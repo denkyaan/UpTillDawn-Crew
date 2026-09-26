@@ -9,7 +9,7 @@ function Metric({label,value,detail}:{label:string;value:number;detail:string}){
 
 export default async function HealthPage(){
  const current=await getCurrentUser();if(!current?.isAdmin)redirect('/')
- const s=await createClient();const since=new Date(Date.now()-24*60*60*1000).toISOString()
+ const s=await createClient();const now=new Date();const since=new Date(now.getTime()-24*60*60*1000).toISOString()
  const [syncFailed,syncPending,unreadPush,openIncidents,pendingIns,pendingOuts,recentAudit]=await Promise.all([
   s.from('offline_operation_records').select('id',{count:'exact',head:true}).eq('status','failed'),
   s.from('offline_operation_records').select('id',{count:'exact',head:true}).eq('status','pending'),
