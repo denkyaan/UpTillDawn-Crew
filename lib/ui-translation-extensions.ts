@@ -49,8 +49,18 @@ const EXTENSIONS: Record<string, Row> = {
   'Personeelslid…': { fr: 'Membre du personnel…', en: 'Staff member…', de: 'Mitarbeiter…' },
 }
 
+const CANONICAL = new Map<string, string>()
+for (const [nl, row] of Object.entries(EXTENSIONS)) {
+  CANONICAL.set(nl, nl)
+  CANONICAL.set(row.fr, nl)
+  CANONICAL.set(row.en, nl)
+  CANONICAL.set(row.de, nl)
+}
+
 export function translateUiExtension(value: string, locale: ExtendedUiLocale) {
-  if (locale === 'nl') return value
-  const row = EXTENSIONS[value]
-  return row?.[locale] || value
+  const canonical = CANONICAL.get(value) || value
+  const row = EXTENSIONS[canonical]
+  if (!row) return value
+  if (locale === 'nl') return canonical
+  return row[locale] || canonical
 }
