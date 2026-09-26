@@ -21,7 +21,9 @@ test('service worker caches the current offline shell version', async () => {
   assert.match(sw, /\/offline\.html/)
   assert.match(sw, /\/offline-public\.html/)
   assert.match(sw, /event\.request\.mode==='navigate'/)
-  assert.match(sw, /publicRoute\?['"]\/offline-public\.html['"]:['"]\/offline\.html['"]/)
+  assert.match(sw, /publicRoute\?caches\.match\(['"]\/offline-public\.html['"]\):privateOfflineResponse\(\)/)
+  assert.match(sw, /async function privateOfflineResponse\(\)/)
+  assert.match(sw, /offline-content\.js/)
 })
 
 
