@@ -18,6 +18,7 @@ export default async function Page() {
   const current = await getCurrentUser()
   if (!current) redirect('/login')
   if (!current.isAdmin) redirect('/')
+  const now = new Date().getTime()
   const { data: sessions, error: sessionsError } = await s
     .from('work_sessions')
     .select('id,user_id,event_id,shift_id,started_at,ended_at')
@@ -68,9 +69,9 @@ export default async function Page() {
       {(sessions || []).map(session => {
         const ownBreaks=(breaks||[]).filter(pause=>pause.work_session_id===session.id)
         const shift=shifts?.find(row=>row.id===session.shift_id)
-        const end=session.ended_at?Date.parse(session.ended_at):Date.now()
+        const end=session.ended_at?Date.parse(session.ended_at):now
         const gross=Math.max(0,Math.floor((end-Date.parse(session.started_at))/1000))
-        const pauseSeconds=ownBreaks.reduce((total,pause)=>total+Math.max(0,Math.floor(((pause.ended_at?Date.parse(pause.ended_at):Date.now())-Date.parse(pause.started_at))/1000)),0)
+        const pauseSeconds=ownBreaks.reduce((total,pause)=>total+Math.max(0,Math.floor(((pause.ended_at?Date.parse(pause.ended_at):now)-Date.parse(pause.started_at))/1000)),0)
         const net=Math.max(0,gross-pauseSeconds)
         const scheduled=shift?Math.max(0,Math.floor((Date.parse(shift.scheduled_end)-Date.parse(shift.scheduled_start))/1000)):null
         const delta=scheduled===null?null:net-scheduled
