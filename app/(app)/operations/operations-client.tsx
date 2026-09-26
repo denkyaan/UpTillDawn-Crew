@@ -13,7 +13,14 @@ type Props={userId:string;shifts:Tables<'shifts'>[];events:Tables<'events'>[];wo
 export default function OperationsClient(p:Props){
  const router=useRouter();const [busy,setBusy]=useState(false),[msg,setMsg]=useState(''),[rejectionReasons,setRejectionReasons]=useState<Record<string,string>>({})
  const s=useMemo(()=>createClient(),[])
- useEffect(()=>{const timer=setInterval(()=>{if(navigator.onLine)router.refresh()},15000);return()=>clearInterval(timer)},[router])
+ useEffect(()=>{
+  const refresh=()=>{if(navigator.onLine)router.refresh()}
+  const onVisibility=()=>{if(document.visibilityState==='visible')refresh()}
+  window.addEventListener('online',refresh)
+  window.addEventListener('focus',refresh)
+  document.addEventListener('visibilitychange',onVisibility)
+  return()=>{window.removeEventListener('online',refresh);window.removeEventListener('focus',refresh);document.removeEventListener('visibilitychange',onVisibility)}
+ },[router])
  useEffect(()=>{void saveOperationsSnapshot({
   version:1,
   userId:p.userId,
@@ -24,7 +31,7 @@ export default function OperationsClient(p:Props){
   activeSession:p.activeSession?{id:p.activeSession.id,event_id:p.activeSession.event_id,shift_id:p.activeSession.shift_id,started_at:p.activeSession.started_at}:null,
   activeBreak:p.activeBreak?{id:p.activeBreak.id,work_session_id:p.activeBreak.work_session_id,started_at:p.activeBreak.started_at}:null,
   checkins:p.checkins.filter(x=>x.user_id===p.userId).map(x=>({event_id:x.event_id,workplace_id:x.workplace_id,status:x.status})),
-}).catch(()=>{})},[p.userId,p.events,p.workplaces,p.shifts,p.activeSession,p.activeBreak,p.checkins])
+ }).catch(()=>{})},[p.userId,p.events,p.workplaces,p.shifts,p.activeSession,p.activeBreak,p.checkins])
  async function run(action:()=>Promise<void>){if(busy)return;setBusy(true);setMsg('');try{await action();router.refresh()}catch{setMsg('Actie niet bevestigd. Controleer je verbinding en huidige status.')}finally{setBusy(false)}}
  async function work(type:string,payload:Record<string,string>){await enqueue(p.userId,type,payload);setMsg('Actie bewaard. Alleen de bevestigde serverstatus geldt.')}
  async function decide(kind:'in'|'out',id:string,approve:boolean){
@@ -64,7 +71,6 @@ export default function OperationsClient(p:Props){
  </main>
 }
 
-
 function EarlyReviewControls({review,name}:{review:Tables<'time_review_requests'>;name:string}){
  const router=useRouter()
  const s=useMemo(()=>createClient(),[])
@@ -82,7 +88,6 @@ function EarlyReviewControls({review,name}:{review:Tables<'time_review_requests'
  return <article className="space-y-3 rounded-xl border border-amber-500/40 p-4"><div><p className="font-bold">{name}</p><p className="text-sm text-muted-foreground">Aangevraagd: {new Date(review.requested_start).toLocaleString('nl-BE')} · gepland: {new Date(review.scheduled_start).toLocaleString('nl-BE')}</p><p className="mt-2 text-sm">Reden: {review.reason}</p></div><div className="grid gap-2 md:grid-cols-[1fr_auto_auto]"><input type="datetime-local" value={adjusted} onChange={event=>setAdjusted(event.target.value)} className="rounded-lg border bg-background p-3"/><button disabled={busy} className="rounded-lg border p-3 font-bold" onClick={()=>submit()}>GOEDKEUREN</button><button disabled={busy||!adjusted} className="rounded-lg bg-violet-600 p-3 font-bold text-white disabled:opacity-50" onClick={()=>submit(adjusted)}>TIJD AANPASSEN</button></div>{message&&<p role="status" className="text-sm">{message}</p>}</article>
 }
 
-
 function formatDigital(totalSeconds:number){
  const seconds=Math.max(0,Math.floor(totalSeconds))
  const hours=Math.floor(seconds/3600)
@@ -93,21 +98,18 @@ function formatDigital(totalSeconds:number){
 
 function LiveWorkSummary({summary,activeBreak,summaryAsOf}:{summary:Summary;activeBreak:Tables<'break_sessions'>|null;summaryAsOf:number}){
  const [now,setNow]=useState(()=>Date.now())
-
  useEffect(()=>{
   const timer=window.setInterval(()=>setNow(Date.now()),1000)
   return()=>window.clearInterval(timer)
  },[])
-
  const elapsed=Math.max(0,Math.floor((now-summaryAsOf)/1000))
  const gross=summary.gross_seconds+elapsed
  const pause=summary.break_seconds+(activeBreak?elapsed:0)
  const work=Math.max(0,gross-pause)
  const remaining=Math.max(0,summary.break_balance_seconds-(activeBreak?elapsed:0))
-
  return <div className="grid gap-3 sm:grid-cols-3">
-  <div className="rounded-xl border p-3"><p className="text-xs font-bold uppercase tracking-wide text-muted-foreground">Werk</p><p className="mt-1 font-mono text-2xl font-black tabular-nums">{formatDigital(work)}</p></div>
-  <div className="rounded-xl border p-3"><p className="text-xs font-bold uppercase tracking-wide text-muted-foreground">Pauze</p><p className="mt-1 font-mono text-2xl font-black tabular-nums">{formatDigital(pause)}</p></div>
-  <div className="rounded-xl border p-3"><p className="text-xs font-bold uppercase tracking-wide text-muted-foreground">Resterend tegoed</p><p className="mt-1 font-mono text-2xl font-black tabular-nums">{formatDigital(remaining)}</p></div>
+  <div className="rounded-xl border p-3"><p className="text-xs font-bold uppercase tracking-wide text-muted-foreground">Werk</p><p className="font-mono text-xl font-black tabular-nums">{formatDigital(work)}</p></div>
+  <div className="rounded-xl border p-3"><p className="text-xs font-bold uppercase tracking-wide text-muted-foreground">Pauze</p><p className="font-mono text-xl font-black tabular-nums">{formatDigital(pause)}</p></div>
+  <div className="rounded-xl border p-3"><p className="text-xs font-bold uppercase tracking-wide text-muted-foreground">Pauze over</p><p className="font-mono text-xl font-black tabular-nums">{formatDigital(remaining)}</p></div>
  </div>
 }
