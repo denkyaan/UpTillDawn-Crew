@@ -1,7 +1,6 @@
 "use client"
 
 import { useEffect,useMemo,useState } from "react"
-import { useRouter } from "next/navigation"
 
 type BreakWindow={startedAt:string;endedAt:string|null}
 
@@ -23,14 +22,12 @@ function formatDigital(totalSeconds:number){
 }
 
 export function ResponsibleLivePersonnel({people}:{people:ResponsibleLivePerson[]}){
-  const router=useRouter()
   const [now,setNow]=useState(()=>Date.now())
 
   useEffect(()=>{
     const clock=window.setInterval(()=>setNow(Date.now()),1000)
-    const refresh=window.setInterval(()=>router.refresh(),15000)
-    return()=>{window.clearInterval(clock);window.clearInterval(refresh)}
-  },[router])
+    return()=>window.clearInterval(clock)
+  },[])
 
   const groups=useMemo(()=>{
     const sorted=[...people].sort((a,b)=>
