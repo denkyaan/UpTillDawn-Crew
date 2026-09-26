@@ -1,6 +1,7 @@
 'use client'
 /* eslint-disable @next/next/no-img-element */
 // Regression contract: Enter = nieuwe regel · verzenden gebeurt met de knop.
+// Production rebuild trigger after restoring the validated chat client.
 import {useEffect,useMemo,useRef,useState} from 'react'
 import {ChevronDown,FileText,Paperclip,Send,Users,X} from 'lucide-react'
 import {createClient} from '@/lib/supabase/crew-client'
