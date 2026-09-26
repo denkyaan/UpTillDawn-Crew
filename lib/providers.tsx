@@ -89,15 +89,25 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
     void refreshAuth()
 
-    const timer=window.setInterval(()=>{
-      const currentUser=userRef.current
-      if(currentUser&&document.visibilityState==="visible")void loadProfile(currentUser.id)
-    },30000)
+    // Refresh authorization state on meaningful user activity instead of
+    // polling Supabase every 30 seconds in every open tab. This keeps role
+    // revocation responsive when a user returns to the app while eliminating
+    // continuous background profile/RPC traffic.
     const focus=()=>{
       const currentUser=userRef.current
       if(currentUser)void loadProfile(currentUser.id)
     }
+    const visibility=()=>{
+      const currentUser=userRef.current
+      if(currentUser&&document.visibilityState==="visible")void loadProfile(currentUser.id)
+    }
+    const online=()=>{
+      const currentUser=userRef.current
+      if(currentUser)void loadProfile(currentUser.id,true)
+    }
     window.addEventListener("focus",focus)
+    window.addEventListener("online",online)
+    document.addEventListener("visibilitychange",visibility)
 
     const {data:{subscription}}=supabase.auth.onAuthStateChange((event,currentSession)=>{
       const nextUser=currentSession?.user??null
@@ -111,7 +121,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       }
     })
 
-    return()=>{alive=false;window.clearInterval(timer);window.removeEventListener("focus",focus);subscription.unsubscribe()}
+    return()=>{
+      alive=false
+      window.removeEventListener("focus",focus)
+      window.removeEventListener("online",online)
+      document.removeEventListener("visibilitychange",visibility)
+      subscription.unsubscribe()
+    }
   },[loadProfile,supabase])
 
   const realIsAdmin = profile?.role === "admin" || isOwner
