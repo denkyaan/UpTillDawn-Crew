@@ -44,6 +44,7 @@ God Mode credentials and sessions are stored only in private server-side state. 
 - Device-language synchronization.
 - Cloudflare Workers AI maker-only Edit mode assistant.
 - Cloudflare production deployment and Supabase push Edge Function.
+- Realtime operational refresh and Admin System Health observability dashboard.
 
 ## Cleanup / regression verification
 
@@ -57,7 +58,7 @@ The current cleanup reran all 15 SQL regression files in `tests/sql/` against th
 
 The corrected SQL suites pass, including privilege/RLS, SECURITY DEFINER surface, release access, profile-role integrity, foreign-key coverage, Responsible read scope, operational security, chat lifecycle, queued uploads, storage security, offline time dependencies and event-selection guards.
 
-Repository CI is expected to remain the release gate for lint, TypeScript, Node tests, production builds and Wrangler dry-run.
+Repository CI is the release gate for lint, TypeScript, Node tests, production builds, Cloudflare Worker build and Wrangler deployment dry-run. CI run #790 for commit `c082b394600a4cbc4030de6fd35389016addc9af` passed every gate after the health-dashboard render-purity correction.
 
 ## Full option/function audit
 
