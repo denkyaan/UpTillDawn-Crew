@@ -52,6 +52,20 @@ async function saveSubscription(subscription:PushSubscription){
   if(!response.ok)throw new Error("Push-subscriptie kon niet worden opgeslagen.")
 }
 
+async function removeServerSubscription(endpoint:string){
+  try{
+    const response=await fetch("/api/push/subscription",{
+      method:"DELETE",
+      credentials:"include",
+      headers:{"content-type":"application/json"},
+      body:JSON.stringify({endpoint}),
+    })
+    return response.ok
+  }catch{
+    return false
+  }
+}
+
 async function updateBadge(unreadCount:number){
   const badgeNavigator=navigator as Navigator&{
     setAppBadge?:(count?:number)=>Promise<void>
@@ -112,7 +126,14 @@ export async function clearLocalPushSubscription():Promise<void>{
   try{
     const registration=await navigator.serviceWorker.ready
     const subscription=await registration.pushManager.getSubscription()
-    if(subscription)await subscription.unsubscribe()
+    if(subscription){
+      // Best effort while the current auth session still exists. If cleanup is
+      // triggered after sign-out, unsubscribe locally so this device can no
+      // longer receive pushes; stale server rows are independently pruned when
+      // delivery reports an expired endpoint.
+      await removeServerSubscription(subscription.endpoint)
+      await subscription.unsubscribe()
+    }
     const badgeNavigator=navigator as Navigator&{clearAppBadge?:()=>Promise<void>}
     await badgeNavigator.clearAppBadge?.().catch(()=>{})
   }catch(error){
@@ -126,12 +147,7 @@ export async function disablePushNotifications():Promise<PushState>{
     const registration=await navigator.serviceWorker.ready
     const subscription=await registration.pushManager.getSubscription()
     if(subscription){
-      await fetch("/api/push/subscription",{
-        method:"DELETE",
-        credentials:"include",
-        headers:{"content-type":"application/json"},
-        body:JSON.stringify({endpoint:subscription.endpoint}),
-      }).catch(()=>null)
+      await removeServerSubscription(subscription.endpoint)
       await subscription.unsubscribe()
     }
     const badgeNavigator=navigator as Navigator&{clearAppBadge?:()=>Promise<void>}
