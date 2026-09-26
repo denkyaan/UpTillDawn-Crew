@@ -3,6 +3,7 @@
 import { useEffect } from "react"
 import { UI_TRANSLATIONS, translateUiText, type UiLocale } from "@/lib/ui-translations"
 import { translateUiExtension, type ExtendedUiLocale } from "@/lib/ui-translation-extensions"
+import { translateCompleteUi } from "@/lib/ui-translation-complete"
 
 const SUPPORTED = new Set<ExtendedUiLocale>(["nl", "fr", "en", "de"])
 const originalText = new WeakMap<Text, string>()
@@ -39,7 +40,6 @@ function deviceLocale(): ExtendedUiLocale {
 function canonicalizeBase(value: string) {
   const exact = canonicalUiText.get(value)
   if (exact) return exact
-
   const separators = /(\s+(?:·|→|—)\s+|:\s+)/
   const parts = value.split(separators)
   if (parts.length <= 1) return value
@@ -58,10 +58,13 @@ function canonicalizeBase(value: string) {
 }
 
 function translate(value: string, locale: ExtendedUiLocale) {
+  const complete = translateCompleteUi(value, locale)
+  if (complete !== value) return complete
   const extension = translateUiExtension(value, locale)
   if (extension !== value) return extension
-
   const canonical = canonicalizeBase(value)
+  const completeCanonical = translateCompleteUi(canonical, locale)
+  if (completeCanonical !== canonical) return completeCanonical
   const extendedCanonical = translateUiExtension(canonical, locale)
   if (extendedCanonical !== canonical) return extendedCanonical
   if (locale === "de") return canonical
@@ -121,7 +124,6 @@ export function LocaleSync() {
     const storedLocale = parseLocale(window.localStorage.getItem("uptilldawn-language"))
     let locale = storedLocale || deviceLocale()
     let applying = false
-
     const applyLocale = (nextLocale: ExtendedUiLocale, persist = false) => {
       locale = nextLocale
       document.documentElement.lang = locale
@@ -134,9 +136,7 @@ export function LocaleSync() {
       document.title = locale === "fr" ? "UP TILL DAWN Personnel" : locale === "en" ? "UP TILL DAWN Staff" : locale === "de" ? "UP TILL DAWN Personal" : "UP TILL DAWN Personeel"
       applying = false
     }
-
     applyLocale(locale, Boolean(storedLocale))
-
     const observer = new MutationObserver(mutations => {
       if (applying) return
       applying = true
@@ -148,11 +148,8 @@ export function LocaleSync() {
       applying = false
     })
     observer.observe(document.body, { subtree: true, childList: true, characterData: true, attributes: true, attributeFilter: [...attributes] })
-
     const onLanguageChange = (event: Event) => applyLocale(normalizeLocale((event as CustomEvent<string>).detail), true)
-    const onDeviceLanguageChange = () => {
-      if (!window.localStorage.getItem("uptilldawn-language")) applyLocale(deviceLocale(), false)
-    }
+    const onDeviceLanguageChange = () => { if (!window.localStorage.getItem("uptilldawn-language")) applyLocale(deviceLocale(), false) }
     window.addEventListener("uptilldawn-language-change", onLanguageChange)
     window.addEventListener("languagechange", onDeviceLanguageChange)
     return () => {
