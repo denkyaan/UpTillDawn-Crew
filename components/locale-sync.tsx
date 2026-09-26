@@ -1,7 +1,7 @@
 "use client"
 
 import { useEffect } from "react"
-import { translateUiText, type UiLocale } from "@/lib/ui-translations"
+import { UI_TRANSLATIONS, translateUiText, type UiLocale } from "@/lib/ui-translations"
 import { translateUiExtension, type ExtendedUiLocale } from "@/lib/ui-translation-extensions"
 
 const SUPPORTED = new Set<ExtendedUiLocale>(["nl", "fr", "en", "de"])
@@ -10,6 +10,13 @@ const renderedText = new WeakMap<Text, string>()
 const originalAttributes = new WeakMap<Element, Map<string, string>>()
 const renderedAttributes = new WeakMap<Element, Map<string, string>>()
 const attributes = ["placeholder", "aria-label", "title"] as const
+
+const canonicalUiText = new Map<string, string>()
+for (const [nl, row] of Object.entries(UI_TRANSLATIONS)) {
+  canonicalUiText.set(nl, nl)
+  canonicalUiText.set(row.fr, nl)
+  canonicalUiText.set(row.en, nl)
+}
 
 function parseLocale(value: string | null | undefined): ExtendedUiLocale | null {
   const language = value?.trim().toLowerCase().split(/[-_]/)[0] as ExtendedUiLocale | undefined
@@ -29,10 +36,36 @@ function deviceLocale(): ExtendedUiLocale {
   return "nl"
 }
 
+function canonicalizeBase(value: string) {
+  const exact = canonicalUiText.get(value)
+  if (exact) return exact
+
+  const separators = /(\s+(?:·|→|—)\s+|:\s+)/
+  const parts = value.split(separators)
+  if (parts.length <= 1) return value
+  let changed = false
+  const canonical = parts.map(part => {
+    if (separators.test(part)) return part
+    const trimmed = part.trim()
+    const hit = canonicalUiText.get(trimmed)
+    if (!hit) return part
+    changed = true
+    const leading = part.match(/^\s*/)?.[0] || ""
+    const trailing = part.match(/\s*$/)?.[0] || ""
+    return leading + hit + trailing
+  }).join("")
+  return changed ? canonical : value
+}
+
 function translate(value: string, locale: ExtendedUiLocale) {
-  const extended = translateUiExtension(value, locale)
-  if (extended !== value || locale === "de") return extended
-  return translateUiText(value, locale as UiLocale)
+  const extension = translateUiExtension(value, locale)
+  if (extension !== value) return extension
+
+  const canonical = canonicalizeBase(value)
+  const extendedCanonical = translateUiExtension(canonical, locale)
+  if (extendedCanonical !== canonical) return extendedCanonical
+  if (locale === "de") return canonical
+  return translateUiText(canonical, locale as UiLocale)
 }
 
 function isExcluded(node: Node) {
