@@ -29,17 +29,37 @@ const nextConfig = {
     unoptimized: true,
   },
   async headers() {
-    return [{
-      source: '/:path*',
-      headers: [
-        { key: 'Content-Security-Policy', value: contentSecurityPolicy },
-        { key: 'X-Content-Type-Options', value: 'nosniff' },
-        { key: 'X-Frame-Options', value: 'SAMEORIGIN' },
-        { key: 'Referrer-Policy', value: 'strict-origin-when-cross-origin' },
-        { key: 'Permissions-Policy', value: 'camera=(self), geolocation=(self), microphone=()' },
-        { key: 'Strict-Transport-Security', value: 'max-age=31536000; includeSubDomains' },
-      ],
-    }]
+    const securityHeaders = [
+      { key: 'Content-Security-Policy', value: contentSecurityPolicy },
+      { key: 'X-Content-Type-Options', value: 'nosniff' },
+      { key: 'X-Frame-Options', value: 'SAMEORIGIN' },
+      { key: 'Referrer-Policy', value: 'strict-origin-when-cross-origin' },
+      { key: 'Permissions-Policy', value: 'camera=(self), geolocation=(self), microphone=()' },
+      { key: 'Strict-Transport-Security', value: 'max-age=31536000; includeSubDomains' },
+    ]
+    return [
+      {
+        source: '/:path*',
+        headers: securityHeaders,
+      },
+      {
+        // A stale service-worker script can keep an installed PWA on an old
+        // application lifecycle even when the client explicitly calls update().
+        source: '/sw.js',
+        headers: [
+          { key: 'Cache-Control', value: 'no-cache, no-store, must-revalidate' },
+          { key: 'CDN-Cache-Control', value: 'no-store' },
+        ],
+      },
+      {
+        // Keep install metadata current across deployments as well.
+        source: '/manifest.webmanifest',
+        headers: [
+          { key: 'Cache-Control', value: 'no-cache, no-store, must-revalidate' },
+          { key: 'CDN-Cache-Control', value: 'no-store' },
+        ],
+      },
+    ]
   },
 }
 
