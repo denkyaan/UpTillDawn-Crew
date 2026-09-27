@@ -1,0 +1,18 @@
+import test from 'node:test'
+import assert from 'node:assert/strict'
+import { readFile } from 'node:fs/promises'
+
+test('CI proves database can be rebuilt from repository migrations', async () => {
+  const workflow=await readFile(new URL('../.github/workflows/ci.yml',import.meta.url),'utf8')
+  assert.match(workflow,/fresh-install:/)
+  assert.match(workflow,/supabase@2\.117\.0 init/)
+  assert.match(workflow,/supabase@2\.117\.0 start/)
+  assert.match(workflow,/db reset --local --no-seed/)
+  assert.match(workflow,/tests\/sql\/\*\.sql/)
+  assert.match(workflow,/psql "\$PGURL" -v ON_ERROR_STOP=1/)
+  assert.match(workflow,/gen types typescript --local/)
+  assert.match(workflow,/diff -u types\/crew-database\.ts/)
+  assert.match(workflow,/Fresh-install database proof/)
+  assert.match(workflow,/if: always\(\)/)
+  assert.match(workflow,/stop --no-backup/)
+})
