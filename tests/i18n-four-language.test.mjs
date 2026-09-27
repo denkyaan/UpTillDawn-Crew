@@ -30,3 +30,18 @@ test('critical navigation and operational labels have German coverage', async ()
     assert.match(all, new RegExp(`['"]${escaped}['"]\\s*:\\s*\\{[^\\n]*de\\s*:`), `${label} must have German coverage`)
   }
 })
+
+test('admin and responsible login denial is consistent and fully translated', async () => {
+  const auth = await readFile(new URL('../lib/actions/auth.ts', import.meta.url), 'utf8')
+  const login = await readFile(new URL('../app/(auth)/login/page.tsx', import.meta.url), 'utf8')
+  const complete = await readFile(new URL('../lib/ui-translation-complete.ts', import.meta.url), 'utf8')
+  const message = 'Foute logingegevens of u heeft geen toegang tot deze rol.'
+  assert.ok(auth.includes("requestedPortal === 'admin' || requestedPortal === 'responsible'"))
+  assert.ok(auth.includes(message))
+  assert.ok(login.includes('portal === "admin" || portal === "responsible"'))
+  assert.ok(login.includes(message))
+  const row = complete.split('\n').find(line => line.includes(message)) || ''
+  assert.match(row, /fr:\s*'[^']+'/)
+  assert.match(row, /en:\s*'[^']+'/)
+  assert.match(row, /de:\s*'[^']+'/)
+})
