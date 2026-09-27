@@ -14,7 +14,7 @@ export type EmergencyInfoView={
 }
 
 function telHref(value:string){
-  const cleaned=value.replace(/[^+\\d]/g,'')
+  const cleaned=value.replace(/[^+\d]/g,'')
   return cleaned?'tel:'+cleaned:undefined
 }
 
