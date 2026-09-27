@@ -2089,6 +2089,24 @@ export type Database = {
         Args: { p_reason?: string; p_shift: string }
         Returns: undefined
       }
+      upt_cancel_shift_change: {
+        Args: { p_request: string }
+        Returns: undefined
+      }
+      upt_claimable_shifts: {
+        Args: never
+        Returns: {
+          event_id: string
+          event_name: string
+          role_name: string
+          scheduled_end: string
+          scheduled_start: string
+          shift_id: string
+          shift_kind: string
+          workplace_id: string
+          workplace_name: string
+        }[]
+      }
       upt_confirm_shift: { Args: { p_shift: string }; Returns: undefined }
       upt_confirm_task_assignment: {
         Args: { p_assignment: string }
@@ -2163,6 +2181,10 @@ export type Database = {
       upt_decide_check_out: {
         Args: { p_approve: boolean; p_check_out: string; p_notes?: string }
         Returns: string
+      }
+      upt_decide_shift_change: {
+        Args: { p_decision: string; p_reason?: string; p_request: string }
+        Returns: undefined
       }
       upt_duplicate_event: {
         Args: {
@@ -2376,9 +2398,23 @@ export type Database = {
         Args: { p_event: string; p_notes?: string }
         Returns: string
       }
+      upt_request_shift_change: {
+        Args: {
+          p_reason?: string
+          p_replacement?: string
+          p_shift: string
+          p_target_shift?: string
+          p_type: string
+        }
+        Returns: string
+      }
       upt_resolve_incident: { Args: { p_incident: string }; Returns: undefined }
       upt_respond_shift: {
         Args: { p_reason?: string; p_response: string; p_shift: string }
+        Returns: undefined
+      }
+      upt_respond_shift_change: {
+        Args: { p_request: string; p_response: string }
         Returns: undefined
       }
       upt_responsible_crew_directory: {
@@ -2442,6 +2478,45 @@ export type Database = {
         }
         Returns: undefined
       }
+      upt_shift_change_candidates: {
+        Args: { p_shift: string }
+        Returns: {
+          full_name: string
+          user_id: string
+        }[]
+      }
+      upt_shift_change_requests: {
+        Args: never
+        Returns: {
+          created_at: string
+          decided_at: string
+          decision_reason: string
+          event_id: string
+          id: string
+          is_stale: boolean
+          reason: string
+          replacement_name: string
+          replacement_responded_at: string
+          replacement_response: string
+          replacement_user_id: string
+          requester_id: string
+          requester_name: string
+          shift_id: string
+          source_role_name: string
+          source_scheduled_end: string
+          source_scheduled_start: string
+          source_workplace_name: string
+          status: string
+          target_role_name: string
+          target_scheduled_end: string
+          target_scheduled_start: string
+          target_shift_id: string
+          target_workplace_name: string
+          type: string
+          updated_at: string
+          workplace_id: string
+        }[]
+      }
       upt_shift_handovers: {
         Args: never
         Returns: {
@@ -2481,6 +2556,18 @@ export type Database = {
       }
       upt_stop_break: { Args: { p_break: string }; Returns: undefined }
       upt_stop_work: { Args: { p_work_session: string }; Returns: undefined }
+      upt_swap_candidates: {
+        Args: { p_shift: string }
+        Returns: {
+          full_name: string
+          role_name: string
+          scheduled_end: string
+          scheduled_start: string
+          target_shift_id: string
+          user_id: string
+          workplace_name: string
+        }[]
+      }
       upt_sync_operation: {
         Args: { p_id: string; p_payload: Json; p_type: string }
         Returns: Json
