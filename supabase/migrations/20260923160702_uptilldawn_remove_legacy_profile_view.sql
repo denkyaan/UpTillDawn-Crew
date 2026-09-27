@@ -1,7 +1,8 @@
--- Remove the retired StaffPortal compatibility surface.
--- Historical databases may still have public.user_profiles as a table, while
--- later installations may expose it as a view. The active application uses
--- public.profiles directly, so remove whichever legacy object exists.
+-- Remove the retired StaffPortal compatibility view.
+-- Historical fresh installs may still have public.user_profiles as the legacy
+-- table referenced by older modules. That table must remain until those
+-- foreign-key dependencies are explicitly migrated. Only remove the object
+-- when it is actually a view.
 
 DO $$
 DECLARE
@@ -16,8 +17,6 @@ BEGIN
 
   IF object_kind = 'v' THEN
     EXECUTE 'DROP VIEW public.user_profiles';
-  ELSIF object_kind IN ('r', 'p') THEN
-    EXECUTE 'DROP TABLE public.user_profiles';
   END IF;
 END
 $$;
