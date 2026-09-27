@@ -6,7 +6,7 @@ DROP FUNCTION IF EXISTS public.handle_email_confirmed();
 -- has fully converged on public.profiles and text-based operational statuses.
 -- Production no longer exposes these tables/types. Fresh installs must match it.
 
-DO $
+DO $$
 DECLARE
   unexpected text;
 BEGIN
@@ -36,7 +36,7 @@ BEGIN
     RAISE EXCEPTION 'Active schema still references legacy user_profiles: %', unexpected;
   END IF;
 END
-$;
+$$;
 
 DROP TABLE IF EXISTS public.pr_attachments CASCADE;
 DROP TABLE IF EXISTS public.pr_approvals CASCADE;
@@ -78,7 +78,7 @@ DROP FUNCTION IF EXISTS public.current_user_has_role(public.user_role);
 DROP FUNCTION IF EXISTS public.current_user_roles();
 DROP FUNCTION IF EXISTS public.trigger_set_updated_at();
 
-DO $
+DO $$
 DECLARE
   unexpected text;
 BEGIN
@@ -103,7 +103,7 @@ BEGIN
     RAISE EXCEPTION 'Active public columns still use retired enum types: %', unexpected;
   END IF;
 END
-$;
+$$;
 
 -- No enum types remain in the canonical production public schema. CASCADE here
 -- deliberately removes only stale legacy overloads/functions that still depend
