@@ -22,6 +22,11 @@ Prefer Supabase **Restore to a New Project** for a physical-backup proof. The re
 
 Creating the second remote project can incur Supabase charges. Repository automation and the verification script are ready, but project creation/restore must not be triggered until the project cost has been explicitly confirmed.
 
+
+### Verified local fresh-install proof
+
+GitHub Actions run `36336833839` for commit `1002b85ee1446294f62d2f84d1f7a685a54fdb01` passed the isolated fresh-install gate: 166 repository migrations replayed from zero, all 16 SQL regression suites passed, and normalized generated `public` TypeScript types matched `types/crew-database.ts` exactly.
+
 ## Auth security gate
 
 Supabase Auth leaked-password protection must be enabled in the production Auth project settings. This is a platform setting and is intentionally not represented as SQL migration state. A release review must verify the setting remains enabled. Current verification source: Supabase Security Advisor `auth_leaked_password_protection`; remediation: https://supabase.com/docs/guides/auth/password-security#password-strength-and-leaked-password-protection.
