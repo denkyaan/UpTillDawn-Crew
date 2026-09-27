@@ -2247,6 +2247,20 @@ export type Database = {
         Args: { p_message: string; p_reason: string }
         Returns: undefined
       }
+      upt_operational_alerts: {
+        Args: never
+        Returns: {
+          detected_at: string
+          event_id: string
+          id: string
+          kind: string
+          planned_end: string
+          planned_start: string
+          shift_id: string
+          user_id: string
+          workplace_id: string
+        }[]
+      }
       upt_own_profile_details: {
         Args: never
         Returns: {
