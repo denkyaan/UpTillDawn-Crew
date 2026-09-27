@@ -9,6 +9,7 @@
 import { redirect } from 'next/navigation'
 import { cookies, headers } from 'next/headers'
 import { createClient } from '@/lib/supabase/crew-server'
+import { passwordPolicyMessage } from '@/lib/password-policy'
 
 function extractName(email: string): string {
     const local = email.split('@')[0]
@@ -51,7 +52,8 @@ export async function signUp(formData: FormData) {
     const fullName = String(formData.get('full_name') || '').trim() || extractName(email)
     if (!email || !password) return { error: 'E-mail en wachtwoord zijn verplicht.' }
     if (!fullName || fullName.length > 200) return { error: 'Volledige naam moet tussen 1 en 200 tekens bevatten.' }
-    if (password.length < 8) return { error: 'Wachtwoord moet minstens 8 tekens bevatten.' }
+    const passwordError = passwordPolicyMessage(password)
+    if (passwordError) return { error: passwordError }
     if (confirmPassword && password !== confirmPassword) return { error: 'Wachtwoorden komen niet overeen.' }
     const origin = appOrigin()
     if (!origin) return { error: 'De applicatieconfiguratie is onvolledig. Neem contact op met de beheerder.' }
@@ -133,7 +135,8 @@ export async function forgotPassword(formData: FormData) {
 export async function updatePassword(formData: FormData) {
     const password = String(formData.get('password') || ''); const confirmPassword = String(formData.get('confirm_password') || '')
     if (password !== confirmPassword) return { error: 'Wachtwoorden komen niet overeen.' }
-    if (password.length < 8) return { error: 'Wachtwoord moet minstens 8 tekens bevatten.' }
+    const passwordError = passwordPolicyMessage(password)
+    if (passwordError) return { error: passwordError }
     const supabase = await createClient(); const { data: { user }, error: userError } = await supabase.auth.getUser()
     if (userError || !user) return { error: 'De herstel-link is ongeldig of verlopen. Vraag een nieuwe herstel-link aan.' }
     const { error } = await supabase.auth.updateUser({ password }); if (error) return { error: 'De aanvraag kon niet worden verwerkt. Probeer opnieuw.' }

@@ -8,5 +8,6 @@
   "preview_urls": false,
   "assets": { "directory": ".open-next/assets", "binding": "ASSETS" },
   "ai": { "binding": "AI" },
+  "previews": { "ai": { "binding": "AI" } },
   "observability": { "enabled": true }
 }

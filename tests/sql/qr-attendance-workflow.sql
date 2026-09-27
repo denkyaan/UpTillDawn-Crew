@@ -26,13 +26,14 @@ FROM qr_ids i
 WHERE p.id=i.id
   AND i.name IN ('staff_early','staff_ten','staff_stop','staff_remote','staff_contact','lead','admin');
 
-INSERT INTO public.events(id,name,start_date,end_date,start_at,end_at,status)
+INSERT INTO public.events(id,name,start_date,end_date,start_at,end_at,status,created_by)
 VALUES(
  (SELECT id FROM qr_ids WHERE name='event'),
  'QR regression event',
  now()-interval '1 hour',now()+interval '6 hours',
  now()-interval '1 hour',now()+interval '6 hours',
- 'active'
+ 'active',
+ (SELECT id FROM qr_ids WHERE name='admin')
 );
 
 INSERT INTO public.workplaces(id,event_id,name,sort_order)

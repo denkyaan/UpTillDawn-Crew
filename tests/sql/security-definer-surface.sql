@@ -1,6 +1,7 @@
 -- Security-definer surface regression.
--- Public SECURITY DEFINER RPCs are intentionally used for validated workflows,
--- but they must never be anonymous/PUBLIC callable and must pin search_path.
+-- Public SECURITY DEFINER RPCs are intentionally used for validated workflows.
+-- PUBLIC execute is forbidden. Anonymous execute is limited to token-gated God Mode
+-- plus the two explicit pre-auth admin login guard/failure entry points.
 
 BEGIN;
 
@@ -30,11 +31,18 @@ BEGIN
       'upt_god_database_connect','upt_god_database_disconnect','upt_god_database_secret',
       'upt_god_login','upt_god_logout',
       'upt_god_repository_connect','upt_god_repository_disconnect','upt_god_repository_secret',
-      'upt_god_role_rules','upt_god_save_role_rules','upt_god_session_valid'
+      'upt_god_role_rules','upt_god_save_role_rules','upt_god_session_valid',
+      'upt_admin_login_guard','upt_admin_login_failure'
     ]);
 
   IF v_count <> 0 THEN
     RAISE EXCEPTION 'FAIL: % unexpected SECURITY DEFINER function(s) are executable by anon', v_count;
+  END IF;
+
+  IF NOT has_function_privilege('anon','public.upt_admin_login_guard(text)','EXECUTE')
+     OR NOT has_function_privilege('anon','public.upt_admin_login_failure(text,text,text,text)','EXECUTE')
+     OR has_function_privilege('anon','public.upt_admin_login_success(text,text,text,text)','EXECUTE') THEN
+    RAISE EXCEPTION 'FAIL: pre-auth admin login privilege boundary is incorrect';
   END IF;
 
   IF EXISTS(
@@ -79,7 +87,14 @@ BEGIN
       AND position('upt_is_approved' in pg_get_functiondef(p.oid)) = 0
       AND position('upt_is_admin' in pg_get_functiondef(p.oid)) = 0
       AND position('god_session_valid' in pg_get_functiondef(p.oid)) = 0
-      AND p.proname NOT IN ('upt_god_login','upt_god_logout')
+      -- Delegated authorization is valid only for these explicit internal
+      -- workflow boundaries whose callees enforce caller identity/scope.
+      AND position('upt_respond_shift' in pg_get_functiondef(p.oid)) = 0
+      AND position('inventory_can_view' in pg_get_functiondef(p.oid)) = 0
+      AND p.proname NOT IN (
+        'upt_god_login','upt_god_logout',
+        'upt_admin_login_guard','upt_admin_login_failure'
+      )
   ) THEN
     RAISE EXCEPTION 'FAIL: authenticated Uptilldawn SECURITY DEFINER entry point lacks an explicit authorization primitive';
   END IF;
@@ -157,5 +172,5 @@ BEGIN
 END
 $god_gate$;
 
-SELECT 'PASS: SECURITY DEFINER surface, token-gated God Mode, retired bootstrap and owner-only private setup are locked down' AS result;
+SELECT 'PASS: SECURITY DEFINER surface, bounded pre-auth admin login boundary, token-gated God Mode, retired bootstrap and owner-only private setup are locked down' AS result;
 ROLLBACK;

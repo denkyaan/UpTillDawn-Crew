@@ -16,7 +16,8 @@
     "preview:cloudflare": "opennextjs-cloudflare preview",
     "deploy:cloudflare": "opennextjs-cloudflare deploy",
     "prebuild": "node scripts/god-source-index.mjs",
-    "predev": "node scripts/god-source-index.mjs"
+    "predev": "node scripts/god-source-index.mjs",
+    "build:next": "next build"
   },
   "dependencies": {
     "@codemirror/lang-css": "6.3.1",

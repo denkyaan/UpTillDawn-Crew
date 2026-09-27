@@ -7,11 +7,14 @@ import { enqueue } from '@/lib/crew-queue'
 import { saveOperationsSnapshot } from '@/lib/crew-offline-snapshot'
 import { nlStatus } from '@/lib/ui-nl'
 import type { Tables,Database } from '@/types/crew-database'
+import { lateMinutes, noShowGraceMinutes } from '@/lib/no-show-policy'
 type Summary=Database['public']['Functions']['upt_work_session_time_summary']['Returns'][number]
 type CrewMember={id:string;full_name:string|null;phone_number:string|null;profile_photo_url:string|null}
-type Props={userId:string;shifts:Tables<'shifts'>[];events:Tables<'events'>[];workplaces:Tables<'workplaces'>[];activeSession:Tables<'work_sessions'>|null;activeBreak:Tables<'break_sessions'>|null;checkins:Tables<'check_ins'>[];checkouts:Tables<'check_outs'>[];manager:boolean;isAdmin:boolean;personalWork:boolean;summary:Summary|null;summaryAsOf:number;liveSessions:Tables<'work_sessions'>[];liveBreaks:Tables<'break_sessions'>[];liveShifts:Tables<'shifts'>[];crewDirectory:CrewMember[];timeReviews:Tables<'time_review_requests'>[]}
+type OperationalAlert=Database['public']['Functions']['upt_operational_alerts']['Returns'][number]
+type ManagerLiveSession=Database['public']['Functions']['upt_manager_live_sessions']['Returns'][number]
+type Props={userId:string;shifts:Tables<'shifts'>[];events:Tables<'events'>[];workplaces:Tables<'workplaces'>[];activeSession:Tables<'work_sessions'>|null;activeBreak:Tables<'break_sessions'>|null;checkins:Tables<'check_ins'>[];checkouts:Tables<'check_outs'>[];manager:boolean;isAdmin:boolean;personalWork:boolean;summary:Summary|null;summaryAsOf:number;liveSessions:ManagerLiveSession[];liveBreaks:Tables<'break_sessions'>[];crewDirectory:CrewMember[];timeReviews:Tables<'time_review_requests'>[];operationalAlerts:OperationalAlert[]}
 export default function OperationsClient(p:Props){
- const router=useRouter();const [busy,setBusy]=useState(false),[msg,setMsg]=useState(''),[rejectionReasons,setRejectionReasons]=useState<Record<string,string>>({})
+ const router=useRouter();const [busy,setBusy]=useState(false),[msg,setMsg]=useState(''),[rejectionReasons,setRejectionReasons]=useState<Record<string,string>>({}),[alertNow,setAlertNow]=useState(()=>Date.now())
  const s=useMemo(()=>createClient(),[])
  useEffect(()=>{
   const refresh=()=>{if(navigator.onLine)router.refresh()}
@@ -21,6 +24,14 @@ export default function OperationsClient(p:Props){
   document.addEventListener('visibilitychange',onVisibility)
   return()=>{window.removeEventListener('online',refresh);window.removeEventListener('focus',refresh);document.removeEventListener('visibilitychange',onVisibility)}
  },[router])
+ useEffect(()=>{
+  if(!p.manager)return
+  const timer=window.setInterval(()=>{
+   setAlertNow(Date.now())
+   if(navigator.onLine)router.refresh()
+  },60_000)
+  return()=>window.clearInterval(timer)
+ },[p.manager,router])
  useEffect(()=>{void saveOperationsSnapshot({
   version:1,
   userId:p.userId,
@@ -65,10 +76,32 @@ export default function OperationsClient(p:Props){
  {checkin?.status==='approved'&&!p.activeSession&&<p className="rounded-xl border border-emerald-500/40 bg-emerald-500/10 p-3 text-sm">Goedgekeurd. De werkregistratie wordt automatisch gestart.</p>}
  {p.activeSession?.event_id===shift.event_id&&p.activeSession.shift_id!==shift.id&&<button disabled={busy} className="w-full rounded-xl border p-4" onClick={()=>run(()=>work('transition',{session_id:p.activeSession!.id,workplace_id:shift.workplace_id}))}>NIEUWE WERKPLEK — OVERGANG BEVESTIGEN</button>}
  </article>})}</section>}
- {p.manager&&<section className="space-y-3 rounded-2xl border p-4"><div className="flex items-center justify-between gap-3"><h2 className="text-xl font-bold">Actuele personeelstatus</h2><span className="text-sm text-muted-foreground">{p.liveSessions.length} actief</span></div>{!p.liveSessions.length&&<p className="text-muted-foreground">Momenteel is er geen zichtbaar personeel aan het werk.</p>}{p.liveSessions.map(ws=>{const crew=p.crewDirectory.find(m=>m.id===ws.user_id);const shift=p.liveShifts.find(x=>x.id===ws.shift_id);const workplace=p.workplaces.find(w=>w.id===shift?.workplace_id);const onBreak=p.liveBreaks.some(b=>b.work_session_id===ws.id&&!b.ended_at);return <article key={ws.id} className="rounded-xl border p-4"><div className="flex items-start justify-between gap-3"><div><p className="font-bold">{crew?.full_name||'Personeelslid'}</p><p className="text-sm text-muted-foreground">{workplace?.name||'Werkplek'} · gestart {new Date(ws.started_at).toLocaleTimeString('nl-BE',{hour:'2-digit',minute:'2-digit'})}</p>{crew?.phone_number&&<a className="text-sm underline" href={`tel:${crew.phone_number}`}>{crew.phone_number}</a>}</div><span className={`rounded-full px-3 py-1 text-xs font-bold ${onBreak?'bg-amber-500/20 text-amber-300':'bg-emerald-500/20 text-emerald-300'}`}>{onBreak?'PAUZE':'AAN HET WERK'}</span></div></article>})}</section>}
+ {p.manager&&p.operationalAlerts.length>0&&<section className="space-y-3 rounded-2xl border border-amber-500/40 bg-amber-500/5 p-4" role="alert">
+  <div className="flex flex-wrap items-center justify-between gap-2"><div><h2 className="text-xl font-bold">Operationele waarschuwingen</h2><p className="text-sm text-muted-foreground">Live bezetting · start/stop-controle · pauzecontrole · no-show vanaf {noShowGraceMinutes()} min</p></div><span className="rounded-full border px-3 py-1 text-xs font-bold">{p.operationalAlerts.length} OPEN</span></div>
+  {p.operationalAlerts.map(alert=><OperationalAlertCard key={alert.id} alert={alert} workplaces={p.workplaces} crewDirectory={p.crewDirectory} alertNow={alertNow}/>)}
+ </section>}
+ {p.manager&&<section className="space-y-3 rounded-2xl border p-4"><div className="flex items-center justify-between gap-3"><h2 className="text-xl font-bold">Actuele personeelstatus</h2><span className="text-sm text-muted-foreground">{p.liveSessions.length} actief</span></div>{!p.liveSessions.length&&<p className="text-muted-foreground">Momenteel is er geen zichtbaar personeel aan het werk.</p>}{p.liveSessions.map(ws=>{const crew=p.crewDirectory.find(m=>m.id===ws.user_id);const onBreak=p.liveBreaks.some(b=>b.work_session_id===ws.session_id&&!b.ended_at);return <article key={ws.session_id} className="rounded-xl border p-4"><div className="flex items-start justify-between gap-3"><div><p className="font-bold">{crew?.full_name||'Personeelslid'}</p><p className="text-sm text-muted-foreground">{ws.workplace_name||'Werkplek'} · gestart {new Date(ws.started_at).toLocaleTimeString('nl-BE',{hour:'2-digit',minute:'2-digit'})}</p>{crew?.phone_number&&<a className="text-sm underline" href={`tel:${crew.phone_number}`}>{crew.phone_number}</a>}</div><span className={`rounded-full px-3 py-1 text-xs font-bold ${onBreak?'bg-amber-500/20 text-amber-300':'bg-emerald-500/20 text-emerald-300'}`}>{onBreak?'PAUZE':'AAN HET WERK'}</span></div></article>})}</section>}
  {p.manager&&<section className="space-y-3"><h2 className="text-xl font-bold">Goedkeuringen</h2>{!approvals.length&&<p className="rounded-xl border p-4 text-muted-foreground">Geen openstaande aanvragen.</p>}{approvals.map(request=>{const crew=p.crewDirectory.find(member=>member.id===request.user_id);return <article key={request.id} className="space-y-3 rounded-xl border p-4"><div><p className="font-bold">{request.kind==='in'?'Starturen':'Stopuren'} · {crew?.full_name||'Personeelslid'}</p><p className="text-sm text-muted-foreground">{p.workplaces.find(w=>w.id===request.workplace_id)?.name||'Werkplek'} · aangevraagd {new Date(request.requested_at).toLocaleString('nl-BE')}</p>{request.remote&&<span className="mt-2 inline-block rounded-full border px-2 py-1 text-xs font-bold">REMOTE</span>}{request.kind==='in'&&request.early_reason&&<p className="mt-2 rounded-lg border border-amber-500/40 p-3 text-sm">Reden vroegstart: {request.early_reason}</p>}</div><input value={rejectionReasons[request.id]||''} onChange={event=>setRejectionReasons(current=>({...current,[request.id]:event.target.value}))} maxLength={500} placeholder="Reden bij afwijzing (verplicht)" className="w-full rounded-lg border bg-background p-3"/><div className="flex flex-wrap gap-3"><button disabled={busy} className="rounded-lg bg-violet-600 p-3 font-bold text-white" onClick={()=>run(()=>decide(request.kind,request.id,true))}>GOEDKEUREN</button><button disabled={busy||!(rejectionReasons[request.id]||'').trim()} className="rounded-lg border p-3 font-bold disabled:opacity-50" onClick={()=>run(()=>decide(request.kind,request.id,false))}>AFWIJZEN</button></div></article>})}</section>}
  {p.isAdmin&&<section className="space-y-3"><h2 className="text-xl font-bold">Tijdcorrectie — vroegstartcontrole</h2>{!p.timeReviews.length&&<p className="rounded-xl border p-4 text-muted-foreground">Geen vroegstarts te controleren.</p>}{p.timeReviews.map(review=><EarlyReviewControls key={review.id} review={review} name={p.crewDirectory.find(member=>member.id===review.user_id)?.full_name||'Personeelslid'}/>)}</section>}
  </main>
+}
+
+function OperationalAlertCard({alert,workplaces,crewDirectory,alertNow}:{alert:OperationalAlert;workplaces:Tables<'workplaces'>[];crewDirectory:CrewMember[];alertNow:number}){
+ const workplace=workplaces.find(item=>item.id===alert.workplace_id)
+ if(alert.kind==='understaffed')return <article className="rounded-xl border border-amber-500/50 bg-amber-500/5 p-4"><div className="flex flex-wrap items-start justify-between gap-3"><div><p className="font-bold">{workplace?.name||'Werkplek'}</p><p className="text-sm text-muted-foreground">Actieve bezetting: {alert.active_staff??0}/{alert.minimum_staff??0} · minimum niet gehaald</p></div><span className="rounded-full bg-amber-500/20 px-3 py-1 text-xs font-black text-amber-600">ONDERBEZET</span></div></article>
+
+ const crew=crewDirectory.find(member=>member.id===alert.user_id)
+ if(alert.kind==='shift-overrun'||alert.kind==='missing-checkout'||alert.kind==='long-break'){
+  const severe=alert.kind==='missing-checkout'
+  const label=alert.kind==='shift-overrun'?'UITLOOP':alert.kind==='missing-checkout'?'STOPUREN ONTBREKEN':'LANGE PAUZE'
+  const detail=alert.kind==='long-break'
+   ? `Pauze gebruikt: ${alert.observed_minutes??0} min · waarschuwingsgrens ${alert.threshold_minutes??70} min`
+   : `Geplande eindtijd ${new Date(alert.planned_end).toLocaleTimeString('nl-BE',{hour:'2-digit',minute:'2-digit'})} · ${alert.observed_minutes??0} min voorbij zonder stopaanvraag`
+  return <article className={`rounded-xl border p-4 ${severe?'border-red-500/50 bg-red-500/5':'border-amber-500/50 bg-amber-500/5'}`}><div className="flex flex-wrap items-start justify-between gap-3"><div><p className="font-bold">{crew?.full_name||'Personeelslid'} · {workplace?.name||'Werkplek'}</p><p className="text-sm text-muted-foreground">{detail}</p>{crew?.phone_number&&<a className="text-sm underline" href={`tel:${crew.phone_number}`}>{crew.phone_number}</a>}</div><span className={`rounded-full px-3 py-1 text-xs font-black ${severe?'bg-red-500/20 text-red-600':'bg-amber-500/20 text-amber-600'}`}>{label}</span></div></article>
+ }
+
+ const minutes=lateMinutes({shiftStartsAt:new Date(alert.planned_start).getTime(),checkedInAt:null,excused:false},alertNow)
+ return <article className={`rounded-xl border p-4 ${alert.kind==='no-show'?'border-red-500/50 bg-red-500/5':'border-amber-500/40'}`}><div className="flex flex-wrap items-start justify-between gap-3"><div><p className="font-bold">{crew?.full_name||'Personeelslid'} · {workplace?.name||'Werkplek'}</p><p className="text-sm text-muted-foreground">Gepland {new Date(alert.planned_start).toLocaleTimeString('nl-BE',{hour:'2-digit',minute:'2-digit'})} · {minutes} min zonder goedgekeurde start</p>{crew?.phone_number&&<a className="text-sm underline" href={`tel:${crew.phone_number}`}>{crew.phone_number}</a>}</div><span className={`rounded-full px-3 py-1 text-xs font-black ${alert.kind==='no-show'?'bg-red-500/20 text-red-600':'bg-amber-500/20 text-amber-600'}`}>{alert.kind==='no-show'?'NO-SHOW':'TE LAAT'}</span></div></article>
 }
 
 function EarlyReviewControls({review,name}:{review:Tables<'time_review_requests'>;name:string}){

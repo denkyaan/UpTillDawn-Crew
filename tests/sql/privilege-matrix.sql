@@ -52,7 +52,10 @@ BEGIN
       'upt_god_database_connect','upt_god_database_disconnect','upt_god_database_secret',
       'upt_god_login','upt_god_logout',
       'upt_god_repository_connect','upt_god_repository_disconnect','upt_god_repository_secret',
-      'upt_god_role_rules','upt_god_save_role_rules','upt_god_session_valid'
+      'upt_god_role_rules','upt_god_save_role_rules','upt_god_session_valid',
+      -- Intentional pre-auth admin login protection. These two are needed
+      -- before a Supabase session exists; login success is authenticated-only.
+      'upt_admin_login_guard','upt_admin_login_failure'
     ]);
 
   IF v_anon_rpcs IS NOT NULL THEN
@@ -121,4 +124,4 @@ BEGIN
   END IF;
 END $matrix$;
 
-SELECT 'PASS: public RLS/anon surface is locked down, only explicit token-gated God Mode RPCs are anonymous, legacy bootstrap is absent, trigger functions are non-callable and RPC-only tables have no direct mutation grants' AS result;
+SELECT 'PASS: public RLS/anon surface is locked down, anonymous RPCs are limited to token-gated God Mode plus the explicit pre-auth admin guard/failure surface, legacy bootstrap is absent, trigger functions are non-callable and RPC-only tables have no direct mutation grants' AS result;

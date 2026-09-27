@@ -6,7 +6,7 @@ GRANT SELECT ON upt_test_ids TO authenticated,anon;
 INSERT INTO auth.users(id) SELECT id FROM upt_test_ids WHERE name IN ('admin','staff','lead','other','pending');
 UPDATE public.profiles SET approved=true,role=CASE WHEN id=(SELECT id FROM upt_test_ids WHERE name='admin') THEN 'admin' WHEN id=(SELECT id FROM upt_test_ids WHERE name='lead') THEN 'responsible_lead' ELSE 'staff' END
 WHERE id IN (SELECT id FROM upt_test_ids WHERE name IN ('admin','staff','lead','other'));
-INSERT INTO public.events(id,name,start_date,end_date,start_at,end_at) SELECT id,'Rollback test',now()-interval '1 day',now()+interval '1 day',now()-interval '1 day',now()+interval '1 day' FROM upt_test_ids WHERE name='event';
+INSERT INTO public.events(id,name,start_date,end_date,start_at,end_at,created_by) SELECT id,'Rollback test',now()-interval '1 day',now()+interval '1 day',now()-interval '1 day',now()+interval '1 day',(SELECT id FROM upt_test_ids WHERE name='admin') FROM upt_test_ids WHERE name='event';
 INSERT INTO public.workplaces(id,event_id,name) SELECT id,(SELECT id FROM upt_test_ids WHERE name='event'),name FROM upt_test_ids WHERE name IN ('bar','ticket');
 INSERT INTO public.event_members(event_id,user_id) SELECT (SELECT id FROM upt_test_ids WHERE name='event'),id FROM upt_test_ids WHERE name IN ('staff','lead','other','pending');
 INSERT INTO public.responsible_assignments(event_id,workplace_id,user_id) SELECT e.id,w.id,u.id FROM upt_test_ids e,upt_test_ids w,upt_test_ids u WHERE e.name='event' AND w.name='bar' AND u.name='lead';
@@ -177,7 +177,16 @@ INSERT INTO public.break_sessions(work_session_id,user_id,started_at,start_time)
 SELECT upt_private.notify_break_allowance();
 SELECT upt_private.notify_break_allowance();
 DO $$ BEGIN
- IF (SELECT count(*) FROM upt_private.break_warning_receipts WHERE user_id=(SELECT id FROM upt_test_ids WHERE name='other'))<>2 THEN RAISE EXCEPTION 'FAIL break warning deduplication'; END IF;
+ IF (SELECT count(*) FROM upt_private.break_warning_receipts WHERE user_id=(SELECT id FROM upt_test_ids WHERE name='other'))<>1
+    OR NOT EXISTS(
+      SELECT 1
+      FROM upt_private.break_warning_receipts
+      WHERE user_id=(SELECT id FROM upt_test_ids WHERE name='other')
+        AND kind='staff_55'
+    )
+ THEN
+   RAISE EXCEPTION 'FAIL break warning deduplication';
+ END IF;
 END $$;
 SELECT 'PASS: profile isolation, self-promotion denial, 10h/75min=9h45 across sessions, staff approval denial, direct clock bypass denial, QR approval gate, lead session isolation, lead check-in isolation, cross-workplace approval denial, pending read/mutation denial, anonymous RPC denial, truncate denial, idempotent replay, operation ID conflict, GPS radius/accuracy, sensitive column denial, briefing acknowledgement, event duplication without history, QR-owned work start/stop, queued break lifecycle, scheduled warning deduplication' AS result;
 ROLLBACK;

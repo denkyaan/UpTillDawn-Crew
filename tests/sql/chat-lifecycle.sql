@@ -16,12 +16,12 @@ SET approved=true,role='staff',full_name='Chat Release Staff'
 FROM chat_ids i
 WHERE p.id=i.id AND i.name='staff';
 
-INSERT INTO public.events(id,name,start_date,end_date,start_at,end_at,status)
+INSERT INTO public.events(id,name,start_date,end_date,start_at,end_at,status,created_by)
 VALUES
-((SELECT id FROM chat_ids WHERE name='future'),'Future Chat',now()+interval '1 hour',now()+interval '4 hours',now()+interval '1 hour',now()+interval '4 hours','scheduled'),
-((SELECT id FROM chat_ids WHERE name='active'),'Active Chat',now()-interval '1 hour',now()+interval '1 hour',now()-interval '1 hour',now()+interval '1 hour','active'),
-((SELECT id FROM chat_ids WHERE name='recent'),'Recent Chat',now()-interval '2 days',now()-interval '1 day',now()-interval '2 days',now()-interval '1 day','active'),
-((SELECT id FROM chat_ids WHERE name='expired'),'Expired Chat',now()-interval '6 days',now()-interval '4 days',now()-interval '6 days',now()-interval '4 days','active');
+((SELECT id FROM chat_ids WHERE name='future'),'Future Chat',now()+interval '1 hour',now()+interval '4 hours',now()+interval '1 hour',now()+interval '4 hours','scheduled',(SELECT id FROM chat_ids WHERE name='staff')),
+((SELECT id FROM chat_ids WHERE name='active'),'Active Chat',now()-interval '1 hour',now()+interval '1 hour',now()-interval '1 hour',now()+interval '1 hour','active',(SELECT id FROM chat_ids WHERE name='staff')),
+((SELECT id FROM chat_ids WHERE name='recent'),'Recent Chat',now()-interval '2 days',now()-interval '1 day',now()-interval '2 days',now()-interval '1 day','active',(SELECT id FROM chat_ids WHERE name='staff')),
+((SELECT id FROM chat_ids WHERE name='expired'),'Expired Chat',now()-interval '6 days',now()-interval '4 days',now()-interval '6 days',now()-interval '4 days','active',(SELECT id FROM chat_ids WHERE name='staff'));
 
 INSERT INTO public.event_members(event_id,user_id,event_role)
 SELECT id,(SELECT id FROM chat_ids WHERE name='staff'),'employee'

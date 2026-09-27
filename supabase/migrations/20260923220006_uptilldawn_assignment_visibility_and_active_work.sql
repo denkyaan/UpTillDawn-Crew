@@ -226,87 +226,92 @@ $$;
 revoke all on function public.upt_responsible_event_members(uuid, uuid) from public, anon;
 grant execute on function public.upt_responsible_event_members(uuid, uuid) to authenticated;
 
-drop policy if exists work_attachments_read on public.work_attachments;
-create policy work_attachments_read
-on public.work_attachments
-for select
-to authenticated
-using (
-  uploaded_by = (select auth.uid())
-  or public.upt_is_admin()
-  or (
-    briefing_id is not null
-    and exists (
-      select 1
-      from public.briefings b
-      where b.id = work_attachments.briefing_id
-        and public.upt_can_access_workplace(b.event_id, b.workplace_id)
-    )
-  )
-  or (
-    personal_instruction_id is not null
-    and exists (
-      select 1
-      from public.personal_instructions pi
-      where pi.id = work_attachments.personal_instruction_id
-        and (
-          pi.user_id = (select auth.uid())
-          or (
-            pi.workplace_id is not null
-            and public.upt_is_responsible(pi.event_id, pi.workplace_id, (select auth.uid()))
+DO $$
+BEGIN
+  IF to_regclass('public.work_attachments') IS NOT NULL THEN
+    EXECUTE 'DROP POLICY IF EXISTS work_attachments_read ON public.work_attachments';
+    EXECUTE $policy$
+      CREATE POLICY work_attachments_read
+      ON public.work_attachments
+      FOR SELECT
+      TO authenticated
+      USING (
+        uploaded_by = (select auth.uid())
+        OR public.upt_is_admin()
+        OR (
+          briefing_id IS NOT NULL
+          AND EXISTS (
+            SELECT 1 FROM public.briefings b
+            WHERE b.id = work_attachments.briefing_id
+              AND public.upt_can_access_workplace(b.event_id, b.workplace_id)
           )
         )
-        and upt_private.event_operational(pi.event_id)
-    )
-  )
-  or (
-    task_id is not null
-    and public.upt_can_read_task(task_id, (select auth.uid()))
-    and exists (
-      select 1
-      from public.tasks t
-      where t.id = work_attachments.task_id
-        and upt_private.event_operational(t.event_id)
-    )
-  )
-);
+        OR (
+          personal_instruction_id IS NOT NULL
+          AND EXISTS (
+            SELECT 1 FROM public.personal_instructions pi
+            WHERE pi.id = work_attachments.personal_instruction_id
+              AND (
+                pi.user_id = (select auth.uid())
+                OR (
+                  pi.workplace_id IS NOT NULL
+                  AND public.upt_is_responsible(pi.event_id, pi.workplace_id, (select auth.uid()))
+                )
+              )
+              AND upt_private.event_operational(pi.event_id)
+          )
+        )
+        OR (
+          task_id IS NOT NULL
+          AND public.upt_can_read_task(task_id, (select auth.uid()))
+          AND EXISTS (
+            SELECT 1 FROM public.tasks t
+            WHERE t.id = work_attachments.task_id
+              AND upt_private.event_operational(t.event_id)
+          )
+        )
+      )
+    $policy$;
 
-drop policy if exists work_attachments_insert on public.work_attachments;
-create policy work_attachments_insert
-on public.work_attachments
-for insert
-to authenticated
-with check (
-  uploaded_by = (select auth.uid())
-  and split_part(storage_path, '/', 1) = (select auth.uid())::text
-  and (
-    public.upt_is_admin()
-    or (
-      briefing_id is not null
-      and exists (
-        select 1
-        from public.briefings b
-        where b.id = work_attachments.briefing_id
-          and b.workplace_id is not null
-          and public.upt_is_responsible(b.event_id, b.workplace_id)
+    EXECUTE 'DROP POLICY IF EXISTS work_attachments_insert ON public.work_attachments';
+    EXECUTE $policy$
+      CREATE POLICY work_attachments_insert
+      ON public.work_attachments
+      FOR INSERT
+      TO authenticated
+      WITH CHECK (
+        uploaded_by = (select auth.uid())
+        AND split_part(storage_path, '/', 1) = (select auth.uid())::text
+        AND (
+          public.upt_is_admin()
+          OR (
+            briefing_id IS NOT NULL
+            AND EXISTS (
+              SELECT 1 FROM public.briefings b
+              WHERE b.id = work_attachments.briefing_id
+                AND b.workplace_id IS NOT NULL
+                AND public.upt_is_responsible(b.event_id, b.workplace_id)
+            )
+          )
+          OR (
+            personal_instruction_id IS NOT NULL
+            AND EXISTS (
+              SELECT 1 FROM public.personal_instructions pi
+              WHERE pi.id = work_attachments.personal_instruction_id
+                AND pi.workplace_id IS NOT NULL
+                AND public.upt_is_responsible(pi.event_id, pi.workplace_id)
+            )
+          )
+          OR (
+            task_id IS NOT NULL
+            AND public.upt_can_manage_task(task_id, (select auth.uid()))
+          )
+        )
       )
-    )
-    or (
-      personal_instruction_id is not null
-      and exists (
-        select 1
-        from public.personal_instructions pi
-        where pi.id = work_attachments.personal_instruction_id
-          and pi.workplace_id is not null
-          and public.upt_is_responsible(pi.event_id, pi.workplace_id)
-      )
-    )
-    or (
-      task_id is not null
-      and public.upt_can_manage_task(task_id, (select auth.uid()))
-    )
-  )
-);
+    $policy$;
+  END IF;
+END
+$$;
 
 create or replace function upt_private.require_active_event_for_operation()
 returns trigger

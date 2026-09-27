@@ -18,7 +18,7 @@ FROM guard_ids i
 WHERE p.id=i.id
   AND i.name IN ('admin','selected_lead','unselected_lead');
 
-INSERT INTO public.events(id,name,start_date,end_date,start_at,end_at,status)
+INSERT INTO public.events(id,name,start_date,end_date,start_at,end_at,status,created_by)
 VALUES(
   (SELECT id FROM guard_ids WHERE name='event'),
   'Responsible guard',
@@ -26,7 +26,8 @@ VALUES(
   now()+interval '4 hours',
   now()+interval '1 hour',
   now()+interval '4 hours',
-  'scheduled'
+  'scheduled',
+  (SELECT id FROM guard_ids WHERE name='admin')
 );
 
 INSERT INTO public.workplaces(id,event_id,name)

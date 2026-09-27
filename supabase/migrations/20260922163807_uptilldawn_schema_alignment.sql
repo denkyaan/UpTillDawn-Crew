@@ -3,10 +3,77 @@
 -- Existing data is preserved.
 
 -- ============================================================
+-- CANONICAL PROFILES BOOTSTRAP
+-- ============================================================
+
+-- Some historical installations already had public.profiles outside the
+-- checked-in migration chain. A fresh install must be able to create the
+-- canonical Crew profile surface before later alignment statements reference it.
+CREATE TABLE IF NOT EXISTS public.profiles (
+  id UUID PRIMARY KEY REFERENCES auth.users(id) ON DELETE CASCADE,
+  updated_at TIMESTAMPTZ,
+  full_name TEXT,
+  home_address TEXT,
+  phone_number TEXT,
+  date_of_birth DATE,
+  national_register_number TEXT,
+  iban TEXT,
+  profile_photo_url TEXT,
+  approved BOOLEAN NOT NULL DEFAULT false,
+  role TEXT NOT NULL DEFAULT 'staff'
+    CHECK (role IN ('staff', 'responsible_lead', 'admin'))
+);
+
+-- Preserve data when upgrading an installation that only has the legacy
+-- StaffPortal profile table. Existing canonical profile rows are never replaced.
+INSERT INTO public.profiles (
+  id,
+  updated_at,
+  full_name,
+  home_address,
+  phone_number,
+  date_of_birth,
+  national_register_number,
+  iban,
+  profile_photo_url,
+  approved,
+  role
+)
+SELECT
+  up.id,
+  up.updated_at,
+  up.full_name,
+  up.address,
+  up.phone,
+  up.date_of_birth,
+  up.national_register_number,
+  up.iban,
+  up.avatar_url,
+  (up.account_status = 'approved'::account_status),
+  CASE
+    WHEN EXISTS (
+      SELECT 1
+      FROM public.user_roles ur
+      WHERE ur.user_id = up.id
+        AND ur.role = 'admin'::user_role
+    ) THEN 'admin'
+    ELSE 'staff'
+  END
+FROM public.user_profiles up
+ON CONFLICT (id) DO NOTHING;
+
+ALTER TABLE public.profiles ENABLE ROW LEVEL SECURITY;
+
+-- ============================================================
 -- EVENTS
 -- ============================================================
 
 ALTER TABLE public.events
+  ADD COLUMN IF NOT EXISTS start_date TIMESTAMPTZ,
+  ADD COLUMN IF NOT EXISTS end_date TIMESTAMPTZ,
+  ADD COLUMN IF NOT EXISTS location TEXT,
+  ADD COLUMN IF NOT EXISTS gps_coordinates POINT,
+  ADD COLUMN IF NOT EXISTS image_url TEXT,
   ADD COLUMN IF NOT EXISTS venue TEXT,
   ADD COLUMN IF NOT EXISTS address TEXT,
   ADD COLUMN IF NOT EXISTS latitude NUMERIC(9,6),
@@ -19,6 +86,12 @@ ALTER TABLE public.events
   ADD COLUMN IF NOT EXISTS created_by UUID REFERENCES public.profiles(id) ON DELETE SET NULL,
   ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ NOT NULL DEFAULT now();
 
+-- Production exposes event status as text. Historical clean installs may
+-- still carry the old event_status enum, so converge before later policies/RPCs.
+ALTER TABLE public.events ALTER COLUMN status DROP DEFAULT;
+ALTER TABLE public.events ALTER COLUMN status TYPE TEXT USING status::text;
+ALTER TABLE public.events ALTER COLUMN status SET DEFAULT 'draft';
+
 DO $$
 BEGIN
   IF EXISTS (
@@ -30,8 +103,9 @@ BEGIN
   ) THEN
     EXECUTE '
       UPDATE public.events
-      SET start_at = COALESCE(start_at, start_date)
-      WHERE start_at IS NULL
+      SET start_at = COALESCE(start_at, start_date),
+          start_date = COALESCE(start_date, start_at)
+      WHERE start_at IS NULL OR start_date IS NULL
     ';
   END IF;
 
@@ -44,8 +118,9 @@ BEGIN
   ) THEN
     EXECUTE '
       UPDATE public.events
-      SET end_at = COALESCE(end_at, end_date)
-      WHERE end_at IS NULL
+      SET end_at = COALESCE(end_at, end_date),
+          end_date = COALESCE(end_date, end_at)
+      WHERE end_at IS NULL OR end_date IS NULL
     ';
   END IF;
 
@@ -58,8 +133,9 @@ BEGIN
   ) THEN
     EXECUTE '
       UPDATE public.events
-      SET venue = COALESCE(venue, location)
-      WHERE venue IS NULL
+      SET venue = COALESCE(venue, location),
+          location = COALESCE(location, venue)
+      WHERE venue IS NULL OR location IS NULL
     ';
   END IF;
 END
@@ -67,7 +143,9 @@ $$;
 
 ALTER TABLE public.events
   ALTER COLUMN start_at SET NOT NULL,
-  ALTER COLUMN end_at SET NOT NULL;
+  ALTER COLUMN end_at SET NOT NULL,
+  ALTER COLUMN start_date SET NOT NULL,
+  ALTER COLUMN end_date SET NOT NULL;
 
 -- ============================================================
 -- WORKPLACES
@@ -122,6 +200,8 @@ ON public.responsible_assignments(event_id, workplace_id, user_id);
 -- ============================================================
 
 ALTER TABLE public.shifts
+  ADD COLUMN IF NOT EXISTS start_time TIMESTAMPTZ,
+  ADD COLUMN IF NOT EXISTS end_time TIMESTAMPTZ,
   ADD COLUMN IF NOT EXISTS role_name TEXT,
   ADD COLUMN IF NOT EXISTS responsible_lead_id UUID REFERENCES public.profiles(id) ON DELETE SET NULL,
   ADD COLUMN IF NOT EXISTS scheduled_start TIMESTAMPTZ,
@@ -130,6 +210,43 @@ ALTER TABLE public.shifts
   ADD COLUMN IF NOT EXISTS overlap_allowed BOOLEAN NOT NULL DEFAULT false,
   ADD COLUMN IF NOT EXISTS notes TEXT,
   ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ NOT NULL DEFAULT now();
+
+-- Production exposes shift status as text. Historical clean installs may
+-- still carry the old shift_status enum. The legacy overlap trigger references
+-- status, so detach it while changing the column type and recreate it afterward.
+DROP TRIGGER IF EXISTS trg_prevent_shift_overlap ON public.shifts;
+
+ALTER TABLE public.shifts ALTER COLUMN status DROP DEFAULT;
+ALTER TABLE public.shifts ALTER COLUMN status TYPE TEXT USING status::text;
+ALTER TABLE public.shifts ALTER COLUMN status SET DEFAULT 'scheduled';
+
+CREATE OR REPLACE FUNCTION public.prevent_shift_overlap()
+RETURNS trigger
+LANGUAGE plpgsql
+SET search_path = public
+AS $$
+BEGIN
+  IF NEW.overlap_allowed = false AND EXISTS (
+    SELECT 1
+    FROM public.shifts s
+    WHERE s.user_id = NEW.user_id
+      AND s.id <> NEW.id
+      AND s.status <> 'cancelled'
+      AND s.overlap_allowed = false
+      AND tstzrange(s.scheduled_start,s.scheduled_end,'[)')
+          && tstzrange(NEW.scheduled_start,NEW.scheduled_end,'[)')
+  ) THEN
+    RAISE EXCEPTION 'Shift overlaps an existing assignment';
+  END IF;
+  RETURN NEW;
+END
+$$;
+
+CREATE TRIGGER trg_prevent_shift_overlap
+BEFORE INSERT OR UPDATE OF user_id,scheduled_start,scheduled_end,overlap_allowed,status
+ON public.shifts
+FOR EACH ROW
+EXECUTE FUNCTION public.prevent_shift_overlap();
 
 DO $$
 BEGIN
@@ -160,8 +277,9 @@ BEGIN
   ) THEN
     EXECUTE '
       UPDATE public.shifts
-      SET scheduled_start = COALESCE(scheduled_start, start_time)
-      WHERE scheduled_start IS NULL
+      SET scheduled_start = COALESCE(scheduled_start, start_time),
+          start_time = COALESCE(start_time, scheduled_start)
+      WHERE scheduled_start IS NULL OR start_time IS NULL
     ';
   END IF;
 
@@ -174,8 +292,9 @@ BEGIN
   ) THEN
     EXECUTE '
       UPDATE public.shifts
-      SET scheduled_end = COALESCE(scheduled_end, end_time)
-      WHERE scheduled_end IS NULL
+      SET scheduled_end = COALESCE(scheduled_end, end_time),
+          end_time = COALESCE(end_time, scheduled_end)
+      WHERE scheduled_end IS NULL OR end_time IS NULL
     ';
   END IF;
 END
@@ -185,7 +304,9 @@ ALTER TABLE public.shifts
   ALTER COLUMN role_name SET DEFAULT 'Crew',
   ALTER COLUMN role_name SET NOT NULL,
   ALTER COLUMN scheduled_start SET NOT NULL,
-  ALTER COLUMN scheduled_end SET NOT NULL;
+  ALTER COLUMN scheduled_end SET NOT NULL,
+  ALTER COLUMN start_time SET NOT NULL,
+  ALTER COLUMN end_time SET NOT NULL;
 
 CREATE INDEX IF NOT EXISTS
   idx_shifts_user_time
@@ -276,6 +397,12 @@ ALTER TABLE public.check_ins
   ALTER COLUMN requested_at SET DEFAULT now(),
   ALTER COLUMN requested_at SET NOT NULL;
 
+-- The current QR flow records remote/contact-confirmed routing separately and
+-- does not require a selfie path. Production no longer carries this legacy
+-- pre-QR constraint, so remove it during canonical convergence.
+ALTER TABLE public.check_ins
+  DROP CONSTRAINT IF EXISTS check_ins_remote_selfie_required;
+
 CREATE INDEX IF NOT EXISTS
   idx_checkins_event_user
 ON public.check_ins(event_id, user_id);
@@ -301,6 +428,8 @@ CREATE TABLE IF NOT EXISTS public.check_outs (
 
 ALTER TABLE public.work_sessions
   ADD COLUMN IF NOT EXISTS shift_id UUID REFERENCES public.shifts(id) ON DELETE SET NULL,
+  ADD COLUMN IF NOT EXISTS start_time TIMESTAMPTZ,
+  ADD COLUMN IF NOT EXISTS end_time TIMESTAMPTZ,
   ADD COLUMN IF NOT EXISTS started_at TIMESTAMPTZ,
   ADD COLUMN IF NOT EXISTS ended_at TIMESTAMPTZ,
   ADD COLUMN IF NOT EXISTS status TEXT NOT NULL DEFAULT 'active',
@@ -337,6 +466,13 @@ BEGIN
   END IF;
 
   UPDATE public.work_sessions
+  SET
+    start_time = COALESCE(start_time, started_at),
+    end_time = COALESCE(end_time, ended_at),
+    started_at = COALESCE(started_at, start_time),
+    ended_at = COALESCE(ended_at, end_time);
+
+  UPDATE public.work_sessions
   SET status = 'active'
   WHERE ended_at IS NULL;
 
@@ -348,7 +484,8 @@ $$;
 
 ALTER TABLE public.work_sessions
   ALTER COLUMN started_at SET DEFAULT now(),
-  ALTER COLUMN started_at SET NOT NULL;
+  ALTER COLUMN started_at SET NOT NULL,
+  ALTER COLUMN start_time SET NOT NULL;
 
 CREATE UNIQUE INDEX IF NOT EXISTS
   one_active_work_session
@@ -365,6 +502,8 @@ ON public.work_sessions(event_id, user_id);
 
 ALTER TABLE public.break_sessions
   ADD COLUMN IF NOT EXISTS user_id UUID REFERENCES public.profiles(id) ON DELETE CASCADE,
+  ADD COLUMN IF NOT EXISTS start_time TIMESTAMPTZ,
+  ADD COLUMN IF NOT EXISTS end_time TIMESTAMPTZ,
   ADD COLUMN IF NOT EXISTS started_at TIMESTAMPTZ,
   ADD COLUMN IF NOT EXISTS ended_at TIMESTAMPTZ,
   ADD COLUMN IF NOT EXISTS created_at TIMESTAMPTZ NOT NULL DEFAULT now();
@@ -402,13 +541,21 @@ BEGIN
       WHERE ended_at IS NULL
     ';
   END IF;
+
+  UPDATE public.break_sessions
+  SET
+    start_time = COALESCE(start_time, started_at),
+    end_time = COALESCE(end_time, ended_at),
+    started_at = COALESCE(started_at, start_time),
+    ended_at = COALESCE(ended_at, end_time);
 END
 $$;
 
 ALTER TABLE public.break_sessions
   ALTER COLUMN user_id SET NOT NULL,
   ALTER COLUMN started_at SET DEFAULT now(),
-  ALTER COLUMN started_at SET NOT NULL;
+  ALTER COLUMN started_at SET NOT NULL,
+  ALTER COLUMN start_time SET NOT NULL;
 
 CREATE UNIQUE INDEX IF NOT EXISTS
   one_active_break
@@ -543,26 +690,23 @@ ON public.messages(channel_id, created_at);
 
 -- Align existing message attachments.
 ALTER TABLE public.message_attachments
+  ADD COLUMN IF NOT EXISTS file_url TEXT,
   ADD COLUMN IF NOT EXISTS storage_path TEXT,
   ADD COLUMN IF NOT EXISTS mime_type TEXT,
   ADD COLUMN IF NOT EXISTS created_at TIMESTAMPTZ NOT NULL DEFAULT now();
 
 DO $$
 BEGIN
-  IF EXISTS (
-    SELECT 1 FROM information_schema.columns
-    WHERE table_schema = 'public'
-      AND table_name = 'message_attachments'
-      AND column_name = 'file_url'
-  ) THEN
-    EXECUTE '
-      UPDATE public.message_attachments
-      SET storage_path = COALESCE(storage_path, file_url)
-      WHERE storage_path IS NULL
-    ';
-  END IF;
+  UPDATE public.message_attachments
+  SET
+    file_url = COALESCE(file_url, storage_path),
+    storage_path = COALESCE(storage_path, file_url);
 END
 $$;
+
+ALTER TABLE public.message_attachments
+  ALTER COLUMN file_url SET NOT NULL,
+  ALTER COLUMN storage_path DROP NOT NULL;
 
 -- ============================================================
 -- NOTIFICATIONS
@@ -1622,3 +1766,143 @@ WITH CHECK (
   OR public.upt_is_responsible(event_id, workplace_id)
 );
 
+
+
+-- ============================================================
+-- CANONICAL PROFILE FOREIGN KEY CONVERGENCE
+-- ============================================================
+-- Historical Crew tables were originally created against the StaffPortal
+-- user_profiles table. Production uses public.profiles for the active Crew
+-- model. Rebuild those legacy foreign keys so clean installs converge with
+-- production while leaving unrelated StaffPortal tables untouched.
+
+ALTER TABLE public.events
+  ALTER COLUMN created_by DROP NOT NULL;
+
+DO $$
+DECLARE
+  fk record;
+  delete_clause text;
+BEGIN
+  FOR fk IN
+    SELECT *
+    FROM (VALUES
+      ('events','events_created_by_fkey','created_by','SET NULL'),
+      ('event_members','event_members_user_id_fkey','user_id','CASCADE'),
+      ('responsible_assignments','responsible_assignments_user_id_fkey','user_id','CASCADE'),
+      ('responsible_assignments','responsible_assignments_assigned_by_fkey','assigned_by','SET NULL'),
+      ('shifts','shifts_user_id_fkey','user_id','CASCADE'),
+      ('shifts','shifts_responsible_lead_id_fkey','responsible_lead_id','SET NULL'),
+      ('incidents','incidents_reporter_id_fkey','reporter_id','RESTRICT'),
+      ('incidents','incidents_responsible_lead_id_fkey','responsible_lead_id','SET NULL'),
+      ('incidents','incidents_acknowledged_by_fkey','acknowledged_by','SET NULL'),
+      ('incidents','incidents_resolved_by_fkey','resolved_by','NO ACTION'),
+      ('briefings','briefings_created_by_fkey','created_by','SET NULL'),
+      ('briefing_acknowledgements','briefing_acknowledgements_user_id_fkey','user_id','CASCADE'),
+      ('tasks','tasks_assigned_user_id_fkey','assigned_user_id','SET NULL'),
+      ('tasks','tasks_created_by_fkey','created_by','SET NULL'),
+      ('tasks','tasks_completed_by_fkey','completed_by','SET NULL'),
+      ('check_ins','check_ins_user_id_fkey','user_id','CASCADE'),
+      ('check_ins','check_ins_decided_by_fkey','decided_by','SET NULL'),
+      ('check_outs','check_outs_user_id_fkey','user_id','CASCADE'),
+      ('check_outs','check_outs_decided_by_fkey','decided_by','SET NULL'),
+      ('work_sessions','work_sessions_user_id_fkey','user_id','CASCADE'),
+      ('break_sessions','break_sessions_user_id_fkey','user_id','CASCADE'),
+      ('workplace_transitions','workplace_transitions_user_id_fkey','user_id','CASCADE'),
+      ('chat_members','chat_members_user_id_fkey','user_id','CASCADE'),
+      ('messages','messages_sender_id_fkey','sender_id','RESTRICT'),
+      ('messages','messages_moderated_by_fkey','moderated_by','SET NULL'),
+      ('crew_notifications','crew_notifications_user_id_fkey','user_id','CASCADE'),
+      ('upt_audit_logs','upt_audit_logs_actor_id_fkey','actor_id','SET NULL'),
+      ('offline_operation_records','offline_operation_records_user_id_fkey','user_id','CASCADE'),
+      ('event_templates','event_templates_created_by_fkey','created_by','SET NULL')
+    ) AS v(table_name,constraint_name,column_name,on_delete)
+  LOOP
+    IF EXISTS (
+      SELECT 1
+      FROM information_schema.columns
+      WHERE table_schema='public'
+        AND table_name=fk.table_name
+        AND column_name=fk.column_name
+    ) THEN
+      EXECUTE format(
+        'ALTER TABLE public.%I DROP CONSTRAINT IF EXISTS %I',
+        fk.table_name,
+        fk.constraint_name
+      );
+
+      delete_clause := CASE fk.on_delete
+        WHEN 'NO ACTION' THEN ''
+        ELSE ' ON DELETE ' || fk.on_delete
+      END;
+
+      EXECUTE format(
+        'ALTER TABLE public.%I ADD CONSTRAINT %I FOREIGN KEY (%I) REFERENCES public.profiles(id)%s',
+        fk.table_name,
+        fk.constraint_name,
+        fk.column_name,
+        delete_clause
+      );
+    END IF;
+  END LOOP;
+END
+$$;
+
+
+-- ============================================================
+-- CANONICAL STATUS TYPE CONVERGENCE
+-- ============================================================
+-- Historical clean installs created these Crew columns with enums. Production
+-- exposes them as text, so convert them before later workflow migrations run.
+
+-- Drop enum-bound consistency checks before converting approval_status to TEXT.
+-- They are recreated immediately after conversion with identical semantics.
+ALTER TABLE public.check_ins
+  DROP CONSTRAINT IF EXISTS check_ins_decision_consistent;
+ALTER TABLE public.check_outs
+  DROP CONSTRAINT IF EXISTS check_outs_decision_consistent;
+
+ALTER TABLE public.incidents ALTER COLUMN status DROP DEFAULT;
+ALTER TABLE public.incidents ALTER COLUMN status TYPE TEXT USING status::text;
+ALTER TABLE public.incidents ALTER COLUMN status SET DEFAULT 'open';
+
+ALTER TABLE public.tasks ALTER COLUMN status DROP DEFAULT;
+ALTER TABLE public.tasks ALTER COLUMN status TYPE TEXT USING status::text;
+ALTER TABLE public.tasks ALTER COLUMN status SET DEFAULT 'not_started';
+
+ALTER TABLE public.check_ins ALTER COLUMN status DROP DEFAULT;
+ALTER TABLE public.check_ins ALTER COLUMN status TYPE TEXT USING status::text;
+ALTER TABLE public.check_ins ALTER COLUMN status SET DEFAULT 'pending';
+ALTER TABLE public.check_ins ALTER COLUMN gps_status DROP DEFAULT;
+ALTER TABLE public.check_ins ALTER COLUMN gps_status TYPE TEXT USING gps_status::text;
+ALTER TABLE public.check_ins ALTER COLUMN gps_status SET DEFAULT 'not_checked';
+
+ALTER TABLE public.check_outs ALTER COLUMN status DROP DEFAULT;
+ALTER TABLE public.check_outs ALTER COLUMN status TYPE TEXT USING status::text;
+ALTER TABLE public.check_outs ALTER COLUMN status SET DEFAULT 'pending';
+
+ALTER TABLE public.check_ins
+  ADD CONSTRAINT check_ins_decision_consistent CHECK (
+    (status='pending' AND decided_at IS NULL AND decided_by IS NULL) OR
+    (status IN ('approved','rejected','cancelled') AND decided_at IS NOT NULL AND decided_by IS NOT NULL)
+  );
+
+ALTER TABLE public.check_outs
+  ADD CONSTRAINT check_outs_decision_consistent CHECK (
+    (status='pending' AND decided_at IS NULL AND decided_by IS NULL) OR
+    (status IN ('approved','rejected','cancelled') AND decided_at IS NOT NULL AND decided_by IS NOT NULL)
+  );
+
+ALTER TABLE public.work_sessions ALTER COLUMN status DROP DEFAULT;
+ALTER TABLE public.work_sessions ALTER COLUMN status TYPE TEXT USING status::text;
+ALTER TABLE public.work_sessions ALTER COLUMN status SET DEFAULT 'active';
+ALTER TABLE public.work_sessions ALTER COLUMN start_gps_status DROP DEFAULT;
+ALTER TABLE public.work_sessions ALTER COLUMN start_gps_status TYPE TEXT USING start_gps_status::text;
+ALTER TABLE public.work_sessions ALTER COLUMN start_gps_status SET DEFAULT 'not_checked';
+ALTER TABLE public.work_sessions ALTER COLUMN stop_gps_status DROP DEFAULT;
+ALTER TABLE public.work_sessions ALTER COLUMN stop_gps_status TYPE TEXT USING stop_gps_status::text;
+ALTER TABLE public.work_sessions ALTER COLUMN stop_gps_status SET DEFAULT 'not_checked';
+
+ALTER TABLE public.offline_operation_records ALTER COLUMN status DROP DEFAULT;
+ALTER TABLE public.offline_operation_records ALTER COLUMN status TYPE TEXT USING status::text;
+ALTER TABLE public.offline_operation_records ALTER COLUMN status SET DEFAULT 'pending';

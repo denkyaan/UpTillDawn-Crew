@@ -1,5 +1,5 @@
 -- Responsible leads are elevated only from one hour before their assigned event
--- until the event ends. Outside that window they resolve to employee.
+-- until the event ends. Outside that window they resolve to the canonical staff role.
 create or replace function public.upt_effective_role(uid uuid default auth.uid())
 returns text
 language sql
@@ -26,12 +26,12 @@ as $$
       where ra.user_id = uid
         and now() >= e.start_at - interval '1 hour'
         and now() <= e.end_at
-        and coalesce(e.status, '') <> 'archived'
+        and e.status <> 'archived'
     ) then 'responsible_lead'
     when exists (
       select 1 from public.profiles p
       where p.id = uid and p.approved = true
-    ) then 'employee'
+    ) then 'staff'
     else null
   end;
 $$;

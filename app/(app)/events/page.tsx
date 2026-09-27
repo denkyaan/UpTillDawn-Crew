@@ -4,6 +4,8 @@ import { AdminOnly } from '@/components/auth/admin-only'
 import { GeoapifyPlaceFields } from '@/components/events/geoapify-place-fields'
 import { FacebookEventField } from '@/components/events/facebook-event-field'
 import { DeleteEventButton } from '@/components/events/delete-event-button'
+import { EmergencyInformationPanel } from '@/components/crew/emergency-information-panel'
+import { EventDocumentsPanel } from '@/components/crew/event-documents-panel'
 import { nlStatus } from '@/lib/ui-nl'
 import { createClient } from '@/lib/supabase/crew-server'
 import { getCurrentUser } from '@/lib/actions/auth'
@@ -24,13 +26,14 @@ export default async function Page(){
   const user=await getCurrentUser()
   if(!user)return null
 
-  const [eventsResult,membershipResult,shiftResult,startedResult,availabilityResult,responsibleResult]=await Promise.all([
+  const [eventsResult,membershipResult,shiftResult,startedResult,availabilityResult,responsibleResult,emergencyResult]=await Promise.all([
     s.from('events').select('id,name,venue,address,start_at,end_at,status,latitude,longitude,checkin_radius_m').order('start_at'),
     s.from('event_members').select('event_id,user_id'),
-    s.from('shifts').select('event_id').eq('user_id',user.id).neq('status','cancelled'),
+    s.from('shifts').select('event_id,workplace_id,workplaces(name)').eq('user_id',user.id).neq('status','cancelled').neq('response_status','declined'),
     s.from('events').select('id').lte('start_at','now'),
     s.from('event_availability').select('event_id,user_id,response,setup_available,breakdown_available,updated_at'),
-    s.from('responsible_assignments').select('event_id').eq('user_id',user.id),
+    s.from('responsible_assignments').select('event_id,workplace_id,workplaces(name,is_active)').eq('user_id',user.id),
+    s.from('event_emergency_information').select('*'),
   ])
   const peopleResult=user.isAdmin
     ? await s.from('profiles').select('id,full_name').eq('approved',true).order('full_name')
@@ -66,6 +69,7 @@ export default async function Page(){
       })
   const memberKeys=new Set(memberships.map(row=>`${row.event_id}:${row.user_id}`))
   const peopleById=new Map(people.map(person=>[person.id,person]))
+  const emergencyByEvent=new Map((emergencyResult.data||[]).map(row=>[row.event_id,row]))
 
   return <main className="space-y-6 p-4 md:p-8">
     <h1 className="text-3xl font-black">Evenementen</h1>
@@ -97,6 +101,23 @@ export default async function Page(){
       const myResponse=myAvailability?.response
       const canRows=user.isAdmin?availability.filter(row=>row.event_id===event.id&&(row.response==='can'||row.setup_available===true||row.breakdown_available===true)):[]
       const eventWorkplaces=user.isAdmin?workplaces.filter(workplace=>workplace.event_id===event.id&&workplace.is_active):[]
+      const responsibleWorkplaces=user.role==='responsible_lead'
+        ? (responsibleResult.data||[])
+            .filter(row=>row.event_id===event.id&&row.workplaces?.is_active!==false)
+            .map(row=>({id:row.workplace_id,label:row.workplaces?.name||'Werkplek'}))
+        : []
+      const staffWorkplaces=user.role==='staff'
+        ? (shiftResult.data||[])
+            .filter(row=>row.event_id===event.id&&row.workplace_id)
+            .map(row=>({id:row.workplace_id,label:row.workplaces?.name||'Werkplek'}))
+        : []
+      const rawDocumentWorkplaces=user.isAdmin
+        ? eventWorkplaces.map(workplace=>({id:workplace.id,label:workplace.name}))
+        : user.role==='responsible_lead'
+          ? responsibleWorkplaces
+          : staffWorkplaces
+      const documentWorkplaceOptions=[...new Map(rawDocumentWorkplaces.map(item=>[item.id,item])).values()]
+      const canManageDocuments=user.isAdmin||(user.role==='responsible_lead'&&responsibleWorkplaces.length>0)
       const chatUntil=new Date(new Date(event.end_at).getTime()+3*24*60*60*1000)
       const assigned=assignedEventIds.has(event.id)
       return <details key={event.id} className="rounded-2xl border bg-card">
@@ -113,6 +134,29 @@ export default async function Page(){
         </summary>
 
         <div className="space-y-4 border-t p-4">
+          <EmergencyInformationPanel
+            compact
+            canEdit={user.isAdmin}
+            info={{
+              eventId:event.id,
+              eventName:event.name,
+              eventAddress:event.address||'',
+              emergencyNumber:emergencyByEvent.get(event.id)?.emergency_number||'',
+              firstAidContact:emergencyByEvent.get(event.id)?.first_aid_contact||null,
+              securityContact:emergencyByEvent.get(event.id)?.security_contact||null,
+              assemblyPoint:emergencyByEvent.get(event.id)?.assembly_point||null,
+              procedure:emergencyByEvent.get(event.id)?.procedure||null,
+              updatedAt:emergencyByEvent.get(event.id)?.updated_at||null,
+            }}
+          />
+
+          <EventDocumentsPanel
+            eventId={event.id}
+            canManage={canManageDocuments}
+            allowEventWide={user.isAdmin}
+            workplaceOptions={documentWorkplaceOptions}
+          />
+
           {!started&&event.status!=='archived'&&<section className="space-y-3">
             <p className="font-semibold">Beschikbaarheid bevestigen</p>
             <form action={setEventAvailability} className="grid gap-3 rounded-xl border p-3 md:grid-cols-3">

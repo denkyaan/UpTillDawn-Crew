@@ -2,7 +2,8 @@ import { createClient } from '@/lib/supabase/crew-server'
 import { getCurrentUser } from '@/lib/actions/auth'
 import { redirect } from 'next/navigation'
 import OperationsClient from './operations-client'
-import type { Tables } from '@/types/crew-database'
+import type { Tables, Database } from '@/types/crew-database'
+import { ShiftHandoverPanel, type HandoverCandidate, type HandoverScope, type HandoverView } from '@/components/responsible/shift-handover-panel'
 
 export const dynamic='force-dynamic'
 
@@ -13,7 +14,8 @@ export default async function Page(){
 
   const role=current.role
   const isAdmin=role==='admin'
-  const manager=isAdmin||role==='responsible_lead'
+  const isResponsible=role==='responsible_lead'
+  const manager=isAdmin||isResponsible
   const nowDate=new Date()
   const now=nowDate.toISOString()
   const startWindowEnd=new Date(nowDate.getTime()+60*60*1000).toISOString()
@@ -103,32 +105,99 @@ export default async function Page(){
     ? await s.rpc('upt_work_session_time_summary',{p_work_session:session.data.id})
     : null
 
-  const timeReviews=isAdmin
-    ? await s.from('time_review_requests').select('*').eq('status','pending').order('created_at')
-    : {data:[],error:null}
+  const [timeReviews,operationalAlerts]=await Promise.all([
+    isAdmin
+      ? s.from('time_review_requests').select('*').eq('status','pending').order('created_at')
+      : Promise.resolve({data:[],error:null}),
+    manager
+      ? s.rpc('upt_operational_alerts')
+      : Promise.resolve({data:[],error:null}),
+  ])
 
-  if(timeReviews.error){
-    return <main className="p-8">Tijdcorrecties konden niet worden geladen. Probeer opnieuw.</main>
+  if(timeReviews.error||operationalAlerts.error){
+    return <main className="p-8">Operationele controles konden niet worden geladen. Probeer opnieuw.</main>
   }
 
-  let liveSessions:Tables<'work_sessions'>[]=[]
+  type ManagerLiveSession=Database['public']['Functions']['upt_manager_live_sessions']['Returns'][number]
+  let handoverScopes:HandoverScope[]=[]
+  let handoverCandidates:HandoverCandidate[]=[]
+  let handovers:HandoverView[]=[]
+
+  if(isResponsible){
+    handoverScopes=responsibleScope.map(scope=>({
+      eventId:scope.event_id,
+      eventName:operationalEvents.find(event=>event.id===scope.event_id)?.name||'Evenement',
+      workplaceId:scope.workplace_id,
+      workplaceName:scopedWorkplaces.find(workplace=>workplace.id===scope.workplace_id)?.name||'Werkplek',
+    }))
+
+    const [handoverResult,snapshotResult,candidateResults]=await Promise.all([
+      s.rpc('upt_shift_handovers'),
+      s.rpc('upt_shift_handover_inventory_snapshots'),
+      Promise.all(responsibleScope.map(scope=>
+        s.rpc('upt_handover_candidates',{p_event:scope.event_id,p_workplace:scope.workplace_id})
+      )),
+    ])
+
+    if(handoverResult.error||snapshotResult.error||candidateResults.some(result=>result.error)){
+      return <main className="p-8">Shift overdrachten konden niet worden geladen. Probeer opnieuw.</main>
+    }
+
+    const inventorySnapshots=new Map((snapshotResult.data||[]).map(row=>[row.handover_id,row.inventory_snapshot]))
+    handovers=(handoverResult.data||[])
+      .filter(row=>operationalEventIds.includes(row.event_id))
+      .map(row=>({
+        id:row.id,
+        eventId:row.event_id,
+        workplaceId:row.workplace_id,
+        outgoingResponsibleId:row.outgoing_responsible_id,
+        outgoingName:row.outgoing_name||'Verantwoordelijke',
+        incomingResponsibleId:row.incoming_responsible_id||null,
+        incomingName:row.incoming_name||null,
+        status:row.status==='accepted'?'accepted':row.status==='ready'?'ready':'draft',
+        openTaskIds:row.open_task_ids||[],
+        openIncidentIds:row.open_incident_ids||[],
+        equipmentNotes:row.equipment_notes||null,
+        notes:row.notes||null,
+        createdAt:row.created_at,
+        updatedAt:row.updated_at,
+        readyAt:row.ready_at||null,
+        acceptedAt:row.accepted_at||null,
+        inventorySnapshot:inventorySnapshots.get(row.id)||null,
+      }))
+
+    handoverCandidates=candidateResults.flatMap((result,index)=>{
+      const scope=responsibleScope[index]
+      return (result.data||[]).map(candidate=>({
+        eventId:scope.event_id,
+        workplaceId:scope.workplace_id,
+        userId:candidate.user_id,
+        fullName:candidate.full_name||'Verantwoordelijke',
+      }))
+    })
+  }
+
+  let liveSessions:ManagerLiveSession[]=[]
   let liveBreaks:Tables<'break_sessions'>[]=[]
-  let liveShifts:Tables<'shifts'>[]=[]
   let crewDirectory:Array<{id:string;full_name:string|null;phone_number:string|null;profile_photo_url:string|null}>=[]
 
   if(manager){
-    const [sessionsResult,breaksResult,liveShiftsResult]=await Promise.all([
-      s.from('work_sessions').select('*').in('event_id',operationalEventIds).is('ended_at',null).order('started_at'),
-      s.from('break_sessions').select('*').is('ended_at',null).order('started_at'),
-      s.from('shifts').select('*').in('event_id',operationalEventIds).neq('status','cancelled'),
-    ])
-    liveShifts=isAdmin
-      ? (liveShiftsResult.data||[])
-      : (liveShiftsResult.data||[]).filter(shift=>scopedWorkplaceIds.has(shift.workplace_id))
-    const liveShiftIds=new Set(liveShifts.map(shift=>shift.id))
-    liveSessions=(sessionsResult.data||[]).filter(ws=>Boolean(ws.shift_id&&liveShiftIds.has(ws.shift_id)))
-    const liveSessionIds=new Set(liveSessions.map(ws=>ws.id))
-    liveBreaks=(breaksResult.data||[]).filter(row=>liveSessionIds.has(row.work_session_id))
+    const liveResult=await s.rpc('upt_manager_live_sessions')
+    if(liveResult.error){
+      return <main className="p-8">Live personeelstatus kon niet worden geladen. Probeer opnieuw.</main>
+    }
+    liveSessions=(liveResult.data||[]).filter(row=>operationalEventIds.includes(row.event_id))
+    const liveSessionIds=liveSessions.map(row=>row.session_id)
+    if(liveSessionIds.length){
+      const breaksResult=await s.from('break_sessions')
+        .select('*')
+        .in('work_session_id',liveSessionIds)
+        .order('started_at')
+      if(breaksResult.error){
+        return <main className="p-8">Live pauzestatus kon niet worden geladen. Probeer opnieuw.</main>
+      }
+      liveBreaks=breaksResult.data||[]
+    }
 
     if(isAdmin){
       const {data}=await s.from('profiles').select('id,full_name,phone_number,profile_photo_url').eq('approved',true)
@@ -143,7 +212,16 @@ export default async function Page(){
     }
   }
 
-  return <OperationsClient
+  return <>
+    {isResponsible&&handoverScopes.length>0&&<div className="mx-auto max-w-4xl px-4 pt-4 md:px-8 md:pt-8">
+      <ShiftHandoverPanel
+        userId={current.id}
+        scopes={handoverScopes}
+        candidates={handoverCandidates}
+        handovers={handovers}
+      />
+    </div>}
+    <OperationsClient
     userId={current.id}
     shifts={shifts.data||[]}
     events={operationalEvents}
@@ -159,8 +237,9 @@ export default async function Page(){
     summaryAsOf={nowDate.getTime()}
     liveSessions={liveSessions}
     liveBreaks={liveBreaks}
-    liveShifts={liveShifts}
     crewDirectory={crewDirectory}
     timeReviews={timeReviews.data||[]}
+    operationalAlerts={operationalAlerts.data||[]}
   />
+  </>
 }
