@@ -9,6 +9,8 @@ export type SecurityLoginEmail = {
   approximateLocation?: string | null
   userAgent?: string | null
   reason?: string | null
+  recipient?: string | null
+  audience?: 'security' | 'account'
 }
 
 function escapeHtml(value: string) {
@@ -54,7 +56,7 @@ export async function sendSecurityLoginEmail(event: SecurityLoginEmail): Promise
     return false
   }
 
-  const recipient = process.env.SECURITY_ALERT_EMAIL || 'steegmanskyani@gmail.com'
+  const recipient = event.recipient || process.env.SECURITY_ALERT_EMAIL || 'steegmanskyani@gmail.com'
   const from = process.env.SECURITY_FROM_EMAIL || 'UpTillDawn Security <onboarding@resend.dev>'
   const now = new Date()
   const timestamp = new Intl.DateTimeFormat('nl-BE', {
@@ -71,9 +73,10 @@ export async function sendSecurityLoginEmail(event: SecurityLoginEmail): Promise
   const agent = event.userAgent || 'onbekend'
   const { device, browser } = describeDevice(event.userAgent)
   const reason = event.reason || '—'
+  const isAccountNotice = event.audience === 'account'
 
   const text = [
-    `UpTillDawn loginpoging: ${status}`,
+    isAccountNotice ? 'UpTillDawn beveiligingsmelding: nieuwe login' : `UpTillDawn loginpoging: ${status}`,
     `Datum en tijd: ${timestamp} (Europe/Brussels)`,
     `ISO-tijdstip: ${timestampIso}`,
     `Portaal: ${event.portal}`,
@@ -88,7 +91,7 @@ export async function sendSecurityLoginEmail(event: SecurityLoginEmail): Promise
   ].filter(Boolean).join('\n')
 
   const html = `
-    <h2>UpTillDawn loginpoging: ${escapeHtml(status)}</h2>
+    <h2>${isAccountNotice ? 'UpTillDawn beveiligingsmelding: nieuwe login' : `UpTillDawn loginpoging: ${escapeHtml(status)}`}</h2>
     <table>
       <tr><td><strong>Datum en tijd</strong></td><td>${escapeHtml(timestamp)} (Europe/Brussels)</td></tr>
       <tr><td><strong>ISO-tijdstip</strong></td><td>${escapeHtml(timestampIso)}</td></tr>
@@ -117,7 +120,9 @@ export async function sendSecurityLoginEmail(event: SecurityLoginEmail): Promise
       body: JSON.stringify({
         from,
         to: [recipient],
-        subject: `[UpTillDawn] Login ${status} – ${event.portal}`,
+        subject: isAccountNotice
+          ? `[UpTillDawn] Nieuwe login – ${event.portal}`
+          : `[UpTillDawn] Login ${status} – ${event.portal}`,
         text,
         html,
       }),
