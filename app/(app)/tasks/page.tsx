@@ -12,6 +12,7 @@ import type { Tables } from '@/types/crew-database'
 import { redirect } from 'next/navigation'
 import { getCurrentUser } from '@/lib/actions/auth'
 import { OperationalChecklistPanel } from '@/components/crew/operational-checklists'
+import { InventoryPanel } from '@/components/crew/inventory-panel'
 
 export const dynamic = 'force-dynamic'
 
@@ -211,6 +212,13 @@ export default async function Page() {
       userId={user.id}
       canManage={false}
       workplaceOptions={[]}
+    />}
+
+    {!manager&&<InventoryPanel
+      userId={user.id}
+      canManage={false}
+      workplaceOptions={[]}
+      crewOptions={[]}
     />}
 
     {error
