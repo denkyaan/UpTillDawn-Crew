@@ -39,7 +39,13 @@ export default function LoginPage() {
     startTransition(async () => {
       try {
         const result = await signIn(formData)
-        if (result?.error) setError(result.error)
+        if (result?.error) {
+          setError(result.error)
+          return
+        }
+        if (result?.success && result.redirectTo) {
+          window.location.assign(result.redirectTo)
+        }
       } catch {
         setError(portal === "admin" || portal === "responsible"
           ? "Foute logingegevens of u heeft geen toegang tot deze rol."
