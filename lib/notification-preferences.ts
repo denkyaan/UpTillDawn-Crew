@@ -21,3 +21,12 @@ export function defaultNotificationPreference(category: NotificationCategory): N
     push: category === 'shift' || category === 'briefing' || category === 'incident' || category === 'help' || category === 'planning',
   }
 }
+
+export function notificationCategoryIsOperationallyCritical(category: NotificationCategory): boolean {
+  return category === 'incident' || category === 'help'
+}
+
+export function effectiveChannelsForPreference(preference: NotificationPreference, priority: NotificationPriority): readonly NotificationChannel[] {
+  if (priority === 'urgent' || notificationCategoryIsOperationallyCritical(preference.category)) return ['in-app','push']
+  return channelsForPreference(preference, priority)
+}
