@@ -7,6 +7,7 @@ import { responsibleCoverageGaps } from '@/lib/responsible-coverage-health'
 import { coverageWindows } from '@/lib/staffing-coverage'
 import { staffNeededForTarget, workplaceStaffingState } from '@/lib/workplace-capacity'
 import { OperationalChecklistPanel } from '@/components/crew/operational-checklists'
+import { InventoryPanel } from '@/components/crew/inventory-panel'
 
 export const dynamic='force-dynamic'
 
@@ -174,6 +175,21 @@ export default async function Page(){
         id:workplace.id,
         eventId:workplace.event_id,
         label:`${workplace.events?.name||'Evenement'} — ${workplace.name}`,
+      }))}
+    />}
+
+    {(isAdmin||isResponsible)&&<InventoryPanel
+      userId={user.id}
+      canManage
+      workplaceOptions={workplaces.filter(workplace=>workplace.is_active).map(workplace=>({
+        id:workplace.id,
+        eventId:workplace.event_id,
+        label:`${workplace.events?.name||'Evenement'} — ${workplace.name}`,
+      }))}
+      crewOptions={assignedCrew.map(person=>({
+        userId:person.id,
+        fullName:person.full_name||'Personeelslid',
+        workplaceId:person.workplace_id,
       }))}
     />}
 
