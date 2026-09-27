@@ -20,6 +20,7 @@ BEGIN
   WHERE c.contype='f'
     AND target_ns.nspname='public'
     AND target.relname='user_profiles'
+    AND NOT (n.nspname='public' AND r.relname='user_profiles')
     AND NOT (
       n.nspname='public'
       AND r.relname = ANY(ARRAY[
