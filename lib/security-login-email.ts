@@ -27,6 +27,26 @@ function label(outcome: SecurityLoginOutcome) {
   return 'MISLUKT'
 }
 
+function describeDevice(userAgent?: string | null) {
+  const ua = userAgent || ''
+  let device = 'Onbekend toestel'
+  if (/iPhone/i.test(ua)) device = 'iPhone'
+  else if (/iPad/i.test(ua)) device = 'iPad'
+  else if (/Android/i.test(ua)) device = /Mobile/i.test(ua) ? 'Android telefoon' : 'Android toestel'
+  else if (/Windows NT/i.test(ua)) device = 'Windows-pc'
+  else if (/Macintosh|Mac OS X/i.test(ua)) device = 'Mac'
+  else if (/Linux/i.test(ua)) device = 'Linux-computer'
+
+  let browser = 'Onbekende browser'
+  if (/Edg\//i.test(ua)) browser = 'Microsoft Edge'
+  else if (/OPR\//i.test(ua)) browser = 'Opera'
+  else if (/Chrome\//i.test(ua)) browser = 'Google Chrome'
+  else if (/Firefox\//i.test(ua)) browser = 'Mozilla Firefox'
+  else if (/Safari\//i.test(ua) && !/Chrome\//i.test(ua)) browser = 'Safari'
+
+  return { device, browser }
+}
+
 export async function sendSecurityLoginEmail(event: SecurityLoginEmail): Promise<boolean> {
   const apiKey = process.env.RESEND_API_KEY
   if (!apiKey) {
@@ -36,37 +56,50 @@ export async function sendSecurityLoginEmail(event: SecurityLoginEmail): Promise
 
   const recipient = process.env.SECURITY_ALERT_EMAIL || 'steegmanskyani@gmail.com'
   const from = process.env.SECURITY_FROM_EMAIL || 'UpTillDawn Security <onboarding@resend.dev>'
-  const timestamp = new Date().toISOString()
+  const now = new Date()
+  const timestamp = new Intl.DateTimeFormat('nl-BE', {
+    timeZone: 'Europe/Brussels',
+    dateStyle: 'full',
+    timeStyle: 'medium',
+  }).format(now)
+  const timestampIso = now.toISOString()
   const status = label(event.outcome)
   const login = event.login || 'onbekend'
   const canonical = event.canonicalLogin && event.canonicalLogin !== event.login ? event.canonicalLogin : null
   const ip = event.ip || 'onbekend'
   const location = event.approximateLocation || 'onbekend'
   const agent = event.userAgent || 'onbekend'
+  const { device, browser } = describeDevice(event.userAgent)
   const reason = event.reason || '—'
 
   const text = [
     `UpTillDawn loginpoging: ${status}`,
-    `Tijdstip: ${timestamp}`,
+    `Datum en tijd: ${timestamp} (Europe/Brussels)`,
+    `ISO-tijdstip: ${timestampIso}`,
     `Portaal: ${event.portal}`,
     `Login: ${login}`,
     canonical ? `Gekoppeld account: ${canonical}` : null,
     `IP-adres: ${ip}`,
     `Locatie (benadering): ${location}`,
-    `Apparaat/browser: ${agent}`,
+    `Toestel: ${device}`,
+    `Browser: ${browser}`,
+    `User-Agent: ${agent}`,
     `Reden: ${reason}`,
   ].filter(Boolean).join('\n')
 
   const html = `
     <h2>UpTillDawn loginpoging: ${escapeHtml(status)}</h2>
     <table>
-      <tr><td><strong>Tijdstip</strong></td><td>${escapeHtml(timestamp)}</td></tr>
+      <tr><td><strong>Datum en tijd</strong></td><td>${escapeHtml(timestamp)} (Europe/Brussels)</td></tr>
+      <tr><td><strong>ISO-tijdstip</strong></td><td>${escapeHtml(timestampIso)}</td></tr>
       <tr><td><strong>Portaal</strong></td><td>${escapeHtml(event.portal)}</td></tr>
       <tr><td><strong>Login</strong></td><td>${escapeHtml(login)}</td></tr>
       ${canonical ? `<tr><td><strong>Gekoppeld account</strong></td><td>${escapeHtml(canonical)}</td></tr>` : ''}
       <tr><td><strong>IP-adres</strong></td><td>${escapeHtml(ip)}</td></tr>
       <tr><td><strong>Locatie (benadering)</strong></td><td>${escapeHtml(location)}</td></tr>
-      <tr><td><strong>Apparaat/browser</strong></td><td>${escapeHtml(agent)}</td></tr>
+      <tr><td><strong>Toestel</strong></td><td>${escapeHtml(device)}</td></tr>
+      <tr><td><strong>Browser</strong></td><td>${escapeHtml(browser)}</td></tr>
+      <tr><td><strong>User-Agent</strong></td><td>${escapeHtml(agent)}</td></tr>
       <tr><td><strong>Reden</strong></td><td>${escapeHtml(reason)}</td></tr>
     </table>
   `
