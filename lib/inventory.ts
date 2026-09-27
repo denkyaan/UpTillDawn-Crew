@@ -6,6 +6,9 @@ export interface InventoryItem {
   category?: string | null
   totalQuantity: number
   availableQuantity: number
+  issuedQuantity?: number
+  damagedQuantity?: number
+  missingQuantity?: number
   eventId?: string | null
   workplaceId?: string | null
 }
@@ -18,4 +21,23 @@ export function inventoryAvailability(item: InventoryItem): 'empty' | 'low' | 'a
 
 export function canIssueInventory(item: InventoryItem, quantity = 1): boolean {
   return quantity > 0 && item.availableQuantity >= quantity
+}
+
+export function inventoryAccountedQuantity(item: InventoryItem): number {
+  return item.availableQuantity
+    + (item.issuedQuantity ?? 0)
+    + (item.damagedQuantity ?? 0)
+    + (item.missingQuantity ?? 0)
+}
+
+export function inventoryCountsAreValid(item: InventoryItem): boolean {
+  const values=[
+    item.totalQuantity,
+    item.availableQuantity,
+    item.issuedQuantity ?? 0,
+    item.damagedQuantity ?? 0,
+    item.missingQuantity ?? 0,
+  ]
+  return values.every(value=>Number.isInteger(value)&&value>=0)
+    && inventoryAccountedQuantity(item)===item.totalQuantity
 }
