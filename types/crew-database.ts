@@ -1983,6 +1983,10 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      upt_accept_shift_handover: {
+        Args: { p_handover: string }
+        Returns: undefined
+      }
       upt_acknowledge_briefing: {
         Args: { p_briefing: string }
         Returns: undefined
@@ -2233,6 +2237,13 @@ export type Database = {
         }
         Returns: Json
       }
+      upt_handover_candidates: {
+        Args: { p_event: string; p_workplace: string }
+        Returns: {
+          full_name: string
+          user_id: string
+        }[]
+      }
       upt_is_admin: { Args: { uid?: string }; Returns: boolean }
       upt_is_approved: { Args: never; Returns: boolean }
       upt_is_responsible: {
@@ -2377,6 +2388,17 @@ export type Database = {
         }
         Returns: string
       }
+      upt_save_shift_handover: {
+        Args: {
+          p_equipment_notes?: string
+          p_event: string
+          p_incoming?: string
+          p_mark_ready?: boolean
+          p_notes?: string
+          p_workplace: string
+        }
+        Returns: string
+      }
       upt_send_message: {
         Args: { p_attachment_path?: string; p_body?: string; p_channel: string }
         Returns: string
@@ -2399,6 +2421,27 @@ export type Database = {
           p_setup: boolean
         }
         Returns: undefined
+      }
+      upt_shift_handovers: {
+        Args: never
+        Returns: {
+          accepted_at: string
+          created_at: string
+          equipment_notes: string
+          event_id: string
+          id: string
+          incoming_name: string
+          incoming_responsible_id: string
+          notes: string
+          open_incident_ids: string[]
+          open_task_ids: string[]
+          outgoing_name: string
+          outgoing_responsible_id: string
+          ready_at: string
+          status: string
+          updated_at: string
+          workplace_id: string
+        }[]
       }
       upt_staff_workplace_live_status: {
         Args: never
