@@ -17,13 +17,14 @@ UPDATE public.profiles
 SET approved=true, role='staff', full_name='Offline Revocation'
 WHERE id=(SELECT id FROM upt_rev_ids WHERE name='staff');
 
-INSERT INTO public.events(id,name,start_date,end_date,start_at,end_at,status)
+INSERT INTO public.events(id,name,start_date,end_date,start_at,end_at,status,created_by)
 VALUES(
  (SELECT id FROM upt_rev_ids WHERE name='event'),
  'Offline revocation rollback',
  now()-interval '1 hour', now()+interval '1 day',
  now()-interval '1 hour', now()+interval '1 day',
- 'active'
+ 'active',
+ (SELECT id FROM upt_rev_ids WHERE name='staff')
 );
 
 UPDATE upt_rev_ids
