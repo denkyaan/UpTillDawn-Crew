@@ -1832,6 +1832,13 @@ $$;
 -- Historical clean installs created these Crew columns with enums. Production
 -- exposes them as text, so convert them before later workflow migrations run.
 
+-- Drop enum-bound consistency checks before converting approval_status to TEXT.
+-- They are recreated immediately after conversion with identical semantics.
+ALTER TABLE public.check_ins
+  DROP CONSTRAINT IF EXISTS check_ins_decision_consistent;
+ALTER TABLE public.check_outs
+  DROP CONSTRAINT IF EXISTS check_outs_decision_consistent;
+
 ALTER TABLE public.incidents ALTER COLUMN status DROP DEFAULT;
 ALTER TABLE public.incidents ALTER COLUMN status TYPE TEXT USING status::text;
 ALTER TABLE public.incidents ALTER COLUMN status SET DEFAULT 'open';
@@ -1850,6 +1857,18 @@ ALTER TABLE public.check_ins ALTER COLUMN gps_status SET DEFAULT 'not_checked';
 ALTER TABLE public.check_outs ALTER COLUMN status DROP DEFAULT;
 ALTER TABLE public.check_outs ALTER COLUMN status TYPE TEXT USING status::text;
 ALTER TABLE public.check_outs ALTER COLUMN status SET DEFAULT 'pending';
+
+ALTER TABLE public.check_ins
+  ADD CONSTRAINT check_ins_decision_consistent CHECK (
+    (status='pending' AND decided_at IS NULL AND decided_by IS NULL) OR
+    (status IN ('approved','rejected','cancelled') AND decided_at IS NOT NULL AND decided_by IS NOT NULL)
+  );
+
+ALTER TABLE public.check_outs
+  ADD CONSTRAINT check_outs_decision_consistent CHECK (
+    (status='pending' AND decided_at IS NULL AND decided_by IS NULL) OR
+    (status IN ('approved','rejected','cancelled') AND decided_at IS NOT NULL AND decided_by IS NOT NULL)
+  );
 
 ALTER TABLE public.work_sessions ALTER COLUMN status DROP DEFAULT;
 ALTER TABLE public.work_sessions ALTER COLUMN status TYPE TEXT USING status::text;
