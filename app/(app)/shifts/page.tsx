@@ -47,13 +47,13 @@ export default async function Page() {
       ? (shifts || []).filter(shift => assignedEventIds.has(shift.event_id))
       : (shifts || []).filter(shift => shift.user_id === user.id)
   if (!isAdmin && !hasOpenAssignedEvent) redirect('/events')
-  let workplaces: Array<{ id: string; name: string; event_id: string; events: { name: string } | null }> = []
+  let workplaces: Array<{ id: string; name: string; event_id: string; minimum_staff: number; target_staff: number; maximum_staff: number | null; events: { name: string } | null }> = []
   let people: CrewOption[] = []
   const managedWorkplaces = new Set<string>()
 
   if (isAdmin) {
     const [{ data: w }, { data: p }] = await Promise.all([
-      s.from('workplaces').select('id,name,event_id,events(name)').eq('is_active', true).order('sort_order'),
+      s.from('workplaces').select('id,name,event_id,minimum_staff,target_staff,maximum_staff,events(name)').eq('is_active', true).order('sort_order'),
       s.from('profiles').select('id,full_name').eq('approved', true).order('full_name'),
     ])
     workplaces = w || []
@@ -70,7 +70,7 @@ export default async function Page() {
     {isAdmin && workplaces.length > 0 && <AdminOnly><form action={createShift} className="grid gap-2 rounded-2xl border p-4 md:grid-cols-3">
       <select name="workplace_id" required className="rounded-lg border bg-background p-3">
         <option value="">Werkplek…</option>
-        {workplaces.map(x => <option key={x.id} value={x.id}>{x.events?.name} — {x.name}</option>)}
+        {workplaces.map(x => <option key={x.id} value={x.id}>{x.events?.name} — {x.name}{x.target_staff>0||x.maximum_staff!==null?` · doel ${x.target_staff}${x.maximum_staff!==null?` / max ${x.maximum_staff}`:''}`:''}</option>)}
       </select>
       <select name="user_id" required className="rounded-lg border bg-background p-3">
         <option value="">Personeelslid…</option>
