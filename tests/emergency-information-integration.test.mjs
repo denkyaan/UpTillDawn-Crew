@@ -100,6 +100,7 @@ test('emergency information is cached per user and rendered in the private offli
 
 test('emergency telephone links retain digits and optional leading plus only', async () => {
   const panel=await readFile(new URL('../components/crew/emergency-information-panel.tsx',import.meta.url),'utf8')
-  assert.match(panel,/replace\(\/\[\^\+\\\\d\]\/g/)
+  const sanitiserLine=panel.split('\n').find(line=>line.includes('const cleaned=value.replace'))
+  assert.equal(sanitiserLine,String.raw`  const cleaned=value.replace(/[^+\d]/g,'')`)
   assert.match(panel,/tel:/)
 })
