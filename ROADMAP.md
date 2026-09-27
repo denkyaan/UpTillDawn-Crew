@@ -17,12 +17,12 @@ The current web/mobile/PWA experience is the production baseline.
 - Installed PWA manifest/service worker behavior
 - Web Push opt-in, delivery, badge/click handling and subscription renewal
 - Cloudflare production deployment from `main`
-- SQL security/regression suite aligned to the current permissions model
+- SQL security/regression suite aligned to the current permissions model\n- Admin System Health dashboard restored and backed by privacy-safe production health aggregates
 
 ## Ongoing / optional work
 
 1. Define overtime/pay-period policy before payroll-style overtime output is enabled.
-2. Complete a from-zero replay of all 163 migrations on an isolated Supabase project.
+2. Complete a from-zero replay of all 164 migrations on an isolated Supabase project.
 3. Broaden offline browsing if full offline parity becomes a requirement.
 4. Continue cross-device regression testing after material iOS/Android/Windows/browser changes.
 5. Enable Supabase leaked-password protection in project Auth settings.
