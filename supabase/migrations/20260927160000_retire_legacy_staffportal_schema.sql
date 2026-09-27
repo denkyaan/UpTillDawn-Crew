@@ -2,9 +2,6 @@
 -- Retire auth/utility artifacts that belonged only to the historical StaffPortal.
 DROP TRIGGER IF EXISTS on_auth_email_confirmed ON auth.users;
 DROP FUNCTION IF EXISTS public.handle_email_confirmed();
-DROP FUNCTION IF EXISTS public.current_user_has_role(public.user_role);
-DROP FUNCTION IF EXISTS public.current_user_roles();
-DROP FUNCTION IF EXISTS public.trigger_set_updated_at();
 
 -- has fully converged on public.profiles and text-based operational statuses.
 -- Production no longer exposes these tables/types. Fresh installs must match it.
@@ -73,6 +70,13 @@ DROP TABLE IF EXISTS public.user_roles CASCADE;
 DROP TABLE IF EXISTS public.departments CASCADE;
 DROP TABLE IF EXISTS public.locations CASCADE;
 DROP TABLE IF EXISTS public.user_profiles CASCADE;
+
+-- These StaffPortal helpers were referenced by RLS policies/triggers on the
+-- retired tables above. Drop them only after those dependencies are gone.
+-- Intentionally no CASCADE: an unexpected active dependency must fail replay.
+DROP FUNCTION IF EXISTS public.current_user_has_role(public.user_role);
+DROP FUNCTION IF EXISTS public.current_user_roles();
+DROP FUNCTION IF EXISTS public.trigger_set_updated_at();
 
 DO $
 DECLARE
