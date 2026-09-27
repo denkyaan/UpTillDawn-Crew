@@ -543,7 +543,7 @@ BEGIN
     started_at = COALESCE(started_at, start_time),
     ended_at = COALESCE(ended_at, end_time);
 END
-$;
+$$;
 
 ALTER TABLE public.break_sessions
   ALTER COLUMN user_id SET NOT NULL,
