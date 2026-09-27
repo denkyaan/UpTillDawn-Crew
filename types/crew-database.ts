@@ -2297,9 +2297,11 @@ export type Database = {
           id: string
           kind: string
           minimum_staff: number
+          observed_minutes: number
           planned_end: string
           planned_start: string
           shift_id: string
+          threshold_minutes: number
           user_id: string
           workplace_id: string
         }[]
