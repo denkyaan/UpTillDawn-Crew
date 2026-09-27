@@ -91,7 +91,7 @@ jobs:
           set -euo pipefail
           FROM="${SECURITY_FROM_EMAIL:-UpTillDawn Security <onboarding@resend.dev>}"
           TO="${SECURITY_ALERT_EMAIL:-steegmanskyani@gmail.com}"
-          payload=$(node -e 'console.log(JSON.stringify({from:process.env.FROM,to:[process.env.TO],subject:"[UpTillDawn] Security mail transport test",text:"Automatische productietest van de login-alert e-mailtransportlaag."}))' FROM="$FROM" TO="$TO")
+          payload=$(FROM="$FROM" TO="$TO" node -e 'console.log(JSON.stringify({from:process.env.FROM,to:[process.env.TO],subject:"[UpTillDawn] Security mail transport test",text:"Automatische productietest van de login-alert e-mailtransportlaag."}))')
           http_code=$(curl -sS -o resend-response.json -w "%{http_code}" https://api.resend.com/emails             -H "Authorization: Bearer $RESEND_API_KEY"             -H "Content-Type: application/json"             -d "$payload")
           cat resend-response.json
           echo
@@ -110,17 +110,17 @@ jobs:
           RESEND_API_KEY: ${{ secrets.RESEND_API_KEY }}
         run: printf '%s' "$RESEND_API_KEY" | npx wrangler secret put RESEND_API_KEY
 
-      - name: Configure login-alert sender
-        if: ${{ secrets.SECURITY_FROM_EMAIL != '' }}
+      - name: Configure optional login-alert routing
         env:
           SECURITY_FROM_EMAIL: ${{ secrets.SECURITY_FROM_EMAIL }}
-        run: printf '%s' "$SECURITY_FROM_EMAIL" | npx wrangler secret put SECURITY_FROM_EMAIL
-
-      - name: Configure login-alert recipient
-        if: ${{ secrets.SECURITY_ALERT_EMAIL != '' }}
-        env:
           SECURITY_ALERT_EMAIL: ${{ secrets.SECURITY_ALERT_EMAIL }}
-        run: printf '%s' "$SECURITY_ALERT_EMAIL" | npx wrangler secret put SECURITY_ALERT_EMAIL
+        run: |
+          if [ -n "${SECURITY_FROM_EMAIL:-}" ]; then
+            printf '%s' "$SECURITY_FROM_EMAIL" | npx wrangler secret put SECURITY_FROM_EMAIL
+          fi
+          if [ -n "${SECURITY_ALERT_EMAIL:-}" ]; then
+            printf '%s' "$SECURITY_ALERT_EMAIL" | npx wrangler secret put SECURITY_ALERT_EMAIL
+          fi
 
       - name: Deploy production Worker
         run: npm run deploy:cloudflare
