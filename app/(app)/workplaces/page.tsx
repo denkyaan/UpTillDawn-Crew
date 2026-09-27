@@ -6,6 +6,7 @@ import { getCurrentUser } from '@/lib/actions/auth'
 import { responsibleCoverageGaps } from '@/lib/responsible-coverage-health'
 import { coverageWindows } from '@/lib/staffing-coverage'
 import { staffNeededForTarget, workplaceStaffingState } from '@/lib/workplace-capacity'
+import { OperationalChecklistPanel } from '@/components/crew/operational-checklists'
 
 export const dynamic='force-dynamic'
 
@@ -165,6 +166,16 @@ export default async function Page(){
         <button className="rounded-lg bg-violet-600 px-4 py-3 font-bold md:col-span-2">WERKPLEK TOEVOEGEN</button>
       </form>
     </AdminOnly>}
+
+    {(isAdmin||isResponsible)&&<OperationalChecklistPanel
+      userId={user.id}
+      canManage
+      workplaceOptions={workplaces.filter(workplace=>workplace.is_active).map(workplace=>({
+        id:workplace.id,
+        eventId:workplace.event_id,
+        label:`${workplace.events?.name||'Evenement'} — ${workplace.name}`,
+      }))}
+    />}
 
     <div className="grid gap-3 md:grid-cols-2">
       {workplaces.map(workplace=>{
