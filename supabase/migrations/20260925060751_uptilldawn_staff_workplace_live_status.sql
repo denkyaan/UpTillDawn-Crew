@@ -24,7 +24,7 @@ as $$
     from public.shifts s
     join public.events e on e.id=s.event_id
     where s.user_id=auth.uid()
-      and coalesce(s.status,'')<>'cancelled'
+      and s.status<>'cancelled'
       and e.status<>'archived'
       and now() between e.start_at and e.end_at
   )
