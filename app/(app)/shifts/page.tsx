@@ -109,7 +109,6 @@ export default async function Page() {
       shift.user_id===user.id
       &&shift.status!=='cancelled'
       &&shift.response_status!=='declined'
-      &&Date.parse(shift.scheduled_start)>Date.now()
     )
     const candidateResults=await Promise.all(candidateShiftRows.map(async shift=>{
       const [replacementResult,swapResult]=await Promise.all([
@@ -233,7 +232,7 @@ export default async function Page() {
                     </details>
                   </div>}
           </div>}
-          {!isAdmin&&x.user_id===user.id&&x.status!=='cancelled'&&x.response_status!=='declined'&&Date.parse(x.scheduled_start)>Date.now()&&<OwnShiftChangeControls
+          {!isAdmin&&x.user_id===user.id&&x.status!=='cancelled'&&x.response_status!=='declined'&&<OwnShiftChangeControls
             shiftId={x.id}
             replacementCandidates={replacementCandidatesByShift.get(x.id)||[]}
             swapCandidates={swapCandidatesByShift.get(x.id)||[]}
