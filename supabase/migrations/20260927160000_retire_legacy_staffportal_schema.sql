@@ -9,6 +9,38 @@ DROP FUNCTION IF EXISTS public.trigger_set_updated_at();
 -- has fully converged on public.profiles and text-based operational statuses.
 -- Production no longer exposes these tables/types. Fresh installs must match it.
 
+DO $
+DECLARE
+  unexpected text;
+BEGIN
+  SELECT string_agg(format('%s.%s', n.nspname, r.relname), ', ' ORDER BY n.nspname, r.relname)
+  INTO unexpected
+  FROM pg_constraint c
+  JOIN pg_class target ON target.oid=c.confrelid
+  JOIN pg_namespace target_ns ON target_ns.oid=target.relnamespace
+  JOIN pg_class r ON r.oid=c.conrelid
+  JOIN pg_namespace n ON n.oid=r.relnamespace
+  WHERE c.contype='f'
+    AND target_ns.nspname='public'
+    AND target.relname='user_profiles'
+    AND NOT (
+      n.nspname='public'
+      AND r.relname = ANY(ARRAY[
+        'departments','user_roles','user_approvers','attendance','attendance_corrections',
+        'wfh_records','leave_balances','leave_requests','visitors','calendar_events',
+        'diary_entries','feedback','complaints','audit_logs','email_templates',
+        'external_contacts','work_schedules','forgotten_clockout_alerts','polls',
+        'poll_votes','notice_board_posts','sso_connections','expense_comments',
+        'expense_audit_log','purchase_requests','pr_approvals','pr_attachments'
+      ])
+    );
+
+  IF unexpected IS NOT NULL THEN
+    RAISE EXCEPTION 'Active schema still references legacy user_profiles: %', unexpected;
+  END IF;
+END
+$;
+
 DROP TABLE IF EXISTS public.pr_attachments CASCADE;
 DROP TABLE IF EXISTS public.pr_approvals CASCADE;
 DROP TABLE IF EXISTS public.purchase_requests CASCADE;
@@ -41,6 +73,33 @@ DROP TABLE IF EXISTS public.user_roles CASCADE;
 DROP TABLE IF EXISTS public.departments CASCADE;
 DROP TABLE IF EXISTS public.locations CASCADE;
 DROP TABLE IF EXISTS public.user_profiles CASCADE;
+
+DO $
+DECLARE
+  unexpected text;
+BEGIN
+  SELECT string_agg(format('%s.%s.%s (%s)', ns.nspname, cls.relname, att.attname, typ.typname), ', ' ORDER BY ns.nspname, cls.relname, att.attname)
+  INTO unexpected
+  FROM pg_attribute att
+  JOIN pg_class cls ON cls.oid=att.attrelid
+  JOIN pg_namespace ns ON ns.oid=cls.relnamespace
+  JOIN pg_type typ ON typ.oid=att.atttypid
+  WHERE att.attnum>0
+    AND NOT att.attisdropped
+    AND ns.nspname='public'
+    AND typ.typname = ANY(ARRAY[
+      'user_role','attendance_status','leave_type','leave_status','day_type',
+      'visitor_status','feedback_status','complaint_severity','complaint_status',
+      'calendar_event_type','audit_action','correction_status','correction_field',
+      'event_status','shift_status','incident_status','account_status','approval_status',
+      'task_status','gps_status','work_status','sync_status'
+    ]);
+
+  IF unexpected IS NOT NULL THEN
+    RAISE EXCEPTION 'Active public columns still use retired enum types: %', unexpected;
+  END IF;
+END
+$;
 
 -- No enum types remain in the canonical production public schema. CASCADE here
 -- deliberately removes only stale legacy overloads/functions that still depend
