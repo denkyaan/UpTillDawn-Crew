@@ -2,7 +2,7 @@
 
 import {useEffect} from 'react'
 import {createClient} from '@/lib/supabase/crew-client'
-import {loadOfflineDocuments,replaceOfflineDocuments,saveOfflineBriefings,saveOfflineBrowseData,saveOfflineEmergency,saveOfflineTasks,type OfflineBriefing,type OfflineDocument,type OfflineEmergencyInfo,type OfflineEvent,type OfflineShift,type OfflineTask,type OfflineWorkplace} from '@/lib/crew-offline-snapshot'
+import {loadOfflineDocuments,replaceOfflineDocuments,saveOfflineBriefings,saveOfflineBrowseData,saveOfflineEmergency,saveOfflineOperationalData,saveOfflineTasks,type OfflineBriefing,type OfflineChecklist,type OfflineDocument,type OfflineEmergencyInfo,type OfflineEvent,type OfflineIncident,type OfflineInventoryIssue,type OfflineInventoryItem,type OfflineShift,type OfflineTask,type OfflineWorkplace} from '@/lib/crew-offline-snapshot'
 
 export function GlobalOfflineContentSync({userId}:{userId:string}){
  useEffect(()=>{
@@ -10,7 +10,7 @@ export function GlobalOfflineContentSync({userId}:{userId:string}){
   const s=createClient()
   let cancelled=false
   void (async()=>{
-   const [{data:briefings},{data:personal},{data:assignments},{data:emergency},{data:documents},{data:eventMemberships},{data:workplaces},{data:shifts}]=await Promise.all([
+   const [{data:briefings},{data:personal},{data:assignments},{data:emergency},{data:documents},{data:eventMemberships},{data:workplaces},{data:shifts},{data:incidents},{data:checklists},{data:checklistItems},{data:inventoryItems},{data:inventoryIssues}]=await Promise.all([
     s.from('briefings').select('id,title,body,version,event_id').order('created_at',{ascending:false}),
     s.from('personal_instructions').select('id,title,body,version,event_id').eq('user_id',userId).order('created_at',{ascending:false}),
     s.from('task_assignments').select('id,status,tasks(id,title,description,event_id,workplace_id)').eq('user_id',userId).order('created_at'),
@@ -19,6 +19,11 @@ export function GlobalOfflineContentSync({userId}:{userId:string}){
     s.from('event_members').select('event_id,events(id,name,address,start_at,end_at,status)').eq('user_id',userId),
     s.from('workplaces').select('id,event_id,name,description').eq('is_active',true).order('sort_order'),
     s.from('shifts').select('id,event_id,workplace_id,role_name,scheduled_start,scheduled_end,status,response_status').eq('user_id',userId).order('scheduled_start'),
+    s.from('incidents').select('id,event_id,workplace_id,message,status,created_at,acknowledged_at,resolved_at,escalated_at').order('created_at',{ascending:false}).limit(100),
+    s.from('operational_checklists').select('id,event_id,workplace_id,kind,title,description,status,completed_at').order('created_at',{ascending:false}),
+    s.from('checklist_items').select('id,checklist_id,label,required,requires_photo,completed_at').order('sort_order'),
+    s.from('inventory_items').select('id,event_id,workplace_id,name,category,available_quantity,issued_quantity,damaged_quantity,missing_quantity').eq('is_active',true).order('name'),
+    s.from('inventory_issues').select('id,item_id,user_id,outstanding_quantity,issued_at').gt('outstanding_quantity',0).order('issued_at',{ascending:false}),
    ])
    if(cancelled)return
    const briefingItems:OfflineBriefing[]=[
@@ -31,6 +36,14 @@ export function GlobalOfflineContentSync({userId}:{userId:string}){
    const eventIds=new Set(eventItems.map(item=>item.id))
    const workplaceItems:OfflineWorkplace[]=(workplaces||[]).filter(row=>eventIds.has(row.event_id)).map(row=>({id:row.id,event_id:row.event_id,name:row.name,description:row.description}))
    const shiftItems:OfflineShift[]=(shifts||[]).map(row=>({id:row.id,event_id:row.event_id,workplace_id:row.workplace_id,role_name:row.role_name,scheduled_start:row.scheduled_start,scheduled_end:row.scheduled_end,status:row.status,response_status:row.response_status}))
+   const incidentItems:OfflineIncident[]=(incidents||[]).filter(row=>eventIds.has(row.event_id)).map(row=>({id:row.id,event_id:row.event_id,workplace_id:row.workplace_id,message:row.message,status:row.status,created_at:row.created_at,acknowledged_at:row.acknowledged_at,resolved_at:row.resolved_at,escalated_at:row.escalated_at}))
+   const visibleChecklists=(checklists||[]).filter(row=>eventIds.has(row.event_id))
+   const checklistIds=new Set(visibleChecklists.map(row=>row.id))
+   const checklistItemRows=(checklistItems||[]).filter(row=>checklistIds.has(row.checklist_id))
+   const checklistModels:OfflineChecklist[]=visibleChecklists.map(row=>({id:row.id,event_id:row.event_id,workplace_id:row.workplace_id,kind:row.kind,title:row.title,description:row.description,status:row.status,completed_at:row.completed_at,items:checklistItemRows.filter(item=>item.checklist_id===row.id).map(item=>({id:item.id,label:item.label,required:item.required,requires_photo:item.requires_photo,completed_at:item.completed_at}))}))
+   const inventoryModels:OfflineInventoryItem[]=(inventoryItems||[]).filter(row=>eventIds.has(row.event_id)).map(row=>({id:row.id,event_id:row.event_id,workplace_id:row.workplace_id,name:row.name,category:row.category,available_quantity:row.available_quantity,issued_quantity:row.issued_quantity,damaged_quantity:row.damaged_quantity,missing_quantity:row.missing_quantity}))
+   const inventoryIds=new Set(inventoryModels.map(row=>row.id))
+   const issueModels:OfflineInventoryIssue[]=(inventoryIssues||[]).filter(row=>inventoryIds.has(row.item_id)).map(row=>({id:row.id,item_id:row.item_id,user_id:row.user_id,outstanding_quantity:row.outstanding_quantity,issued_at:row.issued_at}))
    const existingDocuments=await loadOfflineDocuments(userId)
    const existingById=new Map(existingDocuments.map(document=>[document.id,document]))
    const offlineDocuments:OfflineDocument[]=[]
@@ -44,7 +57,7 @@ export function GlobalOfflineContentSync({userId}:{userId:string}){
     }
     offlineDocuments.push({key:userId+':'+row.id,userId,id:row.id,event_id:row.event_id,event_name:row.events?.name||'Evenement',kind:row.kind,title:row.title,description:row.description,file_name:row.file_name,mime_type:row.mime_type,storage_path:row.storage_path,updated_at:row.updated_at,blob})
    }
-   await Promise.all([saveOfflineBriefings(userId,briefingItems),saveOfflineTasks(userId,taskItems),saveOfflineEmergency(userId,emergencyItems),saveOfflineBrowseData(userId,eventItems,workplaceItems,shiftItems),replaceOfflineDocuments(userId,offlineDocuments)])
+   await Promise.all([saveOfflineBriefings(userId,briefingItems),saveOfflineTasks(userId,taskItems),saveOfflineEmergency(userId,emergencyItems),saveOfflineBrowseData(userId,eventItems,workplaceItems,shiftItems),saveOfflineOperationalData(userId,incidentItems,checklistModels,inventoryModels,issueModels),replaceOfflineDocuments(userId,offlineDocuments)])
   })().catch(()=>{})
   return()=>{cancelled=true}
  },[userId])
