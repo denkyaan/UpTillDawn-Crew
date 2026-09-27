@@ -44,7 +44,7 @@ God Mode credentials and sessions are stored only in private server-side state. 
 - Device-language synchronization.
 - Cloudflare Workers AI maker-only Edit mode assistant.
 - Cloudflare production deployment and Supabase push Edge Function.
-- Realtime operational refresh and Admin System Health observability dashboard with database latency, offline-sync SLO, queue health, push-subscription counts and live operational load.
+- Realtime operational refresh, Admin System Health observability, and Admin Release Readiness with schema-drift detection, required sync blockers and operational deploy warnings.
 
 ## Cleanup / regression verification
 
@@ -71,7 +71,7 @@ The audit also checked the database attack surface rather than only the visible 
 - anonymous table access is absent; anonymous RPC access is limited to the explicit token-gated God Mode surface; the former info-admin bootstrap RPC is closed and revoked from browser roles;
 - retired private-chat creation/peer discovery remains revoked;
 - generated Supabase TypeScript types exactly match the production schema;
-- repository and production migration histories match 164/164.
+- repository and production migration histories match 165/165.
 
 Issues found and corrected during this audit:
 - permanent-admin server routes now use the central admin privilege check;
@@ -103,7 +103,7 @@ Known remaining advisor findings are reviewed rather than blindly removed:
 These are not regressions in the current web/mobile baseline:
 
 1. Define an explicit overtime/pay-period policy before presenting overtime as payroll truth.
-2. Replay all 164 migrations from zero on an isolated project before claiming a fresh-install proof.
+2. Replay all 165 migrations from zero on an isolated project before claiming a fresh-install proof.
 3. Expand offline browsing beyond the operational workflows if full offline parity is ever required.
 4. Continue physical-device regression testing after major browser/OS updates.
 5. Enable Supabase leaked-password protection when the project setting is approved.
