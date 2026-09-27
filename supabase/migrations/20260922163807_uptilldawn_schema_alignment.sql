@@ -397,6 +397,12 @@ ALTER TABLE public.check_ins
   ALTER COLUMN requested_at SET DEFAULT now(),
   ALTER COLUMN requested_at SET NOT NULL;
 
+-- The current QR flow records remote/contact-confirmed routing separately and
+-- does not require a selfie path. Production no longer carries this legacy
+-- pre-QR constraint, so remove it during canonical convergence.
+ALTER TABLE public.check_ins
+  DROP CONSTRAINT IF EXISTS check_ins_remote_selfie_required;
+
 CREATE INDEX IF NOT EXISTS
   idx_checkins_event_user
 ON public.check_ins(event_id, user_id);
