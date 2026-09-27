@@ -766,6 +766,36 @@ export async function removeTaskAssignment(fd:FormData){
  revalidatePath('/tasks')
 }
 
+export async function saveShiftHandover(fd:FormData){
+ const {s,profile}=await approvedClient()
+ if(profile.role!=='responsible_lead')throw new Error('Alleen een verantwoordelijke kan een overdracht voorbereiden.')
+ const incomingRaw=String(fd.get('incoming_user_id')||'').trim()
+ const incoming=incomingRaw?uuid.parse(incomingRaw):undefined
+ const markReady=String(fd.get('mark_ready')||'false')==='true'
+ if(markReady&&!incoming)throw new Error('Selecteer eerst een inkomende verantwoordelijke.')
+ const equipmentNotes=String(fd.get('equipment_notes')||'').trim().slice(0,2000)
+ const notes=String(fd.get('notes')||'').trim().slice(0,4000)
+ const {error}=await s.rpc('upt_save_shift_handover',{
+  p_event:uuid.parse(fd.get('event_id')),
+  p_workplace:uuid.parse(fd.get('workplace_id')),
+  p_incoming:incoming,
+  p_equipment_notes:equipmentNotes||undefined,
+  p_notes:notes||undefined,
+  p_mark_ready:markReady,
+ })
+ check(error)
+ revalidatePath('/operations');revalidatePath('/notifications')
+}
+export async function acceptShiftHandover(fd:FormData){
+ const {s,profile}=await approvedClient()
+ if(profile.role!=='responsible_lead')throw new Error('Alleen een verantwoordelijke kan een overdracht accepteren.')
+ const {error}=await s.rpc('upt_accept_shift_handover',{
+  p_handover:uuid.parse(fd.get('handover_id')),
+ })
+ check(error)
+ revalidatePath('/operations');revalidatePath('/notifications')
+}
+
 export async function markNotificationRead(fd:FormData){
  const s=await createClient()
  const {error}=await s.rpc('upt_mark_notification_read',{p_notification:uuid.parse(fd.get('notification_id'))})
