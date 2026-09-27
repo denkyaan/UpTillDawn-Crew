@@ -180,6 +180,25 @@ DROP TYPE IF EXISTS public.sync_status CASCADE;
 DROP TYPE IF EXISTS public.pr_status CASCADE;
 DROP TYPE IF EXISTS public.wfh_type CASCADE;
 
+-- Canonical message attachment compatibility: production and active upload RPCs
+-- require file_url alongside storage_path. Historical fresh installs may only
+-- have storage_path from 028_uptilldawn_operations.sql.
+ALTER TABLE public.message_attachments
+  ADD COLUMN IF NOT EXISTS file_url TEXT,
+  ADD COLUMN IF NOT EXISTS storage_path TEXT,
+  ADD COLUMN IF NOT EXISTS mime_type TEXT,
+  ADD COLUMN IF NOT EXISTS created_at TIMESTAMPTZ NOT NULL DEFAULT now();
+
+UPDATE public.message_attachments
+SET
+  file_url = COALESCE(file_url, storage_path),
+  storage_path = COALESCE(storage_path, file_url)
+WHERE file_url IS NULL OR storage_path IS NULL;
+
+ALTER TABLE public.message_attachments
+  ALTER COLUMN file_url SET NOT NULL,
+  ALTER COLUMN storage_path DROP NOT NULL;
+
 -- Admin login success is called only after Supabase authentication succeeds.
 -- Keep the two pre-auth guard/failure RPCs available to the login flow, but do
 -- not let anonymous or non-admin authenticated callers clear an admin lockout.
