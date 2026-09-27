@@ -90,7 +90,7 @@ jobs:
         run: |
           set -euo pipefail
           FROM="${SECURITY_FROM_EMAIL:-UpTillDawn Security <onboarding@resend.dev>}"
-          TO="${SECURITY_ALERT_EMAIL:-steegmanskyani@gmail.com}"
+          TO="${SECURITY_ALERT_EMAIL:-steegmans.kyani@icloud.com}"
           payload=$(FROM="$FROM" TO="$TO" node -e 'console.log(JSON.stringify({from:process.env.FROM,to:[process.env.TO],subject:"[UpTillDawn] Security mail transport test",text:"Automatische productietest van de login-alert e-mailtransportlaag."}))')
           http_code=$(curl -sS -o resend-response.json -w "%{http_code}" https://api.resend.com/emails             -H "Authorization: Bearer $RESEND_API_KEY"             -H "Content-Type: application/json"             -d "$payload")
           cat resend-response.json
