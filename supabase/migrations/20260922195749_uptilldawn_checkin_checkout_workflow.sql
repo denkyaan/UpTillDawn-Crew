@@ -42,6 +42,17 @@ ON public.check_outs(workplace_id);
 CREATE INDEX IF NOT EXISTS check_outs_status_idx
 ON public.check_outs(status);
 
+-- Fresh installs created check_ins from the newer operational schema and may
+-- not have the historical compatibility columns that still exist in production.
+-- Add them before legacy normalization/RPC definitions so replayed schema and
+-- production converge on the same surface.
+ALTER TABLE public.check_ins
+  ADD COLUMN IF NOT EXISTS type TEXT NOT NULL DEFAULT 'check-in',
+  ADD COLUMN IF NOT EXISTS created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+  ADD COLUMN IF NOT EXISTS approved_by UUID REFERENCES public.profiles(id) ON DELETE SET NULL,
+  ADD COLUMN IF NOT EXISTS approved_at TIMESTAMPTZ,
+  ADD COLUMN IF NOT EXISTS selfie_url TEXT;
+
 -- ============================================================
 -- 3. NORMALIZE LEGACY CHECK-IN DATA
 -- ============================================================
