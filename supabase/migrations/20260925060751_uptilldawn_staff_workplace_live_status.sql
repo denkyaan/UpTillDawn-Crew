@@ -47,7 +47,7 @@ as $$
   join public.shifts cs
     on cs.event_id=ow.event_id
    and cs.workplace_id=ow.workplace_id
-   and coalesce(cs.status,'')<>'cancelled'
+   and cs.status<>'cancelled'
   join public.work_sessions ws
     on ws.shift_id=cs.id
    and ws.ended_at is null
