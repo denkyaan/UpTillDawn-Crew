@@ -8,7 +8,7 @@ The current web/mobile/PWA experience is the production baseline.
 - RLS and validated mutation boundaries
 - Event, workplace, shift response/reassignment, replacement/swap/open-shift requests, revision-aware pre-shift reminders and Responsible management
 - Check-in/out and work/break tracking
-- Briefings, personal instructions, tasks, operational opening/closing/safety checklists with photo evidence, workplace material logistics with controlled Staff settlement approval, and help/incidents with current-workplace binding and escalation
+- Briefings, personal instructions, tasks, operational opening/closing/safety checklists with photo evidence, workplace material logistics with controlled Staff settlement approval, offline-cached event emergency information, and help/incidents with current-workplace binding and escalation
 - Workplace-scoped chat and private media
 - Responsible and Staff workplace overview status
 - Admin/Responsible operational dashboard, canonical live workplace tracking, understaffing, late/no-show, shift-overrun, missing-checkout and long-break alerts, Responsible shift handovers with inventory snapshots and time corrections
@@ -22,7 +22,7 @@ The current web/mobile/PWA experience is the production baseline.
 ## Ongoing / optional work
 
 1. Define overtime/pay-period policy before payroll-style overtime output is enabled.
-2. Complete a from-zero replay of all 159 migrations on an isolated Supabase project.
+2. Complete a from-zero replay of all 161 migrations on an isolated Supabase project.
 3. Broaden offline browsing if full offline parity becomes a requirement.
 4. Continue cross-device regression testing after material iOS/Android/Windows/browser changes.
 5. Enable Supabase leaked-password protection in project Auth settings.
