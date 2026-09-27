@@ -218,23 +218,18 @@ export function OwnShiftChangeControls({
         <button className="rounded-lg border p-3 font-bold">VERVANGING AANVRAGEN</button>
       </form>}
 
-      {swapCandidates.length>0&&<form action={requestShiftSwap} className="grid gap-2 rounded-lg border p-3">
+      {swapCandidates.length>0&&<div className="grid gap-2 rounded-lg border p-3">
         <p className="font-semibold">Dienst ruilen</p>
-        <input type="hidden" name="shift_id" value={shiftId}/>
-        <select name="target_shift_id" required className="rounded-lg border bg-background p-3">
-          <option value="">Ruildienst…</option>
-          {swapCandidates.map(candidate=><option key={candidate.targetShiftId} value={candidate.targetShiftId}>
-            {candidate.fullName} · {candidate.workplaceName} · {new Date(candidate.scheduledStart).toLocaleString('nl-BE')}
-          </option>)}
-        </select>
-        <select name="replacement_user_id" required className="rounded-lg border bg-background p-3">
-          <option value="">Bevestig collega…</option>
-          {[...new Map(swapCandidates.map(candidate=>[candidate.userId,candidate.fullName])).entries()].map(([userId,fullName])=><option key={userId} value={userId}>{fullName}</option>)}
-        </select>
-        <textarea name="reason" required minLength={3} maxLength={500} placeholder="Waarom wil je ruilen?" className="min-h-20 rounded-lg border bg-background p-3"/>
-        <p className="text-xs text-muted-foreground">De gekozen ruildienst moet van dezelfde collega zijn; dit wordt server-side opnieuw gecontroleerd.</p>
-        <button className="rounded-lg border p-3 font-bold">RUIL AANVRAGEN</button>
-      </form>}
+        {swapCandidates.map(candidate=><form key={candidate.targetShiftId} action={requestShiftSwap} className="grid gap-2 rounded-lg border p-3">
+          <input type="hidden" name="shift_id" value={shiftId}/>
+          <input type="hidden" name="target_shift_id" value={candidate.targetShiftId}/>
+          <input type="hidden" name="replacement_user_id" value={candidate.userId}/>
+          <p className="text-sm font-semibold">{candidate.fullName} · {candidate.workplaceName}</p>
+          <p className="text-xs text-muted-foreground">{new Date(candidate.scheduledStart).toLocaleString('nl-BE')} → {new Date(candidate.scheduledEnd).toLocaleString('nl-BE')} · {candidate.roleName}</p>
+          <textarea name="reason" required minLength={3} maxLength={500} placeholder="Waarom wil je deze diensten ruilen?" className="min-h-20 rounded-lg border bg-background p-3"/>
+          <button className="rounded-lg border p-3 font-bold">DEZE RUIL AANVRAGEN</button>
+        </form>)}
+      </div>}
     </div>
   </details>
 }
