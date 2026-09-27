@@ -176,7 +176,7 @@ UPDATE public.work_sessions SET started_at=now()-interval '80 minutes',start_tim
 INSERT INTO public.break_sessions(work_session_id,user_id,started_at,start_time) SELECT s.id,u.id,now()-interval '71 minutes',now()-interval '71 minutes' FROM upt_test_ids s,upt_test_ids u WHERE s.name='ticket_session' AND u.name='other';
 SELECT upt_private.notify_break_allowance();
 SELECT upt_private.notify_break_allowance();
-DO $ BEGIN
+DO $$ BEGIN
  IF (SELECT count(*) FROM upt_private.break_warning_receipts WHERE user_id=(SELECT id FROM upt_test_ids WHERE name='other'))<>1
     OR NOT EXISTS(
       SELECT 1
@@ -187,6 +187,6 @@ DO $ BEGIN
  THEN
    RAISE EXCEPTION 'FAIL break warning deduplication';
  END IF;
-END $;
+END $$;
 SELECT 'PASS: profile isolation, self-promotion denial, 10h/75min=9h45 across sessions, staff approval denial, direct clock bypass denial, QR approval gate, lead session isolation, lead check-in isolation, cross-workplace approval denial, pending read/mutation denial, anonymous RPC denial, truncate denial, idempotent replay, operation ID conflict, GPS radius/accuracy, sensitive column denial, briefing acknowledgement, event duplication without history, QR-owned work start/stop, queued break lifecycle, scheduled warning deduplication' AS result;
 ROLLBACK;
