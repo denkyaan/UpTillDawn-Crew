@@ -120,6 +120,32 @@ export async function signIn(formData: FormData) {
     if (!submittedEmail || !password) return { error: 'E-mail en wachtwoord zijn verplicht.' }
 
     const supabase = await createClient()
+
+    // If an already-authenticated permanent admin/maker deliberately opens the
+    // admin portal, treat it as a role-mode switch instead of forcing a second
+    // password authentication round-trip.
+    if (requestedPortal === 'admin') {
+        const { data: { user: existingUser } } = await supabase.auth.getUser()
+        if (existingUser) {
+            const [{ data: existingProfile }, { data: existingOwner }] = await Promise.all([
+                supabase.from('profiles').select('approved, role').eq('id', existingUser.id).single(),
+                supabase.rpc('upt_current_is_owner'),
+            ])
+            const permanentAdmin = existingProfile?.approved === true &&
+                (existingProfile.role === 'admin' || existingOwner === true)
+
+            if (permanentAdmin) {
+                const { data: roleMode, error: roleModeError } = await supabase.rpc('upt_set_admin_role_mode', { p_role: 'admin' })
+                if (!roleModeError && roleMode === 'admin') {
+                    return {
+                        success: true,
+                        redirectTo: submittedEmail === MAKER_LOGIN_ALIAS ? '/maker-mode?portal=admin' : '/admin',
+                    }
+                }
+            }
+        }
+    }
+
     const securityRelevant = requestedPortal === 'admin'
     let security = securityRelevant ? await requestSecurityContext() : null
     const getSecurity = async () => {
