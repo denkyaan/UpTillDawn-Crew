@@ -12,7 +12,7 @@ import { createClient } from '@/lib/supabase/crew-server'
 import { passwordPolicyMessage } from '@/lib/password-policy'
 import { sendSecurityLoginEmail } from '@/lib/security-login-email'
 
-const MAKER_LOGIN_ALIAS = 'maker@uptilldown'
+const MAKER_LOGIN_ALIAS = 'maker@uptilldawn'
 const MAKER_ACCOUNT_EMAIL = 'steegmanskyani@gmail.com'
 
 function resolveLoginEmail(email: string) {
