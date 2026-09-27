@@ -6,7 +6,7 @@ The current web/mobile/PWA experience is the production baseline.
 
 - Auth / approval / role model and maker protection
 - RLS and validated mutation boundaries
-- Event, workplace, shift response/reassignment and Responsible management
+- Event, workplace, shift response/reassignment, revision-aware pre-shift reminders and Responsible management
 - Check-in/out and work/break tracking
 - Briefings, personal instructions, tasks and help/incidents with current-workplace binding and escalation
 - Workplace-scoped chat and private media
@@ -22,7 +22,7 @@ The current web/mobile/PWA experience is the production baseline.
 ## Ongoing / optional work
 
 1. Define overtime/pay-period policy before payroll-style overtime output is enabled.
-2. Complete a from-zero replay of all 137 migrations on an isolated Supabase project.
+2. Complete a from-zero replay of all 139 migrations on an isolated Supabase project.
 3. Broaden offline browsing if full offline parity becomes a requirement.
 4. Continue cross-device regression testing after material iOS/Android/Windows/browser changes.
 5. Enable Supabase leaked-password protection in project Auth settings.
