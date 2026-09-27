@@ -121,7 +121,6 @@ function translateNode(root: Node, locale: ExtendedUiLocale) {
 
 export function LocaleSync() {
   useEffect(() => {
-    const storedLocale = parseLocale(window.localStorage.getItem("uptilldawn-language"))
     let locale = deviceLocale()
     let applying = false
     const applyLocale = (nextLocale: ExtendedUiLocale, persist = false) => {
