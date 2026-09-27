@@ -4,6 +4,9 @@ type Row = { fr: string; en: string; de: string }
 // Canonical Dutch UI strings that were historically present only in the NL/FR/EN table.
 // Keep every row complete: missing translations must never silently fall back to Dutch.
 const ROWS: Record<string, Row> = {
+  'Foute logingegevens of u heeft geen toegang tot deze rol.': { fr: 'Identifiants incorrects ou vous n\'avez pas accès à ce rôle.', en: 'Incorrect login details or you do not have access to this role.', de: 'Falsche Anmeldedaten oder Sie haben keinen Zugriff auf diese Rolle.' },
+  'Aanmelden mislukt. Controleer je gegevens en probeer opnieuw.': { fr: 'Échec de la connexion. Vérifiez vos données et réessayez.', en: 'Login failed. Check your details and try again.', de: 'Anmeldung fehlgeschlagen. Überprüfen Sie Ihre Angaben und versuchen Sie es erneut.' },
+  'Dit account heeft geen toegang tot het gekozen portaal.': { fr: 'Ce compte n\'a pas accès au portail sélectionné.', en: 'This account does not have access to the selected portal.', de: 'Dieses Konto hat keinen Zugriff auf das ausgewählte Portal.' },
   'Open inlogmenu': { fr: 'Ouvrir le menu de connexion', en: 'Open login menu', de: 'Anmeldemenü öffnen' },
   'Verberg wachtwoord': { fr: 'Masquer le mot de passe', en: 'Hide password', de: 'Passwort ausblenden' },
   'Toon wachtwoord': { fr: 'Afficher le mot de passe', en: 'Show password', de: 'Passwort anzeigen' },
