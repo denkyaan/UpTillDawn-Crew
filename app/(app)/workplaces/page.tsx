@@ -3,6 +3,7 @@ import { addWorkplace,assignResponsible,demoteResponsibleToStaff,updateWorkplace
 import { AdminOnly } from '@/components/auth/admin-only'
 import { redirect } from 'next/navigation'
 import { getCurrentUser } from '@/lib/actions/auth'
+import { responsibleCoverageGaps } from '@/lib/responsible-coverage-health'
 
 export const dynamic='force-dynamic'
 
@@ -31,6 +32,7 @@ export default async function Page(){
     role_name:string
   }>=[]
   let responsibleAssignments:Array<{workplace_id:string;user_id:string}>=[]
+  let coverageShifts:Array<{userId:string;workplaceId:string;startsAt:number;endsAt:number}>=[]
   let peopleById=new Map<string,Person>()
 
   if(isAdmin){
@@ -43,7 +45,7 @@ export default async function Page(){
     ]=await Promise.all([
       s.from('events').select('id,name').neq('status','archived').order('start_at'),
       s.from('workplaces').select('id,event_id,name,description,sort_order,is_active,events(name)').order('sort_order'),
-      s.from('shifts').select('event_id,workplace_id,user_id,role_name,status').neq('status','cancelled').order('scheduled_start'),
+      s.from('shifts').select('event_id,workplace_id,user_id,role_name,status,scheduled_start,scheduled_end').neq('status','cancelled').order('scheduled_start'),
       s.from('profiles').select('id,full_name,role').eq('approved',true).order('full_name'),
       s.from('responsible_assignments').select('workplace_id,user_id'),
     ])
@@ -51,6 +53,7 @@ export default async function Page(){
     workplaces=workplaceRows||[]
     peopleById=new Map((profileRows||[]).map(person=>[person.id,person]))
     responsibleAssignments=responsibleRows||[]
+    coverageShifts=(shiftRows||[]).map(shift=>({userId:shift.user_id,workplaceId:shift.workplace_id,startsAt:Date.parse(shift.scheduled_start),endsAt:Date.parse(shift.scheduled_end)}))
     const seen=new Set<string>()
     assignedCrew=(shiftRows||[]).flatMap(shift=>{
       const person=peopleById.get(shift.user_id)
@@ -90,7 +93,7 @@ export default async function Page(){
 
     if(isResponsible){
       const [{data:shiftRows},{data:responsibleRows}]=await Promise.all([
-        s.from('shifts').select('event_id,workplace_id,user_id,role_name,status').in('workplace_id',workplaceIds).neq('status','cancelled').order('scheduled_start'),
+        s.from('shifts').select('event_id,workplace_id,user_id,role_name,status,scheduled_start,scheduled_end').in('workplace_id',workplaceIds).neq('status','cancelled').order('scheduled_start'),
         s.from('responsible_assignments').select('event_id,workplace_id,user_id').in('workplace_id',workplaceIds),
       ])
       const memberResults=await Promise.all(workplaces.map(workplace=>
@@ -102,6 +105,7 @@ export default async function Page(){
       }
       peopleById=people
       responsibleAssignments=(responsibleRows||[]).map(row=>({workplace_id:row.workplace_id,user_id:row.user_id}))
+      coverageShifts=(shiftRows||[]).map(shift=>({userId:shift.user_id,workplaceId:shift.workplace_id,startsAt:Date.parse(shift.scheduled_start),endsAt:Date.parse(shift.scheduled_end)}))
       const seen=new Set<string>()
       assignedCrew=(shiftRows||[]).flatMap(shift=>{
         const person=peopleById.get(shift.user_id)
@@ -149,6 +153,12 @@ export default async function Page(){
           .filter(row=>row.workplace_id===workplace.id)
           .map(row=>peopleById.get(row.user_id))
           .filter((person):person is Person=>Boolean(person))
+        const workplaceCoverageShifts=coverageShifts.filter(shift=>shift.workplaceId===workplace.id)
+        const coverageGaps=responsibleCoverageGaps(
+          workplace.id,
+          workplaceCoverageShifts,
+          responsibleAssignments.map(row=>({userId:row.user_id,workplaceId:row.workplace_id})),
+        )
         return <article key={workplace.id} className="rounded-2xl border p-4">
           <div className="flex items-start justify-between gap-3">
             <div>
@@ -175,7 +185,16 @@ export default async function Page(){
 
           {(isAdmin||isResponsible)&&<div className="mt-3 space-y-3">
             <section className="rounded-xl border p-3">
-              <p className="font-semibold">Verantwoordelijke</p>
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <p className="font-semibold">Verantwoordelijke</p>
+                {workplaceCoverageShifts.length>0&&<span className={`rounded-full border px-2 py-1 text-xs font-bold ${coverageGaps.length?'border-amber-500/50 text-amber-600':'border-emerald-500/50 text-emerald-600'}`}>
+                  {coverageGaps.length?`${coverageGaps.length} DEKKINGSGAT${coverageGaps.length===1?'':'EN'}`:'DEKKING OK'}
+                </span>}
+              </div>
+              {coverageGaps.length>0&&<div className="mt-2 space-y-1 rounded-lg border border-amber-500/30 bg-amber-500/5 p-2 text-xs text-muted-foreground">
+                {coverageGaps.slice(0,3).map(gap=><p key={`${gap.startsAt}:${gap.endsAt}`}>{new Date(gap.startsAt).toLocaleString('nl-BE')} → {new Date(gap.endsAt).toLocaleString('nl-BE')}</p>)}
+                {coverageGaps.length>3&&<p>+ {coverageGaps.length-3} extra dekkingsgat(en)</p>}
+              </div>}
               {responsiblePeople.length
                 ? <div className="mt-2 space-y-2">{responsiblePeople.map(person=>
                     <div key={person.id} className="flex flex-wrap items-center justify-between gap-2 rounded-lg border border-violet-500/30 p-2">
