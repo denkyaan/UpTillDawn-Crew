@@ -224,7 +224,7 @@ CREATE OR REPLACE FUNCTION public.prevent_shift_overlap()
 RETURNS trigger
 LANGUAGE plpgsql
 SET search_path = public
-AS $
+AS $$
 BEGIN
   IF NEW.overlap_allowed = false AND EXISTS (
     SELECT 1
@@ -248,7 +248,7 @@ ON public.shifts
 FOR EACH ROW
 EXECUTE FUNCTION public.prevent_shift_overlap();
 
-DO $
+DO $$
 BEGIN
   IF EXISTS (
     SELECT 1
