@@ -69,6 +69,11 @@ ALTER TABLE public.profiles ENABLE ROW LEVEL SECURITY;
 -- ============================================================
 
 ALTER TABLE public.events
+  ADD COLUMN IF NOT EXISTS start_date TIMESTAMPTZ,
+  ADD COLUMN IF NOT EXISTS end_date TIMESTAMPTZ,
+  ADD COLUMN IF NOT EXISTS location TEXT,
+  ADD COLUMN IF NOT EXISTS gps_coordinates POINT,
+  ADD COLUMN IF NOT EXISTS image_url TEXT,
   ADD COLUMN IF NOT EXISTS venue TEXT,
   ADD COLUMN IF NOT EXISTS address TEXT,
   ADD COLUMN IF NOT EXISTS latitude NUMERIC(9,6),
@@ -81,7 +86,13 @@ ALTER TABLE public.events
   ADD COLUMN IF NOT EXISTS created_by UUID REFERENCES public.profiles(id) ON DELETE SET NULL,
   ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ NOT NULL DEFAULT now();
 
-DO $$
+-- Production exposes event status as text. Historical clean installs may
+-- still carry the old event_status enum, so converge before later policies/RPCs.
+ALTER TABLE public.events ALTER COLUMN status DROP DEFAULT;
+ALTER TABLE public.events ALTER COLUMN status TYPE TEXT USING status::text;
+ALTER TABLE public.events ALTER COLUMN status SET DEFAULT 'draft';
+
+DO $
 BEGIN
   IF EXISTS (
     SELECT 1
@@ -92,8 +103,9 @@ BEGIN
   ) THEN
     EXECUTE '
       UPDATE public.events
-      SET start_at = COALESCE(start_at, start_date)
-      WHERE start_at IS NULL
+      SET start_at = COALESCE(start_at, start_date),
+          start_date = COALESCE(start_date, start_at)
+      WHERE start_at IS NULL OR start_date IS NULL
     ';
   END IF;
 
@@ -106,8 +118,9 @@ BEGIN
   ) THEN
     EXECUTE '
       UPDATE public.events
-      SET end_at = COALESCE(end_at, end_date)
-      WHERE end_at IS NULL
+      SET end_at = COALESCE(end_at, end_date),
+          end_date = COALESCE(end_date, end_at)
+      WHERE end_at IS NULL OR end_date IS NULL
     ';
   END IF;
 
@@ -120,8 +133,9 @@ BEGIN
   ) THEN
     EXECUTE '
       UPDATE public.events
-      SET venue = COALESCE(venue, location)
-      WHERE venue IS NULL
+      SET venue = COALESCE(venue, location),
+          location = COALESCE(location, venue)
+      WHERE venue IS NULL OR location IS NULL
     ';
   END IF;
 END
@@ -129,7 +143,9 @@ $$;
 
 ALTER TABLE public.events
   ALTER COLUMN start_at SET NOT NULL,
-  ALTER COLUMN end_at SET NOT NULL;
+  ALTER COLUMN end_at SET NOT NULL,
+  ALTER COLUMN start_date SET NOT NULL,
+  ALTER COLUMN end_date SET NOT NULL;
 
 -- ============================================================
 -- WORKPLACES
@@ -184,6 +200,8 @@ ON public.responsible_assignments(event_id, workplace_id, user_id);
 -- ============================================================
 
 ALTER TABLE public.shifts
+  ADD COLUMN IF NOT EXISTS start_time TIMESTAMPTZ,
+  ADD COLUMN IF NOT EXISTS end_time TIMESTAMPTZ,
   ADD COLUMN IF NOT EXISTS role_name TEXT,
   ADD COLUMN IF NOT EXISTS responsible_lead_id UUID REFERENCES public.profiles(id) ON DELETE SET NULL,
   ADD COLUMN IF NOT EXISTS scheduled_start TIMESTAMPTZ,
@@ -193,7 +211,13 @@ ALTER TABLE public.shifts
   ADD COLUMN IF NOT EXISTS notes TEXT,
   ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ NOT NULL DEFAULT now();
 
-DO $$
+-- Production exposes shift status as text. Historical clean installs may
+-- still carry the old shift_status enum.
+ALTER TABLE public.shifts ALTER COLUMN status DROP DEFAULT;
+ALTER TABLE public.shifts ALTER COLUMN status TYPE TEXT USING status::text;
+ALTER TABLE public.shifts ALTER COLUMN status SET DEFAULT 'scheduled';
+
+DO $
 BEGIN
   IF EXISTS (
     SELECT 1
@@ -222,8 +246,9 @@ BEGIN
   ) THEN
     EXECUTE '
       UPDATE public.shifts
-      SET scheduled_start = COALESCE(scheduled_start, start_time)
-      WHERE scheduled_start IS NULL
+      SET scheduled_start = COALESCE(scheduled_start, start_time),
+          start_time = COALESCE(start_time, scheduled_start)
+      WHERE scheduled_start IS NULL OR start_time IS NULL
     ';
   END IF;
 
@@ -236,8 +261,9 @@ BEGIN
   ) THEN
     EXECUTE '
       UPDATE public.shifts
-      SET scheduled_end = COALESCE(scheduled_end, end_time)
-      WHERE scheduled_end IS NULL
+      SET scheduled_end = COALESCE(scheduled_end, end_time),
+          end_time = COALESCE(end_time, scheduled_end)
+      WHERE scheduled_end IS NULL OR end_time IS NULL
     ';
   END IF;
 END
@@ -247,7 +273,9 @@ ALTER TABLE public.shifts
   ALTER COLUMN role_name SET DEFAULT 'Crew',
   ALTER COLUMN role_name SET NOT NULL,
   ALTER COLUMN scheduled_start SET NOT NULL,
-  ALTER COLUMN scheduled_end SET NOT NULL;
+  ALTER COLUMN scheduled_end SET NOT NULL,
+  ALTER COLUMN start_time SET NOT NULL,
+  ALTER COLUMN end_time SET NOT NULL;
 
 CREATE INDEX IF NOT EXISTS
   idx_shifts_user_time
