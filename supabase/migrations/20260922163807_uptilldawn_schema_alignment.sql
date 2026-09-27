@@ -92,7 +92,7 @@ ALTER TABLE public.events ALTER COLUMN status DROP DEFAULT;
 ALTER TABLE public.events ALTER COLUMN status TYPE TEXT USING status::text;
 ALTER TABLE public.events ALTER COLUMN status SET DEFAULT 'draft';
 
-DO $
+DO $$
 BEGIN
   IF EXISTS (
     SELECT 1
@@ -217,7 +217,7 @@ ALTER TABLE public.shifts ALTER COLUMN status DROP DEFAULT;
 ALTER TABLE public.shifts ALTER COLUMN status TYPE TEXT USING status::text;
 ALTER TABLE public.shifts ALTER COLUMN status SET DEFAULT 'scheduled';
 
-DO $
+DO $$
 BEGIN
   IF EXISTS (
     SELECT 1
