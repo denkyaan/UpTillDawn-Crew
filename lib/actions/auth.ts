@@ -120,7 +120,7 @@ export async function signIn(formData: FormData) {
     if (!submittedEmail || !password) return { error: 'E-mail en wachtwoord zijn verplicht.' }
 
     const supabase = await createClient()
-    const securityRelevant = requestedPortal === 'admin' || submittedEmail === MAKER_LOGIN_ALIAS || email === MAKER_ACCOUNT_EMAIL
+    const securityRelevant = requestedPortal === 'admin'
     let security = securityRelevant ? await requestSecurityContext() : null
     const getSecurity = async () => {
         if (!security) security = await requestSecurityContext()
@@ -192,24 +192,6 @@ export async function signIn(formData: FormData) {
     }
 
     await notifySecurity('success', 'login_success')
-
-    const accountEmail = data.user.email?.trim().toLowerCase() || null
-    const centralSecurityEmail = (process.env.SECURITY_ALERT_EMAIL || MAKER_ACCOUNT_EMAIL).trim().toLowerCase()
-    if (accountEmail && (!securityRelevant || accountEmail !== centralSecurityEmail)) {
-        const context = await getSecurity()
-        await sendSecurityLoginEmail({
-            outcome: 'success',
-            login: accountEmail,
-            canonicalLogin: accountEmail,
-            portal: requestedPortal as 'staff' | 'responsible' | 'admin',
-            ip: context.ip,
-            approximateLocation: context.approximateLocation,
-            userAgent: context.userAgent,
-            reason: 'login_success',
-            recipient: accountEmail,
-            audience: 'account',
-        })
-    }
 
     if (submittedEmail === MAKER_LOGIN_ALIAS) {
         redirect(`/maker-mode?portal=${requestedPortal}`)
