@@ -38,3 +38,8 @@ God Mode source edits remain proposal-based. Restore creates a new proposal from
 ## Critical workflow gate
 
 Before a major production release validate: registration/approval, event availability, assignment, shift confirmation, briefing acknowledgement, QR start request, responsible/admin approval, break start/stop, workplace transition, QR stop request, approval, final work-time summary, push delivery, offline queue replay, and role revocation.
+
+## Deferred external gates
+
+- Supabase leaked-password protection is currently deferred by the product owner.
+- Physical backup -> Restore to a New Project DR proof is currently deferred by the product owner. A manually created empty project does not count as a restore proof.
