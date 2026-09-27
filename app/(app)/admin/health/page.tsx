@@ -4,7 +4,8 @@ import { createClient } from '@/lib/supabase/crew-server'
 import { getCurrentUser } from '@/lib/actions/auth'
 import { RealtimeRefresh } from '@/components/realtime-refresh'
 import { HealthLatencyProbe } from '@/components/admin/health-latency-probe'
-import { aggregateDependencyHealth } from '@/lib/health-checks'\nimport { evaluateOperationalAlerts, highestAlertSeverity } from '@/lib/operational-alert-policy'
+import { aggregateDependencyHealth } from '@/lib/health-checks'
+import { evaluateOperationalAlerts, highestAlertSeverity } from '@/lib/operational-alert-policy'
 import { DEFAULT_SERVICE_LEVELS, serviceLevelMet } from '@/lib/service-levels'
 import type { Database } from '@/types/crew-database'
 
@@ -65,7 +66,9 @@ export default async function Page(){
       : Number(health.offline_stale)>0||!syncHealthy
         ?'degraded'
         :'healthy'
-  const alerts=evaluateOperationalAlerts({offlineFailed:Number(health.offline_failed),offlineStale:Number(health.offline_stale),unreadNotifications:Number(health.unread_notifications),notifications24h:Number(health.notifications_24h),pendingCheckins:Number(health.pending_checkins),pendingCheckouts:Number(health.pending_checkouts),openIncidents:Number(health.open_incidents)})\n  const alertSeverity=highestAlertSeverity(alerts)\n  const overall=aggregateDependencyHealth([{name:'Offline sync',health:syncStatus,checkedAt:Date.parse(health.checked_at)},{name:'Operational alerts',health:alertSeverity==='critical'?'unavailable':alertSeverity==='warning'?'degraded':'healthy',checkedAt:Date.parse(health.checked_at)}])
+  const alerts=evaluateOperationalAlerts({offlineFailed:Number(health.offline_failed),offlineStale:Number(health.offline_stale),unreadNotifications:Number(health.unread_notifications),notifications24h:Number(health.notifications_24h),pendingCheckins:Number(health.pending_checkins),pendingCheckouts:Number(health.pending_checkouts),openIncidents:Number(health.open_incidents)})
+  const alertSeverity=highestAlertSeverity(alerts)
+  const overall=aggregateDependencyHealth([{name:'Offline sync',health:syncStatus,checkedAt:Date.parse(health.checked_at)},{name:'Operational alerts',health:alertSeverity==='critical'?'unavailable':alertSeverity==='warning'?'degraded':'healthy',checkedAt:Date.parse(health.checked_at)}])
 
   return <main className="mx-auto max-w-6xl space-y-6 p-4 pb-28 md:p-8">
     <RealtimeRefresh tables={['work_sessions','break_sessions','check_ins','check_outs','incidents','offline_operation_records','crew_notifications']}/>
@@ -98,7 +101,12 @@ export default async function Page(){
       </article>
     </section>
 
-    {alerts.length>0&&<section className="rounded-2xl border border-amber-500/50 bg-amber-500/5 p-4" role="alert">\n      <h2 className="font-bold">Operationele alerts</h2>\n      <div className="mt-2 space-y-1 text-sm text-muted-foreground">{alerts.map(alert=><p key={alert.code}><strong className={alert.severity==='critical'?'text-red-500':'text-amber-600'}>{alert.severity==='critical'?'KRITIEK':'AANDACHT'}:</strong> {alert.message}</p>)}</div>\n    </section>}\n\n    {(Number(health.offline_failed)>0||Number(health.offline_stale)>0)&&<section className="rounded-2xl border border-amber-500/50 bg-amber-500/5 p-4" role="alert">
+    {alerts.length>0&&<section className="rounded-2xl border border-amber-500/50 bg-amber-500/5 p-4" role="alert">
+      <h2 className="font-bold">Operationele alerts</h2>
+      <div className="mt-2 space-y-1 text-sm text-muted-foreground">{alerts.map(alert=><p key={alert.code}><strong className={alert.severity==='critical'?'text-red-500':'text-amber-600'}>{alert.severity==='critical'?'KRITIEK':'AANDACHT'}:</strong> {alert.message}</p>)}</div>
+    </section>}
+
+    {(Number(health.offline_failed)>0||Number(health.offline_stale)>0)&&<section className="rounded-2xl border border-amber-500/50 bg-amber-500/5 p-4" role="alert">
       <h2 className="font-bold">Synchronisatie vraagt aandacht</h2>
       <p className="mt-1 text-sm text-muted-foreground">
         {Number(health.offline_failed)>0&&<>Er zijn {Number(health.offline_failed)} definitief mislukte serveroperatie(s). </>}
