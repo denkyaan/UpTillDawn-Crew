@@ -227,7 +227,16 @@ export async function updatePassword(formData: FormData) {
     if (passwordError) return { error: passwordError }
     const supabase = await createClient(); const { data: { user }, error: userError } = await supabase.auth.getUser()
     if (userError || !user) return { error: 'De herstel-link is ongeldig of verlopen. Vraag een nieuwe herstel-link aan.' }
-    const { error } = await supabase.auth.updateUser({ password }); if (error) return { error: 'De aanvraag kon niet worden verwerkt. Probeer opnieuw.' }
+    const { error } = await supabase.auth.updateUser({ password })
+    if (error) {
+        if (error.code === 'same_password' || error.message.toLowerCase().includes('different from the old password')) {
+            return { error: 'Je nieuwe wachtwoord moet verschillen van je huidige wachtwoord.' }
+        }
+        if (error.code === 'weak_password') {
+            return { error: 'Dit wachtwoord wordt door de beveiligingsregels geweigerd. Kies een sterker en uniek wachtwoord.' }
+        }
+        return { error: 'Het wachtwoord kon niet worden gewijzigd. Probeer opnieuw.' }
+    }
     const { error: signOutError } = await supabase.auth.signOut({ scope: 'global' }); if (signOutError) await supabase.auth.signOut({ scope: 'local' })
     const cookieStore = await cookies(); cookieStore.delete('uptilldawn-admin-edit-mode'); cookieStore.delete('uptilldawn-admin-edit-role')
     return { success: true, message: 'Wachtwoord is bijgewerkt. Log opnieuw in.' }
