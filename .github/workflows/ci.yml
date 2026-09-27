@@ -48,11 +48,11 @@ jobs:
       - name: PWA cross-device and offline contract
         run: node --test tests/pwa-cross-device-offline-regression.test.mjs
 
-      - name: Build
-        run: npm run build
+      - name: Build Next.js
+        run: npm run build:next
 
       - name: Build Cloudflare Worker
-        run: npm run build:cloudflare
+        run: npm run build
 
       - name: Wrangler deployment dry-run
         run: npx wrangler deploy --dry-run
