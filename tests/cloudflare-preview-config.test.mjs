@@ -14,7 +14,7 @@ test('Cloudflare Worker Previews are explicitly configured', async () => {
     .map(Number)
 
   assert.ok(major > 4 || (major === 4 && minor >= 135), 'Worker Previews require Wrangler 4.135.0+')
-  assert.match(pkg.scripts?.build ?? '', /opennextjs-cloudflare build/)
+  assert.match(pkg.scripts?.build ?? '', /next build/)
   assert.match(pkg.scripts?.['build:next'] ?? '', /next build/)
-  assert.match(pkg.scripts?.['build:cloudflare'] ?? '', /npm run build/)
+  assert.match(pkg.scripts?.['build:cloudflare'] ?? '', /opennextjs-cloudflare build/)
 })
