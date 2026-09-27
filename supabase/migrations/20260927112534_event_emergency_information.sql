@@ -42,7 +42,7 @@ using (
       join public.events e on e.id=em.event_id
       where em.event_id=event_emergency_information.event_id
         and em.user_id=(select auth.uid())
-        and coalesce(e.status,'')<>'archived'
+        and (e.status is null or e.status <> 'archived'::event_status)
         and now()<=e.end_at + interval '3 days'
     )
     or exists(
@@ -53,7 +53,7 @@ using (
         and s.user_id=(select auth.uid())
         and s.status<>'cancelled'
         and s.response_status<>'declined'
-        and coalesce(e.status,'')<>'archived'
+        and (e.status is null or e.status <> 'archived'::event_status)
         and now()<=e.end_at + interval '3 days'
     )
     or exists(
@@ -62,7 +62,7 @@ using (
       join public.events e on e.id=ra.event_id
       where ra.event_id=event_emergency_information.event_id
         and ra.user_id=(select auth.uid())
-        and coalesce(e.status,'')<>'archived'
+        and (e.status is null or e.status <> 'archived'::event_status)
         and now()<=e.end_at + interval '3 days'
     )
   )
@@ -100,7 +100,7 @@ begin
   perform 1
   from public.events e
   where e.id=p_event
-    and coalesce(e.status,'')<>'archived'
+    and (e.status is null or e.status <> 'archived'::event_status)
     and now()<=e.end_at + interval '3 days'
   for update;
   if not found then raise exception 'Evenement is niet beschikbaar.'; end if;
