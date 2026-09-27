@@ -36,7 +36,7 @@ export function GlobalOfflineContentSync({userId}:{userId:string}){
    const eventIds=new Set(eventItems.map(item=>item.id))
    const workplaceItems:OfflineWorkplace[]=(workplaces||[]).filter(row=>eventIds.has(row.event_id)).map(row=>({id:row.id,event_id:row.event_id,name:row.name,description:row.description}))
    const shiftItems:OfflineShift[]=(shifts||[]).map(row=>({id:row.id,event_id:row.event_id,workplace_id:row.workplace_id,role_name:row.role_name,scheduled_start:row.scheduled_start,scheduled_end:row.scheduled_end,status:row.status,response_status:row.response_status}))
-   const incidentItems:OfflineIncident[]=(incidents||[]).filter(row=>eventIds.has(row.event_id)).map(row=>({id:row.id,event_id:row.event_id,workplace_id:row.workplace_id,message:row.message,status:row.status,created_at:row.created_at,acknowledged_at:row.acknowledged_at,resolved_at:row.resolved_at,escalated_at:row.escalated_at}))
+   const incidentItems:OfflineIncident[]=(incidents||[]).filter(row=>Boolean(row.event_id)&&eventIds.has(row.event_id!)).map(row=>({id:row.id,event_id:row.event_id!,workplace_id:row.workplace_id,message:row.message,status:row.status,created_at:row.created_at,acknowledged_at:row.acknowledged_at,resolved_at:row.resolved_at,escalated_at:row.escalated_at}))
    const visibleChecklists=(checklists||[]).filter(row=>eventIds.has(row.event_id))
    const checklistIds=new Set(visibleChecklists.map(row=>row.id))
    const checklistItemRows=(checklistItems||[]).filter(row=>checklistIds.has(row.checklist_id))
