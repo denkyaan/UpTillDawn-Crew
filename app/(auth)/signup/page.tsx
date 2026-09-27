@@ -10,6 +10,7 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Eye, EyeOff, Loader2, AlertCircle } from "lucide-react"
 import { signUp } from "@/lib/actions/auth"
+import { PASSWORD_MIN_LENGTH, passwordPolicyMessage } from "@/lib/password-policy"
 
 
 
@@ -30,7 +31,8 @@ export default function SignupPage() {
     if (!name) errors.full_name = "Volledige naam is verplicht"
     if (!email) errors.email = "E-mail is verplicht"
 
-    if (password.length < 8) errors.password = "Wachtwoord moet minstens 8 tekens bevatten"
+    const passwordError = passwordPolicyMessage(password)
+    if (passwordError) errors.password = passwordError
     if (password !== confirm) errors.confirm_password = "Wachtwoorden komen niet overeen"
 
     return errors
@@ -120,9 +122,11 @@ export default function SignupPage() {
                 id="password"
                 name="password"
                 type={showPassword ? "text" : "password"}
-                placeholder="Min. 8 tekens"
+                placeholder={`Min. ${PASSWORD_MIN_LENGTH} tekens`}
                 className="rounded-xl h-11 pr-10"
                 autoComplete="new-password"
+                minLength={PASSWORD_MIN_LENGTH}
+                required
               />
               <button
                 type="button"
