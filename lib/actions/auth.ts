@@ -192,8 +192,8 @@ export async function signIn(formData: FormData) {
 
     await notifySecurity('success', 'login_success')
 
-    if (submittedEmail === MAKER_LOGIN_ALIAS) {
-        redirect(`/maker-mode?portal=${requestedPortal}`)
+    if (submittedEmail === MAKER_LOGIN_ALIAS && requestedPortal === 'admin') {
+        redirect('/maker-mode?portal=admin')
     }
     redirect(requestedPortal === 'admin' ? '/admin' : '/')
 }
