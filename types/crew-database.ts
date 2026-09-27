@@ -1314,6 +1314,9 @@ export type Database = {
           id: string
           notes: string | null
           overlap_allowed: boolean
+          responded_at: string | null
+          response_reason: string | null
+          response_status: string
           responsible_lead_id: string | null
           role: string | null
           role_name: string
@@ -1335,6 +1338,9 @@ export type Database = {
           id?: string
           notes?: string | null
           overlap_allowed?: boolean
+          responded_at?: string | null
+          response_reason?: string | null
+          response_status?: string
           responsible_lead_id?: string | null
           role?: string | null
           role_name?: string
@@ -1356,6 +1362,9 @@ export type Database = {
           id?: string
           notes?: string | null
           overlap_allowed?: boolean
+          responded_at?: string | null
+          response_reason?: string | null
+          response_status?: string
           responsible_lead_id?: string | null
           role?: string | null
           role_name?: string
@@ -2279,6 +2288,10 @@ export type Database = {
         }
         Returns: Json
       }
+      upt_reassign_shift: {
+        Args: { p_reason: string; p_shift: string; p_user: string }
+        Returns: undefined
+      }
       upt_remove_push_subscription: {
         Args: { p_endpoint: string }
         Returns: undefined
@@ -2305,6 +2318,10 @@ export type Database = {
         Returns: string
       }
       upt_resolve_incident: { Args: { p_incident: string }; Returns: undefined }
+      upt_respond_shift: {
+        Args: { p_reason?: string; p_response: string; p_shift: string }
+        Returns: undefined
+      }
       upt_responsible_crew_directory: {
         Args: { event_uuid: string; workplace_uuid: string }
         Returns: {
