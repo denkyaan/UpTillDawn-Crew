@@ -95,8 +95,6 @@ export async function OperationalChecklistPanel({
         </select>
         <input name="title" required maxLength={200} placeholder="Checklistnaam" className="rounded-lg border bg-background p-3"/>
         <textarea name="description" maxLength={2000} placeholder="Omschrijving (optioneel)" className="rounded-lg border bg-background p-3"/>
-        {workplaceOptions.map(option=><input key={option.id} type="hidden" name={'event_for_'+option.id} value={option.eventId}/>)}
-        <ChecklistEventBridge options={workplaceOptions}/>
         <button className="rounded-lg bg-violet-600 p-3 font-bold text-white md:col-span-2">CHECKLIST AANMAKEN</button>
       </form>
     </details>}
@@ -205,10 +203,3 @@ export async function OperationalChecklistPanel({
   </section>
 }
 
-function ChecklistEventBridge({options}:{options:ChecklistWorkplaceOption[]}){
-  return <script
-    dangerouslySetInnerHTML={{
-      __html:`(()=>{const f=document.currentScript?.closest('form');if(!f)return;const s=f.querySelector('select[name="workplace_id"]');if(!s)return;let h=f.querySelector('input[name="event_id"]');if(!h){h=document.createElement('input');h.type='hidden';h.name='event_id';f.appendChild(h)}const m=${JSON.stringify(Object.fromEntries(options.map(option=>[option.id,option.eventId])))};const sync=()=>{h.value=m[s.value]||''};s.addEventListener('change',sync);sync()})()`,
-    }}
-  />
-}
