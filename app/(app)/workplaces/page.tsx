@@ -56,7 +56,7 @@ export default async function Page(){
     ]=await Promise.all([
       s.from('events').select('id,name').neq('status','archived').order('start_at'),
       s.from('workplaces').select('id,event_id,name,description,sort_order,is_active,minimum_staff,target_staff,maximum_staff,events(name,start_at,end_at)').order('sort_order'),
-      s.from('shifts').select('event_id,workplace_id,user_id,role_name,status,scheduled_start,scheduled_end').neq('status','cancelled').order('scheduled_start'),
+      s.from('shifts').select('event_id,workplace_id,user_id,role_name,status,scheduled_start,scheduled_end').neq('status','cancelled').neq('response_status','declined').order('scheduled_start'),
       s.from('profiles').select('id,full_name,role').eq('approved',true).order('full_name'),
       s.from('responsible_assignments').select('workplace_id,user_id'),
     ])
