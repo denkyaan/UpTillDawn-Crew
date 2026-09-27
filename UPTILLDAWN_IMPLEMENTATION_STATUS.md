@@ -45,11 +45,11 @@ God Mode credentials and sessions are stored only in private server-side state. 
 - Cloudflare Workers AI maker-only Edit mode assistant.
 - Cloudflare production deployment and Supabase push Edge Function.
 - Realtime operational refresh, Admin System Health observability, and Admin Release Readiness with schema-drift detection, required sync blockers and operational deploy warnings.
-- Repository CI now includes an isolated local Supabase fresh-install job that resets from zero, replays every migration, executes every SQL regression suite, and diffs freshly generated database types against `types/crew-database.ts`.
+- Repository CI includes an isolated local Supabase fresh-install job that resets from zero, replays every migration, executes every SQL regression suite, and compares normalized freshly generated public database types against `types/crew-database.ts`. GitHub Actions run `36336833839` passed this gate for commit `1002b85ee1446294f62d2f84d1f7a685a54fdb01`: 166 migrations, 16 SQL suites and exact normalized public-type parity.
 
 ## Cleanup / regression verification
 
-The current cleanup reran all 15 SQL regression files in `tests/sql/` against the target Supabase project using rollback fixtures. During that run, several tests were found to encode obsolete product behavior and were corrected to the current baseline:
+The current cleanup now contains 16 SQL regression files in `tests/sql/`. The isolated fresh-install CI run `36336833839` replayed all 166 migrations from zero and passed all 16 suites before passing normalized generated public-type verification. During that run, several tests were found to encode obsolete product behavior and were corrected to the current baseline:
 
 - Responsible scope is workplace-assignment based rather than broad event-wide workplace access.
 - Staff may see their assigned future workplace/shift according to current role UI rules.
@@ -99,14 +99,18 @@ Known remaining advisor findings are reviewed rather than blindly removed:
 - Leaked-password protection remains a Supabase Auth project setting to enable.
 - Performance advisor findings are unused-index informational notices; foreign-key index coverage passes.
 
-## Remaining non-UI decisions / improvements
+## Remaining external / non-repository gates
 
 These are not regressions in the current web/mobile baseline:
 
-1. Define an explicit overtime/pay-period policy before presenting overtime as payroll truth.
-2. Complete a separate backup/restore disaster-recovery proof against a second isolated remote Supabase project; fresh-install migration replay itself is enforced in CI.
-3. Expand offline browsing beyond the operational workflows if full offline parity is ever required.
-4. Continue physical-device regression testing after major browser/OS updates.
-5. Enable Supabase leaked-password protection when the project setting is approved.
+1. Enable Supabase leaked-password protection in the hosted Auth project setting. Security Advisor still reports `auth_leaked_password_protection` as disabled; this cannot be represented by SQL migration state.
+2. Complete the remote backup -> restore disaster-recovery proof against a second isolated remote Supabase project. The verifier is ready, but provisioning a second remote resource remains cost-gated and requires explicit approval.
+
+## Additional hardening now completed
+
+- Critical offline browsing/snapshot coverage is implemented for operational data, emergency information and offline-critical event/workplace documents; write queues remain idempotent and authorization is rechecked on replay.
+- Cross-device/PWA contract tests run in CI for installed/offline behavior across the supported browser/device model; physical device checks remain a release practice after major OS/browser updates rather than an unimplemented feature.
+- Observability now combines System Health, service-level/freshness alerts, operational alerts, Release Readiness and production log review.
+- Worktime governance now has a versioned Belgian operational overtime baseline with configurable daily/weekly thresholds and break exclusion. It remains intentionally non-payroll-authoritative until employer/pay-period payroll rules are supplied.
 
 The current web/mobile/PWA layout and behavior should be treated as default unless a future change is explicitly requested.
