@@ -18,6 +18,9 @@
   const shiftHtml=(data.shifts||[]).length?(data.shifts||[]).map(item=>'<article class="row" style="display:block"><strong>'+escape(item.role_name)+'</strong><small>'+new Date(item.scheduled_start).toLocaleString('nl-BE')+' → '+new Date(item.scheduled_end).toLocaleString('nl-BE')+' · '+escape(item.response_status||item.status)+'</small></article>').join(''):'<p class="empty">Geen opgeslagen shifts.</p>'
   const briefingHtml=(data.briefings||[]).length?(data.briefings||[]).map(item=>'<article class="row" style="display:block"><strong>'+(item.kind==='personal'?'Persoonlijk · ':'')+escape(item.title)+' · v'+escape(item.version)+'</strong><p style="white-space:pre-wrap">'+escape(item.body)+'</p></article>').join(''):'<p class="empty">Geen opgeslagen instructies.</p>'
   const taskHtml=(data.tasks||[]).length?(data.tasks||[]).map(item=>'<article class="row" style="display:block"><strong>'+escape(item.title)+'</strong><small>'+escape(item.status)+'</small>'+(item.description?'<p style="white-space:pre-wrap">'+escape(item.description)+'</p>':'')+'</article>').join(''):'<p class="empty">Geen opgeslagen taken.</p>'
+  const incidentHtml=(data.incidents||[]).length?(data.incidents||[]).map(item=>'<article class="row" style="display:block"><strong>'+escape(item.status)+(item.escalated_at&&!item.resolved_at?' · GEËSCALEERD':'')+'</strong><p style="white-space:pre-wrap">'+escape(item.message)+'</p><small>'+new Date(item.created_at).toLocaleString('nl-BE')+'</small></article>').join(''):'<p class="empty">Geen opgeslagen help oproepen.</p>'
+  const checklistHtml=(data.checklists||[]).length?(data.checklists||[]).map(item=>{const done=(item.items||[]).filter(point=>point.completed_at).length;return '<article class="row" style="display:block"><strong>'+escape(item.title)+' · '+escape(item.status)+'</strong>'+(item.description?'<p>'+escape(item.description)+'</p>':'')+'<small>'+done+'/'+(item.items||[]).length+' punten voltooid</small></article>'}).join(''):'<p class="empty">Geen opgeslagen operationele checklists.</p>'
+  const inventoryHtml=(data.inventoryItems||[]).length?(data.inventoryItems||[]).map(item=>{const outstanding=(data.inventoryIssues||[]).filter(issue=>issue.item_id===item.id).reduce((sum,issue)=>sum+Number(issue.outstanding_quantity||0),0);return '<article class="row" style="display:block"><strong>'+escape(item.name)+'</strong><small>Beschikbaar '+escape(item.available_quantity)+' · uitgegeven '+escape(item.issued_quantity)+' · beschadigd '+escape(item.damaged_quantity)+' · vermist '+escape(item.missing_quantity)+(outstanding?' · uitstaand '+escape(outstanding):'')+'</small></article>'}).join(''):'<p class="empty">Geen opgeslagen materiaalstatus.</p>'
   const stamp='<small>Laatst online bijgewerkt: '+new Date(data.savedAt).toLocaleString('nl-BE')+'</small>'
   const events=section('Evenementen offline',stamp+eventHtml)
   const workplaces=section('Werkplekken offline',workplaceHtml)
@@ -26,7 +29,10 @@
   const documentsSection=section('Documenten offline',documentHtml)
   const briefs=section('Instructies offline',briefingHtml)
   const tasks=section('Taken offline',taskHtml)
-  const sections=[events,workplaces,shifts,emergency,documentsSection,briefs,tasks]
+  const incidents=section('Help offline',incidentHtml)
+  const checklists=section('Checklists offline',checklistHtml)
+  const inventory=section('Materiaal offline',inventoryHtml)
+  const sections=[events,workplaces,shifts,emergency,documentsSection,briefs,tasks,incidents,checklists,inventory]
   if(queue){for(const item of sections)main.insertBefore(item,queue)}else{main.append(...sections)}
  }
  run().catch(()=>{})
