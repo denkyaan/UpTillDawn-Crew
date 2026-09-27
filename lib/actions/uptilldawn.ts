@@ -329,10 +329,12 @@ export async function assignAvailableCrewShift(fd:FormData){
     : availability?.breakdown_available===true
  if(!eligible)throw new Error('Deze persoon heeft voor dit shift-type geen beschikbaarheid bevestigd.')
  if(!workplace||workplace.event_id!==eventId||!workplace.is_active)throw new Error('Selecteer een actieve werkplek van dit evenement.')
+ let createdMembershipRole:string|null=null
  if(!membership){
   const eventRole=person.role==='responsible_lead'?'responsible_lead':person.role==='admin'?'admin':'employee'
   const {error:memberError}=await s.from('event_members').insert({event_id:eventId,user_id:userId,event_role:eventRole})
   check(memberError)
+  createdMembershipRole=eventRole
  }
  const {error}=await s.rpc('upt_create_shift',{
   p_workplace:workplaceId,
@@ -343,6 +345,13 @@ export async function assignAvailableCrewShift(fd:FormData){
   p_overlap_allowed:fd.get('overlap_allowed')==='on',
   p_shift_kind:shiftKind,
  })
+ if(error&&createdMembershipRole){
+  await s.from('event_members')
+   .delete()
+   .eq('event_id',eventId)
+   .eq('user_id',userId)
+   .eq('event_role',createdMembershipRole)
+ }
  shiftMutationCheck(error)
  revalidatePath('/events');revalidatePath('/shifts');revalidatePath('/workplaces');revalidatePath('/operations');revalidatePath('/tasks');revalidatePath('/briefings')
 }
