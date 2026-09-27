@@ -535,13 +535,21 @@ BEGIN
       WHERE ended_at IS NULL
     ';
   END IF;
+
+  UPDATE public.break_sessions
+  SET
+    start_time = COALESCE(start_time, started_at),
+    end_time = COALESCE(end_time, ended_at),
+    started_at = COALESCE(started_at, start_time),
+    ended_at = COALESCE(ended_at, end_time);
 END
-$$;
+$;
 
 ALTER TABLE public.break_sessions
   ALTER COLUMN user_id SET NOT NULL,
   ALTER COLUMN started_at SET DEFAULT now(),
-  ALTER COLUMN started_at SET NOT NULL;
+  ALTER COLUMN started_at SET NOT NULL,
+  ALTER COLUMN start_time SET NOT NULL;
 
 CREATE UNIQUE INDEX IF NOT EXISTS
   one_active_break
