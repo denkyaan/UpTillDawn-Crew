@@ -90,6 +90,7 @@ declare
   v_incidents uuid[];
   v_equipment text:=nullif(trim(coalesce(p_equipment_notes,'')),'');
   v_notes text:=nullif(trim(coalesce(p_notes,'')),'');
+  v_existing boolean:=false;
   v_was_ready boolean:=false;
   v_incoming_changed boolean:=false;
 begin
@@ -140,8 +141,9 @@ begin
   limit 1
   for update;
 
-  v_was_ready:=found and v_handover.status='ready';
-  v_incoming_changed:=found and v_handover.incoming_responsible_id is distinct from p_incoming;
+  v_existing:=found;
+  v_was_ready:=v_existing and v_handover.status='ready';
+  v_incoming_changed:=v_existing and v_handover.incoming_responsible_id is distinct from p_incoming;
 
   if p_mark_ready then
     select coalesce(array_agg(t.id order by t.created_at),'{}'::uuid[])
@@ -163,7 +165,7 @@ begin
     v_incidents:=coalesce(v_handover.open_incident_ids,'{}'::uuid[]);
   end if;
 
-  if not found then
+  if not v_existing then
     insert into upt_private.shift_handovers(
       event_id,workplace_id,outgoing_responsible_id,incoming_responsible_id,status,
       open_task_ids,open_incident_ids,equipment_notes,notes,ready_at,updated_at
