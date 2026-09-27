@@ -56,7 +56,7 @@ The current cleanup reran all 15 SQL regression files in `tests/sql/` against th
 - Legacy private-chat assumptions were replaced by current workplace-chat behavior; the remaining private-chat peer RPC and direct `chat_members` read grant were revoked.
 - Incident/media Responsible fixtures now include the active-shift context required by current rules.
 
-The corrected SQL suites pass, including privilege/RLS, SECURITY DEFINER surface, release access, profile-role integrity, foreign-key coverage, Responsible read scope, operational security, chat lifecycle, queued uploads, storage security, offline time dependencies and event-selection guards.
+The corrected SQL suites pass, including privilege/RLS, SECURITY DEFINER surface, release access, profile-role integrity, foreign-key coverage, Responsible read scope, operational security, chat lifecycle, queued uploads, storage security, offline time dependencies and event-selection guards. A historical migration-history drift was also repaired: the Geoapify distributed rate limit, attendance-request concurrency guard and task-status revocation guard are now applied and recorded with their original repository versions.
 
 Repository CI is the release gate for lint, TypeScript, Node tests, production builds, Cloudflare Worker build and Wrangler deployment dry-run. CI run #790 for commit `c082b394600a4cbc4030de6fd35389016addc9af` passed every gate after the health-dashboard render-purity correction.
 
@@ -71,7 +71,7 @@ The audit also checked the database attack surface rather than only the visible 
 - anonymous table access is absent; anonymous RPC access is limited to the explicit token-gated God Mode surface; the former info-admin bootstrap RPC is closed and revoked from browser roles;
 - retired private-chat creation/peer discovery remains revoked;
 - generated Supabase TypeScript types exactly match the production schema;
-- repository and production migration histories match 143/143.
+- repository and production migration histories match 153/153.
 
 Issues found and corrected during this audit:
 - permanent-admin server routes now use the central admin privilege check;
@@ -103,7 +103,7 @@ Known remaining advisor findings are reviewed rather than blindly removed:
 These are not regressions in the current web/mobile baseline:
 
 1. Define an explicit overtime/pay-period policy before presenting overtime as payroll truth.
-2. Replay all 143 migrations from zero on an isolated project before claiming a fresh-install proof.
+2. Replay all 153 migrations from zero on an isolated project before claiming a fresh-install proof.
 3. Expand offline browsing beyond the operational workflows if full offline parity is ever required.
 4. Continue physical-device regression testing after major browser/OS updates.
 5. Enable Supabase leaked-password protection when the project setting is approved.
