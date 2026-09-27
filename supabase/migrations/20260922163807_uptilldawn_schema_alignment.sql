@@ -422,6 +422,8 @@ CREATE TABLE IF NOT EXISTS public.check_outs (
 
 ALTER TABLE public.work_sessions
   ADD COLUMN IF NOT EXISTS shift_id UUID REFERENCES public.shifts(id) ON DELETE SET NULL,
+  ADD COLUMN IF NOT EXISTS start_time TIMESTAMPTZ,
+  ADD COLUMN IF NOT EXISTS end_time TIMESTAMPTZ,
   ADD COLUMN IF NOT EXISTS started_at TIMESTAMPTZ,
   ADD COLUMN IF NOT EXISTS ended_at TIMESTAMPTZ,
   ADD COLUMN IF NOT EXISTS status TEXT NOT NULL DEFAULT 'active',
@@ -458,6 +460,13 @@ BEGIN
   END IF;
 
   UPDATE public.work_sessions
+  SET
+    start_time = COALESCE(start_time, started_at),
+    end_time = COALESCE(end_time, ended_at),
+    started_at = COALESCE(started_at, start_time),
+    ended_at = COALESCE(ended_at, end_time);
+
+  UPDATE public.work_sessions
   SET status = 'active'
   WHERE ended_at IS NULL;
 
@@ -469,7 +478,8 @@ $$;
 
 ALTER TABLE public.work_sessions
   ALTER COLUMN started_at SET DEFAULT now(),
-  ALTER COLUMN started_at SET NOT NULL;
+  ALTER COLUMN started_at SET NOT NULL,
+  ALTER COLUMN start_time SET NOT NULL;
 
 CREATE UNIQUE INDEX IF NOT EXISTS
   one_active_work_session
@@ -486,6 +496,8 @@ ON public.work_sessions(event_id, user_id);
 
 ALTER TABLE public.break_sessions
   ADD COLUMN IF NOT EXISTS user_id UUID REFERENCES public.profiles(id) ON DELETE CASCADE,
+  ADD COLUMN IF NOT EXISTS start_time TIMESTAMPTZ,
+  ADD COLUMN IF NOT EXISTS end_time TIMESTAMPTZ,
   ADD COLUMN IF NOT EXISTS started_at TIMESTAMPTZ,
   ADD COLUMN IF NOT EXISTS ended_at TIMESTAMPTZ,
   ADD COLUMN IF NOT EXISTS created_at TIMESTAMPTZ NOT NULL DEFAULT now();
