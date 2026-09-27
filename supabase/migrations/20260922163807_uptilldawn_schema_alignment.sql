@@ -695,14 +695,14 @@ ALTER TABLE public.message_attachments
   ADD COLUMN IF NOT EXISTS mime_type TEXT,
   ADD COLUMN IF NOT EXISTS created_at TIMESTAMPTZ NOT NULL DEFAULT now();
 
-DO $
+DO $$
 BEGIN
   UPDATE public.message_attachments
   SET
     file_url = COALESCE(file_url, storage_path),
     storage_path = COALESCE(storage_path, file_url);
 END
-$;
+$$;
 
 ALTER TABLE public.message_attachments
   ALTER COLUMN file_url SET NOT NULL,
