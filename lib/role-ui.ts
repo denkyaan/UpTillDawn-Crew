@@ -113,7 +113,8 @@ export const ROLE_UI_DEFAULTS: Record<RoleRuleRole, RoleUiRule[]> = {
     navRule("admin","personnel","Personeel & goedkeuringen",80),
     navRule("admin","chat","Chat's",90),
     navRule("admin","crew","Personeel",100),
-    navRule("admin","incidents","Help",110),\n    featureRule("admin","emergency","Noodinformatie",115),
+    navRule("admin","incidents","Help",110),
+    featureRule("admin","emergency","Noodinformatie",115),
     navRule("admin","exports","Excel",120),
     navRule("admin","settings","Instellingen",130),
   ],
@@ -128,7 +129,8 @@ export const ROLE_UI_DEFAULTS: Record<RoleRuleRole, RoleUiRule[]> = {
     featureRule("responsible_lead","inventory","Materiaal",75,"assigned_workplace_role"),
     navRule("responsible_lead","chat","Chat's",80),
     navRule("responsible_lead","crew","Personeel",90),
-    navRule("responsible_lead","incidents","Help",100,"shift_active"),\n    featureRule("responsible_lead","emergency","Noodinformatie",115),
+    navRule("responsible_lead","incidents","Help",100,"shift_active"),
+    featureRule("responsible_lead","emergency","Noodinformatie",115),
   ],
   staff: [
     navRule("staff","overview","Overzicht",10),
@@ -141,7 +143,8 @@ export const ROLE_UI_DEFAULTS: Record<RoleRuleRole, RoleUiRule[]> = {
     featureRule("staff","inventory","Materiaal",75,"shift_active"),
     navRule("staff","chat","Chat's",80),
     navRule("staff","crew","Personeel",90),
-    navRule("staff","incidents","Help",100,"shift_active"),\n    featureRule("staff","emergency","Noodinformatie",115),
+    navRule("staff","incidents","Help",100,"shift_active"),
+    featureRule("staff","emergency","Noodinformatie",115),
   ],
 }
 
