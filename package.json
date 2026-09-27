@@ -7,16 +7,17 @@
   },
   "scripts": {
     "dev": "next dev",
-    "build": "next build",
+    "build": "node scripts/clean-cloudflare.mjs && opennextjs-cloudflare build",
     "start": "next start",
     "lint": "eslint .",
     "typecheck": "tsc --noEmit",
     "test": "node --experimental-strip-types --test \"tests/**/*.test.mjs\"",
-    "build:cloudflare": "node scripts/clean-cloudflare.mjs && opennextjs-cloudflare build",
+    "build:cloudflare": "npm run build",
     "preview:cloudflare": "opennextjs-cloudflare preview",
     "deploy:cloudflare": "opennextjs-cloudflare deploy",
     "prebuild": "node scripts/god-source-index.mjs",
-    "predev": "node scripts/god-source-index.mjs"
+    "predev": "node scripts/god-source-index.mjs",
+    "build:next": "next build"
   },
   "dependencies": {
     "@codemirror/lang-css": "6.3.1",
