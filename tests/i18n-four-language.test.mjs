@@ -33,7 +33,7 @@ test('critical navigation and operational labels have German coverage', async ()
 
 test('admin and responsible login denial is consistent and fully translated', async () => {
   const auth = await readFile(new URL('../lib/actions/auth.ts', import.meta.url), 'utf8')
-  const login = await readFile(new URL('../app/(auth)/login/page.tsx', import.meta.url), 'utf8')
+  const login = await readFile(new URL('../components/auth/login-form.tsx', import.meta.url), 'utf8')
   const complete = await readFile(new URL('../lib/ui-translation-complete.ts', import.meta.url), 'utf8')
   const message = 'Foute logingegevens of u heeft geen toegang tot deze rol.'
   assert.ok(auth.includes("requestedPortal === 'admin' || requestedPortal === 'responsible'"))
