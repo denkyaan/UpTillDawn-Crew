@@ -5,6 +5,7 @@ import { z } from 'zod'
 import { geocodeGeoapify } from '@/lib/geoapify'
 import { fetchFacebookEventInfo } from '@/lib/facebook-event'
 import { responsibleHasConflict } from '@/lib/responsible-coverage'
+import { workplaceCapacityIsValid } from '@/lib/workplace-capacity'
 const uuid=z.string().uuid()
 const text=z.string().trim().min(1).max(200)
 async function adminClient(){
@@ -144,6 +145,23 @@ async function uploadWorkPhotos(
   throw error
  }
 }
+function workplaceCapacityValues(fd:FormData){
+ const minimumStaff=z.coerce.number().int().min(0).max(10000).parse(fd.get('minimum_staff')||0)
+ const targetStaff=z.coerce.number().int().min(0).max(10000).parse(fd.get('target_staff')||0)
+ const maximumRaw=String(fd.get('maximum_staff')||'').trim()
+ const maximumStaff=maximumRaw?z.coerce.number().int().min(0).max(10000).parse(maximumRaw):null
+ if(!workplaceCapacityIsValid({
+  workplaceId:'form',
+  minimumStaff,
+  targetStaff,
+  maximumStaff,
+ }))throw new Error('Bezetting moet voldoen aan minimum ≤ doel ≤ maximum.')
+ return {minimum_staff:minimumStaff,target_staff:targetStaff,maximum_staff:maximumStaff}
+}
+function shiftMutationCheck(error:{code?:string;message?:string}|null){
+ if(error?.message?.includes('Maximumbezetting'))throw new Error('Maximumbezetting van deze werkplek wordt overschreden.')
+ check(error)
+}
 function dates(fd:FormData,start:string,end:string){
  const a=z.string().datetime({offset:true}).parse(fd.get(start)),b=z.string().datetime({offset:true}).parse(fd.get(end))
  if(Date.parse(b)<=Date.parse(a)) throw new Error('Einde moet na begin liggen.')
@@ -200,29 +218,33 @@ export async function createEvent(fd:FormData){
  check(error);revalidatePath('/events')
 }
 export async function addWorkplace(fd:FormData){
- const {s}=await adminClient()
- const eventId=uuid.parse(fd.get('event_id'))
- const {error}=await s.from('workplaces').insert({
-  event_id:eventId,
-  name:text.parse(fd.get('name')),
-  description:String(fd.get('description')||'').trim().slice(0,1000)||null,
-  sort_order:z.coerce.number().int().min(0).max(10000).parse(fd.get('sort_order')||0),
-  is_active:true,
- })
- check(error);revalidatePath('/workplaces')
+ const {s}=await adminClient()
+ const eventId=uuid.parse(fd.get('event_id'))
+ const capacity=workplaceCapacityValues(fd)
+ const {error}=await s.from('workplaces').insert({
+  event_id:eventId,
+  name:text.parse(fd.get('name')),
+  description:String(fd.get('description')||'').trim().slice(0,1000)||null,
+  sort_order:z.coerce.number().int().min(0).max(10000).parse(fd.get('sort_order')||0),
+  is_active:true,
+  ...capacity,
+ })
+ check(error);revalidatePath('/workplaces');revalidatePath('/shifts')
 }
 export async function updateWorkplace(fd:FormData){
- const {s}=await adminClient()
- const workplaceId=uuid.parse(fd.get('workplace_id'))
- const {data:workplace,error:workplaceError}=await s.from('workplaces').select('event_id').eq('id',workplaceId).single()
- check(workplaceError);if(!workplace)throw new Error('Werkplek niet gevonden.')
- const {error}=await s.from('workplaces').update({
-  name:text.parse(fd.get('name')),
-  description:String(fd.get('description')||'').trim().slice(0,1000)||null,
-  sort_order:z.coerce.number().int().min(0).max(10000).parse(fd.get('sort_order')||0),
-  is_active:fd.get('is_active')==='on',
- }).eq('id',workplaceId)
- check(error);revalidatePath('/workplaces')
+ const {s}=await adminClient()
+ const workplaceId=uuid.parse(fd.get('workplace_id'))
+ const capacity=workplaceCapacityValues(fd)
+ const {data:workplace,error:workplaceError}=await s.from('workplaces').select('event_id').eq('id',workplaceId).single()
+ check(workplaceError);if(!workplace)throw new Error('Werkplek niet gevonden.')
+ const {error}=await s.from('workplaces').update({
+  name:text.parse(fd.get('name')),
+  description:String(fd.get('description')||'').trim().slice(0,1000)||null,
+  sort_order:z.coerce.number().int().min(0).max(10000).parse(fd.get('sort_order')||0),
+  is_active:fd.get('is_active')==='on',
+  ...capacity,
+ }).eq('id',workplaceId)
+ check(error);revalidatePath('/workplaces');revalidatePath('/shifts')
 }
 export async function setEventAvailability(fd:FormData){
  const {s}=await approvedClient()
@@ -321,7 +343,7 @@ export async function assignAvailableCrewShift(fd:FormData){
   p_overlap_allowed:fd.get('overlap_allowed')==='on',
   p_shift_kind:shiftKind,
  })
- check(error)
+ shiftMutationCheck(error)
  revalidatePath('/events');revalidatePath('/shifts');revalidatePath('/workplaces');revalidatePath('/operations');revalidatePath('/tasks');revalidatePath('/briefings')
 }
 export async function assignResponsible(fd:FormData){
@@ -451,43 +473,43 @@ export async function demoteResponsibleToStaff(fd:FormData){
  revalidatePath('/')
 }
 export async function createShift(fd:FormData){
- const {s}=await adminClient()
- const [start,end]=dates(fd,'start','end')
- const {error}=await s.rpc('upt_create_shift',{
-  p_workplace:uuid.parse(fd.get('workplace_id')),
-  p_user:uuid.parse(fd.get('user_id')),
-  p_role_name:text.parse(fd.get('role_name')||'Personeel'),
-  p_start:start,
-  p_end:end,
-  p_overlap_allowed:fd.get('overlap_allowed')==='on',
-  p_shift_kind:z.enum(['event','setup','breakdown']).parse(fd.get('shift_kind')||'event'),
- })
- check(error);revalidatePath('/shifts');revalidatePath('/operations')
+ const {s}=await adminClient()
+ const [start,end]=dates(fd,'start','end')
+ const {error}=await s.rpc('upt_create_shift',{
+  p_workplace:uuid.parse(fd.get('workplace_id')),
+  p_user:uuid.parse(fd.get('user_id')),
+  p_role_name:text.parse(fd.get('role_name')||'Personeel'),
+  p_start:start,
+  p_end:end,
+  p_overlap_allowed:fd.get('overlap_allowed')==='on',
+  p_shift_kind:z.enum(['event','setup','breakdown']).parse(fd.get('shift_kind')||'event'),
+ })
+ shiftMutationCheck(error);revalidatePath('/shifts');revalidatePath('/workplaces');revalidatePath('/operations')
 }
 export async function updateShift(fd:FormData){
- const {s}=await adminClient()
- const [start,end]=dates(fd,'start','end')
- const {error}=await s.rpc('upt_update_shift',{
-  p_shift:uuid.parse(fd.get('shift_id')),
-  p_role_name:text.parse(fd.get('role_name')||'Personeel'),
-  p_start:start,
-  p_end:end,
-  p_overlap_allowed:fd.get('overlap_allowed')==='on',
-  p_shift_kind:z.enum(['event','setup','breakdown']).parse(fd.get('shift_kind')||'event'),
- })
- check(error);revalidatePath('/shifts');revalidatePath('/operations')
+ const {s}=await adminClient()
+ const [start,end]=dates(fd,'start','end')
+ const {error}=await s.rpc('upt_update_shift',{
+  p_shift:uuid.parse(fd.get('shift_id')),
+  p_role_name:text.parse(fd.get('role_name')||'Personeel'),
+  p_start:start,
+  p_end:end,
+  p_overlap_allowed:fd.get('overlap_allowed')==='on',
+  p_shift_kind:z.enum(['event','setup','breakdown']).parse(fd.get('shift_kind')||'event'),
+ })
+ shiftMutationCheck(error);revalidatePath('/shifts');revalidatePath('/workplaces');revalidatePath('/operations')
 }
 export async function confirmShift(fd:FormData){
- const {s}=await approvedClient()
- const {error}=await s.rpc('upt_confirm_shift',{p_shift:uuid.parse(fd.get('shift_id'))})
- check(error)
- revalidatePath('/shifts');revalidatePath('/operations')
+ const {s}=await approvedClient()
+ const {error}=await s.rpc('upt_confirm_shift',{p_shift:uuid.parse(fd.get('shift_id'))})
+ check(error)
+ revalidatePath('/shifts');revalidatePath('/operations')
 }
 export async function cancelShift(fd:FormData){
- const {s}=await adminClient()
- const reason=String(fd.get('reason')||'').trim().slice(0,500)
- const {error}=await s.rpc('upt_cancel_shift',{p_shift:uuid.parse(fd.get('shift_id')),...(reason?{p_reason:reason}:{})})
- check(error);revalidatePath('/shifts');revalidatePath('/operations')
+ const {s}=await adminClient()
+ const reason=String(fd.get('reason')||'').trim().slice(0,500)
+ const {error}=await s.rpc('upt_cancel_shift',{p_shift:uuid.parse(fd.get('shift_id')),...(reason?{p_reason:reason}:{})})
+ check(error);revalidatePath('/shifts');revalidatePath('/workplaces');revalidatePath('/operations')
 }
 export async function setAccountStatus(fd:FormData){
  const {s,user}=await adminClient();const id=uuid.parse(fd.get('user_id'));const status=z.enum(['pending','approved']).parse(fd.get('status'));const approved=status==='approved'
