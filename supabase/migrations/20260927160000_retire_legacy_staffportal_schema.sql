@@ -1,4 +1,11 @@
 -- Retire the historical StaffPortal schema after the Uptilldawn Crew model
+-- Retire auth/utility artifacts that belonged only to the historical StaffPortal.
+DROP TRIGGER IF EXISTS on_auth_email_confirmed ON auth.users;
+DROP FUNCTION IF EXISTS public.handle_email_confirmed();
+DROP FUNCTION IF EXISTS public.current_user_has_role(public.user_role);
+DROP FUNCTION IF EXISTS public.current_user_roles();
+DROP FUNCTION IF EXISTS public.trigger_set_updated_at();
+
 -- has fully converged on public.profiles and text-based operational statuses.
 -- Production no longer exposes these tables/types. Fresh installs must match it.
 
