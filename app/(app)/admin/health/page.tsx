@@ -7,6 +7,7 @@ import { HealthLatencyProbe } from '@/components/admin/health-latency-probe'
 import { aggregateDependencyHealth } from '@/lib/health-checks'
 import { evaluateOperationalAlerts, highestAlertSeverity } from '@/lib/operational-alert-policy'
 import { DEFAULT_SERVICE_LEVELS, serviceLevelMet } from '@/lib/service-levels'
+import { healthSnapshotAlert, healthSnapshotAgeMs, serviceLevelAlert } from '@/lib/observability-alerts'
 import type { Database } from '@/types/crew-database'
 
 export const dynamic='force-dynamic'
@@ -66,9 +67,13 @@ export default async function Page(){
       : Number(health.offline_stale)>0||!syncHealthy
         ?'degraded'
         :'healthy'
+  const snapshotAlert=healthSnapshotAlert(health.checked_at)
+  const syncSloAlert=serviceLevelAlert('sync-success',syncRate)
+  const observabilityAlerts=[snapshotAlert,syncSloAlert].filter((alert):alert is NonNullable<typeof alert>=>Boolean(alert))
+  const snapshotAgeMinutes=Math.floor(healthSnapshotAgeMs(health.checked_at)/60_000)
   const alerts=evaluateOperationalAlerts({offlineFailed:Number(health.offline_failed),offlineStale:Number(health.offline_stale),unreadNotifications:Number(health.unread_notifications),notifications24h:Number(health.notifications_24h),pendingCheckins:Number(health.pending_checkins),pendingCheckouts:Number(health.pending_checkouts),openIncidents:Number(health.open_incidents)})
   const alertSeverity=highestAlertSeverity(alerts)
-  const overall=aggregateDependencyHealth([{name:'Offline sync',health:syncStatus,checkedAt:Date.parse(health.checked_at)},{name:'Operational alerts',health:alertSeverity==='critical'?'unavailable':alertSeverity==='warning'?'degraded':'healthy',checkedAt:Date.parse(health.checked_at)}])
+  const overall=aggregateDependencyHealth([{name:'Offline sync',health:syncStatus,checkedAt:Date.parse(health.checked_at)},{name:'Operational alerts',health:alertSeverity==='critical'?'unavailable':alertSeverity==='warning'?'degraded':'healthy',checkedAt:Date.parse(health.checked_at)},{name:'Health snapshot',health:snapshotAlert?.severity==='critical'?'unavailable':snapshotAlert?'degraded':'healthy',checkedAt:Date.parse(health.checked_at)}])
 
   return <main className="mx-auto max-w-6xl space-y-6 p-4 pb-28 md:p-8">
     <RealtimeRefresh tables={['work_sessions','break_sessions','check_ins','check_outs','incidents','offline_operation_records','crew_notifications']}/>
@@ -100,6 +105,12 @@ export default async function Page(){
         </div>
       </article>
     </section>
+
+    {observabilityAlerts.length>0&&<section className="rounded-2xl border border-amber-500/50 bg-amber-500/5 p-4" role="alert">
+      <h2 className="font-bold">Observability waarschuwingen</h2>
+      <div className="mt-2 space-y-1 text-sm text-muted-foreground">{observabilityAlerts.map(alert=><p key={alert.code}><strong className={alert.severity==='critical'?'text-red-500':'text-amber-600'}>{alert.severity==='critical'?'KRITIEK':'SLO'}:</strong> {alert.message}</p>)}</div>
+      <p className="mt-2 text-xs text-muted-foreground">Snapshotleeftijd: {snapshotAgeMinutes} minuut/minuten.</p>
+    </section>}
 
     {alerts.length>0&&<section className="rounded-2xl border border-amber-500/50 bg-amber-500/5 p-4" role="alert">
       <h2 className="font-bold">Operationele alerts</h2>
