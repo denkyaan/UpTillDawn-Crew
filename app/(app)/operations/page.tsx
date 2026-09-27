@@ -131,17 +131,19 @@ export default async function Page(){
       workplaceName:scopedWorkplaces.find(workplace=>workplace.id===scope.workplace_id)?.name||'Werkplek',
     }))
 
-    const [handoverResult,candidateResults]=await Promise.all([
+    const [handoverResult,snapshotResult,candidateResults]=await Promise.all([
       s.rpc('upt_shift_handovers'),
+      s.rpc('upt_shift_handover_inventory_snapshots'),
       Promise.all(responsibleScope.map(scope=>
         s.rpc('upt_handover_candidates',{p_event:scope.event_id,p_workplace:scope.workplace_id})
       )),
     ])
 
-    if(handoverResult.error||candidateResults.some(result=>result.error)){
+    if(handoverResult.error||snapshotResult.error||candidateResults.some(result=>result.error)){
       return <main className="p-8">Shift overdrachten konden niet worden geladen. Probeer opnieuw.</main>
     }
 
+    const inventorySnapshots=new Map((snapshotResult.data||[]).map(row=>[row.handover_id,row.inventory_snapshot]))
     handovers=(handoverResult.data||[])
       .filter(row=>operationalEventIds.includes(row.event_id))
       .map(row=>({
@@ -161,6 +163,7 @@ export default async function Page(){
         updatedAt:row.updated_at,
         readyAt:row.ready_at||null,
         acceptedAt:row.accepted_at||null,
+        inventorySnapshot:inventorySnapshots.get(row.id)||null,
       }))
 
     handoverCandidates=candidateResults.flatMap((result,index)=>{
