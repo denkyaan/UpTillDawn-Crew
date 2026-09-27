@@ -45,6 +45,7 @@ God Mode credentials and sessions are stored only in private server-side state. 
 - Cloudflare Workers AI maker-only Edit mode assistant.
 - Cloudflare production deployment and Supabase push Edge Function.
 - Realtime operational refresh, Admin System Health observability, and Admin Release Readiness with schema-drift detection, required sync blockers and operational deploy warnings.
+- Repository CI now includes an isolated local Supabase fresh-install job that resets from zero, replays every migration, executes every SQL regression suite, and diffs freshly generated database types against `types/crew-database.ts`.
 
 ## Cleanup / regression verification
 
@@ -103,7 +104,7 @@ Known remaining advisor findings are reviewed rather than blindly removed:
 These are not regressions in the current web/mobile baseline:
 
 1. Define an explicit overtime/pay-period policy before presenting overtime as payroll truth.
-2. Replay all 165 migrations from zero on an isolated project before claiming a fresh-install proof.
+2. Complete a separate backup/restore disaster-recovery proof against a second isolated remote Supabase project; fresh-install migration replay itself is enforced in CI.
 3. Expand offline browsing beyond the operational workflows if full offline parity is ever required.
 4. Continue physical-device regression testing after major browser/OS updates.
 5. Enable Supabase leaked-password protection when the project setting is approved.
