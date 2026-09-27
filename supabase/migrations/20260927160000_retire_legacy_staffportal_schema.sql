@@ -132,4 +132,10 @@ DROP TYPE IF EXISTS public.gps_status CASCADE;
 DROP TYPE IF EXISTS public.work_status CASCADE;
 DROP TYPE IF EXISTS public.sync_status CASCADE;
 
+-- Admin login success is called only after Supabase authentication succeeds.
+-- Keep the two pre-auth guard/failure RPCs available to the login flow, but do
+-- not let anonymous callers clear an existing admin lockout.
+REVOKE EXECUTE ON FUNCTION public.upt_admin_login_success(text,text,text,text) FROM anon;
+GRANT EXECUTE ON FUNCTION public.upt_admin_login_success(text,text,text,text) TO authenticated;
+
 NOTIFY pgrst, 'reload schema';
