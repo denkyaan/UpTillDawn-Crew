@@ -7,11 +7,6 @@ export type Json =
   | Json[]
 
 export type Database = {
-  // Allows to automatically instantiate createClient with right options
-  // instead of createClient<Database, { PostgrestVersion: 'XX' }>(URL, KEY)
-  __InternalSupabase: {
-    PostgrestVersion: "14.5"
-  }
   public: {
     Tables: {
       admin_role_modes: {
@@ -2607,6 +2602,25 @@ export type Database = {
           p_target_type: string
         }
         Returns: string
+      }
+      upt_admin_login_failure: {
+        Args: {
+          p_ip?: string
+          p_location?: string
+          p_login: string
+          p_user_agent?: string
+        }
+        Returns: Json
+      }
+      upt_admin_login_guard: { Args: { p_login: string }; Returns: Json }
+      upt_admin_login_success: {
+        Args: {
+          p_ip?: string
+          p_location?: string
+          p_login: string
+          p_user_agent?: string
+        }
+        Returns: undefined
       }
       upt_admin_personnel_details: {
         Args: never
