@@ -21,11 +21,11 @@ SET approved=true,
 FROM rr_ids i
 WHERE p.id=i.id AND i.name IN ('admin','lead','staff','other');
 
-INSERT INTO public.events(id,name,start_date,end_date,start_at,end_at,status)
+INSERT INTO public.events(id,name,start_date,end_date,start_at,end_at,status,created_by)
 VALUES
-((SELECT id FROM rr_ids WHERE name='future'),'Future release',now()+interval '1 hour',now()+interval '5 hours',now()+interval '1 hour',now()+interval '5 hours','scheduled'),
-((SELECT id FROM rr_ids WHERE name='active'),'Active release',now()-interval '1 hour',now()+interval '2 hours',now()-interval '1 hour',now()+interval '2 hours','active'),
-((SELECT id FROM rr_ids WHERE name='ended'),'Ended release',now()-interval '5 hours',now()-interval '1 hour',now()-interval '5 hours',now()-interval '1 hour','active');
+((SELECT id FROM rr_ids WHERE name='future'),'Future release',now()+interval '1 hour',now()+interval '5 hours',now()+interval '1 hour',now()+interval '5 hours','scheduled',(SELECT id FROM rr_ids WHERE name='admin')),
+((SELECT id FROM rr_ids WHERE name='active'),'Active release',now()-interval '1 hour',now()+interval '2 hours',now()-interval '1 hour',now()+interval '2 hours','active',(SELECT id FROM rr_ids WHERE name='admin')),
+((SELECT id FROM rr_ids WHERE name='ended'),'Ended release',now()-interval '5 hours',now()-interval '1 hour',now()-interval '5 hours',now()-interval '1 hour','active',(SELECT id FROM rr_ids WHERE name='admin'));
 
 INSERT INTO public.workplaces(id,event_id,name) VALUES
 ((SELECT id FROM rr_ids WHERE name='future_wp'),(SELECT id FROM rr_ids WHERE name='future'),'Future WP'),
