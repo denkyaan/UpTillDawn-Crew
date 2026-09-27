@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useTransition } from "react"
+import { useEffect, useState, useTransition } from "react"
 import Link from "next/link"
 import Image from "next/image"
 import { Card, CardContent, CardHeader } from "@/components/ui/card"
@@ -15,6 +15,13 @@ export default function ForgotPasswordPage() {
   const [sentTo, setSentTo] = useState("")
   const [error, setError] = useState<string | null>(null)
   const [isPending, startTransition] = useTransition()
+
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search)
+    if (params.get("error") === "invalid_or_expired") {
+      setError("De herstel-link is ongeldig of verlopen. Vraag hieronder een nieuwe herstel-link aan.")
+    }
+  }, [])
 
   const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault()
