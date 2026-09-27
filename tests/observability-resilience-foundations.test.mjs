@@ -36,5 +36,6 @@ test('health observability alerts detect stale snapshots and SLO breaches', asyn
   assert.match(source, /15 \* 60_000/)
   assert.match(source, /5 \* 60_000/)
   assert.match(source, /serviceLevelAlert/)
-  for (const metric of ['availability','api-latency','sync-success','push-delivery']) assert.ok(source.includes(metric))
+  assert.match(source, /ServiceLevelMetric/)
+  assert.match(source, /DEFAULT_SERVICE_LEVELS/)
 })
