@@ -77,7 +77,7 @@ export default async function Page(){
       </div>
       <div className="flex items-center gap-2">
         <StatusBadge status={overall}/>
-        <Link href="/admin" className="rounded-xl border px-4 py-3 font-semibold">Beheeroverzicht</Link>
+        <div className="flex gap-2"><Link href="/admin/release" className="rounded-xl border px-4 py-3 font-semibold">Release readiness</Link><Link href="/admin" className="rounded-xl border px-4 py-3 font-semibold">Beheeroverzicht</Link></div>
       </div>
     </div>
 
