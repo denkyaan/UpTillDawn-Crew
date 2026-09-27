@@ -18,15 +18,18 @@ The current web/mobile/PWA experience is the production baseline.
 - Web Push opt-in, delivery, badge/click handling and subscription renewal
 - Cloudflare production deployment from `main`
 - SQL security/regression suite aligned to the current permissions model\n- Admin System Health dashboard restored and backed by privacy-safe production health aggregates\n- Admin Release Readiness gate with repository/database migration matching and runtime blocker checks
-- CI fresh-install database gate: isolated local Supabase replay from zero, all SQL regressions, and generated-type drift verification
+- CI fresh-install database gate: isolated local Supabase replay from zero, all SQL regressions, and generated-type drift verification. Verified green on GitHub Actions run `36336833839` for commit `1002b85ee1446294f62d2f84d1f7a685a54fdb01` (166 migrations, 16 SQL suites, exact normalized public-type match).
 
-## Ongoing / optional work
+## Remaining external / operational gates
 
-1. Define overtime/pay-period policy before payroll-style overtime output is enabled.
-2. Complete a remote disaster-recovery restore proof on a second isolated Supabase project; from-zero migration replay is now automated in CI.
-3. Broaden offline browsing if full offline parity becomes a requirement.
-4. Continue cross-device regression testing after material iOS/Android/Windows/browser changes.
-5. Enable Supabase leaked-password protection in project Auth settings.
-6. Continue production observability/alerting as real usage volume grows; health and release-readiness baselines are now live.
+1. Enable Supabase leaked-password protection in the hosted Auth project settings. The repository password policy is already enforced, but this platform switch is still reported as disabled by the Supabase Security Advisor.
+2. Complete the remote backup -> restore disaster-recovery proof on a second isolated Supabase resource. Repository verification automation is ready; creation of a second remote project remains cost-gated and requires explicit approval before provisioning.
+
+## Completed hardening beyond the baseline
+
+- Offline browsing now includes cached event emergency information, scoped critical event/workplace documents and operational snapshot support; the critical write workflows remain queue-backed and idempotent.
+- Cross-device/PWA regression contracts for iOS/Android/Windows/browser install, service-worker refresh and offline behavior run in CI after material changes.
+- Production observability includes Admin System Health, SLO/freshness alert helpers, operational alerts and Release Readiness; production Supabase logs were reviewed as part of the hardening pass.
+- Worktime governance includes versioned Belgian operational overtime defaults, configurable daily/weekly thresholds and break exclusion. It is explicitly non-payroll-authoritative until an employer/pay-period payroll policy is formally supplied.
 
 Changes to the current web/mobile layout should be treated as explicit product changes, not cleanup.
