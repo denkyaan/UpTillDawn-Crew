@@ -721,6 +721,65 @@ export async function updatePersonalInstruction(fd:FormData){
  if(error){await rollbackWorkPhotos(s,paths);check(error)}
  revalidatePath('/briefings')
 }
+export async function createInventoryItem(fd:FormData){
+ const {s,profile}=await approvedClient()
+ requireManager(profile.role)
+ const {error}=await s.rpc('upt_create_inventory_item',{
+  p_workplace:uuid.parse(fd.get('workplace_id')),
+  p_name:text.parse(fd.get('name')),
+  p_category:String(fd.get('category')||'').trim().slice(0,120)||undefined,
+  p_quantity:z.coerce.number().int().min(1).max(100000).parse(fd.get('quantity')),
+ })
+ check(error)
+ revalidatePath('/workplaces');revalidatePath('/tasks');revalidatePath('/operations')
+}
+export async function restockInventoryItem(fd:FormData){
+ const {s,profile}=await approvedClient()
+ requireManager(profile.role)
+ const {error}=await s.rpc('upt_restock_inventory_item',{
+  p_item:uuid.parse(fd.get('item_id')),
+  p_quantity:z.coerce.number().int().min(1).max(100000).parse(fd.get('quantity')),
+  p_notes:String(fd.get('notes')||'').trim().slice(0,1000)||undefined,
+ })
+ check(error)
+ revalidatePath('/workplaces');revalidatePath('/tasks');revalidatePath('/operations')
+}
+export async function issueInventoryItem(fd:FormData){
+ const {s,profile}=await approvedClient()
+ requireManager(profile.role)
+ const {error}=await s.rpc('upt_issue_inventory',{
+  p_item:uuid.parse(fd.get('item_id')),
+  p_user:uuid.parse(fd.get('user_id')),
+  p_quantity:z.coerce.number().int().min(1).max(100000).parse(fd.get('quantity')),
+  p_notes:String(fd.get('notes')||'').trim().slice(0,1000)||undefined,
+ })
+ check(error)
+ revalidatePath('/workplaces');revalidatePath('/tasks');revalidatePath('/operations');revalidatePath('/notifications')
+}
+export async function settleInventoryIssue(fd:FormData){
+ const {s}=await approvedClient()
+ const {error}=await s.rpc('upt_settle_inventory_issue',{
+  p_issue:uuid.parse(fd.get('issue_id')),
+  p_condition:z.enum(['returned','damaged','missing']).parse(fd.get('condition')),
+  p_quantity:z.coerce.number().int().min(1).max(100000).parse(fd.get('quantity')),
+  p_notes:String(fd.get('notes')||'').trim().slice(0,1000)||undefined,
+ })
+ check(error)
+ revalidatePath('/workplaces');revalidatePath('/tasks');revalidatePath('/operations');revalidatePath('/notifications')
+}
+export async function restoreInventoryQuantity(fd:FormData){
+ const {s,profile}=await approvedClient()
+ requireManager(profile.role)
+ const {error}=await s.rpc('upt_restore_inventory_quantity',{
+  p_item:uuid.parse(fd.get('item_id')),
+  p_condition:z.enum(['damaged','missing']).parse(fd.get('condition')),
+  p_quantity:z.coerce.number().int().min(1).max(100000).parse(fd.get('quantity')),
+  p_notes:String(fd.get('notes')||'').trim().slice(0,1000)||undefined,
+ })
+ check(error)
+ revalidatePath('/workplaces');revalidatePath('/tasks');revalidatePath('/operations')
+}
+
 const checklistPhotoTypes=new Map([
  ['image/jpeg','jpg'],
  ['image/png','png'],
