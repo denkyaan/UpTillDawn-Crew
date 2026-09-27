@@ -15,11 +15,19 @@ const portals = {
 
 type Portal = keyof typeof portals
 
-export function LoginForm({ portal }: { portal: Portal }) {
+export function LoginForm({
+  portal,
+  nativeAction,
+  initialError = null,
+}: {
+  portal: Portal
+  nativeAction?: string
+  initialError?: string | null
+}) {
   const PortalIcon = portals[portal].icon
   const [menuOpen, setMenuOpen] = useState(false)
   const [showPassword, setShowPassword] = useState(false)
-  const [error, setError] = useState<string | null>(null)
+  const [error, setError] = useState<string | null>(initialError)
   const [isPending, startTransition] = useTransition()
 
   function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
@@ -99,7 +107,12 @@ export function LoginForm({ portal }: { portal: Portal }) {
             </div>
           )}
 
-          <form onSubmit={handleSubmit} className="space-y-5">
+          <form
+            action={nativeAction}
+            method={nativeAction ? "post" : undefined}
+            onSubmit={nativeAction ? undefined : handleSubmit}
+            className="space-y-5"
+          >
             <input type="hidden" name="portal" value={portal} />
             <div>
               <label htmlFor="email" className="mb-2 block text-sm font-semibold">Login</label>
