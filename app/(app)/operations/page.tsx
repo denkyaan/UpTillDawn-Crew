@@ -3,6 +3,7 @@ import { getCurrentUser } from '@/lib/actions/auth'
 import { redirect } from 'next/navigation'
 import OperationsClient from './operations-client'
 import type { Tables, Database } from '@/types/crew-database'
+import { ShiftHandoverPanel, type HandoverCandidate, type HandoverScope, type HandoverView } from '@/components/responsible/shift-handover-panel'
 
 export const dynamic='force-dynamic'
 
@@ -13,7 +14,8 @@ export default async function Page(){
 
   const role=current.role
   const isAdmin=role==='admin'
-  const manager=isAdmin||role==='responsible_lead'
+  const isResponsible=role==='responsible_lead'
+  const manager=isAdmin||isResponsible
   const nowDate=new Date()
   const now=nowDate.toISOString()
   const startWindowEnd=new Date(nowDate.getTime()+60*60*1000).toISOString()
@@ -117,6 +119,61 @@ export default async function Page(){
   }
 
   type ManagerLiveSession=Database['public']['Functions']['upt_manager_live_sessions']['Returns'][number]
+  let handoverScopes:HandoverScope[]=[]
+  let handoverCandidates:HandoverCandidate[]=[]
+  let handovers:HandoverView[]=[]
+
+  if(isResponsible){
+    handoverScopes=responsibleScope.map(scope=>({
+      eventId:scope.event_id,
+      eventName:operationalEvents.find(event=>event.id===scope.event_id)?.name||'Evenement',
+      workplaceId:scope.workplace_id,
+      workplaceName:scopedWorkplaces.find(workplace=>workplace.id===scope.workplace_id)?.name||'Werkplek',
+    }))
+
+    const [handoverResult,candidateResults]=await Promise.all([
+      s.rpc('upt_shift_handovers'),
+      Promise.all(responsibleScope.map(scope=>
+        s.rpc('upt_handover_candidates',{p_event:scope.event_id,p_workplace:scope.workplace_id})
+      )),
+    ])
+
+    if(handoverResult.error||candidateResults.some(result=>result.error)){
+      return <main className="p-8">Shift overdrachten konden niet worden geladen. Probeer opnieuw.</main>
+    }
+
+    handovers=(handoverResult.data||[])
+      .filter(row=>operationalEventIds.includes(row.event_id))
+      .map(row=>({
+        id:row.id,
+        eventId:row.event_id,
+        workplaceId:row.workplace_id,
+        outgoingResponsibleId:row.outgoing_responsible_id,
+        outgoingName:row.outgoing_name||'Verantwoordelijke',
+        incomingResponsibleId:row.incoming_responsible_id||null,
+        incomingName:row.incoming_name||null,
+        status:row.status==='accepted'?'accepted':row.status==='ready'?'ready':'draft',
+        openTaskIds:row.open_task_ids||[],
+        openIncidentIds:row.open_incident_ids||[],
+        equipmentNotes:row.equipment_notes||null,
+        notes:row.notes||null,
+        createdAt:row.created_at,
+        updatedAt:row.updated_at,
+        readyAt:row.ready_at||null,
+        acceptedAt:row.accepted_at||null,
+      }))
+
+    handoverCandidates=candidateResults.flatMap((result,index)=>{
+      const scope=responsibleScope[index]
+      return (result.data||[]).map(candidate=>({
+        eventId:scope.event_id,
+        workplaceId:scope.workplace_id,
+        userId:candidate.user_id,
+        fullName:candidate.full_name||'Verantwoordelijke',
+      }))
+    })
+  }
+
   let liveSessions:ManagerLiveSession[]=[]
   let liveBreaks:Tables<'break_sessions'>[]=[]
   let crewDirectory:Array<{id:string;full_name:string|null;phone_number:string|null;profile_photo_url:string|null}>=[]
@@ -152,7 +209,16 @@ export default async function Page(){
     }
   }
 
-  return <OperationsClient
+  return <>
+    {isResponsible&&handoverScopes.length>0&&<div className="mx-auto max-w-4xl px-4 pt-4 md:px-8 md:pt-8">
+      <ShiftHandoverPanel
+        userId={current.id}
+        scopes={handoverScopes}
+        candidates={handoverCandidates}
+        handovers={handovers}
+      />
+    </div>}
+    <OperationsClient
     userId={current.id}
     shifts={shifts.data||[]}
     events={operationalEvents}
@@ -172,4 +238,5 @@ export default async function Page(){
     timeReviews={timeReviews.data||[]}
     operationalAlerts={operationalAlerts.data||[]}
   />
+  </>
 }
