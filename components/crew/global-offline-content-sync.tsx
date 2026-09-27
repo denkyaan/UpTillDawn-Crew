@@ -2,7 +2,7 @@
 
 import {useEffect} from 'react'
 import {createClient} from '@/lib/supabase/crew-client'
-import {saveOfflineBriefings,saveOfflineEmergency,saveOfflineTasks,type OfflineBriefing,type OfflineEmergencyInfo,type OfflineTask} from '@/lib/crew-offline-snapshot'
+import {loadOfflineDocuments,replaceOfflineDocuments,saveOfflineBriefings,saveOfflineEmergency,saveOfflineTasks,type OfflineBriefing,type OfflineDocument,type OfflineEmergencyInfo,type OfflineTask} from '@/lib/crew-offline-snapshot'
 
 export function GlobalOfflineContentSync({userId}:{userId:string}){
  useEffect(()=>{
@@ -10,11 +10,12 @@ export function GlobalOfflineContentSync({userId}:{userId:string}){
   const s=createClient()
   let cancelled=false
   void (async()=>{
-   const [{data:briefings},{data:personal},{data:assignments},{data:emergency}]=await Promise.all([
+   const [{data:briefings},{data:personal},{data:assignments},{data:emergency},{data:documents}]=await Promise.all([
     s.from('briefings').select('id,title,body,version,event_id').order('created_at',{ascending:false}),
     s.from('personal_instructions').select('id,title,body,version,event_id').eq('user_id',userId).order('created_at',{ascending:false}),
     s.from('task_assignments').select('id,status,tasks(id,title,description,event_id,workplace_id)').eq('user_id',userId).order('created_at'),
     s.from('event_emergency_information').select('event_id,emergency_number,first_aid_contact,security_contact,assembly_point,procedure,updated_at,events(name,address)').order('updated_at',{ascending:false}),
+    s.from('event_documents').select('id,event_id,kind,title,description,file_name,mime_type,storage_path,updated_at,events(name)').eq('offline_critical',true).eq('is_active',true).order('updated_at',{ascending:false}),
    ])
    if(cancelled)return
    const briefingItems:OfflineBriefing[]=[
@@ -23,7 +24,20 @@ export function GlobalOfflineContentSync({userId}:{userId:string}){
    ]
    const taskItems:OfflineTask[]=(assignments||[]).flatMap(row=>row.tasks?[{id:row.id,title:row.tasks.title,description:row.tasks.description,status:row.status,event_id:row.tasks.event_id,workplace_id:row.tasks.workplace_id}]:[])
    const emergencyItems:OfflineEmergencyInfo[]=(emergency||[]).map(row=>({event_id:row.event_id,event_name:row.events?.name||'Evenement',event_address:row.events?.address||'',emergency_number:row.emergency_number,first_aid_contact:row.first_aid_contact,security_contact:row.security_contact,assembly_point:row.assembly_point,procedure:row.procedure,updated_at:row.updated_at}))
-   await Promise.all([saveOfflineBriefings(userId,briefingItems),saveOfflineTasks(userId,taskItems),saveOfflineEmergency(userId,emergencyItems)])
+   const existingDocuments=await loadOfflineDocuments(userId)
+   const existingById=new Map(existingDocuments.map(document=>[document.id,document]))
+   const offlineDocuments:OfflineDocument[]=[]
+   for(const row of documents||[]){
+    const previous=existingById.get(row.id)
+    let blob=previous?.updated_at===row.updated_at&&previous.storage_path===row.storage_path?previous.blob:null
+    if(!blob){
+     const {data:file,error:fileError}=await s.storage.from('work-media').download(row.storage_path)
+     if(fileError||!file)continue
+     blob=file
+    }
+    offlineDocuments.push({key:userId+':'+row.id,userId,id:row.id,event_id:row.event_id,event_name:row.events?.name||'Evenement',kind:row.kind,title:row.title,description:row.description,file_name:row.file_name,mime_type:row.mime_type,storage_path:row.storage_path,updated_at:row.updated_at,blob})
+   }
+   await Promise.all([saveOfflineBriefings(userId,briefingItems),saveOfflineTasks(userId,taskItems),saveOfflineEmergency(userId,emergencyItems),replaceOfflineDocuments(userId,offlineDocuments)])
   })().catch(()=>{})
   return()=>{cancelled=true}
  },[userId])
