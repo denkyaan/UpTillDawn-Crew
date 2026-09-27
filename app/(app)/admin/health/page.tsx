@@ -3,7 +3,8 @@ import { redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase/crew-server'
 import { getCurrentUser } from '@/lib/actions/auth'
 import { RealtimeRefresh } from '@/components/realtime-refresh'
-import { aggregateDependencyHealth, dependencyIsSlow, type DependencyCheck } from '@/lib/health-checks'
+import { HealthLatencyProbe } from '@/components/admin/health-latency-probe'
+import { aggregateDependencyHealth } from '@/lib/health-checks'
 import { DEFAULT_SERVICE_LEVELS, serviceLevelMet } from '@/lib/service-levels'
 import type { Database } from '@/types/crew-database'
 
@@ -34,9 +35,7 @@ export default async function Page(){
   if(!current?.isAdmin)redirect('/')
 
   const s=await createClient()
-  const started=Date.now()
   const result=await s.rpc('upt_admin_system_health')
-  const latencyMs=Date.now()-started
 
   if(result.error||!result.data?.[0]){
     return <main className="mx-auto max-w-6xl space-y-5 p-4 md:p-8">
@@ -55,12 +54,6 @@ export default async function Page(){
   }
 
   const health=result.data[0] as HealthRow
-  const latencyCheck:DependencyCheck={
-    name:'Supabase',
-    health:latencyMs>2000?'unavailable':latencyMs>1000?'degraded':'healthy',
-    latencyMs,
-    checkedAt:Date.parse(health.checked_at),
-  }
   const syncObjective=DEFAULT_SERVICE_LEVELS.find(item=>item.metric==='sync-success')!
   const syncRate=Number(health.offline_operations_24h)>0
     ? Number(health.offline_synced_24h)/Number(health.offline_operations_24h)
@@ -72,10 +65,7 @@ export default async function Page(){
       : Number(health.offline_stale)>0||!syncHealthy
         ?'degraded'
         :'healthy'
-  const overall=aggregateDependencyHealth([
-    latencyCheck,
-    {name:'Offline sync',health:syncStatus,checkedAt:Date.parse(health.checked_at)},
-  ])
+  const overall=aggregateDependencyHealth([{name:'Offline sync',health:syncStatus,checkedAt:Date.parse(health.checked_at)}])
 
   return <main className="mx-auto max-w-6xl space-y-6 p-4 pb-28 md:p-8">
     <RealtimeRefresh tables={['work_sessions','break_sessions','check_ins','check_outs','incidents','offline_operation_records','crew_notifications']}/>
@@ -92,16 +82,7 @@ export default async function Page(){
     </div>
 
     <section className="grid gap-4 md:grid-cols-2">
-      <article className="space-y-3 rounded-2xl border p-4">
-        <div className="flex items-center justify-between gap-3">
-          <div><h2 className="text-xl font-bold">Database & API</h2><p className="text-sm text-muted-foreground">Admin health snapshot via Supabase RPC.</p></div>
-          <StatusBadge status={latencyCheck.health}/>
-        </div>
-        <div className="grid gap-3 sm:grid-cols-2">
-          <Metric label="RPC latency" value={latencyMs+' ms'} detail={dependencyIsSlow(latencyCheck)?'Boven de 1000 ms SLO-grens':'Binnen de 1000 ms SLO-grens'}/>
-          <Metric label="Laatste check" value={new Date(health.checked_at).toLocaleTimeString('nl-BE')} detail={new Date(health.checked_at).toLocaleDateString('nl-BE')}/>
-        </div>
-      </article>
+      <HealthLatencyProbe/>
 
       <article className="space-y-3 rounded-2xl border p-4">
         <div className="flex items-center justify-between gap-3">
