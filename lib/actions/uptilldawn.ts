@@ -6,6 +6,7 @@ import { geocodeGeoapify } from '@/lib/geoapify'
 import { fetchFacebookEventInfo } from '@/lib/facebook-event'
 import { responsibleHasConflict } from '@/lib/responsible-coverage'
 import { workplaceCapacityIsValid } from '@/lib/workplace-capacity'
+import { declineRequiresReason } from '@/lib/crew-self-service'
 const uuid=z.string().uuid()
 const text=z.string().trim().min(1).max(200)
 async function adminClient(){
@@ -368,8 +369,8 @@ export async function assignResponsible(fd:FormData){
  ]=await Promise.all([
   s.from('profiles').select('approved,role').eq('id',user_id).single(),
   s.from('workplaces').select('event_id,is_active').eq('id',workplace_id).single(),
-  s.from('shifts').select('workplace_id,scheduled_start,scheduled_end').eq('workplace_id',workplace_id).eq('user_id',user_id).neq('status','cancelled'),
-  s.from('shifts').select('workplace_id,scheduled_start,scheduled_end').eq('user_id',user_id).neq('status','cancelled'),
+  s.from('shifts').select('workplace_id,scheduled_start,scheduled_end').eq('workplace_id',workplace_id).eq('user_id',user_id).neq('status','cancelled').neq('response_status','declined'),
+  s.from('shifts').select('workplace_id,scheduled_start,scheduled_end').eq('user_id',user_id).neq('status','cancelled').neq('response_status','declined'),
   s.from('responsible_assignments').select('workplace_id').eq('user_id',user_id),
  ])
  check(profileError);check(wError);check(shiftError);check(allUserShiftsError);check(responsibleAssignmentsError)
@@ -511,8 +512,38 @@ export async function updateShift(fd:FormData){
 export async function confirmShift(fd:FormData){
  const {s}=await approvedClient()
  const {error}=await s.rpc('upt_confirm_shift',{p_shift:uuid.parse(fd.get('shift_id'))})
+ shiftMutationCheck(error)
+ revalidatePath('/shifts');revalidatePath('/workplaces');revalidatePath('/operations')
+}
+export async function declineShift(fd:FormData){
+ const {s,user}=await approvedClient()
+ const shiftId=uuid.parse(fd.get('shift_id'))
+ const reason=String(fd.get('reason')||'').trim().slice(0,500)
+ if(declineRequiresReason({
+  shiftId,
+  userId:user.id,
+  response:'declined',
+  reason,
+  updatedAt:Date.now(),
+ }))throw new Error('Geef een reden waarom je deze dienst niet kunt uitvoeren.')
+ const {error}=await s.rpc('upt_respond_shift',{
+  p_shift:shiftId,
+  p_response:'declined',
+  p_reason:reason,
+ })
  check(error)
- revalidatePath('/shifts');revalidatePath('/operations')
+ revalidatePath('/shifts');revalidatePath('/workplaces');revalidatePath('/operations');revalidatePath('/notifications')
+}
+export async function reassignShift(fd:FormData){
+ const {s}=await adminClient()
+ const reason=z.string().trim().min(3).max(500).parse(fd.get('reason'))
+ const {error}=await s.rpc('upt_reassign_shift',{
+  p_shift:uuid.parse(fd.get('shift_id')),
+  p_user:uuid.parse(fd.get('user_id')),
+  p_reason:reason,
+ })
+ shiftMutationCheck(error)
+ revalidatePath('/shifts');revalidatePath('/workplaces');revalidatePath('/operations');revalidatePath('/notifications')
 }
 export async function cancelShift(fd:FormData){
  const {s}=await adminClient()
