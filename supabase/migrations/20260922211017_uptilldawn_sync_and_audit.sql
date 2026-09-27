@@ -13,6 +13,22 @@ SET
 WHERE user_id IS NULL
    OR content IS NULL;
 
+-- Align clean-install incidents with the production compatibility surface.
+ALTER TABLE public.incidents
+  ADD COLUMN IF NOT EXISTS user_id UUID REFERENCES public.profiles(id) ON DELETE RESTRICT,
+  ADD COLUMN IF NOT EXISTS description TEXT,
+  ADD COLUMN IF NOT EXISTS photo_url TEXT,
+  ADD COLUMN IF NOT EXISTS gps_coordinates POINT;
+
+UPDATE public.incidents
+SET
+  user_id = COALESCE(user_id, reporter_id),
+  description = COALESCE(description, message),
+  photo_url = COALESCE(photo_url, photo_path)
+WHERE user_id IS NULL
+   OR description IS NULL
+   OR photo_url IS NULL;
+
 CREATE OR REPLACE FUNCTION public.upt_can_read_channel(p_channel uuid) RETURNS boolean
 LANGUAGE sql STABLE SECURITY DEFINER SET search_path=public AS $$
  SELECT public.upt_is_approved() AND EXISTS(SELECT 1 FROM public.chat_channels c WHERE c.id=p_channel AND (
