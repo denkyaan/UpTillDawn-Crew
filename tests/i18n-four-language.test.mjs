@@ -45,3 +45,10 @@ test('admin and responsible login denial is consistent and fully translated', as
   assert.match(row, /en:\s*'[^']+'/)
   assert.match(row, /de:\s*'[^']+'/)
 })
+
+test('device language wins on application launch', async () => {
+  const sync = await readFile(new URL('../components/locale-sync.tsx', import.meta.url), 'utf8')
+  assert.match(sync, /let locale = deviceLocale\(\)/)
+  assert.doesNotMatch(sync, /storedLocale \|\| deviceLocale\(\)/)
+  assert.match(sync, /onDeviceLanguageChange = \(\) => applyLocale\(deviceLocale\(\), false\)/)
+})
