@@ -134,8 +134,51 @@ DROP TYPE IF EXISTS public.sync_status CASCADE;
 
 -- Admin login success is called only after Supabase authentication succeeds.
 -- Keep the two pre-auth guard/failure RPCs available to the login flow, but do
--- not let anonymous callers clear an existing admin lockout.
-REVOKE EXECUTE ON FUNCTION public.upt_admin_login_success(text,text,text,text) FROM anon;
+-- not let anonymous or non-admin authenticated callers clear an admin lockout.
+CREATE OR REPLACE FUNCTION public.upt_admin_login_success(
+  p_login text,
+  p_ip text DEFAULT null,
+  p_location text DEFAULT null,
+  p_user_agent text DEFAULT null
+)
+RETURNS void
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path=pg_catalog,public,upt_private
+AS $admin_success$
+DECLARE
+  v_key text:=lower(trim(coalesce(p_login,'')));
+  v_count integer;
+BEGIN
+  IF auth.uid() IS NULL OR NOT public.upt_is_admin() THEN
+    RAISE EXCEPTION 'admin authentication required';
+  END IF;
+
+  SELECT failed_attempts
+  INTO v_count
+  FROM upt_private.admin_login_attempts
+  WHERE login_key=v_key;
+
+  IF coalesce(v_count,0)>0 THEN
+    INSERT INTO upt_private.admin_login_security_events(
+      event_type,login_key,failed_attempts,ip_address,approximate_location,user_agent
+    )
+    VALUES(
+      'successful_login_after_failures',
+      v_key,
+      v_count,
+      left(p_ip,128),
+      left(p_location,300),
+      left(p_user_agent,1000)
+    );
+  END IF;
+
+  DELETE FROM upt_private.admin_login_attempts
+  WHERE login_key=v_key;
+END;
+$admin_success$;
+
+REVOKE ALL ON FUNCTION public.upt_admin_login_success(text,text,text,text) FROM PUBLIC, anon;
 GRANT EXECUTE ON FUNCTION public.upt_admin_login_success(text,text,text,text) TO authenticated;
 
 NOTIFY pgrst, 'reload schema';
