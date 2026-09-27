@@ -33,6 +33,41 @@ function appOrigin(): string | null {
     } catch { return null }
 }
 
+async function lookupIpLocation(ip: string | null) {
+    const apiKey = process.env.GEOAPIFY_API_KEY
+    if (!apiKey || !ip) return null
+
+    const controller = new AbortController()
+    const timeout = setTimeout(() => controller.abort(), 2000)
+    try {
+        const url = new URL('https://api.geoapify.com/v1/ipinfo')
+        url.searchParams.set('ip', ip)
+        url.searchParams.set('apiKey', apiKey)
+        url.searchParams.set('lang', 'nl')
+
+        const response = await fetch(url, { signal: controller.signal, cache: 'no-store' })
+        if (!response.ok) return null
+
+        const payload = await response.json() as {
+            city?: { name?: string }
+            state?: { name?: string }
+            country?: { name?: string }
+            postcode?: string
+        }
+        const parts = [
+            payload.city?.name,
+            payload.postcode,
+            payload.state?.name,
+            payload.country?.name,
+        ].filter((value): value is string => Boolean(value))
+        return parts.join(', ') || null
+    } catch {
+        return null
+    } finally {
+        clearTimeout(timeout)
+    }
+}
+
 async function requestSecurityContext() {
     const h = await headers()
     const forwarded = h.get('x-forwarded-for')?.split(',')[0]?.trim()
@@ -40,7 +75,8 @@ async function requestSecurityContext() {
     const city = h.get('cf-ipcity')
     const region = h.get('cf-region')
     const country = h.get('cf-ipcountry')
-    const approximateLocation = [city, region, country].filter(Boolean).join(', ') || null
+    const cloudflareLocation = [city, region, country].filter(Boolean).join(', ') || null
+    const approximateLocation = cloudflareLocation || await lookupIpLocation(ip)
     return { ip, approximateLocation, userAgent: h.get('user-agent') }
 }
 
