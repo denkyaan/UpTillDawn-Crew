@@ -26,7 +26,7 @@ as $$
       where ra.user_id = uid
         and now() >= e.start_at - interval '1 hour'
         and now() <= e.end_at
-        and coalesce(e.status, '') <> 'archived'
+        and e.status <> 'archived'
     ) then 'responsible_lead'
     when exists (
       select 1 from public.profiles p
