@@ -138,7 +138,6 @@ export async function signIn(formData: FormData) {
             approximateLocation: context.approximateLocation,
             userAgent: context.userAgent,
             reason: reason ?? null,
-            audience: 'security',
         })
     }
     if (requestedPortal === 'admin') {
