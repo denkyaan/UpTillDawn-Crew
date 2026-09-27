@@ -22,8 +22,8 @@ The current web/mobile/PWA experience is the production baseline.
 
 ## Remaining external / operational gates
 
-1. Enable Supabase leaked-password protection in the hosted Auth project settings. The repository password policy is already enforced, but this platform switch is still reported as disabled by the Supabase Security Advisor.
-2. Complete the remote backup -> restore disaster-recovery proof on a second isolated Supabase resource. Repository verification automation is ready; creation of a second remote project remains cost-gated and requires explicit approval before provisioning.
+1. **Temporarily deferred by the product owner:** enable Supabase leaked-password protection in the hosted Auth project settings. The repository password policy is already enforced, but this platform switch is still reported as disabled by the Supabase Security Advisor.
+2. **Temporarily deferred by the product owner:** complete the remote backup -> restore disaster-recovery proof. A separate healthy Supabase project is available for testing, but only Supabase Restore to a New Project from a physical backup counts as the required DR proof.
 
 ## Completed hardening beyond the baseline
 
