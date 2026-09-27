@@ -69,13 +69,14 @@ export async function updateSession(request: NextRequest) {
         return response
     }
 
-    // Auth entry pages should not be shown to an already authenticated user.
-    const authPages = ['/login', '/signup', '/forgot-password']
-    const isAuthPage = authPages.some(path =>
+    // Keep login portals reachable while authenticated so admins/makers can
+    // deliberately re-authenticate and switch their effective role mode.
+    const redirectAuthenticatedAuthPages = ['/signup', '/forgot-password']
+    const isRedirectedAuthPage = redirectAuthenticatedAuthPages.some(path =>
         pathname === path || pathname.startsWith(`${path}/`)
     )
 
-    if (isAuthPage && user) {
+    if (isRedirectedAuthPage && user) {
         const url = request.nextUrl.clone()
         url.pathname = '/'
         url.search = ''
