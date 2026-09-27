@@ -38,6 +38,8 @@ test('workplace mutations persist validated capacity settings and shift actions 
   assert.match(source, /shiftMutationCheck/)
   assert.match(source, /Maximumbezetting/)
   assert.match(source, /revalidatePath\('\/workplaces'\)/)
+  assert.match(source, /createdMembershipRole/)
+  assert.match(source, /event_members'[\\s\\S]*?delete\\(\\)/)
 })
 
 test('workplace UI integrates capacity configuration and scheduled coverage state', async () => {
