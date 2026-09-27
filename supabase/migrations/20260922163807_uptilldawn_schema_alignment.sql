@@ -1824,3 +1824,43 @@ BEGIN
   END LOOP;
 END
 $$;
+
+
+-- ============================================================
+-- CANONICAL STATUS TYPE CONVERGENCE
+-- ============================================================
+-- Historical clean installs created these Crew columns with enums. Production
+-- exposes them as text, so convert them before later workflow migrations run.
+
+ALTER TABLE public.incidents ALTER COLUMN status DROP DEFAULT;
+ALTER TABLE public.incidents ALTER COLUMN status TYPE TEXT USING status::text;
+ALTER TABLE public.incidents ALTER COLUMN status SET DEFAULT 'open';
+
+ALTER TABLE public.tasks ALTER COLUMN status DROP DEFAULT;
+ALTER TABLE public.tasks ALTER COLUMN status TYPE TEXT USING status::text;
+ALTER TABLE public.tasks ALTER COLUMN status SET DEFAULT 'not_started';
+
+ALTER TABLE public.check_ins ALTER COLUMN status DROP DEFAULT;
+ALTER TABLE public.check_ins ALTER COLUMN status TYPE TEXT USING status::text;
+ALTER TABLE public.check_ins ALTER COLUMN status SET DEFAULT 'pending';
+ALTER TABLE public.check_ins ALTER COLUMN gps_status DROP DEFAULT;
+ALTER TABLE public.check_ins ALTER COLUMN gps_status TYPE TEXT USING gps_status::text;
+ALTER TABLE public.check_ins ALTER COLUMN gps_status SET DEFAULT 'not_checked';
+
+ALTER TABLE public.check_outs ALTER COLUMN status DROP DEFAULT;
+ALTER TABLE public.check_outs ALTER COLUMN status TYPE TEXT USING status::text;
+ALTER TABLE public.check_outs ALTER COLUMN status SET DEFAULT 'pending';
+
+ALTER TABLE public.work_sessions ALTER COLUMN status DROP DEFAULT;
+ALTER TABLE public.work_sessions ALTER COLUMN status TYPE TEXT USING status::text;
+ALTER TABLE public.work_sessions ALTER COLUMN status SET DEFAULT 'active';
+ALTER TABLE public.work_sessions ALTER COLUMN start_gps_status DROP DEFAULT;
+ALTER TABLE public.work_sessions ALTER COLUMN start_gps_status TYPE TEXT USING start_gps_status::text;
+ALTER TABLE public.work_sessions ALTER COLUMN start_gps_status SET DEFAULT 'not_checked';
+ALTER TABLE public.work_sessions ALTER COLUMN stop_gps_status DROP DEFAULT;
+ALTER TABLE public.work_sessions ALTER COLUMN stop_gps_status TYPE TEXT USING stop_gps_status::text;
+ALTER TABLE public.work_sessions ALTER COLUMN stop_gps_status SET DEFAULT 'not_checked';
+
+ALTER TABLE public.offline_operation_records ALTER COLUMN status DROP DEFAULT;
+ALTER TABLE public.offline_operation_records ALTER COLUMN status TYPE TEXT USING status::text;
+ALTER TABLE public.offline_operation_records ALTER COLUMN status SET DEFAULT 'pending';
