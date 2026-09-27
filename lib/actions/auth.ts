@@ -121,18 +121,24 @@ export async function signIn(formData: FormData) {
 
     const supabase = await createClient()
     const securityRelevant = requestedPortal === 'admin' || submittedEmail === MAKER_LOGIN_ALIAS || email === MAKER_ACCOUNT_EMAIL
-    const security = securityRelevant ? await requestSecurityContext() : null
+    let security = securityRelevant ? await requestSecurityContext() : null
+    const getSecurity = async () => {
+        if (!security) security = await requestSecurityContext()
+        return security
+    }
     const notifySecurity = async (outcome: 'success' | 'failure' | 'blocked' | 'denied', reason?: string) => {
         if (!securityRelevant) return
+        const context = await getSecurity()
         await sendSecurityLoginEmail({
             outcome,
             login: submittedEmail,
             canonicalLogin: email,
             portal: requestedPortal as 'staff' | 'responsible' | 'admin',
-            ip: security?.ip,
-            approximateLocation: security?.approximateLocation,
-            userAgent: security?.userAgent,
+            ip: context.ip,
+            approximateLocation: context.approximateLocation,
+            userAgent: context.userAgent,
             reason: reason ?? null,
+            audience: 'security',
         })
     }
     if (requestedPortal === 'admin') {
@@ -180,8 +186,31 @@ export async function signIn(formData: FormData) {
         if (roleModeError || roleMode !== requestedRoleMode) { await notifySecurity('denied', 'role_mode_error'); await supabase.auth.signOut(); return { error: 'De gekozen rolweergave kon niet worden geactiveerd.', code: 'role_mode_error' } }
     }
 
-    if (requestedPortal === 'admin') await adminSecurityRpc(supabase, 'upt_admin_login_success', { p_login: email, p_ip: security?.ip ?? null, p_location: security?.approximateLocation ?? null, p_user_agent: security?.userAgent ?? null })
+    if (requestedPortal === 'admin') {
+        const context = await getSecurity()
+        await adminSecurityRpc(supabase, 'upt_admin_login_success', { p_login: email, p_ip: context.ip ?? null, p_location: context.approximateLocation ?? null, p_user_agent: context.userAgent ?? null })
+    }
+
     await notifySecurity('success', 'login_success')
+
+    const accountEmail = data.user.email?.trim().toLowerCase() || null
+    const centralSecurityEmail = (process.env.SECURITY_ALERT_EMAIL || MAKER_ACCOUNT_EMAIL).trim().toLowerCase()
+    if (accountEmail && (!securityRelevant || accountEmail !== centralSecurityEmail)) {
+        const context = await getSecurity()
+        await sendSecurityLoginEmail({
+            outcome: 'success',
+            login: accountEmail,
+            canonicalLogin: accountEmail,
+            portal: requestedPortal as 'staff' | 'responsible' | 'admin',
+            ip: context.ip,
+            approximateLocation: context.approximateLocation,
+            userAgent: context.userAgent,
+            reason: 'login_success',
+            recipient: accountEmail,
+            audience: 'account',
+        })
+    }
+
     if (submittedEmail === MAKER_LOGIN_ALIAS) {
         redirect(`/maker-mode?portal=${requestedPortal}`)
     }
