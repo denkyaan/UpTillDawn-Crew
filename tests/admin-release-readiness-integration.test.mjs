@@ -1,6 +1,6 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
-import { readFile } from 'node:fs/promises'
+import { readFile, readdir } from 'node:fs/promises'
 import { releaseReadiness } from '../lib/release-readiness.ts'
 import { EXPECTED_DB_MIGRATION_VERSION } from '../lib/release-baseline.ts'
 
@@ -16,9 +16,13 @@ test('release readiness blocks only failed required checks', () => {
 })
 
 test('expected migration baseline matches the newest repository migration', async () => {
-  const migration=await readFile(new URL('../supabase/migrations/20260927124905_admin_release_readiness_snapshot.sql',import.meta.url),'utf8')
-  assert.equal(EXPECTED_DB_MIGRATION_VERSION,'20260927124905')
-  assert.match(migration,/upt_admin_release_readiness_snapshot/)
+  const migrationDir=new URL('../supabase/migrations/',import.meta.url)
+  const files=await readdir(migrationDir)
+  const versions=files
+    .map(name=>name.match(/^(\\d+)_.*\\.sql$/)?.[1])
+    .filter(Boolean)
+    .sort()
+  assert.equal(EXPECTED_DB_MIGRATION_VERSION,versions.at(-1))
 })
 
 test('release snapshot is admin only and exposes aggregate blockers', async () => {
