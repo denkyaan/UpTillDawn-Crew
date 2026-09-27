@@ -125,7 +125,11 @@ export async function sendSecurityLoginEmail(event: SecurityLoginEmail): Promise
     })
 
     if (!response.ok) {
-      console.error('[security-email] Resend weigerde de login-alert', response.status)
+      const detail = await response.text().catch(() => '')
+      console.error('[security-email] Resend weigerde de login-alert', {
+        status: response.status,
+        detail: detail.slice(0, 1000),
+      })
       return false
     }
 
