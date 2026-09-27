@@ -16,13 +16,14 @@ SET approved=true,
 FROM upt_scope_ids i
 WHERE profiles.id=i.id AND i.name IN ('lead','staff');
 
-INSERT INTO public.events(id,name,start_date,end_date,start_at,end_at,status)
+INSERT INTO public.events(id,name,start_date,end_date,start_at,end_at,status,created_by)
 VALUES(
  (SELECT id FROM upt_scope_ids WHERE name='event'),
  'Responsible scope rollback',
  now()-interval '1 hour', now()+interval '1 day',
  now()-interval '1 hour', now()+interval '1 day',
- 'active'
+ 'active',
+ (SELECT id FROM upt_scope_ids WHERE name='lead')
 );
 
 INSERT INTO public.workplaces(id,event_id,name,sort_order)
