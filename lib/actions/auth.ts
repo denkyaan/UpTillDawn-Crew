@@ -210,7 +210,12 @@ export async function forgotPassword(formData: FormData) {
     const email = resolveLoginEmail(submittedEmail)
     const origin = appOrigin(); if (!origin) return { error: 'De applicatieconfiguratie is onvolledig. Neem contact op met de beheerder.' }
     const supabase = await createClient(); const { error } = await supabase.auth.resetPasswordForEmail(email, { redirectTo: `${origin}/auth/callback?next=/auth/reset-password` })
-    if (error) return { error: 'De aanvraag kon niet worden verwerkt. Probeer opnieuw.' }
+    if (error) {
+        if (error.status === 429 || error.code === 'over_email_send_rate_limit' || error.message.toLowerCase().includes('rate limit')) {
+            return { error: 'Er is zojuist al een herstelmail verstuurd. Wacht even en gebruik de meest recente herstelmail in je inbox.' }
+        }
+        return { error: 'De herstelmail kon niet worden verstuurd. Probeer het later opnieuw.' }
+    }
     return { success: true, message: 'Als dit account bestaat, is een herstel-link naar het e-mailadres verstuurd.' }
 }
 
