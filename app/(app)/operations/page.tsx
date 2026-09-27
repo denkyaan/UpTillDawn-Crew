@@ -116,24 +116,28 @@ export default async function Page(){
     return <main className="p-8">Operationele controles konden niet worden geladen. Probeer opnieuw.</main>
   }
 
-  let liveSessions:Tables<'work_sessions'>[]=[]
+  type ManagerLiveSession=Database['public']['Functions']['upt_manager_live_sessions']['Returns'][number]
+  let liveSessions:ManagerLiveSession[]=[]
   let liveBreaks:Tables<'break_sessions'>[]=[]
-  let liveShifts:Tables<'shifts'>[]=[]
   let crewDirectory:Array<{id:string;full_name:string|null;phone_number:string|null;profile_photo_url:string|null}>=[]
 
   if(manager){
-    const [sessionsResult,breaksResult,liveShiftsResult]=await Promise.all([
-      s.from('work_sessions').select('*').in('event_id',operationalEventIds).is('ended_at',null).order('started_at'),
-      s.from('break_sessions').select('*').is('ended_at',null).order('started_at'),
-      s.from('shifts').select('*').in('event_id',operationalEventIds).neq('status','cancelled'),
-    ])
-    liveShifts=isAdmin
-      ? (liveShiftsResult.data||[])
-      : (liveShiftsResult.data||[]).filter(shift=>scopedWorkplaceIds.has(shift.workplace_id))
-    const liveShiftIds=new Set(liveShifts.map(shift=>shift.id))
-    liveSessions=(sessionsResult.data||[]).filter(ws=>Boolean(ws.shift_id&&liveShiftIds.has(ws.shift_id)))
-    const liveSessionIds=new Set(liveSessions.map(ws=>ws.id))
-    liveBreaks=(breaksResult.data||[]).filter(row=>liveSessionIds.has(row.work_session_id))
+    const liveResult=await s.rpc('upt_manager_live_sessions')
+    if(liveResult.error){
+      return <main className="p-8">Live personeelstatus kon niet worden geladen. Probeer opnieuw.</main>
+    }
+    liveSessions=(liveResult.data||[]).filter(row=>operationalEventIds.includes(row.event_id))
+    const liveSessionIds=liveSessions.map(row=>row.session_id)
+    if(liveSessionIds.length){
+      const breaksResult=await s.from('break_sessions')
+        .select('*')
+        .in('work_session_id',liveSessionIds)
+        .order('started_at')
+      if(breaksResult.error){
+        return <main className="p-8">Live pauzestatus kon niet worden geladen. Probeer opnieuw.</main>
+      }
+      liveBreaks=breaksResult.data||[]
+    }
 
     if(isAdmin){
       const {data}=await s.from('profiles').select('id,full_name,phone_number,profile_photo_url').eq('approved',true)
