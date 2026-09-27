@@ -80,7 +80,7 @@ export async function sendSecurityLoginEmail(event: SecurityLoginEmail): Promise
     `Login: ${login}`,
     canonical ? `Gekoppeld account: ${canonical}` : null,
     `IP-adres: ${ip}`,
-    `Locatie (benadering): ${location}`,
+    `Adres / locatie (benadering): ${location}`,
     `Toestel: ${device}`,
     `Browser: ${browser}`,
     `User-Agent: ${agent}`,
@@ -96,7 +96,7 @@ export async function sendSecurityLoginEmail(event: SecurityLoginEmail): Promise
       <tr><td><strong>Login</strong></td><td>${escapeHtml(login)}</td></tr>
       ${canonical ? `<tr><td><strong>Gekoppeld account</strong></td><td>${escapeHtml(canonical)}</td></tr>` : ''}
       <tr><td><strong>IP-adres</strong></td><td>${escapeHtml(ip)}</td></tr>
-      <tr><td><strong>Locatie (benadering)</strong></td><td>${escapeHtml(location)}</td></tr>
+      <tr><td><strong>Adres / locatie (benadering)</strong></td><td>${escapeHtml(location)}</td></tr>
       <tr><td><strong>Toestel</strong></td><td>${escapeHtml(device)}</td></tr>
       <tr><td><strong>Browser</strong></td><td>${escapeHtml(browser)}</td></tr>
       <tr><td><strong>User-Agent</strong></td><td>${escapeHtml(agent)}</td></tr>
