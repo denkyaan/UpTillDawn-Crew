@@ -2,7 +2,7 @@ name: CI
 
 on:
   push:
-    branches: [main, roadmap/full-platform-upgrade]
+    branches: [main]
   pull_request:
     branches: [main]
   workflow_dispatch:
