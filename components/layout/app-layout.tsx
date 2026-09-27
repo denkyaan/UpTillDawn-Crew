@@ -51,7 +51,9 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
   const order=effectiveRules.map(rule=>rule.feature_key)
   const labels=Object.fromEntries(effectiveRules.map(rule=>[rule.feature_key,rule.label]))
 
+  const personalRoute=pathname.startsWith("/settings")||pathname.startsWith("/notifications")
   const currentFeature=
+    personalRoute?null:
     pathname==="/"||pathname==="/admin"?"overview":
     pathname.startsWith("/events")?"events":
     pathname.startsWith("/operations")?"operations":
