@@ -4,6 +4,8 @@ import { AdminOnly } from '@/components/auth/admin-only'
 import { redirect } from 'next/navigation'
 import { getCurrentUser } from '@/lib/actions/auth'
 import { responsibleCoverageGaps } from '@/lib/responsible-coverage-health'
+import { coverageWindows } from '@/lib/staffing-coverage'
+import { staffNeededForTarget, workplaceStaffingState } from '@/lib/workplace-capacity'
 
 export const dynamic='force-dynamic'
 
@@ -22,7 +24,16 @@ export default async function Page(){
 
   let events:Array<{id:string;name:string}>=[]
   let workplaces:Array<{
-    id:string;event_id:string;name:string;description:string|null;sort_order:number;is_active:boolean;events:{name:string}|null
+    id:string
+    event_id:string
+    name:string
+    description:string|null
+    sort_order:number
+    is_active:boolean
+    minimum_staff:number
+    target_staff:number
+    maximum_staff:number|null
+    events:{name:string;start_at:string;end_at:string}|null
   }>=[]
   let assignedCrew:Array<{
     id:string
@@ -44,7 +55,7 @@ export default async function Page(){
       {data:responsibleRows},
     ]=await Promise.all([
       s.from('events').select('id,name').neq('status','archived').order('start_at'),
-      s.from('workplaces').select('id,event_id,name,description,sort_order,is_active,events(name)').order('sort_order'),
+      s.from('workplaces').select('id,event_id,name,description,sort_order,is_active,minimum_staff,target_staff,maximum_staff,events(name,start_at,end_at)').order('sort_order'),
       s.from('shifts').select('event_id,workplace_id,user_id,role_name,status,scheduled_start,scheduled_end').neq('status','cancelled').order('scheduled_start'),
       s.from('profiles').select('id,full_name,role').eq('approved',true).order('full_name'),
       s.from('responsible_assignments').select('workplace_id,user_id'),
@@ -85,7 +96,7 @@ export default async function Page(){
 
     const [{data:eventRows},{data:workplaceRows}]=await Promise.all([
       s.from('events').select('id,name').in('id',eventIds).neq('status','archived').gte('end_at','now').order('start_at'),
-      s.from('workplaces').select('id,event_id,name,description,sort_order,is_active,events(name)').in('id',workplaceIds).order('sort_order'),
+      s.from('workplaces').select('id,event_id,name,description,sort_order,is_active,minimum_staff,target_staff,maximum_staff,events(name,start_at,end_at)').in('id',workplaceIds).order('sort_order'),
     ])
     events=eventRows||[]
     workplaces=workplaceRows||[]
@@ -142,6 +153,15 @@ export default async function Page(){
         <input name="name" required maxLength={200} placeholder="Nieuwe werkplek" className="rounded-lg border bg-background p-3"/>
         <input name="description" maxLength={1000} placeholder="Omschrijving (optioneel)" className="rounded-lg border bg-background p-3"/>
         <input name="sort_order" type="number" min="0" max="10000" defaultValue="0" aria-label="Volgorde" className="rounded-lg border bg-background p-3"/>
+        <details className="rounded-xl border p-3 md:col-span-2">
+          <summary className="cursor-pointer font-semibold">Bezettingsregels (optioneel)</summary>
+          <div className="mt-3 grid gap-2 sm:grid-cols-3">
+            <label className="grid gap-1 text-sm">Minimum<input name="minimum_staff" type="number" min="0" max="10000" defaultValue="0" className="rounded-lg border bg-background p-2"/></label>
+            <label className="grid gap-1 text-sm">Doel<input name="target_staff" type="number" min="0" max="10000" defaultValue="0" className="rounded-lg border bg-background p-2"/></label>
+            <label className="grid gap-1 text-sm">Maximum<input name="maximum_staff" type="number" min="0" max="10000" placeholder="Geen limiet" className="rounded-lg border bg-background p-2"/></label>
+          </div>
+          <p className="mt-2 text-xs text-muted-foreground">Minimum en doel gelden voor de evenementuren. Maximum wordt ook server-side afgedwongen bij nieuwe of gewijzigde diensten.</p>
+        </details>
         <button className="rounded-lg bg-violet-600 px-4 py-3 font-bold md:col-span-2">WERKPLEK TOEVOEGEN</button>
       </form>
     </AdminOnly>}
@@ -158,6 +178,35 @@ export default async function Page(){
           workplace.id,
           workplaceCoverageShifts,
           responsibleAssignments.map(row=>({userId:row.user_id,workplaceId:row.workplace_id})),
+        )
+        const capacity={
+          workplaceId:workplace.id,
+          minimumStaff:workplace.minimum_staff,
+          targetStaff:workplace.target_staff,
+          maximumStaff:workplace.maximum_staff,
+        }
+        const staffingCoverage=workplace.events
+          ? coverageWindows({
+              workplaceId:workplace.id,
+              startsAt:Date.parse(workplace.events.start_at),
+              endsAt:Date.parse(workplace.events.end_at),
+              requiredStaff:workplace.minimum_staff,
+            },workplaceCoverageShifts)
+          : []
+        const staffingConfigured=workplace.minimum_staff>0||workplace.target_staff>0||workplace.maximum_staff!==null
+        const staffingStates=staffingCoverage.map(window=>workplaceStaffingState(capacity,window.assignedStaff))
+        const staffingState=staffingStates.includes('understaffed')
+          ? 'understaffed'
+          : staffingStates.includes('overstaffed')
+            ? 'overstaffed'
+            : 'target'
+        const staffingGaps=staffingCoverage.filter(window=>window.shortfall>0)
+        const overCapacity=workplace.maximum_staff===null
+          ? []
+          : staffingCoverage.filter(window=>window.assignedStaff>workplace.maximum_staff!)
+        const targetNeed=staffingCoverage.reduce(
+          (maximum,window)=>Math.max(maximum,staffNeededForTarget(capacity,window.assignedStaff)),
+          0,
         )
         return <article key={workplace.id} className="rounded-2xl border p-4">
           <div className="flex items-start justify-between gap-3">
@@ -177,6 +226,11 @@ export default async function Page(){
                 <input name="name" required maxLength={200} defaultValue={workplace.name} className="rounded-lg border bg-background p-2"/>
                 <textarea name="description" maxLength={1000} defaultValue={workplace.description||''} placeholder="Omschrijving (optioneel)" className="rounded-lg border bg-background p-2"/>
                 <input name="sort_order" type="number" min="0" max="10000" defaultValue={workplace.sort_order} aria-label="Volgorde" className="rounded-lg border bg-background p-2"/>
+                <div className="grid gap-2 sm:grid-cols-3">
+                  <label className="grid gap-1 text-sm">Minimum<input name="minimum_staff" type="number" min="0" max="10000" defaultValue={workplace.minimum_staff} className="rounded-lg border bg-background p-2"/></label>
+                  <label className="grid gap-1 text-sm">Doel<input name="target_staff" type="number" min="0" max="10000" defaultValue={workplace.target_staff} className="rounded-lg border bg-background p-2"/></label>
+                  <label className="grid gap-1 text-sm">Maximum<input name="maximum_staff" type="number" min="0" max="10000" defaultValue={workplace.maximum_staff??''} placeholder="Geen limiet" className="rounded-lg border bg-background p-2"/></label>
+                </div>
                 <label className="flex items-center gap-2 text-sm"><input name="is_active" type="checkbox" defaultChecked={workplace.is_active}/>Actief</label>
                 <button className="rounded-lg border px-3 py-2 font-semibold">WIJZIGINGEN OPSLAAN</button>
               </form>
@@ -184,6 +238,23 @@ export default async function Page(){
           </AdminOnly>}
 
           {(isAdmin||isResponsible)&&<div className="mt-3 space-y-3">
+            {staffingConfigured&&<section className="rounded-xl border p-3">
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <div>
+                  <p className="font-semibold">Bezettingsplanning</p>
+                  <p className="text-xs text-muted-foreground">Min. {workplace.minimum_staff} · doel {workplace.target_staff} · max. {workplace.maximum_staff??'geen limiet'}</p>
+                </div>
+                <span className={`rounded-full border px-2 py-1 text-xs font-bold ${staffingState==='understaffed'?'border-amber-500/50 text-amber-600':staffingState==='overstaffed'?'border-red-500/50 text-red-600':'border-emerald-500/50 text-emerald-600'}`}>
+                  {staffingState==='understaffed'?'ONDERBEZET':staffingState==='overstaffed'?'OVERBEZET':'CAPACITEIT OK'}
+                </span>
+              </div>
+              {targetNeed>0&&<p className="mt-2 text-xs text-muted-foreground">Tot {targetNeed} extra medewerker(s) nodig om het doel tijdens alle evenementuren te halen.</p>}
+              {staffingGaps.length>0&&<div className="mt-2 space-y-1 rounded-lg border border-amber-500/30 bg-amber-500/5 p-2 text-xs text-muted-foreground">
+                {staffingGaps.slice(0,3).map(gap=><p key={`staff:${gap.startsAt}:${gap.endsAt}`}>{new Date(gap.startsAt).toLocaleString('nl-BE')} → {new Date(gap.endsAt).toLocaleString('nl-BE')} · {gap.assignedStaff}/{workplace.minimum_staff}</p>)}
+                {staffingGaps.length>3&&<p>+ {staffingGaps.length-3} extra onderbezette periode(s)</p>}
+              </div>}
+              {overCapacity.length>0&&<p className="mt-2 text-xs font-semibold text-red-600">{overCapacity.length} periode(s) overschrijden de ingestelde maximumbezetting.</p>}
+            </section>}
             <section className="rounded-xl border p-3">
               <div className="flex flex-wrap items-center justify-between gap-2">
                 <p className="font-semibold">Verantwoordelijke</p>
