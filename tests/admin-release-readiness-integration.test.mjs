@@ -19,7 +19,7 @@ test('expected migration baseline matches the newest repository migration', asyn
   const migrationDir=new URL('../supabase/migrations/',import.meta.url)
   const files=await readdir(migrationDir)
   const versions=files
-    .map(name=>name.match(/^(\\d+)_.*\\.sql$/)?.[1])
+    .map(name=>name.match(/^(\d+)_.*\.sql$/)?.[1])
     .filter(Boolean)
     .sort()
   assert.equal(EXPECTED_DB_MIGRATION_VERSION,versions.at(-1))
