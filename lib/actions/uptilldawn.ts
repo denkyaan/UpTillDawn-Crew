@@ -759,10 +759,14 @@ export async function addOperationalChecklistItem(fd:FormData){
 export async function removeOperationalChecklistItem(fd:FormData){
  const {s,profile}=await approvedClient()
  requireManager(profile.role)
+ const itemId=uuid.parse(fd.get('item_id'))
+ const {data:item,error:itemError}=await s.from('checklist_items').select('photo_path').eq('id',itemId).maybeSingle()
+ check(itemError)
  const {error}=await s.rpc('upt_remove_operational_checklist_item',{
-  p_item:uuid.parse(fd.get('item_id')),
+  p_item:itemId,
  })
  check(error)
+ if(item?.photo_path)await s.storage.from('work-media').remove([item.photo_path])
  revalidatePath('/tasks');revalidatePath('/workplaces')
 }
 export async function completeOperationalChecklistItem(fd:FormData){
@@ -790,11 +794,15 @@ export async function completeOperationalChecklistItem(fd:FormData){
 }
 export async function reopenOperationalChecklistItem(fd:FormData){
  const {s}=await approvedClient()
+ const itemId=uuid.parse(fd.get('item_id'))
+ const {data:item,error:itemError}=await s.from('checklist_items').select('photo_path').eq('id',itemId).maybeSingle()
+ check(itemError)
  const {error}=await s.rpc('upt_set_operational_checklist_item',{
-  p_item:uuid.parse(fd.get('item_id')),
+  p_item:itemId,
   p_complete:false,
  })
  check(error)
+ if(item?.photo_path)await s.storage.from('work-media').remove([item.photo_path])
  revalidatePath('/tasks');revalidatePath('/workplaces')
 }
 export async function closeOperationalChecklist(fd:FormData){
