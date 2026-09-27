@@ -106,6 +106,52 @@ BEGIN
 END
 $$;
 
+-- Preserve the production compatibility surface while keeping the canonical
+-- Crew workflow columns authoritative. These columns still exist in production
+-- and are intentionally represented in generated API types.
+ALTER TABLE public.shifts
+  ADD COLUMN IF NOT EXISTS role text;
+
+ALTER TABLE public.check_ins
+  ADD COLUMN IF NOT EXISTS type text,
+  ADD COLUMN IF NOT EXISTS workplace_id uuid REFERENCES public.workplaces(id) ON DELETE SET NULL;
+
+UPDATE public.check_ins
+SET type=COALESCE(type,'check-in')
+WHERE type IS NULL;
+
+ALTER TABLE public.check_ins
+  ALTER COLUMN type DROP DEFAULT,
+  ALTER COLUMN type SET NOT NULL,
+  ALTER COLUMN workplace_id SET NOT NULL;
+
+ALTER TABLE public.incidents
+  ADD COLUMN IF NOT EXISTS user_id uuid REFERENCES public.profiles(id) ON DELETE CASCADE,
+  ADD COLUMN IF NOT EXISTS description text;
+
+UPDATE public.incidents
+SET
+  user_id=COALESCE(user_id,reporter_id),
+  description=COALESCE(description,message);
+
+ALTER TABLE public.incidents
+  ALTER COLUMN user_id SET NOT NULL,
+  ALTER COLUMN description SET NOT NULL,
+  ALTER COLUMN event_id DROP NOT NULL;
+
+ALTER TABLE public.messages
+  ADD COLUMN IF NOT EXISTS user_id uuid REFERENCES public.profiles(id) ON DELETE CASCADE;
+
+UPDATE public.messages
+SET user_id=COALESCE(user_id,sender_id)
+WHERE user_id IS NULL;
+
+ALTER TABLE public.messages
+  ALTER COLUMN user_id SET NOT NULL,
+  ALTER COLUMN channel_id DROP NOT NULL,
+  ALTER COLUMN sender_id DROP NOT NULL,
+  ALTER COLUMN body DROP NOT NULL;
+
 -- No enum types remain in the canonical production public schema. CASCADE here
 -- deliberately removes only stale legacy overloads/functions that still depend
 -- on retired enums; active Crew functions use text/uuid/boolean primitives.
@@ -131,6 +177,8 @@ DROP TYPE IF EXISTS public.task_status CASCADE;
 DROP TYPE IF EXISTS public.gps_status CASCADE;
 DROP TYPE IF EXISTS public.work_status CASCADE;
 DROP TYPE IF EXISTS public.sync_status CASCADE;
+DROP TYPE IF EXISTS public.pr_status CASCADE;
+DROP TYPE IF EXISTS public.wfh_type CASCADE;
 
 -- Admin login success is called only after Supabase authentication succeeds.
 -- Keep the two pre-auth guard/failure RPCs available to the login flow, but do
