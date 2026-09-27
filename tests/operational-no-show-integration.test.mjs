@@ -56,3 +56,10 @@ test('operations dashboard loads and renders scoped late and no-show alerts', as
   assert.match(client, /lateMinutes/)
   assert.match(client, /router\.refresh\(\)/)
 })
+
+
+test('operational alert foreign keys are indexed for manager queries and cleanup', async () => {
+  const source = await readFile(new URL('../supabase/migrations/20260927090742_operational_alert_fk_indexes.sql', import.meta.url), 'utf8')
+  assert.match(source, /operational_alerts_event_idx/)
+  assert.match(source, /operational_alerts_user_idx/)
+})
