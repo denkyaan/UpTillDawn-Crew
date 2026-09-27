@@ -1,84 +1,45 @@
 -- UPTILLDAWN function permission hardening
 -- Remove unnecessary PUBLIC/anon execution rights.
+-- Historical installations may contain routines that are absent from a clean
+-- migration replay, so every permission mutation is guarded by to_regprocedure.
 
--- ============================================================
--- TRIGGER FUNCTIONS
--- These are invoked by PostgreSQL triggers, not directly by clients.
--- ============================================================
+DO $$
+DECLARE
+  sig text;
+  proc regprocedure;
+BEGIN
+  -- Trigger/internal functions: never directly executable by clients.
+  FOREACH sig IN ARRAY ARRAY[
+    'public.handle_check_in_approval()',
+    'public.handle_new_user()',
+    'public.upt_protect_profile_security_fields()'
+  ]
+  LOOP
+    proc := to_regprocedure(sig);
+    IF proc IS NOT NULL THEN
+      EXECUTE format('REVOKE ALL ON FUNCTION %s FROM PUBLIC', proc);
+      EXECUTE format('REVOKE ALL ON FUNCTION %s FROM anon', proc);
+      EXECUTE format('REVOKE ALL ON FUNCTION %s FROM authenticated', proc);
+    END IF;
+  END LOOP;
 
-REVOKE ALL ON FUNCTION public.handle_check_in_approval() FROM PUBLIC;
-
-REVOKE ALL ON FUNCTION public.handle_check_in_approval() FROM anon;
-
-REVOKE ALL ON FUNCTION public.handle_check_in_approval() FROM authenticated;
-
-REVOKE ALL ON FUNCTION public.handle_new_user() FROM PUBLIC;
-
-REVOKE ALL ON FUNCTION public.handle_new_user() FROM anon;
-
-REVOKE ALL ON FUNCTION public.handle_new_user() FROM authenticated;
-
-REVOKE ALL ON FUNCTION public.upt_protect_profile_security_fields() FROM PUBLIC;
-
-REVOKE ALL ON FUNCTION public.upt_protect_profile_security_fields() FROM anon;
-
-REVOKE ALL ON FUNCTION public.upt_protect_profile_security_fields() FROM authenticated;
-
--- ============================================================
--- AUTHORIZATION HELPERS
--- Required internally by RLS/policies and authenticated operations.
--- ============================================================
-
-REVOKE ALL ON FUNCTION public.upt_is_admin(uuid) FROM PUBLIC;
-
-REVOKE ALL ON FUNCTION public.upt_is_admin(uuid) FROM anon;
-
-GRANT EXECUTE ON FUNCTION public.upt_is_admin(uuid) TO authenticated;
-
-REVOKE ALL ON FUNCTION public.upt_is_responsible(uuid, uuid, uuid) FROM PUBLIC;
-
-REVOKE ALL ON FUNCTION public.upt_is_responsible(uuid, uuid, uuid) FROM anon;
-
-GRANT EXECUTE ON FUNCTION public.upt_is_responsible(uuid, uuid, uuid) TO authenticated;
-
--- ============================================================
--- RESPONSIBLE CREW DIRECTORY
--- ============================================================
-
-REVOKE ALL ON FUNCTION public.upt_responsible_crew_directory(uuid, uuid) FROM PUBLIC;
-
-REVOKE ALL ON FUNCTION public.upt_responsible_crew_directory(uuid, uuid) FROM anon;
-
-GRANT EXECUTE ON FUNCTION public.upt_responsible_crew_directory(uuid, uuid)
-TO authenticated;
-
--- ============================================================
--- SERVER-AUTHORITATIVE TIME TRACKING RPCs
--- Logged-in users only.
--- Authorization is additionally checked inside each function.
--- ============================================================
-
-REVOKE ALL ON FUNCTION public.upt_start_work(uuid, uuid) FROM PUBLIC;
-
-REVOKE ALL ON FUNCTION public.upt_start_work(uuid, uuid) FROM anon;
-
-GRANT EXECUTE ON FUNCTION public.upt_start_work(uuid, uuid) TO authenticated;
-
-REVOKE ALL ON FUNCTION public.upt_start_break(uuid) FROM PUBLIC;
-
-REVOKE ALL ON FUNCTION public.upt_start_break(uuid) FROM anon;
-
-GRANT EXECUTE ON FUNCTION public.upt_start_break(uuid) TO authenticated;
-
-REVOKE ALL ON FUNCTION public.upt_stop_break(uuid) FROM PUBLIC;
-
-REVOKE ALL ON FUNCTION public.upt_stop_break(uuid) FROM anon;
-
-GRANT EXECUTE ON FUNCTION public.upt_stop_break(uuid) TO authenticated;
-
-REVOKE ALL ON FUNCTION public.upt_stop_work(uuid) FROM PUBLIC;
-
-REVOKE ALL ON FUNCTION public.upt_stop_work(uuid) FROM anon;
-
-GRANT EXECUTE ON FUNCTION public.upt_stop_work(uuid) TO authenticated;
-
+  -- Authenticated helper/RPC functions.
+  FOREACH sig IN ARRAY ARRAY[
+    'public.upt_is_admin(uuid)',
+    'public.upt_is_responsible(uuid,uuid,uuid)',
+    'public.upt_responsible_crew_directory(uuid,uuid)',
+    'public.upt_start_work(uuid,uuid)',
+    'public.upt_start_break(uuid)',
+    'public.upt_stop_break(uuid)',
+    'public.upt_stop_work(uuid)'
+  ]
+  LOOP
+    proc := to_regprocedure(sig);
+    IF proc IS NOT NULL THEN
+      EXECUTE format('REVOKE ALL ON FUNCTION %s FROM PUBLIC', proc);
+      EXECUTE format('REVOKE ALL ON FUNCTION %s FROM anon', proc);
+      EXECUTE format('GRANT EXECUTE ON FUNCTION %s TO authenticated', proc);
+    END IF;
+  END LOOP;
+END
+$$;
