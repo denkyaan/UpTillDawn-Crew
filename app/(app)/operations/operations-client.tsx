@@ -24,10 +24,13 @@ export default function OperationsClient(p:Props){
   return()=>{window.removeEventListener('online',refresh);window.removeEventListener('focus',refresh);document.removeEventListener('visibilitychange',onVisibility)}
  },[router])
  useEffect(()=>{
-  if(!p.manager||!p.operationalAlerts.length)return
-  const timer=window.setInterval(()=>setAlertNow(Date.now()),30_000)
+  if(!p.manager)return
+  const timer=window.setInterval(()=>{
+   setAlertNow(Date.now())
+   if(navigator.onLine)router.refresh()
+  },60_000)
   return()=>window.clearInterval(timer)
- },[p.manager,p.operationalAlerts.length])
+ },[p.manager,router])
  useEffect(()=>{void saveOperationsSnapshot({
   version:1,
   userId:p.userId,
