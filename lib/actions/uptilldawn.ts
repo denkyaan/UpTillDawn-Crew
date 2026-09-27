@@ -730,9 +730,13 @@ const checklistPhotoTypes=new Map([
 export async function createOperationalChecklist(fd:FormData){
  const {s,profile}=await approvedClient()
  requireManager(profile.role)
+ const workplaceId=uuid.parse(fd.get('workplace_id'))
+ const {data:workplace,error:workplaceError}=await s.from('workplaces').select('event_id').eq('id',workplaceId).single()
+ check(workplaceError)
+ if(!workplace)throw new Error('Werkplek niet gevonden.')
  const {error}=await s.rpc('upt_create_operational_checklist',{
-  p_event:uuid.parse(fd.get('event_id')),
-  p_workplace:uuid.parse(fd.get('workplace_id')),
+  p_event:workplace.event_id,
+  p_workplace:workplaceId,
   p_kind:z.enum(['opening','closing','safety','custom']).parse(fd.get('kind')),
   p_title:text.parse(fd.get('title')),
   p_description:String(fd.get('description')||'').trim().slice(0,2000)||undefined,
