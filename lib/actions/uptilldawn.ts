@@ -842,7 +842,7 @@ export async function createOperationalChecklist(fd:FormData){
   p_workplace:workplaceId,
   p_kind:z.enum(['opening','closing','safety','custom']).parse(fd.get('kind')),
   p_title:text.parse(fd.get('title')),
-  p_description:String(fd.get('description')||'').trim().slice(0,2000)||undefined,
+  p_description:String(fd.get('description')||'').trim().slice(0,2000),
  })
  check(error)
  revalidatePath('/tasks');revalidatePath('/workplaces')
