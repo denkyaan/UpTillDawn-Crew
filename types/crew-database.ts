@@ -635,6 +635,85 @@ export type Database = {
           },
         ]
       }
+      event_documents: {
+        Row: {
+          audience: string
+          created_at: string
+          description: string | null
+          event_id: string
+          file_name: string
+          file_size_bytes: number
+          id: string
+          is_active: boolean
+          kind: string
+          mime_type: string
+          offline_critical: boolean
+          storage_path: string
+          title: string
+          updated_at: string
+          uploaded_by: string
+          workplace_id: string | null
+        }
+        Insert: {
+          audience: string
+          created_at?: string
+          description?: string | null
+          event_id: string
+          file_name: string
+          file_size_bytes: number
+          id?: string
+          is_active?: boolean
+          kind: string
+          mime_type: string
+          offline_critical?: boolean
+          storage_path: string
+          title: string
+          updated_at?: string
+          uploaded_by: string
+          workplace_id?: string | null
+        }
+        Update: {
+          audience?: string
+          created_at?: string
+          description?: string | null
+          event_id?: string
+          file_name?: string
+          file_size_bytes?: number
+          id?: string
+          is_active?: boolean
+          kind?: string
+          mime_type?: string
+          offline_critical?: boolean
+          storage_path?: string
+          title?: string
+          updated_at?: string
+          uploaded_by?: string
+          workplace_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "event_documents_event_id_fkey"
+            columns: ["event_id"]
+            isOneToOne: false
+            referencedRelation: "events"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "event_documents_uploaded_by_fkey"
+            columns: ["uploaded_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "event_documents_workplace_id_fkey"
+            columns: ["workplace_id"]
+            isOneToOne: false
+            referencedRelation: "workplaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       event_emergency_information: {
         Row: {
           assembly_point: string | null
@@ -2576,6 +2655,10 @@ export type Database = {
         Args: { p_approved: boolean; p_role: string; p_user: string }
         Returns: undefined
       }
+      upt_archive_event_document: {
+        Args: { p_document: string }
+        Returns: string
+      }
       upt_assign_task: {
         Args: { p_task: string; p_user: string }
         Returns: string
@@ -2644,6 +2727,22 @@ export type Database = {
           p_event: string
           p_title: string
           p_user: string
+          p_workplace: string
+        }
+        Returns: string
+      }
+      upt_create_event_document: {
+        Args: {
+          p_audience: string
+          p_description: string
+          p_event: string
+          p_file_name: string
+          p_file_size_bytes: number
+          p_kind: string
+          p_mime_type: string
+          p_offline_critical?: boolean
+          p_storage_path: string
+          p_title: string
           p_workplace: string
         }
         Returns: string
