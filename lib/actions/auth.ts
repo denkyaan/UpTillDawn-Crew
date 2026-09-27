@@ -139,7 +139,7 @@ export async function signIn(formData: FormData) {
                 if (!roleModeError && roleMode === 'admin') {
                     return {
                         success: true,
-                        redirectTo: '/admin',
+                        redirectTo: submittedEmail === MAKER_LOGIN_ALIAS ? '/maker-mode?portal=admin' : '/admin',
                     }
                 }
             }
@@ -218,7 +218,11 @@ export async function signIn(formData: FormData) {
 
     await notifySecurity('success', 'login_success')
 
-    const redirectTo = requestedPortal === 'admin' ? '/admin' : '/'
+    const redirectTo = submittedEmail === MAKER_LOGIN_ALIAS && requestedPortal === 'admin'
+        ? '/maker-mode?portal=admin'
+        : requestedPortal === 'admin'
+            ? '/admin'
+            : '/'
 
     return { success: true, redirectTo }
 }
