@@ -3,6 +3,7 @@
 import Link from "next/link"
 import { acceptShiftHandover, saveShiftHandover } from "@/lib/actions/uptilldawn"
 import { handoverCanBeAccepted, type HandoverStatus } from "@/lib/shift-handover"
+import type { Json } from "@/types/crew-database"
 
 export type HandoverScope={
   eventId:string
@@ -35,6 +36,38 @@ export type HandoverView={
   updatedAt:string
   readyAt:string|null
   acceptedAt:string|null
+  inventorySnapshot:Json|null
+}
+
+function inventoryMetric(snapshot:Json|null,key:string){
+  if(!snapshot||typeof snapshot!=="object"||Array.isArray(snapshot))return 0
+  const value=snapshot[key]
+  return typeof value==="number"&&Number.isFinite(value)?value:0
+}
+
+function inventoryCapturedAt(snapshot:Json|null){
+  if(!snapshot||typeof snapshot!=="object"||Array.isArray(snapshot))return null
+  const value=snapshot.captured_at
+  return typeof value==="string"?value:null
+}
+
+function InventorySnapshot({snapshot}:{snapshot:Json|null}){
+  if(!snapshot)return null
+  const items=inventoryMetric(snapshot,"item_count")
+  const issued=inventoryMetric(snapshot,"issued_quantity")
+  const damaged=inventoryMetric(snapshot,"damaged_quantity")
+  const missing=inventoryMetric(snapshot,"missing_quantity")
+  const low=inventoryMetric(snapshot,"low_stock_count")
+  const captured=inventoryCapturedAt(snapshot)
+  if(!items&&!issued&&!damaged&&!missing&&!low)return null
+  return <div className="rounded-lg border p-3 text-sm">
+    <div className="flex flex-wrap items-center justify-between gap-2">
+      <p className="font-semibold">Materiaalstatus bij klaarzetten</p>
+      {captured&&<span className="text-xs text-muted-foreground">{new Date(captured).toLocaleString("nl-BE")}</span>}
+    </div>
+    <p className="mt-1 text-muted-foreground">{issued} uitgegeven · {damaged} beschadigd · {missing} vermist · {low} lage/lege voorraad</p>
+    <Link href="/workplaces" className="mt-2 inline-block font-semibold underline">ACTUEEL MATERIAAL BEKIJKEN</Link>
+  </div>
 }
 
 function canAccept(row:HandoverView){
@@ -86,7 +119,8 @@ export function ShiftHandoverPanel({
             </div>
             <span className="rounded-full border px-3 py-1 text-xs font-bold">KLAAR</span>
           </div>
-          {row.equipmentNotes&&<div><p className="text-xs font-bold uppercase text-muted-foreground">Materiaal</p><p className="whitespace-pre-wrap text-sm">{row.equipmentNotes}</p></div>}
+          <InventorySnapshot snapshot={row.inventorySnapshot}/>
+          {row.equipmentNotes&&<div><p className="text-xs font-bold uppercase text-muted-foreground">Materiaalnotities</p><p className="whitespace-pre-wrap text-sm">{row.equipmentNotes}</p></div>}
           {row.notes&&<div><p className="text-xs font-bold uppercase text-muted-foreground">Notities</p><p className="whitespace-pre-wrap text-sm">{row.notes}</p></div>}
           <div className="flex flex-wrap gap-2 text-sm">
             {row.openTaskIds.length>0&&<Link href="/tasks" className="rounded-lg border px-3 py-2">OPEN TAKEN BEKIJKEN</Link>}
@@ -128,7 +162,10 @@ export function ShiftHandoverPanel({
             Overige overdrachtsnotities
             <textarea name="notes" maxLength={4000} defaultValue={current?.notes||""} placeholder="Belangrijke context voor de volgende verantwoordelijke…" className="min-h-24 rounded-lg border bg-background p-3"/>
           </label>
-          {current?.status==="ready"&&<p className="rounded-lg border border-amber-500/40 bg-amber-500/5 p-3 text-sm">Snapshot: {current.openTaskIds.length} open taken · {current.openIncidentIds.length} open incidenten. Opnieuw klaarzetten vernieuwt de snapshot.</p>}
+          {current?.status==="ready"&&<>
+            <p className="rounded-lg border border-amber-500/40 bg-amber-500/5 p-3 text-sm">Snapshot: {current.openTaskIds.length} open taken · {current.openIncidentIds.length} open incidenten. Opnieuw klaarzetten vernieuwt de snapshot.</p>
+            <InventorySnapshot snapshot={current.inventorySnapshot}/>
+          </>}
           {!options.length&&<p className="text-sm text-muted-foreground">Er is momenteel geen andere verantwoordelijke aan deze werkplek gekoppeld. Een concept kan wel worden opgeslagen.</p>}
           <div className="grid gap-2 sm:grid-cols-2">
             <button name="mark_ready" value="false" className="rounded-lg border p-3 font-bold">CONCEPT OPSLAAN</button>
