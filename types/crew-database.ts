@@ -492,6 +492,63 @@ export type Database = {
           },
         ]
       }
+      checklist_items: {
+        Row: {
+          checklist_id: string
+          completed_at: string | null
+          completed_by: string | null
+          created_at: string
+          id: string
+          label: string
+          photo_path: string | null
+          required: boolean
+          requires_photo: boolean
+          sort_order: number
+          updated_at: string
+        }
+        Insert: {
+          checklist_id: string
+          completed_at?: string | null
+          completed_by?: string | null
+          created_at?: string
+          id?: string
+          label: string
+          photo_path?: string | null
+          required?: boolean
+          requires_photo?: boolean
+          sort_order?: number
+          updated_at?: string
+        }
+        Update: {
+          checklist_id?: string
+          completed_at?: string | null
+          completed_by?: string | null
+          created_at?: string
+          id?: string
+          label?: string
+          photo_path?: string | null
+          required?: boolean
+          requires_photo?: boolean
+          sort_order?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "checklist_items_checklist_id_fkey"
+            columns: ["checklist_id"]
+            isOneToOne: false
+            referencedRelation: "operational_checklists"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "checklist_items_completed_by_fkey"
+            columns: ["completed_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       crew_notifications: {
         Row: {
           body: string | null
@@ -1020,6 +1077,80 @@ export type Database = {
             columns: ["user_id"]
             isOneToOne: false
             referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      operational_checklists: {
+        Row: {
+          completed_at: string | null
+          completed_by: string | null
+          created_at: string
+          created_by: string
+          description: string | null
+          event_id: string
+          id: string
+          kind: string
+          status: string
+          title: string
+          updated_at: string
+          workplace_id: string
+        }
+        Insert: {
+          completed_at?: string | null
+          completed_by?: string | null
+          created_at?: string
+          created_by: string
+          description?: string | null
+          event_id: string
+          id?: string
+          kind: string
+          status?: string
+          title: string
+          updated_at?: string
+          workplace_id: string
+        }
+        Update: {
+          completed_at?: string | null
+          completed_by?: string | null
+          created_at?: string
+          created_by?: string
+          description?: string | null
+          event_id?: string
+          id?: string
+          kind?: string
+          status?: string
+          title?: string
+          updated_at?: string
+          workplace_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "operational_checklists_completed_by_fkey"
+            columns: ["completed_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "operational_checklists_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "operational_checklists_event_id_fkey"
+            columns: ["event_id"]
+            isOneToOne: false
+            referencedRelation: "events"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "operational_checklists_workplace_id_fkey"
+            columns: ["workplace_id"]
+            isOneToOne: false
+            referencedRelation: "workplaces"
             referencedColumns: ["id"]
           },
         ]
@@ -2005,6 +2136,15 @@ export type Database = {
         Args: { p_instruction: string }
         Returns: string
       }
+      upt_add_operational_checklist_item: {
+        Args: {
+          p_checklist: string
+          p_label: string
+          p_required?: boolean
+          p_requires_photo?: boolean
+        }
+        Returns: string
+      }
       upt_admin_correct_time: {
         Args: {
           p_corrected_value: string
@@ -2107,6 +2247,10 @@ export type Database = {
           workplace_name: string
         }[]
       }
+      upt_close_operational_checklist: {
+        Args: { p_checklist: string }
+        Returns: undefined
+      }
       upt_confirm_shift: { Args: { p_shift: string }; Returns: undefined }
       upt_confirm_task_assignment: {
         Args: { p_assignment: string }
@@ -2134,6 +2278,16 @@ export type Database = {
           p_longitude?: number
           p_message: string
           p_photo_path?: string
+          p_workplace: string
+        }
+        Returns: string
+      }
+      upt_create_operational_checklist: {
+        Args: {
+          p_description?: string
+          p_event: string
+          p_kind: string
+          p_title: string
           p_workplace: string
         }
         Returns: string
@@ -2373,12 +2527,20 @@ export type Database = {
         Args: { p_reason: string; p_shift: string; p_user: string }
         Returns: undefined
       }
+      upt_remove_operational_checklist_item: {
+        Args: { p_item: string }
+        Returns: undefined
+      }
       upt_remove_push_subscription: {
         Args: { p_endpoint: string }
         Returns: undefined
       }
       upt_remove_task_assignment: {
         Args: { p_assignment: string }
+        Returns: undefined
+      }
+      upt_reopen_operational_checklist: {
+        Args: { p_checklist: string }
         Returns: undefined
       }
       upt_request_check_in: {
@@ -2476,6 +2638,10 @@ export type Database = {
           p_response: string
           p_setup: boolean
         }
+        Returns: undefined
+      }
+      upt_set_operational_checklist_item: {
+        Args: { p_complete: boolean; p_item: string; p_photo_path?: string }
         Returns: undefined
       }
       upt_shift_change_candidates: {
