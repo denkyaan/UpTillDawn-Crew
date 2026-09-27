@@ -4,6 +4,7 @@ import { revalidatePath } from 'next/cache'
 import { z } from 'zod'
 import { geocodeGeoapify } from '@/lib/geoapify'
 import { fetchFacebookEventInfo } from '@/lib/facebook-event'
+import { responsibleHasConflict } from '@/lib/responsible-coverage'
 const uuid=z.string().uuid()
 const text=z.string().trim().min(1).max(200)
 async function adminClient(){
@@ -331,15 +332,45 @@ export async function assignResponsible(fd:FormData){
   {data:p,error:profileError},
   {data:w,error:wError},
   {data:assignedShifts,error:shiftError},
+  {data:allUserShifts,error:allUserShiftsError},
+  {data:responsibleAssignments,error:responsibleAssignmentsError},
  ]=await Promise.all([
   s.from('profiles').select('approved,role').eq('id',user_id).single(),
   s.from('workplaces').select('event_id,is_active').eq('id',workplace_id).single(),
-  s.from('shifts').select('id').eq('workplace_id',workplace_id).eq('user_id',user_id).neq('status','cancelled').limit(1),
+  s.from('shifts').select('workplace_id,scheduled_start,scheduled_end').eq('workplace_id',workplace_id).eq('user_id',user_id).neq('status','cancelled'),
+  s.from('shifts').select('workplace_id,scheduled_start,scheduled_end').eq('user_id',user_id).neq('status','cancelled'),
+  s.from('responsible_assignments').select('workplace_id').eq('user_id',user_id),
  ])
- check(profileError);check(wError);check(shiftError)
+ check(profileError);check(wError);check(shiftError);check(allUserShiftsError);check(responsibleAssignmentsError)
  if(!w||!w.is_active)throw new Error('Werkplek niet gevonden of niet actief.')
  if(!p?.approved)throw new Error('Selecteer een goedgekeurd personeelslid.')
  if(!assignedShifts?.length)throw new Error('Deze persoon heeft geen dienst op deze werkplek.')
+
+ const otherResponsibleWorkplaces=new Set(
+  (responsibleAssignments||[])
+   .map(row=>row.workplace_id)
+   .filter(id=>id!==workplace_id)
+ )
+ const existingResponsibleIntervals=(allUserShifts||[])
+  .filter(shift=>otherResponsibleWorkplaces.has(shift.workplace_id))
+  .map(shift=>({
+   userId:user_id,
+   workplaceId:shift.workplace_id,
+   startsAt:Date.parse(shift.scheduled_start),
+   endsAt:Date.parse(shift.scheduled_end),
+  }))
+ for(const shift of assignedShifts){
+  const candidate={
+   userId:user_id,
+   workplaceId:workplace_id,
+   startsAt:Date.parse(shift.scheduled_start),
+   endsAt:Date.parse(shift.scheduled_end),
+  }
+  if(responsibleHasConflict(candidate,existingResponsibleIntervals)){
+   throw new Error('Deze persoon is tijdens deze dienst al verantwoordelijk op een andere werkplek.')
+  }
+ }
+
  if(p.role==='staff'){
   const {error:roleError}=await s.rpc('upt_admin_set_account',{
    p_user:user_id,
