@@ -59,7 +59,7 @@ as $$
                 where s.event_id=c.event_id
                   and s.workplace_id=c.workplace_id
                   and s.user_id=auth.uid()
-                  and coalesce(s.status,'')<>'cancelled'
+                  and s.status<>'cancelled'
               )
             )
           )
@@ -129,7 +129,7 @@ begin
     select distinct p.id,p.full_name,p.phone_number,p.profile_photo_url
     from public.profiles p
     join public.event_members em on em.user_id=p.id and em.event_id=p_event
-    join public.shifts s on s.user_id=p.id and s.event_id=p_event and s.workplace_id=p_workplace and coalesce(s.status,'')<>'cancelled'
+    join public.shifts s on s.user_id=p.id and s.event_id=p_event and s.workplace_id=p_workplace and s.status<>'cancelled'
     where p.approved=true
     order by p.full_name nulls last,p.id;
   else
@@ -184,7 +184,7 @@ begin
 
   if not v_admin and not exists(
     select 1 from public.shifts s
-    where s.user_id=p_user and s.event_id=p_event and s.workplace_id=p_workplace and coalesce(s.status,'')<>'cancelled'
+    where s.user_id=p_user and s.event_id=p_event and s.workplace_id=p_workplace and s.status<>'cancelled'
   ) then raise exception 'Selecteer alleen personeel dat aan jouw werkplek is toegewezen.'; end if;
 
   insert into public.tasks(event_id,workplace_id,title,description,created_by)
@@ -231,7 +231,7 @@ begin
 
   if not v_admin and not exists(
     select 1 from public.shifts s
-    where s.user_id=p_user and s.event_id=v_task.event_id and s.workplace_id=v_task.workplace_id and coalesce(s.status,'')<>'cancelled'
+    where s.user_id=p_user and s.event_id=v_task.event_id and s.workplace_id=v_task.workplace_id and s.status<>'cancelled'
   ) then raise exception 'Selecteer alleen personeel dat aan jouw werkplek is toegewezen.'; end if;
 
   insert into public.task_assignments(task_id,user_id,assigned_by,status)
