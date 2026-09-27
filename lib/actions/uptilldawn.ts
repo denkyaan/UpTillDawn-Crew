@@ -721,6 +721,97 @@ export async function updatePersonalInstruction(fd:FormData){
  if(error){await rollbackWorkPhotos(s,paths);check(error)}
  revalidatePath('/briefings')
 }
+const checklistPhotoTypes=new Map([
+ ['image/jpeg','jpg'],
+ ['image/png','png'],
+ ['image/webp','webp'],
+])
+
+export async function createOperationalChecklist(fd:FormData){
+ const {s,profile}=await approvedClient()
+ requireManager(profile.role)
+ const {error}=await s.rpc('upt_create_operational_checklist',{
+  p_event:uuid.parse(fd.get('event_id')),
+  p_workplace:uuid.parse(fd.get('workplace_id')),
+  p_kind:z.enum(['opening','closing','safety','custom']).parse(fd.get('kind')),
+  p_title:text.parse(fd.get('title')),
+  p_description:String(fd.get('description')||'').trim().slice(0,2000)||undefined,
+ })
+ check(error)
+ revalidatePath('/tasks');revalidatePath('/workplaces')
+}
+export async function addOperationalChecklistItem(fd:FormData){
+ const {s,profile}=await approvedClient()
+ requireManager(profile.role)
+ const {error}=await s.rpc('upt_add_operational_checklist_item',{
+  p_checklist:uuid.parse(fd.get('checklist_id')),
+  p_label:z.string().trim().min(1).max(300).parse(fd.get('label')),
+  p_required:fd.get('required')==='on',
+  p_requires_photo:fd.get('requires_photo')==='on',
+ })
+ check(error)
+ revalidatePath('/tasks');revalidatePath('/workplaces')
+}
+export async function removeOperationalChecklistItem(fd:FormData){
+ const {s,profile}=await approvedClient()
+ requireManager(profile.role)
+ const {error}=await s.rpc('upt_remove_operational_checklist_item',{
+  p_item:uuid.parse(fd.get('item_id')),
+ })
+ check(error)
+ revalidatePath('/tasks');revalidatePath('/workplaces')
+}
+export async function completeOperationalChecklistItem(fd:FormData){
+ const {s,user}=await approvedClient()
+ const itemId=uuid.parse(fd.get('item_id'))
+ const raw=fd.get('photo')
+ const photo=raw instanceof File&&raw.size>0?raw:null
+ let uploaded:string|null=null
+ if(photo){
+  const ext=checklistPhotoTypes.get(photo.type)
+  if(!ext)throw new Error('Gebruik een JPEG-, PNG- of WebP-foto.')
+  if(photo.size>10*1024*1024)throw new Error('Checklistfoto mag maximaal 10 MB zijn.')
+  uploaded=`${user.id}/checklist/${itemId}/${crypto.randomUUID()}.${ext}`
+  const {error:uploadError}=await s.storage.from('work-media').upload(uploaded,photo,{contentType:photo.type,upsert:false})
+  if(uploadError)throw new Error('Checklistfoto uploaden mislukt.')
+ }
+ const {error}=await s.rpc('upt_set_operational_checklist_item',{
+  p_item:itemId,
+  p_complete:true,
+  ...(uploaded?{p_photo_path:uploaded}:{}),
+ })
+ if(error&&uploaded)await s.storage.from('work-media').remove([uploaded])
+ check(error)
+ revalidatePath('/tasks');revalidatePath('/workplaces')
+}
+export async function reopenOperationalChecklistItem(fd:FormData){
+ const {s}=await approvedClient()
+ const {error}=await s.rpc('upt_set_operational_checklist_item',{
+  p_item:uuid.parse(fd.get('item_id')),
+  p_complete:false,
+ })
+ check(error)
+ revalidatePath('/tasks');revalidatePath('/workplaces')
+}
+export async function closeOperationalChecklist(fd:FormData){
+ const {s,profile}=await approvedClient()
+ requireManager(profile.role)
+ const {error}=await s.rpc('upt_close_operational_checklist',{
+  p_checklist:uuid.parse(fd.get('checklist_id')),
+ })
+ check(error)
+ revalidatePath('/tasks');revalidatePath('/workplaces')
+}
+export async function reopenOperationalChecklist(fd:FormData){
+ const {s,profile}=await approvedClient()
+ requireManager(profile.role)
+ const {error}=await s.rpc('upt_reopen_operational_checklist',{
+  p_checklist:uuid.parse(fd.get('checklist_id')),
+ })
+ check(error)
+ revalidatePath('/tasks');revalidatePath('/workplaces')
+}
+
 export async function createTask(fd:FormData){
  const {s,user,profile}=await approvedClient()
  requireManager(profile.role)
