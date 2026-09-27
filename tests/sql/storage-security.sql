@@ -24,8 +24,8 @@ FROM upt_storage_ids i
 WHERE profiles.id=i.id
   AND i.name IN ('admin','staff','other','lead','outsider');
 
-INSERT INTO public.events(id,name,start_date,end_date,start_at,end_at)
-SELECT id,'Storage rollback',now()-interval '1 hour',now()+interval '1 day',now()-interval '1 hour',now()+interval '1 day'
+INSERT INTO public.events(id,name,start_date,end_date,start_at,end_at,created_by)
+SELECT id,'Storage rollback',now()-interval '1 hour',now()+interval '1 day',now()-interval '1 hour',now()+interval '1 day',(SELECT id FROM upt_storage_ids WHERE name='admin')
 FROM upt_storage_ids WHERE name='event';
 
 INSERT INTO public.workplaces(id,event_id,name)
