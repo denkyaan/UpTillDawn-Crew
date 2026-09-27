@@ -97,7 +97,7 @@ jobs:
 
       - name: Verify generated database types
         run: |
-          npx --yes supabase@2.117.0 gen types typescript --local > /tmp/crew-database.ts
+          npx --yes supabase@2.117.0 gen types typescript --local --schema public > /tmp/crew-database.ts
           diff -u types/crew-database.ts /tmp/crew-database.ts
 
       - name: Record replay proof
