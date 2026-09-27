@@ -17,7 +17,7 @@ UPDATE public.profiles
 SET approved=true, role='staff', full_name='Offline Dependency'
 WHERE id=(SELECT id FROM upt_dep_ids WHERE name='staff');
 
-INSERT INTO public.events(id,name,start_date,end_date,start_at,end_at,status)
+INSERT INTO public.events(id,name,start_date,end_date,start_at,end_at,status,created_by)
 VALUES(
  (SELECT id FROM upt_dep_ids WHERE name='event'),
  'Offline dependency rollback',
@@ -25,7 +25,8 @@ VALUES(
  now()+interval '1 day',
  now()-interval '1 hour',
  now()+interval '1 day',
- 'active'
+ 'active',
+ (SELECT id FROM upt_dep_ids WHERE name='staff')
 );
 
 UPDATE upt_dep_ids
