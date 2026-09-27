@@ -1743,3 +1743,84 @@ WITH CHECK (
   OR public.upt_is_responsible(event_id, workplace_id)
 );
 
+
+
+-- ============================================================
+-- CANONICAL PROFILE FOREIGN KEY CONVERGENCE
+-- ============================================================
+-- Historical Crew tables were originally created against the StaffPortal
+-- user_profiles table. Production uses public.profiles for the active Crew
+-- model. Rebuild those legacy foreign keys so clean installs converge with
+-- production while leaving unrelated StaffPortal tables untouched.
+
+ALTER TABLE public.events
+  ALTER COLUMN created_by DROP NOT NULL;
+
+DO $$
+DECLARE
+  fk record;
+  delete_clause text;
+BEGIN
+  FOR fk IN
+    SELECT *
+    FROM (VALUES
+      ('events','events_created_by_fkey','created_by','SET NULL'),
+      ('event_members','event_members_user_id_fkey','user_id','CASCADE'),
+      ('responsible_assignments','responsible_assignments_user_id_fkey','user_id','CASCADE'),
+      ('responsible_assignments','responsible_assignments_assigned_by_fkey','assigned_by','SET NULL'),
+      ('shifts','shifts_user_id_fkey','user_id','CASCADE'),
+      ('shifts','shifts_responsible_lead_id_fkey','responsible_lead_id','SET NULL'),
+      ('incidents','incidents_reporter_id_fkey','reporter_id','RESTRICT'),
+      ('incidents','incidents_responsible_lead_id_fkey','responsible_lead_id','SET NULL'),
+      ('incidents','incidents_acknowledged_by_fkey','acknowledged_by','SET NULL'),
+      ('incidents','incidents_resolved_by_fkey','resolved_by','NO ACTION'),
+      ('briefings','briefings_created_by_fkey','created_by','SET NULL'),
+      ('briefing_acknowledgements','briefing_acknowledgements_user_id_fkey','user_id','CASCADE'),
+      ('tasks','tasks_assigned_user_id_fkey','assigned_user_id','SET NULL'),
+      ('tasks','tasks_created_by_fkey','created_by','SET NULL'),
+      ('tasks','tasks_completed_by_fkey','completed_by','SET NULL'),
+      ('check_ins','check_ins_user_id_fkey','user_id','CASCADE'),
+      ('check_ins','check_ins_decided_by_fkey','decided_by','SET NULL'),
+      ('check_outs','check_outs_user_id_fkey','user_id','CASCADE'),
+      ('check_outs','check_outs_decided_by_fkey','decided_by','SET NULL'),
+      ('work_sessions','work_sessions_user_id_fkey','user_id','CASCADE'),
+      ('break_sessions','break_sessions_user_id_fkey','user_id','CASCADE'),
+      ('workplace_transitions','workplace_transitions_user_id_fkey','user_id','CASCADE'),
+      ('chat_members','chat_members_user_id_fkey','user_id','CASCADE'),
+      ('messages','messages_sender_id_fkey','sender_id','RESTRICT'),
+      ('messages','messages_moderated_by_fkey','moderated_by','SET NULL'),
+      ('crew_notifications','crew_notifications_user_id_fkey','user_id','CASCADE'),
+      ('upt_audit_logs','upt_audit_logs_actor_id_fkey','actor_id','SET NULL'),
+      ('offline_operation_records','offline_operation_records_user_id_fkey','user_id','CASCADE'),
+      ('event_templates','event_templates_created_by_fkey','created_by','SET NULL')
+    ) AS v(table_name,constraint_name,column_name,on_delete)
+  LOOP
+    IF EXISTS (
+      SELECT 1
+      FROM information_schema.columns
+      WHERE table_schema='public'
+        AND table_name=fk.table_name
+        AND column_name=fk.column_name
+    ) THEN
+      EXECUTE format(
+        'ALTER TABLE public.%I DROP CONSTRAINT IF EXISTS %I',
+        fk.table_name,
+        fk.constraint_name
+      );
+
+      delete_clause := CASE fk.on_delete
+        WHEN 'NO ACTION' THEN ''
+        ELSE ' ON DELETE ' || fk.on_delete
+      END;
+
+      EXECUTE format(
+        'ALTER TABLE public.%I ADD CONSTRAINT %I FOREIGN KEY (%I) REFERENCES public.profiles(id)%s',
+        fk.table_name,
+        fk.constraint_name,
+        fk.column_name,
+        delete_clause
+      );
+    END IF;
+  END LOOP;
+END
+$$;
