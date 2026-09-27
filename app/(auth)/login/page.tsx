@@ -37,8 +37,14 @@ export default function LoginPage() {
       window.sessionStorage.setItem("uptilldawn-return-after-login", requestedNext)
     }
     startTransition(async () => {
-      const result = await signIn(formData)
-      if (result?.error) setError(result.error)
+      try {
+        const result = await signIn(formData)
+        if (result?.error) setError(result.error)
+      } catch {
+        setError(portal === "admin"
+          ? "Foute logingegevens en u heeft geen toegang tot deze rol."
+          : "Aanmelden mislukt. Controleer je gegevens en probeer opnieuw.")
+      }
     })
   }
 
