@@ -635,6 +635,54 @@ export type Database = {
           },
         ]
       }
+      event_emergency_information: {
+        Row: {
+          assembly_point: string | null
+          emergency_number: string
+          event_id: string
+          first_aid_contact: string | null
+          procedure: string | null
+          security_contact: string | null
+          updated_at: string
+          updated_by: string | null
+        }
+        Insert: {
+          assembly_point?: string | null
+          emergency_number?: string
+          event_id: string
+          first_aid_contact?: string | null
+          procedure?: string | null
+          security_contact?: string | null
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Update: {
+          assembly_point?: string | null
+          emergency_number?: string
+          event_id?: string
+          first_aid_contact?: string | null
+          procedure?: string | null
+          security_contact?: string | null
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "event_emergency_information_event_id_fkey"
+            columns: ["event_id"]
+            isOneToOne: true
+            referencedRelation: "events"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "event_emergency_information_updated_by_fkey"
+            columns: ["updated_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       event_members: {
         Row: {
           created_at: string
@@ -3169,6 +3217,17 @@ export type Database = {
       upt_update_task_status: {
         Args: { p_assignment: string; p_status: string }
         Returns: string
+      }
+      upt_upsert_event_emergency_information: {
+        Args: {
+          p_assembly_point?: string
+          p_emergency_number: string
+          p_event: string
+          p_first_aid_contact?: string
+          p_procedure?: string
+          p_security_contact?: string
+        }
+        Returns: undefined
       }
       upt_work_session_time_summary: {
         Args: { p_work_session: string }
