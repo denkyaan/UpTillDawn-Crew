@@ -735,6 +735,8 @@ export type Database = {
           acknowledged_by: string | null
           created_at: string
           description: string
+          escalated_at: string | null
+          escalation_reason: string | null
           event_id: string | null
           gps_accuracy_m: number | null
           gps_coordinates: unknown
@@ -758,6 +760,8 @@ export type Database = {
           acknowledged_by?: string | null
           created_at?: string
           description: string
+          escalated_at?: string | null
+          escalation_reason?: string | null
           event_id?: string | null
           gps_accuracy_m?: number | null
           gps_coordinates?: unknown
@@ -781,6 +785,8 @@ export type Database = {
           acknowledged_by?: string | null
           created_at?: string
           description?: string
+          escalated_at?: string | null
+          escalation_reason?: string | null
           event_id?: string | null
           gps_accuracy_m?: number | null
           gps_coordinates?: unknown
@@ -2138,6 +2144,18 @@ export type Database = {
       }
       upt_current_effective_role: { Args: never; Returns: string }
       upt_current_is_owner: { Args: never; Returns: boolean }
+      upt_current_work_context: {
+        Args: never
+        Returns: {
+          event_id: string
+          event_name: string
+          session_id: string
+          shift_id: string
+          started_at: string
+          workplace_id: string
+          workplace_name: string
+        }[]
+      }
       upt_decide_check_in: {
         Args: { p_approve: boolean; p_check_in: string; p_notes?: string }
         Returns: string
