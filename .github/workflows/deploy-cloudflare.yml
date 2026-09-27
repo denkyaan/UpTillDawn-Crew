@@ -110,6 +110,9 @@ jobs:
           RESEND_API_KEY: ${{ secrets.RESEND_API_KEY }}
         run: printf '%s' "$RESEND_API_KEY" | npx wrangler secret put RESEND_API_KEY
 
+      - name: Configure admin-alert recipient
+        run: printf '%s' 'steegmans.kyani@icloud.com' | npx wrangler secret put SECURITY_ALERT_EMAIL
+
       - name: Configure optional login-alert routing
         env:
           SECURITY_FROM_EMAIL: ${{ secrets.SECURITY_FROM_EMAIL }}
