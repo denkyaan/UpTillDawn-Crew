@@ -49,3 +49,62 @@ jobs:
 
       - name: Wrangler deployment dry-run
         run: npx wrangler deploy --dry-run
+
+  fresh-install:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - name: Checkout
+        uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5.1.0
+
+      - name: Set up Node.js
+        uses: actions/setup-node@a0853c24544627f65ddf259abe73b1d18a591444 # v5.0.0
+        with:
+          node-version: 24
+
+      - name: Install PostgreSQL client
+        run: sudo apt-get update && sudo apt-get install -y postgresql-client
+
+      - name: Initialize isolated Supabase config
+        run: |
+          if [ ! -f supabase/config.toml ]; then
+            npx --yes supabase@2.117.0 init
+          fi
+
+      - name: Start isolated Supabase stack
+        run: npx --yes supabase@2.117.0 start
+
+      - name: Replay every migration from zero
+        run: npx --yes supabase@2.117.0 db reset --local --no-seed
+
+      - name: Run SQL regression suites
+        env:
+          PGURL: postgresql://postgres:postgres@127.0.0.1:54322/postgres
+        run: |
+          set -euo pipefail
+          for file in tests/sql/*.sql; do
+            echo "::group::$file"
+            psql "$PGURL" -v ON_ERROR_STOP=1 -f "$file"
+            echo "::endgroup::"
+          done
+
+      - name: Verify generated database types
+        run: |
+          npx --yes supabase@2.117.0 gen types typescript --local > /tmp/crew-database.ts
+          diff -u types/crew-database.ts /tmp/crew-database.ts
+
+      - name: Record replay proof
+        run: |
+          migration_count=$(find supabase/migrations -maxdepth 1 -type f -name '*.sql' | wc -l | tr -d ' ')
+          sql_suite_count=$(find tests/sql -maxdepth 1 -type f -name '*.sql' | wc -l | tr -d ' ')
+          {
+            echo "## Fresh-install database proof"
+            echo "- Source commit: \`${GITHUB_SHA}\`"
+            echo "- Migrations replayed: ${migration_count}"
+            echo "- SQL suites: ${sql_suite_count}"
+            echo "- Generated types: exact match"
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Stop isolated Supabase stack
+        if: always()
+        run: npx --yes supabase@2.117.0 stop --no-backup
