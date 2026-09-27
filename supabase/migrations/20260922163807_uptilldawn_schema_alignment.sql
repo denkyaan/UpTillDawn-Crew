@@ -212,12 +212,43 @@ ALTER TABLE public.shifts
   ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ NOT NULL DEFAULT now();
 
 -- Production exposes shift status as text. Historical clean installs may
--- still carry the old shift_status enum.
+-- still carry the old shift_status enum. The legacy overlap trigger references
+-- status, so detach it while changing the column type and recreate it afterward.
+DROP TRIGGER IF EXISTS trg_prevent_shift_overlap ON public.shifts;
+
 ALTER TABLE public.shifts ALTER COLUMN status DROP DEFAULT;
 ALTER TABLE public.shifts ALTER COLUMN status TYPE TEXT USING status::text;
 ALTER TABLE public.shifts ALTER COLUMN status SET DEFAULT 'scheduled';
 
-DO $$
+CREATE OR REPLACE FUNCTION public.prevent_shift_overlap()
+RETURNS trigger
+LANGUAGE plpgsql
+SET search_path = public
+AS $
+BEGIN
+  IF NEW.overlap_allowed = false AND EXISTS (
+    SELECT 1
+    FROM public.shifts s
+    WHERE s.user_id = NEW.user_id
+      AND s.id <> NEW.id
+      AND s.status <> 'cancelled'
+      AND s.overlap_allowed = false
+      AND tstzrange(s.scheduled_start,s.scheduled_end,'[)')
+          && tstzrange(NEW.scheduled_start,NEW.scheduled_end,'[)')
+  ) THEN
+    RAISE EXCEPTION 'Shift overlaps an existing assignment';
+  END IF;
+  RETURN NEW;
+END
+$;
+
+CREATE TRIGGER trg_prevent_shift_overlap
+BEFORE INSERT OR UPDATE OF user_id,scheduled_start,scheduled_end,overlap_allowed,status
+ON public.shifts
+FOR EACH ROW
+EXECUTE FUNCTION public.prevent_shift_overlap();
+
+DO $
 BEGIN
   IF EXISTS (
     SELECT 1
