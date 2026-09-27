@@ -76,7 +76,7 @@ jobs:
           fi
 
       - name: Start isolated Supabase stack
-        run: npx --yes supabase@2.117.0 start
+        run: npx --yes supabase@2.117.0 start -x studio,imgproxy,inbucket,edge-runtime,logflare,vector,realtime
 
       - name: Replay every migration from zero
         run: npx --yes supabase@2.117.0 db reset --local --no-seed
