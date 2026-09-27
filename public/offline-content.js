@@ -19,11 +19,15 @@
   const briefingHtml=(data.briefings||[]).length?(data.briefings||[]).map(item=>'<article class="row" style="display:block"><strong>'+(item.kind==='personal'?'Persoonlijk · ':'')+escape(item.title)+' · v'+escape(item.version)+'</strong><p style="white-space:pre-wrap">'+escape(item.body)+'</p></article>').join(''):'<p class="empty">Geen opgeslagen instructies.</p>'
   const taskHtml=(data.tasks||[]).length?(data.tasks||[]).map(item=>'<article class="row" style="display:block"><strong>'+escape(item.title)+'</strong><small>'+escape(item.status)+'</small>'+(item.description?'<p style="white-space:pre-wrap">'+escape(item.description)+'</p>':'')+'</article>').join(''):'<p class="empty">Geen opgeslagen taken.</p>'
   const stamp='<small>Laatst online bijgewerkt: '+new Date(data.savedAt).toLocaleString('nl-BE')+'</small>'
-  const emergency=section('Noodinformatie offline',stamp+emergencyHtml)
+  const events=section('Evenementen offline',stamp+eventHtml)
+  const workplaces=section('Werkplekken offline',workplaceHtml)
+  const shifts=section('Shifts offline',shiftHtml)
+  const emergency=section('Noodinformatie offline',emergencyHtml)
   const documentsSection=section('Documenten offline',documentHtml)
   const briefs=section('Instructies offline',briefingHtml)
   const tasks=section('Taken offline',taskHtml)
-  if(queue){main.insertBefore(emergency,queue);main.insertBefore(documentsSection,queue);main.insertBefore(briefs,queue);main.insertBefore(tasks,queue)}else{main.append(emergency,documentsSection,briefs,tasks)}
+  const sections=[events,workplaces,shifts,emergency,documentsSection,briefs,tasks]
+  if(queue){for(const item of sections)main.insertBefore(item,queue)}else{main.append(...sections)}
  }
  run().catch(()=>{})
 })()
