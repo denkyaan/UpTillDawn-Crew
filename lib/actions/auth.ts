@@ -206,7 +206,8 @@ export async function signOut() {
 
 // ── Forgot Password ──────────────────────────────────────────
 export async function forgotPassword(formData: FormData) {
-    const email = String(formData.get('email') || '').trim().toLowerCase(); if (!email) return { error: 'Vul je e-mailadres in.' }
+    const submittedEmail = String(formData.get('email') || '').trim().toLowerCase(); if (!submittedEmail) return { error: 'Vul je e-mailadres in.' }
+    const email = resolveLoginEmail(submittedEmail)
     const origin = appOrigin(); if (!origin) return { error: 'De applicatieconfiguratie is onvolledig. Neem contact op met de beheerder.' }
     const supabase = await createClient(); const { error } = await supabase.auth.resetPasswordForEmail(email, { redirectTo: `${origin}/auth/callback?next=/auth/reset-password` })
     if (error) return { error: 'De aanvraag kon niet worden verwerkt. Probeer opnieuw.' }
@@ -229,7 +230,8 @@ export async function updatePassword(formData: FormData) {
 
 // ── Resend Verification Email ────────────────────────────────
 export async function resendVerificationEmail(formData: FormData) {
-    const email = String(formData.get('email') || '').trim().toLowerCase(); if (!email) return { error: 'Vul je e-mailadres in.' }
+    const submittedEmail = String(formData.get('email') || '').trim().toLowerCase(); if (!submittedEmail) return { error: 'Vul je e-mailadres in.' }
+    const email = resolveLoginEmail(submittedEmail)
     const origin = appOrigin(); if (!origin) return { error: 'De applicatieconfiguratie is onvolledig. Neem contact op met de beheerder.' }
     const supabase = await createClient(); const { error } = await supabase.auth.resend({ type: 'signup', email, options: { emailRedirectTo: `${origin}/auth/callback` } })
     if (error) return { error: 'De verificatiemail kon niet worden verstuurd. Probeer opnieuw.' }
