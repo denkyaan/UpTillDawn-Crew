@@ -9,10 +9,10 @@ export const dynamic='force-dynamic'
 
 export default async function GodModePage(){
   const token=(await cookies()).get('uptilldawn-god-session')?.value
-  if(!token)redirect('/god-mode/login')
+  if(!token)redirect('/login/admin')
   const s=await createClient()
   const {data:valid}=await s.rpc('upt_god_session_valid',{p_token:token})
-  if(valid!==true)redirect('/god-mode/login')
+  if(valid!==true)redirect('/login/admin')
 
   return <main className="min-h-screen bg-background p-4 pb-16 md:p-8">
     <div className="mx-auto max-w-[1600px] space-y-6">
