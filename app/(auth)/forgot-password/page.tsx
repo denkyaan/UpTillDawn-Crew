@@ -1,8 +1,9 @@
 "use client"
 
-import { useEffect, useState, useTransition } from "react"
+import { useState, useTransition } from "react"
 import Link from "next/link"
 import Image from "next/image"
+import { useSearchParams } from "next/navigation"
 import { Card, CardContent, CardHeader } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -13,15 +14,12 @@ import { forgotPassword } from "@/lib/actions/auth"
 export default function ForgotPasswordPage() {
   const [sent, setSent] = useState(false)
   const [sentTo, setSentTo] = useState("")
-  const [error, setError] = useState<string | null>(null)
+  const searchParams = useSearchParams()
+  const initialError = searchParams.get("error") === "invalid_or_expired"
+    ? "De herstel-link is ongeldig of verlopen. Vraag hieronder een nieuwe herstel-link aan."
+    : null
+  const [error, setError] = useState<string | null>(initialError)
   const [isPending, startTransition] = useTransition()
-
-  useEffect(() => {
-    const params = new URLSearchParams(window.location.search)
-    if (params.get("error") === "invalid_or_expired") {
-      setError("De herstel-link is ongeldig of verlopen. Vraag hieronder een nieuwe herstel-link aan.")
-    }
-  }, [])
 
   const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault()
