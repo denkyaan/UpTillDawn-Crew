@@ -1929,8 +1929,11 @@ export type Database = {
           event_id: string
           id: string
           is_active: boolean
+          maximum_staff: number | null
+          minimum_staff: number
           name: string
           sort_order: number
+          target_staff: number
         }
         Insert: {
           created_at?: string
@@ -1938,8 +1941,11 @@ export type Database = {
           event_id: string
           id?: string
           is_active?: boolean
+          maximum_staff?: number | null
+          minimum_staff?: number
           name: string
           sort_order?: number
+          target_staff?: number
         }
         Update: {
           created_at?: string
@@ -1947,8 +1953,11 @@ export type Database = {
           event_id?: string
           id?: string
           is_active?: boolean
+          maximum_staff?: number | null
+          minimum_staff?: number
           name?: string
           sort_order?: number
+          target_staff?: number
         }
         Relationships: [
           {
