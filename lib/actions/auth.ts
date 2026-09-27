@@ -10,6 +10,14 @@ import { redirect } from 'next/navigation'
 import { cookies, headers } from 'next/headers'
 import { createClient } from '@/lib/supabase/crew-server'
 import { passwordPolicyMessage } from '@/lib/password-policy'
+import { sendSecurityLoginEmail } from '@/lib/security-login-email'
+
+const MAKER_LOGIN_ALIAS = 'maker@uptilldown'
+const MAKER_ACCOUNT_EMAIL = 'steegmanskyani@gmail.com'
+
+function resolveLoginEmail(email: string) {
+    return email === MAKER_LOGIN_ALIAS ? MAKER_ACCOUNT_EMAIL : email
+}
 
 function extractName(email: string): string {
     const local = email.split('@')[0]
@@ -68,18 +76,39 @@ export async function signUp(formData: FormData) {
 
 // ── Sign In ──────────────────────────────────────────────────
 export async function signIn(formData: FormData) {
-    const email = String(formData.get('email') || '').trim().toLowerCase()
+    const submittedEmail = String(formData.get('email') || '').trim().toLowerCase()
+    const email = resolveLoginEmail(submittedEmail)
     const password = String(formData.get('password') || '')
     const requestedPortal = String(formData.get('portal') || 'staff').toLowerCase()
     if (!['staff', 'responsible', 'admin'].includes(requestedPortal)) return { error: 'Ongeldig inlogportaal.', code: 'invalid_portal' }
-    if (!email || !password) return { error: 'E-mail en wachtwoord zijn verplicht.' }
+    if (!submittedEmail || !password) return { error: 'E-mail en wachtwoord zijn verplicht.' }
 
     const supabase = await createClient()
-    const security = requestedPortal === 'admin' ? await requestSecurityContext() : null
+    const securityRelevant = requestedPortal === 'admin' || submittedEmail === MAKER_LOGIN_ALIAS || email === MAKER_ACCOUNT_EMAIL
+    const security = securityRelevant ? await requestSecurityContext() : null
+    const notifySecurity = async (outcome: 'success' | 'failure' | 'blocked' | 'denied', reason?: string) => {
+        if (!securityRelevant) return
+        await sendSecurityLoginEmail({
+            outcome,
+            login: submittedEmail,
+            canonicalLogin: email,
+            portal: requestedPortal as 'staff' | 'responsible' | 'admin',
+            ip: security?.ip,
+            approximateLocation: security?.approximateLocation,
+            userAgent: security?.userAgent,
+            reason: reason ?? null,
+        })
+    }
     if (requestedPortal === 'admin') {
         const { data: guard, error: guardError } = await adminSecurityRpc<{ allowed?: boolean }>(supabase, 'upt_admin_login_guard', { p_login: email })
-        if (guardError) return { error: 'Aanmelden tijdelijk niet beschikbaar. Probeer opnieuw.', code: 'security_guard_error' }
-        if (guard && guard.allowed === false) return { error: 'Te veel mislukte aanmeldpogingen. Probeer over 15 minuten opnieuw.', code: 'login_locked' }
+        if (guardError) {
+            await notifySecurity('failure', 'security_guard_error')
+            return { error: 'Aanmelden tijdelijk niet beschikbaar. Probeer opnieuw.', code: 'security_guard_error' }
+        }
+        if (guard && guard.allowed === false) {
+            await notifySecurity('blocked', 'login_locked')
+            return { error: 'Te veel mislukte aanmeldpogingen. Probeer over 15 minuten opnieuw.', code: 'login_locked' }
+        }
     }
 
     const { data, error } = await supabase.auth.signInWithPassword({ email, password })
@@ -87,21 +116,23 @@ export async function signIn(formData: FormData) {
         if (requestedPortal === 'admin') {
             await adminSecurityRpc(supabase, 'upt_admin_login_failure', { p_login: email, p_ip: security?.ip ?? null, p_location: security?.approximateLocation ?? null, p_user_agent: security?.userAgent ?? null })
         }
+        await notifySecurity('failure', error?.message.includes('Email not confirmed') ? 'email_not_confirmed' : error?.message.includes('Invalid login credentials') ? 'invalid_credentials' : 'auth_failure')
         if (error?.message.includes('Email not confirmed')) return { error: 'Verifieer eerst je e-mailadres.', code: 'email_not_confirmed' }
         if (error?.message.includes('Invalid login credentials')) return { error: 'Onjuist e-mailadres of wachtwoord.', code: 'invalid_credentials' }
         return { error: 'Aanmelden mislukt. Probeer opnieuw.' }
     }
 
     const { data: profile, error: profileError } = await supabase.from('profiles').select('approved, role').eq('id', data.user.id).single()
-    if (profileError || !profile) { await supabase.auth.signOut(); return { error: 'Je profiel kon niet worden geladen. Probeer opnieuw.', code: 'profile_error' } }
+    if (profileError || !profile) { await notifySecurity('denied', 'profile_error'); await supabase.auth.signOut(); return { error: 'Je profiel kon niet worden geladen. Probeer opnieuw.', code: 'profile_error' } }
     const { data: isOwner } = await supabase.rpc('upt_current_is_owner')
-    if (!profile.approved && !isOwner) { await supabase.auth.signOut(); return { error: 'ACCOUNT NOG NIET GOEDGEKEURD', code: 'account_not_approved' } }
+    if (!profile.approved && !isOwner) { await notifySecurity('denied', 'account_not_approved'); await supabase.auth.signOut(); return { error: 'ACCOUNT NOG NIET GOEDGEKEURD', code: 'account_not_approved' } }
 
     const role = profile.role
     const hasPermanentAdminAccess = role === 'admin' || isOwner === true
     const allowed = requestedPortal === 'admin' ? hasPermanentAdminAccess : requestedPortal === 'responsible' ? role === 'responsible_lead' || hasPermanentAdminAccess : role === 'staff' || role === 'responsible_lead' || hasPermanentAdminAccess
     if (!allowed) {
         if (requestedPortal === 'admin') await adminSecurityRpc(supabase, 'upt_admin_login_failure', { p_login: email, p_ip: security?.ip ?? null, p_location: security?.approximateLocation ?? null, p_user_agent: security?.userAgent ?? null })
+        await notifySecurity('denied', 'wrong_portal')
         await supabase.auth.signOut()
         return { error: 'Dit account heeft geen toegang tot het gekozen portaal.', code: 'wrong_portal' }
     }
@@ -109,10 +140,11 @@ export async function signIn(formData: FormData) {
     if (hasPermanentAdminAccess) {
         const requestedRoleMode = requestedPortal === 'admin' ? 'admin' : requestedPortal === 'responsible' ? 'responsible_lead' : 'staff'
         const { data: roleMode, error: roleModeError } = await supabase.rpc('upt_set_admin_role_mode', { p_role: requestedRoleMode })
-        if (roleModeError || roleMode !== requestedRoleMode) { await supabase.auth.signOut(); return { error: 'De gekozen rolweergave kon niet worden geactiveerd.', code: 'role_mode_error' } }
+        if (roleModeError || roleMode !== requestedRoleMode) { await notifySecurity('denied', 'role_mode_error'); await supabase.auth.signOut(); return { error: 'De gekozen rolweergave kon niet worden geactiveerd.', code: 'role_mode_error' } }
     }
 
     if (requestedPortal === 'admin') await adminSecurityRpc(supabase, 'upt_admin_login_success', { p_login: email, p_ip: security?.ip ?? null, p_location: security?.approximateLocation ?? null, p_user_agent: security?.userAgent ?? null })
+    await notifySecurity('success', 'login_success')
     redirect(requestedPortal === 'admin' ? '/admin' : '/')
 }
 
