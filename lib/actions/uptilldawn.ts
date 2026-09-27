@@ -1062,6 +1062,19 @@ export async function markNotificationRead(fd:FormData){
 }
 export async function archiveEvent(fd:FormData){const {s}=await adminClient();const {error}=await s.from('events').update({status:'archived'}).eq('id',uuid.parse(fd.get('event_id')));check(error);revalidatePath('/events')}
 export async function duplicateEvent(fd:FormData){const {s}=await adminClient();const [start,end]=dates(fd,'start_at','end_at');const {error}=await s.rpc('upt_duplicate_event',{p_event:uuid.parse(fd.get('event_id')),p_name:text.parse(fd.get('name')),p_start:start,p_end:end});check(error);revalidatePath('/events')}
+export async function updateEventEmergencyInformation(fd:FormData){
+ const {s}=await adminClient()
+ const {error}=await s.rpc('upt_upsert_event_emergency_information',{
+  p_event:uuid.parse(fd.get('event_id')),
+  p_emergency_number:String(fd.get('emergency_number')||'').trim().slice(0,40),
+  p_first_aid_contact:String(fd.get('first_aid_contact')||'').trim().slice(0,300)||undefined,
+  p_security_contact:String(fd.get('security_contact')||'').trim().slice(0,300)||undefined,
+  p_assembly_point:String(fd.get('assembly_point')||'').trim().slice(0,500)||undefined,
+  p_procedure:String(fd.get('procedure')||'').trim().slice(0,5000)||undefined,
+ })
+ check(error)
+ revalidatePath('/events');revalidatePath('/incidents');revalidatePath('/')
+}
 export async function updateEvent(fd:FormData){
  const {s}=await adminClient()
  const [start,end]=dates(fd,'start_at','end_at')
