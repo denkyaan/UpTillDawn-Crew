@@ -27,7 +27,7 @@ Production crew-management PWA for Uptilldawn events. The application is a Next.
 - Organization/event/workplace chat and private media
 - URGENT/help incidents with optional photo and GPS evidence
 - Staff and Responsible workplace-overview status
-- Admin operational dashboard, time corrections, audit and Excel export
+- Admin/Responsible operational dashboard with scheduled late/no-show detection, time corrections, audit and Excel export
 - IndexedDB operation/upload queues plus an offline operational shell
 - Installed PWA behavior on Windows, Android and iOS
 - Web Push notifications with per-device opt-in and automatic subscription renewal
@@ -62,7 +62,7 @@ Database regression suites are in `tests/sql/`. They use synthetic fixtures and 
 
 ## Database
 
-The production project is tracked through 126 ordered SQL migration files in `supabase/migrations/`. Historical StaffPortal migrations are retained because they are part of migration history, not because the old modules are active.
+The production project is tracked through 128 ordered SQL migration files in `supabase/migrations/`. Historical StaffPortal migrations are retained because they are part of migration history, not because the old modules are active.
 
 Do not reset or blindly replay migrations against production. A complete from-zero replay belongs on an isolated Supabase project.
 
