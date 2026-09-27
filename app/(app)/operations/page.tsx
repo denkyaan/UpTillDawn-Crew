@@ -2,7 +2,7 @@ import { createClient } from '@/lib/supabase/crew-server'
 import { getCurrentUser } from '@/lib/actions/auth'
 import { redirect } from 'next/navigation'
 import OperationsClient from './operations-client'
-import type { Tables } from '@/types/crew-database'
+import type { Tables, Database } from '@/types/crew-database'
 
 export const dynamic='force-dynamic'
 
@@ -164,7 +164,6 @@ export default async function Page(){
     summaryAsOf={nowDate.getTime()}
     liveSessions={liveSessions}
     liveBreaks={liveBreaks}
-    liveShifts={liveShifts}
     crewDirectory={crewDirectory}
     timeReviews={timeReviews.data||[]}
     operationalAlerts={operationalAlerts.data||[]}
