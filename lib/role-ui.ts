@@ -60,6 +60,26 @@ export function ruleUsable(
 }
 
 
+const featureRule = (
+  role: RoleRuleRole,
+  feature_key: string,
+  label: string,
+  sort_order: number,
+  condition_key: RoleCondition = "always",
+  visible = true,
+  enabled = true,
+): RoleUiRule => ({
+  role,
+  feature_key,
+  label,
+  group_key: "operations",
+  visible,
+  enabled,
+  condition_key,
+  sort_order,
+  settings: {},
+})
+
 const navRule = (
   role: RoleRuleRole,
   feature_key: string,
@@ -88,6 +108,7 @@ export const ROLE_UI_DEFAULTS: Record<RoleRuleRole, RoleUiRule[]> = {
     navRule("admin","shifts","Shift's",40),
     navRule("admin","workplaces","Werkplekken",50),
     navRule("admin","tasks","Taken",60),
+    featureRule("admin","inventory","Materiaal",65),
     navRule("admin","briefings","Briefing",70),
     navRule("admin","personnel","Personeel & goedkeuringen",80),
     navRule("admin","chat","Chat's",90),
@@ -104,6 +125,7 @@ export const ROLE_UI_DEFAULTS: Record<RoleRuleRole, RoleUiRule[]> = {
     navRule("responsible_lead","tasks","Taken",50,"shift_active"),
     navRule("responsible_lead","briefings","Briefing",60,"assigned_event"),
     navRule("responsible_lead","workplaces","Werkplekken",70,"assigned_workplace_role"),
+    featureRule("responsible_lead","inventory","Materiaal",75,"assigned_workplace_role"),
     navRule("responsible_lead","chat","Chat's",80),
     navRule("responsible_lead","crew","Personeel",90),
     navRule("responsible_lead","incidents","Help",100,"shift_active"),
@@ -116,6 +138,7 @@ export const ROLE_UI_DEFAULTS: Record<RoleRuleRole, RoleUiRule[]> = {
     navRule("staff","briefings","Briefing",50,"assigned_event"),
     navRule("staff","workplaces","Werkplekken",60,"assigned_event"),
     navRule("staff","tasks","Taken",70,"shift_active"),
+    featureRule("staff","inventory","Materiaal",75,"shift_active"),
     navRule("staff","chat","Chat's",80),
     navRule("staff","crew","Personeel",90),
     navRule("staff","incidents","Help",100,"shift_active"),
