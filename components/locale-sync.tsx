@@ -133,7 +133,15 @@ export function LocaleSync() {
       }
       applying = true
       translateNode(document.body, locale)
-      document.title = locale === "fr" ? "UP TILL DAWN Personnel" : locale === "en" ? "UP TILL DAWN Staff" : locale === "de" ? "UP TILL DAWN Personal" : "UP TILL DAWN Personeel"
+      const path = window.location.pathname
+      const portal = path.startsWith("/login/admin")
+        ? (locale === "fr" ? "Connexion administrateur" : locale === "en" ? "Administrator login" : locale === "de" ? "Administrator-Anmeldung" : "Beheerder inloggen")
+        : path.startsWith("/login/responsible")
+          ? (locale === "fr" ? "Connexion responsable" : locale === "en" ? "Responsible login" : locale === "de" ? "Verantwortlichen-Anmeldung" : "Verantwoordelijke inloggen")
+          : path.startsWith("/login")
+            ? (locale === "fr" ? "Connexion personnel" : locale === "en" ? "Staff login" : locale === "de" ? "Personal-Anmeldung" : "Personeel inloggen")
+            : (locale === "fr" ? "UP TILL DAWN Personnel" : locale === "en" ? "UP TILL DAWN Staff" : locale === "de" ? "UP TILL DAWN Personal" : "UP TILL DAWN Personeel")
+      document.title = path.startsWith("/login") ? `${portal} | UP TILL DAWN Crew` : portal
       applying = false
     }
     applyLocale(locale, Boolean(storedLocale))
@@ -148,12 +156,19 @@ export function LocaleSync() {
       applying = false
     })
     observer.observe(document.body, { subtree: true, childList: true, characterData: true, attributes: true, attributeFilter: [...attributes] })
+    const titleObserver = new MutationObserver(() => {
+      if (applying) return
+      applyLocale(locale, false)
+    })
+    const titleElement = document.querySelector("title")
+    if (titleElement) titleObserver.observe(titleElement, { childList: true, characterData: true, subtree: true })
     const onLanguageChange = (event: Event) => applyLocale(normalizeLocale((event as CustomEvent<string>).detail), true)
     const onDeviceLanguageChange = () => { if (!window.localStorage.getItem("uptilldawn-language")) applyLocale(deviceLocale(), false) }
     window.addEventListener("uptilldawn-language-change", onLanguageChange)
     window.addEventListener("languagechange", onDeviceLanguageChange)
     return () => {
       observer.disconnect()
+      titleObserver.disconnect()
       window.removeEventListener("uptilldawn-language-change", onLanguageChange)
       window.removeEventListener("languagechange", onDeviceLanguageChange)
     }
