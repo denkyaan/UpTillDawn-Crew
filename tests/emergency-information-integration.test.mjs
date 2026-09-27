@@ -95,7 +95,7 @@ test('emergency information is cached per user and rendered in the private offli
   assert.match(sync,/saveOfflineEmergency/)
   assert.match(offline,/Noodinformatie offline/)
   assert.match(offline,/Verzamelpunt:/)
-  assert.match(sw,/uptilldawn-public-v10/)
+  assert.match(sw,/uptilldawn-public-v11/)
 })
 
 test('emergency telephone links retain digits and optional leading plus only', async () => {
