@@ -1091,7 +1091,7 @@ export async function createEventDocument(fd:FormData){
  if(uploadError)throw new Error('Document uploaden mislukt.')
  const {error}=await s.rpc('upt_create_event_document',{
   p_event:eventId,
-  ...(workplaceId?{p_workplace:workplaceId}:{}),
+  p_workplace:(workplaceId??null) as unknown as string,
   p_kind:z.enum(['briefing','safety','map','procedure','permit','technical','crew']).parse(fd.get('kind')),
   p_audience:z.enum(['employee','responsible','admin']).parse(fd.get('audience')),
   p_title:text.parse(fd.get('title')),
