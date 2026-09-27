@@ -545,6 +545,70 @@ export async function reassignShift(fd:FormData){
  shiftMutationCheck(error)
  revalidatePath('/shifts');revalidatePath('/workplaces');revalidatePath('/operations');revalidatePath('/notifications')
 }
+export async function requestShiftReplacement(fd:FormData){
+ const {s}=await approvedClient()
+ const {error}=await s.rpc('upt_request_shift_change',{
+  p_type:'replacement',
+  p_shift:uuid.parse(fd.get('shift_id')),
+  p_replacement:uuid.parse(fd.get('replacement_user_id')),
+  p_reason:z.string().trim().min(3).max(500).parse(fd.get('reason')),
+ })
+ check(error)
+ revalidatePath('/shifts');revalidatePath('/notifications')
+}
+export async function requestShiftSwap(fd:FormData){
+ const {s}=await approvedClient()
+ const {error}=await s.rpc('upt_request_shift_change',{
+  p_type:'swap',
+  p_shift:uuid.parse(fd.get('shift_id')),
+  p_replacement:uuid.parse(fd.get('replacement_user_id')),
+  p_target_shift:uuid.parse(fd.get('target_shift_id')),
+  p_reason:z.string().trim().min(3).max(500).parse(fd.get('reason')),
+ })
+ check(error)
+ revalidatePath('/shifts');revalidatePath('/notifications')
+}
+export async function claimOpenShift(fd:FormData){
+ const {s}=await approvedClient()
+ const {error}=await s.rpc('upt_request_shift_change',{
+  p_type:'claim-open-shift',
+  p_shift:uuid.parse(fd.get('shift_id')),
+  p_reason:z.string().trim().min(3).max(500).parse(fd.get('reason')),
+ })
+ check(error)
+ revalidatePath('/shifts');revalidatePath('/notifications')
+}
+export async function respondShiftChange(fd:FormData){
+ const {s}=await approvedClient()
+ const {error}=await s.rpc('upt_respond_shift_change',{
+  p_request:uuid.parse(fd.get('request_id')),
+  p_response:z.enum(['accepted','declined']).parse(fd.get('response')),
+ })
+ check(error)
+ revalidatePath('/shifts');revalidatePath('/notifications')
+}
+export async function cancelShiftChange(fd:FormData){
+ const {s}=await approvedClient()
+ const {error}=await s.rpc('upt_cancel_shift_change',{
+  p_request:uuid.parse(fd.get('request_id')),
+ })
+ check(error)
+ revalidatePath('/shifts');revalidatePath('/notifications')
+}
+export async function decideShiftChange(fd:FormData){
+ const {s}=await adminClient()
+ const decision=z.enum(['approved','rejected']).parse(fd.get('decision'))
+ const reason=String(fd.get('reason')||'').trim().slice(0,500)
+ if(decision==='rejected'&&reason.length<3)throw new Error('Geef een reden voor de afwijzing.')
+ const {error}=await s.rpc('upt_decide_shift_change',{
+  p_request:uuid.parse(fd.get('request_id')),
+  p_decision:decision,
+  ...(reason?{p_reason:reason}:{}),
+ })
+ shiftMutationCheck(error)
+ revalidatePath('/shifts');revalidatePath('/workplaces');revalidatePath('/operations');revalidatePath('/notifications')
+}
+
 export async function cancelShift(fd:FormData){
  const {s}=await adminClient()
  const reason=String(fd.get('reason')||'').trim().slice(0,500)
