@@ -14,8 +14,10 @@ jobs:
     permissions:
       contents: read
     env:
-      NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
-      NEXT_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.NEXT_PUBLIC_SUPABASE_ANON_KEY }}
+      # Public production Supabase config. Keep this pinned so production cannot
+      # accidentally deploy against the preview project.
+      NEXT_PUBLIC_SUPABASE_URL: https://eakoavcieossazqzplke.supabase.co
+      NEXT_PUBLIC_SUPABASE_ANON_KEY: sb_publishable_DYhOH4m7Kz4P9ZzdQ6aQZQ_DEoZJHp9
       NEXT_PUBLIC_APP_URL: https://crew.uptilldawn.workers.dev
       CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
       CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
@@ -33,9 +35,10 @@ jobs:
         shell: bash
         env:
           GEOAPIFY_API_KEY: ${{ secrets.GEOAPIFY_API_KEY }}
+          RESEND_API_KEY: ${{ secrets.RESEND_API_KEY }}
         run: |
           set -euo pipefail
-          for name in NEXT_PUBLIC_SUPABASE_URL NEXT_PUBLIC_SUPABASE_ANON_KEY GEOAPIFY_API_KEY CLOUDFLARE_API_TOKEN CLOUDFLARE_ACCOUNT_ID; do
+          for name in NEXT_PUBLIC_SUPABASE_URL NEXT_PUBLIC_SUPABASE_ANON_KEY GEOAPIFY_API_KEY RESEND_API_KEY CLOUDFLARE_API_TOKEN CLOUDFLARE_ACCOUNT_ID; do
             if [ -z "${!name:-}" ]; then
               echo "::error::Missing required production secret: $name"
               exit 1
@@ -80,6 +83,11 @@ jobs:
         env:
           GEOAPIFY_API_KEY: ${{ secrets.GEOAPIFY_API_KEY }}
         run: printf '%s' "$GEOAPIFY_API_KEY" | npx wrangler secret put GEOAPIFY_API_KEY
+
+      - name: Configure login-alert email secret
+        env:
+          RESEND_API_KEY: ${{ secrets.RESEND_API_KEY }}
+        run: printf '%s' "$RESEND_API_KEY" | npx wrangler secret put RESEND_API_KEY
 
       - name: Deploy production Worker
         run: npm run deploy:cloudflare
