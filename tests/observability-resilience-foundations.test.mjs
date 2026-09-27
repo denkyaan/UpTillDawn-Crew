@@ -28,3 +28,13 @@ test('cache policy separates offline content from sensitive live data', async ()
   assert.match(source, /dataClass === 'personal' \|\| dataClass === 'live-status'/)
   assert.match(source, /dataClass === 'emergency'/)
 })
+
+
+test('health observability alerts detect stale snapshots and SLO breaches', async () => {
+  const source = await readFile(new URL('../lib/observability-alerts.ts', import.meta.url), 'utf8')
+  assert.match(source, /healthSnapshotAlert/)
+  assert.match(source, /15 \* 60_000/)
+  assert.match(source, /5 \* 60_000/)
+  assert.match(source, /serviceLevelAlert/)
+  for (const metric of ['availability','api-latency','sync-success','push-delivery']) assert.ok(source.includes(metric))
+})
