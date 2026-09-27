@@ -122,7 +122,7 @@ function translateNode(root: Node, locale: ExtendedUiLocale) {
 export function LocaleSync() {
   useEffect(() => {
     const storedLocale = parseLocale(window.localStorage.getItem("uptilldawn-language"))
-    let locale = storedLocale || deviceLocale()
+    let locale = deviceLocale()
     let applying = false
     const applyLocale = (nextLocale: ExtendedUiLocale, persist = false) => {
       locale = nextLocale
@@ -144,7 +144,7 @@ export function LocaleSync() {
       document.title = path.startsWith("/login") ? `${portal} | UP TILL DAWN Crew` : portal
       applying = false
     }
-    applyLocale(locale, Boolean(storedLocale))
+    applyLocale(locale, false)
     const observer = new MutationObserver(mutations => {
       if (applying) return
       applying = true
@@ -157,7 +157,7 @@ export function LocaleSync() {
     })
     observer.observe(document.body, { subtree: true, childList: true, characterData: true, attributes: true, attributeFilter: [...attributes] })
     const onLanguageChange = (event: Event) => applyLocale(normalizeLocale((event as CustomEvent<string>).detail), true)
-    const onDeviceLanguageChange = () => { if (!window.localStorage.getItem("uptilldawn-language")) applyLocale(deviceLocale(), false) }
+    const onDeviceLanguageChange = () => applyLocale(deviceLocale(), false)
     window.addEventListener("uptilldawn-language-change", onLanguageChange)
     window.addEventListener("languagechange", onDeviceLanguageChange)
     return () => {
