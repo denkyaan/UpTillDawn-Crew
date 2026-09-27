@@ -89,7 +89,7 @@ test('critical documents are stored per user offline and cleared on logout', asy
   ])
   assert.match(snapshot,/OfflineDocument/)
   assert.match(snapshot,/indexedDB\.open\('uptilldawn-offline-content',2\)/)
-  assert.match(snapshot,/key:userId\+'\:'/)
+  assert.match(sync,/key:userId\+'\:'\+row\.id/)
   assert.match(snapshot,/tx=content\.transaction\(\['content','documents'\],'readwrite'\)/)
   assert.match(sync,/event_documents/)
   assert.match(sync,/offline_critical/)
