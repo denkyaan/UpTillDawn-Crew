@@ -2608,6 +2608,25 @@ export type Database = {
         }
         Returns: string
       }
+      upt_admin_login_failure: {
+        Args: {
+          p_ip?: string
+          p_location?: string
+          p_login: string
+          p_user_agent?: string
+        }
+        Returns: Json
+      }
+      upt_admin_login_guard: { Args: { p_login: string }; Returns: Json }
+      upt_admin_login_success: {
+        Args: {
+          p_ip?: string
+          p_location?: string
+          p_login: string
+          p_user_agent?: string
+        }
+        Returns: undefined
+      }
       upt_admin_personnel_details: {
         Args: never
         Returns: {
