@@ -1,6 +1,7 @@
 import { createClient } from '@/lib/supabase/crew-server'
 import { IncidentForm } from '@/components/crew/incident-form'
 import { IncidentControls } from '@/components/crew/incident-controls'
+import { EmergencyInformationPanel } from '@/components/crew/emergency-information-panel'
 import { nlStatus } from '@/lib/ui-nl'
 import { redirect } from 'next/navigation'
 import { getCurrentUser } from '@/lib/actions/auth'
@@ -23,12 +24,14 @@ export default async function Page(){
     {data:incidents,error},
     {data:shifts},
     {data:currentContexts,error:currentContextError},
+    {data:emergencyRows,error:emergencyError},
   ]=await Promise.all([
-    s.from('events').select('id,name').lte('start_at',now).gte('end_at',now).neq('status','archived'),
+    s.from('events').select('id,name,address').lte('start_at',now).gte('end_at',now).neq('status','archived'),
     s.from('incidents').select('id,user_id,reporter_id,message,status,created_at,acknowledged_at,resolved_at,escalated_at,escalation_reason,event_id,workplace_id,photo_path').order('created_at',{ascending:false}).limit(100),
     s.from('shifts').select('id,event_id,workplace_id,scheduled_start,scheduled_end,events(name),workplaces(name)')
       .eq('user_id',user.id).neq('status','cancelled').neq('response_status','declined').lte('scheduled_start',now).gte('scheduled_end',now).order('scheduled_start'),
     s.rpc('upt_current_work_context'),
+    s.from('event_emergency_information').select('*'),
   ])
 
   const isAdmin=current.role==='admin'
@@ -37,7 +40,8 @@ export default async function Page(){
   const activeEventIds=new Set((events||[]).map(event=>event.id))
   const activeShifts=(shifts||[]).filter(shift=>activeEventIds.has(shift.event_id))
   const currentContext=currentContexts?.[0]||null
-  if(currentContextError)return <main className="mx-auto max-w-4xl p-4 md:p-8"><p className="rounded-xl border p-4 text-muted-foreground">Huidige werkcontext kon niet worden geladen.</p></main>
+  const emergencyByEvent=new Map((emergencyRows||[]).map(row=>[row.event_id,row]))
+  if(currentContextError||emergencyError)return <main className="mx-auto max-w-4xl p-4 md:p-8"><p className="rounded-xl border p-4 text-muted-foreground">Huidige werkcontext kon niet worden geladen.</p></main>
 
   const responsibleAssignments=isResponsible
     ? (await s.from('responsible_assignments').select('event_id,workplace_id').eq('user_id',user.id)).data||[]
@@ -76,6 +80,8 @@ export default async function Page(){
     },
   )
   const contexts=[...contextMap.values()]
+  const emergencyEvent=(events||[]).find(event=>event.id===(currentContext?.event_id||activeShift?.event_id))||null
+  const emergencyInfo=emergencyEvent?emergencyByEvent.get(emergencyEvent.id)||null:null
 
   const signedMedia=new Map<string,string>()
   await Promise.all(visibleIncidents.filter(i=>i.photo_path).map(async i=>{
@@ -85,6 +91,19 @@ export default async function Page(){
 
   return <main className="mx-auto max-w-4xl space-y-5 p-4 pb-28 md:p-8">
     <h1 className="text-3xl font-black">{manager?'Help':'Urgent melden'}</h1>
+    {emergencyEvent&&<EmergencyInformationPanel
+      info={{
+        eventId:emergencyEvent.id,
+        eventName:emergencyEvent.name,
+        eventAddress:emergencyEvent.address||'',
+        emergencyNumber:emergencyInfo?.emergency_number||'',
+        firstAidContact:emergencyInfo?.first_aid_contact||null,
+        securityContact:emergencyInfo?.security_contact||null,
+        assemblyPoint:emergencyInfo?.assembly_point||null,
+        procedure:emergencyInfo?.procedure||null,
+        updatedAt:emergencyInfo?.updated_at||null,
+      }}
+    />}
     {!isAdmin&&<IncidentForm
       userId={user.id}
       events={(events||[]).filter(event=>activeShifts.some(shift=>shift.event_id===event.id))}
