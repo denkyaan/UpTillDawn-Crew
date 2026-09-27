@@ -25,7 +25,7 @@ Production crew-management PWA for Uptilldawn events. The application is a Next.
 - Workplace transitions without double-counting time
 - Briefings, personal instructions, task assignments, workplace operational checklists with photo evidence, and workplace-scoped material inventory with controlled issue/return/damage/missing workflows
 - Organization/event/workplace chat and private media
-- URGENT/help incidents with canonical current-workplace context, optional photo/GPS evidence and 5-minute unacknowledged escalation
+- Event emergency information with offline-cached emergency number, address, first-aid/security contacts, assembly point and procedure\n- URGENT/help incidents with canonical current-workplace context, optional photo/GPS evidence and 5-minute unacknowledged escalation
 - Staff and Responsible workplace-overview status
 - Admin/Responsible operational dashboard with canonical current-workplace tracking, live understaffing, late/no-show, shift-overrun, missing-checkout and long-break detection, Responsible shift handovers with material snapshots, time corrections, audit and Excel export
 - IndexedDB operation/upload queues plus an offline operational shell
@@ -62,7 +62,7 @@ Database regression suites are in `tests/sql/`. They use synthetic fixtures and 
 
 ## Database
 
-The production project is tracked through 159 ordered SQL migration files in `supabase/migrations/`. Historical StaffPortal migrations are retained because they are part of migration history, not because the old modules are active.
+The production project is tracked through 161 ordered SQL migration files in `supabase/migrations/`. Historical StaffPortal migrations are retained because they are part of migration history, not because the old modules are active.
 
 Do not reset or blindly replay migrations against production. A complete from-zero replay belongs on an isolated Supabase project.
 
