@@ -41,8 +41,8 @@ export default function LoginPage() {
         const result = await signIn(formData)
         if (result?.error) setError(result.error)
       } catch {
-        setError(portal === "admin"
-          ? "Foute logingegevens en u heeft geen toegang tot deze rol."
+        setError(portal === "admin" || portal === "responsible"
+          ? "Foute logingegevens of u heeft geen toegang tot deze rol."
           : "Aanmelden mislukt. Controleer je gegevens en probeer opnieuw.")
       }
     })
