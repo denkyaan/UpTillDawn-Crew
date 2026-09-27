@@ -251,7 +251,7 @@ as $$
     and s.status<>'cancelled'
     and s.response_status='declined'
     and s.scheduled_start>now()
-    and (e.status is null or e.status <> 'archived'::event_status)
+    and (e.status is null or e.status <> 'archived')
     and upt_private.user_available_for_shift(auth.uid(),s.event_id,s.shift_kind)
     and (
       s.overlap_allowed=true
