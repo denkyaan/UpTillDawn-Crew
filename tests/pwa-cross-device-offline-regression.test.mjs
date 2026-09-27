@@ -40,3 +40,11 @@ test('installed PWA keeps the cross-device capability contract', async () => {
   assert.match(sw, /periodicsync/)
   assert.match(sw, /safeLocalPath/)
 })
+
+
+test('offline identity cleanup covers the expanded operational cache', async () => {
+  const snapshot = await readFile(new URL('../lib/crew-offline-snapshot.ts', import.meta.url), 'utf8')
+  assert.match(snapshot, /clearOfflineIdentity/)
+  assert.match(snapshot, /content.*delete\(userId\)/s)
+  assert.match(snapshot, /documents/)
+})
