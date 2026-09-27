@@ -1095,7 +1095,7 @@ export async function createEventDocument(fd:FormData){
   p_kind:z.enum(['briefing','safety','map','procedure','permit','technical','crew']).parse(fd.get('kind')),
   p_audience:z.enum(['employee','responsible','admin']).parse(fd.get('audience')),
   p_title:text.parse(fd.get('title')),
-  p_description:String(fd.get('description')||'').trim().slice(0,2000)||undefined,
+  p_description:String(fd.get('description')||'').trim().slice(0,2000),
   p_storage_path:storagePath,
   p_file_name:fileValue.name.slice(0,255),
   p_mime_type:fileValue.type,
