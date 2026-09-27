@@ -13,7 +13,7 @@ import { passwordPolicyMessage } from '@/lib/password-policy'
 import { sendSecurityLoginEmail } from '@/lib/security-login-email'
 
 const MAKER_LOGIN_ALIAS = 'maker@uptilldawn'
-const MAKER_ACCOUNT_EMAIL = 'steegmanskyani@gmail.com'
+const MAKER_ACCOUNT_EMAIL = 'steegmans.kyani@icloud.com'
 
 function resolveLoginEmail(email: string) {
     return email === MAKER_LOGIN_ALIAS ? MAKER_ACCOUNT_EMAIL : email
