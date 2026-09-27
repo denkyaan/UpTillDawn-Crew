@@ -2239,6 +2239,18 @@ export type Database = {
         Args: { event_uuid: string; uid?: string; workplace_uuid?: string }
         Returns: boolean
       }
+      upt_manager_live_sessions: {
+        Args: never
+        Returns: {
+          event_id: string
+          session_id: string
+          shift_id: string
+          started_at: string
+          user_id: string
+          workplace_id: string
+          workplace_name: string
+        }[]
+      }
       upt_mark_notification_read: {
         Args: { p_notification: string }
         Returns: undefined
@@ -2250,10 +2262,12 @@ export type Database = {
       upt_operational_alerts: {
         Args: never
         Returns: {
+          active_staff: number
           detected_at: string
           event_id: string
           id: string
           kind: string
+          minimum_staff: number
           planned_end: string
           planned_start: string
           shift_id: string
