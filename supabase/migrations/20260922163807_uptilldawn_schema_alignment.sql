@@ -3,6 +3,68 @@
 -- Existing data is preserved.
 
 -- ============================================================
+-- CANONICAL PROFILES BOOTSTRAP
+-- ============================================================
+
+-- Some historical installations already had public.profiles outside the
+-- checked-in migration chain. A fresh install must be able to create the
+-- canonical Crew profile surface before later alignment statements reference it.
+CREATE TABLE IF NOT EXISTS public.profiles (
+  id UUID PRIMARY KEY REFERENCES auth.users(id) ON DELETE CASCADE,
+  updated_at TIMESTAMPTZ,
+  full_name TEXT,
+  home_address TEXT,
+  phone_number TEXT,
+  date_of_birth DATE,
+  national_register_number TEXT,
+  iban TEXT,
+  profile_photo_url TEXT,
+  approved BOOLEAN NOT NULL DEFAULT false,
+  role TEXT NOT NULL DEFAULT 'staff'
+    CHECK (role IN ('staff', 'responsible_lead', 'admin'))
+);
+
+-- Preserve data when upgrading an installation that only has the legacy
+-- StaffPortal profile table. Existing canonical profile rows are never replaced.
+INSERT INTO public.profiles (
+  id,
+  updated_at,
+  full_name,
+  home_address,
+  phone_number,
+  date_of_birth,
+  national_register_number,
+  iban,
+  profile_photo_url,
+  approved,
+  role
+)
+SELECT
+  up.id,
+  up.updated_at,
+  up.full_name,
+  up.address,
+  up.phone,
+  up.date_of_birth,
+  up.national_register_number,
+  up.iban,
+  up.avatar_url,
+  (up.account_status = 'approved'::account_status),
+  CASE
+    WHEN EXISTS (
+      SELECT 1
+      FROM public.user_roles ur
+      WHERE ur.user_id = up.id
+        AND ur.role = 'admin'::user_role
+    ) THEN 'admin'
+    ELSE 'staff'
+  END
+FROM public.user_profiles up
+ON CONFLICT (id) DO NOTHING;
+
+ALTER TABLE public.profiles ENABLE ROW LEVEL SECURITY;
+
+-- ============================================================
 -- EVENTS
 -- ============================================================
 
