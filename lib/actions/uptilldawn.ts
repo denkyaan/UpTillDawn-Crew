@@ -64,6 +64,17 @@ async function requireFeature(
  if(error||!data)throw new Error('Deze functie is voor jouw rol op dit moment niet beschikbaar.')
 }
 type WorkPhotoTarget = { type: 'briefing' | 'instruction' | 'task'; id: string }
+const eventDocumentTypes=new Map([
+ ['image/jpeg','jpg'],
+ ['image/png','png'],
+ ['image/webp','webp'],
+ ['application/pdf','pdf'],
+ ['text/plain','txt'],
+ ['text/csv','csv'],
+ ['application/vnd.openxmlformats-officedocument.wordprocessingml.document','docx'],
+ ['application/vnd.openxmlformats-officedocument.presentationml.presentation','pptx'],
+ ['application/vnd.openxmlformats-officedocument.spreadsheetml.sheet','xlsx'],
+])
 const photoTypes = new Map([
  ['image/jpeg','jpg'],
  ['image/png','png'],
@@ -1062,6 +1073,48 @@ export async function markNotificationRead(fd:FormData){
 }
 export async function archiveEvent(fd:FormData){const {s}=await adminClient();const {error}=await s.from('events').update({status:'archived'}).eq('id',uuid.parse(fd.get('event_id')));check(error);revalidatePath('/events')}
 export async function duplicateEvent(fd:FormData){const {s}=await adminClient();const [start,end]=dates(fd,'start_at','end_at');const {error}=await s.rpc('upt_duplicate_event',{p_event:uuid.parse(fd.get('event_id')),p_name:text.parse(fd.get('name')),p_start:start,p_end:end});check(error);revalidatePath('/events')}
+export async function createEventDocument(fd:FormData){
+ const {s,user,profile}=await approvedClient()
+ requireManager(profile.role)
+ const fileValue=fd.get('document')
+ if(!(fileValue instanceof File)||fileValue.size<=0)throw new Error('Kies een document.')
+ const ext=eventDocumentTypes.get(fileValue.type)
+ if(!ext)throw new Error('Gebruik alleen PDF, DOCX, PPTX, XLSX, TXT, CSV, JPG, PNG of WEBP.')
+ const max=fileValue.type.startsWith('image/')?10*1024*1024:20*1024*1024
+ if(fileValue.size>max)throw new Error(fileValue.type.startsWith('image/')?'Afbeelding mag maximaal 10 MB zijn.':'Document mag maximaal 20 MB zijn.')
+ const eventId=uuid.parse(fd.get('event_id'))
+ const workplaceRaw=String(fd.get('workplace_id')||'').trim()
+ const workplaceId=workplaceRaw?uuid.parse(workplaceRaw):undefined
+ if(profile.role==='responsible_lead'&&!workplaceId)throw new Error('Verantwoordelijke documenten moeten aan een toegewezen werkplek gekoppeld zijn.')
+ const storagePath=`${user.id}/document/${crypto.randomUUID()}.${ext}`
+ const {error:uploadError}=await s.storage.from('work-media').upload(storagePath,fileValue,{contentType:fileValue.type,upsert:false})
+ if(uploadError)throw new Error('Document uploaden mislukt.')
+ const {error}=await s.rpc('upt_create_event_document',{
+  p_event:eventId,
+  ...(workplaceId?{p_workplace:workplaceId}:{}),
+  p_kind:z.enum(['briefing','safety','map','procedure','permit','technical','crew']).parse(fd.get('kind')),
+  p_audience:z.enum(['employee','responsible','admin']).parse(fd.get('audience')),
+  p_title:text.parse(fd.get('title')),
+  p_description:String(fd.get('description')||'').trim().slice(0,2000)||undefined,
+  p_storage_path:storagePath,
+  p_file_name:fileValue.name.slice(0,255),
+  p_mime_type:fileValue.type,
+  p_file_size_bytes:fileValue.size,
+  p_offline_critical:fd.get('offline_critical')==='on',
+ })
+ if(error)await s.storage.from('work-media').remove([storagePath])
+ check(error)
+ revalidatePath('/events');revalidatePath('/notifications')
+}
+export async function archiveEventDocument(fd:FormData){
+ const {s,profile}=await approvedClient()
+ requireManager(profile.role)
+ const {data:path,error}=await s.rpc('upt_archive_event_document',{p_document:uuid.parse(fd.get('document_id'))})
+ check(error)
+ if(path)await s.storage.from('work-media').remove([path])
+ revalidatePath('/events')
+}
+
 export async function updateEventEmergencyInformation(fd:FormData){
  const {s}=await adminClient()
  const {error}=await s.rpc('upt_upsert_event_emergency_information',{
