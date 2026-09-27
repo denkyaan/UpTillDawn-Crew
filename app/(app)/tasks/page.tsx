@@ -11,6 +11,7 @@ import { nlStatus } from '@/lib/ui-nl'
 import type { Tables } from '@/types/crew-database'
 import { redirect } from 'next/navigation'
 import { getCurrentUser } from '@/lib/actions/auth'
+import { OperationalChecklistPanel } from '@/components/crew/operational-checklists'
 
 export const dynamic = 'force-dynamic'
 
@@ -205,6 +206,12 @@ export default async function Page() {
       </label>
       <button className="rounded-xl bg-violet-600 p-3 font-bold md:col-span-2">TAAK AANMAKEN & TOEWIJZEN</button>
     </form></ManagerOnly>}
+
+    {!manager&&<OperationalChecklistPanel
+      userId={user.id}
+      canManage={false}
+      workplaceOptions={[]}
+    />}
 
     {error
       ? <p>Taken konden niet worden geladen.</p>
