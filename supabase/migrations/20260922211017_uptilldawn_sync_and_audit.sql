@@ -1,3 +1,18 @@
+-- Align clean-install messages with the production compatibility surface.
+-- Later sync/RLS logic intentionally writes both legacy and channel-era columns.
+ALTER TABLE public.messages
+  ADD COLUMN IF NOT EXISTS user_id UUID REFERENCES public.profiles(id) ON DELETE RESTRICT,
+  ADD COLUMN IF NOT EXISTS content TEXT,
+  ADD COLUMN IF NOT EXISTS event_id UUID REFERENCES public.events(id) ON DELETE CASCADE,
+  ADD COLUMN IF NOT EXISTS workplace_id UUID REFERENCES public.workplaces(id) ON DELETE CASCADE;
+
+UPDATE public.messages
+SET
+  user_id = COALESCE(user_id, sender_id),
+  content = COALESCE(content, body)
+WHERE user_id IS NULL
+   OR content IS NULL;
+
 CREATE OR REPLACE FUNCTION public.upt_can_read_channel(p_channel uuid) RETURNS boolean
 LANGUAGE sql STABLE SECURITY DEFINER SET search_path=public AS $$
  SELECT public.upt_is_approved() AND EXISTS(SELECT 1 FROM public.chat_channels c WHERE c.id=p_channel AND (
