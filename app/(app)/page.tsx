@@ -84,14 +84,14 @@ export default async function Dashboard() {
 
     const activeAssignments=activeResponsibleAssignments
     if(activeAssignments.length){
-      const workplaceIds=[...new Set(activeAssignments.map(assignment=>assignment.workplace_id))]
-      const eventIds=[...new Set(activeAssignments.map(assignment=>assignment.event_id))]
       const allowedPairs=new Set(activeAssignments.map(assignment=>`${assignment.event_id}:${assignment.workplace_id}`))
-
-      const directoryResults=await Promise.all(activeAssignments.map(assignment=>
-        s.rpc('upt_responsible_crew_directory',{event_uuid:assignment.event_id,workplace_uuid:assignment.workplace_id})
-      ))
-      if(directoryResults.some(result=>result.error))responsibleLiveError=true
+      const [directoryResults,liveResult]=await Promise.all([
+        Promise.all(activeAssignments.map(assignment=>
+          s.rpc('upt_responsible_crew_directory',{event_uuid:assignment.event_id,workplace_uuid:assignment.workplace_id})
+        )),
+        s.rpc('upt_manager_live_sessions'),
+      ])
+      if(directoryResults.some(result=>result.error)||liveResult.error)responsibleLiveError=true
 
       const crewById=new Map<string,string>()
       for(const result of directoryResults){
@@ -100,57 +100,30 @@ export default async function Dashboard() {
         }
       }
 
-      const crewIds=[...crewById.keys()]
-      if(crewIds.length){
-        const [liveShiftsResult,workplacesResult]=await Promise.all([
-          s.from('shifts')
-            .select('id,user_id,event_id,workplace_id,status')
-            .in('user_id',crewIds)
-            .in('event_id',eventIds)
-            .in('workplace_id',workplaceIds)
-            .neq('status','cancelled'),
-          s.from('workplaces').select('id,name').in('id',workplaceIds),
-        ])
-        if(liveShiftsResult.error||workplacesResult.error)responsibleLiveError=true
-
-        const liveShifts=(liveShiftsResult.data||[]).filter(shift=>allowedPairs.has(`${shift.event_id}:${shift.workplace_id}`))
-        const shiftIds=liveShifts.map(shift=>shift.id)
-        if(shiftIds.length){
-          const sessionsResult=await s.from('work_sessions')
-            .select('id,user_id,shift_id,started_at')
-            .in('shift_id',shiftIds)
-            .is('ended_at',null)
+      const liveSessions=(liveResult.data||[]).filter(session=>
+        session.user_id!==current.id
+        && crewById.has(session.user_id)
+        && allowedPairs.has(`${session.event_id}:${session.workplace_id}`)
+      )
+      const sessionIds=liveSessions.map(session=>session.session_id)
+      const breaksResult=sessionIds.length
+        ? await s.from('break_sessions')
+            .select('work_session_id,started_at,ended_at')
+            .in('work_session_id',sessionIds)
             .order('started_at')
-          if(sessionsResult.error)responsibleLiveError=true
+        : {data:[],error:null}
+      if(breaksResult.error)responsibleLiveError=true
 
-          const sessions=sessionsResult.data||[]
-          const sessionIds=sessions.map(session=>session.id)
-          const breaksResult=sessionIds.length
-            ? await s.from('break_sessions')
-                .select('work_session_id,started_at,ended_at')
-                .in('work_session_id',sessionIds)
-                .order('started_at')
-            : {data:[],error:null}
-          if(breaksResult.error)responsibleLiveError=true
-
-          const shiftById=new Map(liveShifts.map(shift=>[shift.id,shift]))
-          const workplaceById=new Map((workplacesResult.data||[]).map(workplace=>[workplace.id,workplace.name]))
-          responsibleLivePeople=sessions.flatMap(session=>{
-            const shift=session.shift_id?shiftById.get(session.shift_id):undefined
-            if(!shift)return []
-            return [{
-              sessionId:session.id,
-              name:crewById.get(session.user_id)||'Personeelslid',
-              workplaceId:shift.workplace_id,
-              workplaceName:workplaceById.get(shift.workplace_id)||'Werkplek',
-              startedAt:session.started_at,
-              breaks:(breaksResult.data||[])
-                .filter(item=>item.work_session_id===session.id)
-                .map(item=>({startedAt:item.started_at,endedAt:item.ended_at})),
-            }]
-          })
-        }
-      }
+      responsibleLivePeople=liveSessions.map(session=>({
+        sessionId:session.session_id,
+        name:crewById.get(session.user_id)||'Personeelslid',
+        workplaceId:session.workplace_id,
+        workplaceName:session.workplace_name||'Werkplek',
+        startedAt:session.started_at,
+        breaks:(breaksResult.data||[])
+          .filter(item=>item.work_session_id===session.session_id)
+          .map(item=>({startedAt:item.started_at,endedAt:item.ended_at})),
+      }))
     }
   }
 
