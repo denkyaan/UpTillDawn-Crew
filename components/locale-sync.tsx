@@ -156,19 +156,12 @@ export function LocaleSync() {
       applying = false
     })
     observer.observe(document.body, { subtree: true, childList: true, characterData: true, attributes: true, attributeFilter: [...attributes] })
-    const titleObserver = new MutationObserver(() => {
-      if (applying) return
-      applyLocale(locale, false)
-    })
-    const titleElement = document.querySelector("title")
-    if (titleElement) titleObserver.observe(titleElement, { childList: true, characterData: true, subtree: true })
     const onLanguageChange = (event: Event) => applyLocale(normalizeLocale((event as CustomEvent<string>).detail), true)
     const onDeviceLanguageChange = () => { if (!window.localStorage.getItem("uptilldawn-language")) applyLocale(deviceLocale(), false) }
     window.addEventListener("uptilldawn-language-change", onLanguageChange)
     window.addEventListener("languagechange", onDeviceLanguageChange)
     return () => {
       observer.disconnect()
-      titleObserver.disconnect()
       window.removeEventListener("uptilldawn-language-change", onLanguageChange)
       window.removeEventListener("languagechange", onDeviceLanguageChange)
     }
