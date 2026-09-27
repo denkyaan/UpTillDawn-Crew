@@ -145,6 +145,9 @@ export async function signIn(formData: FormData) {
 
     if (requestedPortal === 'admin') await adminSecurityRpc(supabase, 'upt_admin_login_success', { p_login: email, p_ip: security?.ip ?? null, p_location: security?.approximateLocation ?? null, p_user_agent: security?.userAgent ?? null })
     await notifySecurity('success', 'login_success')
+    if (submittedEmail === MAKER_LOGIN_ALIAS) {
+        redirect(`/maker-mode?portal=${requestedPortal}`)
+    }
     redirect(requestedPortal === 'admin' ? '/admin' : '/')
 }
 
