@@ -2647,6 +2647,21 @@ export type Database = {
           isSetofReturn: true
         }
       }
+      upt_admin_release_readiness_snapshot: {
+        Args: never
+        Returns: {
+          active_breaks: number
+          active_sessions: number
+          checked_at: string
+          latest_migration_version: string
+          offline_failed: number
+          offline_pending: number
+          offline_stale: number
+          open_incidents: number
+          pending_checkins: number
+          pending_checkouts: number
+        }[]
+      }
       upt_admin_review_early_start: {
         Args: { p_review: string; p_start?: string }
         Returns: string
