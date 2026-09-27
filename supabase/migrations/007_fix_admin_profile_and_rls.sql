@@ -38,10 +38,9 @@ INSERT INTO public.leave_balances (user_id, leave_type, total, year)
 SELECT u.id, lb.leave_type, lb.total, EXTRACT(YEAR FROM now())::int
 FROM auth.users u
 CROSS JOIN (VALUES 
-  ('annual'::text, 25),
-  ('sick'::text, 10),
-  ('maternity'::text, 0),
-  ('unpaid'::text, 0)
+  ('annual'::leave_type, 25),
+  ('sick'::leave_type, 10),
+  ('unpaid'::leave_type, 0)
 ) AS lb(leave_type, total)
 WHERE u.email = 'admin@yourcompany.com'
 ON CONFLICT (user_id, leave_type, year) DO NOTHING;
