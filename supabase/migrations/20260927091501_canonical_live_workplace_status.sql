@@ -44,8 +44,8 @@ as $$
     from public.shifts s
     join public.events e on e.id=s.event_id
     where s.user_id=auth.uid()
-      and coalesce(s.status,'')<>'cancelled'
-      and coalesce(s.response_status,'pending')<>'declined'
+      and (s.status is null or s.status <> 'cancelled'::shift_status)
+      and (s.response_status is null or s.response_status <> 'declined')
       and e.status<>'archived'
       and now() between e.start_at and e.end_at
   ),
