@@ -117,6 +117,7 @@ export async function signIn(formData: FormData) {
             await adminSecurityRpc(supabase, 'upt_admin_login_failure', { p_login: email, p_ip: security?.ip ?? null, p_location: security?.approximateLocation ?? null, p_user_agent: security?.userAgent ?? null })
         }
         await notifySecurity('failure', error?.message.includes('Email not confirmed') ? 'email_not_confirmed' : error?.message.includes('Invalid login credentials') ? 'invalid_credentials' : 'auth_failure')
+        if (requestedPortal === 'admin') return { error: 'Foute logingegevens en u heeft geen toegang tot deze rol.', code: 'invalid_credentials_or_role' }
         if (error?.message.includes('Email not confirmed')) return { error: 'Verifieer eerst je e-mailadres.', code: 'email_not_confirmed' }
         if (error?.message.includes('Invalid login credentials')) return { error: 'Onjuist e-mailadres of wachtwoord.', code: 'invalid_credentials' }
         return { error: 'Aanmelden mislukt. Probeer opnieuw.' }
@@ -134,7 +135,7 @@ export async function signIn(formData: FormData) {
         if (requestedPortal === 'admin') await adminSecurityRpc(supabase, 'upt_admin_login_failure', { p_login: email, p_ip: security?.ip ?? null, p_location: security?.approximateLocation ?? null, p_user_agent: security?.userAgent ?? null })
         await notifySecurity('denied', 'wrong_portal')
         await supabase.auth.signOut()
-        return { error: 'Dit account heeft geen toegang tot het gekozen portaal.', code: 'wrong_portal' }
+        return { error: requestedPortal === 'admin' ? 'Foute logingegevens en u heeft geen toegang tot deze rol.' : 'Dit account heeft geen toegang tot het gekozen portaal.', code: 'wrong_portal' }
     }
 
     if (hasPermanentAdminAccess) {
