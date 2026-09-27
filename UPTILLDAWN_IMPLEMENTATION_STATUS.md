@@ -34,7 +34,7 @@ God Mode credentials and sessions are stored only in private server-side state. 
 ## Verified application areas
 
 - Auth, approval, role switching and immutable maker/admin protection.
-- Event, workplace, shift and Responsible assignment workflows.
+- Event, workplace, shift, Staff accept/decline, audited reassignment and Responsible assignment workflows.
 - Check-in/out and audited work/break timing.
 - Briefings, personal instructions, tasks, help/incidents and workplace-scoped chat.
 - Private media storage and signed/scoped reads.
@@ -71,7 +71,7 @@ The audit also checked the database attack surface rather than only the visible 
 - anonymous table access is absent; anonymous RPC access is limited to the explicit token-gated God Mode surface; the former info-admin bootstrap RPC is closed and revoked from browser roles;
 - retired private-chat creation/peer discovery remains revoked;
 - generated Supabase TypeScript types exactly match the production schema;
-- repository and production migration histories match 125/125.
+- repository and production migration histories match 126/126.
 
 Issues found and corrected during this audit:
 - permanent-admin server routes now use the central admin privilege check;
@@ -103,7 +103,7 @@ Known remaining advisor findings are reviewed rather than blindly removed:
 These are not regressions in the current web/mobile baseline:
 
 1. Define an explicit overtime/pay-period policy before presenting overtime as payroll truth.
-2. Replay all 125 migrations from zero on an isolated project before claiming a fresh-install proof.
+2. Replay all 126 migrations from zero on an isolated project before claiming a fresh-install proof.
 3. Expand offline browsing beyond the operational workflows if full offline parity is ever required.
 4. Continue physical-device regression testing after major browser/OS updates.
 5. Enable Supabase leaked-password protection when the project setting is approved.
