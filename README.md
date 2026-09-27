@@ -27,7 +27,7 @@ Production crew-management PWA for Uptilldawn events. The application is a Next.
 - Organization/event/workplace chat and private media
 - Event emergency information with offline-cached emergency number, address, first-aid/security contacts, assembly point and procedure\n- Scoped event document library for safety plans, maps, procedures, permits and technical files, including per-role/per-workplace access and offline-critical caching\n- URGENT/help incidents with canonical current-workplace context, optional photo/GPS evidence and 5-minute unacknowledged escalation
 - Staff and Responsible workplace-overview status
-- Admin/Responsible operational dashboard with canonical current-workplace tracking, live understaffing, late/no-show, shift-overrun, missing-checkout and long-break detection, Responsible shift handovers with material snapshots, time corrections, audit and Excel export\n- Admin System Health dashboard with live database latency, offline-sync SLO, queue health, push-subscription counts and operational load indicators
+- Admin/Responsible operational dashboard with canonical current-workplace tracking, live understaffing, late/no-show, shift-overrun, missing-checkout and long-break detection, Responsible shift handovers with material snapshots, time corrections, audit and Excel export\n- Admin System Health dashboard with live database latency, offline-sync SLO, queue health, push-subscription counts and operational load indicators\n- Admin Release Readiness gate with database migration-drift detection, hard sync blockers and non-blocking operational warnings
 - IndexedDB operation/upload queues plus an offline operational shell
 - Installed PWA behavior on Windows, Android and iOS
 - Web Push notifications with per-device opt-in and automatic subscription renewal
@@ -62,7 +62,7 @@ Database regression suites are in `tests/sql/`. They use synthetic fixtures and 
 
 ## Database
 
-The production project is tracked through 164 ordered SQL migration files in `supabase/migrations/`. Historical StaffPortal migrations are retained because they are part of migration history, not because the old modules are active.
+The production project is tracked through 165 ordered SQL migration files in `supabase/migrations/`. Historical StaffPortal migrations are retained because they are part of migration history, not because the old modules are active.
 
 Do not reset or blindly replay migrations against production. A complete from-zero replay belongs on an isolated Supabase project.
 
