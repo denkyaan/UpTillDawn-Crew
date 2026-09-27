@@ -103,12 +103,17 @@ export default async function Page(){
     ? await s.rpc('upt_work_session_time_summary',{p_work_session:session.data.id})
     : null
 
-  const timeReviews=isAdmin
-    ? await s.from('time_review_requests').select('*').eq('status','pending').order('created_at')
-    : {data:[],error:null}
+  const [timeReviews,operationalAlerts]=await Promise.all([
+    isAdmin
+      ? s.from('time_review_requests').select('*').eq('status','pending').order('created_at')
+      : Promise.resolve({data:[],error:null}),
+    manager
+      ? s.rpc('upt_operational_alerts')
+      : Promise.resolve({data:[],error:null}),
+  ])
 
-  if(timeReviews.error){
-    return <main className="p-8">Tijdcorrecties konden niet worden geladen. Probeer opnieuw.</main>
+  if(timeReviews.error||operationalAlerts.error){
+    return <main className="p-8">Operationele controles konden niet worden geladen. Probeer opnieuw.</main>
   }
 
   let liveSessions:Tables<'work_sessions'>[]=[]
@@ -162,5 +167,6 @@ export default async function Page(){
     liveShifts={liveShifts}
     crewDirectory={crewDirectory}
     timeReviews={timeReviews.data||[]}
+    operationalAlerts={operationalAlerts.data||[]}
   />
 }
