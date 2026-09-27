@@ -767,6 +767,39 @@ export async function settleInventoryIssue(fd:FormData){
  check(error)
  revalidatePath('/workplaces');revalidatePath('/tasks');revalidatePath('/operations');revalidatePath('/notifications')
 }
+export async function requestInventorySettlement(fd:FormData){
+ const {s}=await approvedClient()
+ const {error}=await s.rpc('upt_request_inventory_settlement',{
+  p_issue:uuid.parse(fd.get('issue_id')),
+  p_condition:z.enum(['returned','damaged','missing']).parse(fd.get('condition')),
+  p_quantity:z.coerce.number().int().min(1).max(100000).parse(fd.get('quantity')),
+  p_notes:String(fd.get('notes')||'').trim().slice(0,1000)||undefined,
+ })
+ check(error)
+ revalidatePath('/workplaces');revalidatePath('/tasks');revalidatePath('/operations');revalidatePath('/notifications')
+}
+export async function cancelInventorySettlement(fd:FormData){
+ const {s}=await approvedClient()
+ const {error}=await s.rpc('upt_cancel_inventory_settlement',{
+  p_request:uuid.parse(fd.get('request_id')),
+ })
+ check(error)
+ revalidatePath('/workplaces');revalidatePath('/tasks');revalidatePath('/operations')
+}
+export async function decideInventorySettlement(fd:FormData){
+ const {s,profile}=await approvedClient()
+ requireManager(profile.role)
+ const decision=z.enum(['approved','rejected']).parse(fd.get('decision'))
+ const note=String(fd.get('note')||'').trim().slice(0,1000)
+ if(decision==='rejected'&&note.length<3)throw new Error('Geef een reden voor de afwijzing.')
+ const {error}=await s.rpc('upt_decide_inventory_settlement',{
+  p_request:uuid.parse(fd.get('request_id')),
+  p_decision:decision,
+  ...(note?{p_note:note}:{}),
+ })
+ check(error)
+ revalidatePath('/workplaces');revalidatePath('/tasks');revalidatePath('/operations');revalidatePath('/notifications')
+}
 export async function restoreInventoryQuantity(fd:FormData){
  const {s,profile}=await approvedClient()
  requireManager(profile.role)
