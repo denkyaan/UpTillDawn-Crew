@@ -2358,6 +2358,7 @@ export type Database = {
         Args: { p_event?: string; p_feature: string; p_workplace?: string }
         Returns: boolean
       }
+      upt_geoapify_rate_limit: { Args: never; Returns: Json }
       upt_god_data_catalog: { Args: { p_token: string }; Returns: Json }
       upt_god_data_mutate: {
         Args: {
