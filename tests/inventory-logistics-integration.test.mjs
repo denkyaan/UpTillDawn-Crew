@@ -126,3 +126,10 @@ test('inventory actions expose manager and staff approval workflows', async () =
   assert.match(source,/upt_request_inventory_settlement/)
   assert.match(source,/upt_decide_inventory_settlement/)
 })
+
+test('inventory RLS helpers are executable only where policy evaluation needs them', async () => {
+  const source=await readFile(new URL('../supabase/migrations/20260927111930_inventory_rls_helper_permissions.sql',import.meta.url),'utf8')
+  assert.match(source,/grant execute on function upt_private\.inventory_can_view\(uuid,uuid\) to authenticated/)
+  assert.match(source,/grant execute on function upt_private\.inventory_can_manage\(uuid,uuid\) to authenticated/)
+  assert.match(source,/revoke all on function upt_private\.apply_inventory_settlement/)
+})
