@@ -31,3 +31,13 @@ test('time corrections retain reason explanation original and corrected values',
   assert.match(source, /explanation\.trim\(\)/)
   assert.match(source, /approvedBy/)
 })
+
+
+test('Belgian operational overtime baseline is versioned but not payroll authoritative', async () => {
+  const source = await readFile(new URL('../lib/worktime-policy-defaults.ts', import.meta.url), 'utf8')
+  assert.match(source, /9 \* 60/)
+  assert.match(source, /38 \* 60/)
+  assert.match(source, /calendar-week/)
+  assert.match(source, /payrollAuthoritative: false/)
+  assert.match(source, /BE-OPS-2026-09-v1/)
+})
