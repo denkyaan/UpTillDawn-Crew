@@ -1,7 +1,10 @@
 import { createClient } from '@/lib/supabase/crew-server'
 import {
+  cancelInventorySettlement,
   createInventoryItem,
+  decideInventorySettlement,
   issueInventoryItem,
+  requestInventorySettlement,
   restockInventoryItem,
   restoreInventoryQuantity,
   settleInventoryIssue,
@@ -37,6 +40,12 @@ function movementLabel(type:string){
   return type
 }
 
+function conditionLabel(condition:string){
+  if(condition==='returned')return 'TERUGGEBRACHT'
+  if(condition==='damaged')return 'BESCHADIGD'
+  return 'VERMIST'
+}
+
 export async function InventoryPanel({
   userId,
   canManage,
@@ -49,13 +58,14 @@ export async function InventoryPanel({
   crewOptions:InventoryCrewOption[]
 }){
   const s=await createClient()
-  const [itemResult,issueResult,movementResult]=await Promise.all([
+  const [itemResult,issueResult,movementResult,requestResult]=await Promise.all([
     s.from('inventory_items').select('*').eq('is_active',true).order('name'),
     s.from('inventory_issues').select('*').order('issued_at',{ascending:false}).limit(200),
     s.from('inventory_movements').select('*').order('created_at',{ascending:false}).limit(canManage?20:10),
+    s.from('inventory_settlement_requests').select('*').order('created_at',{ascending:false}).limit(100),
   ])
 
-  if(itemResult.error||issueResult.error||movementResult.error){
+  if(itemResult.error||issueResult.error||movementResult.error||requestResult.error){
     return <section className="rounded-2xl border p-4">
       <h2 className="text-xl font-black">Materiaal</h2>
       <p className="mt-2 text-sm text-muted-foreground">Materiaalgegevens konden niet worden geladen.</p>
@@ -65,13 +75,18 @@ export async function InventoryPanel({
   const items=(itemResult.data||[]) as Tables<'inventory_items'>[]
   const issues=(issueResult.data||[]) as Tables<'inventory_issues'>[]
   const movements=(movementResult.data||[]) as Tables<'inventory_movements'>[]
+  const requests=(requestResult.data||[]) as Tables<'inventory_settlement_requests'>[]
   const itemsById=new Map(items.map(item=>[item.id,item]))
+  const issuesById=new Map(issues.map(issue=>[issue.id,issue]))
   const workplaceById=new Map(workplaceOptions.map(option=>[option.id,option.label]))
   const crewById=new Map(crewOptions.map(option=>[option.userId,option.fullName]))
   const ownOpenIssues=issues.filter(issue=>issue.user_id===userId&&issue.outstanding_quantity>0)
   const managerOpenIssues=issues.filter(issue=>issue.outstanding_quantity>0)
+  const pendingRequests=requests.filter(request=>request.status==='pending')
+  const pendingByIssue=new Map(pendingRequests.map(request=>[request.issue_id,request]))
+  const ownRecentRequests=requests.filter(request=>request.user_id===userId&&request.status!=='pending').slice(0,5)
 
-  if(!canManage&&!ownOpenIssues.length){
+  if(!canManage&&!ownOpenIssues.length&&!ownRecentRequests.length){
     return <section className="rounded-2xl border p-4">
       <h2 className="text-xl font-black">Mijn materiaal</h2>
       <p className="text-sm text-muted-foreground">Er staat momenteel geen materiaal op jouw naam.</p>
@@ -83,10 +98,41 @@ export async function InventoryPanel({
       <h2 className="text-xl font-black">{canManage?'Materiaalbeheer':'Mijn materiaal'}</h2>
       <p className="text-sm text-muted-foreground">
         {canManage
-          ? 'Voorraad en uitgiftes per werkplek. Beschadigd of vermist materiaal blijft zichtbaar tot het wordt hersteld of teruggevonden.'
-          : 'Verwerk materiaal dat aan jou werd uitgegeven als teruggebracht, beschadigd of vermist.'}
+          ? 'Voorraad en uitgiftes per werkplek. Retourmeldingen van personeel moeten eerst bevestigd worden voordat voorraad opnieuw beschikbaar wordt.'
+          : 'Meld materiaal als teruggebracht, beschadigd of vermist. De voorraad wordt pas aangepast na bevestiging door Responsible of Admin.'}
       </p>
     </div>
+
+    {canManage&&pendingRequests.length>0&&<section className="space-y-3 rounded-xl border border-violet-500/40 bg-violet-500/5 p-3">
+      <h3 className="font-black">Te beoordelen materiaalmeldingen ({pendingRequests.length})</h3>
+      {pendingRequests.map(request=>{
+        const issue=issuesById.get(request.issue_id)
+        const item=issue?itemsById.get(issue.item_id):null
+        return <article key={request.id} className="space-y-3 rounded-lg border bg-background p-3">
+          <div className="flex flex-wrap items-start justify-between gap-2">
+            <div>
+              <p className="font-semibold">{item?.name||'Materiaal'} · {crewById.get(request.user_id)||'Personeelslid'}</p>
+              <p className="text-sm text-muted-foreground">{conditionLabel(request.condition)} · {request.quantity} stuk(s) · gemeld {new Date(request.created_at).toLocaleString('nl-BE')}</p>
+              {request.notes&&<p className="mt-1 text-sm text-muted-foreground">{request.notes}</p>}
+            </div>
+            <span className="rounded-full border px-2 py-1 text-xs font-black">WACHT OP CONTROLE</span>
+          </div>
+          <div className="grid gap-2 sm:grid-cols-2">
+            <form action={decideInventorySettlement}>
+              <input type="hidden" name="request_id" value={request.id}/>
+              <input type="hidden" name="decision" value="approved"/>
+              <button className="w-full rounded-lg bg-emerald-600 p-3 font-bold text-white">BEVESTIGEN</button>
+            </form>
+            <form action={decideInventorySettlement} className="grid gap-2">
+              <input type="hidden" name="request_id" value={request.id}/>
+              <input type="hidden" name="decision" value="rejected"/>
+              <input name="note" required minLength={3} maxLength={1000} placeholder="Reden afwijzing" className="rounded-lg border bg-background p-2"/>
+              <button className="rounded-lg border border-red-500/50 p-3 font-bold text-red-600">AFWIJZEN</button>
+            </form>
+          </div>
+        </article>
+      })}
+    </section>}
 
     {canManage&&workplaceOptions.length>0&&<details className="rounded-xl border p-3">
       <summary className="cursor-pointer font-semibold">Materiaal toevoegen</summary>
@@ -185,7 +231,7 @@ export async function InventoryPanel({
             </form>}
           </div>}
 
-          {itemIssues.length>0&&<details className="rounded-lg border p-3" open={itemIssues.some(issue=>issue.outstanding_quantity>0)}>
+          {itemIssues.length>0&&<details className="rounded-lg border p-3">
             <summary className="cursor-pointer text-sm font-semibold">Uitstaand ({itemIssues.reduce((sum,issue)=>sum+issue.outstanding_quantity,0)})</summary>
             <div className="mt-3 space-y-3">
               {itemIssues.map(issue=><IssueSettlement
@@ -193,6 +239,8 @@ export async function InventoryPanel({
                 issue={issue}
                 itemName={item.name}
                 personName={crewById.get(issue.user_id)||'Personeelslid'}
+                canManage
+                pendingRequest={pendingByIssue.get(issue.id)||null}
               />)}
             </div>
           </details>}
@@ -208,9 +256,28 @@ export async function InventoryPanel({
           issue={issue}
           itemName={item?.name||'Materiaal'}
           personName="Jij"
+          canManage={false}
+          pendingRequest={pendingByIssue.get(issue.id)||null}
         />
       })}
     </div>}
+
+    {!canManage&&ownRecentRequests.length>0&&<details className="rounded-xl border p-3">
+      <summary className="cursor-pointer font-semibold">Recente materiaalmeldingen</summary>
+      <div className="mt-3 space-y-2">
+        {ownRecentRequests.map(request=>{
+          const issue=issuesById.get(request.issue_id)
+          const item=issue?itemsById.get(issue.item_id):null
+          return <div key={request.id} className="rounded-lg border p-3 text-sm">
+            <div className="flex flex-wrap justify-between gap-2">
+              <span className="font-semibold">{item?.name||'Materiaal'} · {conditionLabel(request.condition)} · {request.quantity}</span>
+              <span className="font-black">{request.status==='approved'?'BEVESTIGD':request.status==='rejected'?'AFGEWEZEN':'GEANNULEERD'}</span>
+            </div>
+            {request.decision_note&&<p className="mt-1 text-muted-foreground">{request.decision_note}</p>}
+          </div>
+        })}
+      </div>
+    </details>}
 
     {movements.length>0&&<details className="rounded-xl border p-3">
       <summary className="cursor-pointer font-semibold">Recente materiaalmutaties</summary>
@@ -237,11 +304,17 @@ function IssueSettlement({
   issue,
   itemName,
   personName,
+  canManage,
+  pendingRequest,
 }:{
   issue:Tables<'inventory_issues'>
   itemName:string
   personName:string
+  canManage:boolean
+  pendingRequest:Tables<'inventory_settlement_requests'>|null
 }){
+  const action=canManage?settleInventoryIssue:requestInventorySettlement
+
   return <article className="rounded-lg border p-3">
     <div className="flex flex-wrap items-start justify-between gap-2">
       <div>
@@ -251,17 +324,28 @@ function IssueSettlement({
       </div>
       <span className="rounded-full border px-2 py-1 text-xs font-black">UITSTAAND</span>
     </div>
-    <form action={settleInventoryIssue} className="mt-3 grid gap-2">
-      <input type="hidden" name="issue_id" value={issue.id}/>
-      <div className="grid gap-2 sm:grid-cols-[110px_minmax(0,1fr)]">
-        <input name="quantity" type="number" min="1" max={issue.outstanding_quantity} defaultValue={issue.outstanding_quantity} required aria-label="Aantal verwerken" className="rounded-lg border bg-background p-2"/>
-        <input name="notes" maxLength={1000} placeholder="Notitie (optioneel)" className="rounded-lg border bg-background p-2"/>
-      </div>
-      <div className="grid gap-2 sm:grid-cols-3">
-        <button name="condition" value="returned" className="rounded-lg border p-3 font-bold">TERUGGEBRACHT</button>
-        <button name="condition" value="damaged" className="rounded-lg border border-amber-500/50 p-3 font-bold text-amber-600">BESCHADIGD</button>
-        <button name="condition" value="missing" className="rounded-lg border border-red-500/50 p-3 font-bold text-red-600">VERMIST</button>
-      </div>
-    </form>
+
+    {pendingRequest
+      ? <div className="mt-3 space-y-2 rounded-lg border border-amber-500/40 bg-amber-500/5 p-3 text-sm">
+          <p className="font-semibold">Melding wacht op controle: {conditionLabel(pendingRequest.condition)} · {pendingRequest.quantity} stuk(s)</p>
+          {pendingRequest.notes&&<p className="text-muted-foreground">{pendingRequest.notes}</p>}
+          {!canManage&&<form action={cancelInventorySettlement}>
+            <input type="hidden" name="request_id" value={pendingRequest.id}/>
+            <button className="rounded-lg border px-3 py-2 font-bold">MELDING ANNULEREN</button>
+          </form>}
+        </div>
+      : <form action={action} className="mt-3 grid gap-2">
+          <input type="hidden" name="issue_id" value={issue.id}/>
+          <div className="grid gap-2 sm:grid-cols-[110px_minmax(0,1fr)]">
+            <input name="quantity" type="number" min="1" max={issue.outstanding_quantity} defaultValue={issue.outstanding_quantity} required aria-label="Aantal verwerken" className="rounded-lg border bg-background p-2"/>
+            <input name="notes" maxLength={1000} placeholder="Notitie (optioneel)" className="rounded-lg border bg-background p-2"/>
+          </div>
+          <div className="grid gap-2 sm:grid-cols-3">
+            <button name="condition" value="returned" className="rounded-lg border p-3 font-bold">{canManage?'TERUGBOEKEN':'RETOUR MELDEN'}</button>
+            <button name="condition" value="damaged" className="rounded-lg border border-amber-500/50 p-3 font-bold text-amber-600">{canManage?'BESCHADIGD BOEKEN':'BESCHADIGD MELDEN'}</button>
+            <button name="condition" value="missing" className="rounded-lg border border-red-500/50 p-3 font-bold text-red-600">{canManage?'VERMIST BOEKEN':'VERMIST MELDEN'}</button>
+          </div>
+          {!canManage&&<p className="text-xs text-muted-foreground">Je melding verandert de voorraad pas nadat Responsible of Admin ze bevestigt.</p>}
+        </form>}
   </article>
 }
