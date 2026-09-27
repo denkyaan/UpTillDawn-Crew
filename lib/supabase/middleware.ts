@@ -12,6 +12,7 @@ const PUBLIC_EXACT_PATHS = new Set([
     '/forgot-password',
     '/auth/reset-password',
     '/auth/recovery',
+    '/auth/confirm',
     '/verify-email',
     '/disabled',
     '/unauthorized',
