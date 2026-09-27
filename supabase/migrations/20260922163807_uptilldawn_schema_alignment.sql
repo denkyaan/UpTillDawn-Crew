@@ -690,26 +690,23 @@ ON public.messages(channel_id, created_at);
 
 -- Align existing message attachments.
 ALTER TABLE public.message_attachments
+  ADD COLUMN IF NOT EXISTS file_url TEXT,
   ADD COLUMN IF NOT EXISTS storage_path TEXT,
   ADD COLUMN IF NOT EXISTS mime_type TEXT,
   ADD COLUMN IF NOT EXISTS created_at TIMESTAMPTZ NOT NULL DEFAULT now();
 
-DO $$
+DO $
 BEGIN
-  IF EXISTS (
-    SELECT 1 FROM information_schema.columns
-    WHERE table_schema = 'public'
-      AND table_name = 'message_attachments'
-      AND column_name = 'file_url'
-  ) THEN
-    EXECUTE '
-      UPDATE public.message_attachments
-      SET storage_path = COALESCE(storage_path, file_url)
-      WHERE storage_path IS NULL
-    ';
-  END IF;
+  UPDATE public.message_attachments
+  SET
+    file_url = COALESCE(file_url, storage_path),
+    storage_path = COALESCE(storage_path, file_url);
 END
-$$;
+$;
+
+ALTER TABLE public.message_attachments
+  ALTER COLUMN file_url SET NOT NULL,
+  ALTER COLUMN storage_path DROP NOT NULL;
 
 -- ============================================================
 -- NOTIFICATIONS
