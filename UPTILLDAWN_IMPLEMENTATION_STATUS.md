@@ -38,7 +38,7 @@ God Mode credentials and sessions are stored only in private server-side state. 
 - Check-in/out and audited work/break timing.
 - Briefings, personal instructions, tasks, help/incidents with current-workplace binding and scheduled unacknowledged escalation, and workplace-scoped chat.
 - Private media storage and signed/scoped reads.
-- Responsible/Staff/Admin role-specific dashboards, including canonical current-workplace status, live understaffing, scheduled late/no-show detection and auditable Responsible shift handovers.
+- Responsible/Staff/Admin role-specific dashboards, including canonical current-workplace status, live understaffing, late/no-show, shift-overrun, missing-checkout and long-break detection, plus auditable Responsible shift handovers.
 - Offline operation/upload queues and operational offline shell.
 - Admin time corrections, audit and Excel export.
 - Device-language synchronization.
@@ -71,7 +71,7 @@ The audit also checked the database attack surface rather than only the visible 
 - anonymous table access is absent; anonymous RPC access is limited to the explicit token-gated God Mode surface; the former info-admin bootstrap RPC is closed and revoked from browser roles;
 - retired private-chat creation/peer discovery remains revoked;
 - generated Supabase TypeScript types exactly match the production schema;
-- repository and production migration histories match 136/136.
+- repository and production migration histories match 137/137.
 
 Issues found and corrected during this audit:
 - permanent-admin server routes now use the central admin privilege check;
@@ -103,7 +103,7 @@ Known remaining advisor findings are reviewed rather than blindly removed:
 These are not regressions in the current web/mobile baseline:
 
 1. Define an explicit overtime/pay-period policy before presenting overtime as payroll truth.
-2. Replay all 136 migrations from zero on an isolated project before claiming a fresh-install proof.
+2. Replay all 137 migrations from zero on an isolated project before claiming a fresh-install proof.
 3. Expand offline browsing beyond the operational workflows if full offline parity is ever required.
 4. Continue physical-device regression testing after major browser/OS updates.
 5. Enable Supabase leaked-password protection when the project setting is approved.
