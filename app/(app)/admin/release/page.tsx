@@ -156,7 +156,7 @@ export default async function Page(){
 
     <section className="rounded-2xl border p-4">
       <h2 className="font-bold">Externe release-gates</h2>
-      <p className="mt-1 text-sm text-muted-foreground">Deze pagina controleert geen GitHub-status. De repository-CI moet afzonderlijk groen zijn voor dependency audit, lint, TypeScript, tests, Next.js build, Cloudflare Worker build en Wrangler dry-run.</p>
+      <p className="mt-1 text-sm text-muted-foreground">Deze pagina controleert geen GitHub-status. De repository-CI moet afzonderlijk groen zijn voor dependency audit, lint, TypeScript, tests, Next.js build, Cloudflare Worker build, Wrangler dry-run én een geïsoleerde fresh-install replay van alle database-migraties met SQL-regressies en gegenereerde-typecontrole.</p>
     </section>
   </main>
 }
