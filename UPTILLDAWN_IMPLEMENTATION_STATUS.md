@@ -66,13 +66,13 @@ Repository CI is the release gate for lint, TypeScript, Node tests, production b
 A full option/function audit was run against the current production baseline. Coverage included all role views, auth portals, event/workplace/shift flows, work and break timing, task/instruction acknowledgement, chat/media, incidents/help, profile/settings, notifications, export/audit, offline sync, PWA/Web Push, Edit mode and server API routes.
 
 The audit also checked the database attack surface rather than only the visible UI:
-- all 15 SQL regression suites pass against production using rollback fixtures;
+- the current regression inventory contains 16 SQL suites; the isolated fresh-install CI run passes all 16, while production rollback-fixture audits remain a separate runtime verification step;
 - every public application table has RLS enabled;
 - anonymous table CRUD grants are absent;
 - anonymous table access is absent; anonymous RPC access is limited to the explicit token-gated God Mode surface; the former info-admin bootstrap RPC is closed and revoked from browser roles;
 - retired private-chat creation/peer discovery remains revoked;
 - generated Supabase TypeScript types exactly match the production schema;
-- repository and production migration histories match 165/165.
+- the repository now contains 166 migrations through `20260927160000_retire_legacy_staffportal_schema.sql`; CI proves all 166 replay from zero. Production migration parity must be rechecked after deployment of the branch before claiming an exact production count.
 
 Issues found and corrected during this audit:
 - permanent-admin server routes now use the central admin privilege check;
@@ -103,8 +103,8 @@ Known remaining advisor findings are reviewed rather than blindly removed:
 
 These are not regressions in the current web/mobile baseline:
 
-1. Enable Supabase leaked-password protection in the hosted Auth project setting. Security Advisor still reports `auth_leaked_password_protection` as disabled; this cannot be represented by SQL migration state.
-2. Complete the remote backup -> restore disaster-recovery proof against a second isolated remote Supabase project. The verifier is ready, but provisioning a second remote resource remains cost-gated and requires explicit approval.
+1. **Temporarily deferred by the product owner:** enable Supabase leaked-password protection in the hosted Auth project setting. Security Advisor still reports `auth_leaked_password_protection` as disabled; this cannot be represented by SQL migration state.
+2. **Temporarily deferred by the product owner:** complete the remote backup -> restore disaster-recovery proof. A separate healthy Supabase project exists, but a true physical backup restore must still be initiated through Supabase Restore to a New Project before it counts as DR proof.
 
 ## Additional hardening now completed
 
