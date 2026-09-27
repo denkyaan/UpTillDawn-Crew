@@ -240,7 +240,7 @@ BEGIN
   END IF;
   RETURN NEW;
 END
-$;
+$$;
 
 CREATE TRIGGER trg_prevent_shift_overlap
 BEFORE INSERT OR UPDATE OF user_id,scheduled_start,scheduled_end,overlap_allowed,status
