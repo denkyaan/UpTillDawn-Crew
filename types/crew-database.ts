@@ -2655,6 +2655,27 @@ export type Database = {
         Args: { p_approved: boolean; p_role: string; p_user: string }
         Returns: undefined
       }
+      upt_admin_system_health: {
+        Args: never
+        Returns: {
+          active_breaks: number
+          active_sessions: number
+          approved_users: number
+          checked_at: string
+          enabled_push_subscriptions: number
+          notifications_24h: number
+          offline_failed: number
+          offline_operations_24h: number
+          offline_pending: number
+          offline_stale: number
+          offline_synced_24h: number
+          open_incidents: number
+          pending_checkins: number
+          pending_checkouts: number
+          recent_audit_24h: number
+          unread_notifications: number
+        }[]
+      }
       upt_archive_event_document: {
         Args: { p_document: string }
         Returns: string
