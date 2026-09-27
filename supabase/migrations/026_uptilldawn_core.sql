@@ -60,7 +60,7 @@ CREATE TABLE IF NOT EXISTS workplaces (
 );
 CREATE TABLE IF NOT EXISTS event_members (
  id UUID PRIMARY KEY DEFAULT gen_random_uuid(), event_id UUID NOT NULL REFERENCES events(id) ON DELETE CASCADE, user_id UUID NOT NULL REFERENCES user_profiles(id) ON DELETE CASCADE,
- event_role user_role NOT NULL DEFAULT 'employee', created_at TIMESTAMPTZ NOT NULL DEFAULT now(), UNIQUE(event_id,user_id)
+ event_role TEXT NOT NULL DEFAULT 'employee' CHECK (event_role IN ('employee','responsible_lead','admin')), created_at TIMESTAMPTZ NOT NULL DEFAULT now(), UNIQUE(event_id,user_id)
 );
 CREATE TABLE IF NOT EXISTS responsible_assignments (
  id UUID PRIMARY KEY DEFAULT gen_random_uuid(), event_id UUID NOT NULL REFERENCES events(id) ON DELETE CASCADE, workplace_id UUID NOT NULL REFERENCES workplaces(id) ON DELETE CASCADE,
