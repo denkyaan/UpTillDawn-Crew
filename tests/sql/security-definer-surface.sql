@@ -87,6 +87,10 @@ BEGIN
       AND position('upt_is_approved' in pg_get_functiondef(p.oid)) = 0
       AND position('upt_is_admin' in pg_get_functiondef(p.oid)) = 0
       AND position('god_session_valid' in pg_get_functiondef(p.oid)) = 0
+      -- Delegated authorization is valid only for these explicit internal
+      -- workflow boundaries whose callees enforce caller identity/scope.
+      AND position('upt_respond_shift' in pg_get_functiondef(p.oid)) = 0
+      AND position('inventory_can_view' in pg_get_functiondef(p.oid)) = 0
       AND p.proname NOT IN (
         'upt_god_login','upt_god_logout',
         'upt_admin_login_guard','upt_admin_login_failure'
