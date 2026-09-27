@@ -18,7 +18,7 @@ Production crew-management PWA for Uptilldawn events. The application is a Next.
 
 - Staff, Responsible Lead and Admin login/role flows
 - Admin approval and immutable maker/admin protection
-- Events, workplaces, shifts, Staff accept/decline responses, controlled reassignment, revision-aware pre-shift reminders and Responsible assignments
+- Events, workplaces, shifts, Staff accept/decline responses, controlled reassignment, replacement/swap/open-shift requests, revision-aware pre-shift reminders and Responsible assignments
 - Check-in/check-out approval
 - Server-authoritative work and break tracking
 - 60-minute shared break allowance per employee/event
@@ -62,7 +62,7 @@ Database regression suites are in `tests/sql/`. They use synthetic fixtures and 
 
 ## Database
 
-The production project is tracked through 139 ordered SQL migration files in `supabase/migrations/`. Historical StaffPortal migrations are retained because they are part of migration history, not because the old modules are active.
+The production project is tracked through 141 ordered SQL migration files in `supabase/migrations/`. Historical StaffPortal migrations are retained because they are part of migration history, not because the old modules are active.
 
 Do not reset or blindly replay migrations against production. A complete from-zero replay belongs on an isolated Supabase project.
 
