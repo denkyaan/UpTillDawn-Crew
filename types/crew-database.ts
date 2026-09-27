@@ -1153,6 +1153,93 @@ export type Database = {
           },
         ]
       }
+      inventory_settlement_requests: {
+        Row: {
+          condition: string
+          created_at: string
+          decided_at: string | null
+          decided_by: string | null
+          decision_note: string | null
+          event_id: string
+          id: string
+          issue_id: string
+          notes: string | null
+          quantity: number
+          status: string
+          updated_at: string
+          user_id: string
+          workplace_id: string
+        }
+        Insert: {
+          condition: string
+          created_at?: string
+          decided_at?: string | null
+          decided_by?: string | null
+          decision_note?: string | null
+          event_id: string
+          id?: string
+          issue_id: string
+          notes?: string | null
+          quantity: number
+          status?: string
+          updated_at?: string
+          user_id: string
+          workplace_id: string
+        }
+        Update: {
+          condition?: string
+          created_at?: string
+          decided_at?: string | null
+          decided_by?: string | null
+          decision_note?: string | null
+          event_id?: string
+          id?: string
+          issue_id?: string
+          notes?: string | null
+          quantity?: number
+          status?: string
+          updated_at?: string
+          user_id?: string
+          workplace_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "inventory_settlement_requests_decided_by_fkey"
+            columns: ["decided_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "inventory_settlement_requests_event_id_fkey"
+            columns: ["event_id"]
+            isOneToOne: false
+            referencedRelation: "events"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "inventory_settlement_requests_issue_id_fkey"
+            columns: ["issue_id"]
+            isOneToOne: false
+            referencedRelation: "inventory_issues"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "inventory_settlement_requests_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "inventory_settlement_requests_workplace_id_fkey"
+            columns: ["workplace_id"]
+            isOneToOne: false
+            referencedRelation: "workplaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       message_attachments: {
         Row: {
           created_at: string
@@ -2464,6 +2551,10 @@ export type Database = {
         Args: { p_task: string; p_uid?: string }
         Returns: boolean
       }
+      upt_cancel_inventory_settlement: {
+        Args: { p_request: string }
+        Returns: undefined
+      }
       upt_cancel_shift: {
         Args: { p_reason?: string; p_shift: string }
         Returns: undefined
@@ -2583,6 +2674,10 @@ export type Database = {
       upt_decide_check_out: {
         Args: { p_approve: boolean; p_check_out: string; p_notes?: string }
         Returns: string
+      }
+      upt_decide_inventory_settlement: {
+        Args: { p_decision: string; p_note?: string; p_request: string }
+        Returns: undefined
       }
       upt_decide_shift_change: {
         Args: { p_decision: string; p_reason?: string; p_request: string }
@@ -2830,6 +2925,15 @@ export type Database = {
       }
       upt_request_check_out: {
         Args: { p_event: string; p_notes?: string }
+        Returns: string
+      }
+      upt_request_inventory_settlement: {
+        Args: {
+          p_condition: string
+          p_issue: string
+          p_notes?: string
+          p_quantity: number
+        }
         Returns: string
       }
       upt_request_shift_change: {
