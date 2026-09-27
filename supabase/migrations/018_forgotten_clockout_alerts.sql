@@ -21,6 +21,6 @@ create policy "Admin can view forgotten clockout alerts"
         exists (
             select 1 from user_roles
             where user_roles.user_id = auth.uid()
-            and user_roles.role in ('admin', 'director')
+            and user_roles.role = 'admin'::user_role
         )
     );
