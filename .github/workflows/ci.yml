@@ -98,7 +98,18 @@ jobs:
       - name: Verify generated database types
         run: |
           npx --yes supabase@2.117.0 gen types typescript --local --schema public > /tmp/crew-database.ts
-          diff -u types/crew-database.ts /tmp/crew-database.ts
+          node --input-type=module <<'NODE'
+          import { readFileSync, writeFileSync } from 'node:fs'
+          const normalize = (source) => source
+            .replace(
+              /  \/\/ Allows to automatically instantiate createClient with right options\n  \/\/ instead of createClient<Database, \{ PostgrestVersion: 'XX' \}>\(URL, KEY\)\n  __InternalSupabase: \{\n    PostgrestVersion: "[^"]+"\n  \}\n/,
+              '',
+            )
+            .trimEnd() + '\n'
+          writeFileSync('/tmp/expected-crew-database.ts', normalize(readFileSync('types/crew-database.ts', 'utf8')))
+          writeFileSync('/tmp/actual-crew-database.ts', normalize(readFileSync('/tmp/crew-database.ts', 'utf8')))
+          NODE
+          diff -u /tmp/expected-crew-database.ts /tmp/actual-crew-database.ts
 
       - name: Record replay proof
         run: |
