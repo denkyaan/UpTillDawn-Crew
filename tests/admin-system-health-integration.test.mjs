@@ -37,16 +37,22 @@ test('admin health RPC exposes aggregate metrics only and is browser-admin gated
 })
 
 test('system health route exists behind immutable admin access and uses SLO helpers', async () => {
-  const page=await readFile(new URL('../app/(app)/admin/health/page.tsx',import.meta.url),'utf8')
+  const [page,probe]=await Promise.all([
+    readFile(new URL('../app/(app)/admin/health/page.tsx',import.meta.url),'utf8'),
+    readFile(new URL('../components/admin/health-latency-probe.tsx',import.meta.url),'utf8'),
+  ])
   assert.match(page,/if\(!current\?\.isAdmin\)redirect\('\/'\)/)
   assert.match(page,/upt_admin_system_health/)
   assert.match(page,/aggregateDependencyHealth/)
   assert.match(page,/serviceLevelMet/)
-  assert.match(page,/dependencyIsSlow/)
+  assert.match(page,/HealthLatencyProbe/)
   assert.match(page,/Systeemgezondheid/)
   assert.match(page,/Push subscriptions/)
   assert.match(page,/Synchronisatie vraagt aandacht/)
   assert.match(page,/push-delivery zelf wordt niet als succesvol verondersteld/i)
+  assert.match(probe,/performance\.now\(\)/)
+  assert.match(probe,/upt_admin_system_health/)
+  assert.match(probe,/1000 ms SLO-grens/)
 })
 
 test('admin command center links to the restored health route', async () => {
