@@ -15,7 +15,7 @@ test('staff live status uses current workplace and effective employee role', asy
   assert.match(source, /upt_staff_workplace_live_status/)
   assert.match(source, /current_session_workplace\(ws\.id\)/)
   assert.match(source, /upt_effective_role\(auth\.uid\(\)\) in \('employee','staff'\)/)
-  assert.match(source, /response_status,'pending'\)<>'declined'/)
+  assert.match(source, /s\.response_status is null or s\.response_status <> 'declined'/)
 })
 
 test('manager live sessions are scoped by the current workplace', async () => {
