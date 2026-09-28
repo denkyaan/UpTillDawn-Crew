@@ -205,12 +205,20 @@ export function LocaleSync() {
       if(storedUiLocaleSource()==='manual')return
       applyLocale(deviceUiLocale() as ExtendedUiLocale,'device')
     }
+    const onStorage = (event: StorageEvent) => {
+      if(event.key!=='uptilldawn-language'||!event.newValue)return
+      const next=parseUiLocale(event.newValue)
+      if(!next)return
+      applyLocale(next as ExtendedUiLocale,storedUiLocaleSource()==='manual'?'manual':'device')
+    }
     window.addEventListener(LANGUAGE_CHANGE_EVENT, onLanguageChange)
     window.addEventListener("languagechange", onDeviceLanguageChange)
+    window.addEventListener("storage", onStorage)
     return () => {
       observer.disconnect()
       window.removeEventListener(LANGUAGE_CHANGE_EVENT, onLanguageChange)
       window.removeEventListener("languagechange", onDeviceLanguageChange)
+      window.removeEventListener("storage", onStorage)
     }
   }, [])
   return null
