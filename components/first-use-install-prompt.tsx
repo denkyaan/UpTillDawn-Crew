@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect,useMemo,useState } from "react"
+import { useEffect,useMemo,useRef,useState } from "react"
 import { Download,Share2,X } from "lucide-react"
 import { createClient } from "@/lib/supabase/crew-client"
 import { useAuth } from "@/lib/providers"
@@ -26,6 +26,7 @@ export function FirstUseInstallPrompt(){
   const [iosHelp,setIosHelp]=useState(false)
   const [busy,setBusy]=useState(false)
   const [message,setMessage]=useState("")
+  const autoPromptedRef=useRef<string|null>(null)
 
   useEffect(()=>{
     const handler=(event:Event)=>{
@@ -45,6 +46,41 @@ export function FirstUseInstallPrompt(){
     },0)
     return()=>window.clearTimeout(timer)
   },[loading,user])
+
+  useEffect(()=>{
+    if(!visible||!user||!deferred||isIos()||busy)return
+    if(autoPromptedRef.current===user.id)return
+    autoPromptedRef.current=user.id
+
+    let cancelled=false
+    const run=async()=>{
+      setBusy(true)
+      setMessage("")
+      try{
+        await deferred.prompt()
+        const choice=await deferred.userChoice
+        if(cancelled)return
+        setDeferred(null)
+        if(choice.outcome==="accepted"){
+          setMessage("App-installatie bevestigd. Open Up Till Dawn via het nieuwe app-icoon zodra je browser de installatie heeft afgerond.")
+          window.setTimeout(()=>void finish(),1200)
+        }else{
+          localStorage.setItem("upt-pwa-install-dismissed",String(Date.now()))
+          setVisible(false)
+        }
+      }catch{
+        if(!cancelled){
+          autoPromptedRef.current=null
+          setMessage("Open het browsermenu en kies ‘App installeren’ of ‘Toevoegen aan startscherm’. Automatische installatie is door deze browser niet toegestaan.")
+        }
+      }finally{
+        if(!cancelled)setBusy(false)
+      }
+    }
+
+    void run()
+    return()=>{cancelled=true}
+  },[busy,deferred,user,visible])
 
   useEffect(()=>{
     const installed=()=>{
