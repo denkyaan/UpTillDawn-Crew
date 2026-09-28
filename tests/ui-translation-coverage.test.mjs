@@ -3,6 +3,7 @@ import assert from 'node:assert/strict'
 import { readdir, readFile } from 'node:fs/promises'
 import { join, relative } from 'node:path'
 import ts from 'typescript'
+import { fileURLToPath } from 'node:url'
 
 const ATTRIBUTES=new Set(['placeholder','aria-label','aria-description','title','alt'])
 const USER_MESSAGE_CALLS=new Set(['setStatus','setError','setMessage'])
@@ -101,12 +102,14 @@ function completeKeys(source){
 }
 
 test('every static UI string has NL/FR/EN/DE translation coverage',async()=>{
-  const [extension,complete,app,extra,crew]=await Promise.all([
+  const [extension,complete,app,extra,crew,crewExtra,god]=await Promise.all([
     readFile(new URL('../lib/ui-translation-extensions.ts',import.meta.url),'utf8'),
     readFile(new URL('../lib/ui-translation-complete.ts',import.meta.url),'utf8'),
     readFile(new URL('../lib/ui-translation-catalog-app.ts',import.meta.url),'utf8'),
     readFile(new URL('../lib/ui-translation-catalog-app-extra.ts',import.meta.url),'utf8'),
     readFile(new URL('../lib/ui-translation-catalog-crew.ts',import.meta.url),'utf8'),
+    readFile(new URL('../lib/ui-translation-catalog-crew-extra.ts',import.meta.url),'utf8'),
+    readFile(new URL('../lib/ui-translation-catalog-god.ts',import.meta.url),'utf8'),
   ])
   const covered=new Set([
     ...completeKeys(extension),
@@ -114,13 +117,18 @@ test('every static UI string has NL/FR/EN/DE translation coverage',async()=>{
     ...completeKeys(app),
     ...completeKeys(extra),
     ...completeKeys(crew),
+    ...completeKeys(crewExtra),
+    ...completeKeys(god),
   ])
-  const files=[...await walk(new URL('../app',import.meta.url)),...await walk(new URL('../components',import.meta.url))]
+  const appRoot=fileURLToPath(new URL('../app',import.meta.url))
+  const componentsRoot=fileURLToPath(new URL('../components',import.meta.url))
+  const root=fileURLToPath(new URL('..',import.meta.url))
+  const files=[...await walk(appRoot),...await walk(componentsRoot)]
   const missing=[]
   for(const file of files){
     const source=await readFile(file,'utf8')
     for(const item of collectVisibleStrings(source,file)){
-      if(!covered.has(item.text))missing.push(`${relative(new URL('..',import.meta.url).pathname,file)}:${item.line} :: ${item.text}`)
+      if(!covered.has(item.text))missing.push(`${relative(root,file)}:${item.line} :: ${item.text}`)
     }
   }
   const unique=[...new Set(missing)].sort()
