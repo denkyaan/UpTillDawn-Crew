@@ -21,6 +21,9 @@ const labels: Record<string,string> = {
   task: 'TAAKSTATUS',
   message: 'CHATBERICHT',
   incident: 'URGENT MELDING',
+  checklist_item: 'CHECKLISTPUNT',
+  guestlist_checkin: 'GUESTLIST CHECK-IN',
+  sale: 'VERKOOP',
   incident_photo: 'URGENT FOTO',
   chat_photo: 'CHATFOTO',
 }
