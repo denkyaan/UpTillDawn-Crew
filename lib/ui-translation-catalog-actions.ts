@@ -2,6 +2,7 @@ export type ActionUiLocale='nl'|'fr'|'en'|'de'
 type Row={fr:string;en:string;de:string}
 
 const ROWS:Record<string,Row>={
+  'QR-resource kon niet worden aangemaakt.':{fr:'La ressource QR n’a pas pu être créée.',en:'The QR resource could not be created.',de:'Die QR-Ressource konnte nicht erstellt werden.'},
   "Kostentarief kon niet worden opgeslagen.":{fr:"Le tarif n’a pas pu être enregistré.",en:"The cost rate could not be saved.",de:"Der Kostensatz konnte nicht gespeichert werden."},
   "Kennisartikel kon niet worden opgeslagen.":{fr:"L’article de connaissance n’a pas pu être enregistré.",en:"The knowledge article could not be saved.",de:"Der Wissensartikel konnte nicht gespeichert werden."},
   "Assetgegevens konden niet worden opgeslagen.":{fr:"Les données de l’actif n’ont pas pu être enregistrées.",en:"Asset data could not be saved.",de:"Asset-Daten konnten nicht gespeichert werden."},

@@ -91,19 +91,21 @@ export async function createKnowledgeArticle(fd:FormData){
 }
 
 export async function createQrResource(fd:FormData){
-  const {s}=await adminClient()
+  const {s,user}=await adminClient()
   const eventRaw=String(fd.get('event_id')||'')
   const workplaceRaw=String(fd.get('workplace_id')||'')
   const resourceRaw=String(fd.get('resource_id')||'')
-  const {error}=await s.rpc('upt_create_qr_resource',{
-    p_event:eventRaw?uuid.parse(eventRaw):undefined,
-    p_workplace:workplaceRaw?uuid.parse(workplaceRaw):undefined,
-    p_resource_type:z.enum(['workplace','inventory','document','checklist','task','knowledge']).parse(fd.get('resource_type')),
-    p_resource_id:resourceRaw?uuid.parse(resourceRaw):undefined,
-    p_title:z.string().trim().min(1).max(200).parse(fd.get('title')),
-    p_route:z.string().trim().min(1).max(500).parse(fd.get('route')),
+  const {error}=await s.from('qr_resources').insert({
+    event_id:eventRaw?uuid.parse(eventRaw):null,
+    workplace_id:workplaceRaw?uuid.parse(workplaceRaw):null,
+    resource_type:z.enum(['workplace','inventory','document','checklist','task','knowledge']).parse(fd.get('resource_type')),
+    resource_id:resourceRaw?uuid.parse(resourceRaw):null,
+    title:z.string().trim().min(1).max(200).parse(fd.get('title')),
+    route:z.string().trim().min(1).max(500).parse(fd.get('route')),
+    active:true,
+    created_by:user.id,
   })
-  if(error)throw new Error(error.message)
+  if(error)throw new Error('QR-resource kon niet worden aangemaakt.')
   refresh()
 }
 

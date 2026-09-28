@@ -3955,6 +3955,10 @@ export type Database = {
         }
         Returns: undefined
       }
+      upt_restore_platform_configuration: {
+        Args: { p_version: string }
+        Returns: undefined
+      }
       upt_save_push_subscription: {
         Args: {
           p_auth: string
