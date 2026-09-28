@@ -256,6 +256,18 @@ const EXTENSIONS: Record<string, Row> = {
   'Barcode (optioneel)': { fr: 'Code-barres (optionnel)', en: 'Barcode (optional)', de: 'Barcode (optional)' },
   'Serienummer (optioneel)': { fr: 'Numéro de série (optionnel)', en: 'Serial number (optional)', de: 'Seriennummer (optional)' },
   'ASSETGEGEVENS OPSLAAN': { fr: 'ENREGISTRER LES DONNÉES ASSET', en: 'SAVE ASSET DETAILS', de: 'ASSETDATEN SPEICHERN' },
+
+  'Operationele anomalieën': { fr: 'Anomalies opérationnelles', en: 'Operational anomalies', de: 'Operative Anomalien' },
+  'Actieve signalen die momenteel aandacht vragen.': { fr: 'Signaux actifs nécessitant actuellement une attention.', en: 'Active signals that currently require attention.', de: 'Aktive Signale, die derzeit Aufmerksamkeit erfordern.' },
+  'ACTIEF': { fr: 'ACTIF', en: 'ACTIVE', de: 'AKTIV' },
+  'Bezetting:': { fr: 'Effectif :', en: 'Staffing:', de: 'Besetzung:' },
+  'min gemeten · grens': { fr: 'min mesurées · limite', en: 'min observed · threshold', de: 'Min. gemessen · Grenze' },
+  'Checklist-template toepassen': { fr: 'Appliquer un modèle de checklist', en: 'Apply checklist template', de: 'Checklisten-Vorlage anwenden' },
+  'Kies een werkplek en laad een standaard opening-, sluit- of safetychecklist.': { fr: 'Choisissez un poste et chargez une checklist standard d’ouverture, de fermeture ou de sécurité.', en: 'Choose a workplace and load a standard opening, closing, or safety checklist.', de: 'Wähle einen Arbeitsplatz und lade eine Standard-Öffnungs-, Abschluss- oder Sicherheitscheckliste.' },
+  'CHECKLISTPUNT': { fr: 'POINT DE CHECKLIST', en: 'CHECKLIST ITEM', de: 'CHECKLISTENPUNKT' },
+  'GUESTLIST CHECK-IN': { fr: 'CHECK-IN GUESTLIST', en: 'GUESTLIST CHECK-IN', de: 'GÄSTELISTE CHECK-IN' },
+  'VERKOOP': { fr: 'VENTE', en: 'SALE', de: 'VERKAUF' },
+
   'Code ': { fr: 'Code ', en: 'Code ', de: 'Code ' },
   'Barcode ': { fr: 'Code-barres ', en: 'Barcode ', de: 'Barcode ' },
   'Serienr. ': { fr: 'N° série ', en: 'Serial no. ', de: 'Seriennr. ' },
