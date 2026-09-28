@@ -7,6 +7,7 @@ import { responsibleCoverageGaps } from '@/lib/responsible-coverage-health'
 import { coverageWindows } from '@/lib/staffing-coverage'
 import { staffNeededForTarget, workplaceStaffingState } from '@/lib/workplace-capacity'
 import { WorkplaceShiftPlanner, type WorkplacePlannerPerson, type WorkplacePlannerShift } from '@/components/crew/workplace-shift-planner'
+import { DateInput } from '@/components/crew/date-input'
 
 export const dynamic='force-dynamic'
 
@@ -35,6 +36,8 @@ export default async function Page(){
     minimum_staff:number
     target_staff:number
     maximum_staff:number|null
+    default_shift_start:string|null
+    default_shift_end:string|null
     events:{name:string;start_at:string;end_at:string}|null
   }>=[]
   let assignedCrew:Array<{
@@ -62,8 +65,8 @@ export default async function Page(){
     ]=await Promise.all([
       s.from('events').select('id,name').neq('status','archived').order('start_at'),
       s.from('workplace_catalog').select('id,name,description,sort_order').eq('is_active',true).order('sort_order').order('name'),
-      s.from('workplaces').select('id,event_id,name,description,sort_order,is_active,minimum_staff,target_staff,maximum_staff,events(name,start_at,end_at)').eq('is_active',true).order('sort_order'),
-      s.from('shifts').select('id,event_id,workplace_id,user_id,role_name,shift_kind,status,response_status,scheduled_start,scheduled_end,overlap_allowed').neq('status','cancelled').neq('response_status','declined').order('scheduled_start'),
+      s.from('workplaces').select('id,event_id,name,description,sort_order,is_active,minimum_staff,target_staff,maximum_staff,default_shift_start,default_shift_end,events(name,start_at,end_at)').eq('is_active',true).order('sort_order'),
+      s.from('shifts').select('id,event_id,workplace_id,user_id,role_name,shift_kind,status,response_status,response_reason,confirmed_at,scheduled_start,scheduled_end,overlap_allowed').neq('status','cancelled').neq('response_status','declined').order('scheduled_start'),
       s.from('profiles').select('id,full_name,role').eq('approved',true).order('full_name'),
       s.from('responsible_assignments').select('workplace_id,user_id'),
       s.from('event_availability').select('event_id,user_id,response,setup_available,breakdown_available').or('response.eq.can,setup_available.eq.true,breakdown_available.eq.true'),
@@ -84,6 +87,8 @@ export default async function Page(){
       scheduledEnd:shift.scheduled_end,
       status:shift.status||'scheduled',
       responseStatus:shift.response_status||'pending',
+      responseReason:shift.response_reason||null,
+      confirmedAt:shift.confirmed_at||null,
       overlapAllowed:Boolean(shift.overlap_allowed),
     }))
     for(const availability of availabilityRows||[]){
@@ -130,7 +135,7 @@ export default async function Page(){
 
     const [{data:eventRows},{data:workplaceRows}]=await Promise.all([
       s.from('events').select('id,name').in('id',eventIds).neq('status','archived').gte('end_at','now').order('start_at'),
-      s.from('workplaces').select('id,event_id,name,description,sort_order,is_active,minimum_staff,target_staff,maximum_staff,events(name,start_at,end_at)').in('id',workplaceIds).order('sort_order'),
+      s.from('workplaces').select('id,event_id,name,description,sort_order,is_active,minimum_staff,target_staff,maximum_staff,default_shift_start,default_shift_end,events(name,start_at,end_at)').in('id',workplaceIds).order('sort_order'),
     ])
     events=eventRows||[]
     workplaces=workplaceRows||[]
@@ -138,7 +143,7 @@ export default async function Page(){
 
     if(isResponsible){
       const [{data:shiftRows},{data:responsibleRows}]=await Promise.all([
-        s.from('shifts').select('id,event_id,workplace_id,user_id,role_name,shift_kind,status,response_status,scheduled_start,scheduled_end,overlap_allowed').in('workplace_id',workplaceIds).neq('status','cancelled').neq('response_status','declined').order('scheduled_start'),
+        s.from('shifts').select('id,event_id,workplace_id,user_id,role_name,shift_kind,status,response_status,response_reason,confirmed_at,scheduled_start,scheduled_end,overlap_allowed').in('workplace_id',workplaceIds).neq('status','cancelled').neq('response_status','declined').order('scheduled_start'),
         s.from('responsible_assignments').select('event_id,workplace_id,user_id').in('workplace_id',workplaceIds),
       ])
       const memberResults=await Promise.all(workplaces.map(workplace=>
@@ -160,7 +165,9 @@ export default async function Page(){
         scheduledStart:shift.scheduled_start,
         scheduledEnd:shift.scheduled_end,
         status:shift.status,
-        responseStatus:shift.response_status,
+        responseStatus:shift.response_status||'pending',
+        responseReason:shift.response_reason||null,
+        confirmedAt:shift.confirmed_at||null,
         overlapAllowed:Boolean(shift.overlap_allowed),
       }))
       const seen=new Set<string>()
@@ -178,16 +185,50 @@ export default async function Page(){
         }]
       })
     }
+    if(isStaff){
+      const [{data:shiftRows},{data:profileRow}]=await Promise.all([
+        s.from('shifts').select('id,event_id,workplace_id,user_id,role_name,shift_kind,status,response_status,response_reason,confirmed_at,scheduled_start,scheduled_end,overlap_allowed').eq('user_id',user.id).in('workplace_id',workplaceIds).neq('status','cancelled').order('scheduled_start'),
+        s.from('profiles').select('id,full_name,role').eq('id',user.id).single(),
+      ])
+      if(profileRow)peopleById=new Map([[profileRow.id,profileRow]])
+      plannerShifts=(shiftRows||[]).map(shift=>({
+        id:shift.id,
+        workplaceId:shift.workplace_id,
+        userId:shift.user_id,
+        roleName:shift.role_name,
+        shiftKind:shift.shift_kind==='setup'?'setup':shift.shift_kind==='breakdown'?'breakdown':'event',
+        scheduledStart:shift.scheduled_start,
+        scheduledEnd:shift.scheduled_end,
+        status:shift.status||'scheduled',
+        responseStatus:shift.response_status||'pending',
+        responseReason:shift.response_reason||null,
+        confirmedAt:shift.confirmed_at||null,
+        overlapAllowed:Boolean(shift.overlap_allowed),
+      }))
+      coverageShifts=(shiftRows||[]).filter(shift=>shift.response_status!=='declined').map(shift=>({
+        userId:shift.user_id,
+        workplaceId:shift.workplace_id,
+        startsAt:Date.parse(shift.scheduled_start),
+        endsAt:Date.parse(shift.scheduled_end),
+      }))
+      assignedCrew=(shiftRows||[]).map(shift=>({
+        id:shift.user_id,
+        full_name:profileRow?.full_name||'Personeelslid',
+        event_id:shift.event_id,
+        workplace_id:shift.workplace_id,
+        role_name:shift.role_name,
+      }))
+    }
   }
 
   const responsibleKeys=new Set(responsibleAssignments.map(row=>`${row.workplace_id}:${row.user_id}`))
 
   return <main className="space-y-5 p-4 md:p-8">
     <div>
-      <h1 className="text-3xl font-black">Werkplekken</h1>
+      <h1 className="text-3xl font-black">Werkplaatsen & shifts</h1>
       {isResponsible
-        ? <p className="text-sm text-muted-foreground">Alleen-lezen: bekijk per werkplek wie er ingepland is en wie verantwoordelijk is. Werkplekken beheren kan alleen als beheerder.</p>
-        : !isAdmin&&<p className="text-sm text-muted-foreground">Alleen werkplekken waarvoor je een concrete rol of dienst hebt toegewezen gekregen zijn zichtbaar.</p>}
+        ? <p className="text-sm text-muted-foreground">Bekijk je werkplekken, team en gekoppelde diensten/uren in één overzicht. Werkplekken aanmaken of verwijderen blijft voor admin.</p>
+        : !isAdmin&&<p className="text-sm text-muted-foreground">Bekijk je toegewezen werkplek, shifturen en bevestig of weiger je dienst vanuit hetzelfde scherm.</p>}
     </div>
 
     {isAdmin&&<AdminOnly>
@@ -220,7 +261,15 @@ export default async function Page(){
           </div>
           <p className="mt-2 text-xs text-muted-foreground">Minimum en doel gelden voor de evenementuren. Maximum wordt ook server-side afgedwongen bij nieuwe of gewijzigde diensten.</p>
         </details>
-        <button className="rounded-lg bg-violet-600 px-4 py-3 font-bold md:col-span-2">EXTRA WERKPLEK TOEVOEGEN</button>
+        <div className="md:col-span-2">
+          <p className="mb-2 text-sm font-semibold">Standaard werkuren voor deze werkplek</p>
+          <div className="grid gap-2 md:grid-cols-2">
+            <DateInput name="default_shift_start" required/>
+            <DateInput name="default_shift_end" required/>
+          </div>
+          <p className="mt-1 text-xs text-muted-foreground">Deze uren worden automatisch voorgesteld wanneer je personeel aan deze werkplek koppelt.</p>
+        </div>
+                <button className="rounded-lg bg-violet-600 px-4 py-3 font-bold md:col-span-2">EXTRA WERKPLEK TOEVOEGEN</button>
       </form>
       </details>
     </AdminOnly>}
@@ -285,7 +334,12 @@ export default async function Page(){
                 <input name="name" required maxLength={200} defaultValue={workplace.name} className="rounded-lg border bg-background p-2"/>
                 <textarea name="description" maxLength={1000} defaultValue={workplace.description||''} placeholder="Omschrijving (optioneel)" className="rounded-lg border bg-background p-2"/>
                 <input name="sort_order" type="number" min="0" max="10000" defaultValue={workplace.sort_order} aria-label="Volgorde" className="rounded-lg border bg-background p-2"/>
-                <div className="grid gap-2 sm:grid-cols-3">
+                <div className="grid gap-2 md:grid-cols-2">
+                  <label className="grid gap-1 text-sm">Standaard startuur<DateInput name="default_shift_start" initial={workplace.default_shift_start||undefined} required/></label>
+                  <label className="grid gap-1 text-sm">Standaard einduur<DateInput name="default_shift_end" initial={workplace.default_shift_end||undefined} required/></label>
+                </div>
+                <p className="text-xs text-muted-foreground">Nieuwe personeelsdiensten op deze werkplek nemen deze uren standaard over.</p>
+                                <div className="grid gap-2 sm:grid-cols-3">
                   <label className="grid gap-1 text-sm">Minimum<input name="minimum_staff" type="number" min="0" max="10000" defaultValue={workplace.minimum_staff} className="rounded-lg border bg-background p-2"/></label>
                   <label className="grid gap-1 text-sm">Doel<input name="target_staff" type="number" min="0" max="10000" defaultValue={workplace.target_staff} className="rounded-lg border bg-background p-2"/></label>
                   <label className="grid gap-1 text-sm">Maximum<input name="maximum_staff" type="number" min="0" max="10000" defaultValue={workplace.maximum_staff??''} placeholder="Geen limiet" className="rounded-lg border bg-background p-2"/></label>
@@ -296,11 +350,14 @@ export default async function Page(){
             </details>
           </AdminOnly>}
 
-          {(isAdmin||isResponsible)&&<div className="mt-3 space-y-3">
+          <div className="mt-3 space-y-3">
             <WorkplaceShiftPlanner
               workplaceId={workplace.id}
               eventId={workplace.event_id}
               isAdmin={isAdmin}
+              currentUserId={user.id}
+              defaultStart={workplace.default_shift_start||workplace.events?.start_at||undefined}
+              defaultEnd={workplace.default_shift_end||workplace.events?.end_at||undefined}
               people={isAdmin?plannerPeopleByEvent.get(workplace.event_id)||[]:[...peopleById.values()].map(person=>({id:person.id,fullName:person.full_name||'Naam ontbreekt',eventAvailable:true,setupAvailable:true,breakdownAvailable:true}))}
               shifts={plannerShifts.filter(shift=>shift.workplaceId===workplace.id)}
             />
@@ -379,7 +436,7 @@ export default async function Page(){
               </select>
               <button className="rounded-lg border px-3 py-2 font-semibold">VERANTWOORDELIJKHEID TOEWIJZEN</button>
             </form></AdminOnly>}
-          </div>}
+          </div>
         </article>
       })}
     </div>
