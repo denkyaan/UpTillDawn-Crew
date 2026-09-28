@@ -3,17 +3,17 @@
 import { useEffect, useState } from "react"
 import {
   LANGUAGE_APPLIED_EVENT,
-  LANGUAGE_CHANGE_EVENT,
   initialUiLocale,
+  requestUiLocale,
   parseUiLocale,
   type SupportedUiLocale,
 } from "@/lib/locale-preferences"
 
 const languages:{value:SupportedUiLocale;label:string}[]=[
   {value:"nl",label:"Nederlands"},
-  {value:"fr",label:"Frans"},
-  {value:"en",label:"Engels"},
-  {value:"de",label:"Duits"},
+  {value:"fr",label:"Français"},
+  {value:"en",label:"English"},
+  {value:"de",label:"Deutsch"},
 ]
 
 export function LanguageSwitcher({ dark = false }: { dark?: boolean }) {
@@ -39,11 +39,11 @@ export function LanguageSwitcher({ dark = false }: { dark?: boolean }) {
       onChange={event=>{
         const next=parseUiLocale(event.target.value)||"nl"
         setLanguage(next)
-        window.dispatchEvent(new CustomEvent(LANGUAGE_CHANGE_EVENT,{detail:next}))
+        requestUiLocale(next)
       }}
       className={`rounded-lg border px-3 py-2 ${dark?"border-white/15 bg-black text-white":"bg-background text-foreground"}`}
     >
-      {languages.map(item=><option key={item.value} value={item.value}>{item.label}</option>)}
+      {languages.map(item=><option data-no-translate key={item.value} value={item.value}>{item.label}</option>)}
     </select>
   </label>
 }
