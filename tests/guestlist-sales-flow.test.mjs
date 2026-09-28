@@ -90,8 +90,9 @@ test('admin AI receives guestlist artist backstage sales and register context',a
   assert.match(route,/sales_registers/)
   assert.match(route,/artistPresence/)
   assert.match(route,/cashRegisters/)
-  assert.match(assistant,/Welke artiesten zijn al aanwezig/)
-  assert.match(assistant,/salesoverzicht/)
+  assert.match(assistant,/<textarea/)
+  assert.match(assistant,/setMessage\(e\.target\.value\)/)
+  assert.doesNotMatch(assistant,/const quick=/)
   assert.match(guestlistPage,/PlatformAiAssistant/)
 })
 

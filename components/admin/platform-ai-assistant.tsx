@@ -27,7 +27,7 @@ export function PlatformAiAssistant(){
   return <section className="space-y-3 rounded-2xl border p-4">
     <div>
       <h2 className="text-xl font-black">Admin AI-assistent</h2>
-      <p className="text-sm text-muted-foreground">Typ zelf wat je wilt vragen of laten analyseren. De assistent gebruikt de beschikbare operationele context om te antwoorden.</p>
+      <p className="text-sm text-muted-foreground">Vraag operationele uitleg of laat de assistent risico’s en volgende acties samenvatten. Kritieke wijzigingen worden nooit automatisch uitgevoerd.</p>
     </div>
     <textarea
       value={message}
@@ -41,10 +41,9 @@ export function PlatformAiAssistant(){
       maxLength={4000}
       rows={5}
       autoComplete="off"
-      placeholder="Typ hier je vraag aan de AI-assistent…"
+      placeholder="Bijvoorbeeld: wie is al aanwezig, wat moet backstage voorbereiden en hoe staan de sales?"
       className="min-h-32 w-full resize-y rounded-xl border bg-background p-3"
     />
-    <p className="text-xs text-muted-foreground">Enter = verzenden · Shift + Enter = nieuwe regel</p>
     <button type="button" onClick={submit} disabled={busy||!message.trim()} className="rounded-xl bg-violet-600 px-4 py-3 font-bold text-white">{busy?'ANALYSEREN…':'VRAAG AI'}</button>
     {answer&&<p className="whitespace-pre-wrap rounded-xl bg-muted/40 p-3 text-sm">{answer}</p>}
   </section>
