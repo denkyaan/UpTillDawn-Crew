@@ -118,3 +118,11 @@ test('server metadata and manifest use the same locale source', async () => {
   assert.match(manifest,/await requestUiLocale\(\)/)
   assert.match(manifest,/copy\.manifestName/)
 })
+
+
+test('language preference stays synchronized across tabs', async () => {
+  const sync=await readFile(new URL('../components/locale-sync.tsx',import.meta.url),'utf8')
+  assert.match(sync,/addEventListener\(["']storage["']/)
+  assert.match(sync,/event\.key!==['"]uptilldawn-language['"]/)
+  assert.match(sync,/removeEventListener\(["']storage["']/)
+})
