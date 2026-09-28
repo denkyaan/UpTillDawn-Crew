@@ -7,6 +7,11 @@ export type Json =
   | Json[]
 
 export type Database = {
+  // Allows to automatically instantiate createClient with right options
+  // instead of createClient<Database, { PostgrestVersion: 'XX' }>(URL, KEY)
+  __InternalSupabase: {
+    PostgrestVersion: "14.5"
+  }
   public: {
     Tables: {
       admin_role_modes: {
@@ -3106,6 +3111,16 @@ export type Database = {
       }
       upt_reopen_operational_checklist: {
         Args: { p_checklist: string }
+        Returns: undefined
+      }
+      upt_report_workplace_inventory_condition: {
+        Args: {
+          p_condition: string
+          p_item: string
+          p_notes?: string
+          p_phase: string
+          p_quantity: number
+        }
         Returns: undefined
       }
       upt_request_check_in: {
