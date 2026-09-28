@@ -3,6 +3,7 @@ import { getCurrentUser } from '@/lib/actions/auth'
 import { createClient } from '@/lib/supabase/crew-server'
 import { EventDocumentsPanel } from '@/components/crew/event-documents-panel'
 import { OperationalChecklistPanel } from '@/components/crew/operational-checklists'
+import { WorkplaceInventoryMaterials, type WorkplaceInventoryMaterial } from '@/components/crew/workplace-inventory-materials'
 
 export const dynamic='force-dynamic'
 
@@ -54,7 +55,21 @@ export default async function InventoryPage(){
     }
   }
 
-  const visible=workplaces.filter(workplace=>workplace.events&&workplace.events.status!=='archived')
+  const visible=isAdmin
+    ? workplaces
+    : workplaces.filter(workplace=>workplace.events&&workplace.events.status!=='archived')
+  const workplaceIds=visible.map(workplace=>workplace.id)
+  const materialResult=workplaceIds.length
+    ? await s.from('inventory_items')
+        .select('id,workplace_id,name,category,total_quantity,available_quantity,issued_quantity,damaged_quantity,missing_quantity')
+        .in('workplace_id',workplaceIds)
+        .eq('is_active',true)
+        .order('category')
+        .order('name')
+    : {data:[],error:null}
+  if(materialResult.error)throw new Error('Materialen konden niet worden geladen.')
+  const materials=(materialResult.data||[]) as WorkplaceInventoryMaterial[]
+
   const options=visible.map(workplace=>({
     id:workplace.id,
     eventId:workplace.event_id,
@@ -79,6 +94,14 @@ export default async function InventoryPage(){
         <h2 className="text-2xl font-black">{workplace.name}</h2>
         <p className="text-sm text-muted-foreground">{workplace.events?.name}</p>
       </div>
+
+      <WorkplaceInventoryMaterials
+        workplaceId={workplace.id}
+        workplaceName={workplace.name}
+        materials={materials.filter(item=>item.workplace_id===workplace.id)}
+        isAdmin={isAdmin}
+        isResponsible={isResponsible}
+      />
 
       <EventDocumentsPanel
         eventId={workplace.event_id}
