@@ -27,7 +27,7 @@ export default async function Page(){
     {data:emergencyRows,error:emergencyError},
   ]=await Promise.all([
     s.from('events').select('id,name,address').lte('start_at',now).gte('end_at',now).neq('status','archived'),
-    s.from('incidents').select('id,user_id,reporter_id,message,status,created_at,acknowledged_at,resolved_at,escalated_at,escalation_reason,event_id,workplace_id,photo_path').order('created_at',{ascending:false}).limit(100),
+    s.from('incidents').select('id,user_id,reporter_id,message,status,created_at,acknowledged_at,resolved_at,escalated_at,escalation_reason,event_id,workplace_id,photo_path,category,urgency,people_involved,action_taken').order('created_at',{ascending:false}).limit(100),
     s.from('shifts').select('id,event_id,workplace_id,scheduled_start,scheduled_end,events(name),workplaces(name)')
       .eq('user_id',user.id).neq('status','cancelled').neq('response_status','declined').lte('scheduled_start',now).gte('scheduled_end',now).order('scheduled_start'),
     s.rpc('upt_current_work_context'),
@@ -125,7 +125,9 @@ export default async function Page(){
                 {i.escalated_at&&!i.resolved_at&&<span className="rounded-full border border-red-500/50 bg-red-500/10 px-2 py-1 text-xs font-black text-red-600">GEËSCALEERD</span>}
               </div>
             </div>
-            <p className="mt-2 text-sm text-muted-foreground">{new Date(i.created_at).toLocaleString('nl-BE')}</p>
+            <p className="mt-2 text-sm text-muted-foreground">{new Date(i.created_at).toLocaleString('nl-BE')} · {i.category} · {i.urgency}</p>
+            {i.people_involved&&<p className="mt-1 text-sm text-muted-foreground">Betrokken: {i.people_involved}</p>}
+            {i.action_taken&&<p className="mt-1 text-sm text-muted-foreground">Actie: {i.action_taken}</p>}
             {i.escalated_at&&<p className="mt-1 text-sm font-semibold text-red-600">Na 5 minuten zonder erkenning geëscaleerd naar admin · {new Date(i.escalated_at).toLocaleString('nl-BE')}</p>}
             {i.acknowledged_at&&<p className="text-sm text-muted-foreground">Erkend: {new Date(i.acknowledged_at).toLocaleString('nl-BE')}</p>}
             {i.resolved_at&&<p className="text-sm text-muted-foreground">Opgelost: {new Date(i.resolved_at).toLocaleString('nl-BE')}</p>}

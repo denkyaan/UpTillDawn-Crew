@@ -41,6 +41,9 @@ export function IncidentForm({
     const selectedEvent=String(fd.get('event')||'')
     const selectedWorkplace=String(fd.get('workplace')||'')
     const message=String(fd.get('message')||'').trim()
+    const category=String(fd.get('category')||'general')
+    const urgency=String(fd.get('urgency')||'normal')
+    const peopleInvolved=String(fd.get('people_involved')||'').trim()
     try{
       let location:{latitude:number;longitude:number;accuracy:number}|null=null
       if(navigator.geolocation&&navigator.onLine){
@@ -54,6 +57,9 @@ export function IncidentForm({
         event_id:selectedEvent,
         ...(selectedWorkplace?{workplace_id:selectedWorkplace}:{}),
         message,
+        category,
+        urgency,
+        people_involved:peopleInvolved,
         ...(location||{}),
       }
       if(file){
@@ -86,6 +92,19 @@ export function IncidentForm({
         <option key={`${context.event_id}:${context.workplace_id}`} value={context.workplace_id}>{context.workplace_name}</option>
       )}
     </select>
+    <div className="grid gap-2 md:grid-cols-2">
+      <label className="grid gap-1 text-sm">Categorie
+        <select name="category" defaultValue="general" className="rounded-lg border bg-background p-3">
+          <option value="general">Algemeen</option><option value="medical">Medisch</option><option value="safety">Veiligheid</option><option value="security">Security</option><option value="equipment">Materiaal</option><option value="technical">Technisch</option><option value="staff">Personeel</option>
+        </select>
+      </label>
+      <label className="grid gap-1 text-sm">Urgentie
+        <select name="urgency" defaultValue="normal" className="rounded-lg border bg-background p-3">
+          <option value="normal">Normaal</option><option value="high">Hoog</option><option value="urgent">Urgent</option>
+        </select>
+      </label>
+    </div>
+    <input name="people_involved" maxLength={2000} placeholder="Betrokken personen (optioneel)" className="w-full rounded-lg border bg-background p-3"/>
     <textarea name="message" required maxLength={4000} placeholder="Wat is er aan de hand?" className="min-h-28 w-full rounded-lg border bg-background p-3"/>
     <label className="block text-sm">Optionele foto of video
       <input key={fileKey} type="file" accept="image/jpeg,image/png,image/webp,video/mp4,video/webm,video/quicktime" onChange={e=>setFile(e.target.files?.[0]||null)} className="mt-1 block w-full rounded-lg border bg-background p-3"/>
