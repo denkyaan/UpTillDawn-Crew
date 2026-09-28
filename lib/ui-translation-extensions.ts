@@ -272,6 +272,14 @@ const EXTENSIONS: Record<string, Row> = {
   'Barcode ': { fr: 'Code-barres ', en: 'Barcode ', de: 'Barcode ' },
   'Serienr. ': { fr: 'N° série ', en: 'Serial no. ', de: 'Seriennr. ' },
 
+  '% van de operationele vereisten klaar.': { fr: '% des exigences opérationnelles sont prêtes.', en: '% of operational requirements are ready.', de: '% der operativen Anforderungen sind bereit.' },
+  'entries': { fr: 'entrées', en: 'entries', de: 'Einträge' },
+  '· Tokens': { fr: '· Tokens', en: '· Tokens', de: '· Tokens' },
+  'assets ·': { fr: 'assets ·', en: 'assets ·', de: 'Assets ·' },
+  'u': { fr: 'h', en: 'h', de: 'Std.' },
+  'm': { fr: 'min', en: 'min', de: 'Min.' },
+  'De assistent gebruikt automatisch de context van het geopende scherm of evenement en vat risico’s en volgende acties samen. Kritieke wijzigingen worden nooit automatisch uitgevoerd.': { fr: 'L’assistant utilise automatiquement le contexte de l’écran ou de l’événement ouvert et résume les risques et les prochaines actions. Les modifications critiques ne sont jamais exécutées automatiquement.', en: 'The assistant automatically uses the context of the open screen or event and summarizes risks and next actions. Critical changes are never executed automatically.', de: 'Der Assistent verwendet automatisch den Kontext des geöffneten Bildschirms oder Events und fasst Risiken sowie nächste Schritte zusammen. Kritische Änderungen werden niemals automatisch ausgeführt.' },
+  '” archiveren? Historische gegevens blijven bewaard en het event verdwijnt uit actieve overzichten.': { fr: '» archiver ? Les données historiques restent conservées et l’événement disparaît des aperçus actifs.', en: '” archive? Historical data remains preserved and the event disappears from active overviews.', de: '“ archivieren? Historische Daten bleiben erhalten und das Event verschwindet aus aktiven Übersichten.' },
 }
 
 const CANONICAL = new Map<string, string>()
