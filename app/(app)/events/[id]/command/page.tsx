@@ -40,7 +40,6 @@ export default async function EventCommandPage({params}:{params:Promise<{id:stri
  const readyCount=readiness.filter(Boolean).length
  const percent=Math.round(readyCount/readiness.length*100)
  const isAdmin=current.isAdmin===true
- const ended=Date.now()>Date.parse(snapshot.event.endAt)
 
  return <main className="mx-auto max-w-7xl space-y-6 p-4 pb-28 md:p-8">
   <header className="flex flex-wrap items-end justify-between gap-3">
@@ -96,7 +95,7 @@ export default async function EventCommandPage({params}:{params:Promise<{id:stri
 
   {isAdmin&&<PlatformAiAssistant eventId={id} contextLabel={snapshot.event.name}/>}
 
-  {isAdmin&&ended&&<section className="space-y-3 rounded-2xl border border-amber-500/30 p-5">
+  {isAdmin&&<section className="space-y-3 rounded-2xl border border-amber-500/30 p-5">
    <div><h2 className="text-xl font-black">Post-event afsluiting</h2><p className="text-sm text-muted-foreground">Sluit pas af wanneer werkuren, sluitchecklists, incidenten en inventory-afwijkingen verwerkt zijn.</p></div>
    <form action={closeEvent} className="grid gap-2 md:grid-cols-[auto_1fr_auto]">
     <input type="hidden" name="event_id" value={id}/>
