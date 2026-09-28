@@ -2125,6 +2125,95 @@ export type Database = {
           },
         ]
       }
+      operational_checklist_template_items: {
+        Row: {
+          created_at: string
+          id: string
+          label: string
+          required: boolean
+          requires_photo: boolean
+          sort_order: number
+          template_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          label: string
+          required?: boolean
+          requires_photo?: boolean
+          sort_order?: number
+          template_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          label?: string
+          required?: boolean
+          requires_photo?: boolean
+          sort_order?: number
+          template_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "operational_checklist_template_items_template_id_fkey"
+            columns: ["template_id"]
+            isOneToOne: false
+            referencedRelation: "operational_checklist_templates"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      operational_checklist_templates: {
+        Row: {
+          catalog_workplace_id: string | null
+          created_at: string
+          created_by: string | null
+          description: string | null
+          id: string
+          is_active: boolean
+          kind: string
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          catalog_workplace_id?: string | null
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          id?: string
+          is_active?: boolean
+          kind: string
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          catalog_workplace_id?: string | null
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          id?: string
+          is_active?: boolean
+          kind?: string
+          title?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "operational_checklist_templates_catalog_workplace_id_fkey"
+            columns: ["catalog_workplace_id"]
+            isOneToOne: false
+            referencedRelation: "workplace_catalog"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "operational_checklist_templates_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       operational_checklists: {
         Row: {
           completed_at: string | null
@@ -4055,6 +4144,10 @@ export type Database = {
         }
         Returns: string
       }
+      upt_apply_operational_checklist_template: {
+        Args: { p_event: string; p_template: string; p_workplace: string }
+        Returns: string
+      }
       upt_apply_planning_recommendation: {
         Args: { p_recommendation: string }
         Returns: string
@@ -4130,6 +4223,10 @@ export type Database = {
       }
       upt_capture_event_template: {
         Args: { p_event: string; p_name: string; p_sections?: string[] }
+        Returns: string
+      }
+      upt_capture_operational_checklist_template: {
+        Args: { p_checklist: string; p_name: string }
         Returns: string
       }
       upt_claim_marketplace_shift: {
