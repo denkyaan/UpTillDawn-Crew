@@ -47,7 +47,7 @@ export default async function Page(){
   let responsibleAssignments:Array<{workplace_id:string;user_id:string}>=[]
   let coverageShifts:Array<{userId:string;workplaceId:string;startsAt:number;endsAt:number}>=[]
   let plannerShifts:WorkplacePlannerShift[]=[]
-  let plannerPeopleByEvent=new Map<string,WorkplacePlannerPerson[]>()
+  const plannerPeopleByEvent=new Map<string,WorkplacePlannerPerson[]>()
   let peopleById=new Map<string,Person>()
 
   if(isAdmin){
