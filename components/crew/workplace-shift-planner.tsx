@@ -1,5 +1,5 @@
 import {DateInput} from '@/components/crew/date-input'
-import {assignAvailableCrewShift,cancelShift,updateShift} from '@/lib/actions/uptilldawn'
+import {assignAvailableCrewShift,cancelShift,confirmShift,declineShift,updateShift} from '@/lib/actions/uptilldawn'
 
 export type WorkplacePlannerPerson={
  id:string
@@ -19,6 +19,8 @@ export type WorkplacePlannerShift={
  scheduledEnd:string
  status:string
  responseStatus:string
+ responseReason?:string|null
+ confirmedAt?:string|null
  overlapAllowed:boolean
 }
 
@@ -26,12 +28,14 @@ export function WorkplaceShiftPlanner({
  workplaceId,
  eventId,
  isAdmin,
+ currentUserId,
  people,
  shifts,
 }:{
  workplaceId:string
  eventId:string
  isAdmin:boolean
+ currentUserId:string
  people:WorkplacePlannerPerson[]
  shifts:WorkplacePlannerShift[]
 }){
@@ -95,6 +99,34 @@ export function WorkplaceShiftPlanner({
       <span className="rounded-full border px-2 py-1 text-xs font-bold">{shift.responseStatus==='accepted'?'BEVESTIGD':shift.responseStatus==='declined'?'GEWEIGERD':'WACHT'}</span>
      </div>
     </div>
+
+    {shift.userId===currentUserId&&shift.status!=='cancelled'&&<div className="mt-3 space-y-2">
+     {shift.responseStatus==='accepted'&&shift.confirmedAt
+      ? <p className="rounded-lg border border-emerald-500/40 bg-emerald-500/10 p-3 text-sm font-semibold">SHIFT BEVESTIGD</p>
+      : shift.responseStatus==='declined'
+        ? <div className="space-y-2 rounded-lg border border-red-500/40 bg-red-500/5 p-3">
+            <p className="text-sm font-semibold text-red-600">SHIFT GEWEIGERD</p>
+            {shift.responseReason&&<p className="text-sm text-muted-foreground">{shift.responseReason}</p>}
+            <form action={confirmShift}>
+             <input type="hidden" name="shift_id" value={shift.id}/>
+             <button className="w-full rounded-lg border p-3 font-bold">ALSNOCH BEVESTIGEN</button>
+            </form>
+          </div>
+        : <div className="space-y-2">
+            <form action={confirmShift}>
+             <input type="hidden" name="shift_id" value={shift.id}/>
+             <button className="w-full rounded-lg bg-violet-600 p-3 font-bold text-white">SHIFT BEVESTIGEN</button>
+            </form>
+            <details className="rounded-lg border p-3">
+             <summary className="cursor-pointer text-sm font-semibold">Ik kan deze dienst niet uitvoeren</summary>
+             <form action={declineShift} className="mt-3 grid gap-2">
+              <input type="hidden" name="shift_id" value={shift.id}/>
+              <textarea name="reason" required minLength={3} maxLength={500} placeholder="Reden van weigering" className="rounded-lg border bg-background p-3"/>
+              <button className="rounded-lg border border-red-500/50 p-3 font-bold text-red-600">DIENST WEIGEREN</button>
+             </form>
+            </details>
+          </div>}
+    </div>}
 
     {isAdmin&&shift.status!=='cancelled'&&<details className="mt-3 rounded-lg border p-3">
      <summary className="cursor-pointer text-sm font-semibold">Dienst bewerken</summary>
