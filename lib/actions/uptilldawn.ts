@@ -1,6 +1,6 @@
 'use server'
 import { createClient } from '@/lib/supabase/crew-server'
-import { revalidatePath } from 'next/cache'
+import { revalidatePath } from '@/lib/save-success'
 import { redirect } from 'next/navigation'
 import { z } from 'zod'
 import { geocodeGeoapify } from '@/lib/geoapify'
@@ -238,7 +238,7 @@ export async function createEvent(fd:FormData){
   checkin_radius_m:z.coerce.number().int().min(10).max(10000).parse(fd.get('radius')||100),
   created_by:user.id,
  })
- check(error);revalidatePath('/events')
+ check(error);await revalidatePath('/events')
 }
 export async function addWorkplace(fd:FormData){
  const {s}=await adminClient()
@@ -252,7 +252,7 @@ export async function addWorkplace(fd:FormData){
   is_active:true,
   ...capacity,
  })
- check(error);revalidatePath('/workplaces');revalidatePath('/shifts')
+ check(error);await revalidatePath('/workplaces');await revalidatePath('/shifts')
 }
 export async function updateWorkplace(fd:FormData){
  const {s}=await adminClient()
@@ -267,7 +267,7 @@ export async function updateWorkplace(fd:FormData){
   is_active:fd.get('is_active')==='on',
   ...capacity,
  }).eq('id',workplaceId)
- check(error);revalidatePath('/workplaces');revalidatePath('/shifts')
+ check(error);await revalidatePath('/workplaces');await revalidatePath('/shifts')
 }
 export async function setEventAvailability(fd:FormData){
  const {s}=await approvedClient()
@@ -287,7 +287,7 @@ export async function setEventAvailability(fd:FormData){
   throw new Error('Geef een reden waarom je niet meer kunt deelnemen.')
  }
  check(error)
- revalidatePath('/events')
+ await revalidatePath('/events')
 }
 export async function addEventMember(fd:FormData){
  const {s}=await adminClient()
@@ -302,7 +302,7 @@ export async function addEventMember(fd:FormData){
  const eventRole=p.role==='responsible_lead'?'responsible_lead':p.role==='admin'?'admin':'employee'
  const {error}=await s.from('event_members').upsert({event_id:eventId,user_id:userId,event_role:eventRole},{onConflict:'event_id,user_id'})
  check(error)
- revalidatePath('/events');revalidatePath('/tasks');revalidatePath('/briefings');revalidatePath('/shifts');revalidatePath('/workplaces')
+ await revalidatePath('/events');await revalidatePath('/tasks');await revalidatePath('/briefings');await revalidatePath('/shifts');await revalidatePath('/workplaces')
 }
 export async function addAvailableEventMembers(fd:FormData){
  const {s}=await adminClient()
@@ -327,7 +327,7 @@ export async function addAvailableEventMembers(fd:FormData){
   {onConflict:'event_id,user_id'}
  )
  check(error)
- revalidatePath('/events');revalidatePath('/tasks');revalidatePath('/briefings');revalidatePath('/shifts');revalidatePath('/workplaces')
+ await revalidatePath('/events');await revalidatePath('/tasks');await revalidatePath('/briefings');await revalidatePath('/shifts');await revalidatePath('/workplaces')
 }
 export async function assignAvailableCrewShift(fd:FormData){
  const {s}=await adminClient()
@@ -381,7 +381,7 @@ export async function assignAvailableCrewShift(fd:FormData){
    .eq('event_role',createdMembershipRole)
  }
  shiftMutationCheck(error)
- revalidatePath('/events');revalidatePath('/shifts');revalidatePath('/workplaces');revalidatePath('/operations');revalidatePath('/tasks');revalidatePath('/briefings')
+ await revalidatePath('/events');await revalidatePath('/shifts');await revalidatePath('/workplaces');await revalidatePath('/operations');await revalidatePath('/tasks');await revalidatePath('/briefings')
 }
 export async function assignResponsible(fd:FormData){
  const {s,user}=await adminClient()
@@ -452,7 +452,7 @@ export async function assignResponsible(fd:FormData){
   assigned_by:user.id,
  },{onConflict:'workplace_id,user_id'})
  check(error)
- revalidatePath('/workplaces');revalidatePath('/events');revalidatePath('/tasks');revalidatePath('/briefings');revalidatePath('/operations');revalidatePath('/personnel')
+ await revalidatePath('/workplaces');await revalidatePath('/events');await revalidatePath('/tasks');await revalidatePath('/briefings');await revalidatePath('/operations');await revalidatePath('/personnel')
 }
 export async function demoteResponsibleToStaff(fd:FormData){
  const {s}=await adminClient()
@@ -501,13 +501,13 @@ export async function demoteResponsibleToStaff(fd:FormData){
    .eq('event_role','responsible_lead')
   check(membershipsError)
  }
- revalidatePath('/workplaces')
- revalidatePath('/events')
- revalidatePath('/operations')
- revalidatePath('/tasks')
- revalidatePath('/briefings')
- revalidatePath('/personnel')
- revalidatePath('/')
+ await revalidatePath('/workplaces')
+ await revalidatePath('/events')
+ await revalidatePath('/operations')
+ await revalidatePath('/tasks')
+ await revalidatePath('/briefings')
+ await revalidatePath('/personnel')
+ await revalidatePath('/')
 }
 export async function createShift(fd:FormData){
  const {s}=await adminClient()
@@ -521,7 +521,7 @@ export async function createShift(fd:FormData){
   p_overlap_allowed:fd.get('overlap_allowed')==='on',
   p_shift_kind:z.enum(['event','setup','breakdown']).parse(fd.get('shift_kind')||'event'),
  })
- shiftMutationCheck(error);revalidatePath('/shifts');revalidatePath('/workplaces');revalidatePath('/operations')
+ shiftMutationCheck(error);await revalidatePath('/shifts');await revalidatePath('/workplaces');await revalidatePath('/operations')
 }
 export async function updateShift(fd:FormData){
  const {s}=await adminClient()
@@ -534,13 +534,13 @@ export async function updateShift(fd:FormData){
   p_overlap_allowed:fd.get('overlap_allowed')==='on',
   p_shift_kind:z.enum(['event','setup','breakdown']).parse(fd.get('shift_kind')||'event'),
  })
- shiftMutationCheck(error);revalidatePath('/shifts');revalidatePath('/workplaces');revalidatePath('/operations')
+ shiftMutationCheck(error);await revalidatePath('/shifts');await revalidatePath('/workplaces');await revalidatePath('/operations')
 }
 export async function confirmShift(fd:FormData){
  const {s}=await approvedClient()
  const {error}=await s.rpc('upt_confirm_shift',{p_shift:uuid.parse(fd.get('shift_id'))})
  shiftMutationCheck(error)
- revalidatePath('/shifts');revalidatePath('/workplaces');revalidatePath('/operations')
+ await revalidatePath('/shifts');await revalidatePath('/workplaces');await revalidatePath('/operations')
 }
 export async function declineShift(fd:FormData){
  const {s,user}=await approvedClient()
@@ -559,7 +559,7 @@ export async function declineShift(fd:FormData){
   p_reason:reason,
  })
  check(error)
- revalidatePath('/shifts');revalidatePath('/workplaces');revalidatePath('/operations');revalidatePath('/notifications')
+ await revalidatePath('/shifts');await revalidatePath('/workplaces');await revalidatePath('/operations');await revalidatePath('/notifications')
 }
 export async function reassignShift(fd:FormData){
  const {s}=await adminClient()
@@ -570,7 +570,7 @@ export async function reassignShift(fd:FormData){
   p_reason:reason,
  })
  shiftMutationCheck(error)
- revalidatePath('/shifts');revalidatePath('/workplaces');revalidatePath('/operations');revalidatePath('/notifications')
+ await revalidatePath('/shifts');await revalidatePath('/workplaces');await revalidatePath('/operations');await revalidatePath('/notifications')
 }
 export async function requestShiftReplacement(fd:FormData){
  const {s}=await approvedClient()
@@ -581,7 +581,7 @@ export async function requestShiftReplacement(fd:FormData){
   p_reason:z.string().trim().min(3).max(500).parse(fd.get('reason')),
  })
  check(error)
- revalidatePath('/shifts');revalidatePath('/notifications')
+ await revalidatePath('/shifts');await revalidatePath('/notifications')
 }
 export async function requestShiftSwap(fd:FormData){
  const {s}=await approvedClient()
@@ -593,7 +593,7 @@ export async function requestShiftSwap(fd:FormData){
   p_reason:z.string().trim().min(3).max(500).parse(fd.get('reason')),
  })
  check(error)
- revalidatePath('/shifts');revalidatePath('/notifications')
+ await revalidatePath('/shifts');await revalidatePath('/notifications')
 }
 export async function claimOpenShift(fd:FormData){
  const {s}=await approvedClient()
@@ -603,7 +603,7 @@ export async function claimOpenShift(fd:FormData){
   p_reason:z.string().trim().min(3).max(500).parse(fd.get('reason')),
  })
  check(error)
- revalidatePath('/shifts');revalidatePath('/notifications')
+ await revalidatePath('/shifts');await revalidatePath('/notifications')
 }
 export async function respondShiftChange(fd:FormData){
  const {s}=await approvedClient()
@@ -612,7 +612,7 @@ export async function respondShiftChange(fd:FormData){
   p_response:z.enum(['accepted','declined']).parse(fd.get('response')),
  })
  check(error)
- revalidatePath('/shifts');revalidatePath('/notifications')
+ await revalidatePath('/shifts');await revalidatePath('/notifications')
 }
 export async function cancelShiftChange(fd:FormData){
  const {s}=await approvedClient()
@@ -620,7 +620,7 @@ export async function cancelShiftChange(fd:FormData){
   p_request:uuid.parse(fd.get('request_id')),
  })
  check(error)
- revalidatePath('/shifts');revalidatePath('/notifications')
+ await revalidatePath('/shifts');await revalidatePath('/notifications')
 }
 export async function decideShiftChange(fd:FormData){
  const {s}=await adminClient()
@@ -633,14 +633,14 @@ export async function decideShiftChange(fd:FormData){
   ...(reason?{p_reason:reason}:{}),
  })
  shiftMutationCheck(error)
- revalidatePath('/shifts');revalidatePath('/workplaces');revalidatePath('/operations');revalidatePath('/notifications')
+ await revalidatePath('/shifts');await revalidatePath('/workplaces');await revalidatePath('/operations');await revalidatePath('/notifications')
 }
 
 export async function cancelShift(fd:FormData){
  const {s}=await adminClient()
  const reason=String(fd.get('reason')||'').trim().slice(0,500)
  const {error}=await s.rpc('upt_cancel_shift',{p_shift:uuid.parse(fd.get('shift_id')),...(reason?{p_reason:reason}:{})})
- check(error);revalidatePath('/shifts');revalidatePath('/workplaces');revalidatePath('/operations')
+ check(error);await revalidatePath('/shifts');await revalidatePath('/workplaces');await revalidatePath('/operations')
 }
 export async function approvePersonnelAccount(fd:FormData){
  const {s,user}=await adminClient()
@@ -649,8 +649,8 @@ export async function approvePersonnelAccount(fd:FormData){
  if(id===user.id)throw new Error('Je eigen beheeraccount is al goedgekeurd.')
  const {error}=await s.rpc('upt_admin_set_account',{p_user:id,p_approved:true,p_role:role})
  check(error)
- revalidatePath('/personnel')
- revalidatePath('/notifications')
+ await revalidatePath('/personnel')
+ await revalidatePath('/notifications')
  redirect('/personnel?feedback=approved')
 }
 
@@ -668,12 +668,12 @@ export async function setAccountStatus(fd:FormData){
  }catch{
   feedback='role_error'
  }
- revalidatePath('/personnel')
- revalidatePath('/notifications')
+ await revalidatePath('/personnel')
+ await revalidatePath('/notifications')
  redirect(`/personnel?feedback=${feedback}`)
 }
-export async function acknowledgeBriefing(fd:FormData){const s=await createClient();const {error}=await s.rpc('upt_acknowledge_briefing',{p_briefing:uuid.parse(fd.get('id'))});check(error);revalidatePath('/briefings')}
-export async function acknowledgeInstruction(fd:FormData){const s=await createClient();const {error}=await s.rpc('upt_acknowledge_personal_instruction',{p_instruction:uuid.parse(fd.get('id'))});check(error);revalidatePath('/briefings')}
+export async function acknowledgeBriefing(fd:FormData){const s=await createClient();const {error}=await s.rpc('upt_acknowledge_briefing',{p_briefing:uuid.parse(fd.get('id'))});check(error);await revalidatePath('/briefings')}
+export async function acknowledgeInstruction(fd:FormData){const s=await createClient();const {error}=await s.rpc('upt_acknowledge_personal_instruction',{p_instruction:uuid.parse(fd.get('id'))});check(error);await revalidatePath('/briefings')}
 export async function createBriefing(fd:FormData){
  const {s,user,profile}=await approvedClient()
  requireManager(profile.role)
@@ -700,7 +700,7 @@ export async function createBriefing(fd:FormData){
  check(error);if(!data)throw new Error('Instructie kon niet worden aangemaakt.')
  try{await uploadWorkPhotos(s,user.id,{type:'briefing',id:data.id},files)}
  catch(error){await s.from('briefings').delete().eq('id',data.id);throw error}
- revalidatePath('/briefings')
+ await revalidatePath('/briefings')
 }
 export async function createPersonalInstruction(fd:FormData){
  const {s,user,profile}=await approvedClient()
@@ -736,7 +736,7 @@ export async function createPersonalInstruction(fd:FormData){
  check(error);if(!data)throw new Error('Persoonlijke instructie kon niet worden aangemaakt.')
  try{await uploadWorkPhotos(s,user.id,{type:'instruction',id:data.id},files)}
  catch(error){await s.from('personal_instructions').delete().eq('id',data.id);throw error}
- revalidatePath('/briefings')
+ await revalidatePath('/briefings')
 }
 export async function updateBriefing(fd:FormData){
  const {s,user,profile}=await approvedClient()
@@ -753,7 +753,7 @@ export async function updateBriefing(fd:FormData){
   body:z.string().trim().min(1).max(20000).parse(fd.get('body')),
  }).eq('id',id)
  if(error){await rollbackWorkPhotos(s,paths);check(error)}
- revalidatePath('/briefings')
+ await revalidatePath('/briefings')
 }
 export async function updatePersonalInstruction(fd:FormData){
  const {s,user,profile}=await approvedClient()
@@ -770,7 +770,7 @@ export async function updatePersonalInstruction(fd:FormData){
   body:z.string().trim().min(1).max(20000).parse(fd.get('body')),
  }).eq('id',id)
  if(error){await rollbackWorkPhotos(s,paths);check(error)}
- revalidatePath('/briefings')
+ await revalidatePath('/briefings')
 }
 export async function createInventoryItem(fd:FormData){
  const {s,profile}=await approvedClient()
@@ -782,7 +782,7 @@ export async function createInventoryItem(fd:FormData){
   p_quantity:z.coerce.number().int().min(1).max(100000).parse(fd.get('quantity')),
  })
  check(error)
- revalidatePath('/workplaces');revalidatePath('/tasks');revalidatePath('/operations');revalidatePath('/inventory')
+ await revalidatePath('/workplaces');await revalidatePath('/tasks');await revalidatePath('/operations');await revalidatePath('/inventory')
 }
 export async function reportWorkplaceInventoryCondition(fd:FormData){
  const {s,profile}=await approvedClient()
@@ -795,7 +795,7 @@ export async function reportWorkplaceInventoryCondition(fd:FormData){
   p_notes:String(fd.get('notes')||'').trim().slice(0,1000)||undefined,
  })
  check(error)
- revalidatePath('/inventory');revalidatePath('/workplaces');revalidatePath('/notifications')
+ await revalidatePath('/inventory');await revalidatePath('/workplaces');await revalidatePath('/notifications')
 }
 export async function restockInventoryItem(fd:FormData){
  const {s,profile}=await approvedClient()
@@ -806,7 +806,7 @@ export async function restockInventoryItem(fd:FormData){
   p_notes:String(fd.get('notes')||'').trim().slice(0,1000)||undefined,
  })
  check(error)
- revalidatePath('/workplaces');revalidatePath('/tasks');revalidatePath('/operations');revalidatePath('/inventory')
+ await revalidatePath('/workplaces');await revalidatePath('/tasks');await revalidatePath('/operations');await revalidatePath('/inventory')
 }
 export async function issueInventoryItem(fd:FormData){
  const {s,profile}=await approvedClient()
@@ -818,7 +818,7 @@ export async function issueInventoryItem(fd:FormData){
   p_notes:String(fd.get('notes')||'').trim().slice(0,1000)||undefined,
  })
  check(error)
- revalidatePath('/workplaces');revalidatePath('/tasks');revalidatePath('/operations');revalidatePath('/notifications')
+ await revalidatePath('/workplaces');await revalidatePath('/tasks');await revalidatePath('/operations');await revalidatePath('/notifications')
 }
 export async function settleInventoryIssue(fd:FormData){
  const {s}=await approvedClient()
@@ -829,7 +829,7 @@ export async function settleInventoryIssue(fd:FormData){
   p_notes:String(fd.get('notes')||'').trim().slice(0,1000)||undefined,
  })
  check(error)
- revalidatePath('/workplaces');revalidatePath('/tasks');revalidatePath('/operations');revalidatePath('/notifications')
+ await revalidatePath('/workplaces');await revalidatePath('/tasks');await revalidatePath('/operations');await revalidatePath('/notifications')
 }
 export async function requestInventorySettlement(fd:FormData){
  const {s}=await approvedClient()
@@ -840,7 +840,7 @@ export async function requestInventorySettlement(fd:FormData){
   p_notes:String(fd.get('notes')||'').trim().slice(0,1000)||undefined,
  })
  check(error)
- revalidatePath('/workplaces');revalidatePath('/tasks');revalidatePath('/operations');revalidatePath('/notifications')
+ await revalidatePath('/workplaces');await revalidatePath('/tasks');await revalidatePath('/operations');await revalidatePath('/notifications')
 }
 export async function cancelInventorySettlement(fd:FormData){
  const {s}=await approvedClient()
@@ -848,7 +848,7 @@ export async function cancelInventorySettlement(fd:FormData){
   p_request:uuid.parse(fd.get('request_id')),
  })
  check(error)
- revalidatePath('/workplaces');revalidatePath('/tasks');revalidatePath('/operations')
+ await revalidatePath('/workplaces');await revalidatePath('/tasks');await revalidatePath('/operations')
 }
 export async function decideInventorySettlement(fd:FormData){
  const {s,profile}=await approvedClient()
@@ -862,7 +862,7 @@ export async function decideInventorySettlement(fd:FormData){
   ...(note?{p_note:note}:{}),
  })
  check(error)
- revalidatePath('/workplaces');revalidatePath('/tasks');revalidatePath('/operations');revalidatePath('/notifications')
+ await revalidatePath('/workplaces');await revalidatePath('/tasks');await revalidatePath('/operations');await revalidatePath('/notifications')
 }
 export async function restoreInventoryQuantity(fd:FormData){
  const {s,profile}=await approvedClient()
@@ -874,7 +874,7 @@ export async function restoreInventoryQuantity(fd:FormData){
   p_notes:String(fd.get('notes')||'').trim().slice(0,1000)||undefined,
  })
  check(error)
- revalidatePath('/workplaces');revalidatePath('/tasks');revalidatePath('/operations');revalidatePath('/inventory')
+ await revalidatePath('/workplaces');await revalidatePath('/tasks');await revalidatePath('/operations');await revalidatePath('/inventory')
 }
 
 const checklistPhotoTypes=new Map([
@@ -898,7 +898,7 @@ export async function createOperationalChecklist(fd:FormData){
   p_description:String(fd.get('description')||'').trim().slice(0,2000),
  })
  check(error)
- revalidatePath('/tasks');revalidatePath('/workplaces');revalidatePath('/inventory')
+ await revalidatePath('/tasks');await revalidatePath('/workplaces');await revalidatePath('/inventory')
 }
 export async function addOperationalChecklistItem(fd:FormData){
  const {s,profile}=await approvedClient()
@@ -910,7 +910,7 @@ export async function addOperationalChecklistItem(fd:FormData){
   p_requires_photo:fd.get('requires_photo')==='on',
  })
  check(error)
- revalidatePath('/tasks');revalidatePath('/workplaces');revalidatePath('/inventory')
+ await revalidatePath('/tasks');await revalidatePath('/workplaces');await revalidatePath('/inventory')
 }
 export async function removeOperationalChecklistItem(fd:FormData){
  const {s,profile}=await approvedClient()
@@ -923,7 +923,7 @@ export async function removeOperationalChecklistItem(fd:FormData){
  })
  check(error)
  if(item?.photo_path)await s.storage.from('work-media').remove([item.photo_path])
- revalidatePath('/tasks');revalidatePath('/workplaces');revalidatePath('/inventory')
+ await revalidatePath('/tasks');await revalidatePath('/workplaces');await revalidatePath('/inventory')
 }
 export async function completeOperationalChecklistItem(fd:FormData){
  const {s,user}=await approvedClient()
@@ -946,7 +946,7 @@ export async function completeOperationalChecklistItem(fd:FormData){
  })
  if(error&&uploaded)await s.storage.from('work-media').remove([uploaded])
  check(error)
- revalidatePath('/tasks');revalidatePath('/workplaces');revalidatePath('/inventory')
+ await revalidatePath('/tasks');await revalidatePath('/workplaces');await revalidatePath('/inventory')
 }
 export async function reopenOperationalChecklistItem(fd:FormData){
  const {s}=await approvedClient()
@@ -959,7 +959,7 @@ export async function reopenOperationalChecklistItem(fd:FormData){
  })
  check(error)
  if(item?.photo_path)await s.storage.from('work-media').remove([item.photo_path])
- revalidatePath('/tasks');revalidatePath('/workplaces');revalidatePath('/inventory')
+ await revalidatePath('/tasks');await revalidatePath('/workplaces');await revalidatePath('/inventory')
 }
 export async function closeOperationalChecklist(fd:FormData){
  const {s,profile}=await approvedClient()
@@ -968,7 +968,7 @@ export async function closeOperationalChecklist(fd:FormData){
   p_checklist:uuid.parse(fd.get('checklist_id')),
  })
  check(error)
- revalidatePath('/tasks');revalidatePath('/workplaces');revalidatePath('/inventory')
+ await revalidatePath('/tasks');await revalidatePath('/workplaces');await revalidatePath('/inventory')
 }
 export async function reopenOperationalChecklist(fd:FormData){
  const {s,profile}=await approvedClient()
@@ -977,7 +977,7 @@ export async function reopenOperationalChecklist(fd:FormData){
   p_checklist:uuid.parse(fd.get('checklist_id')),
  })
  check(error)
- revalidatePath('/tasks');revalidatePath('/workplaces');revalidatePath('/inventory')
+ await revalidatePath('/tasks');await revalidatePath('/workplaces');await revalidatePath('/inventory')
 }
 
 export async function createTask(fd:FormData){
@@ -1049,7 +1049,7 @@ export async function createTask(fd:FormData){
   await s.from('tasks').delete().eq('id',taskId)
   throw error
  }
- revalidatePath('/tasks')
+ await revalidatePath('/tasks')
 }
 export async function removeTaskAssignment(fd:FormData){
  const {s,user,profile}=await approvedClient()
@@ -1086,7 +1086,7 @@ export async function removeTaskAssignment(fd:FormData){
  })
 
  check(error)
- revalidatePath('/tasks')
+ await revalidatePath('/tasks')
 }
 
 export async function saveShiftHandover(fd:FormData){
@@ -1107,7 +1107,7 @@ export async function saveShiftHandover(fd:FormData){
   p_mark_ready:markReady,
  })
  check(error)
- revalidatePath('/operations');revalidatePath('/notifications')
+ await revalidatePath('/operations');await revalidatePath('/notifications')
 }
 export async function acceptShiftHandover(fd:FormData){
  const {s,profile}=await approvedClient()
@@ -1116,16 +1116,16 @@ export async function acceptShiftHandover(fd:FormData){
   p_handover:uuid.parse(fd.get('handover_id')),
  })
  check(error)
- revalidatePath('/operations');revalidatePath('/notifications')
+ await revalidatePath('/operations');await revalidatePath('/notifications')
 }
 
 export async function markNotificationRead(fd:FormData){
  const s=await createClient()
  const {error}=await s.rpc('upt_mark_notification_read',{p_notification:uuid.parse(fd.get('notification_id'))})
- check(error);revalidatePath('/notifications')
+ check(error);await revalidatePath('/notifications')
 }
-export async function archiveEvent(fd:FormData){const {s}=await adminClient();const {error}=await s.from('events').update({status:'archived'}).eq('id',uuid.parse(fd.get('event_id')));check(error);revalidatePath('/events')}
-export async function duplicateEvent(fd:FormData){const {s}=await adminClient();const [start,end]=dates(fd,'start_at','end_at');const {error}=await s.rpc('upt_duplicate_event',{p_event:uuid.parse(fd.get('event_id')),p_name:text.parse(fd.get('name')),p_start:start,p_end:end});check(error);revalidatePath('/events')}
+export async function archiveEvent(fd:FormData){const {s}=await adminClient();const {error}=await s.from('events').update({status:'archived'}).eq('id',uuid.parse(fd.get('event_id')));check(error);await revalidatePath('/events')}
+export async function duplicateEvent(fd:FormData){const {s}=await adminClient();const [start,end]=dates(fd,'start_at','end_at');const {error}=await s.rpc('upt_duplicate_event',{p_event:uuid.parse(fd.get('event_id')),p_name:text.parse(fd.get('name')),p_start:start,p_end:end});check(error);await revalidatePath('/events')}
 export async function createEventDocument(fd:FormData){
  const {s,user,profile}=await approvedClient()
  requireManager(profile.role)
@@ -1157,7 +1157,7 @@ export async function createEventDocument(fd:FormData){
  })
  if(error)await s.storage.from('work-media').remove([storagePath])
  check(error)
- revalidatePath('/events');revalidatePath('/inventory');revalidatePath('/notifications')
+ await revalidatePath('/events');await revalidatePath('/inventory');await revalidatePath('/notifications')
 }
 export async function createInventoryTextEntry(fd:FormData){
  const {s,user}=await adminClient()
@@ -1189,7 +1189,7 @@ export async function createInventoryTextEntry(fd:FormData){
   await s.storage.from('work-media').remove([storagePath])
   check(error)
  }
- revalidatePath('/inventory');revalidatePath('/workplaces')
+ await revalidatePath('/inventory');await revalidatePath('/workplaces')
 }
 
 export async function archiveEventDocument(fd:FormData){
@@ -1198,7 +1198,7 @@ export async function archiveEventDocument(fd:FormData){
  const {data:path,error}=await s.rpc('upt_archive_event_document',{p_document:uuid.parse(fd.get('document_id'))})
  check(error)
  if(path)await s.storage.from('work-media').remove([path])
- revalidatePath('/events');revalidatePath('/inventory')
+ await revalidatePath('/events');await revalidatePath('/inventory')
 }
 
 export async function updateEventEmergencyInformation(fd:FormData){
@@ -1212,7 +1212,7 @@ export async function updateEventEmergencyInformation(fd:FormData){
   p_procedure:String(fd.get('procedure')||'').trim().slice(0,5000)||undefined,
  })
  check(error)
- revalidatePath('/events');revalidatePath('/incidents');revalidatePath('/')
+ await revalidatePath('/events');await revalidatePath('/incidents');await revalidatePath('/')
 }
 export async function updateEvent(fd:FormData){
  const {s}=await adminClient()
@@ -1231,11 +1231,11 @@ export async function updateEvent(fd:FormData){
   max_joiners:maxJoiners,
   checkin_radius_m:z.coerce.number().int().min(10).max(10000).parse(fd.get('radius')),
  }).eq('id',uuid.parse(fd.get('event_id')))
- check(error);revalidatePath('/events')
+ check(error);await revalidatePath('/events')
 }
 export async function deleteEvent(fd:FormData){
  const {s}=await adminClient()
  const eventId=uuid.parse(fd.get('event_id'))
  const {error}=await s.from('events').delete().eq('id',eventId)
- check(error);revalidatePath('/events')
+ check(error);await revalidatePath('/events')
 }
