@@ -33,11 +33,13 @@ export async function OperationalChecklistPanel({
   canManage,
   workplaceOptions,
   kinds,
+  canClose = canManage,
 }:{
   userId:string
   canManage:boolean
   workplaceOptions:ChecklistWorkplaceOption[]
   kinds?:ChecklistKind[]
+  canClose?:boolean
 }){
   const s=await createClient()
   const {data:checklists,error}=await s
@@ -189,7 +191,7 @@ export async function OperationalChecklistPanel({
               <button className="rounded-lg border px-4 py-3 font-bold">PUNT TOEVOEGEN</button>
             </form>}
 
-            {canManage&&<div className="flex flex-wrap items-center gap-2 border-t pt-3">
+            {canClose&&<div className="flex flex-wrap items-center gap-2 border-t pt-3">
               {!completed
                 ? <form action={closeOperationalChecklist}>
                     <input type="hidden" name="checklist_id" value={checklist.id}/>
