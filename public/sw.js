@@ -1,4 +1,4 @@
-const CACHE='uptilldawn-public-v11'
+const CACHE='uptilldawn-public-v12'
 const PUBLIC_ASSETS=['/offline.html','/offline-public.html','/offline-content.js','/up-till-dawn-mark.webp']
 
 self.addEventListener('install',event=>{event.waitUntil(caches.open(CACHE).then(cache=>cache.addAll(PUBLIC_ASSETS)).then(()=>self.skipWaiting()))})
