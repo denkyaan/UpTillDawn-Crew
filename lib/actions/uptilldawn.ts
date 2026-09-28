@@ -640,20 +640,22 @@ export async function approvePersonnelAccount(fd:FormData){
 }
 
 export async function setAccountStatus(fd:FormData){
- const {s,user}=await adminClient();const id=uuid.parse(fd.get('user_id'));const status=z.enum(['pending','approved']).parse(fd.get('status'));const approved=status==='approved'
- const role=z.enum(['admin','responsible_lead','staff']).parse(fd.get('role')||'staff')
- if(id===user.id && (!approved||role!=='admin'))throw new Error('Je kunt je eigen beheerderstoegang hier niet intrekken.')
- const {error}=await s.rpc('upt_admin_set_account',{p_user:id,p_approved:approved,p_role:role});check(error)
- if(approved){
-  const {error:notificationError}=await s.from('crew_notifications')
-   .update({read_at:new Date().toISOString()})
-   .eq('user_id',user.id)
-   .eq('kind','account_approval')
-   .eq('link',`/personnel?pending=${id}`)
-   .is('read_at',null)
-  check(notificationError)
- }
- revalidatePath('/personnel');revalidatePath('/notifications')
+ let feedback='role_saved'
+ try{
+  const {s,user}=await adminClient()
+  const id=uuid.parse(fd.get('user_id'))
+  const status=z.enum(['pending','approved']).parse(fd.get('status'))
+  const approved=status==='approved'
+  const role=z.enum(['admin','responsible_lead','staff']).parse(fd.get('role')||'staff')
+  if(id===user.id && (!approved||role!=='admin'))throw new Error('Je kunt je eigen beheerderstoegang hier niet intrekken.')
+  const {error}=await s.rpc('upt_admin_set_account',{p_user:id,p_approved:approved,p_role:role})
+  check(error)
+ }catch{
+  feedback='role_error'
+ }
+ revalidatePath('/personnel')
+ revalidatePath('/notifications')
+ redirect(`/personnel?feedback=${feedback}`)
 }
 export async function acknowledgeBriefing(fd:FormData){const s=await createClient();const {error}=await s.rpc('upt_acknowledge_briefing',{p_briefing:uuid.parse(fd.get('id'))});check(error);revalidatePath('/briefings')}
 export async function acknowledgeInstruction(fd:FormData){const s=await createClient();const {error}=await s.rpc('upt_acknowledge_personal_instruction',{p_instruction:uuid.parse(fd.get('id'))});check(error);revalidatePath('/briefings')}
