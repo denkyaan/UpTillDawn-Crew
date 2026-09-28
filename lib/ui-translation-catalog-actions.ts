@@ -2,6 +2,18 @@ export type ActionUiLocale='nl'|'fr'|'en'|'de'
 type Row={fr:string;en:string;de:string}
 
 const ROWS:Record<string,Row>={
+  'Wachtwoorden komen niet overeen.':{fr:'Les mots de passe ne correspondent pas.',en:'Passwords do not match.',de:'Die Passwörter stimmen nicht überein.'},
+  'Foute logingegevens of u heeft geen toegang tot deze rol.':{fr:'Identifiants incorrects ou vous n’avez pas accès à ce rôle.',en:'Incorrect login details or you do not have access to this role.',de:'Falsche Anmeldedaten oder Sie haben keinen Zugriff auf diese Rolle.'},
+  'Je profiel kon niet worden geladen. Probeer opnieuw.':{fr:'Votre profil n’a pas pu être chargé. Réessayez.',en:'Your profile could not be loaded. Try again.',de:'Dein Profil konnte nicht geladen werden. Versuche es erneut.'},
+  'ACCOUNT NOG NIET GOEDGEKEURD':{fr:'COMPTE PAS ENCORE APPROUVÉ',en:'ACCOUNT NOT YET APPROVED',de:'KONTO NOCH NICHT GENEHMIGT'},
+  'Dit account heeft geen toegang tot het gekozen portaal.':{fr:'Ce compte n’a pas accès au portail sélectionné.',en:'This account does not have access to the selected portal.',de:'Dieses Konto hat keinen Zugriff auf das ausgewählte Portal.'},
+  'God Mode login moet':{fr:'La connexion God Mode doit être',en:'God Mode login must be',de:'God-Mode-Anmeldung muss'},
+  'zijn.':{fr:'être.',en:'be.',de:'sein.'},
+  'Elk document mag maximaal 20 MB zijn.':{fr:'Chaque document peut faire au maximum 20 Mo.',en:'Each document may be up to 20 MB.',de:'Jedes Dokument darf maximal 20 MB groß sein.'},
+  'Elke afbeelding mag maximaal 10 MB zijn.':{fr:'Chaque image peut faire au maximum 10 Mo.',en:'Each image may be up to 10 MB.',de:'Jedes Bild darf maximal 10 MB groß sein.'},
+  'Elke video mag maximaal 50 MB zijn.':{fr:'Chaque vidéo peut faire au maximum 50 Mo.',en:'Each video may be up to 50 MB.',de:'Jedes Video darf maximal 50 MB groß sein.'},
+  'Afbeelding mag maximaal 10 MB zijn.':{fr:'L’image peut faire au maximum 10 Mo.',en:'Image may be up to 10 MB.',de:'Das Bild darf maximal 10 MB groß sein.'},
+  'Document mag maximaal 20 MB zijn.':{fr:'Le document peut faire au maximum 20 Mo.',en:'Document may be up to 20 MB.',de:'Das Dokument darf maximal 20 MB groß sein.'},
   'minstens':{fr:'au moins',en:'at least',de:'mindestens'},
   'tekens':{fr:'caractères',en:'characters',de:'Zeichen'},
   'Wachtwoord moet':{fr:'Le mot de passe doit contenir',en:'Password must contain',de:'Das Passwort muss enthalten'},
