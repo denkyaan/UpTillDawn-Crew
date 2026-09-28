@@ -1,6 +1,6 @@
 'use server'
 
-import { revalidatePath } from 'next/cache'
+import { revalidatePath } from '@/lib/save-success'
 import { redirect } from 'next/navigation'
 import { z } from 'zod'
 import { createClient } from '@/lib/supabase/crew-server'
@@ -20,7 +20,7 @@ async function adminClient(){
 }
 
 function refresh(){
-  for(const path of ['/admin/platform','/events','/shifts','/inventory','/operations'])revalidatePath(path)
+  for(const path of ['/admin/platform','/events','/shifts','/inventory','/operations'])await revalidatePath(path)
 }
 
 export async function generatePlanningRecommendations(fd:FormData){
