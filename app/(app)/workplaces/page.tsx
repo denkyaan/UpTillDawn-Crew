@@ -8,6 +8,7 @@ import { coverageWindows } from '@/lib/staffing-coverage'
 import { staffNeededForTarget, workplaceStaffingState } from '@/lib/workplace-capacity'
 import { WorkplaceShiftPlanner, type WorkplacePlannerPerson, type WorkplacePlannerShift } from '@/components/crew/workplace-shift-planner'
 import { DateInput } from '@/components/crew/date-input'
+import { ShiftChangeCenter, type ClaimableShift, type ShiftChangeRequestView, type ShiftReplacementCandidate, type ShiftSwapCandidate } from '@/components/crew/shift-change-controls'
 
 export const dynamic='force-dynamic'
 
@@ -52,6 +53,11 @@ export default async function Page(){
   let plannerShifts:WorkplacePlannerShift[]=[]
   const plannerPeopleByEvent=new Map<string,WorkplacePlannerPerson[]>()
   let peopleById=new Map<string,Person>()
+  let shiftChangeRequests:ShiftChangeRequestView[]=[]
+  let claimableShifts:ClaimableShift[]=[]
+  const replacementCandidatesByShift=new Map<string,ShiftReplacementCandidate[]>()
+  const swapCandidatesByShift=new Map<string,ShiftSwapCandidate[]>()
+  let shiftChangeError=false
 
   if(isAdmin){
     const [
@@ -221,6 +227,82 @@ export default async function Page(){
     }
   }
 
+  const [{data:shiftChangeRows,error:shiftChangeRowsError},{data:claimableRows,error:claimableRowsError}]=await Promise.all([
+    s.rpc('upt_shift_change_requests'),
+    isAdmin?Promise.resolve({data:[],error:null}):s.rpc('upt_claimable_shifts'),
+  ])
+  shiftChangeError=Boolean(shiftChangeRowsError||claimableRowsError)
+  shiftChangeRequests=(shiftChangeRows||[]).map(row=>({
+    id:row.id,
+    type:row.type==='swap'?'swap':row.type==='claim-open-shift'?'claim-open-shift':'replacement',
+    shiftId:row.shift_id,
+    targetShiftId:row.target_shift_id||null,
+    requesterId:row.requester_id,
+    requesterName:row.requester_name||'Personeelslid',
+    replacementUserId:row.replacement_user_id||null,
+    replacementName:row.replacement_name||null,
+    status:row.status==='approved'?'approved':row.status==='rejected'?'rejected':row.status==='cancelled'?'cancelled':'pending',
+    replacementResponse:row.replacement_response==='accepted'?'accepted':row.replacement_response==='declined'?'declined':row.replacement_response==='not-required'?'not-required':'pending',
+    reason:row.reason,
+    decisionReason:row.decision_reason||null,
+    sourceScheduledStart:row.source_scheduled_start,
+    sourceScheduledEnd:row.source_scheduled_end,
+    sourceRoleName:row.source_role_name,
+    sourceWorkplaceName:row.source_workplace_name,
+    targetScheduledStart:row.target_scheduled_start||null,
+    targetScheduledEnd:row.target_scheduled_end||null,
+    targetRoleName:row.target_role_name||null,
+    targetWorkplaceName:row.target_workplace_name||null,
+    isStale:row.is_stale,
+  }))
+  claimableShifts=(claimableRows||[]).map(row=>({
+    shiftId:row.shift_id,
+    eventName:row.event_name,
+    workplaceName:row.workplace_name,
+    roleName:row.role_name,
+    shiftKind:row.shift_kind,
+    scheduledStart:row.scheduled_start,
+    scheduledEnd:row.scheduled_end,
+  }))
+
+  if(!isAdmin){
+    const ownCandidateShifts=plannerShifts.filter(shift=>
+      shift.userId===user.id&&shift.status!=='cancelled'&&shift.responseStatus!=='declined'
+    )
+    const candidateResults=await Promise.all(ownCandidateShifts.map(async shift=>{
+      const [replacementResult,swapResult]=await Promise.all([
+        s.rpc('upt_shift_change_candidates',{p_shift:shift.id}),
+        s.rpc('upt_swap_candidates',{p_shift:shift.id}),
+      ])
+      return {shiftId:shift.id,replacementResult,swapResult}
+    }))
+    for(const result of candidateResults){
+      if(result.replacementResult.error||result.swapResult.error){
+        shiftChangeError=true
+        continue
+      }
+      replacementCandidatesByShift.set(
+        result.shiftId,
+        (result.replacementResult.data||[]).map(row=>({
+          userId:row.user_id,
+          fullName:row.full_name||'Personeelslid',
+        })),
+      )
+      swapCandidatesByShift.set(
+        result.shiftId,
+        (result.swapResult.data||[]).map(row=>({
+          targetShiftId:row.target_shift_id,
+          userId:row.user_id,
+          fullName:row.full_name||'Personeelslid',
+          workplaceName:row.workplace_name,
+          roleName:row.role_name,
+          scheduledStart:row.scheduled_start,
+          scheduledEnd:row.scheduled_end,
+        })),
+      )
+    }
+  }
+
   const responsibleKeys=new Set(responsibleAssignments.map(row=>`${row.workplace_id}:${row.user_id}`))
 
   return <main className="space-y-5 p-4 md:p-8">
@@ -230,6 +312,14 @@ export default async function Page(){
         ? <p className="text-sm text-muted-foreground">Bekijk je werkplekken, team en gekoppelde diensten/uren in één overzicht. Werkplekken aanmaken of verwijderen blijft voor admin.</p>
         : !isAdmin&&<p className="text-sm text-muted-foreground">Bekijk je toegewezen werkplek, shifturen en bevestig of weiger je dienst vanuit hetzelfde scherm.</p>}
     </div>
+
+    {shiftChangeError&&<p className="rounded-xl border border-amber-500/40 p-4 text-sm text-muted-foreground">Shiftwijzigingen konden niet volledig worden geladen. Vernieuw de pagina.</p>}
+    <ShiftChangeCenter
+      userId={user.id}
+      isAdmin={isAdmin}
+      requests={shiftChangeRequests}
+      claimableShifts={claimableShifts}
+    />
 
     {isAdmin&&<AdminOnly>
       <section className="space-y-3 rounded-2xl border border-violet-500/30 p-4">
@@ -361,6 +451,9 @@ export default async function Page(){
               defaultEnd={workplace.default_shift_end||workplace.events?.end_at||undefined}
               people={isAdmin?plannerPeopleByEvent.get(workplace.event_id)||[]:[...peopleById.values()].map(person=>({id:person.id,fullName:person.full_name||'Naam ontbreekt',eventAvailable:true,setupAvailable:true,breakdownAvailable:true}))}
               shifts={plannerShifts.filter(shift=>shift.workplaceId===workplace.id)}
+              replacementCandidatesByShift={replacementCandidatesByShift}
+              swapCandidatesByShift={swapCandidatesByShift}
+              openRequestShiftIds={shiftChangeRequests.filter(row=>row.status==='pending'&&row.requesterId===user.id).map(row=>row.shiftId)}
             />
             {staffingConfigured&&<section className="rounded-xl border p-3">
               <div className="flex flex-wrap items-center justify-between gap-2">
