@@ -90,9 +90,9 @@ export async function POST(request: NextRequest) {
   if (error || !data.user) {
     await adminRpc(supabase, 'upt_admin_login_failure', {
       p_login: email,
-      p_ip: ip,
-      p_location: approximateLocation,
-      p_user_agent: userAgent,
+      p_ip: ip ?? undefined,
+      p_location: approximateLocation ?? undefined,
+      p_user_agent: userAgent ?? undefined,
     })
     await notify('failure', 'invalid_credentials')
     return NextResponse.redirect(loginUrl(request, 'Foute logingegevens of u heeft geen toegang tot deze rol.'), 303)
