@@ -4,7 +4,6 @@ import { readdir, readFile } from 'node:fs/promises'
 import { join, relative } from 'node:path'
 import ts from 'typescript'
 
-const ROOT=new URL('..',import.meta.url)
 const ATTRIBUTES=new Set(['placeholder','aria-label','aria-description','title','alt'])
 const USER_MESSAGE_CALLS=new Set(['setStatus','setError','setMessage'])
 const INVARIANT=new Set([
