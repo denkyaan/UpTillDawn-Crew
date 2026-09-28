@@ -1,5 +1,5 @@
 import {DateInput} from '@/components/crew/date-input'
-import {assignAvailableCrewShift,cancelShift,confirmShift,declineShift,updateShift} from '@/lib/actions/uptilldawn'
+import {assignAvailableCrewShift,cancelShift,confirmShift,declineShift,reassignShift,updateShift} from '@/lib/actions/uptilldawn'
 import { OwnShiftChangeControls, type ShiftReplacementCandidate, type ShiftSwapCandidate } from '@/components/crew/shift-change-controls'
 
 export type WorkplacePlannerPerson={
@@ -107,7 +107,7 @@ export function WorkplaceShiftPlanner({
      </div>
      <div className="flex flex-wrap gap-2">
       <span className="rounded-full border px-2 py-1 text-xs font-bold">{shift.status.toUpperCase()}</span>
-      <span className="rounded-full border px-2 py-1 text-xs font-bold">{shift.responseStatus==='accepted'?'BEVESTIGD':shift.responseStatus==='declined'?'GEWEIGERD':'WACHT'}</span>
+      <span className="rounded-full border px-2 py-1 text-xs font-bold">{shift.responseStatus==='accepted'?'BEVESTIGD':shift.responseStatus==='declined'?'GEWEIGERD':'WACHT OP REACTIE'}</span>
      </div>
     </div>
 
@@ -161,6 +161,18 @@ export function WorkplaceShiftPlanner({
       <label className="flex items-center gap-2"><input type="checkbox" name="overlap_allowed" defaultChecked={shift.overlapAllowed}/> Overlap toestaan</label>
       <button className="rounded-lg border p-3 font-bold">DIENST OPSLAAN</button>
      </form>
+     <div className="mt-3 border-t pt-3">
+      <p className="text-sm font-semibold">Personeelslid herplannen</p>
+      <form action={reassignShift} className="mt-2 grid gap-2 md:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_auto]">
+       <input type="hidden" name="shift_id" value={shift.id}/>
+       <select name="user_id" required className="rounded-lg border bg-background p-3">
+        <option value="">Nieuw personeelslid…</option>
+        {people.filter(person=>person.id!==shift.userId).map(person=><option key={person.id} value={person.id}>{person.fullName}</option>)}
+       </select>
+       <input name="reason" required minLength={3} maxLength={500} placeholder="Reden herplanning" className="rounded-lg border bg-background p-3"/>
+       <button className="rounded-lg border px-4 py-3 font-bold">HERPLAN DIENST</button>
+      </form>
+     </div>
      <form action={cancelShift} className="mt-2 grid gap-2 sm:grid-cols-[1fr_auto]">
       <input type="hidden" name="shift_id" value={shift.id}/>
       <input name="reason" maxLength={500} placeholder="Reden annulering (optioneel)" className="rounded-lg border bg-background p-3"/>
