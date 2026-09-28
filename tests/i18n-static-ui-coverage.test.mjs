@@ -20,6 +20,9 @@ const untranslatedAllowed=new Set([
   'Supabase',
   'Cloudflare',
   'GitHub',
+  'Français',
+  'English',
+  'Deutsch',
 ])
 
 function decode(value){
