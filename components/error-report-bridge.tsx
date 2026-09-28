@@ -53,7 +53,7 @@ export function ErrorReportBridge(){
       <section className="w-[min(360px,calc(100vw-2rem))] space-y-3 rounded-2xl border bg-background/95 p-4 shadow-2xl backdrop-blur">
           <div className="flex items-start justify-between gap-3">
             <div>
-              <h2 className="font-black">Fout rapporteren</h2>
+              <h2 className="font-black">Fout melden</h2>
               <p className="text-xs text-muted-foreground">De AI-assistent analyseert het rapport op de achtergrond. Als makeractie nodig is, krijgt de maker automatisch een melding.</p>
             </div>
             <button type="button" aria-label="Foutrapport sluiten" data-no-translate onClick={()=>{setOpen(false);setCaptured(null)}} className="rounded-lg border px-2 py-1">×</button>
