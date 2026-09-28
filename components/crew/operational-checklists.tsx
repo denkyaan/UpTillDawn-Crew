@@ -32,10 +32,12 @@ export async function OperationalChecklistPanel({
   userId,
   canManage,
   workplaceOptions,
+  kinds,
 }:{
   userId:string
   canManage:boolean
   workplaceOptions:ChecklistWorkplaceOption[]
+  kinds?:ChecklistKind[]
 }){
   const s=await createClient()
   const {data:checklists,error}=await s
@@ -50,7 +52,8 @@ export async function OperationalChecklistPanel({
     </section>
   }
 
-  const checklistIds=(checklists||[]).map(row=>row.id)
+  const visibleChecklists=(checklists||[]).filter(row=>!kinds||kinds.includes(row.kind as ChecklistKind))
+  const checklistIds=visibleChecklists.map(row=>row.id)
   const {data:items,error:itemError}=checklistIds.length
     ? await s
         .from('checklist_items')
@@ -87,11 +90,11 @@ export async function OperationalChecklistPanel({
           <option value="">Werkplek…</option>
           {workplaceOptions.map(option=><option key={option.id} value={option.id}>{option.label}</option>)}
         </select>
-        <select name="kind" defaultValue="opening" className="rounded-lg border bg-background p-3">
-          <option value="opening">Opening</option>
-          <option value="closing">Sluiting</option>
-          <option value="safety">Veiligheid</option>
-          <option value="custom">Custom</option>
+        <select name="kind" defaultValue={kinds?.[0]||"opening"} className="rounded-lg border bg-background p-3">
+          {(!kinds||kinds.includes("opening"))&&<option value="opening">Opstart</option>}
+          {(!kinds||kinds.includes("closing"))&&<option value="closing">Sluiting</option>}
+          {(!kinds||kinds.includes("safety"))&&<option value="safety">Veiligheid</option>}
+          {(!kinds||kinds.includes("custom"))&&<option value="custom">Custom</option>}
         </select>
         <input name="title" required maxLength={200} placeholder="Checklistnaam" className="rounded-lg border bg-background p-3"/>
         <textarea name="description" maxLength={2000} placeholder="Omschrijving (optioneel)" className="rounded-lg border bg-background p-3"/>
@@ -99,9 +102,9 @@ export async function OperationalChecklistPanel({
       </form>
     </details>}
 
-    {!(checklists||[]).length
+    {!visibleChecklists.length
       ? <p className="rounded-xl border p-4 text-sm text-muted-foreground">Nog geen operationele checklists.</p>
-      : <div className="grid gap-4">{(checklists||[]).map(checklist=>{
+      : <div className="grid gap-4">{visibleChecklists.map(checklist=>{
           const checklistItems=(items||[]).filter(item=>item.checklist_id===checklist.id)
           const model:OperationalChecklist={
             id:checklist.id,
