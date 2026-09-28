@@ -1,6 +1,7 @@
 'use server'
 import { createClient } from '@/lib/supabase/crew-server'
 import { revalidatePath } from 'next/cache'
+import { redirect } from 'next/navigation'
 import { z } from 'zod'
 import { geocodeGeoapify } from '@/lib/geoapify'
 import { fetchFacebookEventInfo } from '@/lib/facebook-event'
@@ -626,6 +627,18 @@ export async function cancelShift(fd:FormData){
  const {error}=await s.rpc('upt_cancel_shift',{p_shift:uuid.parse(fd.get('shift_id')),...(reason?{p_reason:reason}:{})})
  check(error);revalidatePath('/shifts');revalidatePath('/workplaces');revalidatePath('/operations')
 }
+export async function approvePersonnelAccount(fd:FormData){
+ const {s,user}=await adminClient()
+ const id=uuid.parse(fd.get('user_id'))
+ const role=z.enum(['admin','responsible_lead','staff']).parse(fd.get('role')||'staff')
+ if(id===user.id)throw new Error('Je eigen beheeraccount is al goedgekeurd.')
+ const {error}=await s.rpc('upt_admin_set_account',{p_user:id,p_approved:true,p_role:role})
+ check(error)
+ revalidatePath('/personnel')
+ revalidatePath('/notifications')
+ redirect('/personnel?feedback=approved')
+}
+
 export async function setAccountStatus(fd:FormData){
  const {s,user}=await adminClient();const id=uuid.parse(fd.get('user_id'));const status=z.enum(['pending','approved']).parse(fd.get('status'));const approved=status==='approved'
  const role=z.enum(['admin','responsible_lead','staff']).parse(fd.get('role')||'staff')
