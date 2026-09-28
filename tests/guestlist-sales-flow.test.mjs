@@ -109,3 +109,10 @@ test('navigation exposes guestlist and sales with role scoped defaults',async()=
   assert.match(layout,/guestlist:showGuestlist/)
   assert.match(layout,/sales:showSales/)
 })
+
+
+test('admin main dashboard exposes the AI assistant',async()=>{
+  const admin=await read('app/(app)/admin/page.tsx')
+  assert.match(admin,/PlatformAiAssistant/)
+  assert.match(admin,/components\/admin\/platform-ai-assistant/)
+})
