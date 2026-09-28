@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect, useState } from 'react'
+import { showSaveSuccess } from '@/lib/client-save-success'
 
 type Table = {name: string; primaryKey: string[]; columns: {name: string; type: string; required: boolean; generated: boolean}[]}
 type Row = Record<string, unknown>
@@ -57,6 +58,7 @@ export function GodDataEditor() {
       if(!response.ok)throw new Error(data.error)
       await load(table,offset)
       setMessage(remove?'Record verwijderd en gelogd.':'Record opgeslagen en gelogd.')
+      if(!remove)showSaveSuccess()
     }catch(error){setMessage(error instanceof Error?error.message:'Opslaan mislukt.')}
     finally{setBusy(false)}
   }
