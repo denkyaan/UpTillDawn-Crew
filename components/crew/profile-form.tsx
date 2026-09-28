@@ -72,9 +72,10 @@ export function ProfileForm({
       if (error) throw new Error('Profiel opslaan mislukt.')
 
       const preferred=value('preferred_workplace')
-      const {error:preferenceError}=await s.rpc('upt_set_own_workplace_preference',{
-        p_workplace:preferred||undefined,
-      })
+      const {error:preferenceError}=await s.rpc(
+        'upt_set_own_workplace_preference',
+        preferred?{p_workplace:preferred}:{},
+      )
       if(preferenceError)throw new Error('Werkplekvoorkeur opslaan mislukt.')
 
       if (uploadedPath && oldPath && oldPath !== uploadedPath) {
