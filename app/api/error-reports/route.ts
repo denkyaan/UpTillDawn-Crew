@@ -58,7 +58,7 @@ export async function POST(request:Request){
   const input=parsed.data
   const {data,error}=await s.rpc('upt_report_client_error',{
     p_route:input.route,
-    p_error_name:input.errorName||undefined,
+    p_error_name:input.errorName,
     p_error_message:input.errorMessage,
     p_stack_trace:input.stackTrace||undefined,
     p_source:input.source,
