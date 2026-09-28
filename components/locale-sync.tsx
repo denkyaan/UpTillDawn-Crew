@@ -10,7 +10,7 @@ const originalText = new WeakMap<Text, string>()
 const renderedText = new WeakMap<Text, string>()
 const originalAttributes = new WeakMap<Element, Map<string, string>>()
 const renderedAttributes = new WeakMap<Element, Map<string, string>>()
-const attributes = ["placeholder", "aria-label", "title"] as const
+const attributes = ["placeholder", "aria-label", "aria-description", "title", "alt"] as const
 
 const canonicalUiText = new Map<string, string>()
 for (const [nl, row] of Object.entries(UI_TRANSLATIONS)) {
@@ -129,7 +129,7 @@ export function LocaleSync() {
   useEffect(() => {
     let locale = deviceLocale()
     let applying = false
-    const applyLocale = (nextLocale: ExtendedUiLocale, persist = false) => {
+    const applyLocale = (nextLocale: ExtendedUiLocale, persist = true) => {
       locale = nextLocale
       document.documentElement.lang = locale
       if (persist) {
@@ -147,9 +147,18 @@ export function LocaleSync() {
             ? (locale === "fr" ? "Connexion personnel" : locale === "en" ? "Staff login" : locale === "de" ? "Personal-Anmeldung" : "Personeel inloggen")
             : (locale === "fr" ? "UP TILL DAWN Personnel" : locale === "en" ? "UP TILL DAWN Staff" : locale === "de" ? "UP TILL DAWN Personal" : "UP TILL DAWN Personeel")
       document.title = path.startsWith("/login") ? `${portal} | UP TILL DAWN Crew` : portal
+      const description = locale === "fr"
+        ? "Gestion des équipes et du personnel pour les événements Up Till Dawn."
+        : locale === "en"
+          ? "Crew and staff management for Up Till Dawn events."
+          : locale === "de"
+            ? "Crew- und Personalverwaltung für Up Till Dawn Veranstaltungen."
+            : "Crew- en personeelsbeheer voor Up Till Dawn-evenementen."
+      document.querySelectorAll('meta[name="description"],meta[property="og:description"]').forEach(meta=>meta.setAttribute("content",description))
+      window.dispatchEvent(new CustomEvent("uptilldawn-language-applied",{detail:locale}))
       applying = false
     }
-    applyLocale(locale, false)
+    applyLocale(locale, true)
     const observer = new MutationObserver(mutations => {
       if (applying) return
       applying = true
@@ -162,7 +171,7 @@ export function LocaleSync() {
     })
     observer.observe(document.body, { subtree: true, childList: true, characterData: true, attributes: true, attributeFilter: [...attributes] })
     const onLanguageChange = (event: Event) => applyLocale(normalizeLocale((event as CustomEvent<string>).detail), true)
-    const onDeviceLanguageChange = () => applyLocale(deviceLocale(), false)
+    const onDeviceLanguageChange = () => applyLocale(deviceLocale(), true)
     window.addEventListener("uptilldawn-language-change", onLanguageChange)
     window.addEventListener("languagechange", onDeviceLanguageChange)
     return () => {
