@@ -68,10 +68,10 @@ test('every static user-facing UI string has NL/FR/EN/DE coverage', async () => 
   ])
   const fourLanguageKeys=new Set()
   for(const source of [extension,complete]){
-    for(const match of source.matchAll(/^\s{2}['"]([^'"]+)['"]\s*:\s*\{([^\n]+)\},?$/gm)){
-      const row=match[2]
-      if(/fr:\s*['"][^'"]+['"]/.test(row)&&/en:\s*['"][^'"]+['"]/.test(row)&&/de:\s*['"][^'"]+['"]/.test(row)){
-        fourLanguageKeys.add(decode(match[1]))
+    for(const match of source.matchAll(/^\s{2}(['"])(.*?)\1\s*:\s*\{([^\n]+)\},?$/gm)){
+      const row=match[3]
+      if(/fr:\s*['"][^\n]+?['"]\s*,/.test(row)&&/en:\s*['"][^\n]+?['"]\s*,/.test(row)&&/de:\s*['"][^\n]+?['"]/.test(row)){
+        fourLanguageKeys.add(decode(match[2]))
       }
     }
   }
