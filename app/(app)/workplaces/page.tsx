@@ -63,7 +63,7 @@ export default async function Page(){
       s.from('events').select('id,name').neq('status','archived').order('start_at'),
       s.from('workplace_catalog').select('id,name,description,sort_order').eq('is_active',true).order('sort_order').order('name'),
       s.from('workplaces').select('id,event_id,name,description,sort_order,is_active,minimum_staff,target_staff,maximum_staff,events(name,start_at,end_at)').eq('is_active',true).order('sort_order'),
-      s.from('shifts').select('id,event_id,workplace_id,user_id,role_name,shift_kind,status,response_status,scheduled_start,scheduled_end,overlap_allowed').neq('status','cancelled').order('scheduled_start'),
+      s.from('shifts').select('id,event_id,workplace_id,user_id,role_name,shift_kind,status,response_status,scheduled_start,scheduled_end,overlap_allowed').neq('status','cancelled').neq('response_status','declined').order('scheduled_start'),
       s.from('profiles').select('id,full_name,role').eq('approved',true).order('full_name'),
       s.from('responsible_assignments').select('workplace_id,user_id'),
       s.from('event_availability').select('event_id,user_id,response,setup_available,breakdown_available').or('response.eq.can,setup_available.eq.true,breakdown_available.eq.true'),
@@ -138,7 +138,7 @@ export default async function Page(){
 
     if(isResponsible){
       const [{data:shiftRows},{data:responsibleRows}]=await Promise.all([
-        s.from('shifts').select('id,event_id,workplace_id,user_id,role_name,shift_kind,status,response_status,scheduled_start,scheduled_end,overlap_allowed').in('workplace_id',workplaceIds).neq('status','cancelled').order('scheduled_start'),
+        s.from('shifts').select('id,event_id,workplace_id,user_id,role_name,shift_kind,status,response_status,scheduled_start,scheduled_end,overlap_allowed').in('workplace_id',workplaceIds).neq('status','cancelled').neq('response_status','declined').order('scheduled_start'),
         s.from('responsible_assignments').select('event_id,workplace_id,user_id').in('workplace_id',workplaceIds),
       ])
       const memberResults=await Promise.all(workplaces.map(workplace=>
