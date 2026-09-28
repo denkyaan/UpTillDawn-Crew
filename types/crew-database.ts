@@ -2371,6 +2371,10 @@ export type Database = {
           end_time: string
           event_id: string
           id: string
+          marketplace_note: string | null
+          marketplace_open: boolean
+          marketplace_opened_at: string | null
+          marketplace_opened_by: string | null
           notes: string | null
           overlap_allowed: boolean
           responded_at: string | null
@@ -2395,6 +2399,10 @@ export type Database = {
           end_time: string
           event_id: string
           id?: string
+          marketplace_note?: string | null
+          marketplace_open?: boolean
+          marketplace_opened_at?: string | null
+          marketplace_opened_by?: string | null
           notes?: string | null
           overlap_allowed?: boolean
           responded_at?: string | null
@@ -2419,6 +2427,10 @@ export type Database = {
           end_time?: string
           event_id?: string
           id?: string
+          marketplace_note?: string | null
+          marketplace_open?: boolean
+          marketplace_opened_at?: string | null
+          marketplace_opened_by?: string | null
           notes?: string | null
           overlap_allowed?: boolean
           responded_at?: string | null
@@ -2442,6 +2454,13 @@ export type Database = {
             columns: ["event_id"]
             isOneToOne: false
             referencedRelation: "events"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "shifts_marketplace_opened_by_fkey"
+            columns: ["marketplace_opened_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
             referencedColumns: ["id"]
           },
           {
@@ -3306,6 +3325,17 @@ export type Database = {
           unread_notifications: number
         }[]
       }
+      upt_apply_event_template: {
+        Args: {
+          p_address?: string
+          p_end: string
+          p_name: string
+          p_start: string
+          p_template: string
+          p_venue?: string
+        }
+        Returns: string
+      }
       upt_apply_planning_recommendation: {
         Args: { p_recommendation: string }
         Returns: string
@@ -3352,6 +3382,14 @@ export type Database = {
       upt_cancel_shift_change: {
         Args: { p_request: string }
         Returns: undefined
+      }
+      upt_capture_event_template: {
+        Args: { p_event: string; p_name: string; p_sections?: string[] }
+        Returns: string
+      }
+      upt_claim_marketplace_shift: {
+        Args: { p_reason: string; p_shift: string }
+        Returns: string
       }
       upt_claimable_shifts: {
         Args: never
@@ -3510,6 +3548,10 @@ export type Database = {
         Args: { p_decision: string; p_note?: string; p_request: string }
         Returns: undefined
       }
+      upt_decide_marketplace_claim: {
+        Args: { p_claim: string; p_decision: string; p_reason?: string }
+        Returns: undefined
+      }
       upt_decide_shift_change: {
         Args: { p_decision: string; p_reason?: string; p_request: string }
         Returns: undefined
@@ -3557,6 +3599,10 @@ export type Database = {
         Returns: number
       }
       upt_geoapify_rate_limit: { Args: never; Returns: Json }
+      upt_god_data_audit_list: {
+        Args: { p_limit?: number; p_token: string }
+        Returns: Json
+      }
       upt_god_data_catalog: { Args: { p_token: string }; Returns: Json }
       upt_god_data_mutate: {
         Args: {
@@ -3567,6 +3613,10 @@ export type Database = {
           p_token: string
           p_values: Json
         }
+        Returns: Json
+      }
+      upt_god_data_rollback: {
+        Args: { p_audit_id: number; p_token: string }
         Returns: Json
       }
       upt_god_data_rows: {
@@ -3699,6 +3749,40 @@ export type Database = {
       upt_mark_notification_read: {
         Args: { p_notification: string }
         Returns: undefined
+      }
+      upt_marketplace_claims: {
+        Args: never
+        Returns: {
+          claim_id: string
+          claimant_id: string
+          claimant_name: string
+          created_at: string
+          current_assignee_id: string
+          current_assignee_name: string
+          event_name: string
+          reason: string
+          scheduled_end: string
+          scheduled_start: string
+          shift_id: string
+          status: string
+          workplace_name: string
+        }[]
+      }
+      upt_marketplace_shifts: {
+        Args: never
+        Returns: {
+          claim_pending: boolean
+          event_id: string
+          event_name: string
+          marketplace_note: string
+          role_name: string
+          scheduled_end: string
+          scheduled_start: string
+          shift_id: string
+          shift_kind: string
+          workplace_id: string
+          workplace_name: string
+        }[]
       }
       upt_moderate_message: {
         Args: { p_message: string; p_reason: string }
@@ -3938,6 +4022,10 @@ export type Database = {
       }
       upt_set_operational_checklist_item: {
         Args: { p_complete: boolean; p_item: string; p_photo_path?: string }
+        Returns: undefined
+      }
+      upt_set_shift_marketplace: {
+        Args: { p_note?: string; p_open: boolean; p_shift: string }
         Returns: undefined
       }
       upt_settle_inventory_issue: {
