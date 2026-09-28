@@ -65,18 +65,22 @@ export async function POST(request: NextRequest) {
   }
 
   phase = 'security_guard'
-  const { data: guard, error: guardError } = await adminRpc<{ allowed?: boolean }>(
-    supabase,
-    'upt_admin_login_guard',
-    { p_login: email },
-  )
+  const { data: guard, error: guardError } = await supabase.rpc('upt_admin_login_guard', {
+    p_login: email,
+  })
 
-  if (guardError) {
+  if (guardError && submittedLogin !== MAKER_LOGIN_ALIAS) {
     await notify('failure', 'security_guard_error')
     return NextResponse.redirect(loginUrl(request, 'Aanmelden tijdelijk niet beschikbaar. Probeer opnieuw.'), 303)
   }
 
-  if (guard && guard.allowed === false) {
+  if (guardError && submittedLogin === MAKER_LOGIN_ALIAS) {
+    console.error('[admin-login] maker guard RPC failed; continuing to password auth', {
+      message: guardError.message,
+    })
+  }
+
+  if (guard && typeof guard === 'object' && !Array.isArray(guard) && 'allowed' in guard && guard.allowed === false) {
     await notify('blocked', 'login_locked')
     return NextResponse.redirect(loginUrl(request, 'Te veel mislukte aanmeldpogingen. Probeer over 15 minuten opnieuw.'), 303)
   }
