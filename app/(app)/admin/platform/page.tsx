@@ -4,6 +4,7 @@ import { getCurrentUser } from '@/lib/actions/auth'
 import { createClient } from '@/lib/supabase/crew-server'
 import { DateInput } from '@/components/crew/date-input'
 import { PlatformAiAssistant } from '@/components/admin/platform-ai-assistant'
+import { platformModuleHelp } from '@/lib/ui-field-help'
 import {
   applyEventTemplate, applyPlanningRecommendation, captureEventTemplate, createKnowledgeArticle,
   createQrResource, dismissPlanningRecommendation, generateEventReport, generatePlanningRecommendations,
@@ -121,7 +122,7 @@ export default async function PlatformCenter(){
 
     <section className="grid gap-5 xl:grid-cols-2">
       <article className="space-y-3 rounded-2xl border p-4">
-        <h2 className="text-xl font-black">Automatische personeelsplanning</h2>
+        <div><h2 className="text-xl font-black">{platformModuleHelp('planning').label}</h2><p className="text-sm text-muted-foreground">{platformModuleHelp('planning').description}</p></div>
         <form action={generatePlanningRecommendations} className="flex flex-col gap-2 sm:flex-row">
           <select name="event_id" required className={input+' flex-1'}><option value="">Evenement kiezen…</option>{events.map(e=><option key={e.id} value={e.id}>{e.name}</option>)}</select>
           <button className="rounded-xl bg-violet-600 px-4 py-3 font-bold text-white">GENEREER VOORSTELLEN</button>
@@ -135,7 +136,7 @@ export default async function PlatformCenter(){
       </article>
 
       <article className="space-y-3 rounded-2xl border p-4">
-        <h2 className="text-xl font-black">Eventtemplates</h2>
+        <div><h2 className="text-xl font-black">{platformModuleHelp('templates').label}</h2><p className="text-sm text-muted-foreground">{platformModuleHelp('templates').description}</p></div>
         <form action={captureEventTemplate} className="grid gap-2">
           <select name="event_id" required className={input}><option value="">Bron-evenement…</option>{events.map(e=><option key={e.id} value={e.id}>{e.name}</option>)}</select>
           <input name="name" required maxLength={200} placeholder="Templatenaam" className={input}/>
@@ -148,7 +149,7 @@ export default async function PlatformCenter(){
 
     <section className="grid gap-5 xl:grid-cols-2">
       <article className="space-y-3 rounded-2xl border p-4">
-        <h2 className="text-xl font-black">Rapportage & personeelskost</h2>
+        <div><h2 className="text-xl font-black">{platformModuleHelp('reporting').label}</h2><p className="text-sm text-muted-foreground">{platformModuleHelp('reporting').description}</p></div>
         <form action={generateEventReport} className="flex flex-col gap-2 sm:flex-row"><select name="event_id" required className={input+' flex-1'}><option value="">Evenement…</option>{events.map(e=><option key={e.id} value={e.id}>{e.name}</option>)}</select><button className="rounded-xl border px-4 py-3 font-bold">GENEREER RAPPORT</button></form>
         <form action={savePayRate} className="grid gap-2 sm:grid-cols-2">
           <select name="user_id" required className={input}><option value="">Personeelslid…</option>{(profilesResult.data||[]).map(p=><option key={p.id} value={p.id}>{p.full_name||'Personeelslid'}</option>)}</select>
@@ -163,14 +164,14 @@ export default async function PlatformCenter(){
       </article>
 
       <article className="space-y-3 rounded-2xl border p-4">
-        <h2 className="text-xl font-black">Asset management</h2>
+        <div><h2 className="text-xl font-black">{platformModuleHelp('assets').label}</h2><p className="text-sm text-muted-foreground">{platformModuleHelp('assets').description}</p></div>
         {(inventoryResult.data||[]).slice(0,20).map(item=><details key={item.id} className="rounded-xl border p-3"><summary className="cursor-pointer font-semibold">{item.name} · {item.available_quantity}/{item.total_quantity}</summary><form action={updateAssetMetadata} className="mt-3 grid gap-2 sm:grid-cols-2"><input type="hidden" name="item_id" value={item.id}/><input name="asset_code" defaultValue={item.asset_code||''} placeholder="Assetcode" className={input}/><input name="barcode" defaultValue={item.barcode||''} placeholder="Barcode / QR" className={input}/><input name="serial_number" defaultValue={item.serial_number||''} placeholder="Serienummer" className={input}/><input name="location_label" defaultValue={item.location_label||''} placeholder="Locatie" className={input}/><input name="maintenance_due_at" type="datetime-local" defaultValue={item.maintenance_due_at?new Date(item.maintenance_due_at).toISOString().slice(0,16):''} className={input}/><input name="reorder_threshold" type="number" min="0" defaultValue={item.reorder_threshold} className={input}/><input name="unit_cost" type="number" min="0" step="0.01" defaultValue={item.unit_cost_cents==null?'':item.unit_cost_cents/100} placeholder="Eenheidskost €" className={input}/><input name="asset_notes" defaultValue={item.asset_notes||''} placeholder="Assetnotitie" className={input}/><button className="rounded-xl border p-3 font-bold sm:col-span-2">ASSET OPSLAAN</button></form></details>)}
       </article>
     </section>
 
     <section className="grid gap-5 xl:grid-cols-2">
       <article className="space-y-3 rounded-2xl border p-4">
-        <h2 className="text-xl font-black">Kennisbank</h2>
+        <div><h2 className="text-xl font-black">{platformModuleHelp('knowledge').label}</h2><p className="text-sm text-muted-foreground">{platformModuleHelp('knowledge').description}</p></div>
         <form action={createKnowledgeArticle} className="grid gap-2">
           <input name="title" required maxLength={200} placeholder="Titel" className={input}/>
           <input name="category" maxLength={120} placeholder="Categorie" className={input}/>
@@ -184,7 +185,7 @@ export default async function PlatformCenter(){
       </article>
 
       <article className="space-y-3 rounded-2xl border p-4">
-        <h2 className="text-xl font-black">Operationele QR-resources</h2>
+        <div><h2 className="text-xl font-black">{platformModuleHelp('qr').label}</h2><p className="text-sm text-muted-foreground">{platformModuleHelp('qr').description}</p></div>
         <form action={createQrResource} className="grid gap-2">
           <input name="title" required maxLength={200} placeholder="QR-titel" className={input}/>
           <select name="resource_type" className={input} defaultValue="workplace">{['workplace','inventory','document','checklist','task','knowledge'].map(x=><option key={x} value={x}>{x}</option>)}</select>
@@ -199,7 +200,7 @@ export default async function PlatformCenter(){
 
     <section className="grid gap-5 xl:grid-cols-2">
       <article className="space-y-3 rounded-2xl border p-4">
-        <h2 className="text-xl font-black">Feature rollouts</h2>
+        <div><h2 className="text-xl font-black">{platformModuleHelp('rollouts').label}</h2><p className="text-sm text-muted-foreground">{platformModuleHelp('rollouts').description}</p></div>
         {(featuresResult.data||[]).map(feature=><form key={feature.feature_key} action={setFeatureRollout} className="grid gap-2 rounded-xl border p-3 sm:grid-cols-[minmax(0,1fr)_auto_auto]">
           <input type="hidden" name="feature_key" value={feature.feature_key}/><div><b>{feature.feature_key}</b><p className="text-xs text-muted-foreground">{feature.notes||'Geen notitie'}</p></div>
           <select name="audience" defaultValue={feature.audience} className={input}><option value="all">all</option><option value="admin">admin</option><option value="responsible">responsible</option><option value="staff">staff</option></select>
@@ -211,7 +212,7 @@ export default async function PlatformCenter(){
       </article>
 
       <article className="space-y-3 rounded-2xl border p-4">
-        <h2 className="text-xl font-black">Configuratie, staging & recovery</h2>
+        <div><h2 className="text-xl font-black">{platformModuleHelp('recovery').label}</h2><p className="text-sm text-muted-foreground">{platformModuleHelp('recovery').description}</p></div>
         <form action={snapshotPlatformConfiguration} className="flex flex-col gap-2 sm:flex-row"><input name="note" maxLength={1000} placeholder="Versienotitie" className={input+' flex-1'}/><button className="rounded-xl border px-4 py-3 font-bold">SNAPSHOT MAKEN</button></form>
         <div className="rounded-xl border p-3 text-sm"><b>Recovery readiness</b><pre className="mt-2 overflow-auto whitespace-pre-wrap text-xs text-muted-foreground">{JSON.stringify(recoveryResult.data,null,2)}</pre></div>
         <div className="rounded-xl border border-amber-500/40 p-3 text-sm"><b>Staging</b><p className="mt-1 text-muted-foreground">De applicatie is staging-ready via feature rollouts en geïsoleerde CI. Een aparte Supabase databasebranch wordt pas geprovisioneerd na expliciete kostgoedkeuring.</p></div>
