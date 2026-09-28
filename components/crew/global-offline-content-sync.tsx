@@ -2,7 +2,7 @@
 
 import {useEffect} from 'react'
 import {createClient} from '@/lib/supabase/crew-client'
-import {loadOfflineDocuments,replaceOfflineDocuments,saveOfflineBriefings,saveOfflineBrowseData,saveOfflineEmergency,saveOfflineOperationalData,saveOfflineTasks,type OfflineBriefing,type OfflineChecklist,type OfflineDocument,type OfflineEmergencyInfo,type OfflineEvent,type OfflineIncident,type OfflineInventoryIssue,type OfflineInventoryItem,type OfflineShift,type OfflineTask,type OfflineWorkplace} from '@/lib/crew-offline-snapshot'
+import {loadOfflineDocuments,replaceOfflineDocuments,saveOfflineBriefings,saveOfflineBrowseData,saveOfflineEmergency,saveOfflineOperationalData,saveOfflineTasks,saveOfflineKnowledge,type OfflineBriefing,type OfflineChecklist,type OfflineDocument,type OfflineEmergencyInfo,type OfflineEvent,type OfflineIncident,type OfflineInventoryIssue,type OfflineInventoryItem,type OfflineKnowledgeArticle,type OfflineShift,type OfflineTask,type OfflineWorkplace} from '@/lib/crew-offline-snapshot'
 
 export function GlobalOfflineContentSync({userId}:{userId:string}){
  useEffect(()=>{
@@ -10,7 +10,7 @@ export function GlobalOfflineContentSync({userId}:{userId:string}){
   const s=createClient()
   let cancelled=false
   void (async()=>{
-   const [{data:briefings},{data:personal},{data:assignments},{data:emergency},{data:documents},{data:eventMemberships},{data:workplaces},{data:shifts},{data:incidents},{data:checklists},{data:checklistItems},{data:inventoryItems},{data:inventoryIssues}]=await Promise.all([
+   const [{data:briefings},{data:personal},{data:assignments},{data:emergency},{data:documents},{data:eventMemberships},{data:workplaces},{data:shifts},{data:incidents},{data:checklists},{data:checklistItems},{data:inventoryItems},{data:inventoryIssues},{data:knowledge}]=await Promise.all([
     s.from('briefings').select('id,title,body,version,event_id').order('created_at',{ascending:false}),
     s.from('personal_instructions').select('id,title,body,version,event_id').eq('user_id',userId).order('created_at',{ascending:false}),
     s.from('task_assignments').select('id,status,tasks(id,title,description,event_id,workplace_id)').eq('user_id',userId).order('created_at'),
@@ -24,6 +24,7 @@ export function GlobalOfflineContentSync({userId}:{userId:string}){
     s.from('checklist_items').select('id,checklist_id,label,required,requires_photo,completed_at').order('sort_order'),
     s.from('inventory_items').select('id,event_id,workplace_id,name,category,available_quantity,issued_quantity,damaged_quantity,missing_quantity').eq('is_active',true).order('name'),
     s.from('inventory_issues').select('id,item_id,user_id,outstanding_quantity,issued_at').gt('outstanding_quantity',0).order('issued_at',{ascending:false}),
+    s.from('knowledge_articles').select('id,event_id,workplace_id,category,title,body,updated_at').eq('offline_critical',true).eq('is_published',true).order('updated_at',{ascending:false}),
    ])
    if(cancelled)return
    const briefingItems:OfflineBriefing[]=[
@@ -44,6 +45,7 @@ export function GlobalOfflineContentSync({userId}:{userId:string}){
    const inventoryModels:OfflineInventoryItem[]=(inventoryItems||[]).filter(row=>eventIds.has(row.event_id)).map(row=>({id:row.id,event_id:row.event_id,workplace_id:row.workplace_id,name:row.name,category:row.category,available_quantity:row.available_quantity,issued_quantity:row.issued_quantity,damaged_quantity:row.damaged_quantity,missing_quantity:row.missing_quantity}))
    const inventoryIds=new Set(inventoryModels.map(row=>row.id))
    const issueModels:OfflineInventoryIssue[]=(inventoryIssues||[]).filter(row=>inventoryIds.has(row.item_id)).map(row=>({id:row.id,item_id:row.item_id,user_id:row.user_id,outstanding_quantity:row.outstanding_quantity,issued_at:row.issued_at}))
+   const knowledgeModels:OfflineKnowledgeArticle[]=(knowledge||[]).filter(row=>row.event_id===null||eventIds.has(row.event_id)).map(row=>({id:row.id,event_id:row.event_id,workplace_id:row.workplace_id,category:row.category,title:row.title,body:row.body,updated_at:row.updated_at}))
    const existingDocuments=await loadOfflineDocuments(userId)
    const existingById=new Map(existingDocuments.map(document=>[document.id,document]))
    const offlineDocuments:OfflineDocument[]=[]
@@ -57,7 +59,7 @@ export function GlobalOfflineContentSync({userId}:{userId:string}){
     }
     offlineDocuments.push({key:userId+':'+row.id,userId,id:row.id,event_id:row.event_id,event_name:row.events?.name||'Evenement',kind:row.kind,title:row.title,description:row.description,file_name:row.file_name,mime_type:row.mime_type,storage_path:row.storage_path,updated_at:row.updated_at,blob})
    }
-   await Promise.all([saveOfflineBriefings(userId,briefingItems),saveOfflineTasks(userId,taskItems),saveOfflineEmergency(userId,emergencyItems),saveOfflineBrowseData(userId,eventItems,workplaceItems,shiftItems),saveOfflineOperationalData(userId,incidentItems,checklistModels,inventoryModels,issueModels),replaceOfflineDocuments(userId,offlineDocuments)])
+   await Promise.all([saveOfflineBriefings(userId,briefingItems),saveOfflineTasks(userId,taskItems),saveOfflineEmergency(userId,emergencyItems),saveOfflineBrowseData(userId,eventItems,workplaceItems,shiftItems),saveOfflineOperationalData(userId,incidentItems,checklistModels,inventoryModels,issueModels),saveOfflineKnowledge(userId,knowledgeModels),replaceOfflineDocuments(userId,offlineDocuments)])
   })().catch(()=>{})
   return()=>{cancelled=true}
  },[userId])

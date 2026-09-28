@@ -2,6 +2,10 @@ export type ActionUiLocale='nl'|'fr'|'en'|'de'
 type Row={fr:string;en:string;de:string}
 
 const ROWS:Record<string,Row>={
+  'QR-resource kon niet worden aangemaakt.':{fr:'La ressource QR n’a pas pu être créée.',en:'The QR resource could not be created.',de:'Die QR-Ressource konnte nicht erstellt werden.'},
+  "Kostentarief kon niet worden opgeslagen.":{fr:"Le tarif n’a pas pu être enregistré.",en:"The cost rate could not be saved.",de:"Der Kostensatz konnte nicht gespeichert werden."},
+  "Kennisartikel kon niet worden opgeslagen.":{fr:"L’article de connaissance n’a pas pu être enregistré.",en:"The knowledge article could not be saved.",de:"Der Wissensartikel konnte nicht gespeichert werden."},
+  "Assetgegevens konden niet worden opgeslagen.":{fr:"Les données de l’actif n’ont pas pu être enregistrées.",en:"Asset data could not be saved.",de:"Asset-Daten konnten nicht gespeichert werden."},
   'Wachtwoorden komen niet overeen.':{fr:'Les mots de passe ne correspondent pas.',en:'Passwords do not match.',de:'Die Passwörter stimmen nicht überein.'},
   'Foute logingegevens of u heeft geen toegang tot deze rol.':{fr:'Identifiants incorrects ou vous n’avez pas accès à ce rôle.',en:'Incorrect login details or you do not have access to this role.',de:'Falsche Anmeldedaten oder Sie haben keinen Zugriff auf diese Rolle.'},
   'Je profiel kon niet worden geladen. Probeer opnieuw.':{fr:'Votre profil n’a pas pu être chargé. Réessayez.',en:'Your profile could not be loaded. Try again.',de:'Dein Profil konnte nicht geladen werden. Versuche es erneut.'},

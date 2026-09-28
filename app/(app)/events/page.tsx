@@ -134,6 +134,7 @@ export default async function Page(){
         </summary>
 
         <div className="space-y-4 border-t p-4">
+          {!user.isAdmin&&assigned&&<Link href={'/onboarding?event='+event.id} className="inline-flex rounded-xl border px-3 py-2 text-sm font-bold">Onboarding openen</Link>}
           <EmergencyInformationPanel
             compact
             canEdit={user.isAdmin}

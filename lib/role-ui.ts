@@ -117,6 +117,7 @@ export const ROLE_UI_DEFAULTS: Record<RoleRuleRole, RoleUiRule[]> = {
     featureRule("admin","emergency","Noodinformatie",115),
     featureRule("admin","documents","Documenten",118),
     navRule("admin","exports","Excel",120),
+    navRule("admin","platform","Platform Center",125),
     navRule("admin","settings","Instellingen",130),
   ],
   responsible_lead: [
