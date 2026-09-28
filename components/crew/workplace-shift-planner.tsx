@@ -1,5 +1,6 @@
 import {DateInput} from '@/components/crew/date-input'
 import {assignAvailableCrewShift,cancelShift,confirmShift,declineShift,updateShift} from '@/lib/actions/uptilldawn'
+import { OwnShiftChangeControls, type ShiftReplacementCandidate, type ShiftSwapCandidate } from '@/components/crew/shift-change-controls'
 
 export type WorkplacePlannerPerson={
  id:string
@@ -33,6 +34,9 @@ export function WorkplaceShiftPlanner({
  defaultEnd,
  people,
  shifts,
+ replacementCandidatesByShift,
+ swapCandidatesByShift,
+ openRequestShiftIds,
 }:{
  workplaceId:string
  eventId:string
@@ -42,6 +46,9 @@ export function WorkplaceShiftPlanner({
  defaultEnd?:string
  people:WorkplacePlannerPerson[]
  shifts:WorkplacePlannerShift[]
+ replacementCandidatesByShift:Map<string,ShiftReplacementCandidate[]>
+ swapCandidatesByShift:Map<string,ShiftSwapCandidate[]>
+ openRequestShiftIds:string[]
 }){
  const nameById=new Map(people.map(person=>[person.id,person.fullName]))
 
@@ -131,6 +138,13 @@ export function WorkplaceShiftPlanner({
             </details>
           </div>}
     </div>}
+
+    {!isAdmin&&shift.userId===currentUserId&&shift.status!=='cancelled'&&shift.responseStatus!=='declined'&&<OwnShiftChangeControls
+      shiftId={shift.id}
+      replacementCandidates={replacementCandidatesByShift.get(shift.id)||[]}
+      swapCandidates={swapCandidatesByShift.get(shift.id)||[]}
+      hasOpenRequest={openRequestShiftIds.includes(shift.id)}
+    />}
 
     {isAdmin&&shift.status!=='cancelled'&&<details className="mt-3 rounded-lg border p-3">
      <summary className="cursor-pointer text-sm font-semibold">Dienst bewerken</summary>
