@@ -1,6 +1,6 @@
 import { z } from 'zod'
 
-export const STUDIO_REPOSITORY = 'steegmanskyani-netizen/UpTillDawn-Crew'
+export const STUDIO_REPOSITORY = 'denkyaan/UpTillDawn-Crew'
 export const STUDIO_BRANCH = 'main'
 export const MAX_SOURCE_BYTES = 500_000
 

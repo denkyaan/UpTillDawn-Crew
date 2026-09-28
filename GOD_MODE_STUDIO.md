@@ -16,7 +16,7 @@ Open `/god-mode` with the dedicated God Mode login. This session is independent 
 
 ChatGPT's GitHub/Supabase connector sessions cannot be transferred to a deployed website.
 
-1. Under **Koppelingen**, provide a fine-grained GitHub token scoped to `steegmanskyani-netizen/UpTillDawn-Crew`. Required read/write permissions: Contents, Pull requests, Actions and Workflows (for editing workflow files). God Mode checks repository push access before storing it.
+1. Under **Koppelingen**, provide a fine-grained GitHub token scoped to `denkyaan/UpTillDawn-Crew`. Required read/write permissions: Contents, Pull requests, Actions and Workflows (for editing workflow files). God Mode checks repository push access before storing it.
 2. For free SQL, connect a Supabase Management API token authorized for project `eakoavcieossazqzplke`, with database read/write permissions. This is separate from the public browser key. Ordinary data editing does not require this connection.
 
 Credentials are encrypted in Supabase Vault, never written to GitHub or browser storage, and can be disconnected. Every retrieval and modification RPC checks the private expiring God Mode session. HTTP routes additionally reject cross-site requests and use no-store responses. The public RPC grants support the dedicated God Mode cookie authentication, not anonymous access: absent/invalid/expired God tokens are rejected.

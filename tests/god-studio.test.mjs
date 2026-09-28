@@ -32,6 +32,8 @@ test('all powerful God Mode API routes use the shared studio guard', async()=>{
     'app/api/god/data/route.ts',
     'app/api/god/source/route.ts',
     'app/api/god/sql/route.ts',
+    'app/api/god/text-execution/route.ts',
+    'app/api/god/error-reports/route.ts',
   ]
   for(const path of paths){
     const source=await read(path)
