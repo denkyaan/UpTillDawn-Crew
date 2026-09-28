@@ -58,7 +58,7 @@ export default async function GuestlistPage({
     </main>
   }
 
-  const now=Date.now()
+  const now=new Date().getTime()
   const canCheckIn=isAdmin
     || ownResponsible.some(row=>row.event_id===selected.id)
     || ownShifts.some(row=>row.event_id===selected.id&&Date.parse(row.scheduled_start)<=now&&Date.parse(row.scheduled_end)>=now)
