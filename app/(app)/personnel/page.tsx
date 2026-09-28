@@ -27,6 +27,8 @@ export default async function Page({searchParams}:{searchParams?:Promise<{feedba
       <p className="mt-1 text-sm text-muted-foreground">Keur accounts goed, wijzig rollen, blokkeer toegang tijdelijk of verwijder een account definitief.</p>
     </div>
     {params.feedback==='approved'&&<p role="status" className="mb-4 rounded-xl border border-emerald-500/40 bg-emerald-500/10 p-3 font-semibold text-emerald-600">Account goedgekeurd. De gebruiker heeft nu toegang en ontvangt hiervan een melding.</p>}
+    {params.feedback==='role_saved'&&<p role="status" className="mb-4 rounded-xl border border-emerald-500/40 bg-emerald-500/10 p-3 font-semibold text-emerald-600">Rol opgeslagen.</p>}
+    {params.feedback==='role_error'&&<p role="alert" className="mb-4 rounded-xl border border-red-500/40 bg-red-500/10 p-3 font-semibold text-red-500">Rol opslaan mislukt. Probeer opnieuw.</p>}
     {error && <p>Personeelsgegevens konden niet worden geladen.</p>}
     <div className="grid gap-3">{data?.map(p => {
       const isSelf=p.id===current.id
