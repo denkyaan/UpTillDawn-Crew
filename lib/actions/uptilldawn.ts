@@ -244,11 +244,14 @@ export async function addWorkplace(fd:FormData){
  const {s}=await adminClient()
  const eventId=uuid.parse(fd.get('event_id'))
  const capacity=workplaceCapacityValues(fd)
+ const [defaultShiftStart,defaultShiftEnd]=dates(fd,'default_shift_start','default_shift_end')
  const {error}=await s.from('workplaces').insert({
   event_id:eventId,
   name:text.parse(fd.get('name')),
   description:String(fd.get('description')||'').trim().slice(0,1000)||null,
   sort_order:z.coerce.number().int().min(0).max(10000).parse(fd.get('sort_order')||0),
+  default_shift_start:defaultShiftStart,
+  default_shift_end:defaultShiftEnd,
   is_active:true,
   ...capacity,
  })
@@ -258,12 +261,15 @@ export async function updateWorkplace(fd:FormData){
  const {s}=await adminClient()
  const workplaceId=uuid.parse(fd.get('workplace_id'))
  const capacity=workplaceCapacityValues(fd)
+ const [defaultShiftStart,defaultShiftEnd]=dates(fd,'default_shift_start','default_shift_end')
  const {data:workplace,error:workplaceError}=await s.from('workplaces').select('event_id').eq('id',workplaceId).single()
  check(workplaceError);if(!workplace)throw new Error('Werkplek niet gevonden.')
  const {error}=await s.from('workplaces').update({
   name:text.parse(fd.get('name')),
   description:String(fd.get('description')||'').trim().slice(0,1000)||null,
   sort_order:z.coerce.number().int().min(0).max(10000).parse(fd.get('sort_order')||0),
+  default_shift_start:defaultShiftStart,
+  default_shift_end:defaultShiftEnd,
   is_active:fd.get('is_active')==='on',
   ...capacity,
  }).eq('id',workplaceId)
