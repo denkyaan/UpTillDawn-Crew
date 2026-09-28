@@ -4905,7 +4905,7 @@ export type Database = {
         Returns: undefined
       }
       upt_set_own_workplace_preference: {
-        Args: { p_workplace: string }
+        Args: { p_workplace?: string }
         Returns: undefined
       }
       upt_set_shift_marketplace: {
