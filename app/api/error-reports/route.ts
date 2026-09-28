@@ -2,6 +2,7 @@ import { getCloudflareContext } from '@opennextjs/cloudflare'
 import { z } from 'zod'
 import { createClient } from '@/lib/supabase/crew-server'
 import { processErrorReport, type ErrorAiBinding } from '@/lib/error-report-ai'
+import type { Json } from '@/types/crew-database'
 
 export const runtime='nodejs'
 export const dynamic='force-dynamic'
@@ -62,7 +63,7 @@ export async function POST(request:Request){
     p_error_message:input.errorMessage,
     p_stack_trace:input.stackTrace||undefined,
     p_source:input.source,
-    p_client_context:input.clientContext,
+    p_client_context:input.clientContext as Json,
   })
 
   if(error){
