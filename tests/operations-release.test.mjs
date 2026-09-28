@@ -18,7 +18,7 @@ test('planning keeps availability, duplication and overlap controls',async()=>{
  assert.match(events,/Beschikbaarheid bevestigen/)
  assert.match(events,/Evenement dupliceren/)
  assert.match(events,/overlap_allowed/)
- assert.match(actions,/upt_set_event_availability_extended/)
+ assert.match(actions,/upt_set_event_availability_with_reason/)
  assert.match(actions,/duplicateEvent/)
  assert.match(actions,/upt_create_shift/)
 })
