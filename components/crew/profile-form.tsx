@@ -19,10 +19,14 @@ export function ProfileForm({
   id,
   initial,
   photoUrl,
+  preferredWorkplaceId,
+  workplaceOptions,
 }: {
   id: string
   initial: ProfileValues
   photoUrl?: string | null
+  preferredWorkplaceId?: string | null
+  workplaceOptions: Array<{id:string;name:string}>
 }) {
   const [msg, setMsg] = useState('')
   const [busy, setBusy] = useState(false)
@@ -67,6 +71,12 @@ export function ProfileForm({
       })
       if (error) throw new Error('Profiel opslaan mislukt.')
 
+      const preferred=value('preferred_workplace')
+      const {error:preferenceError}=await s.rpc('upt_set_own_workplace_preference',{
+        p_workplace:preferred||undefined,
+      })
+      if(preferenceError)throw new Error('Werkplekvoorkeur opslaan mislukt.')
+
       if (uploadedPath && oldPath && oldPath !== uploadedPath) {
         await s.storage.from('profile-photos').remove([oldPath])
       }
@@ -90,6 +100,13 @@ export function ProfileForm({
     <label className="block">Geboortedatum<input name="dob" type="date" defaultValue={initial.date_of_birth || ''} className="mt-1 block w-full rounded-xl border bg-background p-3"/></label>
     <label className="block">Rijksregisternummer<input name="national_register" autoComplete="off" maxLength={32} defaultValue={initial.national_register_number || ''} className="mt-1 block w-full rounded-xl border bg-background p-3"/></label>
     <label className="block">IBAN<input name="iban" autoComplete="off" maxLength={34} defaultValue={initial.iban || ''} className="mt-1 block w-full rounded-xl border bg-background p-3 uppercase"/></label>
+    <label className="block">Voorkeur werkplek
+      <select name="preferred_workplace" defaultValue={preferredWorkplaceId||''} className="mt-1 block w-full rounded-xl border bg-background p-3">
+        <option value="">Geen voorkeur</option>
+        {workplaceOptions.map(option=><option key={option.id} value={option.id}>{option.name}</option>)}
+      </select>
+    </label>
+    <p className="text-xs text-muted-foreground">Deze voorkeur helpt de planning en wordt gebruikt om bij uitval automatisch de eerstvolgende geschikte wachtlijstkandidaat voor dezelfde werkplek te kiezen.</p>
     <label className="block">Permanente profielfoto<input name="photo" type="file" accept="image/jpeg,image/png,image/webp" className="mt-1 block w-full rounded-xl border bg-background p-3"/></label>
     <p className="text-xs text-muted-foreground">Adres, geboortedatum, rijksregisternummer en IBAN is enkel zichtbaar voor admin.</p>
     <button disabled={busy} className="w-full rounded-xl bg-violet-600 p-3 font-bold">{busy ? 'OPSLAAN…' : 'PROFIEL OPSLAAN'}</button>
