@@ -1,5 +1,5 @@
 'use server'
-import { revalidatePath } from 'next/cache'
+import { revalidatePath } from '@/lib/save-success'
 import { z } from 'zod'
 import { createClient } from '@/lib/supabase/crew-server'
 const uuid=z.string().uuid()
@@ -12,7 +12,7 @@ export async function deletePersonnel(fd:FormData){
  if(workPaths.length){const {error}=await s.storage.from('work-media').remove(workPaths);if(error)throw new Error('Media van deze gebruiker kon niet veilig worden verwijderd.')}
  if(profile?.profile_photo_url){const {error}=await s.storage.from('profile-photos').remove([profile.profile_photo_url]);if(error)throw new Error('Profielfoto kon niet veilig worden verwijderd.')}
  const {error}=await s.rpc('upt_admin_set_account',{p_user:target,p_approved:false,p_role:'__delete__'});if(error)throw new Error(error.message||'Gebruiker verwijderen mislukt.')
- revalidatePath('/personnel');revalidatePath('/chat');revalidatePath('/events');revalidatePath('/workplaces');revalidatePath('/shifts');revalidatePath('/tasks');revalidatePath('/briefings');revalidatePath('/')
+ await revalidatePath('/personnel');await revalidatePath('/chat');await revalidatePath('/events');await revalidatePath('/workplaces');await revalidatePath('/shifts');await revalidatePath('/tasks');await revalidatePath('/briefings');await revalidatePath('/')
 }
 
 
@@ -24,5 +24,5 @@ export async function setPersonnelBlock(fd:FormData){
  const reason=String(fd.get('reason')||'').trim().slice(0,1000)||undefined
  const {error}=await s.rpc('upt_admin_set_personnel_block',{p_user:target,p_blocked:blocked,p_reason:reason})
  if(error)throw new Error(error.message)
- revalidatePath('/personnel');revalidatePath('/');revalidatePath('/events');revalidatePath('/shifts');revalidatePath('/workplaces')
+ await revalidatePath('/personnel');await revalidatePath('/');await revalidatePath('/events');await revalidatePath('/shifts');await revalidatePath('/workplaces')
 }
