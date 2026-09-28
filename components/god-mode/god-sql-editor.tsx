@@ -1,5 +1,6 @@
 'use client'
 import {useState} from 'react'
+import { showSaveSuccess } from '@/lib/client-save-success'
 
 const templates = [
   {name:'Workflowfuncties bekijken',sql:"select p.oid::regprocedure as functie, pg_get_functiondef(p.oid) as code\nfrom pg_proc p join pg_namespace n on n.oid=p.pronamespace\nwhere n.nspname='public' and p.prokind='f' and p.proname like 'upt_%'\norder by p.proname;"},
@@ -22,6 +23,7 @@ export function GodSqlEditor(){
       const data=await response.json()
       if(!response.ok)throw new Error(data.error)
       setResult(JSON.stringify(data.data,null,2));setConfirmed(false)
+      if(write)showSaveSuccess()
     }catch(error){setResult(error instanceof Error?error.message:'SQL uitvoeren mislukt.')}
     finally{setBusy(false)}
   }
