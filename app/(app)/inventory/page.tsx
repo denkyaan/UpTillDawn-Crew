@@ -2,6 +2,7 @@ import { redirect } from 'next/navigation'
 import { getCurrentUser } from '@/lib/actions/auth'
 import { createClient } from '@/lib/supabase/crew-server'
 import { EventDocumentsPanel } from '@/components/crew/event-documents-panel'
+import { PlatformAiAssistant } from '@/components/admin/platform-ai-assistant'
 import { WorkplaceInventoryMaterials, type WorkplaceInventoryMaterial } from '@/components/crew/workplace-inventory-materials'
 import {
   WorkplaceCatalogInventory,
@@ -111,6 +112,7 @@ export default async function InventoryPage(){
     {workplaceLoadError&&<p className="rounded-2xl border border-amber-500/40 p-4 text-sm text-amber-600">Eventwerkplekken konden tijdelijk niet volledig worden geladen.</p>}
     {materialLoadError&&<p className="rounded-2xl border border-amber-500/40 p-4 text-sm text-amber-600">Materialen konden tijdelijk niet volledig worden geladen.</p>}
 
+    {isAdmin&&<PlatformAiAssistant contextKey="inventory" contextLabel="Inventory"/>}
     {isAdmin&&<WorkplaceCatalogInventory workplaces={catalogWorkplaces} items={catalogItems}/>} 
 
     {!visible.length&&<p className="rounded-2xl border p-5 text-muted-foreground">
