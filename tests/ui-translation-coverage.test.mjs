@@ -102,11 +102,20 @@ function completeKeys(source){
 }
 
 test('every static UI string has NL/FR/EN/DE translation coverage',async()=>{
-  const [extension,complete]=await Promise.all([
+  const [extension,complete,app,extra,crew]=await Promise.all([
     readFile(new URL('../lib/ui-translation-extensions.ts',import.meta.url),'utf8'),
     readFile(new URL('../lib/ui-translation-complete.ts',import.meta.url),'utf8'),
+    readFile(new URL('../lib/ui-translation-catalog-app.ts',import.meta.url),'utf8'),
+    readFile(new URL('../lib/ui-translation-catalog-app-extra.ts',import.meta.url),'utf8'),
+    readFile(new URL('../lib/ui-translation-catalog-crew.ts',import.meta.url),'utf8'),
   ])
-  const covered=new Set([...completeKeys(extension),...completeKeys(complete)])
+  const covered=new Set([
+    ...completeKeys(extension),
+    ...completeKeys(complete),
+    ...completeKeys(app),
+    ...completeKeys(extra),
+    ...completeKeys(crew),
+  ])
   const files=[...await walk(new URL('../app',import.meta.url)),...await walk(new URL('../components',import.meta.url))]
   const missing=[]
   for(const file of files){
