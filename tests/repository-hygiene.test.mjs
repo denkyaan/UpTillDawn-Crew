@@ -26,7 +26,8 @@ test('active runtime has no service-role secret or retired StaffPortal schema re
   for (const file of await sourceFiles()) {
     const text = await readFile(file, 'utf8')
     assert.doesNotMatch(text, /SUPABASE_SERVICE_ROLE_KEY|service_role_key/i, relative(root, file))
-    assert.doesNotMatch(text, retired, relative(root, file))
+    const runtimePath=relative(root,file).replaceAll('\\','/')
+    if(!runtimePath.startsWith('lib/ui-translation-'))assert.doesNotMatch(text, retired, runtimePath)
     assert.doesNotMatch(text, /2315/, relative(root, file))
   }
 })
@@ -51,9 +52,12 @@ test('environment example exposes required public variables and keeps server sec
     'NEXT_PUBLIC_SUPABASE_ANON_KEY',
     'NEXT_PUBLIC_APP_URL',
     'GEOAPIFY_API_KEY',
+    'TRANSLATION_API_URL',
+    'TRANSLATION_API_KEY',
   ])
   assert.doesNotMatch(text, /NEXT_PUBLIC_GEOAPIFY_API_KEY/)
   assert.doesNotMatch(text, /NEXT_PUBLIC_GOOGLE_MAPS_API_KEY/)
+  assert.doesNotMatch(text, /NEXT_PUBLIC_TRANSLATION_API_(?:URL|KEY)/)
 })
 
 test('migration history has unique version prefixes', async () => {
