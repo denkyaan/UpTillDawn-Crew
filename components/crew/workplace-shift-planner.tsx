@@ -11,6 +11,7 @@ export type WorkplacePlannerPerson={
 
 export type WorkplacePlannerShift={
  id:string
+ workplaceId:string
  userId:string
  roleName:string
  shiftKind:'event'|'setup'|'breakdown'
