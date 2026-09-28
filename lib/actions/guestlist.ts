@@ -19,7 +19,7 @@ async function adminClient(){
   return s
 }
 
-function refresh(){
+async function await refresh(){
   await revalidatePath('/guestlist')
   await revalidatePath('/admin/platform')
 }
@@ -34,7 +34,7 @@ export async function addGuestlistEntry(fd:FormData){
     p_notes:String(fd.get('notes')||'').trim().slice(0,2000)||undefined,
   })
   if(error)throw new Error(error.message)
-  refresh()
+  await refresh()
 }
 
 export async function updateGuestlistEntry(fd:FormData){
@@ -47,14 +47,14 @@ export async function updateGuestlistEntry(fd:FormData){
     p_notes:String(fd.get('notes')||'').trim().slice(0,2000)||undefined,
   })
   if(error)throw new Error(error.message)
-  refresh()
+  await refresh()
 }
 
 export async function removeGuestlistEntry(fd:FormData){
   const s=await adminClient()
   const {error}=await s.rpc('upt_guestlist_remove_entry',{p_entry:uuid.parse(fd.get('entry_id'))})
   if(error)throw new Error(error.message)
-  refresh()
+  await refresh()
 }
 
 export async function setBackstageWorkplace(fd:FormData){
@@ -64,7 +64,7 @@ export async function setBackstageWorkplace(fd:FormData){
     p_workplace:uuid.parse(fd.get('workplace_id')),
   })
   if(error)throw new Error(error.message)
-  refresh()
+  await refresh()
 }
 
 export async function setArtistHospitality(fd:FormData){
@@ -75,5 +75,5 @@ export async function setArtistHospitality(fd:FormData){
     p_notes:String(fd.get('hospitality_notes')||'').trim().slice(0,3000)||undefined,
   })
   if(error)throw new Error(error.message)
-  refresh()
+  await refresh()
 }
