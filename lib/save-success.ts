@@ -5,6 +5,10 @@ import { cookies } from 'next/headers'
 
 const SAVE_SUCCESS_COOKIE='upt-save-success'
 
+export async function markSaveSuccess(){
+  await markSaveSuccess()
+}
+
 export async function revalidatePath(
   path:string,
   type?:'layout'|'page',
