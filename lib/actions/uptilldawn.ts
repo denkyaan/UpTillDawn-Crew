@@ -212,8 +212,10 @@ export async function createEvent(fd:FormData){
  const name=text.parse(imported?.name||manualName)
  const start=imported?.startAt||optionalIso(fd,'start_at')
  const end=imported?.endAt||optionalIso(fd,'end_at')
- if(!start||!end)throw new Error('Vul start- en einduur in wanneer Facebook deze niet openbaar meegeeft.')
- if(Date.parse(end)<=Date.parse(start))throw new Error('Einde moet na begin liggen.')
+ const registrationDeadline=optionalIso(fd,'registration_deadline')||start
+ if(!start||!end)throw new Error('Vul start- en einduur in wanneer Facebook deze niet openbaar meegeeft.')
+ if(Date.parse(end)<=Date.parse(start))throw new Error('Einde moet na begin liggen.')
+ if(Date.parse(registrationDeadline)>Date.parse(start))throw new Error('De aanmelddeadline moet vóór of op de start van het evenement liggen.')
  const location=await eventLocation(fd,{
   venue:imported?.venue||undefined,
   address:imported?.address||undefined,
@@ -224,6 +226,7 @@ export async function createEvent(fd:FormData){
   address:location.address,
   latitude:location.latitude,longitude:location.longitude,
   start_at:start,end_at:end,start_date:start,end_date:end,
+  registration_deadline:registrationDeadline,
   facebook_event_url:facebookUrl?(imported?.sourceUrl||facebookUrl):null,
   checkin_radius_m:z.coerce.number().int().min(10).max(10000).parse(fd.get('radius')||100),
   created_by:user.id,
@@ -1200,15 +1203,18 @@ export async function updateEventEmergencyInformation(fd:FormData){
  revalidatePath('/events');revalidatePath('/incidents');revalidatePath('/')
 }
 export async function updateEvent(fd:FormData){
- const {s}=await adminClient()
- const [start,end]=dates(fd,'start_at','end_at')
- const location=await eventLocation(fd)
+ const {s}=await adminClient()
+ const [start,end]=dates(fd,'start_at','end_at')
+ const registrationDeadline=optionalIso(fd,'registration_deadline')||start
+ if(Date.parse(registrationDeadline)>Date.parse(start))throw new Error('De aanmelddeadline moet vóór of op de start van het evenement liggen.')
+ const location=await eventLocation(fd)
  const {error}=await s.from('events').update({
   name:text.parse(fd.get('name')),
   venue:location.venue,
   address:location.address,
   latitude:location.latitude,longitude:location.longitude,
   start_at:start,end_at:end,start_date:start,end_date:end,
+  registration_deadline:registrationDeadline,
   checkin_radius_m:z.coerce.number().int().min(10).max(10000).parse(fd.get('radius')),
  }).eq('id',uuid.parse(fd.get('event_id')))
  check(error);revalidatePath('/events')
