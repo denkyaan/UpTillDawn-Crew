@@ -32,15 +32,18 @@ test('shift actions integrate accept decline and admin reassignment', async () =
   assert.match(source, /neq\('response_status','declined'\)/)
 })
 
-test('shift UI exposes response state refusal and controlled reassignment', async () => {
-  const source = await readFile(new URL('../app/(app)/shifts/page.tsx', import.meta.url), 'utf8')
+test('merged workplace shift UI exposes response state refusal and controlled reassignment', async () => {
+  const [page,planner] = await Promise.all([
+    readFile(new URL('../app/(app)/workplaces/page.tsx', import.meta.url), 'utf8'),
+    readFile(new URL('../components/crew/workplace-shift-planner.tsx', import.meta.url), 'utf8'),
+  ])
   for (const label of ['WACHT OP REACTIE','SHIFT GEWEIGERD','ALSNOCH BEVESTIGEN','DIENST WEIGEREN','HERPLAN DIENST']) {
-    assert.ok(source.includes(label), label)
+    assert.ok(planner.includes(label), label)
   }
-  assert.match(source, /response_reason/)
-  assert.match(source, /declineShift/)
-  assert.match(source, /reassignShift/)
-  assert.match(source, /eventMembers/)
+  assert.match(page, /response_reason/)
+  assert.match(planner, /declineShift/)
+  assert.match(planner, /reassignShift/)
+  assert.match(page, /plannerPeopleByEvent/)
 })
 
 test('declined shifts are excluded from staffing coverage', async () => {
