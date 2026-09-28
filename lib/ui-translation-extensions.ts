@@ -30,6 +30,7 @@ const EXTENSIONS: Record<string, Row> = {
   'Werkplekken': { fr: 'Postes de travail', en: 'Workplaces', de: 'Arbeitsplätze' },
   'Taken': { fr: 'Tâches', en: 'Tasks', de: 'Aufgaben' },
   'Briefing': { fr: 'Briefing', en: 'Briefing', de: 'Briefing' },
+  'Briefing & checklists': { fr: 'Briefing & checklists', en: 'Briefing & checklists', de: 'Briefing & Checklisten' },
   'Instructies': { fr: 'Instructions', en: 'Instructions', de: 'Anweisungen' },
   'Gesprekken': { fr: 'Conversations', en: 'Chats', de: 'Chats' },
   'Personeel & goedkeuringen': { fr: 'Personnel et validations', en: 'Staff & approvals', de: 'Personal & Genehmigungen' },
