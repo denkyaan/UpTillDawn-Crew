@@ -68,7 +68,7 @@ export function humanizeTechnicalKey(key:string){
 
 export function fieldHelp(key:string):UiFieldHelp{
  return FIELD_HELP[key]||{
-  label:humanizeTechnicalKey(key),
+  label:'Technisch veld',
   description:'Technisch veld dat door de app of database wordt gebruikt. Pas dit alleen aan als je weet welk proces dit veld beïnvloedt.',
  }
 }
