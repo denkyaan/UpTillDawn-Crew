@@ -4,6 +4,7 @@ import { useEffect } from "react"
 import { UI_TRANSLATIONS, translateUiText, type UiLocale } from "@/lib/ui-translations"
 import { translateUiExtension, type ExtendedUiLocale } from "@/lib/ui-translation-extensions"
 import { translateCompleteUi } from "@/lib/ui-translation-complete"
+import { translateAppUi } from "@/lib/ui-translation-catalog-app"
 import {
   LANGUAGE_APPLIED_EVENT,
   LANGUAGE_CHANGE_EVENT,
@@ -57,6 +58,9 @@ function canonicalizeBase(value: string) {
 }
 
 function translate(value: string, locale: ExtendedUiLocale): string {
+  const catalog = translateAppUi(value, locale)
+  if (catalog !== value) return catalog
+
   const counted = value.match(/^(\d+)\s+(.+)$/)
   if (counted) {
     const translatedTail: string = translate(counted[2], locale)
