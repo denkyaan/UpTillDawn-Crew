@@ -4,8 +4,16 @@ import { useEffect } from "react"
 import { UI_TRANSLATIONS, translateUiText, type UiLocale } from "@/lib/ui-translations"
 import { translateUiExtension, type ExtendedUiLocale } from "@/lib/ui-translation-extensions"
 import { translateCompleteUi } from "@/lib/ui-translation-complete"
-
-const SUPPORTED = new Set<ExtendedUiLocale>(["nl", "fr", "en", "de"])
+import {
+  LANGUAGE_APPLIED_EVENT,
+  LANGUAGE_CHANGE_EVENT,
+  deviceAppLocale,
+  initialAppLocale,
+  parseAppLocale,
+  persistAppLocale,
+  storedLocaleSource,
+  type LocaleSource,
+} from "@/lib/locale"
 const originalText = new WeakMap<Text, string>()
 const renderedText = new WeakMap<Text, string>()
 const originalAttributes = new WeakMap<Element, Map<string, string>>()
@@ -17,24 +25,6 @@ for (const [nl, row] of Object.entries(UI_TRANSLATIONS)) {
   canonicalUiText.set(nl, nl)
   canonicalUiText.set(row.fr, nl)
   canonicalUiText.set(row.en, nl)
-}
-
-function parseLocale(value: string | null | undefined): ExtendedUiLocale | null {
-  const language = value?.trim().toLowerCase().split(/[-_]/)[0] as ExtendedUiLocale | undefined
-  return language && SUPPORTED.has(language) ? language : null
-}
-
-function normalizeLocale(value: string | null | undefined): ExtendedUiLocale {
-  return parseLocale(value) || "nl"
-}
-
-function deviceLocale(): ExtendedUiLocale {
-  const candidates = navigator.languages?.length ? navigator.languages : [navigator.language]
-  for (const candidate of candidates) {
-    const locale = parseLocale(candidate)
-    if (locale) return locale
-  }
-  return "nl"
 }
 
 function canonicalizeBase(value: string) {
@@ -127,15 +117,12 @@ function translateNode(root: Node, locale: ExtendedUiLocale) {
 
 export function LocaleSync() {
   useEffect(() => {
-    let locale = deviceLocale()
+    let locale = initialAppLocale() as ExtendedUiLocale
     let applying = false
-    const applyLocale = (nextLocale: ExtendedUiLocale, persist = true) => {
+    const applyLocale = (nextLocale: ExtendedUiLocale, source: LocaleSource) => {
       locale = nextLocale
       document.documentElement.lang = locale
-      if (persist) {
-        window.localStorage.setItem("uptilldawn-language", locale)
-        document.cookie = `uptilldawn-language=${locale}; path=/; max-age=31536000; samesite=lax`
-      }
+      persistAppLocale(locale, source)
       applying = true
       translateNode(document.body, locale)
       const path = window.location.pathname
@@ -155,10 +142,10 @@ export function LocaleSync() {
             ? "Crew- und Personalverwaltung für Up Till Dawn Veranstaltungen."
             : "Crew- en personeelsbeheer voor Up Till Dawn-evenementen."
       document.querySelectorAll('meta[name="description"],meta[property="og:description"]').forEach(meta=>meta.setAttribute("content",description))
-      window.dispatchEvent(new CustomEvent("uptilldawn-language-applied",{detail:locale}))
+      window.dispatchEvent(new CustomEvent(LANGUAGE_APPLIED_EVENT,{detail:locale}))
       applying = false
     }
-    applyLocale(locale, true)
+    applyLocale(locale, storedLocaleSource()==='manual'?'manual':'device')
     const observer = new MutationObserver(mutations => {
       if (applying) return
       applying = true
@@ -170,13 +157,19 @@ export function LocaleSync() {
       applying = false
     })
     observer.observe(document.body, { subtree: true, childList: true, characterData: true, attributes: true, attributeFilter: [...attributes] })
-    const onLanguageChange = (event: Event) => applyLocale(normalizeLocale((event as CustomEvent<string>).detail), true)
-    const onDeviceLanguageChange = () => applyLocale(deviceLocale(), true)
-    window.addEventListener("uptilldawn-language-change", onLanguageChange)
+    const onLanguageChange = (event: Event) => {
+      const next=parseAppLocale((event as CustomEvent<string>).detail) || 'nl'
+      applyLocale(next as ExtendedUiLocale,'manual')
+    }
+    const onDeviceLanguageChange = () => {
+      if(storedLocaleSource()==='manual')return
+      applyLocale(deviceAppLocale() as ExtendedUiLocale,'device')
+    }
+    window.addEventListener(LANGUAGE_CHANGE_EVENT, onLanguageChange)
     window.addEventListener("languagechange", onDeviceLanguageChange)
     return () => {
       observer.disconnect()
-      window.removeEventListener("uptilldawn-language-change", onLanguageChange)
+      window.removeEventListener(LANGUAGE_CHANGE_EVENT, onLanguageChange)
       window.removeEventListener("languagechange", onDeviceLanguageChange)
     }
   }, [])
