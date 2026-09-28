@@ -37,6 +37,8 @@ function movementLabel(type:string){
   if(type==='missing')return 'Vermist'
   if(type==='restored-damaged')return 'Hersteld'
   if(type==='restored-missing')return 'Teruggevonden'
+  if(type==='sold')return 'Verkocht'
+  if(type==='sale-refund')return 'Verkoop teruggeboekt'
   return type
 }
 

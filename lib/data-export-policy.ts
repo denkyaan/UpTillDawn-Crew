@@ -1,5 +1,5 @@
 export type ExportFormat = 'csv' | 'xlsx' | 'pdf'
-export type ExportDataset = 'work-hours' | 'planning' | 'staff' | 'incidents' | 'tasks' | 'event-report'
+export type ExportDataset = 'work-hours' | 'planning' | 'staff' | 'incidents' | 'tasks' | 'event-report' | 'sales'
 
 export interface ExportRequest {
   dataset: ExportDataset

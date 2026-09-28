@@ -121,7 +121,9 @@ BEGIN
       AND table_name = ANY(ARRAY[
         'break_sessions','chat_channels','chat_members','crew_notifications',
         'event_templates','role_ui_rules','shifts','tasks','upt_audit_logs',
-        'work_sessions','workplace_transitions'
+        'work_sessions','workplace_transitions','user_error_reports',
+        'event_guestlist_entries','event_guestlist_settings','artist_hospitality_items',
+        'artist_backstage_checklists','sales_transactions','sales_registers'
       ])
   ) THEN
     RAISE EXCEPTION 'FAIL direct mutation grant remains on an RPC-only table';

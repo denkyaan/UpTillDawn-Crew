@@ -101,6 +101,46 @@ function translateCatalogFragments(value:string,locale:ExtendedUiLocale){
   return changed?output:value
 }
 
+function translateArtistArrival(value:string,locale:ExtendedUiLocale){
+  const match=value.match(/^Artiest - (.+), is aangekomen\.$/)
+  if(!match)return null
+  const name=match[1]
+  if(locale==='fr')return `Artiste - ${name}, est arrivé.`
+  if(locale==='en')return `Artist - ${name}, has arrived.`
+  if(locale==='de')return `Künstler - ${name}, ist angekommen.`
+  return value
+}
+
+function translateSaleConfirmation(value:string,locale:ExtendedUiLocale){
+  const match=value.match(/^(\d+) × (.+) verkocht · (cash|kaart) · (.+)$/i)
+  if(!match)return null
+  const [,quantity,name,payment,total]=match
+  if(locale==='fr')return `${quantity} × ${name} vendu · ${payment==='cash'?'espèces':'carte'} · ${total}`
+  if(locale==='en')return `${quantity} × ${name} sold · ${payment==='cash'?'cash':'card'} · ${total}`
+  if(locale==='de')return `${quantity} × ${name} verkauft · ${payment==='cash'?'bar':'Karte'} · ${total}`
+  return value
+}
+
+function translateGuestSpotStatus(value:string,locale:ExtendedUiLocale){
+  const match=value.match(/^(\d+) van (\d+) spots binnen · (\d+) resterend$/i)
+  if(!match)return null
+  const [,checked,total,remaining]=match
+  if(locale==='fr')return `${checked} sur ${total} places entrées · ${remaining} restantes`
+  if(locale==='en')return `${checked} of ${total} spots inside · ${remaining} remaining`
+  if(locale==='de')return `${checked} von ${total} Plätzen drin · ${remaining} verbleibend`
+  return value
+}
+
+function translateImportSummary(value:string,locale:ExtendedUiLocale){
+  const match=value.match(/^Import klaar · (\d+) nieuw · (\d+) bestaand · (\d+) aangevuld$/i)
+  if(!match)return null
+  const [,added,existing,supplemented]=match
+  if(locale==='fr')return `Import terminé · ${added} nouveau(x) · ${existing} existant(s) · ${supplemented} complété(s)`
+  if(locale==='en')return `Import complete · ${added} new · ${existing} existing · ${supplemented} supplemented`
+  if(locale==='de')return `Import abgeschlossen · ${added} neu · ${existing} vorhanden · ${supplemented} ergänzt`
+  return value
+}
+
 function translateClockRequestCounts(value:string,locale:ExtendedUiLocale){
   const match=value.match(/^(\d+)\s+inklokverzoek(?:en)?\s+·\s+(\d+)\s+uitklokverzoek(?:en)?$/i)
   if(!match)return null
@@ -112,6 +152,14 @@ function translateClockRequestCounts(value:string,locale:ExtendedUiLocale){
 }
 
 export function translateRuntimeUi(value:string,locale:ExtendedUiLocale):string{
+  const artistArrival=translateArtistArrival(value,locale)
+  if(artistArrival)return artistArrival
+  const saleConfirmation=translateSaleConfirmation(value,locale)
+  if(saleConfirmation)return saleConfirmation
+  const guestSpots=translateGuestSpotStatus(value,locale)
+  if(guestSpots)return guestSpots
+  const importSummary=translateImportSummary(value,locale)
+  if(importSummary)return importSummary
   const clockRequests=translateClockRequestCounts(value,locale)
   if(clockRequests)return clockRequests
   const passwordPolicy=translatePasswordPolicy(value,locale)
