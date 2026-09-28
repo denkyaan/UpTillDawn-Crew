@@ -116,7 +116,7 @@ export function LoginForm({
             <input type="hidden" name="portal" value={portal} />
             <div>
               <label htmlFor="email" className="mb-2 block text-sm font-semibold">Login</label>
-              <input id="email" name="email" type="text" inputMode="email" autoComplete="username" required placeholder="naam@email.com of maker@uptilldawn" className="h-12 w-full rounded-xl border border-white/15 bg-black px-4 text-white outline-none placeholder:text-zinc-600 focus:border-white/50" />
+              <input id="email" name="email" type="text" inputMode="email" autoComplete="username" required placeholder="naam@email.com" className="h-12 w-full rounded-xl border border-white/15 bg-black px-4 text-white outline-none placeholder:text-zinc-600 focus:border-white/50" />
             </div>
             <div>
               <div className="mb-2 flex items-center justify-between">
