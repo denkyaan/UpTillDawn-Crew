@@ -109,7 +109,7 @@ function collectVisibleStrings(sourceText,fileName){
 }
 
 function completeKeys(source){
-  return new Set([...source.matchAll(/^\s{2}["']([^"']+)["']\s*:\s*\{[^\n]*\bfr\s*:[^\n]*\ben\s*:[^\n]*\bde\s*:/gm)].map(match=>clean(match[1])))
+  return new Set([...source.matchAll(/^\s{2}(['"])(.*?)\1\s*:\s*\{[^\n]*\bfr\s*:[^\n]*\ben\s*:[^\n]*\bde\s*:/gm)].map(match=>clean(match[2])))
 }
 
 test('every static UI string has NL/FR/EN/DE translation coverage',async()=>{
