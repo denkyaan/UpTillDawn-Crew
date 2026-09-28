@@ -780,6 +780,7 @@ export async function createInventoryItem(fd:FormData){
   p_name:text.parse(fd.get('name')),
   p_category:String(fd.get('category')||'').trim().slice(0,120)||undefined,
   p_quantity:z.coerce.number().int().min(1).max(100000).parse(fd.get('quantity')),
+  p_item_kind:z.enum(['asset','consumable']).parse(fd.get('item_kind')||'consumable'),
  })
  check(error)
  await revalidatePath('/workplaces');await revalidatePath('/tasks');await revalidatePath('/operations');await revalidatePath('/inventory')
