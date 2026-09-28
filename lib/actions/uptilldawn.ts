@@ -845,7 +845,7 @@ export async function createOperationalChecklist(fd:FormData){
   p_description:String(fd.get('description')||'').trim().slice(0,2000),
  })
  check(error)
- revalidatePath('/tasks');revalidatePath('/workplaces')
+ revalidatePath('/tasks');revalidatePath('/workplaces');revalidatePath('/inventory')
 }
 export async function addOperationalChecklistItem(fd:FormData){
  const {s,profile}=await approvedClient()
@@ -857,7 +857,7 @@ export async function addOperationalChecklistItem(fd:FormData){
   p_requires_photo:fd.get('requires_photo')==='on',
  })
  check(error)
- revalidatePath('/tasks');revalidatePath('/workplaces')
+ revalidatePath('/tasks');revalidatePath('/workplaces');revalidatePath('/inventory')
 }
 export async function removeOperationalChecklistItem(fd:FormData){
  const {s,profile}=await approvedClient()
@@ -870,7 +870,7 @@ export async function removeOperationalChecklistItem(fd:FormData){
  })
  check(error)
  if(item?.photo_path)await s.storage.from('work-media').remove([item.photo_path])
- revalidatePath('/tasks');revalidatePath('/workplaces')
+ revalidatePath('/tasks');revalidatePath('/workplaces');revalidatePath('/inventory')
 }
 export async function completeOperationalChecklistItem(fd:FormData){
  const {s,user}=await approvedClient()
@@ -893,7 +893,7 @@ export async function completeOperationalChecklistItem(fd:FormData){
  })
  if(error&&uploaded)await s.storage.from('work-media').remove([uploaded])
  check(error)
- revalidatePath('/tasks');revalidatePath('/workplaces')
+ revalidatePath('/tasks');revalidatePath('/workplaces');revalidatePath('/inventory')
 }
 export async function reopenOperationalChecklistItem(fd:FormData){
  const {s}=await approvedClient()
@@ -906,7 +906,7 @@ export async function reopenOperationalChecklistItem(fd:FormData){
  })
  check(error)
  if(item?.photo_path)await s.storage.from('work-media').remove([item.photo_path])
- revalidatePath('/tasks');revalidatePath('/workplaces')
+ revalidatePath('/tasks');revalidatePath('/workplaces');revalidatePath('/inventory')
 }
 export async function closeOperationalChecklist(fd:FormData){
  const {s,profile}=await approvedClient()
@@ -915,7 +915,7 @@ export async function closeOperationalChecklist(fd:FormData){
   p_checklist:uuid.parse(fd.get('checklist_id')),
  })
  check(error)
- revalidatePath('/tasks');revalidatePath('/workplaces')
+ revalidatePath('/tasks');revalidatePath('/workplaces');revalidatePath('/inventory')
 }
 export async function reopenOperationalChecklist(fd:FormData){
  const {s,profile}=await approvedClient()
@@ -924,7 +924,7 @@ export async function reopenOperationalChecklist(fd:FormData){
   p_checklist:uuid.parse(fd.get('checklist_id')),
  })
  check(error)
- revalidatePath('/tasks');revalidatePath('/workplaces')
+ revalidatePath('/tasks');revalidatePath('/workplaces');revalidatePath('/inventory')
 }
 
 export async function createTask(fd:FormData){
@@ -1104,7 +1104,7 @@ export async function createEventDocument(fd:FormData){
  })
  if(error)await s.storage.from('work-media').remove([storagePath])
  check(error)
- revalidatePath('/events');revalidatePath('/notifications')
+ revalidatePath('/events');revalidatePath('/inventory');revalidatePath('/notifications')
 }
 export async function createInventoryTextEntry(fd:FormData){
  const {s,user}=await adminClient()
@@ -1145,7 +1145,7 @@ export async function archiveEventDocument(fd:FormData){
  const {data:path,error}=await s.rpc('upt_archive_event_document',{p_document:uuid.parse(fd.get('document_id'))})
  check(error)
  if(path)await s.storage.from('work-media').remove([path])
- revalidatePath('/events')
+ revalidatePath('/events');revalidatePath('/inventory')
 }
 
 export async function updateEventEmergencyInformation(fd:FormData){
