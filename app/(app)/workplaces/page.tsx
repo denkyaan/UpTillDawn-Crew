@@ -321,6 +321,7 @@ export default async function Page(){
             <div>
               <b>{workplace.name}</b>
               <p className="text-sm text-muted-foreground">{workplace.events?.name}</p>
+              {workplace.default_shift_start&&workplace.default_shift_end&&<p className="mt-1 text-sm font-semibold text-violet-400">Werkplekuren: {new Date(workplace.default_shift_start).toLocaleString('nl-BE')} → {new Date(workplace.default_shift_end).toLocaleString('nl-BE')}</p>}
               {workplace.description&&<p className="mt-1 text-sm text-muted-foreground">{workplace.description}</p>}
             </div>
             <span className="rounded-full border px-2 py-1 text-xs">{workplace.is_active?'ACTIEF':'INACTIEF'}</span>
