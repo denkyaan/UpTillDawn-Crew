@@ -27,7 +27,7 @@ export default async function Page(){
   if(!user)return null
 
   const [eventsResult,membershipResult,shiftResult,startedResult,availabilityResult,responsibleResult,emergencyResult]=await Promise.all([
-    s.from('events').select('id,name,venue,address,start_at,end_at,status,latitude,longitude,checkin_radius_m').order('start_at'),
+    s.from('events').select('id,name,venue,address,start_at,end_at,registration_deadline,status,latitude,longitude,checkin_radius_m').order('start_at'),
     s.from('event_members').select('event_id,user_id'),
     s.from('shifts').select('event_id,workplace_id,workplaces(name)').eq('user_id',user.id).neq('status','cancelled').neq('response_status','declined'),
     s.from('events').select('id').lte('start_at','now'),
@@ -63,9 +63,9 @@ export default async function Page(){
     : events.filter(event=>{
         const start=Date.parse(event.start_at)
         const end=Date.parse(event.end_at)
-        const future=nowMs<start&&event.status!=='archived'
+        const visibleWhileOpen=event.status!=='archived'&&nowMs<=end
         const assigned=assignedEventIds.has(event.id)&&nowMs<=end+3*24*60*60*1000
-        return future||assigned
+        return visibleWhileOpen||assigned
       })
   const memberKeys=new Set(memberships.map(row=>`${row.event_id}:${row.user_id}`))
   const peopleById=new Map(people.map(person=>[person.id,person]))
@@ -84,6 +84,7 @@ export default async function Page(){
           <div className="grid gap-3 md:grid-cols-3">
             <DateInput name="start_at" required={false}/>
             <DateInput name="end_at" required={false}/>
+            <label className="grid gap-1 text-sm">Aanmelddeadline (leeg = start evenement)<DateInput name="registration_deadline" required={false}/></label>
             <label className="grid gap-1 text-sm">GPS-radius (m)<input name="radius" type="number" defaultValue="100" min="10" max="10000" className={input}/></label>
           </div>
         </div>
@@ -97,6 +98,9 @@ export default async function Page(){
 
     <div className="space-y-3">{visibleEvents.map(event=>{
       const started=startedEventIds.has(event.id)
+      const ended=nowMs>Date.parse(event.end_at)
+      const registrationDeadline=event.registration_deadline||event.start_at
+      const registrationOpen=event.status!=='archived'&&nowMs<Date.parse(registrationDeadline)
       const myAvailability=availability.find(row=>row.event_id===event.id&&row.user_id===user.id)
       const myResponse=myAvailability?.response
       const canRows=user.isAdmin?availability.filter(row=>row.event_id===event.id&&(row.response==='can'||row.setup_available===true||row.breakdown_available===true)):[]
@@ -129,7 +133,8 @@ export default async function Page(){
               {event.address&&<p className="text-xs text-muted-foreground">{event.address}</p>}
             </div>
             {!started&&<span className="rounded-full border px-2 py-1 text-xs font-bold">Toekomstig</span>}
-            {started&&assigned&&<span className="rounded-full border px-2 py-1 text-xs font-bold">Toegewezen</span>}
+            {started&&!ended&&<span className="rounded-full border border-emerald-500/50 px-2 py-1 text-xs font-bold text-emerald-600">LOPEND</span>}
+            {assigned&&<span className="rounded-full border px-2 py-1 text-xs font-bold">Toegewezen</span>}
           </div>
         </summary>
 
@@ -158,7 +163,12 @@ export default async function Page(){
             workplaceOptions={documentWorkplaceOptions}
           />
 
-          {!started&&event.status!=='archived'&&<section className="space-y-3">
+          {!user.isAdmin&&<div className="rounded-xl border p-3 text-sm">
+            <p><span className="font-semibold">Aanmelddeadline:</span> {new Date(registrationDeadline).toLocaleString('nl-BE')}</p>
+            {!registrationOpen&&<p className="mt-1 font-semibold text-amber-600">Aanmelddeadline verstreken. Je kunt dit evenement nog bekijken, maar niet meer joinen.</p>}
+          </div>}
+
+          {!user.isAdmin&&registrationOpen&&<section className="space-y-3">
             <p className="font-semibold">Beschikbaarheid bevestigen</p>
             <form action={setEventAvailability} className="grid gap-3 rounded-xl border p-3 md:grid-cols-3">
               <input type="hidden" name="event_id" value={event.id}/>
@@ -279,6 +289,7 @@ export default async function Page(){
                 <div className="grid gap-3 md:grid-cols-3">
                   <DateInput name="start_at" initial={event.start_at}/>
                   <DateInput name="end_at" initial={event.end_at}/>
+                  <label className="grid gap-1 text-sm">Aanmelddeadline<DateInput name="registration_deadline" initial={registrationDeadline}/></label>
                   <label className="grid gap-1 text-sm">GPS-radius (m)<input name="radius" type="number" min={10} max={10000} defaultValue={event.checkin_radius_m} className={input}/></label>
                 </div>
                 <button className="rounded-xl bg-violet-600 p-3 font-bold">WIJZIGINGEN OPSLAAN</button>
