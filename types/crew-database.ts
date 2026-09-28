@@ -549,6 +549,41 @@ export type Database = {
           },
         ]
       }
+      configuration_versions: {
+        Row: {
+          created_at: string
+          created_by: string
+          id: string
+          kind: string
+          note: string | null
+          snapshot: Json
+        }
+        Insert: {
+          created_at?: string
+          created_by: string
+          id?: string
+          kind?: string
+          note?: string | null
+          snapshot: Json
+        }
+        Update: {
+          created_at?: string
+          created_by?: string
+          id?: string
+          kind?: string
+          note?: string | null
+          snapshot?: Json
+        }
+        Relationships: [
+          {
+            foreignKeyName: "configuration_versions_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       crew_notifications: {
         Row: {
           body: string | null
@@ -592,8 +627,11 @@ export type Database = {
       }
       event_availability: {
         Row: {
+          available_from: string | null
+          available_until: string | null
           breakdown_available: boolean | null
           event_id: string
+          notes: string | null
           responded_at: string
           response: string
           setup_available: boolean | null
@@ -601,8 +639,11 @@ export type Database = {
           user_id: string
         }
         Insert: {
+          available_from?: string | null
+          available_until?: string | null
           breakdown_available?: boolean | null
           event_id: string
+          notes?: string | null
           responded_at?: string
           response: string
           setup_available?: boolean | null
@@ -610,8 +651,11 @@ export type Database = {
           user_id: string
         }
         Update: {
+          available_from?: string | null
+          available_until?: string | null
           breakdown_available?: boolean | null
           event_id?: string
+          notes?: string | null
           responded_at?: string
           response?: string
           setup_available?: boolean | null
@@ -801,6 +845,84 @@ export type Database = {
           },
         ]
       }
+      event_onboarding_progress: {
+        Row: {
+          completed_at: string
+          event_id: string
+          step: string
+          user_id: string
+        }
+        Insert: {
+          completed_at?: string
+          event_id: string
+          step: string
+          user_id: string
+        }
+        Update: {
+          completed_at?: string
+          event_id?: string
+          step?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "event_onboarding_progress_event_id_fkey"
+            columns: ["event_id"]
+            isOneToOne: false
+            referencedRelation: "events"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "event_onboarding_progress_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      event_report_snapshots: {
+        Row: {
+          event_id: string
+          generated_at: string
+          generated_by: string | null
+          generation_kind: string
+          id: string
+          snapshot: Json
+        }
+        Insert: {
+          event_id: string
+          generated_at?: string
+          generated_by?: string | null
+          generation_kind?: string
+          id?: string
+          snapshot: Json
+        }
+        Update: {
+          event_id?: string
+          generated_at?: string
+          generated_by?: string | null
+          generation_kind?: string
+          id?: string
+          snapshot?: Json
+        }
+        Relationships: [
+          {
+            foreignKeyName: "event_report_snapshots_event_id_fkey"
+            columns: ["event_id"]
+            isOneToOne: false
+            referencedRelation: "events"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "event_report_snapshots_generated_by_fkey"
+            columns: ["generated_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       event_templates: {
         Row: {
           configuration: Json
@@ -808,6 +930,9 @@ export type Database = {
           created_by: string | null
           id: string
           name: string
+          sections: string[]
+          source_event_id: string | null
+          updated_at: string
         }
         Insert: {
           configuration?: Json
@@ -815,6 +940,9 @@ export type Database = {
           created_by?: string | null
           id?: string
           name: string
+          sections?: string[]
+          source_event_id?: string | null
+          updated_at?: string
         }
         Update: {
           configuration?: Json
@@ -822,6 +950,9 @@ export type Database = {
           created_by?: string | null
           id?: string
           name?: string
+          sections?: string[]
+          source_event_id?: string | null
+          updated_at?: string
         }
         Relationships: [
           {
@@ -829,6 +960,13 @@ export type Database = {
             columns: ["created_by"]
             isOneToOne: false
             referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "event_templates_source_event_id_fkey"
+            columns: ["source_event_id"]
+            isOneToOne: false
+            referencedRelation: "events"
             referencedColumns: ["id"]
           },
         ]
@@ -850,6 +988,7 @@ export type Database = {
           location: string | null
           longitude: number | null
           name: string
+          onboarding_required: boolean
           start_at: string
           start_date: string
           status: string
@@ -873,6 +1012,7 @@ export type Database = {
           location?: string | null
           longitude?: number | null
           name: string
+          onboarding_required?: boolean
           start_at: string
           start_date: string
           status?: string
@@ -896,6 +1036,7 @@ export type Database = {
           location?: string | null
           longitude?: number | null
           name?: string
+          onboarding_required?: boolean
           start_at?: string
           start_date?: string
           status?: string
@@ -913,10 +1054,50 @@ export type Database = {
           },
         ]
       }
+      feature_rollouts: {
+        Row: {
+          audience: string
+          enabled: boolean
+          feature_key: string
+          notes: string | null
+          rollout_percentage: number
+          updated_at: string
+          updated_by: string | null
+        }
+        Insert: {
+          audience?: string
+          enabled?: boolean
+          feature_key: string
+          notes?: string | null
+          rollout_percentage?: number
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Update: {
+          audience?: string
+          enabled?: boolean
+          feature_key?: string
+          notes?: string | null
+          rollout_percentage?: number
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "feature_rollouts_updated_by_fkey"
+            columns: ["updated_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       incidents: {
         Row: {
           acknowledged_at: string | null
           acknowledged_by: string | null
+          action_taken: string | null
+          category: string
           created_at: string
           description: string
           escalated_at: string | null
@@ -928,20 +1109,25 @@ export type Database = {
           latitude: number | null
           longitude: number | null
           message: string
+          people_involved: string | null
           photo_path: string | null
           photo_url: string | null
           reporter_id: string
+          resolution_notes: string | null
           resolved_at: string | null
           resolved_by: string | null
           responsible_lead_id: string | null
           status: string
           updated_at: string
+          urgency: string
           user_id: string
           workplace_id: string | null
         }
         Insert: {
           acknowledged_at?: string | null
           acknowledged_by?: string | null
+          action_taken?: string | null
+          category?: string
           created_at?: string
           description: string
           escalated_at?: string | null
@@ -953,20 +1139,25 @@ export type Database = {
           latitude?: number | null
           longitude?: number | null
           message: string
+          people_involved?: string | null
           photo_path?: string | null
           photo_url?: string | null
           reporter_id: string
+          resolution_notes?: string | null
           resolved_at?: string | null
           resolved_by?: string | null
           responsible_lead_id?: string | null
           status?: string
           updated_at?: string
+          urgency?: string
           user_id: string
           workplace_id?: string | null
         }
         Update: {
           acknowledged_at?: string | null
           acknowledged_by?: string | null
+          action_taken?: string | null
+          category?: string
           created_at?: string
           description?: string
           escalated_at?: string | null
@@ -978,14 +1169,17 @@ export type Database = {
           latitude?: number | null
           longitude?: number | null
           message?: string
+          people_involved?: string | null
           photo_path?: string | null
           photo_url?: string | null
           reporter_id?: string
+          resolution_notes?: string | null
           resolved_at?: string | null
           resolved_by?: string | null
           responsible_lead_id?: string | null
           status?: string
           updated_at?: string
+          urgency?: string
           user_id?: string
           workplace_id?: string | null
         }
@@ -1124,7 +1318,10 @@ export type Database = {
       }
       inventory_items: {
         Row: {
+          asset_code: string | null
+          asset_notes: string | null
           available_quantity: number
+          barcode: string | null
           category: string | null
           created_at: string
           created_by: string
@@ -1133,14 +1330,25 @@ export type Database = {
           id: string
           is_active: boolean
           issued_quantity: number
+          last_maintenance_at: string | null
+          location_label: string | null
+          maintenance_due_at: string | null
           missing_quantity: number
           name: string
+          photo_path: string | null
+          purchase_date: string | null
+          reorder_threshold: number
+          serial_number: string | null
           total_quantity: number
+          unit_cost_cents: number | null
           updated_at: string
           workplace_id: string
         }
         Insert: {
+          asset_code?: string | null
+          asset_notes?: string | null
           available_quantity: number
+          barcode?: string | null
           category?: string | null
           created_at?: string
           created_by: string
@@ -1149,14 +1357,25 @@ export type Database = {
           id?: string
           is_active?: boolean
           issued_quantity?: number
+          last_maintenance_at?: string | null
+          location_label?: string | null
+          maintenance_due_at?: string | null
           missing_quantity?: number
           name: string
+          photo_path?: string | null
+          purchase_date?: string | null
+          reorder_threshold?: number
+          serial_number?: string | null
           total_quantity: number
+          unit_cost_cents?: number | null
           updated_at?: string
           workplace_id: string
         }
         Update: {
+          asset_code?: string | null
+          asset_notes?: string | null
           available_quantity?: number
+          barcode?: string | null
           category?: string | null
           created_at?: string
           created_by?: string
@@ -1165,9 +1384,17 @@ export type Database = {
           id?: string
           is_active?: boolean
           issued_quantity?: number
+          last_maintenance_at?: string | null
+          location_label?: string | null
+          maintenance_due_at?: string | null
           missing_quantity?: number
           name?: string
+          photo_path?: string | null
+          purchase_date?: string | null
+          reorder_threshold?: number
+          serial_number?: string | null
           total_quantity?: number
+          unit_cost_cents?: number | null
           updated_at?: string
           workplace_id?: string
         }
@@ -1360,6 +1587,70 @@ export type Database = {
           },
           {
             foreignKeyName: "inventory_settlement_requests_workplace_id_fkey"
+            columns: ["workplace_id"]
+            isOneToOne: false
+            referencedRelation: "workplaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      knowledge_articles: {
+        Row: {
+          body: string
+          category: string | null
+          created_at: string
+          created_by: string
+          event_id: string | null
+          id: string
+          is_published: boolean
+          offline_critical: boolean
+          title: string
+          updated_at: string
+          workplace_id: string | null
+        }
+        Insert: {
+          body: string
+          category?: string | null
+          created_at?: string
+          created_by: string
+          event_id?: string | null
+          id?: string
+          is_published?: boolean
+          offline_critical?: boolean
+          title: string
+          updated_at?: string
+          workplace_id?: string | null
+        }
+        Update: {
+          body?: string
+          category?: string | null
+          created_at?: string
+          created_by?: string
+          event_id?: string | null
+          id?: string
+          is_published?: boolean
+          offline_critical?: boolean
+          title?: string
+          updated_at?: string
+          workplace_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "knowledge_articles_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "knowledge_articles_event_id_fkey"
+            columns: ["event_id"]
+            isOneToOne: false
+            referencedRelation: "events"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "knowledge_articles_workplace_id_fkey"
             columns: ["workplace_id"]
             isOneToOne: false
             referencedRelation: "workplaces"
@@ -1718,6 +2009,93 @@ export type Database = {
           },
         ]
       }
+      planning_recommendations: {
+        Row: {
+          applied_shift_id: string | null
+          created_at: string
+          created_by: string
+          event_id: string
+          id: string
+          reasons: Json
+          recommended_user_id: string
+          role_name: string
+          scheduled_end: string
+          scheduled_start: string
+          score: number
+          status: string
+          updated_at: string
+          workplace_id: string
+        }
+        Insert: {
+          applied_shift_id?: string | null
+          created_at?: string
+          created_by: string
+          event_id: string
+          id?: string
+          reasons?: Json
+          recommended_user_id: string
+          role_name?: string
+          scheduled_end: string
+          scheduled_start: string
+          score?: number
+          status?: string
+          updated_at?: string
+          workplace_id: string
+        }
+        Update: {
+          applied_shift_id?: string | null
+          created_at?: string
+          created_by?: string
+          event_id?: string
+          id?: string
+          reasons?: Json
+          recommended_user_id?: string
+          role_name?: string
+          scheduled_end?: string
+          scheduled_start?: string
+          score?: number
+          status?: string
+          updated_at?: string
+          workplace_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "planning_recommendations_applied_shift_id_fkey"
+            columns: ["applied_shift_id"]
+            isOneToOne: false
+            referencedRelation: "shifts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "planning_recommendations_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "planning_recommendations_event_id_fkey"
+            columns: ["event_id"]
+            isOneToOne: false
+            referencedRelation: "events"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "planning_recommendations_recommended_user_id_fkey"
+            columns: ["recommended_user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "planning_recommendations_workplace_id_fkey"
+            columns: ["workplace_id"]
+            isOneToOne: false
+            referencedRelation: "workplaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       profiles: {
         Row: {
           approved: boolean
@@ -1793,6 +2171,97 @@ export type Database = {
           updated_at?: string
           user_agent?: string | null
           user_id?: string
+        }
+        Relationships: []
+      }
+      qr_resources: {
+        Row: {
+          active: boolean
+          code: string
+          created_at: string
+          created_by: string
+          event_id: string | null
+          id: string
+          resource_id: string | null
+          resource_type: string
+          route: string
+          title: string
+          updated_at: string
+          workplace_id: string | null
+        }
+        Insert: {
+          active?: boolean
+          code?: string
+          created_at?: string
+          created_by: string
+          event_id?: string | null
+          id?: string
+          resource_id?: string | null
+          resource_type: string
+          route: string
+          title: string
+          updated_at?: string
+          workplace_id?: string | null
+        }
+        Update: {
+          active?: boolean
+          code?: string
+          created_at?: string
+          created_by?: string
+          event_id?: string | null
+          id?: string
+          resource_id?: string | null
+          resource_type?: string
+          route?: string
+          title?: string
+          updated_at?: string
+          workplace_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "qr_resources_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "qr_resources_event_id_fkey"
+            columns: ["event_id"]
+            isOneToOne: false
+            referencedRelation: "events"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "qr_resources_workplace_id_fkey"
+            columns: ["workplace_id"]
+            isOneToOne: false
+            referencedRelation: "workplaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      recovery_checks: {
+        Row: {
+          check_type: string
+          checked_at: string
+          details: Json
+          id: string
+          status: string
+        }
+        Insert: {
+          check_type: string
+          checked_at?: string
+          details?: Json
+          id?: string
+          status: string
+        }
+        Update: {
+          check_type?: string
+          checked_at?: string
+          details?: Json
+          id?: string
+          status?: string
         }
         Relationships: []
       }
@@ -1994,6 +2463,63 @@ export type Database = {
             columns: ["workplace_id"]
             isOneToOne: false
             referencedRelation: "workplaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      staff_pay_rates: {
+        Row: {
+          created_at: string
+          created_by: string
+          currency: string
+          effective_from: string
+          effective_until: string | null
+          employer_cost_multiplier_bps: number
+          hourly_rate_cents: number
+          id: string
+          notes: string | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          created_by: string
+          currency?: string
+          effective_from?: string
+          effective_until?: string | null
+          employer_cost_multiplier_bps?: number
+          hourly_rate_cents: number
+          id?: string
+          notes?: string | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string
+          currency?: string
+          effective_from?: string
+          effective_until?: string | null
+          employer_cost_multiplier_bps?: number
+          hourly_rate_cents?: number
+          id?: string
+          notes?: string | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "staff_pay_rates_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "staff_pay_rates_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
             referencedColumns: ["id"]
           },
         ]
@@ -2462,6 +2988,67 @@ export type Database = {
           },
         ]
       }
+      workplace_inventory_notes: {
+        Row: {
+          body: string
+          category: string | null
+          created_at: string
+          created_by: string
+          event_id: string
+          id: string
+          is_active: boolean
+          title: string
+          updated_at: string
+          workplace_id: string
+        }
+        Insert: {
+          body: string
+          category?: string | null
+          created_at?: string
+          created_by: string
+          event_id: string
+          id?: string
+          is_active?: boolean
+          title: string
+          updated_at?: string
+          workplace_id: string
+        }
+        Update: {
+          body?: string
+          category?: string | null
+          created_at?: string
+          created_by?: string
+          event_id?: string
+          id?: string
+          is_active?: boolean
+          title?: string
+          updated_at?: string
+          workplace_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "workplace_inventory_notes_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "workplace_inventory_notes_event_id_fkey"
+            columns: ["event_id"]
+            isOneToOne: false
+            referencedRelation: "events"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "workplace_inventory_notes_workplace_id_fkey"
+            columns: ["workplace_id"]
+            isOneToOne: false
+            referencedRelation: "workplaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       workplace_transitions: {
         Row: {
           confirmed_at: string
@@ -2528,6 +3115,9 @@ export type Database = {
           event_id: string
           id: string
           is_active: boolean
+          map_label: string | null
+          map_x: number | null
+          map_y: number | null
           maximum_staff: number | null
           minimum_staff: number
           name: string
@@ -2540,6 +3130,9 @@ export type Database = {
           event_id: string
           id?: string
           is_active?: boolean
+          map_label?: string | null
+          map_x?: number | null
+          map_y?: number | null
           maximum_staff?: number | null
           minimum_staff?: number
           name: string
@@ -2552,6 +3145,9 @@ export type Database = {
           event_id?: string
           id?: string
           is_active?: boolean
+          map_label?: string | null
+          map_x?: number | null
+          map_y?: number | null
           maximum_staff?: number | null
           minimum_staff?: number
           name?: string
@@ -2710,9 +3306,17 @@ export type Database = {
           unread_notifications: number
         }[]
       }
+      upt_apply_planning_recommendation: {
+        Args: { p_recommendation: string }
+        Returns: string
+      }
       upt_archive_event_document: {
         Args: { p_document: string }
         Returns: string
+      }
+      upt_archive_workplace_inventory_note: {
+        Args: { p_note: string }
+        Returns: undefined
       }
       upt_assign_task: {
         Args: { p_task: string; p_user: string }
@@ -2765,6 +3369,11 @@ export type Database = {
       }
       upt_close_operational_checklist: {
         Args: { p_checklist: string }
+        Returns: undefined
+      }
+      upt_command_center: { Args: { p_event: string }; Returns: Json }
+      upt_complete_event_onboarding_step: {
+        Args: { p_event: string; p_step: string }
         Returns: undefined
       }
       upt_confirm_shift: { Args: { p_shift: string }; Returns: undefined }
@@ -2834,6 +3443,17 @@ export type Database = {
         Returns: string
       }
       upt_create_private_chat: { Args: { p_user: string }; Returns: string }
+      upt_create_qr_resource: {
+        Args: {
+          p_event: string
+          p_resource_id: string
+          p_resource_type: string
+          p_route: string
+          p_title: string
+          p_workplace: string
+        }
+        Returns: string
+      }
       upt_create_shift: {
         Args: {
           p_end: string
@@ -2842,6 +3462,15 @@ export type Database = {
           p_shift_kind?: string
           p_start: string
           p_user: string
+          p_workplace: string
+        }
+        Returns: string
+      }
+      upt_create_workplace_inventory_note: {
+        Args: {
+          p_body: string
+          p_category?: string
+          p_title: string
           p_workplace: string
         }
         Returns: string
@@ -2885,6 +3514,10 @@ export type Database = {
         Args: { p_decision: string; p_reason?: string; p_request: string }
         Returns: undefined
       }
+      upt_dismiss_planning_recommendation: {
+        Args: { p_recommendation: string }
+        Returns: undefined
+      }
       upt_duplicate_event: {
         Args: {
           p_end: string
@@ -2895,6 +3528,21 @@ export type Database = {
         Returns: string
       }
       upt_effective_role: { Args: { uid?: string }; Returns: string }
+      upt_event_onboarding_status: { Args: { p_event: string }; Returns: Json }
+      upt_event_payroll_summary: {
+        Args: { p_event: string }
+        Returns: {
+          break_minutes: number
+          employer_cost_multiplier_bps: number
+          estimate_only: boolean
+          estimated_cost_cents: number
+          full_name: string
+          hourly_rate_cents: number
+          net_minutes: number
+          user_id: string
+          worked_minutes: number
+        }[]
+      }
       upt_feature_allowed: {
         Args: { p_event?: string; p_feature: string; p_workplace?: string }
         Returns: boolean
@@ -2902,6 +3550,11 @@ export type Database = {
       upt_feature_visible: {
         Args: { p_event?: string; p_feature: string; p_workplace?: string }
         Returns: boolean
+      }
+      upt_generate_event_report: { Args: { p_event: string }; Returns: Json }
+      upt_generate_planning_recommendations: {
+        Args: { p_event: string }
+        Returns: number
       }
       upt_geoapify_rate_limit: { Args: never; Returns: Json }
       upt_god_data_catalog: { Args: { p_token: string }; Returns: Json }
@@ -2983,6 +3636,23 @@ export type Database = {
         Returns: {
           full_name: string
           user_id: string
+        }[]
+      }
+      upt_inventory_asset_by_code: {
+        Args: { p_code: string }
+        Returns: {
+          asset_code: string
+          available_quantity: number
+          barcode: string
+          category: string
+          event_id: string
+          id: string
+          location_label: string
+          maintenance_due_at: string
+          name: string
+          serial_number: string
+          total_quantity: number
+          workplace_id: string
         }[]
       }
       upt_inventory_health: {
@@ -3097,6 +3767,7 @@ export type Database = {
         Args: { p_reason: string; p_shift: string; p_user: string }
         Returns: undefined
       }
+      upt_recovery_readiness: { Args: never; Returns: Json }
       upt_remove_operational_checklist_item: {
         Args: { p_item: string }
         Returns: undefined
@@ -3160,6 +3831,7 @@ export type Database = {
         Returns: string
       }
       upt_resolve_incident: { Args: { p_incident: string }; Returns: undefined }
+      upt_resolve_qr_resource: { Args: { p_code: string }; Returns: Json }
       upt_respond_shift: {
         Args: { p_reason?: string; p_response: string; p_shift: string }
         Returns: undefined
@@ -3239,6 +3911,28 @@ export type Database = {
           p_event: string
           p_response: string
           p_setup: boolean
+        }
+        Returns: undefined
+      }
+      upt_set_event_availability_window: {
+        Args: {
+          p_available_from?: string
+          p_available_until?: string
+          p_breakdown: boolean
+          p_event: string
+          p_notes?: string
+          p_response: string
+          p_setup: boolean
+        }
+        Returns: undefined
+      }
+      upt_set_feature_rollout: {
+        Args: {
+          p_audience?: string
+          p_enabled: boolean
+          p_feature_key: string
+          p_notes?: string
+          p_rollout_percentage?: number
         }
         Returns: undefined
       }
@@ -3322,6 +4016,10 @@ export type Database = {
           workplace_id: string
         }[]
       }
+      upt_snapshot_platform_configuration: {
+        Args: { p_note?: string }
+        Returns: string
+      }
       upt_staff_workplace_live_status: {
         Args: never
         Returns: {
@@ -3355,6 +4053,23 @@ export type Database = {
       upt_sync_operation: {
         Args: { p_id: string; p_payload: Json; p_type: string }
         Returns: Json
+      }
+      upt_update_inventory_asset_metadata: {
+        Args: {
+          p_asset_code?: string
+          p_barcode?: string
+          p_item: string
+          p_last_maintenance_at?: string
+          p_location_label?: string
+          p_maintenance_due_at?: string
+          p_notes?: string
+          p_photo_path?: string
+          p_purchase_date?: string
+          p_reorder_threshold?: number
+          p_serial_number?: string
+          p_unit_cost_cents?: number
+        }
+        Returns: undefined
       }
       upt_update_own_profile: {
         Args: {
