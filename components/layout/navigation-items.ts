@@ -29,7 +29,7 @@ export const NAV_ITEMS: NavigationItem[] = [
   { key:"overview", href:"/", label:"Overzicht", icon:LayoutDashboard, roles:["employee","responsible_lead","admin"] },
   { key:"operations", href:"/operations", label:"Mijn werkuren", icon:Clock3, roles:["employee","responsible_lead","admin"] },
   { key:"events", href:"/events", label:"Evenementen", icon:CalendarDays, roles:["employee","responsible_lead","admin"] },
-  { key:"workplaces", href:"/workplaces", label:"Werkplekken", icon:MapPin, roles:["employee","responsible_lead","admin"] },
+  { key:"workplaces", href:"/workplaces", label:"Werkplaatsen & shifts", icon:MapPin, roles:["employee","responsible_lead","admin"] },
   { key:"inventory", href:"/inventory", label:"Inventaris", icon:PackageOpen, roles:["employee","responsible_lead","admin"] },
   { key:"guestlist", href:"/guestlist", label:"Inkom & Guestlist", icon:ListChecks, roles:["employee","responsible_lead","admin"] },
   { key:"sales", href:"/sales", label:"Verkoop", icon:ShoppingCart, roles:["employee","responsible_lead","admin"] },
