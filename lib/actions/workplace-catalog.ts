@@ -35,7 +35,7 @@ async function syncFutureEvents(s:Awaited<ReturnType<typeof createClient>>){
   }
 }
 
-async function await refresh(){
+async function refresh(){
   await revalidatePath('/inventory')
   await revalidatePath('/workplaces')
   await revalidatePath('/events')
