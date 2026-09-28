@@ -53,6 +53,10 @@ BEGIN
       'upt_god_login','upt_god_logout',
       'upt_god_repository_connect','upt_god_repository_disconnect','upt_god_repository_secret',
       'upt_god_role_rules','upt_god_save_role_rules','upt_god_session_valid',
+      -- Dedicated God Mode error queue. These remain callable before an
+      -- ordinary app session exists, but each RPC validates the private,
+      -- expiring God Mode token before reading or mutating anything.
+      'upt_god_error_reports','upt_god_error_report_mark_working','upt_god_error_report_resolve',
       -- Intentional pre-auth admin login protection. These two are needed
       -- before a Supabase session exists; login success is authenticated-only.
       'upt_admin_login_guard','upt_admin_login_failure'
