@@ -99,6 +99,7 @@ test('every static user-facing UI string has NL/FR/EN/DE coverage', async () => 
   const missing=new Map()
 
   function add(value,file,source,node){
+    if(isNoTranslate(node))return
     const text=decode(value)
     if(!meaningful(text)||fourLanguageKeys.has(text))return
     const key=`${text}\u0000${file}`
