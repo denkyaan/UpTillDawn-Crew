@@ -785,6 +785,19 @@ export async function createInventoryItem(fd:FormData){
  check(error)
  await revalidatePath('/workplaces');await revalidatePath('/tasks');await revalidatePath('/operations');await revalidatePath('/inventory')
 }
+export async function updateInventoryAssetDetails(fd:FormData){
+ const {s,profile}=await approvedClient()
+ requireManager(profile.role)
+ const {error}=await s.rpc('upt_set_inventory_asset_details',{
+  p_item:uuid.parse(fd.get('item_id')),
+  p_kind:z.enum(['asset','consumable']).parse(fd.get('item_kind')),
+  p_asset_code:String(fd.get('asset_code')||'').trim().slice(0,120)||undefined,
+  p_barcode:String(fd.get('barcode')||'').trim().slice(0,120)||undefined,
+  p_serial_number:String(fd.get('serial_number')||'').trim().slice(0,200)||undefined,
+ })
+ check(error)
+ await revalidatePath('/inventory');await revalidatePath('/workplaces')
+}
 export async function reportWorkplaceInventoryCondition(fd:FormData){
  const {s,profile}=await approvedClient()
  if(!['admin','responsible_lead'].includes(profile.role))throw new Error('Alleen admin of verantwoordelijke kan materiaal controleren.')
