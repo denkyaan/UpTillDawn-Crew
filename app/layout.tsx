@@ -6,6 +6,8 @@ import type { Metadata, Viewport } from 'next'
 import { ThemeProvider } from '@/components/theme-provider'
 import { AuthProvider } from '@/lib/providers'
 import { Toaster } from '@/components/ui/sonner'
+import { cookies, headers } from 'next/headers'
+import { parseAcceptLanguage, parseAppLocale } from '@/lib/locale'
 import './globals.css'
 
 
@@ -41,13 +43,21 @@ export const viewport: Viewport = {
   userScalable: true,
 }
 
-export default function RootLayout({
+export default async function RootLayout({
   children,
 }: Readonly<{
   children: React.ReactNode
 }>) {
+  const [cookieStore,headerStore]=await Promise.all([cookies(),headers()])
+  const cookieLocale=parseAppLocale(cookieStore.get('uptilldawn-language')?.value)
+  const localeSource=cookieStore.get('uptilldawn-language-source')?.value
+  const requestLocale=parseAcceptLanguage(headerStore.get('accept-language'))
+  const initialLocale=localeSource==='manual'&&cookieLocale
+    ? cookieLocale
+    : requestLocale||cookieLocale||'nl'
+
   return (
-    <html lang="nl" suppressHydrationWarning>
+    <html lang={initialLocale} suppressHydrationWarning>
       <body className="font-sans antialiased" suppressHydrationWarning>
         <ThemeProvider attribute="class" defaultTheme="dark" enableSystem disableTransitionOnChange>
           <AuthProvider>
