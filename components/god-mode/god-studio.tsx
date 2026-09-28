@@ -11,12 +11,49 @@ import {editablePath,summarizeChanges,type SourceChange,type SourceEntry,type So
 import targets from '@/lib/god-source-index.json'
 
 const CodeEditor=dynamic(()=>import('./code-editor'),{ssr:false,loading:()=> <p>Code-editor laden…</p>})
-const tabs=[['builder','Live Builder'],['automations','Automaties'],['source','Programmering'],['elements','Knoppen & onderdelen'],['data','Gegevens'],['sql','Logica & workflows'],['roles','Rollen & navigatie'],['versions','Versies & publicatie'],['connections','Koppelingen']] as const
+const tabs=[['builder','Live Builder'],['ai','AI tekstuitvoering'],['automations','Automaties'],['source','Programmering'],['elements','Knoppen & onderdelen'],['data','Gegevens'],['sql','Logica & workflows'],['roles','Rollen & navigatie'],['versions','Versies & publicatie'],['connections','Koppelingen']] as const
 type Tab=typeof tabs[number][0]
 type Proposal={number:number;url:string;sha:string;branch:string}
 type Commit={sha:string;html_url:string;commit:{message:string;author:{date:string}}}
 type Pull={number:number;html_url:string;title:string;head:{sha:string;ref:string}}
 type Run={id:number;name:string;status:string;conclusion:string|null;html_url:string}
+type RecoveryReport={
+  id:string
+  route:string
+  error_name:string|null
+  error_message:string
+  stack_trace:string|null
+  status:string
+  ai_category:string|null
+  ai_severity:string|null
+  ai_summary:string|null
+  ai_user_message:string|null
+  maker_action_required:boolean
+  maker_action:string|null
+  god_prompt:string|null
+  reported_count:number
+  processing_attempts:number
+  created_at:string
+  updated_at:string
+}
+type TextAiResult={
+  base:string
+  title:string
+  answer:string
+  changes:SourceChange[]
+  selectedFiles:string[]
+  sourceSelection:string
+}
+
+function reportStatusLabel(status:string){
+  if(status==='needs_maker')return 'MAKERACTIE'
+  if(status==='maker_working')return 'IN BEHANDELING'
+  if(status==='processing')return 'AI ANALYSEERT'
+  if(status==='reported')return 'GERAPPORTEERD'
+  if(status==='resolved'||status==='auto_resolved')return 'OPGELOST'
+  if(status==='failed')return 'MISLUKT'
+  return status
+}
 
 async function api<T>(url:string,body?:unknown,method=body?'POST':'GET'):Promise<T>{
   const response=await fetch(url,{method,cache:'no-store',...(body?{headers:{'Content-Type':'application/json'},body:JSON.stringify(body)}:{})})
@@ -42,6 +79,10 @@ export function GodStudio(){
   const [title,setTitle]=useState('')
   const [aiPrompt,setAiPrompt]=useState('')
   const [aiReply,setAiReply]=useState<{answer:string;changes:SourceChange[]}|null>(null)
+  const [textAiPrompt,setTextAiPrompt]=useState('')
+  const [textAiResult,setTextAiResult]=useState<TextAiResult|null>(null)
+  const [errorReports,setErrorReports]=useState<RecoveryReport[]>([])
+  const [selectedErrorReport,setSelectedErrorReport]=useState<string|null>(null)
   const [proposal,setProposal]=useState<Proposal|null>(null)
   const [history,setHistory]=useState<Commit[]>([])
   const [pulls,setPulls]=useState<Pull[]>([])
@@ -69,6 +110,23 @@ export function GodStudio(){
     setBase(data.head);setConnected(data.connected);setFiles(data.files)
   }
   useEffect(()=>{let active=true;void api<{head:string;connected:boolean;files:SourceEntry[]}>('/api/god/source').then(data=>{if(active){setBase(data.head);setConnected(data.connected);setFiles(data.files)}}).catch(error=>{if(active)setMessage(error.message)});void api<{connected:boolean}>('/api/god/sql').then(data=>{if(active)setDatabaseConnected(data.connected)}).catch(()=>{});return()=>{active=false}},[])
+  useEffect(()=>{
+    let active=true
+    void api<{reports:RecoveryReport[]}>('/api/god/error-reports?limit=60')
+      .then(data=>{
+        if(!active)return
+        setErrorReports(data.reports)
+        const requested=new URLSearchParams(window.location.search).get('error-report')
+        if(!requested)return
+        const report=data.reports.find(item=>item.id===requested)
+        if(!report)return
+        setSelectedErrorReport(report.id)
+        setTextAiPrompt(current=>current||recoveryPrompt(report))
+        setTab('ai')
+      })
+      .catch(()=>{})
+    return()=>{active=false}
+  },[])
   useEffect(()=>{if(!changes.length)return;const guard=(event:BeforeUnloadEvent)=>{event.preventDefault()};window.addEventListener('beforeunload',guard);return()=>window.removeEventListener('beforeunload',guard)},[changes.length])
 
   async function open(file:string,targetLine=1){
@@ -118,6 +176,68 @@ export function GodStudio(){
     if(existing.length)throw new Error('De AI wil een bestaand bestand wijzigen dat niet was geopend. Open dat bestand eerst en vraag een nieuw voorstel met die context.')
     setDrafts(current=>({...current,...Object.fromEntries(aiReply.changes.map(c=>[c.path,c.content]))}));setAiReply(null);setMessage('AI-voorstel in je concept gezet. Controleer de verschillen voordat je opslaat.')
   }
+
+  function recoveryPrompt(report:RecoveryReport){
+    return report.god_prompt||[
+      'Onderzoek en herstel dit gemelde productiefoutrapport.',
+      `Pagina: ${report.route}`,
+      `Fout: ${report.error_message}`,
+      report.ai_summary?`AI-diagnose: ${report.ai_summary}`:'',
+      report.maker_action?`Vereiste makeractie: ${report.maker_action}`:'',
+      'Maak de kleinste veilige wijziging, behoud bestaande autorisatie en voeg regressietests toe.',
+    ].filter(Boolean).join('\n')
+  }
+
+  async function loadErrorReports(){
+    const data=await api<{reports:RecoveryReport[]}>('/api/god/error-reports?limit=60')
+    setErrorReports(data.reports)
+    if(typeof window!=='undefined'){
+      const requested=new URLSearchParams(window.location.search).get('error-report')
+      if(requested){
+        const report=data.reports.find(item=>item.id===requested)
+        if(report){
+          setSelectedErrorReport(report.id)
+          setTextAiPrompt(current=>current||recoveryPrompt(report))
+          setTab('ai')
+        }
+      }
+    }
+  }
+
+  async function executeTextAi(){
+    const prompt=textAiPrompt.trim()
+    if(!prompt)throw new Error('Beschrijf eerst wat de AI moet uitvoeren.')
+    if(changes.length)throw new Error('Er staan al conceptwijzigingen klaar. Sla ze eerst op, exporteer ze of maak ze ongedaan voordat je een nieuwe AI-uitvoering start.')
+
+    const result=await api<TextAiResult>('/api/god/text-execution',{
+      message:prompt,
+      ...(selectedErrorReport?{errorReportId:selectedErrorReport}:{}),
+    })
+
+    const selected=new Set(result.selectedFiles)
+    const existingChanges=result.changes.filter(change=>selected.has(change.path))
+    const loaded=await Promise.all(existingChanges.map(async change=>{
+      const data=await api<{content:string}>(`/api/god/source?action=file&path=${encodeURIComponent(change.path)}&ref=${result.base}`)
+      return [change.path,data.content] as const
+    }))
+
+    setBase(result.base)
+    setOriginals(current=>({...current,...Object.fromEntries(loaded)}))
+    setDrafts(current=>({...current,...Object.fromEntries(result.changes.map(change=>[change.path,change.content]))}))
+    setTitle(result.title)
+    setTextAiResult(result)
+    if(result.changes[0])setPath(result.changes[0].path)
+    await load()
+    if(selectedErrorReport)await loadErrorReports()
+    setMessage('AI tekstuitvoering is als concept klaargezet. Controleer de wijzigingen en publiceer pas na geslaagde tests.')
+  }
+
+  async function resolveErrorReport(reportId:string){
+    await api('/api/god/error-reports',{action:'resolve',reportId,note:'Maker heeft de gemelde fout na controle als opgelost gemarkeerd.'})
+    if(selectedErrorReport===reportId)setSelectedErrorReport(null)
+    await loadErrorReports()
+    setMessage('Foutrapport als opgelost gemarkeerd. De gebruiker krijgt een melding.')
+  }
   function inspectFrame(frame:HTMLIFrameElement){
     try{
       const doc=frame.contentDocument;if(!doc)return
@@ -147,6 +267,69 @@ export function GodStudio(){
     <nav aria-label="God Mode gereedschappen" className="flex gap-2 overflow-x-auto rounded-2xl border p-2">{tabs.map(([key,label])=><button key={key} aria-pressed={tab===key} onClick={()=>{setTab(key);if(key==='versions')void action(loadHistory)}} className={`shrink-0 rounded-xl px-4 py-3 text-sm font-bold ${tab===key?'bg-violet-600 text-white':'hover:bg-muted'}`}>{label}</button>)}</nav>
     {message&&<p role="status" className="whitespace-pre-wrap rounded-xl border border-violet-500/40 p-3 text-sm">{message}</p>}
     {tab==='builder'&&<GodVisualBuilder onOpenSource={(file,line)=>void open(file,line)} onPrepareAi={prepareAiFromBuilder}/>}
+    {tab==='ai'&&<section className="space-y-5">
+      <div className="space-y-3 rounded-2xl border border-violet-500/40 bg-violet-500/5 p-4">
+        <div>
+          <h2 className="text-xl font-black">AI tekstuitvoering</h2>
+          <p className="text-sm text-muted-foreground">Beschrijf in gewone taal wat er aan de app moet veranderen. De AI zoekt zelf de relevante bronbestanden, voert de wijziging uit in een concept en zet niets rechtstreeks live.</p>
+        </div>
+        {selectedErrorReport&&<div className="flex flex-wrap items-center justify-between gap-2 rounded-xl border border-amber-500/40 p-3 text-sm">
+          <span>Foutrapport gekoppeld: {selectedErrorReport.slice(0,8)}</span>
+          <button type="button" onClick={()=>setSelectedErrorReport(null)} className="rounded-lg border px-3 py-2">Loskoppelen</button>
+        </div>}
+        <textarea
+          aria-label="AI tekstuitvoering opdracht"
+          value={textAiPrompt}
+          onChange={event=>setTextAiPrompt(event.target.value)}
+          rows={7}
+          maxLength={8000}
+          placeholder="Bijvoorbeeld: voeg bij elke foutmelding een rapportageknop toe en laat de achtergrond-AI de oorzaak analyseren."
+          className="w-full rounded-xl border bg-background p-3"
+        />
+        <button
+          type="button"
+          disabled={busy||!textAiPrompt.trim()||changes.length>0||!connected}
+          onClick={()=>void action(executeTextAi)}
+          className="w-full rounded-xl bg-violet-600 p-3 font-black text-white disabled:opacity-50"
+        >{busy?'AI VOERT UIT…':'AI OPDRACHT UITVOEREN'}</button>
+        {!connected&&<p className="text-sm text-muted-foreground">Koppel GitHub onder Koppelingen zodat de AI de actuele broncode kan lezen.</p>}
+        {changes.length>0&&<p className="text-sm text-amber-500">Er staan al conceptwijzigingen klaar. Rond die eerst af voordat je een nieuwe tekstuitvoering start.</p>}
+        {textAiResult&&<div className="space-y-3 rounded-xl border bg-background p-4">
+          <div><b>{textAiResult.title}</b><p className="mt-1 whitespace-pre-wrap text-sm">{textAiResult.answer}</p></div>
+          <p className="text-xs text-muted-foreground">Broncontext: {textAiResult.selectedFiles.join(', ')}</p>
+          <p className="text-sm font-semibold">{textAiResult.changes.length} wijziging(en) staan in je concept.</p>
+          <button type="button" onClick={()=>setTab('source')} className="rounded-xl border px-4 py-2 font-bold">CONCEPT CONTROLEREN</button>
+        </div>}
+      </div>
+
+      <div className="space-y-3 rounded-2xl border p-4">
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <div><h2 className="text-xl font-black">AI foutherstel</h2><p className="text-sm text-muted-foreground">Gebruikersrapporten worden op de achtergrond geanalyseerd. Alleen fouten waarvoor makeractie nodig is komen hier bovenaan.</p></div>
+          <button type="button" disabled={busy} onClick={()=>void action(loadErrorReports)} className="rounded-xl border px-4 py-2">Vernieuwen</button>
+        </div>
+        {!errorReports.length&&<p className="rounded-xl border border-dashed p-4 text-sm text-muted-foreground">Geen open foutrapporten.</p>}
+        {errorReports.map(report=><article key={report.id} className={"space-y-3 rounded-xl border p-4 "+(report.status==='needs_maker'?'border-amber-500/50':'')}>
+          <div className="flex flex-wrap items-start justify-between gap-2">
+            <div>
+              <p className="font-bold">{report.error_name||'Fout'} · {report.route}</p>
+              <p className="mt-1 text-sm text-muted-foreground">{report.error_message}</p>
+            </div>
+            <span className="rounded-full border px-2 py-1 text-xs font-black">{reportStatusLabel(report.status)}</span>
+          </div>
+          {report.ai_summary&&<p className="text-sm"><b>AI-diagnose:</b> {report.ai_summary}</p>}
+          {report.maker_action&&<p className="rounded-lg border border-amber-500/30 p-3 text-sm"><b>Makeractie:</b> {report.maker_action}</p>}
+          <div className="flex flex-wrap gap-2">
+            <button type="button" onClick={()=>{
+              setSelectedErrorReport(report.id)
+              setTextAiPrompt(recoveryPrompt(report))
+              setTextAiResult(null)
+              window.scrollTo({top:0,behavior:'smooth'})
+            }} className="rounded-lg bg-violet-600 px-3 py-2 text-sm font-bold text-white">AI OPLOSSEN</button>
+            <button type="button" disabled={busy} onClick={()=>void action(()=>resolveErrorReport(report.id))} className="rounded-lg border px-3 py-2 text-sm font-bold">OPGELOST MARKEREN</button>
+          </div>
+        </article>)}
+      </div>
+    </section>}
     {tab==='automations'&&<GodAutomationBuilder onPrepareAi={prepareAiFromBuilder}/>}
     {tab==='source'&&<div className="space-y-4">
       <div className="flex flex-wrap items-center justify-between gap-2"><p className="text-sm text-muted-foreground">Volledige broncode · {base.slice(0,8)||'laden…'} · {changes.length} conceptwijzigingen</p><div className="flex gap-2"><button onClick={exportDraft} disabled={!changes.length} className="rounded-xl border px-3 py-2 text-sm">Concept downloaden</button><button onClick={()=>uploadRef.current?.click()} className="rounded-xl border px-3 py-2 text-sm">Concept importeren</button><input ref={uploadRef} type="file" accept="application/json" hidden onChange={e=>{const file=e.target.files?.[0];if(file)void action(()=>importDraft(file));e.target.value=''}}/></div></div>

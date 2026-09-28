@@ -32,6 +32,7 @@ BEGIN
       'upt_god_login','upt_god_logout',
       'upt_god_repository_connect','upt_god_repository_disconnect','upt_god_repository_secret',
       'upt_god_role_rules','upt_god_save_role_rules','upt_god_session_valid',
+      'upt_god_error_reports','upt_god_error_report_mark_working','upt_god_error_report_resolve',
       'upt_admin_login_guard','upt_admin_login_failure'
     ]);
 

@@ -2902,6 +2902,101 @@ export type Database = {
           },
         ]
       }
+      user_error_reports: {
+        Row: {
+          ai_category: string | null
+          ai_severity: string | null
+          ai_summary: string | null
+          ai_user_message: string | null
+          auto_action: string
+          client_context: Json
+          created_at: string
+          error_message: string
+          error_name: string | null
+          fingerprint: string
+          god_prompt: string | null
+          id: string
+          last_reported_at: string
+          maker_action: string | null
+          maker_action_required: boolean
+          maker_notified_at: string | null
+          processing_attempts: number
+          reported_count: number
+          resolution_note: string | null
+          resolved_at: string | null
+          route: string
+          source: string
+          stack_trace: string | null
+          status: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          ai_category?: string | null
+          ai_severity?: string | null
+          ai_summary?: string | null
+          ai_user_message?: string | null
+          auto_action?: string
+          client_context?: Json
+          created_at?: string
+          error_message: string
+          error_name?: string | null
+          fingerprint: string
+          god_prompt?: string | null
+          id?: string
+          last_reported_at?: string
+          maker_action?: string | null
+          maker_action_required?: boolean
+          maker_notified_at?: string | null
+          processing_attempts?: number
+          reported_count?: number
+          resolution_note?: string | null
+          resolved_at?: string | null
+          route: string
+          source?: string
+          stack_trace?: string | null
+          status?: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          ai_category?: string | null
+          ai_severity?: string | null
+          ai_summary?: string | null
+          ai_user_message?: string | null
+          auto_action?: string
+          client_context?: Json
+          created_at?: string
+          error_message?: string
+          error_name?: string | null
+          fingerprint?: string
+          god_prompt?: string | null
+          id?: string
+          last_reported_at?: string
+          maker_action?: string | null
+          maker_action_required?: boolean
+          maker_notified_at?: string | null
+          processing_attempts?: number
+          reported_count?: number
+          resolution_note?: string | null
+          resolved_at?: string | null
+          route?: string
+          source?: string
+          stack_trace?: string | null
+          status?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "user_error_reports_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       work_attachments: {
         Row: {
           briefing_id: string | null
@@ -3786,6 +3881,21 @@ export type Database = {
         Args: { p_event?: string; p_feature: string; p_workplace?: string }
         Returns: boolean
       }
+      upt_finalize_error_report_ai: {
+        Args: {
+          p_auto_action?: string
+          p_category: string
+          p_god_prompt?: string
+          p_maker_action?: string
+          p_maker_action_required?: boolean
+          p_report: string
+          p_severity: string
+          p_status: string
+          p_summary: string
+          p_user_message: string
+        }
+        Returns: undefined
+      }
       upt_generate_event_report: { Args: { p_event: string }; Returns: Json }
       upt_generate_planning_recommendations: {
         Args: { p_event: string }
@@ -3825,6 +3935,18 @@ export type Database = {
         Returns: undefined
       }
       upt_god_database_secret: { Args: { p_token: string }; Returns: string }
+      upt_god_error_report_mark_working: {
+        Args: { p_report: string; p_token: string }
+        Returns: undefined
+      }
+      upt_god_error_report_resolve: {
+        Args: { p_note?: string; p_report: string; p_token: string }
+        Returns: undefined
+      }
+      upt_god_error_reports: {
+        Args: { p_limit?: number; p_token: string }
+        Returns: Json
+      }
       upt_god_is_configured: { Args: never; Returns: boolean }
       upt_god_login: {
         Args: { p_login: string; p_password: string }
@@ -4060,6 +4182,17 @@ export type Database = {
       upt_reopen_operational_checklist: {
         Args: { p_checklist: string }
         Returns: undefined
+      }
+      upt_report_client_error: {
+        Args: {
+          p_client_context?: Json
+          p_error_message: string
+          p_error_name: string
+          p_route: string
+          p_source?: string
+          p_stack_trace?: string
+        }
+        Returns: Json
       }
       upt_report_workplace_inventory_condition: {
         Args: {
@@ -4317,6 +4450,10 @@ export type Database = {
         }[]
       }
       upt_start_break: { Args: { p_work_session: string }; Returns: string }
+      upt_start_error_report_ai: {
+        Args: { p_report: string }
+        Returns: boolean
+      }
       upt_start_work: {
         Args: { p_event: string; p_shift?: string }
         Returns: string

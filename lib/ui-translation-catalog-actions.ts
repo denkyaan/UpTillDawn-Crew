@@ -2,6 +2,23 @@ export type ActionUiLocale='nl'|'fr'|'en'|'de'
 type Row={fr:string;en:string;de:string}
 
 const ROWS:Record<string,Row>={
+  "Ongeldig foutrapport.":{fr:"Rapport d’erreur invalide.",en:"Invalid error report.",de:"Ungültiger Fehlerbericht."},
+  "Foutrapport kon niet worden geladen.":{fr:"Le rapport d’erreur n’a pas pu être chargé.",en:"The error report could not be loaded.",de:"Der Fehlerbericht konnte nicht geladen werden."},
+  "Foutrapport niet gevonden.":{fr:"Rapport d’erreur introuvable.",en:"Error report not found.",de:"Fehlerbericht nicht gefunden."},
+  "Foutrapport kon niet worden opgeslagen.":{fr:"Le rapport d’erreur n’a pas pu être enregistré.",en:"The error report could not be saved.",de:"Der Fehlerbericht konnte nicht gespeichert werden."},
+  "Foutmelding en pagina zijn verplicht.":{fr:"Le message d’erreur et la page sont obligatoires.",en:"Error message and page are required.",de:"Fehlermeldung und Seite sind erforderlich."},
+  "Ongeldige foutbron.":{fr:"Source d’erreur invalide.",en:"Invalid error source.",de:"Ungültige Fehlerquelle."},
+  "Foutdetails zijn te groot.":{fr:"Les détails de l’erreur sont trop volumineux.",en:"Error details are too large.",de:"Fehlerdetails sind zu groß."},
+  "Foutcontext is te groot.":{fr:"Le contexte de l’erreur est trop volumineux.",en:"Error context is too large.",de:"Fehlerkontext ist zu groß."},
+  "Te veel foutrapporten in korte tijd. Probeer over enkele minuten opnieuw.":{fr:"Trop de rapports d’erreur en peu de temps. Réessayez dans quelques minutes.",en:"Too many error reports in a short time. Try again in a few minutes.",de:"Zu viele Fehlerberichte in kurzer Zeit. Versuche es in einigen Minuten erneut."},
+  "Ongeldige foutstatus.":{fr:"Statut d’erreur invalide.",en:"Invalid error status.",de:"Ungültiger Fehlerstatus."},
+  "Ongeldige foutcategorie.":{fr:"Catégorie d’erreur invalide.",en:"Invalid error category.",de:"Ungültige Fehlerkategorie."},
+  "Ongeldige ernst.":{fr:"Gravité invalide.",en:"Invalid severity.",de:"Ungültiger Schweregrad."},
+  "Ongeldige herstelactie.":{fr:"Action de récupération invalide.",en:"Invalid recovery action.",de:"Ungültige Wiederherstellungsaktion."},
+  "Ongeldige AI-samenvatting.":{fr:"Résumé IA invalide.",en:"Invalid AI summary.",de:"Ungültige KI-Zusammenfassung."},
+  "Ongeldige gebruikersmelding.":{fr:"Message utilisateur invalide.",en:"Invalid user message.",de:"Ungültige Benutzermeldung."},
+  "Makeractie is te groot.":{fr:"L’action du créateur est trop volumineuse.",en:"Maker action is too large.",de:"Maker-Aktion ist zu groß."},
+  "Foutrapport niet beschikbaar voor verwerking.":{fr:"Le rapport d’erreur n’est pas disponible pour traitement.",en:"The error report is not available for processing.",de:"Der Fehlerbericht ist nicht zur Verarbeitung verfügbar."},
   "ACCOUNT GEBLOKKEERD":{fr:"COMPTE BLOQUÉ",en:"ACCOUNT BLOCKED",de:"KONTO GESPERRT"},
   "Je kunt je eigen account niet blokkeren.":{fr:"Vous ne pouvez pas bloquer votre propre compte.",en:"You cannot block your own account.",de:"Du kannst dein eigenes Konto nicht sperren."},
   "De maker van de app kan niet worden geblokkeerd.":{fr:"Le créateur de l’application ne peut pas être bloqué.",en:"The app maker cannot be blocked.",de:"Der App-Ersteller kann nicht gesperrt werden."},
