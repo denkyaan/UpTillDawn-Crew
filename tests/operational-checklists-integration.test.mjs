@@ -87,10 +87,11 @@ test('checklist actions upload and clean evidence safely', async () => {
   assert.match(source,/storage\.from\('work-media'\)\.remove/)
 })
 
-test('checklist UI is integrated into staff Tasks and manager Workplaces without navigation changes', async () => {
-  const [panel,tasks,workplaces]=await Promise.all([
+test('checklist UI is integrated into staff Tasks and manager Briefing without navigation changes', async () => {
+  const [panel,tasks,briefing,workplaces]=await Promise.all([
     readFile(new URL('../components/crew/operational-checklists.tsx',import.meta.url),'utf8'),
     readFile(new URL('../app/(app)/tasks/page.tsx',import.meta.url),'utf8'),
+    readFile(new URL('../app/(app)/briefings/page.tsx',import.meta.url),'utf8'),
     readFile(new URL('../app/(app)/workplaces/page.tsx',import.meta.url),'utf8'),
   ])
   for(const label of [
@@ -104,5 +105,6 @@ test('checklist UI is integrated into staff Tasks and manager Workplaces without
     'CHECKLIST HEROPENEN',
   ])assert.ok(panel.includes(label),label)
   assert.match(tasks,/!manager&&<OperationalChecklistPanel/)
-  assert.match(workplaces,/\(isAdmin\|\|isResponsible\)&&<OperationalChecklistPanel/)
+  assert.match(briefing,/manager&&workplaces\.length>0&&<OperationalChecklistPanel/)
+  assert.doesNotMatch(workplaces,/OperationalChecklistPanel/)
 })
