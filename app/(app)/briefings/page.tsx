@@ -6,6 +6,7 @@ import { BriefingAnalysisFields } from '@/components/crew/briefing-analysis-fiel
 import { acknowledgeBriefing, acknowledgeInstruction, createBriefing, createPersonalInstruction, updateBriefing, updatePersonalInstruction } from '@/lib/actions/uptilldawn'
 import { AssignmentScopeFields, type AssignmentEvent, type AssignmentMembership, type AssignmentPerson, type AssignmentWorkplace } from '@/components/crew/assignment-scope-fields'
 import { OperationalChecklistPanel } from '@/components/crew/operational-checklists'
+import { ChecklistTemplatePanel } from '@/components/crew/checklist-template-panel'
 import { PlatformAiAssistant } from '@/components/admin/platform-ai-assistant'
 import type { Tables } from '@/types/crew-database'
 import { redirect } from 'next/navigation'
@@ -66,6 +67,27 @@ export default async function Page(){
  if(isAdmin){const [{data:eventRows},{data:workplaceRows},{data:personRows},{data:eventMembers},{data:shiftRows}]=await Promise.all([s.from('events').select('id,name').neq('status','archived').order('start_at'),s.from('workplaces').select('id,name,event_id').eq('is_active',true).order('sort_order'),s.from('profiles').select('id,full_name').eq('approved',true).order('full_name'),s.from('event_members').select('event_id,user_id'),s.from('shifts').select('event_id,workplace_id,user_id').neq('status','cancelled')]);events=eventRows||[];workplaces=workplaceRows||[];people=personRows||[];memberships=[...(eventMembers||[]).map(row=>({event_id:row.event_id,workplace_id:null,user_id:row.user_id})),...(shiftRows||[]).map(row=>({event_id:row.event_id,workplace_id:row.workplace_id,user_id:row.user_id}))]}
  else if(isResponsible){const {data:responsibleRows}=await s.from('responsible_assignments').select('event_id,workplace_id').eq('user_id',user.id);const eventIds=[...new Set((responsibleRows||[]).map(row=>row.event_id))],workplaceIds=[...new Set((responsibleRows||[]).map(row=>row.workplace_id))];if(eventIds.length&&workplaceIds.length){const [{data:eventRows},{data:workplaceRows}]=await Promise.all([s.from('events').select('id,name').in('id',eventIds).neq('status','archived').gte('end_at','now').order('start_at'),s.from('workplaces').select('id,name,event_id').in('id',workplaceIds).eq('is_active',true).order('sort_order')]);events=eventRows||[];workplaces=workplaceRows||[];const directories=await Promise.all((responsibleRows||[]).map(async row=>{const {data}=await s.rpc('upt_responsible_event_members',{p_event:row.event_id,p_workplace:row.workplace_id});return{eventId:row.event_id,workplaceId:row.workplace_id,people:data||[]}}));const uniquePeople=new Map<string,AssignmentPerson>();for(const directory of directories)for(const person of directory.people){uniquePeople.set(person.id,{id:person.id,full_name:person.full_name});memberships.push({event_id:directory.eventId,workplace_id:directory.workplaceId,user_id:person.id})}people=[...uniquePeople.values()].sort((a,b)=>(a.full_name||'').localeCompare(b.full_name||'','nl'))}}
  const shiftEventId=ownActiveShifts?.find(shift=>events.some(event=>event.id===shift.event_id))?.event_id||'',currentEventId=activeEvents?.find(event=>events.some(option=>option.id===event.id))?.id||'',defaultEventId=shiftEventId||currentEventId
+ const templateWorkplaceIds=workplaces.map(workplace=>workplace.id)
+ const [{data:templateWorkplaceRows},{data:checklistTemplates}]=manager&&templateWorkplaceIds.length
+  ? await Promise.all([
+      s.from('workplaces').select('id,event_id,name,catalog_workplace_id').in('id',templateWorkplaceIds).eq('is_active',true).order('sort_order'),
+      s.from('operational_checklist_templates').select('id,catalog_workplace_id,kind,title').eq('is_active',true).order('kind').order('title'),
+    ])
+  : [{data:[]},{data:[]}]
+ const eventNames=new Map(events.map(event=>[event.id,event.name]))
+ const templateWorkplaces=(templateWorkplaceRows||[]).map(workplace=>({
+  id:workplace.id,
+  eventId:workplace.event_id,
+  eventName:eventNames.get(workplace.event_id)||'Evenement',
+  name:workplace.name,
+  catalogWorkplaceId:workplace.catalog_workplace_id,
+ }))
+ const templateOptions=(checklistTemplates||[]).map(template=>({
+  id:template.id,
+  catalogWorkplaceId:template.catalog_workplace_id,
+  kind:template.kind,
+  title:template.title,
+ }))
  const attachments:Tables<'work_attachments'>[]=[];const briefingIds=visibleBriefs.map(item=>item.id),personalIds=visiblePersonal.map(item=>item.id)
  if(briefingIds.length){const {data}=await s.from('work_attachments').select('*').in('briefing_id',briefingIds).order('created_at');attachments.push(...(data||[]))}if(personalIds.length){const {data}=await s.from('work_attachments').select('*').in('personal_instruction_id',personalIds).order('created_at');attachments.push(...(data||[]))}
  const photoUrls=new Map<string,string>();await Promise.all(attachments.map(async attachment=>{const {data}=await s.storage.from('work-media').createSignedUrl(attachment.storage_path,300);if(data?.signedUrl)photoUrls.set(attachment.storage_path,data.signedUrl)}));const briefingPhotos=(id:string)=>attachments.filter(item=>item.briefing_id===id),instructionPhotos=(id:string)=>attachments.filter(item=>item.personal_instruction_id===id)
@@ -73,6 +95,7 @@ export default async function Page(){
  {isAdmin&&<PlatformAiAssistant eventId={defaultEventId||undefined} contextKey="briefing" contextLabel="Briefing & checklists"/>}
  {manager&&(isAdmin||events.length>0)&&<ManagerOnly><div className="grid gap-4 lg:grid-cols-2"><form action={createBriefing} className="grid gap-3 rounded-xl border p-4"><h2 className="font-bold">Nieuwe algemene instructie</h2><AssignmentScopeFields events={events} workplaces={workplaces} people={people} memberships={memberships} isAdmin={isAdmin} showEventSelect requirePerson={false} workplaceRequired={false} defaultEventId={defaultEventId}/><BriefingAnalysisFields/><MediaInput/><button className="rounded-xl bg-violet-600 p-3">Instructie aanmaken</button></form>
  <form action={createPersonalInstruction} className="grid gap-3 rounded-xl border border-violet-500 p-4"><h2 className="font-bold">Persoonlijke instructie</h2><AssignmentScopeFields events={events} workplaces={workplaces} people={people} memberships={memberships} isAdmin={isAdmin} showEventSelect workplaceRequired={false} defaultEventId={defaultEventId}/><BriefingAnalysisFields bodyPlaceholder="Persoonlijke instructie"/><MediaInput/><button className="rounded-xl bg-violet-600 p-3">Instructie toewijzen</button></form></div></ManagerOnly>}
+ {manager&&<ChecklistTemplatePanel workplaces={templateWorkplaces} templates={templateOptions}/>}
  {manager&&workplaces.length>0&&<OperationalChecklistPanel
   userId={user.id}
   canManage={manager}
