@@ -3,6 +3,7 @@
 import { cookies } from 'next/headers'
 import { redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase/crew-server'
+import { markSaveSuccess } from '@/lib/save-success'
 
 const GOD_COOKIE='uptilldawn-god-session'
 const GOD_LOGIN='edit@uptilldawn'
@@ -32,6 +33,7 @@ export async function configureGodMode(formData:FormData){
 
   const store=await cookies()
   store.set(GOD_COOKIE,token,{httpOnly:true,secure:true,sameSite:'strict',path:'/',maxAge:2*60*60})
+  await markSaveSuccess()
   redirect('/god-mode')
 }
 
