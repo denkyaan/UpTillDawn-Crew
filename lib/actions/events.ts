@@ -1,6 +1,6 @@
 'use server'
 
-import { revalidatePath } from 'next/cache'
+import { revalidatePath } from '@/lib/save-success'
 import { z } from 'zod'
 import { createClient } from '@/lib/supabase/crew-server'
 import { fetchFacebookEventInfo } from '@/lib/facebook-event'
@@ -59,5 +59,5 @@ export async function createEvent(fd:FormData){
  if(error||!created){console.error('[Event create]',{code:error?.code});throw new Error('Evenement aanmaken mislukt.')}
  const {error:catalogError}=await s.rpc('upt_sync_workplace_catalog_to_event',{p_event:created.id})
  if(catalogError)console.error('[Event workplace catalog sync]',{code:catalogError.code})
- revalidatePath('/events');revalidatePath('/chat');revalidatePath('/workplaces');revalidatePath('/inventory')
+ await revalidatePath('/events');await revalidatePath('/chat');await revalidatePath('/workplaces');await revalidatePath('/inventory')
 }
