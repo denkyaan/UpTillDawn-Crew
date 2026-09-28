@@ -17,7 +17,7 @@ test('offline shell script is syntactically valid and keeps ordered dependency r
 
 test('service worker caches the current offline shell version', async () => {
   const sw = await readFile(new URL('../public/sw.js', import.meta.url), 'utf8')
-  assert.match(sw, /uptilldawn-public-v11/)
+  assert.match(sw, /uptilldawn-public-v12/)
   assert.match(sw, /\/offline\.html/)
   assert.match(sw, /\/offline-public\.html/)
   assert.match(sw, /event\.request\.mode==='navigate'/)
@@ -32,4 +32,20 @@ test('all public auth routes use the privacy-safe offline fallback', async () =>
   for (const route of ['/signup','/forgot-password','/verify-email','/disabled','/unauthorized']) {
     assert.ok(sw.includes(`url.pathname==='${route}'`), `${route} must be treated as public offline`)
   }
+})
+
+
+test('offline operational content can queue checklist guestlist and sales actions', async () => {
+  const content = await readFile(new URL('../public/offline-content.js', import.meta.url), 'utf8')
+  const sync = await readFile(new URL('../components/crew/global-offline-content-sync.tsx', import.meta.url), 'utf8')
+  const center = await readFile(new URL('../components/crew/sync-center.tsx', import.meta.url), 'utf8')
+  assert.match(content,/enqueue\(userId,'checklist_item'/)
+  assert.match(content,/enqueue\(userId,'guestlist_checkin'/)
+  assert.match(content,/enqueue\(userId,'sale'/)
+  assert.match(sync,/saveOfflineGuestlistAndSales/)
+  assert.match(sync,/event_guestlist_entries/)
+  assert.match(sync,/sale_enabled/)
+  assert.match(center,/guestlist_checkin/)
+  assert.match(center,/checklist_item/)
+  assert.match(center,/sale:/)
 })
