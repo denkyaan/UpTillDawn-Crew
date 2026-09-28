@@ -78,6 +78,12 @@ const EXTENSIONS: Record<string, Row> = {
   'Wachtlijst #': { fr: 'Liste d’attente n°', en: 'Waitlist #', de: 'Warteliste #' },
   'Succesvol opgeslagen.': { fr: 'Enregistré avec succès.', en: 'Saved successfully.', de: 'Erfolgreich gespeichert.' },
   'Profiel opgeslagen.': { fr: 'Profil enregistré.', en: 'Profile saved.', de: 'Profil gespeichert.' },
+  'WACHT OP REACTIE': { fr: 'EN ATTENTE DE RÉPONSE', en: 'WAITING FOR RESPONSE', de: 'WARTET AUF ANTWORT' },
+  'Personeelslid herplannen': { fr: 'Replanifier un membre du personnel', en: 'Reassign staff member', de: 'Mitarbeiter neu einplanen' },
+  'Nieuw personeelslid…': { fr: 'Nouveau membre du personnel…', en: 'New staff member…', de: 'Neuer Mitarbeiter…' },
+  'Reden herplanning': { fr: 'Motif de replanification', en: 'Reason for reassignment', de: 'Grund für Neuplanung' },
+  'HERPLAN DIENST': { fr: 'REPLANIFIER LE SERVICE', en: 'REASSIGN SHIFT', de: 'SCHICHT NEU PLANEN' },
+
   'Werkplaatsen & shifts': { fr: 'Postes & services', en: 'Workplaces & shifts', de: 'Arbeitsplätze & Schichten' },
   'Werkplekuren:': { fr: 'Heures du poste :', en: 'Workplace hours:', de: 'Arbeitsplatzzeiten:' },
   'Standaard werkuren voor deze werkplek': { fr: 'Heures de travail standard pour ce poste', en: 'Default working hours for this workplace', de: 'Standardarbeitszeiten für diesen Arbeitsplatz' },
