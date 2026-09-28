@@ -1,6 +1,6 @@
 'use server'
 
-import { revalidatePath } from 'next/cache'
+import { revalidatePath } from '@/lib/save-success'
 import { z } from 'zod'
 import { createClient } from '@/lib/supabase/crew-server'
 
@@ -17,6 +17,6 @@ export async function completeEventOnboardingStep(fd:FormData){
   const value=step.parse(fd.get('step'))
   const {error}=await s.rpc('upt_complete_event_onboarding_step',{p_event:eventId,p_step:value})
   if(error)throw new Error(error.message)
-  revalidatePath('/onboarding')
-  revalidatePath('/events')
+  await revalidatePath('/onboarding')
+  await revalidatePath('/events')
 }
