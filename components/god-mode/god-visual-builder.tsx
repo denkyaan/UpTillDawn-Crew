@@ -103,6 +103,10 @@ export function GodVisualBuilder({
   const [foreground,setForeground] = useState('')
   const [background,setBackground] = useState('')
   const [visible,setVisible] = useState(true)
+  const [themePrimary,setThemePrimary] = useState('#7c3aed')
+  const [themeBackground,setThemeBackground] = useState('#1c1c1e')
+  const [themeCard,setThemeCard] = useState('#2c2c2e')
+  const [themeRadius,setThemeRadius] = useState('0.75rem')
   const [buttonLabel,setButtonLabel] = useState('Nieuwe knop')
   const [buttonAction,setButtonAction] = useState('/events')
   const [status,setStatus] = useState('')
@@ -229,6 +233,19 @@ export function GodVisualBuilder({
     ].filter(Boolean).join(' ')
   }
 
+  function applyThemePreview(){
+    const doc=frameRef.current?.contentDocument
+    if(!doc){setStatus('Open eerst een preview.');return}
+    const root=doc.documentElement
+    root.style.setProperty('--primary',themePrimary)
+    root.style.setProperty('--ring',themePrimary)
+    root.style.setProperty('--sidebar-primary',themePrimary)
+    root.style.setProperty('--background',themeBackground)
+    root.style.setProperty('--card',themeCard)
+    root.style.setProperty('--radius',themeRadius)
+    setStatus('Thema op de preview toegepast. Maak een codevoorstel om dit permanent te maken.')
+  }
+
   function createPreviewButton(){
     const doc=frameRef.current?.contentDocument
     if(!doc)return
@@ -306,9 +323,15 @@ export function GodVisualBuilder({
       </section>
 
       <section className="space-y-3 rounded-2xl border p-4">
-        <p className="text-xs font-black uppercase tracking-wider text-violet-400">Thema</p>
-        <p className="text-sm text-muted-foreground">Gebruik AI om globale kleuren, typografie, radius, spacing of componentstijl veilig in de broncode door te voeren.</p>
-        <button onClick={()=>onPrepareAi('Open de relevante globale CSS/theme-bestanden en maak de visuele stijl van de app volledig instelbaar vanuit God Mode. Behoud dark mode en responsiviteit. Voeg duidelijke CSS custom properties toe voor achtergrond, voorgrond, accentkleur, borders, radius en spacing.')} className="w-full rounded-xl border px-4 py-2">Thema-editor voorbereiden</button>
+        <p className="text-xs font-black uppercase tracking-wider text-violet-400">Thema & kleuren</p>
+        <div className="grid grid-cols-2 gap-2">
+          <label className="text-xs">Primaire kleur<input type="color" value={themePrimary} onChange={e=>setThemePrimary(e.target.value)} className="mt-1 h-10 w-full rounded border bg-background"/></label>
+          <label className="text-xs">Achtergrond<input type="color" value={themeBackground} onChange={e=>setThemeBackground(e.target.value)} className="mt-1 h-10 w-full rounded border bg-background"/></label>
+          <label className="text-xs">Kaarten<input type="color" value={themeCard} onChange={e=>setThemeCard(e.target.value)} className="mt-1 h-10 w-full rounded border bg-background"/></label>
+          <label className="text-xs">Globale ronding<input value={themeRadius} onChange={e=>setThemeRadius(e.target.value)} placeholder="0.75rem" className="mt-1 h-10 w-full rounded border bg-background px-2"/></label>
+        </div>
+        <button onClick={applyThemePreview} className="w-full rounded-xl border px-4 py-2">Thema op preview toepassen</button>
+        <button onClick={()=>onPrepareAi(`Pas het globale thema in app/globals.css aan. Primaire kleur: ${themePrimary}; achtergrond: ${themeBackground}; kaartkleur: ${themeCard}; globale radius: ${themeRadius}. Werk zowel light als dark mode consistent bij, inclusief sidebar, ring en accentvariabelen. Behoud contrast, toegankelijkheid en responsiviteit.`,'app/globals.css',1)} className="w-full rounded-xl bg-violet-600 px-4 py-2 font-bold text-white">Thema als codevoorstel</button>
       </section>
     </aside>
   </div>
