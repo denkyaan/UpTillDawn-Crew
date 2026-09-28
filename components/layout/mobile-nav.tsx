@@ -17,6 +17,7 @@ export function MobileBottomNav({
   chatMissed=0,
   incidentMissed=0,
   taskMissed=0,
+  notificationFeatureCounts={},
   featureOrder=[],
   featureLabels={},
   featureVisibility={},
@@ -26,6 +27,7 @@ export function MobileBottomNav({
   chatMissed?:number
   incidentMissed?:number
   taskMissed?:number
+  notificationFeatureCounts?:Record<string,number>
   featureOrder?:string[]
   featureLabels?:Record<string,string>
   featureVisibility?:Record<string,boolean>
@@ -78,7 +80,10 @@ export function MobileBottomNav({
        : items.slice(activeIndex-1,activeIndex+2)
  const compactItems=contextualItems.length?contextualItems:fallbackItems
 
- const badgeCount=(key:string)=>key==="chat"?chatMissed:key==="incidents"?incidentMissed:key==="tasks"?taskMissed:0
+ const badgeCount=(key:string)=>{
+   const activityCount=key==="chat"?chatMissed:key==="incidents"?incidentMissed:key==="tasks"?taskMissed:0
+   return Math.max(activityCount,notificationFeatureCounts[key]??0)
+ }
 
  const NavItem=({item,expandedItem=false}:{item:NavigationItem;expandedItem?:boolean})=>{
    const href=hrefFor(item)
