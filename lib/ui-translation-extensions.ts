@@ -198,7 +198,6 @@ const EXTENSIONS: Record<string, Row> = {
   'Verantwoordelijken': { fr: 'Responsables', en: 'Responsibles', de: 'Verantwortliche' },
   'Openingschecklists': { fr: 'Checklists d’ouverture', en: 'Opening checklists', de: 'Öffnungschecklisten' },
   'Inventory': { fr: 'Inventaire', en: 'Inventory', de: 'Inventar' },
-  'Incidenten': { fr: 'Incidents', en: 'Incidents', de: 'Vorfälle' },
   'KLAAR': { fr: 'PRÊT', en: 'READY', de: 'BEREIT' },
   'ACTIE NODIG': { fr: 'ACTION REQUISE', en: 'ACTION NEEDED', de: 'AKTION NÖTIG' },
   'Nog te regelen per werkplek': { fr: 'À régler par poste de travail', en: 'Still to arrange per workplace', de: 'Noch pro Arbeitsplatz zu regeln' },
