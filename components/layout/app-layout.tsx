@@ -63,7 +63,7 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
     pathname.startsWith("/inventory")?"inventory":
     pathname.startsWith("/guestlist")?"guestlist":
     pathname.startsWith("/sales")?"sales":
-    pathname.startsWith("/shifts")?"shifts":
+    pathname.startsWith("/shifts")?"workplaces":
     pathname.startsWith("/briefings")?"briefings":
     pathname.startsWith("/tasks")?"tasks":
     pathname.startsWith("/chat")?"chat":
@@ -122,7 +122,7 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
       if(link.startsWith("/inventory"))return "inventory"
       if(link.startsWith("/guestlist"))return "guestlist"
       if(link.startsWith("/sales"))return "sales"
-      if(link.startsWith("/shifts"))return "shifts"
+      if(link.startsWith("/shifts"))return "workplaces"
       if(link.startsWith("/briefings"))return "briefings"
       if(link.startsWith("/tasks"))return "tasks"
       if(link.startsWith("/chat"))return "chat"
@@ -235,7 +235,7 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
 
   const showOverview=feature("overview",true)
   const showEvents=feature("events",true)
-  const showShifts=feature("shifts",Boolean(isAdmin)||context.assignedEvent)
+  const showShifts=false
   const showBriefings=feature("briefings",Boolean(isAdmin)||context.assignedEvent)
   const showOperations=feature("operations",isAdmin?true:context.shiftActive)
   const showWorkplaces=feature("workplaces",Boolean(isAdmin)||context.assignedWorkplaceRole)
