@@ -74,6 +74,7 @@ const EXTENSIONS: Record<string, Row> = {
   '· VOL': { fr: '· COMPLET', en: '· FULL', de: '· VOLL' },
   'Aanmelddeadline:': { fr: 'Date limite d’inscription :', en: 'Registration deadline:', de: 'Anmeldefrist:' },
   'Wachtlijst': { fr: 'Liste d’attente', en: 'Waitlist', de: 'Warteliste' },
+  'Wachtlijst #': { fr: 'Liste d’attente n°', en: 'Waitlist #', de: 'Warteliste #' },
   'Voorkeur werkplek': { fr: 'Poste de travail préféré', en: 'Preferred workplace', de: 'Bevorzugter Arbeitsplatz' },
   'Geen voorkeur': { fr: 'Aucune préférence', en: 'No preference', de: 'Keine Präferenz' },
   'Andere voorkeur': { fr: 'Autre préférence', en: 'Other preference', de: 'Andere Präferenz' },
