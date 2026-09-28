@@ -3888,6 +3888,8 @@ export type Database = {
         Row: {
           catalog_workplace_id: string | null
           created_at: string
+          default_shift_end: string | null
+          default_shift_start: string | null
           description: string | null
           event_id: string
           id: string
@@ -3904,6 +3906,8 @@ export type Database = {
         Insert: {
           catalog_workplace_id?: string | null
           created_at?: string
+          default_shift_end?: string | null
+          default_shift_start?: string | null
           description?: string | null
           event_id: string
           id?: string
@@ -3920,6 +3924,8 @@ export type Database = {
         Update: {
           catalog_workplace_id?: string | null
           created_at?: string
+          default_shift_end?: string | null
+          default_shift_start?: string | null
           description?: string | null
           event_id?: string
           id?: string
