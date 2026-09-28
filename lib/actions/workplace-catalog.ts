@@ -35,7 +35,7 @@ async function syncFutureEvents(s:Awaited<ReturnType<typeof createClient>>){
   }
 }
 
-function refresh(){
+async function await refresh(){
   await revalidatePath('/inventory')
   await revalidatePath('/workplaces')
   await revalidatePath('/events')
@@ -54,7 +54,7 @@ export async function createCatalogWorkplace(fd:FormData){
   })
   if(error)throw new Error(error.message)
   await syncFutureEvents(s)
-  refresh()
+  await refresh()
 }
 
 export async function updateCatalogWorkplace(fd:FormData){
@@ -72,7 +72,7 @@ export async function updateCatalogWorkplace(fd:FormData){
   })
   if(error)throw new Error(error.message)
   await syncFutureEvents(s)
-  refresh()
+  await refresh()
 }
 
 export async function createCatalogItem(fd:FormData){
@@ -85,7 +85,7 @@ export async function createCatalogItem(fd:FormData){
   })
   if(error)throw new Error(error.message)
   await syncFutureEvents(s)
-  refresh()
+  await refresh()
 }
 
 export async function updateCatalogItem(fd:FormData){
@@ -99,12 +99,12 @@ export async function updateCatalogItem(fd:FormData){
   })
   if(error)throw new Error(error.message)
   await syncFutureEvents(s)
-  refresh()
+  await refresh()
 }
 
 export async function syncCatalogToEvent(fd:FormData){
   const s=await adminClient()
   const {error}=await s.rpc('upt_sync_workplace_catalog_to_event',{p_event:uuid.parse(fd.get('event_id'))})
   if(error)throw new Error(error.message)
-  refresh()
+  await refresh()
 }
