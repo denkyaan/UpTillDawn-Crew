@@ -270,19 +270,24 @@ export async function updateWorkplace(fd:FormData){
  check(error);revalidatePath('/workplaces');revalidatePath('/shifts')
 }
 export async function setEventAvailability(fd:FormData){
- const {s}=await approvedClient()
- const eventId=uuid.parse(fd.get('event_id'))
- const response=z.enum(['can','cannot']).parse(fd.get('response'))
- const setup=z.enum(['yes','no']).parse(fd.get('setup_available'))==='yes'
- const breakdown=z.enum(['yes','no']).parse(fd.get('breakdown_available'))==='yes'
- const {error}=await s.rpc('upt_set_event_availability_extended',{
-  p_event:eventId,
-  p_response:response,
-  p_setup:setup,
-  p_breakdown:breakdown,
- })
- check(error)
- revalidatePath('/events')
+ const {s}=await approvedClient()
+ const eventId=uuid.parse(fd.get('event_id'))
+ const response=z.enum(['can','cannot']).parse(fd.get('response'))
+ const setup=z.enum(['yes','no']).parse(fd.get('setup_available'))==='yes'
+ const breakdown=z.enum(['yes','no']).parse(fd.get('breakdown_available'))==='yes'
+ const reason=String(fd.get('reason')||'').trim().slice(0,1000)||undefined
+ const {error}=await s.rpc('upt_set_event_availability_with_reason',{
+  p_event:eventId,
+  p_response:response,
+  p_setup:setup,
+  p_breakdown:breakdown,
+  p_reason:reason,
+ })
+ if(error?.message?.includes('Geef een reden')||error?.message?.includes('Afmeldreden')){
+  throw new Error('Geef een reden waarom je niet meer kunt deelnemen.')
+ }
+ check(error)
+ revalidatePath('/events')
 }
 export async function addEventMember(fd:FormData){
  const {s}=await adminClient()
