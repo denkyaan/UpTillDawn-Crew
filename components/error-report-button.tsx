@@ -4,7 +4,8 @@ import { useCallback,useEffect,useState } from 'react'
 import { createClient } from '@/lib/supabase/crew-client'
 
 type ErrorSource='boundary'|'runtime'|'promise'|'manual'|'api'
-const isTerminal=(status:string)=>['auto_resolved','needs_maker','resolved','failed','dismissed'].includes(status)
+const TERMINAL_STATUSES=new Set(['auto_resolved','needs_maker','resolved','failed','dismissed'])
+const isTerminal=(status:string)=>TERMINAL_STATUSES.has(status)
 
 type ReportState={
   id:string
