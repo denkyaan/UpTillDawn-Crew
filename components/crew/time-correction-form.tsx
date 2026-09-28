@@ -3,6 +3,7 @@
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/crew-client'
+import { showSaveSuccess } from '@/lib/client-save-success'
 
 export function TimeCorrectionForm({ targetType, targetId, startedAt, endedAt }: {
   targetType: 'work_session' | 'break_session'
@@ -38,6 +39,7 @@ export function TimeCorrectionForm({ targetType, targetId, startedAt, endedAt }:
     if (error) setMessage('Correctie geweigerd. Controleer de tijd en probeer opnieuw.')
     else {
       setMessage('Tijdcorrectie opgeslagen en geaudit.')
+      showSaveSuccess()
       router.refresh()
     }
     setBusy(false)
