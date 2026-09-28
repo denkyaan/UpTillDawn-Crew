@@ -1609,6 +1609,7 @@ export type Database = {
           id: string
           is_active: boolean
           issued_quantity: number
+          item_kind: string
           last_maintenance_at: string | null
           location_label: string | null
           maintenance_due_at: string | null
@@ -1640,6 +1641,7 @@ export type Database = {
           id?: string
           is_active?: boolean
           issued_quantity?: number
+          item_kind?: string
           last_maintenance_at?: string | null
           location_label?: string | null
           maintenance_due_at?: string | null
@@ -1671,6 +1673,7 @@ export type Database = {
           id?: string
           is_active?: boolean
           issued_quantity?: number
+          item_kind?: string
           last_maintenance_at?: string | null
           location_label?: string | null
           maintenance_due_at?: string | null
@@ -4041,10 +4044,22 @@ export type Database = {
         }
         Returns: string
       }
+      upt_apply_event_template_v2: {
+        Args: {
+          p_address?: string
+          p_end: string
+          p_name: string
+          p_start: string
+          p_template: string
+          p_venue?: string
+        }
+        Returns: string
+      }
       upt_apply_planning_recommendation: {
         Args: { p_recommendation: string }
         Returns: string
       }
+      upt_archive_event: { Args: { p_event: string }; Returns: undefined }
       upt_archive_event_document: {
         Args: { p_document: string }
         Returns: string
@@ -4135,6 +4150,10 @@ export type Database = {
           workplace_name: string
         }[]
       }
+      upt_close_event: {
+        Args: { p_event: string; p_force?: boolean; p_reason?: string }
+        Returns: undefined
+      }
       upt_close_operational_checklist: {
         Args: { p_checklist: string }
         Returns: undefined
@@ -4191,15 +4210,26 @@ export type Database = {
         }
         Returns: string
       }
-      upt_create_inventory_item: {
-        Args: {
-          p_category?: string
-          p_name: string
-          p_quantity?: number
-          p_workplace: string
-        }
-        Returns: string
-      }
+      upt_create_inventory_item:
+        | {
+            Args: {
+              p_category?: string
+              p_name: string
+              p_quantity?: number
+              p_workplace: string
+            }
+            Returns: string
+          }
+        | {
+            Args: {
+              p_category?: string
+              p_item_kind?: string
+              p_name: string
+              p_quantity?: number
+              p_workplace: string
+            }
+            Returns: string
+          }
       upt_create_operational_checklist: {
         Args: {
           p_description?: string
@@ -4320,6 +4350,7 @@ export type Database = {
         Returns: string
       }
       upt_effective_role: { Args: { uid?: string }; Returns: string }
+      upt_event_command_snapshot: { Args: { p_event: string }; Returns: Json }
       upt_event_onboarding_status: { Args: { p_event: string }; Returns: Json }
       upt_event_payroll_summary: {
         Args: { p_event: string }
@@ -4897,6 +4928,16 @@ export type Database = {
           p_feature_key: string
           p_notes?: string
           p_rollout_percentage?: number
+        }
+        Returns: undefined
+      }
+      upt_set_inventory_asset_details: {
+        Args: {
+          p_asset_code?: string
+          p_barcode?: string
+          p_item: string
+          p_kind: string
+          p_serial_number?: string
         }
         Returns: undefined
       }
