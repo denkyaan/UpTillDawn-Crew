@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect } from "react"
+import { useLayoutEffect } from "react"
 import type { ExtendedUiLocale } from "@/lib/ui-translation-extensions"
 import { translateRuntimeUi } from "@/lib/ui-translation-runtime"
 import {
@@ -68,7 +68,7 @@ function translateNode(root: Node, locale: ExtendedUiLocale) {
 }
 
 export function LocaleSync() {
-  useEffect(() => {
+  useLayoutEffect(() => {
     let locale = initialUiLocale() as ExtendedUiLocale
     let applying = false
     const applyLocale = (nextLocale: ExtendedUiLocale, source: LocaleSource) => {
