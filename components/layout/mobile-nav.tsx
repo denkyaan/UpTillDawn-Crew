@@ -9,9 +9,9 @@ import { useAuth } from "@/lib/providers"
 import { cn } from "@/lib/utils"
 import { getDefaultRoleUiLabel, type RoleRuleRole } from "@/lib/role-ui"
 
-const ASSIGNED_EVENT_KEYS=["events","briefings","shifts","workplaces"] as const
-const STAFF_ACTIVE_SHIFT_KEYS=["operations","shifts","briefings","tasks"] as const
-const RESPONSIBLE_ACTIVE_SHIFT_KEYS=["operations","shifts","workplaces","incidents"] as const
+const ASSIGNED_EVENT_KEYS=["events","briefings","workplaces"] as const
+const STAFF_ACTIVE_SHIFT_KEYS=["operations","workplaces","briefings","tasks"] as const
+const RESPONSIBLE_ACTIVE_SHIFT_KEYS=["operations","workplaces","incidents"] as const
 
 export function MobileBottomNav({
   chatMissed=0,
