@@ -16,6 +16,10 @@ const INVARIANT=new Set([
   'Excel',
   'QR',
   'GPS',
+  'Nederlands',
+  'Français',
+  'English',
+  'Deutsch',
 ])
 
 async function walk(dir){
