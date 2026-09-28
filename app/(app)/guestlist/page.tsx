@@ -5,6 +5,7 @@ import {addGuestlistEntry,setBackstageWorkplace} from '@/lib/actions/guestlist'
 import {GuestlistEntranceClient,type GuestlistEntry} from '@/components/crew/guestlist-entrance-client'
 import {BackstageArtistChecklist,type ArtistChecklistRow} from '@/components/crew/backstage-artist-checklist'
 import {GuestlistImportForm} from '@/components/crew/guestlist-import-form'
+import {PlatformAiAssistant} from '@/components/admin/platform-ai-assistant'
 
 export const dynamic='force-dynamic'
 
@@ -143,6 +144,8 @@ export default async function GuestlistPage({
         </form>
       </article>
     </section>}
+
+    {isAdmin&&<PlatformAiAssistant/>}
 
     <GuestlistEntranceClient
       key={selected.id}
