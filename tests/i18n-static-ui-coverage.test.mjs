@@ -61,6 +61,20 @@ function lineOf(source,node){
   return source.getLineAndCharacterOfPosition(node.getStart(source)).line+1
 }
 
+function isNoTranslate(node){
+  let current=node
+  while(current){
+    if(ts.isJsxElement(current)){
+      if(current.openingElement.attributes.properties.some(attr=>ts.isJsxAttribute(attr)&&attr.name.getText()==='data-no-translate'))return true
+    }
+    if(ts.isJsxSelfClosingElement(current)){
+      if(current.attributes.properties.some(attr=>ts.isJsxAttribute(attr)&&attr.name.getText()==='data-no-translate'))return true
+    }
+    current=current.parent
+  }
+  return false
+}
+
 test('every static user-facing UI string has NL/FR/EN/DE coverage', async () => {
   const [extension,complete,appCatalog,appExtraCatalog,crewCatalog,crewExtraCatalog,godCatalog]=await Promise.all([
     readFile('lib/ui-translation-extensions.ts','utf8'),
