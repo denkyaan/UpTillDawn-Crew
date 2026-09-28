@@ -1,6 +1,7 @@
 'use client'
 
 import { useState } from 'react'
+import { showSaveSuccess } from '@/lib/client-save-success'
 
 export function GuestlistImportForm({eventId}:{eventId:string}){
   const [busy,setBusy]=useState(false)
@@ -18,6 +19,7 @@ export function GuestlistImportForm({eventId}:{eventId:string}){
         return
       }
       setMessage(`Import klaar · ${payload?.inserted||0} nieuw · ${payload?.duplicates||0} bestaand · ${payload?.supplemented||0} aangevuld`)
+      showSaveSuccess()
       window.location.reload()
     }catch{
       setMessage('Guestlist kon niet worden geïmporteerd.')
