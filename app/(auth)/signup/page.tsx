@@ -19,6 +19,7 @@ export default function SignupPage() {
   const [showPassword, setShowPassword] = useState(false)
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({})
   const [serverError, setServerError] = useState<string | null>(null)
+  const [serverErrorCode, setServerErrorCode] = useState<string | null>(null)
   const [isPending, startTransition] = useTransition()
 
   const validate = (formData: FormData): Record<string, string> => {
@@ -41,6 +42,7 @@ export default function SignupPage() {
   const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault()
     setServerError(null)
+    setServerErrorCode(null)
 
     const formData = new FormData(e.currentTarget)
     const errors = validate(formData)
@@ -55,6 +57,7 @@ export default function SignupPage() {
       const result = await signUp(formData)
       if (result?.error) {
         setServerError(result.error)
+        setServerErrorCode('code' in result && typeof result.code === 'string' ? result.code : 'signup_error')
       } else if (result?.success) {
         router.push("/verify-email")
       }
@@ -78,7 +81,10 @@ export default function SignupPage() {
         {serverError && (
           <div className="flex items-start gap-3 rounded-xl border border-destructive/30 bg-destructive/5 p-3">
             <AlertCircle className="h-5 w-5 shrink-0 text-destructive mt-0.5" />
-            <p className="text-sm text-destructive">{serverError}</p>
+            <div>
+              <p className="text-sm text-destructive">{serverError}</p>
+              {serverErrorCode&&<p className="mt-1 text-xs text-muted-foreground">Foutcode: <span data-no-translate className="font-mono">{serverErrorCode}</span></p>}
+            </div>
           </div>
         )}
 
