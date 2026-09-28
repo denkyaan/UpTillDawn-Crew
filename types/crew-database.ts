@@ -4225,10 +4225,6 @@ export type Database = {
         Args: { p_event: string; p_name: string; p_sections?: string[] }
         Returns: string
       }
-      upt_capture_operational_checklist_template: {
-        Args: { p_checklist: string; p_name: string }
-        Returns: string
-      }
       upt_claim_marketplace_shift: {
         Args: { p_reason: string; p_shift: string }
         Returns: string
