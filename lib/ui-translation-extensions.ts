@@ -79,6 +79,20 @@ const EXTENSIONS: Record<string, Row> = {
   'Succesvol opgeslagen.': { fr: 'Enregistré avec succès.', en: 'Saved successfully.', de: 'Erfolgreich gespeichert.' },
   'Profiel opgeslagen.': { fr: 'Profil enregistré.', en: 'Profile saved.', de: 'Profil gespeichert.' },
 
+  'Deze werkposten worden automatisch vooraf aangemaakt voor elk evenement. Daarnaast kun je onbeperkt eigen werkplaatsen toevoegen buiten deze standaardlijst.': { fr: 'Ces postes sont créés automatiquement pour chaque événement. Vous pouvez également ajouter autant de postes personnalisés que nécessaire en dehors de cette liste standard.', en: 'These workplaces are automatically pre-created for every event. You can also add unlimited custom workplaces outside this standard list.', de: 'Diese Arbeitsplätze werden für jede Veranstaltung automatisch vorab erstellt. Zusätzlich kannst du beliebig viele eigene Arbeitsplätze außerhalb dieser Standardliste hinzufügen.' },
+  'Eigen / extra werkplek toevoegen': { fr: 'Ajouter un poste propre / supplémentaire', en: 'Add custom / extra workplace', de: 'Eigenen / zusätzlichen Arbeitsplatz hinzufügen' },
+  'Planning & diensten': { fr: 'Planning & services', en: 'Planning & shifts', de: 'Planung & Schichten' },
+  'Personeel, werkuren en rol rechtstreeks aan deze werkplaats koppelen.': { fr: 'Associez directement le personnel, les heures de travail et le rôle à ce poste.', en: 'Link staff, working hours and role directly to this workplace.', de: 'Personal, Arbeitszeiten und Rolle direkt diesem Arbeitsplatz zuordnen.' },
+  'Personeel + uren toevoegen': { fr: 'Ajouter personnel + heures', en: 'Add staff + hours', de: 'Personal + Zeiten hinzufügen' },
+  'PERSONEEL & UREN TOEVOEGEN': { fr: 'AJOUTER PERSONNEL & HEURES', en: 'ADD STAFF & HOURS', de: 'PERSONAL & ZEITEN HINZUFÜGEN' },
+  'Nog niemand heeft beschikbaarheid voor dit evenement aangeduid.': { fr: 'Personne n’a encore indiqué de disponibilité pour cet événement.', en: 'No one has indicated availability for this event yet.', de: 'Noch niemand hat Verfügbarkeit für diese Veranstaltung angegeben.' },
+  'Nog geen diensten ingepland voor deze werkplaats.': { fr: 'Aucun service n’est encore planifié pour ce poste.', en: 'No shifts have been scheduled for this workplace yet.', de: 'Für diesen Arbeitsplatz sind noch keine Schichten geplant.' },
+  'Dienst bewerken': { fr: 'Modifier le service', en: 'Edit shift', de: 'Schicht bearbeiten' },
+  'DIENST OPSLAAN': { fr: 'ENREGISTRER LE SERVICE', en: 'SAVE SHIFT', de: 'SCHICHT SPEICHERN' },
+  'DIENST ANNULEREN': { fr: 'ANNULER LE SERVICE', en: 'CANCEL SHIFT', de: 'SCHICHT STORNIEREN' },
+  'Reden annulering (optioneel)': { fr: 'Motif d’annulation (optionnel)', en: 'Cancellation reason (optional)', de: 'Stornierungsgrund (optional)' },
+
+
   'Checklisttemplate toepassen': { fr: 'Appliquer un modèle de checklist', en: 'Apply checklist template', de: 'Checklisten-Vorlage anwenden' },
   'TEMPLATE TOEPASSEN': { fr: 'APPLIQUER LE MODÈLE', en: 'APPLY TEMPLATE', de: 'VORLAGE ANWENDEN' },
   'Werkplek': { fr: 'Poste de travail', en: 'Workplace', de: 'Arbeitsplatz' },
