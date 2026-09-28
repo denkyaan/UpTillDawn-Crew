@@ -24,6 +24,7 @@ export function AppSidebar({
  const order=new Map(featureOrder.map((key,index)=>[key,index]))
  const visible=NAV_ITEMS.filter(i=>{
    if(!roles.some(r=>i.roles.includes(r))) return false
+   if(isAdmin&&i.key==="shifts") return false
    if(Object.prototype.hasOwnProperty.call(featureVisibility,i.key)&&!featureVisibility[i.key]) return false
    if(i.key==="operations") return showOperations
    if(i.key==="events") return showEvents
