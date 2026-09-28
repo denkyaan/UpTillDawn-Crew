@@ -153,7 +153,7 @@ export default async function GuestlistPage({
       </article>
     </section>}
 
-    {isAdmin&&<PlatformAiAssistant/>}
+    {isAdmin&&<PlatformAiAssistant eventId={selected.id} contextKey="guestlist" contextLabel={'Guestlist · '+selected.name}/>}
 
     <GuestlistEntranceClient
       key={selected.id}
