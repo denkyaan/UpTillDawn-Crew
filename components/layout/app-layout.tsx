@@ -26,6 +26,8 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
   const [chatMissed,setChatMissed]=useState(0)
   const [incidentMissed,setIncidentMissed]=useState(0)
   const [taskMissed,setTaskMissed]=useState(0)
+  const [notificationMissed,setNotificationMissed]=useState(0)
+  const [notificationFeatureCounts,setNotificationFeatureCounts]=useState<Record<string,number>>({})
   const [context,setContext]=useState<RoleUiContext>(emptyContext)
   const [rules,setRules]=useState<RoleUiRule[]>([])
 
@@ -99,6 +101,7 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
       {data:responsibleAssignments},
       {data:chatEvents},
       {data:chatChannels},
+      {data:unreadNotifications},
     ]=await Promise.all([
       supabase.from("events").select("id,start_at,end_at,status").neq("status","archived").gte("end_at",nowIso),
       supabase.from("event_members").select("event_id,event_role").eq("user_id",user.id),
@@ -106,7 +109,38 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
       supabase.from("responsible_assignments").select("event_id,workplace_id").eq("user_id",user.id),
       supabase.from("events").select("id,start_at,end_at,status").neq("status","archived").lte("start_at",nowIso).gte("end_at",chatWindowStart),
       supabase.from("chat_channels").select("id,kind,event_id,workplace_id").in("kind",["organization","event","workplace"]),
+      supabase.from("crew_notifications").select("id,link,kind").eq("user_id",user.id).is("read_at",null).limit(500),
     ])
+    const notificationRows=unreadNotifications||[]
+    setNotificationMissed(notificationRows.length)
+    const featureCounts:Record<string,number>={}
+    const featureForLink=(link:string|null)=>{
+      if(!link)return null
+      if(link.startsWith("/events"))return "events"
+      if(link.startsWith("/operations"))return "operations"
+      if(link.startsWith("/workplaces"))return "workplaces"
+      if(link.startsWith("/inventory"))return "inventory"
+      if(link.startsWith("/guestlist"))return "guestlist"
+      if(link.startsWith("/sales"))return "sales"
+      if(link.startsWith("/shifts"))return "shifts"
+      if(link.startsWith("/briefings"))return "briefings"
+      if(link.startsWith("/tasks"))return "tasks"
+      if(link.startsWith("/chat"))return "chat"
+      if(link.startsWith("/crew"))return "crew"
+      if(link.startsWith("/incidents"))return "incidents"
+      if(link.startsWith("/exports"))return "exports"
+      if(link.startsWith("/personnel"))return "personnel"
+      if(link.startsWith("/admin/platform")||link.startsWith("/control-center"))return "platform"
+      if(link.startsWith("/settings"))return "settings"
+      if(link==="/"||link.startsWith("/admin"))return "overview"
+      return null
+    }
+    for(const notification of notificationRows){
+      const key=featureForLink(notification.link)
+      if(key)featureCounts[key]=(featureCounts[key]||0)+1
+    }
+    setNotificationFeatureCounts(featureCounts)
+
     const eventRows=events||[]
     const memberIds=new Set((memberships||[]).map(x=>x.event_id))
     const assignedEvent=eventRows.some(e=>
@@ -221,9 +255,9 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
   const showFloatingChat=isAdmin||operationalMode
 
   return <div className="flex h-dvh overflow-hidden bg-background print:block print:h-auto print:overflow-visible">
-    <div className="print:hidden"><AppSidebar chatMissed={chatMissed} incidentMissed={incidentMissed} taskMissed={taskMissed} showOperations={showOperations} showEvents={showEvents} showTasks={showTasks} showBriefings={showBriefings} showShifts={showShifts} showWorkplaces={showWorkplaces} showIncidents={showIncidents} featureOrder={order} featureLabels={labels} featureVisibility={featureVisibility}/></div>
+    <div className="print:hidden"><AppSidebar chatMissed={chatMissed} incidentMissed={incidentMissed} taskMissed={taskMissed} notificationFeatureCounts={notificationFeatureCounts} showOperations={showOperations} showEvents={showEvents} showTasks={showTasks} showBriefings={showBriefings} showShifts={showShifts} showWorkplaces={showWorkplaces} showIncidents={showIncidents} featureOrder={order} featureLabels={labels} featureVisibility={featureVisibility}/></div>
     <div className="flex flex-1 flex-col overflow-hidden print:block print:overflow-visible">
-      <div className="print:hidden"><Topbar/><QueueStatus/></div>
+      <div className="print:hidden"><Topbar notificationMissed={notificationMissed}/><QueueStatus/></div>
       <div id="app-scroll" className="flex-1 overflow-y-auto bg-background scroll-smooth print:overflow-visible">
         <main className="min-h-[calc(100dvh-theme(spacing.16)-theme(spacing.12))] pb-20 md:pb-0 print:min-h-0 print:pb-0">
           {!currentVisible&&!previewAll
@@ -234,7 +268,7 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
               </>}
         </main>
       </div>
-      <div className="print:hidden"><MobileBottomNav chatMissed={chatMissed} incidentMissed={incidentMissed} taskMissed={taskMissed} featureOrder={order} featureLabels={labels} featureVisibility={featureVisibility} assignedEvent={context.assignedEvent} shiftActive={context.shiftActive}/></div>
+      <div className="print:hidden"><MobileBottomNav chatMissed={chatMissed} incidentMissed={incidentMissed} taskMissed={taskMissed} notificationFeatureCounts={notificationFeatureCounts} featureOrder={order} featureLabels={labels} featureVisibility={featureVisibility} assignedEvent={context.assignedEvent} shiftActive={context.shiftActive}/></div>
     </div>
     {!pathname.startsWith("/chat")&&<>
       {showUrgent&&<Link href="/incidents" className="fixed bottom-20 left-4 z-50 rounded-full bg-red-600 px-5 py-4 font-black text-white print:hidden md:hidden">URGENT<CountBadge count={incidentMissed}/></Link>}
