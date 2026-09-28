@@ -216,13 +216,13 @@ export async function createEvent(fd:FormData){
  const manualName=String(fd.get('name')||'').trim()
  const name=text.parse(imported?.name||manualName)
  const start=imported?.startAt||optionalIso(fd,'start_at')
- const end=imported?.endAt||optionalIso(fd,'end_at')
- const registrationDeadline=optionalIso(fd,'registration_deadline')||start
+ const end=imported?.endAt||optionalIso(fd,'end_at')
  const maxJoiners=optionalPositiveInt(fd,'max_joiners')
  if(!start||!end)throw new Error('Vul start- en einduur in wanneer Facebook deze niet openbaar meegeeft.')
+ const registrationDeadline=optionalIso(fd,'registration_deadline')||start
  if(Date.parse(end)<=Date.parse(start))throw new Error('Einde moet na begin liggen.')
  if(Date.parse(registrationDeadline)>Date.parse(start))throw new Error('De aanmelddeadline moet vóór of op de start van het evenement liggen.')
- const location=await eventLocation(fd,{
+ const location=await eventLocation(fd,{
   venue:imported?.venue||undefined,
   address:imported?.address||undefined,
  })
