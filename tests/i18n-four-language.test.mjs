@@ -46,13 +46,18 @@ test('admin and responsible login denial is consistent and fully translated', as
   assert.match(row, /de:\s*'[^']+'/)
 })
 
-test('device language wins on application launch', async () => {
-  const sync = await readFile(new URL('../components/locale-sync.tsx', import.meta.url), 'utf8')
-  assert.match(sync, /let locale = deviceLocale\(\)/)
-  assert.doesNotMatch(sync, /storedLocale \|\| deviceLocale\(\)/)
-  assert.match(sync, /onDeviceLanguageChange = \(\) => applyLocale\(deviceLocale\(\), true\)/)
-  assert.match(sync, /applyLocale\(locale, true\)/)
-  assert.match(sync, /uptilldawn-language-applied/)
+test('device language is the default and manual language remains synchronized', async () => {
+  const [sync, switcher, prefs] = await Promise.all([
+    readFile(new URL('../components/locale-sync.tsx', import.meta.url), 'utf8'),
+    readFile(new URL('../components/language-switcher.tsx', import.meta.url), 'utf8'),
+    readFile(new URL('../lib/locale-preferences.ts', import.meta.url), 'utf8'),
+  ])
+  assert.match(sync, /initialUiLocale\(\)/)
+  assert.match(sync, /storedUiLocaleSource\(\)===['"]manual['"]/)
+  assert.match(sync, /deviceUiLocale\(\)/)
+  assert.match(prefs, /storedUiLocaleSource\(\)===['"]manual['"]&&stored/)
+  assert.match(switcher, /LANGUAGE_APPLIED_EVENT/)
+  assert.match(switcher, /requestUiLocale\(next\)/)
 })
 
 
@@ -73,7 +78,7 @@ test('login UI hides maker alias and count labels are translated dynamically', a
 test('language picker follows the locale applied by LocaleSync', async () => {
   const switcher = await readFile(new URL('../components/language-switcher.tsx', import.meta.url), 'utf8')
   assert.match(switcher, /document\.documentElement\.lang/)
-  assert.match(switcher, /uptilldawn-language-applied/)
-  assert.match(switcher, /uptilldawn-language-change/)
-  assert.doesNotMatch(switcher, /storedLanguage \|\| deviceLanguage\(\)/)
+  assert.match(switcher, /LANGUAGE_APPLIED_EVENT/)
+  assert.match(switcher, /requestUiLocale\(next\)/)
+  for (const nativeLabel of ['Nederlands','Français','English','Deutsch']) assert.ok(switcher.includes(nativeLabel))
 })
