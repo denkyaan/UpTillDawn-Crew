@@ -56,7 +56,15 @@ function canonicalizeBase(value: string) {
 function translatePasswordPolicy(value:string,locale:ExtendedUiLocale){
   const match=value.match(/^Wachtwoord moet (.+) bevatten\.$/)
   if(!match)return null
-  const parts=match[1].split(', ').map(part=>translateActionUi(part,locale))
+  const parts=match[1].split(', ').map(part=>{
+    const min=part.match(/^minstens (\d+) tekens$/)
+    if(min){
+      if(locale==='fr')return `au moins ${min[1]} caractères`
+      if(locale==='en')return `at least ${min[1]} characters`
+      if(locale==='de')return `mindestens ${min[1]} Zeichen`
+    }
+    return translateActionUi(part,locale)
+  })
   const prefix=translateActionUi('Wachtwoord moet',locale)
   if(locale==='fr')return `${prefix} ${parts.join(', ')}.`
   if(locale==='en')return `${prefix} ${parts.join(', ')}.`
