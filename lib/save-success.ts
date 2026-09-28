@@ -1,9 +1,9 @@
-'use server'
+import 'server-only'
 
 import { revalidatePath as nextRevalidatePath } from 'next/cache'
 import { cookies } from 'next/headers'
 
-export const SAVE_SUCCESS_COOKIE='upt-save-success'
+const SAVE_SUCCESS_COOKIE='upt-save-success'
 
 export async function revalidatePath(
   path:string,
