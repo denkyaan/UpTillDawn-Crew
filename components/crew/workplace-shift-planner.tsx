@@ -29,6 +29,8 @@ export function WorkplaceShiftPlanner({
  eventId,
  isAdmin,
  currentUserId,
+ defaultStart,
+ defaultEnd,
  people,
  shifts,
 }:{
@@ -36,6 +38,8 @@ export function WorkplaceShiftPlanner({
  eventId:string
  isAdmin:boolean
  currentUserId:string
+ defaultStart?:string
+ defaultEnd?:string
  people:WorkplacePlannerPerson[]
  shifts:WorkplacePlannerShift[]
 }){
@@ -74,8 +78,8 @@ export function WorkplaceShiftPlanner({
     <label className="flex items-center gap-2 rounded-lg border px-3">
      <input type="checkbox" name="overlap_allowed"/> Overlap toestaan
     </label>
-    <DateInput name="start"/>
-    <DateInput name="end"/>
+    <DateInput name="start" initial={defaultStart}/>
+    <DateInput name="end" initial={defaultEnd}/>
     <button className="rounded-lg bg-violet-600 p-3 font-bold text-white md:col-span-2">PERSONEEL & UREN TOEVOEGEN</button>
    </form>
   </details>}
