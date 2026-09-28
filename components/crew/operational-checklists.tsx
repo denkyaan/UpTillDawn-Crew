@@ -62,6 +62,11 @@ export async function OperationalChecklistPanel({
     </section>
   }
 
+  const {data:optionWorkplaceRows}=workplaceOptions.length
+    ? await s.from('workplaces').select('id,catalog_workplace_id').in('id',workplaceOptions.map(option=>option.id))
+    : {data:[]}
+  const catalogByWorkplace=new Map((optionWorkplaceRows||[]).map(row=>[row.id,row.catalog_workplace_id]))
+
   const visibleChecklists=(checklists||[]).filter(row=>!kinds||kinds.includes(row.kind as ChecklistKind))
   const checklistIds=visibleChecklists.map(row=>row.id)
   const {data:items,error:itemError}=checklistIds.length
@@ -102,7 +107,9 @@ export async function OperationalChecklistPanel({
           <div><b className="text-sm">{option.label}</b><p className="text-xs text-muted-foreground">Werkplek</p></div>
           <select name="template_id" required className="rounded-lg border bg-background p-3">
             <option value="">Template…</option>
-            {(templates||[]).map(template=><option key={template.id} value={template.id}>{template.title} · {kindLabel(template.kind)}</option>)}
+            {(templates||[])
+              .filter(template=>!template.catalog_workplace_id||template.catalog_workplace_id===catalogByWorkplace.get(option.id))
+              .map(template=><option key={template.id} value={template.id}>{template.title} · {kindLabel(template.kind)}</option>)}
           </select>
           <button className="rounded-lg bg-violet-600 px-4 py-3 font-bold text-white">TOEPASSEN</button>
         </form>)}
