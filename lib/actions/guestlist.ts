@@ -19,7 +19,7 @@ async function adminClient(){
   return s
 }
 
-async function await refresh(){
+async function refresh(){
   await revalidatePath('/guestlist')
   await revalidatePath('/admin/platform')
 }
