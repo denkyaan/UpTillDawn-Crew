@@ -1,6 +1,6 @@
 "use client"
 
-import { useLayoutEffect } from "react"
+import { useEffect } from "react"
 import type { ExtendedUiLocale } from "@/lib/ui-translation-extensions"
 import { translateRuntimeUi } from "@/lib/ui-translation-runtime"
 import {
@@ -68,7 +68,7 @@ function translateNode(root: Node, locale: ExtendedUiLocale) {
 }
 
 export function LocaleSync() {
-  useLayoutEffect(() => {
+  useEffect(() => {
     let locale = initialUiLocale() as ExtendedUiLocale
     let applying = false
     const applyLocale = (nextLocale: ExtendedUiLocale, source: LocaleSource) => {
@@ -97,7 +97,6 @@ export function LocaleSync() {
       window.dispatchEvent(new CustomEvent(LANGUAGE_APPLIED_EVENT,{detail:locale}))
       applying = false
     }
-    applyLocale(locale, storedUiLocaleSource()==='manual'?'manual':'device')
     const observer = new MutationObserver(mutations => {
       if (applying) return
       applying = true
@@ -108,7 +107,14 @@ export function LocaleSync() {
       }
       applying = false
     })
-    observer.observe(document.body, { subtree: true, childList: true, characterData: true, attributes: true, attributeFilter: [...attributes] })
+
+    // Never mutate React-owned server HTML during hydration. React error #418 is
+    // a text hydration mismatch; translating the whole body in a layout effect
+    // can change text before descendant hydration has finished.
+    const initialPass = window.setTimeout(() => {
+      applyLocale(locale, storedUiLocaleSource()==='manual'?'manual':'device')
+      observer.observe(document.body, { subtree: true, childList: true, characterData: true, attributes: true, attributeFilter: [...attributes] })
+    }, 0)
     const onLanguageChange = (event: Event) => {
       const next=parseUiLocale((event as CustomEvent<string>).detail) || 'nl'
       applyLocale(next as ExtendedUiLocale,'manual')
@@ -127,6 +133,7 @@ export function LocaleSync() {
     window.addEventListener("languagechange", onDeviceLanguageChange)
     window.addEventListener("storage", onStorage)
     return () => {
+      window.clearTimeout(initialPass)
       observer.disconnect()
       window.removeEventListener(LANGUAGE_CHANGE_EVENT, onLanguageChange)
       window.removeEventListener("languagechange", onDeviceLanguageChange)
