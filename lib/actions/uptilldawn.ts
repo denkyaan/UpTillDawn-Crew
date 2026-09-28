@@ -1106,6 +1106,39 @@ export async function createEventDocument(fd:FormData){
  check(error)
  revalidatePath('/events');revalidatePath('/notifications')
 }
+export async function createInventoryTextEntry(fd:FormData){
+ const {s,user}=await adminClient()
+ const eventId=uuid.parse(fd.get('event_id'))
+ const workplaceId=uuid.parse(fd.get('workplace_id'))
+ const title=text.parse(fd.get('title'))
+ const content=z.string().trim().min(1).max(12000).parse(fd.get('content'))
+ const {data:workplace,error:workplaceError}=await s.from('workplaces').select('event_id,is_active').eq('id',workplaceId).single()
+ check(workplaceError)
+ if(!workplace?.is_active||workplace.event_id!==eventId)throw new Error('Werkplek niet gevonden.')
+ const storagePath=`${user.id}/document/${crypto.randomUUID()}.txt`
+ const body=new Blob([content],{type:'text/plain'})
+ const {error:uploadError}=await s.storage.from('work-media').upload(storagePath,body,{contentType:'text/plain',upsert:false})
+ if(uploadError)throw new Error('Tekst opslaan mislukt.')
+ const {error}=await s.rpc('upt_create_event_document',{
+  p_event:eventId,
+  p_workplace:workplaceId,
+  p_kind:'technical',
+  p_audience:'employee',
+  p_title:title,
+  p_description:content.slice(0,2000),
+  p_storage_path:storagePath,
+  p_file_name:`${title.replace(/[^a-z0-9-_]+/gi,'-').slice(0,80)||'inventaris'}.txt`,
+  p_mime_type:'text/plain',
+  p_file_size_bytes:new TextEncoder().encode(content).byteLength,
+  p_offline_critical:true,
+ })
+ if(error){
+  await s.storage.from('work-media').remove([storagePath])
+  check(error)
+ }
+ revalidatePath('/inventory');revalidatePath('/workplaces')
+}
+
 export async function archiveEventDocument(fd:FormData){
  const {s,profile}=await approvedClient()
  requireManager(profile.role)
