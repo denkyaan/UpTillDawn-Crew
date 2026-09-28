@@ -3,12 +3,14 @@ import assert from 'node:assert/strict'
 import { readFile } from 'node:fs/promises'
 
 test('runtime supports all four product locales', async () => {
-  const [sync,preferences] = await Promise.all([
+  const [sync,preferences,runtime] = await Promise.all([
     readFile(new URL('../components/locale-sync.tsx', import.meta.url), 'utf8'),
     readFile(new URL('../lib/locale-preferences.ts', import.meta.url), 'utf8'),
+    readFile(new URL('../lib/ui-translation-runtime.ts', import.meta.url), 'utf8'),
   ])
   assert.match(preferences, /\['nl','fr','en','de'\]/)
-  assert.match(sync, /translateCompleteUi/)
+  assert.match(sync, /translateRuntimeUi/)
+  assert.match(runtime, /translateCompleteUi/)
   assert.match(sync, /MutationObserver/)
   for (const attribute of ['placeholder', 'aria-label', 'aria-description', 'title', 'alt']) assert.ok(sync.includes(`"${attribute}"`))
 })
@@ -129,7 +131,7 @@ test('language preference stays synchronized across tabs', async () => {
 
 
 test('runtime translator consumes every four-language catalog', async () => {
-  const sync = await readFile(new URL('../components/locale-sync.tsx', import.meta.url), 'utf8')
+  const runtime = await readFile(new URL('../lib/ui-translation-runtime.ts', import.meta.url), 'utf8')
   for (const translator of [
     'translateCompleteUi',
     'translateUiExtension',
@@ -139,7 +141,8 @@ test('runtime translator consumes every four-language catalog', async () => {
     'translateCrewExtraUi',
     'translateGodUi',
     'translateActionUi',
-  ]) assert.ok(sync.includes(translator), `${translator} must be active at runtime`)
+  ]) assert.ok(runtime.includes(translator), `${translator} must be active at runtime`)
+  assert.match(runtime,/translateCatalogFragments/)
 })
 
 test('new visible UI copy is guarded by static four-language coverage tests', async () => {
