@@ -61,7 +61,6 @@ export default async function Page(){
   const visibleEvents=user.isAdmin
     ? events
     : events.filter(event=>{
-        const start=Date.parse(event.start_at)
         const end=Date.parse(event.end_at)
         const visibleWhileOpen=event.status!=='archived'&&nowMs<=end
         const assigned=assignedEventIds.has(event.id)&&nowMs<=end+3*24*60*60*1000
