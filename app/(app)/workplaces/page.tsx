@@ -6,6 +6,7 @@ import { getCurrentUser } from '@/lib/actions/auth'
 import { responsibleCoverageGaps } from '@/lib/responsible-coverage-health'
 import { coverageWindows } from '@/lib/staffing-coverage'
 import { staffNeededForTarget, workplaceStaffingState } from '@/lib/workplace-capacity'
+import { WorkplaceShiftPlanner, type WorkplacePlannerPerson, type WorkplacePlannerShift } from '@/components/crew/workplace-shift-planner'
 
 export const dynamic='force-dynamic'
 
@@ -45,6 +46,8 @@ export default async function Page(){
   }>=[]
   let responsibleAssignments:Array<{workplace_id:string;user_id:string}>=[]
   let coverageShifts:Array<{userId:string;workplaceId:string;startsAt:number;endsAt:number}>=[]
+  let plannerShifts:WorkplacePlannerShift[]=[]
+  let plannerPeopleByEvent=new Map<string,WorkplacePlannerPerson[]>()
   let peopleById=new Map<string,Person>()
 
   if(isAdmin){
@@ -55,20 +58,47 @@ export default async function Page(){
       {data:shiftRows},
       {data:profileRows},
       {data:responsibleRows},
+      {data:availabilityRows},
     ]=await Promise.all([
       s.from('events').select('id,name').neq('status','archived').order('start_at'),
       s.from('workplace_catalog').select('id,name,description,sort_order').eq('is_active',true).order('sort_order').order('name'),
       s.from('workplaces').select('id,event_id,name,description,sort_order,is_active,minimum_staff,target_staff,maximum_staff,events(name,start_at,end_at)').eq('is_active',true).order('sort_order'),
-      s.from('shifts').select('event_id,workplace_id,user_id,role_name,status,scheduled_start,scheduled_end').neq('status','cancelled').neq('response_status','declined').order('scheduled_start'),
+      s.from('shifts').select('id,event_id,workplace_id,user_id,role_name,shift_kind,status,response_status,scheduled_start,scheduled_end,overlap_allowed').neq('status','cancelled').order('scheduled_start'),
       s.from('profiles').select('id,full_name,role').eq('approved',true).order('full_name'),
       s.from('responsible_assignments').select('workplace_id,user_id'),
+      s.from('event_availability').select('event_id,user_id,response,setup_available,breakdown_available').or('response.eq.can,setup_available.eq.true,breakdown_available.eq.true'),
     ])
     events=eventRows||[]
     catalogWorkplaces=catalogRows||[]
     workplaces=workplaceRows||[]
     peopleById=new Map((profileRows||[]).map(person=>[person.id,person]))
     responsibleAssignments=responsibleRows||[]
-    coverageShifts=(shiftRows||[]).map(shift=>({userId:shift.user_id,workplaceId:shift.workplace_id,startsAt:Date.parse(shift.scheduled_start),endsAt:Date.parse(shift.scheduled_end)}))
+    coverageShifts=(shiftRows||[]).filter(shift=>shift.status!=='cancelled'&&shift.response_status!=='declined').map(shift=>({userId:shift.user_id,workplaceId:shift.workplace_id,startsAt:Date.parse(shift.scheduled_start),endsAt:Date.parse(shift.scheduled_end)}))
+    plannerShifts=(shiftRows||[]).map(shift=>({
+      id:shift.id,
+      workplaceId:shift.workplace_id,
+      userId:shift.user_id,
+      roleName:shift.role_name,
+      shiftKind:shift.shift_kind==='setup'?'setup':shift.shift_kind==='breakdown'?'breakdown':'event',
+      scheduledStart:shift.scheduled_start,
+      scheduledEnd:shift.scheduled_end,
+      status:shift.status,
+      responseStatus:shift.response_status,
+      overlapAllowed:Boolean(shift.overlap_allowed),
+    }))
+    for(const availability of availabilityRows||[]){
+      const person=peopleById.get(availability.user_id)
+      if(!person)continue
+      const current=plannerPeopleByEvent.get(availability.event_id)||[]
+      current.push({
+        id:availability.user_id,
+        fullName:person.full_name||'Naam ontbreekt',
+        eventAvailable:availability.response==='can',
+        setupAvailable:Boolean(availability.setup_available),
+        breakdownAvailable:Boolean(availability.breakdown_available),
+      })
+      plannerPeopleByEvent.set(availability.event_id,current)
+    }
     const seen=new Set<string>()
     assignedCrew=(shiftRows||[]).flatMap(shift=>{
       const person=peopleById.get(shift.user_id)
@@ -108,7 +138,7 @@ export default async function Page(){
 
     if(isResponsible){
       const [{data:shiftRows},{data:responsibleRows}]=await Promise.all([
-        s.from('shifts').select('event_id,workplace_id,user_id,role_name,status,scheduled_start,scheduled_end').in('workplace_id',workplaceIds).neq('status','cancelled').order('scheduled_start'),
+        s.from('shifts').select('id,event_id,workplace_id,user_id,role_name,shift_kind,status,response_status,scheduled_start,scheduled_end,overlap_allowed').in('workplace_id',workplaceIds).neq('status','cancelled').order('scheduled_start'),
         s.from('responsible_assignments').select('event_id,workplace_id,user_id').in('workplace_id',workplaceIds),
       ])
       const memberResults=await Promise.all(workplaces.map(workplace=>
@@ -120,7 +150,19 @@ export default async function Page(){
       }
       peopleById=people
       responsibleAssignments=(responsibleRows||[]).map(row=>({workplace_id:row.workplace_id,user_id:row.user_id}))
-      coverageShifts=(shiftRows||[]).map(shift=>({userId:shift.user_id,workplaceId:shift.workplace_id,startsAt:Date.parse(shift.scheduled_start),endsAt:Date.parse(shift.scheduled_end)}))
+      coverageShifts=(shiftRows||[]).filter(shift=>shift.response_status!=='declined').map(shift=>({userId:shift.user_id,workplaceId:shift.workplace_id,startsAt:Date.parse(shift.scheduled_start),endsAt:Date.parse(shift.scheduled_end)}))
+      plannerShifts=(shiftRows||[]).map(shift=>({
+        id:shift.id,
+        workplaceId:shift.workplace_id,
+        userId:shift.user_id,
+        roleName:shift.role_name,
+        shiftKind:shift.shift_kind==='setup'?'setup':shift.shift_kind==='breakdown'?'breakdown':'event',
+        scheduledStart:shift.scheduled_start,
+        scheduledEnd:shift.scheduled_end,
+        status:shift.status,
+        responseStatus:shift.response_status,
+        overlapAllowed:Boolean(shift.overlap_allowed),
+      }))
       const seen=new Set<string>()
       assignedCrew=(shiftRows||[]).flatMap(shift=>{
         const person=peopleById.get(shift.user_id)
@@ -152,7 +194,7 @@ export default async function Page(){
       <section className="space-y-3 rounded-2xl border border-violet-500/30 p-4">
         <div>
           <h2 className="text-xl font-black">Standaardwerkposten</h2>
-          <p className="text-sm text-muted-foreground">Deze werkposten worden automatisch vooraf aangemaakt voor elk evenement en zijn dezelfde categorieën die Inventory gebruikt.</p>
+          <p className="text-sm text-muted-foreground">Deze werkposten worden automatisch vooraf aangemaakt voor elk evenement. Daarnaast kun je onbeperkt eigen werkplaatsen toevoegen buiten deze standaardlijst.</p>
         </div>
         <div className="flex flex-wrap gap-2">
           {catalogWorkplaces.map(workplace=><span key={workplace.id} className="rounded-full border px-3 py-2 text-sm font-semibold">{workplace.name}</span>)}
@@ -160,7 +202,7 @@ export default async function Page(){
       </section>
 
       <details className="rounded-2xl border p-4">
-        <summary className="cursor-pointer font-semibold">Extra werkplek toevoegen</summary>
+        <summary className="cursor-pointer font-semibold">Eigen / extra werkplek toevoegen</summary>
       <form action={addWorkplace} className="mt-3 grid gap-2 md:grid-cols-2">
         <select name="event_id" required className="rounded-lg border bg-background p-3">
           <option value="">Evenement…</option>
@@ -255,6 +297,13 @@ export default async function Page(){
           </AdminOnly>}
 
           {(isAdmin||isResponsible)&&<div className="mt-3 space-y-3">
+            <WorkplaceShiftPlanner
+              workplaceId={workplace.id}
+              eventId={workplace.event_id}
+              isAdmin={isAdmin}
+              people={isAdmin?plannerPeopleByEvent.get(workplace.event_id)||[]:[...peopleById.values()].map(person=>({id:person.id,fullName:person.full_name||'Naam ontbreekt',eventAvailable:true,setupAvailable:true,breakdownAvailable:true}))}
+              shifts={plannerShifts.filter(shift=>shift.workplaceId===workplace.id)}
+            />
             {staffingConfigured&&<section className="rounded-xl border p-3">
               <div className="flex flex-wrap items-center justify-between gap-2">
                 <div>
