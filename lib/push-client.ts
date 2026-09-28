@@ -66,7 +66,7 @@ async function removeServerSubscription(endpoint:string){
   }
 }
 
-async function updateBadge(unreadCount:number){
+export async function syncAppBadgeCount(unreadCount:number){
   const badgeNavigator=navigator as Navigator&{
     setAppBadge?:(count?:number)=>Promise<void>
     clearAppBadge?:()=>Promise<void>
@@ -113,7 +113,7 @@ export async function enablePushNotifications({requestPermission=true}:{requestP
       })
     }
     await saveSubscription(subscription)
-    await updateBadge(config.unreadCount)
+    await syncAppBadgeCount(config.unreadCount)
     return "granted"
   }catch(error){
     console.error("[Push] enable failed",error)
@@ -163,6 +163,6 @@ export async function refreshPushBadge(){
   if(!supportsWebPush()||Notification.permission!=="granted")return
   try{
     const config=await fetchPushConfig()
-    await updateBadge(config.unreadCount)
+    await syncAppBadgeCount(config.unreadCount)
   }catch{}
 }

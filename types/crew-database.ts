@@ -4103,6 +4103,7 @@ export type Database = {
         Args: { p_message: string; p_reason: string }
         Returns: undefined
       }
+      upt_notification_badge_count: { Args: never; Returns: number }
       upt_operational_alerts: {
         Args: never
         Returns: {

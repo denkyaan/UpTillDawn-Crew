@@ -55,9 +55,9 @@ Deno.serve(async(req)=>{
   }
   if(!notification)return json({error:"Notification not found"},404)
 
-  const [{data:subscriptions,error:subscriptionError},{count:unreadCount,error:countError}]=await Promise.all([
+  const [{data:subscriptions,error:subscriptionError},{data:unreadRows,error:countError}]=await Promise.all([
     admin.from("push_subscriptions").select("id,endpoint,p256dh,auth_key").eq("user_id",notification.user_id).eq("enabled",true),
-    admin.from("crew_notifications").select("id",{count:"exact",head:true}).eq("user_id",notification.user_id).is("read_at",null),
+    admin.from("crew_notifications").select("kind,created_at").eq("user_id",notification.user_id).is("read_at",null).limit(1000),
   ])
   if(subscriptionError){
     console.error("[push] subscriptions",subscriptionError.message)
@@ -65,6 +65,12 @@ Deno.serve(async(req)=>{
   }
   if(countError)console.error("[push] unread count",countError.message)
   if(!subscriptions?.length)return json({sent:0,removed:0,failed:0})
+
+  const ephemeralKinds=new Set(["check_ins","check_outs","break_warning"])
+  const badgeCutoff=Date.now()-24*60*60*1000
+  const unreadCount=(unreadRows||[]).filter(row=>
+    !ephemeralKinds.has(row.kind)||Date.parse(row.created_at)>=badgeCutoff
+  ).length
 
   webpush.setVapidDetails(
     "https://crew.uptilldawn.workers.dev",

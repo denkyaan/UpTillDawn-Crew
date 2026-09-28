@@ -3,6 +3,7 @@ import { createClient } from '@/lib/supabase/crew-server'
 import { markNotificationRead } from '@/lib/actions/uptilldawn'
 import { nlStatus } from '@/lib/ui-nl'
 import { PushNotificationSettings } from '@/components/push-notification-settings'
+import { NotificationBadgeSync } from '@/components/notification-badge-sync'
 
 export const dynamic = 'force-dynamic'
 
@@ -20,13 +21,19 @@ export default async function Page() {
   const { data: { user } } = await s.auth.getUser()
   if (!user) return null
 
-  const { data, error } = await s.from('crew_notifications')
-    .select('id,title,body,kind,link,read_at,created_at')
-    .eq('user_id', user.id)
-    .order('created_at', { ascending: false })
-    .limit(100)
+  const [{data,error},{data:badgeCount,error:badgeError}] = await Promise.all([
+    s.from('crew_notifications')
+      .select('id,title,body,kind,link,read_at,created_at')
+      .eq('user_id', user.id)
+      .order('created_at', { ascending: false })
+      .limit(100),
+    s.rpc('upt_notification_badge_count'),
+  ])
+
+  if(badgeError)console.error('[Notifications] badge count',badgeError.code)
 
   return <main className="space-y-4 p-4 md:p-8">
+    <NotificationBadgeSync count={badgeCount??0}/>
     <h1 className="text-3xl font-black">Meldingen</h1>
     <PushNotificationSettings/>
     {error ? <p>Meldingen konden niet worden geladen.</p> : !data?.length ? <p>Geen meldingen.</p> : data.map(n => {
