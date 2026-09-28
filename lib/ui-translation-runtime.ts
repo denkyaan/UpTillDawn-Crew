@@ -101,7 +101,19 @@ function translateCatalogFragments(value:string,locale:ExtendedUiLocale){
   return changed?output:value
 }
 
+function translateClockRequestCounts(value:string,locale:ExtendedUiLocale){
+  const match=value.match(/^(\d+)\s+inklokverzoek(?:en)?\s+·\s+(\d+)\s+uitklokverzoek(?:en)?$/i)
+  if(!match)return null
+  const [clockIn,clockOut]=[match[1],match[2]]
+  if(locale==='fr')return `${clockIn} demande(s) d’entrée · ${clockOut} demande(s) de sortie`
+  if(locale==='en')return `${clockIn} clock-in request(s) · ${clockOut} clock-out request(s)`
+  if(locale==='de')return `${clockIn} Einstempel-Anfrage(n) · ${clockOut} Ausstempel-Anfrage(n)`
+  return value
+}
+
 export function translateRuntimeUi(value:string,locale:ExtendedUiLocale):string{
+  const clockRequests=translateClockRequestCounts(value,locale)
+  if(clockRequests)return clockRequests
   const passwordPolicy=translatePasswordPolicy(value,locale)
   if(passwordPolicy)return passwordPolicy
 

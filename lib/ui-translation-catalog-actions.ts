@@ -2,6 +2,17 @@ export type ActionUiLocale='nl'|'fr'|'en'|'de'
 type Row={fr:string;en:string;de:string}
 
 const ROWS:Record<string,Row>={
+  "ACCOUNT GEBLOKKEERD":{fr:"COMPTE BLOQUÉ",en:"ACCOUNT BLOCKED",de:"KONTO GESPERRT"},
+  "Je kunt je eigen account niet blokkeren.":{fr:"Vous ne pouvez pas bloquer votre propre compte.",en:"You cannot block your own account.",de:"Du kannst dein eigenes Konto nicht sperren."},
+  "De maker van de app kan niet worden geblokkeerd.":{fr:"Le créateur de l’application ne peut pas être bloqué.",en:"The app maker cannot be blocked.",de:"Der App-Ersteller kann nicht gesperrt werden."},
+  "Alleen admin kan standaardwerkplekken beheren.":{fr:"Seul un admin peut gérer les postes standard.",en:"Only an admin can manage standard workplaces.",de:"Nur ein Admin kann Standardarbeitsplätze verwalten."},
+  "Alleen admin kan standaardinventaris beheren.":{fr:"Seul un admin peut gérer l’inventaire standard.",en:"Only an admin can manage standard inventory.",de:"Nur ein Admin kann Standardinventar verwalten."},
+  "Alleen admin kan standaardwerkplekken synchroniseren.":{fr:"Seul un admin peut synchroniser les postes standard.",en:"Only an admin can synchronize standard workplaces.",de:"Nur ein Admin kann Standardarbeitsplätze synchronisieren."},
+  "Standaardwerkplek niet gevonden.":{fr:"Poste standard introuvable.",en:"Standard workplace not found.",de:"Standardarbeitsplatz nicht gefunden."},
+  "Standaardmateriaal niet gevonden.":{fr:"Matériel standard introuvable.",en:"Standard equipment not found.",de:"Standardmaterial nicht gefunden."},
+  "Standaardinventaris kon niet worden geladen.":{fr:"L’inventaire standard n’a pas pu être chargé.",en:"Standard inventory could not be loaded.",de:"Standardinventar konnte nicht geladen werden."},
+  "Werk eerst het uitstaande materiaal van deze gebruiker af.":{fr:"Traitez d’abord le matériel encore attribué à cet utilisateur.",en:"Settle this user’s outstanding equipment first.",de:"Bearbeite zuerst das noch ausstehende Material dieses Benutzers."},
+  "Deblokkeer dit account eerst.":{fr:"Débloquez d’abord ce compte.",en:"Unblock this account first.",de:"Entsperre dieses Konto zuerst."},
   'QR-resource kon niet worden aangemaakt.':{fr:'La ressource QR n’a pas pu être créée.',en:'The QR resource could not be created.',de:'Die QR-Ressource konnte nicht erstellt werden.'},
   "Kostentarief kon niet worden opgeslagen.":{fr:"Le tarif n’a pas pu être enregistré.",en:"The cost rate could not be saved.",de:"Der Kostensatz konnte nicht gespeichert werden."},
   "Kennisartikel kon niet worden opgeslagen.":{fr:"L’article de connaissance n’a pas pu être enregistré.",en:"The knowledge article could not be saved.",de:"Der Wissensartikel konnte nicht gespeichert werden."},

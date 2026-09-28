@@ -4,6 +4,11 @@ import { createClient } from '@/lib/supabase/crew-server'
 import { EventDocumentsPanel } from '@/components/crew/event-documents-panel'
 import { OperationalChecklistPanel } from '@/components/crew/operational-checklists'
 import { WorkplaceInventoryMaterials, type WorkplaceInventoryMaterial } from '@/components/crew/workplace-inventory-materials'
+import {
+  WorkplaceCatalogInventory,
+  type CatalogItem,
+  type CatalogWorkplace,
+} from '@/components/crew/workplace-catalog-inventory'
 
 export const dynamic='force-dynamic'
 
@@ -24,8 +29,26 @@ export default async function InventoryPage(){
   if(!isAdmin&&!isResponsible&&!isStaff)redirect('/')
 
   const s=await createClient()
-  let workplaces:Workplace[]=[]
 
+  let catalogWorkplaces:CatalogWorkplace[]=[]
+  let catalogItems:CatalogItem[]=[]
+  if(isAdmin){
+    const [{data:catalog,error:catalogError},{data:items,error:itemError}]=await Promise.all([
+      s.from('workplace_catalog')
+        .select('id,name,description,sort_order,is_active,minimum_staff,target_staff,maximum_staff')
+        .order('sort_order')
+        .order('name'),
+      s.from('workplace_catalog_items')
+        .select('id,catalog_workplace_id,name,category,default_quantity,is_active')
+        .order('category')
+        .order('name'),
+    ])
+    if(catalogError||itemError)throw new Error('Standaardinventaris kon niet worden geladen.')
+    catalogWorkplaces=(catalog||[]) as CatalogWorkplace[]
+    catalogItems=(items||[]) as CatalogItem[]
+  }
+
+  let workplaces:Workplace[]=[]
   if(isAdmin){
     const {data,error}=await s
       .from('workplaces')
@@ -82,12 +105,18 @@ export default async function InventoryPage(){
       <h1 className="text-3xl font-black">Inventaris</h1>
       <p className="mt-1 text-sm text-muted-foreground">
         {isAdmin
-          ? 'Beheer per werkplek foto’s, documenten, tekst en operationele checklists.'
+          ? 'Beheer standaardwerkplekken vooraf en eventinventaris per werkplek.'
           : 'Bekijk de inventaris en informatie van je toegewezen werkplek.'}
       </p>
     </div>
 
-    {!visible.length&&<p className="rounded-2xl border p-5 text-muted-foreground">Geen toegewezen werkplek met inventaris beschikbaar.</p>}
+    {isAdmin&&<WorkplaceCatalogInventory workplaces={catalogWorkplaces} items={catalogItems}/>}
+
+    {!visible.length&&<p className="rounded-2xl border p-5 text-muted-foreground">
+      {isAdmin
+        ? 'Nog geen evenementwerkplekken. De standaardwerkplekken hierboven blijven altijd beschikbaar en worden automatisch naar nieuwe evenementen gekopieerd.'
+        : 'Geen toegewezen werkplek met inventaris beschikbaar.'}
+    </p>}
 
     {visible.map(workplace=><section key={workplace.id} className="space-y-4 rounded-3xl border p-4 md:p-5">
       <div>

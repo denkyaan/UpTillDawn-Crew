@@ -49,13 +49,15 @@ export async function createEvent(fd:FormData){
  if(!start||!end)throw new Error('Vul start- en einduur in wanneer Facebook deze niet openbaar meegeeft.')
  if(Date.parse(end)<=Date.parse(start))throw new Error('Einde moet na begin liggen.')
  const location=await eventLocation(fd,{venue:imported?.venue||undefined,address:imported?.address||undefined})
- const {error}=await s.from('events').insert({
+ const {data:created,error}=await s.from('events').insert({
   name,venue:location.venue,address:location.address,latitude:location.latitude,longitude:location.longitude,
   start_at:start,end_at:end,start_date:start,end_date:end,
   facebook_event_url:facebookUrl?(imported?.sourceUrl||facebookUrl):null,
   image_url:imported?.imageUrl||null,
   checkin_radius_m:z.coerce.number().int().min(10).max(10000).parse(fd.get('radius')||100),created_by:user.id,
- })
- if(error){console.error('[Event create]',{code:error.code});throw new Error('Evenement aanmaken mislukt.')}
- revalidatePath('/events');revalidatePath('/chat')
+ }).select('id').single()
+ if(error||!created){console.error('[Event create]',{code:error?.code});throw new Error('Evenement aanmaken mislukt.')}
+ const {error:catalogError}=await s.rpc('upt_sync_workplace_catalog_to_event',{p_event:created.id})
+ if(catalogError)console.error('[Event workplace catalog sync]',{code:catalogError.code})
+ revalidatePath('/events');revalidatePath('/chat');revalidatePath('/workplaces');revalidatePath('/inventory')
 }

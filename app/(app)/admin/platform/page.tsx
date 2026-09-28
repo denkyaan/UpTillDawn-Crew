@@ -41,17 +41,27 @@ export default async function PlatformCenter(){
     s.from('qr_resources').select('id,code,event_id,workplace_id,resource_type,title,route,active').order('created_at',{ascending:false}).limit(30),
     s.from('event_templates').select('id,name,source_event_id,sections,updated_at').order('updated_at',{ascending:false}).limit(30),
     s.from('configuration_versions').select('id,kind,note,created_at').order('created_at',{ascending:false}).limit(10),
-    s.from('profiles').select('id,full_name').eq('approved',true).order('full_name'),
+    s.rpc('upt_admin_personnel_details_v2'),
     s.from('workplaces').select('id,event_id,name').eq('is_active',true).order('name'),
     s.from('inventory_items').select('id,event_id,workplace_id,name,asset_code,barcode,serial_number,location_label,maintenance_due_at,reorder_threshold,unit_cost_cents,asset_notes,available_quantity,total_quantity,missing_quantity,damaged_quantity').eq('is_active',true).order('name').limit(200),
     s.from('event_report_snapshots').select('id,event_id,snapshot,generated_at,generation_kind').order('generated_at',{ascending:false}).limit(20),
     s.rpc('upt_recovery_readiness'),
   ])
 
-  const allResults=[eventsResult,recommendationsResult,featuresResult,knowledgeResult,qrResult,templatesResult,versionsResult,profilesResult,workplacesResult,inventoryResult,reportsResult]
-  if(allResults.some(result=>result.error)){
-    return <main className="p-4 md:p-8"><h1 className="text-3xl font-black">Platform Center</h1><p className="mt-4">Platformgegevens konden niet volledig worden geladen.</p></main>
-  }
+  const loadProblems=[
+    eventsResult.error&&'evenementen',
+    recommendationsResult.error&&'planning',
+    featuresResult.error&&'feature rollouts',
+    knowledgeResult.error&&'kennisbank',
+    qrResult.error&&'QR-resources',
+    templatesResult.error&&'eventtemplates',
+    versionsResult.error&&'configuratieversies',
+    profilesResult.error&&'personeel',
+    workplacesResult.error&&'werkplekken',
+    inventoryResult.error&&'inventaris',
+    reportsResult.error&&'rapportage',
+    recoveryResult.error&&'recovery',
+  ].filter((value):value is string=>Boolean(value))
 
   const events=eventsResult.data||[]
   const activeEvents=events.filter(e=>e.start_at<=now&&e.end_at>=now)
@@ -69,14 +79,28 @@ export default async function PlatformCenter(){
     <header className="flex flex-wrap items-end justify-between gap-3">
       <div>
         <p className="text-xs font-black uppercase tracking-[.2em] text-violet-400">PLATFORM OPERATIONS</p>
-        <h1 className="text-3xl font-black">Platform Center</h1>
-        <p className="mt-1 text-sm text-muted-foreground">Planning, templates, alerts, assets, rapportage, kosten, QR, kennis, rollouts en recovery in één beheeromgeving.</p>
+        <h1 className="text-3xl font-black">Platformbeheer</h1>
+        <p className="mt-1 text-sm text-muted-foreground">Centraal beheer voor planning, eventtemplates, operationele signalen, materiaal, rapportage, kosten, QR, kennis, rollouts en herstelcontrole.</p>
       </div>
       <div className="flex flex-wrap gap-2">
         <Link href="/admin" className="rounded-xl border px-4 py-3 font-bold">COMMAND CENTER</Link>
         <Link href="/inventory" className="rounded-xl border px-4 py-3 font-bold">INVENTARIS</Link>
       </div>
     </header>
+
+    {loadProblems.length>0&&<div className="rounded-2xl border border-amber-500/40 bg-amber-500/5 p-4 text-sm">
+      <b>Enkele onderdelen konden niet laden.</b>
+      <p className="mt-1 text-muted-foreground">Niet beschikbaar: {loadProblems.join(', ')}. De overige onderdelen blijven bruikbaar.</p>
+    </div>}
+
+    {!events.length&&<section className="rounded-2xl border border-violet-500/30 p-4">
+      <h2 className="text-xl font-black">Begin hier</h2>
+      <p className="mt-1 text-sm text-muted-foreground">Er zijn nog geen evenementen. Stel eerst je permanente werkplekken en standaardinventaris in; maak daarna een evenement. De masterlijst wordt automatisch overgenomen.</p>
+      <div className="mt-3 flex flex-wrap gap-2">
+        <Link href="/inventory" className="rounded-xl bg-violet-600 px-4 py-3 font-bold text-white">STANDAARDINVENTARIS INSTELLEN</Link>
+        <Link href="/events" className="rounded-xl border px-4 py-3 font-bold">EVENEMENT AANMAKEN</Link>
+      </div>
+    </section>}
 
     <PlatformAiAssistant/>
 

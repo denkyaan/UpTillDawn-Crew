@@ -1322,6 +1322,7 @@ export type Database = {
           asset_notes: string | null
           available_quantity: number
           barcode: string | null
+          catalog_item_id: string | null
           category: string | null
           created_at: string
           created_by: string
@@ -1349,6 +1350,7 @@ export type Database = {
           asset_notes?: string | null
           available_quantity: number
           barcode?: string | null
+          catalog_item_id?: string | null
           category?: string | null
           created_at?: string
           created_by: string
@@ -1376,6 +1378,7 @@ export type Database = {
           asset_notes?: string | null
           available_quantity?: number
           barcode?: string | null
+          catalog_item_id?: string | null
           category?: string | null
           created_at?: string
           created_by?: string
@@ -1399,6 +1402,13 @@ export type Database = {
           workplace_id?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "inventory_items_catalog_item_id_fkey"
+            columns: ["catalog_item_id"]
+            isOneToOne: false
+            referencedRelation: "workplace_catalog_items"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "inventory_items_created_by_fkey"
             columns: ["created_by"]
@@ -2098,7 +2108,12 @@ export type Database = {
       }
       profiles: {
         Row: {
+          account_blocked: boolean
           approved: boolean
+          approved_before_block: boolean | null
+          blocked_at: string | null
+          blocked_by: string | null
+          blocked_reason: string | null
           date_of_birth: string | null
           full_name: string | null
           home_address: string | null
@@ -2111,7 +2126,12 @@ export type Database = {
           updated_at: string | null
         }
         Insert: {
+          account_blocked?: boolean
           approved?: boolean
+          approved_before_block?: boolean | null
+          blocked_at?: string | null
+          blocked_by?: string | null
+          blocked_reason?: string | null
           date_of_birth?: string | null
           full_name?: string | null
           home_address?: string | null
@@ -2124,7 +2144,12 @@ export type Database = {
           updated_at?: string | null
         }
         Update: {
+          account_blocked?: boolean
           approved?: boolean
+          approved_before_block?: boolean | null
+          blocked_at?: string | null
+          blocked_by?: string | null
+          blocked_reason?: string | null
           date_of_birth?: string | null
           full_name?: string | null
           home_address?: string | null
@@ -2136,7 +2161,15 @@ export type Database = {
           role?: string
           updated_at?: string | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "profiles_blocked_by_fkey"
+            columns: ["blocked_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       push_subscriptions: {
         Row: {
@@ -3007,6 +3040,107 @@ export type Database = {
           },
         ]
       }
+      workplace_catalog: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          description: string | null
+          id: string
+          is_active: boolean
+          maximum_staff: number | null
+          minimum_staff: number
+          name: string
+          sort_order: number
+          target_staff: number
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          id?: string
+          is_active?: boolean
+          maximum_staff?: number | null
+          minimum_staff?: number
+          name: string
+          sort_order?: number
+          target_staff?: number
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          id?: string
+          is_active?: boolean
+          maximum_staff?: number | null
+          minimum_staff?: number
+          name?: string
+          sort_order?: number
+          target_staff?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "workplace_catalog_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      workplace_catalog_items: {
+        Row: {
+          catalog_workplace_id: string
+          category: string | null
+          created_at: string
+          created_by: string | null
+          default_quantity: number
+          id: string
+          is_active: boolean
+          name: string
+          updated_at: string
+        }
+        Insert: {
+          catalog_workplace_id: string
+          category?: string | null
+          created_at?: string
+          created_by?: string | null
+          default_quantity?: number
+          id?: string
+          is_active?: boolean
+          name: string
+          updated_at?: string
+        }
+        Update: {
+          catalog_workplace_id?: string
+          category?: string | null
+          created_at?: string
+          created_by?: string | null
+          default_quantity?: number
+          id?: string
+          is_active?: boolean
+          name?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "workplace_catalog_items_catalog_workplace_id_fkey"
+            columns: ["catalog_workplace_id"]
+            isOneToOne: false
+            referencedRelation: "workplace_catalog"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "workplace_catalog_items_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       workplace_inventory_notes: {
         Row: {
           body: string
@@ -3129,6 +3263,7 @@ export type Database = {
       }
       workplaces: {
         Row: {
+          catalog_workplace_id: string | null
           created_at: string
           description: string | null
           event_id: string
@@ -3144,6 +3279,7 @@ export type Database = {
           target_staff: number
         }
         Insert: {
+          catalog_workplace_id?: string | null
           created_at?: string
           description?: string | null
           event_id: string
@@ -3159,6 +3295,7 @@ export type Database = {
           target_staff?: number
         }
         Update: {
+          catalog_workplace_id?: string | null
           created_at?: string
           description?: string | null
           event_id?: string
@@ -3174,6 +3311,13 @@ export type Database = {
           target_staff?: number
         }
         Relationships: [
+          {
+            foreignKeyName: "workplaces_catalog_workplace_id_fkey"
+            columns: ["catalog_workplace_id"]
+            isOneToOne: false
+            referencedRelation: "workplace_catalog"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "workplaces_event_id_fkey"
             columns: ["event_id"]
@@ -3259,10 +3403,35 @@ export type Database = {
           updated_at: string
         }[]
       }
+      upt_admin_personnel_details_v2: {
+        Args: never
+        Returns: {
+          account_blocked: boolean
+          approved: boolean
+          blocked_at: string
+          blocked_reason: string
+          date_of_birth: string
+          email: string
+          full_name: string
+          home_address: string
+          iban: string
+          id: string
+          national_register_number: string
+          phone_number: string
+          profile_photo_url: string
+          role: string
+          updated_at: string
+        }[]
+      }
       upt_admin_profiles: {
         Args: never
         Returns: {
+          account_blocked: boolean
           approved: boolean
+          approved_before_block: boolean | null
+          blocked_at: string | null
+          blocked_by: string | null
+          blocked_reason: string | null
           date_of_birth: string | null
           full_name: string | null
           home_address: string | null
@@ -3302,6 +3471,10 @@ export type Database = {
       }
       upt_admin_set_account: {
         Args: { p_approved: boolean; p_role: string; p_user: string }
+        Returns: undefined
+      }
+      upt_admin_set_personnel_block: {
+        Args: { p_blocked: boolean; p_reason?: string; p_user: string }
         Returns: undefined
       }
       upt_admin_system_health: {
@@ -3500,6 +3673,26 @@ export type Database = {
           p_shift_kind?: string
           p_start: string
           p_user: string
+          p_workplace: string
+        }
+        Returns: string
+      }
+      upt_create_workplace_catalog: {
+        Args: {
+          p_description?: string
+          p_maximum_staff?: number
+          p_minimum_staff?: number
+          p_name: string
+          p_sort_order?: number
+          p_target_staff?: number
+        }
+        Returns: string
+      }
+      upt_create_workplace_catalog_item: {
+        Args: {
+          p_category?: string
+          p_name: string
+          p_quantity?: number
           p_workplace: string
         }
         Returns: string
@@ -4146,6 +4339,10 @@ export type Database = {
         Args: { p_id: string; p_payload: Json; p_type: string }
         Returns: Json
       }
+      upt_sync_workplace_catalog_to_event: {
+        Args: { p_event: string }
+        Returns: Json
+      }
       upt_update_inventory_asset_metadata: {
         Args: {
           p_asset_code?: string
@@ -4189,6 +4386,29 @@ export type Database = {
       upt_update_task_status: {
         Args: { p_assignment: string; p_status: string }
         Returns: string
+      }
+      upt_update_workplace_catalog: {
+        Args: {
+          p_description?: string
+          p_is_active?: boolean
+          p_maximum_staff?: number
+          p_minimum_staff?: number
+          p_name: string
+          p_sort_order?: number
+          p_target_staff?: number
+          p_workplace: string
+        }
+        Returns: undefined
+      }
+      upt_update_workplace_catalog_item: {
+        Args: {
+          p_category?: string
+          p_is_active?: boolean
+          p_item: string
+          p_name: string
+          p_quantity?: number
+        }
+        Returns: undefined
       }
       upt_upsert_event_emergency_information: {
         Args: {
