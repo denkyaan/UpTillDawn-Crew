@@ -126,3 +126,28 @@ test('language preference stays synchronized across tabs', async () => {
   assert.match(sync,/event\.key!==['"]uptilldawn-language['"]/)
   assert.match(sync,/removeEventListener\(["']storage["']/)
 })
+
+
+test('runtime translator consumes every four-language catalog', async () => {
+  const sync = await readFile(new URL('../components/locale-sync.tsx', import.meta.url), 'utf8')
+  for (const translator of [
+    'translateCompleteUi',
+    'translateUiExtension',
+    'translateAppUi',
+    'translateAppExtraUi',
+    'translateCrewUi',
+    'translateCrewExtraUi',
+    'translateGodUi',
+    'translateActionUi',
+  ]) assert.ok(sync.includes(translator), `${translator} must be active at runtime`)
+})
+
+test('new visible UI copy is guarded by static four-language coverage tests', async () => {
+  const [staticCoverage,coverage] = await Promise.all([
+    readFile(new URL('./i18n-static-ui-coverage.test.mjs', import.meta.url), 'utf8'),
+    readFile(new URL('./ui-translation-coverage.test.mjs', import.meta.url), 'utf8'),
+  ])
+  assert.match(staticCoverage, /every static user-facing UI string has NL\/FR\/EN\/DE coverage/)
+  assert.match(coverage, /every static UI string has NL\/FR\/EN\/DE translation coverage/)
+  assert.match(coverage, /server action user messages also require four-language coverage/)
+})
