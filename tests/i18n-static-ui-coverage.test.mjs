@@ -62,13 +62,14 @@ function lineOf(source,node){
 }
 
 test('every static user-facing UI string has NL/FR/EN/DE coverage', async () => {
-  const [extension,complete,appCatalog]=await Promise.all([
+  const [extension,complete,appCatalog,appExtraCatalog]=await Promise.all([
     readFile('lib/ui-translation-extensions.ts','utf8'),
     readFile('lib/ui-translation-complete.ts','utf8'),
     readFile('lib/ui-translation-catalog-app.ts','utf8'),
+    readFile('lib/ui-translation-catalog-app-extra.ts','utf8'),
   ])
   const fourLanguageKeys=new Set()
-  for(const source of [extension,complete,appCatalog]){
+  for(const source of [extension,complete,appCatalog,appExtraCatalog]){
     for(const match of source.matchAll(/^\s{2}(['"])(.*?)\1\s*:\s*\{([^\n]+)\},?$/gm)){
       const row=match[3]
       if(/fr:\s*['"][^\n]+?['"]\s*,/.test(row)&&/en:\s*['"][^\n]+?['"]\s*,/.test(row)&&/de:\s*['"][^\n]+?['"]/.test(row)){
