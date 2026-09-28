@@ -82,7 +82,7 @@ export async function applyEventTemplate(fd:FormData){
  if(!start||!end||Date.parse(end)<=Date.parse(start))throw new Error('Geef geldige evenementuren.')
  const venue=String(fd.get('venue')||'').trim().slice(0,200)||undefined
  const address=String(fd.get('address')||'').trim().slice(0,500)||undefined
- const {data,error}=await s.rpc('upt_apply_event_template',{
+ const {data,error}=await s.rpc('upt_apply_event_template_v2',{
   p_template:templateId,p_name:name,p_start:start,p_end:end,p_venue:venue,p_address:address,
  })
  if(error||!data)throw new Error(error?.message||'Template toepassen mislukt.')
