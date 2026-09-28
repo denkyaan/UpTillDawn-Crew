@@ -59,6 +59,8 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
     pathname.startsWith("/operations")?"operations":
     pathname.startsWith("/workplaces")?"workplaces":
     pathname.startsWith("/inventory")?"inventory":
+    pathname.startsWith("/guestlist")?"guestlist":
+    pathname.startsWith("/sales")?"sales":
     pathname.startsWith("/shifts")?"shifts":
     pathname.startsWith("/briefings")?"briefings":
     pathname.startsWith("/tasks")?"tasks":
@@ -204,6 +206,8 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
   const showOperations=feature("operations",isAdmin?true:context.shiftActive)
   const showWorkplaces=feature("workplaces",Boolean(isAdmin)||context.assignedWorkplaceRole)
   const showInventory=Boolean(isAdmin)||feature("inventory",context.assignedWorkplaceRole)
+  const showGuestlist=feature("guestlist",Boolean(isAdmin)||context.assignedEvent)
+  const showSales=feature("sales",Boolean(isAdmin)||context.assignedWorkplaceRole)
   const showTasks=feature("tasks",Boolean(isAdmin)||context.shiftActive)
   const showIncidents=feature("incidents",isAdmin?true:context.shiftActive)
   const showChat=feature("chat",true)
@@ -211,7 +215,7 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
   const showExports=feature("exports",Boolean(isAdmin))
   const showPersonnel=feature("personnel",Boolean(isAdmin))
   const showSettings=feature("settings",true)
-  const featureVisibility={overview:showOverview,events:showEvents,operations:showOperations,workplaces:showWorkplaces,inventory:showInventory,shifts:showShifts,briefings:showBriefings,tasks:showTasks,chat:showChat,crew:showCrew,incidents:showIncidents,exports:showExports,personnel:showPersonnel,settings:showSettings}
+  const featureVisibility={overview:showOverview,events:showEvents,operations:showOperations,workplaces:showWorkplaces,inventory:showInventory,guestlist:showGuestlist,sales:showSales,shifts:showShifts,briefings:showBriefings,tasks:showTasks,chat:showChat,crew:showCrew,incidents:showIncidents,exports:showExports,personnel:showPersonnel,settings:showSettings}
   const operationalMode=context.eventActive||context.shiftActive
   const showUrgent=!pathname.startsWith("/chat")&&!isAdmin&&showIncidents&&context.shiftActive
   const showFloatingChat=isAdmin||operationalMode

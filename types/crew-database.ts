@@ -32,6 +32,150 @@ export type Database = {
         }
         Relationships: []
       }
+      artist_backstage_checklists: {
+        Row: {
+          artist_received: boolean
+          artist_received_at: string | null
+          created_at: string
+          drinks: string | null
+          drinks_ready: boolean
+          drinks_ready_at: string | null
+          event_id: string
+          guestlist_entry_id: string
+          hospitality_notes: string | null
+          updated_at: string
+          updated_by: string | null
+        }
+        Insert: {
+          artist_received?: boolean
+          artist_received_at?: string | null
+          created_at?: string
+          drinks?: string | null
+          drinks_ready?: boolean
+          drinks_ready_at?: string | null
+          event_id: string
+          guestlist_entry_id: string
+          hospitality_notes?: string | null
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Update: {
+          artist_received?: boolean
+          artist_received_at?: string | null
+          created_at?: string
+          drinks?: string | null
+          drinks_ready?: boolean
+          drinks_ready_at?: string | null
+          event_id?: string
+          guestlist_entry_id?: string
+          hospitality_notes?: string | null
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "artist_backstage_checklists_event_id_fkey"
+            columns: ["event_id"]
+            isOneToOne: false
+            referencedRelation: "events"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "artist_backstage_checklists_guestlist_entry_id_fkey"
+            columns: ["guestlist_entry_id"]
+            isOneToOne: true
+            referencedRelation: "event_guestlist_entries"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "artist_backstage_checklists_updated_by_fkey"
+            columns: ["updated_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      artist_hospitality_items: {
+        Row: {
+          completed_at: string | null
+          completed_by: string | null
+          created_at: string
+          created_by: string | null
+          event_id: string
+          guestlist_entry_id: string
+          id: string
+          is_done: boolean
+          item_name: string
+          notes: string | null
+          quantity: number
+          source: string
+          source_document_name: string | null
+          updated_at: string
+        }
+        Insert: {
+          completed_at?: string | null
+          completed_by?: string | null
+          created_at?: string
+          created_by?: string | null
+          event_id: string
+          guestlist_entry_id: string
+          id?: string
+          is_done?: boolean
+          item_name: string
+          notes?: string | null
+          quantity?: number
+          source?: string
+          source_document_name?: string | null
+          updated_at?: string
+        }
+        Update: {
+          completed_at?: string | null
+          completed_by?: string | null
+          created_at?: string
+          created_by?: string | null
+          event_id?: string
+          guestlist_entry_id?: string
+          id?: string
+          is_done?: boolean
+          item_name?: string
+          notes?: string | null
+          quantity?: number
+          source?: string
+          source_document_name?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "artist_hospitality_items_completed_by_fkey"
+            columns: ["completed_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "artist_hospitality_items_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "artist_hospitality_items_event_id_fkey"
+            columns: ["event_id"]
+            isOneToOne: false
+            referencedRelation: "events"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "artist_hospitality_items_guestlist_entry_id_fkey"
+            columns: ["guestlist_entry_id"]
+            isOneToOne: false
+            referencedRelation: "event_guestlist_entries"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       break_sessions: {
         Row: {
           created_at: string
@@ -806,6 +950,128 @@ export type Database = {
           },
         ]
       }
+      event_guestlist_entries: {
+        Row: {
+          arrival_notified_at: string | null
+          created_at: string
+          created_by: string | null
+          entry_type: string
+          event_id: string
+          id: string
+          is_active: boolean
+          last_checked_in_at: string | null
+          last_checked_in_by: string | null
+          name: string
+          notes: string | null
+          source: string
+          source_document_name: string | null
+          spots_checked_in: number
+          spots_total: number
+          updated_at: string
+        }
+        Insert: {
+          arrival_notified_at?: string | null
+          created_at?: string
+          created_by?: string | null
+          entry_type?: string
+          event_id: string
+          id?: string
+          is_active?: boolean
+          last_checked_in_at?: string | null
+          last_checked_in_by?: string | null
+          name: string
+          notes?: string | null
+          source?: string
+          source_document_name?: string | null
+          spots_checked_in?: number
+          spots_total?: number
+          updated_at?: string
+        }
+        Update: {
+          arrival_notified_at?: string | null
+          created_at?: string
+          created_by?: string | null
+          entry_type?: string
+          event_id?: string
+          id?: string
+          is_active?: boolean
+          last_checked_in_at?: string | null
+          last_checked_in_by?: string | null
+          name?: string
+          notes?: string | null
+          source?: string
+          source_document_name?: string | null
+          spots_checked_in?: number
+          spots_total?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "event_guestlist_entries_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "event_guestlist_entries_event_id_fkey"
+            columns: ["event_id"]
+            isOneToOne: false
+            referencedRelation: "events"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "event_guestlist_entries_last_checked_in_by_fkey"
+            columns: ["last_checked_in_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      event_guestlist_settings: {
+        Row: {
+          backstage_workplace_id: string | null
+          event_id: string
+          updated_at: string
+          updated_by: string | null
+        }
+        Insert: {
+          backstage_workplace_id?: string | null
+          event_id: string
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Update: {
+          backstage_workplace_id?: string | null
+          event_id?: string
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "event_guestlist_settings_backstage_workplace_id_fkey"
+            columns: ["backstage_workplace_id"]
+            isOneToOne: false
+            referencedRelation: "workplaces"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "event_guestlist_settings_event_id_fkey"
+            columns: ["event_id"]
+            isOneToOne: true
+            referencedRelation: "events"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "event_guestlist_settings_updated_by_fkey"
+            columns: ["updated_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       event_members: {
         Row: {
           created_at: string
@@ -1339,6 +1605,9 @@ export type Database = {
           photo_path: string | null
           purchase_date: string | null
           reorder_threshold: number
+          sale_category: string | null
+          sale_enabled: boolean
+          sale_price_cents: number | null
           serial_number: string | null
           total_quantity: number
           unit_cost_cents: number | null
@@ -1367,6 +1636,9 @@ export type Database = {
           photo_path?: string | null
           purchase_date?: string | null
           reorder_threshold?: number
+          sale_category?: string | null
+          sale_enabled?: boolean
+          sale_price_cents?: number | null
           serial_number?: string | null
           total_quantity: number
           unit_cost_cents?: number | null
@@ -1395,6 +1667,9 @@ export type Database = {
           photo_path?: string | null
           purchase_date?: string | null
           reorder_threshold?: number
+          sale_category?: string | null
+          sale_enabled?: boolean
+          sale_price_cents?: number | null
           serial_number?: string | null
           total_quantity?: number
           unit_cost_cents?: number | null
@@ -2395,6 +2670,145 @@ export type Database = {
           visible?: boolean
         }
         Relationships: []
+      }
+      sales_registers: {
+        Row: {
+          event_id: string
+          opened_at: string
+          opened_by: string | null
+          opening_cash_cents: number
+          updated_at: string
+          workplace_id: string
+        }
+        Insert: {
+          event_id: string
+          opened_at?: string
+          opened_by?: string | null
+          opening_cash_cents?: number
+          updated_at?: string
+          workplace_id: string
+        }
+        Update: {
+          event_id?: string
+          opened_at?: string
+          opened_by?: string | null
+          opening_cash_cents?: number
+          updated_at?: string
+          workplace_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "sales_registers_event_id_fkey"
+            columns: ["event_id"]
+            isOneToOne: false
+            referencedRelation: "events"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "sales_registers_opened_by_fkey"
+            columns: ["opened_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "sales_registers_workplace_id_fkey"
+            columns: ["workplace_id"]
+            isOneToOne: false
+            referencedRelation: "workplaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      sales_transactions: {
+        Row: {
+          created_at: string
+          event_id: string
+          id: string
+          inventory_item_id: string
+          notes: string | null
+          original_sale_id: string | null
+          payment_method: string
+          product_name: string
+          quantity: number
+          sale_category: string
+          seller_id: string | null
+          total_cents: number | null
+          transaction_type: string
+          unit_price_cents: number
+          workplace_id: string
+        }
+        Insert: {
+          created_at?: string
+          event_id: string
+          id?: string
+          inventory_item_id: string
+          notes?: string | null
+          original_sale_id?: string | null
+          payment_method: string
+          product_name: string
+          quantity: number
+          sale_category: string
+          seller_id?: string | null
+          total_cents?: number | null
+          transaction_type?: string
+          unit_price_cents: number
+          workplace_id: string
+        }
+        Update: {
+          created_at?: string
+          event_id?: string
+          id?: string
+          inventory_item_id?: string
+          notes?: string | null
+          original_sale_id?: string | null
+          payment_method?: string
+          product_name?: string
+          quantity?: number
+          sale_category?: string
+          seller_id?: string | null
+          total_cents?: number | null
+          transaction_type?: string
+          unit_price_cents?: number
+          workplace_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "sales_transactions_event_id_fkey"
+            columns: ["event_id"]
+            isOneToOne: false
+            referencedRelation: "events"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "sales_transactions_inventory_item_id_fkey"
+            columns: ["inventory_item_id"]
+            isOneToOne: false
+            referencedRelation: "inventory_items"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "sales_transactions_original_sale_id_fkey"
+            columns: ["original_sale_id"]
+            isOneToOne: false
+            referencedRelation: "sales_transactions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "sales_transactions_seller_id_fkey"
+            columns: ["seller_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "sales_transactions_workplace_id_fkey"
+            columns: ["workplace_id"]
+            isOneToOne: false
+            referencedRelation: "workplaces"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       shifts: {
         Row: {
@@ -3616,6 +4030,23 @@ export type Database = {
         Args: { p_note: string }
         Returns: undefined
       }
+      upt_artist_hospitality_add: {
+        Args: {
+          p_entry: string
+          p_item: string
+          p_notes?: string
+          p_quantity?: number
+        }
+        Returns: string
+      }
+      upt_artist_hospitality_remove: {
+        Args: { p_item: string }
+        Returns: undefined
+      }
+      upt_artist_hospitality_toggle: {
+        Args: { p_done: boolean; p_item: string }
+        Returns: undefined
+      }
       upt_assign_task: {
         Args: { p_task: string; p_user: string }
         Returns: string
@@ -3625,6 +4056,14 @@ export type Database = {
         Returns: string
       }
       upt_audit_export: { Args: never; Returns: undefined }
+      upt_backstage_artist_checklist_update: {
+        Args: {
+          p_artist_received: boolean
+          p_drinks_ready: boolean
+          p_entry: string
+        }
+        Returns: undefined
+      }
       upt_can_access_workplace: {
         Args: { p_event: string; p_workplace: string }
         Returns: boolean
@@ -3996,6 +4435,50 @@ export type Database = {
         }
         Returns: Json
       }
+      upt_guestlist_add_entry: {
+        Args: {
+          p_entry_type?: string
+          p_event: string
+          p_name: string
+          p_notes?: string
+          p_spots?: number
+        }
+        Returns: string
+      }
+      upt_guestlist_checkin: {
+        Args: { p_delta: number; p_entry: string }
+        Returns: Json
+      }
+      upt_guestlist_import: {
+        Args: { p_entries: Json; p_event: string; p_source_document?: string }
+        Returns: Json
+      }
+      upt_guestlist_remove_entry: {
+        Args: { p_entry: string }
+        Returns: undefined
+      }
+      upt_guestlist_set_artist_hospitality: {
+        Args: { p_drinks?: string; p_entry: string; p_notes?: string }
+        Returns: undefined
+      }
+      upt_guestlist_set_backstage: {
+        Args: { p_event: string; p_workplace: string }
+        Returns: undefined
+      }
+      upt_guestlist_set_backstage_workplace: {
+        Args: { p_event: string; p_workplace: string }
+        Returns: undefined
+      }
+      upt_guestlist_update_entry: {
+        Args: {
+          p_entry: string
+          p_entry_type: string
+          p_name: string
+          p_notes?: string
+          p_spots: number
+        }
+        Returns: undefined
+      }
       upt_handover_candidates: {
         Args: { p_event: string; p_workplace: string }
         Returns: {
@@ -4284,6 +4767,31 @@ export type Database = {
       }
       upt_restore_platform_configuration: {
         Args: { p_version: string }
+        Returns: undefined
+      }
+      upt_sales_configure_item: {
+        Args: {
+          p_category?: string
+          p_enabled: boolean
+          p_item: string
+          p_price_cents?: number
+        }
+        Returns: undefined
+      }
+      upt_sales_record: {
+        Args: { p_item: string; p_payment_method: string; p_quantity: number }
+        Returns: string
+      }
+      upt_sales_refund: {
+        Args: { p_notes?: string; p_quantity: number; p_sale: string }
+        Returns: string
+      }
+      upt_sales_set_opening_cash: {
+        Args: {
+          p_event: string
+          p_opening_cash_cents: number
+          p_workplace: string
+        }
         Returns: undefined
       }
       upt_save_push_subscription: {
