@@ -13,7 +13,7 @@ export default async function AuthenticatedLayout({ children }: { children: Reac
  const { data: p, error } = await s.from('profiles').select('approved,account_blocked').eq('id', user.id).single()
  if (error || !p) return <main className="p-8">Je profiel kon niet worden geladen. Probeer opnieuw.</main>
  if (p.account_blocked) redirect('/login')
- if (!p.approved) return <main className="p-8">ACCOUNT NOG NIET GOEDGEKEURD</main>
+ if (!p.approved) redirect('/pending-approval')
 
  return <AppLayout><ReturnAfterLogin /><GlobalOfflineContentSync userId={user.id}/><ErrorReportBridge/>{children}</AppLayout>
 }
