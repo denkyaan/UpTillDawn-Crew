@@ -1,5 +1,5 @@
 import { createClient } from '@/lib/supabase/crew-server'
-import { archiveEventDocument, createEventDocument } from '@/lib/actions/uptilldawn'
+import { archiveEventDocument, createEventDocument, createInventoryTextEntry } from '@/lib/actions/uptilldawn'
 import { shouldCacheDocumentOffline, type EventDocumentKind } from '@/lib/document-access'
 import type { Tables } from '@/types/crew-database'
 
@@ -33,18 +33,24 @@ export async function EventDocumentsPanel({
   canManage,
   allowEventWide,
   workplaceOptions,
+  workplaceId,
+  showTextEntry = false,
 }:{
   eventId:string
   canManage:boolean
   allowEventWide:boolean
   workplaceOptions:EventDocumentWorkplaceOption[]
+  workplaceId?:string
+  showTextEntry?:boolean
 }){
   const s=await createClient()
-  const {data,error}=await s
+  let query=s
     .from('event_documents')
     .select('*')
     .eq('event_id',eventId)
     .eq('is_active',true)
+  if(workplaceId)query=query.eq('workplace_id',workplaceId)
+  const {data,error}=await query
     .order('offline_critical',{ascending:false})
     .order('created_at',{ascending:false})
 
@@ -66,6 +72,20 @@ export async function EventDocumentsPanel({
       <h2 className="text-xl font-black">Documenten</h2>
       <p className="text-sm text-muted-foreground">Veiligheid, plannen, procedures, vergunningen en technische bestanden volgens rol en werkplek.</p>
     </div>
+
+    {canManage&&showTextEntry&&<details className="rounded-xl border p-3">
+      <summary className="cursor-pointer font-semibold">Tekst toevoegen</summary>
+      <form action={createInventoryTextEntry} className="mt-3 grid gap-2">
+        <input type="hidden" name="event_id" value={eventId}/>
+        <select name="workplace_id" required className="rounded-lg border bg-background p-3">
+          <option value="">Werkplek…</option>
+          {workplaceOptions.map(option=><option key={option.id} value={option.id}>{option.label}</option>)}
+        </select>
+        <input name="title" required maxLength={200} placeholder="Titel" className="rounded-lg border bg-background p-3"/>
+        <textarea name="content" required maxLength={12000} rows={8} placeholder="Tekst, instructies, inventarisinfo…" className="rounded-lg border bg-background p-3"/>
+        <button className="rounded-lg bg-violet-600 p-3 font-bold text-white">TEKST TOEVOEGEN</button>
+      </form>
+    </details>}
 
     {canManage&&<details className="rounded-xl border p-3">
       <summary className="cursor-pointer font-semibold">Document toevoegen</summary>
