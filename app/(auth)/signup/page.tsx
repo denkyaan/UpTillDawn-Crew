@@ -59,7 +59,7 @@ export default function SignupPage() {
         setServerError(result.error)
         setServerErrorCode('code' in result && typeof result.code === 'string' ? result.code : 'signup_error')
       } else if ('success' in result && result.success) {
-        router.push("/verify-email")
+        router.push('redirectTo' in result && typeof result.redirectTo === 'string' ? result.redirectTo : '/pending-approval')
       }
     })
   }
