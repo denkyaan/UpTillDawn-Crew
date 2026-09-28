@@ -13,6 +13,19 @@ type ReadinessDetails={
  missingOpeningChecklists:Array<{workplaceId:string;name:string}>
 }
 
+type OperationalAlert={
+ id:string
+ event_id:string
+ workplace_id:string|null
+ user_id:string|null
+ kind:string
+ detected_at:string
+ active_staff:number|null
+ minimum_staff:number|null
+ observed_minutes:number|null
+ threshold_minutes:number|null
+}
+
 type Snapshot={
  event:{id:string;name:string;status:string;startAt:string;endAt:string;ended:boolean;registrationDeadline:string|null;maxJoiners:number|null}
  staffing:{workplaces:number;responsibles:number;targetStaff:number;scheduledCrew:number;confirmedMembers:number;waitlist:number}
@@ -38,13 +51,17 @@ export default async function EventCommandPage({params}:{params:Promise<{id:stri
  const current=await getCurrentUser()
  if(!current)redirect('/login')
  const s=await createClient()
- const [{data,error},{data:detailData}]=await Promise.all([
+ const [{data,error},{data:detailData},{data:alertRows},{data:workplaceRows}]=await Promise.all([
   s.rpc('upt_event_command_snapshot',{p_event:id}),
   s.rpc('upt_event_readiness_details',{p_event:id}),
+  s.rpc('upt_operational_alerts'),
+  s.from('workplaces').select('id,name').eq('event_id',id),
  ])
  if(error||!data)redirect('/events')
  const snapshot=data as unknown as Snapshot
  const details=(detailData||{missingResponsibles:[],missingBriefings:[],missingOpeningChecklists:[]}) as unknown as ReadinessDetails
+ const alerts=((alertRows||[]) as OperationalAlert[]).filter(alert=>alert.event_id===id)
+ const workplaceNames=new Map((workplaceRows||[]).map(row=>[row.id,row.name]))
  const r=snapshot.readiness
  const readiness=[r.responsiblesReady,r.staffingReady,r.briefingReady,r.openingReady,r.inventoryReady,r.noOpenIncidents]
  const readyCount=readiness.filter(Boolean).length
@@ -82,6 +99,24 @@ export default async function EventCommandPage({params}:{params:Promise<{id:stri
     <Link href={'/sales?event='+id} className="rounded-xl border px-4 py-3 font-bold">SALES</Link>
    </div>
   </header>
+
+  {alerts.length>0&&<section className="rounded-2xl border border-amber-500/40 p-5">
+   <div className="flex flex-wrap items-center justify-between gap-3">
+    <div><h2 className="text-xl font-black">Operationele anomalieën</h2><p className="text-sm text-muted-foreground">Actieve signalen die momenteel aandacht vragen.</p></div>
+    <span className="rounded-full border border-amber-500/50 px-3 py-1 text-xs font-black text-amber-500">{alerts.length} ACTIEF</span>
+   </div>
+   <div className="mt-3 grid gap-2 lg:grid-cols-2">
+    {alerts.map(alert=><article key={alert.id} className="rounded-xl border p-3">
+     <div className="flex items-start justify-between gap-2">
+      <b>{alert.kind.replaceAll('-',' ')}</b>
+      <span className="text-xs text-muted-foreground">{new Date(alert.detected_at).toLocaleString('nl-BE')}</span>
+     </div>
+     {alert.workplace_id&&<p className="text-sm text-muted-foreground">{workplaceNames.get(alert.workplace_id)||'Werkplek'}</p>}
+     {alert.active_staff!==null&&<p className="mt-1 text-sm">Bezetting: {alert.active_staff}/{alert.minimum_staff??0}</p>}
+     {alert.observed_minutes!==null&&<p className="mt-1 text-sm">{alert.observed_minutes} min gemeten · grens {alert.threshold_minutes??0} min</p>}
+    </article>)}
+   </div>
+  </section>}
 
   <section className="grid gap-3 lg:grid-cols-[1.4fr_1fr]">
    <article className="rounded-2xl border p-5">
