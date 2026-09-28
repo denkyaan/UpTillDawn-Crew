@@ -11,6 +11,7 @@ import { cookies, headers } from 'next/headers'
 import { createClient } from '@/lib/supabase/crew-server'
 import { passwordPolicyMessage } from '@/lib/password-policy'
 import { sendSecurityLoginEmail } from '@/lib/security-login-email'
+import { markSaveSuccess } from '@/lib/save-success'
 
 const MAKER_LOGIN_ALIAS = 'maker@uptilldawn'
 const MAKER_ACCOUNT_EMAIL = 'steegmans.kyani@icloud.com'
@@ -349,6 +350,7 @@ export async function updatePassword(formData: FormData) {
     }
     const { error: signOutError } = await supabase.auth.signOut({ scope: 'global' }); if (signOutError) await supabase.auth.signOut({ scope: 'local' })
     const cookieStore = await cookies(); cookieStore.delete('uptilldawn-admin-edit-mode'); cookieStore.delete('uptilldawn-admin-edit-role')
+    await markSaveSuccess()
     return { success: true, message: 'Wachtwoord is bijgewerkt. Log opnieuw in.' }
 }
 
