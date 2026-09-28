@@ -4,7 +4,7 @@ import { deleteEvent } from "@/lib/actions/uptilldawn"
 
 export function DeleteEventButton({eventId,eventName}:{eventId:string;eventName:string}){
   return <form action={deleteEvent} onSubmit={event=>{
-    if(!window.confirm(`Evenement “${eventName}” definitief archiveren? Alle gekoppelde operationele gegevens worden mee verwijderd.`)){
+    if(!window.confirm(`Evenement “${eventName}” archiveren? Historische gegevens blijven bewaard en het event verdwijnt uit actieve overzichten.`)){
       event.preventDefault()
     }
   }}>
