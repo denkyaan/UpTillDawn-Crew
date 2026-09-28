@@ -7,6 +7,7 @@ import { translateCompleteUi } from "@/lib/ui-translation-complete"
 import { translateAppUi } from "@/lib/ui-translation-catalog-app"
 import { translateAppExtraUi } from "@/lib/ui-translation-catalog-app-extra"
 import { translateCrewUi } from "@/lib/ui-translation-catalog-crew"
+import { translateCrewExtraUi } from "@/lib/ui-translation-catalog-crew-extra"
 import {
   LANGUAGE_APPLIED_EVENT,
   LANGUAGE_CHANGE_EVENT,
@@ -57,6 +58,8 @@ function translate(value: string, locale: ExtendedUiLocale): string {
   if (extraCatalog !== value) return extraCatalog
   const crewCatalog = translateCrewUi(value, locale)
   if (crewCatalog !== value) return crewCatalog
+  const crewExtraCatalog = translateCrewExtraUi(value, locale)
+  if (crewExtraCatalog !== value) return crewExtraCatalog
 
   const counted = value.match(/^(\d+)\s+(.+)$/)
   if (counted) {
