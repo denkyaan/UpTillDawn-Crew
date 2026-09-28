@@ -4,7 +4,7 @@ import { createClient } from '@/lib/supabase/crew-server'
 
 export const runtime='nodejs'
 
-const schema=z.object({message:z.string().trim().min(1).max(4000),eventId:z.string().uuid().optional()})
+const schema=z.object({message:z.string().trim().min(1).max(4000),eventId:z.string().uuid().optional(),contextKey:z.string().trim().max(80).optional()})
 
 function crossSite(request:Request){
   const site=request.headers.get('sec-fetch-site')
@@ -68,6 +68,7 @@ export async function POST(request:Request){
   const inEvent=<T extends {event_id?:string;id?:string}>(rows:T[])=>eventId?rows.filter(row=>row.event_id===eventId||row.id===eventId):rows
   const context={
     activeEventId:eventId||null,
+    activeSection:parsed.data.contextKey||null,
     events:inEvent(events||[]),
     operationalAlerts:inEvent((alerts||[]) as Array<{event_id?:string}>).slice(0,50),
     openIncidents:inEvent(incidents||[]),
@@ -83,7 +84,7 @@ export async function POST(request:Request){
   try{
     const raw=await ai.run('@cf/meta/llama-3.3-70b-instruct-fp8-fast',{
       messages:[
-        {role:'system',content:'Je bent de operationele admin-assistent van Up Till Dawn Crew. Antwoord in het Nederlands. Gebruik uitsluitend de meegegeven actuele platformcontext. Je helpt expliciet met planning, inventaris, Inkom & Guestlist, artiestaanwezigheid/backstage, hospitality, Merch/Tokens/Sales en cash/kaart-kassa-opvolging. Benoem concrete risico’s, feiten en veilige volgende acties. Voer geen wijzigingen uit, verzin geen data en presenteer kost/payrollwaarden als schattingen.'},
+        {role:'system',content:'Je bent de operationele admin-assistent van Up Till Dawn Crew. Antwoord in het Nederlands. Gebruik uitsluitend de meegegeven actuele platformcontext en geef voorrang aan activeSection en activeEventId wanneer die aanwezig zijn. Je helpt expliciet met planning, inventaris, Inkom & Guestlist, artiestaanwezigheid/backstage, hospitality, Merch/Tokens/Sales en cash/kaart-kassa-opvolging. Benoem concrete risico’s, feiten en veilige volgende acties. Voer geen wijzigingen uit, verzin geen data en presenteer kost/payrollwaarden als schattingen.'},
         {role:'user',content:JSON.stringify({request:parsed.data.message,context})},
       ],
       max_tokens:900,
