@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect,useMemo,useState } from 'react'
+import { useEffect,useState } from 'react'
 import { createClient } from '@/lib/supabase/crew-client'
 
 type ErrorSource='boundary'|'runtime'|'promise'|'manual'|'api'
@@ -36,7 +36,7 @@ export function ErrorReportButton({
   const [reportId,setReportId]=useState<string|null>(null)
   const [report,setReport]=useState<ReportState|null>(null)
   const [message,setMessage]=useState('')
-  const terminal=useMemo(()=>new Set(['auto_resolved','needs_maker','resolved','failed','dismissed']),[])
+  const isTerminal=(status:string)=>['auto_resolved','needs_maker','resolved','failed','dismissed'].includes(status)
 
   async function refresh(id:string){
     const response=await fetch('/api/error-reports?id='+encodeURIComponent(id),{cache:'no-store'})
@@ -44,6 +44,7 @@ export function ErrorReportButton({
     if(response.ok&&payload?.report){
       setReport(payload.report)
       if(payload.report.ai_user_message)setMessage(payload.report.ai_user_message)
+      if(isTerminal(payload.report.status))setBusy(false)
     }
   }
 
@@ -60,6 +61,7 @@ export function ErrorReportButton({
         const next=payload.new as ReportState
         setReport(next)
         if(next.ai_user_message)setMessage(next.ai_user_message)
+        if(isTerminal(next.status))setBusy(false)
       })
       .subscribe()
 
@@ -73,11 +75,6 @@ export function ErrorReportButton({
     }
   },[reportId])
 
-  useEffect(()=>{
-    if(report&&terminal.has(report.status)){
-      setBusy(false)
-    }
-  },[report,terminal])
 
   async function submit(){
     if(busy)return

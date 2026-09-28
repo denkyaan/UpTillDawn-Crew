@@ -110,7 +110,23 @@ export function GodStudio(){
     setBase(data.head);setConnected(data.connected);setFiles(data.files)
   }
   useEffect(()=>{let active=true;void api<{head:string;connected:boolean;files:SourceEntry[]}>('/api/god/source').then(data=>{if(active){setBase(data.head);setConnected(data.connected);setFiles(data.files)}}).catch(error=>{if(active)setMessage(error.message)});void api<{connected:boolean}>('/api/god/sql').then(data=>{if(active)setDatabaseConnected(data.connected)}).catch(()=>{});return()=>{active=false}},[])
-  useEffect(()=>{void loadErrorReports().catch(()=>{})},[])
+  useEffect(()=>{
+    let active=true
+    void api<{reports:RecoveryReport[]}>('/api/god/error-reports?limit=60')
+      .then(data=>{
+        if(!active)return
+        setErrorReports(data.reports)
+        const requested=new URLSearchParams(window.location.search).get('error-report')
+        if(!requested)return
+        const report=data.reports.find(item=>item.id===requested)
+        if(!report)return
+        setSelectedErrorReport(report.id)
+        setTextAiPrompt(current=>current||recoveryPrompt(report))
+        setTab('ai')
+      })
+      .catch(()=>{})
+    return()=>{active=false}
+  },[])
   useEffect(()=>{if(!changes.length)return;const guard=(event:BeforeUnloadEvent)=>{event.preventDefault()};window.addEventListener('beforeunload',guard);return()=>window.removeEventListener('beforeunload',guard)},[changes.length])
 
   async function open(file:string,targetLine=1){
