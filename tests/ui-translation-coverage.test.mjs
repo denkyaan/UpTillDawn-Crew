@@ -113,7 +113,7 @@ function completeKeys(source){
 }
 
 test('every static UI string has NL/FR/EN/DE translation coverage',async()=>{
-  const [extension,complete,app,extra,crew,crewExtra,god]=await Promise.all([
+  const [extension,complete,app,extra,crew,crewExtra,god,actions]=await Promise.all([
     readFile(new URL('../lib/ui-translation-extensions.ts',import.meta.url),'utf8'),
     readFile(new URL('../lib/ui-translation-complete.ts',import.meta.url),'utf8'),
     readFile(new URL('../lib/ui-translation-catalog-app.ts',import.meta.url),'utf8'),
@@ -121,6 +121,7 @@ test('every static UI string has NL/FR/EN/DE translation coverage',async()=>{
     readFile(new URL('../lib/ui-translation-catalog-crew.ts',import.meta.url),'utf8'),
     readFile(new URL('../lib/ui-translation-catalog-crew-extra.ts',import.meta.url),'utf8'),
     readFile(new URL('../lib/ui-translation-catalog-god.ts',import.meta.url),'utf8'),
+    readFile(new URL('../lib/ui-translation-catalog-actions.ts',import.meta.url),'utf8'),
   ])
   const covered=new Set([
     ...completeKeys(extension),
@@ -130,6 +131,7 @@ test('every static UI string has NL/FR/EN/DE translation coverage',async()=>{
     ...completeKeys(crew),
     ...completeKeys(crewExtra),
     ...completeKeys(god),
+    ...completeKeys(actions),
   ])
   const appRoot=fileURLToPath(new URL('../app',import.meta.url))
   const componentsRoot=fileURLToPath(new URL('../components',import.meta.url))
@@ -144,4 +146,37 @@ test('every static UI string has NL/FR/EN/DE translation coverage',async()=>{
   }
   const unique=[...new Set(missing)].sort()
   assert.equal(unique.length,0,`Missing four-language UI translations:\n${unique.join('\n')}`)
+})
+
+
+test('server action user messages also require four-language coverage',async()=>{
+  const catalog=await readFile(new URL('../lib/ui-translation-catalog-actions.ts',import.meta.url),'utf8')
+  const covered=completeKeys(catalog)
+  const actionsRoot=fileURLToPath(new URL('../lib/actions',import.meta.url))
+  const root=fileURLToPath(new URL('..',import.meta.url))
+  const entries=await readdir(actionsRoot,{withFileTypes:true})
+  const files=entries.filter(entry=>entry.isFile()&&entry.name.endsWith('.ts')).map(entry=>join(actionsRoot,entry.name))
+  const missing=[]
+  for(const file of files){
+    const source=await readFile(file,'utf8')
+    const sf=ts.createSourceFile(file,source,ts.ScriptTarget.Latest,true,ts.ScriptKind.TS)
+    function visit(node){
+      if(ts.isThrowStatement(node)&&node.expression&&ts.isNewExpression(node.expression)&&node.expression.expression.getText(sf)==='Error'){
+        for(const arg of node.expression.arguments||[]){
+          for(const value of expressionStrings(arg)){
+            if(isTranslatable(value)&&!covered.has(value))missing.push(`${relative(root,file)}:${sf.getLineAndCharacterOfPosition(node.getStart(sf)).line+1} :: ${value}`)
+          }
+        }
+      }
+      if(ts.isPropertyAssignment(node)&&node.name.getText(sf)==='error'){
+        for(const value of expressionStrings(node.initializer)){
+          if(isTranslatable(value)&&!covered.has(value))missing.push(`${relative(root,file)}:${sf.getLineAndCharacterOfPosition(node.getStart(sf)).line+1} :: ${value}`)
+        }
+      }
+      ts.forEachChild(node,visit)
+    }
+    visit(sf)
+  }
+  const unique=[...new Set(missing)].sort()
+  assert.equal(unique.length,0,`Missing four-language server-action translations:\n${unique.join('\n')}`)
 })
