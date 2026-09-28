@@ -129,7 +129,7 @@ begin
   return result_value;
 end;
 $function$
-
+;
 revoke all on function public.upt_sync_operation(uuid,text,jsonb) from public,anon;
 grant execute on function public.upt_sync_operation(uuid,text,jsonb) to authenticated;
 notify pgrst,'reload schema';
