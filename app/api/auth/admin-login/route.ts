@@ -126,14 +126,28 @@ export async function POST(request: NextRequest) {
   }
 
   phase = 'success_audit'
-  await adminRpc(supabase, 'upt_admin_login_success', {
-    p_login: email,
-    p_ip: ip,
-    p_location: approximateLocation,
-    p_user_agent: userAgent,
-  })
-  await notify('success', 'login_success')
+  try {
+    await supabase.rpc('upt_admin_login_success', {
+      p_login: email,
+      p_ip: ip,
+      p_location: approximateLocation,
+      p_user_agent: userAgent,
+    })
+  } catch (auditError) {
+    console.error('[admin-login] success audit failed', {
+      message: auditError instanceof Error ? auditError.message : String(auditError),
+    })
+  }
 
+  try {
+    await notify('success', 'login_success')
+  } catch (notifyError) {
+    console.error('[admin-login] success notification failed', {
+      message: notifyError instanceof Error ? notifyError.message : String(notifyError),
+    })
+  }
+
+  phase = 'redirect'
   const destination = submittedLogin === MAKER_LOGIN_ALIAS
     ? new URL('/maker-mode?portal=admin', request.url)
     : new URL('/admin', request.url)
