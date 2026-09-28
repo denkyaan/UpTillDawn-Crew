@@ -23,3 +23,14 @@ test('chat translation supports the four product locales',async()=>{
   const route=await readFile(new URL('../app/api/translate-chat/route.ts',import.meta.url),'utf8')
   for(const locale of ['nl','fr','en','de'])assert.ok(route.includes(`'${locale}'`))
 })
+
+
+test('automatic chat translation is opt-in and follows the active app locale',async()=>{
+  const chat=await readFile(new URL('../components/crew/chat-client.tsx',import.meta.url),'utf8')
+  const catalog=await readFile(new URL('../lib/ui-translation-catalog-crew-extra.ts',import.meta.url),'utf8')
+  assert.match(chat,/uptilldawn-chat-auto-translate/)
+  assert.match(chat,/Chat automatisch vertalen/)
+  assert.match(chat,/liveTranslateText\(message\.body\|\|'',uiLocale\)/)
+  assert.match(chat,/setTranslations\(\{\}\)/)
+  assert.match(catalog,/["']Chat automatisch vertalen["']\s*:\s*\{[^\n]*fr:[^\n]*en:[^\n]*de:/)
+})
