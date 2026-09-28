@@ -2,6 +2,7 @@ export type CrewExtraLocale='nl'|'fr'|'en'|'de'
 type Row={fr:string;en:string;de:string}
 
 export const CREW_EXTRA_TRANSLATIONS:Record<string,Row>={
+  "Auto":{fr:"Auto",en:"Auto",de:"Auto"},
   "Chat automatisch vertalen":{fr:"Traduire automatiquement le chat",en:"Auto-translate chat",de:"Chat automatisch übersetzen"},
   "Automatische chatvertaling kon niet volledig worden uitgevoerd.":{fr:"La traduction automatique du chat n’a pas pu être effectuée complètement.",en:"Automatic chat translation could not be completed.",de:"Die automatische Chat-Übersetzung konnte nicht vollständig durchgeführt werden."},
   "Open diensten (":{fr:"Services ouverts (",en:"Open shifts (",de:"Offene Schichten ("},
