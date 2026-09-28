@@ -2,7 +2,7 @@
 
 import { useState } from 'react'
 
-export function PlatformAiAssistant(){
+export function PlatformAiAssistant({eventId,contextLabel}:{eventId?:string;contextLabel?:string}={}){
   const [message,setMessage]=useState('')
   const [answer,setAnswer]=useState('')
   const [busy,setBusy]=useState(false)
@@ -15,7 +15,7 @@ export function PlatformAiAssistant(){
       const response=await fetch('/api/admin-assistant',{
         method:'POST',
         headers:{'Content-Type':'application/json'},
-        body:JSON.stringify({message:value}),
+        body:JSON.stringify({message:value,eventId}),
       })
       const payload=await response.json() as {answer?:string;error?:string}
       setAnswer(payload.answer||payload.error||'AI-assistent gaf geen antwoord.')
@@ -26,8 +26,8 @@ export function PlatformAiAssistant(){
 
   return <section className="space-y-3 rounded-2xl border p-4">
     <div>
-      <h2 className="text-xl font-black">Admin AI-assistent</h2>
-      <p className="text-sm text-muted-foreground">Vraag operationele uitleg of laat de assistent risico’s en volgende acties samenvatten. Kritieke wijzigingen worden nooit automatisch uitgevoerd.</p>
+      <h2 className="text-xl font-black">Admin AI-assistent{contextLabel?' · '+contextLabel:''}</h2>
+      <p className="text-sm text-muted-foreground">De assistent gebruikt automatisch de context van het geopende scherm of evenement en vat risico’s en volgende acties samen. Kritieke wijzigingen worden nooit automatisch uitgevoerd.</p>
     </div>
     <textarea
       value={message}
