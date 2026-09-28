@@ -19,7 +19,7 @@ async function adminClient(){
   return {s,user}
 }
 
-async function await refresh(){
+async function refresh(){
   for(const path of ['/admin/platform','/events','/shifts','/inventory','/operations'])await revalidatePath(path)
 }
 
