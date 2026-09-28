@@ -2,6 +2,8 @@ export type ActionUiLocale='nl'|'fr'|'en'|'de'
 type Row={fr:string;en:string;de:string}
 
 const ROWS:Record<string,Row>={
+  'minstens':{fr:'au moins',en:'at least',de:'mindestens'},
+  'tekens':{fr:'caractères',en:'characters',de:'Zeichen'},
   'Wachtwoord moet':{fr:'Le mot de passe doit contenir',en:'Password must contain',de:'Das Passwort muss enthalten'},
   'minstens 12 tekens':{fr:'au moins 12 caractères',en:'at least 12 characters',de:'mindestens 12 Zeichen'},
   'een kleine letter':{fr:'une lettre minuscule',en:'a lowercase letter',de:'einen Kleinbuchstaben'},
