@@ -1,9 +1,11 @@
 'use client'
 
-import { useEffect,useState } from 'react'
+import { useCallback,useEffect,useState } from 'react'
 import { createClient } from '@/lib/supabase/crew-client'
 
 type ErrorSource='boundary'|'runtime'|'promise'|'manual'|'api'
+const isTerminal=(status:string)=>['auto_resolved','needs_maker','resolved','failed','dismissed'].includes(status)
+
 type ReportState={
   id:string
   status:string
@@ -36,9 +38,7 @@ export function ErrorReportButton({
   const [reportId,setReportId]=useState<string|null>(null)
   const [report,setReport]=useState<ReportState|null>(null)
   const [message,setMessage]=useState('')
-  const isTerminal=(status:string)=>['auto_resolved','needs_maker','resolved','failed','dismissed'].includes(status)
-
-  async function refresh(id:string){
+  const refresh=useCallback(async(id:string)=>{
     const response=await fetch('/api/error-reports?id='+encodeURIComponent(id),{cache:'no-store'})
     const payload=await response.json().catch(()=>null) as {report?:ReportState;error?:string}|null
     if(response.ok&&payload?.report){
@@ -46,7 +46,7 @@ export function ErrorReportButton({
       if(payload.report.ai_user_message)setMessage(payload.report.ai_user_message)
       if(isTerminal(payload.report.status))setBusy(false)
     }
-  }
+  },[])
 
   useEffect(()=>{
     if(!reportId)return
@@ -73,7 +73,7 @@ export function ErrorReportButton({
       window.clearInterval(timer)
       void s.removeChannel(channel)
     }
-  },[reportId])
+  },[reportId,refresh])
 
 
   async function submit(){
