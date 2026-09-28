@@ -99,3 +99,22 @@ test('chat messages can use optional live browser translation without mutating o
   assert.match(translator,/LanguageDetector/)
   assert.match(translator,/Translator/)
 })
+
+
+test('server metadata and manifest use the same locale source', async () => {
+  const [serverLocale,root,auth,manifest]=await Promise.all([
+    readFile(new URL('../lib/server-locale.ts',import.meta.url),'utf8'),
+    readFile(new URL('../app/layout.tsx',import.meta.url),'utf8'),
+    readFile(new URL('../app/(auth)/layout.tsx',import.meta.url),'utf8'),
+    readFile(new URL('../app/manifest.ts',import.meta.url),'utf8'),
+  ])
+  assert.match(serverLocale,/requestUiLocale/)
+  assert.match(serverLocale,/localeSource===['"]manual['"]/)
+  for(const locale of ['nl','fr','en','de']) assert.match(serverLocale,new RegExp(`\\b${locale}:\\{`))
+  assert.match(root,/await requestUiLocale\(\)/)
+  assert.match(root,/generateMetadata/)
+  assert.match(auth,/await requestUiLocale\(\)/)
+  assert.match(auth,/generateMetadata/)
+  assert.match(manifest,/await requestUiLocale\(\)/)
+  assert.match(manifest,/copy\.manifestName/)
+})
