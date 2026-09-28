@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect,useMemo,useRef,useState } from "react"
+import { useCallback,useEffect,useMemo,useRef,useState } from "react"
 import { Download,Share2,X } from "lucide-react"
 import { createClient } from "@/lib/supabase/crew-client"
 import { useAuth } from "@/lib/providers"
@@ -27,6 +27,13 @@ export function FirstUseInstallPrompt(){
   const [busy,setBusy]=useState(false)
   const [message,setMessage]=useState("")
   const autoPromptedRef=useRef<string|null>(null)
+
+  const finish=useCallback(async()=>{
+    localStorage.removeItem("upt-pwa-install-dismissed")
+    await db.auth.updateUser({data:{pwa_install_prompt_pending:false}})
+    setVisible(false)
+  },[db])
+
 
   useEffect(()=>{
     const handler=(event:Event)=>{
@@ -80,7 +87,7 @@ export function FirstUseInstallPrompt(){
 
     void run()
     return()=>{cancelled=true}
-  },[busy,deferred,user,visible])
+  },[busy,deferred,finish,user,visible])
 
   useEffect(()=>{
     const installed=()=>{
@@ -95,11 +102,6 @@ export function FirstUseInstallPrompt(){
 
   if(!visible||!user)return null
 
-  async function finish(){
-    localStorage.removeItem("upt-pwa-install-dismissed")
-    await db.auth.updateUser({data:{pwa_install_prompt_pending:false}})
-    setVisible(false)
-  }
 
   async function confirm(){
     setBusy(true)
