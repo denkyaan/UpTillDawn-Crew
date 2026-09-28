@@ -7,6 +7,7 @@ import { ThemeProvider } from '@/components/theme-provider'
 import { AuthProvider } from '@/lib/providers'
 import { Toaster } from '@/components/ui/sonner'
 import { cookies, headers } from 'next/headers'
+import { cookies, headers } from 'next/headers'
 import { parseAcceptLanguage, parseAppLocale } from '@/lib/locale'
 import './globals.css'
 
