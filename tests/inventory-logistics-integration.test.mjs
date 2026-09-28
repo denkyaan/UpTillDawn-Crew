@@ -94,21 +94,24 @@ test('handover captures and exposes inventory state at ready time', async () => 
   assert.match(panel,/ACTUEEL MATERIAAL BEKIJKEN/)
 })
 
-test('inventory is integrated in existing role surfaces and God Mode without a new nav route', async () => {
-  const [tasks,workplaces,panel,roles,nav]=await Promise.all([
+test('inventory is integrated as a workplace-scoped navigation feature while retaining material workflows', async () => {
+  const [tasks,workplaces,panel,roles,nav,inventoryPage]=await Promise.all([
     readFile(new URL('../app/(app)/tasks/page.tsx',import.meta.url),'utf8'),
     readFile(new URL('../app/(app)/workplaces/page.tsx',import.meta.url),'utf8'),
     readFile(new URL('../components/crew/inventory-panel.tsx',import.meta.url),'utf8'),
     readFile(new URL('../lib/role-ui.ts',import.meta.url),'utf8'),
     readFile(new URL('../components/layout/navigation-items.ts',import.meta.url),'utf8'),
+    readFile(new URL('../app/(app)/inventory/page.tsx',import.meta.url),'utf8'),
   ])
   assert.match(tasks,/!manager&&<InventoryPanel/)
   assert.match(workplaces,/\(isAdmin\|\|isResponsible\)&&<InventoryPanel/)
   for(const label of ['Materiaalbeheer','Mijn materiaal','RETOUR MELDEN','BEVESTIGEN','AFWIJZEN','TERUGGEVONDEN'])assert.ok(panel.includes(label),label)
-  assert.match(roles,/featureRule\("admin","inventory","Materiaal"/)
-  assert.match(roles,/featureRule\("responsible_lead","inventory","Materiaal"/)
-  assert.match(roles,/featureRule\("staff","inventory","Materiaal"/)
-  assert.doesNotMatch(nav,/key:"inventory"/)
+  assert.match(roles,/navRule\("admin","inventory","Inventaris"/)
+  assert.match(roles,/navRule\("responsible_lead","inventory","Inventaris"/)
+  assert.match(roles,/navRule\("staff","inventory","Inventaris"/)
+  assert.match(nav,/key:"inventory"/)
+  assert.match(nav,/href:"\/inventory"/)
+  assert.match(inventoryPage,/workplaceId=\{workplace\.id\}/)
 })
 
 test('inventory actions expose manager and staff approval workflows', async () => {
