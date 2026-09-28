@@ -6,36 +6,39 @@ import type { Metadata, Viewport } from 'next'
 import { ThemeProvider } from '@/components/theme-provider'
 import { AuthProvider } from '@/lib/providers'
 import { Toaster } from '@/components/ui/sonner'
-import { cookies, headers } from 'next/headers'
-import { LANGUAGE_SOURCE_KEY, parseAcceptLanguage, parseUiLocale } from '@/lib/locale-preferences'
+import { PRODUCT_COPY, requestUiLocale } from '@/lib/server-locale'
 import './globals.css'
 
 
-export const metadata: Metadata = {
-  metadataBase: new URL('https://crew.uptilldawn.workers.dev'),
-  title: {
-    default: 'UP TILL DAWN Crew',
-    template: '%s | UP TILL DAWN Crew',
-  },
-  description: 'Crew- en personeelsbeheer voor Up Till Dawn-evenementen.',
-  applicationName: 'UP TILL DAWN Crew',
-  manifest: '/manifest.webmanifest',
-  openGraph: {
-    type: 'website',
-    siteName: 'UP TILL DAWN Crew',
-    title: 'UP TILL DAWN Crew',
-    description: 'Crew- en personeelsbeheer voor Up Till Dawn-evenementen.',
-    url: 'https://crew.uptilldawn.workers.dev',
-  },
-  appleWebApp: {
-    capable: true,
-    statusBarStyle: 'default',
-    title: 'UP TILL DAWN Personeel',
-  },
-  icons: {
-    icon: '/up-till-dawn-mark.webp',
-    apple: '/up-till-dawn-mark.webp',
-  },
+export async function generateMetadata():Promise<Metadata>{
+  const locale=await requestUiLocale()
+  const copy=PRODUCT_COPY[locale]
+  return {
+    metadataBase:new URL('https://crew.uptilldawn.workers.dev'),
+    title:{
+      default:'UP TILL DAWN Crew',
+      template:'%s | UP TILL DAWN Crew',
+    },
+    description:copy.description,
+    applicationName:'UP TILL DAWN Crew',
+    manifest:'/manifest.webmanifest',
+    openGraph:{
+      type:'website',
+      siteName:'UP TILL DAWN Crew',
+      title:'UP TILL DAWN Crew',
+      description:copy.description,
+      url:'https://crew.uptilldawn.workers.dev',
+    },
+    appleWebApp:{
+      capable:true,
+      statusBarStyle:'default',
+      title:copy.staffTitle,
+    },
+    icons:{
+      icon:'/up-till-dawn-mark.webp',
+      apple:'/up-till-dawn-mark.webp',
+    },
+  }
 }
 
 export const viewport: Viewport = {
@@ -48,13 +51,7 @@ export default async function RootLayout({
 }: Readonly<{
   children: React.ReactNode
 }>) {
-  const [cookieStore,headerStore]=await Promise.all([cookies(),headers()])
-  const cookieLocale=parseUiLocale(cookieStore.get('uptilldawn-language')?.value)
-  const localeSource=cookieStore.get(LANGUAGE_SOURCE_KEY)?.value
-  const requestLocale=parseAcceptLanguage(headerStore.get('accept-language'))
-  const initialLocale=localeSource==='manual'&&cookieLocale
-    ? cookieLocale
-    : requestLocale||cookieLocale||'nl'
+  const initialLocale=await requestUiLocale()
 
   return (
     <html lang={initialLocale} suppressHydrationWarning>
