@@ -2,6 +2,13 @@ export type ExtraCatalogLocale = 'nl' | 'fr' | 'en' | 'de'
 type Row = { fr:string; en:string; de:string }
 
 export const APP_EXTRA_TRANSLATIONS: Record<string,Row> = {
+  "incident(en) ·": { fr:"incident(s) ·", en:"incident(s) ·", de:"Vorfall/Vorfälle ·" },
+  "lage voorraad": { fr:"stock faible", en:"low stock", de:"niedriger Bestand" },
+  "· score": { fr:"· score", en:"· score", de:"· Bewertung" },
+  "· offline": { fr:"· hors ligne", en:"· offline", de:"· offline" },
+  "all": { fr:"tous", en:"all", de:"alle" },
+  "responsible": { fr:"responsable", en:"responsible", de:"verantwortlich" },
+  "staff": { fr:"personnel", en:"staff", de:"Personal" },
   "CONFIGURATIE HERSTELLEN": { fr:"RESTAURER LA CONFIGURATION", en:"RESTORE CONFIGURATION", de:"KONFIGURATION WIEDERHERSTELLEN" },
   "Checklists": { fr:"Listes de contrôle", en:"Checklists", de:"Checklisten" },
   "Onboarding openen": { fr:"Ouvrir l’onboarding", en:"Open onboarding", de:"Onboarding öffnen" },
