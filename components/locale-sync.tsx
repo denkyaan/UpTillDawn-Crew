@@ -108,13 +108,23 @@ export function LocaleSync() {
       applying = false
     })
 
-    // Never mutate React-owned server HTML during hydration. React error #418 is
-    // a text hydration mismatch; translating the whole body in a layout effect
-    // can change text before descendant hydration has finished.
-    const initialPass = window.setTimeout(() => {
-      applyLocale(locale, storedUiLocaleSource()==='manual'?'manual':'device')
-      observer.observe(document.body, { subtree: true, childList: true, characterData: true, attributes: true, attributeFilter: [...attributes] })
-    }, 0)
+    // Never mutate React-owned server HTML while Next/React can still be
+    // hydrating streamed client boundaries. React error #418 is a text
+    // hydration mismatch. Wait for the document load boundary, then yield one
+    // task before translating and observing future committed DOM changes.
+    let initialPass:number|undefined
+    let observing=false
+    const startRuntimeTranslation=()=>{
+      if(observing||initialPass!==undefined)return
+      initialPass=window.setTimeout(()=>{
+        initialPass=undefined
+        applyLocale(locale, storedUiLocaleSource()==='manual'?'manual':'device')
+        observer.observe(document.body, { subtree: true, childList: true, characterData: true, attributes: true, attributeFilter: [...attributes] })
+        observing=true
+      },0)
+    }
+    if(document.readyState==='complete')startRuntimeTranslation()
+    else window.addEventListener('load',startRuntimeTranslation,{once:true})
     const onLanguageChange = (event: Event) => {
       const next=parseUiLocale((event as CustomEvent<string>).detail) || 'nl'
       applyLocale(next as ExtendedUiLocale,'manual')
@@ -133,7 +143,8 @@ export function LocaleSync() {
     window.addEventListener("languagechange", onDeviceLanguageChange)
     window.addEventListener("storage", onStorage)
     return () => {
-      window.clearTimeout(initialPass)
+      if(initialPass!==undefined)window.clearTimeout(initialPass)
+      window.removeEventListener('load',startRuntimeTranslation)
       observer.disconnect()
       window.removeEventListener(LANGUAGE_CHANGE_EVENT, onLanguageChange)
       window.removeEventListener("languagechange", onDeviceLanguageChange)
