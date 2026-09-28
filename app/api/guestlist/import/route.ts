@@ -153,7 +153,7 @@ async function parseUpload(file:File){
 
   if(name.endsWith('.xlsx')){
     const wb=new ExcelJS.Workbook()
-    const bytes=new Uint8Array(await file.arrayBuffer())
+    const bytes=await file.arrayBuffer()
     await wb.xlsx.load(bytes)
     const ws=wb.worksheets[0]
     if(!ws)throw new Error('Excelbestand bevat geen werkblad.')
