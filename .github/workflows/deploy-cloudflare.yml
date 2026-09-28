@@ -125,6 +125,19 @@ jobs:
             printf '%s' "$SECURITY_ALERT_EMAIL" | npx wrangler secret put SECURITY_ALERT_EMAIL
           fi
 
+      - name: Configure optional live translation provider
+        shell: bash
+        env:
+          TRANSLATION_API_URL: ${{ secrets.TRANSLATION_API_URL }}
+          TRANSLATION_API_KEY: ${{ secrets.TRANSLATION_API_KEY }}
+        run: |
+          if [ -n "${TRANSLATION_API_URL:-}" ]; then
+            printf '%s' "$TRANSLATION_API_URL" | npx wrangler secret put TRANSLATION_API_URL
+          fi
+          if [ -n "${TRANSLATION_API_KEY:-}" ]; then
+            printf '%s' "$TRANSLATION_API_KEY" | npx wrangler secret put TRANSLATION_API_KEY
+          fi
+
       - name: Deploy production Worker
         run: npm run deploy:cloudflare
 
