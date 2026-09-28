@@ -54,6 +54,16 @@ function expressionStrings(node){
   return []
 }
 
+function hasNoTranslateAncestor(node){
+  let current=node
+  while(current){
+    if(ts.isJsxElement(current)&&current.openingElement.attributes.properties.some(attr=>ts.isJsxAttribute(attr)&&attr.name.getText()==='data-no-translate'))return true
+    if(ts.isJsxSelfClosingElement(current)&&current.attributes.properties.some(attr=>ts.isJsxAttribute(attr)&&attr.name.getText()==='data-no-translate'))return true
+    current=current.parent
+  }
+  return false
+}
+
 function callName(node){
   if(ts.isIdentifier(node.expression))return node.expression.text
   if(ts.isPropertyAccessExpression(node.expression)){
@@ -69,6 +79,7 @@ function collectVisibleStrings(sourceText,fileName){
   const sf=ts.createSourceFile(fileName,sourceText,ts.ScriptTarget.Latest,true,ts.ScriptKind.TSX)
   const found=[]
   function add(value,node){
+    if(hasNoTranslateAncestor(node))return
     const text=clean(value)
     if(isTranslatable(text))found.push({text,line:sf.getLineAndCharacterOfPosition(node.getStart(sf)).line+1})
   }
