@@ -53,7 +53,20 @@ function canonicalizeBase(value: string) {
   return changed ? canonical : value
 }
 
+function translatePasswordPolicy(value:string,locale:ExtendedUiLocale){
+  const match=value.match(/^Wachtwoord moet (.+) bevatten\.$/)
+  if(!match)return null
+  const parts=match[1].split(', ').map(part=>translateActionUi(part,locale))
+  const prefix=translateActionUi('Wachtwoord moet',locale)
+  if(locale==='fr')return `${prefix} ${parts.join(', ')}.`
+  if(locale==='en')return `${prefix} ${parts.join(', ')}.`
+  if(locale==='de')return `${prefix} ${parts.join(', ')}.`
+  return value
+}
+
 function translate(value: string, locale: ExtendedUiLocale): string {
+  const passwordPolicy=translatePasswordPolicy(value,locale)
+  if(passwordPolicy)return passwordPolicy
   const catalog = translateAppUi(value, locale)
   if (catalog !== value) return catalog
   const extraCatalog = translateAppExtraUi(value, locale)
