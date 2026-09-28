@@ -1,6 +1,7 @@
 import {redirect} from 'next/navigation'
 import {getCurrentUser} from '@/lib/actions/auth'
 import {createClient} from '@/lib/supabase/crew-server'
+import {PlatformAiAssistant} from '@/components/admin/platform-ai-assistant'
 
 export const dynamic='force-dynamic'
 
@@ -113,6 +114,8 @@ export default async function SalesPage({
         <button className="rounded-xl border px-4 py-3 font-bold">EVENEMENT OPENEN</button>
       </form>
     </header>
+
+    {isAdmin&&selected&&<PlatformAiAssistant eventId={selected.id} contextKey="sales" contextLabel={'Sales · '+selected.name}/>}
 
     {!selected
       ? <p className="rounded-2xl border p-5 text-muted-foreground">Geen evenement beschikbaar.</p>
