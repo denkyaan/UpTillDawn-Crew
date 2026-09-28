@@ -10,6 +10,7 @@ import {
   type RoleRuleRole,
   type RoleUiRule,
 } from "@/lib/role-ui"
+import { featureHelp } from "@/lib/ui-field-help"
 
 const roles:Array<{value:RoleRuleRole;label:string}>=[
   {value:"admin",label:"Admin"},
@@ -190,8 +191,11 @@ export function GodModeEditor(){
         onDrop={()=>dropOn(rule.feature_key)}
         className="rounded-xl border p-3"
       >
-        <div className="mb-3 flex items-center justify-between gap-3">
-          <span className="cursor-grab font-bold">☰ {rule.label}</span>
+        <div className="mb-3 flex items-start justify-between gap-3">
+          <div>
+            <span className="cursor-grab font-bold">☰ {rule.label}</span>
+            <p className="mt-1 text-xs text-muted-foreground">{featureHelp(rule.feature_key,rule.label).description}</p>
+          </div>
           <code className="text-xs text-muted-foreground">{rule.feature_key}</code>
         </div>
         <div className="grid gap-3 sm:grid-cols-2">
