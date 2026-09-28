@@ -78,6 +78,13 @@ const EXTENSIONS: Record<string, Row> = {
   'Wachtlijst #': { fr: 'Liste d’attente n°', en: 'Waitlist #', de: 'Warteliste #' },
   'Succesvol opgeslagen.': { fr: 'Enregistré avec succès.', en: 'Saved successfully.', de: 'Erfolgreich gespeichert.' },
   'Profiel opgeslagen.': { fr: 'Profil enregistré.', en: 'Profile saved.', de: 'Profil gespeichert.' },
+  'ID': { fr: 'ID', en: 'ID', de: 'ID' },
+  'Overlap toestaan': { fr: 'Autoriser le chevauchement', en: 'Allow overlap', de: 'Überschneidung erlauben' },
+  'DIENST': { fr: 'SERVICE', en: 'SHIFT', de: 'SCHICHT' },
+  'GEWEIGERD': { fr: 'REFUSÉ', en: 'DECLINED', de: 'ABGELEHNT' },
+  'WACHT': { fr: 'EN ATTENTE', en: 'PENDING', de: 'WARTET' },
+  '· automatisch ingevuld': { fr: '· rempli automatiquement', en: '· automatically filled', de: '· automatisch ausgefüllt' },
+
   'Unieke technische identificatie van dit record.': { fr: 'Identifiant technique unique de cet enregistrement.', en: 'Unique technical identifier for this record.', de: 'Eindeutige technische Kennung dieses Datensatzes.' },
   'Het evenement waaraan dit record gekoppeld is.': { fr: 'L’événement auquel cet enregistrement est lié.', en: 'The event this record is linked to.', de: 'Die Veranstaltung, mit der dieser Datensatz verknüpft ist.' },
   'De werkplek waaraan dit record gekoppeld is.': { fr: 'Le poste de travail auquel cet enregistrement est lié.', en: 'The workplace this record is linked to.', de: 'Der Arbeitsplatz, mit dem dieser Datensatz verknüpft ist.' },
