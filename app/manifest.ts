@@ -1,11 +1,16 @@
 import type { MetadataRoute } from 'next'
+import { PRODUCT_COPY, requestUiLocale } from '@/lib/server-locale'
 
-export default function manifest(): MetadataRoute.Manifest {
+export const dynamic='force-dynamic'
+
+export default async function manifest():Promise<MetadataRoute.Manifest>{
+  const locale=await requestUiLocale()
+  const copy=PRODUCT_COPY[locale]
   return {
     id:'/',
-    name:'UP TILL DAWN PERSONEELSBEHEER',
+    name:copy.manifestName,
     short_name:'UP TILL DAWN',
-    description:'Personeelsbeheer voor Up Till Dawn-evenementen',
+    description:copy.manifestDescription,
     start_url:'/',
     scope:'/',
     display:'standalone',
