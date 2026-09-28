@@ -55,10 +55,10 @@ test('system health route exists behind immutable admin access and uses SLO help
   assert.match(probe,/1000 ms SLO-grens/)
 })
 
-test('admin command center links to the restored health route', async () => {
+test('admin command center no longer exposes system health shortcut', async () => {
   const admin=await readFile(new URL('../app/(app)/admin/page.tsx',import.meta.url),'utf8')
-  assert.match(admin,/href="\/admin\/health"/)
-  assert.match(admin,/Systeemgezondheid/)
+  assert.doesNotMatch(admin,/href="\/admin\/health"/)
+  assert.doesNotMatch(admin,/Systeemgezondheid/)
 })
 
 test('health route realtime refresh watches operational health inputs', async () => {
