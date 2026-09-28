@@ -14,7 +14,7 @@ type ReadinessDetails={
 }
 
 type Snapshot={
- event:{id:string;name:string;status:string;startAt:string;endAt:string;registrationDeadline:string|null;maxJoiners:number|null}
+ event:{id:string;name:string;status:string;startAt:string;endAt:string;ended:boolean;registrationDeadline:string|null;maxJoiners:number|null}
  staffing:{workplaces:number;responsibles:number;targetStaff:number;scheduledCrew:number;confirmedMembers:number;waitlist:number}
  briefing:{required:number;acknowledged:number}
  checklists:{openingTotal:number;openingCompleted:number;closingTotal:number;closingCompleted:number}
