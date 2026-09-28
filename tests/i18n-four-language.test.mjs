@@ -52,3 +52,17 @@ test('device language wins on application launch', async () => {
   assert.doesNotMatch(sync, /storedLocale \|\| deviceLocale\(\)/)
   assert.match(sync, /onDeviceLanguageChange = \(\) => applyLocale\(deviceLocale\(\), false\)/)
 })
+
+
+test('login UI hides maker alias and count labels are translated dynamically', async () => {
+  const login = await readFile(new URL('../components/auth/login-form.tsx', import.meta.url), 'utf8')
+  const sync = await readFile(new URL('../components/locale-sync.tsx', import.meta.url), 'utf8')
+  const complete = await readFile(new URL('../lib/ui-translation-complete.ts', import.meta.url), 'utf8')
+
+  assert.ok(login.includes('placeholder="naam@email.com"'))
+  assert.ok(!login.includes('placeholder="naam@email.com of maker@uptilldawn"'))
+  assert.match(sync, /value\.match\(\/\^\(\\d\+\)\\s\+\(\.\+\)\$\//)
+  for (const label of ['Actieve evenementen','Aan het werk','Wachtende goedkeuringen','Open help oproepen','Lopende diensten & pauzes','niet gearchiveerd','op pauze','actief','lopend']) {
+    assert.ok(complete.includes(`'${label}'`), `${label} must have complete translation coverage`)
+  }
+})
