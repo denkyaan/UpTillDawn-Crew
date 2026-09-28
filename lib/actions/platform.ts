@@ -19,7 +19,7 @@ async function adminClient(){
   return {s,user}
 }
 
-function refresh(){
+async function await refresh(){
   for(const path of ['/admin/platform','/events','/shifts','/inventory','/operations'])await revalidatePath(path)
 }
 
@@ -27,28 +27,28 @@ export async function generatePlanningRecommendations(fd:FormData){
   const {s}=await adminClient()
   const {error}=await s.rpc('upt_generate_planning_recommendations',{p_event:uuid.parse(fd.get('event_id'))})
   if(error)throw new Error(error.message)
-  refresh()
+  await refresh()
 }
 
 export async function applyPlanningRecommendation(fd:FormData){
   const {s}=await adminClient()
   const {error}=await s.rpc('upt_apply_planning_recommendation',{p_recommendation:uuid.parse(fd.get('recommendation_id'))})
   if(error)throw new Error(error.message)
-  refresh()
+  await refresh()
 }
 
 export async function dismissPlanningRecommendation(fd:FormData){
   const {s}=await adminClient()
   const {error}=await s.rpc('upt_dismiss_planning_recommendation',{p_recommendation:uuid.parse(fd.get('recommendation_id'))})
   if(error)throw new Error(error.message)
-  refresh()
+  await refresh()
 }
 
 export async function generateEventReport(fd:FormData){
   const {s}=await adminClient()
   const {error}=await s.rpc('upt_generate_event_report',{p_event:uuid.parse(fd.get('event_id'))})
   if(error)throw new Error(error.message)
-  refresh()
+  await refresh()
 }
 
 export async function savePayRate(fd:FormData){
@@ -68,7 +68,7 @@ export async function savePayRate(fd:FormData){
     created_by:user.id,
   })
   if(error)throw new Error('Kostentarief kon niet worden opgeslagen.')
-  refresh()
+  await refresh()
 }
 
 export async function createKnowledgeArticle(fd:FormData){
@@ -87,7 +87,7 @@ export async function createKnowledgeArticle(fd:FormData){
     created_by:user.id,
   })
   if(error)throw new Error('Kennisartikel kon niet worden opgeslagen.')
-  refresh()
+  await refresh()
 }
 
 export async function createQrResource(fd:FormData){
@@ -106,7 +106,7 @@ export async function createQrResource(fd:FormData){
     created_by:user.id,
   })
   if(error)throw new Error('QR-resource kon niet worden aangemaakt.')
-  refresh()
+  await refresh()
 }
 
 export async function setFeatureRollout(fd:FormData){
@@ -119,14 +119,14 @@ export async function setFeatureRollout(fd:FormData){
     p_notes:String(fd.get('notes')||'').trim().slice(0,1000)||undefined,
   })
   if(error)throw new Error(error.message)
-  refresh()
+  await refresh()
 }
 
 export async function snapshotPlatformConfiguration(fd:FormData){
   const {s}=await adminClient()
   const {error}=await s.rpc('upt_snapshot_platform_configuration',{p_note:String(fd.get('note')||'').trim().slice(0,1000)||undefined})
   if(error)throw new Error(error.message)
-  refresh()
+  await refresh()
 }
 
 export async function captureEventTemplate(fd:FormData){
@@ -138,7 +138,7 @@ export async function captureEventTemplate(fd:FormData){
     p_sections:sections,
   })
   if(error)throw new Error(error.message)
-  refresh()
+  await refresh()
 }
 
 export async function applyEventTemplate(fd:FormData){
@@ -154,7 +154,7 @@ export async function applyEventTemplate(fd:FormData){
     p_address:String(fd.get('address')||'').trim().slice(0,500)||undefined,
   })
   if(error)throw new Error(error.message)
-  refresh()
+  await refresh()
   if(data)redirect('/events')
 }
 
@@ -174,7 +174,7 @@ export async function updateAssetMetadata(fd:FormData){
     asset_notes:String(fd.get('asset_notes')||'').trim().slice(0,4000)||null,
   }).eq('id',id)
   if(error)throw new Error('Assetgegevens konden niet worden opgeslagen.')
-  refresh()
+  await refresh()
 }
 
 
@@ -182,5 +182,5 @@ export async function restorePlatformConfiguration(fd:FormData){
   const {s}=await adminClient()
   const {error}=await s.rpc('upt_restore_platform_configuration',{p_version:uuid.parse(fd.get('version_id'))})
   if(error)throw new Error(error.message)
-  refresh()
+  await refresh()
 }
