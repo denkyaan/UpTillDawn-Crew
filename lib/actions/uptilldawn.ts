@@ -1250,6 +1250,6 @@ export async function updateEvent(fd:FormData){
 export async function deleteEvent(fd:FormData){
  const {s}=await adminClient()
  const eventId=uuid.parse(fd.get('event_id'))
- const {error}=await s.from('events').delete().eq('id',eventId)
- check(error);await revalidatePath('/events')
+ const {error}=await s.from('events').update({status:'archived',updated_at:new Date().toISOString()}).eq('id',eventId)
+ check(error);await revalidatePath('/events');await revalidatePath('/admin')
 }
