@@ -248,7 +248,14 @@ export async function signIn(formData: FormData) {
     if (profileError || !profile) { await notifySecurity('denied', 'profile_error'); await supabase.auth.signOut(); return { error: 'Je profiel kon niet worden geladen. Probeer opnieuw.', code: 'profile_error' } }
     if (profile.account_blocked) { await notifySecurity('denied', 'account_blocked'); await supabase.auth.signOut(); return { error: 'ACCOUNT GEBLOKKEERD', code: 'account_blocked' } }
     const { data: isOwner } = await supabase.rpc('upt_current_is_owner')
-    if (!profile.approved && !isOwner) { await notifySecurity('denied', 'account_not_approved'); await supabase.auth.signOut(); return { error: 'ACCOUNT NOG NIET GOEDGEKEURD', code: 'account_not_approved' } }
+    if (!profile.approved && !isOwner) {
+        await notifySecurity('denied', 'account_not_approved')
+        if (requestedPortal === 'staff') {
+            return { success: true, redirectTo: '/pending-approval', code: 'account_not_approved' }
+        }
+        await supabase.auth.signOut()
+        return { error: 'ACCOUNT NOG NIET GOEDGEKEURD', code: 'account_not_approved' }
+    }
 
     const role = profile.role
     const hasPermanentAdminAccess = role === 'admin' || isOwner === true
