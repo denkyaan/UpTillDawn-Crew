@@ -25,7 +25,7 @@ function euroToCents(value:FormDataEntryValue|null){
   return Math.round(amount*100)
 }
 
-async function await refresh(){
+async function refresh(){
   await revalidatePath('/sales')
   await revalidatePath('/inventory')
   await revalidatePath('/admin/platform')
