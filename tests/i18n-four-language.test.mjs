@@ -11,6 +11,7 @@ test('runtime supports all four product locales', async () => {
   assert.match(preferences, /\['nl','fr','en','de'\]/)
   assert.match(sync, /translateRuntimeUi/)
   assert.match(runtime, /translateCompleteUi/)
+  assert.match(sync, /useLayoutEffect/)
   assert.match(sync, /MutationObserver/)
   for (const attribute of ['placeholder', 'aria-label', 'aria-description', 'title', 'alt']) assert.ok(sync.includes(`"${attribute}"`))
 })
