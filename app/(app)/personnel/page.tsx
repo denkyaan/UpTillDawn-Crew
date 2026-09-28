@@ -2,13 +2,14 @@ import Image from 'next/image'
 import { getCurrentUser } from '@/lib/actions/auth'
 import { redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase/crew-server'
-import { setAccountStatus } from '@/lib/actions/uptilldawn'
+import { approvePersonnelAccount,setAccountStatus } from '@/lib/actions/uptilldawn'
 import { deletePersonnel,setPersonnelBlock } from '@/lib/actions/personnel'
 import { nlRole, nlStatus } from '@/lib/ui-nl'
 
 export const dynamic = 'force-dynamic'
 
-export default async function Page() {
+export default async function Page({searchParams}:{searchParams?:Promise<{feedback?:string}>}) {
+  const params=searchParams?await searchParams:{}
   const current=await getCurrentUser()
   if (!current?.isAdmin) redirect('/')
   const s = await createClient()
@@ -25,6 +26,7 @@ export default async function Page() {
       <h1 className="text-3xl font-black">Personeel & goedkeuringen</h1>
       <p className="mt-1 text-sm text-muted-foreground">Keur accounts goed, wijzig rollen, blokkeer toegang tijdelijk of verwijder een account definitief.</p>
     </div>
+    {params.feedback==='approved'&&<p role="status" className="mb-4 rounded-xl border border-emerald-500/40 bg-emerald-500/10 p-3 font-semibold text-emerald-600">Account goedgekeurd. De gebruiker heeft nu toegang en ontvangt hiervan een melding.</p>}
     {error && <p>Personeelsgegevens konden niet worden geladen.</p>}
     <div className="grid gap-3">{data?.map(p => {
       const isSelf=p.id===current.id
@@ -58,12 +60,18 @@ export default async function Page() {
           </div>
           <div className="flex min-w-0 flex-col gap-3 md:min-w-[310px]">
             <fieldset disabled={p.account_blocked} className="disabled:opacity-50">
-              <form action={setAccountStatus} className="flex flex-wrap gap-2">
-                <input type="hidden" name="user_id" value={p.id}/>
-                <select name="status" defaultValue={p.approved ? 'approved' : 'pending'} className="rounded-lg border bg-background p-2"><option value="pending">In afwachting</option><option value="approved">Goedgekeurd</option></select>
-                <select name="role" defaultValue={p.role} className="rounded-lg border bg-background p-2"><option value="staff">Personeel</option><option value="responsible_lead">Verantwoordelijke</option><option value="admin">Beheerder</option></select>
-                <button className="rounded-lg bg-violet-600 px-4">Opslaan</button>
-              </form>
+              {!p.approved
+                ? <form action={approvePersonnelAccount} className="flex flex-wrap gap-2">
+                    <input type="hidden" name="user_id" value={p.id}/>
+                    <select name="role" defaultValue={p.role} className="rounded-lg border bg-background p-2"><option value="staff">Personeel</option><option value="responsible_lead">Verantwoordelijke</option><option value="admin">Beheerder</option></select>
+                    <button className="rounded-lg bg-emerald-600 px-4 py-2 font-bold text-white">GOEDKEUREN</button>
+                  </form>
+                : <form action={setAccountStatus} className="flex flex-wrap gap-2">
+                    <input type="hidden" name="user_id" value={p.id}/>
+                    <input type="hidden" name="status" value="approved"/>
+                    <select name="role" defaultValue={p.role} className="rounded-lg border bg-background p-2"><option value="staff">Personeel</option><option value="responsible_lead">Verantwoordelijke</option><option value="admin">Beheerder</option></select>
+                    <button className="rounded-lg bg-violet-600 px-4 py-2">ROL OPSLAAN</button>
+                  </form>}
             </fieldset>
 
             {!isSelf&&<div className="space-y-2 rounded-xl border p-3">
