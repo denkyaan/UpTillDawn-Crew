@@ -36,11 +36,11 @@ export default async function Page(){
     s.from('event_emergency_information').select('*'),
   ])
   const peopleResult=user.isAdmin
-    ? await s.from('profiles').select('id,full_name').eq('approved',true).order('full_name')
+    ? await s.from('profiles').select('id,full_name,preferred_workplace_id').eq('approved',true).order('full_name')
     : {data:[],error:null}
   const [workplacesResult,adminShiftsResult]=user.isAdmin
     ? await Promise.all([
-        s.from('workplaces').select('id,event_id,name,is_active').order('sort_order'),
+        s.from('workplaces').select('id,event_id,name,is_active,catalog_workplace_id').order('sort_order'),
         s.from('shifts').select('id,event_id,workplace_id,user_id,role_name,scheduled_start,scheduled_end,status,shift_kind').order('scheduled_start'),
       ])
     : [{data:[],error:null},{data:[],error:null}]
@@ -106,6 +106,12 @@ export default async function Page(){
       const capacityFull=event.max_joiners!==null&&confirmedCount>=event.max_joiners
       const myAvailability=availability.find(row=>row.event_id===event.id&&row.user_id===user.id)
       const myResponse=myAvailability?.response
+      const eventWorkplaces=user.isAdmin?workplaces.filter(workplace=>workplace.event_id===event.id&&workplace.is_active):[]
+      const preferenceName=(userId:string)=>{
+        const preferred=peopleById.get(userId)?.preferred_workplace_id
+        if(!preferred)return 'Geen voorkeur'
+        return eventWorkplaces.find(workplace=>workplace.catalog_workplace_id===preferred)?.name||'Andere voorkeur'
+      }
       const canRows=user.isAdmin
         ? availability
             .filter(row=>row.event_id===event.id&&(row.response==='can'||row.setup_available===true||row.breakdown_available===true))
@@ -113,12 +119,13 @@ export default async function Page(){
               const aMember=memberKeys.has(`${event.id}:${a.user_id}`)
               const bMember=memberKeys.has(`${event.id}:${b.user_id}`)
               if(aMember!==bMember)return aMember?-1:1
+              const preferenceCompare=preferenceName(a.user_id).localeCompare(preferenceName(b.user_id),'nl')
+              if(preferenceCompare!==0)return preferenceCompare
               const aq=a.queue_joined_at?Date.parse(a.queue_joined_at):Number.MAX_SAFE_INTEGER
               const bq=b.queue_joined_at?Date.parse(b.queue_joined_at):Number.MAX_SAFE_INTEGER
               return aq-bq||a.user_id.localeCompare(b.user_id)
             })
         :[]
-      const eventWorkplaces=user.isAdmin?workplaces.filter(workplace=>workplace.event_id===event.id&&workplace.is_active):[]
       const responsibleWorkplaces=user.role==='responsible_lead'
         ? (responsibleResult.data||[])
             .filter(row=>row.event_id===event.id&&row.workplaces?.is_active!==false)
@@ -255,6 +262,7 @@ export default async function Page(){
                       <div className="flex flex-wrap items-center justify-between gap-2">
                         <div>
                           <p className="font-semibold">{person?.full_name||row.user_id}</p>
+                          <p className="text-xs font-semibold text-violet-500">Voorkeur: {preferenceName(row.user_id)}</p>
                           <p className="text-xs text-muted-foreground">
                             {alreadyAdded?'Toegevoegd aan evenement':waitlistPosition>0?`Wachtlijst #${waitlistPosition}`:'Nog niet toegewezen'}
                             {existingShifts.length?` · ${existingShifts.length} dienst(en)`:''}
