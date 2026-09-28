@@ -94,6 +94,7 @@ export default async function InventoryPage(){
       userId={current.id}
       canManage={isAdmin||isResponsible}
       workplaceOptions={options}
+      kinds={['opening','closing']}
     />}
   </main>
 }
