@@ -7,6 +7,15 @@ import { translateCompleteUi } from "@/lib/ui-translation-complete"
 import {
   LANGUAGE_APPLIED_EVENT,
   LANGUAGE_CHANGE_EVENT,
+  LANGUAGE_SOURCE_KEY,
+  deviceUiLocale,
+  initialUiLocale,
+  parseUiLocale,
+  persistUiLocale,
+} from "@/lib/locale-preferences"
+import {
+  LANGUAGE_APPLIED_EVENT,
+  LANGUAGE_CHANGE_EVENT,
   deviceAppLocale,
   initialAppLocale,
   parseAppLocale,
