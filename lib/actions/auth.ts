@@ -88,6 +88,88 @@ async function adminSecurityRpc<T>(supabase: Awaited<ReturnType<typeof createCli
     return rpc(fn, args)
 }
 
+
+function signUpError(error: { code?: string; status?: number; message?: string }) {
+    const code = String(error.code || '').toLowerCase()
+    const message = String(error.message || '').toLowerCase()
+
+    if (
+        code === 'user_already_exists' ||
+        code === 'email_exists' ||
+        message.includes('already registered') ||
+        message.includes('already been registered')
+    ) {
+        return {
+            error: 'Er bestaat al een account met dit e-mailadres. Log in of gebruik wachtwoord herstellen.',
+            code: 'account_exists',
+        }
+    }
+
+    if (
+        code === 'over_email_send_rate_limit' ||
+        error.status === 429 ||
+        message.includes('rate limit')
+    ) {
+        return {
+            error: 'De verificatiemail kan nu niet worden verzonden omdat de e-maildienst tijdelijk te veel verzoeken ontvangt. Wacht enkele minuten en probeer opnieuw.',
+            code: 'email_rate_limit',
+        }
+    }
+
+    if (
+        code === 'unexpected_failure' &&
+        (
+            message.includes('send email') ||
+            message.includes('smtp') ||
+            message.includes('gomail') ||
+            message.includes('testing emails') ||
+            message.includes('verify a domain')
+        )
+    ) {
+        return {
+            error: 'Registratie kan niet worden afgerond omdat de verificatiemail niet kan worden verzonden. De e-maildienst staat momenteel in testmodus en accepteert nog niet alle e-mailadressen. Neem contact op met de beheerder of probeer een toegestaan testadres.',
+            code: 'email_delivery_test_mode',
+        }
+    }
+
+    if (
+        code === 'email_address_invalid' ||
+        code === 'validation_failed' ||
+        message.includes('invalid email')
+    ) {
+        return {
+            error: 'Dit e-mailadres is niet geldig. Controleer het adres en probeer opnieuw.',
+            code: 'invalid_email',
+        }
+    }
+
+    if (code === 'weak_password' || message.includes('password')) {
+        return {
+            error: 'Het wachtwoord voldoet niet aan de beveiligingsvereisten. Kies een sterker wachtwoord en probeer opnieuw.',
+            code: 'weak_password',
+        }
+    }
+
+    if (code === 'signup_disabled' || message.includes('signups not allowed') || message.includes('signup is disabled')) {
+        return {
+            error: 'Nieuwe registraties zijn momenteel uitgeschakeld. Neem contact op met de beheerder.',
+            code: 'signup_disabled',
+        }
+    }
+
+    if (code === 'captcha_failed' || message.includes('captcha')) {
+        return {
+            error: 'De beveiligingscontrole is mislukt. Vernieuw de pagina en probeer opnieuw.',
+            code: 'captcha_failed',
+        }
+    }
+
+    return {
+        error: 'Registratie is mislukt door een technische fout bij de authenticatieservice. Probeer opnieuw; blijft dit gebeuren, meld foutcode signup_auth_error aan de beheerder.',
+        code: code || 'signup_auth_error',
+    }
+}
+
 // ── Sign Up ──────────────────────────────────────────────────
 export async function signUp(formData: FormData) {
     const email = String(formData.get('email') || '').trim().toLowerCase()
@@ -103,10 +185,7 @@ export async function signUp(formData: FormData) {
     if (!origin) return { error: 'De applicatieconfiguratie is onvolledig. Neem contact op met de beheerder.' }
     const supabase = await createClient()
     const { data, error } = await supabase.auth.signUp({ email, password, options: { emailRedirectTo: `${origin}/auth/callback`, data: { full_name: fullName, pwa_install_prompt_pending: true } } })
-    if (error) {
-        if (error.message.includes('already registered')) return { error: 'Er bestaat al een account met dit e-mailadres. Log in.' }
-        return { error: 'De aanvraag kon niet worden verwerkt. Probeer opnieuw.' }
-    }
+    if (error) return signUpError(error)
     return { success: true, message: `Controleer ${email} voor de verificatielink voordat je inlogt.`, userId: data.user?.id }
 }
 
