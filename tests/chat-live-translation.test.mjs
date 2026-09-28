@@ -29,6 +29,7 @@ test('automatic chat translation is opt-in and follows the active app locale',as
   const chat=await readFile(new URL('../components/crew/chat-client.tsx',import.meta.url),'utf8')
   const catalog=await readFile(new URL('../lib/ui-translation-catalog-crew-extra.ts',import.meta.url),'utf8')
   assert.match(chat,/uptilldawn-chat-auto-translate/)
+  assert.match(chat,/localStorage\.getItem\('uptilldawn-chat-auto-translate'\)/)
   assert.match(chat,/Chat automatisch vertalen/)
   assert.match(chat,/liveTranslateText\(message\.body\|\|'',uiLocale\)/)
   assert.match(chat,/setTranslations\(\{\}\)/)
