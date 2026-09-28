@@ -129,9 +129,9 @@ export async function POST(request: NextRequest) {
   try {
     await supabase.rpc('upt_admin_login_success', {
       p_login: email,
-      p_ip: ip,
-      p_location: approximateLocation,
-      p_user_agent: userAgent,
+      p_ip: ip ?? undefined,
+      p_location: approximateLocation ?? undefined,
+      p_user_agent: userAgent ?? undefined,
     })
   } catch (auditError) {
     console.error('[admin-login] success audit failed', {
