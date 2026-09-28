@@ -6,8 +6,6 @@ import { getCurrentUser } from '@/lib/actions/auth'
 import { responsibleCoverageGaps } from '@/lib/responsible-coverage-health'
 import { coverageWindows } from '@/lib/staffing-coverage'
 import { staffNeededForTarget, workplaceStaffingState } from '@/lib/workplace-capacity'
-import { OperationalChecklistPanel } from '@/components/crew/operational-checklists'
-import { InventoryPanel } from '@/components/crew/inventory-panel'
 
 export const dynamic='force-dynamic'
 
@@ -25,6 +23,7 @@ export default async function Page(){
   if(!isAdmin&&!isResponsible&&!isStaff)redirect('/')
 
   let events:Array<{id:string;name:string}>=[]
+  let catalogWorkplaces:Array<{id:string;name:string;description:string|null;sort_order:number}>=[]
   let workplaces:Array<{
     id:string
     event_id:string
@@ -51,18 +50,21 @@ export default async function Page(){
   if(isAdmin){
     const [
       {data:eventRows},
+      {data:catalogRows},
       {data:workplaceRows},
       {data:shiftRows},
       {data:profileRows},
       {data:responsibleRows},
     ]=await Promise.all([
       s.from('events').select('id,name').neq('status','archived').order('start_at'),
+      s.from('workplace_catalog').select('id,name,description,sort_order').eq('is_active',true).order('sort_order').order('name'),
       s.from('workplaces').select('id,event_id,name,description,sort_order,is_active,minimum_staff,target_staff,maximum_staff,events(name,start_at,end_at)').order('sort_order'),
       s.from('shifts').select('event_id,workplace_id,user_id,role_name,status,scheduled_start,scheduled_end').neq('status','cancelled').neq('response_status','declined').order('scheduled_start'),
       s.from('profiles').select('id,full_name,role').eq('approved',true).order('full_name'),
       s.from('responsible_assignments').select('workplace_id,user_id'),
     ])
     events=eventRows||[]
+    catalogWorkplaces=catalogRows||[]
     workplaces=workplaceRows||[]
     peopleById=new Map((profileRows||[]).map(person=>[person.id,person]))
     responsibleAssignments=responsibleRows||[]
@@ -147,7 +149,19 @@ export default async function Page(){
     </div>
 
     {isAdmin&&<AdminOnly>
-      <form action={addWorkplace} className="grid gap-2 rounded-2xl border p-4 md:grid-cols-2">
+      <section className="space-y-3 rounded-2xl border border-violet-500/30 p-4">
+        <div>
+          <h2 className="text-xl font-black">Standaardwerkposten</h2>
+          <p className="text-sm text-muted-foreground">Deze werkposten worden automatisch vooraf aangemaakt voor elk evenement en zijn dezelfde categorieën die Inventory gebruikt.</p>
+        </div>
+        <div className="flex flex-wrap gap-2">
+          {catalogWorkplaces.map(workplace=><span key={workplace.id} className="rounded-full border px-3 py-2 text-sm font-semibold">{workplace.name}</span>)}
+        </div>
+      </section>
+
+      <details className="rounded-2xl border p-4">
+        <summary className="cursor-pointer font-semibold">Extra werkplek toevoegen</summary>
+      <form action={addWorkplace} className="mt-3 grid gap-2 md:grid-cols-2">
         <select name="event_id" required className="rounded-lg border bg-background p-3">
           <option value="">Evenement…</option>
           {events.map(event=><option key={event.id} value={event.id}>{event.name}</option>)}
@@ -164,34 +178,10 @@ export default async function Page(){
           </div>
           <p className="mt-2 text-xs text-muted-foreground">Minimum en doel gelden voor de evenementuren. Maximum wordt ook server-side afgedwongen bij nieuwe of gewijzigde diensten.</p>
         </details>
-        <button className="rounded-lg bg-violet-600 px-4 py-3 font-bold md:col-span-2">WERKPLEK TOEVOEGEN</button>
+        <button className="rounded-lg bg-violet-600 px-4 py-3 font-bold md:col-span-2">EXTRA WERKPLEK TOEVOEGEN</button>
       </form>
+      </details>
     </AdminOnly>}
-
-    {(isAdmin||isResponsible)&&<OperationalChecklistPanel
-      userId={user.id}
-      canManage
-      workplaceOptions={workplaces.filter(workplace=>workplace.is_active).map(workplace=>({
-        id:workplace.id,
-        eventId:workplace.event_id,
-        label:`${workplace.events?.name||'Evenement'} — ${workplace.name}`,
-      }))}
-    />}
-
-    {(isAdmin||isResponsible)&&<InventoryPanel
-      userId={user.id}
-      canManage
-      workplaceOptions={workplaces.filter(workplace=>workplace.is_active).map(workplace=>({
-        id:workplace.id,
-        eventId:workplace.event_id,
-        label:`${workplace.events?.name||'Evenement'} — ${workplace.name}`,
-      }))}
-      crewOptions={assignedCrew.map(person=>({
-        userId:person.id,
-        fullName:person.full_name||'Personeelslid',
-        workplaceId:person.workplace_id,
-      }))}
-    />}
 
     <div className="grid gap-3 md:grid-cols-2">
       {workplaces.map(workplace=>{
