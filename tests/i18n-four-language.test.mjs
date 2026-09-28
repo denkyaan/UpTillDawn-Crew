@@ -13,7 +13,7 @@ test('runtime supports all four product locales', async () => {
   assert.match(runtime, /translateCompleteUi/)
   assert.match(sync, /useEffect/)
   assert.doesNotMatch(sync, /useLayoutEffect/)
-  assert.match(sync, /setTimeout\(\(\) => \{/)
+  assert.match(sync, /setTimeout\(\(\)\s*=>\s*\{/)
   assert.match(sync, /document\.readyState===['"]complete['"]/)
   assert.match(sync, /addEventListener\(['"]load['"],startRuntimeTranslation/)
   assert.match(sync, /MutationObserver/)
