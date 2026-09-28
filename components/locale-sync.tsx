@@ -5,6 +5,7 @@ import { UI_TRANSLATIONS, translateUiText, type UiLocale } from "@/lib/ui-transl
 import { translateUiExtension, type ExtendedUiLocale } from "@/lib/ui-translation-extensions"
 import { translateCompleteUi } from "@/lib/ui-translation-complete"
 import { translateAppUi } from "@/lib/ui-translation-catalog-app"
+import { translateAppExtraUi } from "@/lib/ui-translation-catalog-app-extra"
 import {
   LANGUAGE_APPLIED_EVENT,
   LANGUAGE_CHANGE_EVENT,
@@ -60,6 +61,8 @@ function canonicalizeBase(value: string) {
 function translate(value: string, locale: ExtendedUiLocale): string {
   const catalog = translateAppUi(value, locale)
   if (catalog !== value) return catalog
+  const extraCatalog = translateAppExtraUi(value, locale)
+  if (extraCatalog !== value) return extraCatalog
 
   const counted = value.match(/^(\d+)\s+(.+)$/)
   if (counted) {
