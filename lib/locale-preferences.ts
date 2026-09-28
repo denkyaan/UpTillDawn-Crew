@@ -24,8 +24,9 @@ export function parseAcceptLanguage(value:string|null|undefined):SupportedUiLoca
 
 export function deviceUiLocale():SupportedUiLocale{
   if(typeof navigator==='undefined')return 'nl'
-  const candidates=navigator.languages?.length?navigator.languages:[navigator.language]
-  for(const candidate of candidates){
+  const primary=parseUiLocale(navigator.language)
+  if(primary)return primary
+  for(const candidate of navigator.languages||[]){
     const locale=parseUiLocale(candidate)
     if(locale)return locale
   }

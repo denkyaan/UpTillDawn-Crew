@@ -14,3 +14,15 @@ export async function deletePersonnel(fd:FormData){
  const {error}=await s.rpc('upt_admin_set_account',{p_user:target,p_approved:false,p_role:'__delete__'});if(error)throw new Error(error.message||'Gebruiker verwijderen mislukt.')
  revalidatePath('/personnel');revalidatePath('/chat');revalidatePath('/events');revalidatePath('/workplaces');revalidatePath('/shifts');revalidatePath('/tasks');revalidatePath('/briefings');revalidatePath('/')
 }
+
+
+export async function setPersonnelBlock(fd:FormData){
+ const s=await createClient();const {data:{user}}=await s.auth.getUser();if(!user)throw new Error('Aanmelden vereist.')
+ const target=uuid.parse(fd.get('user_id'));if(target===user.id)throw new Error('Je kunt je eigen account niet blokkeren.')
+ const {data:isAdmin}=await s.rpc('upt_is_admin',{uid:user.id});if(!isAdmin)throw new Error('Geen toegang.')
+ const blocked=String(fd.get('blocked')||'')==='true'
+ const reason=String(fd.get('reason')||'').trim().slice(0,1000)||undefined
+ const {error}=await s.rpc('upt_admin_set_personnel_block',{p_user:target,p_blocked:blocked,p_reason:reason})
+ if(error)throw new Error(error.message)
+ revalidatePath('/personnel');revalidatePath('/');revalidatePath('/events');revalidatePath('/shifts');revalidatePath('/workplaces')
+}

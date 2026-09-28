@@ -165,8 +165,9 @@ export async function signIn(formData: FormData) {
         return { error: 'Aanmelden mislukt. Probeer opnieuw.' }
     }
 
-    const { data: profile, error: profileError } = await supabase.from('profiles').select('approved, role').eq('id', data.user.id).single()
+    const { data: profile, error: profileError } = await supabase.from('profiles').select('approved, role, account_blocked').eq('id', data.user.id).single()
     if (profileError || !profile) { await notifySecurity('denied', 'profile_error'); await supabase.auth.signOut(); return { error: 'Je profiel kon niet worden geladen. Probeer opnieuw.', code: 'profile_error' } }
+    if (profile.account_blocked) { await notifySecurity('denied', 'account_blocked'); await supabase.auth.signOut(); return { error: 'ACCOUNT GEBLOKKEERD', code: 'account_blocked' } }
     const { data: isOwner } = await supabase.rpc('upt_current_is_owner')
     if (!profile.approved && !isOwner) { await notifySecurity('denied', 'account_not_approved'); await supabase.auth.signOut(); return { error: 'ACCOUNT NOG NIET GOEDGEKEURD', code: 'account_not_approved' } }
 
@@ -278,10 +279,10 @@ export async function getCurrentUser() {
     if (authError || !user) return null
 
     const [{ data: profile, error }, { data: isOwner }] = await Promise.all([
-        supabase.from('profiles').select('id,full_name,phone_number,profile_photo_url,approved,role').eq('id', user.id).single(),
+        supabase.from('profiles').select('id,full_name,phone_number,profile_photo_url,approved,role,account_blocked').eq('id', user.id).single(),
         supabase.rpc('upt_current_is_owner'),
     ])
-    if (error || !profile || (!profile.approved && !isOwner)) return null
+    if (error || !profile || profile.account_blocked || (!profile.approved && !isOwner)) return null
 
     const realRole = profile.role
     const hasPermanentAdminAccess = realRole === 'admin' || isOwner === true

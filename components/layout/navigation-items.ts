@@ -38,6 +38,6 @@ export const NAV_ITEMS: NavigationItem[] = [
   { key:"incidents", href:"/incidents", label:"Incidenten", icon:AlertTriangle, roles:["employee","responsible_lead","admin"] },
   { key:"exports", href:"/exports", label:"Excel", icon:FileSpreadsheet, roles:["admin"] },
   { key:"personnel", href:"/personnel", label:"Personeel & goedkeuringen", icon:UserCheck, roles:["admin"] },
-  { key:"platform", href:"/admin/platform", label:"Platform Center", icon:Boxes, roles:["admin"] },
+  { key:"platform", href:"/admin/platform", label:"Platformbeheer", icon:Boxes, roles:["admin"] },
   { key:"settings", href:"/settings", label:"Instellingen", icon:Settings, roles:["employee","responsible_lead","admin"] },
 ]
