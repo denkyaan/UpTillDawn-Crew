@@ -31,11 +31,17 @@ export function LanguageSwitcher({ dark = false }: { dark?: boolean }) {
 
   useEffect(() => {
     let cancelled = false
-    const stored = window.localStorage.getItem("uptilldawn-language")
-    const storedLanguage: Language | null = stored === "nl" || stored === "fr" || stored === "en" || stored === "de" ? stored : null
-    const next: Language = storedLanguage || deviceLanguage()
-    queueMicrotask(() => { if (!cancelled) setLanguage(next) })
-    return () => { cancelled = true }
+    const sync = (value?: string | null) => {
+      const next = parseLanguage(value || document.documentElement.lang) || deviceLanguage()
+      if (!cancelled) setLanguage(next)
+    }
+    sync(document.documentElement.lang)
+    const onApplied = (event: Event) => sync((event as CustomEvent<string>).detail)
+    window.addEventListener("uptilldawn-language-applied", onApplied)
+    return () => {
+      cancelled = true
+      window.removeEventListener("uptilldawn-language-applied", onApplied)
+    }
   }, [])
 
   return <label className={`flex items-center justify-between gap-3 text-sm ${dark ? "text-zinc-300" : "text-muted-foreground"}`}>
@@ -46,8 +52,6 @@ export function LanguageSwitcher({ dark = false }: { dark?: boolean }) {
       onChange={event => {
         const next = parseLanguage(event.target.value) || "nl"
         setLanguage(next)
-        window.localStorage.setItem("uptilldawn-language", next)
-        document.documentElement.lang = next
         window.dispatchEvent(new CustomEvent("uptilldawn-language-change", { detail: next }))
       }}
       className={`rounded-lg border px-3 py-2 ${dark ? "border-white/15 bg-black text-white" : "bg-background text-foreground"}`}
