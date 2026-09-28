@@ -3,13 +3,15 @@
 import dynamic from 'next/dynamic'
 import {useEffect,useRef,useState} from 'react'
 import {GodModeEditor} from './god-mode-editor'
+import {GodVisualBuilder} from './god-visual-builder'
+import {GodAutomationBuilder} from './god-automation-builder'
 import {GodDataEditor} from './god-data-editor'
 import {GodSqlEditor} from './god-sql-editor'
 import {editablePath,summarizeChanges,type SourceChange,type SourceEntry,type SourceTarget} from '@/lib/god-studio'
 import targets from '@/lib/god-source-index.json'
 
 const CodeEditor=dynamic(()=>import('./code-editor'),{ssr:false,loading:()=> <p>Code-editor laden…</p>})
-const tabs=[['source','Programmering'],['elements','Knoppen & onderdelen'],['data','Gegevens'],['sql','Logica & workflows'],['roles','Rollen & navigatie'],['versions','Versies & publicatie'],['connections','Koppelingen']] as const
+const tabs=[['builder','Live Builder'],['automations','Automaties'],['source','Programmering'],['elements','Knoppen & onderdelen'],['data','Gegevens'],['sql','Logica & workflows'],['roles','Rollen & navigatie'],['versions','Versies & publicatie'],['connections','Koppelingen']] as const
 type Tab=typeof tabs[number][0]
 type Proposal={number:number;url:string;sha:string;branch:string}
 type Commit={sha:string;html_url:string;commit:{message:string;author:{date:string}}}
@@ -24,7 +26,7 @@ async function api<T>(url:string,body?:unknown,method=body?'POST':'GET'):Promise
 }
 
 export function GodStudio(){
-  const [tab,setTab]=useState<Tab>('source')
+  const [tab,setTab]=useState<Tab>('builder')
   const [files,setFiles]=useState<SourceEntry[]>([])
   const [base,setBase]=useState('')
   const [connected,setConnected]=useState(false)
@@ -131,9 +133,21 @@ export function GodStudio(){
   }
   const indexed=(targets as SourceTarget[]).filter(t=>`${t.label} ${t.handler} ${t.file}`.toLowerCase().includes(elementSearch.toLowerCase())).slice(0,100)
 
+  function prepareAiFromBuilder(prompt:string,file?:string,line=1){
+    setAiPrompt(prompt)
+    if(file){
+      void open(file,line)
+      return
+    }
+    setTab('source')
+    setMessage('AI-opdracht voorbereid. Open het relevante bronbestand zodat de AI voldoende context krijgt.')
+  }
+
   return <div className="space-y-4">
     <nav aria-label="God Mode gereedschappen" className="flex gap-2 overflow-x-auto rounded-2xl border p-2">{tabs.map(([key,label])=><button key={key} aria-pressed={tab===key} onClick={()=>{setTab(key);if(key==='versions')void action(loadHistory)}} className={`shrink-0 rounded-xl px-4 py-3 text-sm font-bold ${tab===key?'bg-violet-600 text-white':'hover:bg-muted'}`}>{label}</button>)}</nav>
     {message&&<p role="status" className="whitespace-pre-wrap rounded-xl border border-violet-500/40 p-3 text-sm">{message}</p>}
+    {tab==='builder'&&<GodVisualBuilder onOpenSource={(file,line)=>void open(file,line)} onPrepareAi={prepareAiFromBuilder}/>}
+    {tab==='automations'&&<GodAutomationBuilder onPrepareAi={prepareAiFromBuilder}/>}
     {tab==='source'&&<div className="space-y-4">
       <div className="flex flex-wrap items-center justify-between gap-2"><p className="text-sm text-muted-foreground">Volledige broncode · {base.slice(0,8)||'laden…'} · {changes.length} conceptwijzigingen</p><div className="flex gap-2"><button onClick={exportDraft} disabled={!changes.length} className="rounded-xl border px-3 py-2 text-sm">Concept downloaden</button><button onClick={()=>uploadRef.current?.click()} className="rounded-xl border px-3 py-2 text-sm">Concept importeren</button><input ref={uploadRef} type="file" accept="application/json" hidden onChange={e=>{const file=e.target.files?.[0];if(file)void action(()=>importDraft(file));e.target.value=''}}/></div></div>
       <div className="grid min-w-0 gap-4 lg:grid-cols-[260px_minmax(0,1fr)]"><aside className="space-y-3 rounded-xl border p-3"><input aria-label="Bestand zoeken" placeholder="Bestand of map zoeken…" value={search} onChange={e=>setSearch(e.target.value)} className="w-full rounded-lg border bg-background p-2 text-sm"/><div className="max-h-[55vh] overflow-auto">{Array.from(new Set([...files.map(f=>f.path),...Object.keys(drafts)])).filter(f=>f.toLowerCase().includes(search.toLowerCase())).sort().map(file=><button key={file} disabled={!base||busy} onClick={()=>void open(file)} className={`block w-full break-all rounded p-2 text-left font-mono text-xs ${path===file?'bg-violet-600 text-white':'hover:bg-muted'}`}>{Object.hasOwn(drafts,file)?'● ':''}{file}</button>)}</div><input aria-label="Nieuw bestandspad" placeholder="components/nieuwe-knop.tsx" value={newPath} onChange={e=>setNewPath(e.target.value)} className="w-full rounded-lg border bg-background p-2 text-xs"/><button disabled={busy||!base} onClick={addFile} className="w-full rounded-lg border p-2 text-sm font-bold">Bestand toevoegen</button></aside><section className="min-w-0 space-y-3">{path?<><div className="flex flex-wrap items-center justify-between gap-2"><h2 className="break-all font-mono text-sm">{path}</h2><button disabled={busy} onClick={()=>{setDrafts(current=>({...current,[path]:null}));setMessage('Verwijdering staat klaar in je concept; pas definitief na publicatie.')}} className="rounded border border-red-500/50 px-3 py-2 text-xs text-red-500">Bestand verwijderen</button></div>{drafts[path]===null?<div className="rounded-xl border border-red-500 p-4">Bestand gemarkeerd voor verwijdering. <button onClick={()=>setDrafts(current=>{const next={...current};delete next[path];return next})} className="underline">Ongedaan maken</button></div>:<CodeEditor key={path} path={path} line={line} value={value} onChange={content=>setDrafts(current=>({...current,[path]:content}))} readOnly={busy||(!Object.hasOwn(originals,path)&&!Object.hasOwn(drafts,path))}/>}</>:<div className="grid min-h-80 place-items-center rounded-xl border border-dashed p-6 text-center text-muted-foreground">Open een bestand of kies een knop onder Knoppen & onderdelen.</div>}</section></div>
