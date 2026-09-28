@@ -57,9 +57,9 @@ export async function POST(request: NextRequest) {
       login: submittedLogin,
       canonicalLogin: email,
       portal: 'admin',
-      ip,
-      approximateLocation,
-      userAgent,
+      ip: ip ?? undefined,
+      approximateLocation: approximateLocation ?? undefined,
+      userAgent: userAgent ?? undefined,
       reason,
     }).catch(() => false)
   }
