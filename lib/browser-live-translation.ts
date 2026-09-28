@@ -28,14 +28,14 @@ async function browserTranslate(text:string,targetLanguage:LiveTranslationLocale
 }
 
 async function serverTranslate(text:string,targetLanguage:LiveTranslationLocale){
-  const response=await fetch('/api/translate',{
+  const response=await fetch('/api/translate-chat',{
     method:'POST',
     headers:{'Content-Type':'application/json'},
-    body:JSON.stringify({text,target:targetLanguage}),
+    body:JSON.stringify({text,targetLanguage}),
   })
   if(!response.ok)return null
-  const data=await response.json() as {translatedText?:unknown}
-  return typeof data.translatedText==='string'&&data.translatedText.trim()?data.translatedText:null
+  const data=await response.json() as {translated?:unknown}
+  return typeof data.translated==='string'&&data.translated.trim()?data.translated:null
 }
 
 export async function liveTranslateText(text:string,targetLanguage:LiveTranslationLocale){
@@ -43,7 +43,7 @@ export async function liveTranslateText(text:string,targetLanguage:LiveTranslati
     const translated=await browserTranslate(text,targetLanguage)
     if(translated)return translated
   }catch{
-    // Fall through to the authenticated server provider.
+    // Fall back to the authenticated Workers AI endpoint.
   }
 
   try{
