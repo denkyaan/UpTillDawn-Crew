@@ -4366,6 +4366,7 @@ export type Database = {
           worked_minutes: number
         }[]
       }
+      upt_event_readiness_details: { Args: { p_event: string }; Returns: Json }
       upt_feature_allowed: {
         Args: { p_event?: string; p_feature: string; p_workplace?: string }
         Returns: boolean
