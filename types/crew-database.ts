@@ -774,6 +774,7 @@ export type Database = {
           available_from: string | null
           available_until: string | null
           breakdown_available: boolean | null
+          decline_reason: string | null
           event_id: string
           notes: string | null
           queue_joined_at: string | null
@@ -787,6 +788,7 @@ export type Database = {
           available_from?: string | null
           available_until?: string | null
           breakdown_available?: boolean | null
+          decline_reason?: string | null
           event_id: string
           notes?: string | null
           queue_joined_at?: string | null
@@ -800,6 +802,7 @@ export type Database = {
           available_from?: string | null
           available_until?: string | null
           breakdown_available?: boolean | null
+          decline_reason?: string | null
           event_id?: string
           notes?: string | null
           queue_joined_at?: string | null
@@ -4872,6 +4875,16 @@ export type Database = {
           p_breakdown: boolean
           p_event: string
           p_notes?: string
+          p_response: string
+          p_setup: boolean
+        }
+        Returns: undefined
+      }
+      upt_set_event_availability_with_reason: {
+        Args: {
+          p_breakdown: boolean
+          p_event: string
+          p_reason?: string
           p_response: string
           p_setup: boolean
         }
