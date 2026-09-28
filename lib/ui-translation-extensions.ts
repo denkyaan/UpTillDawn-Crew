@@ -79,6 +79,16 @@ const EXTENSIONS: Record<string, Row> = {
   'Succesvol opgeslagen.': { fr: 'Enregistré avec succès.', en: 'Saved successfully.', de: 'Erfolgreich gespeichert.' },
   'Profiel opgeslagen.': { fr: 'Profil enregistré.', en: 'Profile saved.', de: 'Profil gespeichert.' },
 
+  'Checklisttemplate toepassen': { fr: 'Appliquer un modèle de checklist', en: 'Apply checklist template', de: 'Checklisten-Vorlage anwenden' },
+  'TEMPLATE TOEPASSEN': { fr: 'APPLIQUER LE MODÈLE', en: 'APPLY TEMPLATE', de: 'VORLAGE ANWENDEN' },
+  'Werkplek': { fr: 'Poste de travail', en: 'Workplace', de: 'Arbeitsplatz' },
+  'Event command centers': { fr: 'Centres de commande des événements', en: 'Event command centers', de: 'Event-Kommandozentralen' },
+  'Lopende en eerstvolgende evenementen met directe toegang tot readiness, briefing, inventory, guestlist en sales.': { fr: 'Événements en cours et à venir avec accès direct à la préparation, au briefing, à l’inventaire, à la guestlist et aux ventes.', en: 'Current and upcoming events with direct access to readiness, briefing, inventory, guestlist and sales.', de: 'Laufende und kommende Events mit direktem Zugriff auf Bereitschaft, Briefing, Inventar, Gästeliste und Sales.' },
+  'Alle events': { fr: 'Tous les événements', en: 'All events', de: 'Alle Events' },
+  'Open command center →': { fr: 'Ouvrir le centre de commande →', en: 'Open command center →', de: 'Kommandozentrale öffnen →' },
+  'VOLGEND': { fr: 'À VENIR', en: 'UPCOMING', de: 'NÄCHSTES' },
+
+
   'Evenementen konden tijdelijk niet volledig worden geladen.': { fr: 'Les événements n’ont temporairement pas pu être chargés complètement.', en: 'Events could not be fully loaded temporarily.', de: 'Veranstaltungen konnten vorübergehend nicht vollständig geladen werden.' },
   'Guestlist kon tijdelijk niet volledig worden geladen. De pagina blijft beschikbaar zodat je opnieuw kunt proberen.': { fr: 'La guestlist n’a temporairement pas pu être chargée complètement. La page reste disponible afin que vous puissiez réessayer.', en: 'The guestlist could not be fully loaded temporarily. The page remains available so you can try again.', de: 'Die Gästeliste konnte vorübergehend nicht vollständig geladen werden. Die Seite bleibt verfügbar, damit du es erneut versuchen kannst.' },
   'Backstage-checklist kon tijdelijk niet volledig worden geladen.': { fr: 'La checklist backstage n’a temporairement pas pu être chargée complètement.', en: 'The backstage checklist could not be fully loaded temporarily.', de: 'Die Backstage-Checkliste konnte vorübergehend nicht vollständig geladen werden.' },
