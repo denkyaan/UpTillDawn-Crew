@@ -16,8 +16,8 @@ export default async function Page() {
   const s = await createClient()
   const current = await getCurrentUser()
   if (!current) return null
+  redirect('/workplaces')
   const user = { id: current.id }
-  if(current.role==='admin')redirect('/workplaces')
 
   const [
     { data: shifts, error: shiftsError },
