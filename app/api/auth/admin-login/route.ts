@@ -24,6 +24,8 @@ async function adminRpc<T>(
 }
 
 export async function POST(request: NextRequest) {
+  let phase = 'form'
+  try {
   const formData = await request.formData()
   const submittedLogin = String(formData.get('email') || '').trim().toLowerCase()
   const password = String(formData.get('password') || '')
@@ -33,6 +35,7 @@ export async function POST(request: NextRequest) {
   }
 
   const email = submittedLogin === MAKER_LOGIN_ALIAS ? MAKER_ACCOUNT_EMAIL : submittedLogin
+  phase = 'supabase_client'
   const supabase = await createClient()
   const ip = request.headers.get('cf-connecting-ip')
     || request.headers.get('x-forwarded-for')?.split(',')[0]?.trim()
@@ -61,6 +64,7 @@ export async function POST(request: NextRequest) {
     }).catch(() => false)
   }
 
+  phase = 'security_guard'
   const { data: guard, error: guardError } = await adminRpc<{ allowed?: boolean }>(
     supabase,
     'upt_admin_login_guard',
@@ -77,6 +81,7 @@ export async function POST(request: NextRequest) {
     return NextResponse.redirect(loginUrl(request, 'Te veel mislukte aanmeldpogingen. Probeer over 15 minuten opnieuw.'), 303)
   }
 
+  phase = 'password_auth'
   const { data, error } = await supabase.auth.signInWithPassword({ email, password })
   if (error || !data.user) {
     await adminRpc(supabase, 'upt_admin_login_failure', {
@@ -89,6 +94,7 @@ export async function POST(request: NextRequest) {
     return NextResponse.redirect(loginUrl(request, 'Foute logingegevens of u heeft geen toegang tot deze rol.'), 303)
   }
 
+  phase = 'admin_access'
   const [{ data: profile }, { data: isOwner }] = await Promise.all([
     supabase.from('profiles').select('approved, role').eq('id', data.user.id).single(),
     supabase.rpc('upt_current_is_owner'),
@@ -104,6 +110,7 @@ export async function POST(request: NextRequest) {
     return NextResponse.redirect(loginUrl(request, 'Foute logingegevens of u heeft geen toegang tot deze rol.'), 303)
   }
 
+  phase = 'role_mode'
   const { data: roleMode, error: roleModeError } = await supabase.rpc('upt_set_admin_role_mode', {
     p_role: 'admin',
   })
@@ -114,6 +121,7 @@ export async function POST(request: NextRequest) {
     return NextResponse.redirect(loginUrl(request, 'De beheerdermodus kon niet worden geactiveerd.'), 303)
   }
 
+  phase = 'success_audit'
   await adminRpc(supabase, 'upt_admin_login_success', {
     p_login: email,
     p_ip: ip,
@@ -127,4 +135,14 @@ export async function POST(request: NextRequest) {
     : new URL('/admin', request.url)
 
   return NextResponse.redirect(destination, 303)
+  } catch (error) {
+    console.error('[admin-login] unhandled failure', {
+      phase,
+      message: error instanceof Error ? error.message : String(error),
+    })
+    return NextResponse.redirect(
+      loginUrl(request, `Admin-login kon niet worden verwerkt (fase: ${phase}). Probeer opnieuw.`),
+      303,
+    )
+  }
 }
