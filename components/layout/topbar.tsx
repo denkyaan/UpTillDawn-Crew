@@ -6,7 +6,7 @@ import { useAuth,useDisplayName } from "@/lib/providers"
 import { signOut } from "@/lib/actions/auth"
 import { disablePushNotifications } from "@/lib/push-client"
 
-export function Topbar(){
+export function Topbar({notificationMissed=0}:{notificationMissed?:number}){
  const name=useDisplayName()
  const {roles,isAdmin}=useAuth()
  const [loggingOut,startLogout]=useTransition()
@@ -19,7 +19,10 @@ export function Topbar(){
   </Link>
   <div className="flex min-w-0 items-center gap-2 text-[13px] sm:gap-3 sm:text-sm">
    <span className="hidden sm:inline">{name} · {roleLabel}</span>
-   <Link href="/notifications">Meldingen</Link>
+   <Link href="/notifications" className="relative inline-flex items-center gap-1">
+    Meldingen
+    {notificationMissed>0&&<span className="inline-flex h-5 min-w-5 items-center justify-center rounded-full bg-red-600 px-1 text-[10px] font-black leading-none text-white">{notificationMissed>99?"99+":notificationMissed}</span>}
+   </Link>
    <Link href="/settings">Profiel</Link>
    <button
     type="button"
