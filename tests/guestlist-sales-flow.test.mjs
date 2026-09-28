@@ -64,20 +64,15 @@ test('merch and token sales are transactional inventory movements with payment m
   assert.match(client,/✓ VERKOCHT/)
 })
 
-test('admin sales has opening cash reconciliation refunds and Excel export',async()=>{
+test('sales page is income-only per event with merch and token totals',async()=>{
   const page=await read('app/(app)/sales/page.tsx')
-  const migration=await read('supabase/migrations/20260928101805_inventory_sales_cash_register.sql')
-  const exportRoute=await read('app/api/uptilldawn/sales-export/route.ts')
-  assert.match(page,/Kassa begininhoud/)
-  assert.match(page,/Verwacht in kassa:/)
-  assert.match(page,/EXCEL SALES DOWNLOADEN/)
-  assert.match(page,/TERUGBOEKEN/)
-  assert.match(migration,/sales_registers/)
-  assert.match(migration,/opening_cash_cents/)
-  assert.match(migration,/upt_sales_refund/)
-  assert.match(exportRoute,/addWorksheet\('Transacties'\)/)
-  assert.match(exportRoute,/addWorksheet\('Samenvatting'\)/)
-  assert.match(exportRoute,/Betaalmethode/)
+  assert.match(page,/Totale netto-inkomsten/)
+  assert.match(page,/Merchandise-inkomsten/)
+  assert.match(page,/Token- en kassaverkoop/)
+  assert.match(page,/sales_transactions/)
+  assert.doesNotMatch(page,/Kassa begininhoud/)
+  assert.doesNotMatch(page,/EXCEL SALES DOWNLOADEN/)
+  assert.doesNotMatch(page,/TERUGBOEKEN/)
 })
 
 test('admin AI receives guestlist artist backstage sales and register context',async()=>{
