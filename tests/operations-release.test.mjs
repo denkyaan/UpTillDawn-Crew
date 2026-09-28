@@ -8,7 +8,7 @@ test('admin command center is realtime without polling',async()=>{
  const [admin,realtime]=await Promise.all([source('app/(app)/admin/page.tsx'),source('components/realtime-refresh.tsx')])
  assert.match(admin,/Operationeel command center/)
  assert.match(admin,/<RealtimeRefresh\/>/)
- assert.match(admin,/\/admin\/health/)
+ assert.doesNotMatch(admin,/\/admin\/health/)
  assert.match(realtime,/postgres_changes/)
  assert.doesNotMatch(realtime,/setInterval/)
 })
