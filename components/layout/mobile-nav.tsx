@@ -42,6 +42,7 @@ export function MobileBottomNav({
 
  const items=NAV_ITEMS.filter(i=>{
    if(!roles.some(r=>i.roles.includes(r))) return false
+   if(isAdmin&&i.key==="shifts") return false
    if(Object.prototype.hasOwnProperty.call(featureVisibility,i.key)&&!featureVisibility[i.key]) return false
    return true
  }).sort((a,b)=>(order.get(a.key)??999)-(order.get(b.key)??999))
