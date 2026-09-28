@@ -776,6 +776,7 @@ export type Database = {
           breakdown_available: boolean | null
           event_id: string
           notes: string | null
+          queue_joined_at: string | null
           responded_at: string
           response: string
           setup_available: boolean | null
@@ -788,6 +789,7 @@ export type Database = {
           breakdown_available?: boolean | null
           event_id: string
           notes?: string | null
+          queue_joined_at?: string | null
           responded_at?: string
           response: string
           setup_available?: boolean | null
@@ -800,6 +802,7 @@ export type Database = {
           breakdown_available?: boolean | null
           event_id?: string
           notes?: string | null
+          queue_joined_at?: string | null
           responded_at?: string
           response?: string
           setup_available?: boolean | null
@@ -1253,8 +1256,10 @@ export type Database = {
           latitude: number | null
           location: string | null
           longitude: number | null
+          max_joiners: number | null
           name: string
           onboarding_required: boolean
+          registration_deadline: string | null
           start_at: string
           start_date: string
           status: string
@@ -1277,8 +1282,10 @@ export type Database = {
           latitude?: number | null
           location?: string | null
           longitude?: number | null
+          max_joiners?: number | null
           name: string
           onboarding_required?: boolean
+          registration_deadline?: string | null
           start_at: string
           start_date: string
           status?: string
@@ -1301,8 +1308,10 @@ export type Database = {
           latitude?: number | null
           location?: string | null
           longitude?: number | null
+          max_joiners?: number | null
           name?: string
           onboarding_required?: boolean
+          registration_deadline?: string | null
           start_at?: string
           start_date?: string
           status?: string
