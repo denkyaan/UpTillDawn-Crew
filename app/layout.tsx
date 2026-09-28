@@ -7,8 +7,7 @@ import { ThemeProvider } from '@/components/theme-provider'
 import { AuthProvider } from '@/lib/providers'
 import { Toaster } from '@/components/ui/sonner'
 import { cookies, headers } from 'next/headers'
-import { cookies, headers } from 'next/headers'
-import { parseAcceptLanguage, parseAppLocale } from '@/lib/locale'
+import { LANGUAGE_SOURCE_KEY, parseAcceptLanguage, parseUiLocale } from '@/lib/locale-preferences'
 import './globals.css'
 
 
@@ -50,8 +49,8 @@ export default async function RootLayout({
   children: React.ReactNode
 }>) {
   const [cookieStore,headerStore]=await Promise.all([cookies(),headers()])
-  const cookieLocale=parseAppLocale(cookieStore.get('uptilldawn-language')?.value)
-  const localeSource=cookieStore.get('uptilldawn-language-source')?.value
+  const cookieLocale=parseUiLocale(cookieStore.get('uptilldawn-language')?.value)
+  const localeSource=cookieStore.get(LANGUAGE_SOURCE_KEY)?.value
   const requestLocale=parseAcceptLanguage(headerStore.get('accept-language'))
   const initialLocale=localeSource==='manual'&&cookieLocale
     ? cookieLocale
