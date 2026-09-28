@@ -1,15 +1,8 @@
 "use client"
 
 import { useEffect } from "react"
-import { UI_TRANSLATIONS, translateUiText, type UiLocale } from "@/lib/ui-translations"
-import { translateUiExtension, type ExtendedUiLocale } from "@/lib/ui-translation-extensions"
-import { translateCompleteUi } from "@/lib/ui-translation-complete"
-import { translateAppUi } from "@/lib/ui-translation-catalog-app"
-import { translateAppExtraUi } from "@/lib/ui-translation-catalog-app-extra"
-import { translateCrewUi } from "@/lib/ui-translation-catalog-crew"
-import { translateCrewExtraUi } from "@/lib/ui-translation-catalog-crew-extra"
-import { translateGodUi } from "@/lib/ui-translation-catalog-god"
-import { translateActionUi } from "@/lib/ui-translation-catalog-actions"
+import type { ExtendedUiLocale } from "@/lib/ui-translation-extensions"
+import { translateRuntimeUi } from "@/lib/ui-translation-runtime"
 import {
   LANGUAGE_APPLIED_EVENT,
   LANGUAGE_CHANGE_EVENT,
@@ -26,87 +19,6 @@ const originalAttributes = new WeakMap<Element, Map<string, string>>()
 const renderedAttributes = new WeakMap<Element, Map<string, string>>()
 const attributes = ["placeholder", "aria-label", "aria-description", "title", "alt"] as const
 
-const canonicalUiText = new Map<string, string>()
-for (const [nl, row] of Object.entries(UI_TRANSLATIONS)) {
-  canonicalUiText.set(nl, nl)
-  canonicalUiText.set(row.fr, nl)
-  canonicalUiText.set(row.en, nl)
-}
-
-function canonicalizeBase(value: string) {
-  const exact = canonicalUiText.get(value)
-  if (exact) return exact
-  const separators = /(\s+(?:·|→|—)\s+|:\s+)/
-  const parts = value.split(separators)
-  if (parts.length <= 1) return value
-  let changed = false
-  const canonical = parts.map(part => {
-    if (separators.test(part)) return part
-    const trimmed = part.trim()
-    const hit = canonicalUiText.get(trimmed)
-    if (!hit) return part
-    changed = true
-    const leading = part.match(/^\s*/)?.[0] || ""
-    const trailing = part.match(/\s*$/)?.[0] || ""
-    return leading + hit + trailing
-  }).join("")
-  return changed ? canonical : value
-}
-
-function translatePasswordPolicy(value:string,locale:ExtendedUiLocale){
-  const match=value.match(/^Wachtwoord moet (.+) bevatten\.$/)
-  if(!match)return null
-  const parts=match[1].split(', ').map(part=>{
-    const min=part.match(/^minstens (\d+) tekens$/)
-    if(min){
-      if(locale==='fr')return `au moins ${min[1]} caractères`
-      if(locale==='en')return `at least ${min[1]} characters`
-      if(locale==='de')return `mindestens ${min[1]} Zeichen`
-    }
-    return translateActionUi(part,locale)
-  })
-  const prefix=translateActionUi('Wachtwoord moet',locale)
-  if(locale==='fr')return `${prefix} ${parts.join(', ')}.`
-  if(locale==='en')return `${prefix} ${parts.join(', ')}.`
-  if(locale==='de')return `${prefix} ${parts.join(', ')}.`
-  return value
-}
-
-function translate(value: string, locale: ExtendedUiLocale): string {
-  const passwordPolicy=translatePasswordPolicy(value,locale)
-  if(passwordPolicy)return passwordPolicy
-  const catalog = translateAppUi(value, locale)
-  if (catalog !== value) return catalog
-  const extraCatalog = translateAppExtraUi(value, locale)
-  if (extraCatalog !== value) return extraCatalog
-  const crewCatalog = translateCrewUi(value, locale)
-  if (crewCatalog !== value) return crewCatalog
-  const crewExtraCatalog = translateCrewExtraUi(value, locale)
-  if (crewExtraCatalog !== value) return crewExtraCatalog
-  const godCatalog = translateGodUi(value, locale)
-  if (godCatalog !== value) return godCatalog
-  const actionCatalog = translateActionUi(value, locale)
-  if (actionCatalog !== value) return actionCatalog
-
-  const counted = value.match(/^(\d+)\s+(.+)$/)
-  if (counted) {
-    const translatedTail: string = translate(counted[2], locale)
-    if (translatedTail !== counted[2]) return `${counted[1]} ${translatedTail}`
-  }
-
-  const complete = translateCompleteUi(value, locale)
-  if (complete !== value) return complete
-  const extension = translateUiExtension(value, locale)
-  if (extension !== value) return extension
-  const canonical = canonicalizeBase(value)
-  const completeCanonical = translateCompleteUi(canonical, locale)
-  if (completeCanonical !== canonical) return completeCanonical
-  const extendedCanonical = translateUiExtension(canonical, locale)
-  if (extendedCanonical !== canonical) return extendedCanonical
-  if (locale === "de") return canonical
-  return translateUiText(canonical, locale as UiLocale)
-}
-
 function isExcluded(node: Node) {
   const element = node.nodeType === Node.ELEMENT_NODE ? node as Element : node.parentElement
   return Boolean(element?.closest("[data-no-translate]"))
@@ -121,7 +33,7 @@ function translateTextNode(node: Text, locale: ExtendedUiLocale) {
   const original = originalText.get(node) || current
   const leading = original.match(/^\s*/)?.[0] || ""
   const trailing = original.match(/\s*$/)?.[0] || ""
-  const next = `${leading}${translate(original.trim(), locale)}${trailing}`
+  const next = `${leading}${translateRuntimeUi(original.trim(), locale)}${trailing}`
   renderedText.set(node, next)
   if (node.nodeValue !== next) node.nodeValue = next
 }
@@ -138,7 +50,7 @@ function translateElementAttributes(element: Element, locale: ExtendedUiLocale) 
     const previousRendered = rendered.get(attribute)
     if (!originals.has(attribute) || (previousRendered !== undefined && current !== previousRendered)) originals.set(attribute, current)
     const original = originals.get(attribute) || current
-    const translated = translate(original, locale)
+    const translated = translateRuntimeUi(original, locale)
     rendered.set(attribute, translated)
     if (current !== translated) element.setAttribute(attribute, translated)
   }
