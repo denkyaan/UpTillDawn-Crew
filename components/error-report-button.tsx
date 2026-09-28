@@ -117,6 +117,20 @@ export function ErrorReportButton({
   const action=report?.auto_action
   const canApply=report?.status==='auto_resolved'&&(action==='reload'||(action==='retry'&&Boolean(onRetry)))
 
+  useEffect(()=>{
+    if(!report||report.status!=='auto_resolved')return
+    if(action!=='reload'&&action!=='retry')return
+    if(action==='retry'&&!onRetry)return
+    const key='upt-error-auto-action:'+report.id
+    if(sessionStorage.getItem(key)==='done')return
+    sessionStorage.setItem(key,'done')
+    const timer=window.setTimeout(()=>{
+      if(action==='retry'&&onRetry)onRetry()
+      else if(action==='reload')window.location.reload()
+    },700)
+    return()=>window.clearTimeout(timer)
+  },[action,onRetry,report])
+
   return <div className={compact?'space-y-2':'space-y-3'}>
     <button
       type="button"
