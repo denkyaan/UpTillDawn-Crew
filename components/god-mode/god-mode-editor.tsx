@@ -3,6 +3,7 @@
 import Link from "next/link"
 import { useEffect,useState } from "react"
 import { godModeLogout } from "@/lib/actions/god-mode"
+import { showSaveSuccess } from "@/lib/client-save-success"
 import {
   getDefaultRoleUiRules,
   type RoleCondition,
@@ -91,6 +92,7 @@ export function GodModeEditor(){
       if(!response.ok||!payload?.ok){setMessage(payload?.error||"Opslaan mislukt.");return}
       setRules(payload.rules||rules)
       setMessage("God Mode wijzigingen opgeslagen.")
+      showSaveSuccess()
     }catch{setMessage("Opslaan mislukt.")}
     finally{setBusy(false)}
   }
