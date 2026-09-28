@@ -50,7 +50,9 @@ test('device language wins on application launch', async () => {
   const sync = await readFile(new URL('../components/locale-sync.tsx', import.meta.url), 'utf8')
   assert.match(sync, /let locale = deviceLocale\(\)/)
   assert.doesNotMatch(sync, /storedLocale \|\| deviceLocale\(\)/)
-  assert.match(sync, /onDeviceLanguageChange = \(\) => applyLocale\(deviceLocale\(\), false\)/)
+  assert.match(sync, /onDeviceLanguageChange = \(\) => applyLocale\(deviceLocale\(\), true\)/)
+  assert.match(sync, /applyLocale\(locale, true\)/)
+  assert.match(sync, /uptilldawn-language-applied/)
 })
 
 
@@ -65,4 +67,13 @@ test('login UI hides maker alias and count labels are translated dynamically', a
   for (const label of ['Actieve evenementen','Aan het werk','Wachtende goedkeuringen','Open help oproepen','Lopende diensten & pauzes','niet gearchiveerd','op pauze','actief','lopend']) {
     assert.ok(complete.includes(`'${label}'`), `${label} must have complete translation coverage`)
   }
+})
+
+
+test('language picker follows the locale applied by LocaleSync', async () => {
+  const switcher = await readFile(new URL('../components/language-switcher.tsx', import.meta.url), 'utf8')
+  assert.match(switcher, /document\.documentElement\.lang/)
+  assert.match(switcher, /uptilldawn-language-applied/)
+  assert.match(switcher, /uptilldawn-language-change/)
+  assert.doesNotMatch(switcher, /storedLanguage \|\| deviceLanguage\(\)/)
 })
