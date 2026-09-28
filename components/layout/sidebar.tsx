@@ -35,12 +35,12 @@ export function AppSidebar({
    return true
  }).sort((a,b)=>(order.get(a.key)??999)-(order.get(b.key)??999))
 
- return <aside className="hidden md:flex w-[250px] h-screen sticky top-0 flex-col border-r border-border bg-card">
+ return <aside className="hidden md:flex w-[250px] h-dvh sticky top-0 min-h-0 flex-col overflow-hidden border-r border-border bg-card">
   <Link href={isAdmin?"/admin":"/"} className="h-16 flex items-center gap-3 px-5 border-b border-border">
    <Image src="/up-till-dawn-mark.webp" alt="UP TILL DAWN" width={36} height={36} className="h-9 w-9 rounded-xl object-cover" priority />
    <div><div className="font-black tracking-wide">UP TILL DAWN</div><div className="text-[10px] text-muted-foreground tracking-[.18em]">PERSONEELSBEHEER</div></div>
   </Link>
-  <nav className="p-3 space-y-1">{visible.map(i=>{
+  <nav className="min-h-0 flex-1 space-y-1 overflow-y-auto overscroll-contain p-3 pb-6">{visible.map(i=>{
    const href=i.href==='/'&&isAdmin?'/admin':i.href
    const active=href==='/'?pathname==='/':pathname.startsWith(href)
    const Icon=i.icon
@@ -50,6 +50,6 @@ export function AppSidebar({
     <span className="relative"><Icon className="h-5 w-5"/>{count>0&&<span className="absolute -right-3 -top-3 flex h-5 min-w-5 items-center justify-center rounded-full bg-red-600 px-1 text-[10px] font-black leading-none text-white">{count>99?"99+":count}</span>}</span>{featureLabels[i.key] || fallbackLabel}
    </Link>
   })}</nav>
-  <div className="mt-auto p-4"><div className="text-[11px] text-muted-foreground flex gap-2"><Shield className="h-4 w-4"/>Beveiligde personeelsoperaties</div></div>
+  <div className="shrink-0 border-t border-border p-4"><div className="text-[11px] text-muted-foreground flex gap-2"><Shield className="h-4 w-4"/>Beveiligde personeelsoperaties</div></div>
  </aside>
 }
