@@ -82,8 +82,8 @@ export default async function Page(){
       shiftKind:shift.shift_kind==='setup'?'setup':shift.shift_kind==='breakdown'?'breakdown':'event',
       scheduledStart:shift.scheduled_start,
       scheduledEnd:shift.scheduled_end,
-      status:shift.status,
-      responseStatus:shift.response_status,
+      status:shift.status||'scheduled',
+      responseStatus:shift.response_status||'pending',
       overlapAllowed:Boolean(shift.overlap_allowed),
     }))
     for(const availability of availabilityRows||[]){
