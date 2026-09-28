@@ -186,7 +186,11 @@ export async function signUp(formData: FormData) {
     const supabase = await createClient()
     const { data, error } = await supabase.auth.signUp({ email, password, options: { emailRedirectTo: `${origin}/auth/callback`, data: { full_name: fullName, pwa_install_prompt_pending: true } } })
     if (error) return signUpError(error)
-    return { success: true, message: `Controleer ${email} voor de verificatielink voordat je inlogt.`, userId: data.user?.id }
+    return {
+        success: true,
+        redirectTo: data.session ? '/pending-approval' : '/verify-email',
+        userId: data.user?.id,
+    }
 }
 
 // ── Sign In ──────────────────────────────────────────────────
