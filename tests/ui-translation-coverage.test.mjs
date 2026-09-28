@@ -180,3 +180,37 @@ test('server action user messages also require four-language coverage',async()=>
   const unique=[...new Set(missing)].sort()
   assert.equal(unique.length,0,`Missing four-language server-action translations:\n${unique.join('\n')}`)
 })
+
+
+test('shared validation helpers require four-language coverage',async()=>{
+  const catalog=await readFile(new URL('../lib/ui-translation-catalog-actions.ts',import.meta.url),'utf8')
+  const covered=completeKeys(catalog)
+  const files=[
+    fileURLToPath(new URL('../lib/password-policy.ts',import.meta.url)),
+    fileURLToPath(new URL('../lib/geoapify.ts',import.meta.url)),
+    fileURLToPath(new URL('../lib/facebook-event.ts',import.meta.url)),
+  ]
+  const root=fileURLToPath(new URL('..',import.meta.url))
+  const missing=[]
+  for(const file of files){
+    const source=await readFile(file,'utf8')
+    const kind=file.endsWith('.tsx')?ts.ScriptKind.TSX:ts.ScriptKind.TS
+    const sf=ts.createSourceFile(file,source,ts.ScriptTarget.Latest,true,kind)
+    function add(value,node){
+      const text=clean(value)
+      if(isTranslatable(text)&&!covered.has(text))missing.push(`${relative(root,file)}:${sf.getLineAndCharacterOfPosition(node.getStart(sf)).line+1} :: ${text}`)
+    }
+    function visit(node){
+      if(ts.isThrowStatement(node)&&node.expression&&ts.isNewExpression(node.expression)&&node.expression.expression.getText(sf)==='Error'){
+        for(const arg of node.expression.arguments||[])for(const value of expressionStrings(arg))add(value,arg)
+      }
+      if(ts.isCallExpression(node)&&ts.isPropertyAccessExpression(node.expression)&&node.expression.name.text==='push'){
+        for(const arg of node.arguments)for(const value of expressionStrings(arg))add(value,arg)
+      }
+      ts.forEachChild(node,visit)
+    }
+    visit(sf)
+  }
+  const unique=[...new Set(missing)].sort()
+  assert.equal(unique.length,0,`Missing four-language shared validation translations:\n${unique.join('\n')}`)
+})
