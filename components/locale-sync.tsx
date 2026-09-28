@@ -9,22 +9,13 @@ import { translateAppExtraUi } from "@/lib/ui-translation-catalog-app-extra"
 import {
   LANGUAGE_APPLIED_EVENT,
   LANGUAGE_CHANGE_EVENT,
-  LANGUAGE_SOURCE_KEY,
   deviceUiLocale,
   initialUiLocale,
   parseUiLocale,
   persistUiLocale,
-} from "@/lib/locale-preferences"
-import {
-  LANGUAGE_APPLIED_EVENT,
-  LANGUAGE_CHANGE_EVENT,
-  deviceAppLocale,
-  initialAppLocale,
-  parseAppLocale,
-  persistAppLocale,
-  storedLocaleSource,
+  storedUiLocaleSource,
   type LocaleSource,
-} from "@/lib/locale"
+} from "@/lib/locale-preferences"
 const originalText = new WeakMap<Text, string>()
 const renderedText = new WeakMap<Text, string>()
 const originalAttributes = new WeakMap<Element, Map<string, string>>()
@@ -133,12 +124,12 @@ function translateNode(root: Node, locale: ExtendedUiLocale) {
 
 export function LocaleSync() {
   useEffect(() => {
-    let locale = initialAppLocale() as ExtendedUiLocale
+    let locale = initialUiLocale() as ExtendedUiLocale
     let applying = false
     const applyLocale = (nextLocale: ExtendedUiLocale, source: LocaleSource) => {
       locale = nextLocale
       document.documentElement.lang = locale
-      persistAppLocale(locale, source)
+      persistUiLocale(locale, source)
       applying = true
       translateNode(document.body, locale)
       const path = window.location.pathname
@@ -161,7 +152,7 @@ export function LocaleSync() {
       window.dispatchEvent(new CustomEvent(LANGUAGE_APPLIED_EVENT,{detail:locale}))
       applying = false
     }
-    applyLocale(locale, storedLocaleSource()==='manual'?'manual':'device')
+    applyLocale(locale, storedUiLocaleSource()==='manual'?'manual':'device')
     const observer = new MutationObserver(mutations => {
       if (applying) return
       applying = true
@@ -174,12 +165,12 @@ export function LocaleSync() {
     })
     observer.observe(document.body, { subtree: true, childList: true, characterData: true, attributes: true, attributeFilter: [...attributes] })
     const onLanguageChange = (event: Event) => {
-      const next=parseAppLocale((event as CustomEvent<string>).detail) || 'nl'
+      const next=parseUiLocale((event as CustomEvent<string>).detail) || 'nl'
       applyLocale(next as ExtendedUiLocale,'manual')
     }
     const onDeviceLanguageChange = () => {
-      if(storedLocaleSource()==='manual')return
-      applyLocale(deviceAppLocale() as ExtendedUiLocale,'device')
+      if(storedUiLocaleSource()==='manual')return
+      applyLocale(deviceUiLocale() as ExtendedUiLocale,'device')
     }
     window.addEventListener(LANGUAGE_CHANGE_EVENT, onLanguageChange)
     window.addEventListener("languagechange", onDeviceLanguageChange)
