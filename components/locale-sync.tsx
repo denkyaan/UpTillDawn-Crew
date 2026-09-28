@@ -57,10 +57,10 @@ function canonicalizeBase(value: string) {
   return changed ? canonical : value
 }
 
-function translate(value: string, locale: ExtendedUiLocale) {
+function translate(value: string, locale: ExtendedUiLocale): string {
   const counted = value.match(/^(\d+)\s+(.+)$/)
   if (counted) {
-    const translatedTail = translate(counted[2], locale)
+    const translatedTail: string = translate(counted[2], locale)
     if (translatedTail !== counted[2]) return `${counted[1]} ${translatedTail}`
   }
 
