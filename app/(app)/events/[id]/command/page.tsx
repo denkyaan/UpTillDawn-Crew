@@ -7,6 +7,12 @@ import {PlatformAiAssistant} from '@/components/admin/platform-ai-assistant'
 
 export const dynamic='force-dynamic'
 
+type ReadinessDetails={
+ missingResponsibles:Array<{workplaceId:string;name:string}>
+ missingBriefings:Array<{workplaceId:string;name:string}>
+ missingOpeningChecklists:Array<{workplaceId:string;name:string}>
+}
+
 type Snapshot={
  event:{id:string;name:string;status:string;startAt:string;endAt:string;registrationDeadline:string|null;maxJoiners:number|null}
  staffing:{workplaces:number;responsibles:number;targetStaff:number;scheduledCrew:number;confirmedMembers:number;waitlist:number}
@@ -32,14 +38,34 @@ export default async function EventCommandPage({params}:{params:Promise<{id:stri
  const current=await getCurrentUser()
  if(!current)redirect('/login')
  const s=await createClient()
- const {data,error}=await s.rpc('upt_event_command_snapshot',{p_event:id})
+ const [{data,error},{data:detailData}]=await Promise.all([
+  s.rpc('upt_event_command_snapshot',{p_event:id}),
+  s.rpc('upt_event_readiness_details',{p_event:id}),
+ ])
  if(error||!data)redirect('/events')
  const snapshot=data as unknown as Snapshot
+ const details=(detailData||{missingResponsibles:[],missingBriefings:[],missingOpeningChecklists:[]}) as unknown as ReadinessDetails
  const r=snapshot.readiness
  const readiness=[r.responsiblesReady,r.staffingReady,r.briefingReady,r.openingReady,r.inventoryReady,r.noOpenIncidents]
  const readyCount=readiness.filter(Boolean).length
  const percent=Math.round(readyCount/readiness.length*100)
  const isAdmin=current.isAdmin===true
+ const closed=snapshot.event.status==='closed'||snapshot.event.status==='archived'
+ let postEvent:{plannedCrew:number;attendedCrew:number;workedMinutes:number;incidentCount:number}|null=null
+ if(isAdmin&&closed){
+  const [{data:planned},{data:sessions},{data:incidentRows}]=await Promise.all([
+   s.from('shifts').select('user_id').eq('event_id',id).neq('status','cancelled').neq('response_status','declined'),
+   s.from('work_sessions').select('user_id,started_at,ended_at').eq('event_id',id),
+   s.from('incidents').select('id').eq('event_id',id),
+  ])
+  const plannedCrew=new Set((planned||[]).map(row=>row.user_id)).size
+  const attendedCrew=new Set((sessions||[]).map(row=>row.user_id)).size
+  const workedMinutes=(sessions||[]).reduce((sum,row)=>{
+   if(!row.ended_at)return sum
+   return sum+Math.max(0,Math.round((Date.parse(row.ended_at)-Date.parse(row.started_at))/60000))
+  },0)
+  postEvent={plannedCrew,attendedCrew,workedMinutes,incidentCount:(incidentRows||[]).length}
+ }
 
  return <main className="mx-auto max-w-7xl space-y-6 p-4 pb-28 md:p-8">
   <header className="flex flex-wrap items-end justify-between gap-3">
@@ -86,6 +112,15 @@ export default async function EventCommandPage({params}:{params:Promise<{id:stri
    <Requirement label="Incidenten" ok={r.noOpenIncidents} detail={snapshot.operations.openIncidents+' open incident(en)'} href="/incidents"/>
   </section>
 
+  {(details.missingResponsibles.length>0||details.missingBriefings.length>0||details.missingOpeningChecklists.length>0)&&<section className="rounded-2xl border p-5">
+   <h2 className="text-xl font-black">Nog te regelen per werkplek</h2>
+   <div className="mt-3 grid gap-3 lg:grid-cols-3">
+    <div className="rounded-xl border p-3"><b>Verantwoordelijke ontbreekt</b><p className="mt-1 text-sm text-muted-foreground">{details.missingResponsibles.map(item=>item.name).join(', ')||'Geen'}</p></div>
+    <div className="rounded-xl border p-3"><b>Briefing ontbreekt</b><p className="mt-1 text-sm text-muted-foreground">{details.missingBriefings.map(item=>item.name).join(', ')||'Geen'}</p></div>
+    <div className="rounded-xl border p-3"><b>Openingschecklist ontbreekt</b><p className="mt-1 text-sm text-muted-foreground">{details.missingOpeningChecklists.map(item=>item.name).join(', ')||'Geen'}</p></div>
+   </div>
+  </section>}
+
   <section className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
    <article className="rounded-2xl border p-4"><p className="text-xs font-black uppercase text-muted-foreground">Guestlist</p><p className="mt-2 text-2xl font-black">{snapshot.operations.guestCheckedIn}/{snapshot.operations.guestSpots}</p><p className="text-xs text-muted-foreground">{snapshot.operations.guestlistEntries} entries</p></article>
    <article className="rounded-2xl border p-4"><p className="text-xs font-black uppercase text-muted-foreground">Revenue</p><p className="mt-2 text-2xl font-black">{money(snapshot.sales.netCents)}</p><p className="text-xs text-muted-foreground">Merch {money(snapshot.sales.merchCents)} · Tokens {money(snapshot.sales.tokenCents)}</p></article>
@@ -94,6 +129,17 @@ export default async function EventCommandPage({params}:{params:Promise<{id:stri
   </section>
 
   {isAdmin&&<PlatformAiAssistant eventId={id} contextLabel={snapshot.event.name}/>}
+
+  {isAdmin&&postEvent&&<section className="rounded-2xl border p-5">
+   <div><h2 className="text-xl font-black">Post-event rapport</h2><p className="text-sm text-muted-foreground">Automatische samenvatting na afsluiten.</p></div>
+   <div className="mt-4 grid gap-3 sm:grid-cols-2 xl:grid-cols-5">
+    <div className="rounded-xl border p-3"><b>{postEvent.plannedCrew}</b><p className="text-xs text-muted-foreground">gepland</p></div>
+    <div className="rounded-xl border p-3"><b>{postEvent.attendedCrew}</b><p className="text-xs text-muted-foreground">aanwezig geweest</p></div>
+    <div className="rounded-xl border p-3"><b>{Math.floor(postEvent.workedMinutes/60)}u {postEvent.workedMinutes%60}m</b><p className="text-xs text-muted-foreground">geregistreerde werktijd</p></div>
+    <div className="rounded-xl border p-3"><b>{postEvent.incidentCount}</b><p className="text-xs text-muted-foreground">incidenten</p></div>
+    <div className="rounded-xl border p-3"><b>{money(snapshot.sales.netCents)}</b><p className="text-xs text-muted-foreground">netto-inkomsten</p></div>
+   </div>
+  </section>}
 
   {isAdmin&&<section className="space-y-3 rounded-2xl border border-amber-500/30 p-5">
    <div><h2 className="text-xl font-black">Post-event afsluiting</h2><p className="text-sm text-muted-foreground">Sluit pas af wanneer werkuren, sluitchecklists, incidenten en inventory-afwijkingen verwerkt zijn.</p></div>
