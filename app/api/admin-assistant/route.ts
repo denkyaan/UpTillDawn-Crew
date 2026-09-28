@@ -65,7 +65,7 @@ export async function POST(request:Request){
   }
 
   const eventId=parsed.data.eventId
-  const inEvent=<T extends {event_id?:string;id?:string}>(rows:T[])=>eventId?rows.filter(row=>row.event_id===eventId||row.id===eventId):rows
+  const inEvent=<T extends {event_id?:string|null;id?:string|null}>(rows:T[])=>eventId?rows.filter(row=>row.event_id===eventId||row.id===eventId):rows
   const context={
     activeEventId:eventId||null,
     activeSection:parsed.data.contextKey||null,
