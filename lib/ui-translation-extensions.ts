@@ -263,6 +263,7 @@ const EXTENSIONS: Record<string, Row> = {
   'Bezetting:': { fr: 'Effectif :', en: 'Staffing:', de: 'Besetzung:' },
   'min gemeten · grens': { fr: 'min mesurées · limite', en: 'min observed · threshold', de: 'Min. gemessen · Grenze' },
   'Checklist-template toepassen': { fr: 'Appliquer un modèle de checklist', en: 'Apply checklist template', de: 'Checklisten-Vorlage anwenden' },
+  'Kies per werkplek een standaard opening-, sluit- of safetychecklist.': { fr: 'Choisissez pour chaque poste une checklist standard d’ouverture, de fermeture ou de sécurité.', en: 'Choose a standard opening, closing, or safety checklist for each workplace.', de: 'Wähle für jeden Arbeitsplatz eine Standard-Öffnungs-, Abschluss- oder Sicherheitscheckliste.' },
   'Kies een werkplek en laad een standaard opening-, sluit- of safetychecklist.': { fr: 'Choisissez un poste et chargez une checklist standard d’ouverture, de fermeture ou de sécurité.', en: 'Choose a workplace and load a standard opening, closing, or safety checklist.', de: 'Wähle einen Arbeitsplatz und lade eine Standard-Öffnungs-, Abschluss- oder Sicherheitscheckliste.' },
   'CHECKLISTPUNT': { fr: 'POINT DE CHECKLIST', en: 'CHECKLIST ITEM', de: 'CHECKLISTENPUNKT' },
   'GUESTLIST CHECK-IN': { fr: 'CHECK-IN GUESTLIST', en: 'GUESTLIST CHECK-IN', de: 'GÄSTELISTE CHECK-IN' },
