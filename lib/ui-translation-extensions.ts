@@ -67,6 +67,7 @@ const EXTENSIONS: Record<string, Row> = {
   'IK KAN TOCH NIET': { fr: 'JE NE PEUX FINALEMENT PAS', en: 'I CAN NO LONGER ATTEND', de: 'ICH KANN DOCH NICHT' },
   'bevestigd': { fr: 'confirmés', en: 'confirmed', de: 'bestätigt' },
   'VOL': { fr: 'COMPLET', en: 'FULL', de: 'VOLL' },
+  'Wachtlijst': { fr: 'Liste d’attente', en: 'Waitlist', de: 'Warteliste' },
   'E-mail': { fr: 'E-mail', en: 'Email', de: 'E-Mail' },
   'Opslaan': { fr: 'Enregistrer', en: 'Save', de: 'Speichern' },
   'Toevoegen': { fr: 'Ajouter', en: 'Add', de: 'Hinzufügen' },
