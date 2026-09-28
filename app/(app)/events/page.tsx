@@ -27,7 +27,7 @@ export default async function Page(){
   if(!user)return null
 
   const [eventsResult,membershipResult,shiftResult,startedResult,availabilityResult,responsibleResult,emergencyResult]=await Promise.all([
-    s.from('events').select('id,name,venue,address,start_at,end_at,registration_deadline,status,latitude,longitude,checkin_radius_m').order('start_at'),
+    s.from('events').select('id,name,venue,address,start_at,end_at,registration_deadline,max_joiners,status,latitude,longitude,checkin_radius_m').order('start_at'),
     s.from('event_members').select('event_id,user_id'),
     s.from('shifts').select('event_id,workplace_id,workplaces(name)').eq('user_id',user.id).neq('status','cancelled').neq('response_status','declined'),
     s.from('events').select('id').lte('start_at','now'),
@@ -85,6 +85,7 @@ export default async function Page(){
             <DateInput name="start_at" required={false}/>
             <DateInput name="end_at" required={false}/>
             <label className="grid gap-1 text-sm">Aanmelddeadline (leeg = start evenement)<DateInput name="registration_deadline" required={false}/></label>
+            <label className="grid gap-1 text-sm">Maximum bevestigde deelnemers<input name="max_joiners" type="number" min="1" max="10000" placeholder="Onbeperkt" className={input}/></label>
             <label className="grid gap-1 text-sm">GPS-radius (m)<input name="radius" type="number" defaultValue="100" min="10" max="10000" className={input}/></label>
           </div>
         </div>
@@ -101,6 +102,8 @@ export default async function Page(){
       const ended=nowMs>Date.parse(event.end_at)
       const registrationDeadline=event.registration_deadline||event.start_at
       const registrationOpen=event.status!=='archived'&&nowMs<Date.parse(registrationDeadline)
+      const confirmedCount=memberships.filter(row=>row.event_id===event.id).length
+      const capacityFull=event.max_joiners!==null&&confirmedCount>=event.max_joiners
       const myAvailability=availability.find(row=>row.event_id===event.id&&row.user_id===user.id)
       const myResponse=myAvailability?.response
       const canRows=user.isAdmin?availability.filter(row=>row.event_id===event.id&&(row.response==='can'||row.setup_available===true||row.breakdown_available===true)):[]
@@ -131,6 +134,7 @@ export default async function Page(){
               <h2 className="text-xl font-bold">{event.name}</h2>
               <p className="text-sm text-muted-foreground">{event.venue||'Locatie nog niet ingesteld'} · {new Date(event.start_at).toLocaleString('nl-BE')} · {nlStatus(event.status)}</p>
               {event.address&&<p className="text-xs text-muted-foreground">{event.address}</p>}
+              {event.max_joiners!==null&&<p className="text-xs font-semibold text-muted-foreground">{confirmedCount}/{event.max_joiners} bevestigd{capacityFull?' · VOL':''}</p>}
             </div>
             {!started&&<span className="rounded-full border px-2 py-1 text-xs font-bold">Toekomstig</span>}
             {started&&!ended&&<span className="rounded-full border border-emerald-500/50 px-2 py-1 text-xs font-bold text-emerald-600">LOPEND</span>}
@@ -166,6 +170,7 @@ export default async function Page(){
           {!user.isAdmin&&<div className="rounded-xl border p-3 text-sm">
             <p><span className="font-semibold">Aanmelddeadline:</span> {new Date(registrationDeadline).toLocaleString('nl-BE')}</p>
             {!registrationOpen&&<p className="mt-1 font-semibold text-amber-600">Aanmelddeadline verstreken. Je kunt dit evenement nog bekijken, maar niet meer joinen.</p>}
+            {capacityFull&&<p className="mt-1 font-semibold text-amber-600">Maximum aantal bevestigde deelnemers bereikt. Als er een plaats vrijkomt, krijgt de wachtlijst voorrang.</p>}
           </div>}
 
           {!user.isAdmin&&registrationOpen&&<section className="space-y-3">
@@ -190,6 +195,15 @@ export default async function Page(){
               <button className="rounded-xl bg-violet-600 p-3 font-bold text-white md:col-span-3">BESCHIKBAARHEID OPSLAAN</button>
             </form>
           </section>}
+
+          {!user.isAdmin&&!registrationOpen&&!ended&&(assigned||myResponse==='can')&&<form action={setEventAvailability} className="rounded-xl border border-amber-500/40 p-3">
+            <input type="hidden" name="event_id" value={event.id}/>
+            <input type="hidden" name="response" value="cannot"/>
+            <input type="hidden" name="setup_available" value="no"/>
+            <input type="hidden" name="breakdown_available" value="no"/>
+            <p className="mb-2 text-sm">Kun je toch niet meer deelnemen? Afmelden blijft mogelijk na de aanmelddeadline.</p>
+            <button className="rounded-lg border border-red-500/50 px-3 py-2 text-sm font-bold text-red-500">IK KAN TOCH NIET</button>
+          </form>}
 
           {!user.isAdmin&&started&&assigned&&<div className="rounded-xl border border-violet-500/30 bg-violet-500/5 p-3 text-sm">
             <p className="text-muted-foreground">Na afloop blijft de eventchat beschikbaar tot {chatUntil.toLocaleString('nl-BE')}.</p>
@@ -290,6 +304,7 @@ export default async function Page(){
                   <DateInput name="start_at" initial={event.start_at}/>
                   <DateInput name="end_at" initial={event.end_at}/>
                   <label className="grid gap-1 text-sm">Aanmelddeadline<DateInput name="registration_deadline" initial={registrationDeadline}/></label>
+                  <label className="grid gap-1 text-sm">Maximum bevestigde deelnemers<input name="max_joiners" type="number" min="1" max="10000" defaultValue={event.max_joiners??''} placeholder="Onbeperkt" className={input}/></label>
                   <label className="grid gap-1 text-sm">GPS-radius (m)<input name="radius" type="number" min={10} max={10000} defaultValue={event.checkin_radius_m} className={input}/></label>
                 </div>
                 <button className="rounded-xl bg-violet-600 p-3 font-bold">WIJZIGINGEN OPSLAAN</button>
