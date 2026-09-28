@@ -92,7 +92,8 @@ export default async function InventoryPage(){
 
     {(isAdmin||isResponsible)&&options.length>0&&<OperationalChecklistPanel
       userId={current.id}
-      canManage={isAdmin||isResponsible}
+      canManage={isAdmin}
+      canClose={isAdmin||isResponsible}
       workplaceOptions={options}
       kinds={['opening','closing']}
     />}
