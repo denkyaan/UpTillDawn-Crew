@@ -174,3 +174,11 @@ export async function updateAssetMetadata(fd:FormData){
   if(error)throw new Error('Assetgegevens konden niet worden opgeslagen.')
   refresh()
 }
+
+
+export async function restorePlatformConfiguration(fd:FormData){
+  const {s}=await adminClient()
+  const {error}=await s.rpc('upt_restore_platform_configuration',{p_version:uuid.parse(fd.get('version_id'))})
+  if(error)throw new Error(error.message)
+  refresh()
+}

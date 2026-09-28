@@ -7,7 +7,7 @@ import { PlatformAiAssistant } from '@/components/admin/platform-ai-assistant'
 import {
   applyEventTemplate, applyPlanningRecommendation, captureEventTemplate, createKnowledgeArticle,
   createQrResource, dismissPlanningRecommendation, generateEventReport, generatePlanningRecommendations,
-  savePayRate, setFeatureRollout, snapshotPlatformConfiguration, updateAssetMetadata,
+  savePayRate, setFeatureRollout, snapshotPlatformConfiguration, updateAssetMetadata, restorePlatformConfiguration,
 } from '@/lib/actions/platform'
 
 export const dynamic='force-dynamic'
@@ -115,7 +115,7 @@ export default async function PlatformCenter(){
         <form action={captureEventTemplate} className="grid gap-2">
           <select name="event_id" required className={input}><option value="">Bron-evenement…</option>{events.map(e=><option key={e.id} value={e.id}>{e.name}</option>)}</select>
           <input name="name" required maxLength={200} placeholder="Templatenaam" className={input}/>
-          <div className="grid grid-cols-2 gap-2 text-sm">{['workplaces','briefing','tasks','checklists','inventory'].map(x=><label key={x} className="flex items-center gap-2"><input type="checkbox" name="section" value={x} defaultChecked/> {x}</label>)}</div>
+          <div className="grid grid-cols-2 gap-2 text-sm">{([['workplaces','Werkplekken'],['briefing','Briefing'],['tasks','Taken'],['checklists','Checklists'],['inventory','Inventaris']] as const).map(([value,label])=><label key={value} className="flex items-center gap-2"><input type="checkbox" name="section" value={value} defaultChecked/> {label}</label>)}</div>
           <button className="rounded-xl bg-violet-600 p-3 font-bold text-white">TEMPLATE OPSLAAN</button>
         </form>
         {(templatesResult.data||[]).map(t=><details key={t.id} className="rounded-xl border p-3"><summary className="cursor-pointer font-semibold">{t.name}</summary><form action={applyEventTemplate} className="mt-3 grid gap-2"><input type="hidden" name="template_id" value={t.id}/><input name="name" required placeholder="Nieuw evenement" className={input}/><DateInput name="start_at"/><DateInput name="end_at"/><input name="venue" placeholder="Locatie (optioneel)" className={input}/><input name="address" placeholder="Adres (optioneel)" className={input}/><button className="rounded-xl border p-3 font-bold">MAAK EVENEMENT UIT TEMPLATE</button></form></details>)}
@@ -191,7 +191,7 @@ export default async function PlatformCenter(){
         <form action={snapshotPlatformConfiguration} className="flex flex-col gap-2 sm:flex-row"><input name="note" maxLength={1000} placeholder="Versienotitie" className={input+' flex-1'}/><button className="rounded-xl border px-4 py-3 font-bold">SNAPSHOT MAKEN</button></form>
         <div className="rounded-xl border p-3 text-sm"><b>Recovery readiness</b><pre className="mt-2 overflow-auto whitespace-pre-wrap text-xs text-muted-foreground">{JSON.stringify(recoveryResult.data,null,2)}</pre></div>
         <div className="rounded-xl border border-amber-500/40 p-3 text-sm"><b>Staging</b><p className="mt-1 text-muted-foreground">De applicatie is staging-ready via feature rollouts en geïsoleerde CI. Een aparte Supabase databasebranch wordt pas geprovisioneerd na expliciete kostgoedkeuring.</p></div>
-        {(versionsResult.data||[]).map(v=><div key={v.id} className="rounded-xl border p-3 text-sm"><b>{v.kind}</b><p className="text-xs text-muted-foreground">{new Date(v.created_at).toLocaleString('nl-BE')} · {v.note||'zonder notitie'}</p></div>)}
+        {(versionsResult.data||[]).map(v=><div key={v.id} className="rounded-xl border p-3 text-sm"><div className="flex flex-wrap items-center justify-between gap-2"><div><b>{v.kind}</b><p className="text-xs text-muted-foreground">{new Date(v.created_at).toLocaleString('nl-BE')} · {v.note||'zonder notitie'}</p></div><form action={restorePlatformConfiguration}><input type="hidden" name="version_id" value={v.id}/><button className="rounded-lg border border-amber-500/50 px-3 py-2 text-xs font-bold">CONFIGURATIE HERSTELLEN</button></form></div></div>)}
       </article>
     </section>
   </main>

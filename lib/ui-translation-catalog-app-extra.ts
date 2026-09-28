@@ -2,6 +2,8 @@ export type ExtraCatalogLocale = 'nl' | 'fr' | 'en' | 'de'
 type Row = { fr:string; en:string; de:string }
 
 export const APP_EXTRA_TRANSLATIONS: Record<string,Row> = {
+  "CONFIGURATIE HERSTELLEN": { fr:"RESTAURER LA CONFIGURATION", en:"RESTORE CONFIGURATION", de:"KONFIGURATION WIEDERHERSTELLEN" },
+  "Checklists": { fr:"Listes de contrôle", en:"Checklists", de:"Checklisten" },
   "Onboarding openen": { fr:"Ouvrir l’onboarding", en:"Open onboarding", de:"Onboarding öffnen" },
   "Event-onboarding": { fr:"Onboarding événement", en:"Event onboarding", de:"Event-Onboarding" },
   "Geen toegewezen evenement voor onboarding.": { fr:"Aucun événement attribué pour l’onboarding.", en:"No assigned event for onboarding.", de:"Keine zugewiesene Veranstaltung für das Onboarding." },
