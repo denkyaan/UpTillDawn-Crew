@@ -215,6 +215,8 @@ const ROWS:Record<string,Row>={
   'Je eigen beheeraccount is al goedgekeurd.':{fr:'Votre propre compte administrateur est déjà approuvé.',en:'Your own administrator account is already approved.',de:'Dein eigenes Administratorkonto ist bereits freigegeben.'},
   'Geef een reden waarom je niet meer kunt deelnemen.':{fr:'Indiquez pourquoi vous ne pouvez plus participer.',en:'Please provide a reason why you can no longer attend.',de:'Gib einen Grund an, warum du nicht mehr teilnehmen kannst.'},
   'De aanmelddeadline moet vóór of op de start van het evenement liggen.':{fr:'La date limite d’inscription doit être antérieure ou égale au début de l’événement.',en:'The registration deadline must be before or at the event start.',de:'Die Anmeldefrist muss vor oder spätestens zum Veranstaltungsbeginn liegen.'},
+  'Selecteer minstens één templateonderdeel.':{fr:'Sélectionnez au moins une partie du modèle.',en:'Select at least one template section.',de:'Wähle mindestens einen Vorlagenbereich aus.'},
+  'Geef geldige evenementuren.':{fr:'Indiquez des heures d’événement valides.',en:'Enter valid event times.',de:'Gib gültige Veranstaltungszeiten ein.'},
 }
 
 export function translateActionUi(value:string,locale:ActionUiLocale){
