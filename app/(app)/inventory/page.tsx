@@ -2,7 +2,6 @@ import { redirect } from 'next/navigation'
 import { getCurrentUser } from '@/lib/actions/auth'
 import { createClient } from '@/lib/supabase/crew-server'
 import { EventDocumentsPanel } from '@/components/crew/event-documents-panel'
-import { OperationalChecklistPanel } from '@/components/crew/operational-checklists'
 import { WorkplaceInventoryMaterials, type WorkplaceInventoryMaterial } from '@/components/crew/workplace-inventory-materials'
 import {
   WorkplaceCatalogInventory,
@@ -32,6 +31,9 @@ export default async function InventoryPage(){
 
   let catalogWorkplaces:CatalogWorkplace[]=[]
   let catalogItems:CatalogItem[]=[]
+  let catalogLoadError=false
+  let workplaceLoadError=false
+  let materialLoadError=false
   if(isAdmin){
     const [{data:catalog,error:catalogError},{data:items,error:itemError}]=await Promise.all([
       s.from('workplace_catalog')
@@ -43,7 +45,7 @@ export default async function InventoryPage(){
         .order('category')
         .order('name'),
     ])
-    if(catalogError||itemError)throw new Error('Standaardinventaris kon niet worden geladen.')
+    catalogLoadError=Boolean(catalogError||itemError)
     catalogWorkplaces=(catalog||[]) as CatalogWorkplace[]
     catalogItems=(items||[]) as CatalogItem[]
   }
@@ -55,7 +57,7 @@ export default async function InventoryPage(){
       .select('id,event_id,name,is_active,events(id,name,status,end_at)')
       .eq('is_active',true)
       .order('name')
-    if(error)throw new Error('Inventaris kon niet worden geladen.')
+    workplaceLoadError=Boolean(error)
     workplaces=(data||[]) as Workplace[]
   }else{
     const [{data:shiftRows},{data:responsibleRows}]=await Promise.all([
@@ -73,7 +75,7 @@ export default async function InventoryPage(){
         .in('id',workplaceIds)
         .eq('is_active',true)
         .order('name')
-      if(error)throw new Error('Inventaris kon niet worden geladen.')
+      workplaceLoadError=Boolean(error)
       workplaces=(data||[]) as Workplace[]
     }
   }
@@ -90,14 +92,9 @@ export default async function InventoryPage(){
         .order('category')
         .order('name')
     : {data:[],error:null}
-  if(materialResult.error)throw new Error('Materialen konden niet worden geladen.')
+  materialLoadError=Boolean(materialResult.error)
   const materials=(materialResult.data||[]) as WorkplaceInventoryMaterial[]
 
-  const options=visible.map(workplace=>({
-    id:workplace.id,
-    eventId:workplace.event_id,
-    label:`${workplace.events?.name||'Evenement'} — ${workplace.name}`,
-  }))
 
   return <main className="space-y-6 p-4 pb-28 md:p-8">
     <div>
@@ -110,7 +107,11 @@ export default async function InventoryPage(){
       </p>
     </div>
 
-    {isAdmin&&<WorkplaceCatalogInventory workplaces={catalogWorkplaces} items={catalogItems}/>}
+    {catalogLoadError&&<p className="rounded-2xl border border-amber-500/40 p-4 text-sm text-amber-600">Standaardinventaris kon tijdelijk niet volledig worden geladen. Vernieuw de pagina om opnieuw te proberen.</p>}
+    {workplaceLoadError&&<p className="rounded-2xl border border-amber-500/40 p-4 text-sm text-amber-600">Eventwerkplekken konden tijdelijk niet volledig worden geladen.</p>}
+    {materialLoadError&&<p className="rounded-2xl border border-amber-500/40 p-4 text-sm text-amber-600">Materialen konden tijdelijk niet volledig worden geladen.</p>}
+
+    {isAdmin&&<WorkplaceCatalogInventory workplaces={catalogWorkplaces} items={catalogItems}/>} 
 
     {!visible.length&&<p className="rounded-2xl border p-5 text-muted-foreground">
       {isAdmin
@@ -142,12 +143,5 @@ export default async function InventoryPage(){
       />
     </section>)}
 
-    {(isAdmin||isResponsible)&&options.length>0&&<OperationalChecklistPanel
-      userId={current.id}
-      canManage={isAdmin}
-      canClose={isAdmin||isResponsible}
-      workplaceOptions={options}
-      kinds={['opening','closing']}
-    />}
   </main>
 }
