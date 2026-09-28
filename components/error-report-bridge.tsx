@@ -12,7 +12,6 @@ type CapturedError={
 
 export function ErrorReportBridge(){
   const [open,setOpen]=useState(false)
-  const [manual,setManual]=useState('')
   const [captured,setCaptured]=useState<CapturedError|null>(null)
 
   useEffect(()=>{
@@ -48,15 +47,10 @@ export function ErrorReportBridge(){
     }
   },[])
 
-  const message=captured?.message||manual.trim()
-  const source=captured?.source||'manual'
+  if(!open||!captured)return null
 
   return <div className="fixed bottom-24 left-4 z-[90] max-w-[calc(100vw-2rem)]">
-    {!open
-      ? <button type="button" onClick={()=>setOpen(true)} className="rounded-xl border bg-background/95 px-3 py-2 text-xs font-bold shadow-lg backdrop-blur">
-          Fout melden
-        </button>
-      : <section className="w-[min(360px,calc(100vw-2rem))] space-y-3 rounded-2xl border bg-background/95 p-4 shadow-2xl backdrop-blur">
+      <section className="w-[min(360px,calc(100vw-2rem))] space-y-3 rounded-2xl border bg-background/95 p-4 shadow-2xl backdrop-blur">
           <div className="flex items-start justify-between gap-3">
             <div>
               <h2 className="font-black">Fout rapporteren</h2>
@@ -65,30 +59,18 @@ export function ErrorReportBridge(){
             <button type="button" aria-label="Foutrapport sluiten" data-no-translate onClick={()=>{setOpen(false);setCaptured(null)}} className="rounded-lg border px-2 py-1">×</button>
           </div>
 
-          {captured
-            ? <div className="rounded-xl border border-amber-500/30 p-3 text-sm">
-                <b>Gedetecteerde fout</b>
-                <p className="mt-1 max-h-24 overflow-auto break-words text-muted-foreground">{captured.message}</p>
-                <button type="button" onClick={()=>setCaptured(null)} className="mt-2 text-xs underline">Andere fout beschrijven</button>
-              </div>
-            : <textarea
-                value={manual}
-                onChange={event=>setManual(event.target.value)}
-                maxLength={4000}
-                rows={4}
-                placeholder="Wat ging er fout? Beschrijf wat je deed en wat je verwachtte."
-                className="w-full rounded-xl border bg-background p-3 text-sm"
-              />}
+          <div className="rounded-xl border border-amber-500/30 p-3 text-sm">
+            <b>Gedetecteerde fout</b>
+            <p className="mt-1 max-h-24 overflow-auto break-words text-muted-foreground">{captured.message}</p>
+          </div>
 
-          {message
-            ? <ErrorReportButton
-                errorMessage={message}
-                errorName={captured?.name||'UserReportedError'}
-                stackTrace={captured?.stack||''}
-                source={source}
-                compact
-              />
-            : <p className="text-xs text-muted-foreground">Beschrijf de fout om ze te kunnen melden.</p>}
-        </section>}
+          <ErrorReportButton
+            errorMessage={captured.message}
+            errorName={captured.name}
+            stackTrace={captured.stack}
+            source={captured.source}
+            compact
+          />
+        </section>
   </div>
 }
