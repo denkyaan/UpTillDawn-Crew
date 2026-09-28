@@ -16,15 +16,19 @@ test('inventory is a workplace-scoped role navigation feature', async () => {
   assert.ok(layout.includes('inventory:showInventory'))
 })
 
-test('inventory page scopes content per workplace and limits checklist to startup and closing', async () => {
+test('inventory stays workplace scoped while operational checklists live in briefing', async () => {
   const page = await readFile(new URL('../app/(app)/inventory/page.tsx', import.meta.url), 'utf8')
+  const briefing = await readFile(new URL('../app/(app)/briefings/page.tsx', import.meta.url), 'utf8')
+  const workplaces = await readFile(new URL('../app/(app)/workplaces/page.tsx', import.meta.url), 'utf8')
   const documents = await readFile(new URL('../components/crew/event-documents-panel.tsx', import.meta.url), 'utf8')
 
   assert.ok(page.includes('workplaceId={workplace.id}'))
   assert.ok(page.includes('showTextEntry={isAdmin}'))
-  assert.ok(page.includes("kinds={['opening','closing']}"))
-  assert.ok(page.includes('canManage={isAdmin}'))
-  assert.ok(page.includes('canClose={isAdmin||isResponsible}'))
+  assert.ok(!page.includes('OperationalChecklistPanel'))
+  assert.ok(!workplaces.includes('OperationalChecklistPanel'))
+  assert.ok(briefing.includes('OperationalChecklistPanel'))
+  assert.ok(briefing.includes("kinds={['opening','closing','safety','custom']}"))
+  assert.ok(briefing.includes('workplaceOptions={workplaces.map'))
   assert.ok(documents.includes("query=query.eq('workplace_id',workplaceId)"))
   assert.ok(documents.includes('createInventoryTextEntry'))
 })
