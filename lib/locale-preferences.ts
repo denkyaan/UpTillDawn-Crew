@@ -35,6 +35,7 @@ export function persistUiLocale(locale:SupportedUiLocale,source:'manual'|'device
   window.localStorage.setItem(LANGUAGE_STORAGE_KEY,locale)
   window.localStorage.setItem(LANGUAGE_SOURCE_KEY,source)
   document.cookie=`${LANGUAGE_STORAGE_KEY}=${locale}; path=/; max-age=31536000; samesite=lax`
+  document.cookie=`${LANGUAGE_SOURCE_KEY}=${source}; path=/; max-age=31536000; samesite=lax`
 }
 
 export function activeUiLocale():SupportedUiLocale{
