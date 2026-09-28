@@ -49,7 +49,7 @@ async function request(path:"autocomplete"|"search",text:string,lang:string,limi
     text,
     format:"json",
     limit:String(limit),
-    lang:["nl","fr","en"].includes(lang)?lang:"nl",
+    lang:["nl","fr","en","de"].includes(lang)?lang:"nl",
     apiKey:apiKey(),
   })
   const response=await fetch(`https://api.geoapify.com/v1/geocode/${path}?${params.toString()}`,{
