@@ -3,11 +3,14 @@ import assert from 'node:assert/strict'
 import { readFile } from 'node:fs/promises'
 
 test('runtime supports all four product locales', async () => {
-  const sync = await readFile(new URL('../components/locale-sync.tsx', import.meta.url), 'utf8')
-  assert.match(sync, /\["nl", "fr", "en", "de"\]/)
+  const [sync,preferences] = await Promise.all([
+    readFile(new URL('../components/locale-sync.tsx', import.meta.url), 'utf8'),
+    readFile(new URL('../lib/locale-preferences.ts', import.meta.url), 'utf8'),
+  ])
+  assert.match(preferences, /\['nl','fr','en','de'\]/)
   assert.match(sync, /translateCompleteUi/)
   assert.match(sync, /MutationObserver/)
-  for (const attribute of ['placeholder', 'aria-label', 'title']) assert.ok(sync.includes(`"${attribute}"`))
+  for (const attribute of ['placeholder', 'aria-label', 'aria-description', 'title', 'alt']) assert.ok(sync.includes(`"${attribute}"`))
 })
 
 test('complete fallback rows contain French, English and German', async () => {
@@ -81,4 +84,18 @@ test('language picker follows the locale applied by LocaleSync', async () => {
   assert.match(switcher, /LANGUAGE_APPLIED_EVENT/)
   assert.match(switcher, /requestUiLocale\(next\)/)
   for (const nativeLabel of ['Nederlands','Français','English','Deutsch']) assert.ok(switcher.includes(nativeLabel))
+})
+
+
+test('chat messages can use optional live browser translation without mutating originals', async () => {
+  const [chat,translator]=await Promise.all([
+    readFile(new URL('../components/crew/chat-client.tsx', import.meta.url), 'utf8'),
+    readFile(new URL('../lib/browser-live-translation.ts', import.meta.url), 'utf8'),
+  ])
+  assert.match(chat,/liveTranslateText/)
+  assert.match(chat,/data-no-translate/)
+  assert.match(chat,/Vertaal/)
+  assert.match(chat,/Origineel/)
+  assert.match(translator,/LanguageDetector/)
+  assert.match(translator,/Translator/)
 })
