@@ -1,5 +1,6 @@
 import {
   createInventoryItem,
+  updateInventoryAssetDetails,
   reportWorkplaceInventoryCondition,
   restockInventoryItem,
   restoreInventoryQuantity,
@@ -15,6 +16,10 @@ export type WorkplaceInventoryMaterial={
   issued_quantity:number
   damaged_quantity:number
   missing_quantity:number
+  item_kind:'asset'|'consumable'
+  asset_code:string|null
+  barcode:string|null
+  serial_number:string|null
 }
 
 function ConditionForm({
@@ -66,8 +71,12 @@ export function WorkplaceInventoryMaterials({
         <input type="hidden" name="workplace_id" value={workplaceId}/>
         <input name="name" required maxLength={200} placeholder="Materiaalnaam" className="rounded-lg border bg-background p-3"/>
         <input name="category" maxLength={120} placeholder="Categorie (optioneel)" className="rounded-lg border bg-background p-3"/>
+        <select name="item_kind" defaultValue="consumable" className="rounded-lg border bg-background p-3">
+          <option value="consumable">Verbruiksartikel</option>
+          <option value="asset">Herbruikbaar asset</option>
+        </select>
         <input name="quantity" type="number" min="1" max="100000" defaultValue="1" required className="rounded-lg border bg-background p-3"/>
-        <button className="rounded-lg bg-violet-600 p-3 font-bold text-white">TOEVOEGEN</button>
+        <button className="rounded-lg bg-violet-600 p-3 font-bold text-white md:col-span-2">TOEVOEGEN</button>
       </form>
     </details>}
 
@@ -77,6 +86,10 @@ export function WorkplaceInventoryMaterials({
           <div>
             <h4 className="font-bold">{item.name}</h4>
             {item.category&&<p className="text-sm text-muted-foreground">{item.category}</p>}
+            <p className="text-xs font-semibold text-violet-400">{item.item_kind==='asset'?'Herbruikbaar asset':'Verbruiksartikel'}</p>
+            {item.item_kind==='asset'&&(item.asset_code||item.barcode||item.serial_number)&&<p className="text-xs text-muted-foreground">
+              {[item.asset_code&&'Code '+item.asset_code,item.barcode&&'Barcode '+item.barcode,item.serial_number&&'Serienr. '+item.serial_number].filter(Boolean).join(' · ')}
+            </p>}
           </div>
           <div className="grid grid-cols-2 gap-2 text-sm sm:grid-cols-5">
             <div className="rounded-lg border p-2"><b>{item.available_quantity}</b><p className="text-xs text-muted-foreground">beschikbaar</p></div>
@@ -85,6 +98,21 @@ export function WorkplaceInventoryMaterials({
             <div className="rounded-lg border p-2"><b>{item.missing_quantity}</b><p className="text-xs text-muted-foreground">ontbreekt</p></div>
             <div className="rounded-lg border p-2"><b>{item.total_quantity}</b><p className="text-xs text-muted-foreground">totaal</p></div>
           </div>
+
+          {isAdmin&&<details className="rounded-lg border p-3">
+            <summary className="cursor-pointer font-semibold">Type & assetgegevens</summary>
+            <form action={updateInventoryAssetDetails} className="mt-3 grid gap-2 md:grid-cols-2">
+              <input type="hidden" name="item_id" value={item.id}/>
+              <select name="item_kind" defaultValue={item.item_kind} className="rounded-lg border bg-background p-2">
+                <option value="consumable">Verbruiksartikel</option>
+                <option value="asset">Herbruikbaar asset</option>
+              </select>
+              <input name="asset_code" defaultValue={item.asset_code||''} maxLength={120} placeholder="Assetcode (optioneel)" className="rounded-lg border bg-background p-2"/>
+              <input name="barcode" defaultValue={item.barcode||''} maxLength={120} placeholder="Barcode (optioneel)" className="rounded-lg border bg-background p-2"/>
+              <input name="serial_number" defaultValue={item.serial_number||''} maxLength={200} placeholder="Serienummer (optioneel)" className="rounded-lg border bg-background p-2"/>
+              <button className="rounded-lg border p-2 font-bold md:col-span-2">ASSETGEGEVENS OPSLAAN</button>
+            </form>
+          </details>}
 
           {isAdmin&&<div className="grid gap-2 lg:grid-cols-3">
             <form action={restockInventoryItem} className="grid gap-2 rounded-lg border p-3">
