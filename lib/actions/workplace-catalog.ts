@@ -1,6 +1,6 @@
 'use server'
 
-import { revalidatePath } from 'next/cache'
+import { revalidatePath } from '@/lib/save-success'
 import { z } from 'zod'
 import { createClient } from '@/lib/supabase/crew-server'
 
@@ -36,9 +36,9 @@ async function syncFutureEvents(s:Awaited<ReturnType<typeof createClient>>){
 }
 
 function refresh(){
-  revalidatePath('/inventory')
-  revalidatePath('/workplaces')
-  revalidatePath('/events')
+  await revalidatePath('/inventory')
+  await revalidatePath('/workplaces')
+  await revalidatePath('/events')
 }
 
 export async function createCatalogWorkplace(fd:FormData){
