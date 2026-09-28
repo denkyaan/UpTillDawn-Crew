@@ -46,6 +46,25 @@ export async function GET(request: NextRequest) {
     return NextResponse.redirect(new URL(target, request.nextUrl.origin))
   }
 
-  const target = isRecovery ? '/auth/reset-password' : requested
-  return NextResponse.redirect(new URL(target, request.nextUrl.origin))
+  if (isRecovery) {
+    return NextResponse.redirect(new URL('/auth/reset-password', request.nextUrl.origin))
+  }
+
+  const { data: { user } } = await supabase.auth.getUser()
+  if (user) {
+    const { data: profile } = await supabase
+      .from('profiles')
+      .select('approved,account_blocked')
+      .eq('id', user.id)
+      .single()
+
+    if (profile?.account_blocked) {
+      return NextResponse.redirect(new URL('/disabled', request.nextUrl.origin))
+    }
+    if (profile && !profile.approved) {
+      return NextResponse.redirect(new URL('/pending-approval', request.nextUrl.origin))
+    }
+  }
+
+  return NextResponse.redirect(new URL(requested, request.nextUrl.origin))
 }
