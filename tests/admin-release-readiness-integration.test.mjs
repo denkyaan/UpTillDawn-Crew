@@ -53,11 +53,11 @@ test('admin release page separates hard blockers from operational warnings', asy
   assert.match(page,/GitHub CI blijft daarnaast een afzonderlijke verplichte release-gate/)
 })
 
-test('admin command center and health page expose release readiness', async () => {
+test('release readiness is not exposed on admin command center', async () => {
   const [admin,health]=await Promise.all([
     readFile(new URL('../app/(app)/admin/page.tsx',import.meta.url),'utf8'),
     readFile(new URL('../app/(app)/admin/health/page.tsx',import.meta.url),'utf8'),
   ])
-  assert.match(admin,/href="\/admin\/release"/)
+  assert.doesNotMatch(admin,/href="\/admin\/release"/)
   assert.match(health,/href="\/admin\/release"/)
 })
