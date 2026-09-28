@@ -2,6 +2,7 @@
 
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
+import { toast } from 'sonner'
 import { createClient } from '@/lib/supabase/crew-client'
 import { AddressAutocomplete } from '@/components/crew/address-autocomplete'
 
@@ -82,6 +83,7 @@ export function ProfileForm({
         await s.storage.from('profile-photos').remove([oldPath])
       }
       setMsg('Profiel opgeslagen.')
+      toast.success('Profiel opgeslagen.')
       router.refresh()
     } catch (error) {
       if (uploadedPath) await s.storage.from('profile-photos').remove([uploadedPath])
