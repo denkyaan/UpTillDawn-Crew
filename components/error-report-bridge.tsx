@@ -62,7 +62,7 @@ export function ErrorReportBridge(){
               <h2 className="font-black">Fout rapporteren</h2>
               <p className="text-xs text-muted-foreground">De AI-assistent analyseert het rapport op de achtergrond. Als makeractie nodig is, krijgt de maker automatisch een melding.</p>
             </div>
-            <button type="button" aria-label="Foutrapport sluiten" onClick={()=>{setOpen(false);setCaptured(null)}} className="rounded-lg border px-2 py-1">×</button>
+            <button type="button" aria-label="Foutrapport sluiten" data-no-translate onClick={()=>{setOpen(false);setCaptured(null)}} className="rounded-lg border px-2 py-1">×</button>
           </div>
 
           {captured
