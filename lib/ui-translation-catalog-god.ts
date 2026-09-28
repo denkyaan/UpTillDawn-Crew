@@ -114,7 +114,6 @@ export const GOD_TRANSLATIONS:Record<string,Row>={
   "16px":{fr:"16px",en:"16px",de:"16px"},
   "12px":{fr:"12px",en:"12px",de:"12px"},
   "0px":{fr:"0px",en:"0px",de:"0px"},
-  "Zichtbaar":{fr:"Visible",en:"Visible",de:"Sichtbar"},
   "/events of actieomschrijving":{fr:"/events ou description de l’action",en:"/events or action description",de:"/events oder Aktionsbeschreibung"},
   "0.75rem":{fr:"0.75rem",en:"0.75rem",de:"0.75rem"}
 }
