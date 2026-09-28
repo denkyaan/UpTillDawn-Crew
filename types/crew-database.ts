@@ -2405,6 +2405,7 @@ export type Database = {
           id: string
           national_register_number: string | null
           phone_number: string | null
+          preferred_workplace_id: string | null
           profile_photo_url: string | null
           role: string
           updated_at: string | null
@@ -2423,6 +2424,7 @@ export type Database = {
           id: string
           national_register_number?: string | null
           phone_number?: string | null
+          preferred_workplace_id?: string | null
           profile_photo_url?: string | null
           role?: string
           updated_at?: string | null
@@ -2441,6 +2443,7 @@ export type Database = {
           id?: string
           national_register_number?: string | null
           phone_number?: string | null
+          preferred_workplace_id?: string | null
           profile_photo_url?: string | null
           role?: string
           updated_at?: string | null
@@ -2451,6 +2454,13 @@ export type Database = {
             columns: ["blocked_by"]
             isOneToOne: false
             referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "profiles_preferred_workplace_id_fkey"
+            columns: ["preferred_workplace_id"]
+            isOneToOne: false
+            referencedRelation: "workplace_catalog"
             referencedColumns: ["id"]
           },
         ]
@@ -3957,6 +3967,7 @@ export type Database = {
           id: string
           national_register_number: string | null
           phone_number: string | null
+          preferred_workplace_id: string | null
           profile_photo_url: string | null
           role: string
           updated_at: string | null
@@ -4628,6 +4639,7 @@ export type Database = {
           profile_photo_url: string
         }[]
       }
+      upt_own_workplace_preference: { Args: never; Returns: string }
       upt_private_chat_peers: {
         Args: never
         Returns: {
@@ -4636,6 +4648,13 @@ export type Database = {
           phone_number: string
           profile_photo_url: string
           user_id: string
+        }[]
+      }
+      upt_profile_workplace_options: {
+        Args: never
+        Returns: {
+          id: string
+          name: string
         }[]
       }
       upt_push_delivery_config: {
@@ -4870,6 +4889,10 @@ export type Database = {
       }
       upt_set_operational_checklist_item: {
         Args: { p_complete: boolean; p_item: string; p_photo_path?: string }
+        Returns: undefined
+      }
+      upt_set_own_workplace_preference: {
+        Args: { p_workplace: string }
         Returns: undefined
       }
       upt_set_shift_marketplace: {
