@@ -104,7 +104,7 @@ test('inventory is integrated as a workplace-scoped navigation feature while ret
     readFile(new URL('../app/(app)/inventory/page.tsx',import.meta.url),'utf8'),
   ])
   assert.match(tasks,/!manager&&<InventoryPanel/)
-  assert.match(workplaces,/\(isAdmin\|\|isResponsible\)&&<InventoryPanel/)
+  assert.doesNotMatch(workplaces,/InventoryPanel/)
   for(const label of ['Materiaalbeheer','Mijn materiaal','RETOUR MELDEN','BEVESTIGEN','AFWIJZEN','TERUGGEVONDEN'])assert.ok(panel.includes(label),label)
   assert.match(roles,/navRule\("admin","inventory","Inventaris"/)
   assert.match(roles,/navRule\("responsible_lead","inventory","Inventaris"/)
