@@ -1,6 +1,6 @@
 'use server'
 
-import { revalidatePath } from 'next/cache'
+import { revalidatePath } from '@/lib/save-success'
 import { z } from 'zod'
 import { createClient } from '@/lib/supabase/crew-server'
 
@@ -20,8 +20,8 @@ async function adminClient(){
 }
 
 function refresh(){
-  revalidatePath('/guestlist')
-  revalidatePath('/admin/platform')
+  await revalidatePath('/guestlist')
+  await revalidatePath('/admin/platform')
 }
 
 export async function addGuestlistEntry(fd:FormData){
