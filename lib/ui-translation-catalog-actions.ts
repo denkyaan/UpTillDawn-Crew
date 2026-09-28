@@ -2,6 +2,22 @@ export type ActionUiLocale='nl'|'fr'|'en'|'de'
 type Row={fr:string;en:string;de:string}
 
 const ROWS:Record<string,Row>={
+  'Wachtwoord moet':{fr:'Le mot de passe doit contenir',en:'Password must contain',de:'Das Passwort muss enthalten'},
+  'minstens 12 tekens':{fr:'au moins 12 caractères',en:'at least 12 characters',de:'mindestens 12 Zeichen'},
+  'een kleine letter':{fr:'une lettre minuscule',en:'a lowercase letter',de:'einen Kleinbuchstaben'},
+  'een hoofdletter':{fr:'une lettre majuscule',en:'an uppercase letter',de:'einen Großbuchstaben'},
+  'een cijfer':{fr:'un chiffre',en:'a number',de:'eine Ziffer'},
+  'een symbool':{fr:'un symbole',en:'a symbol',de:'ein Symbol'},
+  'bevatten.':{fr:'.',en:'.',de:'.'},
+  'Locatiezoeker is nog niet geconfigureerd.':{fr:'La recherche de lieux n’est pas encore configurée.',en:'Location search is not configured yet.',de:'Die Standortsuche ist noch nicht konfiguriert.'},
+  'Locaties konden niet worden opgezocht.':{fr:'Les lieux n’ont pas pu être recherchés.',en:'Locations could not be searched.',de:'Standorte konnten nicht gesucht werden.'},
+  'Zoekopdracht is te lang.':{fr:'La recherche est trop longue.',en:'The search query is too long.',de:'Die Suchanfrage ist zu lang.'},
+  'Facebook-redirect werd om veiligheidsredenen geweigerd.':{fr:'La redirection Facebook a été refusée pour des raisons de sécurité.',en:'The Facebook redirect was rejected for security reasons.',de:'Die Facebook-Weiterleitung wurde aus Sicherheitsgründen abgelehnt.'},
+  'Facebook-evenement kon niet worden geopend.':{fr:'L’événement Facebook n’a pas pu être ouvert.',en:'The Facebook event could not be opened.',de:'Die Facebook-Veranstaltung konnte nicht geöffnet werden.'},
+  'Facebook-evenement bevat te veel redirects.':{fr:'L’événement Facebook contient trop de redirections.',en:'The Facebook event contains too many redirects.',de:'Die Facebook-Veranstaltung enthält zu viele Weiterleitungen.'},
+  'Facebook-evenement is te groot om veilig te verwerken.':{fr:'L’événement Facebook est trop volumineux pour être traité en toute sécurité.',en:'The Facebook event is too large to process safely.',de:'Die Facebook-Veranstaltung ist zu groß, um sicher verarbeitet zu werden.'},
+  'Gebruik een geldige openbare Facebook-evenementlink.':{fr:'Utilisez un lien public valide vers un événement Facebook.',en:'Use a valid public Facebook event link.',de:'Verwende einen gültigen öffentlichen Facebook-Veranstaltungslink.'},
+  'Facebook gaf geen geldige evenementpagina terug.':{fr:'Facebook n’a pas renvoyé de page d’événement valide.',en:'Facebook did not return a valid event page.',de:'Facebook hat keine gültige Veranstaltungsseite zurückgegeben.'},
   'E-mail en wachtwoord zijn verplicht.':{fr:'L’e-mail et le mot de passe sont obligatoires.',en:'Email and password are required.',de:'E-Mail und Passwort sind erforderlich.'},
   'Volledige naam moet tussen 1 en 200 tekens bevatten.':{fr:'Le nom complet doit contenir entre 1 et 200 caractères.',en:'Full name must contain between 1 and 200 characters.',de:'Der vollständige Name muss zwischen 1 und 200 Zeichen lang sein.'},
   'De applicatieconfiguratie is onvolledig. Neem contact op met de beheerder.':{fr:'La configuration de l’application est incomplète. Contactez l’administrateur.',en:'The application configuration is incomplete. Contact the administrator.',de:'Die Anwendungskonfiguration ist unvollständig. Kontaktiere den Administrator.'},
