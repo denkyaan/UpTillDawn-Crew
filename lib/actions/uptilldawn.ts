@@ -742,7 +742,20 @@ export async function createInventoryItem(fd:FormData){
   p_quantity:z.coerce.number().int().min(1).max(100000).parse(fd.get('quantity')),
  })
  check(error)
- revalidatePath('/workplaces');revalidatePath('/tasks');revalidatePath('/operations')
+ revalidatePath('/workplaces');revalidatePath('/tasks');revalidatePath('/operations');revalidatePath('/inventory')
+}
+export async function reportWorkplaceInventoryCondition(fd:FormData){
+ const {s,profile}=await approvedClient()
+ if(!['admin','responsible_lead'].includes(profile.role))throw new Error('Alleen admin of verantwoordelijke kan materiaal controleren.')
+ const {error}=await s.rpc('upt_report_workplace_inventory_condition',{
+  p_item:uuid.parse(fd.get('item_id')),
+  p_phase:z.enum(['opening','closing']).parse(fd.get('phase')),
+  p_condition:z.enum(['damaged','missing']).parse(fd.get('condition')),
+  p_quantity:z.coerce.number().int().min(1).max(100000).parse(fd.get('quantity')),
+  p_notes:String(fd.get('notes')||'').trim().slice(0,1000)||undefined,
+ })
+ check(error)
+ revalidatePath('/inventory');revalidatePath('/workplaces');revalidatePath('/notifications')
 }
 export async function restockInventoryItem(fd:FormData){
  const {s,profile}=await approvedClient()
@@ -753,7 +766,7 @@ export async function restockInventoryItem(fd:FormData){
   p_notes:String(fd.get('notes')||'').trim().slice(0,1000)||undefined,
  })
  check(error)
- revalidatePath('/workplaces');revalidatePath('/tasks');revalidatePath('/operations')
+ revalidatePath('/workplaces');revalidatePath('/tasks');revalidatePath('/operations');revalidatePath('/inventory')
 }
 export async function issueInventoryItem(fd:FormData){
  const {s,profile}=await approvedClient()
@@ -821,7 +834,7 @@ export async function restoreInventoryQuantity(fd:FormData){
   p_notes:String(fd.get('notes')||'').trim().slice(0,1000)||undefined,
  })
  check(error)
- revalidatePath('/workplaces');revalidatePath('/tasks');revalidatePath('/operations')
+ revalidatePath('/workplaces');revalidatePath('/tasks');revalidatePath('/operations');revalidatePath('/inventory')
 }
 
 const checklistPhotoTypes=new Map([
