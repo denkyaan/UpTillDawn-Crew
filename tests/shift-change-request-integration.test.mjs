@@ -84,7 +84,7 @@ test('nominee consent and admin approval are separate audited stages', async () 
 })
 
 test('shift change UI exposes replacement swap claim nominee response and admin decision', async () => {
-  const page=await readFile(new URL('../app/(app)/shifts/page.tsx',import.meta.url),'utf8')
+  const page=await readFile(new URL('../app/(app)/workplaces/page.tsx',import.meta.url),'utf8')
   const controls=await readFile(new URL('../components/crew/shift-change-controls.tsx',import.meta.url),'utf8')
   const actions=await readFile(new URL('../lib/actions/uptilldawn.ts',import.meta.url),'utf8')
 
