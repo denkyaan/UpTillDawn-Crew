@@ -58,6 +58,12 @@ function canonicalizeBase(value: string) {
 }
 
 function translate(value: string, locale: ExtendedUiLocale) {
+  const counted = value.match(/^(\d+)\s+(.+)$/)
+  if (counted) {
+    const translatedTail = translate(counted[2], locale)
+    if (translatedTail !== counted[2]) return `${counted[1]} ${translatedTail}`
+  }
+
   const complete = translateCompleteUi(value, locale)
   if (complete !== value) return complete
   const extension = translateUiExtension(value, locale)
