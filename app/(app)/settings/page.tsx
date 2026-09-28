@@ -9,7 +9,11 @@ export default async function Page() {
   const { data: { user } } = await s.auth.getUser()
   if (!user) return null
 
-  const { data, error } = await s.rpc('upt_own_profile_details')
+  const [{data,error},{data:preference},{data:workplaceOptions}] = await Promise.all([
+    s.rpc('upt_own_profile_details'),
+    s.rpc('upt_own_workplace_preference'),
+    s.rpc('upt_profile_workplace_options'),
+  ])
   const profile = data?.[0]
   let photoUrl: string | null = null
   if (profile?.profile_photo_url) {
@@ -24,7 +28,13 @@ export default async function Page() {
     </div>
     {error || !profile
       ? <p>Profiel kon niet worden geladen.</p>
-      : <ProfileForm id={user.id} initial={profile} photoUrl={photoUrl}/>}
+      : <ProfileForm
+          id={user.id}
+          initial={profile}
+          photoUrl={photoUrl}
+          preferredWorkplaceId={preference||null}
+          workplaceOptions={(workplaceOptions||[]).map(option=>({id:option.id,name:option.name}))}
+        />}
     <section className="rounded-2xl border p-4">
       <LanguageSwitcher />
     </section>
