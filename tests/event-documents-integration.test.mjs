@@ -97,5 +97,5 @@ test('critical documents are stored per user offline and cleared on logout', asy
   assert.match(sync,/replaceOfflineDocuments/)
   assert.match(offline,/Documenten offline/)
   assert.match(offline,/OPEN OFFLINE BESTAND/)
-  assert.match(sw,/uptilldawn-public-v11/)
+  assert.match(sw,/uptilldawn-public-v12/)
 })
