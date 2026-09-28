@@ -2,6 +2,12 @@ export type ExtraCatalogLocale = 'nl' | 'fr' | 'en' | 'de'
 type Row = { fr:string; en:string; de:string }
 
 export const APP_EXTRA_TRANSLATIONS: Record<string,Row> = {
+  ". De overige onderdelen blijven bruikbaar.": { fr:". Les autres éléments restent utilisables.", en:". The other sections remain usable.", de:". Die übrigen Bereiche bleiben nutzbar." },
+  "Minimumbezetting": { fr:"Effectif minimum", en:"Minimum staffing", de:"Mindestbesetzung" },
+  "Doelbezetting": { fr:"Effectif cible", en:"Target staffing", de:"Zielbesetzung" },
+  "Max.": { fr:"Max.", en:"Max.", de:"Max." },
+  "Maximumbezetting": { fr:"Effectif maximum", en:"Maximum staffing", de:"Maximalbesetzung" },
+  "Standaardaantal": { fr:"Quantité standard", en:"Default quantity", de:"Standardanzahl" },
   "Platformbeheer": { fr:"Gestion de la plateforme", en:"Platform management", de:"Plattformverwaltung" },
   "Centraal beheer voor planning, eventtemplates, operationele signalen, materiaal, rapportage, kosten, QR, kennis, rollouts en herstelcontrole.": { fr:"Gestion centrale de la planification, des modèles d’événement, des signaux opérationnels, du matériel, des rapports, des coûts, des QR, des connaissances, des déploiements et de la reprise.", en:"Central management for planning, event templates, operational signals, equipment, reporting, costs, QR, knowledge, rollouts and recovery checks.", de:"Zentrale Verwaltung für Planung, Veranstaltungsvorlagen, operative Signale, Material, Berichte, Kosten, QR, Wissen, Rollouts und Wiederherstellungsprüfungen." },
   "Enkele onderdelen konden niet laden.": { fr:"Certains éléments n’ont pas pu être chargés.", en:"Some sections could not be loaded.", de:"Einige Bereiche konnten nicht geladen werden." },
