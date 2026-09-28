@@ -61,3 +61,49 @@ export async function createEvent(fd:FormData){
  if(catalogError)console.error('[Event workplace catalog sync]',{code:catalogError.code})
  await revalidatePath('/events');await revalidatePath('/chat');await revalidatePath('/workplaces');await revalidatePath('/inventory')
 }
+
+export async function captureEventTemplate(fd:FormData){
+ const {s}=await adminClient()
+ const eventId=z.string().uuid().parse(fd.get('event_id'))
+ const name=text.parse(String(fd.get('template_name')||'').trim())
+ const sections=['workplaces','briefing','tasks','checklists','inventory'].filter(section=>fd.get('section_'+section)==='on')
+ if(!sections.length)throw new Error('Selecteer minstens één templateonderdeel.')
+ const {error}=await s.rpc('upt_capture_event_template',{p_event:eventId,p_name:name,p_sections:sections})
+ if(error)throw new Error(error.message||'Template opslaan mislukt.')
+ await revalidatePath('/events')
+}
+
+export async function applyEventTemplate(fd:FormData){
+ const {s}=await adminClient()
+ const templateId=z.string().uuid().parse(fd.get('template_id'))
+ const name=text.parse(String(fd.get('name')||'').trim())
+ const start=optionalIso(fd,'start_at')
+ const end=optionalIso(fd,'end_at')
+ if(!start||!end||Date.parse(end)<=Date.parse(start))throw new Error('Geef geldige evenementuren.')
+ const venue=String(fd.get('venue')||'').trim().slice(0,200)||undefined
+ const address=String(fd.get('address')||'').trim().slice(0,500)||undefined
+ const {data,error}=await s.rpc('upt_apply_event_template',{
+  p_template:templateId,p_name:name,p_start:start,p_end:end,p_venue:venue,p_address:address,
+ })
+ if(error||!data)throw new Error(error?.message||'Template toepassen mislukt.')
+ await s.rpc('upt_sync_workplace_catalog_to_event',{p_event:data})
+ await revalidatePath('/events');await revalidatePath('/workplaces');await revalidatePath('/inventory');await revalidatePath('/briefings')
+}
+
+export async function closeEvent(fd:FormData){
+ const {s}=await adminClient()
+ const eventId=z.string().uuid().parse(fd.get('event_id'))
+ const force=fd.get('force')==='on'
+ const reason=String(fd.get('reason')||'').trim()||undefined
+ const {error}=await s.rpc('upt_close_event',{p_event:eventId,p_force:force,p_reason:reason})
+ if(error)throw new Error(error.message||'Evenement afsluiten mislukt.')
+ await revalidatePath('/events');await revalidatePath('/admin')
+}
+
+export async function archiveEvent(fd:FormData){
+ const {s}=await adminClient()
+ const eventId=z.string().uuid().parse(fd.get('event_id'))
+ const {error}=await s.rpc('upt_archive_event',{p_event:eventId})
+ if(error)throw new Error(error.message||'Evenement archiveren mislukt.')
+ await revalidatePath('/events');await revalidatePath('/admin')
+}
