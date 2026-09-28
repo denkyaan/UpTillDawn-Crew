@@ -31,7 +31,7 @@ export default async function Page(){
     s.from('event_members').select('event_id,user_id'),
     s.from('shifts').select('event_id,workplace_id,workplaces(name)').eq('user_id',user.id).neq('status','cancelled').neq('response_status','declined'),
     s.from('events').select('id').lte('start_at','now'),
-    s.from('event_availability').select('event_id,user_id,response,setup_available,breakdown_available,updated_at'),
+    s.from('event_availability').select('event_id,user_id,response,setup_available,breakdown_available,updated_at,queue_joined_at'),
     s.from('responsible_assignments').select('event_id,workplace_id,workplaces(name,is_active)').eq('user_id',user.id),
     s.from('event_emergency_information').select('*'),
   ])
@@ -106,7 +106,18 @@ export default async function Page(){
       const capacityFull=event.max_joiners!==null&&confirmedCount>=event.max_joiners
       const myAvailability=availability.find(row=>row.event_id===event.id&&row.user_id===user.id)
       const myResponse=myAvailability?.response
-      const canRows=user.isAdmin?availability.filter(row=>row.event_id===event.id&&(row.response==='can'||row.setup_available===true||row.breakdown_available===true)):[]
+      const canRows=user.isAdmin
+        ? availability
+            .filter(row=>row.event_id===event.id&&(row.response==='can'||row.setup_available===true||row.breakdown_available===true))
+            .sort((a,b)=>{
+              const aMember=memberKeys.has(`${event.id}:${a.user_id}`)
+              const bMember=memberKeys.has(`${event.id}:${b.user_id}`)
+              if(aMember!==bMember)return aMember?-1:1
+              const aq=a.queue_joined_at?Date.parse(a.queue_joined_at):Number.MAX_SAFE_INTEGER
+              const bq=b.queue_joined_at?Date.parse(b.queue_joined_at):Number.MAX_SAFE_INTEGER
+              return aq-bq||a.user_id.localeCompare(b.user_id)
+            })
+        :[]
       const eventWorkplaces=user.isAdmin?workplaces.filter(workplace=>workplace.event_id===event.id&&workplace.is_active):[]
       const responsibleWorkplaces=user.role==='responsible_lead'
         ? (responsibleResult.data||[])
@@ -235,13 +246,17 @@ export default async function Page(){
                 ? <div className="space-y-3">{canRows.map(row=>{
                     const person=peopleById.get(row.user_id)
                     const alreadyAdded=memberKeys.has(`${event.id}:${row.user_id}`)
+                    const waitingRows=canRows.filter(candidate=>candidate.response==='can'&&!memberKeys.has(`${event.id}:${candidate.user_id}`))
+                    const waitlistPosition=!alreadyAdded&&row.response==='can'
+                      ? waitingRows.findIndex(candidate=>candidate.user_id===row.user_id)+1
+                      : 0
                     const existingShifts=adminShifts.filter(shift=>shift.event_id===event.id&&shift.user_id===row.user_id&&shift.status!=='cancelled')
                     return <article key={row.user_id} className="rounded-xl border p-3">
                       <div className="flex flex-wrap items-center justify-between gap-2">
                         <div>
                           <p className="font-semibold">{person?.full_name||row.user_id}</p>
                           <p className="text-xs text-muted-foreground">
-                            {alreadyAdded?'Toegevoegd aan evenement':'Nog niet toegewezen'}
+                            {alreadyAdded?'Toegevoegd aan evenement':waitlistPosition>0?`Wachtlijst #${waitlistPosition}`:'Nog niet toegewezen'}
                             {existingShifts.length?` · ${existingShifts.length} dienst(en)`:''}
                           </p>
                         </div>
