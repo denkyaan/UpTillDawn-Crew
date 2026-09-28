@@ -897,6 +897,17 @@ const checklistPhotoTypes=new Map([
  ['image/webp','webp'],
 ])
 
+export async function applyOperationalChecklistTemplate(fd:FormData){
+ const {s,profile}=await approvedClient()
+ if(!['admin','responsible_lead'].includes(profile.role))throw new Error('Geen toegang.')
+ const {error}=await s.rpc('upt_apply_operational_checklist_template',{
+  p_template:uuid.parse(fd.get('template_id')),
+  p_event:uuid.parse(fd.get('event_id')),
+  p_workplace:uuid.parse(fd.get('workplace_id')),
+ })
+ check(error)
+ await revalidatePath('/briefings');await revalidatePath('/tasks')
+}
 export async function createOperationalChecklist(fd:FormData){
  const {s,profile}=await approvedClient()
  requireManager(profile.role)
