@@ -9,6 +9,7 @@ import { EventDocumentsPanel } from '@/components/crew/event-documents-panel'
 import { nlStatus } from '@/lib/ui-nl'
 import { createClient } from '@/lib/supabase/crew-server'
 import { getCurrentUser } from '@/lib/actions/auth'
+import { applyEventTemplate, captureEventTemplate } from '@/lib/actions/events'
 import {
   addWorkplace,
   assignAvailableCrewShift,
@@ -35,6 +36,9 @@ export default async function Page(){
     s.from('responsible_assignments').select('event_id,workplace_id,workplaces(name,is_active)').eq('user_id',user.id),
     s.from('event_emergency_information').select('*'),
   ])
+  const templateResult=user.isAdmin
+    ? await s.from('event_templates').select('id,name,sections,source_event_id,created_at').order('updated_at',{ascending:false})
+    : {data:[],error:null}
   const peopleResult=user.isAdmin
     ? await s.from('profiles').select('id,full_name,preferred_workplace_id').eq('approved',true).order('full_name')
     : {data:[],error:null}
@@ -92,6 +96,35 @@ export default async function Page(){
       <p className="text-xs text-muted-foreground">Bij een openbare Facebook-link worden gevonden naam, locatie en evenementuren automatisch gebruikt. Ontbrekende gegevens worden uit de handmatige velden genomen.</p>
       <button className="rounded-xl bg-violet-600 p-3 font-bold">EVENEMENT AANMAKEN</button>
     </form></AdminOnly>}
+
+    {user.isAdmin&&<AdminOnly><section className="space-y-4 rounded-2xl border p-4">
+      <div>
+        <p className="text-xs font-black uppercase tracking-[.2em] text-violet-400">EVENTTEMPLATES</p>
+        <h2 className="text-xl font-black">Event hergebruiken</h2>
+        <p className="text-sm text-muted-foreground">Sla een bestaand event op als template of maak een nieuw event vanuit werkplekken, briefing, taken, checklists en inventory.</p>
+      </div>
+      <div className="grid gap-4 xl:grid-cols-2">
+        <form action={captureEventTemplate} className="grid gap-2 rounded-xl border p-3">
+          <b>Template maken van bestaand event</b>
+          <select name="event_id" required className={input}><option value="">Bron-event…</option>{events.map(event=><option key={event.id} value={event.id}>{event.name}</option>)}</select>
+          <input name="template_name" required minLength={3} maxLength={200} placeholder="Templatenaam" className={input}/>
+          <div className="grid grid-cols-2 gap-2 text-sm">
+            {['workplaces','briefing','tasks','checklists','inventory'].map(section=><label key={section} className="flex items-center gap-2 rounded-lg border p-2"><input type="checkbox" name={'section_'+section} defaultChecked/>{section}</label>)}
+          </div>
+          <button className="rounded-xl bg-violet-600 p-3 font-bold text-white">TEMPLATE OPSLAAN</button>
+        </form>
+        <form action={applyEventTemplate} className="grid gap-2 rounded-xl border p-3">
+          <b>Nieuw event vanuit template</b>
+          <select name="template_id" required className={input}><option value="">Template…</option>{(templateResult.data||[]).map(template=><option key={template.id} value={template.id}>{template.name}</option>)}</select>
+          <input name="name" required maxLength={200} placeholder="Naam nieuw evenement" className={input}/>
+          <DateInput name="start_at" required/>
+          <DateInput name="end_at" required/>
+          <input name="venue" maxLength={200} placeholder="Locatie/venue (optioneel)" className={input}/>
+          <input name="address" maxLength={500} placeholder="Adres (optioneel)" className={input}/>
+          <button className="rounded-xl bg-violet-600 p-3 font-bold text-white">EVENT VAN TEMPLATE MAKEN</button>
+        </form>
+      </div>
+    </section></AdminOnly>}
 
     {eventsResult.error&&<p>Evenementen konden niet worden geladen.</p>}
     {!eventsResult.error&&!visibleEvents.length&&<p className="rounded-xl border p-4 text-muted-foreground">Geen evenementen beschikbaar.</p>}
@@ -160,6 +193,9 @@ export default async function Page(){
         </summary>
 
         <div className="space-y-4 border-t p-4">
+          <div className="flex flex-wrap gap-2">
+            <Link href={'/events/'+event.id+'/command'} className="inline-flex rounded-xl bg-violet-600 px-3 py-2 text-sm font-bold text-white">COMMAND CENTER</Link>
+          </div>
           {!user.isAdmin&&assigned&&<Link href={'/onboarding?event='+event.id} className="inline-flex rounded-xl border px-3 py-2 text-sm font-bold">Onboarding openen</Link>}
           <EmergencyInformationPanel
             compact
