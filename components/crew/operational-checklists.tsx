@@ -4,6 +4,7 @@ import {
   closeOperationalChecklist,
   completeOperationalChecklistItem,
   createOperationalChecklist,
+  applyOperationalChecklistTemplate,
   removeOperationalChecklistItem,
   reopenOperationalChecklist,
   reopenOperationalChecklistItem,
@@ -42,10 +43,17 @@ export async function OperationalChecklistPanel({
   canClose?:boolean
 }){
   const s=await createClient()
-  const {data:checklists,error}=await s
+  const [{data:checklists,error},{data:templates,error:templateError}]=await Promise.all([
+    s
     .from('operational_checklists')
     .select('id,event_id,workplace_id,kind,title,description,status,completed_at,created_at,events(name),workplaces(name)')
-    .order('created_at',{ascending:false})
+    .order('created_at',{ascending:false}),
+    s.from('operational_checklist_templates')
+      .select('id,catalog_workplace_id,kind,title,description')
+      .eq('is_active',true)
+      .order('kind')
+      .order('title'),
+  ])
 
   if(error){
     return <section className="rounded-2xl border p-4">
@@ -84,6 +92,22 @@ export async function OperationalChecklistPanel({
       <h2 className="text-xl font-black">Operationele checklists</h2>
       <p className="text-sm text-muted-foreground">Opening, sluiting en veiligheid per werkplek. Verplichte punten blokkeren afsluiten totdat ze volledig zijn uitgevoerd.</p>
     </div>
+
+    {canManage&&workplaceOptions.length>0&&!templateError&&(templates||[]).length>0&&<details className="rounded-xl border border-violet-500/30 p-3">
+      <summary className="cursor-pointer font-semibold">Checklisttemplate toepassen</summary>
+      <div className="mt-3 grid gap-3">
+        {workplaceOptions.map(option=><form key={option.id} action={applyOperationalChecklistTemplate} className="grid gap-2 rounded-lg border p-3 md:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_auto]">
+          <input type="hidden" name="event_id" value={option.eventId}/>
+          <input type="hidden" name="workplace_id" value={option.id}/>
+          <div><b className="text-sm">{option.label}</b><p className="text-xs text-muted-foreground">Werkplek</p></div>
+          <select name="template_id" required className="rounded-lg border bg-background p-3">
+            <option value="">Template…</option>
+            {(templates||[]).map(template=><option key={template.id} value={template.id}>{template.title} · {kindLabel(template.kind)}</option>)}
+          </select>
+          <button className="rounded-lg bg-violet-600 px-4 py-3 font-bold text-white">TOEPASSEN</button>
+        </form>)}
+      </div>
+    </details>}
 
     {canManage&&workplaceOptions.length>0&&<details className="rounded-xl border p-3">
       <summary className="cursor-pointer font-semibold">Nieuwe checklist</summary>
