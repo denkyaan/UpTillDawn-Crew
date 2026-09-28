@@ -14,7 +14,7 @@ export default async function AuditPage(){
   .order('created_at',{ascending:false})
   .limit(250)
  const rows=data||[]
- const actorIds=[...new Set(rows.map(row=>row.actor_id).filter(Boolean))]
+ const actorIds=[...new Set(rows.map(row=>row.actor_id).filter((id):id is string=>Boolean(id)))]
  const {data:profiles}=actorIds.length
   ? await s.from('profiles').select('id,full_name').in('id',actorIds)
   : {data:[]}
