@@ -25,7 +25,7 @@ function euroToCents(value:FormDataEntryValue|null){
   return Math.round(amount*100)
 }
 
-function refresh(){
+async function await refresh(){
   await revalidatePath('/sales')
   await revalidatePath('/inventory')
   await revalidatePath('/admin/platform')
@@ -41,7 +41,7 @@ export async function configureSaleItem(fd:FormData){
     p_price_cents:enabled?euroToCents(fd.get('price')):undefined,
   })
   if(error)throw new Error(error.message)
-  refresh()
+  await refresh()
 }
 
 export async function setOpeningCash(fd:FormData){
@@ -52,7 +52,7 @@ export async function setOpeningCash(fd:FormData){
     p_opening_cash_cents:euroToCents(fd.get('opening_cash')),
   })
   if(error)throw new Error(error.message)
-  refresh()
+  await refresh()
 }
 
 export async function refundSale(fd:FormData){
@@ -63,5 +63,5 @@ export async function refundSale(fd:FormData){
     p_notes:String(fd.get('notes')||'').trim().slice(0,1000)||undefined,
   })
   if(error)throw new Error(error.message)
-  refresh()
+  await refresh()
 }
