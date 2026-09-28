@@ -71,6 +71,8 @@ const EXTENSIONS: Record<string, Row> = {
   'Geef kort aan waarom je niet meer kunt deelnemen.': { fr: 'Indiquez brièvement pourquoi vous ne pouvez plus participer.', en: 'Briefly explain why you can no longer attend.', de: 'Gib kurz an, warum du nicht mehr teilnehmen kannst.' },
   'bevestigd': { fr: 'confirmés', en: 'confirmed', de: 'bestätigt' },
   'VOL': { fr: 'COMPLET', en: 'FULL', de: 'VOLL' },
+  '· VOL': { fr: '· COMPLET', en: '· FULL', de: '· VOLL' },
+  'Aanmelddeadline:': { fr: 'Date limite d’inscription :', en: 'Registration deadline:', de: 'Anmeldefrist:' },
   'Wachtlijst': { fr: 'Liste d’attente', en: 'Waitlist', de: 'Warteliste' },
   'Voorkeur werkplek': { fr: 'Poste de travail préféré', en: 'Preferred workplace', de: 'Bevorzugter Arbeitsplatz' },
   'Geen voorkeur': { fr: 'Aucune préférence', en: 'No preference', de: 'Keine Präferenz' },
