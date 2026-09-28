@@ -28,7 +28,7 @@ export default async function Dashboard() {
   const now = new Date().toISOString()
   const [profileResult, eventsResult, shiftsResult, incidentsResult, membershipsResult, activeEventsResult, openEventsResult, responsibleAssignmentsResult] = await Promise.all([
     s.from('profiles').select('full_name,approved,role').eq('id', user.id).single(),
-    s.from('events').select('id,name,venue,start_at,end_at,status').gte('end_at', now).order('start_at', { ascending: true }),
+    s.from('events').select('id,name,venue,start_at,end_at,status').order('start_at', { ascending: true }),
     s.from('shifts').select('id,scheduled_start,scheduled_end,role_name,workplace_id,event_id').eq('user_id', user.id).order('scheduled_start', { ascending: true }),
     s.from('incidents').select('id,event_id,workplace_id').neq('status', 'resolved'),
     s.from('event_members').select('event_id,event_role').eq('user_id', user.id),
@@ -54,10 +54,12 @@ export default async function Dashboard() {
     ...(current.role==='responsible_lead'?responsibleAssignments.map(row=>row.event_id):[]),
   ])
   const nowMs=new Date().getTime()
-  const events=rawEvents.filter(event=>
-    event.status!=='archived'
-    && (Date.parse(event.start_at)>nowMs||assignedEventIds.has(event.id))
-  )
+  const events=rawEvents.filter(event=>{
+    const end=Date.parse(event.end_at)
+    const visibleWhileOpen=event.status!=='archived'&&nowMs<=end
+    const assigned=assignedEventIds.has(event.id)&&nowMs<=end+3*24*60*60*1000
+    return visibleWhileOpen||assigned
+  })
   const hasEventAssignment = memberships.some(member => openEventIds.has(member.event_id))
     || shifts.some(shift=>openEventIds.has(shift.event_id))
     || (current.role==='responsible_lead'&&responsibleAssignments.some(row=>openEventIds.has(row.event_id)))
@@ -154,7 +156,7 @@ export default async function Dashboard() {
     {hasLoadError && <p className="rounded-xl border border-amber-500/40 p-4">Een deel van het overzicht kon niet worden geladen.</p>}
     <section className="grid gap-4 md:grid-cols-3">
       <Card href="/events" icon={CalendarDays} title="Evenementen" value={events.length}/>
-      <AssignedEventOnly available={hasEventAssignment}><Card href="/shifts" icon={Clock3} title="Mijn diensten" value={shifts.length}/></AssignedEventOnly>
+      <AssignedEventOnly available={hasEventAssignment}><Card href="/workplaces" icon={Clock3} title="Werkplaatsen & shifts" value={shifts.length}/></AssignedEventOnly>
       {hasActiveIncidentContext && <ManagerOnly><Card href="/incidents" icon={AlertTriangle} title="Open incidenten" value={activeIncidentCount}/></ManagerOnly>}
     </section>
     {current.role==='staff'&&<section className="space-y-3 rounded-2xl border bg-card p-4">
