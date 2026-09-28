@@ -52,6 +52,8 @@ const EXTENSIONS: Record<string, Row> = {
   'Nog geen account?': { fr: 'Pas encore de compte ?', en: 'No account yet?', de: 'Noch kein Konto?' },
   'Account aanmaken': { fr: 'Créer un compte', en: 'Create account', de: 'Konto erstellen' },
   'Foutcode:': { fr: 'Code d’erreur :', en: 'Error code:', de: 'Fehlercode:' },
+  'Account goedgekeurd. De gebruiker heeft nu toegang en ontvangt hiervan een melding.': { fr: 'Compte approuvé. L’utilisateur a maintenant accès et reçoit une notification.', en: 'Account approved. The user now has access and receives a notification.', de: 'Konto freigegeben. Der Benutzer hat jetzt Zugriff und erhält eine Benachrichtigung.' },
+  'ROL OPSLAAN': { fr: 'ENREGISTRER LE RÔLE', en: 'SAVE ROLE', de: 'ROLLE SPEICHERN' },
   'E-mail': { fr: 'E-mail', en: 'Email', de: 'E-Mail' },
   'Opslaan': { fr: 'Enregistrer', en: 'Save', de: 'Speichern' },
   'Toevoegen': { fr: 'Ajouter', en: 'Add', de: 'Hinzufügen' },
