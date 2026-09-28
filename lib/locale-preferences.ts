@@ -1,5 +1,6 @@
 export const SUPPORTED_UI_LOCALES = ['nl','fr','en','de'] as const
 export type SupportedUiLocale = typeof SUPPORTED_UI_LOCALES[number]
+export type LocaleSource = 'device'|'manual'
 
 const supported = new Set<string>(SUPPORTED_UI_LOCALES)
 export const LANGUAGE_STORAGE_KEY='uptilldawn-language'
@@ -12,6 +13,15 @@ export function parseUiLocale(value:string|null|undefined):SupportedUiLocale|nul
   return locale&&supported.has(locale)?locale as SupportedUiLocale:null
 }
 
+export function parseAcceptLanguage(value:string|null|undefined):SupportedUiLocale|null{
+  if(!value)return null
+  for(const part of value.split(',')){
+    const locale=parseUiLocale(part.split(';')[0])
+    if(locale)return locale
+  }
+  return null
+}
+
 export function deviceUiLocale():SupportedUiLocale{
   if(typeof navigator==='undefined')return 'nl'
   const candidates=navigator.languages?.length?navigator.languages:[navigator.language]
@@ -22,15 +32,25 @@ export function deviceUiLocale():SupportedUiLocale{
   return 'nl'
 }
 
+export function storedUiLocale():SupportedUiLocale|null{
+  if(typeof window==='undefined')return null
+  return parseUiLocale(window.localStorage.getItem(LANGUAGE_STORAGE_KEY))
+}
+
+export function storedUiLocaleSource():LocaleSource|null{
+  if(typeof window==='undefined')return null
+  const source=window.localStorage.getItem(LANGUAGE_SOURCE_KEY)
+  return source==='manual'||source==='device'?source:null
+}
+
 export function initialUiLocale():SupportedUiLocale{
   if(typeof window==='undefined')return 'nl'
-  const stored=parseUiLocale(window.localStorage.getItem(LANGUAGE_STORAGE_KEY))
-  const source=window.localStorage.getItem(LANGUAGE_SOURCE_KEY)
-  if(source==='manual'&&stored)return stored
+  const stored=storedUiLocale()
+  if(storedUiLocaleSource()==='manual'&&stored)return stored
   return deviceUiLocale()
 }
 
-export function persistUiLocale(locale:SupportedUiLocale,source:'manual'|'device'){
+export function persistUiLocale(locale:SupportedUiLocale,source:LocaleSource){
   if(typeof window==='undefined')return
   window.localStorage.setItem(LANGUAGE_STORAGE_KEY,locale)
   window.localStorage.setItem(LANGUAGE_SOURCE_KEY,source)
@@ -38,14 +58,17 @@ export function persistUiLocale(locale:SupportedUiLocale,source:'manual'|'device
   document.cookie=`${LANGUAGE_SOURCE_KEY}=${source}; path=/; max-age=31536000; samesite=lax`
 }
 
+export function requestUiLocale(locale:SupportedUiLocale){
+  persistUiLocale(locale,'manual')
+  window.dispatchEvent(new CustomEvent<SupportedUiLocale>(LANGUAGE_CHANGE_EVENT,{detail:locale}))
+}
+
 export function activeUiLocale():SupportedUiLocale{
   if(typeof document!=='undefined'){
     const html=parseUiLocale(document.documentElement.lang)
     if(html)return html
   }
-  if(typeof window!=='undefined'){
-    const stored=parseUiLocale(window.localStorage.getItem(LANGUAGE_STORAGE_KEY))
-    if(stored)return stored
-  }
+  const stored=storedUiLocale()
+  if(stored)return stored
   return deviceUiLocale()
 }
