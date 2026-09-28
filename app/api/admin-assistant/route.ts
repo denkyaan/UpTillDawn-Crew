@@ -4,7 +4,7 @@ import { createClient } from '@/lib/supabase/crew-server'
 
 export const runtime='nodejs'
 
-const schema=z.object({message:z.string().trim().min(1).max(4000)})
+const schema=z.object({message:z.string().trim().min(1).max(4000),eventId:z.string().uuid().optional()})
 
 function crossSite(request:Request){
   const site=request.headers.get('sec-fetch-site')
@@ -64,16 +64,19 @@ export async function POST(request:Request){
     salesByEvent.set(tx.event_id,bucket)
   }
 
+  const eventId=parsed.data.eventId
+  const inEvent=<T extends {event_id?:string;id?:string}>(rows:T[])=>eventId?rows.filter(row=>row.event_id===eventId||row.id===eventId):rows
   const context={
-    events:events||[],
-    operationalAlerts:(alerts||[]).slice(0,50),
-    openIncidents:incidents||[],
-    inventoryExceptions:(inventory||[]).filter(i=>i.available_quantity<=i.reorder_threshold||i.missing_quantity>0||i.damaged_quantity>0),
+    activeEventId:eventId||null,
+    events:inEvent(events||[]),
+    operationalAlerts:inEvent((alerts||[]) as Array<{event_id?:string}>).slice(0,50),
+    openIncidents:inEvent(incidents||[]),
+    inventoryExceptions:inEvent(inventory||[]).filter(i=>i.available_quantity<=i.reorder_threshold||i.missing_quantity>0||i.damaged_quantity>0),
     artistPresence,
-    guestlist:(guestlist||[]).slice(0,300),
-    backstageHospitality:(backstage||[]).slice(0,300),
-    sales:[...salesByEvent.entries()].map(([eventId,value])=>({eventId,...value})),
-    cashRegisters:registers||[],
+    guestlist:inEvent(guestlist||[]).slice(0,300),
+    backstageHospitality:inEvent(backstage||[]).slice(0,300),
+    sales:[...salesByEvent.entries()].filter(([id])=>!eventId||id===eventId).map(([eventId,value])=>({eventId,...value})),
+    cashRegisters:inEvent(registers||[]),
     recovery,
   }
 
