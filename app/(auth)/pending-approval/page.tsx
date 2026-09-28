@@ -8,25 +8,25 @@ import { Button } from '@/components/ui/button'
 
 const COPY = {
   nl: {
-    title: 'Account wacht op goedkeuring',
+    heading: 'Account wacht op goedkeuring',
     body: 'Je registratie is voltooid. Een beheerder moet je account nog goedkeuren voordat je het crewplatform kunt gebruiken.',
     info: 'Je hoeft geen nieuw account te maken. Zodra je account is goedgekeurd, krijg je bij je volgende bezoek automatisch toegang.',
     logout: 'Uitloggen',
   },
   fr: {
-    title: 'Compte en attente d’approbation',
+    heading: 'Compte en attente d’approbation',
     body: 'Votre inscription est terminée. Un administrateur doit encore approuver votre compte avant que vous puissiez utiliser la plateforme crew.',
     info: 'Vous ne devez pas créer un nouveau compte. Dès que votre compte est approuvé, vous aurez automatiquement accès lors de votre prochaine visite.',
     logout: 'Se déconnecter',
   },
   en: {
-    title: 'Account awaiting approval',
+    heading: 'Account awaiting approval',
     body: 'Your registration is complete. An administrator still needs to approve your account before you can use the crew platform.',
     info: 'You do not need to create another account. Once approved, you will automatically get access on your next visit.',
     logout: 'Log out',
   },
   de: {
-    title: 'Konto wartet auf Freigabe',
+    heading: 'Konto wartet auf Freigabe',
     body: 'Deine Registrierung ist abgeschlossen. Ein Administrator muss dein Konto noch freigeben, bevor du die Crew-Plattform verwenden kannst.',
     info: 'Du musst kein neues Konto erstellen. Sobald dein Konto freigegeben wurde, erhältst du beim nächsten Besuch automatisch Zugriff.',
     logout: 'Abmelden',
@@ -57,7 +57,7 @@ export default async function PendingApprovalPage() {
           <Clock3 className="h-7 w-7" />
         </div>
         <div className="space-y-2">
-          <h1 className="text-xl font-bold">{copy.title}</h1>
+          <h1 className="text-xl font-bold">{copy.heading}</h1>
           <p className="text-sm text-muted-foreground">{copy.body}</p>
         </div>
       </CardHeader>
