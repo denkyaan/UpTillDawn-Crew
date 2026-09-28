@@ -2,7 +2,7 @@
 
 import { useState } from 'react'
 
-export function PlatformAiAssistant({eventId,contextLabel}:{eventId?:string;contextLabel?:string}={}){
+export function PlatformAiAssistant({eventId,contextLabel,contextKey}:{eventId?:string;contextLabel?:string;contextKey?:string}={}){
   const [message,setMessage]=useState('')
   const [answer,setAnswer]=useState('')
   const [busy,setBusy]=useState(false)
@@ -15,7 +15,7 @@ export function PlatformAiAssistant({eventId,contextLabel}:{eventId?:string;cont
       const response=await fetch('/api/admin-assistant',{
         method:'POST',
         headers:{'Content-Type':'application/json'},
-        body:JSON.stringify({message:value,eventId}),
+        body:JSON.stringify({message:value,eventId,contextKey}),
       })
       const payload=await response.json() as {answer?:string;error?:string}
       setAnswer(payload.answer||payload.error||'AI-assistent gaf geen antwoord.')
