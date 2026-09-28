@@ -55,10 +55,10 @@ export default function SignupPage() {
 
     startTransition(async () => {
       const result = await signUp(formData)
-      if (result?.error) {
+      if ('error' in result && result.error) {
         setServerError(result.error)
         setServerErrorCode('code' in result && typeof result.code === 'string' ? result.code : 'signup_error')
-      } else if (result?.success) {
+      } else if ('success' in result && result.success) {
         router.push("/verify-email")
       }
     })
