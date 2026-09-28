@@ -23,12 +23,15 @@ export default async function GuestlistPage({
   const isAdmin=current.isAdmin===true
 
   let events:EventRow[]=[]
+  let eventLoadError=false
+  let guestlistLoadError=false
+  let backstageLoadError=false
   let ownShifts:Array<{event_id:string;scheduled_start:string;scheduled_end:string;status:string;response_status:string}>=[]
   let ownResponsible:Array<{event_id:string}>=[]
 
   if(isAdmin){
     const {data,error}=await s.from('events').select('id,name,status,start_at,end_at').neq('status','archived').order('start_at')
-    if(error)throw new Error('Evenementen konden niet worden geladen.')
+    eventLoadError=Boolean(error)
     events=(data||[]) as EventRow[]
   }else{
     const [shiftResult,responsibleResult,memberResult]=await Promise.all([
@@ -45,7 +48,7 @@ export default async function GuestlistPage({
     ])]
     if(ids.length){
       const {data,error}=await s.from('events').select('id,name,status,start_at,end_at').in('id',ids).neq('status','archived').order('start_at')
-      if(error)throw new Error('Evenementen konden niet worden geladen.')
+      eventLoadError=Boolean(error)
       events=(data||[]) as EventRow[]
     }
   }
@@ -75,7 +78,8 @@ export default async function GuestlistPage({
       .eq('event_id',selected.id),
   ])
 
-  if(entriesResult.error)throw new Error('Guestlist kon niet worden geladen.')
+  guestlistLoadError=Boolean(entriesResult.error)
+  backstageLoadError=Boolean(checklistResult.error)
   const entries=(entriesResult.data||[]) as GuestlistEntry[]
   const checklist=(checklistResult.data||[]) as ArtistChecklistRow[]
   const artists=entries.filter(entry=>entry.entry_type==='artist').map(entry=>({
@@ -96,6 +100,10 @@ export default async function GuestlistPage({
   }
 
   return <main className="mx-auto max-w-6xl space-y-6 p-4 pb-28 md:p-8">
+    {eventLoadError&&<p className="rounded-2xl border border-amber-500/40 p-4 text-sm text-amber-600">Evenementen konden tijdelijk niet volledig worden geladen.</p>}
+    {guestlistLoadError&&<p className="rounded-2xl border border-amber-500/40 p-4 text-sm text-amber-600">Guestlist kon tijdelijk niet volledig worden geladen. De pagina blijft beschikbaar zodat je opnieuw kunt proberen.</p>}
+    {backstageLoadError&&<p className="rounded-2xl border border-amber-500/40 p-4 text-sm text-amber-600">Backstage-checklist kon tijdelijk niet volledig worden geladen.</p>}
+
     <header className="space-y-3">
       <div>
         <p className="text-xs font-black uppercase tracking-[.2em] text-violet-400">INKOM</p>
