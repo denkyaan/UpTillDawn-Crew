@@ -1,4 +1,3 @@
-import {Buffer} from 'node:buffer'
 import {getCloudflareContext} from '@opennextjs/cloudflare'
 import ExcelJS from 'exceljs'
 import {z} from 'zod'
@@ -154,7 +153,8 @@ async function parseUpload(file:File){
 
   if(name.endsWith('.xlsx')){
     const wb=new ExcelJS.Workbook()
-    await wb.xlsx.load(Buffer.from(await file.arrayBuffer()))
+    const bytes=new Uint8Array(await file.arrayBuffer())
+    await wb.xlsx.load(bytes)
     const ws=wb.worksheets[0]
     if(!ws)throw new Error('Excelbestand bevat geen werkblad.')
     const matrix:string[][]=[]
