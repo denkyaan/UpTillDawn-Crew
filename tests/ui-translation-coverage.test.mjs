@@ -7,6 +7,7 @@ import { fileURLToPath } from 'node:url'
 
 const ATTRIBUTES=new Set(['placeholder','aria-label','aria-description','title','alt'])
 const USER_MESSAGE_CALLS=new Set(['setStatus','setError','setMessage'])
+const UI_OBJECT_PROPERTIES=new Set(['label','title','subtitle','description','placeholder','helperText','emptyText'])
 const INVARIANT=new Set([
   'UP TILL DAWN',
   'UP TILL DAWN Crew',
@@ -93,6 +94,12 @@ function collectVisibleStrings(sourceText,fileName){
     }
     if(ts.isJsxExpression(node)&&node.parent&&!ts.isJsxAttribute(node.parent)&&node.expression){
       for(const value of expressionStrings(node.expression))add(value,node)
+    }
+    if(ts.isPropertyAssignment(node)){
+      const name=ts.isIdentifier(node.name)||ts.isStringLiteral(node.name)?node.name.text:''
+      if(UI_OBJECT_PROPERTIES.has(name)){
+        for(const value of expressionStrings(node.initializer))add(value,node)
+      }
     }
     if(ts.isCallExpression(node)){
       const name=callName(node)
