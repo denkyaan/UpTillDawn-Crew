@@ -71,9 +71,9 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
     null
   const currentRule=currentFeature?ruleMap.get(currentFeature):undefined
   const rulesReady=!roleKey||effectiveRules.length>0
-  const adminOperationsRoute=Boolean(isAdmin&&pathname.startsWith("/operations"))
-  const currentVisible=adminOperationsRoute||!currentFeature||!roleKey||!rulesReady||previewAll||ruleMatches(currentRule,context,false)
-  const currentUsable=adminOperationsRoute||!currentFeature||!roleKey||!rulesReady||ruleUsable(currentRule,context,false)
+  const adminAlwaysRoute=Boolean(isAdmin&&(pathname.startsWith("/operations")||pathname.startsWith("/inventory")))
+  const currentVisible=adminAlwaysRoute||!currentFeature||!roleKey||!rulesReady||previewAll||ruleMatches(currentRule,context,false)
+  const currentUsable=adminAlwaysRoute||!currentFeature||!roleKey||!rulesReady||ruleUsable(currentRule,context,false)
   const contentLocked=Boolean(currentVisible&&!currentUsable)
 
   const refresh=useCallback(async()=>{
@@ -203,7 +203,7 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
   const showBriefings=feature("briefings",Boolean(isAdmin)||context.assignedEvent)
   const showOperations=feature("operations",isAdmin?true:context.shiftActive)
   const showWorkplaces=feature("workplaces",Boolean(isAdmin)||context.assignedWorkplaceRole)
-  const showInventory=feature("inventory",Boolean(isAdmin)||context.assignedWorkplaceRole)
+  const showInventory=Boolean(isAdmin)||feature("inventory",context.assignedWorkplaceRole)
   const showTasks=feature("tasks",Boolean(isAdmin)||context.shiftActive)
   const showIncidents=feature("incidents",isAdmin?true:context.shiftActive)
   const showChat=feature("chat",true)
