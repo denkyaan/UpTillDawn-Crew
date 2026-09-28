@@ -3,7 +3,7 @@ import { getCurrentUser } from '@/lib/actions/auth'
 import { ManagerOnly } from '@/components/auth/manager-only'
 import { StaffAvailability, StaffUnavailableMessage } from '@/components/auth/staff-availability'
 import { BriefingAnalysisFields } from '@/components/crew/briefing-analysis-fields'
-import { acknowledgeBriefing, acknowledgeInstruction, applyOperationalChecklistTemplate, createBriefing, createPersonalInstruction, updateBriefing, updatePersonalInstruction } from '@/lib/actions/uptilldawn'
+import { acknowledgeBriefing, acknowledgeInstruction, createBriefing, createPersonalInstruction, updateBriefing, updatePersonalInstruction } from '@/lib/actions/uptilldawn'
 import { AssignmentScopeFields, type AssignmentEvent, type AssignmentMembership, type AssignmentPerson, type AssignmentWorkplace } from '@/components/crew/assignment-scope-fields'
 import { OperationalChecklistPanel } from '@/components/crew/operational-checklists'
 import { PlatformAiAssistant } from '@/components/admin/platform-ai-assistant'
@@ -55,8 +55,8 @@ function PhotoGallery({rows,urls}:{rows:Tables<'work_attachments'>[];urls:Map<st
 export default async function Page(){
  const s=await createClient();const user=await getCurrentUser();if(!user)return null
  const isAdmin=user.role==='admin',isResponsible=user.role==='responsible_lead',manager=isAdmin||isResponsible
- const [{data:briefs,error},{data:personal},{data:acks},{data:packs},{data:eventWindows},{data:ownMemberships},{data:activeEvents},{data:ownActiveShifts},{data:checklistTemplates}]=await Promise.all([
-  s.from('briefings').select('*').order('created_at',{ascending:false}),s.from('personal_instructions').select('*').order('created_at',{ascending:false}),s.from('briefing_acknowledgements').select('*').eq('user_id',user.id),s.from('personal_instruction_acknowledgements').select('*').eq('user_id',user.id),s.from('events').select('id').gte('end_at','now'),s.from('event_members').select('event_id').eq('user_id',user.id),s.from('events').select('id').lte('start_at','now').gte('end_at','now').order('start_at'),s.from('shifts').select('event_id').eq('user_id',user.id).neq('status','cancelled').lte('scheduled_start','now').gte('scheduled_end','now').order('scheduled_start'),s.from('operational_checklist_templates').select('id,catalog_workplace_id,kind,title,description').eq('is_active',true).order('kind').order('title')])
+ const [{data:briefs,error},{data:personal},{data:acks},{data:packs},{data:eventWindows},{data:ownMemberships},{data:activeEvents},{data:ownActiveShifts}]=await Promise.all([
+  s.from('briefings').select('*').order('created_at',{ascending:false}),s.from('personal_instructions').select('*').order('created_at',{ascending:false}),s.from('briefing_acknowledgements').select('*').eq('user_id',user.id),s.from('personal_instruction_acknowledgements').select('*').eq('user_id',user.id),s.from('events').select('id').gte('end_at','now'),s.from('event_members').select('event_id').eq('user_id',user.id),s.from('events').select('id').lte('start_at','now').gte('end_at','now').order('start_at'),s.from('shifts').select('event_id').eq('user_id',user.id).neq('status','cancelled').lte('scheduled_start','now').gte('scheduled_end','now').order('scheduled_start')])
  const readableEventIds=new Set((eventWindows||[]).map(event=>event.id)),assignedEventIds=new Set((ownMemberships||[]).map(row=>row.event_id)),hasOpenAssignedEvent=[...assignedEventIds].some(id=>readableEventIds.has(id));if(!isAdmin&&!hasOpenAssignedEvent)redirect('/events')
  const staffCanReadBriefing=(b:Tables<'briefings'>)=>assignedEventIds.has(b.event_id)&&readableEventIds.has(b.event_id)
  const staffCanReadInstruction=(i:Tables<'personal_instructions'>)=>i.user_id===user.id&&assignedEventIds.has(i.event_id)&&readableEventIds.has(i.event_id)
@@ -73,27 +73,6 @@ export default async function Page(){
  {isAdmin&&<PlatformAiAssistant eventId={defaultEventId||undefined} contextKey="briefing" contextLabel="Briefing & checklists"/>}
  {manager&&(isAdmin||events.length>0)&&<ManagerOnly><div className="grid gap-4 lg:grid-cols-2"><form action={createBriefing} className="grid gap-3 rounded-xl border p-4"><h2 className="font-bold">Nieuwe algemene instructie</h2><AssignmentScopeFields events={events} workplaces={workplaces} people={people} memberships={memberships} isAdmin={isAdmin} showEventSelect requirePerson={false} workplaceRequired={false} defaultEventId={defaultEventId}/><BriefingAnalysisFields/><MediaInput/><button className="rounded-xl bg-violet-600 p-3">Instructie aanmaken</button></form>
  <form action={createPersonalInstruction} className="grid gap-3 rounded-xl border border-violet-500 p-4"><h2 className="font-bold">Persoonlijke instructie</h2><AssignmentScopeFields events={events} workplaces={workplaces} people={people} memberships={memberships} isAdmin={isAdmin} showEventSelect workplaceRequired={false} defaultEventId={defaultEventId}/><BriefingAnalysisFields bodyPlaceholder="Persoonlijke instructie"/><MediaInput/><button className="rounded-xl bg-violet-600 p-3">Instructie toewijzen</button></form></div></ManagerOnly>}
- {manager&&workplaces.length>0&&<section className="space-y-3 rounded-2xl border border-violet-500/30 p-4">
-  <div>
-   <h2 className="text-xl font-black">Checklist-template toepassen</h2>
-   <p className="text-sm text-muted-foreground">Kies een werkplek en laad een standaard opening-, sluit- of safetychecklist.</p>
-  </div>
-  <div className="grid gap-3 lg:grid-cols-2">
-   {workplaces.map(workplace=>{
-    const eventName=events.find(event=>event.id===workplace.event_id)?.name||'Evenement'
-    return <form key={workplace.id} action={applyOperationalChecklistTemplate} className="grid gap-2 rounded-xl border p-3">
-     <input type="hidden" name="event_id" value={workplace.event_id}/>
-     <input type="hidden" name="workplace_id" value={workplace.id}/>
-     <b>{eventName} — {workplace.name}</b>
-     <select name="template_id" required className="rounded-lg border bg-background p-3">
-      <option value="">Template…</option>
-      {(checklistTemplates||[]).map(template=><option key={template.id} value={template.id}>{template.kind.toUpperCase()} · {template.title}</option>)}
-     </select>
-     <button className="rounded-xl border p-3 font-bold">TEMPLATE TOEPASSEN</button>
-    </form>
-   })}
-  </div>
- </section>
  {manager&&workplaces.length>0&&<OperationalChecklistPanel
   userId={user.id}
   canManage={manager}
