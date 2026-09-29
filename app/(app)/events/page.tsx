@@ -80,7 +80,7 @@ export default async function Page({searchParams}:{searchParams?:Promise<{event?
   const peopleById=new Map(people.map(person=>[person.id,person]))
   const emergencyByEvent=new Map((emergencyResult.data||[]).map(row=>[row.event_id,row]))
 
-  return <main className="space-y-6 p-4 md:p-8">
+  return <main id="eventbeheer" className="scroll-mt-24 space-y-6 p-4 md:p-8">
     <div>
       <h1 className="text-3xl font-black">Evenementen</h1>
       <p className="text-sm text-muted-foreground">Beheer de volledige eventlevenscyclus: planning, briefing, readiness, documenten, afsluiting en archief. Klik op een evenement om de context mee te nemen naar andere modules.</p>
