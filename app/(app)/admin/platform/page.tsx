@@ -5,6 +5,7 @@ import { createClient } from '@/lib/supabase/crew-server'
 import { DateInput } from '@/components/crew/date-input'
 import { PlatformAiAssistant } from '@/components/admin/platform-ai-assistant'
 import { platformModuleHelp } from '@/lib/ui-field-help'
+import { AutomationManager } from '@/components/admin/automation-manager'
 import {
   applyEventTemplate, applyPlanningRecommendation, captureEventTemplate, createKnowledgeArticle,
   createQrResource, dismissPlanningRecommendation, generateEventReport, generatePlanningRecommendations,
@@ -33,7 +34,7 @@ export default async function PlatformCenter(){
 
   const [
     eventsResult,recommendationsResult,featuresResult,knowledgeResult,qrResult,templatesResult,
-    versionsResult,profilesResult,workplacesResult,inventoryResult,reportsResult,recoveryResult,
+    versionsResult,profilesResult,workplacesResult,inventoryResult,reportsResult,recoveryResult,automationResult,
   ]=await Promise.all([
     s.from('events').select('id,name,status,start_at,end_at,venue,address').neq('status','archived').order('start_at'),
     s.from('planning_recommendations').select('id,event_id,workplace_id,recommended_user_id,role_name,scheduled_start,scheduled_end,score,reasons,status').eq('status','proposed').order('score',{ascending:false}).limit(100),
@@ -47,6 +48,7 @@ export default async function PlatformCenter(){
     s.from('inventory_items').select('id,event_id,workplace_id,name,asset_code,barcode,serial_number,location_label,maintenance_due_at,reorder_threshold,unit_cost_cents,asset_notes,available_quantity,total_quantity,missing_quantity,damaged_quantity').eq('is_active',true).order('name').limit(200),
     s.from('event_report_snapshots').select('id,event_id,snapshot,generated_at,generation_kind').order('generated_at',{ascending:false}).limit(20),
     s.rpc('upt_recovery_readiness'),
+    s.from('automation_rules').select('automation_key,label,description,enabled,trigger_key,action_key,delay_minutes,reminder_minutes,escalation_minutes,audience,channels,auto_action,audit_enabled,cooldown_minutes,max_retries,last_run_at').order('automation_key'),
   ])
 
   const loadProblems=[
@@ -62,6 +64,7 @@ export default async function PlatformCenter(){
     inventoryResult.error&&'inventaris',
     reportsResult.error&&'rapportage',
     recoveryResult.error&&'recovery',
+    automationResult.error&&'automatiseringen',
   ].filter((value):value is string=>Boolean(value))
 
   const events=eventsResult.data||[]
@@ -104,6 +107,11 @@ export default async function PlatformCenter(){
     </section>}
 
     <PlatformAiAssistant/>
+
+    <AutomationManager rules={(automationResult.data||[]).map(rule=>({
+      ...rule,
+      channels:rule.channels||[],
+    }))}/>
 
     <section className="space-y-3">
       <h2 className="text-xl font-black">Live event-command-center</h2>
