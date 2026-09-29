@@ -99,3 +99,18 @@ test('new automation and admin UX has explicit four-language coverage',async()=>
     assert.match(translations,new RegExp(`'${escaped}': \\{ fr: '.+?', en: '.+?', de: '.+?' \\}`),key)
   }
 })
+
+
+test('admin overview uses a prioritized contextual action center',async()=>{
+  const [page,center,translations]=await Promise.all([
+    read('app/(app)/admin/page.tsx'),
+    read('components/admin/action-center.tsx'),
+    read('lib/ui-translation-complete.ts'),
+  ])
+  assert.match(page,/AdminActionCenter items=\{actionQueue\}/)
+  assert.match(page,/missing-checkout/)
+  assert.match(page,/priority:/)
+  assert.match(center,/critical:0,high:1,normal:2,info:3/)
+  assert.match(center,/gesorteerd op urgentie/)
+  for(const key of ['HOOG','NORMAAL','INFO','STOPUREN ONTBREKEN','ONDERBEZETTING'])assert.ok(translations.includes(`'${key}': { fr:`),key)
+})
