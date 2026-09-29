@@ -1,9 +1,9 @@
 "use client"
 
-import { deleteEvent } from "@/lib/actions/uptilldawn"
+import { archiveEvent } from "@/lib/actions/events"
 
 export function DeleteEventButton({eventId,eventName}:{eventId:string;eventName:string}){
-  return <form action={deleteEvent} onSubmit={event=>{
+  return <form action={archiveEvent} onSubmit={event=>{
     if(!window.confirm(`Evenement “${eventName}” archiveren? Historische gegevens blijven bewaard en het event verdwijnt uit actieve overzichten.`)){
       event.preventDefault()
     }

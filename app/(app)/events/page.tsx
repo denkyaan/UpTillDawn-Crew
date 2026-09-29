@@ -63,7 +63,7 @@ export default async function Page(){
   ])
   const nowMs=new Date().getTime()
   const visibleEvents=user.isAdmin
-    ? events
+    ? events.filter(event=>event.status!=='archived')
     : events.filter(event=>{
         const end=Date.parse(event.end_at)
         const visibleWhileOpen=event.status!=='archived'&&nowMs<=end
