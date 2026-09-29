@@ -1246,6 +1246,9 @@ export type Database = {
       events: {
         Row: {
           address: string | null
+          archive_reason: string | null
+          archived_at: string | null
+          archived_by: string | null
           checkin_radius_m: number
           created_at: string
           created_by: string | null
@@ -1262,7 +1265,10 @@ export type Database = {
           max_joiners: number | null
           name: string
           onboarding_required: boolean
+          pre_archive_status: string | null
           registration_deadline: string | null
+          restored_at: string | null
+          restored_by: string | null
           start_at: string
           start_date: string
           status: string
@@ -1272,6 +1278,9 @@ export type Database = {
         }
         Insert: {
           address?: string | null
+          archive_reason?: string | null
+          archived_at?: string | null
+          archived_by?: string | null
           checkin_radius_m?: number
           created_at?: string
           created_by?: string | null
@@ -1288,7 +1297,10 @@ export type Database = {
           max_joiners?: number | null
           name: string
           onboarding_required?: boolean
+          pre_archive_status?: string | null
           registration_deadline?: string | null
+          restored_at?: string | null
+          restored_by?: string | null
           start_at: string
           start_date: string
           status?: string
@@ -1298,6 +1310,9 @@ export type Database = {
         }
         Update: {
           address?: string | null
+          archive_reason?: string | null
+          archived_at?: string | null
+          archived_by?: string | null
           checkin_radius_m?: number
           created_at?: string
           created_by?: string | null
@@ -1314,7 +1329,10 @@ export type Database = {
           max_joiners?: number | null
           name?: string
           onboarding_required?: boolean
+          pre_archive_status?: string | null
           registration_deadline?: string | null
+          restored_at?: string | null
+          restored_by?: string | null
           start_at?: string
           start_date?: string
           status?: string
@@ -1324,8 +1342,22 @@ export type Database = {
         }
         Relationships: [
           {
+            foreignKeyName: "events_archived_by_fkey"
+            columns: ["archived_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "events_created_by_fkey"
             columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "events_restored_by_fkey"
+            columns: ["restored_by"]
             isOneToOne: false
             referencedRelation: "profiles"
             referencedColumns: ["id"]
@@ -4489,6 +4521,10 @@ export type Database = {
         }
         Returns: undefined
       }
+      upt_force_archive_event: {
+        Args: { p_event: string; p_reason: string }
+        Returns: undefined
+      }
       upt_generate_event_report: { Args: { p_event: string }; Returns: Json }
       upt_generate_planning_recommendations: {
         Args: { p_event: string }
@@ -4916,6 +4952,10 @@ export type Database = {
       }
       upt_restock_inventory_item: {
         Args: { p_item: string; p_notes?: string; p_quantity: number }
+        Returns: undefined
+      }
+      upt_restore_event: {
+        Args: { p_event: string; p_reason?: string }
         Returns: undefined
       }
       upt_restore_inventory_quantity: {
