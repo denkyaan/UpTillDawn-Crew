@@ -65,12 +65,13 @@ export function AdminActionCenter({items}:{items:ActionQueueItem[]}){
     {!sorted.length&&<p className="rounded-xl border border-dashed p-4 text-muted-foreground">Geen directe acties vereist.</p>}
 
     <div className="grid gap-2">
-      {sorted.slice(0,12).map(item=><ContextLink
+      {sorted.slice(0,12).map((item,index)=><ContextLink
         key={item.key}
         href={item.href}
         context={item.context}
         className={'block rounded-xl border p-3 transition hover:-translate-y-0.5 hover:shadow-sm '+classes[item.priority]}
       >
+        {index===0&&urgent>0&&<p className="mb-2 text-[10px] font-black uppercase tracking-[.16em] text-red-500">Eerst behandelen</p>}
         <div className="flex items-start justify-between gap-3">
           <div className="min-w-0">
             <p className="font-semibold">{item.title}</p>
