@@ -14,7 +14,7 @@ test('admin primary navigation is consolidated while nested workflows remain rea
     read('app/(app)/operations/page.tsx'),
   ])
 
-  for(const [key,label] of [
+  for(const pair of [
     ['overview','Overzicht'],['events','Evenementen'],['workplaces','Werkplaatsen & shifts'],
     ['operations','Werkuren'],['tasks','Taken'],['sales','Sales'],['personnel','Goedkeuringen'],
     ['crew','Personeel'],['chat','Chats'],['incidents','Help'],['settings','Beheer'],
