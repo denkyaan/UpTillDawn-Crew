@@ -4,6 +4,21 @@ type Row = { fr: string; en: string; de: string }
 // Canonical Dutch UI strings that were historically present only in the NL/FR/EN table.
 // Keep every row complete: missing translations must never silently fall back to Dutch.
 const ROWS: Record<string, Row> = {
+  'Automatisch verzamelde acties, gesorteerd op urgentie. Eén klik opent meteen de juiste context.': { fr: 'Actions rassemblées automatiquement et classées par urgence. Un clic ouvre directement le bon contexte.', en: 'Automatically collected actions sorted by urgency. One click opens the correct context immediately.', de: 'Automatisch gesammelte Aktionen, nach Dringlichkeit sortiert. Ein Klick öffnet sofort den richtigen Kontext.' },
+  'Geen directe acties vereist.': { fr: 'Aucune action immédiate requise.', en: 'No immediate actions required.', de: 'Keine unmittelbaren Aktionen erforderlich.' },
+  'extra actie(s) zijn beschikbaar via de gekoppelde modules.': { fr: 'action(s) supplémentaire(s) sont disponibles via les modules associés.', en: 'additional action(s) are available through the linked modules.', de: 'weitere Aktion(en) sind über die verknüpften Module verfügbar.' },
+  'HOOG': { fr: 'ÉLEVÉ', en: 'HIGH', de: 'HOCH' },
+  'NORMAAL': { fr: 'NORMAL', en: 'NORMAL', de: 'NORMAL' },
+  'INFO': { fr: 'INFO', en: 'INFO', de: 'INFO' },
+  'STOPUREN ONTBREKEN': { fr: 'POINTAGE DE SORTIE MANQUANT', en: 'CLOCK-OUT MISSING', de: 'AUSSTEMPELN FEHLT' },
+  'NO-SHOW': { fr: 'ABSENCE', en: 'NO-SHOW', de: 'NICHT ERSCHIENEN' },
+  'LANGE PAUZE': { fr: 'PAUSE LONGUE', en: 'LONG BREAK', de: 'LANGE PAUSE' },
+  'ONDERBEZETTING': { fr: 'SOUS-EFFECTIF', en: 'UNDERSTAFFED', de: 'UNTERBESETZT' },
+  'SHIFT UITLOOP': { fr: 'DÉPASSEMENT DE SERVICE', en: 'SHIFT OVERRUN', de: 'SCHICHTÜBERZIEHUNG' },
+  'BRIEFING OPEN': { fr: 'BRIEFING EN ATTENTE', en: 'BRIEFING OPEN', de: 'BRIEFING OFFEN' },
+  'Nieuwe registratie wacht op toegang.': { fr: 'Une nouvelle inscription attend l’accès.', en: 'A new registration is waiting for access.', de: 'Eine neue Registrierung wartet auf Zugriff.' },
+  'OPEN TAAKTOEWIJZINGEN': { fr: 'ATTRIBUTIONS DE TÂCHES OUVERTES', en: 'OPEN TASK ASSIGNMENTS', de: 'OFFENE AUFGABENZUWEISUNGEN' },
+  'SYNCHRONISATIE CONTROLEREN': { fr: 'VÉRIFIER LA SYNCHRONISATION', en: 'CHECK SYNCHRONIZATION', de: 'SYNCHRONISIERUNG PRÜFEN' },
   'Laatste controle:': { fr: 'Dernier contrôle :', en: 'Last check:', de: 'Letzte Kontrolle:' },
   'Nog niet gecontroleerd': { fr: 'Pas encore contrôlé', en: 'Not checked yet', de: 'Noch nicht geprüft' },
   'Vertraging bepaalt wanneer deze workflow voor het eerst actief wordt. Cooldown voorkomt onnodige herhaling. Pushmeldingen worden alleen geleverd wanneer de gebruiker push heeft toegestaan.': { fr: 'Le délai détermine quand ce workflow devient actif pour la première fois. Le délai de réactivation évite les répétitions inutiles. Les notifications push ne sont envoyées que si l’utilisateur les a autorisées.', en: 'Delay determines when this workflow first becomes active. Cooldown prevents unnecessary repetition. Push notifications are delivered only when the user has allowed push.', de: 'Die Verzögerung bestimmt, wann dieser Workflow erstmals aktiv wird. Die Abklingzeit verhindert unnötige Wiederholungen. Push-Mitteilungen werden nur zugestellt, wenn der Nutzer Push erlaubt hat.' },
