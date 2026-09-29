@@ -42,6 +42,19 @@ small{display:block;color:#a1a1aa;line-height:1.45}.urgent{border-color:#7f1d1d}
 </main>
 <div class="fixed"><div><button class="secondary" onclick="location.reload()">OPNIEUW VERBINDEN</button></div></div>
 <script>
+const OFFLINE_COPY={
+ nl:{title:"UP TILL DAWN — GEEN VERBINDING",subtitle:"Lokale operationele modus",offline:"GEEN VERBINDING",notice:"De server is niet bereikbaar. Alleen de laatst bevestigde serverstatus en lokale wachtrij worden gebruikt. Lokale acties krijgen geen verzonnen servertijd.",work:"Werkstatus",shifts:"Mijn diensten",urgent:"URGENT lokaal bewaren",event:"Selecteer evenement",workplace:"Geen specifieke werkplek",message:"Wat is er aan de hand?",save:"URGENT BEWAREN",queue:"Lokale wachtrij",retry:"OPNIEUW VERBINDEN"},
+ fr:{title:"UP TILL DAWN — PAS DE CONNEXION",subtitle:"Mode opérationnel local",offline:"PAS DE CONNEXION",notice:"Le serveur est inaccessible. Seuls le dernier état confirmé et la file d’attente locale sont utilisés.",work:"État de travail",shifts:"Mes services",urgent:"Enregistrer URGENT localement",event:"Sélectionner un événement",workplace:"Aucun poste spécifique",message:"Que se passe-t-il ?",save:"ENREGISTRER URGENT",queue:"File d’attente locale",retry:"SE RECONNECTER"},
+ en:{title:"UP TILL DAWN — NO CONNECTION",subtitle:"Local operational mode",offline:"NO CONNECTION",notice:"The server cannot be reached. Only the last confirmed server state and local queue are used.",work:"Work status",shifts:"My shifts",urgent:"Save URGENT locally",event:"Select event",workplace:"No specific workplace",message:"What is happening?",save:"SAVE URGENT",queue:"Local queue",retry:"RECONNECT"},
+ de:{title:"UP TILL DAWN — KEINE VERBINDUNG",subtitle:"Lokaler Betriebsmodus",offline:"KEINE VERBINDUNG",notice:"Der Server ist nicht erreichbar. Es werden nur der zuletzt bestätigte Serverstatus und die lokale Warteschlange verwendet.",work:"Arbeitsstatus",shifts:"Meine Schichten",urgent:"URGENT lokal speichern",event:"Veranstaltung auswählen",workplace:"Kein bestimmter Arbeitsplatz",message:"Was ist passiert?",save:"URGENT SPEICHERN",queue:"Lokale Warteschlange",retry:"ERNEUT VERBINDEN"}
+};
+const rawLocale=(navigator.languages?.[0]||navigator.language||"nl").toLowerCase();
+const offlineLocale=rawLocale.startsWith("fr")?"fr":rawLocale.startsWith("de")?"de":rawLocale.startsWith("en")?"en":"nl";
+const oc=OFFLINE_COPY[offlineLocale];document.documentElement.lang=offlineLocale;
+document.querySelector(".top h1").textContent=oc.title;document.querySelector(".top .muted").textContent=oc.subtitle;document.querySelector(".pill").textContent=oc.offline;
+document.getElementById("notice").textContent=oc.notice;document.querySelector("#status h2").textContent=oc.work;document.querySelector("#shifts h2").textContent=oc.shifts;
+document.querySelector(".urgent h2").textContent=oc.urgent;document.querySelector("#urgentEvent option").textContent=oc.event;document.querySelector("#urgentWorkplace option").textContent=oc.workplace;
+document.getElementById("urgentMessage").placeholder=oc.message;document.querySelector("#urgentForm button").textContent=oc.save;document.querySelector("#queue h2").textContent=oc.queue;document.querySelector(".fixed button").textContent=oc.retry;
 const TIME_TYPES=new Set(['start_work','start_break','stop_break','stop_work','transition'])
 let snapshot=null,userId='',ops=[],uploads=[]
 
