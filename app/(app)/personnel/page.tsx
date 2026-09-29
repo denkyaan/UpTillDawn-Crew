@@ -7,13 +7,13 @@ import { nlRole } from '@/lib/ui-nl'
 
 export const dynamic = 'force-dynamic'
 
-export default async function Page({searchParams}:{searchParams?:Promise<{feedback?:string}>}) {
+export default async function Page({searchParams}:{searchParams?:Promise<{feedback?:string;user?:string;focus?:string}>}) {
   const params=searchParams?await searchParams:{}
   const current=await getCurrentUser()
   if(!current?.isAdmin)redirect('/')
   const s=await createClient()
   const {data,error}=await s.rpc('upt_admin_personnel_details_v2')
-  const pending=(data||[]).filter(person=>!person.approved)
+  const pending=(data||[]).filter(person=>!person.approved).sort((a,b)=>Number(b.id===params.user)-Number(a.id===params.user))
 
   const photos=new Map<string,string>()
   await Promise.all(pending.filter(person=>person.profile_photo_url).map(async person=>{
@@ -35,7 +35,7 @@ export default async function Page({searchParams}:{searchParams?:Promise<{feedba
     {error&&<p className="rounded-xl border border-red-500/40 p-4 text-red-500">Accountaanvragen konden niet worden geladen.</p>}
     {!error&&!pending.length&&<p className="rounded-2xl border p-5 text-muted-foreground">Er zijn geen openstaande accountaanvragen.</p>}
 
-    <div className="grid gap-3">{pending.map(person=><article key={person.id} className="rounded-2xl border p-4">
+    <div className="grid gap-3">{pending.map(person=>{const focused=person.id===params.user;return <article id={focused?'approval-focus':undefined} key={person.id} className={'rounded-2xl border p-4 '+(focused?'border-violet-500/70 ring-1 ring-violet-500/20':'')}>
       <div className="flex flex-col gap-4 md:flex-row md:items-start">
         <div className="relative grid h-20 w-20 shrink-0 place-items-center overflow-hidden rounded-xl border bg-muted text-xl font-black">
           {photos.get(person.id)
@@ -68,6 +68,6 @@ export default async function Page({searchParams}:{searchParams?:Promise<{feedba
           <button className="rounded-xl bg-emerald-700 p-3 font-black text-white">ACCOUNT GOEDKEUREN</button>
         </form>
       </div>
-    </article>)}</div>
+    </article>})}</div>
   </main>
 }
