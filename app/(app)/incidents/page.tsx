@@ -12,7 +12,8 @@ function isVideo(path:string|null){
   return Boolean(path&&/\.(mp4|webm|mov)(?:$|\?)/i.test(path))
 }
 
-export default async function Page(){
+export default async function Page({searchParams}:{searchParams?:Promise<{event?:string;workplace?:string;user?:string;focus?:string}>}){
+  const params=searchParams?await searchParams:{}
   const s=await createClient()
   const current=await getCurrentUser()
   if(!current)return null
@@ -54,11 +55,15 @@ export default async function Page(){
     return <main className="mx-auto max-w-4xl p-4 md:p-8"><p className="rounded-xl border p-4 text-muted-foreground">Incidenten zijn beschikbaar vanaf de start van een lopend evenement.</p></main>
   }
 
-  const visibleIncidents=(incidents||[]).filter(incident=>{
+  let visibleIncidents=(incidents||[]).filter(incident=>{
     if(!incident.event_id||!activeEventIds.has(incident.event_id))return false
     if(isAdmin)return true
     if(isResponsible)return Boolean(incident.workplace_id&&responsiblePairs.has(`${incident.event_id}:${incident.workplace_id}`))
     return incident.reporter_id===user.id||incident.user_id===user.id
+  })
+  visibleIncidents=[...visibleIncidents].sort((a,b)=>{
+    const score=(incident:typeof visibleIncidents[number])=>Number(Boolean(params.event&&incident.event_id===params.event))*4+Number(Boolean(params.workplace&&incident.workplace_id===params.workplace))*2+Number(Boolean(params.user&&(incident.reporter_id===params.user||incident.user_id===params.user)))
+    return score(b)-score(a)||Date.parse(b.created_at)-Date.parse(a.created_at)
   })
   const activeShift=activeShifts.find(shift=>shift.id===currentContext?.shift_id)||activeShifts[0]
   const contextMap=new Map(activeShifts.map(shift=>[
@@ -80,7 +85,7 @@ export default async function Page(){
     },
   )
   const contexts=[...contextMap.values()]
-  const emergencyEvent=(events||[]).find(event=>event.id===(currentContext?.event_id||activeShift?.event_id))||null
+  const emergencyEvent=(events||[]).find(event=>event.id===(params.event||currentContext?.event_id||activeShift?.event_id))||null
   const emergencyInfo=emergencyEvent?emergencyByEvent.get(emergencyEvent.id)||null:null
 
   const signedMedia=new Map<string,string>()
@@ -117,7 +122,7 @@ export default async function Page(){
       ? <p>Meldingen konden niet worden geladen.</p>
       : !visibleIncidents.length
         ? <p className="text-muted-foreground">Geen help oproepen.</p>
-        : visibleIncidents.map(i=><article key={i.id} className="rounded-xl border p-4">
+        : visibleIncidents.map(i=>{const focused=Boolean((params.event&&i.event_id===params.event)||(params.workplace&&i.workplace_id===params.workplace)||(params.user&&(i.reporter_id===params.user||i.user_id===params.user)));return <article id={focused?'help-focus':undefined} key={i.id} className={'rounded-xl border p-4 '+(focused?'border-violet-500/70 ring-1 ring-violet-500/20':'')}>
             <div className="flex items-start justify-between gap-3">
               <p className="whitespace-pre-wrap">{i.message}</p>
               <div className="flex flex-wrap justify-end gap-2">
