@@ -5070,6 +5070,19 @@ export type Database = {
         }
         Returns: undefined
       }
+      upt_save_automation_rule: {
+        Args: {
+          p_channels: string[]
+          p_cooldown_minutes: number
+          p_delay_minutes: number
+          p_enabled: boolean
+          p_escalation_minutes: number
+          p_key: string
+          p_max_retries: number
+          p_reminder_minutes: number
+        }
+        Returns: undefined
+      }
       upt_save_push_subscription: {
         Args: {
           p_auth: string
