@@ -49,3 +49,10 @@ test('offline operational content can queue checklist guestlist and sales action
   assert.match(center,/checklist_item/)
   assert.match(center,/sale:/)
 })
+
+test('public offline fallback supports all four UI locales', async () => {
+  const html = await readFile(new URL('../public/offline-public.html', import.meta.url), 'utf8')
+  for (const locale of ['nl','fr','en','de']) assert.match(html, new RegExp(locale + ':\\{'))
+  assert.match(html, /navigator\.languages/)
+  assert.match(html, /document\.documentElement\.lang=locale/)
+})
