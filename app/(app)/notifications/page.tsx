@@ -1,9 +1,9 @@
-import Link from 'next/link'
 import { createClient } from '@/lib/supabase/crew-server'
 import { markNotificationRead } from '@/lib/actions/uptilldawn'
 import { nlStatus } from '@/lib/ui-nl'
 import { PushNotificationSettings } from '@/components/push-notification-settings'
 import { NotificationBadgeSync } from '@/components/notification-badge-sync'
+import { NotificationOpenLink } from '@/components/admin/notification-open-link'
 
 export const dynamic = 'force-dynamic'
 
@@ -48,7 +48,7 @@ export default async function Page() {
           {!n.read_at && <span className="rounded-full bg-violet-500/20 px-2 py-1 text-xs font-bold text-violet-300">NIEUW</span>}
         </div>
         <div className="mt-3 flex flex-wrap gap-2">
-          {safeLink && <Link href={safeLink} className="rounded-lg bg-violet-600 px-3 py-2 text-sm font-bold">OPENEN</Link>}
+          {safeLink && <NotificationOpenLink href={safeLink} title="Opent direct in de juiste context" className="rounded-lg bg-violet-600 px-3 py-2 text-sm font-bold">OPENEN</NotificationOpenLink>}
           {!n.read_at && <form action={markNotificationRead}>
             <input type="hidden" name="notification_id" value={n.id}/>
             <button className="rounded-lg border px-3 py-2 text-sm">Markeer gelezen</button>
