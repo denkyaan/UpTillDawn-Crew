@@ -19,7 +19,8 @@ export const dynamic = 'force-dynamic'
 type CrewOption = { id: string; full_name: string | null }
 type WorkplaceOption = { id: string; name: string; event_id: string; events: { name: string } | null }
 
-export default async function Page() {
+export default async function Page({searchParams}:{searchParams?:Promise<{event?:string;workplace?:string;user?:string}>}) {
+  const params=searchParams?await searchParams:{}
   const s = await createClient()
   const current = await getCurrentUser()
   if (!current) return null
@@ -53,7 +54,7 @@ export default async function Page() {
   const manager = isAdmin || isResponsible
   const hasActiveShift = Boolean(ownActiveShifts?.length)
   const activeShiftEventIds = new Set((ownActiveShifts || []).map(shift => shift.event_id))
-  const runningEventId = ownActiveShifts?.[0]?.event_id || activeEvents?.[0]?.id || ''
+  const runningEventId = (isAdmin&&params.event&&events?.some(event=>event.id===params.event)?params.event:null) || ownActiveShifts?.[0]?.event_id || activeEvents?.[0]?.id || ''
 
   const activeEventIds = new Set((activeEvents || []).map(event => event.id))
   const openEventIds = new Set((openEvents || []).map(event => event.id))
@@ -91,6 +92,10 @@ export default async function Page() {
       && activeShiftEventIds.has(item.tasks!.event_id),
     )
   }
+  visibleAssignments=[...visibleAssignments].sort((a,b)=>{
+    const score=(item:typeof visibleAssignments[number])=>Number(Boolean(params.user&&item.user_id===params.user))*4+Number(Boolean(params.workplace&&item.tasks?.workplace_id===params.workplace))*2+Number(Boolean(params.event&&item.tasks?.event_id===params.event))
+    return score(b)-score(a)
+  })
   const hasActiveAssignedEvent = (ownMemberships || []).some(member => activeEventIds.has(member.event_id))
 
   const attachmentRows: Tables<'work_attachments'>[] = []
@@ -118,8 +123,8 @@ export default async function Page() {
       s.from('event_members').select('event_id,user_id'),
       s.from('shifts').select('event_id,workplace_id,user_id').neq('status', 'cancelled'),
     ])
-    workplaces = w || []
-    people = p || []
+    workplaces = [...(w || [])].sort((a,b)=>Number(b.id===params.workplace)-Number(a.id===params.workplace))
+    people = [...(p || [])].sort((a,b)=>Number(b.id===params.user)-Number(a.id===params.user))
     memberships = [
       ...(eventMembers || []).map(row => ({ event_id: row.event_id, workplace_id: null, user_id: row.user_id })),
       ...(shiftRows || []).map(row => ({ event_id: row.event_id, workplace_id: row.workplace_id, user_id: row.user_id })),
@@ -197,6 +202,8 @@ export default async function Page() {
         multiplePeople
         availability={availabilityRows || []}
         defaultEventId={runningEventId}
+        defaultWorkplaceId={params.workplace||''}
+        defaultPersonId={params.user||''}
       />
       <input name="title" required maxLength={200} placeholder="Taaknaam" className="border bg-background p-3"/>
       <textarea name="description" maxLength={4000} placeholder="Omschrijving" className="border bg-background p-3 md:col-span-2"/>
