@@ -19,6 +19,8 @@ export function AssignmentScopeFields({
   multiplePeople = false,
   availability = [],
   defaultEventId = "",
+  defaultWorkplaceId = "",
+  defaultPersonId = "",
 }: {
   events: AssignmentEvent[]
   workplaces: AssignmentWorkplace[]
@@ -31,11 +33,20 @@ export function AssignmentScopeFields({
   multiplePeople?: boolean
   availability?: Array<{ event_id: string; user_id: string }>
   defaultEventId?: string
+  defaultWorkplaceId?: string
+  defaultPersonId?: string
 }) {
-  const validDefaultEventId = events.some(event => event.id === defaultEventId) ? defaultEventId : ""
+  const validDefaultWorkplaceId = workplaces.some(workplace => workplace.id === defaultWorkplaceId) ? defaultWorkplaceId : ""
+  const workplaceEventId = validDefaultWorkplaceId ? workplaces.find(workplace => workplace.id === validDefaultWorkplaceId)?.event_id || "" : ""
+  const validDefaultEventId = events.some(event => event.id === defaultEventId)
+    ? defaultEventId
+    : events.some(event => event.id === workplaceEventId)
+      ? workplaceEventId
+      : ""
+  const validDefaultPersonId = people.some(person => person.id === defaultPersonId) ? defaultPersonId : ""
   const [eventId, setEventId] = useState(validDefaultEventId)
-  const [workplaceId, setWorkplaceId] = useState("")
-  const [personId, setPersonId] = useState("")
+  const [workplaceId, setWorkplaceId] = useState(validDefaultWorkplaceId)
+  const [personId, setPersonId] = useState(validDefaultPersonId)
 
   const visibleWorkplaces = useMemo(
     () => showEventSelect && eventId
