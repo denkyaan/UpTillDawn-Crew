@@ -32,6 +32,11 @@ export default function OperationsClient(p:Props){
   },60_000)
   return()=>window.clearInterval(timer)
  },[p.manager,router])
+ useEffect(()=>{
+  if(!p.focusUserId&&!p.focusWorkplaceId&&!p.focusKind)return
+  const timer=window.setTimeout(()=>document.getElementById('operations-focus')?.scrollIntoView({behavior:'smooth',block:'center'}),120)
+  return()=>window.clearTimeout(timer)
+ },[p.focusUserId,p.focusWorkplaceId,p.focusKind])
  useEffect(()=>{void saveOperationsSnapshot({
   version:1,
   userId:p.userId,
