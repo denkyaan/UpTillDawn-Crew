@@ -40,6 +40,7 @@ export function GodAutomationBuilder({
   const [enabled,setEnabled]=useState(true)
   const [existingRules,setExistingRules]=useState<Array<{automation_key:string;label:string;description:string;enabled:boolean}>>([])
   const [loadingRules,setLoadingRules]=useState(true)
+  const [ruleStatus,setRuleStatus]=useState('')
 
   useEffect(()=>{
     let active=true
@@ -50,6 +51,15 @@ export function GodAutomationBuilder({
     }).catch(()=>{}).finally(()=>{if(active)setLoadingRules(false)})
     return()=>{active=false}
   },[])
+
+  async function toggleRule(rule:{automation_key:string;enabled:boolean}){
+    setRuleStatus('')
+    const response=await fetch('/api/god/automation-rules',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({automation_key:rule.automation_key,enabled:!rule.enabled})})
+    const data=await response.json()
+    if(!response.ok){setRuleStatus(data.error||'Automatisering kon niet worden opgeslagen.');return}
+    setExistingRules(current=>current.map(item=>item.automation_key===rule.automation_key?{...item,enabled:!rule.enabled}:item))
+    setRuleStatus('Automatisering opgeslagen.')
+  }
 
   function prompt() {
     return [
@@ -108,8 +118,9 @@ export function GodAutomationBuilder({
         <p className="mt-2 text-sm text-muted-foreground">{loadingRules?'Automatiseringen laden…':existingRules.filter(rule=>rule.enabled).length+'/'+existingRules.length+' actief'}</p>
         <div className="mt-3 max-h-80 space-y-2 overflow-auto">{existingRules.map(rule=><article key={rule.automation_key} className="rounded-lg border p-3">
           <div className="flex items-start justify-between gap-2"><div><p className="text-sm font-bold">{rule.label}</p><p className="mt-1 text-xs text-muted-foreground">{rule.description}</p></div><span className="rounded-full border px-2 py-1 text-[10px] font-black">{rule.enabled?'ACTIEF':'UIT'}</span></div>
-          <button type="button" onClick={()=>onPrepareAi('Pas de bestaande automation rule '+rule.automation_key+' aan. Behoud de bestaande automation-engine, auditlogging en autorisatie. Regel: '+rule.label+' — '+rule.description+'.','lib/automation-engine.ts',1)} className="mt-2 w-full rounded-lg border px-3 py-2 text-xs font-bold">Bewerken via AI</button>
+          <div className="mt-2 grid grid-cols-2 gap-2"><button type="button" onClick={()=>void toggleRule(rule)} className="rounded-lg border px-3 py-2 text-xs font-bold">{rule.enabled?'Uitschakelen':'Inschakelen'}</button><button type="button" onClick={()=>onPrepareAi('Pas de bestaande automation rule '+rule.automation_key+' aan. Behoud de bestaande automation-engine, auditlogging en autorisatie. Regel: '+rule.label+' — '+rule.description+'.','lib/automation-engine.ts',1)} className="rounded-lg border px-3 py-2 text-xs font-bold">Bewerken via AI</button></div>
         </article>)}</div>
+        {ruleStatus&&<p role="status" className="mt-3 text-xs">{ruleStatus}</p>}
       </section>
     </aside>
   </div>
