@@ -1,3 +1,4 @@
+import Link from 'next/link'
 import { createClient } from '@/lib/supabase/crew-server'
 import { addWorkplace,assignResponsible,demoteResponsibleToStaff,updateWorkplace } from '@/lib/actions/uptilldawn'
 import { AdminOnly } from '@/components/auth/admin-only'
@@ -14,7 +15,8 @@ export const dynamic='force-dynamic'
 
 type Person={id:string;full_name:string|null;role?:string|null}
 
-export default async function Page(){
+export default async function Page({searchParams}:{searchParams?:Promise<{event?:string;workplace?:string}>}){
+  const params=searchParams?await searchParams:{}
   const s=await createClient()
   const current=await getCurrentUser()
   if(!current)return null
@@ -310,6 +312,11 @@ export default async function Page(){
   }
 
   const responsibleKeys=new Set(responsibleAssignments.map(row=>`${row.workplace_id}:${row.user_id}`))
+  const displayWorkplaces=[...workplaces].sort((a,b)=>{
+    const aSelected=(params.workplace&&a.id===params.workplace)||(params.event&&a.event_id===params.event)
+    const bSelected=(params.workplace&&b.id===params.workplace)||(params.event&&b.event_id===params.event)
+    return Number(bSelected)-Number(aSelected)||a.sort_order-b.sort_order||a.name.localeCompare(b.name,'nl')
+  })
 
   return <main className="space-y-5 p-4 md:p-8">
     <div>
@@ -371,7 +378,7 @@ export default async function Page(){
     </AdminOnly>}
 
     <div className="grid gap-3 md:grid-cols-2">
-      {workplaces.map(workplace=>{
+      {displayWorkplaces.map(workplace=>{
         const crew=assignedCrew.filter(person=>person.workplace_id===workplace.id)
         const responsiblePeople=responsibleAssignments
           .filter(row=>row.workplace_id===workplace.id)
@@ -412,7 +419,8 @@ export default async function Page(){
           (maximum,window)=>Math.max(maximum,staffNeededForTarget(capacity,window.assignedStaff)),
           0,
         )
-        return <article key={workplace.id} className="rounded-2xl border p-4">
+        const selected=params.workplace===workplace.id||(Boolean(params.event)&&params.event===workplace.event_id)
+        return <article id={'workplace-'+workplace.id} key={workplace.id} className={'rounded-2xl border p-4 '+(selected?'border-violet-500/70 ring-1 ring-violet-500/20':'')}>
           <div className="flex items-start justify-between gap-3">
             <div>
               <b>{workplace.name}</b>
@@ -446,6 +454,13 @@ export default async function Page(){
               </form>
             </details>
           </AdminOnly>}
+
+          {isAdmin&&<div className="mt-3 flex flex-wrap gap-2">
+            <Link href={'/inventory?event='+workplace.event_id+'&workplace='+workplace.id} className="rounded-lg border px-3 py-2 text-xs font-bold">Inventaris</Link>
+            <Link href={'/guestlist?event='+workplace.event_id+'&workplace='+workplace.id} className="rounded-lg border px-3 py-2 text-xs font-bold">Inkom & Guestlist</Link>
+            <Link href={'/tasks?event='+workplace.event_id+'&workplace='+workplace.id} className="rounded-lg border px-3 py-2 text-xs font-bold">Taken</Link>
+            <Link href={'/briefings?event='+workplace.event_id+'&workplace='+workplace.id} className="rounded-lg border px-3 py-2 text-xs font-bold">Briefing</Link>
+          </div>}
 
           <div className="mt-3 space-y-3">
             <WorkplaceShiftPlanner
