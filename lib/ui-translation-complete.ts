@@ -781,6 +781,8 @@ const ROWS: Record<string, Row> = {
   'Event': { fr: 'Événement', en: 'Event', de: 'Veranstaltung' },
   'ARCHIEF': { fr: 'ARCHIVES', en: 'ARCHIVE', de: 'ARCHIV' },
   'Onbekend': { fr: 'Inconnu', en: 'Unknown', de: 'Unbekannt' },
+  'Operationeel': { fr: 'Opérationnel', en: 'Operational', de: 'Operativ' },
+  'Platform & controle': { fr: 'Plateforme & contrôle', en: 'Platform & control', de: 'Plattform & Kontrolle' },
   'Eerst behandelen': { fr: 'À traiter en premier', en: 'Handle first', de: 'Zuerst bearbeiten' },
   'Volgorde: kritiek → hoog → normaal → info; binnen dezelfde prioriteit staat de oudste actie eerst.': { fr: 'Ordre : critique → élevé → normal → info ; à priorité égale, l’action la plus ancienne apparaît en premier.', en: 'Order: critical → high → normal → info; within the same priority, the oldest action appears first.', de: 'Reihenfolge: kritisch → hoch → normal → Info; innerhalb derselben Priorität steht die älteste Aktion zuerst.' },
   'Werkplaatsen, inventaris & inkom': { fr: 'Postes de travail, inventaire et entrée', en: 'Workplaces, inventory & entrance', de: 'Arbeitsplätze, Inventar & Einlass' },
