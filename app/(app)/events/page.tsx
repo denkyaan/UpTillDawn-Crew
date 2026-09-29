@@ -198,6 +198,8 @@ export default async function Page(){
         <div className="space-y-4 border-t p-4">
           <div className="flex flex-wrap gap-2">
             <Link href={'/events/'+event.id+'/command'} className="inline-flex rounded-xl bg-violet-600 px-3 py-2 text-sm font-bold text-white">COMMAND CENTER</Link>
+            {user.isAdmin&&<Link href={'/briefings?event='+event.id} className="inline-flex rounded-xl border px-3 py-2 text-sm font-bold">Briefing beheren</Link>}
+            {user.isAdmin&&<Link href={'/workplaces?event='+event.id} className="inline-flex rounded-xl border px-3 py-2 text-sm font-bold">Werkplaatsen & shifts</Link>}
           </div>
           {!user.isAdmin&&assigned&&<Link href={'/onboarding?event='+event.id} className="inline-flex rounded-xl border px-3 py-2 text-sm font-bold">Onboarding openen</Link>}
           <EmergencyInformationPanel
