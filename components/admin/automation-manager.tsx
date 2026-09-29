@@ -42,7 +42,7 @@ const actionLabel=(value:string)=>({
 }[value]||value.replaceAll('_',' '))
 
 export function AutomationManager({rules}:{rules:AutomationRuleView[]}){
-  return <section className="space-y-4 rounded-2xl border p-4">
+  return <section id="automatiseringen" className="scroll-mt-24 space-y-4 rounded-2xl border p-4">
     <div className="flex flex-wrap items-end justify-between gap-3">
       <div>
         <p className="text-xs font-black uppercase tracking-[.2em] text-violet-400">AUTOMATION ENGINE</p>
