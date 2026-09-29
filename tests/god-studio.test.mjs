@@ -111,3 +111,15 @@ test('God Mode automation builder uses the persistent automation engine', async(
   assert.match(builder,/existingRules\.map/)
   assert.match(builder,/Bewerken via AI/)
 })
+
+
+test('God Mode can safely toggle existing automation rules', async()=>{
+  const route=await read('app/api/god/automation-rules/route.ts')
+  const builder=await read('components/god-mode/god-automation-builder.tsx')
+  assert.match(route,/export async function POST/)
+  assert.match(route,/upt_save_automation_rule/)
+  assert.match(route,/automation_key/)
+  assert.match(builder,/toggleRule/)
+  assert.match(builder,/Uitschakelen/)
+  assert.match(builder,/Inschakelen/)
+})
