@@ -22,7 +22,7 @@ export default async function Page(){
 
   const isAdmin=current.role==='admin'
   const isResponsible=current.role==='responsible_lead'
-  const isStaff=current.role==='staff'
+  const isStaff=current.role==='staff'||current.role==='employee'
   if(!isAdmin&&!isResponsible&&!isStaff)redirect('/')
 
   let events:Array<{id:string;name:string}>=[]
