@@ -151,7 +151,24 @@ function translateClockRequestCounts(value:string,locale:ExtendedUiLocale){
   return value
 }
 
+function translateActionCenterTitle(value:string,locale:ExtendedUiLocale){
+  const match=value.match(/^(ACCOUNT GOEDKEUREN|INKLOKKEN|UITKLOKKEN|INKLOKKEN ONTBREEKT|HELP) · (.+)$/)
+  if(!match)return null
+  const [,prefix,name]=match
+  const rows:Record<string,{fr:string;en:string;de:string}>={
+    'ACCOUNT GOEDKEUREN':{fr:'APPROUVER LE COMPTE',en:'APPROVE ACCOUNT',de:'KONTO GENEHMIGEN'},
+    'INKLOKKEN':{fr:'POINTAGE D’ENTRÉE',en:'CLOCK IN',de:'EINSTEMPELN'},
+    'UITKLOKKEN':{fr:'POINTAGE DE SORTIE',en:'CLOCK OUT',de:'AUSSTEMPELN'},
+    'INKLOKKEN ONTBREEKT':{fr:'POINTAGE D’ENTRÉE MANQUANT',en:'CLOCK-IN MISSING',de:'EINSTEMPELN FEHLT'},
+    'HELP':{fr:'AIDE',en:'HELP',de:'HILFE'},
+  }
+  if(locale==='nl')return value
+  return `${rows[prefix][locale]} · ${name}`
+}
+
 export function translateRuntimeUi(value:string,locale:ExtendedUiLocale):string{
+  const actionCenterTitle=translateActionCenterTitle(value,locale)
+  if(actionCenterTitle)return actionCenterTitle
   const artistArrival=translateArtistArrival(value,locale)
   if(artistArrival)return artistArrival
   const saleConfirmation=translateSaleConfirmation(value,locale)
