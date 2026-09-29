@@ -36,6 +36,8 @@ test('installed PWA keeps the cross-device capability contract', async () => {
   assert.match(register, /window\.addEventListener\("focus"/)
   assert.match(register, /periodicSync/)
   assert.match(sw, /pushsubscriptionchange/)
+  assert.match(sw, /const renewed=await renewPushSubscription\(\)\.catch\(\(\)=>false\)/)
+  assert.match(sw, /if\(!renewed\)await notifyOpenClients\(\)/)
   assert.match(sw, /notificationclick/)
   assert.match(sw, /periodicsync/)
   assert.match(sw, /safeLocalPath/)
