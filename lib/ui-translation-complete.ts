@@ -811,4 +811,5 @@ export function translateCompleteUi(value: string, locale: CompleteUiLocale) {
   const row = ROWS[canonical]
   if (!row) return value
   return locale === 'nl' ? canonical : row[locale]
+  'ADMIN AI': { fr: 'IA ADMIN', en: 'ADMIN AI', de: 'ADMIN-KI' },
 }
