@@ -38,6 +38,8 @@ export default async function Page(){
       <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
         <AdminCard href="/admin/platform" title="Platform & automatiseringen" description="AI, automatische planning, eventtemplates, rollouts, QR, recovery, rapportage en technische configuratie."/>
         <AdminCard href="/operations" title="Werkurenbeheer" description="Live werkuren, check-in/out, pauzes, operationele waarschuwingen en goedkeuringen."/>
+        <AdminCard href="/personnel" title="Goedkeuringen" description="Behandel uitsluitend nieuwe accountaanvragen en wijs de initiële rol toe."/>
+        <AdminCard href="/crew" title="Personeelsbeheer" description="Beheer goedgekeurd personeel, rollen, blokkeringen, planning en accountverwijdering."/>
         <AdminCard href="/admin/time-records" title="Tijdcorrecties" description="Controleer en corrigeer geregistreerde tijden. Elke correctie blijft auditbaar."/>
         <AdminCard href="/exports" title="Excel-export" description="Exporteer uren en administratieve gegevens vanuit de werkurenworkflow."/>
         <AdminCard href="/audit" title="Auditlog" description="Bekijk wijzigingshistoriek en administratieve acties voor controle en traceerbaarheid."/>
