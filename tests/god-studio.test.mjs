@@ -123,3 +123,13 @@ test('God Mode can safely toggle existing automation rules', async()=>{
   assert.match(builder,/Uitschakelen/)
   assert.match(builder,/Inschakelen/)
 })
+
+
+test('God Mode admin visual preview follows canonical consolidated navigation', async()=>{
+  const visual=await read('components/god-mode/god-visual-builder.tsx')
+  for(const label of ['Werkplaatsen & shifts','Werkuren','Taken','Sales','Goedkeuringen','Personeel','Chats','Help','Beheer']) assert.match(visual,new RegExp(label.replace(/[&]/g,'\\&')))
+  assert.match(visual,/\{label:'Goedkeuringen',path:'\/personnel'\}/)
+  assert.match(visual,/\{label:'Personeel',path:'\/crew'\}/)
+  assert.doesNotMatch(visual,/\{label:'Excel',path:'\/exports'\}/)
+  assert.doesNotMatch(visual,/\{label:'Instellingen',path:'\/settings'\}/)
+})
