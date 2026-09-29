@@ -44,6 +44,17 @@ test('installed PWA keeps the cross-device capability contract', async () => {
 })
 
 
+
+test('PWA update reload waits until queued crew data is server-safe', async () => {
+  const register = await readFile(new URL('../components/pwa-register.tsx', import.meta.url), 'utf8')
+  assert.match(register, /queued\(user\.id\)/)
+  assert.match(register, /queuedUploads\(user\.id\)/)
+  assert.match(register, /await synchronize\(user\.id\)/)
+  assert.match(register, /if\(await hasPendingCrewData\(\)\)return/)
+  assert.match(register, /crew-queue-change/)
+  assert.match(register, /window\.location\.reload\(\)/)
+})
+
 test('offline identity cleanup covers the expanded operational cache', async () => {
   const snapshot = await readFile(new URL('../lib/crew-offline-snapshot.ts', import.meta.url), 'utf8')
   assert.match(snapshot, /clearOfflineIdentity/)
