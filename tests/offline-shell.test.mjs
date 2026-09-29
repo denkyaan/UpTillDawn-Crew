@@ -56,3 +56,11 @@ test('public offline fallback supports all four UI locales', async () => {
   assert.match(html, /navigator\.languages/)
   assert.match(html, /document\.documentElement\.lang=locale/)
 })
+
+test('operational offline shell selects NL FR EN or DE from device locale', async () => {
+  const html = await readFile(new URL('../public/offline.html', import.meta.url), 'utf8')
+  for (const locale of ['nl','fr','en','de']) assert.match(html, new RegExp(locale + ':\\{title:'))
+  assert.match(html, /navigator\.languages/)
+  assert.match(html, /document\.documentElement\.lang=offlineLocale/)
+  assert.match(html, /OFFLINE_COPY\[offlineLocale\]/)
+})
