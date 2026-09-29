@@ -19,11 +19,11 @@ test('admin primary navigation is consolidated while nested workflows remain rea
     ['operations','Werkuren'],['tasks','Taken'],['sales','Sales'],['personnel','Goedkeuringen'],
     ['crew','Personeel'],['chat','Chats'],['incidents','Help'],['settings','Beheer'],
   ]){
-    assert.match(roles,new RegExp(`navRule\\("admin","\${key}","\${label}"`))
+    assert.match(roles,new RegExp(`navRule\\("admin","${pair[0]}","${pair[1]}"`))
   }
 
-  for(const key of ['inventory','guestlist','briefings','exports','platform']){
-    assert.match(roles,new RegExp(`navRule\\("admin","\${key}"[^\\n]+,"never",false,false\\)`))
+  for(const item of ['inventory','guestlist','briefings','exports','platform']){
+    assert.match(roles,new RegExp(`navRule\\("admin","${item}"[^\\n]+,"never",false,false\\)`))
   }
 
   assert.match(nav,/label:"Goedkeuringen"/)
