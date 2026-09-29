@@ -8,6 +8,7 @@ import { NAV_ITEMS, type NavigationItem } from "@/components/layout/navigation-i
 import { useAuth } from "@/lib/providers"
 import { cn } from "@/lib/utils"
 import { getDefaultRoleUiLabel, type RoleRuleRole } from "@/lib/role-ui"
+import { featureHelp } from "@/lib/ui-field-help"
 
 const ASSIGNED_EVENT_KEYS=["events","briefings","workplaces"] as const
 const STAFF_ACTIVE_SHIFT_KEYS=["operations","workplaces","briefings","tasks"] as const
@@ -92,9 +93,12 @@ export function MobileBottomNav({
    const Icon=item.icon
    const count=badgeCount(item.key)
    const label=featureLabels[item.key] || getDefaultRoleUiLabel(roleKey,item.key,item.label)
+   const help=featureHelp(item.key,label)
    return <Link
     data-layout-key={item.key}
     href={href}
+    title={help.description}
+    aria-description={help.description}
     onClick={()=>setExpanded(false)}
     className={cn(
       expandedItem
@@ -107,7 +111,9 @@ export function MobileBottomNav({
      <Icon className="h-5 w-5"/>
      {count>0&&<span className="absolute -right-3 -top-3 flex h-5 min-w-5 items-center justify-center rounded-full bg-red-600 px-1 text-[10px] font-black leading-none text-white shadow ring-2 ring-card">{count>99?"99+":count}</span>}
     </span>
-    <span className={expandedItem?"truncate":"max-w-full truncate"}>{label}</span>
+    {expandedItem
+      ? <span className="min-w-0"><span className="block truncate">{label}</span><span className="mt-0.5 block line-clamp-2 text-[10px] font-normal text-muted-foreground">{help.description}</span></span>
+      : <span className="max-w-full truncate">{label}</span>}
    </Link>
  }
 
