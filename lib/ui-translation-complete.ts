@@ -747,6 +747,16 @@ const ROWS: Record<string, Row> = {
   'Actuele serverstatus voor personeel, goedkeuringen, incidenten, taken en synchronisatie.': { fr: 'État actuel du serveur pour le personnel, les validations, les incidents, les tâches et la synchronisation.', en: 'Current server status for staff, approvals, incidents, tasks and synchronization.', de: 'Aktueller Serverstatus für Personal, Genehmigungen, Vorfälle, Aufgaben und Synchronisierung.' },
   'Tijdregistraties konden niet worden geladen.': { fr: 'Les enregistrements de temps n’ont pas pu être chargés.', en: 'Time records could not be loaded.', de: 'Zeiterfassungen konnten nicht geladen werden.' },
   'Tijdregistraties konden niet volledig worden geladen.': { fr: 'Les enregistrements de temps n’ont pas pu être entièrement chargés.', en: 'Time records could not be fully loaded.', de: 'Zeiterfassungen konnten nicht vollständig geladen werden.' },
+  'Beheer': { fr: 'Gestion', en: 'Management', de: 'Verwaltung' },
+  'Contactgegevens van personeel waarmee je operationeel kunt samenwerken.': { fr: 'Coordonnées du personnel avec lequel vous pouvez collaborer opérationnellement.', en: 'Contact details for staff you can work with operationally.', de: 'Kontaktdaten von Personal, mit dem Sie operativ zusammenarbeiten können.' },
+  'Beheer goedgekeurde medewerkers, rollen, toegang, contactgegevens en komende planning. Nieuwe accounts staan onder Goedkeuringen.': { fr: 'Gérez le personnel approuvé, les rôles, les accès, les coordonnées et la planification à venir. Les nouveaux comptes se trouvent sous Approbations.', en: 'Manage approved staff, roles, access, contact details, and upcoming planning. New accounts are under Approvals.', de: 'Verwalten Sie freigegebenes Personal, Rollen, Zugriffe, Kontaktdaten und die kommende Planung. Neue Konten befinden sich unter Genehmigungen.' },
+  'komende shift(s) ·': { fr: 'service(s) à venir ·', en: 'upcoming shift(s) ·', de: 'kommende Schicht(en) ·' },
+  'open taak/toewijzing(en)': { fr: 'tâche(s)/affectation(s) ouverte(s)', en: 'open task/assignment(s)', de: 'offene Aufgabe(n)/Zuweisung(en)' },
+  'Volgende shift': { fr: 'Prochain service', en: 'Next shift', de: 'Nächste Schicht' },
+  'Personeelsgegevens & historiek': { fr: 'Données du personnel et historique', en: 'Personnel details & history', de: 'Personaldaten & Verlauf' },
+  'Komende shifts': { fr: 'Services à venir', en: 'Upcoming shifts', de: 'Kommende Schichten' },
+  'Je eigen beheeraccount kan hier niet worden geblokkeerd, gedegradeerd of verwijderd.': { fr: 'Votre propre compte administrateur ne peut pas être bloqué, rétrogradé ou supprimé ici.', en: 'Your own admin account cannot be blocked, demoted, or deleted here.', de: 'Ihr eigenes Administratorkonto kann hier nicht gesperrt, herabgestuft oder gelöscht werden.' },
+  'Alleen gebruiken wanneer het account echt moet verdwijnen. Operationele auditgegevens blijven waar vereist behouden.': { fr: 'À utiliser uniquement si le compte doit réellement disparaître. Les données d’audit opérationnelles sont conservées lorsque cela est requis.', en: 'Use only when the account truly needs to be removed. Operational audit data is retained where required.', de: 'Nur verwenden, wenn das Konto wirklich entfernt werden muss. Betriebliche Auditdaten bleiben erhalten, soweit erforderlich.' },
 }
 
 const CANONICAL = new Map<string, string>()
