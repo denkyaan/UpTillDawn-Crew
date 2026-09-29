@@ -655,9 +655,10 @@ export async function approvePersonnelAccount(fd:FormData){
  if(id===user.id)throw new Error('Je eigen beheeraccount is al goedgekeurd.')
  const {error}=await s.rpc('upt_admin_set_account',{p_user:id,p_approved:true,p_role:role})
  check(error)
+ const {data:next}=await s.from('profiles').select('id').eq('approved',false).neq('id',id).order('created_at').limit(1).maybeSingle()
  await revalidatePath('/personnel')
  await revalidatePath('/notifications')
- redirect('/personnel?feedback=approved')
+ redirect(next?.id?'/personnel?feedback=approved&user='+next.id+'&focus=approval':'/personnel?feedback=approved')
 }
 
 export async function setAccountStatus(fd:FormData){
