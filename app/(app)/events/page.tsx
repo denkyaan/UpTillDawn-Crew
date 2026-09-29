@@ -5,6 +5,7 @@ import { GeoapifyPlaceFields } from '@/components/events/geoapify-place-fields'
 import { FacebookEventField } from '@/components/events/facebook-event-field'
 import { ArchiveEventButton } from '@/components/events/archive-event-button'
 import { ArchiveCenter } from '@/components/events/archive-center'
+import { ContextLink } from '@/components/admin/context-link'
 import { EmergencyInformationPanel } from '@/components/crew/emergency-information-panel'
 import { EventDocumentsPanel } from '@/components/crew/event-documents-panel'
 import { nlStatus } from '@/lib/ui-nl'
@@ -197,9 +198,9 @@ export default async function Page(){
 
         <div className="space-y-4 border-t p-4">
           <div className="flex flex-wrap gap-2">
-            <Link href={'/events/'+event.id+'/command'} className="inline-flex rounded-xl bg-violet-600 px-3 py-2 text-sm font-bold text-white">COMMAND CENTER</Link>
-            {user.isAdmin&&<Link href={'/briefings?event='+event.id} className="inline-flex rounded-xl border px-3 py-2 text-sm font-bold">Briefing beheren</Link>}
-            {user.isAdmin&&<Link href={'/workplaces?event='+event.id} className="inline-flex rounded-xl border px-3 py-2 text-sm font-bold">Werkplaatsen & shifts</Link>}
+            <ContextLink href={'/events/'+event.id+'/command'} context={{eventId:event.id}} className="inline-flex rounded-xl bg-violet-600 px-3 py-2 text-sm font-bold text-white">COMMAND CENTER</ContextLink>
+            {user.isAdmin&&<ContextLink href="/briefings" context={{eventId:event.id}} className="inline-flex rounded-xl border px-3 py-2 text-sm font-bold" title="Beheer briefing, bevestigingen en eventchecklists.">Briefing beheren</ContextLink>}
+            {user.isAdmin&&<ContextLink href="/workplaces" context={{eventId:event.id}} className="inline-flex rounded-xl border px-3 py-2 text-sm font-bold" title="Open werkplaatsen, verantwoordelijken, personeel en shifts voor dit evenement.">Werkplaatsen & shifts</ContextLink>}
           </div>
           {!user.isAdmin&&assigned&&<Link href={'/onboarding?event='+event.id} className="inline-flex rounded-xl border px-3 py-2 text-sm font-bold">Onboarding openen</Link>}
           <EmergencyInformationPanel
