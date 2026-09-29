@@ -52,15 +52,15 @@ const pageOptions: Record<Role,{label:string;path:string}[]> = {
   admin: [
     {label:'Overzicht',path:'/admin'},
     {label:'Evenementen',path:'/events'},
+    {label:'Werkplaatsen & shifts',path:'/workplaces'},
     {label:'Werkuren',path:'/operations'},
-    {label:'Shifts',path:'/shifts'},
-    {label:'Werkplekken',path:'/workplaces'},
     {label:'Taken',path:'/tasks'},
-    {label:'Briefing',path:'/briefings'},
-    {label:'Personeel',path:'/personnel'},
+    {label:'Sales',path:'/sales'},
+    {label:'Goedkeuringen',path:'/personnel'},
+    {label:'Personeel',path:'/crew'},
     {label:'Chats',path:'/chat'},
-    {label:'Excel',path:'/exports'},
-    {label:'Instellingen',path:'/settings'},
+    {label:'Help',path:'/incidents'},
+    {label:'Beheer',path:'/settings'},
   ],
 }
 
