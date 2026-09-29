@@ -81,9 +81,7 @@ export default async function InventoryPage(){
     }
   }
 
-  const visible=isAdmin
-    ? workplaces
-    : workplaces.filter(workplace=>workplace.events&&workplace.events.status!=='archived')
+  const visible=workplaces.filter(workplace=>workplace.events&&workplace.events.status!=='archived')
   const workplaceIds=visible.map(workplace=>workplace.id)
   const materialResult=workplaceIds.length
     ? await s.from('inventory_items')
