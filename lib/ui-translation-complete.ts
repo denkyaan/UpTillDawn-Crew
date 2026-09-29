@@ -781,6 +781,7 @@ const ROWS: Record<string, Row> = {
   'Event': { fr: 'Événement', en: 'Event', de: 'Veranstaltung' },
   'ARCHIEF': { fr: 'ARCHIVES', en: 'ARCHIVE', de: 'ARCHIV' },
   'Onbekend': { fr: 'Inconnu', en: 'Unknown', de: 'Unbekannt' },
+  'Open de inkomsten van merch en kassa/tokens voor deze werkplek.': { fr: 'Ouvrir les revenus du merchandising et de la caisse/jetons pour ce poste.', en: 'Open merchandise and till/token revenue for this workplace.', de: 'Einnahmen aus Merchandising und Kasse/Token für diesen Arbeitsplatz öffnen.' },
 }
 
 const CANONICAL = new Map<string, string>()
