@@ -176,6 +176,80 @@ export type Database = {
           },
         ]
       }
+      automation_rules: {
+        Row: {
+          action_key: string
+          audience: string
+          audit_enabled: boolean
+          auto_action: boolean
+          automation_key: string
+          channels: string[]
+          cooldown_minutes: number
+          delay_minutes: number
+          description: string
+          enabled: boolean
+          escalation_minutes: number | null
+          label: string
+          last_run_at: string | null
+          max_retries: number
+          reminder_minutes: number | null
+          settings: Json
+          trigger_key: string
+          updated_at: string
+          updated_by: string | null
+        }
+        Insert: {
+          action_key: string
+          audience?: string
+          audit_enabled?: boolean
+          auto_action?: boolean
+          automation_key: string
+          channels?: string[]
+          cooldown_minutes?: number
+          delay_minutes?: number
+          description: string
+          enabled?: boolean
+          escalation_minutes?: number | null
+          label: string
+          last_run_at?: string | null
+          max_retries?: number
+          reminder_minutes?: number | null
+          settings?: Json
+          trigger_key: string
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Update: {
+          action_key?: string
+          audience?: string
+          audit_enabled?: boolean
+          auto_action?: boolean
+          automation_key?: string
+          channels?: string[]
+          cooldown_minutes?: number
+          delay_minutes?: number
+          description?: string
+          enabled?: boolean
+          escalation_minutes?: number | null
+          label?: string
+          last_run_at?: string | null
+          max_retries?: number
+          reminder_minutes?: number | null
+          settings?: Json
+          trigger_key?: string
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "automation_rules_updated_by_fkey"
+            columns: ["updated_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       break_sessions: {
         Row: {
           created_at: string
