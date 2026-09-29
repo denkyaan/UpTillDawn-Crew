@@ -7,7 +7,8 @@ import { nlRole } from '@/lib/ui-nl'
 
 export const dynamic='force-dynamic'
 
-export default async function Page(){
+export default async function Page({searchParams}:{searchParams?:Promise<{user?:string}>}){
+  const params=searchParams?await searchParams:{}
   const current=await getCurrentUser()
   if(!current)redirect('/login')
   const s=await createClient()
@@ -40,7 +41,7 @@ export default async function Page(){
       .limit(1000),
     s.from('task_assignments').select('id,user_id,status').neq('status','COMPLETED').limit(2000),
   ])
-  const crew=(data||[]).filter(person=>person.approved)
+  const crew=(data||[]).filter(person=>person.approved).sort((a,b)=>Number(b.id===params.user)-Number(a.id===params.user))
   const photos=new Map<string,string>()
   await Promise.all(crew.filter(person=>person.profile_photo_url).map(async person=>{
     const {data:signed}=await s.storage.from('profile-photos').createSignedUrl(person.profile_photo_url!,300)
@@ -70,7 +71,8 @@ export default async function Page(){
       const own=person.id===current.id
       const future=shiftsByUser.get(person.id)||[]
       const next=future[0]
-      return <article key={person.id} className="rounded-2xl border p-4">
+      const focused=person.id===params.user
+      return <article id={focused?'personnel-focus':undefined} key={person.id} className={'rounded-2xl border p-4 '+(focused?'border-violet-500/70 ring-1 ring-violet-500/20':'')}>
         <div className="flex gap-4">
           <div className="relative grid h-20 w-20 shrink-0 place-items-center overflow-hidden rounded-xl border bg-muted text-xl font-black">{photos.get(person.id)?<Image src={photos.get(person.id)!} alt="" fill sizes="80px" unoptimized className="object-cover"/>:(person.full_name||'?').trim().charAt(0).toUpperCase()}</div>
           <div className="min-w-0 flex-1">
