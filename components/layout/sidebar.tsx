@@ -9,6 +9,7 @@ import { Shield } from "lucide-react"
 import { NAV_ITEMS } from "@/components/layout/navigation-items"
 import { getDefaultRoleUiLabel, type RoleRuleRole } from "@/lib/role-ui"
 import { featureHelp } from "@/lib/ui-field-help"
+import { featureHelp } from "@/lib/ui-field-help"
 
 export function AppSidebar({
   chatMissed=0,incidentMissed=0,taskMissed=0,notificationFeatureCounts={},
@@ -51,7 +52,7 @@ export function AppSidebar({
    const fallbackLabel=getDefaultRoleUiLabel(roleKey,i.key,i.label)
    const help=featureHelp(i.key,fallbackLabel)
    return <Link data-layout-key={i.key} key={i.key} href={href} title={help.description} aria-description={help.description} className={cn("flex items-center gap-3 rounded-xl px-3 py-3 text-sm font-semibold",active?"bg-violet-600 text-white":"text-muted-foreground hover:bg-muted hover:text-foreground")}>
-    <span className="relative"><Icon className="h-5 w-5"/>{count>0&&<span className="absolute -right-3 -top-3 flex h-5 min-w-5 items-center justify-center rounded-full bg-red-600 px-1 text-[10px] font-black leading-none text-white">{count>99?"99+":count}</span>}</span>{featureLabels[i.key] || fallbackLabel}
+    <span className="relative"><Icon className="h-5 w-5"/>{count>0&&<span className="absolute -right-3 -top-3 flex h-5 min-w-5 items-center justify-center rounded-full bg-red-600 px-1 text-[10px] font-black leading-none text-white">{count>99?"99+":count}</span>}</span>{label}
    </Link>
   })}</nav>
   <div className="shrink-0 border-t border-border p-4"><div className="text-[11px] text-muted-foreground flex gap-2"><Shield className="h-4 w-4"/>Beveiligde personeelsoperaties</div></div>
