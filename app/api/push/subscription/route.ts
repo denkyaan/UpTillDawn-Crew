@@ -9,7 +9,7 @@ const subscriptionSchema=z.object({
     auth:z.string().min(8).max(256),
   }),
 })
-const removeSchema=z.object({endpoint:z.string().url().max(4096)})
+const removeSchema=z.object({endpoint:z.string().url().max(4096).refine(safePushEndpoint)})
 
 function crossSite(request:Request){
   const fetchSite=request.headers.get("sec-fetch-site")
