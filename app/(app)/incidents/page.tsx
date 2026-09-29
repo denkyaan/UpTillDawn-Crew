@@ -95,7 +95,7 @@ export default async function Page({searchParams}:{searchParams?:Promise<{event?
   }))
 
   return <main className="mx-auto max-w-4xl space-y-5 p-4 pb-28 md:p-8">
-    <h1 className="text-3xl font-black">{manager?'Help':'Urgent melden'}</h1>
+    <div><h1 className="text-3xl font-black">{manager?'Help':'Urgent melden'}</h1>{manager&&<p className="text-sm text-muted-foreground">Behandel hulpvragen en incidenten op urgentie. Niet erkende meldingen worden automatisch geëscaleerd en blijven volledig auditbaar.</p>}</div>
     {emergencyEvent&&<EmergencyInformationPanel
       info={{
         eventId:emergencyEvent.id,
