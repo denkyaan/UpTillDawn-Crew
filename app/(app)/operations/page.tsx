@@ -8,7 +8,8 @@ import { ShiftHandoverPanel, type HandoverCandidate, type HandoverScope, type Ha
 
 export const dynamic='force-dynamic'
 
-export default async function Page(){
+export default async function Page({searchParams}:{searchParams?:Promise<{event?:string;workplace?:string;user?:string;focus?:string}>}){
+  const params=searchParams?await searchParams:{}
   const s=await createClient()
   const current=await getCurrentUser()
   if(!current)redirect('/login')
@@ -246,6 +247,9 @@ export default async function Page(){
     crewDirectory={crewDirectory}
     timeReviews={timeReviews.data||[]}
     operationalAlerts={operationalAlerts.data||[]}
+    focusUserId={params.user||null}
+    focusWorkplaceId={params.workplace||null}
+    focusKind={params.focus||null}
   />
   </>
 }
