@@ -10,8 +10,6 @@ import { NAV_ITEMS } from "@/components/layout/navigation-items"
 import { getDefaultRoleUiLabel, type RoleRuleRole } from "@/lib/role-ui"
 import { featureHelp } from "@/lib/ui-field-help"
 import { useAdminNavigationContext } from "@/lib/admin-navigation-context"
-import { useAdminSelection } from "@/lib/admin-selection-context"
-import { featureHelp } from "@/lib/ui-field-help"
 
 export function AppSidebar({
   chatMissed=0,incidentMissed=0,taskMissed=0,notificationFeatureCounts={},
@@ -24,7 +22,7 @@ export function AppSidebar({
 }) {
  const pathname=usePathname()
  const {roles,isAdmin}=useAuth()
- const adminContext=useAdminSelection()
+ const {hrefFor}=useAdminNavigationContext(Boolean(isAdmin))
  const roleKey:RoleRuleRole=roles.includes("admin")?"admin":roles.includes("responsible_lead")?"responsible_lead":"staff"
  const order=new Map(featureOrder.map((key,index)=>[key,index]))
  const visible=NAV_ITEMS.filter(i=>{
@@ -48,7 +46,7 @@ export function AppSidebar({
   </Link>
   <nav className="min-h-0 flex-1 space-y-1 overflow-y-auto overscroll-contain p-3 pb-6">{visible.map(i=>{
    const baseHref=i.href==='/'&&isAdmin?'/admin':i.href
-   const href=isAdmin?adminContext.href(baseHref):baseHref
+   const href=hrefFor(baseHref,i.key)
    const active=href==='/'?pathname==='/':pathname.startsWith(href)
    const Icon=i.icon
    const activityCount=i.key==="chat"?chatMissed:i.key==="incidents"?incidentMissed:i.key==="tasks"?taskMissed:0
