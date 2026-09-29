@@ -4,6 +4,7 @@ import { redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase/crew-server'
 import { approvePersonnelAccount } from '@/lib/actions/uptilldawn'
 import { nlRole } from '@/lib/ui-nl'
+import { PendingSubmitButton } from '@/components/ui/pending-submit-button'
 
 export const dynamic = 'force-dynamic'
 
@@ -65,7 +66,7 @@ export default async function Page({searchParams}:{searchParams?:Promise<{feedba
             </select>
           </label>
           <p className="text-xs text-muted-foreground">Na goedkeuring wordt toegang onmiddellijk actief en ontvangt de gebruiker een melding.</p>
-          <button className="rounded-xl bg-emerald-700 p-3 font-black text-white">ACCOUNT GOEDKEUREN</button>
+          <PendingSubmitButton pendingLabel="GOEDKEUREN…" className="rounded-xl bg-emerald-700 p-3 font-black text-white">ACCOUNT GOEDKEUREN</PendingSubmitButton>
         </form>
       </div>
     </article>})}</div>
