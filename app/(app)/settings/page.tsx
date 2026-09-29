@@ -35,18 +35,24 @@ export default async function Page(){
 
     {isAdmin&&<section className="space-y-3">
       <div><h2 className="text-xl font-black">Platform & administratie</h2><p className="text-sm text-muted-foreground">Geavanceerde onderdelen staan hier gegroepeerd zodat de hoofdmenu’s operationeel en overzichtelijk blijven.</p></div>
-      <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
-        <AdminCard href="/admin/platform" title="Platform & automatiseringen" description="AI, automatische planning, eventtemplates, rollouts, QR, recovery, rapportage en technische configuratie."/>
-        <AdminCard href="/operations" title="Werkurenbeheer" description="Live werkuren, check-in/out, pauzes, operationele waarschuwingen en goedkeuringen."/>
-        <AdminCard href="/personnel" title="Goedkeuringen" description="Behandel uitsluitend nieuwe accountaanvragen en wijs de initiële rol toe."/>
-        <AdminCard href="/crew" title="Personeelsbeheer" description="Beheer goedgekeurd personeel, rollen, blokkeringen, planning en accountverwijdering."/>
-        <AdminCard href="/admin/time-records" title="Tijdcorrecties" description="Controleer en corrigeer geregistreerde tijden. Elke correctie blijft auditbaar."/>
-        <AdminCard href="/exports" title="Excel-export" description="Exporteer uren en administratieve gegevens vanuit de werkurenworkflow."/>
-        <AdminCard href="/audit" title="Auditlog" description="Bekijk wijzigingshistoriek en administratieve acties voor controle en traceerbaarheid."/>
-        <AdminCard href="/notifications" title="Meldingen" description="Bekijk operationele meldingen, herinneringen en automatische waarschuwingen."/>
-        <AdminCard href="/events" title="Eventdefaults & templates" description="Beheer events, templates, briefing, documenten, readiness, afsluiting en archief."/>
-        <AdminCard href="/workplaces" title="Werkplaatsen, inventaris & inkom" description="Beheer werkplaatsen en shifts en open inventaris, inkom/guestlist, taken, briefing en sales per werkplek."/>
-        <AdminCard href="/god-mode/login" title="God Mode" description="Makeromgeving voor diepgaande interface-, workflow-, automatiserings- en codewijzigingen."/>
+      <div className="space-y-5">
+        <div><h3 className="mb-2 text-sm font-black uppercase tracking-[.16em] text-muted-foreground">Operationeel</h3><div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
+          <AdminCard href="/operations" title="Werkurenbeheer" description="Live werkuren, check-in/out, pauzes, operationele waarschuwingen en goedkeuringen."/>
+          <AdminCard href="/admin/time-records" title="Tijdcorrecties" description="Controleer en corrigeer geregistreerde tijden. Elke correctie blijft auditbaar."/>
+          <AdminCard href="/events" title="Eventdefaults & templates" description="Beheer events, templates, briefing, documenten, readiness, afsluiting en archief."/>
+          <AdminCard href="/workplaces" title="Werkplaatsen, inventaris & inkom" description="Beheer werkplaatsen en shifts en open inventaris, inkom/guestlist, taken, briefing en sales per werkplek."/>
+        </div></div>
+        <div><h3 className="mb-2 text-sm font-black uppercase tracking-[.16em] text-muted-foreground">Personeel</h3><div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
+          <AdminCard href="/personnel" title="Goedkeuringen" description="Behandel uitsluitend nieuwe accountaanvragen en wijs de initiële rol toe."/>
+          <AdminCard href="/crew" title="Personeelsbeheer" description="Beheer goedgekeurd personeel, rollen, blokkeringen, planning en accountverwijdering."/>
+        </div></div>
+        <div><h3 className="mb-2 text-sm font-black uppercase tracking-[.16em] text-muted-foreground">Platform & controle</h3><div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
+          <AdminCard href="/admin/platform" title="Platform & automatiseringen" description="AI, automatische planning, eventtemplates, rollouts, QR, recovery, rapportage en technische configuratie."/>
+          <AdminCard href="/notifications" title="Meldingen" description="Bekijk operationele meldingen, herinneringen en automatische waarschuwingen."/>
+          <AdminCard href="/exports" title="Excel-export" description="Exporteer uren en administratieve gegevens vanuit de werkurenworkflow."/>
+          <AdminCard href="/audit" title="Auditlog" description="Bekijk wijzigingshistoriek en administratieve acties voor controle en traceerbaarheid."/>
+          <AdminCard href="/god-mode/login" title="God Mode" description="Makeromgeving voor diepgaande interface-, workflow-, automatiserings- en codewijzigingen."/>
+        </div></div>
       </div>
     </section>}
 
