@@ -48,7 +48,7 @@ export default async function Page(){
         </div></div>
         <div><h3 className="mb-2 text-sm font-black uppercase tracking-[.16em] text-muted-foreground">Platform & controle</h3><div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
           <AdminCard href="/admin/platform#automatiseringen" title="Platform & automatiseringen" description="AI, automatische planning, eventtemplates, rollouts, QR, recovery, rapportage en technische configuratie."/>
-          <AdminCard href="/notifications" title="Meldingen" description="Bekijk operationele meldingen, herinneringen en automatische waarschuwingen."/>
+          <AdminCard href="/admin/platform#automatiseringen" title="Meldingen" description="Bekijk operationele meldingen, herinneringen en automatische waarschuwingen."/>
           <AdminCard href="/operations#excel-export" title="Excel-export" description="Exporteer uren en administratieve gegevens vanuit de werkurenworkflow."/>
           <AdminCard href="/audit" title="Auditlog" description="Bekijk wijzigingshistoriek en administratieve acties voor controle en traceerbaarheid."/>
           <AdminCard href="/god-mode/login" title="God Mode" description="Makeromgeving voor diepgaande interface-, workflow-, automatiserings- en codewijzigingen."/>
