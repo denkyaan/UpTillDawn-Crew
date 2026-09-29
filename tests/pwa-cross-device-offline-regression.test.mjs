@@ -35,6 +35,8 @@ test('installed PWA keeps the cross-device capability contract', async () => {
   assert.match(register, /window\.addEventListener\("online"/)
   assert.match(register, /window\.addEventListener\("focus"/)
   assert.match(register, /periodicSync/)
+  assert.match(register, /15\*60\*1000/)
+  assert.match(register, /document\.visibilityState===\"visible\"&&navigator\.onLine/)
   assert.match(sw, /pushsubscriptionchange/)
   assert.match(sw, /const renewed=await renewPushSubscription\(\)\.catch\(\(\)=>false\)/)
   assert.match(sw, /if\(!renewed\)await notifyOpenClients\(\)/)
@@ -52,6 +54,8 @@ test('PWA update reload waits until queued crew data is server-safe', async () =
   assert.match(register, /await synchronize\(user\.id\)/)
   assert.match(register, /if\(await hasPendingCrewData\(\)\)return/)
   assert.match(register, /crew-queue-change/)
+  assert.match(register, /updateReloadPending=true/)
+  assert.match(register, /if\(updateReloadPending\)void safelyReloadForUpdate\(\)/)
   assert.match(register, /window\.location\.reload\(\)/)
 })
 
