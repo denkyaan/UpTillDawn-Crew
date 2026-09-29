@@ -1,4 +1,5 @@
 import {saveAutomationRule} from '@/lib/actions/platform'
+import {PendingSubmitButton} from '@/components/ui/pending-submit-button'
 
 export type AutomationRuleView={
   automation_key:string
@@ -102,7 +103,7 @@ export function AutomationManager({rules}:{rules:AutomationRuleView[]}){
 
         <div className="flex flex-wrap items-center justify-between gap-2">
           <p className="text-xs text-muted-foreground">{rule.audit_enabled?'Uitvoeringen worden gededupliceerd en gelogd.':'Audit uitgeschakeld.'} {rule.auto_action?'Automatische actie toegestaan.':'Geen destructieve automatische actie.'}</p>
-          <button className="rounded-xl bg-violet-600 px-4 py-2 text-sm font-black text-white">AUTOMATISERING OPSLAAN</button>
+          <PendingSubmitButton pendingLabel="OPSLAAN…" className="rounded-xl bg-violet-600 px-4 py-2 text-sm font-black text-white">AUTOMATISERING OPSLAAN</PendingSubmitButton>
         </div>
       </form>)}
     </div>
