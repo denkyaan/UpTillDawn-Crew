@@ -4,6 +4,7 @@ type Row = { fr: string; en: string; de: string }
 // Canonical Dutch UI strings that were historically present only in the NL/FR/EN table.
 // Keep every row complete: missing translations must never silently fall back to Dutch.
 const ROWS: Record<string, Row> = {
+  'Opent direct in de juiste context': { fr: 'Ouvre directement dans le bon contexte', en: 'Opens directly in the correct context', de: 'Öffnet direkt im richtigen Kontext' },
   'Automatisch verzamelde acties, gesorteerd op urgentie. Eén klik opent meteen de juiste context.': { fr: 'Actions rassemblées automatiquement et classées par urgence. Un clic ouvre directement le bon contexte.', en: 'Automatically collected actions sorted by urgency. One click opens the correct context immediately.', de: 'Automatisch gesammelte Aktionen, nach Dringlichkeit sortiert. Ein Klick öffnet sofort den richtigen Kontext.' },
   'Geen directe acties vereist.': { fr: 'Aucune action immédiate requise.', en: 'No immediate actions required.', de: 'Keine unmittelbaren Aktionen erforderlich.' },
   'extra actie(s) zijn beschikbaar via de gekoppelde modules.': { fr: 'action(s) supplémentaire(s) sont disponibles via les modules associés.', en: 'additional action(s) are available through the linked modules.', de: 'weitere Aktion(en) sind über die verknüpften Module verfügbar.' },
