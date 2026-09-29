@@ -133,3 +133,13 @@ test('God Mode admin visual preview follows canonical consolidated navigation', 
   assert.doesNotMatch(visual,/\{label:'Excel',path:'\/exports'\}/)
   assert.doesNotMatch(visual,/\{label:'Instellingen',path:'\/settings'\}/)
 })
+
+
+test('admin has one global contextual AI dock in the authenticated shell', async()=>{
+  const layout=await read('components/layout/app-layout.tsx')
+  const assistant=await read('components/admin/platform-ai-assistant.tsx')
+  assert.match(layout,/PlatformAiAssistant/)
+  assert.match(layout,/ADMIN AI/)
+  assert.match(layout,/contextKey=\{currentFeature\|\|undefined\}/)
+  assert.match(assistant,/compact=false/)
+})
