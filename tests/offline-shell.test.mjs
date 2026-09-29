@@ -64,3 +64,13 @@ test('operational offline shell selects NL FR EN or DE from device locale', asyn
   assert.match(html, /document\.documentElement\.lang=offlineLocale/)
   assert.match(html, /OFFLINE_COPY\[offlineLocale\]/)
 })
+
+test('offline operational content uses the same four-language device locale contract', async () => {
+  const content = await readFile(new URL('../public/offline-content.js', import.meta.url), 'utf8')
+  for (const locale of ['nl','fr','en','de']) assert.match(content,new RegExp(locale+":\\{saved:"))
+  assert.match(content,/navigator\.languages/)
+  assert.match(content,/const localeTag=/)
+  assert.match(content,/status\.textContent=T\.saved/)
+  assert.match(content,/section\(T\.guestlist/)
+  assert.match(content,/section\(T\.sales/)
+})
