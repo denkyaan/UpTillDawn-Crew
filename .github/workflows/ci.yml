@@ -7,6 +7,8 @@ on:
     branches: [main]
   workflow_dispatch:
 
+# Keep this workflow manually dispatchable when a push webhook is delayed.
+
 concurrency:
   group: ci-${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: false
