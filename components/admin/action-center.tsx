@@ -48,7 +48,7 @@ export function AdminActionCenter({items}:{items:ActionQueueItem[]}){
   }
   const urgent=counts.critical+counts.high
 
-  return <section className="space-y-3 rounded-2xl border p-4">
+  return <section id="actiecentrum" className="scroll-mt-24 space-y-3 rounded-2xl border p-4">
     <div className="flex flex-wrap items-center justify-between gap-3">
       <div>
         <h2 className="text-xl font-bold">Actiecentrum</h2>
