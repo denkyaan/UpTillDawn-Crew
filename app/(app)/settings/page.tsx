@@ -38,7 +38,7 @@ export default async function Page(){
       <div className="space-y-5">
         <div><h3 className="mb-2 text-sm font-black uppercase tracking-[.16em] text-muted-foreground">Operationeel</h3><div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
           <AdminCard href="/operations" title="Werkurenbeheer" description="Live werkuren, check-in/out, pauzes, operationele waarschuwingen en goedkeuringen."/>
-          <AdminCard href="/admin/time-records" title="Tijdcorrecties" description="Controleer en corrigeer geregistreerde tijden. Elke correctie blijft auditbaar."/>
+          <AdminCard href="/operations#tijdcorrecties" title="Tijdcorrecties" description="Controleer en corrigeer geregistreerde tijden. Elke correctie blijft auditbaar."/>
           <AdminCard href="/events" title="Eventdefaults & templates" description="Beheer events, templates, briefing, documenten, readiness, afsluiting en archief."/>
           <AdminCard href="/workplaces" title="Werkplaatsen, inventaris & inkom" description="Beheer werkplaatsen en shifts en open inventaris, inkom/guestlist, taken, briefing en sales per werkplek."/>
         </div></div>
