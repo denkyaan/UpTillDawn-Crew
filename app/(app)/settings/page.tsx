@@ -45,7 +45,7 @@ export default async function Page(){
         <AdminCard href="/audit" title="Auditlog" description="Bekijk wijzigingshistoriek en administratieve acties voor controle en traceerbaarheid."/>
         <AdminCard href="/notifications" title="Meldingen" description="Bekijk operationele meldingen, herinneringen en automatische waarschuwingen."/>
         <AdminCard href="/events" title="Eventdefaults & templates" description="Beheer events, templates, briefing, documenten, readiness, afsluiting en archief."/>
-        <AdminCard href="/workplaces" title="Werkplaatsen, inventory & inkom" description="Beheer planning en open de interne inventaris- en inkommodules per werkplek."/>
+        <AdminCard href="/workplaces" title="Werkplaatsen, inventaris & inkom" description="Beheer werkplaatsen en shifts en open inventaris, inkom/guestlist, taken, briefing en sales per werkplek."/>
         <AdminCard href="/god-mode/login" title="God Mode" description="Makeromgeving voor diepgaande interface-, workflow-, automatiserings- en codewijzigingen."/>
       </div>
     </section>}
