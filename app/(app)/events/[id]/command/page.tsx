@@ -2,7 +2,8 @@ import Link from 'next/link'
 import {redirect} from 'next/navigation'
 import {getCurrentUser} from '@/lib/actions/auth'
 import {createClient} from '@/lib/supabase/crew-server'
-import {archiveEvent,closeEvent} from '@/lib/actions/events'
+import {closeEvent} from '@/lib/actions/events'
+import {ArchiveEventButton} from '@/components/events/archive-event-button'
 import {PlatformAiAssistant} from '@/components/admin/platform-ai-assistant'
 
 export const dynamic='force-dynamic'
@@ -67,7 +68,8 @@ export default async function EventCommandPage({params}:{params:Promise<{id:stri
  const readyCount=readiness.filter(Boolean).length
  const percent=Math.round(readyCount/readiness.length*100)
  const isAdmin=current.isAdmin===true
- const closed=snapshot.event.status==='closed'||snapshot.event.status==='archived'
+ const archived=snapshot.event.status==='archived'
+ const closed=snapshot.event.status==='closed'||archived
  let postEvent:{plannedCrew:number;attendedCrew:number;workedMinutes:number;incidentCount:number}|null=null
  if(isAdmin&&closed){
   const [{data:planned},{data:sessions},{data:incidentRows}]=await Promise.all([
@@ -90,6 +92,7 @@ export default async function EventCommandPage({params}:{params:Promise<{id:stri
     <p className="text-xs font-black uppercase tracking-[.2em] text-violet-400">EVENT COMMAND CENTER</p>
     <h1 className="text-3xl font-black">{snapshot.event.name}</h1>
     <p className="text-sm text-muted-foreground">{new Date(snapshot.event.startAt).toLocaleString('nl-BE')} → {new Date(snapshot.event.endAt).toLocaleString('nl-BE')}</p>
+    {archived&&<span className="mt-2 inline-flex rounded-full border px-3 py-1 text-xs font-black">Gearchiveerd · alleen-lezen</span>}
    </div>
    <div className="flex flex-wrap gap-2">
     <Link href="/events" className="rounded-xl border px-4 py-3 font-bold">TERUG NAAR EVENTS</Link>
@@ -163,7 +166,7 @@ export default async function EventCommandPage({params}:{params:Promise<{id:stri
    <article className="rounded-2xl border p-4"><p className="text-xs font-black uppercase text-muted-foreground">Actief</p><p className="mt-2 text-2xl font-black">{snapshot.operations.activeSessions}</p><p className="text-xs text-muted-foreground">lopende werksessies</p></article>
   </section>
 
-  {isAdmin&&<PlatformAiAssistant eventId={id} contextLabel={snapshot.event.name}/>}
+  {isAdmin&&!archived&&<PlatformAiAssistant eventId={id} contextLabel={snapshot.event.name}/>}
 
   {isAdmin&&postEvent&&<section className="rounded-2xl border p-5">
    <div><h2 className="text-xl font-black">Post-event rapport</h2><p className="text-sm text-muted-foreground">Automatische samenvatting na afsluiten.</p></div>
@@ -176,7 +179,7 @@ export default async function EventCommandPage({params}:{params:Promise<{id:stri
    </div>
   </section>}
 
-  {isAdmin&&<section className="space-y-3 rounded-2xl border border-amber-500/30 p-5">
+  {isAdmin&&!archived&&<section className="space-y-3 rounded-2xl border border-amber-500/30 p-5">
    <div><h2 className="text-xl font-black">Post-event afsluiting</h2><p className="text-sm text-muted-foreground">Sluit pas af wanneer werkuren, sluitchecklists, incidenten en inventory-afwijkingen verwerkt zijn.</p></div>
    <form action={closeEvent} className="grid gap-2 md:grid-cols-[auto_1fr_auto]">
     <input type="hidden" name="event_id" value={id}/>
@@ -184,10 +187,7 @@ export default async function EventCommandPage({params}:{params:Promise<{id:stri
     <input name="reason" maxLength={1000} placeholder="Reden alleen nodig bij geforceerd afsluiten" className="rounded-xl border bg-background p-3"/>
     <button className="rounded-xl bg-violet-600 px-4 py-3 font-bold text-white">EVENT AFSLUITEN</button>
    </form>
-   {snapshot.event.status==='closed'&&<form action={archiveEvent}>
-    <input type="hidden" name="event_id" value={id}/>
-    <button className="rounded-xl border px-4 py-3 font-bold">EVENT ARCHIVEREN</button>
-   </form>}
+   {snapshot.event.status==='closed'&&<ArchiveEventButton eventId={id} eventName={snapshot.event.name} eventStatus={snapshot.event.status}/>}
   </section>}
  </main>
 }
