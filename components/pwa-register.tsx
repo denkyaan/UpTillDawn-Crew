@@ -23,6 +23,8 @@ export function PwaRegister(){
     let disposed=false
     let reloading=false
     let updateReloadPending=false
+    let lastFreshAt=0
+    let freshnessRun:Promise<void>|null=null
 
     const hasPendingCrewData=async()=>{
       if(!user?.id)return false
@@ -40,15 +42,25 @@ export function PwaRegister(){
       window.location.reload()
     }
 
-    const keepFresh=async()=>{
-      try{
-        const registration=await navigator.serviceWorker.ready
-        await registration.update()
-        if(canUsePush&&supportsWebPush()&&Notification.permission==="granted"){
-          await enablePushNotifications({requestPermission:false})
-          await refreshPushBadge()
-        }
-      }catch{}
+    const keepFresh=async({force=false}:{force?:boolean}={})=>{
+      if(disposed||!navigator.onLine)return
+      const now=Date.now()
+      if(!force&&now-lastFreshAt<60_000)return
+      if(freshnessRun)return freshnessRun
+      freshnessRun=(async()=>{
+        try{
+          const registration=await navigator.serviceWorker.ready
+          await registration.update()
+          if(user?.id)await synchronize(user.id).catch(()=>{})
+          if(canUsePush&&supportsWebPush()&&Notification.permission==="granted"){
+            await enablePushNotifications({requestPermission:false})
+            await refreshPushBadge()
+          }
+          router.refresh()
+          lastFreshAt=Date.now()
+        }catch{}
+      })().finally(()=>{freshnessRun=null})
+      return freshnessRun
     }
 
     const setup=async()=>{
@@ -82,8 +94,11 @@ export function PwaRegister(){
       }
     }
     const onFocus=()=>void keepFresh()
-    const onOnline=()=>void keepFresh()
+    const onOnline=()=>void keepFresh({force:true})
     const onVisibility=()=>{if(document.visibilityState==="visible")void keepFresh()}
+    const onPageShow=(event:PageTransitionEvent)=>{
+      if(event.persisted)void keepFresh({force:true})
+    }
     const onControllerChange=()=>{
       updateReloadPending=true
       void safelyReloadForUpdate()
@@ -98,6 +113,7 @@ export function PwaRegister(){
     window.addEventListener("online",onOnline)
     window.addEventListener("crew-queue-change",onQueueChange)
     document.addEventListener("visibilitychange",onVisibility)
+    window.addEventListener("pageshow",onPageShow)
     void setup()
     const freshnessTimer=window.setInterval(()=>{
       if(document.visibilityState==="visible"&&navigator.onLine)void keepFresh()
@@ -111,6 +127,7 @@ export function PwaRegister(){
       window.removeEventListener("online",onOnline)
       window.removeEventListener("crew-queue-change",onQueueChange)
       document.removeEventListener("visibilitychange",onVisibility)
+      window.removeEventListener("pageshow",onPageShow)
       window.clearInterval(freshnessTimer)
     }
   },[canUsePush,loading,router,user?.id])
