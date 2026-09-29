@@ -5,6 +5,7 @@ import { LocaleSync } from '@/components/locale-sync'
 import type { Metadata, Viewport } from 'next'
 import { ThemeProvider } from '@/components/theme-provider'
 import { AuthProvider } from '@/lib/providers'
+import { AdminSelectionProvider } from '@/lib/admin-selection-context'
 import { Toaster } from '@/components/ui/sonner'
 import { SaveSuccessToaster } from '@/components/save-success-toaster'
 import { PRODUCT_COPY, requestUiLocale } from '@/lib/server-locale'
@@ -59,8 +60,10 @@ export default async function RootLayout({
       <body className="font-sans antialiased" suppressHydrationWarning>
         <ThemeProvider attribute="class" defaultTheme="dark" enableSystem disableTransitionOnChange>
           <AuthProvider>
+            <AdminSelectionProvider>
             <LocaleSync /><PwaRegister /><FirstUseInstallPrompt /><PushPermissionPrompt /><SaveSuccessToaster />{children}
             <Toaster richColors position="top-right" />
+            </AdminSelectionProvider>
           </AuthProvider>
         </ThemeProvider>
       </body>
