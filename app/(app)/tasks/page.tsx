@@ -184,6 +184,7 @@ export default async function Page({searchParams}:{searchParams?:Promise<{event?
   return <main className="space-y-4 p-4 md:p-8">
     <div>
       <h1 className="text-3xl font-black">Taken</h1>
+      {isAdmin&&<p className="text-sm text-muted-foreground">Maak en wijs taken toe per evenement, werkplek of persoon. Context uit Overzicht of Werkplaatsen wordt automatisch vooraf ingevuld.</p>}
       {isResponsible && <p className="text-sm text-muted-foreground">Je kunt alleen taken aanmaken en toewijzen binnen je eigen toegewezen werkplek.</p>}
       <StaffUnavailableMessage available={isAdmin || hasActiveShift}>
         <p className="mt-3 rounded-xl border p-4 text-muted-foreground">Taken zijn beschikbaar vanaf de start van je toegewezen shift.</p>
