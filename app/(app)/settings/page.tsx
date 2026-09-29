@@ -50,7 +50,7 @@ export default async function Page(){
           <AdminCard href="/admin/platform#automatiseringen" title="Platform & automatiseringen" description="AI, automatische planning, eventtemplates, rollouts, QR, recovery, rapportage en technische configuratie."/>
           <AdminCard href="/admin/platform#automatiseringen" title="Meldingen" description="Bekijk operationele meldingen, herinneringen en automatische waarschuwingen."/>
           <AdminCard href="/operations#excel-export" title="Excel-export" description="Exporteer uren en administratieve gegevens vanuit de werkurenworkflow."/>
-          <AdminCard href="/admin/platform#audit-controle" title="Auditlog" description="Bekijk wijzigingshistoriek en administratieve acties voor controle en traceerbaarheid."/>
+          <AdminCard href="/audit" title="Auditlog" description="Bekijk wijzigingshistoriek en administratieve acties voor controle en traceerbaarheid."/>
           <AdminCard href="/god-mode/login" title="God Mode" description="Makeromgeving voor diepgaande interface-, workflow-, automatiserings- en codewijzigingen."/>
         </div></div>
       </div>
