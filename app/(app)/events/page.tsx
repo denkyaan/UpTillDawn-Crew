@@ -24,7 +24,8 @@ import {
 export const dynamic = 'force-dynamic'
 const input='rounded-lg border bg-background p-3'
 
-export default async function Page(){
+export default async function Page({searchParams}:{searchParams?:Promise<{event?:string}>}){
+  const params=searchParams?await searchParams:{}
   const s=await createClient()
   const user=await getCurrentUser()
   if(!user)return null
@@ -66,7 +67,7 @@ export default async function Page(){
     ...(user.role==='responsible_lead'?(responsibleResult.data||[]).map(row=>row.event_id):[]),
   ])
   const nowMs=new Date().getTime()
-  const visibleEvents=user.isAdmin
+  const baseVisibleEvents=user.isAdmin
     ? activeEvents
     : activeEvents.filter(event=>{
         const end=Date.parse(event.end_at)
@@ -74,6 +75,7 @@ export default async function Page(){
         const assigned=assignedEventIds.has(event.id)&&nowMs<=end+3*24*60*60*1000
         return visibleWhileOpen||assigned
       })
+  const visibleEvents=[...baseVisibleEvents].sort((a,b)=>Number(b.id===params.event)-Number(a.id===params.event)||Date.parse(a.start_at)-Date.parse(b.start_at))
   const memberKeys=new Set(memberships.map(row=>`${row.event_id}:${row.user_id}`))
   const peopleById=new Map(people.map(person=>[person.id,person]))
   const emergencyByEvent=new Map((emergencyResult.data||[]).map(row=>[row.event_id,row]))
@@ -181,7 +183,7 @@ export default async function Page(){
       const canManageDocuments=user.isAdmin||(user.role==='responsible_lead'&&responsibleWorkplaces.length>0)
       const chatUntil=new Date(new Date(event.end_at).getTime()+3*24*60*60*1000)
       const assigned=assignedEventIds.has(event.id)
-      return <details key={event.id} className="rounded-2xl border bg-card">
+      return <details key={event.id} open={event.id===params.event||undefined} className={'rounded-2xl border bg-card '+(event.id===params.event?'border-violet-500/70 ring-1 ring-violet-500/20':'')}>
         <summary className="cursor-pointer list-none p-4">
           <div className="flex items-start justify-between gap-3">
             <div>
