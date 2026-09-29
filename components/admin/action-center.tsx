@@ -43,7 +43,10 @@ export function AdminActionCenter({items}:{items:ActionQueueItem[]}){
   const counts={
     critical:sorted.filter(item=>item.priority==='critical').length,
     high:sorted.filter(item=>item.priority==='high').length,
+    normal:sorted.filter(item=>item.priority==='normal').length,
+    info:sorted.filter(item=>item.priority==='info').length,
   }
+  const urgent=counts.critical+counts.high
 
   return <section className="space-y-3 rounded-2xl border p-4">
     <div className="flex flex-wrap items-center justify-between gap-3">
@@ -54,6 +57,7 @@ export function AdminActionCenter({items}:{items:ActionQueueItem[]}){
       <div className="flex items-center gap-2 text-xs font-black">
         {counts.critical>0&&<span className="rounded-full border border-red-500/50 px-2 py-1 text-red-500">{counts.critical} KRITIEK</span>}
         {counts.high>0&&<span className="rounded-full border border-amber-500/50 px-2 py-1 text-amber-500">{counts.high} HOOG</span>}
+        <span className="rounded-full border px-2 py-1">{urgent} URGENT</span>
         <span className="rounded-full border px-2 py-1">{sorted.length} OPEN</span>
       </div>
     </div>
@@ -78,5 +82,6 @@ export function AdminActionCenter({items}:{items:ActionQueueItem[]}){
     </div>
 
     {sorted.length>12&&<p className="text-xs text-muted-foreground">{sorted.length-12} extra actie(s) zijn beschikbaar via de gekoppelde modules.</p>}
+    {sorted.length>0&&<p className="text-xs text-muted-foreground">Volgorde: kritiek → hoog → normaal → info; binnen dezelfde prioriteit staat de oudste actie eerst.</p>}
   </section>
 }
