@@ -55,12 +55,13 @@ export default async function Page({searchParams}:{searchParams?:Promise<{event?
     return <main className="p-8">Werkgegevens konden niet worden geladen. Probeer opnieuw.</main>
   }
 
-  const operationalEventIds=isAdmin
+  let operationalEventIds=isAdmin
     ? candidateEventIds
     : [...new Set([
         ...(shifts.data||[]).map(shift=>shift.event_id),
         ...(session.data?[session.data.event_id]:[]),
       ])]
+  if(isAdmin&&params.event&&candidateEventIds.includes(params.event))operationalEventIds=[params.event]
 
   if(!operationalEventIds.length){
     if(!isAdmin)redirect('/events')
@@ -90,15 +91,15 @@ export default async function Page({searchParams}:{searchParams?:Promise<{event?
     ...responsibleScope.map(row=>row.workplace_id),
   ])
   const scopedWorkplaces=isAdmin
-    ? (workplaces.data||[])
+    ? [...(workplaces.data||[])].sort((a,b)=>Number(b.id===params.workplace)-Number(a.id===params.workplace))
     : (workplaces.data||[]).filter(workplace=>scopedWorkplaceIds.has(workplace.id))
   const scopedCheckins=isAdmin
-    ? (checkins.data||[])
+    ? [...(checkins.data||[])].sort((a,b)=>Number(b.user_id===params.user||b.workplace_id===params.workplace)-Number(a.user_id===params.user||a.workplace_id===params.workplace))
     : manager
       ? (checkins.data||[]).filter(row=>row.user_id===current.id||scopedWorkplaceIds.has(row.workplace_id))
       : (checkins.data||[]).filter(row=>row.user_id===current.id)
   const scopedCheckouts=isAdmin
-    ? (checkouts.data||[])
+    ? [...(checkouts.data||[])].sort((a,b)=>Number(b.user_id===params.user||b.workplace_id===params.workplace)-Number(a.user_id===params.user||a.workplace_id===params.workplace))
     : manager
       ? (checkouts.data||[]).filter(row=>row.user_id===current.id||Boolean(row.workplace_id&&scopedWorkplaceIds.has(row.workplace_id)))
       : (checkouts.data||[]).filter(row=>row.user_id===current.id)
