@@ -217,7 +217,7 @@ export default async function Page({searchParams}:{searchParams?:Promise<{event?
 
   return <>
     {isAdmin&&<div className="mx-auto flex max-w-4xl flex-wrap gap-2 px-4 pt-4 md:px-8 md:pt-8">
-      <Link href="/admin/time-records" className="rounded-xl border px-4 py-3 text-sm font-bold">Tijdcorrecties</Link>
+      <Link id="tijdcorrecties" href="/admin/time-records" className="scroll-mt-24 rounded-xl border px-4 py-3 text-sm font-bold">Tijdcorrecties</Link>
       <Link id="excel-export" href="/exports" className="scroll-mt-24 rounded-xl border px-4 py-3 text-sm font-bold">Excel exporteren</Link>
       <span className="self-center text-xs text-muted-foreground">Werkuren, correcties en export horen bij dezelfde tijdregistratieworkflow.</span>
     </div>}
