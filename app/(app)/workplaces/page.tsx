@@ -458,7 +458,7 @@ export default async function Page({searchParams}:{searchParams?:Promise<{event?
           </AdminOnly>}
 
           {isAdmin&&<div className="mt-3 space-y-2"><p className="text-xs font-semibold text-muted-foreground">Werkplekmodules — context blijft automatisch behouden.</p><div className="flex flex-wrap gap-2">
-            <ContextLink href="/inventory" context={{eventId:workplace.event_id,workplaceId:workplace.id}} className="rounded-lg border px-3 py-2 text-xs font-bold" title="Beheer materiaal, voorraad, ontbrekende en beschadigde items voor deze werkplek.">Inventaris</ContextLink>
+            <ContextLink href="/inventory" context={{eventId:workplace.event_id,workplaceId:workplace.id,focus:'inventory'}} className="rounded-lg border px-3 py-2 text-xs font-bold" title="Beheer materiaal, voorraad, ontbrekende en beschadigde items voor deze werkplek.">Inventaris</ContextLink>
             <ContextLink href="/guestlist" context={{eventId:workplace.event_id,workplaceId:workplace.id}} className="rounded-lg border px-3 py-2 text-xs font-bold" title="Open de operationele inkom- en guestlistmodule voor deze werkplek.">Inkom & Guestlist</ContextLink>
             <ContextLink href="/tasks" context={{eventId:workplace.event_id,workplaceId:workplace.id}} className="rounded-lg border px-3 py-2 text-xs font-bold" title="Open taken in de context van deze werkplek.">Taken</ContextLink>
             <ContextLink href="/briefings" context={{eventId:workplace.event_id,workplaceId:workplace.id}} className="rounded-lg border px-3 py-2 text-xs font-bold" title="Open briefing en checklists voor deze werkplek.">Briefing</ContextLink>
