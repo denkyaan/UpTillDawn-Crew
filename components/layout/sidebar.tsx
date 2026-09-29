@@ -52,7 +52,8 @@ export function AppSidebar({
    const activityCount=i.key==="chat"?chatMissed:i.key==="incidents"?incidentMissed:i.key==="tasks"?taskMissed:0
    const count=Math.max(activityCount,notificationFeatureCounts[i.key]??0)
    const fallbackLabel=getDefaultRoleUiLabel(roleKey,i.key,i.label)
-   const help=featureHelp(i.key,fallbackLabel)
+   const label=featureLabels[i.key] || fallbackLabel
+   const help=featureHelp(i.key,label)
    return <Link data-layout-key={i.key} key={i.key} href={href} title={help.description} aria-description={help.description} className={cn("flex items-center gap-3 rounded-xl px-3 py-3 text-sm font-semibold",active?"bg-violet-600 text-white":"text-muted-foreground hover:bg-muted hover:text-foreground")}>
     <span className="relative"><Icon className="h-5 w-5"/>{count>0&&<span className="absolute -right-3 -top-3 flex h-5 min-w-5 items-center justify-center rounded-full bg-red-600 px-1 text-[10px] font-black leading-none text-white">{count>99?"99+":count}</span>}</span>{label}
    </Link>
