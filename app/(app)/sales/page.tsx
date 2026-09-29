@@ -24,7 +24,7 @@ type Transaction={
 export default async function SalesPage({
   searchParams,
 }:{
-  searchParams:Promise<{event?:string}>
+  searchParams:Promise<{event?:string;workplace?:string}>
 }){
   const current=await getCurrentUser()
   if(!current)redirect('/login')
@@ -85,6 +85,7 @@ export default async function SalesPage({
     ])
     transactionLoadError=Boolean(transactionResult.error)
     transactions=(transactionResult.data||[]) as Transaction[]
+    if(params.workplace)transactions=transactions.filter(transaction=>transaction.workplace_id===params.workplace)
     workplaceNames=new Map((workplaceResult.data||[]).map(row=>[row.id,row.name]))
   }
 
@@ -101,7 +102,7 @@ export default async function SalesPage({
       <div>
         <p className="text-xs font-black uppercase tracking-[.2em] text-violet-400">INKOMSTEN</p>
         <h1 className="text-3xl font-black">Sales</h1>
-        <p className="mt-1 text-sm text-muted-foreground">Alleen inkomsten per evenement: merch en kassa/tokens.</p>
+        <p className="mt-1 text-sm text-muted-foreground">Alleen inkomsten per evenement: merch en kassa/tokens. Vanuit een werkplekklik wordt het overzicht automatisch op die werkplek gefilterd.</p>
       </div>
 
       {eventLoadError&&<p className="rounded-xl border border-amber-500/40 p-3 text-sm text-amber-600">Evenementen konden tijdelijk niet volledig worden geladen.</p>}
@@ -111,7 +112,7 @@ export default async function SalesPage({
           <option value="" disabled>Evenement…</option>
           {events.map(event=><option key={event.id} value={event.id}>{event.name}</option>)}
         </select>
-        <button className="rounded-xl border px-4 py-3 font-bold">EVENEMENT OPENEN</button>
+        {params.workplace&&<input type="hidden" name="workplace" value={params.workplace}/>}<button className="rounded-xl border px-4 py-3 font-bold">EVENEMENT OPENEN</button>
       </form>
     </header>
 
@@ -123,7 +124,7 @@ export default async function SalesPage({
         <section className="grid gap-3 md:grid-cols-3">
           <article className="rounded-2xl border p-5">
             <p className="text-xs font-black uppercase tracking-wider text-muted-foreground">Evenement</p>
-            <h2 className="mt-2 text-2xl font-black">{selected.name}</h2>
+            <h2 className="mt-2 text-2xl font-black">{selected.name}</h2>{params.workplace&&<p className="mt-1 text-sm font-semibold text-violet-400">Werkplek: {workplaceNames.get(params.workplace)||'geselecteerd'}</p>}
             <p className="mt-3 text-3xl font-black">{money(eventRevenue)}</p>
             <p className="text-sm text-muted-foreground">Totale netto-inkomsten</p>
           </article>
