@@ -24,6 +24,7 @@ test('new events inherit master workplaces and inventory',async()=>{
 test('approvals and approved personnel are split into focused admin workflows',async()=>{
   const approvals=await read('app/(app)/personnel/page.tsx')
   const crew=await read('app/(app)/crew/page.tsx')
+  const deleteButton=await read('components/admin/personnel-delete-button.tsx')
   const personnel=await read('lib/actions/personnel.ts')
   const auth=await read('lib/actions/auth.ts')
   assert.match(approvals,/Goedkeuringen/)
@@ -33,7 +34,7 @@ test('approvals and approved personnel are split into focused admin workflows',a
   assert.match(crew,/filter\(person=>person\.approved\)/)
   assert.match(crew,/BLOKKEREN/)
   assert.match(crew,/DEBLOKKEREN/)
-  assert.match(crew,/DEFINITIEF VERWIJDEREN/)
+  assert.match(deleteButton,/DEFINITIEF VERWIJDEREN/)
   assert.match(personnel,/upt_admin_set_personnel_block/)
   assert.match(auth,/account_blocked/)
   assert.match(auth,/ACCOUNT GEBLOKKEERD/)
