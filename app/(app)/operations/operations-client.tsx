@@ -71,7 +71,7 @@ export default function OperationsClient(p:Props){
   const timer=window.setTimeout(()=>document.querySelector('[data-focus-match="true"]')?.scrollIntoView({behavior:'smooth',block:'center'}),150)
   return()=>window.clearTimeout(timer)
  },[p.focusKind,p.focusUserId,p.focusWorkplaceId])
- return <main className="mx-auto max-w-4xl space-y-6 p-4 pb-28 md:p-8"><h1 className="text-3xl font-black">{p.personalWork?'Mijn werkuren':'Operationele status & goedkeuringen'}</h1>{msg&&<p role="status" className="rounded-xl border p-4">{msg}</p>}
+ return <main className="mx-auto max-w-4xl space-y-6 p-4 pb-28 md:p-8"><div><h1 className="text-3xl font-black">{p.personalWork?'Mijn werkuren':'Werkuren'}</h1>{p.isAdmin&&<p className="text-sm text-muted-foreground">Beheer live werkuren, pauzes, check-in/out, afwijkingen en goedkeuringen. Tijdcorrecties en Excel-export horen bij dezelfde tijdregistratieworkflow.</p>}{!p.isAdmin&&p.manager&&<p className="text-sm text-muted-foreground">Volg je werkplekteam, keur start- en stopuren goed en handel operationele waarschuwingen af.</p>}</div>{msg&&<p role="status" className="rounded-xl border p-4">{msg}</p>}
  {p.personalWork&&p.activeSession&&<section className="space-y-4 rounded-2xl border border-violet-500 bg-card p-5"><h2 className="text-xl font-bold">WERK ACTIEF</h2><p>Gestart: {new Date(p.activeSession.started_at).toLocaleString('nl-BE')}</p>
  {p.summary&&<LiveWorkSummary summary={p.summary} activeBreak={p.activeBreak} summaryAsOf={p.summaryAsOf}/>} 
  {p.activeBreak&&p.summary&&p.summary.break_balance_seconds<=300&&<p role="alert" className="text-amber-300">Pauzetegoed bijna of volledig opgebruikt.</p>}
