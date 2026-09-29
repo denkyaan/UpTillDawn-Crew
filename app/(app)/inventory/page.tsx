@@ -20,7 +20,8 @@ type Workplace={
   events:{id:string;name:string;status:string;end_at:string}|null
 }
 
-export default async function InventoryPage(){
+export default async function InventoryPage({searchParams}:{searchParams?:Promise<{event?:string;workplace?:string}>}){
+  const params=searchParams?await searchParams:{}
   const current=await getCurrentUser()
   if(!current)redirect('/login')
   const isAdmin=current.role==='admin'
@@ -81,7 +82,13 @@ export default async function InventoryPage(){
     }
   }
 
-  const visible=workplaces.filter(workplace=>workplace.events&&workplace.events.status!=='archived')
+  const visible=workplaces
+    .filter(workplace=>workplace.events&&workplace.events.status!=='archived')
+    .sort((a,b)=>{
+      const aSelected=(params.workplace&&a.id===params.workplace)||(params.event&&a.event_id===params.event)
+      const bSelected=(params.workplace&&b.id===params.workplace)||(params.event&&b.event_id===params.event)
+      return Number(bSelected)-Number(aSelected)||a.name.localeCompare(b.name,'nl')
+    })
   const workplaceIds=visible.map(workplace=>workplace.id)
   const materialResult=workplaceIds.length
     ? await s.from('inventory_items')
@@ -119,7 +126,7 @@ export default async function InventoryPage(){
         : 'Geen toegewezen werkplek met inventaris beschikbaar.'}
     </p>}
 
-    {visible.map(workplace=><section key={workplace.id} className="space-y-4 rounded-3xl border p-4 md:p-5">
+    {visible.map(workplace=><section id={'inventory-'+workplace.id} key={workplace.id} className={'space-y-4 rounded-3xl border p-4 md:p-5 '+(params.workplace===workplace.id?'border-violet-500/70 ring-1 ring-violet-500/20':'')}>
       <div>
         <h2 className="text-2xl font-black">{workplace.name}</h2>
         <p className="text-sm text-muted-foreground">{workplace.events?.name}</p>
