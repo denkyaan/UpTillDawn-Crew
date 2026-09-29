@@ -1,6 +1,6 @@
 'use server'
 import { createClient } from '@/lib/supabase/crew-server'
-import { revalidatePath } from '@/lib/save-success'
+import { markSaveSuccess, revalidatePath } from '@/lib/save-success'
 import { redirect } from 'next/navigation'
 import { z } from 'zod'
 import { geocodeGeoapify } from '@/lib/geoapify'
@@ -1155,8 +1155,8 @@ export async function markNotificationRead(fd:FormData){
  const {error}=await s.rpc('upt_mark_notification_read',{p_notification:uuid.parse(fd.get('notification_id'))})
  check(error);await revalidatePath('/notifications')
 }
-export async function archiveEvent(fd:FormData){const {s}=await adminClient();const {error}=await s.from('events').update({status:'archived'}).eq('id',uuid.parse(fd.get('event_id')));check(error);await revalidatePath('/events')}
-export async function duplicateEvent(fd:FormData){const {s}=await adminClient();const [start,end]=dates(fd,'start_at','end_at');const {error}=await s.rpc('upt_duplicate_event',{p_event:uuid.parse(fd.get('event_id')),p_name:text.parse(fd.get('name')),p_start:start,p_end:end});check(error);await revalidatePath('/events')}
+export async function archiveEvent(fd:FormData){const {s}=await adminClient();const {error}=await s.rpc('upt_archive_event',{p_event:uuid.parse(fd.get('event_id'))});check(error);await revalidatePath('/events');await markSaveSuccess('event_archived')}
+export async function duplicateEvent(fd:FormData){const {s}=await adminClient();const [start,end]=dates(fd,'start_at','end_at');const {error}=await s.rpc('upt_duplicate_event',{p_event:uuid.parse(fd.get('event_id')),p_name:text.parse(fd.get('name')),p_start:start,p_end:end});check(error);await revalidatePath('/events');await markSaveSuccess('event_duplicated')}
 export async function createEventDocument(fd:FormData){
  const {s,user,profile}=await approvedClient()
  requireManager(profile.role)
@@ -1264,9 +1264,10 @@ export async function updateEvent(fd:FormData){
  }).eq('id',uuid.parse(fd.get('event_id')))
  check(error);await revalidatePath('/events')
 }
+/** @deprecated Historical alias. Events are archived through the canonical archive RPC. */
 export async function deleteEvent(fd:FormData){
- const {s}=await adminClient()
- const eventId=uuid.parse(fd.get('event_id'))
- const {error}=await s.from('events').update({status:'archived',updated_at:new Date().toISOString()}).eq('id',eventId)
- check(error);await revalidatePath('/events');await revalidatePath('/admin')
+ const {s}=await adminClient()
+ const eventId=uuid.parse(fd.get('event_id'))
+ const {error}=await s.rpc('upt_archive_event',{p_event:eventId})
+ check(error);await revalidatePath('/events');await revalidatePath('/admin');await markSaveSuccess('event_archived')
 }
