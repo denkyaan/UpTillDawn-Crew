@@ -4,7 +4,8 @@ import { getCurrentUser } from '@/lib/actions/auth'
 
 export const dynamic='force-dynamic'
 
-export default async function Page(){
+export default async function Page({searchParams}:{searchParams?:Promise<{event?:string;workplace?:string}>}){
+  const params=searchParams?await searchParams:{}
   const s=await createClient();const current=await getCurrentUser();if(!current)return null
   const user={id:current.id}
   const [{data:channels,error},{data:directory},{data:activeEvents},{data:memberships},{data:ownShifts},{data:responsibleAssignments},{data:chatEvents}]=await Promise.all([
@@ -42,7 +43,13 @@ export default async function Page(){
     else if(channel.event_id&&eventImages.get(channel.event_id))channelImages[channel.id]=eventImages.get(channel.event_id)!
   }
   const activeIds=new Set((activeEvents||[]).map(event=>event.id))
-  const defaultChannelId=ordered.find(channel=>channel.kind==='event'&&channel.event_id&&activeIds.has(channel.event_id))?.id||ordered.find(channel=>channel.kind==='organization')?.id||ordered[0]?.id||''
+  const defaultChannelId=
+    (params.workplace?ordered.find(channel=>channel.kind==='workplace'&&channel.workplace_id===params.workplace)?.id:null)
+    ||(params.event?ordered.find(channel=>channel.kind==='event'&&channel.event_id===params.event)?.id:null)
+    ||ordered.find(channel=>channel.kind==='event'&&channel.event_id&&activeIds.has(channel.event_id))?.id
+    ||ordered.find(channel=>channel.kind==='organization')?.id
+    ||ordered[0]?.id
+    ||''
 
   return <main className="mx-auto max-w-4xl p-0 pb-24 md:p-8 md:pb-8">
     {error?<p className="p-4">Gesprekken konden niet worden geladen.</p>:<ChatClient channels={ordered} defaultChannelId={defaultChannelId} userId={user.id} crewDirectory={directory||[]} isAdmin={current.role==='admin'} profilePhotoUrls={profilePhotoUrls} channelImages={channelImages}/>} 
