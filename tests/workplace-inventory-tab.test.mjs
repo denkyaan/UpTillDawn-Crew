@@ -41,16 +41,20 @@ test('admin overview no longer exposes health or release shortcuts', async () =>
 })
 
 
-test('admin inventory is always accessible and workplace materials are synchronized', async () => {
+test('admin inventory stays directly accessible as a nested workplace module and synchronized', async () => {
   const layout = await readFile(new URL('../components/layout/app-layout.tsx', import.meta.url), 'utf8')
   const page = await readFile(new URL('../app/(app)/inventory/page.tsx', import.meta.url), 'utf8')
+  const workplaces = await readFile(new URL('../app/(app)/workplaces/page.tsx', import.meta.url), 'utf8')
+  const roles = await readFile(new URL('../lib/role-ui.ts', import.meta.url), 'utf8')
   const materials = await readFile(new URL('../components/crew/workplace-inventory-materials.tsx', import.meta.url), 'utf8')
   const migration = await readFile(new URL('../supabase/migrations/20260928014432_inventory_workplace_condition_reporting.sql', import.meta.url), 'utf8')
 
   assert.ok(layout.includes('pathname.startsWith("/inventory")'))
-  assert.ok(layout.includes('const showInventory=Boolean(isAdmin)||feature("inventory",context.assignedWorkplaceRole)'))
-  assert.ok(page.includes('const visible=isAdmin'))
+  assert.ok(layout.includes('const showInventory=feature("inventory",context.assignedWorkplaceRole)'))
+  assert.match(roles,/navRule\("admin","inventory","Inventaris",\d+,"never",false,false\)/)
+  assert.match(workplaces,/ContextLink href="\/inventory"/)
   assert.ok(page.includes("from('inventory_items')"))
+  assert.ok(page.includes("status!=='archived'"))
   assert.ok(page.includes('materials={materials.filter(item=>item.workplace_id===workplace.id)}'))
   assert.ok(materials.includes('Materiaal toevoegen aan deze werkplek'))
   assert.ok(materials.includes('Voorraad gekoppeld aan'))
