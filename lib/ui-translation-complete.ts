@@ -4,6 +4,23 @@ type Row = { fr: string; en: string; de: string }
 // Canonical Dutch UI strings that were historically present only in the NL/FR/EN table.
 // Keep every row complete: missing translations must never silently fall back to Dutch.
 const ROWS: Record<string, Row> = {
+  'Context': { fr: 'Contexte', en: 'Context', de: 'Kontext' },
+  'geselecteerd': { fr: 'sélectionné', en: 'selected', de: 'ausgewählt' },
+  'Event:': { fr: 'Événement :', en: 'Event:', de: 'Veranstaltung:' },
+  'Werkplek:': { fr: 'Poste :', en: 'Workplace:', de: 'Arbeitsplatz:' },
+  'Persoon:': { fr: 'Personne :', en: 'Person:', de: 'Person:' },
+  'Planning': { fr: 'Planning', en: 'Planning', de: 'Planung' },
+  'Context wissen': { fr: 'Effacer le contexte', en: 'Clear context', de: 'Kontext löschen' },
+  'Wis de actieve event- en werkplekcontext': { fr: 'Effacer le contexte actif de l’événement et du poste', en: 'Clear the active event and workplace context', de: 'Aktiven Veranstaltungs- und Arbeitsplatzkontext löschen' },
+  'Werkplekmodules — context blijft automatisch behouden.': { fr: 'Modules du poste — le contexte est conservé automatiquement.', en: 'Workplace modules — context is preserved automatically.', de: 'Arbeitsplatzmodule — der Kontext bleibt automatisch erhalten.' },
+  'Beheer materiaal, voorraad, ontbrekende en beschadigde items voor deze werkplek.': { fr: 'Gérez le matériel, le stock, les éléments manquants et endommagés pour ce poste.', en: 'Manage equipment, stock, missing, and damaged items for this workplace.', de: 'Verwalte Material, Bestand sowie fehlende und beschädigte Artikel für diesen Arbeitsplatz.' },
+  'Open de operationele inkom- en guestlistmodule voor deze werkplek.': { fr: 'Ouvrez le module opérationnel d’entrée et de guestlist pour ce poste.', en: 'Open the operational entrance and guestlist module for this workplace.', de: 'Öffne das operative Einlass- und Gästelistenmodul für diesen Arbeitsplatz.' },
+  'Open taken in de context van deze werkplek.': { fr: 'Ouvrez les tâches dans le contexte de ce poste.', en: 'Open tasks in the context of this workplace.', de: 'Öffne Aufgaben im Kontext dieses Arbeitsplatzes.' },
+  'Open briefing en checklists voor deze werkplek.': { fr: 'Ouvrez le briefing et les checklists de ce poste.', en: 'Open the briefing and checklists for this workplace.', de: 'Öffne Briefing und Checklisten für diesen Arbeitsplatz.' },
+  'Beheer briefing, bevestigingen en eventchecklists.': { fr: 'Gérez le briefing, les confirmations et les checklists de l’événement.', en: 'Manage briefing, confirmations, and event checklists.', de: 'Verwalte Briefing, Bestätigungen und Event-Checklisten.' },
+  'Open werkplaatsen, verantwoordelijken, personeel en shifts voor dit evenement.': { fr: 'Ouvrez les postes, responsables, personnel et services de cet événement.', en: 'Open workplaces, responsibles, staff, and shifts for this event.', de: 'Öffne Arbeitsplätze, Verantwortliche, Personal und Schichten für diese Veranstaltung.' },
+  'Beveiligde personeelsoperaties': { fr: 'Opérations du personnel sécurisées', en: 'Secure staff operations', de: 'Sichere Personalvorgänge' },
+
   'Centrale actiequeue met live operationele signalen, goedkeuringen, problemen en directe vervolgstappen.': { fr: 'File d’action centrale avec signaux opérationnels en direct, validations, problèmes et prochaines étapes directes.', en: 'Central action queue with live operational signals, approvals, issues, and direct next steps.', de: 'Zentrale Aktionswarteschlange mit Live-Betriebssignalen, Freigaben, Problemen und direkten nächsten Schritten.' },
   'Beheer de volledige eventlevenscyclus, briefing, readiness, documenten, afsluiting en archief.': { fr: 'Gérez tout le cycle de vie de l’événement, le briefing, la préparation, les documents, la clôture et les archives.', en: 'Manage the full event lifecycle, briefing, readiness, documents, closing, and archive.', de: 'Verwalte den gesamten Veranstaltungszyklus, Briefing, Bereitschaft, Dokumente, Abschluss und Archiv.' },
   'Beheer live werkuren, pauzes, check-in/out, correcties, timesheets en Excel-export.': { fr: 'Gérez les heures en direct, les pauses, les entrées/sorties, les corrections, les feuilles de temps et l’export Excel.', en: 'Manage live work hours, breaks, check-in/out, corrections, timesheets, and Excel export.', de: 'Verwalte Live-Arbeitszeiten, Pausen, Check-in/out, Korrekturen, Stundenzettel und Excel-Export.' },
