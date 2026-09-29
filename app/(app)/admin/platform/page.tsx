@@ -48,7 +48,7 @@ export default async function PlatformCenter(){
     s.from('inventory_items').select('id,event_id,workplace_id,name,asset_code,barcode,serial_number,location_label,maintenance_due_at,reorder_threshold,unit_cost_cents,asset_notes,available_quantity,total_quantity,missing_quantity,damaged_quantity').eq('is_active',true).order('name').limit(200),
     s.from('event_report_snapshots').select('id,event_id,snapshot,generated_at,generation_kind').order('generated_at',{ascending:false}).limit(20),
     s.rpc('upt_recovery_readiness'),
-    s.from('automation_rules').select('automation_key,label,description,enabled,trigger_key,action_key,delay_minutes,reminder_minutes,escalation_minutes,audience,channels,auto_action,audit_enabled,cooldown_minutes,max_retries,last_run_at').order('automation_key'),
+    s.from('automation_rules').select('automation_key,label,description,enabled,trigger_key,action_key,delay_minutes,reminder_minutes,escalation_minutes,audience,channels,auto_action,audit_enabled,cooldown_minutes,max_retries,last_run_at,settings').order('automation_key'),
   ])
 
   const loadProblems=[
