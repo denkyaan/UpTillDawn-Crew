@@ -9,6 +9,7 @@ import { Shield } from "lucide-react"
 import { NAV_ITEMS } from "@/components/layout/navigation-items"
 import { getDefaultRoleUiLabel, type RoleRuleRole } from "@/lib/role-ui"
 import { featureHelp } from "@/lib/ui-field-help"
+import { useAdminNavigationContext } from "@/lib/admin-navigation-context"
 import { useAdminSelection } from "@/lib/admin-selection-context"
 import { featureHelp } from "@/lib/ui-field-help"
 
