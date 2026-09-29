@@ -184,3 +184,29 @@ export async function restorePlatformConfiguration(fd:FormData){
   if(error)throw new Error(error.message)
   await refresh()
 }
+
+
+export async function saveAutomationRule(fd:FormData){
+  const {s,user}=await adminClient()
+  const key=z.string().trim().min(1).max(120).regex(/^[a-z0-9_-]+$/).parse(fd.get('automation_key'))
+  const optionalMinutes=(name:string)=>{
+    const raw=String(fd.get(name)||'').trim()
+    return raw?z.coerce.number().int().min(1).max(43200).parse(raw):null
+  }
+  const channels=fd.getAll('channel').map(String).filter(value=>['in_app','push','email'].includes(value))
+  const {error}=await s.from('automation_rules').update({
+    enabled:fd.get('enabled')==='on',
+    delay_minutes:z.coerce.number().int().min(0).max(43200).parse(fd.get('delay_minutes')||0),
+    reminder_minutes:optionalMinutes('reminder_minutes'),
+    escalation_minutes:optionalMinutes('escalation_minutes'),
+    cooldown_minutes:z.coerce.number().int().min(0).max(43200).parse(fd.get('cooldown_minutes')||0),
+    max_retries:z.coerce.number().int().min(0).max(20).parse(fd.get('max_retries')||0),
+    channels:channels.length?channels:['in_app'],
+    updated_at:new Date().toISOString(),
+    updated_by:user.id,
+  }).eq('automation_key',key)
+  if(error)throw new Error('Automatisering kon niet worden opgeslagen.')
+  await revalidatePath('/admin/platform')
+  await revalidatePath('/settings')
+  await revalidatePath('/admin')
+}
