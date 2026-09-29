@@ -3,7 +3,8 @@ import { DateInput } from '@/components/crew/date-input'
 import { AdminOnly } from '@/components/auth/admin-only'
 import { GeoapifyPlaceFields } from '@/components/events/geoapify-place-fields'
 import { FacebookEventField } from '@/components/events/facebook-event-field'
-import { DeleteEventButton } from '@/components/events/delete-event-button'
+import { ArchiveEventButton } from '@/components/events/archive-event-button'
+import { ArchiveCenter } from '@/components/events/archive-center'
 import { EmergencyInformationPanel } from '@/components/crew/emergency-information-panel'
 import { EventDocumentsPanel } from '@/components/crew/event-documents-panel'
 import { nlStatus } from '@/lib/ui-nl'
@@ -28,7 +29,7 @@ export default async function Page(){
   if(!user)return null
 
   const [eventsResult,membershipResult,shiftResult,startedResult,availabilityResult,responsibleResult,emergencyResult]=await Promise.all([
-    s.from('events').select('id,name,venue,address,start_at,end_at,registration_deadline,max_joiners,status,latitude,longitude,checkin_radius_m').order('start_at'),
+    s.from('events').select('id,name,venue,address,start_at,end_at,registration_deadline,max_joiners,status,latitude,longitude,checkin_radius_m,archived_at,archived_by,archive_reason,restored_at,restored_by,pre_archive_status').order('start_at'),
     s.from('event_members').select('event_id,user_id'),
     s.from('shifts').select('event_id,workplace_id,workplaces(name)').eq('user_id',user.id).neq('status','cancelled').neq('response_status','declined'),
     s.from('events').select('id').lte('start_at','now'),
@@ -51,6 +52,8 @@ export default async function Page(){
 
   const events=eventsResult.data||[]
   const people=peopleResult.data||[]
+  const activeEvents=events.filter(event=>event.status!=='archived')
+  const archivedEvents=events.filter(event=>event.status==='archived').sort((a,b)=>Date.parse(b.archived_at||b.end_at)-Date.parse(a.archived_at||a.end_at))
   const workplaces=workplacesResult.data||[]
   const adminShifts=adminShiftsResult.data||[]
   const memberships=membershipResult.data||[]
@@ -63,8 +66,8 @@ export default async function Page(){
   ])
   const nowMs=new Date().getTime()
   const visibleEvents=user.isAdmin
-    ? events.filter(event=>event.status!=='archived')
-    : events.filter(event=>{
+    ? activeEvents
+    : activeEvents.filter(event=>{
         const end=Date.parse(event.end_at)
         const visibleWhileOpen=event.status!=='archived'&&nowMs<=end
         const assigned=assignedEventIds.has(event.id)&&nowMs<=end+3*24*60*60*1000
@@ -106,7 +109,7 @@ export default async function Page(){
       <div className="grid gap-4 xl:grid-cols-2">
         <form action={captureEventTemplate} className="grid gap-2 rounded-xl border p-3">
           <b>Template maken van bestaand event</b>
-          <select name="event_id" required className={input}><option value="">Bron-event…</option>{events.map(event=><option key={event.id} value={event.id}>{event.name}</option>)}</select>
+          <select name="event_id" required className={input}><option value="">Bron-event…</option>{activeEvents.map(event=><option key={event.id} value={event.id}>{event.name}</option>)}</select>
           <input name="template_name" required minLength={3} maxLength={200} placeholder="Templatenaam" className={input}/>
           <div className="grid grid-cols-2 gap-2 text-sm">
             {['workplaces','briefing','tasks','checklists','inventory'].map(section=><label key={section} className="flex items-center gap-2 rounded-lg border p-2"><input type="checkbox" name={'section_'+section} defaultChecked/>{section}</label>)}
@@ -386,10 +389,12 @@ export default async function Page(){
               </form>
             </details>
 
-            <DeleteEventButton eventId={event.id} eventName={event.name}/>
+            <ArchiveEventButton eventId={event.id} eventName={event.name} eventStatus={event.status}/>
           </div></AdminOnly>}
         </div>
       </details>
     })}</div>
+
+    {user.isAdmin&&<AdminOnly><ArchiveCenter events={archivedEvents.map(event=>({id:event.id,name:event.name,venue:event.venue,address:event.address,startAt:event.start_at,endAt:event.end_at,archivedAt:event.archived_at,archivedByName:event.archived_by?peopleById.get(event.archived_by)?.full_name||null:null,archiveReason:event.archive_reason,preArchiveStatus:event.pre_archive_status}))}/></AdminOnly>}
   </main>
 }
