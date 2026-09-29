@@ -34,6 +34,8 @@ export function PwaRegister(){
 
     const safelyReloadForUpdate=async()=>{
       if(reloading||document.visibilityState!=="visible")return
+      if(freshnessRun)await freshnessRun.catch(()=>{})
+      if(disposed||reloading)return
       if(user?.id&&navigator.onLine){
         try{await synchronize(user.id)}catch{}
       }
@@ -43,7 +45,7 @@ export function PwaRegister(){
     }
 
     const keepFresh=async({force=false}:{force?:boolean}={})=>{
-      if(disposed||!navigator.onLine)return
+      if(disposed||reloading||updateReloadPending||!navigator.onLine)return
       const now=Date.now()
       if(!force&&now-lastFreshAt<60_000)return
       if(freshnessRun)return freshnessRun
@@ -88,7 +90,7 @@ export function PwaRegister(){
     }
 
     const onMessage=(event:MessageEvent)=>{
-      if(event.data?.type==="UPT_PUSH_REFRESH"){
+      if(event.data?.type==="UPT_PUSH_REFRESH"&&!reloading&&!updateReloadPending){
         router.refresh()
         void refreshPushBadge()
       }
