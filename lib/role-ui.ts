@@ -119,8 +119,8 @@ export const ROLE_UI_DEFAULTS: Record<RoleRuleRole, RoleUiRule[]> = {
     navRule("admin","briefings","Briefing",70,"never",false,false),
     navRule("admin","exports","Excel",120,"never",false,false),
     navRule("admin","platform","Platformbeheer",125,"never",false,false),
-    featureRule("admin","emergency","Noodinformatie",115,"never",false,false),
-    featureRule("admin","documents","Documenten",118,"never",false,false),
+    featureRule("admin","emergency","Noodinformatie",115),
+    featureRule("admin","documents","Documenten",118),
   ],
   responsible_lead: [
     navRule("responsible_lead","overview","Overzicht",10),
