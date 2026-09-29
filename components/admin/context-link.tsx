@@ -13,7 +13,7 @@ export function ContextLink({
   const admin=useAdminSelection()
   const nextHref=admin.href(href,context||{})
   return <Link {...props} href={nextHref} onClick={event=>{
-    context&&admin.setSelection(context)
+    if(context)admin.setSelection(context)
     props.onClick?.(event)
   }}>{children}</Link>
 }
