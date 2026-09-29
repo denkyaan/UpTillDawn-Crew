@@ -82,6 +82,7 @@ export function featureHelp(key:string,label?:string):UiFieldHelp{
 
 export function platformModuleHelp(key:string):UiFieldHelp{
  const map:Record<string,UiFieldHelp>={
+  automations:{label:'Automatiseringen',description:'Beheer automatische reminders, controles en escalaties. Elke regel heeft een trigger, timing, doelgroep, kanalen, cooldown en auditbare uitvoering; gevoelige beslissingen blijven handmatig.'},
   planning:{label:'Automatische personeelsplanning',description:'Maakt voorstellen voor personeelsbezetting op basis van beschikbaarheid en werkplekbehoefte. Een voorstel wordt pas actief nadat je het toepast.'},
   templates:{label:'Eventtemplates',description:'Slaat een bestaand event als herbruikbare basis op zodat werkplekken, briefing, taken, checklists en inventory opnieuw gebruikt kunnen worden.'},
   reporting:{label:'Rapportage & personeelskost',description:'Genereert eventrapporten en bewaart interne kosttarieven voor operationele ramingen.'},
