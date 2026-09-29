@@ -38,6 +38,15 @@ async function fetchPushConfig():Promise<PushConfig>{
   return response.json() as Promise<PushConfig>
 }
 
+function sameApplicationServerKey(subscription:PushSubscription,publicKey:string){
+  const current=subscription.options.applicationServerKey
+  if(!current)return false
+  const expected=base64UrlToUint8Array(publicKey)
+  const actual=new Uint8Array(current)
+  if(actual.length!==expected.length)return false
+  return actual.every((value,index)=>value===expected[index])
+}
+
 async function saveSubscription(subscription:PushSubscription){
   const json=subscription.toJSON()
   const p256dh=json.keys?.p256dh
@@ -106,6 +115,11 @@ export async function enablePushNotifications({requestPermission=true}:{requestP
       fetchPushConfig(),
     ])
     let subscription=await registration.pushManager.getSubscription()
+    if(subscription&&!sameApplicationServerKey(subscription,config.publicKey)){
+      await removeServerSubscription(subscription.endpoint)
+      await subscription.unsubscribe()
+      subscription=null
+    }
     if(!subscription){
       subscription=await registration.pushManager.subscribe({
         userVisibleOnly:true,
