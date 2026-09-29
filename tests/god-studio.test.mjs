@@ -85,3 +85,17 @@ test('God Mode AI proposals are bounded and schema validated before reaching dra
   assert.match(route,/resultSchema\.safeParse/)
   assert.match(studio,/AI wil een bestaand bestand wijzigen dat niet was geopend/)
 })
+
+
+test('God Mode studio keeps dedicated authentication and exposes full editing surfaces', async()=>{
+  const page=await read('app/god-mode/page.tsx')
+  const studio=await read('components/god-mode/god-studio.tsx')
+  const visual=await read('components/god-mode/god-visual-builder.tsx')
+  assert.match(page,/redirect\('\/god-mode\/login'\)/)
+  for(const tab of ["'builder'","'ai'","'automations'","'source'","'elements'","'data'","'sql'","'roles'","'versions'","'connections'"]) assert.match(studio,new RegExp(tab))
+  for(const role of ["staff: 'Personeel'","responsible_lead: 'Verantwoordelijke'","admin: 'Admin'"]) assert.match(visual,new RegExp(role))
+  assert.match(studio,/GodModeEditor/)
+  assert.match(studio,/GodAutomationBuilder/)
+  assert.match(studio,/GodDataEditor/)
+  assert.match(studio,/GodSqlEditor/)
+})
