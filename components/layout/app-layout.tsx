@@ -257,7 +257,8 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
   const showExports=feature("exports",Boolean(isAdmin))
   const showPersonnel=feature("personnel",Boolean(isAdmin))
   const showSettings=feature("settings",true)
-  const featureVisibility={overview:showOverview,events:showEvents,operations:showOperations,workplaces:showWorkplaces,inventory:showInventory,guestlist:showGuestlist,sales:showSales,shifts:showShifts,briefings:showBriefings,tasks:showTasks,chat:showChat,crew:showCrew,incidents:showIncidents,exports:showExports,personnel:showPersonnel,settings:showSettings}
+  const showPlatform=feature("platform",Boolean(isAdmin))
+  const featureVisibility={overview:showOverview,events:showEvents,operations:showOperations,workplaces:showWorkplaces,inventory:showInventory,guestlist:showGuestlist,sales:showSales,shifts:showShifts,briefings:showBriefings,tasks:showTasks,chat:showChat,crew:showCrew,incidents:showIncidents,exports:showExports,personnel:showPersonnel,platform:showPlatform,settings:showSettings}
   const operationalMode=context.eventActive||context.shiftActive
   const showUrgent=!pathname.startsWith("/chat")&&!isAdmin&&showIncidents&&context.shiftActive
   const showFloatingChat=isAdmin||operationalMode
