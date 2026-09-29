@@ -99,3 +99,15 @@ test('God Mode studio keeps dedicated authentication and exposes full editing su
   assert.match(studio,/GodDataEditor/)
   assert.match(studio,/GodSqlEditor/)
 })
+
+
+test('God Mode automation builder uses the persistent automation engine', async()=>{
+  const route=await read('app/api/god/automation-rules/route.ts')
+  const builder=await read('components/god-mode/god-automation-builder.tsx')
+  assert.match(route,/authorizeStudio\(request\)/)
+  assert.match(route,/upt_current_is_owner/)
+  assert.match(route,/from\('automation_rules'\)/)
+  assert.match(builder,/\/api\/god\/automation-rules/)
+  assert.match(builder,/existingRules\.map/)
+  assert.match(builder,/Bewerken via AI/)
+})
