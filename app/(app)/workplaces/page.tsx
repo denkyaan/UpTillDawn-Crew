@@ -10,6 +10,7 @@ import { staffNeededForTarget, workplaceStaffingState } from '@/lib/workplace-ca
 import { WorkplaceShiftPlanner, type WorkplacePlannerPerson, type WorkplacePlannerShift } from '@/components/crew/workplace-shift-planner'
 import { DateInput } from '@/components/crew/date-input'
 import { ShiftChangeCenter, type ClaimableShift, type ShiftChangeRequestView, type ShiftReplacementCandidate, type ShiftSwapCandidate } from '@/components/crew/shift-change-controls'
+import { ContextLink } from '@/components/admin/context-link'
 
 export const dynamic='force-dynamic'
 
@@ -455,12 +456,12 @@ export default async function Page({searchParams}:{searchParams?:Promise<{event?
             </details>
           </AdminOnly>}
 
-          {isAdmin&&<div className="mt-3 flex flex-wrap gap-2">
-            <Link href={'/inventory?event='+workplace.event_id+'&workplace='+workplace.id} className="rounded-lg border px-3 py-2 text-xs font-bold">Inventaris</Link>
-            <Link href={'/guestlist?event='+workplace.event_id+'&workplace='+workplace.id} className="rounded-lg border px-3 py-2 text-xs font-bold">Inkom & Guestlist</Link>
-            <Link href={'/tasks?event='+workplace.event_id+'&workplace='+workplace.id} className="rounded-lg border px-3 py-2 text-xs font-bold">Taken</Link>
-            <Link href={'/briefings?event='+workplace.event_id+'&workplace='+workplace.id} className="rounded-lg border px-3 py-2 text-xs font-bold">Briefing</Link>
-          </div>}
+          {isAdmin&&<div className="mt-3 space-y-2"><p className="text-xs font-semibold text-muted-foreground">Werkplekmodules — context blijft automatisch behouden.</p><div className="flex flex-wrap gap-2">
+            <ContextLink href="/inventory" context={{eventId:workplace.event_id,workplaceId:workplace.id}} className="rounded-lg border px-3 py-2 text-xs font-bold" title="Beheer materiaal, voorraad, ontbrekende en beschadigde items voor deze werkplek.">Inventaris</ContextLink>
+            <ContextLink href="/guestlist" context={{eventId:workplace.event_id,workplaceId:workplace.id}} className="rounded-lg border px-3 py-2 text-xs font-bold" title="Open de operationele inkom- en guestlistmodule voor deze werkplek.">Inkom & Guestlist</ContextLink>
+            <ContextLink href="/tasks" context={{eventId:workplace.event_id,workplaceId:workplace.id}} className="rounded-lg border px-3 py-2 text-xs font-bold" title="Open taken in de context van deze werkplek.">Taken</ContextLink>
+            <ContextLink href="/briefings" context={{eventId:workplace.event_id,workplaceId:workplace.id}} className="rounded-lg border px-3 py-2 text-xs font-bold" title="Open briefing en checklists voor deze werkplek.">Briefing</ContextLink>
+          </div></div>}
 
           <div className="mt-3 space-y-3">
             <WorkplaceShiftPlanner
