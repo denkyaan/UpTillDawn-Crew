@@ -204,7 +204,7 @@ export default async function Page({searchParams}:{searchParams?:Promise<{event?
         <div className="space-y-4 border-t p-4">
           <div className="flex flex-wrap gap-2">
             <ContextLink href={'/events/'+event.id+'/command'} context={{eventId:event.id}} className="inline-flex rounded-xl bg-violet-600 px-3 py-2 text-sm font-bold text-white">COMMAND CENTER</ContextLink>
-            {user.isAdmin&&<ContextLink href="/briefings" context={{eventId:event.id}} className="inline-flex rounded-xl border px-3 py-2 text-sm font-bold" title="Beheer briefing, bevestigingen en eventchecklists.">Briefing beheren</ContextLink>}
+            {user.isAdmin&&<ContextLink href="/briefings" context={{eventId:event.id,focus:'briefing'}} className="inline-flex rounded-xl border px-3 py-2 text-sm font-bold" title="Beheer briefing, bevestigingen en eventchecklists.">Briefing beheren</ContextLink>}
             {user.isAdmin&&<ContextLink href="/workplaces" context={{eventId:event.id}} className="inline-flex rounded-xl border px-3 py-2 text-sm font-bold" title="Open werkplaatsen, verantwoordelijken, personeel en shifts voor dit evenement.">Werkplaatsen & shifts</ContextLink>}
           </div>
           {!user.isAdmin&&assigned&&<Link href={'/onboarding?event='+event.id} className="inline-flex rounded-xl border px-3 py-2 text-sm font-bold">Onboarding openen</Link>}
