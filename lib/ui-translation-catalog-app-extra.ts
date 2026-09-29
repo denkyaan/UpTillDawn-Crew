@@ -435,7 +435,6 @@ export const APP_EXTRA_TRANSLATIONS: Record<string,Row> = {
   "Dit toestel of deze browser ondersteunt geen Web Push.": { fr:"Cet appareil ou navigateur ne prend pas en charge Web Push.", en:"This device or browser does not support Web Push.", de:"Dieses Gerät oder dieser Browser unterstützt Web Push nicht." },
   "De pushinstellingen konden niet worden geladen.": { fr:"Les paramètres push n’ont pas pu être chargés.", en:"The push settings could not be loaded.", de:"Die Push-Einstellungen konnten nicht geladen werden." },
   "Sta meldingen toe om updates te ontvangen wanneer de app gesloten is.": { fr:"Autorisez les notifications pour recevoir des mises à jour lorsque l’application est fermée.", en:"Allow notifications to receive updates when the app is closed.", de:"Erlaube Benachrichtigungen, um Updates zu erhalten, wenn die App geschlossen ist." },
-  "ACTIEF": { fr:"ACTIF", en:"ACTIVE", de:"AKTIV" },
   "UITSCHAKELEN": { fr:"DÉSACTIVER", en:"DISABLE", de:"DEAKTIVIEREN" },
   "LADEN…": { fr:"CHARGEMENT…", en:"LOADING…", de:"LADEN…" },
   "PUSHMELDINGEN INSCHAKELEN": { fr:"ACTIVER LES NOTIFICATIONS PUSH", en:"ENABLE PUSH NOTIFICATIONS", de:"PUSH-BENACHRICHTIGUNGEN AKTIVIEREN" },
