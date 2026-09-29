@@ -138,7 +138,7 @@ export default async function Page({searchParams}:{searchParams?:Promise<{event?
             {i.resolved_at&&<p className="text-sm text-muted-foreground">Opgelost: {new Date(i.resolved_at).toLocaleString('nl-BE')}</p>}
             {i.photo_path&&<IncidentMedia url={signedMedia.get(i.id)} video={isVideo(i.photo_path)}/>}
             {manager&&<IncidentControls id={i.id} status={i.status} resolved={Boolean(i.resolved_at)}/>}
-          </article>)}}
+          </article>})}
   </main>
 }
 
