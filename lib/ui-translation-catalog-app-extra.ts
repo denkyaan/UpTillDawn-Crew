@@ -422,6 +422,23 @@ export const APP_EXTRA_TRANSLATIONS: Record<string,Row> = {
   "Normale app": { fr:"Application normale", en:"Normal app", de:"Normale App" },
   "Ga verder in het gekozen portaal.": { fr:"Continuez dans le portail choisi.", en:"Continue in the selected portal.", de:"Fahre im gewählten Portal fort." },
   "Open App Studio met volledige makerrechten.": { fr:"Ouvrez App Studio avec tous les droits de créateur.", en:"Open App Studio with full maker permissions.", de:"Öffne App Studio mit vollständigen Maker-Rechten." },
+  "Pushmeldingen inschakelen?": { fr:"Activer les notifications push ?", en:"Enable push notifications?", de:"Push-Benachrichtigungen aktivieren?" },
+  "Ontvang meldingen van Up Till Dawn ook wanneer de app niet open staat.": { fr:"Recevez les notifications d’Up Till Dawn même lorsque l’application n’est pas ouverte.", en:"Receive Up Till Dawn notifications even when the app is not open.", de:"Erhalte Up Till Dawn-Benachrichtigungen auch, wenn die App nicht geöffnet ist." },
+  "Activeren is niet gelukt. Probeer opnieuw.": { fr:"L’activation a échoué. Réessayez.", en:"Activation failed. Try again.", de:"Die Aktivierung ist fehlgeschlagen. Versuche es erneut." },
+  "ACTIVEREN…": { fr:"ACTIVATION…", en:"ENABLING…", de:"AKTIVIERUNG…" },
+  "TOESTAAN": { fr:"AUTORISER", en:"ALLOW", de:"ZULASSEN" },
+  "Later": { fr:"Plus tard", en:"Later", de:"Später" },
+  "App- & pushmeldingen": { fr:"Notifications de l’app et push", en:"App & push notifications", de:"App- & Push-Benachrichtigungen" },
+  "Pushmeldingen zijn actief op dit toestel.": { fr:"Les notifications push sont actives sur cet appareil.", en:"Push notifications are active on this device.", de:"Push-Benachrichtigungen sind auf diesem Gerät aktiv." },
+  "Meldingen zijn geblokkeerd. Sta ze toe in de instellingen van je browser of toestel.": { fr:"Les notifications sont bloquées. Autorisez-les dans les paramètres de votre navigateur ou appareil.", en:"Notifications are blocked. Allow them in your browser or device settings.", de:"Benachrichtigungen sind blockiert. Erlaube sie in den Browser- oder Geräteeinstellungen." },
+  "Op iPhone/iPad: voeg de website eerst toe aan je beginscherm en open hem als web-app.": { fr:"Sur iPhone/iPad : ajoutez d’abord le site à l’écran d’accueil et ouvrez-le comme web-app.", en:"On iPhone/iPad: first add the website to your Home Screen and open it as a web app.", de:"Auf iPhone/iPad: Füge die Website zuerst zum Home-Bildschirm hinzu und öffne sie als Web-App." },
+  "Dit toestel of deze browser ondersteunt geen Web Push.": { fr:"Cet appareil ou navigateur ne prend pas en charge Web Push.", en:"This device or browser does not support Web Push.", de:"Dieses Gerät oder dieser Browser unterstützt Web Push nicht." },
+  "De pushinstellingen konden niet worden geladen.": { fr:"Les paramètres push n’ont pas pu être chargés.", en:"The push settings could not be loaded.", de:"Die Push-Einstellungen konnten nicht geladen werden." },
+  "Sta meldingen toe om updates te ontvangen wanneer de app gesloten is.": { fr:"Autorisez les notifications pour recevoir des mises à jour lorsque l’application est fermée.", en:"Allow notifications to receive updates when the app is closed.", de:"Erlaube Benachrichtigungen, um Updates zu erhalten, wenn die App geschlossen ist." },
+  "ACTIEF": { fr:"ACTIF", en:"ACTIVE", de:"AKTIV" },
+  "UITSCHAKELEN": { fr:"DÉSACTIVER", en:"DISABLE", de:"DEAKTIVIEREN" },
+  "LADEN…": { fr:"CHARGEMENT…", en:"LOADING…", de:"LADEN…" },
+  "PUSHMELDINGEN INSCHAKELEN": { fr:"ACTIVER LES NOTIFICATIONS PUSH", en:"ENABLE PUSH NOTIFICATIONS", de:"PUSH-BENACHRICHTIGUNGEN AKTIVIEREN" },
   "Personeelsbeheer voor Up Till Dawn-evenementen": { fr:"Gestion du personnel pour les événements Up Till Dawn", en:"Staff management for Up Till Dawn events", de:"Personalverwaltung für Up Till Dawn Veranstaltungen" }
 }
 
