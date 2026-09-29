@@ -1,3 +1,4 @@
+import Link from 'next/link'
 import { createClient } from '@/lib/supabase/crew-server'
 import { getCurrentUser } from '@/lib/actions/auth'
 import { redirect } from 'next/navigation'
@@ -213,6 +214,11 @@ export default async function Page(){
   }
 
   return <>
+    {isAdmin&&<div className="mx-auto flex max-w-4xl flex-wrap gap-2 px-4 pt-4 md:px-8 md:pt-8">
+      <Link href="/admin/time-records" className="rounded-xl border px-4 py-3 text-sm font-bold">Tijdcorrecties</Link>
+      <Link href="/exports" className="rounded-xl border px-4 py-3 text-sm font-bold">Excel exporteren</Link>
+      <span className="self-center text-xs text-muted-foreground">Werkuren, correcties en export horen bij dezelfde tijdregistratieworkflow.</span>
+    </div>}
     {isResponsible&&handoverScopes.length>0&&<div className="mx-auto max-w-4xl px-4 pt-4 md:px-8 md:pt-8">
       <ShiftHandoverPanel
         userId={current.id}
