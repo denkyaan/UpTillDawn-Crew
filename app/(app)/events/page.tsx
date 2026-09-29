@@ -81,7 +81,10 @@ export default async function Page({searchParams}:{searchParams?:Promise<{event?
   const emergencyByEvent=new Map((emergencyResult.data||[]).map(row=>[row.event_id,row]))
 
   return <main className="space-y-6 p-4 md:p-8">
-    <h1 className="text-3xl font-black">Evenementen</h1>
+    <div>
+      <h1 className="text-3xl font-black">Evenementen</h1>
+      <p className="text-sm text-muted-foreground">Beheer de volledige eventlevenscyclus: planning, briefing, readiness, documenten, afsluiting en archief. Klik op een evenement om de context mee te nemen naar andere modules.</p>
+    </div>
 
     {user.isAdmin&&<AdminOnly><form action={createEvent} className="grid gap-3 rounded-2xl border p-4">
       <FacebookEventField/>
