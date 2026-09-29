@@ -10,7 +10,7 @@ export default async function Page(){
   const [{data:channels,error},{data:directory},{data:activeEvents},{data:memberships},{data:ownShifts},{data:responsibleAssignments},{data:chatEvents}]=await Promise.all([
     s.from('chat_channels').select('*').in('kind',['organization','event','workplace']).order('created_at'),
     s.rpc('upt_crew_directory'),
-    s.from('events').select('id,start_at,end_at').lte('start_at','now').gte('end_at','now').order('start_at'),
+    s.from('events').select('id,start_at,end_at').neq('status','archived').lte('start_at','now').gte('end_at','now').order('start_at'),
     s.from('event_members').select('event_id').eq('user_id',user.id),
     s.from('shifts').select('event_id,workplace_id').eq('user_id',user.id).neq('status','cancelled'),
     s.from('responsible_assignments').select('event_id,workplace_id').eq('user_id',user.id),
