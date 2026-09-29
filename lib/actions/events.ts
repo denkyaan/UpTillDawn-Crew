@@ -1,6 +1,6 @@
 'use server'
 
-import { revalidatePath } from '@/lib/save-success'
+import { markSaveSuccess, revalidatePath } from '@/lib/save-success'
 import { z } from 'zod'
 import { createClient } from '@/lib/supabase/crew-server'
 import { fetchFacebookEventInfo } from '@/lib/facebook-event'
@@ -98,12 +98,37 @@ export async function closeEvent(fd:FormData){
  const {error}=await s.rpc('upt_close_event',{p_event:eventId,p_force:force,p_reason:reason})
  if(error)throw new Error(error.message||'Evenement afsluiten mislukt.')
  await revalidatePath('/events');await revalidatePath('/admin')
+ await markSaveSuccess('event_closed')
 }
 
 export async function archiveEvent(fd:FormData){
  const {s}=await adminClient()
  const eventId=z.string().uuid().parse(fd.get('event_id'))
- const {error}=await s.rpc('upt_archive_event',{p_event:eventId})
- if(error)throw new Error(error.message||'Evenement archiveren mislukt.')
+ const force=fd.get('force')==='on'
+ const reason=String(fd.get('reason')||'').trim()
+ const result=force
+  ? await s.rpc('upt_force_archive_event',{p_event:eventId,p_reason:reason})
+  : await s.rpc('upt_archive_event',{p_event:eventId})
+ if(result.error)throw new Error(result.error.message||'Evenement archiveren mislukt.')
  await revalidatePath('/events');await revalidatePath('/admin')
+ await markSaveSuccess('event_archived')
+}
+
+export async function restoreEvent(fd:FormData){
+ const {s}=await adminClient()
+ const eventId=z.string().uuid().parse(fd.get('event_id'))
+ const reason=String(fd.get('reason')||'').trim()||undefined
+ const {error}=await s.rpc('upt_restore_event',{p_event:eventId,p_reason:reason})
+ if(error)throw new Error(error.message||'Evenement herstellen mislukt.')
+ await revalidatePath('/events');await revalidatePath('/admin')
+ await markSaveSuccess('event_restored')
+}
+
+export type EventLifecycleActionState={error:string|null}
+const lifecycleError=(error:unknown,fallback:string):EventLifecycleActionState=>({error:error instanceof Error&&error.message?error.message:fallback})
+export async function archiveEventWithState(_previous:EventLifecycleActionState,fd:FormData):Promise<EventLifecycleActionState>{
+ try{await archiveEvent(fd);return {error:null}}catch(error){return lifecycleError(error,'Evenement archiveren mislukt.')}
+}
+export async function restoreEventWithState(_previous:EventLifecycleActionState,fd:FormData):Promise<EventLifecycleActionState>{
+ try{await restoreEvent(fd);return {error:null}}catch(error){return lifecycleError(error,'Evenement herstellen mislukt.')}
 }
