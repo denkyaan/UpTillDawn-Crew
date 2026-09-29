@@ -114,7 +114,6 @@ export function AutomationManager({rules}:{rules:AutomationRuleView[]}){
               {rule.channels.map(channel=><input key={channel} type="hidden" name="channel" value={channel}/>)}
             </div>}
 
-</details>
 
         <div className="flex flex-wrap items-center justify-between gap-2">
           <p className="text-xs text-muted-foreground">{rule.audit_enabled?'Uitvoeringen worden gededupliceerd en gelogd.':'Audit uitgeschakeld.'} {rule.auto_action?'Automatische actie toegestaan.':'Geen destructieve automatische actie.'}</p>
