@@ -68,6 +68,7 @@ test('click context persists across modules and prefills the next relevant actio
   assert.match(tasks,/defaultWorkplaceId=\{params\.workplace/)
   assert.match(briefings,/defaultPersonId=\{params\.user/)
   assert.match(workplaces,/context=\{\{eventId:workplace\.event_id,workplaceId:workplace\.id,focus:'inventory'\}\}/)
+  assert.match(workplaces,/href="\/sales" context=\{\{eventId:workplace\.event_id,workplaceId:workplace\.id,focus:'sales'\}\}/)
   assert.match(chat,/params\.workplace/)
   assert.match(sales,/transactions\.filter\(transaction=>transaction\.workplace_id===params\.workplace\)/)
   assert.match(help,/help-focus/)
