@@ -657,6 +657,7 @@ export async function approvePersonnelAccount(fd:FormData){
  check(error)
  const {data:next}=await s.from('profiles').select('id').eq('approved',false).neq('id',id).order('created_at').limit(1).maybeSingle()
  await revalidatePath('/personnel')
+ await revalidatePath('/crew')
  await revalidatePath('/notifications')
  redirect(next?.id?'/personnel?feedback=approved&user='+next.id+'&focus=approval':'/personnel?feedback=approved')
 }
