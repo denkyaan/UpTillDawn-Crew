@@ -3,7 +3,7 @@ import assert from 'node:assert/strict'
 import {readFile} from 'node:fs/promises'
 const read=path=>readFile(new URL('../'+path,import.meta.url),'utf8')
 
-test('event archive lifecycle is explicit, recoverable and removed from active admin surfaces',async()=>{
+test('event archive lifecycle is recoverable and absent from active surfaces',async()=>{
   const [events,button,center,actions,command,inventory,tasks,briefings,migration,toaster]=await Promise.all([
     read('app/(app)/events/page.tsx'),
     read('components/events/archive-event-button.tsx'),
