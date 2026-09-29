@@ -61,25 +61,28 @@ export default async function Page(){
 
   if(isAdmin){
     const [
-      {data:eventRows},
+      {data:eventRows,error:eventRowsError},
       {data:catalogRows},
-      {data:workplaceRows},
+      {data:workplaceRows,error:workplaceRowsError},
       {data:shiftRows},
       {data:profileRows},
       {data:responsibleRows},
       {data:availabilityRows},
     ]=await Promise.all([
-      s.from('events').select('id,name').neq('status','archived').order('start_at'),
+      s.from('events').select('id,name,start_at,end_at').neq('status','archived').order('start_at'),
       s.from('workplace_catalog').select('id,name,description,sort_order').eq('is_active',true).order('sort_order').order('name'),
-      s.from('workplaces').select('id,event_id,name,description,sort_order,is_active,minimum_staff,target_staff,maximum_staff,default_shift_start,default_shift_end,events(name,start_at,end_at)').eq('is_active',true).order('sort_order'),
+      s.from('workplaces').select('id,event_id,name,description,sort_order,is_active,minimum_staff,target_staff,maximum_staff,default_shift_start,default_shift_end').eq('is_active',true).order('sort_order'),
       s.from('shifts').select('id,event_id,workplace_id,user_id,role_name,shift_kind,status,response_status,response_reason,confirmed_at,scheduled_start,scheduled_end,overlap_allowed').neq('status','cancelled').neq('response_status','declined').order('scheduled_start'),
       s.from('profiles').select('id,full_name,role').eq('approved',true).order('full_name'),
       s.from('responsible_assignments').select('workplace_id,user_id'),
       s.from('event_availability').select('event_id,user_id,response,setup_available,breakdown_available').or('response.eq.can,setup_available.eq.true,breakdown_available.eq.true'),
     ])
-    events=eventRows||[]
+    if(eventRowsError)throw new Error('Evenementen konden niet worden geladen: '+eventRowsError.message)
+    if(workplaceRowsError)throw new Error('Werkplaatsen konden niet worden geladen: '+workplaceRowsError.message)
+    events=(eventRows||[]).map(event=>({id:event.id,name:event.name}))
     catalogWorkplaces=catalogRows||[]
-    workplaces=workplaceRows||[]
+    const adminEventById=new Map((eventRows||[]).map(event=>[event.id,{name:event.name,start_at:event.start_at,end_at:event.end_at}]))
+    workplaces=(workplaceRows||[]).map(workplace=>({...workplace,events:adminEventById.get(workplace.event_id)||null}))
     peopleById=new Map((profileRows||[]).map(person=>[person.id,person]))
     responsibleAssignments=responsibleRows||[]
     coverageShifts=(shiftRows||[]).filter(shift=>shift.status!=='cancelled'&&shift.response_status!=='declined').map(shift=>({userId:shift.user_id,workplaceId:shift.workplace_id,startsAt:Date.parse(shift.scheduled_start),endsAt:Date.parse(shift.scheduled_end)}))
@@ -139,12 +142,15 @@ export default async function Page(){
     ])]
     if(!eventIds.length||!workplaceIds.length)redirect('/events')
 
-    const [{data:eventRows},{data:workplaceRows}]=await Promise.all([
-      s.from('events').select('id,name').in('id',eventIds).neq('status','archived').gte('end_at','now').order('start_at'),
-      s.from('workplaces').select('id,event_id,name,description,sort_order,is_active,minimum_staff,target_staff,maximum_staff,default_shift_start,default_shift_end,events(name,start_at,end_at)').in('id',workplaceIds).order('sort_order'),
+    const [{data:eventRows,error:eventRowsError},{data:workplaceRows,error:workplaceRowsError}]=await Promise.all([
+      s.from('events').select('id,name,start_at,end_at').in('id',eventIds).neq('status','archived').order('start_at'),
+      s.from('workplaces').select('id,event_id,name,description,sort_order,is_active,minimum_staff,target_staff,maximum_staff,default_shift_start,default_shift_end').in('id',workplaceIds).order('sort_order'),
     ])
-    events=eventRows||[]
-    workplaces=workplaceRows||[]
+    if(eventRowsError)throw new Error('Evenementen konden niet worden geladen: '+eventRowsError.message)
+    if(workplaceRowsError)throw new Error('Werkplaatsen konden niet worden geladen: '+workplaceRowsError.message)
+    events=(eventRows||[]).map(event=>({id:event.id,name:event.name}))
+    const assignedEventById=new Map((eventRows||[]).map(event=>[event.id,{name:event.name,start_at:event.start_at,end_at:event.end_at}]))
+    workplaces=(workplaceRows||[]).map(workplace=>({...workplace,events:assignedEventById.get(workplace.event_id)||null}))
     if(!events.length||!workplaces.length)redirect('/events')
 
     if(isResponsible){
@@ -535,6 +541,6 @@ export default async function Page(){
       })}
     </div>
 
-    {!workplaces.length&&<p className="rounded-xl border p-4 text-muted-foreground">Geen toegewezen werkplekken beschikbaar.</p>}
+    {!workplaces.length&&<p className="rounded-xl border p-4 text-muted-foreground">{isAdmin?'Geen actieve werkplaatsen gevonden voor de beschikbare evenementen.':'Geen toegewezen werkplaatsen beschikbaar.'}</p>}
   </main>
 }
