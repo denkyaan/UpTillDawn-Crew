@@ -114,3 +114,19 @@ test('admin overview uses a prioritized contextual action center',async()=>{
   assert.match(center,/gesorteerd op urgentie/)
   for(const key of ['HOOG','NORMAAL','INFO','STOPUREN ONTBREKEN','ONDERBEZETTING'])assert.ok(translations.includes(`'${key}': { fr:`),key)
 })
+
+
+test('notification clicks preserve admin context and smart alerts deep link to exact modules',async()=>{
+  const [page,link,migration]=await Promise.all([
+    read('app/(app)/notifications/page.tsx'),
+    read('components/admin/notification-open-link.tsx'),
+    read('supabase/migrations/20260929091000_notification_context_deeplinks.sql'),
+  ])
+  assert.match(page,/NotificationOpenLink/)
+  assert.match(link,/selectionFromHref/)
+  assert.match(link,/eventFromPath/)
+  assert.match(migration,/responsible-missing.*\/workplaces/s)
+  assert.match(migration,/briefing-unread.*\/briefings/s)
+  assert.match(migration,/inventory-low.*\/inventory/s)
+  assert.match(migration,/focus=/)
+})
