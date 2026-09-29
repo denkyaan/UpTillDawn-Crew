@@ -2,7 +2,7 @@
 
 import { useState } from 'react'
 
-export function PlatformAiAssistant({eventId,contextLabel,contextKey}:{eventId?:string;contextLabel?:string;contextKey?:string}={}){
+export function PlatformAiAssistant({eventId,contextLabel,contextKey,compact=false}:{eventId?:string;contextLabel?:string;contextKey?:string;compact?:boolean}={}){
   const [message,setMessage]=useState('')
   const [answer,setAnswer]=useState('')
   const [busy,setBusy]=useState(false)
@@ -24,7 +24,7 @@ export function PlatformAiAssistant({eventId,contextLabel,contextKey}:{eventId?:
     }finally{setBusy(false)}
   }
 
-  return <section className="space-y-3 rounded-2xl border p-4">
+  return <section className={compact?'space-y-3':'space-y-3 rounded-2xl border p-4'}>
     <div>
       <h2 className="text-xl font-black">Admin AI-assistent{contextLabel?' · '+contextLabel:''}</h2>
       <p className="text-sm text-muted-foreground">De assistent gebruikt automatisch de context van het geopende scherm of evenement en vat risico’s en volgende acties samen. Kritieke wijzigingen worden nooit automatisch uitgevoerd.</p>
@@ -39,10 +39,10 @@ export function PlatformAiAssistant({eventId,contextLabel,contextKey}:{eventId?:
         }
       }}
       maxLength={4000}
-      rows={5}
+      rows={compact?3:5}
       autoComplete="off"
       placeholder="Bijvoorbeeld: wie is al aanwezig, wat moet backstage voorbereiden en hoe staan de sales?"
-      className="min-h-32 w-full resize-y rounded-xl border bg-background p-3"
+      className={compact?'min-h-24 w-full resize-y rounded-xl border bg-background p-3':'min-h-32 w-full resize-y rounded-xl border bg-background p-3'}
     />
     <button type="button" onClick={submit} disabled={busy||!message.trim()} className="rounded-xl bg-violet-600 px-4 py-3 font-bold text-white">{busy?'ANALYSEREN…':'VRAAG AI'}</button>
     {answer&&<p className="whitespace-pre-wrap rounded-xl bg-muted/40 p-3 text-sm">{answer}</p>}
