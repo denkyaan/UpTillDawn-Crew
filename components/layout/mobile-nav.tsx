@@ -9,6 +9,7 @@ import { useAuth } from "@/lib/providers"
 import { cn } from "@/lib/utils"
 import { getDefaultRoleUiLabel, type RoleRuleRole } from "@/lib/role-ui"
 import { featureHelp } from "@/lib/ui-field-help"
+import { featureHelp } from "@/lib/ui-field-help"
 
 const ASSIGNED_EVENT_KEYS=["events","briefings","workplaces"] as const
 const STAFF_ACTIVE_SHIFT_KEYS=["operations","workplaces","briefings","tasks"] as const
