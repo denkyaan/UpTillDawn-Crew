@@ -2,9 +2,10 @@ import Image from 'next/image'
 import { createClient } from '@/lib/supabase/crew-server'
 import { redirect } from 'next/navigation'
 import { getCurrentUser } from '@/lib/actions/auth'
-import { deletePersonnel,setPersonnelBlock,setPersonnelRole } from '@/lib/actions/personnel'
+import { setPersonnelBlock,setPersonnelRole } from '@/lib/actions/personnel'
 import { nlRole } from '@/lib/ui-nl'
 import { PendingSubmitButton } from '@/components/ui/pending-submit-button'
+import { PersonnelDeleteButton } from '@/components/admin/personnel-delete-button'
 
 export const dynamic='force-dynamic'
 
@@ -115,7 +116,7 @@ export default async function Page({searchParams}:{searchParams?:Promise<{user?:
             {own?<p className="text-xs text-muted-foreground">Je eigen beheeraccount kan hier niet worden geblokkeerd, gedegradeerd of verwijderd.</p>:person.account_blocked
               ? <form action={setPersonnelBlock}><input type="hidden" name="user_id" value={person.id}/><input type="hidden" name="blocked" value="false"/><PendingSubmitButton pendingLabel="DEBLOKKEREN…" className="rounded-lg border border-emerald-500/50 px-4 py-2 font-semibold text-emerald-600">DEBLOKKEREN</PendingSubmitButton></form>
               : <form action={setPersonnelBlock} className="grid gap-2"><input type="hidden" name="user_id" value={person.id}/><input type="hidden" name="blocked" value="true"/><input name="reason" maxLength={1000} placeholder="Reden blokkering (optioneel)" className="rounded-lg border bg-background p-2"/><PendingSubmitButton pendingLabel="BLOKKEREN…" className="rounded-lg border border-amber-500/60 px-4 py-2 font-semibold text-amber-600">BLOKKEREN</PendingSubmitButton></form>}
-            {!own&&<form action={deletePersonnel}><input type="hidden" name="user_id" value={person.id}/><PendingSubmitButton pendingLabel="VERWIJDEREN…" className="rounded-lg border border-red-500/60 px-4 py-2 font-semibold text-red-500">DEFINITIEF VERWIJDEREN</PendingSubmitButton><p className="mt-1 text-xs text-muted-foreground">Alleen gebruiken wanneer het account echt moet verdwijnen. Operationele auditgegevens blijven waar vereist behouden.</p></form>}
+            {!own&&<div><PersonnelDeleteButton userId={person.id} name={person.full_name||'Naam ontbreekt'}/><p className="mt-1 text-xs text-muted-foreground">Alleen gebruiken wanneer het account echt moet verdwijnen. Operationele auditgegevens blijven waar vereist behouden.</p></div>}
           </div>
         </div>
       </article>
