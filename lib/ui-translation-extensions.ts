@@ -78,6 +78,7 @@ const EXTENSIONS: Record<string, Row> = {
   'Wachtlijst #': { fr: 'Liste d’attente n°', en: 'Waitlist #', de: 'Warteliste #' },
   'Succesvol opgeslagen.': { fr: 'Enregistré avec succès.', en: 'Saved successfully.', de: 'Erfolgreich gespeichert.' },
   'Profiel opgeslagen.': { fr: 'Profil enregistré.', en: 'Profile saved.', de: 'Profil gespeichert.' },
+  'Geen actieve werkplaatsen gevonden voor de beschikbare evenementen.': { fr: 'Aucun poste actif trouvé pour les événements disponibles.', en: 'No active workplaces found for the available events.', de: 'Keine aktiven Arbeitsplätze für die verfügbaren Veranstaltungen gefunden.' },
   'WACHT OP REACTIE': { fr: 'EN ATTENTE DE RÉPONSE', en: 'WAITING FOR RESPONSE', de: 'WARTET AUF ANTWORT' },
   'Personeelslid herplannen': { fr: 'Replanifier un membre du personnel', en: 'Reassign staff member', de: 'Mitarbeiter neu einplanen' },
   'Nieuw personeelslid…': { fr: 'Nouveau membre du personnel…', en: 'New staff member…', de: 'Neuer Mitarbeiter…' },
