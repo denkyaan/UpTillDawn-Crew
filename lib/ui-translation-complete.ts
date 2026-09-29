@@ -796,6 +796,7 @@ const ROWS: Record<string, Row> = {
   'Actieve automatiseringen': { fr: 'Automatisations actives', en: 'Active automations', de: 'Aktive Automatisierungen' },
   'regels totaal': { fr: 'règles au total', en: 'rules total', de: 'Regeln insgesamt' },
   'Open de inkomsten van merch en kassa/tokens voor deze werkplek.': { fr: 'Ouvrir les revenus du merchandising et de la caisse/jetons pour ce poste.', en: 'Open merchandise and till/token revenue for this workplace.', de: 'Einnahmen aus Merchandising und Kasse/Token für diesen Arbeitsplatz öffnen.' },
+  'ADMIN AI': { fr: 'IA ADMIN', en: 'ADMIN AI', de: 'ADMIN-KI' },
 }
 
 const CANONICAL = new Map<string, string>()
@@ -811,5 +812,4 @@ export function translateCompleteUi(value: string, locale: CompleteUiLocale) {
   const row = ROWS[canonical]
   if (!row) return value
   return locale === 'nl' ? canonical : row[locale]
-  'ADMIN AI': { fr: 'IA ADMIN', en: 'ADMIN AI', de: 'ADMIN-KI' },
 }
