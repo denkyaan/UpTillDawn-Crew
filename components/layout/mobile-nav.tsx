@@ -9,8 +9,7 @@ import { useAuth } from "@/lib/providers"
 import { cn } from "@/lib/utils"
 import { getDefaultRoleUiLabel, type RoleRuleRole } from "@/lib/role-ui"
 import { featureHelp } from "@/lib/ui-field-help"
-import { useAdminSelection } from "@/lib/admin-selection-context"
-import { featureHelp } from "@/lib/ui-field-help"
+import { useAdminNavigationContext } from "@/lib/admin-navigation-context"
 
 const ASSIGNED_EVENT_KEYS=["events","briefings","workplaces"] as const
 const STAFF_ACTIVE_SHIFT_KEYS=["operations","workplaces","briefings","tasks"] as const
@@ -40,7 +39,7 @@ export function MobileBottomNav({
  const pathname=usePathname()
  const [expanded,setExpanded]=useState(false)
  const {roles,isAdmin}=useAuth()
- const adminContext=useAdminSelection()
+ const {hrefFor:contextHrefFor}=useAdminNavigationContext(Boolean(isAdmin))
  const roleKey:RoleRuleRole=roles.includes("admin")?"admin":roles.includes("responsible_lead")?"responsible_lead":"staff"
  const order=new Map(featureOrder.map((key,index)=>[key,index]))
 
@@ -51,7 +50,10 @@ export function MobileBottomNav({
    return true
  }).sort((a,b)=>(order.get(a.key)??999)-(order.get(b.key)??999))
 
- const hrefFor=(item:NavigationItem)=>{const base=item.href==='/'&&isAdmin?'/admin':item.href;return isAdmin?adminContext.href(base):base}
+ const hrefFor=(item:NavigationItem)=>{
+   const base=item.href==='/'&&isAdmin?'/admin':item.href
+   return contextHrefFor(base,item.key)
+ }
  const isActive=(item:NavigationItem)=>{
    const href=hrefFor(item)
    return href==='/'?pathname==='/':pathname.startsWith(href)
