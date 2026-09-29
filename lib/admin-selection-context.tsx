@@ -1,6 +1,6 @@
 "use client"
 
-import { createContext, useCallback, useContext, useEffect, useMemo, useState } from "react"
+import { createContext, useCallback, useContext, useMemo, useState } from "react"
 
 export type AdminSelection={
   eventId:string|null
@@ -37,12 +37,11 @@ function encodeHref(base:string,selection:AdminSelection){
 }
 
 export function AdminSelectionProvider({children}:{children:React.ReactNode}){
-  const [selection,setState]=useState<AdminSelection>(EMPTY)
-
-  useEffect(()=>{
+  const [selection,setState]=useState<AdminSelection>(()=>{
+    if(typeof window==='undefined')return EMPTY
     try{
       const stored=window.localStorage.getItem(KEY)
-      if(stored)setState(current=>({...current,...JSON.parse(stored)}))
+      const saved=stored?JSON.parse(stored):{}
       const params=new URLSearchParams(window.location.search)
       const fromUrl:Patch={
         eventId:params.get("event"),
@@ -51,9 +50,9 @@ export function AdminSelectionProvider({children}:{children:React.ReactNode}){
         shiftId:params.get("shift"),
         focus:params.get("focus"),
       }
-      if(Object.values(fromUrl).some(Boolean))setState(current=>({...current,...fromUrl}))
-    }catch{}
-  },[])
+      return {...EMPTY,...saved,...Object.fromEntries(Object.entries(fromUrl).filter(([,value])=>Boolean(value)))}
+    }catch{return EMPTY}
+  })
 
   const setSelection=useCallback((patch:Patch)=>{
     setState(current=>{
