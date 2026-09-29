@@ -781,6 +781,7 @@ const ROWS: Record<string, Row> = {
   'Event': { fr: 'Événement', en: 'Event', de: 'Veranstaltung' },
   'ARCHIEF': { fr: 'ARCHIVES', en: 'ARCHIVE', de: 'ARCHIV' },
   'Onbekend': { fr: 'Inconnu', en: 'Unknown', de: 'Unbekannt' },
+  'Werkplaatsen, inventaris & inkom': { fr: 'Postes de travail, inventaire et entrée', en: 'Workplaces, inventory & entrance', de: 'Arbeitsplätze, Inventar & Einlass' },
   'Open de inkomsten van merch en kassa/tokens voor deze werkplek.': { fr: 'Ouvrir les revenus du merchandising et de la caisse/jetons pour ce poste.', en: 'Open merchandise and till/token revenue for this workplace.', de: 'Einnahmen aus Merchandising und Kasse/Token für diesen Arbeitsplatz öffnen.' },
 }
 
