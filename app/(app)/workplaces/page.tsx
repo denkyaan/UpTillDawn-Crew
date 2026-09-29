@@ -318,7 +318,7 @@ export default async function Page({searchParams}:{searchParams?:Promise<{event?
     return Number(bSelected)-Number(aSelected)||a.sort_order-b.sort_order||a.name.localeCompare(b.name,'nl')
   })
 
-  return <main className="space-y-5 p-4 md:p-8">
+  return <main id="werkplaatsbeheer" className="scroll-mt-24 space-y-5 p-4 md:p-8">
     <div>
       <h1 className="text-3xl font-black">Werkplaatsen & shifts</h1>
       {isAdmin
