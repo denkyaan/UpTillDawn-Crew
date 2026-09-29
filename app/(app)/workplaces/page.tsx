@@ -322,9 +322,11 @@ export default async function Page({searchParams}:{searchParams?:Promise<{event?
   return <main className="space-y-5 p-4 md:p-8">
     <div>
       <h1 className="text-3xl font-black">Werkplaatsen & shifts</h1>
-      {isResponsible
-        ? <p className="text-sm text-muted-foreground">Bekijk je werkplekken, team en gekoppelde diensten/uren in één overzicht. Werkplekken aanmaken of verwijderen blijft voor admin.</p>
-        : !isAdmin&&<p className="text-sm text-muted-foreground">Bekijk je toegewezen werkplek, shifturen en bevestig of weiger je dienst vanuit hetzelfde scherm.</p>}
+      {isAdmin
+        ? <p className="text-sm text-muted-foreground">Plan werkplaatsen, verantwoordelijken, personeel en shifturen in één workflow. Vanuit elke werkplek open je direct Inventaris, Inkom & Guestlist, Taken en Briefing met dezelfde context.</p>
+        : isResponsible
+          ? <p className="text-sm text-muted-foreground">Bekijk je werkplekken, team en gekoppelde diensten/uren in één overzicht. Werkplekken aanmaken of verwijderen blijft voor admin.</p>
+          : <p className="text-sm text-muted-foreground">Bekijk je toegewezen werkplek, shifturen en bevestig of weiger je dienst vanuit hetzelfde scherm.</p>}
     </div>
 
     {shiftChangeError&&<p className="rounded-xl border border-amber-500/40 p-4 text-sm text-muted-foreground">Shiftwijzigingen konden niet volledig worden geladen. Vernieuw de pagina.</p>}
