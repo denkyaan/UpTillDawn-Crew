@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import type { AutomationAction, AutomationTrigger } from '@/lib/automation-engine'
 
 const triggers: {value:AutomationTrigger;label:string}[] = [
@@ -38,6 +38,18 @@ export function GodAutomationBuilder({
   const [condition,setCondition]=useState('')
   const [message,setMessage]=useState('')
   const [enabled,setEnabled]=useState(true)
+  const [existingRules,setExistingRules]=useState<Array<{automation_key:string;label:string;description:string;enabled:boolean}>>([])
+  const [loadingRules,setLoadingRules]=useState(true)
+
+  useEffect(()=>{
+    let active=true
+    fetch('/api/god/automation-rules',{cache:'no-store'}).then(async response=>{
+      const data=await response.json()
+      if(!response.ok)throw new Error(data.error||'Automatiseringen konden niet worden geladen.')
+      if(active)setExistingRules(data.rules||[])
+    }).catch(()=>{}).finally(()=>{if(active)setLoadingRules(false)})
+    return()=>{active=false}
+  },[])
 
   function prompt() {
     return [
@@ -93,7 +105,11 @@ export function GodAutomationBuilder({
 
       <section className="rounded-2xl border p-4">
         <p className="text-xs font-black uppercase tracking-wider text-violet-400">Bestaande automaties</p>
-        <p className="mt-2 text-sm text-muted-foreground">De huidige engine bevat vaste triggers en acties. De volgende stap van het AI-voorstel maakt deze persistent zodat ze hier als records kunnen worden geladen, aangepast, gekopieerd en uitgeschakeld.</p>
+        <p className="mt-2 text-sm text-muted-foreground">{loadingRules?'Automatiseringen laden…':existingRules.filter(rule=>rule.enabled).length+'/'+existingRules.length+' actief'}</p>
+        <div className="mt-3 max-h-80 space-y-2 overflow-auto">{existingRules.map(rule=><article key={rule.automation_key} className="rounded-lg border p-3">
+          <div className="flex items-start justify-between gap-2"><div><p className="text-sm font-bold">{rule.label}</p><p className="mt-1 text-xs text-muted-foreground">{rule.description}</p></div><span className="rounded-full border px-2 py-1 text-[10px] font-black">{rule.enabled?'ACTIEF':'UIT'}</span></div>
+          <button type="button" onClick={()=>onPrepareAi('Pas de bestaande automation rule '+rule.automation_key+' aan. Behoud de bestaande automation-engine, auditlogging en autorisatie. Regel: '+rule.label+' — '+rule.description+'.','lib/automation-engine.ts',1)} className="mt-2 w-full rounded-lg border px-3 py-2 text-xs font-bold">Bewerken via AI</button>
+        </article>)}</div>
       </section>
     </aside>
   </div>
