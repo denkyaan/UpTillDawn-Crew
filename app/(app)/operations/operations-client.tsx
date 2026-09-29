@@ -101,6 +101,22 @@ function OperationalAlertCard({alert,workplaces,crewDirectory,alertNow,focused=f
  const workplace=workplaces.find(item=>item.id===alert.workplace_id)
  if(alert.kind==='understaffed')return <article data-focus-match={focused?'true':'false'} className={'rounded-xl border border-amber-500/50 bg-amber-500/5 p-4 '+(focused?'ring-1 ring-violet-500/40':'')}><div className="flex flex-wrap items-start justify-between gap-3"><div><p className="font-bold">{workplace?.name||'Werkplek'}</p><p className="text-sm text-muted-foreground">Actieve bezetting: {alert.active_staff??0}/{alert.minimum_staff??0} · minimum niet gehaald</p></div><span className="rounded-full bg-amber-500/20 px-3 py-1 text-xs font-black text-amber-600">ONDERBEZET</span></div></article>
 
+ const intelligence={
+  'responsible-missing':{label:'VERANTWOORDELIJKE ONTBREEKT',detail:'Deze actieve werkplek heeft nog geen verantwoordelijke.',href:'/workplaces'},
+  'briefing-unread':{label:'BRIEFING OPEN',detail:'Een verplichte briefing is nog niet bevestigd vóór de aankomende shift.',href:'/briefings'},
+  'inventory-low':{label:'LAGE VOORRAAD',detail:'Materiaal op deze werkplek heeft het ingestelde minimum bereikt.',href:'/inventory'},
+  'checklist-overdue':{label:'CHECKLIST OPEN',detail:'Een operationele checklist is na het geplande moment nog niet afgerond.',href:'/briefings'},
+ }[alert.kind]
+ if(intelligence){
+  const href=intelligence.href+'?event='+alert.event_id+'&workplace='+alert.workplace_id+(alert.user_id?'&user='+alert.user_id:'')+'&focus='+alert.kind
+  return <article data-focus-match={focused?'true':'false'} className={'rounded-xl border border-amber-500/50 bg-amber-500/5 p-4 '+(focused?'ring-1 ring-violet-500/40':'')}>
+   <div className="flex flex-wrap items-start justify-between gap-3">
+    <div><p className="font-bold">{workplace?.name||'Werkplek'}</p><p className="text-sm text-muted-foreground">{intelligence.detail}</p><Link href={href} className="mt-2 inline-block text-sm font-semibold text-violet-400 underline">Open juiste onderdeel</Link></div>
+    <span className="rounded-full bg-amber-500/20 px-3 py-1 text-xs font-black text-amber-600">{intelligence.label}</span>
+   </div>
+  </article>
+ }
+
  const crew=crewDirectory.find(member=>member.id===alert.user_id)
  if(alert.kind==='shift-overrun'||alert.kind==='missing-checkout'||alert.kind==='long-break'){
   const severe=alert.kind==='missing-checkout'
