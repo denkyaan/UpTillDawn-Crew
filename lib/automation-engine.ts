@@ -45,6 +45,8 @@ export interface AutomationRule {
   maxRetries:number
   settings:Record<string,unknown>
   lastRunAt?:string|null
+  eventId?:string|null
+  workplaceId?:string|null
 }
 
 export interface AutomationContext {
@@ -58,8 +60,8 @@ export function matchingAutomationRules(rules:readonly AutomationRule[],context:
   return rules.filter(rule=>
     rule.enabled
     && rule.trigger===context.trigger
-    && (!('eventId' in rule)||!(rule as AutomationRule&{eventId?:string|null}).eventId||(rule as AutomationRule&{eventId?:string|null}).eventId===context.eventId)
-    && (!('workplaceId' in rule)||!(rule as AutomationRule&{workplaceId?:string|null}).workplaceId||(rule as AutomationRule&{workplaceId?:string|null}).workplaceId===context.workplaceId)
+    && (!rule.eventId || rule.eventId === context.eventId)
+    && (!rule.workplaceId || rule.workplaceId === context.workplaceId)
   )
 }
 
