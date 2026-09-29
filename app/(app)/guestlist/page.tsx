@@ -14,7 +14,7 @@ type EventRow={id:string;name:string;status:string;start_at:string;end_at:string
 export default async function GuestlistPage({
   searchParams,
 }:{
-  searchParams:Promise<{event?:string}>
+  searchParams:Promise<{event?:string;workplace?:string}>
 }){
   const current=await getCurrentUser()
   if(!current)redirect('/login')
@@ -89,6 +89,7 @@ export default async function GuestlistPage({
   }))
 
   let workplaces:Array<{id:string;name:string}>=[]
+  let workplaceContextName:string|null=null
   let backstageWorkplaceId=''
   if(isAdmin){
     const [workplaceResult,settingsResult]=await Promise.all([
@@ -96,6 +97,7 @@ export default async function GuestlistPage({
       s.from('event_guestlist_settings').select('backstage_workplace_id').eq('event_id',selected.id).maybeSingle(),
     ])
     workplaces=workplaceResult.data||[]
+    workplaceContextName=params.workplace?workplaces.find(workplace=>workplace.id===params.workplace)?.name||null:null
     backstageWorkplaceId=settingsResult.data?.backstage_workplace_id||''
   }
 
@@ -109,12 +111,13 @@ export default async function GuestlistPage({
         <p className="text-xs font-black uppercase tracking-[.2em] text-violet-400">INKOM</p>
         <h1 className="text-3xl font-black">Inkom & Guestlist</h1>
         <p className="mt-1 text-sm text-muted-foreground">Zoek guests en artiesten snel op, registreer aankomst en stuur artiesten realtime door naar backstage.</p>
+        {workplaceContextName&&<p className="mt-2 inline-flex rounded-full border px-3 py-1 text-xs font-bold text-violet-400">Werkplekmodule: {workplaceContextName}</p>}
       </div>
       <form method="get" className="flex flex-col gap-2 sm:flex-row">
         <select name="event" defaultValue={selected.id} className="min-w-0 flex-1 rounded-xl border bg-background p-3">
           {events.map(event=><option key={event.id} value={event.id}>{event.name}</option>)}
         </select>
-        <button className="rounded-xl border px-4 py-3 font-bold">EVENEMENT OPENEN</button>
+        {params.workplace&&<input type="hidden" name="workplace" value={params.workplace}/>}<button className="rounded-xl border px-4 py-3 font-bold">EVENEMENT OPENEN</button>
       </form>
     </header>
 
