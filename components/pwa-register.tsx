@@ -22,6 +22,7 @@ export function PwaRegister(){
 
     let disposed=false
     let reloading=false
+    let updateReloadPending=false
 
     const hasPendingCrewData=async()=>{
       if(!user?.id)return false
@@ -83,9 +84,12 @@ export function PwaRegister(){
     const onFocus=()=>void keepFresh()
     const onOnline=()=>void keepFresh()
     const onVisibility=()=>{if(document.visibilityState==="visible")void keepFresh()}
-    const onControllerChange=()=>void safelyReloadForUpdate()
+    const onControllerChange=()=>{
+      updateReloadPending=true
+      void safelyReloadForUpdate()
+    }
     const onQueueChange=()=>{
-      if(navigator.serviceWorker.controller)void safelyReloadForUpdate()
+      if(updateReloadPending)void safelyReloadForUpdate()
     }
 
     navigator.serviceWorker.addEventListener("message",onMessage)
@@ -95,6 +99,9 @@ export function PwaRegister(){
     window.addEventListener("crew-queue-change",onQueueChange)
     document.addEventListener("visibilitychange",onVisibility)
     void setup()
+    const freshnessTimer=window.setInterval(()=>{
+      if(document.visibilityState==="visible"&&navigator.onLine)void keepFresh()
+    },15*60*1000)
 
     return()=>{
       disposed=true
@@ -104,6 +111,7 @@ export function PwaRegister(){
       window.removeEventListener("online",onOnline)
       window.removeEventListener("crew-queue-change",onQueueChange)
       document.removeEventListener("visibilitychange",onVisibility)
+      window.clearInterval(freshnessTimer)
     }
   },[canUsePush,loading,router,user?.id])
 
