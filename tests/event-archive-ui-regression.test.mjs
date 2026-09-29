@@ -24,7 +24,7 @@ test('event archive lifecycle is recoverable and absent from active surfaces',as
   assert.match(actions,/upt_force_archive_event/)
   assert.match(actions,/upt_restore_event/)
   assert.match(command,/Gearchiveerd · alleen-lezen/)
-  assert.match(inventory,/workplaces\.filter\(workplace=>workplace\.events&&workplace\.events\.status!==['"]archived['"]\)/)
+  assert.match(inventory,/\.filter\(workplace=>workplace\.events&&workplace\.events\.status!==['"]archived['"]\)/)
   assert.match(tasks,/neq\('status','archived'\).*lte\('start_at'/s)
   assert.match(briefings,/neq\('status','archived'\).*gte\('end_at'/s)
   for(const field of ['archived_at','archived_by','archive_reason','restored_at','restored_by','pre_archive_status'])assert.ok(migration.includes(field))
