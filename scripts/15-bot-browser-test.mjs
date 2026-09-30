@@ -119,6 +119,27 @@ try {
         await assertProtectedRoute(context, route, bot)
       }
 
+      // One staff bot performs a real browser mutation against the isolated
+      // event fixture. This proves a hydrated server-action form can change
+      // event availability through the production UI contract.
+      if (index === 2) {
+        await page.goto(`${baseUrl}/events?event=00000000-0000-4000-8000-00000000e2e1`, {
+          waitUntil: 'networkidle',
+          timeout: 45000,
+        })
+        const form = page.locator('form').filter({ hasText: 'Beschikbaarheid bevestigen' }).first()
+        if (await form.count() !== 1) throw new Error('availability action form missing')
+        await form.locator('input[name="response"][value="can"]').check()
+        await form.locator('input[name="setup_available"][value="yes"]').check()
+        await form.locator('input[name="breakdown_available"][value="yes"]').check()
+        await Promise.all([
+          page.waitForLoadState('networkidle'),
+          form.getByRole('button', { name: 'BESCHIKBAARHEID OPSLAAN' }).click(),
+        ])
+        const checked = await form.locator('input[name="response"][value="can"]').isChecked()
+        if (!checked) throw new Error('availability UI did not retain can response')
+      }
+
       console.log(`PASS ${bot} authenticated + workflow surfaces ${viewport.width}x${viewport.height}`)
     } catch (error) {
       failures.push(`${bot}: ${error instanceof Error ? error.message : String(error)}`)
