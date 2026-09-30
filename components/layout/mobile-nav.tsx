@@ -14,6 +14,7 @@ import { useAdminSelection } from "@/lib/admin-selection-context"
 const ASSIGNED_EVENT_KEYS=["events","briefings","workplaces"] as const
 const STAFF_ACTIVE_SHIFT_KEYS=["operations","workplaces","briefings","tasks"] as const
 const RESPONSIBLE_ACTIVE_SHIFT_KEYS=["operations","workplaces","incidents"] as const
+const RESPONSIBLE_ASSIGNED_EVENT_KEYS=["events","briefings","workplaces","inventory"] as const
 
 export function MobileBottomNav({
   chatMissed=0,
@@ -69,7 +70,7 @@ export function MobileBottomNav({
      ? shiftActive
        ? RESPONSIBLE_ACTIVE_SHIFT_KEYS
        : assignedEvent
-         ? ASSIGNED_EVENT_KEYS
+         ? RESPONSIBLE_ASSIGNED_EVENT_KEYS
          : []
      : []
 
