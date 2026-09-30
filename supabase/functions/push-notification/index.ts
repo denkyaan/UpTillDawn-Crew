@@ -14,6 +14,7 @@ type PushSubscriptionRow={
   endpoint:string
   p256dh:string
   auth_key:string
+  locale:string
 }
 
 const json=(body:unknown,status=200)=>new Response(JSON.stringify(body),{
@@ -56,7 +57,7 @@ Deno.serve(async(req)=>{
   if(!notification)return json({error:"Notification not found"},404)
 
   const [{data:subscriptions,error:subscriptionError},{data:unreadRows,error:countError}]=await Promise.all([
-    admin.from("push_subscriptions").select("id,endpoint,p256dh,auth_key").eq("user_id",notification.user_id).eq("enabled",true),
+    admin.from("push_subscriptions").select("id,endpoint,p256dh,auth_key,locale").eq("user_id",notification.user_id).eq("enabled",true),
     admin.from("crew_notifications").select("kind,created_at").eq("user_id",notification.user_id).is("read_at",null).limit(1000),
   ])
   if(subscriptionError){
