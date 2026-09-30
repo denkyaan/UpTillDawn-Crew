@@ -56,7 +56,7 @@ test('admin and responsible login denial is consistent and fully translated', as
   assert.match(row, /de:\s*'[^']+'/)
 })
 
-test('device language is the default and manual language remains synchronized', async () => {
+test('device language is reapplied on startup and manual language remains synchronized during the session', async () => {
   const [sync, switcher, prefs] = await Promise.all([
     readFile(new URL('../components/locale-sync.tsx', import.meta.url), 'utf8'),
     readFile(new URL('../components/language-switcher.tsx', import.meta.url), 'utf8'),
@@ -65,7 +65,8 @@ test('device language is the default and manual language remains synchronized', 
   assert.match(sync, /initialUiLocale\(\)/)
   assert.match(sync, /storedUiLocaleSource\(\)===['"]manual['"]/)
   assert.match(sync, /deviceUiLocale\(\)/)
-  assert.match(prefs, /storedUiLocaleSource\(\)===['"]manual['"]&&stored/)
+  assert.match(prefs, /initialUiLocale[\\s\\S]*return deviceUiLocale\\(\\)/)
+  assert.doesNotMatch(prefs, /storedUiLocaleSource\\(\\)===['"]manual['"]&&stored/)
   assert.match(switcher, /LANGUAGE_APPLIED_EVENT/)
   assert.match(switcher, /requestUiLocale\(next\)/)
 })
