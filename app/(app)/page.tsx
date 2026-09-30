@@ -158,6 +158,15 @@ export default async function Dashboard() {
       <AssignedEventOnly available={hasEventAssignment}><Card href="/workplaces" icon={Clock3} title="Werkplaatsen & shifts" value={shifts.length}/></AssignedEventOnly>
       {hasActiveIncidentContext && <ManagerOnly><Card href="/incidents" icon={AlertTriangle} title="Open incidenten" value={activeIncidentCount}/></ManagerOnly>}
     </section>
+    {current.role==='staff'&&hasEventAssignment&&<section className="space-y-3 rounded-2xl border bg-card p-4">
+      <div><h2 className="text-lg font-bold">Mijn evenement</h2><p className="text-sm text-muted-foreground">Directe toegang tot je toegewezen werk, instructies en materiaal.</p></div>
+      <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+        <Link href="/operations" className="rounded-xl border p-4"><Clock3 className="mb-3 h-5 w-5 text-violet-400"/><p className="font-bold">Mijn werkuren</p><p className="text-xs text-muted-foreground">Start, pauze en stop je werk via de geldige workflow.</p></Link>
+        <Link href="/briefings" className="rounded-xl border p-4"><ClipboardCheck className="mb-3 h-5 w-5 text-violet-400"/><p className="font-bold">Briefing</p><p className="text-xs text-muted-foreground">Lees en bevestig je instructies vóór je shift.</p></Link>
+        <Link href="/workplaces" className="rounded-xl border p-4"><MapPin className="mb-3 h-5 w-5 text-violet-400"/><p className="font-bold">Werkplaats & shift</p><p className="text-xs text-muted-foreground">Bekijk waar en wanneer je bent ingepland.</p></Link>
+        <Link href="/inventory" className="rounded-xl border p-4"><PackageCheck className="mb-3 h-5 w-5 text-violet-400"/><p className="font-bold">Inventaris</p><p className="text-xs text-muted-foreground">Bekijk materiaal van je toegewezen werkplek.</p></Link>
+      </div>
+    </section>}
     {current.role==='staff'&&<section className="space-y-3 rounded-2xl border bg-card p-4">
       <div className="flex items-center justify-between gap-3">
         <div>
