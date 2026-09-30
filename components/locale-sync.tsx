@@ -118,7 +118,7 @@ export function LocaleSync() {
       if(observing||initialPass!==undefined)return
       initialPass=window.setTimeout(()=>{
         initialPass=undefined
-        applyLocale(locale, storedUiLocaleSource()==='manual'?'manual':'device')
+        applyLocale(deviceUiLocale() as ExtendedUiLocale,'device')
         observer.observe(document.body, { subtree: true, childList: true, characterData: true, attributes: true, attributeFilter: [...attributes] })
         observing=true
       },0)
