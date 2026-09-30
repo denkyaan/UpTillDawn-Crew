@@ -49,19 +49,63 @@ BEGIN
 END $$;
 RESET ROLE;
 
--- All staff bots exercise authenticated concurrent-style availability/read permissions.
-DO $$
-DECLARE n int; uid uuid;
-BEGIN
- FOR n IN 5..15 LOOP
-  SELECT id INTO uid FROM bot_ids WHERE name='bot_'||lpad(n::text,2,'0');
-  PERFORM set_config('request.jwt.claim.sub',uid::text,true);
-  EXECUTE 'SET LOCAL ROLE authenticated';
-  INSERT INTO public.event_availability(event_id,user_id,response)
-  VALUES((SELECT id FROM bot_ids WHERE name='event'),uid,'can');
-  EXECUTE 'RESET ROLE';
- END LOOP;
-END $$;
+-- All staff bots exercise their own authenticated availability write under RLS.
+-- Role changes must happen outside PL/pgSQL so auth.uid() observes each bot JWT claim.
+SELECT set_config('request.jwt.claim.sub',(SELECT id::text FROM bot_ids WHERE name='bot_05'),true);
+SET LOCAL ROLE authenticated;
+INSERT INTO public.event_availability(event_id,user_id,response)
+VALUES((SELECT id FROM bot_ids WHERE name='event'),auth.uid(),'can');
+RESET ROLE;
+SELECT set_config('request.jwt.claim.sub',(SELECT id::text FROM bot_ids WHERE name='bot_06'),true);
+SET LOCAL ROLE authenticated;
+INSERT INTO public.event_availability(event_id,user_id,response)
+VALUES((SELECT id FROM bot_ids WHERE name='event'),auth.uid(),'can');
+RESET ROLE;
+SELECT set_config('request.jwt.claim.sub',(SELECT id::text FROM bot_ids WHERE name='bot_07'),true);
+SET LOCAL ROLE authenticated;
+INSERT INTO public.event_availability(event_id,user_id,response)
+VALUES((SELECT id FROM bot_ids WHERE name='event'),auth.uid(),'can');
+RESET ROLE;
+SELECT set_config('request.jwt.claim.sub',(SELECT id::text FROM bot_ids WHERE name='bot_08'),true);
+SET LOCAL ROLE authenticated;
+INSERT INTO public.event_availability(event_id,user_id,response)
+VALUES((SELECT id FROM bot_ids WHERE name='event'),auth.uid(),'can');
+RESET ROLE;
+SELECT set_config('request.jwt.claim.sub',(SELECT id::text FROM bot_ids WHERE name='bot_09'),true);
+SET LOCAL ROLE authenticated;
+INSERT INTO public.event_availability(event_id,user_id,response)
+VALUES((SELECT id FROM bot_ids WHERE name='event'),auth.uid(),'can');
+RESET ROLE;
+SELECT set_config('request.jwt.claim.sub',(SELECT id::text FROM bot_ids WHERE name='bot_10'),true);
+SET LOCAL ROLE authenticated;
+INSERT INTO public.event_availability(event_id,user_id,response)
+VALUES((SELECT id FROM bot_ids WHERE name='event'),auth.uid(),'can');
+RESET ROLE;
+SELECT set_config('request.jwt.claim.sub',(SELECT id::text FROM bot_ids WHERE name='bot_11'),true);
+SET LOCAL ROLE authenticated;
+INSERT INTO public.event_availability(event_id,user_id,response)
+VALUES((SELECT id FROM bot_ids WHERE name='event'),auth.uid(),'can');
+RESET ROLE;
+SELECT set_config('request.jwt.claim.sub',(SELECT id::text FROM bot_ids WHERE name='bot_12'),true);
+SET LOCAL ROLE authenticated;
+INSERT INTO public.event_availability(event_id,user_id,response)
+VALUES((SELECT id FROM bot_ids WHERE name='event'),auth.uid(),'can');
+RESET ROLE;
+SELECT set_config('request.jwt.claim.sub',(SELECT id::text FROM bot_ids WHERE name='bot_13'),true);
+SET LOCAL ROLE authenticated;
+INSERT INTO public.event_availability(event_id,user_id,response)
+VALUES((SELECT id FROM bot_ids WHERE name='event'),auth.uid(),'can');
+RESET ROLE;
+SELECT set_config('request.jwt.claim.sub',(SELECT id::text FROM bot_ids WHERE name='bot_14'),true);
+SET LOCAL ROLE authenticated;
+INSERT INTO public.event_availability(event_id,user_id,response)
+VALUES((SELECT id FROM bot_ids WHERE name='event'),auth.uid(),'can');
+RESET ROLE;
+SELECT set_config('request.jwt.claim.sub',(SELECT id::text FROM bot_ids WHERE name='bot_15'),true);
+SET LOCAL ROLE authenticated;
+INSERT INTO public.event_availability(event_id,user_id,response)
+VALUES((SELECT id FROM bot_ids WHERE name='event'),auth.uid(),'can');
+RESET ROLE;
 
 -- Validate the shared event state produced by all 15 actors.
 DO $$
