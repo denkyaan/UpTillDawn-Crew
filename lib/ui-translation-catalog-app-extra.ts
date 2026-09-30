@@ -457,4 +457,10 @@ export function translateAppExtraUi(value:string,locale:ExtraCatalogLocale){
   if(locale==='nl')return canonical
   return row[locale]||canonical
   'Een deel van de realtime gegevens is tijdelijk niet beschikbaar. De beschikbare onderdelen blijven bruikbaar.': {fr:'Une partie des données en temps réel est temporairement indisponible. Les éléments disponibles restent utilisables.',en:'Some realtime data is temporarily unavailable. Available sections remain usable.',de:'Ein Teil der Echtzeitdaten ist vorübergehend nicht verfügbar. Verfügbare Bereiche bleiben nutzbar.'},
+  'Mijn operationele werkplek': {fr:'Mon poste opérationnel',en:'My operational workplace',de:'Mein operativer Arbeitsplatz'},
+  'Directe toegang tot de functies die je als verantwoordelijke tijdens het evenement gebruikt.': {fr:'Accès direct aux fonctions que vous utilisez comme responsable pendant l’événement.',en:'Direct access to the functions you use as responsible lead during the event.',de:'Direkter Zugriff auf die Funktionen, die du als Verantwortliche/r während der Veranstaltung nutzt.'},
+  'Werk, pauze en operationele opvolging.': {fr:'Travail, pause et suivi opérationnel.',en:'Work, break and operational follow-up.',de:'Arbeit, Pause und operative Nachverfolgung.'},
+  'Instructies en opening- of sluitchecklists.': {fr:'Instructions et check-lists d’ouverture ou de fermeture.',en:'Instructions and opening or closing checklists.',de:'Anweisungen und Checklisten für Öffnung oder Abschluss.'},
+  'Controleer materiaal en meld ontbrekend of defect materiaal.': {fr:'Contrôlez le matériel et signalez le matériel manquant ou défectueux.',en:'Check equipment and report missing or defective items.',de:'Material prüfen und fehlendes oder defektes Material melden.'},
+  'Volg taken van je eigen werkplek op.': {fr:'Suivez les tâches de votre propre poste.',en:'Follow up tasks for your own workplace.',de:'Aufgaben des eigenen Arbeitsplatzes nachverfolgen.'},
 }
