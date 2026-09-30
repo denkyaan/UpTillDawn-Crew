@@ -46,18 +46,25 @@ try {
       await password.fill(testPassword)
 
       if (role === 'admin') {
-        // The admin form uses a native POST and then redirects to a data-heavy
-        // command center. The authentication contract is complete as soon as
-        // that redirect is committed; waiting for the full dashboard load
-        // turns unrelated dashboard latency into a false login failure.
-        await page.locator('button[type="submit"]').click({ timeout: 15000 })
-        await page.waitForURL(url => url.pathname === '/admin', {
+        // The admin login is a native POST route. Use the BrowserContext request
+        // client so we can assert the exact 303 contract without depending on
+        // the data-heavy /admin page finishing a concurrent browser navigation.
+        // BrowserContext.request shares cookies with the browser context, so the
+        // following protected-page check still proves the real issued session.
+        const adminResponse = await context.request.post(`${baseUrl}/api/auth/admin-login`, {
+          form: {
+            email: emailAddress,
+            password: testPassword,
+          },
+          maxRedirects: 0,
           timeout: 45000,
-          waitUntil: 'commit',
         })
+        const location = adminResponse.headers().location || ''
+        const locationPath = location ? new URL(location, baseUrl).pathname : ''
+        if (adminResponse.status() !== 303 || locationPath !== '/admin') {
+          throw new Error(`admin login rejected: HTTP ${adminResponse.status()} -> ${location || 'no location'}`)
+        }
 
-        // Interrupt the heavy dashboard render and prove that the issued
-        // session cookie is accepted by another protected application route.
         await page.goto(`${baseUrl}/events`, {
           waitUntil: 'networkidle',
           timeout: 45000,
