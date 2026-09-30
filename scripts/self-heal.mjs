@@ -54,11 +54,11 @@ async function propose(){
    'Wijzig uitsluitend bestanden die volledig in files zijn meegegeven.',
    'Geen database-migraties, workflows, secrets, dependencies, auth/RLS-versoepeling of nieuwe externe diensten.',
    'Behoud bestaande functionaliteit. Nieuwe zichtbare tekst vereist NL/FR/EN/DE-dekking.',
-   'Als een veilige fix niet voldoende zeker is: changes=[] en confidence=low.',
+   'Gebruik confidence als diagnostische indicatie, niet als publicatiebeslissing. Als je na brononderzoek geen verantwoorde fix kunt formuleren: changes=[].',
   ].join('\n')},
   {role:'user',content:JSON.stringify({reportId,route,errorName,errorMessage,stackTrace,aiSummary,files})},
  ])
- if(result.confidence!=='high'||!Array.isArray(result.changes)||!result.changes.length)return output(false,result.summary||'Geen veilige autonome fix.')
+ if(!Array.isArray(result.changes)||!result.changes.length)return output(false,result.summary||'Geen autonome fix gevonden.')
  const context=new Set(files.map(x=>x.path))
  for(const change of result.changes){
   if(!context.has(change.path)||!editable(change.path)||typeof change.content!=='string')throw new Error('AI wijziging buiten begrensde context geweigerd: '+change.path)
