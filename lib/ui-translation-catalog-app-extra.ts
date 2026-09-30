@@ -481,6 +481,8 @@ export const APP_EXTRA_TRANSLATIONS: Record<string,Row> = {
   "Bestand kon niet naar de server worden verzonden. Het blijft veilig lokaal bewaard; probeer opnieuw via de synchronisatiebalk.": { fr:"Le fichier n’a pas pu être envoyé au serveur. Il reste enregistré localement en sécurité ; réessayez via la barre de synchronisation.", en:"The file could not be sent to the server. It remains safely stored locally; retry via the synchronization bar.", de:"Die Datei konnte nicht an den Server gesendet werden. Sie bleibt sicher lokal gespeichert; versuche es über die Synchronisierungsleiste erneut." },
   "Je sessie is gewijzigd. Meld opnieuw aan voordat je het bestand opnieuw verzendt.": { fr:"Votre session a changé. Reconnectez-vous avant de renvoyer le fichier.", en:"Your session changed. Sign in again before resending the file.", de:"Deine Sitzung hat sich geändert. Melde dich erneut an, bevor du die Datei erneut sendest." },
 
+  "Het lokaal bewaarde bestand bevat geen leesbare gegevens meer. Verwijder deze wachtrij-upload en selecteer het originele bestand opnieuw.": { fr:"Le fichier enregistré localement ne contient plus de données lisibles. Supprimez cet envoi de la file d’attente et sélectionnez à nouveau le fichier original.", en:"The locally stored file no longer contains readable data. Remove this queued upload and select the original file again.", de:"Die lokal gespeicherte Datei enthält keine lesbaren Daten mehr. Entferne diesen Upload aus der Warteschlange und wähle die Originaldatei erneut aus." },
+
 }
 
 const CANONICAL=new Map<string,string>()
