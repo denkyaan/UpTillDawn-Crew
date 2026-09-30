@@ -1,4 +1,4 @@
-import {readFile,writeFile,readdir} from 'node:fs/promises'
+import {readFile,writeFile} from 'node:fs/promises'
 import {execFileSync} from 'node:child_process'
 
 const repo=process.env.GITHUB_REPOSITORY||'denkyaan/UpTillDawn-Crew'
