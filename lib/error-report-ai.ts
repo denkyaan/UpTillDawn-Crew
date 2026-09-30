@@ -114,6 +114,46 @@ function htmlEscape(value:string){
     .replaceAll("'","&#039;")
 }
 
+
+async function dispatchSelfHealing(report:{
+  id:string
+  route:string
+  error_name:string|null
+  error_message:string
+  stack_trace:string|null
+  ai_summary:string
+}){
+  const token=process.env.SELF_HEALING_GITHUB_TOKEN
+  if(!token)return false
+  const response=await fetch('https://api.github.com/repos/denkyaan/UpTillDawn-Crew/actions/workflows/ai-self-heal.yml/dispatches',{
+    method:'POST',
+    headers:{
+      Authorization:`Bearer ${token}`,
+      Accept:'application/vnd.github+json',
+      'X-GitHub-Api-Version':'2022-11-28',
+      'Content-Type':'application/json',
+      'User-Agent':'UpTillDawn-SelfHealing',
+    },
+    body:JSON.stringify({
+      ref:'main',
+      inputs:{
+        report_id:report.id,
+        route:report.route.slice(0,500),
+        error_name:(report.error_name||'Error').slice(0,200),
+        error_message:report.error_message.slice(0,4000),
+        stack_trace:(report.stack_trace||'').slice(0,10000),
+        ai_summary:report.ai_summary.slice(0,3000),
+      },
+    }),
+    signal:AbortSignal.timeout(8000),
+  })
+  if(!response.ok){
+    console.error('[error-ai] self-healing dispatch geweigerd',{status:response.status})
+    return false
+  }
+  return true
+}
+
 async function sendMakerErrorEmail(report:{
   id:string
   route:string
@@ -304,14 +344,27 @@ export async function processErrorReport(client:CrewClient,reportId:string,ai:Er
     if(finalizeError)throw new Error(finalizeError.message)
 
     if(makerRequired){
-      await sendMakerErrorEmail({
-        id:report.id,
-        route:report.route,
-        error_message:report.error_message,
-        ai_summary:result.summary,
-        maker_action:makerAction||'Open het rapport in God Mode.',
-        severity:result.severity,
-      })
+      const autonomousCandidate=['code','client_state','unknown'].includes(result.category)
+      const dispatched=autonomousCandidate
+        ? await dispatchSelfHealing({
+            id:report.id,
+            route:report.route,
+            error_name:report.error_name,
+            error_message:report.error_message,
+            stack_trace:report.stack_trace,
+            ai_summary:result.summary,
+          })
+        : false
+      if(!dispatched){
+        await sendMakerErrorEmail({
+          id:report.id,
+          route:report.route,
+          error_message:report.error_message,
+          ai_summary:result.summary,
+          maker_action:makerAction||'Open het rapport in God Mode.',
+          severity:result.severity,
+        })
+      }
     }
   }catch(error){
     const message=error instanceof Error?error.message:'onbekende fout'
