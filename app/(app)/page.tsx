@@ -1,6 +1,6 @@
 import Link from 'next/link'
 import { redirect } from 'next/navigation'
-import { CalendarDays, Clock3, MapPin, AlertTriangle, ArrowRight } from 'lucide-react'
+import { CalendarDays, Clock3, MapPin, AlertTriangle, ArrowRight, ClipboardCheck, PackageCheck, ListTodo } from 'lucide-react'
 import { createClient } from '@/lib/supabase/crew-server'
 import { ManagerOnly } from '@/components/auth/manager-only'
 import { AssignedEventOnly } from '@/components/auth/assigned-event-only'
@@ -167,6 +167,15 @@ export default async function Dashboard() {
         <span className="text-sm text-muted-foreground">{staffLivePeople.length} actief</span>
       </div>
       <StaffWorkplacePersonnel people={staffLivePeople}/>
+    </section>}
+    {current.role==='responsible_lead'&&activeResponsibleAssignments.length>0&&<section className="space-y-3 rounded-2xl border bg-card p-4">
+      <div><h2 className="text-lg font-bold">Mijn operationele werkplek</h2><p className="text-sm text-muted-foreground">Directe toegang tot de functies die je als verantwoordelijke tijdens het evenement gebruikt.</p></div>
+      <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+        <Link href="/operations" className="rounded-xl border p-4"><Clock3 className="mb-3 h-5 w-5 text-violet-400"/><p className="font-bold">Mijn werkuren</p><p className="text-xs text-muted-foreground">Werk, pauze en operationele opvolging.</p></Link>
+        <Link href="/briefings" className="rounded-xl border p-4"><ClipboardCheck className="mb-3 h-5 w-5 text-violet-400"/><p className="font-bold">Briefing & checklists</p><p className="text-xs text-muted-foreground">Instructies en opening- of sluitchecklists.</p></Link>
+        <Link href="/inventory" className="rounded-xl border p-4"><PackageCheck className="mb-3 h-5 w-5 text-violet-400"/><p className="font-bold">Inventaris</p><p className="text-xs text-muted-foreground">Controleer materiaal en meld ontbrekend of defect materiaal.</p></Link>
+        <Link href="/tasks" className="rounded-xl border p-4"><ListTodo className="mb-3 h-5 w-5 text-violet-400"/><p className="font-bold">Taken</p><p className="text-xs text-muted-foreground">Volg taken van je eigen werkplek op.</p></Link>
+      </div>
     </section>}
     {current.role==='responsible_lead'&&<section className="space-y-3 rounded-2xl border bg-card p-4">
       <div className="flex items-center justify-between gap-3">
