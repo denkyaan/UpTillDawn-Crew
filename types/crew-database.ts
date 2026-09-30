@@ -3501,6 +3501,12 @@ export type Database = {
           },
         ]
       }
+      upload_security_scans: {
+        Row: { id: string; bucket_id: string; storage_path: string; uploaded_by: string | null; mime_type: string; file_size_bytes: number | null; risk_class: string; status: string; sha256: string | null; engine: string | null; engine_result: Json; attempts: number; scanned_at: string | null; created_at: string; updated_at: string }
+        Insert: { id?: string; bucket_id: string; storage_path: string; uploaded_by?: string | null; mime_type: string; file_size_bytes?: number | null; risk_class?: string; status?: string; sha256?: string | null; engine?: string | null; engine_result?: Json; attempts?: number; scanned_at?: string | null; created_at?: string; updated_at?: string }
+        Update: { id?: string; bucket_id?: string; storage_path?: string; uploaded_by?: string | null; mime_type?: string; file_size_bytes?: number | null; risk_class?: string; status?: string; sha256?: string | null; engine?: string | null; engine_result?: Json; attempts?: number; scanned_at?: string | null; created_at?: string; updated_at?: string }
+        Relationships: [{ foreignKeyName: "upload_security_scans_uploaded_by_fkey"; columns: ["uploaded_by"]; isOneToOne: false; referencedRelation: "profiles"; referencedColumns: ["id"] }]
+      }
       upt_audit_logs: {
         Row: {
           action: string
@@ -4692,6 +4698,10 @@ export type Database = {
         Args: { p_login: string; p_password: string }
         Returns: undefined
       }
+      upt_god_upload_security_audit: {
+        Args: { p_limit?: number; p_token: string }
+        Returns: { attempts: number; bucket_id: string; created_at: string; engine: string | null; engine_result: Json; file_size_bytes: number | null; id: string; mime_type: string; risk_class: string; scanned_at: string | null; status: string; storage_path: string; updated_at: string; uploaded_by: string | null; uploader_email: string | null; uploader_name: string | null }[]
+      }
       upt_gps_assessment: {
         Args: {
           p_accuracy: number
@@ -5383,6 +5393,7 @@ export type Database = {
         }
         Returns: undefined
       }
+      upt_upload_scan_status: { Args: { p_bucket: string; p_path: string }; Returns: string }
       upt_upsert_event_emergency_information: {
         Args: {
           p_assembly_point?: string
