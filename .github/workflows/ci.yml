@@ -143,6 +143,28 @@ jobs:
       - name: Run 15 concurrent authenticated browser bots
         run: node scripts/15-bot-browser-test.mjs
 
+      - name: Verify browser action persistence
+        run: |
+          set -euo pipefail
+          psql "$BOT_DB_URL" -v ON_ERROR_STOP=1 <<'SQL'
+          DO $
+          BEGIN
+            IF NOT EXISTS (
+              SELECT 1
+              FROM public.event_availability ea
+              JOIN public.profiles p ON p.id=ea.user_id
+              WHERE ea.event_id='00000000-0000-4000-8000-00000000e2e1'::uuid
+                AND p.full_name='E2E STAFF 03'
+                AND ea.response='can'
+                AND ea.setup_available=true
+                AND ea.breakdown_available=true
+            ) THEN
+              RAISE EXCEPTION 'FAIL browser availability action was not persisted';
+            END IF;
+          END $;
+          SELECT 'PASS: real browser availability action persisted under staff RLS' AS result;
+          SQL
+
       - name: Stop application
         if: always()
         run: kill $(cat /tmp/uptilldawn-bot-app.pid) 2>/dev/null || true
