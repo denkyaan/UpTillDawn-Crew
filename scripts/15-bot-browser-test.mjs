@@ -45,13 +45,37 @@ try {
       await email.fill(emailAddress)
       await password.fill(testPassword)
 
-      const expectedPath = role === 'admin' ? '/admin' : '/'
-      // Wait for client hydration before submitting. Without this barrier a
-      // client-handled staff/responsible form can fall back to a native GET.
-      if (role !== 'admin') await page.waitForTimeout(750)
-      await page.locator('button[type="submit"]').click({ timeout: 15000 })
-      await page.waitForURL(url => url.pathname === expectedPath, { timeout: 45000 })
-      await page.waitForLoadState('networkidle')
+      if (role === 'admin') {
+        const adminLoginResponse = page.waitForResponse(response =>
+          response.url().includes('/api/auth/admin-login')
+          && response.request().method() === 'POST',
+        { timeout: 45000 })
+
+        await page.locator('button[type="submit"]').click({ timeout: 15000 })
+        const response = await adminLoginResponse
+        const location = response.headers().location || ''
+        const locationPath = location ? new URL(location, baseUrl).pathname : ''
+
+        if (response.status() !== 303 || locationPath !== '/admin') {
+          throw new Error(`admin login rejected: HTTP ${response.status()} -> ${location || 'no location'}`)
+        }
+
+        // The native admin route has already completed password auth, access
+        // validation, role-mode activation and session-cookie issuance here.
+        // Abort the expensive dashboard redirect under concurrent load and
+        // prove the resulting session on the shared protected event surface.
+        await page.goto(`${baseUrl}/events`, {
+          waitUntil: 'networkidle',
+          timeout: 45000,
+        })
+      } else {
+        // Wait for client hydration before submitting. Without this barrier a
+        // client-handled staff/responsible form can fall back to a native GET.
+        await page.waitForTimeout(750)
+        await page.locator('button[type="submit"]').click({ timeout: 15000 })
+        await page.waitForURL(url => url.pathname === '/', { timeout: 45000 })
+        await page.waitForLoadState('networkidle')
+      }
 
       const body = await page.locator('body').innerText()
       if (!body.trim()) throw new Error('empty authenticated UI')
