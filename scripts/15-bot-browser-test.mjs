@@ -23,8 +23,10 @@ try{
    if(await email.count()!==1||await password.count()!==1)throw new Error('login controls missing')
    await email.fill(`${bot}@bots.uptilldawn.test`)
    await password.fill('synthetic-not-submitted')
-   const menu=page.getByRole('button',{name:/inlogmenu/i})
-   if(await menu.count())await menu.click()
+   const menu=page.locator('button[aria-expanded]')
+   if(await menu.count()!==1)throw new Error('portal menu control missing')
+   await menu.click()
+   await page.locator('a[href="/login/staff"]').waitFor({state:'attached',timeout:5000})
    for(const target of ['staff','responsible','admin']){
     if(await page.locator(`a[href="/login/${target}"]`).count()!==1)throw new Error(`portal link missing: ${target}`)
    }
