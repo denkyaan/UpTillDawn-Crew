@@ -25,15 +25,17 @@ export default async function Dashboard() {
   if (current.isAdmin) redirect('/admin')
   const user = { id: current.id }
 
-  const now = new Date().toISOString()
+  const nowDate = new Date()
+  const nowMs = nowDate.getTime()
+  const now = nowDate.toISOString()
   const [profileResult, eventsResult, shiftsResult, incidentsResult, membershipsResult, activeEventsResult, openEventsResult, responsibleAssignmentsResult] = await Promise.all([
     s.from('profiles').select('full_name,approved,role').eq('id', user.id).single(),
-    s.from('events').select('id,name,venue,start_at,end_at,status').order('start_at', { ascending: true }),
+    s.from('events').select('id,name,venue,start_at,end_at,status').neq('status','archived').gte('end_at',now).order('start_at', { ascending: true }),
     s.from('shifts').select('id,scheduled_start,scheduled_end,role_name,workplace_id,event_id').eq('user_id', user.id).order('scheduled_start', { ascending: true }),
-    s.from('incidents').select('id,event_id,workplace_id').neq('status', 'resolved'),
+    s.from('incidents').select('id,event_id,workplace_id').neq('status', 'resolved').gte('created_at',new Date(nowMs-3*24*60*60*1000).toISOString()),
     s.from('event_members').select('event_id,event_role').eq('user_id', user.id),
-    s.from('events').select('id').lte('start_at', now).gte('end_at', now),
-    s.from('events').select('id').gte('end_at', now),
+    s.from('events').select('id').neq('status','archived').lte('start_at', now).gte('end_at', now),
+    s.from('events').select('id').neq('status','archived').gte('end_at', now),
     s.from('responsible_assignments').select('event_id,workplace_id').eq('user_id', user.id),
   ])
 
@@ -53,7 +55,6 @@ export default async function Dashboard() {
     ...shifts.map(shift=>shift.event_id),
     ...(current.role==='responsible_lead'?responsibleAssignments.map(row=>row.event_id):[]),
   ])
-  const nowMs=new Date().getTime()
   const events=rawEvents.filter(event=>{
     const end=Date.parse(event.end_at)
     const visibleWhileOpen=event.status!=='archived'&&nowMs<=end
@@ -141,19 +142,17 @@ export default async function Dashboard() {
     }))
   }
 
-  const hasLoadError = Boolean(
-    profileResult.error || eventsResult.error || shiftsResult.error || incidentsResult.error
-    || membershipsResult.error || activeEventsResult.error || openEventsResult.error
-    || responsibleAssignmentsResult.error || responsibleLiveError || staffLiveError
-  )
+  const overviewSources=[profileResult,eventsResult,shiftsResult,incidentsResult,membershipsResult,activeEventsResult,openEventsResult,responsibleAssignmentsResult]
+  const failedOverviewSources=overviewSources.filter(result=>result.error).length+Number(responsibleLiveError)+Number(staffLiveError)
+  const hasLoadError=failedOverviewSources>0
 
-  return <main className="space-y-7 p-4 md:p-8">
+  return <main className="mx-auto max-w-7xl space-y-7 p-4 pb-28 md:p-8">
     <div>
       <p className="text-xs font-bold tracking-[.2em] text-violet-400">UP TILL DAWN PERSONEELSBEHEER</p>
       <h1 className="mt-1 text-3xl font-black">Welkom, {profile?.full_name || 'Personeelslid'}</h1>
       <p className="text-muted-foreground">Je operationele personeelsoverzicht.</p>
     </div>
-    {hasLoadError && <p className="rounded-xl border border-amber-500/40 p-4">Een deel van het overzicht kon niet worden geladen.</p>}
+    {hasLoadError && <p className="rounded-xl border border-amber-500/40 p-4">Een deel van de realtime gegevens is tijdelijk niet beschikbaar. De beschikbare onderdelen blijven bruikbaar.</p>}
     <section className="grid gap-4 md:grid-cols-3">
       <Card href="/events" icon={CalendarDays} title="Evenementen" value={events.length}/>
       <AssignedEventOnly available={hasEventAssignment}><Card href="/workplaces" icon={Clock3} title="Werkplaatsen & shifts" value={shifts.length}/></AssignedEventOnly>
