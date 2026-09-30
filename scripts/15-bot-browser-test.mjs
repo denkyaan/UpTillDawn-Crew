@@ -31,8 +31,8 @@ try {
 
     try {
       const response = await page.goto(`${baseUrl}/login/${role}`, {
-        waitUntil: 'domcontentloaded',
-        timeout: 30000,
+        waitUntil: 'networkidle',
+        timeout: 45000,
       })
       if (!response?.ok()) throw new Error(`HTTP ${response?.status()}`)
 
@@ -46,11 +46,12 @@ try {
       await password.fill(testPassword)
 
       const expectedPath = role === 'admin' ? '/admin' : '/'
-      await Promise.all([
-        page.waitForURL(url => url.pathname === expectedPath, { timeout: 30000 }),
-        page.locator('button[type="submit"]').click(),
-      ])
-      await page.waitForLoadState('domcontentloaded')
+      // Wait for client hydration before submitting. Without this barrier a
+      // client-handled staff/responsible form can fall back to a native GET.
+      if (role !== 'admin') await page.waitForTimeout(750)
+      await page.locator('button[type="submit"]').click({ timeout: 15000 })
+      await page.waitForURL(url => url.pathname === expectedPath, { timeout: 45000 })
+      await page.waitForLoadState('networkidle')
 
       const body = await page.locator('body').innerText()
       if (!body.trim()) throw new Error('empty authenticated UI')
@@ -62,8 +63,8 @@ try {
       }
 
       const eventsResponse = await page.goto(`${baseUrl}/events`, {
-        waitUntil: 'domcontentloaded',
-        timeout: 30000,
+        waitUntil: 'networkidle',
+        timeout: 45000,
       })
       if (!eventsResponse?.ok()) throw new Error(`events HTTP ${eventsResponse?.status()}`)
       if (new URL(page.url()).pathname.startsWith('/login')) {
