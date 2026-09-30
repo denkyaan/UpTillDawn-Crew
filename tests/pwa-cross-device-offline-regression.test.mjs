@@ -87,3 +87,14 @@ test('PWA update activation waits for a server-safe offline queue', async () => 
   assert.match(register, /waitingWorker\.postMessage\(\{type:"UPT_ACTIVATE_UPDATE"\}\)/)
   assert.match(register, /if\(waitingWorker&&!activationRequested\)void safelyActivateUpdate\(\)/)
 })
+
+test('offline operational snapshots refresh after reconnect and foreground resume', async () => {
+  const sync = await readFile(new URL('../components/crew/global-offline-content-sync.tsx', import.meta.url), 'utf8')
+  assert.match(sync, /window\.addEventListener\('online',onOnline\)/)
+  assert.match(sync, /document\.addEventListener\('visibilitychange',onVisible\)/)
+  assert.match(sync, /syncOfflineContent\(\{force:true\}\)/)
+  assert.match(sync, /now-lastSyncedAt<60_000/)
+  assert.match(sync, /15\*60\*1000/)
+  assert.match(sync, /if\(cancelled\|\|syncing\|\|!navigator\.onLine\)return/)
+  assert.match(sync, /window\.removeEventListener\('online',onOnline\)/)
+})
