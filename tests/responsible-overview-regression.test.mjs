@@ -64,3 +64,11 @@ test('responsible defaults exclude admin and God Mode management surfaces',async
  for(const forbidden of ['platform','personnel','exports','automations','god'])assert.doesNotMatch(block,new RegExp('"'+forbidden+'"'))
  for(const allowed of ['overview','operations','events','tasks','briefings','workplaces','inventory','guestlist','sales','chat','crew','incidents'])assert.match(block,new RegExp('"'+allowed+'"'))
 })
+
+test('responsible overview cleanup keeps queries minimal and ignores cancelled shifts',async()=>{
+ const source=await read('app/(app)/page.tsx')
+ assert.match(source,/select\('full_name,approved'\)/)
+ assert.match(source,/select\('id,name,venue,end_at,status'\)/)
+ assert.match(source,/select\('id,workplace_id,event_id'\).*neq\('status','cancelled'\)/)
+ assert.doesNotMatch(source,/select\('full_name,approved,role'\)/)
+})
