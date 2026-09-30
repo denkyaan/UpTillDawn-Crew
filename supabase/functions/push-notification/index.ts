@@ -2,6 +2,7 @@ import "jsr:@supabase/functions-js/edge-runtime.d.ts"
 import { createClient } from "npm:@supabase/supabase-js@2.106.2"
 import webpush from "npm:web-push@3.6.7"
 import { safeNotificationLink, safePushEndpoint } from "./security.ts"
+import { localizePushText } from "./i18n.ts"
 
 type PushConfig={
   vapid_public_key:string
@@ -79,10 +80,10 @@ Deno.serve(async(req)=>{
     config.vapid_private_key,
   )
 
-  const body=JSON.stringify({
+  const payloadFor=(locale:string)=>JSON.stringify({
     notificationId:notification.id,
-    title:String(notification.title||"Up Till Dawn").slice(0,120),
-    body:String(notification.body||"").slice(0,700),
+    title:localizePushText(notification.title||"Up Till Dawn",locale).slice(0,120),
+    body:localizePushText(notification.body||"",locale).slice(0,700),
     kind:String(notification.kind||"info").slice(0,80),
     link:safeNotificationLink(notification.link),
     createdAt:notification.created_at,
@@ -103,7 +104,7 @@ Deno.serve(async(req)=>{
       await webpush.sendNotification({
         endpoint:sub.endpoint,
         keys:{p256dh:sub.p256dh,auth:sub.auth_key},
-      },body,{
+      },payloadFor(sub.locale||"nl"),{
         TTL:86400,
         urgency:notification.kind==="incident"?"high":"normal",
       })
