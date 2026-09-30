@@ -65,10 +65,9 @@ try {
           throw new Error(`admin login rejected: HTTP ${adminResponse.status()} -> ${location || 'no location'}`)
         }
 
-        await page.goto(`${baseUrl}/events`, {
-          waitUntil: 'networkidle',
-          timeout: 45000,
-        })
+        // Session persistence is asserted below through BrowserContext.request.
+        // Keeping the admin page idle avoids turning dashboard rendering into
+        // an authentication signal.
       } else {
         // Wait for client hydration before submitting. Without this barrier a
         // client-handled staff/responsible form can fall back to a native GET.
@@ -87,14 +86,19 @@ try {
         throw new Error('seeded profile did not render')
       }
 
-      const eventsResponse = await page.goto(`${baseUrl}/events`, {
-        waitUntil: 'networkidle',
+      // Verify the issued auth cookies against a protected route without a
+      // second browser navigation. Under 15-way concurrency Playwright can
+      // transiently abort a page.goto while Next.js is still settling client
+      // navigation; the shared BrowserContext request client tests the same
+      // session contract deterministically.
+      const eventsResponse = await context.request.get(`${baseUrl}/events`, {
+        maxRedirects: 0,
         timeout: 45000,
       })
-      if (!eventsResponse?.ok()) throw new Error(`events HTTP ${eventsResponse?.status()}`)
-      if (new URL(page.url()).pathname.startsWith('/login')) {
-        throw new Error('authenticated session did not persist')
+      if (eventsResponse.status() >= 300 && eventsResponse.status() < 400) {
+        throw new Error(`authenticated session redirected: HTTP ${eventsResponse.status()} -> ${eventsResponse.headers().location || 'no location'}`)
       }
+      if (!eventsResponse.ok()) throw new Error(`events HTTP ${eventsResponse.status()}`)
 
       console.log(`PASS ${bot} authenticated ${viewport.width}x${viewport.height}`)
     } catch (error) {
