@@ -64,6 +64,8 @@ test('release CI includes the 15-browser-bot gate',async()=>{
   assert.match(bots,/Array\(13\)\.fill\('staff'\)/)
   for(const locale of ['nl','fr','en','de'])assert.ok(bots.includes(`'${locale}'`),locale)
   assert.match(bots,/Promise\.all\(roles\.map/)
+  for(const route of ['/events','/workplaces','/briefings','/inventory','/guestlist','/chat'])assert.ok(bots.includes(`'${route}'`),route)
+  assert.match(bots,/assertProtectedRoute/)
 })
 
 
