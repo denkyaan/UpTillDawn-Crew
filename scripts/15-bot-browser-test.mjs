@@ -1,42 +1,89 @@
 import { chromium } from 'playwright'
 
-const baseUrl=process.env.BOT_TEST_BASE_URL||'http://127.0.0.1:3000'
-const roles=['admin','responsible',...Array(13).fill('staff')]
-const locales=['nl','fr','en','de']
-const viewports=[
- {width:390,height:844},{width:430,height:932},{width:768,height:1024},
- {width:1280,height:800},{width:1440,height:900},
+const baseUrl = process.env.BOT_TEST_BASE_URL || 'http://127.0.0.1:3000'
+const testPassword = process.env.BOT_TEST_PASSWORD
+if (!testPassword) {
+  console.error('BOT_TEST_PASSWORD is required')
+  process.exit(1)
+}
+
+const roles = ['admin', 'responsible', ...Array(13).fill('staff')]
+const locales = ['nl', 'fr', 'en', 'de']
+const viewports = [
+  { width: 390, height: 844 },
+  { width: 430, height: 932 },
+  { width: 768, height: 1024 },
+  { width: 1280, height: 800 },
+  { width: 1440, height: 900 },
 ]
-const failures=[]
-const browser=await chromium.launch({headless:true})
-try{
- await Promise.all(roles.map(async(role,index)=>{
-  const locale=locales[index%locales.length]
-  const context=await browser.newContext({locale,viewport:viewports[index%viewports.length]})
-  const page=await context.newPage()
-  const bot=`bot-${String(index+1).padStart(2,'0')}-${role}-${locale}`
-  try{
-   const response=await page.goto(`${baseUrl}/login/${role}`,{waitUntil:'networkidle',timeout:30000})
-   if(!response?.ok())throw new Error(`HTTP ${response?.status()}`)
-   const email=page.locator('input[name="email"]')
-   const password=page.locator('input[name="password"]')
-   if(await email.count()!==1||await password.count()!==1)throw new Error('login controls missing')
-   await email.fill(`${bot}@bots.uptilldawn.test`)
-   await password.fill('synthetic-not-submitted')
-   const menu=page.locator('button[aria-expanded]')
-   if(await menu.count()!==1)throw new Error('portal menu control missing')
-   await menu.click()
-   await page.locator('a[href="/login/staff"]').waitFor({state:'attached',timeout:5000})
-   for(const target of ['staff','responsible','admin']){
-    if(await page.locator(`a[href="/login/${target}"]`).count()!==1)throw new Error(`portal link missing: ${target}`)
-   }
-   const body=await page.locator('body').innerText()
-   if(!body.trim())throw new Error('empty UI')
-   console.log(`PASS ${bot} ${viewports[index%viewports.length].width}x${viewports[index%viewports.length].height}`)
-  }catch(error){
-   failures.push(`${bot}: ${error instanceof Error?error.message:String(error)}`)
-  }finally{await context.close()}
- }))
-}finally{await browser.close()}
-if(failures.length){console.error(failures.join('\n'));process.exit(1)}
-console.log('PASS: 15 concurrent browser bots across Admin/Responsible/Staff, NL/FR/EN/DE and mobile/tablet/desktop viewports')
+const failures = []
+const browser = await chromium.launch({ headless: true })
+
+try {
+  await Promise.all(roles.map(async (role, index) => {
+    const locale = locales[index % locales.length]
+    const viewport = viewports[index % viewports.length]
+    const bot = `bot-${String(index + 1).padStart(2, '0')}-${role}-${locale}`
+    const emailAddress = `${bot}@bots.uptilldawn.test`
+    const expectedName = `E2E ${role.toUpperCase()} ${String(index + 1).padStart(2, '0')}`
+    const context = await browser.newContext({ locale, viewport })
+    const page = await context.newPage()
+
+    try {
+      const response = await page.goto(`${baseUrl}/login/${role}`, {
+        waitUntil: 'domcontentloaded',
+        timeout: 30000,
+      })
+      if (!response?.ok()) throw new Error(`HTTP ${response?.status()}`)
+
+      const email = page.locator('input[name="email"]')
+      const password = page.locator('input[name="password"]')
+      if (await email.count() !== 1 || await password.count() !== 1) {
+        throw new Error('login controls missing')
+      }
+
+      await email.fill(emailAddress)
+      await password.fill(testPassword)
+
+      const expectedPath = role === 'admin' ? '/admin' : '/'
+      await Promise.all([
+        page.waitForURL(url => url.pathname === expectedPath, { timeout: 30000 }),
+        page.locator('button[type="submit"]').click(),
+      ])
+      await page.waitForLoadState('domcontentloaded')
+
+      const body = await page.locator('body').innerText()
+      if (!body.trim()) throw new Error('empty authenticated UI')
+      if (/profiel kon niet worden geladen|account nog niet goedgekeurd/i.test(body)) {
+        throw new Error('authenticated profile gate failed')
+      }
+      if (role !== 'admin' && !body.includes(expectedName)) {
+        throw new Error('seeded profile did not render')
+      }
+
+      const eventsResponse = await page.goto(`${baseUrl}/events`, {
+        waitUntil: 'domcontentloaded',
+        timeout: 30000,
+      })
+      if (!eventsResponse?.ok()) throw new Error(`events HTTP ${eventsResponse?.status()}`)
+      if (new URL(page.url()).pathname.startsWith('/login')) {
+        throw new Error('authenticated session did not persist')
+      }
+
+      console.log(`PASS ${bot} authenticated ${viewport.width}x${viewport.height}`)
+    } catch (error) {
+      failures.push(`${bot}: ${error instanceof Error ? error.message : String(error)}`)
+    } finally {
+      await context.close()
+    }
+  }))
+} finally {
+  await browser.close()
+}
+
+if (failures.length) {
+  console.error(failures.join('\n'))
+  process.exit(1)
+}
+
+console.log('PASS: 15 concurrent authenticated browser bots across Admin/Responsible/Staff, NL/FR/EN/DE and mobile/tablet/desktop viewports')
