@@ -109,7 +109,7 @@ export function LoginForm({
 
           <form
             action={nativeAction}
-            method={nativeAction ? "post" : undefined}
+            method="post"
             onSubmit={nativeAction ? undefined : handleSubmit}
             className="space-y-5"
           >
