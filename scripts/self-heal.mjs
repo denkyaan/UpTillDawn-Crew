@@ -125,7 +125,7 @@ async function loop(){
   if(!validation.ok){repairFeedback=validation.feedback;console.error(repairFeedback);continue}
   if(!commitAndPush()){repairFeedback='Validated proposal contained no committable change.';continue}
   const released=await releaseCheck()
-  if(released.ok){console.log('Self-healing release verified.');return}
+  if(released.ok){await markResolved();console.log('Self-healing release verified and report marked auto_resolved.');return}
   repairFeedback=released.feedback
   console.error(repairFeedback)
  }
@@ -158,6 +158,14 @@ async function verify(){
  if(response.status>=500)throw new Error('Productiecontrole faalt met HTTP '+response.status)
  console.log(`Self-healing bevestigd: CI #${ci.run_number}, deploy #${deploy.run_number}, HTTP ${response.status}`)
 }
+async function markResolved(){
+ const url=process.env.SUPABASE_URL||process.env.NEXT_PUBLIC_SUPABASE_URL||''
+ const key=process.env.SUPABASE_SERVICE_ROLE_KEY||''
+ if(!url||!key||!reportId){console.warn('Report resolution skipped: Supabase service credentials unavailable.');return}
+ const response=await fetch(`${url.replace(/\/$/,'')}/rest/v1/rpc/upt_self_heal_resolve_error_report`,{method:'POST',headers:{apikey:key,Authorization:`Bearer ${key}`,'Content-Type':'application/json'},body:JSON.stringify({p_report:reportId})})
+ if(!response.ok)console.warn('Report resolution RPC unavailable; release remains verified.')
+}
+
 async function escalate(extra=''){
  const title=`[Self-healing] Makeractie nodig · ${reportId}`
  const body=[
