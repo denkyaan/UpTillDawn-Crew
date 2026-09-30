@@ -210,7 +210,7 @@ export async function POST(request:Request){
   }
 
   try{
-    await validateUploadSecurity(file)
+    if(['image/jpeg','image/png','image/webp','application/pdf','text/plain','text/csv','application/vnd.openxmlformats-officedocument.wordprocessingml.document','application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'].includes(file.type))await validateUploadSecurity(file)
     const entries=await parseUpload(file)
     if(!entries.length)return Response.json({error:'Geen bruikbare guestlistregels gevonden.'},{status:400})
     if(entries.length>1000)return Response.json({error:'Maximaal 1000 regels per import.'},{status:400})
