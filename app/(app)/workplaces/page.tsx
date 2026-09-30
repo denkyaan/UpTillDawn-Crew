@@ -21,6 +21,7 @@ export default async function Page({searchParams}:{searchParams?:Promise<{event?
   const current=await getCurrentUser()
   if(!current)return null
   const user={id:current.id}
+  const requestNow=new Date().toISOString()
 
   const isAdmin=current.role==='admin'
   const isResponsible=current.role==='responsible_lead'
@@ -150,7 +151,7 @@ export default async function Page({searchParams}:{searchParams?:Promise<{event?
     ])
     if(eventRowsError)throw new Error('Evenementen konden niet worden geladen: '+eventRowsError.message)
     if(workplaceRowsError)throw new Error('Werkplaatsen konden niet worden geladen: '+workplaceRowsError.message)
-    const nowMs=Date.parse(now)
+    const nowMs=Date.parse(requestNow)
     const futureShiftEventIds=new Set((ownShifts||[]).filter(shift=>Date.parse(shift.scheduled_end)>=nowMs).map(shift=>shift.event_id))
     const responsibleEventIds=new Set((ownResponsible||[]).map(row=>row.event_id))
     const visibleEventRows=(eventRows||[]).filter(event=>
