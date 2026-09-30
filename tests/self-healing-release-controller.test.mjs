@@ -18,7 +18,7 @@ test('reported code faults can enter the bounded autonomous repair pipeline',asy
  assert.match(workflow,/npm test/)
  assert.match(workflow,/npm run build:cloudflare/)
  assert.match(workflow,/Wait for CI and production deploy/)
- assert.match(controller,/confidence!==\'high\'/)
+ assert.match(controller,/confidence as diagnostische indicatie/)
  assert.match(controller,/supabase\/migrations\//)
  assert.match(controller,/CI werd niet groen/)
  assert.match(controller,/Productiedeploy werd niet bevestigd/)
