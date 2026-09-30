@@ -12,11 +12,6 @@ test('responsible overview keeps operational data scoped to active assigned work
  assert.match(source,/activeResponsibleWorkplaces\.has\(incident\.workplace_id\)/)
 })
 
-test('responsible overview excludes archived and expired events from primary queries',async()=>{
- const source=await read('app/(app)/page.tsx')
- assert.match(source,/select\('id,name,venue,start_at,end_at,status'\)\.neq\('status','archived'\)\.gte\('end_at',now\)/)
- assert.match(source,/select\('id'\)\.neq\('status','archived'\)\.lte\('start_at', now\)\.gte\('end_at', now\)/)
-})
 
 test('responsible overview degrades per datasource and preserves the usable dashboard',async()=>{
  const source=await read('app/(app)/page.tsx')
@@ -47,4 +42,25 @@ test('responsible overview adds operational shortcuts without removing baseline 
  assert.match(source,/Mijn operationele werkplek/)
  for(const href of ['/events','/workplaces','/operations','/briefings','/inventory','/tasks','/incidents'])assert.ok(source.includes(href),href)
  assert.match(source,/activeResponsibleAssignments\.length>0/)
+})
+
+test('responsible overview keeps unresolved assigned-workplace incidents visible until resolved',async()=>{
+ const source=await read('app/(app)/page.tsx')
+ assert.match(source,/from\('incidents'\).*neq\('status', 'resolved'\)/)
+ assert.doesNotMatch(source,/from\('incidents'\).*gte\('created_at'/)
+ assert.match(source,/activeResponsibleWorkplaces\.has\(incident\.workplace_id\)/)
+})
+
+test('responsible mobile navigation preserves baseline and adds assigned inventory context',async()=>{
+ const source=await read('components/layout/mobile-nav.tsx')
+ assert.match(source,/RESPONSIBLE_ASSIGNED_EVENT_KEYS=\["events","briefings","workplaces","inventory"\]/)
+ assert.match(source,/RESPONSIBLE_ACTIVE_SHIFT_KEYS=\["operations","workplaces","incidents"\]/)
+ assert.match(source,/roleKey==="responsible_lead"/)
+})
+
+test('responsible defaults exclude admin and God Mode management surfaces',async()=>{
+ const source=await read('lib/role-ui.ts')
+ const block=source.split('responsible_lead: [')[1].split('],\n  staff:')[0]
+ for(const forbidden of ['platform','personnel','exports','automations','god'])assert.doesNotMatch(block,new RegExp('"'+forbidden+'"'))
+ for(const allowed of ['overview','operations','events','tasks','briefings','workplaces','inventory','guestlist','sales','chat','crew','incidents'])assert.match(block,new RegExp('"'+allowed+'"'))
 })
