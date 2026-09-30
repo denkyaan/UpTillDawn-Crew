@@ -32,7 +32,7 @@ export default async function Dashboard() {
     s.from('profiles').select('full_name,approved,role').eq('id', user.id).single(),
     s.from('events').select('id,name,venue,start_at,end_at,status').neq('status','archived').gte('end_at',now).order('start_at', { ascending: true }),
     s.from('shifts').select('id,scheduled_start,scheduled_end,role_name,workplace_id,event_id').eq('user_id', user.id).order('scheduled_start', { ascending: true }),
-    s.from('incidents').select('id,event_id,workplace_id').neq('status', 'resolved').gte('created_at',new Date(nowMs-3*24*60*60*1000).toISOString()),
+    s.from('incidents').select('id,event_id,workplace_id').neq('status', 'resolved'),
     s.from('event_members').select('event_id,event_role').eq('user_id', user.id),
     s.from('events').select('id').neq('status','archived').lte('start_at', now).gte('end_at', now),
     s.from('events').select('id').neq('status','archived').gte('end_at', now),
