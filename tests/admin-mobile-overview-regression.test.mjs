@@ -27,3 +27,17 @@ test('normal admin overview does not expose God Mode automation management',asyn
  const source=await read('app/(app)/admin/page.tsx')
  assert.doesNotMatch(source,/automation_rules|Actieve automatiseringen|#automatiseringen/)
 })
+
+test('admin overview uses one authoritative break-session dataset',async()=>{
+ const source=await read('app/(app)/admin/page.tsx')
+ const breakQueries=[...source.matchAll(/s\.from\('break_sessions'\)/g)]
+ assert.equal(breakQueries.length,1)
+ assert.match(source,/activeBreakRows=sessionBreakRows\.filter\(row=>!row\.ended_at\)/)
+ assert.match(source,/sessionBreaks\.error\?1:0/)
+})
+
+test('admin overview keeps the established default navigation and excludes retired surfaces',async()=>{
+ const source=await read('app/(app)/admin/page.tsx')
+ for(const href of ['/admin/time-records','/events','/operations','/personnel','/incidents','/tasks','/crew'])assert.ok(source.includes(href),href)
+ assert.doesNotMatch(source,/href=["']\/admin\/(?:health|release)/)
+})
