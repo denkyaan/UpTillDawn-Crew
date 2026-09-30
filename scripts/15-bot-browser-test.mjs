@@ -134,7 +134,7 @@ try {
         await form.locator('input[name="breakdown_available"][value="yes"]').check()
         await Promise.all([
           page.waitForLoadState('networkidle'),
-          form.locator('button[type="submit"]').click(),
+          form.locator('button').last().click(),
         ])
         const checked = await form.locator('input[name="response"][value="can"]').isChecked()
         if (!checked) throw new Error('availability UI did not retain can response')
