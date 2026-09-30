@@ -141,4 +141,18 @@ const { error: shiftError } = await supabase.from('shifts').upsert({
 }, { onConflict: 'id' })
 if (shiftError) throw shiftError
 
+const guestId = '00000000-0000-4000-8000-00000000e2e5'
+const { error: guestError } = await supabase.from('event_guestlist_entries').upsert({
+  id: guestId,
+  event_id: eventId,
+  name: 'E2E Guest',
+  entry_type: 'guest',
+  spots_total: 2,
+  spots_checked_in: 0,
+  source: 'manual',
+  is_active: true,
+  created_by: admin.userId,
+}, { onConflict: 'id' })
+if (guestError) throw guestError
+
 console.log('Seeded browser-action event', eventId)
