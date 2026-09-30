@@ -8,6 +8,7 @@ import { fetchFacebookEventInfo } from '@/lib/facebook-event'
 import { responsibleHasConflict } from '@/lib/responsible-coverage'
 import { workplaceCapacityIsValid } from '@/lib/workplace-capacity'
 import { declineRequiresReason } from '@/lib/crew-self-service'
+import { safeUploadName, validateUploadSecurity } from '@/lib/upload-security'
 const uuid=z.string().uuid()
 const text=z.string().trim().min(1).max(200)
 async function adminClient(){
@@ -90,30 +91,11 @@ const photoTypes = new Map([
  ['application/vnd.openxmlformats-officedocument.presentationml.presentation','pptx'],
  ['application/vnd.openxmlformats-officedocument.spreadsheetml.sheet','xlsx'],
 ])
-function workPhotoFiles(fd: FormData) {
- const files=[
-  ...fd.getAll('photos'),
-  fd.get('briefing_document'),
- ].filter((value): value is File => value instanceof File && value.size > 0)
- if(files.length>6) throw new Error('Je kunt maximaal 6 bijlagen toevoegen.')
- for(const file of files){
-  const isVideo=file.type.startsWith('video/')
-  const isImage=file.type.startsWith('image/')
-  const max=isVideo?50*1024*1024:isImage?10*1024*1024:20*1024*1024
-  if(file.size>max){
-   throw new Error(
-    isVideo
-     ? 'Elke video mag maximaal 50 MB zijn.'
-     : isImage
-       ? 'Elke afbeelding mag maximaal 10 MB zijn.'
-       : 'Elk document mag maximaal 20 MB zijn.'
-   )
-  }
-  if(!photoTypes.has(file.type)){
-   throw new Error('Gebruik alleen PDF, DOCX, PPTX, XLSX, TXT, CSV, JPG, PNG, WEBP, MP4, WEBM of MOV.')
-  }
- }
- return files
+async function workPhotoFiles(fd: FormData) {
+ const files=[...fd.getAll('photos'),fd.get('briefing_document')].filter((value):value is File=>value instanceof File&&value.size>0)
+ if(files.length>6)throw new Error('Je kunt maximaal 6 bijlagen toevoegen.')
+ for(const file of files)await validateUploadSecurity(file)
+ return files
 }
 async function rollbackWorkPhotos(s:Awaited<ReturnType<typeof createClient>>,paths:string[]){
  if(!paths.length)return
@@ -685,7 +667,7 @@ export async function acknowledgeInstruction(fd:FormData){const s=await createCl
 export async function createBriefing(fd:FormData){
  const {s,user,profile}=await approvedClient()
  requireManager(profile.role)
- const files=workPhotoFiles(fd)
+ const files=await workPhotoFiles(fd)
  const rawWorkplace=String(fd.get('workplace_id')||'').trim()
  const workplaceId=rawWorkplace?uuid.parse(rawWorkplace):null
  let eventId:string
@@ -713,7 +695,7 @@ export async function createBriefing(fd:FormData){
 export async function createPersonalInstruction(fd:FormData){
  const {s,user,profile}=await approvedClient()
  requireManager(profile.role)
- const files=workPhotoFiles(fd)
+ const files=await workPhotoFiles(fd)
  const rawWorkplace=String(fd.get('workplace_id')||'').trim()
  const workplaceId=rawWorkplace?uuid.parse(rawWorkplace):null
  let eventId:string
@@ -754,7 +736,7 @@ export async function updateBriefing(fd:FormData){
  check(currentError);if(!current)throw new Error('Instructie niet gevonden.')
  await requireEventManager(s,user.id,profile.role,current.event_id)
  await requireFeature(s,profile.role,'briefings',current.event_id,current.workplace_id)
- const files=workPhotoFiles(fd)
+ const files=await workPhotoFiles(fd)
  const paths=await uploadWorkPhotos(s,user.id,{type:'briefing',id},files)
  const {error}=await s.from('briefings').update({
   title:text.parse(fd.get('title')),
@@ -771,7 +753,7 @@ export async function updatePersonalInstruction(fd:FormData){
  check(currentError);if(!current)throw new Error('Persoonlijke instructie niet gevonden.')
  await requireEventManager(s,user.id,profile.role,current.event_id)
  await requireFeature(s,profile.role,'briefings',current.event_id,current.workplace_id)
- const files=workPhotoFiles(fd)
+ const files=await workPhotoFiles(fd)
  const paths=await uploadWorkPhotos(s,user.id,{type:'instruction',id},files)
  const {error}=await s.from('personal_instructions').update({
   title:text.parse(fd.get('title')),
@@ -1016,7 +998,7 @@ export async function reopenOperationalChecklist(fd:FormData){
 export async function createTask(fd:FormData){
  const {s,user,profile}=await approvedClient()
  requireManager(profile.role)
- const files=workPhotoFiles(fd)
+ const files=await workPhotoFiles(fd)
  const rawWorkplace=String(fd.get('workplace_id')||'').trim()
  let eventId:string
  let workplaceId:string|null=null
@@ -1164,10 +1146,9 @@ export async function createEventDocument(fd:FormData){
  requireManager(profile.role)
  const fileValue=fd.get('document')
  if(!(fileValue instanceof File)||fileValue.size<=0)throw new Error('Kies een document.')
- const ext=eventDocumentTypes.get(fileValue.type)
+ const validated=await validateUploadSecurity(fileValue)
+ const ext=eventDocumentTypes.get(validated.mime)
  if(!ext)throw new Error('Gebruik alleen PDF, DOCX, PPTX, XLSX, TXT, CSV, JPG, PNG of WEBP.')
- const max=fileValue.type.startsWith('image/')?10*1024*1024:20*1024*1024
- if(fileValue.size>max)throw new Error(fileValue.type.startsWith('image/')?'Afbeelding mag maximaal 10 MB zijn.':'Document mag maximaal 20 MB zijn.')
  const eventId=uuid.parse(fd.get('event_id'))
  const workplaceRaw=String(fd.get('workplace_id')||'').trim()
  const workplaceId=workplaceRaw?uuid.parse(workplaceRaw):undefined
@@ -1183,7 +1164,7 @@ export async function createEventDocument(fd:FormData){
   p_title:text.parse(fd.get('title')),
   p_description:String(fd.get('description')||'').trim().slice(0,2000),
   p_storage_path:storagePath,
-  p_file_name:fileValue.name.slice(0,255),
+  p_file_name:safeUploadName(fileValue.name),
   p_mime_type:fileValue.type,
   p_file_size_bytes:fileValue.size,
   p_offline_critical:fd.get('offline_critical')==='on',
