@@ -46,24 +46,18 @@ try {
       await password.fill(testPassword)
 
       if (role === 'admin') {
-        const adminLoginResponse = page.waitForResponse(response =>
-          response.url().includes('/api/auth/admin-login')
-          && response.request().method() === 'POST',
-        { timeout: 45000 })
-
+        // The admin form uses a native POST and then redirects to a data-heavy
+        // command center. The authentication contract is complete as soon as
+        // that redirect is committed; waiting for the full dashboard load
+        // turns unrelated dashboard latency into a false login failure.
         await page.locator('button[type="submit"]').click({ timeout: 15000 })
-        const response = await adminLoginResponse
-        const location = response.headers().location || ''
-        const locationPath = location ? new URL(location, baseUrl).pathname : ''
+        await page.waitForURL(url => url.pathname === '/admin', {
+          timeout: 45000,
+          waitUntil: 'commit',
+        })
 
-        if (response.status() !== 303 || locationPath !== '/admin') {
-          throw new Error(`admin login rejected: HTTP ${response.status()} -> ${location || 'no location'}`)
-        }
-
-        // The native admin route has already completed password auth, access
-        // validation, role-mode activation and session-cookie issuance here.
-        // Abort the expensive dashboard redirect under concurrent load and
-        // prove the resulting session on the shared protected event surface.
+        // Interrupt the heavy dashboard render and prove that the issued
+        // session cookie is accepted by another protected application route.
         await page.goto(`${baseUrl}/events`, {
           waitUntil: 'networkidle',
           timeout: 45000,
