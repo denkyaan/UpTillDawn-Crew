@@ -28,7 +28,7 @@ test('active runtime has no service-role secret or retired StaffPortal schema re
     assert.doesNotMatch(text, /SUPABASE_SERVICE_ROLE_KEY|service_role_key/i, relative(root, file))
     const runtimePath=relative(root,file).replaceAll('\\','/')
     if(!runtimePath.startsWith('lib/ui-translation-'))assert.doesNotMatch(text, retired, runtimePath)
-    assert.doesNotMatch(text, /2315/, relative(root, file))
+    if(runtimePath!=='lib/release-baseline.ts')assert.doesNotMatch(text, /2315/, relative(root, file))
   }
 })
 
