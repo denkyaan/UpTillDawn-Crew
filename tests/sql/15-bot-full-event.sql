@@ -16,7 +16,7 @@ UPDATE public.profiles p SET approved=true,
 FROM bot_ids b WHERE p.id=b.id AND b.name like 'bot_%';
 
 INSERT INTO public.events(id,name,start_date,end_date,start_at,end_at,status,created_by)
-VALUES((SELECT id FROM bot_ids WHERE name='event'),'15 Bot Full Event',now()-interval '1 hour',now()+interval '8 hours',now()-interval '1 hour',now()+interval '8 hours','active',(SELECT id FROM bot_ids WHERE name='bot_01'));
+VALUES((SELECT id FROM bot_ids WHERE name='event'),'15 Bot Full Event',now()+interval '1 hour',now()+interval '9 hours',now()+interval '1 hour',now()+interval '9 hours','scheduled',(SELECT id FROM bot_ids WHERE name='bot_01'));
 
 INSERT INTO public.workplaces(id,event_id,name,minimum_staff,target_staff,sort_order) VALUES
 ((SELECT id FROM bot_ids WHERE name='wp_entrance'),(SELECT id FROM bot_ids WHERE name='event'),'Entrance',2,4,10),
@@ -44,7 +44,7 @@ BEGIN
            when n in (3,9,10,11,12) then (SELECT id FROM bot_ids WHERE name='wp_bar')
            else (SELECT id FROM bot_ids WHERE name='wp_backstage') end;
   PERFORM public.upt_create_shift(wp,(SELECT id FROM bot_ids WHERE name='bot_'||lpad(n::text,2,'0')),
-    case when n<=4 then 'Verantwoordelijke' else 'Personeel' end,now()-interval '30 minutes',now()+interval '6 hours',false);
+    case when n<=4 then 'Verantwoordelijke' else 'Personeel' end,now()+interval '90 minutes',now()+interval '7 hours',false);
  END LOOP;
 END $$;
 RESET ROLE;
