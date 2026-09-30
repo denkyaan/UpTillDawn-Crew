@@ -32,3 +32,9 @@ test('staff defaults keep management surfaces inaccessible',async()=>{
  for(const key of ['overview','operations','events','briefings','workplaces','tasks','inventory','chat','crew','incidents']) assert.ok(block.includes(`"staff","${key}"`))
  assert.doesNotMatch(block,/"staff","(?:platform|personnel|exports|automations|god)"/)
 })
+
+test('staff workplace context excludes declined shifts and expired events',async()=>{
+ const source=await read('app/(app)/workplaces/page.tsx')
+ assert.match(source,/select\('event_id,workplace_id'\)\.eq\('user_id',user\.id\)\.neq\('status','cancelled'\)\.neq\('response_status','declined'\)/)
+ assert.match(source,/select\('id,name,start_at,end_at'\)\.in\('id',eventIds\)\.neq\('status','archived'\)\.gte\('end_at','now'\)/)
+})
