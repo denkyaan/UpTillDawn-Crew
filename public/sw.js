@@ -1,7 +1,8 @@
 const CACHE='uptilldawn-public-v12'
 const PUBLIC_ASSETS=['/offline.html','/offline-public.html','/offline-content.js','/up-till-dawn-mark.webp']
 
-self.addEventListener('install',event=>{event.waitUntil(caches.open(CACHE).then(cache=>cache.addAll(PUBLIC_ASSETS)).then(()=>self.skipWaiting()))})
+self.addEventListener('install',event=>{event.waitUntil(caches.open(CACHE).then(cache=>cache.addAll(PUBLIC_ASSETS)))})
+self.addEventListener('message',event=>{if(event.data?.type==='UPT_ACTIVATE_UPDATE')event.waitUntil(self.skipWaiting())})
 self.addEventListener('activate',event=>{event.waitUntil(caches.keys().then(keys=>Promise.all(keys.filter(key=>key.startsWith('uptilldawn-')&&key!==CACHE).map(key=>caches.delete(key)))).then(()=>self.clients.claim()))})
 
 async function privateOfflineResponse(){
