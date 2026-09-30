@@ -463,3 +463,4 @@ export function translateAppExtraUi(value:string,locale:ExtraCatalogLocale){
   if(!row)return value
   if(locale==='nl')return canonical
   return row[locale]||canonical
+}
