@@ -79,3 +79,16 @@ test('15-bot full-event simulation is part of fresh-install release gate',async(
   assert.match(simulation,/event_availability/)
   assert.match(simulation,/ROLLBACK;/)
 })
+
+
+test('release CI explicitly gates the full event lifecycle regressions',async()=>{
+  const workflow=await read('.github/workflows/ci.yml')
+  assert.match(workflow,/Full event lifecycle release gate/)
+  for(const suite of [
+    '15-bot-full-event.sql',
+    'qr-attendance-workflow.sql',
+    'operational-security.sql',
+    'chat-lifecycle.sql',
+    'queued-upload-security.sql',
+  ])assert.ok(workflow.includes(suite),suite)
+})
