@@ -65,3 +65,15 @@ test('release CI includes the 15-browser-bot gate',async()=>{
   for(const locale of ['nl','fr','en','de'])assert.ok(bots.includes(`'${locale}'`),locale)
   assert.match(bots,/Promise\.all\(roles\.map/)
 })
+
+
+test('15-bot full-event simulation is part of fresh-install release gate',async()=>{
+  const [workflow,simulation]=await Promise.all([read('.github/workflows/ci.yml'),read('tests/sql/15-bot-full-event.sql')])
+  assert.match(workflow,/for file in tests\/sql\/\*\.sql/)
+  assert.match(simulation,/generate_series\(1,15\)/)
+  assert.match(simulation,/bot_01/)
+  assert.match(simulation,/responsible_assignments/)
+  assert.match(simulation,/upt_create_shift/)
+  assert.match(simulation,/event_availability/)
+  assert.match(simulation,/ROLLBACK;/)
+})
