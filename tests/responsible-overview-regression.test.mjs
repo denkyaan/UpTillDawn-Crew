@@ -41,3 +41,10 @@ test('responsible overview keeps mobile bottom-navigation clearance and bounded 
  assert.match(source,/pb-28/)
  assert.match(source,/md:p-8/)
 })
+
+test('responsible overview adds operational shortcuts without removing baseline capabilities',async()=>{
+ const source=await read('app/(app)/page.tsx')
+ assert.match(source,/Mijn operationele werkplek/)
+ for(const href of ['/events','/workplaces','/operations','/briefings','/inventory','/tasks','/incidents'])assert.ok(source.includes(href),href)
+ assert.match(source,/activeResponsibleAssignments\.length>0/)
+})
