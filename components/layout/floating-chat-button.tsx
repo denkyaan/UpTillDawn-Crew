@@ -18,7 +18,7 @@ function clamp(value: number, min: number, max: number) {
   return Math.min(Math.max(value, min), max)
 }
 
-export function FloatingChatButton({ count = 0 }: { count?: number }) {
+export function FloatingChatButton({ count = 0, stackedAboveAdminAi = false }: { count?: number; stackedAboveAdminAi?: boolean }) {
   const router = useRouter()
   const [position, setPosition] = useState<Position | null>(null)
   const drag = useRef<DragState | null>(null)
@@ -73,7 +73,7 @@ export function FloatingChatButton({ count = 0 }: { count?: number }) {
     onPointerCancel={() => { drag.current = null }}
     aria-label={count ? `Chat, ${count} gemiste berichten. Sleep om te verplaatsen.` : "Chat. Sleep om te verplaatsen."}
     title="Chat — sleep om te verplaatsen"
-    style={position ? { left: position.x, top: position.y } : { right: "1rem", bottom: "5rem" }}
+    style={position ? { left: position.x, top: position.y } : { right: "1rem", bottom: stackedAboveAdminAi ? "9.5rem" : "5rem" }}
     className="fixed z-50 flex h-14 w-14 touch-none select-none items-center justify-center rounded-full border border-white/30 bg-black text-white shadow-lg md:hidden"
   >
     <MessageCircle className="h-7 w-7"/>
