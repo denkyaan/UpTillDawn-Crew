@@ -26,3 +26,13 @@ test('god mode includes automation builder', async () => {
   assert.ok(automation.includes('AI-implementatievoorstel maken'))
   assert.ok(automation.includes('lib/automation-engine.ts'))
 })
+
+test('god mode role previews mirror the consolidated production surfaces',async()=>{
+  const builder=await readFile(new URL('../components/god-mode/god-visual-builder.tsx',import.meta.url),'utf8')
+  assert.doesNotMatch(builder,/label:'Shifts',path:'\/shifts'/)
+  for(const entry of [
+    "label:'Werkplaatsen & shifts',path:'/workplaces'",
+    "label:'Inventaris',path:'/inventory'",
+    "label:'Inkom & Guestlist',path:'/guestlist'",
+  ])assert.ok(builder.includes(entry),entry)
+})
