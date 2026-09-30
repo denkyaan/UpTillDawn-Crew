@@ -8,6 +8,8 @@ const errorName=process.env.ERROR_NAME||'Error'
 const errorMessage=process.env.ERROR_MESSAGE||''
 const stackTrace=process.env.STACK_TRACE||''
 const aiSummary=process.env.AI_SUMMARY||''
+const maxAttempts=Math.max(1,Math.min(5,Number(process.env.MAX_REPAIR_ATTEMPTS||4)))
+let repairFeedback=''
 const account=process.env.CF_ACCOUNT_ID||''
 const token=process.env.CF_API_TOKEN||''
 const model='@cf/meta/llama-3.3-70b-instruct-fp8-fast'
@@ -38,7 +40,7 @@ async function propose(){
  const paths=await candidates()
  const selected=await ai([
   {role:'system',content:'Selecteer maximaal 8 relevante bronbestanden voor een minimale productiefout-fix. Kies alleen uit candidates. Geef uitsluitend JSON {paths:string[]}.'},
-  {role:'user',content:JSON.stringify({route,errorName,errorMessage,stackTrace,aiSummary,candidates:paths})},
+  {role:'user',content:JSON.stringify({route,errorName,errorMessage,stackTrace,aiSummary,repairFeedback,candidates:paths})},
  ],1200)
  const chosen=[...new Set(selected.paths||[])].filter(p=>paths.includes(p)).slice(0,8)
  if(!chosen.length)return output(false,'Geen veilige bronselectie.')
@@ -56,7 +58,7 @@ async function propose(){
    'Behoud bestaande functionaliteit. Nieuwe zichtbare tekst vereist NL/FR/EN/DE-dekking.',
    'Gebruik confidence als diagnostische indicatie, niet als publicatiebeslissing. Als je na brononderzoek geen verantwoorde fix kunt formuleren: changes=[].',
   ].join('\n')},
-  {role:'user',content:JSON.stringify({reportId,route,errorName,errorMessage,stackTrace,aiSummary,files})},
+  {role:'user',content:JSON.stringify({reportId,route,errorName,errorMessage,stackTrace,aiSummary,repairFeedback,files})},
  ])
  if(!Array.isArray(result.changes)||!result.changes.length)return output(false,result.summary||'Geen autonome fix gevonden.')
  const context=new Set(files.map(x=>x.path))
@@ -72,6 +74,65 @@ function output(changed,summary){
  console.log(summary)
 }
 function requireWrite(path,text){execFileSync('bash',['-lc',`cat >> "$1" <<'__UPT__'\n${text}__UPT__`,'_',path])}
+
+function runValidation(){
+ const commands=[
+  ['npm',['run','lint']],['npm',['run','typecheck']],['npm',['test']],
+  ['npm',['run','build:next']],['npm',['run','build:cloudflare']],
+  ['npx',['wrangler','deploy','--dry-run']],
+ ]
+ for(const [cmd,args] of commands){
+  try{sh(cmd,args,{stdio:['ignore','pipe','pipe']})}
+  catch(error){
+   const stderr=String(error.stderr||'')
+   const stdout=String(error.stdout||'')
+   return {ok:false,feedback:(cmd+' '+args.join(' ')+' failed\\n'+stdout+'\\n'+stderr).slice(-12000)}
+  }
+ }
+ return {ok:true,feedback:''}
+}
+function commitAndPush(){
+ sh('git',['config','user.name','UpTillDawn Self-Healing AI'])
+ sh('git',['config','user.email','self-healing@users.noreply.github.com'])
+ sh('git',['add','--all'])
+ try{sh('git',['diff','--cached','--quiet']);return false}catch{}
+ sh('git',['commit','-m',`fix(self-heal): repair error ${reportId}`])
+ sh('git',['pull','--rebase','origin','main'])
+ sh('git',['push','origin','HEAD:main'])
+ return true
+}
+async function releaseCheck(){
+ try{await verify();return {ok:true,feedback:''}}
+ catch(error){return {ok:false,feedback:String(error?.message||error).slice(0,12000)}}
+}
+async function loop(){
+ const base=sh('git',['rev-parse','HEAD'])
+ for(let attempt=1;attempt<=maxAttempts;attempt++){
+  console.log(`Self-healing attempt ${attempt}/${maxAttempts}`)
+  if(attempt>1){
+   sh('git',['reset','--hard',base])
+   sh('git',['clean','-fd'])
+  }
+  let changed=false
+  const original=process.env.GITHUB_OUTPUT
+  process.env.GITHUB_OUTPUT=''
+  try{
+   await propose()
+   changed=sh('git',['status','--porcelain']).length>0
+  }finally{process.env.GITHUB_OUTPUT=original}
+  if(!changed){repairFeedback='AI produced no bounded change. '+repairFeedback;continue}
+  const validation=runValidation()
+  if(!validation.ok){repairFeedback=validation.feedback;console.error(repairFeedback);continue}
+  if(!commitAndPush()){repairFeedback='Validated proposal contained no committable change.';continue}
+  const released=await releaseCheck()
+  if(released.ok){console.log('Self-healing release verified.');return}
+  repairFeedback=released.feedback
+  console.error(repairFeedback)
+ }
+ await escalate(`Autonomous repair exhausted ${maxAttempts} attempts. Last evidence: ${repairFeedback}`)
+ throw new Error('Self-healing kon de fout niet autonoom oplossen na '+maxAttempts+' pogingen.')
+}
+
 async function verify(){
  const sha=sh('git',['rev-parse','HEAD'])
  const deadline=Date.now()+18*60*1000
@@ -97,18 +158,20 @@ async function verify(){
  if(response.status>=500)throw new Error('Productiecontrole faalt met HTTP '+response.status)
  console.log(`Self-healing bevestigd: CI #${ci.run_number}, deploy #${deploy.run_number}, HTTP ${response.status}`)
 }
-async function escalate(){
+async function escalate(extra=''){
  const title=`[Self-healing] Makeractie nodig · ${reportId}`
  const body=[
   'De autonome herstelcontroller kon geen voldoende zekere, begrensde codefix publiceren.',
   '',`**Route:** ${route}`,`**Fout:** ${errorName}: ${errorMessage}`,
   aiSummary?`**AI-diagnose:** ${aiSummary}`:'',
+  extra?`**Autonome herstelresultaat:** ${extra}`:'',
   '','Controleer dit rapport in God Mode. Mogelijke oorzaken: database/configuratie/secret/externe dienst of onvoldoende zekere codewijziging.'
  ].filter(Boolean).join('\n')
  sh('gh',['issue','create','--repo',repo,'--title',title,'--body',body])
 }
 const command=process.argv[2]
-if(command==='propose')await propose()
+if(command==='loop')await loop()
+else if(command==='propose')await propose()
 else if(command==='verify')await verify()
 else if(command==='escalate')await escalate()
 else throw new Error('Onbekend self-heal commando.')
