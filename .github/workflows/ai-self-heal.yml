@@ -1,0 +1,106 @@
+name: AI Self Healing
+
+on:
+  workflow_dispatch:
+    inputs:
+      report_id:
+        description: Error report UUID
+        required: true
+        type: string
+      route:
+        description: Failing application route
+        required: true
+        type: string
+      error_name:
+        description: Error class
+        required: false
+        type: string
+      error_message:
+        description: Sanitized error message
+        required: true
+        type: string
+      stack_trace:
+        description: Sanitized stack trace
+        required: false
+        type: string
+      ai_summary:
+        description: Initial AI diagnosis
+        required: false
+        type: string
+
+permissions:
+  contents: write
+  actions: read
+  issues: write
+
+concurrency:
+  group: self-heal-${{ inputs.report_id }}
+  cancel-in-progress: false
+
+jobs:
+  repair:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    env:
+      CF_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+      CF_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      REPORT_ID: ${{ inputs.report_id }}
+      ERROR_ROUTE: ${{ inputs.route }}
+      ERROR_NAME: ${{ inputs.error_name }}
+      ERROR_MESSAGE: ${{ inputs.error_message }}
+      STACK_TRACE: ${{ inputs.stack_trace }}
+      AI_SUMMARY: ${{ inputs.ai_summary }}
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09
+        with:
+          fetch-depth: 0
+
+      - uses: actions/setup-node@a0853c24544627f65ddf259abe73b1d18a591444
+        with:
+          node-version: 24
+          cache: npm
+
+      - name: Install
+        run: npm ci
+
+      - name: Generate bounded repair
+        id: repair
+        shell: bash
+        run: |
+          set -euo pipefail
+          node scripts/self-heal.mjs propose
+
+      - name: Validate repair
+        if: steps.repair.outputs.changed == 'true'
+        run: |
+          npm run lint
+          npm run typecheck
+          npm test
+          npm run build:next
+          npm run build:cloudflare
+          npx wrangler deploy --dry-run
+
+      - name: Commit validated repair
+        if: steps.repair.outputs.changed == 'true'
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name "UpTillDawn Self-Healing AI"
+          git config user.email "self-healing@users.noreply.github.com"
+          git add --all
+          git diff --cached --quiet && exit 0
+          git commit -m "fix(self-heal): repair error ${REPORT_ID}"
+          git pull --rebase origin main
+          git push origin HEAD:main
+
+      - name: Wait for CI and production deploy
+        if: steps.repair.outputs.changed == 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: node scripts/self-heal.mjs verify
+
+      - name: Escalate when no safe repair exists
+        if: steps.repair.outputs.changed != 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: node scripts/self-heal.mjs escalate
