@@ -41,8 +41,8 @@ begin
   if not denied then raise exception 'Unscoped delete allowed'; end if;
   result:=public.upt_god_data_mutate(token,'role_ui_rules','delete','{"role":"staff","feature_key":"studio_regression_fixture"}',row_after,'{}');
   if not (result->>'ok')::boolean then raise exception 'Delete failed'; end if;
-end; $$;
-do $ begin
+end; $body$;
+do $audit$ begin
   if (select count(*) from upt_private.god_data_audit where table_name='role_ui_rules' and coalesce(after_row,before_row)->>'feature_key'='studio_regression_fixture')<>3 then raise exception 'Audit trail incomplete'; end if;
-end; $$;
+end; $audit$;
 rollback;
