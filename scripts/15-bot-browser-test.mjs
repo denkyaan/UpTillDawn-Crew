@@ -150,6 +150,30 @@ try {
         if (!persistedCan || !persistedSetup || !persistedBreakdown) {
           throw new Error('availability server action did not persist all selected values')
         }
+
+        await page.goto(`${baseUrl}/briefings?event=00000000-0000-4000-8000-00000000e2e1&workplace=00000000-0000-4000-8000-00000000e2e2`, {
+          waitUntil: 'networkidle',
+          timeout: 45000,
+        })
+        const briefingArticle = page.locator('article').filter({ hasText: 'E2E Entrance Briefing' }).first()
+        if (await briefingArticle.count() !== 1) throw new Error('briefing acknowledgement fixture missing')
+        const acknowledgeButton = briefingArticle.getByRole('button', { name: 'INSTRUCTIE GELEZEN' })
+        if (await acknowledgeButton.count() !== 1) throw new Error('briefing acknowledgement button missing')
+        const [briefingResponse] = await Promise.all([
+          page.waitForResponse(
+            response => response.request().method() === 'POST' && response.url().includes('/briefings'),
+            { timeout: 30000 },
+          ),
+          acknowledgeButton.click(),
+        ])
+        if (!briefingResponse.ok()) {
+          throw new Error(`briefing acknowledgement server action failed with HTTP ${briefingResponse.status()}`)
+        }
+        await page.reload({ waitUntil: 'networkidle', timeout: 45000 })
+        const persistedBriefing = page.locator('article').filter({ hasText: 'E2E Entrance Briefing' }).first()
+        if (!(await persistedBriefing.getByText('INSTRUCTIE GELEZEN', { exact: true }).isVisible())) {
+          throw new Error('briefing acknowledgement did not persist after reload')
+        }
       }
 
       console.log(`PASS ${bot} authenticated + workflow surfaces ${viewport.width}x${viewport.height}`)
