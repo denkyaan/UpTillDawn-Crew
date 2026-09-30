@@ -84,7 +84,7 @@ const { error: eventError } = await supabase.from('events').upsert({
   start_at: startsAt,
   end_at: endsAt,
   status: 'scheduled',
-  created_by: admin.id,
+  created_by: admin.userId,
 }, { onConflict: 'id' })
 if (eventError) throw eventError
 const { error: workplaceError } = await supabase.from('workplaces').upsert({
@@ -96,15 +96,15 @@ const { error: workplaceError } = await supabase.from('workplaces').upsert({
 }, { onConflict: 'id' })
 if (workplaceError) throw workplaceError
 const { error: membersError } = await supabase.from('event_members').upsert([
-  { event_id: eventId, user_id: responsible.id, event_role: 'responsible_lead' },
-  { event_id: eventId, user_id: staff.id, event_role: 'employee' },
+  { event_id: eventId, user_id: responsible.userId, event_role: 'responsible_lead' },
+  { event_id: eventId, user_id: staff.userId, event_role: 'employee' },
 ], { onConflict: 'event_id,user_id' })
 if (membersError) throw membersError
 const { error: responsibleError } = await supabase.from('responsible_assignments').upsert({
   event_id: eventId,
   workplace_id: workplaceId,
-  user_id: responsible.id,
-  assigned_by: admin.id,
+  user_id: responsible.userId,
+  assigned_by: admin.userId,
 }, { onConflict: 'event_id,workplace_id' })
 if (responsibleError) throw responsibleError
 console.log('Seeded browser-action event', eventId)
