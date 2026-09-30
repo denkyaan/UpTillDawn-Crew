@@ -19,11 +19,18 @@ export function PushPermissionPrompt(){
     if(!canPrompt)return()=>{cancelled=true}
     void (async()=>{
       if(!isInstalledPwa())return
-      const current=await getPushState()
+      let current=await getPushState()
+      // Permission may already be granted while the local/server subscription
+      // needs a silent refresh (for example after a service-worker/VAPID update).
+      // Repair that state without showing the permission prompt again.
+      if(current==="default"&&typeof Notification!=="undefined"&&Notification.permission==="granted"){
+        current=await enablePushNotifications({requestPermission:false})
+      }
       if(cancelled)return
       setState(current)
       const dismissed=Number(localStorage.getItem("upt-push-prompt-dismissed")||0)
-      setVisible(current==="default"&&(!dismissed||Date.now()-dismissed>WEEK))
+      const permissionNeedsConsent=typeof Notification!=="undefined"&&Notification.permission==="default"
+      setVisible(current==="default"&&permissionNeedsConsent&&(!dismissed||Date.now()-dismissed>WEEK))
     })()
     return()=>{cancelled=true}
   },[canPrompt])
