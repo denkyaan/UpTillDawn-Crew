@@ -73,3 +73,17 @@ test('offline identity cleanup covers the expanded operational cache', async () 
   assert.match(snapshot, /content.*delete\(userId\)/s)
   assert.match(snapshot, /documents/)
 })
+
+test('PWA update activation waits for a server-safe offline queue', async () => {
+  const register = await readFile(new URL('../components/pwa-register.tsx', import.meta.url), 'utf8')
+  const sw = await readFile(new URL('../public/sw.js', import.meta.url), 'utf8')
+  const installHandler = sw.match(/self\.addEventListener\('install',[^\n]+/)?.[0] || ''
+  assert.doesNotMatch(installHandler, /skipWaiting/)
+  assert.match(sw, /UPT_ACTIVATE_UPDATE/)
+  assert.match(sw, /event\.waitUntil\(self\.skipWaiting\(\)\)/)
+  assert.match(register, /registration\.waiting/)
+  assert.match(register, /registration\.addEventListener\("updatefound"/)
+  assert.match(register, /if\(await hasPendingCrewData\(\)\)return/)
+  assert.match(register, /waitingWorker\.postMessage\(\{type:"UPT_ACTIVATE_UPDATE"\}\)/)
+  assert.match(register, /if\(waitingWorker&&!activationRequested\)void safelyActivateUpdate\(\)/)
+})
