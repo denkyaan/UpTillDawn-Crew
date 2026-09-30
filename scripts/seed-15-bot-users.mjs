@@ -120,4 +120,25 @@ const { error: briefingError } = await supabase.from('briefings').upsert({
 }, { onConflict: 'id' })
 if (briefingError) throw briefingError
 
+const shiftId = '00000000-0000-4000-8000-00000000e2e4'
+const shiftStart = new Date(Date.now() - 15 * 60 * 1000).toISOString()
+const shiftEnd = new Date(Date.now() + 6 * 60 * 60 * 1000).toISOString()
+const { error: shiftError } = await supabase.from('shifts').upsert({
+  id: shiftId,
+  event_id: eventId,
+  workplace_id: workplaceId,
+  user_id: staff.userId,
+  start_time: shiftStart,
+  end_time: shiftEnd,
+  scheduled_start: shiftStart,
+  scheduled_end: shiftEnd,
+  role: 'staff',
+  role_name: 'Entrance',
+  status: 'scheduled',
+  response_status: 'accepted',
+  responsible_lead_id: responsible.userId,
+  overlap_allowed: false,
+}, { onConflict: 'id' })
+if (shiftError) throw shiftError
+
 console.log('Seeded browser-action event', eventId)
