@@ -2,10 +2,10 @@ import { createClient } from '@supabase/supabase-js'
 
 const supabaseUrl = process.env.BOT_SUPABASE_URL || process.env.NEXT_PUBLIC_SUPABASE_URL
 const serviceRoleKey = process.env.BOT_SERVICE_ROLE_KEY
-const password = process.env.BOT_TEST_PASSWORD || 'BotTest-Only!2026'
+const password = process.env.BOT_TEST_PASSWORD
 
-if (!supabaseUrl || !serviceRoleKey) {
-  console.error('Missing BOT_SUPABASE_URL/NEXT_PUBLIC_SUPABASE_URL or BOT_SERVICE_ROLE_KEY')
+if (!supabaseUrl || !serviceRoleKey || !password) {
+  console.error('Missing BOT_SUPABASE_URL/NEXT_PUBLIC_SUPABASE_URL, BOT_SERVICE_ROLE_KEY or BOT_TEST_PASSWORD')
   process.exit(1)
 }
 
