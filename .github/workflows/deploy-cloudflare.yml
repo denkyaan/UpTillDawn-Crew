@@ -56,7 +56,7 @@ jobs:
           SELF_HEALING_GITHUB_TOKEN: ${{ secrets.SELF_HEALING_GITHUB_TOKEN }}
         run: |
           set -euo pipefail
-          for name in NEXT_PUBLIC_SUPABASE_URL NEXT_PUBLIC_SUPABASE_ANON_KEY GEOAPIFY_API_KEY RESEND_API_KEY CLOUDFLARE_API_TOKEN CLOUDFLARE_ACCOUNT_ID SELF_HEALING_GITHUB_TOKEN; do
+          for name in NEXT_PUBLIC_SUPABASE_URL NEXT_PUBLIC_SUPABASE_ANON_KEY GEOAPIFY_API_KEY RESEND_API_KEY CLOUDFLARE_API_TOKEN CLOUDFLARE_ACCOUNT_ID; do
             if [ -z "${!name:-}" ]; then
               echo "::error::Missing required production secret: $name"
               exit 1
@@ -141,7 +141,8 @@ jobs:
             printf '%s' "$SECURITY_ALERT_EMAIL" | npx wrangler secret put SECURITY_ALERT_EMAIL
           fi
 
-      - name: Configure self-healing GitHub credential
+      - name: Configure optional self-healing GitHub credential
+        if: ${{ secrets.SELF_HEALING_GITHUB_TOKEN != '' }}
         env:
           SELF_HEALING_GITHUB_TOKEN: ${{ secrets.SELF_HEALING_GITHUB_TOKEN }}
         run: printf '%s' "$SELF_HEALING_GITHUB_TOKEN" | npx wrangler secret put SELF_HEALING_GITHUB_TOKEN
