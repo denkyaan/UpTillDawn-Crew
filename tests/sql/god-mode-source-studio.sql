@@ -3,16 +3,16 @@ begin;
 insert into upt_private.god_mode_sessions(token_hash,expires_at)
 values(extensions.digest('studio-test-session-00000000000000000000000000000000','sha256'),now()+interval '5 minutes');
 -- Operational God Studio RPCs are no longer executable by anon; validate the revoke separately.
-do $
+do $body$
 declare r record;
 begin
   for r in select p.oid from pg_proc p join pg_namespace n on n.oid=p.pronamespace where n.nspname='public' and p.proname like 'upt_god_%' and p.proname <> 'upt_god_login'
   loop
     if has_function_privilege('anon',r.oid,'EXECUTE') then raise exception 'Anonymous God Studio RPC execute still granted'; end if;
   end loop;
-end $;
+end $body$;
 
-do $
+do $body$
 declare token text:='studio-test-session-00000000000000000000000000000000'; row_before jsonb; row_after jsonb; result jsonb; denied boolean:=false;
 begin
   begin perform public.upt_god_data_catalog('invalid'); exception when others then denied:=true; end;
