@@ -127,7 +127,7 @@ try {
           waitUntil: 'networkidle',
           timeout: 45000,
         })
-        const form = page.locator('form').filter({ hasText: 'Beschikbaarheid bevestigen' }).first()
+        const form = page.locator('form').filter({ has: page.locator('input[name="response"][value="can"]') }).first()
         if (await form.count() !== 1) throw new Error('availability action form missing')
         await form.locator('input[name="response"][value="can"]').check()
         await form.locator('input[name="setup_available"][value="yes"]').check()
