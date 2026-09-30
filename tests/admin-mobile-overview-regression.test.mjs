@@ -22,3 +22,8 @@ test('admin action center excludes operational alerts for non-running events',as
  assert.match(source,/operationalAlertRows=alertRows\.filter\(alert=>activeEventIds\.has\(alert\.event_id\)\)/)
  assert.match(source,/\.\.\.operationalAlertRows\.map\(alert=>/)
 })
+
+test('normal admin overview does not expose God Mode automation management',async()=>{
+ const source=await read('app/(app)/admin/page.tsx')
+ assert.doesNotMatch(source,/automation_rules|Actieve automatiseringen|#automatiseringen/)
+})
