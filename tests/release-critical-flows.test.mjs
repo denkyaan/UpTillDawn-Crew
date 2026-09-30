@@ -53,3 +53,43 @@ test('release keeps canonical role labels and four-language runtime',async()=>{
   for(const role of ['admin','responsible_lead','staff'])assert.ok(roles.includes('"'+role+'"'),role)
   for(const locale of ['nl','fr','en','de'])assert.ok(runtime.includes(locale),locale)
 })
+
+test('release gate keeps role-aware mobile navigation and help discoverability',async()=>{
+  const [mobile,roles,help]=await Promise.all([
+    read('components/layout/mobile-nav.tsx'),
+    read('lib/role-ui.ts'),
+    read('lib/ui-field-help.ts'),
+  ])
+  for(const role of ['staff','responsible_lead','admin'])assert.ok(roles.includes(role),role)
+  for(const key of ['ASSIGNED_EVENT_KEYS','STAFF_ACTIVE_SHIFT_KEYS','RESPONSIBLE_ACTIVE_SHIFT_KEYS'])assert.ok(mobile.includes(key),key)
+  assert.match(mobile,/featureHelp\(item\.key,label\)/)
+  assert.match(mobile,/aria-description=\{help\.description\}/)
+  assert.match(help,/description/)
+})
+
+test('release gate keeps realtime multi-device and offline recovery contracts',async()=>{
+  const [realtime,pwa,offlineSync,queue]=await Promise.all([
+    read('lib/realtime-reconnect.ts'),
+    read('components/pwa-register.tsx'),
+    read('components/crew/global-offline-content-sync.tsx'),
+    read('lib/crew-queue.ts'),
+  ])
+  assert.match(realtime,/state\.attempts < 20/)
+  assert.match(pwa,/window\.addEventListener\("online"/)
+  assert.match(pwa,/UPT_ACTIVATE_UPDATE/)
+  assert.match(offlineSync,/window\.addEventListener\('online',onOnline\)/)
+  assert.match(offlineSync,/visibilitychange/)
+  assert.match(queue,/crew-queue-change/)
+})
+
+test('release gate keeps production cleanup and retired surfaces out of active navigation',async()=>{
+  const [nav,roles]=await Promise.all([
+    read('components/layout/navigation-items.ts'),
+    read('lib/role-ui.ts'),
+  ])
+  assert.doesNotMatch(nav,/Systeemgezondheid/)
+  assert.doesNotMatch(nav,/label:"Release"/)
+  assert.match(roles,/navRule\("admin","shifts".*"never",false,false\)/)
+  assert.match(roles,/navRule\("staff","shifts".*"never",false,false\)/)
+  assert.match(roles,/navRule\("responsible_lead","shifts".*"never",false,false\)/)
+})
