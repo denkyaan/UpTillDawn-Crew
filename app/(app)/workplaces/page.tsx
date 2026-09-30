@@ -150,7 +150,7 @@ export default async function Page({searchParams}:{searchParams?:Promise<{event?
     ])
     if(eventRowsError)throw new Error('Evenementen konden niet worden geladen: '+eventRowsError.message)
     if(workplaceRowsError)throw new Error('Werkplaatsen konden niet worden geladen: '+workplaceRowsError.message)
-    const nowMs=Date.now()
+    const nowMs=Date.parse(now)
     const futureShiftEventIds=new Set((ownShifts||[]).filter(shift=>Date.parse(shift.scheduled_end)>=nowMs).map(shift=>shift.event_id))
     const responsibleEventIds=new Set((ownResponsible||[]).map(row=>row.event_id))
     const visibleEventRows=(eventRows||[]).filter(event=>
