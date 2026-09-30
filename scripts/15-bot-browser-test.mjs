@@ -157,17 +157,20 @@ try {
         })
         const briefingArticle = page.locator('article').filter({ hasText: 'E2E Entrance Briefing' }).first()
         if (await briefingArticle.count() !== 1) throw new Error('briefing acknowledgement fixture missing')
-        const acknowledgeButton = briefingArticle.getByRole('button', { name: 'INSTRUCTIE GELEZEN' })
-        if (await acknowledgeButton.count() !== 1) throw new Error('briefing acknowledgement button missing')
-        const [briefingResponse] = await Promise.all([
-          page.waitForResponse(
-            response => response.request().method() === 'POST' && response.url().includes('/briefings'),
-            { timeout: 30000 },
-          ),
-          acknowledgeButton.click(),
-        ])
-        if (!briefingResponse.ok()) {
-          throw new Error(`briefing acknowledgement server action failed with HTTP ${briefingResponse.status()}`)
+        const acknowledgeButton = briefingArticle.locator('form button').first()
+        const alreadyAcknowledged = await briefingArticle.getByText('INSTRUCTIE GELEZEN', { exact: true }).isVisible()
+        if (!alreadyAcknowledged) {
+          if (await acknowledgeButton.count() !== 1) throw new Error('briefing acknowledgement control missing')
+          const [briefingResponse] = await Promise.all([
+            page.waitForResponse(
+              response => response.request().method() === 'POST' && response.url().includes('/briefings'),
+              { timeout: 30000 },
+            ),
+            acknowledgeButton.click(),
+          ])
+          if (!briefingResponse.ok()) {
+            throw new Error(`briefing acknowledgement server action failed with HTTP ${briefingResponse.status()}`)
+          }
         }
         await page.reload({ waitUntil: 'networkidle', timeout: 45000 })
         const persistedBriefing = page.locator('article').filter({ hasText: 'E2E Entrance Briefing' }).first()
