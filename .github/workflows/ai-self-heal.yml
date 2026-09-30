@@ -50,6 +50,8 @@ jobs:
       ERROR_MESSAGE: ${{ inputs.error_message }}
       STACK_TRACE: ${{ inputs.stack_trace }}
       AI_SUMMARY: ${{ inputs.ai_summary }}
+      SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+      SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
     steps:
       - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09
         with:
