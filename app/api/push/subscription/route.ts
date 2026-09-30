@@ -1,6 +1,7 @@
 import { z } from "zod"
 import { createClient } from "@/lib/supabase/crew-server"
 import { safePushEndpoint } from "@/lib/push-security"
+import { parseUiLocale } from "@/lib/locale-preferences"
 
 const subscriptionSchema=z.object({
   endpoint:z.string().url().max(4096).refine(safePushEndpoint),
@@ -8,6 +9,7 @@ const subscriptionSchema=z.object({
     p256dh:z.string().min(20).max(512),
     auth:z.string().min(8).max(256),
   }),
+  locale:z.string().optional(),
 })
 const removeSchema=z.object({endpoint:z.string().url().max(4096).refine(safePushEndpoint)})
 
@@ -32,6 +34,7 @@ export async function POST(request:Request){
     p_p256dh:parsed.data.keys.p256dh,
     p_auth:parsed.data.keys.auth,
     p_user_agent:(request.headers.get("user-agent")||"").slice(0,500)||undefined,
+    p_locale:parseUiLocale(parsed.data.locale)||"nl",
   })
   if(error){
     console.error("[Push] save subscription",error.code)
