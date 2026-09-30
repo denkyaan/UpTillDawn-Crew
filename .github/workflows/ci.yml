@@ -61,28 +61,74 @@ jobs:
 
   browser-bots:
     runs-on: ubuntu-latest
-    timeout-minutes: 20
+    timeout-minutes: 30
     env:
-      NEXT_PUBLIC_SUPABASE_URL: https://placeholder.supabase.co
-      NEXT_PUBLIC_SUPABASE_ANON_KEY: placeholder-anon-key
       NEXT_PUBLIC_APP_URL: http://127.0.0.1:3000
       BOT_TEST_BASE_URL: http://127.0.0.1:3000
     steps:
       - name: Checkout
         uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5.1.0
+
       - name: Set up Node.js
         uses: actions/setup-node@a0853c24544627f65ddf259abe73b1d18a591444 # v5.0.0
         with:
           node-version: 24
           cache: npm
+
       - name: Install application
         run: npm ci
+
+      - name: Install PostgreSQL client
+        run: sudo apt-get update && sudo apt-get install -y postgresql-client
+
+      - name: Initialize isolated Supabase config
+        run: |
+          if [ ! -f supabase/config.toml ]; then
+            npx --yes supabase@2.117.0 init
+          fi
+
+      - name: Start isolated Supabase stack
+        run: npx --yes supabase@2.117.0 start -x studio,imgproxy,inbucket,edge-runtime,logflare,vector,realtime
+
+      - name: Replay every migration from zero
+        run: npx --yes supabase@2.117.0 db reset --local --no-seed
+
+      - name: Export isolated bot credentials
+        run: |
+          set -euo pipefail
+          eval "$(npx --yes supabase@2.117.0 status -o env)"
+          api_url="${API_URL:-${SUPABASE_URL:-}}"
+          public_key="${ANON_KEY:-${PUBLISHABLE_KEY:-}}"
+          service_key="${SERVICE_ROLE_KEY:-${SECRET_KEY:-}}"
+          test -n "$api_url"
+          test -n "$public_key"
+          test -n "$service_key"
+          bot_password="$(openssl rand -base64 24 | tr -d '\n')Aa1!"
+          echo "::add-mask::$service_key"
+          echo "::add-mask::$bot_password"
+          {
+            echo "NEXT_PUBLIC_SUPABASE_URL=$api_url"
+            echo "NEXT_PUBLIC_SUPABASE_ANON_KEY=$public_key"
+            echo "BOT_SUPABASE_URL=$api_url"
+            echo "BOT_SERVICE_ROLE_KEY=$service_key"
+            echo "BOT_TEST_PASSWORD=$bot_password"
+            echo "BOT_DB_URL=postgresql://postgres:postgres@127.0.0.1:54322/postgres"
+          } >> "$GITHUB_ENV"
+
+      - name: Prepare isolated authentication fixtures
+        run: |
+          set -euo pipefail
+          psql "$BOT_DB_URL" -v ON_ERROR_STOP=1 -c "DROP TRIGGER IF EXISTS on_auth_user_created ON auth.users;"
+          node scripts/seed-15-bot-users.mjs
+
       - name: Install isolated browser test runtime
         run: |
           npm install --no-save --package-lock=false playwright@1.55.0
           npx playwright install --with-deps chromium
+
       - name: Build application
         run: npm run build:next
+
       - name: Start application
         run: |
           npm start > /tmp/uptilldawn-bot-app.log 2>&1 &
@@ -93,12 +139,17 @@ jobs:
           done
           cat /tmp/uptilldawn-bot-app.log
           exit 1
-      - name: Run 15 concurrent browser bots
+
+      - name: Run 15 concurrent authenticated browser bots
         run: node scripts/15-bot-browser-test.mjs
+
       - name: Stop application
         if: always()
         run: kill $(cat /tmp/uptilldawn-bot-app.pid) 2>/dev/null || true
 
+      - name: Stop isolated Supabase stack
+        if: always()
+        run: npx --yes supabase@2.117.0 stop --no-backup
   fresh-install:
     runs-on: ubuntu-latest
     timeout-minutes: 30
