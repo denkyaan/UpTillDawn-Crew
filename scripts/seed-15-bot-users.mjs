@@ -107,4 +107,17 @@ const { error: responsibleError } = await supabase.from('responsible_assignments
   assigned_by: admin.userId,
 })
 if (responsibleError) throw responsibleError
+
+const briefingId = '00000000-0000-4000-8000-00000000e2e3'
+const { error: briefingError } = await supabase.from('briefings').upsert({
+  id: briefingId,
+  event_id: eventId,
+  workplace_id: workplaceId,
+  title: 'E2E Entrance Briefing',
+  body: 'E2E briefing acknowledgement fixture',
+  version: 1,
+  created_by: admin.userId,
+}, { onConflict: 'id' })
+if (briefingError) throw briefingError
+
 console.log('Seeded browser-action event', eventId)
