@@ -59,6 +59,46 @@ jobs:
       - name: Wrangler deployment dry-run
         run: npx wrangler deploy --dry-run
 
+  browser-bots:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    env:
+      NEXT_PUBLIC_SUPABASE_URL: https://placeholder.supabase.co
+      NEXT_PUBLIC_SUPABASE_ANON_KEY: placeholder-anon-key
+      NEXT_PUBLIC_APP_URL: http://127.0.0.1:3000
+      BOT_TEST_BASE_URL: http://127.0.0.1:3000
+    steps:
+      - name: Checkout
+        uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5.1.0
+      - name: Set up Node.js
+        uses: actions/setup-node@a0853c24544627f65ddf259abe73b1d18a591444 # v5.0.0
+        with:
+          node-version: 24
+          cache: npm
+      - name: Install application
+        run: npm ci
+      - name: Install isolated browser test runtime
+        run: |
+          npm install --no-save --package-lock=false playwright@1.55.0
+          npx playwright install --with-deps chromium
+      - name: Build application
+        run: npm run build:next
+      - name: Start application
+        run: |
+          npm start > /tmp/uptilldawn-bot-app.log 2>&1 &
+          echo $! > /tmp/uptilldawn-bot-app.pid
+          for i in {1..60}; do
+            if curl --fail --silent http://127.0.0.1:3000/login/staff >/dev/null; then exit 0; fi
+            sleep 1
+          done
+          cat /tmp/uptilldawn-bot-app.log
+          exit 1
+      - name: Run 15 concurrent browser bots
+        run: node scripts/15-bot-browser-test.mjs
+      - name: Stop application
+        if: always()
+        run: kill $(cat /tmp/uptilldawn-bot-app.pid) 2>/dev/null || true
+
   fresh-install:
     runs-on: ubuntu-latest
     timeout-minutes: 30
