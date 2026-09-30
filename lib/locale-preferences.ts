@@ -46,8 +46,8 @@ export function storedUiLocaleSource():LocaleSource|null{
 
 export function initialUiLocale():SupportedUiLocale{
   if(typeof window==='undefined')return 'nl'
-  const stored=storedUiLocale()
-  if(storedUiLocaleSource()==='manual'&&stored)return stored
+  // Every fresh app session starts from the current device/browser language.
+  // A manual switch remains effective for the current open session only.
   return deviceUiLocale()
 }
 
