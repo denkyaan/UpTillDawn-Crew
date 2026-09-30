@@ -3528,7 +3528,7 @@ export type Database = {
           file_size_bytes?: number | null
           id?: string
           mime_type: string
-          risk_class?: string
+          risk_class: string
           scanned_at?: string | null
           sha256?: string | null
           status?: string
