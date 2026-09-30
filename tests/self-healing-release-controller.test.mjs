@@ -28,6 +28,6 @@ test('reported code faults can enter the bounded autonomous repair pipeline',asy
 test('production deployment provisions the self-healing dispatcher secret',async()=>{
  const deploy=await read('.github/workflows/deploy-cloudflare.yml')
  assert.match(deploy,/SELF_HEALING_GITHUB_TOKEN/)
- assert.match(deploy,/optional self-healing GitHub credential/)
+ assert.match(deploy,/self-healing GitHub credential when available/)
  assert.match(deploy,/wrangler secret put SELF_HEALING_GITHUB_TOKEN/)
 })
