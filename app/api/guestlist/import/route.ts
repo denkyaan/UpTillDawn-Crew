@@ -2,6 +2,7 @@ import {getCloudflareContext} from '@opennextjs/cloudflare'
 import ExcelJS from 'exceljs'
 import {z} from 'zod'
 import {createClient} from '@/lib/supabase/crew-server'
+import { validateUploadSecurity } from '@/lib/upload-security'
 
 export const runtime='nodejs'
 export const dynamic='force-dynamic'
@@ -209,6 +210,7 @@ export async function POST(request:Request){
   }
 
   try{
+    await validateUploadSecurity(file)
     const entries=await parseUpload(file)
     if(!entries.length)return Response.json({error:'Geen bruikbare guestlistregels gevonden.'},{status:400})
     if(entries.length>1000)return Response.json({error:'Maximaal 1000 regels per import.'},{status:400})
