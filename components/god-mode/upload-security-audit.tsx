@@ -1,5 +1,5 @@
 'use client'
-type Row={id:string;bucket_id:string;storage_path:string;uploader_email:string|null;uploader_name:string|null;mime_type:string|null;file_size_bytes:number|null;risk_class:string;status:string;engine:string|null;engine_result:unknown;attempts:number;scanned_at:string|null;created_at:string}
+type Row={id:string;bucket_id:string;storage_path:string;uploaded_by:string|null;uploader_email:string|null;uploader_name:string|null;mime_type:string|null;file_size_bytes:number|null;risk_class:string;status:string;engine:string|null;engine_result:unknown;attempts:number;scanned_at:string|null;created_at:string}
 export function UploadSecurityAudit({rows}:{rows:Row[]}){
  const bad=rows.filter(r=>['infected','suspicious','scan_failed'].includes(r.status))
  return <section className="rounded-2xl border p-5"><div className="mb-4"><h2 className="text-xl font-black">Uploadbeveiliging · Sécurité des téléchargements · Upload security · Upload-Sicherheit</h2><p className="text-sm text-muted-foreground">Wie uploadde wat, waar, wanneer en wat ging er mis · Qui / quoi / où / quand · Who / what / where / when · Wer / was / wo / wann</p></div>
