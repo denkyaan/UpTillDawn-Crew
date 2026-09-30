@@ -465,6 +465,19 @@ export const APP_EXTRA_TRANSLATIONS: Record<string,Row> = {
   "Briefing nog bevestigen": { fr:"Briefing à confirmer", en:"Briefing still needs confirmation", de:"Briefing noch bestätigen" },
   "Lees en bevestig je verplichte briefing vóór je shift.": { fr:"Lisez et confirmez votre briefing obligatoire avant votre service.", en:"Read and confirm your required briefing before your shift.", de:"Lies und bestätige dein verpflichtendes Briefing vor deiner Schicht." },
 
+  "Bestand is lokaal bewaard en wordt verzonden zodra je online bent.": { fr:"Le fichier est enregistré localement et sera envoyé dès que vous serez en ligne.", en:"The file is saved locally and will be sent when you are online.", de:"Die Datei wurde lokal gespeichert und wird gesendet, sobald du online bist." },
+  "Bestand verzonden.": { fr:"Fichier envoyé.", en:"File sent.", de:"Datei gesendet." },
+  "Uploadbeveiliging · Sécurité des téléchargements · Upload security · Upload-Sicherheit": { fr:"Sécurité des téléchargements", en:"Upload security", de:"Upload-Sicherheit" },
+  "Wie uploadde wat, waar, wanneer en wat ging er mis · Qui / quoi / où / quand · Who / what / where / when · Wer / was / wo / wann": { fr:"Qui a téléchargé quoi, où, quand et quel problème est survenu", en:"Who uploaded what, where, when and what went wrong", de:"Wer hat was, wo und wann hochgeladen und was ist schiefgelaufen" },
+  "Scans": { fr:"Analyses", en:"Scans", de:"Scans" },
+  "Problemen · Problèmes · Issues · Probleme": { fr:"Problèmes", en:"Issues", de:"Probleme" },
+  "Wie · Qui · Who · Wer": { fr:"Qui", en:"Who", de:"Wer" },
+  "Bestand · Fichier · File · Datei": { fr:"Fichier", en:"File", de:"Datei" },
+  "Waar · Où · Where · Wo": { fr:"Où", en:"Where", de:"Wo" },
+  "Wanneer · Quand · When · Wann": { fr:"Quand", en:"When", de:"Wann" },
+  "Probleem · Problème · Issue · Problem": { fr:"Problème", en:"Issue", de:"Problem" },
+  "Nog geen uploads · Aucun téléchargement · No uploads yet · Noch keine Uploads": { fr:"Aucun téléchargement", en:"No uploads yet", de:"Noch keine Uploads" },
+
 }
 
 const CANONICAL=new Map<string,string>()
