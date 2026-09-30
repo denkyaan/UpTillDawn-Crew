@@ -188,6 +188,33 @@ jobs:
             echo "::endgroup::"
           done
 
+      - name: Full event lifecycle release gate
+        env:
+          PGURL: postgresql://postgres:postgres@127.0.0.1:54322/postgres
+        run: |
+          set -euo pipefail
+          lifecycle_suites=(
+            tests/sql/15-bot-full-event.sql
+            tests/sql/qr-attendance-workflow.sql
+            tests/sql/operational-security.sql
+            tests/sql/chat-lifecycle.sql
+            tests/sql/queued-upload-security.sql
+          )
+          for file in "${lifecycle_suites[@]}"; do
+            echo "::group::lifecycle ${file}"
+            psql "$PGURL" -v ON_ERROR_STOP=1 -f "$file"
+            echo "::endgroup::"
+          done
+          {
+            echo "## Full event lifecycle gate"
+            echo "- 15-actor event/workplace/shift/availability: PASS"
+            echo "- QR check-in/check-out + approval: PASS"
+            echo "- Briefing acknowledgement + governed break lifecycle: PASS"
+            echo "- Incident/offline security semantics: PASS"
+            echo "- Chat lifecycle + 3-day retention window: PASS"
+            echo "- Chat/incident attachment idempotency: PASS"
+          } >> "$GITHUB_STEP_SUMMARY"
+
       - name: Verify generated database types
         run: |
           npx --yes supabase@2.117.0 gen types typescript --local --schema public > /tmp/crew-database.ts
