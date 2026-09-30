@@ -40,7 +40,7 @@ concurrency:
 jobs:
   repair:
     runs-on: ubuntu-latest
-    timeout-minutes: 25
+    timeout-minutes: 55
     env:
       CF_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
       CF_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
@@ -63,44 +63,12 @@ jobs:
       - name: Install
         run: npm ci
 
-      - name: Generate bounded repair
-        id: repair
+      - name: Autonomous repair loop
+        env:
+          GH_TOKEN: ${{ github.token }}
+          MAX_REPAIR_ATTEMPTS: "4"
+          NEXT_PUBLIC_APP_URL: https://crew.uptilldawn.workers.dev
         shell: bash
         run: |
           set -euo pipefail
-          node scripts/self-heal.mjs propose
-
-      - name: Validate repair
-        if: steps.repair.outputs.changed == 'true'
-        run: |
-          npm run lint
-          npm run typecheck
-          npm test
-          npm run build:next
-          npm run build:cloudflare
-          npx wrangler deploy --dry-run
-
-      - name: Commit validated repair
-        if: steps.repair.outputs.changed == 'true'
-        shell: bash
-        run: |
-          set -euo pipefail
-          git config user.name "UpTillDawn Self-Healing AI"
-          git config user.email "self-healing@users.noreply.github.com"
-          git add --all
-          git diff --cached --quiet && exit 0
-          git commit -m "fix(self-heal): repair error ${REPORT_ID}"
-          git pull --rebase origin main
-          git push origin HEAD:main
-
-      - name: Wait for CI and production deploy
-        if: steps.repair.outputs.changed == 'true'
-        env:
-          GH_TOKEN: ${{ github.token }}
-        run: node scripts/self-heal.mjs verify
-
-      - name: Escalate when no safe repair exists
-        if: steps.repair.outputs.changed != 'true'
-        env:
-          GH_TOKEN: ${{ github.token }}
-        run: node scripts/self-heal.mjs escalate
+          node scripts/self-heal.mjs loop
