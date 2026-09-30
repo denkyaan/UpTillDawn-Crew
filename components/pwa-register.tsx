@@ -23,6 +23,8 @@ export function PwaRegister(){
     let disposed=false
     let reloading=false
     let updateReloadPending=false
+    let activationRequested=false
+    let waitingWorker:ServiceWorker|null=null
     let lastFreshAt=0
     let freshnessRun:Promise<void>|null=null
 
@@ -30,6 +32,14 @@ export function PwaRegister(){
       if(!user?.id)return false
       const [ops,uploads]=await Promise.all([queued(user.id),queuedUploads(user.id)])
       return ops.length>0||uploads.length>0
+    }
+
+    const safelyActivateUpdate=async()=>{
+      if(disposed||activationRequested||!waitingWorker||!navigator.onLine)return
+      if(user?.id)await synchronize(user.id).catch(()=>{})
+      if(await hasPendingCrewData())return
+      activationRequested=true
+      waitingWorker.postMessage({type:"UPT_ACTIVATE_UPDATE"})
     }
 
     const safelyReloadForUpdate=async()=>{
@@ -68,7 +78,22 @@ export function PwaRegister(){
     const setup=async()=>{
       try{
         const registration=await navigator.serviceWorker.register("/sw.js",{updateViaCache:"none"})
+        const watchWaitingWorker=()=>{
+          if(registration.waiting){
+            waitingWorker=registration.waiting
+            void safelyActivateUpdate()
+          }
+        }
+        registration.addEventListener("updatefound",()=>{
+          const installing=registration.installing
+          if(!installing)return
+          installing.addEventListener("statechange",()=>{
+            if(installing.state==="installed"&&navigator.serviceWorker.controller)watchWaitingWorker()
+          })
+        })
+        watchWaitingWorker()
         await registration.update()
+        watchWaitingWorker()
 
         const periodicSync=(registration as ServiceWorkerRegistration&{periodicSync?:PeriodicSyncManagerLike}).periodicSync
         if(periodicSync){
@@ -96,7 +121,7 @@ export function PwaRegister(){
       }
     }
     const onFocus=()=>void keepFresh()
-    const onOnline=()=>void keepFresh({force:true})
+    const onOnline=()=>{void safelyActivateUpdate();void keepFresh({force:true})}
     const onVisibility=()=>{if(document.visibilityState==="visible")void keepFresh()}
     const onPageShow=(event:PageTransitionEvent)=>{
       if(event.persisted)void keepFresh({force:true})
@@ -106,6 +131,7 @@ export function PwaRegister(){
       void safelyReloadForUpdate()
     }
     const onQueueChange=()=>{
+      if(waitingWorker&&!activationRequested)void safelyActivateUpdate()
       if(updateReloadPending)void safelyReloadForUpdate()
     }
 
