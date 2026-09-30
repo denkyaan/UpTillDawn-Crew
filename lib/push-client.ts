@@ -1,5 +1,7 @@
 "use client"
 
+import { activeUiLocale } from "@/lib/locale-preferences"
+
 export type PushState="unsupported"|"needs_install"|"default"|"denied"|"granted"|"error"
 
 type PushConfig={publicKey:string;unreadCount:number}
@@ -56,7 +58,7 @@ async function saveSubscription(subscription:PushSubscription){
     method:"POST",
     credentials:"include",
     headers:{"content-type":"application/json"},
-    body:JSON.stringify({endpoint:json.endpoint,keys:{p256dh,auth}}),
+    body:JSON.stringify({endpoint:json.endpoint,keys:{p256dh,auth},locale:activeUiLocale()}),
   })
   if(!response.ok)throw new Error("Push-subscriptie kon niet worden opgeslagen.")
 }
