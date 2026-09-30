@@ -93,3 +93,14 @@ test('release gate keeps production cleanup and retired surfaces out of active n
   assert.match(roles,/navRule\("staff","shifts".*"never",false,false\)/)
   assert.match(roles,/navRule\("responsible_lead","shifts".*"never",false,false\)/)
 })
+
+test('retired system health and release pages cannot be opened directly',async()=>{
+  const [health,release]=await Promise.all([
+    read('app/(app)/admin/health/page.tsx'),
+    read('app/(app)/admin/release/page.tsx'),
+  ])
+  for(const source of [health,release]){
+    assert.match(source,/redirect\('\/admin'\)/)
+    assert.doesNotMatch(source,/Systeemgezondheid|Release readiness|upt_admin_system_health|upt_admin_release_readiness_snapshot/)
+  }
+})
