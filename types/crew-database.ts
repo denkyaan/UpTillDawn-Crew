@@ -5200,6 +5200,10 @@ export type Database = {
         }
         Returns: string
       }
+      upt_self_heal_resolve_error_report: {
+        Args: { p_report: string }
+        Returns: boolean
+      }
       upt_send_message: {
         Args: { p_attachment_path?: string; p_body?: string; p_channel: string }
         Returns: string
