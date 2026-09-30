@@ -438,6 +438,7 @@ export const APP_EXTRA_TRANSLATIONS: Record<string,Row> = {
   "UITSCHAKELEN": { fr:"DÉSACTIVER", en:"DISABLE", de:"DEAKTIVIEREN" },
   "LADEN…": { fr:"CHARGEMENT…", en:"LOADING…", de:"LADEN…" },
   "PUSHMELDINGEN INSCHAKELEN": { fr:"ACTIVER LES NOTIFICATIONS PUSH", en:"ENABLE PUSH NOTIFICATIONS", de:"PUSH-BENACHRICHTIGUNGEN AKTIVIEREN" },
+  "Een deel van de realtime beheergegevens is tijdelijk niet beschikbaar. De beschikbare onderdelen blijven bruikbaar.": { fr:"Une partie des données de gestion en temps réel est temporairement indisponible. Les éléments disponibles restent utilisables.", en:"Some realtime management data is temporarily unavailable. Available sections remain usable.", de:"Ein Teil der Echtzeit-Verwaltungsdaten ist vorübergehend nicht verfügbar. Verfügbare Bereiche bleiben nutzbar." },
   "Personeelsbeheer voor Up Till Dawn-evenementen": { fr:"Gestion du personnel pour les événements Up Till Dawn", en:"Staff management for Up Till Dawn events", de:"Personalverwaltung für Up Till Dawn Veranstaltungen" }
 }
 
