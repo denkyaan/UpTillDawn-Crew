@@ -478,6 +478,9 @@ export const APP_EXTRA_TRANSLATIONS: Record<string,Row> = {
   "Probleem · Problème · Issue · Problem": { fr:"Problème", en:"Issue", de:"Problem" },
   "Nog geen uploads · Aucun téléchargement · No uploads yet · Noch keine Uploads": { fr:"Aucun téléchargement", en:"No uploads yet", de:"Noch keine Uploads" },
 
+  "Bestand kon niet naar de server worden verzonden. Het blijft veilig lokaal bewaard; probeer opnieuw via de synchronisatiebalk.": { fr:"Le fichier n’a pas pu être envoyé au serveur. Il reste enregistré localement en sécurité ; réessayez via la barre de synchronisation.", en:"The file could not be sent to the server. It remains safely stored locally; retry via the synchronization bar.", de:"Die Datei konnte nicht an den Server gesendet werden. Sie bleibt sicher lokal gespeichert; versuche es über die Synchronisierungsleiste erneut." },
+  "Je sessie is gewijzigd. Meld opnieuw aan voordat je het bestand opnieuw verzendt.": { fr:"Votre session a changé. Reconnectez-vous avant de renvoyer le fichier.", en:"Your session changed. Sign in again before resending the file.", de:"Deine Sitzung hat sich geändert. Melde dich erneut an, bevor du die Datei erneut sendest." },
+
 }
 
 const CANONICAL=new Map<string,string>()
