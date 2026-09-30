@@ -131,7 +131,7 @@ export default async function Page({searchParams}:{searchParams?:Promise<{event?
     })
   }else{
     const [{data:ownShifts},{data:ownResponsible}]=await Promise.all([
-      s.from('shifts').select('event_id,workplace_id').eq('user_id',user.id).neq('status','cancelled').neq('response_status','declined'),
+      s.from('shifts').select('event_id,workplace_id,scheduled_start,scheduled_end').eq('user_id',user.id).neq('status','cancelled').neq('response_status','declined'),
       s.from('responsible_assignments').select('event_id,workplace_id').eq('user_id',user.id),
     ])
     const workplaceIds=[...new Set([
@@ -145,14 +145,22 @@ export default async function Page({searchParams}:{searchParams?:Promise<{event?
     if(!eventIds.length||!workplaceIds.length)redirect('/events')
 
     const [{data:eventRows,error:eventRowsError},{data:workplaceRows,error:workplaceRowsError}]=await Promise.all([
-      s.from('events').select('id,name,start_at,end_at').in('id',eventIds).neq('status','archived').gte('end_at','now').order('start_at'),
+      s.from('events').select('id,name,start_at,end_at').in('id',eventIds).neq('status','archived').order('start_at'),
       s.from('workplaces').select('id,event_id,name,description,sort_order,is_active,minimum_staff,target_staff,maximum_staff,default_shift_start,default_shift_end').in('id',workplaceIds).order('sort_order'),
     ])
     if(eventRowsError)throw new Error('Evenementen konden niet worden geladen: '+eventRowsError.message)
     if(workplaceRowsError)throw new Error('Werkplaatsen konden niet worden geladen: '+workplaceRowsError.message)
-    events=(eventRows||[]).map(event=>({id:event.id,name:event.name}))
-    const assignedEventById=new Map((eventRows||[]).map(event=>[event.id,{name:event.name,start_at:event.start_at,end_at:event.end_at}]))
-    workplaces=(workplaceRows||[]).map(workplace=>({...workplace,events:assignedEventById.get(workplace.event_id)||null}))
+    const nowMs=Date.now()
+    const futureShiftEventIds=new Set((ownShifts||[]).filter(shift=>Date.parse(shift.scheduled_end)>=nowMs).map(shift=>shift.event_id))
+    const responsibleEventIds=new Set((ownResponsible||[]).map(row=>row.event_id))
+    const visibleEventRows=(eventRows||[]).filter(event=>
+      Date.parse(event.end_at)>=nowMs
+      || futureShiftEventIds.has(event.id)
+      || (responsibleEventIds.has(event.id)&&Date.parse(event.end_at)+3*24*60*60*1000>=nowMs)
+    )
+    events=visibleEventRows.map(event=>({id:event.id,name:event.name}))
+    const assignedEventById=new Map(visibleEventRows.map(event=>[event.id,{name:event.name,start_at:event.start_at,end_at:event.end_at}]))
+    workplaces=(workplaceRows||[]).filter(workplace=>assignedEventById.has(workplace.event_id)).map(workplace=>({...workplace,events:assignedEventById.get(workplace.event_id)||null}))
     if(!events.length||!workplaces.length)redirect('/events')
 
     if(isResponsible){
