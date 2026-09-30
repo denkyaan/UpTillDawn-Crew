@@ -1,0 +1,1 @@
+create index if not exists upload_security_scans_uploaded_by_idx on public.upload_security_scans(uploaded_by);
