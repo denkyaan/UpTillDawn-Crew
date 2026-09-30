@@ -65,3 +65,46 @@ for (let index = 0; index < roles.length; index += 1) {
 }
 
 console.log(`PASS: seeded ${created.length} isolated authenticated browser-bot accounts`)
+
+
+// Seed one deterministic browser-action event so staff/responsible bots can
+// mutate availability through the actual UI without touching production data.
+const admin = seeded[0]
+const responsible = seeded[1]
+const staff = seeded[2]
+const eventId = '00000000-0000-4000-8000-00000000e2e1'
+const workplaceId = '00000000-0000-4000-8000-00000000e2e2'
+const startsAt = new Date(Date.now() + 2 * 60 * 60 * 1000).toISOString()
+const endsAt = new Date(Date.now() + 10 * 60 * 60 * 1000).toISOString()
+const { error: eventError } = await supabase.from('events').upsert({
+  id: eventId,
+  name: 'E2E Browser Action Event',
+  start_date: startsAt,
+  end_date: endsAt,
+  start_at: startsAt,
+  end_at: endsAt,
+  status: 'scheduled',
+  created_by: admin.id,
+}, { onConflict: 'id' })
+if (eventError) throw eventError
+const { error: workplaceError } = await supabase.from('workplaces').upsert({
+  id: workplaceId,
+  event_id: eventId,
+  name: 'E2E Entrance',
+  sort_order: 1,
+  is_active: true,
+}, { onConflict: 'id' })
+if (workplaceError) throw workplaceError
+const { error: membersError } = await supabase.from('event_members').upsert([
+  { event_id: eventId, user_id: responsible.id, event_role: 'responsible_lead' },
+  { event_id: eventId, user_id: staff.id, event_role: 'employee' },
+], { onConflict: 'event_id,user_id' })
+if (membersError) throw membersError
+const { error: responsibleError } = await supabase.from('responsible_assignments').upsert({
+  event_id: eventId,
+  workplace_id: workplaceId,
+  user_id: responsible.id,
+  assigned_by: admin.id,
+}, { onConflict: 'event_id,workplace_id' })
+if (responsibleError) throw responsibleError
+console.log('Seeded browser-action event', eventId)
