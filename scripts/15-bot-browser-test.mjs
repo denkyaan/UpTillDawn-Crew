@@ -174,6 +174,22 @@ try {
         if (!(await persistedBriefing.getByText('INSTRUCTIE GELEZEN', { exact: true }).isVisible())) {
           throw new Error('briefing acknowledgement did not persist after reload')
         }
+
+        await page.goto(`${baseUrl}/guestlist?event=00000000-0000-4000-8000-00000000e2e1`, {
+          waitUntil: 'networkidle',
+          timeout: 45000,
+        })
+        const guest = page.locator('article').filter({ hasText: 'E2E Guest' }).first()
+        if (await guest.count() !== 1) throw new Error('guestlist action fixture missing')
+        const checkInButton = guest.getByRole('button', { name: 'Eén spot inchecken' })
+        if (!(await checkInButton.isEnabled())) throw new Error('guestlist check-in action unexpectedly disabled')
+        await checkInButton.click()
+        await guest.getByText('1/2', { exact: true }).waitFor({ state: 'visible', timeout: 30000 })
+        await page.reload({ waitUntil: 'networkidle', timeout: 45000 })
+        const persistedGuest = page.locator('article').filter({ hasText: 'E2E Guest' }).first()
+        if (!(await persistedGuest.getByText('1/2', { exact: true }).isVisible())) {
+          throw new Error('guestlist check-in did not persist after reload')
+        }
       }
 
       console.log(`PASS ${bot} authenticated + workflow surfaces ${viewport.width}x${viewport.height}`)
