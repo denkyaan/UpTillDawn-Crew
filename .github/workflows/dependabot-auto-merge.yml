@@ -1,16 +1,15 @@
-name: Dependabot Auto Merge
+name: Dependabot Validation
 
 on:
   pull_request_target:
     types: [opened, synchronize, reopened, ready_for_review]
 
 permissions:
-  contents: write
-  pull-requests: write
-  checks: read
+  contents: read
+  pull-requests: read
 
 jobs:
-  enable-auto-merge:
+  policy:
     if: github.actor == 'dependabot[bot]' && github.event.pull_request.draft == false
     runs-on: ubuntu-latest
     steps:
@@ -20,15 +19,9 @@ jobs:
         with:
           github-token: "${{ secrets.GITHUB_TOKEN }}"
 
-      - name: Enable auto-merge for patch and minor updates
-        if: steps.metadata.outputs.update-type == 'version-update:semver-patch' || steps.metadata.outputs.update-type == 'version-update:semver-minor'
-        env:
-          GH_TOKEN: "${{ secrets.GITHUB_TOKEN }}"
-          PR_URL: "${{ github.event.pull_request.html_url }}"
-        run: gh pr merge --auto --squash "$PR_URL"
-
-      - name: Keep major updates for explicit review
-        if: steps.metadata.outputs.update-type == 'version-update:semver-major'
+      - name: Keep dependency updates isolated from production
         run: |
-          echo "Major dependency update detected."
-          echo "CI will validate it, but it will not be merged automatically."
+          echo "Dependency updates are validation-only."
+          echo "No Dependabot pull request is automatically merged or deployed."
+          echo "Update type: ${{ steps.metadata.outputs.update-type }}"
+          echo "The application remains unchanged until an update is explicitly approved."
