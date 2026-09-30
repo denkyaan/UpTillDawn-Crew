@@ -53,9 +53,10 @@ jobs:
           RESEND_API_KEY: ${{ secrets.RESEND_API_KEY }}
           SECURITY_FROM_EMAIL: ${{ secrets.SECURITY_FROM_EMAIL }}
           SECURITY_ALERT_EMAIL: ${{ secrets.SECURITY_ALERT_EMAIL }}
+          SELF_HEALING_GITHUB_TOKEN: ${{ secrets.SELF_HEALING_GITHUB_TOKEN }}
         run: |
           set -euo pipefail
-          for name in NEXT_PUBLIC_SUPABASE_URL NEXT_PUBLIC_SUPABASE_ANON_KEY GEOAPIFY_API_KEY RESEND_API_KEY CLOUDFLARE_API_TOKEN CLOUDFLARE_ACCOUNT_ID; do
+          for name in NEXT_PUBLIC_SUPABASE_URL NEXT_PUBLIC_SUPABASE_ANON_KEY GEOAPIFY_API_KEY RESEND_API_KEY CLOUDFLARE_API_TOKEN CLOUDFLARE_ACCOUNT_ID SELF_HEALING_GITHUB_TOKEN; do
             if [ -z "${!name:-}" ]; then
               echo "::error::Missing required production secret: $name"
               exit 1
@@ -139,6 +140,11 @@ jobs:
           if [ -n "${SECURITY_ALERT_EMAIL:-}" ]; then
             printf '%s' "$SECURITY_ALERT_EMAIL" | npx wrangler secret put SECURITY_ALERT_EMAIL
           fi
+
+      - name: Configure self-healing GitHub credential
+        env:
+          SELF_HEALING_GITHUB_TOKEN: ${{ secrets.SELF_HEALING_GITHUB_TOKEN }}
+        run: printf '%s' "$SELF_HEALING_GITHUB_TOKEN" | npx wrangler secret put SELF_HEALING_GITHUB_TOKEN
 
       - name: Configure optional live translation provider
         shell: bash
