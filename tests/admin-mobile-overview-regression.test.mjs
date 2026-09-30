@@ -15,3 +15,10 @@ test('mobile admin AI sits above bottom navigation and chat stacks above it',asy
  assert.match(layout,/stackedAboveAdminAi=\{Boolean\(isAdmin\)\}/)
  assert.match(chat,/stackedAboveAdminAi \? "9\.5rem" : "5rem"/)
 })
+
+test('admin action center excludes operational alerts for non-running events',async()=>{
+ const source=await read('app/(app)/admin/page.tsx')
+ assert.match(source,/activeEventIds=new Set\(activeEvents\.map\(event=>event\.id\)\)/)
+ assert.match(source,/operationalAlertRows=alertRows\.filter\(alert=>activeEventIds\.has\(alert\.event_id\)\)/)
+ assert.match(source,/\.\.\.operationalAlertRows\.map\(alert=>/)
+})
