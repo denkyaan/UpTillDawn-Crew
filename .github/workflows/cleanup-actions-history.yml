@@ -2,6 +2,8 @@ name: Cleanup Actions History
 
 on:
   workflow_dispatch:
+  schedule:
+    - cron: "17 3 * * 0"
 
 permissions:
   actions: write
@@ -11,7 +13,7 @@ jobs:
   cleanup:
     runs-on: ubuntu-latest
     steps:
-      - name: Remove failed, cancelled and skipped historical runs
+      - name: Remove unsuccessful historical runs
         env:
           GH_TOKEN: ${{ github.token }}
           REPO: ${{ github.repository }}
@@ -23,9 +25,8 @@ jobs:
             local workflow="$1"
             shift
             for conclusion in "$@"; do
-              page=1
               while :; do
-                ids="$(gh api --paginate -H "Accept: application/vnd.github+json"                   "/repos/$REPO/actions/workflows/$workflow/runs?status=$conclusion&per_page=100"                   --jq '.workflow_runs[].id' 2>/dev/null || true)"
+                ids="$(gh api -H "Accept: application/vnd.github+json"                   "/repos/$REPO/actions/workflows/$workflow/runs?status=$conclusion&per_page=100"                   --jq '.workflow_runs[].id' 2>/dev/null || true)"
                 [ -z "$ids" ] && break
                 deleted=0
                 while read -r id; do
@@ -35,12 +36,8 @@ jobs:
                   deleted=$((deleted+1))
                 done <<< "$ids"
                 [ "$deleted" -eq 0 ] && break
-                # Deletions collapse pagination, so query page 1 again.
               done
             done
           }
-
           delete_runs "ci.yml" failure cancelled
           delete_runs "deploy-cloudflare.yml" failure cancelled skipped
-
-          echo "Historical failed/cancelled CI runs and failed/cancelled/skipped deploy runs removed."
