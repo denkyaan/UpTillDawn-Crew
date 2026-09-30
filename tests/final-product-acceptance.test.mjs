@@ -22,7 +22,7 @@ test('final acceptance covers event planning briefing workplace shift and availa
 
 test('final acceptance covers check-in work break checkout and governed timesheets',async()=>{
   const [qr,operations,actions]=await Promise.all([read('components/crew/qr-shift-request.tsx'),read('app/(app)/operations/operations-client.tsx'),read('lib/actions/uptilldawn.ts')])
-  assert.match(qr,/check/i)
+  assert.match(qr,/upt_qr_request/)
   assert.match(operations,/pauze/i)
   assert.match(actions,/upt_/)
   assert.match(actions,/timesheet|work_session|checkout|check_out/i)
