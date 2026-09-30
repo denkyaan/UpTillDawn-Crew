@@ -69,9 +69,9 @@ console.log(`PASS: seeded ${created.length} isolated authenticated browser-bot a
 
 // Seed one deterministic browser-action event so staff/responsible bots can
 // mutate availability through the actual UI without touching production data.
-const admin = seeded[0]
-const responsible = seeded[1]
-const staff = seeded[2]
+const admin = created[0]
+const responsible = created[1]
+const staff = created[2]
 const eventId = '00000000-0000-4000-8000-00000000e2e1'
 const workplaceId = '00000000-0000-4000-8000-00000000e2e2'
 const startsAt = new Date(Date.now() + 2 * 60 * 60 * 1000).toISOString()
