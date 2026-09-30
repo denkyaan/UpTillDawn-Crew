@@ -2673,6 +2673,7 @@ export type Database = {
           enabled: boolean
           endpoint: string
           id: string
+          locale: string
           p256dh: string
           updated_at: string
           user_agent: string | null
@@ -2684,6 +2685,7 @@ export type Database = {
           enabled?: boolean
           endpoint: string
           id?: string
+          locale?: string
           p256dh: string
           updated_at?: string
           user_agent?: string | null
@@ -2695,6 +2697,7 @@ export type Database = {
           enabled?: boolean
           endpoint?: string
           id?: string
+          locale?: string
           p256dh?: string
           updated_at?: string
           user_agent?: string | null
@@ -5083,15 +5086,26 @@ export type Database = {
         }
         Returns: undefined
       }
-      upt_save_push_subscription: {
-        Args: {
-          p_auth: string
-          p_endpoint: string
-          p_p256dh: string
-          p_user_agent?: string
-        }
-        Returns: string
-      }
+      upt_save_push_subscription:
+        | {
+            Args: {
+              p_auth: string
+              p_endpoint: string
+              p_p256dh: string
+              p_user_agent?: string
+            }
+            Returns: string
+          }
+        | {
+            Args: {
+              p_auth: string
+              p_endpoint: string
+              p_locale?: string
+              p_p256dh: string
+              p_user_agent?: string
+            }
+            Returns: string
+          }
       upt_save_shift_handover: {
         Args: {
           p_equipment_notes?: string
