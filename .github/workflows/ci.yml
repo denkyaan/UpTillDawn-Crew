@@ -212,6 +212,14 @@ jobs:
             tests/sql/operational-security.sql
             tests/sql/chat-lifecycle.sql
             tests/sql/queued-upload-security.sql
+            tests/sql/release-access-matrix.sql
+            tests/sql/privilege-matrix.sql
+            tests/sql/responsible-read-scope.sql
+            tests/sql/responsible-event-selection-guard.sql
+            tests/sql/offline-revocation-replay.sql
+            tests/sql/offline-time-dependencies.sql
+            tests/sql/storage-security.sql
+            tests/sql/new-feature-security.sql
           )
           for file in "${lifecycle_suites[@]}"; do
             echo "::group::lifecycle ${file}"
@@ -226,6 +234,11 @@ jobs:
             echo "- Incident/offline security semantics: PASS"
             echo "- Chat lifecycle + 3-day retention window: PASS"
             echo "- Chat/incident attachment idempotency: PASS"
+            echo "- Staff/Admin/Responsible permission boundaries: PASS"
+            echo "- Responsible workplace isolation: PASS"
+            echo "- Unapproved/anonymous and revoked-access denial: PASS"
+            echo "- Offline replay/time dependency security: PASS"
+            echo "- Storage and new-feature security surfaces: PASS"
           } >> "$GITHUB_STEP_SUMMARY"
 
       - name: Verify generated database types
