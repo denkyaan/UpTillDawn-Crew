@@ -33,8 +33,10 @@ test('staff defaults keep management surfaces inaccessible',async()=>{
  assert.doesNotMatch(block,/"staff","(?:platform|personnel|exports|automations|god)"/)
 })
 
-test('staff workplace context excludes declined shifts and expired events',async()=>{
+test('staff workplace context excludes declined shifts while preserving teardown assignments',async()=>{
  const source=await read('app/(app)/workplaces/page.tsx')
- assert.match(source,/select\('event_id,workplace_id'\)\.eq\('user_id',user\.id\)\.neq\('status','cancelled'\)\.neq\('response_status','declined'\)/)
- assert.match(source,/select\('id,name,start_at,end_at'\)\.in\('id',eventIds\)\.neq\('status','archived'\)\.gte\('end_at','now'\)/)
+ assert.match(source,/scheduled_start,scheduled_end/)
+ assert.match(source,/futureShiftEventIds/)
+ assert.match(source,/Date\.parse\(shift\.scheduled_end\)>=nowMs/)
+ assert.doesNotMatch(source,/neq\('status','archived'\)\.gte\('end_at','now'\)/)
 })
