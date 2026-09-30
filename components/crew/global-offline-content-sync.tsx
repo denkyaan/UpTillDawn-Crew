@@ -6,10 +6,16 @@ import {loadOfflineDocuments,replaceOfflineDocuments,saveOfflineBriefings,saveOf
 
 export function GlobalOfflineContentSync({userId}:{userId:string}){
  useEffect(()=>{
-  if(!navigator.onLine)return
   const s=createClient()
   let cancelled=false
-  void (async()=>{
+  let syncing=false
+  let lastSyncedAt=0
+  const syncOfflineContent=async({force=false}:{force?:boolean}={})=>{
+   if(cancelled||syncing||!navigator.onLine)return
+   const now=Date.now()
+   if(!force&&now-lastSyncedAt<60_000)return
+   syncing=true
+   try{
    const [{data:briefings},{data:personal},{data:assignments},{data:emergency},{data:documents},{data:eventMemberships},{data:workplaces},{data:shifts},{data:incidents},{data:checklists},{data:checklistItems},{data:inventoryItems},{data:inventoryIssues},{data:knowledge},{data:guestlistRows},{data:saleRows}]=await Promise.all([
     s.from('briefings').select('id,title,body,version,event_id').order('created_at',{ascending:false}),
     s.from('personal_instructions').select('id,title,body,version,event_id').eq('user_id',userId).order('created_at',{ascending:false}),
@@ -64,8 +70,16 @@ export function GlobalOfflineContentSync({userId}:{userId:string}){
     offlineDocuments.push({key:userId+':'+row.id,userId,id:row.id,event_id:row.event_id,event_name:row.events?.name||'Evenement',kind:row.kind,title:row.title,description:row.description,file_name:row.file_name,mime_type:row.mime_type,storage_path:row.storage_path,updated_at:row.updated_at,blob})
    }
    await Promise.all([saveOfflineBriefings(userId,briefingItems),saveOfflineTasks(userId,taskItems),saveOfflineEmergency(userId,emergencyItems),saveOfflineBrowseData(userId,eventItems,workplaceItems,shiftItems),saveOfflineOperationalData(userId,incidentItems,checklistModels,inventoryModels,issueModels),saveOfflineKnowledge(userId,knowledgeModels),saveOfflineGuestlistAndSales(userId,guestlistModels,saleModels),replaceOfflineDocuments(userId,offlineDocuments)])
-  })().catch(()=>{})
-  return()=>{cancelled=true}
+   lastSyncedAt=Date.now()
+   }finally{syncing=false}
+  }
+  const onOnline=()=>void syncOfflineContent({force:true}).catch(()=>{})
+  const onVisible=()=>{if(document.visibilityState==='visible')void syncOfflineContent().catch(()=>{})}
+  window.addEventListener('online',onOnline)
+  document.addEventListener('visibilitychange',onVisible)
+  void syncOfflineContent({force:true}).catch(()=>{})
+  const timer=window.setInterval(()=>{if(document.visibilityState==='visible')void syncOfflineContent().catch(()=>{})},15*60*1000)
+  return()=>{cancelled=true;window.removeEventListener('online',onOnline);document.removeEventListener('visibilitychange',onVisible);window.clearInterval(timer)}
  },[userId])
  return null
 }
