@@ -456,4 +456,5 @@ export function translateAppExtraUi(value:string,locale:ExtraCatalogLocale){
   if(!row)return value
   if(locale==='nl')return canonical
   return row[locale]||canonical
+  'Een deel van de realtime gegevens is tijdelijk niet beschikbaar. De beschikbare onderdelen blijven bruikbaar.': {fr:'Une partie des données en temps réel est temporairement indisponible. Les éléments disponibles restent utilisables.',en:'Some realtime data is temporarily unavailable. Available sections remain usable.',de:'Ein Teil der Echtzeitdaten ist vorübergehend nicht verfügbar. Verfügbare Bereiche bleiben nutzbar.'},
 }
