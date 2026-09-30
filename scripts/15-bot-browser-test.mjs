@@ -132,12 +132,24 @@ try {
         await form.locator('input[name="response"][value="can"]').check()
         await form.locator('input[name="setup_available"][value="yes"]').check()
         await form.locator('input[name="breakdown_available"][value="yes"]').check()
-        await Promise.all([
-          page.waitForLoadState('networkidle'),
+        const [actionResponse] = await Promise.all([
+          page.waitForResponse(
+            response => response.request().method() === 'POST' && response.url().includes('/events'),
+            { timeout: 30000 },
+          ),
           form.locator('button').last().click(),
         ])
-        const checked = await form.locator('input[name="response"][value="can"]').isChecked()
-        if (!checked) throw new Error('availability UI did not retain can response')
+        if (!actionResponse.ok()) {
+          throw new Error(`availability server action failed with HTTP ${actionResponse.status()}`)
+        }
+        await page.reload({ waitUntil: 'networkidle', timeout: 45000 })
+        const persistedForm = page.locator('form').filter({ has: page.locator('input[name="response"][value="can"]') }).first()
+        const persistedCan = await persistedForm.locator('input[name="response"][value="can"]').isChecked()
+        const persistedSetup = await persistedForm.locator('input[name="setup_available"][value="yes"]').isChecked()
+        const persistedBreakdown = await persistedForm.locator('input[name="breakdown_available"][value="yes"]').isChecked()
+        if (!persistedCan || !persistedSetup || !persistedBreakdown) {
+          throw new Error('availability server action did not persist all selected values')
+        }
       }
 
       console.log(`PASS ${bot} authenticated + workflow surfaces ${viewport.width}x${viewport.height}`)
