@@ -2,8 +2,17 @@
 begin;
 insert into upt_private.god_mode_sessions(token_hash,expires_at)
 values(extensions.digest('studio-test-session-00000000000000000000000000000000','sha256'),now()+interval '5 minutes');
-set local role anon;
-do $$
+-- Operational God Studio RPCs are no longer executable by anon; validate the revoke separately.
+do $
+declare r record;
+begin
+  for r in select p.oid from pg_proc p join pg_namespace n on n.oid=p.pronamespace where n.nspname='public' and p.proname like 'upt_god_%' and p.proname <> 'upt_god_login'
+  loop
+    if has_function_privilege('anon',r.oid,'EXECUTE') then raise exception 'Anonymous God Studio RPC execute still granted'; end if;
+  end loop;
+end $;
+
+do $
 declare token text:='studio-test-session-00000000000000000000000000000000'; row_before jsonb; row_after jsonb; result jsonb; denied boolean:=false;
 begin
   begin perform public.upt_god_data_catalog('invalid'); exception when others then denied:=true; end;
@@ -33,8 +42,7 @@ begin
   result:=public.upt_god_data_mutate(token,'role_ui_rules','delete','{"role":"staff","feature_key":"studio_regression_fixture"}',row_after,'{}');
   if not (result->>'ok')::boolean then raise exception 'Delete failed'; end if;
 end; $$;
-reset role;
-do $$ begin
+do $ begin
   if (select count(*) from upt_private.god_data_audit where table_name='role_ui_rules' and coalesce(after_row,before_row)->>'feature_key'='studio_regression_fixture')<>3 then raise exception 'Audit trail incomplete'; end if;
 end; $$;
 rollback;
