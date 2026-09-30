@@ -65,7 +65,7 @@ test('device language is reapplied on startup and manual language remains synchr
   assert.match(sync, /initialUiLocale\(\)/)
   assert.match(sync, /storedUiLocaleSource\(\)===['"]manual['"]/)
   assert.match(sync, /deviceUiLocale\(\)/)
-  assert.match(prefs, /initialUiLocale[\\s\\S]*return deviceUiLocale\\(\\)/)
+  assert.match(prefs, /initialUiLocale[\s\S]*return deviceUiLocale\(\)/)
   assert.doesNotMatch(prefs, /storedUiLocaleSource\\(\\)===['"]manual['"]&&stored/)
   assert.match(switcher, /LANGUAGE_APPLIED_EVENT/)
   assert.match(switcher, /requestUiLocale\(next\)/)
