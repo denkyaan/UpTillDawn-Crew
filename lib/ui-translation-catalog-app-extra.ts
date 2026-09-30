@@ -447,6 +447,14 @@ export const APP_EXTRA_TRANSLATIONS: Record<string,Row> = {
   "Instructies en opening- of sluitchecklists.": { fr:"Instructions et check-lists d’ouverture ou de fermeture.", en:"Instructions and opening or closing checklists.", de:"Anweisungen und Checklisten für Öffnung oder Abschluss." },
   "Controleer materiaal en meld ontbrekend of defect materiaal.": { fr:"Contrôlez le matériel et signalez le matériel manquant ou défectueux.", en:"Check equipment and report missing or defective items.", de:"Material prüfen und fehlendes oder defektes Material melden." },
   "Volg taken van je eigen werkplek op.": { fr:"Suivez les tâches de votre propre poste.", en:"Follow up tasks for your own workplace.", de:"Aufgaben des eigenen Arbeitsplatzes nachverfolgen." },
+  "Mijn evenement": { fr:"Mon événement", en:"My event", de:"Meine Veranstaltung" },
+  "Directe toegang tot je toegewezen werk, instructies en materiaal.": { fr:"Accès direct à votre travail attribué, vos instructions et votre matériel.", en:"Direct access to your assigned work, instructions and equipment.", de:"Direkter Zugriff auf deine zugewiesene Arbeit, Anweisungen und Materialien." },
+  "Start, pauze en stop je werk via de geldige workflow.": { fr:"Démarrez, mettez en pause et arrêtez votre travail via le flux prévu.", en:"Start, pause and stop your work through the approved workflow.", de:"Starte, pausiere und beende deine Arbeit über den vorgesehenen Ablauf." },
+  "Lees en bevestig je instructies vóór je shift.": { fr:"Lisez et confirmez vos instructions avant votre service.", en:"Read and confirm your instructions before your shift.", de:"Lies und bestätige deine Anweisungen vor deiner Schicht." },
+  "Werkplaats & shift": { fr:"Poste & service", en:"Workplace & shift", de:"Arbeitsplatz & Schicht" },
+  "Bekijk waar en wanneer je bent ingepland.": { fr:"Consultez où et quand vous êtes planifié.", en:"See where and when you are scheduled.", de:"Sieh, wo und wann du eingeplant bist." },
+  "Bekijk materiaal van je toegewezen werkplek.": { fr:"Consultez le matériel de votre poste attribué.", en:"View equipment for your assigned workplace.", de:"Sieh das Material deines zugewiesenen Arbeitsplatzes ein." },
+
 }
 
 const CANONICAL=new Map<string,string>()
