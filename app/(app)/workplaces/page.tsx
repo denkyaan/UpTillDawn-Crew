@@ -131,7 +131,7 @@ export default async function Page({searchParams}:{searchParams?:Promise<{event?
     })
   }else{
     const [{data:ownShifts},{data:ownResponsible}]=await Promise.all([
-      s.from('shifts').select('event_id,workplace_id').eq('user_id',user.id).neq('status','cancelled'),
+      s.from('shifts').select('event_id,workplace_id').eq('user_id',user.id).neq('status','cancelled').neq('response_status','declined'),
       s.from('responsible_assignments').select('event_id,workplace_id').eq('user_id',user.id),
     ])
     const workplaceIds=[...new Set([
@@ -145,7 +145,7 @@ export default async function Page({searchParams}:{searchParams?:Promise<{event?
     if(!eventIds.length||!workplaceIds.length)redirect('/events')
 
     const [{data:eventRows,error:eventRowsError},{data:workplaceRows,error:workplaceRowsError}]=await Promise.all([
-      s.from('events').select('id,name,start_at,end_at').in('id',eventIds).neq('status','archived').order('start_at'),
+      s.from('events').select('id,name,start_at,end_at').in('id',eventIds).neq('status','archived').gte('end_at','now').order('start_at'),
       s.from('workplaces').select('id,event_id,name,description,sort_order,is_active,minimum_staff,target_staff,maximum_staff,default_shift_start,default_shift_end').in('id',workplaceIds).order('sort_order'),
     ])
     if(eventRowsError)throw new Error('Evenementen konden niet worden geladen: '+eventRowsError.message)
