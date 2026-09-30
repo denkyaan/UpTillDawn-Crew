@@ -30,8 +30,8 @@ export default async function Dashboard() {
   const now = nowDate.toISOString()
   const [profileResult, eventsResult, shiftsResult, incidentsResult, membershipsResult, activeEventsResult, openEventsResult, responsibleAssignmentsResult] = await Promise.all([
     s.from('profiles').select('full_name,approved').eq('id', user.id).single(),
-    s.from('events').select('id,name,venue,end_at,status').neq('status','archived').gte('end_at',now).order('start_at', { ascending: true }),
-    s.from('shifts').select('id,workplace_id,event_id').eq('user_id', user.id).neq('status','cancelled').order('scheduled_start', { ascending: true }),
+    s.from('events').select('id,name,venue,end_at,status').neq('status','archived').order('start_at', { ascending: true }),
+    s.from('shifts').select('id,workplace_id,event_id,scheduled_start,scheduled_end,response_status').eq('user_id', user.id).neq('status','cancelled').neq('response_status','declined').order('scheduled_start', { ascending: true }),
     s.from('incidents').select('id,event_id,workplace_id').neq('status', 'resolved'),
     s.from('event_members').select('event_id,event_role').eq('user_id', user.id),
     s.from('events').select('id').neq('status','archived').lte('start_at', now).gte('end_at', now),
@@ -62,8 +62,11 @@ export default async function Dashboard() {
     return visibleWhileOpen||assigned
   })
   const hasEventAssignment = memberships.some(member => openEventIds.has(member.event_id))
-    || shifts.some(shift=>openEventIds.has(shift.event_id))
-    || (current.role==='responsible_lead'&&responsibleAssignments.some(row=>openEventIds.has(row.event_id)))
+    || shifts.some(shift=>Date.parse(shift.scheduled_end)>=nowMs)
+    || (current.role==='responsible_lead'&&responsibleAssignments.some(row=>{
+      const event=rawEvents.find(item=>item.id===row.event_id)
+      return Boolean(event&&Date.parse(event.end_at)+3*24*60*60*1000>=nowMs)
+    }))
   const activeResponsibleAssignments=responsibleAssignments
     .filter(assignment=>activeEventIds.has(assignment.event_id))
   const activeResponsibleWorkplaces=new Set(activeResponsibleAssignments.map(assignment=>assignment.workplace_id))
