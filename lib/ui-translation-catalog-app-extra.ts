@@ -483,6 +483,8 @@ export const APP_EXTRA_TRANSLATIONS: Record<string,Row> = {
 
   "Het lokaal bewaarde bestand bevat geen leesbare gegevens meer. Verwijder deze wachtrij-upload en selecteer het originele bestand opnieuw.": { fr:"Le fichier enregistré localement ne contient plus de données lisibles. Supprimez cet envoi de la file d’attente et sélectionnez à nouveau le fichier original.", en:"The locally stored file no longer contains readable data. Remove this queued upload and select the original file again.", de:"Die lokal gespeicherte Datei enthält keine lesbaren Daten mehr. Entferne diesen Upload aus der Warteschlange und wähle die Originaldatei erneut aus." },
 
+  "Bestand kon niet naar de server worden verzonden:": { fr:"Le fichier n’a pas pu être envoyé au serveur :", en:"The file could not be sent to the server:", de:"Die Datei konnte nicht an den Server gesendet werden:" },
+
 }
 
 const CANONICAL=new Map<string,string>()
