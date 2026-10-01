@@ -320,6 +320,67 @@ try {
       await context.close()
     }
   }))
+
+  // Sequential cross-role attendance lifecycle after the concurrent smoke phase.
+  // Fresh sessions avoid race conditions while still exercising the real UI/RPC contracts.
+  async function loginLifecycle(role,index){
+    const locale=locales[index%locales.length]
+    const context=await browser.newContext({locale,viewport:{width:430,height:932}})
+    const page=await context.newPage()
+    const bot=`bot-${String(index+1).padStart(2,'0')}-${role}-${locale}`
+    const emailAddress=`${bot}@bots.uptilldawn.test`
+    if(role==='admin'){
+      const response=await context.request.post(`${baseUrl}/api/auth/admin-login`,{form:{email:emailAddress,password:testPassword},maxRedirects:0,timeout:45000})
+      if(response.status()!==303)throw new Error(`lifecycle admin login failed HTTP ${response.status()}`)
+    }else{
+      await page.goto(`${baseUrl}/login/${role}`,{waitUntil:'networkidle',timeout:45000})
+      await page.locator('input[name="email"]').fill(emailAddress)
+      await page.locator('input[name="password"]').fill(testPassword)
+      await page.waitForTimeout(750)
+      await page.locator('button[type="submit"]').click()
+      await page.waitForURL(url=>url.pathname==='/',{timeout:45000})
+    }
+    return {context,page}
+  }
+
+  try{
+    const staff=await loginLifecycle('staff',2)
+    try{
+      await staff.page.goto(`${baseUrl}/qr`,{waitUntil:'networkidle',timeout:45000})
+      const yes=staff.page.locator('[data-action="qr-contact-yes"]')
+      if(await yes.count()!==1){
+        const body=(await staff.page.locator('body').innerText()).replace(/\s+/g,' ').slice(0,900)
+        throw new Error(`staff start request did not reach contact step: ${body}`)
+      }
+      const [requestResponse]=await Promise.all([
+        staff.page.waitForResponse(r=>r.request().method()==='POST'&&r.url().includes('/rpc/upt_qr_request'),{timeout:30000}),
+        yes.click(),
+      ])
+      if(!requestResponse.ok())throw new Error(`staff start request failed HTTP ${requestResponse.status()}`)
+    }finally{await staff.context.close()}
+
+    const responsible=await loginLifecycle('responsible',1)
+    try{
+      await responsible.page.goto(`${baseUrl}/operations?event=00000000-0000-4000-8000-00000000e2e1&workplace=00000000-0000-4000-8000-00000000e2e2`,{waitUntil:'networkidle',timeout:45000})
+      const approve=responsible.page.locator('[data-action="in-approve"]').first()
+      if(await approve.count()!==1){
+        const body=(await responsible.page.locator('body').innerText()).replace(/\s+/g,' ').slice(0,1100)
+        throw new Error(`responsible start approval missing: ${body}`)
+      }
+      const [approveResponse]=await Promise.all([
+        responsible.page.waitForResponse(r=>r.request().method()==='POST'&&r.url().includes('/rpc/upt_decide_check_in'),{timeout:30000}),
+        approve.click(),
+      ])
+      if(!approveResponse.ok())throw new Error(`responsible start approval failed HTTP ${approveResponse.status()}`)
+    }finally{await responsible.context.close()}
+
+    const active=await lifecycleAdmin.from('work_sessions').select('id').eq('user_id',(await lifecycleAdmin.from('profiles').select('id').eq('email','bot-03-staff-en@bots.uptilldawn.test').maybeSingle()).data?.id||'').is('ended_at',null)
+    // Browser UI is the authority; the service-role read only asserts persistence.
+    if(active.error||!active.data?.length)throw new Error('approved browser check-in did not create an active work session')
+    console.log('PASS cross-role browser lifecycle: Staff check-in request -> Responsible approval -> active work session')
+  }catch(error){
+    failures.push(`cross-role-lifecycle: ${error instanceof Error?error.message:String(error)}`)
+  }
 } finally {
   await browser.close()
 }
