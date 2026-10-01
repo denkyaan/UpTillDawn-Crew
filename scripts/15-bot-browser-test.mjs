@@ -359,38 +359,52 @@ try {
         await staff.page.waitForTimeout(250)
       }
       const yes=staff.page.locator('[data-action="qr-contact-yes"]')
-      if(await yes.count()!==1){
+      const remote=staff.page.locator('[data-action="qr-remote-request"]')
+      if(await yes.count()===1){
+        const [requestResponse]=await Promise.all([
+          staff.page.waitForResponse(r=>r.request().method()==='POST'&&r.url().includes('/rpc/upt_qr_request'),{timeout:30000}),
+          yes.click(),
+        ])
+        if(!requestResponse.ok())throw new Error(`staff start request failed HTTP ${requestResponse.status()}`)
+      }else if(await remote.count()===1){
+        const [requestResponse]=await Promise.all([
+          staff.page.waitForResponse(r=>r.request().method()==='POST'&&r.url().includes('/rpc/upt_qr_request'),{timeout:30000}),
+          remote.click(),
+        ])
+        if(!requestResponse.ok())throw new Error(`staff remote start request failed HTTP ${requestResponse.status()}`)
+      }else{
         const body=(await staff.page.locator('body').innerText()).replace(/\s+/g,' ').slice(0,900)
-        throw new Error(`staff start request did not reach contact step after required confirmations: ${body}`)
+        throw new Error(`staff start request did not reach contact/remote step after required confirmations: ${body}`)
       }
-      const [requestResponse]=await Promise.all([
-        staff.page.waitForResponse(r=>r.request().method()==='POST'&&r.url().includes('/rpc/upt_qr_request'),{timeout:30000}),
-        yes.click(),
-      ])
-      if(!requestResponse.ok())throw new Error(`staff start request failed HTTP ${requestResponse.status()}`)
     }finally{await staff.context.close()}
 
-    const responsible=await loginLifecycle('responsible',1)
+    // The production router chooses Responsible when available, otherwise Admin.
+    // Exercise whichever reviewer the persisted request actually selected.
+    const pending=await lifecycleAdmin.from('check_ins').select('reviewer_kind').eq('event_id','00000000-0000-4000-8000-00000000e2e1').eq('status','pending').order('requested_at',{ascending:false}).limit(1).maybeSingle()
+    if(pending.error||!pending.data?.reviewer_kind)throw new Error('browser check-in request was not persisted')
+    const reviewerRole=pending.data.reviewer_kind==='admin'?'admin':'responsible'
+    const reviewerIndex=reviewerRole==='admin'?0:1
+    const reviewer=await loginLifecycle(reviewerRole,reviewerIndex)
     try{
-      await responsible.page.goto(`${baseUrl}/operations?event=00000000-0000-4000-8000-00000000e2e1&workplace=00000000-0000-4000-8000-00000000e2e2`,{waitUntil:'networkidle',timeout:45000})
-      const approve=responsible.page.locator('[data-action="in-approve"]').first()
+      await reviewer.page.goto(`${baseUrl}/operations?event=00000000-0000-4000-8000-00000000e2e1&workplace=00000000-0000-4000-8000-00000000e2e2`,{waitUntil:'networkidle',timeout:45000})
+      const approve=reviewer.page.locator('[data-action="in-approve"]').first()
       if(await approve.count()!==1){
-        const body=(await responsible.page.locator('body').innerText()).replace(/\s+/g,' ').slice(0,1100)
-        throw new Error(`responsible start approval missing: ${body}`)
+        const body=(await reviewer.page.locator('body').innerText()).replace(/\s+/g,' ').slice(0,1100)
+        throw new Error(`${reviewerRole} start approval missing: ${body}`)
       }
       const [approveResponse]=await Promise.all([
-        responsible.page.waitForResponse(r=>r.request().method()==='POST'&&r.url().includes('/rpc/upt_decide_check_in'),{timeout:30000}),
+        reviewer.page.waitForResponse(r=>r.request().method()==='POST'&&r.url().includes('/rpc/upt_decide_check_in'),{timeout:30000}),
         approve.click(),
       ])
-      if(!approveResponse.ok())throw new Error(`responsible start approval failed HTTP ${approveResponse.status()}`)
-    }finally{await responsible.context.close()}
+      if(!approveResponse.ok())throw new Error(`${reviewerRole} start approval failed HTTP ${approveResponse.status()}`)
+    }finally{await reviewer.context.close()}
 
     const latestCheckIn=await lifecycleAdmin.from('check_ins').select('user_id').eq('event_id','00000000-0000-4000-8000-00000000e2e1').eq('status','approved').order('requested_at',{ascending:false}).limit(1).maybeSingle()
     if(latestCheckIn.error||!latestCheckIn.data?.user_id)throw new Error('approved browser check-in was not persisted')
     const active=await lifecycleAdmin.from('work_sessions').select('id').eq('user_id',latestCheckIn.data.user_id).eq('event_id','00000000-0000-4000-8000-00000000e2e1').is('ended_at',null)
     // Browser UI is the authority; the service-role read only asserts persistence.
     if(active.error||!active.data?.length)throw new Error('approved browser check-in did not create an active work session')
-    console.log('PASS cross-role browser lifecycle: Staff check-in request -> Responsible approval -> active work session')
+    console.log(`PASS cross-role browser lifecycle: Staff check-in request -> routed reviewer approval -> active work session`)
   }catch(error){
     failures.push(`cross-role-lifecycle: ${error instanceof Error?error.message:String(error)}`)
   }
