@@ -347,10 +347,21 @@ try {
     const staff=await loginLifecycle('staff',2)
     try{
       await staff.page.goto(`${baseUrl}/qr`,{waitUntil:'networkidle',timeout:45000})
+      // Production requires shift confirmation before attendance. Complete any
+      // required confirmation through the real QR UI, then continue to contact.
+      for(let attempt=0;attempt<3;attempt++){
+        const confirm=staff.page.locator('[data-action^="qr-confirm-"]').first()
+        if(await confirm.count()!==1)break
+        await Promise.all([
+          staff.page.waitForResponse(r=>r.request().method()==='POST'&&(r.url().includes('/rpc/upt_confirm_shift')||r.url().includes('/rpc/upt_acknowledge_briefing')),{timeout:30000}),
+          confirm.click(),
+        ])
+        await staff.page.waitForTimeout(250)
+      }
       const yes=staff.page.locator('[data-action="qr-contact-yes"]')
       if(await yes.count()!==1){
         const body=(await staff.page.locator('body').innerText()).replace(/\s+/g,' ').slice(0,900)
-        throw new Error(`staff start request did not reach contact step: ${body}`)
+        throw new Error(`staff start request did not reach contact step after required confirmations: ${body}`)
       }
       const [requestResponse]=await Promise.all([
         staff.page.waitForResponse(r=>r.request().method()==='POST'&&r.url().includes('/rpc/upt_qr_request'),{timeout:30000}),
