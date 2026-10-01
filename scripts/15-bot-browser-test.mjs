@@ -458,8 +458,15 @@ try {
       await staffTs.page.goto(`${baseUrl}/timesheets?event=00000000-0000-4000-8000-00000000e2e1`,{waitUntil:'networkidle',timeout:45000})
       const submit=staffTs.page.locator('[data-action="timesheet-submit"]')
       if(await submit.count()!==1)throw new Error('timesheet submit action missing')
-      await submit.click()
-      await staffTs.page.waitForLoadState('networkidle',{timeout:45000})
+      const [submitResponse]=await Promise.all([
+        staffTs.page.waitForResponse(r=>r.request().method()==='POST'&&r.url().includes('/rpc/upt_submit_timesheet'),{timeout:30000}),
+        submit.click(),
+      ])
+      if(!submitResponse.ok()){
+        const body=await submitResponse.text()
+        throw new Error(`timesheet submit RPC failed HTTP ${submitResponse.status()}: ${body.slice(0,500)}`)
+      }
+      await staffTs.page.waitForLoadState('networkidle',{timeout:45000}).catch(()=>{})
     }finally{await staffTs.context.close()}
 
     const submitted=await lifecycleAdmin.from('timesheets').select('id,status').eq('event_id','00000000-0000-4000-8000-00000000e2e1').eq('user_id',latestCheckIn.data.user_id).maybeSingle()
