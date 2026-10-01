@@ -161,7 +161,7 @@ jobs:
           task_count="$(psql "$BOT_DB_URL" -v ON_ERROR_STOP=1 -Atc "SELECT count(*) FROM public.task_assignments WHERE id='00000000-0000-4000-8000-00000000e2e7'::uuid AND confirmed_at IS NOT NULL;")"
           test "$task_count" = "1"
           echo "PASS: real browser task confirmation persisted"
-          chat_count="$(psql "$BOT_DB_URL" -v ON_ERROR_STOP=1 -Atc "SELECT count(*) FROM public.messages m JOIN public.chat_channels c ON c.id=m.channel_id WHERE c.id='00000000-0000-4000-8000-00000000e2e9'::uuid AND m.body='E2E lifecycle chat message';")"
+          chat_count="$(psql "$BOT_DB_URL" -v ON_ERROR_STOP=1 -Atc "SELECT count(*) FROM public.messages m JOIN public.chat_channels c ON c.id=m.channel_id WHERE c.event_id='00000000-0000-4000-8000-00000000e2e1'::uuid AND c.kind='event' AND m.body='E2E lifecycle chat message';")"
           test "$chat_count" = "1"
           echo "PASS: real browser chat message persisted"
           incident_count="$(psql "$BOT_DB_URL" -v ON_ERROR_STOP=1 -Atc "SELECT count(*) FROM public.incidents WHERE event_id='00000000-0000-4000-8000-00000000e2e1'::uuid AND message='E2E lifecycle incident';")"
