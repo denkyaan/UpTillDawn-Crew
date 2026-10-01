@@ -1,9 +1,12 @@
 import { chromium } from 'playwright'
+import { createClient } from '@supabase/supabase-js'
 
 const baseUrl = process.env.BOT_TEST_BASE_URL || 'http://127.0.0.1:3000'
 const testPassword = process.env.BOT_TEST_PASSWORD
-if (!testPassword) {
-  console.error('BOT_TEST_PASSWORD is required')
+const supabaseUrl = process.env.BOT_SUPABASE_URL || process.env.NEXT_PUBLIC_SUPABASE_URL
+const serviceRoleKey = process.env.BOT_SERVICE_ROLE_KEY
+if (!testPassword || !supabaseUrl || !serviceRoleKey) {
+  console.error('BOT_TEST_PASSWORD, BOT_SUPABASE_URL and BOT_SERVICE_ROLE_KEY are required')
   process.exit(1)
 }
 
@@ -252,6 +255,16 @@ try {
         if (!(await persistedGuest.getByText('1/2', { exact: true }).isVisible())) {
           throw new Error('guestlist check-in did not persist after reload')
         }
+
+        // Intake is complete. Advance only the isolated E2E event into its
+        // operational phase so production availability/task gates stay intact.
+        const lifecycleAdmin = createClient(supabaseUrl, serviceRoleKey, { auth: { persistSession: false, autoRefreshToken: false } })
+        const activeStart = new Date(Date.now() - 60 * 60 * 1000).toISOString()
+        const activeEnd = new Date(Date.now() + 8 * 60 * 60 * 1000).toISOString()
+        const { error: phaseError } = await lifecycleAdmin.from('events').update({
+          start_date: activeStart, start_at: activeStart, end_date: activeEnd, end_at: activeEnd, status: 'active',
+        }).eq('id', '00000000-0000-4000-8000-00000000e2e1')
+        if (phaseError) throw new Error(`failed to advance E2E event lifecycle: ${phaseError.message}`)
 
         // Continue the same staff browser through operational lifecycle surfaces.
         await page.goto(`${baseUrl}/tasks?event=00000000-0000-4000-8000-00000000e2e1&workplace=00000000-0000-4000-8000-00000000e2e2`, { waitUntil: 'networkidle', timeout: 45000 })
