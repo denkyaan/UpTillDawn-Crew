@@ -532,12 +532,13 @@ try {
     try{
       await respInv.page.goto(`${baseUrl}/inventory?event=00000000-0000-4000-8000-00000000e2e1&workplace=00000000-0000-4000-8000-00000000e2e2`,{waitUntil:'networkidle',timeout:45000})
       for(const phase of ['opening','closing']){
-        const form=respInv.page.locator(`form:has([data-action="inventory-condition-${phase}"])`).first()
-        if(await form.count()!==1)throw new Error(`Responsible inventory ${phase} control missing`)
+        const button=respInv.page.locator(`[data-action="inventory-condition-${phase}"]`).first()
+        if(await button.count()!==1)throw new Error(`Responsible inventory ${phase} control missing`)
+        const form=button.locator('xpath=ancestor::form[1]')
         await form.locator('select[name="condition"]').selectOption(phase==='opening'?'missing':'damaged')
         await form.locator('input[name="quantity"]').fill('1')
         await form.locator('input[name="notes"]').fill(`E2E ${phase} condition`)
-        await form.locator(`[data-action="inventory-condition-${phase}"]`).click()
+        await button.click()
         await respInv.page.waitForLoadState('networkidle',{timeout:45000}).catch(()=>{})
       }
     }finally{await respInv.context.close()}
