@@ -252,6 +252,43 @@ try {
         if (!(await persistedGuest.getByText('1/2', { exact: true }).isVisible())) {
           throw new Error('guestlist check-in did not persist after reload')
         }
+
+        // Continue the same staff browser through operational lifecycle surfaces.
+        await page.goto(`${baseUrl}/tasks?event=00000000-0000-4000-8000-00000000e2e1&workplace=00000000-0000-4000-8000-00000000e2e2`, { waitUntil: 'networkidle', timeout: 45000 })
+        const taskCard = page.locator('article').filter({ hasText: 'E2E Entrance Task' }).first()
+        if (await taskCard.count() !== 1) throw new Error('task lifecycle fixture missing')
+        const confirmTask = taskCard.locator('[data-action="task-confirm"]')
+        if (await confirmTask.count() !== 1) throw new Error('task confirmation action missing')
+        const [taskConfirmResponse] = await Promise.all([
+          page.waitForResponse(r => r.request().method()==='POST' && r.url().includes('/tasks'), {timeout:30000}),
+          confirmTask.click(),
+        ])
+        if (!taskConfirmResponse.ok()) throw new Error(`task confirmation failed HTTP ${taskConfirmResponse.status()}`)
+        await page.reload({waitUntil:'networkidle',timeout:45000})
+        const persistedTask = page.locator('article').filter({ hasText: 'E2E Entrance Task' }).first()
+        if (await persistedTask.locator('[data-action="task-confirm"]').count() !== 0) throw new Error('task confirmation did not persist')
+
+        await page.goto(`${baseUrl}/inventory?event=00000000-0000-4000-8000-00000000e2e1&workplace=00000000-0000-4000-8000-00000000e2e2`, {waitUntil:'networkidle',timeout:45000})
+        const inventoryCard = page.locator('article').filter({hasText:'E2E Radio'}).first()
+        if (await inventoryCard.count() !== 1) throw new Error('inventory lifecycle fixture missing')
+        // Staff may inspect inventory, but condition reporting remains Responsible-only.
+        if (await inventoryCard.locator('[data-action="inventory-condition-opening"]').count() !== 0) throw new Error('staff unexpectedly received responsible inventory mutation control')
+
+        await page.goto(`${baseUrl}/chat?event=00000000-0000-4000-8000-00000000e2e1`, {waitUntil:'networkidle',timeout:45000})
+        const chatInput = page.locator('textarea[placeholder]').last()
+        await chatInput.fill('E2E lifecycle chat message')
+        const send = page.locator('[data-action="chat-send"]')
+        await send.click()
+        await page.getByText('E2E lifecycle chat message',{exact:true}).waitFor({state:'visible',timeout:15000})
+        await page.reload({waitUntil:'networkidle',timeout:45000})
+        if (!(await page.getByText('E2E lifecycle chat message',{exact:true}).isVisible())) throw new Error('chat message did not persist after reload')
+
+        await page.goto(`${baseUrl}/incidents?event=00000000-0000-4000-8000-00000000e2e1&workplace=00000000-0000-4000-8000-00000000e2e2`, {waitUntil:'networkidle',timeout:45000})
+        const incidentForm = page.locator('form').filter({has:page.locator('[data-action="incident-submit"]')}).first()
+        if (await incidentForm.count() !== 1) throw new Error('incident action form missing')
+        await incidentForm.locator('textarea[name="message"]').fill('E2E lifecycle incident')
+        await incidentForm.locator('[data-action="incident-submit"]').click()
+        await incidentForm.locator('[role="status"]').waitFor({state:'visible',timeout:15000})
       }
 
       console.log(`PASS ${bot} authenticated + workflow surfaces ${viewport.width}x${viewport.height}`)
