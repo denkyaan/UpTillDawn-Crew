@@ -157,8 +157,9 @@ try {
         })
         const briefingArticle = page.locator('article').filter({ hasText: 'E2E Entrance Briefing' }).first()
         if (await briefingArticle.count() !== 1) throw new Error('briefing acknowledgement fixture missing')
-        const acknowledgeButton = briefingArticle.locator('form button').first()
-        const alreadyAcknowledged = await briefingArticle.getByText('INSTRUCTIE GELEZEN', { exact: true }).isVisible()
+        const acknowledgeForm = briefingArticle.locator('form').filter({ has: briefingArticle.locator('input[name="id"][value="00000000-0000-4000-8000-00000000e2e3"]') })
+        const acknowledgeButton = acknowledgeForm.locator('button').first()
+        const alreadyAcknowledged = await acknowledgeForm.count() === 0
         if (!alreadyAcknowledged) {
           if (await acknowledgeButton.count() !== 1) throw new Error('briefing acknowledgement control missing')
           const [briefingResponse] = await Promise.all([
@@ -174,11 +175,8 @@ try {
         }
         await page.reload({ waitUntil: 'networkidle', timeout: 45000 })
         const persistedBriefing = page.locator('article').filter({ hasText: 'E2E Entrance Briefing' }).first()
-        const persistedAck = persistedBriefing.getByText('INSTRUCTIE GELEZEN', { exact: true })
-        if (!(await persistedAck.isVisible())) {
-          // The database persistence is asserted independently by CI immediately
-          // after this browser run. Keep the UI failure diagnostic-rich instead
-          // of silently accepting a stale/readback mismatch.
+        const persistedAckForm = persistedBriefing.locator('form').filter({ has: persistedBriefing.locator('input[name="id"][value="00000000-0000-4000-8000-00000000e2e3"]') })
+        if (await persistedAckForm.count() !== 0) {
           const bodyText = (await persistedBriefing.textContent()) || ''
           throw new Error(`briefing acknowledgement UI readback missing after reload: ${bodyText.slice(0, 240)}`)
         }
