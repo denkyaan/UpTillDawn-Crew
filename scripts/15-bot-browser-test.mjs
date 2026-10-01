@@ -117,6 +117,22 @@ try {
         throw new Error('seeded profile did not render')
       }
 
+      // Runtime i18n regression: after LocaleSync applies the browser locale,
+      // the rendered document must advertise that locale and must not expose
+      // the known Dutch management copy in non-Dutch sessions.
+      await page.waitForFunction(expected => document.documentElement.lang === expected, locale, { timeout: 15000 })
+      if (locale !== 'nl') {
+        const rendered = (await page.locator('body').innerText()).replace(/\\s+/g, ' ')
+        const dutchLeaks = [
+          'Acties met prioriteit',
+          'Live werkuren, check-in/out, pauzes, operationele waarschuwingen en goedkeuringen.',
+          'Controleer en corrigeer geregistreerde tijden. Elke correctie blijft auditbaar.',
+          'Beheer events, templates, briefing, documenten, readiness, afsluiting en archief.',
+          'Beheer werkplaatsen en shifts en open inventaris, inkom/guestlist, taken, briefing en sales per werkplek.',
+        ].filter(value => rendered.includes(value))
+        if (dutchLeaks.length) throw new Error(`runtime i18n leak for ${locale}: ${dutchLeaks.join(' | ')}`)
+      }
+
       // Smoke the real protected workflow surfaces with the same authenticated
       // browser context. The SQL full-event suite separately performs the
       // transactional 15-actor event/workplace/shift/availability simulation.
