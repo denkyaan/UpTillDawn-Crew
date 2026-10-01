@@ -1,5 +1,9 @@
 import { initOpenNextCloudflareForDev } from '@opennextjs/cloudflare'
 
+const localSupabaseConnectSources = process.env.NEXT_PUBLIC_SUPABASE_URL?.startsWith('http://127.0.0.1:') || process.env.NEXT_PUBLIC_SUPABASE_URL?.startsWith('http://localhost:')
+  ? ' http://127.0.0.1:* ws://127.0.0.1:* http://localhost:* ws://localhost:*'
+  : ''
+
 const contentSecurityPolicy = [
   "default-src 'self'",
   "base-uri 'self'",
@@ -10,7 +14,7 @@ const contentSecurityPolicy = [
   "style-src 'self' 'unsafe-inline'",
   "img-src 'self' data: blob: https:",
   "font-src 'self' data:",
-  "connect-src 'self' https://*.supabase.co wss://*.supabase.co https://*.geoapify.com https://api.geoapify.com",
+  "connect-src 'self' https://*.supabase.co wss://*.supabase.co https://*.geoapify.com https://api.geoapify.com" + localSupabaseConnectSources,
   "worker-src 'self' blob:",
   "manifest-src 'self'",
   "media-src 'self' blob: https:",
