@@ -515,7 +515,65 @@ try {
     const locked=await lifecycleAdmin.from('timesheets').select('status').eq('id',submitted.data.id).maybeSingle()
     if(locked.error||locked.data?.status!=='locked')throw new Error('timesheet did not reach locked state')
 
-    console.log('PASS cross-role browser lifecycle: check-in -> approval -> work -> break/resume -> checkout -> timesheet submit/approve/lock')
+    // Complete task state lifecycle after confirmation.
+    const staffOps=await loginLifecycle('staff',2)
+    try{
+      await staffOps.page.goto(`${baseUrl}/tasks?event=00000000-0000-4000-8000-00000000e2e1&workplace=00000000-0000-4000-8000-00000000e2e2`,{waitUntil:'networkidle',timeout:45000})
+      const task=staffOps.page.locator('article').filter({hasText:'E2E Entrance Task'}).first()
+      for(const action of ['task-status-in-progress','task-status-completed']){
+        const button=task.locator(`[data-action="${action}"]`)
+        if(await button.count()!==1)throw new Error(`${action} missing`)
+        await button.click();await staffOps.page.waitForTimeout(900)
+      }
+    }finally{await staffOps.context.close()}
+
+    // Responsible inventory opening + closing mutations.
+    const respInv=await loginLifecycle('responsible',1)
+    try{
+      await respInv.page.goto(`${baseUrl}/inventory?event=00000000-0000-4000-8000-00000000e2e1&workplace=00000000-0000-4000-8000-00000000e2e2`,{waitUntil:'networkidle',timeout:45000})
+      for(const phase of ['opening','closing']){
+        const form=respInv.page.locator(`form:has([data-action="inventory-condition-${phase}"])`).first()
+        if(await form.count()!==1)throw new Error(`Responsible inventory ${phase} control missing`)
+        await form.locator('select[name="condition"]').selectOption(phase==='opening'?'missing':'damaged')
+        await form.locator('input[name="quantity"]').fill('1')
+        await form.locator('input[name="notes"]').fill(`E2E ${phase} condition`)
+        await form.locator(`[data-action="inventory-condition-${phase}"]`).click()
+        await respInv.page.waitForLoadState('networkidle',{timeout:45000}).catch(()=>{})
+      }
+    }finally{await respInv.context.close()}
+
+    // Chat attachment path: select a real file and send it through the production queue.
+    const staffChat=await loginLifecycle('staff',2)
+    try{
+      await staffChat.page.goto(`${baseUrl}/chat?event=00000000-0000-4000-8000-00000000e2e1`,{waitUntil:'networkidle',timeout:45000})
+      const fileInput=staffChat.page.locator('input[type="file"]').last()
+      await fileInput.setInputFiles({name:'e2e-lifecycle.txt',mimeType:'text/plain',buffer:Buffer.from('UpTillDawn E2E lifecycle attachment')})
+      const sendFile=staffChat.page.locator('[data-action="chat-send"]')
+      if(await sendFile.count()!==1)throw new Error('chat attachment send action missing')
+      await sendFile.click()
+      await staffChat.page.waitForTimeout(1800)
+    }finally{await staffChat.context.close()}
+
+    // Negative permission: Staff must never receive Admin event-management controls.
+    const staffDenied=await loginLifecycle('staff',2)
+    try{
+      await staffDenied.page.goto(`${baseUrl}/events?event=00000000-0000-4000-8000-00000000e2e1`,{waitUntil:'networkidle',timeout:45000})
+      if(await staffDenied.page.getByText('EVENEMENT AANMAKEN',{exact:true}).count()!==0)throw new Error('Staff unexpectedly received Admin event creation control')
+    }finally{await staffDenied.context.close()}
+
+    // Close event through the production lifecycle RPC, then prove assigned Staff chat retention.
+    const {error:closeError}=await lifecycleAdmin.rpc('upt_close_event',{p_event:'00000000-0000-4000-8000-00000000e2e1',p_force:true,p_reason:'E2E lifecycle completion'})
+    if(closeError)throw new Error(`event closure failed: ${closeError.message}`)
+    const closed=await lifecycleAdmin.from('events').select('status,end_at').eq('id','00000000-0000-4000-8000-00000000e2e1').single()
+    if(closed.error||!closed.data)throw new Error('closed event could not be read back')
+
+    const retainedChat=await loginLifecycle('staff',2)
+    try{
+      await retainedChat.page.goto(`${baseUrl}/chat?event=00000000-0000-4000-8000-00000000e2e1`,{waitUntil:'networkidle',timeout:45000})
+      if(!(await retainedChat.page.getByText('E2E lifecycle chat message',{exact:true}).isVisible()))throw new Error('assigned Staff lost event chat immediately after event closure')
+    }finally{await retainedChat.context.close()}
+
+    console.log('PASS full combined lifecycle: tasks + inventory + chat/upload + incidents + closure/chat retention + negative Staff permissions')
   }catch(error){
     failures.push(`cross-role-lifecycle: ${error instanceof Error?error.message:String(error)}`)
   }
