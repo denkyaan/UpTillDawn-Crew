@@ -110,7 +110,7 @@ export function IncidentForm({
       <input key={fileKey} type="file" accept="image/jpeg,image/png,image/webp,video/mp4,video/webm,video/quicktime" onChange={e=>setFile(e.target.files?.[0]||null)} className="mt-1 block w-full rounded-lg border bg-background p-3"/>
       <span className="mt-1 block text-xs text-muted-foreground">Foto maximaal 10 MB · video maximaal 50 MB.</span>
     </label>
-    <button disabled={busy} className="w-full rounded-xl bg-red-600 p-4 font-black text-white">{busy?'BEWAREN…':'URGENT VERSTUREN'}</button>
+    <button data-action="incident-submit" disabled={busy} className="w-full rounded-xl bg-red-600 p-4 font-black text-white">{busy?'BEWAREN…':'URGENT VERSTUREN'}</button>
     {status&&<p role="status">{status}</p>}
   </form>
 }
