@@ -3501,6 +3501,70 @@ export type Database = {
           },
         ]
       }
+      timesheets: {
+        Row: {
+          created_at: string
+          event_id: string
+          id: string
+          locked_at: string | null
+          rejection_reason: string | null
+          reviewed_at: string | null
+          reviewed_by: string | null
+          status: string
+          submitted_at: string | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          event_id: string
+          id?: string
+          locked_at?: string | null
+          rejection_reason?: string | null
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          status?: string
+          submitted_at?: string | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          event_id?: string
+          id?: string
+          locked_at?: string | null
+          rejection_reason?: string | null
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          status?: string
+          submitted_at?: string | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "timesheets_event_id_fkey"
+            columns: ["event_id"]
+            isOneToOne: false
+            referencedRelation: "events"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "timesheets_reviewed_by_fkey"
+            columns: ["reviewed_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "timesheets_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       upload_security_scans: {
         Row: {
           attempts: number
@@ -4882,6 +4946,7 @@ export type Database = {
         }
         Returns: string
       }
+      upt_lock_timesheet: { Args: { p_timesheet: string }; Returns: undefined }
       upt_manager_live_sessions: {
         Args: never
         Returns: {
@@ -5129,6 +5194,10 @@ export type Database = {
       }
       upt_restore_platform_configuration: {
         Args: { p_version: string }
+        Returns: undefined
+      }
+      upt_review_timesheet: {
+        Args: { p_approve: boolean; p_reason?: string; p_timesheet: string }
         Returns: undefined
       }
       upt_sales_configure_item: {
@@ -5383,6 +5452,7 @@ export type Database = {
       }
       upt_stop_break: { Args: { p_break: string }; Returns: undefined }
       upt_stop_work: { Args: { p_work_session: string }; Returns: undefined }
+      upt_submit_timesheet: { Args: { p_event: string }; Returns: string }
       upt_swap_candidates: {
         Args: { p_shift: string }
         Returns: {
