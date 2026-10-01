@@ -169,3 +169,23 @@ jobs:
 
       - name: Deploy public Worker alias
         run: npx wrangler deploy --config wrangler.alias.jsonc
+
+      - name: Production public-surface smoke
+        shell: bash
+        run: |
+          set -euo pipefail
+          paths=("/" "/login/admin" "/login/responsible" "/login/staff" "/manifest.webmanifest" "/sw.js")
+          for path in "${paths[@]}"; do
+            safe_name=$(printf '%s' "$path" | tr '/.' '__')
+            body="/tmp/upt-smoke-${safe_name}.body"
+            code=$(curl -L -sS --retry 5 --retry-delay 2 --retry-all-errors -o "$body" -w "%{http_code}" "${NEXT_PUBLIC_APP_URL}${path}")
+            echo "${path}: HTTP ${code}"
+            if [ "$code" -lt 200 ] || [ "$code" -ge 400 ]; then
+              echo "::error::Production smoke failed for ${path} with HTTP ${code}"
+              exit 1
+            fi
+            if grep -qiE 'Internal Server Error|Application error|This page could not be found' "$body"; then
+              echo "::error::Production smoke body indicates an application failure for ${path}"
+              exit 1
+            fi
+          done
