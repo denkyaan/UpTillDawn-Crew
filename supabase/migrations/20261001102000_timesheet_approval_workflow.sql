@@ -7,6 +7,8 @@ create table if not exists public.timesheets (
  unique(event_id,user_id)
 );
 create index if not exists timesheets_event_status_idx on public.timesheets(event_id,status);
+create index if not exists timesheets_user_id_idx on public.timesheets(user_id);
+create index if not exists timesheets_reviewed_by_idx on public.timesheets(reviewed_by);
 alter table public.timesheets enable row level security;
 create policy timesheets_read on public.timesheets for select to authenticated using(user_id=auth.uid() or public.upt_is_admin(auth.uid()) or exists(select 1 from public.responsible_assignments ra where ra.event_id=timesheets.event_id and ra.user_id=auth.uid()));
 revoke all on public.timesheets from anon,authenticated; grant select on public.timesheets to authenticated;
