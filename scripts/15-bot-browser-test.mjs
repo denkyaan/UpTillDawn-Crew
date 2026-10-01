@@ -478,8 +478,15 @@ try {
       const row=tsReviewer.page.locator(`[data-timesheet-id="${submitted.data.id}"]`)
       const approveTs=row.locator('[data-action="timesheet-approve"]')
       if(await approveTs.count()!==1)throw new Error('Responsible timesheet approval missing for own workplace Staff')
-      await approveTs.click()
-      await tsReviewer.page.waitForLoadState('networkidle',{timeout:45000})
+      const [reviewResponse]=await Promise.all([
+        tsReviewer.page.waitForResponse(r=>r.request().method()==='POST'&&r.url().includes('/rpc/upt_review_timesheet'),{timeout:30000}),
+        approveTs.click(),
+      ])
+      if(!reviewResponse.ok()){
+        const body=await reviewResponse.text()
+        throw new Error(`Responsible timesheet approval RPC failed HTTP ${reviewResponse.status()}: ${body.slice(0,700)}`)
+      }
+      await tsReviewer.page.waitForLoadState('networkidle',{timeout:45000}).catch(()=>{})
     }finally{await tsReviewer.context.close()}
 
     const approvedTs=await lifecycleAdmin.from('timesheets').select('status').eq('id',submitted.data.id).maybeSingle()
