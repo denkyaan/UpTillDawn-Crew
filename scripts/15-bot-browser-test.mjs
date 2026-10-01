@@ -158,20 +158,21 @@ try {
         const briefingArticle = page.locator('article').filter({ hasText: 'E2E Entrance Briefing' }).first()
         if (await briefingArticle.count() !== 1) throw new Error('briefing acknowledgement fixture missing')
         const acknowledgeForm = briefingArticle.locator('form').filter({ has: briefingArticle.locator('input[name="id"][value="00000000-0000-4000-8000-00000000e2e3"]') })
+        if (await acknowledgeForm.count() !== 1) {
+          const bodyText = (await briefingArticle.textContent()) || ''
+          throw new Error(`briefing acknowledgement control missing before bot03 action: ${bodyText.slice(0, 240)}`)
+        }
         const acknowledgeButton = acknowledgeForm.locator('button').first()
-        const alreadyAcknowledged = await acknowledgeForm.count() === 0
-        if (!alreadyAcknowledged) {
-          if (await acknowledgeButton.count() !== 1) throw new Error('briefing acknowledgement control missing')
-          const [briefingResponse] = await Promise.all([
-            page.waitForResponse(
-              response => response.request().method() === 'POST' && response.url().includes('/briefings'),
-              { timeout: 30000 },
-            ),
-            acknowledgeButton.click(),
-          ])
-          if (!briefingResponse.ok()) {
-            throw new Error(`briefing acknowledgement server action failed with HTTP ${briefingResponse.status()}`)
-          }
+        if (await acknowledgeButton.count() !== 1) throw new Error('briefing acknowledgement button missing')
+        const [briefingResponse] = await Promise.all([
+          page.waitForResponse(
+            response => response.request().method() === 'POST' && response.url().includes('/briefings'),
+            { timeout: 30000 },
+          ),
+          acknowledgeButton.click(),
+        ])
+        if (!briefingResponse.ok()) {
+          throw new Error(`briefing acknowledgement server action failed with HTTP ${briefingResponse.status()}`)
         }
         await page.reload({ waitUntil: 'networkidle', timeout: 45000 })
         const persistedBriefing = page.locator('article').filter({ hasText: 'E2E Entrance Briefing' }).first()
