@@ -24,9 +24,22 @@ const failures = []
 const lifecycleAdmin = createClient(supabaseUrl, serviceRoleKey, { auth: { persistSession: false, autoRefreshToken: false } })
 
 const roleSmokeRoutes = {
-  admin: ['/events', '/workplaces', '/briefings', '/inventory', '/guestlist', '/chat', '/operations'],
-  responsible: ['/events', '/workplaces', '/briefings', '/inventory', '/guestlist', '/chat'],
-  staff: ['/events', '/workplaces', '/briefings', '/inventory', '/guestlist', '/chat'],
+  admin: ['/', '/admin', '/events', '/workplaces', '/briefings', '/inventory', '/guestlist', '/chat', '/operations', '/tasks', '/timesheets', '/incidents', '/notifications', '/personnel', '/sales', '/settings', '/exports', '/audit'],
+  responsible: ['/', '/events', '/workplaces', '/briefings', '/inventory', '/guestlist', '/chat', '/operations', '/tasks', '/timesheets', '/incidents', '/notifications', '/sales', '/settings'],
+  staff: ['/', '/events', '/workplaces', '/briefings', '/inventory', '/guestlist', '/chat', '/operations', '/tasks', '/timesheets', '/incidents', '/notifications', '/sales', '/settings'],
+}
+
+const dutchRuntimeLeakPatterns = [
+  /\\b(?:Beheer|Beheren|Werkplaatsen|Werkplek|Werkuren|Personeel|Verantwoordelijke|Evenementen|Evenement|Meldingen|Instellingen|Taken|Taak|Briefing|Inventaris|Inkom|Goedkeuren|Afkeuren|Opslaan|Verwijderen|Toevoegen|Beschikbaar|Niet beschikbaar|Geen resultaten|Acties met prioriteit)\\b/i,
+  /\\b(?:wordt|worden|kunnen|kunt|jouw|deze|geen|alleen|alle|voor|van|met)\\s+(?:automatisch|personeel|werkplek|evenement|account|shift|uren|meldingen|resultaten)\\b/i,
+]
+
+async function assertRuntimeLocale(page, locale, bot, route) {
+  await page.waitForFunction(expected => document.documentElement.lang === expected, locale, { timeout: 15000 })
+  if (locale === 'nl') return
+  const rendered = (await page.locator('body').innerText()).replace(/\\s+/g, ' ')
+  const leak = dutchRuntimeLeakPatterns.find(pattern => pattern.test(rendered))
+  if (leak) throw new Error(`${bot} runtime i18n leak on ${route} for ${locale}: ${rendered.match(leak)?.[0] || leak}`)
 }
 
 async function assertProtectedRoute(context, route, bot) {
@@ -117,21 +130,8 @@ try {
         throw new Error('seeded profile did not render')
       }
 
-      // Runtime i18n regression: after LocaleSync applies the browser locale,
-      // the rendered document must advertise that locale and must not expose
-      // the known Dutch management copy in non-Dutch sessions.
-      await page.waitForFunction(expected => document.documentElement.lang === expected, locale, { timeout: 15000 })
-      if (locale !== 'nl') {
-        const rendered = (await page.locator('body').innerText()).replace(/\\s+/g, ' ')
-        const dutchLeaks = [
-          'Acties met prioriteit',
-          'Live werkuren, check-in/out, pauzes, operationele waarschuwingen en goedkeuringen.',
-          'Controleer en corrigeer geregistreerde tijden. Elke correctie blijft auditbaar.',
-          'Beheer events, templates, briefing, documenten, readiness, afsluiting en archief.',
-          'Beheer werkplaatsen en shifts en open inventaris, inkom/guestlist, taken, briefing en sales per werkplek.',
-        ].filter(value => rendered.includes(value))
-        if (dutchLeaks.length) throw new Error(`runtime i18n leak for ${locale}: ${dutchLeaks.join(' | ')}`)
-      }
+      // Runtime i18n regression on the authenticated landing page.
+      await assertRuntimeLocale(page, locale, bot, page.url())
 
       // Smoke the real protected workflow surfaces with the same authenticated
       // browser context. The SQL full-event suite separately performs the
@@ -143,6 +143,8 @@ try {
         // the explicit acknowledgement proof runs.
         if (index === 2 && route === '/briefings') continue
         await assertProtectedRoute(context, route, bot)
+        await page.goto(`${baseUrl}${route}`, { waitUntil: 'networkidle', timeout: 45000 })
+        if (!page.url().includes('/login')) await assertRuntimeLocale(page, locale, bot, route)
       }
 
       // One staff bot performs a real browser mutation against the isolated
