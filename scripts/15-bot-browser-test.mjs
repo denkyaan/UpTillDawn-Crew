@@ -482,12 +482,19 @@ try {
       await tsReviewer.page.waitForLoadState('networkidle',{timeout:45000})
     }finally{await tsReviewer.context.close()}
 
+    const approvedTs=await lifecycleAdmin.from('timesheets').select('status').eq('id',submitted.data.id).maybeSingle()
+    if(approvedTs.error||approvedTs.data?.status!=='approved')throw new Error(`Responsible approval did not persist: ${approvedTs.error?.message||approvedTs.data?.status||'missing'}`)
+
     const adminTs=await loginLifecycle('admin',0)
     try{
       await adminTs.page.goto(`${baseUrl}/timesheets?event=00000000-0000-4000-8000-00000000e2e1`,{waitUntil:'networkidle',timeout:45000})
       const row=adminTs.page.locator(`[data-timesheet-id="${submitted.data.id}"]`)
       const lock=row.locator('[data-action="timesheet-lock"]')
-      if(await lock.count()!==1)throw new Error('Admin timesheet lock action missing after approval')
+      if(await lock.count()!==1){
+        const rowText=await row.innerText().catch(()=>'<row missing>')
+        const body=(await adminTs.page.locator('body').innerText()).replace(/\s+/g,' ').slice(0,1200)
+        throw new Error(`Admin timesheet lock action missing after persisted approval; row=${rowText}; page=${body}`)
+      }
       await lock.click()
       await adminTs.page.waitForLoadState('networkidle',{timeout:45000})
     }finally{await adminTs.context.close()}
