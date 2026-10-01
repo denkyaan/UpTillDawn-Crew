@@ -502,8 +502,15 @@ try {
         const body=(await adminTs.page.locator('body').innerText()).replace(/\s+/g,' ').slice(0,1200)
         throw new Error(`Admin timesheet lock action missing after persisted approval; row=${rowText}; page=${body}`)
       }
-      await lock.click()
-      await adminTs.page.waitForLoadState('networkidle',{timeout:45000})
+      const [lockResponse]=await Promise.all([
+        adminTs.page.waitForResponse(r=>r.request().method()==='POST'&&r.url().includes('/rpc/upt_lock_timesheet'),{timeout:30000}),
+        lock.click(),
+      ])
+      if(!lockResponse.ok()){
+        const body=await lockResponse.text()
+        throw new Error(`Admin timesheet lock RPC failed HTTP ${lockResponse.status()}: ${body.slice(0,700)}`)
+      }
+      await adminTs.page.waitForLoadState('networkidle',{timeout:45000}).catch(()=>{})
     }finally{await adminTs.context.close()}
     const locked=await lifecycleAdmin.from('timesheets').select('status').eq('id',submitted.data.id).maybeSingle()
     if(locked.error||locked.data?.status!=='locked')throw new Error('timesheet did not reach locked state')
