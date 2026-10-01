@@ -174,8 +174,13 @@ try {
         }
         await page.reload({ waitUntil: 'networkidle', timeout: 45000 })
         const persistedBriefing = page.locator('article').filter({ hasText: 'E2E Entrance Briefing' }).first()
-        if (!(await persistedBriefing.getByText('INSTRUCTIE GELEZEN', { exact: true }).isVisible())) {
-          throw new Error('briefing acknowledgement did not persist after reload')
+        const persistedAck = persistedBriefing.getByText('INSTRUCTIE GELEZEN', { exact: true })
+        if (!(await persistedAck.isVisible())) {
+          // The database persistence is asserted independently by CI immediately
+          // after this browser run. Keep the UI failure diagnostic-rich instead
+          // of silently accepting a stale/readback mismatch.
+          const bodyText = (await persistedBriefing.textContent()) || ''
+          throw new Error(`briefing acknowledgement UI readback missing after reload: ${bodyText.slice(0, 240)}`)
         }
 
         await page.goto(`${baseUrl}/guestlist?event=00000000-0000-4000-8000-00000000e2e1`, {
