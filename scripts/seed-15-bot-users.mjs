@@ -176,7 +176,7 @@ const { error: taskError } = await supabase.from('tasks').upsert({
 }, { onConflict: 'id' })
 if (taskError) throw taskError
 const { error: assignmentError } = await supabase.from('task_assignments').upsert({
-  id: assignmentId, task_id: taskId, user_id: staff.userId, assigned_by: responsible.userId, status: 'not_started', confirmed_at: null,
+  id: assignmentId, task_id: taskId, user_id: staff.userId, assigned_by: responsible.userId, status: 'NOT STARTED', confirmed_at: null,
 }, { onConflict: 'id' })
 if (assignmentError) throw assignmentError
 
