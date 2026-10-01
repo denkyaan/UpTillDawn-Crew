@@ -146,6 +146,42 @@ jobs:
       - name: Run 15 concurrent authenticated browser bots
         run: node scripts/15-bot-browser-test.mjs
 
+      - name: Full application surface inventory gate
+        run: |
+          set -euo pipefail
+          node --input-type=module <<'NODE'
+          import { readdirSync, readFileSync } from 'node:fs'
+          import { join } from 'node:path'
+
+          const walk=(dir)=>readdirSync(dir,{withFileTypes:true}).flatMap(e=>e.isDirectory()?walk(join(dir,e.name)):[join(dir,e.name)])
+          const routes=walk('app').filter(p=>/\/page\.tsx$/.test(p))
+          const apis=walk('app/api').filter(p=>/\/route\.ts$/.test(p))
+          const actions=walk('lib/actions').filter(p=>/\.ts$/.test(p))
+          const sql=walk('tests/sql').filter(p=>/\.sql$/.test(p))
+          const tests=walk('tests').filter(p=>/\.test\.mjs$/.test(p))
+          const browser=readFileSync('scripts/15-bot-browser-test.mjs','utf8')
+          const ci=readFileSync('.github/workflows/ci.yml','utf8')
+
+          const requiredRoutes=['events','workplaces','briefings','inventory','guestlist','chat','operations','tasks','timesheets','incidents','notifications','personnel','sales','settings','exports','audit']
+          const missingRoutes=requiredRoutes.filter(r=>!routes.some(p=>p.includes('/'+r+'/')||p.endsWith('/'+r+'/page.tsx')))
+          const requiredSql=['privilege-matrix','release-access-matrix','storage-security','queued-upload-security','timesheet-lifecycle','qr-attendance-workflow','chat-lifecycle']
+          const missingSql=requiredSql.filter(n=>!sql.some(p=>p.endsWith(n+'.sql')))
+          const requiredTestThemes=['auth','inventory','guestlist','incident','offline','pwa','push','realtime','god','archive','workplace','timesheet','security']
+          const missingThemes=requiredTestThemes.filter(n=>!tests.some(p=>p.toLowerCase().includes(n)))
+          const requiredBrowserProof=['availability','briefing','guestlist','task','inventory','chat','incident','timesheet','closure']
+          const missingBrowser=requiredBrowserProof.filter(n=>!browser.toLowerCase().includes(n))
+
+          console.log(JSON.stringify({routes:routes.length,apis:apis.length,actionModules:actions.length,sqlSuites:sql.length,nodeSuites:tests.length},null,2))
+          if(missingRoutes.length||missingSql.length||missingThemes.length||missingBrowser.length){
+            console.error({missingRoutes,missingSql,missingThemes,missingBrowser})
+            process.exit(1)
+          }
+          if(!ci.includes('npm audit --audit-level=high')||!ci.includes('npm run typecheck')||!ci.includes('Wrangler deployment dry-run')){
+            throw new Error('release static/dependency/deployment gates incomplete')
+          }
+          console.log('PASS: application surface inventory is represented across browser, Node and SQL release gates')
+          NODE
+
       - name: Verify browser action persistence
         run: |
           set -euo pipefail
