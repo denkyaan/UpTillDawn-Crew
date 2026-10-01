@@ -273,10 +273,16 @@ try {
         const confirmTask = taskCard.locator('[data-action="task-confirm"]')
         if (await confirmTask.count() !== 1) throw new Error('task confirmation action missing')
         const [taskConfirmResponse] = await Promise.all([
-          page.waitForResponse(r => r.request().method()==='POST' && r.url().includes('/tasks'), {timeout:30000}),
+          page.waitForResponse(
+            r => r.request().method()==='POST' && r.url().includes('/rest/v1/rpc/upt_confirm_task_assignment'),
+            { timeout: 30000 },
+          ),
           confirmTask.click(),
         ])
-        if (!taskConfirmResponse.ok()) throw new Error(`task confirmation failed HTTP ${taskConfirmResponse.status()}`)
+        if (!taskConfirmResponse.ok()) {
+          const body = await taskConfirmResponse.text()
+          throw new Error(`task confirmation RPC failed HTTP ${taskConfirmResponse.status()}: ${body.slice(0, 400)}`)
+        }
         await page.reload({waitUntil:'networkidle',timeout:45000})
         const persistedTask = page.locator('article').filter({ hasText: 'E2E Entrance Task' }).first()
         if (await persistedTask.locator('[data-action="task-confirm"]').count() !== 0) throw new Error('task confirmation did not persist')
