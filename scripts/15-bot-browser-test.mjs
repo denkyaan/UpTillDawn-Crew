@@ -289,7 +289,10 @@ try {
 
         await page.goto(`${baseUrl}/inventory?event=00000000-0000-4000-8000-00000000e2e1&workplace=00000000-0000-4000-8000-00000000e2e2`, {waitUntil:'networkidle',timeout:45000})
         const inventoryCard = page.locator('article').filter({hasText:'E2E Radio'}).first()
-        if (await inventoryCard.count() !== 1) throw new Error('inventory lifecycle fixture missing')
+        if (await inventoryCard.count() !== 1) {
+          const pageText = (await page.locator('body').innerText()).replace(/\s+/g,' ').slice(0,1200)
+          throw new Error(`inventory lifecycle fixture missing; page=${pageText}`)
+        }
         // Staff may inspect inventory, but condition reporting remains Responsible-only.
         if (await inventoryCard.locator('[data-action="inventory-condition-opening"]').count() !== 0) throw new Error('staff unexpectedly received responsible inventory mutation control')
 
