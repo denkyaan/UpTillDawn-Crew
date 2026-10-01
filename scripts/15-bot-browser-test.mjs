@@ -404,7 +404,90 @@ try {
     const active=await lifecycleAdmin.from('work_sessions').select('id').eq('user_id',latestCheckIn.data.user_id).eq('event_id','00000000-0000-4000-8000-00000000e2e1').is('ended_at',null)
     // Browser UI is the authority; the service-role read only asserts persistence.
     if(active.error||!active.data?.length)throw new Error('approved browser check-in did not create an active work session')
-    console.log(`PASS cross-role browser lifecycle: Staff check-in request -> routed reviewer approval -> active work session`)
+    // Work/break lifecycle through the Staff operations UI.
+    const staffWork=await loginLifecycle('staff',2)
+    try{
+      await staffWork.page.goto(`${baseUrl}/operations?event=00000000-0000-4000-8000-00000000e2e1`,{waitUntil:'networkidle',timeout:45000})
+      const startBreak=staffWork.page.locator('[data-action="break-start"]')
+      if(await startBreak.count()!==1)throw new Error('break-start action missing for active Staff work session')
+      await startBreak.click()
+      await staffWork.page.waitForTimeout(1200)
+      await staffWork.page.reload({waitUntil:'networkidle',timeout:45000})
+      const stopBreak=staffWork.page.locator('[data-action="break-stop"]')
+      if(await stopBreak.count()!==1)throw new Error('break-stop action missing after break start')
+      await stopBreak.click()
+      await staffWork.page.waitForTimeout(1200)
+      await staffWork.page.reload({waitUntil:'networkidle',timeout:45000})
+      if(await staffWork.page.locator('[data-action="break-start"]').count()!==1)throw new Error('work did not resume after break stop')
+
+      await staffWork.page.goto(`${baseUrl}/qr`,{waitUntil:'networkidle',timeout:45000})
+      const yesStop=staffWork.page.locator('[data-action="qr-contact-yes"]')
+      const remoteStop=staffWork.page.locator('[data-action="qr-remote-request"]')
+      const requestButton=await yesStop.count()===1?yesStop:remoteStop
+      if(await requestButton.count()!==1){
+        const body=(await staffWork.page.locator('body').innerText()).replace(/\s+/g,' ').slice(0,900)
+        throw new Error(`checkout request action missing: ${body}`)
+      }
+      const [stopResponse]=await Promise.all([
+        staffWork.page.waitForResponse(r=>r.request().method()==='POST'&&r.url().includes('/rpc/upt_qr_request'),{timeout:30000}),
+        requestButton.click(),
+      ])
+      if(!stopResponse.ok())throw new Error(`checkout request failed HTTP ${stopResponse.status()}`)
+    }finally{await staffWork.context.close()}
+
+    const pendingOut=await lifecycleAdmin.from('check_outs').select('reviewer_kind').eq('event_id','00000000-0000-4000-8000-00000000e2e1').eq('status','pending').order('requested_at',{ascending:false}).limit(1).maybeSingle()
+    if(pendingOut.error||!pendingOut.data?.reviewer_kind)throw new Error('browser checkout request was not persisted')
+    const outRole=pendingOut.data.reviewer_kind==='admin'?'admin':'responsible'
+    const outReviewer=await loginLifecycle(outRole,outRole==='admin'?0:1)
+    try{
+      await outReviewer.page.goto(`${baseUrl}/operations?event=00000000-0000-4000-8000-00000000e2e1&workplace=00000000-0000-4000-8000-00000000e2e2`,{waitUntil:'networkidle',timeout:45000})
+      const approveOut=outReviewer.page.locator('[data-action="out-approve"]').first()
+      if(await approveOut.count()!==1)throw new Error(`${outRole} checkout approval missing`)
+      await Promise.all([
+        outReviewer.page.waitForResponse(r=>r.request().method()==='POST'&&r.url().includes('/rpc/upt_decide_check_out'),{timeout:30000}),
+        approveOut.click(),
+      ])
+    }finally{await outReviewer.context.close()}
+
+    const ended=await lifecycleAdmin.from('work_sessions').select('ended_at').eq('user_id',latestCheckIn.data.user_id).eq('event_id','00000000-0000-4000-8000-00000000e2e1').not('ended_at','is',null).limit(1)
+    if(ended.error||!ended.data?.length)throw new Error('approved checkout did not end work session')
+
+    // Timesheet lifecycle: Staff submit -> routed manager approve -> Admin lock.
+    const staffTs=await loginLifecycle('staff',2)
+    try{
+      await staffTs.page.goto(`${baseUrl}/timesheets?event=00000000-0000-4000-8000-00000000e2e1`,{waitUntil:'networkidle',timeout:45000})
+      const submit=staffTs.page.locator('[data-action="timesheet-submit"]')
+      if(await submit.count()!==1)throw new Error('timesheet submit action missing')
+      await submit.click()
+      await staffTs.page.waitForLoadState('networkidle',{timeout:45000})
+    }finally{await staffTs.context.close()}
+
+    const submitted=await lifecycleAdmin.from('timesheets').select('id,status').eq('event_id','00000000-0000-4000-8000-00000000e2e1').eq('user_id',latestCheckIn.data.user_id).maybeSingle()
+    if(submitted.error||submitted.data?.status!=='submitted')throw new Error('Staff timesheet was not submitted')
+
+    const tsReviewer=await loginLifecycle('responsible',1)
+    try{
+      await tsReviewer.page.goto(`${baseUrl}/timesheets?event=00000000-0000-4000-8000-00000000e2e1`,{waitUntil:'networkidle',timeout:45000})
+      const row=tsReviewer.page.locator(`[data-timesheet-id="${submitted.data.id}"]`)
+      const approveTs=row.locator('[data-action="timesheet-approve"]')
+      if(await approveTs.count()!==1)throw new Error('Responsible timesheet approval missing for own workplace Staff')
+      await approveTs.click()
+      await tsReviewer.page.waitForLoadState('networkidle',{timeout:45000})
+    }finally{await tsReviewer.context.close()}
+
+    const adminTs=await loginLifecycle('admin',0)
+    try{
+      await adminTs.page.goto(`${baseUrl}/timesheets?event=00000000-0000-4000-8000-00000000e2e1`,{waitUntil:'networkidle',timeout:45000})
+      const row=adminTs.page.locator(`[data-timesheet-id="${submitted.data.id}"]`)
+      const lock=row.locator('[data-action="timesheet-lock"]')
+      if(await lock.count()!==1)throw new Error('Admin timesheet lock action missing after approval')
+      await lock.click()
+      await adminTs.page.waitForLoadState('networkidle',{timeout:45000})
+    }finally{await adminTs.context.close()}
+    const locked=await lifecycleAdmin.from('timesheets').select('status').eq('id',submitted.data.id).maybeSingle()
+    if(locked.error||locked.data?.status!=='locked')throw new Error('timesheet did not reach locked state')
+
+    console.log('PASS cross-role browser lifecycle: check-in -> approval -> work -> break/resume -> checkout -> timesheet submit/approve/lock')
   }catch(error){
     failures.push(`cross-role-lifecycle: ${error instanceof Error?error.message:String(error)}`)
   }
