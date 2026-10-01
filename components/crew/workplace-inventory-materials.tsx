@@ -39,7 +39,7 @@ function ConditionForm({
     </select>
     <input name="quantity" type="number" min="1" max={Math.max(1,item.available_quantity)} defaultValue="1" required disabled={empty} aria-label="Aantal afwijkend" className="rounded-lg border bg-background p-2"/>
     <input name="notes" maxLength={1000} disabled={empty} placeholder="Notitie (optioneel)" className="min-w-0 rounded-lg border bg-background p-2"/>
-    <button disabled={empty} className="rounded-lg border px-4 py-2 font-bold disabled:opacity-40">MELDEN</button>
+    <button data-action={`inventory-condition-${phase}`} disabled={empty} className="rounded-lg border px-4 py-2 font-bold disabled:opacity-40">MELDEN</button>
   </form>
 }
 
