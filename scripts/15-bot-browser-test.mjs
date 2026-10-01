@@ -191,7 +191,12 @@ try {
         if (await checkInButton.count() !== 1) throw new Error('guestlist check-in action missing')
         if (!(await checkInButton.isEnabled())) throw new Error('guestlist check-in action unexpectedly disabled')
         await checkInButton.click()
-        await guest.getByText('1/2', { exact: true }).waitFor({ state: 'visible', timeout: 30000 })
+        try {
+          await guest.getByText('1/2', { exact: true }).waitFor({ state: 'visible', timeout: 10000 })
+        } catch {
+          const guestText = (await guest.textContent()) || ''
+          throw new Error(`guestlist check-in did not reach 1/2: ${guestText.slice(0, 320)}`)
+        }
         await page.reload({ waitUntil: 'networkidle', timeout: 45000 })
         const persistedGuest = page.locator('article').filter({ hasText: 'E2E Guest' }).first()
         if (!(await persistedGuest.getByText('1/2', { exact: true }).isVisible())) {
