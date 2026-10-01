@@ -112,7 +112,7 @@ export function GuestlistEntranceClient({
         last_checked_in_at:new Date().toISOString(),
       }:item))
     }catch(error){
-      setMessage(error instanceof Error?error.message:'Guestlist check-in mislukt.')
+      setMessage(error instanceof Error?error.message:'')
     }finally{
       setPendingEntry(null)
     }
