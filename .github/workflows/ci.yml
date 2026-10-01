@@ -149,7 +149,7 @@ jobs:
           count="$(psql "$BOT_DB_URL" -v ON_ERROR_STOP=1 -Atc "SELECT count(*) FROM public.event_availability ea JOIN public.profiles p ON p.id=ea.user_id WHERE ea.event_id='00000000-0000-4000-8000-00000000e2e1'::uuid AND p.full_name='E2E STAFF 03' AND ea.response='can' AND ea.setup_available=true AND ea.breakdown_available=true;")"
           test "$count" = "1"
           echo "PASS: real browser availability action persisted under staff RLS"
-          briefing_count="$(psql "$BOT_DB_URL" -v ON_ERROR_STOP=1 -Atc "SELECT count(*) FROM public.briefing_acknowledgements ba JOIN public.profiles p ON p.id=ba.user_id WHERE ba.briefing_id='00000000-0000-4000-8000-00000000e2e3'::uuid AND p.full_name='E2E STAFF 03' AND ba.version=1;")"
+          briefing_count="$(psql "$BOT_DB_URL" -v ON_ERROR_STOP=1 -Atc "SELECT count(*) FROM public.briefing_acknowledgements ba JOIN auth.users u ON u.id=ba.user_id WHERE ba.briefing_id='00000000-0000-4000-8000-00000000e2e3'::uuid AND lower(u.email)=lower('bot-03-staff-en@bots.uptilldawn.test') AND ba.version=1;")"
           test "$briefing_count" = "1"
           echo "PASS: real browser briefing acknowledgement persisted under staff RLS"
           guest_count="$(psql "$BOT_DB_URL" -v ON_ERROR_STOP=1 -Atc "SELECT count(*) FROM public.event_guestlist_entries WHERE id='00000000-0000-4000-8000-00000000e2e5'::uuid AND spots_checked_in=1;")"
