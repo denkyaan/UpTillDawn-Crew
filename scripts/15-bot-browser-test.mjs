@@ -20,6 +20,7 @@ const viewports = [
   { width: 1440, height: 900 },
 ]
 const failures = []
+const lifecycleAdmin = createClient(supabaseUrl, serviceRoleKey, { auth: { persistSession: false, autoRefreshToken: false } })
 
 const roleSmokeRoutes = {
   admin: ['/events', '/workplaces', '/briefings', '/inventory', '/guestlist', '/chat', '/operations'],
@@ -258,7 +259,6 @@ try {
 
         // Intake is complete. Advance only the isolated E2E event into its
         // operational phase so production availability/task gates stay intact.
-        const lifecycleAdmin = createClient(supabaseUrl, serviceRoleKey, { auth: { persistSession: false, autoRefreshToken: false } })
         const activeStart = new Date(Date.now() - 60 * 60 * 1000).toISOString()
         const activeEnd = new Date(Date.now() + 8 * 60 * 60 * 1000).toISOString()
         const { error: phaseError } = await lifecycleAdmin.from('events').update({
@@ -374,7 +374,9 @@ try {
       if(!approveResponse.ok())throw new Error(`responsible start approval failed HTTP ${approveResponse.status()}`)
     }finally{await responsible.context.close()}
 
-    const active=await lifecycleAdmin.from('work_sessions').select('id').eq('user_id',(await lifecycleAdmin.from('profiles').select('id').eq('email','bot-03-staff-en@bots.uptilldawn.test').maybeSingle()).data?.id||'').is('ended_at',null)
+    const latestCheckIn=await lifecycleAdmin.from('check_ins').select('user_id').eq('event_id','00000000-0000-4000-8000-00000000e2e1').eq('status','approved').order('requested_at',{ascending:false}).limit(1).maybeSingle()
+    if(latestCheckIn.error||!latestCheckIn.data?.user_id)throw new Error('approved browser check-in was not persisted')
+    const active=await lifecycleAdmin.from('work_sessions').select('id').eq('user_id',latestCheckIn.data.user_id).eq('event_id','00000000-0000-4000-8000-00000000e2e1').is('ended_at',null)
     // Browser UI is the authority; the service-role read only asserts persistence.
     if(active.error||!active.data?.length)throw new Error('approved browser check-in did not create an active work session')
     console.log('PASS cross-role browser lifecycle: Staff check-in request -> Responsible approval -> active work session')
