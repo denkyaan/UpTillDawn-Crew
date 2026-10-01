@@ -188,15 +188,18 @@ const { error: inventoryError } = await supabase.from('inventory_items').upsert(
 }, { onConflict: 'id' })
 if (inventoryError) throw inventoryError
 
-const channelId = '00000000-0000-4000-8000-00000000e2e9'
-const { error: channelError } = await supabase.from('chat_channels').upsert({
-  id: channelId, event_id: eventId, workplace_id: null, kind: 'event', name: 'E2E Event Chat',
-}, { onConflict: 'id' })
-if (channelError) throw channelError
+const { data: eventChannel, error: eventChannelError } = await supabase
+  .from('chat_channels')
+  .select('id')
+  .eq('event_id', eventId)
+  .eq('kind', 'event')
+  .maybeSingle()
+if (eventChannelError) throw eventChannelError
+if (!eventChannel) throw new Error('Expected automatic event chat channel was not created')
 const { error: chatMemberError } = await supabase.from('chat_members').upsert([
-  { channel_id: channelId, user_id: admin.userId },
-  { channel_id: channelId, user_id: responsible.userId },
-  { channel_id: channelId, user_id: staff.userId },
+  { channel_id: eventChannel.id, user_id: admin.userId },
+  { channel_id: eventChannel.id, user_id: responsible.userId },
+  { channel_id: eventChannel.id, user_id: staff.userId },
 ], { onConflict: 'channel_id,user_id' })
 if (chatMemberError) throw chatMemberError
 
