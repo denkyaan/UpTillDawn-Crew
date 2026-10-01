@@ -97,7 +97,7 @@ const { error: workplaceError } = await supabase.from('workplaces').upsert({
 if (workplaceError) throw workplaceError
 const { error: membersError } = await supabase.from('event_members').upsert([
   { event_id: eventId, user_id: responsible.userId, event_role: 'responsible_lead' },
-  { event_id: eventId, user_id: staff.userId, event_role: 'staff' },
+  { event_id: eventId, user_id: staff.userId, event_role: 'employee' },
 ], { onConflict: 'event_id,user_id' })
 if (membersError) throw membersError
 const { error: responsibleError } = await supabase.from('responsible_assignments').insert({
