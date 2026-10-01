@@ -187,9 +187,14 @@ try {
         })
         const guest = page.locator('article').filter({ hasText: 'E2E Guest' }).first()
         if (await guest.count() !== 1) throw new Error('guestlist action fixture missing')
-        const checkInButton = guest.locator('button').filter({ hasText: '+' }).first()
+        const checkInButton = guest.locator('button[data-action="guestlist-check-in"]').first()
         if (await checkInButton.count() !== 1) throw new Error('guestlist check-in action missing')
         if (!(await checkInButton.isEnabled())) throw new Error('guestlist check-in action unexpectedly disabled')
+        // A server-rendered button can be visible/enabled before React has attached
+        // its onClick handler. Wait for hydration by proving a React-managed input responds.
+        const guestSearch = page.locator('input[placeholder]').first()
+        await guestSearch.fill('E2E Guest')
+        await guest.getByText('E2E Guest', { exact: true }).waitFor({ state: 'visible', timeout: 10000 })
         const guestlistRpc = page.waitForResponse(response =>
           response.url().includes('/rest/v1/rpc/upt_guestlist_checkin') && response.request().method() === 'POST',
           { timeout: 15000 },
