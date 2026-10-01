@@ -187,7 +187,7 @@ try {
         })
         const guest = page.locator('article').filter({ hasText: 'E2E Guest' }).first()
         if (await guest.count() !== 1) throw new Error('guestlist action fixture missing')
-        const checkInButton = guest.locator('button').filter({ hasNotText: '2/2' }).first()
+        const checkInButton = guest.locator('button').filter({ hasText: '+' }).first()
         if (await checkInButton.count() !== 1) throw new Error('guestlist check-in action missing')
         if (!(await checkInButton.isEnabled())) throw new Error('guestlist check-in action unexpectedly disabled')
         await checkInButton.click()
