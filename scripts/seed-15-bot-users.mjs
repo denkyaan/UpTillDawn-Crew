@@ -74,7 +74,7 @@ const responsible = created[1]
 const staff = created[2]
 const eventId = '00000000-0000-4000-8000-00000000e2e1'
 const workplaceId = '00000000-0000-4000-8000-00000000e2e2'
-const startsAt = new Date(Date.now() - 60 * 60 * 1000).toISOString()
+const startsAt = new Date(Date.now() + 2 * 60 * 60 * 1000).toISOString()
 const endsAt = new Date(Date.now() + 10 * 60 * 60 * 1000).toISOString()
 const { error: eventError } = await supabase.from('events').upsert({
   id: eventId,
@@ -83,7 +83,7 @@ const { error: eventError } = await supabase.from('events').upsert({
   end_date: endsAt,
   start_at: startsAt,
   end_at: endsAt,
-  status: 'active',
+  status: 'scheduled',
   created_by: admin.userId,
 }, { onConflict: 'id' })
 if (eventError) throw eventError
