@@ -74,7 +74,7 @@ const responsible = created[1]
 const staff = created[2]
 const eventId = '00000000-0000-4000-8000-00000000e2e1'
 const workplaceId = '00000000-0000-4000-8000-00000000e2e2'
-const startsAt = new Date(Date.now() + 2 * 60 * 60 * 1000).toISOString()
+const startsAt = new Date(Date.now() - 60 * 60 * 1000).toISOString()
 const endsAt = new Date(Date.now() + 10 * 60 * 60 * 1000).toISOString()
 const { error: eventError } = await supabase.from('events').upsert({
   id: eventId,
@@ -83,7 +83,7 @@ const { error: eventError } = await supabase.from('events').upsert({
   end_date: endsAt,
   start_at: startsAt,
   end_at: endsAt,
-  status: 'scheduled',
+  status: 'active',
   created_by: admin.userId,
 }, { onConflict: 'id' })
 if (eventError) throw eventError
@@ -167,5 +167,37 @@ const { error: guestError } = await supabase.from('event_guestlist_entries').ups
   created_by: admin.userId,
 }, { onConflict: 'id' })
 if (guestError) throw guestError
+
+const taskId = '00000000-0000-4000-8000-00000000e2e6'
+const assignmentId = '00000000-0000-4000-8000-00000000e2e7'
+const { error: taskError } = await supabase.from('tasks').upsert({
+  id: taskId, event_id: eventId, workplace_id: workplaceId, title: 'E2E Entrance Task',
+  description: 'Strict browser lifecycle task', status: 'open', created_by: responsible.userId,
+}, { onConflict: 'id' })
+if (taskError) throw taskError
+const { error: assignmentError } = await supabase.from('task_assignments').upsert({
+  id: assignmentId, task_id: taskId, user_id: staff.userId, assigned_by: responsible.userId, status: 'not_started', confirmed_at: null,
+}, { onConflict: 'id' })
+if (assignmentError) throw assignmentError
+
+const inventoryId = '00000000-0000-4000-8000-00000000e2e8'
+const { error: inventoryError } = await supabase.from('inventory_items').upsert({
+  id: inventoryId, event_id: eventId, workplace_id: workplaceId, name: 'E2E Radio',
+  category: 'E2E', total_quantity: 3, available_quantity: 3, issued_quantity: 0,
+  damaged_quantity: 0, missing_quantity: 0, item_kind: 'asset', is_active: true, created_by: admin.userId,
+}, { onConflict: 'id' })
+if (inventoryError) throw inventoryError
+
+const channelId = '00000000-0000-4000-8000-00000000e2e9'
+const { error: channelError } = await supabase.from('chat_channels').upsert({
+  id: channelId, event_id: eventId, workplace_id: null, kind: 'event', name: 'E2E Event Chat',
+}, { onConflict: 'id' })
+if (channelError) throw channelError
+const { error: chatMemberError } = await supabase.from('chat_members').upsert([
+  { channel_id: channelId, user_id: admin.userId },
+  { channel_id: channelId, user_id: responsible.userId },
+  { channel_id: channelId, user_id: staff.userId },
+], { onConflict: 'channel_id,user_id' })
+if (chatMemberError) throw chatMemberError
 
 console.log('Seeded browser-action event', eventId)
