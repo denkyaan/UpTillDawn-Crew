@@ -137,8 +137,8 @@ export default function QrShiftRequest() {
       <p>Vraag de verantwoordelijke om je {result.kind === 'stop' ? 'stopuren' : 'starturen'} te behandelen.</p>
       <p className="font-bold">Heb je je kunnen wenden tot de verantwoordelijke?</p>
       <div className="grid grid-cols-2 gap-3">
-        <button onClick={() => perform(true)} className="rounded-xl bg-violet-600 p-4 font-bold text-white">JA</button>
-        <button onClick={() => perform(false)} className="rounded-xl border p-4 font-bold">NEE</button>
+        <button data-action="qr-contact-yes" onClick={() => perform(true)} className="rounded-xl bg-violet-600 p-4 font-bold text-white">JA</button>
+        <button data-action="qr-contact-no" onClick={() => perform(false)} className="rounded-xl border p-4 font-bold">NEE</button>
       </div>
     </section>}
 
@@ -150,6 +150,7 @@ export default function QrShiftRequest() {
           : 'Je kon je niet wenden tot de verantwoordelijke. De remote aanvraag wordt door de verantwoordelijke behandeld.'}
       </p>
       <button
+        data-action="qr-remote-request"
         onClick={() => perform(false, true)}
         className="w-full rounded-xl bg-violet-600 p-4 font-bold text-white"
       >
