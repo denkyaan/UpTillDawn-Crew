@@ -71,14 +71,26 @@ export default async function InventoryPage({searchParams}:{searchParams?:Promis
       ...(responsibleRows||[]).map(row=>row.workplace_id),
     ])]
     if(workplaceIds.length){
-      const {data,error}=await s
+      const {data:workplaceRows,error:workplaceError}=await s
         .from('workplaces')
-        .select('id,event_id,name,is_active,events(id,name,status,end_at)')
+        .select('id,event_id,name,is_active')
         .in('id',workplaceIds)
         .eq('is_active',true)
         .order('name')
-      workplaceLoadError=Boolean(error)
-      workplaces=(data||[]) as Workplace[]
+      workplaceLoadError=Boolean(workplaceError)
+      if(!workplaceError&&workplaceRows?.length){
+        const eventIds=[...new Set(workplaceRows.map(row=>row.event_id))]
+        const {data:eventRows,error:eventError}=await s
+          .from('events')
+          .select('id,name,status,end_at')
+          .in('id',eventIds)
+        workplaceLoadError=Boolean(eventError)
+        const eventsById=new Map((eventRows||[]).map(event=>[event.id,event]))
+        workplaces=workplaceRows.map(row=>({
+          ...row,
+          events:eventsById.get(row.event_id)||null,
+        })) as Workplace[]
+      }
     }
   }
 
