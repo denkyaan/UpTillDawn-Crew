@@ -41,6 +41,7 @@ export function TaskControls({
         Wacht op bevestiging
       </p>
       <button
+        data-action="task-confirm"
         disabled={busy}
         className="rounded-lg bg-violet-600 p-3 font-bold text-white disabled:opacity-50"
         onClick={confirm}
@@ -54,6 +55,7 @@ export function TaskControls({
   return <div className="mt-3 flex flex-wrap gap-2">
     {statuses.map(status => <button
       key={status.value}
+      data-action={`task-status-${status.value.toLowerCase().replaceAll(' ','-')}`}
       disabled={busy}
       className="rounded-lg border p-3"
       onClick={async () => {
