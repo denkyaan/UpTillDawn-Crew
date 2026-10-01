@@ -190,12 +190,22 @@ try {
         const checkInButton = guest.locator('button').filter({ hasText: '+' }).first()
         if (await checkInButton.count() !== 1) throw new Error('guestlist check-in action missing')
         if (!(await checkInButton.isEnabled())) throw new Error('guestlist check-in action unexpectedly disabled')
+        const guestlistRpc = page.waitForResponse(response =>
+          response.url().includes('/rest/v1/rpc/upt_guestlist_checkin') && response.request().method() === 'POST',
+          { timeout: 15000 },
+        )
         await checkInButton.click()
+        const guestlistResponse = await guestlistRpc
+        const guestlistBody = await guestlistResponse.text()
+        if (!guestlistResponse.ok()) {
+          throw new Error(`guestlist RPC failed ${guestlistResponse.status()}: ${guestlistBody.slice(0, 500)}`)
+        }
         try {
           await guest.getByText('1/2', { exact: true }).waitFor({ state: 'visible', timeout: 10000 })
         } catch {
           const guestText = (await guest.textContent()) || ''
-          throw new Error(`guestlist check-in did not reach 1/2: ${guestText.slice(0, 320)}`)
+          const pageText = (await page.locator('body').textContent()) || ''
+          throw new Error(`guestlist RPC succeeded but UI did not reach 1/2; rpc=${guestlistBody.slice(0, 240)} guest=${guestText.slice(0, 240)} page=${pageText.slice(-400)}`)
         }
         await page.reload({ waitUntil: 'networkidle', timeout: 45000 })
         const persistedGuest = page.locator('article').filter({ hasText: 'E2E Guest' }).first()
