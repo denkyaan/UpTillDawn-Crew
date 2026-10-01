@@ -5,8 +5,9 @@ const baseUrl = process.env.BOT_TEST_BASE_URL || 'http://127.0.0.1:3000'
 const testPassword = process.env.BOT_TEST_PASSWORD
 const supabaseUrl = process.env.BOT_SUPABASE_URL || process.env.NEXT_PUBLIC_SUPABASE_URL
 const serviceRoleKey = process.env.BOT_SERVICE_ROLE_KEY
-if (!testPassword || !supabaseUrl || !serviceRoleKey) {
-  console.error('BOT_TEST_PASSWORD, BOT_SUPABASE_URL and BOT_SERVICE_ROLE_KEY are required')
+const anonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
+if (!testPassword || !supabaseUrl || !serviceRoleKey || !anonKey) {
+  console.error('BOT_TEST_PASSWORD, BOT_SUPABASE_URL, BOT_SERVICE_ROLE_KEY and NEXT_PUBLIC_SUPABASE_ANON_KEY are required')
   process.exit(1)
 }
 
