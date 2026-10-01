@@ -215,6 +215,7 @@ jobs:
             tests/sql/operational-security.sql
             tests/sql/chat-lifecycle.sql
             tests/sql/queued-upload-security.sql
+            tests/sql/timesheet-lifecycle.sql
             tests/sql/release-access-matrix.sql
             tests/sql/privilege-matrix.sql
             tests/sql/responsible-read-scope.sql
@@ -233,6 +234,7 @@ jobs:
             echo "## Full event lifecycle gate"
             echo "- 15-actor event/workplace/shift/availability: PASS"
             echo "- QR check-in/check-out + approval: PASS"
+            echo "- Timesheet submit/reject/resubmit/approve/lock + audit: PASS"
             echo "- Briefing acknowledgement + governed break lifecycle: PASS"
             echo "- Incident/offline security semantics: PASS"
             echo "- Chat lifecycle + 3-day retention window: PASS"
