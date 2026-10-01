@@ -182,6 +182,7 @@ export function GuestlistEntranceClient({
                   onClick={()=>void adjust(entry,1)}
                   className="h-11 w-11 rounded-xl bg-emerald-700 text-xl font-black text-white disabled:opacity-30"
                   aria-label="Eén spot inchecken"
+                  data-action="guestlist-check-in"
                 >+</button>
               </div>
             </div>
