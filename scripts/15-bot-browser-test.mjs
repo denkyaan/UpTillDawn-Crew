@@ -532,10 +532,15 @@ try {
     try{
       await respInv.page.goto(`${baseUrl}/inventory?event=00000000-0000-4000-8000-00000000e2e1&workplace=00000000-0000-4000-8000-00000000e2e2`,{waitUntil:'networkidle',timeout:45000})
       for(const phase of ['opening','closing']){
-        const button=respInv.page.locator(`[data-action="inventory-condition-${phase}"]`).first()
-        if(await button.count()!==1)throw new Error(`Responsible inventory ${phase} control missing`)
+        const details=respInv.page.locator('details').filter({has:respInv.page.locator(`[data-action="inventory-condition-${phase}"]`)}).first()
+        if(await details.count()!==1)throw new Error(`Responsible inventory ${phase} section missing`)
+        await details.locator('summary').click()
+        const button=details.locator(`[data-action="inventory-condition-${phase}"]`).first()
         const form=button.locator('xpath=ancestor::form[1]')
-        await form.locator('select[name="condition"]').selectOption(phase==='opening'?'missing':'damaged')
+        const condition=form.locator('select[name="condition"]')
+        await condition.waitFor({state:'visible',timeout:10000})
+        if(await condition.isDisabled())throw new Error(`Responsible inventory ${phase} control unexpectedly disabled`)
+        await condition.selectOption(phase==='opening'?'missing':'damaged')
         await form.locator('input[name="quantity"]').fill('1')
         await form.locator('input[name="notes"]').fill(`E2E ${phase} condition`)
         await button.click()
