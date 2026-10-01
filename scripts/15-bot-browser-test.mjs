@@ -116,6 +116,11 @@ try {
       // browser context. The SQL full-event suite separately performs the
       // transactional 15-actor event/workplace/shift/availability simulation.
       for (const route of roleSmokeRoutes[role]) {
+        // bot03 owns the strict briefing lifecycle fixture below. Do not visit
+        // /briefings in the generic smoke pass first: assertProtectedRoute uses
+        // a separate page/context surface and can exercise form semantics before
+        // the explicit acknowledgement proof runs.
+        if (index === 2 && route === '/briefings') continue
         await assertProtectedRoute(context, route, bot)
       }
 
