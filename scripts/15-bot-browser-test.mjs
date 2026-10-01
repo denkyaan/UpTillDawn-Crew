@@ -195,12 +195,41 @@ try {
         const guestSearch = page.locator('input[placeholder]').first()
         await guestSearch.fill('E2E Guest')
         await guest.getByText('E2E Guest', { exact: true }).waitFor({ state: 'visible', timeout: 10000 })
+        const guestlistTrace = []
+        const recordRequest = request => {
+          if (request.method() === 'POST') guestlistTrace.push(`REQ ${request.method()} ${request.url()}`)
+        }
+        const recordResponse = response => {
+          if (response.request().method() === 'POST') guestlistTrace.push(`RES ${response.status()} ${response.url()}`)
+        }
+        const recordConsole = message => guestlistTrace.push(`CONSOLE ${message.type()} ${message.text()}`)
+        const recordPageError = error => guestlistTrace.push(`PAGEERROR ${error.message}`)
+        page.on('request', recordRequest)
+        page.on('response', recordResponse)
+        page.on('console', recordConsole)
+        page.on('pageerror', recordPageError)
         const guestlistRpc = page.waitForResponse(response =>
-          response.url().includes('/rest/v1/rpc/upt_guestlist_checkin') && response.request().method() === 'POST',
+          response.request().method() === 'POST' &&
+          response.url().includes('/rpc/upt_guestlist_checkin'),
           { timeout: 15000 },
         )
         await checkInButton.click()
-        const guestlistResponse = await guestlistRpc
+        let guestlistResponse
+        try {
+          guestlistResponse = await guestlistRpc
+        } catch (error) {
+          const buttonState = await checkInButton.evaluate(button => ({
+            disabled: button.disabled,
+            action: button.getAttribute('data-action'),
+            text: button.textContent,
+          }))
+          throw new Error(`guestlist RPC not observed after click; button=${JSON.stringify(buttonState)} trace=${guestlistTrace.slice(-20).join(' | ')} original=${error instanceof Error ? error.message : String(error)}`)
+        } finally {
+          page.off('request', recordRequest)
+          page.off('response', recordResponse)
+          page.off('console', recordConsole)
+          page.off('pageerror', recordPageError)
+        }
         const guestlistBody = await guestlistResponse.text()
         if (!guestlistResponse.ok()) {
           throw new Error(`guestlist RPC failed ${guestlistResponse.status()}: ${guestlistBody.slice(0, 500)}`)
