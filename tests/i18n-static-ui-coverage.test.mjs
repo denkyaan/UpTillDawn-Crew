@@ -5,7 +5,7 @@ import path from 'node:path'
 import * as ts from 'typescript'
 
 const roots=['app','components']
-const visibleAttributes=new Set(['placeholder','aria-label','aria-description','title','alt'])
+const visibleAttributes=new Set(['placeholder','aria-label','aria-description','title','alt','description','label','subtitle','helperText','helpText','emptyText','message','caption','hint','text'])
 const runtimeSetters=new Set(['setStatus','setError','setMessage'])
 const untranslatedAllowed=new Set([
   'UP TILL DAWN',
@@ -89,13 +89,19 @@ test('every static user-facing UI string has NL/FR/EN/DE coverage', async () => 
     readFile('lib/ui-translation-catalog-god.ts','utf8'),
   ])
   const fourLanguageKeys=new Set()
-  for(const source of [extension,complete,appCatalog,appExtraCatalog,crewCatalog,crewExtraCatalog,godCatalog]){
-    for(const match of source.matchAll(/^\s{2}(['"])(.*?)\1\s*:\s*\{([^\n]+)\},?$/gm)){
-      const row=match[3]
-      if(/fr:\s*['"][^\n]+?['"]\s*,/.test(row)&&/en:\s*['"][^\n]+?['"]\s*,/.test(row)&&/de:\s*['"][^\n]+?['"]/.test(row)){
-        fourLanguageKeys.add(decode(match[2]))
+  for(const [index,catalogSource] of [extension,complete,appCatalog,appExtraCatalog,crewCatalog,crewExtraCatalog,godCatalog].entries()){
+    const source=ts.createSourceFile('catalog-'+index+'.ts',catalogSource,ts.ScriptTarget.Latest,true,ts.ScriptKind.TS)
+    function collect(node){
+      if(ts.isPropertyAssignment(node)){
+        const key=ts.isStringLiteral(node.name)||ts.isNoSubstitutionTemplateLiteral(node.name)?decode(node.name.text):null
+        if(key&&ts.isObjectLiteralExpression(node.initializer)){
+          const languages=new Set(node.initializer.properties.filter(ts.isPropertyAssignment).map(p=>p.name.getText(source).replace(/^['"]|['"]$/g,'')))
+          if(languages.has('fr')&&languages.has('en')&&languages.has('de'))fourLanguageKeys.add(key)
+        }
       }
+      ts.forEachChild(node,collect)
     }
+    collect(source)
   }
 
   const files=(await Promise.all(roots.map(walk))).flat()
