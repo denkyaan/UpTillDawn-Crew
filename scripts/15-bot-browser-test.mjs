@@ -544,8 +544,20 @@ try {
         await condition.selectOption(phase==='opening'?'missing':'damaged')
         await form.locator('input[name="quantity"]').fill('1')
         await form.locator('input[name="notes"]').fill(`E2E ${phase} condition`)
-        await button.click()
+        const [conditionResponse] = await Promise.all([
+          respInv.page.waitForResponse(
+            r => r.request().method()==='POST' && r.url().includes('/inventory'),
+            {timeout:30000},
+          ),
+          button.click(),
+        ])
+        if (!conditionResponse.ok()) throw new Error(`Responsible inventory ${phase} submission failed HTTP ${conditionResponse.status()}`)
         await respInv.page.waitForLoadState('networkidle',{timeout:45000}).catch(()=>{})
+        // A Server Action refresh replaces the rendered inventory tree. Re-open the
+        // closing section on the refreshed DOM instead of continuing on stale locators.
+        if (phase==='opening') {
+          await respInv.page.reload({waitUntil:'networkidle',timeout:45000})
+        }
       }
     }finally{await respInv.context.close()}
 
