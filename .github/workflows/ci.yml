@@ -120,6 +120,9 @@ jobs:
           set -euo pipefail
           psql "$BOT_DB_URL" -v ON_ERROR_STOP=1 -c "DROP TRIGGER IF EXISTS on_auth_user_created ON auth.users;"
           node scripts/seed-15-bot-users.mjs
+          briefing_seed_count="$(psql "$BOT_DB_URL" -v ON_ERROR_STOP=1 -Atc "SELECT count(*) FROM public.briefing_acknowledgements ba JOIN auth.users u ON u.id=ba.user_id WHERE ba.briefing_id='00000000-0000-4000-8000-00000000e2e3'::uuid AND lower(u.email)=lower('bot-03-staff-en@bots.uptilldawn.test');")"
+          test "$briefing_seed_count" = "0"
+          echo "PASS: bot03 briefing fixture starts unacknowledged"
 
       - name: Install isolated browser test runtime
         run: |
