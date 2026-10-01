@@ -571,8 +571,12 @@ try {
     // Close event as a real authenticated Admin; service-role bypass must not impersonate lifecycle authority.
     const closingAdmin=await loginLifecycle('admin',0)
     try{
+      const adminEmail='bot-01-admin-nl@bots.uptilldawn.test'
+      const authClient=createClient(supabaseUrl,anonKey,{auth:{persistSession:false,autoRefreshToken:false}})
+      const {data:adminAuth,error:adminAuthError}=await authClient.auth.signInWithPassword({email:adminEmail,password:testPassword})
+      if(adminAuthError||!adminAuth.session?.access_token)throw new Error(`lifecycle admin Supabase session failed: ${adminAuthError?.message||'access token missing'}`)
       const closeResponse=await closingAdmin.context.request.post(`${supabaseUrl}/rest/v1/rpc/upt_close_event`,{
-        headers:{apikey:anonKey,Authorization:`Bearer ${(await closingAdmin.context.cookies()).find(c=>c.name.includes('auth-token'))?.value||''}`},
+        headers:{apikey:anonKey,Authorization:`Bearer ${adminAuth.session.access_token}`},
         data:{p_event:'00000000-0000-4000-8000-00000000e2e1',p_force:true,p_reason:'E2E lifecycle completion'},
         timeout:30000,
       })
