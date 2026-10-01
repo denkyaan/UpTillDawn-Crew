@@ -567,9 +567,16 @@ try {
       if(await staffDenied.page.getByText('EVENEMENT AANMAKEN',{exact:true}).count()!==0)throw new Error('Staff unexpectedly received Admin event creation control')
     }finally{await staffDenied.context.close()}
 
-    // Close event through the production lifecycle RPC, then prove assigned Staff chat retention.
-    const {error:closeError}=await lifecycleAdmin.rpc('upt_close_event',{p_event:'00000000-0000-4000-8000-00000000e2e1',p_force:true,p_reason:'E2E lifecycle completion'})
-    if(closeError)throw new Error(`event closure failed: ${closeError.message}`)
+    // Close event as a real authenticated Admin; service-role bypass must not impersonate lifecycle authority.
+    const closingAdmin=await loginLifecycle('admin',0)
+    try{
+      const closeResponse=await closingAdmin.context.request.post(`${supabaseUrl}/rest/v1/rpc/upt_close_event`,{
+        headers:{apikey:anonKey,Authorization:`Bearer ${(await closingAdmin.context.cookies()).find(c=>c.name.includes('auth-token'))?.value||''}`},
+        data:{p_event:'00000000-0000-4000-8000-00000000e2e1',p_force:true,p_reason:'E2E lifecycle completion'},
+        timeout:30000,
+      })
+      if(!closeResponse.ok())throw new Error(`event closure failed HTTP ${closeResponse.status()}: ${(await closeResponse.text()).slice(0,500)}`)
+    }finally{await closingAdmin.context.close()}
     const closed=await lifecycleAdmin.from('events').select('status,end_at').eq('id','00000000-0000-4000-8000-00000000e2e1').single()
     if(closed.error||!closed.data)throw new Error('closed event could not be read back')
 
