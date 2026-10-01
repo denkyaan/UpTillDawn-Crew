@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect,useMemo,useState,useTransition } from 'react'
+import { useEffect,useMemo,useState } from 'react'
 import { createClient } from '@/lib/supabase/crew-client'
 import { removeGuestlistEntry,updateGuestlistEntry } from '@/lib/actions/guestlist'
 
@@ -33,7 +33,7 @@ export function GuestlistEntranceClient({
   const [query,setQuery]=useState('')
   const [filter,setFilter]=useState<'all'|'artist'|'guest'|'open'|'complete'>('all')
   const [message,setMessage]=useState('')
-  const [pending,startTransition]=useTransition()
+  const [pendingEntry,setPendingEntry]=useState<string|null>(null)
 
   useEffect(()=>{
     const s=createClient()
@@ -94,9 +94,10 @@ export function GuestlistEntranceClient({
   },{total:0,checked:0,artists:0,artistsPresent:0,guests:0}),[entries])
 
   async function adjust(entry:GuestlistEntry,delta:-1|1){
-    if(pending)return
+    if(pendingEntry)return
     setMessage('')
-    startTransition(async()=>{
+    setPendingEntry(entry.id)
+    try{
       const s=createClient()
       const {data,error}=await s.rpc('upt_guestlist_checkin',{p_entry:entry.id,p_delta:delta})
       if(error){
@@ -110,7 +111,11 @@ export function GuestlistEntranceClient({
         spots_checked_in:checked,
         last_checked_in_at:new Date().toISOString(),
       }:item))
-    })
+    }catch(error){
+      setMessage(error instanceof Error?error.message:'Guestlist check-in mislukt.')
+    }finally{
+      setPendingEntry(null)
+    }
   }
 
   return <section className="space-y-4">
@@ -170,7 +175,7 @@ export function GuestlistEntranceClient({
               <div className="flex items-center gap-2">
                 <button
                   type="button"
-                  disabled={!canCheckIn||pending||entry.spots_checked_in<=0}
+                  disabled={!canCheckIn||pendingEntry!==null||entry.spots_checked_in<=0}
                   onClick={()=>void adjust(entry,-1)}
                   className="h-11 w-11 rounded-xl border text-xl font-black disabled:opacity-30"
                   aria-label="Eén spot terugdraaien"
@@ -178,7 +183,7 @@ export function GuestlistEntranceClient({
                 <span className="min-w-12 text-center text-xl font-black">{entry.spots_checked_in}/{entry.spots_total}</span>
                 <button
                   type="button"
-                  disabled={!canCheckIn||pending||complete}
+                  disabled={!canCheckIn||pendingEntry!==null||complete}
                   onClick={()=>void adjust(entry,1)}
                   className="h-11 w-11 rounded-xl bg-emerald-700 text-xl font-black text-white disabled:opacity-30"
                   aria-label="Eén spot inchecken"
