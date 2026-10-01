@@ -8,6 +8,8 @@ insert into public.events(id,name,start_date,end_date,start_at,end_at,status,cre
 insert into public.workplaces(id,event_id,name,sort_order) values((select id from ts_ids where name='wp'),(select id from ts_ids where name='event'),'TS workplace',1);
 insert into public.event_members(event_id,user_id,event_role) values((select id from ts_ids where name='event'),(select id from ts_ids where name='staff'),'employee');
 insert into public.responsible_assignments(event_id,workplace_id,user_id) values((select id from ts_ids where name='event'),(select id from ts_ids where name='wp'),(select id from ts_ids where name='lead'));
+insert into public.shifts(event_id,workplace_id,user_id,start_time,end_time,scheduled_start,scheduled_end,role,status,response_status)
+values((select id from ts_ids where name='event'),(select id from ts_ids where name='wp'),(select id from ts_ids where name='staff'),now()-interval '8 hours',now(),now()-interval '8 hours',now(),'staff','scheduled','accepted');
 
 select set_config('request.jwt.claim.sub',(select id::text from ts_ids where name='staff'),true); set local role authenticated;
 select public.upt_submit_timesheet((select id from ts_ids where name='event'));
