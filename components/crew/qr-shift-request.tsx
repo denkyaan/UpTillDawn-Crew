@@ -105,6 +105,7 @@ export default function QrShiftRequest() {
         <div className="mt-2 flex flex-wrap gap-2">
           <Link className="rounded-lg border px-3 py-2 text-sm" href={item.link}>OPENEN</Link>
           <button
+            data-action={`qr-confirm-${result.kind}`}
             className="rounded-lg bg-violet-600 px-3 py-2 text-sm font-bold text-white"
             onClick={() => confirmItem(item, result.kind)}
           >
