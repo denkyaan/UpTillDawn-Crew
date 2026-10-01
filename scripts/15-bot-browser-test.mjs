@@ -143,9 +143,18 @@ try {
         // the explicit acknowledgement proof runs.
         if (index === 2 && route === '/briefings') continue
         await assertProtectedRoute(context, route, bot)
-        await page.goto(`${baseUrl}${route}`, { waitUntil: 'networkidle', timeout: 45000 })
-        if (!page.url().includes('/login')) await assertRuntimeLocale(page, locale, bot, route)
+        // Keep bot03's hydrated Staff page/session untouched until its strict
+        // mutation lifecycle below. A broad route crawl can legitimately hit
+        // role/shift redirects and must not replace that mutation page.
+        if (index !== 2) {
+          await page.goto(`${baseUrl}${route}`, { waitUntil: 'networkidle', timeout: 45000 })
+          if (!page.url().includes('/login')) await assertRuntimeLocale(page, locale, bot, route)
+        }
       }
+
+      // Bot03 still gets runtime-i18n coverage on its isolated real workflow
+      // routes, without the generic crawl mutating its navigation/session state.
+      if (index === 2) await assertRuntimeLocale(page, locale, bot, page.url())
 
       // One staff bot performs a real browser mutation against the isolated
       // event fixture. This proves a hydrated server-action form can change
@@ -390,7 +399,7 @@ try {
           staff.page.waitForResponse(r=>r.request().method()==='POST'&&r.url().includes('/rpc/upt_qr_request'),{timeout:30000}),
           remote.click(),
         ])
-        if(!requestResponse.ok())throw new Error(`staff remote start request failed HTTP ${requestResponse.status()}`)
+        if(!requestResponse.ok()){ const body=await requestResponse.text(); throw new Error(`staff remote start request failed HTTP ${requestResponse.status()}: ${body.slice(0,700)}`) }
       }else{
         const body=(await staff.page.locator('body').innerText()).replace(/\s+/g,' ').slice(0,900)
         throw new Error(`staff start request did not reach contact/remote step after required confirmations: ${body}`)
