@@ -144,6 +144,16 @@ const { error: briefingError } = await supabase.from('briefings').upsert({
 }, { onConflict: 'id' })
 if (briefingError) throw briefingError
 
+// Keep the browser action fixture deterministic. The strict E2E flow must
+// start with bot03 not having acknowledged this briefing, then prove that the
+// real UI action creates the acknowledgement under staff RLS.
+const { error: briefingAckResetError } = await supabase
+  .from('briefing_acknowledgements')
+  .delete()
+  .eq('briefing_id', briefingId)
+  .eq('user_id', staff.userId)
+if (briefingAckResetError) throw briefingAckResetError
+
 const guestId = '00000000-0000-4000-8000-00000000e2e5'
 const { error: guestError } = await supabase.from('event_guestlist_entries').upsert({
   id: guestId,
