@@ -31,13 +31,13 @@ test('personal work screen uses live work and pause clocks without payable metri
   assert.doesNotMatch(operations, /net_payable_seconds/)
 })
 
-test('responsible overview live timers avoid periodic server polling', async () => {
+test('responsible overview stays non-blocking while live timer component remains client-driven', async () => {
   const dashboard = await read('app/(app)/page.tsx')
   const live = await read('components/responsible/responsible-live-personnel.tsx')
   assert.match(dashboard, /responsible_assignments/)
-  assert.match(dashboard, /upt_responsible_crew_directory/)
-  assert.match(dashboard, /upt_manager_live_sessions/)
-  assert.match(dashboard, /break_sessions/)
+  assert.doesNotMatch(dashboard, /upt_responsible_crew_directory/)
+  assert.doesNotMatch(dashboard, /upt_manager_live_sessions/)
+  assert.doesNotMatch(dashboard, /break_sessions/)
   assert.match(dashboard, /Personeel van mijn werkplek/)
   assert.match(dashboard, /ResponsibleLivePersonnel/)
   assert.match(live, /PAUZE/)
