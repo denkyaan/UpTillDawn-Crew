@@ -206,7 +206,7 @@ export async function signIn(formData: FormData) {
 
     const supabase = await createClient()
 
-    const securityRelevant = requestedPortal === 'admin'
+    const securityRelevant = true
     let security = securityRelevant ? await requestSecurityContext() : null
     const getSecurity = async () => {
         if (!security) security = await requestSecurityContext()
