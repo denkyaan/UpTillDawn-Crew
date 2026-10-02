@@ -607,9 +607,9 @@ try {
     if(activeShift.error||!activeShift.data?.length)throw new Error('staff active shift fixture missing before task status lifecycle')
     const taskAssignmentRestore=await lifecycleAdmin.from('task_assignments').update({
       user_id:bot03Profile.data.id,status:'NOT STARTED',confirmed_at:new Date().toISOString(),
-    }).eq('id',taskAssignmentId)
+    }).eq('id','00000000-0000-4000-8000-00000000e2e7')
     if(taskAssignmentRestore.error)throw new Error(`failed to restore confirmed task assignment: ${taskAssignmentRestore.error.message}`)
-    const confirmedTask=await lifecycleAdmin.from('task_assignments').select('user_id,confirmed_at,status').eq('id',taskAssignmentId).single()
+    const confirmedTask=await lifecycleAdmin.from('task_assignments').select('user_id,confirmed_at,status').eq('id','00000000-0000-4000-8000-00000000e2e7').single()
     if(confirmedTask.error||confirmedTask.data?.user_id!==bot03Profile.data.id||!confirmedTask.data?.confirmed_at)throw new Error('confirmed task assignment fixture missing before status lifecycle')
     const staffOps=await loginLifecycle('staff',2)
     try{
@@ -623,7 +623,7 @@ try {
         const deadline=Date.now()+15000
         let persisted=false
         while(Date.now()<deadline){
-          const row=await lifecycleAdmin.from('task_assignments').select('status').eq('id',taskAssignmentId).maybeSingle()
+          const row=await lifecycleAdmin.from('task_assignments').select('status').eq('id','00000000-0000-4000-8000-00000000e2e7').maybeSingle()
           if(!row.error&&row.data?.status===expected){persisted=true;break}
           await staffOps.page.waitForTimeout(300)
         }
