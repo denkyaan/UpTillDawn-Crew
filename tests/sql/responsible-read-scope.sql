@@ -16,6 +16,8 @@ SET approved=true,
 FROM upt_scope_ids i
 WHERE profiles.id=i.id AND i.name IN ('lead','staff');
 
+GRANT SELECT ON public.profiles TO authenticated;
+
 INSERT INTO public.events(id,name,start_date,end_date,start_at,end_at,status,created_by)
 VALUES(
  (SELECT id FROM upt_scope_ids WHERE name='event'),
@@ -146,5 +148,6 @@ BEGIN
 END $$;
 RESET ROLE;
 
+REVOKE SELECT ON public.profiles FROM authenticated;
 SELECT 'PASS: responsible and staff workplace visibility is assignment-scoped' AS result;
 ROLLBACK;
