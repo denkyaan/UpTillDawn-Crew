@@ -5090,6 +5090,18 @@ export type Database = {
         Args: { p_checklist: string }
         Returns: undefined
       }
+      upt_current_profile: {
+        Args: never
+        Returns: {
+          id: string
+          full_name: string
+          phone_number: string
+          profile_photo_url: string
+          approved: boolean
+          role: string
+          account_blocked: boolean
+        }[]
+      }
       upt_admin_pending_profiles: {
         Args: never
         Returns: {
