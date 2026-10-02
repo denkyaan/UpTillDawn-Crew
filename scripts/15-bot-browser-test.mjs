@@ -143,8 +143,11 @@ try {
         // client-handled staff/responsible form can fall back to a native GET.
         await page.waitForTimeout(750)
         await page.locator('button[type="submit"]').click({ timeout: 15000 })
-        await page.waitForURL(url => url.pathname === '/', { timeout: 45000 })
-        await page.waitForLoadState('domcontentloaded')
+        await page.waitForURL(url => url.pathname === '/', { timeout: 45000, waitUntil: 'domcontentloaded' })
+        // The URL can change before the streamed authenticated landing page has
+        // committed. Wait for the root document to become interactive before
+        // starting profile/UI assertions.
+        await page.waitForFunction(() => document.readyState === 'interactive' || document.readyState === 'complete', null, { timeout: 45000 })
       }
 
       const body = await page.locator('body').innerText()
@@ -582,8 +585,16 @@ try {
     const locked=await lifecycleAdmin.from('timesheets').select('status').eq('id',submitted.data.id).maybeSingle()
     if(locked.error||locked.data?.status!=='locked')throw new Error('timesheet did not reach locked state')
 
-    // Complete task state lifecycle after confirmation.
-    const activeShift=await lifecycleAdmin.from('shifts').select('id').eq('event_id','00000000-0000-4000-8000-00000000e2e1').eq('user_id','00000000-0000-4000-8000-000000000103').neq('status','cancelled').lte('scheduled_start',new Date().toISOString()).gte('scheduled_end',new Date().toISOString()).limit(1)
+    // Complete task state lifecycle after confirmation. Attendance/timesheet
+    // operations may advance or close the original shift fixture, so re-anchor
+    // the isolated bot03 shift around now before exercising task UI gating.
+    const taskShiftStart=new Date(Date.now()-30*60*1000).toISOString()
+    const taskShiftEnd=new Date(Date.now()+2*60*60*1000).toISOString()
+    const taskShiftLookup=await lifecycleAdmin.from('shifts').select('id').eq('event_id','00000000-0000-4000-8000-00000000e2e1').eq('user_id','00000000-0000-4000-8000-000000000103').neq('status','cancelled').limit(1).maybeSingle()
+    if(taskShiftLookup.error||!taskShiftLookup.data?.id)throw new Error('staff shift fixture missing before task status lifecycle')
+    const taskShiftUpdate=await lifecycleAdmin.from('shifts').update({scheduled_start:taskShiftStart,scheduled_end:taskShiftEnd}).eq('id',taskShiftLookup.data.id)
+    if(taskShiftUpdate.error)throw new Error(`failed to re-anchor staff task shift: ${taskShiftUpdate.error.message}`)
+    const activeShift=await lifecycleAdmin.from('shifts').select('id').eq('id',taskShiftLookup.data.id).neq('status','cancelled').lte('scheduled_start',new Date().toISOString()).gte('scheduled_end',new Date().toISOString()).limit(1)
     if(activeShift.error||!activeShift.data?.length)throw new Error('staff active shift fixture missing before task status lifecycle')
     const staffOps=await loginLifecycle('staff',2)
     try{
