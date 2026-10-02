@@ -32,7 +32,7 @@ export default async function Page({searchParams}:{searchParams?:Promise<{event?
     if(current.role==='admin')return true
     if(channel.kind==='organization')return true
     if(!channel.event_id||!chatWindowEventIds.has(channel.event_id))return false
-    if(channel.kind==='event')return memberEventIds.has(channel.event_id)
+    if(channel.kind==='event')return memberEventIds.has(channel.event_id)||ownShifts.some(shift=>shift.event_id===channel.event_id)||responsibleAssignments.some(row=>row.event_id===channel.event_id)
     return Boolean(channel.workplace_id&&workplaceIds.has(channel.workplace_id))
   })
   const ordered=[...readable].sort((a,b)=>{const weight=(kind:string)=>kind==='organization'?0:kind==='event'?1:2;const byKind=weight(a.kind)-weight(b.kind);return byKind||(a.name||'').localeCompare(b.name||'','nl')})
