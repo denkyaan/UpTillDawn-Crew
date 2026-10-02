@@ -7,7 +7,8 @@ test('staff overview preserves baseline and adds assignment shortcuts',async()=>
  const source=await read('app/(app)/page.tsx')
  assert.match(source,/current\.role==='staff'&&hasEventAssignment/)
  for(const value of ['Mijn evenement','Mijn werkuren','Briefing','Werkplaats & shift','Inventaris','Personeel van mijn werkplek']) assert.ok(source.includes(value))
- assert.match(source,/upt_staff_workplace_live_status/)
+ assert.doesNotMatch(source,/upt_staff_workplace_live_status/)
+ assert.match(source,/StaffWorkplacePersonnel/)
 })
 
 test('staff mobile navigation preserves assigned and active-shift workflow',async()=>{
