@@ -41,6 +41,8 @@ INSERT INTO public.event_members(event_id,user_id,event_role) VALUES
 INSERT INTO public.briefings(event_id,title,body,created_by)
 VALUES((SELECT id FROM rr_ids WHERE name='ended'),'Ended briefing','hidden after end',(SELECT id FROM rr_ids WHERE name='admin'));
 
+GRANT SELECT ON public.profiles TO authenticated;
+
 -- Admin establishes the valid future assignment baseline:
 -- both crew members have a future shift and the lead is assigned to that workplace.
 SELECT set_config('request.jwt.claim.sub',(SELECT id::text FROM rr_ids WHERE name='admin'),true);
@@ -69,6 +71,7 @@ VALUES(
   auth.uid()
 );
 RESET ROLE;
+REVOKE SELECT ON public.profiles FROM authenticated;
 
 -- Workplace Responsible can prepare briefing/instruction content and read the assigned workplace,
 -- but cannot create workplaces, manage shifts or create shift-active tasks before the shift starts.
