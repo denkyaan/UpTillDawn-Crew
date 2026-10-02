@@ -84,7 +84,13 @@ async function assertProtectedRoute(context, route, bot) {
 const browser = await chromium.launch({ headless: true })
 
 try {
-  await Promise.all(roles.map(async (role, index) => {
+  // Keep all 15 browser actors, but cap simultaneous SSR-heavy sessions so the
+  // single CI Next server measures app behavior instead of artificial overload.
+  const smokeConcurrency=5
+  for(let batchStart=0;batchStart<roles.length;batchStart+=smokeConcurrency){
+    const batch=roles.slice(batchStart,batchStart+smokeConcurrency)
+    await Promise.all(batch.map(async (role, offset) => {
+      const index=batchStart+offset
     const locale = locales[index % locales.length]
     const viewport = viewports[index % viewports.length]
     const bot = `bot-${String(index + 1).padStart(2, '0')}-${role}-${locale}`
@@ -365,7 +371,8 @@ try {
     } finally {
       await context.close()
     }
-  }))
+    }))
+  }
 
   // Sequential cross-role attendance lifecycle after the concurrent smoke phase.
   // Fresh sessions avoid race conditions while still exercising the real UI/RPC contracts.
@@ -576,14 +583,25 @@ try {
     if(locked.error||locked.data?.status!=='locked')throw new Error('timesheet did not reach locked state')
 
     // Complete task state lifecycle after confirmation.
+    const activeShift=await lifecycleAdmin.from('shifts').select('id').eq('event_id','00000000-0000-4000-8000-00000000e2e1').eq('user_id','00000000-0000-4000-8000-000000000103').neq('status','cancelled').lte('scheduled_start',new Date().toISOString()).gte('scheduled_end',new Date().toISOString()).limit(1)
+    if(activeShift.error||!activeShift.data?.length)throw new Error('staff active shift fixture missing before task status lifecycle')
     const staffOps=await loginLifecycle('staff',2)
     try{
-      await staffOps.page.goto(`${baseUrl}/tasks?event=00000000-0000-4000-8000-00000000e2e1&workplace=00000000-0000-4000-8000-00000000e2e2`,{waitUntil:'networkidle',timeout:45000})
+      await gotoWithTransientRetry(staffOps.page,`${baseUrl}/tasks?event=00000000-0000-4000-8000-00000000e2e1&workplace=00000000-0000-4000-8000-00000000e2e2`)
       const task=staffOps.page.locator('article').filter({hasText:'E2E Entrance Task'}).first()
-      for(const action of ['task-status-in-progress','task-status-completed']){
+      await task.waitFor({state:'visible',timeout:15000})
+      for(const [action,expected] of [['task-status-in-progress','IN PROGRESS'],['task-status-completed','COMPLETED']]){
         const button=task.locator(`[data-action="${action}"]`)
         if(await button.count()!==1)throw new Error(`${action} missing`)
-        await button.click();await staffOps.page.waitForTimeout(900)
+        await button.click()
+        const deadline=Date.now()+15000
+        let persisted=false
+        while(Date.now()<deadline){
+          const row=await lifecycleAdmin.from('task_assignments').select('status').eq('id',taskAssignmentId).maybeSingle()
+          if(!row.error&&row.data?.status===expected){persisted=true;break}
+          await staffOps.page.waitForTimeout(300)
+        }
+        if(!persisted)throw new Error(`${action} did not persist ${expected}`)
       }
     }finally{await staffOps.context.close()}
 
