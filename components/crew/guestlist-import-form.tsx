@@ -22,8 +22,8 @@ export function GuestlistImportForm({eventId}:{eventId:string}){
       setMessage(`Import klaar · ${payload?.inserted||0} nieuw · ${payload?.duplicates||0} bestaand · ${payload?.supplemented||0} aangevuld`)
       showSaveSuccess()
       window.location.reload()
-    }catch{
-      setMessage('Guestlist kon niet worden geïmporteerd.')
+    }catch(error){
+      setMessage(humanizeAppError(error))
     }finally{
       setBusy(false)
     }
