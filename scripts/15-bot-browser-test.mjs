@@ -34,6 +34,26 @@ const dutchRuntimeLeakPatterns = [
   /\\b(?:wordt|worden|kunnen|kunt|jouw|deze|geen|alleen|alle|voor|van|met)\\s+(?:automatisch|personeel|werkplek|evenement|account|shift|uren|meldingen|resultaten)\\b/i,
 ]
 
+async function gotoWithTransientRetry(page, url, options={}) {
+  const merged={waitUntil:'domcontentloaded',timeout:45000,...options}
+  let lastError
+  for(let attempt=1;attempt<=3;attempt++){
+    try{
+      return await page.goto(url,merged)
+    }catch(error){
+      lastError=error
+      const message=error instanceof Error?error.message:String(error)
+      if(!/ERR_ABORTED|Navigation interrupted|frame was detached|Target page, context or browser has been closed/i.test(message)||attempt===3)throw error
+      await page.waitForTimeout(250*attempt)
+    }
+  }
+  throw lastError
+}
+
+async function waitForSeededProfile(page, expectedName) {
+  await page.getByText(expectedName,{exact:true}).first().waitFor({state:'visible',timeout:15000})
+}
+
 async function assertRuntimeLocale(page, locale, bot, route) {
   await page.waitForFunction(expected => document.documentElement.lang === expected, locale, { timeout: 15000 })
   if (locale === 'nl') return
@@ -126,9 +146,7 @@ try {
       if (/profiel kon niet worden geladen|account nog niet goedgekeurd/i.test(body)) {
         throw new Error('authenticated profile gate failed')
       }
-      if (role !== 'admin' && !body.includes(expectedName)) {
-        throw new Error('seeded profile did not render')
-      }
+      if (role !== 'admin') await waitForSeededProfile(page, expectedName)
 
       // Runtime i18n regression on the authenticated landing page.
       await assertRuntimeLocale(page, locale, bot, page.url())
@@ -147,7 +165,7 @@ try {
         // mutation lifecycle below. A broad route crawl can legitimately hit
         // role/shift redirects and must not replace that mutation page.
         if (index !== 2) {
-          await page.goto(`${baseUrl}${route}`, { waitUntil: 'networkidle', timeout: 45000 })
+          await gotoWithTransientRetry(page, `${baseUrl}${route}`)
           if (!page.url().includes('/login')) await assertRuntimeLocale(page, locale, bot, route)
         }
       }
