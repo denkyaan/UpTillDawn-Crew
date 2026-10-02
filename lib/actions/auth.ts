@@ -371,14 +371,25 @@ export const getCurrentUser = cache(async function getCurrentUser() {
     const { data: { user }, error: authError } = await supabase.auth.getUser()
     if (authError || !user) return null
 
-    const [{ data: profile, error }, { data: isOwner }] = await Promise.all([
-        supabase.from('profiles').select('id,full_name,phone_number,profile_photo_url,approved,role,account_blocked').eq('id', user.id).single(),
-        supabase.rpc('upt_current_is_owner'),
-    ])
-    if (error || !profile || profile.account_blocked || (!profile.approved && !isOwner)) return null
+    const { data: profile, error } = await supabase
+        .from('profiles')
+        .select('id,full_name,phone_number,profile_photo_url,approved,role,account_blocked')
+        .eq('id', user.id)
+        .single()
+    if (error || !profile || profile.account_blocked) return null
 
     const realRole = profile.role
-    const hasPermanentAdminAccess = realRole === 'admin' || isOwner === true
+    // Approved ordinary crew never need owner/effective-role RPCs. Keeping
+    // their authenticated shell to auth + one profile read prevents every
+    // Staff/Responsible page request from queueing privileged role checks.
+    const needsOwnerCheck = !profile.approved || realRole === 'admin'
+    const { data: ownerFlag } = needsOwnerCheck
+        ? await supabase.rpc('upt_current_is_owner')
+        : { data: false }
+    const isOwner = ownerFlag === true
+    if (!profile.approved && !isOwner) return null
+
+    const hasPermanentAdminAccess = realRole === 'admin' || isOwner
     const { data: storedRole } = hasPermanentAdminAccess
         ? await supabase.rpc('upt_current_effective_role')
         : { data: realRole }

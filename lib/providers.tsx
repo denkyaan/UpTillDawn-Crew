@@ -13,6 +13,7 @@ interface UserProfile {
   profile_photo_url: string | null
   approved: boolean
   role: "staff" | "responsible_lead" | "admin"
+  account_blocked?: boolean
 }
 
 interface AuthContextType {
@@ -52,20 +53,24 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     if(profileRequestRef.current)return profileRequestRef.current
 
     const request=(async()=>{
-      const [{data,error},{data:ownerFlag},{data:effectiveRole,error:effectiveRoleError}]=await Promise.all([
-        supabase.from("profiles").select("id,full_name,profile_photo_url,approved,role").eq("id",userId).single(),
-        supabase.rpc("upt_current_is_owner"),
-        supabase.rpc("upt_current_effective_role"),
-      ])
+      const {data,error}=await supabase.from("profiles").select("id,full_name,profile_photo_url,approved,role,account_blocked").eq("id",userId).single()
       lastProfileLoadRef.current=Date.now()
       const role=data?.role
+      if(error||!data||data.account_blocked||(role!=="staff"&&role!=="responsible_lead"&&role!=="admin")){
+        setProfile(null);setRoles([]);setRoleModeState(null);setIsOwner(false);return
+      }
+      const needsOwnerCheck=!data.approved||role==="admin"
+      const {data:ownerFlag}=needsOwnerCheck?await supabase.rpc("upt_current_is_owner"):{data:false}
       const owner=ownerFlag===true
-      if(error||!data||(!data.approved&&!owner)||(role!=="staff"&&role!=="responsible_lead"&&role!=="admin")){
+      if(!data.approved&&!owner){
         setProfile(null);setRoles([]);setRoleModeState(null);setIsOwner(false);return
       }
       setIsOwner(owner)
       setProfile({id:data.id,full_name:data.full_name??"",profile_photo_url:data.profile_photo_url,approved:data.approved||owner,role})
       const baseUiRole:UiRole=role==="staff"?"employee":role
+      const {data:effectiveRole,error:effectiveRoleError}=role==="admin"||owner
+        ?await supabase.rpc("upt_current_effective_role")
+        :{data:role,error:null}
       const resolved:UiRole=!effectiveRoleError&&effectiveRole==="responsible_lead"?"responsible_lead":!effectiveRoleError&&(effectiveRole==="staff"||effectiveRole==="employee")?"employee":!effectiveRoleError&&effectiveRole==="admin"?"admin":baseUiRole
       setRoles([resolved])
       setRoleModeState(resolved)
