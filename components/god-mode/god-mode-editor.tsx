@@ -11,6 +11,7 @@ import {
   type RoleUiRule,
 } from "@/lib/role-ui"
 import { featureHelp } from "@/lib/ui-field-help"
+import { humanizeAppError } from "@/lib/client-error-message"
 
 const roles:Array<{value:RoleRuleRole;label:string}>=[
   {value:"admin",label:"Admin"},
@@ -54,9 +55,9 @@ export function GodModeEditor(){
     try{
       const response=await fetch("/api/god/rules?role="+nextRole,{cache:"no-store"})
       const payload=await response.json().catch(()=>null) as {rules?:RoleUiRule[];error?:string}|null
-      if(!response.ok||!payload){setMessage(payload?.error||"Rolregels konden niet worden geladen.");return}
+      if(!response.ok||!payload){setMessage(humanizeAppError(payload?.error||"Rolregels konden niet worden geladen."));return}
       setRules(payload.rules?.length?payload.rules:getDefaultRoleUiRules(nextRole))
-    }catch{setMessage("Rolregels konden niet worden geladen.")}
+    }catch(error){setMessage(humanizeAppError(error))}
     finally{setLoading(false)}
   }
 
@@ -90,11 +91,11 @@ export function GodModeEditor(){
         body:JSON.stringify({role,rules}),
       })
       const payload=await response.json().catch(()=>null) as {ok?:boolean;rules?:RoleUiRule[];error?:string}|null
-      if(!response.ok||!payload?.ok){setMessage(payload?.error||"Opslaan mislukt.");return}
+      if(!response.ok||!payload?.ok){setMessage(humanizeAppError(payload?.error||"Opslaan mislukt."));return}
       setRules(payload.rules||rules)
       setMessage("God Mode wijzigingen opgeslagen.")
       showSaveSuccess()
-    }catch{setMessage("Opslaan mislukt.")}
+    }catch(error){setMessage(humanizeAppError(error))}
     finally{setBusy(false)}
   }
 
@@ -109,9 +110,9 @@ export function GodModeEditor(){
         body:JSON.stringify({message:prompt,role,path:"/god-mode",rules}),
       })
       const payload=await response.json().catch(()=>null) as (AiReply&{error?:string})|null
-      if(!response.ok||!payload){setAiError(payload?.error||"AI kon niet antwoorden.");return}
+      if(!response.ok||!payload){setAiError(humanizeAppError(payload?.error||"AI kon niet antwoorden."));return}
       setAiReply({answer:payload.answer,patches:Array.isArray(payload.patches)?payload.patches:[]})
-    }catch{setAiError("AI kon niet worden bereikt.")}
+    }catch(error){setAiError(humanizeAppError(error))}
     finally{setAiBusy(false)}
   }
 

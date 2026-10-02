@@ -8,6 +8,7 @@ import {GodAutomationBuilder} from './god-automation-builder'
 import {GodDataEditor} from './god-data-editor'
 import {GodSqlEditor} from './god-sql-editor'
 import {editablePath,summarizeChanges,type SourceChange,type SourceEntry,type SourceTarget} from '@/lib/god-studio'
+import {humanizeAppError} from '@/lib/client-error-message'
 import targets from '@/lib/god-source-index.json'
 
 const CodeEditor=dynamic(()=>import('./code-editor'),{ssr:false,loading:()=> <p>Code-editor laden…</p>})
@@ -58,7 +59,7 @@ function reportStatusLabel(status:string){
 async function api<T>(url:string,body?:unknown,method=body?'POST':'GET'):Promise<T>{
   const response=await fetch(url,{method,cache:'no-store',...(body?{headers:{'Content-Type':'application/json'},body:JSON.stringify(body)}:{})})
   const data=await response.json()
-  if(!response.ok)throw new Error(data.error||'De actie is mislukt.')
+  if(!response.ok)throw new Error(humanizeAppError(data.error||'De actie is mislukt.'))
   return data as T
 }
 
@@ -102,14 +103,14 @@ export function GodStudio(){
   async function action(task:()=>Promise<void>){
     if(busy)return
     setBusy(true);setMessage('')
-    try{await task()}catch(error){setMessage(error instanceof Error?error.message:'De actie is mislukt.')}
+    try{await task()}catch(error){setMessage(humanizeAppError(error))}
     finally{setBusy(false)}
   }
   async function load(){
     const data=await api<{head:string;connected:boolean;files:SourceEntry[]}>('/api/god/source')
     setBase(data.head);setConnected(data.connected);setFiles(data.files)
   }
-  useEffect(()=>{let active=true;void api<{head:string;connected:boolean;files:SourceEntry[]}>('/api/god/source').then(data=>{if(active){setBase(data.head);setConnected(data.connected);setFiles(data.files)}}).catch(error=>{if(active)setMessage(error.message)});void api<{connected:boolean}>('/api/god/sql').then(data=>{if(active)setDatabaseConnected(data.connected)}).catch(()=>{});return()=>{active=false}},[])
+  useEffect(()=>{let active=true;void api<{head:string;connected:boolean;files:SourceEntry[]}>('/api/god/source').then(data=>{if(active){setBase(data.head);setConnected(data.connected);setFiles(data.files)}}).catch(error=>{if(active)setMessage(humanizeAppError(error))});void api<{connected:boolean}>('/api/god/sql').then(data=>{if(active)setDatabaseConnected(data.connected)}).catch(()=>{});return()=>{active=false}},[])
   useEffect(()=>{
     let active=true
     void api<{reports:RecoveryReport[]}>('/api/god/error-reports?limit=60')
@@ -137,7 +138,7 @@ export function GodStudio(){
       const data=await api<{content:string}>(`/api/god/source?action=file&path=${encodeURIComponent(file)}&ref=${base}`)
       setOriginals(current=>({...current,[file]:data.content}))
       if(requestId.current===id)setLine(targetLine)
-    }catch(error){if(requestId.current===id)setMessage(error instanceof Error?error.message:'Bestand openen mislukt.')}
+    }catch(error){if(requestId.current===id)setMessage(error instanceof Error?humanizeAppError(error):'Bestand openen mislukt.')}
   }
   function addFile(){
     const file=newPath.trim()
