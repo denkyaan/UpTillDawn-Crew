@@ -50,6 +50,21 @@ async function gotoWithTransientRetry(page, url, options={}) {
   throw lastError
 }
 
+async function gotoProtectedSmokeRoute(page, route, bot) {
+  const url=`${baseUrl}${route}`
+  try {
+    await gotoWithTransientRetry(page,url)
+  } catch(error) {
+    const message=error instanceof Error?error.message:String(error)
+    if(!/interrupted by another navigation/i.test(message))throw error
+    await page.waitForLoadState('domcontentloaded',{timeout:15000}).catch(()=>{})
+    const finalUrl=new URL(page.url(),baseUrl)
+    if(finalUrl.origin!==new URL(baseUrl).origin||finalUrl.pathname.startsWith('/login')){
+      throw new Error(`${bot} protected-route navigation escaped authentication on ${route}: ${page.url()}`)
+    }
+  }
+}
+
 async function waitForSeededProfile(page, expectedName, context, bot, diagnostics) {
   // The login redirect already owns the authenticated root navigation.
   // Do not replace it with a second page.goto while Next is committing RSC.
@@ -189,7 +204,7 @@ try {
         // mutation lifecycle below. A broad route crawl can legitimately hit
         // role/shift redirects and must not replace that mutation page.
         if (index !== 2) {
-          await gotoWithTransientRetry(page, `${baseUrl}${route}`)
+          await gotoProtectedSmokeRoute(page, route, bot)
           if (!page.url().includes('/login')) await assertRuntimeLocale(page, locale, bot, route)
         }
       }
