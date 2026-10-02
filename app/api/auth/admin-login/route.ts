@@ -99,13 +99,14 @@ export async function POST(request: NextRequest) {
   }
 
   phase = 'admin_access'
-  const [{ data: profile }, { data: isOwner }] = await Promise.all([
-    supabase.from('profiles').select('approved, role').eq('id', data.user.id).single(),
+  const [{ data: profileRows, error: profileError }, { data: isOwner }] = await Promise.all([
+    supabase.rpc('upt_current_profile'),
     supabase.rpc('upt_current_is_owner'),
   ])
+  const profile = profileRows?.[0] ?? null
 
   const hasAdminAccess = Boolean(
-    profile?.approved === true && (profile.role === 'admin' || isOwner === true),
+    !profileError && profile?.approved === true && (profile.role === 'admin' || isOwner === true),
   )
 
   if (!hasAdminAccess) {
