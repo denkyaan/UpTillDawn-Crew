@@ -9,7 +9,7 @@ using (
     select 1 from public.shifts s
     where s.event_id=events.id and s.user_id=(select auth.uid())
       and s.status<>'cancelled' and coalesce(s.response_status,'')<>'declined'
-      and now()<=events.end_at+interval '3 days'
+      and now()>=events.start_at and now()>=events.start_at and now()<=events.end_at+interval '3 days'
   )
   or exists (
     select 1 from public.responsible_assignments ra
