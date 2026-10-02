@@ -361,6 +361,9 @@ try {
         await page.getByText('E2E lifecycle chat message',{exact:true}).waitFor({state:'visible',timeout:15000})
         await page.reload({waitUntil:'networkidle',timeout:45000})
         if (!(await page.getByText('E2E lifecycle chat message',{exact:true}).isVisible())) throw new Error('chat message did not persist after reload')
+        const persistedLifecycleMessage=await lifecycleAdmin.from('messages').select('id,body,channel_id,sender_id').eq('body','E2E lifecycle chat message').order('created_at',{ascending:false}).limit(1).maybeSingle()
+        if(persistedLifecycleMessage.error||!persistedLifecycleMessage.data?.id)throw new Error('lifecycle chat message was not persisted server-side before closure')
+        globalThis.__uptLifecycleMessage=persistedLifecycleMessage.data
 
         await page.goto(`${baseUrl}/incidents?event=00000000-0000-4000-8000-00000000e2e1&workplace=00000000-0000-4000-8000-00000000e2e2`, {waitUntil:'networkidle',timeout:45000})
         const incidentForm = page.locator('form').filter({has:page.locator('[data-action="incident-submit"]')}).first()
@@ -710,9 +713,13 @@ try {
     const retainedChannels=await retainedAuth.from('chat_channels').select('id,kind,event_id').eq('event_id','00000000-0000-4000-8000-00000000e2e1')
     if(retainedChannels.error)throw new Error(`retained Staff channel RLS failed: ${retainedChannels.error.message}`)
     if(!retainedChannels.data?.some(channel=>channel.kind==='event'))throw new Error('retained Staff channel RLS returned no event channel after closure')
-    const retainedMessages=await retainedAuth.from('messages').select('id,body,channel_id').eq('body','E2E lifecycle chat message')
+    const persistedLifecycleMessage=globalThis.__uptLifecycleMessage
+    if(!persistedLifecycleMessage?.id)throw new Error('lifecycle message diagnostic missing before retained read')
+    const serviceRetainedMessage=await lifecycleAdmin.from('messages').select('id,body,channel_id,sender_id').eq('id',persistedLifecycleMessage.id).maybeSingle()
+    if(serviceRetainedMessage.error||!serviceRetainedMessage.data)throw new Error('lifecycle message disappeared server-side after closure')
+    const retainedMessages=await retainedAuth.from('messages').select('id,body,channel_id').eq('id',persistedLifecycleMessage.id)
     if(retainedMessages.error)throw new Error(`retained Staff message RLS failed: ${retainedMessages.error.message}`)
-    if(!retainedMessages.data?.length)throw new Error('retained Staff message RLS returned no lifecycle message after closure')
+    if(!retainedMessages.data?.length)throw new Error(`retained Staff message RLS hid persisted message ${persistedLifecycleMessage.id} on channel ${persistedLifecycleMessage.channel_id}`)
 
 const retainedChat=await loginLifecycle('staff',2)
     try{
