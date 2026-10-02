@@ -7,6 +7,7 @@
 'use server'
 
 import { redirect } from 'next/navigation'
+import { cache } from 'react'
 import { cookies, headers } from 'next/headers'
 import { createClient } from '@/lib/supabase/crew-server'
 import { passwordPolicyMessage } from '@/lib/password-policy'
@@ -365,7 +366,7 @@ export async function resendVerificationEmail(formData: FormData) {
 }
 
 // ── Get Current User with Profile ────────────────────────────
-export async function getCurrentUser() {
+export const getCurrentUser = cache(async function getCurrentUser() {
     const supabase = await createClient()
     const { data: { user }, error: authError } = await supabase.auth.getUser()
     if (authError || !user) return null
@@ -404,7 +405,7 @@ export async function getCurrentUser() {
         isOwner: isOwner === true,
         isEditMode: false,
     }
-}
+})
 
 export async function verifyAdminSettingsCode() {
     return { ok: false, error: 'De oude PIN-editor is verwijderd. Gebruik God Mode.' }

@@ -27,8 +27,7 @@ export default async function Dashboard() {
 
   const nowDate = new Date()
   const nowMs = nowDate.getTime()
-  const [profileResult, eventsResult, shiftsResult, incidentsResult, membershipsResult, responsibleAssignmentsResult] = await Promise.all([
-    s.from('profiles').select('full_name,approved').eq('id', user.id).single(),
+  const [eventsResult, shiftsResult, incidentsResult, membershipsResult, responsibleAssignmentsResult] = await Promise.all([
     s.from('events').select('id,name,venue,start_at,end_at,status').neq('status','archived').order('start_at', { ascending: true }),
     s.from('shifts').select('id,workplace_id,event_id,scheduled_start,scheduled_end,response_status').eq('user_id', user.id).neq('status','cancelled').neq('response_status','declined').order('scheduled_start', { ascending: true }),
     s.from('incidents').select('id,event_id,workplace_id').neq('status', 'resolved'),
@@ -36,10 +35,7 @@ export default async function Dashboard() {
     s.from('responsible_assignments').select('event_id,workplace_id').eq('user_id', user.id),
   ])
 
-  const profile = profileResult.data
-  if (profile && !profile.approved) {
-    return <div className="p-8"><div className="mx-auto mt-20 max-w-xl rounded-2xl border border-amber-500/30 bg-amber-500/10 p-8 text-center"><h1 className="text-2xl font-black">ACCOUNT NOG NIET GOEDGEKEURD</h1><p className="mt-2 text-muted-foreground">Je account wacht op goedkeuring door een beheerder.</p></div></div>
-  }
+
 
   const rawEvents = eventsResult.data || []
   const shifts = shiftsResult.data || []
@@ -84,14 +80,14 @@ export default async function Dashboard() {
   const staffLivePeople:StaffWorkplacePerson[]=[]
   const staffLiveError=false
 
-  const overviewSources=[profileResult,eventsResult,shiftsResult,incidentsResult,membershipsResult,responsibleAssignmentsResult]
+  const overviewSources=[eventsResult,shiftsResult,incidentsResult,membershipsResult,responsibleAssignmentsResult]
   const failedOverviewSources=overviewSources.filter(result=>result.error).length+Number(responsibleLiveError)+Number(staffLiveError)
   const hasLoadError=failedOverviewSources>0
 
   return <main className="mx-auto max-w-7xl space-y-7 p-4 pb-28 md:p-8">
     <div>
       <p className="text-xs font-bold tracking-[.2em] text-violet-400">UP TILL DAWN PERSONEELSBEHEER</p>
-      <h1 className="mt-1 text-3xl font-black">Welkom, {profile?.full_name || 'Personeelslid'}</h1>
+      <h1 className="mt-1 text-3xl font-black">Welkom, {current.full_name || 'Personeelslid'}</h1>
       <p className="text-muted-foreground">Je operationele personeelsoverzicht.</p>
     </div>
     {hasLoadError && <p className="rounded-xl border border-amber-500/40 p-4">Een deel van de realtime gegevens is tijdelijk niet beschikbaar. De beschikbare onderdelen blijven bruikbaar.</p>}
