@@ -1,4 +1,5 @@
 import Link from 'next/link'
+import { Suspense } from 'react'
 import { redirect } from 'next/navigation'
 import { CalendarDays, Clock3, MapPin, AlertTriangle, ArrowRight, ClipboardCheck, PackageCheck, ListTodo } from 'lucide-react'
 import { createClient } from '@/lib/supabase/crew-server'
@@ -18,12 +19,8 @@ function Card({ href, icon: Icon, title, value }: { href: string; icon: typeof C
   </Link>
 }
 
-export default async function Dashboard() {
-  const current = await getCurrentUser()
-  if (!current) return null
-  if (current.isAdmin) redirect('/admin')
-  const user = { id: current.id }
-
+async function DashboardOverview({current}:{current:NonNullable<Awaited<ReturnType<typeof getCurrentUser>>>}) {
+  const user={id:current.id}
   // Keep identity visible independently from the data-heavy overview below.
   // The authenticated shell can render the user's name without a duplicate profile lookup.
   const s = await createClient()
@@ -86,13 +83,8 @@ export default async function Dashboard() {
   const failedOverviewSources=overviewSources.filter(result=>result.error).length+Number(responsibleLiveError)+Number(staffLiveError)
   const hasLoadError=failedOverviewSources>0
 
-  return <main className="mx-auto max-w-7xl space-y-7 p-4 pb-28 md:p-8">
-    <div>
-      <p className="text-xs font-bold tracking-[.2em] text-violet-400">UP TILL DAWN PERSONEELSBEHEER</p>
-      <h1 className="mt-1 text-3xl font-black">Welkom, {current.full_name || 'Personeelslid'}</h1>
-      <p className="text-muted-foreground">Je operationele personeelsoverzicht.</p>
-    </div>
-    {hasLoadError && <p className="rounded-xl border border-amber-500/40 p-4">Een deel van de realtime gegevens is tijdelijk niet beschikbaar. De beschikbare onderdelen blijven bruikbaar.</p>}
+
+  return <>{hasLoadError && <p className="rounded-xl border border-amber-500/40 p-4">Een deel van de realtime gegevens is tijdelijk niet beschikbaar. De beschikbare onderdelen blijven bruikbaar.</p>}
     <section className="grid gap-4 md:grid-cols-3">
       <Card href="/events" icon={CalendarDays} title="Evenementen" value={events.length}/>
       <AssignedEventOnly available={hasEventAssignment}><Card href="/workplaces" icon={Clock3} title="Werkplaatsen & shifts" value={shifts.length}/></AssignedEventOnly>
@@ -142,5 +134,21 @@ export default async function Dashboard() {
         {events.length ? events.slice(0, 3).map(event => <Link href="/events" key={event.id} className="flex items-center justify-between rounded-2xl border border-border bg-card p-4"><div><div className="font-bold">{event.name}</div><div className="flex gap-2 text-sm text-muted-foreground"><MapPin className="h-4 w-4"/>{event.venue || 'Locatie nog niet ingesteld'}</div></div><ArrowRight className="h-5 w-5"/></Link>) : <div className="rounded-2xl border border-dashed p-8 text-center text-muted-foreground">Geen evenementen beschikbaar.</div>}
       </div>
     </section>
+</>
+}
+
+export default async function Dashboard() {
+  const current=await getCurrentUser()
+  if(!current)return null
+  if(current.isAdmin)redirect('/admin')
+  return <main className="mx-auto max-w-7xl space-y-7 p-4 pb-28 md:p-8">
+    <div>
+      <p className="text-xs font-bold tracking-[.2em] text-violet-400">UP TILL DAWN PERSONEELSBEHEER</p>
+      <h1 className="mt-1 text-3xl font-black">Welkom, {current.full_name || 'Personeelslid'}</h1>
+      <p className="text-muted-foreground">Je operationele personeelsoverzicht.</p>
+    </div>
+    <Suspense fallback={<section className="rounded-2xl border border-dashed p-6 text-sm text-muted-foreground">Operationeel overzicht laden…</section>}>
+      <DashboardOverview current={current}/>
+    </Suspense>
   </main>
 }
