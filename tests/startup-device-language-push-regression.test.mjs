@@ -12,8 +12,7 @@ test('device language is the default until the user makes a manual choice',async
 test('manual language survives navigation and reload while device mode tracks the device',async()=>{
  const sync=await read('components/locale-sync.tsx')
  assert.match(sync,/applyLocale\(initialUiLocale\(\) as ExtendedUiLocale,initialUiLocaleSource\(\)\)/)
- assert.doesNotMatch(sync,/applyLocale\(deviceUiLocale\(\) as ExtendedUiLocale,'device'\)/)
- assert.match(sync,/if\(storedUiLocaleSource\(\)==='manual'\)return/)
+ assert.match(sync,/const onDeviceLanguageChange = \(\) => \{[\s\S]*if\(storedUiLocaleSource\(\)==='manual'\)return[\s\S]*applyLocale\(deviceUiLocale\(\) as ExtendedUiLocale,'device'\)/)
 })
 
 test('all four supported locales remain selectable',async()=>{
