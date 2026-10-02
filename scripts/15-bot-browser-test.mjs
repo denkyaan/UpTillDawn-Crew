@@ -118,7 +118,7 @@ try {
         await page.waitForTimeout(750)
         await page.locator('button[type="submit"]').click({ timeout: 15000 })
         await page.waitForURL(url => url.pathname === '/', { timeout: 45000 })
-        await page.waitForLoadState('networkidle')
+        await page.waitForLoadState('domcontentloaded')
       }
 
       const body = await page.locator('body').innerText()
@@ -372,6 +372,20 @@ try {
   }
 
   try{
+    // The concurrent smoke phase may still touch the isolated event after bot03.
+    // Re-establish the operational clock here, immediately before attendance,
+    // so the sequential lifecycle cannot race with parallel event mutations.
+    const attendanceStart = new Date(Date.now() - 60 * 60 * 1000).toISOString()
+    const attendanceEnd = new Date(Date.now() + 8 * 60 * 60 * 1000).toISOString()
+    const {error:attendancePhaseError}=await lifecycleAdmin.from('events').update({
+      start_date:attendanceStart,start_at:attendanceStart,end_date:attendanceEnd,end_at:attendanceEnd,status:'active',
+    }).eq('id','00000000-0000-4000-8000-00000000e2e1')
+    if(attendancePhaseError)throw new Error(`failed to establish attendance lifecycle clock: ${attendancePhaseError.message}`)
+    const attendanceEvent=await lifecycleAdmin.from('events').select('start_at,end_at,status').eq('id','00000000-0000-4000-8000-00000000e2e1').single()
+    if(attendanceEvent.error||attendanceEvent.data?.status!=='active'||Date.parse(attendanceEvent.data.start_at)>Date.now()){
+      throw new Error('attendance lifecycle event was not active before QR start request')
+    }
+
     const staff=await loginLifecycle('staff',2)
     try{
       await staff.page.goto(`${baseUrl}/qr`,{waitUntil:'networkidle',timeout:45000})
