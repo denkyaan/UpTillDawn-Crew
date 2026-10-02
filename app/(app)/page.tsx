@@ -27,7 +27,6 @@ export default async function Dashboard() {
 
   const nowDate = new Date()
   const nowMs = nowDate.getTime()
-  const now = nowDate.toISOString()
   const [profileResult, eventsResult, shiftsResult, incidentsResult, membershipsResult, responsibleAssignmentsResult] = await Promise.all([
     s.from('profiles').select('full_name,approved').eq('id', user.id).single(),
     s.from('events').select('id,name,venue,end_at,status').neq('status','archived').order('start_at', { ascending: true }),
