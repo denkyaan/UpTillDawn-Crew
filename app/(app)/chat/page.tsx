@@ -13,7 +13,7 @@ export default async function Page({searchParams}:{searchParams?:Promise<{event?
     s.rpc('upt_crew_directory'),
     s.from('events').select('id,start_at,end_at').neq('status','archived').lte('start_at','now').gte('end_at','now').order('start_at'),
     s.from('event_members').select('event_id').eq('user_id',user.id),
-    s.from('shifts').select('event_id,workplace_id').eq('user_id',user.id).neq('status','cancelled'),
+    s.from('shifts').select('event_id,workplace_id,response_status').eq('user_id',user.id).neq('status','cancelled').neq('response_status','declined'),
     s.from('responsible_assignments').select('event_id,workplace_id').eq('user_id',user.id),
     s.from('events').select('id,start_at,end_at,status,image_url').order('start_at'),
   ])
@@ -25,14 +25,17 @@ export default async function Page({searchParams}:{searchParams?:Promise<{event?
   }))
 
   const now=new Date().getTime();const memberEventIds=new Set((memberships||[]).map(row=>row.event_id))
-  const workplaceIds=new Set([...(ownShifts||[]).map(row=>row.workplace_id),...(responsibleAssignments||[]).map(row=>row.workplace_id)])
+  const assignedShifts=ownShifts||[]
+  const assignedResponsible=responsibleAssignments||[]
+  const assignedEventIds=new Set([...memberEventIds,...assignedShifts.map(row=>row.event_id),...assignedResponsible.map(row=>row.event_id)])
+  const workplaceIds=new Set([...assignedShifts.map(row=>row.workplace_id),...assignedResponsible.map(row=>row.workplace_id)])
   const chatWindowEventIds=new Set((chatEvents||[]).filter(event=>Date.parse(event.start_at)<=now&&now<=Date.parse(event.end_at)+3*24*60*60*1000).map(event=>event.id))
   const readable=(channels||[]).filter(channel=>{
     if(!['organization','event','workplace'].includes(channel.kind))return false
     if(current.role==='admin')return true
     if(channel.kind==='organization')return true
     if(!channel.event_id||!chatWindowEventIds.has(channel.event_id))return false
-    if(channel.kind==='event')return memberEventIds.has(channel.event_id)||ownShifts.some(shift=>shift.event_id===channel.event_id)||responsibleAssignments.some(row=>row.event_id===channel.event_id)
+    if(channel.kind==='event')return assignedEventIds.has(channel.event_id)
     return Boolean(channel.workplace_id&&workplaceIds.has(channel.workplace_id))
   })
   const ordered=[...readable].sort((a,b)=>{const weight=(kind:string)=>kind==='organization'?0:kind==='event'?1:2;const byKind=weight(a.kind)-weight(b.kind);return byKind||(a.name||'').localeCompare(b.name||'','nl')})

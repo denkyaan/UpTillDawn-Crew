@@ -44,7 +44,7 @@ export default async function Dashboard() {
   const rawEvents = eventsResult.data || []
   const shifts = shiftsResult.data || []
   const memberships = membershipsResult.data || []
-  const activeEventIds = new Set(rawEvents.filter(event=>Date.parse(event.end_at)>=nowMs).map(event=>event.id))
+  const activeEventIds = new Set(rawEvents.filter(event=>Date.parse(event.start_at)<=nowMs&&Date.parse(event.end_at)>=nowMs).map(event=>event.id))
   const openEventIds = new Set(rawEvents.filter(event=>Date.parse(event.end_at)>=nowMs).map(event=>event.id))
   const responsibleAssignments=responsibleAssignmentsResult.data||[]
   const assignedEventIds=new Set([
