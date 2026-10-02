@@ -10,6 +10,7 @@ const stackTrace=process.env.STACK_TRACE||''
 const aiSummary=process.env.AI_SUMMARY||''
 const maxAttempts=Math.max(1,Math.min(5,Number(process.env.MAX_REPAIR_ATTEMPTS||4)))
 let repairFeedback=''
+let diagnosis=null
 const account=process.env.CF_ACCOUNT_ID||''
 const token=process.env.CF_API_TOKEN||''
 const model='@cf/meta/llama-3.3-70b-instruct-fp8-fast'
@@ -36,21 +37,43 @@ async function candidates(){
  return tracked.map(path=>({path,score:terms.reduce((n,t)=>n+(path.toLowerCase().includes(t)?3:0),0)}))
   .sort((a,b)=>b.score-a.score).slice(0,50).map(x=>x.path)
 }
-async function propose(){
+async function diagnose(){
  const paths=await candidates()
  const selected=await ai([
-  {role:'system',content:'Selecteer maximaal 8 relevante bronbestanden voor een minimale productiefout-fix. Kies alleen uit candidates. Geef uitsluitend JSON {paths:string[]}.'},
+  {role:'system',content:'Selecteer maximaal 10 bronbestanden die nodig zijn om de gemelde fout te verklaren. Kies alleen uit candidates. Geef uitsluitend JSON {paths:string[]}.'},
   {role:'user',content:JSON.stringify({route,errorName,errorMessage,stackTrace,aiSummary,repairFeedback,candidates:paths})},
  ],1200)
- const chosen=[...new Set(selected.paths||[])].filter(p=>paths.includes(p)).slice(0,8)
- if(!chosen.length)return output(false,'Geen veilige bronselectie.')
+ const chosen=[...new Set(selected.paths||[])].filter(p=>paths.includes(p)).slice(0,10)
+ if(!chosen.length)return null
  const files=[]
  let bytes=0
- for(const path of chosen){const content=await readFile(path,'utf8');bytes+=Buffer.byteLength(content);if(bytes<=140000)files.push({path,content})}
+ for(const path of chosen){const content=await readFile(path,'utf8');bytes+=Buffer.byteLength(content);if(bytes<=170000)files.push({path,content})}
+ const evidence=await ai([
+  {role:'system',content:[
+   'Je bent de diagnosepoort van UpTillDawn Crew. Je mag GEEN codewijziging voorstellen.',
+   'Bepaal eerst de root cause uit het foutrapport en de meegeleverde broncode.',
+   'Geef uitsluitend JSON {rootCause,evidence:[{path,detail}],confidence,affectedPaths}.',
+   'confidence is low, medium of high. affectedPaths bevat alleen paden uit files.',
+   'Evidence moet concreet verwijzen naar gedrag/code in de meegeleverde bestanden.',
+   'Als de oorzaak niet bewezen kan worden: confidence=low en affectedPaths=[].',
+  ].join('\\n')},
+  {role:'user',content:JSON.stringify({reportId,route,errorName,errorMessage,stackTrace,aiSummary,repairFeedback,files})},
+ ],3000)
+ const confidence=['low','medium','high'].includes(evidence?.confidence)?evidence.confidence:'low'
+ const affected=[...new Set(evidence?.affectedPaths||[])].filter(p=>files.some(file=>file.path===p)&&editable(p)).slice(0,8)
+ const proof=Array.isArray(evidence?.evidence)?evidence.evidence.filter(item=>item&&typeof item.path==='string'&&typeof item.detail==='string'&&files.some(file=>file.path===item.path)).slice(0,12):[]
+ if(confidence==='low'||!affected.length||!proof.length||typeof evidence?.rootCause!=='string'||!evidence.rootCause.trim())return null
+ return {rootCause:evidence.rootCause.trim(),evidence:proof,confidence,affectedPaths:affected,files}
+}
+async function propose(){
+ diagnosis=await diagnose()
+ if(!diagnosis)return output(false,'Geen voldoende bewezen root cause; automatische wijziging geweigerd.')
+ const files=diagnosis.files.filter(file=>diagnosis.affectedPaths.includes(file.path))
  const result=await ai([
   {role:'system',content:[
    'Je bent de begrensde self-healing programmeur van UpTillDawn Crew.',
-   'Maak uitsluitend een minimale fix voor de gemelde fout.',
+   'Maak uitsluitend een minimale fix voor de bewezen root cause uit diagnosis.',
+   'Wijzig niets dat niet rechtstreeks door diagnosis.evidence wordt ondersteund.',
    'Geef JSON {summary,confidence,changes:[{path,content}]}. confidence is low, medium of high.',
    'content is steeds de volledige nieuwe bestandsinhoud.',
    'Wijzig uitsluitend bestanden die volledig in files zijn meegegeven.',
@@ -58,10 +81,10 @@ async function propose(){
    'Behoud bestaande functionaliteit. Nieuwe zichtbare tekst vereist NL/FR/EN/DE-dekking.',
    'Gebruik confidence als diagnostische indicatie, niet als publicatiebeslissing. Als je na brononderzoek geen verantwoorde fix kunt formuleren: changes=[].',
   ].join('\n')},
-  {role:'user',content:JSON.stringify({reportId,route,errorName,errorMessage,stackTrace,aiSummary,repairFeedback,files})},
+  {role:'user',content:JSON.stringify({reportId,route,errorName,errorMessage,stackTrace,aiSummary,repairFeedback,diagnosis:{rootCause:diagnosis.rootCause,evidence:diagnosis.evidence,confidence:diagnosis.confidence},files})},
  ])
  if(!Array.isArray(result.changes)||!result.changes.length)return output(false,result.summary||'Geen autonome fix gevonden.')
- const context=new Set(files.map(x=>x.path))
+ const context=new Set(diagnosis.affectedPaths)
  for(const change of result.changes){
   if(!context.has(change.path)||!editable(change.path)||typeof change.content!=='string')throw new Error('AI wijziging buiten begrensde context geweigerd: '+change.path)
   await writeFile(change.path,change.content,'utf8')
@@ -108,7 +131,7 @@ async function releaseCheck(){
 async function loop(){
  const base=sh('git',['rev-parse','HEAD'])
  for(let attempt=1;attempt<=maxAttempts;attempt++){
-  console.log(`Self-healing attempt ${attempt}/${maxAttempts}`)
+  console.log(`Self-healing attempt ${attempt}/${maxAttempts}: evidence -> root cause -> bounded fix -> full validation -> CI -> deploy`)
   if(attempt>1){
    sh('git',['reset','--hard',base])
    sh('git',['clean','-fd'])
