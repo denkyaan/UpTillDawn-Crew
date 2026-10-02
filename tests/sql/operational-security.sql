@@ -34,7 +34,10 @@ SET LOCAL ROLE authenticated;
 DO $$ DECLARE a record; b record; BEGIN
  PERFORM public.upt_acknowledge_briefing((SELECT id FROM upt_test_ids WHERE name='briefing'));
  IF NOT EXISTS(SELECT 1 FROM public.briefing_acknowledgements WHERE user_id=auth.uid()) THEN RAISE EXCEPTION 'FAIL briefing acknowledgement'; END IF;
- IF (SELECT count(*) FROM public.profiles)<>1 THEN RAISE EXCEPTION 'FAIL profile isolation'; END IF;
+ BEGIN
+   PERFORM id FROM public.profiles LIMIT 1;
+   RAISE EXCEPTION 'FAIL direct profile table read';
+ EXCEPTION WHEN insufficient_privilege THEN NULL; END;
  BEGIN
  UPDATE public.profiles SET role='admin' WHERE id=auth.uid();
  RAISE EXCEPTION 'FAIL self promotion permitted';
