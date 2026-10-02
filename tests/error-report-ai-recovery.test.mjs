@@ -6,12 +6,14 @@ const read=path=>readFile(new URL('../'+path,import.meta.url),'utf8')
 
 test('authenticated app exposes user-controlled error reporting and blocked-account enforcement',async()=>{
   const layout=await read('app/(app)/layout.tsx')
+  const auth=await read('lib/actions/auth.ts')
   const boundary=await read('app/(app)/error.tsx')
   const bridge=await read('components/error-report-bridge.tsx')
   const button=await read('components/error-report-button.tsx')
 
   assert.match(layout,/ErrorReportBridge/)
-  assert.match(layout,/account_blocked/)
+  assert.match(layout,/getCurrentUser/)
+  assert.match(auth,/account_blocked/)
   assert.match(boundary,/ErrorReportButton/)
   assert.match(boundary,/source="boundary"/)
   assert.match(bridge,/unhandledrejection/)

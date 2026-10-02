@@ -702,7 +702,18 @@ try {
     const closed=await lifecycleAdmin.from('events').select('status,end_at').eq('id','00000000-0000-4000-8000-00000000e2e1').single()
     if(closed.error||!closed.data)throw new Error('closed event could not be read back')
 
-    const retainedChat=await loginLifecycle('staff',2)
+        // Prove the database authorization contract directly before exercising the UI.
+    const retainedAuth=createClient(supabaseUrl,anonKey,{auth:{persistSession:false,autoRefreshToken:false}})
+    const {error:retainedAuthError}=await retainedAuth.auth.signInWithPassword({email:'bot-03-staff-en@bots.uptilldawn.test',password:testPassword})
+    if(retainedAuthError)throw new Error(`retained Staff auth failed: ${retainedAuthError.message}`)
+    const retainedChannels=await retainedAuth.from('chat_channels').select('id,kind,event_id').eq('event_id','00000000-0000-4000-8000-00000000e2e1')
+    if(retainedChannels.error)throw new Error(`retained Staff channel RLS failed: ${retainedChannels.error.message}`)
+    if(!retainedChannels.data?.some(channel=>channel.kind==='event'))throw new Error('retained Staff channel RLS returned no event channel after closure')
+    const retainedMessages=await retainedAuth.from('messages').select('id,body,channel_id').eq('body','E2E lifecycle chat message')
+    if(retainedMessages.error)throw new Error(`retained Staff message RLS failed: ${retainedMessages.error.message}`)
+    if(!retainedMessages.data?.length)throw new Error('retained Staff message RLS returned no lifecycle message after closure')
+
+const retainedChat=await loginLifecycle('staff',2)
     try{
       await retainedChat.page.goto(`${baseUrl}/chat?event=00000000-0000-4000-8000-00000000e2e1`,{waitUntil:'networkidle',timeout:45000})
       if(!(await retainedChat.page.getByText('E2E lifecycle chat message',{exact:true}).isVisible()))throw new Error('assigned Staff lost event chat immediately after event closure')

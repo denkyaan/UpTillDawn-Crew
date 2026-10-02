@@ -19,12 +19,14 @@ function Card({ href, icon: Icon, title, value }: { href: string; icon: typeof C
 }
 
 export default async function Dashboard() {
-  const s = await createClient()
   const current = await getCurrentUser()
   if (!current) return null
   if (current.isAdmin) redirect('/admin')
   const user = { id: current.id }
 
+  // Keep identity visible independently from the data-heavy overview below.
+  // The authenticated shell can render the user's name without a duplicate profile lookup.
+  const s = await createClient()
   const nowDate = new Date()
   const nowMs = nowDate.getTime()
   const [eventsResult, shiftsResult, incidentsResult, membershipsResult, responsibleAssignmentsResult] = await Promise.all([
