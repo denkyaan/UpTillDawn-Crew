@@ -4250,6 +4250,14 @@ export type Database = {
         }
         Returns: undefined
       }
+      upt_admin_pending_profiles: {
+        Args: never
+        Returns: {
+          full_name: string
+          id: string
+          updated_at: string
+        }[]
+      }
       upt_admin_personnel_details: {
         Args: never
         Returns: {
@@ -4638,6 +4646,18 @@ export type Database = {
       }
       upt_current_effective_role: { Args: never; Returns: string }
       upt_current_is_owner: { Args: never; Returns: boolean }
+      upt_current_profile: {
+        Args: never
+        Returns: {
+          account_blocked: boolean
+          approved: boolean
+          full_name: string
+          id: string
+          phone_number: string
+          profile_photo_url: string
+          role: string
+        }[]
+      }
       upt_current_work_context: {
         Args: never
         Returns: {
@@ -5089,26 +5109,6 @@ export type Database = {
       upt_reopen_operational_checklist: {
         Args: { p_checklist: string }
         Returns: undefined
-      }
-      upt_current_profile: {
-        Args: never
-        Returns: {
-          id: string
-          full_name: string
-          phone_number: string
-          profile_photo_url: string
-          approved: boolean
-          role: string
-          account_blocked: boolean
-        }[]
-      }
-      upt_admin_pending_profiles: {
-        Args: never
-        Returns: {
-          id: string
-          full_name: string
-          updated_at: string
-        }[]
       }
       upt_report_client_error: {
         Args: {
