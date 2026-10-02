@@ -1,11 +1,11 @@
 import Link from 'next/link'
 import { Suspense } from 'react'
-import { redirect } from 'next/navigation'
 import { CalendarDays, Clock3, MapPin, AlertTriangle, ArrowRight, ClipboardCheck, PackageCheck, ListTodo } from 'lucide-react'
 import { createClient } from '@/lib/supabase/crew-server'
 import { ManagerOnly } from '@/components/auth/manager-only'
 import { AssignedEventOnly } from '@/components/auth/assigned-event-only'
 import { getCurrentUser } from '@/lib/actions/auth'
+import { DashboardIdentity } from '@/components/crew/dashboard-identity'
 import { ResponsibleLivePersonnel, type ResponsibleLivePerson } from '@/components/responsible/responsible-live-personnel'
 import { StaffWorkplacePersonnel, type StaffWorkplacePerson } from '@/components/crew/staff-workplace-personnel'
 
@@ -137,18 +137,17 @@ async function DashboardOverview({current}:{current:NonNullable<Awaited<ReturnTy
 </>
 }
 
-export default async function Dashboard() {
+async function AuthenticatedDashboardOverview() {
   const current=await getCurrentUser()
-  if(!current)return null
-  if(current.isAdmin)redirect('/admin')
+  if(!current||current.isAdmin)return null
+  return <DashboardOverview current={current}/>
+}
+
+export default function Dashboard() {
   return <main className="mx-auto max-w-7xl space-y-7 p-4 pb-28 md:p-8">
-    <div>
-      <p className="text-xs font-bold tracking-[.2em] text-violet-400">UP TILL DAWN PERSONEELSBEHEER</p>
-      <h1 className="mt-1 text-3xl font-black">Welkom, {current.full_name || 'Personeelslid'}</h1>
-      <p className="text-muted-foreground">Je operationele personeelsoverzicht.</p>
-    </div>
+    <DashboardIdentity/>
     <Suspense fallback={<section className="rounded-2xl border border-dashed p-6 text-sm text-muted-foreground">Operationeel overzicht laden…</section>}>
-      <DashboardOverview current={current}/>
+      <AuthenticatedDashboardOverview/>
     </Suspense>
   </main>
 }
