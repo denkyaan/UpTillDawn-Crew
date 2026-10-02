@@ -8,6 +8,7 @@ import {
   LANGUAGE_CHANGE_EVENT,
   deviceUiLocale,
   initialUiLocale,
+  initialUiLocaleSource,
   parseUiLocale,
   persistUiLocale,
   storedUiLocaleSource,
@@ -118,7 +119,7 @@ export function LocaleSync() {
       if(observing||initialPass!==undefined)return
       initialPass=window.setTimeout(()=>{
         initialPass=undefined
-        applyLocale(deviceUiLocale() as ExtendedUiLocale,'device')
+        applyLocale(initialUiLocale() as ExtendedUiLocale,initialUiLocaleSource())
         observer.observe(document.body, { subtree: true, childList: true, characterData: true, attributes: true, attributeFilter: [...attributes] })
         observing=true
       },0)
