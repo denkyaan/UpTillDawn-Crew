@@ -1,6 +1,7 @@
 'use client'
 
 import { useState } from 'react'
+import { humanizeAppError } from '@/lib/client-error-message'
 
 export function PlatformAiAssistant({eventId,contextLabel,contextKey,compact=false}:{eventId?:string;contextLabel?:string;contextKey?:string;compact?:boolean}={}){
   const [message,setMessage]=useState('')
@@ -18,7 +19,7 @@ export function PlatformAiAssistant({eventId,contextLabel,contextKey,compact=fal
         body:JSON.stringify({message:value,eventId,contextKey}),
       })
       const payload=await response.json() as {answer?:string;error?:string}
-      setAnswer(payload.answer||payload.error||'AI-assistent gaf geen antwoord.')
+      setAnswer(payload.answer||(response.ok?'AI-assistent gaf geen antwoord.':humanizeAppError(payload.error)))
     }catch{
       setAnswer('AI-assistent is tijdelijk niet beschikbaar.')
     }finally{setBusy(false)}

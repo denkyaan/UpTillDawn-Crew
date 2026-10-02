@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react'
 import { showSaveSuccess } from '@/lib/client-save-success'
 import { fieldHelp } from '@/lib/ui-field-help'
+import { humanizeAppError } from '@/lib/client-error-message'
 
 type Table = {name: string; primaryKey: string[]; columns: {name: string; type: string; required: boolean; generated: boolean}[]}
 type Row = Record<string, unknown>
@@ -25,9 +26,9 @@ export function GodDataEditor() {
     try {
       const response = await fetch(`/api/god/data?table=${encodeURIComponent(name)}&offset=${page}`,{cache:'no-store'})
       const data = await response.json()
-      if (!response.ok) throw new Error(data.error)
+      if (!response.ok) throw new Error(humanizeAppError(data.error))
       setRows(data.data); setTable(name); setOffset(page)
-    } catch (error) { setMessage(error instanceof Error ? error.message : 'Laden mislukt.') }
+    } catch (error) { setMessage(humanizeAppError(error)) }
     finally { setBusy(false) }
   }
 
@@ -35,9 +36,9 @@ export function GodDataEditor() {
     let active=true
     void fetch('/api/god/data',{cache:'no-store'}).then(async response=>{
       const data=await response.json()
-      if(!response.ok)throw new Error(data.error)
+      if(!response.ok)throw new Error(humanizeAppError(data.error))
       if(active)setTables(data.data)
-    }).catch(error=>{if(active)setMessage(String(error.message||'Laden mislukt.'))})
+    }).catch(error=>{if(active)setMessage(humanizeAppError(error))})
     return()=>{active=false}
   },[])
 
@@ -56,11 +57,11 @@ export function GodDataEditor() {
       const key = Object.fromEntries(definition.primaryKey.map(name=>[name,original?.[name]]))
       const response = await fetch('/api/god/data',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({table,operation:remove?'delete':original?'update':'insert',key:original?key:{},before:original,values})})
       const data=await response.json()
-      if(!response.ok)throw new Error(data.error)
+      if(!response.ok)throw new Error(humanizeAppError(data.error))
       await load(table,offset)
       setMessage(remove?'Record verwijderd en gelogd.':'Record opgeslagen en gelogd.')
       if(!remove)showSaveSuccess()
-    }catch(error){setMessage(error instanceof Error?error.message:'Opslaan mislukt.')}
+    }catch(error){setMessage(humanizeAppError(error))}
     finally{setBusy(false)}
   }
 

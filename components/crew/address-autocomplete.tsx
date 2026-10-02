@@ -1,6 +1,7 @@
 "use client"
 
 import { useEffect,useId,useState } from "react"
+import { humanizeAppError } from "@/lib/client-error-message"
 
 type Suggestion={
   id:string
@@ -45,7 +46,7 @@ export function AddressAutocomplete({
           signal:controller.signal,headers:{Accept:"application/json"},
         })
         const payload=await response.json() as {results?:Suggestion[];error?:string}
-        if(!response.ok){setSuggestions([]);setError(payload.error||"Adressen konden niet worden opgezocht.");return}
+        if(!response.ok){setSuggestions([]);setError(humanizeAppError(payload.error||"Adressen konden niet worden opgezocht."));return}
         setSuggestions(payload.results||[]);setActive(-1)
       }catch(fetchError){
         if(fetchError instanceof DOMException&&fetchError.name==="AbortError")return

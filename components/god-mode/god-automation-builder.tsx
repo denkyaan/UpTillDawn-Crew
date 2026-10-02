@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react'
 import type { AutomationAction, AutomationTrigger } from '@/lib/automation-engine'
+import { humanizeAppError } from '@/lib/client-error-message'
 
 const triggers: {value:AutomationTrigger;label:string}[] = [
   {value:'shift-starting',label:'Shift start binnenkort'},
@@ -46,7 +47,7 @@ export function GodAutomationBuilder({
     let active=true
     fetch('/api/god/automation-rules',{cache:'no-store'}).then(async response=>{
       const data=await response.json()
-      if(!response.ok)throw new Error(data.error||'Automatiseringen konden niet worden geladen.')
+      if(!response.ok)throw new Error(humanizeAppError(data.error||'Automatiseringen konden niet worden geladen.'))
       if(active)setExistingRules(data.rules||[])
     }).catch(()=>{}).finally(()=>{if(active)setLoadingRules(false)})
     return()=>{active=false}
@@ -56,7 +57,7 @@ export function GodAutomationBuilder({
     setRuleStatus('')
     const response=await fetch('/api/god/automation-rules',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({automation_key:rule.automation_key,enabled:!rule.enabled})})
     const data=await response.json()
-    if(!response.ok){setRuleStatus(data.error||'Automatisering kon niet worden opgeslagen.');return}
+    if(!response.ok){setRuleStatus(humanizeAppError(data.error||'Automatisering kon niet worden opgeslagen.'));return}
     setExistingRules(current=>current.map(item=>item.automation_key===rule.automation_key?{...item,enabled:!rule.enabled}:item))
     setRuleStatus('Automatisering opgeslagen.')
   }

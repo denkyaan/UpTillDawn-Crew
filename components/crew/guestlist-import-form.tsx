@@ -2,6 +2,7 @@
 
 import { useState } from 'react'
 import { showSaveSuccess } from '@/lib/client-save-success'
+import { humanizeAppError } from '@/lib/client-error-message'
 
 export function GuestlistImportForm({eventId}:{eventId:string}){
   const [busy,setBusy]=useState(false)
@@ -15,7 +16,7 @@ export function GuestlistImportForm({eventId}:{eventId:string}){
       const response=await fetch('/api/guestlist/import',{method:'POST',body:formData})
       const payload=await response.json().catch(()=>null) as {inserted?:number;duplicates?:number;supplemented?:number;error?:string}|null
       if(!response.ok){
-        setMessage(payload?.error||'Guestlist kon niet worden geïmporteerd.')
+        setMessage(humanizeAppError(payload?.error||'Guestlist kon niet worden geïmporteerd.'))
         return
       }
       setMessage(`Import klaar · ${payload?.inserted||0} nieuw · ${payload?.duplicates||0} bestaand · ${payload?.supplemented||0} aangevuld`)
