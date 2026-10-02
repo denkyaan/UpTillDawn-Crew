@@ -250,7 +250,8 @@ export async function signIn(formData: FormData) {
         return { error: 'Aanmelden mislukt. Probeer opnieuw.' }
     }
 
-    const { data: profile, error: profileError } = await supabase.from('profiles').select('approved, role, account_blocked').eq('id', data.user.id).single()
+    const { data: profileRows, error: profileError } = await supabase.rpc('upt_current_profile')
+    const profile = profileRows?.[0] ?? null
     if (profileError || !profile) { await notifySecurity('denied', 'profile_error'); await supabase.auth.signOut(); return { error: 'Je profiel kon niet worden geladen. Probeer opnieuw.', code: 'profile_error' } }
     if (profile.account_blocked) { await notifySecurity('denied', 'account_blocked'); await supabase.auth.signOut(); return { error: 'ACCOUNT GEBLOKKEERD', code: 'account_blocked' } }
     const { data: isOwner } = await supabase.rpc('upt_current_is_owner')
@@ -371,11 +372,8 @@ export const getCurrentUser = cache(async function getCurrentUser() {
     const { data: { user }, error: authError } = await supabase.auth.getUser()
     if (authError || !user) return null
 
-    const { data: profile, error } = await supabase
-        .from('profiles')
-        .select('id,full_name,phone_number,profile_photo_url,approved,role,account_blocked')
-        .eq('id', user.id)
-        .single()
+    const { data: profileRows, error } = await supabase.rpc('upt_current_profile')
+    const profile = profileRows?.[0] ?? null
     if (error || !profile || profile.account_blocked) return null
 
     const realRole = profile.role
