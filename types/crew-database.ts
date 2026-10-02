@@ -5090,6 +5090,14 @@ export type Database = {
         Args: { p_checklist: string }
         Returns: undefined
       }
+      upt_admin_pending_profiles: {
+        Args: never
+        Returns: {
+          id: string
+          full_name: string
+          updated_at: string
+        }[]
+      }
       upt_report_client_error: {
         Args: {
           p_client_context?: Json
