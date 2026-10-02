@@ -2,6 +2,7 @@
 
 import { useEffect,useMemo,useState } from 'react'
 import { createClient } from '@/lib/supabase/crew-client'
+import { humanizeAppError } from '@/lib/client-error-message'
 import { removeGuestlistEntry,updateGuestlistEntry } from '@/lib/actions/guestlist'
 
 export type GuestlistEntry={
@@ -101,7 +102,7 @@ export function GuestlistEntranceClient({
       const s=createClient()
       const {data,error}=await s.rpc('upt_guestlist_checkin',{p_entry:entry.id,p_delta:delta})
       if(error){
-        setMessage(error.message)
+        setMessage(humanizeAppError(error))
         return
       }
       const payload=(data&&typeof data==='object'&&!Array.isArray(data)?data:{}) as {checkedIn?:unknown}
@@ -112,7 +113,7 @@ export function GuestlistEntranceClient({
         last_checked_in_at:new Date().toISOString(),
       }:item))
     }catch(error){
-      setMessage(error instanceof Error?error.message:'')
+      setMessage(humanizeAppError(error))
     }finally{
       setPendingEntry(null)
     }

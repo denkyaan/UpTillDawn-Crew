@@ -2,6 +2,7 @@
 
 import {useMemo,useState,useTransition} from 'react'
 import {createClient} from '@/lib/supabase/crew-client'
+import { humanizeAppError } from '@/lib/client-error-message'
 
 export type SaleProduct={
   id:string
@@ -41,7 +42,7 @@ export function SalesRegisterClient({initialProducts}:{initialProducts:SaleProdu
         p_payment_method:payment,
       })
       if(error){
-        setMessage(error.message)
+        setMessage(humanizeAppError(error))
         return
       }
       setProducts(current=>current.map(item=>item.id===product.id?{

@@ -3,6 +3,7 @@
 import Link from 'next/link'
 import { useEffect, useMemo, useState } from 'react'
 import { createClient } from '@/lib/supabase/crew-client'
+import { humanizeAppError } from '@/lib/client-error-message'
 
 type MissingItem = {
   id: string
@@ -40,7 +41,7 @@ export default function QrShiftRequest() {
       p_remote: remote,
       p_early_reason: reason.trim() || undefined,
     })
-    if (error) setError(error.message)
+    if (error) setError(humanizeAppError(error))
     else setResult(data as Result)
     setBusy(false)
   }
@@ -50,7 +51,7 @@ export default function QrShiftRequest() {
     ;(async () => {
       const { data, error } = await s.rpc('upt_qr_request')
       if (!active) return
-      if (error) setError(error.message)
+      if (error) setError(humanizeAppError(error))
       else setResult(data as Result)
       setBusy(false)
     })()
@@ -66,7 +67,7 @@ export default function QrShiftRequest() {
       ? await s.rpc('upt_confirm_shift', { p_shift: item.id })
       : await s.rpc('upt_acknowledge_briefing', { p_briefing: item.id })
     if (response.error) {
-      setError(response.error.message)
+      setError(humanizeAppError(response.error))
       setBusy(false)
       return
     }
