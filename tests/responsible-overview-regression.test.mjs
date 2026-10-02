@@ -7,8 +7,8 @@ test('responsible overview keeps operational data scoped to active assigned work
  const source=await read('app/(app)/page.tsx')
  assert.match(source,/activeResponsibleAssignments=responsibleAssignments/)
  assert.match(source,/activeEventIds\.has\(assignment\.event_id\)/)
- assert.match(source,/allowedPairs=new Set\(activeAssignments\.map/)
- assert.match(source,/allowedPairs\.has\(/)
+ assert.doesNotMatch(source,/upt_manager_live_sessions/)
+ assert.match(source,/activeResponsibleAssignments/)
  assert.match(source,/activeResponsibleWorkplaces\.has\(incident\.workplace_id\)/)
 })
 
