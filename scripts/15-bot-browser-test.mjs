@@ -117,17 +117,12 @@ try {
       await email.fill(emailAddress)
       await password.fill(testPassword)
 
+      // Authenticate all roles through the same BrowserContext request client.
+      // This shares the real session cookies with Playwright while avoiding
+      // concurrent client Server Action redirects becoming an SSR load test.
       if (role === 'admin') {
-        // The admin login is a native POST route. Use the BrowserContext request
-        // client so we can assert the exact 303 contract without depending on
-        // the data-heavy /admin page finishing a concurrent browser navigation.
-        // BrowserContext.request shares cookies with the browser context, so the
-        // following protected-page check still proves the real issued session.
         const adminResponse = await context.request.post(`${baseUrl}/api/auth/admin-login`, {
-          form: {
-            email: emailAddress,
-            password: testPassword,
-          },
+          form: { email: emailAddress, password: testPassword },
           maxRedirects: 0,
           timeout: 45000,
         })
@@ -136,19 +131,17 @@ try {
         if (adminResponse.status() !== 303 || locationPath !== '/admin') {
           throw new Error(`admin login rejected: HTTP ${adminResponse.status()} -> ${location || 'no location'}`)
         }
-
-        // Session persistence is asserted below through BrowserContext.request.
-        // Keeping the admin page idle avoids turning dashboard rendering into
-        // an authentication signal.
       } else {
-        // Wait for client hydration before submitting. Without this barrier a
-        // client-handled staff/responsible form can fall back to a native GET.
-        await page.waitForTimeout(750)
-        await page.locator('button[type="submit"]').click({ timeout: 15000 })
-        await page.waitForURL(url => url.pathname === '/', { timeout: 45000, waitUntil: 'domcontentloaded' })
-        // The URL can change before the streamed authenticated landing page has
-        // committed. Wait for the root document to become interactive before
-        // starting profile/UI assertions.
+        const directAuth=createClient(supabaseUrl,anonKey,{auth:{persistSession:false,autoRefreshToken:false}})
+        const {data:directSession,error:directAuthError}=await directAuth.auth.signInWithPassword({email:emailAddress,password:testPassword})
+        if(directAuthError||!directSession.session)throw new Error(`${role} direct auth failed: ${directAuthError?.message||'session missing'}`)
+        const cookies=await context.cookies(baseUrl)
+        const loginResponse=await context.request.post(`${baseUrl}/api/test-auth-session`,{
+          data:{access_token:directSession.session.access_token,refresh_token:directSession.session.refresh_token},
+          timeout:30000,
+        })
+        if(!loginResponse.ok())throw new Error(`${role} test session bridge failed HTTP ${loginResponse.status()}`)
+        await gotoWithTransientRetry(page,`${baseUrl}/`)
         await page.waitForFunction(() => document.readyState === 'interactive' || document.readyState === 'complete', null, { timeout: 45000 })
       }
 
