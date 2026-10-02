@@ -67,7 +67,8 @@ test('responsible defaults exclude admin and God Mode management surfaces',async
 
 test('responsible overview cleanup keeps queries minimal and ignores cancelled shifts',async()=>{
  const source=await read('app/(app)/page.tsx')
- assert.match(source,/select\('full_name,approved'\)/)
+ assert.match(source,/current\.full_name/)
+ assert.doesNotMatch(source,/from\('profiles'\)\.select\('full_name,approved'\)/)
  assert.match(source,/select\('id,name,venue,start_at,end_at,status'\)/)
  assert.match(source,/select\('id,workplace_id,event_id,scheduled_start,scheduled_end,response_status'\).*neq\('status','cancelled'\).*neq\('response_status','declined'\)/)
  assert.doesNotMatch(source,/select\('full_name,approved,role'\)/)
