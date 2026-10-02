@@ -51,12 +51,9 @@ async function gotoWithTransientRetry(page, url, options={}) {
 }
 
 async function waitForSeededProfile(page, expectedName) {
-  // Streaming RSC can keep Playwright's navigation pending after auth even
-  // though the session is already valid. Retry the root as a fresh bounded
-  // navigation, then require the seeded identity to render.
   for(let attempt=1;attempt<=3;attempt++){
     try{
-      await gotoWithTransientRetry(page,`${baseUrl}/`,{waitUntil:'domcontentloaded',timeout:45000})
+      await page.goto(`${baseUrl}/`,{waitUntil:'commit',timeout:45000})
       await page.getByText(expectedName,{exact:true}).first().waitFor({state:'visible',timeout:30000})
       return
     }catch(error){
@@ -597,30 +594,23 @@ try {
     const locked=await lifecycleAdmin.from('timesheets').select('status').eq('id',submitted.data.id).maybeSingle()
     if(locked.error||locked.data?.status!=='locked')throw new Error('timesheet did not reach locked state')
 
-    // Complete task state lifecycle after confirmation. Attendance/timesheet
-    // operations are allowed to consume/cancel the original shift, so restore
-    // the isolated bot03 fixture with the same deterministic ID and valid
-    // production columns before exercising task UI gating.
+    // Complete task state lifecycle after confirmation. Resolve the current
+    // seeded bot UUIDs from profiles instead of assuming fixed auth UUIDs.
+    const bot03Profile=await lifecycleAdmin.from('profiles').select('id').eq('full_name','E2E STAFF 03').single()
+    if(bot03Profile.error||!bot03Profile.data?.id)throw new Error('bot03 profile missing before task status lifecycle')
+    const responsibleProfile=await lifecycleAdmin.from('profiles').select('id').eq('full_name','E2E RESPONSIBLE 02').single()
+    if(responsibleProfile.error||!responsibleProfile.data?.id)throw new Error('responsible profile missing before task status lifecycle')
     const taskShiftStart=new Date(Date.now()-30*60*1000).toISOString()
     const taskShiftEnd=new Date(Date.now()+2*60*60*1000).toISOString()
     const taskShiftRestore=await lifecycleAdmin.from('shifts').upsert({
-      id:'00000000-0000-4000-8000-00000000e2e4',
-      event_id:'00000000-0000-4000-8000-00000000e2e1',
-      workplace_id:'00000000-0000-4000-8000-00000000e2e2',
-      user_id:'00000000-0000-4000-8000-000000000103',
-      start_time:taskShiftStart,
-      end_time:taskShiftEnd,
-      scheduled_start:taskShiftStart,
-      scheduled_end:taskShiftEnd,
-      role:'staff',
-      role_name:'Entrance',
-      status:'scheduled',
-      response_status:'accepted',
-      responsible_lead_id:'00000000-0000-4000-8000-000000000102',
-      overlap_allowed:false,
+      id:'00000000-0000-4000-8000-00000000e2e4',event_id:'00000000-0000-4000-8000-00000000e2e1',
+      workplace_id:'00000000-0000-4000-8000-00000000e2e2',user_id:bot03Profile.data.id,
+      start_time:taskShiftStart,end_time:taskShiftEnd,scheduled_start:taskShiftStart,scheduled_end:taskShiftEnd,
+      role:'staff',role_name:'Entrance',status:'scheduled',response_status:'accepted',
+      responsible_lead_id:responsibleProfile.data.id,overlap_allowed:false,
     },{onConflict:'id'})
     if(taskShiftRestore.error)throw new Error(`failed to restore staff task shift: ${taskShiftRestore.error.message}`)
-    const activeShift=await lifecycleAdmin.from('shifts').select('id').eq('id','00000000-0000-4000-8000-00000000e2e4').neq('status','cancelled').lte('scheduled_start',new Date().toISOString()).gte('scheduled_end',new Date().toISOString()).limit(1)
+    const activeShift=await lifecycleAdmin.from('shifts').select('id').eq('id','00000000-0000-4000-8000-00000000e2e4').eq('user_id',bot03Profile.data.id).neq('status','cancelled').lte('scheduled_start',new Date().toISOString()).gte('scheduled_end',new Date().toISOString()).limit(1)
     if(activeShift.error||!activeShift.data?.length)throw new Error('staff active shift fixture missing before task status lifecycle')
     const staffOps=await loginLifecycle('staff',2)
     try{
