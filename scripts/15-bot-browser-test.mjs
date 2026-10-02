@@ -140,6 +140,8 @@ try {
           timeout:30000,
         })
         if(!loginResponse.ok())throw new Error(`${role} test session bridge failed HTTP ${loginResponse.status()}`)
+        const bridgedCookies=await context.cookies(baseUrl)
+        if(!bridgedCookies.some(cookie=>cookie.name.startsWith('sb-')&&cookie.value))throw new Error(`${role} test session bridge returned no Supabase auth cookie`)
         await gotoWithTransientRetry(page,`${baseUrl}/`)
         await page.waitForFunction(() => document.readyState === 'interactive' || document.readyState === 'complete', null, { timeout: 45000 })
       }
