@@ -62,7 +62,12 @@ export function TaskControls({
         setBusy(true)
         setError('')
         try {
-          await enqueue(userId, 'task', { assignment_id: id, status: status.value })
+          if (navigator.onLine) {
+            const { error: statusError } = await s.rpc('upt_update_task_status', { p_assignment: id, p_status: status.value })
+            if (statusError) throw statusError
+          } else {
+            await enqueue(userId, 'task', { assignment_id: id, status: status.value })
+          }
           router.refresh()
         } catch {
           setError('Wijziging kon niet worden bewaard.')

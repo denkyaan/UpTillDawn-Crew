@@ -80,70 +80,12 @@ export default async function Dashboard() {
     )
   ).length
 
-  let responsibleLivePeople:ResponsibleLivePerson[]=[]
-  let responsibleLiveError=false
-  let staffLivePeople:StaffWorkplacePerson[]=[]
-  let staffLiveError=false
-
-  if(current.role==='responsible_lead'){
-    responsibleLiveError=Boolean(responsibleAssignmentsResult.error)
-
-    const activeAssignments=activeResponsibleAssignments
-    if(activeAssignments.length){
-      const allowedPairs=new Set(activeAssignments.map(assignment=>`${assignment.event_id}:${assignment.workplace_id}`))
-      const [directoryResults,liveResult]=await Promise.all([
-        Promise.all(activeAssignments.map(assignment=>
-          s.rpc('upt_responsible_crew_directory',{event_uuid:assignment.event_id,workplace_uuid:assignment.workplace_id})
-        )),
-        s.rpc('upt_manager_live_sessions'),
-      ])
-      if(directoryResults.some(result=>result.error)||liveResult.error)responsibleLiveError=true
-
-      const crewById=new Map<string,string>()
-      for(const result of directoryResults){
-        for(const member of result.data||[]){
-          if(member.id!==current.id)crewById.set(member.id,member.full_name||'Personeelslid')
-        }
-      }
-
-      const liveSessions=(liveResult.data||[]).filter(session=>
-        session.user_id!==current.id
-        && crewById.has(session.user_id)
-        && allowedPairs.has(`${session.event_id}:${session.workplace_id}`)
-      )
-      const sessionIds=liveSessions.map(session=>session.session_id)
-      const breaksResult=sessionIds.length
-        ? await s.from('break_sessions')
-            .select('work_session_id,started_at,ended_at')
-            .in('work_session_id',sessionIds)
-            .order('started_at')
-        : {data:[],error:null}
-      if(breaksResult.error)responsibleLiveError=true
-
-      responsibleLivePeople=liveSessions.map(session=>({
-        sessionId:session.session_id,
-        name:crewById.get(session.user_id)||'Personeelslid',
-        workplaceId:session.workplace_id,
-        workplaceName:session.workplace_name||'Werkplek',
-        startedAt:session.started_at,
-        breaks:(breaksResult.data||[])
-          .filter(item=>item.work_session_id===session.session_id)
-          .map(item=>({startedAt:item.started_at,endedAt:item.ended_at})),
-      }))
-    }
-  }
-
-  if(current.role==='staff'){
-    const staffStatusResult=await s.rpc('upt_staff_workplace_live_status')
-    staffLiveError=Boolean(staffStatusResult.error)
-    staffLivePeople=(staffStatusResult.data||[]).map(person=>({
-      sessionId:person.session_id,
-      name:person.full_name||'Personeelslid',
-      workplaceId:person.workplace_id,
-      workplaceName:person.workplace_name||'Werkplek',
-      status:person.status==='PAUZE'?'PAUZE':'WERKT',
-    }))
-  }
+  // Keep the authenticated landing render fast and deterministic. Live personnel widgets
+  // refresh on their dedicated operational surfaces instead of blocking the root RSC response.
+  const responsibleLivePeople:ResponsibleLivePerson[]=[]
+  const responsibleLiveError=false
+  const staffLivePeople:StaffWorkplacePerson[]=[]
+  const staffLiveError=false
 
   const overviewSources=[profileResult,eventsResult,shiftsResult,incidentsResult,membershipsResult,activeEventsResult,openEventsResult,responsibleAssignmentsResult]
   const failedOverviewSources=overviewSources.filter(result=>result.error).length+Number(responsibleLiveError)+Number(staffLiveError)
