@@ -108,6 +108,13 @@ DO $$ BEGIN
  END;
 END $$;
 RESET ROLE;
+SELECT set_config('request.jwt.claim.sub',(SELECT id::text FROM upt_test_ids WHERE name='admin'),true);
+SET LOCAL ROLE authenticated;
+DO $ DECLARE pending_count integer; BEGIN
+ SELECT count(*) INTO pending_count FROM public.upt_admin_pending_profiles();
+ IF pending_count < 1 THEN RAISE EXCEPTION 'FAIL admin pending profiles RPC'; END IF;
+END $;
+RESET ROLE;
 SELECT set_config('request.jwt.claim.sub','',true);
 SET LOCAL ROLE anon;
 DO $anon_surface$ BEGIN
