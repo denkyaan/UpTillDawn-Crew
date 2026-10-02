@@ -28,14 +28,12 @@ export default async function Dashboard() {
   const nowDate = new Date()
   const nowMs = nowDate.getTime()
   const now = nowDate.toISOString()
-  const [profileResult, eventsResult, shiftsResult, incidentsResult, membershipsResult, activeEventsResult, openEventsResult, responsibleAssignmentsResult] = await Promise.all([
+  const [profileResult, eventsResult, shiftsResult, incidentsResult, membershipsResult, responsibleAssignmentsResult] = await Promise.all([
     s.from('profiles').select('full_name,approved').eq('id', user.id).single(),
     s.from('events').select('id,name,venue,end_at,status').neq('status','archived').order('start_at', { ascending: true }),
     s.from('shifts').select('id,workplace_id,event_id,scheduled_start,scheduled_end,response_status').eq('user_id', user.id).neq('status','cancelled').neq('response_status','declined').order('scheduled_start', { ascending: true }),
     s.from('incidents').select('id,event_id,workplace_id').neq('status', 'resolved'),
     s.from('event_members').select('event_id,event_role').eq('user_id', user.id),
-    s.from('events').select('id').neq('status','archived').lte('start_at', now).gte('end_at', now),
-    s.from('events').select('id').neq('status','archived').gte('end_at', now),
     s.from('responsible_assignments').select('event_id,workplace_id').eq('user_id', user.id),
   ])
 
@@ -47,8 +45,8 @@ export default async function Dashboard() {
   const rawEvents = eventsResult.data || []
   const shifts = shiftsResult.data || []
   const memberships = membershipsResult.data || []
-  const activeEventIds = new Set((activeEventsResult.data || []).map(event => event.id))
-  const openEventIds = new Set((openEventsResult.data || []).map(event => event.id))
+  const activeEventIds = new Set(rawEvents.filter(event=>Date.parse(event.end_at)>=nowMs).map(event=>event.id))
+  const openEventIds = new Set(rawEvents.filter(event=>Date.parse(event.end_at)>=nowMs).map(event=>event.id))
   const responsibleAssignments=responsibleAssignmentsResult.data||[]
   const assignedEventIds=new Set([
     ...memberships.map(member=>member.event_id),
@@ -87,7 +85,7 @@ export default async function Dashboard() {
   const staffLivePeople:StaffWorkplacePerson[]=[]
   const staffLiveError=false
 
-  const overviewSources=[profileResult,eventsResult,shiftsResult,incidentsResult,membershipsResult,activeEventsResult,openEventsResult,responsibleAssignmentsResult]
+  const overviewSources=[profileResult,eventsResult,shiftsResult,incidentsResult,membershipsResult,responsibleAssignmentsResult]
   const failedOverviewSources=overviewSources.filter(result=>result.error).length+Number(responsibleLiveError)+Number(staffLiveError)
   const hasLoadError=failedOverviewSources>0
 
