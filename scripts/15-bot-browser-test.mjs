@@ -51,16 +51,9 @@ async function gotoWithTransientRetry(page, url, options={}) {
 }
 
 async function waitForSeededProfile(page, expectedName) {
-  for(let attempt=1;attempt<=3;attempt++){
-    try{
-      await page.goto(`${baseUrl}/`,{waitUntil:'commit',timeout:45000})
-      await page.getByText(expectedName,{exact:true}).first().waitFor({state:'visible',timeout:30000})
-      return
-    }catch(error){
-      if(attempt===3)throw error
-      await page.waitForTimeout(500*attempt)
-    }
-  }
+  // The login redirect already owns the authenticated root navigation.
+  // Do not replace it with a second page.goto while Next is committing RSC.
+  await page.getByText(expectedName,{exact:true}).first().waitFor({state:'visible',timeout:45000})
 }
 
 async function assertRuntimeLocale(page, locale, bot, route) {
@@ -612,6 +605,12 @@ try {
     if(taskShiftRestore.error)throw new Error(`failed to restore staff task shift: ${taskShiftRestore.error.message}`)
     const activeShift=await lifecycleAdmin.from('shifts').select('id').eq('id','00000000-0000-4000-8000-00000000e2e4').eq('user_id',bot03Profile.data.id).neq('status','cancelled').lte('scheduled_start',new Date().toISOString()).gte('scheduled_end',new Date().toISOString()).limit(1)
     if(activeShift.error||!activeShift.data?.length)throw new Error('staff active shift fixture missing before task status lifecycle')
+    const taskAssignmentRestore=await lifecycleAdmin.from('task_assignments').update({
+      user_id:bot03Profile.data.id,status:'NOT STARTED',confirmed_at:new Date().toISOString(),
+    }).eq('id',taskAssignmentId)
+    if(taskAssignmentRestore.error)throw new Error(`failed to restore confirmed task assignment: ${taskAssignmentRestore.error.message}`)
+    const confirmedTask=await lifecycleAdmin.from('task_assignments').select('user_id,confirmed_at,status').eq('id',taskAssignmentId).single()
+    if(confirmedTask.error||confirmedTask.data?.user_id!==bot03Profile.data.id||!confirmedTask.data?.confirmed_at)throw new Error('confirmed task assignment fixture missing before status lifecycle')
     const staffOps=await loginLifecycle('staff',2)
     try{
       await gotoWithTransientRetry(staffOps.page,`${baseUrl}/tasks?event=00000000-0000-4000-8000-00000000e2e1&workplace=00000000-0000-4000-8000-00000000e2e2`)
