@@ -614,10 +614,11 @@ try {
     const staffOps=await loginLifecycle('staff',2)
     try{
       await gotoWithTransientRetry(staffOps.page,`${baseUrl}/tasks?event=00000000-0000-4000-8000-00000000e2e1&workplace=00000000-0000-4000-8000-00000000e2e2`)
-      const task=staffOps.page.locator('article').filter({hasText:'E2E Entrance Task'}).first()
-      await task.waitFor({state:'visible',timeout:15000})
       for(const [action,expected] of [['task-status-in-progress','IN PROGRESS'],['task-status-completed','COMPLETED']]){
+        const task=staffOps.page.locator('article').filter({hasText:'E2E Entrance Task'}).first()
+        await task.waitFor({state:'visible',timeout:15000})
         const button=task.locator(`[data-action="${action}"]`)
+        await button.waitFor({state:'visible',timeout:15000})
         if(await button.count()!==1)throw new Error(`${action} missing`)
         await button.click()
         const deadline=Date.now()+15000
@@ -628,6 +629,7 @@ try {
           await staffOps.page.waitForTimeout(300)
         }
         if(!persisted)throw new Error(`${action} did not persist ${expected}`)
+        await staffOps.page.waitForLoadState('domcontentloaded',{timeout:15000}).catch(()=>{})
       }
     }finally{await staffOps.context.close()}
 
