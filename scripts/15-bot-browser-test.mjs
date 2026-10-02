@@ -50,10 +50,24 @@ async function gotoWithTransientRetry(page, url, options={}) {
   throw lastError
 }
 
-async function waitForSeededProfile(page, expectedName) {
+async function waitForSeededProfile(page, expectedName, context, bot, diagnostics) {
   // The login redirect already owns the authenticated root navigation.
   // Do not replace it with a second page.goto while Next is committing RSC.
-  await page.getByText(expectedName,{exact:true}).first().waitFor({state:'visible',timeout:45000})
+  try {
+    await page.getByText(expectedName,{exact:true}).first().waitFor({state:'visible',timeout:45000})
+  } catch (error) {
+    const body=await page.locator('body').innerText().catch(()=>'<body unavailable>')
+    const cookies=await context.cookies(baseUrl).catch(()=>[])
+    const rootProbe=await context.request.get(`${baseUrl}/`,{maxRedirects:0,timeout:15000}).catch(()=>null)
+    const rootBody=rootProbe?await rootProbe.text().catch(()=>'<unreadable>'):'<probe failed>'
+    const safeBody=body.replace(/\\s+/g,' ').slice(0,1800)
+    const safeRoot=rootBody.replace(/\\s+/g,' ').slice(0,1800)
+    const cookieNames=[...new Set(cookies.map(cookie=>cookie.name))].join(',')
+    const consoleErrors=diagnostics.consoleErrors.slice(-8).join(' | ')||'none'
+    const pageErrors=diagnostics.pageErrors.slice(-8).join(' | ')||'none'
+    const probe=rootProbe?`HTTP ${rootProbe.status()} location=${rootProbe.headers().location||'none'}`:'unavailable'
+    throw new Error(`${bot} profile render diagnostic: finalUrl=${page.url()} rootProbe=${probe} cookies=[${cookieNames}] consoleErrors=[${consoleErrors}] pageErrors=[${pageErrors}] body="${safeBody}" rootBody="${safeRoot}" original=${error instanceof Error?error.message:String(error)}`)
+  }
 }
 
 async function assertRuntimeLocale(page, locale, bot, route) {
@@ -100,6 +114,11 @@ try {
     const expectedName = `E2E ${role.toUpperCase()} ${String(index + 1).padStart(2, '0')}`
     const context = await browser.newContext({ locale, viewport })
     const page = await context.newPage()
+    const diagnostics={consoleErrors:[],pageErrors:[]}
+    page.on('console',message=>{
+      if(message.type()==='error')diagnostics.consoleErrors.push(message.text().slice(0,500))
+    })
+    page.on('pageerror',error=>diagnostics.pageErrors.push(String(error?.message||error).slice(0,500)))
 
     try {
       const response = await page.goto(`${baseUrl}/login/${role}`, {
@@ -151,7 +170,7 @@ try {
       if (/profiel kon niet worden geladen|account nog niet goedgekeurd/i.test(body)) {
         throw new Error('authenticated profile gate failed')
       }
-      if (role !== 'admin') await waitForSeededProfile(page, expectedName)
+      if (role !== 'admin') await waitForSeededProfile(page, expectedName, context, bot, diagnostics)
 
       // Runtime i18n regression on the authenticated landing page.
       await assertRuntimeLocale(page, locale, bot, page.url())
