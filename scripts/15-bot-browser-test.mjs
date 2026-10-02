@@ -135,7 +135,6 @@ try {
         const directAuth=createClient(supabaseUrl,anonKey,{auth:{persistSession:false,autoRefreshToken:false}})
         const {data:directSession,error:directAuthError}=await directAuth.auth.signInWithPassword({email:emailAddress,password:testPassword})
         if(directAuthError||!directSession.session)throw new Error(`${role} direct auth failed: ${directAuthError?.message||'session missing'}`)
-        const cookies=await context.cookies(baseUrl)
         const loginResponse=await context.request.post(`${baseUrl}/api/test-auth-session`,{
           data:{access_token:directSession.session.access_token,refresh_token:directSession.session.refresh_token},
           timeout:30000,

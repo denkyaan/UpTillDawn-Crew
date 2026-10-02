@@ -68,6 +68,7 @@ jobs:
     env:
       NEXT_PUBLIC_APP_URL: http://127.0.0.1:3000
       BOT_TEST_BASE_URL: http://127.0.0.1:3000
+      UPT_E2E_SESSION_BRIDGE: '1'
     steps:
       - name: Checkout
         uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5.1.0
