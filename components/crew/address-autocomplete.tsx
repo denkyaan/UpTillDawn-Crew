@@ -50,7 +50,7 @@ export function AddressAutocomplete({
         setSuggestions(payload.results||[]);setActive(-1)
       }catch(fetchError){
         if(fetchError instanceof DOMException&&fetchError.name==="AbortError")return
-        setSuggestions([]);setError("Adressen konden niet worden opgezocht.")
+        setSuggestions([]);setError(humanizeAppError(fetchError))
       }finally{if(!controller.signal.aborted)setLoading(false)}
     },300)
     return()=>{window.clearTimeout(timer);controller.abort()}
