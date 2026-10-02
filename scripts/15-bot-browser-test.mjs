@@ -616,6 +616,7 @@ try {
       await gotoWithTransientRetry(staffOps.page,`${baseUrl}/tasks?event=00000000-0000-4000-8000-00000000e2e1&workplace=00000000-0000-4000-8000-00000000e2e2`)
       for(const [action,expected] of [['task-status-in-progress','IN PROGRESS'],['task-status-completed','COMPLETED']]){
         const task=staffOps.page.locator('article').filter({hasText:'E2E Entrance Task'}).first()
+        await staffOps.page.reload({waitUntil:'domcontentloaded',timeout:30000})
         await task.waitFor({state:'visible',timeout:15000})
         const button=task.locator(`[data-action="${action}"]`)
         await button.waitFor({state:'visible',timeout:15000})

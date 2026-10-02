@@ -3,6 +3,7 @@ export type ExtendedUiLocale = 'nl' | 'fr' | 'en' | 'de'
 type Row = { fr: string; en: string; de: string }
 
 const EXTENSIONS: Record<string, Row> = {
+  'Operationeel overzicht laden…': { fr: 'Chargement de l’aperçu opérationnel…', en: 'Loading operational overview…', de: 'Betriebsübersicht wird geladen…' },
   'Importeer briefing': { fr: 'Importer le briefing', en: 'Import briefing', de: 'Briefing importieren' },
   'Importeer een bestaand briefingbestand. De titel en algemene instructies worden automatisch uitgelezen en ingevuld.': { fr: 'Importez un fichier de briefing existant. Le titre et les instructions générales sont lus et remplis automatiquement.', en: 'Import an existing briefing file. The title and general instructions are read and filled in automatically.', de: 'Importieren Sie eine vorhandene Briefing-Datei. Titel und allgemeine Anweisungen werden automatisch ausgelesen und ausgefüllt.' },
   'Bestand wordt gelezen…': { fr: 'Lecture du fichier…', en: 'Reading file…', de: 'Datei wird gelesen…' },
