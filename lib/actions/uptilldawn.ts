@@ -23,13 +23,14 @@ async function adminClient(){
  return {s,user}
 }
 async function approvedClient(){
- const s=await createClient()
- const {data:{user}}=await s.auth.getUser()
- if(!user) throw new Error('Aanmelden vereist.')
- const {data:profile}=await s.from('profiles').select('approved,role').eq('id',user.id).single()
- if(!profile?.approved) throw new Error('ACCOUNT NOG NIET GOEDGEKEURD')
- const {data:effectiveRole}=await s.rpc('upt_current_effective_role')
- return {s,user,profile:{...profile,role:effectiveRole||profile.role}}
+ const s=await createClient()
+ const {data:{user}}=await s.auth.getUser()
+ if(!user) throw new Error('Aanmelden vereist.')
+ const {data:profileRows,error:profileError}=await s.rpc('upt_current_profile')
+ const profile=profileRows?.[0]??null
+ if(profileError||!profile?.approved||profile.account_blocked) throw new Error('ACCOUNT NOG NIET GOEDGEKEURD')
+ const {data:effectiveRole}=await s.rpc('upt_current_effective_role')
+ return {s,user,profile:{...profile,role:effectiveRole||profile.role}}
 }
 function check(error:{code?:string}|null){if(error){console.error('[Crew mutation]',{code:error.code});throw new Error('Opslaan mislukt. Controleer je invoer en probeer opnieuw.')}}
 function requireManager(role:string){if(!['admin','responsible_lead'].includes(role))throw new Error('Geen toegang.')}
