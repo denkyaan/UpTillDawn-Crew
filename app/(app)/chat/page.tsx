@@ -15,7 +15,7 @@ export default async function Page({searchParams}:{searchParams?:Promise<{event?
     s.from('event_members').select('event_id').eq('user_id',user.id),
     s.from('shifts').select('event_id,workplace_id').eq('user_id',user.id).neq('status','cancelled'),
     s.from('responsible_assignments').select('event_id,workplace_id').eq('user_id',user.id),
-    s.from('events').select('id,start_at,end_at,status,image_url').neq('status','archived').order('start_at'),
+    s.from('events').select('id,start_at,end_at,status,image_url').order('start_at'),
   ])
 
   const profilePhotoUrls:Record<string,string>={}
