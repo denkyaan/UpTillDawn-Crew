@@ -44,6 +44,7 @@ VALUES(
   'responsible_lead'
 );
 
+GRANT SELECT ON public.profiles TO authenticated;
 SELECT set_config('request.jwt.claim.sub',(SELECT id::text FROM guard_ids WHERE name='admin'),true);
 SET LOCAL ROLE authenticated;
 
@@ -81,5 +82,6 @@ BEGIN
 END $$;
 
 RESET ROLE;
+REVOKE SELECT ON public.profiles FROM authenticated;
 SELECT 'PASS: workplace Responsible requires prior event selection' AS result;
 ROLLBACK;
