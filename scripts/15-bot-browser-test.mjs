@@ -51,7 +51,19 @@ async function gotoWithTransientRetry(page, url, options={}) {
 }
 
 async function waitForSeededProfile(page, expectedName) {
-  await page.getByText(expectedName,{exact:true}).first().waitFor({state:'visible',timeout:15000})
+  // Streaming RSC can keep Playwright's navigation pending after auth even
+  // though the session is already valid. Retry the root as a fresh bounded
+  // navigation, then require the seeded identity to render.
+  for(let attempt=1;attempt<=3;attempt++){
+    try{
+      await gotoWithTransientRetry(page,`${baseUrl}/`,{waitUntil:'domcontentloaded',timeout:45000})
+      await page.getByText(expectedName,{exact:true}).first().waitFor({state:'visible',timeout:30000})
+      return
+    }catch(error){
+      if(attempt===3)throw error
+      await page.waitForTimeout(500*attempt)
+    }
+  }
 }
 
 async function assertRuntimeLocale(page, locale, bot, route) {
@@ -586,15 +598,29 @@ try {
     if(locked.error||locked.data?.status!=='locked')throw new Error('timesheet did not reach locked state')
 
     // Complete task state lifecycle after confirmation. Attendance/timesheet
-    // operations may advance or close the original shift fixture, so re-anchor
-    // the isolated bot03 shift around now before exercising task UI gating.
+    // operations are allowed to consume/cancel the original shift, so restore
+    // the isolated bot03 fixture with the same deterministic ID and valid
+    // production columns before exercising task UI gating.
     const taskShiftStart=new Date(Date.now()-30*60*1000).toISOString()
     const taskShiftEnd=new Date(Date.now()+2*60*60*1000).toISOString()
-    const taskShiftLookup=await lifecycleAdmin.from('shifts').select('id').eq('event_id','00000000-0000-4000-8000-00000000e2e1').eq('user_id','00000000-0000-4000-8000-000000000103').neq('status','cancelled').limit(1).maybeSingle()
-    if(taskShiftLookup.error||!taskShiftLookup.data?.id)throw new Error('staff shift fixture missing before task status lifecycle')
-    const taskShiftUpdate=await lifecycleAdmin.from('shifts').update({scheduled_start:taskShiftStart,scheduled_end:taskShiftEnd}).eq('id',taskShiftLookup.data.id)
-    if(taskShiftUpdate.error)throw new Error(`failed to re-anchor staff task shift: ${taskShiftUpdate.error.message}`)
-    const activeShift=await lifecycleAdmin.from('shifts').select('id').eq('id',taskShiftLookup.data.id).neq('status','cancelled').lte('scheduled_start',new Date().toISOString()).gte('scheduled_end',new Date().toISOString()).limit(1)
+    const taskShiftRestore=await lifecycleAdmin.from('shifts').upsert({
+      id:'00000000-0000-4000-8000-00000000e2e4',
+      event_id:'00000000-0000-4000-8000-00000000e2e1',
+      workplace_id:'00000000-0000-4000-8000-00000000e2e2',
+      user_id:'00000000-0000-4000-8000-000000000103',
+      start_time:taskShiftStart,
+      end_time:taskShiftEnd,
+      scheduled_start:taskShiftStart,
+      scheduled_end:taskShiftEnd,
+      role:'staff',
+      role_name:'Entrance',
+      status:'scheduled',
+      response_status:'accepted',
+      responsible_lead_id:'00000000-0000-4000-8000-000000000102',
+      overlap_allowed:false,
+    },{onConflict:'id'})
+    if(taskShiftRestore.error)throw new Error(`failed to restore staff task shift: ${taskShiftRestore.error.message}`)
+    const activeShift=await lifecycleAdmin.from('shifts').select('id').eq('id','00000000-0000-4000-8000-00000000e2e4').neq('status','cancelled').lte('scheduled_start',new Date().toISOString()).gte('scheduled_end',new Date().toISOString()).limit(1)
     if(activeShift.error||!activeShift.data?.length)throw new Error('staff active shift fixture missing before task status lifecycle')
     const staffOps=await loginLifecycle('staff',2)
     try{
