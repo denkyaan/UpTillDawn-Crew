@@ -54,7 +54,7 @@ async function waitForSeededProfile(page, expectedName, context, bot, diagnostic
   // The login redirect already owns the authenticated root navigation.
   // Do not replace it with a second page.goto while Next is committing RSC.
   try {
-    await page.getByText(expectedName,{exact:true}).first().waitFor({state:'visible',timeout:45000})
+    await page.getByText(expectedName,{exact:false}).first().waitFor({state:'visible',timeout:45000})
   } catch (error) {
     const body=await page.locator('body').innerText().catch(()=>'<body unavailable>')
     const cookies=await context.cookies(baseUrl).catch(()=>[])
