@@ -8,13 +8,10 @@ export default async function Page({searchParams}:{searchParams?:Promise<{event?
   const params=searchParams?await searchParams:{}
   const s=await createClient();const current=await getCurrentUser();if(!current)return null
   const user={id:current.id}
-  const [{data:channels,error},{data:directory},{data:activeEvents},{data:memberships},{data:ownShifts},{data:responsibleAssignments},{data:chatEvents}]=await Promise.all([
+  const [{data:channels,error},{data:directory},{data:activeEvents},{data:chatEvents}]=await Promise.all([
     s.from('chat_channels').select('*').in('kind',['organization','event','workplace']).order('created_at'),
     s.rpc('upt_crew_directory'),
     s.from('events').select('id,start_at,end_at').neq('status','archived').lte('start_at','now').gte('end_at','now').order('start_at'),
-    s.from('event_members').select('event_id').eq('user_id',user.id),
-    s.from('shifts').select('event_id,workplace_id,response_status').eq('user_id',user.id).neq('status','cancelled').neq('response_status','declined'),
-    s.from('responsible_assignments').select('event_id,workplace_id').eq('user_id',user.id),
     s.from('events').select('id,start_at,end_at,status,image_url').order('start_at'),
   ])
 
@@ -24,20 +21,10 @@ export default async function Page({searchParams}:{searchParams?:Promise<{event?
     if(signed?.signedUrl)profilePhotoUrls[member.id]=signed.signedUrl
   }))
 
-  const now=new Date().getTime();const memberEventIds=new Set((memberships||[]).map(row=>row.event_id))
-  const assignedShifts=ownShifts||[]
-  const assignedResponsible=responsibleAssignments||[]
-  const assignedEventIds=new Set([...memberEventIds,...assignedShifts.map(row=>row.event_id),...assignedResponsible.map(row=>row.event_id)])
-  const workplaceIds=new Set([...assignedShifts.map(row=>row.workplace_id),...assignedResponsible.map(row=>row.workplace_id)])
-  const chatWindowEventIds=new Set((chatEvents||[]).filter(event=>Date.parse(event.start_at)<=now&&now<=Date.parse(event.end_at)+3*24*60*60*1000).map(event=>event.id))
-  const readable=(channels||[]).filter(channel=>{
-    if(!['organization','event','workplace'].includes(channel.kind))return false
-    if(current.role==='admin')return true
-    if(channel.kind==='organization')return true
-    if(!channel.event_id||!chatWindowEventIds.has(channel.event_id))return false
-    if(channel.kind==='event')return assignedEventIds.has(channel.event_id)
-    return Boolean(channel.workplace_id&&workplaceIds.has(channel.workplace_id))
-  })
+  // chat_channels is already protected by upt_can_read_channel RLS. Do not apply a
+  // second assignment policy in the UI: that can only hide channels the database
+  // has explicitly authorized, especially during the three-day post-event window.
+  const readable=(channels||[]).filter(channel=>['organization','event','workplace'].includes(channel.kind))
   const ordered=[...readable].sort((a,b)=>{const weight=(kind:string)=>kind==='organization'?0:kind==='event'?1:2;const byKind=weight(a.kind)-weight(b.kind);return byKind||(a.name||'').localeCompare(b.name||'','nl')})
   const eventImages=new Map((chatEvents||[]).map(event=>[event.id,event.image_url]))
   const channelImages:Record<string,string>={}
