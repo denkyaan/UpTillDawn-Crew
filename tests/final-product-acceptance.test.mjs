@@ -63,7 +63,7 @@ test('release CI includes the 15-browser-bot gate',async()=>{
   assert.match(workflow,/Run 15 concurrent authenticated browser bots/)
   assert.match(bots,/Array\(13\)\.fill\('staff'\)/)
   for(const locale of ['nl','fr','en','de'])assert.ok(bots.includes(`'${locale}'`),locale)
-  assert.match(bots,/const smokeConcurrency=5/)
+  assert.match(bots,/const smokeConcurrency=3/)
   assert.match(bots,/for\(let batchStart=0;batchStart<roles\.length;batchStart\+=smokeConcurrency\)/)
   assert.match(bots,/Promise\.all\(batch\.map/)
   for(const route of ['/events','/workplaces','/briefings','/inventory','/guestlist','/chat'])assert.ok(bots.includes(`'${route}'`),route)

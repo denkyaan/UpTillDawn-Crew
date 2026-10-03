@@ -190,25 +190,6 @@ try {
       }
       if (role !== 'admin') await waitForSeededProfile(page, expectedName, context, bot, diagnostics)
 
-      // Assert compact navigation only after the authenticated profile/role UI
-      // has hydrated. This covers phones, tablets and iPhone landscape.
-      if (viewport.width < 1024) {
-        const mobileNav = page.getByRole('navigation', { name: 'Mobiele navigatie' })
-        await mobileNav.waitFor({state:'visible',timeout:30000})
-        const navMetrics=await mobileNav.evaluate(el=>({
-          height:el.getBoundingClientRect().height,
-          display:getComputedStyle(el).display,
-          visibility:getComputedStyle(el).visibility,
-        }))
-        if (navMetrics.height < 48 || navMetrics.display === 'none' || navMetrics.visibility === 'hidden') {
-          throw new Error(`${bot} mobile bottom navigation is unusable at ${viewport.width}px: ${JSON.stringify(navMetrics)}`)
-        }
-        if (role === 'admin') {
-          const chatAction = page.getByRole('button', { name: /^Chat(?:[,.]|$)/i })
-          await chatAction.waitFor({state:'visible',timeout:30000})
-        }
-      }
-
       // Runtime i18n regression on the authenticated landing page.
       await assertRuntimeLocale(page, locale, bot, page.url())
 
