@@ -4250,6 +4250,15 @@ export type Database = {
         }
         Returns: undefined
       }
+      upt_admin_operational_profiles: {
+        Args: never
+        Returns: {
+          full_name: string
+          id: string
+          phone_number: string
+          role: string
+        }[]
+      }
       upt_admin_pending_profiles: {
         Args: never
         Returns: {
