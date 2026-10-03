@@ -265,7 +265,7 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
   const showUrgent=!pathname.startsWith("/chat")&&!isAdmin&&showIncidents&&context.shiftActive
   const showFloatingChat=isAdmin||operationalMode
 
-  return <div className="flex h-dvh overflow-hidden bg-background print:block print:h-auto print:overflow-visible">
+  return <div className="flex h-dvh bg-background print:block print:h-auto">
     {/* Mobile shell lives at the AppLayout root so iOS fixed positioning is not
         clipped by the nested overflow scroll container. */}
     <div className="print:hidden">
