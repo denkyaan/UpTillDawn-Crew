@@ -272,7 +272,8 @@ export function RoleAppTour(){
     document.querySelectorAll("[data-upt-tour-highlight]").forEach(el=>el.removeAttribute("data-upt-tour-highlight"))
     if(!open||!shown)return
     if(step?.route&&pathname!==step.route){
-      router.push(step.route+(step.route.includes("?")?"&":"?")+"tour=1")
+      router.push(step.route)
+      sessionStorage.setItem("uptilldawn-tour-preview-route","1")
       return
     }
     let target:HTMLElement|null=null
