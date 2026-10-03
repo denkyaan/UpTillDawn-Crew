@@ -3,6 +3,7 @@
 import Image from "next/image"
 import Link from "next/link"
 import { usePathname } from "next/navigation"
+import { useEffect, useState } from "react"
 import { useAuth } from "@/lib/providers"
 import { cn } from "@/lib/utils"
 import { Shield } from "lucide-react"
@@ -22,13 +23,16 @@ export function AppSidebar({
 }) {
  const pathname=usePathname()
  const {roles,isAdmin}=useAuth()
+ const [tourPreview,setTourPreview]=useState(false)
  const adminContext=useAdminSelection()
  const roleKey:RoleRuleRole=roles.includes("admin")?"admin":roles.includes("responsible_lead")?"responsible_lead":"staff"
  const order=new Map(featureOrder.map((key,index)=>[key,index]))
+ useEffect(()=>{const on=(e:Event)=>setTourPreview(Boolean((e as CustomEvent<{active?:boolean}>).detail?.active));addEventListener("uptilldawn-tour-preview",on);return()=>removeEventListener("uptilldawn-tour-preview",on)},[])
  const visible=NAV_ITEMS.filter(i=>{
    if(!roles.some(r=>i.roles.includes(r))) return false
    if(i.key==="shifts") return false
-   if(Object.prototype.hasOwnProperty.call(featureVisibility,i.key)&&!featureVisibility[i.key]) return false
+   if(!tourPreview&&Object.prototype.hasOwnProperty.call(featureVisibility,i.key)&&!featureVisibility[i.key]) return false
+   if(tourPreview) return true
    if(i.key==="operations") return showOperations
    if(i.key==="events") return showEvents
    if(i.key==="tasks") return showTasks

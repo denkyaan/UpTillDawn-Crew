@@ -3,6 +3,7 @@ import { createClient } from '@/lib/supabase/crew-server'
 import { ProfileForm } from '@/components/crew/profile-form'
 import { LanguageSwitcher } from '@/components/language-switcher'
 import { getCurrentUser } from '@/lib/actions/auth'
+import { RestartRoleTourButton } from '@/components/role-app-tour'
 
 export const dynamic='force-dynamic'
 
@@ -61,6 +62,12 @@ export default async function Page(){
       {error||!profile
         ? <p>Profiel kon niet worden geladen.</p>
         : <ProfileForm id={user.id} initial={profile} photoUrl={photoUrl} preferredWorkplaceId={preference||null} workplaceOptions={(workplaceOptions||[]).map(option=>({id:option.id,name:option.name}))}/>}
+    </section>
+
+    <section className="rounded-2xl border p-4">
+      <h2 className="mb-2 text-xl font-black">Rondleiding</h2>
+      <p className="mb-3 text-sm text-muted-foreground">Bekijk de interactieve uitleg voor de rol die je momenteel gebruikt.</p>
+      <RestartRoleTourButton/>
     </section>
 
     <section className="rounded-2xl border p-4">

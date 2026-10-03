@@ -182,6 +182,24 @@ try {
         await page.waitForFunction(() => document.readyState === 'interactive' || document.readyState === 'complete', null, { timeout: 45000 })
       }
 
+      // Existing seeded bots predate first-login onboarding. Dismiss the
+      // optional role tour so lifecycle assertions exercise the underlying UI.
+      const tourLater=page.getByRole('button',{name:/^(LATER|PLUS TARD|SPÄTER)$/i})
+      if(await tourLater.count()){
+        await tourLater.first().click()
+        // The tour component writes the per-user/role postponement key to
+        // localStorage. Wait for that persistence before navigating away so a
+        // fast lifecycle navigation cannot remount the choice modal.
+        await page.waitForFunction(() =>
+          Object.keys(localStorage).some(key =>
+            key.startsWith('uptilldawn-app-tour:') && localStorage.getItem(key)==='postponed'
+          ),
+          null,
+          {timeout:5000},
+        )
+        await page.getByRole('dialog').waitFor({state:'detached',timeout:5000}).catch(()=>{})
+      }
+
       const body = await page.locator('body').innerText()
       if (!body.trim()) throw new Error('empty authenticated UI')
 

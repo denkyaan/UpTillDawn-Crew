@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useEffect, useState } from "react"
 import Link from "next/link"
 import { usePathname } from "next/navigation"
 import { ChevronDown, ChevronUp } from "lucide-react"
@@ -39,15 +39,19 @@ export function MobileBottomNav({
 }) {
  const pathname=usePathname()
  const [expanded,setExpanded]=useState(false)
+ const [tourPreview,setTourPreview]=useState(false)
  const {roles,isAdmin}=useAuth()
  const adminContext=useAdminSelection()
  const roleKey:RoleRuleRole=roles.includes("admin")?"admin":roles.includes("responsible_lead")?"responsible_lead":"staff"
  const order=new Map(featureOrder.map((key,index)=>[key,index]))
+ useEffect(()=>{const on=(e:Event)=>{const detail=(e as CustomEvent<{active?:boolean}>).detail;setTourPreview(Boolean(detail?.active));if(detail?.active)setExpanded(true)};addEventListener("uptilldawn-tour-preview",on);return()=>removeEventListener("uptilldawn-tour-preview",on)},[])
 
+ // During the guided tour expose the complete role navigation regardless of
+ // event/shift assignment. This is preview-only; backend permissions remain unchanged.
  const items=NAV_ITEMS.filter(i=>{
    if(!roles.some(r=>i.roles.includes(r))) return false
    if(i.key==="shifts") return false
-   if(Object.prototype.hasOwnProperty.call(featureVisibility,i.key)&&!featureVisibility[i.key]) return false
+   if(!tourPreview&&Object.prototype.hasOwnProperty.call(featureVisibility,i.key)&&!featureVisibility[i.key]) return false
    return true
  }).sort((a,b)=>(order.get(a.key)??999)-(order.get(b.key)??999))
 
@@ -60,7 +64,7 @@ export function MobileBottomNav({
    return href==='/'?pathname==='/':pathname.startsWith(href)
  }
 
- const contextualKeys=roleKey==="staff"
+ const contextualKeys=tourPreview?[]:roleKey==="staff"
    ? shiftActive
      ? STAFF_ACTIVE_SHIFT_KEYS
      : assignedEvent

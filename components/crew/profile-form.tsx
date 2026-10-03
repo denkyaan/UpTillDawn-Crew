@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { toast } from 'sonner'
 import { createClient } from '@/lib/supabase/crew-client'
@@ -31,7 +31,16 @@ export function ProfileForm({
 }) {
   const [msg, setMsg] = useState('')
   const [busy, setBusy] = useState(false)
+  const [requiredCompletion, setRequiredCompletion] = useState(false)
   const router = useRouter()
+
+  useEffect(() => {
+    let alive=true
+    void createClient().rpc('upt_current_profile_completion').then(({data})=>{
+      if(alive)setRequiredCompletion(Boolean(data?.[0]?.required&&!data[0].completed))
+    })
+    return()=>{alive=false}
+  }, [])
 
   return <form className="space-y-4" onSubmit={async e => {
     e.preventDefault()
@@ -79,6 +88,13 @@ export function ProfileForm({
       )
       if(preferenceError)throw new Error('Werkplekvoorkeur opslaan mislukt.')
 
+      const {data:completion}=await s.rpc('upt_current_profile_completion')
+      if(completion?.[0]?.required&&!completion[0].completed){
+        const {error:completeError}=await s.rpc('upt_mark_own_profile_complete')
+        if(completeError)throw new Error('Vul eerst alle verplichte profielvelden en een profielfoto in.')
+        window.dispatchEvent(new Event('uptilldawn-profile-completed'))
+      }
+
       if (uploadedPath && oldPath && oldPath !== uploadedPath) {
         await s.storage.from('profile-photos').remove([oldPath])
       }
@@ -92,17 +108,18 @@ export function ProfileForm({
       setBusy(false)
     }
   }}>
+    {requiredCompletion&&<div className="rounded-2xl border border-violet-500/50 bg-violet-500/10 p-4"><p className="font-black">Vul eerst je profiel volledig aan</p><p className="mt-1 text-sm text-muted-foreground">Alle verplichte velden en een profielfoto moeten opgeslagen zijn voordat je verder kunt. Daarna start automatisch de rondleiding voor jouw rol.</p></div>}
     {photoUrl && <div className="overflow-hidden rounded-2xl border">
       {/* Private signed storage URL. */}
       {/* eslint-disable-next-line @next/next/no-img-element */}
       <img src={photoUrl} alt="Profielfoto" className="max-h-72 w-full object-contain bg-black/20"/>
     </div>}
     <label className="block">Naam<input name="name" required maxLength={200} defaultValue={initial.full_name || ''} className="mt-1 block w-full rounded-xl border bg-background p-3"/></label>
-    <AddressAutocomplete name="address" label="Adres" defaultValue={initial.home_address || ''}/>
-    <label className="block">Telefoon<input name="phone" type="tel" maxLength={40} defaultValue={initial.phone_number || ''} className="mt-1 block w-full rounded-xl border bg-background p-3"/></label>
-    <label className="block">Geboortedatum<input name="dob" type="date" defaultValue={initial.date_of_birth || ''} className="mt-1 block w-full rounded-xl border bg-background p-3"/></label>
-    <label className="block">Rijksregisternummer<input name="national_register" autoComplete="off" maxLength={32} defaultValue={initial.national_register_number || ''} className="mt-1 block w-full rounded-xl border bg-background p-3"/></label>
-    <label className="block">IBAN<input name="iban" autoComplete="off" maxLength={34} defaultValue={initial.iban || ''} className="mt-1 block w-full rounded-xl border bg-background p-3 uppercase"/></label>
+    <AddressAutocomplete name="address" label="Adres" defaultValue={initial.home_address || ''} required={requiredCompletion}/>
+    <label className="block">Telefoon<input name="phone" type="tel" required={requiredCompletion} maxLength={40} defaultValue={initial.phone_number || ''} className="mt-1 block w-full rounded-xl border bg-background p-3"/></label>
+    <label className="block">Geboortedatum<input name="dob" type="date" required={requiredCompletion} defaultValue={initial.date_of_birth || ''} className="mt-1 block w-full rounded-xl border bg-background p-3"/></label>
+    <label className="block">Rijksregisternummer<input name="national_register" required={requiredCompletion} autoComplete="off" maxLength={32} defaultValue={initial.national_register_number || ''} className="mt-1 block w-full rounded-xl border bg-background p-3"/></label>
+    <label className="block">IBAN<input name="iban" required={requiredCompletion} autoComplete="off" maxLength={34} defaultValue={initial.iban || ''} className="mt-1 block w-full rounded-xl border bg-background p-3 uppercase"/></label>
     <label className="block">Voorkeur werkplek
       <select name="preferred_workplace" defaultValue={preferredWorkplaceId||''} className="mt-1 block w-full rounded-xl border bg-background p-3">
         <option value="">Geen voorkeur</option>
@@ -110,7 +127,7 @@ export function ProfileForm({
       </select>
     </label>
     <p className="text-xs text-muted-foreground">Deze voorkeur helpt de planning en wordt gebruikt om bij uitval automatisch de eerstvolgende geschikte wachtlijstkandidaat voor dezelfde werkplek te kiezen.</p>
-    <label className="block">Permanente profielfoto<input name="photo" type="file" accept="image/jpeg,image/png,image/webp" className="mt-1 block w-full rounded-xl border bg-background p-3"/></label>
+    <label className="block">Permanente profielfoto<input name="photo" type="file" required={requiredCompletion&&!initial.profile_photo_url} accept="image/jpeg,image/png,image/webp" className="mt-1 block w-full rounded-xl border bg-background p-3"/></label>
     <p className="text-xs text-muted-foreground">Adres, geboortedatum, rijksregisternummer en IBAN is enkel zichtbaar voor admin.</p>
     <button disabled={busy} className="w-full rounded-xl bg-violet-600 p-3 font-bold">{busy ? 'OPSLAAN…' : 'PROFIEL OPSLAAN'}</button>
     {msg && <p role="status">{msg}</p>}

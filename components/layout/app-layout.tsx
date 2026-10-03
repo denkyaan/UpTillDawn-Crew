@@ -13,6 +13,7 @@ import { useAuth } from "@/lib/providers"
 import { getDefaultRoleUiRules, ruleMatches, ruleUsable, type RoleUiContext, type RoleUiRule } from "@/lib/role-ui"
 import { AdminContextBar } from "@/components/admin/admin-context-bar"
 import { PlatformAiAssistant } from "@/components/admin/platform-ai-assistant"
+import { RoleAppTour } from "@/components/role-app-tour"
 
 function CountBadge({ count }: { count: number }) {
   if (count < 1) return null
@@ -33,6 +34,8 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
   const [context,setContext]=useState<RoleUiContext>(emptyContext)
   const [rules,setRules]=useState<RoleUiRule[]>([])
   const [adminAiOpen,setAdminAiOpen]=useState(false)
+  const [tourPreview,setTourPreview]=useState(false)
+  useEffect(()=>{const on=(e:Event)=>setTourPreview(Boolean((e as CustomEvent<{active?:boolean}>).detail?.active));addEventListener("uptilldawn-tour-preview",on);return()=>removeEventListener("uptilldawn-tour-preview",on)},[])
 
   const activeUiRole=roles[0]
   const roleKey=activeUiRole==="responsible_lead"?"responsible_lead":activeUiRole==="admin"?"admin":activeUiRole==="employee"?"staff":null
@@ -48,7 +51,7 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
 
   const effectiveRules=rules.length?rules:defaultRules
   const ruleMap=useMemo(()=>new Map(effectiveRules.map(rule=>[rule.feature_key,rule])),[effectiveRules])
-  const previewAll=false
+  const previewAll=tourPreview
   const feature=(key:string,fallback:boolean)=>{
     const rule=ruleMap.get(key)
     return rule?ruleMatches(rule,context,previewAll):fallback
@@ -266,6 +269,7 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
   const showFloatingChat=isAdmin||operationalMode
 
   return <div className="flex h-dvh bg-background print:block print:h-auto">
+    <RoleAppTour/>
     {/* Mobile shell lives at the AppLayout root so iOS fixed positioning is not
         clipped by the nested overflow scroll container. */}
     <div className="print:hidden">

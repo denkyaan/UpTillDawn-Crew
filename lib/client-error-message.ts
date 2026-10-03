@@ -7,6 +7,8 @@ const SAFE_MESSAGES=[
   'Deze actie is pas beschikbaar vanaf de start van het evenement.',
   'Deze actie is niet meer beschikbaar omdat het evenement is afgelopen.',
   'Je hebt geen toegang tot deze actie.',
+  'Aanmelden vereist.',
+  'Geen toegang.',
   'Je sessie is verlopen. Meld je opnieuw aan.',
   'Je bent momenteel offline. Controleer je internetverbinding en probeer opnieuw.',
   'De server reageert momenteel niet. Probeer over enkele ogenblikken opnieuw.',
@@ -32,6 +34,8 @@ export function humanizeAppError(error:unknown,locale:SupportedUiLocale=activeUi
   if(/pas beschikbaar vanaf de start van het evenement|event(?: is)? not (?:started|active)|before (?:the )?event start/i.test(raw))message=SAFE_MESSAGES[0]
   else if(/evenement (?:is )?afgelopen|event (?:has )?ended|event closed/i.test(raw))message=SAFE_MESSAGES[1]
   else if(/jwt|session|token.*expired|not authenticated|aanmelden vereist/i.test(raw))message=SAFE_MESSAGES[3]
+  else if(/^aanmelden vereist\.?$/i.test(raw))message=SAFE_MESSAGES[11]
+  else if(/^geen toegang\.?$/i.test(raw))message=SAFE_MESSAGES[12]
   else if(/permission|forbidden|unauthorized|geen toegang|not allowed/i.test(raw))message=SAFE_MESSAGES[2]
   else if(/already|duplicate|unique constraint|23505/i.test(raw))message=SAFE_MESSAGES[7]
   else if(/stale|conflict|changed since|version mismatch|409/i.test(raw))message=SAFE_MESSAGES[8]

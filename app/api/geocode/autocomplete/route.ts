@@ -11,11 +11,11 @@ export async function GET(request:NextRequest){
   const {data:{user}}=await s.auth.getUser()
   if(!user)return NextResponse.json({error:"Aanmelden vereist."},{status:401})
 
-  const [{data:isApproved},{data:isAdmin}]=await Promise.all([
-    s.rpc("upt_is_approved"),
-    s.rpc("upt_is_admin",{uid:user.id}),
-  ])
-  if(!isApproved||!isAdmin){
+  const {data:isApproved}=await s.rpc("upt_is_approved")
+  // Address autocomplete is part of each approved user's own profile flow.
+  // Role authorization belongs to profile mutation RPCs, not this read-only
+  // suggestion endpoint; Staff and Responsible must be able to complete it.
+  if(!isApproved){
     return NextResponse.json({error:"Geen toegang."},{status:403})
   }
 

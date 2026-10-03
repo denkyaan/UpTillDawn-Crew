@@ -178,3 +178,14 @@
     background-color: #0a84ff1a;
   }
 }
+
+
+/* Guided onboarding: keep the real control visible above the dimmed tour layer. */
+[data-upt-tour-highlight="true"] {
+  position: relative;
+  z-index: 130 !important;
+  outline: 3px solid var(--ring) !important;
+  outline-offset: 4px;
+  border-radius: max(var(--radius), 0.5rem);
+  box-shadow: 0 0 0 9999px rgb(0 0 0 / 0.42);
+}

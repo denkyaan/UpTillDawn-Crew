@@ -2594,6 +2594,8 @@ export type Database = {
       profiles: {
         Row: {
           account_blocked: boolean
+          app_profile_completed_at: string | null
+          app_profile_required: boolean
           approved: boolean
           approved_before_block: boolean | null
           blocked_at: string | null
@@ -2613,6 +2615,8 @@ export type Database = {
         }
         Insert: {
           account_blocked?: boolean
+          app_profile_completed_at?: string | null
+          app_profile_required?: boolean
           approved?: boolean
           approved_before_block?: boolean | null
           blocked_at?: string | null
@@ -2632,6 +2636,8 @@ export type Database = {
         }
         Update: {
           account_blocked?: boolean
+          app_profile_completed_at?: string | null
+          app_profile_required?: boolean
           approved?: boolean
           approved_before_block?: boolean | null
           blocked_at?: string | null
@@ -4308,6 +4314,8 @@ export type Database = {
         Args: never
         Returns: {
           account_blocked: boolean
+          app_profile_completed_at: string | null
+          app_profile_required: boolean
           approved: boolean
           approved_before_block: boolean | null
           blocked_at: string | null
@@ -4667,6 +4675,13 @@ export type Database = {
           role: string
         }[]
       }
+      upt_current_profile_completion: {
+        Args: never
+        Returns: {
+          completed: boolean
+          required: boolean
+        }[]
+      }
       upt_current_work_context: {
         Args: never
         Returns: {
@@ -4992,6 +5007,7 @@ export type Database = {
         Args: { p_notification: string }
         Returns: undefined
       }
+      upt_mark_own_profile_complete: { Args: never; Returns: boolean }
       upt_marketplace_claims: {
         Args: never
         Returns: {
@@ -5175,6 +5191,10 @@ export type Database = {
           p_type: string
         }
         Returns: string
+      }
+      upt_require_first_profile: {
+        Args: { p_user: string }
+        Returns: undefined
       }
       upt_resolve_incident: { Args: { p_incident: string }; Returns: undefined }
       upt_resolve_qr_resource: { Args: { p_code: string }; Returns: Json }
