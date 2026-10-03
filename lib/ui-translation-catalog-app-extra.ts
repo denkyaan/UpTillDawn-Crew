@@ -614,6 +614,12 @@ export const APP_EXTRA_TRANSLATIONS: Record<string,Row> = {
   "DJ Nova · Artist · 3 spots ·": {fr:"DJ Nova · Artiste · 3 places ·",en:"DJ Nova · Artist · 3 spots ·",de:"DJ Nova · Künstler · 3 Plätze ·"},
   "Tokens €1.240": {fr:"Jetons 1.240 €",en:"Tokens €1,240",de:"Tokens 1.240 €"},
   "Merch €385": {fr:"Merch 385 €",en:"Merch €385",de:"Merch 385 €"},
+  "Voer per Bar / Toog, Merch of Tokens de actuele prijzen in, of upload een foto of bestand. De prijslijst is gekoppeld aan het evenement en de werkplek.": {fr:"Saisissez les prix actuels pour Bar / Comptoir, Merch ou Tokens, ou téléchargez une photo ou un fichier. La liste de prix est liée à l’événement et au poste.",en:"Enter the current prices for Bar / Counter, Merch or Tokens, or upload a photo or file. The price list is linked to the event and workplace.",de:"Gib die aktuellen Preise für Bar / Theke, Merch oder Tokens ein oder lade ein Foto bzw. eine Datei hoch. Die Preisliste ist mit Event und Arbeitsplatz verknüpft."},
+  "Prijslijst invoeren": {fr:"Saisir la liste de prix",en:"Enter price list",de:"Preisliste eingeben"},
+  "Voorbeeld:\\nCola — €3,00\\nWater — €2,50": {fr:"Exemple :\\nCola — 3,00 €\\nEau — 2,50 €",en:"Example:\\nCola — €3.00\\nWater — €2.50",de:"Beispiel:\\nCola — 3,00 €\\nWasser — 2,50 €"},
+  "INGEVOERDE PRIJSLIJST OPSLAAN": {fr:"ENREGISTRER LA LISTE SAISIE",en:"SAVE ENTERED PRICE LIST",de:"EINGEGEBENE PREISLISTE SPEICHERN"},
+  "of upload een foto of bestand": {fr:"ou téléchargez une photo ou un fichier",en:"or upload a photo or file",de:"oder Foto bzw. Datei hochladen"},
+  "Prijslijst opslaan mislukt.": {fr:"Échec de l’enregistrement de la liste de prix.",en:"Failed to save the price list.",de:"Preisliste konnte nicht gespeichert werden."},
 }
 
 const CANONICAL=new Map<string,string>()
