@@ -591,6 +591,13 @@ export const APP_EXTRA_TRANSLATIONS: Record<string,Row> = {
   "Opbouwteam vóór het evenement.": {fr:"Équipe chargée du montage et de la préparation avant l’événement.",en:"Team for setup and preparation before the event.",de:"Team für Aufbau und Vorbereitung vor der Veranstaltung."},
   "Afbouwteam na het evenement.": {fr:"Équipe chargée du démontage et du rangement après l’événement.",en:"Team for teardown and cleanup after the event.",de:"Team für Abbau und Aufräumen nach der Veranstaltung."},
   "Tokenverkoop, tokenkassa en uitgifte.": {fr:"Vente de jetons, caisse à jetons et distribution.",en:"Token sales, token till and distribution.",de:"Tokenverkauf, Tokenkasse und Ausgabe."},
+  "Merchverkoop en voorraadopvolging.": {fr:"Vente de merchandising et suivi du stock.",en:"Merchandise sales and stock tracking.",de:"Merchandise-Verkauf und Bestandsverfolgung."},
+  "Barverkoop en operationele toogwerking.": {fr:"Ventes au bar et fonctionnement opérationnel du comptoir.",en:"Bar sales and operational bar service.",de:"Barverkauf und operativer Thekenbetrieb."},
+  "Artiestenontvangst, hospitality en backstagecoördinatie.": {fr:"Accueil des artistes, hospitality et coordination backstage.",en:"Artist reception, hospitality and backstage coordination.",de:"Künstlerempfang, Hospitality und Backstage-Koordination."},
+  "Opbouw en voorbereiding van het evenement.": {fr:"Montage et préparation de l’événement.",en:"Event setup and preparation.",de:"Aufbau und Vorbereitung der Veranstaltung."},
+  "Afbouw en afsluiting van het evenement.": {fr:"Démontage et clôture de l’événement.",en:"Event teardown and closing.",de:"Abbau und Abschluss der Veranstaltung."},
+  "Guestlist maken & beheren": {fr:"Créer et gérer la guestlist",en:"Create & manage guest list",de:"Gästeliste erstellen & verwalten"},
+  "Voeg gasten en artiesten handmatig toe of importeer een bestaand bestand.": {fr:"Ajoutez manuellement des invités et des artistes ou importez un fichier existant.",en:"Add guests and artists manually or import an existing file.",de:"Füge Gäste und Künstler manuell hinzu oder importiere eine bestehende Datei."},
 }
 
 const CANONICAL=new Map<string,string>()
