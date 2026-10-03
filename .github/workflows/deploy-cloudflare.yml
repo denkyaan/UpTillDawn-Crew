@@ -94,6 +94,38 @@ jobs:
       - name: Test
         run: npm test
 
+      - name: Production Supabase RPC contract
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          check_rpc() {
+            local rpc="$1"
+            local payload="$2"
+            local body
+            body=$(mktemp)
+            local code
+            code=$(curl -sS -o "$body" -w "%{http_code}" -X POST \
+              "${NEXT_PUBLIC_SUPABASE_URL}/rest/v1/rpc/${rpc}" \
+              -H "apikey: ${NEXT_PUBLIC_SUPABASE_ANON_KEY}" \
+              -H "Content-Type: application/json" \
+              -d "$payload")
+
+            echo "${rpc}: HTTP ${code}"
+            cat "$body"
+            echo
+
+            if [ "$code" = "404" ] || grep -q 'PGRST202' "$body" || grep -qi 'could not find the function' "$body"; then
+              echo "::error::Production Supabase RPC contract missing: ${rpc}"
+              exit 1
+            fi
+          }
+
+          check_rpc upt_current_profile '{}'
+          check_rpc upt_current_is_owner '{}'
+          check_rpc upt_current_effective_role '{}'
+          check_rpc upt_set_admin_role_mode '{"p_role":"admin"}'
+
       - name: Build Cloudflare Worker
         run: npm run build:cloudflare
 
