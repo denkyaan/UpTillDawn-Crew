@@ -90,7 +90,7 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
     ||pathname.startsWith("/admin/platform")
   ))
   const currentVisible=adminAlwaysRoute||!currentFeature||!roleKey||!rulesReady||previewAll||ruleMatches(currentRule,context,false)
-  const currentUsable=adminAlwaysRoute||!currentFeature||!roleKey||!rulesReady||ruleUsable(currentRule,context,false)
+  const currentUsable=previewAll||adminAlwaysRoute||!currentFeature||!roleKey||!rulesReady||ruleUsable(currentRule,context,false)
   const contentLocked=Boolean(currentVisible&&!currentUsable)
 
   const refresh=useCallback(async()=>{

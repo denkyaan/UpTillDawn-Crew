@@ -11,6 +11,7 @@ import { Label } from "@/components/ui/label"
 import { Eye, EyeOff, Loader2, AlertCircle } from "lucide-react"
 import { signUp } from "@/lib/actions/auth"
 import { PASSWORD_MIN_LENGTH, passwordPolicyMessage } from "@/lib/password-policy"
+import { queuePwaInstallPrompt } from "@/lib/pwa-install-prompt"
 
 
 
@@ -59,6 +60,9 @@ export default function SignupPage() {
         setServerError(result.error)
         setServerErrorCode('code' in result && typeof result.code === 'string' ? result.code : 'signup_error')
       } else if ('success' in result && result.success) {
+        // Registration can require e-mail verification, so there may be no auth
+        // session yet. Queue the install UI locally before navigating away.
+        queuePwaInstallPrompt()
         router.push('redirectTo' in result && typeof result.redirectTo === 'string' ? result.redirectTo : '/pending-approval')
       }
     })
