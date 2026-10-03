@@ -2,6 +2,7 @@ export type ActionUiLocale='nl'|'fr'|'en'|'de'
 type Row={fr:string;en:string;de:string}
 
 const ROWS:Record<string,Row>={
+  "Prijslijst opslaan mislukt.":{fr:"Échec de l’enregistrement de la liste de prix.",en:"Failed to save the price list.",de:"Preisliste konnte nicht gespeichert werden."},
   "Bestand is groter dan 10 MB.":{fr:"Le fichier dépasse 10 Mo.",en:"The file is larger than 10 MB.",de:"Die Datei ist größer als 10 MB."},
   "Document kon niet naar tekst worden omgezet.":{fr:"Le document n’a pas pu être converti en texte.",en:"The document could not be converted to text.",de:"Das Dokument konnte nicht in Text umgewandelt werden."},
   "AI kon geen geldige guestlist uit dit document halen.":{fr:"L’IA n’a pas pu extraire une guestlist valide de ce document.",en:"AI could not extract a valid guest list from this document.",de:"Die KI konnte aus diesem Dokument keine gültige Gästeliste extrahieren."},
