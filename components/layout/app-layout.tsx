@@ -266,6 +266,13 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
   const showFloatingChat=isAdmin||operationalMode
 
   return <div className="flex h-dvh overflow-hidden bg-background print:block print:h-auto print:overflow-visible">
+    {/* Mobile shell lives at the AppLayout root so iOS fixed positioning is not
+        clipped by the nested overflow scroll container. */}
+    <div className="print:hidden">
+      <MobileBottomNav chatMissed={chatMissed} incidentMissed={incidentMissed} taskMissed={taskMissed} notificationFeatureCounts={notificationFeatureCounts} featureOrder={order} featureLabels={labels} featureVisibility={featureVisibility} assignedEvent={context.assignedEvent} shiftActive={context.shiftActive}/>
+    </div>
+    {!pathname.startsWith("/chat")&&showFloatingChat&&<FloatingChatButton count={chatMissed} stackedAboveAdminAi={Boolean(isAdmin)}/>}
+
     <div className="print:hidden"><AppSidebar chatMissed={chatMissed} incidentMissed={incidentMissed} taskMissed={taskMissed} notificationFeatureCounts={notificationFeatureCounts} showOperations={showOperations} showEvents={showEvents} showTasks={showTasks} showBriefings={showBriefings} showShifts={showShifts} showWorkplaces={showWorkplaces} showIncidents={showIncidents} featureOrder={order} featureLabels={labels} featureVisibility={featureVisibility}/></div>
     <div className="flex flex-1 flex-col overflow-hidden print:block print:overflow-visible">
       <div className="print:hidden"><Topbar notificationMissed={notificationMissed}/><QueueStatus/>{isAdmin&&<AdminContextBar/>}</div>
@@ -279,12 +286,10 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
               </>}
         </main>
       </div>
-      <div className="print:hidden"><MobileBottomNav chatMissed={chatMissed} incidentMissed={incidentMissed} taskMissed={taskMissed} notificationFeatureCounts={notificationFeatureCounts} featureOrder={order} featureLabels={labels} featureVisibility={featureVisibility} assignedEvent={context.assignedEvent} shiftActive={context.shiftActive}/></div>
     </div>
     {isAdmin&&<div className="fixed bottom-20 right-4 z-[70] print:hidden lg:bottom-4"><button type="button" aria-expanded={adminAiOpen} onClick={()=>setAdminAiOpen(value=>!value)} className="rounded-full bg-violet-600 px-5 py-3 font-black text-white shadow-xl">ADMIN AI</button>{adminAiOpen&&<div className="absolute bottom-14 right-0 w-[min(92vw,430px)] max-h-[75vh] overflow-auto rounded-2xl border bg-background p-4 shadow-2xl"><PlatformAiAssistant contextKey={currentFeature||undefined} contextLabel={labels[currentFeature||""]} compact/></div>}</div>}
     {!pathname.startsWith("/chat")&&<>
       {showUrgent&&<Link href="/incidents" className="fixed bottom-20 left-4 z-50 rounded-full bg-red-600 px-5 py-4 font-black text-white print:hidden lg:hidden">URGENT<CountBadge count={incidentMissed}/></Link>}
-      {showFloatingChat&&<FloatingChatButton count={chatMissed} stackedAboveAdminAi={Boolean(isAdmin)}/>} 
     </>}
   </div>
 }
