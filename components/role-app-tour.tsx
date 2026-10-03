@@ -204,10 +204,9 @@ export function RoleAppTour(){
   const [insideIndex,setInsideIndex]=useState(-1)
   // Keep SSR and the first hydration render identical. Device/manual locale is
   // applied only after mount; this removes the React #418 hydration mismatch.
-  const [locale,setLocale]=useState<ExtendedUiLocale>("nl")
+  const [locale,setLocale]=useState<ExtendedUiLocale>(()=>initialUiLocale() as ExtendedUiLocale)
 
   useEffect(()=>{
-    setLocale(initialUiLocale() as ExtendedUiLocale)
     const on=(event:Event)=>{
       const next=parseUiLocale((event as CustomEvent<string>).detail)
       if(next)setLocale(next as ExtendedUiLocale)
