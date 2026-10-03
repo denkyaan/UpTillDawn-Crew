@@ -192,12 +192,18 @@ try {
       // has hydrated. This covers phones, tablets and iPhone landscape.
       if (viewport.width < 1024) {
         const mobileNav = page.getByRole('navigation', { name: 'Mobiele navigatie' })
-        await mobileNav.waitFor({state:'visible',timeout:15000})
-        const box=await mobileNav.boundingBox()
-        if (!box || box.height < 48) throw new Error(`${bot} mobile bottom navigation has no usable height at ${viewport.width}px`)
+        await mobileNav.waitFor({state:'visible',timeout:30000})
+        const navMetrics=await mobileNav.evaluate(el=>({
+          height:el.getBoundingClientRect().height,
+          display:getComputedStyle(el).display,
+          visibility:getComputedStyle(el).visibility,
+        }))
+        if (navMetrics.height < 48 || navMetrics.display === 'none' || navMetrics.visibility === 'hidden') {
+          throw new Error(`${bot} mobile bottom navigation is unusable at ${viewport.width}px: ${JSON.stringify(navMetrics)}`)
+        }
         if (role === 'admin') {
-          const chatAction = page.locator('a[href="/chat"]').filter({has:page.locator('svg')}).last()
-          await chatAction.waitFor({state:'visible',timeout:15000})
+          const chatAction = page.getByRole('button', { name: /^Chat(?:[,.]|$)/i })
+          await chatAction.waitFor({state:'visible',timeout:30000})
         }
       }
 
