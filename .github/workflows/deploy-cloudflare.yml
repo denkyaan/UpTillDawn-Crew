@@ -76,7 +76,13 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
-      - name: Dependency audit
+      - name: Production dependency audit
+        run: npm audit --omit=dev --audit-level=high
+
+      - name: Development dependency audit
+        # Keep the full advisory visible without blocking production on an
+        # unpatched dev-only lint dependency. Production dependencies fail hard.
+        continue-on-error: true
         run: npm audit --audit-level=high
 
       - name: Lint
