@@ -5,7 +5,7 @@ import { readFile } from 'node:fs/promises'
 const read = (path) => readFile(new URL('../' + path, import.meta.url), 'utf8')
 
 test('auth email routes match configured Supabase templates end to end', async () => {
-  const [middleware, callback, recovery, confirm, forgot, reset, actions] = await Promise.all([
+  const [middleware, callback, recovery, confirm, forgot, reset, actions, makerLogin] = await Promise.all([
     read('lib/supabase/middleware.ts'),
     read('app/auth/callback/route.ts'),
     read('app/(auth)/auth/recovery/page.tsx'),
@@ -13,6 +13,7 @@ test('auth email routes match configured Supabase templates end to end', async (
     read('app/(auth)/forgot-password/page.tsx'),
     read('app/auth/reset-password/page.tsx'),
     read('lib/actions/auth.ts'),
+    read('lib/maker-login.ts'),
   ])
 
   assert.match(middleware, /['"]\/auth\/recovery['"]/)
@@ -33,7 +34,10 @@ test('auth email routes match configured Supabase templates end to end', async (
   }
   assert.match(confirm, /action="\/auth\/callback"/)
 
-  assert.match(actions, /MAKER_ACCOUNT_EMAIL = 'steegmans\.kyani@icloud\.com'/)
+  assert.match(makerLogin, /MAKER_ACCOUNT_EMAIL = 'steegmans\.kyani@icloud\.com'/)
+  assert.match(makerLogin, /maker@upilldawn/)
+  assert.match(makerLogin, /maker@uptilldawn/)
+  assert.match(actions, /resolveLoginEmail\(submittedEmail\)/)
   assert.match(actions, /resetPasswordForEmail\(email/)
   assert.match(reset, /updatePassword\(formData\)/)
   assert.match(forgot, /invalid_or_expired/)
