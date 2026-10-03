@@ -182,6 +182,17 @@ try {
 
       const body = await page.locator('body').innerText()
       if (!body.trim()) throw new Error('empty authenticated UI')
+
+      // Compact/touch layouts, including iPhone landscape (~926 CSS px), must
+      // keep the mobile bottom navigation. Admin must also keep the chat action.
+      if (viewport.width < 1024) {
+        const mobileNav = page.getByRole('navigation', { name: 'Mobiele navigatie' })
+        if (!(await mobileNav.isVisible())) throw new Error(`${bot} mobile bottom navigation is not visible at ${viewport.width}px`)
+        if (role === 'admin') {
+          const chatAction = page.getByRole('link', { name: /chat/i }).last()
+          if (!(await chatAction.isVisible())) throw new Error(`${bot} admin floating chat action is not visible at ${viewport.width}px`)
+        }
+      }
       if (/profiel kon niet worden geladen|account nog niet goedgekeurd/i.test(body)) {
         throw new Error('authenticated profile gate failed')
       }
