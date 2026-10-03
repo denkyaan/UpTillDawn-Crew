@@ -53,10 +53,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     if(profileRequestRef.current)return profileRequestRef.current
 
     const request=(async()=>{
-      const {data,error}=await supabase.from("profiles").select("id,full_name,profile_photo_url,approved,role,account_blocked").eq("id",userId).single()
+      const {data:profileRows,error}=await supabase.rpc("upt_current_profile")
+      const data=profileRows?.[0]??null
       lastProfileLoadRef.current=Date.now()
       const role=data?.role
-      if(error||!data||(role!=="staff"&&role!=="responsible_lead"&&role!=="admin")){
+      if(error||!data||data.id!==userId||(role!=="staff"&&role!=="responsible_lead"&&role!=="admin")){
         setProfile(null);setRoles([]);setRoleModeState(null);setIsOwner(false);return
       }
       const needsOwnerCheck=Boolean(data.account_blocked)||!data.approved||role==="admin"
