@@ -35,7 +35,7 @@ test('auth email routes match configured Supabase templates end to end', async (
   assert.match(confirm, /action="\/auth\/callback"/)
 
   assert.match(makerLogin, /MAKER_ACCOUNT_EMAIL = 'steegmans\.kyani@icloud\.com'/)
-  assert.match(makerLogin, /maker@upilldawn/)
+  assert.doesNotMatch(makerLogin, /maker@upilldawn/)
   assert.match(makerLogin, /maker@uptilldawn/)
   assert.match(actions, /resolveLoginEmail\(submittedEmail\)/)
   assert.match(actions, /resetPasswordForEmail\(email/)

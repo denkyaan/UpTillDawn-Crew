@@ -3,11 +3,13 @@ import assert from 'node:assert/strict'
 import { readFile } from 'node:fs/promises'
 import { isMakerLogin, resolveLoginEmail, MAKER_ACCOUNT_EMAIL } from '../lib/maker-login.ts'
 
-test('both maker login spellings and canonical account resolve to the permanent maker account',()=>{
-  for(const login of ['maker@upilldawn','maker@uptilldawn',MAKER_ACCOUNT_EMAIL]){
+test('only the supported maker login and canonical account resolve to the permanent maker account',()=>{
+  for(const login of ['maker@uptilldawn',MAKER_ACCOUNT_EMAIL]){
     assert.equal(isMakerLogin(login),true)
     assert.equal(resolveLoginEmail(login),MAKER_ACCOUNT_EMAIL)
   }
+  assert.equal(isMakerLogin('maker@upilldawn'),false)
+  assert.equal(resolveLoginEmail('maker@upilldawn'),'maker@upilldawn')
   assert.equal(isMakerLogin('staff@uptilldawn'),false)
 })
 
