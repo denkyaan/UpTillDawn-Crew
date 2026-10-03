@@ -604,6 +604,16 @@ export const APP_EXTRA_TRANSLATIONS: Record<string,Row> = {
   "Geen Bar / Toog-, Merch- of Tokenswerkplek gevonden voor dit evenement.": {fr:"Aucun poste Bar / Comptoir, Merch ou Tokens trouvé pour cet événement.",en:"No Bar / Counter, Merch or Tokens workplace found for this event.",de:"Kein Arbeitsplatz Bar / Theke, Merch oder Tokens für dieses Event gefunden."},
   "PRIJSLIJST UPLOADEN": {fr:"TÉLÉCHARGER LA LISTE DE PRIX",en:"UPLOAD PRICE LIST",de:"PREISLISTE HOCHLADEN"},
   "Open de guestlist, voeg gasten of artiesten toe en importeer een bestand.": {fr:"Ouvrez la guestlist, ajoutez des invités ou artistes et importez un fichier.",en:"Open the guest list, add guests or artists and import a file.",de:"Öffne die Gästeliste, füge Gäste oder Künstler hinzu und importiere eine Datei."},
+  "Main Bar": {fr:"Bar principal",en:"Main Bar",de:"Hauptbar"},
+  "Main Bar ·": {fr:"Bar principal ·",en:"Main Bar ·",de:"Hauptbar ·"},
+  "Bekers · 480/500": {fr:"Gobelets · 480/500",en:"Cups · 480/500",de:"Becher · 480/500"},
+  "Tokens · 1200/1200": {fr:"Jetons · 1200/1200",en:"Tokens · 1200/1200",de:"Tokens · 1200/1200"},
+  "Scanner · 2/2": {fr:"Scanners · 2/2",en:"Scanners · 2/2",de:"Scanner · 2/2"},
+  "Bar mat · 3/4": {fr:"Tapis de bar · 3/4",en:"Bar mats · 3/4",de:"Barmatten · 3/4"},
+  "Amelie Vos · Guest · 2 spots · ✓": {fr:"Amelie Vos · Invitée · 2 places · ✓",en:"Amelie Vos · Guest · 2 spots · ✓",de:"Amelie Vos · Gast · 2 Plätze · ✓"},
+  "DJ Nova · Artist · 3 spots ·": {fr:"DJ Nova · Artiste · 3 places ·",en:"DJ Nova · Artist · 3 spots ·",de:"DJ Nova · Künstler · 3 Plätze ·"},
+  "Tokens €1.240": {fr:"Jetons 1.240 €",en:"Tokens €1,240",de:"Tokens 1.240 €"},
+  "Merch €385": {fr:"Merch 385 €",en:"Merch €385",de:"Merch 385 €"},
 }
 
 const CANONICAL=new Map<string,string>()
