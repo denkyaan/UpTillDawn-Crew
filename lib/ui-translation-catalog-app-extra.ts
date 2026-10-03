@@ -598,6 +598,11 @@ export const APP_EXTRA_TRANSLATIONS: Record<string,Row> = {
   "Afbouw en afsluiting van het evenement.": {fr:"Démontage et clôture de l’événement.",en:"Event teardown and closing.",de:"Abbau und Abschluss der Veranstaltung."},
   "Guestlist maken & beheren": {fr:"Créer et gérer la guestlist",en:"Create & manage guest list",de:"Gästeliste erstellen & verwalten"},
   "Voeg gasten en artiesten handmatig toe of importeer een bestaand bestand.": {fr:"Ajoutez manuellement des invités et des artistes ou importez un fichier existant.",en:"Add guests and artists manually or import an existing file.",de:"Füge Gäste und Künstler manuell hinzu oder importiere eine bestehende Datei."},
+  "Bar/Toog": {fr:"Bar / Comptoir",en:"Bar / Counter",de:"Bar / Theke"},
+  "Prijslijsten": {fr:"Listes de prix",en:"Price lists",de:"Preislisten"},
+  "Upload per Bar / Toog, Merch of Tokens een foto of bestand met de actuele prijzen. De prijslijst is gekoppeld aan het evenement en de werkplek.": {fr:"Téléchargez pour Bar / Comptoir, Merch ou Tokens une photo ou un fichier avec les prix actuels. La liste de prix est liée à l’événement et au poste.",en:"Upload a photo or file with current prices for Bar / Counter, Merch or Tokens. The price list is linked to the event and workplace.",de:"Lade für Bar / Theke, Merch oder Tokens ein Foto oder eine Datei mit den aktuellen Preisen hoch. Die Preisliste ist mit Event und Arbeitsplatz verknüpft."},
+  "Geen Bar / Toog-, Merch- of Tokenswerkplek gevonden voor dit evenement.": {fr:"Aucun poste Bar / Comptoir, Merch ou Tokens trouvé pour cet événement.",en:"No Bar / Counter, Merch or Tokens workplace found for this event.",de:"Kein Arbeitsplatz Bar / Theke, Merch oder Tokens für dieses Event gefunden."},
+  "PRIJSLIJST UPLOADEN": {fr:"TÉLÉCHARGER LA LISTE DE PRIX",en:"UPLOAD PRICE LIST",de:"PREISLISTE HOCHLADEN"},
 }
 
 const CANONICAL=new Map<string,string>()
