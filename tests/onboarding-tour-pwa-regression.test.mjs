@@ -11,8 +11,7 @@ test('role tour is hydration-safe and opens real tabs without full reloads',asyn
     read('components/layout/mobile-nav.tsx'),
   ])
   assert.match(tour,/useState<ExtendedUiLocale>\("nl"\)/)
-  assert.match(tour,/setLocale\(initialUiLocale\(\) as ExtendedUiLocale\)/)
-  assert.doesNotMatch(tour,/useState<ExtendedUiLocale>\(\(\)=>initialUiLocale/)
+  assert.doesNotMatch(tour,/initialUiLocale\(/)
   assert.match(tour,/router\.push\(step\.route\)/)
   assert.doesNotMatch(tour,/location\.assign\(step\.route\)/)
   assert.match(tour,/inside:\[/)

@@ -6,7 +6,7 @@ import {useAuth,type UiRole} from "@/lib/providers"
 import {createClient} from "@/lib/supabase/crew-client"
 import {translateRuntimeUi} from "@/lib/ui-translation-runtime"
 import {featureHelp} from "@/lib/ui-field-help"
-import {initialUiLocale,parseUiLocale,LANGUAGE_APPLIED_EVENT} from "@/lib/locale-preferences"
+import {parseUiLocale,LANGUAGE_APPLIED_EVENT} from "@/lib/locale-preferences"
 import type {ExtendedUiLocale} from "@/lib/ui-translation-extensions"
 
 type TourText={nl:string;en:string;fr:string;de:string}
@@ -204,7 +204,7 @@ export function RoleAppTour(){
   const [insideIndex,setInsideIndex]=useState(-1)
   // Keep SSR and the first hydration render identical. Device/manual locale is
   // applied only after mount; this removes the React #418 hydration mismatch.
-  const [locale,setLocale]=useState<ExtendedUiLocale>(()=>initialUiLocale() as ExtendedUiLocale)
+  const [locale,setLocale]=useState<ExtendedUiLocale>("nl")
 
   useEffect(()=>{
     const on=(event:Event)=>{
