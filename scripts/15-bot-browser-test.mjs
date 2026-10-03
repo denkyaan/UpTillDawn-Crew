@@ -117,7 +117,9 @@ const browser = await chromium.launch({ headless: true })
 try {
   // Keep all 15 browser actors, but cap simultaneous SSR-heavy sessions so the
   // single CI Next server measures app behavior instead of artificial overload.
-  const smokeConcurrency=5
+  // Three simultaneous actors keep role coverage concurrent without starving
+  // the single CI Next.js server during hydrated mobile assertions.
+  const smokeConcurrency=3
   for(let batchStart=0;batchStart<roles.length;batchStart+=smokeConcurrency){
     const batch=roles.slice(batchStart,batchStart+smokeConcurrency)
     await Promise.all(batch.map(async (role, offset) => {
