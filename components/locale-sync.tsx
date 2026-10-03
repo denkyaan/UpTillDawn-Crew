@@ -131,7 +131,6 @@ export function LocaleSync() {
       applyLocale(next as ExtendedUiLocale,'manual')
     }
     const onDeviceLanguageChange = () => {
-      if(storedUiLocaleSource()==='manual')return
       applyLocale(deviceUiLocale() as ExtendedUiLocale,'device')
     }
     const onStorage = (event: StorageEvent) => {

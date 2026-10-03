@@ -337,7 +337,10 @@ export default async function Page({searchParams}:{searchParams?:Promise<{event?
           : <p className="text-sm text-muted-foreground">Bekijk je toegewezen werkplek, shifturen en bevestig of weiger je dienst vanuit hetzelfde scherm.</p>}
     </div>
 
-    {shiftChangeError&&<p className="rounded-xl border border-amber-500/40 p-4 text-sm text-muted-foreground">Shiftwijzigingen konden niet volledig worden geladen. Vernieuw de pagina.</p>}
+    {shiftChangeError&&<div className="rounded-xl border border-amber-500/40 bg-amber-500/5 p-4">
+      <p className="text-sm font-bold text-amber-700">Planningwaarschuwing</p>
+      <p className="mt-1 text-sm text-muted-foreground">Niet alle shiftwijzigingen konden worden geladen. Je bestaande planning blijft behouden. Vernieuw de pagina.</p>
+    </div>}
     <ShiftChangeCenter
       userId={user.id}
       isAdmin={isAdmin}
@@ -365,7 +368,6 @@ export default async function Page({searchParams}:{searchParams?:Promise<{event?
         </select>
         <input name="name" required maxLength={200} placeholder="Nieuwe werkplek" className="rounded-lg border bg-background p-3"/>
         <label className="grid gap-1 text-sm font-semibold">Omschrijving (optioneel)<input name="description" maxLength={1000} placeholder="Korte uitleg over deze werkplek" className="rounded-lg border bg-background p-3 font-normal"/><span className="text-xs font-normal text-muted-foreground">Beschrijf wat deze werkplek doet of waarvoor ze wordt gebruikt.</span></label>
-        <label className="grid gap-1 text-sm font-semibold">Weergavevolgorde<input name="sort_order" type="number" min="0" max="10000" defaultValue="0" className="rounded-lg border bg-background p-3 font-normal"/><span className="text-xs font-normal text-muted-foreground">Bepaalt waar de werkplek in lijsten staat. 0 is de standaard; een hoger getal zet ze later in de lijst.</span></label>
         <details className="rounded-xl border p-3 md:col-span-2">
           <summary className="cursor-pointer font-semibold">Bezettingsregels (optioneel)</summary>
           <div className="mt-3 grid gap-2 sm:grid-cols-3">
@@ -436,7 +438,7 @@ export default async function Page({searchParams}:{searchParams?:Promise<{event?
             <div>
               <b>{workplace.name}</b>
               <p className="text-sm text-muted-foreground">{workplace.events?.name}</p>
-              {workplace.description&&<p className="mt-1 text-sm text-muted-foreground">{workplace.description}</p>}
+              <p className="mt-1 text-sm text-muted-foreground">{workplace.description||'Geen omschrijving toegevoegd.'}</p>
             </div>
             <span className="rounded-full border px-2 py-1 text-xs">{workplace.is_active?'ACTIEF':'INACTIEF'}</span>
           </div>
@@ -448,7 +450,7 @@ export default async function Page({searchParams}:{searchParams?:Promise<{event?
                 <input type="hidden" name="workplace_id" value={workplace.id}/>
                 <input name="name" required maxLength={200} defaultValue={workplace.name} className="rounded-lg border bg-background p-2"/>
                 <textarea name="description" maxLength={1000} defaultValue={workplace.description||''} placeholder="Omschrijving (optioneel)" className="rounded-lg border bg-background p-2"/>
-                <input name="sort_order" type="number" min="0" max="10000" defaultValue={workplace.sort_order} aria-label="Volgorde" className="rounded-lg border bg-background p-2"/>
+                <input type="hidden" name="sort_order" value={workplace.sort_order}/>
                 <div className="grid gap-2 md:grid-cols-2">
                   <label className="grid gap-1 text-sm">Standaard startuur<DateInput name="default_shift_start" initial={workplace.default_shift_start||undefined} required/></label>
                   <label className="grid gap-1 text-sm">Standaard einduur<DateInput name="default_shift_end" initial={workplace.default_shift_end||undefined} required/></label>
@@ -499,6 +501,7 @@ export default async function Page({searchParams}:{searchParams?:Promise<{event?
               </div>
               {targetNeed>0&&<p className="mt-2 text-xs text-muted-foreground">Tot {targetNeed} extra medewerker(s) nodig om het doel tijdens alle evenementuren te halen.</p>}
               {staffingGaps.length>0&&<div className="mt-2 space-y-1 rounded-lg border border-amber-500/30 bg-amber-500/5 p-2 text-xs text-muted-foreground">
+                <p className="font-semibold text-amber-700">Onderbezetting tijdens deze uren</p>
                 {staffingGaps.slice(0,3).map(gap=><p key={`staff:${gap.startsAt}:${gap.endsAt}`}>{new Date(gap.startsAt).toLocaleString('nl-BE')} → {new Date(gap.endsAt).toLocaleString('nl-BE')} · {gap.assignedStaff}/{workplace.minimum_staff}</p>)}
                 {staffingGaps.length>3&&<p>+ {staffingGaps.length-3} extra onderbezette periode(s)</p>}
               </div>}
@@ -512,6 +515,7 @@ export default async function Page({searchParams}:{searchParams?:Promise<{event?
                 </span>}
               </div>
               {coverageGaps.length>0&&<div className="mt-2 space-y-1 rounded-lg border border-amber-500/30 bg-amber-500/5 p-2 text-xs text-muted-foreground">
+                <p className="font-semibold text-amber-700">Geen verantwoordelijke dekking tijdens deze uren</p>
                 {coverageGaps.slice(0,3).map(gap=><p key={`${gap.startsAt}:${gap.endsAt}`}>{new Date(gap.startsAt).toLocaleString('nl-BE')} → {new Date(gap.endsAt).toLocaleString('nl-BE')}</p>)}
                 {coverageGaps.length>3&&<p>+ {coverageGaps.length-3} extra dekkingsgat(en)</p>}
               </div>}

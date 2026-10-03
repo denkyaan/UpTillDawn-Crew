@@ -228,11 +228,25 @@ export async function addWorkplace(fd:FormData){
  const eventId=uuid.parse(fd.get('event_id'))
  const capacity=workplaceCapacityValues(fd)
  const [defaultShiftStart,defaultShiftEnd]=dates(fd,'default_shift_start','default_shift_end')
+ const requestedSortOrder=String(fd.get('sort_order')||'').trim()
+ let sortOrder:number
+ if(requestedSortOrder){
+  sortOrder=z.coerce.number().int().min(0).max(10000).parse(requestedSortOrder)
+ }else{
+  const {data:lastWorkplace,error:sortError}=await s.from('workplaces')
+   .select('sort_order')
+   .eq('event_id',eventId)
+   .order('sort_order',{ascending:false})
+   .limit(1)
+   .maybeSingle()
+  check(sortError)
+  sortOrder=Math.min(10000,(lastWorkplace?.sort_order??-10)+10)
+ }
  const {error}=await s.from('workplaces').insert({
   event_id:eventId,
   name:text.parse(fd.get('name')),
   description:String(fd.get('description')||'').trim().slice(0,1000)||null,
-  sort_order:z.coerce.number().int().min(0).max(10000).parse(fd.get('sort_order')||0),
+  sort_order:sortOrder,
   default_shift_start:defaultShiftStart,
   default_shift_end:defaultShiftEnd,
   is_active:true,

@@ -3,16 +3,21 @@ import assert from 'node:assert/strict'
 import {readFile} from 'node:fs/promises'
 const read=p=>readFile(new URL('../'+p,import.meta.url),'utf8')
 
-test('device language is the default until the user makes a manual choice',async()=>{
- const prefs=await read('lib/locale-preferences.ts')
- assert.match(prefs,/storedUiLocaleSource\(\)==='manual'&&stored \? stored : deviceUiLocale\(\)/)
- assert.match(prefs,/initialUiLocaleSource[\s\S]*storedUiLocaleSource\(\)==='manual'/)
+test('device language is authoritative at every fresh app start',async()=>{
+ const [prefs,server]=await Promise.all([
+  read('lib/locale-preferences.ts'),
+  read('lib/server-locale.ts'),
+ ])
+ assert.match(prefs,/initialUiLocale\(\)[\s\S]*return deviceUiLocale\(\)/)
+ assert.match(prefs,/initialUiLocaleSource\(\)[\s\S]*return 'device'/)
+ assert.match(server,/return headerLocale\|\|cookieLocale\|\|'nl'/)
 })
 
-test('manual language survives navigation and reload while device mode tracks the device',async()=>{
+test('manual language applies in-session while device changes resync the app',async()=>{
  const sync=await read('components/locale-sync.tsx')
  assert.match(sync,/applyLocale\(initialUiLocale\(\) as ExtendedUiLocale,initialUiLocaleSource\(\)\)/)
- assert.match(sync,/const onDeviceLanguageChange = \(\) => \{[\s\S]*if\(storedUiLocaleSource\(\)==='manual'\)return[\s\S]*applyLocale\(deviceUiLocale\(\) as ExtendedUiLocale,'device'\)/)
+ assert.match(sync,/const onDeviceLanguageChange = \(\) => \{[\s\S]*applyLocale\(deviceUiLocale\(\) as ExtendedUiLocale,'device'\)/)
+ assert.doesNotMatch(sync,/onDeviceLanguageChange[\s\S]{0,180}storedUiLocaleSource\(\)==='manual'/)
 })
 
 test('all four supported locales remain selectable',async()=>{

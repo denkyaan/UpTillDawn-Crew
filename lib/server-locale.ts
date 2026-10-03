@@ -1,6 +1,5 @@
 import { cookies, headers } from 'next/headers'
 import {
-  LANGUAGE_SOURCE_KEY,
   parseAcceptLanguage,
   parseUiLocale,
   type SupportedUiLocale,
@@ -9,11 +8,10 @@ import {
 export async function requestUiLocale():Promise<SupportedUiLocale>{
   const [cookieStore,headerStore]=await Promise.all([cookies(),headers()])
   const cookieLocale=parseUiLocale(cookieStore.get('uptilldawn-language')?.value)
-  const localeSource=cookieStore.get(LANGUAGE_SOURCE_KEY)?.value
   const headerLocale=parseAcceptLanguage(headerStore.get('accept-language'))
-  return localeSource==='manual'&&cookieLocale
-    ? cookieLocale
-    : headerLocale||cookieLocale||'nl'
+  // Device/browser language is authoritative on a fresh request. The cookie is
+  // only a fallback for clients that do not send a usable Accept-Language.
+  return headerLocale||cookieLocale||'nl'
 }
 
 export const PRODUCT_COPY={

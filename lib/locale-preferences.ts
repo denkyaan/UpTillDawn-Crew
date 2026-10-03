@@ -46,15 +46,14 @@ export function storedUiLocaleSource():LocaleSource|null{
 
 export function initialUiLocale():SupportedUiLocale{
   if(typeof window==='undefined')return 'nl'
-  // A deliberate language choice must remain authoritative across navigation
-  // and reloads. Without a manual choice, follow the current device language.
-  const stored=storedUiLocale()
-  return storedUiLocaleSource()==='manual'&&stored ? stored : deviceUiLocale()
+  // Every fresh app start follows the device/browser language. A manual
+  // selection still applies immediately for the active session, but it does
+  // not pin future app starts to an outdated device language.
+  return deviceUiLocale()
 }
 
 export function initialUiLocaleSource():LocaleSource{
-  if(typeof window==='undefined')return 'device'
-  return storedUiLocaleSource()==='manual'&&storedUiLocale() ? 'manual' : 'device'
+  return 'device'
 }
 
 export function persistUiLocale(locale:SupportedUiLocale,source:LocaleSource){
