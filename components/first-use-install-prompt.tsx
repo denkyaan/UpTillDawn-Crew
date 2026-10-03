@@ -93,11 +93,10 @@ export function FirstUseInstallPrompt(){
   const [busy,setBusy]=useState(false)
   const [message,setMessage]=useState("")
   // Deterministic SSR/client first render; device locale is applied after mount.
-  const [locale,setLocale]=useState<SupportedUiLocale>("nl")
+  const [locale,setLocale]=useState<SupportedUiLocale>(()=>initialUiLocale())
   const t=(key:keyof typeof COPY.nl)=>COPY[locale][key]
 
   useEffect(()=>{
-    setLocale(initialUiLocale())
     const onLanguage=(event:Event)=>{
       const next=parseUiLocale((event as CustomEvent<string>).detail)
       if(next)setLocale(next)
