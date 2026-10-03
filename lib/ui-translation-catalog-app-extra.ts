@@ -603,6 +603,7 @@ export const APP_EXTRA_TRANSLATIONS: Record<string,Row> = {
   "Upload per Bar / Toog, Merch of Tokens een foto of bestand met de actuele prijzen. De prijslijst is gekoppeld aan het evenement en de werkplek.": {fr:"Téléchargez pour Bar / Comptoir, Merch ou Tokens une photo ou un fichier avec les prix actuels. La liste de prix est liée à l’événement et au poste.",en:"Upload a photo or file with current prices for Bar / Counter, Merch or Tokens. The price list is linked to the event and workplace.",de:"Lade für Bar / Theke, Merch oder Tokens ein Foto oder eine Datei mit den aktuellen Preisen hoch. Die Preisliste ist mit Event und Arbeitsplatz verknüpft."},
   "Geen Bar / Toog-, Merch- of Tokenswerkplek gevonden voor dit evenement.": {fr:"Aucun poste Bar / Comptoir, Merch ou Tokens trouvé pour cet événement.",en:"No Bar / Counter, Merch or Tokens workplace found for this event.",de:"Kein Arbeitsplatz Bar / Theke, Merch oder Tokens für dieses Event gefunden."},
   "PRIJSLIJST UPLOADEN": {fr:"TÉLÉCHARGER LA LISTE DE PRIX",en:"UPLOAD PRICE LIST",de:"PREISLISTE HOCHLADEN"},
+  "Open de guestlist, voeg gasten of artiesten toe en importeer een bestand.": {fr:"Ouvrez la guestlist, ajoutez des invités ou artistes et importez un fichier.",en:"Open the guest list, add guests or artists and import a file.",de:"Öffne die Gästeliste, füge Gäste oder Künstler hinzu und importiere eine Datei."},
 }
 
 const CANONICAL=new Map<string,string>()
