@@ -122,6 +122,9 @@ const ROUTES:Record<string,string>={
   settings:"/settings",
 }
 
+const TOUR_DEMO_QUERY="?tour=1"
+const DEMO_FEATURES=new Set(["overview","events","operations","workplaces","briefings","tasks","inventory","guestlist","sales"])
+
 const PAGE_SELECTORS:Record<string,string>={
   overview:"main",
   events:"main form, main",
@@ -149,15 +152,16 @@ const ROLE_FEATURES:Record<UiRole,string[]>={
 
 function makeFeatureStep(role:UiRole,key:string):Step{
   const help=featureHelp(key)
-  const route=key==="overview"&&role==="admin"?"/admin":ROUTES[key]
+  const baseRoute=key==="overview"&&role==="admin"?"/admin":ROUTES[key]
+  const route=baseRoute&&(DEMO_FEATURES.has(key)?baseRoute+TOUR_DEMO_QUERY:baseRoute)
   return {
     heading:help.label,
     body:help.description,
     selector:'[data-layout-key="'+key+'"]',
     route,
     inside:[
-      {heading:UI_COPY.what,body:help.description,selector:"main"},
-      {heading:UI_COPY.how,body:HOW_COPY[role][key]||GENERIC_HOW,selector:PAGE_SELECTORS[key]||"main"},
+      {heading:UI_COPY.what,body:help.description,selector:'[data-tour-demo], main'},
+      {heading:UI_COPY.how,body:HOW_COPY[role][key]||GENERIC_HOW,selector:'[data-tour-demo="time-actions"], [data-tour-demo="shift"], '+(PAGE_SELECTORS[key]||"main")},
     ],
   }
 }
