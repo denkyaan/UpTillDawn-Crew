@@ -117,7 +117,8 @@ test('server metadata and manifest use the same locale source', async () => {
     readFile(new URL('../app/manifest.ts',import.meta.url),'utf8'),
   ])
   assert.match(serverLocale,/requestUiLocale/)
-  assert.match(serverLocale,/localeSource===['"]manual['"]/)
+  assert.match(serverLocale,/headerLocale\\|\\|cookieLocale\\|\\|['"]nl['"]/)
+  assert.doesNotMatch(serverLocale,/localeSource===['"]manual['"]/)
   for(const locale of ['nl','fr','en','de']) assert.match(serverLocale,new RegExp(`\\b${locale}:\\{`))
   assert.match(root,/await requestUiLocale\(\)/)
   assert.match(root,/generateMetadata/)
