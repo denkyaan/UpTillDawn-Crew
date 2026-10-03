@@ -121,7 +121,8 @@ export default async function GuestlistPage({
       </form>
     </header>
 
-    {isAdmin&&<section className="grid gap-4 lg:grid-cols-2">
+    {isAdmin&&<section className="grid gap-4 lg:grid-cols-2" data-tour="guestlist-create">
+      <div className="lg:col-span-2"><h2 className="text-2xl font-black">Guestlist maken & beheren</h2><p className="mt-1 text-sm text-muted-foreground">Voeg gasten en artiesten handmatig toe of importeer een bestaand bestand.</p></div>
       <article className="space-y-3 rounded-2xl border p-4">
         <h2 className="text-xl font-black">Guest of artiest toevoegen</h2>
         <form action={addGuestlistEntry} className="grid gap-2 sm:grid-cols-2">
