@@ -56,13 +56,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       const {data,error}=await supabase.from("profiles").select("id,full_name,profile_photo_url,approved,role,account_blocked").eq("id",userId).single()
       lastProfileLoadRef.current=Date.now()
       const role=data?.role
-      if(error||!data||data.account_blocked||(role!=="staff"&&role!=="responsible_lead"&&role!=="admin")){
+      if(error||!data||(role!=="staff"&&role!=="responsible_lead"&&role!=="admin")){
         setProfile(null);setRoles([]);setRoleModeState(null);setIsOwner(false);return
       }
-      const needsOwnerCheck=!data.approved||role==="admin"
+      const needsOwnerCheck=Boolean(data.account_blocked)||!data.approved||role==="admin"
       const {data:ownerFlag}=needsOwnerCheck?await supabase.rpc("upt_current_is_owner"):{data:false}
       const owner=ownerFlag===true
-      if(!data.approved&&!owner){
+      if((data.account_blocked&&!owner)||(!data.approved&&!owner)){
         setProfile(null);setRoles([]);setRoleModeState(null);setIsOwner(false);return
       }
       setIsOwner(owner)

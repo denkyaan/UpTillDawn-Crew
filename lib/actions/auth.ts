@@ -365,6 +365,28 @@ export async function resendVerificationEmail(formData: FormData) {
 }
 
 // ── Get Current User with Profile ────────────────────────────
+export async function enterNormalAppFromMakerSession(formData: FormData) {
+    const requestedPortal = String(formData.get('portal') || 'admin').toLowerCase()
+    const portal = requestedPortal === 'staff' || requestedPortal === 'responsible' || requestedPortal === 'admin'
+        ? requestedPortal
+        : 'admin'
+
+    const supabase = await createClient()
+    const { data: { user } } = await supabase.auth.getUser()
+    if (!user) redirect(`/login/${portal}`)
+
+    const { data: isOwner, error: ownerError } = await supabase.rpc('upt_current_is_owner')
+    if (ownerError || isOwner !== true) redirect('/unauthorized')
+
+    const roleMode = portal === 'admin' ? 'admin' : portal === 'responsible' ? 'responsible_lead' : 'staff'
+    const { data: activatedRole, error: roleModeError } = await supabase.rpc('upt_set_admin_role_mode', { p_role: roleMode })
+    if (roleModeError || activatedRole !== roleMode) {
+        redirect(`/maker-mode?portal=${portal}&error=role-mode`)
+    }
+
+    redirect(portal === 'admin' ? '/admin' : '/')
+}
+
 export const getCurrentUser = cache(async function getCurrentUser() {
     const supabase = await createClient()
     const { data: { user }, error: authError } = await supabase.auth.getUser()
@@ -372,17 +394,17 @@ export const getCurrentUser = cache(async function getCurrentUser() {
 
     const { data: profileRows, error } = await supabase.rpc('upt_current_profile')
     const profile = profileRows?.[0] ?? null
-    if (error || !profile || profile.account_blocked) return null
+    if (error || !profile) return null
 
     const realRole = profile.role
-    // Approved ordinary crew never need owner/effective-role RPCs. Keeping
-    // their authenticated shell to auth + one profile read prevents every
-    // Staff/Responsible page request from queueing privileged role checks.
-    const needsOwnerCheck = !profile.approved || realRole === 'admin'
+    // Owner status must be resolved before ordinary block/approval gates so a
+    // legacy or accidental personnel flag can never lock the maker out.
+    const needsOwnerCheck = Boolean(profile.account_blocked) || !profile.approved || realRole === 'admin'
     const { data: ownerFlag } = needsOwnerCheck
         ? await supabase.rpc('upt_current_is_owner')
         : { data: false }
     const isOwner = ownerFlag === true
+    if (profile.account_blocked && !isOwner) return null
     if (!profile.approved && !isOwner) return null
 
     const hasPermanentAdminAccess = realRole === 'admin' || isOwner
