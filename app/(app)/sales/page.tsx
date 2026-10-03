@@ -2,7 +2,7 @@ import {redirect} from 'next/navigation'
 import {getCurrentUser} from '@/lib/actions/auth'
 import {createClient} from '@/lib/supabase/crew-server'
 import {PlatformAiAssistant} from '@/components/admin/platform-ai-assistant'
-import {createPriceListDocument,archiveEventDocument} from '@/lib/actions/uptilldawn'
+import {createPriceListDocument,createPriceListTextEntry,archiveEventDocument} from '@/lib/actions/uptilldawn'
 
 export const dynamic='force-dynamic'
 
@@ -129,19 +129,30 @@ export default async function SalesPage({
     {isAdmin&&selected&&<PlatformAiAssistant eventId={selected.id} contextKey="sales" contextLabel={'Sales · '+selected.name}/>}
 
     {isAdmin&&selected&&<section className="space-y-4 rounded-2xl border border-violet-500/30 p-4" data-tour="price-lists">
-      <div><h2 className="text-xl font-black">Prijslijsten</h2><p className="text-sm text-muted-foreground">Upload per Bar / Toog, Merch of Tokens een foto of bestand met de actuele prijzen. De prijslijst is gekoppeld aan het evenement en de werkplek.</p></div>
+      <div><h2 className="text-xl font-black">Prijslijsten</h2><p className="text-sm text-muted-foreground">Voer per Bar / Toog, Merch of Tokens de actuele prijzen in, of upload een foto of bestand. De prijslijst is gekoppeld aan het evenement en de werkplek.</p></div>
       {!salesWorkplaces.length&&<p className="rounded-xl border border-dashed p-3 text-sm text-muted-foreground">Geen Bar / Toog-, Merch- of Tokenswerkplek gevonden voor dit evenement.</p>}
       <div className="grid gap-3 lg:grid-cols-3">{salesWorkplaces.map(workplace=>{
         const docs=priceLists.filter(doc=>doc.workplace_id===workplace.id)
         return <article key={workplace.id} className="space-y-3 rounded-xl border p-3">
           <h3 className="font-black">{workplace.name}</h3>
-          <form action={createPriceListDocument} className="grid gap-2">
-            <input type="hidden" name="event_id" value={selected.id}/>
-            <input type="hidden" name="workplace_id" value={workplace.id}/>
-            <input type="hidden" name="workplace_name" value={workplace.name}/>
-            <input name="document" type="file" required accept=".pdf,.docx,.pptx,.xlsx,.txt,.csv,.jpg,.jpeg,.png,.webp,application/pdf,text/plain,text/csv,image/jpeg,image/png,image/webp" className="rounded-lg border bg-background p-2"/>
-            <button className="rounded-lg bg-violet-600 px-3 py-2 font-bold text-white">PRIJSLIJST UPLOADEN</button>
-          </form>
+          <div className="grid gap-3">
+            <form action={createPriceListTextEntry} className="grid gap-2">
+              <input type="hidden" name="event_id" value={selected.id}/>
+              <input type="hidden" name="workplace_id" value={workplace.id}/>
+              <input type="hidden" name="workplace_name" value={workplace.name}/>
+              <label className="text-xs font-black uppercase tracking-wide text-muted-foreground">Prijslijst invoeren</label>
+              <textarea name="price_list_text" required maxLength={12000} rows={6} placeholder={"Voorbeeld:\nCola — €3,00\nWater — €2,50"} className="rounded-lg border bg-background p-3"/>
+              <button className="rounded-lg border border-violet-500 px-3 py-2 font-bold">INGEVOERDE PRIJSLIJST OPSLAAN</button>
+            </form>
+            <div className="text-center text-xs font-black uppercase text-muted-foreground">of upload een foto of bestand</div>
+            <form action={createPriceListDocument} className="grid gap-2">
+              <input type="hidden" name="event_id" value={selected.id}/>
+              <input type="hidden" name="workplace_id" value={workplace.id}/>
+              <input type="hidden" name="workplace_name" value={workplace.name}/>
+              <input name="document" type="file" required accept=".pdf,.docx,.pptx,.xlsx,.txt,.csv,.jpg,.jpeg,.png,.webp,application/pdf,text/plain,text/csv,image/jpeg,image/png,image/webp" className="rounded-lg border bg-background p-2"/>
+              <button className="rounded-lg bg-violet-600 px-3 py-2 font-bold text-white">PRIJSLIJST UPLOADEN</button>
+            </form>
+          </div>
           {docs.length>0&&<div className="space-y-2">{docs.map(doc=><div key={doc.id} className="flex items-center justify-between gap-2 rounded-lg border p-2 text-sm"><span className="min-w-0 truncate">{doc.file_name}</span><div className="flex gap-1">{priceListUrls.get(doc.id)&&<a href={priceListUrls.get(doc.id)} target="_blank" rel="noreferrer" className="rounded border px-2 py-1 font-bold">OPENEN</a>}<form action={archiveEventDocument}><input type="hidden" name="document_id" value={doc.id}/><button className="rounded border px-2 py-1 font-bold">VERWIJDEREN</button></form></div></div>)}</div>}
         </article>
       })}</div>
