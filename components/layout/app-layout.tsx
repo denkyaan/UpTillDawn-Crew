@@ -14,6 +14,7 @@ import { getDefaultRoleUiRules, ruleMatches, ruleUsable, type RoleUiContext, typ
 import { AdminContextBar } from "@/components/admin/admin-context-bar"
 import { PlatformAiAssistant } from "@/components/admin/platform-ai-assistant"
 import { RoleAppTour } from "@/components/role-app-tour"
+import { TourActiveEventDemo } from "@/components/tour-active-event-demo"
 
 function CountBadge({ count }: { count: number }) {
   if (count < 1) return null
@@ -282,6 +283,7 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
       <div className="print:hidden"><Topbar notificationMissed={notificationMissed}/><QueueStatus/>{isAdmin&&<AdminContextBar/>}</div>
       <div id="app-scroll" className="flex-1 overflow-y-auto bg-background scroll-smooth print:overflow-visible">
         <main className="min-h-[calc(100dvh-theme(spacing.16)-theme(spacing.12))] pb-20 lg:pb-0 print:min-h-0 print:pb-0">
+          {tourPreview&&<TourActiveEventDemo role={isAdmin?"admin":role==="responsible_lead"?"responsible_lead":"employee"}/>} 
           {!currentVisible&&!previewAll
             ? <div className="m-4 rounded-2xl border p-6 text-muted-foreground">Deze functie is verborgen voor jouw rol of huidige context.</div>
             : <>
