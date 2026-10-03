@@ -1223,6 +1223,16 @@ export async function createInventoryTextEntry(fd:FormData){
  await revalidatePath('/inventory');await revalidatePath('/workplaces')
 }
 
+export async function createPriceListDocument(fd:FormData){
+ const workplaceName=z.string().trim().min(1).max(200).parse(fd.get('workplace_name'))
+ fd.set('kind','technical')
+ fd.set('audience','employee')
+ fd.set('title','Prijslijst · '+workplaceName)
+ fd.set('description','Actuele prijslijst voor '+workplaceName+'.')
+ fd.set('offline_critical','on')
+ await createEventDocument(fd)
+ await revalidatePath('/sales')
+}
 export async function archiveEventDocument(fd:FormData){
  const {s,profile}=await approvedClient()
  requireManager(profile.role)
