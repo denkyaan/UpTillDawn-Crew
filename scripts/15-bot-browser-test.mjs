@@ -183,20 +183,23 @@ try {
       const body = await page.locator('body').innerText()
       if (!body.trim()) throw new Error('empty authenticated UI')
 
-      // Compact/touch layouts, including iPhone landscape (~926 CSS px), must
-      // keep the mobile bottom navigation. Admin must also keep the chat action.
-      if (viewport.width < 1024) {
-        const mobileNav = page.getByRole('navigation', { name: 'Mobiele navigatie' })
-        if (!(await mobileNav.isVisible())) throw new Error(`${bot} mobile bottom navigation is not visible at ${viewport.width}px`)
-        if (role === 'admin') {
-          const chatAction = page.getByRole('link', { name: /chat/i }).last()
-          if (!(await chatAction.isVisible())) throw new Error(`${bot} admin floating chat action is not visible at ${viewport.width}px`)
-        }
-      }
       if (/profiel kon niet worden geladen|account nog niet goedgekeurd/i.test(body)) {
         throw new Error('authenticated profile gate failed')
       }
       if (role !== 'admin') await waitForSeededProfile(page, expectedName, context, bot, diagnostics)
+
+      // Assert compact navigation only after the authenticated profile/role UI
+      // has hydrated. This covers phones, tablets and iPhone landscape.
+      if (viewport.width < 1024) {
+        const mobileNav = page.getByRole('navigation', { name: 'Mobiele navigatie' })
+        await mobileNav.waitFor({state:'visible',timeout:15000})
+        const box=await mobileNav.boundingBox()
+        if (!box || box.height < 48) throw new Error(`${bot} mobile bottom navigation has no usable height at ${viewport.width}px`)
+        if (role === 'admin') {
+          const chatAction = page.locator('a[href="/chat"]').filter({has:page.locator('svg')}).last()
+          await chatAction.waitFor({state:'visible',timeout:15000})
+        }
+      }
 
       // Runtime i18n regression on the authenticated landing page.
       await assertRuntimeLocale(page, locale, bot, page.url())

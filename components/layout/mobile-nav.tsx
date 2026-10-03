@@ -123,7 +123,7 @@ export function MobileBottomNav({
    </Link>
  }
 
- return <nav aria-label="Mobiele navigatie" className="fixed inset-x-0 bottom-0 z-50 border-t border-border bg-card/95 backdrop-blur lg:hidden">
+ return <nav aria-label="Mobiele navigatie" className="fixed inset-x-0 bottom-0 z-50 min-h-14 border-t border-border bg-card/95 pb-[env(safe-area-inset-bottom)] backdrop-blur lg:hidden">
   {expanded&&
    <div className="absolute inset-x-0 bottom-full max-h-[60dvh] overflow-y-auto border-t border-border bg-card/98 p-3 shadow-2xl">
     <div className="grid grid-cols-2 gap-2">
