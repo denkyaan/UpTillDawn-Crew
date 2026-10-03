@@ -583,6 +583,14 @@ export const APP_EXTRA_TRANSLATIONS: Record<string,Row> = {
   "2 example tasks assigned": {fr:"2 tâches d’exemple attribuées",en:"2 example tasks assigned",de:"2 Beispielaufgaben zugewiesen"},
   "Tasks": {fr:"Tâches",en:"Tasks",de:"Aufgaben"},
   "Opening checklist ready": {fr:"Checklist d’ouverture prête",en:"Opening checklist ready",de:"Öffnungs-Checkliste bereit"},
+  "Ticket scan, guestlist en artiestenontvangst.": {fr:"Scannez les tickets, contrôlez la liste des invités et accueillez les artistes.",en:"Scan tickets, check the guest list and welcome artists.",de:"Tickets scannen, Gästeliste prüfen und Künstler empfangen."},
+  "Merchandise verkoop en voorraad.": {fr:"Vente de marchandises et gestion du stock.",en:"Merchandise sales and stock management.",de:"Merchandise-Verkauf und Bestandsverwaltung."},
+  "Bar, toog en kassawerking.": {fr:"Fonctionnement du bar, du comptoir et de la caisse.",en:"Bar, counter and cash-register operations.",de:"Bar-, Theken- und Kassenbetrieb."},
+  "Backstage, artiestenopvang en hospitality.": {fr:"Gestion backstage, accueil des artistes et hospitalité.",en:"Backstage management, artist reception and hospitality.",de:"Backstage-Management, Künstlerempfang und Hospitality."},
+  "Flexibele ondersteuning waar nodig.": {fr:"Soutien flexible là où il est nécessaire pendant l’événement.",en:"Flexible support wherever needed during the event.",de:"Flexible Unterstützung dort, wo sie während der Veranstaltung benötigt wird."},
+  "Opbouwteam vóór het evenement.": {fr:"Équipe chargée du montage et de la préparation avant l’événement.",en:"Team for setup and preparation before the event.",de:"Team für Aufbau und Vorbereitung vor der Veranstaltung."},
+  "Afbouwteam na het evenement.": {fr:"Équipe chargée du démontage et du rangement après l’événement.",en:"Team for teardown and cleanup after the event.",de:"Team für Abbau und Aufräumen nach der Veranstaltung."},
+  "Tokenverkoop, tokenkassa en uitgifte.": {fr:"Vente de jetons, caisse à jetons et distribution.",en:"Token sales, token till and distribution.",de:"Tokenverkauf, Tokenkasse und Ausgabe."},
 }
 
 const CANONICAL=new Map<string,string>()
