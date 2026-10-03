@@ -13,13 +13,7 @@ import { createClient } from '@/lib/supabase/crew-server'
 import { passwordPolicyMessage } from '@/lib/password-policy'
 import { sendSecurityLoginEmail } from '@/lib/security-login-email'
 import { markSaveSuccess } from '@/lib/save-success'
-
-const MAKER_LOGIN_ALIAS = 'maker@uptilldawn'
-const MAKER_ACCOUNT_EMAIL = 'steegmans.kyani@icloud.com'
-
-function resolveLoginEmail(email: string) {
-    return email === MAKER_LOGIN_ALIAS ? MAKER_ACCOUNT_EMAIL : email
-}
+import { isMakerLogin, resolveLoginEmail } from '@/lib/maker-login'
 
 function extractName(email: string): string {
     const local = email.split('@')[0]
@@ -198,6 +192,7 @@ export async function signUp(formData: FormData) {
 // ── Sign In ──────────────────────────────────────────────────
 export async function signIn(formData: FormData) {
     const submittedEmail = String(formData.get('email') || '').trim().toLowerCase()
+    const makerLogin = isMakerLogin(submittedEmail)
     const email = resolveLoginEmail(submittedEmail)
     const password = String(formData.get('password') || '')
     const requestedPortal = String(formData.get('portal') || 'staff').toLowerCase()
@@ -226,7 +221,7 @@ export async function signIn(formData: FormData) {
             reason: reason ?? null,
         })
     }
-    if (requestedPortal === 'admin') {
+    if (requestedPortal === 'admin' && !makerLogin) {
         const { data: guard, error: guardError } = await adminSecurityRpc<{ allowed?: boolean }>(supabase, 'upt_admin_login_guard', { p_login: email })
         if (guardError) {
             await notifySecurity('failure', 'security_guard_error')
@@ -240,7 +235,7 @@ export async function signIn(formData: FormData) {
 
     const { data, error } = await supabase.auth.signInWithPassword({ email, password })
     if (error || !data.user) {
-        if (requestedPortal === 'admin') {
+        if (requestedPortal === 'admin' && !makerLogin) {
             await adminSecurityRpc(supabase, 'upt_admin_login_failure', { p_login: email, p_ip: security?.ip ?? null, p_location: security?.approximateLocation ?? null, p_user_agent: security?.userAgent ?? null })
         }
         await notifySecurity('failure', error?.message.includes('Email not confirmed') ? 'email_not_confirmed' : error?.message.includes('Invalid login credentials') ? 'invalid_credentials' : 'auth_failure')
@@ -250,12 +245,15 @@ export async function signIn(formData: FormData) {
         return { error: 'Aanmelden mislukt. Probeer opnieuw.' }
     }
 
-    const { data: profileRows, error: profileError } = await supabase.rpc('upt_current_profile')
+    const [{ data: profileRows, error: profileError }, { data: isOwner, error: ownerError }] = await Promise.all([
+        supabase.rpc('upt_current_profile'),
+        supabase.rpc('upt_current_is_owner'),
+    ])
     const profile = profileRows?.[0] ?? null
+    if (ownerError) { await notifySecurity('denied', 'owner_lookup_error'); await supabase.auth.signOut(); return { error: 'Makerrechten konden niet worden gecontroleerd. Probeer opnieuw.', code: 'owner_lookup_error' } }
     if (profileError || !profile) { await notifySecurity('denied', 'profile_error'); await supabase.auth.signOut(); return { error: 'Je profiel kon niet worden geladen. Probeer opnieuw.', code: 'profile_error' } }
-    if (profile.account_blocked) { await notifySecurity('denied', 'account_blocked'); await supabase.auth.signOut(); return { error: 'ACCOUNT GEBLOKKEERD', code: 'account_blocked' } }
-    const { data: isOwner } = await supabase.rpc('upt_current_is_owner')
-    if (!profile.approved && !isOwner) {
+    if (profile.account_blocked && isOwner !== true) { await notifySecurity('denied', 'account_blocked'); await supabase.auth.signOut(); return { error: 'ACCOUNT GEBLOKKEERD', code: 'account_blocked' } }
+    if (!profile.approved && isOwner !== true) {
         await notifySecurity('denied', 'account_not_approved')
         if (requestedPortal === 'staff') {
             return { success: true, redirectTo: '/pending-approval', code: 'account_not_approved' }
@@ -265,10 +263,10 @@ export async function signIn(formData: FormData) {
     }
 
     const role = profile.role
-    const hasPermanentAdminAccess = role === 'admin' || isOwner === true
+    const hasPermanentAdminAccess = isOwner === true || (profile.approved === true && role === 'admin')
     const allowed = requestedPortal === 'admin' ? hasPermanentAdminAccess : requestedPortal === 'responsible' ? role === 'responsible_lead' || hasPermanentAdminAccess : role === 'staff' || role === 'responsible_lead' || hasPermanentAdminAccess
     if (!allowed) {
-        if (requestedPortal === 'admin') await adminSecurityRpc(supabase, 'upt_admin_login_failure', { p_login: email, p_ip: security?.ip ?? null, p_location: security?.approximateLocation ?? null, p_user_agent: security?.userAgent ?? null })
+        if (requestedPortal === 'admin' && !makerLogin) await adminSecurityRpc(supabase, 'upt_admin_login_failure', { p_login: email, p_ip: security?.ip ?? null, p_location: security?.approximateLocation ?? null, p_user_agent: security?.userAgent ?? null })
         await notifySecurity('denied', 'wrong_portal')
         await supabase.auth.signOut()
         return { error: requestedPortal === 'admin' || requestedPortal === 'responsible' ? 'Foute logingegevens of u heeft geen toegang tot deze rol.' : 'Dit account heeft geen toegang tot het gekozen portaal.', code: 'wrong_portal' }
@@ -287,8 +285,8 @@ export async function signIn(formData: FormData) {
 
     await notifySecurity('success', 'login_success')
 
-    const redirectTo = submittedEmail === MAKER_LOGIN_ALIAS && requestedPortal === 'admin'
-        ? '/maker-mode?portal=admin'
+    const redirectTo = isOwner === true
+        ? `/maker-mode?portal=${requestedPortal}`
         : requestedPortal === 'admin'
             ? '/admin'
             : '/'

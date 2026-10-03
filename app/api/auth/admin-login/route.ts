@@ -1,9 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/crew-server'
 import { sendSecurityLoginEmail } from '@/lib/security-login-email'
-
-const MAKER_LOGIN_ALIAS = 'maker@uptilldawn'
-const MAKER_ACCOUNT_EMAIL = 'steegmans.kyani@icloud.com'
+import { isMakerLogin, resolveLoginEmail } from '@/lib/maker-login'
 
 function loginUrl(request: NextRequest, error?: string) {
   const url = new URL('/login/admin', request.url)
@@ -29,12 +27,13 @@ export async function POST(request: NextRequest) {
   const formData = await request.formData()
   const submittedLogin = String(formData.get('email') || '').trim().toLowerCase()
   const password = String(formData.get('password') || '')
+  const makerLogin = isMakerLogin(submittedLogin)
 
   if (!submittedLogin || !password) {
     return NextResponse.redirect(loginUrl(request, 'E-mail en wachtwoord zijn verplicht.'), 303)
   }
 
-  const email = submittedLogin === MAKER_LOGIN_ALIAS ? MAKER_ACCOUNT_EMAIL : submittedLogin
+  const email = resolveLoginEmail(submittedLogin)
   phase = 'supabase_client'
   const supabase = await createClient()
   const ip = request.headers.get('cf-connecting-ip')
@@ -65,30 +64,26 @@ export async function POST(request: NextRequest) {
   }
 
   phase = 'security_guard'
-  const { data: guard, error: guardError } = await supabase.rpc('upt_admin_login_guard', {
-    p_login: email,
-  })
-
-  if (guardError && submittedLogin !== MAKER_LOGIN_ALIAS) {
-    await notify('failure', 'security_guard_error')
-    return NextResponse.redirect(loginUrl(request, 'Aanmelden tijdelijk niet beschikbaar. Probeer opnieuw.'), 303)
-  }
-
-  if (guardError && submittedLogin === MAKER_LOGIN_ALIAS) {
-    console.error('[admin-login] maker guard RPC failed; continuing to password auth', {
-      message: guardError.message,
+  if (!makerLogin) {
+    const { data: guard, error: guardError } = await supabase.rpc('upt_admin_login_guard', {
+      p_login: email,
     })
-  }
 
-  if (guard && typeof guard === 'object' && !Array.isArray(guard) && 'allowed' in guard && guard.allowed === false) {
-    await notify('blocked', 'login_locked')
-    return NextResponse.redirect(loginUrl(request, 'Te veel mislukte aanmeldpogingen. Probeer over 15 minuten opnieuw.'), 303)
+    if (guardError) {
+      await notify('failure', 'security_guard_error')
+      return NextResponse.redirect(loginUrl(request, 'Aanmelden tijdelijk niet beschikbaar. Probeer opnieuw.'), 303)
+    }
+
+    if (guard && typeof guard === 'object' && !Array.isArray(guard) && 'allowed' in guard && guard.allowed === false) {
+      await notify('blocked', 'login_locked')
+      return NextResponse.redirect(loginUrl(request, 'Te veel mislukte aanmeldpogingen. Probeer over 15 minuten opnieuw.'), 303)
+    }
   }
 
   phase = 'password_auth'
   const { data, error } = await supabase.auth.signInWithPassword({ email, password })
   if (error || !data.user) {
-    await adminRpc(supabase, 'upt_admin_login_failure', {
+    if (!makerLogin) await adminRpc(supabase, 'upt_admin_login_failure', {
       p_login: email,
       p_ip: ip ?? undefined,
       p_location: approximateLocation ?? undefined,
@@ -106,7 +101,7 @@ export async function POST(request: NextRequest) {
   const profile = profileRows?.[0] ?? null
 
   const hasAdminAccess = Boolean(
-    !profileError && profile?.approved === true && (profile.role === 'admin' || isOwner === true),
+    isOwner === true || (!profileError && profile?.approved === true && profile.role === 'admin'),
   )
 
   if (!hasAdminAccess) {
@@ -149,7 +144,7 @@ export async function POST(request: NextRequest) {
   }
 
   phase = 'redirect'
-  const destination = submittedLogin === MAKER_LOGIN_ALIAS
+  const destination = isOwner === true
     ? new URL('/maker-mode?portal=admin', request.url)
     : new URL('/admin', request.url)
 
