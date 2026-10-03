@@ -90,7 +90,8 @@ export default async function SalesPage({
     transactionLoadError=Boolean(transactionResult.error)
     transactions=(transactionResult.data||[]) as Transaction[]
     if(params.workplace)transactions=transactions.filter(transaction=>transaction.workplace_id===params.workplace)
-    salesWorkplaces=(workplaceResult.data||[]).filter(row=>/bar|toog|merch|token/i.test(row.name))
+    salesWorkplaces=(workplaceResult.data||[]).filter(row=>/bar|toog|counter|comptoir|theke|merch|token|jeton/i.test(row.name))
+    if(params.workplace)salesWorkplaces=salesWorkplaces.filter(row=>row.id===params.workplace)
     workplaceNames=new Map((workplaceResult.data||[]).map(row=>[row.id,row.name]))
     if(isAdmin&&salesWorkplaces.length){
       const {data:docs}=await s.from('event_documents').select('id,workplace_id,title,file_name,storage_path').eq('event_id',selected.id).eq('kind','technical').eq('is_active',true).like('title','Prijslijst ·%').in('workplace_id',salesWorkplaces.map(row=>row.id)).order('created_at',{ascending:false})

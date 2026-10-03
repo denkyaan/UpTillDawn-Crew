@@ -1244,7 +1244,7 @@ export async function createPriceListTextEntry(fd:FormData){
   p_mime_type:'text/plain',p_file_size_bytes:new TextEncoder().encode(content).byteLength,p_offline_critical:true,
  })
  if(error){await s.storage.from('work-media').remove([storagePath]);check(error)}
- await revalidatePath('/sales')
+ await revalidatePath('/sales');await revalidatePath('/workplaces')
 }
 
 export async function createPriceListDocument(fd:FormData){
@@ -1255,7 +1255,7 @@ export async function createPriceListDocument(fd:FormData){
  fd.set('description','Actuele prijslijst voor '+workplaceName+'.')
  fd.set('offline_critical','on')
  await createEventDocument(fd)
- await revalidatePath('/sales')
+ await revalidatePath('/sales');await revalidatePath('/workplaces')
 }
 export async function archiveEventDocument(fd:FormData){
  const {s,profile}=await approvedClient()

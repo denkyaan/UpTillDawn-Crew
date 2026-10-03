@@ -112,3 +112,24 @@ test('admin main dashboard exposes the AI assistant',async()=>{
   assert.match(admin,/PlatformAiAssistant/)
   assert.match(admin,/components\/admin\/platform-ai-assistant/)
 })
+
+
+test('bar counter merch and token workplaces expose translated price-list input and upload',async()=>{
+  const [page,workplaces,translations,actions]=await Promise.all([
+    read('app/(app)/sales/page.tsx'),
+    read('app/(app)/workplaces/page.tsx'),
+    read('lib/ui-translation-catalog-app-extra.ts'),
+    read('lib/actions/uptilldawn.ts'),
+  ])
+  assert.match(page,/Prijslijst invoeren/)
+  assert.match(page,/price_list_text/)
+  assert.match(page,/PRIJSLIJST UPLOADEN/)
+  assert.match(page,/\.pdf,\.docx,\.pptx,\.xlsx,\.txt,\.csv,\.jpg,\.jpeg,\.png,\.webp/)
+  assert.match(page,/counter\|comptoir\|theke/)
+  assert.match(page,/if\(params\.workplace\)salesWorkplaces=salesWorkplaces\.filter/)
+  assert.match(workplaces,/Prijslijst & Sales/)
+  assert.match(translations,/"Bar \/ Toog": \{fr:"Bar \/ Comptoir",en:"Bar \/ Counter",de:"Bar \/ Theke"\}/)
+  assert.match(translations,/"Prijslijst & Sales":/)
+  assert.match(actions,/createPriceListTextEntry/)
+  assert.match(actions,/createPriceListDocument/)
+})
