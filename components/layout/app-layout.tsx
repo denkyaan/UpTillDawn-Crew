@@ -276,20 +276,21 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
     <div className="print:hidden">
       <MobileBottomNav chatMissed={chatMissed} incidentMissed={incidentMissed} taskMissed={taskMissed} notificationFeatureCounts={notificationFeatureCounts} featureOrder={order} featureLabels={labels} featureVisibility={featureVisibility} assignedEvent={context.assignedEvent} shiftActive={context.shiftActive}/>
     </div>
-    {!pathname.startsWith("/chat")&&showFloatingChat&&<FloatingChatButton count={chatMissed} stackedAboveAdminAi={Boolean(isAdmin)}/>}
+    {!tourPreview&&!pathname.startsWith("/chat")&&showFloatingChat&&<FloatingChatButton count={chatMissed} stackedAboveAdminAi={Boolean(isAdmin)}/>}
 
     <div className="print:hidden"><AppSidebar chatMissed={chatMissed} incidentMissed={incidentMissed} taskMissed={taskMissed} notificationFeatureCounts={notificationFeatureCounts} showOperations={showOperations} showEvents={showEvents} showTasks={showTasks} showBriefings={showBriefings} showShifts={showShifts} showWorkplaces={showWorkplaces} showIncidents={showIncidents} featureOrder={order} featureLabels={labels} featureVisibility={featureVisibility}/></div>
     <div className="flex flex-1 flex-col overflow-hidden print:block print:overflow-visible">
       <div className="print:hidden"><Topbar notificationMissed={notificationMissed}/><QueueStatus/>{isAdmin&&<AdminContextBar/>}</div>
       <div id="app-scroll" className="flex-1 overflow-y-auto bg-background scroll-smooth print:overflow-visible">
         <main className="min-h-[calc(100dvh-theme(spacing.16)-theme(spacing.12))] pb-20 lg:pb-0 print:min-h-0 print:pb-0">
-          {tourPreview&&(pathname==="/"||pathname==="/admin"||pathname.startsWith("/operations")||pathname.startsWith("/workplaces")||pathname.startsWith("/briefings")||pathname.startsWith("/tasks")||pathname.startsWith("/inventory")||pathname.startsWith("/guestlist")||pathname.startsWith("/sales"))&&<TourActiveEventDemo role={isAdmin?"admin":activeUiRole==="responsible_lead"?"responsible_lead":"employee"}/>} 
-          {!currentVisible&&!previewAll
-            ? <div className="m-4 rounded-2xl border p-6 text-muted-foreground">Deze functie is verborgen voor jouw rol of huidige context.</div>
-            : <>
-                {!currentUsable&&<p className="m-3 rounded-xl border p-3 text-sm text-muted-foreground">Alleen-lezen: deze functie is zichtbaar, maar momenteel niet bruikbaar voor jouw rol.</p>}
-                <div inert={contentLocked}>{children}</div>
-              </>}
+          {tourPreview
+            ? <TourActiveEventDemo role={isAdmin?"admin":activeUiRole==="responsible_lead"?"responsible_lead":"employee"}/>
+            : !currentVisible
+              ? <div className="m-4 rounded-2xl border p-6 text-muted-foreground">Deze functie is verborgen voor jouw rol of huidige context.</div>
+              : <>
+                  {!currentUsable&&<p className="m-3 rounded-xl border p-3 text-sm text-muted-foreground">Alleen-lezen: deze functie is zichtbaar, maar momenteel niet bruikbaar voor jouw rol.</p>}
+                  <div inert={contentLocked}>{children}</div>
+                </>}
         </main>
       </div>
     </div>
