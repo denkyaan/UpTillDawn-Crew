@@ -12,7 +12,7 @@ import { StaffWorkplacePersonnel, type StaffWorkplacePerson } from '@/components
 export const dynamic = 'force-dynamic'
 
 function Card({ href, icon: Icon, title, value }: { href: string; icon: typeof CalendarDays; title: string; value: number }) {
-  return <Link href={href} className="rounded-2xl border border-border bg-card p-5">
+  return <Link href={href} className="block w-full rounded-2xl border border-border bg-card p-5">
     <div className="flex items-center justify-between"><Icon className="h-5 w-5 text-violet-400"/><ArrowRight className="h-4 w-4 text-muted-foreground"/></div>
     <div className="mt-5 text-3xl font-black">{value}</div>
     <div className="text-sm text-muted-foreground">{title}</div>
@@ -86,7 +86,7 @@ async function DashboardOverview({current,tour=false}:{current:NonNullable<Await
 
   return <>{hasLoadError && <p className="rounded-xl border border-amber-500/40 p-4">Een deel van de realtime gegevens is tijdelijk niet beschikbaar. De beschikbare onderdelen blijven bruikbaar.</p>}
     <section className="grid gap-4 md:grid-cols-3">
-      <div className={tour?"rounded-2xl ring-4 ring-violet-500 ring-offset-2 ring-offset-background":""}><Card href={tour?"/events?tour=1":"/events"} icon={CalendarDays} title="Evenementen" value={tour?1:events.length}/></div>
+      <Card href={tour?"/events?tour=1":"/events"} icon={CalendarDays} title="Evenementen" value={tour?1:events.length}/>
       <AssignedEventOnly available={hasEventAssignment}><Card href="/workplaces" icon={Clock3} title="Werkplaatsen & shifts" value={shifts.length}/></AssignedEventOnly>
       {hasActiveIncidentContext && <ManagerOnly><Card href="/incidents" icon={AlertTriangle} title="Open incidenten" value={activeIncidentCount}/></ManagerOnly>}
     </section>
