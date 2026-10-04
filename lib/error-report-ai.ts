@@ -344,7 +344,11 @@ export async function processErrorReport(client:CrewClient,reportId:string,ai:Er
     if(finalizeError)throw new Error(finalizeError.message)
 
     if(makerRequired){
-      const autonomousCandidate=['code','client_state','unknown'].includes(result.category)
+      // Technical reports are first handed to the bounded autonomous repair
+      // controller. It validates the root cause, limits editable scope, runs
+      // the full test/build pipeline and only publishes after CI + deploy.
+      // Maker escalation is therefore the fallback, not the first action.
+      const autonomousCandidate=['code','client_state','unknown','database','configuration','permission','data'].includes(result.category)
       const dispatched=autonomousCandidate
         ? await dispatchSelfHealing({
             id:report.id,
@@ -390,14 +394,24 @@ export async function processErrorReport(client:CrewClient,reportId:string,ai:Er
       if(finalizeError)throw finalizeError
 
       if(makerRequired){
-        await sendMakerErrorEmail({
+        const dispatched=await dispatchSelfHealing({
           id:report.id,
           route:report.route,
+          error_name:report.error_name,
           error_message:report.error_message,
+          stack_trace:report.stack_trace,
           ai_summary:fallback.summary,
-          maker_action:fallback.makerAction||'Open het rapport in God Mode.',
-          severity:fallback.severity,
         })
+        if(!dispatched){
+          await sendMakerErrorEmail({
+            id:report.id,
+            route:report.route,
+            error_message:report.error_message,
+            ai_summary:fallback.summary,
+            maker_action:fallback.makerAction||'Open het rapport in God Mode.',
+            severity:fallback.severity,
+          })
+        }
       }
     }catch(finalizeError){
       console.error('[error-ai] fallback-escalatie mislukt',finalizeError instanceof Error?finalizeError.message:'unknown')
