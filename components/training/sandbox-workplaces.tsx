@@ -1,0 +1,19 @@
+"use client"
+import {useEffect,useState} from "react"
+import Link from "next/link"
+import {LANGUAGE_APPLIED_EVENT,activeUiLocale,type SupportedUiLocale} from "@/lib/locale-preferences"
+
+const t=(l:SupportedUiLocale,nl:string,en:string,fr:string,de:string)=>({nl,en,fr,de}[l])
+export function SandboxWorkplaces(){
+ const [l,setL]=useState<SupportedUiLocale>(()=>typeof window==="undefined"?"nl":activeUiLocale())
+ useEffect(()=>{const apply=()=>setL(activeUiLocale());addEventListener(LANGUAGE_APPLIED_EVENT,apply);return()=>removeEventListener(LANGUAGE_APPLIED_EVENT,apply)},[])
+ return <main id="werkplaatsbeheer" className="scroll-mt-24 space-y-5 p-4 md:p-8">
+  <div><h1 className="text-3xl font-black">{t(l,"Werkplaatsen & shifts","Workplaces & shifts","Postes de travail & shifts","Arbeitsplätze & Schichten")}</h1><p className="text-sm text-muted-foreground">{t(l,"Bekijk je toegewezen werkplek, shifturen en bevestig of weiger je dienst vanuit hetzelfde scherm.","View your assigned workplace and shift hours, and accept or decline your shift from the same screen.","Consultez votre poste de travail et vos heures de shift, puis acceptez ou refusez votre shift depuis le même écran.","Sieh deinen zugewiesenen Arbeitsplatz und deine Schichtzeiten und bestätige oder lehne deine Schicht im selben Bildschirm ab.")}</p></div>
+  <article className="rounded-2xl border border-violet-500/70 p-4 ring-1 ring-violet-500/20">
+   <div className="flex items-start justify-between gap-3"><div><b>{t(l,"Bar / Toog","Bar / Counter","Bar / Comptoir","Bar / Theke")}</b><p className="text-sm text-muted-foreground">{t(l,"UpTillDawn Trainingsavond","UpTillDawn Training Night","Soirée d’entraînement UpTillDawn","UpTillDawn Trainingsabend")}</p><p className="mt-1 text-sm text-muted-foreground">{t(l,"Drankservice en kassawerking tijdens het evenement.","Drink service and till operation during the event.","Service des boissons et gestion de la caisse pendant l’événement.","Getränkeservice und Kassenbetrieb während des Events.")}</p></div><span className="rounded-full border px-2 py-1 text-xs">{t(l,"ACTIEF","ACTIVE","ACTIF","AKTIV")}</span></div>
+   <section className="mt-3 rounded-xl border p-3"><p className="font-semibold">{t(l,"Jouw shift","Your shift","Votre shift","Deine Schicht")}</p><p className="mt-1 text-sm">10/10/2026 · 20:00 → 11/10/2026 · 04:00</p><p className="text-sm text-muted-foreground">{t(l,"Functie: Barmedewerker","Role: Bar staff","Fonction : Personnel de bar","Funktion: Barpersonal")}</p><span className="mt-2 inline-flex rounded-full border border-emerald-500/50 px-2 py-1 text-xs font-bold text-emerald-600">{t(l,"TOEGEWEZEN","ASSIGNED","ASSIGNÉ","ZUGEWIESEN")}</span></section>
+   <section className="mt-3 rounded-xl border p-3"><p className="font-semibold">{t(l,"Verantwoordelijke","Responsible lead","Responsable","Verantwortliche Person")}</p><p className="mt-2 text-sm">{t(l,"Demo Verantwoordelijke","Demo Responsible","Responsable démo","Demo-Verantwortliche")}</p></section>
+   <section className="mt-3 rounded-xl border p-3"><p className="font-semibold">{t(l,"Volgende stap","Next step","Étape suivante","Nächster Schritt")}</p><p className="mt-1 text-sm text-muted-foreground">{t(l,"Je bent nu ingepland. Open vervolgens de briefing en lees de instructies voor je shift.","You are now scheduled. Next, open the briefing and read the instructions for your shift.","Vous êtes maintenant planifié. Ouvrez ensuite le briefing et lisez les instructions de votre shift.","Du bist jetzt eingeplant. Öffne als Nächstes das Briefing und lies die Anweisungen für deine Schicht.")}</p><Link href="/briefings?tour=1" className="mt-3 inline-flex rounded-xl bg-violet-600 px-4 py-3 font-bold text-white ring-4 ring-violet-500/40">{t(l,"BRIEFING OPENEN","OPEN BRIEFING","OUVRIR LE BRIEFING","BRIEFING ÖFFNEN")}</Link></section>
+  </article>
+ </main>
+}
