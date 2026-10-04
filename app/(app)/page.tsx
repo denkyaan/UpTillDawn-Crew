@@ -1,4 +1,5 @@
 import Link from 'next/link'
+import { SandboxEvent } from '@/components/training/sandbox-event'
 import { Suspense } from 'react'
 import { CalendarDays, Clock3, MapPin, AlertTriangle, ArrowRight, ClipboardCheck, PackageCheck, ListTodo } from 'lucide-react'
 import { redirect } from 'next/navigation'
@@ -137,23 +138,11 @@ async function DashboardOverview({current}:{current:NonNullable<Awaited<ReturnTy
 </>
 }
 
-function SandboxOverview({current}:{current:NonNullable<Awaited<ReturnType<typeof getCurrentUser>>>}){
-  // All visible sandbox copy is supplied as four-language alternatives so the
-  // runtime translator and static translation gate use the same contract.
-  const t=(...copy:[string,string,string,string])=>copy[0]
-  return <main className="mx-auto max-w-7xl space-y-6 p-4 pb-28 md:p-8" data-tour-demo="overview">
-    <div><p className="text-xs font-bold tracking-[.2em] text-violet-400">{t("UP TILL DAWN TRAINING","UP TILL DAWN TRAINING","FORMATION UP TILL DAWN","UP TILL DAWN TRAINING")}</p><h1 className="mt-1 text-3xl font-black">{t("Training","Training","Formation","Training")} · {current.full_name||t("Crewlid","Crew member","Membre de l’équipe","Crewmitglied")}</h1><p className="text-muted-foreground">{t("UpTillDawn Trainingsavond · Hoofdbar · 20:00–04:00","UpTillDawn Training Night · Main Bar · 20:00–04:00","Soirée d’entraînement UpTillDawn · Bar principal · 20:00–04:00","UpTillDawn Trainingsabend · Hauptbar · 20:00–04:00")}</p></div>
-    <section className="grid gap-4 md:grid-cols-3"><Card href="/events?tour=1" icon={CalendarDays} title={t("Evenementen","Events","Événements","Events")} value={1}/><Card href="/workplaces?tour=1" icon={Clock3} title={t("Werkplaatsen & shifts","Workplaces & shifts","Postes & shifts","Arbeitsplätze & Schichten")} value={1}/><Card href="/operations?tour=1" icon={Clock3} title={t("Mijn werkuren","My work hours","Mes heures de travail","Meine Arbeitszeiten")} value={1}/></section>
-    <section className="space-y-3 rounded-2xl border bg-card p-4"><h2 className="text-lg font-bold">{t("Personeel van mijn werkplek","Staff at my workplace","Personnel de mon poste","Personal an meinem Arbeitsplatz")}</h2><p>{t("Alex Demo · Verantwoordelijke · Aan het werk 00:42:18","Alex Demo · Responsible · Working 00:42:18","Alex Demo · Responsable · Au travail 00:42:18","Alex Demo · Verantwortlich · Bei der Arbeit 00:42:18")}</p><p>{t("Sam Demo · Barpersoneel · Pauze 00:18:07","Sam Demo · Bar staff · Break 00:18:07","Sam Demo · Personnel du bar · Pause 00:18:07","Sam Demo · Barpersonal · Pause 00:18:07")}</p></section>
-    <section><h2 className="mb-3 text-lg font-bold">{t("Komende evenementen","Upcoming events","Événements à venir","Kommende Events")}</h2><article className="rounded-2xl border bg-card p-4"><p className="font-bold">{t("UpTillDawn Trainingsavond","UpTillDawn Training Night","Soirée d’entraînement UpTillDawn","UpTillDawn Trainingsabend")}</p><p className="text-sm text-muted-foreground">{t("Vanavond · Trainingslocatie","Tonight · Training Venue","Ce soir · Lieu d’entraînement","Heute Abend · Trainingsort")}</p></article></section>
-  </main>
-}
-
 export default async function Dashboard({searchParams}:{searchParams?:Promise<{tour?:string}>}) {
   const current=await getCurrentUser()
   if(!current)return null
   const params=searchParams?await searchParams:{}
-  if(params.tour==='1')return <SandboxOverview current={current}/>
+  if(params.tour==='1')return <SandboxEvent userName={current.full_name||'Crew'} role={current.role}/>
   if(current.isAdmin)redirect('/admin')
   return <main className="mx-auto max-w-7xl space-y-7 p-4 pb-28 md:p-8">
     <div>
