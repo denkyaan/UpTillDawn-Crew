@@ -349,27 +349,27 @@ export function RoleAppTour(){
       <div className="absolute inset-0 bg-black/35"/>
       {anchor&&<div className="absolute rounded-2xl ring-4 ring-violet-500 ring-offset-4 ring-offset-background/20 shadow-[0_0_0_9999px_rgba(0,0,0,.18)] transition-all duration-200" style={{top:Math.max(6,anchor.top-4),left:Math.max(6,anchor.left-4),width:Math.min(innerWidth-12,anchor.width+8),height:anchor.height+8}}/>}
       <section
-        className="pointer-events-auto absolute w-[min(18rem,calc(100vw-1.5rem))] rounded-xl border bg-background/95 p-2.5 shadow-xl backdrop-blur"
+        className="pointer-events-auto absolute w-[min(15.5rem,calc(100vw-2rem))] rounded-2xl border border-violet-500/30 bg-background/90 p-2 shadow-lg backdrop-blur-md"
         style={anchor?(()=>{
-          const w=Math.min(288,innerWidth-24),h=150,gap=10
+          const w=Math.min(248,innerWidth-32),h=126,gap=8
           const below=anchor.top+anchor.height+gap
           const top=below+h<innerHeight-12?below:Math.max(12,anchor.top-h-gap)
           const left=Math.max(12,Math.min(innerWidth-w-12,anchor.left+anchor.width/2-w/2))
-          return {top,left}
+          return {top,left,maxHeight:"min(36vh,220px)",overflowY:"auto"}
         })():{left:12,bottom:"calc(4.75rem + env(safe-area-inset-bottom))"}}
       >
         <div className="flex items-center gap-2">
           <p className="text-[11px] font-black uppercase tracking-[.14em] text-violet-400">{resolve(UI_COPY.tour)} · {index+1}/{steps.length}{insideIndex>=0&&step?.inside?.length?" · "+(insideIndex+1)+"/"+step.inside.length:""}</p>
           <button onClick={finish} className="ml-auto text-xs font-bold text-muted-foreground">{resolve(UI_COPY.skip)}</button>
         </div>
-        <h2 className="mt-1 text-sm font-black">{resolve(shown.heading)}</h2>
-        <p className="mt-1 text-xs leading-4 text-muted-foreground">{resolve(shown.body)}</p>
-        <div className="mt-3 flex justify-end gap-2">
+        <h2 className="mt-1 text-[13px] font-black leading-4">{resolve(shown.heading)}</h2>
+        <p className="mt-1 text-[11px] leading-[15px] text-muted-foreground">{resolve(shown.body)}</p>
+        <div className="mt-2 flex justify-end gap-1.5">
           {(index>0||insideIndex>=0)&&<button onClick={()=>{
             if(insideIndex>0){setInsideIndex(value=>value-1);return}
             if(insideIndex===0){setInsideIndex(-1);return}
             setIndex(value=>Math.max(0,value-1));setInsideIndex(-1)
-          }} className="rounded-lg border px-3 py-1.5 text-sm font-bold">{resolve(UI_COPY.back)}</button>}
+          }} className="rounded-lg border px-2.5 py-1 text-xs font-bold">{resolve(UI_COPY.back)}</button>}
           <button onClick={()=>{
             const details=step?.inside||[]
             if(insideIndex<0&&details.length){setInsideIndex(0);return}
@@ -377,7 +377,7 @@ export function RoleAppTour(){
             setInsideIndex(-1)
             if(index===steps.length-1)finish()
             else setIndex(value=>value+1)
-          }} className="rounded-lg bg-violet-600 px-3 py-1.5 text-sm font-black text-white">{resolve(index===steps.length-1&&insideIndex>=(step?.inside?.length||0)-1?UI_COPY.done:UI_COPY.next)}</button>
+          }} className="rounded-lg bg-violet-600 px-2.5 py-1 text-xs font-black text-white">{resolve(index===steps.length-1&&insideIndex>=(step?.inside?.length||0)-1?UI_COPY.done:UI_COPY.next)}</button>
         </div>
       </section>
     </div>}
