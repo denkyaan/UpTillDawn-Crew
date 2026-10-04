@@ -41,13 +41,13 @@ export function MobileBottomNav({
  const [expanded,setExpanded]=useState(false)
  const [tourPreview,setTourPreview]=useState(false)
  const [sandboxHelp,setSandboxHelp]=useState("")
- const [trainingNavTarget,setTrainingNavTarget]=useState<string|null>(null)
+ const [trainingNavTarget,setTrainingNavTarget]=useState<string|null>(()=>{if(typeof window==="undefined")return null;try{return JSON.parse(sessionStorage.getItem("uptilldawn-training-workflow-v3")||"{}").navTarget||null}catch{return null}})
  const {roles,isAdmin}=useAuth()
  const adminContext=useAdminSelection()
  const roleKey:RoleRuleRole=roles.includes("admin")?"admin":roles.includes("responsible_lead")?"responsible_lead":"staff"
  const order=new Map(featureOrder.map((key,index)=>[key,index]))
  useEffect(()=>{const on=(e:Event)=>{const detail=(e as CustomEvent<{active?:boolean}>).detail;const active=Boolean(detail?.active);setTourPreview(active);if(!active)setExpanded(false)};addEventListener("uptilldawn-tour-preview",on);return()=>removeEventListener("uptilldawn-tour-preview",on)},[])
- useEffect(()=>{if(!tourPreview)return;try{const s=JSON.parse(sessionStorage.getItem("uptilldawn-training-workflow-v3")||"{}");if(s.navTarget)setTrainingNavTarget(s.navTarget)}catch{};const on=(e:Event)=>setTrainingNavTarget((e as CustomEvent<{target?:string}>).detail?.target||null);addEventListener("uptilldawn-training-nav-target",on);return()=>removeEventListener("uptilldawn-training-nav-target",on)},[tourPreview])
+ useEffect(()=>{if(!tourPreview)return;const on=(e:Event)=>setTrainingNavTarget((e as CustomEvent<{target?:string}>).detail?.target||null);addEventListener("uptilldawn-training-nav-target",on);return()=>removeEventListener("uptilldawn-training-nav-target",on)},[tourPreview])
 
  // During the guided tour expose the complete role navigation regardless of
  // event/shift assignment. This is preview-only; backend permissions remain unchanged.
