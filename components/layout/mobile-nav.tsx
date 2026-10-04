@@ -114,12 +114,15 @@ export function MobileBottomNav({
    const count=badgeCount(item.key)
    const label=featureLabels[item.key] || getDefaultRoleUiLabel(roleKey,item.key,item.label)
    const help=featureHelp(item.key,label)
+   const trainingLocked=tourPreview&&Boolean(trainingNavTarget)&&trainingNavTarget!==item.key
    return <Link
     data-layout-key={item.key}
-    href={href}
+    href={trainingLocked?"#":href}
+    aria-disabled={trainingLocked}
     title={help.description}
     aria-description={help.description}
-    onClick={()=>{
+    onClick={(event)=>{
+      if(trainingLocked){event.preventDefault();return}
       if(tourPreview&&trainingNavTarget===item.key){try{const s=JSON.parse(sessionStorage.getItem("uptilldawn-training-workflow-v3")||"{}");sessionStorage.setItem("uptilldawn-training-workflow-v3",JSON.stringify({...s,navTarget:null}))}catch{};setTrainingNavTarget(null)}
       setExpanded(false)
 
@@ -130,6 +133,7 @@ export function MobileBottomNav({
         :"flex min-w-0 flex-1 flex-col items-center justify-center gap-1 rounded-lg px-1 py-1.5 text-[9px] font-semibold",
       active?"bg-violet-500/10 text-violet-400":"text-muted-foreground",
       trainingNavTarget===item.key?"ring-4 ring-violet-500 ring-inset animate-pulse":"",
+      trainingLocked?"pointer-events-auto cursor-not-allowed opacity-35":"",
     )}
    >
     <span className="relative shrink-0">
