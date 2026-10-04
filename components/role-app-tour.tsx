@@ -276,7 +276,6 @@ export function RoleAppTour(){
 
   useEffect(()=>{
     document.querySelectorAll("[data-upt-tour-highlight]").forEach(el=>el.removeAttribute("data-upt-tour-highlight"))
-    setAnchor(null)
     if(!open||!shown)return
     const wanted=step?.route?.split("?")[0]
     if(wanted&&pathname!==wanted){
@@ -292,6 +291,7 @@ export function RoleAppTour(){
       setAnchor({top:r.top,left:r.left,width:r.width,height:r.height})
     }
     const timer=window.setTimeout(()=>{
+      setAnchor(null)
       target=(document.querySelector(shown.selector)||document.querySelector("main")) as HTMLElement|null
       if(!target)return
       target.setAttribute("data-upt-tour-highlight","true")
