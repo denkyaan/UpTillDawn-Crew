@@ -1,3 +1,4 @@
+import { SandboxGuestlist } from '@/components/training/sandbox-feature-pages'
 import {redirect} from 'next/navigation'
 import {getCurrentUser} from '@/lib/actions/auth'
 import {createClient} from '@/lib/supabase/crew-server'
@@ -14,12 +15,13 @@ type EventRow={id:string;name:string;status:string;start_at:string;end_at:string
 export default async function GuestlistPage({
   searchParams,
 }:{
-  searchParams:Promise<{event?:string;workplace?:string}>
+  searchParams:Promise<{event?:string;workplace?:string;tour?:string}>
 }){
   const current=await getCurrentUser()
   if(!current)redirect('/login')
   const s=await createClient()
   const params=await searchParams
+  if(params.tour==='1'&&current.role!=='admin')return <SandboxGuestlist/>
   const isAdmin=current.isAdmin===true
 
   let events:EventRow[]=[]
