@@ -1,5 +1,4 @@
 import Link from 'next/link'
-import { SandboxEvent } from '@/components/training/sandbox-event'
 import { Suspense } from 'react'
 import { CalendarDays, Clock3, MapPin, AlertTriangle, ArrowRight, ClipboardCheck, PackageCheck, ListTodo } from 'lucide-react'
 import { redirect } from 'next/navigation'
@@ -141,8 +140,7 @@ async function DashboardOverview({current}:{current:NonNullable<Awaited<ReturnTy
 export default async function Dashboard({searchParams}:{searchParams?:Promise<{tour?:string}>}) {
   const current=await getCurrentUser()
   if(!current)return null
-  const params=searchParams?await searchParams:{}
-  if(params.tour==='1')return <SandboxEvent userName={current.full_name||'Crew'} role={current.role}/>
+  if(searchParams)await searchParams
   if(current.isAdmin)redirect('/admin')
   return <main className="mx-auto max-w-7xl space-y-7 p-4 pb-28 md:p-8">
     <div>
