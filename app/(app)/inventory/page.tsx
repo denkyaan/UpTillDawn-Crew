@@ -54,13 +54,30 @@ export default async function InventoryPage({searchParams}:{searchParams?:Promis
 
   let workplaces:Workplace[]=[]
   if(isAdmin){
-    const {data,error}=await s
+    // Fetch workplaces and events separately. The embedded PostgREST relation
+    // can fail independently (schema-cache/relation ambiguity) and used to
+    // surface a false amber load error even when both tables were available.
+    const {data:workplaceRows,error:workplaceError}=await s
       .from('workplaces')
-      .select('id,event_id,name,is_active,events(id,name,status,end_at)')
+      .select('id,event_id,name,is_active')
       .eq('is_active',true)
       .order('name')
-    workplaceLoadError=Boolean(error)
-    workplaces=(data||[]) as Workplace[]
+    workplaceLoadError=Boolean(workplaceError)
+    if(!workplaceError&&workplaceRows?.length){
+      const eventIds=[...new Set(workplaceRows.map(row=>row.event_id))]
+      const {data:eventRows,error:eventError}=await s
+        .from('events')
+        .select('id,name,status,end_at')
+        .in('id',eventIds)
+      workplaceLoadError=Boolean(eventError)
+      if(!eventError){
+        const eventsById=new Map((eventRows||[]).map(event=>[event.id,event]))
+        workplaces=workplaceRows.map(row=>({
+          ...row,
+          events:eventsById.get(row.event_id)||null,
+        })) as Workplace[]
+      }
+    }
   }else{
     const [{data:shiftRows},{data:responsibleRows}]=await Promise.all([
       s.from('shifts').select('event_id,workplace_id').eq('user_id',current.id).neq('status','cancelled').neq('response_status','declined'),
