@@ -14,6 +14,7 @@ import { getDefaultRoleUiRules, ruleMatches, ruleUsable, type RoleUiContext, typ
 import { AdminContextBar } from "@/components/admin/admin-context-bar"
 import { PlatformAiAssistant } from "@/components/admin/platform-ai-assistant"
 import { RoleAppTour } from "@/components/role-app-tour"
+import { LANGUAGE_APPLIED_EVENT, activeUiLocale, type SupportedUiLocale } from "@/lib/locale-preferences"
 
 function CountBadge({ count }: { count: number }) {
   if (count < 1) return null
@@ -35,7 +36,9 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
   const [rules,setRules]=useState<RoleUiRule[]>([])
   const [adminAiOpen,setAdminAiOpen]=useState(false)
   const [tourPreview,setTourPreview]=useState(false)
+  const [trainingLocale,setTrainingLocale]=useState<SupportedUiLocale>(()=>typeof window==="undefined"?"nl":activeUiLocale())
   useEffect(()=>{const on=(e:Event)=>setTourPreview(Boolean((e as CustomEvent<{active?:boolean}>).detail?.active));addEventListener("uptilldawn-tour-preview",on);return()=>removeEventListener("uptilldawn-tour-preview",on)},[])
+  useEffect(()=>{const apply=()=>setTrainingLocale(activeUiLocale());addEventListener(LANGUAGE_APPLIED_EVENT,apply);return()=>removeEventListener(LANGUAGE_APPLIED_EVENT,apply)},[])
 
   const activeUiRole=roles[0]
   const roleKey=activeUiRole==="responsible_lead"?"responsible_lead":activeUiRole==="admin"?"admin":activeUiRole==="employee"?"staff":null
@@ -287,7 +290,7 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
           {!currentVisible&&!previewAll
             ? <div className="m-4 rounded-2xl border p-6 text-muted-foreground">Deze functie is verborgen voor jouw rol of huidige context.</div>
             : <>
-                {tourPreview&&<div data-no-translate className="m-3 rounded-xl border border-violet-500/40 bg-violet-500/10 px-3 py-2 text-xs font-bold text-violet-600">TRAINING SANDBOX · fictieve actieve eventcontext · productiedata wordt niet als demo weergegeven</div>}
+                {tourPreview&&<div className="mx-3 mt-2 text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">{({nl:"Trainingsmodus · fictieve gegevens",en:"Training mode · fictional data",fr:"Mode entraînement · données fictives",de:"Trainingsmodus · fiktive Daten"} as Record<SupportedUiLocale,string>)[trainingLocale]}</div>}
                 {!currentUsable&&!previewAll&&<p className="m-3 rounded-xl border p-3 text-sm text-muted-foreground">Alleen-lezen: deze functie is zichtbaar, maar momenteel niet bruikbaar voor jouw rol.</p>}
                 <div inert={contentLocked&&!previewAll}>{children}</div>
               </>}
