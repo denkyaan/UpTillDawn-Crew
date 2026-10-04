@@ -140,7 +140,7 @@ async function DashboardOverview({current}:{current:NonNullable<Awaited<ReturnTy
 function SandboxOverview({current}:{current:NonNullable<Awaited<ReturnType<typeof getCurrentUser>>>}){
   // All visible sandbox copy is supplied as four-language alternatives so the
   // runtime translator and static translation gate use the same contract.
-  const t=(nl:string,_en:string,_fr:string,_de:string)=>nl
+  const t=(...copy:[string,string,string,string])=>copy[0]
   return <main className="mx-auto max-w-7xl space-y-6 p-4 pb-28 md:p-8" data-tour-demo="overview">
     <div><p className="text-xs font-bold tracking-[.2em] text-violet-400">{t("UP TILL DAWN TRAINING","UP TILL DAWN TRAINING","FORMATION UP TILL DAWN","UP TILL DAWN TRAINING")}</p><h1 className="mt-1 text-3xl font-black">{t("Training","Training","Formation","Training")} · {current.full_name||t("Crewlid","Crew member","Membre de l’équipe","Crewmitglied")}</h1><p className="text-muted-foreground">{t("UpTillDawn Trainingsavond · Hoofdbar · 20:00–04:00","UpTillDawn Training Night · Main Bar · 20:00–04:00","Soirée d’entraînement UpTillDawn · Bar principal · 20:00–04:00","UpTillDawn Trainingsabend · Hauptbar · 20:00–04:00")}</p></div>
     <section className="grid gap-4 md:grid-cols-3"><Card href="/events?tour=1" icon={CalendarDays} title={t("Evenementen","Events","Événements","Events")} value={1}/><Card href="/workplaces?tour=1" icon={Clock3} title={t("Werkplaatsen & shifts","Workplaces & shifts","Postes & shifts","Arbeitsplätze & Schichten")} value={1}/><Card href="/operations?tour=1" icon={Clock3} title={t("Mijn werkuren","My work hours","Mes heures de travail","Meine Arbeitszeiten")} value={1}/></section>
