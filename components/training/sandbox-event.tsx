@@ -9,8 +9,8 @@ const tr=(l:L,nl:string,en:string,fr:string,de:string)=>({nl,en,fr,de}[l])
 const KEY="uptilldawn-training-workflow-v2"
 
 export function SandboxEvent({userName,role}:{userName:string;role:string}){
- const [l,setL]=useState<L>("nl"),[state,setState]=useState<State>({stage:"event",briefing:false}),[note,setNote]=useState("")
- useEffect(()=>{const apply=()=>setL((parseUiLocale(document.documentElement.lang)||"nl") as L);apply();addEventListener(LANGUAGE_APPLIED_EVENT,apply);try{const saved=sessionStorage.getItem(KEY);if(saved)setState(JSON.parse(saved))}catch{}return()=>removeEventListener(LANGUAGE_APPLIED_EVENT,apply)},[])
+ const [l,setL]=useState<L>("nl"),[state,setState]=useState<State>(()=>{if(typeof window==="undefined")return {stage:"event",briefing:false};try{const saved=sessionStorage.getItem(KEY);return saved?JSON.parse(saved):{stage:"event",briefing:false}}catch{return {stage:"event",briefing:false}}}),[note,setNote]=useState("")
+ useEffect(()=>{const apply=()=>setL((parseUiLocale(document.documentElement.lang)||"nl") as L);apply();addEventListener(LANGUAGE_APPLIED_EVENT,apply);return()=>removeEventListener(LANGUAGE_APPLIED_EVENT,apply)},[])
  const save=(next:State)=>{setState(next);sessionStorage.setItem(KEY,JSON.stringify(next))}
  const explain=(text:string)=>setNote(text)
  const advance=(stage:Stage,message:string)=>{save({...state,stage});explain(message)}
