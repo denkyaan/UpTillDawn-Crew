@@ -224,7 +224,6 @@ export function RoleAppTour(){
   }
 
   const step=steps[index]
-  const detail=insideIndex>=0?step?.inside?.[insideIndex]:null
 
   useEffect(()=>{
     if(loading||!user||!role)return
