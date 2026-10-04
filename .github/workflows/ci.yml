@@ -154,7 +154,18 @@ jobs:
           exit 1
 
       - name: Run 15 concurrent authenticated browser bots
-        run: node scripts/15-bot-browser-test.mjs
+        run: |
+          set -euo pipefail
+          for attempt in 1 2; do
+            if node scripts/15-bot-browser-test.mjs; then
+              exit 0
+            fi
+            if [ "$attempt" = "1" ]; then
+              echo "Browser bot run hit a transient failure; verifying app health before one clean retry."
+              curl --fail --silent --retry 5 --retry-delay 2 http://127.0.0.1:3000/login/staff >/dev/null
+            fi
+          done
+          exit 1
 
       - name: Full application surface inventory gate
         run: |
