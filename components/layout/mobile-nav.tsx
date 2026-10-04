@@ -41,11 +41,13 @@ export function MobileBottomNav({
  const [expanded,setExpanded]=useState(false)
  const [tourPreview,setTourPreview]=useState(false)
  const [sandboxHelp,setSandboxHelp]=useState("")
+ const [trainingNavTarget,setTrainingNavTarget]=useState<string|null>(null)
  const {roles,isAdmin}=useAuth()
  const adminContext=useAdminSelection()
  const roleKey:RoleRuleRole=roles.includes("admin")?"admin":roles.includes("responsible_lead")?"responsible_lead":"staff"
  const order=new Map(featureOrder.map((key,index)=>[key,index]))
  useEffect(()=>{const on=(e:Event)=>{const detail=(e as CustomEvent<{active?:boolean}>).detail;const active=Boolean(detail?.active);setTourPreview(active);if(!active)setExpanded(false)};addEventListener("uptilldawn-tour-preview",on);return()=>removeEventListener("uptilldawn-tour-preview",on)},[])
+ useEffect(()=>{if(!tourPreview)return;try{const s=JSON.parse(sessionStorage.getItem("uptilldawn-training-workflow-v3")||"{}");if(s.navTarget)setTrainingNavTarget(s.navTarget)}catch{};const on=(e:Event)=>setTrainingNavTarget((e as CustomEvent<{target?:string}>).detail?.target||null);addEventListener("uptilldawn-training-nav-target",on);return()=>removeEventListener("uptilldawn-training-nav-target",on)},[tourPreview])
 
  // During the guided tour expose the complete role navigation regardless of
  // event/shift assignment. This is preview-only; backend permissions remain unchanged.
@@ -127,6 +129,7 @@ export function MobileBottomNav({
         ?"flex min-h-16 items-center gap-3 rounded-xl px-3 py-2 text-sm font-semibold"
         :"flex min-w-0 flex-1 flex-col items-center justify-center gap-1 rounded-lg px-1 py-1.5 text-[9px] font-semibold",
       active?"bg-violet-500/10 text-violet-400":"text-muted-foreground",
+      trainingNavTarget===item.key?"ring-4 ring-violet-500 ring-inset animate-pulse":"",
     )}
    >
     <span className="relative shrink-0">
@@ -157,10 +160,11 @@ export function MobileBottomNav({
      type="button"
      aria-label={expanded?"Navigatie inklappen":"Navigatie uitklappen"}
      aria-expanded={expanded}
-     onClick={()=>setExpanded(value=>!value)}
+     onClick={()=>{setExpanded(value=>!value);if(trainingNavTarget==="workplaces")setSandboxHelp(featureHelp("workplaces",featureLabels.workplaces||getDefaultRoleUiLabel(roleKey,"workplaces","Workplaces")).description)}}
      className={cn(
        "flex w-11 shrink-0 items-center justify-center rounded-lg border border-border",
        expanded?"bg-violet-500/10 text-violet-400":"text-muted-foreground",
+       trainingNavTarget&&!expanded?"ring-4 ring-violet-500 animate-pulse":"",
      )}
     >
      {expanded?<ChevronDown className="h-5 w-5"/>:<ChevronUp className="h-5 w-5"/>}
