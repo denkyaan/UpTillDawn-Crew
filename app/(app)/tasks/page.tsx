@@ -1,3 +1,4 @@
+import { SandboxTasks } from '@/components/training/sandbox-feature-pages'
 import { createTask, removeTaskAssignment } from '@/lib/actions/uptilldawn'
 import { createClient } from '@/lib/supabase/crew-server'
 import { TaskControls } from '@/components/crew/task-controls'
@@ -19,11 +20,12 @@ export const dynamic = 'force-dynamic'
 type CrewOption = { id: string; full_name: string | null }
 type WorkplaceOption = { id: string; name: string; event_id: string; events: { name: string } | null }
 
-export default async function Page({searchParams}:{searchParams?:Promise<{event?:string;workplace?:string;user?:string}>}) {
+export default async function Page({searchParams}:{searchParams?:Promise<{event?:string;workplace?:string;user?:string;tour?:string}>}) {
   const params=searchParams?await searchParams:{}
   const s = await createClient()
   const current = await getCurrentUser()
   if (!current) return null
+  if(params.tour==='1'&&current.role!=='admin')return <SandboxTasks/>
   const user = { id: current.id }
 
   const [
