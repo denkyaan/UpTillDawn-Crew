@@ -10,6 +10,7 @@ import { cn } from "@/lib/utils"
 import { getDefaultRoleUiLabel, type RoleRuleRole } from "@/lib/role-ui"
 import { featureHelp } from "@/lib/ui-field-help"
 import { useAdminSelection } from "@/lib/admin-selection-context"
+import { LANGUAGE_APPLIED_EVENT, activeUiLocale, type SupportedUiLocale } from "@/lib/locale-preferences"
 
 const ASSIGNED_EVENT_KEYS=["events","briefings","workplaces"] as const
 const STAFF_ACTIVE_SHIFT_KEYS=["operations","workplaces","briefings","tasks"] as const
@@ -42,13 +43,15 @@ export function MobileBottomNav({
  const [tourPreview,setTourPreview]=useState(false)
  const [sandboxHelp,setSandboxHelp]=useState("")
  const [trainingNavTarget,setTrainingNavTarget]=useState<string|null>(null)
+ const [trainingLocale,setTrainingLocale]=useState<SupportedUiLocale>(()=>typeof window==="undefined"?"nl":activeUiLocale())
  const {roles,isAdmin}=useAuth()
  const adminContext=useAdminSelection()
  const roleKey:RoleRuleRole=roles.includes("admin")?"admin":roles.includes("responsible_lead")?"responsible_lead":"staff"
  const order=new Map(featureOrder.map((key,index)=>[key,index]))
  useEffect(()=>{const on=(e:Event)=>{const detail=(e as CustomEvent<{active?:boolean}>).detail;const active=Boolean(detail?.active);setTourPreview(active);if(!active)setExpanded(false)};addEventListener("uptilldawn-tour-preview",on);return()=>removeEventListener("uptilldawn-tour-preview",on)},[])
  useEffect(()=>{const load=()=>{try{const s=JSON.parse(sessionStorage.getItem("uptilldawn-training-workflow-v3")||"{}");setTrainingNavTarget(s.navTarget||null)}catch{setTrainingNavTarget(null)}};const id=requestAnimationFrame(load);return()=>cancelAnimationFrame(id)},[pathname])
- useEffect(()=>{if(!tourPreview)return;const on=(e:Event)=>setTrainingNavTarget((e as CustomEvent<{target?:string}>).detail?.target||null);addEventListener("uptilldawn-training-nav-target",on);return()=>removeEventListener("uptilldawn-training-nav-target",on)},[tourPreview])
+ useEffect(()=>{const on=(e:Event)=>setTrainingNavTarget((e as CustomEvent<{target?:string}>).detail?.target||null);addEventListener("uptilldawn-training-nav-target",on);return()=>removeEventListener("uptilldawn-training-nav-target",on)},[])
+ useEffect(()=>{const apply=()=>setTrainingLocale(activeUiLocale());addEventListener(LANGUAGE_APPLIED_EVENT,apply);return()=>removeEventListener(LANGUAGE_APPLIED_EVENT,apply)},[])
 
  // During the guided tour expose the complete role navigation regardless of
  // event/shift assignment. This is preview-only; backend permissions remain unchanged.
@@ -144,7 +147,7 @@ export function MobileBottomNav({
    </Link>
  }
 
- return <>{tourPreview&&sandboxHelp&&<div data-no-translate className="fixed inset-x-3 bottom-[calc(4.5rem+env(safe-area-inset-bottom))] z-[170] rounded-2xl border border-violet-500/40 bg-background/95 p-4 shadow-2xl backdrop-blur"><p className="text-sm font-bold">{sandboxHelp}</p><button type="button" onClick={()=>setSandboxHelp("")} className="mt-2 rounded-lg border px-3 py-2 text-xs font-bold">OK</button></div>}<nav aria-label="Mobiele navigatie" className="fixed inset-x-0 bottom-0 z-50 min-h-14 border-t border-border bg-card/95 pb-[env(safe-area-inset-bottom)] backdrop-blur lg:hidden">
+ return <>{tourPreview&&sandboxHelp&&<div className="fixed inset-x-3 bottom-[calc(4.5rem+env(safe-area-inset-bottom))] z-[170] rounded-2xl border border-violet-500/40 bg-background/95 p-4 shadow-2xl backdrop-blur"><p className="text-sm font-bold">{sandboxHelp}</p><button type="button" onClick={()=>setSandboxHelp("")} className="mt-2 rounded-lg border px-3 py-2 text-xs font-bold">{{nl:"BEGREPEN",en:"GOT IT",fr:"COMPRIS",de:"VERSTANDEN"}[trainingLocale]}</button></div>}<nav aria-label={{nl:"Mobiele navigatie",en:"Mobile navigation",fr:"Navigation mobile",de:"Mobile Navigation"}[trainingLocale]} className="fixed inset-x-0 bottom-0 z-50 min-h-14 border-t border-border bg-card/95 pb-[env(safe-area-inset-bottom)] backdrop-blur lg:hidden">
   {expanded&&
    <div className="absolute inset-x-0 bottom-full max-h-[60dvh] overflow-y-auto border-t border-border bg-card/98 p-3 shadow-2xl">
     <div className="grid grid-cols-2 gap-2">
@@ -160,9 +163,9 @@ export function MobileBottomNav({
    {items.length>compactItems.length&&
     <button
      type="button"
-     aria-label={expanded?"Navigatie inklappen":"Navigatie uitklappen"}
+     aria-label={expanded?{nl:"Navigatie inklappen",en:"Collapse navigation",fr:"Réduire la navigation",de:"Navigation einklappen"}[trainingLocale]:{nl:"Navigatie uitklappen",en:"Expand navigation",fr:"Développer la navigation",de:"Navigation ausklappen"}[trainingLocale]}
      aria-expanded={expanded}
-     onClick={()=>setExpanded(value=>!value)}
+     onClick={()=>{setExpanded(value=>!value);if(!expanded&&trainingNavTarget==="workplaces"){const m={nl:"Open nu Werkplaatsen & shifts.",en:"Now open Workplaces & shifts.",fr:"Ouvrez maintenant Postes de travail & shifts.",de:"Öffne jetzt Arbeitsplätze & Schichten."}[trainingLocale];setSandboxHelp(m)}}
      className={cn(
        "flex w-11 shrink-0 items-center justify-center rounded-lg border border-border",
        expanded?"bg-violet-500/10 text-violet-400":"text-muted-foreground",
