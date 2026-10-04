@@ -6,7 +6,7 @@ import {useAuth,type UiRole} from "@/lib/providers"
 import {createClient} from "@/lib/supabase/crew-client"
 import {translateRuntimeUi} from "@/lib/ui-translation-runtime"
 import {featureHelp} from "@/lib/ui-field-help"
-import {parseUiLocale,LANGUAGE_APPLIED_EVENT} from "@/lib/locale-preferences"
+import {activeUiLocale,parseUiLocale,LANGUAGE_APPLIED_EVENT} from "@/lib/locale-preferences"
 import type {ExtendedUiLocale} from "@/lib/ui-translation-extensions"
 
 type TourText={nl:string;en:string;fr:string;de:string}
@@ -155,12 +155,11 @@ function makeFeatureStep(role:UiRole,key:string):Step{
   const baseRoute=key==="overview"&&role==="admin"?"/admin":ROUTES[key]
   const route=baseRoute&&(DEMO_FEATURES.has(key)?baseRoute+TOUR_DEMO_QUERY:baseRoute)
   return {
-    heading:help.label,
+    heading:UI_COPY.what,
     body:help.description,
     selector:'[data-layout-key="'+key+'"]',
     route,
     inside:[
-      {heading:UI_COPY.what,body:help.description,selector:'[data-tour-demo], main'},
       {heading:UI_COPY.how,body:HOW_COPY[role][key]||GENERIC_HOW,selector:'[data-tour-demo="time-actions"], [data-tour-demo="shift"], '+(PAGE_SELECTORS[key]||"main")},
     ],
   }
@@ -191,7 +190,7 @@ const tours:Record<UiRole,Step[]>={
   ],
 }
 
-const VERSION=4
+const VERSION=5
 function storageKey(userId:string,role:UiRole){return "uptilldawn-app-tour:"+userId+":"+role+":v"+VERSION}
 
 export function RoleAppTour(){
@@ -211,6 +210,7 @@ export function RoleAppTour(){
   const [locale,setLocale]=useState<ExtendedUiLocale>("nl")
 
   useEffect(()=>{
+    setLocale(activeUiLocale() as ExtendedUiLocale)
     const on=(event:Event)=>{
       const next=parseUiLocale((event as CustomEvent<string>).detail)
       if(next)setLocale(next as ExtendedUiLocale)
