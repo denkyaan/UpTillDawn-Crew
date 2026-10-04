@@ -14,6 +14,7 @@ import { getDefaultRoleUiRules, ruleMatches, ruleUsable, type RoleUiContext, typ
 import { AdminContextBar } from "@/components/admin/admin-context-bar"
 import { PlatformAiAssistant } from "@/components/admin/platform-ai-assistant"
 import { RoleAppTour } from "@/components/role-app-tour"
+import { SandboxEvent } from "@/components/training/sandbox-event"
 
 function CountBadge({ count }: { count: number }) {
   if (count < 1) return null
@@ -289,7 +290,7 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
             : <>
                 {tourPreview&&<div data-no-translate className="m-3 rounded-xl border border-violet-500/40 bg-violet-500/10 px-3 py-2 text-xs font-bold text-violet-600">TRAINING SANDBOX · fictieve actieve eventcontext · productiedata wordt niet als demo weergegeven</div>}
                 {!currentUsable&&!previewAll&&<p className="m-3 rounded-xl border p-3 text-sm text-muted-foreground">Alleen-lezen: deze functie is zichtbaar, maar momenteel niet bruikbaar voor jouw rol.</p>}
-                <div inert={contentLocked&&!previewAll}>{children}</div>
+                <div inert={contentLocked&&!previewAll}>{tourPreview?<SandboxEvent userName={user?.user_metadata?.full_name||"Crew"} role={activeUiRole||"employee"}/>:children}</div>
               </>}
         </main>
       </div>
