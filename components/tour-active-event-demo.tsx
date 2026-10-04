@@ -12,16 +12,20 @@ const names=["Lina Peeters","Noah Jacobs","Mila Vermeulen","Lucas Maes"]
 export function TourActiveEventDemo({role}:{role:Role}){
  const pathname=usePathname()
  const [locale,setLocale]=useState<Locale>("nl")
- useEffect(()=>{const on=(event:Event)=>{const next=parseUiLocale((event as CustomEvent<string>).detail);if(next)setLocale(next as Locale)};addEventListener(LANGUAGE_APPLIED_EVENT,on);return()=>removeEventListener(LANGUAGE_APPLIED_EVENT,on)},[])
+ useEffect(()=>{const on=(event:Event)=>{const next=parseUiLocale((event as CustomEvent<string>).detail);if(next)setLocale(next as Locale)};const initial=parseUiLocale(document.documentElement.lang);if(initial)queueMicrotask(()=>setLocale(initial as Locale));addEventListener(LANGUAGE_APPLIED_EVENT,on);return()=>removeEventListener(LANGUAGE_APPLIED_EVENT,on)},[])
  const heading=t(locale,"DEMO · ACTIEF EVENEMENT","DEMO · ACTIVE EVENT","DÉMO · ÉVÉNEMENT ACTIF","DEMO · AKTIVES EVENT")
  const event=t(locale,"Up Till Dawn — Demo Night","Up Till Dawn — Demo Night","Up Till Dawn — Demo Night","Up Till Dawn — Demo Night")
- const workplace=t(locale,"Main Bar","Main Bar","Bar principal","Hauptbar")
+ const workplace=role==="admin"
+  ? t(locale,"Alle werkplekken","All workplaces","Tous les postes","Alle Arbeitsplätze")
+  : role==="responsible_lead"
+    ? t(locale,"Main Bar · verantwoordelijke","Main Bar · responsible lead","Bar principal · responsable","Hauptbar · verantwortlich")
+    : t(locale,"Main Bar","Main Bar","Bar principal","Hauptbar")
  const badge=<span className="rounded-full border border-violet-500/40 bg-violet-500/10 px-2 py-1 text-[11px] font-black text-violet-500">{heading}</span>
  let body=<>
   <div className="grid gap-3 sm:grid-cols-3">
    <article className="rounded-xl border p-3"><p className="text-xs text-muted-foreground">{t(locale,"Evenement","Event","Événement","Event")}</p><p className="font-black">{event}</p><p className="text-sm text-emerald-600">{t(locale,"Nu actief · 22:00–06:00","Live now · 22:00–06:00","Actif maintenant · 22:00–06:00","Jetzt aktiv · 22:00–06:00")}</p></article>
-   <article className="rounded-xl border p-3"><p className="text-xs text-muted-foreground">{t(locale,"Jouw werkplek","Your workplace","Votre poste","Dein Arbeitsplatz")}</p><p className="font-black">{workplace}</p><p className="text-sm">{t(locale,"Shift 22:00–04:00","Shift 22:00–04:00","Shift 22:00–04:00","Schicht 22:00–04:00")}</p></article>
-   <article className="rounded-xl border p-3"><p className="text-xs text-muted-foreground">{t(locale,"Status","Status","Statut","Status")}</p><p className="font-black">{t(locale,"Ingecheckt","Checked in","Enregistré","Eingecheckt")}</p><p className="text-sm">{t(locale,"Werk 01:42:18","Work 01:42:18","Travail 01:42:18","Arbeit 01:42:18")}</p></article>
+   <article className="rounded-xl border p-3"><p className="text-xs text-muted-foreground">{role==="admin"?t(locale,"Werkplekken","Workplaces","Postes","Arbeitsplätze"):t(locale,"Jouw werkplek","Your workplace","Votre poste","Dein Arbeitsplatz")}</p><p className="font-black">{workplace}</p><p className="text-sm">{role==="admin"?t(locale,"6 actief · 24 crew","6 active · 24 crew","6 actifs · 24 équipiers","6 aktiv · 24 Crew"):t(locale,"Shift 22:00–04:00","Shift 22:00–04:00","Shift 22:00–04:00","Schicht 22:00–04:00")}</p></article>
+   <article className="rounded-xl border p-3"><p className="text-xs text-muted-foreground">{t(locale,"Status","Status","Statut","Status")}</p><p className="font-black">{role==="admin"?t(locale,"Event operationeel","Event operational","Événement opérationnel","Event betriebsbereit"):role==="responsible_lead"?t(locale,"Werkplek actief","Workplace active","Poste actif","Arbeitsplatz aktiv"):t(locale,"Ingecheckt","Checked in","Enregistré","Eingecheckt")}</p><p className="text-sm">{role==="admin"?t(locale,"2 openstaande acties","2 pending actions","2 actions en attente","2 offene Aktionen"):role==="responsible_lead"?t(locale,"4/5 personeel actief","4/5 staff active","4/5 personnel actifs","4/5 Personal aktiv"):t(locale,"Werk 01:42:18","Work 01:42:18","Travail 01:42:18","Arbeit 01:42:18")}</p></article>
   </div>
  </>
  if(pathname.startsWith("/operations"))body=<div data-tour-demo="time-actions" className="grid gap-3">
