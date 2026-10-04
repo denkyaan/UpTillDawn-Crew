@@ -320,13 +320,7 @@ export function RoleAppTour(){
       </section>
     </div>}
 
-    {open&&shown&&<div data-no-translate className="fixed bottom-[calc(4.5rem+env(safe-area-inset-bottom))] right-3 z-[140] pointer-events-auto">
-      <button type="button" onClick={()=>{
-        setInsideIndex(-1)
-        if(index===steps.length-1)finish()
-        else setIndex(value=>value+1)
-      }} className="rounded-full border border-violet-500/40 bg-background/95 px-4 py-2 text-xs font-black shadow-lg backdrop-blur">{resolve(index===steps.length-1?UI_COPY.done:UI_COPY.next)}</button>
-    </div>}
+
   </>
 }
 
