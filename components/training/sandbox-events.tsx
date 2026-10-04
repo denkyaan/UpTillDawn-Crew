@@ -1,0 +1,33 @@
+"use client"
+import {useEffect,useState} from "react"
+import {LANGUAGE_APPLIED_EVENT,parseUiLocale} from "@/lib/locale-preferences"
+type L="nl"|"en"|"fr"|"de"
+const tr=(l:L,nl:string,en:string,fr:string,de:string)=>({nl,en,fr,de}[l])
+const KEY="uptilldawn-training-workflow-v3"
+export function SandboxEvents(){
+ const [l,setL]=useState<L>("nl"),[open,setOpen]=useState(false),[saved,setSaved]=useState(false),[help,setHelp]=useState("")
+ useEffect(()=>{const apply=()=>setL((parseUiLocale(document.documentElement.lang)||"nl") as L);apply();addEventListener(LANGUAGE_APPLIED_EVENT,apply);try{const s=JSON.parse(sessionStorage.getItem(KEY)||"{}");setOpen(!!s.eventOpened);setSaved(!!s.availability)}catch{}return()=>removeEventListener(LANGUAGE_APPLIED_EVENT,apply)},[])
+ const persist=(patch:Record<string,unknown>)=>{let s={};try{s=JSON.parse(sessionStorage.getItem(KEY)||"{}")}catch{};sessionStorage.setItem(KEY,JSON.stringify({...s,...patch}))}
+ const ring="ring-4 ring-violet-500 ring-offset-2 ring-offset-background animate-pulse"
+ return <main id="eventbeheer" className="scroll-mt-24 space-y-6 p-4 md:p-8">
+  <div><h1 className="text-3xl font-black">{tr(l,"Evenementen","Events","Événements","Events")}</h1><p className="text-sm text-muted-foreground">{tr(l,"Bekijk je evenementen en bevestig je beschikbaarheid.","View your events and confirm your availability.","Consultez vos événements et confirmez votre disponibilité.","Sieh dir deine Events an und bestätige deine Verfügbarkeit.")}</p></div>
+  <div className="space-y-3"><details open={open} className="rounded-2xl border bg-card">
+   <summary onClick={e=>{e.preventDefault();if(!open){setOpen(true);persist({eventOpened:true});setHelp(tr(l,"Goed. Hier zie je dezelfde evenementdetails als in de echte app. Bevestig nu je beschikbaarheid.","Good. Here you see the same event details as in the real app. Now confirm your availability.","Bien. Vous voyez ici les mêmes détails que dans l’application réelle. Confirmez maintenant votre disponibilité.","Gut. Hier siehst du dieselben Eventdetails wie in der echten App. Bestätige jetzt deine Verfügbarkeit."))}else setOpen(false)}} className={"cursor-pointer list-none p-4 "+(!open?ring:"")}>
+    <div className="flex items-start justify-between gap-3"><div><h2 className="text-xl font-bold">{tr(l,"UpTillDawn Trainingsavond","UpTillDawn Training Night","Soirée d’entraînement UpTillDawn","UpTillDawn Trainingsabend")}</h2><p className="text-sm text-muted-foreground">{tr(l,"Trainingslocatie","Training Venue","Lieu d’entraînement","Trainingsort")} · 10/10/2026, 20:00 · {tr(l,"gepland","scheduled","planifié","geplant")}</p><p className="text-xs text-muted-foreground">{tr(l,"Bondgenotenlaan 1, Leuven","Bondgenotenlaan 1, Leuven","Bondgenotenlaan 1, Louvain","Bondgenotenlaan 1, Leuven")}</p><p className="text-xs font-semibold text-muted-foreground">12/20 {tr(l,"bevestigd","confirmed","confirmés","bestätigt")}</p></div><span className="rounded-full border px-2 py-1 text-xs font-bold">{tr(l,"Toekomstig","Upcoming","À venir","Bevorstehend")}</span></div>
+   </summary>
+   <div className="space-y-4 border-t p-4">
+    <div className="rounded-xl border p-3 text-sm"><p><span className="font-semibold">{tr(l,"Aanmelddeadline","Registration deadline","Date limite d’inscription","Anmeldefrist")}:</span> 09/10/2026, 18:00</p></div>
+    <section className="space-y-3"><p className="font-semibold">{tr(l,"Beschikbaarheid bevestigen","Confirm availability","Confirmer la disponibilité","Verfügbarkeit bestätigen")}</p>
+     <div className={"grid gap-3 rounded-xl border p-3 md:grid-cols-3 "+(!saved?ring:"")}>
+      <fieldset className="space-y-2"><legend className="text-sm font-semibold">{tr(l,"Evenement","Event","Événement","Event")}</legend><label className="flex items-center gap-2"><input readOnly checked type="radio"/>{tr(l,"Ja","Yes","Oui","Ja")}</label><label className="flex items-center gap-2"><input readOnly type="radio"/>{tr(l,"Nee","No","Non","Nein")}</label></fieldset>
+      <fieldset className="space-y-2"><legend className="text-sm font-semibold">{tr(l,"Opbouw","Setup","Montage","Aufbau")}</legend><label className="flex items-center gap-2"><input readOnly checked type="radio"/>{tr(l,"Ja","Yes","Oui","Ja")}</label><label className="flex items-center gap-2"><input readOnly type="radio"/>{tr(l,"Nee","No","Non","Nein")}</label></fieldset>
+      <fieldset className="space-y-2"><legend className="text-sm font-semibold">{tr(l,"Afbouw","Breakdown","Démontage","Abbau")}</legend><label className="flex items-center gap-2"><input readOnly type="radio"/>{tr(l,"Ja","Yes","Oui","Ja")}</label><label className="flex items-center gap-2"><input readOnly checked type="radio"/>{tr(l,"Nee","No","Non","Nein")}</label></fieldset>
+      <label className="grid gap-1 text-sm md:col-span-3">{tr(l,"Reden bij afmelding","Reason when declining","Raison en cas de refus","Grund bei Absage")}<textarea readOnly className="rounded-lg border bg-background p-3"/></label>
+      <button type="button" onClick={()=>{setSaved(true);persist({availability:true,assigned:true});setHelp(tr(l,"Beschikbaarheid opgeslagen. Je krijgt nu een shift op basis van je profielvoorkeur. Open daarna Werkplaatsen & shifts.","Availability saved. You now receive a shift based on your profile preference. Next open Workplaces & shifts.","Disponibilité enregistrée. Un shift vous est maintenant attribué selon votre préférence de profil. Ouvrez ensuite Postes & shifts.","Verfügbarkeit gespeichert. Du erhältst jetzt eine Schicht anhand deiner Profilpräferenz. Öffne danach Arbeitsplätze & Schichten."))}} className="rounded-xl bg-violet-600 p-3 font-bold text-white md:col-span-3">{tr(l,"BESCHIKBAARHEID OPSLAAN","SAVE AVAILABILITY","ENREGISTRER LA DISPONIBILITÉ","VERFÜGBARKEIT SPEICHERN")}</button>
+     </div>
+    </section>
+   </div>
+  </details></div>
+  {help&&<div className="fixed inset-x-3 bottom-[calc(5rem+env(safe-area-inset-bottom))] z-[170] rounded-2xl border border-violet-500/50 bg-background/95 p-4 shadow-2xl backdrop-blur"><p className="text-sm font-bold">{help}</p><button onClick={()=>setHelp("")} className="mt-3 rounded-lg border px-3 py-2 text-xs font-bold">{tr(l,"BEGREPEN","GOT IT","COMPRIS","VERSTANDEN")}</button></div>}
+ </main>
+}
