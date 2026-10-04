@@ -122,12 +122,7 @@ export function MobileBottomNav({
     onClick={()=>{
       if(tourPreview&&trainingNavTarget===item.key){try{const s=JSON.parse(sessionStorage.getItem("uptilldawn-training-workflow-v3")||"{}");sessionStorage.setItem("uptilldawn-training-workflow-v3",JSON.stringify({...s,navTarget:null}))}catch{};setTrainingNavTarget(null)}
       setExpanded(false)
-      if(tourPreview){
-        const message=help.description
-        sessionStorage.setItem("uptilldawn-sandbox-help",message)
-        setSandboxHelp(message)
-        dispatchEvent(new CustomEvent("uptilldawn-sandbox-help",{detail:message}))
-      }
+
     }}
     className={cn(
       expandedItem
