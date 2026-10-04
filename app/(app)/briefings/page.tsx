@@ -1,3 +1,4 @@
+import { SandboxBriefings } from '@/components/training/sandbox-briefings'
 import { createClient } from '@/lib/supabase/crew-server'
 import { getCurrentUser } from '@/lib/actions/auth'
 import { ManagerOnly } from '@/components/auth/manager-only'
@@ -53,9 +54,10 @@ function PhotoGallery({rows,urls}:{rows:Tables<'work_attachments'>[];urls:Map<st
  </div>
 }
 
-export default async function Page({searchParams}:{searchParams?:Promise<{event?:string;workplace?:string;user?:string}>}){
+export default async function Page({searchParams}:{searchParams?:Promise<{event?:string;workplace?:string;user?:string;tour?:string}>}){
  const params=searchParams?await searchParams:{}
  const s=await createClient();const user=await getCurrentUser();if(!user)return null
+ if(params.tour==='1'&&user.role!=='admin')return <SandboxBriefings/>
  const isAdmin=user.role==='admin',isResponsible=user.role==='responsible_lead',manager=isAdmin||isResponsible
  const [{data:briefs,error},{data:personal},{data:acks},{data:packs},{data:eventWindows},{data:ownMemberships},{data:activeEvents},{data:ownActiveShifts}]=await Promise.all([
   s.from('briefings').select('*').order('created_at',{ascending:false}),s.from('personal_instructions').select('*').order('created_at',{ascending:false}),s.from('briefing_acknowledgements').select('*').eq('user_id',user.id),s.from('personal_instruction_acknowledgements').select('*').eq('user_id',user.id),s.from('events').select('id').neq('status','archived').gte('end_at','now'),s.from('event_members').select('event_id').eq('user_id',user.id),s.from('events').select('id').neq('status','archived').lte('start_at','now').gte('end_at','now').order('start_at'),s.from('shifts').select('event_id').eq('user_id',user.id).neq('status','cancelled').lte('scheduled_start','now').gte('scheduled_end','now').order('scheduled_start')])
