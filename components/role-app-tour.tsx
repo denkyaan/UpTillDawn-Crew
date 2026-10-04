@@ -225,7 +225,6 @@ export function RoleAppTour(){
 
   const step=steps[index]
   const detail=insideIndex>=0?step?.inside?.[insideIndex]:null
-  const shown=detail||step
 
   useEffect(()=>{
     if(loading||!user||!role)return
@@ -288,12 +287,6 @@ export function RoleAppTour(){
   if(!user||!role||!activeRole)return null
 
   const setPreview=(active:boolean)=>dispatchEvent(new CustomEvent("uptilldawn-tour-preview",{detail:{active,role:activeRole}}))
-  const finish=()=>{
-    localStorage.setItem(storageKey(user.id,activeRole),"completed")
-    setOpen(false)
-    setChoice(false)
-    setPreview(false)
-  }
   const later=()=>{
     localStorage.setItem(storageKey(user.id,activeRole),"postponed")
     setChoice(false)
