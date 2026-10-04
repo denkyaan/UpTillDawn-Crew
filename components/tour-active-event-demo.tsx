@@ -3,14 +3,17 @@
 import {usePathname} from "next/navigation"
 import {useEffect,useState} from "react"
 import {parseUiLocale,LANGUAGE_APPLIED_EVENT} from "@/lib/locale-preferences"
+import {useAuth,useDisplayName} from "@/lib/providers"
 
 type Role="employee"|"responsible_lead"|"admin"
 type Locale="nl"|"en"|"fr"|"de"
 const t=(locale:Locale,nl:string,en:string,fr:string,de:string)=>({nl,en,fr,de}[locale])
-const names=["Lina Peeters","Noah Jacobs","Mila Vermeulen","Lucas Maes"]
+const crewNames=["Lina Peeters","Noah Jacobs","Mila Vermeulen"]
 
 export function TourActiveEventDemo({role}:{role:Role}){
  const pathname=usePathname()
+ const {profile}=useAuth()
+ const displayName=useDisplayName()
  const [locale,setLocale]=useState<Locale>("nl")
  const [demoState,setDemoState]=useState<"ready"|"clicked">("ready")
  useEffect(()=>{const on=(event:Event)=>{const next=parseUiLocale((event as CustomEvent<string>).detail);if(next)setLocale(next as Locale)};const initial=parseUiLocale(document.documentElement.lang);if(initial)queueMicrotask(()=>setLocale(initial as Locale));addEventListener(LANGUAGE_APPLIED_EVENT,on);return()=>removeEventListener(LANGUAGE_APPLIED_EVENT,on)},[])
@@ -21,10 +24,12 @@ export function TourActiveEventDemo({role}:{role:Role}){
   : role==="responsible_lead"
     ? t(locale,"Main Bar · verantwoordelijke","Main Bar · responsible lead","Bar principal · responsable","Hauptbar · verantwortlich")
     : t(locale,"Main Bar","Main Bar","Bar principal","Hauptbar")
+ const names=[displayName,...crewNames.filter(name=>name!==displayName)]
+ const personLabel=profile?.full_name||displayName
  const badge=<span className="rounded-full border border-violet-500/40 bg-violet-500/10 px-2 py-1 text-[11px] font-black text-violet-500">{heading}</span>
  const demoButton=(label:string)=><button data-tour-demo="primary-action" type="button" onClick={()=>setDemoState("clicked")} className="rounded-xl border border-violet-500/50 px-4 py-2 text-sm font-black hover:bg-violet-500/10 focus:outline-none focus:ring-2 focus:ring-violet-500">{label}</button>
  let body=<>
-  <div className="grid gap-3 sm:grid-cols-3">
+  <div className="mb-3 rounded-xl border border-violet-500/30 p-3"><p className="text-xs text-muted-foreground">{t(locale,"Jij in deze demo","You in this demo","Vous dans cette démo","Du in dieser Demo")}</p><p className="font-black">{personLabel}</p><p className="text-sm">{role==="admin"?t(locale,"Admin · beheert dit actieve evenement","Admin · managing this live event","Admin · gère cet événement actif","Admin · verwaltet dieses aktive Event"):role==="responsible_lead"?t(locale,"Verantwoordelijke · Main Bar","Responsible lead · Main Bar","Responsable · Bar principal","Verantwortlich · Hauptbar"):t(locale,"Personeel · Main Bar · shift 22:00–04:00","Staff · Main Bar · shift 22:00–04:00","Personnel · Bar principal · shift 22:00–04:00","Personal · Hauptbar · Schicht 22:00–04:00")}</p></div><div className="grid gap-3 sm:grid-cols-3">
    <article className="rounded-xl border p-3"><p className="text-xs text-muted-foreground">{t(locale,"Evenement","Event","Événement","Event")}</p><p className="font-black">{event}</p><p className="text-sm text-emerald-600">{t(locale,"Nu actief · 22:00–06:00","Live now · 22:00–06:00","Actif maintenant · 22:00–06:00","Jetzt aktiv · 22:00–06:00")}</p></article>
    <article className="rounded-xl border p-3"><p className="text-xs text-muted-foreground">{role==="admin"?t(locale,"Werkplekken","Workplaces","Postes","Arbeitsplätze"):t(locale,"Jouw werkplek","Your workplace","Votre poste","Dein Arbeitsplatz")}</p><p className="font-black">{workplace}</p><p className="text-sm">{role==="admin"?t(locale,"6 actief · 24 crew","6 active · 24 crew","6 actifs · 24 équipiers","6 aktiv · 24 Crew"):t(locale,"Shift 22:00–04:00","Shift 22:00–04:00","Shift 22:00–04:00","Schicht 22:00–04:00")}</p></article>
    <article className="rounded-xl border p-3"><p className="text-xs text-muted-foreground">{t(locale,"Status","Status","Statut","Status")}</p><p className="font-black">{role==="admin"?t(locale,"Event operationeel","Event operational","Événement opérationnel","Event betriebsbereit"):role==="responsible_lead"?t(locale,"Werkplek actief","Workplace active","Poste actif","Arbeitsplatz aktiv"):t(locale,"Ingecheckt","Checked in","Enregistré","Eingecheckt")}</p><p className="text-sm">{role==="admin"?t(locale,"2 openstaande acties","2 pending actions","2 actions en attente","2 offene Aktionen"):role==="responsible_lead"?t(locale,"4/5 personeel actief","4/5 staff active","4/5 personnel actifs","4/5 Personal aktiv"):t(locale,"Werk 01:42:18","Work 01:42:18","Travail 01:42:18","Arbeit 01:42:18")}</p></article>
@@ -44,5 +49,5 @@ export function TourActiveEventDemo({role}:{role:Role}){
  else if(pathname.startsWith("/inventory"))body=<div data-tour-demo className="grid gap-2"><div className="flex items-center gap-2">{badge}<strong>Main Bar · {t(locale,"Inventaris","Inventory","Inventaire","Inventar")}</strong></div><div className="grid grid-cols-2 gap-2 text-sm"><p>Bekers · 480/500</p><p>Tokens · 1200/1200</p><p>Scanner · 2/2</p><p className="text-amber-600">Bar mat · 3/4</p></div></div>
  else if(pathname.startsWith("/guestlist"))body=<div data-tour-demo className="grid gap-2"><div className="flex items-center gap-2">{badge}<strong>{t(locale,"Inkom & Guestlist","Entrance & Guest list","Entrée & Liste invités","Eingang & Gästeliste")}</strong></div><p className="text-sm">Amelie Vos · Guest · 2 spots · ✓</p><p className="text-sm">DJ Nova · Artist · 3 spots · {t(locale,"Nog niet binnen","Not arrived","Pas encore arrivé","Noch nicht angekommen")}</p></div>
  else if(pathname.startsWith("/sales"))body=<div data-tour-demo className="grid gap-2"><div className="flex items-center gap-2">{badge}<strong>{t(locale,"Live verkoop","Live sales","Ventes en direct","Live-Verkauf")}</strong></div><div className="grid grid-cols-3 gap-2 text-sm"><p>Tokens €1.240</p><p>Merch €385</p><p>{t(locale,"Totaal","Total","Total","Gesamt")} €1.625</p></div></div>
- return <section data-no-translate data-tour-demo="training-screen" className="mx-auto min-h-full w-full max-w-5xl p-4 sm:p-6" aria-label={heading}><div className="mb-3 flex items-center justify-between gap-2">{badge}<span className="text-xs text-muted-foreground">{role==="admin"?"Admin":role==="responsible_lead"?t(locale,"Verantwoordelijke","Responsible","Responsable","Verantwortlich"):t(locale,"Personeel","Staff","Personnel","Personal")}</span></div>{body}</section>
+ return <section data-no-translate data-tour-demo="training-screen" data-demo-person={personLabel} className="mx-auto min-h-full w-full max-w-5xl p-4 sm:p-6" aria-label={heading}><div className="mb-3 flex items-center justify-between gap-2">{badge}<span className="text-xs text-muted-foreground">{role==="admin"?"Admin":role==="responsible_lead"?t(locale,"Verantwoordelijke","Responsible","Responsable","Verantwortlich"):t(locale,"Personeel","Staff","Personnel","Personal")}</span></div>{body}</section>
 }
