@@ -14,7 +14,6 @@ import { getDefaultRoleUiRules, ruleMatches, ruleUsable, type RoleUiContext, typ
 import { AdminContextBar } from "@/components/admin/admin-context-bar"
 import { PlatformAiAssistant } from "@/components/admin/platform-ai-assistant"
 import { RoleAppTour } from "@/components/role-app-tour"
-import { TourActiveEventDemo } from "@/components/tour-active-event-demo"
 
 function CountBadge({ count }: { count: number }) {
   if (count < 1) return null
@@ -53,9 +52,11 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
   const effectiveRules=rules.length?rules:defaultRules
   const ruleMap=useMemo(()=>new Map(effectiveRules.map(rule=>[rule.feature_key,rule])),[effectiveRules])
   const previewAll=tourPreview
+  const sandboxContext:RoleUiContext={assignedEvent:true,assignedWorkplaceRole:true,eventActive:true,shiftActive:true}
+  const effectiveContext=tourPreview?sandboxContext:context
   const feature=(key:string,fallback:boolean)=>{
     const rule=ruleMap.get(key)
-    return rule?ruleMatches(rule,context,previewAll):fallback
+    return rule?ruleMatches(rule,effectiveContext,previewAll):fallback
   }
   const order=effectiveRules.map(rule=>rule.feature_key)
   const labels=Object.fromEntries(effectiveRules.map(rule=>[rule.feature_key,rule.label]))
@@ -90,8 +91,8 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
     ||pathname.startsWith("/exports")
     ||pathname.startsWith("/admin/platform")
   ))
-  const currentVisible=adminAlwaysRoute||!currentFeature||!roleKey||!rulesReady||previewAll||ruleMatches(currentRule,context,false)
-  const currentUsable=previewAll||adminAlwaysRoute||!currentFeature||!roleKey||!rulesReady||ruleUsable(currentRule,context,false)
+  const currentVisible=adminAlwaysRoute||!currentFeature||!roleKey||!rulesReady||previewAll||ruleMatches(currentRule,effectiveContext,false)
+  const currentUsable=previewAll||adminAlwaysRoute||!currentFeature||!roleKey||!rulesReady||ruleUsable(currentRule,effectiveContext,false)
   const contentLocked=Boolean(currentVisible&&!currentUsable)
 
   const refresh=useCallback(async()=>{
@@ -265,8 +266,8 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
   const showSettings=feature("settings",true)
   const showPlatform=feature("platform",Boolean(isAdmin))
   const featureVisibility={overview:showOverview,events:showEvents,operations:showOperations,workplaces:showWorkplaces,inventory:showInventory,guestlist:showGuestlist,sales:showSales,shifts:showShifts,briefings:showBriefings,tasks:showTasks,chat:showChat,crew:showCrew,incidents:showIncidents,exports:showExports,personnel:showPersonnel,platform:showPlatform,settings:showSettings}
-  const operationalMode=context.eventActive||context.shiftActive
-  const showUrgent=!pathname.startsWith("/chat")&&!isAdmin&&showIncidents&&context.shiftActive
+  const operationalMode=effectiveContext.eventActive||effectiveContext.shiftActive
+  const showUrgent=!pathname.startsWith("/chat")&&!isAdmin&&showIncidents&&effectiveContext.shiftActive
   const showFloatingChat=isAdmin||operationalMode
 
   return <div className="flex h-dvh bg-background print:block print:h-auto">
@@ -274,7 +275,7 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
     {/* Mobile shell lives at the AppLayout root so iOS fixed positioning is not
         clipped by the nested overflow scroll container. */}
     <div className="print:hidden">
-      <MobileBottomNav chatMissed={chatMissed} incidentMissed={incidentMissed} taskMissed={taskMissed} notificationFeatureCounts={notificationFeatureCounts} featureOrder={order} featureLabels={labels} featureVisibility={featureVisibility} assignedEvent={context.assignedEvent} shiftActive={context.shiftActive}/>
+      <MobileBottomNav chatMissed={chatMissed} incidentMissed={incidentMissed} taskMissed={taskMissed} notificationFeatureCounts={notificationFeatureCounts} featureOrder={order} featureLabels={labels} featureVisibility={featureVisibility} assignedEvent={effectiveContext.assignedEvent} shiftActive={effectiveContext.shiftActive}/>
     </div>
     {!tourPreview&&!pathname.startsWith("/chat")&&showFloatingChat&&<FloatingChatButton count={chatMissed} stackedAboveAdminAi={Boolean(isAdmin)}/>}
 
@@ -283,18 +284,17 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
       <div className="print:hidden"><Topbar notificationMissed={notificationMissed}/><QueueStatus/>{isAdmin&&<AdminContextBar/>}</div>
       <div id="app-scroll" className="flex-1 overflow-y-auto bg-background scroll-smooth print:overflow-visible">
         <main className="min-h-[calc(100dvh-theme(spacing.16)-theme(spacing.12))] pb-20 lg:pb-0 print:min-h-0 print:pb-0">
-          {tourPreview
-            ? <TourActiveEventDemo role={isAdmin?"admin":activeUiRole==="responsible_lead"?"responsible_lead":"employee"}/>
-            : !currentVisible
-              ? <div className="m-4 rounded-2xl border p-6 text-muted-foreground">Deze functie is verborgen voor jouw rol of huidige context.</div>
-              : <>
-                  {!currentUsable&&<p className="m-3 rounded-xl border p-3 text-sm text-muted-foreground">Alleen-lezen: deze functie is zichtbaar, maar momenteel niet bruikbaar voor jouw rol.</p>}
-                  <div inert={contentLocked}>{children}</div>
-                </>}
+          {!currentVisible&&!previewAll
+            ? <div className="m-4 rounded-2xl border p-6 text-muted-foreground">Deze functie is verborgen voor jouw rol of huidige context.</div>
+            : <>
+                {tourPreview&&<div data-no-translate className="m-3 rounded-xl border border-violet-500/40 bg-violet-500/10 px-3 py-2 text-xs font-bold text-violet-600">TRAINING SANDBOX · fictieve actieve eventcontext · productiedata wordt niet als demo weergegeven</div>}
+                {!currentUsable&&!previewAll&&<p className="m-3 rounded-xl border p-3 text-sm text-muted-foreground">Alleen-lezen: deze functie is zichtbaar, maar momenteel niet bruikbaar voor jouw rol.</p>}
+                <div inert={contentLocked&&!previewAll}>{children}</div>
+              </>}
         </main>
       </div>
     </div>
-    {isAdmin&&<div className="fixed bottom-20 right-4 z-[70] print:hidden lg:bottom-4"><button type="button" aria-expanded={adminAiOpen} onClick={()=>setAdminAiOpen(value=>!value)} className="rounded-full bg-violet-600 px-5 py-3 font-black text-white shadow-xl">ADMIN AI</button>{adminAiOpen&&<div className="absolute bottom-14 right-0 w-[min(92vw,430px)] max-h-[75vh] overflow-auto rounded-2xl border bg-background p-4 shadow-2xl"><PlatformAiAssistant contextKey={currentFeature||undefined} contextLabel={labels[currentFeature||""]} compact/></div>}</div>}
+    {isAdmin&&!tourPreview&&<div className="fixed bottom-20 right-4 z-[70] print:hidden lg:bottom-4"><button type="button" aria-expanded={adminAiOpen} onClick={()=>setAdminAiOpen(value=>!value)} className="rounded-full bg-violet-600 px-5 py-3 font-black text-white shadow-xl">ADMIN AI</button>{adminAiOpen&&<div className="absolute bottom-14 right-0 w-[min(92vw,430px)] max-h-[75vh] overflow-auto rounded-2xl border bg-background p-4 shadow-2xl"><PlatformAiAssistant contextKey={currentFeature||undefined} contextLabel={labels[currentFeature||""]} compact/></div>}</div>}
     {!pathname.startsWith("/chat")&&<>
       {showUrgent&&<Link href="/incidents" className="fixed bottom-20 left-4 z-50 rounded-full bg-red-600 px-5 py-4 font-black text-white print:hidden lg:hidden">URGENT<CountBadge count={incidentMissed}/></Link>}
     </>}
