@@ -6,7 +6,7 @@ import {useAuth,type UiRole} from "@/lib/providers"
 import {createClient} from "@/lib/supabase/crew-client"
 import {translateRuntimeUi} from "@/lib/ui-translation-runtime"
 import {featureHelp} from "@/lib/ui-field-help"
-import {activeUiLocale,parseUiLocale,LANGUAGE_APPLIED_EVENT} from "@/lib/locale-preferences"
+import {parseUiLocale,LANGUAGE_APPLIED_EVENT} from "@/lib/locale-preferences"
 import type {ExtendedUiLocale} from "@/lib/ui-translation-extensions"
 
 type TourText={nl:string;en:string;fr:string;de:string}
@@ -210,7 +210,6 @@ export function RoleAppTour(){
   const [locale,setLocale]=useState<ExtendedUiLocale>("nl")
 
   useEffect(()=>{
-    setLocale(activeUiLocale() as ExtendedUiLocale)
     const on=(event:Event)=>{
       const next=parseUiLocale((event as CustomEvent<string>).detail)
       if(next)setLocale(next as ExtendedUiLocale)
@@ -255,6 +254,8 @@ export function RoleAppTour(){
     const restart=(event:Event)=>{
       const requested=(event as CustomEvent<UiRole|undefined>).detail
       const nextRole=requested&&tours[requested]?requested:role
+      const active=parseUiLocale(document.documentElement.lang)
+      if(active)setLocale(active as ExtendedUiLocale)
       setTourRole(nextRole)
       setIndex(0)
       setInsideIndex(-1)
@@ -308,6 +309,8 @@ export function RoleAppTour(){
     setPreview(false)
   }
   const start=()=>{
+    const active=parseUiLocale(document.documentElement.lang)
+    if(active)setLocale(active as ExtendedUiLocale)
     setTourRole(role)
     setChoice(false)
     setIndex(0)
