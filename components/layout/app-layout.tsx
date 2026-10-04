@@ -280,7 +280,7 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
     <div className="print:hidden">
       <MobileBottomNav chatMissed={chatMissed} incidentMissed={incidentMissed} taskMissed={taskMissed} notificationFeatureCounts={notificationFeatureCounts} featureOrder={order} featureLabels={labels} featureVisibility={featureVisibility} assignedEvent={effectiveContext.assignedEvent} shiftActive={effectiveContext.shiftActive}/>
     </div>
-    {!tourPreview&&!pathname.startsWith("/chat")&&showFloatingChat&&<FloatingChatButton count={chatMissed} stackedAboveAdminAi={Boolean(isAdmin)}/>}
+    {!pathname.startsWith("/chat")&&showFloatingChat&&<FloatingChatButton count={chatMissed} stackedAboveAdminAi={Boolean(isAdmin)}/>}
 
     <div className="print:hidden"><AppSidebar chatMissed={chatMissed} incidentMissed={incidentMissed} taskMissed={taskMissed} notificationFeatureCounts={notificationFeatureCounts} showOperations={showOperations} showEvents={showEvents} showTasks={showTasks} showBriefings={showBriefings} showShifts={showShifts} showWorkplaces={showWorkplaces} showIncidents={showIncidents} featureOrder={order} featureLabels={labels} featureVisibility={featureVisibility}/></div>
     <div className="flex flex-1 flex-col overflow-hidden print:block print:overflow-visible">
