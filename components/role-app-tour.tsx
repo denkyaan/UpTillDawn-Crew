@@ -153,7 +153,7 @@ const ROLE_FEATURES:Record<UiRole,string[]>={
 function makeFeatureStep(role:UiRole,key:string):Step{
   const help=featureHelp(key)
   const baseRoute=key==="overview"&&role==="admin"?"/admin":ROUTES[key]
-  const route=baseRoute&&(DEMO_FEATURES.has(key)?baseRoute+TOUR_DEMO_QUERY:baseRoute)
+  const route=baseRoute&&(DEMO_FEATURES.has(key)||key==="overview"?baseRoute+TOUR_DEMO_QUERY:baseRoute)
   return {
     heading:UI_COPY.what,
     body:help.description,
