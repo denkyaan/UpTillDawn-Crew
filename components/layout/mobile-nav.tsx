@@ -41,12 +41,13 @@ export function MobileBottomNav({
  const [expanded,setExpanded]=useState(false)
  const [tourPreview,setTourPreview]=useState(false)
  const [sandboxHelp,setSandboxHelp]=useState("")
- const [trainingNavTarget,setTrainingNavTarget]=useState<string|null>(()=>{if(typeof window==="undefined")return null;try{return JSON.parse(sessionStorage.getItem("uptilldawn-training-workflow-v3")||"{}").navTarget||null}catch{return null}})
+ const [trainingNavTarget,setTrainingNavTarget]=useState<string|null>(null)
  const {roles,isAdmin}=useAuth()
  const adminContext=useAdminSelection()
  const roleKey:RoleRuleRole=roles.includes("admin")?"admin":roles.includes("responsible_lead")?"responsible_lead":"staff"
  const order=new Map(featureOrder.map((key,index)=>[key,index]))
  useEffect(()=>{const on=(e:Event)=>{const detail=(e as CustomEvent<{active?:boolean}>).detail;const active=Boolean(detail?.active);setTourPreview(active);if(!active)setExpanded(false)};addEventListener("uptilldawn-tour-preview",on);return()=>removeEventListener("uptilldawn-tour-preview",on)},[])
+ useEffect(()=>{const load=()=>{try{const s=JSON.parse(sessionStorage.getItem("uptilldawn-training-workflow-v3")||"{}");setTrainingNavTarget(s.navTarget||null)}catch{setTrainingNavTarget(null)}};const id=requestAnimationFrame(load);return()=>cancelAnimationFrame(id)},[pathname])
  useEffect(()=>{if(!tourPreview)return;const on=(e:Event)=>setTrainingNavTarget((e as CustomEvent<{target?:string}>).detail?.target||null);addEventListener("uptilldawn-training-nav-target",on);return()=>removeEventListener("uptilldawn-training-nav-target",on)},[tourPreview])
 
  // During the guided tour expose the complete role navigation regardless of
@@ -116,6 +117,7 @@ export function MobileBottomNav({
     title={help.description}
     aria-description={help.description}
     onClick={()=>{
+      if(tourPreview&&item.key==="workplaces"){try{const s=JSON.parse(sessionStorage.getItem("uptilldawn-training-workflow-v3")||"{}");sessionStorage.setItem("uptilldawn-training-workflow-v3",JSON.stringify({...s,navTarget:null}))}catch{};setTrainingNavTarget(null)}
       setExpanded(false)
       if(tourPreview){
         const message=help.description
@@ -160,7 +162,7 @@ export function MobileBottomNav({
      type="button"
      aria-label={expanded?"Navigatie inklappen":"Navigatie uitklappen"}
      aria-expanded={expanded}
-     onClick={()=>{setExpanded(value=>!value);if(trainingNavTarget==="workplaces")setSandboxHelp(featureHelp("workplaces",featureLabels.workplaces||getDefaultRoleUiLabel(roleKey,"workplaces","Workplaces")).description)}}
+     onClick={()=>setExpanded(value=>!value)}
      className={cn(
        "flex w-11 shrink-0 items-center justify-center rounded-lg border border-border",
        expanded?"bg-violet-500/10 text-violet-400":"text-muted-foreground",
