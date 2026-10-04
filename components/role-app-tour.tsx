@@ -204,7 +204,6 @@ export function RoleAppTour(){
   const [open,setOpen]=useState(false)
   const [choice,setChoice]=useState(false)
   const [index,setIndex]=useState(0)
-  const [insideIndex,setInsideIndex]=useState(-1)
   // Keep SSR and the first hydration render identical. Device/manual locale is
   // applied only after mount; this removes the React #418 hydration mismatch.
   const [locale,setLocale]=useState<ExtendedUiLocale>("nl")
@@ -256,7 +255,6 @@ export function RoleAppTour(){
       if(active)setLocale(active as ExtendedUiLocale)
       setTourRole(nextRole)
       setIndex(0)
-      setInsideIndex(-1)
       setChoice(false)
       setOpen(true)
       router.push((nextRole==="admin"?"/admin":"/")+"?tour=1")
@@ -297,7 +295,6 @@ export function RoleAppTour(){
     setTourRole(role)
     setChoice(false)
     setIndex(0)
-    setInsideIndex(-1)
     setOpen(true)
     router.push((role==="admin"?"/admin":"/")+"?tour=1")
     sessionStorage.setItem("uptilldawn-tour-preview-route","1")
