@@ -37,8 +37,10 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
   const [adminAiOpen,setAdminAiOpen]=useState(false)
   const [tourPreview,setTourPreview]=useState(false)
   const [trainingLocale,setTrainingLocale]=useState<SupportedUiLocale>(()=>typeof window==="undefined"?"nl":activeUiLocale())
+  const [trainingChatUnlocked,setTrainingChatUnlocked]=useState(false)
   useEffect(()=>{const on=(e:Event)=>setTourPreview(Boolean((e as CustomEvent<{active?:boolean}>).detail?.active));addEventListener("uptilldawn-tour-preview",on);return()=>removeEventListener("uptilldawn-tour-preview",on)},[])
   useEffect(()=>{const apply=()=>setTrainingLocale(activeUiLocale());addEventListener(LANGUAGE_APPLIED_EVENT,apply);return()=>removeEventListener(LANGUAGE_APPLIED_EVENT,apply)},[])
+  useEffect(()=>{const load=()=>{try{const s=JSON.parse(sessionStorage.getItem("uptilldawn-training-workflow-v3")||"{}");setTrainingChatUnlocked(Boolean(s.chatTourCompleted))}catch{setTrainingChatUnlocked(false)}};load();const on=()=>load();addEventListener("uptilldawn-training-chat-completed",on);return()=>removeEventListener("uptilldawn-training-chat-completed",on)},[tourPreview])
 
   const activeUiRole=roles[0]
   const roleKey=activeUiRole==="responsible_lead"?"responsible_lead":activeUiRole==="admin"?"admin":activeUiRole==="employee"?"staff":null
@@ -280,7 +282,7 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
     <div className="print:hidden">
       <MobileBottomNav chatMissed={chatMissed} incidentMissed={incidentMissed} taskMissed={taskMissed} notificationFeatureCounts={notificationFeatureCounts} featureOrder={order} featureLabels={labels} featureVisibility={featureVisibility} assignedEvent={effectiveContext.assignedEvent} shiftActive={effectiveContext.shiftActive}/>
     </div>
-    {!pathname.startsWith("/chat")&&showFloatingChat&&<FloatingChatButton count={chatMissed} stackedAboveAdminAi={Boolean(isAdmin)}/>}
+    {!pathname.startsWith("/chat")&&showFloatingChat&&(!tourPreview||trainingChatUnlocked)&&<FloatingChatButton count={chatMissed} stackedAboveAdminAi={Boolean(isAdmin)}/>}
 
     <div className="print:hidden"><AppSidebar chatMissed={chatMissed} incidentMissed={incidentMissed} taskMissed={taskMissed} notificationFeatureCounts={notificationFeatureCounts} showOperations={showOperations} showEvents={showEvents} showTasks={showTasks} showBriefings={showBriefings} showShifts={showShifts} showWorkplaces={showWorkplaces} showIncidents={showIncidents} featureOrder={order} featureLabels={labels} featureVisibility={featureVisibility}/></div>
     <div className="flex flex-1 flex-col overflow-hidden print:block print:overflow-visible">
