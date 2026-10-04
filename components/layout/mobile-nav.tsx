@@ -113,7 +113,7 @@ export function MobileBottomNav({
     href={href}
     title={help.description}
     aria-description={help.description}
-    onClick={(event)=>{
+    onClick={()=>{
       setExpanded(false)
       if(tourPreview){
         const message=help.description
