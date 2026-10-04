@@ -1,13 +1,13 @@
 "use client"
 import {useEffect,useState} from "react"
-import {LANGUAGE_APPLIED_EVENT,parseUiLocale} from "@/lib/locale-preferences"
+import {LANGUAGE_APPLIED_EVENT,activeUiLocale} from "@/lib/locale-preferences"
 type L="nl"|"en"|"fr"|"de"
 const tr=(l:L,nl:string,en:string,fr:string,de:string)=>({nl,en,fr,de}[l])
 const KEY="uptilldawn-training-workflow-v3"
 export function SandboxEvents(){
  const initial=()=>{if(typeof window==="undefined")return {eventOpened:false,availability:false};try{return JSON.parse(sessionStorage.getItem(KEY)||"{}")}catch{return {eventOpened:false,availability:false}}}
- const [l,setL]=useState<L>("nl"),[open,setOpen]=useState(()=>!!initial().eventOpened),[saved,setSaved]=useState(()=>!!initial().availability),[eventChoice,setEventChoice]=useState<"yes"|"no">("yes"),[setupChoice,setSetupChoice]=useState<"yes"|"no">("yes"),[breakdownChoice,setBreakdownChoice]=useState<"yes"|"no">("no"),[help,setHelp]=useState("")
- useEffect(()=>{const apply=()=>setL((parseUiLocale(document.documentElement.lang)||"nl") as L);apply();addEventListener(LANGUAGE_APPLIED_EVENT,apply);return()=>removeEventListener(LANGUAGE_APPLIED_EVENT,apply)},[])
+ const [l,setL]=useState<L>(()=>typeof window==="undefined"?"nl":activeUiLocale() as L),[open,setOpen]=useState(()=>!!initial().eventOpened),[saved,setSaved]=useState(()=>!!initial().availability),[eventChoice,setEventChoice]=useState<"yes"|"no">("yes"),[setupChoice,setSetupChoice]=useState<"yes"|"no">("yes"),[breakdownChoice,setBreakdownChoice]=useState<"yes"|"no">("no"),[help,setHelp]=useState("")
+ useEffect(()=>{const apply=()=>setL(activeUiLocale() as L);addEventListener(LANGUAGE_APPLIED_EVENT,apply);return()=>removeEventListener(LANGUAGE_APPLIED_EVENT,apply)},[])
  const persist=(patch:Record<string,unknown>)=>{let s={};try{s=JSON.parse(sessionStorage.getItem(KEY)||"{}")}catch{};sessionStorage.setItem(KEY,JSON.stringify({...s,...patch}))}
  const ring="ring-4 ring-violet-500 ring-offset-2 ring-offset-background animate-pulse"
  return <main id="eventbeheer" className="scroll-mt-24 space-y-6 p-4 md:p-8">
