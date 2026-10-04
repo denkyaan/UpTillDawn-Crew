@@ -160,7 +160,7 @@ function makeFeatureStep(role:UiRole,key:string):Step{
     selector:'[data-layout-key="'+key+'"]',
     route,
     inside:[
-      {heading:UI_COPY.how,body:HOW_COPY[role][key]||GENERIC_HOW,selector:'[data-tour-demo="time-actions"], [data-tour-demo="shift"], '+(PAGE_SELECTORS[key]||"main")},
+      {heading:UI_COPY.how,body:HOW_COPY[role][key]||GENERIC_HOW,selector:'[data-tour-demo="primary-action"], [data-tour-demo="time-actions"] button, [data-tour-demo="shift"] article, [data-tour-demo] button, [data-tour-demo] article, '+(PAGE_SELECTORS[key]||"main")},
     ],
   }
 }
@@ -190,7 +190,7 @@ const tours:Record<UiRole,Step[]>={
   ],
 }
 
-const VERSION=6
+const VERSION=7
 function storageKey(userId:string,role:UiRole){return "uptilldawn-app-tour:"+userId+":"+role+":v"+VERSION}
 
 export function RoleAppTour(){
@@ -349,9 +349,9 @@ export function RoleAppTour(){
       <div className="absolute inset-0 bg-black/35"/>
       {anchor&&<div className="absolute rounded-2xl ring-4 ring-violet-500 ring-offset-4 ring-offset-background/20 shadow-[0_0_0_9999px_rgba(0,0,0,.18)] transition-all duration-200" style={{top:Math.max(6,anchor.top-4),left:Math.max(6,anchor.left-4),width:Math.min(innerWidth-12,anchor.width+8),height:anchor.height+8}}/>}
       <section
-        className="pointer-events-auto absolute w-[min(22rem,calc(100vw-1.5rem))] rounded-2xl border bg-background/95 p-3 shadow-2xl backdrop-blur"
+        className="pointer-events-auto absolute w-[min(18rem,calc(100vw-1.5rem))] rounded-xl border bg-background/95 p-2.5 shadow-xl backdrop-blur"
         style={anchor?(()=>{
-          const w=Math.min(352,innerWidth-24),h=190,gap=14
+          const w=Math.min(288,innerWidth-24),h=150,gap=10
           const below=anchor.top+anchor.height+gap
           const top=below+h<innerHeight-12?below:Math.max(12,anchor.top-h-gap)
           const left=Math.max(12,Math.min(innerWidth-w-12,anchor.left+anchor.width/2-w/2))
@@ -362,8 +362,8 @@ export function RoleAppTour(){
           <p className="text-[11px] font-black uppercase tracking-[.14em] text-violet-400">{resolve(UI_COPY.tour)} · {index+1}/{steps.length}{insideIndex>=0&&step?.inside?.length?" · "+(insideIndex+1)+"/"+step.inside.length:""}</p>
           <button onClick={finish} className="ml-auto text-xs font-bold text-muted-foreground">{resolve(UI_COPY.skip)}</button>
         </div>
-        <h2 className="mt-1 text-base font-black">{resolve(shown.heading)}</h2>
-        <p className="mt-1.5 text-sm leading-5 text-muted-foreground">{resolve(shown.body)}</p>
+        <h2 className="mt-1 text-sm font-black">{resolve(shown.heading)}</h2>
+        <p className="mt-1 text-xs leading-4 text-muted-foreground">{resolve(shown.body)}</p>
         <div className="mt-3 flex justify-end gap-2">
           {(index>0||insideIndex>=0)&&<button onClick={()=>{
             if(insideIndex>0){setInsideIndex(value=>value-1);return}
