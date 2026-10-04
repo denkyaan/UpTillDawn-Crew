@@ -5,6 +5,7 @@ import { redirect } from 'next/navigation'
 import OperationsClient from './operations-client'
 import type { Tables, Database } from '@/types/crew-database'
 import { ShiftHandoverPanel, type HandoverCandidate, type HandoverScope, type HandoverView } from '@/components/responsible/shift-handover-panel'
+import { SandboxOperations } from '@/components/training/sandbox-operations'
 
 export const dynamic='force-dynamic'
 
@@ -14,43 +15,7 @@ export default async function Page({searchParams}:{searchParams?:Promise<{event?
   const current=await getCurrentUser()
   if(!current)redirect('/login')
 
-  if(params.tour==='1')return <main className="mx-auto max-w-4xl space-y-4 p-4 md:p-8" data-tour-demo="operations">
-    <div className="rounded-2xl border border-violet-500/40 bg-violet-500/10 p-4">
-      <p className="text-xs font-black uppercase tracking-[.16em] text-violet-400">TOUR PREVIEW</p>
-      <h1 className="mt-1 text-2xl font-black">UpTillDawn Tour Event</h1>
-      <p className="mt-2 text-sm text-muted-foreground">Demo · Main Bar · 20:00–04:00</p>
-    </div>
-    <section className="grid gap-3 sm:grid-cols-2">
-      <article className="rounded-2xl border p-4" data-tour-demo="shift">
-        <h2 className="font-black">Shift</h2>
-        <p className="mt-1 text-sm">Main Bar · 20:00–04:00</p>
-        <p className="mt-1 text-xs text-muted-foreground">Responsible: Alex Demo</p>
-      </article>
-      <article className="rounded-2xl border p-4" data-tour-demo="status">
-        <h2 className="font-black">Work status</h2>
-        <p className="mt-1 text-sm">Ready for check-in</p>
-        <p className="mt-1 text-xs text-muted-foreground">No real time registration is performed during the tour.</p>
-      </article>
-    </section>
-    <section className="rounded-2xl border p-4" data-tour-demo="time-actions">
-      <h2 className="font-black">Work hours</h2>
-      <p className="mt-1 text-sm text-muted-foreground">The tour uses these disabled example actions to explain the complete work-time flow.</p>
-      <div className="mt-3 grid grid-cols-2 gap-2 sm:grid-cols-4">
-        <button disabled className="rounded-xl border p-3 font-bold opacity-70">Check-in</button>
-        <button disabled className="rounded-xl border p-3 font-bold opacity-70">Start work</button>
-        <button disabled className="rounded-xl border p-3 font-bold opacity-70">Start break</button>
-        <button disabled className="rounded-xl border p-3 font-bold opacity-70">Stop work</button>
-      </div>
-    </section>
-    <section className="rounded-2xl border p-4" data-tour-demo="event-context">
-      <h2 className="font-black">Tour event context</h2>
-      <div className="mt-3 grid gap-2 text-sm sm:grid-cols-3">
-        <div className="rounded-xl border p-3"><strong>Briefing</strong><p>Safety, bar setup and closing checklist</p></div>
-        <div className="rounded-xl border p-3"><strong>Tasks</strong><p>2 example tasks assigned</p></div>
-        <div className="rounded-xl border p-3"><strong>Inventory</strong><p>Opening checklist ready</p></div>
-      </div>
-    </section>
-  </main>
+  if(params.tour==='1')return <SandboxOperations userName={current.full_name||'Crew'} role={current.role}/>
 
   const role=current.role
   const isAdmin=role==='admin'
