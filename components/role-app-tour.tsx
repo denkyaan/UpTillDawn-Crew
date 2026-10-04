@@ -261,6 +261,8 @@ export function RoleAppTour(){
       setInsideIndex(-1)
       setChoice(false)
       setOpen(true)
+      router.push((nextRole==="admin"?"/admin":"/")+"?tour=1")
+      sessionStorage.setItem("uptilldawn-tour-preview-route","1")
       dispatchEvent(new CustomEvent("uptilldawn-tour-preview",{detail:{active:true,role:nextRole}}))
     }
     addEventListener("uptilldawn-profile-completed",completed)
@@ -305,6 +307,8 @@ export function RoleAppTour(){
     setIndex(0)
     setInsideIndex(-1)
     setOpen(true)
+    router.push((role==="admin"?"/admin":"/")+"?tour=1")
+    sessionStorage.setItem("uptilldawn-tour-preview-route","1")
     setPreview(true)
   }
 
