@@ -278,7 +278,7 @@ export function RoleAppTour(){
     document.querySelectorAll("[data-upt-tour-highlight]").forEach(el=>el.removeAttribute("data-upt-tour-highlight"))
     if(!open||!shown)return
     const wanted=step?.route?.split("?")[0]
-    if(wanted&&pathname!==wanted){
+    if(step?.route&&wanted&&pathname!==wanted){
       router.push(step.route)
       sessionStorage.setItem("uptilldawn-tour-preview-route","1")
       return
