@@ -19,7 +19,7 @@ function Card({ href, icon: Icon, title, value }: { href: string; icon: typeof C
   </Link>
 }
 
-async function DashboardOverview({current}:{current:NonNullable<Awaited<ReturnType<typeof getCurrentUser>>>}) {
+async function DashboardOverview({current,tour=false}:{current:NonNullable<Awaited<ReturnType<typeof getCurrentUser>>>;tour?:boolean}) {
   const user={id:current.id}
   // Keep identity visible independently from the data-heavy overview below.
   // The authenticated shell can render the user's name without a duplicate profile lookup.
@@ -86,7 +86,7 @@ async function DashboardOverview({current}:{current:NonNullable<Awaited<ReturnTy
 
   return <>{hasLoadError && <p className="rounded-xl border border-amber-500/40 p-4">Een deel van de realtime gegevens is tijdelijk niet beschikbaar. De beschikbare onderdelen blijven bruikbaar.</p>}
     <section className="grid gap-4 md:grid-cols-3">
-      <Card href="/events" icon={CalendarDays} title="Evenementen" value={events.length}/>
+      <div className={tour?"rounded-2xl ring-4 ring-violet-500 ring-offset-2 ring-offset-background":""}><Card href={tour?"/events?tour=1":"/events"} icon={CalendarDays} title="Evenementen" value={tour?1:events.length}/></div>
       <AssignedEventOnly available={hasEventAssignment}><Card href="/workplaces" icon={Clock3} title="Werkplaatsen & shifts" value={shifts.length}/></AssignedEventOnly>
       {hasActiveIncidentContext && <ManagerOnly><Card href="/incidents" icon={AlertTriangle} title="Open incidenten" value={activeIncidentCount}/></ManagerOnly>}
     </section>
@@ -131,7 +131,7 @@ async function DashboardOverview({current}:{current:NonNullable<Awaited<ReturnTy
     <section>
       <h2 className="mb-3 text-lg font-bold">Komende evenementen</h2>
       <div className="grid gap-3">
-        {events.length ? events.slice(0, 3).map(event => <Link href="/events" key={event.id} className="flex items-center justify-between rounded-2xl border border-border bg-card p-4"><div><div className="font-bold">{event.name}</div><div className="flex gap-2 text-sm text-muted-foreground"><MapPin className="h-4 w-4"/>{event.venue || 'Locatie nog niet ingesteld'}</div></div><ArrowRight className="h-5 w-5"/></Link>) : <div className="rounded-2xl border border-dashed p-8 text-center text-muted-foreground">Geen evenementen beschikbaar.</div>}
+        {tour ? <Link href="/events?tour=1" className="flex items-center justify-between rounded-2xl border border-violet-500 bg-card p-4 ring-4 ring-violet-500/70 ring-offset-2 ring-offset-background"><div><div className="font-bold">UpTillDawn Training Night</div><div className="flex gap-2 text-sm text-muted-foreground"><MapPin className="h-4 w-4"/>Training Venue</div></div><ArrowRight className="h-5 w-5"/></Link> : events.length ? events.slice(0, 3).map(event => <Link href="/events" key={event.id} className="flex items-center justify-between rounded-2xl border border-border bg-card p-4"><div><div className="font-bold">{event.name}</div><div className="flex gap-2 text-sm text-muted-foreground"><MapPin className="h-4 w-4"/>{event.venue || 'Locatie nog niet ingesteld'}</div></div><ArrowRight className="h-5 w-5"/></Link>) : <div className="rounded-2xl border border-dashed p-8 text-center text-muted-foreground">Geen evenementen beschikbaar.</div>}
       </div>
     </section>
 </>
@@ -140,7 +140,7 @@ async function DashboardOverview({current}:{current:NonNullable<Awaited<ReturnTy
 export default async function Dashboard({searchParams}:{searchParams?:Promise<{tour?:string}>}) {
   const current=await getCurrentUser()
   if(!current)return null
-  if(searchParams)await searchParams
+  const params=searchParams?await searchParams:{}
   if(current.isAdmin)redirect('/admin')
   return <main className="mx-auto max-w-7xl space-y-7 p-4 pb-28 md:p-8">
     <div>
@@ -149,7 +149,7 @@ export default async function Dashboard({searchParams}:{searchParams?:Promise<{t
       <p className="text-muted-foreground">Je operationele personeelsoverzicht.</p>
     </div>
     <Suspense fallback={<section className="rounded-2xl border border-dashed p-6 text-sm text-muted-foreground">Operationeel overzicht laden…</section>}>
-      <DashboardOverview current={current}/>
+      <DashboardOverview current={current} tour={params.tour==='1'}/>
     </Suspense>
   </main>
 }
