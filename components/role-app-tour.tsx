@@ -279,7 +279,7 @@ export function RoleAppTour(){
     if(!open||!shown)return
     const wanted=step?.route?.split("?")[0]
     if(wanted&&pathname!==wanted){
-      router.push(step!.route!)
+      router.push(step.route)
       sessionStorage.setItem("uptilldawn-tour-preview-route","1")
       return
     }
