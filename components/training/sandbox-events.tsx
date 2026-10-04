@@ -1,12 +1,10 @@
 "use client"
 import {useEffect,useState} from "react"
-import {useRouter} from "next/navigation"
 import {LANGUAGE_APPLIED_EVENT,parseUiLocale} from "@/lib/locale-preferences"
 type L="nl"|"en"|"fr"|"de"
 const tr=(l:L,nl:string,en:string,fr:string,de:string)=>({nl,en,fr,de}[l])
 const KEY="uptilldawn-training-workflow-v3"
 export function SandboxEvents(){
- const router=useRouter()
  const initial=()=>{if(typeof window==="undefined")return {eventOpened:false,availability:false};try{return JSON.parse(sessionStorage.getItem(KEY)||"{}")}catch{return {eventOpened:false,availability:false}}}
  const [l,setL]=useState<L>("nl"),[open,setOpen]=useState(()=>!!initial().eventOpened),[saved,setSaved]=useState(()=>!!initial().availability),[eventChoice,setEventChoice]=useState<"yes"|"no">("yes"),[setupChoice,setSetupChoice]=useState<"yes"|"no">("yes"),[breakdownChoice,setBreakdownChoice]=useState<"yes"|"no">("no"),[help,setHelp]=useState("")
  useEffect(()=>{const apply=()=>setL((parseUiLocale(document.documentElement.lang)||"nl") as L);apply();addEventListener(LANGUAGE_APPLIED_EVENT,apply);return()=>removeEventListener(LANGUAGE_APPLIED_EVENT,apply)},[])
@@ -26,7 +24,7 @@ export function SandboxEvents(){
       <fieldset className="space-y-2"><legend className="text-sm font-semibold">{tr(l,"Opbouw","Setup","Montage","Aufbau")}</legend><label className="flex items-center gap-2"><input name="training-setup" checked={setupChoice==="yes"} onChange={()=>setSetupChoice("yes")} type="radio"/>{tr(l,"Ja","Yes","Oui","Ja")}</label><label className="flex items-center gap-2"><input name="training-setup" checked={setupChoice==="no"} onChange={()=>setSetupChoice("no")} type="radio"/>{tr(l,"Nee","No","Non","Nein")}</label></fieldset>
       <fieldset className="space-y-2"><legend className="text-sm font-semibold">{tr(l,"Afbouw","Breakdown","Démontage","Abbau")}</legend><label className="flex items-center gap-2"><input name="training-breakdown" checked={breakdownChoice==="yes"} onChange={()=>setBreakdownChoice("yes")} type="radio"/>{tr(l,"Ja","Yes","Oui","Ja")}</label><label className="flex items-center gap-2"><input name="training-breakdown" checked={breakdownChoice==="no"} onChange={()=>setBreakdownChoice("no")} type="radio"/>{tr(l,"Nee","No","Non","Nein")}</label></fieldset>
       <label className="grid gap-1 text-sm md:col-span-3">{tr(l,"Reden bij afmelding","Reason when declining","Raison en cas de refus","Grund bei Absage")}<textarea readOnly className="rounded-lg border bg-background p-3"/></label>
-      <button type="button" onClick={()=>{setSaved(true);persist({availability:true,assigned:true});router.push("/workplaces?tour=1")}} className="rounded-xl bg-violet-600 p-3 font-bold text-white md:col-span-3">{tr(l,"BESCHIKBAARHEID OPSLAAN","SAVE AVAILABILITY","ENREGISTRER LA DISPONIBILITÉ","VERFÜGBARKEIT SPEICHERN")}</button>
+      <button type="button" onClick={()=>{setSaved(true);persist({availability:true,assigned:true,navTarget:"workplaces"});dispatchEvent(new CustomEvent("uptilldawn-training-nav-target",{detail:{target:"workplaces"}}));setHelp(tr(l,"Beschikbaarheid opgeslagen. Open nu eerst de extra navigatie met het pijltje onderaan.","Availability saved. First open the extra navigation using the arrow at the bottom.","Disponibilité enregistrée. Ouvrez d’abord la navigation supplémentaire avec la flèche en bas.","Verfügbarkeit gespeichert. Öffne zuerst die zusätzliche Navigation mit dem Pfeil unten."))}} className="rounded-xl bg-violet-600 p-3 font-bold text-white md:col-span-3">{tr(l,"BESCHIKBAARHEID OPSLAAN","SAVE AVAILABILITY","ENREGISTRER LA DISPONIBILITÉ","VERFÜGBARKEIT SPEICHERN")}</button>
      </div>
     </section>
    </div>
