@@ -205,7 +205,6 @@ export function RoleAppTour(){
   const [choice,setChoice]=useState(false)
   const [index,setIndex]=useState(0)
   const [insideIndex,setInsideIndex]=useState(-1)
-  const [anchor,setAnchor]=useState<{top:number;left:number;width:number;height:number}|null>(null)
   // Keep SSR and the first hydration render identical. Device/manual locale is
   // applied only after mount; this removes the React #418 hydration mismatch.
   const [locale,setLocale]=useState<ExtendedUiLocale>("nl")
@@ -275,38 +274,14 @@ export function RoleAppTour(){
   },[loading,role,router,user])
 
   useEffect(()=>{
-    document.querySelectorAll("[data-upt-tour-highlight]").forEach(el=>el.removeAttribute("data-upt-tour-highlight"))
-    if(!open||!shown)return
-    const wanted=step?.route?.split("?")[0]
-    if(step?.route&&wanted&&pathname!==wanted){
+    if(!open||!step)return
+    const wanted=step.route?.split("?")[0]
+    if(step.route&&wanted&&pathname!==wanted){
       router.push(step.route)
       sessionStorage.setItem("uptilldawn-tour-preview-route","1")
-      return
     }
-    let target:HTMLElement|null=null
-    let raf=0
-    const update=()=>{
-      if(!target)return
-      const r=target.getBoundingClientRect()
-      setAnchor({top:r.top,left:r.left,width:r.width,height:r.height})
-    }
-    const timer=window.setTimeout(()=>{
-      setAnchor(null)
-      target=(document.querySelector(shown.selector)||document.querySelector("main")) as HTMLElement|null
-      if(!target)return
-      target.setAttribute("data-upt-tour-highlight","true")
-      target.scrollIntoView({block:"center",behavior:"smooth"})
-      window.setTimeout(update,260)
-      update()
-    },120)
-    const onMove=()=>{cancelAnimationFrame(raf);raf=requestAnimationFrame(update)}
-    addEventListener("resize",onMove);addEventListener("scroll",onMove,true)
-    return()=>{
-      window.clearTimeout(timer);cancelAnimationFrame(raf)
-      removeEventListener("resize",onMove);removeEventListener("scroll",onMove,true)
-      target?.removeAttribute("data-upt-tour-highlight")
-    }
-  },[index,insideIndex,open,pathname,router,shown,step])
+  },[index,open,pathname,router,step])
+
 
   if(!user||!role||!activeRole)return null
 
@@ -345,41 +320,12 @@ export function RoleAppTour(){
       </section>
     </div>}
 
-    {open&&shown&&<div data-no-translate className="fixed inset-0 z-[140] pointer-events-none" aria-live="polite">
-      <div className="absolute inset-0 bg-black/35"/>
-      {anchor&&<div className="absolute rounded-2xl ring-4 ring-violet-500 ring-offset-4 ring-offset-background/20 shadow-[0_0_0_9999px_rgba(0,0,0,.18)] transition-all duration-200" style={{top:Math.max(6,anchor.top-4),left:Math.max(6,anchor.left-4),width:Math.min(innerWidth-12,anchor.width+8),height:anchor.height+8}}/>}
-      <section
-        className="pointer-events-auto absolute w-[min(15.5rem,calc(100vw-2rem))] rounded-2xl border border-violet-500/30 bg-background/90 p-2 shadow-lg backdrop-blur-md"
-        style={anchor?(()=>{
-          const w=Math.min(248,innerWidth-32),h=126,gap=8
-          const below=anchor.top+anchor.height+gap
-          const top=below+h<innerHeight-12?below:Math.max(12,anchor.top-h-gap)
-          const left=Math.max(12,Math.min(innerWidth-w-12,anchor.left+anchor.width/2-w/2))
-          return {top,left,maxHeight:"min(36vh,220px)",overflowY:"auto"}
-        })():{left:12,bottom:"calc(4.75rem + env(safe-area-inset-bottom))"}}
-      >
-        <div className="flex items-center gap-2">
-          <p className="text-[11px] font-black uppercase tracking-[.14em] text-violet-400">{resolve(UI_COPY.tour)} · {index+1}/{steps.length}{insideIndex>=0&&step?.inside?.length?" · "+(insideIndex+1)+"/"+step.inside.length:""}</p>
-          <button onClick={finish} className="ml-auto text-xs font-bold text-muted-foreground">{resolve(UI_COPY.skip)}</button>
-        </div>
-        <h2 className="mt-1 text-[13px] font-black leading-4">{resolve(shown.heading)}</h2>
-        <p className="mt-1 text-[11px] leading-[15px] text-muted-foreground">{resolve(shown.body)}</p>
-        <div className="mt-2 flex justify-end gap-1.5">
-          {(index>0||insideIndex>=0)&&<button onClick={()=>{
-            if(insideIndex>0){setInsideIndex(value=>value-1);return}
-            if(insideIndex===0){setInsideIndex(-1);return}
-            setIndex(value=>Math.max(0,value-1));setInsideIndex(-1)
-          }} className="rounded-lg border px-2.5 py-1 text-xs font-bold">{resolve(UI_COPY.back)}</button>}
-          <button onClick={()=>{
-            const details=step?.inside||[]
-            if(insideIndex<0&&details.length){setInsideIndex(0);return}
-            if(insideIndex>=0&&insideIndex<details.length-1){setInsideIndex(value=>value+1);return}
-            setInsideIndex(-1)
-            if(index===steps.length-1)finish()
-            else setIndex(value=>value+1)
-          }} className="rounded-lg bg-violet-600 px-2.5 py-1 text-xs font-black text-white">{resolve(index===steps.length-1&&insideIndex>=(step?.inside?.length||0)-1?UI_COPY.done:UI_COPY.next)}</button>
-        </div>
-      </section>
+    {open&&shown&&<div data-no-translate className="fixed bottom-[calc(4.5rem+env(safe-area-inset-bottom))] right-3 z-[140] pointer-events-auto">
+      <button type="button" onClick={()=>{
+        setInsideIndex(-1)
+        if(index===steps.length-1)finish()
+        else setIndex(value=>value+1)
+      }} className="rounded-full border border-violet-500/40 bg-background/95 px-4 py-2 text-xs font-black shadow-lg backdrop-blur">{resolve(index===steps.length-1?UI_COPY.done:UI_COPY.next)}</button>
     </div>}
   </>
 }
