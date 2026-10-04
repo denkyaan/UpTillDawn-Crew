@@ -120,7 +120,7 @@ export function MobileBottomNav({
     title={help.description}
     aria-description={help.description}
     onClick={()=>{
-      if(tourPreview&&item.key==="workplaces"){try{const s=JSON.parse(sessionStorage.getItem("uptilldawn-training-workflow-v3")||"{}");sessionStorage.setItem("uptilldawn-training-workflow-v3",JSON.stringify({...s,navTarget:null}))}catch{};setTrainingNavTarget(null)}
+      if(tourPreview&&trainingNavTarget===item.key){try{const s=JSON.parse(sessionStorage.getItem("uptilldawn-training-workflow-v3")||"{}");sessionStorage.setItem("uptilldawn-training-workflow-v3",JSON.stringify({...s,navTarget:null}))}catch{};setTrainingNavTarget(null)}
       setExpanded(false)
       if(tourPreview){
         const message=help.description
@@ -165,7 +165,7 @@ export function MobileBottomNav({
      type="button"
      aria-label={expanded?{nl:"Navigatie inklappen",en:"Collapse navigation",fr:"Réduire la navigation",de:"Navigation einklappen"}[trainingLocale]:{nl:"Navigatie uitklappen",en:"Expand navigation",fr:"Développer la navigation",de:"Navigation ausklappen"}[trainingLocale]}
      aria-expanded={expanded}
-     onClick={()=>{setExpanded(value=>!value);if(!expanded&&trainingNavTarget==="workplaces"){const m={nl:"Open nu Werkplaatsen & shifts.",en:"Now open Workplaces & shifts.",fr:"Ouvrez maintenant Postes de travail & shifts.",de:"Öffne jetzt Arbeitsplätze & Schichten."}[trainingLocale];setSandboxHelp(m)}}}
+     onClick={()=>{setExpanded(value=>!value);if(!expanded&&trainingNavTarget){const messages={workplaces:{nl:"Open nu Werkplaatsen & shifts.",en:"Now open Workplaces & shifts.",fr:"Ouvrez maintenant Postes de travail & shifts.",de:"Öffne jetzt Arbeitsplätze & Schichten."},briefings:{nl:"Open nu Briefing.",en:"Now open Briefing.",fr:"Ouvrez maintenant Briefing.",de:"Öffne jetzt Briefing."}};const m=messages[trainingNavTarget as keyof typeof messages]?.[trainingLocale];if(m)setSandboxHelp(m)}}}
      className={cn(
        "flex w-11 shrink-0 items-center justify-center rounded-lg border border-border",
        expanded?"bg-violet-500/10 text-violet-400":"text-muted-foreground",
