@@ -40,6 +40,7 @@ export function MobileBottomNav({
  const pathname=usePathname()
  const [expanded,setExpanded]=useState(false)
  const [tourPreview,setTourPreview]=useState(false)
+ const [sandboxHelp,setSandboxHelp]=useState("")
  const {roles,isAdmin}=useAuth()
  const adminContext=useAdminSelection()
  const roleKey:RoleRuleRole=roles.includes("admin")?"admin":roles.includes("responsible_lead")?"responsible_lead":"staff"
@@ -57,7 +58,10 @@ export function MobileBottomNav({
 
  const hrefFor=(item:NavigationItem)=>{
    const base=item.href==='/'&&isAdmin?'/admin':item.href
-   return isAdmin?adminContext.href(base):base
+   const href=isAdmin?adminContext.href(base):base
+   if(!tourPreview)return href
+   const join=href.includes("?")?"&":"?"
+   return href+join+"tour=1"
  }
  const isActive=(item:NavigationItem)=>{
    const href=hrefFor(item)
@@ -109,7 +113,15 @@ export function MobileBottomNav({
     href={href}
     title={help.description}
     aria-description={help.description}
-    onClick={()=>setExpanded(false)}
+    onClick={(event)=>{
+      setExpanded(false)
+      if(tourPreview){
+        const message=help.description
+        sessionStorage.setItem("uptilldawn-sandbox-help",message)
+        setSandboxHelp(message)
+        dispatchEvent(new CustomEvent("uptilldawn-sandbox-help",{detail:message}))
+      }
+    }}
     className={cn(
       expandedItem
         ?"flex min-h-16 items-center gap-3 rounded-xl px-3 py-2 text-sm font-semibold"
@@ -127,7 +139,7 @@ export function MobileBottomNav({
    </Link>
  }
 
- return <nav aria-label="Mobiele navigatie" className="fixed inset-x-0 bottom-0 z-50 min-h-14 border-t border-border bg-card/95 pb-[env(safe-area-inset-bottom)] backdrop-blur lg:hidden">
+ return <>{tourPreview&&sandboxHelp&&<div data-no-translate className="fixed inset-x-3 bottom-[calc(4.5rem+env(safe-area-inset-bottom))] z-[170] rounded-2xl border border-violet-500/40 bg-background/95 p-4 shadow-2xl backdrop-blur"><p className="text-sm font-bold">{sandboxHelp}</p><button type="button" onClick={()=>setSandboxHelp("")} className="mt-2 rounded-lg border px-3 py-2 text-xs font-bold">OK</button></div>}<nav aria-label="Mobiele navigatie" className="fixed inset-x-0 bottom-0 z-50 min-h-14 border-t border-border bg-card/95 pb-[env(safe-area-inset-bottom)] backdrop-blur lg:hidden">
   {expanded&&
    <div className="absolute inset-x-0 bottom-full max-h-[60dvh] overflow-y-auto border-t border-border bg-card/98 p-3 shadow-2xl">
     <div className="grid grid-cols-2 gap-2">
@@ -155,5 +167,5 @@ export function MobileBottomNav({
     </button>
    }
   </div>
- </nav>
+ </nav></>
 }
