@@ -190,7 +190,7 @@ const tours:Record<UiRole,Step[]>={
   ],
 }
 
-const VERSION=5
+const VERSION=6
 function storageKey(userId:string,role:UiRole){return "uptilldawn-app-tour:"+userId+":"+role+":v"+VERSION}
 
 export function RoleAppTour(){
@@ -205,6 +205,7 @@ export function RoleAppTour(){
   const [choice,setChoice]=useState(false)
   const [index,setIndex]=useState(0)
   const [insideIndex,setInsideIndex]=useState(-1)
+  const [anchor,setAnchor]=useState<{top:number;left:number;width:number;height:number}|null>(null)
   // Keep SSR and the first hydration render identical. Device/manual locale is
   // applied only after mount; this removes the React #418 hydration mismatch.
   const [locale,setLocale]=useState<ExtendedUiLocale>("nl")
@@ -275,21 +276,34 @@ export function RoleAppTour(){
 
   useEffect(()=>{
     document.querySelectorAll("[data-upt-tour-highlight]").forEach(el=>el.removeAttribute("data-upt-tour-highlight"))
+    setAnchor(null)
     if(!open||!shown)return
-    if(step?.route&&pathname!==step.route){
-      router.push(step.route)
+    const wanted=step?.route?.split("?")[0]
+    if(wanted&&pathname!==wanted){
+      router.push(step!.route!)
       sessionStorage.setItem("uptilldawn-tour-preview-route","1")
       return
     }
     let target:HTMLElement|null=null
+    let raf=0
+    const update=()=>{
+      if(!target)return
+      const r=target.getBoundingClientRect()
+      setAnchor({top:r.top,left:r.left,width:r.width,height:r.height})
+    }
     const timer=window.setTimeout(()=>{
       target=(document.querySelector(shown.selector)||document.querySelector("main")) as HTMLElement|null
       if(!target)return
       target.setAttribute("data-upt-tour-highlight","true")
       target.scrollIntoView({block:"center",behavior:"smooth"})
-    },80)
+      window.setTimeout(update,260)
+      update()
+    },120)
+    const onMove=()=>{cancelAnimationFrame(raf);raf=requestAnimationFrame(update)}
+    addEventListener("resize",onMove);addEventListener("scroll",onMove,true)
     return()=>{
-      window.clearTimeout(timer)
+      window.clearTimeout(timer);cancelAnimationFrame(raf)
+      removeEventListener("resize",onMove);removeEventListener("scroll",onMove,true)
       target?.removeAttribute("data-upt-tour-highlight")
     }
   },[index,insideIndex,open,pathname,router,shown,step])
@@ -332,35 +346,38 @@ export function RoleAppTour(){
     </div>}
 
     {open&&shown&&<div data-no-translate className="fixed inset-0 z-[140] pointer-events-none" aria-live="polite">
-      <div className="absolute inset-0 bg-black/20"/>
-      <section className="pointer-events-auto absolute bottom-[calc(4.75rem+env(safe-area-inset-bottom))] left-3 right-3 mx-auto max-h-[40dvh] max-w-md overflow-y-auto rounded-2xl border bg-background/95 p-4 shadow-2xl backdrop-blur lg:bottom-4 lg:left-auto lg:right-4 lg:w-[24rem]">
-        <p className="text-xs font-black uppercase tracking-[.16em] text-violet-400">
-          {resolve(UI_COPY.tour)} · {index+1}/{steps.length}{insideIndex>=0&&step?.inside?.length?" · "+(insideIndex+1)+"/"+step.inside.length:""}
-        </p>
-        <h2 className="mt-1 text-xl font-black">{resolve(shown.heading)}</h2>
-        <p className="mt-2 text-sm leading-6 text-muted-foreground">{resolve(shown.body)}</p>
-        <div className="mt-4 flex items-center gap-2">
-          <button onClick={finish} className="mr-auto text-sm font-bold text-muted-foreground">{resolve(UI_COPY.skip)}</button>
-          {(index>0||insideIndex>=0)&&<button
-            onClick={()=>{
-              if(insideIndex>0){setInsideIndex(value=>value-1);return}
-              if(insideIndex===0){setInsideIndex(-1);return}
-              setIndex(value=>Math.max(0,value-1))
-              setInsideIndex(-1)
-            }}
-            className="rounded-xl border px-3 py-2 font-bold"
-          >{resolve(UI_COPY.back)}</button>}
-          <button
-            onClick={()=>{
-              const details=step?.inside||[]
-              if(insideIndex<0&&details.length){setInsideIndex(0);return}
-              if(insideIndex>=0&&insideIndex<details.length-1){setInsideIndex(value=>value+1);return}
-              setInsideIndex(-1)
-              if(index===steps.length-1)finish()
-              else setIndex(value=>value+1)
-            }}
-            className="rounded-xl bg-violet-600 px-4 py-2 font-black text-white"
-          >{resolve(index===steps.length-1&&insideIndex>=(step?.inside?.length||0)-1?UI_COPY.done:UI_COPY.next)}</button>
+      <div className="absolute inset-0 bg-black/35"/>
+      {anchor&&<div className="absolute rounded-2xl ring-4 ring-violet-500 ring-offset-4 ring-offset-background/20 shadow-[0_0_0_9999px_rgba(0,0,0,.18)] transition-all duration-200" style={{top:Math.max(6,anchor.top-4),left:Math.max(6,anchor.left-4),width:Math.min(innerWidth-12,anchor.width+8),height:anchor.height+8}}/>}
+      <section
+        className="pointer-events-auto absolute w-[min(22rem,calc(100vw-1.5rem))] rounded-2xl border bg-background/95 p-3 shadow-2xl backdrop-blur"
+        style={anchor?(()=>{
+          const w=Math.min(352,innerWidth-24),h=190,gap=14
+          const below=anchor.top+anchor.height+gap
+          const top=below+h<innerHeight-12?below:Math.max(12,anchor.top-h-gap)
+          const left=Math.max(12,Math.min(innerWidth-w-12,anchor.left+anchor.width/2-w/2))
+          return {top,left}
+        })():{left:12,bottom:"calc(4.75rem + env(safe-area-inset-bottom))"}}
+      >
+        <div className="flex items-center gap-2">
+          <p className="text-[11px] font-black uppercase tracking-[.14em] text-violet-400">{resolve(UI_COPY.tour)} · {index+1}/{steps.length}{insideIndex>=0&&step?.inside?.length?" · "+(insideIndex+1)+"/"+step.inside.length:""}</p>
+          <button onClick={finish} className="ml-auto text-xs font-bold text-muted-foreground">{resolve(UI_COPY.skip)}</button>
+        </div>
+        <h2 className="mt-1 text-base font-black">{resolve(shown.heading)}</h2>
+        <p className="mt-1.5 text-sm leading-5 text-muted-foreground">{resolve(shown.body)}</p>
+        <div className="mt-3 flex justify-end gap-2">
+          {(index>0||insideIndex>=0)&&<button onClick={()=>{
+            if(insideIndex>0){setInsideIndex(value=>value-1);return}
+            if(insideIndex===0){setInsideIndex(-1);return}
+            setIndex(value=>Math.max(0,value-1));setInsideIndex(-1)
+          }} className="rounded-lg border px-3 py-1.5 text-sm font-bold">{resolve(UI_COPY.back)}</button>}
+          <button onClick={()=>{
+            const details=step?.inside||[]
+            if(insideIndex<0&&details.length){setInsideIndex(0);return}
+            if(insideIndex>=0&&insideIndex<details.length-1){setInsideIndex(value=>value+1);return}
+            setInsideIndex(-1)
+            if(index===steps.length-1)finish()
+            else setIndex(value=>value+1)
+          }} className="rounded-lg bg-violet-600 px-3 py-1.5 text-sm font-black text-white">{resolve(index===steps.length-1&&insideIndex>=(step?.inside?.length||0)-1?UI_COPY.done:UI_COPY.next)}</button>
         </div>
       </section>
     </div>}
