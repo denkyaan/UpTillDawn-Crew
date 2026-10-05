@@ -161,3 +161,57 @@ test('new visible UI copy is guarded by static four-language coverage tests', as
   assert.match(coverage, /every static UI string has NL\/FR\/EN\/DE translation coverage/)
   assert.match(coverage, /server action user messages also require four-language coverage/)
 })
+
+
+test('database-driven workplace and notification copy is localized in all four product languages', async () => {
+  const [complete,runtime,push]=await Promise.all([
+    readFile(new URL('../lib/ui-translation-complete.ts', import.meta.url), 'utf8'),
+    readFile(new URL('../lib/ui-translation-runtime.ts', import.meta.url), 'utf8'),
+    readFile(new URL('../supabase/functions/push-notification/i18n.ts', import.meta.url), 'utf8'),
+  ])
+
+  for(const label of [
+    'Backstage Management',
+    'Allrounder',
+    'Vervoer van artiesten, crew en andere toegewezen personen van en naar het evenement.',
+    'Pauzetegoed bijna op',
+    'Dienst gestart',
+    'No-show gedetecteerd',
+    'Werkplek onderbezet',
+    'HELP ESCALATIE',
+    'Nieuwe accountgoedkeuring',
+    'Account goedgekeurd',
+    'Shift binnen 24 uur',
+    'Vertrek voor ophaling',
+    'Driver · artiest aangekomen',
+    'Backstage opvolging vereist',
+  ]){
+    assert.ok(complete.includes(`'${label}': { fr:`), `${label} must have FR/EN/DE catalog coverage`)
+  }
+
+  for(const translator of [
+    'translateShiftReminder',
+    'translateUnderstaffing',
+    'translateAccountApproval',
+    'translateEventReportReady',
+    'translateInventoryQuantity',
+    'translateDriverDeparture',
+    'translateDriverArrival',
+    'translateAdminLockout',
+  ]) assert.ok(runtime.includes(translator), `${translator} must be active in the runtime translator`)
+
+  for(const marker of [
+    'Pauzetegoed bijna op',
+    'No-show gedetecteerd',
+    'Nieuwe accountgoedkeuring',
+    'Shift binnen 24 uur',
+    'Vertrek voor ophaling',
+    'Driver · artiest aangekomen',
+    'start binnen',
+    'Actieve bezetting op',
+    'Nieuw account wacht op goedkeuring',
+    'rit ±',
+    'Driver is aangekomen op het evenement met artiest',
+    'mislukte admin-loginpogingen',
+  ]) assert.ok(push.includes(marker), `${marker} must be covered by push localization`)
+})
