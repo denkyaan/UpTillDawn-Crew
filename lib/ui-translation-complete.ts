@@ -861,7 +861,6 @@ const ROWS: Record<string, Row> = {
   'Je account is goedgekeurd. Je hebt nu toegang tot Up Till Dawn Crew.': { fr: 'Votre compte est approuvé. Vous avez maintenant accès à Up Till Dawn Crew.', en: 'Your account has been approved. You now have access to Up Till Dawn Crew.', de: 'Dein Konto wurde genehmigt. Du hast jetzt Zugriff auf Up Till Dawn Crew.' },
   'Shift binnen 24 uur': { fr: 'Service dans les 24 heures', en: 'Shift within 24 hours', de: 'Schicht innerhalb von 24 Stunden' },
   'Shift binnen 2 uur': { fr: 'Service dans les 2 heures', en: 'Shift within 2 hours', de: 'Schicht innerhalb von 2 Stunden' },
-  'Shift start binnenkort': { fr: 'Le service commence bientôt', en: 'Shift starts soon', de: 'Schicht beginnt bald' },
   'Materiaalretour gemeld': { fr: 'Retour de matériel signalé', en: 'Material return reported', de: 'Materialrückgabe gemeldet' },
   'Beschadigd materiaal gemeld': { fr: 'Matériel endommagé signalé', en: 'Damaged material reported', de: 'Beschädigtes Material gemeldet' },
   'Vermist materiaal gemeld': { fr: 'Matériel manquant signalé', en: 'Missing material reported', de: 'Fehlendes Material gemeldet' },
