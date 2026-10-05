@@ -15,7 +15,7 @@ concurrency:
 
 jobs:
   build:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-26.04
     env:
       # Placeholder public values are sufficient for compile-time validation.
       # Real production values are configured separately in Cloudflare.
@@ -69,7 +69,7 @@ jobs:
         run: npx wrangler deploy --dry-run
 
   browser-bots:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-26.04
     timeout-minutes: 30
     env:
       NEXT_PUBLIC_APP_URL: http://127.0.0.1:3000
@@ -250,7 +250,7 @@ jobs:
         if: always()
         run: npx --yes supabase@2.117.0 stop --no-backup
   fresh-install:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-26.04
     timeout-minutes: 30
     steps:
       - name: Checkout
