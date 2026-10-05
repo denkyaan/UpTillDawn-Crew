@@ -3,7 +3,7 @@
 import {useEffect,useMemo,useState} from "react"
 import {useAuth,type UiRole} from "@/lib/providers"
 import {activeUiLocale,LANGUAGE_APPLIED_EVENT,type SupportedUiLocale} from "@/lib/locale-preferences"
-import {getTourChapters,tourProgressKey,TOUR_VERSION,type TourMode,type TourRole,type TourScenario} from "@/lib/tour-training"
+import {getTourChapters,tourProgressKey,TOUR_VERSION,TOUR_WORKFLOW_KEY,type TourMode,type TourRole,type TourScenario} from "@/lib/tour-training"
 
 type Progress={version:number;activeKey:string;completed:string[];skipped:string[];paused:boolean}
 const c=(locale:SupportedUiLocale,nl:string,en:string,fr:string,de:string)=>({nl,en,fr,de}[locale])
@@ -34,6 +34,15 @@ export function TourHelpIndex(){
     if(targetRole!==roles[0]&&realIsAdmin)await setRoleMode(targetRole)
     const workplace=options?.workplace??preferred
     if(workplace){sessionStorage.setItem("uptilldawn-training-preferred-workplace",workplace);setPreferred(workplace)}
+    if(options?.scenario){
+      let workflow:Record<string,unknown>={}
+      try{workflow=JSON.parse(sessionStorage.getItem(TOUR_WORKFLOW_KEY)||"{}")}catch{}
+      const phase=options.scenario==="break"?"break":options.scenario==="post_event"?"finished":options.scenario==="live_event"?"working":"assigned"
+      const seeded=options.scenario==="pre_event"
+        ?{eventOpened:false,availability:false,assigned:false,briefingRead:false,operationPhase:phase,navTarget:"events"}
+        :{...workflow,eventOpened:true,availability:true,assigned:true,briefingRead:true,operationPhase:phase,navTarget:null,trainingComplete:false}
+      sessionStorage.setItem(TOUR_WORKFLOW_KEY,JSON.stringify(seeded))
+    }
     const nextRole=targetRole as TourRole
     const nextChapters=getTourChapters(nextRole,{driver:/driver/i.test(workplace),entrance:/inkom|entrance|guest/i.test(workplace),mode:options?.mode||"full"})
     const key=tourProgressKey(user.id,nextRole)
