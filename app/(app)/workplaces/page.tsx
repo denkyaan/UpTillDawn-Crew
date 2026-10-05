@@ -62,6 +62,7 @@ export default async function Page({searchParams}:{searchParams?:Promise<{event?
   let claimableShifts:ClaimableShift[]=[]
   const replacementCandidatesByShift=new Map<string,ShiftReplacementCandidate[]>()
   const swapCandidatesByShift=new Map<string,ShiftSwapCandidate[]>()
+  const driverArtistsByEvent=new Map<string,Array<{id:string;name:string}>>()
   let shiftChangeError=false
 
   if(isAdmin){
@@ -73,6 +74,7 @@ export default async function Page({searchParams}:{searchParams?:Promise<{event?
       {data:profileRows},
       {data:responsibleRows},
       {data:availabilityRows},
+      {data:artistRows},
     ]=await Promise.all([
       s.from('events').select('id,name,start_at,end_at').neq('status','archived').order('start_at'),
       s.from('workplace_catalog').select('id,name,description,sort_order').eq('is_active',true).order('sort_order').order('name'),
@@ -81,6 +83,7 @@ export default async function Page({searchParams}:{searchParams?:Promise<{event?
       s.from('profiles').select('id,full_name,role').eq('approved',true).order('full_name'),
       s.from('responsible_assignments').select('workplace_id,user_id'),
       s.from('event_availability').select('event_id,user_id,response,setup_available,breakdown_available').or('response.eq.can,setup_available.eq.true,breakdown_available.eq.true'),
+      s.from('event_guestlist_entries').select('id,event_id,name').eq('entry_type','artist').eq('is_active',true).order('name'),
     ])
     if(eventRowsError)throw new Error('Evenementen konden niet worden geladen: '+eventRowsError.message)
     if(workplaceRowsError)throw new Error('Werkplaatsen konden niet worden geladen: '+workplaceRowsError.message)
@@ -105,6 +108,7 @@ export default async function Page({searchParams}:{searchParams?:Promise<{event?
       confirmedAt:shift.confirmed_at||null,
       overlapAllowed:Boolean(shift.overlap_allowed),
     }))
+    for(const artist of artistRows||[]){const current=driverArtistsByEvent.get(artist.event_id)||[];current.push({id:artist.id,name:artist.name});driverArtistsByEvent.set(artist.event_id,current)}
     for(const availability of availabilityRows||[]){
       const person=peopleById.get(availability.user_id)
       if(!person)continue
@@ -491,6 +495,7 @@ export default async function Page({searchParams}:{searchParams?:Promise<{event?
               replacementCandidatesByShift={replacementCandidatesByShift}
               swapCandidatesByShift={swapCandidatesByShift}
               openRequestShiftIds={shiftChangeRequests.filter(row=>row.status==='pending'&&row.requesterId===user.id).map(row=>row.shiftId)}
+              driverArtists={driverArtistsByEvent.get(workplace.event_id)||[]}
             />
             {staffingConfigured&&<section className="rounded-xl border p-3">
               <div className="flex flex-wrap items-center justify-between gap-2">
