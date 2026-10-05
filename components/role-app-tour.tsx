@@ -147,7 +147,7 @@ const PAGE_SELECTORS:Record<string,string>={
 
 const ROLE_FEATURES:Record<UiRole,string[]>={
   employee:["overview","events","operations","workplaces","briefings","tasks","inventory","guestlist","sales","chat","crew","incidents","settings"],
-  responsible_lead:["overview","events","operations","workplaces","briefings","tasks","inventory","guestlist","sales","chat","crew","incidents","settings"],
+  responsible_lead:["overview","events","operations","workplaces","briefings","tasks","inventory","guestlist","chat","crew","incidents","settings"],
   admin:["overview","events","operations","workplaces","briefings","tasks","inventory","guestlist","sales","personnel","crew","chat","incidents","exports","platform","settings"],
 }
 
