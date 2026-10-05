@@ -18,7 +18,7 @@ test('mobile bottom navigation and floating chat remain mounted in the authentic
   ])
   assert.match(shell,/<MobileBottomNav/)
   assert.match(shell,/<FloatingChatButton/)
-  assert.match(shell,/const showFloatingChat=isAdmin\|\|operationalMode/)
+  assert.match(shell,/const showFloatingChat=showChat/)\n  assert.match(shell,/const showChat=feature\("chat",true\)&&!pathname\.startsWith\("\/chat"\)/)
   assert.match(nav,/fixed inset-x-0 bottom-0/)
   assert.match(nav,/lg:hidden/) 
   assert.match(nav,/min-h-14/)
