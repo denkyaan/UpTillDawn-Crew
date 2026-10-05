@@ -4,6 +4,7 @@ type Row = { fr: string; en: string; de: string }
 // Canonical Dutch UI strings that were historically present only in the NL/FR/EN table.
 // Keep every row complete: missing translations must never silently fall back to Dutch.
 const ROWS: Record<string, Row> = {
+  'Admin-login tijdelijk geblokkeerd': { fr: 'Connexion administrateur temporairement bloquée', en: 'Admin login temporarily blocked', de: 'Admin-Anmeldung vorübergehend gesperrt' },
   'Inkom': { fr: 'Entrée', en: 'Entrance', de: 'Eingang' },
   'Ticket scan': { fr: 'Contrôle des billets', en: 'Ticket scan', de: 'Ticketkontrolle' },
   'Ticket Scan': { fr: 'Contrôle des billets', en: 'Ticket Scan', de: 'Ticketkontrolle' },
