@@ -241,11 +241,7 @@ function DriverControls({s,busy,run,activeSessionId,activeDriving,summary,tasks,
   if(error)throw error
   if(selected)await setStatus("completed")
  }
- async function returning(){
-  if(!selected)return
-  const eta=new Date(Date.now()+(selected.estimated_drive_minutes||0)*60_000).toISOString()
-  await setStatus("returning",eta)
- }
+ async function returning(){if(selected)await setStatus("returning")}
  return <div className="space-y-3 rounded-xl border border-violet-500/50 bg-violet-500/5 p-4">
   <div><p className="font-black">DRIVER</p><p className="text-sm text-muted-foreground">{activeDriving?tx("Rijtijd actief · eventtijd staat automatisch stil.","Driving time active · event time is automatically paused.","Temps de conduite actif · le temps événement est automatiquement suspendu.","Fahrzeit aktiv · Eventzeit wird automatisch pausiert."):tx("Eventtijd actief.","Event time active.","Temps événement actif.","Eventzeit aktiv.")}</p></div>
   {summary&&<div className="grid grid-cols-3 gap-2 text-center text-sm"><div className="rounded-lg border p-2"><b>{formatDigital(summary.event_seconds)}</b><br/>{tx("Event","Event","Événement","Event")}</div><div className="rounded-lg border p-2"><b>{formatDigital(summary.driving_seconds)}</b><br/>Driving</div><div className="rounded-lg border p-2"><b>{Number(summary.total_km||0).toFixed(1)} km</b><br/>{tx("Kilometers","Kilometres","Kilomètres","Kilometer")}</div></div>}
