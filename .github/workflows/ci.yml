@@ -15,13 +15,16 @@ concurrency:
 
 jobs:
   build:
-    runs-on: ubuntu-26.04
+    runs-on: ubuntu-24.04
+    timeout-minutes: 60
     env:
-      # Placeholder public values are sufficient for compile-time validation.
-      # Real production values are configured separately in Cloudflare.
+      # Placeholder public values are sufficient for the first compile-time validation.
+      # The browser phase replaces these through GITHUB_ENV with the isolated local Supabase values.
       NEXT_PUBLIC_SUPABASE_URL: https://placeholder.supabase.co
       NEXT_PUBLIC_SUPABASE_ANON_KEY: placeholder-anon-key
-      NEXT_PUBLIC_APP_URL: http://localhost:3000
+      NEXT_PUBLIC_APP_URL: http://127.0.0.1:3000
+      BOT_TEST_BASE_URL: http://127.0.0.1:3000
+      UPT_E2E_SESSION_BRIDGE: '1'
     steps:
       - name: Checkout
         uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5.1.0
@@ -67,27 +70,6 @@ jobs:
 
       - name: Wrangler deployment dry-run
         run: npx wrangler deploy --dry-run
-
-  browser-bots:
-    runs-on: ubuntu-22.04
-    timeout-minutes: 30
-    env:
-      NEXT_PUBLIC_APP_URL: http://127.0.0.1:3000
-      BOT_TEST_BASE_URL: http://127.0.0.1:3000
-      UPT_E2E_SESSION_BRIDGE: '1'
-    steps:
-      - name: Checkout
-        uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5.1.0
-
-      - name: Set up Node.js
-        uses: actions/setup-node@a0853c24544627f65ddf259abe73b1d18a591444 # v5.0.0
-        with:
-          node-version: 24
-          cache: npm
-
-      - name: Install application
-        run: npm ci
-
       - name: Install PostgreSQL client
         run: sudo apt-get update && sudo apt-get install -y postgresql-client
 
@@ -101,6 +83,89 @@ jobs:
         run: npx --yes supabase@2.117.0 start -x studio,imgproxy,inbucket,edge-runtime,logflare,vector,realtime
 
       - name: Replay every migration from zero
+        run: npx --yes supabase@2.117.0 db reset --local --no-seed
+
+      - name: Run SQL regression suites
+        env:
+          PGURL: postgresql://postgres:postgres@127.0.0.1:54322/postgres
+        run: |
+          set -euo pipefail
+          for file in tests/sql/*.sql; do
+            echo "::group::$file"
+            psql "$PGURL" -v ON_ERROR_STOP=1 -f "$file"
+            echo "::endgroup::"
+          done
+
+      - name: Full event lifecycle release gate
+        env:
+          PGURL: postgresql://postgres:postgres@127.0.0.1:54322/postgres
+        run: |
+          set -euo pipefail
+          lifecycle_suites=(
+            tests/sql/15-bot-full-event.sql
+            tests/sql/qr-attendance-workflow.sql
+            tests/sql/operational-security.sql
+            tests/sql/chat-lifecycle.sql
+            tests/sql/queued-upload-security.sql
+            tests/sql/timesheet-lifecycle.sql
+            tests/sql/release-access-matrix.sql
+            tests/sql/privilege-matrix.sql
+            tests/sql/responsible-read-scope.sql
+            tests/sql/responsible-event-selection-guard.sql
+            tests/sql/offline-revocation-replay.sql
+            tests/sql/offline-time-dependencies.sql
+            tests/sql/storage-security.sql
+            tests/sql/new-feature-security.sql
+          )
+          for file in "${lifecycle_suites[@]}"; do
+            echo "::group::lifecycle ${file}"
+            psql "$PGURL" -v ON_ERROR_STOP=1 -f "$file"
+            echo "::endgroup::"
+          done
+          {
+            echo "## Full event lifecycle gate"
+            echo "- 15-actor event/workplace/shift/availability: PASS"
+            echo "- QR check-in/check-out + approval: PASS"
+            echo "- Timesheet submit/reject/resubmit/approve/lock + audit: PASS"
+            echo "- Briefing acknowledgement + governed break lifecycle: PASS"
+            echo "- Incident/offline security semantics: PASS"
+            echo "- Chat lifecycle + 3-day retention window: PASS"
+            echo "- Chat/incident attachment idempotency: PASS"
+            echo "- Staff/Admin/Responsible permission boundaries: PASS"
+            echo "- Responsible workplace isolation: PASS"
+            echo "- Unapproved/anonymous and revoked-access denial: PASS"
+            echo "- Offline replay/time dependency security: PASS"
+            echo "- Storage and new-feature security surfaces: PASS"
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Verify generated database types
+        run: |
+          npx --yes supabase@2.117.0 gen types typescript --local --schema public > /tmp/crew-database.ts
+          node --input-type=module <<'NODE'
+          import { readFileSync, writeFileSync } from 'node:fs'
+          const normalize = (source) => source
+            .replace(
+              /  \/\/ Allows to automatically instantiate createClient with right options\n  \/\/ instead of createClient<Database, \{ PostgrestVersion: 'XX' \}>\(URL, KEY\)\n  __InternalSupabase: \{\n    PostgrestVersion: "[^"]+"\n  \}\n/,
+              '',
+            )
+            .trimEnd() + '\n'
+          writeFileSync('/tmp/expected-crew-database.ts', normalize(readFileSync('types/crew-database.ts', 'utf8')))
+          writeFileSync('/tmp/actual-crew-database.ts', normalize(readFileSync('/tmp/crew-database.ts', 'utf8')))
+          NODE
+          diff -u /tmp/expected-crew-database.ts /tmp/actual-crew-database.ts
+
+      - name: Record replay proof
+        run: |
+          migration_count=$(find supabase/migrations -maxdepth 1 -type f -name '*.sql' | wc -l | tr -d ' ')
+          sql_suite_count=$(find tests/sql -maxdepth 1 -type f -name '*.sql' | wc -l | tr -d ' ')
+          {
+            echo "## Fresh-install database proof"
+            echo "- Source commit: \`${GITHUB_SHA}\`"
+            echo "- Migrations replayed: ${migration_count}"
+            echo "- SQL suites: ${sql_suite_count}"
+            echo "- Generated types: exact match"
+          } >> "$GITHUB_STEP_SUMMARY"
+      - name: Reset isolated database for browser fixtures
         run: npx --yes supabase@2.117.0 db reset --local --no-seed
 
       - name: Export isolated bot credentials
@@ -245,117 +310,6 @@ jobs:
       - name: Stop application
         if: always()
         run: kill $(cat /tmp/uptilldawn-bot-app.pid) 2>/dev/null || true
-
-      - name: Stop isolated Supabase stack
-        if: always()
-        run: npx --yes supabase@2.117.0 stop --no-backup
-  fresh-install:
-    runs-on: ubuntu-26.04
-    timeout-minutes: 30
-    steps:
-      - name: Checkout
-        uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5.1.0
-
-      - name: Set up Node.js
-        uses: actions/setup-node@a0853c24544627f65ddf259abe73b1d18a591444 # v5.0.0
-        with:
-          node-version: 24
-
-      - name: Install PostgreSQL client
-        run: sudo apt-get update && sudo apt-get install -y postgresql-client
-
-      - name: Initialize isolated Supabase config
-        run: |
-          if [ ! -f supabase/config.toml ]; then
-            npx --yes supabase@2.117.0 init
-          fi
-
-      - name: Start isolated Supabase stack
-        run: npx --yes supabase@2.117.0 start -x studio,imgproxy,inbucket,edge-runtime,logflare,vector,realtime
-
-      - name: Replay every migration from zero
-        run: npx --yes supabase@2.117.0 db reset --local --no-seed
-
-      - name: Run SQL regression suites
-        env:
-          PGURL: postgresql://postgres:postgres@127.0.0.1:54322/postgres
-        run: |
-          set -euo pipefail
-          for file in tests/sql/*.sql; do
-            echo "::group::$file"
-            psql "$PGURL" -v ON_ERROR_STOP=1 -f "$file"
-            echo "::endgroup::"
-          done
-
-      - name: Full event lifecycle release gate
-        env:
-          PGURL: postgresql://postgres:postgres@127.0.0.1:54322/postgres
-        run: |
-          set -euo pipefail
-          lifecycle_suites=(
-            tests/sql/15-bot-full-event.sql
-            tests/sql/qr-attendance-workflow.sql
-            tests/sql/operational-security.sql
-            tests/sql/chat-lifecycle.sql
-            tests/sql/queued-upload-security.sql
-            tests/sql/timesheet-lifecycle.sql
-            tests/sql/release-access-matrix.sql
-            tests/sql/privilege-matrix.sql
-            tests/sql/responsible-read-scope.sql
-            tests/sql/responsible-event-selection-guard.sql
-            tests/sql/offline-revocation-replay.sql
-            tests/sql/offline-time-dependencies.sql
-            tests/sql/storage-security.sql
-            tests/sql/new-feature-security.sql
-          )
-          for file in "${lifecycle_suites[@]}"; do
-            echo "::group::lifecycle ${file}"
-            psql "$PGURL" -v ON_ERROR_STOP=1 -f "$file"
-            echo "::endgroup::"
-          done
-          {
-            echo "## Full event lifecycle gate"
-            echo "- 15-actor event/workplace/shift/availability: PASS"
-            echo "- QR check-in/check-out + approval: PASS"
-            echo "- Timesheet submit/reject/resubmit/approve/lock + audit: PASS"
-            echo "- Briefing acknowledgement + governed break lifecycle: PASS"
-            echo "- Incident/offline security semantics: PASS"
-            echo "- Chat lifecycle + 3-day retention window: PASS"
-            echo "- Chat/incident attachment idempotency: PASS"
-            echo "- Staff/Admin/Responsible permission boundaries: PASS"
-            echo "- Responsible workplace isolation: PASS"
-            echo "- Unapproved/anonymous and revoked-access denial: PASS"
-            echo "- Offline replay/time dependency security: PASS"
-            echo "- Storage and new-feature security surfaces: PASS"
-          } >> "$GITHUB_STEP_SUMMARY"
-
-      - name: Verify generated database types
-        run: |
-          npx --yes supabase@2.117.0 gen types typescript --local --schema public > /tmp/crew-database.ts
-          node --input-type=module <<'NODE'
-          import { readFileSync, writeFileSync } from 'node:fs'
-          const normalize = (source) => source
-            .replace(
-              /  \/\/ Allows to automatically instantiate createClient with right options\n  \/\/ instead of createClient<Database, \{ PostgrestVersion: 'XX' \}>\(URL, KEY\)\n  __InternalSupabase: \{\n    PostgrestVersion: "[^"]+"\n  \}\n/,
-              '',
-            )
-            .trimEnd() + '\n'
-          writeFileSync('/tmp/expected-crew-database.ts', normalize(readFileSync('types/crew-database.ts', 'utf8')))
-          writeFileSync('/tmp/actual-crew-database.ts', normalize(readFileSync('/tmp/crew-database.ts', 'utf8')))
-          NODE
-          diff -u /tmp/expected-crew-database.ts /tmp/actual-crew-database.ts
-
-      - name: Record replay proof
-        run: |
-          migration_count=$(find supabase/migrations -maxdepth 1 -type f -name '*.sql' | wc -l | tr -d ' ')
-          sql_suite_count=$(find tests/sql -maxdepth 1 -type f -name '*.sql' | wc -l | tr -d ' ')
-          {
-            echo "## Fresh-install database proof"
-            echo "- Source commit: \`${GITHUB_SHA}\`"
-            echo "- Migrations replayed: ${migration_count}"
-            echo "- SQL suites: ${sql_suite_count}"
-            echo "- Generated types: exact match"
-          } >> "$GITHUB_STEP_SUMMARY"
 
       - name: Stop isolated Supabase stack
         if: always()
