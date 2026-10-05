@@ -843,6 +843,158 @@ export type Database = {
           },
         ]
       }
+      driver_sessions: {
+        Row: {
+          actual_km: number | null
+          artist_arrival_notified_at: string | null
+          created_at: string
+          end_latitude: number | null
+          end_longitude: number | null
+          ended_at: string | null
+          event_id: string
+          expected_km: number | null
+          id: string
+          start_latitude: number | null
+          start_longitude: number | null
+          started_at: string
+          task_id: string | null
+          user_id: string
+          work_session_id: string
+        }
+        Insert: {
+          actual_km?: number | null
+          artist_arrival_notified_at?: string | null
+          created_at?: string
+          end_latitude?: number | null
+          end_longitude?: number | null
+          ended_at?: string | null
+          event_id: string
+          expected_km?: number | null
+          id?: string
+          start_latitude?: number | null
+          start_longitude?: number | null
+          started_at?: string
+          task_id?: string | null
+          user_id: string
+          work_session_id: string
+        }
+        Update: {
+          actual_km?: number | null
+          artist_arrival_notified_at?: string | null
+          created_at?: string
+          end_latitude?: number | null
+          end_longitude?: number | null
+          ended_at?: string | null
+          event_id?: string
+          expected_km?: number | null
+          id?: string
+          start_latitude?: number | null
+          start_longitude?: number | null
+          started_at?: string
+          task_id?: string | null
+          user_id?: string
+          work_session_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "driver_sessions_event_id_fkey"
+            columns: ["event_id"]
+            isOneToOne: false
+            referencedRelation: "events"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "driver_sessions_task_id_fkey"
+            columns: ["task_id"]
+            isOneToOne: false
+            referencedRelation: "tasks"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "driver_sessions_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "driver_sessions_work_session_id_fkey"
+            columns: ["work_session_id"]
+            isOneToOne: false
+            referencedRelation: "work_sessions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      driver_task_details: {
+        Row: {
+          address: string
+          completed_at: string | null
+          created_at: string
+          direction: string
+          estimated_drive_minutes: number | null
+          eta_at: string | null
+          expected_km: number | null
+          guestlist_entry_id: string | null
+          notified_at: string | null
+          notify_at: string | null
+          passenger_name: string
+          passenger_phone: string
+          scheduled_at: string
+          status: string
+          task_id: string
+        }
+        Insert: {
+          address: string
+          completed_at?: string | null
+          created_at?: string
+          direction: string
+          estimated_drive_minutes?: number | null
+          eta_at?: string | null
+          expected_km?: number | null
+          guestlist_entry_id?: string | null
+          notified_at?: string | null
+          notify_at?: string | null
+          passenger_name: string
+          passenger_phone: string
+          scheduled_at: string
+          status?: string
+          task_id: string
+        }
+        Update: {
+          address?: string
+          completed_at?: string | null
+          created_at?: string
+          direction?: string
+          estimated_drive_minutes?: number | null
+          eta_at?: string | null
+          expected_km?: number | null
+          guestlist_entry_id?: string | null
+          notified_at?: string | null
+          notify_at?: string | null
+          passenger_name?: string
+          passenger_phone?: string
+          scheduled_at?: string
+          status?: string
+          task_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "driver_task_details_guestlist_entry_id_fkey"
+            columns: ["guestlist_entry_id"]
+            isOneToOne: false
+            referencedRelation: "event_guestlist_entries"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "driver_task_details_task_id_fkey"
+            columns: ["task_id"]
+            isOneToOne: true
+            referencedRelation: "tasks"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       event_availability: {
         Row: {
           available_from: string | null
@@ -4718,6 +4870,32 @@ export type Database = {
         Args: { p_recommendation: string }
         Returns: undefined
       }
+      upt_driver_dashboard: {
+        Args: { p_event: string }
+        Returns: {
+          address: string
+          driver_name: string
+          driving: boolean
+          eta_at: string
+          passenger_name: string
+          started_at: string
+          total_km: number
+          trip_status: string
+          user_id: string
+        }[]
+      }
+      upt_driver_set_trip_status: {
+        Args: { p_eta?: string; p_status: string; p_task: string }
+        Returns: undefined
+      }
+      upt_driver_time_summary: {
+        Args: { p_work_session: string }
+        Returns: {
+          driving_seconds: number
+          event_seconds: number
+          total_km: number
+        }[]
+      }
       upt_duplicate_event: {
         Args: {
           p_end: string
@@ -4977,6 +5155,10 @@ export type Database = {
       }
       upt_is_admin: { Args: { uid?: string }; Returns: boolean }
       upt_is_approved: { Args: never; Returns: boolean }
+      upt_is_driver_supervisor: {
+        Args: { p_event: string; p_uid?: string }
+        Returns: boolean
+      }
       upt_is_responsible: {
         Args: { event_uuid: string; uid?: string; workplace_uuid?: string }
         Returns: boolean
@@ -5336,6 +5518,35 @@ export type Database = {
         Returns: string
       }
       upt_set_admin_role_mode: { Args: { p_role: string }; Returns: string }
+      upt_set_driver_task_details:
+        | {
+            Args: {
+              p_address: string
+              p_direction: string
+              p_estimated_drive_minutes: number
+              p_notify_at: string
+              p_passenger_name: string
+              p_passenger_phone: string
+              p_scheduled_at: string
+              p_task: string
+            }
+            Returns: undefined
+          }
+        | {
+            Args: {
+              p_address: string
+              p_direction: string
+              p_estimated_drive_minutes: number
+              p_expected_km?: number
+              p_guestlist_entry?: string
+              p_notify_at: string
+              p_passenger_name: string
+              p_passenger_phone: string
+              p_scheduled_at: string
+              p_task: string
+            }
+            Returns: undefined
+          }
       upt_set_event_availability_extended: {
         Args: {
           p_breakdown: boolean
@@ -5491,6 +5702,16 @@ export type Database = {
         }[]
       }
       upt_start_break: { Args: { p_work_session: string }; Returns: string }
+      upt_start_driving: {
+        Args: {
+          p_expected_km?: number
+          p_latitude?: number
+          p_longitude?: number
+          p_task?: string
+          p_work_session: string
+        }
+        Returns: string
+      }
       upt_start_error_report_ai: {
         Args: { p_report: string }
         Returns: boolean
@@ -5500,6 +5721,15 @@ export type Database = {
         Returns: string
       }
       upt_stop_break: { Args: { p_break: string }; Returns: undefined }
+      upt_stop_driving: {
+        Args: {
+          p_actual_km?: number
+          p_driver_session: string
+          p_latitude?: number
+          p_longitude?: number
+        }
+        Returns: undefined
+      }
       upt_stop_work: { Args: { p_work_session: string }; Returns: undefined }
       upt_submit_timesheet: { Args: { p_event: string }; Returns: string }
       upt_swap_candidates: {
