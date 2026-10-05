@@ -18,7 +18,7 @@ type Props={
 const COPY={
   nl:{
     eyebrow:"EERSTE GEBRUIK",
-    title:"Klaar voor je eerste echte evenement",
+    heading:"Klaar voor je eerste echte evenement",
     intro:"Er staat nog geen productie-evenement in de app. Start hieronder; trainingsdata blijven volledig gescheiden van echte gegevens.",
     crew:(approved:number,pending:number)=>`${approved} goedgekeurde account(s) · ${pending} aanvraag/aanvragen open`,
     createTitle:"1. Maak het eerste evenement",
@@ -40,7 +40,7 @@ const COPY={
   },
   en:{
     eyebrow:"FIRST USE",
-    title:"Ready for your first real event",
+    heading:"Ready for your first real event",
     intro:"There is no production event in the app yet. Start below; training data stays fully separated from real data.",
     crew:(approved:number,pending:number)=>`${approved} approved account(s) · ${pending} request(s) pending`,
     createTitle:"1. Create the first event",
@@ -62,7 +62,7 @@ const COPY={
   },
   fr:{
     eyebrow:"PREMIÈRE UTILISATION",
-    title:"Prêt pour votre premier vrai événement",
+    heading:"Prêt pour votre premier vrai événement",
     intro:"Aucun événement de production n’est encore présent dans l’application. Commencez ci-dessous ; les données de formation restent totalement séparées des données réelles.",
     crew:(approved:number,pending:number)=>`${approved} compte(s) approuvé(s) · ${pending} demande(s) en attente`,
     createTitle:"1. Créez le premier événement",
@@ -84,7 +84,7 @@ const COPY={
   },
   de:{
     eyebrow:"ERSTE NUTZUNG",
-    title:"Bereit für dein erstes echtes Event",
+    heading:"Bereit für dein erstes echtes Event",
     intro:"In der App gibt es noch kein Produktions-Event. Starte unten; Trainingsdaten bleiben vollständig von echten Daten getrennt.",
     crew:(approved:number,pending:number)=>`${approved} genehmigte(s) Konto/Konten · ${pending} offene Anfrage(n)`,
     createTitle:"1. Erstelle das erste Event",
@@ -107,11 +107,11 @@ const COPY={
 } as const
 
 const STEPS=[
-  {icon:CalendarDays,title:"createTitle",body:"createBody",action:"createAction",href:"/events#event-aanmaken"},
-  {icon:Users,title:"crewTitle",body:"crewBody",action:"crewAction",href:"/personnel"},
-  {icon:Warehouse,title:"planningTitle",body:"planningBody",action:"planningAction",href:"/workplaces"},
-  {icon:ClipboardList,title:"briefingTitle",body:"briefingBody",action:"briefingAction",href:"/briefings"},
-  {icon:GraduationCap,title:"trainingTitle",body:"trainingBody",action:"trainingAction",href:"/help"},
+  {icon:CalendarDays,headingKey:"createTitle",bodyKey:"createBody",actionKey:"createAction",href:"/events#event-aanmaken"},
+  {icon:Users,headingKey:"crewTitle",bodyKey:"crewBody",actionKey:"crewAction",href:"/personnel"},
+  {icon:Warehouse,headingKey:"planningTitle",bodyKey:"planningBody",actionKey:"planningAction",href:"/workplaces"},
+  {icon:ClipboardList,headingKey:"briefingTitle",bodyKey:"briefingBody",actionKey:"briefingAction",href:"/briefings"},
+  {icon:GraduationCap,headingKey:"trainingTitle",bodyKey:"trainingBody",actionKey:"trainingAction",href:"/help"},
 ] as const
 
 export function FirstUseReadiness({pendingApprovals,approvedCrew}:Props){
@@ -132,7 +132,7 @@ export function FirstUseReadiness({pendingApprovals,approvedCrew}:Props){
     <div className="flex flex-wrap items-start justify-between gap-3">
       <div>
         <p className="text-xs font-black uppercase tracking-[.2em] text-violet-400">{t.eyebrow}</p>
-        <h2 className="mt-1 text-2xl font-black">{t.title}</h2>
+        <h2 className="mt-1 text-2xl font-black">{t.heading}</h2>
         <p className="mt-2 max-w-3xl text-sm text-muted-foreground">{t.intro}</p>
       </div>
       <span className="rounded-full border px-3 py-2 text-xs font-black">{t.crew(approvedCrew,pendingApprovals)}</span>
@@ -144,15 +144,15 @@ export function FirstUseReadiness({pendingApprovals,approvedCrew}:Props){
     </p>
 
     <div className="grid gap-3 lg:grid-cols-2">
-      {STEPS.map(({icon:Icon,title,body,action,href},index)=><article key={href} className={`rounded-2xl border p-4 ${index===0?"border-violet-500/50":""}`}>
+      {STEPS.map(({icon:Icon,headingKey,bodyKey,actionKey,href},index)=><article key={href} className={`rounded-2xl border p-4 ${index===0?"border-violet-500/50":""}`}>
         <div className="flex gap-3">
           <span className="grid h-9 w-9 shrink-0 place-items-center rounded-xl bg-muted"><Icon className="h-4 w-4"/></span>
           <div>
-            <h3 className="font-black">{t[title]}</h3>
-            <p className="mt-1 text-sm leading-6 text-muted-foreground">{t[body]}</p>
+            <h3 className="font-black">{t[headingKey]}</h3>
+            <p className="mt-1 text-sm leading-6 text-muted-foreground">{t[bodyKey]}</p>
           </div>
         </div>
-        <Link href={href} className={`mt-4 inline-flex rounded-xl px-4 py-2 text-sm font-black ${index===0?"bg-violet-600 text-white":"border"}`}>{t[action]}</Link>
+        <Link href={href} className={`mt-4 inline-flex rounded-xl px-4 py-2 text-sm font-black ${index===0?"bg-violet-600 text-white":"border"}`}>{t[actionKey]}</Link>
       </article>)}
     </div>
   </section>

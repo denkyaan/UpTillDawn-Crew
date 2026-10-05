@@ -2,7 +2,7 @@
 
 ## Local database rebuild proof
 
-Every release CI must:
+Every release CI must prove that the database can be rebuilt from an **empty isolated Supabase project** or equivalent isolated local Supabase stack:
 
 1. start an isolated local Supabase stack;
 2. replay all repository migrations from zero;
