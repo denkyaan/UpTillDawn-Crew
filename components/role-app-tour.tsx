@@ -258,10 +258,8 @@ export function RoleAppTour(){
       setTourRole(nextRole)
       setIndex(0)
       setChoice(false)
-      setOpen(true)
-      router.push((nextRole==="admin"?"/admin":"/")+"?tour=1")
-      sessionStorage.setItem("uptilldawn-tour-preview-route","1")
-      dispatchEvent(new CustomEvent("uptilldawn-tour-preview",{detail:{active:true,role:nextRole}}))
+      setOpen(false)
+      setWelcome(true)
     }
     addEventListener("uptilldawn-profile-completed",completed)
     addEventListener("uptilldawn-restart-tour",restart)
