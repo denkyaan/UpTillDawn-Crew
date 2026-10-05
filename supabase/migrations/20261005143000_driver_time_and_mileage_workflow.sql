@@ -69,7 +69,7 @@ returns table(event_seconds bigint,driving_seconds bigint,total_km numeric)
 language sql stable security definer set search_path='pg_catalog','public','upt_private' as $fn$
  with ws as(select started_at,coalesce(ended_at,now()) ended_at from public.work_sessions where id=p_work_session and (user_id=auth.uid() or public.upt_is_admin(auth.uid()))),
  d as(select sum(extract(epoch from(coalesce(ds.ended_at,now())-ds.started_at))) drive,sum(coalesce(ds.actual_km,ds.expected_km,0)) km from public.driver_sessions ds where ds.work_session_id=p_work_session)
- select greatest(0,extract(epoch from(ws.ended_at-ws.started_at)-coalesce(d.drive,0)))::bigint,coalesce(d.drive,0)::bigint,coalesce(d.km,0) from ws cross join d
+ select greatest(0,extract(epoch from(ws.ended_at-ws.started_at))-coalesce(d.drive,0))::bigint,coalesce(d.drive,0)::bigint,coalesce(d.km,0) from ws cross join d
 $fn$;
 grant execute on function public.upt_driver_time_summary(uuid) to authenticated;
 
