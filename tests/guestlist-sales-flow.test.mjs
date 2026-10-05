@@ -91,18 +91,20 @@ test('admin AI receives guestlist artist backstage sales and register context',a
   assert.match(guestlistPage,/PlatformAiAssistant/)
 })
 
-test('navigation exposes guestlist and sales with role scoped defaults',async()=>{
+test('navigation exposes guestlist while Sales remains admin-only',async()=>{
   const nav=await read('components/layout/navigation-items.ts')
   const roles=await read('lib/role-ui.ts')
   const layout=await read('components/layout/app-layout.tsx')
   assert.match(nav,/key:"guestlist".*href:"\/guestlist"/)
   assert.match(nav,/key:"sales".*href:"\/sales"/)
   assert.match(roles,/navRule\("staff","guestlist","Inkom & Guestlist".*"assigned_event"/)
-  assert.match(roles,/navRule\("staff","sales","Verkoop".*"assigned_workplace_role"/)
+  assert.doesNotMatch(roles,/navRule\("staff","sales"/)
+  assert.doesNotMatch(roles,/navRule\("responsible_lead","sales"/)
   assert.match(roles,/navRule\("admin","sales","Sales"/)
   assert.match(layout,/pathname\.startsWith\("\/guestlist"\)\?"guestlist"/)
   assert.match(layout,/pathname\.startsWith\("\/sales"\)\?"sales"/)
   assert.match(layout,/guestlist:showGuestlist/)
+  assert.match(layout,/const showSales=Boolean\(isAdmin\)&&feature\("sales",true\)/)
   assert.match(layout,/sales:showSales/)
 })
 
