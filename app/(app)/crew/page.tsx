@@ -6,13 +6,15 @@ import { setPersonnelBlock,setPersonnelRole } from '@/lib/actions/personnel'
 import { nlRole } from '@/lib/ui-nl'
 import { PendingSubmitButton } from '@/components/ui/pending-submit-button'
 import { PersonnelDeleteButton } from '@/components/admin/personnel-delete-button'
+import { SandboxRoleModule } from '@/components/training/sandbox-role-module'
 
 export const dynamic='force-dynamic'
 
-export default async function Page({searchParams}:{searchParams?:Promise<{user?:string}>}){
+export default async function Page({searchParams}:{searchParams?:Promise<{user?:string;tour?:string}>}){
   const params=searchParams?await searchParams:{}
   const current=await getCurrentUser()
   if(!current)redirect('/login')
+  if(params.tour==='1')return <SandboxRoleModule role={current.role} module="crew"/>
   const s=await createClient()
   const isAdmin=current.isAdmin===true
 
