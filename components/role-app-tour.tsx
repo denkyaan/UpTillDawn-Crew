@@ -297,13 +297,26 @@ export function RoleAppTour(){
     setTourRole(role)
     setChoice(false)
     setIndex(0)
+    setOpen(false)
+    setWelcome(true)
+  }
+
+  const beginTraining=()=>{
+    setWelcome(false)
     setOpen(true)
-    router.push((role==="admin"?"/admin":"/")+"?tour=1")
+    router.push((activeRole==="admin"?"/admin":"/")+"?tour=1")
     sessionStorage.setItem("uptilldawn-tour-preview-route","1")
     setPreview(true)
   }
 
   return <>
+    {welcome&&<div data-no-translate className="fixed inset-0 z-[145] flex items-end justify-center bg-black/60 p-4 sm:items-center" role="dialog" aria-modal="true">
+      <section className="w-full max-w-md rounded-2xl border bg-background p-5 shadow-2xl">
+        <h2 className="text-xl font-black">{resolve(UI_COPY.promptTitle)}</h2>
+        <p className="mt-3 text-sm leading-6 text-muted-foreground">{resolve(UI_COPY.promptBody)}</p>
+        <button onClick={beginTraining} className="mt-5 w-full rounded-xl bg-violet-600 px-4 py-3 font-black text-white">{resolve(UI_COPY.welcomeContinue)}</button>
+      </section>
+    </div>}
     {choice&&<div data-no-translate className="fixed inset-0 z-[140] flex items-end justify-center bg-black/60 p-4 sm:items-center" role="dialog" aria-modal="true">
       <section className="w-full max-w-md rounded-2xl border bg-background p-5 shadow-2xl">
         <h2 className="text-xl font-black">{resolve(UI_COPY.promptTitle)}</h2>
