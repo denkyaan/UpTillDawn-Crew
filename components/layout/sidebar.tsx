@@ -50,8 +50,9 @@ export function AppSidebar({
   </Link>
   <nav className="min-h-0 flex-1 space-y-1 overflow-y-auto overscroll-contain p-3 pb-6">{visible.map(i=>{
    const baseHref=i.href==='/'&&isAdmin?'/admin':i.href
-   const href=isAdmin?adminContext.href(baseHref):baseHref
-   const active=href==='/'?pathname==='/':pathname.startsWith(href)
+   const rawHref=isAdmin?adminContext.href(baseHref):baseHref
+   const href=tourPreview?rawHref+(rawHref.includes("?")?"&":"?")+"tour=1":rawHref
+   const active=rawHref==='/'?pathname==='/':pathname.startsWith(rawHref.split("?")[0])
    const Icon=i.icon
    const activityCount=i.key==="chat"?chatMissed:i.key==="incidents"?incidentMissed:i.key==="tasks"?taskMissed:0
    const count=Math.max(activityCount,notificationFeatureCounts[i.key]??0)
