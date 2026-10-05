@@ -113,6 +113,7 @@ export default async function Page({searchParams}:{searchParams?:Promise<{event?
   const activeShift=session.data?.shift_id?(shifts.data||[]).find(row=>row.id===session.data?.shift_id):null
   const activeWorkplace=activeShift?(workplaces.data||[]).find(row=>row.id===activeShift.workplace_id):null
   const isDriverSession=Boolean(session.data&&activeWorkplace&&/driver/i.test(activeWorkplace.name))
+  const driverEvent=isDriverSession&&session.data?(candidateEvents||[]).find(event=>event.id===session.data?.event_id):null
   const driverSession=isDriverSession&&session.data
     ? await s.from('driver_sessions').select('*').eq('work_session_id',session.data.id).is('ended_at',null).maybeSingle()
     : {data:null,error:null}
@@ -274,6 +275,7 @@ export default async function Page({searchParams}:{searchParams?:Promise<{event?
     driverSummary={driverSummary?.data?.[0]||null}
     driverTasks={driverTasks.data||[]}
     driverDashboard={driverDashboard}
+    driverEventPoint={driverEvent?.latitude!=null&&driverEvent?.longitude!=null?{latitude:Number(driverEvent.latitude),longitude:Number(driverEvent.longitude)}:null}
   />
   </>
 }
