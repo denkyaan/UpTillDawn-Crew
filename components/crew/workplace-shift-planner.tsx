@@ -40,6 +40,7 @@ export function WorkplaceShiftPlanner({
  replacementCandidatesByShift,
  swapCandidatesByShift,
  openRequestShiftIds,
+ driverArtists=[],
 }:{
  workplaceId:string
  eventId:string
@@ -53,6 +54,7 @@ export function WorkplaceShiftPlanner({
  replacementCandidatesByShift:Map<string,ShiftReplacementCandidate[]>
  swapCandidatesByShift:Map<string,ShiftSwapCandidate[]>
  openRequestShiftIds:string[]
+ driverArtists?:Array<{id:string;name:string}>
 }){
  const nameById=new Map(people.map(person=>[person.id,person.fullName]))
 
