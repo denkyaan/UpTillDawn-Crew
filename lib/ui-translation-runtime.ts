@@ -151,6 +151,110 @@ function translateClockRequestCounts(value:string,locale:ExtendedUiLocale){
   return value
 }
 
+
+function translateRequestStatus(value:string,locale:ExtendedUiLocale){
+  const match=value.match(/^Aanvraag:\s*(pending|approved|rejected|cancelled|canceled)$/i)
+  if(!match||locale==='nl')return null
+  const status=match[1].toLowerCase()
+  const labels={
+    fr:{pending:'en attente',approved:'approuvée',rejected:'refusée',cancelled:'annulée',canceled:'annulée'},
+    en:{pending:'pending',approved:'approved',rejected:'rejected',cancelled:'cancelled',canceled:'cancelled'},
+    de:{pending:'offen',approved:'genehmigt',rejected:'abgelehnt',cancelled:'storniert',canceled:'storniert'},
+  } as const
+  return `${locale==='fr'?'Demande':locale==='en'?'Request':'Anfrage'}: ${labels[locale][status as keyof typeof labels.fr]}`
+}
+
+function translateShiftReminder(value:string,locale:ExtendedUiLocale){
+  const match=value.match(/^(.+?) · (.+?) start binnen (24 uur|2 uur|15 minuten)(\. Gebruik de QR-flow bij aankomst\.)?$/)
+  if(!match||locale==='nl')return null
+  const [,eventName,workplace,window,qr]=match
+  const span=window==='24 uur'
+    ? (locale==='fr'?'24 heures':locale==='en'?'24 hours':'24 Stunden')
+    : window==='2 uur'
+      ? (locale==='fr'?'2 heures':locale==='en'?'2 hours':'2 Stunden')
+      : (locale==='fr'?'15 minutes':locale==='en'?'15 minutes':'15 Minuten')
+  const start=locale==='fr'
+    ? `${eventName} · ${workplace} commence dans ${span}.`
+    : locale==='en'
+      ? `${eventName} · ${workplace} starts within ${span}.`
+      : `${eventName} · ${workplace} beginnt in ${span}.`
+  if(!qr)return start
+  return start+' '+(locale==='fr'?'Utilisez le flux QR à votre arrivée.':locale==='en'?'Use the QR flow when you arrive.':'Nutze bei deiner Ankunft den QR-Ablauf.')
+}
+
+function translateUnderstaffing(value:string,locale:ExtendedUiLocale){
+  const match=value.match(/^Actieve bezetting op (.+): (\d+)\/(\d+)\.$/)
+  if(!match||locale==='nl')return null
+  const [,workplace,active,minimum]=match
+  if(locale==='fr')return `Effectif actif à ${workplace} : ${active}/${minimum}.`
+  if(locale==='en')return `Active staffing at ${workplace}: ${active}/${minimum}.`
+  return `Aktive Besetzung bei ${workplace}: ${active}/${minimum}.`
+}
+
+function translateAccountApproval(value:string,locale:ExtendedUiLocale){
+  const match=value.match(/^Nieuw account wacht op goedkeuring: (.+)\.$/)
+  if(!match||locale==='nl')return null
+  if(locale==='fr')return `Un nouveau compte attend une approbation : ${match[1]}.`
+  if(locale==='en')return `A new account is awaiting approval: ${match[1]}.`
+  return `Ein neues Konto wartet auf Genehmigung: ${match[1]}.`
+}
+
+function translateEventReportReady(value:string,locale:ExtendedUiLocale){
+  const match=value.match(/^(.+) is afgerond\. Het automatische eventrapport staat klaar\.$/)
+  if(!match||locale==='nl')return null
+  if(locale==='fr')return `${match[1]} est terminé. Le rapport automatique de l’événement est prêt.`
+  if(locale==='en')return `${match[1]} is complete. The automatic event report is ready.`
+  return `${match[1]} ist abgeschlossen. Der automatische Eventbericht ist fertig.`
+}
+
+function translateInventoryQuantity(value:string,locale:ExtendedUiLocale){
+  const match=value.match(/^(.+) · (\d+) stuk\(s\)( · .+)?$/)
+  if(!match||locale==='nl')return null
+  const [,name,quantity,note='']=match
+  const unit=locale==='fr'?'pièce(s)':locale==='en'?'item(s)':'Stück'
+  return `${name} · ${quantity} ${unit}${note}`
+}
+
+function translateDriverDeparture(value:string,locale:ExtendedUiLocale){
+  const match=value.match(/^(.+) · (Ophalen|Afzetten): (.+?) · (.+?) · (.+?) · rit ±(\d+) min · 15 min vertrekmarge\.$/)
+  if(!match||locale==='nl')return null
+  const [,eventName,direction,person,phone,address,minutes]=match
+  const action=direction==='Ophalen'
+    ? (locale==='fr'?'Prise en charge':locale==='en'?'Pickup':'Abholung')
+    : (locale==='fr'?'Dépose':locale==='en'?'Drop-off':'Absetzen')
+  const suffix=locale==='fr'
+    ? `trajet ±${minutes} min · marge de départ 15 min.`
+    : locale==='en'
+      ? `drive ±${minutes} min · 15 min departure margin.`
+      : `Fahrt ±${minutes} Min. · 15 Min. Abfahrtsreserve.`
+  return `${eventName} · ${action}: ${person} · ${phone} · ${address} · ${suffix}`
+}
+
+function translateDriverArrival(value:string,locale:ExtendedUiLocale){
+  const match=value.match(/^Driver is aangekomen op het evenement met artiest - (.+?)\.(?: (Stel een backstage werkplek in\.|Er is geen backstage manager toegewezen\.))?$/)
+  if(!match||locale==='nl')return null
+  const [,artist,followup]=match
+  const base=locale==='fr'
+    ? `Le chauffeur est arrivé à l’événement avec l’artiste - ${artist}.`
+    : locale==='en'
+      ? `The driver arrived at the event with artist - ${artist}.`
+      : `Der Fahrer ist mit dem Künstler - ${artist} - am Event angekommen.`
+  if(!followup)return base
+  const extra=followup.startsWith('Stel')
+    ? (locale==='fr'?'Configurez un poste backstage.':locale==='en'?'Configure a backstage workplace.':'Richte einen Backstage-Arbeitsplatz ein.')
+    : (locale==='fr'?'Aucun responsable backstage n’est assigné.':locale==='en'?'No backstage manager is assigned.':'Es ist kein Backstage-Manager zugewiesen.')
+  return `${base} ${extra}`
+}
+
+function translateAdminLockout(value:string,locale:ExtendedUiLocale){
+  const match=value.match(/^3 mislukte admin-loginpogingen\. Account: (.+?)\. IP: (.+?)\. Locatie \(benadering\): (.+?)\. Apparaat\/browser: (.+?)\. Login gedurende 15 minuten geblokkeerd\.$/)
+  if(!match||locale==='nl')return null
+  const [,account,ip,location,device]=match
+  if(locale==='fr')return `3 tentatives de connexion administrateur ont échoué. Compte : ${account}. IP : ${ip}. Localisation (approximative) : ${location}. Appareil/navigateur : ${device}. Connexion bloquée pendant 15 minutes.`
+  if(locale==='en')return `3 admin login attempts failed. Account: ${account}. IP: ${ip}. Location (approximate): ${location}. Device/browser: ${device}. Login blocked for 15 minutes.`
+  return `3 Admin-Anmeldeversuche sind fehlgeschlagen. Konto: ${account}. IP: ${ip}. Standort (ungefähr): ${location}. Gerät/Browser: ${device}. Anmeldung für 15 Minuten gesperrt.`
+}
+
 function translateActionCenterTitle(value:string,locale:ExtendedUiLocale){
   const match=value.match(/^(ACCOUNT GOEDKEUREN|INKLOKKEN|UITKLOKKEN|INKLOKKEN ONTBREEKT|HELP) · (.+)$/)
   if(!match)return null
@@ -167,6 +271,11 @@ function translateActionCenterTitle(value:string,locale:ExtendedUiLocale){
 }
 
 export function translateRuntimeUi(value:string,locale:ExtendedUiLocale):string{
+  const dynamicTranslators=[translateRequestStatus,translateShiftReminder,translateUnderstaffing,translateAccountApproval,translateEventReportReady,translateInventoryQuantity,translateDriverDeparture,translateDriverArrival,translateAdminLockout] as const
+  for(const translator of dynamicTranslators){
+    const translated=translator(value,locale)
+    if(translated)return translated
+  }
   const actionCenterTitle=translateActionCenterTitle(value,locale)
   if(actionCenterTitle)return actionCenterTitle
   const artistArrival=translateArtistArrival(value,locale)
