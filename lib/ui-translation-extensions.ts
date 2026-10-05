@@ -429,6 +429,20 @@ const EXTENSIONS: Record<string, Row> = {
   'm': { fr: 'min', en: 'min', de: 'Min.' },
   'De assistent gebruikt automatisch de context van het geopende scherm of evenement en vat risico’s en volgende acties samen. Kritieke wijzigingen worden nooit automatisch uitgevoerd.': { fr: 'L’assistant utilise automatiquement le contexte de l’écran ou de l’événement ouvert et résume les risques et les prochaines actions. Les modifications critiques ne sont jamais exécutées automatiquement.', en: 'The assistant automatically uses the context of the open screen or event and summarizes risks and next actions. Critical changes are never executed automatically.', de: 'Der Assistent verwendet automatisch den Kontext des geöffneten Bildschirms oder Events und fasst Risiken sowie nächste Schritte zusammen. Kritische Änderungen werden niemals automatisch ausgeführt.' },
   '” archiveren? Historische gegevens blijven bewaard en het event verdwijnt uit actieve overzichten.': { fr: '» archiver ? Les données historiques restent conservées et l’événement disparaît des aperçus actifs.', en: '” archive? Historical data remains preserved and the event disappears from active overviews.', de: '“ archivieren? Historische Daten bleiben erhalten und das Event verschwindet aus aktiven Übersichten.' },
+  'driving': { fr:'en route', en:'driving', de:'unterwegs' },
+  'completed': { fr:'terminé', en:'completed', de:'abgeschlossen' },
+  'returning': { fr:'retour', en:'returning', de:'Rückfahrt' },
+  'at_passenger': { fr:'chez la personne', en:'at passenger', de:'bei der Person' },
+  'DRIVER': { fr:'CHAUFFEUR', en:'DRIVER', de:'FAHRER' },
+  'Driver': { fr:'Chauffeur', en:'Driver', de:'Fahrer' },
+  'Driving': { fr:'Conduite', en:'Driving', de:'Fahrzeit' },
+  'START DRIVING': { fr:'DÉMARRER LA CONDUITE', en:'START DRIVING', de:'FAHRT STARTEN' },
+  'km': { fr:'km', en:'km', de:'km' },
+  'km ·': { fr:'km ·', en:'km ·', de:'km ·' },
+  'min ·': { fr:'min ·', en:'min ·', de:'Min. ·' },
+  'Positie…': { fr:'Position…', en:'Position…', de:'Position…' },
+  'Bar': { fr:'Bar', en:'Bar', de:'Bar' },
+  'Toog': { fr:'Comptoir', en:'Counter', de:'Theke' },
 }
 
 const CANONICAL = new Map<string, string>()
