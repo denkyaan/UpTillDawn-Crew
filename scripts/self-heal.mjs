@@ -152,7 +152,7 @@ async function loop(){
   repairFeedback=released.feedback
   console.error(repairFeedback)
  }
- await escalate(`Autonomous repair exhausted ${maxAttempts} attempts. Last evidence: ${repairFeedback}`)
+ console.error(`Autonomous repair exhausted ${maxAttempts} attempts. Report remains registered for technical follow-up. Last evidence: ${repairFeedback}`)
  throw new Error('Self-healing kon de fout niet autonoom oplossen na '+maxAttempts+' pogingen.')
 }
 
