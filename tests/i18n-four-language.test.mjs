@@ -179,6 +179,7 @@ test('database-driven workplace and notification copy is localized in all four p
     'Allrounder',
     'Vervoer van artiesten, crew en andere toegewezen personen van en naar het evenement.',
     'Pauzetegoed bijna op',
+    'Admin-login tijdelijk geblokkeerd',
     'Dienst gestart',
     'No-show gedetecteerd',
     'Werkplek onderbezet',
@@ -216,6 +217,9 @@ test('database-driven workplace and notification copy is localized in all four p
     'Nieuw account wacht op goedkeuring',
     'rit ±',
     'Driver is aangekomen op het evenement met artiest',
+    'Admin-login tijdelijk geblokkeerd',
     'mislukte admin-loginpogingen',
   ]) assert.ok(push.includes(marker), `${marker} must be covered by push localization`)
+  assert.match(runtime,/part!==['"]onbekend['"]/, 'unknown lockout values must be localized in the app')
+  assert.match(push,/part===["']onbekend["']/, 'unknown lockout values must be localized in push notifications')
 })
