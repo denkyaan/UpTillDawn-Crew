@@ -214,7 +214,7 @@ async function sendMakerErrorEmail(report:{
   }
 }
 
-async function finalizeFailure(client:CrewClient,reportId:string,message:string){
+async function finalizeFailure(client:CrewClient,reportId:string){
   const summary='De achtergrond-AI kon dit foutrapport niet volledig analyseren.'
   await client.rpc('upt_finalize_error_report_ai',{
     p_report:reportId,
@@ -302,7 +302,7 @@ export async function processErrorReport(client:CrewClient,reportId:string,ai:Er
   }
 
   if(!ai){
-    await finalizeFailure(client,reportId,'Cloudflare Workers AI binding is niet beschikbaar.')
+    await finalizeFailure(client,reportId)
     console.error('[error-ai] AI-binding ontbreekt; rapport blijft voor autonome technische opvolging bewaard',{reportId})
     return
   }
@@ -385,7 +385,7 @@ export async function processErrorReport(client:CrewClient,reportId:string,ai:Er
       }
     }catch(finalizeError){
       console.error('[error-ai] fallback-escalatie mislukt',finalizeError instanceof Error?finalizeError.message:'unknown')
-      try{await finalizeFailure(client,reportId,message)}catch{}
+      try{await finalizeFailure(client,reportId)}catch{}
     }
   }
 }
