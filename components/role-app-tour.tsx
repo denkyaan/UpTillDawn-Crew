@@ -9,7 +9,7 @@ import {featureHelp} from "@/lib/ui-field-help"
 import {parseUiLocale,LANGUAGE_APPLIED_EVENT} from "@/lib/locale-preferences"
 import type {ExtendedUiLocale} from "@/lib/ui-translation-extensions"
 import {TourControlCenter} from "@/components/training/tour-control-center"
-import {TOUR_SESSION_KEY,type TourMode} from "@/lib/tour-training"
+import {TOUR_SESSION_KEY,tourProgressKey,type TourMode} from "@/lib/tour-training"
 
 type TourText={nl:string;en:string;fr:string;de:string}
 type Copy=string|TourText
@@ -282,17 +282,32 @@ export function RoleAppTour(){
     void check()
     const completed=()=>void check()
     const restart=(event:Event)=>{
-      const detail=(event as CustomEvent<UiRole|{role?:UiRole;workplace?:string;chapter?:string;mode?:TourMode;scenario?:string}|undefined>).detail
+      const detail=(event as CustomEvent<UiRole|{role?:UiRole;workplace?:string;chapter?:string;mode?:TourMode;scenario?:string;reset?:boolean}|undefined>).detail
       const requested=typeof detail==="string"?detail:detail?.role
       const nextRole=requested&&tours[requested]?requested:role
       const nextMode=typeof detail==="object"&&detail?.mode?detail.mode:"full"
       const workplace=typeof detail==="object"?detail?.workplace:undefined
+      const chapter=typeof detail==="object"?detail?.chapter:undefined
+      const reset=typeof detail==="object"&&detail?.reset===true
       const active=parseUiLocale(document.documentElement.lang)
       if(active)setLocale(active as ExtendedUiLocale)
       if(workplace!==undefined){
         setPreferredWorkplace(workplace)
         if(workplace)sessionStorage.setItem("uptilldawn-training-preferred-workplace",workplace)
         else sessionStorage.removeItem("uptilldawn-training-preferred-workplace")
+      }
+      if(chapter){
+        const key=tourProgressKey(user.id,nextRole)
+        let existing:{completed?:string[];skipped?:string[]}={}
+        try{existing=JSON.parse(localStorage.getItem(key)||"{}")}catch{}
+        localStorage.setItem(key,JSON.stringify({
+          version:VERSION,
+          activeKey:chapter,
+          completed:reset?[]:Array.isArray(existing.completed)?existing.completed:[],
+          skipped:reset?[]:Array.isArray(existing.skipped)?existing.skipped:[],
+          paused:false,
+          updatedAt:new Date().toISOString(),
+        }))
       }
       setTourMode(nextMode)
       setTourRole(nextRole)
@@ -404,11 +419,11 @@ export function RestartRoleTourButton(){
   const [locale,setLocale]=useState<ExtendedUiLocale>("nl")
   useEffect(()=>{const apply=()=>{const next=parseUiLocale(document.documentElement.lang);if(next)setLocale(next as ExtendedUiLocale)};apply();addEventListener(LANGUAGE_APPLIED_EVENT,apply);return()=>removeEventListener(LANGUAGE_APPLIED_EVENT,apply)},[])
   const label=(nl:string,en:string,fr:string,de:string)=>({nl,en,fr,de}[locale])
-  const start=async(nextRole?:UiRole,workplace?:string,chapter?:string)=>{
+  const start=async(nextRole?:UiRole,workplace?:string,chapter="overview")=>{
     const target=nextRole||roles[0]
     if(!target)return
     if(target!==roles[0]&&realIsAdmin)await setRoleMode(target)
-    dispatchEvent(new CustomEvent("uptilldawn-restart-tour",{detail:{role:target,workplace,chapter,mode:"full"}}))
+    dispatchEvent(new CustomEvent("uptilldawn-restart-tour",{detail:{role:target,workplace,chapter,mode:"full",reset:true}}))
   }
   if(!isOwner)return <div data-no-translate className="flex flex-wrap gap-2"><button type="button" onClick={()=>void start()} className="rounded-xl border px-4 py-3 font-bold">{label("RONDLEIDING OPNIEUW STARTEN","RESTART TOUR","RECOMMENCER LA VISITE","RUNDGANG NEU STARTEN")}</button><a href="/help" className="rounded-xl border px-4 py-3 font-bold">{label("ALLE RONDLEIDINGEN","ALL TOURS","TOUTES LES VISITES","ALLE RUNDGÄNGE")}</a></div>
   return <div data-no-translate className="flex flex-wrap gap-2">
