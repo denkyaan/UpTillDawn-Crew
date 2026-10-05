@@ -110,6 +110,18 @@ export default async function Page({searchParams}:{searchParams?:Promise<{event?
   const summary=personalWork&&session.data
     ? await s.rpc('upt_work_session_time_summary',{p_work_session:session.data.id})
     : null
+  const activeShift=session.data?.shift_id?(shifts.data||[]).find(row=>row.id===session.data?.shift_id):null
+  const activeWorkplace=activeShift?(workplaces.data||[]).find(row=>row.id===activeShift.workplace_id):null
+  const isDriverSession=Boolean(session.data&&activeWorkplace&&/driver/i.test(activeWorkplace.name))
+  const driverSession=isDriverSession&&session.data
+    ? await s.from('driver_sessions').select('*').eq('work_session_id',session.data.id).is('ended_at',null).maybeSingle()
+    : {data:null,error:null}
+  const driverSummary=isDriverSession&&session.data
+    ? await s.rpc('upt_driver_time_summary' as 'upt_work_session_time_summary',{p_work_session:session.data.id})
+    : null
+  const driverTasks=isDriverSession&&session.data
+    ? await s.from('driver_task_details').select('task_id,direction,passenger_name,passenger_phone,address,scheduled_at,estimated_drive_minutes').order('scheduled_at')
+    : {data:[],error:null}
 
   const [timeReviews,operationalAlerts]=await Promise.all([
     isAdmin
@@ -254,6 +266,10 @@ export default async function Page({searchParams}:{searchParams?:Promise<{event?
     focusUserId={params.user||null}
     focusWorkplaceId={params.workplace||null}
     focusKind={params.focus||null}
+    isDriverSession={isDriverSession}
+    activeDriverSession={driverSession.data}
+    driverSummary={(driverSummary?.data as unknown as Array<{event_seconds:number;driving_seconds:number;total_km:number}>|null)?.[0]||null}
+    driverTasks={driverTasks.data||[]}
   />
   </>
 }
