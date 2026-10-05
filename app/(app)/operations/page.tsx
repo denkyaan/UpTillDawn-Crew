@@ -58,11 +58,13 @@ export default async function Page({searchParams}:{searchParams?:Promise<{event?
     return <main className="p-8">Werkgegevens konden niet worden geladen. Probeer opnieuw.</main>
   }
 
+  const responsibleEventRows=isResponsible&&candidateEventIds.length?(await s.from('responsible_assignments').select('event_id').eq('user_id',current.id).in('event_id',candidateEventIds)).data||[]:[]
   let operationalEventIds=isAdmin
     ? candidateEventIds
     : [...new Set([
         ...(shifts.data||[]).map(shift=>shift.event_id),
         ...(session.data?[session.data.event_id]:[]),
+        ...responsibleEventRows.map(row=>row.event_id),
       ])]
   if(isAdmin&&params.event&&candidateEventIds.includes(params.event))operationalEventIds=[params.event]
 
