@@ -215,3 +215,33 @@ test('database-driven workplace and notification copy is localized in all four p
     'mislukte admin-loginpogingen',
   ]) assert.ok(push.includes(marker), `${marker} must be covered by push localization`)
 })
+
+
+test('database-backed standard workplace labels and descriptions have four-language coverage', async () => {
+  const complete = await readFile(new URL('../lib/ui-translation-complete.ts', import.meta.url), 'utf8')
+  const expected = [
+    'Backstage Management',
+    'Allrounder',
+    'Vervoer van artiesten, crew en andere toegewezen personen van en naar het evenement.',
+    'Inkom',
+    'Ticket scan',
+    'Guest list',
+    'Artists',
+  ]
+  for (const value of expected) {
+    const line=complete.split('\n').find(row=>row.includes("'"+value+"'")||row.includes('"'+value+'"'))||''
+    assert.match(line,/fr:\s*['"][^'"]+['"]/,value+' missing FR runtime coverage')
+    assert.match(line,/en:\s*['"][^'"]+['"]/,value+' missing EN runtime coverage')
+    assert.match(line,/de:\s*['"][^'"]+['"]/,value+' missing DE runtime coverage')
+  }
+})
+
+test('dynamic notification shells are localized while event person and address data stay intact', async () => {
+  const runtime = await readFile(new URL('../lib/ui-translation-runtime.ts', import.meta.url), 'utf8')
+  for (const helper of ['translateRequestDecision','translateAccountApproval','translateDriverDeparture','translateAdminLockout']) {
+    assert.ok(runtime.includes(helper),helper+' must be active in runtime translation')
+  }
+  assert.match(runtime,/Ophalen\|Afzetten/)
+  assert.match(runtime,/Nieuw account wacht op goedkeuring/)
+  assert.match(runtime,/mislukte admin-loginpogingen/)
+})
