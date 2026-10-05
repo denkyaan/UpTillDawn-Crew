@@ -1,6 +1,6 @@
 "use client"
 
-import {useEffect,useMemo,useState} from "react"
+import {useCallback,useEffect,useMemo,useState} from "react"
 import {usePathname,useRouter} from "next/navigation"
 import {useAuth,type UiRole} from "@/lib/providers"
 import {createClient} from "@/lib/supabase/crew-client"
@@ -206,6 +206,7 @@ export function RoleAppTour(){
   const [preferredWorkplace,setPreferredWorkplace]=useState("")
   const [tourMode,setTourMode]=useState<TourMode>("full")
   const activeRole=tourRole||role
+  const setPreview=useCallback((active:boolean)=>dispatchEvent(new CustomEvent("uptilldawn-tour-preview",{detail:{active,role:activeRole}})),[activeRole])
   const steps=useMemo(()=>{
     if(!activeRole)return []
     const workplace=preferredWorkplace.toLowerCase()
@@ -346,11 +347,10 @@ export function RoleAppTour(){
     addEventListener("uptilldawn-tour-stop",stop)
     addEventListener("uptilldawn-tour-finished",finish)
     return()=>{removeEventListener("uptilldawn-tour-stop",stop);removeEventListener("uptilldawn-tour-finished",finish)}
-  },[role,user])
+  },[role,setPreview,user])
 
   if(!user||!role||!activeRole)return null
 
-  const setPreview=(active:boolean)=>dispatchEvent(new CustomEvent("uptilldawn-tour-preview",{detail:{active,role:activeRole}}))
   const later=()=>{
     localStorage.setItem(storageKey(user.id,activeRole),"postponed")
     setChoice(false)

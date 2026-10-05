@@ -22,11 +22,11 @@ export function TourHelpIndex(){
   const role=(roles[0]||"employee") as TourRole
   const [locale,setLocale]=useState<SupportedUiLocale>(()=>typeof window==="undefined"?"nl":activeUiLocale())
   const [preferred,setPreferred]=useState(()=>typeof window==="undefined"?"":sessionStorage.getItem("uptilldawn-training-preferred-workplace")||"")
-  const [refresh,setRefresh]=useState(0)
+  const [,setRefresh]=useState(0)
   useEffect(()=>{const apply=()=>setLocale(activeUiLocale());addEventListener(LANGUAGE_APPLIED_EVENT,apply);const changed=()=>setRefresh(v=>v+1);addEventListener("uptilldawn-tour-finished",changed);addEventListener("storage",changed);return()=>{removeEventListener(LANGUAGE_APPLIED_EVENT,apply);removeEventListener("uptilldawn-tour-finished",changed);removeEventListener("storage",changed)}},[])
   const driver=/driver/i.test(preferred)
   const entrance=/inkom|entrance|guest/i.test(preferred)
-  const chapters=useMemo(()=>getTourChapters(role,{driver,entrance}),[driver,entrance,role,refresh])
+  const chapters=useMemo(()=>getTourChapters(role,{driver,entrance}),[driver,entrance,role])
   const progress=user?progressFor(user.id,role,chapters[0]?.key||"overview"):null
   if(!user||!progress)return null
 
