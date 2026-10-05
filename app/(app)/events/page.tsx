@@ -258,9 +258,6 @@ export default async function Page({searchParams}:{searchParams?:Promise<{event?
                 <label className="flex items-center gap-2"><input required type="radio" name="breakdown_available" value="yes" defaultChecked={myAvailability?.breakdown_available===true}/> Ja</label>
                 <label className="flex items-center gap-2"><input required type="radio" name="breakdown_available" value="no" defaultChecked={myAvailability?.breakdown_available===false}/> Nee</label>
               </fieldset>
-              <label className="grid gap-1 text-sm md:col-span-3">Reden bij afmelding
-                <textarea name="reason" maxLength={1000} placeholder="Verplicht als je eerder had aangegeven dat je kon deelnemen." className={input}/>
-              </label>
               <button className="rounded-xl bg-violet-600 p-3 font-bold text-white md:col-span-3">BESCHIKBAARHEID OPSLAAN</button>
             </form>
           </section>}
