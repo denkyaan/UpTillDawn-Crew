@@ -277,7 +277,7 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
   const showSettings=feature("settings",true)
   const showPlatform=feature("platform",Boolean(isAdmin))
   const featureVisibility={overview:showOverview,events:showEvents,operations:showOperations,workplaces:showWorkplaces,inventory:showInventory,guestlist:showGuestlist,sales:showSales,shifts:showShifts,briefings:showBriefings,tasks:showTasks,chat:showChat,crew:showCrew,incidents:showIncidents,exports:showExports,personnel:showPersonnel,platform:showPlatform,settings:showSettings}
-  const showUrgent=!pathname.startsWith("/chat")&&!isAdmin&&showIncidents&&effectiveContext.shiftActive&&(!tourPreview||trainingHelpUnlocked)
+  const showUrgent=!pathname.startsWith("/chat")&&!isAdmin&&showIncidents&&effectiveContext.shiftActive&&(!tourPreview||(trainingHelpUnlocked&&!trainingComplete&&trainingNavTarget==="operations"))
   const showFloatingChat=showChat
 
   return <div className="flex h-dvh bg-background print:block print:h-auto">
@@ -287,7 +287,7 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
     <div className="print:hidden">
       <MobileBottomNav chatMissed={chatMissed} incidentMissed={incidentMissed} taskMissed={taskMissed} notificationFeatureCounts={notificationFeatureCounts} featureOrder={order} featureLabels={labels} featureVisibility={featureVisibility} assignedEvent={effectiveContext.assignedEvent} shiftActive={effectiveContext.shiftActive}/>
     </div>
-    {showFloatingChat&&(!tourPreview? !pathname.startsWith("/chat") : trainingChatUnlocked&&!trainingComplete&&pathname.startsWith("/chat"))&&<div className={tourPreview?"rounded-full ring-4 ring-violet-500/60 animate-pulse":undefined}><FloatingChatButton count={chatMissed} stackedAboveAdminAi={Boolean(isAdmin)}/></div>}
+    {showFloatingChat&&(!tourPreview? !pathname.startsWith("/chat") : trainingChatUnlocked&&!trainingComplete&&pathname.startsWith("/chat")&&trainingNavTarget==="crew")&&<div className={tourPreview?"rounded-full ring-4 ring-violet-500/60 animate-pulse":undefined}><FloatingChatButton count={chatMissed} stackedAboveAdminAi={Boolean(isAdmin)}/></div>}
     {tourPreview&&trainingComplete&&showFloatingChat&&!pathname.startsWith("/chat")&&<FloatingChatButton count={chatMissed} stackedAboveAdminAi={Boolean(isAdmin)}/>}
 
     <div className="print:hidden"><AppSidebar chatMissed={chatMissed} incidentMissed={incidentMissed} taskMissed={taskMissed} notificationFeatureCounts={notificationFeatureCounts} showOperations={showOperations} showEvents={showEvents} showTasks={showTasks} showBriefings={showBriefings} showShifts={showShifts} showWorkplaces={showWorkplaces} showIncidents={showIncidents} featureOrder={order} featureLabels={labels} featureVisibility={featureVisibility}/></div>
