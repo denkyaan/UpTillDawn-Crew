@@ -1311,7 +1311,8 @@ export async function createDriverTransportTask(fd:FormData){
  const shiftId=uuid.parse(fd.get('shift_id'))
  const direction=z.enum(['pickup','dropoff']).parse(fd.get('direction'))
  const passengerName=text.parse(fd.get('passenger_name'))
- const guestlistEntryId=optionalUuid(fd.get('guestlist_entry_id'))
+ const guestlistRaw=String(fd.get('guestlist_entry_id')||'').trim()
+ const guestlistEntryId=guestlistRaw?uuid.parse(guestlistRaw):undefined
  const passengerPhone=text.parse(fd.get('passenger_phone'))
  const address=text.parse(fd.get('address'))
  const scheduledAt=new Date(String(fd.get('scheduled_at')||''))
