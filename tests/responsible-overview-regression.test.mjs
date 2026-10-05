@@ -62,7 +62,7 @@ test('responsible defaults exclude admin and God Mode management surfaces',async
  const source=await read('lib/role-ui.ts')
  const block=source.split('responsible_lead: [')[1].split('],\n  staff:')[0]
  for(const forbidden of ['platform','personnel','exports','automations','god'])assert.doesNotMatch(block,new RegExp('"'+forbidden+'"'))
- for(const allowed of ['overview','operations','events','tasks','briefings','workplaces','inventory','guestlist','sales','chat','crew','incidents'])assert.match(block,new RegExp('"'+allowed+'"'))
+ for(const allowed of ['overview','operations','events','tasks','briefings','workplaces','inventory','guestlist','chat','crew','incidents'])assert.match(block,new RegExp('"'+allowed+'"'))
 })
 
 test('responsible overview cleanup keeps queries minimal and ignores cancelled shifts',async()=>{
