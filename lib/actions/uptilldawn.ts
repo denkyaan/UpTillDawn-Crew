@@ -1305,3 +1305,44 @@ export async function deleteEvent(fd:FormData){
  const {error}=await s.rpc('upt_archive_event',{p_event:eventId})
  check(error);await revalidatePath('/events');await revalidatePath('/admin');await markSaveSuccess('event_archived')
 }
+
+export async function createDriverTransportTask(fd:FormData){
+ const {s}=await adminClient()
+ const shiftId=uuid.parse(fd.get('shift_id'))
+ const direction=z.enum(['pickup','dropoff']).parse(fd.get('direction'))
+ const passengerName=text.parse(fd.get('passenger_name'))
+ const passengerPhone=text.parse(fd.get('passenger_phone'))
+ const address=text.parse(fd.get('address'))
+ const scheduledAt=new Date(String(fd.get('scheduled_at')||''))
+ if(Number.isNaN(scheduledAt.getTime()))throw new Error('Geef een geldig tijdstip.')
+ const {data:shift,error:shiftError}=await s.from('shifts')
+  .select('id,event_id,workplace_id,user_id,status,workplaces(name),events(address,latitude,longitude)')
+  .eq('id',shiftId).single()
+ check(shiftError)
+ if(!shift||shift.status==='cancelled')throw new Error('Driver-shift is niet beschikbaar.')
+ const workplace=shift.workplaces
+ if(!workplace||!/driver/i.test(workplace.name))throw new Error('Deze rit kan alleen aan een Driver-shift worden gekoppeld.')
+ const event=shift.events
+ if(!event)throw new Error('Evenement niet gevonden.')
+ let eventPoint=event.latitude!=null&&event.longitude!=null
+  ? {latitude:Number(event.latitude),longitude:Number(event.longitude)}
+  : null
+ if(!eventPoint&&event.address)eventPoint=await geocodeGeoapify(event.address)
+ if(!eventPoint)throw new Error('Het evenement heeft geen bruikbaar adres.')
+ const destination=await geocodeGeoapify(address)
+ if(!destination)throw new Error('Het ophaal-/afzetadres kon niet worden gevonden.')
+ const driveMinutes=await drivingMinutesGeoapify(eventPoint,destination)
+ const notifyAt=new Date(scheduledAt.getTime()-(driveMinutes+15)*60_000).toISOString()
+ const title=direction==='pickup'?`Ophalen · ${passengerName}`:`Afzetten · ${passengerName}`
+ const description=`${passengerPhone} · ${address} · ${scheduledAt.toLocaleString('nl-BE')}`
+ const {data:taskId,error:taskError}=await s.rpc('upt_create_assigned_task',{
+  p_event:shift.event_id,p_workplace:shift.workplace_id,p_user:shift.user_id,p_title:title,p_description:description,
+ })
+ check(taskError);if(!taskId)throw new Error('Driver-rit kon niet worden aangemaakt.')
+ const {error:detailError}=await s.rpc('upt_set_driver_task_details' as 'upt_is_approved',{
+  p_task:taskId,p_direction:direction,p_passenger_name:passengerName,p_passenger_phone:passengerPhone,
+  p_address:address,p_scheduled_at:scheduledAt.toISOString(),p_estimated_drive_minutes:driveMinutes,p_notify_at:notifyAt,
+ } as never)
+ if(detailError){await s.from('tasks').delete().eq('id',taskId);check(detailError)}
+ await revalidatePath('/workplaces');await revalidatePath('/tasks')
+}
