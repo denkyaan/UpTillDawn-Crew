@@ -4,15 +4,18 @@ import { ProfileForm } from '@/components/crew/profile-form'
 import { LanguageSwitcher } from '@/components/language-switcher'
 import { getCurrentUser } from '@/lib/actions/auth'
 import { RestartRoleTourButton } from '@/components/role-app-tour'
+import { SandboxRoleModule } from '@/components/training/sandbox-role-module'
 
 export const dynamic='force-dynamic'
 
 const AdminCard=({href,title,description}:{href:string;title:string;description:string})=><Link href={href} className="rounded-2xl border p-4 transition hover:border-violet-500/60 hover:bg-muted/30"><h2 className="font-black">{title}</h2><p className="mt-1 text-sm text-muted-foreground">{description}</p></Link>
 
-export default async function Page(){
+export default async function Page({searchParams}:{searchParams?:Promise<{tour?:string}>}){
+  const params=searchParams?await searchParams:{}
   const s=await createClient()
   const [{data:{user}},current]=await Promise.all([s.auth.getUser(),getCurrentUser()])
   if(!user)return null
+  if(params.tour==='1'&&current)return <SandboxRoleModule role={current.role} module="settings"/>
 
   const [{data,error},{data:preference},{data:workplaceOptions}]=await Promise.all([
     s.rpc('upt_own_profile_details'),
