@@ -74,17 +74,20 @@ export function TourControlCenter({active,userId,role,preferredWorkplace,mode="f
   const [rect,setRect]=useState<Rect|null>(null)
   const [fallbackTarget,setFallbackTarget]=useState(false)
   const progressRef=useRef(progress)
-  progressRef.current=progress
+  useEffect(()=>{progressRef.current=progress},[progress])
   const write=useCallback((next:Progress)=>{progressRef.current=next;setProgress(next);localStorage.setItem(progressKey,JSON.stringify(next))},[progressKey])
 
   useEffect(()=>{const apply=()=>setLocale(activeUiLocale());addEventListener(LANGUAGE_APPLIED_EVENT,apply);return()=>removeEventListener(LANGUAGE_APPLIED_EVENT,apply)},[])
   useEffect(()=>{
     if(!active||!chapters.length)return
-    const restored=readProgress(progressKey,chapters[0].key)
-    const valid=chapters.some(chapter=>chapter.key===restored.activeKey)
-    const next=valid?restored:{...restored,activeKey:chapters[0].key}
-    write({...next,paused:false,updatedAt:new Date().toISOString()})
     sessionStorage.setItem(TOUR_SESSION_KEY,JSON.stringify({active:true,role,mode}))
+    const frame=requestAnimationFrame(()=>{
+      const restored=readProgress(progressKey,chapters[0].key)
+      const valid=chapters.some(chapter=>chapter.key===restored.activeKey)
+      const next=valid?restored:{...restored,activeKey:chapters[0].key}
+      write({...next,paused:false,updatedAt:new Date().toISOString()})
+    })
+    return()=>cancelAnimationFrame(frame)
   },[active,chapters,mode,progressKey,role,write])
 
   const current=chapters.find(chapter=>chapter.key===progress.activeKey)||chapters[0]
