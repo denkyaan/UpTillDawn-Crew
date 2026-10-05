@@ -13,6 +13,7 @@ import {
   ScrollText,
   ShoppingCart,
   Settings,
+  CircleHelp,
   UserCheck,
   Users,
 } from "lucide-react"
@@ -42,5 +43,6 @@ export const NAV_ITEMS: NavigationItem[] = [
   { key:"exports", href:"/exports", label:"Excel", icon:FileSpreadsheet, roles:["admin"] },
   { key:"personnel", href:"/personnel", label:"Goedkeuringen", icon:UserCheck, roles:["admin"] },
   { key:"platform", href:"/admin/platform", label:"Platformbeheer", icon:Boxes, roles:["admin"] },
+  { key:"help", href:"/help", label:"Rondleidingen & training", icon:CircleHelp, roles:["employee","responsible_lead","admin"] },
   { key:"settings", href:"/settings", label:"Beheer", icon:Settings, roles:["employee","responsible_lead","admin"] },
 ]
