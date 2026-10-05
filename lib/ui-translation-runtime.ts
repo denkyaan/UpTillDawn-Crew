@@ -255,56 +255,6 @@ function translateAdminLockout(value:string,locale:ExtendedUiLocale){
   return `3 Admin-Anmeldeversuche sind fehlgeschlagen. Konto: ${account}. IP: ${ip}. Standort (ungefähr): ${location}. Gerät/Browser: ${device}. Anmeldung für 15 Minuten gesperrt.`
 }
 
-function translateRequestDecision(value:string,locale:ExtendedUiLocale){
-  const match=value.match(/^Aanvraag:\s*(pending|approved|rejected|cancelled)$/i)
-  if(!match)return null
-  const state=match[1].toLowerCase() as 'pending'|'approved'|'rejected'|'cancelled'
-  const labels={
-    nl:{pending:'in afwachting',approved:'goedgekeurd',rejected:'afgewezen',cancelled:'geannuleerd'},
-    fr:{pending:'en attente',approved:'approuvée',rejected:'refusée',cancelled:'annulée'},
-    en:{pending:'pending',approved:'approved',rejected:'rejected',cancelled:'cancelled'},
-    de:{pending:'ausstehend',approved:'genehmigt',rejected:'abgelehnt',cancelled:'storniert'},
-  } as const
-  const prefix={nl:'Aanvraag',fr:'Demande',en:'Request',de:'Anfrage'} as const
-  return `${prefix[locale]}: ${labels[locale][state]}`
-}
-
-function translateAccountApproval(value:string,locale:ExtendedUiLocale){
-  const match=value.match(/^Nieuw account wacht op goedkeuring: (.+)\.$/)
-  if(!match)return null
-  if(locale==='fr')return `Nouveau compte en attente d’approbation : ${match[1]}.`
-  if(locale==='en')return `New account awaiting approval: ${match[1]}.`
-  if(locale==='de')return `Neues Konto wartet auf Freigabe: ${match[1]}.`
-  return value
-}
-
-function translateDriverDeparture(value:string,locale:ExtendedUiLocale){
-  const match=value.match(/^(.+?) · (Ophalen|Afzetten): (.*?) · (.*?) · (.*?) · rit ±(\d+) min · 15 min vertrekmarge\.$/)
-  if(!match)return null
-  const [,eventName,direction,passenger,phone,address,minutes]=match
-  if(locale==='fr')return `${eventName} · ${direction==='Ophalen'?'Prise en charge':'Dépose'} : ${passenger} · ${phone} · ${address} · trajet ±${minutes} min · marge de départ 15 min.`
-  if(locale==='en')return `${eventName} · ${direction==='Ophalen'?'Pickup':'Drop-off'}: ${passenger} · ${phone} · ${address} · trip ±${minutes} min · 15 min departure margin.`
-  if(locale==='de')return `${eventName} · ${direction==='Ophalen'?'Abholen':'Absetzen'}: ${passenger} · ${phone} · ${address} · Fahrt ±${minutes} Min · 15 Min Abfahrtspuffer.`
-  return value
-}
-
-function translateAdminLockout(value:string,locale:ExtendedUiLocale){
-  const match=value.match(/^3 mislukte admin-loginpogingen\. Account: (.*?)\. IP: (.*?)\. Locatie \(benadering\): (.*?)\. Apparaat\/browser: (.*?)\. Login gedurende 15 minuten geblokkeerd\.$/)
-  if(!match)return null
-  const localUnknown=(part:string)=>{
-    if(part!=='onbekend')return part
-    if(locale==='fr')return 'inconnu'
-    if(locale==='en')return 'unknown'
-    if(locale==='de')return 'unbekannt'
-    return part
-  }
-  const account=match[1],ip=localUnknown(match[2]),location=localUnknown(match[3]),agent=localUnknown(match[4])
-  if(locale==='fr')return `3 tentatives de connexion administrateur échouées. Compte : ${account}. IP : ${ip}. Localisation (approximative) : ${location}. Appareil/navigateur : ${agent}. Connexion bloquée pendant 15 minutes.`
-  if(locale==='en')return `3 failed admin login attempts. Account: ${account}. IP: ${ip}. Approximate location: ${location}. Device/browser: ${agent}. Login blocked for 15 minutes.`
-  if(locale==='de')return `3 fehlgeschlagene Admin-Anmeldeversuche. Konto: ${account}. IP: ${ip}. Standort (ungefähr): ${location}. Gerät/Browser: ${agent}. Anmeldung für 15 Minuten gesperrt.`
-  return value
-}
-
 function translateActionCenterTitle(value:string,locale:ExtendedUiLocale){
   const match=value.match(/^(ACCOUNT GOEDKEUREN|INKLOKKEN|UITKLOKKEN|INKLOKKEN ONTBREEKT|HELP) · (.+)$/)
   if(!match)return null
@@ -321,14 +271,6 @@ function translateActionCenterTitle(value:string,locale:ExtendedUiLocale){
 }
 
 export function translateRuntimeUi(value:string,locale:ExtendedUiLocale):string{
-  const requestDecision=translateRequestDecision(value,locale)
-  if(requestDecision)return requestDecision
-  const accountApproval=translateAccountApproval(value,locale)
-  if(accountApproval)return accountApproval
-  const driverDeparture=translateDriverDeparture(value,locale)
-  if(driverDeparture)return driverDeparture
-  const adminLockout=translateAdminLockout(value,locale)
-  if(adminLockout)return adminLockout
   const dynamicTranslators=[translateRequestStatus,translateShiftReminder,translateUnderstaffing,translateAccountApproval,translateEventReportReady,translateInventoryQuantity,translateDriverDeparture,translateDriverArrival,translateAdminLockout] as const
   for(const translator of dynamicTranslators){
     const translated=translator(value,locale)
