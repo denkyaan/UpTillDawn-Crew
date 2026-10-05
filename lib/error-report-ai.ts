@@ -222,11 +222,11 @@ async function finalizeFailure(client:CrewClient,reportId:string,message:string)
     p_category:'unknown',
     p_severity:'medium',
     p_summary:summary,
-    p_user_message:'Je foutrapport is bewaard. De maker is ingeschakeld omdat de automatische analyse niet kon worden afgerond.',
+    p_user_message:'Je foutrapport is bewaard. De automatische herstelcontroller onderzoekt dit verder.',
     p_auto_action:'none',
-    p_maker_action_required:true,
-    p_maker_action:'Open het foutrapport in God Mode en voer de diagnose handmatig uit. Achtergrondanalyse: '+message.slice(0,1200),
-    p_god_prompt:'Onderzoek dit productiefoutrapport in God Mode, bepaal de oorzaak en maak een gecontroleerd code- of configuratievoorstel. Rapport-ID: '+reportId,
+    p_maker_action_required:false,
+    p_maker_action:undefined,
+    p_god_prompt:undefined,
   })
 }
 
@@ -303,14 +303,7 @@ export async function processErrorReport(client:CrewClient,reportId:string,ai:Er
 
   if(!ai){
     await finalizeFailure(client,reportId,'Cloudflare Workers AI binding is niet beschikbaar.')
-    await sendMakerErrorEmail({
-      id:report.id,
-      route:report.route,
-      error_message:report.error_message,
-      ai_summary:'Cloudflare Workers AI was niet beschikbaar tijdens de foutanalyse.',
-      maker_action:'Controleer de AI-binding/deployment en open het rapport in God Mode.',
-      severity:'medium',
-    })
+    console.error('[error-ai] AI-binding ontbreekt; rapport blijft voor autonome technische opvolging bewaard',{reportId})
     return
   }
 
@@ -359,16 +352,7 @@ export async function processErrorReport(client:CrewClient,reportId:string,ai:Er
             ai_summary:result.summary,
           })
         : false
-      if(!dispatched){
-        await sendMakerErrorEmail({
-          id:report.id,
-          route:report.route,
-          error_message:report.error_message,
-          ai_summary:result.summary,
-          maker_action:makerAction||'Open het rapport in God Mode.',
-          severity:result.severity,
-        })
-      }
+      if(!dispatched)console.error('[error-ai] self-healing dispatch niet beschikbaar; rapport blijft technisch geregistreerd',{reportId})
     }
   }catch(error){
     const message=error instanceof Error?error.message:'onbekende fout'
@@ -402,16 +386,7 @@ export async function processErrorReport(client:CrewClient,reportId:string,ai:Er
           stack_trace:report.stack_trace,
           ai_summary:fallback.summary,
         })
-        if(!dispatched){
-          await sendMakerErrorEmail({
-            id:report.id,
-            route:report.route,
-            error_message:report.error_message,
-            ai_summary:fallback.summary,
-            maker_action:fallback.makerAction||'Open het rapport in God Mode.',
-            severity:fallback.severity,
-          })
-        }
+        if(!dispatched)console.error('[error-ai] fallback self-healing dispatch niet beschikbaar; rapport blijft technisch geregistreerd',{reportId})
       }
     }catch(finalizeError){
       console.error('[error-ai] fallback-escalatie mislukt',finalizeError instanceof Error?finalizeError.message:'unknown')
