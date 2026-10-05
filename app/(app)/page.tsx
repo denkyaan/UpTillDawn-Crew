@@ -8,6 +8,7 @@ import { AssignedEventOnly } from '@/components/auth/assigned-event-only'
 import { getCurrentUser } from '@/lib/actions/auth'
 import { ResponsibleLivePersonnel, type ResponsibleLivePerson } from '@/components/responsible/responsible-live-personnel'
 import { StaffWorkplacePersonnel, type StaffWorkplacePerson } from '@/components/crew/staff-workplace-personnel'
+import { TourActiveEventDemo } from '@/components/tour-active-event-demo'
 
 export const dynamic = 'force-dynamic'
 
@@ -142,6 +143,7 @@ export default async function Dashboard({searchParams}:{searchParams?:Promise<{t
   if(!current)return null
   const params=searchParams?await searchParams:{}
   if(current.isAdmin)redirect('/admin')
+  if(params.tour==='1')return <TourActiveEventDemo role={current.role==='responsible_lead'?'responsible_lead':'employee'}/>
   return <main className="mx-auto max-w-7xl space-y-7 p-4 pb-28 md:p-8">
     <div>
       <p className="text-xs font-bold tracking-[.2em] text-violet-400">UP TILL DAWN PERSONEELSBEHEER</p>

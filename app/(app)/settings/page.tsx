@@ -71,6 +71,7 @@ export default async function Page({searchParams}:{searchParams?:Promise<{tour?:
       <h2 className="mb-2 text-xl font-black">Rondleiding</h2>
       <p className="mb-3 text-sm text-muted-foreground">Bekijk de interactieve uitleg voor de rol die je momenteel gebruikt.</p>
       <RestartRoleTourButton/>
+      <Link href="/help" className="mt-3 inline-flex rounded-xl border px-4 py-3 font-bold">Rondleidingen & training</Link>
     </section>
 
     <section className="rounded-2xl border p-4">

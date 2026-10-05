@@ -8,6 +8,8 @@ import {translateRuntimeUi} from "@/lib/ui-translation-runtime"
 import {featureHelp} from "@/lib/ui-field-help"
 import {parseUiLocale,LANGUAGE_APPLIED_EVENT} from "@/lib/locale-preferences"
 import type {ExtendedUiLocale} from "@/lib/ui-translation-extensions"
+import {TourControlCenter} from "@/components/training/tour-control-center"
+import {TOUR_SESSION_KEY,type TourMode} from "@/lib/tour-training"
 
 type TourText={nl:string;en:string;fr:string;de:string}
 type Copy=string|TourText
@@ -191,8 +193,9 @@ const tours:Record<UiRole,Step[]>={
   ],
 }
 
-const VERSION=7
-function storageKey(userId:string,role:UiRole){return "uptilldawn-app-tour:"+userId+":"+role+":v"+VERSION}
+const VERSION=8
+const PREVIOUS_VERSION=7
+function storageKey(userId:string,role:UiRole,version=VERSION){return "uptilldawn-app-tour:"+userId+":"+role+":v"+version}
 
 export function RoleAppTour(){
   const {user,roles,loading}=useAuth()
@@ -201,6 +204,7 @@ export function RoleAppTour(){
   const pathname=usePathname()
   const [tourRole,setTourRole]=useState<UiRole|null>(null)
   const [preferredWorkplace,setPreferredWorkplace]=useState("")
+  const [tourMode,setTourMode]=useState<TourMode>("full")
   const activeRole=tourRole||role
   const steps=useMemo(()=>{
     if(!activeRole)return []
@@ -257,11 +261,18 @@ export function RoleAppTour(){
         return
       }
       const saved=localStorage.getItem(storageKey(user.id,role))
+      const previous=localStorage.getItem(storageKey(user.id,role,PREVIOUS_VERSION))
       if(saved==="completed"||saved==="postponed"){
         setChoice(false)
         return
       }
+      if(previous==="completed"){
+        setTourMode("new")
+        setChoice(true)
+        return
+      }
       if(state?.required&&state.completed){
+        setTourMode("full")
         setChoice(true)
         return
       }
@@ -270,10 +281,19 @@ export function RoleAppTour(){
     void check()
     const completed=()=>void check()
     const restart=(event:Event)=>{
-      const requested=(event as CustomEvent<UiRole|undefined>).detail
+      const detail=(event as CustomEvent<UiRole|{role?:UiRole;workplace?:string;chapter?:string;mode?:TourMode;scenario?:string}|undefined>).detail
+      const requested=typeof detail==="string"?detail:detail?.role
       const nextRole=requested&&tours[requested]?requested:role
+      const nextMode=typeof detail==="object"&&detail?.mode?detail.mode:"full"
+      const workplace=typeof detail==="object"?detail?.workplace:undefined
       const active=parseUiLocale(document.documentElement.lang)
       if(active)setLocale(active as ExtendedUiLocale)
+      if(workplace!==undefined){
+        setPreferredWorkplace(workplace)
+        if(workplace)sessionStorage.setItem("uptilldawn-training-preferred-workplace",workplace)
+        else sessionStorage.removeItem("uptilldawn-training-preferred-workplace")
+      }
+      setTourMode(nextMode)
       setTourRole(nextRole)
       setIndex(0)
       setChoice(false)
@@ -299,6 +319,34 @@ export function RoleAppTour(){
     }
   },[index,open,pathname,router,step])
 
+  useEffect(()=>{
+    if(!user||!role)return
+    const restore=()=>{
+      try{
+        const saved=JSON.parse(sessionStorage.getItem(TOUR_SESSION_KEY)||"null") as {active?:boolean;role?:UiRole;mode?:TourMode}|null
+        if(saved?.active&&saved.role===role){
+          setTourRole(role)
+          setTourMode(saved.mode||"full")
+          setOpen(true)
+          setWelcome(false)
+          setChoice(false)
+          setPreview(true)
+        }
+      }catch{}
+    }
+    restore()
+    const stop=()=>{setOpen(false);setWelcome(false);setPreview(false)}
+    const finish=(event:Event)=>{
+      const detail=(event as CustomEvent<{role?:UiRole;mode?:TourMode}>).detail
+      const finishedRole=detail?.role&&tours[detail.role]?detail.role:role
+      localStorage.setItem(storageKey(user.id,finishedRole),"completed")
+      sessionStorage.removeItem(TOUR_SESSION_KEY)
+      setOpen(false);setWelcome(false);setChoice(false);setPreview(false)
+    }
+    addEventListener("uptilldawn-tour-stop",stop)
+    addEventListener("uptilldawn-tour-finished",finish)
+    return()=>{removeEventListener("uptilldawn-tour-stop",stop);removeEventListener("uptilldawn-tour-finished",finish)}
+  },[role,user])
 
   if(!user||!role||!activeRole)return null
 
@@ -306,6 +354,7 @@ export function RoleAppTour(){
   const later=()=>{
     localStorage.setItem(storageKey(user.id,activeRole),"postponed")
     setChoice(false)
+    sessionStorage.removeItem(TOUR_SESSION_KEY)
     setPreview(false)
   }
   const start=()=>{
@@ -321,12 +370,13 @@ export function RoleAppTour(){
   const beginTraining=()=>{
     setWelcome(false)
     setOpen(true)
-    router.push((activeRole==="admin"?"/admin":"/")+"?tour=1")
     sessionStorage.setItem("uptilldawn-tour-preview-route","1")
+    sessionStorage.setItem(TOUR_SESSION_KEY,JSON.stringify({active:true,role:activeRole,mode:tourMode}))
     setPreview(true)
   }
 
   return <>
+    <TourControlCenter active={open} userId={user.id} role={activeRole} preferredWorkplace={preferredWorkplace} mode={tourMode}/>
     {welcome&&<div data-no-translate className="fixed inset-0 z-[145] flex items-end justify-center bg-black/60 p-4 sm:items-center" role="dialog" aria-modal="true">
       <section className="w-full max-w-md rounded-2xl border bg-background p-5 shadow-2xl">
         <h2 className="text-xl font-black">{resolve(UI_COPY.promptTitle)}</h2>
@@ -350,12 +400,22 @@ export function RoleAppTour(){
 }
 
 export function RestartRoleTourButton(){
-  const {isOwner}=useAuth()
-  const start=(role?:UiRole)=>dispatchEvent(new CustomEvent("uptilldawn-restart-tour",{detail:role}))
-  if(!isOwner)return <button type="button" onClick={()=>start()} className="rounded-xl border px-4 py-3 font-bold">RONDLEIDING OPNIEUW STARTEN</button>
-  return <div className="flex flex-wrap gap-2">
-    <button type="button" onClick={()=>start("admin")} className="rounded-xl border px-4 py-3 font-bold">ADMIN RONDLEIDING</button>
-    <button type="button" onClick={()=>start("responsible_lead")} className="rounded-xl border px-4 py-3 font-bold">VERANTWOORDELIJKE RONDLEIDING</button>
-    <button type="button" onClick={()=>start("employee")} className="rounded-xl border px-4 py-3 font-bold">PERSONEEL RONDLEIDING</button>
+  const {isOwner,realIsAdmin,roles,setRoleMode}=useAuth()
+  const [locale,setLocale]=useState<ExtendedUiLocale>("nl")
+  useEffect(()=>{const apply=()=>{const next=parseUiLocale(document.documentElement.lang);if(next)setLocale(next as ExtendedUiLocale)};apply();addEventListener(LANGUAGE_APPLIED_EVENT,apply);return()=>removeEventListener(LANGUAGE_APPLIED_EVENT,apply)},[])
+  const label=(nl:string,en:string,fr:string,de:string)=>({nl,en,fr,de}[locale])
+  const start=async(nextRole?:UiRole,workplace?:string,chapter?:string)=>{
+    const target=nextRole||roles[0]
+    if(!target)return
+    if(target!==roles[0]&&realIsAdmin)await setRoleMode(target)
+    dispatchEvent(new CustomEvent("uptilldawn-restart-tour",{detail:{role:target,workplace,chapter,mode:"full"}}))
+  }
+  if(!isOwner)return <div data-no-translate className="flex flex-wrap gap-2"><button type="button" onClick={()=>void start()} className="rounded-xl border px-4 py-3 font-bold">{label("RONDLEIDING OPNIEUW STARTEN","RESTART TOUR","RECOMMENCER LA VISITE","RUNDGANG NEU STARTEN")}</button><a href="/help" className="rounded-xl border px-4 py-3 font-bold">{label("ALLE RONDLEIDINGEN","ALL TOURS","TOUTES LES VISITES","ALLE RUNDGÄNGE")}</a></div>
+  return <div data-no-translate className="flex flex-wrap gap-2">
+    <button type="button" onClick={()=>void start("admin","")} className="rounded-xl border px-4 py-3 font-bold">ADMIN</button>
+    <button type="button" onClick={()=>void start("responsible_lead","Bar / Toog")} className="rounded-xl border px-4 py-3 font-bold">{label("VERANTWOORDELIJKE","RESPONSIBLE","RESPONSABLE","VERANTWORTLICH")}</button>
+    <button type="button" onClick={()=>void start("employee","Bar / Toog")} className="rounded-xl border px-4 py-3 font-bold">{label("PERSONEEL","STAFF","PERSONNEL","PERSONAL")}</button>
+    <button type="button" onClick={()=>void start("employee","Driver","driver")} className="rounded-xl border px-4 py-3 font-bold">DRIVER</button>
+    <a href="/help" className="rounded-xl border px-4 py-3 font-bold">{label("INDEX","INDEX","INDEX","INDEX")}</a>
   </div>
 }

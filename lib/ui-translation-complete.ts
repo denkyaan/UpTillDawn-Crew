@@ -810,6 +810,7 @@ const ROWS: Record<string, Row> = {
   'Deze uren worden automatisch voorgesteld wanneer je personeel aan deze werkplek koppelt.': { fr: 'Ces horaires sont proposés automatiquement lorsque vous affectez du personnel à ce poste.', en: 'These hours are automatically suggested when you assign staff to this workplace.', de: 'Diese Zeiten werden automatisch vorgeschlagen, wenn Sie Personal diesem Arbeitsplatz zuweisen.' },
   'EXTRA WERKPLEK TOEVOEGEN': { fr: 'AJOUTER UN POSTE SUPPLÉMENTAIRE', en: 'ADD EXTRA WORKPLACE', de: 'ZUSÄTZLICHEN ARBEITSPLATZ HINZUFÜGEN' },
   'ADMIN AI': { fr: 'IA ADMIN', en: 'ADMIN AI', de: 'ADMIN-KI' },
+  'Rondleidingen & training': { fr: 'Visites & formation', en: 'Tours & training', de: 'Rundgänge & Training' },
 }
 
 const CANONICAL = new Map<string, string>()
