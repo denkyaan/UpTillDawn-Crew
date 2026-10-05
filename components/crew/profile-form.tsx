@@ -82,6 +82,9 @@ export function ProfileForm({
       if (error) throw new Error('Profiel opslaan mislukt.')
 
       const preferred=value('preferred_workplace')
+      const preferredName=workplaceOptions.find(option=>option.id===preferred)?.name||''
+      if(preferredName)sessionStorage.setItem('uptilldawn-training-preferred-workplace',preferredName)
+      else sessionStorage.removeItem('uptilldawn-training-preferred-workplace')
       const {error:preferenceError}=await s.rpc(
         'upt_set_own_workplace_preference',
         preferred?{p_workplace:preferred}:{},
