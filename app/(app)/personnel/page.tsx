@@ -9,7 +9,7 @@ import { SandboxRoleModule } from '@/components/training/sandbox-role-module'
 
 export const dynamic = 'force-dynamic'
 
-export default async function Page({searchParams}:{searchParams?:Promise<{feedback?:string;user?:string;focus?:string}>}) {
+export default async function Page({searchParams}:{searchParams?:Promise<{feedback?:string;user?:string;focus?:string;tour?:string}>}) {
   const params=searchParams?await searchParams:{}
   const current=await getCurrentUser()
   if(!current?.isAdmin)redirect('/')
