@@ -132,7 +132,6 @@ export const ROLE_UI_DEFAULTS: Record<RoleRuleRole, RoleUiRule[]> = {
     navRule("responsible_lead","workplaces","Werkplaatsen & shifts",40,"assigned_workplace_role"),
     navRule("responsible_lead","inventory","Inventaris",62,"assigned_workplace_role"),
     navRule("responsible_lead","guestlist","Inkom & Guestlist",65,"assigned_event"),
-    navRule("responsible_lead","sales","Verkoop",67,"assigned_workplace_role"),
     navRule("responsible_lead","chat","Chat's",80),
     navRule("responsible_lead","crew","Personeel",90),
     navRule("responsible_lead","incidents","Help",100,"shift_active"),
