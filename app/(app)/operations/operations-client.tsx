@@ -85,8 +85,8 @@ export default function OperationsClient(p:Props){
  {p.summary&&<LiveWorkSummary summary={p.summary} activeBreak={p.activeBreak} summaryAsOf={p.summaryAsOf}/>} 
  {p.activeBreak&&p.summary&&p.summary.break_balance_seconds<=300&&<p role="alert" className="text-amber-300">Pauzetegoed bijna of volledig opgebruikt.</p>}
  {p.isDriverSession&&<DriverControls s={s} busy={busy} run={run} activeSessionId={p.activeSession.id} activeDriving={p.activeDriverSession||null} summary={p.driverSummary||null} tasks={p.driverTasks||[]}/>} 
- <button data-action={p.activeBreak?'break-stop':'break-start'} disabled={busy} className="w-full rounded-xl border p-4 font-bold" onClick={()=>run(()=>p.activeBreak?work('stop_break',{break_id:p.activeBreak.id}):work('start_break',{session_id:p.activeSession!.id}))}>{p.activeBreak?'PAUZE STOPPEN':'PAUZE STARTEN'}</button>
- {pendingStop
+ <button data-action={p.activeBreak?'break-stop':'break-start'} disabled={busy||Boolean(p.activeDriverSession)} className="w-full rounded-xl border p-4 font-bold" onClick={()=>run(()=>p.activeBreak?work('stop_break',{break_id:p.activeBreak.id}):work('start_break',{session_id:p.activeSession!.id}))}>{p.activeBreak?'PAUZE STOPPEN':'PAUZE STARTEN'}</button>
+ {p.activeDriverSession?<p className="rounded-xl border border-amber-500/40 bg-amber-500/10 p-4 font-semibold">STOP DRIVING is verplicht vóór pauze of stopuren.</p>:pendingStop
   ?<div className="rounded-xl border border-amber-500/40 bg-amber-500/10 p-4"><p className="font-semibold">Stopuren aangevraagd</p><p className="mt-1 text-sm">Je teller blijft doorlopen. Bij goedkeuring wordt de stoptijd teruggezet naar {new Date(pendingStop.requested_at).toLocaleTimeString('nl-BE',{hour:'2-digit',minute:'2-digit'})}.</p></div>
   :<Link className="block w-full rounded-xl bg-red-700 p-4 text-center font-bold text-white" href="/qr">STOPUREN AANVRAGEN</Link>}
  </section>}
