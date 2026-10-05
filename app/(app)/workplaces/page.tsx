@@ -485,6 +485,7 @@ export default async function Page({searchParams}:{searchParams?:Promise<{event?
               currentUserId={user.id}
               defaultStart={workplace.default_shift_start||workplace.events?.start_at||undefined}
               defaultEnd={workplace.default_shift_end||workplace.events?.end_at||undefined}
+              workplaceName={workplace.name}
               people={isAdmin?plannerPeopleByEvent.get(workplace.event_id)||[]:[...peopleById.values()].map(person=>({id:person.id,fullName:person.full_name||'Naam ontbreekt',eventAvailable:true,setupAvailable:true,breakdownAvailable:true}))}
               shifts={plannerShifts.filter(shift=>shift.workplaceId===workplace.id)}
               replacementCandidatesByShift={replacementCandidatesByShift}
