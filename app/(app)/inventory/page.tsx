@@ -25,7 +25,7 @@ export default async function InventoryPage({searchParams}:{searchParams?:Promis
   const params=searchParams?await searchParams:{}
   const current=await getCurrentUser()
   if(!current)redirect('/login')
-  if(params.tour==='1'&&current.role!=='admin')return <SandboxInventory/>
+  if(params.tour==='1')return <SandboxInventory/>
   const isAdmin=current.role==='admin'
   const isResponsible=current.role==='responsible_lead'
   const isStaff=current.role==='staff'
