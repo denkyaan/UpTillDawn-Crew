@@ -287,8 +287,8 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
     <div className="print:hidden">
       <MobileBottomNav chatMissed={chatMissed} incidentMissed={incidentMissed} taskMissed={taskMissed} notificationFeatureCounts={notificationFeatureCounts} featureOrder={order} featureLabels={labels} featureVisibility={featureVisibility} assignedEvent={effectiveContext.assignedEvent} shiftActive={effectiveContext.shiftActive}/>
     </div>
-    {showFloatingChat&&(!tourPreview? !pathname.startsWith("/chat") : trainingChatUnlocked&&!trainingComplete&&pathname.startsWith("/chat")&&trainingNavTarget==="__chat_button")&&<div className={tourPreview?"rounded-full ring-4 ring-violet-500/60 animate-pulse":undefined}><FloatingChatButton count={chatMissed} stackedAboveAdminAi={Boolean(isAdmin)}/></div>}
-    {tourPreview&&trainingComplete&&showFloatingChat&&!pathname.startsWith("/chat")&&<FloatingChatButton count={chatMissed} stackedAboveAdminAi={Boolean(isAdmin)}/>}
+    {showFloatingChat&&(!tourPreview? !pathname.startsWith("/chat") : trainingChatUnlocked&&!trainingComplete&&pathname.startsWith("/chat")&&trainingNavTarget==="__chat_button")&&<div className={tourPreview?"rounded-full ring-4 ring-violet-500/60 animate-pulse":undefined}><FloatingChatButton count={chatMissed} stackedAboveAdminAi={Boolean(isAdmin)} href={tourPreview?"/chat?tour=1":"/chat"}/></div>}
+    {tourPreview&&trainingComplete&&showFloatingChat&&!pathname.startsWith("/chat")&&<FloatingChatButton count={chatMissed} stackedAboveAdminAi={Boolean(isAdmin)} href={tourPreview?"/chat?tour=1":"/chat"}/>}
 
     <div className="print:hidden"><AppSidebar chatMissed={chatMissed} incidentMissed={incidentMissed} taskMissed={taskMissed} notificationFeatureCounts={notificationFeatureCounts} showOperations={showOperations} showEvents={showEvents} showTasks={showTasks} showBriefings={showBriefings} showShifts={showShifts} showWorkplaces={showWorkplaces} showIncidents={showIncidents} featureOrder={order} featureLabels={labels} featureVisibility={featureVisibility}/></div>
     <div className="flex flex-1 flex-col overflow-hidden print:block print:overflow-visible">
@@ -307,7 +307,7 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
     </div>
     {isAdmin&&!tourPreview&&<div className="fixed bottom-20 right-4 z-[70] print:hidden lg:bottom-4"><button type="button" aria-expanded={adminAiOpen} onClick={()=>setAdminAiOpen(value=>!value)} className="rounded-full bg-violet-600 px-5 py-3 font-black text-white shadow-xl">ADMIN AI</button>{adminAiOpen&&<div className="absolute bottom-14 right-0 w-[min(92vw,430px)] max-h-[75vh] overflow-auto rounded-2xl border bg-background p-4 shadow-2xl"><PlatformAiAssistant contextKey={currentFeature||undefined} contextLabel={labels[currentFeature||""]} compact/></div>}</div>}
     {!pathname.startsWith("/chat")&&<>
-      {showUrgent&&<Link href="/incidents" className={`fixed bottom-20 left-4 z-50 rounded-full bg-red-600 px-5 py-4 font-black text-white print:hidden lg:hidden ${tourPreview&&trainingHelpUnlocked&&!trainingComplete&&trainingNavTarget==="operations"?"ring-4 ring-violet-500/60 animate-pulse":""}`}>{({nl:"HELP",en:"HELP",fr:"AIDE",de:"HILFE"} as Record<SupportedUiLocale,string>)[trainingLocale]}<CountBadge count={incidentMissed}/></Link>}
+      {showUrgent&&<Link href={tourPreview?"/incidents?tour=1":"/incidents"} className={`fixed bottom-20 left-4 z-50 rounded-full bg-red-600 px-5 py-4 font-black text-white print:hidden lg:hidden ${tourPreview&&trainingHelpUnlocked&&!trainingComplete&&trainingNavTarget==="operations"?"ring-4 ring-violet-500/60 animate-pulse":""}`}>{({nl:"HELP",en:"HELP",fr:"AIDE",de:"HILFE"} as Record<SupportedUiLocale,string>)[trainingLocale]}<CountBadge count={incidentMissed}/></Link>}
     </>}
   </div>
 }

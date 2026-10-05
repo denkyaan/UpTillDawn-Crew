@@ -79,3 +79,40 @@ test('tour overview is sandboxed before production overview queries run',async()
   const dashboardOverview=dashboard.indexOf("<DashboardOverview current")
   assert.ok(dashboardTour>0&&dashboardTour<dashboardOverview,'crew tour must return before production overview render')
 })
+
+
+test('admin event, workplace and briefing chapters never expose production views during tour',async()=>{
+  const [events,workplaces,briefings]=await Promise.all([
+    read('app/(app)/events/page.tsx'),
+    read('app/(app)/workplaces/page.tsx'),
+    read('app/(app)/briefings/page.tsx'),
+  ])
+  for(const source of [events,workplaces,briefings]){
+    assert.match(source,/params\.tour==='1'/)
+    assert.match(source,/TourActiveEventDemo role="admin"/)
+  }
+})
+
+test('desktop and floating tour navigation preserve sandbox query',async()=>{
+  const [sidebar,layout,floating]=await Promise.all([
+    read('components/layout/sidebar.tsx'),
+    read('components/layout/app-layout.tsx'),
+    read('components/layout/floating-chat-button.tsx'),
+  ])
+  assert.match(sidebar,/tourPreview\?rawHref/)
+  assert.match(sidebar,/tour=1/)
+  assert.match(layout,/\/chat\?tour=1/)
+  assert.match(layout,/\/incidents\?tour=1/)
+  assert.match(floating,/href = "\/chat"/)
+  assert.match(floating,/router\.push\(href\)/)
+})
+
+test('driver sandbox visibly separates driving time and mileage and explains arrival notification',async()=>{
+  const operations=await read('components/training/sandbox-operations.tsx')
+  assert.match(operations,/driveSeconds/)
+  assert.match(operations,/drivingTime/)
+  assert.match(operations,/distanceKm/)
+  assert.match(operations,/Eventtijd gepauzeerd/)
+  assert.match(operations,/Backstage Management krijgt dan automatisch de aankomstmelding/)
+  assert.match(operations,/setDriveSeconds\(0\)/)
+})

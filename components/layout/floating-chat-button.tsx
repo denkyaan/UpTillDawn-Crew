@@ -18,7 +18,7 @@ function clamp(value: number, min: number, max: number) {
   return Math.min(Math.max(value, min), max)
 }
 
-export function FloatingChatButton({ count = 0, stackedAboveAdminAi = false }: { count?: number; stackedAboveAdminAi?: boolean }) {
+export function FloatingChatButton({ count = 0, stackedAboveAdminAi = false, href = "/chat" }: { count?: number; stackedAboveAdminAi?: boolean; href?: string }) {
   const router = useRouter()
   const [position, setPosition] = useState<Position | null>(null)
   const drag = useRef<DragState | null>(null)
@@ -62,7 +62,7 @@ export function FloatingChatButton({ count = 0, stackedAboveAdminAi = false }: {
     if (event.currentTarget.hasPointerCapture(event.pointerId)) {
       event.currentTarget.releasePointerCapture(event.pointerId)
     }
-    if (!state.moved) router.push("/chat")
+    if (!state.moved) router.push(href)
   }
 
   return <button
