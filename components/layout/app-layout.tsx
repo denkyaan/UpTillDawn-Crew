@@ -38,9 +38,10 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
   const [tourPreview,setTourPreview]=useState(false)
   const [trainingLocale,setTrainingLocale]=useState<SupportedUiLocale>(()=>typeof window==="undefined"?"nl":activeUiLocale())
   const [trainingChatUnlocked,setTrainingChatUnlocked]=useState(false)
+  const [trainingHelpUnlocked,setTrainingHelpUnlocked]=useState(false)
   useEffect(()=>{const on=(e:Event)=>setTourPreview(Boolean((e as CustomEvent<{active?:boolean}>).detail?.active));addEventListener("uptilldawn-tour-preview",on);return()=>removeEventListener("uptilldawn-tour-preview",on)},[])
   useEffect(()=>{const apply=()=>setTrainingLocale(activeUiLocale());addEventListener(LANGUAGE_APPLIED_EVENT,apply);return()=>removeEventListener(LANGUAGE_APPLIED_EVENT,apply)},[])
-  useEffect(()=>{const load=()=>{try{const s=JSON.parse(sessionStorage.getItem("uptilldawn-training-workflow-v3")||"{}");setTrainingChatUnlocked(Boolean(s.chatTourCompleted||sessionStorage.getItem("chatTourCompleted")==="1"))}catch{setTrainingChatUnlocked(false)}};load();const on=()=>load();addEventListener("uptilldawn-training-chat-completed",on);return()=>removeEventListener("uptilldawn-training-chat-completed",on)},[tourPreview])
+  useEffect(()=>{const load=()=>{try{const s=JSON.parse(sessionStorage.getItem("uptilldawn-training-workflow-v3")||"{}");setTrainingChatUnlocked(Boolean(s.chatTourCompleted||sessionStorage.getItem("chatTourCompleted")==="1"));setTrainingHelpUnlocked(Boolean(s.incidentDone||s.helpTourCompleted))}catch{setTrainingChatUnlocked(false);setTrainingHelpUnlocked(false)}};load();const onChat=()=>load();const onHelp=()=>load();addEventListener("uptilldawn-training-chat-completed",onChat);addEventListener("uptilldawn-training-help-completed",onHelp);return()=>{removeEventListener("uptilldawn-training-chat-completed",onChat);removeEventListener("uptilldawn-training-help-completed",onHelp)}},[tourPreview])
 
   const activeUiRole=roles[0]
   const roleKey=activeUiRole==="responsible_lead"?"responsible_lead":activeUiRole==="admin"?"admin":activeUiRole==="employee"?"staff":null
@@ -271,7 +272,7 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
   const showSettings=feature("settings",true)
   const showPlatform=feature("platform",Boolean(isAdmin))
   const featureVisibility={overview:showOverview,events:showEvents,operations:showOperations,workplaces:showWorkplaces,inventory:showInventory,guestlist:showGuestlist,sales:showSales,shifts:showShifts,briefings:showBriefings,tasks:showTasks,chat:showChat,crew:showCrew,incidents:showIncidents,exports:showExports,personnel:showPersonnel,platform:showPlatform,settings:showSettings}
-  const showUrgent=!pathname.startsWith("/chat")&&!isAdmin&&showIncidents&&effectiveContext.shiftActive
+  const showUrgent=!pathname.startsWith("/chat")&&!isAdmin&&showIncidents&&effectiveContext.shiftActive&&(!tourPreview||trainingHelpUnlocked)
   const showFloatingChat=showChat
 
   return <div className="flex h-dvh bg-background print:block print:h-auto">
