@@ -88,9 +88,9 @@ function deterministicFallback(report:{error_message:string;error_name:string|nu
       summary:'De fout wijst op een autorisatie- of databasepermissieprobleem.',
       userMessage:'De AI heeft een rechtenprobleem gedetecteerd en doorgestuurd voor een gecontroleerde technische correctie.',
       autoAction:'none',
-      makerActionRequired:true,
-      makerAction:'Controleer de falende databaseactie/RPC en de bijbehorende grants/RLS. Pas uitsluitend de minimale vereiste rechten of server-action aan.',
-      godPrompt:`Onderzoek en herstel het autorisatieprobleem op ${report.route}: ${report.error_message}`,
+      makerActionRequired:false,
+      makerAction:null,
+      godPrompt:`Onderzoek en herstel autonoom het autorisatieprobleem op ${report.route}: ${report.error_message}`,
     }
   }
   return {
@@ -99,9 +99,9 @@ function deterministicFallback(report:{error_message:string;error_name:string|nu
     summary:'De fout kon niet met voldoende zekerheid automatisch worden geclassificeerd.',
     userMessage:'De fout is bewaard en wordt verder technisch onderzocht.',
     autoAction:'none',
-    makerActionRequired:true,
-    makerAction:'Onderzoek het foutrapport en herstel de onderliggende oorzaak met minimale impact.',
-    godPrompt:`Onderzoek en herstel deze productiefout op ${report.route}: ${report.error_message}`,
+    makerActionRequired:false,
+    makerAction:null,
+    godPrompt:`Onderzoek en herstel autonoom deze productiefout op ${report.route}: ${report.error_message}`,
   }
 }
 
@@ -248,9 +248,9 @@ async function analyzeWithRetry(ai:ErrorAiBinding,report:{
     'Gebruik exact deze autoAction waarden: none, retry, reload.',
     'makerAction en godPrompt moeten string of null zijn.',
     'autoAction mag alleen retry of reload zijn als dat veilig is en geen gegevensverlies kan veroorzaken; anders none.',
-    'Zet makerActionRequired=true voor vermoedelijke code-, database-, configuratie-, autorisatie- of dataproblemen, voor hoge/kritieke ernst of wanneer de oorzaak onzeker is.',
-    'Als makeractie nodig is, schrijf een concrete makerAction en een godPrompt waarmee God Mode een controleerbaar code/configuratievoorstel kan maken.',
-    'Verander zelf geen databasegegevens, rechten, code, secrets of gebruikersaccounts.',
+    'Zet makerActionRequired uitsluitend op true wanneer de noodzakelijke oplossing onmogelijk autonoom kan worden uitgevoerd, bijvoorbeeld omdat uitsluitend de maker een ontbrekend secret, extern account, betaling, fysieke handeling of andere niet-delegeerbare actie kan uitvoeren.',
+    'Code-, database-, configuratie-, autorisatie- en dataproblemen zijn op zichzelf GEEN reden voor makeractie: laat de autonome herstelcontroller deze eerst proberen te herstellen en valideren.',
+    'Als makeractie echt onvermijdelijk is, schrijf exact welke niet-autonoom uitvoerbare handeling de maker moet uitvoeren.',
     'Antwoord in het Nederlands.',
   ].join('\n')
 
@@ -311,8 +311,6 @@ export async function processErrorReport(client:CrewClient,reportId:string,ai:Er
     const result=await analyzeWithRetry(ai,report)
 
     const makerRequired=result.makerActionRequired
-      || ['code','database','configuration','permission','data'].includes(result.category)
-      || ['high','critical'].includes(result.severity)
 
     const makerAction=makerRequired
       ? (result.makerAction||'Open het rapport in God Mode en onderzoek de oorzaak voordat je een wijziging publiceert.')
@@ -337,13 +335,13 @@ export async function processErrorReport(client:CrewClient,reportId:string,ai:Er
     if(finalizeError)throw new Error(finalizeError.message)
 
     if(makerRequired){
+      await sendMakerErrorEmail({id:report.id,route:report.route,error_message:report.error_message,ai_summary:result.summary,maker_action:makerAction||'Makeractie vereist.',severity:result.severity})
+    }else if(result.autoAction==='none'||['code','client_state','unknown','database','configuration','permission','data'].includes(result.category)){
       // Technical reports are first handed to the bounded autonomous repair
       // controller. It validates the root cause, limits editable scope, runs
       // the full test/build pipeline and only publishes after CI + deploy.
       // Maker escalation is therefore the fallback, not the first action.
-      const autonomousCandidate=['code','client_state','unknown','database','configuration','permission','data'].includes(result.category)
-      const dispatched=autonomousCandidate
-        ? await dispatchSelfHealing({
+      const dispatched=await dispatchSelfHealing({
             id:report.id,
             route:report.route,
             error_name:report.error_name,
@@ -351,7 +349,6 @@ export async function processErrorReport(client:CrewClient,reportId:string,ai:Er
             stack_trace:report.stack_trace,
             ai_summary:result.summary,
           })
-        : false
       if(!dispatched)console.error('[error-ai] self-healing dispatch niet beschikbaar; rapport blijft technisch geregistreerd',{reportId})
     }
   }catch(error){
@@ -360,8 +357,6 @@ export async function processErrorReport(client:CrewClient,reportId:string,ai:Er
     try{
       const fallback=deterministicFallback(report)
       const makerRequired=fallback.makerActionRequired
-        || ['code','database','configuration','permission','data'].includes(fallback.category)
-        || ['high','critical'].includes(fallback.severity)
 
       const {error:finalizeError}=await client.rpc('upt_finalize_error_report_ai',{
         p_report:reportId,
