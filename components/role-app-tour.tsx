@@ -18,10 +18,10 @@ const c=(nl:string,en:string,fr:string,de:string):TourText=>({nl,en,fr,de})
 
 const UI_COPY={
   promptTitle:c("Welkom bij Up Till Dawn Crew","Welcome to Up Till Dawn Crew","Bienvenue dans Up Till Dawn Crew","Willkommen bei Up Till Dawn Crew"),
-  promptBody:c("Start de interactieve rondleiding. Elke tab wordt echt geopend en binnen elke tab krijg je uitleg over wat je ziet en hoe je de functies gebruikt.","Start the interactive tour. Every tab is opened for real, and inside each tab you get an explanation of what you see and how to use its functions.","Démarrez la visite interactive. Chaque onglet est réellement ouvert et, dans chaque onglet, vous recevez une explication de ce que vous voyez et de la façon d’utiliser les fonctions.","Starte die interaktive Führung. Jeder Tab wird tatsächlich geöffnet, und in jedem Tab wird erklärt, was du siehst und wie du die Funktionen verwendest."),
+  promptBody:c("Je profiel is opgeslagen. Welkom bij Up Till Dawn Crew! We laten je nu stap voor stap de app gebruiken met fictieve trainingsgegevens. Je voert de handelingen zelf uit, precies in de volgorde waarin je ze tijdens een echt evenement gebruikt. Er worden tijdens de training geen echte evenementgegevens gewijzigd.","Your profile has been saved. Welcome to Up Till Dawn Crew! We will now guide you step by step through the app using fictional training data. You perform the actions yourself, in the same order you will use them during a real event. No real event data is changed during training.","Votre profil est enregistré. Bienvenue dans Up Till Dawn Crew ! Nous allons maintenant vous guider pas à pas dans l’application avec des données d’entraînement fictives. Vous effectuez vous-même les actions, dans le même ordre que lors d’un véritable événement. Aucune donnée réelle d’événement n’est modifiée pendant la formation.","Dein Profil wurde gespeichert. Willkommen bei Up Till Dawn Crew! Wir führen dich jetzt Schritt für Schritt mit fiktiven Trainingsdaten durch die App. Du führst die Aktionen selbst aus, in derselben Reihenfolge wie bei einem echten Event. Während des Trainings werden keine echten Eventdaten geändert."),
   tour:c("Rondleiding","Tour","Visite","Rundgang"),
   start:c("START RONDLEIDING","START TOUR","COMMENCER LA VISITE","RUNDGANG STARTEN"),
-  later:c("LATER","LATER","PLUS TARD","SPÄTER"),
+  later:c("LATER","LATER","PLUS TARD","SPÄTER"),\n  welcomeContinue:c("START TRAINING","START TRAINING","COMMENCER LA FORMATION","TRAINING STARTEN"),
   skip:c("OVERSLAAN","SKIP","PASSER","ÜBERSPRINGEN"),
   back:c("VORIGE","BACK","PRÉCÉDENT","ZURÜCK"),
   next:c("VOLGENDE","NEXT","SUIVANT","WEITER"),
@@ -202,7 +202,7 @@ export function RoleAppTour(){
   const activeRole=tourRole||role
   const steps=useMemo(()=>activeRole?tours[activeRole]:[],[activeRole])
   const [open,setOpen]=useState(false)
-  const [choice,setChoice]=useState(false)
+  const [choice,setChoice]=useState(false)\n  const [welcome,setWelcome]=useState(false)
   const [index,setIndex]=useState(0)
   // Keep SSR and the first hydration render identical. Device/manual locale is
   // applied only after mount; this removes the React #418 hydration mismatch.
