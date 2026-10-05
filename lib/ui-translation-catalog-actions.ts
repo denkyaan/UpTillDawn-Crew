@@ -219,6 +219,15 @@ const ROWS:Record<string,Row>={
   'De aanmelddeadline moet vóór of op de start van het evenement liggen.':{fr:'La date limite d’inscription doit être antérieure ou égale au début de l’événement.',en:'The registration deadline must be before or at the event start.',de:'Die Anmeldefrist muss vor oder spätestens zum Veranstaltungsbeginn liegen.'},
   'Selecteer minstens één templateonderdeel.':{fr:'Sélectionnez au moins une partie du modèle.',en:'Select at least one template section.',de:'Wähle mindestens einen Vorlagenbereich aus.'},
   'Geef geldige evenementuren.':{fr:'Indiquez des heures d’événement valides.',en:'Enter valid event times.',de:'Gib gültige Veranstaltungszeiten ein.'},
+  'Geef een geldig tijdstip.':{fr:'Indiquez une heure valide.',en:'Enter a valid time.',de:'Gib einen gültigen Zeitpunkt ein.'},
+  'Driver-shift is niet beschikbaar.':{fr:'Le service chauffeur n’est pas disponible.',en:'The Driver shift is not available.',de:'Die Fahrer-Schicht ist nicht verfügbar.'},
+  'Deze rit kan alleen aan een Driver-shift worden gekoppeld.':{fr:'Ce trajet ne peut être lié qu’à un service chauffeur.',en:'This trip can only be linked to a Driver shift.',de:'Diese Fahrt kann nur einer Fahrer-Schicht zugeordnet werden.'},
+  'Evenement niet gevonden.':{fr:'Événement introuvable.',en:'Event not found.',de:'Event nicht gefunden.'},
+  'Het evenement heeft geen bruikbaar adres.':{fr:'L’événement n’a pas d’adresse utilisable.',en:'The event has no usable address.',de:'Das Event hat keine verwendbare Adresse.'},
+  'Het ophaal-/afzetadres kon niet worden gevonden.':{fr:'L’adresse de prise en charge/dépôt est introuvable.',en:'The pickup/drop-off address could not be found.',de:'Die Abhol-/Absetzadresse konnte nicht gefunden werden.'},
+  'Driver-rit kon niet worden aangemaakt.':{fr:'Le trajet chauffeur n’a pas pu être créé.',en:'The Driver trip could not be created.',de:'Die Fahrerfahrt konnte nicht erstellt werden.'},
+  'Autoroute kon niet worden berekend.':{fr:'L’itinéraire routier n’a pas pu être calculé.',en:'The driving route could not be calculated.',de:'Die Fahrroute konnte nicht berechnet werden.'},
+  'Autorijtijd kon niet worden berekend.':{fr:'Le temps de trajet n’a pas pu être calculé.',en:'The driving time could not be calculated.',de:'Die Fahrzeit konnte nicht berechnet werden.'},
 }
 
 export function translateActionUi(value:string,locale:ActionUiLocale){
