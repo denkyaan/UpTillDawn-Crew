@@ -154,14 +154,16 @@ function translateClockRequestCounts(value:string,locale:ExtendedUiLocale){
 
 function translateRequestStatus(value:string,locale:ExtendedUiLocale){
   const match=value.match(/^Aanvraag:\s*(pending|approved|rejected|cancelled|canceled)$/i)
-  if(!match||locale==='nl')return null
+  if(!match)return null
   const status=match[1].toLowerCase()
   const labels={
+    nl:{pending:'in afwachting',approved:'goedgekeurd',rejected:'afgewezen',cancelled:'geannuleerd',canceled:'geannuleerd'},
     fr:{pending:'en attente',approved:'approuvée',rejected:'refusée',cancelled:'annulée',canceled:'annulée'},
     en:{pending:'pending',approved:'approved',rejected:'rejected',cancelled:'cancelled',canceled:'cancelled'},
     de:{pending:'offen',approved:'genehmigt',rejected:'abgelehnt',cancelled:'storniert',canceled:'storniert'},
   } as const
-  return `${locale==='fr'?'Demande':locale==='en'?'Request':'Anfrage'}: ${labels[locale][status as keyof typeof labels.fr]}`
+  const prefix={nl:'Aanvraag',fr:'Demande',en:'Request',de:'Anfrage'} as const
+  return `${prefix[locale]}: ${labels[locale][status as keyof typeof labels.nl]}`
 }
 
 function translateShiftReminder(value:string,locale:ExtendedUiLocale){
