@@ -59,7 +59,7 @@ test('final acceptance keeps retired admin surfaces retired and all static UI fo
 
 test('release CI includes the 15-browser-bot gate',async()=>{
   const [workflow,bots]=await Promise.all([read('.github/workflows/ci.yml'),read('scripts/15-bot-browser-test.mjs')])
-  assert.match(workflow,/browser-bots:/)
+  assert.equal((workflow.match(/runs-on:/g)||[]).length,1,'release CI must stay on one hosted runner')
   assert.match(workflow,/Run 15 concurrent authenticated browser bots/)
   assert.match(bots,/Array\(13\)\.fill\('staff'\)/)
   for(const locale of ['nl','fr','en','de'])assert.ok(bots.includes(`'${locale}'`),locale)
