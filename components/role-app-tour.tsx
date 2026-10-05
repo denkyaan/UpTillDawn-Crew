@@ -200,8 +200,18 @@ export function RoleAppTour(){
   const router=useRouter()
   const pathname=usePathname()
   const [tourRole,setTourRole]=useState<UiRole|null>(null)
+  const [preferredWorkplace,setPreferredWorkplace]=useState("")
   const activeRole=tourRole||role
-  const steps=useMemo(()=>activeRole?tours[activeRole]:[],[activeRole])
+  const steps=useMemo(()=>{
+    if(!activeRole)return []
+    const workplace=preferredWorkplace.toLowerCase()
+    return tours[activeRole].filter(step=>{
+      const route=step.route?.split("?")[0]
+      if(route==="/sales"&&activeRole!=="admin")return false
+      if(route==="/guestlist"&&!workplace.includes("inkom")&&!workplace.includes("entrance")&&!workplace.includes("guest"))return false
+      return true
+    })
+  },[activeRole,preferredWorkplace])
   const [open,setOpen]=useState(false)
   const [choice,setChoice]=useState(false)
   const [welcome,setWelcome]=useState(false)
@@ -230,8 +240,17 @@ export function RoleAppTour(){
     if(loading||!user||!role)return
     let alive=true
     const check=async()=>{
-      const {data}=await createClient().rpc("upt_current_profile_completion")
+      const client=createClient()
+      const [{data},{data:preference},{data:workplaceOptions}]=await Promise.all([
+        client.rpc("upt_current_profile_completion"),
+        client.rpc("upt_own_workplace_preference"),
+        client.rpc("upt_profile_workplace_options"),
+      ])
       if(!alive)return
+      const preferredName=(workplaceOptions||[]).find((option:{id:string;name:string})=>option.id===preference)?.name||""
+      setPreferredWorkplace(preferredName)
+      if(preferredName)sessionStorage.setItem("uptilldawn-training-preferred-workplace",preferredName)
+      else sessionStorage.removeItem("uptilldawn-training-preferred-workplace")
       const state=data?.[0]
       if(state?.required&&!state.completed){
         if(location.pathname!=="/settings")router.replace("/settings?complete-profile=1")
