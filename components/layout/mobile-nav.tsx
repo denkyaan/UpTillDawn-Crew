@@ -132,7 +132,7 @@ export function MobileBottomNav({
         ?"flex min-h-16 items-center gap-3 rounded-xl px-3 py-2 text-sm font-semibold"
         :"flex min-w-0 flex-1 flex-col items-center justify-center gap-1 rounded-lg px-1 py-1.5 text-[9px] font-semibold",
       active?"bg-violet-500/10 text-violet-400":"text-muted-foreground",
-      trainingNavTarget===item.key?"ring-4 ring-violet-500 ring-inset animate-pulse":"",
+      trainingNavTarget===item.key&&item.key!=="chat"?"ring-4 ring-violet-500 ring-inset animate-pulse":"",
       trainingLocked?"pointer-events-auto cursor-not-allowed opacity-35":"",
     )}
    >
