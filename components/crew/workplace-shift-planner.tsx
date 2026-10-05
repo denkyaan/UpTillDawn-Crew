@@ -159,7 +159,9 @@ export function WorkplaceShiftPlanner({
       hasOpenRequest={openRequestShiftIds.includes(shift.id)}
     />}
 
-    {isAdmin&&shift.status!=='cancelled'&&/driver/i.test(workplaceName)&&<DriverTransportForm shiftId={shift.id}/>}\n\n    {isAdmin&&shift.status!=='cancelled'&&<details className="mt-3 rounded-lg border p-3">
+    {isAdmin&&shift.status!=='cancelled'&&/driver/i.test(workplaceName)&&<DriverTransportForm shiftId={shift.id} artists={driverArtists}/>}
+
+    {isAdmin&&shift.status!=='cancelled'&&<details className="mt-3 rounded-lg border p-3">
      <summary className="cursor-pointer text-sm font-semibold">Dienst bewerken</summary>
      <form action={updateShift} className="mt-3 grid gap-2 md:grid-cols-2">
       <input type="hidden" name="shift_id" value={shift.id}/>
