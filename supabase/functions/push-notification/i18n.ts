@@ -111,8 +111,16 @@ function dynamic(value:string,locale:keyof Localized){
  return null
 }
 
+function localizeDutchRequestStatus(value:string){
+ const request=value.match(/^Aanvraag:\s*(pending|approved|rejected|cancelled|canceled)$/i)
+ if(!request)return null
+ const map={pending:"in afwachting",approved:"goedgekeurd",rejected:"afgewezen",cancelled:"geannuleerd",canceled:"geannuleerd"} as const
+ return `Aanvraag: ${map[request[1].toLowerCase() as keyof typeof map]}`
+}
+
 export function localizePushText(value:unknown,locale:string){
  const text=String(value||"")
- if(locale==="nl"||!localeOk(locale))return text
+ if(locale==="nl")return localizeDutchRequestStatus(text)||text
+ if(!localeOk(locale))return text
  return copy[text]?.[locale]||dynamic(text,locale)||text
 }
