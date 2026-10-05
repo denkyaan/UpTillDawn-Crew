@@ -33,7 +33,7 @@ export default async function SalesPage({
 
   const s=await createClient()
   const params=await searchParams
-  if(params.tour==='1'&&current.role!=='admin')return <SandboxSales/>
+  if(params.tour==='1')return <SandboxSales role={current.role}/>
   const isAdmin=current.isAdmin===true
 
   let events:EventRow[]=[]
