@@ -19,7 +19,7 @@ function persist(next:string|null,module:Module){
  try{s=JSON.parse(sessionStorage.getItem(KEY)||"{}")}catch{}
  sessionStorage.setItem(KEY,JSON.stringify({...s,[module+"TrainingDone"]:true,navTarget:next,trainingComplete:module==="settings"}))
  dispatchEvent(new CustomEvent("uptilldawn-training-nav-target",{detail:{target:next||undefined}}))
- if(module==="chat"){sessionStorage.setItem("chatTourCompleted","1");dispatchEvent(new CustomEvent("uptilldawn-training-chat-completed"))}
+ if(module==="chat"){sessionStorage.setItem("chatTourCompleted","1");const updated={...s,chatTourCompleted:true,[module+"TrainingDone"]:true,navTarget:next,trainingComplete:module==="settings"};sessionStorage.setItem(KEY,JSON.stringify(updated));dispatchEvent(new CustomEvent("uptilldawn-training-chat-completed"))}
 }
 
 export function SandboxRoleModule({role,module}:{role:Role;module:Module}){
