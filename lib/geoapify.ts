@@ -77,3 +77,25 @@ export async function geocodeGeoapify(text:string,lang="nl"){
   const results=await request("search",query,lang,1)
   return results[0]||null
 }
+
+
+export async function drivingMinutesGeoapify(
+  from:{latitude:number;longitude:number},
+  to:{latitude:number;longitude:number},
+){
+  const params=new URLSearchParams({
+    waypoints:`${from.latitude},${from.longitude}|${to.latitude},${to.longitude}`,
+    mode:"drive",
+    apiKey:apiKey(),
+  })
+  const response=await fetch(`https://api.geoapify.com/v1/routing?${params.toString()}`,{
+    headers:{Accept:"application/json"},
+    cache:"no-store",
+    signal:AbortSignal.timeout(8_000),
+  })
+  if(!response.ok)throw new Error("Autorijtijd kon niet worden berekend.")
+  const payload=await response.json() as {features?:Array<{properties?:{time?:number}}>}
+  const seconds=payload.features?.[0]?.properties?.time
+  if(typeof seconds!=="number"||!Number.isFinite(seconds)||seconds<0)throw new Error("Autorijtijd kon niet worden berekend.")
+  return Math.max(1,Math.ceil(seconds/60))
+}
