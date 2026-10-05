@@ -1311,6 +1311,7 @@ export async function createDriverTransportTask(fd:FormData){
  const shiftId=uuid.parse(fd.get('shift_id'))
  const direction=z.enum(['pickup','dropoff']).parse(fd.get('direction'))
  const passengerName=text.parse(fd.get('passenger_name'))
+ const guestlistEntryId=optionalUuid(fd.get('guestlist_entry_id'))
  const passengerPhone=text.parse(fd.get('passenger_phone'))
  const address=text.parse(fd.get('address'))
  const scheduledAt=new Date(String(fd.get('scheduled_at')||''))
@@ -1331,7 +1332,8 @@ export async function createDriverTransportTask(fd:FormData){
  if(!eventPoint)throw new Error('Het evenement heeft geen bruikbaar adres.')
  const destination=await geocodeGeoapify(address)
  if(!destination)throw new Error('Het ophaal-/afzetadres kon niet worden gevonden.')
- const driveMinutes=await drivingMinutesGeoapify(eventPoint,destination)
+ const route=await drivingRouteGeoapify(eventPoint,destination)
+ const driveMinutes=route.minutes
  const notifyAt=new Date(scheduledAt.getTime()-(driveMinutes+15)*60_000).toISOString()
  const title=direction==='pickup'?`Ophalen · ${passengerName}`:`Afzetten · ${passengerName}`
  const description=`${passengerPhone} · ${address} · ${scheduledAt.toLocaleString('nl-BE')}`
@@ -1342,6 +1344,7 @@ export async function createDriverTransportTask(fd:FormData){
  const {error:detailError}=await s.rpc('upt_set_driver_task_details' as 'upt_is_approved',{
   p_task:taskId,p_direction:direction,p_passenger_name:passengerName,p_passenger_phone:passengerPhone,
   p_address:address,p_scheduled_at:scheduledAt.toISOString(),p_estimated_drive_minutes:driveMinutes,p_notify_at:notifyAt,
+  p_expected_km:route.kilometers,p_guestlist_entry:guestlistEntryId,
  } as never)
  if(detailError){await s.from('tasks').delete().eq('id',taskId);check(detailError)}
  await revalidatePath('/workplaces');await revalidatePath('/tasks')
