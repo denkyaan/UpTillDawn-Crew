@@ -16,6 +16,7 @@ const copy:Record<string,Localized>={
 "Pauze langer dan 70 minuten":{fr:"Pause de plus de 70 minutes",en:"Break longer than 70 minutes",de:"Pause länger als 70 Minuten"},
 "Check-in aangevraagd":{fr:"Check-in demandé",en:"Check-in requested",de:"Check-in angefordert"},
 "Check-out aangevraagd":{fr:"Check-out demandé",en:"Check-out requested",de:"Check-out angefordert"},
+"Admin-login tijdelijk geblokkeerd":{fr:"Connexion administrateur temporairement bloquée",en:"Admin login temporarily blocked",de:"Admin-Anmeldung vorübergehend gesperrt"},
 "Dienst gestart":{fr:"Service commencé",en:"Shift started",de:"Schicht gestartet"},
 "Je dienst is gestart en er is nog geen goedgekeurde start geregistreerd.":{fr:"Votre service a commencé et aucun début approuvé n’est encore enregistré.",en:"Your shift has started and no approved start has been recorded yet.",de:"Deine Schicht hat begonnen und es wurde noch kein genehmigter Start erfasst."},
 "Personeelslid nog niet gestart":{fr:"Membre du personnel pas encore démarré",en:"Staff member has not started yet",de:"Mitarbeiter noch nicht gestartet"},
@@ -102,7 +103,11 @@ function dynamic(value:string,locale:keyof Localized){
   return `${base} ${extra}`
  }
  const lockout=value.match(/^3 mislukte admin-loginpogingen\. Account: (.+?)\. IP: (.+?)\. Locatie \(benadering\): (.+?)\. Apparaat\/browser: (.+?)\. Login gedurende 15 minuten geblokkeerd\.$/)
- if(lockout)return locale==="fr"?`3 tentatives de connexion administrateur ont échoué. Compte : ${lockout[1]}. IP : ${lockout[2]}. Localisation (approximative) : ${lockout[3]}. Appareil/navigateur : ${lockout[4]}. Connexion bloquée pendant 15 minutes.`:locale==="en"?`3 admin login attempts failed. Account: ${lockout[1]}. IP: ${lockout[2]}. Location (approximate): ${lockout[3]}. Device/browser: ${lockout[4]}. Login blocked for 15 minutes.`:`3 Admin-Anmeldeversuche sind fehlgeschlagen. Konto: ${lockout[1]}. IP: ${lockout[2]}. Standort (ungefähr): ${lockout[3]}. Gerät/Browser: ${lockout[4]}. Anmeldung für 15 Minuten gesperrt.`
+ if(lockout){
+  const localUnknown=(part:string)=>part==="onbekend"?(locale==="fr"?"inconnu":locale==="en"?"unknown":"unbekannt"):part
+  const account=lockout[1],ip=localUnknown(lockout[2]),location=localUnknown(lockout[3]),device=localUnknown(lockout[4])
+  return locale==="fr"?`3 tentatives de connexion administrateur ont échoué. Compte : ${account}. IP : ${ip}. Localisation (approximative) : ${location}. Appareil/navigateur : ${device}. Connexion bloquée pendant 15 minutes.`:locale==="en"?`3 admin login attempts failed. Account: ${account}. IP: ${ip}. Location (approximate): ${location}. Device/browser: ${device}. Login blocked for 15 minutes.`:`3 Admin-Anmeldeversuche sind fehlgeschlagen. Konto: ${account}. IP: ${ip}. Standort (ungefähr): ${location}. Gerät/Browser: ${device}. Anmeldung für 15 Minuten gesperrt.`
+ }
  return null
 }
 
