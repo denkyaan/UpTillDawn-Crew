@@ -12,7 +12,10 @@ type Summary=Database['public']['Functions']['upt_work_session_time_summary']['R
 type CrewMember={id:string;full_name:string|null;phone_number:string|null;profile_photo_url:string|null}
 type OperationalAlert=Database['public']['Functions']['upt_operational_alerts']['Returns'][number]
 type ManagerLiveSession=Database['public']['Functions']['upt_manager_live_sessions']['Returns'][number]
-type Props={userId:string;shifts:Tables<'shifts'>[];events:Tables<'events'>[];workplaces:Tables<'workplaces'>[];activeSession:Tables<'work_sessions'>|null;activeBreak:Tables<'break_sessions'>|null;checkins:Tables<'check_ins'>[];checkouts:Tables<'check_outs'>[];manager:boolean;isAdmin:boolean;personalWork:boolean;summary:Summary|null;summaryAsOf:number;liveSessions:ManagerLiveSession[];liveBreaks:Tables<'break_sessions'>[];crewDirectory:CrewMember[];timeReviews:Tables<'time_review_requests'>[];operationalAlerts:OperationalAlert[];focusUserId?:string|null;focusWorkplaceId?:string|null;focusKind?:string|null}
+type DriverSession={id:string;started_at:string;task_id:string|null;expected_km:number|null}
+type DriverTask={task_id:string;direction:string;passenger_name:string;passenger_phone:string;address:string;scheduled_at:string;estimated_drive_minutes:number|null}
+type DriverSummary={event_seconds:number;driving_seconds:number;total_km:number}
+type Props={userId:string;shifts:Tables<'shifts'>[];events:Tables<'events'>[];workplaces:Tables<'workplaces'>[];activeSession:Tables<'work_sessions'>|null;activeBreak:Tables<'break_sessions'>|null;checkins:Tables<'check_ins'>[];checkouts:Tables<'check_outs'>[];manager:boolean;isAdmin:boolean;personalWork:boolean;summary:Summary|null;summaryAsOf:number;liveSessions:ManagerLiveSession[];liveBreaks:Tables<'break_sessions'>[];crewDirectory:CrewMember[];timeReviews:Tables<'time_review_requests'>[];operationalAlerts:OperationalAlert[];focusUserId?:string|null;focusWorkplaceId?:string|null;focusKind?:string|null;isDriverSession?:boolean;activeDriverSession?:DriverSession|null;driverSummary?:DriverSummary|null;driverTasks?:DriverTask[]}
 export default function OperationsClient(p:Props){
  const router=useRouter();const [busy,setBusy]=useState(false),[msg,setMsg]=useState(''),[rejectionReasons,setRejectionReasons]=useState<Record<string,string>>({}),[alertNow,setAlertNow]=useState(()=>Date.now())
  const s=useMemo(()=>createClient(),[])
@@ -79,6 +82,7 @@ export default function OperationsClient(p:Props){
  {p.personalWork&&p.activeSession&&<section className="space-y-4 rounded-2xl border border-violet-500 bg-card p-5"><h2 className="text-xl font-bold">WERK ACTIEF</h2><p>Gestart: {new Date(p.activeSession.started_at).toLocaleString('nl-BE')}</p>
  {p.summary&&<LiveWorkSummary summary={p.summary} activeBreak={p.activeBreak} summaryAsOf={p.summaryAsOf}/>} 
  {p.activeBreak&&p.summary&&p.summary.break_balance_seconds<=300&&<p role="alert" className="text-amber-300">Pauzetegoed bijna of volledig opgebruikt.</p>}
+ {p.isDriverSession&&<DriverControls s={s} busy={busy} run={run} activeSessionId={p.activeSession.id} activeDriving={p.activeDriverSession||null} summary={p.driverSummary||null} tasks={p.driverTasks||[]}/>} 
  <button data-action={p.activeBreak?'break-stop':'break-start'} disabled={busy} className="w-full rounded-xl border p-4 font-bold" onClick={()=>run(()=>p.activeBreak?work('stop_break',{break_id:p.activeBreak.id}):work('start_break',{session_id:p.activeSession!.id}))}>{p.activeBreak?'PAUZE STOPPEN':'PAUZE STARTEN'}</button>
  {pendingStop
   ?<div className="rounded-xl border border-amber-500/40 bg-amber-500/10 p-4"><p className="font-semibold">Stopuren aangevraagd</p><p className="mt-1 text-sm">Je teller blijft doorlopen. Bij goedkeuring wordt de stoptijd teruggezet naar {new Date(pendingStop.requested_at).toLocaleTimeString('nl-BE',{hour:'2-digit',minute:'2-digit'})}.</p></div>
@@ -175,5 +179,33 @@ function LiveWorkSummary({summary,activeBreak,summaryAsOf}:{summary:Summary;acti
   <div className="rounded-xl border p-3"><p className="text-xs font-bold uppercase tracking-wide text-muted-foreground">Werk</p><p className="font-mono text-xl font-black tabular-nums">{formatDigital(work)}</p></div>
   <div className="rounded-xl border p-3"><p className="text-xs font-bold uppercase tracking-wide text-muted-foreground">Pauze</p><p className="font-mono text-xl font-black tabular-nums">{formatDigital(pause)}</p></div>
   <div className="rounded-xl border p-3"><p className="text-xs font-bold uppercase tracking-wide text-muted-foreground">Pauze over</p><p className="font-mono text-xl font-black tabular-nums">{formatDigital(remaining)}</p></div>
+ </div>
+}
+
+
+function DriverControls({s,busy,run,activeSessionId,activeDriving,summary,tasks}:{s:ReturnType<typeof createClient>;busy:boolean;run:(fn:()=>Promise<void>)=>Promise<void>;activeSessionId:string;activeDriving:DriverSession|null;summary:DriverSummary|null;tasks:DriverTask[]}){
+ const [taskId,setTaskId]=useState(tasks[0]?.task_id||'')
+ const selected=tasks.find(task=>task.task_id===taskId)
+ const locate=()=>new Promise<GeolocationPosition>((resolve,reject)=>navigator.geolocation.getCurrentPosition(resolve,reject,{enableHighAccuracy:true,timeout:12000,maximumAge:0}))
+ async function startDriving(){
+  const pos=await locate()
+  const {error}=await s.rpc('upt_start_driving' as 'upt_start_work',{
+   p_work_session:activeSessionId,p_task:taskId||undefined,p_latitude:pos.coords.latitude,p_longitude:pos.coords.longitude,p_expected_km:undefined,
+  } as never)
+  if(error)throw error
+ }
+ async function stopDriving(){
+  if(!activeDriving)return
+  const pos=await locate()
+  const {error}=await s.rpc('upt_stop_driving' as 'upt_stop_work',{
+   p_driver_session:activeDriving.id,p_latitude:pos.coords.latitude,p_longitude:pos.coords.longitude,p_actual_km:undefined,
+  } as never)
+  if(error)throw error
+ }
+ return <div className="space-y-3 rounded-xl border border-violet-500/50 bg-violet-500/5 p-4">
+  <div><p className="font-black">DRIVER</p><p className="text-sm text-muted-foreground">{activeDriving?'Rijtijd actief · eventtijd staat automatisch stil.':'Eventtijd actief.'}</p></div>
+  {summary&&<div className="grid grid-cols-3 gap-2 text-center text-sm"><div className="rounded-lg border p-2"><b>{formatDigital(summary.event_seconds)}</b><br/>Event</div><div className="rounded-lg border p-2"><b>{formatDigital(summary.driving_seconds)}</b><br/>Driving</div><div className="rounded-lg border p-2"><b>{Number(summary.total_km||0).toFixed(1)} km</b><br/>Kilometers</div></div>}
+  {!activeDriving&&<><select value={taskId} onChange={e=>setTaskId(e.target.value)} className="w-full rounded-lg border bg-background p-3"><option value="">Rit selecteren</option>{tasks.map(task=><option key={task.task_id} value={task.task_id}>{task.direction==='pickup'?'Ophalen':'Afzetten'} · {task.passenger_name} · {new Date(task.scheduled_at).toLocaleTimeString('nl-BE',{hour:'2-digit',minute:'2-digit'})}</option>)}</select>{selected&&<div className="rounded-lg border p-3 text-sm"><p className="font-bold">{selected.passenger_name}</p><a href={`tel:${selected.passenger_phone}`} className="underline">{selected.passenger_phone}</a><p>{selected.address}</p><p>Geschatte rijtijd: {selected.estimated_drive_minutes??'—'} min</p></div>}<button disabled={busy||!taskId} onClick={()=>run(startDriving)} className="w-full rounded-xl bg-violet-600 p-4 font-black text-white disabled:opacity-50">START DRIVING</button></>}
+  {activeDriving&&<button disabled={busy} onClick={()=>run(stopDriving)} className="w-full rounded-xl bg-violet-600 p-4 font-black text-white">STOP DRIVING · TERUG OP EVENT</button>}
  </div>
 }
