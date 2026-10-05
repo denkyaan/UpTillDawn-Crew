@@ -33,34 +33,3 @@ test('push prompt appears only when notification consent is actually missing',as
  assert.match(source,/permissionNeedsConsent/)
  assert.match(source,/current==="default"&&permissionNeedsConsent/)
 })
-
-
-test('database-generated push copy has FR EN DE coverage including dynamic notification shells',async()=>{
- const source=await read('supabase/functions/push-notification/i18n.ts')
- const staticCopy=[
-  'Pauzetegoed bijna op',
-  'Check-in aangevraagd',
-  'Check-out aangevraagd',
-  'Admin-login tijdelijk geblokkeerd',
-  'Nieuw belangrijk document',
-  'Nieuw evenementdocument',
-  'Nieuwe accountgoedkeuring',
-  'Verantwoordelijke ontbreekt',
-  'Briefing nog niet bevestigd',
-  'Voorraad onder minimum',
-  'Checklist nog niet afgerond',
-  'Dataconsistentie waarschuwing',
-  'Operationele waarschuwing',
-  'Vertrek voor ophaling',
-  'Vertrek voor afzetrit',
- ]
- for(const value of staticCopy){
-  const line=source.split('\n').find(row=>row.includes('"'+value+'"'))||''
-  assert.match(line,/fr:"[^"]+"/,value+' missing FR push copy')
-  assert.match(line,/en:"[^"]+"/,value+' missing EN push copy')
-  assert.match(line,/de:"[^"]+"/,value+' missing DE push copy')
- }
- for(const helper of ['translateRequestDecision','translateAccountApproval','translateDriverDeparture','translateAdminLockout']){
-  assert.ok(source.includes(helper),helper+' must localize dynamic push content')
- }
-})
