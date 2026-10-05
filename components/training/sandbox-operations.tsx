@@ -28,7 +28,7 @@ export function SandboxOperations({userName,role}:{userName:string;role:string})
    {phase==="resumed"&&<p className="col-span-2 rounded-xl border p-3 text-sm sm:col-span-4">{tr(locale,"Gebruik het gemarkeerde pijltje onderaan en open Help / Incidenten.","Use the highlighted arrow below and open Help / Incidents.","Utilisez la flèche surlignée en bas et ouvrez Aide / Incidents.","Nutze den markierten Pfeil unten und öffne Hilfe / Vorfälle.")}</p>}
    {phase==="incident"&&<button data-tour-demo="primary-action" onClick={()=>setPhase("finished")} className="rounded-xl bg-violet-600 p-3 font-black text-white">{tr(locale,"STOP WERK","STOP WORK","ARRÊTER LE TRAVAIL","ARBEIT STOPPEN")}</button>}
    {phase==="finished"&&<button data-tour-demo="primary-action" onClick={()=>{setPhase("timesheet");nav("inventory")}} className="rounded-xl bg-violet-600 p-3 font-black text-white">{tr(locale,"URENSTAAT INDIENEN","SUBMIT TIMESHEET","SOUMETTRE LA FEUILLE D’HEURES","STUNDENZETTEL SENDEN")}</button>}
-   {phase==="timesheet"&&<button onClick={()=>{setPhase("assigned");setSeconds(0)}} className="rounded-xl border p-3 font-black">{tr(locale,"TRAINING OPNIEUW","RESTART TRAINING","RECOMMENCER LA FORMATION","TRAINING NEU STARTEN")}</button>}
+   {phase==="timesheet"&&<button onClick={()=>{setPhase("assigned");setSeconds(0);dispatchEvent(new CustomEvent("uptilldawn-restart-tour"))}} className="rounded-xl border p-3 font-black">{tr(locale,"TRAINING OPNIEUW","RESTART TRAINING","RECOMMENCER LA FORMATION","TRAINING NEU STARTEN")}</button>}
   </div></section>
 
  </main>
