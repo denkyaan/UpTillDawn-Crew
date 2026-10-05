@@ -21,7 +21,8 @@ const UI_COPY={
   promptBody:c("Je profiel is opgeslagen. Welkom bij Up Till Dawn Crew! We laten je nu stap voor stap kennismaken met de app. Je voert de handelingen zelf uit en leert onderweg waar je alles vindt en hoe de volledige workflow voor jouw rol werkt.","Your profile has been saved. Welcome to Up Till Dawn Crew! We will now introduce you to the app step by step. You perform the actions yourself and learn where everything is and how the complete workflow for your role works.","Votre profil est enregistré. Bienvenue dans Up Till Dawn Crew ! Nous allons maintenant vous présenter l’application pas à pas. Vous effectuez vous-même les actions et découvrez où tout se trouve ainsi que le fonctionnement complet de votre rôle.","Dein Profil wurde gespeichert. Willkommen bei Up Till Dawn Crew! Wir zeigen dir die App jetzt Schritt für Schritt. Du führst die Aktionen selbst aus und lernst dabei, wo du alles findest und wie der vollständige Ablauf für deine Rolle funktioniert."),
   tour:c("Rondleiding","Tour","Visite","Rundgang"),
   start:c("START RONDLEIDING","START TOUR","COMMENCER LA VISITE","RUNDGANG STARTEN"),
-  later:c("LATER","LATER","PLUS TARD","SPÄTER"),\n  welcomeContinue:c("START TRAINING","START TRAINING","COMMENCER LA FORMATION","TRAINING STARTEN"),
+  later:c("LATER","LATER","PLUS TARD","SPÄTER"),
+  welcomeContinue:c("START TRAINING","START TRAINING","COMMENCER LA FORMATION","TRAINING STARTEN"),
   skip:c("OVERSLAAN","SKIP","PASSER","ÜBERSPRINGEN"),
   back:c("VORIGE","BACK","PRÉCÉDENT","ZURÜCK"),
   next:c("VOLGENDE","NEXT","SUIVANT","WEITER"),
@@ -202,7 +203,8 @@ export function RoleAppTour(){
   const activeRole=tourRole||role
   const steps=useMemo(()=>activeRole?tours[activeRole]:[],[activeRole])
   const [open,setOpen]=useState(false)
-  const [choice,setChoice]=useState(false)\n  const [welcome,setWelcome]=useState(false)
+  const [choice,setChoice]=useState(false)
+  const [welcome,setWelcome]=useState(false)
   const [index,setIndex]=useState(0)
   // Keep SSR and the first hydration render identical. Device/manual locale is
   // applied only after mount; this removes the React #418 hydration mismatch.
