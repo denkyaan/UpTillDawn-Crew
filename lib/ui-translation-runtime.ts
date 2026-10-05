@@ -249,7 +249,13 @@ function translateDriverArrival(value:string,locale:ExtendedUiLocale){
 function translateAdminLockout(value:string,locale:ExtendedUiLocale){
   const match=value.match(/^3 mislukte admin-loginpogingen\. Account: (.+?)\. IP: (.+?)\. Locatie \(benadering\): (.+?)\. Apparaat\/browser: (.+?)\. Login gedurende 15 minuten geblokkeerd\.$/)
   if(!match||locale==='nl')return null
-  const [,account,ip,location,device]=match
+  const localUnknown=(part:string)=>{
+    if(part!=='onbekend')return part
+    if(locale==='fr')return 'inconnu'
+    if(locale==='en')return 'unknown'
+    return 'unbekannt'
+  }
+  const account=match[1],ip=localUnknown(match[2]),location=localUnknown(match[3]),device=localUnknown(match[4])
   if(locale==='fr')return `3 tentatives de connexion administrateur ont échoué. Compte : ${account}. IP : ${ip}. Localisation (approximative) : ${location}. Appareil/navigateur : ${device}. Connexion bloquée pendant 15 minutes.`
   if(locale==='en')return `3 admin login attempts failed. Account: ${account}. IP: ${ip}. Location (approximate): ${location}. Device/browser: ${device}. Login blocked for 15 minutes.`
   return `3 Admin-Anmeldeversuche sind fehlgeschlagen. Konto: ${account}. IP: ${ip}. Standort (ungefähr): ${location}. Gerät/Browser: ${device}. Anmeldung für 15 Minuten gesperrt.`
