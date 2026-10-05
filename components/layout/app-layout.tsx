@@ -40,9 +40,11 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
   const [trainingChatUnlocked,setTrainingChatUnlocked]=useState(false)
   const [trainingHelpUnlocked,setTrainingHelpUnlocked]=useState(false)
   const [trainingComplete,setTrainingComplete]=useState(false)
+  const [trainingNavTarget,setTrainingNavTarget]=useState<string|null>(null)
   const [trainingWorkplace,setTrainingWorkplace]=useState("")
   useEffect(()=>{const on=(e:Event)=>{const active=Boolean((e as CustomEvent<{active?:boolean}>).detail?.active);setTourPreview(active);if(active)setTrainingWorkplace(sessionStorage.getItem("uptilldawn-training-preferred-workplace")||"")};addEventListener("uptilldawn-tour-preview",on);return()=>removeEventListener("uptilldawn-tour-preview",on)},[])
   useEffect(()=>{const apply=()=>setTrainingLocale(activeUiLocale());addEventListener(LANGUAGE_APPLIED_EVENT,apply);return()=>removeEventListener(LANGUAGE_APPLIED_EVENT,apply)},[])
+  useEffect(()=>{const load=()=>{try{const s=JSON.parse(sessionStorage.getItem("uptilldawn-training-workflow-v3")||"{}");setTrainingNavTarget(s.navTarget||null)}catch{setTrainingNavTarget(null)}};load();const on=(e:Event)=>setTrainingNavTarget((e as CustomEvent<{target?:string}>).detail?.target||null);addEventListener("uptilldawn-training-nav-target",on);return()=>removeEventListener("uptilldawn-training-nav-target",on)},[pathname,tourPreview])
   useEffect(()=>{const load=()=>{try{const s=JSON.parse(sessionStorage.getItem("uptilldawn-training-workflow-v3")||"{}");setTrainingChatUnlocked(Boolean(s.chatTourCompleted||sessionStorage.getItem("chatTourCompleted")==="1"));setTrainingHelpUnlocked(Boolean(s.helpTourCompleted));setTrainingComplete(Boolean(s.trainingComplete))}catch{setTrainingChatUnlocked(false);setTrainingHelpUnlocked(false);setTrainingComplete(false)}};load();const onChat=()=>load();const onHelp=()=>load();addEventListener("uptilldawn-training-chat-completed",onChat);addEventListener("uptilldawn-training-help-completed",onHelp);addEventListener("uptilldawn-training-completed",onHelp);return()=>{removeEventListener("uptilldawn-training-chat-completed",onChat);removeEventListener("uptilldawn-training-help-completed",onHelp);removeEventListener("uptilldawn-training-completed",onHelp)}},[tourPreview])
 
   const activeUiRole=roles[0]
@@ -305,7 +307,7 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
     </div>
     {isAdmin&&!tourPreview&&<div className="fixed bottom-20 right-4 z-[70] print:hidden lg:bottom-4"><button type="button" aria-expanded={adminAiOpen} onClick={()=>setAdminAiOpen(value=>!value)} className="rounded-full bg-violet-600 px-5 py-3 font-black text-white shadow-xl">ADMIN AI</button>{adminAiOpen&&<div className="absolute bottom-14 right-0 w-[min(92vw,430px)] max-h-[75vh] overflow-auto rounded-2xl border bg-background p-4 shadow-2xl"><PlatformAiAssistant contextKey={currentFeature||undefined} contextLabel={labels[currentFeature||""]} compact/></div>}</div>}
     {!pathname.startsWith("/chat")&&<>
-      {showUrgent&&<Link href="/incidents" className={`fixed bottom-20 left-4 z-50 rounded-full bg-red-600 px-5 py-4 font-black text-white print:hidden lg:hidden ${tourPreview&&trainingHelpUnlocked&&!trainingComplete?"ring-4 ring-violet-500/60 animate-pulse":""}`}>{({nl:"HELP",en:"HELP",fr:"AIDE",de:"HILFE"} as Record<SupportedUiLocale,string>)[trainingLocale]}<CountBadge count={incidentMissed}/></Link>}
+      {showUrgent&&<Link href="/incidents" className={`fixed bottom-20 left-4 z-50 rounded-full bg-red-600 px-5 py-4 font-black text-white print:hidden lg:hidden ${tourPreview&&trainingHelpUnlocked&&!trainingComplete&&trainingNavTarget==="operations"?"ring-4 ring-violet-500/60 animate-pulse":""}`}>{({nl:"HELP",en:"HELP",fr:"AIDE",de:"HILFE"} as Record<SupportedUiLocale,string>)[trainingLocale]}<CountBadge count={incidentMissed}/></Link>}
     </>}
   </div>
 }
