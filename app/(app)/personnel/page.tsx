@@ -5,6 +5,7 @@ import { createClient } from '@/lib/supabase/crew-server'
 import { approvePersonnelAccount } from '@/lib/actions/uptilldawn'
 import { nlRole } from '@/lib/ui-nl'
 import { PendingSubmitButton } from '@/components/ui/pending-submit-button'
+import { SandboxRoleModule } from '@/components/training/sandbox-role-module'
 
 export const dynamic = 'force-dynamic'
 
@@ -12,6 +13,7 @@ export default async function Page({searchParams}:{searchParams?:Promise<{feedba
   const params=searchParams?await searchParams:{}
   const current=await getCurrentUser()
   if(!current?.isAdmin)redirect('/')
+  if(params.tour==='1')return <SandboxRoleModule role="admin" module="personnel"/>
   const s=await createClient()
   const {data,error}=await s.rpc('upt_admin_personnel_details_v2')
   const pending=(data||[]).filter(person=>!person.approved).sort((a,b)=>Number(b.id===params.user)-Number(a.id===params.user))
