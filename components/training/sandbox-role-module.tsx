@@ -4,7 +4,7 @@ import {activeUiLocale,LANGUAGE_APPLIED_EVENT,type SupportedUiLocale} from "@/li
 
 const KEY="uptilldawn-training-workflow-v3"
 const t=(l:SupportedUiLocale,nl:string,en:string,fr:string,de:string)=>({nl,en,fr,de}[l])
-type Role="admin"|"responsible_lead"|"employee"|"staff"
+export type TrainingRole="admin"|"responsible_lead"|"employee"|"staff"
 type Module="chat"|"crew"|"personnel"|"exports"|"platform"|"settings"
 
 const NEXT:Record<string,Partial<Record<Module,string|null>>>={
@@ -17,12 +17,12 @@ const NEXT:Record<string,Partial<Record<Module,string|null>>>={
 function persist(next:string|null,module:Module){
  let s:Record<string,unknown>={}
  try{s=JSON.parse(sessionStorage.getItem(KEY)||"{}")}catch{}
- sessionStorage.setItem(KEY,JSON.stringify({...s,[module+"TrainingDone"]:true,navTarget:next,trainingComplete:module==="settings"}))
+ const trainingComplete=module==="settings"\n sessionStorage.setItem(KEY,JSON.stringify({...s,[module+"TrainingDone"]:true,navTarget:next,trainingComplete}))
  dispatchEvent(new CustomEvent("uptilldawn-training-nav-target",{detail:{target:next||undefined}}))
- if(module==="chat"){sessionStorage.setItem("chatTourCompleted","1");const updated={...s,chatTourCompleted:true,[module+"TrainingDone"]:true,navTarget:next,trainingComplete:module==="settings"};sessionStorage.setItem(KEY,JSON.stringify(updated));dispatchEvent(new CustomEvent("uptilldawn-training-chat-completed"))}
+ if(module==="chat"){sessionStorage.setItem("chatTourCompleted","1");const updated={...s,chatTourCompleted:true,[module+"TrainingDone"]:true,navTarget:next,trainingComplete};sessionStorage.setItem(KEY,JSON.stringify(updated));dispatchEvent(new CustomEvent("uptilldawn-training-chat-completed"))}
 }
 
-export function SandboxRoleModule({role,module}:{role:Role;module:Module}){
+export function SandboxRoleModule({role,module}:{role:TrainingRole;module:Module}){
  const [l,setL]=useState<SupportedUiLocale>(()=>typeof window==="undefined"?"nl":activeUiLocale())
  const [done,setDone]=useState(false)
  useEffect(()=>{const f=()=>setL(activeUiLocale());addEventListener(LANGUAGE_APPLIED_EVENT,f);return()=>removeEventListener(LANGUAGE_APPLIED_EVENT,f)},[])
