@@ -79,7 +79,7 @@ export async function geocodeGeoapify(text:string,lang="nl"){
 }
 
 
-export async function drivingMinutesGeoapify(
+export async function drivingRouteGeoapify(
   from:{latitude:number;longitude:number},
   to:{latitude:number;longitude:number},
 ){
@@ -89,13 +89,15 @@ export async function drivingMinutesGeoapify(
     apiKey:apiKey(),
   })
   const response=await fetch(`https://api.geoapify.com/v1/routing?${params.toString()}`,{
-    headers:{Accept:"application/json"},
-    cache:"no-store",
-    signal:AbortSignal.timeout(8_000),
+    headers:{Accept:"application/json"},cache:"no-store",signal:AbortSignal.timeout(8_000),
   })
-  if(!response.ok)throw new Error("Autorijtijd kon niet worden berekend.")
-  const payload=await response.json() as {features?:Array<{properties?:{time?:number}}>}
-  const seconds=payload.features?.[0]?.properties?.time
-  if(typeof seconds!=="number"||!Number.isFinite(seconds)||seconds<0)throw new Error("Autorijtijd kon niet worden berekend.")
-  return Math.max(1,Math.ceil(seconds/60))
+  if(!response.ok)throw new Error("Autoroute kon niet worden berekend.")
+  const payload=await response.json() as {features?:Array<{properties?:{time?:number;distance?:number}}>}
+  const properties=payload.features?.[0]?.properties
+  if(typeof properties?.time!=="number"||!Number.isFinite(properties.time)||properties.time<0)throw new Error("Autorijtijd kon niet worden berekend.")
+  const distance=typeof properties.distance==="number"&&Number.isFinite(properties.distance)?properties.distance:0
+  return {minutes:Math.max(1,Math.ceil(properties.time/60)),kilometers:Math.max(0,Math.round(distance/10)/100)}
+}
+export async function drivingMinutesGeoapify(from:{latitude:number;longitude:number},to:{latitude:number;longitude:number}){
+  return (await drivingRouteGeoapify(from,to)).minutes
 }
