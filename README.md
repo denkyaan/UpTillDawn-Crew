@@ -2,6 +2,10 @@
 
 Production crew-management PWA for Uptilldawn events. The application is a Next.js 16 / React 19 app on Cloudflare Workers through OpenNext, backed by Supabase Auth, PostgreSQL/RLS, private Storage, Realtime and a Supabase Edge Function for Web Push delivery.
 
+## First production use
+
+The Admin dashboard shows a guided first-use checklist while no production event exists. The complete operational sequence is documented in [docs/FIRST_USE.md](docs/FIRST_USE.md). Training/tour data is isolated from real event data.
+
 ## Production baseline
 
 - Canonical branch: `main`

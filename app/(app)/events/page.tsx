@@ -89,7 +89,7 @@ export default async function Page({searchParams}:{searchParams?:Promise<{event?
       <p className="text-sm text-muted-foreground">Beheer de volledige eventlevenscyclus: planning, briefing, readiness, documenten, afsluiting en archief. Klik op een evenement om de context mee te nemen naar andere modules.</p>
     </div>
 
-    {user.isAdmin&&<AdminOnly><form action={createEvent} className="grid gap-3 rounded-2xl border p-4">
+    {user.isAdmin&&<AdminOnly><form id="event-aanmaken" action={createEvent} className="grid scroll-mt-24 gap-3 rounded-2xl border p-4">
       <FacebookEventField/>
       <div className="rounded-xl border p-3">
         <p className="mb-3 text-sm font-semibold">Handmatige gegevens / fallback</p>

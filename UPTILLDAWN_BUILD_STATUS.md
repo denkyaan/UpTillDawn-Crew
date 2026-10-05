@@ -1,19 +1,26 @@
-# Uptilldawn build status
+# UpTillDawn Crew build status
 
-The current `main` branch is the canonical production baseline.
+`main` is the canonical production branch.
 
-Required release checks:
+## Release gate
 
-- dependency audit
-- ESLint
-- TypeScript
-- Node regression tests
-- Next.js production build
-- OpenNext Cloudflare build
-- Wrangler deployment dry-run
-- production Cloudflare Git build/deploy
-- Supabase SQL regression suite
+The CI release gate runs the full validation chain on one hosted runner to avoid multi-runner queue fragmentation:
 
-The desktop/web layout, contextual mobile navigation, role UI defaults, installed-PWA behavior and Web Push flow are part of this baseline and are covered by regression tests.
+- production dependency audit;
+- ESLint;
+- TypeScript;
+- Node regression suite;
+- Next.js production build;
+- Cloudflare Worker build;
+- Wrangler deployment dry-run;
+- isolated local Supabase startup;
+- replay of all repository migrations from zero;
+- every SQL regression suite;
+- generated public database type parity;
+- 15 authenticated browser bots and persistence checks.
 
-See [UPTILLDAWN_IMPLEMENTATION_STATUS.md](UPTILLDAWN_IMPLEMENTATION_STATUS.md) for the latest verified state and [DEPLOYMENT.md](DEPLOYMENT.md) for runtime architecture.
+A successful CI run triggers the Cloudflare production workflow, which repeats critical static/build checks, validates production Supabase RPC contracts, deploys the Worker + public alias and performs public HTTP/manifest/service-worker smoke checks.
+
+Last fully verified release before the first-use cleanup: CI #2811 and Deploy Cloudflare #1034 on commit `e35ccff73570b7db0650c15341c4b3fc41f43dfc`.
+
+See `UPTILLDAWN_IMPLEMENTATION_STATUS.md`, `docs/FIRST_USE.md` and `DEPLOYMENT.md`.

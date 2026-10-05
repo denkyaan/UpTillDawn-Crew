@@ -1,35 +1,30 @@
-# Uptilldawn roadmap
+# UpTillDawn Crew roadmap
 
-The current web/mobile/PWA experience is the production baseline.
+## Production product
 
-## Completed baseline
+The core product is implemented and production-deployed. The current baseline includes:
 
-- Auth / approval / role model and maker protection
-- RLS and validated mutation boundaries
-- Event, workplace, shift response/reassignment, replacement/swap/open-shift requests, revision-aware pre-shift reminders and Responsible management
-- Check-in/out and work/break tracking
-- Briefings, personal instructions, tasks, operational opening/closing/safety checklists with photo evidence, workplace material logistics with controlled Staff settlement approval, offline-cached event emergency information, scoped event/workplace documents with offline-critical caching, and help/incidents with current-workplace binding and escalation
-- Workplace-scoped chat and private media
-- Responsible and Staff workplace overview status
-- Admin/Responsible operational dashboard, canonical live workplace tracking, understaffing, late/no-show, shift-overrun, missing-checkout and long-break alerts, Responsible shift handovers with inventory snapshots and time corrections
-- IndexedDB queues and operational offline shell
-- Contextual mobile navigation with expandable compact bar
-- Installed PWA manifest/service worker behavior
-- Web Push opt-in, delivery, badge/click handling and subscription renewal
-- Cloudflare production deployment from `main`
-- SQL security/regression suite aligned to the current permissions model\n- Admin System Health dashboard restored and backed by privacy-safe production health aggregates\n- Admin Release Readiness gate with repository/database migration matching and runtime blocker checks
-- CI fresh-install database gate: isolated local Supabase replay from zero, all SQL regressions, and generated-type drift verification. Verified green on GitHub Actions run `36336833839` for commit `1002b85ee1446294f62d2f84d1f7a685a54fdb01` (166 migrations, 16 SQL suites, exact normalized public-type match).
+- account verification, Admin approval, role gating and maker protection;
+- event lifecycle, availability, capacity and waitlist;
+- workplaces + shifts, Responsible assignment and crew planning;
+- briefing, tasks, inventory, guestlist/entrance, sales, incidents/help, chat and documents;
+- QR attendance, work/break timing, timesheets, overtime governance and audit-safe correction;
+- Driver workflow with transport tasks, driving time, mileage and Backstage artist-arrival handling;
+- PWA/offline/push/update behavior;
+- NL/FR/EN/DE UI coverage and device-language synchronization;
+- God Mode/Edit tooling and safe role-training sandbox;
+- isolated database replay, SQL regressions, generated-type parity and 15 browser bots in CI;
+- Cloudflare production deployment and public smoke validation.
 
-## Remaining external / operational gates
+## First real use
 
-1. **Temporarily deferred by the product owner:** enable Supabase leaked-password protection in the hosted Auth project settings. The repository password policy is already enforced, but this platform switch is still reported as disabled by the Supabase Security Advisor.
-2. **Temporarily deferred by the product owner:** complete the remote backup -> restore disaster-recovery proof. A separate healthy Supabase project is available for testing, but only Supabase Restore to a New Project from a physical backup counts as the required DR proof.
+The production operational dataset is intentionally clean before the first real event. The Admin dashboard exposes a first-use sequence while no event exists. See `docs/FIRST_USE.md`.
 
-## Completed hardening beyond the baseline
+## Remaining external infrastructure work
 
-- Offline browsing now includes cached event emergency information, scoped critical event/workplace documents and operational snapshot support; the critical write workflows remain queue-backed and idempotent.
-- Cross-device/PWA regression contracts for iOS/Android/Windows/browser install, service-worker refresh and offline behavior run in CI after material changes.
-- Production observability includes Admin System Health, SLO/freshness alert helpers, operational alerts and Release Readiness; production Supabase logs were reviewed as part of the hardening pass.
-- Worktime governance includes versioned Belgian operational overtime defaults, configurable daily/weekly thresholds and break exclusion. It is explicitly non-payroll-authoritative until an employer/pay-period payroll policy is formally supplied.
+These are the only known intentionally deferred release-infrastructure gates:
 
-Changes to the current web/mobile layout should be treated as explicit product changes, not cleanup.
+1. Enable Supabase Auth leaked-password protection.
+2. Prove disaster recovery with a real physical backup restored to a new isolated Supabase project.
+
+Any future roadmap item should be added only when it represents a new requested product capability, not already-completed historical work.

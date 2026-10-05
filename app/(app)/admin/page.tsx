@@ -9,6 +9,7 @@ import { PlatformAiAssistant } from '@/components/admin/platform-ai-assistant'
 import { ContextLink } from '@/components/admin/context-link'
 import { AdminActionCenter, type ActionQueueItem } from '@/components/admin/action-center'
 import { TourActiveEventDemo } from '@/components/tour-active-event-demo'
+import { FirstUseReadiness } from '@/components/admin/first-use-readiness'
 
 export const dynamic = 'force-dynamic'
 
@@ -114,6 +115,7 @@ export default async function Page({searchParams}:{searchParams?:Promise<{tour?:
   }]:[]),
  ]
  return <main className="mx-auto max-w-7xl space-y-7 p-4 pb-28 md:p-8"><RealtimeRefresh/><div className="flex flex-wrap items-end justify-between gap-3"><div><p className="text-xs font-bold tracking-[.2em] text-violet-400">UP TILL DAWN BEHEER</p><h1 className="text-3xl font-black">Operationeel command center</h1><p className="text-muted-foreground">Realtime serverstatus voor personeel, goedkeuringen, help oproepen, taken en synchronisatie.</p></div><div className="flex flex-wrap gap-2"><Link href="/admin/time-records" className="rounded-xl border px-4 py-3">Tijdcorrecties</Link></div></div>
+ {!eventRows.length&&<FirstUseReadiness pendingApprovals={pendingProfileRows.length} approvedCrew={profileRows.length}/>}
  <PlatformAiAssistant/>
  {failedOverviewSources>0&&<p role="status" className="rounded-xl border border-amber-500/50 p-3 text-sm text-muted-foreground">Een deel van de realtime beheergegevens is tijdelijk niet beschikbaar. De beschikbare onderdelen blijven bruikbaar.</p>}
  <section className="space-y-3 rounded-2xl border p-4">

@@ -1,35 +1,40 @@
 # Recovery and release gate
 
-## Database recovery proof
+## Local database rebuild proof
 
-A release is not considered disaster-recovery verified until all repository migrations replay successfully from an empty isolated Supabase project and the SQL regression suites pass against that project. Production must never be used as the replay target.
+Every release CI must:
+
+1. start an isolated local Supabase stack;
+2. replay all repository migrations from zero;
+3. execute every SQL regression suite with `ON_ERROR_STOP=1`;
+4. regenerate public TypeScript database types;
+5. compare normalized generated types with `types/crew-database.ts`;
+6. reset the isolated database and run the authenticated browser-bot fixtures.
+
+At the verified pre-cleanup production release the repository contained **283 migrations** and **19 SQL regression suites**. Production-generated public database types matched the repository exactly.
+
+Raw migration-count equality is not required for the existing production project because historical production-alignment migrations intentionally represented some equivalent repository history under different versions/names. Schema/type parity and release-contract checks remain authoritative.
+
+## Remote disaster-recovery proof
+
+A release is not disaster-recovery proven until a real production backup has been restored into a **new isolated Supabase project** and the restored copy has passed the recovery verifier.
 
 Required proof:
 
-1. Create an isolated Supabase project.
-2. Link the CLI to that project.
-3. Run `npx supabase db push` from a clean checkout.
-4. Regenerate database types and compare them with `types/crew-database.ts`.
-5. Run every file in `tests/sql/` inside rollback transactions.
-6. Create representative event/shift/attendance data, take a backup, restore it to a second isolated project, and rerun the critical workflow checks.
-7. Run `SOURCE_COMMIT=<sha> DR_DATABASE_URL=<restored-connection-string> bash scripts/verify-remote-dr-restore.sh` against the restored project. The verifier requires matching latest migration state and executes every SQL regression suite with `ON_ERROR_STOP=1`.
-8. Verify Storage objects, Edge Functions, Auth settings, Realtime settings and external jobs separately; a database restore does not by itself prove those platform surfaces.
-9. Record migration count, source commit, backup timestamp, restored project reference, Storage/config verification and restore result in the release record.
+1. Obtain a current production physical backup/restore point.
+2. Use Supabase **Restore to a New Project**; never overwrite production for this test.
+3. Before exercising the restored copy, disable or redirect outbound cron/webhook/`pg_net` integrations where appropriate.
+4. Verify migration/schema state and generated types.
+5. Run every SQL regression suite and the critical workflow checks.
+6. Verify Storage objects, Edge Functions, Auth configuration, Realtime configuration and external jobs separately; a database restore alone does not prove those surfaces.
+7. Run `SOURCE_COMMIT=<sha> DR_DATABASE_URL=<restored-connection-string> bash scripts/verify-remote-dr-restore.sh`.
+8. Record source commit, backup timestamp, restored project reference and verification result.
 
-### Remote DR safety
-
-Prefer Supabase **Restore to a New Project** for a physical-backup proof. The restored project is independent of production, but external database jobs/extensions may begin executing immediately after a binary restore. Before exercising the restored copy, disable or redirect outbound integrations such as webhook/pg_net/cron targets where applicable.
-
-Creating the second remote project can incur Supabase charges. Repository automation and the verification script are ready, but project creation/restore must not be triggered until the project cost has been explicitly confirmed.
-
-
-### Verified local fresh-install proof
-
-GitHub Actions run `36336833839` for commit `1002b85ee1446294f62d2f84d1f7a685a54fdb01` passed the isolated fresh-install gate: 166 repository migrations replayed from zero, all 16 SQL regression suites passed, and normalized generated `public` TypeScript types matched `types/crew-database.ts` exactly.
+There is currently no separate restore-test project in the connected Supabase account. Creating one may incur cost and therefore requires explicit cost confirmation before creation.
 
 ## Auth security gate
 
-Supabase Auth leaked-password protection must be enabled in the production Auth project settings. This is a platform setting and is intentionally not represented as SQL migration state. A release review must verify the setting remains enabled. Current verification source: Supabase Security Advisor `auth_leaked_password_protection`; remediation: https://supabase.com/docs/guides/auth/password-security#password-strength-and-leaked-password-protection.
+Supabase Auth leaked-password protection must be enabled in the hosted production Auth settings. The repository already enforces its own password-strength policy, but the Supabase Security Advisor still reports `auth_leaked_password_protection` as disabled.
 
 ## God Mode recovery
 
@@ -37,9 +42,4 @@ God Mode source edits remain proposal-based. Restore creates a new proposal from
 
 ## Critical workflow gate
 
-Before a major production release validate: registration/approval, event availability, assignment, shift confirmation, briefing acknowledgement, QR start request, responsible/admin approval, break start/stop, workplace transition, QR stop request, approval, final work-time summary, push delivery, offline queue replay, and role revocation.
-
-## Deferred external gates
-
-- Supabase leaked-password protection is currently deferred by the product owner.
-- Physical backup -> Restore to a New Project DR proof is currently deferred by the product owner. A manually created empty project does not count as a restore proof.
+For major releases validate registration/approval, event availability, assignment, shift confirmation, briefing acknowledgement, attendance, work/break/Driver transitions, timesheet approval/lock, push delivery, offline replay and role revocation.
