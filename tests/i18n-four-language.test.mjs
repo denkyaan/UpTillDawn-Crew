@@ -222,4 +222,8 @@ test('database-driven workplace and notification copy is localized in all four p
   ]) assert.ok(push.includes(marker), `${marker} must be covered by push localization`)
   assert.match(runtime,/part!==['"]onbekend['"]/, 'unknown lockout values must be localized in the app')
   assert.match(push,/part===["']onbekend["']/, 'unknown lockout values must be localized in push notifications')
+  assert.match(runtime,/nl:\{pending:'in afwachting',approved:'goedgekeurd',rejected:'afgewezen'/, 'Dutch request status enums must not leak English')
+  assert.doesNotMatch(runtime,/if\(!match\|\|locale===['"]nl['"]\)return null/, 'Dutch request status must be translated')
+  assert.match(push,/localizeDutchRequestStatus/, 'Dutch push request status must be normalized')
+  assert.match(push,/approved:"goedgekeurd"/, 'Dutch push request status enums must not leak English')
 })
