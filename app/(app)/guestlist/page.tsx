@@ -21,7 +21,7 @@ export default async function GuestlistPage({
   if(!current)redirect('/login')
   const s=await createClient()
   const params=await searchParams
-  if(params.tour==='1'&&current.role!=='admin')return <SandboxGuestlist/>
+  if(params.tour==='1')return <SandboxGuestlist/>
   const isAdmin=current.isAdmin===true
 
   let events:EventRow[]=[]
