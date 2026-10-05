@@ -1342,11 +1342,11 @@ export async function createDriverTransportTask(fd:FormData){
   p_event:shift.event_id,p_workplace:shift.workplace_id,p_user:shift.user_id,p_title:title,p_description:description,
  })
  check(taskError);if(!taskId)throw new Error('Driver-rit kon niet worden aangemaakt.')
- const {error:detailError}=await s.rpc('upt_set_driver_task_details' as 'upt_is_approved',{
+ const {error:detailError}=await s.rpc('upt_set_driver_task_details',{
   p_task:taskId,p_direction:direction,p_passenger_name:passengerName,p_passenger_phone:passengerPhone,
   p_address:address,p_scheduled_at:scheduledAt.toISOString(),p_estimated_drive_minutes:driveMinutes,p_notify_at:notifyAt,
   p_expected_km:route.kilometers,p_guestlist_entry:guestlistEntryId,
- } as never)
+ })
  if(detailError){await s.from('tasks').delete().eq('id',taskId);check(detailError)}
  await revalidatePath('/workplaces');await revalidatePath('/tasks')
 }
