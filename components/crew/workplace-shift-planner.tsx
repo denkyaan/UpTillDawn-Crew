@@ -79,7 +79,13 @@ export function WorkplaceShiftPlanner({
       ].filter(Boolean).join('/')||'geen beschikbaarheid'}
      </option>)}
     </select>
-    <input name="role_name" defaultValue="Personeel" maxLength={200} className="rounded-lg border bg-background p-3"/>
+    {/bar|toog/i.test(workplaceName)
+     ? <select name="role_name" required defaultValue="" className="rounded-lg border bg-background p-3">
+        <option value="">Positie…</option>
+        <option value="Bar">Bar</option>
+        <option value="Toog">Toog</option>
+       </select>
+     : <input name="role_name" defaultValue="Personeel" maxLength={200} className="rounded-lg border bg-background p-3"/>}
     <select name="shift_kind" defaultValue="event" className="rounded-lg border bg-background p-3">
      <option value="event">Evenement</option>
      <option value="setup">Opbouw</option>
@@ -154,7 +160,12 @@ export function WorkplaceShiftPlanner({
      <summary className="cursor-pointer text-sm font-semibold">Dienst bewerken</summary>
      <form action={updateShift} className="mt-3 grid gap-2 md:grid-cols-2">
       <input type="hidden" name="shift_id" value={shift.id}/>
-      <input name="role_name" required maxLength={200} defaultValue={shift.roleName} className="rounded-lg border bg-background p-3"/>
+      {/bar|toog/i.test(workplaceName)
+       ? <select name="role_name" required defaultValue={shift.roleName} className="rounded-lg border bg-background p-3">
+          <option value="Bar">Bar</option>
+          <option value="Toog">Toog</option>
+         </select>
+       : <input name="role_name" required maxLength={200} defaultValue={shift.roleName} className="rounded-lg border bg-background p-3"/>}
       <select name="shift_kind" defaultValue={shift.shiftKind} className="rounded-lg border bg-background p-3">
        <option value="event">Evenement</option>
        <option value="setup">Opbouw</option>
