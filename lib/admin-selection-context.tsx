@@ -42,19 +42,21 @@ export function AdminSelectionProvider({children}:{children:React.ReactNode}){
   const [selection,setState]=useState<AdminSelection>(EMPTY)
 
   useEffect(()=>{
-    try{
-      const stored=window.localStorage.getItem(KEY)
-      const saved=stored?JSON.parse(stored):{}
-      const params=new URLSearchParams(window.location.search)
-      const fromUrl:Patch={
-        eventId:params.get("event"),
-        workplaceId:params.get("workplace"),
-        userId:params.get("user"),
-        shiftId:params.get("shift"),
-        focus:params.get("focus"),
-      }
-      setState({...EMPTY,...saved,...Object.fromEntries(Object.entries(fromUrl).filter(([,value])=>Boolean(value)))})
-    }catch{setState(EMPTY)}
+    queueMicrotask(()=>{
+      try{
+        const stored=window.localStorage.getItem(KEY)
+        const saved=stored?JSON.parse(stored):{}
+        const params=new URLSearchParams(window.location.search)
+        const fromUrl:Patch={
+          eventId:params.get("event"),
+          workplaceId:params.get("workplace"),
+          userId:params.get("user"),
+          shiftId:params.get("shift"),
+          focus:params.get("focus"),
+        }
+        setState({...EMPTY,...saved,...Object.fromEntries(Object.entries(fromUrl).filter(([,value])=>Boolean(value)))})
+      }catch{setState(EMPTY)}
+    })
   },[])
 
   const setSelection=useCallback((patch:Patch)=>{
