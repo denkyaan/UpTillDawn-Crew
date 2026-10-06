@@ -616,7 +616,11 @@ declare
   v_excerpt text;
   v_title text;
 begin
-  -- Initialize unread tracking immediately on the first new message a participant can see.
+  -- System messages (including birthday cron messages) run without an authenticated
+  -- user context and already have their own notification workflow.
+  if new.sender_id is null then return new; end if;
+
+  -- Initialize unread tracking immediately on the first new human message a participant can see.
   -- This avoids marking historical backlog unread while still counting the first post-upgrade message.
   for v_recipient in
     select person.id
@@ -632,8 +636,6 @@ begin
     )
     on conflict(channel_id,user_id) do nothing;
   end loop;
-
-  if new.sender_id is null then return new; end if;
 
   select coalesce(nullif(trim(p.full_name),''),'Personeelslid') into v_sender_name
   from public.profiles p where p.id=new.sender_id;
