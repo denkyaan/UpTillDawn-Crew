@@ -11,12 +11,12 @@ export function QueueStatus() {
   const { user } = useAuth()
   const [ops, setOps] = useState<QueuedOperation[]>([])
   const [uploads, setUploads] = useState<QueuedUpload[]>([])
-  const [online,setOnline]=useState(()=>typeof navigator==='undefined'?true:navigator.onLine)
+  const [online,setOnline]=useState(true)
   const [syncing,setSyncing]=useState(false)
   const [lastSynced,setLastSynced]=useState<number|null>(null)
-  const [l,setL]=useState<SupportedUiLocale>(()=>typeof window==='undefined'?'nl':activeUiLocale())
+  const [l,setL]=useState<SupportedUiLocale>('nl')
 
-  useEffect(()=>{const f=()=>setL(activeUiLocale());addEventListener(LANGUAGE_APPLIED_EVENT,f);return()=>removeEventListener(LANGUAGE_APPLIED_EVENT,f)},[])
+  useEffect(()=>{const f=()=>setL(activeUiLocale());f();addEventListener(LANGUAGE_APPLIED_EVENT,f);return()=>removeEventListener(LANGUAGE_APPLIED_EVENT,f)},[])
   useEffect(() => {
     if (!user) return
     const id = user.id

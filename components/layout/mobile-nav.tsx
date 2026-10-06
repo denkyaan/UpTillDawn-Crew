@@ -43,7 +43,7 @@ export function MobileBottomNav({
  const [tourPreview,setTourPreview]=useState(false)
  const [sandboxHelp,setSandboxHelp]=useState("")
  const [trainingNavTarget,setTrainingNavTarget]=useState<string|null>(null)
- const [trainingLocale,setTrainingLocale]=useState<SupportedUiLocale>(()=>typeof window==="undefined"?"nl":activeUiLocale())
+ const [trainingLocale,setTrainingLocale]=useState<SupportedUiLocale>("nl")
  const {roles,isAdmin}=useAuth()
  const adminContext=useAdminSelection()
  const roleKey:RoleRuleRole=roles.includes("admin")?"admin":roles.includes("responsible_lead")?"responsible_lead":"staff"
@@ -51,7 +51,7 @@ export function MobileBottomNav({
  useEffect(()=>{const on=(e:Event)=>{const detail=(e as CustomEvent<{active?:boolean}>).detail;const active=Boolean(detail?.active);setTourPreview(active);if(!active)setExpanded(false)};addEventListener("uptilldawn-tour-preview",on);return()=>removeEventListener("uptilldawn-tour-preview",on)},[])
  useEffect(()=>{const load=()=>{try{const s=JSON.parse(sessionStorage.getItem("uptilldawn-training-workflow-v3")||"{}");setTrainingNavTarget(s.navTarget||null)}catch{setTrainingNavTarget(null)}};const id=requestAnimationFrame(load);return()=>cancelAnimationFrame(id)},[pathname])
  useEffect(()=>{const on=(e:Event)=>setTrainingNavTarget((e as CustomEvent<{target?:string}>).detail?.target||null);addEventListener("uptilldawn-training-nav-target",on);return()=>removeEventListener("uptilldawn-training-nav-target",on)},[])
- useEffect(()=>{const apply=()=>setTrainingLocale(activeUiLocale());addEventListener(LANGUAGE_APPLIED_EVENT,apply);return()=>removeEventListener(LANGUAGE_APPLIED_EVENT,apply)},[])
+ useEffect(()=>{const apply=()=>setTrainingLocale(activeUiLocale());apply();addEventListener(LANGUAGE_APPLIED_EVENT,apply);return()=>removeEventListener(LANGUAGE_APPLIED_EVENT,apply)},[])
 
  // During the guided tour expose the complete role navigation regardless of
  // event/shift assignment. This is preview-only; backend permissions remain unchanged.

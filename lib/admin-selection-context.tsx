@@ -1,6 +1,6 @@
 "use client"
 
-import { createContext, useCallback, useContext, useMemo, useState } from "react"
+import { createContext, useCallback, useContext, useEffect, useMemo, useState } from "react"
 
 export type AdminSelection={
   eventId:string|null
@@ -37,8 +37,11 @@ function encodeHref(base:string,selection:AdminSelection){
 }
 
 export function AdminSelectionProvider({children}:{children:React.ReactNode}){
-  const [selection,setState]=useState<AdminSelection>(()=>{
-    if(typeof window==='undefined')return EMPTY
+  // Keep SSR and the first browser render identical. Browser-persisted
+  // selection is restored after mount, then all generated links update normally.
+  const [selection,setState]=useState<AdminSelection>(EMPTY)
+
+  useEffect(()=>{
     try{
       const stored=window.localStorage.getItem(KEY)
       const saved=stored?JSON.parse(stored):{}
@@ -50,9 +53,9 @@ export function AdminSelectionProvider({children}:{children:React.ReactNode}){
         shiftId:params.get("shift"),
         focus:params.get("focus"),
       }
-      return {...EMPTY,...saved,...Object.fromEntries(Object.entries(fromUrl).filter(([,value])=>Boolean(value)))}
-    }catch{return EMPTY}
-  })
+      setState({...EMPTY,...saved,...Object.fromEntries(Object.entries(fromUrl).filter(([,value])=>Boolean(value)))})
+    }catch{setState(EMPTY)}
+  },[])
 
   const setSelection=useCallback((patch:Patch)=>{
     setState(current=>{
