@@ -127,7 +127,12 @@ export const CREW_EXTRA_TRANSLATIONS:Record<string,Row>={
   "KLAAR VOOR OVERDRACHT":{fr:"PRÊT POUR TRANSMISSION",en:"READY FOR HANDOVER",de:"BEREIT ZUR ÜBERGABE"},
   "Recent geaccepteerd":{fr:"Récemment accepté",en:"Recently accepted",de:"Kürzlich akzeptiert"},
   "taken ·":{fr:"tâches ·",en:"tasks ·",de:"Aufgaben ·"},
-  "incidenten · geaccepteerd":{fr:"incidents · accepté",en:"incidents · accepted",de:"Vorfälle · akzeptiert"}
+  "incidenten · geaccepteerd":{fr:"incidents · accepté",en:"incidents · accepted",de:"Vorfälle · akzeptiert"},
+  "Voor beheerders zijn voor- en achternaam, profielfoto, telefoonnummer en geboortedatum verplicht.":{fr:"Pour les administrateurs, le prénom et le nom, la photo de profil, le numéro de téléphone et la date de naissance sont obligatoires.",en:"For admins, first and last name, profile photo, phone number and date of birth are required.",de:"Für Administratoren sind Vor- und Nachname, Profilfoto, Telefonnummer und Geburtsdatum verpflichtend."},
+  "Voor personeel en verantwoordelijken zijn alle profielvelden, een werkplekvoorkeur en een profielfoto verplicht.":{fr:"Pour le personnel et les responsables, tous les champs du profil, une préférence de poste et une photo de profil sont obligatoires.",en:"For staff and responsible leads, all profile fields, a workplace preference and a profile photo are required.",de:"Für Personal und Verantwortliche sind alle Profilfelder, eine Arbeitsplatzpräferenz und ein Profilfoto verpflichtend."},
+  "Voor- en achternaam":{fr:"Prénom et nom",en:"First and last name",de:"Vor- und Nachname"},
+  "Kies een werkplek":{fr:"Choisissez un poste",en:"Choose a workplace",de:"Arbeitsplatz auswählen"},
+  "Adres, geboortedatum, rijksregisternummer en IBAN zijn enkel zichtbaar voor admin.":{fr:"L’adresse, la date de naissance, le numéro de registre national et l’IBAN sont uniquement visibles par les administrateurs.",en:"Address, date of birth, national register number and IBAN are only visible to admins.",de:"Adresse, Geburtsdatum, Nationalregisternummer und IBAN sind nur für Administratoren sichtbar."}
 }
 
 const CANONICAL=new Map<string,string>()
