@@ -62,6 +62,9 @@ jobs:
       - name: Six-domain release candidate acceptance
         run: node --test tests/final-six-domain-release-candidate.test.mjs
 
+      - name: Run production-style dry run contract
+        run: node --test tests/production-dry-run-contract.test.mjs
+
       - name: Build Next.js
         run: npm run build:next
 
