@@ -5,15 +5,16 @@ import { SandboxRoleModule,type TrainingRole } from '@/components/training/sandb
 
 export const dynamic='force-dynamic'
 
-export default async function Page({searchParams}:{searchParams?:Promise<{event?:string;workplace?:string;private?:string;channel?:string;tour?:string}>}){
+export default async function Page({searchParams}:{searchParams?:Promise<{event?:string;workplace?:string;private?:string;channel?:string;message?:string;tour?:string}>}){
   const params=searchParams?await searchParams:{}
   const s=await createClient();const current=await getCurrentUser();if(!current)return null
   if(params.tour==='1')return <SandboxRoleModule role={current.role as TrainingRole} module="chat"/>
   const user={id:current.id}
-  const [{data:channels,error},{data:directory},{data:privatePeers},{data:activeEvents},{data:chatEvents}]=await Promise.all([
+  const [{data:channels,error},{data:directory},{data:privatePeers},{data:channelSummaries},{data:activeEvents},{data:chatEvents}]=await Promise.all([
     s.from('chat_channels').select('*').in('kind',['organization','event','workplace','private']).order('created_at'),
     s.rpc('upt_crew_directory'),
     s.rpc('upt_private_chat_peers'),
+    s.rpc('upt_chat_channel_summaries'),
     s.from('events').select('id,start_at,end_at').neq('status','archived').lte('start_at','now').gte('end_at','now').order('start_at'),
     s.from('events').select('id,start_at,end_at,status,image_url').order('start_at'),
   ])
@@ -32,6 +33,7 @@ export default async function Page({searchParams}:{searchParams?:Promise<{event?
   const eventImages=new Map((chatEvents||[]).map(event=>[event.id,event.image_url]))
   const privatePeerNames=Object.fromEntries((privatePeers||[]).map(peer=>[peer.channel_id,peer.full_name||'Privéchat']))
   const privatePeerIds=Object.fromEntries((privatePeers||[]).map(peer=>[peer.channel_id,peer.user_id]))
+  const initialChannelStates=Object.fromEntries((channelSummaries||[]).map(summary=>[summary.channel_id,summary]))
   const channelImages:Record<string,string>={}
   for(const channel of ordered){
     if(channel.kind==='organization'||(channel.kind==='private'&&channel.name==='Up Till Dawn · persoonlijk'))channelImages[channel.id]='/up-till-dawn-mark.webp'
@@ -50,6 +52,6 @@ export default async function Page({searchParams}:{searchParams?:Promise<{event?
     ||''
 
   return <main className="mx-auto max-w-4xl p-0 pb-24 md:p-8 md:pb-8">
-    {error?<p className="p-4">Gesprekken konden niet worden geladen.</p>:<ChatClient channels={ordered} defaultChannelId={defaultChannelId} userId={user.id} crewDirectory={directory||[]} isAdmin={current.role==='admin'} profilePhotoUrls={profilePhotoUrls} channelImages={channelImages} privatePeerNames={privatePeerNames}/>} 
+    {error?<p className="p-4">Gesprekken konden niet worden geladen.</p>:<ChatClient channels={ordered} defaultChannelId={defaultChannelId} userId={user.id} crewDirectory={directory||[]} isAdmin={current.role==='admin'} profilePhotoUrls={profilePhotoUrls} channelImages={channelImages} privatePeerNames={privatePeerNames} privatePeerIds={privatePeerIds} initialChannelStates={initialChannelStates} focusMessageId={params.message||null}/>} 
   </main>
 }
