@@ -143,7 +143,6 @@ export function ChatClient({channels,defaultChannelId,userId,crewDirectory,isAdm
   },[effectiveSelected])
 
   useEffect(()=>{endRef.current?.scrollIntoView({block:'end'})},[current.messages.length,effectiveSelected])
-  useEffect(()=>{setReplyTo(null);setMentionState(null)},[effectiveSelected])
 
   const directory=useMemo(()=>new Map(crewDirectory.map(member=>[member.id,member])),[crewDirectory])
   const messageLookup=useMemo(()=>{
