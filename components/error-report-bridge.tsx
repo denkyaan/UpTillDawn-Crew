@@ -14,7 +14,7 @@ type CapturedError={
 export function ErrorReportBridge(){
   const [open,setOpen]=useState(false)
   const [expanded,setExpanded]=useState(false)
-  const [locale,setLocale]=useState(()=>typeof window==='undefined'?'nl':activeUiLocale())
+  const [locale,setLocale]=useState<'nl'|'en'|'fr'|'de'>('nl')
   const [captured,setCaptured]=useState<CapturedError|null>(null)
 
   useEffect(()=>{
