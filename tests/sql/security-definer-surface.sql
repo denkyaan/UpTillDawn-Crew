@@ -1,7 +1,8 @@
 -- Security-definer surface regression.
 -- Public SECURITY DEFINER RPCs are intentionally used for validated workflows.
--- PUBLIC execute is forbidden. Anonymous execute is limited to token-gated God Mode
--- plus the two explicit pre-auth admin login guard/failure entry points.
+-- PUBLIC execute is forbidden. Anonymous execute is limited to the two explicit
+-- pre-auth admin login guard/failure entry points. God Mode requires an
+-- authenticated permanent-maker session.
 
 BEGIN;
 
@@ -27,12 +28,6 @@ BEGIN
     AND p.prosecdef
     AND has_function_privilege('anon', p.oid, 'EXECUTE')
     AND p.proname <> ALL(ARRAY[
-      'upt_god_data_catalog','upt_god_data_mutate','upt_god_data_rows',
-      'upt_god_database_connect','upt_god_database_disconnect','upt_god_database_secret',
-      'upt_god_login','upt_god_logout',
-      'upt_god_repository_connect','upt_god_repository_disconnect','upt_god_repository_secret',
-      'upt_god_role_rules','upt_god_save_role_rules','upt_god_session_valid',
-      'upt_god_error_reports','upt_god_error_report_mark_working','upt_god_error_report_resolve',
       'upt_admin_login_guard','upt_admin_login_failure'
     ]);
 
@@ -54,10 +49,8 @@ BEGIN
       AND p.prosecdef
       AND has_function_privilege('anon',p.oid,'EXECUTE')
       AND p.proname LIKE 'upt_god_%'
-      AND p.proname NOT IN ('upt_god_login','upt_god_logout')
-      AND position('god_session_valid' in pg_get_functiondef(p.oid))=0
   ) THEN
-    RAISE EXCEPTION 'FAIL: anonymous God Mode RPC lacks token-session validation';
+    RAISE EXCEPTION 'FAIL: anonymous caller can execute a God Mode RPC';
   END IF;
 
   SELECT count(*) INTO v_count
@@ -93,7 +86,6 @@ BEGIN
       AND position('upt_respond_shift' in pg_get_functiondef(p.oid)) = 0
       AND position('inventory_can_view' in pg_get_functiondef(p.oid)) = 0
       AND p.proname NOT IN (
-        'upt_god_login','upt_god_logout',
         'upt_admin_login_guard','upt_admin_login_failure'
       )
   ) THEN
@@ -136,8 +128,9 @@ BEGIN
   END IF;
 
   IF has_function_privilege('anon','public.upt_god_is_configured()','EXECUTE')
-     OR has_function_privilege('anon','public.upt_god_set_credentials(text,text)','EXECUTE') THEN
-    RAISE EXCEPTION 'FAIL: anonymous caller can access owner-only God Mode setup RPC';
+     OR has_function_privilege('anon','public.upt_god_set_credentials(text,text)','EXECUTE')
+     OR has_function_privilege('anon','public.upt_god_login(text,text)','EXECUTE') THEN
+    RAISE EXCEPTION 'FAIL: anonymous caller can access a retired God Mode credential RPC';
   END IF;
 
   IF has_function_privilege('authenticated','public.upt_god_is_configured()','EXECUTE')
@@ -146,8 +139,27 @@ BEGIN
     RAISE EXCEPTION 'FAIL: retired standalone God Mode credential RPC is still client-executable';
   END IF;
 
-  IF NOT has_function_privilege('authenticated','public.upt_god_login_owner()','EXECUTE') THEN
-    RAISE EXCEPTION 'FAIL: permanent-maker God Mode entry is unavailable';
+  IF NOT has_function_privilege('authenticated','public.upt_god_login_owner()','EXECUTE')
+     OR position(
+       'is_app_owner'
+       in pg_get_functiondef('public.upt_god_login_owner()'::regprocedure)
+     )=0 THEN
+    RAISE EXCEPTION 'FAIL: permanent-maker God Mode entry is unavailable or unguarded';
+  END IF;
+
+  IF EXISTS(
+    SELECT 1
+    FROM pg_proc p
+    JOIN pg_namespace n ON n.oid=p.pronamespace
+    WHERE n.nspname='public'
+      AND p.prosecdef
+      AND p.proname LIKE 'upt_god_%'
+      AND has_function_privilege('authenticated',p.oid,'EXECUTE')
+      AND p.proname <> 'upt_god_login_owner'
+      AND position('god_session_valid' in pg_get_functiondef(p.oid))=0
+      AND position('is_app_owner' in pg_get_functiondef(p.oid))=0
+  ) THEN
+    RAISE EXCEPTION 'FAIL: authenticated God Mode RPC is not owner/session guarded';
   END IF;
 
   IF EXISTS(
@@ -164,19 +176,8 @@ BEGIN
   IF NOT has_table_privilege('authenticated','public.role_ui_rules','SELECT') THEN
     RAISE EXCEPTION 'FAIL: authenticated cannot read role_ui_rules';
   END IF;
-
-  IF position(
-       'is_app_owner'
-       in pg_get_functiondef('public.upt_god_is_configured()'::regprocedure)
-     )=0
-     OR position(
-       'is_app_owner'
-       in pg_get_functiondef('public.upt_god_set_credentials(text,text)'::regprocedure)
-     )=0 THEN
-    RAISE EXCEPTION 'FAIL: God Mode configuration RPC lacks immutable owner guard';
-  END IF;
 END
 $god_gate$;
 
-SELECT 'PASS: SECURITY DEFINER surface, bounded pre-auth admin login boundary, token-gated God Mode, retired bootstrap and owner-only private setup are locked down' AS result;
+SELECT 'PASS: SECURITY DEFINER surface, bounded pre-auth admin login boundary, permanent-maker-only God Mode and retired standalone credential flow are locked down' AS result;
 ROLLBACK;
