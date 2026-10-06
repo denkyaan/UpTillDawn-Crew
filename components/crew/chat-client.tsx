@@ -575,7 +575,7 @@ export function ChatClient({channels,defaultChannelId,userId,crewDirectory,isAdm
     const trimmed=body.trim()
     if(busy||!effectiveSelected||(!trimmed&&!file))return
     setBusy(true)
-    setStatus('')
+    setStatus(translateRuntimeUi('Verzenden…',uiLocale))
     try{
       const replyId=replyTo?.id||null
       const mentionIds=mentionIdsForText(trimmed,currentPeople,userId)
@@ -588,6 +588,7 @@ export function ChatClient({channels,defaultChannelId,userId,crewDirectory,isAdm
       }else{
         await enqueue(userId,'message',{channel_id:effectiveSelected,body:trimmed,reply_to_message_id:replyId,mention_ids:mentionIds})
         setBody('')
+        setStatus(translateRuntimeUi(navigator.onLine?'Verzonden.':'Bericht staat in de wachtrij.',uiLocale))
       }
       setReplyTo(null)
       setPendingDraftReplyId(null)
