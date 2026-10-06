@@ -63,7 +63,9 @@ const copy:Record<string,Localized>={
 "Vertrek voor ophaling":{fr:"Départ pour la prise en charge",en:"Leave for pickup",de:"Abfahrt zur Abholung"},
 "Vertrek voor afzetrit":{fr:"Départ pour le trajet de dépose",en:"Leave for drop-off",de:"Abfahrt zur Absetzfahrt"},
 "Driver · artiest aangekomen":{fr:"Chauffeur · artiste arrivé",en:"Driver · artist arrived",de:"Fahrer · Künstler angekommen"},
-"Backstage opvolging vereist":{fr:"Suivi backstage requis",en:"Backstage follow-up required",de:"Backstage-Nachverfolgung erforderlich"}
+"Backstage opvolging vereist":{fr:"Suivi backstage requis",en:"Backstage follow-up required",de:"Backstage-Nachverfolgung erforderlich"},
+"Het is je verjaardag!🥳🎁":{fr:"C’est ton anniversaire ! 🥳🎁",en:"It’s your birthday! 🥳🎁",de:"Heute ist dein Geburtstag! 🥳🎁"},
+"Van harte gefeliciteerd met je verjaardag!🥳 Laat het een fantastische dag zijn en maak er het beste van! 🎉🎉":{fr:"Joyeux anniversaire ! 🥳 Passe une journée fantastique et profite-en au maximum ! 🎉🎉",en:"Happy birthday! 🥳 Have a fantastic day and make the most of it! 🎉🎉",de:"Herzlichen Glückwunsch zum Geburtstag! 🥳 Hab einen fantastischen Tag und mach das Beste daraus! 🎉🎉"}
 }
 
 const localeOk=(locale:string):locale is keyof Localized=>locale==="fr"||locale==="en"||locale==="de"

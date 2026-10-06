@@ -263,6 +263,19 @@ function translateAdminLockout(value:string,locale:ExtendedUiLocale){
   return `3 Admin-Anmeldeversuche sind fehlgeschlagen. Konto: ${account}. IP: ${ip}. Standort (ungefähr): ${location}. Gerät/Browser: ${device}. Anmeldung für 15 Minuten gesperrt.`
 }
 
+function translateBirthdayAndProfileCopy(value:string,locale:ExtendedUiLocale){
+  const rows:Record<string,{fr:string;en:string;de:string}>={
+    'Het is je verjaardag!🥳🎁':{fr:'C’est ton anniversaire ! 🥳🎁',en:'It’s your birthday! 🥳🎁',de:'Heute ist dein Geburtstag! 🥳🎁'},
+    'Van harte gefeliciteerd met je verjaardag!🥳 Laat het een fantastische dag zijn en maak er het beste van! 🎉🎉':{fr:'Joyeux anniversaire ! 🥳 Passe une journée fantastique et profite-en au maximum ! 🎉🎉',en:'Happy birthday! 🥳 Have a fantastic day and make the most of it! 🎉🎉',de:'Herzlichen Glückwunsch zum Geburtstag! 🥳 Hab einen fantastischen Tag und mach das Beste daraus! 🎉🎉'},
+    'Voor- en achternaam':{fr:'Prénom et nom',en:'First and last name',de:'Vor- und Nachname'},
+    'Voor beheerders zijn voor- en achternaam, profielfoto, telefoonnummer en geboortedatum verplicht.':{fr:'Pour les administrateurs, le prénom et le nom, la photo de profil, le numéro de téléphone et la date de naissance sont obligatoires.',en:'For admins, first and last name, profile photo, phone number and date of birth are required.',de:'Für Administratoren sind Vor- und Nachname, Profilfoto, Telefonnummer und Geburtsdatum verpflichtend.'},
+    'Voor personeel en verantwoordelijken zijn alle profielvelden, een werkplekvoorkeur en een profielfoto verplicht.':{fr:'Pour le personnel et les responsables, tous les champs du profil, une préférence de poste et une photo de profil sont obligatoires.',en:'For staff and responsible leads, all profile fields, a workplace preference and a profile photo are required.',de:'Für Personal und Verantwortliche sind alle Profilfelder, eine Arbeitsplatzpräferenz und ein Profilfoto verpflichtend.'},
+    'Kies een werkplek':{fr:'Choisissez un poste',en:'Choose a workplace',de:'Arbeitsplatz auswählen'},
+  }
+  if(locale==='nl')return rows[value]?value:null
+  return rows[value]?.[locale]||null
+}
+
 function translateActionCenterTitle(value:string,locale:ExtendedUiLocale){
   const match=value.match(/^(ACCOUNT GOEDKEUREN|INKLOKKEN|UITKLOKKEN|INKLOKKEN ONTBREEKT|HELP) · (.+)$/)
   if(!match)return null
@@ -279,7 +292,7 @@ function translateActionCenterTitle(value:string,locale:ExtendedUiLocale){
 }
 
 export function translateRuntimeUi(value:string,locale:ExtendedUiLocale):string{
-  const dynamicTranslators=[translateRequestStatus,translateShiftReminder,translateUnderstaffing,translateAccountApproval,translateEventReportReady,translateInventoryQuantity,translateDriverDeparture,translateDriverArrival,translateAdminLockout] as const
+  const dynamicTranslators=[translateBirthdayAndProfileCopy,translateRequestStatus,translateShiftReminder,translateUnderstaffing,translateAccountApproval,translateEventReportReady,translateInventoryQuantity,translateDriverDeparture,translateDriverArrival,translateAdminLockout] as const
   for(const translator of dynamicTranslators){
     const translated=translator(value,locale)
     if(translated)return translated

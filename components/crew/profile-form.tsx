@@ -22,12 +22,14 @@ export function ProfileForm({
   photoUrl,
   preferredWorkplaceId,
   workplaceOptions,
+  isAdminProfile,
 }: {
   id: string
   initial: ProfileValues
   photoUrl?: string | null
   preferredWorkplaceId?: string | null
   workplaceOptions: Array<{id:string;name:string}>
+  isAdminProfile: boolean
 }) {
   const [msg, setMsg] = useState('')
   const [busy, setBusy] = useState(false)
@@ -81,15 +83,19 @@ export function ProfileForm({
       })
       if (error) throw new Error('Profiel opslaan mislukt.')
 
-      const preferred=value('preferred_workplace')
-      const preferredName=workplaceOptions.find(option=>option.id===preferred)?.name||''
-      if(preferredName)sessionStorage.setItem('uptilldawn-training-preferred-workplace',preferredName)
-      else sessionStorage.removeItem('uptilldawn-training-preferred-workplace')
-      const {error:preferenceError}=await s.rpc(
-        'upt_set_own_workplace_preference',
-        preferred?{p_workplace:preferred}:{},
-      )
-      if(preferenceError)throw new Error('Werkplekvoorkeur opslaan mislukt.')
+      if(!isAdminProfile){
+        const preferred=value('preferred_workplace')
+        const preferredName=workplaceOptions.find(option=>option.id===preferred)?.name||''
+        if(preferredName)sessionStorage.setItem('uptilldawn-training-preferred-workplace',preferredName)
+        else sessionStorage.removeItem('uptilldawn-training-preferred-workplace')
+        const {error:preferenceError}=await s.rpc(
+          'upt_set_own_workplace_preference',
+          preferred?{p_workplace:preferred}:{},
+        )
+        if(preferenceError)throw new Error('Werkplekvoorkeur opslaan mislukt.')
+      }else{
+        sessionStorage.removeItem('uptilldawn-training-preferred-workplace')
+      }
 
       const {data:completion}=await s.rpc('upt_current_profile_completion')
       if(completion?.[0]?.required&&!completion[0].completed){
@@ -111,27 +117,29 @@ export function ProfileForm({
       setBusy(false)
     }
   }}>
-    {requiredCompletion&&<div className="rounded-2xl border border-violet-500/50 bg-violet-500/10 p-4"><p className="font-black">Vul eerst je profiel volledig aan</p><p className="mt-1 text-sm text-muted-foreground">Alle verplichte velden en een profielfoto moeten opgeslagen zijn voordat je verder kunt. Daarna start automatisch de rondleiding voor jouw rol.</p></div>}
+    {requiredCompletion&&<div className="rounded-2xl border border-violet-500/50 bg-violet-500/10 p-4"><p className="font-black">Vul eerst je profiel volledig aan</p><p className="mt-1 text-sm text-muted-foreground">{isAdminProfile?'Voor beheerders zijn voor- en achternaam, profielfoto, telefoonnummer en geboortedatum verplicht.':'Voor personeel en verantwoordelijken zijn alle profielvelden, een werkplekvoorkeur en een profielfoto verplicht.'}</p></div>}
     {photoUrl && <div className="overflow-hidden rounded-2xl border">
       {/* Private signed storage URL. */}
       {/* eslint-disable-next-line @next/next/no-img-element */}
       <img src={photoUrl} alt="Profielfoto" className="max-h-72 w-full object-contain bg-black/20"/>
     </div>}
-    <label className="block">Naam<input name="name" required maxLength={200} defaultValue={initial.full_name || ''} className="mt-1 block w-full rounded-xl border bg-background p-3"/></label>
-    <AddressAutocomplete name="address" label="Adres" defaultValue={initial.home_address || ''} required={requiredCompletion}/>
-    <label className="block">Telefoon<input name="phone" type="tel" required={requiredCompletion} maxLength={40} defaultValue={initial.phone_number || ''} className="mt-1 block w-full rounded-xl border bg-background p-3"/></label>
-    <label className="block">Geboortedatum<input name="dob" type="date" required={requiredCompletion} defaultValue={initial.date_of_birth || ''} className="mt-1 block w-full rounded-xl border bg-background p-3"/></label>
-    <label className="block">Rijksregisternummer<input name="national_register" required={requiredCompletion} autoComplete="off" maxLength={32} defaultValue={initial.national_register_number || ''} className="mt-1 block w-full rounded-xl border bg-background p-3"/></label>
-    <label className="block">IBAN<input name="iban" required={requiredCompletion} autoComplete="off" maxLength={34} defaultValue={initial.iban || ''} className="mt-1 block w-full rounded-xl border bg-background p-3 uppercase"/></label>
-    <label className="block">Voorkeur werkplek
-      <select name="preferred_workplace" defaultValue={preferredWorkplaceId||''} className="mt-1 block w-full rounded-xl border bg-background p-3">
-        <option value="">Geen voorkeur</option>
-        {workplaceOptions.map(option=><option key={option.id} value={option.id}>{option.name}</option>)}
-      </select>
-    </label>
-    <p className="text-xs text-muted-foreground">Deze voorkeur helpt de planning en wordt gebruikt om bij uitval automatisch de eerstvolgende geschikte wachtlijstkandidaat voor dezelfde werkplek te kiezen.</p>
-    <label className="block">Permanente profielfoto<input name="photo" type="file" required={requiredCompletion&&!initial.profile_photo_url} accept="image/jpeg,image/png,image/webp" className="mt-1 block w-full rounded-xl border bg-background p-3"/></label>
-    <p className="text-xs text-muted-foreground">Adres, geboortedatum, rijksregisternummer en IBAN is enkel zichtbaar voor admin.</p>
+    <label className="block">Voor- en achternaam<input name="name" required maxLength={200} defaultValue={initial.full_name || ''} className="mt-1 block w-full rounded-xl border bg-background p-3"/></label>
+    {!isAdminProfile&&<AddressAutocomplete name="address" label="Adres" defaultValue={initial.home_address || ''} required/>}
+    <label className="block">Telefoon<input name="phone" type="tel" required maxLength={40} defaultValue={initial.phone_number || ''} className="mt-1 block w-full rounded-xl border bg-background p-3"/></label>
+    <label className="block">Geboortedatum<input name="dob" type="date" required defaultValue={initial.date_of_birth || ''} className="mt-1 block w-full rounded-xl border bg-background p-3"/></label>
+    {!isAdminProfile&&<>
+      <label className="block">Rijksregisternummer<input name="national_register" required autoComplete="off" maxLength={32} defaultValue={initial.national_register_number || ''} className="mt-1 block w-full rounded-xl border bg-background p-3"/></label>
+      <label className="block">IBAN<input name="iban" required autoComplete="off" maxLength={34} defaultValue={initial.iban || ''} className="mt-1 block w-full rounded-xl border bg-background p-3 uppercase"/></label>
+      <label className="block">Voorkeur werkplek
+        <select name="preferred_workplace" required defaultValue={preferredWorkplaceId||''} className="mt-1 block w-full rounded-xl border bg-background p-3">
+          <option value="" disabled>Kies een werkplek</option>
+          {workplaceOptions.map(option=><option key={option.id} value={option.id}>{option.name}</option>)}
+        </select>
+      </label>
+      <p className="text-xs text-muted-foreground">Deze voorkeur helpt de planning en wordt gebruikt om bij uitval automatisch de eerstvolgende geschikte wachtlijstkandidaat voor dezelfde werkplek te kiezen.</p>
+    </>}
+    <label className="block">Permanente profielfoto<input name="photo" type="file" required={!initial.profile_photo_url} accept="image/jpeg,image/png,image/webp" className="mt-1 block w-full rounded-xl border bg-background p-3"/></label>
+    {!isAdminProfile&&<p className="text-xs text-muted-foreground">Adres, geboortedatum, rijksregisternummer en IBAN zijn enkel zichtbaar voor admin.</p>}
     <button disabled={busy} className="w-full rounded-xl bg-violet-600 p-3 font-bold">{busy ? 'OPSLAAN…' : 'PROFIEL OPSLAAN'}</button>
     {msg && <p role="status">{msg}</p>}
   </form>

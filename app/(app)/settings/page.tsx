@@ -64,7 +64,7 @@ export default async function Page({searchParams}:{searchParams?:Promise<{tour?:
       <div className="mb-4"><h2 className="text-xl font-black">Mijn profiel</h2><p className="text-sm text-muted-foreground">{profile?.email||user.email}</p></div>
       {error||!profile
         ? <p>Profiel kon niet worden geladen.</p>
-        : <ProfileForm id={user.id} initial={profile} photoUrl={photoUrl} preferredWorkplaceId={preference||null} workplaceOptions={(workplaceOptions||[]).map(option=>({id:option.id,name:option.name}))}/>}
+        : <ProfileForm id={user.id} initial={profile} photoUrl={photoUrl} preferredWorkplaceId={preference||null} workplaceOptions={(workplaceOptions||[]).map(option=>({id:option.id,name:option.name}))} isAdminProfile={current?.realRole==='admin'}/>}
     </section>
 
     <section className="rounded-2xl border p-4">
