@@ -14,7 +14,7 @@ import { LANGUAGE_APPLIED_EVENT, activeUiLocale, type SupportedUiLocale } from "
 
 const ASSIGNED_EVENT_KEYS=["events","briefings","workplaces"] as const
 const STAFF_ACTIVE_SHIFT_KEYS=["operations","workplaces","briefings","tasks"] as const
-const RESPONSIBLE_ACTIVE_SHIFT_KEYS=["operations","workplaces","incidents"] as const
+const RESPONSIBLE_ACTIVE_SHIFT_KEYS=["operations","workplaces","incidents"] as const // Help is surfaced through the incidents/help operational action
 const RESPONSIBLE_ASSIGNED_EVENT_KEYS=["events","briefings","workplaces"] as const
 
 export function MobileBottomNav({

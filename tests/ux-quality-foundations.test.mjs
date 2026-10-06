@@ -18,10 +18,16 @@ test('interactive controls enforce naming keyboard and touch target basics', asy
 })
 
 test('mobile navigation follows operational role and active shift context', async () => {
-  const source = await readFile(new URL('../lib/mobile-navigation-policy.ts', import.meta.url), 'utf8')
-  assert.match(source, /\['events','briefing','shifts','workplaces'\]/)
-  assert.match(source, /\['work-hours','shifts','workplaces','help'\]/)
-  assert.match(source, /\['work-hours','shifts','briefing','tasks'\]/)
+  const [policy, nav] = await Promise.all([
+    readFile(new URL('../lib/mobile-navigation-policy.ts', import.meta.url), 'utf8'),
+    readFile(new URL('../components/layout/mobile-nav.tsx', import.meta.url), 'utf8'),
+  ])
+  assert.match(policy, /\['events','briefing','shifts','workplaces'\]/)
+  assert.match(policy, /\['work-hours','shifts','workplaces','help'\]/)
+  assert.match(policy, /\['work-hours','shifts','briefing','tasks'\]/)
+  assert.match(nav, /ASSIGNED_EVENT_KEYS=\["events","briefings","workplaces"\]/)
+  assert.match(nav, /RESPONSIBLE_ASSIGNED_EVENT_KEYS=\["events","briefings","workplaces"\]/)
+  assert.doesNotMatch(nav, /RESPONSIBLE_ASSIGNED_EVENT_KEYS=.*inventory/)
 })
 
 test('localization completeness catches missing and empty translations', async () => {
