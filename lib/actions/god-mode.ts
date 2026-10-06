@@ -6,7 +6,7 @@ import { createClient } from '@/lib/supabase/crew-server'
 import { markSaveSuccess } from '@/lib/save-success'
 
 const GOD_COOKIE='uptilldawn-god-session'
-const GOD_LOGIN='edit@uptilldawn'
+const GOD_LOGIN='godmode@uptilldawn'
 
 export async function configureGodMode(formData:FormData){
   const login=String(formData.get('login')||'').trim().toLowerCase()
@@ -28,8 +28,8 @@ export async function configureGodMode(formData:FormData){
     throw new Error('God Mode kon niet worden geconfigureerd.')
   }
 
-  const {data:token,error:loginError}=await s.rpc('upt_god_login',{p_login:login,p_password:password})
-  if(loginError||!token)throw new Error('God Mode werd opgeslagen maar de nieuwe sessie kon niet starten.')
+  const {data:token,error:sessionError}=await s.rpc('upt_god_login_owner')
+  if(sessionError||!token)throw new Error('God Mode werd opgeslagen maar de nieuwe sessie kon niet starten.')
 
   const store=await cookies()
   store.set(GOD_COOKIE,token,{httpOnly:true,secure:true,sameSite:'strict',path:'/',maxAge:2*60*60})
