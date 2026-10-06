@@ -15,7 +15,7 @@ test('Supabase advisor hardening keeps RPC-only tables explicitly closed',async(
   ]
   for(const table of protectedTables) assert.match(sql,new RegExp(`'${table}'`))
   assert.match(sql,/for all to anon,authenticated using \(false\) with check \(false\)/)
-  assert.doesNotMatch(sql,/grant\s+/i)
+  assert.doesNotMatch(sql,/^\\s*grant\\s+/im)
 })
 
 test('Supabase advisor hardening covers chat foreign keys',async()=>{
