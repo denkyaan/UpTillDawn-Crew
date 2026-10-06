@@ -205,7 +205,7 @@ begin
     s.mute_mode,
     (select count(*) from upt_private.chat_pins pin where pin.channel_id=c.id)::bigint,
     (
-      public.upt_is_admin()
+      (c.kind in ('event','workplace') and public.upt_is_admin())
       or (c.kind='workplace' and c.event_id is not null and c.workplace_id is not null
           and public.upt_is_responsible(c.event_id,c.workplace_id,v_actor))
       or (c.kind='event' and c.event_id is not null
@@ -344,7 +344,7 @@ begin
 
   select * into v_channel from public.chat_channels where id=v_message_channel;
 
-  v_allowed:=public.upt_is_admin()
+  v_allowed:=(v_channel.kind in ('event','workplace') and public.upt_is_admin())
     or (v_channel.kind='workplace' and v_channel.event_id is not null and v_channel.workplace_id is not null
         and public.upt_is_responsible(v_channel.event_id,v_channel.workplace_id,v_actor))
     or (v_channel.kind='event' and v_channel.event_id is not null
