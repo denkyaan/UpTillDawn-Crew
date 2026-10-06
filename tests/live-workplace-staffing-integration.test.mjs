@@ -26,14 +26,14 @@ test('manager live sessions are scoped by the current workplace', async () => {
   assert.match(source, /revoke all on function public\.upt_manager_live_sessions\(\) from public,anon/)
 })
 
-test('operations consumes canonical manager live sessions while root overview stays non-blocking', async () => {
+test('operations and scoped root overview consume canonical manager live sessions', async () => {
   const operations = await readFile(new URL('../app/(app)/operations/page.tsx', import.meta.url), 'utf8')
   const dashboard = await readFile(new URL('../app/(app)/page.tsx', import.meta.url), 'utf8')
   const client = await readFile(new URL('../app/(app)/operations/operations-client.tsx', import.meta.url), 'utf8')
 
   assert.match(operations, /upt_manager_live_sessions/)
   assert.doesNotMatch(operations, /liveShifts=/)
-  assert.doesNotMatch(dashboard, /upt_manager_live_sessions/)
+  assert.match(dashboard, /upt_manager_live_sessions/)\n  assert.match(dashboard, /activeRows\.filter\(row=>activeResponsibleWorkplaces\.has\(row\.workplace_id\)\)/)
   assert.match(dashboard, /ResponsibleLivePersonnel/)
   assert.match(client, /ws\.workplace_name/)
   assert.match(client, /ws\.session_id/)
