@@ -135,7 +135,7 @@ try {
     page.on('console',message=>{
       if(message.type()==='error')diagnostics.consoleErrors.push(message.text().slice(0,500))
     })
-    page.on('pageerror',error=>diagnostics.pageErrors.push(String(error?.message||error).slice(0,500)))
+    page.on('pageerror',error=>diagnostics.pageErrors.push(`${new URL(page.url(),baseUrl).pathname}${new URL(page.url(),baseUrl).search}: ${String(error?.message||error).slice(0,500)}`))
 
     try {
       const response = await page.goto(`${baseUrl}/login/${role}`, {

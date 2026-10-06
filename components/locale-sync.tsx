@@ -111,8 +111,9 @@ export function LocaleSync() {
 
     // LocaleSync is mounted after the app children. Never mutate React-owned
     // server HTML until that subtree has committed hydration, the load event
-    // has fired, and two paint frames have yielded. Mutating earlier can turn
-    // translated text into React #418 hydration mismatches.
+    // has fired, a hydration grace period has elapsed, and two paint frames
+    // have yielded. Mutating earlier can turn translated text into React #418
+    // hydration mismatches on slower streamed/mobile renders.
     let initialPass:number|undefined
     let observing=false
     const startRuntimeTranslation=()=>{
@@ -127,7 +128,7 @@ export function LocaleSync() {
           })
         })
         void first
-      },0)
+      },1200)
     }
     if(document.readyState==='complete')startRuntimeTranslation()
     else window.addEventListener('load',startRuntimeTranslation,{once:true})

@@ -8,7 +8,7 @@ test('runtime translation waits until after app children hydration',async()=>{
   readFile(new URL('../components/locale-sync.tsx',import.meta.url),'utf8'),
  ])
  assert.ok(layout.indexOf('{children}')<layout.indexOf('<LocaleSync />'),'LocaleSync must mount after app children')
- assert.match(sync,/setTimeout\(\(\)=>\s*\{[\s\S]*requestAnimationFrame\(\(\)=>\s*\{[\s\S]*requestAnimationFrame\(/)
+ assert.match(sync,/setTimeout\(\(\)=>\s*\{[\s\S]*requestAnimationFrame\(\(\)=>\s*\{[\s\S]*requestAnimationFrame\([\s\S]*\},1200\)/)
 })
 
 test('event tour follows the current interactive action',async()=>{
@@ -17,4 +17,11 @@ test('event tour follows the current interactive action',async()=>{
  assert.match(source,/data-tour-demo=\{open&&!saved\?"primary-action":undefined\}/)
  const tour=await readFile(new URL('../components/training/tour-control-center.tsx',import.meta.url),'utf8')
  assert.match(tour,/container\?\.querySelector\('\[data-tour-demo="primary-action"\]:not\(:disabled\), button:not\(:disabled\), summary, input:not\(:disabled\)'\)/)
+})
+
+
+test('tour panel text never blocks the highlighted page action',async()=>{
+ const source=await readFile(new URL('../components/training/tour-control-center.tsx',import.meta.url),'utf8')
+ assert.match(source,/data-tour-panel[\\s\\S]*pointer-events-none/)
+ assert.match(source,/pointer-events-auto[\\s\\S]*PAUZEER/)
 })
