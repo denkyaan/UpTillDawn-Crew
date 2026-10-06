@@ -626,7 +626,7 @@ begin
     select p.id
     from public.profiles p
     where p.approved is true
-      and p.blocked is not true
+      and coalesce(p.account_blocked,false)=false
       and (
         exists(select 1 from public.chat_channels c where c.id=new.channel_id and c.kind='organization')
         or exists(
@@ -694,7 +694,7 @@ begin
     select p.id
     from public.profiles p
     where p.approved is true
-      and p.blocked is not true
+      and coalesce(p.account_blocked,false)=false
       and p.id<>new.sender_id
       and (
         exists(select 1 from public.chat_channels c where c.id=new.channel_id and c.kind='organization')
