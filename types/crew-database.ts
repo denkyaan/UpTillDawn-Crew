@@ -4770,7 +4770,6 @@ export type Database = {
         Returns: string
       }
       upt_create_private_chat: { Args: { p_user: string }; Returns: string }
-      upt_delete_private_chat: { Args: { p_channel: string }; Returns: undefined }
       upt_create_qr_resource: {
         Args: {
           p_event: string
@@ -4883,6 +4882,10 @@ export type Database = {
       }
       upt_decide_shift_change: {
         Args: { p_decision: string; p_reason?: string; p_request: string }
+        Returns: undefined
+      }
+      upt_delete_private_chat: {
+        Args: { p_channel: string }
         Returns: undefined
       }
       upt_dismiss_planning_recommendation: {
