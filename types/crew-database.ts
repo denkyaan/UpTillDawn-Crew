@@ -5242,10 +5242,7 @@ export type Database = {
           workplace_name: string
         }[]
       }
-      upt_mark_chat_read: {
-        Args: { p_channel: string }
-        Returns: undefined
-      }
+      upt_mark_chat_read: { Args: { p_channel: string }; Returns: undefined }
       upt_mark_notification_read: {
         Args: { p_notification: string }
         Returns: undefined
@@ -5594,21 +5591,21 @@ export type Database = {
         }
         Returns: string
       }
-      upt_send_chat_photo_message_operation: {
-        Args: {
-          p_attachment_path: string
-          p_body: string
-          p_channel: string
-          p_operation: string
-          p_reply_to?: string
-        }
-        Returns: string
-      }
       upt_send_chat_message_operation_v2: {
         Args: {
           p_body: string
           p_channel: string
           p_mention_ids?: string[]
+          p_operation: string
+          p_reply_to?: string
+        }
+        Returns: string
+      }
+      upt_send_chat_photo_message_operation: {
+        Args: {
+          p_attachment_path: string
+          p_body: string
+          p_channel: string
           p_operation: string
           p_reply_to?: string
         }
@@ -5881,6 +5878,10 @@ export type Database = {
         Args: { p_event: string }
         Returns: Json
       }
+      upt_toggle_chat_pin: {
+        Args: { p_message: string; p_pinned: boolean }
+        Returns: undefined
+      }
       upt_update_inventory_asset_metadata: {
         Args: {
           p_asset_code?: string
@@ -5896,10 +5897,6 @@ export type Database = {
           p_serial_number?: string
           p_unit_cost_cents?: number
         }
-        Returns: undefined
-      }
-      upt_toggle_chat_pin: {
-        Args: { p_message: string; p_pinned: boolean }
         Returns: undefined
       }
       upt_update_own_profile: {
