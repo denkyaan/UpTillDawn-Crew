@@ -48,9 +48,9 @@ const copy={
 } as const
 
 export function RoleGuideBriefing({role}:{role:string}){
- const [l,setL]=useState<SupportedUiLocale>(()=>typeof window==="undefined"?"nl":activeUiLocale())
+ const [l,setL]=useState<SupportedUiLocale>("nl")
  const [open,setOpen]=useState(false)
- useEffect(()=>{const apply=()=>setL(activeUiLocale());addEventListener(LANGUAGE_APPLIED_EVENT,apply);return()=>removeEventListener(LANGUAGE_APPLIED_EVENT,apply)},[])
+ useEffect(()=>{const apply=()=>setL(activeUiLocale());apply();addEventListener(LANGUAGE_APPLIED_EVENT,apply);return()=>removeEventListener(LANGUAGE_APPLIED_EVENT,apply)},[])
  const key=role==="admin"?"admin":role==="responsible_lead"?"responsible_lead":"employee"
  const c=copy[key]
  return <article className="rounded-xl border border-violet-500/50 p-4">

@@ -5,10 +5,10 @@ import {RoleGuideBriefing} from "@/components/crew/role-guide-briefing"
 const t=(l:SupportedUiLocale,nl:string,en:string,fr:string,de:string)=>({nl,en,fr,de}[l])
 const KEY="uptilldawn-training-workflow-v3"
 export function SandboxBriefings({role="employee"}:{role?:string}){
- const [l,setL]=useState<SupportedUiLocale>(()=>typeof window==="undefined"?"nl":activeUiLocale())
+ const [l,setL]=useState<SupportedUiLocale>("nl")
  const [opened,setOpened]=useState(false)
  const [read,setRead]=useState(false)
- useEffect(()=>{const apply=()=>setL(activeUiLocale());addEventListener(LANGUAGE_APPLIED_EVENT,apply);return()=>removeEventListener(LANGUAGE_APPLIED_EVENT,apply)},[])
+ useEffect(()=>{const apply=()=>setL(activeUiLocale());apply();addEventListener(LANGUAGE_APPLIED_EVENT,apply);return()=>removeEventListener(LANGUAGE_APPLIED_EVENT,apply)},[])
  const acknowledge=()=>{let s={};try{s=JSON.parse(sessionStorage.getItem(KEY)||"{}")}catch{};sessionStorage.setItem(KEY,JSON.stringify({...s,briefingRead:true,navTarget:"operations"}));setRead(true);dispatchEvent(new CustomEvent("uptilldawn-training-nav-target",{detail:{target:"operations"}}))}
  return <main className="space-y-5 p-4 md:p-8">
   <div><h1 className="text-3xl font-black">{t(l,"Briefing & checklists","Briefing & checklists","Briefing & checklists","Briefing & Checklisten")}</h1><p className="text-sm text-muted-foreground">{t(l,"Lees de briefing voor je toegewezen shift en bevestig dat je de instructies hebt gelezen.","Read the briefing for your assigned shift and confirm that you have read the instructions.","Lisez le briefing de votre shift attribué et confirmez que vous avez lu les instructions.","Lies das Briefing für deine zugewiesene Schicht und bestätige, dass du die Anweisungen gelesen hast.")}</p></div>

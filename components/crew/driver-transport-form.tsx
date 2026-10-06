@@ -5,9 +5,9 @@ import {activeUiLocale,LANGUAGE_APPLIED_EVENT,type SupportedUiLocale} from "@/li
 const t=(l:SupportedUiLocale,nl:string,en:string,fr:string,de:string)=>({nl,en,fr,de}[l])
 export type DriverArtist={id:string;name:string}
 export function DriverTransportForm({shiftId,artists=[]}:{shiftId:string;artists?:DriverArtist[]}){
- const [l,setL]=useState<SupportedUiLocale>(()=>typeof window==="undefined"?"nl":activeUiLocale())
+ const [l,setL]=useState<SupportedUiLocale>("nl")
  const [artistId,setArtistId]=useState(""),[name,setName]=useState("")
- useEffect(()=>{const f=()=>setL(activeUiLocale());addEventListener(LANGUAGE_APPLIED_EVENT,f);return()=>removeEventListener(LANGUAGE_APPLIED_EVENT,f)},[])
+ useEffect(()=>{const f=()=>setL(activeUiLocale());f();addEventListener(LANGUAGE_APPLIED_EVENT,f);return()=>removeEventListener(LANGUAGE_APPLIED_EVENT,f)},[])
  return <details className="mt-3 rounded-lg border border-violet-500/30 p-3">
   <summary className="cursor-pointer font-semibold">{t(l,"Driver-rit toevoegen","Add driver trip","Ajouter un trajet chauffeur","Fahrerfahrt hinzufügen")}</summary>
   <form action={createDriverTransportTask} className="mt-3 grid gap-2 md:grid-cols-2">

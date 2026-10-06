@@ -22,9 +22,10 @@ function formatDigital(totalSeconds:number){
 }
 
 export function ResponsibleLivePersonnel({people}:{people:ResponsibleLivePerson[]}){
-  const [now,setNow]=useState(()=>Date.now())
+  const [now,setNow]=useState(0)
 
   useEffect(()=>{
+    setNow(Date.now())
     const clock=window.setInterval(()=>setNow(Date.now()),1000)
     return()=>window.clearInterval(clock)
   },[])

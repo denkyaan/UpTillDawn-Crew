@@ -25,9 +25,9 @@ function persist(next:string|null,module:Module){
 }
 
 export function SandboxRoleModule({role,module}:{role:TrainingRole;module:Module}){
- const [l,setL]=useState<SupportedUiLocale>(()=>typeof window==="undefined"?"nl":activeUiLocale())
+ const [l,setL]=useState<SupportedUiLocale>("nl")
  const [done,setDone]=useState(false)
- useEffect(()=>{const f=()=>setL(activeUiLocale());addEventListener(LANGUAGE_APPLIED_EVENT,f);return()=>removeEventListener(LANGUAGE_APPLIED_EVENT,f)},[])
+ useEffect(()=>{const f=()=>setL(activeUiLocale());f();addEventListener(LANGUAGE_APPLIED_EVENT,f);return()=>removeEventListener(LANGUAGE_APPLIED_EVENT,f)},[])
  const next=NEXT[role]?.[module]??null
  const copy={
   chat:{title:t(l,"Chats","Chats","Chats","Chats"),desc:t(l,"Organisatie-, event- en werkplekcommunicatie.","Organisation, event and workplace communication.","Communication organisation, événement et poste.","Organisations-, Event- und Arbeitsplatzkommunikation."),action:t(l,"BERICHT VERSTUREN","SEND MESSAGE","ENVOYER LE MESSAGE","NACHRICHT SENDEN"),result:t(l,"Trainingsbericht verzonden in de fictieve eventchat.","Training message sent in the fictional event chat.","Message d’entraînement envoyé dans le chat fictif de l’événement.","Trainingsnachricht im fiktiven Event-Chat gesendet.")},

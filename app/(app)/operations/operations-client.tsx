@@ -19,8 +19,9 @@ type DriverSummary={event_seconds:number;driving_seconds:number;total_km:number}
 type DriverDashboard=Database['public']['Functions']['upt_driver_dashboard']['Returns'][number]
 type Props={userId:string;shifts:Tables<'shifts'>[];events:Tables<'events'>[];workplaces:Tables<'workplaces'>[];activeSession:Tables<'work_sessions'>|null;activeBreak:Tables<'break_sessions'>|null;checkins:Tables<'check_ins'>[];checkouts:Tables<'check_outs'>[];manager:boolean;isAdmin:boolean;personalWork:boolean;summary:Summary|null;summaryAsOf:number;liveSessions:ManagerLiveSession[];liveBreaks:Tables<'break_sessions'>[];crewDirectory:CrewMember[];timeReviews:Tables<'time_review_requests'>[];operationalAlerts:OperationalAlert[];focusUserId?:string|null;focusWorkplaceId?:string|null;focusKind?:string|null;isDriverSession?:boolean;activeDriverSession?:DriverSession|null;driverSummary?:DriverSummary|null;driverTasks?:DriverTask[];driverDashboard?:DriverDashboard[];driverEventPoint?:{latitude:number;longitude:number}|null}
 export default function OperationsClient(p:Props){
- const router=useRouter();const [busy,setBusy]=useState(false),[msg,setMsg]=useState(''),[rejectionReasons,setRejectionReasons]=useState<Record<string,string>>({}),[alertNow,setAlertNow]=useState(()=>Date.now())
+ const router=useRouter();const [busy,setBusy]=useState(false),[msg,setMsg]=useState(''),[rejectionReasons,setRejectionReasons]=useState<Record<string,string>>({}),[alertNow,setAlertNow]=useState(0)
  const s=useMemo(()=>createClient(),[])
+ useEffect(()=>{setAlertNow(Date.now())},[])
  useEffect(()=>{
   const refresh=()=>{if(navigator.onLine)router.refresh()}
   const onVisibility=()=>{if(document.visibilityState==='visible')refresh()}
@@ -168,8 +169,9 @@ function formatDigital(totalSeconds:number){
 }
 
 function LiveWorkSummary({summary,activeBreak,summaryAsOf}:{summary:Summary;activeBreak:Tables<'break_sessions'>|null;summaryAsOf:number}){
- const [now,setNow]=useState(()=>Date.now())
+ const [now,setNow]=useState(summaryAsOf)
  useEffect(()=>{
+  setNow(Date.now())
   const timer=window.setInterval(()=>setNow(Date.now()),1000)
   return()=>window.clearInterval(timer)
  },[])
@@ -187,27 +189,27 @@ function LiveWorkSummary({summary,activeBreak,summaryAsOf}:{summary:Summary;acti
 
 
 function DriverDrivingLockNotice(){
- const [l,setL]=useState<SupportedUiLocale>(()=>activeUiLocale())
- useEffect(()=>{const fn=()=>setL(activeUiLocale());addEventListener(LANGUAGE_APPLIED_EVENT,fn);return()=>removeEventListener(LANGUAGE_APPLIED_EVENT,fn)},[])
+ const [l,setL]=useState<SupportedUiLocale>("nl")
+ useEffect(()=>{const fn=()=>setL(activeUiLocale());fn();addEventListener(LANGUAGE_APPLIED_EVENT,fn);return()=>removeEventListener(LANGUAGE_APPLIED_EVENT,fn)},[])
  const copy={nl:"STOP DRIVING is verplicht vóór pauze of stopuren.",en:"STOP DRIVING is required before a break or clocking out.",fr:"STOP DRIVING est obligatoire avant une pause ou la fin du travail.",de:"STOP DRIVING ist vor einer Pause oder dem Arbeitsende erforderlich."}
  return <p className="rounded-xl border border-amber-500/40 bg-amber-500/10 p-4 font-semibold">{copy[l]}</p>
 }
 
 function DriverBackstageDashboard({rows}:{rows:DriverDashboard[]}){
- const [l,setL]=useState<SupportedUiLocale>(()=>activeUiLocale())
- useEffect(()=>{const fn=()=>setL(activeUiLocale());addEventListener(LANGUAGE_APPLIED_EVENT,fn);return()=>removeEventListener(LANGUAGE_APPLIED_EVENT,fn)},[])
+ const [l,setL]=useState<SupportedUiLocale>("nl")
+ useEffect(()=>{const fn=()=>setL(activeUiLocale());fn();addEventListener(LANGUAGE_APPLIED_EVENT,fn);return()=>removeEventListener(LANGUAGE_APPLIED_EVENT,fn)},[])
  const tx=(nl:string,en:string,fr:string,de:string)=>({nl,en,fr,de}[l])
  return <section className="space-y-3 rounded-2xl border border-violet-500/40 p-4"><div><h2 className="text-xl font-bold">{tx("Driver-overzicht","Driver overview","Aperçu chauffeurs","Fahrerübersicht")}</h2><p className="text-sm text-muted-foreground">{tx("Backstage volgt hier de actieve transporten en ETA.","Backstage tracks active transport and ETA here.","Backstage suit ici les transports actifs et les ETA.","Backstage verfolgt hier aktive Fahrten und ETA.")}</p></div>{rows.map((row,i)=><article key={row.user_id+":"+i} className="rounded-xl border p-3"><div className="flex items-start justify-between gap-3"><div><p className="font-bold">{row.driver_name||tx("Driver","Driver","Chauffeur","Fahrer")}</p><p className="text-sm">{row.passenger_name||"—"}{row.address?" · "+row.address:""}</p>{row.eta_at&&<p className="text-sm font-semibold">ETA {new Date(row.eta_at).toLocaleTimeString([], {hour:"2-digit",minute:"2-digit"})}</p>}</div><span className="rounded-full border px-2 py-1 text-xs font-bold">{row.driving?tx("ONDERWEG","DRIVING","EN ROUTE","UNTERWEGS"):tx("OP EVENT","AT EVENT","SUR ÉVÉNEMENT","AM EVENT")}</span></div></article>)}</section>
 }
 
 function DriverControls({s,busy,run,activeSessionId,activeDriving,summary,tasks,eventPoint}:{s:ReturnType<typeof createClient>;busy:boolean;run:(fn:()=>Promise<void>)=>Promise<void>;activeSessionId:string;activeDriving:DriverSession|null;summary:DriverSummary|null;tasks:DriverTask[];eventPoint:{latitude:number;longitude:number}|null}){
- const [l,setL]=useState<SupportedUiLocale>(()=>activeUiLocale())
+ const [l,setL]=useState<SupportedUiLocale>("nl")
  const [taskId,setTaskId]=useState(activeDriving?.task_id||tasks.find(t=>t.status!=="completed")?.task_id||"")
  const [trackedKm,setTrackedKm]=useState(0),[nearEvent,setNearEvent]=useState(false)
  const last=useRef<{lat:number;lon:number}|null>(null)
  const selected=tasks.find(task=>task.task_id===taskId)
  const tx=(nl:string,en:string,fr:string,de:string)=>({nl,en,fr,de}[l])
- useEffect(()=>{const fn=()=>setL(activeUiLocale());addEventListener(LANGUAGE_APPLIED_EVENT,fn);return()=>removeEventListener(LANGUAGE_APPLIED_EVENT,fn)},[])
+ useEffect(()=>{const fn=()=>setL(activeUiLocale());fn();addEventListener(LANGUAGE_APPLIED_EVENT,fn);return()=>removeEventListener(LANGUAGE_APPLIED_EVENT,fn)},[])
  useEffect(()=>{
   if(!activeDriving||!navigator.geolocation)return
   const id=navigator.geolocation.watchPosition(pos=>{

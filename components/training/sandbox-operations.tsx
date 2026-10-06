@@ -6,12 +6,13 @@ const tr=(l:Locale,nl:string,en:string,fr:string,de:string)=>({nl,en,fr,de}[l])
 const KEY="uptilldawn-training-workflow-v3"
 export function SandboxOperations({userName,role}:{userName:string;role:string}){
  const initial=()=>{if(typeof window==="undefined")return {} as Record<string,unknown>;try{return JSON.parse(sessionStorage.getItem(KEY)||"{}")}catch{return {}}}
- const [preferred]=useState(()=>typeof window==="undefined"?"Bar/Toog":sessionStorage.getItem("uptilldawn-training-preferred-workplace")||"Bar/Toog")
+ const [preferred,setPreferred]=useState("Bar/Toog")
  const isDriver=/driver/i.test(preferred)
- const [locale,setLocale]=useState<Locale>(()=>typeof window==="undefined"?"nl":activeUiLocale() as Locale),[phase,setPhaseState]=useState<Phase>(()=>{const s=initial();const saved=s.operationPhase as Phase|undefined;if(saved&&saved!=="working")return saved;if(s.taskDone)return "task";return saved||"assigned"}),[seconds,setSeconds]=useState(0),[driveSeconds,setDriveSeconds]=useState(0)
+ const [locale,setLocale]=useState<Locale>("nl"),[phase,setPhaseState]=useState<Phase>("assigned"),[seconds,setSeconds]=useState(0),[driveSeconds,setDriveSeconds]=useState(0)
  const setPhase=(next:Phase)=>{setPhaseState(next);const s=initial();sessionStorage.setItem(KEY,JSON.stringify({...s,operationPhase:next}))}
  const nav=(key:string)=>{const s=initial();sessionStorage.setItem(KEY,JSON.stringify({...s,navTarget:key}));dispatchEvent(new CustomEvent("uptilldawn-training-nav-target",{detail:{target:key}}))}
- useEffect(()=>{const on=()=>setLocale(activeUiLocale() as Locale);addEventListener(LANGUAGE_APPLIED_EVENT,on);return()=>removeEventListener(LANGUAGE_APPLIED_EVENT,on)},[])
+ useEffect(()=>{const on=()=>setLocale(activeUiLocale() as Locale);on();addEventListener(LANGUAGE_APPLIED_EVENT,on);return()=>removeEventListener(LANGUAGE_APPLIED_EVENT,on)},[])
+ useEffect(()=>{setPreferred(sessionStorage.getItem("uptilldawn-training-preferred-workplace")||"Bar/Toog");const s=initial();const saved=s.operationPhase as Phase|undefined;setPhaseState(saved&&saved!=="working"?saved:s.taskDone?"task":saved||"assigned")},[])
  useEffect(()=>{if(!["working","driving","at_person","returning","break"].includes(phase))return;const id=setInterval(()=>setSeconds(v=>v+1),1000);return()=>clearInterval(id)},[phase])
  useEffect(()=>{if(!["driving","returning"].includes(phase))return;const id=setInterval(()=>setDriveSeconds(v=>v+1),1000);return()=>clearInterval(id)},[phase])
  useEffect(()=>{const sync=()=>{const s=initial();if(s.taskDone&&phase==="working"&&!s.incidentDone){setPhaseState("task");sessionStorage.setItem(KEY,JSON.stringify({...s,operationPhase:"task"}))}};addEventListener("focus",sync);sync();return()=>removeEventListener("focus",sync)},[phase])
