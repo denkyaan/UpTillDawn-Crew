@@ -1,0 +1,133 @@
+-- Public API privilege/RLS regression matrix.
+-- Read-only assertions only.
+
+DO $matrix$
+DECLARE
+  v_missing_rls text;
+  v_anon_tables text;
+  v_public_policies text;
+  v_anon_rpcs text;
+  v_executable_triggers text;
+BEGIN
+  SELECT string_agg(format('%I.%I', n.nspname, c.relname), ', ')
+  INTO v_missing_rls
+  FROM pg_class c
+  JOIN pg_namespace n ON n.oid=c.relnamespace
+  WHERE n.nspname='public'
+    AND c.relkind='r'
+    AND NOT c.relrowsecurity;
+
+  IF v_missing_rls IS NOT NULL THEN
+    RAISE EXCEPTION 'FAIL public tables without RLS: %', v_missing_rls;
+  END IF;
+
+  SELECT string_agg(table_name||':'||privilege_type, ', ' ORDER BY table_name, privilege_type)
+  INTO v_anon_tables
+  FROM information_schema.role_table_grants
+  WHERE table_schema='public'
+    AND grantee='anon';
+
+  IF v_anon_tables IS NOT NULL THEN
+    RAISE EXCEPTION 'FAIL anonymous public-table grants: %', v_anon_tables;
+  END IF;
+
+  SELECT string_agg(tablename||':'||policyname, ', ' ORDER BY tablename, policyname)
+  INTO v_public_policies
+  FROM pg_policies
+  WHERE schemaname='public'
+    AND 'public'=ANY(roles);
+
+  IF v_public_policies IS NOT NULL THEN
+    RAISE EXCEPTION 'FAIL RLS policies still granted to PUBLIC: %', v_public_policies;
+  END IF;
+
+  SELECT string_agg(routine_name, ', ' ORDER BY routine_name)
+  INTO v_anon_rpcs
+  FROM information_schema.role_routine_grants
+  WHERE routine_schema='public'
+    AND grantee='anon'
+    AND routine_name LIKE 'upt_%'
+    AND routine_name <> ALL(ARRAY[
+      'upt_god_data_catalog','upt_god_data_mutate','upt_god_data_rows',
+      'upt_god_database_connect','upt_god_database_disconnect','upt_god_database_secret',
+      'upt_god_login','upt_god_logout',
+      'upt_god_repository_connect','upt_god_repository_disconnect','upt_god_repository_secret',
+      'upt_god_role_rules','upt_god_save_role_rules','upt_god_session_valid',
+      -- Dedicated God Mode error queue. These remain callable before an
+      -- ordinary app session exists, but each RPC validates the private,
+      -- expiring God Mode token before reading or mutating anything.
+      'upt_god_error_reports','upt_god_error_report_mark_working','upt_god_error_report_resolve',
+      -- Intentional pre-auth admin login protection. These two are needed
+      -- before a Supabase session exists; login success is authenticated-only.
+      'upt_admin_login_guard','upt_admin_login_failure'
+    ]);
+
+  IF v_anon_rpcs IS NOT NULL THEN
+    RAISE EXCEPTION 'FAIL unexpected anonymous Uptilldawn RPC execute grants: %', v_anon_rpcs;
+  END IF;
+
+  SELECT string_agg(p.oid::regprocedure::text, ', ' ORDER BY p.oid::regprocedure::text)
+  INTO v_executable_triggers
+  FROM pg_proc p
+  JOIN pg_namespace n ON n.oid=p.pronamespace
+  WHERE n.nspname='public'
+    AND p.prorettype='trigger'::regtype
+    AND (
+      has_function_privilege('public',p.oid,'EXECUTE')
+      OR has_function_privilege('anon',p.oid,'EXECUTE')
+      OR has_function_privilege('authenticated',p.oid,'EXECUTE')
+    );
+
+  IF v_executable_triggers IS NOT NULL THEN
+    RAISE EXCEPTION 'FAIL directly executable trigger functions: %', v_executable_triggers;
+  END IF;
+
+  IF has_function_privilege(
+       'authenticated',
+       'public.upt_request_check_in(uuid,uuid,boolean,text,numeric,numeric,numeric,text)',
+       'EXECUTE'
+     )
+     OR has_function_privilege(
+       'authenticated',
+       'public.upt_request_check_out(uuid,text)',
+       'EXECUTE'
+     ) THEN
+    RAISE EXCEPTION 'FAIL retired pre-QR attendance RPC remains executable';
+  END IF;
+
+  IF EXISTS (
+    SELECT 1
+    FROM pg_trigger t
+    JOIN pg_class c ON c.oid=t.tgrelid
+    JOIN pg_namespace n ON n.oid=c.relnamespace
+    WHERE NOT t.tgisinternal
+      AND n.nspname='auth'
+      AND c.relname='users'
+      AND t.tgname='upt_promote_confirmed_info_admin'
+  ) OR to_regprocedure('public.upt_promote_confirmed_info_admin()') IS NOT NULL
+    OR to_regprocedure('public.upt_info_admin_bootstrap_open()') IS NOT NULL
+    OR to_regprocedure('public.upt_password_change_required()') IS NOT NULL
+    OR to_regprocedure('public.upt_mark_password_changed()') IS NOT NULL
+    OR to_regclass('upt_private.password_change_required') IS NOT NULL THEN
+    RAISE EXCEPTION 'FAIL legacy info-admin bootstrap artifact remains';
+  END IF;
+
+  IF EXISTS (
+    SELECT 1
+    FROM information_schema.role_table_grants
+    WHERE table_schema='public'
+      AND grantee='authenticated'
+      AND privilege_type IN ('INSERT','UPDATE','DELETE')
+      AND table_name = ANY(ARRAY[
+        'break_sessions','chat_channels','chat_members','crew_notifications',
+        'event_templates','role_ui_rules','shifts','tasks','upt_audit_logs',
+        'work_sessions','workplace_transitions','user_error_reports',
+        'event_guestlist_entries','event_guestlist_settings','artist_hospitality_items',
+        'artist_backstage_checklists','sales_transactions','sales_registers'
+      ])
+  ) THEN
+    RAISE EXCEPTION 'FAIL direct mutation grant remains on an RPC-only table';
+  END IF;
+END $matrix$;
+
+SELECT 'PASS: public RLS/anon surface is locked down, anonymous RPCs are limited to token-gated God Mode plus the explicit pre-auth admin guard/failure surface, legacy bootstrap is absent, trigger functions are non-callable and RPC-only tables have no direct mutation grants' AS result;

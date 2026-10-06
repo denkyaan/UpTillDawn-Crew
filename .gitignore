@@ -1,0 +1,38 @@
+# v0 runtime files
+__v0_runtime_loader.js
+__v0_devtools.tsx
+__v0_jsx-dev-runtime.ts
+
+# Common ignores
+node_modules/
+.next/
+.env*.local
+.DS_Store
+tsconfig.tsbuildinfo
+.vercel
+build/
+dist/
+out/
+coverage/
+*.log
+__pycache__/
+.pytest_cache/
+target/
+
+# Claude Code (machine-specific, not for git)
+.claude/
+
+# Local credential files — never commit these
+CLAUDE_ACCESS.md
+PROJECT-CREDENTIALS-AND-SETUP.md
+CLAUDE-PROMPT-FOR-NEW-PC.md
+
+# Local archive folder — old scripts and docs
+_archive/
+
+# Supabase local temp files
+supabase/.temp/
+
+.open-next/
+.wrangler/
+.dev.vars*

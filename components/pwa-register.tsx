@@ -1,0 +1,164 @@
+"use client"
+
+import { useEffect } from "react"
+import { useRouter } from "next/navigation"
+import { clearLocalPushSubscription,enablePushNotifications,refreshPushBadge,supportsWebPush } from "@/lib/push-client"
+import { queued,queuedUploads,synchronize } from "@/lib/crew-queue"
+import { useAuth } from "@/lib/providers"
+
+type PeriodicSyncManagerLike={
+  getTags:()=>Promise<string[]>
+  register:(tag:string,options:{minInterval:number})=>Promise<void>
+}
+
+export function PwaRegister(){
+  const router=useRouter()
+  const {user,profile,loading}=useAuth()
+  const canUsePush=!loading&&Boolean(user&&profile?.approved)
+
+  useEffect(()=>{
+    if(!("serviceWorker" in navigator))return
+    if(!loading&&!canUsePush)void clearLocalPushSubscription()
+
+    let disposed=false
+    let reloading=false
+    let updateReloadPending=false
+    let activationRequested=false
+    let waitingWorker:ServiceWorker|null=null
+    let lastFreshAt=0
+    let freshnessRun:Promise<void>|null=null
+
+    const hasPendingCrewData=async()=>{
+      if(!user?.id)return false
+      const [ops,uploads]=await Promise.all([queued(user.id),queuedUploads(user.id)])
+      return ops.length>0||uploads.length>0
+    }
+
+    const safelyActivateUpdate=async()=>{
+      if(disposed||activationRequested||!waitingWorker||!navigator.onLine)return
+      if(user?.id)await synchronize(user.id).catch(()=>{})
+      if(await hasPendingCrewData())return
+      activationRequested=true
+      waitingWorker.postMessage({type:"UPT_ACTIVATE_UPDATE"})
+    }
+
+    const safelyReloadForUpdate=async()=>{
+      if(reloading||document.visibilityState!=="visible")return
+      if(freshnessRun)await freshnessRun.catch(()=>{})
+      if(disposed||reloading)return
+      if(user?.id&&navigator.onLine){
+        try{await synchronize(user.id)}catch{}
+      }
+      if(await hasPendingCrewData())return
+      reloading=true
+      window.location.reload()
+    }
+
+    const keepFresh=async({force=false}:{force?:boolean}={})=>{
+      if(disposed||reloading||updateReloadPending||!navigator.onLine)return
+      const now=Date.now()
+      if(!force&&now-lastFreshAt<60_000)return
+      if(freshnessRun)return freshnessRun
+      freshnessRun=(async()=>{
+        try{
+          const registration=await navigator.serviceWorker.ready
+          await registration.update()
+          if(user?.id)await synchronize(user.id).catch(()=>{})
+          if(canUsePush&&supportsWebPush()&&Notification.permission==="granted"){
+            await enablePushNotifications({requestPermission:false})
+            await refreshPushBadge()
+          }
+          router.refresh()
+          lastFreshAt=Date.now()
+        }catch{}
+      })().finally(()=>{freshnessRun=null})
+      return freshnessRun
+    }
+
+    const setup=async()=>{
+      try{
+        const registration=await navigator.serviceWorker.register("/sw.js",{updateViaCache:"none"})
+        const watchWaitingWorker=()=>{
+          if(registration.waiting){
+            waitingWorker=registration.waiting
+            void safelyActivateUpdate()
+          }
+        }
+        registration.addEventListener("updatefound",()=>{
+          const installing=registration.installing
+          if(!installing)return
+          installing.addEventListener("statechange",()=>{
+            if(installing.state==="installed"&&navigator.serviceWorker.controller)watchWaitingWorker()
+          })
+        })
+        watchWaitingWorker()
+        await registration.update()
+        watchWaitingWorker()
+
+        const periodicSync=(registration as ServiceWorkerRegistration&{periodicSync?:PeriodicSyncManagerLike}).periodicSync
+        if(periodicSync){
+          try{
+            const tags=await periodicSync.getTags()
+            if(!tags.includes("uptilldawn-app-refresh")){
+              await periodicSync.register("uptilldawn-app-refresh",{minInterval:60*60*1000})
+            }
+          }catch{}
+        }
+
+        if(!disposed&&canUsePush&&supportsWebPush()&&Notification.permission==="granted"){
+          await enablePushNotifications({requestPermission:false})
+          await refreshPushBadge()
+        }
+      }catch(error){
+        console.error("[PWA] service worker registration failed",error)
+      }
+    }
+
+    const onMessage=(event:MessageEvent)=>{
+      if(event.data?.type==="UPT_PUSH_REFRESH"&&!reloading&&!updateReloadPending){
+        router.refresh()
+        void refreshPushBadge()
+      }
+    }
+    const onFocus=()=>void keepFresh()
+    const onOnline=()=>{void safelyActivateUpdate();void keepFresh({force:true})}
+    const onVisibility=()=>{if(document.visibilityState==="visible")void keepFresh()}
+    const onPageShow=(event:PageTransitionEvent)=>{
+      if(event.persisted)void keepFresh({force:true})
+    }
+    const onControllerChange=()=>{
+      updateReloadPending=true
+      void safelyReloadForUpdate()
+    }
+    const onQueueChange=()=>{
+      if(waitingWorker&&!activationRequested)void safelyActivateUpdate()
+      if(updateReloadPending)void safelyReloadForUpdate()
+    }
+
+    navigator.serviceWorker.addEventListener("message",onMessage)
+    navigator.serviceWorker.addEventListener("controllerchange",onControllerChange)
+    window.addEventListener("focus",onFocus)
+    window.addEventListener("online",onOnline)
+    window.addEventListener("crew-queue-change",onQueueChange)
+    document.addEventListener("visibilitychange",onVisibility)
+    window.addEventListener("pageshow",onPageShow)
+    void setup()
+    const freshnessTimer=window.setInterval(()=>{
+      if(document.visibilityState==="visible"&&navigator.onLine)void keepFresh()
+    },15*60*1000)
+
+    return()=>{
+      disposed=true
+      navigator.serviceWorker.removeEventListener("message",onMessage)
+      navigator.serviceWorker.removeEventListener("controllerchange",onControllerChange)
+      window.removeEventListener("focus",onFocus)
+      window.removeEventListener("online",onOnline)
+      window.removeEventListener("crew-queue-change",onQueueChange)
+      document.removeEventListener("visibilitychange",onVisibility)
+      window.removeEventListener("pageshow",onPageShow)
+      window.clearInterval(freshnessTimer)
+    }
+  },[canUsePush,loading,router,user?.id])
+
+  return null
+}

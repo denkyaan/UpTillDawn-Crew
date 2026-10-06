@@ -1,0 +1,66 @@
+name: Cleanup Actions History
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: "17 3 * * 0"
+
+permissions:
+  actions: write
+  contents: read
+
+jobs:
+  cleanup:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Keep only useful Actions history
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+          CURRENT_RUN_ID: ${{ github.run_id }}
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          # Keep only the newest completed run for the workflows that matter.
+          # CI/deploy/self-heal remain visible; superseded history is removed.
+          keep_latest_completed () {
+            local workflow="$1"
+            mapfile -t ids < <(gh api --paginate "/repos/$REPO/actions/workflows/$workflow/runs?per_page=100" --jq '.workflow_runs[] | select(.status=="completed") | .id')
+            local kept=0
+            for id in "${ids[@]}"; do
+              [ -z "$id" ] && continue
+              [ "$id" = "$CURRENT_RUN_ID" ] && continue
+              if [ "$kept" -eq 0 ]; then
+                kept=1
+                continue
+              fi
+              gh api --method DELETE "/repos/$REPO/actions/runs/$id"
+            done
+          }
+
+          # Remove all historical runs of maintenance-only workflows, including
+          # this cleanup workflow itself. The currently executing run cannot be
+          # deleted until a later cleanup, so the next run removes it.
+          delete_all_history () {
+            local workflow="$1"
+            while :; do
+              ids="$(gh api "/repos/$REPO/actions/workflows/$workflow/runs?per_page=100" --jq '.workflow_runs[].id' 2>/dev/null || true)"
+              [ -z "$ids" ] && break
+              deleted=0
+              while read -r id; do
+                [ -z "$id" ] && continue
+                [ "$id" = "$CURRENT_RUN_ID" ] && continue
+                gh api --method DELETE "/repos/$REPO/actions/runs/$id"
+                deleted=$((deleted+1))
+              done <<< "$ids"
+              [ "$deleted" -eq 0 ] && break
+            done
+          }
+
+          keep_latest_completed "ci.yml"
+          keep_latest_completed "deploy-cloudflare.yml"
+          keep_latest_completed "ai-self-heal.yml"
+
+          delete_all_history "cleanup-actions-history.yml"
+          delete_all_history "dependabot-auto-merge.yml"

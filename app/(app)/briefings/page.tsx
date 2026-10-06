@@ -1,0 +1,122 @@
+import { SandboxBriefings } from '@/components/training/sandbox-briefings'
+import { TourActiveEventDemo } from '@/components/tour-active-event-demo'
+import { createClient } from '@/lib/supabase/crew-server'
+import { getCurrentUser } from '@/lib/actions/auth'
+import { ManagerOnly } from '@/components/auth/manager-only'
+import { StaffAvailability, StaffUnavailableMessage } from '@/components/auth/staff-availability'
+import { BriefingAnalysisFields } from '@/components/crew/briefing-analysis-fields'
+import { acknowledgeBriefing, acknowledgeInstruction, createBriefing, createPersonalInstruction, updateBriefing, updatePersonalInstruction } from '@/lib/actions/uptilldawn'
+import { AssignmentScopeFields, type AssignmentEvent, type AssignmentMembership, type AssignmentPerson, type AssignmentWorkplace } from '@/components/crew/assignment-scope-fields'
+import { OperationalChecklistPanel } from '@/components/crew/operational-checklists'
+import { ChecklistTemplatePanel } from '@/components/crew/checklist-template-panel'
+import { PlatformAiAssistant } from '@/components/admin/platform-ai-assistant'
+import type { Tables } from '@/types/crew-database'
+import { RoleGuideBriefing } from '@/components/crew/role-guide-briefing'
+
+function MediaInput(){return <label className="grid gap-1 text-sm">Foto&apos;s of video&apos;s<input name="photos" type="file" accept="image/jpeg,image/png,image/webp,video/mp4,video/webm,video/quicktime" multiple className="rounded-lg border bg-background p-2"/><span className="text-xs text-muted-foreground">Maximaal 5 bestanden per instructie. Foto maximaal 10 MB, video maximaal 50 MB.</span></label>}
+function PhotoGallery({rows,urls}:{rows:Tables<'work_attachments'>[];urls:Map<string,string>}){
+ if(!rows.length)return null
+ return <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
+  {rows.map(row=>{
+   const url=urls.get(row.storage_path)
+   if(!url)return null
+
+   if(row.mime_type?.startsWith('video/')){
+    return <video key={row.id} src={url} controls playsInline className="h-48 w-full rounded-xl border bg-black object-contain"/>
+   }
+
+   if(row.mime_type?.startsWith('image/')){
+    return <a key={row.id} href={url} target="_blank" rel="noreferrer" className="overflow-hidden rounded-xl border bg-black/10">
+     {/* eslint-disable-next-line @next/next/no-img-element */}
+     <img src={url} alt="Media bij instructie" className="h-36 w-full object-cover"/>
+    </a>
+   }
+
+   const type =
+    row.mime_type==='application/pdf'?'PDF':
+    row.mime_type?.includes('wordprocessingml')?'DOCX':
+    row.mime_type?.includes('presentationml')?'PPTX':
+    row.mime_type?.includes('spreadsheetml')?'XLSX':
+    row.mime_type==='text/csv'?'CSV':
+    row.mime_type==='text/plain'?'TXT':
+    'Document'
+
+   return <a
+    key={row.id}
+    href={url}
+    target="_blank"
+    rel="noreferrer"
+    className="flex min-h-28 flex-col justify-between rounded-xl border bg-card p-4 hover:bg-muted"
+   >
+    <span className="text-xs font-bold uppercase tracking-wider text-muted-foreground">{type}</span>
+    <span className="font-bold">Document openen</span>
+   </a>
+  })}
+ </div>
+}
+
+export default async function Page({searchParams}:{searchParams?:Promise<{event?:string;workplace?:string;user?:string;tour?:string}>}){
+ const params=searchParams?await searchParams:{}
+ const s=await createClient();const user=await getCurrentUser();if(!user)return null
+ if(params.tour==='1')return user.role==='admin'?<TourActiveEventDemo role="admin"/>:<SandboxBriefings role={user.role}/>
+ const isAdmin=user.role==='admin',isResponsible=user.role==='responsible_lead',manager=isAdmin||isResponsible
+ const [{data:briefs,error},{data:personal},{data:acks},{data:packs},{data:eventWindows},{data:ownMemberships},{data:activeEvents},{data:ownActiveShifts}]=await Promise.all([
+  s.from('briefings').select('*').order('created_at',{ascending:false}),s.from('personal_instructions').select('*').order('created_at',{ascending:false}),s.from('briefing_acknowledgements').select('*').eq('user_id',user.id),s.from('personal_instruction_acknowledgements').select('*').eq('user_id',user.id),s.from('events').select('id').neq('status','archived').gte('end_at','now'),s.from('event_members').select('event_id').eq('user_id',user.id),s.from('events').select('id').neq('status','archived').lte('start_at','now').gte('end_at','now').order('start_at'),s.from('shifts').select('event_id').eq('user_id',user.id).neq('status','cancelled').lte('scheduled_start','now').gte('scheduled_end','now').order('scheduled_start')])
+ const readableEventIds=new Set((eventWindows||[]).map(event=>event.id)),assignedEventIds=new Set((ownMemberships||[]).map(row=>row.event_id))
+ const hasOpenAssignedEvent=[...assignedEventIds].some(id=>readableEventIds.has(id))
+ const staffCanReadBriefing=(b:Tables<'briefings'>)=>assignedEventIds.has(b.event_id)&&readableEventIds.has(b.event_id)
+ const staffCanReadInstruction=(i:Tables<'personal_instructions'>)=>i.user_id===user.id&&assignedEventIds.has(i.event_id)&&readableEventIds.has(i.event_id)
+ let visibleBriefs=isAdmin?(briefs||[]).filter(b=>readableEventIds.has(b.event_id)):isResponsible?(briefs||[]).filter(b=>assignedEventIds.has(b.event_id)&&readableEventIds.has(b.event_id)):(briefs||[]).filter(staffCanReadBriefing)
+ let visiblePersonal=isAdmin?(personal||[]).filter(i=>readableEventIds.has(i.event_id)):isResponsible?(personal||[]).filter(i=>assignedEventIds.has(i.event_id)&&readableEventIds.has(i.event_id)):(personal||[]).filter(staffCanReadInstruction)
+ visibleBriefs=[...visibleBriefs].sort((a,b)=>Number(b.event_id===params.event||b.workplace_id===params.workplace)-Number(a.event_id===params.event||a.workplace_id===params.workplace))
+ visiblePersonal=[...visiblePersonal].sort((a,b)=>Number(b.user_id===params.user||b.event_id===params.event||b.workplace_id===params.workplace)-Number(a.user_id===params.user||a.event_id===params.event||a.workplace_id===params.workplace))
+ const hasStaffInstruction=visibleBriefs.length>0||visiblePersonal.length>0
+ let events:AssignmentEvent[]=[],workplaces:AssignmentWorkplace[]=[],people:AssignmentPerson[]=[],memberships:AssignmentMembership[]=[]
+ if(isAdmin){const [{data:eventRows},{data:workplaceRows},{data:personRows},{data:eventMembers},{data:shiftRows}]=await Promise.all([s.from('events').select('id,name').neq('status','archived').order('start_at'),s.from('workplaces').select('id,name,event_id').eq('is_active',true).order('sort_order'),s.from('profiles').select('id,full_name').eq('approved',true).order('full_name'),s.from('event_members').select('event_id,user_id'),s.from('shifts').select('event_id,workplace_id,user_id').neq('status','cancelled')]);events=eventRows||[];workplaces=workplaceRows||[];people=personRows||[];memberships=[...(eventMembers||[]).map(row=>({event_id:row.event_id,workplace_id:null,user_id:row.user_id})),...(shiftRows||[]).map(row=>({event_id:row.event_id,workplace_id:row.workplace_id,user_id:row.user_id}))]}
+ else if(isResponsible){const {data:responsibleRows}=await s.from('responsible_assignments').select('event_id,workplace_id').eq('user_id',user.id);const eventIds=[...new Set((responsibleRows||[]).map(row=>row.event_id))],workplaceIds=[...new Set((responsibleRows||[]).map(row=>row.workplace_id))];if(eventIds.length&&workplaceIds.length){const [{data:eventRows},{data:workplaceRows}]=await Promise.all([s.from('events').select('id,name').in('id',eventIds).neq('status','archived').gte('end_at','now').order('start_at'),s.from('workplaces').select('id,name,event_id').in('id',workplaceIds).eq('is_active',true).order('sort_order')]);events=eventRows||[];workplaces=workplaceRows||[];const directories=await Promise.all((responsibleRows||[]).map(async row=>{const {data}=await s.rpc('upt_responsible_event_members',{p_event:row.event_id,p_workplace:row.workplace_id});return{eventId:row.event_id,workplaceId:row.workplace_id,people:data||[]}}));const uniquePeople=new Map<string,AssignmentPerson>();for(const directory of directories)for(const person of directory.people){uniquePeople.set(person.id,{id:person.id,full_name:person.full_name});memberships.push({event_id:directory.eventId,workplace_id:directory.workplaceId,user_id:person.id})}people=[...uniquePeople.values()].sort((a,b)=>(a.full_name||'').localeCompare(b.full_name||'','nl'))}}
+ const shiftEventId=ownActiveShifts?.find(shift=>events.some(event=>event.id===shift.event_id))?.event_id||'',currentEventId=activeEvents?.find(event=>events.some(option=>option.id===event.id))?.id||'',contextEventId=params.event&&events.some(event=>event.id===params.event)?params.event:'',defaultEventId=contextEventId||shiftEventId||currentEventId
+ const templateWorkplaceIds=workplaces.map(workplace=>workplace.id)
+ const [{data:templateWorkplaceRows},{data:checklistTemplates}]=manager&&templateWorkplaceIds.length
+  ? await Promise.all([
+      s.from('workplaces').select('id,event_id,name,catalog_workplace_id').in('id',templateWorkplaceIds).eq('is_active',true).order('sort_order'),
+      s.from('operational_checklist_templates').select('id,catalog_workplace_id,kind,title').eq('is_active',true).order('kind').order('title'),
+    ])
+  : [{data:[]},{data:[]}]
+ const eventNames=new Map(events.map(event=>[event.id,event.name]))
+ const templateWorkplaces=(templateWorkplaceRows||[]).map(workplace=>({
+  id:workplace.id,
+  eventId:workplace.event_id,
+  eventName:eventNames.get(workplace.event_id)||'Evenement',
+  name:workplace.name,
+  catalogWorkplaceId:workplace.catalog_workplace_id,
+ }))
+ const templateOptions=(checklistTemplates||[]).map(template=>({
+  id:template.id,
+  catalogWorkplaceId:template.catalog_workplace_id,
+  kind:template.kind,
+  title:template.title,
+ }))
+ const attachments:Tables<'work_attachments'>[]=[];const briefingIds=visibleBriefs.map(item=>item.id),personalIds=visiblePersonal.map(item=>item.id)
+ if(briefingIds.length){const {data}=await s.from('work_attachments').select('*').in('briefing_id',briefingIds).order('created_at');attachments.push(...(data||[]))}if(personalIds.length){const {data}=await s.from('work_attachments').select('*').in('personal_instruction_id',personalIds).order('created_at');attachments.push(...(data||[]))}
+ const photoUrls=new Map<string,string>();await Promise.all(attachments.map(async attachment=>{const {data}=await s.storage.from('work-media').createSignedUrl(attachment.storage_path,300);if(data?.signedUrl)photoUrls.set(attachment.storage_path,data.signedUrl)}));const briefingPhotos=(id:string)=>attachments.filter(item=>item.briefing_id===id),instructionPhotos=(id:string)=>attachments.filter(item=>item.personal_instruction_id===id)
+ return <main className="space-y-5 p-4 md:p-8"><div><h1 className="text-3xl font-black">Briefing & checklists</h1>{isResponsible&&<p className="text-sm text-muted-foreground">Je kunt instructies voorbereiden voor evenementen waaraan je als verantwoordelijke bent toegewezen.</p>}<StaffUnavailableMessage available={hasOpenAssignedEvent}><p className="mt-3 rounded-xl border p-4 text-muted-foreground">Instructies worden zichtbaar zodra je aan een evenement bent toegevoegd.</p></StaffUnavailableMessage></div>
+ <RoleGuideBriefing role={user.role}/>
+ {isAdmin&&<PlatformAiAssistant eventId={defaultEventId||undefined} contextKey="briefing" contextLabel="Briefing & checklists"/>}
+ {manager&&(isAdmin||events.length>0)&&<ManagerOnly><div className="grid gap-4 lg:grid-cols-2"><form action={createBriefing} className="grid gap-3 rounded-xl border p-4"><h2 className="font-bold">Nieuwe algemene instructie</h2><AssignmentScopeFields events={events} workplaces={workplaces} people={people} memberships={memberships} isAdmin={isAdmin} showEventSelect requirePerson={false} workplaceRequired={false} defaultEventId={defaultEventId} defaultWorkplaceId={params.workplace||''}/><BriefingAnalysisFields/><MediaInput/><button className="rounded-xl bg-violet-600 p-3">Instructie aanmaken</button></form>
+ <form action={createPersonalInstruction} className="grid gap-3 rounded-xl border border-violet-500 p-4"><h2 className="font-bold">Persoonlijke instructie</h2><AssignmentScopeFields events={events} workplaces={workplaces} people={people} memberships={memberships} isAdmin={isAdmin} showEventSelect workplaceRequired={false} defaultEventId={defaultEventId} defaultWorkplaceId={params.workplace||''} defaultPersonId={params.user||''}/><BriefingAnalysisFields bodyPlaceholder="Persoonlijke instructie"/><MediaInput/><button className="rounded-xl bg-violet-600 p-3">Instructie toewijzen</button></form></div></ManagerOnly>}
+ {manager&&<ChecklistTemplatePanel workplaces={templateWorkplaces} templates={templateOptions}/>}
+ {manager&&workplaces.length>0&&<OperationalChecklistPanel
+  userId={user.id}
+  canManage={manager}
+  canClose={manager}
+  workplaceOptions={workplaces.map(workplace=>({
+   id:workplace.id,
+   eventId:workplace.event_id,
+   label:`${events.find(event=>event.id===workplace.event_id)?.name||'Evenement'} — ${workplace.name}`,
+  }))}
+  kinds={['opening','closing','safety','custom']}
+/>}
+ {error&&<p>Instructies konden niet worden geladen.</p>}{!manager&&assignedEventIds.size>0&&!hasStaffInstruction&&<p className="rounded-xl border p-4 text-muted-foreground">Nog geen instructies voor jouw evenement.</p>}
+ {visibleBriefs.map(briefing=><StaffAvailability key={briefing.id} available={staffCanReadBriefing(briefing)}><article className="space-y-3 rounded-xl border p-4"><h2 className="text-xl font-bold">{briefing.title} · v{briefing.version}</h2><p className="whitespace-pre-wrap">{briefing.body}</p><PhotoGallery rows={briefingPhotos(briefing.id)} urls={photoUrls}/>{manager?<ManagerOnly><form action={updateBriefing} className="grid gap-2 border-t pt-3"><input type="hidden" name="id" value={briefing.id}/><input name="title" defaultValue={briefing.title} required className="border bg-background p-2"/><textarea name="body" defaultValue={briefing.body} required className="border bg-background p-2"/><MediaInput/><button className="rounded-lg border p-2">Wijzig instructie + nieuwe bevestiging</button></form></ManagerOnly>:acks?.some(ack=>ack.briefing_id===briefing.id&&ack.version===briefing.version)?<p>INSTRUCTIE GELEZEN</p>:<form action={acknowledgeBriefing}><input type="hidden" name="id" value={briefing.id}/><button className="rounded-xl border p-3">INSTRUCTIE GELEZEN</button></form>}</article></StaffAvailability>)}
+ {visiblePersonal.map(instruction=><StaffAvailability key={instruction.id} available={staffCanReadInstruction(instruction)}><article className="space-y-3 rounded-xl border border-violet-500 p-4"><h2 className="text-xl font-bold">Persoonlijk: {instruction.title} · v{instruction.version}</h2><p className="whitespace-pre-wrap">{instruction.body}</p><PhotoGallery rows={instructionPhotos(instruction.id)} urls={photoUrls}/>{manager?<ManagerOnly><form action={updatePersonalInstruction} className="grid gap-2 border-t pt-3"><input type="hidden" name="id" value={instruction.id}/><input name="title" defaultValue={instruction.title} required className="border bg-background p-2"/><textarea name="body" defaultValue={instruction.body} required className="border bg-background p-2"/><MediaInput/><button className="rounded-lg border p-2">Wijzig instructie + nieuwe bevestiging</button></form></ManagerOnly>:packs?.some(ack=>ack.instruction_id===instruction.id&&ack.version===instruction.version)?<p>Gelezen</p>:<form action={acknowledgeInstruction}><input type="hidden" name="id" value={instruction.id}/><button className="rounded-xl border p-3">Gelezen bevestigen</button></form>}</article></StaffAvailability>)}</main>
+}

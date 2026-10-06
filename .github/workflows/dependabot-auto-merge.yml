@@ -1,0 +1,27 @@
+name: Dependabot Validation
+
+on:
+  pull_request_target:
+    types: [opened, synchronize, reopened, ready_for_review]
+
+permissions:
+  contents: read
+  pull-requests: read
+
+jobs:
+  policy:
+    if: github.actor == 'dependabot[bot]' && github.event.pull_request.draft == false
+    runs-on: ubuntu-latest
+    steps:
+      - name: Read Dependabot update metadata
+        id: metadata
+        uses: dependabot/fetch-metadata@08eff52bf64351f401fb50d4972fa95b9f2c2d1b # v2.4.0
+        with:
+          github-token: "${{ secrets.GITHUB_TOKEN }}"
+
+      - name: Keep dependency updates isolated from production
+        run: |
+          echo "Dependency updates are validation-only."
+          echo "No Dependabot pull request is automatically merged or deployed."
+          echo "Update type: ${{ steps.metadata.outputs.update-type }}"
+          echo "The application remains unchanged until an update is explicitly approved."

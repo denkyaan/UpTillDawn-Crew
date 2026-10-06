@@ -1,0 +1,12 @@
+<!doctype html><html lang="nl"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="theme-color" content="#050505"><title>Up Till Dawn</title><body style="margin:0;background:#050505;color:white;font:18px system-ui;padding:32px"><main style="max-width:620px;margin:auto"><h1>UP TILL DAWN</h1><h2 id="title"></h2><p id="body"></p><button id="retry" onclick="location.reload()" style="background:#7c3aed;color:white;border:0;border-radius:12px;padding:14px 18px;font:inherit;font-weight:700"></button></main><script>
+const COPY={
+ nl:{title:"Geen verbinding",body:"Deze pagina heeft een internetverbinding nodig. Probeer opnieuw zodra je online bent.",retry:"Opnieuw proberen"},
+ fr:{title:"Pas de connexion",body:"Cette page nécessite une connexion Internet. Réessayez dès que vous êtes en ligne.",retry:"Réessayer"},
+ en:{title:"No connection",body:"This page needs an internet connection. Try again when you are online.",retry:"Try again"},
+ de:{title:"Keine Verbindung",body:"Diese Seite benötigt eine Internetverbindung. Versuche es erneut, sobald du online bist.",retry:"Erneut versuchen"}
+};
+const raw=(navigator.languages?.[0]||navigator.language||"nl").toLowerCase();
+const locale=raw.startsWith("fr")?"fr":raw.startsWith("de")?"de":raw.startsWith("en")?"en":"nl";
+document.documentElement.lang=locale;const c=COPY[locale];document.title="Up Till Dawn — "+c.title;
+document.getElementById("title").textContent=c.title;document.getElementById("body").textContent=c.body;document.getElementById("retry").textContent=c.retry;
+</script></body></html>

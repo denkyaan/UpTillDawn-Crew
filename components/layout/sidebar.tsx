@@ -1,0 +1,68 @@
+"use client"
+
+import Image from "next/image"
+import Link from "next/link"
+import { usePathname } from "next/navigation"
+import { useEffect, useState } from "react"
+import { useAuth } from "@/lib/providers"
+import { cn } from "@/lib/utils"
+import { Shield } from "lucide-react"
+import { NAV_ITEMS } from "@/components/layout/navigation-items"
+import { getDefaultRoleUiLabel, type RoleRuleRole } from "@/lib/role-ui"
+import { featureHelp } from "@/lib/ui-field-help"
+import { useAdminSelection } from "@/lib/admin-selection-context"
+
+export function AppSidebar({
+  chatMissed=0,incidentMissed=0,taskMissed=0,notificationFeatureCounts={},
+  showOperations=false,showEvents=false,showTasks=false,showBriefings=false,showShifts=false,showWorkplaces=false,showIncidents=false,
+  featureOrder=[],featureLabels={},featureVisibility={},
+}:{
+  chatMissed?:number;incidentMissed?:number;taskMissed?:number;notificationFeatureCounts?:Record<string,number>;
+  showOperations?:boolean;showEvents?:boolean;showTasks?:boolean;showBriefings?:boolean;showShifts?:boolean;showWorkplaces?:boolean;showIncidents?:boolean;
+  featureOrder?:string[];featureLabels?:Record<string,string>;featureVisibility?:Record<string,boolean>;
+}) {
+ const pathname=usePathname()
+ const {roles,isAdmin}=useAuth()
+ const [tourPreview,setTourPreview]=useState(false)
+ const adminContext=useAdminSelection()
+ const roleKey:RoleRuleRole=roles.includes("admin")?"admin":roles.includes("responsible_lead")?"responsible_lead":"staff"
+ const order=new Map(featureOrder.map((key,index)=>[key,index]))
+ useEffect(()=>{const on=(e:Event)=>setTourPreview(Boolean((e as CustomEvent<{active?:boolean}>).detail?.active));addEventListener("uptilldawn-tour-preview",on);return()=>removeEventListener("uptilldawn-tour-preview",on)},[])
+ const visible=NAV_ITEMS.filter(i=>{
+   if(!roles.some(r=>i.roles.includes(r))) return false
+   if(i.key==="shifts") return false
+   if(!tourPreview&&Object.prototype.hasOwnProperty.call(featureVisibility,i.key)&&!featureVisibility[i.key]) return false
+   if(tourPreview) return true
+   if(i.key==="operations") return showOperations
+   if(i.key==="events") return showEvents
+   if(i.key==="tasks") return showTasks
+   if(i.key==="briefings") return showBriefings
+   if(i.key==="workplaces") return showWorkplaces
+   if(i.key==="shifts") return showShifts
+   if(i.key==="incidents") return showIncidents
+   return true
+ }).sort((a,b)=>(order.get(a.key)??999)-(order.get(b.key)??999))
+
+ return <aside className="hidden lg:flex w-[250px] h-dvh sticky top-0 min-h-0 flex-col overflow-hidden border-r border-border bg-card">
+  <Link href={isAdmin?"/admin":"/"} className="h-16 flex items-center gap-3 px-5 border-b border-border">
+   <Image src="/up-till-dawn-mark.webp" alt="UP TILL DAWN" width={36} height={36} className="h-9 w-9 rounded-xl object-cover" priority />
+   <div><div className="font-black tracking-wide">UP TILL DAWN</div><div className="text-[10px] text-muted-foreground tracking-[.18em]">PERSONEELSBEHEER</div></div>
+  </Link>
+  <nav className="min-h-0 flex-1 space-y-1 overflow-y-auto overscroll-contain p-3 pb-6">{visible.map(i=>{
+   const baseHref=i.href==='/'&&isAdmin?'/admin':i.href
+   const rawHref=isAdmin?adminContext.href(baseHref):baseHref
+   const href=tourPreview?rawHref+(rawHref.includes("?")?"&":"?")+"tour=1":rawHref
+   const active=rawHref==='/'?pathname==='/':pathname.startsWith(rawHref.split("?")[0])
+   const Icon=i.icon
+   const activityCount=i.key==="chat"?chatMissed:i.key==="incidents"?incidentMissed:i.key==="tasks"?taskMissed:0
+   const count=Math.max(activityCount,notificationFeatureCounts[i.key]??0)
+   const fallbackLabel=getDefaultRoleUiLabel(roleKey,i.key,i.label)
+   const label=featureLabels[i.key] || fallbackLabel
+   const help=featureHelp(i.key,label)
+   return <Link data-layout-key={i.key} key={i.key} href={href} title={help.description} aria-description={help.description} className={cn("flex items-center gap-3 rounded-xl px-3 py-3 text-sm font-semibold",active?"bg-violet-600 text-white":"text-muted-foreground hover:bg-muted hover:text-foreground")}>
+    <span className="relative"><Icon className="h-5 w-5"/>{count>0&&<span className="absolute -right-3 -top-3 flex h-5 min-w-5 items-center justify-center rounded-full bg-red-600 px-1 text-[10px] font-black leading-none text-white">{count>99?"99+":count}</span>}</span>{label}
+   </Link>
+  })}</nav>
+  <div className="shrink-0 border-t border-border p-4"><div className="text-[11px] text-muted-foreground flex gap-2"><Shield className="h-4 w-4"/>Beveiligde personeelsoperaties</div></div>
+ </aside>
+}

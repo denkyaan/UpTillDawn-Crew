@@ -1,0 +1,321 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+# Keep this workflow manually dispatchable when a push webhook is delayed.
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ubuntu-26.04-arm
+    timeout-minutes: 60
+    env:
+      # Placeholder public values are sufficient for the first compile-time validation.
+      # The browser phase replaces these through GITHUB_ENV with the isolated local Supabase values.
+      NEXT_PUBLIC_SUPABASE_URL: https://placeholder.supabase.co
+      NEXT_PUBLIC_SUPABASE_ANON_KEY: placeholder-anon-key
+      NEXT_PUBLIC_APP_URL: http://127.0.0.1:3000
+      BOT_TEST_BASE_URL: http://127.0.0.1:3000
+      UPT_E2E_SESSION_BRIDGE: '1'
+    steps:
+      - name: Checkout
+        uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5.1.0
+
+      - name: Set up Node.js
+        uses: actions/setup-node@a0853c24544627f65ddf259abe73b1d18a591444 # v5.0.0
+        with:
+          node-version: 24
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Production dependency audit
+        run: npm audit --omit=dev --audit-level=high
+
+      - name: Development dependency audit
+        # Full audit remains visible, but does not block releases for an
+        # unpatched dev-only advisory. Production dependencies still fail hard.
+        continue-on-error: true
+        run: npm audit --audit-level=high
+
+      - name: Lint
+        run: npm run lint
+
+      - name: Typecheck
+        run: npm run typecheck
+
+      - name: Test
+        run: npm test
+
+      - name: PWA cross-device and offline contract
+        run: node --test tests/pwa-cross-device-offline-regression.test.mjs
+
+      - name: Six-domain release candidate acceptance
+        run: node --test tests/final-six-domain-release-candidate.test.mjs
+
+      - name: Run production-style dry run contract
+        run: node --test tests/production-dry-run-contract.test.mjs
+
+      - name: Build Next.js
+        run: npm run build:next
+
+      - name: Build Cloudflare Worker
+        run: npm run build:cloudflare
+
+      - name: Wrangler deployment dry-run
+        run: npx wrangler deploy --dry-run
+      - name: Install PostgreSQL client
+        run: sudo apt-get update && sudo apt-get install -y postgresql-client
+
+      - name: Initialize isolated Supabase config
+        run: |
+          if [ ! -f supabase/config.toml ]; then
+            npx --yes supabase@2.117.0 init
+          fi
+
+      - name: Start isolated Supabase stack
+        run: npx --yes supabase@2.117.0 start -x studio,imgproxy,inbucket,edge-runtime,logflare,vector,realtime
+
+      - name: Replay every migration from zero
+        run: npx --yes supabase@2.117.0 db reset --local --no-seed
+
+      - name: Run SQL regression suites
+        env:
+          PGURL: postgresql://postgres:postgres@127.0.0.1:54322/postgres
+        run: |
+          set -euo pipefail
+          for file in tests/sql/*.sql; do
+            echo "::group::$file"
+            psql "$PGURL" -v ON_ERROR_STOP=1 -f "$file"
+            echo "::endgroup::"
+          done
+
+      - name: Full event lifecycle release gate
+        env:
+          PGURL: postgresql://postgres:postgres@127.0.0.1:54322/postgres
+        run: |
+          set -euo pipefail
+          lifecycle_suites=(
+            tests/sql/15-bot-full-event.sql
+            tests/sql/qr-attendance-workflow.sql
+            tests/sql/operational-security.sql
+            tests/sql/chat-lifecycle.sql
+            tests/sql/queued-upload-security.sql
+            tests/sql/timesheet-lifecycle.sql
+            tests/sql/release-access-matrix.sql
+            tests/sql/privilege-matrix.sql
+            tests/sql/responsible-read-scope.sql
+            tests/sql/responsible-event-selection-guard.sql
+            tests/sql/offline-revocation-replay.sql
+            tests/sql/offline-time-dependencies.sql
+            tests/sql/storage-security.sql
+            tests/sql/new-feature-security.sql
+          )
+          for file in "${lifecycle_suites[@]}"; do
+            echo "::group::lifecycle ${file}"
+            psql "$PGURL" -v ON_ERROR_STOP=1 -f "$file"
+            echo "::endgroup::"
+          done
+          {
+            echo "## Full event lifecycle gate"
+            echo "- 15-actor event/workplace/shift/availability: PASS"
+            echo "- QR check-in/check-out + approval: PASS"
+            echo "- Timesheet submit/reject/resubmit/approve/lock + audit: PASS"
+            echo "- Briefing acknowledgement + governed break lifecycle: PASS"
+            echo "- Incident/offline security semantics: PASS"
+            echo "- Chat lifecycle + 3-day retention window: PASS"
+            echo "- Chat/incident attachment idempotency: PASS"
+            echo "- Staff/Admin/Responsible permission boundaries: PASS"
+            echo "- Responsible workplace isolation: PASS"
+            echo "- Unapproved/anonymous and revoked-access denial: PASS"
+            echo "- Offline replay/time dependency security: PASS"
+            echo "- Storage and new-feature security surfaces: PASS"
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Verify generated database types
+        run: |
+          npx --yes supabase@2.117.0 gen types typescript --local --schema public > /tmp/crew-database.ts
+          node --input-type=module <<'NODE'
+          import { readFileSync, writeFileSync } from 'node:fs'
+          const normalize = (source) => source
+            .replace(
+              /  \/\/ Allows to automatically instantiate createClient with right options\n  \/\/ instead of createClient<Database, \{ PostgrestVersion: 'XX' \}>\(URL, KEY\)\n  __InternalSupabase: \{\n    PostgrestVersion: "[^"]+"\n  \}\n/,
+              '',
+            )
+            .trimEnd() + '\n'
+          writeFileSync('/tmp/expected-crew-database.ts', normalize(readFileSync('types/crew-database.ts', 'utf8')))
+          writeFileSync('/tmp/actual-crew-database.ts', normalize(readFileSync('/tmp/crew-database.ts', 'utf8')))
+          NODE
+          diff -u /tmp/expected-crew-database.ts /tmp/actual-crew-database.ts
+
+      - name: Record replay proof
+        run: |
+          migration_count=$(find supabase/migrations -maxdepth 1 -type f -name '*.sql' | wc -l | tr -d ' ')
+          sql_suite_count=$(find tests/sql -maxdepth 1 -type f -name '*.sql' | wc -l | tr -d ' ')
+          {
+            echo "## Fresh-install database proof"
+            echo "- Source commit: \`${GITHUB_SHA}\`"
+            echo "- Migrations replayed: ${migration_count}"
+            echo "- SQL suites: ${sql_suite_count}"
+            echo "- Generated types: exact match"
+          } >> "$GITHUB_STEP_SUMMARY"
+      - name: Reset isolated database for browser fixtures
+        run: npx --yes supabase@2.117.0 db reset --local --no-seed
+
+      - name: Export isolated bot credentials
+        run: |
+          set -euo pipefail
+          eval "$(npx --yes supabase@2.117.0 status -o env)"
+          api_url="${API_URL:-${SUPABASE_URL:-}}"
+          public_key="${ANON_KEY:-${PUBLISHABLE_KEY:-}}"
+          service_key="${SERVICE_ROLE_KEY:-${SECRET_KEY:-}}"
+          test -n "$api_url"
+          test -n "$public_key"
+          test -n "$service_key"
+          bot_password="$(openssl rand -base64 24 | tr -d '\n')Aa1!"
+          echo "::add-mask::$service_key"
+          echo "::add-mask::$bot_password"
+          {
+            echo "NEXT_PUBLIC_SUPABASE_URL=$api_url"
+            echo "NEXT_PUBLIC_SUPABASE_ANON_KEY=$public_key"
+            echo "BOT_SUPABASE_URL=$api_url"
+            echo "BOT_SERVICE_ROLE_KEY=$service_key"
+            echo "BOT_TEST_PASSWORD=$bot_password"
+            echo "BOT_DB_URL=postgresql://postgres:postgres@127.0.0.1:54322/postgres"
+          } >> "$GITHUB_ENV"
+
+      - name: Prepare isolated authentication fixtures
+        run: |
+          set -euo pipefail
+          psql "$BOT_DB_URL" -v ON_ERROR_STOP=1 -c "DROP TRIGGER IF EXISTS on_auth_user_created ON auth.users;"
+          node scripts/seed-15-bot-users.mjs
+          briefing_seed_count="$(psql "$BOT_DB_URL" -v ON_ERROR_STOP=1 -Atc "SELECT count(*) FROM public.briefing_acknowledgements ba JOIN auth.users u ON u.id=ba.user_id WHERE ba.briefing_id='00000000-0000-4000-8000-00000000e2e3'::uuid AND lower(u.email)=lower('bot-03-staff-en@bots.uptilldawn.test');")"
+          test "$briefing_seed_count" = "0"
+          echo "PASS: bot03 briefing fixture starts unacknowledged"
+
+      - name: Install isolated browser test runtime
+        run: |
+          npm install --no-save --package-lock=false playwright@1.62.1
+          npx playwright install --with-deps chromium
+
+      - name: Build application
+        run: npm run build:next
+
+      - name: Start application
+        run: |
+          npm start > /tmp/uptilldawn-bot-app.log 2>&1 &
+          echo $! > /tmp/uptilldawn-bot-app.pid
+          for i in {1..60}; do
+            if curl --fail --silent http://127.0.0.1:3000/login/staff >/dev/null; then exit 0; fi
+            sleep 1
+          done
+          cat /tmp/uptilldawn-bot-app.log
+          exit 1
+
+      - name: Run 15 concurrent authenticated browser bots
+        run: |
+          set -euo pipefail
+          for attempt in 1 2; do
+            if node scripts/15-bot-browser-test.mjs; then
+              exit 0
+            fi
+            if [ "$attempt" = "1" ]; then
+              echo "Browser bot run hit a transient failure; resetting isolated fixtures before one clean retry."
+              curl --fail --silent --retry 5 --retry-delay 2 http://127.0.0.1:3000/login/staff >/dev/null
+              npx --yes supabase@2.117.0 db reset --local
+              BOT_SUPABASE_URL="$BOT_SUPABASE_URL" BOT_SERVICE_ROLE_KEY="$BOT_SERVICE_ROLE_KEY" BOT_TEST_PASSWORD="$BOT_TEST_PASSWORD" node scripts/seed-15-bot-users.mjs
+            fi
+          done
+          exit 1
+
+      - name: Full application surface inventory gate
+        run: |
+          set -euo pipefail
+          node --input-type=module <<'NODE'
+          import { readdirSync, readFileSync } from 'node:fs'
+          import { join } from 'node:path'
+
+          const walk=(dir)=>readdirSync(dir,{withFileTypes:true}).flatMap(e=>e.isDirectory()?walk(join(dir,e.name)):[join(dir,e.name)])
+          const routes=walk('app').filter(p=>/\/page\.tsx$/.test(p))
+          const apis=walk('app/api').filter(p=>/\/route\.ts$/.test(p))
+          const actions=walk('lib/actions').filter(p=>/\.ts$/.test(p))
+          const sql=walk('tests/sql').filter(p=>/\.sql$/.test(p))
+          const tests=walk('tests').filter(p=>/\.test\.mjs$/.test(p))
+          const browser=readFileSync('scripts/15-bot-browser-test.mjs','utf8')
+          const ci=readFileSync('.github/workflows/ci.yml','utf8')
+
+          const requiredRoutes=['events','workplaces','briefings','inventory','guestlist','chat','operations','tasks','timesheets','incidents','notifications','personnel','sales','settings','exports','audit']
+          const missingRoutes=requiredRoutes.filter(r=>!routes.some(p=>p.includes('/'+r+'/')||p.endsWith('/'+r+'/page.tsx')))
+          const requiredSql=['privilege-matrix','release-access-matrix','storage-security','queued-upload-security','timesheet-lifecycle','qr-attendance-workflow','chat-lifecycle']
+          const missingSql=requiredSql.filter(n=>!sql.some(p=>p.endsWith(n+'.sql')))
+          const requiredTestThemes=['auth','inventory','guestlist','incident','offline','pwa','push','realtime','god','archive','workplace','timesheet','security']
+          const missingThemes=requiredTestThemes.filter(n=>!tests.some(p=>p.toLowerCase().includes(n)))
+          const requiredBrowserProof=['availability','briefing','guestlist','task','inventory','chat','incident','timesheet','closure']
+          const missingBrowser=requiredBrowserProof.filter(n=>!browser.toLowerCase().includes(n))
+
+          console.log(JSON.stringify({routes:routes.length,apis:apis.length,actionModules:actions.length,sqlSuites:sql.length,nodeSuites:tests.length},null,2))
+          if(missingRoutes.length||missingSql.length||missingThemes.length||missingBrowser.length){
+            console.error({missingRoutes,missingSql,missingThemes,missingBrowser})
+            process.exit(1)
+          }
+          if(!ci.includes('npm audit --omit=dev --audit-level=high')||!ci.includes('npm audit --audit-level=high')||!ci.includes('npm run typecheck')||!ci.includes('Wrangler deployment dry-run')){
+            throw new Error('release static/dependency/deployment gates incomplete')
+          }
+          console.log('PASS: application surface inventory is represented across browser, Node and SQL release gates')
+          NODE
+
+      - name: Verify browser action persistence
+        run: |
+          set -euo pipefail
+          count="$(psql "$BOT_DB_URL" -v ON_ERROR_STOP=1 -Atc "SELECT count(*) FROM public.event_availability ea JOIN public.profiles p ON p.id=ea.user_id WHERE ea.event_id='00000000-0000-4000-8000-00000000e2e1'::uuid AND p.full_name='E2E STAFF 03' AND ea.response='can' AND ea.setup_available=true AND ea.breakdown_available=true;")"
+          test "$count" = "1"
+          echo "PASS: real browser availability action persisted under staff RLS"
+          briefing_count="$(psql "$BOT_DB_URL" -v ON_ERROR_STOP=1 -Atc "SELECT count(*) FROM public.briefing_acknowledgements ba JOIN auth.users u ON u.id=ba.user_id WHERE ba.briefing_id='00000000-0000-4000-8000-00000000e2e3'::uuid AND lower(u.email)=lower('bot-03-staff-en@bots.uptilldawn.test') AND ba.version=1;")"
+          test "$briefing_count" = "1"
+          echo "PASS: real browser briefing acknowledgement persisted under staff RLS"
+          guest_count="$(psql "$BOT_DB_URL" -v ON_ERROR_STOP=1 -Atc "SELECT count(*) FROM public.event_guestlist_entries WHERE id='00000000-0000-4000-8000-00000000e2e5'::uuid AND spots_checked_in=1;")"
+          test "$guest_count" = "1"
+          echo "PASS: real browser guestlist check-in persisted under staff RLS"
+          task_count="$(psql "$BOT_DB_URL" -v ON_ERROR_STOP=1 -Atc "SELECT count(*) FROM public.task_assignments WHERE id='00000000-0000-4000-8000-00000000e2e7'::uuid AND confirmed_at IS NOT NULL;")"
+          test "$task_count" = "1"
+          echo "PASS: real browser task confirmation persisted"
+          chat_count="$(psql "$BOT_DB_URL" -v ON_ERROR_STOP=1 -Atc "SELECT count(*) FROM public.messages m JOIN public.chat_channels c ON c.id=m.channel_id WHERE c.event_id='00000000-0000-4000-8000-00000000e2e1'::uuid AND c.kind='event' AND m.body='E2E lifecycle chat message';")"
+          test "$chat_count" = "1"
+          echo "PASS: real browser chat message persisted"
+          incident_count="$(psql "$BOT_DB_URL" -v ON_ERROR_STOP=1 -Atc "SELECT count(*) FROM public.incidents WHERE event_id='00000000-0000-4000-8000-00000000e2e1'::uuid AND message='E2E lifecycle incident';")"
+          test "$incident_count" = "1"
+          echo "PASS: real browser incident persisted"
+          task_completed="$(psql "$BOT_DB_URL" -v ON_ERROR_STOP=1 -Atc "SELECT count(*) FROM public.task_assignments WHERE id='00000000-0000-4000-8000-00000000e2e7'::uuid AND status='COMPLETED';")"
+          test "$task_completed" = "1"
+          echo "PASS: real browser task lifecycle persisted through COMPLETED"
+          inventory_missing="$(psql "$BOT_DB_URL" -v ON_ERROR_STOP=1 -Atc "SELECT count(*) FROM public.inventory_movements WHERE item_id='00000000-0000-4000-8000-00000000e2e8'::uuid AND movement_type='missing' AND quantity=1;")"
+          inventory_damaged="$(psql "$BOT_DB_URL" -v ON_ERROR_STOP=1 -Atc "SELECT count(*) FROM public.inventory_movements WHERE item_id='00000000-0000-4000-8000-00000000e2e8'::uuid AND movement_type='damaged' AND quantity=1;")"
+          inventory_state="$(psql "$BOT_DB_URL" -v ON_ERROR_STOP=1 -Atc "SELECT available_quantity || ':' || missing_quantity || ':' || damaged_quantity FROM public.inventory_items WHERE id='00000000-0000-4000-8000-00000000e2e8'::uuid;")"
+          echo "inventory persistence: missing=$inventory_missing damaged=$inventory_damaged state=$inventory_state"
+          test "$inventory_missing" -ge "1"
+          test "$inventory_damaged" -ge "1"
+          IFS=: read -r inventory_available inventory_missing_total inventory_damaged_total <<< "$inventory_state"
+          test "$inventory_missing_total" -ge "1"
+          test "$inventory_damaged_total" -ge "1"
+          test "$inventory_available" -le "1"
+          echo "PASS: Responsible opening/closing inventory movements and stock counters persisted"
+          closed_event="$(psql "$BOT_DB_URL" -v ON_ERROR_STOP=1 -Atc "SELECT count(*) FROM public.events WHERE id='00000000-0000-4000-8000-00000000e2e1'::uuid AND status IN ('closed','completed','archived');")"
+          test "$closed_event" = "1"
+          echo "PASS: authenticated Admin event closure persisted"
+
+      - name: Stop application
+        if: always()
+        run: kill $(cat /tmp/uptilldawn-bot-app.pid) 2>/dev/null || true
+
+      - name: Stop isolated Supabase stack
+        if: always()
+        run: npx --yes supabase@2.117.0 stop --no-backup

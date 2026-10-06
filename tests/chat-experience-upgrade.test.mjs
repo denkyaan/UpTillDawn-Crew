@@ -1,0 +1,87 @@
+import test from 'node:test'
+import assert from 'node:assert/strict'
+import { readFile } from 'node:fs/promises'
+
+test('advanced chat experience remains wired end to end',async()=>{
+  const [chat,layout,page,queue,types,migration,qualification,catalog,push]=await Promise.all([
+    readFile(new URL('../components/crew/chat-client.tsx',import.meta.url),'utf8'),
+    readFile(new URL('../components/layout/app-layout.tsx',import.meta.url),'utf8'),
+    readFile(new URL('../app/(app)/chat/page.tsx',import.meta.url),'utf8'),
+    readFile(new URL('../lib/crew-queue.ts',import.meta.url),'utf8'),
+    readFile(new URL('../types/crew-database.ts',import.meta.url),'utf8'),
+    readFile(new URL('../supabase/migrations/20261006124500_chat_experience_upgrade.sql',import.meta.url),'utf8'),
+    readFile(new URL('../supabase/migrations/20261006125000_chat_channel_people_qualification.sql',import.meta.url),'utf8'),
+    readFile(new URL('../lib/ui-translation-catalog-crew-extra.ts',import.meta.url),'utf8'),
+    readFile(new URL('../supabase/functions/push-notification/i18n.ts',import.meta.url),'utf8'),
+  ])
+
+  for(const rpc of [
+    'upt_mark_chat_read','upt_set_chat_mute','upt_chat_channel_summaries','upt_chat_unread_total',
+    'upt_set_chat_typing','upt_chat_typing_users','upt_chat_pins','upt_toggle_chat_pin',
+    'upt_search_chat_messages','upt_send_chat_message_operation_v2','upt_send_chat_photo_message_operation_v2',
+  ])assert.ok(migration.includes(rpc),rpc)
+
+  assert.match(migration,/mentioned_user_ids uuid\[\]/)
+  assert.match(migration,/chat_reply/)
+  assert.match(migration,/chat_mention/)
+  assert.match(migration,/chat_message/)
+  assert.match(migration,/\/chat\?channel=%s&message=%s/)
+  assert.match(migration,/c\.kind in \('event','workplace'\) and public\.upt_is_admin\(\)/)
+  assert.match(migration,/maximaal 5 berichten/)
+  assert.match(migration,/mute_mode in \('all','mentions','muted'\)/)
+  assert.match(qualification,/select c\.\* into v_channel/)
+  assert.match(qualification,/where c\.id=p_channel/)
+  const unreadGuard=await readFile(new URL('../supabase/migrations/20261006125500_chat_unread_authorization_guard.sql',import.meta.url),'utf8')
+  assert.match(unreadGuard,/v_actor uuid:=auth\.uid\(\)/)
+  assert.match(unreadGuard,/not public\.upt_is_approved\(\)/)
+  const systemGuard=migration.indexOf('if new.sender_id is null then return new; end if;')
+  const participantLoop=migration.indexOf('from public.profiles p',systemGuard)
+  assert.ok(systemGuard>=0&&participantLoop>systemGuard,'system messages must bypass participant notification lookup')
+  assert.doesNotMatch(migration,/from public\.upt_chat_channel_people\(new\.channel_id\)/,'message trigger must not depend on auth.uid()-scoped participant RPC')
+
+  assert.match(queue,/mention_ids/)
+  assert.match(queue,/upt_send_chat_message_operation_v2/)
+  assert.match(queue,/upt_send_chat_photo_message_operation_v2/)
+
+  assert.match(page,/upt_chat_channel_summaries/)
+  assert.match(page,/focusMessageId=\{params\.message\|\|null\}/)
+
+  assert.match(layout,/upt_chat_unread_total/)
+  assert.match(layout,/uptilldawn-chat-read/)
+
+  assert.match(chat,/Oudere berichten laden/)
+  assert.match(chat,/Nieuwe berichten/)
+  assert.match(chat,/upt_chat_typing_users/)
+  assert.match(chat,/upt_set_chat_typing/)
+  assert.match(chat,/upt_search_chat_messages/)
+  assert.match(chat,/upt_toggle_chat_pin/)
+  assert.match(chat,/upt_set_chat_mute/)
+  assert.match(chat,/peer_last_read_at/)
+  assert.match(chat,/Gelezen/)
+  assert.match(chat,/Afgeleverd/)
+  assert.match(chat,/draftFilesRef/)
+  assert.match(chat,/uptilldawn-chat-draft/)
+  assert.match(chat,/mentionIdsForText/)
+  assert.match(chat,/selectedMentionIds/)
+  assert.match(chat,/setSelectedMentionIds\(previous=>previous\.includes\(person\.id\)/)
+  assert.match(chat,/mentionIds:selectedMentionIds/)
+  assert.match(chat,/ring-2 ring-amber-300/)
+  assert.match(chat,/unread=\{Number\(channelStates\[channel\.id\]\?\.unread_count/)
+  assert.match(chat,/mentions=\{Number\(channelStates\[channel\.id\]\?\.mention_count/)
+
+  assert.match(types,/upt_chat_channel_summaries/)
+  assert.match(types,/upt_search_chat_messages/)
+  assert.match(types,/upt_set_chat_mute/)
+  assert.match(types,/mentioned_user_ids/)
+
+  for(const label of [
+    'Nieuwe berichten','Oudere berichten laden','Alleen @mentions en antwoorden','Meldingen voor deze chat',
+    'Zoeken in chat','Vastgepind','Gelezen','Afgeleverd','Verzenden…','Verzonden.',
+  ])assert.ok(catalog.includes(`"${label}"`),label)
+
+  assert.match(push,/chatDynamic/)
+  assert.match(push,/heeft je vermeld in/)
+  assert.match(push,/heeft op je bericht geantwoord/)
+  assert.match(push,/General chat/)
+  assert.match(push,/Chat général/)
+})

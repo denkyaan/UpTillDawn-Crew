@@ -1,0 +1,281 @@
+"use client"
+
+import { useCallback, useEffect, useMemo, useState } from "react"
+import Link from "next/link"
+import { usePathname } from "next/navigation"
+import { AppSidebar } from "@/components/layout/sidebar"
+import { Topbar } from "@/components/layout/topbar"
+import { MobileBottomNav } from "@/components/layout/mobile-nav"
+import { FloatingChatButton } from "@/components/layout/floating-chat-button"
+import { QueueStatus } from "@/components/crew/queue-status"
+import { createClient } from "@/lib/supabase/crew-client"
+import { useAuth } from "@/lib/providers"
+import { getDefaultRoleUiRules, ruleMatches, ruleUsable, type RoleUiContext, type RoleUiRule } from "@/lib/role-ui"
+import { AdminContextBar } from "@/components/admin/admin-context-bar"
+import { PlatformAiAssistant } from "@/components/admin/platform-ai-assistant"
+import { RoleAppTour } from "@/components/role-app-tour"
+import { LANGUAGE_APPLIED_EVENT, activeUiLocale, type SupportedUiLocale } from "@/lib/locale-preferences"
+
+function CountBadge({ count }: { count: number }) {
+  if (count < 1) return null
+  return <span className="absolute -right-2 -top-2 flex h-5 min-w-5 items-center justify-center rounded-full bg-red-600 px-1 text-[11px] font-black leading-none text-white shadow ring-2 ring-background">{count>99?"99+":count}</span>
+}
+
+const emptyContext:RoleUiContext={assignedEvent:false,assignedWorkplaceRole:false,eventActive:false,shiftActive:false}
+
+export function AppLayout({ children }: { children: React.ReactNode }) {
+  const pathname=usePathname()
+  const {user,roles,isAdmin}=useAuth()
+  const supabase=useMemo(()=>createClient(),[])
+  const [chatMissed,setChatMissed]=useState(0)
+  const [incidentMissed,setIncidentMissed]=useState(0)
+  const [taskMissed,setTaskMissed]=useState(0)
+  const [notificationMissed,setNotificationMissed]=useState(0)
+  const [notificationFeatureCounts,setNotificationFeatureCounts]=useState<Record<string,number>>({})
+  const [context,setContext]=useState<RoleUiContext>(emptyContext)
+  const [rules,setRules]=useState<RoleUiRule[]>([])
+  const [adminAiOpen,setAdminAiOpen]=useState(false)
+  const [tourPreview,setTourPreview]=useState(false)
+  const [trainingLocale,setTrainingLocale]=useState<SupportedUiLocale>(()=>typeof window==="undefined"?"nl":activeUiLocale())
+  const [trainingChatUnlocked,setTrainingChatUnlocked]=useState(false)
+  const [trainingHelpUnlocked,setTrainingHelpUnlocked]=useState(false)
+  const [trainingComplete,setTrainingComplete]=useState(false)
+  const [trainingNavTarget,setTrainingNavTarget]=useState<string|null>(null)
+  const [trainingWorkplace,setTrainingWorkplace]=useState("")
+  useEffect(()=>{const on=(e:Event)=>{const active=Boolean((e as CustomEvent<{active?:boolean}>).detail?.active);setTourPreview(active);if(active)setTrainingWorkplace(sessionStorage.getItem("uptilldawn-training-preferred-workplace")||"")};addEventListener("uptilldawn-tour-preview",on);return()=>removeEventListener("uptilldawn-tour-preview",on)},[])
+  useEffect(()=>{const apply=()=>setTrainingLocale(activeUiLocale());addEventListener(LANGUAGE_APPLIED_EVENT,apply);return()=>removeEventListener(LANGUAGE_APPLIED_EVENT,apply)},[])
+  useEffect(()=>{const load=()=>{try{const s=JSON.parse(sessionStorage.getItem("uptilldawn-training-workflow-v3")||"{}");setTrainingNavTarget(s.navTarget||null)}catch{setTrainingNavTarget(null)}};load();const on=(e:Event)=>setTrainingNavTarget((e as CustomEvent<{target?:string}>).detail?.target||null);addEventListener("uptilldawn-training-nav-target",on);return()=>removeEventListener("uptilldawn-training-nav-target",on)},[pathname,tourPreview])
+  useEffect(()=>{const load=()=>{try{const s=JSON.parse(sessionStorage.getItem("uptilldawn-training-workflow-v3")||"{}");setTrainingChatUnlocked(Boolean(s.chatTourCompleted||sessionStorage.getItem("chatTourCompleted")==="1"));setTrainingHelpUnlocked(Boolean(s.helpTourCompleted));setTrainingComplete(Boolean(s.trainingComplete))}catch{setTrainingChatUnlocked(false);setTrainingHelpUnlocked(false);setTrainingComplete(false)}};load();const onChat=()=>load();const onHelp=()=>load();addEventListener("uptilldawn-training-chat-completed",onChat);addEventListener("uptilldawn-training-help-completed",onHelp);addEventListener("uptilldawn-training-completed",onHelp);return()=>{removeEventListener("uptilldawn-training-chat-completed",onChat);removeEventListener("uptilldawn-training-help-completed",onHelp);removeEventListener("uptilldawn-training-completed",onHelp)}},[tourPreview])
+
+  const activeUiRole=roles[0]
+  const roleKey=activeUiRole==="responsible_lead"?"responsible_lead":activeUiRole==="admin"?"admin":activeUiRole==="employee"?"staff":null
+  const defaultRules=useMemo(()=>roleKey?getDefaultRoleUiRules(roleKey):[],[roleKey])
+
+  const loadRules=useCallback(async()=>{
+    if(!roleKey){setRules([]);return}
+    const {data}=await supabase.from("role_ui_rules").select("role,feature_key,label,group_key,visible,enabled,condition_key,sort_order,settings").eq("role",roleKey).order("sort_order")
+    setRules((data?.length?data:defaultRules) as RoleUiRule[])
+  },[defaultRules,roleKey,supabase])
+
+  useEffect(()=>{const first=window.setTimeout(()=>void loadRules(),0);const fn=()=>void loadRules();window.addEventListener("uptilldawn-role-rules-updated",fn);return()=>{window.clearTimeout(first);window.removeEventListener("uptilldawn-role-rules-updated",fn)}},[loadRules])
+
+  const effectiveRules=rules.length?rules:defaultRules
+  const ruleMap=useMemo(()=>new Map(effectiveRules.map(rule=>[rule.feature_key,rule])),[effectiveRules])
+  const previewAll=tourPreview
+  const sandboxContext:RoleUiContext={assignedEvent:true,assignedWorkplaceRole:true,eventActive:true,shiftActive:true}
+  const effectiveContext=tourPreview?sandboxContext:context
+  const feature=(key:string,fallback:boolean)=>{
+    const rule=ruleMap.get(key)
+    return rule?ruleMatches(rule,effectiveContext,previewAll):fallback
+  }
+  const order=effectiveRules.map(rule=>rule.feature_key)
+  const labels=Object.fromEntries(effectiveRules.map(rule=>[rule.feature_key,rule.label]))
+
+  const personalRoute=pathname.startsWith("/settings")||pathname.startsWith("/notifications")
+  const currentFeature=
+    personalRoute?null:
+    pathname==="/"||pathname==="/admin"?"overview":
+    pathname.startsWith("/events")?"events":
+    pathname.startsWith("/operations")?"operations":
+    pathname.startsWith("/workplaces")?"workplaces":
+    pathname.startsWith("/inventory")?"inventory":
+    pathname.startsWith("/guestlist")?"guestlist":
+    pathname.startsWith("/sales")?"sales":
+    pathname.startsWith("/shifts")?"workplaces":
+    pathname.startsWith("/briefings")?"briefings":
+    pathname.startsWith("/tasks")?"tasks":
+    pathname.startsWith("/chat")?"chat":
+    pathname.startsWith("/crew")?"crew":
+    pathname.startsWith("/incidents")?"incidents":
+    pathname.startsWith("/exports")?"exports":
+    pathname.startsWith("/personnel")?"personnel":
+    pathname.startsWith("/settings")?"settings":
+    null
+  const currentRule=currentFeature?ruleMap.get(currentFeature):undefined
+  const rulesReady=!roleKey||effectiveRules.length>0
+  const adminAlwaysRoute=Boolean(isAdmin&&(
+    pathname.startsWith("/operations")
+    ||pathname.startsWith("/inventory")
+    ||pathname.startsWith("/guestlist")
+    ||pathname.startsWith("/briefings")
+    ||pathname.startsWith("/exports")
+    ||pathname.startsWith("/admin/platform")
+  ))
+  const currentVisible=adminAlwaysRoute||!currentFeature||!roleKey||!rulesReady||previewAll||ruleMatches(currentRule,effectiveContext,false)
+  const currentUsable=previewAll||adminAlwaysRoute||!currentFeature||!roleKey||!rulesReady||ruleUsable(currentRule,effectiveContext,false)
+  const contentLocked=Boolean(currentVisible&&!currentUsable)
+
+  const refresh=useCallback(async()=>{
+    if(!user)return
+    const now=new Date()
+    const nowIso=now.toISOString()
+    const incidentKey=`uptilldawn-last-incidents-view:${user.id}`
+    const taskKey=`uptilldawn-last-tasks-view:${user.id}`
+    let incidentSince=window.localStorage.getItem(incidentKey)
+    const taskSince=window.localStorage.getItem(taskKey)||"1970-01-01T00:00:00.000Z"
+    if(!incidentSince){incidentSince=nowIso;window.localStorage.setItem(incidentKey,incidentSince)}
+    const [
+      {data:events},
+      {data:memberships},
+      {data:shifts},
+      {data:responsibleAssignments},
+      {data:chatUnreadTotal},
+      {data:unreadNotifications},
+    ]=await Promise.all([
+      supabase.from("events").select("id,start_at,end_at,status").neq("status","archived").gte("end_at",nowIso),
+      supabase.from("event_members").select("event_id,event_role").eq("user_id",user.id),
+      supabase.from("shifts").select("event_id,workplace_id,scheduled_start,scheduled_end,status").eq("user_id",user.id).neq("status","cancelled"),
+      supabase.from("responsible_assignments").select("event_id,workplace_id").eq("user_id",user.id),
+      supabase.rpc("upt_chat_unread_total"),
+      supabase.from("crew_notifications").select("id,link,kind").eq("user_id",user.id).is("read_at",null).limit(500),
+    ])
+    const notificationRows=unreadNotifications||[]
+    setNotificationMissed(notificationRows.length)
+    const featureCounts:Record<string,number>={}
+    const featureForLink=(link:string|null)=>{
+      if(!link)return null
+      if(link.startsWith("/events"))return "events"
+      if(link.startsWith("/operations"))return "operations"
+      if(link.startsWith("/workplaces"))return "workplaces"
+      if(link.startsWith("/inventory"))return "inventory"
+      if(link.startsWith("/guestlist"))return "guestlist"
+      if(link.startsWith("/sales"))return "sales"
+      if(link.startsWith("/shifts"))return "workplaces"
+      if(link.startsWith("/briefings"))return "briefings"
+      if(link.startsWith("/tasks"))return "tasks"
+      if(link.startsWith("/chat"))return "chat"
+      if(link.startsWith("/crew"))return "crew"
+      if(link.startsWith("/incidents"))return "incidents"
+      if(link.startsWith("/exports"))return "exports"
+      if(link.startsWith("/personnel"))return "personnel"
+      if(link.startsWith("/admin/platform")||link.startsWith("/control-center"))return "platform"
+      if(link.startsWith("/settings"))return "settings"
+      if(link==="/"||link.startsWith("/admin"))return "overview"
+      return null
+    }
+    for(const notification of notificationRows){
+      const key=featureForLink(notification.link)
+      if(key)featureCounts[key]=(featureCounts[key]||0)+1
+    }
+    setNotificationFeatureCounts(featureCounts)
+
+    const eventRows=events||[]
+    const memberIds=new Set((memberships||[]).map(x=>x.event_id))
+    const assignedEvent=eventRows.some(e=>
+      memberIds.has(e.id)
+      || (shifts||[]).some(shift=>shift.event_id===e.id)
+      || (responsibleAssignments||[]).some(assignment=>assignment.event_id===e.id)
+    ) || (shifts||[]).some(shift=>Date.parse(shift.scheduled_end)>=now.getTime())
+    const eventActive=eventRows.some(e=>
+      (memberIds.has(e.id)||(shifts||[]).some(shift=>shift.event_id===e.id)||(responsibleAssignments||[]).some(assignment=>assignment.event_id===e.id))
+      && Date.parse(e.start_at)<=now.getTime()
+      && Date.parse(e.end_at)>=now.getTime()
+    )
+    const shiftActive=(shifts||[]).some(s=>Date.parse(s.scheduled_start)<=now.getTime()&&Date.parse(s.scheduled_end)>=now.getTime())
+    const assignedWorkplaceRole=(shifts||[]).length>0||(responsibleAssignments||[]).length>0
+    setContext({assignedEvent,assignedWorkplaceRole,eventActive,shiftActive})
+
+    const activeShiftRows=(shifts||[]).filter(shift=>
+      Date.parse(shift.scheduled_start)<=now.getTime()&&Date.parse(shift.scheduled_end)>=now.getTime()
+    )
+    const activeShiftEventIds=new Set(activeShiftRows.map(shift=>shift.event_id))
+    const activeShiftWorkplaceIds=new Set(activeShiftRows.map(shift=>shift.workplace_id))
+    const responsibleWorkplaceIds=new Set((responsibleAssignments||[]).map(row=>row.workplace_id))
+    const activeResponsibleWorkplaceIds=new Set(
+      [...responsibleWorkplaceIds].filter(workplaceId=>activeShiftWorkplaceIds.has(workplaceId))
+    )
+
+    if(pathname.startsWith("/tasks")){window.localStorage.setItem(taskKey,nowIso);setTaskMissed(0)}
+    else if(activeUiRole==="admin"){
+      const {count}=await supabase.from("task_assignments").select("id",{count:"exact",head:true}).gt("created_at",taskSince).neq("status","COMPLETED")
+      setTaskMissed(count??0)
+    }else{
+      const {data:taskRows}=await supabase.from("task_assignments")
+        .select("id,user_id,tasks(event_id,workplace_id)")
+        .gt("created_at",taskSince)
+        .neq("status","COMPLETED")
+        .limit(1000)
+      const count=(taskRows||[]).filter(row=>{
+        const task=row.tasks
+        if(!task)return false
+        if(activeUiRole==="employee")return row.user_id===user.id&&activeShiftEventIds.has(task.event_id)
+        if(row.user_id===user.id&&activeShiftEventIds.has(task.event_id))return true
+        return Boolean(task.workplace_id&&activeResponsibleWorkplaceIds.has(task.workplace_id))
+      }).length
+      setTaskMissed(count)
+    }
+
+    setChatMissed(Number(chatUnreadTotal||0))
+
+    if(pathname.startsWith("/incidents")){window.localStorage.setItem(incidentKey,nowIso);setIncidentMissed(0)}
+    else if(activeUiRole==="admin"){
+      const {count}=await supabase.from("incidents").select("id",{count:"exact",head:true}).gt("created_at",incidentSince)
+      setIncidentMissed(count??0)
+    }else if(activeUiRole==="employee"){
+      const {count}=await supabase.from("incidents").select("id",{count:"exact",head:true})
+        .eq("reporter_id",user.id)
+        .gt("created_at",incidentSince)
+      setIncidentMissed(count??0)
+    }else if(activeResponsibleWorkplaceIds.size){
+      const {count}=await supabase.from("incidents").select("id",{count:"exact",head:true})
+        .in("workplace_id",[...activeResponsibleWorkplaceIds])
+        .gt("created_at",incidentSince)
+      setIncidentMissed(count??0)
+    }else setIncidentMissed(0)
+  },[activeUiRole,pathname,supabase,user])
+
+  useEffect(()=>{queueMicrotask(()=>void refresh());const timer=window.setInterval(()=>void refresh(),10000);const focus=()=>void refresh();const chatRead=()=>void refresh();window.addEventListener("focus",focus);window.addEventListener("uptilldawn-chat-read",chatRead);return()=>{window.clearInterval(timer);window.removeEventListener("focus",focus);window.removeEventListener("uptilldawn-chat-read",chatRead)}},[refresh])
+
+  const showOverview=feature("overview",true)
+  const showEvents=feature("events",true)
+  const showShifts=false
+  const showBriefings=feature("briefings",Boolean(isAdmin)||context.assignedEvent)
+  const showOperations=feature("operations",isAdmin?true:context.shiftActive)
+  const showWorkplaces=feature("workplaces",Boolean(isAdmin)||context.assignedWorkplaceRole)
+  const showInventory=feature("inventory",context.assignedWorkplaceRole)
+  const trainingEntrance=/inkom|entrance|guest/i.test(trainingWorkplace)
+  const showGuestlist=feature("guestlist",Boolean(isAdmin)||context.assignedEvent)&&(!tourPreview||Boolean(isAdmin)||trainingEntrance)
+  const showSales=Boolean(isAdmin)&&feature("sales",true)
+  const showTasks=feature("tasks",Boolean(isAdmin)||context.shiftActive)
+  const showIncidents=feature("incidents",isAdmin?true:context.shiftActive)
+  const showChat=feature("chat",true)
+  const showCrew=feature("crew",true)
+  const showExports=feature("exports",Boolean(isAdmin))
+  const showPersonnel=feature("personnel",Boolean(isAdmin))
+  const showSettings=feature("settings",true)
+  const showPlatform=feature("platform",Boolean(isAdmin))
+  const featureVisibility={overview:showOverview,events:showEvents,operations:showOperations,workplaces:showWorkplaces,inventory:showInventory,guestlist:showGuestlist,sales:showSales,shifts:showShifts,briefings:showBriefings,tasks:showTasks,chat:showChat,crew:showCrew,incidents:showIncidents,exports:showExports,personnel:showPersonnel,platform:showPlatform,settings:showSettings}
+  const showUrgent=!pathname.startsWith("/chat")&&!isAdmin&&showIncidents&&effectiveContext.shiftActive&&(!tourPreview||(trainingHelpUnlocked&&!trainingComplete&&trainingNavTarget==="operations"))
+  const showFloatingChat=showChat
+
+  return <div className="flex h-dvh bg-background print:block print:h-auto">
+    <RoleAppTour/>
+    {/* Mobile shell lives at the AppLayout root so iOS fixed positioning is not
+        clipped by the nested overflow scroll container. */}
+    <div className="print:hidden">
+      <MobileBottomNav chatMissed={chatMissed} incidentMissed={incidentMissed} taskMissed={taskMissed} notificationFeatureCounts={notificationFeatureCounts} featureOrder={order} featureLabels={labels} featureVisibility={featureVisibility} assignedEvent={effectiveContext.assignedEvent} shiftActive={effectiveContext.shiftActive}/>
+    </div>
+    {showFloatingChat&&(!tourPreview? !pathname.startsWith("/chat") : trainingChatUnlocked&&!trainingComplete&&pathname.startsWith("/chat")&&trainingNavTarget==="__chat_button")&&<div className={tourPreview?"rounded-full ring-4 ring-violet-500/60 animate-pulse":undefined}><FloatingChatButton count={chatMissed} stackedAboveAdminAi={Boolean(isAdmin)} href={tourPreview?"/chat?tour=1":"/chat"}/></div>}
+    {tourPreview&&trainingComplete&&showFloatingChat&&!pathname.startsWith("/chat")&&<FloatingChatButton count={chatMissed} stackedAboveAdminAi={Boolean(isAdmin)} href={tourPreview?"/chat?tour=1":"/chat"}/>}
+
+    <div className="print:hidden"><AppSidebar chatMissed={chatMissed} incidentMissed={incidentMissed} taskMissed={taskMissed} notificationFeatureCounts={notificationFeatureCounts} showOperations={showOperations} showEvents={showEvents} showTasks={showTasks} showBriefings={showBriefings} showShifts={showShifts} showWorkplaces={showWorkplaces} showIncidents={showIncidents} featureOrder={order} featureLabels={labels} featureVisibility={featureVisibility}/></div>
+    <div className="flex flex-1 flex-col overflow-hidden print:block print:overflow-visible">
+      <div className="print:hidden"><Topbar notificationMissed={notificationMissed}/><QueueStatus/>{isAdmin&&<AdminContextBar/>}</div>
+      <div id="app-scroll" className="flex-1 overflow-y-auto bg-background scroll-smooth print:overflow-visible">
+        <main className="min-h-[calc(100dvh-theme(spacing.16)-theme(spacing.12))] pb-20 lg:pb-0 print:min-h-0 print:pb-0">
+          {!currentVisible&&!previewAll
+            ? <div className="m-4 rounded-2xl border p-6 text-muted-foreground">Deze functie is verborgen voor jouw rol of huidige context.</div>
+            : <>
+                {tourPreview&&<div className="mx-3 mt-2 text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">{({nl:"Trainingsmodus · fictieve gegevens",en:"Training mode · fictional data",fr:"Mode entraînement · données fictives",de:"Trainingsmodus · fiktive Daten"} as Record<SupportedUiLocale,string>)[trainingLocale]}</div>}
+                {!currentUsable&&!previewAll&&<p className="m-3 rounded-xl border p-3 text-sm text-muted-foreground">Alleen-lezen: deze functie is zichtbaar, maar momenteel niet bruikbaar voor jouw rol.</p>}
+                <div inert={contentLocked&&!previewAll}>{children}</div>
+              </>}
+        </main>
+      </div>
+    </div>
+    {isAdmin&&!tourPreview&&<div className="fixed bottom-20 right-4 z-[70] print:hidden lg:bottom-4"><button type="button" aria-expanded={adminAiOpen} onClick={()=>setAdminAiOpen(value=>!value)} className="rounded-full bg-violet-600 px-5 py-3 font-black text-white shadow-xl">ADMIN AI</button>{adminAiOpen&&<div className="absolute bottom-14 right-0 w-[min(92vw,430px)] max-h-[75vh] overflow-auto rounded-2xl border bg-background p-4 shadow-2xl"><PlatformAiAssistant contextKey={currentFeature||undefined} contextLabel={labels[currentFeature||""]} compact/></div>}</div>}
+    {!pathname.startsWith("/chat")&&<>
+      {showUrgent&&<Link href={tourPreview?"/incidents?tour=1":"/incidents"} className={`fixed bottom-20 left-4 z-50 rounded-full bg-red-600 px-5 py-4 font-black text-white print:hidden lg:hidden ${tourPreview&&trainingHelpUnlocked&&!trainingComplete&&trainingNavTarget==="operations"?"ring-4 ring-violet-500/60 animate-pulse":""}`}>{({nl:"HELP",en:"HELP",fr:"AIDE",de:"HILFE"} as Record<SupportedUiLocale,string>)[trainingLocale]}<CountBadge count={incidentMissed}/></Link>}
+    </>}
+  </div>
+}
