@@ -594,6 +594,14 @@ export function ChatClient({channels,defaultChannelId,userId,crewDirectory,isAdm
     finally{setBusy(false)}
   }
 
+  const currentState=channelStates[effectiveSelected]
+  const currentPins=pinsByChannel[effectiveSelected]||[]
+  const pinnedIds=new Set(currentPins.map(pin=>pin.message_id))
+  const privatePeerId=selectedChannel?.kind==='private'&&selectedChannel.name!=='Up Till Dawn · persoonlijk'?privatePeerIds[selectedChannel.id]:undefined
+  const privatePeer=privatePeerId?directory.get(privatePeerId):undefined
+  const unreadCutoff=unreadCutoffs.current[effectiveSelected]
+  const firstUnreadId=unreadCutoff?current.messages.find(message=>message.sender_id!==userId&&Date.parse(message.created_at)>Date.parse(unreadCutoff))?.id:null
+
   if(!selectedChannel)return <section className="rounded-2xl border p-6"><h1 className="text-2xl font-black">Chat</h1><p className="mt-2 text-muted-foreground">Er zijn momenteel geen beschikbare chats.</p></section>
 
   return <section className="relative flex min-h-[calc(100dvh-9rem)] flex-col overflow-hidden bg-background md:min-h-[70vh] md:rounded-3xl md:border">
@@ -611,6 +619,42 @@ export function ChatClient({channels,defaultChannelId,userId,crewDirectory,isAdm
         <button type="button" onClick={()=>{setPrivatePickerOpen(open=>!open);setPickerOpen(false)}} className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl border bg-card" aria-label={translateRuntimeUi('Nieuwe privéchat',uiLocale)} title={translateRuntimeUi('Nieuwe privéchat',uiLocale)}><MessageCirclePlus className="h-5 w-5"/></button>
         {selectedChannel.kind==='private'&&selectedChannel.name!=='Up Till Dawn · persoonlijk'&&<button type="button" disabled={busy} onClick={()=>void deletePrivateChat()} className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl border bg-card" aria-label={translateRuntimeUi('Privéchat verwijderen',uiLocale)} title={translateRuntimeUi('Privéchat verwijderen',uiLocale)}><Trash2 className="h-5 w-5"/></button>}
       </div>
+      <div className="mt-2 flex flex-wrap items-center gap-2 text-xs">
+        {typingUsers.length>0&&<span className="mr-auto min-w-0 truncate font-semibold text-violet-600 dark:text-violet-300">{typingUsers.length===1?`${typingUsers[0]} ${translateRuntimeUi('typt…',uiLocale)}`:`${typingUsers.slice(0,2).join(', ')} ${translateRuntimeUi('typen…',uiLocale)}`}</span>}
+        {!typingUsers.length&&<span className="mr-auto"/>}
+        <label className="flex items-center gap-1 rounded-lg border bg-card px-2 py-1.5" title={translateRuntimeUi('Meldingen voor deze chat',uiLocale)}>
+          <Bell className="h-3.5 w-3.5"/>
+          <select disabled={selectedChannel.name==='Up Till Dawn · persoonlijk'} value={selectedChannel.name==='Up Till Dawn · persoonlijk'?'all':currentState?.mute_mode||'mentions'} onChange={event=>void setMuteMode(event.target.value)} className="max-w-[11rem] bg-transparent text-[11px] outline-none">
+            <option value="all">{translateRuntimeUi('Alle berichten',uiLocale)}</option>
+            <option value="mentions">{translateRuntimeUi('Alleen @mentions en antwoorden',uiLocale)}</option>
+            <option value="muted">{translateRuntimeUi('Gedempt',uiLocale)}</option>
+          </select>
+        </label>
+        <button type="button" onClick={()=>{setSearchOpen(open=>!open);setPinsOpen(false);setProfileOpen(false)}} className="rounded-lg border bg-card p-2" aria-label={translateRuntimeUi('Zoeken in chat',uiLocale)} title={translateRuntimeUi('Zoeken in chat',uiLocale)}><Search className="h-4 w-4"/></button>
+        <button type="button" onClick={()=>{setPinsOpen(open=>!open);setSearchOpen(false);setProfileOpen(false);void loadPins(effectiveSelected)}} className="relative rounded-lg border bg-card p-2" aria-label={translateRuntimeUi('Vastgepind',uiLocale)} title={translateRuntimeUi('Vastgepind',uiLocale)}><Pin className="h-4 w-4"/>{currentPins.length>0&&<span className="absolute -right-1.5 -top-1.5 rounded-full bg-violet-600 px-1 text-[9px] font-black text-white">{currentPins.length}</span>}</button>
+        {privatePeer&&<button type="button" onClick={()=>{setProfileOpen(open=>!open);setSearchOpen(false);setPinsOpen(false)}} className="rounded-lg border bg-card p-2" aria-label={translateRuntimeUi('Contact',uiLocale)} title={translateRuntimeUi('Contact',uiLocale)}><Phone className="h-4 w-4"/></button>}
+      </div>
+      {profileOpen&&privatePeer&&<div className="mt-3 rounded-2xl border bg-card p-3 shadow-sm">
+        <div className="flex items-center gap-3"><ChannelAvatar src={profilePhotoUrls[privatePeer.id]}/><div className="min-w-0"><p className="truncate font-black">{privatePeer.full_name}</p><p className="text-xs text-muted-foreground">{privatePeer.phone_number||translateRuntimeUi('Geen telefoonnummer beschikbaar.',uiLocale)}</p></div></div>
+      </div>}
+      {pinsOpen&&<div className="mt-3 max-h-56 overflow-y-auto rounded-2xl border bg-card p-2 shadow-sm">
+        <p className="px-2 py-1 text-xs font-black">{translateRuntimeUi('Vastgepind',uiLocale)} · {currentPins.length}/5</p>
+        {currentPins.length?currentPins.map(pin=><button key={pin.message_id} type="button" onClick={()=>{void ensureMessageVisible(pin.message_id);setPinsOpen(false)}} className="block w-full rounded-xl px-3 py-2 text-left hover:bg-muted">
+          <span className="block truncate text-sm font-semibold">{pin.body||translateRuntimeUi('Bestand',uiLocale)}</span>
+          <span className="text-[10px] text-muted-foreground">{new Date(pin.pinned_at).toLocaleString()}</span>
+        </button>):<p className="px-3 py-4 text-sm text-muted-foreground">{translateRuntimeUi('Geen vastgepinde berichten.',uiLocale)}</p>}
+      </div>}
+      {searchOpen&&<div className="mt-3 rounded-2xl border bg-card p-3 shadow-sm">
+        <div className="grid gap-2 sm:grid-cols-2">
+          <input value={searchQuery} onChange={event=>setSearchQuery(event.target.value)} placeholder={translateRuntimeUi('Zoek in chat…',uiLocale)} className="rounded-xl border bg-background px-3 py-2 text-sm sm:col-span-2"/>
+          <select value={searchSender} onChange={event=>setSearchSender(event.target.value)} className="rounded-xl border bg-background px-3 py-2 text-sm"><option value="">{translateRuntimeUi('Iedereen',uiLocale)}</option>{currentPeople.map(person=><option key={person.id} value={person.id}>{person.full_name}</option>)}</select>
+          <select value={searchAttachment} onChange={event=>setSearchAttachment(event.target.value)} className="rounded-xl border bg-background px-3 py-2 text-sm"><option value="">{translateRuntimeUi('Alle berichten',uiLocale)}</option><option value="any">{translateRuntimeUi('Elke bijlage',uiLocale)}</option><option value="media">{translateRuntimeUi('Afbeeldingen/video',uiLocale)}</option><option value="file">{translateRuntimeUi('Documenten',uiLocale)}</option></select>
+          <label className="text-[11px] text-muted-foreground">{translateRuntimeUi('Van datum',uiLocale)}<input type="date" value={searchFrom} onChange={event=>setSearchFrom(event.target.value)} className="mt-1 block w-full rounded-xl border bg-background px-3 py-2 text-sm text-foreground"/></label>
+          <label className="text-[11px] text-muted-foreground">{translateRuntimeUi('Tot datum',uiLocale)}<input type="date" value={searchTo} onChange={event=>setSearchTo(event.target.value)} className="mt-1 block w-full rounded-xl border bg-background px-3 py-2 text-sm text-foreground"/></label>
+        </div>
+        <button type="button" disabled={searchBusy} onClick={()=>void runSearch()} className="mt-2 w-full rounded-xl bg-violet-600 px-3 py-2 text-sm font-black text-white disabled:opacity-50">{searchBusy?translateRuntimeUi('Zoeken…',uiLocale):translateRuntimeUi('Zoek',uiLocale)}</button>
+        <div className="mt-2 max-h-52 overflow-y-auto">{searchResults.length?searchResults.map(result=><button key={result.id} type="button" onClick={()=>{void ensureMessageVisible(result.id);setSearchOpen(false)}} className="block w-full rounded-xl px-3 py-2 text-left hover:bg-muted"><span className="block truncate text-sm font-semibold">{result.body||translateRuntimeUi('Bestand',uiLocale)}</span><span className="text-[10px] text-muted-foreground">{result.sender_id?directory.get(result.sender_id)?.full_name||translateRuntimeUi('Personeelslid',uiLocale):'Up Till Dawn'} · {new Date(result.created_at).toLocaleString()}</span></button>):<p className="px-3 py-3 text-sm text-muted-foreground">{translateRuntimeUi('Geen zoekresultaten.',uiLocale)}</p>}</div>
+      </div>}
       {pickerOpen&&<div className="absolute left-3 right-3 top-[4.5rem] z-40 max-h-[65vh] overflow-y-auto rounded-2xl border bg-card p-2 shadow-2xl">
         <div className="flex items-center justify-between px-2 py-1"><p className="text-sm font-black">Gesprekken</p><button type="button" onClick={()=>setPickerOpen(false)} className="rounded-full p-2"><X className="h-4 w-4"/></button></div>
         {[[privateChannels,'Privégesprekken'],[organizationChannels,'Algemeen'],[eventChannels,'Evenementen'],[workplaceChannels,'Werkplekken']]
