@@ -154,19 +154,6 @@ export function TourControlCenter({active,userId,role,preferredWorkplace,mode="f
     const next={...progressRef.current,...patch,activeKey:chapter.key,paused:false,updatedAt:new Date().toISOString()}
     write(next);router.push(tourRoute(role,chapter));setIndexOpen(false)
   }
-  const completeAndGo=(direction:1|-1)=>{
-    const currentProgress=progressRef.current
-    const completed=direction===1?unique([...currentProgress.completed,current.key]):currentProgress.completed
-    const nextIndex=currentIndex+direction
-    if(nextIndex<0)return
-    if(nextIndex>=chapters.length){write({...currentProgress,completed,paused:false,updatedAt:new Date().toISOString()});sessionStorage.removeItem(TOUR_SESSION_KEY);dispatchEvent(new CustomEvent("uptilldawn-tour-finished",{detail:{role,mode}}));return}
-    saveActive(chapters[nextIndex],{completed})
-  }
-  const skip=()=>{
-    const skipped=unique([...progressRef.current.skipped,current.key])
-    if(currentIndex>=chapters.length-1){write({...progressRef.current,skipped,updatedAt:new Date().toISOString()});sessionStorage.removeItem(TOUR_SESSION_KEY);dispatchEvent(new CustomEvent("uptilldawn-tour-finished",{detail:{role,mode}}));return}
-    saveActive(chapters[currentIndex+1],{skipped})
-  }
   const pause=()=>{write({...progressRef.current,paused:true,updatedAt:new Date().toISOString()});sessionStorage.removeItem(TOUR_SESSION_KEY);dispatchEvent(new CustomEvent("uptilldawn-tour-stop",{detail:{role,mode}}))}
   const startScenario=(scenario:TourScenario)=>{
     seedScenario(scenario)
