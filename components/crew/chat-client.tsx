@@ -106,6 +106,7 @@ export function ChatClient({channels,defaultChannelId,userId,crewDirectory,isAdm
   const [searchBusy,setSearchBusy]=useState(false)
   const [pinsOpen,setPinsOpen]=useState(false)
   const [profileOpen,setProfileOpen]=useState(false)
+  const [notificationOpen,setNotificationOpen]=useState(false)
   const [highlightedMessageId,setHighlightedMessageId]=useState<string|null>(null)
   const unreadCutoffs=useRef<Record<string,string|null>>(Object.fromEntries(Object.entries(initialChannelStates).map(([id,state])=>[id,state.last_read_at||null])))
   const endRef=useRef<HTMLDivElement>(null)
@@ -322,6 +323,7 @@ export function ChatClient({channels,defaultChannelId,userId,crewDirectory,isAdm
     setSearchOpen(false)
     setPinsOpen(false)
     setProfileOpen(false)
+    setNotificationOpen(false)
   }
 
   function senderName(message:Tables<'messages'>){
