@@ -173,7 +173,7 @@ export function ChatClient({channels,defaultChannelId,userId,crewDirectory,isAdm
         if(target)setReplyTo(target)
       }
     }catch{}
-  },[effectiveSelected,messageLookup,userId])
+  },[effectiveSelected,userId])
 
   useEffect(()=>{
     if(!focusMessageId||!effectiveSelected)return
@@ -244,6 +244,19 @@ export function ChatClient({channels,defaultChannelId,userId,crewDirectory,isAdm
     for(const message of Object.values(current.replyTargets))map.set(message.id,message)
     return map
   },[current.messages,current.replyTargets])
+
+  useEffect(()=>{
+    if(!initialDraftLoadedRef.current||!effectiveSelected)return
+    const payload={body,replyId:replyTo?.id||null}
+    if(payload.body.trim()||payload.replyId)window.localStorage.setItem(`uptilldawn-chat-draft:${userId}:${effectiveSelected}`,JSON.stringify(payload))
+    else window.localStorage.removeItem(`uptilldawn-chat-draft:${userId}:${effectiveSelected}`)
+  },[body,replyTo?.id,effectiveSelected,userId])
+
+  useEffect(()=>{
+    if(!replyTo)return
+    const refreshed=messageLookup.get(replyTo.id)
+    if(refreshed&&refreshed!==replyTo)setReplyTo(refreshed)
+  },[messageLookup,replyTo])
 
   const mentionCandidates=useMemo(()=>{
     if(!mentionState)return []
@@ -495,18 +508,23 @@ export function ChatClient({channels,defaultChannelId,userId,crewDirectory,isAdm
     setStatus('')
     try{
       const replyId=replyTo?.id||null
+      const mentionIds=mentionIdsForText(trimmed,currentPeople,userId)
       if(file){
-        await enqueueChatPhoto(userId,effectiveSelected,trimmed,file,replyId)
+        await enqueueChatPhoto(userId,effectiveSelected,trimmed,file,replyId,mentionIds)
         setBody('')
         setFile(null)
         setFileKey(key=>key+1)
         setStatus(navigator.onLine?'Bestand verzonden.':'Bestand is lokaal bewaard en wordt verzonden zodra je online bent.')
       }else{
-        await enqueue(userId,'message',{channel_id:effectiveSelected,body:trimmed,reply_to_message_id:replyId})
+        await enqueue(userId,'message',{channel_id:effectiveSelected,body:trimmed,reply_to_message_id:replyId,mention_ids:mentionIds})
         setBody('')
       }
       setReplyTo(null)
       setMentionState(null)
+      draftFilesRef.current.delete(effectiveSelected)
+      window.localStorage.removeItem(`uptilldawn-chat-draft:${userId}:${effectiveSelected}`)
+      void setTyping(false)
+      window.setTimeout(()=>void markCurrentRead(),250)
     }catch(error){
       const message=error instanceof Error?error.message:String(error||'')
       setStatus(message.includes('UPLOAD_LOCAL_FILE_EMPTY')
@@ -672,13 +690,13 @@ export function ChatClient({channels,defaultChannelId,userId,crewDirectory,isAdm
 
       {file&&<div className="mb-2 flex items-center justify-between rounded-xl border bg-card px-3 py-2 text-xs"><span className="truncate">{file.name}</span><button type="button" onClick={()=>{setFile(null);setFileKey(key=>key+1)}}><X className="h-4 w-4"/></button></div>}
       <form className="flex items-end gap-2" onSubmit={event=>{event.preventDefault();void sendMessage()}}>
-        <label className="flex h-11 w-11 shrink-0 cursor-pointer items-center justify-center rounded-full border bg-card" aria-label="Bestand toevoegen"><Paperclip className="h-5 w-5"/><input key={fileKey} type="file" accept={ACCEPT} onChange={event=>setFile(event.target.files?.[0]||null)} className="sr-only"/></label>
+        <label className="flex h-11 w-11 shrink-0 cursor-pointer items-center justify-center rounded-full border bg-card" aria-label="Bestand toevoegen"><Paperclip className="h-5 w-5"/><input key={fileKey} type="file" accept={ACCEPT} onChange={event=>{const nextFile=event.target.files?.[0]||null;setFile(nextFile);draftFilesRef.current.set(effectiveSelected,nextFile)}} className="sr-only"/></label>
         <textarea
           ref={textareaRef}
           maxLength={4000}
           rows={2}
           value={body}
-          onChange={event=>{const value=event.target.value;setBody(value);refreshMentionState(value,event.target.selectionStart)}}
+          onChange={event=>{const value=event.target.value;setBody(value);refreshMentionState(value,event.target.selectionStart);void setTyping(Boolean(value.trim()))}}
           onSelect={event=>refreshMentionState(body,event.currentTarget.selectionStart)}
           placeholder="Typ een bericht…"
           className="max-h-32 min-h-11 min-w-0 flex-1 resize-none rounded-2xl border bg-card px-4 py-3 text-sm"
