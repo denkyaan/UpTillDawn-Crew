@@ -4653,6 +4653,14 @@ export type Database = {
         Args: { p_event: string; p_name: string; p_sections?: string[] }
         Returns: string
       }
+      upt_chat_channel_people: {
+        Args: { p_channel: string }
+        Returns: {
+          full_name: string
+          id: string
+          profile_photo_url: string
+        }[]
+      }
       upt_claim_marketplace_shift: {
         Args: { p_reason: string; p_shift: string }
         Returns: string
@@ -4813,14 +4821,6 @@ export type Database = {
           p_workplace: string
         }
         Returns: string
-      }
-      upt_chat_channel_people: {
-        Args: { p_channel: string }
-        Returns: {
-          full_name: string
-          id: string
-          profile_photo_url: string
-        }[]
       }
       upt_crew_directory: {
         Args: never
