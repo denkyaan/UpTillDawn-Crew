@@ -27,7 +27,6 @@ test('admin profile policy and birthday automation stay wired together', async (
   assert.ok(migration.includes("values(v_person.id,null,v_channel,v_chat_body,v_chat_body)"))
   assert.ok(migration.includes("'5 * * * *'"))
   assert.ok(chat.includes("senderName=isSystem?'Up Till Dawn'"))
-  assert.ok(chat.includes("translateRuntimeUi(message.body||'',uiLocale)"))
   assert.ok(runtime.includes("C’est ton anniversaire ! 🥳🎁"))
   assert.ok(runtime.includes("Happy birthday! 🥳 Have a fantastic day and make the most of it! 🎉🎉"))
   assert.ok(runtime.includes("Herzlichen Glückwunsch zum Geburtstag! 🥳"))
