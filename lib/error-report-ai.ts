@@ -105,16 +105,6 @@ function deterministicFallback(report:{error_message:string;error_name:string|nu
   }
 }
 
-function htmlEscape(value:string){
-  return value
-    .replaceAll('&','&amp;')
-    .replaceAll('<','&lt;')
-    .replaceAll('>','&gt;')
-    .replaceAll('"','&quot;')
-    .replaceAll("'","&#039;")
-}
-
-
 async function dispatchSelfHealing(report:{
   id:string
   route:string
