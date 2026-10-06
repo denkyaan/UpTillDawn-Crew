@@ -154,66 +154,6 @@ async function dispatchSelfHealing(report:{
   return true
 }
 
-async function sendMakerErrorEmail(report:{
-  id:string
-  route:string
-  error_message:string
-  ai_summary:string
-  maker_action:string
-  severity:string
-}){
-  const apiKey=process.env.RESEND_API_KEY
-  if(!apiKey)return false
-  const recipient=process.env.SECURITY_ALERT_EMAIL||'steegmans.kyani@icloud.com'
-  const from=process.env.SECURITY_FROM_EMAIL||'UpTillDawn Security <onboarding@resend.dev>'
-  const origin=(process.env.NEXT_PUBLIC_APP_URL||'https://crew.uptilldawn.workers.dev').replace(/\/$/,'')
-  const godUrl=`${origin}/god-mode?error-report=${encodeURIComponent(report.id)}`
-  const text=[
-    'UpTillDawn AI foutdiagnose vereist makeractie',
-    `Ernst: ${report.severity}`,
-    `Pagina: ${report.route}`,
-    `Fout: ${report.error_message}`,
-    `AI-samenvatting: ${report.ai_summary}`,
-    `Makeractie: ${report.maker_action}`,
-    `Open God Mode: ${godUrl}`,
-  ].join('\n')
-  const html=`
-    <h2>UpTillDawn AI foutdiagnose vereist makeractie</h2>
-    <p><strong>Ernst:</strong> ${htmlEscape(report.severity)}</p>
-    <p><strong>Pagina:</strong> ${htmlEscape(report.route)}</p>
-    <p><strong>Fout:</strong> ${htmlEscape(report.error_message)}</p>
-    <p><strong>AI-samenvatting:</strong> ${htmlEscape(report.ai_summary)}</p>
-    <p><strong>Makeractie:</strong> ${htmlEscape(report.maker_action)}</p>
-    <p><a href="${htmlEscape(godUrl)}">Open in God Mode</a></p>
-  `
-  const controller=new AbortController()
-  const timeout=setTimeout(()=>controller.abort(),3500)
-  try{
-    const response=await fetch('https://api.resend.com/emails',{
-      method:'POST',
-      headers:{Authorization:`Bearer ${apiKey}`,'Content-Type':'application/json'},
-      body:JSON.stringify({
-        from,
-        to:[recipient],
-        subject:`[UpTillDawn] AI foutdiagnose · ${report.severity.toUpperCase()}`,
-        text,
-        html,
-      }),
-      signal:controller.signal,
-    })
-    if(!response.ok){
-      console.error('[error-ai] maker-email geweigerd',{status:response.status})
-      return false
-    }
-    return true
-  }catch(error){
-    console.error('[error-ai] maker-email mislukt',error instanceof Error?error.message:'unknown')
-    return false
-  }finally{
-    clearTimeout(timeout)
-  }
-}
-
 async function finalizeFailure(client:CrewClient,reportId:string){
   const summary='De achtergrond-AI kon dit foutrapport niet volledig analyseren.'
   await client.rpc('upt_finalize_error_report_ai',{
