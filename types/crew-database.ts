@@ -2259,6 +2259,7 @@ export type Database = {
           created_at: string
           event_id: string | null
           id: string
+          mentioned_user_ids: string[]
           moderated_at: string | null
           moderated_by: string | null
           reply_to_message_id: string | null
@@ -2273,6 +2274,7 @@ export type Database = {
           created_at?: string
           event_id?: string | null
           id?: string
+          mentioned_user_ids?: string[]
           moderated_at?: string | null
           moderated_by?: string | null
           reply_to_message_id?: string | null
@@ -2287,6 +2289,7 @@ export type Database = {
           created_at?: string
           event_id?: string | null
           id?: string
+          mentioned_user_ids?: string[]
           moderated_at?: string | null
           moderated_by?: string | null
           reply_to_message_id?: string | null
@@ -4661,6 +4664,38 @@ export type Database = {
           profile_photo_url: string
         }[]
       }
+      upt_chat_channel_summaries: {
+        Args: never
+        Returns: {
+          can_pin: boolean
+          channel_id: string
+          last_read_at: string
+          mention_count: number
+          mute_mode: string
+          peer_last_read_at: string
+          pinned_count: number
+          unread_count: number
+        }[]
+      }
+      upt_chat_pins: {
+        Args: { p_channel: string }
+        Returns: {
+          body: string
+          message_created_at: string
+          message_id: string
+          pinned_at: string
+          pinned_by: string
+          sender_id: string
+        }[]
+      }
+      upt_chat_typing_users: {
+        Args: { p_channel: string }
+        Returns: {
+          full_name: string
+          user_id: string
+        }[]
+      }
+      upt_chat_unread_total: { Args: never; Returns: number }
       upt_claim_marketplace_shift: {
         Args: { p_reason: string; p_shift: string }
         Returns: string
@@ -5207,6 +5242,10 @@ export type Database = {
           workplace_name: string
         }[]
       }
+      upt_mark_chat_read: {
+        Args: { p_channel: string }
+        Returns: undefined
+      }
       upt_mark_notification_read: {
         Args: { p_notification: string }
         Returns: undefined
@@ -5522,6 +5561,26 @@ export type Database = {
         }
         Returns: string
       }
+      upt_search_chat_messages: {
+        Args: {
+          p_attachment_kind?: string
+          p_channel: string
+          p_from?: string
+          p_limit?: number
+          p_query?: string
+          p_sender?: string
+          p_to?: string
+        }
+        Returns: {
+          attachment_kind: string
+          body: string
+          created_at: string
+          id: string
+          mentioned_user_ids: string[]
+          reply_to_message_id: string
+          sender_id: string
+        }[]
+      }
       upt_self_heal_resolve_error_report: {
         Args: { p_report: string }
         Returns: boolean
@@ -5545,6 +5604,27 @@ export type Database = {
         }
         Returns: string
       }
+      upt_send_chat_message_operation_v2: {
+        Args: {
+          p_body: string
+          p_channel: string
+          p_mention_ids?: string[]
+          p_operation: string
+          p_reply_to?: string
+        }
+        Returns: string
+      }
+      upt_send_chat_photo_message_operation_v2: {
+        Args: {
+          p_attachment_path: string
+          p_body: string
+          p_channel: string
+          p_mention_ids?: string[]
+          p_operation: string
+          p_reply_to?: string
+        }
+        Returns: string
+      }
       upt_send_message: {
         Args: { p_attachment_path?: string; p_body?: string; p_channel: string }
         Returns: string
@@ -5559,6 +5639,14 @@ export type Database = {
         Returns: string
       }
       upt_set_admin_role_mode: { Args: { p_role: string }; Returns: string }
+      upt_set_chat_mute: {
+        Args: { p_channel: string; p_mode: string }
+        Returns: undefined
+      }
+      upt_set_chat_typing: {
+        Args: { p_active: boolean; p_channel: string }
+        Returns: undefined
+      }
       upt_set_driver_task_details:
         | {
             Args: {
@@ -5808,6 +5896,10 @@ export type Database = {
           p_serial_number?: string
           p_unit_cost_cents?: number
         }
+        Returns: undefined
+      }
+      upt_toggle_chat_pin: {
+        Args: { p_message: string; p_pinned: boolean }
         Returns: undefined
       }
       upt_update_own_profile: {
