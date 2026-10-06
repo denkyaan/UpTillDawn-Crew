@@ -24,8 +24,12 @@ type Rect={left:number;top:number;width:number;height:number}
 const c=(locale:SupportedUiLocale,nl:string,en:string,fr:string,de:string)=>({nl,en,fr,de}[locale])
 const unique=(values:string[])=>[...new Set(values)]
 
+function initialProgress(defaultKey:string):Progress{
+  return {version:TOUR_VERSION,activeKey:defaultKey,completed:[],skipped:[],paused:false,updatedAt:""}
+}
+
 function readProgress(key:string,defaultKey:string):Progress{
-  const fallback:Progress={version:TOUR_VERSION,activeKey:defaultKey,completed:[],skipped:[],paused:false,updatedAt:new Date().toISOString()}
+  const fallback=initialProgress(defaultKey)
   if(typeof window==="undefined")return fallback
   try{
     const parsed=JSON.parse(localStorage.getItem(key)||"null") as Partial<Progress>|null
@@ -69,8 +73,10 @@ export function TourControlCenter({active,userId,role,preferredWorkplace,mode="f
   const entrance=/inkom|entrance|guest/i.test(preferredWorkplace)
   const chapters=useMemo(()=>getTourChapters(role,{driver,entrance,mode}),[driver,entrance,mode,role])
   const progressKey=tourProgressKey(userId,role)
-  const [locale,setLocale]=useState<SupportedUiLocale>(()=>typeof window==="undefined"?"nl":activeUiLocale())
-  const [progress,setProgress]=useState<Progress>(()=>readProgress(progressKey,chapters[0]?.key||"overview"))
+  // Keep SSR and the first browser render identical. Locale and saved tour
+  // progress are restored only after mount, preventing React hydration errors.
+  const [locale,setLocale]=useState<SupportedUiLocale>("nl")
+  const [progress,setProgress]=useState<Progress>(()=>initialProgress(chapters[0]?.key||"overview"))
   const [indexOpen,setIndexOpen]=useState(false)
   const [detailsOpen,setDetailsOpen]=useState(false)
   const [rect,setRect]=useState<Rect|null>(null)
@@ -81,7 +87,7 @@ export function TourControlCenter({active,userId,role,preferredWorkplace,mode="f
   useEffect(()=>{progressRef.current=progress},[progress])
   const write=useCallback((next:Progress)=>{progressRef.current=next;setProgress(next);localStorage.setItem(progressKey,JSON.stringify(next))},[progressKey])
 
-  useEffect(()=>{const apply=()=>setLocale(activeUiLocale());addEventListener(LANGUAGE_APPLIED_EVENT,apply);return()=>removeEventListener(LANGUAGE_APPLIED_EVENT,apply)},[])
+  useEffect(()=>{const apply=()=>setLocale(activeUiLocale());apply();addEventListener(LANGUAGE_APPLIED_EVENT,apply);return()=>removeEventListener(LANGUAGE_APPLIED_EVENT,apply)},[])
   useEffect(()=>{
     if(!active||!chapters.length)return
     sessionStorage.setItem(TOUR_SESSION_KEY,JSON.stringify({active:true,role,mode}))
