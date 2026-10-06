@@ -3,7 +3,7 @@
 // Regression contract: Enter = nieuwe regel · verzenden gebeurt met de knop.
 import {useEffect,useMemo,useRef,useState} from 'react'
 import {useRouter} from 'next/navigation'
-import {ChevronDown,FileText,MessageCirclePlus,Paperclip,Send,Trash2,Users,X} from 'lucide-react'
+import {Bell,ChevronDown,FileText,MessageCirclePlus,Paperclip,Phone,Pin,Search,Send,Trash2,Users,X} from 'lucide-react'
 import {createClient} from '@/lib/supabase/crew-client'
 import {enqueue,enqueueChatPhoto} from '@/lib/crew-queue'
 import type {Database,Tables} from '@/types/crew-database'
@@ -12,8 +12,11 @@ import {translateRuntimeUi,translateSystemMessage} from '@/lib/ui-translation-ru
 
 type CrewMember=Database['public']['Functions']['upt_crew_directory']['Returns'][number]
 type ChatPerson=Database['public']['Functions']['upt_chat_channel_people']['Returns'][number]
+type ChatSummary=Database['public']['Functions']['upt_chat_channel_summaries']['Returns'][number]
+type ChatPin=Database['public']['Functions']['upt_chat_pins']['Returns'][number]
+type ChatSearchResult=Database['public']['Functions']['upt_search_chat_messages']['Returns'][number]
 type Attachment={url:string;mimeType:string|null}
-type ChannelCache={messages:Tables<'messages'>[];attachments:Record<string,Attachment[]>;replyTargets:Record<string,Tables<'messages'>>}
+type ChannelCache={messages:Tables<'messages'>[];attachments:Record<string,Attachment[]>;replyTargets:Record<string,Tables<'messages'>>;hasMore:boolean}
 type MentionState={start:number;end:number;query:string}
 const EMPTY_PEOPLE:ChatPerson[]=[]
 const ACCEPT='image/jpeg,image/png,image/webp,video/mp4,video/webm,video/quicktime,application/pdf,text/plain,text/csv,application/vnd.openxmlformats-officedocument.wordprocessingml.document,application/vnd.openxmlformats-officedocument.presentationml.presentation,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
@@ -34,14 +37,30 @@ function AttachmentView({attachment,mine}:{attachment:Attachment;mine:boolean}){
 function escapeRegExp(value:string){return value.replace(/[.*+?^${}()|[\]\\]/g,'\\$&')}
 function normalizeText(value:string){return value.normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLocaleLowerCase('nl-BE').trim()}
 
-function MentionedText({text,people}:{text:string;people:CrewMember[]}){
-  const names=people.map(person=>person.full_name?.trim()).filter((name):name is string=>Boolean(name)).sort((a,b)=>b.length-a.length)
-  if(!names.length)return <>{text}</>
-  const mentionSet=new Set(names.map(name=>`@${name.toLocaleLowerCase('nl-BE')}`))
-  const pattern=new RegExp(`(@(?:${names.map(escapeRegExp).join('|')}))`,'gi')
-  return <>{text.split(pattern).map((part,index)=>mentionSet.has(part.toLocaleLowerCase('nl-BE'))
-    ?<span key={index} className="rounded bg-violet-500/15 px-0.5 font-bold text-violet-600 dark:text-violet-300">{part}</span>
-    :<span key={index}>{part}</span>)}</>
+function MentionedText({text,people,userId}:{text:string;people:CrewMember[];userId:string}){
+  const entries=people.map(person=>({id:person.id,name:person.full_name?.trim()||''})).filter(entry=>entry.name).sort((a,b)=>b.name.length-a.name.length)
+  if(!entries.length)return <>{text}</>
+  const mentionMap=new Map(entries.map(entry=>[`@${entry.name.toLocaleLowerCase('nl-BE')}`,entry.id]))
+  const pattern=new RegExp(`(@(?:${entries.map(entry=>escapeRegExp(entry.name)).join('|')}))`,'gi')
+  return <>{text.split(pattern).map((part,index)=>{
+    const mentionedId=mentionMap.get(part.toLocaleLowerCase('nl-BE'))
+    if(!mentionedId)return <span key={index}>{part}</span>
+    const mine=mentionedId===userId
+    return <span key={index} className={mine?"rounded bg-amber-300 px-1 font-black text-black":"rounded bg-violet-500/15 px-0.5 font-bold text-violet-600 dark:text-violet-300"}>{part}</span>
+  })}</>
+}
+
+function mentionIdsForText(text:string,people:ChatPerson[],userId:string){
+  return people.filter(person=>person.id!==userId&&person.full_name?.trim()).filter(person=>{
+    const pattern=new RegExp(`(^|\\s)@${escapeRegExp(person.full_name.trim())}(?=$|[\\s.,!?;:])`,'i')
+    return pattern.test(text)
+  }).map(person=>person.id)
+}
+
+function mergeMessages(...sets:Tables<'messages'>[][]){
+  const byId=new Map<string,Tables<'messages'>>()
+  for(const set of sets)for(const message of set)byId.set(message.id,message)
+  return [...byId.values()].sort((a,b)=>Date.parse(a.created_at)-Date.parse(b.created_at))
 }
 
 function detectMention(value:string,cursor:number):MentionState|null{
