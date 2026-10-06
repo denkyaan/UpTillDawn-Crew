@@ -71,14 +71,23 @@ const copy:Record<string,Localized>={
 const localeOk=(locale:string):locale is keyof Localized=>locale==="fr"||locale==="en"||locale==="de"
 
 function chatDynamic(value:string,locale:keyof Localized){
+ const chatLabel=(label:string)=>{
+  const rows:Record<string,Localized>={
+   "Algemene chat":{fr:"Chat général",en:"General chat",de:"Allgemeiner Chat"},
+   "Werkplekchat":{fr:"Chat du poste",en:"Workplace chat",de:"Arbeitsplatz-Chat"},
+   "Eventchat":{fr:"Chat de l’événement",en:"Event chat",de:"Event-Chat"},
+   "Privéchat":{fr:"Chat privé",en:"Private chat",de:"Privater Chat"},
+  }
+  return rows[label]?.[locale]||label
+ }
  const mention=value.match(/^(.+) heeft je vermeld in (.+)$/)
- if(mention)return locale==="fr"?`${mention[1]} vous a mentionné dans ${mention[2]}`:locale==="en"?`${mention[1]} mentioned you in ${mention[2]}`:`${mention[1]} hat dich in ${mention[2]} erwähnt`
+ if(mention){const channel=chatLabel(mention[2]);return locale==="fr"?`${mention[1]} vous a mentionné dans ${channel}`:locale==="en"?`${mention[1]} mentioned you in ${channel}`:`${mention[1]} hat dich in ${channel} erwähnt`}
  const reply=value.match(/^(.+) heeft op je bericht geantwoord$/)
  if(reply)return locale==="fr"?`${reply[1]} a répondu à votre message`:locale==="en"?`${reply[1]} replied to your message`:`${reply[1]} hat auf deine Nachricht geantwortet`
  const privateMessage=value.match(/^Nieuw privébericht van (.+)$/)
  if(privateMessage)return locale==="fr"?`Nouveau message privé de ${privateMessage[1]}`:locale==="en"?`New private message from ${privateMessage[1]}`:`Neue private Nachricht von ${privateMessage[1]}`
  const groupMessage=value.match(/^Nieuw bericht in (.+)$/)
- if(groupMessage)return locale==="fr"?`Nouveau message dans ${groupMessage[1]}`:locale==="en"?`New message in ${groupMessage[1]}`:`Neue Nachricht in ${groupMessage[1]}`
+ if(groupMessage){const channel=chatLabel(groupMessage[1]);return locale==="fr"?`Nouveau message dans ${channel}`:locale==="en"?`New message in ${channel}`:`Neue Nachricht in ${channel}`}
  return null
 }
 
