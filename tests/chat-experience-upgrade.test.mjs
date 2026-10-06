@@ -72,4 +72,6 @@ test('advanced chat experience remains wired end to end',async()=>{
   assert.match(push,/chatDynamic/)
   assert.match(push,/heeft je vermeld in/)
   assert.match(push,/heeft op je bericht geantwoord/)
+  assert.match(push,/General chat/)
+  assert.match(push,/Chat général/)
 })
