@@ -422,6 +422,41 @@ try {
         await incidentForm.locator('[role="status"]').waitFor({state:'visible',timeout:15000})
       }
 
+      // Exercise the real tour UI in all three roles and all four locales.
+      // Use only the isolated browser's training state; no production fixtures are changed.
+      if(index<4){
+        const tourRole=role==='staff'?'employee':role==='responsible'?'responsible_lead':'admin'
+        const profile=await lifecycleAdmin.from('profiles').select('id').eq('full_name',expectedName).single()
+        if(profile.error||!profile.data)throw new Error('tour test profile unavailable')
+        await page.evaluate(({tourRole,userId})=>{
+          localStorage.setItem(`uptilldawn-app-tour:${userId}:${tourRole}:v8`,'postponed')
+          localStorage.removeItem(`uptilldawn-tour-progress:${userId}:${tourRole}:v8`)
+          sessionStorage.setItem('uptilldawn-tour-active-v8',JSON.stringify({active:true,role:tourRole,mode:'full'}))
+          sessionStorage.removeItem('uptilldawn-training-workflow-v3')
+        },{tourRole,userId:profile.data.id})
+        await page.goto(`${baseUrl}${role==='admin'?'/admin':'/'}?tour=1`,{waitUntil:'networkidle',timeout:45000})
+        const explanation=page.locator('button[aria-controls="tour-step-details"]')
+        await explanation.waitFor({state:'visible',timeout:30000})
+        await explanation.click()
+        await page.locator('#tour-step-details').waitFor({state:'visible'})
+        await explanation.click()
+        await page.locator('#tour-step-details').waitFor({state:'hidden'})
+        await page.locator('[data-tour-demo="primary-action"]').click()
+        await page.waitForURL(url=>url.pathname==='/events'&&url.searchParams.get('tour')==='1',{timeout:30000})
+        if(role==='admin')await page.locator('[data-tour-demo="primary-action"]').click()
+        else await page.getByRole('button',{name:/^(BESCHIKBAARHEID OPSLAAN|SAVE AVAILABILITY|ENREGISTRER LA DISPONIBILITÉ|VERFÜGBARKEIT SPEICHERN)$/}).click()
+        await page.waitForURL(url=>url.pathname==='/workplaces'&&url.searchParams.get('tour')==='1',{timeout:30000})
+        // A second hydrated interaction catches the former competing route effect.
+        await explanation.click()
+        await page.locator('#tour-step-details').waitFor({state:'visible'})
+        if(new URL(page.url()).pathname!=='/workplaces')throw new Error('tour returned to its first chapter')
+        await page.getByRole('button',{name:/^(PAUZEER|PAUSE|PAUSIEREN)$/}).click()
+        await explanation.waitFor({state:'hidden'})
+        const progress=await page.evaluate(({tourRole,userId})=>JSON.parse(localStorage.getItem(`uptilldawn-tour-progress:${userId}:${tourRole}:v8`)||'null'),{tourRole,userId:profile.data.id})
+        if(!progress?.paused||progress.activeKey!=='workplaces'||!progress.completed.includes('events'))throw new Error('tour progress or pause did not persist')
+        console.log(`PASS ${bot} tour explanation + overview/event/workplace navigation + pause persistence`)
+      }
+
       console.log(`PASS ${bot} authenticated + workflow surfaces ${viewport.width}x${viewport.height}`)
     } catch (error) {
       failures.push(`${bot}: ${error instanceof Error ? error.message : String(error)}`)

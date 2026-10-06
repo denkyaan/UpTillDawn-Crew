@@ -1,7 +1,7 @@
 "use client"
 
-import {useCallback,useEffect,useMemo,useState} from "react"
-import {usePathname,useRouter} from "next/navigation"
+import {useCallback,useEffect,useState} from "react"
+import {useRouter} from "next/navigation"
 import {useAuth,type UiRole} from "@/lib/providers"
 import {createClient} from "@/lib/supabase/crew-client"
 import {translateRuntimeUi} from "@/lib/ui-translation-runtime"
@@ -201,26 +201,14 @@ export function RoleAppTour(){
   const {user,roles,loading}=useAuth()
   const role=roles[0]
   const router=useRouter()
-  const pathname=usePathname()
   const [tourRole,setTourRole]=useState<UiRole|null>(null)
   const [preferredWorkplace,setPreferredWorkplace]=useState("")
   const [tourMode,setTourMode]=useState<TourMode>("full")
   const activeRole=tourRole||role
   const setPreview=useCallback((active:boolean)=>dispatchEvent(new CustomEvent("uptilldawn-tour-preview",{detail:{active,role:activeRole}})),[activeRole])
-  const steps=useMemo(()=>{
-    if(!activeRole)return []
-    const workplace=preferredWorkplace.toLowerCase()
-    return tours[activeRole].filter(step=>{
-      const route=step.route?.split("?")[0]
-      if(route==="/sales"&&activeRole!=="admin")return false
-      if(route==="/guestlist"&&!workplace.includes("inkom")&&!workplace.includes("entrance")&&!workplace.includes("guest"))return false
-      return true
-    })
-  },[activeRole,preferredWorkplace])
   const [open,setOpen]=useState(false)
   const [choice,setChoice]=useState(false)
   const [welcome,setWelcome]=useState(false)
-  const [index,setIndex]=useState(0)
   // Keep SSR and the first hydration render identical. Device/manual locale is
   // applied only after mount; this removes the React #418 hydration mismatch.
   const [locale,setLocale]=useState<ExtendedUiLocale>("nl")
@@ -239,7 +227,6 @@ export function RoleAppTour(){
     return translateRuntimeUi(value,locale)
   }
 
-  const step=steps[index]
 
   useEffect(()=>{
     if(loading||!user||!role)return
@@ -311,7 +298,6 @@ export function RoleAppTour(){
       }
       setTourMode(nextMode)
       setTourRole(nextRole)
-      setIndex(0)
       setChoice(false)
       setOpen(false)
       setWelcome(true)
@@ -325,15 +311,6 @@ export function RoleAppTour(){
       dispatchEvent(new CustomEvent("uptilldawn-tour-preview",{detail:{active:false}}))
     }
   },[loading,role,router,user])
-
-  useEffect(()=>{
-    if(!open||!step)return
-    const wanted=step.route?.split("?")[0]
-    if(step.route&&wanted&&pathname!==wanted){
-      router.push(step.route)
-      sessionStorage.setItem("uptilldawn-tour-preview-route","1")
-    }
-  },[index,open,pathname,router,step])
 
   useEffect(()=>{
     if(!user||!role)return
@@ -377,7 +354,6 @@ export function RoleAppTour(){
     if(active)setLocale(active as ExtendedUiLocale)
     setTourRole(role)
     setChoice(false)
-    setIndex(0)
     setOpen(false)
     setWelcome(true)
   }

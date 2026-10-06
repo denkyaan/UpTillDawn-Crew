@@ -5,14 +5,18 @@ import {readFile} from 'node:fs/promises'
 const read=path=>readFile(new URL('../'+path,import.meta.url),'utf8')
 
 test('role tour is hydration-safe and opens real tabs without full reloads',async()=>{
-  const [tour,layout,mobile]=await Promise.all([
+  const [tour,layout,mobile,controller]=await Promise.all([
     read('components/role-app-tour.tsx'),
     read('components/layout/app-layout.tsx'),
     read('components/layout/mobile-nav.tsx'),
+    read('components/training/tour-control-center.tsx'),
   ])
   assert.match(tour,/useState<ExtendedUiLocale>\("nl"\)/)
   assert.doesNotMatch(tour,/initialUiLocale\(/)
-  assert.match(tour,/router\.push\(step\.route\)/)
+  assert.match(tour,/<TourControlCenter active=\{open\}/)
+  assert.doesNotMatch(tour,/router\.push\(step\.route\)/)
+  assert.match(controller,/router\.push\(tourRoute\(role,next\)\)/)
+  assert.doesNotMatch(controller,/location\.assign\(/)
   assert.doesNotMatch(tour,/location\.assign\(step\.route\)/)
   assert.match(tour,/inside:\[/)
   assert.match(tour,/ROLE_FEATURES\.responsible_lead\.map/)
