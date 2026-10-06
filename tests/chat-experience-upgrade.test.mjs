@@ -35,8 +35,9 @@ test('advanced chat experience remains wired end to end',async()=>{
   assert.match(unreadGuard,/v_actor uuid:=auth\.uid\(\)/)
   assert.match(unreadGuard,/not public\.upt_is_approved\(\)/)
   const systemGuard=migration.indexOf('if new.sender_id is null then return new; end if;')
-  const participantLoop=migration.indexOf('from public.upt_chat_channel_people(new.channel_id) person',systemGuard)
-  assert.ok(systemGuard>=0&&participantLoop>systemGuard,'system messages must bypass authenticated participant notification lookup')
+  const participantLoop=migration.indexOf('from public.profiles p',systemGuard)
+  assert.ok(systemGuard>=0&&participantLoop>systemGuard,'system messages must bypass participant notification lookup')
+  assert.doesNotMatch(migration,/from public\.upt_chat_channel_people\(new\.channel_id\)/,'message trigger must not depend on auth.uid()-scoped participant RPC')
 
   assert.match(queue,/mention_ids/)
   assert.match(queue,/upt_send_chat_message_operation_v2/)
