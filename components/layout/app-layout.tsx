@@ -109,31 +109,24 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
     if(!user)return
     const now=new Date()
     const nowIso=now.toISOString()
-    const chatKey=`uptilldawn-last-chat-view:${user.id}`
     const incidentKey=`uptilldawn-last-incidents-view:${user.id}`
     const taskKey=`uptilldawn-last-tasks-view:${user.id}`
-    let chatSince=window.localStorage.getItem(chatKey)
     let incidentSince=window.localStorage.getItem(incidentKey)
     const taskSince=window.localStorage.getItem(taskKey)||"1970-01-01T00:00:00.000Z"
-    if(!chatSince){chatSince=nowIso;window.localStorage.setItem(chatKey,chatSince)}
     if(!incidentSince){incidentSince=nowIso;window.localStorage.setItem(incidentKey,incidentSince)}
-
-    const chatWindowStart=new Date(now.getTime()-3*24*60*60*1000).toISOString()
     const [
       {data:events},
       {data:memberships},
       {data:shifts},
       {data:responsibleAssignments},
-      {data:chatEvents},
-      {data:chatChannels},
+      {data:chatUnreadTotal},
       {data:unreadNotifications},
     ]=await Promise.all([
       supabase.from("events").select("id,start_at,end_at,status").neq("status","archived").gte("end_at",nowIso),
       supabase.from("event_members").select("event_id,event_role").eq("user_id",user.id),
       supabase.from("shifts").select("event_id,workplace_id,scheduled_start,scheduled_end,status").eq("user_id",user.id).neq("status","cancelled"),
       supabase.from("responsible_assignments").select("event_id,workplace_id").eq("user_id",user.id),
-      supabase.from("events").select("id,start_at,end_at,status").neq("status","archived").lte("start_at",nowIso).gte("end_at",chatWindowStart),
-      supabase.from("chat_channels").select("id,kind,event_id,workplace_id").in("kind",["organization","event","workplace"]),
+      supabase.rpc("upt_chat_unread_total"),
       supabase.from("crew_notifications").select("id,link,kind").eq("user_id",user.id).is("read_at",null).limit(500),
     ])
     const notificationRows=unreadNotifications||[]
@@ -212,32 +205,7 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
       setTaskMissed(count)
     }
 
-    if(pathname.startsWith("/chat")){window.localStorage.setItem(chatKey,nowIso);setChatMissed(0)}
-    else if(activeUiRole==="admin"){
-      const {count}=await supabase.from("messages").select("id",{count:"exact",head:true}).gt("created_at",chatSince).neq("sender_id",user.id)
-      setChatMissed(count??0)
-    }else{
-      const chatEventIds=new Set((chatEvents||[]).map(event=>event.id))
-      const ownEventIds=new Set((memberships||[]).map(row=>row.event_id))
-      const ownWorkplaceIds=new Set([
-        ...(shifts||[]).map(row=>row.workplace_id),
-        ...(responsibleAssignments||[]).map(row=>row.workplace_id),
-      ])
-      const allowedChannelIds=(chatChannels||[]).filter(channel=>{
-        if(channel.kind==="organization")return true
-        if(!channel.event_id||!chatEventIds.has(channel.event_id))return false
-        if(channel.kind==="event")return ownEventIds.has(channel.event_id)
-        return Boolean(channel.workplace_id&&ownWorkplaceIds.has(channel.workplace_id))
-      }).map(channel=>channel.id)
-      if(!allowedChannelIds.length)setChatMissed(0)
-      else{
-        const {count}=await supabase.from("messages").select("id",{count:"exact",head:true})
-          .in("channel_id",allowedChannelIds)
-          .gt("created_at",chatSince)
-          .neq("sender_id",user.id)
-        setChatMissed(count??0)
-      }
-    }
+    setChatMissed(Number(chatUnreadTotal||0))
 
     if(pathname.startsWith("/incidents")){window.localStorage.setItem(incidentKey,nowIso);setIncidentMissed(0)}
     else if(activeUiRole==="admin"){
@@ -256,7 +224,7 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
     }else setIncidentMissed(0)
   },[activeUiRole,pathname,supabase,user])
 
-  useEffect(()=>{queueMicrotask(()=>void refresh());const timer=window.setInterval(()=>void refresh(),10000);const focus=()=>void refresh();window.addEventListener("focus",focus);return()=>{window.clearInterval(timer);window.removeEventListener("focus",focus)}},[refresh])
+  useEffect(()=>{queueMicrotask(()=>void refresh());const timer=window.setInterval(()=>void refresh(),10000);const focus=()=>void refresh();const chatRead=()=>void refresh();window.addEventListener("focus",focus);window.addEventListener("uptilldawn-chat-read",chatRead);return()=>{window.clearInterval(timer);window.removeEventListener("focus",focus);window.removeEventListener("uptilldawn-chat-read",chatRead)}},[refresh])
 
   const showOverview=feature("overview",true)
   const showEvents=feature("events",true)
