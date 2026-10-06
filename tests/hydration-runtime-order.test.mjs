@@ -22,6 +22,6 @@ test('event tour follows the current interactive action',async()=>{
 
 test('tour panel text never blocks the highlighted page action',async()=>{
  const source=await readFile(new URL('../components/training/tour-control-center.tsx',import.meta.url),'utf8')
- assert.match(source,/data-tour-panel[\\s\\S]*pointer-events-none/)
- assert.match(source,/pointer-events-auto[\\s\\S]*PAUZEER/)
+ assert.match(source,/data-tour-panel[\s\S]*pointer-events-none/)
+ assert.match(source,/pointer-events-auto[\s\S]*PAUZEER/)
 })
