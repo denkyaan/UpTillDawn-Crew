@@ -73,7 +73,7 @@ function detectMention(value:string,cursor:number):MentionState|null{
   return {start:at,end:cursor,query}
 }
 
-export function ChatClient({channels,defaultChannelId,userId,crewDirectory,isAdmin,profilePhotoUrls,channelImages,privatePeerNames}:{channels:Tables<'chat_channels'>[];defaultChannelId:string;userId:string;crewDirectory:CrewMember[];isAdmin:boolean;profilePhotoUrls:Record<string,string>;channelImages:Record<string,string>;privatePeerNames:Record<string,string>}){
+export function ChatClient({channels,defaultChannelId,userId,crewDirectory,isAdmin,profilePhotoUrls,channelImages,privatePeerNames,privatePeerIds,initialChannelStates,focusMessageId}:{channels:Tables<'chat_channels'>[];defaultChannelId:string;userId:string;crewDirectory:CrewMember[];isAdmin:boolean;profilePhotoUrls:Record<string,string>;channelImages:Record<string,string>;privatePeerNames:Record<string,string>;privatePeerIds:Record<string,string>;initialChannelStates:Record<string,ChatSummary>;focusMessageId:string|null}){
   const router=useRouter()
   const [selected,setSelected]=useState(defaultChannelId||channels[0]?.id||'')
   const [cache,setCache]=useState<Record<string,ChannelCache>>({})
@@ -92,8 +92,28 @@ export function ChatClient({channels,defaultChannelId,userId,crewDirectory,isAdm
   const [replyTo,setReplyTo]=useState<Tables<'messages'>|null>(null)
   const [peopleByChannel,setPeopleByChannel]=useState<Record<string,ChatPerson[]>>({})
   const [mentionState,setMentionState]=useState<MentionState|null>(null)
+  const [channelStates,setChannelStates]=useState<Record<string,ChatSummary>>(initialChannelStates)
+  const [pinsByChannel,setPinsByChannel]=useState<Record<string,ChatPin[]>>({})
+  const [typingUsers,setTypingUsers]=useState<string[]>([])
+  const [loadingOlder,setLoadingOlder]=useState(false)
+  const [searchOpen,setSearchOpen]=useState(false)
+  const [searchQuery,setSearchQuery]=useState('')
+  const [searchSender,setSearchSender]=useState('')
+  const [searchAttachment,setSearchAttachment]=useState('')
+  const [searchFrom,setSearchFrom]=useState('')
+  const [searchTo,setSearchTo]=useState('')
+  const [searchResults,setSearchResults]=useState<ChatSearchResult[]>([])
+  const [searchBusy,setSearchBusy]=useState(false)
+  const [pinsOpen,setPinsOpen]=useState(false)
+  const [profileOpen,setProfileOpen]=useState(false)
+  const [highlightedMessageId,setHighlightedMessageId]=useState<string|null>(null)
+  const unreadCutoffs=useRef<Record<string,string|null>>(Object.fromEntries(Object.entries(initialChannelStates).map(([id,state])=>[id,state.last_read_at||null])))
   const endRef=useRef<HTMLDivElement>(null)
+  const messageListRef=useRef<HTMLDivElement>(null)
   const textareaRef=useRef<HTMLTextAreaElement>(null)
+  const typingStopTimerRef=useRef<number|null>(null)
+  const typingThrottleRef=useRef(0)
+  const draftFilesRef=useRef(new Map<string,File|null>())
 
   useEffect(()=>{
     const stored=window.localStorage.getItem('uptilldawn-chat-auto-translate')==='1'
@@ -101,7 +121,7 @@ export function ChatClient({channels,defaultChannelId,userId,crewDirectory,isAdm
   },[])
 
   const effectiveSelected=selected&&channels.some(channel=>channel.id===selected)?selected:defaultChannelId||channels[0]?.id||''
-  const current=cache[effectiveSelected]||{messages:[],attachments:{},replyTargets:{}}
+  const current=cache[effectiveSelected]||{messages:[],attachments:{},replyTargets:{},hasMore:false}
   const selectedChannel=channels.find(channel=>channel.id===effectiveSelected)
   const currentPeople=peopleByChannel[effectiveSelected]||EMPTY_PEOPLE
 
