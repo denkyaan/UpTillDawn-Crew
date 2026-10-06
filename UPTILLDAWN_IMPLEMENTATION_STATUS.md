@@ -2,6 +2,10 @@
 
 ## Production baseline
 
+### Canonical default — 2026-10-06
+
+Commit `1564670844c84b367b0fd7ae17615e7a8a1779b6` is the approved canonical application default for subsequent work. CI #2815 and Deploy Cloudflare #1038 both succeeded on this exact source state. Preserve this behavior and layout as the regression baseline unless the product owner explicitly approves a later default.
+
 UpTillDawn Crew is deployed from `main` to Cloudflare Workers and uses the production Supabase project `eakoavcieossazqzplke`.
 
 The last fully verified release before the first-use cleanup was:
