@@ -28,6 +28,9 @@ test('advanced chat experience remains wired end to end',async()=>{
   assert.match(migration,/c\.kind in \('event','workplace'\) and public\.upt_is_admin\(\)/)
   assert.match(migration,/maximaal 5 berichten/)
   assert.match(migration,/mute_mode in \('all','mentions','muted'\)/)
+  const systemGuard=migration.indexOf('if new.sender_id is null then return new; end if;')
+  const participantLoop=migration.indexOf('from public.upt_chat_channel_people(new.channel_id) person',systemGuard)
+  assert.ok(systemGuard>=0&&participantLoop>systemGuard,'system messages must bypass authenticated participant notification lookup')
 
   assert.match(queue,/mention_ids/)
   assert.match(queue,/upt_send_chat_message_operation_v2/)
