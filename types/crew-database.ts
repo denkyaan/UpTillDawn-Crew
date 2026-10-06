@@ -2261,6 +2261,7 @@ export type Database = {
           id: string
           moderated_at: string | null
           moderated_by: string | null
+          reply_to_message_id: string | null
           sender_id: string | null
           user_id: string
           workplace_id: string | null
@@ -2274,6 +2275,7 @@ export type Database = {
           id?: string
           moderated_at?: string | null
           moderated_by?: string | null
+          reply_to_message_id?: string | null
           sender_id?: string | null
           user_id: string
           workplace_id?: string | null
@@ -2287,6 +2289,7 @@ export type Database = {
           id?: string
           moderated_at?: string | null
           moderated_by?: string | null
+          reply_to_message_id?: string | null
           sender_id?: string | null
           user_id?: string
           workplace_id?: string | null
@@ -2311,6 +2314,13 @@ export type Database = {
             columns: ["moderated_by"]
             isOneToOne: false
             referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "messages_reply_to_message_id_fkey"
+            columns: ["reply_to_message_id"]
+            isOneToOne: false
+            referencedRelation: "messages"
             referencedColumns: ["id"]
           },
           {
@@ -4804,6 +4814,14 @@ export type Database = {
         }
         Returns: string
       }
+      upt_chat_channel_people: {
+        Args: { p_channel: string }
+        Returns: {
+          full_name: string
+          id: string
+          profile_photo_url: string
+        }[]
+      }
       upt_crew_directory: {
         Args: never
         Returns: {
@@ -5503,6 +5521,25 @@ export type Database = {
       upt_self_heal_resolve_error_report: {
         Args: { p_report: string }
         Returns: boolean
+      }
+      upt_send_chat_message_operation: {
+        Args: {
+          p_body: string
+          p_channel: string
+          p_operation: string
+          p_reply_to?: string
+        }
+        Returns: string
+      }
+      upt_send_chat_photo_message_operation: {
+        Args: {
+          p_attachment_path: string
+          p_body: string
+          p_channel: string
+          p_operation: string
+          p_reply_to?: string
+        }
+        Returns: string
       }
       upt_send_message: {
         Args: { p_attachment_path?: string; p_body?: string; p_channel: string }
