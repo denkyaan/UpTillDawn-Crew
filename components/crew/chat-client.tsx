@@ -93,6 +93,7 @@ export function ChatClient({channels,defaultChannelId,userId,crewDirectory,isAdm
   const [pendingDraftReplyId,setPendingDraftReplyId]=useState<string|null>(null)
   const [peopleByChannel,setPeopleByChannel]=useState<Record<string,ChatPerson[]>>({})
   const [mentionState,setMentionState]=useState<MentionState|null>(null)
+  const [selectedMentionIds,setSelectedMentionIds]=useState<string[]>([])
   const [channelStates,setChannelStates]=useState<Record<string,ChatSummary>>(initialChannelStates)
   const [pinsByChannel,setPinsByChannel]=useState<Record<string,ChatPin[]>>({})
   const [typingUsers,setTypingUsers]=useState<string[]>([])
@@ -167,11 +168,13 @@ export function ChatClient({channels,defaultChannelId,userId,crewDirectory,isAdm
     if(initialDraftLoadedRef.current||!effectiveSelected)return
     initialDraftLoadedRef.current=true
     try{
-      const stored=JSON.parse(window.localStorage.getItem(`uptilldawn-chat-draft:${userId}:${effectiveSelected}`)||'{}') as {body?:string;replyId?:string|null}
+      const stored=JSON.parse(window.localStorage.getItem(`uptilldawn-chat-draft:${userId}:${effectiveSelected}`)||'{}') as {body?:string;replyId?:string|null;mentionIds?:string[]}
       const nextBody=stored.body||''
       const nextReplyId=stored.replyId||null
+      const nextMentionIds=Array.isArray(stored.mentionIds)?stored.mentionIds.filter(id=>typeof id==='string'):[]
       queueMicrotask(()=>{
         setBody(nextBody)
+        setSelectedMentionIds(nextMentionIds)
         if(nextReplyId)setPendingDraftReplyId(nextReplyId)
       })
     }catch{}
@@ -256,10 +259,10 @@ export function ChatClient({channels,defaultChannelId,userId,crewDirectory,isAdm
 
   useEffect(()=>{
     if(!initialDraftLoadedRef.current||!effectiveSelected)return
-    const payload={body,replyId:replyTo?.id||pendingDraftReplyId||null}
-    if(payload.body.trim()||payload.replyId)window.localStorage.setItem(`uptilldawn-chat-draft:${userId}:${effectiveSelected}`,JSON.stringify(payload))
+    const payload={body,replyId:replyTo?.id||pendingDraftReplyId||null,mentionIds:selectedMentionIds}
+    if(payload.body.trim()||payload.replyId||payload.mentionIds.length)window.localStorage.setItem(`uptilldawn-chat-draft:${userId}:${effectiveSelected}`,JSON.stringify(payload))
     else window.localStorage.removeItem(`uptilldawn-chat-draft:${userId}:${effectiveSelected}`)
-  },[body,replyTo?.id,pendingDraftReplyId,effectiveSelected,userId])
+  },[body,replyTo?.id,pendingDraftReplyId,selectedMentionIds,effectiveSelected,userId])
 
   useEffect(()=>{
     if(!pendingDraftReplyId)return
@@ -302,20 +305,21 @@ export function ChatClient({channels,defaultChannelId,userId,crewDirectory,isAdm
 
   function saveDraft(channelId:string){
     if(!channelId)return
-    const payload={body,replyId:replyTo?.id||pendingDraftReplyId||null}
-    if(payload.body.trim()||payload.replyId)window.localStorage.setItem(`uptilldawn-chat-draft:${userId}:${channelId}`,JSON.stringify(payload))
+    const payload={body,replyId:replyTo?.id||pendingDraftReplyId||null,mentionIds:selectedMentionIds}
+    if(payload.body.trim()||payload.replyId||payload.mentionIds.length)window.localStorage.setItem(`uptilldawn-chat-draft:${userId}:${channelId}`,JSON.stringify(payload))
     else window.localStorage.removeItem(`uptilldawn-chat-draft:${userId}:${channelId}`)
     draftFilesRef.current.set(channelId,file)
   }
 
   function restoreDraft(channelId:string){
     try{
-      const stored=JSON.parse(window.localStorage.getItem(`uptilldawn-chat-draft:${userId}:${channelId}`)||'{}') as {body?:string;replyId?:string|null}
+      const stored=JSON.parse(window.localStorage.getItem(`uptilldawn-chat-draft:${userId}:${channelId}`)||'{}') as {body?:string;replyId?:string|null;mentionIds?:string[]}
       setBody(stored.body||'')
+      setSelectedMentionIds(Array.isArray(stored.mentionIds)?stored.mentionIds.filter(id=>typeof id==='string'):[])
       const restored=stored.replyId?messageLookup.get(stored.replyId)||null:null
       setReplyTo(restored)
       setPendingDraftReplyId(stored.replyId&&!restored?stored.replyId:null)
-    }catch{setBody('');setReplyTo(null);setPendingDraftReplyId(null)}
+    }catch{setBody('');setReplyTo(null);setPendingDraftReplyId(null);setSelectedMentionIds([])}
     setFile(draftFilesRef.current.get(channelId)||null)
     setFileKey(key=>key+1)
   }
@@ -358,6 +362,7 @@ export function ChatClient({channels,defaultChannelId,userId,crewDirectory,isAdm
     const next=body.slice(0,mentionState.start)+replacement+body.slice(mentionState.end)
     const cursor=mentionState.start+replacement.length
     setBody(next)
+    setSelectedMentionIds(previous=>previous.includes(person.id)?previous:[...previous,person.id])
     setMentionState(null)
     requestAnimationFrame(()=>{
       textareaRef.current?.focus()
@@ -567,7 +572,8 @@ export function ChatClient({channels,defaultChannelId,userId,crewDirectory,isAdm
     setStatus(translateRuntimeUi('Verzenden…',uiLocale))
     try{
       const replyId=replyTo?.id||null
-      const mentionIds=mentionIdsForText(trimmed,currentPeople,userId)
+      const presentMentionIds=new Set(mentionIdsForText(trimmed,currentPeople,userId))
+      const mentionIds=selectedMentionIds.filter(id=>presentMentionIds.has(id))
       if(file){
         await enqueueChatPhoto(userId,effectiveSelected,trimmed,file,replyId,mentionIds)
         setBody('')
@@ -582,6 +588,7 @@ export function ChatClient({channels,defaultChannelId,userId,crewDirectory,isAdm
       setReplyTo(null)
       setPendingDraftReplyId(null)
       setMentionState(null)
+      setSelectedMentionIds([])
       draftFilesRef.current.delete(effectiveSelected)
       window.localStorage.removeItem(`uptilldawn-chat-draft:${userId}:${effectiveSelected}`)
       void setTyping(false)
@@ -810,7 +817,7 @@ export function ChatClient({channels,defaultChannelId,userId,crewDirectory,isAdm
           maxLength={4000}
           rows={2}
           value={body}
-          onChange={event=>{const value=event.target.value;setBody(value);refreshMentionState(value,event.target.selectionStart);void setTyping(Boolean(value.trim()))}}
+          onChange={event=>{const value=event.target.value;setBody(value);const present=new Set(mentionIdsForText(value,currentPeople,userId));setSelectedMentionIds(previous=>previous.filter(id=>present.has(id)));refreshMentionState(value,event.target.selectionStart);void setTyping(Boolean(value.trim()))}}
           onSelect={event=>refreshMentionState(body,event.currentTarget.selectionStart)}
           placeholder="Typ een bericht…"
           className="max-h-32 min-h-11 min-w-0 flex-1 resize-none rounded-2xl border bg-card px-4 py-3 text-sm"
