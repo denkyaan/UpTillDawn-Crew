@@ -263,6 +263,76 @@ function translateAdminLockout(value:string,locale:ExtendedUiLocale){
   return `3 Admin-Anmeldeversuche sind fehlgeschlagen. Konto: ${account}. IP: ${ip}. Standort (ungefähr): ${location}. Gerät/Browser: ${device}. Anmeldung für 15 Minuten gesperrt.`
 }
 
+
+const BIRTHDAY_SYSTEM_VARIANTS:Record<ExtendedUiLocale,readonly string[]>={
+  nl:[
+    '🥳 Vandaag vieren we {name}! Van harte gefeliciteerd met je verjaardag. Geniet van alle mooie momenten en maak er een topdag van! 🎉🎂',
+    '🎉 Hiep hiep hoera voor {name}! Een hele fijne verjaardag gewenst vol plezier, goeie vibes en onvergetelijke momenten! 🥳🎁',
+    '🎂 Vandaag staat {name} in de spotlight! Gefeliciteerd met je verjaardag en geniet volop van jouw speciale dag! ✨🥳',
+    '🎈 Feestmodus aan voor {name}! Van harte gefeliciteerd en maak van vandaag een dag om niet te vergeten! 🥳🎉',
+    '🥂 Een dikke verjaardagswens voor {name}! Geniet van je dag, lach veel en maak mooie herinneringen! 🎂🎊',
+    '🌟 Vandaag draait alles om {name}! Gefeliciteerd met je verjaardag en maak er iets fantastisch van! 🥳🎁',
+    '🎁 Happy birthday vibes voor {name}! We wensen je een dag vol geluk, plezier en alles waar je blij van wordt! 🎉🥳',
+    '🎊 Tijd om {name} te vieren! Van harte gefeliciteerd en geniet van elke seconde van je verjaardag! 🎂✨',
+    '🥳 Een extra feestelijke dag voor {name}! Gefeliciteerd en hopelijk wordt vandaag minstens zo geweldig als jij! 🎉🎈',
+    '🎂 Kaarsjes, goeie vibes en feest voor {name}! Van harte gefeliciteerd en geniet maximaal van je verjaardag! 🥳🎁',
+    '✨ Vandaag is van {name}! Gefeliciteerd met je verjaardag en maak er samen met iedereen een onvergetelijke dag van! 🎉🎂',
+    '🎉 Groot feest voor {name}! We wensen je een fantastische verjaardag vol plezier, mooie verrassingen en goeie herinneringen! 🥳🎁',
+  ],
+  fr:[
+    '🥳 Aujourd’hui, on fête {name} ! Joyeux anniversaire. Profite de chaque beau moment et passe une journée exceptionnelle ! 🎉🎂',
+    '🎉 Hip hip hip hourra pour {name} ! On te souhaite un très bel anniversaire rempli de plaisir, de bonnes ondes et de moments inoubliables ! 🥳🎁',
+    '🎂 Aujourd’hui, {name} est sous les projecteurs ! Joyeux anniversaire et profite pleinement de cette journée rien qu’à toi ! ✨🥳',
+    '🎈 Mode fête activé pour {name} ! Joyeux anniversaire et fais de cette journée un souvenir inoubliable ! 🥳🎉',
+    '🥂 Un énorme vœu d’anniversaire pour {name} ! Profite de ta journée, ris beaucoup et crée de beaux souvenirs ! 🎂🎊',
+    '🌟 Aujourd’hui, tout tourne autour de {name} ! Joyeux anniversaire et fais-en quelque chose de fantastique ! 🥳🎁',
+    '🎁 Ambiance anniversaire pour {name} ! On te souhaite une journée pleine de bonheur, de plaisir et de tout ce qui te fait sourire ! 🎉🥳',
+    '🎊 Il est temps de célébrer {name} ! Joyeux anniversaire et profite de chaque seconde de ta journée ! 🎂✨',
+    '🥳 Une journée encore plus festive pour {name} ! Joyeux anniversaire, et on espère qu’elle sera au moins aussi géniale que toi ! 🎉🎈',
+    '🎂 Bougies, bonnes ondes et fête pour {name} ! Joyeux anniversaire et profite à fond de ta journée ! 🥳🎁',
+    '✨ Aujourd’hui, c’est la journée de {name} ! Joyeux anniversaire et rends-la inoubliable avec tout le monde ! 🎉🎂',
+    '🎉 Grande fête pour {name} ! On te souhaite un anniversaire fantastique rempli de plaisir, de belles surprises et de super souvenirs ! 🥳🎁',
+  ],
+  en:[
+    '🥳 Today we’re celebrating {name}! Happy birthday. Enjoy every great moment and make it an amazing day! 🎉🎂',
+    '🎉 Hip hip hooray for {name}! Wishing you a fantastic birthday full of fun, good vibes and unforgettable moments! 🥳🎁',
+    '🎂 Today {name} is in the spotlight! Happy birthday and enjoy every bit of your special day! ✨🥳',
+    '🎈 Party mode on for {name}! Happy birthday and make today one to remember! 🥳🎉',
+    '🥂 A huge birthday wish for {name}! Enjoy your day, laugh a lot and make great memories! 🎂🎊',
+    '🌟 Today is all about {name}! Happy birthday and make it something fantastic! 🥳🎁',
+    '🎁 Birthday vibes for {name}! Wishing you a day full of happiness, fun and everything that makes you smile! 🎉🥳',
+    '🎊 Time to celebrate {name}! Happy birthday and enjoy every second of your day! 🎂✨',
+    '🥳 An extra festive day for {name}! Happy birthday — hope today is at least as awesome as you are! 🎉🎈',
+    '🎂 Candles, good vibes and celebration for {name}! Happy birthday and enjoy your day to the fullest! 🥳🎁',
+    '✨ Today belongs to {name}! Happy birthday and make it an unforgettable day with everyone! 🎉🎂',
+    '🎉 Big celebration for {name}! Wishing you a fantastic birthday full of fun, great surprises and amazing memories! 🥳🎁',
+  ],
+  de:[
+    '🥳 Heute feiern wir {name}! Alles Gute zum Geburtstag. Genieß jeden schönen Moment und mach daraus einen großartigen Tag! 🎉🎂',
+    '🎉 Hoch soll {name} leben! Wir wünschen dir einen fantastischen Geburtstag voller Spaß, guter Stimmung und unvergesslicher Momente! 🥳🎁',
+    '🎂 Heute steht {name} im Rampenlicht! Alles Gute zum Geburtstag und genieß deinen besonderen Tag in vollen Zügen! ✨🥳',
+    '🎈 Partymodus an für {name}! Alles Gute zum Geburtstag und mach diesen Tag unvergesslich! 🥳🎉',
+    '🥂 Ein riesiger Geburtstagsgruß für {name}! Genieß deinen Tag, lach viel und sammle schöne Erinnerungen! 🎂🎊',
+    '🌟 Heute dreht sich alles um {name}! Alles Gute zum Geburtstag und mach etwas Fantastisches daraus! 🥳🎁',
+    '🎁 Geburtstagsstimmung für {name}! Wir wünschen dir einen Tag voller Glück, Spaß und allem, was dich zum Lächeln bringt! 🎉🥳',
+    '🎊 Zeit, {name} zu feiern! Alles Gute zum Geburtstag und genieß jede Sekunde deines Tages! 🎂✨',
+    '🥳 Ein besonders festlicher Tag für {name}! Alles Gute zum Geburtstag – hoffentlich wird er mindestens so großartig wie du! 🎉🎈',
+    '🎂 Kerzen, gute Stimmung und Feierlaune für {name}! Alles Gute zum Geburtstag und genieß deinen Tag in vollen Zügen! 🥳🎁',
+    '✨ Heute gehört der Tag {name}! Alles Gute zum Geburtstag und mach ihn gemeinsam mit allen unvergesslich! 🎉🎂',
+    '🎉 Große Feier für {name}! Wir wünschen dir einen fantastischen Geburtstag voller Spaß, schöner Überraschungen und toller Erinnerungen! 🥳🎁',
+  ],
+}
+
+export function translateSystemMessage(body:string,content:string|null|undefined,locale:ExtendedUiLocale):string{
+  const marker=content?.match(/^upt-birthday:v2:(\d{1,2}):([\s\S]+)$/)
+  if(marker){
+    const index=Number(marker[1])-1
+    const template=BIRTHDAY_SYSTEM_VARIANTS[locale]?.[index]
+    if(template)return template.replace('{name}',marker[2])
+  }
+  return translateRuntimeUi(body,locale)
+}
+
 function translateBirthdayAndProfileCopy(value:string,locale:ExtendedUiLocale){
   const personalizedBirthday=value.match(/^Van harte gefeliciteerd met je verjaardag, (.+)!🥳 Laat het een fantastische dag zijn en maak er het beste van! 🎉🎉$/)
   if(personalizedBirthday){

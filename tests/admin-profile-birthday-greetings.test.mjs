@@ -3,14 +3,16 @@ import assert from 'node:assert/strict'
 import { readFile } from 'node:fs/promises'
 
 test('admin profile policy and birthday automation stay wired together', async () => {
-  const [profile,settings,chat,runtime,push,migration,personalizedMigration]=await Promise.all([
+  const [profile,settings,chat,chatPage,runtime,push,migration,personalizedMigration,variedMigration]=await Promise.all([
     readFile(new URL('../components/crew/profile-form.tsx',import.meta.url),'utf8'),
     readFile(new URL('../app/(app)/settings/page.tsx',import.meta.url),'utf8'),
     readFile(new URL('../components/crew/chat-client.tsx',import.meta.url),'utf8'),
+    readFile(new URL('../app/(app)/chat/page.tsx',import.meta.url),'utf8'),
     readFile(new URL('../lib/ui-translation-runtime.ts',import.meta.url),'utf8'),
     readFile(new URL('../supabase/functions/push-notification/i18n.ts',import.meta.url),'utf8'),
     readFile(new URL('../supabase/migrations/20261006113000_admin_profile_birthday_greetings.sql',import.meta.url),'utf8'),
     readFile(new URL('../supabase/migrations/20261006114500_personalized_birthday_chat.sql',import.meta.url),'utf8'),
+    readFile(new URL('../supabase/migrations/20261006115500_birthday_private_and_varied_messages.sql',import.meta.url),'utf8'),
   ])
 
   assert.ok(settings.includes("isAdminProfile={current?.realRole==='admin'}"))
@@ -36,4 +38,17 @@ test('admin profile policy and birthday automation stay wired together', async (
   assert.ok(personalizedMigration.includes("Van harte gefeliciteerd met je verjaardag, %s!🥳"))
   assert.ok(personalizedMigration.includes("v_person.full_name"))
   assert.ok(push.includes('"Het is je verjaardag!🥳🎁"'))
+  assert.ok(chat.includes("privateChannels=channels.filter(c=>c.kind==='private')"))
+  assert.ok(chat.includes("translateSystemMessage(message.body||'',message.content,uiLocale)"))
+  assert.ok(chat.includes("selectedChannel.kind!=='private'"))
+  assert.ok(chatPage.includes("['organization','event','workplace','private']"))
+  assert.ok(chatPage.includes("params.private==='1'"))
+  assert.ok(runtime.includes('upt-birthday:v2:'))
+  assert.ok(runtime.includes('BIRTHDAY_SYSTEM_VARIANTS'))
+  assert.ok(variedMigration.includes("private_message_id"))
+  assert.ok(variedMigration.includes("Up Till Dawn · persoonlijk"))
+  assert.ok(variedMigration.includes("upt-birthday:v2:"))
+  assert.ok(variedMigration.includes("v_variant := 1 + mod"))
+  assert.ok(variedMigration.includes("'/chat?private=1'"))
+  assert.ok(variedMigration.includes("c.kind='private'"))
 })
