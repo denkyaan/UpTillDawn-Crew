@@ -8,7 +8,7 @@ import {createClient} from '@/lib/supabase/crew-client'
 import {enqueue,enqueueChatPhoto} from '@/lib/crew-queue'
 import type {Database,Tables} from '@/types/crew-database'
 import {liveTranslateText,type LiveTranslationLocale} from '@/lib/browser-live-translation'
-import {translateRuntimeUi,translateSystemMessage} from '@/lib/ui-translation-runtime'
+import {translateSystemMessage} from '@/lib/ui-translation-runtime'
 type CrewMember=Database['public']['Functions']['upt_crew_directory']['Returns'][number]
 type Attachment={url:string;mimeType:string|null}
 type ChannelCache={messages:Tables<'messages'>[];attachments:Record<string,Attachment[]>}
