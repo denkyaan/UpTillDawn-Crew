@@ -2,6 +2,7 @@
 
 import {useCallback,useEffect,useMemo,useRef,useState} from "react"
 import {usePathname,useRouter} from "next/navigation"
+import {tourPanelLayout} from "@/lib/tour-panel-layout"
 import {activeUiLocale,LANGUAGE_APPLIED_EVENT,type SupportedUiLocale} from "@/lib/locale-preferences"
 import {
   TOUR_SESSION_KEY,
@@ -131,7 +132,8 @@ export function TourControlCenter({active,userId,role,preferredWorkplace,mode="f
       frame=requestAnimationFrame(()=>{if(stopped)return;const r=target.getBoundingClientRect();setRect({left:Math.max(4,r.left-5),top:Math.max(4,r.top-5),width:Math.max(24,r.width+10),height:Math.max(24,r.height+10)})})
     }
     const locate=()=>{
-      const found=document.querySelector('[data-tour-demo="primary-action"]:not(:disabled)')||document.querySelector(selector)
+      const container=document.querySelector(selector)
+      const found=document.querySelector('[data-tour-demo="primary-action"]:not(:disabled)')||container?.querySelector('button:not(:disabled), summary, input:not(:disabled)')||container
       if(found){const style=getComputedStyle(found);if(style.display!=="none"&&style.visibility!=="hidden"&&found.getClientRects().length){cancelAnimationFrame(resetFrame);setTargetReady(true);setTargetMissing(false);updateRect(found);located=true;return true}}
       return false
     }
@@ -207,7 +209,7 @@ export function TourControlCenter({active,userId,role,preferredWorkplace,mode="f
       <div aria-hidden className="pointer-events-none fixed z-[188] animate-pulse rounded-xl border-[3px] border-violet-400 shadow-[0_0_0_9999px_rgba(0,0,0,0.52),0_0_28px_rgba(139,92,246,0.95)] transition-all duration-300" style={{left:rect.left,top:rect.top,width:rect.width,height:rect.height}}/>
       <div aria-hidden className="pointer-events-none fixed z-[189] -translate-x-1/2 rounded-full border-2 border-violet-300 bg-violet-600 px-3 py-1.5 text-xs font-black text-white shadow-xl" style={{left:Math.min(window.innerWidth-62,Math.max(62,rect.left+rect.width/2)),top:Math.max(6,rect.top-38)}}>↓ {c(locale,"HIER","HERE","ICI","HIER")}</div>
     </>}
-    <aside data-no-translate className="fixed bottom-[calc(env(safe-area-inset-bottom)+5.25rem)] left-3 right-3 z-[190] mx-auto max-w-sm rounded-2xl border border-violet-500/50 bg-background/95 p-3 shadow-2xl backdrop-blur sm:left-auto sm:right-4 sm:bottom-4 sm:mx-0">
+    <aside data-no-translate data-tour-panel style={tourPanelLayout(rect,window.innerHeight,window.innerWidth<1024)} className="overflow-y-auto fixed bottom-[calc(env(safe-area-inset-bottom)+5.25rem)] left-3 right-3 z-[190] mx-auto max-w-sm rounded-2xl border border-violet-500/50 bg-background/95 p-3 shadow-2xl backdrop-blur sm:left-auto sm:right-4 sm:bottom-4 sm:mx-0">
       <div className="flex items-start justify-between gap-3"><div className="min-w-0"><div className="flex flex-wrap items-center gap-2"><span className="text-[10px] font-black uppercase tracking-[.18em] text-violet-500">{c(locale,"Rondleiding","Tour","Visite","Rundgang")} · {currentIndex+1}/{chapters.length}</span>{isNew&&<span className="rounded-full border border-emerald-500/50 px-2 py-0.5 text-[10px] font-black text-emerald-500">{c(locale,"NIEUW","NEW","NOUVEAU","NEU")}</span>}</div><h2 className="mt-1 truncate text-base font-black">{current.title[locale]}</h2><p className="mt-1 text-xs leading-5 text-muted-foreground">{current.description[locale]}</p></div><button type="button" onClick={()=>setDetailsOpen(value=>!value)} aria-expanded={detailsOpen} aria-controls="tour-step-details" className="shrink-0 rounded-lg border px-3 py-2 text-xs font-black" aria-label={c(locale,"Uitleg","Explanation","Explication","Erklärung")}>{detailsOpen?"−":"?"}</button><button type="button" onClick={()=>setIndexOpen(value=>!value)} className="shrink-0 rounded-lg border px-3 py-2 text-xs font-black">{indexOpen?c(locale,"SLUIT","CLOSE","FERMER","SCHLIESSEN"):c(locale,"INDEX","INDEX","INDEX","INDEX")}</button></div>
       <div className="mt-3 h-1.5 overflow-hidden rounded-full bg-muted"><div className="h-full bg-violet-500 transition-all" style={{width:percent+"%"}}/></div>
       <div className="mt-2 flex items-center justify-between text-[10px] text-muted-foreground"><span>{completedCount}/{chapters.length} {c(locale,"afgerond","completed","terminés","abgeschlossen")}</span><span>{percent}%</span></div>

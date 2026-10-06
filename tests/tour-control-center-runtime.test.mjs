@@ -4,6 +4,7 @@ import {readFile} from 'node:fs/promises'
 import vm from 'node:vm'
 import ts from 'typescript'
 import * as training from '../lib/tour-training.ts'
+import * as panelLayout from '../lib/tour-panel-layout.ts'
 
 const source=await readFile(new URL('../components/training/tour-control-center.tsx',import.meta.url),'utf8')
 const compiled=ts.transpileModule(source,{compilerOptions:{module:ts.ModuleKind.CommonJS,jsx:ts.JsxEmit.ReactJSX,target:ts.ScriptTarget.ES2022}}).outputText
@@ -28,8 +29,8 @@ function harness({visible=true,locale='en',chapter='overview',startPath}={}){
   const router={push:route=>routes.push(route)}
   const dispatchEvent=event=>{for(const fn of [...(listeners.get(event.type)||[])])fn(event);return true}
   const rect={left:10,top:80,width:180,height:40}
-  const element={scrollIntoView(){},getBoundingClientRect:()=>rect,getClientRects:()=>visible?[rect]:[]}
-  const context={exports:{},require(name){if(name==='react')return hooks;if(name==='react/jsx-runtime')return {jsx,jsxs:jsx,Fragment:'fragment'};if(name==='next/navigation')return {useRouter:()=>router,usePathname:()=>pathname};if(name==='@/lib/tour-training')return training;if(name==='@/lib/locale-preferences')return {activeUiLocale:()=>locale,LANGUAGE_APPLIED_EVENT:'language'};throw Error(name)},
+  const element={querySelector:()=>null,scrollIntoView(){},getBoundingClientRect:()=>rect,getClientRects:()=>visible?[rect]:[]}
+  const context={exports:{},require(name){if(name==='react')return hooks;if(name==='react/jsx-runtime')return {jsx,jsxs:jsx,Fragment:'fragment'};if(name==='next/navigation')return {useRouter:()=>router,usePathname:()=>pathname};if(name==='@/lib/tour-training')return training;if(name==='@/lib/tour-panel-layout')return panelLayout;if(name==='@/lib/locale-preferences')return {activeUiLocale:()=>locale,LANGUAGE_APPLIED_EVENT:'language'};throw Error(name)},
     localStorage,sessionStorage,location:{pathname,search:'?tour=1'},innerWidth:390,innerHeight:844,
     fetch:async(url,options)=>{requests.push({url,...options});return {ok:true}},
     document:{querySelector:()=>visible?element:null,body:{}},
@@ -140,4 +141,17 @@ test('starting a saved tour from settings opens its saved chapter without comple
   app.navigate('/')
   assert.equal(app.progress().activeKey,'overview')
   app.unmount()
+})
+
+
+test('tour panel stays outside the highlighted control on mobile and desktop',()=>{
+  for(const [height,mobile] of [[844,true],[932,true],[500,true],[800,false]]){
+    for(const top of [90,200,height/2,height-160]){
+      const target={top,height:44}
+      const panel=panelLayout.tourPanelLayout(target,height,mobile)
+      const panelTop=panel.top==='auto'?height-panel.bottom-panel.maxHeight:panel.top
+      assert.ok(panel.maxHeight>=0)
+      assert.ok(panelTop+panel.maxHeight<=target.top-12||panelTop>=target.top+target.height+12,JSON.stringify({target,panel,height}))
+    }
+  }
 })

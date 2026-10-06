@@ -457,9 +457,10 @@ try {
         console.log(`PASS ${bot} tour explanation + overview/event/workplace navigation + pause persistence`)
       }
 
+      if(diagnostics.pageErrors.length)throw new Error(`Unhandled browser errors: ${JSON.stringify(diagnostics.pageErrors)}`)
       console.log(`PASS ${bot} authenticated + workflow surfaces ${viewport.width}x${viewport.height}`)
     } catch (error) {
-      failures.push(`${bot}: ${error instanceof Error ? error.message : String(error)}`)
+      failures.push(`${bot}: ${error instanceof Error ? error.message : String(error)}; pageErrors=${JSON.stringify(diagnostics.pageErrors)}; consoleErrors=${JSON.stringify(diagnostics.consoleErrors.slice(-5))}`)
     } finally {
       await context.close()
     }
