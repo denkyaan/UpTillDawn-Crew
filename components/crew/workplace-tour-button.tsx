@@ -19,8 +19,8 @@ const key=(name:string)=>{
 export function WorkplaceTourButton({workplaceName,roleName}:{workplaceName:string;roleName:string}){
  const [open,setOpen]=useState(false)
  const [step,setStep]=useState(0)
- const [l,setL]=useState<SupportedUiLocale>(()=>typeof window==='undefined'?'nl':activeUiLocale())
- useEffect(()=>{const apply=()=>setL(activeUiLocale());addEventListener(LANGUAGE_APPLIED_EVENT,apply);return()=>removeEventListener(LANGUAGE_APPLIED_EVENT,apply)},[])
+ const [l,setL]=useState<SupportedUiLocale>('nl')
+ useEffect(()=>{const apply=()=>setL(activeUiLocale());apply();addEventListener(LANGUAGE_APPLIED_EVENT,apply);return()=>removeEventListener(LANGUAGE_APPLIED_EVENT,apply)},[])
  const common=[
   t(l,'Lees eerst de briefing van deze shift en controleer je werkplek en uren.','First read this shift briefing and check your workplace and hours.','Lisez d’abord le briefing de ce shift et vérifiez votre poste et vos heures.','Lies zuerst das Briefing dieser Schicht und prüfe Arbeitsplatz und Zeiten.'),
   t(l,'Meld je bij de verantwoordelijke en voer de check-in uit wanneer je shift start.','Report to the responsible lead and check in when your shift starts.','Présentez-vous au responsable et effectuez le check-in au début du shift.','Melde dich bei der verantwortlichen Person und checke zu Schichtbeginn ein.'),
