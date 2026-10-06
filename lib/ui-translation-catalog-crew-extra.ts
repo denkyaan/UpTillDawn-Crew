@@ -181,6 +181,11 @@ export const CREW_EXTRA_TRANSLATIONS:Record<string,Row>={
   "Verzenden…":{fr:"Envoi…",en:"Sending…",de:"Wird gesendet…"},
   "Verzonden.":{fr:"Envoyé.",en:"Sent.",de:"Gesendet."},
   "Bericht staat in de wachtrij.":{fr:"Le message est en file d’attente.",en:"Message is queued.",de:"Nachricht ist in der Warteschlange."},
+  "Oudere berichten konden niet worden geladen.":{fr:"Les anciens messages n’ont pas pu être chargés.",en:"Older messages could not be loaded.",de:"Ältere Nachrichten konnten nicht geladen werden."},
+  "Zoeken mislukt.":{fr:"La recherche a échoué.",en:"Search failed.",de:"Suche fehlgeschlagen."},
+  "Bericht vastgepind.":{fr:"Message épinglé.",en:"Message pinned.",de:"Nachricht angepinnt."},
+  "Pin verwijderd.":{fr:"Épingle retirée.",en:"Pin removed.",de:"Pin entfernt."},
+  "Meldingen bijgewerkt.":{fr:"Notifications mises à jour.",en:"Notifications updated.",de:"Benachrichtigungen aktualisiert."},
 }
 
 const CANONICAL=new Map<string,string>()
