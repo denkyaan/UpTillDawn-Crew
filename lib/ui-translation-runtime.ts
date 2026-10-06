@@ -354,6 +354,42 @@ function translateBirthdayAndProfileCopy(value:string,locale:ExtendedUiLocale){
   return rows[value]?.[locale]||null
 }
 
+function translateChatNotification(value:string,locale:ExtendedUiLocale){
+  const mention=value.match(/^(.+) heeft je vermeld in (.+)$/)
+  if(mention){
+    const [,name,channel]=mention
+    if(locale==='fr')return `${name} vous a mentionné dans ${channel}`
+    if(locale==='en')return `${name} mentioned you in ${channel}`
+    if(locale==='de')return `${name} hat dich in ${channel} erwähnt`
+    return value
+  }
+  const reply=value.match(/^(.+) heeft op je bericht geantwoord$/)
+  if(reply){
+    const name=reply[1]
+    if(locale==='fr')return `${name} a répondu à votre message`
+    if(locale==='en')return `${name} replied to your message`
+    if(locale==='de')return `${name} hat auf deine Nachricht geantwortet`
+    return value
+  }
+  const privateMessage=value.match(/^Nieuw privébericht van (.+)$/)
+  if(privateMessage){
+    const name=privateMessage[1]
+    if(locale==='fr')return `Nouveau message privé de ${name}`
+    if(locale==='en')return `New private message from ${name}`
+    if(locale==='de')return `Neue private Nachricht von ${name}`
+    return value
+  }
+  const groupMessage=value.match(/^Nieuw bericht in (.+)$/)
+  if(groupMessage){
+    const channel=groupMessage[1]
+    if(locale==='fr')return `Nouveau message dans ${channel}`
+    if(locale==='en')return `New message in ${channel}`
+    if(locale==='de')return `Neue Nachricht in ${channel}`
+    return value
+  }
+  return null
+}
+
 function translateActionCenterTitle(value:string,locale:ExtendedUiLocale){
   const match=value.match(/^(ACCOUNT GOEDKEUREN|INKLOKKEN|UITKLOKKEN|INKLOKKEN ONTBREEKT|HELP) · (.+)$/)
   if(!match)return null
@@ -370,7 +406,7 @@ function translateActionCenterTitle(value:string,locale:ExtendedUiLocale){
 }
 
 export function translateRuntimeUi(value:string,locale:ExtendedUiLocale):string{
-  const dynamicTranslators=[translateBirthdayAndProfileCopy,translateRequestStatus,translateShiftReminder,translateUnderstaffing,translateAccountApproval,translateEventReportReady,translateInventoryQuantity,translateDriverDeparture,translateDriverArrival,translateAdminLockout] as const
+  const dynamicTranslators=[translateBirthdayAndProfileCopy,translateChatNotification,translateRequestStatus,translateShiftReminder,translateUnderstaffing,translateAccountApproval,translateEventReportReady,translateInventoryQuantity,translateDriverDeparture,translateDriverArrival,translateAdminLockout] as const
   for(const translator of dynamicTranslators){
     const translated=translator(value,locale)
     if(translated)return translated
