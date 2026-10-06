@@ -623,8 +623,39 @@ begin
   -- Initialize unread tracking immediately on the first new human message a participant can see.
   -- This avoids marking historical backlog unread while still counting the first post-upgrade message.
   for v_recipient in
-    select person.id
-    from public.upt_chat_channel_people(new.channel_id) person
+    select p.id
+    from public.profiles p
+    where p.approved is true
+      and p.blocked is not true
+      and (
+        exists(select 1 from public.chat_channels c where c.id=new.channel_id and c.kind='organization')
+        or exists(
+          select 1 from public.chat_channels c
+          join public.events e on e.id=c.event_id
+          where c.id=new.channel_id
+            and c.kind='event'
+            and e.status<>'archived'
+            and (
+              exists(select 1 from public.event_members em where em.event_id=c.event_id and em.user_id=p.id)
+              or exists(select 1 from public.shifts s where s.event_id=c.event_id and s.user_id=p.id and s.status<>'cancelled')
+              or exists(select 1 from public.responsible_assignments ra where ra.event_id=c.event_id and ra.user_id=p.id)
+            )
+        )
+        or exists(
+          select 1 from public.chat_channels c
+          where c.id=new.channel_id
+            and c.kind='workplace'
+            and (
+              exists(select 1 from public.shifts s where s.event_id=c.event_id and s.workplace_id=c.workplace_id and s.user_id=p.id and s.status<>'cancelled')
+              or exists(select 1 from public.responsible_assignments ra where ra.event_id=c.event_id and ra.workplace_id=c.workplace_id and ra.user_id=p.id)
+            )
+        )
+        or exists(
+          select 1 from public.chat_channels c
+          join public.chat_members cm on cm.channel_id=c.id and cm.user_id=p.id
+          where c.id=new.channel_id and c.kind='private'
+        )
+      )
   loop
     insert into upt_private.chat_user_states(channel_id,user_id,last_read_at,mute_mode,updated_at)
     values(
@@ -660,9 +691,40 @@ begin
   end if;
 
   for v_recipient in
-    select person.id
-    from public.upt_chat_channel_people(new.channel_id) person
-    where person.id<>new.sender_id
+    select p.id
+    from public.profiles p
+    where p.approved is true
+      and p.blocked is not true
+      and p.id<>new.sender_id
+      and (
+        exists(select 1 from public.chat_channels c where c.id=new.channel_id and c.kind='organization')
+        or exists(
+          select 1 from public.chat_channels c
+          join public.events e on e.id=c.event_id
+          where c.id=new.channel_id
+            and c.kind='event'
+            and e.status<>'archived'
+            and (
+              exists(select 1 from public.event_members em where em.event_id=c.event_id and em.user_id=p.id)
+              or exists(select 1 from public.shifts s where s.event_id=c.event_id and s.user_id=p.id and s.status<>'cancelled')
+              or exists(select 1 from public.responsible_assignments ra where ra.event_id=c.event_id and ra.user_id=p.id)
+            )
+        )
+        or exists(
+          select 1 from public.chat_channels c
+          where c.id=new.channel_id
+            and c.kind='workplace'
+            and (
+              exists(select 1 from public.shifts s where s.event_id=c.event_id and s.workplace_id=c.workplace_id and s.user_id=p.id and s.status<>'cancelled')
+              or exists(select 1 from public.responsible_assignments ra where ra.event_id=c.event_id and ra.workplace_id=c.workplace_id and ra.user_id=p.id)
+            )
+        )
+        or exists(
+          select 1 from public.chat_channels c
+          join public.chat_members cm on cm.channel_id=c.id and cm.user_id=p.id
+          where c.id=new.channel_id and c.kind='private'
+        )
+      )
   loop
     v_mode:=upt_private.chat_effective_mute_mode(new.channel_id,v_recipient.id);
     if v_mode='muted' then continue; end if;
