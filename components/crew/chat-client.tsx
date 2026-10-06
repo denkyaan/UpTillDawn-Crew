@@ -175,7 +175,15 @@ export function ChatClient({channels,defaultChannelId,userId,crewDirectory,isAdm
         }))
         for(const item of signed)if(item)(grouped[item.messageId]||=[]).push({url:item.url,mimeType:item.mimeType})
       }
-      if(alive)setCache(previous=>({...previous,[effectiveSelected]:{messages:ordered,attachments:grouped,replyTargets}}))
+      if(alive)setCache(previous=>{
+        const prior=previous[effectiveSelected]
+        return {...previous,[effectiveSelected]:{
+          messages:mergeMessages(prior?.messages||[],ordered),
+          attachments:{...(prior?.attachments||{}),...grouped},
+          replyTargets:{...(prior?.replyTargets||{}),...replyTargets},
+          hasMore:ordered.length===100,
+        }}
+      })
     }
     void load()
     const channel=s.channel(`crew-chat-${effectiveSelected}`)
@@ -185,7 +193,7 @@ export function ChatClient({channels,defaultChannelId,userId,crewDirectory,isAdm
     return()=>{alive=false;window.clearInterval(timer);void s.removeChannel(channel)}
   },[effectiveSelected])
 
-  useEffect(()=>{endRef.current?.scrollIntoView({block:'end'})},[current.messages.length,effectiveSelected])
+  useEffect(()=>{endRef.current?.scrollIntoView({block:'end'})},[effectiveSelected])
 
   const directory=useMemo(()=>new Map(crewDirectory.map(member=>[member.id,member])),[crewDirectory])
   const messageLookup=useMemo(()=>{
@@ -257,6 +265,124 @@ export function ChatClient({channels,defaultChannelId,userId,crewDirectory,isAdm
 
   function scrollToMessage(id:string){
     document.querySelector<HTMLElement>(`[data-message-id="${id}"]`)?.scrollIntoView({behavior:'smooth',block:'center'})
+  }
+
+  async function refreshChannelStates(){
+    const s=createClient()
+    const {data}=await s.rpc('upt_chat_channel_summaries')
+    if(!data)return
+    setChannelStates(Object.fromEntries((data as ChatSummary[]).map(item=>[item.channel_id,item])))
+  }
+
+  async function loadPins(channelId:string){
+    const s=createClient()
+    const {data,error}=await s.rpc('upt_chat_pins',{p_channel:channelId})
+    if(error)return
+    setPinsByChannel(previous=>({...previous,[channelId]:(data||[]) as ChatPin[]}))
+  }
+
+  async function markCurrentRead(){
+    if(!effectiveSelected)return
+    const s=createClient()
+    const {error}=await s.rpc('upt_mark_chat_read',{p_channel:effectiveSelected})
+    if(error)return
+    const now=new Date().toISOString()
+    setChannelStates(previous=>{
+      const currentState=previous[effectiveSelected]
+      if(!currentState)return previous
+      return {...previous,[effectiveSelected]:{...currentState,unread_count:0,mention_count:0,last_read_at:now}}
+    })
+    window.dispatchEvent(new Event('uptilldawn-chat-read'))
+  }
+
+  async function setTyping(active:boolean){
+    if(!effectiveSelected||selectedChannel?.name==='Up Till Dawn · persoonlijk')return
+    const now=Date.now()
+    if(active&&now-typingThrottleRef.current<1200)return
+    if(active)typingThrottleRef.current=now
+    const s=createClient()
+    void s.rpc('upt_set_chat_typing',{p_channel:effectiveSelected,p_active:active})
+    if(typingStopTimerRef.current)window.clearTimeout(typingStopTimerRef.current)
+    if(active)typingStopTimerRef.current=window.setTimeout(()=>void setTyping(false),2500)
+  }
+
+  async function loadOlder(){
+    if(!effectiveSelected||loadingOlder||!current.hasMore||!current.messages.length)return
+    setLoadingOlder(true)
+    const list=messageListRef.current
+    const previousHeight=list?.scrollHeight||0
+    const oldest=current.messages[0]
+    try{
+      const s=createClient()
+      const {data,error}=await s.from('messages').select('*').eq('channel_id',effectiveSelected).lt('created_at',oldest.created_at).order('created_at',{ascending:false}).limit(100)
+      if(error)throw error
+      const older=((data||[]) as Tables<'messages'>[]).reverse()
+      setCache(previous=>{
+        const existing=previous[effectiveSelected]||current
+        return {...previous,[effectiveSelected]:{...existing,messages:mergeMessages(older,existing.messages),hasMore:older.length===100}}
+      })
+      requestAnimationFrame(()=>{
+        if(list)list.scrollTop=Math.max(0,list.scrollHeight-previousHeight)
+      })
+    }catch{
+      setStatus('Oudere berichten konden niet worden geladen.')
+    }finally{setLoadingOlder(false)}
+  }
+
+  async function ensureMessageVisible(messageId:string){
+    if(messageLookup.has(messageId)){setHighlightedMessageId(messageId);requestAnimationFrame(()=>scrollToMessage(messageId));return}
+    const s=createClient()
+    const {data}=await s.from('messages').select('*').eq('id',messageId).eq('channel_id',effectiveSelected).maybeSingle()
+    if(!data)return
+    setCache(previous=>{
+      const existing=previous[effectiveSelected]||current
+      return {...previous,[effectiveSelected]:{...existing,messages:mergeMessages(existing.messages,[data as Tables<'messages'>])}}
+    })
+    setHighlightedMessageId(messageId)
+    window.setTimeout(()=>scrollToMessage(messageId),100)
+    window.setTimeout(()=>setHighlightedMessageId(value=>value===messageId?null:value),2500)
+  }
+
+  async function runSearch(){
+    if(!effectiveSelected||searchBusy)return
+    setSearchBusy(true)
+    try{
+      const s=createClient()
+      const {data,error}=await s.rpc('upt_search_chat_messages',{
+        p_channel:effectiveSelected,
+        p_query:searchQuery.trim()||undefined,
+        p_sender:searchSender||undefined,
+        p_attachment_kind:searchAttachment||undefined,
+        p_from:searchFrom?new Date(`${searchFrom}T00:00:00`).toISOString():undefined,
+        p_to:searchTo?new Date(`${searchTo}T23:59:59.999`).toISOString():undefined,
+        p_limit:50,
+      })
+      if(error)throw error
+      setSearchResults((data||[]) as ChatSearchResult[])
+    }catch{
+      setStatus('Zoeken mislukt.')
+    }finally{setSearchBusy(false)}
+  }
+
+  async function togglePin(messageId:string,pinned:boolean){
+    const s=createClient()
+    const {error}=await s.rpc('upt_toggle_chat_pin',{p_message:messageId,p_pinned:pinned})
+    if(error){setStatus(error.message);return}
+    await loadPins(effectiveSelected)
+    await refreshChannelStates()
+    setStatus(pinned?'Bericht vastgepind.':'Pin verwijderd.')
+  }
+
+  async function setMuteMode(mode:string){
+    if(!effectiveSelected)return
+    const s=createClient()
+    const {error}=await s.rpc('upt_set_chat_mute',{p_channel:effectiveSelected,p_mode:mode})
+    if(error){setStatus(error.message);return}
+    setChannelStates(previous=>{
+      const state=previous[effectiveSelected]
+      return state?{...previous,[effectiveSelected]:{...state,mute_mode:mode}}:previous
+    })
+    setStatus('Meldingen bijgewerkt.')
   }
 
   async function translateMessage(messageId:string,text:string){
