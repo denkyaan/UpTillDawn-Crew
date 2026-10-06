@@ -58,6 +58,7 @@ export function TourControlCenter({active,userId,role,preferredWorkplace,mode="f
   const [locale,setLocale]=useState<SupportedUiLocale>(()=>typeof window==="undefined"?"nl":activeUiLocale())
   const [progress,setProgress]=useState<Progress>(()=>readProgress(progressKey,chapters[0]?.key||"overview"))
   const [indexOpen,setIndexOpen]=useState(false)
+  const [detailsOpen,setDetailsOpen]=useState(false)
   const [rect,setRect]=useState<Rect|null>(null)
   const [targetReady,setTargetReady]=useState(false)
   const progressRef=useRef(progress)
@@ -119,6 +120,33 @@ export function TourControlCenter({active,userId,role,preferredWorkplace,mode="f
     return()=>{stopped=true;observer?.disconnect();window.clearTimeout(timeout);removeEventListener("resize",onResize);setRect(null)}
   },[active,current,pathname])
 
+  useEffect(()=>{
+    if(!active||!current)return
+    const advanceTo=(target?:string)=>{
+      if(!target||target.startsWith("__"))return
+      const next=chapters.find(chapter=>chapter.key===target)
+      if(!next||next.key===current.key)return
+      const prior=progressRef.current
+      const completed=unique([...prior.completed,current.key])
+      write({...prior,activeKey:next.key,completed,paused:false,updatedAt:new Date().toISOString()})
+      router.push(tourRoute(role,next))
+      setIndexOpen(false)
+      setDetailsOpen(false)
+    }
+    const onTarget=(event:Event)=>advanceTo((event as CustomEvent<{target?:string}|string|undefined>).detail instanceof Object
+      ? ((event as CustomEvent<{target?:string}>).detail?.target)
+      : (event as CustomEvent<string>).detail)
+    const onComplete=()=>{
+      const prior=progressRef.current
+      write({...prior,completed:unique([...prior.completed,current.key]),paused:false,updatedAt:new Date().toISOString()})
+      sessionStorage.removeItem(TOUR_SESSION_KEY)
+      dispatchEvent(new CustomEvent("uptilldawn-tour-finished",{detail:{role,mode}}))
+    }
+    addEventListener("uptilldawn-training-nav-target",onTarget)
+    addEventListener("uptilldawn-training-completed",onComplete)
+    return()=>{removeEventListener("uptilldawn-training-nav-target",onTarget);removeEventListener("uptilldawn-training-completed",onComplete)}
+  },[active,chapters,current,mode,role,router,write])
+
   if(!active||!current||!chapters.length)return null
 
   const saveActive=(chapter:TourChapter,patch?:Partial<Progress>)=>{
@@ -151,8 +179,8 @@ export function TourControlCenter({active,userId,role,preferredWorkplace,mode="f
 
   return <>
     {rect&&<div aria-hidden className="pointer-events-none fixed z-[188] rounded-xl border-2 border-violet-400 shadow-[0_0_0_9999px_rgba(0,0,0,0.42)] transition-all duration-300" style={{left:rect.left,top:rect.top,width:rect.width,height:rect.height}}/>}
-    <aside data-no-translate className="fixed left-3 right-3 top-[calc(env(safe-area-inset-top)+4.5rem)] z-[190] mx-auto max-w-sm rounded-2xl border border-violet-500/50 bg-background/95 p-3 shadow-2xl backdrop-blur sm:left-auto sm:right-4 sm:top-auto sm:bottom-4 sm:mx-0">
-      <div className="flex items-start justify-between gap-3"><div className="min-w-0"><div className="flex flex-wrap items-center gap-2"><span className="text-[10px] font-black uppercase tracking-[.18em] text-violet-500">{c(locale,"Rondleiding","Tour","Visite","Rundgang")} · {currentIndex+1}/{chapters.length}</span>{isNew&&<span className="rounded-full border border-emerald-500/50 px-2 py-0.5 text-[10px] font-black text-emerald-500">{c(locale,"NIEUW","NEW","NOUVEAU","NEU")}</span>}</div><h2 className="mt-1 truncate text-lg font-black">{current.title[locale]}</h2><p className="mt-1 text-xs leading-5 text-muted-foreground">{current.description[locale]}</p></div><button type="button" onClick={()=>setIndexOpen(value=>!value)} className="shrink-0 rounded-lg border px-3 py-2 text-xs font-black">{indexOpen?c(locale,"SLUIT","CLOSE","FERMER","SCHLIESSEN"):c(locale,"INDEX","INDEX","INDEX","INDEX")}</button></div>
+    <aside data-no-translate className="fixed bottom-[calc(env(safe-area-inset-bottom)+5.25rem)] left-3 right-3 z-[190] mx-auto max-w-sm rounded-2xl border border-violet-500/50 bg-background/95 p-3 shadow-2xl backdrop-blur sm:left-auto sm:right-4 sm:bottom-4 sm:mx-0">
+      <div className="flex items-start justify-between gap-3"><div className="min-w-0"><div className="flex flex-wrap items-center gap-2"><span className="text-[10px] font-black uppercase tracking-[.18em] text-violet-500">{c(locale,"Rondleiding","Tour","Visite","Rundgang")} · {currentIndex+1}/{chapters.length}</span>{isNew&&<span className="rounded-full border border-emerald-500/50 px-2 py-0.5 text-[10px] font-black text-emerald-500">{c(locale,"NIEUW","NEW","NOUVEAU","NEU")}</span>}</div><h2 className="mt-1 truncate text-base font-black">{current.title[locale]}</h2>{detailsOpen&&<p className="mt-1 text-xs leading-5 text-muted-foreground">{current.description[locale]}</p>}</div><button type="button" onClick={()=>setDetailsOpen(value=>!value)} className="shrink-0 rounded-lg border px-3 py-2 text-xs font-black" aria-label={c(locale,"Uitleg","Explanation","Explication","Erklärung")}>{detailsOpen?"−":"?"}</button><button type="button" onClick={()=>setIndexOpen(value=>!value)} className="shrink-0 rounded-lg border px-3 py-2 text-xs font-black">{indexOpen?c(locale,"SLUIT","CLOSE","FERMER","SCHLIESSEN"):c(locale,"INDEX","INDEX","INDEX","INDEX")}</button></div>
       <div className="mt-3 h-1.5 overflow-hidden rounded-full bg-muted"><div className="h-full bg-violet-500 transition-all" style={{width:percent+"%"}}/></div>
       <div className="mt-2 flex items-center justify-between text-[10px] text-muted-foreground"><span>{completedCount}/{chapters.length} {c(locale,"afgerond","completed","terminés","abgeschlossen")}</span><span>{percent}%</span></div>
       {!targetReady&&<p className="mt-2 text-[11px] text-amber-500">{c(locale,"Trainingsonderdeel wordt geladen…","Loading training control…","Chargement de l’élément de formation…","Trainingselement wird geladen…")}</p>}
