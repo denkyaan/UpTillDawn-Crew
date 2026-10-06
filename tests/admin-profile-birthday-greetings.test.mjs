@@ -37,7 +37,7 @@ test('admin profile policy and birthday automation stay wired together', async (
   assert.ok(personalizedMigration.includes("Van harte gefeliciteerd met je verjaardag, %s!🥳"))
   assert.ok(personalizedMigration.includes("v_person.full_name"))
   assert.ok(push.includes('"Het is je verjaardag!🥳🎁"'))
-  assert.ok(chat.includes("privateChannels=channels.filter(c=>c.kind==='private')"))
+  assert.ok(chat.includes("privateChannels=channels.filter(channel=>channel.kind==='private')"))
   assert.ok(chat.includes("translateSystemMessage(message.body||'',message.content,uiLocale)"))
   assert.ok(chat.includes("selectedChannel.kind!=='private'"))
   assert.ok(chatPage.includes("['organization','event','workplace','private']"))
