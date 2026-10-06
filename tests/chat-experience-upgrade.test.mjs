@@ -3,13 +3,14 @@ import assert from 'node:assert/strict'
 import { readFile } from 'node:fs/promises'
 
 test('advanced chat experience remains wired end to end',async()=>{
-  const [chat,layout,page,queue,types,migration,catalog,push]=await Promise.all([
+  const [chat,layout,page,queue,types,migration,qualification,catalog,push]=await Promise.all([
     readFile(new URL('../components/crew/chat-client.tsx',import.meta.url),'utf8'),
     readFile(new URL('../components/layout/app-layout.tsx',import.meta.url),'utf8'),
     readFile(new URL('../app/(app)/chat/page.tsx',import.meta.url),'utf8'),
     readFile(new URL('../lib/crew-queue.ts',import.meta.url),'utf8'),
     readFile(new URL('../types/crew-database.ts',import.meta.url),'utf8'),
     readFile(new URL('../supabase/migrations/20261006124500_chat_experience_upgrade.sql',import.meta.url),'utf8'),
+    readFile(new URL('../supabase/migrations/20261006125000_chat_channel_people_qualification.sql',import.meta.url),'utf8'),
     readFile(new URL('../lib/ui-translation-catalog-crew-extra.ts',import.meta.url),'utf8'),
     readFile(new URL('../supabase/functions/push-notification/i18n.ts',import.meta.url),'utf8'),
   ])
@@ -28,6 +29,8 @@ test('advanced chat experience remains wired end to end',async()=>{
   assert.match(migration,/c\.kind in \('event','workplace'\) and public\.upt_is_admin\(\)/)
   assert.match(migration,/maximaal 5 berichten/)
   assert.match(migration,/mute_mode in \('all','mentions','muted'\)/)
+  assert.match(qualification,/select c\.\* into v_channel/)
+  assert.match(qualification,/where c\.id=p_channel/)
   const systemGuard=migration.indexOf('if new.sender_id is null then return new; end if;')
   const participantLoop=migration.indexOf('from public.upt_chat_channel_people(new.channel_id) person',systemGuard)
   assert.ok(systemGuard>=0&&participantLoop>systemGuard,'system messages must bypass authenticated participant notification lookup')
