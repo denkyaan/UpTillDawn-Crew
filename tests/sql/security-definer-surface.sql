@@ -140,9 +140,14 @@ BEGIN
     RAISE EXCEPTION 'FAIL: anonymous caller can access owner-only God Mode setup RPC';
   END IF;
 
-  IF NOT has_function_privilege('authenticated','public.upt_god_is_configured()','EXECUTE')
-     OR NOT has_function_privilege('authenticated','public.upt_god_set_credentials(text,text)','EXECUTE') THEN
-    RAISE EXCEPTION 'FAIL: owner configuration RPC is unavailable to authenticated owner sessions';
+  IF has_function_privilege('authenticated','public.upt_god_is_configured()','EXECUTE')
+     OR has_function_privilege('authenticated','public.upt_god_set_credentials(text,text)','EXECUTE')
+     OR has_function_privilege('authenticated','public.upt_god_login(text,text)','EXECUTE') THEN
+    RAISE EXCEPTION 'FAIL: retired standalone God Mode credential RPC is still client-executable';
+  END IF;
+
+  IF NOT has_function_privilege('authenticated','public.upt_god_login_owner()','EXECUTE') THEN
+    RAISE EXCEPTION 'FAIL: permanent-maker God Mode entry is unavailable';
   END IF;
 
   IF EXISTS(
