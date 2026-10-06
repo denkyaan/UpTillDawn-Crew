@@ -90,6 +90,7 @@ export function ChatClient({channels,defaultChannelId,userId,crewDirectory,isAdm
   const [translating,setTranslating]=useState<string|null>(null)
   const [autoTranslate,setAutoTranslate]=useState(false)
   const [replyTo,setReplyTo]=useState<Tables<'messages'>|null>(null)
+  const [pendingDraftReplyId,setPendingDraftReplyId]=useState<string|null>(null)
   const [peopleByChannel,setPeopleByChannel]=useState<Record<string,ChatPerson[]>>({})
   const [mentionState,setMentionState]=useState<MentionState|null>(null)
   const [channelStates,setChannelStates]=useState<Record<string,ChatSummary>>(initialChannelStates)
@@ -179,7 +180,8 @@ export function ChatClient({channels,defaultChannelId,userId,crewDirectory,isAdm
       setBody(stored.body||'')
       if(stored.replyId){
         const target=messageLookup.get(stored.replyId)
-        if(target)setReplyTo(target)
+        if(target){setReplyTo(target);setPendingDraftReplyId(null)}
+        else setPendingDraftReplyId(stored.replyId)
       }
     }catch{}
   },[effectiveSelected,userId])
@@ -244,6 +246,13 @@ export function ChatClient({channels,defaultChannelId,userId,crewDirectory,isAdm
     return()=>{alive=false;window.clearInterval(timer);void s.removeChannel(channel)}
   },[effectiveSelected])
 
+  useEffect(()=>{
+    if(!effectiveSelected||!current.messages.length)return
+    const timer=window.setTimeout(()=>void markCurrentRead(),350)
+    return()=>window.clearTimeout(timer)
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  },[effectiveSelected,current.messages.length])
+
   useEffect(()=>{endRef.current?.scrollIntoView({block:'end'})},[effectiveSelected])
 
   const directory=useMemo(()=>new Map(crewDirectory.map(member=>[member.id,member])),[crewDirectory])
@@ -256,10 +265,17 @@ export function ChatClient({channels,defaultChannelId,userId,crewDirectory,isAdm
 
   useEffect(()=>{
     if(!initialDraftLoadedRef.current||!effectiveSelected)return
-    const payload={body,replyId:replyTo?.id||null}
+    const payload={body,replyId:replyTo?.id||pendingDraftReplyId||null}
     if(payload.body.trim()||payload.replyId)window.localStorage.setItem(`uptilldawn-chat-draft:${userId}:${effectiveSelected}`,JSON.stringify(payload))
     else window.localStorage.removeItem(`uptilldawn-chat-draft:${userId}:${effectiveSelected}`)
-  },[body,replyTo?.id,effectiveSelected,userId])
+  },[body,replyTo?.id,pendingDraftReplyId,effectiveSelected,userId])
+
+  useEffect(()=>{
+    if(pendingDraftReplyId){
+      const target=messageLookup.get(pendingDraftReplyId)
+      if(target){setReplyTo(target);setPendingDraftReplyId(null)}
+    }
+  },[messageLookup,pendingDraftReplyId])
 
   useEffect(()=>{
     if(!replyTo)return
@@ -296,7 +312,7 @@ export function ChatClient({channels,defaultChannelId,userId,crewDirectory,isAdm
 
   function saveDraft(channelId:string){
     if(!channelId)return
-    const payload={body,replyId:replyTo?.id||null}
+    const payload={body,replyId:replyTo?.id||pendingDraftReplyId||null}
     if(payload.body.trim()||payload.replyId)window.localStorage.setItem(`uptilldawn-chat-draft:${userId}:${channelId}`,JSON.stringify(payload))
     else window.localStorage.removeItem(`uptilldawn-chat-draft:${userId}:${channelId}`)
     draftFilesRef.current.set(channelId,file)
@@ -306,8 +322,10 @@ export function ChatClient({channels,defaultChannelId,userId,crewDirectory,isAdm
     try{
       const stored=JSON.parse(window.localStorage.getItem(`uptilldawn-chat-draft:${userId}:${channelId}`)||'{}') as {body?:string;replyId?:string|null}
       setBody(stored.body||'')
-      setReplyTo(stored.replyId?messageLookup.get(stored.replyId)||null:null)
-    }catch{setBody('');setReplyTo(null)}
+      const restored=stored.replyId?messageLookup.get(stored.replyId)||null:null
+      setReplyTo(restored)
+      setPendingDraftReplyId(stored.replyId&&!restored?stored.replyId:null)
+    }catch{setBody('');setReplyTo(null);setPendingDraftReplyId(null)}
     setFile(draftFilesRef.current.get(channelId)||null)
     setFileKey(key=>key+1)
   }
@@ -321,6 +339,7 @@ export function ChatClient({channels,defaultChannelId,userId,crewDirectory,isAdm
     setStatus('')
     setMentionState(null)
     setSearchOpen(false)
+    setSearchResults([])
     setPinsOpen(false)
     setProfileOpen(false)
     setNotificationOpen(false)
@@ -530,6 +549,7 @@ export function ChatClient({channels,defaultChannelId,userId,crewDirectory,isAdm
         setBody('')
       }
       setReplyTo(null)
+      setPendingDraftReplyId(null)
       setMentionState(null)
       draftFilesRef.current.delete(effectiveSelected)
       window.localStorage.removeItem(`uptilldawn-chat-draft:${userId}:${effectiveSelected}`)
@@ -722,7 +742,7 @@ export function ChatClient({channels,defaultChannelId,userId,crewDirectory,isAdm
                 {isPinned&&<span className="inline-flex items-center gap-0.5 font-semibold"><Pin className="h-3 w-3"/>{translateRuntimeUi('Vastgepind',uiLocale)}</span>}
                 {mine&&selectedChannel.kind==='private'&&selectedChannel.name!=='Up Till Dawn · persoonlijk'&&<span className="font-semibold">{translateRuntimeUi(peerRead?'Gelezen':'Afgeleverd',uiLocale)}</span>}
                 {!moderated&&!isSystem&&message.body&&<button type="button" disabled={translating===message.id} onClick={()=>translated?setTranslations(previous=>{const next={...previous};delete next[message.id];return next}):void translateMessage(message.id,message.body||'')} className="underline">{translated?'Origineel':translating===message.id?'Vertalen…':'Vertaal'}</button>}
-                {!moderated&&selectedChannel.name!=='Up Till Dawn · persoonlijk'&&<button type="button" onClick={()=>{setReplyTo(message);requestAnimationFrame(()=>textareaRef.current?.focus())}} className="font-semibold underline">{translateRuntimeUi('Antwoorden',uiLocale)}</button>}
+                {!moderated&&selectedChannel.name!=='Up Till Dawn · persoonlijk'&&<button type="button" onClick={()=>{setReplyTo(message);setPendingDraftReplyId(null);requestAnimationFrame(()=>textareaRef.current?.focus())}} className="font-semibold underline">{translateRuntimeUi('Antwoorden',uiLocale)}</button>}
                 {!moderated&&currentState?.can_pin&&<button type="button" onClick={()=>void togglePin(message.id,!isPinned)} className="font-semibold underline">{translateRuntimeUi(isPinned?'Pin verwijderen':'Vastpinnen',uiLocale)}</button>}
                 {isAdmin&&!moderated&&<button type="button" disabled={busy} onClick={()=>moderate(message.id)} className="underline">Modereer</button>}
               </div>
@@ -748,7 +768,7 @@ export function ChatClient({channels,defaultChannelId,userId,crewDirectory,isAdm
           <p className="font-bold">{translateRuntimeUi('Antwoord op',uiLocale)} {senderName(replyTo)}</p>
           <p className="mt-0.5 truncate text-muted-foreground">{replyTo.moderated_at?translateRuntimeUi('Bericht verwijderd door beheerder',uiLocale):(replyTo.body||'')}</p>
         </div>
-        <button type="button" onClick={()=>setReplyTo(null)} className="rounded-full p-1" aria-label={translateRuntimeUi('Antwoord verwijderen',uiLocale)}><X className="h-4 w-4"/></button>
+        <button type="button" onClick={()=>{setReplyTo(null);setPendingDraftReplyId(null)}} className="rounded-full p-1" aria-label={translateRuntimeUi('Antwoord verwijderen',uiLocale)}><X className="h-4 w-4"/></button>
       </div>}
 
       {file&&<div className="mb-2 flex items-center justify-between rounded-xl border bg-card px-3 py-2 text-xs"><span className="truncate">{file.name}</span><button type="button" onClick={()=>{setFile(null);setFileKey(key=>key+1)}}><X className="h-4 w-4"/></button></div>}
