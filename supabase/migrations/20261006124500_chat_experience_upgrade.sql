@@ -616,6 +616,23 @@ declare
   v_excerpt text;
   v_title text;
 begin
+  -- Initialize unread tracking immediately on the first new message a participant can see.
+  -- This avoids marking historical backlog unread while still counting the first post-upgrade message.
+  for v_recipient in
+    select person.id
+    from public.upt_chat_channel_people(new.channel_id) person
+  loop
+    insert into upt_private.chat_user_states(channel_id,user_id,last_read_at,mute_mode,updated_at)
+    values(
+      new.channel_id,
+      v_recipient.id,
+      new.created_at-interval '1 microsecond',
+      coalesce(upt_private.chat_default_mute_mode(new.channel_id),'mentions'),
+      now()
+    )
+    on conflict(channel_id,user_id) do nothing;
+  end loop;
+
   if new.sender_id is null then return new; end if;
 
   select coalesce(nullif(trim(p.full_name),''),'Personeelslid') into v_sender_name
