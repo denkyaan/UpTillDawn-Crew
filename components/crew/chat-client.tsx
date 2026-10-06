@@ -125,6 +125,14 @@ export function ChatClient({channels,defaultChannelId,userId,crewDirectory,isAdm
   const current=cache[effectiveSelected]||{messages:[],attachments:{},replyTargets:{},hasMore:false}
   const selectedChannel=channels.find(channel=>channel.id===effectiveSelected)
   const currentPeople=peopleByChannel[effectiveSelected]||EMPTY_PEOPLE
+  const selectedState=channelStates[effectiveSelected]
+  const selectedPins=pinsByChannel[effectiveSelected]||[]
+  const selectedPeerId=privatePeerIds[effectiveSelected]
+  const selectedPeer=selectedPeerId?crewDirectory.find(member=>member.id===selectedPeerId):undefined
+  const unreadCutoff=unreadCutoffs.current[effectiveSelected]
+  const firstUnreadIndex=unreadCutoff
+    ?current.messages.findIndex(message=>message.sender_id!==userId&&Date.parse(message.created_at)>Date.parse(unreadCutoff))
+    :-1
 
   useEffect(()=>{
     const read=()=>{
