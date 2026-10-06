@@ -354,6 +354,26 @@ function translateBirthdayAndProfileCopy(value:string,locale:ExtendedUiLocale){
   return rows[value]?.[locale]||null
 }
 
+function translateErrorReportCopy(value:string,locale:ExtendedUiLocale){
+  if(locale==='nl')return null
+  const rows:Record<string,{fr:string;en:string;de:string}>={
+    'AI-foutanalyse klaar':{fr:"Analyse d’erreur IA terminée",en:'AI error analysis complete',de:'KI-Fehleranalyse abgeschlossen'},
+    'Er is een probleem met de gegevens voor de begeleide tour.':{fr:'Un problème est survenu avec les données de la visite guidée.',en:'There is a problem with the guided tour data.',de:'Es gibt ein Problem mit den Daten der geführten Tour.'},
+    'Probeer het opnieuw.':{fr:'Réessayez.',en:'Please try again.',de:'Bitte versuche es erneut.'},
+    'De fout blijft geregistreerd voor automatische technische opvolging.':{fr:'L’erreur reste enregistrée pour un suivi technique automatique.',en:'The error remains logged for automatic technical follow-up.',de:'Der Fehler bleibt für die automatische technische Nachverfolgung protokolliert.'},
+  }
+  const exact=rows[value]?.[locale]
+  if(exact)return exact
+  let output=value
+  let changed=false
+  for(const [source,row] of Object.entries(rows)){
+    if(!output.includes(source))continue
+    output=output.split(source).join(row[locale])
+    changed=true
+  }
+  return changed?output:null
+}
+
 function translateChatNotification(value:string,locale:ExtendedUiLocale){
   const chatLabel=(label:string)=>{
     const rows:Record<string,{fr:string;en:string;de:string}>={
@@ -417,7 +437,7 @@ function translateActionCenterTitle(value:string,locale:ExtendedUiLocale){
 }
 
 export function translateRuntimeUi(value:string,locale:ExtendedUiLocale):string{
-  const dynamicTranslators=[translateBirthdayAndProfileCopy,translateChatNotification,translateRequestStatus,translateShiftReminder,translateUnderstaffing,translateAccountApproval,translateEventReportReady,translateInventoryQuantity,translateDriverDeparture,translateDriverArrival,translateAdminLockout] as const
+  const dynamicTranslators=[translateBirthdayAndProfileCopy,translateErrorReportCopy,translateChatNotification,translateRequestStatus,translateShiftReminder,translateUnderstaffing,translateAccountApproval,translateEventReportReady,translateInventoryQuantity,translateDriverDeparture,translateDriverArrival,translateAdminLockout] as const
   for(const translator of dynamicTranslators){
     const translated=translator(value,locale)
     if(translated)return translated
