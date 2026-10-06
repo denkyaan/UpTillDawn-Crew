@@ -226,8 +226,10 @@ jobs:
               exit 0
             fi
             if [ "$attempt" = "1" ]; then
-              echo "Browser bot run hit a transient failure; verifying app health before one clean retry."
+              echo "Browser bot run hit a transient failure; resetting isolated fixtures before one clean retry."
               curl --fail --silent --retry 5 --retry-delay 2 http://127.0.0.1:3000/login/staff >/dev/null
+              npx --yes supabase@2.117.0 db reset --local
+              BOT_SUPABASE_URL="$BOT_SUPABASE_URL" BOT_SERVICE_ROLE_KEY="$BOT_SERVICE_ROLE_KEY" BOT_TEST_PASSWORD="$BOT_TEST_PASSWORD" node scripts/seed-15-bot-users.mjs
             fi
           done
           exit 1
