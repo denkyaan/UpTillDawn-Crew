@@ -430,9 +430,32 @@ export function ChatClient({channels,defaultChannelId,userId,crewDirectory,isAdm
       const {data,error}=await s.from('messages').select('*').eq('channel_id',effectiveSelected).lt('created_at',oldest.created_at).order('created_at',{ascending:false}).limit(100)
       if(error)throw error
       const older=((data||[]) as Tables<'messages'>[]).reverse()
+      const ids=older.map(message=>message.id)
+      const olderAttachments:Record<string,Attachment[]>={}
+      const olderReplies:Record<string,Tables<'messages'>>={}
+      if(ids.length){
+        const {data:attachmentRows}=await s.from('message_attachments').select('message_id,storage_path,mime_type').in('message_id',ids)
+        const signed=await Promise.all((attachmentRows||[]).filter(row=>row.storage_path).map(async row=>{
+          const {data:url}=await s.storage.from('chat-attachments').createSignedUrl(row.storage_path!,300)
+          return url?.signedUrl?{messageId:row.message_id,url:url.signedUrl,mimeType:row.mime_type}:null
+        }))
+        for(const item of signed)if(item)(olderAttachments[item.messageId]||=[]).push({url:item.url,mimeType:item.mimeType})
+        const inBatch=new Set(ids)
+        const replyIds=[...new Set(older.map(message=>message.reply_to_message_id).filter((id):id is string=>Boolean(id)&&!inBatch.has(id!)))]
+        if(replyIds.length){
+          const {data:replyRows}=await s.from('messages').select('*').in('id',replyIds)
+          for(const row of (replyRows||[]) as Tables<'messages'>[])olderReplies[row.id]=row
+        }
+      }
       setCache(previous=>{
         const existing=previous[effectiveSelected]||current
-        return {...previous,[effectiveSelected]:{...existing,messages:mergeMessages(older,existing.messages),hasMore:older.length===100}}
+        return {...previous,[effectiveSelected]:{
+          ...existing,
+          messages:mergeMessages(older,existing.messages),
+          attachments:{...olderAttachments,...existing.attachments},
+          replyTargets:{...olderReplies,...existing.replyTargets},
+          hasMore:older.length===100,
+        }}
       })
       requestAnimationFrame(()=>{
         if(list)list.scrollTop=Math.max(0,list.scrollHeight-previousHeight)
@@ -447,9 +470,27 @@ export function ChatClient({channels,defaultChannelId,userId,crewDirectory,isAdm
     const s=createClient()
     const {data}=await s.from('messages').select('*').eq('id',messageId).eq('channel_id',effectiveSelected).maybeSingle()
     if(!data)return
+    const target=data as Tables<'messages'>
+    const targetAttachments:Record<string,Attachment[]>={}
+    const {data:attachmentRows}=await s.from('message_attachments').select('message_id,storage_path,mime_type').eq('message_id',messageId)
+    const signed=await Promise.all((attachmentRows||[]).filter(row=>row.storage_path).map(async row=>{
+      const {data:url}=await s.storage.from('chat-attachments').createSignedUrl(row.storage_path!,300)
+      return url?.signedUrl?{messageId:row.message_id,url:url.signedUrl,mimeType:row.mime_type}:null
+    }))
+    for(const item of signed)if(item)(targetAttachments[item.messageId]||=[]).push({url:item.url,mimeType:item.mimeType})
+    let replyTarget:Tables<'messages'>|null=null
+    if(target.reply_to_message_id&&!messageLookup.has(target.reply_to_message_id)){
+      const {data:reply}=await s.from('messages').select('*').eq('id',target.reply_to_message_id).maybeSingle()
+      replyTarget=reply as Tables<'messages'>|null
+    }
     setCache(previous=>{
       const existing=previous[effectiveSelected]||current
-      return {...previous,[effectiveSelected]:{...existing,messages:mergeMessages(existing.messages,[data as Tables<'messages'>])}}
+      return {...previous,[effectiveSelected]:{
+        ...existing,
+        messages:mergeMessages(existing.messages,[target]),
+        attachments:{...existing.attachments,...targetAttachments},
+        replyTargets:replyTarget?{...existing.replyTargets,[replyTarget.id]:replyTarget}:existing.replyTargets,
+      }}
     })
     setHighlightedMessageId(messageId)
     window.setTimeout(()=>scrollToMessage(messageId),100)
