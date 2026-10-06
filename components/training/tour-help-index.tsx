@@ -23,7 +23,7 @@ export function TourHelpIndex(){
   const [locale,setLocale]=useState<SupportedUiLocale>("nl")
   const [preferred,setPreferred]=useState("")
   const [,setRefresh]=useState(0)
-  useEffect(()=>{const apply=()=>setLocale(activeUiLocale());apply();setPreferred(sessionStorage.getItem("uptilldawn-training-preferred-workplace")||"");addEventListener(LANGUAGE_APPLIED_EVENT,apply);const changed=()=>setRefresh(v=>v+1);addEventListener("uptilldawn-tour-finished",changed);addEventListener("storage",changed);return()=>{removeEventListener(LANGUAGE_APPLIED_EVENT,apply);removeEventListener("uptilldawn-tour-finished",changed);removeEventListener("storage",changed)}},[])
+  useEffect(()=>{const apply=()=>setLocale(activeUiLocale());queueMicrotask(()=>{apply();setPreferred(sessionStorage.getItem("uptilldawn-training-preferred-workplace")||"")});addEventListener(LANGUAGE_APPLIED_EVENT,apply);const changed=()=>setRefresh(v=>v+1);addEventListener("uptilldawn-tour-finished",changed);addEventListener("storage",changed);return()=>{removeEventListener(LANGUAGE_APPLIED_EVENT,apply);removeEventListener("uptilldawn-tour-finished",changed);removeEventListener("storage",changed)}},[])
   const driver=/driver/i.test(preferred)
   const entrance=/inkom|entrance|guest/i.test(preferred)
   const chapters=useMemo(()=>getTourChapters(role,{driver,entrance}),[driver,entrance,role])
