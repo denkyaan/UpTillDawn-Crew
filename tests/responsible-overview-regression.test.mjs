@@ -7,7 +7,7 @@ test('responsible overview keeps operational data scoped to active assigned work
  const source=await read('app/(app)/page.tsx')
  assert.match(source,/activeResponsibleAssignments=responsibleAssignments/)
  assert.match(source,/activeEventIds\.has\(assignment\.event_id\)/)
- assert.doesNotMatch(source,/upt_manager_live_sessions/)
+ assert.match(source,/upt_manager_live_sessions/)\n assert.match(source,/activeRows\.filter\(row=>activeResponsibleWorkplaces\.has\(row\.workplace_id\)\)/)
  assert.match(source,/activeResponsibleAssignments/)
  assert.match(source,/activeResponsibleWorkplaces\.has\(incident\.workplace_id\)/)
 })
@@ -68,7 +68,7 @@ test('responsible defaults exclude admin and God Mode management surfaces',async
 test('responsible overview cleanup keeps queries minimal and ignores cancelled shifts',async()=>{
  const source=await read('app/(app)/page.tsx')
  assert.match(source,/current\.full_name/)
- assert.doesNotMatch(source,/from\('profiles'\)\.select\('full_name,approved'\)/)
+ assert.doesNotMatch(source,/from\('profiles'\)\.select\('full_name,approved'\)/)\n assert.match(source,/from\('profiles'\)\.select\('id,full_name'\)/)
  assert.match(source,/select\('id,name,venue,start_at,end_at,status'\)/)
  assert.match(source,/select\('id,workplace_id,event_id,scheduled_start,scheduled_end,response_status'\).*neq\('status','cancelled'\).*neq\('response_status','declined'\)/)
  assert.doesNotMatch(source,/select\('full_name,approved,role'\)/)
