@@ -107,7 +107,6 @@ export function ChatClient({channels,defaultChannelId,userId,crewDirectory,isAdm
   const [searchBusy,setSearchBusy]=useState(false)
   const [pinsOpen,setPinsOpen]=useState(false)
   const [profileOpen,setProfileOpen]=useState(false)
-  const [notificationOpen,setNotificationOpen]=useState(false)
   const [highlightedMessageId,setHighlightedMessageId]=useState<string|null>(null)
   const unreadCutoffs=useRef<Record<string,string|null>>(Object.fromEntries(Object.entries(initialChannelStates).map(([id,state])=>[id,state.last_read_at||null])))
   const endRef=useRef<HTMLDivElement>(null)
@@ -169,12 +168,12 @@ export function ChatClient({channels,defaultChannelId,userId,crewDirectory,isAdm
     initialDraftLoadedRef.current=true
     try{
       const stored=JSON.parse(window.localStorage.getItem(`uptilldawn-chat-draft:${userId}:${effectiveSelected}`)||'{}') as {body?:string;replyId?:string|null}
-      setBody(stored.body||'')
-      if(stored.replyId){
-        const target=messageLookup.get(stored.replyId)
-        if(target){setReplyTo(target);setPendingDraftReplyId(null)}
-        else setPendingDraftReplyId(stored.replyId)
-      }
+      const nextBody=stored.body||''
+      const nextReplyId=stored.replyId||null
+      queueMicrotask(()=>{
+        setBody(nextBody)
+        if(nextReplyId)setPendingDraftReplyId(nextReplyId)
+      })
     }catch{}
   },[effectiveSelected,userId])
 
@@ -263,16 +262,15 @@ export function ChatClient({channels,defaultChannelId,userId,crewDirectory,isAdm
   },[body,replyTo?.id,pendingDraftReplyId,effectiveSelected,userId])
 
   useEffect(()=>{
-    if(pendingDraftReplyId){
-      const target=messageLookup.get(pendingDraftReplyId)
-      if(target){setReplyTo(target);setPendingDraftReplyId(null)}
-    }
+    if(!pendingDraftReplyId)return
+    const target=messageLookup.get(pendingDraftReplyId)
+    if(target)queueMicrotask(()=>{setReplyTo(target);setPendingDraftReplyId(null)})
   },[messageLookup,pendingDraftReplyId])
 
   useEffect(()=>{
     if(!replyTo)return
     const refreshed=messageLookup.get(replyTo.id)
-    if(refreshed&&refreshed!==replyTo)setReplyTo(refreshed)
+    if(refreshed&&refreshed!==replyTo)queueMicrotask(()=>setReplyTo(refreshed))
   },[messageLookup,replyTo])
 
   const mentionCandidates=useMemo(()=>{
@@ -334,7 +332,6 @@ export function ChatClient({channels,defaultChannelId,userId,crewDirectory,isAdm
     setSearchResults([])
     setPinsOpen(false)
     setProfileOpen(false)
-    setNotificationOpen(false)
   }
 
   function senderName(message:Tables<'messages'>){
