@@ -39,7 +39,7 @@ test('admin profile policy and birthday automation stay wired together', async (
   assert.ok(push.includes('"Het is je verjaardag!🥳🎁"'))
   assert.ok(chat.includes("privateChannels=channels.filter(channel=>channel.kind==='private')"))
   assert.ok(chat.includes("translateSystemMessage(message.body||'',message.content,uiLocale)"))
-  assert.ok(chat.includes("selectedChannel.kind!=='private'"))
+  assert.ok(chat.includes("selectedChannel.name!=='Up Till Dawn · persoonlijk'"))
   assert.ok(chatPage.includes("['organization','event','workplace','private']"))
   assert.ok(chatPage.includes("params.private==='1'"))
   assert.ok(runtime.includes('upt-birthday:v2:'))
