@@ -63,7 +63,8 @@ export default async function RootLayout({
         <ThemeProvider attribute="class" defaultTheme="dark" enableSystem disableTransitionOnChange>
           <AuthProvider>
             <AdminSelectionProvider>
-            <LocaleSync /><PwaRegister /><FirstUseInstallPrompt /><PushPermissionPrompt /><SaveSuccessToaster />{children}
+            <PwaRegister /><FirstUseInstallPrompt /><PushPermissionPrompt /><SaveSuccessToaster />{children}
+            <LocaleSync />
             <Toaster richColors position="top-right" />
             </AdminSelectionProvider>
           </AuthProvider>

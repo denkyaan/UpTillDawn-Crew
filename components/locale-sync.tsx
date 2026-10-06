@@ -109,19 +109,24 @@ export function LocaleSync() {
       applying = false
     })
 
-    // Never mutate React-owned server HTML while Next/React can still be
-    // hydrating streamed client boundaries. React error #418 is a text
-    // hydration mismatch. Wait for the document load boundary, then yield one
-    // task before translating and observing future committed DOM changes.
+    // LocaleSync is mounted after the app children. Never mutate React-owned
+    // server HTML until that subtree has committed hydration, the load event
+    // has fired, and two paint frames have yielded. Mutating earlier can turn
+    // translated text into React #418 hydration mismatches.
     let initialPass:number|undefined
     let observing=false
     const startRuntimeTranslation=()=>{
       if(observing||initialPass!==undefined)return
       initialPass=window.setTimeout(()=>{
-        initialPass=undefined
-        applyLocale(initialUiLocale() as ExtendedUiLocale,initialUiLocaleSource())
-        observer.observe(document.body, { subtree: true, childList: true, characterData: true, attributes: true, attributeFilter: [...attributes] })
-        observing=true
+        const first=requestAnimationFrame(()=>{
+          requestAnimationFrame(()=>{
+            initialPass=undefined
+            applyLocale(initialUiLocale() as ExtendedUiLocale,initialUiLocaleSource())
+            observer.observe(document.body, { subtree: true, childList: true, characterData: true, attributes: true, attributeFilter: [...attributes] })
+            observing=true
+          })
+        })
+        void first
       },0)
     }
     if(document.readyState==='complete')startRuntimeTranslation()

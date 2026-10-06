@@ -139,7 +139,7 @@ export function TourControlCenter({active,userId,role,preferredWorkplace,mode="f
     }
     const locate=()=>{
       const container=document.querySelector(selector)
-      const found=document.querySelector('[data-tour-demo="primary-action"]:not(:disabled)')||container?.querySelector('button:not(:disabled), summary, input:not(:disabled)')||container
+      const found=container?.querySelector('[data-tour-demo="primary-action"]:not(:disabled), button:not(:disabled), summary, input:not(:disabled)')||document.querySelector('[data-tour-demo="primary-action"]:not(:disabled)')||container
       if(found){const style=getComputedStyle(found);if(style.display!=="none"&&style.visibility!=="hidden"&&found.getClientRects().length){cancelAnimationFrame(resetFrame);setTargetReady(true);setTargetMissing(false);updateRect(found);located=true;return true}}
       return false
     }
