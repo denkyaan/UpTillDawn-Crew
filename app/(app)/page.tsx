@@ -85,6 +85,15 @@ async function DashboardOverview({current,tour=false}:{current:NonNullable<Await
     staffLiveError=current.role==='staff'
   }else{
     const activeRows=liveResult.data||[]
+    const liveUserIds=[...new Set(activeRows.map(row=>row.user_id))]
+    const liveProfiles=liveUserIds.length
+      ? await s.from('profiles').select('id,full_name').in('id',liveUserIds)
+      : {data:[],error:null}
+    const liveNames=new Map((liveProfiles.data||[]).map(profile=>[profile.id,profile.full_name||'Personeelslid']))
+    if(liveProfiles.error){
+      responsibleLiveError=current.role==='responsible_lead'
+      staffLiveError=current.role==='staff'
+    }
     if(current.role==='responsible_lead'&&activeResponsibleWorkplaces.size){
       const visible=activeRows.filter(row=>activeResponsibleWorkplaces.has(row.workplace_id))
       const sessionIds=visible.map(row=>row.session_id)
@@ -94,7 +103,7 @@ async function DashboardOverview({current,tour=false}:{current:NonNullable<Await
       responsibleLiveError=Boolean(breaksResult.error)
       if(!breaksResult.error)responsibleLivePeople=visible.map(row=>({
         sessionId:row.session_id,
-        name:row.full_name||'Personeelslid',
+        name:liveNames.get(row.user_id)||'Personeelslid',
         workplaceId:row.workplace_id,
         workplaceName:row.workplace_name||'Werkplek',
         startedAt:row.started_at,
@@ -105,10 +114,10 @@ async function DashboardOverview({current,tour=false}:{current:NonNullable<Await
       const ownWorkplaceIds=new Set(shifts.filter(shift=>Date.parse(shift.scheduled_start)<=nowMs&&Date.parse(shift.scheduled_end)>=nowMs).map(shift=>shift.workplace_id))
       staffLivePeople=activeRows.filter(row=>row.user_id!==user.id&&ownWorkplaceIds.has(row.workplace_id)).map(row=>({
         sessionId:row.session_id,
-        name:row.full_name||'Personeelslid',
+        name:liveNames.get(row.user_id)||'Personeelslid',
         workplaceId:row.workplace_id,
         workplaceName:row.workplace_name||'Werkplek',
-        status:row.on_break?'PAUZE':'WERKT',
+        status:'WERKT',
       }))
     }
   }
