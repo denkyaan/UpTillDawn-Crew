@@ -137,6 +137,15 @@ export const CREW_EXTRA_TRANSLATIONS:Record<string,Row>={
   "Voor- en achternaam":{fr:"Prénom et nom",en:"First and last name",de:"Vor- und Nachname"},
   "Kies een werkplek":{fr:"Choisissez un poste",en:"Choose a workplace",de:"Arbeitsplatz auswählen"},
   "Adres, geboortedatum, rijksregisternummer en IBAN zijn enkel zichtbaar voor admin.":{fr:"L’adresse, la date de naissance, le numéro de registre national et l’IBAN sont uniquement visibles par les administrateurs.",en:"Address, date of birth, national register number and IBAN are only visible to admins.",de:"Adresse, Geburtsdatum, Nationalregisternummer und IBAN sind nur für Administratoren sichtbar."}
+  "Nieuwe privéchat":{fr:"Nouveau chat privé",en:"New private chat",de:"Neuer privater Chat"},
+  "Kies iemand om een privéchat te starten.":{fr:"Choisissez une personne pour démarrer un chat privé.",en:"Choose someone to start a private chat.",de:"Wähle eine Person aus, um einen privaten Chat zu starten."},
+  "Zoek persoon…":{fr:"Rechercher une personne…",en:"Search person…",de:"Person suchen…"},
+  "Privégesprekken":{fr:"Chats privés",en:"Private chats",de:"Private Chats"},
+  "Privéchat":{fr:"Chat privé",en:"Private chat",de:"Privater Chat"},
+  "Privéchat verwijderen":{fr:"Supprimer le chat privé",en:"Delete private chat",de:"Privaten Chat löschen"},
+  "Deze privéchat verwijderen? Het volledige gesprek wordt voor beide deelnemers verwijderd. Berichten kunnen niet afzonderlijk worden verwijderd.":{fr:"Supprimer ce chat privé ? Toute la conversation sera supprimée pour les deux participants. Les messages ne peuvent pas être supprimés individuellement.",en:"Delete this private chat? The entire conversation will be deleted for both participants. Individual messages cannot be deleted.",de:"Diesen privaten Chat löschen? Die gesamte Unterhaltung wird für beide Teilnehmer gelöscht. Einzelne Nachrichten können nicht gelöscht werden."},
+  "Privéchat kon niet worden verwijderd.":{fr:"Le chat privé n’a pas pu être supprimé.",en:"The private chat could not be deleted.",de:"Der private Chat konnte nicht gelöscht werden."},
+  "Privéchat kon niet worden gestart.":{fr:"Le chat privé n’a pas pu être démarré.",en:"The private chat could not be started.",de:"Der private Chat konnte nicht gestartet werden."},
 }
 
 const CANONICAL=new Map<string,string>()
