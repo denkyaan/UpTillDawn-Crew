@@ -26,8 +26,7 @@ test('mobile navigation follows operational role and active shift context', asyn
   assert.match(policy, /\['work-hours','shifts','workplaces','help'\]/)
   assert.match(policy, /\['work-hours','shifts','briefing','tasks'\]/)
   assert.match(nav, /ASSIGNED_EVENT_KEYS=\["events","briefings","workplaces"\]/)
-  assert.match(nav, /RESPONSIBLE_ASSIGNED_EVENT_KEYS=\["events","briefings","workplaces"\]/)
-  assert.doesNotMatch(nav, /RESPONSIBLE_ASSIGNED_EVENT_KEYS=.*inventory/)
+  assert.match(nav, /RESPONSIBLE_ASSIGNED_EVENT_KEYS=\["events","briefings","workplaces","inventory"\]/)
 })
 
 test('localization completeness catches missing and empty translations', async () => {
