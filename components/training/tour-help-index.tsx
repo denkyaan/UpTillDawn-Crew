@@ -20,10 +20,10 @@ function progressFor(userId:string,role:TourRole,first:string){
 export function TourHelpIndex(){
   const {user,roles,isOwner,realIsAdmin,setRoleMode}=useAuth()
   const role=(roles[0]||"employee") as TourRole
-  const [locale,setLocale]=useState<SupportedUiLocale>(()=>typeof window==="undefined"?"nl":activeUiLocale())
-  const [preferred,setPreferred]=useState(()=>typeof window==="undefined"?"":sessionStorage.getItem("uptilldawn-training-preferred-workplace")||"")
+  const [locale,setLocale]=useState<SupportedUiLocale>("nl")
+  const [preferred,setPreferred]=useState("")
   const [,setRefresh]=useState(0)
-  useEffect(()=>{const apply=()=>setLocale(activeUiLocale());addEventListener(LANGUAGE_APPLIED_EVENT,apply);const changed=()=>setRefresh(v=>v+1);addEventListener("uptilldawn-tour-finished",changed);addEventListener("storage",changed);return()=>{removeEventListener(LANGUAGE_APPLIED_EVENT,apply);removeEventListener("uptilldawn-tour-finished",changed);removeEventListener("storage",changed)}},[])
+  useEffect(()=>{const apply=()=>setLocale(activeUiLocale());apply();setPreferred(sessionStorage.getItem("uptilldawn-training-preferred-workplace")||"");addEventListener(LANGUAGE_APPLIED_EVENT,apply);const changed=()=>setRefresh(v=>v+1);addEventListener("uptilldawn-tour-finished",changed);addEventListener("storage",changed);return()=>{removeEventListener(LANGUAGE_APPLIED_EVENT,apply);removeEventListener("uptilldawn-tour-finished",changed);removeEventListener("storage",changed)}},[])
   const driver=/driver/i.test(preferred)
   const entrance=/inkom|entrance|guest/i.test(preferred)
   const chapters=useMemo(()=>getTourChapters(role,{driver,entrance}),[driver,entrance,role])
