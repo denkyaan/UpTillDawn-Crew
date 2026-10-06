@@ -73,12 +73,45 @@ async function DashboardOverview({current,tour=false}:{current:NonNullable<Await
     )
   ).length
 
-  // Keep the authenticated landing render fast and deterministic. Live personnel widgets
-  // refresh on their dedicated operational surfaces instead of blocking the root RSC response.
-  const responsibleLivePeople:ResponsibleLivePerson[]=[]
-  const responsibleLiveError=false
-  const staffLivePeople:StaffWorkplacePerson[]=[]
-  const staffLiveError=false
+  // Keep the landing operational: Staff sees active colleagues on the same workplace;
+  // Responsible sees active personnel plus work/pause timers for workplaces they supervise.
+  let responsibleLivePeople:ResponsibleLivePerson[]=[]
+  let responsibleLiveError=false
+  let staffLivePeople:StaffWorkplacePerson[]=[]
+  let staffLiveError=false
+  const liveResult=await s.rpc('upt_manager_live_sessions')
+  if(liveResult.error){
+    responsibleLiveError=current.role==='responsible_lead'
+    staffLiveError=current.role==='staff'
+  }else{
+    const activeRows=liveResult.data||[]
+    if(current.role==='responsible_lead'&&activeResponsibleWorkplaces.size){
+      const visible=activeRows.filter(row=>activeResponsibleWorkplaces.has(row.workplace_id))
+      const sessionIds=visible.map(row=>row.session_id)
+      const breaksResult=sessionIds.length
+        ? await s.from('break_sessions').select('work_session_id,started_at,ended_at').in('work_session_id',sessionIds).order('started_at')
+        : {data:[],error:null}
+      responsibleLiveError=Boolean(breaksResult.error)
+      if(!breaksResult.error)responsibleLivePeople=visible.map(row=>({
+        sessionId:row.session_id,
+        name:row.full_name||'Personeelslid',
+        workplaceId:row.workplace_id,
+        workplaceName:row.workplace_name||'Werkplek',
+        startedAt:row.started_at,
+        breaks:(breaksResult.data||[]).filter(item=>item.work_session_id===row.session_id).map(item=>({startedAt:item.started_at,endedAt:item.ended_at})),
+      }))
+    }
+    if(current.role==='staff'){
+      const ownWorkplaceIds=new Set(shifts.filter(shift=>Date.parse(shift.scheduled_start)<=nowMs&&Date.parse(shift.scheduled_end)>=nowMs).map(shift=>shift.workplace_id))
+      staffLivePeople=activeRows.filter(row=>row.user_id!==user.id&&ownWorkplaceIds.has(row.workplace_id)).map(row=>({
+        sessionId:row.session_id,
+        name:row.full_name||'Personeelslid',
+        workplaceId:row.workplace_id,
+        workplaceName:row.workplace_name||'Werkplek',
+        status:row.on_break?'PAUZE':'WERKT',
+      }))
+    }
+  }
 
   const overviewSources=[eventsResult,shiftsResult,incidentsResult,membershipsResult,responsibleAssignmentsResult]
   const failedOverviewSources=overviewSources.filter(result=>result.error).length+Number(responsibleLiveError)+Number(staffLiveError)
