@@ -3,13 +3,14 @@ import assert from 'node:assert/strict'
 import { readFile } from 'node:fs/promises'
 
 test('admin profile policy and birthday automation stay wired together', async () => {
-  const [profile,settings,chat,runtime,push,migration]=await Promise.all([
+  const [profile,settings,chat,runtime,push,migration,personalizedMigration]=await Promise.all([
     readFile(new URL('../components/crew/profile-form.tsx',import.meta.url),'utf8'),
     readFile(new URL('../app/(app)/settings/page.tsx',import.meta.url),'utf8'),
     readFile(new URL('../components/crew/chat-client.tsx',import.meta.url),'utf8'),
     readFile(new URL('../lib/ui-translation-runtime.ts',import.meta.url),'utf8'),
     readFile(new URL('../supabase/functions/push-notification/i18n.ts',import.meta.url),'utf8'),
     readFile(new URL('../supabase/migrations/20261006113000_admin_profile_birthday_greetings.sql',import.meta.url),'utf8'),
+    readFile(new URL('../supabase/migrations/20261006114500_personalized_birthday_chat.sql',import.meta.url),'utf8'),
   ])
 
   assert.ok(settings.includes("isAdminProfile={current?.realRole==='admin'}"))
@@ -28,5 +29,11 @@ test('admin profile policy and birthday automation stay wired together', async (
   assert.ok(runtime.includes("C’est ton anniversaire ! 🥳🎁"))
   assert.ok(runtime.includes("Happy birthday! 🥳 Have a fantastic day and make the most of it! 🎉🎉"))
   assert.ok(runtime.includes("Herzlichen Glückwunsch zum Geburtstag! 🥳"))
+  assert.ok(runtime.includes("Joyeux anniversaire, ${name} ! 🥳"))
+  assert.ok(runtime.includes("Happy birthday, ${name}! 🥳"))
+  assert.ok(runtime.includes("Herzlichen Glückwunsch zum Geburtstag, ${name}! 🥳"))
+  assert.ok(personalizedMigration.includes("select p.id,trim(p.full_name) as full_name"))
+  assert.ok(personalizedMigration.includes("Van harte gefeliciteerd met je verjaardag, %s!🥳"))
+  assert.ok(personalizedMigration.includes("v_person.full_name"))
   assert.ok(push.includes('"Het is je verjaardag!🥳🎁"'))
 })

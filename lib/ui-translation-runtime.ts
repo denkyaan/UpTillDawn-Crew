@@ -264,6 +264,14 @@ function translateAdminLockout(value:string,locale:ExtendedUiLocale){
 }
 
 function translateBirthdayAndProfileCopy(value:string,locale:ExtendedUiLocale){
+  const personalizedBirthday=value.match(/^Van harte gefeliciteerd met je verjaardag, (.+)!🥳 Laat het een fantastische dag zijn en maak er het beste van! 🎉🎉$/)
+  if(personalizedBirthday){
+    const name=personalizedBirthday[1]
+    if(locale==='fr')return `Joyeux anniversaire, ${name} ! 🥳 Passe une journée fantastique et profite-en au maximum ! 🎉🎉`
+    if(locale==='en')return `Happy birthday, ${name}! 🥳 Have a fantastic day and make the most of it! 🎉🎉`
+    if(locale==='de')return `Herzlichen Glückwunsch zum Geburtstag, ${name}! 🥳 Hab einen fantastischen Tag und mach das Beste daraus! 🎉🎉`
+    return value
+  }
   const rows:Record<string,{fr:string;en:string;de:string}>={
     'Het is je verjaardag!🥳🎁':{fr:'C’est ton anniversaire ! 🥳🎁',en:'It’s your birthday! 🥳🎁',de:'Heute ist dein Geburtstag! 🥳🎁'},
     'Van harte gefeliciteerd met je verjaardag!🥳 Laat het een fantastische dag zijn en maak er het beste van! 🎉🎉':{fr:'Joyeux anniversaire ! 🥳 Passe une journée fantastique et profite-en au maximum ! 🎉🎉',en:'Happy birthday! 🥳 Have a fantastic day and make the most of it! 🎉🎉',de:'Herzlichen Glückwunsch zum Geburtstag! 🥳 Hab einen fantastischen Tag und mach das Beste daraus! 🎉🎉'},
