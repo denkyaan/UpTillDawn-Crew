@@ -355,9 +355,20 @@ function translateBirthdayAndProfileCopy(value:string,locale:ExtendedUiLocale){
 }
 
 function translateChatNotification(value:string,locale:ExtendedUiLocale){
+  const chatLabel=(label:string)=>{
+    const rows:Record<string,{fr:string;en:string;de:string}>={
+      'Algemene chat':{fr:'Chat général',en:'General chat',de:'Allgemeiner Chat'},
+      'Werkplekchat':{fr:'Chat du poste',en:'Workplace chat',de:'Arbeitsplatz-Chat'},
+      'Eventchat':{fr:'Chat de l’événement',en:'Event chat',de:'Event-Chat'},
+      'Privéchat':{fr:'Chat privé',en:'Private chat',de:'Privater Chat'},
+    }
+    if(locale==='nl')return label
+    return rows[label]?.[locale]||label
+  }
   const mention=value.match(/^(.+) heeft je vermeld in (.+)$/)
   if(mention){
-    const [,name,channel]=mention
+    const [,name,rawChannel]=mention
+    const channel=chatLabel(rawChannel)
     if(locale==='fr')return `${name} vous a mentionné dans ${channel}`
     if(locale==='en')return `${name} mentioned you in ${channel}`
     if(locale==='de')return `${name} hat dich in ${channel} erwähnt`
@@ -381,7 +392,7 @@ function translateChatNotification(value:string,locale:ExtendedUiLocale){
   }
   const groupMessage=value.match(/^Nieuw bericht in (.+)$/)
   if(groupMessage){
-    const channel=groupMessage[1]
+    const channel=chatLabel(groupMessage[1])
     if(locale==='fr')return `Nouveau message dans ${channel}`
     if(locale==='en')return `New message in ${channel}`
     if(locale==='de')return `Neue Nachricht in ${channel}`
