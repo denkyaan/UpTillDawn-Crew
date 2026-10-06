@@ -73,12 +73,41 @@ async function DashboardOverview({current,tour=false}:{current:NonNullable<Await
     )
   ).length
 
-  // Keep the authenticated landing render fast and deterministic. Live personnel widgets
-  // refresh on their dedicated operational surfaces instead of blocking the root RSC response.
-  const responsibleLivePeople:ResponsibleLivePerson[]=[]
-  const responsibleLiveError=false
-  const staffLivePeople:StaffWorkplacePerson[]=[]
-  const staffLiveError=false
+  // Load the small live-personnel slice only when the role actually needs it.
+  // This restores the operational overview without adding work to Admin or unassigned users.
+  let responsibleLivePeople:ResponsibleLivePerson[]=[]
+  let responsibleLiveError=false
+  let staffLivePeople:StaffWorkplacePerson[]=[]
+  let staffLiveError=false
+  if(current.role==='responsible_lead'&&activeResponsibleWorkplaces.size){
+    const live=await s.rpc('upt_manager_live_sessions')
+    responsibleLiveError=Boolean(live.error)
+    responsibleLivePeople=(live.data||[])
+      .filter(row=>activeResponsibleWorkplaces.has(row.workplace_id))
+      .map(row=>({
+        sessionId:row.session_id,
+        name:row.full_name||'Personeelslid',
+        workplaceId:row.workplace_id,
+        workplaceName:row.workplace_name||'Werkplek',
+        startedAt:row.started_at,
+        breaks:(row.breaks||[]).map((item:{started_at:string;ended_at:string|null})=>({startedAt:item.started_at,endedAt:item.ended_at})),
+      }))
+  } else if(current.role==='staff'&&activeEventIds.size){
+    const ownActiveShiftWorkplaces=new Set(shifts.filter(shift=>activeEventIds.has(shift.event_id)).map(shift=>shift.workplace_id))
+    if(ownActiveShiftWorkplaces.size){
+      const live=await s.rpc('upt_manager_live_sessions')
+      staffLiveError=Boolean(live.error)
+      staffLivePeople=(live.data||[])
+        .filter(row=>ownActiveShiftWorkplaces.has(row.workplace_id)&&row.user_id!==current.id)
+        .map(row=>({
+          sessionId:row.session_id,
+          name:row.full_name||'Personeelslid',
+          workplaceId:row.workplace_id,
+          workplaceName:row.workplace_name||'Werkplek',
+          status:(row.on_break?'PAUZE':'WERKT') as 'PAUZE'|'WERKT',
+        }))
+    }
+  }
 
   const overviewSources=[eventsResult,shiftsResult,incidentsResult,membershipsResult,responsibleAssignmentsResult]
   const failedOverviewSources=overviewSources.filter(result=>result.error).length+Number(responsibleLiveError)+Number(staffLiveError)
