@@ -6,14 +6,14 @@ values(extensions.digest('studio-test-session-00000000000000000000000000000000',
 do $body$
 declare r record;
 begin
-  for r in select p.oid from pg_proc p join pg_namespace n on n.oid=p.pronamespace where n.nspname='public' and p.proname like 'upt_god_%' and p.proname <> 'upt_god_login'
+  for r in select p.oid from pg_proc p join pg_namespace n on n.oid=p.pronamespace where n.nspname='public' and p.proname like 'upt_god_%'
   loop
     if has_function_privilege('anon',r.oid,'EXECUTE') then raise exception 'Anonymous God Studio RPC execute still granted'; end if;
   end loop;
 end $body$;
 
 do $body$
-declare token text:='studio-test-session-00000000000000000000000000000000'; row_before jsonb; row_after jsonb; result jsonb; denied boolean:=false;
+declare denied boolean:=false;
 begin
   begin perform public.upt_god_data_catalog('invalid'); exception when others then denied:=true; end;
   if not denied then raise exception 'Unauthenticated catalog access allowed'; end if;
@@ -23,6 +23,19 @@ begin
   denied:=false;
   begin perform public.upt_god_database_secret('invalid'); exception when others then denied:=true; end;
   if not denied then raise exception 'Unauthenticated database credential access allowed'; end if;
+end; $body$;
+
+-- Simulate the permanent maker identity without creating an Auth user. The FK
+-- trigger is disabled only for this rolled-back fixture insert.
+set local session_replication_role = replica;
+insert into upt_private.app_owners(user_id)
+values('00000000-0000-4000-8000-00000000a11e');
+set local session_replication_role = origin;
+select set_config('request.jwt.claim.sub','00000000-0000-4000-8000-00000000a11e',true);
+
+do $body$
+declare token text:='studio-test-session-00000000000000000000000000000000'; row_before jsonb; row_after jsonb; result jsonb; denied boolean:=false;
+begin
   if jsonb_array_length(public.upt_god_data_catalog(token))=0 then raise exception 'Catalog empty'; end if;
   denied:=false;
   begin perform public.upt_god_data_rows(token,'profiles;drop table public.profiles',0); exception when others then denied:=true; end;
