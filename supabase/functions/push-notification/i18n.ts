@@ -70,6 +70,18 @@ const copy:Record<string,Localized>={
 
 const localeOk=(locale:string):locale is keyof Localized=>locale==="fr"||locale==="en"||locale==="de"
 
+function chatDynamic(value:string,locale:keyof Localized){
+ const mention=value.match(/^(.+) heeft je vermeld in (.+)$/)
+ if(mention)return locale==="fr"?`${mention[1]} vous a mentionné dans ${mention[2]}`:locale==="en"?`${mention[1]} mentioned you in ${mention[2]}`:`${mention[1]} hat dich in ${mention[2]} erwähnt`
+ const reply=value.match(/^(.+) heeft op je bericht geantwoord$/)
+ if(reply)return locale==="fr"?`${reply[1]} a répondu à votre message`:locale==="en"?`${reply[1]} replied to your message`:`${reply[1]} hat auf deine Nachricht geantwortet`
+ const privateMessage=value.match(/^Nieuw privébericht van (.+)$/)
+ if(privateMessage)return locale==="fr"?`Nouveau message privé de ${privateMessage[1]}`:locale==="en"?`New private message from ${privateMessage[1]}`:`Neue private Nachricht von ${privateMessage[1]}`
+ const groupMessage=value.match(/^Nieuw bericht in (.+)$/)
+ if(groupMessage)return locale==="fr"?`Nouveau message dans ${groupMessage[1]}`:locale==="en"?`New message in ${groupMessage[1]}`:`Neue Nachricht in ${groupMessage[1]}`
+ return null
+}
+
 function dynamic(value:string,locale:keyof Localized){
  const request=value.match(/^Aanvraag:\s*(pending|approved|rejected|cancelled|canceled)$/i)
  if(request){
@@ -124,5 +136,5 @@ export function localizePushText(value:unknown,locale:string){
  const text=String(value||"")
  if(locale==="nl")return localizeDutchRequestStatus(text)||text
  if(!localeOk(locale))return text
- return copy[text]?.[locale]||dynamic(text,locale)||text
+ return copy[text]?.[locale]||chatDynamic(text,locale)||dynamic(text,locale)||text
 }
