@@ -48,15 +48,6 @@ BEGIN
     AND grantee='anon'
     AND routine_name LIKE 'upt_%'
     AND routine_name <> ALL(ARRAY[
-      'upt_god_data_catalog','upt_god_data_mutate','upt_god_data_rows',
-      'upt_god_database_connect','upt_god_database_disconnect','upt_god_database_secret',
-      'upt_god_login','upt_god_logout',
-      'upt_god_repository_connect','upt_god_repository_disconnect','upt_god_repository_secret',
-      'upt_god_role_rules','upt_god_save_role_rules','upt_god_session_valid',
-      -- Dedicated God Mode error queue. These remain callable before an
-      -- ordinary app session exists, but each RPC validates the private,
-      -- expiring God Mode token before reading or mutating anything.
-      'upt_god_error_reports','upt_god_error_report_mark_working','upt_god_error_report_resolve',
       -- Intentional pre-auth admin login protection. These two are needed
       -- before a Supabase session exists; login success is authenticated-only.
       'upt_admin_login_guard','upt_admin_login_failure'
@@ -130,4 +121,4 @@ BEGIN
   END IF;
 END $matrix$;
 
-SELECT 'PASS: public RLS/anon surface is locked down, anonymous RPCs are limited to token-gated God Mode plus the explicit pre-auth admin guard/failure surface, legacy bootstrap is absent, trigger functions are non-callable and RPC-only tables have no direct mutation grants' AS result;
+SELECT 'PASS: public RLS/anon surface is locked down, anonymous RPCs are limited to the explicit pre-auth admin guard/failure surface, God Mode requires the maker session, legacy bootstrap is absent, trigger functions are non-callable and RPC-only tables have no direct mutation grants' AS result;
