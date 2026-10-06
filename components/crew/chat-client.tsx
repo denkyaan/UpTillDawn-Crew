@@ -2,7 +2,8 @@
 /* eslint-disable @next/next/no-img-element */
 // Regression contract: Enter = nieuwe regel · verzenden gebeurt met de knop.
 import {useEffect,useMemo,useRef,useState} from 'react'
-import {ChevronDown,FileText,Paperclip,Send,Users,X} from 'lucide-react'
+import {useRouter} from 'next/navigation'
+import {ChevronDown,FileText,MessageCirclePlus,Paperclip,Send,Trash2,Users,X} from 'lucide-react'
 import {createClient} from '@/lib/supabase/crew-client'
 import {enqueue,enqueueChatPhoto} from '@/lib/crew-queue'
 import type {Database,Tables} from '@/types/crew-database'
@@ -53,7 +54,8 @@ function detectMention(value:string,cursor:number):MentionState|null{
   return {start:at,end:cursor,query}
 }
 
-export function ChatClient({channels,defaultChannelId,userId,crewDirectory,isAdmin,profilePhotoUrls,channelImages}:{channels:Tables<'chat_channels'>[];defaultChannelId:string;userId:string;crewDirectory:CrewMember[];isAdmin:boolean;profilePhotoUrls:Record<string,string>;channelImages:Record<string,string>}){
+export function ChatClient({channels,defaultChannelId,userId,crewDirectory,isAdmin,profilePhotoUrls,channelImages,privatePeerNames}:{channels:Tables<'chat_channels'>[];defaultChannelId:string;userId:string;crewDirectory:CrewMember[];isAdmin:boolean;profilePhotoUrls:Record<string,string>;channelImages:Record<string,string>;privatePeerNames:Record<string,string>}){
+  const router=useRouter()
   const [selected,setSelected]=useState(defaultChannelId||channels[0]?.id||'')
   const [cache,setCache]=useState<Record<string,ChannelCache>>({})
   const [body,setBody]=useState('')
@@ -62,6 +64,8 @@ export function ChatClient({channels,defaultChannelId,userId,crewDirectory,isAdm
   const [status,setStatus]=useState('')
   const [busy,setBusy]=useState(false)
   const [pickerOpen,setPickerOpen]=useState(false)
+  const [privatePickerOpen,setPrivatePickerOpen]=useState(false)
+  const [privateSearch,setPrivateSearch]=useState('')
   const [uiLocale,setUiLocale]=useState<LiveTranslationLocale>('nl')
   const [translations,setTranslations]=useState<Record<string,string>>({})
   const [translating,setTranslating]=useState<string|null>(null)
@@ -164,13 +168,22 @@ export function ChatClient({channels,defaultChannelId,userId,crewDirectory,isAdm
     })
   },[currentPeople,mentionState])
 
-  const channelName=(channel:Tables<'chat_channels'>)=>channel.kind==='private'?'Up Till Dawn':channel.kind==='organization'?'Algemene chat':channel.kind==='workplace'?(channel.name||'Werkplekchat'):(channel.name||'Eventchat')
+  const privateCandidates=useMemo(()=>{
+    const query=normalizeText(privateSearch)
+    return crewDirectory.filter(member=>member.id!==userId&&member.full_name?.trim()).filter(member=>{
+      if(!query)return true
+      const full=normalizeText(member.full_name||'')
+      return full.startsWith(query)||full.split(/\s+/).some(part=>part.startsWith(query))
+    })
+  },[crewDirectory,privateSearch,userId])
+
+  const channelName=(channel:Tables<'chat_channels'>)=>channel.kind==='private'?(channel.name==='Up Till Dawn · persoonlijk'?'Up Till Dawn':privatePeerNames[channel.id]||translateRuntimeUi('Privéchat',uiLocale)):channel.kind==='organization'?'Algemene chat':channel.kind==='workplace'?(channel.name||'Werkplekchat'):(channel.name||'Eventchat')
   const privateChannels=channels.filter(channel=>channel.kind==='private')
   const eventChannels=channels.filter(channel=>channel.kind==='event')
   const workplaceChannels=channels.filter(channel=>channel.kind==='workplace')
   const organizationChannels=channels.filter(channel=>channel.kind==='organization')
 
-  function chooseChannel(id:string){setSelected(id);setPickerOpen(false);setStatus('');setReplyTo(null);setMentionState(null)}
+  function chooseChannel(id:string){setSelected(id);setPickerOpen(false);setPrivatePickerOpen(false);setStatus('');setReplyTo(null);setMentionState(null)}
 
   function senderName(message:Tables<'messages'>){
     if(message.sender_id===null)return 'Up Till Dawn'
@@ -271,6 +284,41 @@ export function ChatClient({channels,defaultChannelId,userId,crewDirectory,isAdm
     }finally{setBusy(false)}
   }
 
+  async function startPrivateChat(peerId:string){
+    if(busy)return
+    setBusy(true)
+    setStatus('')
+    try{
+      const s=createClient()
+      const {data,error}=await s.rpc('upt_create_private_chat',{p_user:peerId})
+      if(error)throw error
+      if(!data)throw new Error('Privéchat kon niet worden gestart.')
+      setPrivatePickerOpen(false)
+      setPrivateSearch('')
+      router.push(`/chat?channel=${data}`)
+      router.refresh()
+    }catch{
+      setStatus('Privéchat kon niet worden gestart.')
+    }finally{setBusy(false)}
+  }
+
+  async function deletePrivateChat(){
+    if(busy||!selectedChannel||selectedChannel.kind!=='private'||selectedChannel.name==='Up Till Dawn · persoonlijk')return
+    const confirmed=window.confirm(translateRuntimeUi('Deze privéchat verwijderen? Het volledige gesprek wordt voor beide deelnemers verwijderd. Berichten kunnen niet afzonderlijk worden verwijderd.',uiLocale))
+    if(!confirmed)return
+    setBusy(true)
+    setStatus('')
+    try{
+      const s=createClient()
+      const {error}=await s.rpc('upt_delete_private_chat',{p_channel:selectedChannel.id})
+      if(error)throw error
+      router.push('/chat')
+      router.refresh()
+    }catch{
+      setStatus('Privéchat kon niet worden verwijderd.')
+    }finally{setBusy(false)}
+  }
+
   async function moderate(messageId:string){
     const reason=window.prompt('Reden voor moderatie (wordt geaudit):')?.trim()
     if(!reason||busy)return
@@ -298,15 +346,27 @@ export function ChatClient({channels,defaultChannelId,userId,crewDirectory,isAdm
           <input type="checkbox" checked={autoTranslate} onChange={event=>{const enabled=event.target.checked;setAutoTranslate(enabled);window.localStorage.setItem('uptilldawn-chat-auto-translate',enabled?'1':'0')}}/>
           <span className="hidden sm:inline">Chat automatisch vertalen</span><span className="sm:hidden" aria-label="Chat automatisch vertalen">Auto</span>
         </label>
+        <button type="button" onClick={()=>{setPrivatePickerOpen(open=>!open);setPickerOpen(false)}} className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl border bg-card" aria-label={translateRuntimeUi('Nieuwe privéchat',uiLocale)} title={translateRuntimeUi('Nieuwe privéchat',uiLocale)}><MessageCirclePlus className="h-5 w-5"/></button>
+        {selectedChannel.kind==='private'&&selectedChannel.name!=='Up Till Dawn · persoonlijk'&&<button type="button" disabled={busy} onClick={()=>void deletePrivateChat()} className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl border bg-card" aria-label={translateRuntimeUi('Privéchat verwijderen',uiLocale)} title={translateRuntimeUi('Privéchat verwijderen',uiLocale)}><Trash2 className="h-5 w-5"/></button>}
       </div>
       {pickerOpen&&<div className="absolute left-3 right-3 top-[4.5rem] z-40 max-h-[65vh] overflow-y-auto rounded-2xl border bg-card p-2 shadow-2xl">
         <div className="flex items-center justify-between px-2 py-1"><p className="text-sm font-black">Gesprekken</p><button type="button" onClick={()=>setPickerOpen(false)} className="rounded-full p-2"><X className="h-4 w-4"/></button></div>
-        {[[privateChannels,'Up Till Dawn'],[organizationChannels,'Algemeen'],[eventChannels,'Evenementen'],[workplaceChannels,'Werkplekken']]
+        {[[privateChannels,'Privégesprekken'],[organizationChannels,'Algemeen'],[eventChannels,'Evenementen'],[workplaceChannels,'Werkplekken']]
           .filter(([group])=>(group as Tables<'chat_channels'>[]).length>0)
           .map(([group,label])=><div key={label as string} className="mt-2">
             <p className="px-2 py-1 text-[11px] font-bold uppercase tracking-[.16em] text-muted-foreground">{label as string}</p>
             {(group as Tables<'chat_channels'>[]).map(channel=><ChannelButton key={channel.id} channel={channel} selected={effectiveSelected} onChoose={chooseChannel} name={channelName(channel)} image={channelImages[channel.id]}/>)}
           </div>)}
+      </div>}
+      {privatePickerOpen&&<div className="absolute left-3 right-3 top-[4.5rem] z-50 rounded-2xl border bg-card p-3 shadow-2xl">
+        <div className="flex items-center justify-between gap-3"><div><p className="text-sm font-black">Nieuwe privéchat</p><p className="text-xs text-muted-foreground">Kies iemand om een privéchat te starten.</p></div><button type="button" onClick={()=>setPrivatePickerOpen(false)} className="rounded-full p-2"><X className="h-4 w-4"/></button></div>
+        <input value={privateSearch} onChange={event=>setPrivateSearch(event.target.value)} placeholder="Zoek persoon…" className="mt-3 w-full rounded-xl border bg-background px-3 py-2 text-sm"/>
+        <div className="mt-2 max-h-64 overflow-y-auto">
+          {privateCandidates.length?privateCandidates.map(member=><button key={member.id} type="button" disabled={busy} onClick={()=>void startPrivateChat(member.id)} className="flex w-full items-center gap-3 rounded-xl px-3 py-2 text-left hover:bg-muted disabled:opacity-50">
+            <div className="h-9 w-9 shrink-0 overflow-hidden rounded-full border bg-muted">{profilePhotoUrls[member.id]?<img src={profilePhotoUrls[member.id]} alt="" className="h-full w-full object-cover"/>:<div className="flex h-full w-full items-center justify-center text-[10px] font-black">{(member.full_name||'').split(/\s+/).map(part=>part[0]).join('').slice(0,2).toUpperCase()}</div>}</div>
+            <span className="min-w-0 flex-1 truncate text-sm font-bold">{member.full_name}</span>
+          </button>):<p className="px-3 py-4 text-sm text-muted-foreground">Geen personen gevonden.</p>}
+        </div>
       </div>}
     </header>
 
@@ -346,7 +406,7 @@ export function ChatClient({channels,defaultChannelId,userId,crewDirectory,isAdm
               <div className={`mt-1.5 flex flex-wrap items-center justify-end gap-2 text-[10px] ${mine?'text-white/75':'text-muted-foreground'}`}>
                 <time>{timestamp}</time>
                 {!moderated&&!isSystem&&message.body&&<button type="button" disabled={translating===message.id} onClick={()=>translated?setTranslations(previous=>{const next={...previous};delete next[message.id];return next}):void translateMessage(message.id,message.body||'')} className="underline">{translated?'Origineel':translating===message.id?'Vertalen…':'Vertaal'}</button>}
-                {!moderated&&selectedChannel.kind!=='private'&&<button type="button" onClick={()=>{setReplyTo(message);requestAnimationFrame(()=>textareaRef.current?.focus())}} className="font-semibold underline">{translateRuntimeUi('Antwoorden',uiLocale)}</button>}
+                {!moderated&&selectedChannel.name!=='Up Till Dawn · persoonlijk'&&<button type="button" onClick={()=>{setReplyTo(message);requestAnimationFrame(()=>textareaRef.current?.focus())}} className="font-semibold underline">{translateRuntimeUi('Antwoorden',uiLocale)}</button>}
                 {isAdmin&&!moderated&&<button type="button" disabled={busy} onClick={()=>moderate(message.id)} className="underline">Modereer</button>}
               </div>
             </div>
@@ -356,7 +416,7 @@ export function ChatClient({channels,defaultChannelId,userId,crewDirectory,isAdm
       <div ref={endRef}/>
     </div>
 
-    {selectedChannel.kind!=='private'&&<div className="relative sticky bottom-0 z-20 border-t bg-background/95 p-3 backdrop-blur">
+    {selectedChannel.name!=='Up Till Dawn · persoonlijk'&&<div className="relative sticky bottom-0 z-20 border-t bg-background/95 p-3 backdrop-blur">
       {mentionState&&<div className="absolute bottom-full left-3 right-3 z-30 mb-2 max-h-56 overflow-y-auto rounded-2xl border bg-card p-1 shadow-2xl">
         {mentionCandidates.length
           ?mentionCandidates.map(person=><button key={person.id} type="button" onMouseDown={event=>event.preventDefault()} onClick={()=>selectMention(person)} className="flex w-full items-center gap-3 rounded-xl px-3 py-2 text-left hover:bg-muted">
