@@ -407,9 +407,9 @@ try {
         await chatInput.fill('E2E lifecycle chat message')
         const send = page.locator('[data-action="chat-send"]')
         await send.click()
-        await page.getByText('E2E lifecycle chat message',{exact:true}).waitFor({state:'visible',timeout:15000})
+        await page.locator('article').getByText('E2E lifecycle chat message',{exact:true}).waitFor({state:'visible',timeout:15000})
         await page.reload({waitUntil:'networkidle',timeout:45000})
-        if (!(await page.getByText('E2E lifecycle chat message',{exact:true}).isVisible())) throw new Error('chat message did not persist after reload')
+        if (!(await page.locator('article').getByText('E2E lifecycle chat message',{exact:true}).isVisible())) throw new Error('chat message did not persist after reload')
         const persistedLifecycleMessage=await lifecycleAdmin.from('messages').select('id,body,channel_id,sender_id').eq('body','E2E lifecycle chat message').order('created_at',{ascending:false}).limit(1).maybeSingle()
         if(persistedLifecycleMessage.error||!persistedLifecycleMessage.data?.id)throw new Error('lifecycle chat message was not persisted server-side before closure')
         globalThis.__uptLifecycleMessage=persistedLifecycleMessage.data
