@@ -114,6 +114,7 @@ export function ChatClient({channels,defaultChannelId,userId,crewDirectory,isAdm
   const typingStopTimerRef=useRef<number|null>(null)
   const typingThrottleRef=useRef(0)
   const draftFilesRef=useRef(new Map<string,File|null>())
+  const initialDraftLoadedRef=useRef(false)
 
   useEffect(()=>{
     const stored=window.localStorage.getItem('uptilldawn-chat-auto-translate')==='1'
@@ -138,6 +139,47 @@ export function ChatClient({channels,defaultChannelId,userId,crewDirectory,isAdm
     window.addEventListener('uptilldawn-language-applied',listener)
     return()=>window.removeEventListener('uptilldawn-language-applied',listener)
   },[])
+
+  useEffect(()=>{
+    if(!effectiveSelected)return
+    void refreshChannelStates()
+    void loadPins(effectiveSelected)
+    const stateTimer=window.setInterval(()=>void refreshChannelStates(),5000)
+    const typingTimer=window.setInterval(async()=>{
+      const s=createClient()
+      const {data}=await s.rpc('upt_chat_typing_users',{p_channel:effectiveSelected})
+      setTypingUsers((data||[]).map(item=>item.full_name).filter(Boolean))
+    },1600)
+    const readTimer=window.setTimeout(()=>void markCurrentRead(),450)
+    return()=>{
+      window.clearInterval(stateTimer)
+      window.clearInterval(typingTimer)
+      window.clearTimeout(readTimer)
+      if(typingStopTimerRef.current)window.clearTimeout(typingStopTimerRef.current)
+      void createClient().rpc('upt_set_chat_typing',{p_channel:effectiveSelected,p_active:false})
+      setTypingUsers([])
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  },[effectiveSelected])
+
+  useEffect(()=>{
+    if(initialDraftLoadedRef.current||!effectiveSelected)return
+    initialDraftLoadedRef.current=true
+    try{
+      const stored=JSON.parse(window.localStorage.getItem(`uptilldawn-chat-draft:${userId}:${effectiveSelected}`)||'{}') as {body?:string;replyId?:string|null}
+      setBody(stored.body||'')
+      if(stored.replyId){
+        const target=messageLookup.get(stored.replyId)
+        if(target)setReplyTo(target)
+      }
+    }catch{}
+  },[effectiveSelected,messageLookup,userId])
+
+  useEffect(()=>{
+    if(!focusMessageId||!effectiveSelected)return
+    void ensureMessageVisible(focusMessageId)
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  },[focusMessageId,effectiveSelected])
 
   useEffect(()=>{
     if(!effectiveSelected)return
@@ -230,7 +272,36 @@ export function ChatClient({channels,defaultChannelId,userId,crewDirectory,isAdm
   const workplaceChannels=channels.filter(channel=>channel.kind==='workplace')
   const organizationChannels=channels.filter(channel=>channel.kind==='organization')
 
-  function chooseChannel(id:string){setSelected(id);setPickerOpen(false);setPrivatePickerOpen(false);setStatus('');setReplyTo(null);setMentionState(null)}
+  function saveDraft(channelId:string){
+    if(!channelId)return
+    const payload={body,replyId:replyTo?.id||null}
+    if(payload.body.trim()||payload.replyId)window.localStorage.setItem(`uptilldawn-chat-draft:${userId}:${channelId}`,JSON.stringify(payload))
+    else window.localStorage.removeItem(`uptilldawn-chat-draft:${userId}:${channelId}`)
+    draftFilesRef.current.set(channelId,file)
+  }
+
+  function restoreDraft(channelId:string){
+    try{
+      const stored=JSON.parse(window.localStorage.getItem(`uptilldawn-chat-draft:${userId}:${channelId}`)||'{}') as {body?:string;replyId?:string|null}
+      setBody(stored.body||'')
+      setReplyTo(stored.replyId?messageLookup.get(stored.replyId)||null:null)
+    }catch{setBody('');setReplyTo(null)}
+    setFile(draftFilesRef.current.get(channelId)||null)
+    setFileKey(key=>key+1)
+  }
+
+  function chooseChannel(id:string){
+    saveDraft(effectiveSelected)
+    setSelected(id)
+    restoreDraft(id)
+    setPickerOpen(false)
+    setPrivatePickerOpen(false)
+    setStatus('')
+    setMentionState(null)
+    setSearchOpen(false)
+    setPinsOpen(false)
+    setProfileOpen(false)
+  }
 
   function senderName(message:Tables<'messages'>){
     if(message.sender_id===null)return 'Up Till Dawn'
