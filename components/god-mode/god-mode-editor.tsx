@@ -148,7 +148,6 @@ export function GodModeEditor(){
       </div>
       <div className="flex flex-wrap gap-2">
         <Link href="/" className="rounded-xl border px-4 py-2 text-sm font-bold">Website openen</Link>
-        <Link href="/god-mode/setup" className="rounded-xl border px-4 py-2 text-sm font-bold">God login wijzigen</Link>
         <form action={godModeLogout}><button className="rounded-xl border border-red-500/40 px-4 py-2 text-sm font-bold">God Mode afsluiten</button></form>
       </div>
     </section>
