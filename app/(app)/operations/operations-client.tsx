@@ -21,7 +21,7 @@ type Props={userId:string;shifts:Tables<'shifts'>[];events:Tables<'events'>[];wo
 export default function OperationsClient(p:Props){
  const router=useRouter();const [busy,setBusy]=useState(false),[msg,setMsg]=useState(''),[rejectionReasons,setRejectionReasons]=useState<Record<string,string>>({}),[alertNow,setAlertNow]=useState(0)
  const s=useMemo(()=>createClient(),[])
- useEffect(()=>{setAlertNow(Date.now())},[])
+ useEffect(()=>{const first=window.setTimeout(()=>setAlertNow(Date.now()),0);return()=>window.clearTimeout(first)},[])
  useEffect(()=>{
   const refresh=()=>{if(navigator.onLine)router.refresh()}
   const onVisibility=()=>{if(document.visibilityState==='visible')refresh()}
@@ -171,9 +171,9 @@ function formatDigital(totalSeconds:number){
 function LiveWorkSummary({summary,activeBreak,summaryAsOf}:{summary:Summary;activeBreak:Tables<'break_sessions'>|null;summaryAsOf:number}){
  const [now,setNow]=useState(summaryAsOf)
  useEffect(()=>{
-  setNow(Date.now())
+  const first=window.setTimeout(()=>setNow(Date.now()),0)
   const timer=window.setInterval(()=>setNow(Date.now()),1000)
-  return()=>window.clearInterval(timer)
+  return()=>{window.clearTimeout(first);window.clearInterval(timer)}
  },[])
  const elapsed=Math.max(0,Math.floor((now-summaryAsOf)/1000))
  const gross=summary.gross_seconds+elapsed

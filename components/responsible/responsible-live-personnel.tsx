@@ -25,9 +25,9 @@ export function ResponsibleLivePersonnel({people}:{people:ResponsibleLivePerson[
   const [now,setNow]=useState(0)
 
   useEffect(()=>{
-    setNow(Date.now())
+    const first=window.setTimeout(()=>setNow(Date.now()),0)
     const clock=window.setInterval(()=>setNow(Date.now()),1000)
-    return()=>window.clearInterval(clock)
+    return()=>{window.clearTimeout(first);window.clearInterval(clock)}
   },[])
 
   const groups=useMemo(()=>{

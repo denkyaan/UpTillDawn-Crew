@@ -8,7 +8,7 @@ export function SandboxWorkplaces(){
  const [briefingTarget,setBriefingTarget]=useState(false)
  const [preferred,setPreferred]=useState("Bar/Toog")
  useEffect(()=>{const apply=()=>setL(activeUiLocale());apply();addEventListener(LANGUAGE_APPLIED_EVENT,apply);return()=>removeEventListener(LANGUAGE_APPLIED_EVENT,apply)},[])
- useEffect(()=>{setPreferred(sessionStorage.getItem("uptilldawn-training-preferred-workplace")||"Bar/Toog")},[])
+ useEffect(()=>{const frame=requestAnimationFrame(()=>setPreferred(sessionStorage.getItem("uptilldawn-training-preferred-workplace")||"Bar/Toog"));return()=>cancelAnimationFrame(frame)},[])
  return <main id="werkplaatsbeheer" className="scroll-mt-24 space-y-5 p-4 md:p-8">
   <div><h1 className="text-3xl font-black">{t(l,"Werkplaatsen & shifts","Workplaces & shifts","Postes de travail & shifts","Arbeitsplätze & Schichten")}</h1><p className="text-sm text-muted-foreground">{t(l,"Bekijk je toegewezen werkplek, shifturen en bevestig of weiger je dienst vanuit hetzelfde scherm.","View your assigned workplace and shift hours, and accept or decline your shift from the same screen.","Consultez votre poste de travail et vos heures de shift, puis acceptez ou refusez votre shift depuis le même écran.","Sieh deinen zugewiesenen Arbeitsplatz und deine Schichtzeiten und bestätige oder lehne deine Schicht im selben Bildschirm ab.")}</p></div>
   <article className="rounded-2xl border border-violet-500/70 p-4 ring-1 ring-violet-500/20">

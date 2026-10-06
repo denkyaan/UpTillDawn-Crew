@@ -43,9 +43,9 @@ function breakSeconds(breaks:BreakWindow[],now:number){
 function useClock(){
  const [now,setNow]=useState(0)
  useEffect(()=>{
-  setNow(Date.now())
+  const first=window.setTimeout(()=>setNow(Date.now()),0)
   const timer=window.setInterval(()=>setNow(Date.now()),1000)
-  return()=>window.clearInterval(timer)
+  return()=>{window.clearTimeout(first);window.clearInterval(timer)}
  },[])
  return now
 }

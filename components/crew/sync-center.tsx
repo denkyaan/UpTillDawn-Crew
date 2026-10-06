@@ -55,13 +55,14 @@ export function SyncCenter() {
       }).catch(() => {})
     }
     const network = () => { setOnline(navigator.onLine); update() }
-    setOnline(navigator.onLine)
+    const first=window.setTimeout(()=>setOnline(navigator.onLine),0)
     update()
     window.addEventListener('crew-queue-change', update)
     window.addEventListener('online', network)
     window.addEventListener('offline', network)
     return () => {
       alive = false
+      window.clearTimeout(first)
       window.removeEventListener('crew-queue-change', update)
       window.removeEventListener('online', network)
       window.removeEventListener('offline', network)

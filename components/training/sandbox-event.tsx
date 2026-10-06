@@ -11,7 +11,7 @@ const KEY="uptilldawn-training-workflow-v2"
 export function SandboxEvent({userName,role}:{userName:string;role:string}){
  const [l,setL]=useState<L>("nl"),[state,setState]=useState<State>({stage:"event",briefing:false}),[note,setNote]=useState("")
  useEffect(()=>{const apply=()=>setL((parseUiLocale(document.documentElement.lang)||"nl") as L);apply();addEventListener(LANGUAGE_APPLIED_EVENT,apply);return()=>removeEventListener(LANGUAGE_APPLIED_EVENT,apply)},[])
- useEffect(()=>{try{const saved=sessionStorage.getItem(KEY);if(saved)setState(JSON.parse(saved) as State)}catch{}},[])
+ useEffect(()=>{const frame=requestAnimationFrame(()=>{try{const saved=sessionStorage.getItem(KEY);if(saved)setState(JSON.parse(saved) as State)}catch{}});return()=>cancelAnimationFrame(frame)},[])
  const save=(next:State)=>{setState(next);sessionStorage.setItem(KEY,JSON.stringify(next))}
  const explain=(text:string)=>setNote(text)
  const advance=(stage:Stage,message:string)=>{save({...state,stage});explain(message)}
