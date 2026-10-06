@@ -42,4 +42,4 @@ God Mode source edits remain proposal-based. Restore creates a new proposal from
 
 ## Critical workflow gate
 
-For major releases validate registration/approval, event availability, assignment, shift confirmation, briefing acknowledgement, attendance, work/break/Driver transitions, timesheet approval/lock, push delivery, offline replay and role revocation.
+For major releases validate registration/approval, event availability, assignment, shift confirmation, briefing acknowledgement, the QR start request and attendance flow, work/break/Driver transitions, timesheet approval/lock, push delivery, offline replay and role revocation.
