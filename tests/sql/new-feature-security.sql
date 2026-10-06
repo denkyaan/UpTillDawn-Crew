@@ -18,7 +18,8 @@ SET approved=true,
       WHEN id=(SELECT id FROM upt_new_ids WHERE name='admin') THEN 'admin'
       WHEN id=(SELECT id FROM upt_new_ids WHERE name='lead') THEN 'responsible_lead'
       ELSE 'staff'
-    END
+    END,
+    profile_photo_url=id::text || '/rollback-profile.webp'
 WHERE id IN (SELECT id FROM upt_new_ids WHERE name IN ('admin','staff','lead','other'));
 
 INSERT INTO public.events(id,name,start_date,end_date,start_at,end_at,created_by)
