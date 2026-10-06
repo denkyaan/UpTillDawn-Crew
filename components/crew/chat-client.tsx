@@ -663,7 +663,7 @@ export function ChatClient({channels,defaultChannelId,userId,crewDirectory,isAdm
           .filter(([group])=>(group as Tables<'chat_channels'>[]).length>0)
           .map(([group,label])=><div key={label as string} className="mt-2">
             <p className="px-2 py-1 text-[11px] font-bold uppercase tracking-[.16em] text-muted-foreground">{label as string}</p>
-            {(group as Tables<'chat_channels'>[]).map(channel=><ChannelButton key={channel.id} channel={channel} selected={effectiveSelected} onChoose={chooseChannel} name={channelName(channel)} image={channelImages[channel.id]}/>)}
+            {(group as Tables<'chat_channels'>[]).map(channel=><ChannelButton key={channel.id} channel={channel} selected={effectiveSelected} onChoose={chooseChannel} name={channelName(channel)} image={channelImages[channel.id]} unread={Number(channelStates[channel.id]?.unread_count||0)} mentions={Number(channelStates[channel.id]?.mention_count||0)}/>)}
           </div>)}
       </div>}
       {privatePickerOpen&&<div className="absolute left-3 right-3 top-[4.5rem] z-50 rounded-2xl border bg-card p-3 shadow-2xl">
@@ -678,7 +678,8 @@ export function ChatClient({channels,defaultChannelId,userId,crewDirectory,isAdm
       </div>}
     </header>
 
-    <div className="flex-1 space-y-3 overflow-y-auto px-3 py-4 md:px-5">
+    <div ref={messageListRef} onScroll={event=>{if(event.currentTarget.scrollTop<80&&current.hasMore&&!loadingOlder)void loadOlder()}} className="flex-1 space-y-3 overflow-y-auto px-3 py-4 md:px-5">
+      {current.hasMore&&<div className="text-center"><button type="button" disabled={loadingOlder} onClick={()=>void loadOlder()} className="rounded-full border bg-card px-3 py-1.5 text-xs font-semibold">{loadingOlder?translateRuntimeUi('Oudere berichten laden…',uiLocale):translateRuntimeUi('Oudere berichten laden',uiLocale)}</button></div>}
       {!current.messages.length&&<p className="py-10 text-center text-sm text-muted-foreground">Nog geen berichten in deze chat.</p>}
       {current.messages.map(message=>{
         const isSystem=message.sender_id===null
@@ -698,7 +699,12 @@ export function ChatClient({channels,defaultChannelId,userId,crewDirectory,isAdm
           :replyTarget?.sender_id===null
             ?translateSystemMessage(replyTarget.body||'',replyTarget.content,uiLocale)
             :replyTarget?.body||''
-        return <article data-message-id={message.id} key={message.id} className={`flex items-end gap-2 ${mine?'justify-end':'justify-start'}`}>
+        const isPinned=pinnedIds.has(message.id)
+        const mentionsMe=message.mentioned_user_ids?.includes(userId)
+        const peerRead=Boolean(mine&&selectedChannel.kind==='private'&&selectedChannel.name!=='Up Till Dawn · persoonlijk'&&currentState?.peer_last_read_at&&Date.parse(currentState.peer_last_read_at)>=Date.parse(message.created_at))
+        return <div key={message.id} className="contents">
+          {firstUnreadId===message.id&&<div className="my-3 flex items-center gap-3"><span className="h-px flex-1 bg-violet-500/40"/><span className="text-[10px] font-black uppercase tracking-[.16em] text-violet-500">{translateRuntimeUi('Nieuwe berichten',uiLocale)}</span><span className="h-px flex-1 bg-violet-500/40"/></div>}
+          <article data-message-id={message.id} className={`flex items-end gap-2 rounded-xl transition ${mine?'justify-end':'justify-start'} ${mentionsMe?'ring-2 ring-amber-300/70':''} ${highlightedMessageId===message.id?'bg-violet-500/15 ring-2 ring-violet-500':''}`}>
           {!mine&&<div className="h-8 w-8 shrink-0 overflow-hidden rounded-full border bg-muted">{photoUrl?<img src={photoUrl} alt="" className="h-full w-full object-cover"/>:<div className="flex h-full w-full items-center justify-center text-[10px] font-black">{initials}</div>}</div>}
           <div className={`max-w-[82%] ${mine?'items-end':'items-start'} flex flex-col`}>
             {!mine&&<p className="mb-1 px-1 text-xs font-bold text-muted-foreground">{displaySender}</p>}
@@ -709,17 +715,20 @@ export function ChatClient({channels,defaultChannelId,userId,crewDirectory,isAdm
               </button>}
               {moderated
                 ?<p className="whitespace-pre-wrap break-words text-sm leading-relaxed">Bericht verwijderd door beheerder</p>
-                :<p data-no-translate className="whitespace-pre-wrap break-words text-sm leading-relaxed"><MentionedText text={displayBody} people={crewDirectory}/></p>}
+                :<p data-no-translate className="whitespace-pre-wrap break-words text-sm leading-relaxed"><MentionedText text={displayBody} people={crewDirectory} userId={userId}/></p>}
               {!moderated&&current.attachments[message.id]?.map((attachment,index)=><AttachmentView key={index} attachment={attachment} mine={mine}/>)}
               <div className={`mt-1.5 flex flex-wrap items-center justify-end gap-2 text-[10px] ${mine?'text-white/75':'text-muted-foreground'}`}>
                 <time>{timestamp}</time>
+                {isPinned&&<span className="inline-flex items-center gap-0.5 font-semibold"><Pin className="h-3 w-3"/>{translateRuntimeUi('Vastgepind',uiLocale)}</span>}
+                {mine&&selectedChannel.kind==='private'&&selectedChannel.name!=='Up Till Dawn · persoonlijk'&&<span className="font-semibold">{translateRuntimeUi(peerRead?'Gelezen':'Afgeleverd',uiLocale)}</span>}
                 {!moderated&&!isSystem&&message.body&&<button type="button" disabled={translating===message.id} onClick={()=>translated?setTranslations(previous=>{const next={...previous};delete next[message.id];return next}):void translateMessage(message.id,message.body||'')} className="underline">{translated?'Origineel':translating===message.id?'Vertalen…':'Vertaal'}</button>}
                 {!moderated&&selectedChannel.name!=='Up Till Dawn · persoonlijk'&&<button type="button" onClick={()=>{setReplyTo(message);requestAnimationFrame(()=>textareaRef.current?.focus())}} className="font-semibold underline">{translateRuntimeUi('Antwoorden',uiLocale)}</button>}
+                {!moderated&&currentState?.can_pin&&<button type="button" onClick={()=>void togglePin(message.id,!isPinned)} className="font-semibold underline">{translateRuntimeUi(isPinned?'Pin verwijderen':'Vastpinnen',uiLocale)}</button>}
                 {isAdmin&&!moderated&&<button type="button" disabled={busy} onClick={()=>moderate(message.id)} className="underline">Modereer</button>}
               </div>
             </div>
           </div>
-        </article>
+        </article></div>
       })}
       <div ref={endRef}/>
     </div>
@@ -763,6 +772,11 @@ export function ChatClient({channels,defaultChannelId,userId,crewDirectory,isAdm
   </section>
 }
 
-function ChannelButton({channel,selected,onChoose,name,image}:{channel:Tables<'chat_channels'>;selected:string;onChoose:(id:string)=>void;name:string;image?:string}){
-  return <button type="button" onClick={()=>onChoose(channel.id)} className={`flex w-full items-center gap-3 rounded-xl px-3 py-2 text-left ${channel.id===selected?'bg-violet-600 text-white':'hover:bg-muted'}`}><ChannelAvatar src={image} size="sm"/><span className="min-w-0 flex-1 truncate text-sm font-bold">{name}</span></button>
+function ChannelButton({channel,selected,onChoose,name,image,unread,mentions}:{channel:Tables<'chat_channels'>;selected:string;onChoose:(id:string)=>void;name:string;image?:string;unread:number;mentions:number}){
+  return <button type="button" onClick={()=>onChoose(channel.id)} className={`flex w-full items-center gap-3 rounded-xl px-3 py-2 text-left ${channel.id===selected?'bg-violet-600 text-white':'hover:bg-muted'}`}>
+    <ChannelAvatar src={image} size="sm"/>
+    <span className="min-w-0 flex-1 truncate text-sm font-bold">{name}</span>
+    {mentions>0&&<span className="rounded-full bg-amber-300 px-1.5 py-0.5 text-[10px] font-black text-black">@ {mentions>99?'99+':mentions}</span>}
+    {unread>0&&<span className={`rounded-full px-1.5 py-0.5 text-[10px] font-black ${channel.id===selected?'bg-white text-violet-700':'bg-violet-600 text-white'}`}>{unread>99?'99+':unread}</span>}
+  </button>
 }
