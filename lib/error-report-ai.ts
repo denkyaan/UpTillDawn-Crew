@@ -310,7 +310,9 @@ export async function processErrorReport(client:CrewClient,reportId:string,ai:Er
   try{
     const result=await analyzeWithRetry(ai,report)
 
-    const makerRequired=result.makerActionRequired
+    // Production errors are always routed through autonomous recovery first.
+    // The maker must never receive an app error as a manual action request.
+    const makerRequired=false
 
     const makerAction=makerRequired
       ? (result.makerAction||'Open het rapport in God Mode en onderzoek de oorzaak voordat je een wijziging publiceert.')
@@ -334,9 +336,7 @@ export async function processErrorReport(client:CrewClient,reportId:string,ai:Er
     })
     if(finalizeError)throw new Error(finalizeError.message)
 
-    if(makerRequired){
-      await sendMakerErrorEmail({id:report.id,route:report.route,error_message:report.error_message,ai_summary:result.summary,maker_action:makerAction||'Makeractie vereist.',severity:result.severity})
-    }else if(result.autoAction==='none'||['code','client_state','unknown','database','configuration','permission','data'].includes(result.category)){
+    if(result.autoAction==='none'||result.makerActionRequired||['code','client_state','unknown','database','configuration','permission','data'].includes(result.category)){
       // Technical reports are first handed to the bounded autonomous repair
       // controller. It validates the root cause, limits editable scope, runs
       // the full test/build pipeline and only publishes after CI + deploy.
@@ -356,7 +356,7 @@ export async function processErrorReport(client:CrewClient,reportId:string,ai:Er
     console.error('[error-ai] achtergrondanalyse mislukt',{reportId,message})
     try{
       const fallback=deterministicFallback(report)
-      const makerRequired=fallback.makerActionRequired
+      const makerRequired=false
 
       const {error:finalizeError}=await client.rpc('upt_finalize_error_report_ai',{
         p_report:reportId,
@@ -372,7 +372,7 @@ export async function processErrorReport(client:CrewClient,reportId:string,ai:Er
       })
       if(finalizeError)throw finalizeError
 
-      if(makerRequired){
+      if(fallback.autoAction==='none'||fallback.makerActionRequired){
         const dispatched=await dispatchSelfHealing({
           id:report.id,
           route:report.route,
