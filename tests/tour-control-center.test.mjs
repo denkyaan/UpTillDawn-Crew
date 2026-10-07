@@ -29,7 +29,7 @@ test('tour controller recovers missing targets and never writes production data'
   ])
   assert.match(controller,/MutationObserver/)
   assert.match(controller,/scrollIntoView/)
-  assert.match(controller,/matchMedia\("\(max-width: 1023px\)"\)/)
+  assert.match(controller,/const mobile=innerWidth<1024/)
   assert.match(controller,/\/api\/error-reports/)
   assert.match(controller,/localStorage\.setItem\(progressKey/)
   assert.match(controller,/OVERSLAAN/)
