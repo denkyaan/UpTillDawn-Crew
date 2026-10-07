@@ -71,7 +71,8 @@ export function TourControlCenter({active,userId,role,preferredWorkplace,mode="f
   const pathname=usePathname()
   const driver=/driver/i.test(preferredWorkplace)
   const entrance=/inkom|entrance|guest/i.test(preferredWorkplace)
-  const tourScope=preferredWorkplace?"workplace":"general" as const\n  const chapters=useMemo(()=>getTourChapters(role,{driver,entrance,mode,scope:tourScope}),[driver,entrance,mode,role,tourScope])
+  const tourScope:"general"|"workplace"=preferredWorkplace?"workplace":"general"
+  const chapters=useMemo(()=>getTourChapters(role,{driver,entrance,mode,scope:tourScope}),[driver,entrance,mode,role,tourScope])
   const progressKey=tourProgressKey(userId,role,preferredWorkplace)
   // Keep SSR and the first browser render identical. Locale and saved tour
   // progress are restored only after mount, preventing React hydration errors.
