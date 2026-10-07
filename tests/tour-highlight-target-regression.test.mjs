@@ -5,13 +5,14 @@ import test from 'node:test'
 const center=readFileSync('components/training/tour-control-center.tsx','utf8')
 const training=readFileSync('lib/tour-training.ts','utf8')
 
-test('all role tours use one exact actionable element for highlight and HERE marker geometry',()=>{
+test('all role tours use one exact actionable element with non-blocking highlight geometry',()=>{
   assert.match(center,/exactPrimary=container instanceof HTMLElement&&container\.matches/)
   assert.match(center,/nestedPrimary=container\?\.querySelector/)
   assert.match(center,/const found=exactPrimary\|\|nestedPrimary\|\|fallbackAction\|\|container/)
   assert.match(center,/new ResizeObserver\(\(\)=>updateRect\(found\)\)/)
   assert.match(center,/style=\{\{left:rect\.left,top:rect\.top,width:rect\.width,height:rect\.height\}\}/)
-  assert.match(center,/rect\.left\+rect\.width\/2/)
+  assert.doesNotMatch(center,/shadow-\[0_0_0_9999px/)
+  assert.doesNotMatch(center,/↓|HIER|HERE|ICI/)
 })
 
 test('blocking do-this-now instruction card is absent from every role tour',()=>{
