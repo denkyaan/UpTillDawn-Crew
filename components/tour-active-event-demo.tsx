@@ -16,6 +16,7 @@ export function TourActiveEventDemo({role}:{role:Role}){
  const displayName=useDisplayName()
  const [locale,setLocale]=useState<Locale>("nl")
  const [demoState,setDemoState]=useState<"ready"|"clicked">("ready")
+ const [operationStep,setOperationStep]=useState(0)
  useEffect(()=>{const on=(event:Event)=>{const next=parseUiLocale((event as CustomEvent<string>).detail);if(next)setLocale(next as Locale)};const initial=parseUiLocale(document.documentElement.lang);if(initial)queueMicrotask(()=>setLocale(initial as Locale));addEventListener(LANGUAGE_APPLIED_EVENT,on);return()=>removeEventListener(LANGUAGE_APPLIED_EVENT,on)},[])
  const heading=t(locale,"DEMO · ACTIEF EVENEMENT","DEMO · ACTIVE EVENT","DÉMO · ÉVÉNEMENT ACTIF","DEMO · AKTIVES EVENT")
  const event=t(locale,"Up Till Dawn — Demo Night","Up Till Dawn — Demo Night","Up Till Dawn — Demo Night","Up Till Dawn — Demo Night")
@@ -43,11 +44,45 @@ export function TourActiveEventDemo({role}:{role:Role}){
    <article className="rounded-xl border p-3"><p className="text-xs text-muted-foreground">{t(locale,"Status","Status","Statut","Status")}</p><p className="font-black">{role==="admin"?t(locale,"Event operationeel","Event operational","Événement opérationnel","Event betriebsbereit"):role==="responsible_lead"?t(locale,"Werkplek actief","Workplace active","Poste actif","Arbeitsplatz aktiv"):t(locale,"Ingecheckt","Checked in","Enregistré","Eingecheckt")}</p><p className="text-sm">{role==="admin"?t(locale,"2 openstaande acties","2 pending actions","2 actions en attente","2 offene Aktionen"):role==="responsible_lead"?t(locale,"4/5 personeel actief","4/5 staff active","4/5 personnel actifs","4/5 Personal aktiv"):t(locale,"Werk 01:42:18","Work 01:42:18","Travail 01:42:18","Arbeit 01:42:18")}</p></article>
   </div>
  </>
- if(pathname.startsWith("/operations"))body=<div data-tour-demo="time-actions" className="grid gap-3">
-  <div className="flex flex-wrap items-center gap-2">{badge}<strong>{event}</strong><span>·</span><span>{workplace}</span></div>
-  <div className="grid gap-3 sm:grid-cols-3"><article className="rounded-xl border p-3"><p className="text-xs text-muted-foreground">{t(locale,"Werk gestart","Work started","Travail commencé","Arbeit gestartet")}</p><p className="text-2xl font-black tabular-nums">01:42:18</p><p className="text-xs">22:00</p></article><article className="rounded-xl border p-3"><p className="text-xs text-muted-foreground">{t(locale,"Pauze","Break","Pause","Pause")}</p><p className="font-black">{t(locale,"Nog niet genomen","Not taken yet","Pas encore prise","Noch nicht genommen")}</p></article><article className="rounded-xl border p-3"><p className="text-xs text-muted-foreground">{t(locale,"Check-in","Check-in","Check-in","Check-in")}</p><p className="font-black text-emerald-600">{t(locale,"Bevestigd","Confirmed","Confirmé","Bestätigt")}</p></article></div>
-  <div className="flex flex-wrap gap-2">{demoButton(t(locale,"START PAUZE","START BREAK","DÉMARRER LA PAUSE","PAUSE STARTEN"))}<button type="button" className="rounded-xl border px-4 py-2 font-bold">{t(locale,"STOP WERK","STOP WORK","ARRÊTER LE TRAVAIL","ARBEIT STOPPEN")}</button></div>{demoState==="clicked"&&<p data-tour-demo="feedback" className="rounded-xl border border-emerald-500/40 p-3 text-sm text-emerald-600">✓ {t(locale,"Goed. In de echte app start hiermee je pauzetimer.","Good. In the real app this starts your break timer.","Bien. Dans l’application réelle, cela démarre votre minuteur de pause.","Gut. In der echten App startest du damit deinen Pausentimer.")}</p>}
- </div>
+ if(pathname.startsWith("/operations")){
+  const operationActions=role==="admin"?[
+   t(locale,"ACTIEVE CREW OPENEN","OPEN ACTIVE CREW","OUVRIR L’ÉQUIPE ACTIVE","AKTIVE CREW ÖFFNEN"),
+   t(locale,"URENSTAAT CONTROLEREN","REVIEW TIMESHEET","VÉRIFIER LA FEUILLE D’HEURES","STUNDENZETTEL PRÜFEN"),
+   t(locale,"CORRECTIE TOEPASSEN","APPLY CORRECTION","APPLIQUER LA CORRECTION","KORREKTUR ANWENDEN"),
+   t(locale,"UREN GOEDKEUREN","APPROVE HOURS","APPROUVER LES HEURES","STUNDEN GENEHMIGEN"),
+   t(locale,"URENSTAAT LOCKEN","LOCK TIMESHEET","VERROUILLER LA FEUILLE","STUNDENZETTEL SPERREN"),
+  ]:role==="responsible_lead"?[
+   t(locale,"AANWIJZING BEVESTIGEN","CONFIRM CHECK-IN","CONFIRMER L’AFFECTATION","ZUWEISUNG BESTÄTIGEN"),
+   t(locale,"START WERK","START WORK","DÉMARRER LE TRAVAIL","ARBEIT STARTEN"),
+   t(locale,"START PAUZE","START BREAK","DÉMARRER LA PAUSE","PAUSE STARTEN"),
+   t(locale,"STOP PAUZE","STOP BREAK","TERMINER LA PAUSE","PAUSE BEENDEN"),
+   t(locale,"STOP WERK & CONTROLEER URENSTAAT","STOP WORK & REVIEW TIMESHEET","ARRÊTER LE TRAVAIL ET VÉRIFIER LA FEUILLE","ARBEIT STOPPEN & STUNDENZETTEL PRÜFEN"),
+  ]:[
+   t(locale,"AANWIJZING BEVESTIGEN","CONFIRM CHECK-IN","CONFIRMER L’AFFECTATION","ZUWEISUNG BESTÄTIGEN"),
+   t(locale,"START WERK","START WORK","DÉMARRER LE TRAVAIL","ARBEIT STARTEN"),
+   t(locale,"START PAUZE","START BREAK","DÉMARRER LA PAUSE","PAUSE STARTEN"),
+   t(locale,"STOP PAUZE","STOP BREAK","TERMINER LA PAUSE","PAUSE BEENDEN"),
+   t(locale,"STOP WERK","STOP WORK","ARRÊTER LE TRAVAIL","ARBEIT STOPPEN"),
+   t(locale,"URENSTAAT INDIENEN","SUBMIT TIMESHEET","SOUMETTRE LA FEUILLE D’HEURES","STUNDENZETTEL SENDEN"),
+  ]
+  const operationDone=operationStep>=operationActions.length
+  const runOperation=()=>{
+   if(operationDone)return
+   const nextStep=operationStep+1
+   setOperationStep(nextStep)
+   if(nextStep>=operationActions.length){
+    let state:Record<string,unknown>={}
+    try{state=JSON.parse(sessionStorage.getItem("uptilldawn-training-workflow-v3")||"{}")}catch{}
+    sessionStorage.setItem("uptilldawn-training-workflow-v3",JSON.stringify({...state,operationComplete:true,navTarget:"tasks"}))
+    dispatchEvent(new CustomEvent("uptilldawn-training-nav-target",{detail:{target:"tasks"}}))
+   }
+  }
+  body=<div data-tour-demo="time-actions" className="grid gap-3">
+   <div className="flex flex-wrap items-center gap-2">{badge}<strong>{event}</strong><span>·</span><span>{workplace}</span></div>
+   <div className="grid gap-3 sm:grid-cols-3"><article className="rounded-xl border p-3"><p className="text-xs text-muted-foreground">{t(locale,"Workflow","Workflow","Workflow","Workflow")}</p><p className="font-black">{Math.min(operationStep+1,operationActions.length)}/{operationActions.length}</p></article><article className="rounded-xl border p-3"><p className="text-xs text-muted-foreground">{t(locale,"Pauzeregel","Break rule","Règle de pause","Pausenregel")}</p><p className="font-black">{t(locale,"1 uur verplicht","1 hour required","1 heure obligatoire","1 Stunde Pflicht")}</p></article><article className="rounded-xl border p-3"><p className="text-xs text-muted-foreground">{t(locale,"Demo","Demo","Démo","Demo")}</p><p className="font-black text-emerald-600">{t(locale,"Geen echte uren gewijzigd","No real hours changed","Aucune heure réelle modifiée","Keine echten Stunden geändert")}</p></article></div>
+   <button data-tour-demo="primary-action" type="button" disabled={operationDone} onClick={runOperation} className="w-fit rounded-xl border border-violet-500/50 px-4 py-3 text-sm font-black disabled:opacity-60">{operationDone?t(locale,"WORKFLOW VOLTOOID","WORKFLOW COMPLETE","WORKFLOW TERMINÉ","WORKFLOW ABGESCHLOSSEN"):operationActions[operationStep]}</button>
+  </div>
+ }
  else if(pathname.startsWith("/workplaces"))body=<div data-tour-demo="shift" className="grid gap-3">
   <div className="flex flex-wrap items-center gap-2">{badge}<strong>{event}</strong></div>
   <div className="grid gap-3 md:grid-cols-2"><article className="rounded-xl border p-4"><h3 className="font-black">Main Bar</h3><p className="text-sm text-muted-foreground">{t(locale,"Verantwoordelijke: Lina Peeters · 4/5 personeel","Responsible: Lina Peeters · 4/5 staff","Responsable : Lina Peeters · 4/5 personnel","Verantwortlich: Lina Peeters · 4/5 Personal")}</p><p className="mt-2 text-sm">22:00–04:00 · {t(locale,"Actieve shift","Active shift","Shift actif","Aktive Schicht")}</p></article><article className="rounded-xl border p-4"><h3 className="font-black">{t(locale,"Crew op deze werkplek","Crew at this workplace","Équipe à ce poste","Crew an diesem Arbeitsplatz")}</h3>{names.map((n,i)=><p key={n} className="mt-1 text-sm">{n} · {i===2?t(locale,"Pauze 00:18","Break 00:18","Pause 00:18","Pause 00:18"):t(locale,"Aan het werk","Working","Au travail","Bei der Arbeit")}</p>)}</article></div>
