@@ -140,7 +140,7 @@ export function TourControlCenter({active,userId,role,preferredWorkplace,mode="f
     }
     const locate=()=>{
       const container=document.querySelector(selector)
-      const exactPrimary=container?.matches('[data-tour-demo="primary-action"]:not(:disabled)')?container:null
+      const exactPrimary=container instanceof HTMLElement&&container.matches('[data-tour-demo="primary-action"]:not(:disabled)')?container:null
       const nestedPrimary=container?.querySelector('[data-tour-demo="primary-action"]:not(:disabled)')
       const fallbackAction=container?.querySelector('button:not(:disabled), summary, input:not(:disabled)')
       const found=exactPrimary||nestedPrimary||fallbackAction||container
