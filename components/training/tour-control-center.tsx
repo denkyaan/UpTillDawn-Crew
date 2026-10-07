@@ -204,3 +204,16 @@ export function TourControlCenter({active,userId,role,preferredWorkplace,mode="f
   }
   const pause=()=>{write({...progressRef.current,paused:true,updatedAt:new Date().toISOString()});sessionStorage.removeItem(TOUR_SESSION_KEY);dispatchEvent(new CustomEvent("uptilldawn-tour-stop",{detail:{role,mode}}))}
 
+  return <>
+    {rect&&<>
+      <div aria-hidden className="pointer-events-none fixed z-[188] animate-pulse rounded-xl border-[3px] border-violet-400 shadow-[0_0_0_9999px_rgba(0,0,0,0.52),0_0_28px_rgba(139,92,246,0.95)] transition-all duration-300" style={{left:rect.left,top:rect.top,width:rect.width,height:rect.height}}/>
+      <div aria-hidden className="pointer-events-none fixed z-[189] -translate-x-1/2 rounded-full border-2 border-violet-300 bg-violet-600 px-3 py-1.5 text-xs font-black text-white shadow-xl" style={{left:Math.min(window.innerWidth-62,Math.max(62,rect.left+rect.width/2)),top:Math.max(6,rect.top-38)}}>↓ {c(locale,"HIER","HERE","ICI","HIER")}</div>
+    </>}
+    {actionFeedback&&<div data-no-translate className="pointer-events-none fixed left-1/2 top-20 z-[190] w-[min(88vw,22rem)] -translate-x-1/2 rounded-xl border border-violet-500/50 bg-background/95 px-3 py-2 text-xs font-semibold leading-5 shadow-xl backdrop-blur">{actionFeedback}</div>}
+    <div data-no-translate data-tour-panel className="pointer-events-none fixed right-3 top-[calc(env(safe-area-inset-top)+.75rem)] z-[190] flex items-center gap-2">
+      <span className="rounded-full border border-violet-500/50 bg-background/95 px-2.5 py-1.5 text-[10px] font-black shadow">{currentIndex+1}/{chapters.length}</span>
+      {targetMissing&&<button type="button" onClick={skip} className="pointer-events-auto rounded-full border bg-background/95 px-3 py-1.5 text-[10px] font-black">{c(locale,"OVERSLAAN","SKIP","PASSER","ÜBERSPRINGEN")}</button>}
+      <button type="button" onClick={pause} className="pointer-events-auto rounded-full border bg-background/95 px-3 py-1.5 text-[10px] font-black">{c(locale,"PAUZEER","PAUSE","PAUSE","PAUSIEREN")}</button>
+    </div>
+  </>
+}
