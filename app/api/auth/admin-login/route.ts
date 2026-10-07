@@ -1,24 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/crew-server'
 import { sendSecurityLoginEmail } from '@/lib/security-login-email'
-import { isMakerLogin, resolveLoginEmail } from '@/lib/maker-login'
+import { resolveLoginEmail } from '@/lib/maker-login'
 
 function loginUrl(request: NextRequest, error?: string) {
   const url = new URL('/login/admin', request.url)
   if (error) url.searchParams.set('error', error)
   return url
-}
-
-async function adminRpc<T>(
-  supabase: Awaited<ReturnType<typeof createClient>>,
-  fn: string,
-  args: Record<string, unknown>,
-) {
-  const rpc = supabase.rpc as unknown as (
-    name: string,
-    params: Record<string, unknown>,
-  ) => Promise<{ data: T | null; error: { message?: string } | null }>
-  return rpc(fn, args)
 }
 
 export async function POST(request: NextRequest) {
@@ -27,7 +15,6 @@ export async function POST(request: NextRequest) {
   const formData = await request.formData()
   const submittedLogin = String(formData.get('email') || '').trim().toLowerCase()
   const password = String(formData.get('password') || '')
-  const makerLogin = isMakerLogin(submittedLogin)
 
   if (!submittedLogin || !password) {
     return NextResponse.redirect(loginUrl(request, 'E-mail en wachtwoord zijn verplicht.'), 303)
