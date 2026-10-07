@@ -188,7 +188,7 @@ export function TourControlCenter({active,userId,role,preferredWorkplace,mode="f
     addEventListener("uptilldawn-training-nav-target",onTarget)
     addEventListener("uptilldawn-training-completed",onComplete)
     return()=>{removeEventListener("uptilldawn-training-nav-target",onTarget);removeEventListener("uptilldawn-training-completed",onComplete)}
-  },[active,chapters,current,locale,mode,preferredWorkplace,role,router,write])
+  },[active,chapters,current,currentIndex,locale,mode,preferredWorkplace,role,router,write])
 
   if(!active||!current||!chapters.length)return null
 
