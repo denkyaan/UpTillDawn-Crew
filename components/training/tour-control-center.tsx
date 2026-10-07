@@ -137,19 +137,37 @@ export function TourControlCenter({active,userId,role,preferredWorkplace,mode="f
         setRect({left:Math.max(4,r.left-5),top:Math.max(4,r.top-5),width:Math.max(24,r.width+10),height:Math.max(24,r.height+10)})
       })
     }
+    const visibleInViewport=(element:Element|null):element is HTMLElement=>{
+      if(!(element instanceof HTMLElement))return false
+      const style=getComputedStyle(element)
+      if(style.display==="none"||style.visibility==="hidden"||!element.getClientRects().length)return false
+      const r=element.getBoundingClientRect()
+      return r.width>0&&r.height>0&&r.bottom>0&&r.right>0&&r.top<innerHeight&&r.left<innerWidth
+    }
+    const viewportScore=(element:HTMLElement)=>{
+      const r=element.getBoundingClientRect()
+      const width=Math.max(0,Math.min(r.right,innerWidth)-Math.max(r.left,0))
+      const height=Math.max(0,Math.min(r.bottom,innerHeight)-Math.max(r.top,0))
+      return width*height
+    }
     const locate=()=>{
-      const container=document.querySelector(selector)
-      const exactPrimary=container instanceof HTMLElement&&container.matches('[data-tour-demo="primary-action"]:not(:disabled)')?container:null
-      const nestedPrimary=container?.querySelector('[data-tour-demo="primary-action"]:not(:disabled)')
-      const fallbackAction=container?.querySelector('button:not(:disabled), summary, input:not(:disabled)')
-      const found=exactPrimary||nestedPrimary||fallbackAction||container
+      const candidates=[...document.querySelectorAll(selector)].flatMap(container=>{
+        const exactPrimary=container instanceof HTMLElement&&container.matches('[data-tour-demo="primary-action"]:not(:disabled)')?container:null
+        const nestedPrimary=container.querySelector('[data-tour-demo="primary-action"]:not(:disabled)')
+        const fallbackAction=container.querySelector('button:not(:disabled), summary, input:not(:disabled)')
+        const found=exactPrimary||nestedPrimary||fallbackAction||container
+        return visibleInViewport(found)?[found]:[]
+      }).sort((a,b)=>{
+        const score=viewportScore(b)-viewportScore(a)
+        if(score)return score
+        const ar=a.getBoundingClientRect(),br=b.getBoundingClientRect()
+        return ar.top-br.top||ar.left-br.left
+      })
+      const found=candidates[0]
       if(found){
-        const style=getComputedStyle(found)
-        if(style.display!=="none"&&style.visibility!=="hidden"&&found.getClientRects().length){
-          cancelAnimationFrame(resetFrame);setTargetMissing(false);updateRect(found);located=true
-          resizeObserver?.disconnect();resizeObserver=new ResizeObserver(()=>updateRect(found));resizeObserver.observe(found)
-          return true
-        }
+        cancelAnimationFrame(resetFrame);setTargetMissing(false);updateRect(found);located=true
+        resizeObserver?.disconnect();resizeObserver=new ResizeObserver(()=>updateRect(found));resizeObserver.observe(found)
+        return true
       }
       return false
     }
