@@ -15,7 +15,6 @@ export function TourActiveEventDemo({role}:{role:Role}){
  const {profile}=useAuth()
  const displayName=useDisplayName()
  const [locale,setLocale]=useState<Locale>("nl")
- const [demoState,setDemoState]=useState<"ready"|"clicked">("ready")
  const [operationStep,setOperationStep]=useState(0)
  useEffect(()=>{const on=(event:Event)=>{const next=parseUiLocale((event as CustomEvent<string>).detail);if(next)setLocale(next as Locale)};const initial=parseUiLocale(document.documentElement.lang);if(initial)queueMicrotask(()=>setLocale(initial as Locale));addEventListener(LANGUAGE_APPLIED_EVENT,on);return()=>removeEventListener(LANGUAGE_APPLIED_EVENT,on)},[])
  const heading=t(locale,"DEMO · ACTIEF EVENEMENT","DEMO · ACTIVE EVENT","DÉMO · ÉVÉNEMENT ACTIF","DEMO · AKTIVES EVENT")
@@ -36,7 +35,6 @@ export function TourActiveEventDemo({role}:{role:Role}){
   sessionStorage.setItem("uptilldawn-training-workflow-v3",JSON.stringify({...state,eventOpened:true,navTarget:nextChapter,...(nextChapter==="operations"?{briefingRead:true}:{}),...(nextChapter==="workplaces"?{availability:true,assigned:true}:{})}))
   dispatchEvent(new CustomEvent("uptilldawn-training-nav-target",{detail:{target:nextChapter}}))
  }
- const demoButton=(label:string)=><button data-tour-demo="primary-action" type="button" onClick={()=>setDemoState("clicked")} className="rounded-xl border border-violet-500/50 px-4 py-2 text-sm font-black hover:bg-violet-500/10 focus:outline-none focus:ring-2 focus:ring-violet-500">{label}</button>
  let body=<>
   <div className="mb-3 rounded-xl border border-violet-500/30 p-3"><p className="text-xs text-muted-foreground">{t(locale,"Jij in deze demo","You in this demo","Vous dans cette démo","Du in dieser Demo")}</p><p className="font-black">{personLabel}</p><p className="text-sm">{role==="admin"?t(locale,"Admin · beheert dit actieve evenement","Admin · managing this live event","Admin · gère cet événement actif","Admin · verwaltet dieses aktive Event"):role==="responsible_lead"?t(locale,"Verantwoordelijke · Main Bar","Responsible lead · Main Bar","Responsable · Bar principal","Verantwortlich · Hauptbar"):t(locale,"Personeel · Main Bar · shift 22:00–04:00","Staff · Main Bar · shift 22:00–04:00","Personnel · Bar principal · shift 22:00–04:00","Personal · Hauptbar · Schicht 22:00–04:00")}</p></div><div className="grid gap-3 sm:grid-cols-3">
    <article className="rounded-xl border p-3"><p className="text-xs text-muted-foreground">{t(locale,"Evenement","Event","Événement","Event")}</p><p className="font-black">{event}</p><p className="text-sm text-emerald-600">{t(locale,"Nu actief · 22:00–06:00","Live now · 22:00–06:00","Actif maintenant · 22:00–06:00","Jetzt aktiv · 22:00–06:00")}</p></article>
