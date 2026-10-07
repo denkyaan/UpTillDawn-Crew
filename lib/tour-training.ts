@@ -49,8 +49,13 @@ export const TOUR_CHAPTERS:readonly TourChapter[]=[
 
 export function tourText(copy:TourCopy,locale:TourLocale){return copy[locale]}
 
-export function tourProgressKey(userId:string,role:TourRole){
-  return "uptilldawn-tour-progress:"+userId+":"+role+":v"+TOUR_VERSION
+export function tourWorkplaceKey(workplace?:string){
+  const normalized=(workplace||"general").trim().toLocaleLowerCase().normalize("NFKD").replace(/[\\u0300-\\u036f]/g,"").replace(/[^a-z0-9]+/g,"-").replace(/^-|-$/g,"")
+  return normalized||"general"
+}
+
+export function tourProgressKey(userId:string,role:TourRole,workplace?:string){
+  return "uptilldawn-tour-progress:"+userId+":"+role+":"+tourWorkplaceKey(workplace)+":v"+TOUR_VERSION
 }
 
 export function tourRoute(role:TourRole,chapter:TourChapter){
