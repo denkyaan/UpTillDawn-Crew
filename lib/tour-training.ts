@@ -67,7 +67,7 @@ export function tourBaseRoute(role:TourRole,chapter:TourChapter){
   return chapter.key==="overview"&&role==="admin"?"/admin":chapter.route
 }
 
-export function getTourChapters(role:TourRole,options?:{driver?:boolean;entrance?:boolean;mode?:TourMode}){
+export function getTourChapters(role:TourRole,options?:{driver?:boolean;entrance?:boolean;mode?:TourMode;scope?:"general"|"workplace"}){
   const driver=options?.driver===true
   const entrance=options?.entrance===true
   return TOUR_CHAPTERS.filter(chapter=>{
