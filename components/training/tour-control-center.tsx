@@ -72,7 +72,7 @@ export function TourControlCenter({active,userId,role,preferredWorkplace,mode="f
   const driver=/driver/i.test(preferredWorkplace)
   const entrance=/inkom|entrance|guest/i.test(preferredWorkplace)
   const chapters=useMemo(()=>getTourChapters(role,{driver,entrance,mode}),[driver,entrance,mode,role])
-  const progressKey=tourProgressKey(userId,role)
+  const progressKey=tourProgressKey(userId,role,preferredWorkplace)
   // Keep SSR and the first browser render identical. Locale and saved tour
   // progress are restored only after mount, preventing React hydration errors.
   const [locale,setLocale]=useState<SupportedUiLocale>("nl")
@@ -90,7 +90,7 @@ export function TourControlCenter({active,userId,role,preferredWorkplace,mode="f
   useEffect(()=>{const apply=()=>setLocale(activeUiLocale());apply();addEventListener(LANGUAGE_APPLIED_EVENT,apply);return()=>removeEventListener(LANGUAGE_APPLIED_EVENT,apply)},[])
   useEffect(()=>{
     if(!active||!chapters.length)return
-    sessionStorage.setItem(TOUR_SESSION_KEY,JSON.stringify({active:true,role,mode}))
+    sessionStorage.setItem(TOUR_SESSION_KEY,JSON.stringify({active:true,role,mode,workplace:preferredWorkplace}))
     const restored=readProgress(progressKey,chapters[0].key)
     const chapter=chapters.find(item=>item.key===restored.activeKey)||chapters[0]
     const next={...restored,activeKey:chapter.key}
@@ -187,7 +187,7 @@ export function TourControlCenter({active,userId,role,preferredWorkplace,mode="f
       const prior=progressRef.current
       write({...prior,completed:unique([...prior.completed,current.key]),paused:false,updatedAt:new Date().toISOString()})
       sessionStorage.removeItem(TOUR_SESSION_KEY)
-      dispatchEvent(new CustomEvent("uptilldawn-tour-finished",{detail:{role,mode}}))
+      dispatchEvent(new CustomEvent("uptilldawn-tour-finished",{detail:{role,mode,workplace:preferredWorkplace}}))
     }
     addEventListener("uptilldawn-training-nav-target",onTarget)
     addEventListener("uptilldawn-training-completed",onComplete)
