@@ -99,13 +99,13 @@ test('a late tour target recovers after timeout and reports only once',()=>{
 
 test('action navigation keeps its new chapter while Next commits the route',()=>{
   const app=harness()
-  app.emit('uptilldawn-training-nav-target',{target:'events'})
+  app.emit('uptilldawn-training-nav-target',{target:'crew'})
   assert.equal(app.progress().activeKey,'crew')
   assert.deepEqual(app.progress().completed,['overview'])
-  assert.deepEqual(app.routes,['/?tour=1','/events?tour=1'])
-  app.navigate('/events')
-  assert.equal(app.progress().activeKey,'events')
-  assert.deepEqual(app.routes,['/?tour=1','/events?tour=1'])
+  assert.deepEqual(app.routes,['/?tour=1','/crew?tour=1'])
+  app.navigate('/crew')
+  assert.equal(app.progress().activeKey,'crew')
+  assert.deepEqual(app.routes,['/?tour=1','/crew?tour=1'])
   app.unmount()
 })
 
@@ -116,7 +116,7 @@ test('missing-target skip records skipped instead of falsely completing the chap
   app.click('SKIP')
   assert.deepEqual(app.progress().skipped,['overview'])
   assert.deepEqual(app.progress().completed,[])
-  assert.equal(app.progress().activeKey,'events')
+  assert.equal(app.progress().activeKey,'crew')
   app.unmount()
 })
 
