@@ -160,7 +160,12 @@ export function TourControlCenter({active,userId,role,preferredWorkplace,mode="f
     if(!active||!current)return
     const advanceTo=(target?:string)=>{
       if(typeof target!=="string"||!target||target.startsWith("__"))return
-      const next=chapters.find(chapter=>chapter.key===target)
+      // A sandbox action can emit an operational target (for example "events")
+      // while the active first-use tour is intentionally scoped to general
+      // chapters only. In that case continue to the next chapter in the active
+      // scope instead of silently ignoring the user's indicated action.
+      const requested=chapters.find(chapter=>chapter.key===target)
+      const next=requested||chapters[currentIndex+1]
       if(!next||next.key===current.key)return
       const prior=progressRef.current
       const completed=unique([...prior.completed,current.key])
