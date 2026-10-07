@@ -530,6 +530,36 @@ try {
       )
     }
 
+    // Lifecycle contexts are intentionally fresh and do not inherit the
+    // first-use tour state from the concurrent browser smoke contexts.
+    // These tests exercise operational UI, not onboarding, so mark the
+    // role-level first-use prompt as postponed before the first navigation.
+    const profile=await lifecycleAdmin
+      .from('profiles')
+      .select('id')
+      .eq('full_name',`E2E ${role === 'responsible' ? 'Responsible' : role === 'admin' ? 'Admin' : 'Staff'} ${String(index+1).padStart(2,'0')}`)
+      .single()
+
+    if(profile.error||!profile.data?.id){
+      throw new Error(`lifecycle ${role} profile unavailable`)
+    }
+
+    const tourRole=role==='staff'
+      ? 'employee'
+      : role==='responsible'
+        ? 'responsible_lead'
+        : 'admin'
+
+    await page.addInitScript(({userId,tourRole})=>{
+      localStorage.setItem(
+        `uptilldawn-app-tour:${userId}:${tourRole}:v8`,
+        'postponed'
+      )
+    },{
+      userId:profile.data.id,
+      tourRole,
+    })
+
     return {context,page}
   }
 
