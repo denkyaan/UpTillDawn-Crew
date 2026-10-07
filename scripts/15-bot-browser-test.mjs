@@ -422,8 +422,10 @@ try {
         await incidentForm.locator('[role="status"]').waitFor({state:'visible',timeout:15000})
       }
 
-      // Exercise the current compact general first-use tour for the first four bots.
-      // General training is role-only and independent from event/workplace assignment.
+      // Exercise the compact general first-use tour without coupling the
+      // browser smoke run to a hard-coded chapter route. The controller itself
+      // owns role-specific chapter order; the browser verifies the highlighted
+      // action, contextual feedback event and persisted pause state.
       if(index<4){
         const tourRole=role==='staff'?'employee':role==='responsible'?'responsible_lead':'admin'
         const profile=await lifecycleAdmin.from('profiles').select('id').eq('full_name',expectedName).single()
@@ -439,24 +441,35 @@ try {
         await page.goto(`${baseUrl}${role==='admin'?'/admin':'/'}?tour=1`,{waitUntil:'networkidle',timeout:45000})
         const primary=page.locator('[data-tour-demo="primary-action"]').first()
         await primary.waitFor({state:'visible',timeout:30000})
-        // The tour overlay intentionally spotlights the action while allowing the
-        // underlying control to stay interactive. Assert geometry, then use a
-        // trusted DOM click so Playwright does not treat the visual spotlight as
-        // an interception failure.
         const primaryBox=await primary.boundingBox()
-        const spotlight=page.locator('.z-\\[188\\]').first()
-        const spotlightBox=await spotlight.boundingBox()
-        if(!primaryBox||!spotlightBox)throw new Error('tour spotlight geometry unavailable')
-        if(Math.abs((primaryBox.x+primaryBox.width/2)-(spotlightBox.x+spotlightBox.width/2))>8||
-           Math.abs((primaryBox.y+primaryBox.height/2)-(spotlightBox.y+spotlightBox.height/2))>8){
-          throw new Error('tour spotlight is not aligned with the primary action')
-        }
+        await page.waitForFunction(()=>{
+          const overlays=[...document.querySelectorAll('div[aria-hidden].fixed')]
+          return overlays.some(node=>{
+            const style=getComputedStyle(node)
+            return style.pointerEvents==='none'&&node.getBoundingClientRect().width>0
+          })
+        },null,{timeout:10000})
+        const aligned=await primary.evaluate(button=>{
+          const b=button.getBoundingClientRect()
+          return [...document.querySelectorAll('div[aria-hidden].fixed')].some(node=>{
+            const r=node.getBoundingClientRect()
+            return getComputedStyle(node).pointerEvents==='none'&&
+              Math.abs((b.left+b.width/2)-(r.left+r.width/2))<=8&&
+              Math.abs((b.top+b.height/2)-(r.top+r.height/2))<=8
+          })
+        })
+        if(!primaryBox||!aligned)throw new Error('tour spotlight is not aligned with the primary action')
+        const before=await page.evaluate(key=>JSON.parse(localStorage.getItem(key)||'null'),progressKey)
         await primary.evaluate(button=>button.click())
-        await page.waitForURL(url=>url.pathname==='/crew'&&url.searchParams.get('tour')==='1',{timeout:30000})
+        await page.waitForFunction(({key,previous})=>{
+          const next=JSON.parse(localStorage.getItem(key)||'null')
+          return next&&next.activeKey&&next.activeKey!==previous&&Array.isArray(next.completed)&&next.completed.includes(previous)
+        },{key:progressKey,previous:before?.activeKey||'overview'},{timeout:30000})
+        const advanced=await page.evaluate(key=>JSON.parse(localStorage.getItem(key)||'null'),progressKey)
         await page.getByRole('button',{name:/^(PAUZEER|PAUSE|PAUSIEREN)$/}).click()
         const progress=await page.evaluate(key=>JSON.parse(localStorage.getItem(key)||'null'),progressKey)
-        if(!progress?.paused||progress.activeKey!=='crew'||!progress.completed.includes('overview'))throw new Error('general tour progress or pause did not persist')
-        console.log(`PASS ${bot} compact general tour + overview/crew navigation + pause persistence`)
+        if(!progress?.paused||progress.activeKey!==advanced.activeKey||!progress.completed.includes(before?.activeKey||'overview'))throw new Error('general tour progress or pause did not persist')
+        console.log(`PASS ${bot} compact general tour highlight + action advance + pause persistence`)
       }
 
       if(diagnostics.pageErrors.length)throw new Error(`Unhandled browser errors: ${JSON.stringify(diagnostics.pageErrors)}`)
