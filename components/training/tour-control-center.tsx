@@ -117,6 +117,8 @@ export function TourControlCenter({active,userId,role,preferredWorkplace,mode="f
     let stopped=false
     let observer:MutationObserver|undefined
     let resizeObserver:ResizeObserver|undefined
+    let observedTarget:HTMLElement|undefined
+    let observedLayoutRoot:Element|undefined
     let timeout=0
     let frame=0
     let located=false
@@ -171,14 +173,24 @@ export function TourControlCenter({active,userId,role,preferredWorkplace,mode="f
       const found=candidates[0]
       if(found){
         cancelAnimationFrame(resetFrame);setTargetMissing(false);updateRect(found);located=true
-        resizeObserver?.disconnect();resizeObserver=new ResizeObserver(()=>updateRect(found));resizeObserver.observe(found)
+        const layoutRoot=found.closest('[data-tour-demo="training-screen"]')||found.parentElement||found
+        if(observedTarget!==found||observedLayoutRoot!==layoutRoot){
+          observedTarget=found;observedLayoutRoot=layoutRoot
+          resizeObserver?.disconnect()
+          resizeObserver=new ResizeObserver(()=>updateRect(found))
+          resizeObserver.observe(found)
+          if(layoutRoot!==found)resizeObserver.observe(layoutRoot)
+          observer?.disconnect()
+          observer=new MutationObserver(()=>{locate()})
+          observer.observe(layoutRoot,{childList:true,subtree:true,characterData:true,attributes:true,attributeFilter:["class","style","hidden"]})
+        }
         return true
       }
       return false
     }
     if(!locate()){
-      observer=new MutationObserver(()=>{if(locate())observer?.disconnect()})
-      observer.observe(document.body,{childList:true,subtree:true,attributes:true,attributeFilter:["class","style","hidden"]})
+      observer=new MutationObserver(()=>{locate()})
+      observer.observe(document.body,{childList:true,subtree:true,characterData:true,attributes:true,attributeFilter:["class","style","hidden"]})
       timeout=window.setTimeout(()=>{if(stopped||locate())return;setTargetMissing(true);setRect(null);void reportMissingTarget(current,selector)},8000)
     }
     const onResize=()=>{locate()}

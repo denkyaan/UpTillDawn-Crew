@@ -29,7 +29,7 @@ function harness({visible=true,locale='en',chapter='overview',startPath}={}){
   const router={push:route=>routes.push(route)}
   const dispatchEvent=event=>{for(const fn of [...(listeners.get(event.type)||[])])fn(event);return true}
   const rect={left:10,top:80,width:180,height:40}
-  const element={matches:()=>false,querySelector:()=>null,scrollIntoView(){},getBoundingClientRect:()=>rect,getClientRects:()=>visible?[rect]:[]}
+  const element={matches:()=>false,querySelector:()=>null,closest:()=>null,scrollIntoView(){},getBoundingClientRect:()=>rect,getClientRects:()=>visible?[rect]:[]}
   const context={exports:{},require(name){if(name==='react')return hooks;if(name==='react/jsx-runtime')return {jsx,jsxs:jsx,Fragment:'fragment'};if(name==='next/navigation')return {useRouter:()=>router,usePathname:()=>pathname};if(name==='@/lib/tour-training')return training;if(name==='@/lib/tour-panel-layout')return panelLayout;if(name==='@/lib/locale-preferences')return {activeUiLocale:()=>locale,LANGUAGE_APPLIED_EVENT:'language'};throw Error(name)},
     localStorage,sessionStorage,location:{pathname,search:'?tour=1'},innerWidth:390,innerHeight:844,
     fetch:async(url,options)=>{requests.push({url,...options});return {ok:true}},
@@ -42,7 +42,7 @@ function harness({visible=true,locale='en',chapter='overview',startPath}={}){
     CustomEvent:class{constructor(type,{detail}={}){this.type=type;this.detail=detail}},
     HTMLElement:class{},
     ResizeObserver:class{constructor(fn){this.fn=fn}observe(){}disconnect(){}},
-    MutationObserver:class{constructor(fn){this.fn=fn;this.connected=false;observers.push(this)}observe(){this.connected=true}disconnect(){this.connected=false}},
+    MutationObserver:class{constructor(fn){this.fn=fn;this.connected=false;this.options=null;observers.push(this)}observe(_target,options){this.connected=true;this.options=options}disconnect(){this.connected=false}},
   }
   Object.setPrototypeOf(element,context.HTMLElement.prototype)
   context.window=context
@@ -69,6 +69,8 @@ function harness({visible=true,locale='en',chapter='overview',startPath}={}){
     navigate(path){pathname=path;dirty=true;flush()},
     timeout(){const pending=[...timers.values()];timers.clear();pending.forEach(fn=>fn());flush()},
     reveal(){visible=true;for(const observer of observers)if(observer.connected)observer.fn();flush()},
+    spotlight:()=>nodes(tree).find(node=>typeof node.props?.className==='string'&&node.props.className.includes('z-[188]'))?.props.style,
+    moveTarget(top){rect.top=top;for(const observer of observers)if(observer.connected)observer.fn();flush()},
     unmount(){for(const slot of slots)slot?.cleanup?.()},
   }
 }
@@ -78,6 +80,15 @@ test('tour stays compact and reveals contextual information only after the highl
   assert.ok(!app.text().includes('Learn to read the live event'))
   app.emit('uptilldawn-training-nav-target',{target:'crew'})
   assert.match(app.text(),/Learn to read the live event/)
+  app.unmount()
+})
+
+test('spotlight follows position-only layout shifts after localized text reflows',()=>{
+  const app=harness({locale:'en'})
+  assert.equal(app.spotlight()?.top,75)
+  assert.ok(app.observers.some(observer=>observer.connected&&observer.options?.characterData))
+  app.moveTarget(40)
+  assert.equal(app.spotlight()?.top,35)
   app.unmount()
 })
 
