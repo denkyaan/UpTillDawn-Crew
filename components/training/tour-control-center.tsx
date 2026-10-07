@@ -151,8 +151,7 @@ export function TourControlCenter({active,userId,role,preferredWorkplace,mode="f
       return width*height
     }
     const locate=()=>{
-      const firstContainer=document.querySelector(selector)
-      const containers=typeof document.querySelectorAll==="function"?[...document.querySelectorAll(selector)]:firstContainer?[firstContainer]:[]
+      const containers=typeof document.querySelectorAll==="function"?[...document.querySelectorAll(selector)]:(()=>{const container=document.querySelector(selector);return container?[container]:[]})()
       const candidates=containers.flatMap(container=>{
         const exactPrimary=container instanceof HTMLElement&&container.matches('[data-tour-demo="primary-action"]:not(:disabled)')?container:null
         const nestedPrimary=container?.querySelector('[data-tour-demo="primary-action"]:not(:disabled)')
