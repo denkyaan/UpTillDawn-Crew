@@ -16,7 +16,9 @@ test('event tour follows the current interactive action',async()=>{
  assert.match(source,/data-tour-demo=\{!open\?"primary-action":undefined\}/)
  assert.match(source,/data-tour-demo=\{open&&!saved\?"primary-action":undefined\}/)
  const tour=await readFile(new URL('../components/training/tour-control-center.tsx',import.meta.url),'utf8')
- assert.match(tour,/container\?\.querySelector\('\[data-tour-demo="primary-action"\]:not\(:disabled\), button:not\(:disabled\), summary, input:not\(:disabled\)'\)/)
+ assert.match(tour,/nestedPrimary=container\?\.querySelector\('\[data-tour-demo="primary-action"\]:not\(:disabled\)'\)/)
+ assert.match(tour,/fallbackAction=container\?\.querySelector\('button:not\(:disabled\), summary, input:not\(:disabled\)'\)/)
+ assert.match(tour,/const found=exactPrimary\|\|nestedPrimary\|\|fallbackAction\|\|container/)
 })
 
 
