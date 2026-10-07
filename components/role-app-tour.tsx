@@ -244,6 +244,16 @@ export function RoleAppTour(){
       if(preferredName)sessionStorage.setItem("uptilldawn-training-preferred-workplace",preferredName)
       else sessionStorage.removeItem("uptilldawn-training-preferred-workplace")
       const state=data?.[0]
+      const saved=localStorage.getItem(storageKey(user.id,role))
+      const previous=localStorage.getItem(storageKey(user.id,role,PREVIOUS_VERSION))
+
+      // Respect an explicit Later choice before automatically offering the
+      // first-use general tour again. Manual restarts remain independent.
+      if(saved==="postponed"){
+        setChoice(false)
+        return
+      }
+
       const generalRole=role as "employee"|"responsible_lead"|"admin"
       const generalChapters=getTourChapters(generalRole,{scope:"general"})
       let generalProgress:{completed?:string[]}|null=null
@@ -264,9 +274,7 @@ export function RoleAppTour(){
         if(location.pathname!=="/settings")router.replace("/settings?complete-profile=1")
         return
       }
-      const saved=localStorage.getItem(storageKey(user.id,role))
-      const previous=localStorage.getItem(storageKey(user.id,role,PREVIOUS_VERSION))
-      if(saved==="completed"||saved==="postponed"){
+      if(saved==="completed"){
         setChoice(false)
         return
       }
