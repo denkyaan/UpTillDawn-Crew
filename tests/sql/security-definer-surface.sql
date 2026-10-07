@@ -1,8 +1,8 @@
 -- Security-definer surface regression.
 -- Public SECURITY DEFINER RPCs are intentionally used for validated workflows.
--- PUBLIC execute is forbidden. Anonymous execute is limited to the two explicit
--- pre-auth admin login guard/failure entry points. God Mode requires an
--- authenticated permanent-maker session.
+-- PUBLIC and anonymous execute are forbidden for this SECURITY DEFINER surface.
+-- The retired pre-auth admin login guard/failure RPCs are service-only. God Mode
+-- requires an authenticated permanent-maker session.
 
 BEGIN;
 
