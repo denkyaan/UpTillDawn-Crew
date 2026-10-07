@@ -460,7 +460,18 @@ try {
               Math.abs((b.top+b.height/2)-(r.top+r.height/2))<=8
           })
         })
-        if(!primaryBox||!aligned)throw new Error('tour spotlight is not aligned with the primary action')
+        if(!primaryBox||!aligned){
+          const geometry=await page.evaluate(()=>{
+            const primary=document.querySelector('[data-tour-demo="primary-action"]')
+            const b=primary?.getBoundingClientRect()
+            const overlays=[...document.querySelectorAll('div[aria-hidden].fixed')].map(node=>{
+              const r=node.getBoundingClientRect(),style=getComputedStyle(node)
+              return {className:node.className,pointerEvents:style.pointerEvents,left:r.left,top:r.top,width:r.width,height:r.height}
+            })
+            return {viewport:{width:innerWidth,height:innerHeight,scrollX,scrollY},primary:b?{left:b.left,top:b.top,width:b.width,height:b.height}:null,overlays}
+          })
+          throw new Error(`tour spotlight is not aligned with the primary action; geometry=${JSON.stringify(geometry)}`)
+        }
         const before=await page.evaluate(key=>JSON.parse(localStorage.getItem(key)||'null'),progressKey)
         if(!before?.activeKey)throw new Error('general tour did not initialize active progress')
         await primary.evaluate(button=>button.click())
