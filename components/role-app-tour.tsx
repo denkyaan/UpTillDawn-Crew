@@ -9,7 +9,7 @@ import {featureHelp} from "@/lib/ui-field-help"
 import {parseUiLocale,LANGUAGE_APPLIED_EVENT} from "@/lib/locale-preferences"
 import type {ExtendedUiLocale} from "@/lib/ui-translation-extensions"
 import {TourControlCenter} from "@/components/training/tour-control-center"
-import {TOUR_SESSION_KEY,tourProgressKey,type TourMode} from "@/lib/tour-training"
+import {TOUR_SESSION_KEY,getTourChapters,tourProgressKey,type TourMode} from "@/lib/tour-training"
 
 type TourText={nl:string;en:string;fr:string;de:string}
 type Copy=string|TourText
@@ -244,6 +244,14 @@ export function RoleAppTour(){
       if(preferredName)sessionStorage.setItem("uptilldawn-training-preferred-workplace",preferredName)
       else sessionStorage.removeItem("uptilldawn-training-preferred-workplace")
       const state=data?.[0]
+      if(preferredName){
+        const scopedRole=role as "employee"|"responsible_lead"|"admin"
+        const scopedChapters=getTourChapters(scopedRole,{driver:/driver/i.test(preferredName),entrance:/inkom|entrance|guest/i.test(preferredName)})
+        let scoped:{completed?:string[]}|null=null
+        try{scoped=JSON.parse(localStorage.getItem(tourProgressKey(user.id,scopedRole,preferredName))||"null")}catch{}
+        const completed=new Set(Array.isArray(scoped?.completed)?scoped.completed:[])
+        if(scopedChapters.some(chapter=>!completed.has(chapter.key))){setTourMode("full");setChoice(true);return}
+      }
       if(state?.required&&!state.completed){
         if(location.pathname!=="/settings")router.replace("/settings?complete-profile=1")
         return
