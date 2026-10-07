@@ -182,23 +182,16 @@ try {
         await page.waitForFunction(() => document.readyState === 'interactive' || document.readyState === 'complete', null, { timeout: 45000 })
       }
 
-      // Existing seeded bots predate first-login onboarding. Dismiss the
-      // optional role tour so lifecycle assertions exercise the underlying UI.
-      const tourLater=page.getByRole('button',{name:/^(LATER|PLUS TARD|SPÄTER)$/i})
-      if(await tourLater.count()){
-        await tourLater.first().click()
-        // The tour component writes the per-user/role postponement key to
-        // localStorage. Wait for that persistence before navigating away so a
-        // fast lifecycle navigation cannot remount the choice modal.
-        await page.waitForFunction(() =>
-          Object.keys(localStorage).some(key =>
-            key.startsWith('uptilldawn-app-tour:') && localStorage.getItem(key)==='postponed'
-          ),
-          null,
-          {timeout:5000},
-        )
-        await page.getByRole('dialog').waitFor({state:'detached',timeout:5000}).catch(()=>{})
-      }
+      // Existing seeded bots exercise operational UI here, not onboarding.
+      // Persist postponement explicitly so the modal cannot race later workflow
+      // actions. The dedicated tour block below resets and starts the tour.
+      const tourRole=role==='staff'?'employee':role==='responsible'?'responsible_lead':'admin'
+      const profile=await lifecycleAdmin.from('profiles').select('id').eq('full_name',expectedName).single()
+      if(profile.error||!profile.data?.id)throw new Error('browser bot profile unavailable')
+      await page.evaluate(({userId,tourRole})=>{
+        localStorage.setItem(`uptilldawn-app-tour:${userId}:${tourRole}:v8`,'postponed')
+      },{userId:profile.data.id,tourRole})
+      await page.reload({waitUntil:'networkidle',timeout:45000})
 
       const body = await page.locator('body').innerText()
       if (!body.trim()) throw new Error('empty authenticated UI')
@@ -427,9 +420,6 @@ try {
       // owns role-specific chapter order; the browser verifies the highlighted
       // action, contextual feedback event and persisted pause state.
       if(index<4){
-        const tourRole=role==='staff'?'employee':role==='responsible'?'responsible_lead':'admin'
-        const profile=await lifecycleAdmin.from('profiles').select('id').eq('full_name',expectedName).single()
-        if(profile.error||!profile.data)throw new Error('tour test profile unavailable')
         const progressKey=`uptilldawn-tour-progress:${profile.data.id}:${tourRole}:general:v8`
         await page.evaluate(({tourRole,userId,progressKey})=>{
           localStorage.setItem(`uptilldawn-app-tour:${userId}:${tourRole}:v8`,'postponed')
@@ -534,14 +524,8 @@ try {
     // first-use tour state from the concurrent browser smoke contexts.
     // These tests exercise operational UI, not onboarding, so mark the
     // role-level first-use prompt as postponed before the first navigation.
-    const profile=await lifecycleAdmin
-      .from('profiles')
-      .select('id')
-      .eq('full_name',`E2E ${role === 'responsible' ? 'Responsible' : role === 'admin' ? 'Admin' : 'Staff'} ${String(index+1).padStart(2,'0')}`)
-      .single()
-
-    if(profile.error||!profile.data?.id){
-      throw new Error(`lifecycle ${role} profile unavailable`)
+    if(!data.user?.id){
+      throw new Error(`lifecycle ${role} authenticated user id missing`)
     }
 
     const tourRole=role==='staff'
@@ -556,7 +540,7 @@ try {
         'postponed'
       )
     },{
-      userId:profile.data.id,
+      userId:data.user.id,
       tourRole,
     })
 
