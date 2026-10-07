@@ -33,12 +33,9 @@ test('God Mode is reachable only through the authenticated maker flow',async()=>
 
   // Fast preflight for SQL regression fixtures: stale privilege expectations
   // must fail here, before the slower local Supabase replay starts.
-  const securityAnonAllowlist=securitySurface.match(/p\.proname <> ALL\(ARRAY\[([\s\S]*?)\]\);/)?.[1] ?? ''
-  const privilegeAnonAllowlist=privilegeMatrix.match(/routine_name <> ALL\(ARRAY\[([\s\S]*?)\]\);/)?.[1] ?? ''
-  assert.ok(securityAnonAllowlist)
-  assert.ok(privilegeAnonAllowlist)
-  assert.doesNotMatch(securityAnonAllowlist,/upt_god_/)
-  assert.doesNotMatch(privilegeAnonAllowlist,/upt_god_/)
+  assert.match(securitySurface,/has_function_privilege\('anon','public\.upt_admin_login_guard\(text\)','EXECUTE'\)/)
+  assert.match(securitySurface,/has_function_privilege\('anon','public\.upt_admin_login_failure\(text,text,text,text\)','EXECUTE'\)/)
+  assert.match(privilegeMatrix,/anonymous Uptilldawn RPC execution is closed/)
   assert.doesNotMatch(securitySurface,/token-gated God Mode|anonymous God Mode|owner configuration RPC/i)
   assert.doesNotMatch(privilegeMatrix,/token-gated God Mode|Dedicated God Mode error queue/i)
   assert.match(securitySurface,/permanent-maker-only God Mode/)
