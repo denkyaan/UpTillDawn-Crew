@@ -75,6 +75,7 @@ export function getTourChapters(role:TourRole,options?:{driver?:boolean;entrance
     if(chapter.requires==="driver"&&!driver)return false
     if(chapter.requires==="entrance"&&role!=="admin"&&!entrance)return false
     if(options?.mode==="new"&&chapter.newSince!==TOUR_VERSION)return false
+    if(options?.scope==="general"&&chapter.scenario!=="general")return false
     return true
   })
 }
