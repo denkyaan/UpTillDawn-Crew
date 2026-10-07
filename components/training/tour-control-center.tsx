@@ -151,10 +151,12 @@ export function TourControlCenter({active,userId,role,preferredWorkplace,mode="f
       return width*height
     }
     const locate=()=>{
-      const candidates=[...document.querySelectorAll(selector)].flatMap(container=>{
+      const firstContainer=document.querySelector(selector)
+      const containers=typeof document.querySelectorAll==="function"?[...document.querySelectorAll(selector)]:firstContainer?[firstContainer]:[]
+      const candidates=containers.flatMap(container=>{
         const exactPrimary=container instanceof HTMLElement&&container.matches('[data-tour-demo="primary-action"]:not(:disabled)')?container:null
-        const nestedPrimary=container.querySelector('[data-tour-demo="primary-action"]:not(:disabled)')
-        const fallbackAction=container.querySelector('button:not(:disabled), summary, input:not(:disabled)')
+        const nestedPrimary=container?.querySelector('[data-tour-demo="primary-action"]:not(:disabled)')
+        const fallbackAction=container?.querySelector('button:not(:disabled), summary, input:not(:disabled)')
         const found=exactPrimary||nestedPrimary||fallbackAction||container
         return visibleInViewport(found)?[found]:[]
       }).sort((a,b)=>{
