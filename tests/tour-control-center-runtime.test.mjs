@@ -73,17 +73,12 @@ function harness({visible=true,locale='en',chapter='overview',startPath}={}){
   }
 }
 
-test('tour explanation opens and closes in each supported language',()=>{
-  for(const [locale,label,copy] of [['en','Explanation','Your progress is saved'],['nl','Uitleg','Je voortgang wordt opgeslagen'],['fr','Explication','Votre progression est enregistrée'],['de','Erklärung','Dein Fortschritt wird gespeichert']]){
-    const app=harness({locale})
-    assert.ok(!app.text().includes(copy))
-    app.click(label)
-    assert.ok(app.text().includes(copy))
-    assert.equal(app.button(label).props['aria-expanded'],true)
-    app.click(label)
-    assert.ok(!app.text().includes(copy))
-    app.unmount()
-  }
+test('tour stays compact and reveals contextual information only after the highlighted action',()=>{
+  const app=harness({locale:'en'})
+  assert.ok(!app.text().includes('Learn to read the live event'))
+  app.emit('uptilldawn-training-nav-target',{target:'events'})
+  assert.match(app.text(),/Learn to read the live event/)
+  app.unmount()
 })
 
 test('a late tour target recovers after timeout and reports only once',()=>{
@@ -96,7 +91,7 @@ test('a late tour target recovers after timeout and reports only once',()=>{
   assert.ok(app.observers.some(observer=>observer.connected))
   app.reveal()
   assert.equal(app.button('SKIP'),undefined)
-  assert.match(app.text(),/Perform the highlighted action/)
+  assert.ok(!app.text().includes('Perform the highlighted action'))
   assert.equal(app.requests.length,1)
   app.unmount()
   assert.ok(app.observers.every(observer=>!observer.connected))
@@ -147,14 +142,9 @@ test('starting a saved tour from settings opens its saved chapter without comple
 })
 
 
-test('tour panel stays outside the highlighted control on mobile and desktop',()=>{
-  for(const [height,mobile] of [[844,true],[932,true],[500,true],[800,false]]){
-    for(const top of [90,200,height/2,height-160]){
-      const target={top,height:44}
-      const panel=panelLayout.tourPanelLayout(target,height,mobile)
-      const panelTop=panel.top==='auto'?height-panel.bottom-panel.maxHeight:panel.top
-      assert.ok(panel.maxHeight>=0)
-      assert.ok(panelTop+panel.maxHeight<=target.top-12||panelTop>=target.top+target.height+12,JSON.stringify({target,panel,height}))
-    }
-  }
+test('tour chrome remains compact and does not render the legacy blocking panel',async()=>{
+  const source=await readFile(new URL('../components/training/tour-control-center.tsx',import.meta.url),'utf8')
+  assert.doesNotMatch(source,/tourPanelLayout\(/)
+  assert.doesNotMatch(source,/DO THIS NOW|DOE DIT NU/)
+  assert.match(source,/actionFeedback/)
 })
