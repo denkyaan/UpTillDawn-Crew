@@ -63,32 +63,9 @@ export async function POST(request: NextRequest) {
     }).catch(() => false)
   }
 
-  phase = 'security_guard'
-  if (!makerLogin) {
-    const { data: guard, error: guardError } = await supabase.rpc('upt_admin_login_guard', {
-      p_login: email,
-    })
-
-    if (guardError) {
-      await notify('failure', 'security_guard_error')
-      return NextResponse.redirect(loginUrl(request, 'Aanmelden tijdelijk niet beschikbaar. Probeer opnieuw.'), 303)
-    }
-
-    if (guard && typeof guard === 'object' && !Array.isArray(guard) && 'allowed' in guard && guard.allowed === false) {
-      await notify('blocked', 'login_locked')
-      return NextResponse.redirect(loginUrl(request, 'Te veel mislukte aanmeldpogingen. Probeer over 15 minuten opnieuw.'), 303)
-    }
-  }
-
   phase = 'password_auth'
   const { data, error } = await supabase.auth.signInWithPassword({ email, password })
   if (error || !data.user) {
-    if (!makerLogin) await adminRpc(supabase, 'upt_admin_login_failure', {
-      p_login: email,
-      p_ip: ip ?? undefined,
-      p_location: approximateLocation ?? undefined,
-      p_user_agent: userAgent ?? undefined,
-    })
     await notify('failure', 'invalid_credentials')
     return NextResponse.redirect(loginUrl(request, 'Foute logingegevens of u heeft geen toegang tot deze rol.'), 303)
   }
