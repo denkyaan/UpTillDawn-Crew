@@ -75,7 +75,11 @@ export function getTourChapters(role:TourRole,options?:{driver?:boolean;entrance
     if(chapter.requires==="driver"&&!driver)return false
     if(chapter.requires==="entrance"&&role!=="admin"&&!entrance)return false
     if(options?.mode==="new"&&chapter.newSince!==TOUR_VERSION)return false
-    if(options?.scope==="general"&&chapter.scenario!=="general")return false
+    // The first-use role tour must teach the complete role without requiring
+    // a real assignment. It runs entirely against fictional sandbox data.
+    // Only chapters that genuinely require a specific workplace are deferred
+    // to the later workplace-scoped tour.
+    if(options?.scope==="general"&&chapter.requires)return false
     return true
   })
 }
