@@ -244,6 +244,14 @@ export function RoleAppTour(){
       if(preferredName)sessionStorage.setItem("uptilldawn-training-preferred-workplace",preferredName)
       else sessionStorage.removeItem("uptilldawn-training-preferred-workplace")
       const state=data?.[0]
+      const generalRole=role as "employee"|"responsible_lead"|"admin"
+      const generalChapters=getTourChapters(generalRole,{scope:"general"})
+      let generalProgress:{completed?:string[]}|null=null
+      try{generalProgress=JSON.parse(localStorage.getItem(tourProgressKey(user.id,generalRole,""))||"null")}catch{}
+      const generalCompleted=new Set(Array.isArray(generalProgress?.completed)?generalProgress.completed:[])
+      if(generalChapters.some(chapter=>!generalCompleted.has(chapter.key))){
+        setPreferredWorkplace("");sessionStorage.removeItem("uptilldawn-training-preferred-workplace");setTourMode("full");setChoice(true);return
+      }
       if(preferredName){
         const scopedRole=role as "employee"|"responsible_lead"|"admin"
         const scopedChapters=getTourChapters(scopedRole,{driver:/driver/i.test(preferredName),entrance:/inkom|entrance|guest/i.test(preferredName)})
