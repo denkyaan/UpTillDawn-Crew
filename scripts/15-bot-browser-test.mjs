@@ -486,21 +486,50 @@ try {
   // Fresh sessions avoid race conditions while still exercising the real UI/RPC contracts.
   async function loginLifecycle(role,index){
     const locale=locales[index%locales.length]
-    const context=await browser.newContext({locale,viewport:{width:430,height:932}})
+    const context=await browser.newContext({
+      locale,
+      viewport:{width:430,height:932},
+    })
     const page=await context.newPage()
+
     const bot=`bot-${String(index+1).padStart(2,'0')}-${role}-${locale}`
     const emailAddress=`${bot}@bots.uptilldawn.test`
-    if(role==='admin'){
-      const response=await context.request.post(`${baseUrl}/api/auth/admin-login`,{form:{email:emailAddress,password:testPassword},maxRedirects:0,timeout:45000})
-      if(response.status()!==303)throw new Error(`lifecycle admin login failed HTTP ${response.status()}`)
-    }else{
-      await page.goto(`${baseUrl}/login/${role}`,{waitUntil:'networkidle',timeout:45000})
-      await page.locator('input[name="email"]').fill(emailAddress)
-      await page.locator('input[name="password"]').fill(testPassword)
-      await page.waitForTimeout(750)
-      await page.locator('button[type="submit"]').click()
-      await page.waitForURL(url=>url.pathname==='/',{timeout:45000})
+
+    const auth=createClient(supabaseUrl,anonKey,{
+      auth:{
+        persistSession:false,
+        autoRefreshToken:false,
+      },
+    })
+
+    const {data,error}=await auth.auth.signInWithPassword({
+      email:emailAddress,
+      password:testPassword,
+    })
+
+    if(error||!data.session){
+      throw new Error(
+        `lifecycle ${role} authentication failed: ${error?.message||'session missing'}`
+      )
     }
+
+    const response=await context.request.post(
+      `${baseUrl}/api/test-auth-session`,
+      {
+        data:{
+          access_token:data.session.access_token,
+          refresh_token:data.session.refresh_token,
+        },
+        timeout:30000,
+      }
+    )
+
+    if(!response.ok()){
+      throw new Error(
+        `lifecycle ${role} session bridge failed HTTP ${response.status()}`
+      )
+    }
+
     return {context,page}
   }
 
