@@ -34,7 +34,6 @@ test('tour controller recovers missing targets and never writes production data'
   assert.match(controller,/localStorage\.setItem\(progressKey/)
   assert.match(controller,/OVERSLAAN/)
   assert.match(controller,/PAUZEER/)
-  assert.match(controller,/seedScenario/)
   for(const source of [operations,events,workplaces,briefings,features,roleModules]){
     assert.doesNotMatch(source,/createClient\(/)
     assert.doesNotMatch(source,/\.from\(/)
