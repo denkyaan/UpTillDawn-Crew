@@ -221,23 +221,8 @@ export async function signIn(formData: FormData) {
             reason: reason ?? null,
         })
     }
-    if (requestedPortal === 'admin' && !makerLogin) {
-        const { data: guard, error: guardError } = await adminSecurityRpc<{ allowed?: boolean }>(supabase, 'upt_admin_login_guard', { p_login: email })
-        if (guardError) {
-            await notifySecurity('failure', 'security_guard_error')
-            return { error: 'Aanmelden tijdelijk niet beschikbaar. Probeer opnieuw.', code: 'security_guard_error' }
-        }
-        if (guard && guard.allowed === false) {
-            await notifySecurity('blocked', 'login_locked')
-            return { error: 'Te veel mislukte aanmeldpogingen. Probeer over 15 minuten opnieuw.', code: 'login_locked' }
-        }
-    }
-
     const { data, error } = await supabase.auth.signInWithPassword({ email, password })
     if (error || !data.user) {
-        if (requestedPortal === 'admin' && !makerLogin) {
-            await adminSecurityRpc(supabase, 'upt_admin_login_failure', { p_login: email, p_ip: security?.ip ?? null, p_location: security?.approximateLocation ?? null, p_user_agent: security?.userAgent ?? null })
-        }
         await notifySecurity('failure', error?.message.includes('Email not confirmed') ? 'email_not_confirmed' : error?.message.includes('Invalid login credentials') ? 'invalid_credentials' : 'auth_failure')
         if (requestedPortal === 'admin' || requestedPortal === 'responsible') return { error: 'Foute logingegevens of u heeft geen toegang tot deze rol.', code: 'invalid_credentials_or_role' }
         if (error?.message.includes('Email not confirmed')) return { error: 'Verifieer eerst je e-mailadres.', code: 'email_not_confirmed' }
@@ -266,7 +251,6 @@ export async function signIn(formData: FormData) {
     const hasPermanentAdminAccess = isOwner === true || (profile.approved === true && role === 'admin')
     const allowed = requestedPortal === 'admin' ? hasPermanentAdminAccess : requestedPortal === 'responsible' ? role === 'responsible_lead' || hasPermanentAdminAccess : role === 'staff' || role === 'responsible_lead' || hasPermanentAdminAccess
     if (!allowed) {
-        if (requestedPortal === 'admin' && !makerLogin) await adminSecurityRpc(supabase, 'upt_admin_login_failure', { p_login: email, p_ip: security?.ip ?? null, p_location: security?.approximateLocation ?? null, p_user_agent: security?.userAgent ?? null })
         await notifySecurity('denied', 'wrong_portal')
         await supabase.auth.signOut()
         return { error: requestedPortal === 'admin' || requestedPortal === 'responsible' ? 'Foute logingegevens of u heeft geen toegang tot deze rol.' : 'Dit account heeft geen toegang tot het gekozen portaal.', code: 'wrong_portal' }
