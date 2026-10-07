@@ -130,16 +130,12 @@ export function TourControlCenter({active,userId,role,preferredWorkplace,mode="f
     const updateRect=(element:Element)=>{
       const target=element as HTMLElement
       cancelAnimationFrame(frame)
-      if(!located){
-        // Position first, then measure after the smooth scroll has settled.
-        // Measuring in the same animation frame captured an intermediate Y
-        // coordinate on tablet/desktop viewports and left the spotlight stale.
-        target.scrollIntoView({behavior:"smooth",block:"center",inline:"nearest"})
-        const settle=()=>{if(stopped)return;const r=target.getBoundingClientRect();setRect({left:Math.max(4,r.left-5),top:Math.max(4,r.top-5),width:Math.max(24,r.width+10),height:Math.max(24,r.height+10)})}
-        frame=requestAnimationFrame(()=>requestAnimationFrame(settle))
-        return
-      }
-      frame=requestAnimationFrame(()=>{if(stopped)return;const r=target.getBoundingClientRect();setRect({left:Math.max(4,r.left-5),top:Math.max(4,r.top-5),width:Math.max(24,r.width+10),height:Math.max(24,r.height+10)})})
+      if(!located)target.scrollIntoView({behavior:"auto",block:"center",inline:"nearest"})
+      frame=requestAnimationFrame(()=>{
+        if(stopped)return
+        const r=target.getBoundingClientRect()
+        setRect({left:Math.max(4,r.left-5),top:Math.max(4,r.top-5),width:Math.max(24,r.width+10),height:Math.max(24,r.height+10)})
+      })
     }
     const locate=()=>{
       const container=document.querySelector(selector)
