@@ -116,12 +116,13 @@ test('missing-target skip records skipped instead of falsely completing the chap
   app.click('SKIP')
   assert.deepEqual(app.progress().skipped,['overview'])
   assert.deepEqual(app.progress().completed,[])
-  assert.equal(app.progress().activeKey,'crew')
+  assert.equal(app.progress().activeKey,'events')
   app.unmount()
 })
 
 test('skipping an unavailable final chapter pauses instead of claiming tour completion',()=>{
-  const app=harness({visible:false,chapter:'crew'})
+  const finalChapter=training.getTourChapters('employee',{scope:'general'}).at(-1).key
+  const app=harness({visible:false,chapter:finalChapter,startPath:training.tourBaseRoute('employee',training.getTourChapters('employee',{scope:'general'}).at(-1))})
   app.timeout()
   app.click('SKIP')
   assert.equal(app.progress().paused,true)
