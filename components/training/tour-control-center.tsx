@@ -211,8 +211,7 @@ export function TourControlCenter({active,userId,role,preferredWorkplace,mode="f
 
   return <>
     {rect&&<>
-      <div aria-hidden className="pointer-events-none fixed z-[188] animate-pulse rounded-xl border-[3px] border-violet-400 shadow-[0_0_0_9999px_rgba(0,0,0,0.52),0_0_28px_rgba(139,92,246,0.95)] transition-all duration-300" style={{left:rect.left,top:rect.top,width:rect.width,height:rect.height}}/>
-      <div aria-hidden className="pointer-events-none fixed z-[189] -translate-x-1/2 rounded-full border-2 border-violet-300 bg-violet-600 px-3 py-1.5 text-xs font-black text-white shadow-xl" style={{left:Math.min(window.innerWidth-62,Math.max(62,rect.left+rect.width/2)),top:Math.max(6,rect.top-38)}}>↓ {c(locale,"HIER","HERE","ICI","HIER")}</div>
+      <div aria-hidden className="pointer-events-none fixed z-[188] animate-pulse rounded-xl border-[3px] border-violet-400 shadow-[0_0_24px_rgba(139,92,246,0.9)] transition-all duration-300" style={{left:rect.left,top:rect.top,width:rect.width,height:rect.height}}/>
     </>}
     {actionFeedback&&<div data-no-translate className="pointer-events-none fixed left-1/2 top-20 z-[190] w-[min(88vw,22rem)] -translate-x-1/2 rounded-xl border border-violet-500/50 bg-background/95 px-3 py-2 text-xs font-semibold leading-5 shadow-xl backdrop-blur">{actionFeedback}</div>}
     <div data-no-translate data-tour-panel className="pointer-events-none fixed right-3 top-[calc(env(safe-area-inset-top)+.75rem)] z-[190] flex items-center gap-2">
