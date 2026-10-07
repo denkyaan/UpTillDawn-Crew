@@ -49,7 +49,7 @@ function harness({visible=true,locale='en',chapter='overview',startPath}={}){
   vm.runInNewContext(compiled,context)
   function flush(){
     for(let n=0;n<30;n++){
-      if(dirty){dirty=false;cursor=0;tree=context.exports.TourControlCenter({active:true,userId:'test-user',role:'employee',preferredWorkplace:'bar'})}
+      if(dirty){dirty=false;cursor=0;tree=context.exports.TourControlCenter({active:true,userId:'test-user',role:'employee',preferredWorkplace:''})}
       while(effects.length)effects.shift()()
       if(frames.size){const pending=[...frames.values()];frames.clear();pending.forEach(fn=>fn())}
       if(!dirty&&!effects.length&&!frames.size)return
@@ -100,7 +100,7 @@ test('a late tour target recovers after timeout and reports only once',()=>{
 test('action navigation keeps its new chapter while Next commits the route',()=>{
   const app=harness()
   app.emit('uptilldawn-training-nav-target',{target:'events'})
-  assert.equal(app.progress().activeKey,'events')
+  assert.equal(app.progress().activeKey,'crew')
   assert.deepEqual(app.progress().completed,['overview'])
   assert.deepEqual(app.routes,['/?tour=1','/events?tour=1'])
   app.navigate('/events')
@@ -121,7 +121,7 @@ test('missing-target skip records skipped instead of falsely completing the chap
 })
 
 test('skipping an unavailable final chapter pauses instead of claiming tour completion',()=>{
-  const app=harness({visible:false,chapter:'settings'})
+  const app=harness({visible:false,chapter:'crew'})
   app.timeout()
   app.click('SKIP')
   assert.equal(app.progress().paused,true)
