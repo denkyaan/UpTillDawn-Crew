@@ -101,7 +101,7 @@ export function TourControlCenter({active,userId,role,preferredWorkplace,mode="f
       write({...next,paused:false,updatedAt:new Date().toISOString()})
     })
     return()=>cancelAnimationFrame(frame)
-  },[active,chapters,mode,progressKey,role,router,write])
+  },[active,chapters,mode,preferredWorkplace,progressKey,role,router,write])
 
   const current=chapters.find(chapter=>chapter.key===progress.activeKey)||chapters[0]
   const currentIndex=Math.max(0,chapters.findIndex(chapter=>chapter.key===current?.key))
@@ -130,7 +130,7 @@ export function TourControlCenter({active,userId,role,preferredWorkplace,mode="f
     let timeout=0
     let frame=0
     let located=false
-    const resetFrame=requestAnimationFrame(()=>{setTargetReady(false);setTargetMissing(false)})
+    const resetFrame=requestAnimationFrame(()=>{setTargetMissing(false)})
     const mobile=matchMedia("(max-width: 1023px)").matches
     const selector=mobile?current.mobileSelector:current.desktopSelector
     const updateRect=(element:Element)=>{
@@ -148,7 +148,7 @@ export function TourControlCenter({active,userId,role,preferredWorkplace,mode="f
       if(found){
         const style=getComputedStyle(found)
         if(style.display!=="none"&&style.visibility!=="hidden"&&found.getClientRects().length){
-          cancelAnimationFrame(resetFrame);setTargetReady(true);setTargetMissing(false);updateRect(found);located=true
+          cancelAnimationFrame(resetFrame);setTargetMissing(false);updateRect(found);located=true
           resizeObserver?.disconnect();resizeObserver=new ResizeObserver(()=>updateRect(found));resizeObserver.observe(found)
           return true
         }
@@ -158,7 +158,7 @@ export function TourControlCenter({active,userId,role,preferredWorkplace,mode="f
     if(!locate()){
       observer=new MutationObserver(()=>{if(locate())observer?.disconnect()})
       observer.observe(document.body,{childList:true,subtree:true,attributes:true,attributeFilter:["class","style","hidden"]})
-      timeout=window.setTimeout(()=>{if(stopped||locate())return;setTargetReady(false);setTargetMissing(true);setRect(null);void reportMissingTarget(current,selector)},8000)
+      timeout=window.setTimeout(()=>{if(stopped||locate())return;setTargetMissing(true);setRect(null);void reportMissingTarget(current,selector)},8000)
     }
     const onResize=()=>{locate()}
     addEventListener("resize",onResize)
@@ -193,7 +193,7 @@ export function TourControlCenter({active,userId,role,preferredWorkplace,mode="f
     addEventListener("uptilldawn-training-nav-target",onTarget)
     addEventListener("uptilldawn-training-completed",onComplete)
     return()=>{removeEventListener("uptilldawn-training-nav-target",onTarget);removeEventListener("uptilldawn-training-completed",onComplete)}
-  },[active,chapters,current,mode,role,router,write])
+  },[active,chapters,current,locale,mode,preferredWorkplace,role,router,write])
 
   if(!active||!current||!chapters.length)return null
 
