@@ -76,7 +76,7 @@ function harness({visible=true,locale='en',chapter='overview',startPath}={}){
 test('tour stays compact and reveals contextual information only after the highlighted action',()=>{
   const app=harness({locale:'en'})
   assert.ok(!app.text().includes('Learn to read the live event'))
-  app.emit('uptilldawn-training-nav-target',{target:'events'})
+  app.emit('uptilldawn-training-nav-target',{target:'crew'})
   assert.match(app.text(),/Learn to read the live event/)
   app.unmount()
 })
