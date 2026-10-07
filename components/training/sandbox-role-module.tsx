@@ -37,9 +37,56 @@ export function SandboxRoleModule({role,module}:{role:TrainingRole;module:Module
   platform:{title:t(l,"Platformbeheer","Platform management","Gestion de la plateforme","Plattformverwaltung"),desc:t(l,"Automatiseringen, templates, rollouts, QR, recovery en technische configuratie.","Automations, templates, rollouts, QR, recovery and technical configuration.","Automatisations, modèles, déploiements, QR, recovery et configuration technique.","Automatisierungen, Vorlagen, Rollouts, QR, Recovery und technische Konfiguration."),action:t(l,"DEMO-AUTOMATISERING OPENEN","OPEN DEMO AUTOMATION","OUVRIR L’AUTOMATISATION DÉMO","DEMO-AUTOMATISIERUNG ÖFFNEN"),result:t(l,"Fictieve automatisering gecontroleerd; niets werd gepubliceerd.","Fictional automation reviewed; nothing was published.","Automatisation fictive vérifiée ; rien n’a été publié.","Fiktive Automatisierung geprüft; nichts wurde veröffentlicht.")},
   settings:{title:role==="admin"?t(l,"Beheer","Management","Gestion","Verwaltung"):t(l,"Profiel","Profile","Profil","Profil"),desc:t(l,"Controleer profiel, taal en de instellingen die bij je rol horen.","Review profile, language and the settings available to your role.","Vérifiez le profil, la langue et les paramètres disponibles pour votre rôle.","Prüfe Profil, Sprache und die für deine Rolle verfügbaren Einstellungen."),action:t(l,"TRAINING AFRONDEN","FINISH TRAINING","TERMINER LA FORMATION","TRAINING ABSCHLIESSEN"),result:t(l,"De volledige roltraining is afgerond.","The complete role training is finished.","La formation complète du rôle est terminée.","Das vollständige Rollentraining ist abgeschlossen.")},
  }[module]
- const complete=()=>{setDone(true);persist(next,module)}
+ const actionSets:Record<Module,string[]>={
+  personnel:role==="admin"?[
+   t(l,"Aanvraag openen","Open request","Ouvrir la demande","Anfrage öffnen"),
+   t(l,"Profiel controleren","Review profile","Vérifier le profil","Profil prüfen"),
+   t(l,"Initiële rol kiezen","Choose initial role","Choisir le rôle initial","Anfangsrolle wählen"),
+   t(l,"Account goedkeuren","Approve account","Approuver le compte","Konto genehmigen"),
+  ]:[copy.action],
+  crew:role==="admin"?[
+   t(l,"Personeelsprofiel openen","Open staff profile","Ouvrir le profil du personnel","Personalprofil öffnen"),
+   t(l,"Rol wijzigen","Change role","Modifier le rôle","Rolle ändern"),
+   t(l,"Account blokkeren en deblokkeren","Block and unblock account","Bloquer et débloquer le compte","Konto sperren und entsperren"),
+   t(l,"Personeel verwijderen controleren","Review staff deletion","Contrôler la suppression du personnel","Personal-Löschung prüfen"),
+  ]:[
+   t(l,"Personeelslijst openen","Open staff directory","Ouvrir la liste du personnel","Personalliste öffnen"),
+   t(l,"Contactgegevens openen","Open contact details","Ouvrir les coordonnées","Kontaktdaten öffnen"),
+  ],
+  chat:[
+   t(l,"Eventchat openen","Open event chat","Ouvrir le chat événement","Event-Chat öffnen"),
+   t(l,"Privéchat starten","Start private chat","Démarrer un chat privé","Privatchat starten"),
+   t(l,"Antwoord en @-vermelding gebruiken","Use reply and @mention","Utiliser réponse et @mention","Antwort und @-Erwähnung nutzen"),
+   t(l,"Trainingsbericht versturen","Send training message","Envoyer le message de formation","Trainingsnachricht senden"),
+  ],
+  exports:[
+   t(l,"Goedgekeurde uren selecteren","Select approved hours","Sélectionner les heures approuvées","Genehmigte Stunden auswählen"),
+   t(l,"Gelockte uren controleren","Review locked hours","Vérifier les heures verrouillées","Gesperrte Stunden prüfen"),
+   t(l,"Excel-export voorbereiden","Prepare Excel export","Préparer l’export Excel","Excel-Export vorbereiten"),
+  ],
+  platform:[
+   t(l,"Automatiseringen openen","Open automations","Ouvrir les automatisations","Automatisierungen öffnen"),
+   t(l,"Templates controleren","Review templates","Vérifier les modèles","Vorlagen prüfen"),
+   t(l,"Rollouts controleren","Review rollouts","Vérifier les déploiements","Rollouts prüfen"),
+   t(l,"QR-configuratie openen","Open QR configuration","Ouvrir la configuration QR","QR-Konfiguration öffnen"),
+   t(l,"Recovery controleren","Review recovery","Vérifier le recovery","Recovery prüfen"),
+   t(l,"Technische configuratie openen","Open technical configuration","Ouvrir la configuration technique","Technische Konfiguration öffnen"),
+  ],
+  settings:[
+   t(l,"Profielinstellingen openen","Open profile settings","Ouvrir les paramètres du profil","Profileinstellungen öffnen"),
+   t(l,"Taalinstelling controleren","Review language setting","Vérifier la langue","Spracheinstellung prüfen"),
+   t(l,"Rolinstellingen controleren","Review role settings","Vérifier les paramètres du rôle","Rolleneinstellungen prüfen"),
+   t(l,"Training afronden","Finish training","Terminer la formation","Training abschließen"),
+  ],
+ }
+ const actions=actionSets[module]
+ const [actionIndex,setActionIndex]=useState(0)
+ const complete=()=>{
+  if(actionIndex<actions.length-1){setActionIndex(value=>value+1);return}
+  setDone(true);persist(next,module)
+ }
  return <main className="mx-auto max-w-5xl space-y-5 p-4 pb-28 md:p-8">
   <header><p className="text-xs font-black uppercase tracking-[.2em] text-violet-400">{t(l,"TRAINING · FICTIEVE GEGEVENS","TRAINING · FICTIONAL DATA","FORMATION · DONNÉES FICTIVES","TRAINING · FIKTIVE DATEN")}</p><h1 className="text-3xl font-black">{copy.title}</h1><p className="mt-1 text-sm text-muted-foreground">{copy.desc}</p></header>
-  <section className="rounded-2xl border p-4"><h2 className="font-black">{t(l,"UpTillDawn Trainingsavond","UpTillDawn Training Night","Soirée d’entraînement UpTillDawn","UpTillDawn Trainingsabend")}</h2><p className="mt-2 text-sm">{copy.desc}</p><button data-tour-demo="primary-action" onClick={complete} disabled={done} className="mt-4 rounded-xl border p-3 font-black disabled:opacity-60">{done?t(l,"VOLTOOID","COMPLETED","TERMINÉ","ERLEDIGT"):copy.action}</button>{done&&<div className="mt-3 rounded-xl border p-3 text-sm"><p className="font-semibold">{copy.result}</p>{next&&<p className="mt-2">{t(l,"De volgende trainingsfunctie wordt nu geopend.","The next training feature now opens.","La fonction de formation suivante s’ouvre maintenant.","Die nächste Trainingsfunktion wird jetzt geöffnet.")}</p>}</div>}</section>
+  <section className="rounded-2xl border p-4"><h2 className="font-black">{t(l,"UpTillDawn Trainingsavond","UpTillDawn Training Night","Soirée d’entraînement UpTillDawn","UpTillDawn Trainingsabend")}</h2><p className="mt-2 text-sm">{copy.desc}</p><p className="mt-3 text-xs font-bold text-muted-foreground">{Math.min(actionIndex+1,actions.length)}/{actions.length}</p><button data-tour-demo="primary-action" onClick={complete} disabled={done} className="mt-2 rounded-xl border p-3 font-black disabled:opacity-60">{done?t(l,"VOLTOOID","COMPLETED","TERMINÉ","ERLEDIGT"):actions[actionIndex]}</button>{done&&<div className="mt-3 rounded-xl border p-3 text-sm"><p className="font-semibold">{copy.result}</p>{next&&<p className="mt-2">{t(l,"De volgende trainingsfunctie wordt nu geopend.","The next training feature now opens.","La fonction de formation suivante s’ouvre maintenant.","Die nächste Trainingsfunktion wird jetzt geöffnet.")}</p>}</div>}</section>
  </main>
 }
