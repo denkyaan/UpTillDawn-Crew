@@ -121,7 +121,11 @@ export function TourControlCenter({active,userId,role,preferredWorkplace,mode="f
     let frame=0
     let located=false
     const resetFrame=requestAnimationFrame(()=>{setTargetMissing(false)})
-    const mobile=matchMedia("(max-width: 1023px)").matches
+    // Select the tour target from the actual viewport width. CI and embedded/PWA
+    // environments can report a stale media-query result during the first paint,
+    // which previously made tablet bots resolve the desktop container while the
+    // visible primary action belonged to the mobile layout.
+    const mobile=innerWidth<1024
     const selector=mobile?current.mobileSelector:current.desktopSelector
     const updateRect=(element:Element)=>{
       const target=element as HTMLElement
