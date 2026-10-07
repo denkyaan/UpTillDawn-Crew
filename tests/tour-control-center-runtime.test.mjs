@@ -29,7 +29,7 @@ function harness({visible=true,locale='en',chapter='overview',startPath}={}){
   const router={push:route=>routes.push(route)}
   const dispatchEvent=event=>{for(const fn of [...(listeners.get(event.type)||[])])fn(event);return true}
   const rect={left:10,top:80,width:180,height:40}
-  const element={querySelector:()=>null,scrollIntoView(){},getBoundingClientRect:()=>rect,getClientRects:()=>visible?[rect]:[]}
+  const element={matches:()=>false,querySelector:()=>null,scrollIntoView(){},getBoundingClientRect:()=>rect,getClientRects:()=>visible?[rect]:[]}
   const context={exports:{},require(name){if(name==='react')return hooks;if(name==='react/jsx-runtime')return {jsx,jsxs:jsx,Fragment:'fragment'};if(name==='next/navigation')return {useRouter:()=>router,usePathname:()=>pathname};if(name==='@/lib/tour-training')return training;if(name==='@/lib/tour-panel-layout')return panelLayout;if(name==='@/lib/locale-preferences')return {activeUiLocale:()=>locale,LANGUAGE_APPLIED_EVENT:'language'};throw Error(name)},
     localStorage,sessionStorage,location:{pathname,search:'?tour=1'},innerWidth:390,innerHeight:844,
     fetch:async(url,options)=>{requests.push({url,...options});return {ok:true}},
@@ -40,8 +40,11 @@ function harness({visible=true,locale='en',chapter='overview',startPath}={}){
     addEventListener(name,fn){if(!listeners.has(name))listeners.set(name,new Set());listeners.get(name).add(fn)},
     removeEventListener:(name,fn)=>listeners.get(name)?.delete(fn),dispatchEvent,
     CustomEvent:class{constructor(type,{detail}={}){this.type=type;this.detail=detail}},
+    HTMLElement:class{},
+    ResizeObserver:class{constructor(fn){this.fn=fn}observe(){}disconnect(){}},
     MutationObserver:class{constructor(fn){this.fn=fn;this.connected=false;observers.push(this)}observe(){this.connected=true}disconnect(){this.connected=false}},
   }
+  Object.setPrototypeOf(element,context.HTMLElement.prototype)
   context.window=context
   vm.runInNewContext(compiled,context)
   function flush(){
