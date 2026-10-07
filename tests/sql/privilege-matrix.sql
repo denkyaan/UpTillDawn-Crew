@@ -47,11 +47,7 @@ BEGIN
   WHERE routine_schema='public'
     AND grantee='anon'
     AND routine_name LIKE 'upt_%'
-    AND routine_name <> ALL(ARRAY[
-      -- Intentional pre-auth admin login protection. These two are needed
-      -- before a Supabase session exists; login success is authenticated-only.
-      'upt_admin_login_guard','upt_admin_login_failure'
-    ]);
+;
 
   IF v_anon_rpcs IS NOT NULL THEN
     RAISE EXCEPTION 'FAIL unexpected anonymous Uptilldawn RPC execute grants: %', v_anon_rpcs;
@@ -121,4 +117,4 @@ BEGIN
   END IF;
 END $matrix$;
 
-SELECT 'PASS: public RLS/anon surface is locked down, anonymous RPCs are limited to the explicit pre-auth admin guard/failure surface, God Mode requires the maker session, legacy bootstrap is absent, trigger functions are non-callable and RPC-only tables have no direct mutation grants' AS result;
+SELECT 'PASS: public RLS/anon surface is locked down, anonymous Uptilldawn RPC execution is closed, God Mode requires the maker session, legacy bootstrap is absent, trigger functions are non-callable and RPC-only tables have no direct mutation grants' AS result;
