@@ -168,7 +168,10 @@ export function TourControlCenter({active,userId,role,preferredWorkplace,mode="f
       pendingPathRef.current=tourBaseRoute(role,next)
       router.push(tourRoute(role,next))
     }
-    const onTarget=(event:Event)=>{\n      setActionFeedback(current.description[locale])\n      window.setTimeout(()=>setActionFeedback(""),2600)\n      const detail=(event as CustomEvent<{target?:string}|string|undefined>).detail
+    const onTarget=(event:Event)=>{
+      setActionFeedback(current.description[locale])
+      window.setTimeout(()=>setActionFeedback(""),2600)
+      const detail=(event as CustomEvent<{target?:string}|string|undefined>).detail
       advanceTo(typeof detail==="string"?detail:detail?.target)
     }
     const onComplete=()=>{
