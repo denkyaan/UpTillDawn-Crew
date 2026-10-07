@@ -6,7 +6,7 @@ const center=readFileSync('components/training/tour-control-center.tsx','utf8')
 const training=readFileSync('lib/tour-training.ts','utf8')
 
 test('all role tours use one exact actionable element for highlight and HERE marker geometry',()=>{
-  assert.match(center,/exactPrimary=container\?\.matches/)
+  assert.match(center,/exactPrimary=container instanceof HTMLElement&&container\.matches/)
   assert.match(center,/nestedPrimary=container\?\.querySelector/)
   assert.match(center,/const found=exactPrimary\|\|nestedPrimary\|\|fallbackAction\|\|container/)
   assert.match(center,/new ResizeObserver\(\(\)=>updateRect\(found\)\)/)
