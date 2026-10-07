@@ -192,7 +192,6 @@ export async function signUp(formData: FormData) {
 // ── Sign In ──────────────────────────────────────────────────
 export async function signIn(formData: FormData) {
     const submittedEmail = String(formData.get('email') || '').trim().toLowerCase()
-    const makerLogin = isMakerLogin(submittedEmail)
     const email = resolveLoginEmail(submittedEmail)
     const password = String(formData.get('password') || '')
     const requestedPortal = String(formData.get('portal') || 'staff').toLowerCase()
