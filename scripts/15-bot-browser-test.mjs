@@ -462,12 +462,19 @@ try {
         })
         if(!primaryBox||!aligned)throw new Error('tour spotlight is not aligned with the primary action')
         const before=await page.evaluate(key=>JSON.parse(localStorage.getItem(key)||'null'),progressKey)
+        if(!before?.activeKey)throw new Error('general tour did not initialize active progress')
         await primary.evaluate(button=>button.click())
-        await page.waitForFunction(({key,previous})=>{
-          const next=JSON.parse(localStorage.getItem(key)||'null')
-          return next&&next.activeKey&&next.activeKey!==previous&&Array.isArray(next.completed)&&next.completed.includes(previous)
-        },{key:progressKey,previous:before?.activeKey||'overview'},{timeout:30000})
+        // The compact tour advances through React state before persistence.
+        // Assert the next highlighted action first, then verify persisted progress.
+        await page.locator('[data-tour-demo="primary-action"]').first().waitFor({state:'visible',timeout:30000})
+        await page.waitForTimeout(250)
         const advanced=await page.evaluate(key=>JSON.parse(localStorage.getItem(key)||'null'),progressKey)
+        if(
+          !advanced?.activeKey||
+          advanced.activeKey===before.activeKey||
+          !Array.isArray(advanced.completed)||
+          !advanced.completed.includes(before.activeKey)
+        )throw new Error(`general tour action did not advance persisted progress: before=${JSON.stringify(before)} after=${JSON.stringify(advanced)}`)
         await page.getByRole('button',{name:/^(PAUZEER|PAUSE|PAUSIEREN)$/}).click()
         const progress=await page.evaluate(key=>JSON.parse(localStorage.getItem(key)||'null'),progressKey)
         if(!progress?.paused||progress.activeKey!==advanced.activeKey||!progress.completed.includes(before?.activeKey||'overview'))throw new Error('general tour progress or pause did not persist')
