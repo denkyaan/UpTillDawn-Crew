@@ -26,7 +26,7 @@ export function TourHelpIndex(){
   useEffect(()=>{const apply=()=>setLocale(activeUiLocale());queueMicrotask(()=>{apply();setPreferred(sessionStorage.getItem("uptilldawn-training-preferred-workplace")||"")});addEventListener(LANGUAGE_APPLIED_EVENT,apply);const changed=()=>setRefresh(v=>v+1);addEventListener("uptilldawn-tour-finished",changed);addEventListener("storage",changed);return()=>{removeEventListener(LANGUAGE_APPLIED_EVENT,apply);removeEventListener("uptilldawn-tour-finished",changed);removeEventListener("storage",changed)}},[])
   const driver=/driver/i.test(preferred)
   const entrance=/inkom|entrance|guest/i.test(preferred)
-  const chapters=useMemo(()=>getTourChapters(role,{driver,entrance}),[driver,entrance,role])
+  const chapters=useMemo(()=>getTourChapters(role,{driver,entrance,scope:preferred?"workplace":"general"}),[driver,entrance,preferred,role])
   const progress=user?progressFor(user.id,role,chapters[0]?.key||"overview",preferred):null
   if(!user||!progress)return null
 
@@ -44,7 +44,7 @@ export function TourHelpIndex(){
       sessionStorage.setItem(TOUR_WORKFLOW_KEY,JSON.stringify(seeded))
     }
     const nextRole=targetRole as TourRole
-    const nextChapters=getTourChapters(nextRole,{driver:/driver/i.test(workplace),entrance:/inkom|entrance|guest/i.test(workplace),mode:options?.mode||"full"})
+    const nextChapters=getTourChapters(nextRole,{driver:/driver/i.test(workplace),entrance:/inkom|entrance|guest/i.test(workplace),mode:options?.mode||"full",scope:workplace?"workplace":"general"})
     const key=tourProgressKey(user.id,nextRole,workplace)
     const existing=progressFor(user.id,nextRole,nextChapters[0]?.key||"overview",workplace)
     const activeKey=options?.chapter&&nextChapters.some(chapter=>chapter.key===options.chapter)?options.chapter:existing.activeKey
