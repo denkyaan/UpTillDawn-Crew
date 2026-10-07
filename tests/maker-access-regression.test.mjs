@@ -19,7 +19,8 @@ test('maker login cannot be locked out by admin guard and verified owner can ent
     readFile(new URL('../app/api/auth/admin-login/route.ts',import.meta.url),'utf8'),
   ])
 
-  assert.match(auth,/requestedPortal === 'admin' && !makerLogin/)
+  assert.doesNotMatch(auth,/upt_admin_login_guard|upt_admin_login_failure/)
+  assert.match(auth,/supabase\.rpc\('upt_current_is_owner'\)/)
   assert.match(auth,/profile\.account_blocked && isOwner !== true/)
   assert.match(auth,/hasPermanentAdminAccess = isOwner === true/)
   assert.match(auth,/\/maker-mode\?portal=\$\{requestedPortal\}/)
