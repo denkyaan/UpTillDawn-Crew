@@ -201,7 +201,7 @@ export function TourControlCenter({active,userId,role,preferredWorkplace,mode="f
     clearTrainingNavTarget()
     const next={...progressRef.current,...patch,activeKey:chapter.key,paused:false,updatedAt:new Date().toISOString()}
     pendingPathRef.current=tourBaseRoute(role,chapter)
-    write(next);router.push(tourRoute(role,chapter));setIndexOpen(false);setDetailsOpen(false)
+    write(next);router.push(tourRoute(role,chapter))
   }
   const skip=()=>{
     if(!targetMissing)return
