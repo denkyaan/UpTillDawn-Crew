@@ -13,7 +13,7 @@ import { createClient } from '@/lib/supabase/crew-server'
 import { passwordPolicyMessage } from '@/lib/password-policy'
 import { sendSecurityLoginEmail } from '@/lib/security-login-email'
 import { markSaveSuccess } from '@/lib/save-success'
-import { isMakerLogin, resolveLoginEmail } from '@/lib/maker-login'
+import { resolveLoginEmail } from '@/lib/maker-login'
 
 function extractName(email: string): string {
     const local = email.split('@')[0]
