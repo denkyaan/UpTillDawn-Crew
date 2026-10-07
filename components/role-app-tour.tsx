@@ -318,7 +318,7 @@ export function RoleAppTour(){
       removeEventListener("uptilldawn-restart-tour",restart)
       dispatchEvent(new CustomEvent("uptilldawn-tour-preview",{detail:{active:false}}))
     }
-  },[loading,role,router,user])
+  },[loading,preferredWorkplace,role,router,user])
 
   useEffect(()=>{
     if(!user||!role)return
