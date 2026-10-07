@@ -137,17 +137,21 @@ export function TourControlCenter({active,userId,role,preferredWorkplace,mode="f
         setRect({left:Math.max(4,r.left-5),top:Math.max(4,r.top-5),width:Math.max(24,r.width+10),height:Math.max(24,r.height+10)})
       })
     }
+    const rectEdges=(r:DOMRect)=>({
+      right:Number.isFinite(r.right)?r.right:r.left+r.width,
+      bottom:Number.isFinite(r.bottom)?r.bottom:r.top+r.height,
+    })
     const visibleInViewport=(element:Element|null):element is HTMLElement=>{
       if(!(element instanceof HTMLElement))return false
       const style=getComputedStyle(element)
       if(style.display==="none"||style.visibility==="hidden"||!element.getClientRects().length)return false
-      const r=element.getBoundingClientRect()
-      return r.width>0&&r.height>0&&r.bottom>0&&r.right>0&&r.top<innerHeight&&r.left<innerWidth
+      const r=element.getBoundingClientRect(),edges=rectEdges(r)
+      return r.width>0&&r.height>0&&edges.bottom>0&&edges.right>0&&r.top<innerHeight&&r.left<innerWidth
     }
     const viewportScore=(element:HTMLElement)=>{
-      const r=element.getBoundingClientRect()
-      const width=Math.max(0,Math.min(r.right,innerWidth)-Math.max(r.left,0))
-      const height=Math.max(0,Math.min(r.bottom,innerHeight)-Math.max(r.top,0))
+      const r=element.getBoundingClientRect(),edges=rectEdges(r)
+      const width=Math.max(0,Math.min(edges.right,innerWidth)-Math.max(r.left,0))
+      const height=Math.max(0,Math.min(edges.bottom,innerHeight)-Math.max(r.top,0))
       return width*height
     }
     const locate=()=>{
