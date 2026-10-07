@@ -125,6 +125,7 @@ export function TourControlCenter({active,userId,role,preferredWorkplace,mode="f
     if(!active||!current)return
     let stopped=false
     let observer:MutationObserver|undefined
+    let resizeObserver:ResizeObserver|undefined
     let timeout=0
     let frame=0
     let located=false
@@ -139,8 +140,18 @@ export function TourControlCenter({active,userId,role,preferredWorkplace,mode="f
     }
     const locate=()=>{
       const container=document.querySelector(selector)
-      const found=container?.querySelector('[data-tour-demo="primary-action"]:not(:disabled), button:not(:disabled), summary, input:not(:disabled)')||document.querySelector('[data-tour-demo="primary-action"]:not(:disabled)')||container
-      if(found){const style=getComputedStyle(found);if(style.display!=="none"&&style.visibility!=="hidden"&&found.getClientRects().length){cancelAnimationFrame(resetFrame);setTargetReady(true);setTargetMissing(false);updateRect(found);located=true;return true}}
+      const exactPrimary=container?.matches('[data-tour-demo="primary-action"]:not(:disabled)')?container:null
+      const nestedPrimary=container?.querySelector('[data-tour-demo="primary-action"]:not(:disabled)')
+      const fallbackAction=container?.querySelector('button:not(:disabled), summary, input:not(:disabled)')
+      const found=exactPrimary||nestedPrimary||fallbackAction||container
+      if(found){
+        const style=getComputedStyle(found)
+        if(style.display!=="none"&&style.visibility!=="hidden"&&found.getClientRects().length){
+          cancelAnimationFrame(resetFrame);setTargetReady(true);setTargetMissing(false);updateRect(found);located=true
+          resizeObserver?.disconnect();resizeObserver=new ResizeObserver(()=>updateRect(found));resizeObserver.observe(found)
+          return true
+        }
+      }
       return false
     }
     if(!locate()){
@@ -151,7 +162,7 @@ export function TourControlCenter({active,userId,role,preferredWorkplace,mode="f
     const onResize=()=>{locate()}
     addEventListener("resize",onResize)
     addEventListener("scroll",onResize,true)
-    return()=>{stopped=true;observer?.disconnect();window.clearTimeout(timeout);cancelAnimationFrame(frame);cancelAnimationFrame(resetFrame);removeEventListener("resize",onResize);removeEventListener("scroll",onResize,true);setRect(null)}
+    return()=>{stopped=true;observer?.disconnect();resizeObserver?.disconnect();window.clearTimeout(timeout);cancelAnimationFrame(frame);cancelAnimationFrame(resetFrame);removeEventListener("resize",onResize);removeEventListener("scroll",onResize,true);setRect(null)}
   },[active,current,pathname])
 
   useEffect(()=>{
@@ -219,7 +230,7 @@ export function TourControlCenter({active,userId,role,preferredWorkplace,mode="f
       <div className="flex items-start justify-between gap-3"><div className="min-w-0"><div className="flex flex-wrap items-center gap-2"><span className="text-[10px] font-black uppercase tracking-[.18em] text-violet-500">{c(locale,"Rondleiding","Tour","Visite","Rundgang")} · {currentIndex+1}/{chapters.length}</span>{isNew&&<span className="rounded-full border border-emerald-500/50 px-2 py-0.5 text-[10px] font-black text-emerald-500">{c(locale,"NIEUW","NEW","NOUVEAU","NEU")}</span>}</div><h2 className="mt-1 truncate text-base font-black">{current.title[locale]}</h2><p className="mt-1 text-xs leading-5 text-muted-foreground">{current.description[locale]}</p></div><button type="button" onClick={()=>setDetailsOpen(value=>!value)} aria-expanded={detailsOpen} aria-controls="tour-step-details" className="pointer-events-auto shrink-0 rounded-lg border px-3 py-2 text-xs font-black" aria-label={c(locale,"Uitleg","Explanation","Explication","Erklärung")}>{detailsOpen?"−":"?"}</button><button type="button" onClick={()=>setIndexOpen(value=>!value)} className="pointer-events-auto shrink-0 rounded-lg border px-3 py-2 text-xs font-black">{indexOpen?c(locale,"SLUIT","CLOSE","FERMER","SCHLIESSEN"):c(locale,"INDEX","INDEX","INDEX","INDEX")}</button></div>
       <div className="mt-3 h-1.5 overflow-hidden rounded-full bg-muted"><div className="h-full bg-violet-500 transition-all" style={{width:percent+"%"}}/></div>
       <div className="mt-2 flex items-center justify-between text-[10px] text-muted-foreground"><span>{completedCount}/{chapters.length} {c(locale,"afgerond","completed","terminés","abgeschlossen")}</span><span>{percent}%</span></div>
-      {targetReady?<div className="mt-3 rounded-xl border-2 border-violet-500/60 bg-violet-500/10 p-3"><p className="text-[10px] font-black uppercase tracking-[.16em] text-violet-500">{c(locale,"DOE DIT NU","DO THIS NOW","FAITES CECI MAINTENANT","JETZT AUSFÜHREN")}</p><p className="mt-1 text-sm font-bold">{c(locale,"Gebruik de knop of bediening die hierboven met HIER is aangeduid. Volg daarna de volgende gemarkeerde stap.","Use the button or control marked HERE above. Then follow the next highlighted step.","Utilisez le bouton ou la commande indiquée ICI ci-dessus. Suivez ensuite l’étape suivante mise en évidence.","Benutze die oben mit HIER markierte Schaltfläche oder Bedienung. Folge danach dem nächsten hervorgehobenen Schritt.")}</p></div>:<p className="mt-2 text-[11px] text-amber-500">{c(locale,"Trainingsonderdeel wordt geladen…","Loading training control…","Chargement de l’élément de formation…","Trainingselement wird geladen…")}</p>}
+      {!targetReady&&<p className="mt-2 text-[11px] text-amber-500">{c(locale,"Trainingsonderdeel wordt geladen…","Loading training control…","Chargement de l’élément de formation…","Trainingselement wird geladen…")}</p>}
       {detailsOpen&&<div id="tour-step-details" className="pointer-events-auto mt-3 rounded-xl border p-3 text-xs leading-5"><p>{current.description[locale]}</p><p className="mt-2">{c(locale,"Voer de gemarkeerde actie uit op de pagina. Je voortgang wordt opgeslagen. Via STAPPEN kun je een onderdeel opnieuw openen; PAUZEER bewaart de rondleiding voor later.","Perform the highlighted action on the page. Your progress is saved. Use STEPS to reopen a chapter; PAUSE saves the tour for later.","Effectuez l’action indiquée sur la page. Votre progression est enregistrée. ÉTAPES permet de rouvrir un chapitre ; PAUSE conserve la visite pour plus tard.","Führe die markierte Aktion auf der Seite aus. Dein Fortschritt wird gespeichert. Mit SCHRITTE öffnest du ein Kapitel erneut; PAUSIEREN speichert den Rundgang für später.")}</p></div>}
       {targetMissing&&<div role="status" className="mt-3 rounded-xl border border-amber-500/40 p-3 text-xs"><p>{c(locale,"Deze bediening is nog niet beschikbaar. Je kunt wachten, via STAPPEN opnieuw openen of dit onderdeel overslaan.","This control is not available yet. Wait, reopen it through STEPS, or skip this chapter.","Cette commande n’est pas encore disponible. Attendez, rouvrez-la via ÉTAPES ou passez ce chapitre.","Diese Bedienung ist noch nicht verfügbar. Warte, öffne sie über SCHRITTE erneut oder überspringe dieses Kapitel.")}</p><button type="button" onClick={skip} className="pointer-events-auto mt-2 rounded-lg border px-3 py-2 font-bold">{c(locale,"OVERSLAAN","SKIP","PASSER","ÜBERSPRINGEN")}</button></div>}
       {indexOpen&&<div className="pointer-events-auto mt-3 max-h-[44dvh] space-y-3 overflow-y-auto rounded-xl border p-3">
