@@ -1,7 +1,7 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
 import {readFileSync} from 'node:fs'
-import {tourProgressKey,tourWorkplaceKey} from '../lib/tour-training.ts'
+import {getTourChapters,tourProgressKey,tourWorkplaceKey} from '../lib/tour-training.ts'
 
 test('tour progress is isolated by user role and workplace',()=>{
   assert.notEqual(tourProgressKey('u','employee','Bar / Toog'),tourProgressKey('u','employee','Driver'))
@@ -23,4 +23,17 @@ test('tour has no blocking explanation panel and shows feedback only after a gui
   assert.doesNotMatch(center,/DO THIS NOW|DOE DIT NU/)
   assert.match(center,/setActionFeedback\(current\.description\[locale\]\)/)
   assert.match(center,/actionFeedback&&/)
+})
+
+
+test('first app use has an independent role-only tour before any workplace assignment',()=>{
+  const general=getTourChapters('employee',{scope:'general'})
+  const workplace=getTourChapters('employee',{scope:'workplace'})
+  assert.ok(general.length>0)
+  assert.ok(general.every(chapter=>chapter.scenario==='general'))
+  assert.ok(workplace.some(chapter=>chapter.scenario!=='general'))
+  assert.notEqual(tourProgressKey('u','employee',''),tourProgressKey('u','employee','Bar / Toog'))
+  const roleTour=readFileSync('components/role-app-tour.tsx','utf8')
+  assert.match(roleTour,/generalChapters=getTourChapters\(generalRole,\{scope:"general"\}\)/)
+  assert.ok(roleTour.indexOf('generalChapters=getTourChapters')<roleTour.indexOf('if(preferredName){'))
 })
