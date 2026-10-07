@@ -8,10 +8,10 @@ import {getTourChapters,tourProgressKey,TOUR_VERSION,TOUR_WORKFLOW_KEY,type Tour
 type Progress={version:number;activeKey:string;completed:string[];skipped:string[];paused:boolean}
 const c=(locale:SupportedUiLocale,nl:string,en:string,fr:string,de:string)=>({nl,en,fr,de}[locale])
 
-function progressFor(userId:string,role:TourRole,first:string){
+function progressFor(userId:string,role:TourRole,first:string,workplace?:string){
   if(typeof window==="undefined")return {version:TOUR_VERSION,activeKey:first,completed:[],skipped:[],paused:false} satisfies Progress
   try{
-    const value=JSON.parse(localStorage.getItem(tourProgressKey(userId,role))||"null") as Progress|null
+    const value=JSON.parse(localStorage.getItem(tourProgressKey(userId,role,workplace))||"null") as Progress|null
     if(value?.version===TOUR_VERSION)return value
   }catch{}
   return {version:TOUR_VERSION,activeKey:first,completed:[],skipped:[],paused:false} satisfies Progress
@@ -27,7 +27,7 @@ export function TourHelpIndex(){
   const driver=/driver/i.test(preferred)
   const entrance=/inkom|entrance|guest/i.test(preferred)
   const chapters=useMemo(()=>getTourChapters(role,{driver,entrance}),[driver,entrance,role])
-  const progress=user?progressFor(user.id,role,chapters[0]?.key||"overview"):null
+  const progress=user?progressFor(user.id,role,chapters[0]?.key||"overview",preferred):null
   if(!user||!progress)return null
 
   const start=async(targetRole:UiRole=role,options?:{workplace?:string;chapter?:string;mode?:TourMode;scenario?:TourScenario})=>{
@@ -45,8 +45,8 @@ export function TourHelpIndex(){
     }
     const nextRole=targetRole as TourRole
     const nextChapters=getTourChapters(nextRole,{driver:/driver/i.test(workplace),entrance:/inkom|entrance|guest/i.test(workplace),mode:options?.mode||"full"})
-    const key=tourProgressKey(user.id,nextRole)
-    const existing=progressFor(user.id,nextRole,nextChapters[0]?.key||"overview")
+    const key=tourProgressKey(user.id,nextRole,workplace)
+    const existing=progressFor(user.id,nextRole,nextChapters[0]?.key||"overview",workplace)
     const activeKey=options?.chapter&&nextChapters.some(chapter=>chapter.key===options.chapter)?options.chapter:existing.activeKey
     localStorage.setItem(key,JSON.stringify({...existing,activeKey,paused:false}))
     dispatchEvent(new CustomEvent("uptilldawn-restart-tour",{detail:{role:targetRole,workplace,chapter:activeKey,mode:options?.mode||"full",scenario:options?.scenario}}))
