@@ -27,18 +27,15 @@ BEGIN
   WHERE n.nspname = 'public'
     AND p.prosecdef
     AND has_function_privilege('anon', p.oid, 'EXECUTE')
-    AND p.proname <> ALL(ARRAY[
-      'upt_admin_login_guard','upt_admin_login_failure'
-    ]);
+;
 
   IF v_count <> 0 THEN
     RAISE EXCEPTION 'FAIL: % unexpected SECURITY DEFINER function(s) are executable by anon', v_count;
   END IF;
 
-  IF NOT has_function_privilege('anon','public.upt_admin_login_guard(text)','EXECUTE')
-     OR NOT has_function_privilege('anon','public.upt_admin_login_failure(text,text,text,text)','EXECUTE')
-     OR has_function_privilege('anon','public.upt_admin_login_success(text,text,text,text)','EXECUTE') THEN
-    RAISE EXCEPTION 'FAIL: pre-auth admin login privilege boundary is incorrect';
+  IF has_function_privilege('anon','public.upt_admin_login_guard(text)','EXECUTE')
+     OR has_function_privilege('anon','public.upt_admin_login_failure(text,text,text,text)','EXECUTE') THEN
+    RAISE EXCEPTION 'FAIL: retired anonymous admin lockout RPC remains executable';
   END IF;
 
   IF EXISTS(
@@ -85,9 +82,6 @@ BEGIN
       -- workflow boundaries whose callees enforce caller identity/scope.
       AND position('upt_respond_shift' in pg_get_functiondef(p.oid)) = 0
       AND position('inventory_can_view' in pg_get_functiondef(p.oid)) = 0
-      AND p.proname NOT IN (
-        'upt_admin_login_guard','upt_admin_login_failure'
-      )
   ) THEN
     RAISE EXCEPTION 'FAIL: authenticated Uptilldawn SECURITY DEFINER entry point lacks an explicit authorization primitive';
   END IF;
@@ -179,5 +173,5 @@ BEGIN
 END
 $god_gate$;
 
-SELECT 'PASS: SECURITY DEFINER surface, bounded pre-auth admin login boundary, permanent-maker-only God Mode and retired standalone credential flow are locked down' AS result;
+SELECT 'PASS: SECURITY DEFINER surface, closed anonymous admin login mutation surface, permanent-maker-only God Mode and retired standalone credential flow are locked down' AS result;
 ROLLBACK;
