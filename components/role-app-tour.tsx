@@ -284,7 +284,7 @@ export function RoleAppTour(){
         else sessionStorage.removeItem("uptilldawn-training-preferred-workplace")
       }
       if(chapter){
-        const key=tourProgressKey(user.id,nextRole)
+        const key=tourProgressKey(user.id,nextRole,workplace??preferredWorkplace)
         let existing:{completed?:string[];skipped?:string[]}={}
         try{existing=JSON.parse(localStorage.getItem(key)||"{}")}catch{}
         localStorage.setItem(key,JSON.stringify({
@@ -316,10 +316,11 @@ export function RoleAppTour(){
     if(!user||!role)return
     const restore=()=>{
       try{
-        const saved=JSON.parse(sessionStorage.getItem(TOUR_SESSION_KEY)||"null") as {active?:boolean;role?:UiRole;mode?:TourMode}|null
+        const saved=JSON.parse(sessionStorage.getItem(TOUR_SESSION_KEY)||"null") as {active?:boolean;role?:UiRole;mode?:TourMode;workplace?:string}|null
         if(saved?.active&&saved.role===role){
           setTourRole(role)
           setTourMode(saved.mode||"full")
+          if(saved.workplace!==undefined)setPreferredWorkplace(saved.workplace)
           setOpen(true)
           setWelcome(false)
           setChoice(false)
@@ -362,7 +363,7 @@ export function RoleAppTour(){
     setWelcome(false)
     setOpen(true)
     sessionStorage.setItem("uptilldawn-tour-preview-route","1")
-    sessionStorage.setItem(TOUR_SESSION_KEY,JSON.stringify({active:true,role:activeRole,mode:tourMode}))
+    sessionStorage.setItem(TOUR_SESSION_KEY,JSON.stringify({active:true,role:activeRole,mode:tourMode,workplace:preferredWorkplace}))
     setPreview(true)
   }
 
