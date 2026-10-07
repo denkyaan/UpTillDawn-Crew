@@ -185,7 +185,7 @@ export function TourControlCenter({active,userId,role,preferredWorkplace,mode="f
     addEventListener("resize",onResize)
     addEventListener("scroll",onResize,true)
     return()=>{stopped=true;observer?.disconnect();resizeObserver?.disconnect();window.clearTimeout(timeout);cancelAnimationFrame(frame);cancelAnimationFrame(resetFrame);removeEventListener("resize",onResize);removeEventListener("scroll",onResize,true);setRect(null)}
-  },[active,current,pathname])
+  },[active,current,locale,pathname])
 
   useEffect(()=>{
     if(!active||!current)return
