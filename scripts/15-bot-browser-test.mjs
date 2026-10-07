@@ -201,7 +201,9 @@ try {
       await page.evaluate(({userId,tourRole})=>{
         localStorage.setItem(`uptilldawn-app-tour:${userId}:${tourRole}:v8`,'postponed')
       },{userId:profile.data.id,tourRole})
-      await page.reload({waitUntil:'networkidle',timeout:45000})
+      // localStorage is already updated in this live document. Avoid a second
+      // navigation here: it races Next/RSC redirects and can abort the page.
+      await page.waitForLoadState('domcontentloaded',{timeout:15000}).catch(()=>{})
 
       const body = await page.locator('body').innerText()
       if (!body.trim()) throw new Error('empty authenticated UI')
