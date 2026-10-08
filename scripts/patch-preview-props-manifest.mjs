@@ -1,19 +1,23 @@
-// Diagnose the actual OpenNext bundle before attempting another runtime patch.
-// This script deliberately fails closed if the expected manifest loader cannot
-// be identified, preventing another known-broken production deployment.
-import { readFileSync } from 'node:fs'
-const source = readFileSync(new URL('../.open-next/worker.js', import.meta.url), 'utf8')
-for (const token of ['Unexpected loadManifest', 'preview-props.json', 'getPreviewProps', 'loadManifest']) {
-  let from = 0
-  let hits = 0
-  while (hits < 4) {
-    const at = source.indexOf(token, from)
-    if (at < 0) break
-    const excerpt = source.slice(Math.max(0, at - 350), Math.min(source.length, at + 450))
-    console.log('OPENNEXT_MANIFEST_DIAGNOSTIC', token, at, JSON.stringify(excerpt))
-    from = at + token.length
-    hits++
+import { readdirSync, readFileSync } from 'node:fs'
+import { join } from 'node:path'
+const root = '.open-next'
+const tokens = ['Unexpected loadManifest', 'preview-props.json', 'getPreviewProps', 'loadManifest']
+let matches = 0
+function walk(dir) {
+  for (const entry of readdirSync(dir, { withFileTypes: true })) {
+    const path = join(dir, entry.name)
+    if (entry.isDirectory()) { walk(path); continue }
+    if (!/\\.(?:js|mjs|cjs)$/.test(entry.name)) continue
+    const source = readFileSync(path, 'utf8')
+    for (const token of tokens) {
+      const at = source.indexOf(token)
+      if (at < 0) continue
+      matches++
+      console.log('OPENNEXT_MANIFEST_DIAGNOSTIC', path, token, at,
+        JSON.stringify(source.slice(Math.max(0, at - 500), at + 650)))
+    }
   }
-  if (!hits) console.log('OPENNEXT_MANIFEST_DIAGNOSTIC', token, 'NOT FOUND')
 }
-throw new Error('Manifest loader compatibility not yet verified; block production deployment')
+walk(root)
+console.log('OPENNEXT_MANIFEST_DIAGNOSTIC total matches:', matches)
+throw new Error('Production blocked pending confirmed OpenNext manifest runtime correction')
