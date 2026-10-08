@@ -14,7 +14,7 @@ function walk(dir) {
   for (const entry of readdirSync(dir, { withFileTypes: true })) {
     const path = join(dir, entry.name)
     if (entry.isDirectory()) { walk(path); continue }
-    if (!/\\.(?:js|mjs|cjs)$/.test(entry.name)) continue
+    if (!/\.(?:js|mjs|cjs)$/.test(entry.name)) continue
     const source = readFileSync(path, 'utf8')
     if (source.includes(replacement)) { already++; continue }
     if (!source.includes(needle)) continue
