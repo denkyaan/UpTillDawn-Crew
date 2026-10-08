@@ -21,6 +21,18 @@ type Progress={version:number;activeKey:string;completed:string[];skipped:string
 type Rect={left:number;top:number;width:number;height:number}
 const c=(locale:SupportedUiLocale,nl:string,en:string,fr:string,de:string)=>({nl,en,fr,de}[locale])
 const unique=(values:string[])=>[...new Set(values)]
+// Sandbox components emit their own completion destination. Role-specific
+// chapter order can differ, so validate the source action and unlock only the
+// next chapter in the actual role sequence, never an arbitrary skipped chapter.
+const ACTION_TARGETS:Record<string,readonly string[]>={
+  overview:["events"],events:["workplaces"],workplaces:["briefings"],
+  briefings:["operations"],operations:["tasks"],driver:["tasks"],
+  tasks:["incidents"],incidents:["inventory"],inventory:["guestlist"],
+  guestlist:["sales","crew"],sales:["personnel"],personnel:["crew"],
+  crew:["chat"],chat:["settings","exports"],exports:["platform"],
+  platform:["settings"],settings:["timesheet"],
+}
+
 
 function initialProgress(defaultKey:string):Progress{
   return {version:TOUR_VERSION,activeKey:defaultKey,completed:[],skipped:[],paused:false,updatedAt:""}
@@ -223,14 +235,19 @@ export function TourControlCenter({active,userId,role,preferredWorkplace,mode="f
       // while the active first-use tour is intentionally scoped to general
       // chapters only. In that case continue to the next chapter in the active
       // scope instead of silently ignoring the user's indicated action.
-      const requested=chapters.find(chapter=>chapter.key===target)
-      // Do not allow an arbitrary event to skip chapters.
+      // Reject signals that do not belong to the active chapter.
+      // Filtering workplace-specific chapters must not block the general tour.
+      if(!ACTION_TARGETS[current.key]?.includes(target))return
       const next=chapters[currentIndex+1]
-      if(!requested||requested.key!==next?.key)return
       if(!next||next.key===current.key)return
-      // Unlock the next chapter only after the trainee opens its tab.
+      // A completed action only unlocks the next tab. The trainee clicks it.
       awaitingNavigationRef.current=next.key
       setNavigationTarget(tourBaseRoute(role,next))
+      try{
+        const state=JSON.parse(sessionStorage.getItem(TOUR_WORKFLOW_KEY)||"{}")
+        sessionStorage.setItem(TOUR_WORKFLOW_KEY,JSON.stringify({...state,navTarget:next.key}))
+      }catch{}
+      dispatchEvent(new CustomEvent("uptilldawn-training-next-tab",{detail:{target:next.key}}))
       setActionFeedback(c(locale,"Open nu zelf de volgende tab.","Open the next tab yourself.","Ouvrez vous-même l’onglet suivant.","Öffne den nächsten Tab selbst."))
     }
     const onTarget=(event:Event)=>{
