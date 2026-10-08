@@ -1,34 +1,19 @@
-// Next.js 16.4 calls getPreviewProps during server construction.
-// OpenNext 1.20.9's manifest loader throws on preview-props.json.
-// Narrow runtime workaround: only that manifest gets an empty object.
-// Fail the deployment build if the generated loader changes unexpectedly.
-import { readFileSync, writeFileSync } from 'node:fs'
-const file = new URL('../.open-next/worker.js', import.meta.url)
-let source = readFileSync(file, 'utf8')
-const needle = 'loadManifest'
-if (!source.includes(needle)) {
-  throw new Error('OpenNext manifest loader signature changed; refusing unsafe patch')
+// Diagnose the actual OpenNext bundle before attempting another runtime patch.
+// This script deliberately fails closed if the expected manifest loader cannot
+// be identified, preventing another known-broken production deployment.
+import { readFileSync } from 'node:fs'
+const source = readFileSync(new URL('../.open-next/worker.js', import.meta.url), 'utf8')
+for (const token of ['Unexpected loadManifest', 'preview-props.json', 'getPreviewProps', 'loadManifest']) {
+  let from = 0
+  let hits = 0
+  while (hits < 4) {
+    const at = source.indexOf(token, from)
+    if (at < 0) break
+    const excerpt = source.slice(Math.max(0, at - 350), Math.min(source.length, at + 450))
+    console.log('OPENNEXT_MANIFEST_DIAGNOSTIC', token, at, JSON.stringify(excerpt))
+    from = at + token.length
+    hits++
+  }
+  if (!hits) console.log('OPENNEXT_MANIFEST_DIAGNOSTIC', token, 'NOT FOUND')
 }
-const patterns = [
-  /throw new Error\(`Unexpected loadManifest\(\$\{([\w$]+)\}\) call!\`\);?/,
-  /throw new Error\("Unexpected loadManifest\(" \+ ([\w$]+) \+ "\) call!"\);?/,
-  /throw Error\(`Unexpected loadManifest\(\$\{([\w$]+)\}\) call!\`\);?/
-]
-let patched = false
-for (const pattern of patterns) {
-  const match = source.match(pattern)
-  if (!match) continue
-  const variable = match[1]
-  const replacement = `if (String(${variable}).endsWith("/.next/server/preview-props.json")) return {}; ${match[0]}`
-  source = source.replace(match[0], replacement)
-  patched = true
-  break
-}
-if (!patched) {
-  // The error is emitted by the lazily loaded server-function chunk rather than worker.js.
-  // Leave the bundle intact until the correct generated module is identified.
-  console.log('Manifest throw not found in worker entrypoint; no patch applied')
-  process.exit(0)
-}
-writeFileSync(file, source)
-console.log('Patched OpenNext preview-props manifest fallback (Next.js 16.4)')
+throw new Error('Manifest loader compatibility not yet verified; block production deployment')
