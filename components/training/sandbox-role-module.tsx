@@ -87,6 +87,7 @@ export function SandboxRoleModule({role,module}:{role:TrainingRole;module:Module
  // Resuming the tour must not silently complete unperformed actions.
  const actionKey="uptilldawn-demo-actions-v1:"+role+":"+module
  useEffect(()=>{
+  const frame=requestAnimationFrame(()=>{
   try{
    const stored=JSON.parse(sessionStorage.getItem(actionKey)||"[]") as unknown
    const recorded=Array.isArray(stored)?stored.filter((n):n is number=>Number.isInteger(n)&&n>=0&&n<actions.length):[]
@@ -97,6 +98,7 @@ export function SandboxRoleModule({role,module}:{role:TrainingRole;module:Module
    setDone(firstMissing===actions.length)
   }catch{setActionIndex(0);setDone(false)}
   setHydrated(true)
+  });return()=>cancelAnimationFrame(frame)
  // The action inventory is fixed per module; translations do not change indices.
  // eslint-disable-next-line react-hooks/exhaustive-deps
  },[actionKey])
