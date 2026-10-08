@@ -200,14 +200,15 @@ jobs:
       - name: Deploy public Worker alias
         run: npx wrangler deploy --config wrangler.alias.jsonc
 
-      - name: Capture production Worker exceptions during smoke
+      - name: Capture upstream and alias Worker exceptions
         shell: bash
         run: |
-          # Wrangler tail runs only while the smoke test executes. Limit output
-          # to exception diagnostics and never print request headers or secrets.
-          (timeout 110s npx wrangler tail uptilldawn-crew --format json > /tmp/upt-worker-tail.jsonl 2>/tmp/upt-worker-tail.err || true) &
-          echo "UPT_TAIL_PID=$!" >> "$GITHUB_ENV"
-          sleep 5
+          # The public endpoint is the 'crew' alias, which forwards to
+          # 'uptilldawn-crew'. Either Worker may throw the 1101 exception.
+          for worker in crew uptilldawn-crew; do
+            (timeout 120s npx wrangler tail "$worker" --format json > "/tmp/upt-tail-${worker}.jsonl" 2> "/tmp/upt-tail-${worker}.err" || true) &
+          done
+          sleep 8
 
       - name: Production public-surface smoke
         shell: bash
@@ -245,23 +246,35 @@ jobs:
             exit 1
           fi
 
-      - name: Report production Worker exceptions
+      - name: Report Worker exceptions and tail diagnostics
         if: always()
         shell: bash
         run: |
-          if [ -f /tmp/upt-worker-tail.jsonl ]; then
-            node -e '
-              const fs=require("fs");
-              for(const line of fs.readFileSync("/tmp/upt-worker-tail.jsonl","utf8").split("\\n")){
-                try {
-                  const event=JSON.parse(line);
-                  const errors=event.exceptions||[];
-                  for(const error of errors) console.log("Worker exception:",JSON.stringify({name:error.name,message:error.message,stack:error.stack}));
-                  if(event.outcome==="exception") console.log("Worker exception outcome:",event.scriptName||"unknown");
-                } catch {}
-              }
-            '
-          fi
-          if [ -f /tmp/upt-worker-tail.err ]; then
-            grep -Ei 'error|fail|permission|unauthorized' /tmp/upt-worker-tail.err | head -15 || true
-          fi
+          for worker in crew uptilldawn-crew; do
+            echo "=== ${worker} ==="
+            WORKER="$worker" node <<'NODE'
+          const fs = require('fs');
+          const worker = process.env.WORKER;
+          const file = `/tmp/upt-tail-${worker}.jsonl`;
+          if (fs.existsSync(file)) {
+            const lines = fs.readFileSync(file, 'utf8').split(/\r?\n/);
+            console.log('Tail events captured:', lines.filter(Boolean).length);
+            for (const line of lines) {
+              try {
+                const event = JSON.parse(line);
+                for (const error of event.exceptions || []) {
+                  console.log('Worker exception:', JSON.stringify({
+                    name: error.name, message: error.message, stack: error.stack
+                  }));
+                }
+                if (event.outcome && event.outcome !== 'ok') {
+                  console.log('Worker outcome:', event.outcome);
+                }
+              } catch {}
+            }
+          } else console.log('No tail output file');
+          NODE
+            if [ -f "/tmp/upt-tail-${worker}.err" ]; then
+              sed -E 's/(token|key|password)=[^ ]+/\1=[REDACTED]/Ig' "/tmp/upt-tail-${worker}.err" | tail -12
+            fi
+          done
