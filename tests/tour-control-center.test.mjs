@@ -127,3 +127,12 @@ test('staff and responsible role training follows crew then chat then settings t
   }
   assert.match(source,/admin:\{personnel:"crew",crew:"chat",chat:"exports",exports:"platform",platform:"settings",settings:"timesheet"\}/)
 })
+
+test('all chapter titles and descriptions contain four nonempty translations',async()=>{
+  const source=await read('lib/tour-training.ts')
+  const chapters=[...source.matchAll(/\{key:"([^"]+)",route:"([^"]+)",roles:([^,]+),scenario:"([^"]+)",title:c\("([^"]+)","([^"]+)","([^"]+)","([^"]+)"\),description:c\("([^"]+)","([^"]+)","([^"]+)","([^"]+)"\)/g)]
+  assert.equal(chapters.length,18,'every training chapter must have a complete translated title and description')
+  for(const chapter of chapters){
+    for(const value of chapter.slice(5,13))assert.ok(value.trim().length>0,chapter[1]+' has an empty translation')
+  }
+})
