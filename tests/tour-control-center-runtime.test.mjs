@@ -101,7 +101,7 @@ test('a late tour target recovers after timeout and reports only once',()=>{
   assert.equal(app.requests.length,1)
   assert.equal(app.requests[0].url,'/api/error-reports')
   assert.equal(JSON.parse(app.requests[0].body).errorName,'TourTargetMissing')
-  assert.ok(app.button('SKIP'))
+  assert.equal(app.button('SKIP'),undefined)
   assert.ok(app.observers.some(observer=>observer.connected))
   app.reveal()
   assert.equal(app.button('SKIP'),undefined)
@@ -111,40 +111,31 @@ test('a late tour target recovers after timeout and reports only once',()=>{
   assert.ok(app.observers.every(observer=>!observer.connected))
 })
 
-test('action navigation keeps its new chapter while Next commits the route',()=>{
+test('navigation cannot skip mandatory chapters',()=>{
   const app=harness()
   app.emit('uptilldawn-training-nav-target',{target:'crew'})
-  assert.equal(app.progress().activeKey,'crew')
-  assert.deepEqual(app.progress().completed,['overview'])
-  assert.deepEqual(app.routes,['/?tour=1','/crew?tour=1'])
-  app.navigate('/crew')
-  assert.equal(app.progress().activeKey,'crew')
-  assert.deepEqual(app.routes,['/?tour=1','/crew?tour=1'])
+  assert.equal(app.progress().activeKey,'overview')
+  assert.deepEqual(app.progress().completed,[])
   app.unmount()
 })
 
-test('missing-target skip records skipped instead of falsely completing the chapter',()=>{
+test('missing target is reported without silently completing a chapter',()=>{
   const app=harness({visible:false})
+  app.timeout()
   assert.equal(app.button('SKIP'),undefined)
-  app.timeout()
-  app.click('SKIP')
-  assert.deepEqual(app.progress().skipped,['overview'])
   assert.deepEqual(app.progress().completed,[])
-  assert.equal(app.progress().activeKey,'events')
+  assert.equal(app.progress().activeKey,'overview')
   app.unmount()
 })
 
-test('skipping an unavailable final chapter pauses instead of claiming tour completion',()=>{
-  const finalChapter=training.getTourChapters('employee',{scope:'general'}).at(-1).key
-  const app=harness({visible:false,chapter:finalChapter,startPath:training.tourBaseRoute('employee',training.getTourChapters('employee',{scope:'general'}).at(-1))})
+test('unavailable final chapter cannot complete training',()=>{
+  const last=training.getTourChapters('employee',{scope:'general'}).at(-1)
+  const app=harness({visible:false,chapter:last.key,startPath:training.tourBaseRoute('employee',last)})
   app.timeout()
-  app.click('SKIP')
-  assert.equal(app.progress().paused,true)
+  assert.equal(app.button('SKIP'),undefined)
   assert.deepEqual(app.progress().completed,[])
-  assert.equal(app.sessionStorage.getItem(training.TOUR_SESSION_KEY),null)
   app.unmount()
 })
-
 
 test('starting a saved tour from settings opens its saved chapter without completing another',()=>{
   const app=harness({startPath:'/settings'})
