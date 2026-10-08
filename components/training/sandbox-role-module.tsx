@@ -19,7 +19,7 @@ function persist(next:string|null,module:Module){
  try{s=JSON.parse(sessionStorage.getItem(KEY)||"{}")}catch{}
  // Settings is not proof that the user completed the operational workflow.
  const trainingComplete=false
- sessionStorage.setItem(KEY,JSON.stringify({...s,[module+"TrainingDone"]:true,navTarget:next,trainingComplete}))
+ sessionStorage.setItem(KEY,JSON.stringify({...s,[module+"TrainingDone"]:module!=="chat",navTarget:module==="chat"?"__chat_button":next,trainingComplete}))
  if(module!=="chat")dispatchEvent(new CustomEvent("uptilldawn-training-nav-target",{detail:{target:next||undefined}}))
  if(module==="chat"){sessionStorage.setItem("chatTourCompleted","1");const updated={...s,chatTourCompleted:true,[module+"TrainingDone"]:true,navTarget:"__chat_button",chatNextTarget:next,trainingComplete};sessionStorage.setItem(KEY,JSON.stringify(updated));dispatchEvent(new CustomEvent("uptilldawn-training-chat-completed"));dispatchEvent(new CustomEvent("uptilldawn-training-nav-target",{detail:{target:"__chat_button"}}));window.setTimeout(()=>{sessionStorage.setItem(KEY,JSON.stringify({...updated,navTarget:next}));dispatchEvent(new CustomEvent("uptilldawn-training-nav-target",{detail:{target:next||undefined}}))},2200)}
  // Completion is emitted only after the user submits the sandbox timesheet.
