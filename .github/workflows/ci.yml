@@ -7,7 +7,7 @@ on:
     branches: [main]
   workflow_dispatch:
 
-# Keep this workflow manually dispatchable when a push webhook is delayed.
+# Revalidate the complete pipeline on the regenerated Next.js security lockfile.
 
 concurrency:
   group: ci-${{ github.workflow }}-${{ github.ref }}
