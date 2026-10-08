@@ -61,7 +61,7 @@ export function TourControlCenter({active,userId,role,preferredWorkplace,mode="f
   // progress are restored only after mount, preventing React hydration errors.
   const [locale,setLocale]=useState<SupportedUiLocale>("nl")
   const [progress,setProgress]=useState<Progress>(()=>initialProgress(chapters[0]?.key||"overview"))
-  const [rect,setRect]=useState<Rect|null>(null)
+  const [,setRect]=useState<Rect|null>(null)
   const [targetMissing,setTargetMissing]=useState(false)
   const [actionFeedback,setActionFeedback]=useState("")
   const [navigationTarget,setNavigationTarget]=useState<string|null>(null)
