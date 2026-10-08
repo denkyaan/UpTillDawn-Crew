@@ -34,6 +34,26 @@ const dutchRuntimeLeakPatterns = [
   /\\b(?:wordt|worden|kunnen|kunt|jouw|deze|geen|alleen|alle|voor|van|met)\\s+(?:automatisch|personeel|werkplek|evenement|account|shift|uren|meldingen|resultaten)\\b/i,
 ]
 
+async function reloadWithTransientRetry(page, options={}) {
+  const url=page.url()
+  let lastError
+  for(let attempt=1;attempt<=3;attempt++){
+    try {
+      await page.reload({waitUntil:'domcontentloaded',timeout:45000,...options})
+      return
+    } catch(error) {
+      lastError=error
+      const message=String(error?.message||error)
+      if(!/ERR_ABORTED|frame was detached|navigation interrupted/i.test(message))throw error
+      if(attempt===3)break
+      await page.waitForTimeout(400*attempt)
+      await gotoWithTransientRetry(page,url,{waitUntil:'domcontentloaded',timeout:45000})
+      return
+    }
+  }
+  throw lastError
+}
+
 async function gotoWithTransientRetry(page, url, options={}) {
   const merged={waitUntil:'domcontentloaded',timeout:45000,...options}
   let lastError
@@ -262,7 +282,7 @@ try {
         if (!actionResponse.ok()) {
           throw new Error(`availability server action failed with HTTP ${actionResponse.status()}`)
         }
-        await page.reload({ waitUntil: 'networkidle', timeout: 45000 })
+        await reloadWithTransientRetry(page,{ waitUntil: 'networkidle', timeout: 45000 })
         const persistedForm = page.locator('form').filter({ has: page.locator('input[name="response"][value="can"]') }).first()
         const persistedCan = await persistedForm.locator('input[name="response"][value="can"]').isChecked()
         const persistedSetup = await persistedForm.locator('input[name="setup_available"][value="yes"]').isChecked()
@@ -294,7 +314,7 @@ try {
         if (!briefingResponse.ok()) {
           throw new Error(`briefing acknowledgement server action failed with HTTP ${briefingResponse.status()}`)
         }
-        await page.reload({ waitUntil: 'networkidle', timeout: 45000 })
+        await reloadWithTransientRetry(page,{ waitUntil: 'networkidle', timeout: 45000 })
         const persistedBriefing = page.locator('article').filter({ hasText: 'E2E Entrance Briefing' }).first()
         const persistedAckForm = persistedBriefing.locator('form:has(input[name="id"][value="00000000-0000-4000-8000-00000000e2e3"])')
         if (await persistedAckForm.count() !== 0) {
@@ -362,7 +382,7 @@ try {
           const pageText = (await page.locator('body').textContent()) || ''
           throw new Error(`guestlist RPC succeeded but UI did not reach 1/2; rpc=${guestlistBody.slice(0, 240)} guest=${guestText.slice(0, 240)} page=${pageText.slice(-400)}`)
         }
-        await page.reload({ waitUntil: 'networkidle', timeout: 45000 })
+        await reloadWithTransientRetry(page,{ waitUntil: 'networkidle', timeout: 45000 })
         const persistedGuest = page.locator('article').filter({ hasText: 'E2E Guest' }).first()
         if (!(await persistedGuest.getByText('1/2', { exact: true }).isVisible())) {
           throw new Error('guestlist check-in did not persist after reload')
@@ -394,7 +414,7 @@ try {
           const body = await taskConfirmResponse.text()
           throw new Error(`task confirmation RPC failed HTTP ${taskConfirmResponse.status()}: ${body.slice(0, 400)}`)
         }
-        await page.reload({waitUntil:'networkidle',timeout:45000})
+        await reloadWithTransientRetry(page,{waitUntil:'networkidle',timeout:45000})
         const persistedTask = page.locator('article').filter({ hasText: 'E2E Entrance Task' }).first()
         if (await persistedTask.locator('[data-action="task-confirm"]').count() !== 0) throw new Error('task confirmation did not persist')
 
@@ -413,7 +433,7 @@ try {
         const send = page.locator('[data-action="chat-send"]')
         await send.click()
         await page.locator('article').getByText('E2E lifecycle chat message',{exact:true}).waitFor({state:'visible',timeout:15000})
-        await page.reload({waitUntil:'networkidle',timeout:45000})
+        await reloadWithTransientRetry(page,{waitUntil:'networkidle',timeout:45000})
         if (!(await page.locator('article').getByText('E2E lifecycle chat message',{exact:true}).isVisible())) throw new Error('chat message did not persist after reload')
         const persistedLifecycleMessage=await lifecycleAdmin.from('messages').select('id,body,channel_id,sender_id').eq('body','E2E lifecycle chat message').order('created_at',{ascending:false}).limit(1).maybeSingle()
         if(persistedLifecycleMessage.error||!persistedLifecycleMessage.data?.id)throw new Error('lifecycle chat message was not persisted server-side before closure')
@@ -660,12 +680,12 @@ try {
       if(await startBreak.count()!==1)throw new Error('break-start action missing for active Staff work session')
       await startBreak.click()
       await staffWork.page.waitForTimeout(1200)
-      await staffWork.page.reload({waitUntil:'networkidle',timeout:45000})
+      await reloadWithTransientRetry(staffWork.page,{waitUntil:'networkidle',timeout:45000})
       const stopBreak=staffWork.page.locator('[data-action="break-stop"]')
       if(await stopBreak.count()!==1)throw new Error('break-stop action missing after break start')
       await stopBreak.click()
       await staffWork.page.waitForTimeout(1200)
-      await staffWork.page.reload({waitUntil:'networkidle',timeout:45000})
+      await reloadWithTransientRetry(staffWork.page,{waitUntil:'networkidle',timeout:45000})
       if(await staffWork.page.locator('[data-action="break-start"]').count()!==1)throw new Error('work did not resume after break stop')
 
       await staffWork.page.goto(`${baseUrl}/qr`,{waitUntil:'networkidle',timeout:45000})
@@ -792,7 +812,7 @@ try {
       await gotoWithTransientRetry(staffOps.page,`${baseUrl}/tasks?event=00000000-0000-4000-8000-00000000e2e1&workplace=00000000-0000-4000-8000-00000000e2e2`)
       for(const [action,expected] of [['task-status-in-progress','IN PROGRESS'],['task-status-completed','COMPLETED']]){
         const task=staffOps.page.locator('article').filter({hasText:'E2E Entrance Task'}).first()
-        await staffOps.page.reload({waitUntil:'domcontentloaded',timeout:30000})
+        await reloadWithTransientRetry(staffOps.page,{waitUntil:'domcontentloaded',timeout:30000})
         await task.waitFor({state:'visible',timeout:15000})
         const button=task.locator(`[data-action="${action}"]`)
         await button.waitFor({state:'visible',timeout:15000})
@@ -838,7 +858,7 @@ try {
         // A Server Action refresh replaces the rendered inventory tree. Re-open the
         // closing section on the refreshed DOM instead of continuing on stale locators.
         if (phase==='opening') {
-          await respInv.page.reload({waitUntil:'networkidle',timeout:45000})
+          await reloadWithTransientRetry(respInv.page,{waitUntil:'networkidle',timeout:45000})
         }
       }
     }finally{await respInv.context.close()}
