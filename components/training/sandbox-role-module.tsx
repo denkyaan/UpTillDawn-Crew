@@ -82,12 +82,37 @@ export function SandboxRoleModule({role,module}:{role:TrainingRole;module:Module
  }
  const actions=actionSets[module]
  const [actionIndex,setActionIndex]=useState(0)
+ const [hydrated,setHydrated]=useState(false)
+ // Each sandbox action is recorded independently, per role and module.
+ // Resuming the tour must not silently complete unperformed actions.
+ const actionKey="uptilldawn-demo-actions-v1:"+role+":"+module
+ useEffect(()=>{
+  try{
+   const stored=JSON.parse(sessionStorage.getItem(actionKey)||"[]") as unknown
+   const recorded=Array.isArray(stored)?stored.filter((n):n is number=>Number.isInteger(n)&&n>=0&&n<actions.length):[]
+   const uniqueSteps=new Set(recorded)
+   let firstMissing=0
+   while(firstMissing<actions.length&&uniqueSteps.has(firstMissing))firstMissing++
+   setActionIndex(Math.min(firstMissing,actions.length-1))
+   setDone(firstMissing===actions.length)
+  }catch{setActionIndex(0);setDone(false)}
+  setHydrated(true)
+ // The action inventory is fixed per module; translations do not change indices.
+ // eslint-disable-next-line react-hooks/exhaustive-deps
+ },[actionKey])
  const complete=()=>{
+  if(!hydrated||done)return
+  let recorded:number[]=[]
+  try{const saved=JSON.parse(sessionStorage.getItem(actionKey)||"[]");if(Array.isArray(saved))recorded=saved.filter((n):n is number=>Number.isInteger(n))}catch{}
+  // Only the currently displayed action can be credited.
+  const nextRecorded=[...new Set([...recorded,actionIndex])]
+  sessionStorage.setItem(actionKey,JSON.stringify(nextRecorded))
   if(actionIndex<actions.length-1){setActionIndex(value=>value+1);return}
+  if(actions.some((_,index)=>!nextRecorded.includes(index)))return
   setDone(true);persist(next,module)
  }
  return <main className="mx-auto max-w-5xl space-y-5 p-4 pb-28 md:p-8">
   <header><p className="text-xs font-black uppercase tracking-[.2em] text-violet-400">{t(l,"TRAINING · FICTIEVE GEGEVENS","TRAINING · FICTIONAL DATA","FORMATION · DONNÉES FICTIVES","TRAINING · FIKTIVE DATEN")}</p><h1 className="text-3xl font-black">{copy.title}</h1><p className="mt-1 text-sm text-muted-foreground">{copy.desc}</p></header>
-  <section className="rounded-2xl border p-4"><h2 className="font-black">{t(l,"UpTillDawn Trainingsavond","UpTillDawn Training Night","Soirée d’entraînement UpTillDawn","UpTillDawn Trainingsabend")}</h2><p className="mt-2 text-sm">{copy.desc}</p><p className="mt-3 text-xs font-bold text-muted-foreground">{Math.min(actionIndex+1,actions.length)}/{actions.length}</p><button data-tour-demo="primary-action" onClick={complete} disabled={done} className="mt-2 rounded-xl border p-3 font-black disabled:opacity-60">{done?t(l,"VOLTOOID","COMPLETED","TERMINÉ","ERLEDIGT"):actions[actionIndex]}</button>{done&&<div className="mt-3 rounded-xl border p-3 text-sm"><p className="font-semibold">{copy.result}</p>{next&&<p className="mt-2">{t(l,"De volgende trainingsfunctie wordt nu geopend.","The next training feature now opens.","La fonction de formation suivante s’ouvre maintenant.","Die nächste Trainingsfunktion wird jetzt geöffnet.")}</p>}</div>}</section>
+  <section className="rounded-2xl border p-4"><h2 className="font-black">{t(l,"UpTillDawn Trainingsavond","UpTillDawn Training Night","Soirée d’entraînement UpTillDawn","UpTillDawn Trainingsabend")}</h2><p className="mt-2 text-sm">{copy.desc}</p><p className="mt-3 text-xs font-bold text-muted-foreground">{Math.min(actionIndex+1,actions.length)}/{actions.length}</p><button data-tour-demo="primary-action" onClick={complete} disabled={done||!hydrated} className="mt-2 rounded-xl border p-3 font-black disabled:opacity-60">{done?t(l,"VOLTOOID","COMPLETED","TERMINÉ","ERLEDIGT"):actions[actionIndex]}</button>{done&&<div className="mt-3 rounded-xl border p-3 text-sm"><p className="font-semibold">{copy.result}</p>{next&&<p className="mt-2">{t(l,"De volgende trainingsfunctie wordt nu geopend.","The next training feature now opens.","La fonction de formation suivante s’ouvre maintenant.","Die nächste Trainingsfunktion wird jetzt geöffnet.")}</p>}</div>}</section>
  </main>
 }
