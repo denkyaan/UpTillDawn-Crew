@@ -8,9 +8,9 @@ export type TrainingRole="admin"|"responsible_lead"|"employee"|"staff"
 type Module="chat"|"crew"|"personnel"|"exports"|"platform"|"settings"
 
 const NEXT:Record<string,Partial<Record<Module,string|null>>>={
- employee:{chat:"crew",crew:"settings",settings:"timesheet"},
- staff:{chat:"crew",crew:"settings",settings:"timesheet"},
- responsible_lead:{chat:"crew",crew:"settings",settings:"timesheet"},
+ employee:{crew:"chat",chat:"settings",settings:"timesheet"},
+ staff:{crew:"chat",chat:"settings",settings:"timesheet"},
+ responsible_lead:{crew:"chat",chat:"settings",settings:"timesheet"},
  admin:{personnel:"crew",crew:"chat",chat:"exports",exports:"platform",platform:"settings",settings:"timesheet"},
 }
 
