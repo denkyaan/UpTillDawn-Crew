@@ -19,8 +19,8 @@ jobs:
           cache: npm
       - name: Restore previous Next.js runtime version
         run: |
-          npm install next@16.3.6 --save-exact --package-lock=true
-          node -e 'const p=require("./package.json"); if(p.dependencies.next!=="16.3.6") process.exit(1)'
+          npm install next@16.3.8 --save-exact --package-lock=true
+          node -e 'const p=require("./package.json"); if(p.dependencies.next!=="16.3.8") process.exit(1)'
       - name: Record temporary security advisory for emergency availability recovery
         run: npm audit --omit=dev --audit-level=high || echo 'Security audit requires follow-up after service recovery'
       - name: Verify reproducible dependency installation
@@ -34,5 +34,5 @@ jobs:
             echo "::error::No dependency change produced"
             exit 1
           fi
-          git commit -m "Emergency restore Next.js 16.3.6 runtime compatibility"
+          git commit -m "Restore compatible Next.js 16.3.8 runtime"
           git push origin HEAD:main
