@@ -121,7 +121,7 @@ export function TourControlCenter({active,userId,role,preferredWorkplace,mode="f
   },[active,chapters,current,pathname,role,router,write])
 
   useEffect(()=>{
-    if(!active||!current)return
+    if(!active||!current||navigationTarget)return
     let stopped=false
     let observer:MutationObserver|undefined
     let resizeObserver:ResizeObserver|undefined
@@ -137,7 +137,6 @@ export function TourControlCenter({active,userId,role,preferredWorkplace,mode="f
     // visible primary action belonged to the mobile layout.
     const mobile=innerWidth<1024
     const selector=mobile?current.mobileSelector:current.desktopSelector
-    if(navigationTarget){setRect(null);return}
     const updateRect=(element:Element)=>{
       const target=element as HTMLElement
       cancelAnimationFrame(frame)
