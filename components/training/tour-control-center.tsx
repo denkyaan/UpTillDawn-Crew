@@ -249,12 +249,6 @@ export function TourControlCenter({active,userId,role,preferredWorkplace,mode="f
 
   if(!active||!current||!chapters.length)return null
 
-  const saveActive=(chapter:TourChapter,patch?:Partial<Progress>)=>{
-    clearTrainingNavTarget()
-    const next={...progressRef.current,...patch,activeKey:chapter.key,paused:false,updatedAt:new Date().toISOString()}
-    pendingPathRef.current=tourBaseRoute(role,chapter)
-    write(next);router.push(tourRoute(role,chapter))
-  }
   const pause=()=>{write({...progressRef.current,paused:true,updatedAt:new Date().toISOString()});sessionStorage.removeItem(TOUR_SESSION_KEY);dispatchEvent(new CustomEvent("uptilldawn-tour-stop",{detail:{role,mode}}))}
 
   return <>
