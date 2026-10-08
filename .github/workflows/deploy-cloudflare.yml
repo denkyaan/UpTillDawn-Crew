@@ -256,23 +256,36 @@ jobs:
           const fs = require('fs');
           const worker = process.env.WORKER;
           const file = `/tmp/upt-tail-${worker}.jsonl`;
-          if (fs.existsSync(file)) {
-            const lines = fs.readFileSync(file, 'utf8').split(/\r?\n/);
-            console.log('Tail events captured:', lines.filter(Boolean).length);
-            for (const line of lines) {
-              try {
-                const event = JSON.parse(line);
-                for (const error of event.exceptions || []) {
-                  console.log('Worker exception:', JSON.stringify({
-                    name: error.name, message: error.message, stack: error.stack
-                  }));
-                }
-                if (event.outcome && event.outcome !== 'ok') {
-                  console.log('Worker outcome:', event.outcome);
-                }
-              } catch {}
+          if (!fs.existsSync(file)) { console.log('No tail output file'); process.exit(0); }
+          const raw = fs.readFileSync(file, 'utf8');
+          // Wrangler emits multi-line JSON objects; line-by-line JSON.parse
+          // silently discards all exceptions. Decode a JSON object stream.
+          let depth=0, quoted=false, escaped=false, begin=-1, count=0;
+          for (let i=0; i<raw.length; i++) {
+            const ch=raw[i];
+            if (begin<0) { if(ch==='{') { begin=i; depth=1; } continue; }
+            if (quoted) {
+              if(escaped) escaped=false;
+              else if(ch==='\\\\') escaped=true;
+              else if(ch==='"') quoted=false;
+            } else if(ch==='"') quoted=true;
+            else if(ch==='{') depth++;
+            else if(ch==='}') {
+              depth--;
+              if(depth===0) {
+                try {
+                  const event=JSON.parse(raw.slice(begin,i+1)); count++;
+                  for(const error of event.exceptions||[]) console.log('Worker exception:',JSON.stringify({name:error.name,message:error.message,stack:error.stack}));
+                  if(event.outcome && event.outcome!=='ok') console.log('Worker outcome:',event.outcome);
+                  if(event.logs) for(const log of event.logs) {
+                    if(log.level==='error') console.log('Worker error log:',JSON.stringify(log.message).slice(0,3000));
+                  }
+                } catch(e) { console.log('Tail JSON parse failed:',e.message); }
+                begin=-1;
+              }
             }
-          } else console.log('No tail output file');
+          }
+          console.log('Decoded tail events:',count,'bytes:',raw.length);
           NODE
             if [ -f "/tmp/upt-tail-${worker}.err" ]; then
               sed -E 's/(token|key|password)=[^ ]+/\1=[REDACTED]/Ig' "/tmp/upt-tail-${worker}.err" | tail -12
