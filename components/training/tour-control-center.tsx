@@ -106,8 +106,8 @@ export function TourControlCenter({active,userId,role,preferredWorkplace,mode="f
       const routeChapter=chapterForPath(role,pathname,chapters)
       if(routeChapter&&tourBaseRoute(role,current)!==pathname){
         const prior=progressRef.current
-        const completed=prior.activeKey&&prior.activeKey!==routeChapter.key?unique([...prior.completed,prior.activeKey]):prior.completed
-        write({...prior,activeKey:routeChapter.key,completed,updatedAt:new Date().toISOString()})
+        // Navigation is not proof of completing the previous action.
+        router.push(tourRoute(role,current))
       }else router.push(tourRoute(role,current))
     }
   },[active,chapters,current,pathname,role,router,write])
@@ -216,7 +216,9 @@ export function TourControlCenter({active,userId,role,preferredWorkplace,mode="f
       // chapters only. In that case continue to the next chapter in the active
       // scope instead of silently ignoring the user's indicated action.
       const requested=chapters.find(chapter=>chapter.key===target)
-      const next=requested||chapters[currentIndex+1]
+      // Do not allow an arbitrary event to skip chapters.
+      const next=chapters[currentIndex+1]
+      if(requested&&requested.key!==next?.key)return
       if(!next||next.key===current.key)return
       const prior=progressRef.current
       const completed=unique([...prior.completed,current.key])
@@ -231,6 +233,10 @@ export function TourControlCenter({active,userId,role,preferredWorkplace,mode="f
       advanceTo(typeof detail==="string"?detail:detail?.target)
     }
     const onComplete=()=>{
+      // Completion requires the sandbox to have recorded a submitted timesheet.
+      let submitted=false
+      try{submitted=JSON.parse(sessionStorage.getItem(TOUR_WORKFLOW_KEY)||"{}").operationPhase==="timesheet"}catch{}
+      if(!submitted||current.key!=="operations")return
       const prior=progressRef.current
       write({...prior,completed:unique([...prior.completed,current.key]),paused:false,updatedAt:new Date().toISOString()})
       sessionStorage.removeItem(TOUR_SESSION_KEY)
