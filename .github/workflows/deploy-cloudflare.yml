@@ -124,6 +124,45 @@ jobs:
       - name: Deployment dry-run
         run: npx wrangler deploy --dry-run
 
+      - name: Inspect final Wrangler bundle before production deployment
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p /tmp/upt-worker-inspection
+          npx wrangler deploy --dry-run --outdir /tmp/upt-worker-inspection
+          node <<'NODE'
+          const fs=require('node:fs');
+          const path=require('node:path');
+          const root='/tmp/upt-worker-inspection';
+          const files=[];
+          function walk(dir) {
+            for(const entry of fs.readdirSync(dir,{withFileTypes:true})){
+              const p=path.join(dir,entry.name);
+              if(entry.isDirectory())walk(p);
+              else if(/\\.(?:js|mjs|cjs)$/.test(entry.name))files.push(p);
+            }
+          }
+          walk(root);
+          let found=false;
+          for(const file of files){
+            const source=fs.readFileSync(file,'utf8');
+            for(const token of ['Unexpected loadManifest(', 'preview-props.json', 'getPreviewProps']){
+              const at=source.indexOf(token);
+              if(at<0)continue;
+              found=true;
+              console.log('FINAL_WORKER_MANIFEST',file,token,'offset',at);
+              console.log(source.slice(Math.max(0,at-350),at+550));
+            }
+          }
+          if(!found)console.log('No matching manifest strings in final dry-run bundle');
+          // The production stack already confirms this loader crashes on startup.
+          // Never replace the last working deployment with a known-broken bundle.
+          if(found){
+            console.error('BLOCKED: final Worker still contains the known failing preview-props manifest loader. Resolve adapter compatibility before production deployment.');
+            process.exitCode=1;
+          }
+          NODE
+
       - name: Public alias dry-run
         run: npx wrangler deploy --dry-run --config wrangler.alias.jsonc
 
