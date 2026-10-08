@@ -88,6 +88,13 @@ export function TourControlCenter({active,userId,role,preferredWorkplace,mode="f
   const currentIndex=Math.max(0,chapters.findIndex(chapter=>chapter.key===current?.key))
   useEffect(()=>{
     if(!active||!current)return
+    let state:Record<string,unknown>={}
+    try{state=JSON.parse(sessionStorage.getItem(TOUR_WORKFLOW_KEY)||"{}")}catch{}
+    const finalReady=current.key==="timesheet"&&chapters.slice(0,-1).every(chapter=>progress.completed.includes(chapter.key))
+    sessionStorage.setItem(TOUR_WORKFLOW_KEY,JSON.stringify({...state,finalTimesheetReady:finalReady}))
+  },[active,chapters,current,progress.completed])
+  useEffect(()=>{
+    if(!active||!current)return
     const expected=tourBaseRoute(role,current)
     if(pendingPathRef.current){
       if(pathname!==pendingPathRef.current)return
@@ -208,7 +215,7 @@ export function TourControlCenter({active,userId,role,preferredWorkplace,mode="f
       const requested=chapters.find(chapter=>chapter.key===target)
       // Do not allow an arbitrary event to skip chapters.
       const next=chapters[currentIndex+1]
-      if(requested&&requested.key!==next?.key)return
+      if(!requested||requested.key!==next?.key)return
       if(!next||next.key===current.key)return
       const prior=progressRef.current
       const completed=unique([...prior.completed,current.key])
