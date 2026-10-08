@@ -136,3 +136,12 @@ test('all chapter titles and descriptions contain four nonempty translations',as
     for(const value of chapter.slice(5,13))assert.ok(value.trim().length>0,chapter[1]+' has an empty translation')
   }
 })
+
+test('sandbox transition targets follow the mandatory training chapters',async()=>{
+ const [features,roleModules]=await Promise.all([read('components/training/sandbox-feature-pages.tsx'),read('components/training/sandbox-role-module.tsx')])
+ assert.match(features,/navTarget:"incidents"/)
+ assert.match(features,/navTarget:"inventory"/)
+ assert.match(features,/target\("guestlist"\)/)
+ for(const role of ['employee','staff','responsible_lead'])assert.ok(roleModules.includes(role+':{crew:"chat",chat:"settings",settings:"timesheet"}'))
+ assert.match(roleModules,/admin:\{personnel:"crew",crew:"chat",chat:"exports",exports:"platform",platform:"settings",settings:"timesheet"\}/)
+})
