@@ -118,3 +118,12 @@ test('driver sandbox visibly separates driving time and mileage and explains arr
   assert.match(operations,/Backstage Management krijgt dan automatisch de aankomstmelding/)
   assert.match(operations,/setDriveSeconds\(0\)/)
 })
+
+
+test('staff and responsible role training follows crew then chat then settings then timesheet',async()=>{
+  const source=await read('components/training/sandbox-role-module.tsx')
+  for(const role of ['employee','staff','responsible_lead']){
+    assert.ok(source.includes(role+':{crew:"chat",chat:"settings",settings:"timesheet"}'),role)
+  }
+  assert.match(source,/admin:\{personnel:"crew",crew:"chat",chat:"exports",exports:"platform",platform:"settings",settings:"timesheet"\}/)
+})
