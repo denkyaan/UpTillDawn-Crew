@@ -50,7 +50,7 @@ export function MobileBottomNav({
  const order=new Map(featureOrder.map((key,index)=>[key,index]))
  useEffect(()=>{const on=(e:Event)=>{const detail=(e as CustomEvent<{active?:boolean}>).detail;const active=Boolean(detail?.active);setTourPreview(active);if(!active)setExpanded(false)};addEventListener("uptilldawn-tour-preview",on);return()=>removeEventListener("uptilldawn-tour-preview",on)},[])
  useEffect(()=>{const load=()=>{try{const s=JSON.parse(sessionStorage.getItem("uptilldawn-training-workflow-v3")||"{}");setTrainingNavTarget(s.navTarget||null)}catch{setTrainingNavTarget(null)}};const id=requestAnimationFrame(load);return()=>cancelAnimationFrame(id)},[pathname])
- useEffect(()=>{const on=(e:Event)=>setTrainingNavTarget((e as CustomEvent<{target?:string}>).detail?.target||null);addEventListener("uptilldawn-training-nav-target",on);return()=>removeEventListener("uptilldawn-training-nav-target",on)},[])
+ useEffect(()=>{const on=(e:Event)=>{let target=(e as CustomEvent<{target?:string}>).detail?.target||null;if(document.body?.dataset.uptTrainingActive==="true"){try{target=JSON.parse(sessionStorage.getItem("uptilldawn-training-workflow-v3")||"{}").navTarget||target}catch{}}setTrainingNavTarget(target)};addEventListener("uptilldawn-training-nav-target",on);return()=>removeEventListener("uptilldawn-training-nav-target",on)},[])
  // The controller resolves the actual next chapter for this role, even when
  // the sandbox action was authored for a different chapter order.
  useEffect(()=>{const on=(e:Event)=>setTrainingNavTarget((e as CustomEvent<{target?:string}>).detail?.target||null);addEventListener("uptilldawn-training-next-tab",on);return()=>removeEventListener("uptilldawn-training-next-tab",on)},[])
