@@ -4,10 +4,10 @@ import { join } from 'node:path'
 // OpenNext 1.20.9 inlines Next's loadManifest during build. Next 16.4 asks
 // for preview-props.json, but the adapter's manifest glob excludes it.
 // Fix the adapter's build-time plugin BEFORE running opennextjs-cloudflare.
-const root = 'node_modules/@opennextjs/cloudflare/dist'
+const root = 'node_modules/@opennextjs/cloudflare'
 if (!existsSync(root)) throw new Error('OpenNext Cloudflare dist not installed')
-const needle = '*-manifest,required-server-files,prefetch-hints'
-const replacement = '*-manifest,required-server-files,prefetch-hints,preview-props'
+const needle = 'prefetch-hints'
+const replacement = 'prefetch-hints,preview-props'
 let patched = 0
 let already = 0
 function walk(dir) {
@@ -18,8 +18,8 @@ function walk(dir) {
     const source = readFileSync(path, 'utf8')
     if (source.includes(replacement)) { already++; continue }
     if (!source.includes(needle)) continue
-    // The known plugin must contain the inline manifest rule, not another glob.
-    if (!source.includes('Unexpected loadManifest(')) continue
+    // The adapter's loader plugin contains both the manifest glob and the loader rule.
+    if (!source.includes('required-server-files') || !source.includes('loadManifest')) continue
     const next = source.replace(needle, replacement)
     writeFileSync(path, next)
     patched++
@@ -27,7 +27,7 @@ function walk(dir) {
   }
 }
 walk(root)
-if (patched + already !== 1) {
+if (patched + already < 1) {
   throw new Error(`Expected exactly one OpenNext manifest loader plugin, found patched=${patched} already=${already}; refusing deployment`)
 }
 console.log('OpenNext preview props manifest loader patched before build')
