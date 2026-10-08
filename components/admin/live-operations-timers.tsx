@@ -93,7 +93,7 @@ export function AdminRunningShifts({shifts}:{shifts:RunningShift[]}){
    return <article key={shift.shiftId} className="rounded-xl border p-3">
     <div className="grid gap-3 sm:grid-cols-[minmax(0,1fr)_auto_auto_auto] sm:items-center">
      <p className="truncate font-bold">{shift.name}</p>
-     <div><p className="text-[10px] font-bold uppercase tracking-wide text-muted-foreground">Startuur</p><p className="font-mono tabular-nums">{new Date(start).toLocaleTimeString('nl-BE',{hour:'2-digit',minute:'2-digit',second:'2-digit'})}</p></div>
+     <div><p className="text-[10px] font-bold uppercase tracking-wide text-muted-foreground">Startuur</p><p className="font-mono tabular-nums">{new Date(start).toLocaleTimeString('nl-BE',{timeZone:'Europe/Brussels',hour:'2-digit',minute:'2-digit',second:'2-digit'})}</p></div>
      <div><p className="text-[10px] font-bold uppercase tracking-wide text-muted-foreground">Pauze</p><p className="font-mono tabular-nums">{formatDigital(pause)}</p></div>
      <span className={shift.status==='PAUZE'?'rounded-full bg-amber-500/20 px-3 py-1 text-xs font-bold text-amber-300':shift.status==='WERKT'?'rounded-full bg-emerald-500/20 px-3 py-1 text-xs font-bold text-emerald-300':'rounded-full border px-3 py-1 text-xs font-bold'}>{shift.status}</span>
     </div>
