@@ -25,7 +25,7 @@ const unique=(values:string[])=>[...new Set(values)]
 // chapter order can differ, so validate the source action and unlock only the
 // next chapter in the actual role sequence, never an arbitrary skipped chapter.
 const ACTION_TARGETS:Record<string,readonly string[]>={
-  overview:["events"],events:["workplaces"],workplaces:["briefings"],
+  overview:["events","personnel"],events:["workplaces"],workplaces:["briefings"],
   briefings:["operations"],operations:["tasks"],driver:["tasks"],
   tasks:["incidents"],incidents:["inventory"],inventory:["guestlist"],
   guestlist:["sales","crew"],sales:["personnel"],personnel:["crew"],
