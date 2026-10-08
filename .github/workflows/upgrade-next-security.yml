@@ -1,4 +1,4 @@
-name: Restore compatible Next.js Cloudflare runtime
+name: Keep Next.js 16.4 Cloudflare runtime
 on:
   push:
     paths:
@@ -17,12 +17,12 @@ jobs:
         with:
           node-version: '24'
           cache: npm
-      - name: Restore previous Next.js runtime version
+      - name: Preserve Next.js 16.4.0
         run: |
-          npm install next@16.3.8 --save-exact --package-lock=true
-          node -e 'const p=require("./package.json"); if(p.dependencies.next!=="16.3.8") process.exit(1)'
-      - name: Record temporary security advisory for emergency availability recovery
-        run: npm audit --omit=dev --audit-level=high || echo 'Security audit requires follow-up after service recovery'
+          npm install next@16.4.0 --save-exact --package-lock=true
+          node -e 'const p=require("./package.json"); if(p.dependencies.next!=="16.4.0") process.exit(1)'
+      - name: Verify production dependency security
+        run: npm audit --omit=dev --audit-level=high
       - name: Verify reproducible dependency installation
         run: npm ci --ignore-scripts
       - name: Commit compatible Next.js and lockfile together
@@ -34,5 +34,5 @@ jobs:
             echo "::error::No dependency change produced"
             exit 1
           fi
-          git commit -m "Restore compatible Next.js 16.3.8 runtime"
+          git commit -m "Restore compatible Next.js 16.4.0 runtime"
           git push origin HEAD:main
