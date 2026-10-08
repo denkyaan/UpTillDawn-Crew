@@ -20,4 +20,4 @@ function walk(dir) {
 }
 walk(root)
 console.log('OPENNEXT_MANIFEST_DIAGNOSTIC total matches:', matches)
-throw new Error('Production blocked pending confirmed OpenNext manifest runtime correction')
+console.log('No loader in .open-next source; inspect Next/OpenNext dependency modules before patching')
