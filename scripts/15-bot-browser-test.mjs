@@ -463,53 +463,39 @@ try {
         await page.goto(`${baseUrl}${role==='admin'?'/admin':'/'}?tour=1`,{waitUntil:'networkidle',timeout:45000})
         const primary=page.locator('[data-tour-demo="primary-action"]').first()
         await primary.waitFor({state:'visible',timeout:30000})
-        const primaryBox=await primary.boundingBox()
-        await page.waitForFunction(()=>{
-          const overlays=[...document.querySelectorAll('div[aria-hidden].fixed')]
-          return overlays.some(node=>{
-            const style=getComputedStyle(node)
-            return style.pointerEvents==='none'&&node.getBoundingClientRect().width>0
-          })
-        },null,{timeout:10000})
-        const aligned=await primary.evaluate(button=>{
-          const b=button.getBoundingClientRect()
-          return [...document.querySelectorAll('div[aria-hidden].fixed')].some(node=>{
-            const r=node.getBoundingClientRect()
-            return getComputedStyle(node).pointerEvents==='none'&&
-              Math.abs((b.left+b.width/2)-(r.left+r.width/2))<=8&&
-              Math.abs((b.top+b.height/2)-(r.top+r.height/2))<=8
-          })
-        })
-        if(!primaryBox||!aligned){
-          const geometry=await page.evaluate(()=>{
-            const primary=document.querySelector('[data-tour-demo="primary-action"]')
-            const b=primary?.getBoundingClientRect()
-            const overlays=[...document.querySelectorAll('div[aria-hidden].fixed')].map(node=>{
-              const r=node.getBoundingClientRect(),style=getComputedStyle(node)
-              return {className:node.className,pointerEvents:style.pointerEvents,left:r.left,top:r.top,width:r.width,height:r.height}
-            })
-            return {viewport:{width:innerWidth,height:innerHeight,scrollX,scrollY},primary:b?{left:b.left,top:b.top,width:b.width,height:b.height}:null,overlays}
-          })
-          throw new Error(`tour spotlight is not aligned with the primary action; geometry=${JSON.stringify(geometry)}`)
-        }
+        const actualColor=await primary.evaluate(button=>getComputedStyle(button).backgroundColor)
+        if(!/rgb\\(124,\\s*58,\\s*237\\)/.test(actualColor))throw new Error(`required training action is not solid purple: ${actualColor}`)
+        const oldSpotlight=await page.evaluate(()=>[...document.querySelectorAll('div[aria-hidden].fixed')].some(node=>String(node.className).includes('z-[188]')))
+        if(oldSpotlight)throw new Error('legacy fixed spotlight should not dim or overlay the training screen')
         const before=await page.evaluate(key=>JSON.parse(localStorage.getItem(key)||'null'),progressKey)
         if(!before?.activeKey)throw new Error('general tour did not initialize active progress')
         await primary.evaluate(button=>button.click())
-        // The compact tour advances through React state before persistence.
-        // Assert the next highlighted action first, then verify persisted progress.
-        await page.locator('[data-tour-demo="primary-action"]').first().waitFor({state:'visible',timeout:30000})
-        await page.waitForTimeout(250)
+        // Completing an action must never navigate on behalf of the trainee.
+        const availableTab=page.locator('a[data-upt-training-next-tab="true"]')
+        await availableTab.first().waitFor({state:'attached',timeout:15000})
+        const afterAction=await page.evaluate(key=>JSON.parse(localStorage.getItem(key)||'null'),progressKey)
+        if(afterAction?.activeKey!==before.activeKey||afterAction?.completed?.includes(before.activeKey)){
+          throw new Error('general tour advanced without the trainee opening the next tab')
+        }
+        // Each browser bot now uses the highlighted real navigation tab.
+        if(viewport.width<1024){
+          const mobileNav=page.locator('nav[aria-label]').first()
+          if(!await mobileNav.locator('a[data-upt-training-next-tab="true"]:visible').count()){
+            await mobileNav.locator('button[aria-expanded="false"]').click()
+          }
+          await mobileNav.locator('a[data-upt-training-next-tab="true"]:visible').first().click()
+        }else{
+          await page.locator('aside a[data-upt-training-next-tab="true"]:visible').first().click()
+        }
+        await page.waitForFunction(({key,previous})=>{
+          const now=JSON.parse(localStorage.getItem(key)||'null')
+          return now?.activeKey!==previous&&now?.completed?.includes(previous)
+        },{key:progressKey,previous:before.activeKey},{timeout:30000})
         const advanced=await page.evaluate(key=>JSON.parse(localStorage.getItem(key)||'null'),progressKey)
-        if(
-          !advanced?.activeKey||
-          advanced.activeKey===before.activeKey||
-          !Array.isArray(advanced.completed)||
-          !advanced.completed.includes(before.activeKey)
-        )throw new Error(`general tour action did not advance persisted progress: before=${JSON.stringify(before)} after=${JSON.stringify(advanced)}`)
         await page.getByRole('button',{name:/^(PAUZEER|PAUSE|PAUSIEREN)$/}).click()
         const progress=await page.evaluate(key=>JSON.parse(localStorage.getItem(key)||'null'),progressKey)
         if(!progress?.paused||progress.activeKey!==advanced.activeKey||!progress.completed.includes(before?.activeKey||'overview'))throw new Error('general tour progress or pause did not persist')
-        console.log(`PASS ${bot} compact general tour highlight + action advance + pause persistence`)
+        console.log(`PASS ${bot} manual purple-tab navigation + verified progress + pause persistence`)
       }
 
       if(diagnostics.pageErrors.length)throw new Error(`Unhandled browser errors: ${JSON.stringify(diagnostics.pageErrors)}`)
