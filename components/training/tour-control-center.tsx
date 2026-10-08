@@ -65,6 +65,7 @@ export function TourControlCenter({active,userId,role,preferredWorkplace,mode="f
   const [targetMissing,setTargetMissing]=useState(false)
   const [actionFeedback,setActionFeedback]=useState("")
   const pendingPathRef=useRef<string|null>(null)
+  const awaitingNavigationRef=useRef<string|null>(null)
   const progressRef=useRef(progress)
   useEffect(()=>{progressRef.current=progress},[progress])
   const write=useCallback((next:Progress)=>{progressRef.current=next;setProgress(next);localStorage.setItem(progressKey,JSON.stringify(next))},[progressKey])
@@ -101,6 +102,14 @@ export function TourControlCenter({active,userId,role,preferredWorkplace,mode="f
       pendingPathRef.current=null
     }
     if(pathname!==expected){
+      const awaited=awaitingNavigationRef.current
+      const awaitedChapter=chapters.find(item=>item.key===awaited)
+      if(awaitedChapter&&pathname===tourBaseRoute(role,awaitedChapter)){
+        const prior=progressRef.current
+        write({...prior,activeKey:awaitedChapter.key,completed:unique([...prior.completed,current.key]),paused:false,updatedAt:new Date().toISOString()})
+        awaitingNavigationRef.current=null
+        return
+      }
       const routeChapter=chapterForPath(role,pathname,chapters)
       if(routeChapter&&tourBaseRoute(role,current)!==pathname){
         // Navigation is not proof of completing the previous action.
@@ -217,11 +226,9 @@ export function TourControlCenter({active,userId,role,preferredWorkplace,mode="f
       const next=chapters[currentIndex+1]
       if(!requested||requested.key!==next?.key)return
       if(!next||next.key===current.key)return
-      const prior=progressRef.current
-      const completed=unique([...prior.completed,current.key])
-      write({...prior,activeKey:next.key,completed,paused:false,updatedAt:new Date().toISOString()})
-      pendingPathRef.current=tourBaseRoute(role,next)
-      router.push(tourRoute(role,next))
+      // Unlock the next chapter only after the trainee opens its tab.
+      awaitingNavigationRef.current=next.key
+      setActionFeedback(c(locale,"Open nu zelf de volgende tab.","Open the next tab yourself.","Ouvrez vous-même l’onglet suivant.","Öffne den nächsten Tab selbst."))
     }
     const onTarget=(event:Event)=>{
       setActionFeedback(current.description[locale])
