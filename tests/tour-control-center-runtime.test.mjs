@@ -52,7 +52,10 @@ function harness({visible=true,locale='en',chapter='overview',startPath}={}){
       if(dirty){dirty=false;cursor=0;tree=context.exports.TourControlCenter({active:true,userId:'test-user',role:'employee',preferredWorkplace:''})}
       while(effects.length)effects.shift()()
       if(frames.size){const pending=[...frames.values()];frames.clear();pending.forEach(fn=>fn())}
-      if(!dirty&&!effects.length&&!frames.size)return
+      // The browser spotlight intentionally schedules one measurement every
+      // animation frame. Stop the synchronous harness when state has settled;
+      // queued frames represent future browser paints, not a render loop.
+      if(!dirty&&!effects.length)return
     }
     throw Error('Tour render loop')
   }
