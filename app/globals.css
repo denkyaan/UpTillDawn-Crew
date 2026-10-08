@@ -187,5 +187,21 @@
   outline: 3px solid var(--ring) !important;
   outline-offset: 4px;
   border-radius: max(var(--radius), 0.5rem);
-  box-shadow: 0 0 0 9999px rgb(0 0 0 / 0.42);
+  box-shadow: none;
+}
+
+
+/* Interactive role training: highlight navigation only while changing tabs. */
+body[data-upt-training-active="true"] a[data-upt-training-next-tab="true"] {
+  outline: 3px solid #8b5cf6 !important;
+  outline-offset: 3px;
+  border-radius: 10px;
+}
+
+/* The one required action is solid purple, with no pulse or dimmed backdrop. */
+body[data-upt-training-active="true"] [data-tour-demo="primary-action"]:not(:disabled) {
+  background-color: #7c3aed !important;
+  color: white !important;
+  border-color: #7c3aed !important;
+  animation: none !important;
 }
