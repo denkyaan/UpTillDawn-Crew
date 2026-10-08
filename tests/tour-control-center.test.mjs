@@ -9,7 +9,7 @@ test('tour v8 has role, scenario, driver, progress and new-release coverage',asy
   assert.match(config,/TOUR_VERSION=8/)
   for(const role of ['employee','responsible_lead','admin'])assert.ok(config.includes('"'+role+'"'))
   for(const scenario of ['pre_event','live_event','break','post_event'])assert.ok(config.includes('"'+scenario+'"'))
-  for(const key of ['overview','events','workplaces','briefings','operations','driver','tasks','incidents','inventory','guestlist','sales','personnel','crew','chat','exports','platform','settings'])assert.ok(config.includes('key:"'+key+'"'),key)
+  for(const key of ['overview','events','workplaces','briefings','operations','driver','tasks','incidents','inventory','guestlist','sales','personnel','crew','chat','exports','platform','settings','timesheet'])assert.ok(config.includes('key:"'+key+'"'),key)
   assert.match(config,/mobileSelector:string/)
   assert.match(config,/desktopSelector:string/)
   assert.match(config,/requires:"driver"/)
@@ -35,7 +35,7 @@ test('tour controller recovers missing targets and never writes production data'
   assert.match(controller,/viewportScore/)
   assert.match(controller,/\/api\/error-reports/)
   assert.match(controller,/localStorage\.setItem\(progressKey/)
-  assert.match(controller,/OVERSLAAN/)
+  assert.doesNotMatch(controller,/OVERSLAAN/)
   assert.match(controller,/PAUZEER/)
   for(const source of [operations,events,workplaces,briefings,features,roleModules]){
     assert.doesNotMatch(source,/createClient\(/)
