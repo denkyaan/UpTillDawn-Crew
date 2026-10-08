@@ -64,6 +64,7 @@ export function TourControlCenter({active,userId,role,preferredWorkplace,mode="f
   const [rect,setRect]=useState<Rect|null>(null)
   const [targetMissing,setTargetMissing]=useState(false)
   const [actionFeedback,setActionFeedback]=useState("")
+  const [navigationTarget,setNavigationTarget]=useState<string|null>(null)
   const pendingPathRef=useRef<string|null>(null)
   const awaitingNavigationRef=useRef<string|null>(null)
   const progressRef=useRef(progress)
@@ -108,6 +109,7 @@ export function TourControlCenter({active,userId,role,preferredWorkplace,mode="f
         const prior=progressRef.current
         write({...prior,activeKey:awaitedChapter.key,completed:unique([...prior.completed,current.key]),paused:false,updatedAt:new Date().toISOString()})
         awaitingNavigationRef.current=null
+        setNavigationTarget(null)
         return
       }
       const routeChapter=chapterForPath(role,pathname,chapters)
@@ -135,6 +137,7 @@ export function TourControlCenter({active,userId,role,preferredWorkplace,mode="f
     // visible primary action belonged to the mobile layout.
     const mobile=innerWidth<1024
     const selector=mobile?current.mobileSelector:current.desktopSelector
+    if(navigationTarget){setRect(null);return}
     const updateRect=(element:Element)=>{
       const target=element as HTMLElement
       cancelAnimationFrame(frame)
@@ -211,7 +214,7 @@ export function TourControlCenter({active,userId,role,preferredWorkplace,mode="f
     addEventListener("resize",onResize)
     addEventListener("scroll",onResize,true)
     return()=>{stopped=true;observer?.disconnect();resizeObserver?.disconnect();window.clearTimeout(timeout);cancelAnimationFrame(frame);cancelAnimationFrame(resetFrame);removeEventListener("resize",onResize);removeEventListener("scroll",onResize,true);setRect(null)}
-  },[active,current,locale,pathname])
+  },[active,current,locale,pathname,navigationTarget])
 
   useEffect(()=>{
     if(!active||!current)return
@@ -228,6 +231,7 @@ export function TourControlCenter({active,userId,role,preferredWorkplace,mode="f
       if(!next||next.key===current.key)return
       // Unlock the next chapter only after the trainee opens its tab.
       awaitingNavigationRef.current=next.key
+      setNavigationTarget(tourBaseRoute(role,next))
       setActionFeedback(c(locale,"Open nu zelf de volgende tab.","Open the next tab yourself.","Ouvrez vous-même l’onglet suivant.","Öffne den nächsten Tab selbst."))
     }
     const onTarget=(event:Event)=>{
@@ -256,8 +260,10 @@ export function TourControlCenter({active,userId,role,preferredWorkplace,mode="f
   const pause=()=>{write({...progressRef.current,paused:true,updatedAt:new Date().toISOString()});sessionStorage.removeItem(TOUR_SESSION_KEY);dispatchEvent(new CustomEvent("uptilldawn-tour-stop",{detail:{role,mode}}))}
 
   return <>
+    {navigationTarget&&<style>{`a[href^="${navigationTarget}"]{outline:3px solid #8b5cf6!important;outline-offset:2px!important;border-radius:10px}`}</style>}
+    {!navigationTarget&&<style>{`[data-tour-demo="primary-action"]:not(:disabled){background-color:#7c3aed!important;color:white!important;border-color:#7c3aed!important;animation:none!important}`}</style>}
     {rect&&<>
-      <div aria-hidden className="pointer-events-none fixed z-[188] animate-pulse rounded-xl border-[3px] border-violet-400 shadow-[0_0_24px_rgba(139,92,246,0.9)]" style={{left:rect.left,top:rect.top,width:rect.width,height:rect.height}}/>
+      <div aria-hidden className="pointer-events-none fixed z-[188] rounded-xl bg-violet-600/20 outline outline-2 outline-violet-500" style={{left:rect.left,top:rect.top,width:rect.width,height:rect.height}}/>
     </>}
     {actionFeedback&&<div data-no-translate className="pointer-events-none fixed left-1/2 top-20 z-[190] w-[min(88vw,22rem)] -translate-x-1/2 rounded-xl border border-violet-500/50 bg-background/95 px-3 py-2 text-xs font-semibold leading-5 shadow-xl backdrop-blur">{actionFeedback}</div>}
     <div data-no-translate data-tour-panel className="pointer-events-none fixed right-3 top-[calc(env(safe-area-inset-top)+.75rem)] z-[190] flex items-center gap-2">
