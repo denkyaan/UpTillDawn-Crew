@@ -51,6 +51,9 @@ export function MobileBottomNav({
  useEffect(()=>{const on=(e:Event)=>{const detail=(e as CustomEvent<{active?:boolean}>).detail;const active=Boolean(detail?.active);setTourPreview(active);if(!active)setExpanded(false)};addEventListener("uptilldawn-tour-preview",on);return()=>removeEventListener("uptilldawn-tour-preview",on)},[])
  useEffect(()=>{const load=()=>{try{const s=JSON.parse(sessionStorage.getItem("uptilldawn-training-workflow-v3")||"{}");setTrainingNavTarget(s.navTarget||null)}catch{setTrainingNavTarget(null)}};const id=requestAnimationFrame(load);return()=>cancelAnimationFrame(id)},[pathname])
  useEffect(()=>{const on=(e:Event)=>setTrainingNavTarget((e as CustomEvent<{target?:string}>).detail?.target||null);addEventListener("uptilldawn-training-nav-target",on);return()=>removeEventListener("uptilldawn-training-nav-target",on)},[])
+ // The controller resolves the actual next chapter for this role, even when
+ // the sandbox action was authored for a different chapter order.
+ useEffect(()=>{const on=(e:Event)=>setTrainingNavTarget((e as CustomEvent<{target?:string}>).detail?.target||null);addEventListener("uptilldawn-training-next-tab",on);return()=>removeEventListener("uptilldawn-training-next-tab",on)},[])
  useEffect(()=>{const apply=()=>setTrainingLocale(activeUiLocale());apply();addEventListener(LANGUAGE_APPLIED_EVENT,apply);return()=>removeEventListener(LANGUAGE_APPLIED_EVENT,apply)},[])
 
  // During the guided tour expose the complete role navigation regardless of
@@ -132,7 +135,7 @@ export function MobileBottomNav({
         ?"flex min-h-16 items-center gap-3 rounded-xl px-3 py-2 text-sm font-semibold"
         :"flex min-w-0 flex-1 flex-col items-center justify-center gap-1 rounded-lg px-1 py-1.5 text-[9px] font-semibold",
       active?"bg-violet-500/10 text-violet-400":"text-muted-foreground",
-      trainingNavTarget===item.key&&item.key!=="chat"?"ring-4 ring-violet-500 ring-inset animate-pulse":"",
+      trainingNavTarget===item.key&&item.key!=="chat"?"ring-2 ring-violet-500 ring-inset":"",
       trainingLocked?"pointer-events-auto cursor-not-allowed opacity-35":"",
     )}
    >
@@ -168,7 +171,7 @@ export function MobileBottomNav({
      className={cn(
        "flex w-11 shrink-0 items-center justify-center rounded-lg border border-border",
        expanded?"bg-violet-500/10 text-violet-400":"text-muted-foreground",
-       trainingNavTarget&&!expanded?"ring-4 ring-violet-500 animate-pulse":"",
+       trainingNavTarget&&!expanded?"border-violet-500":"",
      )}
     >
      {expanded?<ChevronDown className="h-5 w-5"/>:<ChevronUp className="h-5 w-5"/>}
