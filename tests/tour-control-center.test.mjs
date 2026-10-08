@@ -145,3 +145,18 @@ test('sandbox transition targets follow the mandatory training chapters',async()
  for(const role of ['employee','staff','responsible_lead'])assert.ok(roleModules.includes(role+':{crew:"chat",chat:"settings",settings:"timesheet"}'))
  assert.match(roleModules,/admin:\{personnel:"crew",crew:"chat",chat:"exports",exports:"platform",platform:"settings",settings:"timesheet"\}/)
 })
+
+test('guestlist demo advances to an authorized next chapter for every role',async()=>{
+ const [guestlist,feature]=await Promise.all([read('app/(app)/guestlist/page.tsx'),read('components/training/sandbox-feature-pages.tsx')])
+ assert.match(guestlist,/SandboxGuestlist isAdmin=\{current\.isAdmin===true\}/)
+ assert.match(feature,/export function SandboxGuestlist\(\{isAdmin=false\}:\{isAdmin\?:boolean\}\)/)
+ assert.match(feature,/target\(isAdmin\?"sales":"crew"\)/)
+})
+
+test('chat module completes after button introduction rather than before navigation',async()=>{
+ const source=await read('components/training/sandbox-role-module.tsx')
+ assert.match(source,/if\(module!=="chat"\)dispatchEvent/)
+ assert.match(source,/chatTourCompleted:false/)
+ assert.match(source,/chatTrainingDone:true,navTarget:next/)
+ assert.ok(source.indexOf('chatTrainingDone:true,navTarget:next')>source.indexOf('window.setTimeout('))
+})
