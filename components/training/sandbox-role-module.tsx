@@ -8,10 +8,10 @@ export type TrainingRole="admin"|"responsible_lead"|"employee"|"staff"
 type Module="chat"|"crew"|"personnel"|"exports"|"platform"|"settings"
 
 const NEXT:Record<string,Partial<Record<Module,string|null>>>={
- employee:{chat:"crew",crew:"settings",settings:null},
- staff:{chat:"crew",crew:"settings",settings:null},
- responsible_lead:{chat:"crew",crew:"settings",settings:null},
- admin:{personnel:"crew",crew:"chat",chat:"exports",exports:"platform",platform:"settings",settings:null},
+ employee:{chat:"crew",crew:"settings",settings:"timesheet"},
+ staff:{chat:"crew",crew:"settings",settings:"timesheet"},
+ responsible_lead:{chat:"crew",crew:"settings",settings:"timesheet"},
+ admin:{personnel:"crew",crew:"chat",chat:"exports",exports:"platform",platform:"settings",settings:"timesheet"},
 }
 
 function persist(next:string|null,module:Module){
