@@ -12,7 +12,7 @@
     "lint": "eslint .",
     "typecheck": "tsc --noEmit",
     "test": "node --experimental-strip-types --test \"tests/**/*.test.mjs\"",
-    "build:cloudflare": "node scripts/clean-cloudflare.mjs && opennextjs-cloudflare build && node scripts/patch-preview-props-manifest.mjs",
+    "build:cloudflare": "node scripts/clean-cloudflare.mjs && opennextjs-cloudflare build",
     "preview:cloudflare": "opennextjs-cloudflare preview",
     "deploy:cloudflare": "opennextjs-cloudflare deploy",
     "prebuild": "node scripts/god-source-index.mjs",
