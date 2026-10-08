@@ -36,11 +36,6 @@ function readProgress(key:string,defaultKey:string):Progress{
   }catch{return fallback}
 }
 
-function setWorkflow(patch:Record<string,unknown>){
-  let state:Record<string,unknown>={}
-  try{state=JSON.parse(sessionStorage.getItem(TOUR_WORKFLOW_KEY)||"{}")}catch{}
-  sessionStorage.setItem(TOUR_WORKFLOW_KEY,JSON.stringify({...state,...patch}))
-}
 async function reportMissingTarget(chapter:TourChapter,selector:string){
   const key="uptilldawn-tour-missing:"+TOUR_VERSION+":"+chapter.key+":"+selector
   try{
