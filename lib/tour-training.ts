@@ -71,7 +71,7 @@ export function tourBaseRoute(role:TourRole,chapter:TourChapter){
 export function getTourChapters(role:TourRole,options?:{driver?:boolean;entrance?:boolean;mode?:TourMode;scope?:"general"|"workplace"}){
   const driver=options?.driver===true
   const entrance=options?.entrance===true
-  return TOUR_CHAPTERS.filter(chapter=>{
+  const selected=TOUR_CHAPTERS.filter(chapter=>{
     if(!chapter.roles.includes(role))return false
     if(chapter.requires==="driver"&&!driver)return false
     if(chapter.requires==="entrance"&&role!=="admin"&&!entrance)return false
@@ -83,6 +83,13 @@ export function getTourChapters(role:TourRole,options?:{driver?:boolean;entrance
     if(options?.scope==="general"&&chapter.requires)return false
     return true
   })
+  // Administrators learn administration first, rather than being sent through
+  // the employee availability and work-clock sequence as their primary flow.
+  if(role==="admin"){
+    const order=["overview","personnel","crew","events","workplaces","briefings","tasks","inventory","guestlist","operations","incidents","sales","chat","exports","platform","settings","timesheet"]
+    return selected.sort((a,b)=>order.indexOf(a.key)-order.indexOf(b.key))
+  }
+  return selected
 }
 
 export function chapterForPath(role:TourRole,pathname:string,chapters:readonly TourChapter[]){
