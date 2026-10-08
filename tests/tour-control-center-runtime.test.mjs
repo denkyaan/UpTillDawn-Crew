@@ -33,7 +33,7 @@ function harness({visible=true,locale='en',chapter='overview',startPath}={}){
   const context={exports:{},require(name){if(name==='react')return hooks;if(name==='react/jsx-runtime')return {jsx,jsxs:jsx,Fragment:'fragment'};if(name==='next/navigation')return {useRouter:()=>router,usePathname:()=>pathname};if(name==='@/lib/tour-training')return training;if(name==='@/lib/tour-panel-layout')return panelLayout;if(name==='@/lib/locale-preferences')return {activeUiLocale:()=>locale,LANGUAGE_APPLIED_EVENT:'language'};throw Error(name)},
     localStorage,sessionStorage,location:{pathname,search:'?tour=1'},innerWidth:390,innerHeight:844,
     fetch:async(url,options)=>{requests.push({url,...options});return {ok:true}},
-    document:{querySelector:()=>visible?element:null,body:{}},
+    document:{querySelector:()=>visible?element:null,querySelectorAll:()=>[],body:{dataset:{}}},
     matchMedia:()=>({matches:true}),getComputedStyle:()=>({display:'block',visibility:'visible'}),
     requestAnimationFrame(fn){const id=nextId++;frames.set(id,fn);return id},cancelAnimationFrame:id=>frames.delete(id),
     setTimeout(fn){const id=nextId++;timers.set(id,fn);return id},clearTimeout:id=>timers.delete(id),
@@ -86,12 +86,12 @@ test('tour stays compact and reveals contextual information only after the highl
   app.unmount()
 })
 
-test('spotlight follows position-only layout shifts after localized text reflows',()=>{
+test('training has no overlay while layout observers stay active',()=>{
   const app=harness({locale:'en'})
-  assert.equal(app.spotlight()?.top,75)
+  assert.equal(app.spotlight(),undefined)
   assert.ok(app.observers.some(observer=>observer.connected&&observer.options?.characterData))
   app.moveTarget(40)
-  assert.equal(app.spotlight()?.top,35)
+  assert.equal(app.spotlight(),undefined)
   app.unmount()
 })
 
@@ -109,6 +109,18 @@ test('a late tour target recovers after timeout and reports only once',()=>{
   assert.equal(app.requests.length,1)
   app.unmount()
   assert.ok(app.observers.every(observer=>!observer.connected))
+})
+
+test('completing an action waits for manual tab navigation',()=>{
+  const app=harness()
+  const priorRoutes=app.routes.length
+  app.emit('uptilldawn-training-nav-target',{target:'events'})
+  assert.equal(app.routes.length,priorRoutes,'tour must not automatically navigate')
+  assert.equal(app.progress().activeKey,'overview')
+  app.navigate('/events')
+  assert.equal(app.progress().activeKey,'events')
+  assert.ok(app.progress().completed.includes('overview'))
+  app.unmount()
 })
 
 test('navigation cannot skip mandatory chapters',()=>{
