@@ -41,10 +41,6 @@ function setWorkflow(patch:Record<string,unknown>){
   try{state=JSON.parse(sessionStorage.getItem(TOUR_WORKFLOW_KEY)||"{}")}catch{}
   sessionStorage.setItem(TOUR_WORKFLOW_KEY,JSON.stringify({...state,...patch}))
 }
-function clearTrainingNavTarget(){
-  setWorkflow({navTarget:null})
-  dispatchEvent(new CustomEvent("uptilldawn-training-nav-target",{detail:{target:undefined}}))
-}
 async function reportMissingTarget(chapter:TourChapter,selector:string){
   const key="uptilldawn-tour-missing:"+TOUR_VERSION+":"+chapter.key+":"+selector
   try{
@@ -105,7 +101,6 @@ export function TourControlCenter({active,userId,role,preferredWorkplace,mode="f
     if(pathname!==expected){
       const routeChapter=chapterForPath(role,pathname,chapters)
       if(routeChapter&&tourBaseRoute(role,current)!==pathname){
-        const prior=progressRef.current
         // Navigation is not proof of completing the previous action.
         router.push(tourRoute(role,current))
       }else router.push(tourRoute(role,current))
