@@ -254,16 +254,37 @@ export function TourControlCenter({active,userId,role,preferredWorkplace,mode="f
     return()=>{removeEventListener("uptilldawn-training-nav-target",onTarget);removeEventListener("uptilldawn-training-completed",onComplete)}
   },[active,chapters,current,currentIndex,locale,mode,preferredWorkplace,role,router,write])
 
+  // Only the target tab is accented during navigation. Sandbox actions use
+  // a solid purple control; no page-dimming overlay or blinking highlight.
+  useEffect(()=>{
+    if(!active)return
+    document.body.dataset.uptTrainingActive="true"
+    return()=>{delete document.body.dataset.uptTrainingActive}
+  },[active])
+
+  useEffect(()=>{
+    if(!active||!navigationTarget)return
+    const sync=()=>{
+      for(const anchor of document.querySelectorAll<HTMLAnchorElement>("a[href]")){
+        const path=anchor.getAttribute("href")?.split(/[?#]/)[0]
+        if(path===navigationTarget)anchor.setAttribute("data-upt-training-next-tab","true")
+        else anchor.removeAttribute("data-upt-training-next-tab")
+      }
+    }
+    sync()
+    const observer=new MutationObserver(sync)
+    observer.observe(document.body,{childList:true,subtree:true,attributes:true,attributeFilter:["href"]})
+    return()=>{
+      observer.disconnect()
+      document.querySelectorAll('[data-upt-training-next-tab]').forEach(anchor=>anchor.removeAttribute("data-upt-training-next-tab"))
+    }
+  },[active,navigationTarget])
+
   if(!active||!current||!chapters.length)return null
 
   const pause=()=>{write({...progressRef.current,paused:true,updatedAt:new Date().toISOString()});sessionStorage.removeItem(TOUR_SESSION_KEY);dispatchEvent(new CustomEvent("uptilldawn-tour-stop",{detail:{role,mode}}))}
 
   return <>
-    {navigationTarget&&<style>{`a[href^="${navigationTarget}"]{outline:3px solid #8b5cf6!important;outline-offset:2px!important;border-radius:10px}`}</style>}
-    {!navigationTarget&&<style>{`[data-tour-demo="primary-action"]:not(:disabled){background-color:#7c3aed!important;color:white!important;border-color:#7c3aed!important;animation:none!important}`}</style>}
-    {rect&&<>
-      <div aria-hidden className="pointer-events-none fixed z-[188] rounded-xl bg-violet-600/20 outline outline-2 outline-violet-500" style={{left:rect.left,top:rect.top,width:rect.width,height:rect.height}}/>
-    </>}
     {actionFeedback&&<div data-no-translate className="pointer-events-none fixed left-1/2 top-20 z-[190] w-[min(88vw,22rem)] -translate-x-1/2 rounded-xl border border-violet-500/50 bg-background/95 px-3 py-2 text-xs font-semibold leading-5 shadow-xl backdrop-blur">{actionFeedback}</div>}
     <div data-no-translate data-tour-panel className="pointer-events-none fixed right-3 top-[calc(env(safe-area-inset-top)+.75rem)] z-[190] flex items-center gap-2">
       <span className="rounded-full border border-violet-500/50 bg-background/95 px-2.5 py-1.5 text-[10px] font-black shadow">{currentIndex+1}/{chapters.length}</span>
