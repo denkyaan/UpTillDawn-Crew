@@ -200,6 +200,15 @@ jobs:
       - name: Deploy public Worker alias
         run: npx wrangler deploy --config wrangler.alias.jsonc
 
+      - name: Capture production Worker exceptions during smoke
+        shell: bash
+        run: |
+          # Wrangler tail runs only while the smoke test executes. Limit output
+          # to exception diagnostics and never print request headers or secrets.
+          (timeout 110s npx wrangler tail uptilldawn-crew --format json > /tmp/upt-worker-tail.jsonl 2>/tmp/upt-worker-tail.err || true) &
+          echo "UPT_TAIL_PID=$!" >> "$GITHUB_ENV"
+          sleep 5
+
       - name: Production public-surface smoke
         shell: bash
         run: |
@@ -234,4 +243,25 @@ jobs:
           if [ "$sw_code" -lt 200 ] || [ "$sw_code" -ge 400 ] || ! grep -q "self.addEventListener" "$sw_body"; then
             echo "::error::Production service-worker smoke failed"
             exit 1
+          fi
+
+      - name: Report production Worker exceptions
+        if: always()
+        shell: bash
+        run: |
+          if [ -f /tmp/upt-worker-tail.jsonl ]; then
+            node -e '
+              const fs=require("fs");
+              for(const line of fs.readFileSync("/tmp/upt-worker-tail.jsonl","utf8").split("\\n")){
+                try {
+                  const event=JSON.parse(line);
+                  const errors=event.exceptions||[];
+                  for(const error of errors) console.log("Worker exception:",JSON.stringify({name:error.name,message:error.message,stack:error.stack}));
+                  if(event.outcome==="exception") console.log("Worker exception outcome:",event.scriptName||"unknown");
+                } catch {}
+              }
+            '
+          fi
+          if [ -f /tmp/upt-worker-tail.err ]; then
+            grep -Ei 'error|fail|permission|unauthorized' /tmp/upt-worker-tail.err | head -15 || true
           fi
