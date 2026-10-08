@@ -133,11 +133,19 @@ export function TourControlCenter({active,userId,role,preferredWorkplace,mode="f
       const target=element as HTMLElement
       cancelAnimationFrame(frame)
       if(!located)target.scrollIntoView({behavior:"auto",block:"center",inline:"nearest"})
-      frame=requestAnimationFrame(()=>{
+      // Translated labels and responsive containers can shift the target without
+      // changing its size. Sample the live DOM on consecutive animation frames
+      // instead of relying solely on ResizeObserver and mutation notifications.
+      const sample=()=>{
         if(stopped)return
         const r=target.getBoundingClientRect()
-        setRect({left:Math.max(4,r.left-5),top:Math.max(4,r.top-5),width:Math.max(24,r.width+10),height:Math.max(24,r.height+10)})
-      })
+        setRect(previous=>{
+          const next={left:Math.max(4,r.left-5),top:Math.max(4,r.top-5),width:Math.max(24,r.width+10),height:Math.max(24,r.height+10)}
+          return previous&&previous.left===next.left&&previous.top===next.top&&previous.width===next.width&&previous.height===next.height?previous:next
+        })
+        frame=requestAnimationFrame(sample)
+      }
+      frame=requestAnimationFrame(sample)
     }
     const rectEdges=(r:DOMRect)=>({
       right:Number.isFinite(r.right)?r.right:r.left+r.width,
