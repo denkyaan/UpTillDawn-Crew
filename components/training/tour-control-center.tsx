@@ -236,7 +236,7 @@ export function TourControlCenter({active,userId,role,preferredWorkplace,mode="f
       // Completion requires the sandbox to have recorded a submitted timesheet.
       let submitted=false
       try{submitted=JSON.parse(sessionStorage.getItem(TOUR_WORKFLOW_KEY)||"{}").operationPhase==="timesheet"}catch{}
-      if(!submitted||current.key!=="operations")return
+      if(!submitted||current.key!==chapters[chapters.length-1]?.key||chapters.some(chapter=>chapter.key!==current.key&&!progressRef.current.completed.includes(chapter.key)))return
       const prior=progressRef.current
       write({...prior,completed:unique([...prior.completed,current.key]),paused:false,updatedAt:new Date().toISOString()})
       sessionStorage.removeItem(TOUR_SESSION_KEY)
@@ -255,15 +255,6 @@ export function TourControlCenter({active,userId,role,preferredWorkplace,mode="f
     pendingPathRef.current=tourBaseRoute(role,chapter)
     write(next);router.push(tourRoute(role,chapter))
   }
-  const skip=()=>{
-    if(!targetMissing)return
-    const skipped=unique([...progressRef.current.skipped,current.key])
-    const next=chapters[currentIndex+1]
-    if(next){saveActive(next,{skipped});return}
-    write({...progressRef.current,skipped,paused:true,updatedAt:new Date().toISOString()})
-    sessionStorage.removeItem(TOUR_SESSION_KEY)
-    dispatchEvent(new CustomEvent("uptilldawn-tour-stop",{detail:{role,mode}}))
-  }
   const pause=()=>{write({...progressRef.current,paused:true,updatedAt:new Date().toISOString()});sessionStorage.removeItem(TOUR_SESSION_KEY);dispatchEvent(new CustomEvent("uptilldawn-tour-stop",{detail:{role,mode}}))}
 
   return <>
@@ -273,7 +264,7 @@ export function TourControlCenter({active,userId,role,preferredWorkplace,mode="f
     {actionFeedback&&<div data-no-translate className="pointer-events-none fixed left-1/2 top-20 z-[190] w-[min(88vw,22rem)] -translate-x-1/2 rounded-xl border border-violet-500/50 bg-background/95 px-3 py-2 text-xs font-semibold leading-5 shadow-xl backdrop-blur">{actionFeedback}</div>}
     <div data-no-translate data-tour-panel className="pointer-events-none fixed right-3 top-[calc(env(safe-area-inset-top)+.75rem)] z-[190] flex items-center gap-2">
       <span className="rounded-full border border-violet-500/50 bg-background/95 px-2.5 py-1.5 text-[10px] font-black shadow">{currentIndex+1}/{chapters.length}</span>
-      {targetMissing&&<button type="button" onClick={skip} className="pointer-events-auto rounded-full border bg-background/95 px-3 py-1.5 text-[10px] font-black">{c(locale,"OVERSLAAN","SKIP","PASSER","ÜBERSPRINGEN")}</button>}
+      {targetMissing&&<span role="status" className="rounded-full border border-amber-500/50 bg-background/95 px-3 py-1.5 text-[10px] font-bold">{c(locale,"DOEL ONTBREEKT — TRAINING GEBLOKKEERD","TARGET MISSING — TRAINING BLOCKED","CIBLE ABSENTE — FORMATION BLOQUÉE","ZIEL FEHLT — TRAINING BLOCKIERT")}</span>}
       <button type="button" onClick={pause} className="pointer-events-auto rounded-full border bg-background/95 px-3 py-1.5 text-[10px] font-black">{c(locale,"PAUZEER","PAUSE","PAUSE","PAUSIEREN")}</button>
     </div>
   </>
