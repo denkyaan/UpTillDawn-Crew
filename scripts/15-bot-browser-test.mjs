@@ -603,7 +603,11 @@ try {
               briefings:{'briefings:admin:0':'save-briefing'},
               operations:{'operations:admin:6':'approve-hours','operations:admin:7':'lock-hours'},
             })[chapter]?.[operationId]:null
-            if(directAdminAction){
+            const real=page.locator('[data-training-practical-op="'+operationId+'"]:visible:not([disabled])').first()
+            const usingReal=(await real.count())>0
+            if(usingReal){
+              await real.click()
+            }else if(directAdminAction){
               const direct=page.locator('[data-training-admin-module="'+chapter+'"] [data-training-admin-action="'+directAdminAction+'"]')
               await direct.waitFor({state:'visible',timeout:15000})
               await direct.click()
@@ -625,9 +629,9 @@ try {
             }else if(kind==='upload'){
               await operation.locator('select').first().selectOption('training-briefing.pdf')
             }else throw new Error('Unknown practical action '+chapter+'/'+kind)
-            if(!directAdminAction)await operation.locator('button[data-training-active-action]').last().click()
+            if(!directAdminAction&&!usingReal)await operation.locator('button[data-training-active-action]').last().click()
             await waitForPracticeRecorded(page,progressKey,chapter,operationId,exercise+1)
-            if(directAdminAction){
+            if(directAdminAction||usingReal){
               const saved=await page.evaluate(({key,id})=>{
                 const record=JSON.parse(localStorage.getItem(key+':actions-v1')||'{}')[id]
                 return !!(record?.value&&record?.at&&record?.kind)
