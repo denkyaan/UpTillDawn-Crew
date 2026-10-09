@@ -1,6 +1,7 @@
 "use client"
 
 import { useEffect,useId,useState } from "react"
+import { humanizeAppError } from "@/lib/client-error-message"
 import {activeUiLocale,LANGUAGE_APPLIED_EVENT,type SupportedUiLocale} from "@/lib/locale-preferences"
 
 type Suggestion={
@@ -55,15 +56,15 @@ export function AddressAutocomplete({
           signal:controller.signal,headers:{Accept:"application/json"},
         })
         const payload=await response.json() as {results?:Suggestion[];error?:string}
-        if(!response.ok){setSuggestions([]);setError(lookupError);return}
+        if(!response.ok){setSuggestions([]);setError(locale==="nl"?humanizeAppError(payload.error||lookupError):lookupError);return}
         setSuggestions(payload.results||[]);setActive(-1)
       }catch(fetchError){
         if(fetchError instanceof DOMException&&fetchError.name==="AbortError")return
-        setSuggestions([]);setError(lookupError)
+        setSuggestions([]);setError(locale==="nl"?humanizeAppError(fetchError):lookupError)
       }finally{if(!controller.signal.aborted)setLoading(false)}
     },300)
     return()=>{window.clearTimeout(timer);controller.abort()}
-  },[focused,value,lookupError])
+  },[focused,value,lookupError,locale])
 
   function choose(item:Suggestion){
     setValue(item.formatted)
