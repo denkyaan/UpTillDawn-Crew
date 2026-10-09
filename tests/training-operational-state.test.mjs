@@ -9,6 +9,7 @@ const read=path=>readFile(new URL('../'+path,import.meta.url),'utf8')
 const runtime=await read('lib/training-operational-state.ts')
 const catalog=await read('lib/training-exercise-catalog.ts')
 const lab=await read('components/training/role-training-lab.tsx')
+const fields=await read('lib/training-operation-ui.ts')
 function load(source){
  const js=ts.transpileModule(source,{compilerOptions:{module:ts.ModuleKind.CommonJS,target:ts.ScriptTarget.ES2022}}).outputText
  const sandbox={exports:{},require(){throw new Error('Pure training model must not use runtime imports')}}
@@ -87,9 +88,11 @@ test('Stop Work occurs only after other chapters and before timesheet submission
 })
 
 test('hands-on UI uses real simulated entities, instructions and domain state',()=>{
- for(const fragment of ['data-training-live-workflow','data-training-domain','data-training-status','trainingOperationError(role,current,ledger)','data-training-full-instructions','FULL_INSTRUCTIONS.briefings','FULL_INSTRUCTIONS.tasks','timesheet','Lina Peeters','Noah Jacobs','damaged','artist']){
+ for(const fragment of ['data-training-live-workflow','data-training-domain','data-training-status','trainingOperationError(role,current,ledger)','data-training-full-instructions','FULL_INSTRUCTIONS.briefings','FULL_INSTRUCTIONS.tasks','trainingField(current)','timesheet']){
   assert.ok(lab.includes(fragment),'missing feature '+fragment)
  }
+ for(const value of ['Lina Peeters','Noah Jacobs','damaged','artist','events:admin:0','tasks','inventory','guestlist','Driver'])assert.ok(fields.includes(value),'missing semantic input '+value)
+ assert.doesNotMatch(fields,/supabase\\.from\\(|createClient\\(|fetch\\(['"]\\/api/)
  assert.doesNotMatch(runtime,/createClient\(|fetch\(|supabase\.from\(|\.rpc\(/)
  assert.doesNotMatch(lab,/supabase\.from\(|createClient\(|fetch\(['"]\/api/)
 })
