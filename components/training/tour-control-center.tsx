@@ -329,7 +329,7 @@ export function TourControlCenter({active,userId,role,preferredWorkplace,mode="f
   // Next.js can unmount the current route. Route-only effects may run after
   // hydration and previously reverted the user to the preceding tab.
   useEffect(()=>{
-    if(!active||!navigationTarget||!current)return
+    if(!active||!navigationTarget||!current||typeof document.addEventListener!=="function")return
     const onClick=(event:MouseEvent)=>{
       if(event.defaultPrevented||event.button!==0||event.metaKey||event.ctrlKey||event.shiftKey||event.altKey)return
       const element=event.target
