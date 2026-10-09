@@ -1,7 +1,6 @@
 "use client"
 
 import { useEffect,useId,useState } from "react"
-import { humanizeAppError } from "@/lib/client-error-message"
 import {activeUiLocale,LANGUAGE_APPLIED_EVENT,type SupportedUiLocale} from "@/lib/locale-preferences"
 
 type Suggestion={
@@ -36,6 +35,7 @@ export function AddressAutocomplete({
   const [error,setError]=useState("")
   const [locale,setLocale]=useState<SupportedUiLocale>("nl")
   const t=(nl:string,en:string,fr:string,de:string)=>({nl,en,fr,de})[locale]
+  const lookupError=t("Adressen konden niet worden opgezocht.","Addresses could not be retrieved.","Impossible de rechercher les adresses.","Adressen konnten nicht abgerufen werden.")
   useEffect(()=>{
     const frame=requestAnimationFrame(()=>setLocale(activeUiLocale()))
     const apply=()=>setLocale(activeUiLocale())
@@ -55,15 +55,15 @@ export function AddressAutocomplete({
           signal:controller.signal,headers:{Accept:"application/json"},
         })
         const payload=await response.json() as {results?:Suggestion[];error?:string}
-        if(!response.ok){setSuggestions([]);setError(humanizeAppError(payload.error||t("Adressen konden niet worden opgezocht.","Addresses could not be retrieved.","Impossible de rechercher les adresses.","Adressen konnten nicht abgerufen werden.")));return}
+        if(!response.ok){setSuggestions([]);setError(lookupError);return}
         setSuggestions(payload.results||[]);setActive(-1)
       }catch(fetchError){
         if(fetchError instanceof DOMException&&fetchError.name==="AbortError")return
-        setSuggestions([]);setError(humanizeAppError(fetchError))
+        setSuggestions([]);setError(lookupError)
       }finally{if(!controller.signal.aborted)setLoading(false)}
     },300)
     return()=>{window.clearTimeout(timer);controller.abort()}
-  },[focused,value])
+  },[focused,value,lookupError])
 
   function choose(item:Suggestion){
     setValue(item.formatted)
