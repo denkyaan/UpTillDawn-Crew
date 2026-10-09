@@ -641,19 +641,39 @@ try {
             }else await page.locator('aside a[data-upt-training-next-tab="true"]:visible').first().click()
             await waitForTrainingTab(page,progressKey,chapter)
           }
-          // A ticked catalogue alone is insufficient. Confirm the simulated
-          // operational entity actually reached the correct lifecycle state.
+          // The controller can unmount the completed chapter or navigate to the
+          // next route before this check runs. A missing DOM badge is therefore
+          // not a workflow failure. Verify actual persisted operation evidence,
+          // including kind and timestamp; also validate the badge if it remains.
           const expectedDomain={
-            personnel:'approval',briefings:'briefing',driver:'driver',
-            tasks:'task',inventory:'inventory',guestlist:'guestlist',chat:'chat',
-            ...(tourRole==='admin'?{events:'event',workplaces:'workplace'}:{operations:'break'}),
+            personnel:['approval','personnel:admin:3'],
+            briefings:['briefing','briefings:shared:5'],
+            driver:['driver','driver:shared:9'],
+            tasks:['task','tasks:shared:4'],
+            inventory:['inventory','inventory:shared:3'],
+            guestlist:['guestlist','guestlist:shared:4'],
+            chat:['chat','chat:shared:6'],
+            ...(tourRole==='admin'
+              ? {events:['event','events:admin:6'],workplaces:['workplace','workplaces:admin:4']}
+              : {operations:['break',tourRole==='employee'?'operations:employee:5':'operations:responsible_lead:3']}),
           }[chapter]
           if(expectedDomain){
-            const operational=await page.evaluate(domain=>{
+            const [domain,operationId]=expectedDomain
+            const actual=await page.evaluate(({key,domain,operationId})=>{
+              const evidence=JSON.parse(localStorage.getItem(key+':actions-v1')||'{}')[operationId]
               const card=document.querySelector('[data-training-domain="'+domain+'"]')
-              return card?.getAttribute('data-training-status')||null
-            },expectedDomain)
-            if(operational!=='completed')throw new Error('Domain state not completed after '+chapter+': '+expectedDomain+'='+operational)
+              return {
+                evidence:!!(evidence?.value&&evidence?.at&&evidence?.kind),
+                status:card?.getAttribute('data-training-status')||null,
+                mountedChapter:document.querySelector('[data-training-lab]')?.getAttribute('data-training-chapter')||null,
+              }
+            },{key:progressKey,domain,operationId})
+            if(!actual.evidence)throw new Error('Missing persisted domain operation after '+chapter+': '+operationId)
+            // Only compare a UI badge while the completed chapter is still
+            // mounted; a successor chapter can render before React hydration.
+            if(actual.mountedChapter===chapter&&actual.status!=='completed'){
+              throw new Error('Domain not completed in its own chapter: '+domain+'='+actual.status)
+            }
           }
           if(chapter==='timesheet'){
             const status=await page.evaluate(({key,role})=>{
