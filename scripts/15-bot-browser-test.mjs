@@ -545,6 +545,91 @@ try {
         const progress=await page.evaluate(key=>JSON.parse(localStorage.getItem(key)||'null'),progressKey)
         if(!progress?.paused||progress.activeKey!==advanced.activeKey||!progress.completed.includes(before?.activeKey||'overview'))throw new Error('general tour progress or pause did not persist')
         console.log(`PASS ${bot} manual purple-tab navigation + verified progress + pause persistence`)
+
+        // A single chapter is not evidence that the role tour works from
+        // registration to the final timesheet. Resume the paused onboarding
+        // and execute every remaining required exercise in its true UI order.
+        await page.evaluate((tourRole)=>{
+          sessionStorage.setItem('uptilldawn-tour-active-v8',JSON.stringify({
+            active:true,role:tourRole,mode:'full',workplace:''
+          }))
+        },tourRole)
+        await page.reload({waitUntil:'domcontentloaded',timeout:45000})
+        await page.locator('[data-training-lab]').waitFor({state:'visible',timeout:30000})
+        const fullyVisited=[]
+        for(let chapterCount=0;chapterCount<24;chapterCount++){
+          const lab=page.locator('[data-training-lab]')
+          await lab.waitFor({state:'visible',timeout:30000})
+          const chapter=await lab.getAttribute('data-training-chapter')
+          if(!chapter)throw new Error('practical chapter is missing its identity')
+          if(fullyVisited.includes(chapter))throw new Error('repeated chapter '+chapter)
+          fullyVisited.push(chapter)
+          const total=Number(await lab.locator('progress').getAttribute('max'))
+          if(total<3)throw new Error('missing practice operations for '+chapter)
+          const start=Number(await lab.locator('progress').evaluate(el=>el.value))
+          for(let exercise=start;exercise<total;exercise++){
+            const operation=lab.locator('[data-training-kind]')
+            const kind=await operation.getAttribute('data-training-kind')
+            if(kind==='inspect'){
+              await operation.locator('button[data-training-active-action="true"]').first().click()
+            }else if(['write','message','form','number','delete'].includes(kind)){
+              await operation.locator('input[type="text"],input[type="number"],textarea').first().fill(
+                kind==='number'?'12':kind==='delete'?'DEMO':'Training event action'
+              )
+              if(kind==='form')await operation.locator('select').first().selectOption({index:1})
+            }else if(kind==='select'){
+              await operation.locator('select').first().selectOption({index:1})
+            }else if(kind==='toggle'){
+              await operation.locator('input[type="checkbox"]').first().check()
+            }else if(kind==='schedule'){
+              const times=operation.locator('input[type="datetime-local"]')
+              await times.nth(0).fill('2026-10-10T20:00')
+              await times.nth(1).fill('2026-10-11T04:00')
+            }else if(kind==='upload'){
+              await operation.locator('select').first().selectOption('training-briefing.pdf')
+            }else throw new Error('Unknown practical action '+chapter+'/'+kind)
+            await operation.locator('button[data-training-active-action]').last().click()
+            await page.waitForFunction(({key,chapter,count})=>{
+              const ledger=JSON.parse(localStorage.getItem(key+':actions-v1')||'{}')
+              return Object.keys(ledger).filter(id=>id.startsWith(chapter+':')).length>=count
+            },{key:progressKey,chapter,count:exercise+1},{timeout:15000})
+          }
+          await page.waitForFunction(({key,chapter})=>{
+            const p=JSON.parse(localStorage.getItem(key)||'null')
+            return p?.completed?.includes(chapter)||!!document.querySelector('a[data-upt-training-next-tab="true"]')
+          },{key:progressKey,chapter},{timeout:30000})
+          const progress=await page.evaluate(key=>JSON.parse(localStorage.getItem(key)||'null'),progressKey)
+          if(progress?.completed?.includes(chapter)){
+            // Two scenarios can share a route (operations -> Driver). The
+            // controller still requires completion of each scenario's inputs.
+            if(progress?.completed?.length===progress?.completed?.filter((x,i,a)=>a.indexOf(x)===i).length&&chapter==='timesheet')break
+            await page.waitForFunction(previous=>{
+              const lab=document.querySelector('[data-training-lab]')
+              return lab?.getAttribute('data-training-chapter')!==previous
+            },chapter,{timeout:15000})
+          }else{
+            const highlighted=page.locator('a[data-upt-training-next-tab="true"]')
+            await highlighted.first().waitFor({state:'attached',timeout:15000})
+            if(viewport.width<1024){
+              const mobile=page.locator('nav[aria-label]').first()
+              if(!await mobile.locator('a[data-upt-training-next-tab="true"]:visible').count()){
+                await mobile.locator('button[aria-expanded="false"]').click()
+              }
+              await mobile.locator('a[data-upt-training-next-tab="true"]:visible').first().click()
+            }else await page.locator('aside a[data-upt-training-next-tab="true"]:visible').first().click()
+            await page.waitForFunction(({key,chapter})=>{
+              const p=JSON.parse(localStorage.getItem(key)||'null')
+              return p?.completed?.includes(chapter)
+            },{key:progressKey,chapter},{timeout:30000})
+          }
+          console.log(`PASS ${bot} complete role curriculum chapter ${chapter}: ${total} verified operations`)
+        }
+        const final=await page.evaluate(key=>JSON.parse(localStorage.getItem(key)||'null'),progressKey)
+        if(!final?.completed?.includes('timesheet')||fullyVisited.length<12){
+          throw new Error(`role training did not finish end to end: ${JSON.stringify({completed:final?.completed,visited:fullyVisited})}`)
+        }
+        console.log(`PASS ${bot} full practical role tour completed: ${fullyVisited.length} chapters`)
+
       }
 
       if(diagnostics.pageErrors.length)throw new Error(`Unhandled browser errors: ${JSON.stringify(diagnostics.pageErrors)}`)
