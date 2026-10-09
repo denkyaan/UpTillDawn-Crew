@@ -96,7 +96,7 @@ export function RoleTrainingLab({role,chapter,progressKey}:{role:TourRole;chapte
   const observer=new MutationObserver(update)
   observer.observe(document.body,{childList:true,subtree:true,attributes:true,attributeFilter:["disabled"]})
   return()=>observer.disconnect()
- },[current?.id])
+ },[current])
  const showFunctionalControl=()=>{
   const button=Array.from(document.querySelectorAll<HTMLElement>("[data-training-practical-op]")).find(node=>
    node.dataset.trainingPracticalOp===current?.id&&!node.hasAttribute("disabled")&&node.getClientRects().length>0
