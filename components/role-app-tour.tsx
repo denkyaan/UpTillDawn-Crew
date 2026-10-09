@@ -210,6 +210,9 @@ export function RoleAppTour(){
   const [open,setOpen]=useState(false)
   const [choice,setChoice]=useState(false)
   const [welcome,setWelcome]=useState(false)
+  // An old tour session may exist when the account still needs a profile.
+  // Nothing from that session is rendered until the server confirms completion.
+  const [profileGate,setProfileGate]=useState<"checking"|"blocked"|"ready">("checking")
   // Keep SSR and the first hydration render identical. Device/manual locale is
   // applied only after mount; this removes the React #418 hydration mismatch.
   const [locale,setLocale]=useState<ExtendedUiLocale>("nl")
@@ -248,12 +251,15 @@ export function RoleAppTour(){
       // Approval grants access to the app, but the mandatory profile must be
       // completed and saved before onboarding or the role tour can begin.
       // Fail closed if profile-completion state cannot be verified.
-      if(!state){setChoice(false);return}
+      if(!state){setProfileGate("blocked");setChoice(false);setOpen(false);setWelcome(false);return}
       if(state.required&&!state.completed){
-        setChoice(false)
+        setProfileGate("blocked")
+        setChoice(false);setOpen(false);setWelcome(false)
+        sessionStorage.removeItem(TOUR_SESSION_KEY)
         if(location.pathname!=="/settings")router.replace("/settings?complete-profile=1")
         return
       }
+      setProfileGate("ready")
       const saved=localStorage.getItem(storageKey(user.id,role))
       const previous=localStorage.getItem(storageKey(user.id,role,PREVIOUS_VERSION))
 
@@ -404,15 +410,15 @@ export function RoleAppTour(){
   }
 
   return <>
-    <TourControlCenter active={open} userId={user.id} role={activeRole} preferredWorkplace={preferredWorkplace} mode={tourMode}/>
-    {welcome&&<div data-no-translate className="fixed inset-0 z-[145] flex items-end justify-center bg-transparent p-4 sm:items-center" role="dialog" aria-modal="true">
+    <TourControlCenter active={open&&profileGate==="ready"} userId={user.id} role={activeRole} preferredWorkplace={preferredWorkplace} mode={tourMode}/>
+    {profileGate==="ready"&&welcome&&<div data-no-translate className="fixed inset-0 z-[145] flex items-end justify-center bg-transparent p-4 sm:items-center" role="dialog" aria-modal="true">
       <section className="w-full max-w-md rounded-2xl border bg-background p-5 shadow-2xl">
         <h2 className="text-xl font-black">{resolve(UI_COPY.promptTitle)}</h2>
         <p className="mt-3 text-sm leading-6 text-muted-foreground">{resolve(UI_COPY.promptBody)}</p>
         <button onClick={beginTraining} className="mt-5 w-full rounded-xl bg-violet-600 px-4 py-3 font-black text-white">{resolve(UI_COPY.welcomeContinue)}</button>
       </section>
     </div>}
-    {choice&&<div data-no-translate className="fixed inset-0 z-[140] flex items-end justify-center bg-transparent p-4 sm:items-center" role="dialog" aria-modal="true">
+    {profileGate==="ready"&&choice&&<div data-no-translate className="fixed inset-0 z-[140] flex items-end justify-center bg-transparent p-4 sm:items-center" role="dialog" aria-modal="true">
       <section className="w-full max-w-md rounded-2xl border bg-background p-5 shadow-2xl">
         <h2 className="text-xl font-black">{resolve(UI_COPY.promptTitle)}</h2>
         <p className="mt-2 text-sm text-muted-foreground">{resolve(UI_COPY.promptBody)}</p>
