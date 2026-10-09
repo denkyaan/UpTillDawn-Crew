@@ -325,6 +325,35 @@ export function TourControlCenter({active,userId,role,preferredWorkplace,mode="f
     }
   },[active,current,pathname])
 
+  // Persist a verified chapter transition on the actual tab click, before
+  // Next.js can unmount the current route. Route-only effects may run after
+  // hydration and previously reverted the user to the preceding tab.
+  useEffect(()=>{
+    if(!active||!navigationTarget||!current)return
+    const onClick=(event:MouseEvent)=>{
+      if(event.defaultPrevented||event.button!==0||event.metaKey||event.ctrlKey||event.shiftKey||event.altKey)return
+      const element=event.target
+      if(!(element instanceof Element))return
+      const anchor=element.closest("a[href]")
+      if(!(anchor instanceof HTMLAnchorElement)||anchor.getAttribute("aria-disabled")==="true")return
+      const destination=new URL(anchor.href,location.origin)
+      if(destination.origin!==location.origin||destination.pathname!==navigationTarget||!destination.searchParams.has("tour"))return
+      const target=chapters[currentIndex+1]
+      if(!target||tourBaseRoute(role,target)!==destination.pathname||!isChapterPractised(progressKey,role,current.key))return
+      const prior=progressRef.current
+      write({...prior,activeKey:target.key,completed:unique([...prior.completed,current.key]),paused:false,updatedAt:new Date().toISOString()})
+      awaitingNavigationRef.current=null
+      setNavigationTarget(null)
+      try{
+        const old=JSON.parse(sessionStorage.getItem(TOUR_WORKFLOW_KEY)||"{}")
+        sessionStorage.setItem(TOUR_WORKFLOW_KEY,JSON.stringify({...old,navTarget:null}))
+      }catch{}
+      dispatchEvent(new CustomEvent("uptilldawn-training-next-tab",{detail:{target:null}}))
+    }
+    document.addEventListener("click",onClick,true)
+    return()=>document.removeEventListener("click",onClick,true)
+  },[active,chapters,current,currentIndex,navigationTarget,progressKey,role,write])
+
   // Only the target tab is accented during navigation. Sandbox actions use
   // a solid purple control; no page-dimming overlay or blinking highlight.
   useEffect(()=>{
