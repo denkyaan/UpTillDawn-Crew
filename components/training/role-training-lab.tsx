@@ -85,17 +85,19 @@ export function RoleTrainingLab({role,chapter,progressKey}:{role:TourRole;chapte
  // instead of accepting a second generic confirmation checkbox.
  useEffect(()=>{
   const update=()=>{
-   const available=!!current&&Array.from(document.querySelectorAll<HTMLElement>("[data-training-practical-op]")).some(node=>
-    node.dataset.trainingPracticalOp===current.id
-    &&!node.hasAttribute("disabled")
-    &&node.getClientRects().length>0
-   )
+   let available=false
+   for(const node of document.querySelectorAll<HTMLElement>("[data-training-practical-op]")){
+    const matched=!!current&&node.dataset.trainingPracticalOp===current.id
+      &&!node.hasAttribute("disabled")&&node.getClientRects().length>0
+    if(matched){available=true;if(node.getAttribute("data-training-active-action")!=="true")node.setAttribute("data-training-active-action","true")}
+    else if(node.hasAttribute("data-training-active-action"))node.removeAttribute("data-training-active-action")
+   }
    setFunctionalControl(available)
   }
   update()
   const observer=new MutationObserver(update)
-  observer.observe(document.body,{childList:true,subtree:true,attributes:true,attributeFilter:["disabled"]})
-  return()=>observer.disconnect()
+  observer.observe(document.body,{childList:true,subtree:true,attributes:true,attributeFilter:["disabled","data-training-active-action"]})
+  return()=>{observer.disconnect();for(const node of document.querySelectorAll<HTMLElement>("[data-training-practical-op]"))node.removeAttribute("data-training-active-action")}
  },[current])
  const showFunctionalControl=()=>{
   const button=Array.from(document.querySelectorAll<HTMLElement>("[data-training-practical-op]")).find(node=>

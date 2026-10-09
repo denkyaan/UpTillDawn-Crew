@@ -198,6 +198,24 @@ body[data-upt-training-active="true"] a[data-upt-training-next-tab="true"] {
   border-radius: 10px;
 }
 
+/* Only the active functional sandbox action is purple; other sample controls
+   do not masquerade as the next required step. No pulsing or dimming. */
+body[data-upt-training-active="true"] [data-training-practical-op]:not([data-training-active-action="true"]) {
+  background-color: var(--background) !important;
+  color: var(--foreground) !important;
+  border-color: var(--border) !important;
+  box-shadow: none !important;
+  outline: none !important;
+  animation: none !important;
+}
+body[data-upt-training-active="true"] [data-training-practical-op][data-training-active-action="true"]:not(:disabled) {
+  background-color: #7c3aed !important;
+  color: #fff !important;
+  border-color: #7c3aed !important;
+  box-shadow: none !important;
+  animation: none !important;
+}
+
 /* The one required action is solid purple, with no pulse or dimmed backdrop. */
 body[data-upt-training-active="true"] [data-training-lab] [data-training-active-action="true"]:not(:disabled) {
   background-color: #7c3aed !important;
