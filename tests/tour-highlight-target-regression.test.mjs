@@ -13,7 +13,7 @@ test('all role tours use one exact actionable element with non-blocking highligh
   const css=readFileSync('app/globals.css','utf8')
   assert.doesNotMatch(center,/style=\\{\\{left:rect/)
   assert.match(css,/data-upt-training-next-tab/)
-  assert.match(css,/data-tour-demo="primary-action"/)
+  assert.match(css,/data-training-active-action/)
   assert.match(css,/animation: none/)
   assert.doesNotMatch(css,/0 0 0 9999px/)
   assert.doesNotMatch(center,/shadow-\[0_0_0_9999px/)
