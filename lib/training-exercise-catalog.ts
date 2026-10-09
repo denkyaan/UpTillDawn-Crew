@@ -1,4 +1,4 @@
-import type {TourRole,TourLocale,TourCopy} from "./tour-training"
+import type {TourRole,TourCopy} from "./tour-training"
 
 // An explicit operation inventory is required for every role and every training
 // chapter. An operation cannot be credited by visiting a page or waiting.
