@@ -215,7 +215,7 @@ export function RoleTrainingLab({role,chapter,progressKey}:{role:TourRole;chapte
    <h3 className="text-lg font-black">{current.title[language]}</h3>
    <p className="text-sm leading-6 text-muted-foreground">{current.help[language]}</p>
    {current.kind==="inspect"&&<div className="space-y-3">
-     <button type="button" data-training-active-action={!isOpened?"true":undefined} onClick={()=>{setOpened(true);setOpenedFor(current.id);setReviewed(true);setError("")}} className="rounded-xl border px-4 py-3 text-sm font-bold">{c(language,"OPEN DEMO-INFORMATIE","OPEN DEMO INFORMATION","OUVRIR LES INFORMATIONS DÉMO","DEMO-INFORMATIONEN ÖFFNEN")}</button>
+     <button type="button" data-training-active-action={!isOpened?"true":undefined} onClick={()=>{setOpened(true);setOpenedFor(current.id);setReviewed(true);setError("")}} className="rounded-xl border px-4 py-3 text-sm font-bold">{current.title[language]}</button>
      {isOpened&&<article className="rounded-xl border border-violet-500/30 bg-violet-500/5 p-3 text-sm leading-6"><p className="font-bold">{current.title[language]}</p><p>{current.help[language]}</p><p className="mt-2 text-muted-foreground">{EXAMPLES[chapter]?.[language]}</p></article>}
      {reviewed&&isOpened&&<button type="button" data-training-active-action onClick={execute} className="rounded-xl border px-4 py-3 text-sm font-black">{c(language,"IK HEB DIT GECONTROLEERD","I HAVE REVIEWED THIS","J’AI VÉRIFIÉ","ICH HABE DIES GEPRÜFT")}</button>}
     </div>}
