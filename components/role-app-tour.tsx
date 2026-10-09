@@ -10,6 +10,7 @@ import {parseUiLocale,LANGUAGE_APPLIED_EVENT} from "@/lib/locale-preferences"
 import type {ExtendedUiLocale} from "@/lib/ui-translation-extensions"
 import {TourControlCenter} from "@/components/training/tour-control-center"
 import {TOUR_SESSION_KEY,getTourChapters,tourProgressKey,type TourMode} from "@/lib/tour-training"
+import {practiceDoneKey} from "@/lib/training-exercise-catalog"
 
 type TourText={nl:string;en:string;fr:string;de:string}
 type Copy=string|TourText
@@ -309,6 +310,12 @@ export function RoleAppTour(){
       }
       if(chapter){
         const key=tourProgressKey(user.id,nextRole,workplace??preferredWorkplace)
+        // A manual restart means repeating every operation, not replaying
+        // stored checkmarks from the previous hands-on training session.
+        if(reset){
+          localStorage.removeItem(practiceDoneKey(key))
+          sessionStorage.removeItem("uptilldawn-lab-model:"+key)
+        }
         let existing:{completed?:string[];skipped?:string[]}={}
         try{existing=JSON.parse(localStorage.getItem(key)||"{}")}catch{}
         localStorage.setItem(key,JSON.stringify({
