@@ -257,6 +257,26 @@ export function TourControlCenter({active,userId,role,preferredWorkplace,mode="f
       dispatchEvent(new CustomEvent("uptilldawn-training-next-tab",{detail:{target:next.key}}))
       setActionFeedback(c(locale,"Open nu zelf de volgende tab.","Open the next tab yourself.","Ouvrez vous-même l’onglet suivant.","Öffne den nächsten Tab selbst."))
     }
+    const onTabSelected=(event:Event)=>{
+      // The trainee actually clicked the highlighted navigation link.
+      // Persist completion BEFORE Next.js changes the route: otherwise the
+      // controller can unmount and lose awaitingNavigationRef mid-transition.
+      const detail=(event as CustomEvent<{key?:string}>).detail
+      const next=chapters[currentIndex+1]
+      if(!next||detail?.key!==next.key||!isChapterPractised(progressKey,role,current.key))return
+      if(tourBaseRoute(role,next)===tourBaseRoute(role,current))return
+      const nextPath=tourBaseRoute(role,next)
+      pendingPathRef.current=nextPath
+      awaitingNavigationRef.current=null
+      const prior=progressRef.current
+      write({...prior,activeKey:next.key,completed:unique([...prior.completed,current.key]),paused:false,updatedAt:new Date().toISOString()})
+      try{
+        const state=JSON.parse(sessionStorage.getItem(TOUR_WORKFLOW_KEY)||"{}")
+        sessionStorage.setItem(TOUR_WORKFLOW_KEY,JSON.stringify({...state,navTarget:null}))
+      }catch{}
+      setNavigationTarget(null)
+      dispatchEvent(new CustomEvent("uptilldawn-training-next-tab",{detail:{target:null}}))
+    }
     const onTarget=(event:Event)=>{
       const detail=(event as CustomEvent<{target?:string}|string|undefined>).detail
       const target=typeof detail==="string"?detail:detail?.target
@@ -293,9 +313,11 @@ export function TourControlCenter({active,userId,role,preferredWorkplace,mode="f
     }
     addEventListener("uptilldawn-training-nav-target",onTarget)
     addEventListener("uptilldawn-training-lab-completed",onLabCompleted)
+    addEventListener("uptilldawn-training-tab-selected",onTabSelected)
     return()=>{
       removeEventListener("uptilldawn-training-nav-target",onTarget)
       removeEventListener("uptilldawn-training-lab-completed",onLabCompleted)
+      removeEventListener("uptilldawn-training-tab-selected",onTabSelected)
     }
   },[active,chapters,current,currentIndex,locale,mode,preferredWorkplace,progressKey,role,write])
 
