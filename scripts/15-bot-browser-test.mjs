@@ -629,31 +629,6 @@ try {
             await waitForPracticeRecorded(page,progressKey,chapter,operationId,exercise+1)
             if(directAdminAction)console.log('PASS '+bot+' credited real admin control '+chapter+'/'+operationId)
           }
-          await page.waitForFunction(({key,chapter})=>{
-            const p=JSON.parse(localStorage.getItem(key)||'null')
-            return p?.completed?.includes(chapter)||!!document.querySelector('a[data-upt-training-next-tab="true"]')
-          },{key:progressKey,chapter},{timeout:30000})
-          const progress=await page.evaluate(key=>JSON.parse(localStorage.getItem(key)||'null'),progressKey)
-          if(progress?.completed?.includes(chapter)){
-            // Two scenarios can share a route (operations -> Driver). The
-            // controller still requires completion of each scenario's inputs.
-            if(progress?.completed?.length===progress?.completed?.filter((x,i,a)=>a.indexOf(x)===i).length&&chapter==='timesheet')break
-            await page.waitForFunction(previous=>{
-              const lab=document.querySelector('[data-training-lab]')
-              return lab?.getAttribute('data-training-chapter')!==previous
-            },chapter,{timeout:15000})
-          }else{
-            const highlighted=page.locator('a[data-upt-training-next-tab="true"]')
-            await highlighted.first().waitFor({state:'attached',timeout:15000})
-            if(viewport.width<1024){
-              const mobile=page.locator('nav[aria-label]').first()
-              if(!await mobile.locator('a[data-upt-training-next-tab="true"]:visible').count()){
-                await mobile.locator('button[aria-expanded="false"]').click()
-              }
-              await mobile.locator('a[data-upt-training-next-tab="true"]:visible').first().click()
-            }else await page.locator('aside a[data-upt-training-next-tab="true"]:visible').first().click()
-            await waitForTrainingTab(page,progressKey,chapter)
-          }
           // The admin curriculum must also operate its realistic management
           // controls. Completing isolated catalogue fields cannot substitute
           // for saving an event, creating a shift, opening a briefing or
@@ -689,6 +664,31 @@ try {
               if(await manager.locator('[data-training-admin-action="approve-hours"]').isEnabled())throw new Error('Locked admin timesheet can still be edited')
             }
             console.log('PASS '+bot+' functional admin '+chapter+' buttons')
+          }
+          await page.waitForFunction(({key,chapter})=>{
+            const p=JSON.parse(localStorage.getItem(key)||'null')
+            return p?.completed?.includes(chapter)||!!document.querySelector('a[data-upt-training-next-tab="true"]')
+          },{key:progressKey,chapter},{timeout:30000})
+          const progress=await page.evaluate(key=>JSON.parse(localStorage.getItem(key)||'null'),progressKey)
+          if(progress?.completed?.includes(chapter)){
+            // Two scenarios can share a route (operations -> Driver). The
+            // controller still requires completion of each scenario's inputs.
+            if(progress?.completed?.length===progress?.completed?.filter((x,i,a)=>a.indexOf(x)===i).length&&chapter==='timesheet')break
+            await page.waitForFunction(previous=>{
+              const lab=document.querySelector('[data-training-lab]')
+              return lab?.getAttribute('data-training-chapter')!==previous
+            },chapter,{timeout:15000})
+          }else{
+            const highlighted=page.locator('a[data-upt-training-next-tab="true"]')
+            await highlighted.first().waitFor({state:'attached',timeout:15000})
+            if(viewport.width<1024){
+              const mobile=page.locator('nav[aria-label]').first()
+              if(!await mobile.locator('a[data-upt-training-next-tab="true"]:visible').count()){
+                await mobile.locator('button[aria-expanded="false"]').click()
+              }
+              await mobile.locator('a[data-upt-training-next-tab="true"]:visible').first().click()
+            }else await page.locator('aside a[data-upt-training-next-tab="true"]:visible').first().click()
+            await waitForTrainingTab(page,progressKey,chapter)
           }
           // The controller can unmount the completed chapter or navigate to the
           // next route before this check runs. A missing DOM badge is therefore
