@@ -595,7 +595,19 @@ try {
             const kind=await operation.getAttribute('data-training-kind')
             const operationId=await operation.getAttribute('data-training-operation')
             if(!operationId)throw new Error('missing training operation identity in '+chapter)
-            if(kind==='inspect'){
+            // A subset of required Admin steps is credited ONLY by clicking
+            // the real functional training view, not its generic companion.
+            const directAdminAction=tourRole==='admin'?({
+              events:{'events:admin:6':'publish-event'},
+              workplaces:{'workplaces:admin:0':'save-shift'},
+              briefings:{'briefings:admin:0':'save-briefing'},
+              operations:{'operations:admin:6':'approve-hours'},
+            })[chapter]?.[operationId]:null
+            if(directAdminAction){
+              const direct=page.locator('[data-training-admin-module="'+chapter+'"] [data-training-admin-action="'+directAdminAction+'"]')
+              await direct.waitFor({state:'visible',timeout:15000})
+              await direct.click()
+            }else if(kind==='inspect'){
               await operation.locator('button[data-training-active-action="true"]').first().click()
             }else if(['write','message','form','number','delete'].includes(kind)){
               await operation.locator('input[type="text"],input[type="number"],textarea').first().fill(
@@ -613,8 +625,9 @@ try {
             }else if(kind==='upload'){
               await operation.locator('select').first().selectOption('training-briefing.pdf')
             }else throw new Error('Unknown practical action '+chapter+'/'+kind)
-            await operation.locator('button[data-training-active-action]').last().click()
+            if(!directAdminAction)await operation.locator('button[data-training-active-action]').last().click()
             await waitForPracticeRecorded(page,progressKey,chapter,operationId,exercise+1)
+            if(directAdminAction)console.log('PASS '+bot+' credited real admin control '+chapter+'/'+operationId)
           }
           await page.waitForFunction(({key,chapter})=>{
             const p=JSON.parse(localStorage.getItem(key)||'null')
