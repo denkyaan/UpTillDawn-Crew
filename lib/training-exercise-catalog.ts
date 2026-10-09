@@ -15,6 +15,11 @@ inspect|Controleer de status en locatie|Review status and location|Vérifier le 
 inspect|Bekijk je rol en toegangsrechten|Review your role and permissions|Vérifier votre rôle et vos droits|Rolle und Berechtigungen prüfen
 inspect|Bekijk de beschikbare werkplekken|View available workplaces|Voir les postes disponibles|Verfügbare Arbeitsplätze ansehen
 inspect|Controleer de meldingen|Review notifications|Consulter les notifications|Benachrichtigungen prüfen
+inspect|Doorloop fictieve registratie en verificatie|Practise fictional registration and verification|Simuler inscription et vérification fictives|Fiktive Registrierung und Verifizierung üben
+write|Vul een verplicht profielveld aan|Complete required profile field|Compléter un champ de profil obligatoire|Pflichtfeld im Profil ausfüllen
+select|Kies een voorkeurswerkplek|Choose preferred workplace|Choisir un poste préféré|Bevorzugten Arbeitsplatz wählen
+inspect|Controleer de rolkeuze bij aanmelden|Review role selection on sign-in|Vérifier le choix du rôle à la connexion|Rollenauswahl beim Login prüfen
+inspect|Bekijk de appinstallatie na registratie|View post-signup app installation|Voir l’installation après inscription|App-Installation nach Registrierung ansehen
 inspect|Open de bijbehorende helpinformatie|Open contextual help|Ouvrir l’aide contextuelle|Kontexthilfe öffnen
 `,
 events:`
@@ -25,6 +30,8 @@ select|Selecteer je beschikbaarheid|Select your availability|Sélectionner votre
 select|Selecteer opbouwbeschikbaarheid|Select setup availability|Sélectionner la disponibilité montage|Aufbauverfügbarkeit auswählen
 select|Selecteer afbouwbeschikbaarheid|Select teardown availability|Sélectionner la disponibilité démontage|Abbauverfügbarkeit auswählen
 inspect|Controleer de aanmeldbevestiging|Review availability confirmation|Vérifier la confirmation de disponibilité|Bestätigung der Verfügbarkeit prüfen
+inspect|Simuleer een aanmelddeadline die verstreken is|Review registration after deadline|Vérifier l’inscription après délai|Anmeldung nach Fristablauf prüfen
+inspect|Bekijk automatische vervanging vanuit de wachtlijst|Review automatic waiting-list replacement|Vérifier le remplacement automatique|Automatischen Ersatz aus Warteliste prüfen
 `,
 workplaces:`
 inspect|Open de werkplekdetails|Open workplace details|Ouvrir les détails du poste|Arbeitsplatzdetails öffnen
@@ -32,6 +39,9 @@ inspect|Bekijk de shifturen|Review shift hours|Vérifier les horaires|Schichtzei
 inspect|Bekijk de verantwoordelijke en ploeg|View responsible lead and crew|Voir le responsable et l’équipe|Verantwortliche und Team ansehen
 inspect|Controleer de werkplekinstructies|Review workplace instructions|Consulter les consignes du poste|Arbeitsplatzanweisungen prüfen
 inspect|Open de gekoppelde prijslijst|Open linked price list|Ouvrir la liste des prix liée|Verknüpfte Preisliste öffnen
+inspect|Bekijk de standaardwerkplek Tokens|View default Tokens workplace|Voir le poste Jetons par défaut|Standardarbeitsplatz Tokens ansehen
+inspect|Controleer Bar en Toog als subtoewijzing|Review Bar and Counter subassignment|Vérifier sous-affectation Bar et Comptoir|Bar und Theke als Unterzuweisung prüfen
+inspect|Bekijk werkplekspecifieke taken en inventaris|Review workplace tasks and inventory|Voir tâches et inventaire du poste|Aufgaben und Inventar je Arbeitsplatz prüfen
 `,
 briefings:`
 inspect|Open de evenementbriefing|Open event briefing|Ouvrir le briefing événement|Event-Briefing öffnen
@@ -40,6 +50,8 @@ inspect|Lees de werkplekspecifieke instructies|Read workplace-specific instructi
 inspect|Controleer de openingschecklist|Review opening checklist|Vérifier la checklist d’ouverture|Start-Checkliste prüfen
 inspect|Controleer de afsluitchecklist|Review closing checklist|Vérifier la checklist de fermeture|Abschluss-Checkliste prüfen
 toggle|Bevestig dat je de briefing gelezen hebt|Acknowledge reading the briefing|Confirmer la lecture du briefing|Lesen des Briefings bestätigen
+inspect|Bekijk gekoppelde werkplektaken|Review linked workplace tasks|Voir les tâches liées au poste|Verknüpfte Arbeitsplatzaufgaben ansehen
+inspect|Controleer wijzigingen aan een briefing|Review briefing updates|Vérifier les modifications du briefing|Briefingänderungen prüfen
 `,
 operations:`
 inspect|Controleer de toegewezen shift|Review assigned shift|Vérifier le shift attribué|Zugewiesene Schicht prüfen
@@ -47,6 +59,8 @@ inspect|Open de aanwijzingsgegevens|Open check-in details|Ouvrir les détails de
 inspect|Controleer de GPS-zone|Review GPS radius|Vérifier le rayon GPS|GPS-Radius prüfen
 inspect|Controleer de live werktimer|Review live work timer|Vérifier le chronomètre de travail|Arbeitszeittimer prüfen
 inspect|Bekijk het pauzebeleid|Review break policy|Consulter la politique des pauses|Pausenregelung prüfen
+inspect|Controleer de selfie-aanwijzingsoptie|Review selfie check-in option|Vérifier l’option de pointage selfie|Selfie-Check-in-Option prüfen
+inspect|Controleer herinneringen voor pauzeeinde|Review break-end reminders|Vérifier les rappels de fin de pause|Erinnerungen zum Pausenende prüfen
 `,
 driver:`
 inspect|Open de toegewezen rit|Open assigned trip|Ouvrir le trajet attribué|Zugewiesene Fahrt öffnen
@@ -68,6 +82,8 @@ inspect|Lees de taakomschrijving en deadline|Read task details and deadline|Lire
 inspect|Bekijk de toegewezen personen|Review assigned people|Vérifier les personnes désignées|Zugewiesene Personen ansehen
 message|Stuur een taakopmerking|Send a task comment|Envoyer un commentaire de tâche|Aufgabenkommentar senden
 toggle|Markeer de demotaak als voltooid|Mark demo task completed|Marquer la tâche démo terminée|Demo-Aufgabe als erledigt markieren
+inspect|Controleer wat zichtbaar is vóór de shift|Review visibility before shift|Vérifier la visibilité avant le shift|Sichtbarkeit vor Schichtbeginn prüfen
+inspect|Bekijk taakstatus na afmelding|Review task status after absence|Vérifier le statut après désistement|Aufgabenstatus nach Absage prüfen
 `,
 incidents:`
 inspect|Open Help en incidenten|Open Help and incidents|Ouvrir Aide et incidents|Hilfe und Vorfälle öffnen
@@ -77,6 +93,8 @@ select|Kies de urgentiegraad|Select urgency|Choisir le niveau d’urgence|Dringl
 inspect|Controleer de GPS-coördinaten|Review GPS coordinates|Vérifier les coordonnées GPS|GPS-Koordinaten prüfen
 toggle|Verstuur een fictieve hulpvraag|Send a fictional help request|Envoyer une demande d’aide fictive|Fiktive Hilfeanfrage senden
 inspect|Bekijk de status van de melding|Review incident status|Vérifier le statut du signalement|Vorfallstatus prüfen
+inspect|Controleer realtime foutmeldingsrapportage|Review real-time error reporting|Vérifier les rapports d’erreurs en temps réel|Echtzeit-Fehlerberichte prüfen
+inspect|Bekijk welke meldingen naar Admin gaan|Review escalation to Admin|Voir les alertes envoyées à Admin|Eskalationen an Admin prüfen
 `,
 inventory:`
 inspect|Open inventaris van de werkplek|Open workplace inventory|Ouvrir l’inventaire du poste|Arbeitsplatzinventar öffnen
@@ -86,6 +104,7 @@ toggle|Vink de opstartcontrole af|Complete opening inspection|Effectuer le contr
 select|Geef materiaalstatus aan|Report equipment condition|Indiquer l’état du matériel|Materialzustand melden
 message|Meld een ontbrekend item|Report missing item|Signaler un objet manquant|Fehlenden Gegenstand melden
 toggle|Vink de afsluitcontrole af|Complete closing inspection|Effectuer le contrôle de fermeture|Abschlusskontrolle abschließen
+inspect|Controleer de wekelijkse inventarisopvolging|Review weekly inventory audit|Vérifier le suivi hebdomadaire de l’inventaire|Wöchentliche Inventarkontrolle prüfen
 `,
 guestlist:`
 inspect|Open de zoekbare gastenlijst|Open searchable guest list|Ouvrir la liste d’invités consultable|Durchsuchbare Gästeliste öffnen
@@ -94,6 +113,7 @@ select|Filter op artiest of gast|Filter artists or guests|Filtrer artiste ou inv
 inspect|Controleer het aantal guestspots|Review guest spot allocation|Vérifier les places invités|Gästeplätze prüfen
 toggle|Vink een fictieve aankomst af|Check in a fictional arrival|Enregistrer une arrivée fictive|Fiktive Ankunft abhaken
 inspect|Controleer de Backstage-melding|Review backstage notification|Vérifier la notification Backstage|Backstage-Benachrichtigung prüfen
+inspect|Bekijk geïmporteerde en manuele guestlistrecords|View imported and manual guest list records|Voir les entrées importées et manuelles|Importierte und manuelle Gästelisteneinträge ansehen
 `,
 crew:`
 inspect|Open de personeelslijst|Open staff directory|Ouvrir la liste du personnel|Personalliste öffnen
@@ -118,6 +138,10 @@ inspect|Controleer de berichttijd en afzender|Review message timestamp and sende
 toggle|Markeer de chat als gelezen|Mark chat as read|Marquer le chat lu|Chat als gelesen markieren
 toggle|Verwijder de privéchat uit de lijst|Remove private chat from list|Retirer le chat privé de la liste|Privatchat aus Liste entfernen
 inspect|Controleer dat berichten behouden blijven|Verify message retention|Vérifier la conservation des messages|Nachrichtenerhalt prüfen
+inspect|Bekijk chatvertaling in vier talen|Review chat translation in four languages|Voir la traduction du chat en quatre langues|Chatübersetzung in vier Sprachen prüfen
+inspect|Controleer verjaardagsmeldingen|Review birthday notifications|Vérifier les notifications d’anniversaire|Geburtstagsbenachrichtigungen prüfen
+inspect|Bekijk bijlagen terwijl malwarecontrole draait|Review files during malware scanning|Voir les fichiers pendant le scan antivirus|Dateien während Malwareprüfung ansehen
+inspect|Controleer de bewaarperiode van eventchat|Review event-chat retention period|Vérifier la durée de conservation du chat événement|Aufbewahrungsdauer des Eventchats prüfen
 `,
 settings:`
 inspect|Open je profielinstellingen|Open profile settings|Ouvrir les paramètres du profil|Profileinstellungen öffnen
@@ -129,6 +153,9 @@ inspect|Bekijk de appinstallatie op Android|Review Android installation|Consulte
 inspect|Bekijk de appinstallatie op iOS|Review iOS installation|Consulter l’installation iOS|iOS-Installation ansehen
 inspect|Bekijk de appinstallatie op Windows|Review Windows installation|Consulter l’installation Windows|Windows-Installation ansehen
 inspect|Controleer pushmeldingen en achtergrondupdates|Review push and background updates|Vérifier les notifications et mises à jour|Push und Hintergrundupdates prüfen
+inspect|Controleer de machtigingen voor camera en GPS|Review camera and GPS permissions|Vérifier les permissions caméra et GPS|Kamera- und GPS-Berechtigungen prüfen
+inspect|Controleer de offline PWA-modus|Review offline PWA mode|Vérifier le mode PWA hors ligne|Offline-PWA-Modus prüfen
+inspect|Bekijk de synchronisatie na herstel van internet|Review synchronization after reconnect|Vérifier la synchronisation après reconnexion|Synchronisierung nach Wiederverbindung prüfen
 `,
 help:`
 inspect|Open de functiehandleiding|Open feature guide|Ouvrir le guide des fonctions|Funktionshandbuch öffnen
@@ -137,11 +164,17 @@ inspect|Bekijk de rollen en hun rechten|Review roles and permissions|Consulter l
 inspect|Bekijk het volledige trainingsprogramma|Review full training curriculum|Consulter le programme complet|Gesamten Trainingsplan ansehen
 inspect|Open de uitleg over de QR-code|Open QR-code instructions|Ouvrir les instructions du QR code|QR-Code-Anleitung öffnen
 inspect|Bekijk de herstartoptie voor rondleidingen|View tour restart option|Voir l’option de redémarrage|Neustartoption der Führung ansehen
+inspect|Bekijk registratie, inloggen en accountgoedkeuring|Review registration, login and approval|Voir inscription, connexion et approbation|Registrierung, Login und Genehmigung ansehen
+inspect|Bekijk het opnieuw verzenden van verificatie-e-mail|Review resend verification email|Voir le renvoi de vérification|Erneute Bestätigungs-E-Mail ansehen
+inspect|Bekijk hulp bij wachtwoordherstel|Review password recovery help|Consulter l’aide récupération du mot de passe|Hilfe zur Passwortwiederherstellung ansehen
 `,
 timesheet:`
 inspect|Open de fictieve urenstaat|Open fictional timesheet|Ouvrir la feuille d’heures fictive|Fiktiven Stundenzettel öffnen
 inspect|Controleer bruto-uren, pauze en netto-uren|Review gross, break and net hours|Vérifier les heures brutes, pauses et nettes|Brutto-, Pausen- und Nettostunden prüfen
 inspect|Controleer de overtime-regel|Review overtime policy|Vérifier les règles d’heures supplémentaires|Überstundenregelung prüfen
+inspect|Controleer de status ingediend, goedgekeurd of afgekeurd|Review submitted, approved or rejected status|Vérifier statuts soumis, approuvé ou refusé|Eingereicht-, Genehmigt- und Abgelehnt-Status prüfen
+inspect|Bekijk verplichte correctiereden|Review mandatory correction reason|Vérifier la justification obligatoire|Pflichtbegründung für Korrektur prüfen
+inspect|Bekijk de onwijzigbare auditgeschiedenis|Review immutable audit trail|Vérifier l’historique d’audit immuable|Unveränderbare Audit-Historie prüfen
 `
 }
 const ROLE:Record<TourRole,Record<Chapter,string>>={
@@ -161,6 +194,8 @@ inspect|Controleer de goedkeuringsmelding|Review approval notification|Vérifier
 message|Vraag ontbrekende gegevens op|Request missing information|Demander des données manquantes|Fehlende Angaben anfordern
 toggle|Simuleer een afwijzing met reden|Simulate rejection with reason|Simuler un refus motivé|Ablehnung mit Begründung simulieren
 inspect|Bekijk herverificatie en accountstatus|Review reverification and account status|Vérifier revérification et statut|Erneute Verifizierung und Kontostatus prüfen
+toggle|Simuleer een verzoek tot opnieuw verzenden van verificatie|Simulate resend verification request|Simuler le renvoi de la vérification|Erneute Verifizierungsanforderung simulieren
+inspect|Controleer toegangsweigering bij verkeerde portal|Review wrong-portal access denial|Vérifier l’accès refusé sur un mauvais portail|Zugriffsverweigerung bei falschem Portal prüfen
 `,
 crew:`
 select|Wijzig de rol van een fictieve medewerker|Change fictional staff role|Modifier le rôle d’un membre fictif|Rolle eines fiktiven Mitarbeiters ändern
@@ -185,6 +220,8 @@ select|Wijs de beschikbare plek toe|Assign an available slot|Attribuer une place
 message|Verstuur de spot-open melding|Send open-slot notification|Envoyer notification place libre|Benachrichtigung über freien Platz senden
 inspect|Bekijk eventdocumenten en bijlagen|Review event documents|Voir les documents de l’événement|Eventdokumente ansehen
 toggle|Archiveer het fictieve evenement|Archive fictional event|Archiver l’événement fictif|Fiktives Event archivieren
+inspect|Controleer dat afgesloten events leesbaar blijven|Review archived event visibility|Vérifier la consultation des événements archivés|Sichtbarkeit archivierter Events prüfen
+toggle|Herstel een fictief gearchiveerd evenement|Restore fictional archived event|Restaurer un événement fictif archivé|Fiktives archiviertes Event wiederherstellen
 `,
 workplaces:`
 form|Maak een nieuwe werkplek aan|Create a workplace|Créer un poste de travail|Arbeitsplatz erstellen
@@ -201,6 +238,11 @@ form|Maak een Driver-opdracht aan|Create Driver assignment|Créer une mission ch
 schedule|Voer de ophaaltijd in|Enter pickup time|Saisir l’heure de prise en charge|Abholzeit eingeben
 write|Voer artiest, telefoon en adres in|Enter artist, phone and address|Saisir artiste, téléphone et adresse|Künstler, Telefon und Adresse eingeben
 inspect|Controleer berekende rijtijd en melding|Review travel time and alert|Vérifier temps de trajet et alerte|Fahrzeit und Meldung prüfen
+upload|Upload een fictieve Bar/Toog-prijslijst|Upload fictional Bar/Counter price list|Téléverser une liste des prix Bar/Comptoir|Fiktive Bar/Theke-Preisliste hochladen
+upload|Upload een fictieve Merch-prijslijst|Upload fictional Merch price list|Téléverser une liste des prix Merch|Fiktive Merch-Preisliste hochladen
+upload|Upload een fictieve Tokens-prijslijst|Upload fictional Tokens price list|Téléverser une liste des prix Jetons|Fiktive Tokens-Preisliste hochladen
+form|Voer een prijslijstitem manueel in|Enter price list item manually|Saisir un article de liste de prix|Preislistenartikel manuell eingeben
+inspect|Controleer prijswijziging op werkplek|Review updated workplace pricing|Vérifier les prix mis à jour|Aktualisierte Arbeitsplatzpreise prüfen
 `,
 briefings:`
 form|Maak een evenementbriefing aan|Create event briefing|Créer un briefing événement|Event-Briefing erstellen
@@ -248,6 +290,8 @@ message|Geef correctiereden op|Record correction reason|Indiquer le motif de cor
 number|Pas een fictieve uurwaarde aan|Correct fictional hours|Corriger des heures fictives|Fiktive Stunden korrigieren
 toggle|Keur de gecorrigeerde uren goed|Approve corrected hours|Approuver les heures corrigées|Korrigierte Stunden genehmigen
 toggle|Vergrendel een goedgekeurde urenstaat|Lock approved timesheet|Verrouiller une feuille approuvée|Genehmigten Stundenzettel sperren
+message|Motiveer een afgekeurde urenstaat|Give rejection reason for timesheet|Motiver le refus d’une feuille d’heures|Ablehnungsgrund für Stundenzettel angeben
+inspect|Controleer de gelockte status na goedkeuring|Review locked status after approval|Vérifier le verrouillage après approbation|Sperrstatus nach Genehmigung prüfen
 select|Kies het overtimetarief|Choose overtime rule|Choisir la règle d’heures supplémentaires|Überstundenregel wählen
 number|Stel de dagelijkse drempel in|Set daily threshold|Définir le seuil quotidien|Tagesschwelle festlegen
 number|Stel de wekelijkse drempel in|Set weekly threshold|Définir le seuil hebdomadaire|Wochenschwelle festlegen
@@ -296,6 +340,10 @@ inspect|Bekijk foutmeldingen en auditlogs|Review error reports and audit logs|Vo
 inspect|Bekijk herstel en recovery|Review recovery configuration|Voir la configuration de récupération|Recovery-Konfiguration ansehen
 inspect|Bekijk release- en rolloutstatus|Review releases and rollouts|Voir versions et déploiements|Releases und Rollouts prüfen
 toggle|Simuleer een veilige rollout|Simulate safe rollout|Simuler un déploiement sûr|Sicheren Rollout simulieren
+inspect|Controleer AI-foutanalyse en verantwoordingslog|Review AI error analysis and audit log|Vérifier l’analyse IA et le journal d’audit|KI-Fehleranalyse und Auditprotokoll prüfen
+inspect|Bekijk achtergrondscan van foto en video|Review background scan for photos and videos|Voir le scan des photos et vidéos|Hintergrundscan von Foto und Video prüfen
+inspect|Controleer de stappen van auto-fix naar retest|Review auto-fix and retest steps|Vérifier la correction automatique et le nouveau test|Auto-Fix und Retest-Schritte prüfen
+inspect|Bekijk mislukte CI zonder productie-release|Review failed CI without production release|Vérifier la CI échouée sans mise en production|Fehlgeschlagene CI ohne Produktionsfreigabe prüfen
 `,
 settings:`
 inspect|Bekijk rol- en rechteninstellingen|Review role and permission settings|Voir les droits et rôles|Rollen- und Rechteinstellungen prüfen
@@ -448,7 +496,11 @@ function parse(chapter:string,group:string,raw:string):PracticeOperation[]{
   })
 }
 export function getTrainingOperations(role:TourRole,chapter:Chapter):PracticeOperation[]{
-  return [...parse(chapter,"shared",SHARED[chapter]||""),...parse(chapter,role,ROLE[role][chapter]||"")]
+  const shared=parse(chapter,"shared",SHARED[chapter]||"")
+  const roleNeutral=role==="admin"&&chapter==="events"
+    ?shared.filter(step=>!(/beschikbaarheid|opbouwbeschikbaarheid|afbouwbeschikbaarheid|aanmeldbevestiging/i).test(step.title.nl))
+    :shared
+  return [...roleNeutral,...parse(chapter,role,ROLE[role][chapter]||"")]
 }
 export function practiceDoneKey(progressKey:string){return progressKey+":actions-v1"}
 export type PracticeEvidence={value:string;at:string;kind:PracticeKind}
