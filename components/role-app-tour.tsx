@@ -355,7 +355,9 @@ export function RoleAppTour(){
   },[loading,preferredWorkplace,role,router,user])
 
   useEffect(()=>{
-    if(!user||!role)return
+    // Do not resurrect a stored training session or preview sandbox until
+    // the mandatory profile gate has been verified for this login.
+    if(!user||!role||profileGate!=="ready")return
     const restore=()=>{
       try{
         const saved=JSON.parse(sessionStorage.getItem(TOUR_SESSION_KEY)||"null") as {active?:boolean;role?:UiRole;mode?:TourMode;workplace?:string}|null
@@ -382,7 +384,7 @@ export function RoleAppTour(){
     addEventListener("uptilldawn-tour-stop",stop)
     addEventListener("uptilldawn-tour-finished",finish)
     return()=>{removeEventListener("uptilldawn-tour-stop",stop);removeEventListener("uptilldawn-tour-finished",finish)}
-  },[role,setPreview,user])
+  },[profileGate,role,setPreview,user])
 
   if(!user||!role||!activeRole)return null
 
