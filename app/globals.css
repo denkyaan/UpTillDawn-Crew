@@ -218,3 +218,17 @@ body[data-upt-training-active="true"] [data-training-lab] [data-training-active-
   outline: 2px solid #8b5cf6;
   accent-color: #7c3aed;
 }
+
+/* The old demo's illustrative CTAs must not compete with the single required
+   interactive practice control. No pulsing rings while training is active. */
+body[data-upt-training-active="true"] [data-tour-demo="primary-action"]:not([data-training-active-action]) {
+  background-color: var(--background) !important;
+  color: var(--foreground) !important;
+  border: 1px solid var(--border) !important;
+  box-shadow: none !important;
+  outline: none !important;
+  animation: none !important;
+}
+body[data-upt-training-active="true"] .animate-pulse {
+  animation: none !important;
+}
