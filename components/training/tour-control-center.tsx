@@ -92,8 +92,12 @@ export function TourControlCenter({active,userId,role,preferredWorkplace,mode="f
     if(!active||!chapters.length)return
     sessionStorage.setItem(TOUR_SESSION_KEY,JSON.stringify({active:true,role,mode,workplace:preferredWorkplace}))
     const restored=readProgress(progressKey,chapters[0].key)
-    const chapter=chapters.find(item=>item.key===restored.activeKey)||chapters[0]
-    const next={...restored,activeKey:chapter.key}
+    // Stored chapter flags from the old tour are NOT proof that the user
+    // performed the new hands-on actions. Reject every unverified flag and
+    // resume from the first incomplete chapter rather than skipping ahead.
+    const verified=chapters.filter(item=>restored.completed.includes(item.key)&&isChapterPractised(progressKey,role,item.key)).map(item=>item.key)
+    const chapter=chapters.find(item=>!verified.includes(item.key))||chapters[chapters.length-1]
+    const next={...restored,activeKey:chapter.key,completed:verified,skipped:[]}
     pendingPathRef.current=tourBaseRoute(role,chapter)
     router.push(tourRoute(role,chapter))
     const frame=requestAnimationFrame(()=>{
