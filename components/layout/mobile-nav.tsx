@@ -56,9 +56,6 @@ export function MobileBottomNav({
  useEffect(()=>{const on=(e:Event)=>{
    const next=(e as CustomEvent<{target?:string}>).detail?.target||null
    setTrainingNavTarget(next)
-   // Opening the tab menu is visual guidance, NOT automatic navigation.
-   // The trainee still has to press the purple target tab themselves.
-   if(next)setExpanded(true)
   };addEventListener("uptilldawn-training-next-tab",on);return()=>removeEventListener("uptilldawn-training-next-tab",on)},[])
  useEffect(()=>{const apply=()=>setTrainingLocale(activeUiLocale());apply();addEventListener(LANGUAGE_APPLIED_EVENT,apply);return()=>removeEventListener(LANGUAGE_APPLIED_EVENT,apply)},[])
 
@@ -109,7 +106,14 @@ export function MobileBottomNav({
      : activeIndex>=items.length-1
        ? items.slice(-3)
        : items.slice(activeIndex-1,activeIndex+2)
- const compactItems=contextualItems.length?contextualItems:fallbackItems
+ // A mandatory target must always be visible among the three bottom tabs.
+ // Do not open the menu, move the user, or accent anything except that target.
+ const guidedItem=tourPreview&&trainingNavTarget?items.find(item=>item.key===trainingNavTarget):undefined
+ const compactItems=guidedItem
+   ? fallbackItems.some(item=>item.key===guidedItem.key)
+     ? fallbackItems
+     : [...fallbackItems.slice(0,2),guidedItem]
+   : contextualItems.length?contextualItems:fallbackItems
 
  const badgeCount=(key:string)=>{
    const activityCount=key==="chat"?chatMissed:key==="incidents"?incidentMissed:key==="tasks"?taskMissed:0
