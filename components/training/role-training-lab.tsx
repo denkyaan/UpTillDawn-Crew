@@ -157,6 +157,23 @@ export function RoleTrainingLab({role,chapter,progressKey}:{role:TourRole;chapte
    <p className="text-sm text-muted-foreground">{chapterData?.description[language]}</p>
    <div className="flex items-center gap-3 text-xs font-bold"><span>{Math.min(index,operations.length)} / {operations.length} {c(language,"handelingen uitgevoerd","actions completed","actions réalisées","Handlungen erledigt")}</span><progress className="h-2 flex-1 accent-violet-600" value={index} max={Math.max(1,operations.length)}/></div>
   </header>
+  <section data-training-demo-state className="mt-4 grid gap-2 sm:grid-cols-2 lg:grid-cols-3" aria-label={c(language,"Actuele demogegevens","Current demo state","Données démo actuelles","Aktuelle Demodaten")}>
+   <article className="rounded-lg border p-3 text-sm">
+    <p className="text-xs font-bold text-muted-foreground">{c(language,"Evenement","Event","Événement","Event")}</p>
+    <p className="mt-1 font-bold">{ledger["events:admin:0"]?.value?.split(" · ")[0]||c(language,"UpTillDawn Trainingsavond","UpTillDawn Training Night","Soirée d’entraînement UpTillDawn","UpTillDawn Trainingsabend")}</p>
+    <p className="text-xs text-muted-foreground">{c(language,"Maximale crew","Maximum crew","Équipe maximale","Maximale Crew")}: {ledger["events:admin:3"]?.value||"20"}</p>
+   </article>
+   <article className="rounded-lg border p-3 text-sm">
+    <p className="text-xs font-bold text-muted-foreground">{c(language,"Werkplek en shift","Workplace and shift","Poste et shift","Arbeitsplatz und Schicht")}</p>
+    <p className="mt-1 font-bold">{ledger["workplaces:admin:0"]?.value?.split(" · ")[0]||"Main Bar"}</p>
+    <p className="text-xs text-muted-foreground">{ledger["workplaces:admin:3"]?.value||"20:00 → 04:00"} · Lina Peeters</p>
+   </article>
+   <article className="rounded-lg border p-3 text-sm">
+    <p className="text-xs font-bold text-muted-foreground">{c(language,"Briefing en taak","Briefing and task","Briefing et tâche","Briefing und Aufgabe")}</p>
+    <p className="mt-1 font-bold">{ledger["briefings:admin:0"]?.value?.split(" · ")[0]||c(language,"Main Bar-briefing","Main Bar briefing","Briefing Bar principal","Hauptbar-Briefing")}</p>
+    <p className="text-xs text-muted-foreground">{ledger["tasks:admin:0"]?.value?.split(" · ")[0]||c(language,"Koeling aanvullen","Restock cooler","Réapprovisionner le frigo","Kühlung auffüllen")}</p>
+   </article>
+  </section>
   {current?<div className="mt-5 space-y-4 rounded-xl border p-4">
    <p className="text-xs font-bold text-violet-500">{c(language,"ACTIEVE HANDELING","ACTIVE ACTION","ACTION ACTIVE","AKTIVE HANDLUNG")} {index+1}/{operations.length}</p>
    <h3 className="text-lg font-black">{current.title[language]}</h3>
