@@ -311,7 +311,7 @@ export function TourControlCenter({active,userId,role,preferredWorkplace,mode="f
       if(!(root instanceof HTMLElement))return
       host=document.createElement("div")
       host.setAttribute("data-training-lab-host",current.key)
-      root.appendChild(host)
+      root.prepend(host)
       setPortalHost(host)
     }
     const frame=requestAnimationFrame(mount)
