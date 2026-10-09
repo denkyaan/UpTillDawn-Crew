@@ -108,10 +108,14 @@ test('admin event, workplace and briefing chapters never expose production views
     read('app/(app)/workplaces/page.tsx'),
     read('app/(app)/briefings/page.tsx'),
   ])
-  for(const source of [events,workplaces,briefings]){
+  for(const [name,source] of [['events',events],['workplaces',workplaces],['briefings',briefings]]){
     assert.match(source,/params\.tour==='1'/)
-    assert.match(source,/TourActiveEventDemo role="admin"/)
+    assert.ok(source.includes('SandboxAdminManager module="'+name+'"'),'admin '+name+' must use its own interactive training module')
   }
+  const roleGuide=await read('lib/tour-training.ts')
+  assert.match(roleGuide,/data-training-admin-module/,'tour must highlight the dedicated admin training view')
+  const module=await read('components/training/sandbox-admin-manager.tsx')
+  assert.doesNotMatch(module,/createClient\(|fetch\(|supabase\.from\(|\.rpc\(/,'admin training must never mutate live event data')
 })
 
 test('desktop and floating tour navigation preserve sandbox query',async()=>{
