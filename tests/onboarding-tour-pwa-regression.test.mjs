@@ -72,3 +72,19 @@ test('mandatory profile completion exposes explicit UI labels and validation in 
     assert.ok(profile.includes(key),'missing localized mandatory profile field: '+key)
   }
 })
+
+test('German autocomplete uses de and the mandatory onboarding gate confirms the committed status',async()=>{
+  const [address,profile,tour]=await Promise.all([
+    read('components/crew/address-autocomplete.tsx'),
+    read('components/crew/profile-form.tsx'),
+    read('components/role-app-tour.tsx'),
+  ])
+  assert.match(address,/\["nl","fr","en","de"\]\.includes\(htmlLang\)/)
+  assert.match(address,/LANGUAGE_APPLIED_EVENT/)
+  assert.match(address,/Keine Adressen gefunden/)
+  assert.match(address,/Straße, Hausnummer oder Ort eingeben/)
+  assert.match(profile,/data:verified,error:verifyError/)
+  assert.match(profile,/verifyError\|\|!verified\?\.\[0\]\?\.completed/)
+  assert.ok(profile.indexOf('data:verified,error:verifyError')<profile.indexOf("window.dispatchEvent(new Event('uptilldawn-profile-completed'))"))
+  assert.ok(tour.includes('if(!state){setChoice(false);return}'),'tour cannot bypass an unavailable completion state')
+})
