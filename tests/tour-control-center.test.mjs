@@ -114,8 +114,8 @@ test('admin event, workplace and briefing chapters never expose production views
   }
   const roleGuide=await read('lib/tour-training.ts')
   assert.match(roleGuide,/data-training-admin-module/,'tour must highlight the dedicated admin training view')
-  const module=await read('components/training/sandbox-admin-manager.tsx')
-  assert.doesNotMatch(module,/createClient\(|fetch\(|supabase\.from\(|\.rpc\(/,'admin training must never mutate live event data')
+  const adminSandbox=await read('components/training/sandbox-admin-manager.tsx')
+  assert.doesNotMatch(adminSandbox,/createClient\(|fetch\(|supabase\.from\(|\.rpc\(/,'admin training must never mutate live event data')
 })
 
 test('desktop and floating tour navigation preserve sandbox query',async()=>{
