@@ -469,14 +469,35 @@ try {
         const total=Number(await lab.locator('progress').getAttribute('max'))
         if(total<5)throw new Error('training chapter has too few exercises')
         for(let exercise=0;exercise<total;exercise++){
-          const current=lab.locator('[data-training-active-action="true"]').first()
-          await current.waitFor({state:'visible',timeout:15000})
-          const actualColor=await current.evaluate(button=>getComputedStyle(button).backgroundColor)
-          if(!/rgb\\(124,\\s*58,\\s*237\\)/.test(actualColor))throw new Error(`required training action is not solid purple: ${actualColor}`)
-          await current.click()
-          const confirmed=lab.locator('[data-training-active-action="true"]').first()
-          await confirmed.waitFor({state:'visible',timeout:15000})
-          await confirmed.click()
+          const action=lab.locator('[data-training-kind]')
+          const kind=await action.getAttribute('data-training-kind')
+          if(!kind)throw new Error('missing training action kind')
+          if(kind==='inspect'){
+            const open=action.locator('button[data-training-active-action="true"]').first()
+            await open.waitFor({state:'visible',timeout:15000})
+            const color=await open.evaluate(button=>getComputedStyle(button).backgroundColor)
+            if(!/rgb\\(124,\\s*58,\\s*237\\)/.test(color))throw new Error(`training inspection action not purple: ${color}`)
+            await open.click()
+          }else if(kind==='write'||kind==='message'||kind==='form'||kind==='number'||kind==='delete'){
+            const input=action.locator('input[type="text"],input[type="number"],textarea').first()
+            await input.fill(kind==='number'?'12':kind==='delete'?'DEMO':'UpTillDawn demo action')
+            if(kind==='form')await action.locator('select').selectOption({index:1})
+          }else if(kind==='select'){
+            await action.locator('select').selectOption({index:1})
+          }else if(kind==='toggle'){
+            await action.locator('input[type="checkbox"]').check()
+          }else if(kind==='schedule'){
+            const times=action.locator('input[type="datetime-local"]')
+            await times.nth(0).fill('2026-10-10T20:00')
+            await times.nth(1).fill('2026-10-11T04:00')
+          }else if(kind==='upload'){
+            await action.locator('select').selectOption('training-briefing.pdf')
+          }else throw new Error(`unhandled mandatory practice type ${kind}`)
+          const commit=action.locator('button[data-training-active-action="true"]').last()
+          await commit.waitFor({state:'visible',timeout:15000})
+          const color=await commit.evaluate(button=>getComputedStyle(button).backgroundColor)
+          if(!/rgb\\(124,\\s*58,\\s*237\\)/.test(color))throw new Error(`required training confirmation is not solid purple: ${color}`)
+          await commit.click()
           await page.waitForFunction(({index})=>{
             const root=document.querySelector('[data-training-lab]')
             return Number(root?.querySelector('progress')?.value)>=index+1
