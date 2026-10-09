@@ -245,6 +245,15 @@ export function RoleAppTour(){
       if(preferredName)sessionStorage.setItem("uptilldawn-training-preferred-workplace",preferredName)
       else sessionStorage.removeItem("uptilldawn-training-preferred-workplace")
       const state=data?.[0]
+      // Approval grants access to the app, but the mandatory profile must be
+      // completed and saved before onboarding or the role tour can begin.
+      // Fail closed if profile-completion state cannot be verified.
+      if(!state){setChoice(false);return}
+      if(state.required&&!state.completed){
+        setChoice(false)
+        if(location.pathname!=="/settings")router.replace("/settings?complete-profile=1")
+        return
+      }
       const saved=localStorage.getItem(storageKey(user.id,role))
       const previous=localStorage.getItem(storageKey(user.id,role,PREVIOUS_VERSION))
 
@@ -270,10 +279,6 @@ export function RoleAppTour(){
         try{scoped=JSON.parse(localStorage.getItem(tourProgressKey(user.id,scopedRole,preferredName))||"null")}catch{}
         const completed=new Set(Array.isArray(scoped?.completed)?scoped.completed:[])
         if(scopedChapters.some(chapter=>!completed.has(chapter.key))){setTourMode("full");setChoice(true);return}
-      }
-      if(state?.required&&!state.completed){
-        if(location.pathname!=="/settings")router.replace("/settings?complete-profile=1")
-        return
       }
       if(saved==="completed"){
         setChoice(false)
@@ -400,14 +405,14 @@ export function RoleAppTour(){
 
   return <>
     <TourControlCenter active={open} userId={user.id} role={activeRole} preferredWorkplace={preferredWorkplace} mode={tourMode}/>
-    {welcome&&<div data-no-translate className="fixed inset-0 z-[145] flex items-end justify-center bg-black/60 p-4 sm:items-center" role="dialog" aria-modal="true">
+    {welcome&&<div data-no-translate className="fixed inset-0 z-[145] flex items-end justify-center bg-transparent p-4 sm:items-center" role="dialog" aria-modal="true">
       <section className="w-full max-w-md rounded-2xl border bg-background p-5 shadow-2xl">
         <h2 className="text-xl font-black">{resolve(UI_COPY.promptTitle)}</h2>
         <p className="mt-3 text-sm leading-6 text-muted-foreground">{resolve(UI_COPY.promptBody)}</p>
         <button onClick={beginTraining} className="mt-5 w-full rounded-xl bg-violet-600 px-4 py-3 font-black text-white">{resolve(UI_COPY.welcomeContinue)}</button>
       </section>
     </div>}
-    {choice&&<div data-no-translate className="fixed inset-0 z-[140] flex items-end justify-center bg-black/60 p-4 sm:items-center" role="dialog" aria-modal="true">
+    {choice&&<div data-no-translate className="fixed inset-0 z-[140] flex items-end justify-center bg-transparent p-4 sm:items-center" role="dialog" aria-modal="true">
       <section className="w-full max-w-md rounded-2xl border bg-background p-5 shadow-2xl">
         <h2 className="text-xl font-black">{resolve(UI_COPY.promptTitle)}</h2>
         <p className="mt-2 text-sm text-muted-foreground">{resolve(UI_COPY.promptBody)}</p>
