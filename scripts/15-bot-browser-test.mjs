@@ -476,7 +476,7 @@ try {
             const open=action.locator('button[data-training-active-action="true"]').first()
             await open.waitFor({state:'visible',timeout:15000})
             const color=await open.evaluate(button=>getComputedStyle(button).backgroundColor)
-            if(!/rgb\\(124,\\s*58,\\s*237\\)/.test(color))throw new Error(`training inspection action not purple: ${color}`)
+            if(!/rgb\(124,\s*58,\s*237\)/.test(color))throw new Error(`training inspection action not purple: ${color}`)
             await open.click()
           }else if(kind==='write'||kind==='message'||kind==='form'||kind==='number'||kind==='delete'){
             const input=action.locator('input[type="text"],input[type="number"],textarea').first()
@@ -496,7 +496,7 @@ try {
           const commit=action.locator('button[data-training-active-action="true"]').last()
           await commit.waitFor({state:'visible',timeout:15000})
           const color=await commit.evaluate(button=>getComputedStyle(button).backgroundColor)
-          if(!/rgb\\(124,\\s*58,\\s*237\\)/.test(color))throw new Error(`required training confirmation is not solid purple: ${color}`)
+          if(!/rgb\(124,\s*58,\s*237\)/.test(color))throw new Error(`required training confirmation is not solid purple: ${color}`)
           await commit.click()
           await page.waitForFunction(({index})=>{
             const root=document.querySelector('[data-training-lab]')
