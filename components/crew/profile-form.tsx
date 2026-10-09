@@ -106,10 +106,14 @@ export function ProfileForm({
         sessionStorage.removeItem('uptilldawn-training-preferred-workplace')
       }
 
-      const {data:completion}=await s.rpc('upt_current_profile_completion')
-      if(completion?.[0]?.required&&!completion[0].completed){
+      const {data:completion,error:completionError}=await s.rpc('upt_current_profile_completion')
+      if(completionError||!completion?.[0])throw new Error(t('Profielstatus kon niet worden gecontroleerd.','Could not verify profile status.','Impossible de vérifier le statut du profil.','Profilstatus konnte nicht geprüft werden.'))
+      if(completion[0].required&&!completion[0].completed){
         const {error:completeError}=await s.rpc('upt_mark_own_profile_complete')
         if(completeError)throw new Error(t('Vul eerst alle verplichte profielvelden en een profielfoto in.','Complete all required profile fields and add a profile photo first.','Remplissez tous les champs obligatoires et ajoutez une photo de profil.','Fülle zuerst alle Pflichtfelder aus und füge ein Profilfoto hinzu.'))
+        // A successful write alone is not proof that the completion gate opened.
+        const {data:verified,error:verifyError}=await s.rpc('upt_current_profile_completion')
+        if(verifyError||!verified?.[0]?.completed)throw new Error(t('De profielaanvulling is nog niet bevestigd.','Profile completion has not been confirmed.','La complétion du profil n’a pas encore été confirmée.','Die Profilvervollständigung wurde noch nicht bestätigt.'))
         window.dispatchEvent(new Event('uptilldawn-profile-completed'))
       }
 
