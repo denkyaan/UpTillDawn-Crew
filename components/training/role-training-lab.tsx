@@ -5,6 +5,7 @@ import {activeUiLocale,LANGUAGE_APPLIED_EVENT,type SupportedUiLocale} from "@/li
 import {getTrainingOperations,practiceDoneKey,readPracticeLedger,isChapterPractised,type PracticeOperation,type PracticeLedger} from "@/lib/training-exercise-catalog"
 import {TOUR_CHAPTERS,type TourRole,type TourCopy} from "@/lib/tour-training"
 import {demoScenarioFromLedger} from "@/lib/training-demo-scenario"
+import {trainingOperationalState,trainingOperationError} from "@/lib/training-operational-state"
 
 const c=(l:SupportedUiLocale,nl:string,en:string,fr:string,de:string)=>({nl,en,fr,de}[l])
 const EXAMPLES:Record<string,TourCopy>={
@@ -74,6 +75,7 @@ export function RoleTrainingLab({role,chapter,progressKey}:{role:TourRole;chapte
  const current=operations[index]
  const isOpened=opened&&openedFor===current?.id
  const scenario=demoScenarioFromLedger(ledger)
+ const domainStates=trainingOperationalState(role,ledger)
  const complete=operations.length>0&&operations.every(step=>Boolean(ledger[step.id]?.value))
  const options=current?optionsFor(current):[]
  useEffect(()=>{const apply=()=>setLanguage(activeUiLocale());const frame=requestAnimationFrame(apply);addEventListener(LANGUAGE_APPLIED_EVENT,apply);return()=>{cancelAnimationFrame(frame);removeEventListener(LANGUAGE_APPLIED_EVENT,apply)}},[])
@@ -132,6 +134,8 @@ export function RoleTrainingLab({role,chapter,progressKey}:{role:TourRole;chapte
     value="confirmed";break
   }
   if(!value)return
+  const prereq=trainingOperationError(role,current,ledger)
+  if(prereq){setError(prereq[language]);return}
   const entry={value,at:new Date().toISOString(),kind:current.kind}
   const next={...ledger,[current.id]:entry}
   localStorage.setItem(practiceDoneKey(progressKey),JSON.stringify(next))
@@ -157,6 +161,15 @@ export function RoleTrainingLab({role,chapter,progressKey}:{role:TourRole;chapte
    <p className="text-sm text-muted-foreground">{chapterData?.description[language]}</p>
    <div className="flex items-center gap-3 text-xs font-bold"><span>{Math.min(index,operations.length)} / {operations.length} {c(language,"handelingen uitgevoerd","actions completed","actions réalisées","Handlungen erledigt")}</span><progress className="h-2 flex-1 accent-violet-600" value={index} max={Math.max(1,operations.length)}/></div>
   </header>
+  <section data-training-live-workflow className="mt-4 grid gap-2 sm:grid-cols-2 lg:grid-cols-3" aria-label={c(language,"Live fictieve eventworkflow","Live fictional event workflow","Flux événement fictif en direct","Live-Ablauf des fiktiven Events")}>
+   {domainStates.map(row=><article key={row.domain} data-training-domain={row.domain} data-training-status={row.status} className="rounded-lg border bg-background p-3 text-sm">
+     <div className="flex items-start justify-between gap-2">
+       <h3 className="font-bold">{row.title[language]}</h3>
+       <span className={row.status==="completed"?"rounded-full border border-emerald-600 px-2 py-0.5 text-[10px] font-bold text-emerald-600":row.status==="active"?"rounded-full border border-amber-600 px-2 py-0.5 text-[10px] font-bold text-amber-600":"rounded-full border px-2 py-0.5 text-[10px] font-bold text-muted-foreground"}>{row.status==="completed"?c(language,"VOLTOOID","COMPLETED","TERMINÉ","ABGESCHLOSSEN"):row.status==="active"?c(language,"BEZIG","IN PROGRESS","EN COURS","IN ARBEIT"):c(language,"WACHT","PENDING","EN ATTENTE","AUSSTEHEND")}</span>
+     </div>
+     <p className="mt-2 text-xs text-muted-foreground">{row.detail[language]}</p>
+   </article>)}
+  </section>
   <section data-training-demo-state className="mt-4 grid gap-2 sm:grid-cols-2 lg:grid-cols-3" aria-label={c(language,"Actuele demogegevens","Current demo state","Données démo actuelles","Aktuelle Demodaten")}>
    <article className="rounded-lg border p-3 text-sm">
     <p className="text-xs font-bold text-muted-foreground">{c(language,"Evenement","Event","Événement","Event")}</p>
