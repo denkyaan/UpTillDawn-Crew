@@ -498,10 +498,22 @@ try {
           const color=await commit.evaluate(button=>getComputedStyle(button).backgroundColor)
           if(!/rgb\(124,\s*58,\s*237\)/.test(color))throw new Error(`required training confirmation is not solid purple: ${color}`)
           await commit.click()
-          await page.waitForFunction(({index})=>{
-            const root=document.querySelector('[data-training-lab]')
-            return Number(root?.querySelector('progress')?.value)>=index+1
-          },{index:exercise},{timeout:15000})
+          try{
+            await page.waitForFunction(({index})=>{
+              const root=document.querySelector('[data-training-lab]')
+              return Number(root?.querySelector('progress')?.value)>=index+1
+            },{index:exercise},{timeout:15000})
+          }catch(error){
+            const snapshot=await lab.evaluate(root=>({
+              progress:root.querySelector('progress')?.value,
+              max:root.querySelector('progress')?.max,
+              kind:root.querySelector('[data-training-kind]')?.getAttribute('data-training-kind'),
+              title:root.querySelector('[data-training-kind] h3')?.textContent,
+              validation:root.querySelector('[role="alert"]')?.textContent,
+              completed:root.querySelector('[data-training-kind]')?.textContent?.slice(0,300),
+            }))
+            throw new Error(`Practice action ${exercise+1}/${total} was not recorded: ${JSON.stringify(snapshot)}; ${error}`)
+          }
         }
         const oldSpotlight=await page.evaluate(()=>[...document.querySelectorAll('div[aria-hidden].fixed')].some(node=>String(node.className).includes('z-[188]')))
         if(oldSpotlight)throw new Error('legacy fixed spotlight should not dim or overlay the training screen')
