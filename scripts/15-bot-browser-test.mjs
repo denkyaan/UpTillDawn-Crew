@@ -641,6 +641,42 @@ try {
             }else await page.locator('aside a[data-upt-training-next-tab="true"]:visible').first().click()
             await waitForTrainingTab(page,progressKey,chapter)
           }
+          // The admin curriculum must also operate its realistic management
+          // controls. Completing isolated catalogue fields cannot substitute
+          // for saving an event, creating a shift, opening a briefing or
+          // approving a timesheet on the visible role-specific demo screen.
+          if(tourRole==='admin'&&['events','workplaces','briefings','operations'].includes(chapter)){
+            const manager=page.locator('[data-training-admin-module="'+chapter+'"]')
+            await manager.waitFor({state:'visible',timeout:20000})
+            const action=async id=>{
+              const button=manager.locator('[data-training-admin-action="'+id+'"]')
+              await button.waitFor({state:'visible',timeout:15000})
+              if(!await button.isEnabled())throw new Error('Admin training action disabled: '+chapter+'/'+id)
+              await button.click()
+              await manager.locator('[role="status"]').waitFor({state:'visible',timeout:10000})
+            }
+            if(chapter==='events'){
+              await action('publish-event')
+              await action('archive-event')
+              await action('restore-event')
+            }else if(chapter==='workplaces'){
+              await action('save-shift')
+              await action('add-price')
+            }else if(chapter==='briefings'){
+              await action('save-briefing')
+              await action('open-briefing')
+              await manager.locator('input[type="checkbox"]').check()
+              await action('ack-briefing')
+              await page.waitForFunction(()=>document.querySelector('[data-training-admin-module="briefings"]')?.textContent?.includes('4/4'),undefined,{timeout:10000})
+            }else if(chapter==='operations'){
+              await manager.locator('input[type="text"]').last().fill('Gecorrigeerd wegens gecontroleerde badge-informatie')
+              await action('reject-hours')
+              await action('approve-hours')
+              await action('lock-hours')
+              if(await manager.locator('[data-training-admin-action="approve-hours"]').isEnabled())throw new Error('Locked admin timesheet can still be edited')
+            }
+            console.log('PASS '+bot+' functional admin '+chapter+' buttons')
+          }
           // The controller can unmount the completed chapter or navigate to the
           // next route before this check runs. A missing DOM badge is therefore
           // not a workflow failure. Verify actual persisted operation evidence,
