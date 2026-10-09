@@ -10,7 +10,7 @@ export function SandboxEvents(){
  useEffect(()=>{const apply=()=>setL(activeUiLocale() as L);apply();addEventListener(LANGUAGE_APPLIED_EVENT,apply);return()=>removeEventListener(LANGUAGE_APPLIED_EVENT,apply)},[])
  useEffect(()=>{const frame=requestAnimationFrame(()=>{const s=initial();setOpen(Boolean(s.eventOpened));setSaved(Boolean(s.availability))});return()=>cancelAnimationFrame(frame)},[])
  const persist=(patch:Record<string,unknown>)=>{let s={};try{s=JSON.parse(sessionStorage.getItem(KEY)||"{}")}catch{};sessionStorage.setItem(KEY,JSON.stringify({...s,...patch}))}
- const ring="ring-4 ring-violet-500 ring-offset-2 ring-offset-background animate-pulse"
+ const ring="rounded-xl bg-violet-600 text-white"
  return <main id="eventbeheer" className="scroll-mt-24 space-y-6 p-4 md:p-8">
   <div><h1 className="text-3xl font-black">{tr(l,"Evenementen","Events","Événements","Events")}</h1><p className="text-sm text-muted-foreground">{tr(l,"Bekijk je evenementen en bevestig je beschikbaarheid.","View your events and confirm your availability.","Consultez vos événements et confirmez votre disponibilité.","Sieh dir deine Events an und bestätige deine Verfügbarkeit.")}</p></div>
   <div className="space-y-3"><details open={open} className="rounded-2xl border bg-card">
