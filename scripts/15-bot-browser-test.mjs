@@ -641,6 +641,28 @@ try {
             }else await page.locator('aside a[data-upt-training-next-tab="true"]:visible').first().click()
             await waitForTrainingTab(page,progressKey,chapter)
           }
+          // A ticked catalogue alone is insufficient. Confirm the simulated
+          // operational entity actually reached the correct lifecycle state.
+          const expectedDomain={
+            personnel:'approval',briefings:'briefing',driver:'driver',
+            tasks:'task',inventory:'inventory',guestlist:'guestlist',chat:'chat',
+            ...(tourRole==='admin'?{events:'event',workplaces:'workplace'}:{operations:'break'}),
+          }[chapter]
+          if(expectedDomain){
+            const operational=await page.evaluate(domain=>{
+              const card=document.querySelector('[data-training-domain="'+domain+'"]')
+              return card?.getAttribute('data-training-status')||null
+            },expectedDomain)
+            if(operational!=='completed')throw new Error('Domain state not completed after '+chapter+': '+expectedDomain+'='+operational)
+          }
+          if(chapter==='timesheet'){
+            const status=await page.evaluate(({key,role})=>{
+              const actions=JSON.parse(localStorage.getItem(key+':actions-v1')||'{}')
+              const id='timesheet:'+role+':'
+              return {stop:!!actions[id+(role==='admin'?'5':'0')]?.at,submitted:!!actions[id+(role==='admin'?'5':'3')]?.at}
+            },{key:progressKey,role:tourRole})
+            if(!status.stop||!status.submitted)throw new Error('Final work-stop and timesheet submission are not both recorded: '+JSON.stringify(status))
+          }
           console.log(`PASS ${bot} complete role curriculum chapter ${chapter}: ${total} verified operations`)
         }
         const final=await page.evaluate(key=>JSON.parse(localStorage.getItem(key)||'null'),progressKey)
