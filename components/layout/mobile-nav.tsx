@@ -41,7 +41,7 @@ export function MobileBottomNav({
  const pathname=usePathname()
  const [expanded,setExpanded]=useState(false)
  const [tourPreview,setTourPreview]=useState(false)
- const [sandboxHelp,setSandboxHelp]=useState("")
+
  const [trainingNavTarget,setTrainingNavTarget]=useState<string|null>(null)
  const [trainingLocale,setTrainingLocale]=useState<SupportedUiLocale>("nl")
  const {roles,isAdmin}=useAuth()
@@ -149,7 +149,7 @@ export function MobileBottomNav({
    </Link>
  }
 
- return <>{tourPreview&&sandboxHelp&&<div className="fixed inset-x-3 bottom-[calc(4.5rem+env(safe-area-inset-bottom))] z-[170] rounded-2xl border border-violet-500/40 bg-background/95 p-4 shadow-2xl backdrop-blur"><p className="text-sm font-bold">{sandboxHelp}</p><button type="button" onClick={()=>setSandboxHelp("")} className="mt-2 rounded-lg border px-3 py-2 text-xs font-bold">{{nl:"BEGREPEN",en:"GOT IT",fr:"COMPRIS",de:"VERSTANDEN"}[trainingLocale]}</button></div>}<nav aria-label={{nl:"Mobiele navigatie",en:"Mobile navigation",fr:"Navigation mobile",de:"Mobile Navigation"}[trainingLocale]} className="fixed inset-x-0 bottom-0 z-50 min-h-14 border-t border-border bg-card/95 pb-[env(safe-area-inset-bottom)] backdrop-blur lg:hidden">
+ return <><nav aria-label={{nl:"Mobiele navigatie",en:"Mobile navigation",fr:"Navigation mobile",de:"Mobile Navigation"}[trainingLocale]} className="fixed inset-x-0 bottom-0 z-50 min-h-14 border-t border-border bg-card/95 pb-[env(safe-area-inset-bottom)] backdrop-blur lg:hidden">
   {expanded&&
    <div className="absolute inset-x-0 bottom-full max-h-[60dvh] overflow-y-auto border-t border-border bg-card/98 p-3 shadow-2xl">
     <div className="grid grid-cols-2 gap-2">
@@ -167,7 +167,7 @@ export function MobileBottomNav({
      type="button"
      aria-label={expanded?{nl:"Navigatie inklappen",en:"Collapse navigation",fr:"Réduire la navigation",de:"Navigation einklappen"}[trainingLocale]:{nl:"Navigatie uitklappen",en:"Expand navigation",fr:"Développer la navigation",de:"Navigation ausklappen"}[trainingLocale]}
      aria-expanded={expanded}
-     onClick={()=>{setExpanded(value=>!value);if(!expanded&&trainingNavTarget){const messages={workplaces:{nl:"Open nu Werkplaatsen & shifts.",en:"Now open Workplaces & shifts.",fr:"Ouvrez maintenant Postes de travail & shifts.",de:"Öffne jetzt Arbeitsplätze & Schichten."},briefings:{nl:"Open nu Briefing.",en:"Now open Briefing.",fr:"Ouvrez maintenant Briefing.",de:"Öffne jetzt Briefing."},operations:{nl:"Open nu Mijn werkuren.",en:"Now open My work hours.",fr:"Ouvrez maintenant Mes heures de travail.",de:"Öffne jetzt Meine Arbeitszeiten."},tasks:{nl:"Open nu Taken.",en:"Now open Tasks.",fr:"Ouvrez maintenant Tâches.",de:"Öffne jetzt Aufgaben."},incidents:{nl:"Open nu Help / Incidenten.",en:"Now open Help / Incidents.",fr:"Ouvrez maintenant Aide / Incidents.",de:"Öffne jetzt Hilfe / Vorfälle."},inventory:{nl:"Open nu Inventaris.",en:"Now open Inventory.",fr:"Ouvrez maintenant Inventaire.",de:"Öffne jetzt Inventar."},guestlist:{nl:"Open nu Inkom & Guestlist.",en:"Now open Entrance & Guestlist.",fr:"Ouvrez maintenant Entrée & Guestlist.",de:"Öffne jetzt Eingang & Gästeliste."},sales:{nl:"Open nu Verkoop.",en:"Now open Sales.",fr:"Ouvrez maintenant Ventes.",de:"Öffne jetzt Verkauf."},chat:{nl:"Open nu Chats.",en:"Now open Chats.",fr:"Ouvrez maintenant Chats.",de:"Öffne jetzt Chats."},crew:{nl:"Open nu Personeel.",en:"Now open Staff.",fr:"Ouvrez maintenant Personnel.",de:"Öffne jetzt Personal."},personnel:{nl:"Open nu Goedkeuringen.",en:"Now open Approvals.",fr:"Ouvrez maintenant Approbations.",de:"Öffne jetzt Genehmigungen."},exports:{nl:"Open nu Excel.",en:"Now open Excel.",fr:"Ouvrez maintenant Excel.",de:"Öffne jetzt Excel."},platform:{nl:"Open nu Platformbeheer.",en:"Now open Platform management.",fr:"Ouvrez maintenant Gestion de la plateforme.",de:"Öffne jetzt Plattformverwaltung."},settings:{nl:"Open nu Beheer / Profiel.",en:"Now open Management / Profile.",fr:"Ouvrez maintenant Gestion / Profil.",de:"Öffne jetzt Verwaltung / Profil."}};const m=messages[trainingNavTarget as keyof typeof messages]?.[trainingLocale];if(m)setSandboxHelp(m)}}}
+     onClick={()=>setExpanded(value=>!value)}
      className={cn(
        "flex w-11 shrink-0 items-center justify-center rounded-lg border border-border",
        expanded?"bg-violet-500/10 text-violet-400":"text-muted-foreground",
