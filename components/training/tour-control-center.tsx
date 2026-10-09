@@ -2,6 +2,9 @@
 
 import {useCallback,useEffect,useMemo,useRef,useState} from "react"
 import {usePathname,useRouter} from "next/navigation"
+import {createPortal} from "react-dom"
+import {RoleTrainingLab} from "@/components/training/role-training-lab"
+import {isChapterPractised} from "@/lib/training-exercise-catalog"
 import {activeUiLocale,LANGUAGE_APPLIED_EVENT,type SupportedUiLocale} from "@/lib/locale-preferences"
 import {
   TOUR_SESSION_KEY,
@@ -77,6 +80,7 @@ export function TourControlCenter({active,userId,role,preferredWorkplace,mode="f
   const [targetMissing,setTargetMissing]=useState(false)
   const [actionFeedback,setActionFeedback]=useState("")
   const [navigationTarget,setNavigationTarget]=useState<string|null>(null)
+  const [portalHost,setPortalHost]=useState<HTMLElement|null>(null)
   const pendingPathRef=useRef<string|null>(null)
   const awaitingNavigationRef=useRef<string|null>(null)
   const progressRef=useRef(progress)
@@ -117,7 +121,7 @@ export function TourControlCenter({active,userId,role,preferredWorkplace,mode="f
     if(pathname!==expected){
       const awaited=awaitingNavigationRef.current
       const awaitedChapter=chapters.find(item=>item.key===awaited)
-      if(awaitedChapter&&pathname===tourBaseRoute(role,awaitedChapter)){
+      if(awaitedChapter&&pathname===tourBaseRoute(role,awaitedChapter)&&isChapterPractised(progressKey,role,current.key)){
         const prior=progressRef.current
         write({...prior,activeKey:awaitedChapter.key,completed:unique([...prior.completed,current.key]),paused:false,updatedAt:new Date().toISOString()})
         awaitingNavigationRef.current=null
@@ -130,7 +134,7 @@ export function TourControlCenter({active,userId,role,preferredWorkplace,mode="f
         router.push(tourRoute(role,current))
       }else router.push(tourRoute(role,current))
     }
-  },[active,chapters,current,pathname,role,router,write])
+  },[active,chapters,current,pathname,progressKey,role,router,write])
 
   useEffect(()=>{
     if(!active||!current||navigationTarget)return
@@ -229,18 +233,17 @@ export function TourControlCenter({active,userId,role,preferredWorkplace,mode="f
 
   useEffect(()=>{
     if(!active||!current)return
-    const advanceTo=(target?:string)=>{
-      if(typeof target!=="string"||!target||target.startsWith("__"))return
-      // A sandbox action can emit an operational target (for example "events")
-      // while the active first-use tour is intentionally scoped to general
-      // chapters only. In that case continue to the next chapter in the active
-      // scope instead of silently ignoring the user's indicated action.
-      // Reject signals that do not belong to the active chapter.
-      // Filtering workplace-specific chapters must not block the general tour.
-      if(!ACTION_TARGETS[current.key]?.includes(target))return
+    const moveToNext=()=>{
+      if(!isChapterPractised(progressKey,role,current.key))return
       const next=chapters[currentIndex+1]
       if(!next||next.key===current.key)return
-      // A completed action only unlocks the next tab. The trainee clicks it.
+      const prior=progressRef.current
+      // Multiple exercises can be on the same route (operations and Driver).
+      // This is a scenario change, not navigation to another tab.
+      if(tourBaseRoute(role,current)===tourBaseRoute(role,next)){
+        write({...prior,activeKey:next.key,completed:unique([...prior.completed,current.key]),paused:false,updatedAt:new Date().toISOString()})
+        return
+      }
       awaitingNavigationRef.current=next.key
       setNavigationTarget(tourBaseRoute(role,next))
       try{
@@ -251,25 +254,71 @@ export function TourControlCenter({active,userId,role,preferredWorkplace,mode="f
       setActionFeedback(c(locale,"Open nu zelf de volgende tab.","Open the next tab yourself.","Ouvrez vous-même l’onglet suivant.","Öffne den nächsten Tab selbst."))
     }
     const onTarget=(event:Event)=>{
+      const detail=(event as CustomEvent<{target?:string}|string|undefined>).detail
+      const target=typeof detail==="string"?detail:detail?.target
+      if(!target||!ACTION_TARGETS[current.key]?.includes(target))return
       setActionFeedback(current.description[locale])
       window.setTimeout(()=>setActionFeedback(""),2600)
-      const detail=(event as CustomEvent<{target?:string}|string|undefined>).detail
-      advanceTo(typeof detail==="string"?detail:detail?.target)
+      // Legacy sandbox buttons remain illustrative, but cannot unlock the
+      // course until every required, independently recorded practice action
+      // for this chapter has been completed by the trainee.
+      if(!isChapterPractised(progressKey,role,current.key)){
+        try{
+          const state=JSON.parse(sessionStorage.getItem(TOUR_WORKFLOW_KEY)||"{}")
+          sessionStorage.setItem(TOUR_WORKFLOW_KEY,JSON.stringify({...state,navTarget:null}))
+        }catch{}
+        dispatchEvent(new CustomEvent("uptilldawn-training-next-tab",{detail:{target:null}}))
+        return
+      }
+      moveToNext()
     }
-    const onComplete=()=>{
-      // Completion requires the sandbox to have recorded a submitted timesheet.
-      let submitted=false
-      try{submitted=JSON.parse(sessionStorage.getItem(TOUR_WORKFLOW_KEY)||"{}").operationPhase==="timesheet"}catch{}
-      if(!submitted||current.key!==chapters[chapters.length-1]?.key||chapters.some(chapter=>chapter.key!==current.key&&!progressRef.current.completed.includes(chapter.key)))return
-      const prior=progressRef.current
-      write({...prior,completed:unique([...prior.completed,current.key]),paused:false,updatedAt:new Date().toISOString()})
-      sessionStorage.removeItem(TOUR_SESSION_KEY)
-      dispatchEvent(new CustomEvent("uptilldawn-tour-finished",{detail:{role,mode,workplace:preferredWorkplace}}))
+    const onLabCompleted=(event:Event)=>{
+      const detail=(event as CustomEvent<{role?:TourRole;chapter?:string}>).detail
+      if(detail?.role!==role||detail.chapter!==current.key)return
+      if(!isChapterPractised(progressKey,role,current.key))return
+      if(current.key===chapters[chapters.length-1]?.key){
+        if(chapters.some(chapter=>chapter.key!==current.key&&!progressRef.current.completed.includes(chapter.key)))return
+        const prior=progressRef.current
+        write({...prior,completed:unique([...prior.completed,current.key]),paused:false,updatedAt:new Date().toISOString()})
+        sessionStorage.removeItem(TOUR_SESSION_KEY)
+        dispatchEvent(new CustomEvent("uptilldawn-tour-finished",{detail:{role,mode,workplace:preferredWorkplace}}))
+        return
+      }
+      moveToNext()
     }
     addEventListener("uptilldawn-training-nav-target",onTarget)
-    addEventListener("uptilldawn-training-completed",onComplete)
-    return()=>{removeEventListener("uptilldawn-training-nav-target",onTarget);removeEventListener("uptilldawn-training-completed",onComplete)}
-  },[active,chapters,current,currentIndex,locale,mode,preferredWorkplace,role,router,write])
+    addEventListener("uptilldawn-training-lab-completed",onLabCompleted)
+    return()=>{
+      removeEventListener("uptilldawn-training-nav-target",onTarget)
+      removeEventListener("uptilldawn-training-lab-completed",onLabCompleted)
+    }
+  },[active,chapters,current,currentIndex,locale,mode,preferredWorkplace,progressKey,role,write])
+
+  // Mount the practical exercises directly in each fictional page, not as a
+  // full-screen overlay. The existing fake data remains visible and editable.
+  useEffect(()=>{
+    if(!active||!current||typeof document.createElement!=="function")return
+    let host:HTMLDivElement|null=null
+    let stopped=false
+    const mount=()=>{
+      if(stopped||host)return
+      const root=document.querySelector('[data-tour-demo="training-screen"]')||document.querySelector("main")
+      if(!(root instanceof HTMLElement))return
+      host=document.createElement("div")
+      host.setAttribute("data-training-lab-host",current.key)
+      root.appendChild(host)
+      setPortalHost(host)
+    }
+    const frame=requestAnimationFrame(mount)
+    const observer=new MutationObserver(mount)
+    observer.observe(document.body,{childList:true,subtree:true})
+    return()=>{
+      stopped=true
+      observer.disconnect()
+      cancelAnimationFrame(frame)
+      host?.remove()
+    }
+  },[active,current,pathname])
 
   // Only the target tab is accented during navigation. Sandbox actions use
   // a solid purple control; no page-dimming overlay or blinking highlight.
@@ -302,6 +351,7 @@ export function TourControlCenter({active,userId,role,preferredWorkplace,mode="f
   const pause=()=>{write({...progressRef.current,paused:true,updatedAt:new Date().toISOString()});sessionStorage.removeItem(TOUR_SESSION_KEY);dispatchEvent(new CustomEvent("uptilldawn-tour-stop",{detail:{role,mode}}))}
 
   return <>
+    {portalHost&&createPortal(<RoleTrainingLab key={progressKey+":"+current.key} role={role} chapter={current.key} progressKey={progressKey}/>,portalHost)}
     {actionFeedback&&<div data-no-translate className="pointer-events-none fixed left-1/2 top-20 z-[190] w-[min(88vw,22rem)] -translate-x-1/2 rounded-xl border border-violet-500/50 bg-background/95 px-3 py-2 text-xs font-semibold leading-5 shadow-xl backdrop-blur">{actionFeedback}</div>}
     <div data-no-translate data-tour-panel className="pointer-events-none fixed right-3 top-[calc(env(safe-area-inset-top)+.75rem)] z-[190] flex items-center gap-2">
       <span className="rounded-full border border-violet-500/50 bg-background/95 px-2.5 py-1.5 text-[10px] font-black shadow">{currentIndex+1}/{chapters.length}</span>
