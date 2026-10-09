@@ -83,13 +83,9 @@ export function RoleTrainingLab({role,chapter,progressKey}:{role:TourRole;chapte
   })
   return()=>cancelAnimationFrame(frame)
  },[progressKey,role,chapter])
- useEffect(()=>{
-  const frame=requestAnimationFrame(()=>{
-   setOpened(false);setOpenedFor("");setDraftFor("");setTextValue("");setSelected("");setAcknowledged(false)
-   setFirstTime("");setSecondTime("");setFileName("");setError("");setReviewed(false)
-  })
-  return()=>cancelAnimationFrame(frame)
- },[current?.id])
+ // Inputs are reset in the same event that submits a step. A deferred
+ // requestAnimationFrame reset used to erase the next step's input when users
+ // or concurrent browser bots interacted before the next paint.
  useEffect(()=>{
   if(!hydrated||!complete||!isChapterPractised(progressKey,role,chapter))return
   const marker=progressKey+":"+chapter
@@ -138,8 +134,10 @@ export function RoleTrainingLab({role,chapter,progressKey}:{role:TourRole;chapte
   const next={...ledger,[current.id]:entry}
   localStorage.setItem(practiceDoneKey(progressKey),JSON.stringify(next))
   recordDemoState(progressKey,current.id,value)
+  setOpened(false);setOpenedFor("");setDraftFor("");setTextValue("")
+  setSelected("");setAcknowledged(false);setFirstTime("");setSecondTime("")
+  setFileName("");setReviewed(false);setError("")
   setLedger(next)
-  setError("")
   requestAnimationFrame(()=>container.current?.scrollIntoView({behavior:"smooth",block:"start"}))
  }
  const resetAll=()=>{
