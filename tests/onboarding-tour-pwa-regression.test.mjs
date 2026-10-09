@@ -42,3 +42,33 @@ test('registration queues the PWA install prompt even before an auth session exi
   assert.match(prompt,/isIos\(\)/)
   assert.match(prompt,/Add to Home Screen/)
 })
+
+
+test('a newly approved account completes and saves its profile before any role tour',async()=>{
+  const [tour,profile]=await Promise.all([
+    read('components/role-app-tour.tsx'),
+    read('components/crew/profile-form.tsx'),
+  ])
+  const mandatory= tour.indexOf('if(state.required&&!state.completed)')
+  const postponed= tour.indexOf('if(saved==="postponed")')
+  const chooseChapter=tour.indexOf('const generalChapters=getTourChapters')
+  assert.ok(mandatory>0,'required profile check must exist')
+  assert.ok(mandatory<postponed,'postponed preference cannot bypass mandatory profile completion')
+  assert.ok(mandatory<chooseChapter,'mandatory profile completion precedes any chapter offer')
+  assert.match(tour,/router\.replace\("\/settings\?complete-profile=1"\)/)
+  assert.match(profile,/upt_mark_own_profile_complete/)
+  assert.match(profile,/uptilldawn-profile-completed/)
+  assert.match(tour,/addEventListener\("uptilldawn-profile-completed",completed\)/)
+  assert.doesNotMatch(tour,/bg-black\/60/,'the tour must not dim the entire page')
+})
+
+test('mandatory profile completion exposes explicit UI labels and validation in NL EN FR DE',async()=>{
+  const profile=await read('components/crew/profile-form.tsx')
+  assert.match(profile,/LANGUAGE_APPLIED_EVENT/)
+  assert.match(profile,/activeUiLocale\(\)/)
+  assert.match(profile,/t\('Vul eerst je profiel volledig aan','Complete your profile first','Complétez d’abord votre profil','Vervollständige zuerst dein Profil'\)/)
+  assert.match(profile,/t\('PROFIEL OPSLAAN','SAVE PROFILE','ENREGISTRER LE PROFIL','PROFIL SPEICHERN'\)/)
+  for(const key of ['Phone','Téléphone','Telefon','Date of birth','Date de naissance','Geburtsdatum','Preferred workplace','Poste préféré','Bevorzugter Arbeitsplatz']){
+    assert.ok(profile.includes(key),'missing localized mandatory profile field: '+key)
+  }
+})
