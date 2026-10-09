@@ -114,6 +114,7 @@ export function ProfileForm({
         // A successful write alone is not proof that the completion gate opened.
         const {data:verified,error:verifyError}=await s.rpc('upt_current_profile_completion')
         if(verifyError||!verified?.[0]?.completed)throw new Error(t('De profielaanvulling is nog niet bevestigd.','Profile completion has not been confirmed.','La complétion du profil n’a pas encore été confirmée.','Die Profilvervollständigung wurde noch nicht bestätigt.'))
+        setRequiredCompletion(false)
         window.dispatchEvent(new Event('uptilldawn-profile-completed'))
       }
 
