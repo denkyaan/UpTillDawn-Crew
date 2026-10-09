@@ -2,7 +2,7 @@
 
 import {useEffect,useMemo,useRef,useState} from "react"
 import {activeUiLocale,LANGUAGE_APPLIED_EVENT,type SupportedUiLocale} from "@/lib/locale-preferences"
-import {getTrainingOperations,practiceDoneKey,readPracticeLedger,isChapterPractised,type PracticeOperation,type PracticeLedger} from "@/lib/training-exercise-catalog"
+import {getTrainingOperations,practiceDoneKey,readPracticeLedger,isChapterPractised,type PracticeLedger} from "@/lib/training-exercise-catalog"
 import {TOUR_CHAPTERS,type TourRole,type TourCopy} from "@/lib/tour-training"
 import {demoScenarioFromLedger} from "@/lib/training-demo-scenario"
 import {trainingOperationalState,trainingOperationError} from "@/lib/training-operational-state"
