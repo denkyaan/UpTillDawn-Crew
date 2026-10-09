@@ -464,7 +464,7 @@ try {
         const primary=page.locator('[data-tour-demo="primary-action"]').first()
         await primary.waitFor({state:'visible',timeout:30000})
         const actualColor=await primary.evaluate(button=>getComputedStyle(button).backgroundColor)
-        if(!/rgb\\(124,\\s*58,\\s*237\\)/.test(actualColor))throw new Error(`required training action is not solid purple: ${actualColor}`)
+        if(!/rgb\(124,\s*58,\s*237\)/.test(actualColor))throw new Error(`required training action is not solid purple: ${actualColor}`)
         const oldSpotlight=await page.evaluate(()=>[...document.querySelectorAll('div[aria-hidden].fixed')].some(node=>String(node.className).includes('z-[188]')))
         if(oldSpotlight)throw new Error('legacy fixed spotlight should not dim or overlay the training screen')
         const before=await page.evaluate(key=>JSON.parse(localStorage.getItem(key)||'null'),progressKey)
