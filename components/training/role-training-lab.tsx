@@ -174,7 +174,7 @@ export function RoleTrainingLab({role,chapter,progressKey}:{role:TourRole;chapte
     <p className="text-xs text-muted-foreground">{scenario.taskName}</p>
    </article>
   </section>
-  {current?<div data-training-kind={current.kind} className="mt-5 space-y-4 rounded-xl border p-4">
+  {current?<div data-training-kind={current.kind} data-training-operation={current.id} className="mt-5 space-y-4 rounded-xl border p-4">
    <p className="text-xs font-bold text-violet-500">{c(language,"ACTIEVE HANDELING","ACTIVE ACTION","ACTION ACTIVE","AKTIVE HANDLUNG")} {index+1}/{operations.length}</p>
    <h3 className="text-lg font-black">{current.title[language]}</h3>
    <p className="text-sm leading-6 text-muted-foreground">{current.help[language]}</p>

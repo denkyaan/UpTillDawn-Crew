@@ -69,6 +69,11 @@ export function tourBaseRoute(role:TourRole,chapter:TourChapter){
   return chapter.key==="overview"&&role==="admin"?"/admin":chapter.route
 }
 
+export function tourNavigationKey(chapter:TourChapter){
+  // Driver and the final timesheet are chapters within the Work hours tab.
+  return chapter.route==="/operations"?"operations":chapter.key
+}
+
 export function getTourChapters(role:TourRole,options?:{driver?:boolean;entrance?:boolean;mode?:TourMode;scope?:"general"|"workplace"}){
   const driver=options?.driver===true
   const entrance=options?.entrance===true

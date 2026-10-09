@@ -23,6 +23,44 @@ const viewports = [
 const failures = []
 const lifecycleAdmin = createClient(supabaseUrl, serviceRoleKey, { auth: { persistSession: false, autoRefreshToken: false } })
 
+async function waitForPracticeRecorded(page, key, chapter, operationId, count) {
+  try {
+    // Storage is written synchronously; React commits the next input afterwards.
+    // Wait for both so a fast bot cannot fill the preceding operation's field.
+    await page.waitForFunction(({key,chapter,operationId,count})=>{
+      const ledger=JSON.parse(localStorage.getItem(key+':actions-v1')||'{}')
+      if(!ledger[operationId]?.value||!ledger[operationId]?.at)return false
+      const root=document.querySelector('[data-training-lab]')
+      if(root?.getAttribute('data-training-chapter')===chapter){
+        return Number(root.querySelector('progress')?.value)>=count
+          &&root.querySelector('[data-training-operation]')?.getAttribute('data-training-operation')!==operationId
+      }
+      return JSON.parse(localStorage.getItem(key)||'null')?.completed?.includes(chapter)
+    },{key,chapter,operationId,count},{timeout:15000})
+  } catch(error) {
+    const snapshot=await page.evaluate(()=>{
+      const root=document.querySelector('[data-training-lab]')
+      return {
+        path:location.pathname,
+        chapter:root?.getAttribute('data-training-chapter'),
+        operation:root?.querySelector('[data-training-operation]')?.getAttribute('data-training-operation'),
+        progress:root?.querySelector('progress')?.value,
+        title:root?.querySelector('[data-training-kind] h3')?.textContent,
+        validation:root?.querySelector('[role="alert"]')?.textContent,
+      }
+    })
+    throw new Error(`Practice ${chapter}/${operationId} did not reach ${count}: ${JSON.stringify(snapshot)}`,{cause:error})
+  }
+}
+
+async function waitForTrainingTab(page, key, previous) {
+  await page.waitForFunction(({key,previous})=>{
+    const progress=JSON.parse(localStorage.getItem(key)||'null')
+    return progress?.activeKey!==previous&&progress?.completed?.includes(previous)
+      &&document.querySelector('[data-training-lab]')?.getAttribute('data-training-chapter')===progress.activeKey
+  },{key,previous},{timeout:30000})
+}
+
 const roleSmokeRoutes = {
   admin: ['/', '/admin', '/events', '/workplaces', '/briefings', '/inventory', '/guestlist', '/chat', '/operations', '/tasks', '/timesheets', '/incidents', '/notifications', '/personnel', '/sales', '/settings', '/exports', '/audit'],
   responsible: ['/', '/events', '/workplaces', '/briefings', '/inventory', '/guestlist', '/chat', '/operations', '/tasks', '/timesheets', '/incidents', '/notifications', '/sales', '/settings'],
@@ -466,11 +504,14 @@ try {
         await lab.waitFor({state:'visible',timeout:30000})
         // The training engine renders one actionable operation at a time;
         // opening and acknowledging each item records separate evidence.
+        const firstChapter=await lab.getAttribute('data-training-chapter')
         const total=Number(await lab.locator('progress').getAttribute('max'))
         if(total<5)throw new Error('training chapter has too few exercises')
         for(let exercise=0;exercise<total;exercise++){
           const action=lab.locator('[data-training-kind]')
           const kind=await action.getAttribute('data-training-kind')
+          const operationId=await action.getAttribute('data-training-operation')
+          if(!operationId)throw new Error('missing training operation identity')
           if(!kind)throw new Error('missing training action kind')
           if(kind==='inspect'){
             const open=action.locator('button[data-training-active-action="true"]').first()
@@ -498,22 +539,7 @@ try {
           const color=await commit.evaluate(button=>getComputedStyle(button).backgroundColor)
           if(!/rgb\(124,\s*58,\s*237\)/.test(color))throw new Error(`required training confirmation is not solid purple: ${color}`)
           await commit.click()
-          try{
-            await page.waitForFunction(({index})=>{
-              const root=document.querySelector('[data-training-lab]')
-              return Number(root?.querySelector('progress')?.value)>=index+1
-            },{index:exercise},{timeout:15000})
-          }catch(error){
-            const snapshot=await lab.evaluate(root=>({
-              progress:root.querySelector('progress')?.value,
-              max:root.querySelector('progress')?.max,
-              kind:root.querySelector('[data-training-kind]')?.getAttribute('data-training-kind'),
-              title:root.querySelector('[data-training-kind] h3')?.textContent,
-              validation:root.querySelector('[role="alert"]')?.textContent,
-              completed:root.querySelector('[data-training-kind]')?.textContent?.slice(0,300),
-            }))
-            throw new Error(`Practice action ${exercise+1}/${total} was not recorded: ${JSON.stringify(snapshot)}; ${error}`)
-          }
+          await waitForPracticeRecorded(page,progressKey,firstChapter,operationId,exercise+1)
         }
         const oldSpotlight=await page.evaluate(()=>[...document.querySelectorAll('div[aria-hidden].fixed')].some(node=>String(node.className).includes('z-[188]')))
         if(oldSpotlight)throw new Error('legacy fixed spotlight should not dim or overlay the training screen')
@@ -536,10 +562,7 @@ try {
         }else{
           await page.locator('aside a[data-upt-training-next-tab="true"]:visible').first().click()
         }
-        await page.waitForFunction(({key,previous})=>{
-          const now=JSON.parse(localStorage.getItem(key)||'null')
-          return now?.activeKey!==previous&&now?.completed?.includes(previous)
-        },{key:progressKey,previous:before.activeKey},{timeout:30000})
+        await waitForTrainingTab(page,progressKey,before.activeKey)
         const advanced=await page.evaluate(key=>JSON.parse(localStorage.getItem(key)||'null'),progressKey)
         await page.getByRole('button',{name:/^(PAUZEER|PAUSE|PAUSIEREN)$/}).click()
         const progress=await page.evaluate(key=>JSON.parse(localStorage.getItem(key)||'null'),progressKey)
@@ -570,6 +593,8 @@ try {
           for(let exercise=start;exercise<total;exercise++){
             const operation=lab.locator('[data-training-kind]')
             const kind=await operation.getAttribute('data-training-kind')
+            const operationId=await operation.getAttribute('data-training-operation')
+            if(!operationId)throw new Error('missing training operation identity in '+chapter)
             if(kind==='inspect'){
               await operation.locator('button[data-training-active-action="true"]').first().click()
             }else if(['write','message','form','number','delete'].includes(kind)){
@@ -589,10 +614,7 @@ try {
               await operation.locator('select').first().selectOption('training-briefing.pdf')
             }else throw new Error('Unknown practical action '+chapter+'/'+kind)
             await operation.locator('button[data-training-active-action]').last().click()
-            await page.waitForFunction(({key,chapter,count})=>{
-              const ledger=JSON.parse(localStorage.getItem(key+':actions-v1')||'{}')
-              return Object.keys(ledger).filter(id=>id.startsWith(chapter+':')).length>=count
-            },{key:progressKey,chapter,count:exercise+1},{timeout:15000})
+            await waitForPracticeRecorded(page,progressKey,chapter,operationId,exercise+1)
           }
           await page.waitForFunction(({key,chapter})=>{
             const p=JSON.parse(localStorage.getItem(key)||'null')
@@ -617,10 +639,7 @@ try {
               }
               await mobile.locator('a[data-upt-training-next-tab="true"]:visible').first().click()
             }else await page.locator('aside a[data-upt-training-next-tab="true"]:visible').first().click()
-            await page.waitForFunction(({key,chapter})=>{
-              const p=JSON.parse(localStorage.getItem(key)||'null')
-              return p?.completed?.includes(chapter)
-            },{key:progressKey,chapter},{timeout:30000})
+            await waitForTrainingTab(page,progressKey,chapter)
           }
           console.log(`PASS ${bot} complete role curriculum chapter ${chapter}: ${total} verified operations`)
         }

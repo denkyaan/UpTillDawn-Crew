@@ -13,6 +13,7 @@ import {
   chapterForPath,
   getTourChapters,
   tourBaseRoute,
+  tourNavigationKey,
   tourProgressKey,
   tourRoute,
   type TourChapter,
@@ -76,6 +77,11 @@ export function TourControlCenter({active,userId,role,preferredWorkplace,mode="f
   // progress are restored only after mount, preventing React hydration errors.
   const [locale,setLocale]=useState<SupportedUiLocale>("nl")
   const [progress,setProgress]=useState<Progress>(()=>initialProgress(chapters[0]?.key||"overview"))
+  // A new role, scope, or resumed session must restore its own progress before
+  // any route correction or exercise can run.
+  const restoration=useMemo(()=>({active,chapters,mode,preferredWorkplace,progressKey,role}),[active,chapters,mode,preferredWorkplace,progressKey,role])
+  const [restored,setRestored]=useState<typeof restoration|null>(null)
+  const progressReady=restored===restoration
   const [,setRect]=useState<Rect|null>(null)
   const [targetMissing,setTargetMissing]=useState(false)
   const [actionFeedback,setActionFeedback]=useState("")
@@ -102,21 +108,22 @@ export function TourControlCenter({active,userId,role,preferredWorkplace,mode="f
     router.push(tourRoute(role,chapter))
     const frame=requestAnimationFrame(()=>{
       write({...next,paused:false,updatedAt:new Date().toISOString()})
+      setRestored(restoration)
     })
     return()=>cancelAnimationFrame(frame)
-  },[active,chapters,mode,preferredWorkplace,progressKey,role,router,write])
+  },[active,chapters,mode,preferredWorkplace,progressKey,restoration,role,router,write])
 
   const current=chapters.find(chapter=>chapter.key===progress.activeKey)||chapters[0]
   const currentIndex=Math.max(0,chapters.findIndex(chapter=>chapter.key===current?.key))
   useEffect(()=>{
-    if(!active||!current)return
+    if(!active||!progressReady||!current)return
     let state:Record<string,unknown>={}
     try{state=JSON.parse(sessionStorage.getItem(TOUR_WORKFLOW_KEY)||"{}")}catch{}
     const finalReady=current.key==="timesheet"&&chapters.slice(0,-1).every(chapter=>progress.completed.includes(chapter.key))
     sessionStorage.setItem(TOUR_WORKFLOW_KEY,JSON.stringify({...state,finalTimesheetReady:finalReady}))
-  },[active,chapters,current,progress.completed])
+  },[active,chapters,current,progress.completed,progressReady])
   useEffect(()=>{
-    if(!active||!current)return
+    if(!active||!progressReady||!current)return
     const expected=tourBaseRoute(role,current)
     if(pendingPathRef.current){
       if(pathname!==pendingPathRef.current)return
@@ -138,10 +145,10 @@ export function TourControlCenter({active,userId,role,preferredWorkplace,mode="f
         router.push(tourRoute(role,current))
       }else router.push(tourRoute(role,current))
     }
-  },[active,chapters,current,pathname,progressKey,role,router,write])
+  },[active,chapters,current,pathname,progressKey,progressReady,role,router,write])
 
   useEffect(()=>{
-    if(!active||!current||navigationTarget)return
+    if(!active||!progressReady||!current||navigationTarget)return
     let stopped=false
     let observer:MutationObserver|undefined
     let resizeObserver:ResizeObserver|undefined
@@ -233,10 +240,10 @@ export function TourControlCenter({active,userId,role,preferredWorkplace,mode="f
     addEventListener("resize",onResize)
     addEventListener("scroll",onResize,true)
     return()=>{stopped=true;observer?.disconnect();resizeObserver?.disconnect();window.clearTimeout(timeout);cancelAnimationFrame(frame);cancelAnimationFrame(resetFrame);removeEventListener("resize",onResize);removeEventListener("scroll",onResize,true);setRect(null)}
-  },[active,current,locale,pathname,navigationTarget])
+  },[active,current,locale,pathname,navigationTarget,progressReady])
 
   useEffect(()=>{
-    if(!active||!current)return
+    if(!active||!progressReady||!current)return
     const moveToNext=()=>{
       if(!isChapterPractised(progressKey,role,current.key))return
       const next=chapters[currentIndex+1]
@@ -252,9 +259,9 @@ export function TourControlCenter({active,userId,role,preferredWorkplace,mode="f
       setNavigationTarget(tourBaseRoute(role,next))
       try{
         const state=JSON.parse(sessionStorage.getItem(TOUR_WORKFLOW_KEY)||"{}")
-        sessionStorage.setItem(TOUR_WORKFLOW_KEY,JSON.stringify({...state,navTarget:next.key}))
+        sessionStorage.setItem(TOUR_WORKFLOW_KEY,JSON.stringify({...state,navTarget:tourNavigationKey(next)}))
       }catch{}
-      dispatchEvent(new CustomEvent("uptilldawn-training-next-tab",{detail:{target:next.key}}))
+      dispatchEvent(new CustomEvent("uptilldawn-training-next-tab",{detail:{target:tourNavigationKey(next)}}))
       setActionFeedback(c(locale,"Open nu zelf de volgende tab.","Open the next tab yourself.","Ouvrez vous-même l’onglet suivant.","Öffne den nächsten Tab selbst."))
     }
     const onTabSelected=(event:Event)=>{
@@ -263,7 +270,7 @@ export function TourControlCenter({active,userId,role,preferredWorkplace,mode="f
       // controller can unmount and lose awaitingNavigationRef mid-transition.
       const detail=(event as CustomEvent<{key?:string}>).detail
       const next=chapters[currentIndex+1]
-      if(!next||detail?.key!==next.key||!isChapterPractised(progressKey,role,current.key))return
+      if(!next||detail?.key!==tourNavigationKey(next)||!isChapterPractised(progressKey,role,current.key))return
       if(tourBaseRoute(role,next)===tourBaseRoute(role,current))return
       const nextPath=tourBaseRoute(role,next)
       pendingPathRef.current=nextPath
@@ -319,22 +326,30 @@ export function TourControlCenter({active,userId,role,preferredWorkplace,mode="f
       removeEventListener("uptilldawn-training-lab-completed",onLabCompleted)
       removeEventListener("uptilldawn-training-tab-selected",onTabSelected)
     }
-  },[active,chapters,current,currentIndex,locale,mode,preferredWorkplace,progressKey,role,write])
+  },[active,chapters,current,currentIndex,locale,mode,preferredWorkplace,progressKey,progressReady,role,write])
 
   // Mount the practical exercises directly in each fictional page, not as a
   // full-screen overlay. The existing fake data remains visible and editable.
   useEffect(()=>{
-    if(!active||!current||typeof document.createElement!=="function")return
+    if(!active||!progressReady||!current||typeof document.createElement!=="function")return
+    // Progress is saved at click time, before the destination finishes loading.
+    // Do not expose its inputs on the previous page and then remount them when
+    // the route arrives: that discards a trainee's partially completed action.
+    if(pathname!==tourBaseRoute(role,current))return
     let host:HTMLDivElement|null=null
     let stopped=false
     const mount=()=>{
-      if(stopped||host)return
+      if(stopped)return
       const root=document.querySelector('[data-tour-demo="training-screen"]')||document.querySelector("main")
       if(!(root instanceof HTMLElement))return
-      host=document.createElement("div")
-      host.setAttribute("data-training-lab-host",current.key)
-      root.prepend(host)
-      setPortalHost(host)
+      if(!host){
+        host=document.createElement("div")
+        host.setAttribute("data-training-lab-host",current.key)
+        setPortalHost(host)
+      }
+      // Keep the same portal and input state if streamed page content replaces
+      // its container after navigation.
+      if(host.parentElement!==root)root.prepend(host)
     }
     const frame=requestAnimationFrame(mount)
     const observer=new MutationObserver(mount)
@@ -345,7 +360,7 @@ export function TourControlCenter({active,userId,role,preferredWorkplace,mode="f
       cancelAnimationFrame(frame)
       host?.remove()
     }
-  },[active,current,pathname])
+  },[active,current,pathname,progressReady,role])
 
   // Persist a verified chapter transition on the actual tab click, before
   // Next.js can unmount the current route. Route-only effects may run after
@@ -402,12 +417,12 @@ export function TourControlCenter({active,userId,role,preferredWorkplace,mode="f
     }
   },[active,navigationTarget])
 
-  if(!active||!current||!chapters.length)return null
+  if(!active||!progressReady||!current||!chapters.length)return null
 
   const pause=()=>{write({...progressRef.current,paused:true,updatedAt:new Date().toISOString()});sessionStorage.removeItem(TOUR_SESSION_KEY);dispatchEvent(new CustomEvent("uptilldawn-tour-stop",{detail:{role,mode}}))}
 
   return <>
-    {portalHost&&createPortal(<RoleTrainingLab key={progressKey+":"+current.key} role={role} chapter={current.key} progressKey={progressKey}/>,portalHost)}
+    {portalHost?.getAttribute("data-training-lab-host")===current.key&&pathname===tourBaseRoute(role,current)&&createPortal(<RoleTrainingLab key={progressKey+":"+current.key} role={role} chapter={current.key} progressKey={progressKey}/>,portalHost)}
     {actionFeedback&&<div data-no-translate className="pointer-events-none fixed left-1/2 top-20 z-[190] w-[min(88vw,22rem)] -translate-x-1/2 rounded-xl border border-violet-500/50 bg-background/95 px-3 py-2 text-xs font-semibold leading-5 shadow-xl backdrop-blur">{actionFeedback}</div>}
     <div data-no-translate data-tour-panel className="pointer-events-none fixed right-3 top-[calc(env(safe-area-inset-top)+.75rem)] z-[190] flex items-center gap-2">
       <span className="rounded-full border border-violet-500/50 bg-background/95 px-2.5 py-1.5 text-[10px] font-black shadow">{currentIndex+1}/{chapters.length}</span>
