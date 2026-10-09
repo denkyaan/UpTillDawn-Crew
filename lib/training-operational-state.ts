@@ -29,11 +29,11 @@ export function trainingOperationalState(role:TourRole,ledger:PracticeLedger):Tr
   const breakEnded=get("operations:employee:5","operations:responsible_lead:3")
   const startedDrive=get("driver:shared:6")
   const stoppedDrive=get("driver:shared:9")
-  const task=get("tasks:shared:4","tasks:employee:0")
+  const task=get("tasks:shared:4")
   const inventory=get("inventory:shared:3","inventory:responsible_lead:3")
   const artist=get("guestlist:shared:4","guestlist:employee:1")
   const chat=get("chat:shared:6","chat:admin:2")
-  const stopWork=get("timesheet:"+r+":2")
+  const stopWork=get("timesheet:"+r+":0")
   const submitted=get("timesheet:"+r+":3")
   const adminTimesheet=get("timesheet:admin:5")
   const rows=[
