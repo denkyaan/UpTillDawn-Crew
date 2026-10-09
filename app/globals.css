@@ -199,9 +199,22 @@ body[data-upt-training-active="true"] a[data-upt-training-next-tab="true"] {
 }
 
 /* The one required action is solid purple, with no pulse or dimmed backdrop. */
-body[data-upt-training-active="true"] [data-tour-demo="primary-action"]:not(:disabled) {
+body[data-upt-training-active="true"] [data-training-lab] [data-training-active-action="true"]:not(:disabled) {
   background-color: #7c3aed !important;
   color: white !important;
   border-color: #7c3aed !important;
   animation: none !important;
+}
+
+/* A selected operation is the only control tinted by the training engine. */
+body[data-upt-training-active="true"] [data-training-lab] [data-training-active-action="true"]:is(input,select,textarea) {
+  border-color: #7c3aed !important;
+  outline: 2px solid #8b5cf6;
+  outline-offset: 2px;
+  background-color: var(--background) !important;
+  color: var(--foreground) !important;
+}
+body[data-upt-training-active="true"] [data-training-lab] [data-training-active-action="true"][type="checkbox"] {
+  outline: 2px solid #8b5cf6;
+  accent-color: #7c3aed;
 }
