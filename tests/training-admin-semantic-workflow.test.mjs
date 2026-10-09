@@ -49,7 +49,7 @@ test('event, onboarding and workplace forms no longer ask for unrelated generic 
  assert.deepEqual([...trainingField(action('employee','guestlist','Filter artists')).options.map(x=>x.value)],['guest','artist'])
  assert.deepEqual([...trainingField(action('employee','inventory','Report equipment condition')).options.map(x=>x.value)],['good','missing','damaged'])
  assert.deepEqual([...trainingField(action('responsible_lead','tasks','task priority')).options.map(x=>x.value)],['normal','high','urgent'])
- assert.deepEqual([...trainingField(action('admin','platform','automatic trigger')).options.map(x=>x.value)],['availability','shift','incident'])
+ assert.deepEqual([...trainingField(action('admin','platform','automation trigger')).options.map(x=>x.value)],['availability','shift','incident'])
  assert.deepEqual([...trainingField(action('admin','events','available slot')).options.map(x=>x.value)],['lina','noah','mila'])
  assert.deepEqual([...trainingField(action('admin','incidents','Assign an incident')).options.map(x=>x.value)],['lina','noah','mila'])
  assert.deepEqual([...trainingField(action('responsible_lead','incidents','Escalate to Admin')).options.map(x=>x.value)],['admin'])
