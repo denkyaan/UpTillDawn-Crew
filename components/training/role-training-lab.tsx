@@ -56,6 +56,7 @@ export function RoleTrainingLab({role,chapter,progressKey}:{role:TourRole;chapte
  const [language,setLanguage]=useState<SupportedUiLocale>("nl")
  const [ledger,setLedger]=useState<PracticeLedger>({})
  const [hydrated,setHydrated]=useState(false)
+ const [functionalControl,setFunctionalControl]=useState(false)
  const [opened,setOpened]=useState(false)
  const [openedFor,setOpenedFor]=useState("")
  const [draftFor,setDraftFor]=useState("")
@@ -79,6 +80,29 @@ export function RoleTrainingLab({role,chapter,progressKey}:{role:TourRole;chapte
  const complete=operations.length>0&&operations.every(step=>Boolean(ledger[step.id]?.value&&ledger[step.id]?.at&&ledger[step.id]?.kind===step.kind))
  const field=current?trainingField(current):null
  const options=field?.options||[]
+ // A functional sandbox action is a real, separately mounted button in the
+ // fictional role interface. When present, the lesson requires that button
+ // instead of accepting a second generic confirmation checkbox.
+ useEffect(()=>{
+  const update=()=>{
+   const available=!!current&&Array.from(document.querySelectorAll<HTMLElement>("[data-training-practical-op]")).some(node=>
+    node.dataset.trainingPracticalOp===current.id
+    &&!node.hasAttribute("disabled")
+    &&node.getClientRects().length>0
+   )
+   setFunctionalControl(available)
+  }
+  update()
+  const observer=new MutationObserver(update)
+  observer.observe(document.body,{childList:true,subtree:true,attributes:true,attributeFilter:["disabled"]})
+  return()=>observer.disconnect()
+ },[current?.id])
+ const showFunctionalControl=()=>{
+  const button=Array.from(document.querySelectorAll<HTMLElement>("[data-training-practical-op]")).find(node=>
+   node.dataset.trainingPracticalOp===current?.id&&!node.hasAttribute("disabled")&&node.getClientRects().length>0
+  )
+  button?.scrollIntoView({behavior:"smooth",block:"center"})
+ }
  useEffect(()=>{const apply=()=>setLanguage(activeUiLocale());const frame=requestAnimationFrame(apply);addEventListener(LANGUAGE_APPLIED_EVENT,apply);return()=>{cancelAnimationFrame(frame);removeEventListener(LANGUAGE_APPLIED_EVENT,apply)}},[])
  useEffect(()=>{
   const frame=requestAnimationFrame(()=>{
@@ -213,6 +237,12 @@ export function RoleTrainingLab({role,chapter,progressKey}:{role:TourRole;chapte
    <p className="text-xs font-bold text-violet-500">{c(language,"ACTIEVE HANDELING","ACTIVE ACTION","ACTION ACTIVE","AKTIVE HANDLUNG")} {index+1}/{operations.length}</p>
    <h3 className="text-lg font-black">{current.title[language]}</h3>
    <p className="text-sm leading-6 text-muted-foreground">{current.help[language]}</p>
+   {functionalControl&&<div data-training-functional-prompt className="rounded-xl border border-violet-500/50 p-4 text-sm">
+    <p className="font-bold">{c(language,"Voer deze stap uit via de echte paarse knop op het demopaneel.","Perform this step with the actual purple control on the demo panel.","Effectuez cette étape avec le vrai bouton violet du panneau démo.","Führe diesen Schritt mit der echten violetten Schaltfläche im Demobereich aus.")}</p>
+    <p className="mt-1 text-muted-foreground">{c(language,"Er wordt pas voortgang geregistreerd na jouw klik op de functie. Er worden geen productiegegevens gewijzigd.","Progress is recorded only after you click the functional control. No production data is changed.","La progression n’est enregistrée qu’après votre clic sur la fonction. Aucune donnée de production n’est modifiée.","Der Fortschritt wird erst nach deinem Klick erfasst. Es werden keine Produktionsdaten geändert.")}</p>
+    <button type="button" onClick={showFunctionalControl} className="mt-3 rounded-lg border px-3 py-2 font-bold">{c(language,"TOON DE FUNCTIE","SHOW CONTROL","AFFICHER LA FONCTION","FUNKTION ANZEIGEN")}</button>
+   </div>}
+   {!functionalControl&&<>
    {current.kind==="inspect"&&<div className="space-y-3">
      <button type="button" data-training-active-action={!isOpened?"true":undefined} onClick={()=>{setOpened(true);setOpenedFor(current.id);setReviewed(true);setError("")}} className="rounded-xl border px-4 py-3 text-sm font-bold">{current.title[language]}</button>
      {isOpened&&<article className="rounded-xl border border-violet-500/30 bg-violet-500/5 p-3 text-sm leading-6"><p className="font-bold">{current.title[language]}</p><p>{current.help[language]}</p><p className="mt-2 text-muted-foreground">{EXAMPLES[chapter]?.[language]}</p></article>}
@@ -234,6 +264,7 @@ export function RoleTrainingLab({role,chapter,progressKey}:{role:TourRole;chapte
    {current.kind==="schedule"&&<div className="grid grid-cols-1 gap-3 sm:grid-cols-2">{[0,1].map((n)=><label key={n} className="grid gap-1 text-sm font-bold">{n===0?c(language,"Begin","Start","Début","Beginn"):c(language,"Einde","End","Fin","Ende")}<input data-training-active-action={!(n===0?firstTime:secondTime)?"true":undefined} type="datetime-local" value={n===0?firstTime:secondTime} onChange={event=>{(n===0?setFirstTime:setSecondTime)(event.target.value);setDraftFor(current.id);setError("")}} className="w-full rounded-lg border bg-background p-3"/></label>)}</div>}
    {current.kind==="upload"&&<div className="grid gap-3"><label className="grid gap-1 text-sm font-bold">{c(language,"Selecteer een demobestand","Select a demo file","Choisir un fichier démo","Demo-Datei auswählen")}<select data-training-active-action={!fileName?"true":undefined} value={fileName} onChange={event=>{setFileName(event.target.value);setDraftFor(current.id);setError("")}} className="rounded-lg border bg-background p-3"><option value="">{c(language,"Kies een voorbeeld","Select an example","Choisir un exemple","Beispiel wählen")}</option><option value="training-briefing.pdf">training-briefing.pdf</option><option value="training-prices.csv">training-prices.csv</option><option value="training-inventory.png">training-inventory.png</option></select></label><label className="grid gap-1 text-xs text-muted-foreground">{c(language,"Of kies een eigen bestand (wordt niet geüpload)","Or select your own file (not uploaded)","Ou sélectionnez un fichier personnel (non téléversé)","Oder eigene Datei wählen (wird nicht hochgeladen)")}<input type="file" onChange={event=>{setFileName(event.target.files?.[0]?.name||"");setDraftFor(current.id)}} className="w-full rounded-lg border bg-background p-2 text-foreground"/></label></div>}
    {current.kind!=="inspect"&&<button type="button" data-training-active-action={!error?"true":undefined} onClick={execute} className="rounded-xl border px-4 py-3 text-sm font-black">{current.title[language]}</button>}
+   </>}
    {error&&<p role="alert" className="rounded-lg border border-rose-500/40 bg-rose-500/5 p-3 text-sm text-rose-500">{error}</p>}
   </div>:<div role="status" className="mt-5 rounded-xl border border-emerald-500/40 bg-emerald-500/5 p-4"><h3 className="font-black text-emerald-600">{c(language,"Alle handelingen in dit hoofdstuk uitgevoerd","All chapter actions completed","Toutes les actions du chapitre sont terminées","Alle Kapitelhandlungen abgeschlossen")}</h3><p className="mt-2 text-sm">{c(language,"Open nu zelf de volgende aangeduide tab. Niets werd automatisch uitgevoerd.","Now open the indicated next tab yourself. No actions were performed automatically.","Ouvrez vous-même l’onglet suivant. Aucune action automatique.","Öffne nun selbst den markierten nächsten Tab. Keine automatischen Aktionen.")}</p></div>}
   <details className="mt-5 rounded-xl border p-3 text-sm"><summary className="cursor-pointer font-bold">{c(language,"Overzicht uitgevoerde handelingen","Completed action log","Journal des actions effectuées","Protokoll ausgeführter Aktionen")}</summary><ol className="mt-3 max-h-60 space-y-2 overflow-y-auto">{operations.filter(step=>ledger[step.id]?.value).map(step=><li key={step.id} className="flex items-start justify-between gap-3 rounded-lg border p-2"><span>{step.title[language]}<small className="mt-1 block break-all text-muted-foreground">{ledger[step.id]?.value}</small></span><span className="text-emerald-600">✓</span></li>)}</ol></details>

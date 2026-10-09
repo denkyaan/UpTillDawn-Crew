@@ -72,3 +72,19 @@ test('admin functional sandbox is isolated, supports required role modules and e
  assert.match(trainingLab,/detail\.id!==current\.id/,'out of order actions cannot count as completed')
   assert.doesNotMatch(manager,/fetch\(|supabase\.|createClient\(|\.rpc\(/,'training must not write to production')
 })
+
+
+test('functional sandbox controls take priority over generic duplicate exercises',async()=>{
+ const [lab,bots]=await Promise.all([
+  read('components/training/role-training-lab.tsx'),read('scripts/15-bot-browser-test.mjs')
+ ])
+ assert.match(lab,/data-training-functional-prompt/)
+ assert.match(lab,/!functionalControl&&<>/,'generic practice controls must be suppressed when real UI is usable')
+ assert.match(lab,/data-training-practical-op/)
+ assert.match(lab,/node\.getClientRects\(\)\.length>0/)
+ for(const id of ['events:admin:6','events:admin:12','events:admin:14','workplaces:admin:0','workplaces:admin:17','briefings:admin:0','operations:admin:6','operations:admin:7']){
+  assert.ok(manager.includes('data-training-practical-op="'+id+'"'),'missing actual sandbox button: '+id)
+  assert.ok(bots.includes("'"+id+"':"),'browser bot does not exercise real functional button: '+id)
+ }
+ assert.match(bots,/Real sandbox click did not persist the expected action/)
+})

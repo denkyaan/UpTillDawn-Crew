@@ -598,10 +598,10 @@ try {
             // A subset of required Admin steps is credited ONLY by clicking
             // the real functional training view, not its generic companion.
             const directAdminAction=tourRole==='admin'?({
-              events:{'events:admin:6':'publish-event'},
-              workplaces:{'workplaces:admin:0':'save-shift'},
+              events:{'events:admin:6':'publish-event','events:admin:12':'archive-event','events:admin:14':'restore-event'},
+              workplaces:{'workplaces:admin:0':'save-shift','workplaces:admin:17':'add-price'},
               briefings:{'briefings:admin:0':'save-briefing'},
-              operations:{'operations:admin:6':'approve-hours'},
+              operations:{'operations:admin:6':'approve-hours','operations:admin:7':'lock-hours'},
             })[chapter]?.[operationId]:null
             if(directAdminAction){
               const direct=page.locator('[data-training-admin-module="'+chapter+'"] [data-training-admin-action="'+directAdminAction+'"]')
@@ -627,7 +627,14 @@ try {
             }else throw new Error('Unknown practical action '+chapter+'/'+kind)
             if(!directAdminAction)await operation.locator('button[data-training-active-action]').last().click()
             await waitForPracticeRecorded(page,progressKey,chapter,operationId,exercise+1)
-            if(directAdminAction)console.log('PASS '+bot+' credited real admin control '+chapter+'/'+operationId)
+            if(directAdminAction){
+              const saved=await page.evaluate(({key,id})=>{
+                const record=JSON.parse(localStorage.getItem(key+':actions-v1')||'{}')[id]
+                return !!(record?.value&&record?.at&&record?.kind)
+              },{key:progressKey,id:operationId})
+              if(!saved)throw new Error('Real sandbox click did not persist the expected action: '+operationId)
+              console.log('PASS '+bot+' credited real admin control '+chapter+'/'+operationId)
+            }
           }
           // The admin curriculum must also operate its realistic management
           // controls. Completing isolated catalogue fields cannot substitute
