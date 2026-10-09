@@ -78,7 +78,7 @@ test('Stop Work occurs only after other chapters and before timesheet submission
   assert.equal(sheet.at(-4).kind,'toggle')
   assert.match(sheet.at(-4).title.en,/Stop work/)
   assert.match(sheet.at(-1).title.en,/Submit/)
-  const stop=sheet.at(-4).id,submit=sheet.at(-1)
+  const stop=sheet.at(-4).id,submit=sheet.at(-1).id
   assert.ok(trainingOperationError(role,idStep(role,'timesheet',submit),{}))
   assert.equal(trainingOperationError(role,idStep(role,'timesheet',submit),{[stop]:evidence()}),null)
   assert.equal(byDomain(role,{[stop]:evidence()},'timesheet').status,'active')
