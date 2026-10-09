@@ -260,9 +260,10 @@ export function TourControlCenter({active,userId,role,preferredWorkplace,mode="f
     const onTarget=(event:Event)=>{
       const detail=(event as CustomEvent<{target?:string}|string|undefined>).detail
       const target=typeof detail==="string"?detail:detail?.target
-      if(!target||!ACTION_TARGETS[current.key]?.includes(target))return
+      if(!target)return
       setActionFeedback(current.description[locale])
       window.setTimeout(()=>setActionFeedback(""),2600)
+      if(!ACTION_TARGETS[current.key]?.includes(target))return
       // Legacy sandbox buttons remain illustrative, but cannot unlock the
       // course until every required, independently recorded practice action
       // for this chapter has been completed by the trainee.
