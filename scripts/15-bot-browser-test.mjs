@@ -641,7 +641,7 @@ try {
               await button.waitFor({state:'visible',timeout:15000})
               if(!await button.isEnabled())throw new Error('Admin training action disabled: '+chapter+'/'+id)
               await button.click()
-              await manager.locator('[role="status"]').waitFor({state:'visible',timeout:10000})
+              await manager.locator('p[role="status"]').waitFor({state:'visible',timeout:10000})
             }
             if(chapter==='events'){
               await action('publish-event')
