@@ -44,6 +44,25 @@ test('tour controller recovers missing targets and never writes production data'
   }
 })
 
+test('trainee tab click saves chapter before route remount; mobile target stays visible',async()=>{
+ const [center,sidebar,mobile]=await Promise.all([
+  read('components/training/tour-control-center.tsx'),
+  read('components/layout/sidebar.tsx'),
+  read('components/layout/mobile-nav.tsx'),
+ ])
+ assert.match(center,/uptilldawn-training-tab-selected/)
+ assert.match(center,/pendingPathRef\.current=nextPath/)
+ assert.match(center,/write\(\{\.\.\.prior,activeKey:next\.key,completed:unique/)
+ assert.match(center,/isChapterPractised\(progressKey,role,current\.key\)/)
+ for(const source of [sidebar,mobile]){
+  assert.match(source,/uptilldawn-training-tab-selected/)
+  assert.match(source,/detail:\{key:/)
+ }
+ assert.match(mobile,/const guidedItem=tourPreview&&trainingNavTarget/)
+ assert.match(mobile,/fallbackItems\.slice\(0,2\),guidedItem/)
+ assert.doesNotMatch(mobile,/if\(next\)setExpanded\(true\)/)
+})
+
 test('driver training contains full event-driving-return workflow',async()=>{
   const operations=await read('components/training/sandbox-operations.tsx')
   for(const token of ['"driving"','"at_person"','"returning"','START DRIVING','STOP DRIVING','Backstage'])assert.ok(operations.includes(token),token)
