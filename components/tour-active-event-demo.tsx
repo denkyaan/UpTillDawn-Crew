@@ -4,6 +4,8 @@ import {usePathname} from "next/navigation"
 import {useEffect,useState} from "react"
 import {parseUiLocale,LANGUAGE_APPLIED_EVENT} from "@/lib/locale-preferences"
 import {useAuth,useDisplayName} from "@/lib/providers"
+import {tourProgressKey} from "@/lib/tour-training"
+import {readDemoScenario,type DemoScenario} from "@/lib/training-demo-scenario"
 
 type Role="employee"|"responsible_lead"|"admin"
 type Locale="nl"|"en"|"fr"|"de"
@@ -15,15 +17,25 @@ export function TourActiveEventDemo({role}:{role:Role}){
  const {profile}=useAuth()
  const displayName=useDisplayName()
  const [locale,setLocale]=useState<Locale>("nl")
+ const [scenario,setScenario]=useState<DemoScenario|null>(null)
+ useEffect(()=>{
+   const refresh=()=>{
+     const workplace=sessionStorage.getItem("uptilldawn-training-preferred-workplace")||""
+     if(profile?.id)setScenario(readDemoScenario(tourProgressKey(profile.id,role,workplace)))
+   }
+   const frame=requestAnimationFrame(refresh)
+   addEventListener("uptilldawn-training-demo-updated",refresh)
+   return()=>{cancelAnimationFrame(frame);removeEventListener("uptilldawn-training-demo-updated",refresh)}
+ },[profile?.id,role])
  const [operationStep,setOperationStep]=useState(0)
  useEffect(()=>{const on=(event:Event)=>{const next=parseUiLocale((event as CustomEvent<string>).detail);if(next)setLocale(next as Locale)};const initial=parseUiLocale(document.documentElement.lang);if(initial)queueMicrotask(()=>setLocale(initial as Locale));addEventListener(LANGUAGE_APPLIED_EVENT,on);return()=>removeEventListener(LANGUAGE_APPLIED_EVENT,on)},[])
  const heading=t(locale,"DEMO · ACTIEF EVENEMENT","DEMO · ACTIVE EVENT","DÉMO · ÉVÉNEMENT ACTIF","DEMO · AKTIVES EVENT")
- const event=t(locale,"Up Till Dawn — Demo Night","Up Till Dawn — Demo Night","Up Till Dawn — Demo Night","Up Till Dawn — Demo Night")
+ const event=scenario?.eventName||t(locale,"Up Till Dawn — Demo Night","Up Till Dawn — Demo Night","Up Till Dawn — Demo Night","Up Till Dawn — Demo Night")
  const workplace=role==="admin"
   ? t(locale,"Alle werkplekken","All workplaces","Tous les postes","Alle Arbeitsplätze")
   : role==="responsible_lead"
     ? t(locale,"Main Bar · verantwoordelijke","Main Bar · responsible lead","Bar principal · responsable","Hauptbar · verantwortlich")
-    : t(locale,"Main Bar","Main Bar","Bar principal","Hauptbar")
+    : scenario?.workplaceName||t(locale,"Main Bar","Main Bar","Bar principal","Hauptbar")
  const names=[displayName,...crewNames.filter(name=>name!==displayName)]
  const personLabel=profile?.full_name||displayName
  const badge=<span className="rounded-full border border-violet-500/40 bg-violet-500/10 px-2 py-1 text-[11px] font-black text-violet-500">{heading}</span>
