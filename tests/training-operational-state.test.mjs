@@ -27,6 +27,7 @@ const byDomain=(role,ledger,domain)=>trainingOperationalState(role,ledger).find(
 
 test('training status is derived from actions, not visiting demo tabs',()=>{
  const empty=trainingOperationalState('employee',{})
+ assert.equal(isChapterPractised('no-evidence','employee','briefings'),false)
  assert.ok(empty.length>=9)
  assert.equal(byDomain('employee',{},'briefing').status,'pending')
  assert.equal(byDomain('employee',{},'timesheet').status,'pending')
