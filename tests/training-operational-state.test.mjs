@@ -92,7 +92,7 @@ test('hands-on UI uses real simulated entities, instructions and domain state',(
   assert.ok(lab.includes(fragment),'missing feature '+fragment)
  }
  for(const value of ['Lina Peeters','Noah Jacobs','damaged','artist','events:admin:0','tasks','inventory','guestlist','Driver'])assert.ok(fields.includes(value),'missing semantic input '+value)
- assert.doesNotMatch(fields,/supabase\\.from\\(|createClient\\(|fetch\\(['"]\\/api/)
+ assert.doesNotMatch(fields,/createClient\(|fetch\(|supabase\.from\(|\.rpc\(/)
  assert.doesNotMatch(runtime,/createClient\(|fetch\(|supabase\.from\(|\.rpc\(/)
  assert.doesNotMatch(lab,/supabase\.from\(|createClient\(|fetch\(['"]\/api/)
 })
