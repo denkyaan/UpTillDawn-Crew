@@ -93,13 +93,13 @@ export function RoleTrainingLab({role,chapter,progressKey}:{role:TourRole;chapte
  const lastCompletion=useRef("")
  const container=useRef<HTMLElement|null>(null)
  const chapterData=TOUR_CHAPTERS.find(item=>item.key===chapter)
- const currentIndex=operations.findIndex(step=>!ledger[step.id]?.value)
+ const currentIndex=operations.findIndex(step=>!ledger[step.id]?.value||!ledger[step.id]?.at||ledger[step.id]?.kind!==step.kind)
  const index=currentIndex<0?operations.length:currentIndex
  const current=operations[index]
  const isOpened=opened&&openedFor===current?.id
  const scenario=demoScenarioFromLedger(ledger)
  const domainStates=trainingOperationalState(role,ledger)
- const complete=operations.length>0&&operations.every(step=>Boolean(ledger[step.id]?.value))
+ const complete=operations.length>0&&operations.every(step=>Boolean(ledger[step.id]?.value&&ledger[step.id]?.at&&ledger[step.id]?.kind===step.kind))
  const options=current?optionsFor(current):[]
  useEffect(()=>{const apply=()=>setLanguage(activeUiLocale());const frame=requestAnimationFrame(apply);addEventListener(LANGUAGE_APPLIED_EVENT,apply);return()=>{cancelAnimationFrame(frame);removeEventListener(LANGUAGE_APPLIED_EVENT,apply)}},[])
  useEffect(()=>{
