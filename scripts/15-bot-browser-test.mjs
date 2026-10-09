@@ -456,21 +456,37 @@ try {
         await page.evaluate(({tourRole,userId,progressKey})=>{
           localStorage.setItem(`uptilldawn-app-tour:${userId}:${tourRole}:v8`,'postponed')
           localStorage.removeItem(progressKey)
+          localStorage.removeItem(progressKey+':actions-v1')
           sessionStorage.setItem('uptilldawn-tour-active-v8',JSON.stringify({active:true,role:tourRole,mode:'full',workplace:''}))
           sessionStorage.removeItem('uptilldawn-training-preferred-workplace')
           sessionStorage.removeItem('uptilldawn-training-workflow-v3')
         },{tourRole,userId:profile.data.id,progressKey})
         await page.goto(`${baseUrl}${role==='admin'?'/admin':'/'}?tour=1`,{waitUntil:'networkidle',timeout:45000})
-        const primary=page.locator('[data-tour-demo="primary-action"]').first()
-        await primary.waitFor({state:'visible',timeout:30000})
-        const actualColor=await primary.evaluate(button=>getComputedStyle(button).backgroundColor)
-        if(!/rgb\(124,\s*58,\s*237\)/.test(actualColor))throw new Error(`required training action is not solid purple: ${actualColor}`)
+        const lab=page.locator('[data-training-lab]')
+        await lab.waitFor({state:'visible',timeout:30000})
+        // The training engine renders one actionable operation at a time;
+        // opening and acknowledging each item records separate evidence.
+        const total=Number(await lab.locator('progress').getAttribute('max'))
+        if(total<5)throw new Error('training chapter has too few exercises')
+        for(let exercise=0;exercise<total;exercise++){
+          const current=lab.locator('[data-training-active-action="true"]').first()
+          await current.waitFor({state:'visible',timeout:15000})
+          const actualColor=await current.evaluate(button=>getComputedStyle(button).backgroundColor)
+          if(!/rgb\\(124,\\s*58,\\s*237\\)/.test(actualColor))throw new Error(`required training action is not solid purple: ${actualColor}`)
+          await current.click()
+          const confirmed=lab.locator('[data-training-active-action="true"]').first()
+          await confirmed.waitFor({state:'visible',timeout:15000})
+          await confirmed.click()
+          await page.waitForFunction(({index})=>{
+            const root=document.querySelector('[data-training-lab]')
+            return Number(root?.querySelector('progress')?.value)>=index+1
+          },{index:exercise},{timeout:15000})
+        }
         const oldSpotlight=await page.evaluate(()=>[...document.querySelectorAll('div[aria-hidden].fixed')].some(node=>String(node.className).includes('z-[188]')))
         if(oldSpotlight)throw new Error('legacy fixed spotlight should not dim or overlay the training screen')
         const before=await page.evaluate(key=>JSON.parse(localStorage.getItem(key)||'null'),progressKey)
         if(!before?.activeKey)throw new Error('general tour did not initialize active progress')
-        await primary.evaluate(button=>button.click())
-        // Completing an action must never navigate on behalf of the trainee.
+        // Completing every required action must never navigate on behalf of the trainee.
         const availableTab=page.locator('a[data-upt-training-next-tab="true"]')
         await availableTab.first().waitFor({state:'attached',timeout:15000})
         const afterAction=await page.evaluate(key=>JSON.parse(localStorage.getItem(key)||'null'),progressKey)
