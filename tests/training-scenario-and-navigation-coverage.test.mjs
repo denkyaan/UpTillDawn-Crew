@@ -8,7 +8,7 @@ import {getTourChapters} from '../lib/tour-training.ts'
 const compile=path=>ts.transpileModule(readFileSync(path,'utf8'),{compilerOptions:{module:ts.ModuleKind.CommonJS,target:ts.ScriptTarget.ES2022}}).outputText
 const scenario={exports:{},require(){throw new Error('Scenario projection must not access external systems')}}
 vm.runInNewContext(compile('lib/training-demo-scenario.ts'),scenario)
-const {demoScenarioFromLedger,readDemoScenario}=scenario.exports
+const {demoScenarioFromLedger}=scenario.exports
 const evidence=value=>({value,at:'2026-10-09T00:00:00Z',kind:'form'})
 
 test('one fictional event flows into every subsequent training chapter',()=>{
