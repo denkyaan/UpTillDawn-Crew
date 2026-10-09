@@ -9,7 +9,7 @@ test('tour v8 has role, scenario, driver, progress and new-release coverage',asy
   assert.match(config,/TOUR_VERSION=8/)
   for(const role of ['employee','responsible_lead','admin'])assert.ok(config.includes('"'+role+'"'))
   for(const scenario of ['pre_event','live_event','break','post_event'])assert.ok(config.includes('"'+scenario+'"'))
-  for(const key of ['overview','events','workplaces','briefings','operations','driver','tasks','incidents','inventory','guestlist','sales','personnel','crew','chat','exports','platform','settings','timesheet'])assert.ok(config.includes('key:"'+key+'"'),key)
+  for(const key of ['overview','events','workplaces','briefings','operations','driver','tasks','incidents','inventory','guestlist','sales','personnel','crew','chat','exports','platform','settings','help','timesheet'])assert.ok(config.includes('key:"'+key+'"'),key)
   assert.match(config,/mobileSelector:string/)
   assert.match(config,/desktopSelector:string/)
   assert.match(config,/requires:"driver"/)
@@ -131,7 +131,7 @@ test('staff and responsible role training follows crew then chat then settings t
 test('all chapter titles and descriptions contain four nonempty translations',async()=>{
   const source=await read('lib/tour-training.ts')
   const chapters=[...source.matchAll(/\{key:"([^"]+)",route:"([^"]+)",roles:([^,]+),scenario:"([^"]+)",title:c\("([^"]+)","([^"]+)","([^"]+)","([^"]+)"\),description:c\("([^"]+)","([^"]+)","([^"]+)","([^"]+)"\)/g)]
-  assert.equal(chapters.length,18,'every training chapter must have a complete translated title and description')
+  assert.equal(chapters.length,19,'every training chapter must have a complete translated title and description')
   for(const chapter of chapters){
     for(const value of chapter.slice(5,13))assert.ok(value.trim().length>0,chapter[1]+' has an empty translation')
   }
