@@ -395,7 +395,7 @@ toggle|Beëindig verplichte pauze|End required break|Terminer la pause obligatoi
 inspect|Controleer pauzereminder|Review break reminder|Vérifier le rappel de pause|Pausenerinnerung prüfen
 inspect|Bekijk actieve ploeguren|Review active team hours|Voir les heures de l’équipe|Aktive Teamstunden ansehen
 message|Geef een uurcorrectie met reden op|Submit hours correction reason|Indiquer motif de correction|Stundenkorrektur begründen
-toggle|Stop je eigen werktimer|Stop your work timer|Arrêter votre chronomètre|Eigenen Arbeitstimer stoppen
+inspect|Controleer dat Stop Work pas in de eindfase mogelijk is|Review why Stop Work is locked until the final stage|Vérifier pourquoi Arrêter le travail reste verrouillé jusqu’à la fin|Prüfe warum Arbeitsende bis zum Abschluss gesperrt bleibt
 `,
 tasks:`
 form|Maak een taak voor je werkplek|Create task for your workplace|Créer tâche pour votre poste|Aufgabe für eigenen Arbeitsplatz erstellen
@@ -429,6 +429,7 @@ settings:`
 inspect|Controleer bevoegdheden van de verantwoordelijke|Review lead permissions|Vérifier les droits du responsable|Rechte der Verantwortlichen prüfen
 `,
 timesheet:`
+toggle|Stop je werk definitief na de rolmodules|Stop work after completing all role modules|Arrêter le travail après tous les modules du rôle|Arbeit nach allen Rollenmodulen beenden
 toggle|Controleer je eigen urenstaat|Review your timesheet|Vérifier votre feuille d’heures|Eigenen Stundenzettel prüfen
 message|Vraag een uurcorrectie aan|Request hours correction|Demander une correction d’heures|Stundenkorrektur beantragen
 toggle|Dien je eigen urenstaat in|Submit your timesheet|Soumettre votre feuille d’heures|Eigenen Stundenzettel einreichen
@@ -460,7 +461,7 @@ toggle|Start werk|Start work|Démarrer le travail|Arbeit starten
 toggle|Start pauze|Start break|Démarrer la pause|Pause starten
 inspect|Controleer pauzetimer en herinnering|Review break timer and reminder|Vérifier chrono et rappel de pause|Pausentimer und Erinnerung prüfen
 toggle|Stop pauze|End break|Terminer la pause|Pause beenden
-toggle|Stop werk|Stop work|Arrêter le travail|Arbeit beenden
+inspect|Controleer dat Stop Work pas na alle modules uitgevoerd wordt|Review that Stop Work follows all training modules|Vérifier que l’arrêt du travail suit tous les modules|Prüfe, dass Arbeitsende erst nach allen Modulen erfolgt
 `,
 tasks:`
 toggle|Start een toegewezen taak|Start assigned task|Démarrer tâche attribuée|Zugewiesene Aufgabe starten
@@ -478,6 +479,7 @@ crew:`
 inspect|Bekijk de contactgegevens van leidinggevende|Review lead contact information|Voir les coordonnées du responsable|Kontaktdaten des Verantwortlichen ansehen
 `,
 timesheet:`
+toggle|Stop werk na alle verplichte opleidingsmodules|Stop work after every mandatory training module|Arrêter le travail après tous les modules obligatoires|Arbeit nach allen verpflichtenden Trainingsmodulen beenden
 toggle|Controleer je werk- en pauzeuren|Review work and break hours|Vérifier les heures et les pauses|Arbeits- und Pausenzeiten prüfen
 message|Vraag een correctie aan|Request correction|Demander correction|Korrektur beantragen
 toggle|Dien de demo-urenstaat in|Submit demo timesheet|Soumettre la feuille d’heures démo|Demo-Stundenzettel einreichen
@@ -515,7 +517,7 @@ export function isChapterPractised(progressKey:string,role:TourRole,chapter:stri
   const required=getTrainingOperations(role,chapter)
   if(!required.length)return false
   const evidence=readPracticeLedger(progressKey)
-  return required.every(step=>Boolean(evidence[step.id]?.value&&evidence[step.id]?.at))
+  return required.every(step=>Boolean(evidence[step.id]?.value&&evidence[step.id]?.at&&evidence[step.id]?.kind===step.kind))
 }
 export function countRoleOperations(role:TourRole,chapters:readonly {key:string}[]){
   return chapters.reduce((sum,chapter)=>sum+getTrainingOperations(role,chapter.key).length,0)
