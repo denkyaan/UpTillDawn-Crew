@@ -88,6 +88,27 @@ export function RoleTrainingLab({role,chapter,progressKey}:{role:TourRole;chapte
   })
   return()=>cancelAnimationFrame(frame)
  },[progressKey,role,chapter])
+ // A trainee may operate the actual functional sandbox control rather
+ // than duplicate that click in the practice card. Credit only the CURRENT
+ // prescribed action when its operation type, payload and prerequisites match.
+ useEffect(()=>{
+  const onAction=(event:Event)=>{
+   const detail=(event as CustomEvent<{role?:TourRole;chapter?:string;id?:string;kind?:string;value?:string}>).detail
+   if(!hydrated||!current||detail?.role!==role||detail.chapter!==chapter||detail.id!==current.id||detail.kind!==current.kind)return
+   const value=detail.value?.trim()||""
+   if(!value||(current.kind==="inspect"&&value!=="reviewed")||(current.kind==="toggle"&&value!=="confirmed")||(current.kind==="form"&&!value.includes(" · "))||(current.kind==="message"&&value.length<5))return
+   const blocked=trainingOperationError(role,current,ledger)
+   if(blocked){setError(blocked[language]);return}
+   const next={...ledger,[current.id]:{value,kind:current.kind,at:new Date().toISOString()}}
+   localStorage.setItem(practiceDoneKey(progressKey),JSON.stringify(next))
+   recordDemoState(progressKey,current.id,value)
+   setOpened(false);setOpenedFor("");setDraftFor("");setTextValue("");setSelected("");setAcknowledged(false)
+   setFirstTime("");setSecondTime("");setFileName("");setReviewed(false);setError("")
+   setLedger(next)
+  }
+  addEventListener("uptilldawn-training-practical-action",onAction)
+  return()=>removeEventListener("uptilldawn-training-practical-action",onAction)
+ },[chapter,current,hydrated,language,ledger,progressKey,role])
  // Inputs are reset in the same event that submits a step. A deferred
  // requestAnimationFrame reset used to erase the next step's input when users
  // or concurrent browser bots interacted before the next paint.
