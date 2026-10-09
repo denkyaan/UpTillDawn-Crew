@@ -14,7 +14,7 @@ function harness({visible=true,locale='en',chapter='overview',startPath}={}){
   const slots=[],effects=[],listeners=new Map(),frames=new Map(),timers=new Map(),requests=[],routes=[],observers=[]
   let cursor=0,dirty=true,tree,nextId=1,pathname=startPath||(chapter==='settings'?'/settings':'/')
   const storage=()=>{const values=new Map();return {getItem:key=>values.get(key)??null,setItem:(key,value)=>values.set(key,String(value)),removeItem:key=>values.delete(key)}}
-  const localStorage=storage(),sessionStorage=storage()
+  const localStorage=storage(),sessionStorage=storage(),verified=new Set()
   const progressKey=training.tourProgressKey('test-user','employee')
   localStorage.setItem(progressKey,JSON.stringify({version:training.TOUR_VERSION,activeKey:chapter,completed:[],skipped:[],paused:false}))
   const same=(a,b)=>a&&b&&a.length===b.length&&a.every((value,i)=>Object.is(value,b[i]))
@@ -30,7 +30,7 @@ function harness({visible=true,locale='en',chapter='overview',startPath}={}){
   const dispatchEvent=event=>{for(const fn of [...(listeners.get(event.type)||[])])fn(event);return true}
   const rect={left:10,top:80,width:180,height:40}
   const element={matches:()=>false,querySelector:()=>null,closest:()=>null,scrollIntoView(){},getBoundingClientRect:()=>rect,getClientRects:()=>visible?[rect]:[]}
-  const context={exports:{},require(name){if(name==='react')return hooks;if(name==='react/jsx-runtime')return {jsx,jsxs:jsx,Fragment:'fragment'};if(name==='next/navigation')return {useRouter:()=>router,usePathname:()=>pathname};if(name==='@/lib/tour-training')return training;if(name==='@/lib/tour-panel-layout')return panelLayout;if(name==='@/lib/locale-preferences')return {activeUiLocale:()=>locale,LANGUAGE_APPLIED_EVENT:'language'};throw Error(name)},
+  const context={exports:{},require(name){if(name==='react')return hooks;if(name==='react/jsx-runtime')return {jsx,jsxs:jsx,Fragment:'fragment'};if(name==='react-dom')return {createPortal:()=>null};if(name==='@/components/training/role-training-lab')return {RoleTrainingLab:()=>null};if(name==='@/lib/training-exercise-catalog')return {isChapterPractised:(_key,_role,chapter)=>verified.has(chapter)};if(name==='next/navigation')return {useRouter:()=>router,usePathname:()=>pathname};if(name==='@/lib/tour-training')return training;if(name==='@/lib/tour-panel-layout')return panelLayout;if(name==='@/lib/locale-preferences')return {activeUiLocale:()=>locale,LANGUAGE_APPLIED_EVENT:'language'};throw Error(name)},
     localStorage,sessionStorage,location:{pathname,search:'?tour=1'},innerWidth:390,innerHeight:844,
     fetch:async(url,options)=>{requests.push({url,...options});return {ok:true}},
     document:{querySelector:()=>visible?element:null,querySelectorAll:()=>[],body:{dataset:{}}},
@@ -69,6 +69,7 @@ function harness({visible=true,locale='en',chapter='overview',startPath}={}){
     text:()=>text(tree),
     click(name){const button=this.button(name);assert.ok(button,`Missing button: ${name}`);button.props.onClick();flush()},
     emit(name,detail){dispatchEvent(new context.CustomEvent(name,{detail}));flush()},
+    completeChapter(chapter){verified.add(chapter);this.emit('uptilldawn-training-lab-completed',{role:'employee',chapter})},
     navigate(path){pathname=path;dirty=true;flush()},
     timeout(){const pending=[...timers.values()];timers.clear();pending.forEach(fn=>fn());flush()},
     reveal(){visible=true;for(const observer of observers)if(observer.connected)observer.fn();flush()},
@@ -115,8 +116,10 @@ test('completing an action waits for manual tab navigation',()=>{
   const app=harness()
   const priorRoutes=app.routes.length
   app.emit('uptilldawn-training-nav-target',{target:'events'})
-  assert.equal(app.routes.length,priorRoutes,'tour must not automatically navigate')
+  assert.equal(app.routes.length,priorRoutes,'legacy sandbox event cannot navigate')
   assert.equal(app.progress().activeKey,'overview')
+  app.completeChapter('overview')
+  assert.equal(app.routes.length,priorRoutes,'even verified exercises must not navigate on behalf of the user')
   app.navigate('/events')
   assert.equal(app.progress().activeKey,'events')
   assert.ok(app.progress().completed.includes('overview'))
