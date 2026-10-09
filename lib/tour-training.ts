@@ -94,7 +94,12 @@ export function getTourChapters(role:TourRole,options?:{driver?:boolean;entrance
   // the employee availability and work-clock sequence as their primary flow.
   if(role==="admin"){
     const order=["overview","personnel","crew","events","workplaces","briefings","tasks","inventory","guestlist","operations","incidents","sales","chat","exports","platform","settings","help","timesheet"]
-    return selected.sort((a,b)=>order.indexOf(a.key)-order.indexOf(b.key))
+    const adminModules=new Set(["events","workplaces","briefings","operations"])
+    return selected.map(chapter=>adminModules.has(chapter.key)?{
+      ...chapter,
+      mobileSelector:'[data-training-admin-module="'+chapter.key+'"]',
+      desktopSelector:'[data-training-admin-module="'+chapter.key+'"]',
+    }:chapter).sort((a,b)=>order.indexOf(a.key)-order.indexOf(b.key))
   }
   return selected
 }
