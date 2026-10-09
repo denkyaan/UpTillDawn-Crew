@@ -53,7 +53,13 @@ export function MobileBottomNav({
  useEffect(()=>{const on=(e:Event)=>{let target=(e as CustomEvent<{target?:string}>).detail?.target||null;if(document.body?.dataset.uptTrainingActive==="true"){try{target=JSON.parse(sessionStorage.getItem("uptilldawn-training-workflow-v3")||"{}").navTarget||target}catch{}}setTrainingNavTarget(target)};addEventListener("uptilldawn-training-nav-target",on);return()=>removeEventListener("uptilldawn-training-nav-target",on)},[])
  // The controller resolves the actual next chapter for this role, even when
  // the sandbox action was authored for a different chapter order.
- useEffect(()=>{const on=(e:Event)=>setTrainingNavTarget((e as CustomEvent<{target?:string}>).detail?.target||null);addEventListener("uptilldawn-training-next-tab",on);return()=>removeEventListener("uptilldawn-training-next-tab",on)},[])
+ useEffect(()=>{const on=(e:Event)=>{
+   const next=(e as CustomEvent<{target?:string}>).detail?.target||null
+   setTrainingNavTarget(next)
+   // Opening the tab menu is visual guidance, NOT automatic navigation.
+   // The trainee still has to press the purple target tab themselves.
+   if(next)setExpanded(true)
+  };addEventListener("uptilldawn-training-next-tab",on);return()=>removeEventListener("uptilldawn-training-next-tab",on)},[])
  useEffect(()=>{const apply=()=>setTrainingLocale(activeUiLocale());apply();addEventListener(LANGUAGE_APPLIED_EVENT,apply);return()=>removeEventListener(LANGUAGE_APPLIED_EVENT,apply)},[])
 
  // During the guided tour expose the complete role navigation regardless of
@@ -126,6 +132,7 @@ export function MobileBottomNav({
     aria-description={help.description}
     onClick={(event)=>{
       if(trainingLocked){event.preventDefault();return}
+      if(tourPreview)dispatchEvent(new CustomEvent("uptilldawn-training-tab-selected",{detail:{key:item.key}}))
       if(tourPreview&&trainingNavTarget===item.key){try{const s=JSON.parse(sessionStorage.getItem("uptilldawn-training-workflow-v3")||"{}");sessionStorage.setItem("uptilldawn-training-workflow-v3",JSON.stringify({...s,navTarget:null}))}catch{};setTrainingNavTarget(null)}
       setExpanded(false)
 
