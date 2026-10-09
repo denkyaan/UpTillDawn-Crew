@@ -57,6 +57,8 @@ test('a newly approved account completes and saves its profile before any role t
   assert.match(tour,/<TourControlCenter active=\{open&&profileGate==="ready"\}/)
   assert.match(tour,/profileGate==="ready"&&welcome/)
   assert.match(tour,/profileGate==="ready"&&choice/)
+  assert.match(tour,/if\(!user\|\|!role\|\|profileGate!=="ready"\)return/)
+  assert.match(tour,/\[profileGate,role,setPreview,user\]/)
   assert.ok(mandatory<postponed,'postponed preference cannot bypass mandatory profile completion')
   assert.ok(mandatory<chooseChapter,'mandatory profile completion precedes any chapter offer')
   assert.match(tour,/router\.replace\("\/settings\?complete-profile=1"\)/)
