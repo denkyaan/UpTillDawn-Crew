@@ -1,3 +1,4 @@
+import { SandboxAdminManager } from '@/components/training/sandbox-admin-manager'
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase/crew-server'
 import { getCurrentUser } from '@/lib/actions/auth'
@@ -15,7 +16,7 @@ export default async function Page({searchParams}:{searchParams?:Promise<{event?
   const current=await getCurrentUser()
   if(!current)redirect('/login')
 
-  if(params.tour==='1')return <SandboxOperations userName={current.full_name||'Crew'} role={current.role}/>
+  if(params.tour==='1')return current.role==='admin'?<SandboxAdminManager module="operations"/>:<SandboxOperations userName={current.full_name||'Crew'} role={current.role}/>
 
   const role=current.role
   const isAdmin=role==='admin'
