@@ -32,6 +32,16 @@ const EXAMPLES:Record<string,TourCopy>={
 function optionsFor(step:PracticeOperation):{value:string;label:TourCopy}[]{
  const name=step.title.nl.toLowerCase()
  const item=(value:string,nl:string,en:string,fr:string,de:string)=>({value,label:{nl,en,fr,de}})
+ // A role operation must choose the entity it describes, not a generic workplace.
+ const people=[item("lina","Lina Peeters","Lina Peeters","Lina Peeters","Lina Peeters"),item("noah","Noah Jacobs","Noah Jacobs","Noah Jacobs","Noah Jacobs"),item("mila","Mila Vermeulen","Mila Vermeulen","Mila Vermeulen","Mila Vermeulen")]
+ if(["workplaces:admin:2","workplaces:admin:4","workplaces:admin:5","workplaces:admin:8","workplaces:responsible_lead:1","tasks:admin:3","tasks:responsible_lead:2","chat:shared:4","chat:admin:1"].includes(step.id))return people
+ if(["guestlist:shared:2","guestlist:admin:2"].includes(step.id))return [item("guest","Gast","Guest","Invité","Gast"),item("artist","Artiest","Artist","Artiste","Künstler")]
+ if(["inventory:shared:4","inventory:responsible_lead:1"].includes(step.id))return [item("good","In orde","Good","En bon état","In Ordnung"),item("missing","Ontbreekt","Missing","Manquant","Fehlt"),item("damaged","Beschadigd","Damaged","Endommagé","Beschädigt")]
+ if(step.id==="tasks:responsible_lead:3")return [item("normal","Normaal","Normal","Normal","Normal"),item("high","Hoog","High","Élevée","Hoch"),item("urgent","Dringend","Urgente","Urgente","Dringend")]
+ if(["operations:admin:3","timesheet:admin:1"].includes(step.id))return [item("noah-timesheet","Noah Jacobs · urenstaat","Noah Jacobs · timesheet","Noah Jacobs · feuille d’heures","Noah Jacobs · Stundenzettel"),item("lina-timesheet","Lina Peeters · urenstaat","Lina Peeters · timesheet","Lina Peeters · feuille d’heures","Lina Peeters · Stundenzettel")]
+ if(["events:shared:3","events:shared:4","events:shared:5"].includes(step.id))return [item("yes","IK KAN","I CAN","JE PEUX","ICH KANN"),item("no","IK KAN NIET","I CANNOT","JE NE PEUX PAS","ICH KANN NICHT")]
+ if(step.id==="events:admin:5")return [item("scheduled","Gepland","Scheduled","Prévu","Geplant"),item("active","Actief","Active","Actif","Aktiv"),item("closed","Afgesloten","Closed","Clôturé","Abgeschlossen")]
+ if(step.id==="operations:admin:10")return [item("daily","Dagelijks","Daily","Journalier","Täglich"),item("weekly","Wekelijks","Weekly","Hebdomadaire","Wöchentlich")]
  if(/taal/.test(name))return [item("nl","Nederlands","Dutch","Néerlandais","Niederländisch"),item("fr","Frans","French","Français","Französisch"),item("en","Engels","English","Anglais","Englisch"),item("de","Duits","German","Allemand","Deutsch")]
  if(/rol/.test(name))return [item("employee","Personeel","Staff","Personnel","Personal"),item("responsible_lead","Verantwoordelijke","Responsible lead","Responsable","Verantwortlich"),item("admin","Admin","Admin","Admin","Admin")]
  if(/urgentie/.test(name))return [item("normal","Normaal","Normal","Normal","Normal"),item("urgent","Dringend","Urgent","Urgent","Dringend"),item("critical","Kritiek","Critical","Critique","Kritisch")]
