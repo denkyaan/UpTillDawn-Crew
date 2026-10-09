@@ -4,6 +4,7 @@ import {useEffect,useMemo,useRef,useState} from "react"
 import {activeUiLocale,LANGUAGE_APPLIED_EVENT,type SupportedUiLocale} from "@/lib/locale-preferences"
 import {getTrainingOperations,practiceDoneKey,readPracticeLedger,isChapterPractised,type PracticeOperation,type PracticeLedger} from "@/lib/training-exercise-catalog"
 import {TOUR_CHAPTERS,type TourRole,type TourCopy} from "@/lib/tour-training"
+import {demoScenarioFromLedger} from "@/lib/training-demo-scenario"
 
 const c=(l:SupportedUiLocale,nl:string,en:string,fr:string,de:string)=>({nl,en,fr,de}[l])
 const EXAMPLES:Record<string,TourCopy>={
@@ -72,6 +73,7 @@ export function RoleTrainingLab({role,chapter,progressKey}:{role:TourRole;chapte
  const index=currentIndex<0?operations.length:currentIndex
  const current=operations[index]
  const isOpened=opened&&openedFor===current?.id
+ const scenario=demoScenarioFromLedger(ledger)
  const complete=operations.length>0&&operations.every(step=>Boolean(ledger[step.id]?.value))
  const options=current?optionsFor(current):[]
  useEffect(()=>{const apply=()=>setLanguage(activeUiLocale());const frame=requestAnimationFrame(apply);addEventListener(LANGUAGE_APPLIED_EVENT,apply);return()=>{cancelAnimationFrame(frame);removeEventListener(LANGUAGE_APPLIED_EVENT,apply)}},[])
@@ -158,18 +160,18 @@ export function RoleTrainingLab({role,chapter,progressKey}:{role:TourRole;chapte
   <section data-training-demo-state className="mt-4 grid gap-2 sm:grid-cols-2 lg:grid-cols-3" aria-label={c(language,"Actuele demogegevens","Current demo state","Données démo actuelles","Aktuelle Demodaten")}>
    <article className="rounded-lg border p-3 text-sm">
     <p className="text-xs font-bold text-muted-foreground">{c(language,"Evenement","Event","Événement","Event")}</p>
-    <p className="mt-1 font-bold">{ledger["events:admin:0"]?.value?.split(" · ")[0]||c(language,"UpTillDawn Trainingsavond","UpTillDawn Training Night","Soirée d’entraînement UpTillDawn","UpTillDawn Trainingsabend")}</p>
-    <p className="text-xs text-muted-foreground">{c(language,"Maximale crew","Maximum crew","Équipe maximale","Maximale Crew")}: {ledger["events:admin:3"]?.value||"20"}</p>
+    <p className="mt-1 font-bold">{scenario.eventName}</p>
+    <p className="text-xs text-muted-foreground">{c(language,"Maximale crew","Maximum crew","Équipe maximale","Maximale Crew")}: {scenario.crewLimit}</p>
    </article>
    <article className="rounded-lg border p-3 text-sm">
     <p className="text-xs font-bold text-muted-foreground">{c(language,"Werkplek en shift","Workplace and shift","Poste et shift","Arbeitsplatz und Schicht")}</p>
-    <p className="mt-1 font-bold">{ledger["workplaces:admin:0"]?.value?.split(" · ")[0]||"Main Bar"}</p>
-    <p className="text-xs text-muted-foreground">{ledger["workplaces:admin:3"]?.value||"20:00 → 04:00"} · Lina Peeters</p>
+    <p className="mt-1 font-bold">{scenario.workplaceName}</p>
+    <p className="text-xs text-muted-foreground">{scenario.shiftTime} · Lina Peeters</p>
    </article>
    <article className="rounded-lg border p-3 text-sm">
     <p className="text-xs font-bold text-muted-foreground">{c(language,"Briefing en taak","Briefing and task","Briefing et tâche","Briefing und Aufgabe")}</p>
-    <p className="mt-1 font-bold">{ledger["briefings:admin:0"]?.value?.split(" · ")[0]||c(language,"Main Bar-briefing","Main Bar briefing","Briefing Bar principal","Hauptbar-Briefing")}</p>
-    <p className="text-xs text-muted-foreground">{ledger["tasks:admin:0"]?.value?.split(" · ")[0]||c(language,"Koeling aanvullen","Restock cooler","Réapprovisionner le frigo","Kühlung auffüllen")}</p>
+    <p className="mt-1 font-bold">{scenario.briefingName}</p>
+    <p className="text-xs text-muted-foreground">{scenario.taskName}</p>
    </article>
   </section>
   {current?<div data-training-kind={current.kind} className="mt-5 space-y-4 rounded-xl border p-4">
