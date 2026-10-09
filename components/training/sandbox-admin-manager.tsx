@@ -13,14 +13,14 @@ const names:Record<Module,string>={events:"events",workplaces:"workplaces",brief
 export function SandboxAdminManager({module}:{module:Module}){
  const {profile}=useAuth()
  const [l,setL]=useState<SupportedUiLocale>("nl")
- const [s,setS]=useState<State>(d)
+ const [s,setS]=useState<State>(()=>module==="briefings"?{...d,published:true}:d)
  const [demo,setDemo]=useState<DemoScenario|null>(null)
  const [notice,setNotice]=useState("")
  const [opened,setOpened]=useState(false)
  const [log,setLog]=useState<string[]>([])
  const key="uptilldawn-admin-training-"+names[module]+":v1"
  useEffect(()=>{const run=()=>setL(activeUiLocale());run();addEventListener(LANGUAGE_APPLIED_EVENT,run);return()=>removeEventListener(LANGUAGE_APPLIED_EVENT,run)},[])
- useEffect(()=>{const frame=requestAnimationFrame(()=>{try{const raw=JSON.parse(sessionStorage.getItem(key)||"null");if(raw&&typeof raw==="object")setS({...d,...raw})}catch{} });return()=>cancelAnimationFrame(frame)},[key])
+ useEffect(()=>{const frame=requestAnimationFrame(()=>{try{const raw=JSON.parse(sessionStorage.getItem(key)||"null");if(raw&&typeof raw==="object")setS({...d,...(module==="briefings"?{published:true}:{}),...raw})}catch{} });return()=>cancelAnimationFrame(frame)},[key])
  useEffect(()=>{const run=()=>{if(profile?.id)setDemo(readDemoScenario(tourProgressKey(profile.id,"admin","")))};const frame=requestAnimationFrame(run);addEventListener("uptilldawn-training-demo-updated",run);return()=>{cancelAnimationFrame(frame);removeEventListener("uptilldawn-training-demo-updated",run)}},[profile?.id])
  const set=<K extends keyof State>(name:K,value:State[K])=>{setS(old=>{const next={...old,[name]:value};sessionStorage.setItem(key,JSON.stringify(next));return next});setNotice("")}
  const act=(label:string,update:Partial<State>={})=>{setS(old=>{const next={...old,...update};sessionStorage.setItem(key,JSON.stringify(next));return next});setLog(old=>[label,...old].slice(0,10));setNotice(c(l,"Demoactie uitgevoerd, er zijn geen productiegegevens gewijzigd.","Demo action completed; no production data changed.","Action démo effectuée, aucune donnée de production modifiée.","Demoaktion durchgeführt, keine Produktionsdaten verändert."))}
