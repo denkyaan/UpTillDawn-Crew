@@ -35,7 +35,7 @@ test('account and permissions role curriculum counts have real controls',()=>{
 test('people bot performs the real role-specific UI and verifies its audit trail',()=>{
  const bot=read('scripts/15-bot-browser-test.mjs')
  assert.match(bot,/const peopleReal=\['crew','personnel'\]\.includes\(chapter\)/)
- assert.match(bot,/const requiredReal=chatReal\|\|peopleReal\|\|systemReal\|\|commonReal\.has\(operationId\)/)
+ assert.match(bot,/const requiredReal=chatReal\|\|peopleReal\|\|systemReal\|\|helpReal\|\|commonReal\.has\(operationId\)/)
  for(const marker of ['data-demo-people-search','data-demo-people-select','data-demo-people-message','data-demo-people-confirm']){
   assert.ok(bot.includes(marker),'bot must interact with '+marker)
  }
