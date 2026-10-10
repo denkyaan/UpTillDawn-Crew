@@ -642,7 +642,8 @@ try {
             const chatReal=chapter==='chat'&&operationId.startsWith('chat:')
             const peopleReal=['crew','personnel'].includes(chapter)&&operationId.startsWith(chapter+':')
             const systemReal=['exports','platform','settings'].includes(chapter)&&operationId.startsWith(chapter+':')
-            const requiredReal=chatReal||peopleReal||systemReal||commonReal.has(operationId)
+            const helpReal=chapter==='help'&&operationId.startsWith('help:shared:')
+            const requiredReal=chatReal||peopleReal||systemReal||helpReal||commonReal.has(operationId)
               ||(tourRole==='admin'?adminReal:crewReal).has(operationId)
             // Exercise the actual conversation composer rather than an
             // unrelated generic practice form. The simulated conversation is
@@ -693,6 +694,12 @@ try {
                 await system.locator('[data-demo-system-to]').fill('2026-10-11T04:00')
               }
             }
+            if(helpReal){
+              const help=page.locator('[data-training-help="true"]')
+              await help.waitFor({state:'visible',timeout:15000})
+              if(kind==='write')await help.locator('[data-demo-help-search]').fill('briefing')
+              else await help.locator('[data-demo-help-open]').click()
+            }
             if(requiredReal)await real.waitFor({state:'visible',timeout:15000})
             const usingReal=requiredReal||(await real.count())>0
             if(usingReal){
@@ -729,6 +736,12 @@ try {
               if(!saved)throw new Error('Real sandbox click did not persist the expected action: '+operationId)
               console.log('PASS '+bot+' credited real admin control '+chapter+'/'+operationId)
             }
+          }
+          if(chapter==='help'){
+            const reviewed=await page.evaluate(role=>JSON.parse(sessionStorage.getItem('uptilldawn-help-training-v1:'+role)||'null'),tourRole)
+            if(!reviewed||reviewed.read?.length!==total||!reviewed.search?.toLowerCase().includes('briefing'))
+              throw new Error('Help curriculum did not open every real guide article and run a search: '+JSON.stringify(reviewed))
+            console.log('PASS '+bot+' complete contextual Help guide and search: '+reviewed.read.length+' actions')
           }
           if(['exports','platform','settings'].includes(chapter)){
             const snapshot=await page.evaluate(({role,chapter})=>{
