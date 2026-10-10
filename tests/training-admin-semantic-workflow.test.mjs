@@ -88,3 +88,22 @@ test('functional sandbox controls take priority over generic duplicate exercises
  }
  assert.match(bots,/Real sandbox click did not persist the expected action/)
 })
+
+test('staff portal actions use employee training role so opening briefings and starting work receive credit',async()=>{
+ const [briefings,operations,briefingPage,operationsPage,seed]=await Promise.all([
+  read('components/training/sandbox-briefings.tsx'),
+  read('components/training/sandbox-operations.tsx'),
+  read('app/(app)/briefings/page.tsx'),
+  read('app/(app)/operations/page.tsx'),
+  read('scripts/seed-15-bot-users.mjs')
+ ])
+ assert.match(seed,/staff:\s*'staff'/,'fixture must preserve the real database role')
+ assert.match(briefingPage,/SandboxBriefings role=\{user\.role\}/)
+ assert.match(operationsPage,/SandboxOperations userName=/)
+ for(const source of [briefings,operations]){
+  assert.match(source,/role==="staff"\?"employee":role/,'staff role must normalize before emitting proof')
+  assert.match(source,/detail:\{role:trainingRole,chapter:/,'training event must use canonical role')
+ }
+ assert.match(briefings,/credit\("briefings:shared:0","inspect"\)/)
+ assert.match(operations,/credit\(role==="responsible_lead"\?"operations:responsible_lead:0":"operations:employee:0"\)/)
+})

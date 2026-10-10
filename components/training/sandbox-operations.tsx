@@ -10,7 +10,9 @@ export function SandboxOperations({userName,role}:{userName:string;role:string})
  const isDriver=/driver/i.test(preferred)
  const [locale,setLocale]=useState<Locale>("nl"),[phase,setPhaseState]=useState<Phase>("assigned"),[seconds,setSeconds]=useState(0),[driveSeconds,setDriveSeconds]=useState(0)
  const setPhase=(next:Phase)=>{setPhaseState(next);const s=initial();sessionStorage.setItem(KEY,JSON.stringify({...s,operationPhase:next}))}
- const credit=(id:string)=>dispatchEvent(new CustomEvent("uptilldawn-training-practical-action",{detail:{role,chapter:"operations",id,kind:"toggle",value:"confirmed"}}))
+ // Profile roles: staff/responsible_lead. Training roles: employee/responsible_lead.
+ const trainingRole=role==="staff"?"employee":role
+ const credit=(id:string)=>dispatchEvent(new CustomEvent("uptilldawn-training-practical-action",{detail:{role:trainingRole,chapter:"operations",id,kind:"toggle",value:"confirmed"}}))
  const nav=(key:string)=>{const s=initial();sessionStorage.setItem(KEY,JSON.stringify({...s,navTarget:key}));dispatchEvent(new CustomEvent("uptilldawn-training-nav-target",{detail:{target:key}}))}
  useEffect(()=>{const on=()=>setLocale(activeUiLocale() as Locale);on();addEventListener(LANGUAGE_APPLIED_EVENT,on);return()=>removeEventListener(LANGUAGE_APPLIED_EVENT,on)},[])
  useEffect(()=>{const frame=requestAnimationFrame(()=>{setPreferred(sessionStorage.getItem("uptilldawn-training-preferred-workplace")||"Bar/Toog");const s=initial();const saved=s.operationPhase as Phase|undefined;setPhaseState(saved&&saved!=="working"?saved:s.taskDone?"task":saved||"assigned")});return()=>cancelAnimationFrame(frame)},[])

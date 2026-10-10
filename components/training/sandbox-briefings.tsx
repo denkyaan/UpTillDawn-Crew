@@ -9,7 +9,10 @@ export function SandboxBriefings({role="employee"}:{role?:string}){
  const [opened,setOpened]=useState(false)
  const [read,setRead]=useState(false)
  useEffect(()=>{const apply=()=>setL(activeUiLocale());apply();addEventListener(LANGUAGE_APPLIED_EVENT,apply);return()=>removeEventListener(LANGUAGE_APPLIED_EVENT,apply)},[])
- const credit=(id:string,kind:"inspect"|"toggle")=>dispatchEvent(new CustomEvent("uptilldawn-training-practical-action",{detail:{role,chapter:"briefings",id,kind,value:kind==="inspect"?"reviewed":"confirmed"}}))
+ // The database calls this portal "staff", while the role-training catalog calls it "employee".
+ // Emit the canonical training role so the active lesson credits actual clicks.
+ const trainingRole=role==="staff"?"employee":role
+ const credit=(id:string,kind:"inspect"|"toggle")=>dispatchEvent(new CustomEvent("uptilldawn-training-practical-action",{detail:{role:trainingRole,chapter:"briefings",id,kind,value:kind==="inspect"?"reviewed":"confirmed"}}))
  const acknowledge=()=>{credit("briefings:shared:5","toggle");let s={};try{s=JSON.parse(sessionStorage.getItem(KEY)||"{}")}catch{};sessionStorage.setItem(KEY,JSON.stringify({...s,briefingRead:true,navTarget:"operations"}));setRead(true);dispatchEvent(new CustomEvent("uptilldawn-training-nav-target",{detail:{target:"operations"}}))}
  return <main data-tour-demo="training-screen" data-training-briefings="true" className="space-y-5 p-4 md:p-8">
   <div><h1 className="text-3xl font-black">{t(l,"Briefing & checklists","Briefing & checklists","Briefing & checklists","Briefing & Checklisten")}</h1><p className="text-sm text-muted-foreground">{t(l,"Lees de briefing voor je toegewezen shift en bevestig dat je de instructies hebt gelezen.","Read the briefing for your assigned shift and confirm that you have read the instructions.","Lisez le briefing de votre shift attribué et confirmez que vous avez lu les instructions.","Lies das Briefing für deine zugewiesene Schicht und bestätige, dass du die Anweisungen gelesen hast.")}</p></div>
