@@ -62,3 +62,18 @@ test('15 authenticated bots use all required real system controls and assert per
  assert.match(bot,/chapter==='platform'&&\(!snapshot\.automation/)
  assert.match(bot,/chapter==='settings'&&\(!snapshot\.profile/)
 })
+
+test('export option visibility is tied to the semantic step id rather than a transient array index',async()=>{
+ const view=await read('components/training/sandbox-system-training.tsx')
+ const bot=await read('scripts/15-bot-browser-test.mjs')
+ assert.match(view,/current\?\.id==="exports:shared:0"/)
+ assert.match(view,/current\?\.id==="exports:shared:3"/)
+ assert.match(view,/current\?\.id==="platform:shared:3"/)
+ assert.match(view,/current\?\.id==="settings:shared:2"/)
+ assert.match(bot,/'exports:shared:0':'training-event'/)
+ assert.match(bot,/'exports:shared:3':'xlsx'/)
+ assert.match(bot,/\.some\(option=>option\.value===chosen\)/)
+ assert.match(bot,/Export\/platform\/settings selection mismatch/)
+ assert.match(bot,/sameTargetInterrupted/)
+ assert.match(bot,/await page\.waitForURL\(url,\{waitUntil:'domcontentloaded',timeout:15000\}\)/)
+})

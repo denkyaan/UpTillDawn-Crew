@@ -101,6 +101,12 @@ async function gotoWithTransientRetry(page, url, options={}) {
     }catch(error){
       lastError=error
       const message=error instanceof Error?error.message:String(error)
+      const sameTargetInterrupted=/interrupted by another navigation to/i.test(message)
+        &&message.includes('to "'+url+'"')
+      if(sameTargetInterrupted){
+        await page.waitForURL(url,{waitUntil:'domcontentloaded',timeout:15000})
+        return
+      }
       if(!/ERR_ABORTED|Navigation interrupted|frame was detached|Target page, context or browser has been closed/i.test(message)||attempt===3)throw error
       await page.waitForTimeout(250*attempt)
     }
@@ -675,9 +681,31 @@ try {
               await system.waitFor({state:'visible',timeout:15000})
               await system.locator('[data-demo-system-operation="'+operationId+'"]').waitFor({state:'visible',timeout:15000})
               if(kind==='select'){
-                const chosen=chapter==='exports'?(operationId==='exports:shared:0'?'training-event':'xlsx')
-                  :chapter==='platform'?'shift-confirmed':'en'
-                await system.locator('[data-demo-system-select]').selectOption(chosen)
+                const choiceByOperation={
+                  'exports:shared:0':'training-event',
+                  'exports:shared:3':'xlsx',
+                  'platform:shared:3':'shift-confirmed',
+                  'settings:shared:2':'en',
+                }
+                const chosen=choiceByOperation[operationId]
+                if(!chosen)throw new Error('No semantic sandbox selection configured for '+operationId)
+                const input=system.locator('[data-demo-system-operation="'+operationId+'"] [data-demo-system-select]')
+                try{
+                  await page.waitForFunction(({chapter,operationId,chosen})=>{
+                    const container=document.querySelector('[data-training-system="'+chapter+'"]')
+                    const operation=container?.querySelector('[data-demo-system-operation="'+operationId+'"]')
+                    const select=operation?.querySelector('[data-demo-system-select]')
+                    return select && [...select.options].some(option=>option.value===chosen)
+                  },{chapter,operationId,chosen},{timeout:12000})
+                }catch(error){
+                  const snapshot=await system.evaluate(root=>({
+                    active:root.querySelector('[data-demo-system-operation]')?.getAttribute('data-demo-system-operation'),
+                    options:[...root.querySelectorAll('[data-demo-system-select] option')].map(option=>option.value),
+                    lab:document.querySelector('[data-training-lab] [data-training-operation]')?.getAttribute('data-training-operation')
+                  }))
+                  throw new Error('Export/platform/settings selection mismatch: '+JSON.stringify({chapter,operationId,chosen,snapshot}),{cause:error})
+                }
+                await input.selectOption(chosen)
               }
               if(kind==='form'){
                 await system.locator('[data-demo-system-name]').fill(
