@@ -603,6 +603,18 @@ try {
               briefings:{'briefings:admin:0':'save-briefing'},
               operations:{'operations:admin:6':'approve-hours','operations:admin:7':'lock-hours'},
             })[chapter]?.[operationId]:null
+            // A timesheet must be rejected with a reason while still unlocked.
+            // The exercise approves and locks it later; a late rejection is invalid.
+            if(tourRole==='admin'&&chapter==='operations'&&operationId==='operations:admin:6'){
+              const manager=page.locator('[data-training-admin-module="operations"]')
+              await manager.locator('input[type="text"]').last().fill('Gecorrigeerd wegens gecontroleerde badge-informatie')
+              const reject=manager.locator('[data-training-admin-action="reject-hours"]')
+              if(!await reject.isEnabled())throw new Error('Unlocked timesheet rejection disabled despite valid reason')
+              await reject.click()
+              await manager.locator('p[role="status"]').waitFor({state:'visible',timeout:10000})
+              const state=await page.evaluate(()=>JSON.parse(sessionStorage.getItem('uptilldawn-admin-training-operations:v1')||'null'))
+              if(!state?.rejected||state.locked||state.reason?.length<5)throw new Error('Rejection did not persist before timesheet approval')
+            }
             const real=page.locator('[data-training-practical-op="'+operationId+'"]:visible:not([disabled])').first()
             const usingReal=(await real.count())>0
             if(usingReal){
@@ -668,11 +680,12 @@ try {
               await action('ack-briefing')
               await page.waitForFunction(()=>document.querySelector('[data-training-admin-module="briefings"]')?.textContent?.includes('4/4'),undefined,{timeout:10000})
             }else if(chapter==='operations'){
-              await manager.locator('input[type="text"]').last().fill('Gecorrigeerd wegens gecontroleerde badge-informatie')
-              await action('reject-hours')
-              await action('approve-hours')
-              await action('lock-hours')
-              if(await manager.locator('[data-training-admin-action="approve-hours"]').isEnabled())throw new Error('Locked admin timesheet can still be edited')
+              // The curriculum already rejected, approved and locked this demo
+              // timesheet in order. Verify its final immutable state.
+              const state=await page.evaluate(()=>JSON.parse(sessionStorage.getItem('uptilldawn-admin-training-operations:v1')||'null'))
+              if(!state?.locked||!state.approved||state.rejected||state.reason?.trim().length<5)throw new Error('Admin reject/approve/lock lifecycle not persisted')
+              if(await manager.locator('[data-training-admin-action="approve-hours"]').isEnabled())throw new Error('Locked admin timesheet can still be approved')
+              if(await manager.locator('[data-training-admin-action="reject-hours"]').isEnabled())throw new Error('Locked admin timesheet can still be rejected')
             }
             console.log('PASS '+bot+' functional admin '+chapter+' buttons')
           }
