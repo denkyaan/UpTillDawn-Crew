@@ -39,7 +39,11 @@ test('chat simulation retains private messages after removing conversation; no f
 test('browser bots must fill and click real contextual chat steps and check persistent evidence',()=>{
  const bot=read('scripts/15-bot-browser-test.mjs')
  assert.match(bot,/const chatReal=chapter==='chat'&&operationId\.startsWith\('chat:'\)/)
- assert.match(bot,/const requiredReal=chatReal\|\|peopleReal\|\|systemReal\|\|helpReal\|\|commonReal\.has\(operationId\)/)
+ assert.match(bot,/const requiredReal=chatReal\b/,'chat controls must be mandatory')
+ assert.match(bot,/\|\|peopleReal\b/,'crew controls must be mandatory')
+ assert.match(bot,/\|\|systemReal\b/,'system controls must be mandatory')
+ assert.match(bot,/\|\|helpReal\b/,'Help controls must be mandatory')
+ assert.match(bot,/\|\|lifecycleReal\b/,'Driver and timesheet controls must be mandatory')
  assert.match(bot,/data-demo-chat-search/)
  assert.match(bot,/data-demo-chat-choice/)
  assert.match(bot,/data-demo-chat-composer/)
