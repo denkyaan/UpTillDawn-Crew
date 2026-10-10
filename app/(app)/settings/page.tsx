@@ -4,7 +4,7 @@ import { ProfileForm } from '@/components/crew/profile-form'
 import { LanguageSwitcher } from '@/components/language-switcher'
 import { getCurrentUser } from '@/lib/actions/auth'
 import { RestartRoleTourButton } from '@/components/role-app-tour'
-import { SandboxRoleModule,type TrainingRole } from '@/components/training/sandbox-role-module'
+import { SandboxSystemTraining } from '@/components/training/sandbox-system-training'
 
 export const dynamic='force-dynamic'
 
@@ -15,7 +15,7 @@ export default async function Page({searchParams}:{searchParams?:Promise<{tour?:
   const s=await createClient()
   const [{data:{user}},current]=await Promise.all([s.auth.getUser(),getCurrentUser()])
   if(!user)return null
-  if(params.tour==='1'&&current)return <SandboxRoleModule role={current.role as TrainingRole} module="settings"/>
+  if(params.tour==='1'&&current)return <SandboxSystemTraining role={current.role} module="settings"/>
 
   const [{data,error},{data:preference},{data:workplaceOptions}]=await Promise.all([
     s.rpc('upt_own_profile_details'),

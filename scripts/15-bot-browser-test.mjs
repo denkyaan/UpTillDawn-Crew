@@ -641,7 +641,8 @@ try {
             ])
             const chatReal=chapter==='chat'&&operationId.startsWith('chat:')
             const peopleReal=['crew','personnel'].includes(chapter)&&operationId.startsWith(chapter+':')
-            const requiredReal=chatReal||peopleReal||commonReal.has(operationId)
+            const systemReal=['exports','platform','settings'].includes(chapter)&&operationId.startsWith(chapter+':')
+            const requiredReal=chatReal||peopleReal||systemReal||commonReal.has(operationId)
               ||(tourRole==='admin'?adminReal:crewReal).has(operationId)
             // Exercise the actual conversation composer rather than an
             // unrelated generic practice form. The simulated conversation is
@@ -666,6 +667,31 @@ try {
               if(kind==='select')await people.locator('[data-demo-people-select]').selectOption(operationId==='crew:admin:3'?'Tokens':'employee')
               if(kind==='message')await people.locator('[data-demo-people-message]').fill('Fictional personnel training message')
               if(kind==='delete')await people.locator('[data-demo-people-confirm]').fill('DEMO')
+            }
+            if(systemReal){
+              const system=page.locator('[data-training-system="'+chapter+'"]')
+              await system.waitFor({state:'visible',timeout:15000})
+              await system.locator('[data-demo-system-operation="'+operationId+'"]').waitFor({state:'visible',timeout:15000})
+              if(kind==='select'){
+                const chosen=chapter==='exports'?(operationId==='exports:shared:0'?'training-event':'xlsx')
+                  :chapter==='platform'?'shift-confirmed':'en'
+                await system.locator('[data-demo-system-select]').selectOption(chosen)
+              }
+              if(kind==='form'){
+                await system.locator('[data-demo-system-name]').fill(
+                  operationId==='platform:shared:2'?'Demo staff shift notification':'Demo briefing template'
+                )
+                await system.locator('[data-demo-system-category]').selectOption(
+                  operationId==='platform:shared:2'?'notification':'briefing'
+                )
+              }
+              if(kind==='write'||kind==='message')await system.locator('[data-demo-system-name]').fill(
+                kind==='message'?'Please check the fictional demo permission and audit log':'Demo trainee profile'
+              )
+              if(kind==='schedule'){
+                await system.locator('[data-demo-system-from]').fill('2026-10-10T20:00')
+                await system.locator('[data-demo-system-to]').fill('2026-10-11T04:00')
+              }
             }
             if(requiredReal)await real.waitFor({state:'visible',timeout:15000})
             const usingReal=requiredReal||(await real.count())>0
@@ -703,6 +729,23 @@ try {
               if(!saved)throw new Error('Real sandbox click did not persist the expected action: '+operationId)
               console.log('PASS '+bot+' credited real admin control '+chapter+'/'+operationId)
             }
+          }
+          if(['exports','platform','settings'].includes(chapter)){
+            const snapshot=await page.evaluate(({role,chapter})=>{
+              const v=JSON.parse(sessionStorage.getItem('uptilldawn-system-training-v1:'+role+':'+chapter)||'null')
+              if(!v)return null
+              return {audit:v.audit?.length,ready:v.ready,event:v.event,format:v.format,from:v.from,to:v.to,
+                automation:v.automation,trigger:v.trigger,template:v.template,rollout:v.rollout,
+                profile:v.profile,language:v.language,push:v.push,answer:v.answer}
+            },{role:tourRole,chapter})
+            if(!snapshot||snapshot.audit!==total)throw new Error('System training did not record every real control: '+chapter+' '+JSON.stringify(snapshot))
+            if(chapter==='exports'&&(!snapshot.ready||!snapshot.event||!snapshot.format||!snapshot.from||!snapshot.to))
+              throw new Error('Export workflow never prepared the validated demo dataset: '+JSON.stringify(snapshot))
+            if(chapter==='platform'&&(!snapshot.automation||!snapshot.trigger||!snapshot.template||!snapshot.rollout))
+              throw new Error('Platform training did not build an automation, template and safe demo rollout: '+JSON.stringify(snapshot))
+            if(chapter==='settings'&&(!snapshot.profile||!snapshot.language||!snapshot.push||(tourRole==='admin'&&!snapshot.answer)))
+              throw new Error('Settings demo never persisted its real profile, language, notification or AI interactions: '+JSON.stringify(snapshot))
+            console.log('PASS '+bot+' stateful fictional '+chapter+' workflow with '+snapshot.audit+' real controls')
           }
           if(['crew','personnel'].includes(chapter)){
             const result=await page.evaluate(({role,chapter})=>{
