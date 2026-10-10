@@ -639,8 +639,24 @@ try {
               'workplaces:admin:0','workplaces:admin:17',
               'briefings:admin:0','operations:admin:6','operations:admin:7'
             ])
-            const requiredReal=commonReal.has(operationId)
+            const chatReal=chapter==='chat'&&operationId.startsWith('chat:')
+            const requiredReal=chatReal||commonReal.has(operationId)
               ||(tourRole==='admin'?adminReal:crewReal).has(operationId)
+            // Exercise the actual conversation composer rather than an
+            // unrelated generic practice form. The simulated conversation is
+            // persisted so message retention and private-chat deletion are
+            // independently verifiable after the walkthrough.
+            if(chatReal){
+              const chat=page.locator('[data-training-chat="true"]')
+              await chat.waitFor({state:'visible',timeout:15000})
+              await page.locator('[data-demo-chat-operation="'+operationId+'"]').waitFor({state:'visible',timeout:15000})
+              if(kind==='write')await chat.locator('[data-demo-chat-search]').fill('Lina')
+              if(kind==='select')await chat.locator('[data-demo-chat-choice]').selectOption('lina')
+              if(kind==='message')await chat.locator('[data-demo-chat-composer]').fill(
+                operationId==='chat:shared:8'?'@Lina welcome to the training event':'Training event action'
+              )
+              if(kind==='upload')await chat.locator('[data-demo-chat-attachment]').selectOption('training-inventory.png')
+            }
             if(requiredReal)await real.waitFor({state:'visible',timeout:15000})
             const usingReal=requiredReal||(await real.count())>0
             if(usingReal){
@@ -677,6 +693,26 @@ try {
               if(!saved)throw new Error('Real sandbox click did not persist the expected action: '+operationId)
               console.log('PASS '+bot+' credited real admin control '+chapter+'/'+operationId)
             }
+          }
+          if(chapter==='chat'){
+            const simulated=await page.evaluate(role=>{
+              const state=JSON.parse(sessionStorage.getItem('uptilldawn-chat-training-v1:'+role)||'null')
+              if(!state)return null
+              return {
+                hidden:state.privateVisible===false,
+                retainedPrivate:state.messages.filter(m=>m.channel==='private').length,
+                messages:state.messages.length,
+                replied:state.messages.some(m=>m.replyTo),
+                mentioned:state.messages.some(m=>m.body.includes('@Lina')),
+                attachment:state.messages.some(m=>m.attachment==='training-inventory.png'),
+                read:state.unread===0,
+                scanned:state.scanReviewed
+              }
+            },tourRole)
+            if(!simulated||!simulated.hidden||simulated.retainedPrivate<1||simulated.messages<7||
+                !simulated.replied||!simulated.mentioned||!simulated.attachment||!simulated.read||!simulated.scanned)
+              throw new Error('Fictional chat lifecycle incomplete: '+JSON.stringify(simulated))
+            console.log('PASS '+bot+' fictional chat messages + reply + mention + attachment + hide-with-retention')
           }
           // The admin curriculum must also operate its realistic management
           // controls. Completing isolated catalogue fields cannot substitute
