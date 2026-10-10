@@ -615,8 +615,26 @@ try {
               const state=await page.evaluate(()=>JSON.parse(sessionStorage.getItem('uptilldawn-admin-training-operations:v1')||'null'))
               if(!state?.rejected||state.locked||state.reason?.length<5)throw new Error('Rejection did not persist before timesheet approval')
             }
+            // Some streamed sandbox screens arrive just after the training
+            // portal. Their genuine controls must be awaited; counting them
+            // immediately causes a race and clicks a disappearing fallback.
             const real=page.locator('[data-training-practical-op="'+operationId+'"]:visible:not([disabled])').first()
-            const usingReal=(await real.count())>0
+            const requiredReal=new Set([
+              'events:shared:0','workplaces:shared:0',
+              'tasks:shared:0','tasks:shared:4',
+              'inventory:shared:0','inventory:shared:3',
+              'briefings:shared:0','briefings:shared:1',
+              'briefings:shared:2','briefings:shared:3',
+              'briefings:shared:4','briefings:shared:5',
+              'guestlist:shared:4','incidents:shared:5',
+              'operations:employee:0','operations:employee:2',
+              'operations:responsible_lead:0','operations:responsible_lead:1',
+              'events:admin:6','events:admin:12','events:admin:14',
+              'workplaces:admin:0','workplaces:admin:17',
+              'briefings:admin:0','operations:admin:6','operations:admin:7'
+            ]).has(operationId)
+            if(requiredReal)await real.waitFor({state:'visible',timeout:15000})
+            const usingReal=requiredReal||(await real.count())>0
             if(usingReal){
               await real.click()
             }else if(directAdminAction){

@@ -16,7 +16,7 @@ export function SandboxEvents(){
  }
  const persist=(patch:Record<string,unknown>)=>{let s={};try{s=JSON.parse(sessionStorage.getItem(KEY)||"{}")}catch{};sessionStorage.setItem(KEY,JSON.stringify({...s,...patch}))}
  const ring="rounded-xl bg-violet-600 text-white"
- return <main id="eventbeheer" className="scroll-mt-24 space-y-6 p-4 md:p-8">
+ return <main id="eventbeheer" data-tour-demo="training-screen" className="scroll-mt-24 space-y-6 p-4 md:p-8">
   <div><h1 className="text-3xl font-black">{tr(l,"Evenementen","Events","Événements","Events")}</h1><p className="text-sm text-muted-foreground">{tr(l,"Bekijk je evenementen en bevestig je beschikbaarheid.","View your events and confirm your availability.","Consultez vos événements et confirmez votre disponibilité.","Sieh dir deine Events an und bestätige deine Verfügbarkeit.")}</p></div>
   <div className="space-y-3"><details open={open} className="rounded-2xl border bg-card">
    <summary data-training-practical-op="events:shared:0" data-tour-demo={!open?"primary-action":undefined} onClick={e=>{e.preventDefault();if(!open){credit("events:shared:0","inspect");setOpen(true);persist({eventOpened:true});setHelp(tr(l,"Goed. Hier zie je dezelfde evenementdetails als in de echte app. Bevestig nu je beschikbaarheid.","Good. Here you see the same event details as in the real app. Now confirm your availability.","Bien. Vous voyez ici les mêmes détails que dans l’application réelle. Confirmez maintenant votre disponibilité.","Gut. Hier siehst du dieselben Eventdetails wie in der echten App. Bestätige jetzt deine Verfügbarkeit."))}else setOpen(false)}} className={"cursor-pointer list-none p-4 "+(!open?ring:"")}>

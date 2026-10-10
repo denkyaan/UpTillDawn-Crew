@@ -131,3 +131,19 @@ test('real crew buttons back the opening exercise for events workplaces tasks an
  assert.match(bots,/const usingReal=\(await real\.count\(\)\)>0/)
  for(const source of [events,workplaces,pages,briefings])assert.doesNotMatch(source,/createClient\(|supabase\.from\(|\.rpc\(/)
 })
+
+test('the streamed event and workplace tour mounts only on its real sandbox and awaits the real UI',async()=>{
+ const [events,workplaces,center,bots]=await Promise.all([
+  read('components/training/sandbox-events.tsx'),
+  read('components/training/sandbox-workplaces.tsx'),
+  read('components/training/tour-control-center.tsx'),
+  read('scripts/15-bot-browser-test.mjs')
+ ])
+ for(const [page,root] of [[events,'eventbeheer'],[workplaces,'werkplaatsbeheer']]){
+  assert.ok(page.includes('id="'+root+'" data-tour-demo="training-screen"'),root+' needs a stable functional mount')
+ }
+ assert.match(center,/current\.key==="events"\|\|current\.key==="workplaces"\s*\?sandbox/,'streamed demo routes cannot use a temporary layout main')
+ assert.match(bots,/if\(requiredReal\)await real\.waitFor\(\{state:'visible',timeout:15000\}\)/,'E2E must await the actual functional control')
+ assert.match(bots,/'workplaces:shared:0'/,'workplace opener is a required real control')
+ assert.match(bots,/'briefings:shared:5'/,'briefing confirmation is a required real control')
+})

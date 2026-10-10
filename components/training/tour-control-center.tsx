@@ -340,9 +340,15 @@ export function TourControlCenter({active,userId,role,preferredWorkplace,mode="f
     let stopped=false
     const mount=()=>{
       if(stopped)return
+      // Events and workplace pages are streamed. Do not mount exercises in
+      // a temporary layout <main> while their functional demo is still loading:
+      // the trainee would see a generic button that disappears mid-click.
+      const sandbox=document.querySelector('[data-tour-demo="training-screen"]')
       const root=current.key==="briefings"
         ?document.querySelector('[data-training-briefings="true"],[data-training-admin-module="briefings"]')
-        :document.querySelector('[data-tour-demo="training-screen"]')||document.querySelector("main")
+        :current.key==="events"||current.key==="workplaces"
+          ?sandbox
+          :sandbox||document.querySelector("main")
       if(!(root instanceof HTMLElement))return
       if(!host){
         host=document.createElement("div")
