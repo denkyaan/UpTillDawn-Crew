@@ -340,7 +340,9 @@ export function TourControlCenter({active,userId,role,preferredWorkplace,mode="f
     let stopped=false
     const mount=()=>{
       if(stopped)return
-      const root=document.querySelector('[data-tour-demo="training-screen"]')||document.querySelector("main")
+      const root=current.key==="briefings"
+        ?document.querySelector('[data-training-briefings="true"],[data-training-admin-module="briefings"]')
+        :document.querySelector('[data-tour-demo="training-screen"]')||document.querySelector("main")
       if(!(root instanceof HTMLElement))return
       if(!host){
         host=document.createElement("div")
