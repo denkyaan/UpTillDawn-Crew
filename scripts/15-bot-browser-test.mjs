@@ -643,7 +643,8 @@ try {
             const peopleReal=['crew','personnel'].includes(chapter)&&operationId.startsWith(chapter+':')
             const systemReal=['exports','platform','settings'].includes(chapter)&&operationId.startsWith(chapter+':')
             const helpReal=chapter==='help'&&operationId.startsWith('help:shared:')
-            const requiredReal=chatReal||peopleReal||systemReal||helpReal||commonReal.has(operationId)
+            const lifecycleReal=['driver','timesheet'].includes(chapter)&&operationId.startsWith(chapter+':')
+            const requiredReal=chatReal||peopleReal||systemReal||helpReal||lifecycleReal||commonReal.has(operationId)
               ||(tourRole==='admin'?adminReal:crewReal).has(operationId)
             // Exercise the actual conversation composer rather than an
             // unrelated generic practice form. The simulated conversation is
@@ -700,6 +701,13 @@ try {
               if(kind==='write')await help.locator('[data-demo-help-search]').fill('briefing')
               else await help.locator('[data-demo-help-open]').click()
             }
+            if(lifecycleReal){
+              const workflow=page.locator('[data-training-lifecycle="'+chapter+'"]')
+              await workflow.waitFor({state:'visible',timeout:15000})
+              await workflow.locator('[data-demo-lifecycle-operation="'+operationId+'"]').waitFor({state:'visible',timeout:15000})
+              if(kind==='message')await workflow.locator('[data-demo-lifecycle-reason]').fill('Corrected fictional event shift after verification of staff attendance')
+              if(kind==='select')await workflow.locator('[data-demo-lifecycle-select]').selectOption('lina')
+            }
             if(requiredReal)await real.waitFor({state:'visible',timeout:15000})
             const usingReal=requiredReal||(await real.count())>0
             if(usingReal){
@@ -736,6 +744,15 @@ try {
               if(!saved)throw new Error('Real sandbox click did not persist the expected action: '+operationId)
               console.log('PASS '+bot+' credited real admin control '+chapter+'/'+operationId)
             }
+          }
+          if(['driver','timesheet'].includes(chapter)){
+            const state=await page.evaluate(({role,chapter})=>JSON.parse(sessionStorage.getItem('uptilldawn-lifecycle-training-v1:'+role+':'+chapter)||'null'),{role:tourRole,chapter})
+            if(!state||state.audit?.length!==total||state.completed?.length!==total)throw new Error('Lifecycle demo did not record all real '+chapter+' actions: '+JSON.stringify(state))
+            if(chapter==='driver'&&(!(state.eventMinutes>0)||!(state.driveMinutes>0)||!(state.kilometers>0)||!state.backstage||state.phase!=='event-time-resumed'))
+              throw new Error('Driver training did not pause and resume event time or notify Backstage: '+JSON.stringify(state))
+            if(chapter==='timesheet'&&(tourRole==='admin'?(!state.approved||!state.rejected||!state.locked):(!state.reviewed||!state.submitted||state.phase!=='stopped')))
+              throw new Error('Timesheet training did not complete real review / approval / submission lifecycle: '+JSON.stringify(state))
+            console.log('PASS '+bot+' real '+chapter+' audited lifecycle + complete operation evidence')
           }
           if(chapter==='help'){
             const reviewed=await page.evaluate(role=>JSON.parse(sessionStorage.getItem('uptilldawn-help-training-v1:'+role)||'null'),tourRole)

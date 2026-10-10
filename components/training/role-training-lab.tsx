@@ -80,30 +80,35 @@ export function RoleTrainingLab({role,chapter,progressKey}:{role:TourRole;chapte
  const complete=operations.length>0&&operations.every(step=>Boolean(ledger[step.id]?.value&&ledger[step.id]?.at&&ledger[step.id]?.kind===step.kind))
  const field=current?trainingField(current):null
  const options=field?.options||[]
- // A functional sandbox action is a real, separately mounted button in the
- // fictional role interface. When present, the lesson requires that button
- // instead of accepting a second generic confirmation checkbox.
+ // The functional sandbox owns its actions even when confirmation is gated
+ // on a preceding "open/read" step. Never expose the generic duplicate while
+ // the real control exists but is temporarily disabled.
  useEffect(()=>{
   const update=()=>{
-   let available=false
-   for(const node of document.querySelectorAll<HTMLElement>("[data-training-practical-op]")){
-    const matched=!!current&&node.dataset.trainingPracticalOp===current.id
-      &&!node.hasAttribute("disabled")&&node.getClientRects().length>0
-    if(matched){available=true;if(node.getAttribute("data-training-active-action")!=="true")node.setAttribute("data-training-active-action","true")}
+   const nodes=Array.from(document.querySelectorAll<HTMLElement>("[data-training-practical-op],[data-training-preview-op]"))
+   const matches=nodes.filter(node=>!!current
+      &&(node.dataset.trainingPracticalOp===current.id||node.dataset.trainingPreviewOp===current.id)
+      &&node.getClientRects().length>0)
+   const active=matches.find(node=>node.dataset.trainingPracticalOp===current?.id&&!node.hasAttribute("disabled"))
+     ||matches.find(node=>node.dataset.trainingPreviewOp===current?.id&&!node.hasAttribute("disabled"))
+     ||matches[0]
+   for(const node of nodes){
+    if(node===active){if(node.getAttribute("data-training-active-action")!=="true")node.setAttribute("data-training-active-action","true")}
     else if(node.hasAttribute("data-training-active-action"))node.removeAttribute("data-training-active-action")
    }
-   setFunctionalControl(available)
+   setFunctionalControl(matches.length>0)
   }
   update()
   const observer=new MutationObserver(update)
   observer.observe(document.body,{childList:true,subtree:true,attributes:true,attributeFilter:["disabled","data-training-active-action"]})
-  return()=>{observer.disconnect();for(const node of document.querySelectorAll<HTMLElement>("[data-training-practical-op]"))node.removeAttribute("data-training-active-action")}
+  return()=>{observer.disconnect();for(const node of document.querySelectorAll<HTMLElement>("[data-training-practical-op],[data-training-preview-op]"))node.removeAttribute("data-training-active-action")}
  },[current])
  const showFunctionalControl=()=>{
-  const button=Array.from(document.querySelectorAll<HTMLElement>("[data-training-practical-op]")).find(node=>
-   node.dataset.trainingPracticalOp===current?.id&&!node.hasAttribute("disabled")&&node.getClientRects().length>0
-  )
-  button?.scrollIntoView({behavior:"smooth",block:"center"})
+  const nodes=Array.from(document.querySelectorAll<HTMLElement>("[data-training-practical-op],[data-training-preview-op]"))
+  const candidate=nodes.find(node=>node.dataset.trainingPracticalOp===current?.id&&!node.hasAttribute("disabled")&&node.getClientRects().length>0)
+    ||nodes.find(node=>node.dataset.trainingPreviewOp===current?.id&&!node.hasAttribute("disabled")&&node.getClientRects().length>0)
+    ||nodes.find(node=>node.dataset.trainingPracticalOp===current?.id&&node.getClientRects().length>0)
+  candidate?.scrollIntoView({behavior:"smooth",block:"center"})
  }
  useEffect(()=>{const apply=()=>setLanguage(activeUiLocale());const frame=requestAnimationFrame(apply);addEventListener(LANGUAGE_APPLIED_EVENT,apply);return()=>{cancelAnimationFrame(frame);removeEventListener(LANGUAGE_APPLIED_EVENT,apply)}},[])
  useEffect(()=>{

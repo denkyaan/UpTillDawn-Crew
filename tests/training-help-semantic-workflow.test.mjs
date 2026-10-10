@@ -51,3 +51,15 @@ test('authenticated browser curriculum actually opens Help articles and executes
  assert.match(bot,/reviewed\.read\?\.length!==total/)
  assert.match(bot,/reviewed\.search\?\.toLowerCase\(\)\.includes\('briefing'\)/)
 })
+
+test('locked real Help actions never reveal a bypassable generic practice checkbox',async()=>{
+ const [lab,help]=await Promise.all([
+  read('components/training/role-training-lab.tsx'),read('components/training/sandbox-help-training.tsx')
+ ])
+ assert.match(help,/data-training-preview-op=\{id\}/,'open-help button must be highlighted before review')
+ assert.match(help,/data-training-practical-op=\{id\}/,'review action must be credited separately')
+ assert.match(help,/current\.kind==="inspect"&&opened!==id/,'review requires opening the article first')
+ assert.match(lab,/data-training-preview-op/,'instructor must recognize multi-stage sandbox controls')
+ assert.match(lab,/setFunctionalControl\(matches\.length>0\)/,'disabled confirmation still blocks generic practice')
+ assert.match(lab,/node\.dataset\.trainingPracticalOp===current\?\.id&&!node\.hasAttribute\("disabled"\)/,'completed precondition focuses the real confirmation')
+})
