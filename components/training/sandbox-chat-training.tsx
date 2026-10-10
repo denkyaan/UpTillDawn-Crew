@@ -83,9 +83,8 @@ export function SandboxChatTraining({role}:{role:string}){
  }
  const commit=()=>{
   if(!current)return
-  const id=current.id
   const i=index
-  let next={...state,messages:[...state.messages],participants:[...state.participants]}
+  const next={...state,messages:[...state.messages],participants:[...state.participants]}
   if(isAdminStep){
    if(i===1){next.participants=[...new Set([...next.participants,peer])];record(next,peer);return}
    if(i===2){
