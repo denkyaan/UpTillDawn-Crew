@@ -9,7 +9,7 @@ test('tour v8 has role, scenario, driver, progress and new-release coverage',asy
   assert.match(config,/TOUR_VERSION=8/)
   for(const role of ['employee','responsible_lead','admin'])assert.ok(config.includes('"'+role+'"'))
   for(const scenario of ['pre_event','live_event','break','post_event'])assert.ok(config.includes('"'+scenario+'"'))
-  for(const key of ['overview','events','workplaces','briefings','operations','driver','tasks','incidents','inventory','guestlist','sales','personnel','crew','chat','exports','platform','settings'])assert.ok(config.includes('key:"'+key+'"'),key)
+  for(const key of ['overview','events','workplaces','briefings','operations','driver','tasks','incidents','inventory','guestlist','sales','personnel','crew','chat','exports','platform','settings','help','timesheet'])assert.ok(config.includes('key:"'+key+'"'),key)
   assert.match(config,/mobileSelector:string/)
   assert.match(config,/desktopSelector:string/)
   assert.match(config,/requires:"driver"/)
@@ -30,18 +30,37 @@ test('tour controller recovers missing targets and never writes production data'
   assert.match(controller,/MutationObserver/)
   assert.match(controller,/scrollIntoView/)
   assert.match(controller,/const mobile=innerWidth<1024/)
-  assert.match(controller,/\[active,current,locale,pathname\]/)
+  assert.match(controller,/\[active,current,locale,pathname,navigationTarget,progressReady\]/)
   assert.match(controller,/document\.querySelectorAll\(selector\)/)
   assert.match(controller,/viewportScore/)
   assert.match(controller,/\/api\/error-reports/)
   assert.match(controller,/localStorage\.setItem\(progressKey/)
-  assert.match(controller,/OVERSLAAN/)
+  assert.doesNotMatch(controller,/OVERSLAAN/)
   assert.match(controller,/PAUZEER/)
   for(const source of [operations,events,workplaces,briefings,features,roleModules]){
     assert.doesNotMatch(source,/createClient\(/)
     assert.doesNotMatch(source,/\.from\(/)
     assert.doesNotMatch(source,/\.rpc\(/)
   }
+})
+
+test('trainee tab click saves chapter before route remount; mobile target stays visible',async()=>{
+ const [center,sidebar,mobile]=await Promise.all([
+  read('components/training/tour-control-center.tsx'),
+  read('components/layout/sidebar.tsx'),
+  read('components/layout/mobile-nav.tsx'),
+ ])
+ assert.match(center,/uptilldawn-training-tab-selected/)
+ assert.match(center,/pendingPathRef\.current=nextPath/)
+ assert.match(center,/write\(\{\.\.\.prior,activeKey:next\.key,completed:unique/)
+ assert.match(center,/isChapterPractised\(progressKey,role,current\.key\)/)
+ for(const source of [sidebar,mobile]){
+  assert.match(source,/uptilldawn-training-tab-selected/)
+  assert.match(source,/detail:\{key:/)
+ }
+ assert.match(mobile,/const guidedItem=tourPreview&&trainingNavTarget/)
+ assert.match(mobile,/fallbackItems\.slice\(0,2\),guidedItem/)
+ assert.doesNotMatch(mobile,/if\(next\)setExpanded\(true\)/)
 })
 
 test('driver training contains full event-driving-return workflow',async()=>{
@@ -89,10 +108,14 @@ test('admin event, workplace and briefing chapters never expose production views
     read('app/(app)/workplaces/page.tsx'),
     read('app/(app)/briefings/page.tsx'),
   ])
-  for(const source of [events,workplaces,briefings]){
+  for(const [name,source] of [['events',events],['workplaces',workplaces],['briefings',briefings]]){
     assert.match(source,/params\.tour==='1'/)
-    assert.match(source,/TourActiveEventDemo role="admin"/)
+    assert.ok(source.includes('SandboxAdminManager module="'+name+'"'),'admin '+name+' must use its own interactive training module')
   }
+  const roleGuide=await read('lib/tour-training.ts')
+  assert.match(roleGuide,/data-training-admin-module/,'tour must highlight the dedicated admin training view')
+  const adminSandbox=await read('components/training/sandbox-admin-manager.tsx')
+  assert.doesNotMatch(adminSandbox,/createClient\(|fetch\(|supabase\.from\(|\.rpc\(/,'admin training must never mutate live event data')
 })
 
 test('desktop and floating tour navigation preserve sandbox query',async()=>{
@@ -117,4 +140,46 @@ test('driver sandbox visibly separates driving time and mileage and explains arr
   assert.match(operations,/Eventtijd gepauzeerd/)
   assert.match(operations,/Backstage Management krijgt dan automatisch de aankomstmelding/)
   assert.match(operations,/setDriveSeconds\(0\)/)
+})
+
+
+test('staff and responsible role training follows crew then chat then settings then timesheet',async()=>{
+  const source=await read('components/training/sandbox-role-module.tsx')
+  for(const role of ['employee','staff','responsible_lead']){
+    assert.ok(source.includes(role+':{crew:"chat",chat:"settings",settings:"timesheet"}'),role)
+  }
+  assert.match(source,/admin:\{personnel:"crew",crew:"chat",chat:"exports",exports:"platform",platform:"settings",settings:"timesheet"\}/)
+})
+
+test('all chapter titles and descriptions contain four nonempty translations',async()=>{
+  const source=await read('lib/tour-training.ts')
+  const chapters=[...source.matchAll(/\{key:"([^"]+)",route:"([^"]+)",roles:([^,]+),scenario:"([^"]+)",title:c\("([^"]+)","([^"]+)","([^"]+)","([^"]+)"\),description:c\("([^"]+)","([^"]+)","([^"]+)","([^"]+)"\)/g)]
+  assert.equal(chapters.length,19,'every training chapter must have a complete translated title and description')
+  for(const chapter of chapters){
+    for(const value of chapter.slice(5,13))assert.ok(value.trim().length>0,chapter[1]+' has an empty translation')
+  }
+})
+
+test('sandbox transition targets follow the mandatory training chapters',async()=>{
+ const [features,roleModules]=await Promise.all([read('components/training/sandbox-feature-pages.tsx'),read('components/training/sandbox-role-module.tsx')])
+ assert.match(features,/navTarget:"incidents"/)
+ assert.match(features,/navTarget:"inventory"/)
+ assert.match(features,/target\("guestlist"\)/)
+ for(const role of ['employee','staff','responsible_lead'])assert.ok(roleModules.includes(role+':{crew:"chat",chat:"settings",settings:"timesheet"}'))
+ assert.match(roleModules,/admin:\{personnel:"crew",crew:"chat",chat:"exports",exports:"platform",platform:"settings",settings:"timesheet"\}/)
+})
+
+test('guestlist demo advances to an authorized next chapter for every role',async()=>{
+ const [guestlist,feature]=await Promise.all([read('app/(app)/guestlist/page.tsx'),read('components/training/sandbox-feature-pages.tsx')])
+ assert.match(guestlist,/SandboxGuestlist isAdmin=\{current\.isAdmin===true\}/)
+ assert.match(feature,/export function SandboxGuestlist\(\{isAdmin=false\}:\{isAdmin\?:boolean\}\)/)
+ assert.match(feature,/target\(isAdmin\?"sales":"crew"\)/)
+})
+
+test('chat module completes after button introduction rather than before navigation',async()=>{
+ const source=await read('components/training/sandbox-role-module.tsx')
+ assert.match(source,/if\(module!=="chat"\)dispatchEvent/)
+ assert.match(source,/chatTourCompleted:false/)
+ assert.match(source,/chatTrainingDone:true,navTarget:next/)
+ assert.ok(source.indexOf('chatTrainingDone:true,navTarget:next')>source.indexOf('window.setTimeout('))
 })

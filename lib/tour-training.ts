@@ -45,6 +45,8 @@ export const TOUR_CHAPTERS:readonly TourChapter[]=[
   {key:"exports",route:"/exports",roles:["admin"],scenario:"post_event",title:c("Excel & urenexport","Excel & time export","Excel & export des heures","Excel & Stundenexport"),description:c("Bereid een fictieve export van goedgekeurde en gelockte uren voor.","Prepare a fictional export of approved and locked hours.","Préparez un export fictif des heures approuvées et verrouillées.","Bereite einen fiktiven Export genehmigter und gesperrter Stunden vor."),mobileSelector:'[data-tour-demo="primary-action"]',desktopSelector:'[data-tour-demo="primary-action"]',fallbackSelector:"main"},
   {key:"platform",route:"/admin/platform",roles:["admin"],scenario:"general",title:c("Platformbeheer","Platform management","Gestion de la plateforme","Plattformverwaltung"),description:c("Bekijk automatiseringen, recovery en technische configuratie in veilige demo-modus.","Review automations, recovery and technical configuration in safe demo mode.","Consultez les automatisations, le recovery et la configuration technique en mode démo sûr.","Prüfe Automatisierungen, Recovery und technische Konfiguration im sicheren Demo-Modus."),mobileSelector:'[data-tour-demo="primary-action"]',desktopSelector:'[data-tour-demo="primary-action"]',fallbackSelector:"main"},
   {key:"settings",route:"/settings",roles:all,scenario:"post_event",title:c("Afronden & instellingen","Finish & settings","Terminer & paramètres","Abschluss & Einstellungen"),description:c("Controleer profiel en taal en rond de roltraining af.","Review profile and language and finish the role training.","Vérifiez le profil et la langue puis terminez la formation du rôle.","Prüfe Profil und Sprache und schließe das Rollentraining ab."),mobileSelector:'[data-tour-demo="primary-action"]',desktopSelector:'[data-tour-demo="primary-action"]',fallbackSelector:"main"},
+  {key:"help",route:"/help",roles:all,scenario:"general",title:c("Help & volledige handleiding","Help & complete guide","Aide et guide complet","Hilfe und vollständiges Handbuch"),description:c("Zoek een functie, open de handleiding, controleer rolrechten, QR en herstartopties.","Search a feature, open the guide, check role permissions, QR and restart options.","Recherchez une fonction, ouvrez le guide, vérifiez les droits, le QR et le redémarrage.","Funktion suchen, Handbuch öffnen, Rollenrechte, QR und Neustart prüfen."),mobileSelector:"main",desktopSelector:"main",fallbackSelector:"main",newSince:8},
+  {key:"timesheet",route:"/operations",roles:all,scenario:"post_event",title:c("Werk stoppen en urenstaat indienen","Stop work and submit timesheet","Arrêter le travail et soumettre les heures","Arbeit beenden und Stundenzettel einreichen"),description:c("Beëindig de fictieve shift, controleer je urenstaat en dien deze in als laatste verplichte stap.","End the fictional shift, review the timesheet and submit it as the final required step.","Terminez le service fictif, vérifiez la feuille d’heures et soumettez-la en dernière étape obligatoire.","Beende die fiktive Schicht, prüfe den Stundenzettel und reiche ihn als letzten Pflichtschritt ein."),mobileSelector:'[data-tour-demo="time-actions"]',desktopSelector:'[data-tour-demo="time-actions"]',fallbackSelector:"main"},
 ] as const
 
 export function tourText(copy:TourCopy,locale:TourLocale){return copy[locale]}
@@ -67,21 +69,39 @@ export function tourBaseRoute(role:TourRole,chapter:TourChapter){
   return chapter.key==="overview"&&role==="admin"?"/admin":chapter.route
 }
 
+export function tourNavigationKey(chapter:TourChapter){
+  // Driver and the final timesheet are chapters within the Work hours tab.
+  return chapter.route==="/operations"?"operations":chapter.key
+}
+
 export function getTourChapters(role:TourRole,options?:{driver?:boolean;entrance?:boolean;mode?:TourMode;scope?:"general"|"workplace"}){
   const driver=options?.driver===true
   const entrance=options?.entrance===true
-  return TOUR_CHAPTERS.filter(chapter=>{
+  const selected=TOUR_CHAPTERS.filter(chapter=>{
     if(!chapter.roles.includes(role))return false
-    if(chapter.requires==="driver"&&!driver)return false
-    if(chapter.requires==="entrance"&&role!=="admin"&&!entrance)return false
+    if(chapter.requires==="driver"&&!driver&&options?.scope!=="general")return false
+    if(chapter.requires==="entrance"&&role!=="admin"&&!entrance&&options?.scope!=="general")return false
     if(options?.mode==="new"&&chapter.newSince!==TOUR_VERSION)return false
     // The first-use role tour must teach the complete role without requiring
     // a real assignment. It runs entirely against fictional sandbox data.
     // Only chapters that genuinely require a specific workplace are deferred
     // to the later workplace-scoped tour.
-    if(options?.scope==="general"&&chapter.requires)return false
+    // General first-use training includes the conditional Driver and Entrance
+    // workflows in a fictional scenario: no real assignment is required.
     return true
   })
+  // Administrators learn administration first, rather than being sent through
+  // the employee availability and work-clock sequence as their primary flow.
+  if(role==="admin"){
+    const order=["overview","personnel","crew","events","workplaces","briefings","tasks","inventory","guestlist","operations","incidents","sales","chat","exports","platform","settings","help","timesheet"]
+    const adminModules=new Set(["events","workplaces","briefings","operations"])
+    return selected.map(chapter=>adminModules.has(chapter.key)?{
+      ...chapter,
+      mobileSelector:'[data-training-admin-module="'+chapter.key+'"]',
+      desktopSelector:'[data-training-admin-module="'+chapter.key+'"]',
+    }:chapter).sort((a,b)=>order.indexOf(a.key)-order.indexOf(b.key))
+  }
+  return selected
 }
 
 export function chapterForPath(role:TourRole,pathname:string,chapters:readonly TourChapter[]){

@@ -187,5 +187,66 @@
   outline: 3px solid var(--ring) !important;
   outline-offset: 4px;
   border-radius: max(var(--radius), 0.5rem);
-  box-shadow: 0 0 0 9999px rgb(0 0 0 / 0.42);
+  box-shadow: none;
+}
+
+
+/* Interactive role training: highlight navigation only while changing tabs. */
+body[data-upt-training-active="true"] a[data-upt-training-next-tab="true"] {
+  outline: 3px solid #8b5cf6 !important;
+  outline-offset: 3px;
+  border-radius: 10px;
+}
+
+/* Only the active functional sandbox action is purple; other sample controls
+   do not masquerade as the next required step. No pulsing or dimming. */
+body[data-upt-training-active="true"] [data-training-practical-op]:not([data-training-active-action="true"]) {
+  background-color: var(--background) !important;
+  color: var(--foreground) !important;
+  border-color: var(--border) !important;
+  box-shadow: none !important;
+  outline: none !important;
+  animation: none !important;
+}
+body[data-upt-training-active="true"] [data-training-practical-op][data-training-active-action="true"]:not(:disabled) {
+  background-color: #7c3aed !important;
+  color: #fff !important;
+  border-color: #7c3aed !important;
+  box-shadow: none !important;
+  animation: none !important;
+}
+
+/* The one required action is solid purple, with no pulse or dimmed backdrop. */
+body[data-upt-training-active="true"] [data-training-lab] [data-training-active-action="true"]:not(:disabled) {
+  background-color: #7c3aed !important;
+  color: white !important;
+  border-color: #7c3aed !important;
+  animation: none !important;
+}
+
+/* A selected operation is the only control tinted by the training engine. */
+body[data-upt-training-active="true"] [data-training-lab] [data-training-active-action="true"]:is(input,select,textarea) {
+  border-color: #7c3aed !important;
+  outline: 2px solid #8b5cf6;
+  outline-offset: 2px;
+  background-color: var(--background) !important;
+  color: var(--foreground) !important;
+}
+body[data-upt-training-active="true"] [data-training-lab] [data-training-active-action="true"][type="checkbox"] {
+  outline: 2px solid #8b5cf6;
+  accent-color: #7c3aed;
+}
+
+/* The old demo's illustrative CTAs must not compete with the single required
+   interactive practice control. No pulsing rings while training is active. */
+body[data-upt-training-active="true"] [data-tour-demo="primary-action"]:not([data-training-active-action]) {
+  background-color: var(--background) !important;
+  color: var(--foreground) !important;
+  border: 1px solid var(--border) !important;
+  box-shadow: none !important;
+  outline: none !important;
+  animation: none !important;
+}
+body[data-upt-training-active="true"] .animate-pulse {
+  animation: none !important;
 }
