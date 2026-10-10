@@ -640,7 +640,8 @@ try {
               'briefings:admin:0','operations:admin:6','operations:admin:7'
             ])
             const chatReal=chapter==='chat'&&operationId.startsWith('chat:')
-            const requiredReal=chatReal||commonReal.has(operationId)
+            const peopleReal=['crew','personnel'].includes(chapter)&&operationId.startsWith(chapter+':')
+            const requiredReal=chatReal||peopleReal||commonReal.has(operationId)
               ||(tourRole==='admin'?adminReal:crewReal).has(operationId)
             // Exercise the actual conversation composer rather than an
             // unrelated generic practice form. The simulated conversation is
@@ -656,6 +657,15 @@ try {
                 operationId==='chat:shared:8'?'@Lina welcome to the training event':'Training event action'
               )
               if(kind==='upload')await chat.locator('[data-demo-chat-attachment]').selectOption('training-inventory.png')
+            }
+            if(peopleReal){
+              const people=page.locator('[data-training-people="'+chapter+'"]')
+              await people.waitFor({state:'visible',timeout:15000})
+              await page.locator('[data-demo-people-operation="'+operationId+'"]').waitFor({state:'visible',timeout:15000})
+              if(kind==='write')await people.locator('[data-demo-people-search]').fill('Lina')
+              if(kind==='select')await people.locator('[data-demo-people-select]').selectOption(operationId==='crew:admin:3'?'Tokens':'employee')
+              if(kind==='message')await people.locator('[data-demo-people-message]').fill('Fictional personnel training message')
+              if(kind==='delete')await people.locator('[data-demo-people-confirm]').fill('DEMO')
             }
             if(requiredReal)await real.waitFor({state:'visible',timeout:15000})
             const usingReal=requiredReal||(await real.count())>0
@@ -693,6 +703,21 @@ try {
               if(!saved)throw new Error('Real sandbox click did not persist the expected action: '+operationId)
               console.log('PASS '+bot+' credited real admin control '+chapter+'/'+operationId)
             }
+          }
+          if(['crew','personnel'].includes(chapter)){
+            const result=await page.evaluate(({role,chapter})=>{
+              const state=JSON.parse(sessionStorage.getItem('uptilldawn-people-training-v1:'+role+':'+chapter)||'null')
+              if(!state)return null
+              const lina=state.members.find(x=>x.id==='lina')
+              const mila=state.members.find(x=>x.id==='mila')
+              return {lina,mila,audit:state.audit.length,resend:state.verifiedResent,denied:state.portalDenied}
+            },{role:tourRole,chapter})
+            if(!result)throw new Error('People training lost its local sandbox state: '+chapter)
+            if(chapter==='personnel'&&(!result.lina||result.lina.status!=='approved'||result.mila?.status!=='rejected'||!result.resend||!result.denied||result.audit<3))
+              throw new Error('Admin registration and approval sequence failed: '+JSON.stringify(result))
+            if(chapter==='crew'&&tourRole==='admin'&&(!result.lina||result.lina.blocked||result.lina.workplace!=='Tokens'||result.mila||result.audit<5))
+              throw new Error('Admin staff permissions / demo deletion failed: '+JSON.stringify(result))
+            console.log('PASS '+bot+' fictional '+chapter+' role-scoped personnel actions + local audit')
           }
           if(chapter==='chat'){
             const simulated=await page.evaluate(role=>{
