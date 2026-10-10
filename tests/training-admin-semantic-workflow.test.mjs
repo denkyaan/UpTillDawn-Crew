@@ -107,3 +107,27 @@ test('staff portal actions use employee training role so opening briefings and s
  assert.match(briefings,/credit\("briefings:shared:0","inspect"\)/)
  assert.match(operations,/credit\(role==="responsible_lead"\?"operations:responsible_lead:0":"operations:employee:0"\)/)
 })
+
+test('real crew buttons back the opening exercise for events workplaces tasks and inventory',async()=>{
+ const [events,workplaces,pages,briefings,bots]=await Promise.all([
+  read('components/training/sandbox-events.tsx'),
+  read('components/training/sandbox-workplaces.tsx'),
+  read('components/training/sandbox-feature-pages.tsx'),
+  read('components/training/sandbox-briefings.tsx'),
+  read('scripts/15-bot-browser-test.mjs')
+ ])
+ for(const [source,id] of [
+  [events,'events:shared:0'],[workplaces,'workplaces:shared:0'],
+  [pages,'tasks:shared:0'],[pages,'inventory:shared:0'],
+  [pages,'inventory:shared:3']
+ ])assert.ok(source.includes('data-training-practical-op="'+id+'"'),id+' must have a real operational control')
+ assert.match(events,/credit\("events:shared:0","inspect"\)/)
+ assert.match(workplaces,/setDetailsOpened\(true\)/)
+ assert.match(pages,/credit\("tasks","tasks:shared:0","inspect"\)/)
+ assert.match(pages,/credit\("inventory","inventory:shared:3"\)/)
+ assert.match(briefings,/sectionsRead\.every\(Boolean\)/,'briefing confirmation must require reading all four parts')
+ assert.match(briefings,/data-training-practical-op=\{"briefings:shared:"\+\(i\+1\)\}/)
+ assert.match(briefings,/credit\("briefings:shared:"\+\(i\+1\),"inspect"\)/)
+ assert.match(bots,/const usingReal=\(await real\.count\(\)\)>0/)
+ for(const source of [events,workplaces,pages,briefings])assert.doesNotMatch(source,/createClient\(|supabase\.from\(|\.rpc\(/)
+})
