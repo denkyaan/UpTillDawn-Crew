@@ -107,7 +107,7 @@ export function SandboxSystemTraining({module,role}:{module:Module;role:string})
   if(module==="exports"&&idx===0)return [
    {value:"training-event",label:T(l,"UpTillDawn Trainingsavond","UpTillDawn Training Night","Soirée d’entraînement UpTillDawn","UpTillDawn Trainingsabend")}
   ]
-  if(module==="exports"&&idx===3)return [{value:"xlsx",label:"Excel (.xlsx)"},{value:"csv",label:"CSV (.csv)"}]
+  if(module==="exports"&&idx===3)return [{value:"xlsx",label:T(l,"Excel (.xlsx)","Excel (.xlsx)","Excel (.xlsx)","Excel (.xlsx)")},{value:"csv",label:T(l,"CSV (.csv)","CSV (.csv)","CSV (.csv)","CSV (.csv)")}]
   if(module==="platform"&&idx===3)return [
    {value:"shift-confirmed",label:T(l,"Shift bevestigd","Shift confirmed","Shift confirmé","Schicht bestätigt")},
    {value:"artist-arrived",label:T(l,"Artiest aangekomen","Artist arrived","Artiste arrivé","Künstler angekommen")}
@@ -137,7 +137,7 @@ export function SandboxSystemTraining({module,role}:{module:Module;role:string})
    <h2 className="font-bold">{T(l,"Fictieve urenregistratie","Fictional timesheets","Feuilles d’heures fictives","Fiktive Stundenzettel")}</h2>
    <div className="overflow-x-auto"><table className="w-full text-left text-sm"><thead><tr><th>{T(l,"Personeel","Staff","Personnel","Personal")}</th><th>{T(l,"Werkplek","Workplace","Poste","Arbeitsplatz")}</th><th>{T(l,"Netto uren","Net hours","Heures nettes","Nettostunden")}</th><th>{T(l,"Status","Status","Statut","Status")}</th></tr></thead><tbody>{rows.map(row=><tr key={row.name} className="border-t"><td className="py-2">{row.name}</td><td>{row.workplace}</td><td>{row.gross-row.breakHours}</td><td>{row.approved&&row.locked?T(l,"Goedgekeurd en gelockt","Approved and locked","Approuvé et verrouillé","Genehmigt und gesperrt"):T(l,"Niet exporteerbaar","Not exportable","Non exportable","Nicht exportierbar")}</td></tr>)}</tbody></table></div>
    <p className="text-sm">{T(l,"Netto exporteerbare uren","Net exportable hours","Heures nettes exportables","Exportierbare Nettostunden")}: <strong>{total}</strong></p>
-   {state.ready&&<p data-demo-system-ready className="rounded-lg border border-violet-500 p-3 text-sm">{T(l,"Demo-export gereed","Demo export prepared","Export démo prêt","Demo-Export bereit")} · {state.format.toUpperCase()} · {total} h · {state.from} → {state.to}</p>}
+   {state.ready&&<p data-demo-system-ready className="rounded-lg border border-violet-500 p-3 text-sm">{T(l,"Demo-export gereed","Demo export prepared","Export démo prêt","Demo-Export bereit")} · {state.format.toUpperCase()} · {total} {T(l,"uur","hours","heures","Std.")} · {state.from} → {state.to}</p>}
   </section>}
   {module==="platform"&&<section className="grid gap-3 md:grid-cols-2" data-demo-system-platform>
    <article className="rounded-xl border p-4"><h2 className="font-bold">{T(l,"Automatisering","Automation","Automatisation","Automatisierung")}</h2><p className="text-sm">{state.automation||T(l,"Nog niet ingesteld","Not configured","Non configuré","Nicht konfiguriert")} · {state.trigger||"—"}</p></article>
