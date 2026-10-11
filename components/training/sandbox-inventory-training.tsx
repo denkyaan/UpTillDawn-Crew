@@ -37,7 +37,7 @@ export function SandboxInventoryTraining({role}:{role:string}){
  const options=():{id:string;label:string}[]=>{
   if(current?.kind==="upload")return idx===4?[{id:"training-stock.png",label:T(locale,"training-stock.png","training-stock.png","training-stock.png","training-stock.png")}]:[{id:"training-equipment.pdf",label:T(locale,"training-equipment.pdf","training-equipment.pdf","training-equipment.pdf","training-equipment.pdf")}]
   if(group==="admin"&&idx===3)return [{id:"bar",label:T(locale,"Bar / Toog","Bar / Counter","Bar / Comptoir","Bar / Theke")},{id:"merch",label:"Merch"},{id:"tokens",label:"Tokens"}]
-  if((group==="admin"&&idx===8)||(group==="responsible_lead"&&idx===5))return [{id:"noah",label:"Noah Jacobs"},{id:"lina",label:"Lina Peeters"}]
+  if((group==="admin"&&idx===8)||(group==="responsible_lead"&&idx===5))return [{id:"noah",label:T(locale,"Noah Jacobs","Noah Jacobs","Noah Jacobs","Noah Jacobs")},{id:"lina",label:T(locale,"Lina Peeters","Lina Peeters","Lina Peeters","Lina Peeters")}]
    if(group==="responsible_lead"&&idx===1||group==="shared"&&idx===4)return [{id:"damaged",label:T(locale,"Beschadigd","Damaged","Endommagé","Beschädigt")},{id:"missing",label:T(locale,"Ontbreekt","Missing","Manquant","Fehlt")},{id:"ok",label:T(locale,"In orde","OK","Conforme","In Ordnung")}]
   return [{id:"bar",label:T(locale,"Bar / Toog","Bar / Counter","Bar / Comptoir","Bar / Theke")},{id:"merch",label:"Merch"}]
  }
