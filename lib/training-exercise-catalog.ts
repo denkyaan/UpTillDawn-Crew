@@ -151,6 +151,13 @@ toggle|Schakel automatische chatvertaling in (demo)|Enable automatic chat transl
 toggle|Schakel automatische chatvertaling uit (demo)|Disable automatic chat translation (demo)|Désactiver la traduction automatique (démo)|Automatische Chatübersetzung ausschalten (Demo)
 toggle|Toon een vooraf vertaalde demoboodschap|Show a predefined translated message|Afficher un message déjà traduit|Vorgefertigte übersetzte Nachricht anzeigen
 toggle|Herstel de originele demoboodschap|Restore original sample message|Restaurer le message original|Originale Beispielnachricht wiederherstellen
+select|Filter op mijn eigen chatberichten|Filter messages by my sender|Filtrer mes propres messages|Nach eigenen Nachrichten filtern
+select|Filter op afbeeldingen en video|Filter image and video attachments|Filtrer les images et vidéos|Bilder und Videos filtern
+schedule|Stel de zoekperiode in|Set chat search date range|Définir les dates de recherche|Zeitraum der Chatsuche festlegen
+write|Zoek bijlagen via trefwoord|Search attachments by keyword|Rechercher les pièces jointes par mot-clé|Anhänge nach Suchwort suchen
+toggle|Voer de gecombineerde chatzoekopdracht uit|Run combined chat search filters|Exécuter la recherche combinée|Kombinierte Chatsuche ausführen
+select|Open een gevonden chatbericht|Open a matching chat message|Ouvrir un message trouvé|Gefundene Nachricht öffnen
+toggle|Wis alle ingestelde zoekfilters|Clear all chat search filters|Effacer les filtres de recherche|Alle Chatsuchfilter löschen
 `,
 settings:`
 inspect|Open je profielinstellingen|Open profile settings|Ouvrir les paramètres du profil|Profileinstellungen öffnen

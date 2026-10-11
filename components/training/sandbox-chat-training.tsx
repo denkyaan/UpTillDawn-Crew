@@ -5,8 +5,8 @@ import {getTrainingOperations,type PracticeOperation} from "@/lib/training-exerc
 import type {TourRole} from "@/lib/tour-training"
 
 type Channel="organization"|"event"|"workplace"|"private"
-type Message={id:number;channel:Channel;body:string;sender:string;time:string;replyTo?:number;attachment?:string}
-type State={channel:Channel;peer:string;privateVisible:boolean;unread:number;participants:string[];messages:Message[];scanReviewed:boolean;messageMatches:number[];pinnedMessageIds:number[];pinsReviewed:boolean;olderLoaded:boolean;pinAudit:string[];moderatedMessageIds:number[];muteMode:'all'|'mentions'|'muted';notificationAudit:string[];autoTranslate:boolean;manualTranslated:boolean;translationAudit:string[]}
+type Message={id:number;channel:Channel;body:string;sender:string;time:string;replyTo?:number;attachment?:string;date?:string}
+type State={channel:Channel;peer:string;privateVisible:boolean;unread:number;participants:string[];messages:Message[];scanReviewed:boolean;messageMatches:number[];pinnedMessageIds:number[];pinsReviewed:boolean;olderLoaded:boolean;pinAudit:string[];moderatedMessageIds:number[];muteMode:'all'|'mentions'|'muted';notificationAudit:string[];autoTranslate:boolean;manualTranslated:boolean;translationAudit:string[];filterSender:string;filterAttachment:string;filterFrom:string;filterTo:string;filterQuery:string;filteredMatches:number[];selectedSearchResult:number|null;filterAudit:string[]}
 const STORAGE="uptilldawn-chat-training-v1:"
 const T=(l:SupportedUiLocale,nl:string,en:string,fr:string,de:string)=>({nl,en,fr,de}[l])
 const choices=[{value:"lina",name:"Lina Peeters"},{value:"noah",name:"Noah Jacobs"},{value:"mila",name:"Mila Vermeulen"}]
@@ -16,12 +16,12 @@ const initial=():State=>({
   {id:1,channel:"event",body:"Welkom bij UpTillDawn Trainingsavond.",sender:"Lina Peeters",time:"19:40"},
   {id:2,channel:"workplace",body:"Bar / Toog: controleer de prijslijst en de voorraad.",sender:"Noah Jacobs",time:"19:45"},
   {id:3,channel:"organization",body:"De trainingslocatie is klaar voor alle crew.",sender:"Admin",time:"19:46"}
- ],scanReviewed:false,messageMatches:[],pinnedMessageIds:[1],pinsReviewed:false,olderLoaded:false,pinAudit:[],moderatedMessageIds:[],muteMode:'all',notificationAudit:[],autoTranslate:false,manualTranslated:false,translationAudit:[]
+ ],scanReviewed:false,messageMatches:[],pinnedMessageIds:[1],pinsReviewed:false,olderLoaded:false,pinAudit:[],moderatedMessageIds:[],muteMode:'all',notificationAudit:[],autoTranslate:false,manualTranslated:false,translationAudit:[],filterSender:'',filterAttachment:'',filterFrom:'',filterTo:'',filterQuery:'',filteredMatches:[],selectedSearchResult:null,filterAudit:[]
 })
 function saved(key:string):State{
  try{
   const parsed=JSON.parse(sessionStorage.getItem(key)||"null") as State|null
-  if(parsed&&Array.isArray(parsed.messages)&&Array.isArray(parsed.participants)&&typeof parsed.unread==="number")return {...initial(),...parsed,messageMatches:parsed.messageMatches||[],pinnedMessageIds:parsed.pinnedMessageIds||[1],pinAudit:parsed.pinAudit||[],moderatedMessageIds:parsed.moderatedMessageIds||[],muteMode:parsed.muteMode||'all',notificationAudit:parsed.notificationAudit||[],autoTranslate:parsed.autoTranslate===true,manualTranslated:parsed.manualTranslated===true,translationAudit:parsed.translationAudit||[]}
+  if(parsed&&Array.isArray(parsed.messages)&&Array.isArray(parsed.participants)&&typeof parsed.unread==="number")return {...initial(),...parsed,messageMatches:parsed.messageMatches||[],pinnedMessageIds:parsed.pinnedMessageIds||[1],pinAudit:parsed.pinAudit||[],moderatedMessageIds:parsed.moderatedMessageIds||[],muteMode:parsed.muteMode||'all',notificationAudit:parsed.notificationAudit||[],autoTranslate:parsed.autoTranslate===true,manualTranslated:parsed.manualTranslated===true,translationAudit:parsed.translationAudit||[],filterSender:parsed.filterSender||'',filterAttachment:parsed.filterAttachment||'',filterFrom:parsed.filterFrom||'',filterTo:parsed.filterTo||'',filterQuery:parsed.filterQuery||'',filteredMatches:parsed.filteredMatches||[],selectedSearchResult:parsed.selectedSearchResult??null,filterAudit:parsed.filterAudit||[]}
  }catch{}
  return initial()
 }
@@ -33,6 +33,10 @@ export function SandboxChatTraining({role}:{role:string}){
  const [search,setSearch]=useState("")
  const [peer,setPeer]=useState("lina")
  const [notificationChoice,setNotificationChoice]=useState("")
+ const [filterChoice,setFilterChoice]=useState("")
+ const [fromDate,setFromDate]=useState("")
+ const [toDate,setToDate]=useState("")
+ const [resultChoice,setResultChoice]=useState("")
  const [draft,setDraft]=useState("")
  const [file,setFile]=useState("")
  const [error,setError]=useState("")
@@ -85,7 +89,7 @@ export function SandboxChatTraining({role}:{role:string}){
  const commit=()=>{
   if(!current)return
   const i=index
-  const next={...state,messages:[...state.messages],participants:[...state.participants],messageMatches:[...state.messageMatches],pinnedMessageIds:[...state.pinnedMessageIds],pinAudit:[...state.pinAudit],moderatedMessageIds:[...state.moderatedMessageIds],notificationAudit:[...state.notificationAudit],translationAudit:[...state.translationAudit]}
+  const next={...state,messages:[...state.messages],participants:[...state.participants],messageMatches:[...state.messageMatches],pinnedMessageIds:[...state.pinnedMessageIds],pinAudit:[...state.pinAudit],moderatedMessageIds:[...state.moderatedMessageIds],notificationAudit:[...state.notificationAudit],translationAudit:[...state.translationAudit],filteredMatches:[...state.filteredMatches],filterAudit:[...state.filterAudit]}
   if(isAdminStep){
    if(i===1){next.participants=[...new Set([...next.participants,peer])];record(next,peer);return}
    if(i===2){
@@ -123,13 +127,13 @@ export function SandboxChatTraining({role}:{role:string}){
    if(i===8&&!draft.includes("@Lina")){setError(T(l,"Gebruik @Lina in je bericht.","Mention @Lina in the message.","Mentionnez @Lina dans le message.","Erwähne @Lina in der Nachricht."));return}
    const target:Channel=i===5?"private":"event"
    next.channel=target;next.privateVisible=true
-   next.messages.push({id:Date.now(),channel:target,sender:"Jij / You",body:draft.trim(),time:"20:02",...(i===7&&lastEvent?{replyTo:lastEvent.id}:{})})
+   next.messages.push({id:Date.now(),channel:target,sender:"Jij / You",body:draft.trim(),time:"20:02",date:"2026-10-11",...(i===7&&lastEvent?{replyTo:lastEvent.id}:{})})
    record(next,draft.trim());return
   }
   if(i===9){
    if(!file){setError(T(l,"Selecteer een fictieve bijlage.","Select a fictional attachment.","Choisissez une pièce jointe fictive.","Wähle einen fiktiven Anhang."));return}
    next.channel="event"
-   next.messages.push({id:Date.now(),channel:"event",sender:"Jij / You",body:T(l,"Demo-bijlage","Demo attachment","Pièce jointe démo","Demo-Anhang"),time:"20:03",attachment:file})
+   next.messages.push({id:Date.now(),channel:"event",sender:"Jij / You",body:T(l,"Demo-bijlage","Demo attachment","Pièce jointe démo","Demo-Anhang"),time:"20:03",date:"2026-10-11",attachment:file})
    record(next,file);return
   }
   if(i===10){next.scanReviewed=true;record(next,"reviewed");return}
@@ -172,6 +176,44 @@ export function SandboxChatTraining({role}:{role:string}){
   if(i===27){
    if(!next.manualTranslated)return
    next.manualTranslated=false;next.translationAudit.push("example-off");next.channel="event";record(next,"confirmed");return
+  }
+  if(i===28){
+   if(filterChoice!=="me"){setError(T(l,"Selecteer je eigen berichten.","Select your own messages.","Sélectionnez vos propres messages.","Wähle deine eigenen Nachrichten."));return}
+   next.filterSender="me";next.filterAudit.push("sender");record(next,"me");return
+  }
+  if(i===29){
+   if(filterChoice!=="media"){setError(T(l,"Selecteer afbeeldingen en video's.","Select images and videos.","Sélectionnez images et vidéos.","Wähle Bilder und Videos."));return}
+   next.filterAttachment="media";next.filterAudit.push("attachment");record(next,"media");return
+  }
+  if(i===30){
+   if(!/^\d{4}-\d{2}-\d{2}$/.test(fromDate)||!/^\d{4}-\d{2}-\d{2}$/.test(toDate)||fromDate>toDate){
+    setError(T(l,"Begindatum mag niet na einddatum liggen.","Start date must not be later than end date.","La date de début ne doit pas dépasser la fin.","Startdatum darf nicht nach dem Enddatum liegen."));return
+   }
+   next.filterFrom=fromDate;next.filterTo=toDate;next.filterAudit.push("dates");record(next,fromDate+" → "+toDate);return
+  }
+  if(i===31){
+   if(search.trim().length<3){setError(T(l,"Geef minstens drie tekens op.","Enter at least three characters.","Saisissez au moins trois caractères.","Gib mindestens drei Zeichen ein."));return}
+   next.filterQuery=search.trim();next.filterAudit.push("query");record(next,search.trim());return
+  }
+  if(i===32){
+   if(next.filterSender!=="me"||next.filterAttachment!=="media"||!next.filterFrom||!next.filterTo||!next.filterQuery)return
+   const keyword=next.filterQuery.toLowerCase()
+   next.filteredMatches=next.messages.filter(m=>m.channel==="event"&&m.sender==="Jij / You"&&
+    Boolean(m.attachment&&/\.(png|jpg|jpeg|webp|gif|mp4)$/i.test(m.attachment))&&
+    Boolean(m.date&&m.date>=next.filterFrom&&m.date<=next.filterTo)&&
+    (m.body+" "+m.attachment).toLowerCase().includes(keyword)).map(m=>m.id)
+   if(!next.filteredMatches.length){setError(T(l,"Geen berichten voldoen aan de filters.","No messages match these filters.","Aucun message ne correspond aux filtres.","Keine Nachrichten passen zu den Filtern."));return}
+   next.channel="event";next.filterAudit.push("search");record(next,"confirmed");return
+  }
+  if(i===33){
+   const id=Number(resultChoice)
+   if(!resultChoice||!next.filteredMatches.includes(id))return
+   next.selectedSearchResult=id;next.filterAudit.push("open");next.channel="event";record(next,resultChoice);return
+  }
+  if(i===34){
+   if(next.selectedSearchResult===null||!next.filteredMatches.includes(next.selectedSearchResult))return
+   next.filterSender="";next.filterAttachment="";next.filterFrom="";next.filterTo="";next.filterQuery=""
+   next.filteredMatches=[];next.selectedSearchResult=null;next.filterAudit.push("clear");record(next,"confirmed");return
   }
   record(next,current.kind==="toggle"?"confirmed":"reviewed")
  }
