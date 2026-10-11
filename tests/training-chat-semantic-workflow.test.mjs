@@ -10,14 +10,15 @@ test('chat sandbox is selected exclusively in tour mode and never replaces real 
  assert.match(route,/return <main[\s\S]*<ChatClient channels=/)
 })
 
-test('chat demo supports 35 shared exercises and six admin-only exercises for each role',()=>{
+test('chat demo supports 35 shared, two lead-only and six admin-only exercises',()=>{
  const source=read('components/training/sandbox-chat-training.tsx')
  const shared=getTrainingOperations('employee','chat').filter(x=>x.id.startsWith('chat:shared:'))
  assert.equal(shared.length,35)
  const admin=getTrainingOperations('admin','chat')
  assert.equal(admin.length,41)
+ assert.equal(getTrainingOperations('responsible_lead','chat').length,37)
  for(const role of ['employee','responsible_lead','admin']){
-  assert.equal(getTrainingOperations(role,'chat').length,role==='admin'?41:35)
+  assert.equal(getTrainingOperations(role,'chat').length,role==='admin'?41:role==='responsible_lead'?37:35)
  }
  assert.match(source,/data-training-practical-op=\{current\.id\}/)
  assert.match(source,/detail:\{role:normalized,chapter:"chat",id:current\.id,kind:current\.kind,value\}/)
@@ -104,4 +105,16 @@ test('combined chat search checks the actual message body, not attachment filena
  assert.doesNotMatch(sandbox,/\(m\.body\+" "\+m\.attachment\)/)
  assert.match(sandbox,/body:T\(l,"Demo-bijlage"/)
  assert.match(production,/coalesce\(m\.body,''\) ilike/)
+})
+
+test('responsible chat pin and unpin is exercised while staff is prohibited',()=>{
+ const demo=read('components/training/sandbox-chat-training.tsx')
+ const bot=read('scripts/15-bot-browser-test.mjs')
+ const sql=read('supabase/migrations/20261006124500_chat_experience_upgrade.sql')
+ assert.ok(demo.includes('chat:responsible_lead:'))
+ assert.ok(demo.includes('next.pinAudit.push("pin")'))
+ assert.ok(demo.includes('next.pinAudit.push("unpin")'))
+ assert.ok(bot.includes("tourRole==='responsible_lead'&&simulated.pinAudit"))
+ assert.ok(bot.includes("tourRole==='employee'&&simulated.pinAudit.length!==0"))
+ assert.ok(sql.includes('upt_is_responsible(v_channel.event_id,v_channel.workplace_id,v_actor)'))
 })

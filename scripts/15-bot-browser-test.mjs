@@ -1171,6 +1171,8 @@ try {
                 !simulated.replied||!simulated.mentioned||!simulated.attachment||!simulated.read||!simulated.scanned||
                 !simulated.searched||!simulated.pinsReviewed||!simulated.olderLoaded||!simulated.seededPin||
                 (tourRole==='admin'&&(simulated.pinAudit.join(',')!=='pin,unpin'||simulated.moderated!==1))||
+                (tourRole==='responsible_lead'&&simulated.pinAudit.join(',')!=='pin,unpin')||
+                (tourRole==='employee'&&simulated.pinAudit.length!==0)||
                 simulated.muteMode!=='mentions'||simulated.notificationAudit?.join(',')!=='muted,mentions'||
                 simulated.autoTranslate!==false||simulated.manualTranslated!==false||
                 simulated.translationAudit?.join(',')!=='auto-on,auto-off,example-on,example-off'||

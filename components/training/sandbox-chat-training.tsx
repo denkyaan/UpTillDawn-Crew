@@ -46,6 +46,7 @@ export function SandboxChatTraining({role}:{role:string}){
  const current:PracticeOperation|undefined=steps.find(x=>x.id===currentId)
  const index=current?Number(current.id.split(":").at(-1)):0
  const isAdminStep=current?.id.startsWith("chat:admin:")
+ const isLeadStep=current?.id.startsWith("chat:responsible_lead:")
  const currentChannel=state.channel
  const messages=state.messages.filter(m=>m.channel===currentChannel)
  const lastEvent=state.messages.filter(m=>m.channel==="event").at(-1)
@@ -90,6 +91,17 @@ export function SandboxChatTraining({role}:{role:string}){
   if(!current)return
   const i=index
   const next={...state,messages:[...state.messages],participants:[...state.participants],messageMatches:[...state.messageMatches],pinnedMessageIds:[...state.pinnedMessageIds],pinAudit:[...state.pinAudit],moderatedMessageIds:[...state.moderatedMessageIds],notificationAudit:[...state.notificationAudit],translationAudit:[...state.translationAudit],filteredMatches:[...state.filteredMatches],filterAudit:[...state.filterAudit]}
+  if(isLeadStep){
+   if(i===0){
+    if(!lastEvent||next.pinnedMessageIds.includes(lastEvent.id)){setError(T(l,"Kies eerst een niet-vastgepind bericht.","Choose a message not yet pinned.","Choisissez un message non épinglé.","Wähle eine noch nicht angeheftete Nachricht."));return}
+    next.pinnedMessageIds.push(lastEvent.id);next.pinAudit.push("pin");next.channel="event";record(next,"confirmed");return
+   }
+   if(i===1){
+    if(!lastEvent||!next.pinnedMessageIds.includes(lastEvent.id)){setError(T(l,"Pin dit bericht eerst.","Pin this message first.","Épinglez d’abord ce message.","Hefte diese Nachricht zuerst an."));return}
+    next.pinnedMessageIds=next.pinnedMessageIds.filter(id=>id!==lastEvent.id);next.pinAudit.push("unpin");next.channel="event";record(next,"confirmed");return
+   }
+   return
+  }
   if(isAdminStep){
    if(i===1){next.participants=[...new Set([...next.participants,peer])];record(next,peer);return}
    if(i===2){

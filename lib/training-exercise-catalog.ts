@@ -455,6 +455,10 @@ crew:`
 inspect|Bekijk de ploeglijst van je post|View your team list|Voir l’équipe de votre poste|Eigenes Team ansehen
 message|Neem contact op met een teamlid|Contact team member|Contacter un membre de l’équipe|Teammitglied kontaktieren
 `,
+chat:`
+toggle|Pin een bericht in jouw werkplek- of evenementchat|Pin a message in your workplace or event chat|Épingler un message du chat de votre poste ou événement|Nachricht im Arbeitsplatz- oder Eventchat anheften
+toggle|Verwijder de pin van jouw bericht|Unpin a message in your workplace or event chat|Désépingler un message dans votre chat de poste ou événement|Anheftung im Arbeitsplatz- oder Eventchat lösen
+`,
 settings:`
 inspect|Controleer bevoegdheden van de verantwoordelijke|Review lead permissions|Vérifier les droits du responsable|Rechte der Verantwortlichen prüfen
 `,
