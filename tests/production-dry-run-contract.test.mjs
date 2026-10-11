@@ -29,7 +29,7 @@ test('production dry run permanently covers the full human event journey',async(
 test('production dry run remains a mandatory CI gate',async()=>{
  const ci=await read('.github/workflows/ci.yml')
  assert.match(ci,/node --test tests\/production-dry-run-contract\.test\.mjs/)
- assert.match(ci,/Run 15 concurrent authenticated browser bots/)
+ assert.match(ci,/Run 15 full cross-role browser tours with bounded concurrency/)
  assert.match(ci,/Verify browser action persistence/)
  assert.match(ci,/Full event lifecycle release gate/)
 })
