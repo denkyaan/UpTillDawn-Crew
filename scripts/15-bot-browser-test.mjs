@@ -919,7 +919,17 @@ try {
                await drill.locator('[data-demo-operations-operation="'+operationId+'"]').waitFor({state:'visible',timeout:15000})
                if(kind==='inspect'){await drill.locator('[data-training-preview-op="'+operationId+'"]').click();await drill.locator('[data-demo-operations-detail="'+operationId+'"]').waitFor({state:'visible',timeout:15000})}
                if(kind==='select')await drill.locator('[data-demo-operations-select]').selectOption(operationId==='operations:admin:10'?'daily':'lina')
-               if(kind==='number')await drill.locator('[data-demo-operations-number]').fill(operationId==='operations:admin:12'?'40':operationId==='operations:admin:11'?'8':'7')
+               if(kind==='number'){
+                 const input=drill.locator('[data-demo-operations-number]')
+                 if(operationId==='operations:admin:5'||operationId==='operations:admin:12'){
+                   await input.fill(operationId==='operations:admin:5'?'-2':'4')
+                   await drill.locator('[data-training-practical-op="'+operationId+'"]').click()
+                   await drill.locator('[role="alert"]').waitFor({state:'visible',timeout:10000})
+                   const remained=await lab.locator('[data-training-operation]').getAttribute('data-training-operation')
+                   if(remained!==operationId)throw new Error('Invalid hours advanced the tour: '+operationId)
+                 }
+                 await input.fill(operationId==='operations:admin:12'?'40':operationId==='operations:admin:11'?'8':'7')
+               }
                if(kind==='message'&&operationId!=='operations:admin:8')await drill.locator('[data-demo-operations-message]').fill('Corrected fictional shift after badge verification and staff confirmation')
              }
              if(requiredReal)await real.waitFor({state:'visible',timeout:15000})
