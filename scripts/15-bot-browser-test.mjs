@@ -519,6 +519,24 @@ try {
           const operationId=await action.getAttribute('data-training-operation')
           if(!operationId)throw new Error('missing training operation identity')
           if(!kind)throw new Error('missing training action kind')
+          if(firstChapter==='overview'){
+            const panel=page.locator('[data-training-overview="'+tourRole+'"]')
+            await panel.waitFor({state:'visible',timeout:15000})
+            if(kind==='inspect'){
+              await panel.locator('[data-training-preview-op="'+operationId+'"]').click()
+              await panel.locator('[data-demo-overview-detail="'+operationId+'"]').waitFor({state:'visible',timeout:15000})
+            }else if(kind==='write'){
+              await panel.locator('[data-demo-overview-profile]').fill('Demo profile approved by Admin')
+            }else if(kind==='select'){
+              await panel.locator('[data-demo-overview-preference]').selectOption('bar')
+            }else throw new Error('Unexpected real overview action kind '+kind+' '+operationId)
+            const actual=panel.locator('[data-training-practical-op="'+operationId+'"]')
+            await actual.waitFor({state:'visible',timeout:15000})
+            if(!await actual.isEnabled())throw new Error('Overview action locked despite fulfilling prerequisites '+operationId)
+            await actual.click()
+            await waitForPracticeRecorded(page,progressKey,firstChapter,operationId,exercise+1)
+            continue
+          }
           if(kind==='inspect'){
             const open=action.locator('button[data-training-active-action="true"]').first()
             await open.waitFor({state:'visible',timeout:15000})
@@ -546,6 +564,11 @@ try {
           if(!/rgb\(124,\s*58,\s*237\)/.test(color))throw new Error(`required training confirmation is not solid purple: ${color}`)
           await commit.click()
           await waitForPracticeRecorded(page,progressKey,firstChapter,operationId,exercise+1)
+        }
+        if(firstChapter==='overview'){
+          const state=await page.evaluate(role=>JSON.parse(sessionStorage.getItem('uptilldawn-overview-training-v1:'+role)||'null'),tourRole)
+          if(!state||state.visited?.length!==total||!state.registrationVerified||!state.profile||!state.preferred||!state.eventOpened)
+            throw new Error('Overview onboarding did not complete real registration, profile, preferences and role drilldown: '+JSON.stringify(state))
         }
         const oldSpotlight=await page.evaluate(()=>[...document.querySelectorAll('div[aria-hidden].fixed')].some(node=>String(node.className).includes('z-[188]')))
         if(oldSpotlight)throw new Error('legacy fixed spotlight should not dim or overlay the training screen')
