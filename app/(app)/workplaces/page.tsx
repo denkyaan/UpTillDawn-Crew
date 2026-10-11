@@ -1,5 +1,6 @@
 import { SandboxWorkplaces } from '@/components/training/sandbox-workplaces'
 import { SandboxAdminManager } from '@/components/training/sandbox-admin-manager'
+import { SandboxWorkplaceTraining } from '@/components/training/sandbox-workplace-training'
 import { createClient } from '@/lib/supabase/crew-server'
 import { addWorkplace,assignResponsible,demoteResponsibleToStaff,updateWorkplace } from '@/lib/actions/uptilldawn'
 import { AdminOnly } from '@/components/auth/admin-only'
@@ -22,7 +23,7 @@ export default async function Page({searchParams}:{searchParams?:Promise<{event?
   const s=await createClient()
   const current=await getCurrentUser()
   if(!current)return null
-  if(params.tour==='1')return current.role==='admin'?<SandboxAdminManager module="workplaces"/>:<SandboxWorkplaces/>
+  if(params.tour==='1')return <>{current.role==='admin'?<SandboxAdminManager module="workplaces"/>:<SandboxWorkplaces/>}<SandboxWorkplaceTraining role={current.role}/></>
   const user={id:current.id}
   const requestNow=new Date().toISOString()
 

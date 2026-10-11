@@ -679,7 +679,8 @@ try {
             const guestlistReal=chapter==='guestlist'&&operationId.startsWith('guestlist:')
             const tasksReal=chapter==='tasks'&&operationId.startsWith('tasks:')
             const eventsReal=chapter==='events'&&operationId.startsWith('events:')
-            const requiredReal=chatReal||peopleReal||systemReal||helpReal||lifecycleReal||revenueReal||incidentReal||inventoryReal||guestlistReal||tasksReal||eventsReal||commonReal.has(operationId)
+            const workplaceReal=chapter==='workplaces'&&operationId.startsWith('workplaces:')
+            const requiredReal=chatReal||peopleReal||systemReal||helpReal||lifecycleReal||revenueReal||incidentReal||inventoryReal||guestlistReal||tasksReal||eventsReal||workplaceReal||commonReal.has(operationId)
               ||(tourRole==='admin'?adminReal:crewReal).has(operationId)
             // Exercise the actual conversation composer rather than an
             // unrelated generic practice form. The simulated conversation is
@@ -869,6 +870,33 @@ try {
                 await eventPanel.locator('[data-demo-event-end]').fill('2026-10-11T04:00')
               }
             }
+            if(workplaceReal&&!(['workplaces:admin:0','workplaces:admin:17'].includes(operationId)||operationId==='workplaces:shared:0'&&tourRole!=='admin')){
+              const panel=page.locator('[data-training-workplace="'+tourRole+'"]')
+              await panel.waitFor({state:'visible',timeout:15000})
+              await panel.locator('[data-demo-workplace-operation="'+operationId+'"]').waitFor({state:'visible',timeout:15000})
+              if(kind==='inspect'){
+                await panel.locator('[data-training-preview-op="'+operationId+'"]').click()
+                await panel.locator('[data-demo-workplace-detail="'+operationId+'"]').waitFor({state:'visible',timeout:15000})
+              }
+              if(['form','write','message'].includes(kind))
+                await panel.locator('[data-demo-workplace-input]').fill('DJ Nova artist pickup and crew briefing information')
+              if(kind==='select'){
+                const workplaceSelections={
+                  'workplaces:admin:1':'bar','workplaces:admin:2':'lina',
+                  'workplaces:admin:4':'noah','workplaces:admin:5':'mila',
+                  'workplaces:admin:8':'mila','workplaces:responsible_lead:1':'noah',
+                  'workplaces:employee:1':'bar'
+                }
+                const choice=workplaceSelections[operationId]
+                if(!choice)throw new Error('Missing workplace choice for '+operationId)
+                await panel.locator('[data-demo-workplace-select]').selectOption(choice)
+              }
+              if(kind==='schedule'){
+                await panel.locator('[data-demo-workplace-start]').fill(operationId==='workplaces:admin:11'?'2026-10-10T21:35':'2026-10-10T20:00')
+                await panel.locator('[data-demo-workplace-end]').fill('2026-10-11T04:00')
+              }
+              if(kind==='upload')await panel.locator('[data-demo-workplace-upload]').selectOption('training-prices.csv')
+            }
             if(requiredReal)await real.waitFor({state:'visible',timeout:15000})
             const usingReal=requiredReal||(await real.count())>0
             if(usingReal){
@@ -939,6 +967,18 @@ try {
             if(tourRole==='responsible_lead'&&(!saved.escalation||!saved.response||saved.status!=='closed'))
               throw new Error('Lead incident workflow did not escalate and resolve: '+JSON.stringify(saved))
             console.log('PASS '+bot+' incidents: '+total+' real actions with role-scoped audit trail')
+          }
+          if(chapter==='workplaces'){
+            const snapshot=await page.evaluate(role=>JSON.parse(sessionStorage.getItem('uptilldawn-workplace-training-v1:'+role)||'null'),tourRole)
+            const delegated=tourRole==='admin'?2:1
+            if(!snapshot||snapshot.audit?.length!==total-delegated)
+              throw new Error('Workplace training did not perform all role-correct actions: '+JSON.stringify({total,delegated,snapshot}))
+            if(tourRole==='admin'&&(!snapshot.artist||!snapshot.pickup||snapshot.files?.length!==3||!snapshot.replacement||!snapshot.staff.includes('mila')))
+              throw new Error('Admin workplace, Driver pickup, staff assignments or price list training incomplete: '+JSON.stringify(snapshot))
+            if(tourRole==='responsible_lead'&&(!snapshot.checkedIn||!snapshot.notice||!snapshot.staff.includes('noah')))
+              throw new Error('Responsible lead did not complete scoped team management: '+JSON.stringify(snapshot))
+            if(tourRole==='employee'&&!snapshot.favorite)
+              throw new Error('Employee preference selection was not saved: '+JSON.stringify(snapshot))
           }
           if(chapter==='events'){
             const snapshot=await page.evaluate(role=>JSON.parse(sessionStorage.getItem('uptilldawn-event-training-v1:'+role)||'null'),tourRole)
