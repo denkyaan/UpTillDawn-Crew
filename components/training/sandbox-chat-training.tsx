@@ -133,7 +133,7 @@ export function SandboxChatTraining({role}:{role:string}){
   if(i===9){
    if(!file){setError(T(l,"Selecteer een fictieve bijlage.","Select a fictional attachment.","Choisissez une pièce jointe fictive.","Wähle einen fiktiven Anhang."));return}
    next.channel="event"
-   next.messages.push({id:Date.now(),channel:"event",sender:"Jij / You",body:T(l,"Demo-bijlage","Demo attachment","Pièce jointe démo","Demo-Anhang"),time:"20:03",date:"2026-10-11",attachment:file})
+   next.messages.push({id:Date.now(),channel:"event",sender:"Jij / You",body:T(l,"Demo-bijlage","Demo attachment","Pièce jointe démo","Demo-Anhang")+": "+file,time:"20:03",date:"2026-10-11",attachment:file})
    record(next,file);return
   }
   if(i===10){next.scanReviewed=true;record(next,"reviewed");return}
@@ -201,7 +201,7 @@ export function SandboxChatTraining({role}:{role:string}){
    next.filteredMatches=next.messages.filter(m=>m.channel==="event"&&m.sender==="Jij / You"&&
     Boolean(m.attachment&&/\.(png|jpg|jpeg|webp|gif|mp4)$/i.test(m.attachment))&&
     Boolean(m.date&&m.date>=next.filterFrom&&m.date<=next.filterTo)&&
-    (m.body+" "+m.attachment).toLowerCase().includes(keyword)).map(m=>m.id)
+    m.body.toLowerCase().includes(keyword)).map(m=>m.id)
    if(!next.filteredMatches.length){setError(T(l,"Geen berichten voldoen aan de filters.","No messages match these filters.","Aucun message ne correspond aux filtres.","Keine Nachrichten passen zu den Filtern."));return}
    next.channel="event";next.filterAudit.push("search");record(next,"confirmed");return
   }

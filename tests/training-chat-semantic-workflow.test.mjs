@@ -96,3 +96,12 @@ test('private chat tour matches the production full-conversation delete contract
  assert.match(bot,/simulated\.retainedPrivate!==0/)
  assert.doesNotMatch(client,/upt_delete_message/)
 })
+
+test('combined chat search checks the actual message body, not attachment filename alone',()=>{
+ const sandbox=read('components/training/sandbox-chat-training.tsx')
+ const production=read('supabase/migrations/20261006124500_chat_experience_upgrade.sql')
+ assert.match(sandbox,/m\.body\.toLowerCase\(\)\.includes\(keyword\)/)
+ assert.doesNotMatch(sandbox,/\(m\.body\+" "\+m\.attachment\)/)
+ assert.match(sandbox,/body:T\(l,"Demo-bijlage"/)
+ assert.match(production,/coalesce\(m\.body,''\) ilike/)
+})
