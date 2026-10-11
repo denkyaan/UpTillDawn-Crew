@@ -94,7 +94,7 @@ export function SandboxInventoryTraining({role}:{role:string}){
      <p>{T(locale,"Opstartcontrole","Opening inspection","Contrôle d’ouverture","Startkontrolle")}: {data.opening?"✓":"—"} · {T(locale,"Afsluitcontrole","Closing inspection","Contrôle de fermeture","Abschlusskontrolle")}: {data.closing?"✓":"—"}</p>
      <p>{T(locale,"Documenten","Documents","Documents","Dokumente")}: {data.photo} · {data.document} · {T(locale,"Meldingen","Reports","Signalements","Meldungen")}: {data.reports.length}</p>
     </article>}
-   </div>
+   </div>}
    {(current.kind==="form"||current.kind==="number"||current.kind==="message")&&<label className="grid gap-2 text-sm font-bold">{current.title[locale]}
     {current.kind==="message"?<textarea data-demo-inventory-input value={text} onChange={e=>setText(e.target.value)} rows={3} className="rounded-lg border bg-background p-3"/>:<input data-demo-inventory-input type={current.kind==="number"?"number":"text"} min={current.kind==="number"?1:undefined} value={text} onChange={e=>setText(e.target.value)} className="rounded-lg border bg-background p-3"/>}</label>}
    {current.kind==="form"&&<label className="grid gap-2 text-sm font-bold">{T(locale,"Materiaalgroep","Inventory group","Groupe de matériel","Materialgruppe")}<select data-demo-inventory-category value={category} onChange={e=>setCategory(e.target.value)} className="rounded-lg border bg-background p-3"><option value="">{T(locale,"Selecteer","Select","Sélectionner","Auswählen")}</option>{categoryOptions.map(x=><option key={x.id} value={x.id}>{x.text}</option>)}</select></label>}
