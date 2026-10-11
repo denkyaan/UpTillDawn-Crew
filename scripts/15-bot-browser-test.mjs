@@ -650,7 +650,9 @@ try {
             const systemReal=['exports','platform','settings'].includes(chapter)&&operationId.startsWith(chapter+':')
             const helpReal=chapter==='help'&&operationId.startsWith('help:shared:')
             const lifecycleReal=['driver','timesheet'].includes(chapter)&&operationId.startsWith(chapter+':')
-            const requiredReal=chatReal||peopleReal||systemReal||helpReal||lifecycleReal||commonReal.has(operationId)
+            const revenueReal=chapter==='sales'&&operationId.startsWith('sales:admin:')
+            const incidentReal=chapter==='incidents'&&operationId.startsWith('incidents:')
+            const requiredReal=chatReal||peopleReal||systemReal||helpReal||lifecycleReal||revenueReal||incidentReal||commonReal.has(operationId)
               ||(tourRole==='admin'?adminReal:crewReal).has(operationId)
             // Exercise the actual conversation composer rather than an
             // unrelated generic practice form. The simulated conversation is
@@ -738,6 +740,26 @@ try {
               if(kind==='message')await workflow.locator('[data-demo-lifecycle-reason]').fill('Corrected fictional event shift after verification of staff attendance')
               if(kind==='select')await workflow.locator('[data-demo-lifecycle-select]').selectOption('lina')
             }
+            if(revenueReal){
+              const sales=page.locator('[data-training-sales="true"]')
+              await sales.waitFor({state:'visible',timeout:15000})
+              await sales.locator('[data-demo-sales-operation="'+operationId+'"]').waitFor({state:'visible',timeout:15000})
+              if(kind==='number')await sales.locator('[data-demo-sales-amount]').fill('3')
+            }
+            if(incidentReal){
+              const incident=page.locator('[data-training-incident="true"]')
+              await incident.waitFor({state:'visible',timeout:15000})
+              await incident.locator('[data-demo-incident-operation="'+operationId+'"]').waitFor({state:'visible',timeout:15000})
+              if(kind==='message')await incident.locator('[data-demo-incident-message]').fill('Training till terminal failure checked and backup till activated')
+              if(kind==='select'){
+                const choice={
+                  'incidents:shared:1':'technical','incidents:shared:3':'urgent',
+                  'incidents:admin:1':'lina','incidents:responsible_lead:2':'admin'
+                }[operationId]
+                if(!choice)throw new Error('Unmapped incident control '+operationId)
+                await incident.locator('[data-demo-incident-select]').selectOption(choice)
+              }
+            }
             if(requiredReal)await real.waitFor({state:'visible',timeout:15000})
             const usingReal=requiredReal||(await real.count())>0
             if(usingReal){
@@ -774,6 +796,24 @@ try {
               if(!saved)throw new Error('Real sandbox click did not persist the expected action: '+operationId)
               console.log('PASS '+bot+' credited real admin control '+chapter+'/'+operationId)
             }
+          }
+          if(chapter==='sales'){
+            const sales=await page.evaluate(()=>JSON.parse(sessionStorage.getItem('uptilldawn-sales-training-v1:admin')||'null'))
+            if(!sales||sales.audit?.length!==total||sales.merchSold!==3||sales.tokensSold!==3||!sales.reconciled||!sales.exportReady)
+              throw new Error('Sales training did not persist all nine real revenue actions: '+JSON.stringify(sales))
+            if(sales.merchCents!==38450+3600||sales.tokenCents!==25000+2400||sales.discrepancyCents!==0)
+              throw new Error('Sales demo double-counted or dropped registered transactions: '+JSON.stringify(sales))
+            console.log('PASS '+bot+' sales: '+total+' real actions; three buckets, balanced ledger, export')
+          }
+          if(chapter==='incidents'){
+            const saved=await page.evaluate(role=>JSON.parse(sessionStorage.getItem('uptilldawn-incident-training-v1:'+role)||'null'),tourRole)
+            if(!saved||saved.audit?.length!==total||!saved.sent||saved.category!=='technical'||saved.urgency!=='urgent'||!saved.gpsReviewed)
+              throw new Error('Incident training failed to persist the full incident report: '+JSON.stringify(saved))
+            if(tourRole==='admin'&&(!saved.assignee||!saved.response||saved.status!=='closed'))
+              throw new Error('Admin incident workflow did not assign, reply and close: '+JSON.stringify(saved))
+            if(tourRole==='responsible_lead'&&(!saved.escalation||!saved.response||saved.status!=='closed'))
+              throw new Error('Lead incident workflow did not escalate and resolve: '+JSON.stringify(saved))
+            console.log('PASS '+bot+' incidents: '+total+' real actions with role-scoped audit trail')
           }
           if(['driver','timesheet'].includes(chapter)){
             const state=await page.evaluate(({role,chapter})=>JSON.parse(sessionStorage.getItem('uptilldawn-lifecycle-training-v1:'+role+':'+chapter)||'null'),{role:tourRole,chapter})

@@ -1,4 +1,4 @@
-import { SandboxIncidents } from '@/components/training/sandbox-feature-pages'
+import { SandboxIncidentTraining } from '@/components/training/sandbox-incident-training'
 import { createClient } from '@/lib/supabase/crew-server'
 import { IncidentForm } from '@/components/crew/incident-form'
 import { IncidentControls } from '@/components/crew/incident-controls'
@@ -18,7 +18,7 @@ export default async function Page({searchParams}:{searchParams?:Promise<{event?
   const s=await createClient()
   const current=await getCurrentUser()
   if(!current)return null
-  if(params.tour==='1')return <SandboxIncidents/>
+  if(params.tour==='1')return <SandboxIncidentTraining role={current.role}/>
   const user={id:current.id}
   const now=new Date().toISOString()
 
