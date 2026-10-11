@@ -692,7 +692,7 @@ try {
               const chat=page.locator('[data-training-chat="true"]')
               await chat.waitFor({state:'visible',timeout:15000})
               await page.locator('[data-demo-chat-operation="'+operationId+'"]').waitFor({state:'visible',timeout:15000})
-              if(kind==='write')await chat.locator('[data-demo-chat-search]').fill('Lina')
+              if(kind==='write')await chat.locator('[data-demo-chat-search]').fill(operationId==='chat:shared:19'?'Training event action':'Lina')
               if(kind==='select')await chat.locator('[data-demo-chat-choice]').selectOption('lina')
               if(kind==='message')await chat.locator('[data-demo-chat-composer]').fill(
                 operationId==='chat:shared:8'?'@Lina welcome to the training event':'Training event action'
@@ -1138,13 +1138,21 @@ try {
                 mentioned:state.messages.some(m=>m.body.includes('@Lina')),
                 attachment:state.messages.some(m=>m.attachment==='training-inventory.png'),
                 read:state.unread===0,
-                scanned:state.scanReviewed
+                scanned:state.scanReviewed,
+                searched:state.messageMatches?.length>0,
+                pinsReviewed:state.pinsReviewed===true,
+                olderLoaded:state.olderLoaded===true,
+                seededPin:state.pinnedMessageIds?.includes(1)===true,
+                pinAudit:state.pinAudit||[],
+                moderated:state.moderatedMessageIds?.length||0
               }
             },tourRole)
             if(!simulated||!simulated.hidden||simulated.retainedPrivate<1||simulated.messages<7||
-                !simulated.replied||!simulated.mentioned||!simulated.attachment||!simulated.read||!simulated.scanned)
+                !simulated.replied||!simulated.mentioned||!simulated.attachment||!simulated.read||!simulated.scanned||
+                !simulated.searched||!simulated.pinsReviewed||!simulated.olderLoaded||!simulated.seededPin||
+                (tourRole==='admin'&&(simulated.pinAudit.join(',')!=='pin,unpin'||simulated.moderated!==1)))
               throw new Error('Fictional chat lifecycle incomplete: '+JSON.stringify(simulated))
-            console.log('PASS '+bot+' fictional chat messages + reply + mention + attachment + hide-with-retention')
+            console.log('PASS '+bot+' fictional chat message search, pinned history, moderation and retention')
           }
           // The admin curriculum must also operate its realistic management
           // controls. Completing isolated catalogue fields cannot substitute

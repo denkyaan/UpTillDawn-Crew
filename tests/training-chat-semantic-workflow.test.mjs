@@ -10,14 +10,14 @@ test('chat sandbox is selected exclusively in tour mode and never replaces real 
  assert.match(route,/return <main[\s\S]*<ChatClient channels=/)
 })
 
-test('chat demo supports all 19 shared exercises and three admin-only exercises for each role',()=>{
+test('chat demo supports 22 shared exercises and six admin-only exercises for each role',()=>{
  const source=read('components/training/sandbox-chat-training.tsx')
  const shared=getTrainingOperations('employee','chat').filter(x=>x.id.startsWith('chat:shared:'))
- assert.equal(shared.length,19)
+ assert.equal(shared.length,22)
  const admin=getTrainingOperations('admin','chat')
- assert.equal(admin.length,22)
+ assert.equal(admin.length,28)
  for(const role of ['employee','responsible_lead','admin']){
-  assert.equal(getTrainingOperations(role,'chat').length,role==='admin'?22:19)
+  assert.equal(getTrainingOperations(role,'chat').length,role==='admin'?28:22)
  }
  assert.match(source,/data-training-practical-op=\{current\.id\}/)
  assert.match(source,/detail:\{role:normalized,chapter:"chat",id:current\.id,kind:current\.kind,value\}/)
@@ -51,4 +51,14 @@ test('browser bots must fill and click real contextual chat steps and check pers
  assert.match(bot,/if\(chapter==='chat'\)/)
  assert.match(bot,/simulated\.retainedPrivate<1/)
  assert.match(bot,/simulated\.attachment/)
+})
+
+test('chat search, pin review, unpin, older messages and moderation persist domain state',()=>{
+ const source=read('components/training/sandbox-chat-training.tsx')
+ const bot=read('scripts/15-bot-browser-test.mjs')
+ for(const fragment of ['data-demo-chat-search-results','data-demo-chat-pinned','data-demo-chat-older-loaded','next.messageMatches=','next.pinnedMessageIds.push','next.pinnedMessageIds=next.pinnedMessageIds.filter','next.moderatedMessageIds.push','next.olderLoaded=true'])assert.ok(source.includes(fragment),'missing chat control '+fragment)
+ assert.match(bot,/operationId==='chat:shared:19'/)
+ assert.match(bot,/simulated\.pinAudit\.join\(','\)!=='pin,unpin'/)
+ assert.match(bot,/simulated\.moderated!==1/)
+ assert.doesNotMatch(source,/supabase\.from\(|createClient\(|fetch\(/)
 })
