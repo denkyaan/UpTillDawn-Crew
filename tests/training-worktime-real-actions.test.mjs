@@ -19,7 +19,10 @@ test('all nondelegated worktime actions use domain controls and are browser-veri
   assert.ok(operations.length>=14)
   const owned=operations.filter(op=>!delegated.includes(op.id))
   assert.ok(owned.length>=12,role+' lacks functional worktime operations')
-  for(const op of owned)assert.ok(drill.includes('data-training-practical-op={id}'),'role '+role+' missing functional worktime button')
+  for(const op of owned){
+   assert.ok(op.id.startsWith('operations:'),'unexpected training operation '+op.id)
+   assert.ok(drill.includes('data-training-practical-op={id}'),'role '+role+' missing functional worktime button')
+  }
  }
  assert.match(page,/SandboxOperationalDrill role=\{current\.role\}/)
  assert.match(drill,/data-demo-operations-operation=\{id\}/)
