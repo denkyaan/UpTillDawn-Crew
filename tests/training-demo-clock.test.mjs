@@ -24,7 +24,7 @@ test('isolated event, break and driving timers never double count',()=>{
 
 test('the tour persists phase snapshots and displays the independent break clock',()=>{
   const src=readFileSync('components/training/sandbox-operations.tsx','utf8')
-  assert.match(src,/settleTrainingClock\(initial\(\),Date\.now\(\)\)/)
+  assert.match(src,/settleTrainingClock\(readTrainingState\(\),Date\.now\(\)\)/)
   assert.match(src,/phase==="break"\?breakTime:time/)
   assert.match(src,/setInterval\(tick,1000\)/)
   assert.doesNotMatch(src,/\["working","driving","at_person","returning","break"\]/)
