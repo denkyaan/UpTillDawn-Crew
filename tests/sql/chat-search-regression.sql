@@ -3,6 +3,7 @@ BEGIN;
 
 CREATE TEMP TABLE search_test_ids(name text primary key,id uuid default gen_random_uuid());
 INSERT INTO search_test_ids(name) VALUES ('crew'),('event'),('media'),('document'),('plain');
+GRANT SELECT ON search_test_ids TO authenticated;
 
 INSERT INTO auth.users(id,email)
 SELECT id,name||'@chat-search.example.invalid'

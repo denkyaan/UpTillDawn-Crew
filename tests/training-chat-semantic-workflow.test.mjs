@@ -118,3 +118,8 @@ test('responsible chat pin and unpin is exercised while staff is prohibited',()=
  assert.ok(bot.includes("tourRole==='employee'&&simulated.pinAudit.length!==0"))
  assert.ok(sql.includes('upt_is_responsible(v_channel.event_id,v_channel.workplace_id,v_actor)'))
 })
+
+test('private-chat delete confirmation must verify absence of all private messages',()=>{
+ const source=read('components/training/sandbox-chat-training.tsx')
+ assert.match(source,/if\(i===14\)\{if\(next\.privateVisible\|\|next\.messages\.some\(m=>m\.channel==="private"\)\)/)
+})

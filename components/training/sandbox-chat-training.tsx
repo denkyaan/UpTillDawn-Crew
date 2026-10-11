@@ -150,6 +150,7 @@ export function SandboxChatTraining({role}:{role:string}){
   }
   if(i===10){next.scanReviewed=true;record(next,"reviewed");return}
   if(i===12){next.unread=0;record(next,"confirmed");return}
+  if(i===14){if(next.privateVisible||next.messages.some(m=>m.channel==="private")){setError(T(l,"Controleer of het volledige privégesprek weg is.","Verify the entire private conversation has been deleted.","Vérifiez que toute la conversation privée a été supprimée.","Prüfe, dass die gesamte private Unterhaltung gelöscht wurde."));return}record(next,"reviewed");return}
   if(i===13){if(!next.privateVisible||!next.messages.some(m=>m.channel==="private"))return;next.messages=next.messages.filter(m=>m.channel!=="private");next.privateVisible=false;next.channel="event";record(next,"confirmed");return}
   if(i===19){
    const needle=search.trim().toLowerCase()
