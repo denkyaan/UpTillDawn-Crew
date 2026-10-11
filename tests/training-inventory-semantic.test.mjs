@@ -33,6 +33,8 @@ test('inventory tour is a real role-specific stock and opening/closing workflow'
  assert.match(app,/data-training-practical-op=\{current\.id\}/)
  assert.match(app,/data-demo-inventory-category/)
  assert.match(app,/data-demo-inventory-select/)
+ assert.match(app,/options\(\)\.some\(option=>option\.id===selected\)/)
+ assert.match(bot,/Invalid inventory quantity advanced the tour/)
  assert.match(app,/data-demo-inventory-input/)
  assert.match(app,/next\.quantity=n/)
  assert.match(app,/next\.opening=true/)

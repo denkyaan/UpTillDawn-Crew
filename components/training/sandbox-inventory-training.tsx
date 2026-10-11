@@ -53,7 +53,7 @@ export function SandboxInventoryTraining({role}:{role:string}){
    if(group==="admin"&&idx===0)next.category=text.trim()
    if(group==="admin"&&idx===1)next.newItem=text.trim()
   }else if(current.kind==="select"||current.kind==="upload"){
-   if(!selected)return fail()
+   if(!selected||!options().some(option=>option.id===selected))return fail()
    value=selected
    if(current.kind==="upload"&&group==="admin"){if(idx===4)next.photo=selected;if(idx===5)next.document=selected}
    if(current.kind==="select"){

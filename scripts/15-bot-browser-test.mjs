@@ -804,7 +804,15 @@ try {
                 await inventory.locator('[data-demo-inventory-input]').fill(operationId==='inventory:admin:0'?'Stage consumables':'Handheld scanner')
                 await inventory.locator('[data-demo-inventory-category]').selectOption('stock')
               }
-              if(kind==='number')await inventory.locator('[data-demo-inventory-input]').fill('12')
+              if(kind==='number'){
+                const amount=inventory.locator('[data-demo-inventory-input]')
+                await amount.fill('0')
+                await inventory.locator('[data-training-practical-op="'+operationId+'"]').click()
+                await inventory.locator('[role="alert"]').waitFor({state:'visible',timeout:10000})
+                if(await lab.locator('[data-training-operation]').getAttribute('data-training-operation')!==operationId)
+                  throw new Error('Invalid inventory quantity advanced the tour')
+                await amount.fill('12')
+              }
               if(kind==='message')await inventory.locator('[data-demo-inventory-input]').fill('Training shortage: three broken water bottle trays')
               if(kind==='select'||kind==='upload'){
                 const selections={
