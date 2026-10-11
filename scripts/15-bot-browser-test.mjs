@@ -794,6 +794,12 @@ try {
               const inventory=page.locator('[data-training-inventory="true"]')
               await inventory.waitFor({state:'visible',timeout:15000})
               await inventory.locator('[data-demo-inventory-operation="'+operationId+'"]').waitFor({state:'visible',timeout:15000})
+              if(kind==='inspect'){
+                const confirm=inventory.locator('[data-training-practical-op="'+operationId+'"]')
+                if(await confirm.isEnabled())throw new Error('Inventory inspection completed without opening details: '+operationId)
+                await inventory.locator('[data-demo-inventory-preview="'+operationId+'"]').click()
+                await inventory.locator('[data-demo-inventory-detail="'+operationId+'"]').waitFor({state:'visible',timeout:15000})
+              }
               if(kind==='form'){
                 await inventory.locator('[data-demo-inventory-input]').fill(operationId==='inventory:admin:0'?'Stage consumables':'Handheld scanner')
                 await inventory.locator('[data-demo-inventory-category]').selectOption('stock')
@@ -980,7 +986,7 @@ try {
           }
           if(chapter==='inventory'){
             const inventory=await page.evaluate(role=>JSON.parse(sessionStorage.getItem('uptilldawn-inventory-training-v1:'+role)||'null'),tourRole)
-            if(!inventory||inventory.audit?.length!==total||!inventory.opening||!inventory.closing||!inventory.reports?.length||inventory.condition!=='damaged')
+            if(!inventory||inventory.audit?.length!==total||!inventory.opening||!inventory.closing||!inventory.reports?.length||inventory.condition!=='damaged'||!inventory.inspected?.includes('inventory:shared:0')||!inventory.inspected?.includes('inventory:shared:7'))
               throw new Error('Real inventory workflow incomplete: '+JSON.stringify(inventory))
             if(tourRole==='admin'&&(!inventory.category||!inventory.newItem||inventory.quantity!==12||inventory.workplace!=='merch'||!inventory.photo||!inventory.document))
               throw new Error('Admin inventory category, materials and upload controls not persisted: '+JSON.stringify(inventory))

@@ -5,11 +5,11 @@ import {activeUiLocale,LANGUAGE_APPLIED_EVENT,type SupportedUiLocale} from "@/li
 import {getTrainingOperations} from "@/lib/training-exercise-catalog"
 import type {TourRole} from "@/lib/tour-training"
 
-type InventoryState={audit:string[];category:string;newItem:string;quantity:number;workplace:string;condition:string;photo:string;document:string;opening:boolean;closing:boolean;reports:string[]}
-const initial=():InventoryState=>({audit:[],category:"",newItem:"",quantity:24,workplace:"bar",condition:"ok",photo:"training-stock.png",document:"training-equipment.pdf",opening:false,closing:false,reports:[]})
+type InventoryState={audit:string[];inspected:string[];category:string;newItem:string;quantity:number;workplace:string;condition:string;photo:string;document:string;opening:boolean;closing:boolean;reports:string[]}
+const initial=():InventoryState=>({audit:[],inspected:[],category:"",newItem:"",quantity:24,workplace:"bar",condition:"ok",photo:"training-stock.png",document:"training-equipment.pdf",opening:false,closing:false,reports:[]})
 const T=(l:SupportedUiLocale,nl:string,en:string,fr:string,de:string)=>({nl,en,fr,de}[l])
 const key=(role:TourRole)=>"uptilldawn-inventory-training-v1:"+role
-function restore(role:TourRole){try{const x=JSON.parse(sessionStorage.getItem(key(role))||"null") as InventoryState|null;if(x&&Array.isArray(x.audit)&&Array.isArray(x.reports))return x}catch{}return initial()}
+function restore(role:TourRole){try{const x=JSON.parse(sessionStorage.getItem(key(role))||"null") as InventoryState|null;if(x&&Array.isArray(x.audit)&&Array.isArray(x.reports))return {...initial(),...x,inspected:Array.isArray(x.inspected)?x.inspected:[]}}catch{}return initial()}
 export function SandboxInventoryTraining({role}:{role:string}){
  const trainingRole:TourRole=role==="admin"?"admin":role==="responsible_lead"?"responsible_lead":"employee"
  const [locale,setLocale]=useState<SupportedUiLocale>("nl")
@@ -20,6 +20,7 @@ export function SandboxInventoryTraining({role}:{role:string}){
  const [category,setCategory]=useState("")
  const [error,setError]=useState("")
  const [ready,setReady]=useState(false)
+ const [openedInspection,setOpenedInspection]=useState("")
  const actions=useMemo(()=>getTrainingOperations(trainingRole,"inventory"),[trainingRole])
  const current=actions.find(x=>x.id===operation)
  const group=current?.id.split(":")[1]
@@ -41,9 +42,12 @@ export function SandboxInventoryTraining({role}:{role:string}){
  }
  const record=()=>{
   if(!ready||!current)return
-  const next:InventoryState={...data,audit:[...data.audit],reports:[...data.reports]}
+  const next:InventoryState={...data,audit:[...data.audit],inspected:[...data.inspected],reports:[...data.reports]}
   let value="reviewed"
-  if(current.kind==="form"){
+  if(current.kind==="inspect"){
+   if(openedInspection!==current.id)return fail()
+   next.inspected.push(current.id)
+  }else if(current.kind==="form"){
    if(text.trim().length<4||!category)return fail()
    value=text.trim()+" · "+category
    if(group==="admin"&&idx===0)next.category=text.trim()
@@ -82,11 +86,20 @@ export function SandboxInventoryTraining({role}:{role:string}){
   </div>
   <section className="rounded-xl border p-4"><h2 className="font-bold">{T(locale,"Wekelijks inventarisoverzicht","Weekly inventory review","Revue hebdomadaire de l’inventaire","Wöchentliche Inventarübersicht")}</h2><p className="text-sm">{T(locale,"Deze lijst synchroniseert in de training met de toegewezen werkplek, inclusief schade en tekorten.","This training list follows the assigned workplace, including damage and shortages.","Cette liste de formation suit le poste attribué, les dégâts et les manques.","Diese Trainingsliste folgt dem zugewiesenen Arbeitsplatz sowie Schäden und Fehlbeständen.")}</p>{data.reports.map((report,i)=><p key={i} className="mt-2 border-t pt-2 text-sm">{report}</p>)}</section>
   {current&&<section data-demo-inventory-operation={current.id} className="space-y-3 rounded-xl border border-violet-500/50 p-4"><h2 className="font-black">{current.title[locale]}</h2><p className="text-sm">{current.help[locale]}</p>
+   {current.kind==="inspect"&&<div className="space-y-2">
+    <button type="button" data-demo-inventory-preview={current.id} data-training-preview-op={current.id} onClick={()=>setOpenedInspection(current.id)} className="w-full rounded-xl bg-violet-600 p-3 font-black text-white">{T(locale,"OPEN INVENTARISDETAILS","OPEN INVENTORY DETAILS","OUVRIR LES DÉTAILS","INVENTARDETAILS ÖFFNEN")}</button>
+    {openedInspection===current.id&&<article data-demo-inventory-detail={current.id} className="space-y-1 rounded-xl border p-3 text-sm">
+     <p>{T(locale,"Werkplek","Workplace","Poste","Arbeitsplatz")}: {data.workplace} · {T(locale,"Materiaal","Equipment","Matériel","Material")}: {data.newItem||T(locale,"Waterflesjes","Water bottles","Bouteilles d’eau","Wasserflaschen")}</p>
+     <p>{T(locale,"Voorraad","Stock","Stock","Bestand")}: {data.quantity} · {T(locale,"Staat","Condition","État","Zustand")}: {data.condition}</p>
+     <p>{T(locale,"Opstartcontrole","Opening inspection","Contrôle d’ouverture","Startkontrolle")}: {data.opening?"✓":"—"} · {T(locale,"Afsluitcontrole","Closing inspection","Contrôle de fermeture","Abschlusskontrolle")}: {data.closing?"✓":"—"}</p>
+     <p>{T(locale,"Documenten","Documents","Documents","Dokumente")}: {data.photo} · {data.document} · {T(locale,"Meldingen","Reports","Signalements","Meldungen")}: {data.reports.length}</p>
+    </article>}
+   </div>
    {(current.kind==="form"||current.kind==="number"||current.kind==="message")&&<label className="grid gap-2 text-sm font-bold">{current.title[locale]}
     {current.kind==="message"?<textarea data-demo-inventory-input value={text} onChange={e=>setText(e.target.value)} rows={3} className="rounded-lg border bg-background p-3"/>:<input data-demo-inventory-input type={current.kind==="number"?"number":"text"} min={current.kind==="number"?1:undefined} value={text} onChange={e=>setText(e.target.value)} className="rounded-lg border bg-background p-3"/>}</label>}
    {current.kind==="form"&&<label className="grid gap-2 text-sm font-bold">{T(locale,"Materiaalgroep","Inventory group","Groupe de matériel","Materialgruppe")}<select data-demo-inventory-category value={category} onChange={e=>setCategory(e.target.value)} className="rounded-lg border bg-background p-3"><option value="">{T(locale,"Selecteer","Select","Sélectionner","Auswählen")}</option>{categoryOptions.map(x=><option key={x.id} value={x.id}>{x.text}</option>)}</select></label>}
    {(current.kind==="select"||current.kind==="upload")&&<label className="grid gap-2 text-sm font-bold">{current.title[locale]}<select data-demo-inventory-select value={selected} onChange={e=>setSelected(e.target.value)} className="rounded-lg border bg-background p-3"><option value="">{T(locale,"Selecteer","Select","Sélectionner","Auswählen")}</option>{options().map(x=><option key={x.id} value={x.id}>{x.label}</option>)}</select></label>}
-   <button type="button" data-training-practical-op={current.id} disabled={!ready} onClick={record} className="w-full rounded-xl bg-violet-600 p-3 font-black text-white disabled:opacity-40">{current.title[locale]}</button>
+   <button type="button" data-training-practical-op={current.id} disabled={!ready||(current.kind==="inspect"&&openedInspection!==current.id)} onClick={record} className="w-full rounded-xl bg-violet-600 p-3 font-black text-white disabled:opacity-40">{current.title[locale]}</button>
    {error&&<p role="alert" className="text-sm text-red-500">{error}</p>}
   </section>}
   <details className="rounded-xl border p-3"><summary className="cursor-pointer font-bold">{T(locale,"Controlelog","Audit trail","Journal d’audit","Prüfprotokoll")} · {data.audit.length}</summary><ol data-demo-inventory-audit-count={data.audit.length} className="mt-2 space-y-1 text-sm">{data.audit.map((x,i)=><li key={i}>{x}</li>)}</ol></details>

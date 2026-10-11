@@ -26,6 +26,10 @@ test('inventory tour is a real role-specific stock and opening/closing workflow'
  }
  assert.match(app,/getTrainingOperations\(trainingRole,"inventory"\)/)
  assert.match(app,/data-demo-inventory-operation=\{current\.id\}/)
+ assert.match(app,/data-demo-inventory-preview=\{current\.id\}/)
+ assert.match(app,/data-demo-inventory-detail=\{current\.id\}/)
+ assert.match(app,/openedInspection!==current\.id/)
+ assert.match(bot,/Inventory inspection completed without opening details/)
  assert.match(app,/data-training-practical-op=\{current\.id\}/)
  assert.match(app,/data-demo-inventory-category/)
  assert.match(app,/data-demo-inventory-select/)
