@@ -1,5 +1,6 @@
 import { chromium } from 'playwright'
 import { createClient } from '@supabase/supabase-js'
+import {botMatrix} from './bot-role-matrix.mjs'
 
 const baseUrl = process.env.BOT_TEST_BASE_URL || 'http://127.0.0.1:3000'
 const testPassword = process.env.BOT_TEST_PASSWORD
@@ -11,8 +12,7 @@ if (!testPassword || !supabaseUrl || !serviceRoleKey || !anonKey) {
   process.exit(1)
 }
 
-const roles = ['admin', 'responsible', ...Array(13).fill('staff')]
-const locales = ['nl', 'fr', 'en', 'de']
+const roles = botMatrix.map(({role})=>role)
 const viewports = [
   { width: 390, height: 844 },
   { width: 430, height: 932 },
@@ -198,7 +198,7 @@ try {
     const batch=roles.slice(batchStart,batchStart+smokeConcurrency)
     await Promise.all(batch.map(async (role, offset) => {
       const index=batchStart+offset
-    const locale = locales[index % locales.length]
+    const locale = botMatrix[index].locale
     const viewport = viewports[index % viewports.length]
     const bot = `bot-${String(index + 1).padStart(2, '0')}-${role}-${locale}`
     const emailAddress = `${bot}@bots.uptilldawn.test`
@@ -491,11 +491,11 @@ try {
         await incidentForm.locator('[role="status"]').waitFor({state:'visible',timeout:15000})
       }
 
-      // Exercise the compact general first-use tour without coupling the
-      // browser smoke run to a hard-coded chapter route. The controller itself
+      // Every actor must exercise the full general first-use tour without coupling
+      // browser verification to hard-coded chapter routes. The controller itself
       // owns role-specific chapter order; the browser verifies the highlighted
       // action, contextual feedback event and persisted pause state.
-      if(index<4){
+      if(index<botMatrix.length){
         const progressKey=`uptilldawn-tour-progress:${profile.data.id}:${tourRole}:general:v8`
         await page.evaluate(({tourRole,userId,progressKey})=>{
           localStorage.setItem(`uptilldawn-app-tour:${userId}:${tourRole}:v8`,'postponed')
@@ -1227,7 +1227,7 @@ try {
   // Sequential cross-role attendance lifecycle after the concurrent smoke phase.
   // Fresh sessions avoid race conditions while still exercising the real UI/RPC contracts.
   async function loginLifecycle(role,index){
-    const locale=locales[index%locales.length]
+    const locale=botMatrix[index].locale
     const context=await browser.newContext({
       locale,
       viewport:{width:430,height:932},
@@ -1635,4 +1635,4 @@ if (failures.length) {
   process.exit(1)
 }
 
-console.log('PASS: 15 concurrent authenticated browser bots + protected event workflow surfaces across Admin/Responsible/Staff, NL/FR/EN/DE and mobile/tablet/desktop viewports')
+console.log('PASS: 15 authenticated browser bots completed in bounded batches + protected event workflow surfaces across Admin/Responsible/Staff, NL/FR/EN/DE and mobile/tablet/desktop viewports')

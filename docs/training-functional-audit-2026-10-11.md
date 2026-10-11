@@ -32,7 +32,7 @@ De vier talen **NL/FR/EN/DE**, zelf klikken op de navigatietab, uitsluitend paar
 
 ### Belangrijke interpretatie van de 15 bots
 
-Er zijn **15 geauthenticeerde browseractors**, maar in `scripts/15-bot-browser-test.mjs` doorlopen alleen de eerste vier (`index<4`) alle trainingshoofdstukken integraal. De overige actors testen vooral authenticatie, routes en operationele deelstromen. De uitspraak ‘15 bots geslaagd’ is dus **geen bewijs dat alle 15 bots elk hoofdstuk en elk edge case hebben getest**.
+In de nieuwe testopzet doorlopen **alle 15 geauthenticeerde browseractors** de volledige rolspecifieke rondleiding. De actor-matrix spreidt Admin, Responsible en Staff over NL/FR/EN/DE en behoudt de vaste eerste drie testaccounts voor SQL- en QR-regressies. Dit is testdekking, **geen bewijs dat alle zichtbare productieknoppen of foutpaden reeds zijn geïmplementeerd en getest**. De uitkomst moet nog door een nieuwe CI-run worden bevestigd.
 
 ### Nog te toetsen vóór een definitieve release
 

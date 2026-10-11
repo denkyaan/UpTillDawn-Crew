@@ -222,7 +222,7 @@ jobs:
           cat /tmp/uptilldawn-bot-app.log
           exit 1
 
-      - name: Run 15 concurrent authenticated browser bots
+      - name: Run 15 full cross-role browser tours with bounded concurrency
         run: |
           set -euo pipefail
           for attempt in 1 2; do
