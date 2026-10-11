@@ -680,8 +680,9 @@ try {
             const tasksReal=chapter==='tasks'&&operationId.startsWith('tasks:')
             const eventsReal=chapter==='events'&&operationId.startsWith('events:')
             const workplaceReal=chapter==='workplaces'&&operationId.startsWith('workplaces:')
-            const briefingReal=chapter==='briefings'&&operationId.startsWith('briefings:')
-            const requiredReal=chatReal||peopleReal||systemReal||helpReal||lifecycleReal||revenueReal||incidentReal||inventoryReal||guestlistReal||tasksReal||eventsReal||workplaceReal||briefingReal||commonReal.has(operationId)
+            const operationsReal=chapter==='operations'&&operationId.startsWith('operations:')
+             const briefingReal=chapter==='briefings'&&operationId.startsWith('briefings:')
+            const requiredReal=chatReal||peopleReal||systemReal||helpReal||lifecycleReal||revenueReal||incidentReal||inventoryReal||guestlistReal||tasksReal||eventsReal||workplaceReal||briefingReal||operationsReal||commonReal.has(operationId)
               ||(tourRole==='admin'?adminReal:crewReal).has(operationId)
             // Exercise the actual conversation composer rather than an
             // unrelated generic practice form. The simulated conversation is
@@ -912,7 +913,16 @@ try {
               if(kind==='select')await panel.locator('[data-demo-briefing-select]').selectOption('bar')
               if(kind==='upload')await panel.locator('[data-demo-briefing-file]').selectOption('training-briefing.pdf')
             }
-            if(requiredReal)await real.waitFor({state:'visible',timeout:15000})
+            if(operationsReal&&!['operations:admin:6','operations:admin:7','operations:responsible_lead:0','operations:responsible_lead:1','operations:employee:0','operations:employee:2'].includes(operationId)){
+               const drill=page.locator('[data-training-operational-drill="'+tourRole+'"]')
+               await drill.waitFor({state:'visible',timeout:15000})
+               await drill.locator('[data-demo-operations-operation="'+operationId+'"]').waitFor({state:'visible',timeout:15000})
+               if(kind==='inspect'){await drill.locator('[data-training-preview-op="'+operationId+'"]').click();await drill.locator('[data-demo-operations-detail="'+operationId+'"]').waitFor({state:'visible',timeout:15000})}
+               if(kind==='select')await drill.locator('[data-demo-operations-select]').selectOption(operationId==='operations:admin:10'?'daily':'lina')
+               if(kind==='number')await drill.locator('[data-demo-operations-number]').fill(operationId==='operations:admin:12'?'40':operationId==='operations:admin:11'?'8':'7')
+               if(kind==='message'&&operationId!=='operations:admin:8')await drill.locator('[data-demo-operations-message]').fill('Corrected fictional shift after badge verification and staff confirmation')
+             }
+             if(requiredReal)await real.waitFor({state:'visible',timeout:15000})
             const usingReal=requiredReal||(await real.count())>0
             if(usingReal){
               await real.click()
@@ -948,6 +958,15 @@ try {
               if(!saved)throw new Error('Real sandbox click did not persist the expected action: '+operationId)
               console.log('PASS '+bot+' credited real admin control '+chapter+'/'+operationId)
             }
+          }
+          if(chapter==='operations'){
+            const drill=await page.evaluate(role=>JSON.parse(sessionStorage.getItem('uptilldawn-worktime-drill-v1:'+role)||'null'),tourRole)
+            if(!drill||drill.audit?.length!==total-2)throw new Error('Missing real worktime operations: '+JSON.stringify({total,role:tourRole,drill}))
+            if(tourRole==='admin'&&(!drill.timesheet||!drill.reason||drill.hours!==7||drill.policy!=='daily'||drill.daily!==8||drill.weekly!==40))
+              throw new Error('Admin timesheet correction or overtime demo incomplete: '+JSON.stringify(drill))
+            if(tourRole!=='admin'&&(drill.breakPhase!=='resumed'||!drill.reminder))
+              throw new Error('Crew worktime break and reminder practice incomplete: '+JSON.stringify(drill))
+            console.log('PASS '+bot+' real worktime drill with '+drill.audit.length+' stateful role actions')
           }
           if(chapter==='inventory'){
             const inventory=await page.evaluate(role=>JSON.parse(sessionStorage.getItem('uptilldawn-inventory-training-v1:'+role)||'null'),tourRole)
