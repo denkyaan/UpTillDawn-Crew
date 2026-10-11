@@ -22,7 +22,7 @@ test('Sales page presents a stateful nine-step Admin simulation with real operat
  assert.deepEqual(sales.map(x=>x.id).join('|'),Array.from({length:9},(_,i)=>'sales:admin:'+i).join('|'))
  assert.equal(sales[4].kind,'number')
  assert.equal(sales[5].kind,'number')
- assert.match(page,/params\.tour==='1'\)return <SandboxSalesTraining\/>/)
+ assert.ok(page.includes("if(params.tour==='1'){if(current.isAdmin!==true)redirect('/');return <SandboxSalesTraining/>}"),'Sales demo must enforce Admin access before rendering')
  assert.doesNotMatch(page,/import \{ SandboxSales \}/)
  assert.match(view,/data-demo-sales-operation=\{step\.id\}/)
  assert.match(view,/data-training-practical-op=\{step\.id\}/)

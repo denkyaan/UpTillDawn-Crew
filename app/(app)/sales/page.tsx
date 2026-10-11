@@ -33,7 +33,7 @@ export default async function SalesPage({
 
   const s=await createClient()
   const params=await searchParams
-  if(params.tour==='1')return <SandboxSalesTraining/>
+  if(params.tour==='1'){if(current.isAdmin!==true)redirect('/');return <SandboxSalesTraining/>}
   const isAdmin=current.isAdmin===true
 
   let events:EventRow[]=[]
