@@ -678,7 +678,8 @@ try {
             const inventoryReal=chapter==='inventory'&&operationId.startsWith('inventory:')
             const guestlistReal=chapter==='guestlist'&&operationId.startsWith('guestlist:')
             const tasksReal=chapter==='tasks'&&operationId.startsWith('tasks:')
-            const requiredReal=chatReal||peopleReal||systemReal||helpReal||lifecycleReal||revenueReal||incidentReal||inventoryReal||guestlistReal||tasksReal||commonReal.has(operationId)
+            const eventsReal=chapter==='events'&&operationId.startsWith('events:')
+            const requiredReal=chatReal||peopleReal||systemReal||helpReal||lifecycleReal||revenueReal||incidentReal||inventoryReal||guestlistReal||tasksReal||eventsReal||commonReal.has(operationId)
               ||(tourRole==='admin'?adminReal:crewReal).has(operationId)
             // Exercise the actual conversation composer rather than an
             // unrelated generic practice form. The simulated conversation is
@@ -844,6 +845,30 @@ try {
               }
               if(kind==='schedule')await task.locator('[data-demo-task-date]').fill('2026-10-11T01:30')
             }
+            if(eventsReal&&!(['events:admin:6','events:admin:12','events:admin:14'].includes(operationId)||operationId==='events:shared:0'&&tourRole!=='admin')){
+              const eventPanel=page.locator('[data-training-event="'+tourRole+'"]')
+              await eventPanel.waitFor({state:'visible',timeout:15000})
+              await eventPanel.locator('[data-demo-event-operation="'+operationId+'"]').waitFor({state:'visible',timeout:15000})
+              if(kind==='inspect'){
+                await eventPanel.locator('[data-training-preview-op="'+operationId+'"]').click()
+                await eventPanel.locator('[data-demo-event-detail="'+operationId+'"]').waitFor({state:'visible',timeout:15000})
+              }
+              if(['form','write','message','number'].includes(kind))
+                await eventPanel.locator('[data-demo-event-value]').fill(kind==='number'?'24':'UpTillDawn full demo event and announcement')
+              if(kind==='select'){
+                const eventSelections={
+                  'events:shared:3':'can','events:shared:4':'yes','events:shared:5':'yes',
+                  'events:employee:0':'can','events:admin:5':'scheduled','events:admin:9':'mila'
+                }
+                const choice=eventSelections[operationId]
+                if(!choice)throw new Error('Missing event choice for '+operationId)
+                await eventPanel.locator('[data-demo-event-select]').selectOption(choice)
+              }
+              if(kind==='schedule'){
+                await eventPanel.locator('[data-demo-event-start]').fill(operationId==='events:admin:4'?'2026-10-10T18:00':'2026-10-10T20:00')
+                await eventPanel.locator('[data-demo-event-end]').fill('2026-10-11T04:00')
+              }
+            }
             if(requiredReal)await real.waitFor({state:'visible',timeout:15000})
             const usingReal=requiredReal||(await real.count())>0
             if(usingReal){
@@ -914,6 +939,20 @@ try {
             if(tourRole==='responsible_lead'&&(!saved.escalation||!saved.response||saved.status!=='closed'))
               throw new Error('Lead incident workflow did not escalate and resolve: '+JSON.stringify(saved))
             console.log('PASS '+bot+' incidents: '+total+' real actions with role-scoped audit trail')
+          }
+          if(chapter==='events'){
+            const snapshot=await page.evaluate(role=>JSON.parse(sessionStorage.getItem('uptilldawn-event-training-v1:'+role)||'null'),tourRole)
+            const delegated=tourRole==='admin'?3:1
+            if(!snapshot||snapshot.audit?.length!==total-delegated)
+              throw new Error('Event training did not complete all required real event operations: '+JSON.stringify({total,delegated,snapshot}))
+            if(snapshot.response!=='can'||snapshot.setup!=='yes'||snapshot.breakdown!=='yes')
+              throw new Error('Event registration and setup/teardown choices not saved: '+JSON.stringify(snapshot))
+            if(tourRole==='admin'&&(!snapshot.assigned||!snapshot.notification||!snapshot.name))
+              throw new Error('Admin event capacity, waiting-list replacement or notifications absent: '+JSON.stringify(snapshot))
+            if(tourRole==='employee'&&!snapshot.waitlist)
+              throw new Error('Staff did not simulate waitlist enrollment: '+JSON.stringify(snapshot))
+            if(tourRole==='responsible_lead'&&!snapshot.crewMessage)
+              throw new Error('Responsible lead did not message the assigned team: '+JSON.stringify(snapshot))
           }
           if(chapter==='tasks'){
             const snapshot=await page.evaluate(role=>JSON.parse(sessionStorage.getItem('uptilldawn-task-training-v1:'+role)||'null'),tourRole)
