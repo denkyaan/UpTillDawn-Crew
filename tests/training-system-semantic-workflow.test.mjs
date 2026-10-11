@@ -103,3 +103,22 @@ test('all Admin export and platform selects map to the matching catalog operatio
  assert.ok(!app.includes('exports:shared:0'),'Admin export must not expect nonexistent shared operation ids')
  assert.ok(!bot.includes("'exports:shared:0':"),'Bot must never target nonexistent shared export steps')
 })
+
+test('Admin Platform form actions use their actual catalog IDs and valid type choices',async()=>{
+ const vm=await import('node:vm')
+ const ts=await import('typescript')
+ const src=await read('lib/training-exercise-catalog.ts')
+ const js=ts.default.transpileModule(src,{compilerOptions:{module:ts.default.ModuleKind.CommonJS,target:ts.default.ScriptTarget.ES2022}}).outputText
+ const sandbox={exports:{},require(){throw new Error('No dependencies in catalog')}}
+ vm.runInNewContext(js,sandbox)
+ const expected={'platform:admin:2':['notification','Demo staff shift notification'],'platform:admin:5':['briefing','Demo briefing template']}
+ const all=sandbox.exports.getTrainingOperations('admin','platform').filter(op=>op.kind==='form').map(op=>op.id)
+ assert.equal(all.join('|'),Object.keys(expected).join('|'))
+ const bot=await read('scripts/15-bot-browser-test.mjs')
+ const app=await read('components/training/sandbox-system-training.tsx')
+ for(const [id,[type,name]] of Object.entries(expected)){
+  assert.ok(bot.includes("'"+id+"':{name:'"+name+"',type:'"+type+"'}"),id+' must fill a valid configured form')
+ }
+ assert.match(app,/const categories=\(\)=>idx===2\?/,'automation must allow the notification category')
+ assert.ok(!bot.includes('platform:shared:2'),'Admin Platform has no shared exercise ID')
+})

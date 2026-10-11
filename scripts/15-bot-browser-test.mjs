@@ -708,12 +708,14 @@ try {
                 await input.selectOption(chosen)
               }
               if(kind==='form'){
-                await system.locator('[data-demo-system-name]').fill(
-                  operationId==='platform:shared:2'?'Demo staff shift notification':'Demo briefing template'
-                )
-                await system.locator('[data-demo-system-category]').selectOption(
-                  operationId==='platform:shared:2'?'notification':'briefing'
-                )
+                const formValues={
+                  'platform:admin:2':{name:'Demo staff shift notification',type:'notification'},
+                  'platform:admin:5':{name:'Demo briefing template',type:'briefing'},
+                }
+                const fields=formValues[operationId]
+                if(!fields)throw new Error('No semantic system form configured for '+operationId)
+                await system.locator('[data-demo-system-operation="'+operationId+'"] [data-demo-system-name]').fill(fields.name)
+                await system.locator('[data-demo-system-operation="'+operationId+'"] [data-demo-system-category]').selectOption(fields.type)
               }
               if(kind==='write'||kind==='message')await system.locator('[data-demo-system-name]').fill(
                 kind==='message'?'Please check the fictional demo permission and audit log':'Demo trainee profile'
