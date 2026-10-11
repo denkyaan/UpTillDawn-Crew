@@ -142,6 +142,9 @@ inspect|Bekijk chatvertaling in vier talen|Review chat translation in four langu
 inspect|Controleer verjaardagsmeldingen|Review birthday notifications|Vérifier les notifications d’anniversaire|Geburtstagsbenachrichtigungen prüfen
 inspect|Bekijk bijlagen terwijl malwarecontrole draait|Review files during malware scanning|Voir les fichiers pendant le scan antivirus|Dateien während Malwareprüfung ansehen
 inspect|Controleer de bewaarperiode van eventchat|Review event-chat retention period|Vérifier la durée de conservation du chat événement|Aufbewahrungsdauer des Eventchats prüfen
+write|Zoek een verzonden evenementbericht|Search sent event messages|Rechercher les messages événement envoyés|Gesendete Eventnachrichten suchen
+inspect|Bekijk de vastgepinde berichten|Review pinned messages panel|Consulter les messages épinglés|Angeheftete Nachrichten prüfen
+toggle|Laad oudere fictieve chatberichten|Load older fictional chat messages|Charger d’anciens messages fictifs|Ältere fiktive Nachrichten laden
 `,
 settings:`
 inspect|Open je profielinstellingen|Open profile settings|Ouvrir les paramètres du profil|Profileinstellungen öffnen
@@ -325,6 +328,9 @@ chat:`
 inspect|Bekijk organisatorische groepsrechten|Review group permissions|Vérifier les droits de groupe|Gruppenberechtigungen prüfen
 select|Beheer deelnemers van een fictieve chat|Manage fictional chat participants|Gérer les participants du chat fictif|Teilnehmer eines fiktiven Chats verwalten
 message|Verstuur een aankondiging naar crew|Send crew announcement|Envoyer annonce à l’équipe|Crew-Ankündigung senden
+toggle|Pin een fictief evenementbericht|Pin a fictional event message|Épingler un message événement fictif|Fiktive Eventnachricht anheften
+toggle|Verwijder de pin van een bericht|Unpin an event message|Désépingler un message|Eventnachricht lösen
+toggle|Modereer een bericht zonder het te wissen|Moderate a message without deleting it|Modérer un message sans suppression|Nachricht ohne Löschung moderieren
 `,
 exports:`
 select|Kies een evenement voor export|Select event for export|Choisir événement pour l’export|Event für Export wählen

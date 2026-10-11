@@ -6,7 +6,7 @@ import type {TourRole} from "@/lib/tour-training"
 
 type Channel="organization"|"event"|"workplace"|"private"
 type Message={id:number;channel:Channel;body:string;sender:string;time:string;replyTo?:number;attachment?:string}
-type State={channel:Channel;peer:string;privateVisible:boolean;unread:number;participants:string[];messages:Message[];scanReviewed:boolean}
+type State={channel:Channel;peer:string;privateVisible:boolean;unread:number;participants:string[];messages:Message[];scanReviewed:boolean;messageMatches:number[];pinnedMessageIds:number[];pinsReviewed:boolean;olderLoaded:boolean;pinAudit:string[];moderatedMessageIds:number[]}
 const STORAGE="uptilldawn-chat-training-v1:"
 const T=(l:SupportedUiLocale,nl:string,en:string,fr:string,de:string)=>({nl,en,fr,de}[l])
 const choices=[{value:"lina",name:"Lina Peeters"},{value:"noah",name:"Noah Jacobs"},{value:"mila",name:"Mila Vermeulen"}]
@@ -16,12 +16,12 @@ const initial=():State=>({
   {id:1,channel:"event",body:"Welkom bij UpTillDawn Trainingsavond.",sender:"Lina Peeters",time:"19:40"},
   {id:2,channel:"workplace",body:"Bar / Toog: controleer de prijslijst en de voorraad.",sender:"Noah Jacobs",time:"19:45"},
   {id:3,channel:"organization",body:"De trainingslocatie is klaar voor alle crew.",sender:"Admin",time:"19:46"}
- ],scanReviewed:false
+ ],scanReviewed:false,messageMatches:[],pinnedMessageIds:[1],pinsReviewed:false,olderLoaded:false,pinAudit:[],moderatedMessageIds:[]
 })
 function saved(key:string):State{
  try{
   const parsed=JSON.parse(sessionStorage.getItem(key)||"null") as State|null
-  if(parsed&&Array.isArray(parsed.messages)&&Array.isArray(parsed.participants)&&typeof parsed.unread==="number")return parsed
+  if(parsed&&Array.isArray(parsed.messages)&&Array.isArray(parsed.participants)&&typeof parsed.unread==="number")return {...initial(),...parsed,messageMatches:parsed.messageMatches||[],pinnedMessageIds:parsed.pinnedMessageIds||[1],pinAudit:parsed.pinAudit||[],moderatedMessageIds:parsed.moderatedMessageIds||[]}
  }catch{}
  return initial()
 }
@@ -84,13 +84,25 @@ export function SandboxChatTraining({role}:{role:string}){
  const commit=()=>{
   if(!current)return
   const i=index
-  const next={...state,messages:[...state.messages],participants:[...state.participants]}
+  const next={...state,messages:[...state.messages],participants:[...state.participants],messageMatches:[...state.messageMatches],pinnedMessageIds:[...state.pinnedMessageIds],pinAudit:[...state.pinAudit],moderatedMessageIds:[...state.moderatedMessageIds]}
   if(isAdminStep){
    if(i===1){next.participants=[...new Set([...next.participants,peer])];record(next,peer);return}
    if(i===2){
     if(draft.trim().length<5){setError(T(l,"Schrijf eerst een aankondiging.","Write an announcement first.","Rédigez d’abord une annonce.","Schreibe zuerst eine Ankündigung."));return}
     next.messages.push({id:Date.now(),channel:"organization",sender:"Admin",body:draft.trim(),time:"20:03"})
     record(next,draft.trim());return
+   }
+   if(i===3){
+    if(!lastEvent||next.pinnedMessageIds.includes(lastEvent.id)){setError(T(l,"Kies een niet-vastgepind bericht.","Choose an unpinned message.","Choisissez un message non épinglé.","Wähle eine nicht angeheftete Nachricht."));return}
+    next.pinnedMessageIds.push(lastEvent.id);next.pinAudit.push("pin");record(next,"confirmed");return
+   }
+   if(i===4){
+    if(!lastEvent||!next.pinnedMessageIds.includes(lastEvent.id)){setError(T(l,"Pin het bericht eerst.","Pin the message first.","Épinglez d’abord le message.","Nachricht zuerst anheften."));return}
+    next.pinnedMessageIds=next.pinnedMessageIds.filter(id=>id!==lastEvent.id);next.pinAudit.push("unpin");record(next,"confirmed");return
+   }
+   if(i===5){
+    if(!lastEvent||next.moderatedMessageIds.includes(lastEvent.id)){setError(T(l,"Kies een niet-gemodereerd bericht.","Choose an unmoderated message.","Choisissez un message non modéré.","Wähle eine unmoderierte Nachricht."));return}
+    next.moderatedMessageIds.push(lastEvent.id);record(next,"confirmed");return
    }
    record(next,"reviewed");return
   }
@@ -122,6 +134,22 @@ export function SandboxChatTraining({role}:{role:string}){
   if(i===10){next.scanReviewed=true;record(next,"reviewed");return}
   if(i===12){next.unread=0;record(next,"confirmed");return}
   if(i===13){next.privateVisible=false;next.channel="event";record(next,"confirmed");return}
+  if(i===19){
+   const needle=search.trim().toLowerCase()
+   if(needle.length<3){setError(T(l,"Zoek met minstens drie tekens.","Search with at least three characters.","Recherchez avec trois caractères minimum.","Suche mit mindestens drei Zeichen."));return}
+   next.messageMatches=next.messages.filter(m=>m.channel==="event"&&m.body.toLowerCase().includes(needle)).map(m=>m.id)
+   if(!next.messageMatches.length){setError(T(l,"Geen bericht gevonden.","No matching message found.","Aucun message trouvé.","Keine passende Nachricht gefunden."));return}
+   next.channel="event";record(next,search.trim());return
+  }
+  if(i===20){
+   if(!next.pinnedMessageIds.length)return
+   next.pinsReviewed=true;record(next,"reviewed");return
+  }
+  if(i===21){
+   if(next.olderLoaded)return
+   next.messages.unshift({id:0,channel:"event",sender:"Lina Peeters",body:T(l,"Oud fictief crewbericht vóór de shift.","Older fictional crew message before the shift.","Ancien message fictif avant le shift.","Ältere fiktive Crewnachricht vor der Schicht."),time:"18:30"})
+   next.olderLoaded=true;next.channel="event";record(next,"confirmed");return
+  }
   record(next,current.kind==="toggle"?"confirmed":"reviewed")
  }
  const command=()=>{
@@ -142,8 +170,11 @@ export function SandboxChatTraining({role}:{role:string}){
    <section className="space-y-3 rounded-xl border p-4">
     <h2 className="font-bold">{labels[currentChannel]}</h2>
     <div data-demo-chat-message-count={state.messages.length} className="min-h-32 space-y-3">
-     {messages.map(message=><article key={message.id} className="rounded-lg border p-3 text-sm"><div className="flex justify-between gap-2"><strong>{message.sender}</strong><time>{message.time}</time></div><p className="mt-2 whitespace-pre-wrap">{message.body}</p>{message.replyTo&&<p className="mt-1 text-xs text-muted-foreground">{T(l,"Antwoord op bericht","Reply to message","Réponse au message","Antwort auf Nachricht")} #{message.replyTo}</p>}{message.attachment&&<p className="mt-2 rounded-lg border p-2 text-xs">{message.attachment} · {T(l,"simulatie van achtergrondcontrole","background scan simulation","simulation d’analyse en arrière-plan","simulierte Hintergrundprüfung")}</p>}</article>)}
+     {messages.map(message=><article key={message.id} className="rounded-lg border p-3 text-sm"><div className="flex justify-between gap-2"><strong>{message.sender}</strong><time>{message.time}</time></div><p className="mt-2 whitespace-pre-wrap">{state.moderatedMessageIds.includes(message.id)?T(l,"Bericht gemodereerd (bewaard in demo).","Message moderated (retained in demo).","Message modéré (conservé dans la démo).","Nachricht moderiert (in Demo gespeichert)."):message.body}</p>{message.replyTo&&<p className="mt-1 text-xs text-muted-foreground">{T(l,"Antwoord op bericht","Reply to message","Réponse au message","Antwort auf Nachricht")} #{message.replyTo}</p>}{message.attachment&&<p className="mt-2 rounded-lg border p-2 text-xs">{message.attachment} · {T(l,"simulatie van achtergrondcontrole","background scan simulation","simulation d’analyse en arrière-plan","simulierte Hintergrundprüfung")}</p>}</article>)}
     </div>
+    {state.messageMatches.length>0&&<div data-demo-chat-search-results={state.messageMatches.length} className="rounded-lg border p-3 text-xs"><strong>{T(l,"Zoekresultaten","Search results","Résultats de recherche","Suchergebnisse")}: {state.messageMatches.length}</strong>{state.messages.filter(m=>state.messageMatches.includes(m.id)).map(m=><p key={m.id} className="mt-1">{m.sender}: {m.body}</p>)}</div>}
+    {state.pinsReviewed&&<div data-demo-chat-pinned={state.pinnedMessageIds.length} className="rounded-lg border p-3 text-xs"><strong>{T(l,"Vastgepinde berichten","Pinned messages","Messages épinglés","Angeheftete Nachrichten")}: {state.pinnedMessageIds.length}</strong>{state.messages.filter(m=>state.pinnedMessageIds.includes(m.id)).map(m=><p key={m.id} className="mt-1">{m.sender}: {m.body}</p>)}</div>}
+    {state.olderLoaded&&<p data-demo-chat-older-loaded className="text-xs">{T(l,"Oudere fictieve berichten geladen.","Older fictional messages loaded.","Anciens messages fictifs chargés.","Ältere fiktive Nachrichten geladen.")}</p>}
     {current&&<section className="space-y-3 rounded-lg border border-violet-500/40 p-4" data-demo-chat-operation={current.id}><p className="text-xs font-bold uppercase text-violet-500">{T(l,"Nu uitvoeren in de demo","Perform now in demo","À effectuer dans la démo","Jetzt in Demo ausführen")}</p><h3 className="font-semibold">{current.title[l]}</h3>{command()}<button type="button" data-training-practical-op={current.id} disabled={!hydrated} onClick={commit} className="w-full rounded-lg bg-violet-600 px-4 py-3 text-sm font-bold text-white disabled:opacity-50">{current.title[l]}</button>{error&&<p role="alert" className="text-sm text-rose-500">{error}</p>}</section>}
     {state.scanReviewed&&<p data-demo-chat-scan className="rounded-lg border p-3 text-xs">{T(l,"Demo: controleproces bekeken. Dit is geen echte malwarescan.","Demo: scan workflow reviewed. This is not a real malware scan.","Démo : processus de scan consulté, sans analyse réelle.","Demo: Scanablauf geprüft; kein echter Malware-Scan.")}</p>}
     <aside className="rounded-lg border p-3 text-xs text-muted-foreground">{T(l,"Eventchat: zichtbaar tot 3 dagen na afloop. Privéchats mogen uit de lijst verdwijnen, berichten worden niet verwijderd.","Event chat: visible for three days after close. A private chat can be hidden without deleting messages.","Chat événement : visible pendant 3 jours après clôture. Masquer un chat privé ne supprime aucun message.","Eventchat: drei Tage nach Ende sichtbar. Ein Privatchat kann ohne Nachrichtenverlust ausgeblendet werden.")}</aside>
