@@ -10,14 +10,14 @@ test('chat sandbox is selected exclusively in tour mode and never replaces real 
  assert.match(route,/return <main[\s\S]*<ChatClient channels=/)
 })
 
-test('chat demo supports 22 shared exercises and six admin-only exercises for each role',()=>{
+test('chat demo supports 28 shared exercises and six admin-only exercises for each role',()=>{
  const source=read('components/training/sandbox-chat-training.tsx')
  const shared=getTrainingOperations('employee','chat').filter(x=>x.id.startsWith('chat:shared:'))
- assert.equal(shared.length,22)
+ assert.equal(shared.length,28)
  const admin=getTrainingOperations('admin','chat')
- assert.equal(admin.length,28)
+ assert.equal(admin.length,34)
  for(const role of ['employee','responsible_lead','admin']){
-  assert.equal(getTrainingOperations(role,'chat').length,role==='admin'?28:22)
+  assert.equal(getTrainingOperations(role,'chat').length,role==='admin'?34:28)
  }
  assert.match(source,/data-training-practical-op=\{current\.id\}/)
  assert.match(source,/detail:\{role:normalized,chapter:"chat",id:current\.id,kind:current\.kind,value\}/)
@@ -61,4 +61,14 @@ test('chat search, pin review, unpin, older messages and moderation persist doma
  assert.match(bot,/simulated\.pinAudit\.join\(','\)!=='pin,unpin'/)
  assert.match(bot,/simulated\.moderated!==1/)
  assert.doesNotMatch(source,/supabase\.from\(|createClient\(|fetch\(/)
+})
+
+test('chat notification and example translation controls persist real training state transitions',()=>{
+ const source=read('components/training/sandbox-chat-training.tsx')
+ const bots=read('scripts/15-bot-browser-test.mjs')
+ for(const x of ['data-demo-chat-notification-mode','data-demo-chat-notification=','data-demo-chat-auto-translate=','data-demo-chat-manual-translation=','next.notificationAudit.push(expected)','next.translationAudit.push("auto-on")','next.translationAudit.push("auto-off")','next.translationAudit.push("example-on")','next.translationAudit.push("example-off")'])assert.ok(source.includes(x),'missing '+x)
+ assert.match(bots,/simulated\.notificationAudit\?\.join/)
+ assert.match(bots,/simulated\.translationAudit\?\.join/)
+ assert.match(source,/not a live translation service/)
+ assert.doesNotMatch(source,/liveTranslateText\(|supabase\.from\(|createClient\(|fetch\(/)
 })

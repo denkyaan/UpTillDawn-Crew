@@ -145,6 +145,12 @@ inspect|Controleer de bewaarperiode van eventchat|Review event-chat retention pe
 write|Zoek een verzonden evenementbericht|Search sent event messages|Rechercher les messages événement envoyés|Gesendete Eventnachrichten suchen
 inspect|Bekijk de vastgepinde berichten|Review pinned messages panel|Consulter les messages épinglés|Angeheftete Nachrichten prüfen
 toggle|Laad oudere fictieve chatberichten|Load older fictional chat messages|Charger d’anciens messages fictifs|Ältere fiktive Nachrichten laden
+select|Demp de chatmeldingen|Mute chat notifications|Couper les notifications du chat|Chatbenachrichtigungen stummschalten
+select|Ontvang enkel vermeldingen en antwoorden|Notify only mentions and replies|Notifier uniquement les mentions et réponses|Nur Erwähnungen und Antworten melden
+toggle|Schakel automatische chatvertaling in (demo)|Enable automatic chat translation (demo)|Activer la traduction automatique (démo)|Automatische Chatübersetzung einschalten (Demo)
+toggle|Schakel automatische chatvertaling uit (demo)|Disable automatic chat translation (demo)|Désactiver la traduction automatique (démo)|Automatische Chatübersetzung ausschalten (Demo)
+toggle|Toon een vooraf vertaalde demoboodschap|Show a predefined translated message|Afficher un message déjà traduit|Vorgefertigte übersetzte Nachricht anzeigen
+toggle|Herstel de originele demoboodschap|Restore original sample message|Restaurer le message original|Originale Beispielnachricht wiederherstellen
 `,
 settings:`
 inspect|Open je profielinstellingen|Open profile settings|Ouvrir les paramètres du profil|Profileinstellungen öffnen
