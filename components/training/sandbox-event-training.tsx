@@ -5,11 +5,11 @@ import {getTrainingOperations,type PracticeOperation} from "@/lib/training-exerc
 import type {TourRole} from "@/lib/tour-training"
 
 type EventState={
- name:string;venue:string;start:string;end:string;deadline:string;capacity:number;status:string;
+ name:string;eventType:string;venue:string;start:string;end:string;deadline:string;capacity:number;status:string;
  response:string;setup:string;breakdown:string;waitlist:boolean;assigned:string;notification:string;crewMessage:string;
  published:boolean;archived:boolean;reviewed:string[];audit:string[]
 }
-const initial=():EventState=>({name:"UpTillDawn Trainingsavond",venue:"Leuven",start:"2026-10-10T20:00",end:"2026-10-11T04:00",deadline:"2026-10-10T18:00",capacity:20,status:"scheduled",response:"",setup:"",breakdown:"",waitlist:false,assigned:"",notification:"",crewMessage:"",published:false,archived:false,reviewed:[],audit:[]})
+const initial=():EventState=>({name:"UpTillDawn Trainingsavond",eventType:"",venue:"Leuven",start:"2026-10-10T20:00",end:"2026-10-11T04:00",deadline:"2026-10-10T18:00",capacity:20,status:"scheduled",response:"",setup:"",breakdown:"",waitlist:false,assigned:"",notification:"",crewMessage:"",published:false,archived:false,reviewed:[],audit:[]})
 const T=(l:SupportedUiLocale,nl:string,en:string,fr:string,de:string)=>({nl,en,fr,de}[l])
 const store=(role:TourRole)=>"uptilldawn-event-training-v1:"+role
 function restore(role:TourRole){try{const v=JSON.parse(sessionStorage.getItem(store(role))||"null") as EventState|null;if(v&&Array.isArray(v.reviewed)&&Array.isArray(v.audit))return v}catch{}return initial()}
@@ -70,7 +70,12 @@ export function SandboxEventTraining({role}:{role:string}){
   }else if(current.kind==="form"||current.kind==="write"||current.kind==="message"){
    if(value.trim().length<5)return fail("Vul minstens vijf tekens in.","Enter at least five characters.","Saisissez au moins cinq caractères.","Mindestens fünf Zeichen eingeben.")
    result=value.trim()
-   if(group==="admin"&&index===0)next.name=result
+   if(current.kind==="form"){
+    if(group!=="admin"||index!==0||!["rave","festival","party"].includes(selection))
+     return fail("Kies een geldig type evenement.","Choose a valid event type.","Choisissez un type d’événement valide.","Wähle einen gültigen Eventtyp.")
+    next.name=value.trim();next.eventType=selection
+    result=value.trim()+" · "+selection
+   }
    if(group==="admin"&&index===2)next.venue=result
    if(group==="admin"&&index===10)next.notification=result
    if(group==="responsible_lead"&&index===2)next.crewMessage=result
@@ -107,7 +112,7 @@ export function SandboxEventTraining({role}:{role:string}){
   </article>
   <div data-demo-event-operation={id} className="space-y-3 rounded-xl border border-violet-500/40 p-3"><h3 className="font-bold">{current.title[l]}</h3>
   {current.kind==="inspect"?<><button type="button" data-training-preview-op={id} onClick={()=>setOpened(true)} className="w-full rounded-lg bg-violet-600 p-3 font-bold text-white">{T(l,"OPEN EVENTDETAILS","OPEN EVENT DETAILS","OUVRIR LES DÉTAILS","EVENTDETAILS ÖFFNEN")}</button>{opened&&<p data-demo-event-detail={id} className="rounded-lg border p-3 text-sm">{notes()}</p>}</>
-   :current.kind==="form"||current.kind==="write"||current.kind==="message"||current.kind==="number"?<label className="grid gap-2 text-sm font-semibold">{current.title[l]}<input data-demo-event-value type={current.kind==="number"?"number":"text"} value={value} onChange={e=>setValue(e.target.value)} className="rounded-lg border bg-background p-3"/></label>
+   :current.kind==="form"||current.kind==="write"||current.kind==="message"||current.kind==="number"?<div className="grid gap-3"><label className="grid gap-2 text-sm font-semibold">{current.title[l]}<input data-demo-event-value type={current.kind==="number"?"number":"text"} value={value} onChange={e=>setValue(e.target.value)} className="rounded-lg border bg-background p-3"/></label>{current.kind==="form"&&<label className="grid gap-2 text-sm font-semibold">{T(l,"Type evenement","Event type","Type d’événement","Eventtyp")}<select data-demo-event-type value={selection} onChange={e=>setSelection(e.target.value)} className="rounded-lg border bg-background p-3"><option value="">{T(l,"Kies een type","Choose a type","Choisir un type","Typ wählen")}</option><option value="rave">Rave</option><option value="festival">Festival</option><option value="party">{T(l,"Feest","Party","Fête","Party")}</option></select></label>}</div>
    :current.kind==="select"?<label className="grid gap-2 text-sm font-semibold">{current.title[l]}<select data-demo-event-select value={selection} onChange={e=>setSelection(e.target.value)} className="rounded-lg border bg-background p-3"><option value="">{T(l,"Kies een optie","Select an option","Choisir","Wählen")}</option>{choices().map(([id,nl,en,fr,de])=><option key={id} value={id}>{l==="nl"?nl:l==="en"?en:l==="fr"?fr:de}</option>)}</select></label>
    :current.kind==="schedule"?<div className="grid gap-2 sm:grid-cols-2"><input data-demo-event-start type="datetime-local" value={start} onChange={e=>setStart(e.target.value)} className="rounded-lg border bg-background p-3"/><input data-demo-event-end type="datetime-local" value={end} onChange={e=>setEnd(e.target.value)} className="rounded-lg border bg-background p-3"/></div>
    :<p className="text-sm">{current.help[l]}</p>}

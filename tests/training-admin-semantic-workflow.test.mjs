@@ -153,3 +153,16 @@ test('the streamed event and workplace tour mounts only on its real sandbox and 
  assert.match(bots,/'workplaces:shared:0'/,'workplace opener is a required real control')
  assert.match(bots,/'briefings:shared:5'/,'briefing confirmation is a required real control')
 })
+
+test('Admin event creation requires a real event type and emits valid form evidence',async()=>{
+ const event=await read('components/training/sandbox-event-training.tsx')
+ const bots=await read('scripts/15-bot-browser-test.mjs')
+ const step=action('admin','events','Create new fictional event')
+ assert.equal(step.id,'events:admin:0')
+ assert.equal(step.kind,'form')
+ assert.match(event,/data-demo-event-type/)
+ assert.match(event,/\["rave","festival","party"\]\.includes\(selection\)/)
+ assert.match(event,/next\.name=value\.trim\(\);next\.eventType=selection/)
+ assert.match(event,/result=value\.trim\(\)\+" · "\+selection/)
+ assert.match(bots,/if\(kind==='form'\)await eventPanel\.locator\('\[data-demo-event-type\]'\)\.selectOption\('rave'\)/)
+})

@@ -857,6 +857,7 @@ try {
               }
               if(['form','write','message','number'].includes(kind))
                 await eventPanel.locator('[data-demo-event-value]').fill(kind==='number'?'24':'UpTillDawn full demo event and announcement')
+              if(kind==='form')await eventPanel.locator('[data-demo-event-type]').selectOption('rave')
               if(kind==='select'){
                 const eventSelections={
                   'events:shared:3':'can','events:shared:4':'yes','events:shared:5':'yes',
