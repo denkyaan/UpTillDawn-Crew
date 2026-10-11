@@ -677,7 +677,8 @@ try {
             const incidentReal=chapter==='incidents'&&operationId.startsWith('incidents:')
             const inventoryReal=chapter==='inventory'&&operationId.startsWith('inventory:')
             const guestlistReal=chapter==='guestlist'&&operationId.startsWith('guestlist:')
-            const requiredReal=chatReal||peopleReal||systemReal||helpReal||lifecycleReal||revenueReal||incidentReal||inventoryReal||guestlistReal||commonReal.has(operationId)
+            const tasksReal=chapter==='tasks'&&operationId.startsWith('tasks:')
+            const requiredReal=chatReal||peopleReal||systemReal||helpReal||lifecycleReal||revenueReal||incidentReal||inventoryReal||guestlistReal||tasksReal||commonReal.has(operationId)
               ||(tourRole==='admin'?adminReal:crewReal).has(operationId)
             // Exercise the actual conversation composer rather than an
             // unrelated generic practice form. The simulated conversation is
@@ -819,6 +820,30 @@ try {
               if(kind==='message')await guestlist.locator('[data-demo-guestlist-input]').fill('DJ Nova confirmed at entrance, backstage prepare artist reception')
               if(kind==='select'||kind==='upload')await guestlist.locator('[data-demo-guestlist-select]').selectOption(kind==='upload'?'training-guestlist.csv':'artist')
             }
+            if(tasksReal){
+              const task=page.locator('[data-training-task="'+tourRole+'"]')
+              await task.waitFor({state:'visible',timeout:15000})
+              await task.locator('[data-demo-task-operation="'+operationId+'"]').waitFor({state:'visible',timeout:15000})
+              if(kind==='inspect'){
+                await task.locator('[data-training-preview-op="'+operationId+'"]').click()
+                await task.locator('[data-demo-task-detail="'+operationId+'"]').waitFor({state:'visible',timeout:15000})
+              }
+              if(kind==='form'||kind==='write'||kind==='message')
+                await task.locator('[data-demo-task-input]').fill(kind==='form'?'Restock Bar supplies':'Verify water, cola and replacement stock before closing time.')
+              if(kind==='select'){
+                const taskChoices={
+                  'tasks:admin:2':'bar',
+                  'tasks:admin:3':'noah',
+                  'tasks:admin:5':'in_progress',
+                  'tasks:responsible_lead:2':'noah',
+                  'tasks:responsible_lead:3':'normal',
+                }
+                const chosen=taskChoices[operationId]
+                if(!chosen)throw new Error('No role-correct task selection for '+operationId)
+                await task.locator('[data-demo-task-select]').selectOption(chosen)
+              }
+              if(kind==='schedule')await task.locator('[data-demo-task-date]').fill('2026-10-11T01:30')
+            }
             if(requiredReal)await real.waitFor({state:'visible',timeout:15000})
             const usingReal=requiredReal||(await real.count())>0
             if(usingReal){
@@ -889,6 +914,18 @@ try {
             if(tourRole==='responsible_lead'&&(!saved.escalation||!saved.response||saved.status!=='closed'))
               throw new Error('Lead incident workflow did not escalate and resolve: '+JSON.stringify(saved))
             console.log('PASS '+bot+' incidents: '+total+' real actions with role-scoped audit trail')
+          }
+          if(chapter==='tasks'){
+            const snapshot=await page.evaluate(role=>JSON.parse(sessionStorage.getItem('uptilldawn-task-training-v1:'+role)||'null'),tourRole)
+            if(!snapshot||snapshot.audit?.length!==total||snapshot.completed?.length!==total)
+              throw new Error('Task workflow did not record all real role-specific actions: '+JSON.stringify(snapshot))
+            if(tourRole==='admin'&&(!snapshot.task?.assignees.includes('noah')||snapshot.task.workplace!=='bar'||!snapshot.task.deadline))
+              throw new Error('Admin task creation and assignment were not performed: '+JSON.stringify(snapshot))
+            if(tourRole==='responsible_lead'&&!snapshot.task?.assignees.includes('noah'))
+              throw new Error('Lead did not assign a worker within their workplace: '+JSON.stringify(snapshot))
+            if(tourRole==='employee'&&snapshot.task?.secondaryStatus!=='in_progress')
+              throw new Error('Staff did not start their second assigned task: '+JSON.stringify(snapshot))
+            console.log('PASS '+bot+' functional role-specific task creation, assignment and comments: '+total)
           }
           if(['driver','timesheet'].includes(chapter)){
             const state=await page.evaluate(({role,chapter})=>JSON.parse(sessionStorage.getItem('uptilldawn-lifecycle-training-v1:'+role+':'+chapter)||'null'),{role:tourRole,chapter})
