@@ -104,11 +104,11 @@ export function SandboxSystemTraining({module,role}:{module:Module;role:string})
   dispatchEvent(new CustomEvent("uptilldawn-training-practical-action",{detail:{role:trainingRole,chapter:module,id:current.id,kind:current.kind,value}}))
  }
  const choices=():{value:string;label:string}[]=>{
-  if(module==="exports"&&current?.id==="exports:shared:0")return [
+  if(module==="exports"&&current?.id==="exports:admin:0")return [
    {value:"training-event",label:T(l,"UpTillDawn Trainingsavond","UpTillDawn Training Night","Soirée d’entraînement UpTillDawn","UpTillDawn Trainingsabend")}
   ]
-  if(module==="exports"&&current?.id==="exports:shared:3")return [{value:"xlsx",label:T(l,"Excel (.xlsx)","Excel (.xlsx)","Excel (.xlsx)","Excel (.xlsx)")},{value:"csv",label:T(l,"CSV (.csv)","CSV (.csv)","CSV (.csv)","CSV (.csv)")}]
-  if(module==="platform"&&current?.id==="platform:shared:3")return [
+  if(module==="exports"&&current?.id==="exports:admin:3")return [{value:"xlsx",label:T(l,"Excel (.xlsx)","Excel (.xlsx)","Excel (.xlsx)","Excel (.xlsx)")},{value:"csv",label:T(l,"CSV (.csv)","CSV (.csv)","CSV (.csv)","CSV (.csv)")}]
+  if(module==="platform"&&current?.id==="platform:admin:3")return [
    {value:"shift-confirmed",label:T(l,"Shift bevestigd","Shift confirmed","Shift confirmé","Schicht bestätigt")},
    {value:"artist-arrived",label:T(l,"Artiest aangekomen","Artist arrived","Artiste arrivé","Künstler angekommen")}
   ]

@@ -682,9 +682,9 @@ try {
               await system.locator('[data-demo-system-operation="'+operationId+'"]').waitFor({state:'visible',timeout:15000})
               if(kind==='select'){
                 const choiceByOperation={
-                  'exports:shared:0':'training-event',
-                  'exports:shared:3':'xlsx',
-                  'platform:shared:3':'shift-confirmed',
+                  'exports:admin:0':'training-event',
+                  'exports:admin:3':'xlsx',
+                  'platform:admin:3':'shift-confirmed',
                   'settings:shared:2':'en',
                 }
                 const chosen=choiceByOperation[operationId]

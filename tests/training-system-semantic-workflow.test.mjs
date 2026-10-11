@@ -66,14 +66,40 @@ test('15 authenticated bots use all required real system controls and assert per
 test('export option visibility is tied to the semantic step id rather than a transient array index',async()=>{
  const view=await read('components/training/sandbox-system-training.tsx')
  const bot=await read('scripts/15-bot-browser-test.mjs')
- assert.match(view,/current\?\.id==="exports:shared:0"/)
- assert.match(view,/current\?\.id==="exports:shared:3"/)
- assert.match(view,/current\?\.id==="platform:shared:3"/)
+ assert.match(view,/current\?\.id==="exports:admin:0"/)
+ assert.match(view,/current\?\.id==="exports:admin:3"/)
+ assert.match(view,/current\?\.id==="platform:admin:3"/)
  assert.match(view,/current\?\.id==="settings:shared:2"/)
- assert.match(bot,/'exports:shared:0':'training-event'/)
- assert.match(bot,/'exports:shared:3':'xlsx'/)
+ assert.match(bot,/'exports:admin:0':'training-event'/)
+ assert.match(bot,/'exports:admin:3':'xlsx'/)
  assert.match(bot,/\.some\(option=>option\.value===chosen\)/)
  assert.match(bot,/Export\/platform\/settings selection mismatch/)
  assert.match(bot,/sameTargetInterrupted/)
  assert.match(bot,/await page\.waitForURL\(url,\{waitUntil:'domcontentloaded',timeout:15000\}\)/)
+})
+
+test('all Admin export and platform selects map to the matching catalog operations',async()=>{
+ const vm=await import('node:vm')
+ const ts=await import('typescript')
+ const source=await read('lib/training-exercise-catalog.ts')
+ const js=ts.default.transpileModule(source,{compilerOptions:{module:ts.default.ModuleKind.CommonJS,target:ts.default.ScriptTarget.ES2022}}).outputText
+ const context={exports:{},require(){throw new Error('Catalog must not need runtime dependencies')}}
+ vm.runInNewContext(js,context)
+ const app=await read('components/training/sandbox-system-training.tsx')
+ const bot=await read('scripts/15-bot-browser-test.mjs')
+ const expected={
+  exports:{'exports:admin:0':'training-event','exports:admin:3':'xlsx'},
+  platform:{'platform:admin:3':'shift-confirmed'},
+  settings:{'settings:shared:2':'en'}
+ }
+ for(const [chapter,options] of Object.entries(expected)){
+  const found=context.exports.getTrainingOperations('admin',chapter).filter(step=>step.kind==='select').map(step=>step.id)
+  assert.equal(found.join('|'),Object.keys(options).join('|'),chapter+' requires a matching real UI select for every catalog action')
+  for(const [id,value] of Object.entries(options)){
+   assert.ok(app.includes('current?.id==="'+id+'"'),'missing UI option mapping for '+id)
+   assert.ok(bot.includes("'"+id+"':'"+value+"'"),'missing bot value '+value+' for '+id)
+  }
+ }
+ assert.ok(!app.includes('exports:shared:0'),'Admin export must not expect nonexistent shared operation ids')
+ assert.ok(!bot.includes("'exports:shared:0':"),'Bot must never target nonexistent shared export steps')
 })
