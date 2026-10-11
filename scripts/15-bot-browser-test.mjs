@@ -680,7 +680,8 @@ try {
             const tasksReal=chapter==='tasks'&&operationId.startsWith('tasks:')
             const eventsReal=chapter==='events'&&operationId.startsWith('events:')
             const workplaceReal=chapter==='workplaces'&&operationId.startsWith('workplaces:')
-            const requiredReal=chatReal||peopleReal||systemReal||helpReal||lifecycleReal||revenueReal||incidentReal||inventoryReal||guestlistReal||tasksReal||eventsReal||workplaceReal||commonReal.has(operationId)
+            const briefingReal=chapter==='briefings'&&operationId.startsWith('briefings:')
+            const requiredReal=chatReal||peopleReal||systemReal||helpReal||lifecycleReal||revenueReal||incidentReal||inventoryReal||guestlistReal||tasksReal||eventsReal||workplaceReal||briefingReal||commonReal.has(operationId)
               ||(tourRole==='admin'?adminReal:crewReal).has(operationId)
             // Exercise the actual conversation composer rather than an
             // unrelated generic practice form. The simulated conversation is
@@ -897,6 +898,19 @@ try {
               }
               if(kind==='upload')await panel.locator('[data-demo-workplace-upload]').selectOption('training-prices.csv')
             }
+            if(briefingReal&&!(tourRole!=='admin'&&operationId.startsWith('briefings:shared:')&&Number(operationId.split(':').at(-1))<=5||operationId==='briefings:admin:0')){
+              const panel=page.locator('[data-training-briefing-management="'+tourRole+'"]')
+              await panel.waitFor({state:'visible',timeout:15000})
+              await panel.locator('[data-demo-briefing-operation="'+operationId+'"]').waitFor({state:'visible',timeout:15000})
+              if(kind==='inspect'){
+                await panel.locator('[data-training-preview-op="'+operationId+'"]').click()
+                await panel.locator('[data-demo-briefing-detail="'+operationId+'"]').waitFor({state:'visible',timeout:15000})
+              }
+              if(['form','write','message'].includes(kind))
+                await panel.locator('[data-demo-briefing-input]').fill('Check all emergency exits, tills and shift safety instructions')
+              if(kind==='select')await panel.locator('[data-demo-briefing-select]').selectOption('bar')
+              if(kind==='upload')await panel.locator('[data-demo-briefing-file]').selectOption('training-briefing.pdf')
+            }
             if(requiredReal)await real.waitFor({state:'visible',timeout:15000})
             const usingReal=requiredReal||(await real.count())>0
             if(usingReal){
@@ -967,6 +981,18 @@ try {
             if(tourRole==='responsible_lead'&&(!saved.escalation||!saved.response||saved.status!=='closed'))
               throw new Error('Lead incident workflow did not escalate and resolve: '+JSON.stringify(saved))
             console.log('PASS '+bot+' incidents: '+total+' real actions with role-scoped audit trail')
+          }
+          if(chapter==='briefings'){
+            const snapshot=await page.evaluate(role=>JSON.parse(sessionStorage.getItem('uptilldawn-briefing-training-v1:'+role)||'null'),tourRole)
+            const delegated=tourRole==='admin'?1:6
+            if(!snapshot||snapshot.audit?.length!==total-delegated)
+              throw new Error('Briefing management training left required role actions generic: '+JSON.stringify({total,delegated,snapshot}))
+            if(tourRole==='admin'&&(!snapshot.safety||!snapshot.checklist||!snapshot.attachments.length||!snapshot.notices.length||!snapshot.acknowledged))
+              throw new Error('Admin did not complete briefing, safety, checklist, attachments and notifications: '+JSON.stringify(snapshot))
+            if(tourRole==='responsible_lead'&&(!snapshot.checklist||!snapshot.teamConfirmed||!snapshot.notices.length))
+              throw new Error('Lead did not create and acknowledge workplace briefing: '+JSON.stringify(snapshot))
+            if(tourRole==='employee'&&!snapshot.teamConfirmed)
+              throw new Error('Staff did not complete role-specific acknowledgment: '+JSON.stringify(snapshot))
           }
           if(chapter==='workplaces'){
             const snapshot=await page.evaluate(role=>JSON.parse(sessionStorage.getItem('uptilldawn-workplace-training-v1:'+role)||'null'),tourRole)
