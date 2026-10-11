@@ -985,8 +985,8 @@ try {
             const delegated=tourRole==='admin'?3:1
             if(!snapshot||snapshot.audit?.length!==total-delegated)
               throw new Error('Event training did not complete all required real event operations: '+JSON.stringify({total,delegated,snapshot}))
-            if(snapshot.response!=='can'||snapshot.setup!=='yes'||snapshot.breakdown!=='yes')
-              throw new Error('Event registration and setup/teardown choices not saved: '+JSON.stringify(snapshot))
+            if(tourRole!=='admin'&&(snapshot.response!=='can'||snapshot.setup!=='yes'||snapshot.breakdown!=='yes'))
+              throw new Error('Crew event registration and setup/teardown choices not saved: '+JSON.stringify(snapshot))
             if(tourRole==='admin'&&(!snapshot.assigned||!snapshot.notification||!snapshot.name))
               throw new Error('Admin event capacity, waiting-list replacement or notifications absent: '+JSON.stringify(snapshot))
             if(tourRole==='employee'&&!snapshot.waitlist)

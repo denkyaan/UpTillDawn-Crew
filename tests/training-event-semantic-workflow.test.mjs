@@ -33,7 +33,8 @@ test('events tutorial executes real role-scoped availability, waitlist and Admin
  }
  for(const [role,specific] of Object.entries(choices)){
   const ops=context.exports.getTrainingOperations(role,'events')
-  for(const id of ['events:shared:3','events:shared:4','events:shared:5',...Object.keys(specific)]){
+  const roleShared=role==='admin'?[]:['events:shared:3','events:shared:4','events:shared:5']
+  for(const id of [...roleShared,...Object.keys(specific)]){
    assert.equal(ops.find(x=>x.id===id)?.kind,'select',id)
    assert.ok(bot.includes("'"+id+"':"),'real bot select for '+id)
   }
