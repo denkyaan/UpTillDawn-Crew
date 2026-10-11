@@ -811,14 +811,15 @@ try {
                 await inventory.locator('[role="alert"]').waitFor({state:'visible',timeout:10000})
                 if(await lab.locator('[data-training-operation]').getAttribute('data-training-operation')!==operationId)
                   throw new Error('Invalid inventory quantity advanced the tour')
-                await amount.fill('12')
+                await amount.fill(operationId==='inventory:admin:7'?'5':'12')
               }
-              if(kind==='message')await inventory.locator('[data-demo-inventory-input]').fill('Training shortage: three broken water bottle trays')
+              if(kind==='message')await inventory.locator('[data-demo-inventory-input]').fill(operationId==='inventory:admin:13'?'Damage claim rejected for lacking photographic proof':'Training shortage: three broken water bottle trays')
               if(kind==='select'||kind==='upload'){
                 const selections={
                   'inventory:shared:4':'damaged','inventory:admin:3':'merch',
                   'inventory:admin:4':'training-stock.png','inventory:admin:5':'training-equipment.pdf',
-                  'inventory:responsible_lead:1':'damaged'
+                  'inventory:responsible_lead:1':'damaged',
+                  'inventory:admin:8':'noah','inventory:responsible_lead:5':'noah'
                 }
                 const selection=selections[operationId]
                 if(!selection)throw new Error('No real inventory selection for '+operationId)
@@ -996,9 +997,11 @@ try {
             const inventory=await page.evaluate(role=>JSON.parse(sessionStorage.getItem('uptilldawn-inventory-training-v1:'+role)||'null'),tourRole)
             if(!inventory||inventory.audit?.length!==total||!inventory.opening||!inventory.closing||!inventory.reports?.length||inventory.condition!=='damaged'||!inventory.inspected?.includes('inventory:shared:0')||!inventory.inspected?.includes('inventory:shared:7'))
               throw new Error('Real inventory workflow incomplete: '+JSON.stringify(inventory))
-            if(tourRole==='admin'&&(!inventory.category||!inventory.newItem||inventory.quantity!==12||inventory.workplace!=='merch'||!inventory.photo||!inventory.document))
+            if(tourRole==='admin'&&(!inventory.category||!inventory.newItem||inventory.quantity!==17||inventory.workplace!=='merch'||!inventory.photo||!inventory.document||inventory.restocked!==5||inventory.issuedTo!=='noah'||!inventory.returned||inventory.settlement!=='rejected'||!inventory.rejectionReason))
               throw new Error('Admin inventory category, materials and upload controls not persisted: '+JSON.stringify(inventory))
-            console.log('PASS '+bot+' inventory: '+total+' real opening/closing/material/shortage actions')
+            if(tourRole==='responsible_lead'&&(inventory.issuedTo!=='noah'||inventory.quantity!==23||inventory.settlement!=='pending'))throw new Error('Lead return not requested correctly: '+JSON.stringify(inventory))
+            if(tourRole==='employee'&&(inventory.quantity!==24||inventory.settlement!=='cancelled'))throw new Error('Staff cancellation altered stock: '+JSON.stringify(inventory))
+            console.log('PASS '+bot+' inventory: '+total+' audited issue, return, claim and cancellation actions')
           }
           if(chapter==='guestlist'){
             const guestlist=await page.evaluate(role=>JSON.parse(sessionStorage.getItem('uptilldawn-guestlist-training-v1:'+role)||'null'),tourRole)

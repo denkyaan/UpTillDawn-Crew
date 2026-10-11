@@ -18,7 +18,7 @@ test('inventory tour is a real role-specific stock and opening/closing workflow'
  ])
  assert.match(route,/<SandboxInventoryTraining role=\{current\.role\}\/>/)
  assert.doesNotMatch(route,/import \{ SandboxInventory \}/)
- const counts={admin:15,responsible_lead:13,employee:10}
+ const counts={admin:23,responsible_lead:16,employee:13}
  for(const [role,count] of Object.entries(counts)){
   const actions=ops(role,'inventory')
   assert.equal(actions.length,count)
@@ -36,14 +36,14 @@ test('inventory tour is a real role-specific stock and opening/closing workflow'
  assert.match(app,/options\(\)\.some\(option=>option\.id===selected\)/)
  assert.match(bot,/Invalid inventory quantity advanced the tour/)
  assert.match(app,/data-demo-inventory-input/)
- assert.match(app,/next\.quantity=n/)
+ assert.match(app,/else next\.quantity=n/)
  assert.match(app,/next\.opening=true/)
  assert.match(app,/next\.closing=true/)
  assert.match(app,/sessionStorage\.setItem\(key\(trainingRole\),JSON\.stringify\(next\)\)/)
  assert.match(bot,/const inventoryReal=chapter==='inventory'/)
  assert.match(bot,/inventory\.audit\?\.length!==total/)
  assert.match(bot,/inventory\.condition!=='damaged'/)
- assert.match(bot,/inventory\.quantity!==12/)
+ assert.match(bot,/inventory\.quantity!==17/)
  assert.doesNotMatch(app,/createClient\(|supabase\.from\(|\.rpc\(|fetch\(/)
 })
 
@@ -53,4 +53,10 @@ test('inventoried upload demonstrations never simulate unverified background mal
  assert.match(app,/training-equipment\.pdf/)
  assert.match(app,/current\.kind==="upload"/)
  assert.doesNotMatch(app,/scanCompleted|antivirusClean|malwareVerified|scanResult/)
+})
+
+test('role inventory workflows persist stock issues, returns, claim decisions and cancellations',async()=>{
+ const [ui,bots]=await Promise.all([read('components/training/sandbox-inventory-training.tsx'),read('scripts/15-bot-browser-test.mjs')])
+ for(const s of ['next.quantity-=1','next.quantity+=1','next.restocked=n','next.settlement="approved"','next.settlement="rejected"','next.settlement="cancelled"'])assert.ok(ui.includes(s),'missing '+s)
+ assert.match(bots,/Staff cancellation altered stock/)
 })

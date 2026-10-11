@@ -5,8 +5,8 @@ import {activeUiLocale,LANGUAGE_APPLIED_EVENT,type SupportedUiLocale} from "@/li
 import {getTrainingOperations} from "@/lib/training-exercise-catalog"
 import type {TourRole} from "@/lib/tour-training"
 
-type InventoryState={audit:string[];inspected:string[];category:string;newItem:string;quantity:number;workplace:string;condition:string;photo:string;document:string;opening:boolean;closing:boolean;reports:string[]}
-const initial=():InventoryState=>({audit:[],inspected:[],category:"",newItem:"",quantity:24,workplace:"bar",condition:"ok",photo:"training-stock.png",document:"training-equipment.pdf",opening:false,closing:false,reports:[]})
+type InventoryState={audit:string[];inspected:string[];category:string;newItem:string;quantity:number;workplace:string;condition:string;photo:string;document:string;opening:boolean;closing:boolean;reports:string[];restocked:number;issuedTo:string;settlement:'none'|'pending'|'approved'|'rejected'|'cancelled';returned:boolean;rejectionReason:string}
+const initial=():InventoryState=>({audit:[],inspected:[],category:"",newItem:"",quantity:24,workplace:"bar",condition:"ok",photo:"training-stock.png",document:"training-equipment.pdf",opening:false,closing:false,reports:[],restocked:0,issuedTo:'',settlement:'none',returned:false,rejectionReason:''})
 const T=(l:SupportedUiLocale,nl:string,en:string,fr:string,de:string)=>({nl,en,fr,de}[l])
 const key=(role:TourRole)=>"uptilldawn-inventory-training-v1:"+role
 function restore(role:TourRole){try{const x=JSON.parse(sessionStorage.getItem(key(role))||"null") as InventoryState|null;if(x&&Array.isArray(x.audit)&&Array.isArray(x.reports))return {...initial(),...x,inspected:Array.isArray(x.inspected)?x.inspected:[]}}catch{}return initial()}
@@ -37,7 +37,8 @@ export function SandboxInventoryTraining({role}:{role:string}){
  const options=():{id:string;label:string}[]=>{
   if(current?.kind==="upload")return idx===4?[{id:"training-stock.png",label:T(locale,"training-stock.png","training-stock.png","training-stock.png","training-stock.png")}]:[{id:"training-equipment.pdf",label:T(locale,"training-equipment.pdf","training-equipment.pdf","training-equipment.pdf","training-equipment.pdf")}]
   if(group==="admin"&&idx===3)return [{id:"bar",label:T(locale,"Bar / Toog","Bar / Counter","Bar / Comptoir","Bar / Theke")},{id:"merch",label:"Merch"},{id:"tokens",label:"Tokens"}]
-  if(group==="responsible_lead"&&idx===1||group==="shared"&&idx===4)return [{id:"damaged",label:T(locale,"Beschadigd","Damaged","Endommagé","Beschädigt")},{id:"missing",label:T(locale,"Ontbreekt","Missing","Manquant","Fehlt")},{id:"ok",label:T(locale,"In orde","OK","Conforme","In Ordnung")}]
+  if((group==="admin"&&idx===8)||(group==="responsible_lead"&&idx===5))return [{id:"noah",label:"Noah Jacobs"},{id:"lina",label:"Lina Peeters"}]
+   if(group==="responsible_lead"&&idx===1||group==="shared"&&idx===4)return [{id:"damaged",label:T(locale,"Beschadigd","Damaged","Endommagé","Beschädigt")},{id:"missing",label:T(locale,"Ontbreekt","Missing","Manquant","Fehlt")},{id:"ok",label:T(locale,"In orde","OK","Conforme","In Ordnung")}]
   return [{id:"bar",label:T(locale,"Bar / Toog","Bar / Counter","Bar / Comptoir","Bar / Theke")},{id:"merch",label:"Merch"}]
  }
  const record=()=>{
@@ -46,6 +47,9 @@ export function SandboxInventoryTraining({role}:{role:string}){
   let value="reviewed"
   if(current.kind==="inspect"){
    if(openedInspection!==current.id)return fail()
+   if(group==="admin"&&idx===14&&(!next.returned||next.settlement!=="rejected"))return fail()
+   if(group==="responsible_lead"&&idx===7&&next.settlement!=="pending")return fail()
+   if(group==="employee"&&idx===4&&(next.settlement!=="cancelled"||next.quantity!==24))return fail()
    next.inspected.push(current.id)
   }else if(current.kind==="form"){
    if(text.trim().length<4||!category)return fail()
@@ -58,21 +62,41 @@ export function SandboxInventoryTraining({role}:{role:string}){
    if(current.kind==="upload"&&group==="admin"){if(idx===4)next.photo=selected;if(idx===5)next.document=selected}
    if(current.kind==="select"){
     if(group==="admin"&&idx===3)next.workplace=selected
-    else next.condition=selected
+    else if((group==="admin"&&idx===8)||(group==="responsible_lead"&&idx===5)){
+     if(next.issuedTo||next.quantity<1)return fail()
+     next.issuedTo=selected;next.quantity-=1
+    }else next.condition=selected
    }
   }else if(current.kind==="number"){
    const n=Number(text)
    if(!Number.isSafeInteger(n)||n<1||n>10000)return fail()
-   next.quantity=n;value=String(n)
+   if(group==="admin"&&idx===7){next.quantity+=n;next.restocked=n}
+   else next.quantity=n
+   value=String(n)
   }else if(current.kind==="message"){
    if(text.trim().length<8)return fail()
-   next.reports.push(text.trim());value=text.trim()
+   if(group==="admin"&&idx===13){
+    if(text.trim().length<10||next.settlement!=="pending"||!next.returned)return fail()
+    next.settlement="rejected";next.rejectionReason=text.trim()
+   }else next.reports.push(text.trim())
+   value=text.trim()
   }else if(current.kind==="toggle"){
    value="confirmed"
    if(group==="shared"&&idx===3)next.opening=true
    if(group==="shared"&&idx===6){if(!next.opening)return fail();next.closing=true}
    if(group==="responsible_lead"&&idx===3)next.opening=true
    if(group==="responsible_lead"&&idx===4){if(!next.opening)return fail();next.closing=true}
+   if(group==="admin"){
+    if(idx===9){if(!next.issuedTo||next.settlement!=="none")return fail();next.settlement="pending"}
+    if(idx===10){if(next.settlement!=="pending")return fail();next.settlement="approved"}
+    if(idx===11){if(next.settlement!=="approved"||next.returned)return fail();next.quantity+=1;next.returned=true}
+    if(idx===12){if(!next.returned||next.settlement!=="approved")return fail();next.settlement="pending"}
+   }
+   if(group==="responsible_lead"&&idx===6){if(!next.issuedTo||next.settlement!=="none")return fail();next.settlement="pending"}
+   if(group==="employee"){
+    if(idx===2){if(!next.reports.length||next.settlement!=="none")return fail();next.settlement="pending"}
+    if(idx===3){if(next.settlement!=="pending")return fail();next.settlement="cancelled"}
+   }
   }
   next.audit.push(current.id+" · "+value)
   sessionStorage.setItem(key(trainingRole),JSON.stringify(next));setData(next);setText("");setSelected("");setCategory("");setError("")
@@ -81,7 +105,7 @@ export function SandboxInventoryTraining({role}:{role:string}){
  return <main data-tour-demo="training-screen" data-training-inventory="true" className="mx-auto max-w-6xl space-y-5 p-4 pb-28 md:p-8">
   <header><p className="text-xs font-black uppercase text-violet-500">{T(locale,"FICTIEVE MATERIAALCONTROLE","FICTIONAL EQUIPMENT INSPECTION","CONTRÔLE DE MATÉRIEL FICTIF","FIKTIVE MATERIALKONTROLLE")}</p><h1 className="text-2xl font-black">{T(locale,"Inventaris per werkplek","Inventory by workplace","Inventaire par poste","Inventar pro Arbeitsplatz")}</h1><p className="text-sm text-muted-foreground">{T(locale,"Een eigen trainingsoverzicht, zonder echte inventaris te wijzigen.","Your own training ledger; no production inventory is changed.","Registre de formation distinct ; aucun inventaire réel n’est modifié.","Eigenes Trainingsprotokoll ohne Änderungen am echten Inventar.")}</p></header>
   <div className="grid gap-3 sm:grid-cols-2" data-demo-inventory-dashboard>
-   <article className="rounded-xl border p-4"><h2 className="font-bold">{T(locale,"Werkplek","Workplace","Poste","Arbeitsplatz")}: {data.workplace==="bar"?T(locale,"Bar / Toog","Bar / Counter","Bar / Comptoir","Bar / Theke"):data.workplace}</h2><p>{data.newItem||T(locale,"Waterflesjes","Water bottles","Bouteilles d’eau","Wasserflaschen")}: <strong data-demo-inventory-quantity>{data.quantity}</strong></p><p className="text-sm">{T(locale,"Categorie","Category","Catégorie","Kategorie")}: {data.category||"stock"}</p><p className="text-sm">{T(locale,"Staat","Condition","État","Zustand")}: <strong>{data.condition}</strong></p></article>
+   <article className="rounded-xl border p-4"><h2 className="font-bold">{T(locale,"Werkplek","Workplace","Poste","Arbeitsplatz")}: {data.workplace==="bar"?T(locale,"Bar / Toog","Bar / Counter","Bar / Comptoir","Bar / Theke"):data.workplace}</h2><p>{data.newItem||T(locale,"Waterflesjes","Water bottles","Bouteilles d’eau","Wasserflaschen")}: <strong data-demo-inventory-quantity>{data.quantity}</strong></p><p className="text-sm">{T(locale,"Categorie","Category","Catégorie","Kategorie")}: {data.category||"stock"}</p><p className="text-sm">{T(locale,"Staat","Condition","État","Zustand")}: <strong>{data.condition}</strong></p><p data-demo-inventory-settlement className="text-sm">{T(locale,"Uitgegeven aan","Issued to","Attribué à","Ausgegeben an")}: {data.issuedTo||"—"} · {T(locale,"Retourstatus","Return status","Statut du retour","Rückgabestatus")}: {data.settlement}</p></article>
    <article className="rounded-xl border p-4"><h2 className="font-bold">{T(locale,"Foto's en documenten","Photos and documents","Photos et documents","Fotos und Dokumente")}</h2><p>{data.photo} · {data.document}</p><p className="text-sm">{T(locale,"Opstartcheck","Opening check","Contrôle d’ouverture","Startkontrolle")}: {data.opening?"✓":"—"} · {T(locale,"Afsluitcheck","Closing check","Contrôle de fermeture","Abschlusskontrolle")}: {data.closing?"✓":"—"}</p><p className="text-sm">{T(locale,"Gemelde tekorten","Shortages reported","Manques signalés","Gemeldete Fehlbestände")}: {data.reports.length}</p></article>
   </div>
   <section className="rounded-xl border p-4"><h2 className="font-bold">{T(locale,"Wekelijks inventarisoverzicht","Weekly inventory review","Revue hebdomadaire de l’inventaire","Wöchentliche Inventarübersicht")}</h2><p className="text-sm">{T(locale,"Deze lijst synchroniseert in de training met de toegewezen werkplek, inclusief schade en tekorten.","This training list follows the assigned workplace, including damage and shortages.","Cette liste de formation suit le poste attribué, les dégâts et les manques.","Diese Trainingsliste folgt dem zugewiesenen Arbeitsplatz sowie Schäden und Fehlbeständen.")}</p>{data.reports.map((report,i)=><p key={i} className="mt-2 border-t pt-2 text-sm">{report}</p>)}</section>
@@ -90,7 +114,7 @@ export function SandboxInventoryTraining({role}:{role:string}){
     <button type="button" data-demo-inventory-preview={current.id} data-training-preview-op={current.id} onClick={()=>setOpenedInspection(current.id)} className="w-full rounded-xl bg-violet-600 p-3 font-black text-white">{T(locale,"OPEN INVENTARISDETAILS","OPEN INVENTORY DETAILS","OUVRIR LES DÉTAILS","INVENTARDETAILS ÖFFNEN")}</button>
     {openedInspection===current.id&&<article data-demo-inventory-detail={current.id} className="space-y-1 rounded-xl border p-3 text-sm">
      <p>{T(locale,"Werkplek","Workplace","Poste","Arbeitsplatz")}: {data.workplace} · {T(locale,"Materiaal","Equipment","Matériel","Material")}: {data.newItem||T(locale,"Waterflesjes","Water bottles","Bouteilles d’eau","Wasserflaschen")}</p>
-     <p>{T(locale,"Voorraad","Stock","Stock","Bestand")}: {data.quantity} · {T(locale,"Staat","Condition","État","Zustand")}: {data.condition}</p>
+     <p>{T(locale,"Voorraad","Stock","Stock","Bestand")}: {data.quantity} · {T(locale,"Staat","Condition","État","Zustand")}: {data.condition}</p><p>{T(locale,"Retour","Return","Retour","Rückgabe")}: {data.settlement} · {T(locale,"Teruggeboekt","Restored","Réintégré","Zurückgebucht")}: {data.returned?"✓":"—"}</p>
      <p>{T(locale,"Opstartcontrole","Opening inspection","Contrôle d’ouverture","Startkontrolle")}: {data.opening?"✓":"—"} · {T(locale,"Afsluitcontrole","Closing inspection","Contrôle de fermeture","Abschlusskontrolle")}: {data.closing?"✓":"—"}</p>
      <p>{T(locale,"Documenten","Documents","Documents","Dokumente")}: {data.photo} · {data.document} · {T(locale,"Meldingen","Reports","Signalements","Meldungen")}: {data.reports.length}</p>
     </article>}

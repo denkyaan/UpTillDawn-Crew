@@ -271,6 +271,14 @@ select|Koppel materiaal aan een werkplek|Link material to workplace|Lier matéri
 upload|Upload een demofoto van materiaal|Upload demo material photo|Téléverser une photo démo|Demo-Materialfoto hochladen
 upload|Voeg een inventarisdocument toe|Add inventory document|Joindre un document d’inventaire|Inventardokument hinzufügen
 inspect|Controleer het wekelijkse overzicht|Review weekly inventory summary|Vérifier le bilan hebdomadaire|Wöchentliche Inventarübersicht prüfen
+number|Voeg materiaalvoorraad toe|Restock fictional inventory|Réapprovisionner le stock fictif|Fiktiven Bestand auffüllen
+select|Geef materiaal uit aan medewerker|Issue equipment to staff member|Attribuer du matériel à un équipier|Material an Mitarbeiter ausgeben
+toggle|Registreer retourverzoek|Register return request|Enregistrer une demande de retour|Rückgabeanfrage erfassen
+toggle|Keur retourverzoek goed|Approve return request|Approuver la demande de retour|Rückgabeanfrage genehmigen
+toggle|Boek retour in voorraad|Restore returned item to stock|Réintégrer l’article retourné|Rückgabe in Bestand buchen
+toggle|Open nieuwe schadeclaim|Open damage claim|Ouvrir une déclaration de dommage|Neue Schadensmeldung öffnen
+message|Weiger schadeclaim met reden|Reject damage claim with reason|Refuser la déclaration avec motif|Schadensmeldung mit Grund ablehnen
+inspect|Controleer de voorraadbewegingen|Review inventory movements|Vérifier les mouvements de stock|Bestandsbewegungen prüfen
 `,
 guestlist:`
 form|Maak een guestlist aan|Create guest list|Créer une liste d’invités|Gästeliste erstellen
@@ -410,6 +418,9 @@ select|Markeer een artikel als beschadigd|Flag damaged item|Marquer un article e
 message|Meld een tekort aan Admin|Report shortage to Admin|Signaler un manque à Admin|Fehlbestand an Admin melden
 toggle|Bevestig de opstartchecklist|Confirm opening checklist|Confirmer la checklist d’ouverture|Start-Checkliste bestätigen
 toggle|Bevestig de afsluitchecklist|Confirm closing checklist|Confirmer la checklist de fermeture|Abschluss-Checkliste bestätigen
+select|Geef materiaal uit aan ploeglid|Issue equipment to team member|Attribuer du matériel à un équipier|Material ans Team ausgeben
+toggle|Vraag retour van materiaal aan|Request equipment return|Demander retour du matériel|Materialrückgabe beantragen
+inspect|Controleer retour en voorraad|Review pending return and stock|Contrôler retour et stock|Rückgabe und Bestand prüfen
 `,
 guestlist:`
 inspect|Bekijk artiestenstatus voor Backstage|Review artist arrival status|Voir les arrivées artistes|Künstlerankunft prüfen
@@ -470,6 +481,9 @@ message|Meld een probleem met taak|Report issue with task|Signaler un problème 
 inventory:`
 inspect|Bekijk materialen voor je shift|Review shift equipment|Voir matériel de votre shift|Schichtmaterial ansehen
 message|Meld ontbrekend materiaal|Report missing equipment|Signaler matériel manquant|Fehlendes Material melden
+toggle|Dien materiaalprobleem in|Submit equipment issue report|Soumettre un signalement de matériel|Materialproblem melden
+toggle|Annuleer eigen openstaande melding|Cancel own pending report|Annuler son signalement en attente|Eigene offene Meldung stornieren
+inspect|Controleer voorraad na annuleren|Review inventory after cancellation|Vérifier le stock après annulation|Bestand nach Stornierung prüfen
 `,
 guestlist:`
 write|Zoek artiest via gastenlijst|Search artist in guest list|Rechercher artiste dans la liste|Künstler in Gästeliste suchen
