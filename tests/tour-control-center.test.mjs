@@ -169,11 +169,19 @@ test('sandbox transition targets follow the mandatory training chapters',async()
  assert.match(roleModules,/admin:\{personnel:"crew",crew:"chat",chat:"exports",exports:"platform",platform:"settings",settings:"timesheet"\}/)
 })
 
-test('guestlist demo advances to an authorized next chapter for every role',async()=>{
- const [guestlist,feature]=await Promise.all([read('app/(app)/guestlist/page.tsx'),read('components/training/sandbox-feature-pages.tsx')])
- assert.match(guestlist,/SandboxGuestlist isAdmin=\{current\.isAdmin===true\}/)
- assert.match(feature,/export function SandboxGuestlist\(\{isAdmin=false\}:\{isAdmin\?:boolean\}\)/)
- assert.match(feature,/target\(isAdmin\?"sales":"crew"\)/)
+test('guestlist demo advances only through authorized manual tour navigation after real operations',async()=>{
+ const [route,guestlist,controller]=await Promise.all([
+  read('app/(app)/guestlist/page.tsx'),
+  read('components/training/sandbox-guestlist-training.tsx'),
+  read('components/training/tour-control-center.tsx')
+ ])
+ assert.ok(route.includes('<SandboxGuestlistTraining role={current.role}/>'))
+ assert.ok(guestlist.includes('getTrainingOperations(trainingRole,"guestlist")'))
+ assert.ok(guestlist.includes('data-training-practical-op={current.id}'))
+ assert.ok(guestlist.includes('chapter:"guestlist",id:current.id'))
+ assert.ok(!guestlist.includes('uptilldawn-training-nav-target'),'guestlist must not force tab navigation')
+ assert.ok(controller.includes('const target=chapters[currentIndex+1]'))
+ assert.ok(controller.includes('isChapterPractised(progressKey,role,current.key)'))
 })
 
 test('chat module completes after button introduction rather than before navigation',async()=>{
