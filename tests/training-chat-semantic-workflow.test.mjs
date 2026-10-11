@@ -26,9 +26,9 @@ test('chat demo supports 35 shared exercises and six admin-only exercises for ea
  assert.doesNotMatch(source,/supabase\.|createClient\(|fetch\(/)
 })
 
-test('chat simulation retains private messages after removing conversation; no false antivirus claims',()=>{
+test('chat simulation deletes complete private conversation without individual message removal; no false antivirus claims',()=>{
  const source=read('components/training/sandbox-chat-training.tsx')
- assert.match(source,/if\(i===13\)\{next\.privateVisible=false;next\.channel="event";record\(next,"confirmed"\);return\}/)
+ assert.match(source,/next\.messages=next\.messages\.filter\(m=>m\.channel!=="private"\)/)
  assert.match(source,/const privateCount=state\.messages\.filter\(m=>m\.channel==="private"\)\.length/)
  assert.match(source,/const target:Channel=i===5\?"private":"event"/)
  assert.match(source,/i===8&&!draft\.includes\("@Lina"\)/)
@@ -49,7 +49,7 @@ test('browser bots must fill and click real contextual chat steps and check pers
  assert.match(bot,/data-demo-chat-composer/)
  assert.match(bot,/data-demo-chat-attachment/)
  assert.match(bot,/if\(chapter==='chat'\)/)
- assert.match(bot,/simulated\.retainedPrivate<1/)
+ assert.match(bot,/simulated\.retainedPrivate!==0/)
  assert.match(bot,/simulated\.attachment/)
 })
 
@@ -82,4 +82,17 @@ test('advanced chat search needs sender, media, date range, keyword, result open
  assert.match(bot,/simulated\.filtersCleared/)
  assert.match(bot,/sender,attachment,dates,query,search,open,clear/)
  assert.doesNotMatch(source,/createClient\(|\.rpc\(|supabase\.from\(/)
+})
+
+test('private chat tour matches the production full-conversation delete contract',()=>{
+ const source=read('components/training/sandbox-chat-training.tsx')
+ const bot=read('scripts/15-bot-browser-test.mjs')
+ const migration=read('supabase/migrations/20261006121000_private_chat_management.sql')
+ const client=read('components/crew/chat-client.tsx')
+ assert.match(migration,/delete from public\.chat_channels where id=p_channel/)
+ assert.match(client,/upt_delete_private_chat/)
+ assert.match(source,/next\.messages=next\.messages\.filter\(m=>m\.channel!=="private"\)/)
+ assert.match(source,/Private chat and its messages deleted/)
+ assert.match(bot,/simulated\.retainedPrivate!==0/)
+ assert.doesNotMatch(client,/upt_delete_message/)
 })

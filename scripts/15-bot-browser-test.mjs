@@ -1167,7 +1167,7 @@ try {
                 filtersCleared:state.filterSender===''&&state.filterAttachment===''&&state.filterFrom===''&&state.filterTo===''&&state.filterQuery===''&&state.filteredMatches?.length===0&&state.selectedSearchResult===null
               }
             },tourRole)
-            if(!simulated||!simulated.hidden||simulated.retainedPrivate<1||simulated.messages<7||
+            if(!simulated||!simulated.hidden||simulated.retainedPrivate!==0||simulated.messages<7||
                 !simulated.replied||!simulated.mentioned||!simulated.attachment||!simulated.read||!simulated.scanned||
                 !simulated.searched||!simulated.pinsReviewed||!simulated.olderLoaded||!simulated.seededPin||
                 (tourRole==='admin'&&(simulated.pinAudit.join(',')!=='pin,unpin'||simulated.moderated!==1))||

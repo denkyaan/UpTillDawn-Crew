@@ -138,7 +138,7 @@ export function SandboxChatTraining({role}:{role:string}){
   }
   if(i===10){next.scanReviewed=true;record(next,"reviewed");return}
   if(i===12){next.unread=0;record(next,"confirmed");return}
-  if(i===13){next.privateVisible=false;next.channel="event";record(next,"confirmed");return}
+  if(i===13){if(!next.privateVisible||!next.messages.some(m=>m.channel==="private"))return;next.messages=next.messages.filter(m=>m.channel!=="private");next.privateVisible=false;next.channel="event";record(next,"confirmed");return}
   if(i===19){
    const needle=search.trim().toLowerCase()
    if(needle.length<3){setError(T(l,"Zoek met minstens drie tekens.","Search with at least three characters.","Recherchez avec trois caractères minimum.","Suche mit mindestens drei Zeichen."));return}
@@ -234,7 +234,7 @@ export function SandboxChatTraining({role}:{role:string}){
   <div className="grid gap-4 md:grid-cols-[210px_1fr]">
    <nav aria-label={T(l,"Demo-gesprekken","Demo conversations","Conversations démo","Demo-Gespräche")} className="space-y-2 rounded-xl border p-3">
     {(["organization","event","workplace","private"] as Channel[]).filter(channel=>channel!=="private"||state.privateVisible).map(channel=><button key={channel} type="button" onClick={()=>save({...state,channel})} className={"block w-full rounded-lg border p-3 text-left text-sm font-semibold "+(channel===currentChannel?"border-violet-500":"")}>{labels[channel]} {channel==="event"&&state.unread>0?<span className="ml-2 rounded-full border px-2">{state.unread}</span>:null}</button>)}
-    {!state.privateVisible&&<p data-demo-chat-private-hidden className="text-xs text-muted-foreground">{T(l,"Privéchat verwijderd uit lijst; berichten blijven bewaard.","Private chat removed from list; messages retained.","Chat privé retiré de la liste ; messages conservés.","Privatchat aus Liste entfernt; Nachrichten bleiben gespeichert.")}</p>}
+    {!state.privateVisible&&<p data-demo-chat-private-hidden className="text-xs text-muted-foreground">{T(l,"Privéchat en bijhorende berichten verwijderd.","Private chat and its messages deleted.","Chat privé et messages associés supprimés.","Privatchat und zugehörige Nachrichten gelöscht.")}</p>}
    </nav>
    <section className="space-y-3 rounded-xl border p-4">
     <h2 className="font-bold">{labels[currentChannel]}</h2>

@@ -136,8 +136,8 @@ upload|Voeg een demobijlage toe|Attach a demo file|Joindre un fichier démo|Demo
 inspect|Controleer de bijlage en veiligheidscontrole|Review attachment and security scan|Vérifier la pièce jointe et l’analyse|Anhang und Sicherheitsprüfung prüfen
 inspect|Controleer de berichttijd en afzender|Review message timestamp and sender|Vérifier la date et l’expéditeur|Zeitstempel und Absender prüfen
 toggle|Markeer de chat als gelezen|Mark chat as read|Marquer le chat lu|Chat als gelesen markieren
-toggle|Verwijder de privéchat uit de lijst|Remove private chat from list|Retirer le chat privé de la liste|Privatchat aus Liste entfernen
-inspect|Controleer dat berichten behouden blijven|Verify message retention|Vérifier la conservation des messages|Nachrichtenerhalt prüfen
+toggle|Verwijder het volledige privégesprek|Delete entire private conversation|Supprimer la conversation privée complète|Gesamten Privatchat löschen
+inspect|Controleer dat privéberichten verwijderd zijn|Verify private messages were removed|Vérifier la suppression des messages privés|Löschung der Privatnachrichten prüfen
 inspect|Bekijk chatvertaling in vier talen|Review chat translation in four languages|Voir la traduction du chat en quatre langues|Chatübersetzung in vier Sprachen prüfen
 inspect|Controleer verjaardagsmeldingen|Review birthday notifications|Vérifier les notifications d’anniversaire|Geburtstagsbenachrichtigungen prüfen
 inspect|Bekijk bijlagen terwijl malwarecontrole draait|Review files during malware scanning|Voir les fichiers pendant le scan antivirus|Dateien während Malwareprüfung ansehen
