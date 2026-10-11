@@ -10,14 +10,14 @@ test('chat sandbox is selected exclusively in tour mode and never replaces real 
  assert.match(route,/return <main[\s\S]*<ChatClient channels=/)
 })
 
-test('chat demo supports 28 shared exercises and six admin-only exercises for each role',()=>{
+test('chat demo supports 35 shared exercises and six admin-only exercises for each role',()=>{
  const source=read('components/training/sandbox-chat-training.tsx')
  const shared=getTrainingOperations('employee','chat').filter(x=>x.id.startsWith('chat:shared:'))
- assert.equal(shared.length,28)
+ assert.equal(shared.length,35)
  const admin=getTrainingOperations('admin','chat')
- assert.equal(admin.length,34)
+ assert.equal(admin.length,41)
  for(const role of ['employee','responsible_lead','admin']){
-  assert.equal(getTrainingOperations(role,'chat').length,role==='admin'?34:28)
+  assert.equal(getTrainingOperations(role,'chat').length,role==='admin'?41:35)
  }
  assert.match(source,/data-training-practical-op=\{current\.id\}/)
  assert.match(source,/detail:\{role:normalized,chapter:"chat",id:current\.id,kind:current\.kind,value\}/)
@@ -71,4 +71,15 @@ test('chat notification and example translation controls persist real training s
  assert.match(bots,/simulated\.translationAudit\?\.join/)
  assert.match(source,/not a live translation service/)
  assert.doesNotMatch(source,/liveTranslateText\(|supabase\.from\(|createClient\(|fetch\(/)
+})
+
+test('advanced chat search needs sender, media, date range, keyword, result opening and reset',()=>{
+ const source=read('components/training/sandbox-chat-training.tsx')
+ const bot=read('scripts/15-bot-browser-test.mjs')
+ for(const marker of ['data-demo-chat-search-filter','data-demo-chat-search-from','data-demo-chat-search-to','data-demo-chat-filtered-result','data-demo-chat-combined-results','data-demo-chat-selected-result','next.filteredMatches=next.messages.filter','next.filterAudit.push("clear")'])assert.ok(source.includes(marker),'missing search step '+marker)
+ assert.match(source,/fromDate>toDate/)
+ assert.match(bot,/Invalid chat search dates advanced the tour/)
+ assert.match(bot,/simulated\.filtersCleared/)
+ assert.match(bot,/sender,attachment,dates,query,search,open,clear/)
+ assert.doesNotMatch(source,/createClient\(|\.rpc\(|supabase\.from\(/)
 })

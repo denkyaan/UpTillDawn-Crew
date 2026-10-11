@@ -692,14 +692,24 @@ try {
               const chat=page.locator('[data-training-chat="true"]')
               await chat.waitFor({state:'visible',timeout:15000})
               await page.locator('[data-demo-chat-operation="'+operationId+'"]').waitFor({state:'visible',timeout:15000})
-              if(kind==='write')await chat.locator('[data-demo-chat-search]').fill(operationId==='chat:shared:19'?'Training event action':'Lina')
+              if(kind==='write')await chat.locator('[data-demo-chat-search]').fill(operationId==='chat:shared:31'?'inventory':operationId==='chat:shared:19'?'Training event action':'Lina')
               if(kind==='select'){
                 if(operationId==='chat:shared:22'||operationId==='chat:shared:23')await chat.locator('[data-demo-chat-notification-mode]').selectOption(operationId==='chat:shared:22'?'muted':'mentions')
+                else if(operationId==='chat:shared:28'||operationId==='chat:shared:29')await chat.locator('[data-demo-chat-search-filter]').selectOption(operationId==='chat:shared:28'?'me':'media')
+                else if(operationId==='chat:shared:33')await chat.locator('[data-demo-chat-filtered-result]').selectOption({index:1})
                 else await chat.locator('[data-demo-chat-choice]').selectOption('lina')
               }
               if(kind==='message')await chat.locator('[data-demo-chat-composer]').fill(
                 operationId==='chat:shared:8'?'@Lina welcome to the training event':'Training event action'
               )
+              if(kind==='schedule'){
+                const from=chat.locator('[data-demo-chat-search-from]'),to=chat.locator('[data-demo-chat-search-to]')
+                await from.fill('2026-10-12');await to.fill('2026-10-11')
+                await chat.locator('[data-training-practical-op="'+operationId+'"]').click()
+                await chat.locator('[role="alert"]').waitFor({state:'visible',timeout:10000})
+                if(await page.locator('[data-training-lab] [data-training-operation]').getAttribute('data-training-operation')!==operationId)throw Error('Invalid chat search dates advanced the tour')
+                await from.fill('2026-10-11')
+              }
               if(kind==='upload')await chat.locator('[data-demo-chat-attachment]').selectOption('training-inventory.png')
             }
             if(peopleReal){
@@ -1152,7 +1162,9 @@ try {
                 notificationAudit:state.notificationAudit,
                 autoTranslate:state.autoTranslate,
                 manualTranslated:state.manualTranslated,
-                translationAudit:state.translationAudit
+                translationAudit:state.translationAudit,
+                filterAudit:state.filterAudit,
+                filtersCleared:state.filterSender===''&&state.filterAttachment===''&&state.filterFrom===''&&state.filterTo===''&&state.filterQuery===''&&state.filteredMatches?.length===0&&state.selectedSearchResult===null
               }
             },tourRole)
             if(!simulated||!simulated.hidden||simulated.retainedPrivate<1||simulated.messages<7||
@@ -1161,7 +1173,8 @@ try {
                 (tourRole==='admin'&&(simulated.pinAudit.join(',')!=='pin,unpin'||simulated.moderated!==1))||
                 simulated.muteMode!=='mentions'||simulated.notificationAudit?.join(',')!=='muted,mentions'||
                 simulated.autoTranslate!==false||simulated.manualTranslated!==false||
-                simulated.translationAudit?.join(',')!=='auto-on,auto-off,example-on,example-off')
+                simulated.translationAudit?.join(',')!=='auto-on,auto-off,example-on,example-off'||
+                simulated.filterAudit?.join(',')!=='sender,attachment,dates,query,search,open,clear'||!simulated.filtersCleared)
               throw new Error('Fictional chat lifecycle incomplete: '+JSON.stringify(simulated))
             console.log('PASS '+bot+' fictional chat message search, pinned history, moderation and retention')
           }
