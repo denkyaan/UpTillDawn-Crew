@@ -67,6 +67,13 @@ export function SandboxIncidentTraining({role}:{role:string}){
   }else return
   next.audit.push(current.id+" · "+value)
   sessionStorage.setItem(evidenceKey(trainingRole),JSON.stringify(next));setState(next);setSelected("");setMessage("");setErr("")
+  if(group==="shared"&&index===5&&next.sent){
+   try{
+    const old=JSON.parse(sessionStorage.getItem("uptilldawn-training-workflow-v3")||"{}")
+    sessionStorage.setItem("uptilldawn-training-workflow-v3",JSON.stringify({...old,operationPhase:"incident",incidentDone:true,helpTourCompleted:true}))
+   }catch{}
+   dispatchEvent(new CustomEvent("uptilldawn-training-help-completed"))
+  }
   dispatchEvent(new CustomEvent("uptilldawn-training-practical-action",{detail:{role:trainingRole,chapter:"incidents",id:current.id,kind:current.kind,value}}))
  }
  const opts=():{id:string;name:string}[]=>{

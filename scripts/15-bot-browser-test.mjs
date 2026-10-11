@@ -652,7 +652,9 @@ try {
             const lifecycleReal=['driver','timesheet'].includes(chapter)&&operationId.startsWith(chapter+':')
             const revenueReal=chapter==='sales'&&operationId.startsWith('sales:admin:')
             const incidentReal=chapter==='incidents'&&operationId.startsWith('incidents:')
-            const requiredReal=chatReal||peopleReal||systemReal||helpReal||lifecycleReal||revenueReal||incidentReal||commonReal.has(operationId)
+            const inventoryReal=chapter==='inventory'&&operationId.startsWith('inventory:')
+            const guestlistReal=chapter==='guestlist'&&operationId.startsWith('guestlist:')
+            const requiredReal=chatReal||peopleReal||systemReal||helpReal||lifecycleReal||revenueReal||incidentReal||inventoryReal||guestlistReal||commonReal.has(operationId)
               ||(tourRole==='admin'?adminReal:crewReal).has(operationId)
             // Exercise the actual conversation composer rather than an
             // unrelated generic practice form. The simulated conversation is
@@ -760,6 +762,40 @@ try {
                 await incident.locator('[data-demo-incident-select]').selectOption(choice)
               }
             }
+            if(inventoryReal){
+              const inventory=page.locator('[data-training-inventory="true"]')
+              await inventory.waitFor({state:'visible',timeout:15000})
+              await inventory.locator('[data-demo-inventory-operation="'+operationId+'"]').waitFor({state:'visible',timeout:15000})
+              if(kind==='form'){
+                await inventory.locator('[data-demo-inventory-input]').fill(operationId==='inventory:admin:0'?'Stage consumables':'Handheld scanner')
+                await inventory.locator('[data-demo-inventory-category]').selectOption('stock')
+              }
+              if(kind==='number')await inventory.locator('[data-demo-inventory-input]').fill('12')
+              if(kind==='message')await inventory.locator('[data-demo-inventory-input]').fill('Training shortage: three broken water bottle trays')
+              if(kind==='select'||kind==='upload'){
+                const selections={
+                  'inventory:shared:4':'damaged','inventory:admin:3':'merch',
+                  'inventory:admin:4':'training-stock.png','inventory:admin:5':'training-equipment.pdf',
+                  'inventory:responsible_lead:1':'damaged'
+                }
+                const selection=selections[operationId]
+                if(!selection)throw new Error('No real inventory selection for '+operationId)
+                await inventory.locator('[data-demo-inventory-select]').selectOption(selection)
+              }
+            }
+            if(guestlistReal){
+              const guestlist=page.locator('[data-training-guestlist="true"]')
+              await guestlist.waitFor({state:'visible',timeout:15000})
+              await guestlist.locator('[data-demo-guestlist-operation="'+operationId+'"]').waitFor({state:'visible',timeout:15000})
+              if(kind==='form'){
+                await guestlist.locator('[data-demo-guestlist-input]').fill('Demo Event Guest List')
+                await guestlist.locator('[data-demo-guestlist-category]').selectOption('artist')
+              }
+              if(kind==='write')await guestlist.locator('[data-demo-guestlist-input]').fill(operationId==='guestlist:admin:1'?'DJ Astra':'Nova')
+              if(kind==='number')await guestlist.locator('[data-demo-guestlist-input]').fill('2')
+              if(kind==='message')await guestlist.locator('[data-demo-guestlist-input]').fill('DJ Nova confirmed at entrance, backstage prepare artist reception')
+              if(kind==='select'||kind==='upload')await guestlist.locator('[data-demo-guestlist-select]').selectOption(kind==='upload'?'training-guestlist.csv':'artist')
+            }
             if(requiredReal)await real.waitFor({state:'visible',timeout:15000})
             const usingReal=requiredReal||(await real.count())>0
             if(usingReal){
@@ -796,6 +832,22 @@ try {
               if(!saved)throw new Error('Real sandbox click did not persist the expected action: '+operationId)
               console.log('PASS '+bot+' credited real admin control '+chapter+'/'+operationId)
             }
+          }
+          if(chapter==='inventory'){
+            const inventory=await page.evaluate(role=>JSON.parse(sessionStorage.getItem('uptilldawn-inventory-training-v1:'+role)||'null'),tourRole)
+            if(!inventory||inventory.audit?.length!==total||!inventory.opening||!inventory.closing||!inventory.reports?.length||inventory.condition!=='damaged')
+              throw new Error('Real inventory workflow incomplete: '+JSON.stringify(inventory))
+            if(tourRole==='admin'&&(!inventory.category||!inventory.newItem||inventory.quantity!==12||inventory.workplace!=='merch'||!inventory.photo||!inventory.document))
+              throw new Error('Admin inventory category, materials and upload controls not persisted: '+JSON.stringify(inventory))
+            console.log('PASS '+bot+' inventory: '+total+' real opening/closing/material/shortage actions')
+          }
+          if(chapter==='guestlist'){
+            const guestlist=await page.evaluate(role=>JSON.parse(sessionStorage.getItem('uptilldawn-guestlist-training-v1:'+role)||'null'),tourRole)
+            if(!guestlist||guestlist.audit?.length!==total||!guestlist.arrived||!guestlist.backstage||guestlist.filter!=='artist'||!guestlist.search?.includes('Nova'))
+              throw new Error('Real guestlist check-in, artist search or Backstage notification missing: '+JSON.stringify(guestlist))
+            if(tourRole==='admin'&&(!guestlist.listName||!guestlist.newGuest||guestlist.guestType!=='artist'||!guestlist.importFile||!guestlist.duplicatesReviewed||!guestlist.messages.length))
+              throw new Error('Admin guestlist creation, import, duplicate checking or Backstage message missing: '+JSON.stringify(guestlist))
+            console.log('PASS '+bot+' guestlist: '+total+' real searchable/importable guest records and artist arrival')
           }
           if(chapter==='sales'){
             const sales=await page.evaluate(()=>JSON.parse(sessionStorage.getItem('uptilldawn-sales-training-v1:admin')||'null'))
