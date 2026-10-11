@@ -93,9 +93,9 @@ export function SandboxOperationalDrill({role}:{role:string}){
  return <section data-training-operational-drill={trainingRole} className="mx-auto my-4 max-w-6xl space-y-3 rounded-2xl border border-violet-500/50 p-4">
   <p className="text-xs font-bold text-violet-500">{t(locale,"INTERACTIEVE WERKUREN · FICTIEVE GEGEVENS","PRACTICAL WORKTIME · FICTIONAL DATA","HEURES PRATIQUES · DONNÉES FICTIVES","PRAKTISCHE ARBEITSZEIT · FIKTIVE DATEN")}</p>
   <article data-demo-worktime-state className="rounded-xl border p-3 text-sm">
-   <b>Main Bar · Lina Peeters / Noah Jacobs</b>
+   <b>{t(locale,"Hoofdbar · Lina Peeters / Noah Jacobs","Main Bar · Lina Peeters / Noah Jacobs","Bar principal · Lina Peeters / Noah Jacobs","Hauptbar · Lina Peeters / Noah Jacobs")}</b>
    <p>{t(locale,"Pauze","Break","Pause","Pause")}: {state.breakPhase} · {t(locale,"Urenstaat","Timesheet","Feuille","Stundenzettel")}: {state.timesheet||"—"} · {t(locale,"Uurcorrectie","Hours correction","Correction horaire","Stundenkorrektur")}: {state.hours||"—"}</p>
-   <p>{t(locale,"Overuren","Overtime","Heures supp.","Überstunden")}: {state.policy||"—"} · {state.daily||"—"}h / {state.weekly||"—"}h</p>
+   <p>{t(locale,"Overuren","Overtime","Heures supp.","Überstunden")}: {state.policy||"—"} · {state.daily||"—"}{t(locale," u/dag / "," h/day / "," h/jour / "," Std./Tag / ")}{state.weekly||"—"}{t(locale," u/week"," h/week"," h/semaine"," Std./Woche")}</p>
   </article>
   <div data-demo-operations-operation={id} className="space-y-3 rounded-xl border p-3">
    <h3 className="font-black">{step.title[locale]}</h3>
