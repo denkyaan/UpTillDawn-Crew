@@ -219,7 +219,6 @@ export function TourControlCenter({active,userId,role,preferredWorkplace,mode="f
       const requested=chapters.find(chapter=>chapter.key===target)
       const next=requested||chapters[currentIndex+1]
       if(!next||next.key===current.key)return
-      const prior=progressRef.current
       // The user must explicitly choose to continue. Confirming a demo action
       // must never silently navigate to another tab.
       setAwaitingNavigation(next.key)
