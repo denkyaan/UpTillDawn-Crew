@@ -113,16 +113,16 @@ test('a late tour target recovers after timeout and reports only once',()=>{
 
 test('action confirmation waits for explicit user navigation before changing chapter',()=>{
   const app=harness()
-  app.emit('uptilldawn-training-nav-target',{target:'crew'})
+  app.emit('uptilldawn-training-nav-target',{target:'events'})
   assert.equal(app.progress().activeKey,'overview')
   assert.deepEqual(app.progress().completed,[])
   assert.deepEqual(app.routes,['/?tour=1'])
   app.click('Open the next step yourself →')
-  assert.equal(app.progress().activeKey,'crew')
+  assert.equal(app.progress().activeKey,'events')
   assert.deepEqual(app.progress().completed,['overview'])
-  assert.deepEqual(app.routes,['/?tour=1','/crew?tour=1'])
-  app.navigate('/crew')
-  assert.equal(app.progress().activeKey,'crew')
+  assert.deepEqual(app.routes,['/?tour=1','/events?tour=1'])
+  app.navigate('/events')
+  assert.equal(app.progress().activeKey,'events')
   app.unmount()
 })
 
