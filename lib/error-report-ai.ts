@@ -125,7 +125,7 @@ async function dispatchSelfHealing(report:{
       'User-Agent':'UpTillDawn-SelfHealing',
     },
     body:JSON.stringify({
-      ref:'main',
+      ref:'staging',
       inputs:{
         report_id:report.id,
         route:report.route.slice(0,500),
