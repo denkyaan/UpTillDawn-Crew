@@ -51,7 +51,7 @@ CREATE TYPE audit_action AS ENUM (
 -- ============================================================
 
 CREATE TABLE departments (
-  id          UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  id          UUID PRIMARY KEY DEFAULT extensions.uuid_generate_v4(),
   name        TEXT NOT NULL UNIQUE,
   description TEXT,
   head_user_id UUID, -- FK added later after users table
@@ -64,7 +64,7 @@ CREATE TABLE departments (
 -- ============================================================
 
 CREATE TABLE locations (
-  id          UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  id          UUID PRIMARY KEY DEFAULT extensions.uuid_generate_v4(),
   name        TEXT NOT NULL UNIQUE,
   address     TEXT,
   city        TEXT,
@@ -106,7 +106,7 @@ ALTER TABLE departments
 -- ============================================================
 
 CREATE TABLE user_roles (
-  id          UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  id          UUID PRIMARY KEY DEFAULT extensions.uuid_generate_v4(),
   user_id     UUID NOT NULL REFERENCES user_profiles(id) ON DELETE CASCADE,
   role        user_role NOT NULL,
   assigned_by UUID REFERENCES user_profiles(id) ON DELETE SET NULL,
@@ -122,7 +122,7 @@ CREATE TABLE user_roles (
 -- ============================================================
 
 CREATE TABLE user_approvers (
-  id            UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  id            UUID PRIMARY KEY DEFAULT extensions.uuid_generate_v4(),
   user_id       UUID NOT NULL REFERENCES user_profiles(id) ON DELETE CASCADE,
   approver_id   UUID NOT NULL REFERENCES user_profiles(id) ON DELETE CASCADE,
   priority      INTEGER NOT NULL DEFAULT 1 CHECK (priority BETWEEN 1 AND 3),
@@ -137,7 +137,7 @@ CREATE TABLE user_approvers (
 -- ============================================================
 
 CREATE TABLE attendance (
-  id              UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  id              UUID PRIMARY KEY DEFAULT extensions.uuid_generate_v4(),
   user_id         UUID NOT NULL REFERENCES user_profiles(id) ON DELETE CASCADE,
   work_date       DATE NOT NULL,
   clock_in        TIMESTAMPTZ,
@@ -164,7 +164,7 @@ CREATE TYPE correction_status AS ENUM ('submitted', 'approved', 'rejected', 'app
 CREATE TYPE correction_field  AS ENUM ('clock_in', 'clock_out', 'break_start', 'break_end');
 
 CREATE TABLE attendance_corrections (
-  id              UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  id              UUID PRIMARY KEY DEFAULT extensions.uuid_generate_v4(),
   attendance_id   UUID NOT NULL REFERENCES attendance(id) ON DELETE CASCADE,
   user_id         UUID NOT NULL REFERENCES user_profiles(id) ON DELETE CASCADE,
   field           correction_field NOT NULL,
@@ -183,7 +183,7 @@ CREATE TABLE attendance_corrections (
 -- ============================================================
 
 CREATE TABLE wfh_records (
-  id          UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  id          UUID PRIMARY KEY DEFAULT extensions.uuid_generate_v4(),
   user_id     UUID NOT NULL REFERENCES user_profiles(id) ON DELETE CASCADE,
   wfh_date    DATE NOT NULL,
   notes       TEXT,
@@ -199,7 +199,7 @@ CREATE INDEX idx_wfh_user_date ON wfh_records(user_id, wfh_date DESC);
 -- ============================================================
 
 CREATE TABLE leave_balances (
-  id          UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  id          UUID PRIMARY KEY DEFAULT extensions.uuid_generate_v4(),
   user_id     UUID NOT NULL REFERENCES user_profiles(id) ON DELETE CASCADE,
   leave_type  leave_type NOT NULL,
   total       NUMERIC(5,2) NOT NULL DEFAULT 0,
@@ -220,7 +220,7 @@ CREATE TABLE leave_balances (
 -- ============================================================
 
 CREATE TABLE leave_requests (
-  id            UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  id            UUID PRIMARY KEY DEFAULT extensions.uuid_generate_v4(),
   user_id       UUID NOT NULL REFERENCES user_profiles(id) ON DELETE CASCADE,
   leave_type    leave_type NOT NULL,
   start_date    DATE NOT NULL,
@@ -247,7 +247,7 @@ CREATE INDEX idx_leave_dates      ON leave_requests(start_date, end_date);
 -- ============================================================
 
 CREATE TABLE visitors (
-  id                  UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  id                  UUID PRIMARY KEY DEFAULT extensions.uuid_generate_v4(),
   host_user_id        UUID NOT NULL REFERENCES user_profiles(id) ON DELETE CASCADE,
   visitor_name        TEXT NOT NULL,
   visitor_email       TEXT NOT NULL,
@@ -282,7 +282,7 @@ CREATE INDEX idx_visitors_status_date ON visitors(status, visit_date);
 -- ============================================================
 
 CREATE TABLE calendar_events (
-  id              UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  id              UUID PRIMARY KEY DEFAULT extensions.uuid_generate_v4(),
   user_id         UUID REFERENCES user_profiles(id) ON DELETE CASCADE,
   title           TEXT NOT NULL,
   description     TEXT,
@@ -307,7 +307,7 @@ CREATE INDEX idx_cal_dept      ON calendar_events(department_id, event_date);
 -- ============================================================
 
 CREATE TABLE diary_entries (
-  id          UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  id          UUID PRIMARY KEY DEFAULT extensions.uuid_generate_v4(),
   user_id     UUID NOT NULL REFERENCES user_profiles(id) ON DELETE CASCADE,
   title       TEXT NOT NULL,
   content     TEXT,
@@ -324,7 +324,7 @@ CREATE INDEX idx_diary_user ON diary_entries(user_id, created_at DESC);
 -- ============================================================
 
 CREATE TABLE feedback (
-  id          UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  id          UUID PRIMARY KEY DEFAULT extensions.uuid_generate_v4(),
   user_id     UUID NOT NULL REFERENCES user_profiles(id) ON DELETE CASCADE,
   subject     TEXT NOT NULL,
   message     TEXT NOT NULL,
@@ -339,7 +339,7 @@ CREATE TABLE feedback (
 -- ============================================================
 
 CREATE TABLE complaints (
-  id            UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  id            UUID PRIMARY KEY DEFAULT extensions.uuid_generate_v4(),
   user_id       UUID REFERENCES user_profiles(id) ON DELETE SET NULL, -- nullable for anonymous
   subject       TEXT NOT NULL,
   message       TEXT NOT NULL,
@@ -357,7 +357,7 @@ CREATE TABLE complaints (
 -- ============================================================
 
 CREATE TABLE audit_logs (
-  id            UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  id            UUID PRIMARY KEY DEFAULT extensions.uuid_generate_v4(),
   actor_id      UUID REFERENCES user_profiles(id) ON DELETE SET NULL,
   actor_email   TEXT,
   action        audit_action NOT NULL,
@@ -380,7 +380,7 @@ CREATE INDEX idx_audit_created   ON audit_logs(created_at DESC);
 -- ============================================================
 
 CREATE TABLE email_templates (
-  id            UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  id            UUID PRIMARY KEY DEFAULT extensions.uuid_generate_v4(),
   name          TEXT NOT NULL UNIQUE,
   subject       TEXT NOT NULL,
   html_body     TEXT NOT NULL,
