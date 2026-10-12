@@ -15,7 +15,7 @@ test('role tour is hydration-safe and opens real tabs without full reloads',asyn
   assert.doesNotMatch(tour,/initialUiLocale\(/)
   assert.match(tour,/<TourControlCenter active=\{open\}/)
   assert.doesNotMatch(tour,/router\.push\(step\.route\)/)
-  assert.match(controller,/router\.push\(tourRoute\(role,next\)\)/)
+  assert.match(controller,/document\.addEventListener\("click",onNavigationClick,true\)/)
   assert.doesNotMatch(controller,/location\.assign\(/)
   assert.doesNotMatch(tour,/location\.assign\(step\.route\)/)
   assert.match(tour,/inside:\[/)
