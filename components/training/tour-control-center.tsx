@@ -73,6 +73,7 @@ export function TourControlCenter({active,userId,role,preferredWorkplace,mode="f
   const [rect,setRect]=useState<Rect|null>(null)
   const [targetMissing,setTargetMissing]=useState(false)
   const [actionFeedback,setActionFeedback]=useState("")
+  const feedbackTimerRef=useRef<ReturnType<typeof setTimeout>|null>(null)
   const [awaitingNavigation,setAwaitingNavigation]=useState<string|null>(null)
   const pendingPathRef=useRef<string|null>(null)
   const progressRef=useRef(progress)
@@ -224,8 +225,9 @@ export function TourControlCenter({active,userId,role,preferredWorkplace,mode="f
       setAwaitingNavigation(next.key)
     }
     const onTarget=(event:Event)=>{
+      if(feedbackTimerRef.current!==null)window.clearTimeout(feedbackTimerRef.current)
       setActionFeedback(current.description[locale])
-      window.setTimeout(()=>setActionFeedback(""),2600)
+      feedbackTimerRef.current=window.setTimeout(()=>{setActionFeedback("");feedbackTimerRef.current=null},6500)
       const detail=(event as CustomEvent<{target?:string}|string|undefined>).detail
       advanceTo(typeof detail==="string"?detail:detail?.target)
     }
