@@ -39,6 +39,7 @@ concurrency:
 
 jobs:
   repair:
+    if: vars.ENABLE_AUTOMATIC_SELF_HEAL == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 55
     env:
