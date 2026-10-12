@@ -35,7 +35,7 @@ COMMENT ON COLUMN leave_balances.last_accrued_on IS
 -- provider is one of the Supabase OAuth providers (e.g. azure,
 -- google) or the literal 'saml' for SAML 2.0 SSO.
 CREATE TABLE IF NOT EXISTS sso_connections (
-    id            UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    id            UUID PRIMARY KEY DEFAULT extensions.uuid_generate_v4(),
     domain        TEXT NOT NULL UNIQUE,
     provider      TEXT NOT NULL,
     display_name  TEXT NOT NULL,
