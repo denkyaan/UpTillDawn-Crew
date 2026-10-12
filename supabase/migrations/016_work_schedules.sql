@@ -3,7 +3,7 @@
 -- Defaults to Mon–Fri / 7.5h so nothing breaks for existing employees.
 
 CREATE TABLE IF NOT EXISTS work_schedules (
-  id           UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  id           UUID PRIMARY KEY DEFAULT extensions.uuid_generate_v4(),
   user_id      UUID NOT NULL REFERENCES user_profiles(id) ON DELETE CASCADE,
   work_days    TEXT[] NOT NULL DEFAULT ARRAY['mon','tue','wed','thu','fri'],
   daily_hours  NUMERIC(4,2) NOT NULL DEFAULT 7.5,
