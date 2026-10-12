@@ -4,10 +4,9 @@ This is a **separate Cloudflare Worker**: `uptilldawn-crew-staging`. It never de
 
 ## Test database isolation
 
-The staging workflow intentionally cannot deploy until both GitHub repository Actions variables have been configured:
+The staging workflow is preconfigured with the **separate** Supabase test project `npbjrtiolqperdgljnhi` and its browser-safe publishable key. GitHub Actions variables `UPT_TEST_SUPABASE_URL` and `UPT_TEST_SUPABASE_ANON_KEY` may optionally override the defaults, but connecting to the production database is strictly rejected. Never use service-role credentials.
 
-- `UPT_TEST_SUPABASE_URL` — URL of a **separate** Supabase test project.
-- `UPT_TEST_SUPABASE_ANON_KEY` — its **publishable** public key (never the service-role key).
+The branch must contain a `STAGING_PREVIEW_READY` marker **only after all 298 migrations have been applied and verified**. Until then, deployment is safely skipped. This marker has deliberately NOT been created yet.
 
 The workflow explicitly rejects the existing production Supabase project `eakoavcieossazqzplke`. A test Supabase project needs the current SQL migrations and Auth redirect allowlist for the staging origin. No production data is copied automatically.
 
