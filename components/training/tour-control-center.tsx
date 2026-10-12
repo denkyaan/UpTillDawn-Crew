@@ -240,8 +240,6 @@ export function TourControlCenter({active,userId,role,preferredWorkplace,mode="f
     return()=>{removeEventListener("uptilldawn-training-nav-target",onTarget);removeEventListener("uptilldawn-training-completed",onComplete)}
   },[active,chapters,current,currentIndex,locale,mode,preferredWorkplace,role,router,write])
 
-  if(!active||!current||!chapters.length)return null
-
   // Continue only after the user activates the actual navigation link.
   // Never create a second floating navigation button or navigate on their behalf.
   useEffect(()=>{
@@ -264,6 +262,8 @@ export function TourControlCenter({active,userId,role,preferredWorkplace,mode="f
     document.addEventListener("click",onNavigationClick,true)
     return()=>document.removeEventListener("click",onNavigationClick,true)
   },[active,awaitingNavigation,chapters,role,write])
+
+  if(!active||!current||!chapters.length)return null
 
   const saveActive=(chapter:TourChapter,patch?:Partial<Progress>)=>{
     clearTrainingNavTarget()
