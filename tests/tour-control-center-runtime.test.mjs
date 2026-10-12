@@ -31,7 +31,7 @@ function harness({visible=true,locale='en',chapter='overview',startPath}={}){
   const rect={left:10,top:80,width:180,height:40}
   const element={matches:()=>false,querySelector:()=>null,closest:()=>null,scrollIntoView(){},getBoundingClientRect:()=>rect,getClientRects:()=>visible?[rect]:[]}
   const context={exports:{},require(name){if(name==='react')return hooks;if(name==='react/jsx-runtime')return {jsx,jsxs:jsx,Fragment:'fragment'};if(name==='next/navigation')return {useRouter:()=>router,usePathname:()=>pathname};if(name==='@/lib/tour-training')return training;if(name==='@/lib/tour-panel-layout')return panelLayout;if(name==='@/lib/locale-preferences')return {activeUiLocale:()=>locale,LANGUAGE_APPLIED_EVENT:'language'};throw Error(name)},
-    localStorage,sessionStorage,location:{pathname,search:'?tour=1'},innerWidth:390,innerHeight:844,
+    localStorage,sessionStorage,location:{pathname,search:'?tour=1',href:'https://example.test'+pathname,origin:'https://example.test'},innerWidth:390,innerHeight:844,
     fetch:async(url,options)=>{requests.push({url,...options});return {ok:true}},
     document:{querySelector:()=>visible?element:null,body:{},addEventListener(name,fn){if(!listeners.has("document:"+name))listeners.set("document:"+name,new Set());listeners.get("document:"+name).add(fn)},removeEventListener(name,fn){listeners.get("document:"+name)?.delete(fn)}},
     matchMedia:()=>({matches:true}),getComputedStyle:()=>({display:'block',visibility:'visible'}),
