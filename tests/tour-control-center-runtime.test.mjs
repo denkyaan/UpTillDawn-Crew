@@ -117,7 +117,7 @@ test('action confirmation waits for explicit user navigation before changing cha
   assert.equal(app.progress().activeKey,'overview')
   assert.deepEqual(app.progress().completed,[])
   assert.deepEqual(app.routes,['/?tour=1'])
-  app.click('tour-continue-explicit')
+  app.click('Open the next step yourself')
   assert.equal(app.progress().activeKey,'events')
   assert.deepEqual(app.progress().completed,['overview'])
   assert.deepEqual(app.routes,['/?tour=1','/events?tour=1'])
