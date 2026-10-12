@@ -51,6 +51,17 @@ jobs:
         run: npx wrangler deploy --dry-run --config wrangler.staging.jsonc
       - name: Deploy staging only
         run: npx wrangler deploy --config wrangler.staging.jsonc
+      - name: Configure staging-only self-healing dispatcher
+        shell: bash
+        env:
+          SELF_HEALING_GITHUB_TOKEN: ${{ secrets.STAGING_SELF_HEALING_GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+          if [ -n "${SELF_HEALING_GITHUB_TOKEN:-}" ]; then
+            printf '%s' "$SELF_HEALING_GITHUB_TOKEN" | npx wrangler secret put SELF_HEALING_GITHUB_TOKEN --config wrangler.staging.jsonc
+          else
+            echo 'Staging AI dispatcher not configured; autonomous dispatch disabled.'
+          fi
       - name: Staging HTTP smoke
         shell: bash
         run: |
