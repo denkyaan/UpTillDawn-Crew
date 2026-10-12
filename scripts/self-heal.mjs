@@ -102,7 +102,7 @@ function runValidation(){
  const commands=[
   ['npm',['run','lint']],['npm',['run','typecheck']],['npm',['test']],
   ['npm',['run','build:next']],['npm',['run','build:cloudflare']],
-  ['npx',['wrangler','deploy','--dry-run']],
+  ['npx',['wrangler','deploy','--dry-run','--config','wrangler.staging.jsonc']],
  ]
  for(const [cmd,args] of commands){
   try{sh(cmd,args,{stdio:['ignore','pipe','pipe']})}
@@ -115,13 +115,14 @@ function runValidation(){
  return {ok:true,feedback:''}
 }
 function commitAndPush(){
+ if(process.env.GITHUB_REF!=='refs/heads/staging'||process.env.SELF_HEAL_TARGET!=='staging')throw new Error('Production push forbidden.')
  sh('git',['config','user.name','UpTillDawn Self-Healing AI'])
  sh('git',['config','user.email','self-healing@users.noreply.github.com'])
  sh('git',['add','--all'])
  try{sh('git',['diff','--cached','--quiet']);return false}catch{}
  sh('git',['commit','-m',`fix(self-heal): repair error ${reportId}`])
- sh('git',['pull','--rebase','origin','main'])
- sh('git',['push','origin','HEAD:main'])
+ sh('git',['pull','--rebase','origin','staging'])
+ sh('git',['push','origin','HEAD:staging'])
  return true
 }
 async function releaseCheck(){
@@ -129,6 +130,7 @@ async function releaseCheck(){
  catch(error){return {ok:false,feedback:String(error?.message||error).slice(0,12000)}}
 }
 async function loop(){
+ if(process.env.GITHUB_REF!=='refs/heads/staging'||process.env.SELF_HEAL_TARGET!=='staging')throw new Error('Staging-only guard.')
  const base=sh('git',['rev-parse','HEAD'])
  for(let attempt=1;attempt<=maxAttempts;attempt++){
   console.log(`Self-healing attempt ${attempt}/${maxAttempts}: evidence -> root cause -> bounded fix -> full validation -> CI -> deploy`)
@@ -162,24 +164,17 @@ async function verify(){
  let ci=null
  while(Date.now()<deadline){
   const runs=JSON.parse(sh('gh',['api',`repos/${repo}/actions/runs?head_sha=${sha}&per_page=20`]))
-  ci=runs.workflow_runs?.find(x=>x.name==='CI')
+  ci=runs.workflow_runs?.find(x=>x.name==='Deploy Staging')
   if(ci?.status==='completed')break
   await new Promise(r=>setTimeout(r,15000))
  }
  if(!ci||ci.conclusion!=='success')throw new Error('Self-healing CI werd niet groen.')
- let deploy=null
- while(Date.now()<deadline){
-  const runs=JSON.parse(sh('gh',['api',`repos/${repo}/actions/runs?head_sha=${sha}&per_page=30`]))
-  deploy=runs.workflow_runs?.find(x=>x.name==='Deploy Cloudflare'&&x.conclusion==='success')
-  if(deploy)break
-  await new Promise(r=>setTimeout(r,15000))
- }
- if(!deploy)throw new Error('Productiedeploy werd niet bevestigd.')
- const base=(process.env.NEXT_PUBLIC_APP_URL||'https://crew.uptilldawn.workers.dev').replace(/\/$/,'')
+ if(ci.head_branch!=='staging')throw new Error('Verkeerde deployment branch.')
+ const base='https://uptilldawn-crew-staging.uptilldawn.workers.dev'
  const target=route.startsWith('/')&&!route.startsWith('//')?base+route.split('?')[0]:base
  const response=await fetch(target,{redirect:'manual'})
  if(response.status>=500)throw new Error('Productiecontrole faalt met HTTP '+response.status)
- console.log(`Self-healing bevestigd: CI #${ci.run_number}, deploy #${deploy.run_number}, HTTP ${response.status}`)
+ console.log(`Self-healing staging bevestigd: deploy #${ci.run_number}, HTTP ${response.status}`)
 }
 async function markResolved(){
  const url=process.env.SUPABASE_URL||process.env.NEXT_PUBLIC_SUPABASE_URL||''
