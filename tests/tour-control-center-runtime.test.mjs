@@ -33,14 +33,14 @@ function harness({visible=true,locale='en',chapter='overview',startPath}={}){
   const context={exports:{},require(name){if(name==='react')return hooks;if(name==='react/jsx-runtime')return {jsx,jsxs:jsx,Fragment:'fragment'};if(name==='next/navigation')return {useRouter:()=>router,usePathname:()=>pathname};if(name==='@/lib/tour-training')return training;if(name==='@/lib/tour-panel-layout')return panelLayout;if(name==='@/lib/locale-preferences')return {activeUiLocale:()=>locale,LANGUAGE_APPLIED_EVENT:'language'};throw Error(name)},
     localStorage,sessionStorage,location:{pathname,search:'?tour=1'},innerWidth:390,innerHeight:844,
     fetch:async(url,options)=>{requests.push({url,...options});return {ok:true}},
-    document:{querySelector:()=>visible?element:null,body:{}},
+    document:{querySelector:()=>visible?element:null,body:{},addEventListener(name,fn){if(!listeners.has("document:"+name))listeners.set("document:"+name,new Set());listeners.get("document:"+name).add(fn)},removeEventListener(name,fn){listeners.get("document:"+name)?.delete(fn)}},
     matchMedia:()=>({matches:true}),getComputedStyle:()=>({display:'block',visibility:'visible'}),
     requestAnimationFrame(fn){const id=nextId++;frames.set(id,fn);return id},cancelAnimationFrame:id=>frames.delete(id),
     setTimeout(fn){const id=nextId++;timers.set(id,fn);return id},clearTimeout:id=>timers.delete(id),
     addEventListener(name,fn){if(!listeners.has(name))listeners.set(name,new Set());listeners.get(name).add(fn)},
     removeEventListener:(name,fn)=>listeners.get(name)?.delete(fn),dispatchEvent,
     CustomEvent:class{constructor(type,{detail}={}){this.type=type;this.detail=detail}},
-    HTMLElement:class{},
+    HTMLElement:class{},Element:class{},HTMLAnchorElement:class{},URL,
     ResizeObserver:class{constructor(fn){this.fn=fn}observe(){}disconnect(){}},
     MutationObserver:class{constructor(fn){this.fn=fn;this.connected=false;this.options=null;observers.push(this)}observe(_target,options){this.connected=true;this.options=options}disconnect(){this.connected=false}},
   }
@@ -69,6 +69,7 @@ function harness({visible=true,locale='en',chapter='overview',startPath}={}){
     text:()=>text(tree),
     click(name){const button=this.button(name);assert.ok(button,`Missing button: ${name}`);button.props.onClick();flush()},
     emit(name,detail){dispatchEvent(new context.CustomEvent(name,{detail}));flush()},
+    clickNav(path){const link={href:"https://example.test"+path};Object.setPrototypeOf(link,context.HTMLAnchorElement.prototype);const target={closest:()=>link};Object.setPrototypeOf(target,context.Element.prototype);for(const fn of [...(listeners.get("document:click")||[])])fn({target});flush();pathname=path;dirty=true;flush()},
     navigate(path){pathname=path;dirty=true;flush()},
     timeout(){const pending=[...timers.values()];timers.clear();pending.forEach(fn=>fn());flush()},
     reveal(){visible=true;for(const observer of observers)if(observer.connected)observer.fn();flush()},
@@ -117,10 +118,11 @@ test('action confirmation waits for explicit user navigation before changing cha
   assert.equal(app.progress().activeKey,'overview')
   assert.deepEqual(app.progress().completed,[])
   assert.deepEqual(app.routes,['/?tour=1'])
-  app.click('Open the next step yourself')
+  assert.equal(app.button('Open the next step yourself'),undefined)
+  app.clickNav('/events?tour=1')
   assert.equal(app.progress().activeKey,'events')
   assert.deepEqual(app.progress().completed,['overview'])
-  assert.deepEqual(app.routes,['/?tour=1','/events?tour=1'])
+  assert.deepEqual(app.routes,['/?tour=1'])
   app.navigate('/events')
   assert.equal(app.progress().activeKey,'events')
   app.unmount()
