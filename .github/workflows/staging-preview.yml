@@ -36,8 +36,8 @@ jobs:
           else
             echo "ready=true" >> "$GITHUB_OUTPUT"
           fi
-      - if: ${{ steps.staging.outputs.ready == 'true' }}
       - name: Enforce strict staging isolation
+        if: ${{ steps.staging.outputs.ready == 'true' }}
         shell: bash
         run: |
           set -euo pipefail
@@ -58,35 +58,35 @@ jobs:
           fi
           grep -q '"name": "uptilldawn-crew-staging"' wrangler.staging.jsonc
           echo "Separate Worker and database configuration confirmed."
-      - if: ${{ steps.staging.outputs.ready == 'true' }}
       - name: Set up Node.js
+        if: ${{ steps.staging.outputs.ready == 'true' }}
         uses: actions/setup-node@a0853c24544627f65ddf259abe73b1d18a591444 # v5.0.0
         with:
           node-version: 24
           cache: npm
-      - if: ${{ steps.staging.outputs.ready == 'true' }}
       - name: Install locked dependencies
+        if: ${{ steps.staging.outputs.ready == 'true' }}
         run: npm ci
-      - if: ${{ steps.staging.outputs.ready == 'true' }}
       - name: Check lint
+        if: ${{ steps.staging.outputs.ready == 'true' }}
         run: npm run lint
-      - if: ${{ steps.staging.outputs.ready == 'true' }}
       - name: Check TypeScript
+        if: ${{ steps.staging.outputs.ready == 'true' }}
         run: npm run typecheck
-      - if: ${{ steps.staging.outputs.ready == 'true' }}
       - name: Run regressions
+        if: ${{ steps.staging.outputs.ready == 'true' }}
         run: npm test
-      - if: ${{ steps.staging.outputs.ready == 'true' }}
       - name: Build staging Cloudflare bundle
+        if: ${{ steps.staging.outputs.ready == 'true' }}
         run: npm run build:cloudflare
-      - if: ${{ steps.staging.outputs.ready == 'true' }}
       - name: Inspect staging upload
+        if: ${{ steps.staging.outputs.ready == 'true' }}
         run: npx wrangler deploy --dry-run --config wrangler.staging.jsonc --var "NEXT_PUBLIC_SUPABASE_URL:$NEXT_PUBLIC_SUPABASE_URL" --var "NEXT_PUBLIC_SUPABASE_ANON_KEY:$NEXT_PUBLIC_SUPABASE_ANON_KEY" --var "NEXT_PUBLIC_APP_URL:$NEXT_PUBLIC_APP_URL"
-      - if: ${{ steps.staging.outputs.ready == 'true' }}
       - name: Publish separate staging Worker only
+        if: ${{ steps.staging.outputs.ready == 'true' }}
         run: npx wrangler deploy --config wrangler.staging.jsonc --var "NEXT_PUBLIC_SUPABASE_URL:$NEXT_PUBLIC_SUPABASE_URL" --var "NEXT_PUBLIC_SUPABASE_ANON_KEY:$NEXT_PUBLIC_SUPABASE_ANON_KEY" --var "NEXT_PUBLIC_APP_URL:$NEXT_PUBLIC_APP_URL"
-      - if: ${{ steps.staging.outputs.ready == 'true' }}
       - name: Verify deployed staging login and PWA resources
+        if: ${{ steps.staging.outputs.ready == 'true' }}
         shell: bash
         run: |
           set -euo pipefail
