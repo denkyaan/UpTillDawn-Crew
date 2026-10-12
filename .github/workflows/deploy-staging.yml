@@ -19,7 +19,7 @@ jobs:
     env:
       NEXT_PUBLIC_SUPABASE_URL: https://npbjrtiolqperdgljnhi.supabase.co
       NEXT_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.STAGING_SUPABASE_ANON_KEY }}
-      NEXT_PUBLIC_APP_URL: https://uptilldawn-crew-staging.workers.dev
+      NEXT_PUBLIC_APP_URL: https://uptilldawn-crew-staging.uptilldawn.workers.dev
       CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
       CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
     steps:
