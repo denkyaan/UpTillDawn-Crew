@@ -242,15 +242,29 @@ export function TourControlCenter({active,userId,role,preferredWorkplace,mode="f
 
   if(!active||!current||!chapters.length)return null
 
-  const continueToNext=()=>{
+  // Continue only after the user activates the actual navigation link.
+  // Never create a second floating navigation button or navigate on their behalf.
+  useEffect(()=>{
+    if(!active||!awaitingNavigation)return
     const next=chapters.find(chapter=>chapter.key===awaitingNavigation)
     if(!next)return
-    const prior=progressRef.current
-    write({...prior,activeKey:next.key,completed:unique([...prior.completed,current.key]),paused:false,updatedAt:new Date().toISOString()})
-    setAwaitingNavigation(null)
-    pendingPathRef.current=tourBaseRoute(role,next)
-    router.push(tourRoute(role,next))
-  }
+    const destination=tourBaseRoute(role,next)
+    const onNavigationClick=(event:MouseEvent)=>{
+      const target=event.target
+      if(!(target instanceof Element))return
+      const link=target.closest('a[href]')
+      if(!(link instanceof HTMLAnchorElement))return
+      const href=new URL(link.href,window.location.href)
+      if(href.origin!==window.location.origin||href.pathname!==destination)return
+      const prior=progressRef.current
+      write({...prior,activeKey:next.key,completed:unique([...prior.completed,prior.activeKey]),paused:false,updatedAt:new Date().toISOString()})
+      setAwaitingNavigation(null)
+      pendingPathRef.current=destination
+    }
+    document.addEventListener("click",onNavigationClick,true)
+    return()=>document.removeEventListener("click",onNavigationClick,true)
+  },[active,awaitingNavigation,chapters,role,write])
+
   const saveActive=(chapter:TourChapter,patch?:Partial<Progress>)=>{
     clearTrainingNavTarget()
     const next={...progressRef.current,...patch,activeKey:chapter.key,paused:false,updatedAt:new Date().toISOString()}
@@ -272,7 +286,7 @@ export function TourControlCenter({active,userId,role,preferredWorkplace,mode="f
     {rect&&<>
       <div aria-hidden className="pointer-events-none fixed z-[188] animate-pulse rounded-xl border-[3px] border-violet-400 shadow-[0_0_24px_rgba(139,92,246,0.9)]" style={{left:rect.left,top:rect.top,width:rect.width,height:rect.height}}/>
     </>}
-    {awaitingNavigation&&<button type="button" aria-label={c(locale,"Open zelf de volgende stap","Open the next step yourself","Ouvrir vous-même l’étape suivante","Nächsten Schritt selbst öffnen")} onClick={continueToNext} className="fixed bottom-24 right-4 z-[195] rounded-xl bg-violet-600 px-5 py-3 text-sm font-bold text-white shadow-xl focus-visible:outline focus-visible:outline-2 focus-visible:outline-violet-300">{c(locale,"Open zelf de volgende stap","Open the next step yourself","Ouvrir vous-même l’étape suivante","Nächsten Schritt selbst öffnen")} →</button>}
+    {awaitingNavigation&&<div data-no-translate role="status" className="pointer-events-none fixed bottom-[calc(env(safe-area-inset-bottom)+5.5rem)] left-1/2 z-[190] w-[min(90vw,24rem)] -translate-x-1/2 rounded-xl border border-violet-500/60 bg-background/95 px-4 py-3 text-center text-xs font-semibold shadow-xl">{c(locale,"Open zelf de gemarkeerde navigatietab om verder te gaan.","Open the highlighted navigation tab yourself to continue.","Ouvrez vous-même l’onglet de navigation mis en évidence pour continuer.","Öffne selbst den hervorgehobenen Navigationstab, um fortzufahren.")}</div>}
     {actionFeedback&&<div data-no-translate className="pointer-events-none fixed left-1/2 top-20 z-[190] w-[min(88vw,22rem)] -translate-x-1/2 rounded-xl border border-violet-500/50 bg-background/95 px-3 py-2 text-xs font-semibold leading-5 shadow-xl backdrop-blur">{actionFeedback}</div>}
     <div data-no-translate data-tour-panel className="pointer-events-none fixed right-3 top-[calc(env(safe-area-inset-top)+.75rem)] z-[190] flex items-center gap-2">
       <span className="rounded-full border border-violet-500/50 bg-background/95 px-2.5 py-1.5 text-[10px] font-black shadow">{currentIndex+1}/{chapters.length}</span>
