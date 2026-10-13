@@ -14,6 +14,12 @@ export type Database = {
   }
   public: {
     Tables: {
+      training_scenario_members: {
+        Row: { scenario_id: string; user_id: string; created_at: string }
+        Insert: { scenario_id: string; user_id: string; created_at?: string }
+        Update: { scenario_id?: string; user_id?: string; created_at?: string }
+        Relationships: []
+      }
       training_scenarios: {
         Row: { id: string; owner_id: string; name: string; payload: Json; updated_at: string }
         Insert: { id?: string; owner_id: string; name?: string; payload?: Json; updated_at?: string }
