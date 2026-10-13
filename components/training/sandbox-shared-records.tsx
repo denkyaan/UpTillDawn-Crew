@@ -1,7 +1,7 @@
 "use client"
 import {useEffect,useState} from "react"
 import {activeUiLocale,LANGUAGE_APPLIED_EVENT,type SupportedUiLocale} from "@/lib/locale-preferences"
-import {loadOwnedTrainingScenario} from "@/lib/training/scenario-sync"
+import {loadOwnedTrainingScenario,loadParticipantTrainingScenario} from "@/lib/training/scenario-sync"
 const KEY="uptilldawn-training-workflow-v3"
 type Item={title:string;description:string;workplace:string;start?:string;end?:string;phone?:string;address?:string}
 type State={adminEventDraft?:{name:string;venue:string};admin_workplaces?:Item[];admin_briefings?:Item[];admin_tasks?:Item[];admin_inventory?:Item[];admin_guestlist?:Item[];admin_drivers?:Item[];trainingTaskDone?:string[];trainingBriefingDone?:string[]}
@@ -12,7 +12,7 @@ export function SandboxSharedRecords({kind}:{kind:"workplaces"|"briefings"|"task
  const [opened,setOpened]=useState<string[]>([])
  useEffect(()=>{const apply=()=>setLocale(activeUiLocale());apply();addEventListener(LANGUAGE_APPLIED_EVENT,apply);return()=>removeEventListener(LANGUAGE_APPLIED_EVENT,apply)},[])
  useEffect(()=>{const frame=requestAnimationFrame(()=>{try{const saved=JSON.parse(sessionStorage.getItem(KEY)||"{}") as State;setState(saved)}catch{}});return()=>cancelAnimationFrame(frame)},[])
- useEffect(()=>{let active=true;loadOwnedTrainingScenario().then(payload=>{if(!active||!payload)return;const local=JSON.parse(sessionStorage.getItem(KEY)||"{}");const merged={...payload,...local};sessionStorage.setItem(KEY,JSON.stringify(merged));setState(merged as State)}).catch(()=>{});return()=>{active=false}},[])
+ useEffect(()=>{let active=true;Promise.all([loadOwnedTrainingScenario(),loadParticipantTrainingScenario()]).then(([owned,shared])=>{const payload=owned||shared;{if(!active||!payload)return;const local=JSON.parse(sessionStorage.getItem(KEY)||"{}");const merged={...payload,...local};sessionStorage.setItem(KEY,JSON.stringify(merged));setState(merged as State)}).catch(()=>{});return()=>{active=false}},[])
  const records=state[("admin_"+kind) as "admin_workplaces"|"admin_briefings"|"admin_tasks"|"admin_inventory"|"admin_guestlist"|"admin_drivers"]||[]
  const doneKey=kind==="briefings"?"trainingBriefingDone":"trainingTaskDone"
  const done=state[doneKey]||[]
