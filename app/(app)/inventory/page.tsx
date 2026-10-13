@@ -1,3 +1,5 @@
+import { SandboxAdminBuilder } from '@/components/training/sandbox-admin-builder'
+import { SandboxSharedRecords } from '@/components/training/sandbox-shared-records'
 import { SandboxInventory } from '@/components/training/sandbox-feature-pages'
 import { redirect } from 'next/navigation'
 import { getCurrentUser } from '@/lib/actions/auth'
@@ -25,7 +27,7 @@ export default async function InventoryPage({searchParams}:{searchParams?:Promis
   const params=searchParams?await searchParams:{}
   const current=await getCurrentUser()
   if(!current)redirect('/login')
-  if(params.tour==='1')return <SandboxInventory/>
+  if(params.tour==='1')return current.role==='admin'?<SandboxAdminBuilder kind="inventory"/>:<SandboxSharedRecords kind="inventory"/>
   const isAdmin=current.role==='admin'
   const isResponsible=current.role==='responsible_lead'
   const isStaff=current.role==='staff'
