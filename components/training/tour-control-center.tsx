@@ -2,6 +2,9 @@
 
 import {useCallback,useEffect,useMemo,useRef,useState} from "react"
 import {usePathname,useRouter} from "next/navigation"
+import {getParticipantTrainingScenarioId,getOwnedTrainingScenarioId} from "@/lib/training/scenario-sync"
+import {loadTrainingProgress} from "@/lib/training/progress-sync"
+import {trainingReport} from "@/lib/training/completion-policy"
 import {activeUiLocale,LANGUAGE_APPLIED_EVENT,type SupportedUiLocale} from "@/lib/locale-preferences"
 import {
   TOUR_SESSION_KEY,
@@ -242,7 +245,19 @@ export function TourControlCenter({active,userId,role,preferredWorkplace,mode="f
       const detail=(event as CustomEvent<{target?:string}|string|undefined>).detail
       advanceTo(typeof detail==="string"?detail:detail?.target)
     }
-    const onComplete=()=>{
+    const onComplete=async()=>{
+      try{
+        const scenarioId=role==="admin"?await getOwnedTrainingScenarioId():await getParticipantTrainingScenarioId()
+        const record=await loadTrainingProgress(scenarioId,role)
+        const report=trainingReport(record)
+        if(!report.canFinish){
+          setActionFeedback(c(locale,"Opleiding niet voltooid: "+report.pending.length+" oefeningen moeten nog geverifieerd worden.","Training incomplete: "+report.pending.length+" exercises still require verification.","Formation incomplète : "+report.pending.length+" exercices doivent encore être vérifiés.","Training unvollständig: "+report.pending.length+" Übungen müssen noch überprüft werden."))
+          return
+        }
+      }catch{
+        setActionFeedback(c(locale,"Afronden geblokkeerd: trainingsvoortgang kon niet worden gecontroleerd.","Completion blocked: training progress could not be verified.","Fin bloquée : impossible de vérifier la progression.","Abschluss gesperrt: Trainingsfortschritt konnte nicht geprüft werden."))
+        return
+      }
       const prior=progressRef.current
       write({...prior,completed:unique([...prior.completed,current.key]),paused:false,updatedAt:new Date().toISOString()})
       sessionStorage.removeItem(TOUR_SESSION_KEY)
