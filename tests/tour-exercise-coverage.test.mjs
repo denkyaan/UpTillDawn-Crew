@@ -57,3 +57,24 @@ test('each role receives its own functional tour instead of one identical workfl
  assert.notDeepEqual([...admin].sort(),[...employee].sort(),'admin and employee tours must differ')
  assert.notDeepEqual([...admin].sort(),[...responsible].sort(),'admin and responsible tours must differ')
 })
+
+
+test('granular training exercise contracts preserve separate role permissions',async()=>{
+ const {ROLE_EXERCISES}=await import('../lib/training/role-exercise-plan.ts')
+ for(const role of ['admin','responsible_lead','employee']){
+  const modules=ROLE_EXERCISES[role]
+  assert.ok(Object.keys(modules).length>=9,role+' needs broad functional training')
+  for(const [module,actions] of Object.entries(modules)){
+   assert.ok(actions.length>=2,role+' '+module+' needs multiple real actions')
+   assert.equal(new Set(actions).size,actions.length,role+' '+module+' has duplicate exercises')
+  }
+ }
+ for(const restricted of ['personnel','sales','platform','exports']) {
+  assert.ok(ROLE_EXERCISES.admin[restricted])
+  assert.equal(ROLE_EXERCISES.employee[restricted],undefined)
+  assert.equal(ROLE_EXERCISES.responsible_lead[restricted],undefined)
+ }
+ assert.ok(ROLE_EXERCISES.admin.operations.includes('approve-timesheet'))
+ assert.ok(ROLE_EXERCISES.responsible_lead.operations.includes('confirm-crew-arrival'))
+ assert.ok(ROLE_EXERCISES.employee.operations.includes('submit-timesheet'))
+})
