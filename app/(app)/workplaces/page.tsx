@@ -22,7 +22,7 @@ export default async function Page({searchParams}:{searchParams?:Promise<{event?
   const s=await createClient()
   const current=await getCurrentUser()
   if(!current)return null
-  if(params.tour==='1')return ( current.role==='admin' )?<SandboxAdminBuilder kind="workplaces"/>:<SandboxSharedRecords kind="workplaces"/>
+  if(params.tour==='1')return ( current.role==='admin' )?<><SandboxAdminBuilder kind="workplaces"/><SandboxAdminBuilder kind="drivers"/></>:<><SandboxSharedRecords kind="workplaces"/><SandboxSharedRecords kind="drivers"/></>
   const user={id:current.id}
   const requestNow=new Date().toISOString()
 
