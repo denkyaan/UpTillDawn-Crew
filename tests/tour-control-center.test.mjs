@@ -89,10 +89,12 @@ test('admin event, workplace and briefing chapters never expose production views
     read('app/(app)/workplaces/page.tsx'),
     read('app/(app)/briefings/page.tsx'),
   ])
-  for(const source of [events,workplaces,briefings]){
-    assert.match(source,/params\.tour==='1'/)
-    assert.match(source,/TourActiveEventDemo role="admin"/)
-  }
+  assert.match(events,/params\\.tour==='1'/)
+  assert.match(events,/<SandboxAdminEvent\\/>/)
+  assert.match(workplaces,/params\\.tour==='1'/)
+  assert.match(workplaces,/<SandboxAdminBuilder kind="workplaces"\\/>/)
+  assert.match(briefings,/params\\.tour==='1'/)
+  assert.match(briefings,/<SandboxAdminBuilder kind="briefings"\\/>/)
 })
 
 test('desktop and floating tour navigation preserve sandbox query',async()=>{
