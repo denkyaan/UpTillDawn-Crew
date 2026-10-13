@@ -20,7 +20,7 @@ ALTER TABLE public.training_scenarios ENABLE ROW LEVEL SECURITY;
 REVOKE ALL ON public.training_scenarios FROM anon;
 GRANT SELECT,INSERT,UPDATE ON public.training_scenarios TO authenticated;
 CREATE POLICY training_scenarios_read ON public.training_scenarios FOR SELECT TO authenticated USING (
- EXISTS(SELECT 1 FROM public.profiles p WHERE p.id=auth.uid())
+ owner_id=auth.uid()
 );
 CREATE POLICY training_scenarios_admin_insert ON public.training_scenarios FOR INSERT TO authenticated WITH CHECK (
  owner_id=auth.uid() AND EXISTS(SELECT 1 FROM public.profiles p WHERE p.id=auth.uid() AND p.role='admin')
