@@ -1,5 +1,7 @@
 "use client"
 import {useEffect,useState} from "react"
+import {TrainingQuestionsPanel} from "@/components/training/training-questions-panel"
+import {getParticipantTrainingScenarioId} from "@/lib/training/scenario-sync"
 import {activeUiLocale,LANGUAGE_APPLIED_EVENT,type SupportedUiLocale} from "@/lib/locale-preferences"
 
 const KEY="uptilldawn-training-workflow-v3"
@@ -27,6 +29,8 @@ function persist(next:string|null,module:Module){
 export function SandboxRoleModule({role,module}:{role:TrainingRole;module:Module}){
  const [l,setL]=useState<SupportedUiLocale>("nl")
  const [done,setDone]=useState(false)
+ const [questionScenario,setQuestionScenario]=useState("")
+ const [questionError,setQuestionError]=useState("")
  useEffect(()=>{const f=()=>setL(activeUiLocale());f();addEventListener(LANGUAGE_APPLIED_EVENT,f);return()=>removeEventListener(LANGUAGE_APPLIED_EVENT,f)},[])
  const next=NEXT[role]?.[module]??null
  const copy={
@@ -127,5 +131,6 @@ export function SandboxRoleModule({role,module}:{role:TrainingRole;module:Module
  return <main className="mx-auto max-w-5xl space-y-5 p-4 pb-28 md:p-8">
   <header><p className="text-xs font-black uppercase tracking-[.2em] text-violet-400">{t(l,"TRAINING · FICTIEVE GEGEVENS","TRAINING · FICTIONAL DATA","FORMATION · DONNÉES FICTIVES","TRAINING · FIKTIVE DATEN")}</p><h1 className="text-3xl font-black">{copy.title}</h1><p className="mt-1 text-sm text-muted-foreground">{copy.desc}</p></header>
   <section className="rounded-2xl border p-4"><h2 className="font-black">{t(l,"UpTillDawn Trainingsavond","UpTillDawn Training Night","Soirée d’entraînement UpTillDawn","UpTillDawn Trainingsabend")}</h2><p className="mt-2 text-sm">{copy.desc}</p><p className="mt-3 text-xs font-bold text-muted-foreground">{Math.min(actionIndex+1,actions.length)}/{actions.length}</p><p role="status" className="mt-2 rounded-xl border border-violet-500/40 bg-violet-500/5 p-3 text-sm leading-6">{exerciseContext[module]?.[actionIndex]||copy.desc}</p><div className="mt-3 h-1.5 overflow-hidden rounded-full bg-muted" aria-hidden="true"><div className="h-full bg-violet-500 transition-all" style={{width:`${(done?actions.length:actionIndex)/actions.length*100}%`}}/></div><button data-tour-demo="primary-action" onClick={complete} disabled={done} className="mt-2 rounded-xl border p-3 font-black disabled:opacity-60">{done?t(l,"VOLTOOID","COMPLETED","TERMINÉ","ERLEDIGT"):actions[actionIndex]}</button>{done&&<div className="mt-3 rounded-xl border p-3 text-sm"><p className="font-semibold">{copy.result}</p>{next&&<p className="mt-2">{t(l,"De volgende trainingsfunctie wordt nu geopend.","The next training feature now opens.","La fonction de formation suivante s’ouvre maintenant.","Die nächste Trainingsfunktion wird jetzt geöffnet.")}</p>}</div>}</section>
+  {module==="settings"&&<section className="space-y-3 rounded-xl border p-4"><button type="button" className="rounded-xl border px-4 py-2" onClick={async()=>{try{setQuestionScenario(await getParticipantTrainingScenarioId());setQuestionError("")}catch{setQuestionError(t(l,"Geen gekoppeld trainingsscenario gevonden.","No linked training scenario found.","Aucun scénario de formation lié.","Kein verknüpftes Trainingsszenario gefunden."))}}}>{t(l,"Vragen over de opleiding","Training questions","Questions sur la formation","Fragen zur Schulung")}</button>{questionError&&<p role="alert">{questionError}</p>}{questionScenario&&<TrainingQuestionsPanel scenarioId={questionScenario} role={role==="staff"?"employee":role}/>}</section>}
  </main>
 }
