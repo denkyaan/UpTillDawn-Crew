@@ -268,7 +268,8 @@ export function TourControlCenter({active,userId,role,preferredWorkplace,mode="f
       const href=new URL(link.href,window.location.href)
       if(href.origin!==window.location.origin||href.pathname!==destination)return
       const prior=progressRef.current
-      write({...prior,activeKey:next.key,completed:unique([...prior.completed,prior.activeKey]),paused:false,updatedAt:new Date().toISOString()})
+      // Moving to the next tab does not prove the previous exercise was performed.
+      write({...prior,activeKey:next.key,paused:false,updatedAt:new Date().toISOString()})
       setAwaitingNavigation(null)
       pendingPathRef.current=destination
     }
