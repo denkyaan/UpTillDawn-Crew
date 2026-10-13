@@ -9,7 +9,7 @@ test("training scenario migration explicitly refuses unverified projects",()=>{
 })
 test("training scenarios are isolated to their owner",()=>{
  assert.match(sql,/ENABLE ROW LEVEL SECURITY/)
- assert.match(sql,/training_scenarios_read[\s\S]*?USING \(owner_id=auth\.uid\(\)\)/)
+ assert.match(sql,/training_scenarios_read[\s\S]*?USING \(\s*owner_id=auth\.uid\(\)\s*\)/)
  assert.match(sql,/training_scenarios_admin_insert[\s\S]*?owner_id=auth\.uid\(\)/)
  assert.match(sql,/training_scenarios_admin_update[\s\S]*?owner_id=auth\.uid\(\)/)
 })
