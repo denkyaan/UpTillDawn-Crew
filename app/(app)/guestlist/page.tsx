@@ -1,3 +1,5 @@
+import { SandboxAdminBuilder } from '@/components/training/sandbox-admin-builder'
+import { SandboxSharedRecords } from '@/components/training/sandbox-shared-records'
 import { SandboxGuestlist } from '@/components/training/sandbox-feature-pages'
 import {redirect} from 'next/navigation'
 import {getCurrentUser} from '@/lib/actions/auth'
@@ -21,7 +23,7 @@ export default async function GuestlistPage({
   if(!current)redirect('/login')
   const s=await createClient()
   const params=await searchParams
-  if(params.tour==='1')return <SandboxGuestlist/>
+  if(params.tour==='1')return current.role==='admin'?<SandboxAdminBuilder kind="guestlist"/>:<SandboxSharedRecords kind="guestlist"/>
   const isAdmin=current.isAdmin===true
 
   let events:EventRow[]=[]
