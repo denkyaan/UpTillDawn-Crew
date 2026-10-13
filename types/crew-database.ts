@@ -14,6 +14,12 @@ export type Database = {
   }
   public: {
     Tables: {
+      training_scenarios: {
+        Row: { id: string; owner_id: string; name: string; payload: Json; updated_at: string }
+        Insert: { id?: string; owner_id: string; name?: string; payload?: Json; updated_at?: string }
+        Update: { id?: string; owner_id?: string; name?: string; payload?: Json; updated_at?: string }
+        Relationships: []
+      }
       admin_role_modes: {
         Row: {
           active_role: string
