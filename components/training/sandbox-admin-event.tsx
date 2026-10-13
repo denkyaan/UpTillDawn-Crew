@@ -4,7 +4,7 @@ import {activeUiLocale,LANGUAGE_APPLIED_EVENT,type SupportedUiLocale} from "@/li
 import {syncBrowserTrainingScenario,loadOwnedTrainingScenario,addTrainingParticipant,getOwnedTrainingScenarioId} from "@/lib/training/scenario-sync"
 
 import {TrainingQuestionsPanel} from "@/components/training/training-questions-panel"
-import {listTrainingProgressReports} from "@/lib/training/progress-sync"
+import {listTrainingProgressReports,saveVerifiedTrainingExercise} from "@/lib/training/progress-sync"
 
 const KEY="uptilldawn-training-workflow-v3"
 const t=(l:SupportedUiLocale,nl:string,en:string,fr:string,de:string)=>({nl,en,fr,de}[l])
@@ -26,12 +26,21 @@ export function SandboxAdminEvent(){
  useEffect(()=>{let cancelled=false;void loadOwnedTrainingScenario().then(remote=>{if(cancelled||!remote)return;const local=JSON.parse(sessionStorage.getItem(KEY)||"{}");if(local.adminEventCreated)return;sessionStorage.setItem(KEY,JSON.stringify(remote));if(remote.adminEventDraft)setDraft(remote.adminEventDraft as EventDraft);setCreated(Boolean(remote.adminEventCreated));setPublished(Boolean(remote.adminEventPublished))}).catch(()=>{});return()=>{cancelled=true}},[])
  const persist=(patch:Record<string,unknown>)=>{let s={};try{s=JSON.parse(sessionStorage.getItem(KEY)||"{}")}catch{}sessionStorage.setItem(KEY,JSON.stringify({...s,...patch}));void syncBrowserTrainingScenario().catch(()=>setError(t(l,"Lokaal opgeslagen; synchronisatie mislukt.","Saved locally; sync failed.","Enregistré localement ; synchronisation échouée.","Lokal gespeichert; Synchronisierung fehlgeschlagen.")))}
  const update=(field:keyof EventDraft,value:string)=>{setDraft(old=>({...old,[field]:value}));setError("")}
+ const verifyEventExercise=async(id:"events:create-event"|"events:set-capacity"|"events:set-registration-deadline"|"events:publish-event")=>{
+  try{
+   await syncBrowserTrainingScenario()
+   const scenario=await getOwnedTrainingScenarioId()
+   await saveVerifiedTrainingExercise(scenario,"admin",id,{verified:true})
+  }catch{
+   setError(t(l,"Oefening lokaal uitgevoerd, maar verificatie niet opgeslagen. Probeer opnieuw na synchronisatie.","Exercise performed locally, but verification was not saved. Retry after syncing.","Exercice effectué localement, mais validation non enregistrée. Réessayez après synchronisation.","Übung lokal ausgeführt, aber Bestätigung nicht gespeichert. Nach Synchronisierung erneut versuchen."))
+  }
+ }
  const create=()=>{
   if(!draft.name.trim()||!draft.venue.trim()||!draft.start||!draft.end||!draft.deadline||!draft.capacity){setError(t(l,"Vul alle velden in.","Complete all fields.","Complétez tous les champs.","Fülle alle Felder aus."));return}
   if(new Date(draft.end)<=new Date(draft.start)||new Date(draft.deadline)>=new Date(draft.start)||Number(draft.capacity)<1||!Number.isInteger(Number(draft.capacity))){setError(t(l,"Controleer de uren, deadline en capaciteit.","Check the times, deadline and capacity.","Vérifiez les heures, la date limite et la capacité.","Prüfe Zeiten, Frist und Kapazität."));return}
-  setCreated(true);persist({adminEventCreated:true,adminEventDraft:draft})
+  setCreated(true);persist({adminEventCreated:true,adminEventDraft:draft});void (async()=>{await verifyEventExercise("events:create-event");await verifyEventExercise("events:set-capacity");await verifyEventExercise("events:set-registration-deadline")})()
  }
- const publish=()=>{setPublished(true);persist({adminEventPublished:true,adminEventDraft:draft,navTarget:"workplaces"});dispatchEvent(new CustomEvent("uptilldawn-training-nav-target",{detail:{target:"workplaces"}}))}
+ const publish=()=>{setPublished(true);persist({adminEventPublished:true,adminEventDraft:draft,navTarget:"workplaces"});void verifyEventExercise("events:publish-event");dispatchEvent(new CustomEvent("uptilldawn-training-nav-target",{detail:{target:"workplaces"}}))}
  const fieldClass="w-full rounded-xl border bg-background px-3 py-2 text-sm"
  return <main className="mx-auto max-w-3xl space-y-5 p-4 pb-24 sm:p-6" data-tour-demo="training-screen">
   <header><p className="text-xs font-bold uppercase text-violet-400">{t(l,"TRAINING · FICTIEVE GEGEVENS","TRAINING · FICTIONAL DATA","FORMATION · DONNÉES FICTIVES","TRAINING · FIKTIVE DATEN")}</p><h1 className="mt-2 text-2xl font-black">{t(l,"Maak zelf een evenement","Create an event yourself","Créez vous-même un événement","Erstelle selbst ein Event")}</h1><p className="mt-2 text-sm text-muted-foreground">{t(l,"Vul alle gegevens zelf in. Dit oefenevenement wordt alleen in je browsersessie opgeslagen.","Enter all details yourself. This practice event is stored only in your browser session.","Saisissez vous-même toutes les données. Cet événement fictif reste dans votre session.","Gib alle Daten selbst ein. Dieses Übungsevent wird nur in deiner Browsersitzung gespeichert.")}</p></header>
