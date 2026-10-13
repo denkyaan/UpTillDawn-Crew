@@ -1,7 +1,9 @@
 "use client"
 import {useEffect,useState} from "react"
 import {activeUiLocale,LANGUAGE_APPLIED_EVENT,type SupportedUiLocale} from "@/lib/locale-preferences"
-import {syncBrowserTrainingScenario,loadOwnedTrainingScenario,addTrainingParticipant} from "@/lib/training/scenario-sync"
+import {syncBrowserTrainingScenario,loadOwnedTrainingScenario,addTrainingParticipant,getOwnedTrainingScenarioId} from "@/lib/training/scenario-sync"
+
+import {TrainingQuestionsPanel} from "@/components/training/training-questions-panel"
 
 const KEY="uptilldawn-training-workflow-v3"
 const t=(l:SupportedUiLocale,nl:string,en:string,fr:string,de:string)=>({nl,en,fr,de}[l])
@@ -13,6 +15,7 @@ export function SandboxAdminEvent(){
  const [created,setCreated]=useState(false)
  const [published,setPublished]=useState(false)
  const [error,setError]=useState("")
+ const [scenarioId,setScenarioId]=useState("")
  const [participantId,setParticipantId]=useState("")
  const [participantMessage,setParticipantMessage]=useState("")
  useEffect(()=>{const apply=()=>setL(activeUiLocale());apply();addEventListener(LANGUAGE_APPLIED_EVENT,apply);return()=>removeEventListener(LANGUAGE_APPLIED_EVENT,apply)},[])
@@ -43,5 +46,6 @@ export function SandboxAdminEvent(){
   </form>
   {created&&<section className="space-y-3 rounded-2xl border border-violet-500/50 p-4"><p className="font-bold text-emerald-500">{t(l,"Fictief evenement aangemaakt","Fictional event created","Événement fictif créé","Fiktives Event erstellt")}</p><h2 className="text-xl font-bold">{draft.name}</h2><p className="text-sm">{draft.venue} · {draft.start.replace("T"," ")} — {draft.end.replace("T"," ")}</p><p className="text-sm">{t(l,"Capaciteit","Capacity","Capacité","Kapazität")}: {draft.capacity}</p><p className="text-sm">{t(l,"Deadline","Deadline","Date limite","Frist")}: {draft.deadline.replace("T"," ")}</p>{!published?<button data-tour-demo="primary-action" type="button" onClick={publish} className="rounded-xl bg-violet-600 px-5 py-3 font-bold text-white">{t(l,"EVENEMENT PUBLICER EN VERDERGAAN","PUBLISH EVENT AND CONTINUE","PUBLIER ET CONTINUER","EVENT VERÖFFENTLICHEN UND WEITER")}</button>:<p role="status" className="font-semibold text-emerald-500">{t(l,"Gepubliceerd in de demo. Open zelf Werkplekken & Shifts om verder te gaan.","Published in the demo. Open Workplaces & Shifts yourself to continue.","Publié dans la démo. Ouvrez vous-même Postes & Shifts.","In der Demo veröffentlicht. Öffne Arbeitsplätze & Schichten selbst.")}</p>}</section>}
   {created&&<section className="space-y-3 rounded-2xl border p-4"><h2 className="font-bold">{t(l,"Deelnemer toevoegen","Add participant","Ajouter un participant","Teilnehmer hinzufügen")}</h2><p className="text-sm">{t(l,"Voeg het gebruikers-ID toe van een bestaand staging-account.","Enter the user ID of an existing staging account.","Saisissez l’identifiant d’un compte staging existant.","Gib die Benutzer-ID eines bestehenden Staging-Kontos ein.")}</p><form className="space-y-2" onSubmit={async e=>{e.preventDefault();setParticipantMessage("");try{await addTrainingParticipant(participantId.trim());setParticipantId("");setParticipantMessage(t(l,"Deelnemer toegevoegd.","Participant added.","Participant ajouté.","Teilnehmer hinzugefügt."))}catch{setParticipantMessage(t(l,"Toevoegen mislukt. Controleer het ID en of het scenario is gesynchroniseerd.","Could not add participant. Check the ID and scenario sync.","Ajout impossible. Vérifiez l’identifiant et la synchronisation.","Hinzufügen fehlgeschlagen. Prüfe ID und Synchronisierung."))}}}><input aria-label={t(l,"Gebruikers-ID","User ID","Identifiant utilisateur","Benutzer-ID")} className={fieldClass} value={participantId} onChange={e=>setParticipantId(e.target.value)} placeholder={t(l,"Gebruikers-ID (UUID)","User ID (UUID)","Identifiant utilisateur (UUID)","Benutzer-ID (UUID)")} required pattern="[0-9a-fA-F-]{36}"/><button type="submit" className="rounded-xl bg-violet-600 px-4 py-2 font-bold text-white">{t(l,"TOEVOEGEN","ADD","AJOUTER","HINZUFÜGEN")}</button></form>{participantMessage&&<p role="status" className="text-sm">{participantMessage}</p>}</section>}
+  {created&&<section className="space-y-3 rounded-2xl border p-4"><button type="button" className="rounded-xl border px-4 py-2" onClick={async()=>{try{setScenarioId(await getOwnedTrainingScenarioId())}catch{setError(t(l,"Trainingsscenario niet gevonden.","Training scenario not found.","Scénario introuvable.","Trainingsszenario nicht gefunden."))}}}>{t(l,"Trainingsvragen openen","Open training questions","Ouvrir les questions","Trainingsfragen öffnen")}</button>{scenarioId&&<TrainingQuestionsPanel scenarioId={scenarioId} role="admin" isAdmin/>}</section>}
  </main>
 }
