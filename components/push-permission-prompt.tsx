@@ -1,6 +1,7 @@
 "use client"
 
 import { useEffect,useState } from "react"
+import { useSearchParams } from "next/navigation"
 import { BellRing } from "lucide-react"
 import { enablePushNotifications,getPushState,isInstalledPwa,type PushState } from "@/lib/push-client"
 import { useAuth } from "@/lib/providers"
@@ -9,6 +10,8 @@ const WEEK=7*24*60*60*1000
 
 export function PushPermissionPrompt(){
   const {user,profile,loading}=useAuth()
+  const searchParams=useSearchParams()
+  const inTraining=searchParams.get("tour")==="1"
   const canPrompt=!loading&&Boolean(user&&profile?.approved)
   const [visible,setVisible]=useState(false)
   const [busy,setBusy]=useState(false)
@@ -16,7 +19,7 @@ export function PushPermissionPrompt(){
 
   useEffect(()=>{
     let cancelled=false
-    if(!canPrompt)return()=>{cancelled=true}
+    if(!canPrompt||inTraining)return()=>{cancelled=true}
     void (async()=>{
       if(!isInstalledPwa())return
       let current=await getPushState()
@@ -33,9 +36,9 @@ export function PushPermissionPrompt(){
       setVisible(current==="default"&&permissionNeedsConsent&&(!dismissed||Date.now()-dismissed>WEEK))
     })()
     return()=>{cancelled=true}
-  },[canPrompt])
+  },[canPrompt,inTraining])
 
-  if(!canPrompt||!visible)return null
+  if(!canPrompt||inTraining||!visible)return null
 
   const enable=async()=>{
     setBusy(true)
