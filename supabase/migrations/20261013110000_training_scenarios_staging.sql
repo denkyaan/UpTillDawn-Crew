@@ -3,7 +3,7 @@ DO $$
 BEGIN
  IF current_setting('app.settings.project_ref', true) IS DISTINCT FROM 'npbjrtiolqperdgljnhi'
     AND current_database() NOT LIKE '%npbjrtiolqperdgljnhi%' THEN
-   RAISE NOTICE 'Training scenario migration requires explicit staging deployment verification';
+   RAISE EXCEPTION 'Training scenario migration blocked: explicit staging project verification required';
  END IF;
 END $$;
 CREATE TABLE IF NOT EXISTS public.training_scenarios (
