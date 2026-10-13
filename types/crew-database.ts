@@ -20,6 +20,12 @@ export type Database = {
         Update: { scenario_id?: string; user_id?: string; created_at?: string }
         Relationships: []
       }
+      training_questions: {
+        Row: { id: string; scenario_id: string; participant_id: string; role: string; question: string; answer: string | null; status: string; created_at: string; answered_at: string | null }
+        Insert: { id?: string; scenario_id: string; participant_id: string; role: string; question: string; answer?: string | null; status?: string; created_at?: string; answered_at?: string | null }
+        Update: { id?: string; scenario_id?: string; participant_id?: string; role?: string; question?: string; answer?: string | null; status?: string; created_at?: string; answered_at?: string | null }
+        Relationships: []
+      }
       training_scenarios: {
         Row: { id: string; owner_id: string; name: string; payload: Json; updated_at: string }
         Insert: { id?: string; owner_id: string; name?: string; payload?: Json; updated_at?: string }
