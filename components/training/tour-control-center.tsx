@@ -105,7 +105,7 @@ export function TourControlCenter({active,userId,role,preferredWorkplace,mode="f
       feedbackTimerRef.current=window.setTimeout(()=>{setActionFeedback("");feedbackTimerRef.current=null},6500)
     },250)
     return()=>{window.clearTimeout(timer);if(feedbackTimerRef.current!==null){window.clearTimeout(feedbackTimerRef.current);feedbackTimerRef.current=null}}
-  },[active,current?.key,locale,progress.paused])
+  },[active,current,locale,progress.paused])
 
   useEffect(()=>{
     if(!active||!current)return
