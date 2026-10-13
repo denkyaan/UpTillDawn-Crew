@@ -1,7 +1,6 @@
 import Link from 'next/link'
 import { SandboxEvents } from '@/components/training/sandbox-events'
 import { SandboxAdminEvent } from '@/components/training/sandbox-admin-event'
-import { TourActiveEventDemo } from '@/components/tour-active-event-demo'
 import { DateInput } from '@/components/crew/date-input'
 import { AdminOnly } from '@/components/auth/admin-only'
 import { GeoapifyPlaceFields } from '@/components/events/geoapify-place-fields'
