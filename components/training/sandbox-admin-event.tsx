@@ -60,7 +60,7 @@ export function SandboxAdminEvent(){
      {report.pending.length>0&&<details className="mt-2"><summary className="cursor-pointer font-semibold">{t(l,"Openstaande oefeningen","Pending exercises","Exercices restants","Offene Übungen")} ({report.pending.length})</summary><ul className="mt-2 list-disc pl-5">{report.pending.map(id=><li key={id}>{id}</li>)}</ul></details>}
      {report.failed.length>0&&<p className="mt-2 text-red-500">{t(l,"Oefeningen met fouten","Exercises with errors","Exercices avec erreurs","Übungen mit Fehlern")}: {report.failed.join(", ")}</p>}
    </article>)}
-  </section>
+  </section>}
   {created&&<section className="space-y-3 rounded-2xl border p-4"><button type="button" className="rounded-xl border px-4 py-2" onClick={async()=>{try{setScenarioId(await getOwnedTrainingScenarioId())}catch{setError(t(l,"Trainingsscenario niet gevonden.","Training scenario not found.","Scénario introuvable.","Trainingsszenario nicht gefunden."))}}}>{t(l,"Trainingsvragen openen","Open training questions","Ouvrir les questions","Trainingsfragen öffnen")}</button>{scenarioId&&<TrainingQuestionsPanel scenarioId={scenarioId} role="admin" isAdmin/>}</section>}
  </main>
 }
