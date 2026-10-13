@@ -118,7 +118,8 @@ export function TourControlCenter({active,userId,role,preferredWorkplace,mode="f
       const routeChapter=chapterForPath(role,pathname,chapters)
       if(routeChapter&&tourBaseRoute(role,current)!==pathname){
         const prior=progressRef.current
-        // Visiting another tab is navigation, never evidence that an exercise was completed.\n        const completed=prior.completed
+        // Visiting another tab is navigation, never evidence that an exercise was completed.
+        const completed=prior.completed
         write({...prior,activeKey:routeChapter.key,completed,updatedAt:new Date().toISOString()})
       }else router.push(tourRoute(role,current))
     }
