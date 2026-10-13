@@ -1,7 +1,7 @@
 "use client"
 import {useEffect,useState} from "react"
 import {activeUiLocale,LANGUAGE_APPLIED_EVENT,type SupportedUiLocale} from "@/lib/locale-preferences"
-import {syncBrowserTrainingScenario} from "@/lib/training/scenario-sync"
+import {syncBrowserTrainingScenario,loadOwnedTrainingScenario} from "@/lib/training/scenario-sync"
 
 const KEY="uptilldawn-training-workflow-v3"
 const t=(l:SupportedUiLocale,nl:string,en:string,fr:string,de:string)=>({nl,en,fr,de}[l])
@@ -15,6 +15,7 @@ export function SandboxAdminEvent(){
  const [error,setError]=useState("")
  useEffect(()=>{const apply=()=>setL(activeUiLocale());apply();addEventListener(LANGUAGE_APPLIED_EVENT,apply);return()=>removeEventListener(LANGUAGE_APPLIED_EVENT,apply)},[])
  useEffect(()=>{const frame=requestAnimationFrame(()=>{try{const s=JSON.parse(sessionStorage.getItem(KEY)||"{}");if(s.adminEventDraft)setDraft(s.adminEventDraft);setCreated(Boolean(s.adminEventCreated));setPublished(Boolean(s.adminEventPublished))}catch{}});return()=>cancelAnimationFrame(frame)},[])
+ useEffect(()=>{let cancelled=false;void loadOwnedTrainingScenario().then(remote=>{if(cancelled||!remote)return;const local=JSON.parse(sessionStorage.getItem(KEY)||"{}");if(local.adminEventCreated)return;sessionStorage.setItem(KEY,JSON.stringify(remote));if(remote.adminEventDraft)setDraft(remote.adminEventDraft as EventDraft);setCreated(Boolean(remote.adminEventCreated));setPublished(Boolean(remote.adminEventPublished))}).catch(()=>{});return()=>{cancelled=true}},[])
  const persist=(patch:Record<string,unknown>)=>{let s={};try{s=JSON.parse(sessionStorage.getItem(KEY)||"{}")}catch{}sessionStorage.setItem(KEY,JSON.stringify({...s,...patch}));void syncBrowserTrainingScenario().catch(()=>setError(t(l,"Lokaal opgeslagen; synchronisatie mislukt.","Saved locally; sync failed.","Enregistré localement ; synchronisation échouée.","Lokal gespeichert; Synchronisierung fehlgeschlagen.")))}
  const update=(field:keyof EventDraft,value:string)=>{setDraft(old=>({...old,[field]:value}));setError("")}
  const create=()=>{
