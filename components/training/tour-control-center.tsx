@@ -4,7 +4,7 @@ import {useCallback,useEffect,useMemo,useRef,useState} from "react"
 import {usePathname,useRouter} from "next/navigation"
 import {getParticipantTrainingScenarioId,getOwnedTrainingScenarioId} from "@/lib/training/scenario-sync"
 import {loadTrainingProgress} from "@/lib/training/progress-sync"
-import {trainingReport} from "@/lib/training/completion-policy"
+import {trainingReport,resumeExercise} from "@/lib/training/completion-policy"
 import {activeUiLocale,LANGUAGE_APPLIED_EVENT,type SupportedUiLocale} from "@/lib/locale-preferences"
 import {
   TOUR_SESSION_KEY,
@@ -78,6 +78,7 @@ export function TourControlCenter({active,userId,role,preferredWorkplace,mode="f
   const [actionFeedback,setActionFeedback]=useState("")
   const feedbackTimerRef=useRef<number|null>(null)
   const [awaitingNavigation,setAwaitingNavigation]=useState<string|null>(null)
+  const [resumeHint,setResumeHint]=useState<string|null>(null)
   const pendingPathRef=useRef<string|null>(null)
   const progressRef=useRef(progress)
   useEffect(()=>{progressRef.current=progress},[progress])
@@ -98,6 +99,20 @@ export function TourControlCenter({active,userId,role,preferredWorkplace,mode="f
     return()=>cancelAnimationFrame(frame)
   },[active,chapters,mode,preferredWorkplace,progressKey,role,router,write])
 
+  useEffect(()=>{
+    if(!active)return
+    let cancelled=false
+    void (async()=>{
+      try{
+        const scenarioId=role==="admin"?await getOwnedTrainingScenarioId():await getParticipantTrainingScenarioId()
+        const record=await loadTrainingProgress(scenarioId,role)
+        if(cancelled)return
+        const next=resumeExercise(record)
+        setResumeHint(next)
+      }catch{if(!cancelled)setResumeHint(null)}
+    })()
+    return()=>{cancelled=true}
+  },[active,role])
   const current=chapters.find(chapter=>chapter.key===progress.activeKey)||chapters[0]
   const currentIndex=Math.max(0,chapters.findIndex(chapter=>chapter.key===current?.key))
   useEffect(()=>{
@@ -315,6 +330,7 @@ export function TourControlCenter({active,userId,role,preferredWorkplace,mode="f
     {rect&&<>
       <div aria-hidden className="pointer-events-none fixed z-[188] animate-pulse rounded-xl border-[3px] border-violet-400 shadow-[0_0_24px_rgba(139,92,246,0.9)]" style={{left:rect.left,top:rect.top,width:rect.width,height:rect.height}}/>
     </>}
+    {resumeHint&&<div data-no-translate role="status" className="pointer-events-none fixed left-1/2 top-[calc(env(safe-area-inset-top)+8rem)] z-[190] w-[min(88vw,25rem)] -translate-x-1/2 rounded-xl border border-violet-500/50 bg-background/95 px-3 py-2 text-xs font-semibold shadow-xl">{c(locale,"Eerstvolgende niet-geverifieerde oefening: ","Next unverified exercise: ","Prochain exercice non vérifié : ","Nächste ungeprüfte Übung: ")}{resumeHint}</div>}
     {awaitingNavigation&&<div data-no-translate role="status" className="pointer-events-none fixed bottom-[calc(env(safe-area-inset-bottom)+5.5rem)] left-1/2 z-[190] w-[min(90vw,24rem)] -translate-x-1/2 rounded-xl border border-violet-500/60 bg-background/95 px-4 py-3 text-center text-xs font-semibold shadow-xl">{c(locale,"Open zelf de gemarkeerde navigatietab om verder te gaan.","Open the highlighted navigation tab yourself to continue.","Ouvrez vous-même l’onglet de navigation mis en évidence pour continuer.","Öffne selbst den hervorgehobenen Navigationstab, um fortzufahren.")}</div>}
     {actionFeedback&&<div data-no-translate className="pointer-events-none fixed left-1/2 top-32 z-[190] w-[min(88vw,22rem)] -translate-x-1/2 rounded-xl border border-violet-500/50 bg-background/95 px-3 py-2 text-xs font-semibold leading-5 shadow-xl backdrop-blur">{actionFeedback}</div>}
     <div data-no-translate data-tour-panel className="pointer-events-none fixed right-3 top-[calc(env(safe-area-inset-top)+5rem)] z-[190] flex items-center gap-2">
