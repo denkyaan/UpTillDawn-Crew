@@ -47,3 +47,14 @@ export async function loadParticipantTrainingScenario(){
   if(error) throw error
   return data?.payload && typeof data.payload==="object" && !Array.isArray(data.payload)?data.payload as Record<string,unknown>:null
 }
+
+export async function addTrainingParticipant(participantId:string){
+  stagingOnly()
+  const client=createClient()
+  const {data:{user},error:authError}=await client.auth.getUser()
+  if(authError||!user) throw new Error("Login required")
+  const {data:scenario,error:scenarioError}=await client.from("training_scenarios").select("id").eq("owner_id",user.id).single()
+  if(scenarioError) throw scenarioError
+  const {error}=await client.from("training_scenario_members").insert({scenario_id:scenario.id,user_id:participantId})
+  if(error) throw error
+}
