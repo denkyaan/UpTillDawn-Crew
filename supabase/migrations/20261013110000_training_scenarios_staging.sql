@@ -1,8 +1,7 @@
 -- Staging-only migration: do not apply to production.
 DO $$
 BEGIN
- IF current_setting('app.settings.project_ref', true) IS DISTINCT FROM 'npbjrtiolqperdgljnhi'
-    AND current_database() NOT LIKE '%npbjrtiolqperdgljnhi%' THEN
+ IF current_setting('app.settings.project_ref', true) IS DISTINCT FROM 'npbjrtiolqperdgljnhi' THEN
    RAISE EXCEPTION 'Training scenario migration blocked: explicit staging project verification required';
  END IF;
 END $$;
