@@ -58,3 +58,24 @@ export async function addTrainingParticipant(participantId:string){
   const {error}=await client.from("training_scenario_members").insert({scenario_id:scenario.id,user_id:participantId})
   if(error) throw error
 }
+
+export async function getOwnedTrainingScenarioId():Promise<string>{
+  stagingOnly()
+  const client=createClient()
+  const {data:{user},error:authError}=await client.auth.getUser()
+  if(authError||!user)throw new Error("Login required")
+  const {data,error}=await client.from("training_scenarios").select("id").eq("owner_id",user.id).single()
+  if(error||!data)throw error??new Error("Training scenario not found")
+  return data.id
+}
+
+export async function getParticipantTrainingScenarioId():Promise<string>{
+  stagingOnly()
+  const client=createClient()
+  const {data:{user},error:authError}=await client.auth.getUser()
+  if(authError||!user)throw new Error("Login required")
+  const {data,error}=await client.from("training_scenario_members").select("scenario_id").eq("user_id",user.id).limit(2)
+  if(error)throw error
+  if(data?.length!==1)throw new Error("Exactly one training scenario is required")
+  return data[0].scenario_id
+}
