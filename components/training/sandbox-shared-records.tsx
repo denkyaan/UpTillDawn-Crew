@@ -12,7 +12,7 @@ export function SandboxSharedRecords({kind}:{kind:"workplaces"|"briefings"|"task
  const [opened,setOpened]=useState<string[]>([])
  useEffect(()=>{const apply=()=>setLocale(activeUiLocale());apply();addEventListener(LANGUAGE_APPLIED_EVENT,apply);return()=>removeEventListener(LANGUAGE_APPLIED_EVENT,apply)},[])
  useEffect(()=>{const frame=requestAnimationFrame(()=>{try{const saved=JSON.parse(sessionStorage.getItem(KEY)||"{}") as State;setState(saved)}catch{}});return()=>cancelAnimationFrame(frame)},[])
- useEffect(()=>{let active=true;Promise.all([loadOwnedTrainingScenario(),loadParticipantTrainingScenario()]).then(([owned,shared])=>{const payload=owned||shared;{if(!active||!payload)return;const local=JSON.parse(sessionStorage.getItem(KEY)||"{}");const merged={...payload,...local};sessionStorage.setItem(KEY,JSON.stringify(merged));setState(merged as State)}).catch(()=>{});return()=>{active=false}},[])
+ useEffect(()=>{let active=true;Promise.all([loadOwnedTrainingScenario(),loadParticipantTrainingScenario()]).then(([owned,shared])=>{const payload=owned||shared;if(!active||!payload)return;const local=JSON.parse(sessionStorage.getItem(KEY)||"{}");const merged={...payload,...local};sessionStorage.setItem(KEY,JSON.stringify(merged));setState(merged as State)}).catch(()=>{});return()=>{active=false}},[])
  const records=state[("admin_"+kind) as "admin_workplaces"|"admin_briefings"|"admin_tasks"|"admin_inventory"|"admin_guestlist"|"admin_drivers"]||[]
  const doneKey=kind==="briefings"?"trainingBriefingDone":"trainingTaskDone"
  const done=state[doneKey]||[]
