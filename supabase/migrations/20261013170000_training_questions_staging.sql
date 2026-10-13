@@ -19,7 +19,8 @@ CREATE TABLE IF NOT EXISTS public.training_questions (
 CREATE INDEX IF NOT EXISTS training_questions_scenario_idx ON public.training_questions(scenario_id,created_at DESC);
 ALTER TABLE public.training_questions ENABLE ROW LEVEL SECURITY;
 REVOKE ALL ON public.training_questions FROM anon;
-GRANT SELECT,INSERT,UPDATE ON public.training_questions TO authenticated;
+GRANT SELECT,INSERT ON public.training_questions TO authenticated;
+GRANT UPDATE (answer,status,answered_at) ON public.training_questions TO authenticated;
 CREATE POLICY training_questions_read ON public.training_questions FOR SELECT TO authenticated
  USING (participant_id=auth.uid() OR EXISTS
  (SELECT 1 FROM public.training_scenarios s WHERE s.id=scenario_id AND s.owner_id=auth.uid()));
