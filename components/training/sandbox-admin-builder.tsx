@@ -1,0 +1,33 @@
+"use client"
+import {useEffect,useState} from "react"
+import {activeUiLocale,LANGUAGE_APPLIED_EVENT,type SupportedUiLocale} from "@/lib/locale-preferences"
+const KEY="uptilldawn-training-workflow-v3"
+const tr=(l:SupportedUiLocale,nl:string,en:string,fr:string,de:string)=>({nl,en,fr,de}[l])
+type Kind="workplaces"|"briefings"|"tasks"
+type RecordItem={title:string;description:string;workplace:string;start?:string;end?:string}
+export function SandboxAdminBuilder({kind}:{kind:Kind}){
+ const [locale,setLocale]=useState<SupportedUiLocale>("nl")
+ const [eventName,setEventName]=useState("")
+ const [items,setItems]=useState<RecordItem[]>([])
+ const [title,setTitle]=useState("")
+ const [description,setDescription]=useState("")
+ const [workplace,setWorkplace]=useState("")
+ const [start,setStart]=useState("")
+ const [end,setEnd]=useState("")
+ const [error,setError]=useState("")
+ useEffect(()=>{const apply=()=>setLocale(activeUiLocale());apply();addEventListener(LANGUAGE_APPLIED_EVENT,apply);return()=>removeEventListener(LANGUAGE_APPLIED_EVENT,apply)},[])
+ useEffect(()=>{const frame=requestAnimationFrame(()=>{try{const s=JSON.parse(sessionStorage.getItem(KEY)||"{}");setEventName(s.adminEventDraft?.name||"");setItems(s["admin_"+kind]||[])}catch{}});return()=>cancelAnimationFrame(frame)},[kind])
+ const save=(next:RecordItem[])=>{setItems(next);let s:Record<string,unknown>={};try{s=JSON.parse(sessionStorage.getItem(KEY)||"{}")}catch{};sessionStorage.setItem(KEY,JSON.stringify({...s,["admin_"+kind]:next}))}
+ const labels={workplaces:tr(locale,"Werkplekken en shifts","Workplaces and shifts","Postes et shifts","Arbeitsplätze und Schichten"),briefings:tr(locale,"Briefings","Briefings","Briefings","Briefings"),tasks:tr(locale,"Taken","Tasks","Tâches","Aufgaben")}
+ const workplaceItems=(()=>{try{return (JSON.parse(sessionStorage.getItem(KEY)||"{}").admin_workplaces||[]) as RecordItem[]}catch{return []}})()
+ const create=()=>{if(!title.trim()||!description.trim()||(kind!=="workplaces"&&!workplace)||(kind==="workplaces"&&(!start||!end||end<=start))){setError(tr(locale,"Vul alle verplichte velden correct in.","Complete all required fields correctly.","Remplissez correctement tous les champs obligatoires.","Fülle alle Pflichtfelder korrekt aus."));return}save([...items,{title:title.trim(),description:description.trim(),workplace:kind==="workplaces"?title.trim():workplace,...(kind==="workplaces"?{start,end}:{})}]);setTitle("");setDescription("");setStart("");setEnd("");setError("")}
+ return <main data-tour-demo="training-screen" className="mx-auto max-w-3xl space-y-5 p-4 pb-24"><p className="text-xs font-bold text-violet-500">{tr(locale,"FICTIEVE TRAINING · ADMIN","FICTIONAL TRAINING · ADMIN","FORMATION FICTIVE · ADMIN","FIKTIVES TRAINING · ADMIN")}</p><h1 className="text-2xl font-black">{labels[kind]}</h1><p className="text-sm">{eventName||tr(locale,"Maak eerst je demo-evenement aan.","Create your demo event first.","Créez d’abord votre événement démo.","Erstelle zuerst dein Demo-Event.")}</p>
+ {eventName&&<><form onSubmit={e=>{e.preventDefault();create()}} className="space-y-3 rounded-xl border p-4">
+ <label className="block text-sm font-semibold">{kind==="workplaces"?tr(locale,"Naam werkplek","Workplace name","Nom du poste","Arbeitsplatzname"):kind==="briefings"?tr(locale,"Titel briefing","Briefing title","Titre du briefing","Briefingtitel"):tr(locale,"Taaknaam","Task title","Titre de la tâche","Aufgabentitel")}<input data-tour-demo="primary-action" required className="mt-1 w-full rounded-lg border bg-background p-3" value={title} onChange={e=>setTitle(e.target.value)}/></label>
+ {kind!=="workplaces"&&<label className="block text-sm font-semibold">{tr(locale,"Werkplek","Workplace","Poste","Arbeitsplatz")}<select required className="mt-1 w-full rounded-lg border bg-background p-3" value={workplace} onChange={e=>setWorkplace(e.target.value)}><option value="">{tr(locale,"Kies een werkplek","Choose a workplace","Choisissez un poste","Arbeitsplatz wählen")}</option>{workplaceItems.map((w,i)=><option key={i} value={w.title}>{w.title}</option>)}</select></label>}
+ <label className="block text-sm font-semibold">{kind==="briefings"?tr(locale,"Volledige briefing en instructies","Full briefing and instructions","Briefing complet et consignes","Vollständiges Briefing und Anweisungen"):tr(locale,"Beschrijving en instructies","Description and instructions","Description et consignes","Beschreibung und Anweisungen")}<textarea required rows={5} className="mt-1 w-full rounded-lg border bg-background p-3" value={description} onChange={e=>setDescription(e.target.value)}/></label>
+ {kind==="workplaces"&&<div className="grid grid-cols-2 gap-3"><label className="text-sm">{tr(locale,"Start shift","Shift start","Début du shift","Schichtbeginn")}<input required type="time" className="mt-1 w-full rounded-lg border bg-background p-3" value={start} onChange={e=>setStart(e.target.value)}/></label><label className="text-sm">{tr(locale,"Einde shift","Shift end","Fin du shift","Schichtende")}<input required type="time" className="mt-1 w-full rounded-lg border bg-background p-3" value={end} onChange={e=>setEnd(e.target.value)}/></label></div>}
+ {error&&<p role="alert" className="text-red-500">{error}</p>}<button className="rounded-lg bg-violet-600 px-4 py-3 font-bold text-white">{tr(locale,"AANMAKEN EN OPSLAAN","CREATE AND SAVE","CRÉER ET ENREGISTRER","ERSTELLEN UND SPEICHERN")}</button></form>
+ <section className="space-y-2"><h2 className="font-bold">{tr(locale,"Zelf aangemaakt","Created by you","Créé par vous","Von dir erstellt")} ({items.length})</h2>{items.map((item,i)=><article key={i} className="rounded-xl border p-3"><h3 className="font-bold">{item.title}</h3><p className="whitespace-pre-wrap text-sm">{item.description}</p><p className="text-xs text-muted-foreground">{item.workplace} {item.start&&item.end?`· ${item.start}–${item.end}`:""}</p></article>)}</section></>}
+ </main>
+}
