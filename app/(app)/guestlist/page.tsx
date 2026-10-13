@@ -1,6 +1,5 @@
 import { SandboxAdminBuilder } from '@/components/training/sandbox-admin-builder'
 import { SandboxSharedRecords } from '@/components/training/sandbox-shared-records'
-import { SandboxGuestlist } from '@/components/training/sandbox-feature-pages'
 import {redirect} from 'next/navigation'
 import {getCurrentUser} from '@/lib/actions/auth'
 import {createClient} from '@/lib/supabase/crew-server'
