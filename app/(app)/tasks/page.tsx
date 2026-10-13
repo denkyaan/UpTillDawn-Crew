@@ -26,7 +26,7 @@ export default async function Page({searchParams}:{searchParams?:Promise<{event?
   const s = await createClient()
   const current = await getCurrentUser()
   if (!current) return null
-  if(params.tour==='1')return user.role==='admin'?<SandboxAdminBuilder kind="tasks"/>:<SandboxTasks/>
+  if(params.tour==='1')return current.role==='admin'?<SandboxAdminBuilder kind="tasks"/>:<SandboxTasks/>
   const user = { id: current.id }
 
   const [
