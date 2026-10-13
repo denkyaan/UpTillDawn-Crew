@@ -33,3 +33,17 @@ export async function syncBrowserTrainingScenario(){
   const payload=JSON.parse(sessionStorage.getItem(KEY)||"{}") as Record<string,unknown>
   await saveOwnedTrainingScenario(payload)
 }
+
+export async function loadParticipantTrainingScenario(){
+  stagingOnly()
+  const client=createClient()
+  const {data:{user},error:authError}=await client.auth.getUser()
+  if(authError||!user) throw new Error("Login required")
+  const {data:membership,error:membershipError}=await client.from("training_scenario_members").select("scenario_id").eq("user_id",user.id).limit(2)
+  if(membershipError) throw membershipError
+  if(!membership?.length) return null
+  if(membership.length!==1) throw new Error("Select a training scenario")
+  const {data,error}=await client.from("training_scenarios").select("payload").eq("id",membership[0].scenario_id).single()
+  if(error) throw error
+  return data?.payload && typeof data.payload==="object" && !Array.isArray(data.payload)?data.payload as Record<string,unknown>:null
+}
