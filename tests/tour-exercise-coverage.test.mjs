@@ -42,3 +42,18 @@ test('all training sandboxes have localized exercises without database writes',a
  assert.match(operations,/driverChecks/)
  assert.match(operations,/!\["working","at_person","task","resumed"\]\.includes\(phase\)/)
 })
+
+
+test('each role receives its own functional tour instead of one identical workflow',()=>{
+ const keys=role=>new Set(getTourChapters(role,{scope:'general'}).map(chapter=>chapter.key))
+ const admin=keys('admin')
+ const responsible=keys('responsible_lead')
+ const employee=keys('employee')
+ for(const key of ['sales','personnel','exports','platform']){
+  assert.ok(admin.has(key),'admin must cover '+key)
+  assert.ok(!responsible.has(key),'responsible must not see '+key)
+  assert.ok(!employee.has(key),'employee must not see '+key)
+ }
+ assert.notDeepEqual([...admin].sort(),[...employee].sort(),'admin and employee tours must differ')
+ assert.notDeepEqual([...admin].sort(),[...responsible].sort(),'admin and responsible tours must differ')
+})
