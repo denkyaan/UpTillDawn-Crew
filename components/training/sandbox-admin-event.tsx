@@ -13,7 +13,7 @@ export function SandboxAdminEvent(){
  const [published,setPublished]=useState(false)
  const [error,setError]=useState("")
  useEffect(()=>{const apply=()=>setL(activeUiLocale());apply();addEventListener(LANGUAGE_APPLIED_EVENT,apply);return()=>removeEventListener(LANGUAGE_APPLIED_EVENT,apply)},[])
- useEffect(()=>{try{const s=JSON.parse(sessionStorage.getItem(KEY)||"{}");if(s.adminEventDraft)setDraft(s.adminEventDraft);setCreated(Boolean(s.adminEventCreated));setPublished(Boolean(s.adminEventPublished))}catch{}},[])
+ useEffect(()=>{const frame=requestAnimationFrame(()=>{try{const s=JSON.parse(sessionStorage.getItem(KEY)||"{}");if(s.adminEventDraft)setDraft(s.adminEventDraft);setCreated(Boolean(s.adminEventCreated));setPublished(Boolean(s.adminEventPublished))}catch{}});return()=>cancelAnimationFrame(frame)},[])
  const persist=(patch:Record<string,unknown>)=>{let s={};try{s=JSON.parse(sessionStorage.getItem(KEY)||"{}")}catch{}sessionStorage.setItem(KEY,JSON.stringify({...s,...patch}))}
  const update=(field:keyof EventDraft,value:string)=>{setDraft(old=>({...old,[field]:value}));setError("")}
  const create=()=>{
