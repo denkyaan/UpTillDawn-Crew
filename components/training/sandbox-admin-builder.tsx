@@ -1,6 +1,7 @@
 "use client"
 import {useEffect,useState} from "react"
 import {activeUiLocale,LANGUAGE_APPLIED_EVENT,type SupportedUiLocale} from "@/lib/locale-preferences"
+import {syncBrowserTrainingScenario} from "@/lib/training/scenario-sync"
 const KEY="uptilldawn-training-workflow-v3"
 const tr=(l:SupportedUiLocale,nl:string,en:string,fr:string,de:string)=>({nl,en,fr,de}[l])
 type Kind="workplaces"|"briefings"|"tasks"|"inventory"|"guestlist"|"drivers"
@@ -19,7 +20,7 @@ export function SandboxAdminBuilder({kind}:{kind:Kind}){
  const [error,setError]=useState("")
  useEffect(()=>{const apply=()=>setLocale(activeUiLocale());apply();addEventListener(LANGUAGE_APPLIED_EVENT,apply);return()=>removeEventListener(LANGUAGE_APPLIED_EVENT,apply)},[])
  useEffect(()=>{const frame=requestAnimationFrame(()=>{try{const s=JSON.parse(sessionStorage.getItem(KEY)||"{}");setEventName(s.adminEventDraft?.name||"");setItems(s["admin_"+kind]||[])}catch{}});return()=>cancelAnimationFrame(frame)},[kind])
- const save=(next:RecordItem[])=>{setItems(next);let s:Record<string,unknown>={};try{s=JSON.parse(sessionStorage.getItem(KEY)||"{}")}catch{};sessionStorage.setItem(KEY,JSON.stringify({...s,["admin_"+kind]:next}))}
+ const save=(next:RecordItem[])=>{setItems(next);let s:Record<string,unknown>={};try{s=JSON.parse(sessionStorage.getItem(KEY)||"{}")}catch{};sessionStorage.setItem(KEY,JSON.stringify({...s,["admin_"+kind]:next}));void syncBrowserTrainingScenario().catch(()=>setError(tr(locale,"Opslag op dit toestel gelukt; synchronisatie mislukt.","Saved on this device; sync failed.","Enregistré sur cet appareil ; synchronisation échouée.","Auf diesem Gerät gespeichert; Synchronisierung fehlgeschlagen.")))}
  const labels={workplaces:tr(locale,"Werkplekken en shifts","Workplaces and shifts","Postes et shifts","Arbeitsplätze und Schichten"),briefings:tr(locale,"Briefings","Briefings","Briefings","Briefings"),tasks:tr(locale,"Taken","Tasks","Tâches","Aufgaben"),inventory:tr(locale,"Inventaris","Inventory","Inventaire","Inventar"),guestlist:tr(locale,"Gastenlijst","Guest list","Liste des invités","Gästeliste"),drivers:tr(locale,"Driver-opdrachten","Driver assignments","Missions chauffeur","Fahreraufträge")}
  const workplaceItems=(()=>{try{return (JSON.parse(sessionStorage.getItem(KEY)||"{}").admin_workplaces||[]) as RecordItem[]}catch{return []}})()
  const create=()=>{if(!title.trim()||!description.trim()||(kind!=="workplaces"&&kind!=="drivers"&&!workplace)||(kind==="workplaces"&&(!start||!end||end<=start))||(kind==="drivers"&&(!phone.trim()||!address.trim()||!start))){setError(tr(locale,"Vul alle verplichte velden correct in.","Complete all required fields correctly.","Remplissez correctement tous les champs obligatoires.","Fülle alle Pflichtfelder korrekt aus."));return}save([...items,{title:title.trim(),description:description.trim(),workplace:kind==="workplaces"?title.trim():workplace,...(kind==="workplaces"?{start,end}:kind==="drivers"?{start,phone,address}:{})}]);setTitle("");setDescription("");setStart("");setEnd("");setPhone("");setAddress("");setError("")}
