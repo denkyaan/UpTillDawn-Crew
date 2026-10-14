@@ -3,7 +3,7 @@ name: Deploy Staging
 on:
   workflow_dispatch:
   push:
-    branches: [staging]
+    branches: [staging, test/role-tour-e2e-validation]
 
 concurrency:
   group: uptilldawn-staging
