@@ -1,4 +1,4 @@
-import { SandboxGuestlist } from '@/components/training/sandbox-feature-pages'
+import { SandboxGuestlistTraining } from '@/components/training/sandbox-guestlist-training'
 import {redirect} from 'next/navigation'
 import {getCurrentUser} from '@/lib/actions/auth'
 import {createClient} from '@/lib/supabase/crew-server'
@@ -21,7 +21,7 @@ export default async function GuestlistPage({
   if(!current)redirect('/login')
   const s=await createClient()
   const params=await searchParams
-  if(params.tour==='1')return <SandboxGuestlist/>
+  if(params.tour==='1')return <SandboxGuestlistTraining role={current.role}/>
   const isAdmin=current.isAdmin===true
 
   let events:EventRow[]=[]

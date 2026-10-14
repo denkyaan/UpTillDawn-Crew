@@ -1,4 +1,4 @@
-import { SandboxInventory } from '@/components/training/sandbox-feature-pages'
+import { SandboxInventoryTraining } from '@/components/training/sandbox-inventory-training'
 import { redirect } from 'next/navigation'
 import { getCurrentUser } from '@/lib/actions/auth'
 import { createClient } from '@/lib/supabase/crew-server'
@@ -25,7 +25,7 @@ export default async function InventoryPage({searchParams}:{searchParams?:Promis
   const params=searchParams?await searchParams:{}
   const current=await getCurrentUser()
   if(!current)redirect('/login')
-  if(params.tour==='1')return <SandboxInventory/>
+  if(params.tour==='1')return <SandboxInventoryTraining role={current.role}/>
   const isAdmin=current.role==='admin'
   const isResponsible=current.role==='responsible_lead'
   const isStaff=current.role==='staff'

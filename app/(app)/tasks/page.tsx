@@ -1,4 +1,4 @@
-import { SandboxTasks } from '@/components/training/sandbox-feature-pages'
+import { SandboxTaskTraining } from '@/components/training/sandbox-task-training'
 import { createTask, removeTaskAssignment } from '@/lib/actions/uptilldawn'
 import { createClient } from '@/lib/supabase/crew-server'
 import { TaskControls } from '@/components/crew/task-controls'
@@ -25,7 +25,7 @@ export default async function Page({searchParams}:{searchParams?:Promise<{event?
   const s = await createClient()
   const current = await getCurrentUser()
   if (!current) return null
-  if(params.tour==='1')return <SandboxTasks/>
+  if(params.tour==='1')return <SandboxTaskTraining role={current.role}/>
   const user = { id: current.id }
 
   const [

@@ -28,10 +28,10 @@ function ChannelAvatar({src,size='lg'}:{src?:string;size?:'sm'|'lg'}){
   </div>
 }
 
-function AttachmentView({attachment,mine}:{attachment:Attachment;mine:boolean}){
+function AttachmentView({attachment,mine,locale}:{attachment:Attachment;mine:boolean;locale:LiveTranslationLocale}){
   if(attachment.mimeType?.startsWith('video/'))return <video src={attachment.url} controls playsInline className="mt-2 max-h-80 w-full rounded-xl border border-white/15 bg-black"/>
-  if(attachment.mimeType?.startsWith('image/'))return <a href={attachment.url} target="_blank" rel="noreferrer" className="mt-2 block overflow-hidden rounded-xl border border-white/15"><img src={attachment.url} alt="Chatmedia" className="max-h-80 w-full object-contain bg-black/20"/></a>
-  return <a href={attachment.url} target="_blank" rel="noreferrer" className={`mt-2 flex items-center gap-2 rounded-xl border p-3 text-sm font-bold ${mine?'border-white/20 bg-white/10':'bg-muted/50'}`}><FileText className="h-5 w-5 shrink-0"/><span>Document openen</span></a>
+  if(attachment.mimeType?.startsWith('image/'))return <a href={attachment.url} target="_blank" rel="noreferrer" className="mt-2 block overflow-hidden rounded-xl border border-white/15"><img src={attachment.url} alt={translateRuntimeUi("Chatmedia",locale)} className="max-h-80 w-full object-contain bg-black/20"/></a>
+  return <a href={attachment.url} target="_blank" rel="noreferrer" className={`mt-2 flex items-center gap-2 rounded-xl border p-3 text-sm font-bold ${mine?'border-white/20 bg-white/10':'bg-muted/50'}`}><FileText className="h-5 w-5 shrink-0"/><span>{translateRuntimeUi('Document openen',locale)}</span></a>
 }
 
 function escapeRegExp(value:string){return value.replace(/[.*+?^${}()|[\]\\]/g,'\\$&')}
@@ -642,7 +642,7 @@ export function ChatClient({channels,defaultChannelId,userId,crewDirectory,isAdm
   }
 
   async function moderate(messageId:string){
-    const reason=window.prompt('Reden voor moderatie (wordt geaudit):')?.trim()
+    const reason=window.prompt(translateRuntimeUi('Reden voor moderatie (wordt geaudit):',uiLocale))?.trim()
     if(!reason||busy)return
     setBusy(true)
     try{
@@ -662,19 +662,19 @@ export function ChatClient({channels,defaultChannelId,userId,crewDirectory,isAdm
   const unreadCutoff=unreadCutoffs.current[effectiveSelected]
   const firstUnreadId=unreadCutoff?current.messages.find(message=>message.sender_id!==userId&&Date.parse(message.created_at)>Date.parse(unreadCutoff))?.id:null
 
-  if(!selectedChannel)return <section className="rounded-2xl border p-6"><h1 className="text-2xl font-black">Chat</h1><p className="mt-2 text-muted-foreground">Er zijn momenteel geen beschikbare chats.</p></section>
+  if(!selectedChannel)return <section className="rounded-2xl border p-6"><h1 className="text-2xl font-black">Chat</h1><p className="mt-2 text-muted-foreground">{translateRuntimeUi('Er zijn momenteel geen beschikbare chats.',uiLocale)}</p></section>
 
   return <section className="relative flex min-h-[calc(100dvh-9rem)] flex-col overflow-hidden bg-background md:min-h-[70vh] md:rounded-3xl md:border">
     <header className="sticky top-0 z-30 border-b bg-background/95 px-3 py-3 backdrop-blur md:px-4">
       <div className="flex items-center gap-2">
         <button type="button" onClick={()=>setPickerOpen(open=>!open)} className="flex min-w-0 flex-1 items-center gap-3 rounded-2xl p-1 text-left hover:bg-muted/60">
           <ChannelAvatar src={channelImages[selectedChannel.id]}/>
-          <div className="min-w-0 flex-1"><p className="truncate text-base font-black">{channelName(selectedChannel)}</p><p className="text-xs text-muted-foreground">Tik om van chat te wisselen</p></div>
+          <div className="min-w-0 flex-1"><p className="truncate text-base font-black">{channelName(selectedChannel)}</p><p className="text-xs text-muted-foreground">{translateRuntimeUi('Tik om van chat te wisselen',uiLocale)}</p></div>
           <ChevronDown className={`h-5 w-5 shrink-0 ${pickerOpen?'rotate-180':''}`}/>
         </button>
         <label className="flex shrink-0 items-center gap-2 rounded-xl border px-2 py-2 text-[11px] font-semibold text-muted-foreground">
           <input type="checkbox" checked={autoTranslate} onChange={event=>{const enabled=event.target.checked;setAutoTranslate(enabled);window.localStorage.setItem('uptilldawn-chat-auto-translate',enabled?'1':'0')}}/>
-          <span className="hidden sm:inline">Chat automatisch vertalen</span><span className="sm:hidden" aria-label="Chat automatisch vertalen">Auto</span>
+          <span className="hidden sm:inline">{translateRuntimeUi('Chat automatisch vertalen',uiLocale)}</span><span className="sm:hidden" aria-label={translateRuntimeUi('Chat automatisch vertalen',uiLocale)}>{translateRuntimeUi('Auto',uiLocale)}</span>
         </label>
         <button type="button" onClick={()=>{setPrivatePickerOpen(open=>!open);setPickerOpen(false)}} className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl border bg-card" aria-label={translateRuntimeUi('Nieuwe privéchat',uiLocale)} title={translateRuntimeUi('Nieuwe privéchat',uiLocale)}><MessageCirclePlus className="h-5 w-5"/></button>
         {selectedChannel.kind==='private'&&selectedChannel.name!=='Up Till Dawn · persoonlijk'&&<button type="button" disabled={busy} onClick={()=>void deletePrivateChat()} className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl border bg-card" aria-label={translateRuntimeUi('Privéchat verwijderen',uiLocale)} title={translateRuntimeUi('Privéchat verwijderen',uiLocale)}><Trash2 className="h-5 w-5"/></button>}
@@ -716,29 +716,29 @@ export function ChatClient({channels,defaultChannelId,userId,crewDirectory,isAdm
         <div className="mt-2 max-h-52 overflow-y-auto">{searchResults.length?searchResults.map(result=><button key={result.id} type="button" onClick={()=>{void ensureMessageVisible(result.id);setSearchOpen(false)}} className="block w-full rounded-xl px-3 py-2 text-left hover:bg-muted"><span className="block truncate text-sm font-semibold">{result.body||translateRuntimeUi('Bestand',uiLocale)}</span><span className="text-[10px] text-muted-foreground">{result.sender_id?directory.get(result.sender_id)?.full_name||translateRuntimeUi('Personeelslid',uiLocale):'Up Till Dawn'} · {new Date(result.created_at).toLocaleString()}</span></button>):<p className="px-3 py-3 text-sm text-muted-foreground">{translateRuntimeUi('Geen zoekresultaten.',uiLocale)}</p>}</div>
       </div>}
       {pickerOpen&&<div className="absolute left-3 right-3 top-[4.5rem] z-40 max-h-[65vh] overflow-y-auto rounded-2xl border bg-card p-2 shadow-2xl">
-        <div className="flex items-center justify-between px-2 py-1"><p className="text-sm font-black">Gesprekken</p><button type="button" onClick={()=>setPickerOpen(false)} className="rounded-full p-2"><X className="h-4 w-4"/></button></div>
+        <div className="flex items-center justify-between px-2 py-1"><p className="text-sm font-black">{translateRuntimeUi('Gesprekken',uiLocale)}</p><button type="button" onClick={()=>setPickerOpen(false)} className="rounded-full p-2"><X className="h-4 w-4"/></button></div>
         {[[privateChannels,'Privégesprekken'],[organizationChannels,'Algemeen'],[eventChannels,'Evenementen'],[workplaceChannels,'Werkplekken']]
           .filter(([group])=>(group as Tables<'chat_channels'>[]).length>0)
           .map(([group,label])=><div key={label as string} className="mt-2">
-            <p className="px-2 py-1 text-[11px] font-bold uppercase tracking-[.16em] text-muted-foreground">{label as string}</p>
+            <p className="px-2 py-1 text-[11px] font-bold uppercase tracking-[.16em] text-muted-foreground">{translateRuntimeUi(label as string,uiLocale)}</p>
             {(group as Tables<'chat_channels'>[]).map(channel=><ChannelButton key={channel.id} channel={channel} selected={effectiveSelected} onChoose={chooseChannel} name={channelName(channel)} image={channelImages[channel.id]} unread={Number(channelStates[channel.id]?.unread_count||0)} mentions={Number(channelStates[channel.id]?.mention_count||0)}/>)}
           </div>)}
       </div>}
       {privatePickerOpen&&<div className="absolute left-3 right-3 top-[4.5rem] z-50 rounded-2xl border bg-card p-3 shadow-2xl">
-        <div className="flex items-center justify-between gap-3"><div><p className="text-sm font-black">Nieuwe privéchat</p><p className="text-xs text-muted-foreground">Kies iemand om een privéchat te starten.</p></div><button type="button" onClick={()=>setPrivatePickerOpen(false)} className="rounded-full p-2"><X className="h-4 w-4"/></button></div>
-        <input value={privateSearch} onChange={event=>setPrivateSearch(event.target.value)} placeholder="Zoek persoon…" className="mt-3 w-full rounded-xl border bg-background px-3 py-2 text-sm"/>
+        <div className="flex items-center justify-between gap-3"><div><p className="text-sm font-black">{translateRuntimeUi('Nieuwe privéchat',uiLocale)}</p><p className="text-xs text-muted-foreground">{translateRuntimeUi('Kies iemand om een privéchat te starten.',uiLocale)}</p></div><button type="button" onClick={()=>setPrivatePickerOpen(false)} className="rounded-full p-2"><X className="h-4 w-4"/></button></div>
+        <input value={privateSearch} onChange={event=>setPrivateSearch(event.target.value)} placeholder={translateRuntimeUi('Zoek persoon…',uiLocale)} className="mt-3 w-full rounded-xl border bg-background px-3 py-2 text-sm"/>
         <div className="mt-2 max-h-64 overflow-y-auto">
           {privateCandidates.length?privateCandidates.map(member=><button key={member.id} type="button" disabled={busy} onClick={()=>void startPrivateChat(member.id)} className="flex w-full items-center gap-3 rounded-xl px-3 py-2 text-left hover:bg-muted disabled:opacity-50">
             <div className="h-9 w-9 shrink-0 overflow-hidden rounded-full border bg-muted">{profilePhotoUrls[member.id]?<img src={profilePhotoUrls[member.id]} alt="" className="h-full w-full object-cover"/>:<div className="flex h-full w-full items-center justify-center text-[10px] font-black">{(member.full_name||'').split(/\s+/).map(part=>part[0]).join('').slice(0,2).toUpperCase()}</div>}</div>
             <span className="min-w-0 flex-1 truncate text-sm font-bold">{member.full_name}</span>
-          </button>):<p className="px-3 py-4 text-sm text-muted-foreground">Geen personen gevonden.</p>}
+          </button>):<p className="px-3 py-4 text-sm text-muted-foreground">{translateRuntimeUi('Geen personen gevonden.',uiLocale)}</p>}
         </div>
       </div>}
     </header>
 
     <div ref={messageListRef} onScroll={event=>{if(event.currentTarget.scrollTop<80&&current.hasMore&&!loadingOlder)void loadOlder()}} className="flex-1 space-y-3 overflow-y-auto px-3 py-4 md:px-5">
       {current.hasMore&&<div className="text-center"><button type="button" disabled={loadingOlder} onClick={()=>void loadOlder()} className="rounded-full border bg-card px-3 py-1.5 text-xs font-semibold">{loadingOlder?translateRuntimeUi('Oudere berichten laden…',uiLocale):translateRuntimeUi('Oudere berichten laden',uiLocale)}</button></div>}
-      {!current.messages.length&&<p className="py-10 text-center text-sm text-muted-foreground">Nog geen berichten in deze chat.</p>}
+      {!current.messages.length&&<p className="py-10 text-center text-sm text-muted-foreground">{translateRuntimeUi('Nog geen berichten in deze chat.',uiLocale)}</p>}
       {current.messages.map(message=>{
         const isSystem=message.sender_id===null
         const sender=message.sender_id?directory.get(message.sender_id):undefined
@@ -772,17 +772,17 @@ export function ChatClient({channels,defaultChannelId,userId,crewDirectory,isAdm
                 <span className="mt-0.5 block max-w-full truncate opacity-80">{replyText.slice(0,160)}</span>
               </button>}
               {moderated
-                ?<p className="whitespace-pre-wrap break-words text-sm leading-relaxed">Bericht verwijderd door beheerder</p>
+                ?<p className="whitespace-pre-wrap break-words text-sm leading-relaxed">{translateRuntimeUi('Bericht verwijderd door beheerder',uiLocale)}</p>
                 :<p data-no-translate className="whitespace-pre-wrap break-words text-sm leading-relaxed"><MentionedText text={displayBody} people={crewDirectory} userId={userId}/></p>}
-              {!moderated&&current.attachments[message.id]?.map((attachment,index)=><AttachmentView key={index} attachment={attachment} mine={mine}/>)}
+              {!moderated&&current.attachments[message.id]?.map((attachment,index)=><AttachmentView key={index} attachment={attachment} mine={mine} locale={uiLocale}/>)}
               <div className={`mt-1.5 flex flex-wrap items-center justify-end gap-2 text-[10px] ${mine?'text-white/75':'text-muted-foreground'}`}>
                 <time>{timestamp}</time>
                 {isPinned&&<span className="inline-flex items-center gap-0.5 font-semibold"><Pin className="h-3 w-3"/>{translateRuntimeUi('Vastgepind',uiLocale)}</span>}
                 {mine&&selectedChannel.kind==='private'&&selectedChannel.name!=='Up Till Dawn · persoonlijk'&&<span className="font-semibold">{translateRuntimeUi(peerRead?'Gelezen':'Afgeleverd',uiLocale)}</span>}
-                {!moderated&&!isSystem&&message.body&&<button type="button" disabled={translating===message.id} onClick={()=>translated?setTranslations(previous=>{const next={...previous};delete next[message.id];return next}):void translateMessage(message.id,message.body||'')} className="underline">{translated?'Origineel':translating===message.id?'Vertalen…':'Vertaal'}</button>}
+                {!moderated&&!isSystem&&message.body&&<button type="button" disabled={translating===message.id} onClick={()=>translated?setTranslations(previous=>{const next={...previous};delete next[message.id];return next}):void translateMessage(message.id,message.body||'')} className="underline">{translateRuntimeUi(translated?'Origineel':translating===message.id?'Vertalen…':'Vertaal',uiLocale)}</button>}
                 {!moderated&&selectedChannel.name!=='Up Till Dawn · persoonlijk'&&<button type="button" onClick={()=>{setReplyTo(message);setPendingDraftReplyId(null);requestAnimationFrame(()=>textareaRef.current?.focus())}} className="font-semibold underline">{translateRuntimeUi('Antwoorden',uiLocale)}</button>}
                 {!moderated&&currentState?.can_pin&&<button type="button" onClick={()=>void togglePin(message.id,!isPinned)} className="font-semibold underline">{translateRuntimeUi(isPinned?'Pin verwijderen':'Vastpinnen',uiLocale)}</button>}
-                {isAdmin&&!moderated&&<button type="button" disabled={busy} onClick={()=>moderate(message.id)} className="underline">Modereer</button>}
+                {isAdmin&&!moderated&&<button type="button" disabled={busy} onClick={()=>moderate(message.id)} className="underline">{translateRuntimeUi('Modereer',uiLocale)}</button>}
               </div>
             </div>
           </div>
@@ -811,7 +811,7 @@ export function ChatClient({channels,defaultChannelId,userId,crewDirectory,isAdm
 
       {file&&<div className="mb-2 flex items-center justify-between rounded-xl border bg-card px-3 py-2 text-xs"><span className="truncate">{file.name}</span><button type="button" onClick={()=>{setFile(null);setFileKey(key=>key+1)}}><X className="h-4 w-4"/></button></div>}
       <form className="flex items-end gap-2" onSubmit={event=>{event.preventDefault();void sendMessage()}}>
-        <label className="flex h-11 w-11 shrink-0 cursor-pointer items-center justify-center rounded-full border bg-card" aria-label="Bestand toevoegen"><Paperclip className="h-5 w-5"/><input key={fileKey} type="file" accept={ACCEPT} onChange={event=>{const nextFile=event.target.files?.[0]||null;setFile(nextFile);draftFilesRef.current.set(effectiveSelected,nextFile)}} className="sr-only"/></label>
+        <label className="flex h-11 w-11 shrink-0 cursor-pointer items-center justify-center rounded-full border bg-card" aria-label={translateRuntimeUi('Bestand toevoegen',uiLocale)}><Paperclip className="h-5 w-5"/><input key={fileKey} type="file" accept={ACCEPT} onChange={event=>{const nextFile=event.target.files?.[0]||null;setFile(nextFile);draftFilesRef.current.set(effectiveSelected,nextFile)}} className="sr-only"/></label>
         <textarea
           ref={textareaRef}
           maxLength={4000}
@@ -819,13 +819,13 @@ export function ChatClient({channels,defaultChannelId,userId,crewDirectory,isAdm
           value={body}
           onChange={event=>{const value=event.target.value;setBody(value);const present=new Set(mentionIdsForText(value,currentPeople,userId));setSelectedMentionIds(previous=>previous.filter(id=>present.has(id)));refreshMentionState(value,event.target.selectionStart);void setTyping(Boolean(value.trim()))}}
           onSelect={event=>refreshMentionState(body,event.currentTarget.selectionStart)}
-          placeholder="Typ een bericht…"
+          placeholder={translateRuntimeUi('Typ een bericht…',uiLocale)}
           className="max-h-32 min-h-11 min-w-0 flex-1 resize-none rounded-2xl border bg-card px-4 py-3 text-sm"
         />
         <button data-action="chat-send" type="submit" disabled={busy||(!body.trim()&&!file)} className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-violet-600 text-white disabled:opacity-40"><Send className="h-5 w-5"/></button>
       </form>
-      <p className="mt-1 text-center text-[10px] text-muted-foreground">Enter = nieuwe regel · verzenden gebeurt met de knop.</p>
-      {status&&<p className="mt-2 text-center text-xs text-muted-foreground">{status}</p>}
+      <p className="mt-1 text-center text-[10px] text-muted-foreground">{translateRuntimeUi('Enter = nieuwe regel · verzenden gebeurt met de knop.',uiLocale)}</p>
+      {status&&<p className="mt-2 text-center text-xs text-muted-foreground">{translateRuntimeUi(status,uiLocale)}</p>}
     </div>}
   </section>
 }

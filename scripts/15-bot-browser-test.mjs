@@ -1,5 +1,6 @@
 import { chromium } from 'playwright'
 import { createClient } from '@supabase/supabase-js'
+import {botMatrix} from './bot-role-matrix.mjs'
 
 const baseUrl = process.env.BOT_TEST_BASE_URL || 'http://127.0.0.1:3000'
 const testPassword = process.env.BOT_TEST_PASSWORD
@@ -11,8 +12,7 @@ if (!testPassword || !supabaseUrl || !serviceRoleKey || !anonKey) {
   process.exit(1)
 }
 
-const roles = ['admin', 'responsible', ...Array(13).fill('staff')]
-const locales = ['nl', 'fr', 'en', 'de']
+const roles = botMatrix.map(({role})=>role)
 const viewports = [
   { width: 390, height: 844 },
   { width: 430, height: 932 },
@@ -22,6 +22,44 @@ const viewports = [
 ]
 const failures = []
 const lifecycleAdmin = createClient(supabaseUrl, serviceRoleKey, { auth: { persistSession: false, autoRefreshToken: false } })
+
+async function waitForPracticeRecorded(page, key, chapter, operationId, count) {
+  try {
+    // Storage is written synchronously; React commits the next input afterwards.
+    // Wait for both so a fast bot cannot fill the preceding operation's field.
+    await page.waitForFunction(({key,chapter,operationId,count})=>{
+      const ledger=JSON.parse(localStorage.getItem(key+':actions-v1')||'{}')
+      if(!ledger[operationId]?.value||!ledger[operationId]?.at)return false
+      const root=document.querySelector('[data-training-lab]')
+      if(root?.getAttribute('data-training-chapter')===chapter){
+        return Number(root.querySelector('progress')?.value)>=count
+          &&root.querySelector('[data-training-operation]')?.getAttribute('data-training-operation')!==operationId
+      }
+      return JSON.parse(localStorage.getItem(key)||'null')?.completed?.includes(chapter)
+    },{key,chapter,operationId,count},{timeout:15000})
+  } catch(error) {
+    const snapshot=await page.evaluate(()=>{
+      const root=document.querySelector('[data-training-lab]')
+      return {
+        path:location.pathname,
+        chapter:root?.getAttribute('data-training-chapter'),
+        operation:root?.querySelector('[data-training-operation]')?.getAttribute('data-training-operation'),
+        progress:root?.querySelector('progress')?.value,
+        title:root?.querySelector('[data-training-kind] h3')?.textContent,
+        validation:root?.querySelector('[role="alert"]')?.textContent,
+      }
+    })
+    throw new Error(`Practice ${chapter}/${operationId} did not reach ${count}: ${JSON.stringify(snapshot)}`,{cause:error})
+  }
+}
+
+async function waitForTrainingTab(page, key, previous) {
+  await page.waitForFunction(({key,previous})=>{
+    const progress=JSON.parse(localStorage.getItem(key)||'null')
+    return progress?.activeKey!==previous&&progress?.completed?.includes(previous)
+      &&document.querySelector('[data-training-lab]')?.getAttribute('data-training-chapter')===progress.activeKey
+  },{key,previous},{timeout:30000})
+}
 
 const roleSmokeRoutes = {
   admin: ['/', '/admin', '/events', '/workplaces', '/briefings', '/inventory', '/guestlist', '/chat', '/operations', '/tasks', '/timesheets', '/incidents', '/notifications', '/personnel', '/sales', '/settings', '/exports', '/audit'],
@@ -63,6 +101,12 @@ async function gotoWithTransientRetry(page, url, options={}) {
     }catch(error){
       lastError=error
       const message=error instanceof Error?error.message:String(error)
+      const sameTargetInterrupted=/interrupted by another navigation to/i.test(message)
+        &&message.includes('to "'+url+'"')
+      if(sameTargetInterrupted){
+        await page.waitForURL(url,{waitUntil:'domcontentloaded',timeout:15000})
+        return
+      }
       if(!/ERR_ABORTED|Navigation interrupted|frame was detached|Target page, context or browser has been closed/i.test(message)||attempt===3)throw error
       await page.waitForTimeout(250*attempt)
     }
@@ -154,7 +198,7 @@ try {
     const batch=roles.slice(batchStart,batchStart+smokeConcurrency)
     await Promise.all(batch.map(async (role, offset) => {
       const index=batchStart+offset
-    const locale = locales[index % locales.length]
+    const locale = botMatrix[index].locale
     const viewport = viewports[index % viewports.length]
     const bot = `bot-${String(index + 1).padStart(2, '0')}-${role}-${locale}`
     const emailAddress = `${bot}@bots.uptilldawn.test`
@@ -447,69 +491,807 @@ try {
         await incidentForm.locator('[role="status"]').waitFor({state:'visible',timeout:15000})
       }
 
-      // Exercise the compact general first-use tour without coupling the
-      // browser smoke run to a hard-coded chapter route. The controller itself
+      // Every actor must exercise the full general first-use tour without coupling
+      // browser verification to hard-coded chapter routes. The controller itself
       // owns role-specific chapter order; the browser verifies the highlighted
       // action, contextual feedback event and persisted pause state.
-      if(index<4){
+      if(index<botMatrix.length){
         const progressKey=`uptilldawn-tour-progress:${profile.data.id}:${tourRole}:general:v8`
         await page.evaluate(({tourRole,userId,progressKey})=>{
           localStorage.setItem(`uptilldawn-app-tour:${userId}:${tourRole}:v8`,'postponed')
           localStorage.removeItem(progressKey)
+          localStorage.removeItem(progressKey+':actions-v1')
           sessionStorage.setItem('uptilldawn-tour-active-v8',JSON.stringify({active:true,role:tourRole,mode:'full',workplace:''}))
           sessionStorage.removeItem('uptilldawn-training-preferred-workplace')
           sessionStorage.removeItem('uptilldawn-training-workflow-v3')
         },{tourRole,userId:profile.data.id,progressKey})
         await page.goto(`${baseUrl}${role==='admin'?'/admin':'/'}?tour=1`,{waitUntil:'networkidle',timeout:45000})
-        const primary=page.locator('[data-tour-demo="primary-action"]').first()
-        await primary.waitFor({state:'visible',timeout:30000})
-        const primaryBox=await primary.boundingBox()
-        await page.waitForFunction(()=>{
-          const overlays=[...document.querySelectorAll('div[aria-hidden].fixed')]
-          return overlays.some(node=>{
-            const style=getComputedStyle(node)
-            return style.pointerEvents==='none'&&node.getBoundingClientRect().width>0
-          })
-        },null,{timeout:10000})
-        const aligned=await primary.evaluate(button=>{
-          const b=button.getBoundingClientRect()
-          return [...document.querySelectorAll('div[aria-hidden].fixed')].some(node=>{
-            const r=node.getBoundingClientRect()
-            return getComputedStyle(node).pointerEvents==='none'&&
-              Math.abs((b.left+b.width/2)-(r.left+r.width/2))<=8&&
-              Math.abs((b.top+b.height/2)-(r.top+r.height/2))<=8
-          })
-        })
-        if(!primaryBox||!aligned){
-          const geometry=await page.evaluate(()=>{
-            const primary=document.querySelector('[data-tour-demo="primary-action"]')
-            const b=primary?.getBoundingClientRect()
-            const overlays=[...document.querySelectorAll('div[aria-hidden].fixed')].map(node=>{
-              const r=node.getBoundingClientRect(),style=getComputedStyle(node)
-              return {className:node.className,pointerEvents:style.pointerEvents,left:r.left,top:r.top,width:r.width,height:r.height}
-            })
-            return {viewport:{width:innerWidth,height:innerHeight,scrollX,scrollY},primary:b?{left:b.left,top:b.top,width:b.width,height:b.height}:null,overlays}
-          })
-          throw new Error(`tour spotlight is not aligned with the primary action; geometry=${JSON.stringify(geometry)}`)
+        const lab=page.locator('[data-training-lab]')
+        await lab.waitFor({state:'visible',timeout:30000})
+        // The training engine renders one actionable operation at a time;
+        // opening and acknowledging each item records separate evidence.
+        const firstChapter=await lab.getAttribute('data-training-chapter')
+        const total=Number(await lab.locator('progress').getAttribute('max'))
+        if(total<5)throw new Error('training chapter has too few exercises')
+        for(let exercise=0;exercise<total;exercise++){
+          const action=lab.locator('[data-training-kind]')
+          const kind=await action.getAttribute('data-training-kind')
+          const operationId=await action.getAttribute('data-training-operation')
+          if(!operationId)throw new Error('missing training operation identity')
+          if(!kind)throw new Error('missing training action kind')
+          if(firstChapter==='overview'){
+            const panel=page.locator('[data-training-overview="'+tourRole+'"]')
+            await panel.waitFor({state:'visible',timeout:15000})
+            if(kind==='inspect'){
+              await panel.locator('[data-training-preview-op="'+operationId+'"]').click()
+              await panel.locator('[data-demo-overview-detail="'+operationId+'"]').waitFor({state:'visible',timeout:15000})
+            }else if(kind==='write'){
+              await panel.locator('[data-demo-overview-profile]').fill('Demo profile approved by Admin')
+            }else if(kind==='select'){
+              await panel.locator('[data-demo-overview-preference]').selectOption('bar')
+            }else throw new Error('Unexpected real overview action kind '+kind+' '+operationId)
+            const actual=panel.locator('[data-training-practical-op="'+operationId+'"]')
+            await actual.waitFor({state:'visible',timeout:15000})
+            if(!await actual.isEnabled())throw new Error('Overview action locked despite fulfilling prerequisites '+operationId)
+            await actual.click()
+            await waitForPracticeRecorded(page,progressKey,firstChapter,operationId,exercise+1)
+            continue
+          }
+          if(kind==='inspect'){
+            const open=action.locator('button[data-training-active-action="true"]').first()
+            await open.waitFor({state:'visible',timeout:15000})
+            const color=await open.evaluate(button=>getComputedStyle(button).backgroundColor)
+            if(!/rgb\(124,\s*58,\s*237\)/.test(color))throw new Error(`training inspection action not purple: ${color}`)
+            await open.click()
+          }else if(kind==='write'||kind==='message'||kind==='form'||kind==='number'||kind==='delete'){
+            const input=action.locator('input[type="text"],input[type="number"],textarea').first()
+            await input.fill(kind==='number'?'12':kind==='delete'?'DEMO':'UpTillDawn demo action')
+            if(kind==='form')await action.locator('select').selectOption({index:1})
+          }else if(kind==='select'){
+            await action.locator('select').selectOption({index:1})
+          }else if(kind==='toggle'){
+            await action.locator('input[type="checkbox"]').check()
+          }else if(kind==='schedule'){
+            const times=action.locator('input[type="datetime-local"]')
+            await times.nth(0).fill('2026-10-10T20:00')
+            await times.nth(1).fill('2026-10-11T04:00')
+          }else if(kind==='upload'){
+            await action.locator('select').selectOption('training-briefing.pdf')
+          }else throw new Error(`unhandled mandatory practice type ${kind}`)
+          const commit=action.locator('button[data-training-active-action="true"]').last()
+          await commit.waitFor({state:'visible',timeout:15000})
+          const color=await commit.evaluate(button=>getComputedStyle(button).backgroundColor)
+          if(!/rgb\(124,\s*58,\s*237\)/.test(color))throw new Error(`required training confirmation is not solid purple: ${color}`)
+          await commit.click()
+          await waitForPracticeRecorded(page,progressKey,firstChapter,operationId,exercise+1)
         }
+        if(firstChapter==='overview'){
+          const state=await page.evaluate(role=>JSON.parse(sessionStorage.getItem('uptilldawn-overview-training-v1:'+role)||'null'),tourRole)
+          if(!state||state.visited?.length!==total||!state.registrationVerified||!state.profile||!state.preferred||!state.eventOpened)
+            throw new Error('Overview onboarding did not complete real registration, profile, preferences and role drilldown: '+JSON.stringify(state))
+        }
+        const oldSpotlight=await page.evaluate(()=>[...document.querySelectorAll('div[aria-hidden].fixed')].some(node=>String(node.className).includes('z-[188]')))
+        if(oldSpotlight)throw new Error('legacy fixed spotlight should not dim or overlay the training screen')
         const before=await page.evaluate(key=>JSON.parse(localStorage.getItem(key)||'null'),progressKey)
         if(!before?.activeKey)throw new Error('general tour did not initialize active progress')
-        await primary.evaluate(button=>button.click())
-        // The compact tour advances through React state before persistence.
-        // Assert the next highlighted action first, then verify persisted progress.
-        await page.locator('[data-tour-demo="primary-action"]').first().waitFor({state:'visible',timeout:30000})
-        await page.waitForTimeout(250)
+        // Completing every required action must never navigate on behalf of the trainee.
+        const availableTab=page.locator('a[data-upt-training-next-tab="true"]')
+        await availableTab.first().waitFor({state:'attached',timeout:15000})
+        const afterAction=await page.evaluate(key=>JSON.parse(localStorage.getItem(key)||'null'),progressKey)
+        if(afterAction?.activeKey!==before.activeKey||afterAction?.completed?.includes(before.activeKey)){
+          throw new Error('general tour advanced without the trainee opening the next tab')
+        }
+        // Each browser bot now uses the highlighted real navigation tab.
+        if(viewport.width<1024){
+          const mobileNav=page.locator('nav[aria-label]').first()
+          if(!await mobileNav.locator('a[data-upt-training-next-tab="true"]:visible').count()){
+            await mobileNav.locator('button[aria-expanded="false"]').click()
+          }
+          await mobileNav.locator('a[data-upt-training-next-tab="true"]:visible').first().click()
+        }else{
+          await page.locator('aside a[data-upt-training-next-tab="true"]:visible').first().click()
+        }
+        await waitForTrainingTab(page,progressKey,before.activeKey)
         const advanced=await page.evaluate(key=>JSON.parse(localStorage.getItem(key)||'null'),progressKey)
-        if(
-          !advanced?.activeKey||
-          advanced.activeKey===before.activeKey||
-          !Array.isArray(advanced.completed)||
-          !advanced.completed.includes(before.activeKey)
-        )throw new Error(`general tour action did not advance persisted progress: before=${JSON.stringify(before)} after=${JSON.stringify(advanced)}`)
         await page.getByRole('button',{name:/^(PAUZEER|PAUSE|PAUSIEREN)$/}).click()
         const progress=await page.evaluate(key=>JSON.parse(localStorage.getItem(key)||'null'),progressKey)
         if(!progress?.paused||progress.activeKey!==advanced.activeKey||!progress.completed.includes(before?.activeKey||'overview'))throw new Error('general tour progress or pause did not persist')
-        console.log(`PASS ${bot} compact general tour highlight + action advance + pause persistence`)
+        console.log(`PASS ${bot} manual purple-tab navigation + verified progress + pause persistence`)
+
+        // A single chapter is not evidence that the role tour works from
+        // registration to the final timesheet. Resume the paused onboarding
+        // and execute every remaining required exercise in its true UI order.
+        await page.evaluate((tourRole)=>{
+          sessionStorage.setItem('uptilldawn-tour-active-v8',JSON.stringify({
+            active:true,role:tourRole,mode:'full',workplace:''
+          }))
+        },tourRole)
+        await page.reload({waitUntil:'domcontentloaded',timeout:45000})
+        await page.locator('[data-training-lab]').waitFor({state:'visible',timeout:30000})
+        const fullyVisited=[]
+        for(let chapterCount=0;chapterCount<24;chapterCount++){
+          const lab=page.locator('[data-training-lab]')
+          await lab.waitFor({state:'visible',timeout:30000})
+          const chapter=await lab.getAttribute('data-training-chapter')
+          if(!chapter)throw new Error('practical chapter is missing its identity')
+          if(fullyVisited.includes(chapter))throw new Error('repeated chapter '+chapter)
+          fullyVisited.push(chapter)
+          const total=Number(await lab.locator('progress').getAttribute('max'))
+          if(total<3)throw new Error('missing practice operations for '+chapter)
+          const start=Number(await lab.locator('progress').evaluate(el=>el.value))
+          for(let exercise=start;exercise<total;exercise++){
+            const operation=lab.locator('[data-training-kind]')
+            const kind=await operation.getAttribute('data-training-kind')
+            const operationId=await operation.getAttribute('data-training-operation')
+            if(!operationId)throw new Error('missing training operation identity in '+chapter)
+            // A subset of required Admin steps is credited ONLY by clicking
+            // the real functional training view, not its generic companion.
+            const directAdminAction=tourRole==='admin'?({
+              events:{'events:admin:6':'publish-event','events:admin:12':'archive-event','events:admin:14':'restore-event'},
+              workplaces:{'workplaces:admin:0':'save-shift','workplaces:admin:17':'add-price'},
+              briefings:{'briefings:admin:0':'save-briefing'},
+              operations:{'operations:admin:6':'approve-hours','operations:admin:7':'lock-hours'},
+            })[chapter]?.[operationId]:null
+            // A timesheet must be rejected with a reason while still unlocked.
+            // The exercise approves and locks it later; a late rejection is invalid.
+            if(tourRole==='admin'&&chapter==='operations'&&operationId==='operations:admin:6'){
+              const manager=page.locator('[data-training-admin-module="operations"]')
+              await manager.locator('input[type="text"]').last().fill('Gecorrigeerd wegens gecontroleerde badge-informatie')
+              const reject=manager.locator('[data-training-admin-action="reject-hours"]')
+              if(!await reject.isEnabled())throw new Error('Unlocked timesheet rejection disabled despite valid reason')
+              await reject.click()
+              await manager.locator('p[role="status"]').waitFor({state:'visible',timeout:10000})
+              const state=await page.evaluate(()=>JSON.parse(sessionStorage.getItem('uptilldawn-admin-training-operations:v1')||'null'))
+              if(!state?.rejected||state.locked||state.reason?.length<5)throw new Error('Rejection did not persist before timesheet approval')
+            }
+            // Some streamed sandbox screens arrive just after the training
+            // portal. Their genuine controls must be awaited; counting them
+            // immediately causes a race and clicks a disappearing fallback.
+            const real=page.locator('[data-training-practical-op="'+operationId+'"]:visible:not([disabled])').first()
+            // Admin sees its own management sandbox for these chapters;
+            // the shared staff controls exist only in crew-role screens.
+            const commonReal=new Set([
+              'tasks:shared:0','tasks:shared:4',
+              'inventory:shared:0','inventory:shared:3',
+              'guestlist:shared:4','incidents:shared:5'
+            ])
+            const crewReal=new Set([
+              'events:shared:0','workplaces:shared:0',
+              'briefings:shared:0','briefings:shared:1',
+              'briefings:shared:2','briefings:shared:3',
+              'briefings:shared:4','briefings:shared:5',
+              'operations:employee:0','operations:employee:2',
+              'operations:responsible_lead:0','operations:responsible_lead:1'
+            ])
+            const adminReal=new Set([
+              'events:admin:6','events:admin:12','events:admin:14',
+              'workplaces:admin:0','workplaces:admin:17',
+              'briefings:admin:0','operations:admin:6','operations:admin:7'
+            ])
+            const chatReal=chapter==='chat'&&operationId.startsWith('chat:')
+            const peopleReal=['crew','personnel'].includes(chapter)&&operationId.startsWith(chapter+':')
+            const systemReal=['exports','platform','settings'].includes(chapter)&&operationId.startsWith(chapter+':')
+            const helpReal=chapter==='help'&&operationId.startsWith('help:shared:')
+            const lifecycleReal=['driver','timesheet'].includes(chapter)&&operationId.startsWith(chapter+':')
+            const revenueReal=chapter==='sales'&&operationId.startsWith('sales:admin:')
+            const incidentReal=chapter==='incidents'&&operationId.startsWith('incidents:')
+            const inventoryReal=chapter==='inventory'&&operationId.startsWith('inventory:')
+            const guestlistReal=chapter==='guestlist'&&operationId.startsWith('guestlist:')
+            const tasksReal=chapter==='tasks'&&operationId.startsWith('tasks:')
+            const eventsReal=chapter==='events'&&operationId.startsWith('events:')
+            const workplaceReal=chapter==='workplaces'&&operationId.startsWith('workplaces:')
+            const operationsReal=chapter==='operations'&&operationId.startsWith('operations:')
+             const briefingReal=chapter==='briefings'&&operationId.startsWith('briefings:')
+            const requiredReal=chatReal||peopleReal||systemReal||helpReal||lifecycleReal||revenueReal||incidentReal||inventoryReal||guestlistReal||tasksReal||eventsReal||workplaceReal||briefingReal||operationsReal||commonReal.has(operationId)
+              ||(tourRole==='admin'?adminReal:crewReal).has(operationId)
+            // Exercise the actual conversation composer rather than an
+            // unrelated generic practice form. The simulated conversation is
+            // persisted so message retention and private-chat deletion are
+            // independently verifiable after the walkthrough.
+            if(chatReal){
+              const chat=page.locator('[data-training-chat="true"]')
+              await chat.waitFor({state:'visible',timeout:15000})
+              await page.locator('[data-demo-chat-operation="'+operationId+'"]').waitFor({state:'visible',timeout:15000})
+              if(kind==='write')await chat.locator('[data-demo-chat-search]').fill(operationId==='chat:shared:31'?'inventory':operationId==='chat:shared:19'?'Training event action':'Lina')
+              if(kind==='select'){
+                if(operationId==='chat:shared:22'||operationId==='chat:shared:23')await chat.locator('[data-demo-chat-notification-mode]').selectOption(operationId==='chat:shared:22'?'muted':'mentions')
+                else if(operationId==='chat:shared:28'||operationId==='chat:shared:29')await chat.locator('[data-demo-chat-search-filter]').selectOption(operationId==='chat:shared:28'?'me':'media')
+                else if(operationId==='chat:shared:33')await chat.locator('[data-demo-chat-filtered-result]').selectOption({index:1})
+                else await chat.locator('[data-demo-chat-choice]').selectOption('lina')
+              }
+              if(kind==='message')await chat.locator('[data-demo-chat-composer]').fill(
+                operationId==='chat:shared:8'?'@Lina welcome to the training event':'Training event action'
+              )
+              if(kind==='schedule'){
+                const from=chat.locator('[data-demo-chat-search-from]'),to=chat.locator('[data-demo-chat-search-to]')
+                await from.fill('2026-10-12');await to.fill('2026-10-11')
+                await chat.locator('[data-training-practical-op="'+operationId+'"]').click()
+                await chat.locator('[role="alert"]').waitFor({state:'visible',timeout:10000})
+                if(await page.locator('[data-training-lab] [data-training-operation]').getAttribute('data-training-operation')!==operationId)throw Error('Invalid chat search dates advanced the tour')
+                await from.fill('2026-10-11')
+              }
+              if(kind==='upload')await chat.locator('[data-demo-chat-attachment]').selectOption('training-inventory.png')
+            }
+            if(peopleReal){
+              const people=page.locator('[data-training-people="'+chapter+'"]')
+              await people.waitFor({state:'visible',timeout:15000})
+              await page.locator('[data-demo-people-operation="'+operationId+'"]').waitFor({state:'visible',timeout:15000})
+              if(kind==='write')await people.locator('[data-demo-people-search]').fill('Lina')
+              if(kind==='select')await people.locator('[data-demo-people-select]').selectOption(operationId==='crew:admin:3'?'Tokens':'employee')
+              if(kind==='message')await people.locator('[data-demo-people-message]').fill('Fictional personnel training message')
+              if(kind==='delete')await people.locator('[data-demo-people-confirm]').fill('DEMO')
+            }
+            if(systemReal){
+              const system=page.locator('[data-training-system="'+chapter+'"]')
+              await system.waitFor({state:'visible',timeout:15000})
+              await system.locator('[data-demo-system-operation="'+operationId+'"]').waitFor({state:'visible',timeout:15000})
+              if(kind==='select'){
+                const choiceByOperation={
+                  'exports:admin:0':'training-event',
+                  'exports:admin:3':'xlsx',
+                  'platform:admin:3':'shift-confirmed',
+                  'settings:shared:2':'en',
+                }
+                const chosen=choiceByOperation[operationId]
+                if(!chosen)throw new Error('No semantic sandbox selection configured for '+operationId)
+                const input=system.locator('[data-demo-system-operation="'+operationId+'"] [data-demo-system-select]')
+                try{
+                  await page.waitForFunction(({chapter,operationId,chosen})=>{
+                    const container=document.querySelector('[data-training-system="'+chapter+'"]')
+                    const operation=container?.querySelector('[data-demo-system-operation="'+operationId+'"]')
+                    const select=operation?.querySelector('[data-demo-system-select]')
+                    return select && [...select.options].some(option=>option.value===chosen)
+                  },{chapter,operationId,chosen},{timeout:12000})
+                }catch(error){
+                  const snapshot=await system.evaluate(root=>({
+                    active:root.querySelector('[data-demo-system-operation]')?.getAttribute('data-demo-system-operation'),
+                    options:[...root.querySelectorAll('[data-demo-system-select] option')].map(option=>option.value),
+                    lab:document.querySelector('[data-training-lab] [data-training-operation]')?.getAttribute('data-training-operation')
+                  }))
+                  throw new Error('Export/platform/settings selection mismatch: '+JSON.stringify({chapter,operationId,chosen,snapshot}),{cause:error})
+                }
+                await input.selectOption(chosen)
+              }
+              if(kind==='form'){
+                const formValues={
+                  'platform:admin:2':{name:'Demo staff shift notification',type:'notification'},
+                  'platform:admin:5':{name:'Demo briefing template',type:'briefing'},
+                }
+                const fields=formValues[operationId]
+                if(!fields)throw new Error('No semantic system form configured for '+operationId)
+                await system.locator('[data-demo-system-operation="'+operationId+'"] [data-demo-system-name]').fill(fields.name)
+                await system.locator('[data-demo-system-operation="'+operationId+'"] [data-demo-system-category]').selectOption(fields.type)
+              }
+              if(kind==='write'||kind==='message')await system.locator('[data-demo-system-name]').fill(
+                kind==='message'?'Please check the fictional demo permission and audit log':'Demo trainee profile'
+              )
+              if(kind==='schedule'){
+                await system.locator('[data-demo-system-from]').fill('2026-10-10T20:00')
+                await system.locator('[data-demo-system-to]').fill('2026-10-11T04:00')
+              }
+            }
+            if(helpReal){
+              const help=page.locator('[data-training-help="true"]')
+              await help.waitFor({state:'visible',timeout:15000})
+              if(kind==='write')await help.locator('[data-demo-help-search]').fill('briefing')
+              else await help.locator('[data-demo-help-open]').click()
+            }
+            if(lifecycleReal){
+              const workflow=page.locator('[data-training-lifecycle="'+chapter+'"]')
+              await workflow.waitFor({state:'visible',timeout:15000})
+              await workflow.locator('[data-demo-lifecycle-operation="'+operationId+'"]').waitFor({state:'visible',timeout:15000})
+              if(kind==='message')await workflow.locator('[data-demo-lifecycle-reason]').fill('Corrected fictional event shift after verification of staff attendance')
+              if(kind==='select')await workflow.locator('[data-demo-lifecycle-select]').selectOption('lina')
+            }
+            if(revenueReal){
+              const sales=page.locator('[data-training-sales="true"]')
+              await sales.waitFor({state:'visible',timeout:15000})
+              await sales.locator('[data-demo-sales-operation="'+operationId+'"]').waitFor({state:'visible',timeout:15000})
+              if(kind==='number')await sales.locator('[data-demo-sales-amount]').fill('3')
+            }
+            if(incidentReal){
+              const incident=page.locator('[data-training-incident="true"]')
+              await incident.waitFor({state:'visible',timeout:15000})
+              await incident.locator('[data-demo-incident-operation="'+operationId+'"]').waitFor({state:'visible',timeout:15000})
+              if(kind==='message')await incident.locator('[data-demo-incident-message]').fill('Training till terminal failure checked and backup till activated')
+              if(kind==='select'){
+                const choice={
+                  'incidents:shared:1':'technical','incidents:shared:3':'urgent',
+                  'incidents:admin:1':'lina','incidents:responsible_lead:2':'admin'
+                }[operationId]
+                if(!choice)throw new Error('Unmapped incident control '+operationId)
+                await incident.locator('[data-demo-incident-select]').selectOption(choice)
+              }
+            }
+            if(inventoryReal){
+              const inventory=page.locator('[data-training-inventory="true"]')
+              await inventory.waitFor({state:'visible',timeout:15000})
+              await inventory.locator('[data-demo-inventory-operation="'+operationId+'"]').waitFor({state:'visible',timeout:15000})
+              if(kind==='inspect'){
+                const confirm=inventory.locator('[data-training-practical-op="'+operationId+'"]')
+                if(await confirm.isEnabled())throw new Error('Inventory inspection completed without opening details: '+operationId)
+                await inventory.locator('[data-demo-inventory-preview="'+operationId+'"]').click()
+                await inventory.locator('[data-demo-inventory-detail="'+operationId+'"]').waitFor({state:'visible',timeout:15000})
+              }
+              if(kind==='form'){
+                await inventory.locator('[data-demo-inventory-input]').fill(operationId==='inventory:admin:0'?'Stage consumables':'Handheld scanner')
+                await inventory.locator('[data-demo-inventory-category]').selectOption('stock')
+              }
+              if(kind==='number'){
+                const amount=inventory.locator('[data-demo-inventory-input]')
+                await amount.fill('0')
+                await inventory.locator('[data-training-practical-op="'+operationId+'"]').click()
+                await inventory.locator('[role="alert"]').waitFor({state:'visible',timeout:10000})
+                if(await lab.locator('[data-training-operation]').getAttribute('data-training-operation')!==operationId)
+                  throw new Error('Invalid inventory quantity advanced the tour')
+                await amount.fill(operationId==='inventory:admin:7'?'5':'12')
+              }
+              if(kind==='message')await inventory.locator('[data-demo-inventory-input]').fill(operationId==='inventory:admin:13'?'Damage claim rejected for lacking photographic proof':'Training shortage: three broken water bottle trays')
+              if(kind==='select'||kind==='upload'){
+                const selections={
+                  'inventory:shared:4':'damaged','inventory:admin:3':'merch',
+                  'inventory:admin:4':'training-stock.png','inventory:admin:5':'training-equipment.pdf',
+                  'inventory:responsible_lead:1':'damaged',
+                  'inventory:admin:8':'noah','inventory:responsible_lead:5':'noah'
+                }
+                const selection=selections[operationId]
+                if(!selection)throw new Error('No real inventory selection for '+operationId)
+                await inventory.locator('[data-demo-inventory-select]').selectOption(selection)
+              }
+            }
+            if(guestlistReal){
+              const guestlist=page.locator('[data-training-guestlist="true"]')
+              await guestlist.waitFor({state:'visible',timeout:15000})
+              await guestlist.locator('[data-demo-guestlist-operation="'+operationId+'"]').waitFor({state:'visible',timeout:15000})
+              if(kind==='form'){
+                await guestlist.locator('[data-demo-guestlist-input]').fill('Demo Event Guest List')
+                await guestlist.locator('[data-demo-guestlist-category]').selectOption('artist')
+              }
+              if(kind==='write')await guestlist.locator('[data-demo-guestlist-input]').fill(operationId==='guestlist:admin:1'?'DJ Astra':'Nova')
+              if(kind==='number')await guestlist.locator('[data-demo-guestlist-input]').fill('2')
+              if(kind==='message')await guestlist.locator('[data-demo-guestlist-input]').fill('DJ Nova confirmed at entrance, backstage prepare artist reception')
+              if(kind==='select'||kind==='upload')await guestlist.locator('[data-demo-guestlist-select]').selectOption(kind==='upload'?'training-guestlist.csv':'artist')
+            }
+            if(tasksReal){
+              const task=page.locator('[data-training-task="'+tourRole+'"]')
+              await task.waitFor({state:'visible',timeout:15000})
+              await task.locator('[data-demo-task-operation="'+operationId+'"]').waitFor({state:'visible',timeout:15000})
+              if(kind==='inspect'){
+                await task.locator('[data-training-preview-op="'+operationId+'"]').click()
+                await task.locator('[data-demo-task-detail="'+operationId+'"]').waitFor({state:'visible',timeout:15000})
+              }
+              if(kind==='form'||kind==='write'||kind==='message')
+                await task.locator('[data-demo-task-input]').fill(kind==='form'?'Restock Bar supplies':'Verify water, cola and replacement stock before closing time.')
+              if(kind==='select'){
+                const taskChoices={
+                  'tasks:admin:2':'bar',
+                  'tasks:admin:3':'noah',
+                  'tasks:admin:5':'in_progress',
+                  'tasks:responsible_lead:2':'noah',
+                  'tasks:responsible_lead:3':'normal',
+                }
+                const chosen=taskChoices[operationId]
+                if(!chosen)throw new Error('No role-correct task selection for '+operationId)
+                await task.locator('[data-demo-task-select]').selectOption(chosen)
+              }
+              if(kind==='schedule')await task.locator('[data-demo-task-date]').fill('2026-10-11T01:30')
+            }
+            if(eventsReal&&!(['events:admin:6','events:admin:12','events:admin:14'].includes(operationId)||operationId==='events:shared:0'&&tourRole!=='admin')){
+              const eventPanel=page.locator('[data-training-event="'+tourRole+'"]')
+              await eventPanel.waitFor({state:'visible',timeout:15000})
+              await eventPanel.locator('[data-demo-event-operation="'+operationId+'"]').waitFor({state:'visible',timeout:15000})
+              if(kind==='inspect'){
+                await eventPanel.locator('[data-training-preview-op="'+operationId+'"]').click()
+                await eventPanel.locator('[data-demo-event-detail="'+operationId+'"]').waitFor({state:'visible',timeout:15000})
+              }
+              if(['form','write','message','number'].includes(kind))
+                await eventPanel.locator('[data-demo-event-value]').fill(kind==='number'?'24':'UpTillDawn full demo event and announcement')
+              if(kind==='form')await eventPanel.locator('[data-demo-event-type]').selectOption('rave')
+              if(kind==='select'){
+                const eventSelections={
+                  'events:shared:3':'can','events:shared:4':'yes','events:shared:5':'yes',
+                  'events:employee:0':'can','events:admin:5':'scheduled','events:admin:9':'mila'
+                }
+                const choice=eventSelections[operationId]
+                if(!choice)throw new Error('Missing event choice for '+operationId)
+                await eventPanel.locator('[data-demo-event-select]').selectOption(choice)
+              }
+              if(kind==='schedule'){
+                await eventPanel.locator('[data-demo-event-start]').fill(operationId==='events:admin:4'?'2026-10-10T18:00':'2026-10-10T20:00')
+                await eventPanel.locator('[data-demo-event-end]').fill('2026-10-11T04:00')
+              }
+            }
+            if(workplaceReal&&!(['workplaces:admin:0','workplaces:admin:17'].includes(operationId)||operationId==='workplaces:shared:0'&&tourRole!=='admin')){
+              const panel=page.locator('[data-training-workplace="'+tourRole+'"]')
+              await panel.waitFor({state:'visible',timeout:15000})
+              await panel.locator('[data-demo-workplace-operation="'+operationId+'"]').waitFor({state:'visible',timeout:15000})
+              if(kind==='inspect'){
+                await panel.locator('[data-training-preview-op="'+operationId+'"]').click()
+                await panel.locator('[data-demo-workplace-detail="'+operationId+'"]').waitFor({state:'visible',timeout:15000})
+              }
+              if(['form','write','message'].includes(kind))
+                await panel.locator('[data-demo-workplace-input]').fill('DJ Nova artist pickup and crew briefing information')
+              if(kind==='select'){
+                const workplaceSelections={
+                  'workplaces:admin:1':'bar','workplaces:admin:2':'lina',
+                  'workplaces:admin:4':'noah','workplaces:admin:5':'mila',
+                  'workplaces:admin:8':'mila','workplaces:responsible_lead:1':'noah',
+                  'workplaces:employee:1':'bar'
+                }
+                const choice=workplaceSelections[operationId]
+                if(!choice)throw new Error('Missing workplace choice for '+operationId)
+                await panel.locator('[data-demo-workplace-select]').selectOption(choice)
+              }
+              if(kind==='schedule'){
+                await panel.locator('[data-demo-workplace-start]').fill(operationId==='workplaces:admin:11'?'2026-10-10T21:35':'2026-10-10T20:00')
+                await panel.locator('[data-demo-workplace-end]').fill('2026-10-11T04:00')
+              }
+              if(kind==='upload')await panel.locator('[data-demo-workplace-upload]').selectOption('training-prices.csv')
+            }
+            if(briefingReal&&!(tourRole!=='admin'&&operationId.startsWith('briefings:shared:')&&Number(operationId.split(':').at(-1))<=5||operationId==='briefings:admin:0')){
+              const panel=page.locator('[data-training-briefing-management="'+tourRole+'"]')
+              await panel.waitFor({state:'visible',timeout:15000})
+              await panel.locator('[data-demo-briefing-operation="'+operationId+'"]').waitFor({state:'visible',timeout:15000})
+              if(kind==='inspect'){
+                await panel.locator('[data-training-preview-op="'+operationId+'"]').click()
+                await panel.locator('[data-demo-briefing-detail="'+operationId+'"]').waitFor({state:'visible',timeout:15000})
+              }
+              if(['form','write','message'].includes(kind))
+                await panel.locator('[data-demo-briefing-input]').fill('Check all emergency exits, tills and shift safety instructions')
+              if(kind==='select')await panel.locator('[data-demo-briefing-select]').selectOption('bar')
+              if(kind==='upload')await panel.locator('[data-demo-briefing-file]').selectOption('training-briefing.pdf')
+            }
+            if(operationsReal&&!['operations:admin:6','operations:admin:7','operations:responsible_lead:0','operations:responsible_lead:1','operations:employee:0','operations:employee:2'].includes(operationId)){
+               const drill=page.locator('[data-training-operational-drill="'+tourRole+'"]')
+               await drill.waitFor({state:'visible',timeout:15000})
+               await drill.locator('[data-demo-operations-operation="'+operationId+'"]').waitFor({state:'visible',timeout:15000})
+               if(kind==='inspect'){await drill.locator('[data-training-preview-op="'+operationId+'"]').click();await drill.locator('[data-demo-operations-detail="'+operationId+'"]').waitFor({state:'visible',timeout:15000})}
+               if(kind==='select')await drill.locator('[data-demo-operations-select]').selectOption(operationId==='operations:admin:10'?'daily':'lina')
+               if(kind==='number'){
+                 const input=drill.locator('[data-demo-operations-number]')
+                 if(operationId==='operations:admin:5'||operationId==='operations:admin:12'){
+                   await input.fill(operationId==='operations:admin:5'?'-2':'4')
+                   await drill.locator('[data-training-practical-op="'+operationId+'"]').click()
+                   await drill.locator('[role="alert"]').waitFor({state:'visible',timeout:10000})
+                   const remained=await lab.locator('[data-training-operation]').getAttribute('data-training-operation')
+                   if(remained!==operationId)throw new Error('Invalid hours advanced the tour: '+operationId)
+                 }
+                 await input.fill(operationId==='operations:admin:12'?'40':operationId==='operations:admin:11'?'8':'7')
+               }
+               if(kind==='message'&&operationId!=='operations:admin:8')await drill.locator('[data-demo-operations-message]').fill('Corrected fictional shift after badge verification and staff confirmation')
+             }
+             if(requiredReal)await real.waitFor({state:'visible',timeout:15000})
+            const usingReal=requiredReal||(await real.count())>0
+            if(usingReal){
+              await real.click()
+            }else if(directAdminAction){
+              const direct=page.locator('[data-training-admin-module="'+chapter+'"] [data-training-admin-action="'+directAdminAction+'"]')
+              await direct.waitFor({state:'visible',timeout:15000})
+              await direct.click()
+            }else if(kind==='inspect'){
+              await operation.locator('button[data-training-active-action="true"]').first().click()
+            }else if(['write','message','form','number','delete'].includes(kind)){
+              await operation.locator('input[type="text"],input[type="number"],textarea').first().fill(
+                kind==='number'?'12':kind==='delete'?'DEMO':'Training event action'
+              )
+              if(kind==='form')await operation.locator('select').first().selectOption({index:1})
+            }else if(kind==='select'){
+              await operation.locator('select').first().selectOption({index:1})
+            }else if(kind==='toggle'){
+              await operation.locator('input[type="checkbox"]').first().check()
+            }else if(kind==='schedule'){
+              const times=operation.locator('input[type="datetime-local"]')
+              await times.nth(0).fill('2026-10-10T20:00')
+              await times.nth(1).fill('2026-10-11T04:00')
+            }else if(kind==='upload'){
+              await operation.locator('select').first().selectOption('training-briefing.pdf')
+            }else throw new Error('Unknown practical action '+chapter+'/'+kind)
+            if(!directAdminAction&&!usingReal)await operation.locator('button[data-training-active-action]').last().click()
+            await waitForPracticeRecorded(page,progressKey,chapter,operationId,exercise+1)
+            if(directAdminAction||usingReal){
+              const saved=await page.evaluate(({key,id})=>{
+                const record=JSON.parse(localStorage.getItem(key+':actions-v1')||'{}')[id]
+                return !!(record?.value&&record?.at&&record?.kind)
+              },{key:progressKey,id:operationId})
+              if(!saved)throw new Error('Real sandbox click did not persist the expected action: '+operationId)
+              console.log('PASS '+bot+' credited real admin control '+chapter+'/'+operationId)
+            }
+          }
+          if(chapter==='operations'){
+            const drill=await page.evaluate(role=>JSON.parse(sessionStorage.getItem('uptilldawn-worktime-drill-v1:'+role)||'null'),tourRole)
+            if(!drill||drill.audit?.length!==total-2)throw new Error('Missing real worktime operations: '+JSON.stringify({total,role:tourRole,drill}))
+            if(tourRole==='admin'&&(!drill.timesheet||!drill.reason||drill.hours!==7||drill.policy!=='daily'||drill.daily!==8||drill.weekly!==40))
+              throw new Error('Admin timesheet correction or overtime demo incomplete: '+JSON.stringify(drill))
+            if(tourRole!=='admin'&&(drill.breakPhase!=='resumed'||!drill.reminder))
+              throw new Error('Crew worktime break and reminder practice incomplete: '+JSON.stringify(drill))
+            console.log('PASS '+bot+' real worktime drill with '+drill.audit.length+' stateful role actions')
+          }
+          if(chapter==='inventory'){
+            const inventory=await page.evaluate(role=>JSON.parse(sessionStorage.getItem('uptilldawn-inventory-training-v1:'+role)||'null'),tourRole)
+            if(!inventory||inventory.audit?.length!==total||!inventory.opening||!inventory.closing||!inventory.reports?.length||inventory.condition!=='damaged'||!inventory.inspected?.includes('inventory:shared:0')||!inventory.inspected?.includes('inventory:shared:7'))
+              throw new Error('Real inventory workflow incomplete: '+JSON.stringify(inventory))
+            if(tourRole==='admin'&&(!inventory.category||!inventory.newItem||inventory.quantity!==17||inventory.workplace!=='merch'||!inventory.photo||!inventory.document||inventory.restocked!==5||inventory.issuedTo!=='noah'||!inventory.returned||inventory.settlement!=='rejected'||!inventory.rejectionReason))
+              throw new Error('Admin inventory category, materials and upload controls not persisted: '+JSON.stringify(inventory))
+            if(tourRole==='responsible_lead'&&(inventory.issuedTo!=='noah'||inventory.quantity!==23||inventory.settlement!=='pending'))throw new Error('Lead return not requested correctly: '+JSON.stringify(inventory))
+            if(tourRole==='employee'&&(inventory.quantity!==24||inventory.settlement!=='cancelled'))throw new Error('Staff cancellation altered stock: '+JSON.stringify(inventory))
+            console.log('PASS '+bot+' inventory: '+total+' audited issue, return, claim and cancellation actions')
+          }
+          if(chapter==='guestlist'){
+            const guestlist=await page.evaluate(role=>JSON.parse(sessionStorage.getItem('uptilldawn-guestlist-training-v1:'+role)||'null'),tourRole)
+            if(!guestlist||guestlist.audit?.length!==total||!guestlist.arrived||!guestlist.backstage||guestlist.filter!=='artist'||!guestlist.search?.includes('Nova'))
+              throw new Error('Real guestlist check-in, artist search or Backstage notification missing: '+JSON.stringify(guestlist))
+            if(tourRole==='admin'&&(!guestlist.listName||!guestlist.newGuest||guestlist.guestType!=='artist'||!guestlist.importFile||!guestlist.duplicatesReviewed||!guestlist.messages.length))
+              throw new Error('Admin guestlist creation, import, duplicate checking or Backstage message missing: '+JSON.stringify(guestlist))
+            console.log('PASS '+bot+' guestlist: '+total+' real searchable/importable guest records and artist arrival')
+          }
+          if(chapter==='sales'){
+            const sales=await page.evaluate(()=>JSON.parse(sessionStorage.getItem('uptilldawn-sales-training-v1:admin')||'null'))
+            if(!sales||sales.audit?.length!==total||sales.merchSold!==3||sales.tokensSold!==3||!sales.reconciled||!sales.exportReady)
+              throw new Error('Sales training did not persist all nine real revenue actions: '+JSON.stringify(sales))
+            if(sales.merchCents!==38450+3600||sales.tokenCents!==25000+2400||sales.discrepancyCents!==0)
+              throw new Error('Sales demo double-counted or dropped registered transactions: '+JSON.stringify(sales))
+            console.log('PASS '+bot+' sales: '+total+' real actions; three buckets, balanced ledger, export')
+          }
+          if(chapter==='incidents'){
+            const saved=await page.evaluate(role=>JSON.parse(sessionStorage.getItem('uptilldawn-incident-training-v1:'+role)||'null'),tourRole)
+            if(!saved||saved.audit?.length!==total||!saved.sent||saved.category!=='technical'||saved.urgency!=='urgent'||!saved.gpsReviewed)
+              throw new Error('Incident training failed to persist the full incident report: '+JSON.stringify(saved))
+            if(tourRole==='admin'&&(!saved.assignee||!saved.response||saved.status!=='closed'))
+              throw new Error('Admin incident workflow did not assign, reply and close: '+JSON.stringify(saved))
+            if(tourRole==='responsible_lead'&&(!saved.escalation||!saved.response||saved.status!=='closed'))
+              throw new Error('Lead incident workflow did not escalate and resolve: '+JSON.stringify(saved))
+            console.log('PASS '+bot+' incidents: '+total+' real actions with role-scoped audit trail')
+          }
+          if(chapter==='briefings'){
+            const snapshot=await page.evaluate(role=>JSON.parse(sessionStorage.getItem('uptilldawn-briefing-training-v1:'+role)||'null'),tourRole)
+            const delegated=tourRole==='admin'?1:6
+            if(!snapshot||snapshot.audit?.length!==total-delegated)
+              throw new Error('Briefing management training left required role actions generic: '+JSON.stringify({total,delegated,snapshot}))
+            if(tourRole==='admin'&&(!snapshot.safety||!snapshot.checklist||!snapshot.attachments.length||!snapshot.notices.length||!snapshot.acknowledged))
+              throw new Error('Admin did not complete briefing, safety, checklist, attachments and notifications: '+JSON.stringify(snapshot))
+            if(tourRole==='responsible_lead'&&(!snapshot.checklist||!snapshot.teamConfirmed||!snapshot.notices.length))
+              throw new Error('Lead did not create and acknowledge workplace briefing: '+JSON.stringify(snapshot))
+            if(tourRole==='employee'&&!snapshot.teamConfirmed)
+              throw new Error('Staff did not complete role-specific acknowledgment: '+JSON.stringify(snapshot))
+          }
+          if(chapter==='workplaces'){
+            const snapshot=await page.evaluate(role=>JSON.parse(sessionStorage.getItem('uptilldawn-workplace-training-v1:'+role)||'null'),tourRole)
+            const delegated=tourRole==='admin'?2:1
+            if(!snapshot||snapshot.audit?.length!==total-delegated)
+              throw new Error('Workplace training did not perform all role-correct actions: '+JSON.stringify({total,delegated,snapshot}))
+            if(tourRole==='admin'&&(!snapshot.artist||!snapshot.pickup||snapshot.files?.length!==3||!snapshot.replacement||!snapshot.staff.includes('mila')))
+              throw new Error('Admin workplace, Driver pickup, staff assignments or price list training incomplete: '+JSON.stringify(snapshot))
+            if(tourRole==='responsible_lead'&&(!snapshot.checkedIn||!snapshot.notice||!snapshot.staff.includes('noah')))
+              throw new Error('Responsible lead did not complete scoped team management: '+JSON.stringify(snapshot))
+            if(tourRole==='employee'&&!snapshot.favorite)
+              throw new Error('Employee preference selection was not saved: '+JSON.stringify(snapshot))
+          }
+          if(chapter==='events'){
+            const snapshot=await page.evaluate(role=>JSON.parse(sessionStorage.getItem('uptilldawn-event-training-v1:'+role)||'null'),tourRole)
+            const delegated=tourRole==='admin'?3:1
+            if(!snapshot||snapshot.audit?.length!==total-delegated)
+              throw new Error('Event training did not complete all required real event operations: '+JSON.stringify({total,delegated,snapshot}))
+            if(tourRole!=='admin'&&(snapshot.response!=='can'||snapshot.setup!=='yes'||snapshot.breakdown!=='yes'))
+              throw new Error('Crew event registration and setup/teardown choices not saved: '+JSON.stringify(snapshot))
+            if(tourRole==='admin'&&(!snapshot.assigned||!snapshot.notification||!snapshot.name))
+              throw new Error('Admin event capacity, waiting-list replacement or notifications absent: '+JSON.stringify(snapshot))
+            if(tourRole==='employee'&&!snapshot.waitlist)
+              throw new Error('Staff did not simulate waitlist enrollment: '+JSON.stringify(snapshot))
+            if(tourRole==='responsible_lead'&&!snapshot.crewMessage)
+              throw new Error('Responsible lead did not message the assigned team: '+JSON.stringify(snapshot))
+          }
+          if(chapter==='tasks'){
+            const snapshot=await page.evaluate(role=>JSON.parse(sessionStorage.getItem('uptilldawn-task-training-v1:'+role)||'null'),tourRole)
+            if(!snapshot||snapshot.audit?.length!==total||snapshot.completed?.length!==total)
+              throw new Error('Task workflow did not record all real role-specific actions: '+JSON.stringify(snapshot))
+            if(tourRole==='admin'&&(!snapshot.task?.assignees.includes('noah')||snapshot.task.workplace!=='bar'||!snapshot.task.deadline))
+              throw new Error('Admin task creation and assignment were not performed: '+JSON.stringify(snapshot))
+            if(tourRole==='responsible_lead'&&!snapshot.task?.assignees.includes('noah'))
+              throw new Error('Lead did not assign a worker within their workplace: '+JSON.stringify(snapshot))
+            if(tourRole==='employee'&&snapshot.task?.secondaryStatus!=='in_progress')
+              throw new Error('Staff did not start their second assigned task: '+JSON.stringify(snapshot))
+            console.log('PASS '+bot+' functional role-specific task creation, assignment and comments: '+total)
+          }
+          if(['driver','timesheet'].includes(chapter)){
+            const state=await page.evaluate(({role,chapter})=>JSON.parse(sessionStorage.getItem('uptilldawn-lifecycle-training-v1:'+role+':'+chapter)||'null'),{role:tourRole,chapter})
+            if(!state||state.audit?.length!==total||state.completed?.length!==total)throw new Error('Lifecycle demo did not record all real '+chapter+' actions: '+JSON.stringify(state))
+            if(chapter==='driver'&&(!(state.eventMinutes>0)||!(state.driveMinutes>0)||!(state.kilometers>0)||!state.backstage||state.phase!=='event-time-resumed'))
+              throw new Error('Driver training did not pause and resume event time or notify Backstage: '+JSON.stringify(state))
+            if(chapter==='timesheet'&&(tourRole==='admin'?(!state.approved||!state.rejected||!state.locked):(!state.reviewed||!state.submitted||state.phase!=='stopped')))
+              throw new Error('Timesheet training did not complete real review / approval / submission lifecycle: '+JSON.stringify(state))
+            console.log('PASS '+bot+' real '+chapter+' audited lifecycle + complete operation evidence')
+          }
+          if(chapter==='help'){
+            const reviewed=await page.evaluate(role=>JSON.parse(sessionStorage.getItem('uptilldawn-help-training-v1:'+role)||'null'),tourRole)
+            if(!reviewed||reviewed.read?.length!==total||!reviewed.search?.toLowerCase().includes('briefing'))
+              throw new Error('Help curriculum did not open every real guide article and run a search: '+JSON.stringify(reviewed))
+            console.log('PASS '+bot+' complete contextual Help guide and search: '+reviewed.read.length+' actions')
+          }
+          if(['exports','platform','settings'].includes(chapter)){
+            const snapshot=await page.evaluate(({role,chapter})=>{
+              const v=JSON.parse(sessionStorage.getItem('uptilldawn-system-training-v1:'+role+':'+chapter)||'null')
+              if(!v)return null
+              return {audit:v.audit?.length,ready:v.ready,event:v.event,format:v.format,from:v.from,to:v.to,
+                automation:v.automation,trigger:v.trigger,template:v.template,rollout:v.rollout,
+                profile:v.profile,language:v.language,push:v.push,answer:v.answer}
+            },{role:tourRole,chapter})
+            if(!snapshot||snapshot.audit!==total)throw new Error('System training did not record every real control: '+chapter+' '+JSON.stringify(snapshot))
+            if(chapter==='exports'&&(!snapshot.ready||!snapshot.event||!snapshot.format||!snapshot.from||!snapshot.to))
+              throw new Error('Export workflow never prepared the validated demo dataset: '+JSON.stringify(snapshot))
+            if(chapter==='platform'&&(!snapshot.automation||!snapshot.trigger||!snapshot.template||!snapshot.rollout))
+              throw new Error('Platform training did not build an automation, template and safe demo rollout: '+JSON.stringify(snapshot))
+            if(chapter==='settings'&&(!snapshot.profile||!snapshot.language||!snapshot.push||(tourRole==='admin'&&!snapshot.answer)))
+              throw new Error('Settings demo never persisted its real profile, language, notification or AI interactions: '+JSON.stringify(snapshot))
+            console.log('PASS '+bot+' stateful fictional '+chapter+' workflow with '+snapshot.audit+' real controls')
+          }
+          if(['crew','personnel'].includes(chapter)){
+            const result=await page.evaluate(({role,chapter})=>{
+              const state=JSON.parse(sessionStorage.getItem('uptilldawn-people-training-v1:'+role+':'+chapter)||'null')
+              if(!state)return null
+              const lina=state.members.find(x=>x.id==='lina')
+              const mila=state.members.find(x=>x.id==='mila')
+              return {lina,mila,audit:state.audit.length,resend:state.verifiedResent,denied:state.portalDenied}
+            },{role:tourRole,chapter})
+            if(!result)throw new Error('People training lost its local sandbox state: '+chapter)
+            if(chapter==='personnel'&&(!result.lina||result.lina.status!=='approved'||result.mila?.status!=='rejected'||!result.resend||!result.denied||result.audit<3))
+              throw new Error('Admin registration and approval sequence failed: '+JSON.stringify(result))
+            if(chapter==='crew'&&tourRole==='admin'&&(!result.lina||result.lina.blocked||result.lina.workplace!=='Tokens'||result.mila||result.audit<5))
+              throw new Error('Admin staff permissions / demo deletion failed: '+JSON.stringify(result))
+            console.log('PASS '+bot+' fictional '+chapter+' role-scoped personnel actions + local audit')
+          }
+          if(chapter==='chat'){
+            const simulated=await page.evaluate(role=>{
+              const state=JSON.parse(sessionStorage.getItem('uptilldawn-chat-training-v1:'+role)||'null')
+              if(!state)return null
+              return {
+                hidden:state.privateVisible===false,
+                retainedPrivate:state.messages.filter(m=>m.channel==='private').length,
+                messages:state.messages.length,
+                replied:state.messages.some(m=>m.replyTo),
+                mentioned:state.messages.some(m=>m.body.includes('@Lina')),
+                attachment:state.messages.some(m=>m.attachment==='training-inventory.png'),
+                read:state.unread===0,
+                scanned:state.scanReviewed,
+                searched:state.messageMatches?.length>0,
+                pinsReviewed:state.pinsReviewed===true,
+                olderLoaded:state.olderLoaded===true,
+                seededPin:state.pinnedMessageIds?.includes(1)===true,
+                pinAudit:state.pinAudit||[],
+                moderated:state.moderatedMessageIds?.length||0,
+                muteMode:state.muteMode,
+                notificationAudit:state.notificationAudit,
+                autoTranslate:state.autoTranslate,
+                manualTranslated:state.manualTranslated,
+                translationAudit:state.translationAudit,
+                filterAudit:state.filterAudit,
+                filtersCleared:state.filterSender===''&&state.filterAttachment===''&&state.filterFrom===''&&state.filterTo===''&&state.filterQuery===''&&state.filteredMatches?.length===0&&state.selectedSearchResult===null
+              }
+            },tourRole)
+            if(!simulated||!simulated.hidden||simulated.retainedPrivate!==0||simulated.messages<7||
+                !simulated.replied||!simulated.mentioned||!simulated.attachment||!simulated.read||!simulated.scanned||
+                !simulated.searched||!simulated.pinsReviewed||!simulated.olderLoaded||!simulated.seededPin||
+                (tourRole==='admin'&&(simulated.pinAudit.join(',')!=='pin,unpin'||simulated.moderated!==1))||
+                (tourRole==='responsible_lead'&&simulated.pinAudit.join(',')!=='pin,unpin')||
+                (tourRole==='employee'&&simulated.pinAudit.length!==0)||
+                simulated.muteMode!=='mentions'||simulated.notificationAudit?.join(',')!=='muted,mentions'||
+                simulated.autoTranslate!==false||simulated.manualTranslated!==false||
+                simulated.translationAudit?.join(',')!=='auto-on,auto-off,example-on,example-off'||
+                simulated.filterAudit?.join(',')!=='sender,attachment,dates,query,search,open,clear'||!simulated.filtersCleared)
+              throw new Error('Fictional chat lifecycle incomplete: '+JSON.stringify(simulated))
+            console.log('PASS '+bot+' fictional chat message search, pinned history, moderation and retention')
+          }
+          // The admin curriculum must also operate its realistic management
+          // controls. Completing isolated catalogue fields cannot substitute
+          // for saving an event, creating a shift, opening a briefing or
+          // approving a timesheet on the visible role-specific demo screen.
+          if(tourRole==='admin'&&['events','workplaces','briefings','operations'].includes(chapter)){
+            const manager=page.locator('[data-training-admin-module="'+chapter+'"]')
+            await manager.waitFor({state:'visible',timeout:20000})
+            const action=async id=>{
+              const button=manager.locator('[data-training-admin-action="'+id+'"]')
+              await button.waitFor({state:'visible',timeout:15000})
+              if(!await button.isEnabled())throw new Error('Admin training action disabled: '+chapter+'/'+id)
+              await button.click()
+              await manager.locator('p[role="status"]').waitFor({state:'visible',timeout:10000})
+            }
+            if(chapter==='events'){
+              await action('publish-event')
+              await action('archive-event')
+              await action('restore-event')
+            }else if(chapter==='workplaces'){
+              await action('save-shift')
+              await action('add-price')
+            }else if(chapter==='briefings'){
+              await action('save-briefing')
+              await action('open-briefing')
+              await manager.locator('input[type="checkbox"]').check()
+              await action('ack-briefing')
+              await page.waitForFunction(()=>document.querySelector('[data-training-admin-module="briefings"]')?.textContent?.includes('4/4'),undefined,{timeout:10000})
+            }else if(chapter==='operations'){
+              // The curriculum already rejected, approved and locked this demo
+              // timesheet in order. Verify its final immutable state.
+              const state=await page.evaluate(()=>JSON.parse(sessionStorage.getItem('uptilldawn-admin-training-operations:v1')||'null'))
+              if(!state?.locked||!state.approved||state.rejected||state.reason?.trim().length<5)throw new Error('Admin reject/approve/lock lifecycle not persisted')
+              if(await manager.locator('[data-training-admin-action="approve-hours"]').isEnabled())throw new Error('Locked admin timesheet can still be approved')
+              if(await manager.locator('[data-training-admin-action="reject-hours"]').isEnabled())throw new Error('Locked admin timesheet can still be rejected')
+            }
+            console.log('PASS '+bot+' functional admin '+chapter+' buttons')
+          }
+          await page.waitForFunction(({key,chapter})=>{
+            const p=JSON.parse(localStorage.getItem(key)||'null')
+            return p?.completed?.includes(chapter)||!!document.querySelector('a[data-upt-training-next-tab="true"]')
+          },{key:progressKey,chapter},{timeout:30000})
+          const progress=await page.evaluate(key=>JSON.parse(localStorage.getItem(key)||'null'),progressKey)
+          if(progress?.completed?.includes(chapter)){
+            // Two scenarios can share a route (operations -> Driver). The
+            // controller still requires completion of each scenario's inputs.
+            if(progress?.completed?.length===progress?.completed?.filter((x,i,a)=>a.indexOf(x)===i).length&&chapter==='timesheet')break
+            await page.waitForFunction(previous=>{
+              const lab=document.querySelector('[data-training-lab]')
+              return lab?.getAttribute('data-training-chapter')!==previous
+            },chapter,{timeout:15000})
+          }else{
+            const highlighted=page.locator('a[data-upt-training-next-tab="true"]')
+            await highlighted.first().waitFor({state:'attached',timeout:15000})
+            if(viewport.width<1024){
+              const mobile=page.locator('nav[aria-label]').first()
+              if(!await mobile.locator('a[data-upt-training-next-tab="true"]:visible').count()){
+                await mobile.locator('button[aria-expanded="false"]').click()
+              }
+              await mobile.locator('a[data-upt-training-next-tab="true"]:visible').first().click()
+            }else await page.locator('aside a[data-upt-training-next-tab="true"]:visible').first().click()
+            await waitForTrainingTab(page,progressKey,chapter)
+          }
+          // The controller can unmount the completed chapter or navigate to the
+          // next route before this check runs. A missing DOM badge is therefore
+          // not a workflow failure. Verify actual persisted operation evidence,
+          // including kind and timestamp; also validate the badge if it remains.
+          const expectedDomain={
+            personnel:['approval','personnel:admin:3'],
+            briefings:['briefing','briefings:shared:5'],
+            driver:['driver','driver:shared:9'],
+            tasks:['task','tasks:shared:4'],
+            inventory:['inventory','inventory:shared:3'],
+            guestlist:['guestlist','guestlist:shared:4'],
+            chat:['chat','chat:shared:6'],
+            ...(tourRole==='admin'
+              ? {events:['event','events:admin:6'],workplaces:['workplace','workplaces:admin:4']}
+              : {operations:['break',tourRole==='employee'?'operations:employee:5':'operations:responsible_lead:3']}),
+          }[chapter]
+          if(expectedDomain){
+            const [domain,operationId]=expectedDomain
+            const actual=await page.evaluate(({key,domain,operationId})=>{
+              const evidence=JSON.parse(localStorage.getItem(key+':actions-v1')||'{}')[operationId]
+              const card=document.querySelector('[data-training-domain="'+domain+'"]')
+              return {
+                evidence:!!(evidence?.value&&evidence?.at&&evidence?.kind),
+                status:card?.getAttribute('data-training-status')||null,
+                mountedChapter:document.querySelector('[data-training-lab]')?.getAttribute('data-training-chapter')||null,
+              }
+            },{key:progressKey,domain,operationId})
+            if(!actual.evidence)throw new Error('Missing persisted domain operation after '+chapter+': '+operationId)
+            // Only compare a UI badge while the completed chapter is still
+            // mounted; a successor chapter can render before React hydration.
+            if(actual.mountedChapter===chapter&&actual.status!=='completed'){
+              throw new Error('Domain not completed in its own chapter: '+domain+'='+actual.status)
+            }
+          }
+          if(chapter==='timesheet'){
+            const status=await page.evaluate(({key,role})=>{
+              const actions=JSON.parse(localStorage.getItem(key+':actions-v1')||'{}')
+              const id='timesheet:'+role+':'
+              return {stop:!!actions[id+(role==='admin'?'5':'0')]?.at,submitted:!!actions[id+(role==='admin'?'5':'3')]?.at}
+            },{key:progressKey,role:tourRole})
+            if(!status.stop||!status.submitted)throw new Error('Final work-stop and timesheet submission are not both recorded: '+JSON.stringify(status))
+          }
+          console.log(`PASS ${bot} complete role curriculum chapter ${chapter}: ${total} verified operations`)
+        }
+        const final=await page.evaluate(key=>JSON.parse(localStorage.getItem(key)||'null'),progressKey)
+        if(!final?.completed?.includes('timesheet')||fullyVisited.length<12){
+          throw new Error(`role training did not finish end to end: ${JSON.stringify({completed:final?.completed,visited:fullyVisited})}`)
+        }
+        console.log(`PASS ${bot} full practical role tour completed: ${fullyVisited.length} chapters`)
+
       }
 
       if(diagnostics.pageErrors.length)throw new Error(`Unhandled browser errors: ${JSON.stringify(diagnostics.pageErrors)}`)
@@ -525,7 +1307,7 @@ try {
   // Sequential cross-role attendance lifecycle after the concurrent smoke phase.
   // Fresh sessions avoid race conditions while still exercising the real UI/RPC contracts.
   async function loginLifecycle(role,index){
-    const locale=locales[index%locales.length]
+    const locale=botMatrix[index].locale
     const context=await browser.newContext({
       locale,
       viewport:{width:430,height:932},
@@ -933,4 +1715,4 @@ if (failures.length) {
   process.exit(1)
 }
 
-console.log('PASS: 15 concurrent authenticated browser bots + protected event workflow surfaces across Admin/Responsible/Staff, NL/FR/EN/DE and mobile/tablet/desktop viewports')
+console.log('PASS: 15 authenticated browser bots completed in bounded batches + protected event workflow surfaces across Admin/Responsible/Staff, NL/FR/EN/DE and mobile/tablet/desktop viewports')

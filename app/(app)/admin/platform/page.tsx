@@ -6,7 +6,7 @@ import { DateInput } from '@/components/crew/date-input'
 import { PlatformAiAssistant } from '@/components/admin/platform-ai-assistant'
 import { platformModuleHelp } from '@/lib/ui-field-help'
 import { AutomationManager } from '@/components/admin/automation-manager'
-import { SandboxRoleModule } from '@/components/training/sandbox-role-module'
+import { SandboxSystemTraining } from '@/components/training/sandbox-system-training'
 import {
   applyEventTemplate, applyPlanningRecommendation, captureEventTemplate, createKnowledgeArticle,
   createQrResource, dismissPlanningRecommendation, generateEventReport, generatePlanningRecommendations,
@@ -31,7 +31,7 @@ export default async function PlatformCenter({searchParams}:{searchParams?:Promi
   const params=searchParams?await searchParams:{}
   const current=await getCurrentUser()
   if(!current?.isAdmin)redirect('/')
-  if(params.tour==='1')return <SandboxRoleModule role="admin" module="platform"/>
+  if(params.tour==='1')return <SandboxSystemTraining role="admin" module="platform"/>
   const s=await createClient()
   const now=new Date().toISOString()
 
