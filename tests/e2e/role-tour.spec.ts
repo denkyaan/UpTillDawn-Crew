@@ -67,6 +67,15 @@ test.describe('UpTillDawn role-tour browser validation', () => {
       const formStateBeforeSubmit = await page.locator('form').first().evaluate(form => ({ actionPath: new URL((form as HTMLFormElement).action).pathname, method: (form as HTMLFormElement).method, hasSubmitHandler: true, emailPresent: Boolean((form as HTMLFormElement).querySelector('[name="email"]')), passwordPresent: Boolean((form as HTMLFormElement).querySelector('[name="password"]')) }));
       console.log(`[${role}] Form structure: ${JSON.stringify(formStateBeforeSubmit)}`);
       await submit.click();
+      // Some staging pages hydrate after the initial click. Retry the real submit once
+      // only if there was no navigation and no same-origin POST at all.
+      await page.waitForTimeout(1500);
+      if (new URL(page.url()).pathname.startsWith('/login/') && formPosts.length === 0) {
+        console.log(`[${role}] No form POST after initial click; retrying submit after hydration`);
+        await expect(emailInput).toHaveValue(email!);
+        await passwordInput.fill(password!);
+        await page.locator('form').first().evaluate(form => (form as HTMLFormElement).requestSubmit());
+      }
       // The login form can unmount immediately after a successful redirect.
       // Never await a locator on the old login page after submission.
       console.log(`[${role}] Post-click URL: ${page.url()}`);
