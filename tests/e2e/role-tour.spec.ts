@@ -17,6 +17,9 @@ test.describe('UpTillDawn role-tour browser validation', () => {
       await page.goto(new URL('/login/' + role.toLowerCase(), baseURL!).toString(), { waitUntil: 'domcontentloaded' });
       console.log(`[${role}] Login URL: ${page.url()}`);
       const inlineScripts = await page.locator('script:not([src])').allTextContents();
+      const helperPresent = inlineScripts.some(source => source.includes('globalThis.__name'));
+      console.log('STAGING_THEME_HELPER_PRESENT=' + helperPresent);
+      expect(helperPresent, 'Staging does not include the updated theme bootstrap; deploy test branch before running E2E').toBe(true);
       const suspectScripts = inlineScripts.filter(source => source.includes('__name'));
       for (const [index, source] of suspectScripts.entries()) {
         console.error(`[${role}] inline script using __name (${index + 1}/${suspectScripts.length}):\n${source.slice(0, 4500)}`);
