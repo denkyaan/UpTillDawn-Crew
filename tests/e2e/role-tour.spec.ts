@@ -117,6 +117,24 @@ test.describe('UpTillDawn role-tour browser validation', () => {
         expect(check.visible, `${role} ${check.path}: body not visible`).toBe(true);
         expect(check.finalPath, `${role} ${check.path}: unexpected login redirect`).not.toMatch(/^\/login\//);
       }
+      // Role-specific training entrypoint: validate the actual chapters and start control.
+      const trainingResponse = await page.goto(new URL('/help', baseURL!).toString(), { waitUntil: 'domcontentloaded', timeout: 20000 });
+      await expect(page.locator('main')).toBeVisible();
+      const trainingHeading = page.getByRole('heading', { name: /interactieve opleiding|interactive training|formation interactive|interaktives training/i });
+      await expect(trainingHeading).toBeVisible({ timeout: 12000 });
+      const chapters = page.locator('main section').filter({ has: page.getByRole('heading', { name: /hoofdstukken|chapters|chapitres|kapitel/i }) }).locator('button');
+      const chapterNames = await chapters.allTextContents();
+      expect(chapterNames.length, `${role}: role-specific training has no chapters`).toBeGreaterThan(0);
+      const startTour = page.getByRole('button', { name: /rondleiding starten|start tour|commencer la visite|rundgang starten|hervatten|resume|reprendre|fortsetzen/i });
+      await expect(startTour).toBeVisible();
+      await testInfo.attach(`${role.toLowerCase()}-tour-chapters.json`, { body: JSON.stringify({ role, trainingStatus: trainingResponse?.status(), chapters: chapterNames }, null, 2), contentType: 'application/json' });
+      console.log(`[${role}] Tour chapter inventory (${chapterNames.length}): ${JSON.stringify(chapterNames)}`);
+      await page.screenshot({ path: testInfo.outputPath(`${role.toLowerCase()}-training-index.png`), fullPage: true });
+      await startTour.click();
+      await page.waitForTimeout(600);
+      console.log(`[${role}] Tour start URL: ${page.url()}`);
+      await page.screenshot({ path: testInfo.outputPath(`${role.toLowerCase()}-tour-start.png`), fullPage: true });
+      await expect(page.locator('body')).toBeVisible();
       await page.screenshot({ path: testInfo.outputPath(`${role.toLowerCase()}-post-login.png`), fullPage: true });
       if (errors.length) console.error(`[${role}] Uncaught exceptions with stacks:\n${errors.join('\n---\n')}`);
       expect(errors, 'Uncaught browser exceptions').toEqual([]);
