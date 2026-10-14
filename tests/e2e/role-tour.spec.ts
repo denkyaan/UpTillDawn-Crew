@@ -97,6 +97,26 @@ test.describe('UpTillDawn role-tour browser validation', () => {
       console.log(`[${role}] Navigation inventory: ${JSON.stringify(navigation)}`);
       await testInfo.attach(`${role.toLowerCase()}-navigation.json`, { body: JSON.stringify({ role, authenticatedPath, navigation }, null, 2), contentType: 'application/json' });
       await expect(page.locator('body')).toBeVisible();
+      // Non-destructive route coverage: visit every same-origin, visible navigation destination.
+      const routeChecks: Array<{ path: string; finalPath: string; status: number | null; visible: boolean }> = [];
+      const uniquePaths = [...new Set(navigation.map(item => item.href).filter((href): href is string => Boolean(href && href.startsWith('/') && !href.startsWith('//'))))];
+      for (const path of uniquePaths) {
+        const target = new URL(path, baseURL!);
+        const response = await page.goto(target.toString(), { waitUntil: 'domcontentloaded', timeout: 20000 }).catch(() => null);
+        const finalPath = new URL(page.url()).pathname;
+        const visible = await page.locator('body').isVisible().catch(() => false);
+        routeChecks.push({ path, finalPath, status: response?.status() ?? null, visible });
+        await page.screenshot({ path: testInfo.outputPath(`${role.toLowerCase()}-route-${routeChecks.length}.png`), fullPage: true });
+      }
+      console.log(`[${role}] Navigation route audit: ${JSON.stringify(routeChecks)}`);
+      await testInfo.attach(`${role.toLowerCase()}-route-audit.json`, { body: JSON.stringify(routeChecks, null, 2), contentType: 'application/json' });
+      expect(routeChecks.length, 'No navigable routes found for authenticated role').toBeGreaterThan(0);
+      for (const check of routeChecks) {
+        expect(check.status, `${role} ${check.path}: HTTP error`).not.toBeNull();
+        expect(check.status!, `${role} ${check.path}: HTTP error`).toBeLessThan(400);
+        expect(check.visible, `${role} ${check.path}: body not visible`).toBe(true);
+        expect(check.finalPath, `${role} ${check.path}: unexpected login redirect`).not.toMatch(/^\/login\//);
+      }
       await page.screenshot({ path: testInfo.outputPath(`${role.toLowerCase()}-post-login.png`), fullPage: true });
       if (errors.length) console.error(`[${role}] Uncaught exceptions with stacks:\n${errors.join('\n---\n')}`);
       expect(errors, 'Uncaught browser exceptions').toEqual([]);
