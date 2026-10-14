@@ -37,9 +37,32 @@ test.describe('UpTillDawn role-tour browser validation', () => {
       await page.screenshot({ path: testInfo.outputPath(`${role.toLowerCase()}-login.png`), fullPage: true });
       const submit = page.getByRole('button', { name: /inloggen|login|sign in|connexion|anmelden/i });
       await expect(submit).toBeVisible();
+      const authResponses: Array<{ status: number; url: string; error?: string }> = [];
+      page.on('response', async response => {
+        const url = response.url();
+        if (!/\/auth\/v1\/(token|user|verify|otp)|\/api\/auth\//i.test(url)) return;
+        const record: { status: number; url: string; error?: string } = { status: response.status(), url: url.replace(/([?&](?:token|access_token|refresh_token|code|apikey)=)[^&]+/gi, '$1[REDACTED]') };
+        if (response.status() >= 400) {
+          try {
+            const data = await response.json();
+            record.error = String(data?.error_code || data?.code || data?.error || data?.msg || 'HTTP error').slice(0, 180);
+          } catch { record.error = 'HTTP error (non-JSON response)'; }
+        }
+        authResponses.push(record);
+      });
       await submit.click();
       await expect(page.locator('body')).not.toContainText(/invalid login credentials|ongeldige inloggegevens/i);
-      await expect.poll(() => new URL(page.url()).pathname, { timeout: 15000 }).not.toMatch(/^\/login\//);
+      try {
+        await expect.poll(() => new URL(page.url()).pathname, { timeout: 15000 }).not.toMatch(/^\/login\//);
+      } catch (error) {
+        const visibleAlert = await page.locator('[role="alert"], [aria-live="assertive"], [data-sonner-toast]').allTextContents().catch(() => []);
+        const inputState = await page.locator('input[type="email"], input[type="password"]').evaluateAll(inputs => inputs.map(input => ({ type: (input as HTMLInputElement).type, valid: (input as HTMLInputElement).validity.valid, validationMessage: (input as HTMLInputElement).validationMessage })));
+        const diagnostic = { role, currentPath: new URL(page.url()).pathname, authResponses, visibleAlert: visibleAlert.map(t => t.slice(0, 250)), inputState };
+        console.error(`[${role}] Login diagnostic: ${JSON.stringify(diagnostic)}`);
+        await testInfo.attach(`${role.toLowerCase()}-login-diagnostic.json`, { body: JSON.stringify(diagnostic, null, 2), contentType: 'application/json' });
+        await page.screenshot({ path: testInfo.outputPath(`${role.toLowerCase()}-login-failure.png`), fullPage: true });
+        throw error;
+      }
       const authenticatedPath = new URL(page.url()).pathname;
       console.log(`[${role}] Authenticated landing path: ${authenticatedPath}`);
       const navigation = await page.locator('nav a, [role="navigation"] a, aside a').evaluateAll(links => links.map(link => ({ text: (link.textContent || '').trim().slice(0, 100), href: (link as HTMLAnchorElement).getAttribute('href') })).filter(link => link.text || link.href));
