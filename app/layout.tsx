@@ -59,8 +59,10 @@ export default async function RootLayout({
 
   return (
     <html lang={initialLocale} suppressHydrationWarning>
-      <body className="font-sans antialiased" suppressHydrationWarning>
+      <head>
         <script dangerouslySetInnerHTML={{ __html: "globalThis.__name ??= (target) => target;" }} />
+      </head>
+      <body className="font-sans antialiased" suppressHydrationWarning>
         <ThemeProvider attribute="class" defaultTheme="dark" enableSystem disableTransitionOnChange>
           <AuthProvider>
             <AdminSelectionProvider>
