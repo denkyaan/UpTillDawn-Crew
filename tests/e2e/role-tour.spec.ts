@@ -34,6 +34,7 @@ test.describe('UpTillDawn role-tour browser validation', () => {
       await expect(passwordInput).toBeVisible();
       await emailInput.fill(email!);
       await passwordInput.fill(password!);
+      await expect(passwordInput).toHaveValue(password!);
       await page.screenshot({ path: testInfo.outputPath(`${role.toLowerCase()}-login.png`), fullPage: true });
       const submit = page.getByRole('button', { name: /inloggen|login|sign in|connexion|anmelden/i });
       await expect(submit).toBeVisible();
@@ -50,6 +51,13 @@ test.describe('UpTillDawn role-tour browser validation', () => {
         }
         authResponses.push(record);
       });
+      // React hydration can replace controlled inputs after an early fill; assert again immediately before submission.
+      await expect(emailInput).toHaveValue(email!);
+      if (await passwordInput.inputValue() !== password!) {
+        console.log(`[${role}] Password input was reset before submit; refilling after hydration`);
+        await passwordInput.fill(password!);
+      }
+      await expect(passwordInput).toHaveValue(password!);
       await submit.click();
       await expect(page.locator('body')).not.toContainText(/invalid login credentials|ongeldige inloggegevens/i);
       try {
