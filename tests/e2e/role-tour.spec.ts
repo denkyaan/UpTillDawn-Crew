@@ -41,8 +41,12 @@ test.describe('UpTillDawn role-tour browser validation', () => {
       const submit = page.getByRole('button', { name: /inloggen|login|sign in|connexion|anmelden/i });
       await expect(submit).toBeVisible();
       const authResponses: Array<{ status: number; url: string; error?: string }> = [];
+      const formPosts: Array<{ status: number; path: string; nextAction: boolean }> = [];
       page.on('response', async response => {
         const url = response.url();
+        if (response.request().method() === 'POST' && new URL(url).origin === new URL(baseURL!).origin) {
+          formPosts.push({ status: response.status(), path: new URL(url).pathname, nextAction: Boolean(response.request().headers()['next-action']) });
+        }
         if (!/\/auth\/v1\/(token|user|verify|otp)|\/api\/auth\//i.test(url)) return;
         const record: { status: number; url: string; error?: string } = { status: response.status(), url: url.replace(/([?&](?:token|access_token|refresh_token|code|apikey)=)[^&]+/gi, '$1[REDACTED]') };
         if (response.status() >= 400) {
@@ -60,6 +64,8 @@ test.describe('UpTillDawn role-tour browser validation', () => {
         await passwordInput.fill(password!);
       }
       await expect(passwordInput).toHaveValue(password!);
+      const formStateBeforeSubmit = await page.locator('form').first().evaluate(form => ({ actionPath: new URL((form as HTMLFormElement).action).pathname, method: (form as HTMLFormElement).method, hasSubmitHandler: true, emailPresent: Boolean((form as HTMLFormElement).querySelector('[name="email"]')), passwordPresent: Boolean((form as HTMLFormElement).querySelector('[name="password"]')) }));
+      console.log(`[${role}] Form structure: ${JSON.stringify(formStateBeforeSubmit)}`);
       await submit.click();
       // Native form validation must not silently block authentication.
       const nativeValidation = await passwordInput.evaluate(input => ({ valid: (input as HTMLInputElement).validity.valid, empty: !(input as HTMLInputElement).value }));
@@ -70,7 +76,7 @@ test.describe('UpTillDawn role-tour browser validation', () => {
       } catch (error) {
         const visibleAlert = await page.locator('[role="alert"], [aria-live="assertive"], [data-sonner-toast]').allTextContents().catch(() => []);
         const inputState = await page.locator('input[type="email"], input[type="password"]').evaluateAll(inputs => inputs.map(input => ({ type: (input as HTMLInputElement).type, valid: (input as HTMLInputElement).validity.valid, validationMessage: (input as HTMLInputElement).validationMessage })));
-        const diagnostic = { role, currentPath: new URL(page.url()).pathname, authResponses, visibleAlert: visibleAlert.map(t => t.slice(0, 250)), inputState };
+        const diagnostic = { role, currentPath: new URL(page.url()).pathname, authResponses, formPosts, visibleAlert: visibleAlert.map(t => t.slice(0, 250)), inputState };
         console.error(`[${role}] Login diagnostic: ${JSON.stringify(diagnostic)}`);
         await testInfo.attach(`${role.toLowerCase()}-login-diagnostic.json`, { body: JSON.stringify(diagnostic, null, 2), contentType: 'application/json' });
         await page.screenshot({ path: testInfo.outputPath(`${role.toLowerCase()}-login-failure.png`), fullPage: true });
