@@ -11,7 +11,9 @@ test.describe('UpTillDawn role-tour browser validation', () => {
       const password = process.env[`E2E_${role}_PASSWORD`];
       test.skip(!email || !password, `Missing isolated ${role} test credentials`);
       const errors: string[] = [];
-      page.on('pageerror', error => errors.push(error.message));
+      page.on('pageerror', error => errors.push(error.stack || error.message));
+      page.on('console', message => { if (message.type() === 'error') console.log(`[${role}] console error: ${message.text()}`); });
+      page.on('requestfailed', request => console.log(`[${role}] failed request: ${request.method()} ${request.url()} ${request.failure()?.errorText ?? ''}`));
       await page.goto(new URL('/login/' + role.toLowerCase(), baseURL!).toString(), { waitUntil: 'domcontentloaded' });
       console.log(`[${role}] Login URL: ${page.url()}`);
       await expect(page.locator('body')).toBeVisible();
@@ -27,6 +29,7 @@ test.describe('UpTillDawn role-tour browser validation', () => {
       await submit.click();
       await expect(page.locator('body')).not.toContainText(/invalid login credentials|ongeldige inloggegevens/i);
       await page.screenshot({ path: testInfo.outputPath(`${role.toLowerCase()}-post-login.png`), fullPage: true });
+      if (errors.length) console.error(`[${role}] Uncaught exceptions with stacks:\n${errors.join('\n---\n')}`);
       expect(errors, 'Uncaught browser exceptions').toEqual([]);
     });
   }
