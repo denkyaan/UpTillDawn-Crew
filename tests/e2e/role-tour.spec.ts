@@ -67,9 +67,9 @@ test.describe('UpTillDawn role-tour browser validation', () => {
       const formStateBeforeSubmit = await page.locator('form').first().evaluate(form => ({ actionPath: new URL((form as HTMLFormElement).action).pathname, method: (form as HTMLFormElement).method, hasSubmitHandler: true, emailPresent: Boolean((form as HTMLFormElement).querySelector('[name="email"]')), passwordPresent: Boolean((form as HTMLFormElement).querySelector('[name="password"]')) }));
       console.log(`[${role}] Form structure: ${JSON.stringify(formStateBeforeSubmit)}`);
       await submit.click();
-      // Native form validation must not silently block authentication.
-      const nativeValidation = await passwordInput.evaluate(input => ({ valid: (input as HTMLInputElement).validity.valid, empty: !(input as HTMLInputElement).value }));
-      if (!nativeValidation.valid || nativeValidation.empty) console.error(`[${role}] Password input invalid after click: ${JSON.stringify(nativeValidation)}`);
+      // The login form can unmount immediately after a successful redirect.
+      // Never await a locator on the old login page after submission.
+      console.log(`[${role}] Post-click URL: ${page.url()}`);
       await expect(page.locator('body')).not.toContainText(/invalid login credentials|ongeldige inloggegevens/i);
       try {
         await expect.poll(() => new URL(page.url()).pathname, { timeout: 15000 }).not.toMatch(/^\/login\//);
