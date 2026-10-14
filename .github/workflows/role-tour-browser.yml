@@ -1,0 +1,38 @@
+name: Role tour browser validation
+on:
+  workflow_dispatch:
+jobs:
+  browser-check:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    env:
+      E2E_BASE_URL: https://uptilldawn-crew-staging.workers.dev
+      E2E_ADMIN_EMAIL: ${{ secrets.E2E_ADMIN_EMAIL }}
+      E2E_ADMIN_PASSWORD: ${{ secrets.E2E_ADMIN_PASSWORD }}
+      E2E_RESPONSIBLE_EMAIL: ${{ secrets.E2E_RESPONSIBLE_EMAIL }}
+      E2E_RESPONSIBLE_PASSWORD: ${{ secrets.E2E_RESPONSIBLE_PASSWORD }}
+      E2E_STAFF_EMAIL: ${{ secrets.E2E_STAFF_EMAIL }}
+      E2E_STAFF_PASSWORD: ${{ secrets.E2E_STAFF_PASSWORD }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+      - run: npm ci
+      - run: npm install --no-save @playwright/test
+      - run: npx playwright install --with-deps chromium
+      - name: Require staging configuration
+        run: |
+          case "$E2E_BASE_URL" in https://uptilldawn-crew-staging.workers.dev) ;; *) echo "Unsafe staging URL"; exit 1;; esac
+          for role in ADMIN RESPONSIBLE STAFF; do
+            email_var="E2E_${role}_EMAIL"
+            password_var="E2E_${role}_PASSWORD"
+            test -n "${!email_var}" && test -n "${!password_var}" || { echo "Missing test credentials for $role"; exit 1; }
+          done
+      - run: npx playwright test tests/e2e/role-tour.spec.ts --reporter=line
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: role-tour-browser-evidence
+          path: test-results/
