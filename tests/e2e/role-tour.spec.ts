@@ -39,6 +39,13 @@ test.describe('UpTillDawn role-tour browser validation', () => {
       await expect(submit).toBeVisible();
       await submit.click();
       await expect(page.locator('body')).not.toContainText(/invalid login credentials|ongeldige inloggegevens/i);
+      await expect.poll(() => new URL(page.url()).pathname, { timeout: 15000 }).not.toMatch(/^\/login\//);
+      const authenticatedPath = new URL(page.url()).pathname;
+      console.log(`[${role}] Authenticated landing path: ${authenticatedPath}`);
+      const navigation = await page.locator('nav a, [role="navigation"] a, aside a').evaluateAll(links => links.map(link => ({ text: (link.textContent || '').trim().slice(0, 100), href: (link as HTMLAnchorElement).getAttribute('href') })).filter(link => link.text || link.href));
+      console.log(`[${role}] Navigation inventory: ${JSON.stringify(navigation)}`);
+      await testInfo.attach(`${role.toLowerCase()}-navigation.json`, { body: JSON.stringify({ role, authenticatedPath, navigation }, null, 2), contentType: 'application/json' });
+      await expect(page.locator('body')).toBeVisible();
       await page.screenshot({ path: testInfo.outputPath(`${role.toLowerCase()}-post-login.png`), fullPage: true });
       if (errors.length) console.error(`[${role}] Uncaught exceptions with stacks:\n${errors.join('\n---\n')}`);
       expect(errors, 'Uncaught browser exceptions').toEqual([]);
