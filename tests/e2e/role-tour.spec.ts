@@ -32,6 +32,8 @@ test.describe('UpTillDawn role-tour browser validation', () => {
       const passwordInput = page.locator('input[type="password"]');
       await expect(emailInput).toBeVisible();
       await expect(passwordInput).toBeVisible();
+      // Wait for client hydration to settle before filling React-controlled inputs.
+      await page.waitForLoadState('networkidle', { timeout: 10000 }).catch(() => {});
       await emailInput.fill(email!);
       await passwordInput.fill(password!);
       await expect(passwordInput).toHaveValue(password!);
@@ -59,6 +61,9 @@ test.describe('UpTillDawn role-tour browser validation', () => {
       }
       await expect(passwordInput).toHaveValue(password!);
       await submit.click();
+      // Native form validation must not silently block authentication.
+      const nativeValidation = await passwordInput.evaluate(input => ({ valid: (input as HTMLInputElement).validity.valid, empty: !(input as HTMLInputElement).value }));
+      if (!nativeValidation.valid || nativeValidation.empty) console.error(`[${role}] Password input invalid after click: ${JSON.stringify(nativeValidation)}`);
       await expect(page.locator('body')).not.toContainText(/invalid login credentials|ongeldige inloggegevens/i);
       try {
         await expect.poll(() => new URL(page.url()).pathname, { timeout: 15000 }).not.toMatch(/^\/login\//);
