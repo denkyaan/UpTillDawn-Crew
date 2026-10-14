@@ -93,6 +93,8 @@ test.describe('UpTillDawn role-tour browser validation', () => {
       }
       const authenticatedPath = new URL(page.url()).pathname;
       console.log(`[${role}] Authenticated landing path: ${authenticatedPath}`);
+      // Wait for the client-side role navigation to hydrate before taking inventory.
+      await expect.poll(async () => page.locator('nav a[href], [role="navigation"] a[href], aside a[href]').count(), { timeout: 15000 }).toBeGreaterThan(0);
       const navigation = await page.locator('nav a, [role="navigation"] a, aside a').evaluateAll(links => links.map(link => ({ text: (link.textContent || '').trim().slice(0, 100), href: (link as HTMLAnchorElement).getAttribute('href') })).filter(link => link.text || link.href));
       console.log(`[${role}] Navigation inventory: ${JSON.stringify(navigation)}`);
       await testInfo.attach(`${role.toLowerCase()}-navigation.json`, { body: JSON.stringify({ role, authenticatedPath, navigation }, null, 2), contentType: 'application/json' });
