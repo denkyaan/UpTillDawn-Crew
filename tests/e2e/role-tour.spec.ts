@@ -16,6 +16,14 @@ test.describe('UpTillDawn role-tour browser validation', () => {
       page.on('requestfailed', request => console.log(`[${role}] failed request: ${request.method()} ${request.url()} ${request.failure()?.errorText ?? ''}`));
       await page.goto(new URL('/login/' + role.toLowerCase(), baseURL!).toString(), { waitUntil: 'domcontentloaded' });
       console.log(`[${role}] Login URL: ${page.url()}`);
+      const inlineScripts = await page.locator('script:not([src])').allTextContents();
+      const suspectScripts = inlineScripts.filter(source => source.includes('__name'));
+      for (const [index, source] of suspectScripts.entries()) {
+        console.error(`[${role}] inline script using __name (${index + 1}/${suspectScripts.length}):\n${source.slice(0, 4500)}`);
+      }
+      if (suspectScripts.length) {
+        await testInfo.attach(`${role.toLowerCase()}-inline-scripts.txt`, { body: suspectScripts.join('\n\n-----\n\n'), contentType: 'text/plain' });
+      }
       await expect(page.locator('body')).toBeVisible();
       const emailInput = page.locator('input[type="email"], input[name="email"], input[autocomplete="email"]').first();
       const passwordInput = page.locator('input[type="password"]');
