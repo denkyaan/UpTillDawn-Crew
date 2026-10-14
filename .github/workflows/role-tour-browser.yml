@@ -6,7 +6,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 20
     env:
-      E2E_BASE_URL: ${{ vars.E2E_STAGING_URL }}
+      E2E_BASE_URL: https://uptilldawn-crew-staging.workers.dev
       E2E_ADMIN_EMAIL: ${{ secrets.E2E_ADMIN_EMAIL }}
       E2E_ADMIN_PASSWORD: ${{ secrets.E2E_ADMIN_PASSWORD }}
       E2E_RESPONSIBLE_EMAIL: ${{ secrets.E2E_RESPONSIBLE_EMAIL }}
@@ -24,7 +24,7 @@ jobs:
       - run: npx playwright install --with-deps chromium
       - name: Require staging configuration
         run: |
-          test -n "$E2E_BASE_URL" || { echo 'Missing E2E_STAGING_URL'; exit 1; }
+          case "$E2E_BASE_URL" in https://uptilldawn-crew-staging.workers.dev) ;; *) echo "Unsafe staging URL"; exit 1;; esac
           for role in ADMIN RESPONSIBLE STAFF; do
             email_var="E2E_${role}_EMAIL"
             password_var="E2E_${role}_PASSWORD"
