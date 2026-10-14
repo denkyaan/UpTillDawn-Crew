@@ -12,9 +12,10 @@ test.describe('UpTillDawn role-tour browser validation', () => {
       test.skip(!email || !password, `Missing isolated ${role} test credentials`);
       const errors: string[] = [];
       page.on('pageerror', error => errors.push(error.message));
-      await page.goto(baseURL!, { waitUntil: 'domcontentloaded' });
+      await page.goto(new URL('/login/' + role.toLowerCase(), baseURL!).toString(), { waitUntil: 'domcontentloaded' });
+      console.log(`[${role}] Login URL: ${page.url()}`);
       await expect(page.locator('body')).toBeVisible();
-      const emailInput = page.getByRole('textbox', { name: /e-?mail/i });
+      const emailInput = page.locator('input[type="email"], input[name="email"], input[autocomplete="email"]').first();
       const passwordInput = page.locator('input[type="password"]');
       await expect(emailInput).toBeVisible();
       await expect(passwordInput).toBeVisible();
