@@ -188,6 +188,22 @@ test.describe('UpTillDawn role-tour browser validation', () => {
 
       console.log(`[${role}] Tour chapter inventory (${chapterNames.length}): ${JSON.stringify(chapterNames)}`);
       await testInfo.attach(`${role.toLowerCase()}-tour-chapters.json`, { body: JSON.stringify({ role, trainingStatus: trainingResponse?.status(), chapters: chapterNames }, null, 2), contentType: 'application/json' });
+      // On first login a welcome dialog can legitimately cover the tour index.
+      // Acknowledge it through its own visible action, never by removing the overlay
+      // or forcing a click on the covered tour button.
+      const welcomeText = /welkom bij up till dawn crew|welcome to up till dawn crew|bienvenue chez up till dawn crew|willkommen bei up till dawn crew/i;
+      const welcome = page.getByRole('dialog').filter({ hasText: welcomeText }).first();
+      const welcomeFallback = page.locator('[role="alertdialog"], [aria-modal="true"]').filter({ hasText: welcomeText }).first();
+      const activeWelcome = await welcome.isVisible().catch(() => false) ? welcome : welcomeFallback;
+      if (await activeWelcome.isVisible().catch(() => false)) {
+        const buttons = await activeWelcome.getByRole('button').allTextContents();
+        console.log(`[${role}] Welcome dialog actions: ${JSON.stringify(buttons)}`);
+        await testInfo.attach(`${role.toLowerCase()}-welcome-actions.json`, { body: JSON.stringify({ role, buttons }, null, 2), contentType: 'application/json' });
+        const proceed = activeWelcome.getByRole('button', { name: /verder|doorgaan|begrepen|start|begin|volgende|oké|oke|ok|continue|next|got it|understood|commencer|continuer|suivant|compris|weiter|fortfahren|verstanden|los geht/i }).first();
+        await expect(proceed, `${role}: welcome dialog must provide a recognizable continue action`).toBeVisible({ timeout: 5000 });
+        await proceed.click({ timeout: 8000, noWaitAfter: true });
+        await expect(activeWelcome, `${role}: welcome dialog should close after its continue action`).toBeHidden({ timeout: 10000 });
+      }
       const startTour = page.getByRole('button', { name: /rondleiding starten|start tour|commencer la visite|rundgang starten|hervatten|resume|reprendre|fortsetzen/i });
       await expect(startTour).toBeVisible();
       await page.screenshot({ path: testInfo.outputPath(`${role.toLowerCase()}-training-index.png`), fullPage: true });
