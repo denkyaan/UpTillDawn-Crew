@@ -202,13 +202,23 @@ test.describe('UpTillDawn role-tour browser validation', () => {
       console.log(`[${role}] Tour start actionability: ${JSON.stringify(startState)}`);
       await testInfo.attach(`${role.toLowerCase()}-start-actionability.json`, { body: JSON.stringify(startState, null, 2), contentType: 'application/json' });
       try {
-        await startTour.click({ timeout: 8000 });
+        // Next.js navigation can keep Playwright's click navigation wait pending even
+        // after the browser dispatched the click. Separate dispatch from outcome.
+        await startTour.click({ timeout: 8000, noWaitAfter: true });
       } catch (error) {
         console.error(`[${role}] Tour start click failed: ${String(error).slice(0, 1200)}`);
         await page.screenshot({ path: testInfo.outputPath(`${role.toLowerCase()}-start-click-failure.png`), fullPage: false, timeout: 5000 }).catch(() => {});
         throw error;
       }
       await page.waitForTimeout(600);
+      const afterStart = {
+        path: new URL(page.url()).pathname,
+        heading: await page.getByRole('heading').allTextContents().catch(() => []),
+        startVisible: await startTour.isVisible().catch(() => false),
+        bodyText: (await page.locator('main').innerText().catch(() => '')).slice(0, 1200)
+      };
+      console.log(`[${role}] Tour start outcome: ${JSON.stringify(afterStart)}`);
+      await testInfo.attach(`${role.toLowerCase()}-start-outcome.json`, { body: JSON.stringify(afterStart, null, 2), contentType: 'application/json' });
       console.log(`[${role}] Tour start URL: ${page.url()}`);
       await page.screenshot({ path: testInfo.outputPath(`${role.toLowerCase()}-tour-start.png`), fullPage: true });
       await expect(page.locator('body')).toBeVisible();
