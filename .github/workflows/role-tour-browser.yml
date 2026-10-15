@@ -30,6 +30,12 @@ jobs:
             password_var="E2E_${role}_PASSWORD"
             test -n "${!email_var}" && test -n "${!password_var}" || { echo "Missing test credentials for $role"; exit 1; }
           done
+      - name: Verify role-tour test checkout
+        run: |
+          echo "Branch: $GITHUB_REF_NAME"
+          echo "Commit: $GITHUB_SHA"
+          test -f tests/e2e/role-tour.spec.ts || { echo "::error::Role tour spec missing. Dispatch workflow on test/role-tour-e2e-validation, not main."; exit 1; }
+          npx playwright test tests/e2e/role-tour.spec.ts --list
       - run: npx playwright test tests/e2e/role-tour.spec.ts --reporter=line
       - uses: actions/upload-artifact@v4
         if: always()
