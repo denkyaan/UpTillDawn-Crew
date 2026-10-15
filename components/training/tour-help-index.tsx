@@ -18,9 +18,8 @@ function progressFor(userId:string,role:TourRole,first:string,workplace?:string)
 }
 
 export function TourHelpIndex(){
-  const {user,roles,roleMode,loading,realIsAdmin,setRoleMode,refreshProfile}=useAuth()
+  const {user,roles,roleMode,realIsAdmin,setRoleMode}=useAuth()
   const role=(roleMode||roles[0]||null) as TourRole|null
-  useEffect(()=>{if(user&&!loading&&!role)void refreshProfile()},[user?.id,loading,role,refreshProfile])
   const [locale,setLocale]=useState<SupportedUiLocale>("nl")
   const [preferred,setPreferred]=useState("")
   const [,setRefresh]=useState(0)
