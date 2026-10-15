@@ -253,6 +253,18 @@ test.describe('UpTillDawn role-tour browser validation', () => {
         await page.screenshot({ path: testInfo.outputPath(`${role.toLowerCase()}-start-click-failure.png`), fullPage: false, timeout: 5000 }).catch(() => {});
         throw error;
       }
+      // The index START TOUR may open a first-login welcome dialog asynchronously.
+      // Complete the real two-stage onboarding flow instead of waiting for a
+      // controller while two modal dialogs still block the app.
+      if (!(await page.locator('[data-tour-panel]').isVisible().catch(() => false))) {
+        const welcomeDialogs = page.locator('[role="dialog"][aria-modal="true"], [role="alertdialog"]').filter({
+          hasText: /je profiel is opgeslagen|your profile has been saved|votre profil a été enregistré|dein profil wurde gespeichert/i,
+        });
+        if (await welcomeDialogs.count()) {
+          console.log(`[${role}] Completing delayed first-login welcome after index start`);
+          await acknowledgeWelcome();
+        }
+      }
       await page.waitForTimeout(600);
       const afterStart = {
         path: new URL(page.url()).pathname,
