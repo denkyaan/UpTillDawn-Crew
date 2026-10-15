@@ -6,7 +6,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 20
     env:
-      E2E_BASE_URL: https://uptilldawn-crew-staging.uptilldawn.workers.dev
+      E2E_BASE_URL: https://uptilldawn-crew-staging.workers.dev
       E2E_ADMIN_EMAIL: ${{ secrets.E2E_ADMIN_EMAIL }}
       E2E_ADMIN_PASSWORD: ${{ secrets.E2E_ADMIN_PASSWORD }}
       E2E_RESPONSIBLE_EMAIL: ${{ secrets.E2E_RESPONSIBLE_EMAIL }}
