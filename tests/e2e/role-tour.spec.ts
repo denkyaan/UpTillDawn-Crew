@@ -200,7 +200,11 @@ test.describe('UpTillDawn role-tour browser validation', () => {
         const proceed = welcome.getByRole('button', { name: /start rondleiding|start tour|commencer la visite|rundgang starten/i }).first();
         await expect(proceed).toBeVisible({ timeout: 5000 });
         await proceed.click({ timeout: 8000, noWaitAfter: true });
-        await expect(welcome, `${role}: original welcome must close`).toBeHidden({ timeout: 10000 });
+        // The first welcome intentionally transitions to a second START TRAINING dialog.
+        const beginTraining = page.getByRole('dialog').getByRole('button', { name: /start training|commencer la formation|training starten/i }).first();
+        await expect(beginTraining).toBeVisible({ timeout: 10000 });
+        await beginTraining.click({ timeout: 8000, noWaitAfter: true });
+        await expect(beginTraining).toBeHidden({ timeout: 10000 });
         console.log(`[${role}] Dialogs after welcome: ${JSON.stringify((await page.locator('[role="dialog"]').allInnerTexts()).map(t => t.slice(0, 300)))}`);
         return true;
       };
