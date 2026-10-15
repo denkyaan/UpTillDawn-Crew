@@ -24,7 +24,7 @@ jobs:
       - run: npx playwright install --with-deps chromium
       - name: Require staging configuration
         run: |
-          case "$E2E_BASE_URL" in https://uptilldawn-crew-staging.uptilldawn.workers.dev) ;; *) echo "Unsafe staging URL"; exit 1;; esac
+          case "$E2E_BASE_URL" in https://uptilldawn-crew-staging.workers.dev) ;; *) echo "Unsafe staging URL"; exit 1;; esac
           for role in ADMIN RESPONSIBLE STAFF; do
             email_var="E2E_${role}_EMAIL"
             password_var="E2E_${role}_PASSWORD"
