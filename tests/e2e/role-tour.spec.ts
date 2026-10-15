@@ -191,20 +191,39 @@ test.describe('UpTillDawn role-tour browser validation', () => {
       const startTour = page.getByRole('button', { name: /rondleiding starten|start tour|commencer la visite|rundgang starten|hervatten|resume|reprendre|fortsetzen/i });
       await expect(startTour).toBeVisible();
       await page.screenshot({ path: testInfo.outputPath(`${role.toLowerCase()}-training-index.png`), fullPage: true });
-      await startTour.click();
+      // A visible button can still be disabled or covered. Capture actionability before a bounded click.
+      const startState = await startTour.evaluate(button => {
+        const rect = button.getBoundingClientRect();
+        const centerX = rect.left + rect.width / 2;
+        const centerY = rect.top + rect.height / 2;
+        const hit = document.elementFromPoint(centerX, centerY);
+        return { disabled: (button as HTMLButtonElement).disabled, ariaDisabled: button.getAttribute('aria-disabled'), text: (button.textContent || '').trim().slice(0, 160), rect: { x: rect.x, y: rect.y, width: rect.width, height: rect.height }, centerHitTag: hit?.tagName ?? null, centerHitText: (hit?.textContent || '').trim().slice(0, 160), covered: Boolean(hit && !button.contains(hit) && hit !== button) };
+      });
+      console.log(`[${role}] Tour start actionability: ${JSON.stringify(startState)}`);
+      await testInfo.attach(`${role.toLowerCase()}-start-actionability.json`, { body: JSON.stringify(startState, null, 2), contentType: 'application/json' });
+      try {
+        await startTour.click({ timeout: 8000 });
+      } catch (error) {
+        console.error(`[${role}] Tour start click failed: ${String(error).slice(0, 1200)}`);
+        await page.screenshot({ path: testInfo.outputPath(`${role.toLowerCase()}-start-click-failure.png`), fullPage: false, timeout: 5000 }).catch(() => {});
+        throw error;
+      }
       await page.waitForTimeout(600);
       console.log(`[${role}] Tour start URL: ${page.url()}`);
       await page.screenshot({ path: testInfo.outputPath(`${role.toLowerCase()}-tour-start.png`), fullPage: true });
       await expect(page.locator('body')).toBeVisible();
       // Non-destructive route coverage: visit every same-origin, visible navigation destination.
+      console.log(`[${role}] Route audit started with ${navigation.length} navigation links`);
       const routeChecks: Array<{ path: string; finalPath: string; status: number | null; visible: boolean }> = [];
       const uniquePaths = [...new Set(navigation.map(item => item.href).filter((href): href is string => Boolean(href && href.startsWith('/') && !href.startsWith('//'))))];
       for (const path of uniquePaths) {
+        console.log(`[${role}] Route audit visiting ${path}`);
         const target = new URL(path, baseURL!);
         const response = await page.goto(target.toString(), { waitUntil: 'domcontentloaded', timeout: 20000 }).catch(() => null);
         const finalPath = new URL(page.url()).pathname;
         const visible = await page.locator('body').isVisible().catch(() => false);
         routeChecks.push({ path, finalPath, status: response?.status() ?? null, visible });
+        console.log(`[${role}] Route audit result ${path}: status=${response?.status() ?? 'null'} final=${finalPath}`);
         if (routeChecks.length <= 2) await page.screenshot({ path: testInfo.outputPath(`${role.toLowerCase()}-route-${routeChecks.length}.png`), fullPage: false, timeout: 5000 }).catch(error => console.log(`[${role}] optional route screenshot skipped: ${String(error)}`));
       }
       console.log(`[${role}] Navigation route audit: ${JSON.stringify(routeChecks)}`);
