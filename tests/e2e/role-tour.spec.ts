@@ -154,6 +154,9 @@ test.describe('UpTillDawn role-tour browser validation', () => {
       const roleHeading = await page.locator('main section').first().locator('h2').first().textContent().catch(() => null);
       const adminSwitchVisible = await page.getByRole('button', { name: /admin-rondleiding openen|open admin tour|ouvrir la visite admin|admin-tour öffnen/i }).isVisible().catch(() => false);
       console.log(`[${role}] Training role heading: ${JSON.stringify(roleHeading)}; admin switch visible: ${adminSwitchVisible}`);
+      if (role === 'RESPONSIBLE' && !/verantwoordelijke|responsible|responsable|verantwortlich/i.test(roleHeading || '')) {
+        throw new Error(`Responsible credentials are rendering ${JSON.stringify(roleHeading)} training on staging. Verify the account's effective role and staging deployment.`);
+      }
       if (role === 'ADMIN' && !/admin/i.test(roleHeading || '')) {
         throw new Error(`Admin credentials are rendering ${JSON.stringify(roleHeading)} training on staging; admin switch visible=${adminSwitchVisible}. Verify staging deployment and effective role before checking chapters.`);
       }
