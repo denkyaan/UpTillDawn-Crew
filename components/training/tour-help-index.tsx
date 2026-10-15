@@ -18,7 +18,7 @@ function progressFor(userId:string,role:TourRole,first:string,workplace?:string)
 }
 
 export function TourHelpIndex(){
-  const {user,roles,roleMode,realIsAdmin,setRoleMode}=useAuth()
+  const {user,roles,roleMode,realIsAdmin,isOwner,setRoleMode}=useAuth()
   const role=(roleMode||roles[0]||null) as TourRole|null
   const [locale,setLocale]=useState<SupportedUiLocale>("nl")
   const [preferred,setPreferred]=useState("")
