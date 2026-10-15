@@ -15,7 +15,8 @@ test.describe('Role-specific tour chapter matrix (all locales)', () => {
       expect(new Set(chapters.map(chapter => chapter.key)).size).toBe(chapters.length);
       for (const chapter of chapters) {
         expect(chapter.roles).toContain(role);
-        expect(tourBaseRoute(role, chapter)).toMatch(/^\\/(?!\\/)/);
+        expect(tourBaseRoute(role, chapter).startsWith('/')).toBe(true);
+        expect(tourBaseRoute(role, chapter).startsWith('//')).toBe(false);
         expect(chapter.mobileSelector.trim()).not.toBe('');
         expect(chapter.desktopSelector.trim()).not.toBe('');
         for (const locale of locales) {
