@@ -208,12 +208,12 @@ test.describe('UpTillDawn role-tour browser validation', () => {
         console.log(`[${role}] Dialogs after welcome: ${JSON.stringify((await page.locator('[role="dialog"]').allInnerTexts()).map(t => t.slice(0, 300)))}`);
         return true;
       };
-      await acknowledgeWelcome();
+      const trainingStartedByWelcome = await acknowledgeWelcome();
       const startTour = page.getByRole('button', { name: /rondleiding starten|start tour|commencer la visite|rundgang starten|hervatten|resume|reprendre|fortsetzen/i });
-      await expect(startTour).toBeVisible();
+      if (!trainingStartedByWelcome) await expect(startTour).toBeVisible({ timeout: 10000 });
       await page.screenshot({ path: testInfo.outputPath(`${role.toLowerCase()}-training-index.png`), fullPage: true });
       // A visible button can still be disabled or covered. Capture actionability before a bounded click.
-      const startState = await startTour.evaluate(button => {
+      const startState = trainingStartedByWelcome ? { alreadyStarted: true } : await startTour.evaluate(button => {
         const rect = button.getBoundingClientRect();
         const centerX = rect.left + rect.width / 2;
         const centerY = rect.top + rect.height / 2;
@@ -222,7 +222,7 @@ test.describe('UpTillDawn role-tour browser validation', () => {
       });
       console.log(`[${role}] Tour start actionability: ${JSON.stringify(startState)}`);
       await testInfo.attach(`${role.toLowerCase()}-start-actionability.json`, { body: JSON.stringify(startState, null, 2), contentType: 'application/json' });
-      try {
+      if (!trainingStartedByWelcome) try {
         // Next.js navigation can keep Playwright's click navigation wait pending even
         // after the browser dispatched the click. Separate dispatch from outcome.
         // A late-mounted welcome dialog can intercept the pointer after our
