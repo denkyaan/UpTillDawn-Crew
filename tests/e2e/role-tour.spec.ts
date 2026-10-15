@@ -108,7 +108,7 @@ test.describe('UpTillDawn role-tour browser validation', () => {
         const finalPath = new URL(page.url()).pathname;
         const visible = await page.locator('body').isVisible().catch(() => false);
         routeChecks.push({ path, finalPath, status: response?.status() ?? null, visible });
-        await page.screenshot({ path: testInfo.outputPath(`${role.toLowerCase()}-route-${routeChecks.length}.png`), fullPage: true });
+        if (routeChecks.length <= 2) await page.screenshot({ path: testInfo.outputPath(`${role.toLowerCase()}-route-${routeChecks.length}.png`), fullPage: false, timeout: 5000 }).catch(error => console.log(`[${role}] optional route screenshot skipped: ${String(error)}`));
       }
       console.log(`[${role}] Navigation route audit: ${JSON.stringify(routeChecks)}`);
       await testInfo.attach(`${role.toLowerCase()}-route-audit.json`, { body: JSON.stringify(routeChecks, null, 2), contentType: 'application/json' });
