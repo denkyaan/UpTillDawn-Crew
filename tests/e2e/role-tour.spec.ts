@@ -3,6 +3,39 @@ import { test, expect } from '@playwright/test';
 const baseURL = process.env.E2E_BASE_URL;
 const roles = ['ADMIN', 'RESPONSIBLE', 'STAFF'] as const;
 
+import { getTourChapters, tourBaseRoute, type TourRole, type TourLocale } from '../../lib/tour-training';
+
+test.describe('Role-specific tour chapter matrix (all locales)', () => {
+  const locales: TourLocale[] = ['nl', 'fr', 'en', 'de'];
+  const roleCases: TourRole[] = ['admin', 'responsible_lead', 'employee'];
+  for (const role of roleCases) {
+    test(`${role}: every chapter has translated instructions and safe role-scoped routes`, () => {
+      const chapters = getTourChapters(role, { mode: 'full', scope: 'general' });
+      expect(chapters.length).toBeGreaterThanOrEqual(role === 'admin' ? 14 : 10);
+      expect(new Set(chapters.map(chapter => chapter.key)).size).toBe(chapters.length);
+      for (const chapter of chapters) {
+        expect(chapter.roles).toContain(role);
+        expect(tourBaseRoute(role, chapter)).toMatch(/^\\/(?!\\/)/);
+        expect(chapter.mobileSelector.trim()).not.toBe('');
+        expect(chapter.desktopSelector.trim()).not.toBe('');
+        for (const locale of locales) {
+          expect(chapter.title[locale]?.trim(), `${role}/${chapter.key}/${locale}: title`).not.toBe('');
+          expect(chapter.description[locale]?.trim(), `${role}/${chapter.key}/${locale}: instructions`).not.toBe('');
+        }
+      }
+      const keys = chapters.map(chapter => chapter.key);
+      for (const key of ['overview', 'events', 'workplaces', 'briefings', 'operations', 'tasks', 'incidents', 'inventory', 'chat', 'settings']) {
+        expect(keys, `${role}: missing essential workflow chapter ${key}`).toContain(key);
+      }
+      if (role === 'admin') {
+        for (const key of ['sales', 'personnel', 'exports', 'platform']) expect(keys).toContain(key);
+      } else {
+        for (const key of ['sales', 'personnel', 'exports', 'platform']) expect(keys).not.toContain(key);
+      }
+    });
+  }
+});
+
 test.describe('UpTillDawn role-tour browser validation', () => {
   test.setTimeout(120_000);
   for (const role of roles) {
