@@ -1,6 +1,9 @@
 name: Role tour browser validation
 on:
   workflow_dispatch:
+  push:
+    branches:
+      - test/role-tour-e2e-validation
 jobs:
   browser-check:
     runs-on: ubuntu-latest
