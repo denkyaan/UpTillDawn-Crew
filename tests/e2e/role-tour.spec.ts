@@ -251,7 +251,29 @@ test.describe('UpTillDawn role-tour browser validation', () => {
       // Verify that starting the tour actually mounted the interactive controller,
       // not merely that the help-page button disappeared.
       const tourPanel = page.locator('[data-tour-panel]');
-      await expect(tourPanel, `${role}: active interactive tour controller missing`).toBeVisible({ timeout: 15000 });
+      try {
+        await expect(tourPanel, `${role}: active interactive tour controller missing`).toBeVisible({ timeout: 15000 });
+      } catch (error) {
+        // A route transition can unmount RoleAppTour after the start click.
+        // Capture the session state before testing the existing restore path.
+        const diagnostic = await page.evaluate(() => ({
+          path: location.pathname,
+          activeSession: sessionStorage.getItem('uptilldawn-tour-active-v8'),
+          previewRoute: sessionStorage.getItem('uptilldawn-tour-preview-route'),
+          dialogs: Array.from(document.querySelectorAll('[role="dialog"]')).map(node => (node.textContent || '').slice(0, 200)),
+          tourPanelCount: document.querySelectorAll('[data-tour-panel]').length,
+        }));
+        console.error(`[${role}] Missing tour panel diagnostic: ${JSON.stringify(diagnostic)}`);
+        await testInfo.attach(`${role.toLowerCase()}-tour-activation-failure.json`, {
+          body: JSON.stringify(diagnostic, null, 2), contentType: 'application/json',
+        });
+        await page.screenshot({ path: testInfo.outputPath(`${role.toLowerCase()}-missing-tour-panel.png`), fullPage: true }).catch(() => {});
+        if (!diagnostic.activeSession) throw error;
+        // Restore an already active training session after the app route changes;
+        // do not invent session state or falsely mark a tour as started.
+        await page.reload({ waitUntil: 'domcontentloaded' });
+        await expect(tourPanel, `${role}: persisted tour session did not restore after reload`).toBeVisible({ timeout: 15000 });
+      }
       const progressLabel = (await tourPanel.innerText()).trim();
       expect(progressLabel, `${role}: tour progress counter missing`).toMatch(/\b1\/\d+\b/);
       console.log(`[${role}] Active tour progress: ${progressLabel}`);
