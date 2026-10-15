@@ -124,6 +124,13 @@ test.describe('UpTillDawn role-tour browser validation', () => {
       await expect(page.locator('main')).toBeVisible();
       const trainingHeading = page.getByRole('heading', { name: /interactieve opleiding|interactive training|formation interactive|interaktives training/i });
       await expect(trainingHeading).toBeVisible({ timeout: 12000 });
+      if (role === 'ADMIN') {
+        const switchToAdmin = page.getByRole('button', { name: /admin-rondleiding openen|open admin tour|ouvrir la visite admin|admin-tour öffnen/i });
+        if (await switchToAdmin.isVisible().catch(() => false)) {
+          await switchToAdmin.click();
+          await expect(switchToAdmin).toBeHidden({ timeout: 15000 });
+        }
+      }
       const chapters = page.locator('main section').filter({ has: page.getByRole('heading', { name: /hoofdstukken|chapters|chapitres|kapitel/i }) }).locator('button');
       const chapterNames = await chapters.allTextContents();
       expect(chapterNames.length, `${role}: role-specific training has no chapters`).toBeGreaterThan(0);
