@@ -211,11 +211,15 @@ test.describe('UpTillDawn role-tour browser validation', () => {
         const buttons = await welcome.getByRole('button').allTextContents();
         console.log(`[${role}] Welcome dialog: ${JSON.stringify({ text: dialogText, buttons })}`);
         await testInfo.attach(`${role.toLowerCase()}-onboarding-dialog.json`, { body: JSON.stringify({ role, text: dialogText, buttons }, null, 2), contentType: 'application/json' });
+        // The welcome dialog has two valid stages. On a delayed mount it can
+        // already be at START TRAINING, so do not require START TOUR again.
         const proceed = welcome.getByRole('button', { name: /start rondleiding|start tour|commencer la visite|rundgang starten/i }).first();
-        await expect(proceed).toBeVisible({ timeout: 5000 });
-        await proceed.click({ timeout: 8000, noWaitAfter: true });
-        // The first welcome intentionally transitions to a second START TRAINING dialog.
         const beginTraining = page.getByRole('dialog').getByRole('button', { name: /start training|commencer la formation|training starten/i }).first();
+        if (await proceed.isVisible().catch(() => false)) {
+          await proceed.click({ timeout: 8000, noWaitAfter: true });
+        } else {
+          console.log(`[${role}] Welcome already at START TRAINING stage`);
+        }
         await expect(beginTraining).toBeVisible({ timeout: 10000 });
         await beginTraining.click({ timeout: 8000, noWaitAfter: true });
         await expect(beginTraining).toBeHidden({ timeout: 10000 });
