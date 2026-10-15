@@ -248,6 +248,17 @@ test.describe('UpTillDawn role-tour browser validation', () => {
       };
       console.log(`[${role}] Tour start outcome: ${JSON.stringify(afterStart)}`);
       await testInfo.attach(`${role.toLowerCase()}-start-outcome.json`, { body: JSON.stringify(afterStart, null, 2), contentType: 'application/json' });
+      // Verify that starting the tour actually mounted the interactive controller,
+      // not merely that the help-page button disappeared.
+      const tourPanel = page.locator('[data-tour-panel]');
+      await expect(tourPanel, `${role}: active interactive tour controller missing`).toBeVisible({ timeout: 15000 });
+      const progressLabel = (await tourPanel.innerText()).trim();
+      expect(progressLabel, `${role}: tour progress counter missing`).toMatch(/\\b1\\/\\d+\\b/);
+      console.log(`[${role}] Active tour progress: ${progressLabel}`);
+      await testInfo.attach(`${role.toLowerCase()}-active-tour.json`, {
+        body: JSON.stringify({ role, progressLabel, path: new URL(page.url()).pathname }, null, 2),
+        contentType: 'application/json',
+      });
       console.log(`[${role}] Tour start URL: ${page.url()}`);
       await page.screenshot({ path: testInfo.outputPath(`${role.toLowerCase()}-tour-start.png`), fullPage: true });
       await expect(page.locator('body')).toBeVisible();
