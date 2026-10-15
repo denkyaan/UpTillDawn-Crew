@@ -345,6 +345,18 @@ test.describe('UpTillDawn role-tour browser validation', () => {
         body: JSON.stringify({ role, progressLabel, path: new URL(page.url()).pathname }, null, 2),
         contentType: 'application/json',
       });
+      // Exercise a real interactive tour control rather than only inspecting its presence.
+      // Pausing is non-destructive and must clear the active session for every role.
+      const pauseButton = tourPanel.getByRole('button', { name: /pauzeer|pause|pausieren/i });
+      await expect(pauseButton, `${role}: pause control missing`).toBeVisible();
+      await pauseButton.click({ timeout: 8000 });
+      await expect(tourPanel, `${role}: tour panel remained active after pause`).toBeHidden({ timeout: 10000 });
+      const pausedSession = await page.evaluate(() => sessionStorage.getItem('uptilldawn-tour-active-v8'));
+      expect(pausedSession, `${role}: paused tour left active session behind`).toBeNull();
+      await testInfo.attach(`${role.toLowerCase()}-pause-validation.json`, {
+        body: JSON.stringify({ role, progressBeforePause: progressLabel, panelHidden: true, activeSession: pausedSession }, null, 2),
+        contentType: 'application/json',
+      });
       console.log(`[${role}] Tour start URL: ${page.url()}`);
       await page.screenshot({ path: testInfo.outputPath(`${role.toLowerCase()}-tour-start.png`), fullPage: true });
       await expect(page.locator('body')).toBeVisible();
