@@ -14,6 +14,13 @@ test.describe('UpTillDawn role-tour browser validation', () => {
       const errors: string[] = [];
       page.on('pageerror', error => errors.push(error.stack || error.message));
       page.on('console', message => { if (message.type() === 'error') console.log(`[${role}] console error: ${message.text()}`); });
+      const serverFailures: Array<{ path: string; status: number; method: string }> = [];
+      page.on('response', response => {
+        if (response.status() < 500) return;
+        const url = new URL(response.url());
+        if (url.origin !== new URL(baseURL!).origin) return;
+        serverFailures.push({ path: url.pathname, status: response.status(), method: response.request().method() });
+      });
       page.on('requestfailed', request => console.log(`[${role}] failed request: ${request.method()} ${request.url()} ${request.failure()?.errorText ?? ''}`));
       await page.goto(new URL('/login/' + role.toLowerCase(), baseURL!).toString(), { waitUntil: 'domcontentloaded' });
       console.log(`[${role}] Login URL: ${page.url()}`);
@@ -88,6 +95,13 @@ test.describe('UpTillDawn role-tour browser validation', () => {
       await expect(passwordInput).toHaveValue(password!);
       const formStateBeforeSubmit = await page.locator('form').first().evaluate(form => ({ actionPath: new URL((form as HTMLFormElement).action).pathname, method: (form as HTMLFormElement).method, hasSubmitHandler: true, emailPresent: Boolean((form as HTMLFormElement).querySelector('[name="email"]')), passwordPresent: Boolean((form as HTMLFormElement).querySelector('[name="password"]')) }));
       console.log(`[${role}] Form structure: ${JSON.stringify(formStateBeforeSubmit)}`);
+      const loginSubmitState = await submit.evaluate(button => ({
+        disabled: (button as HTMLButtonElement).disabled,
+        formValid: (button as HTMLButtonElement).form?.checkValidity() ?? null,
+        type: (button as HTMLButtonElement).type,
+        html: button.outerHTML.slice(0, 500),
+      }));
+      console.log(`[${role}] Submit state: ${JSON.stringify(loginSubmitState)}`);
       await submit.click();
       // Some staging pages hydrate after the initial click. Retry the real submit once
       // only if there was no navigation and no same-origin POST at all.
@@ -107,7 +121,7 @@ test.describe('UpTillDawn role-tour browser validation', () => {
       } catch (error) {
         const visibleAlert = await page.locator('[role="alert"], [aria-live="assertive"], [data-sonner-toast]').allTextContents().catch(() => []);
         const inputState = await page.locator('input[type="email"], input[type="password"]').evaluateAll(inputs => inputs.map(input => ({ type: (input as HTMLInputElement).type, valid: (input as HTMLInputElement).validity.valid, validationMessage: (input as HTMLInputElement).validationMessage })));
-        const diagnostic = { role, currentPath: new URL(page.url()).pathname, authResponses, formPosts, visibleAlert: visibleAlert.map(t => t.slice(0, 250)), inputState };
+        const diagnostic = { role, currentPath: new URL(page.url()).pathname, authResponses, formPosts, loginSubmitState, visibleAlert: visibleAlert.map(t => t.slice(0, 250)), inputState, serverFailures };
         console.error(`[${role}] Login diagnostic: ${JSON.stringify(diagnostic)}`);
         await testInfo.attach(`${role.toLowerCase()}-login-diagnostic.json`, { body: JSON.stringify(diagnostic, null, 2), contentType: 'application/json' });
         await page.screenshot({ path: testInfo.outputPath(`${role.toLowerCase()}-login-failure.png`), fullPage: true });
@@ -299,6 +313,8 @@ test.describe('UpTillDawn role-tour browser validation', () => {
         if (routeChecks.length <= 2) await page.screenshot({ path: testInfo.outputPath(`${role.toLowerCase()}-route-${routeChecks.length}.png`), fullPage: false, timeout: 5000 }).catch(error => console.log(`[${role}] optional route screenshot skipped: ${String(error)}`));
       }
       console.log(`[${role}] Navigation route audit: ${JSON.stringify(routeChecks)}`);
+      console.log(`[${role}] Server failures (HTTP 5xx): ${JSON.stringify(serverFailures.slice(-40))}`);
+      await testInfo.attach(`${role.toLowerCase()}-server-failures.json`, { body: JSON.stringify(serverFailures, null, 2), contentType: 'application/json' });
       await testInfo.attach(`${role.toLowerCase()}-route-audit.json`, { body: JSON.stringify(routeChecks, null, 2), contentType: 'application/json' });
       expect(routeChecks.length, 'No navigable routes found for authenticated role').toBeGreaterThan(0);
       for (const check of routeChecks) {
