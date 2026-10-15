@@ -191,17 +191,17 @@ test.describe('UpTillDawn role-tour browser validation', () => {
       // Onboarding may mount after the tour index becomes visible. Handle any
       // first-login modal both before the click and if it arrives during actionability.
       const acknowledgeWelcome = async () => {
-        const dialogs = page.locator('[role="dialog"][aria-modal="true"], [role="alertdialog"]');
-        const visible = dialogs.filter({ visible: true }).first();
-        if (!(await visible.isVisible().catch(() => false))) return false;
-        const dialogText = (await visible.innerText().catch(() => '')).slice(0, 500);
-        const buttons = await visible.getByRole('button').allTextContents();
-        console.log(`[${role}] Blocking onboarding dialog: ${JSON.stringify({ text: dialogText, buttons })}`);
+        const welcome = page.locator('[role="dialog"][aria-modal="true"], [role="alertdialog"]').filter({ hasText: /je profiel is opgeslagen|your profile has been saved|votre profil a été enregistré|dein profil wurde gespeichert/i }).first();
+        if (!(await welcome.isVisible().catch(() => false))) return false;
+        const dialogText = (await welcome.innerText().catch(() => '')).slice(0, 500);
+        const buttons = await welcome.getByRole('button').allTextContents();
+        console.log(`[${role}] Welcome dialog: ${JSON.stringify({ text: dialogText, buttons })}`);
         await testInfo.attach(`${role.toLowerCase()}-onboarding-dialog.json`, { body: JSON.stringify({ role, text: dialogText, buttons }, null, 2), contentType: 'application/json' });
-        const proceed = visible.getByRole('button', { name: /verder|doorgaan|begrepen|start|begin|volgende|oké|oke|ok|continue|next|got it|understood|commencer|continuer|suivant|compris|weiter|fortfahren|verstanden|los geht/i }).first();
-        await expect(proceed, `${role}: onboarding dialog needs a supported continue button`).toBeVisible({ timeout: 5000 });
+        const proceed = welcome.getByRole('button', { name: /start rondleiding|start tour|commencer la visite|rundgang starten/i }).first();
+        await expect(proceed).toBeVisible({ timeout: 5000 });
         await proceed.click({ timeout: 8000, noWaitAfter: true });
-        await expect(visible).toBeHidden({ timeout: 10000 });
+        await expect(welcome, `${role}: original welcome must close`).toBeHidden({ timeout: 10000 });
+        console.log(`[${role}] Dialogs after welcome: ${JSON.stringify((await page.locator('[role="dialog"]').allInnerTexts()).map(t => t.slice(0, 300)))}`);
         return true;
       };
       await acknowledgeWelcome();
