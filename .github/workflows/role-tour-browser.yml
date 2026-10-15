@@ -20,8 +20,15 @@ jobs:
           node-version: '22'
           cache: npm
       - run: npm ci
-      - run: npm install --no-save @playwright/test
-      - run: npx playwright install --with-deps chromium
+      - name: Cache Playwright Chromium
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/ms-playwright
+          key: playwright-chromium-${{ runner.os }}-${{ hashFiles('package-lock.json') }}
+      - name: Install Chromium (cached)
+        run: npx playwright install chromium
+      - name: Install Chromium system libraries
+        run: npx playwright install-deps chromium
       - name: Require staging configuration
         run: |
           case "$E2E_BASE_URL" in https://uptilldawn-crew-staging.uptilldawn.workers.dev) ;; *) echo "Unsafe staging URL"; exit 1;; esac
@@ -36,7 +43,7 @@ jobs:
           echo "Commit: $GITHUB_SHA"
           test -f tests/e2e/role-tour.spec.ts || { echo "::error::Role tour spec missing. Dispatch workflow on test/role-tour-e2e-validation, not main."; exit 1; }
           npx playwright test tests/e2e/role-tour.spec.ts --list
-      - run: npx playwright test tests/e2e/role-tour.spec.ts --reporter=line
+      - run: npx playwright test tests/e2e/role-tour.spec.ts --reporter=line --workers=3
       - uses: actions/upload-artifact@v4
         if: always()
         with:
