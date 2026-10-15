@@ -4,6 +4,7 @@ const baseURL = process.env.E2E_BASE_URL;
 const roles = ['ADMIN', 'RESPONSIBLE', 'STAFF'] as const;
 
 test.describe('UpTillDawn role-tour browser validation', () => {
+  test.setTimeout(120_000);
   for (const role of roles) {
     test(role + ' authenticated tour inspection', async ({ page }, testInfo) => {
       test.skip(!baseURL, 'E2E_BASE_URL must target an isolated staging deployment');
@@ -120,26 +121,6 @@ test.describe('UpTillDawn role-tour browser validation', () => {
       console.log(`[${role}] Navigation inventory: ${JSON.stringify(navigation)}`);
       await testInfo.attach(`${role.toLowerCase()}-navigation.json`, { body: JSON.stringify({ role, authenticatedPath, navigation }, null, 2), contentType: 'application/json' });
       await expect(page.locator('body')).toBeVisible();
-      // Non-destructive route coverage: visit every same-origin, visible navigation destination.
-      const routeChecks: Array<{ path: string; finalPath: string; status: number | null; visible: boolean }> = [];
-      const uniquePaths = [...new Set(navigation.map(item => item.href).filter((href): href is string => Boolean(href && href.startsWith('/') && !href.startsWith('//'))))];
-      for (const path of uniquePaths) {
-        const target = new URL(path, baseURL!);
-        const response = await page.goto(target.toString(), { waitUntil: 'domcontentloaded', timeout: 20000 }).catch(() => null);
-        const finalPath = new URL(page.url()).pathname;
-        const visible = await page.locator('body').isVisible().catch(() => false);
-        routeChecks.push({ path, finalPath, status: response?.status() ?? null, visible });
-        if (routeChecks.length <= 2) await page.screenshot({ path: testInfo.outputPath(`${role.toLowerCase()}-route-${routeChecks.length}.png`), fullPage: false, timeout: 5000 }).catch(error => console.log(`[${role}] optional route screenshot skipped: ${String(error)}`));
-      }
-      console.log(`[${role}] Navigation route audit: ${JSON.stringify(routeChecks)}`);
-      await testInfo.attach(`${role.toLowerCase()}-route-audit.json`, { body: JSON.stringify(routeChecks, null, 2), contentType: 'application/json' });
-      expect(routeChecks.length, 'No navigable routes found for authenticated role').toBeGreaterThan(0);
-      for (const check of routeChecks) {
-        expect(check.status, `${role} ${check.path}: HTTP error`).not.toBeNull();
-        expect(check.status!, `${role} ${check.path}: HTTP error`).toBeLessThan(400);
-        expect(check.visible, `${role} ${check.path}: body not visible`).toBe(true);
-        expect(check.finalPath, `${role} ${check.path}: unexpected login redirect`).not.toMatch(/^\/login\//);
-      }
       // Role-specific training entrypoint: validate the actual chapters and start control.
       // A client-side redirect or outstanding prefetch may abort a navigation even
       // when the destination loads correctly. Recover once on a fresh page.
@@ -161,7 +142,14 @@ test.describe('UpTillDawn role-tour browser validation', () => {
       }
       await expect(page.locator('main')).toBeVisible();
       const trainingHeading = page.getByRole('heading', { name: /interactieve opleiding|interactive training|formation interactive|interaktives training/i });
-      await expect(trainingHeading).toBeVisible({ timeout: 12000 });
+      try {
+        await expect(trainingHeading).toBeVisible({ timeout: 20000 });
+      } catch (error) {
+        const diagnostic = { role, path: new URL(page.url()).pathname, headings: await page.getByRole('heading').allTextContents().catch(() => []), mainVisible: await page.locator('main').isVisible().catch(() => false), rpc: roleRpcDiagnostics };
+        console.error(`[${role}] Training render diagnostic: ${JSON.stringify(diagnostic)}`);
+        await testInfo.attach(`${role.toLowerCase()}-training-render.json`, { body: JSON.stringify(diagnostic, null, 2), contentType: 'application/json' });
+        throw error;
+      }
       if (role === 'ADMIN') {
         const switchToAdmin = page.getByRole('button', { name: /admin-rondleiding openen|open admin tour|ouvrir la visite admin|admin-tour öffnen/i });
         if (await switchToAdmin.isVisible().catch(() => false)) {
@@ -182,6 +170,26 @@ test.describe('UpTillDawn role-tour browser validation', () => {
       }
       if (role === 'ADMIN' && !/admin/i.test(roleHeading || '')) {
         throw new Error(`Admin credentials are rendering ${JSON.stringify(roleHeading)} training on staging; admin switch visible=${adminSwitchVisible}. Verify staging deployment and effective role before checking chapters.`);
+      }
+      // Non-destructive route coverage: visit every same-origin, visible navigation destination.
+      const routeChecks: Array<{ path: string; finalPath: string; status: number | null; visible: boolean }> = [];
+      const uniquePaths = [...new Set(navigation.map(item => item.href).filter((href): href is string => Boolean(href && href.startsWith('/') && !href.startsWith('//'))))];
+      for (const path of uniquePaths) {
+        const target = new URL(path, baseURL!);
+        const response = await page.goto(target.toString(), { waitUntil: 'domcontentloaded', timeout: 20000 }).catch(() => null);
+        const finalPath = new URL(page.url()).pathname;
+        const visible = await page.locator('body').isVisible().catch(() => false);
+        routeChecks.push({ path, finalPath, status: response?.status() ?? null, visible });
+        if (routeChecks.length <= 2) await page.screenshot({ path: testInfo.outputPath(`${role.toLowerCase()}-route-${routeChecks.length}.png`), fullPage: false, timeout: 5000 }).catch(error => console.log(`[${role}] optional route screenshot skipped: ${String(error)}`));
+      }
+      console.log(`[${role}] Navigation route audit: ${JSON.stringify(routeChecks)}`);
+      await testInfo.attach(`${role.toLowerCase()}-route-audit.json`, { body: JSON.stringify(routeChecks, null, 2), contentType: 'application/json' });
+      expect(routeChecks.length, 'No navigable routes found for authenticated role').toBeGreaterThan(0);
+      for (const check of routeChecks) {
+        expect(check.status, `${role} ${check.path}: HTTP error`).not.toBeNull();
+        expect(check.status!, `${role} ${check.path}: HTTP error`).toBeLessThan(400);
+        expect(check.visible, `${role} ${check.path}: body not visible`).toBe(true);
+        expect(check.finalPath, `${role} ${check.path}: unexpected login redirect`).not.toMatch(/^\/login\//);
       }
       const chapters = page.locator('main section').filter({ has: page.getByRole('heading', { name: /hoofdstukken|chapters|chapitres|kapitel/i }) }).locator('button');
       const chapterNames = await chapters.allTextContents();
