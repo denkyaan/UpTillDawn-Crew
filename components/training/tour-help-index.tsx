@@ -18,17 +18,17 @@ function progressFor(userId:string,role:TourRole,first:string,workplace?:string)
 }
 
 export function TourHelpIndex(){
-  const {user,roles,isOwner,realIsAdmin,setRoleMode}=useAuth()
-  const role=(roles[0]||"employee") as TourRole
+  const {user,roles,roleMode,realIsAdmin,setRoleMode}=useAuth()
+  const role=(roleMode||roles[0]||null) as TourRole|null
   const [locale,setLocale]=useState<SupportedUiLocale>("nl")
   const [preferred,setPreferred]=useState("")
   const [,setRefresh]=useState(0)
   useEffect(()=>{const apply=()=>setLocale(activeUiLocale());queueMicrotask(()=>{apply();setPreferred(sessionStorage.getItem("uptilldawn-training-preferred-workplace")||"")});addEventListener(LANGUAGE_APPLIED_EVENT,apply);const changed=()=>setRefresh(v=>v+1);addEventListener("uptilldawn-tour-finished",changed);addEventListener("storage",changed);return()=>{removeEventListener(LANGUAGE_APPLIED_EVENT,apply);removeEventListener("uptilldawn-tour-finished",changed);removeEventListener("storage",changed)}},[])
   const driver=/driver/i.test(preferred)
   const entrance=/inkom|entrance|guest/i.test(preferred)
-  const chapters=useMemo(()=>getTourChapters(role,{driver,entrance,scope:preferred?"workplace":"general"}),[driver,entrance,preferred,role])
-  const progress=user?progressFor(user.id,role,chapters[0]?.key||"overview",preferred):null
-  if(!user||!progress)return null
+  const chapters=useMemo(()=>role?getTourChapters(role,{driver,entrance,scope:preferred?"workplace":"general"}):[],[driver,entrance,preferred,role])
+  const progress=user&&role?progressFor(user.id,role,chapters[0]?.key||"overview",preferred):null
+  if(!user||!role||!progress)return null
 
   const start=async(targetRole:UiRole=role,options?:{workplace?:string;chapter?:string;mode?:TourMode;scenario?:TourScenario})=>{
     if(targetRole!==roles[0]&&realIsAdmin)await setRoleMode(targetRole)
