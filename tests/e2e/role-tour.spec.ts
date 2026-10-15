@@ -40,6 +40,27 @@ test.describe('UpTillDawn role-tour browser validation', () => {
       await page.screenshot({ path: testInfo.outputPath(`${role.toLowerCase()}-login.png`), fullPage: true });
       const submit = page.getByRole('button', { name: /inloggen|login|sign in|connexion|anmelden/i });
       await expect(submit).toBeVisible();
+      // Capture only role diagnostics and HTTP error codes; never log tokens, profile IDs or PII.
+      const roleRpcDiagnostics: Array<{ rpc: string; status: number; role?: string; errorCode?: string }> = [];
+      page.on('response', async response => {
+        const match = new URL(response.url()).pathname.match(/\/rest\/v1\/rpc\/(upt_current_profile|upt_current_effective_role|upt_current_is_owner)$/);
+        if (!match) return;
+        const item: { rpc: string; status: number; role?: string; errorCode?: string } = { rpc: match[1], status: response.status() };
+        try {
+          const payload = await response.json();
+          if (response.status() >= 400) {
+            item.errorCode = String(payload?.code ?? payload?.error_code ?? 'HTTP_ERROR').slice(0, 80);
+          } else if (match[1] === 'upt_current_profile') {
+            const raw = Array.isArray(payload) ? payload[0]?.role : payload?.role;
+            if (['staff', 'responsible_lead', 'admin'].includes(raw)) item.role = raw;
+          } else if (match[1] === 'upt_current_effective_role' && ['staff', 'employee', 'responsible_lead', 'admin'].includes(payload)) {
+            item.role = payload;
+          } else if (match[1] === 'upt_current_is_owner' && typeof payload === 'boolean') {
+            item.role = payload ? 'owner' : 'not_owner';
+          }
+        } catch { if (response.status() >= 400) item.errorCode = 'UNREADABLE_RESPONSE'; }
+        roleRpcDiagnostics.push(item);
+      });
       const authResponses: Array<{ status: number; url: string; error?: string }> = [];
       const formPosts: Array<{ status: number; path: string; nextAction: boolean }> = [];
       page.on('response', async response => {
@@ -154,6 +175,8 @@ test.describe('UpTillDawn role-tour browser validation', () => {
       const roleHeading = await page.locator('main section').first().locator('h2').first().textContent().catch(() => null);
       const adminSwitchVisible = await page.getByRole('button', { name: /admin-rondleiding openen|open admin tour|ouvrir la visite admin|admin-tour öffnen/i }).isVisible().catch(() => false);
       console.log(`[${role}] Training role heading: ${JSON.stringify(roleHeading)}; admin switch visible: ${adminSwitchVisible}`);
+      console.log(`[${role}] Safe Supabase role RPC diagnostic: ${JSON.stringify(roleRpcDiagnostics)}`);
+      await testInfo.attach(`${role.toLowerCase()}-role-rpc-diagnostic.json`, { body: JSON.stringify({ expectedRole: role, rpc: roleRpcDiagnostics }, null, 2), contentType: 'application/json' });
       if (role === 'RESPONSIBLE' && !/verantwoordelijke|responsible|responsable|verantwortlich/i.test(roleHeading || '')) {
         throw new Error(`Responsible credentials are rendering ${JSON.stringify(roleHeading)} training on staging. Verify the account's effective role and staging deployment.`);
       }
