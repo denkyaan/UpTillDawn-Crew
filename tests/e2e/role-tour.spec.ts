@@ -253,7 +253,7 @@ test.describe('UpTillDawn role-tour browser validation', () => {
       const tourPanel = page.locator('[data-tour-panel]');
       await expect(tourPanel, `${role}: active interactive tour controller missing`).toBeVisible({ timeout: 15000 });
       const progressLabel = (await tourPanel.innerText()).trim();
-      expect(progressLabel, `${role}: tour progress counter missing`).toMatch(/\\b1\\/\\d+\\b/);
+      expect(progressLabel, `${role}: tour progress counter missing`).toMatch(/\b1\/\d+\b/);
       console.log(`[${role}] Active tour progress: ${progressLabel}`);
       await testInfo.attach(`${role.toLowerCase()}-active-tour.json`, {
         body: JSON.stringify({ role, progressLabel, path: new URL(page.url()).pathname }, null, 2),
