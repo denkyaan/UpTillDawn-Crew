@@ -120,7 +120,24 @@ test.describe('UpTillDawn role-tour browser validation', () => {
         expect(check.finalPath, `${role} ${check.path}: unexpected login redirect`).not.toMatch(/^\/login\//);
       }
       // Role-specific training entrypoint: validate the actual chapters and start control.
-      const trainingResponse = await page.goto(new URL('/help', baseURL!).toString(), { waitUntil: 'domcontentloaded', timeout: 20000 });
+      // A client-side redirect or outstanding prefetch may abort a navigation even
+      // when the destination loads correctly. Recover once on a fresh page.
+      let trainingResponse: Awaited<ReturnType<typeof page.goto>> = null;
+      try {
+        trainingResponse = await page.goto(new URL('/help', baseURL!).toString(), { waitUntil: 'domcontentloaded', timeout: 20000 });
+      } catch (error) {
+        if (!String(error).includes('ERR_ABORTED')) throw error;
+        console.log(`[${role}] /help navigation aborted; retrying in a fresh page`);
+        const retryPage = await page.context().newPage();
+        try {
+          const retryResponse = await retryPage.goto(new URL('/help', baseURL!).toString(), { waitUntil: 'domcontentloaded', timeout: 20000 });
+          await expect(retryPage.locator('main')).toBeVisible();
+          await page.goto(new URL('/help', baseURL!).toString(), { waitUntil: 'commit', timeout: 20000 }).catch(() => null);
+          trainingResponse = retryResponse;
+        } finally {
+          await retryPage.close();
+        }
+      }
       await expect(page.locator('main')).toBeVisible();
       const trainingHeading = page.getByRole('heading', { name: /interactieve opleiding|interactive training|formation interactive|interaktives training/i });
       await expect(trainingHeading).toBeVisible({ timeout: 12000 });
