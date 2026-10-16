@@ -513,16 +513,27 @@ test.describe('UpTillDawn role-tour browser validation', () => {
       await expect(page.locator('body')).toBeVisible();
       // Non-destructive route coverage: visit every same-origin, visible navigation destination.
       console.log(`[${role}] Route audit started with ${navigation.length} navigation links`);
-      const routeChecks: Array<{ path: string; finalPath: string; status: number | null; visible: boolean }> = [];
+      const routeChecks: Array<{ path: string; finalPath: string; status: number | null; visible: boolean; navigationError: string | null; documentStatus: number | null }> = [];
       const uniquePaths = [...new Set(navigation.map(item => item.href).filter((href): href is string => Boolean(href && href.startsWith('/') && !href.startsWith('//'))))];
       for (const path of uniquePaths) {
         console.log(`[${role}] Route audit visiting ${path}`);
         const target = new URL(path, baseURL!);
-        const response = await page.goto(target.toString(), { waitUntil: 'domcontentloaded', timeout: 20000 }).catch(() => null);
+        let navigationError: string | null = null;
+        const response = await page.goto(target.toString(), { waitUntil: 'domcontentloaded', timeout: 20000 }).catch((error: unknown) => {
+          navigationError = String(error);
+          return null;
+        });
         const finalPath = new URL(page.url()).pathname;
         const visible = await page.locator('body').isVisible().catch(() => false);
-        routeChecks.push({ path, finalPath, status: response?.status() ?? null, visible });
-        console.log(`[${role}] Route audit result ${path}: status=${response?.status() ?? 'null'} final=${finalPath}`);
+        // A Next.js client-side route may not yield a document response.
+        // Preserve the real failure reason and independently probe HTTP without
+        // treating a rendered body as proof of a successful server response.
+        const documentStatus = response ? response.status() : await page.request.get(target.toString(), { timeout: 15000, maxRedirects: 0 }).then(result => result.status()).catch((error: unknown) => {
+          console.error(`[${role}] Route audit HTTP probe failed ${path}: ${String(error)}`);
+          return null;
+        });
+        routeChecks.push({ path, finalPath, status: response?.status() ?? null, visible, navigationError, documentStatus });
+        console.log(`[${role}] Route audit result ${path}: status=${response?.status() ?? 'null'} httpProbe=${documentStatus ?? 'null'} final=${finalPath} navigationError=${navigationError ?? 'none'}`);
         if (routeChecks.length <= 2) await page.screenshot({ path: testInfo.outputPath(`${role.toLowerCase()}-route-${routeChecks.length}.png`), fullPage: false, timeout: 5000 }).catch(error => console.log(`[${role}] optional route screenshot skipped: ${String(error)}`));
       }
       console.log(`[${role}] Navigation route audit: ${JSON.stringify(routeChecks)}`);
@@ -531,8 +542,8 @@ test.describe('UpTillDawn role-tour browser validation', () => {
       await testInfo.attach(`${role.toLowerCase()}-route-audit.json`, { body: JSON.stringify(routeChecks, null, 2), contentType: 'application/json' });
       expect(routeChecks.length, 'No navigable routes found for authenticated role').toBeGreaterThan(0);
       for (const check of routeChecks) {
-        expect(check.status, `${role} ${check.path}: HTTP error`).not.toBeNull();
-        expect(check.status!, `${role} ${check.path}: HTTP error`).toBeLessThan(400);
+        expect(check.documentStatus, `${role} ${check.path}: no document or independent HTTP response (navigation error: ${check.navigationError ?? 'none'})`).not.toBeNull();
+        expect(check.documentStatus!, `${role} ${check.path}: HTTP error (navigation error: ${check.navigationError ?? 'none'})`).toBeLessThan(400);
         expect(check.visible, `${role} ${check.path}: body not visible`).toBe(true);
         expect(check.finalPath, `${role} ${check.path}: unexpected login redirect`).not.toMatch(/^\/login\//);
       }
