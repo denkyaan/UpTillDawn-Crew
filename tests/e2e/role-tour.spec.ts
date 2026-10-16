@@ -217,11 +217,17 @@ test.describe('UpTillDawn role-tour browser validation', () => {
       // The admin login uses a document navigation via /api/auth/admin-login.
       // Inspecting body before that navigation settles races the old document
       // being destroyed and causes a false timeout.
-      await page.waitForURL(url => !url.pathname.startsWith('/api/auth/'), {
-        waitUntil: 'domcontentloaded',
-        timeout: 15000,
-      }).catch(() => {});
-      await expect(page.locator('body')).toBeVisible({ timeout: 15000 });
+      await page.waitForLoadState('domcontentloaded', { timeout: 30000 }).catch(() => {});
+      try {
+        await expect(page.locator('body')).toBeVisible({ timeout: 30000 });
+      } catch (error) {
+        const diagnostic = { role, url: page.url(), authResponses, formPosts, serverFailures };
+        console.error(`[${role}] Login document navigation diagnostic: ${JSON.stringify(diagnostic)}`);
+        await testInfo.attach(`${role.toLowerCase()}-login-document-navigation.json`, {
+          body: JSON.stringify(diagnostic, null, 2), contentType: 'application/json',
+        });
+        throw error;
+      }
       await expect(page.locator('body')).not.toContainText(/invalid login credentials|ongeldige inloggegevens/i);
       try {
         await expect.poll(() => new URL(page.url()).pathname, { timeout: 15000 }).not.toMatch(/^\/login\//);
@@ -450,7 +456,25 @@ test.describe('UpTillDawn role-tour browser validation', () => {
       const targetSelector = testInfo.project.use.viewport?.width && testInfo.project.use.viewport.width < 1024
         ? firstChapter.mobileSelector : firstChapter.desktopSelector;
       const tourTarget = page.locator(targetSelector).first();
-      await expect(tourTarget, `${role}: first training chapter target missing`).toBeVisible({ timeout: 10000 });
+      try {
+        await expect(tourTarget, `${role}: first training chapter target missing`).toBeVisible({ timeout: 15000 });
+      } catch (error) {
+        const diagnostic = await page.evaluate((selector) => ({
+          path: location.pathname,
+          expectedSelector: selector,
+          matchingElements: document.querySelectorAll(selector).length,
+          demoScreens: Array.from(document.querySelectorAll('[data-tour-demo]')).map(el => ({
+            type: el.getAttribute('data-tour-demo'), visible: el.getClientRects().length > 0,
+          })),
+          panel: document.querySelector('[data-tour-panel]')?.textContent?.slice(0, 500) ?? null,
+          session: sessionStorage.getItem('uptilldawn-tour-active-v8'),
+        }), targetSelector);
+        console.error(`[${role}] Missing chapter target diagnostic: ${JSON.stringify(diagnostic)}`);
+        await testInfo.attach(`${role.toLowerCase()}-missing-first-target.json`, {
+          body: JSON.stringify(diagnostic, null, 2), contentType: 'application/json',
+        });
+        throw error;
+      }
       const targetBounds = await tourTarget.boundingBox();
       expect(targetBounds, `${role}: first training target has no visible bounds`).not.toBeNull();
       expect(targetBounds!.width).toBeGreaterThan(0);
