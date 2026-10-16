@@ -246,6 +246,7 @@ test.describe('UpTillDawn role-tour browser validation', () => {
       const clickTarget = navigation.find(item =>
         item.href?.startsWith('/') && !item.href.startsWith('//') &&
         new URL(item.href, baseURL!).pathname !== authenticatedPath &&
+        new URL(item.href, baseURL!).pathname !== '/' &&
         !['login', 'logout', 'signup', 'auth'].includes(new URL(item.href, baseURL!).pathname.split('/')[1])
       );
       expect(clickTarget, `${role}: no distinct role navigation link`).toBeDefined();
