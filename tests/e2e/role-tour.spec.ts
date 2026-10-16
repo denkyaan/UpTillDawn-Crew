@@ -433,6 +433,11 @@ test.describe('UpTillDawn role-tour browser validation', () => {
             progress: Object.entries(localStorage).filter(([key]) => key.startsWith('uptilldawn-tour-progress:')),
             dialogs: Array.from(document.querySelectorAll('[role="dialog"]')).map(node => (node.textContent || '').slice(0, 500)),
             tourActionEvents: (window as typeof window & { __tourActionEvents?: unknown[] }).__tourActionEvents ?? [],
+            tourController: {
+              panelCount: document.querySelectorAll('[data-tour-panel]').length,
+              currentText: document.querySelector('[data-tour-panel]')?.textContent?.trim() ?? null,
+              activeSession: sessionStorage.getItem('uptilldawn-tour-active-v8'),
+            },
             demoButtons: Array.from(document.querySelectorAll('[data-tour-demo="primary-action"]')).map(node => ({ text: node.textContent?.trim(), html: node.outerHTML.slice(0, 500) })),
           }));
           await testInfo.attach(`${role.toLowerCase()}-first-action-failure.json`, {
@@ -440,6 +445,7 @@ test.describe('UpTillDawn role-tour browser validation', () => {
             contentType: 'application/json',
           });
           console.error(`[${role}] FIRST_ACTION_FAILURE ${JSON.stringify({ before: firstActionBefore, after })}`);
+          console.error(`[${role}] STAGING_CONTROLLER_CHECK: real event emitted=${after.tourActionEvents.some((event: { type: string }) => event.type === 'uptilldawn-training-nav-target')}; active chapter=${after.tourController.currentText}; persisted progress=${JSON.stringify(after.progress)}. A test-branch merge does not deploy application code to E2E_BASE_URL.`);
           throw error;
         }
         await testInfo.attach(`${role.toLowerCase()}-first-action-transition.json`, {
