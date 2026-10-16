@@ -396,7 +396,17 @@ test.describe('UpTillDawn role-tour browser validation', () => {
             body: JSON.stringify({ role, dialogState, firstActionBefore }, null, 2),
             contentType: 'application/json',
           });
-          throw new Error(`${role}: first action blocked by a real modal dialog; see blocking-dialog artifact`);
+          // The first-login welcome can mount *after* the tour panel appears.
+          // Finish that real two-step onboarding UI before interacting with the
+          // sandbox. Never bypass an unknown dialog or force a covered click.
+          const knownWelcome = dialogState.every(text =>
+            /je profiel is opgeslagen|your profile has been saved|votre profil a été enregistré|dein profil wurde gespeichert/i.test(text)
+          );
+          if (!knownWelcome || !(await acknowledgeWelcome())) {
+            throw new Error(`${role}: unexpected blocking dialog before first action; see blocking-dialog artifact`);
+          }
+          await expect(blockingDialog, `${role}: welcome dialog did not close`).toHaveCount(0, { timeout: 10000 });
+          await expect(tourPanel, `${role}: tour controller missing after welcome`).toBeVisible({ timeout: 15000 });
         }
         await overviewAction.click({ timeout: 10000 });
         try {
