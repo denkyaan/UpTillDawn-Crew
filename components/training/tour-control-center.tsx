@@ -216,7 +216,10 @@ export function TourControlCenter({active,userId,role,preferredWorkplace,mode="f
       // chapters only. In that case continue to the next chapter in the active
       // scope instead of silently ignoring the user's indicated action.
       const requested=chapters.find(chapter=>chapter.key===target)
-      const next=requested||chapters[currentIndex+1]
+      // The sandbox primary action can report the current chapter's target
+      // (e.g. "overview") as the user completes it. Treat that as a completed
+      // action and advance, rather than discarding it as a no-op.
+      const next=requested&&requested.key!==current.key?requested:chapters[currentIndex+1]
       if(!next||next.key===current.key)return
       const prior=progressRef.current
       const completed=unique([...prior.completed,current.key])
