@@ -408,6 +408,20 @@ test.describe('UpTillDawn role-tour browser validation', () => {
           await expect(blockingDialog, `${role}: welcome dialog did not close`).toHaveCount(0, { timeout: 10000 });
           await expect(tourPanel, `${role}: tour controller missing after welcome`).toBeVisible({ timeout: 15000 });
         }
+        // Observe genuine application events only; do not emit or fabricate them.
+        await page.evaluate(() => {
+          const win = window as typeof window & { __tourActionEvents?: Array<{ type: string; detail: unknown; path: string }> };
+          win.__tourActionEvents = [];
+          for (const type of ['uptilldawn-training-nav-target', 'uptilldawn-training-completed']) {
+            window.addEventListener(type, (event) => {
+              win.__tourActionEvents?.push({
+                type,
+                detail: (event as CustomEvent).detail ?? null,
+                path: location.pathname,
+              });
+            });
+          }
+        });
         await overviewAction.click({ timeout: 10000 });
         try {
           await expect(tourPanel, `${role}: first sandbox action did not advance tour`).toContainText('2/11', { timeout: 15000 });
@@ -418,11 +432,14 @@ test.describe('UpTillDawn role-tour browser validation', () => {
             activeSession: sessionStorage.getItem('uptilldawn-tour-active-v8'),
             progress: Object.entries(localStorage).filter(([key]) => key.startsWith('uptilldawn-tour-progress:')),
             dialogs: Array.from(document.querySelectorAll('[role="dialog"]')).map(node => (node.textContent || '').slice(0, 500)),
+            tourActionEvents: (window as typeof window & { __tourActionEvents?: unknown[] }).__tourActionEvents ?? [],
+            demoButtons: Array.from(document.querySelectorAll('[data-tour-demo="primary-action"]')).map(node => ({ text: node.textContent?.trim(), html: node.outerHTML.slice(0, 500) })),
           }));
           await testInfo.attach(`${role.toLowerCase()}-first-action-failure.json`, {
             body: JSON.stringify({ role, before: firstActionBefore, after }, null, 2),
             contentType: 'application/json',
           });
+          console.error(`[${role}] FIRST_ACTION_FAILURE ${JSON.stringify({ before: firstActionBefore, after })}`);
           throw error;
         }
         await testInfo.attach(`${role.toLowerCase()}-first-action-transition.json`, {
