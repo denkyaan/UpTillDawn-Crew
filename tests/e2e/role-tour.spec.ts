@@ -345,6 +345,30 @@ test.describe('UpTillDawn role-tour browser validation', () => {
         body: JSON.stringify({ role, progressLabel, path: new URL(page.url()).pathname }, null, 2),
         contentType: 'application/json',
       });
+      // Assert the actual first chapter target is present and visibly highlighted.
+      // This checks the rendered UI instead of simulating a tour-completion event.
+      const firstChapter = getTourChapters(
+        role === 'ADMIN' ? 'admin' : role === 'RESPONSIBLE' ? 'responsible_lead' : 'employee',
+        { mode: 'full', scope: 'general' }
+      )[0];
+      const targetSelector = testInfo.project.use.viewport?.width && testInfo.project.use.viewport.width < 1024
+        ? firstChapter.mobileSelector : firstChapter.desktopSelector;
+      const tourTarget = page.locator(targetSelector).first();
+      await expect(tourTarget, `${role}: first training chapter target missing`).toBeVisible({ timeout: 10000 });
+      const targetBounds = await tourTarget.boundingBox();
+      expect(targetBounds, `${role}: first training target has no visible bounds`).not.toBeNull();
+      expect(targetBounds!.width).toBeGreaterThan(0);
+      expect(targetBounds!.height).toBeGreaterThan(0);
+      const highlight = page.locator('div[aria-hidden="true"].fixed.border-violet-400');
+      await expect(highlight, `${role}: purple target highlight missing`).toBeVisible({ timeout: 10000 });
+      const highlightBounds = await highlight.boundingBox();
+      expect(highlightBounds, `${role}: highlight has no bounds`).not.toBeNull();
+      expect(highlightBounds!.width).toBeGreaterThan(0);
+      expect(highlightBounds!.height).toBeGreaterThan(0);
+      await testInfo.attach(`${role.toLowerCase()}-target-highlight.json`, {
+        body: JSON.stringify({ role, chapter: firstChapter.key, targetSelector, targetBounds, highlightBounds }, null, 2),
+        contentType: 'application/json',
+      });
       // Exercise a real interactive tour control rather than only inspecting its presence.
       // Pausing is non-destructive and must clear the active session for every role.
       const pauseButton = tourPanel.getByRole('button', { name: /pauzeer|pause|pausieren/i });
