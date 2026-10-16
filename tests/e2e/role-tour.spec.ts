@@ -377,6 +377,20 @@ test.describe('UpTillDawn role-tour browser validation', () => {
         body: JSON.stringify({ role, chapter: firstChapter.key, targetSelector, targetBounds, highlightBounds }, null, 2),
         contentType: 'application/json',
       });
+      // Execute the actual sandbox overview CTA for crew roles and require a
+      // real chapter transition. Do not dispatch synthetic training events.
+      if (role !== 'ADMIN') {
+        const overviewAction = page.getByRole('button', {
+          name: /view the demo event|bekijk het demo.event|voir l'événement démo|demo.event ansehen/i,
+        }).first();
+        await expect(overviewAction, `${role}: overview demo action missing`).toBeVisible({ timeout: 10000 });
+        await overviewAction.click({ timeout: 10000 });
+        await expect(tourPanel, `${role}: first sandbox action did not advance tour`).toContainText('2/11', { timeout: 15000 });
+        await testInfo.attach(`${role.toLowerCase()}-first-action-transition.json`, {
+          body: JSON.stringify({ role, action: 'overview demo event', progress: (await tourPanel.innerText()).trim(), path: new URL(page.url()).pathname }, null, 2),
+          contentType: 'application/json',
+        });
+      }
       // Exercise a real interactive tour control rather than only inspecting its presence.
       // Pausing is non-destructive and must clear the active session for every role.
       const pauseButton = tourPanel.getByRole('button', { name: /pauzeer|pause|pausieren/i });
