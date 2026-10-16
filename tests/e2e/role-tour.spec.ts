@@ -37,6 +37,32 @@ test.describe('Role-specific tour chapter matrix (all locales)', () => {
   }
 });
 
+// Separate per-locale cases ensure that one missing translation is reported
+// against the exact role and locale instead of being hidden in a shared case.
+// These are static chapter-contract checks, not substitutes for browser E2E.
+test.describe('Complete chapter contracts by role and locale', () => {
+  const locales: TourLocale[] = ['nl', 'fr', 'en', 'de'];
+  const roleCases: TourRole[] = ['admin', 'responsible_lead', 'employee'];
+  for (const role of roleCases) {
+    for (const locale of locales) {
+      test(`${role}/${locale}: every chapter has complete instructional content`, () => {
+        const chapters = getTourChapters(role, { mode: 'full', scope: 'general' });
+        expect(chapters.length).toBeGreaterThan(0);
+        for (const [index, chapter] of chapters.entries()) {
+          expect(chapter.title[locale]?.trim(), `${role}/${locale}/${chapter.key}: missing title`).toBeTruthy();
+          expect(chapter.description[locale]?.trim(), `${role}/${locale}/${chapter.key}: missing guidance`).toBeTruthy();
+          expect(chapter.desktopSelector.trim(), `${role}/${locale}/${chapter.key}: missing desktop target`).toBeTruthy();
+          expect(chapter.mobileSelector.trim(), `${role}/${locale}/${chapter.key}: missing mobile target`).toBeTruthy();
+          const route = tourBaseRoute(role, chapter);
+          expect(route, `${role}/${locale}/${chapter.key}: invalid route`).toMatch(/^\/(?!\/)/);
+          expect(chapter.roles, `${role}/${locale}/${chapter.key}: role leakage`).toContain(role);
+          expect(chapters.findIndex(item => item.key === chapter.key), `${role}/${locale}/${chapter.key}: duplicate chapter`).toBe(index);
+        }
+      });
+    }
+  }
+});
+
 test.describe('UpTillDawn role-tour browser validation', () => {
   test.setTimeout(120_000);
   for (const role of roles) {
