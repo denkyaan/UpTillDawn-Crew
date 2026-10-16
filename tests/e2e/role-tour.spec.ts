@@ -384,8 +384,37 @@ test.describe('UpTillDawn role-tour browser validation', () => {
           name: /view the demo event|bekijk het demo.event|voir l'événement démo|demo.event ansehen/i,
         }).first();
         await expect(overviewAction, `${role}: overview demo action missing`).toBeVisible({ timeout: 10000 });
+        const blockingDialog = page.locator('[role="dialog"][aria-modal="true"]:visible');
+        const dialogState = await blockingDialog.allTextContents();
+        const firstActionBefore = await page.evaluate(() => ({
+          path: location.pathname,
+          workflow: sessionStorage.getItem('uptilldawn-training-workflow-v3'),
+          activeSession: sessionStorage.getItem('uptilldawn-tour-active-v8'),
+        }));
+        if (dialogState.length) {
+          await testInfo.attach(`${role.toLowerCase()}-blocking-dialog.json`, {
+            body: JSON.stringify({ role, dialogState, firstActionBefore }, null, 2),
+            contentType: 'application/json',
+          });
+          throw new Error(`${role}: first action blocked by a real modal dialog; see blocking-dialog artifact`);
+        }
         await overviewAction.click({ timeout: 10000 });
-        await expect(tourPanel, `${role}: first sandbox action did not advance tour`).toContainText('2/11', { timeout: 15000 });
+        try {
+          await expect(tourPanel, `${role}: first sandbox action did not advance tour`).toContainText('2/11', { timeout: 15000 });
+        } catch (error) {
+          const after = await page.evaluate(() => ({
+            path: location.pathname,
+            workflow: sessionStorage.getItem('uptilldawn-training-workflow-v3'),
+            activeSession: sessionStorage.getItem('uptilldawn-tour-active-v8'),
+            progress: Object.entries(localStorage).filter(([key]) => key.startsWith('uptilldawn-tour-progress:')),
+            dialogs: Array.from(document.querySelectorAll('[role="dialog"]')).map(node => (node.textContent || '').slice(0, 500)),
+          }));
+          await testInfo.attach(`${role.toLowerCase()}-first-action-failure.json`, {
+            body: JSON.stringify({ role, before: firstActionBefore, after }, null, 2),
+            contentType: 'application/json',
+          });
+          throw error;
+        }
         await testInfo.attach(`${role.toLowerCase()}-first-action-transition.json`, {
           body: JSON.stringify({ role, action: 'overview demo event', progress: (await tourPanel.innerText()).trim(), path: new URL(page.url()).pathname }, null, 2),
           contentType: 'application/json',
