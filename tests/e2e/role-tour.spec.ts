@@ -604,7 +604,7 @@ test.describe('UpTillDawn role-tour browser validation', () => {
       // Inventory the actual visible, enabled and disabled controls on every
       // authenticated route. This is an auditable coverage baseline, not a
       // substitute for exercising each action. Never click destructive actions.
-      const controlInventory: Array<{ path: string; controls: Array<{ kind: string; label: string; disabled: boolean }>; error?: string }> = [];
+      const controlInventory: Array<{ path: string; controls: Array<{ kind: string; label: string; disabled: boolean; accessibleName: string; actionable: boolean }>; error?: string }> = [];
       for (const path of uniquePaths) {
         const target = new URL(path, baseURL!).toString();
         const inventoryPage = await page.context().newPage();
@@ -626,6 +626,8 @@ test.describe('UpTillDawn role-tour browser validation', () => {
                 kind: node.tagName.toLowerCase(),
                 label: (element.getAttribute('aria-label') || element.getAttribute('title') || (input.type === 'password' ? '[password field]' : element.textContent) || element.getAttribute('name') || '').trim().slice(0, 120),
                 disabled: Boolean(input.disabled || element.getAttribute('aria-disabled') === 'true'),
+              accessibleName: (element.getAttribute('aria-label') || element.getAttribute('aria-labelledby') || element.getAttribute('title') || (element as HTMLButtonElement).innerText || element.getAttribute('placeholder') || element.getAttribute('name') || '').trim().slice(0, 120),
+              actionable: !Boolean(input.disabled || element.getAttribute('aria-disabled') === 'true'),
               };
             })
           );
@@ -641,6 +643,14 @@ test.describe('UpTillDawn role-tour browser validation', () => {
         contentType: 'application/json',
       });
       console.log(`[${role}] Visible control inventory: ${JSON.stringify(controlInventory.map(item => ({ path: item.path, count: item.controls.length, error: item.error ?? null })))}`);
+      const unnamedActions = controlInventory.flatMap(item => item.controls
+        .filter(control => control.actionable && (control.kind === 'button' || control.kind === 'summary') && !control.accessibleName)
+        .map(control => ({ path: item.path, kind: control.kind, label: control.label })));
+      await testInfo.attach(`${role.toLowerCase()}-unnamed-actions.json`, {
+        body: JSON.stringify({ role, unnamedActions }, null, 2),
+        contentType: 'application/json',
+      });
+      console.log(`[${role}] Accessible control naming audit: ${unnamedActions.length} unnamed interactive controls`);
       const inventoryErrors = controlInventory.filter(item => item.error);
       expect(inventoryErrors, `${role}: routes could not be inventoried: ${JSON.stringify(inventoryErrors.map(item => ({ path: item.path, error: item.error })))}`).toHaveLength(0);
       console.log(`[${role}] Navigation route audit: ${JSON.stringify(routeChecks)}`);
