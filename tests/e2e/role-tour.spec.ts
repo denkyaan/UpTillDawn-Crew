@@ -353,6 +353,33 @@ test.describe('UpTillDawn role-tour browser validation', () => {
       await expect(tourPanel, `${role}: tour panel remained active after pause`).toBeHidden({ timeout: 10000 });
       const pausedSession = await page.evaluate(() => sessionStorage.getItem('uptilldawn-tour-active-v8'));
       expect(pausedSession, `${role}: paused tour left active session behind`).toBeNull();
+      // Validate persistence through an actual page reload. No synthetic tour
+      // events, fabricated progress or mutations to application state.
+      const savedProgressBeforeReload = await page.evaluate(() =>
+        Object.entries(localStorage)
+          .filter(([key]) => key.startsWith('uptilldawn-tour-progress:'))
+          .map(([key, value]) => ({ key, value: JSON.parse(value) as { paused?: boolean; activeKey?: string; completed?: string[] } }))
+      );
+      const pausedRecords = savedProgressBeforeReload.filter(record => record.value.paused === true);
+      expect(pausedRecords.length, `${role}: no persisted paused tour progress`).toBeGreaterThan(0);
+      await page.reload({ waitUntil: 'domcontentloaded', timeout: 20000 });
+      await expect(tourPanel, `${role}: paused tour unexpectedly restarted after reload`).toBeHidden({ timeout: 10000 });
+      const savedProgressAfterReload = await page.evaluate(() =>
+        Object.entries(localStorage)
+          .filter(([key]) => key.startsWith('uptilldawn-tour-progress:'))
+          .map(([key, value]) => ({ key, value: JSON.parse(value) as { paused?: boolean; activeKey?: string; completed?: string[] } }))
+      );
+      for (const record of pausedRecords) {
+        const restored = savedProgressAfterReload.find(item => item.key === record.key);
+        expect(restored, `${role}: paused tour progress lost on reload`).toBeDefined();
+        expect(restored!.value.paused).toBe(true);
+        expect(restored!.value.activeKey).toBe(record.value.activeKey);
+        expect(restored!.value.completed).toEqual(record.value.completed);
+      }
+      await testInfo.attach(`${role.toLowerCase()}-pause-reload-persistence.json`, {
+        body: JSON.stringify({ role, pausedRecords, restoredRecords: savedProgressAfterReload }, null, 2),
+        contentType: 'application/json',
+      });
       await testInfo.attach(`${role.toLowerCase()}-pause-validation.json`, {
         body: JSON.stringify({ role, progressBeforePause: progressLabel, panelHidden: true, activeSession: pausedSession }, null, 2),
         contentType: 'application/json',
