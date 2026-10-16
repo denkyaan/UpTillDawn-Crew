@@ -82,7 +82,8 @@ test.describe('Workplace tour scope and new-chapter contracts', () => {
       }
       for (const chapter of workplace) {
         expect(chapter.roles).toContain(role);
-        expect(tourBaseRoute(role, chapter)).toMatch(/^\\/(?!\\/)/);
+        expect(tourBaseRoute(role, chapter).startsWith('/')).toBe(true);
+        expect(tourBaseRoute(role, chapter).startsWith('//')).toBe(false);
         if (chapter.requires) expect(generalKeys.has(chapter.key), `${role}/${chapter.key}: required chapter leaked into general scope`).toBe(false);
       }
       for (const chapter of recent) {
