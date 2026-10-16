@@ -63,6 +63,44 @@ test.describe('Complete chapter contracts by role and locale', () => {
   }
 });
 
+// Workplace-specific tours are separate from the general first-use tour.
+// Verify their inclusion rules for every role; this is contract coverage,
+// not a claim that the workplace exercises were performed in a browser.
+test.describe('Workplace tour scope and new-chapter contracts', () => {
+  const roleCases: TourRole[] = ['admin', 'responsible_lead', 'employee'];
+  for (const role of roleCases) {
+    test(`${role}: driver, entrance and new-mode chapter scope`, () => {
+      const general = getTourChapters(role, { mode: 'full', scope: 'general' });
+      const workplace = getTourChapters(role, { mode: 'full', scope: 'workplace', driver: true, entrance: true });
+      const recent = getTourChapters(role, { mode: 'new', scope: 'workplace', driver: true, entrance: true });
+      const generalKeys = new Set(general.map(chapter => chapter.key));
+      const workplaceKeys = new Set(workplace.map(chapter => chapter.key));
+      expect(workplaceKeys.size).toBe(workplace.length);
+      for (const chapter of general) {
+        expect(chapter.requires, `${role}/${chapter.key}: workplace-only chapter leaked into general tour`).toBeUndefined();
+        expect(workplaceKeys.has(chapter.key), `${role}/${chapter.key}: general chapter missing from full workplace scope`).toBe(true);
+      }
+      for (const chapter of workplace) {
+        expect(chapter.roles).toContain(role);
+        expect(tourBaseRoute(role, chapter)).toMatch(/^\\/(?!\\/)/);
+        if (chapter.requires) expect(generalKeys.has(chapter.key), `${role}/${chapter.key}: required chapter leaked into general scope`).toBe(false);
+      }
+      for (const chapter of recent) {
+        expect(chapter.newSince, `${role}/${chapter.key}: old chapter included in new-only tour`).toBe(8);
+        expect(workplaceKeys.has(chapter.key)).toBe(true);
+      }
+      const withoutAssignments = getTourChapters(role, { mode: 'full', scope: 'workplace' });
+      expect(withoutAssignments.some(chapter => chapter.requires === 'driver')).toBe(false);
+      expect(withoutAssignments.some(chapter => chapter.requires === 'entrance' && role !== 'admin')).toBe(false);
+      if (role === 'admin') {
+        expect(workplaceKeys.has('driver')).toBe(false);
+      } else {
+        expect(workplaceKeys.has('driver')).toBe(true);
+      }
+    });
+  }
+});
+
 test.describe('UpTillDawn role-tour browser validation', () => {
   test.setTimeout(120_000);
   for (const role of roles) {
