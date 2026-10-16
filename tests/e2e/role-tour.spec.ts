@@ -506,6 +506,27 @@ test.describe('UpTillDawn role-tour browser validation', () => {
           await expect(eventsLink, `${role}: events navigation link missing`).toBeVisible({ timeout: 10000 });
           await eventsLink.click({ timeout: 10000 });
           await expect(tourPanel, `${role}: manually opening Events did not advance tour`).toContainText('2/11', { timeout: 15000 });
+          // Chapter 2 must display its real training exercise and highlight the
+          // actual actionable element after the user manually opens Events.
+          const eventChapter = getTourChapters(
+            role === 'RESPONSIBLE' ? 'responsible_lead' : 'employee',
+            { mode: 'full', scope: 'general' }
+          ).find(chapter => chapter.key === 'events');
+          expect(eventChapter, `${role}: Events chapter missing from tour contract`).toBeDefined();
+          const eventTargetSelector = page.viewportSize()?.width && page.viewportSize()!.width < 1024
+            ? eventChapter!.mobileSelector : eventChapter!.desktopSelector;
+          const eventTarget = page.locator(eventTargetSelector).first();
+          await expect(eventTarget, `${role}: Events exercise target missing after navigation`).toBeVisible({ timeout: 10000 });
+          const eventBounds = await eventTarget.boundingBox();
+          expect(eventBounds, `${role}: Events target has no bounds`).not.toBeNull();
+          expect(eventBounds!.width).toBeGreaterThan(0);
+          expect(eventBounds!.height).toBeGreaterThan(0);
+          const eventsHighlight = page.locator('div[aria-hidden="true"].fixed.border-violet-400');
+          await expect(eventsHighlight, `${role}: Events target highlight missing`).toBeVisible({ timeout: 10000 });
+          const eventsHighlightBounds = await eventsHighlight.boundingBox();
+          expect(eventsHighlightBounds, `${role}: Events highlight has no bounds`).not.toBeNull();
+          expect(eventsHighlightBounds!.width).toBeGreaterThan(0);
+          expect(eventsHighlightBounds!.height).toBeGreaterThan(0);
         } catch (error) {
           const after = await page.evaluate(() => ({
             path: location.pathname,
