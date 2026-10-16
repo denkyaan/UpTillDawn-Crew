@@ -242,6 +242,23 @@ test.describe('UpTillDawn role-tour browser validation', () => {
       console.log(`[${role}] Navigation inventory: ${JSON.stringify(navigation)}`);
       await testInfo.attach(`${role.toLowerCase()}-navigation.json`, { body: JSON.stringify({ role, authenticatedPath, navigation }, null, 2), contentType: 'application/json' });
       await expect(page.locator('body')).toBeVisible();
+      // Validate a real role navigation click; route visits alone do not test links.
+      const clickTarget = navigation.find(item =>
+        item.href?.startsWith('/') && !item.href.startsWith('//') &&
+        new URL(item.href, baseURL!).pathname !== authenticatedPath &&
+        !/^\\/(login|logout|signup|auth)(\\/|$)/i.test(item.href)
+      );
+      expect(clickTarget, `${role}: no distinct role navigation link`).toBeDefined();
+      const targetPath = new URL(clickTarget!.href!, baseURL!).pathname;
+      const actualLink = page.locator('nav a[href], [role="navigation"] a[href], aside a[href]')
+        .filter({ visible: true }).filter({ hasText: clickTarget!.text }).first();
+      await expect(actualLink, `${role}: role navigation link not visible`).toBeVisible({ timeout: 10000 });
+      await actualLink.click({ timeout: 10000 });
+      await expect.poll(() => new URL(page.url()).pathname, { timeout: 15000 }).toBe(targetPath);
+      await testInfo.attach(`${role.toLowerCase()}-real-navigation-click.json`, {
+        body: JSON.stringify({ role, targetPath, finalPath: new URL(page.url()).pathname }, null, 2),
+        contentType: 'application/json',
+      });
       // Role-specific training entrypoint: validate the actual chapters and start control.
       // A client-side redirect or outstanding prefetch may abort a navigation even
       // when the destination loads correctly. Recover once on a fresh page.
