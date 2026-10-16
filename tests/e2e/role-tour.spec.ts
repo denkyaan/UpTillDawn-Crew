@@ -149,6 +149,14 @@ test.describe('UpTillDawn role-tour browser validation', () => {
       // The login form can unmount immediately after a successful redirect.
       // Never await a locator on the old login page after submission.
       console.log(`[${role}] Post-click URL: ${page.url()}`);
+      // The admin login uses a document navigation via /api/auth/admin-login.
+      // Inspecting body before that navigation settles races the old document
+      // being destroyed and causes a false timeout.
+      await page.waitForURL(url => !url.pathname.startsWith('/api/auth/'), {
+        waitUntil: 'domcontentloaded',
+        timeout: 15000,
+      }).catch(() => {});
+      await expect(page.locator('body')).toBeVisible({ timeout: 15000 });
       await expect(page.locator('body')).not.toContainText(/invalid login credentials|ongeldige inloggegevens/i);
       try {
         await expect.poll(() => new URL(page.url()).pathname, { timeout: 15000 }).not.toMatch(/^\/login\//);
