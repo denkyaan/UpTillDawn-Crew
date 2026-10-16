@@ -424,7 +424,23 @@ test.describe('UpTillDawn role-tour browser validation', () => {
         });
         await overviewAction.click({ timeout: 10000 });
         try {
-          await expect(tourPanel, `${role}: first sandbox action did not advance tour`).toContainText('2/11', { timeout: 15000 });
+          // Staging intentionally requires manual navigation after completing an
+          // exercise. Clicking the CTA alone must not advance the chapter.
+          await expect.poll(async () => page.evaluate(() => {
+            try { return JSON.parse(sessionStorage.getItem('uptilldawn-training-workflow-v3') || '{}').navTarget; }
+            catch { return null; }
+          }), { timeout: 10000 }).toBe('events');
+          await expect(tourPanel, `${role}: chapter advanced without manual navigation`).toContainText('1/11');
+          const manualHint = page.getByRole('status').filter({
+            hasText: /open (zelf )?de gemarkeerde navigatietab|open the highlighted navigation tab|ouvrez vous-même l.onglet|öffne selbst den hervorgehobenen/i,
+          });
+          await expect(manualHint, `${role}: manual navigation instruction missing`).toBeVisible({ timeout: 10000 });
+          const eventsLink = page.locator('a[href]').filter({
+            hasText: /evenementen|events|événements|veranstaltungen/i,
+          }).filter({ visible: true }).first();
+          await expect(eventsLink, `${role}: events navigation link missing`).toBeVisible({ timeout: 10000 });
+          await eventsLink.click({ timeout: 10000 });
+          await expect(tourPanel, `${role}: manually opening Events did not advance tour`).toContainText('2/11', { timeout: 15000 });
         } catch (error) {
           const after = await page.evaluate(() => ({
             path: location.pathname,
