@@ -604,32 +604,45 @@ test.describe('UpTillDawn role-tour browser validation', () => {
       // Inventory the actual visible, enabled and disabled controls on every
       // authenticated route. This is an auditable coverage baseline, not a
       // substitute for exercising each action. Never click destructive actions.
-      const controlInventory: Array<{ path: string; controls: Array<{ kind: string; label: string; disabled: boolean }> }> = [];
+      const controlInventory: Array<{ path: string; controls: Array<{ kind: string; label: string; disabled: boolean }>; error?: string }> = [];
       for (const path of uniquePaths) {
-        await page.goto(new URL(path, baseURL!).toString(), { waitUntil: 'domcontentloaded', timeout: 20000 });
-        await expect(page.locator('main')).toBeVisible({ timeout: 15000 });
-        const controls = await page.locator('main button, main input, main select, main textarea, main [role="button"], main summary').evaluateAll(nodes =>
-          nodes.filter(node => {
-            const element = node as HTMLElement;
-            const style = getComputedStyle(element);
-            return style.display !== 'none' && style.visibility !== 'hidden' && element.getClientRects().length > 0;
-          }).map(node => {
-            const element = node as HTMLElement;
-            const input = node as HTMLInputElement;
-            return {
-              kind: node.tagName.toLowerCase(),
-              label: (element.getAttribute('aria-label') || element.getAttribute('title') || (input.type === 'password' ? '[password field]' : element.textContent) || element.getAttribute('name') || '').trim().slice(0, 120),
-              disabled: Boolean(input.disabled || element.getAttribute('aria-disabled') === 'true'),
-            };
-          })
-        );
-        controlInventory.push({ path, controls });
+        const target = new URL(path, baseURL!).toString();
+        const inventoryPage = await page.context().newPage();
+        try {
+          // An isolated page avoids races with the active tour controller and
+          // makes each route independent. A failed route is recorded, never
+          // silently counted as covered.
+          await inventoryPage.goto(target, { waitUntil: 'commit', timeout: 20000 });
+          await expect(inventoryPage.locator('main').first()).toBeVisible({ timeout: 10000 });
+          const controls = await inventoryPage.locator('main button, main input, main select, main textarea, main [role="button"], main summary').evaluateAll(nodes =>
+            nodes.filter(node => {
+              const element = node as HTMLElement;
+              const style = getComputedStyle(element);
+              return style.display !== 'none' && style.visibility !== 'hidden' && element.getClientRects().length > 0;
+            }).map(node => {
+              const element = node as HTMLElement;
+              const input = node as HTMLInputElement;
+              return {
+                kind: node.tagName.toLowerCase(),
+                label: (element.getAttribute('aria-label') || element.getAttribute('title') || (input.type === 'password' ? '[password field]' : element.textContent) || element.getAttribute('name') || '').trim().slice(0, 120),
+                disabled: Boolean(input.disabled || element.getAttribute('aria-disabled') === 'true'),
+              };
+            })
+          );
+          controlInventory.push({ path, controls });
+        } catch (error) {
+          controlInventory.push({ path, controls: [], error: String(error).slice(0, 500) });
+        } finally {
+          await inventoryPage.close();
+        }
       }
       await testInfo.attach(`${role.toLowerCase()}-visible-controls.json`, {
         body: JSON.stringify({ role, controlInventory }, null, 2),
         contentType: 'application/json',
       });
-      console.log(`[${role}] Visible control inventory: ${JSON.stringify(controlInventory.map(item => ({ path: item.path, count: item.controls.length })))}`);
+      console.log(`[${role}] Visible control inventory: ${JSON.stringify(controlInventory.map(item => ({ path: item.path, count: item.controls.length, error: item.error ?? null })))}`);
+      const inventoryErrors = controlInventory.filter(item => item.error);
+      expect(inventoryErrors, `${role}: routes could not be inventoried: ${JSON.stringify(inventoryErrors.map(item => ({ path: item.path, error: item.error })))}`).toHaveLength(0);
       console.log(`[${role}] Navigation route audit: ${JSON.stringify(routeChecks)}`);
       console.log(`[${role}] Server failures (HTTP 5xx): ${JSON.stringify(serverFailures.slice(-40))}`);
       await testInfo.attach(`${role.toLowerCase()}-server-failures.json`, { body: JSON.stringify(serverFailures, null, 2), contentType: 'application/json' });
