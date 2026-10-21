@@ -2,7 +2,7 @@ import Link from 'next/link'
 import { redirect } from 'next/navigation'
 import { getCurrentUser } from '@/lib/actions/auth'
 import { createClient } from '@/lib/supabase/crew-server'
-import { RoleManagementForm } from './role-management-form'
+import { RoleManagementForm, RoleQuickAction } from './role-management-form'
 
 export const dynamic = 'force-dynamic'
 
@@ -42,6 +42,7 @@ export default async function PortalRolesPage() {
 
   const { data: users } = current.realIsAdmin ? await supabase.from('profiles').select('id,full_name').eq('approved', true).eq('account_blocked', false).neq('id', current.id).order('full_name').limit(500) : { data: null }
 
+  const names = new Map((users ?? []).map(user => [user.id, user.full_name || user.id]))
   const t = translations
   return <main className="mx-auto max-w-5xl space-y-5 p-6">
     <Link href="/portals" className="text-sm text-violet-400">{t.back}</Link>
@@ -51,8 +52,8 @@ export default async function PortalRolesPage() {
     {error ? <p role="alert" className="rounded-xl border border-amber-500/50 p-4">{t.error}</p>
       : !data?.length ? <p className="rounded-xl border p-4">{t.empty}</p>
       : <div className="overflow-x-auto rounded-xl border"><table className="w-full text-left text-sm">
-        <thead><tr className="border-b bg-card"><th className="p-3">{t.person}</th><th className="p-3">{t.portal}</th><th className="p-3">{t.role}</th><th className="p-3">{t.status}</th></tr></thead>
-        <tbody>{data.map(row => <tr key={row.id} className="border-b last:border-b-0"><td className="p-3 font-mono text-xs">{row.user_id}</td><td className="p-3">{row.portal}</td><td className="p-3">{row.role}</td><td className="p-3">{row.revoked_at ? t.revoked : row.approved ? t.approved : t.pending}</td></tr>)}</tbody>
+        <thead><tr className="border-b bg-card"><th className="p-3">{t.person}</th><th className="p-3">{t.portal}</th><th className="p-3">{t.role}</th><th className="p-3">{t.status}</th>{current.realIsAdmin && <th className="p-3">{t.action}</th>}</tr></thead>
+        <tbody>{data.map(row => <tr key={row.id} className="border-b last:border-b-0"><td className="p-3 text-xs">{names.get(row.user_id) ?? row.user_id}</td><td className="p-3">{row.portal}</td><td className="p-3">{row.role}</td><td className="p-3">{row.revoked_at ? t.revoked : row.approved ? t.approved : t.pending}</td>{current.realIsAdmin && <td className="p-3"><RoleQuickAction userId={row.user_id} portal={row.portal} role={row.role} action={row.revoked_at ? "assign" : row.approved ? "revoke" : "approve"} /></td>}</tr>)}</tbody>
       </table></div>}
   </main>
 }
