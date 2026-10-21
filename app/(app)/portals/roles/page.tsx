@@ -7,7 +7,7 @@ export const dynamic = 'force-dynamic'
 
 const translations = {
   title: 'Portaalrollen',
-  description: 'Overzicht van je eigen roltoewijzingen. Wijzigingen zijn nog niet beschikbaar.',
+  description: 'Overzicht van portaalroltoewijzingen. Wijzigingen zijn nog niet beschikbaar.',
   empty: 'Er zijn nog geen roltoewijzingen.',
   error: 'Roltoewijzingen kunnen niet worden geladen.',
   back: 'Terug naar portalen',
@@ -23,13 +23,14 @@ const translations = {
 export default async function PortalRolesPage() {
   const current = await getCurrentUser()
   if (!current) redirect('/login')
+  if (!current.realIsAdmin) redirect('/portals')
   
 
   // No service-role key: RLS remains authoritative, and no write operations are exposed.
   const supabase = await createClient()
   const { data, error } = await supabase.from('portal_role_assignments')
     .select('id,user_id,portal,role,approved,revoked_at')
-    .eq('user_id', current.id).order('created_at', { ascending: false }).limit(100)
+    .order('created_at', { ascending: false }).limit(100)
 
   const t = translations
   return <main className="mx-auto max-w-5xl space-y-5 p-6">
