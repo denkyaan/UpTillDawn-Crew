@@ -283,7 +283,10 @@ try {
           timeout: 45000,
         })
         const form = page.locator('form').filter({ has: page.locator('input[name="response"][value="can"]') }).first()
-        if (await form.count() !== 1) throw new Error('availability action form missing')
+        if (await form.count() !== 1) {
+          const diagnostic=await page.evaluate(()=>({url:location.href,title:document.title,body:document.body.innerText.slice(0,1500),forms:[...document.forms].map(f=>({action:f.action,fields:[...f.querySelectorAll('input')].map(i=>i.name).slice(0,12)}))}))
+          throw new Error(`availability action form missing: ${JSON.stringify(diagnostic)}`)
+        }
         await form.locator('input[name="response"][value="can"]').check()
         await form.locator('input[name="setup_available"][value="yes"]').check()
         await form.locator('input[name="breakdown_available"][value="yes"]').check()
@@ -746,7 +749,11 @@ try {
     try{
       await staffTs.page.goto(`${baseUrl}/timesheets?event=00000000-0000-4000-8000-00000000e2e1`,{waitUntil:'networkidle',timeout:45000})
       const submit=staffTs.page.locator('[data-action="timesheet-submit"]')
-      if(await submit.count()!==1)throw new Error('timesheet submit action missing')
+      if(await submit.count()!==1){
+        const {data:ownRows,error:ownError}=await lifecycleAdmin.from('timesheets').select('id,status,user_id').eq('event_id','00000000-0000-4000-8000-00000000e2e1').eq('user_id',(await lifecycleAdmin.auth.admin.listUsers({perPage:1000})).data?.users?.find(u=>u.email==='bot-03-staff-en@bots.uptilldawn.test')?.id||'00000000-0000-0000-0000-000000000000')
+        const diagnostic=await staffTs.page.evaluate(()=>({url:location.href,body:document.body.innerText.slice(0,1600),status:document.querySelector('[data-timesheet-own-status]')?.textContent,actions:[...document.querySelectorAll('[data-action]')].map(el=>el.getAttribute('data-action'))}))
+        throw new Error(`timesheet submit action missing: ${JSON.stringify({diagnostic,ownRows,ownError:ownError?.message})}`)
+      }
       const [submitResponse]=await Promise.all([
         staffTs.page.waitForResponse(r=>r.request().method()==='POST'&&r.url().includes('/rpc/upt_submit_timesheet'),{timeout:30000}),
         submit.click(),
