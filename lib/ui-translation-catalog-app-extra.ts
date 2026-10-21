@@ -2,6 +2,8 @@ export type ExtraCatalogLocale = 'nl' | 'fr' | 'en' | 'de'
 type Row = { fr:string; en:string; de:string }
 
 export const APP_EXTRA_TRANSLATIONS: Record<string,Row> = {
+  "Portaalrollen": { fr:"Rôles des portails", en:"Portal roles", de:"Portalrollen" },
+  "Overzicht van je eigen roltoewijzingen. Wijzigingen zijn nog niet beschikbaar.": { fr:"Aperçu de vos propres rôles attribués. Les modifications ne sont pas encore disponibles.", en:"Overview of your own role assignments. Changes are not available yet.", de:"Übersicht deiner eigenen Rollenzuweisungen. Änderungen sind noch nicht verfügbar." },
   "Portaal niet beschikbaar": { fr:"Portail indisponible", en:"Portal unavailable", de:"Portal nicht verfügbar" },
   "De toegangscontrole kan momenteel niet worden uitgevoerd. Probeer later opnieuw.": { fr:"La vérification des accès est momentanément indisponible. Réessayez plus tard.", en:"Access verification is currently unavailable. Try again later.", de:"Die Zugriffsprüfung ist derzeit nicht verfügbar. Versuche es später erneut." },
   "Terug naar portalen": { fr:"Retour aux portails", en:"Back to portals", de:"Zurück zu den Portalen" },
