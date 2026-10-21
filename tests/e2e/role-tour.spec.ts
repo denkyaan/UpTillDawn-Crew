@@ -730,7 +730,13 @@ test.describe('UpTillDawn role-tour browser validation', () => {
           // silently counted as covered.
           await inventoryPage.goto(target, { waitUntil: 'commit', timeout: 20000 });
           await expect(inventoryPage.locator('main').first()).toBeVisible({ timeout: 10000 });
-          const controls = await inventoryPage.locator('main button, main input, main select, main textarea, main [role="button"], main summary').evaluateAll(nodes =>
+          // A visible shell is not proof that React finished hydrating.
+          // Inventory interactive elements across the rendered document,
+          // including role portals and dialogs mounted outside <main>.
+          await inventoryPage.waitForLoadState('domcontentloaded', { timeout: 12000 }).catch(() => {});
+          await inventoryPage.locator('button, input, select, textarea, [role="button"], [role="tab"], summary, a[href]')
+            .first().waitFor({ state: 'attached', timeout: 12000 });
+          const controls = await inventoryPage.locator('button, input, select, textarea, [role="button"], [role="tab"], summary, a[href]').evaluateAll(nodes =>
             nodes.filter(node => {
               const element = node as HTMLElement;
               const style = getComputedStyle(element);
@@ -842,7 +848,7 @@ test.describe('UpTillDawn role-tour browser validation', () => {
       // for comprehensive E2E coverage.
       const actionCoverage = controlInventory.map(route => {
         const attempted = interactionAudit.filter(action => action.path === route.path && !action.error);
-        const actionable = route.controls.filter(control => control.actionable);
+        const actionable = route.controls.filter(control => control.actionable && !['a'].includes(control.kind));
         const unexercised = actionable.filter(control =>
           !attempted.some(action =>
             (control.kind === 'summary' && action.kind === 'disclosure' && action.label === control.accessibleName) ||
@@ -866,10 +872,11 @@ test.describe('UpTillDawn role-tour browser validation', () => {
         unexercised: actionCoverage.reduce((sum, route) => sum + route.unexercisedCount, 0),
       };
       await testInfo.attach(`${role.toLowerCase()}-e2e-action-coverage-gaps.json`, {
-        body: JSON.stringify({ role, actionTotals, actionCoverage, releaseReady: actionTotals.unexercised === 0 }, null, 2),
+        body: JSON.stringify({ role, actionTotals, actionCoverage, releaseReady: actionTotals.actionable > 0 && actionTotals.unexercised === 0 }, null, 2),
         contentType: 'application/json',
       });
       console.log(`[${role}] E2E action coverage gaps: ${JSON.stringify(actionTotals)} (not a release approval)`);
+      expect(actionTotals.actionable, `${role}: inventory returned zero actionable controls; coverage is invalid, not complete`).toBeGreaterThan(0);
       const interactionErrors = interactionAudit.filter(item => item.error);
       expect(interactionErrors, `${role}: real UI interaction failures`).toHaveLength(0);
       const inventoryErrors = controlInventory.filter(item => item.error);
