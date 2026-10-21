@@ -519,7 +519,7 @@ try {
         if(afterAction?.activeKey!==before.activeKey||afterAction?.completed?.includes(before.activeKey)){
           throw new Error('demo action automatically advanced or falsely completed the tour')
         }
-        const eventsLink=page.locator('a[href]').filter({hasText:/evenement|event|événement|veranstaltung/i}).first()
+        const eventsLink=page.locator('a[href][data-layout-key="events"]:visible').first()
         await eventsLink.waitFor({state:'visible',timeout:15000})
         await eventsLink.click()
         await page.waitForFunction(key=>{
