@@ -41,7 +41,7 @@ begin
     or has_table_privilege('authenticated','public.portal_role_assignments','DELETE') then
     raise exception 'Authenticated role has portal grant mutation privilege';
   end if;
-  if (select prosecdef from pg_proc where oid='public.upt_my_portal_assignments()'::regprocedure) then
-    raise exception 'Entitlement RPC must remain SECURITY INVOKER';
+  if not (select prosecdef from pg_proc where oid='public.upt_my_portal_assignments()'::regprocedure) then
+    raise exception 'Entitlement RPC must safely read profile state under SECURITY DEFINER';
   end if;
 end $$;
