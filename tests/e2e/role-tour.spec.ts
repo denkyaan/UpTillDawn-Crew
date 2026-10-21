@@ -898,6 +898,34 @@ test.describe('UpTillDawn role-tour browser validation', () => {
             contentType: 'application/json',
           });
           expect(interactionReady, `${role} ${path}: navigation did not render usable main: ${JSON.stringify(navigationAttempts)}`).toBe(true);
+          // Exercise a real, non-mutating navigation action from this route.
+          // A route visit alone is not a click; only credit the interaction
+          // after the browser URL changes to the observed link destination.
+          const routeNavigation = interactionPage.locator('nav a[href]:visible, [role="navigation"] a[href]:visible, aside a[href]:visible');
+          const routeNavigationCount = await routeNavigation.count();
+          let navigationExercised = false;
+          for (let linkIndex = 0; linkIndex < routeNavigationCount; linkIndex++) {
+            const link = routeNavigation.nth(linkIndex);
+            const href = await link.getAttribute('href');
+            if (!href?.startsWith('/') || href.startsWith('//')) continue;
+            const destination = new URL(href, baseURL!).pathname;
+            if (destination === new URL(interactionPage.url()).pathname ||
+                /^\/(login|logout|signup|auth)(\/|$)/.test(destination)) continue;
+            const label = (await link.innerText().catch(() => '')).trim().slice(0, 100);
+            await link.click({ timeout: 8000, noWaitAfter: true });
+            await expect.poll(() => new URL(interactionPage.url()).pathname, { timeout: 15000 }).toBe(destination);
+            interactionAudit.push({ path, kind: 'navigation', label: label || destination, result: `clicked:${destination}` });
+            navigationExercised = true;
+            break;
+          }
+          if (!navigationExercised) {
+            interactionAudit.push({ path, kind: 'navigation-unavailable', label: '', result: 'no-visible-safe-destination' });
+          }
+          // Return to the original route before exercising disclosures/tabs.
+          if (navigationExercised) {
+            await interactionPage.goto(interactionUrl, { waitUntil: 'commit', timeout: 20000 });
+            await expect(interactionPage.locator('main').first()).toBeVisible({ timeout: 12000 });
+          }
           const summaries = interactionPage.locator('main details > summary:visible');
           const summaryCount = await summaries.count();
           for (let index = 0; index < summaryCount; index++) {
