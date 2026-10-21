@@ -836,6 +836,40 @@ test.describe('UpTillDawn role-tour browser validation', () => {
         body: JSON.stringify({ role, interactionAudit }, null, 2), contentType: 'application/json',
       });
       console.log(`[${role}] Real safe interactions: ${JSON.stringify(interactionAudit)}`);
+      // Coverage is only credited for observed UI interactions, not for
+      // discovering a button or for loading its route. Surface remaining
+      // actions explicitly so the release gate cannot mistake green tests
+      // for comprehensive E2E coverage.
+      const actionCoverage = controlInventory.map(route => {
+        const attempted = interactionAudit.filter(action => action.path === route.path && !action.error);
+        const actionable = route.controls.filter(control => control.actionable);
+        const unexercised = actionable.filter(control =>
+          !attempted.some(action =>
+            (control.kind === 'summary' && action.kind === 'disclosure' && action.label === control.accessibleName) ||
+            (action.kind === 'tab' && action.label === control.accessibleName)
+          )
+        );
+        return {
+          path: route.path,
+          actionableCount: actionable.length,
+          observedInteractionCount: attempted.length,
+          unexercisedCount: unexercised.length,
+          unexercised: unexercised.map(control => ({
+            kind: control.kind, label: control.accessibleName || control.label || '[unnamed]',
+          })),
+        };
+      });
+      const actionTotals = {
+        routes: actionCoverage.length,
+        actionable: actionCoverage.reduce((sum, route) => sum + route.actionableCount, 0),
+        observedInteractions: actionCoverage.reduce((sum, route) => sum + route.observedInteractionCount, 0),
+        unexercised: actionCoverage.reduce((sum, route) => sum + route.unexercisedCount, 0),
+      };
+      await testInfo.attach(`${role.toLowerCase()}-e2e-action-coverage-gaps.json`, {
+        body: JSON.stringify({ role, actionTotals, actionCoverage, releaseReady: actionTotals.unexercised === 0 }, null, 2),
+        contentType: 'application/json',
+      });
+      console.log(`[${role}] E2E action coverage gaps: ${JSON.stringify(actionTotals)} (not a release approval)`);
       const interactionErrors = interactionAudit.filter(item => item.error);
       expect(interactionErrors, `${role}: real UI interaction failures`).toHaveLength(0);
       const inventoryErrors = controlInventory.filter(item => item.error);
