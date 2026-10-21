@@ -2,6 +2,9 @@ export type ActionUiLocale='nl'|'fr'|'en'|'de'
 type Row={fr:string;en:string;de:string}
 
 const ROWS:Record<string,Row>={
+  "Geen toegang":{fr:"Accès refusé",en:"Access denied",de:"Zugriff verweigert"},
+  "Ongeldige rolwijziging":{fr:"Modification de rôle invalide",en:"Invalid role change",de:"Ungültige Rollenänderung"},
+  "Rolwijziging niet uitgevoerd":{fr:"Modification de rôle non effectuée",en:"Role change not completed",de:"Rollenänderung nicht ausgeführt"},
   "Prijslijst opslaan mislukt.":{fr:"Échec de l’enregistrement de la liste de prix.",en:"Failed to save the price list.",de:"Preisliste konnte nicht gespeichert werden."},
   "Bestand is groter dan 10 MB.":{fr:"Le fichier dépasse 10 Mo.",en:"The file is larger than 10 MB.",de:"Die Datei ist größer als 10 MB."},
   "Document kon niet naar tekst worden omgezet.":{fr:"Le document n’a pas pu être converti en texte.",en:"The document could not be converted to text.",de:"Das Dokument konnte nicht in Text umgewandelt werden."},
