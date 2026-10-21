@@ -854,7 +854,7 @@ test.describe('UpTillDawn role-tour browser validation', () => {
               navHrefs,
               mainVisible: await discoveryPage.locator('main:visible').count() > 0,
             });
-            return navHrefs.filter(href => href.startsWith('/') && href !== '/' && !/^\\/(login|logout|signup|auth)(\\/|$)/.test(href)).length;
+            return navHrefs.filter(href => href.startsWith('/') && href !== '/' && !/^\/(login|logout|signup|auth)(\/|$)/.test(href)).length;
           }, { timeout: 20000, intervals: [500, 1000, 2000] }).toBeGreaterThan(0);
         } catch (error) {
           console.log(`[${role}] Discovery hydration incomplete: ${String(error)}`);
