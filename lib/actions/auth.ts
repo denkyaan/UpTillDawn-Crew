@@ -195,7 +195,7 @@ export async function signIn(formData: FormData) {
     const email = resolveLoginEmail(submittedEmail)
     const password = String(formData.get('password') || '')
     const requestedPortal = String(formData.get('portal') || 'staff').toLowerCase()
-    if (!['staff', 'responsible', 'admin'].includes(requestedPortal)) return { error: 'Ongeldig inlogportaal.', code: 'invalid_portal' }
+    if (!['staff', 'responsible', 'admin', 'promotion', 'administration'].includes(requestedPortal)) return { error: 'Ongeldig inlogportaal.', code: 'invalid_portal' }
     if (!submittedEmail || !password) return { error: 'E-mail en wachtwoord zijn verplicht.' }
 
     const supabase = await createClient()
@@ -213,7 +213,7 @@ export async function signIn(formData: FormData) {
             outcome,
             login: submittedEmail,
             canonicalLogin: email,
-            portal: requestedPortal as 'staff' | 'responsible' | 'admin',
+            portal: (requestedPortal === 'promotion' ? 'staff' : requestedPortal === 'administration' ? 'admin' : requestedPortal) as 'staff' | 'responsible' | 'admin',
             ip: context.ip,
             approximateLocation: context.approximateLocation,
             userAgent: context.userAgent,
@@ -247,8 +247,20 @@ export async function signIn(formData: FormData) {
     }
 
     const role = profile.role
+    let assignedPortalAccess = false
+    if (requestedPortal === 'promotion' || requestedPortal === 'administration') {
+        const { data: assignments, error: assignmentError } = await supabase.rpc('upt_my_portal_assignments')
+        if (assignmentError) {
+            await notifySecurity('denied', 'portal_access_unavailable')
+            await supabase.auth.signOut()
+            return { error: 'Portaalrechten konden niet worden gecontroleerd.', code: 'portal_access_unavailable' }
+        }
+        assignedPortalAccess = (assignments ?? []).some((entry: { portal: string; role: string; approved: boolean; revoked_at: string | null }) =>
+            entry.portal === requestedPortal && entry.approved && !entry.revoked_at &&
+            (requestedPortal === 'promotion' ? ['promoter', 'admin'].includes(entry.role) : ['administrative_staff', 'admin'].includes(entry.role)))
+    }
     const hasPermanentAdminAccess = isOwner === true || (profile.approved === true && role === 'admin')
-    const allowed = requestedPortal === 'admin' ? hasPermanentAdminAccess : requestedPortal === 'responsible' ? role === 'responsible_lead' || hasPermanentAdminAccess : role === 'staff' || role === 'responsible_lead' || hasPermanentAdminAccess
+    const allowed = requestedPortal === 'promotion' || requestedPortal === 'administration' ? assignedPortalAccess : requestedPortal === 'admin' ? hasPermanentAdminAccess : requestedPortal === 'responsible' ? role === 'responsible_lead' || hasPermanentAdminAccess : role === 'staff' || role === 'responsible_lead' || hasPermanentAdminAccess
     if (!allowed) {
         await notifySecurity('denied', 'wrong_portal')
         await supabase.auth.signOut()
@@ -268,7 +280,9 @@ export async function signIn(formData: FormData) {
 
     await notifySecurity('success', 'login_success')
 
-    const redirectTo = isOwner === true
+    const redirectTo = requestedPortal === 'promotion' || requestedPortal === 'administration'
+        ? '/portals/' + requestedPortal
+        : isOwner === true
         ? `/maker-mode?portal=${requestedPortal}`
         : requestedPortal === 'admin'
             ? '/admin'
