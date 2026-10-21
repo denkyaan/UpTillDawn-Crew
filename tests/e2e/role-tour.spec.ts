@@ -601,7 +601,23 @@ test.describe('UpTillDawn role-tour browser validation', () => {
         await expect(tourPanel, `${role}: persisted tour session did not restore after reload`).toBeVisible({ timeout: 15000 });
       }
       const progressLabel = (await tourPanel.innerText()).trim();
-      expect(progressLabel, `${role}: tour progress counter missing`).toMatch(/\b1\/\d+\b/);
+      // A resumed 5/11 is a real state discrepancy, not a missing counter.
+      // Capture the precise client-side state without mutating user records or
+      // weakening the first-chapter assertion. Never attach auth tokens.
+      const progressState = await page.evaluate(() => ({
+        path: location.pathname,
+        progressKeys: Object.keys(localStorage).filter(key => key.startsWith('uptilldawn-tour-progress:'))
+          .map(key => ({ key, value: localStorage.getItem(key)?.slice(0, 2000) })),
+        activeSession: sessionStorage.getItem('uptilldawn-tour-active-v8')?.slice(0, 2000) ?? null,
+        trainingWorkflow: sessionStorage.getItem('uptilldawn-training-workflow-v3')?.slice(0, 2000) ?? null,
+        previewRoute: sessionStorage.getItem('uptilldawn-tour-preview-route'),
+        panelText: document.querySelector('[data-tour-panel]')?.textContent?.slice(0, 500) ?? null,
+      }));
+      await testInfo.attach(`${role.toLowerCase()}-tour-progress-source.json`, {
+        body: JSON.stringify({ role, progressLabel, progressState }, null, 2),
+        contentType: 'application/json',
+      });
+      expect(progressLabel, `${role}: expected fresh tour at 1/N, received ${progressLabel}; inspect tour-progress-source artifact`).toMatch(/\\b1\\/\\d+\\b/);
       console.log(`[${role}] Active tour progress: ${progressLabel}`);
       await testInfo.attach(`${role.toLowerCase()}-active-tour.json`, {
         body: JSON.stringify({ role, progressLabel, path: new URL(page.url()).pathname }, null, 2),
