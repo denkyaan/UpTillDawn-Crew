@@ -42,3 +42,35 @@ export function RoleManagementForm({ users }: { users: UserOption[] }) {
     {result && <p role="status" aria-live="polite" className="sm:col-span-2">{result}</p>}
   </form>
 }
+
+export function RoleQuickAction({ userId, portal, role, action }: {
+  userId: string
+  portal: string
+  role: string
+  action: 'assign' | 'approve' | 'revoke'
+}) {
+  const [pending, startTransition] = useTransition()
+  const [result, setResult] = useState('')
+  const label = action === 'approve' ? 'Goedkeuren' : action === 'revoke' ? 'Intrekken' : 'Opnieuw toewijzen'
+
+  return <div className="flex flex-col gap-1">
+    <button type="button" disabled={pending} className="rounded border border-violet-500 px-3 py-1 text-violet-400 disabled:opacity-50" onClick={() => {
+      if (action === 'revoke' && !window.confirm('Rol intrekken?')) return
+      const form = new FormData()
+      form.set('user_id', userId)
+      form.set('portal', portal)
+      form.set('role', role)
+      form.set('action', action)
+      setResult('')
+      startTransition(async () => {
+        try {
+          await changePortalRole(form)
+          setResult('Rolwijziging opgeslagen.')
+        } catch {
+          setResult('Rolwijziging niet uitgevoerd.')
+        }
+      })
+    }}>{pending ? 'Bezig met opslaan...' : label}</button>
+    {result && <span role="status" aria-live="polite" className="text-xs">{result}</span>}
+  </div>
+}
