@@ -1,4 +1,6 @@
 import Link from 'next/link'
+import { headers } from 'next/headers'
+import { parseAcceptLanguage, parseUiLocale } from '@/lib/locale-preferences'
 import { notFound, redirect } from 'next/navigation'
 import { getCurrentUser } from '@/lib/actions/auth'
 import { createClient } from '@/lib/supabase/crew-server'
@@ -27,7 +29,10 @@ export default async function PortalPage({ params }: { params: Promise<{ portal:
   })) notFound()
 
   const promotion = portal === 'promotion'
-  const t = portalCopy['nl']
+  const requestHeaders = await headers()
+  const cookieLocale = parseUiLocale(requestHeaders.get('cookie')?.match(/(?:^|;\\s*)uptilldawn-language=([^;]+)/)?.[1])
+  const locale = cookieLocale ?? parseAcceptLanguage(requestHeaders.get('accept-language')) ?? 'nl'
+  const t = portalCopy[locale]
   return <main className="mx-auto max-w-4xl space-y-6 p-6">
     <Link href="/portals" className="text-sm text-violet-400">← Alle portalen</Link>
     <header><h1 className="text-2xl font-bold">{promotion ? 'Promotie' : 'Administratie'}</h1></header>
