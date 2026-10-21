@@ -4,6 +4,13 @@ import { getCurrentUser } from '@/lib/actions/auth'
 import { createClient } from '@/lib/supabase/crew-server'
 import { canOpenPortal, type PortalAssignment } from '@/lib/portal-access'
 
+const portalCopy = {
+  nl: { chatDesc: "Open de bestaande chatkanalen waarvoor je toegang hebt.", chatLink: "Chats →", taskDesc: "Bekijk je bestaande opdrachten.", taskLink: "Taken →", financeDesc: "Financiële workflows zijn nog niet beschikbaar.", reportDesc: "Bestaande rapportage voor beheerders.", salesLink: "Sales →" },
+  fr: { chatDesc: "Ouvrez les canaux de discussion auxquels vous avez accès.", chatLink: "Discussions →", taskDesc: "Consultez vos tâches existantes.", taskLink: "Tâches →", financeDesc: "Les processus financiers ne sont pas encore disponibles.", reportDesc: "Rapports existants réservés aux administrateurs.", salesLink: "Ventes →" },
+  en: { chatDesc: "Open the existing chat channels you can access.", chatLink: "Chats →", taskDesc: "View your existing tasks.", taskLink: "Tasks →", financeDesc: "Financial workflows are not yet available.", reportDesc: "Existing reports for administrators.", salesLink: "Sales →" },
+  de: { chatDesc: "Öffne die bestehenden Chatkanäle, auf die du Zugriff hast.", chatLink: "Chats →", taskDesc: "Sieh dir deine bestehenden Aufgaben an.", taskLink: "Aufgaben →", financeDesc: "Finanzielle Abläufe sind noch nicht verfügbar.", reportDesc: "Bestehende Berichte für Administratoren.", salesLink: "Verkäufe →" },
+} as const
+
 export const dynamic = 'force-dynamic'
 
 export default async function PortalPage({ params }: { params: Promise<{ portal: string }> }) {
@@ -20,29 +27,30 @@ export default async function PortalPage({ params }: { params: Promise<{ portal:
   })) notFound()
 
   const promotion = portal === 'promotion'
+  const t = portalCopy['nl']
   return <main className="mx-auto max-w-4xl space-y-6 p-6">
     <Link href="/portals" className="text-sm text-violet-400">← Alle portalen</Link>
     <header><h1 className="text-2xl font-bold">{promotion ? 'Promotie' : 'Administratie'}</h1></header>
     {promotion ? <div className="grid gap-4 sm:grid-cols-2">
       <section className="rounded-2xl border bg-card p-5">
         <h2 className="font-semibold">Chats</h2>
-        <p className="mt-2 text-sm text-muted-foreground">Open de bestaande chatkanalen waarvoor je toegang hebt.</p>
-        <Link href="/chat" className="mt-4 inline-flex rounded-lg bg-violet-600 px-4 py-2 text-sm font-medium text-white">Chats →</Link>
+        <p className="mt-2 text-sm text-muted-foreground">{t.chatDesc}</p>
+        <Link href="/chat" className="mt-4 inline-flex rounded-lg bg-violet-600 px-4 py-2 text-sm font-medium text-white">{t.chatLink}</Link>
       </section>
       <section className="rounded-2xl border bg-card p-5">
         <h2 className="font-semibold">Taken</h2>
-        <p className="mt-2 text-sm text-muted-foreground">Bekijk je bestaande opdrachten.</p>
-        <Link href="/tasks" className="mt-4 inline-flex rounded-lg bg-violet-600 px-4 py-2 text-sm font-medium text-white">Taken →</Link>
+        <p className="mt-2 text-sm text-muted-foreground">{t.taskDesc}</p>
+        <Link href="/tasks" className="mt-4 inline-flex rounded-lg bg-violet-600 px-4 py-2 text-sm font-medium text-white">{t.taskLink}</Link>
       </section>
     </div> : <div className="grid gap-4 sm:grid-cols-2">
       <section className="rounded-2xl border bg-card p-5">
         <h2 className="font-semibold">Administratie</h2>
-        <p className="mt-2 text-sm text-muted-foreground">Financiële workflows zijn nog niet beschikbaar.</p>
+        <p className="mt-2 text-sm text-muted-foreground">{t.financeDesc}</p>
       </section>
       {current.isAdmin && <section className="rounded-2xl border bg-card p-5">
         <h2 className="font-semibold">Sales</h2>
-        <p className="mt-2 text-sm text-muted-foreground">Bestaande rapportage voor beheerders.</p>
-        <Link href="/sales" className="mt-4 inline-flex rounded-lg bg-violet-600 px-4 py-2 text-sm font-medium text-white">Sales →</Link>
+        <p className="mt-2 text-sm text-muted-foreground">{t.reportDesc}</p>
+        <Link href="/sales" className="mt-4 inline-flex rounded-lg bg-violet-600 px-4 py-2 text-sm font-medium text-white">{t.salesLink}</Link>
       </section>}
     </div>}
   </main>
