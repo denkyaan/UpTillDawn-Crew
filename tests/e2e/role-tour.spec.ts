@@ -1020,8 +1020,30 @@ test.describe('UpTillDawn role-tour browser validation', () => {
           for (const candidate of distinctFeatureCandidates) {
             const featurePage = await page.context().newPage();
             try {
-              await featurePage.goto(interactionUrl, { waitUntil: 'commit', timeout: 20000 });
-              await expect(featurePage.locator('main').first()).toBeVisible({ timeout: 12000 });
+              const featureNavigationAttempts: Array<{ attempt: number; error: string | null; url: string; readyState: string | null }> = [];
+              let featureOriginReady = false;
+              for (let attempt = 1; attempt <= 2 && !featureOriginReady; attempt++) {
+                let error: string | null = null;
+                try {
+                  await featurePage.goto(interactionUrl, { waitUntil: 'commit', timeout: 20000 });
+                  await expect(featurePage.locator('main').first()).toBeVisible({ timeout: 12000 });
+                  featureOriginReady = true;
+                } catch (caught) {
+                  error = String(caught).slice(0, 500);
+                }
+                featureNavigationAttempts.push({
+                  attempt, error, url: featurePage.url(),
+                  readyState: await featurePage.evaluate(() => document.readyState).catch(() => null),
+                });
+                if (!featureOriginReady && attempt === 1) {
+                  await featurePage.goto('about:blank', { waitUntil: 'commit', timeout: 5000 }).catch(() => {});
+                }
+              }
+              await testInfo.attach(`${role.toLowerCase()}-feature-origin-${uniquePaths.indexOf(path)}-${candidate.index}.json`, {
+                body: JSON.stringify({ role, path, destination: candidate.destination, featureNavigationAttempts }, null, 2),
+                contentType: 'application/json',
+              });
+              expect(featureOriginReady, `${role} ${path}: feature origin did not render: ${JSON.stringify(featureNavigationAttempts)}`).toBe(true);
               const featureLink = featurePage.locator('nav a[href], [role="navigation"] a[href], aside a[href]')
                 .and(featurePage.locator(`a[href=${JSON.stringify(candidate.destination)}]`)).first();
               await expect(featureLink).toBeVisible({ timeout: 15000 });
