@@ -3,7 +3,7 @@
 import { useState, useTransition } from "react"
 import Link from "next/link"
 import Image from "next/image"
-import { Menu, X, Eye, EyeOff, Loader2, AlertCircle, ArrowRight, ShieldCheck, Users, UserCog } from "lucide-react"
+import { Menu, X, Eye, EyeOff, Loader2, AlertCircle, ArrowRight, ShieldCheck, Users, UserCog, Megaphone, BriefcaseBusiness } from "lucide-react"
 import { signIn } from "@/lib/actions/auth"
 import { LanguageSwitcher } from "@/components/language-switcher"
 
@@ -11,6 +11,8 @@ const portals = {
   staff: { label: "Personeel", icon: Users },
   responsible: { label: "Verantwoordelijke", icon: UserCog },
   admin: { label: "Beheerder", icon: ShieldCheck },
+  promotion: { label: "Promotie", icon: Megaphone },
+  administration: { label: "Administratie", icon: BriefcaseBusiness },
 } as const
 
 type Portal = keyof typeof portals
