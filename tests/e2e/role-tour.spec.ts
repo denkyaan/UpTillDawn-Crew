@@ -262,15 +262,6 @@ test.describe('UpTillDawn role-tour browser validation', () => {
         body: JSON.stringify(linkAudit, null, 2), contentType: 'application/json',
       });
       console.log(`[${role}] Functional anchor navigation coverage: ${JSON.stringify(linkAudit)}`);
-      if (functionalLinks.length > 0) {
-        const clickTarget = functionalLinks[0];
-        const targetPath = new URL(clickTarget.href!, baseURL!).pathname;
-        const actualLink = page.locator('nav a[href], [role="navigation"] a[href], aside a[href]')
-          .filter({ visible: true }).filter({ hasText: clickTarget.text }).first();
-        await expect(actualLink, `${role}: visible functional navigation link missing`).toBeVisible({ timeout: 10000 });
-        await actualLink.click({ timeout: 10000 });
-        await expect.poll(() => new URL(page.url()).pathname, { timeout: 15000 }).toBe(targetPath);
-      }
       // Role-specific training entrypoint: validate the actual chapters and start control.
       // A client-side redirect or outstanding prefetch may abort a navigation even
       // when the destination loads correctly. Recover once on a fresh page.
@@ -361,6 +352,33 @@ test.describe('UpTillDawn role-tour browser validation', () => {
         return true;
       };
       const trainingStartedByWelcome = await acknowledgeWelcome();
+      // Exercise navigation in an isolated authenticated page only after the
+      // actual first-login onboarding dialog has been completed. The original
+      // page must stay on /help for the training start assertions.
+      if (functionalLinks.length > 0) {
+        const navigationPage = await page.context().newPage();
+        try {
+          await navigationPage.goto(new URL(authenticatedPath, baseURL!).toString(), {
+            waitUntil: 'domcontentloaded', timeout: 20000,
+          });
+          const blockingDialog = navigationPage.locator('[role="dialog"][aria-modal="true"]:visible');
+          const blockingTexts = await blockingDialog.allInnerTexts();
+          expect(blockingTexts, `${role}: unexpected dialog blocks functional navigation`).toEqual([]);
+          const clickTarget = functionalLinks[0];
+          const targetPath = new URL(clickTarget.href!, baseURL!).pathname;
+          const actualLink = navigationPage.locator('nav a[href], [role="navigation"] a[href], aside a[href]')
+            .filter({ visible: true }).filter({ hasText: clickTarget.text }).first();
+          await expect(actualLink, `${role}: visible functional navigation link missing`).toBeVisible({ timeout: 10000 });
+          await actualLink.click({ timeout: 10000 });
+          await expect.poll(() => new URL(navigationPage.url()).pathname, { timeout: 15000 }).toBe(targetPath);
+          await testInfo.attach(`${role.toLowerCase()}-real-navigation-click.json`, {
+            body: JSON.stringify({ role, targetPath, finalPath: new URL(navigationPage.url()).pathname }, null, 2),
+            contentType: 'application/json',
+          });
+        } finally {
+          await navigationPage.close();
+        }
+      }
       const startTour = page.getByRole('button', { name: /rondleiding starten|start tour|commencer la visite|rundgang starten|hervatten|resume|reprendre|fortsetzen/i });
       if (!trainingStartedByWelcome) await expect(startTour).toBeVisible({ timeout: 10000 });
       await page.screenshot({ path: testInfo.outputPath(`${role.toLowerCase()}-training-index.png`), fullPage: true });
