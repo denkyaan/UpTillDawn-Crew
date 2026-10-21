@@ -944,18 +944,28 @@ test.describe('UpTillDawn role-tour browser validation', () => {
           // after the browser URL changes to the observed link destination.
           const routeNavigation = interactionPage.locator('nav a[href]:visible, [role="navigation"] a[href]:visible, aside a[href]:visible');
           const routeNavigationCount = await routeNavigation.count();
-          let navigationExercised = false;
+          // Prefer a real feature route over the brand/logo home link.
+          // The latter exercises navigation but does not cover a feature.
+          const navigationCandidates: Array<{ index: number; destination: string; label: string }> = [];
           for (let linkIndex = 0; linkIndex < routeNavigationCount; linkIndex++) {
             const link = routeNavigation.nth(linkIndex);
             const href = await link.getAttribute('href');
             if (!href?.startsWith('/') || href.startsWith('//')) continue;
             const destination = new URL(href, baseURL!).pathname;
             if (destination === new URL(interactionPage.url()).pathname ||
-                /^\/(login|logout|signup|auth)(\/|$)/.test(destination)) continue;
-            const label = (await link.innerText().catch(() => '')).trim().slice(0, 100);
+                /^\\/(login|logout|signup|auth)(\\/|$)/.test(destination)) continue;
+            navigationCandidates.push({
+              index: linkIndex, destination,
+              label: (await link.innerText().catch(() => '')).trim().slice(0, 100),
+            });
+          }
+          navigationCandidates.sort((a, b) => Number(a.destination === '/') - Number(b.destination === '/'));
+          let navigationExercised = false;
+          for (const candidate of navigationCandidates) {
+            const link = routeNavigation.nth(candidate.index);
             await link.click({ timeout: 8000, noWaitAfter: true });
-            await expect.poll(() => new URL(interactionPage.url()).pathname, { timeout: 15000 }).toBe(destination);
-            interactionAudit.push({ path, kind: 'navigation', label: label || destination, result: `clicked:${destination}` });
+            await expect.poll(() => new URL(interactionPage.url()).pathname, { timeout: 15000 }).toBe(candidate.destination);
+            interactionAudit.push({ path, kind: 'navigation', label: candidate.label || candidate.destination, result: `clicked:${candidate.destination}` });
             navigationExercised = true;
             break;
           }
@@ -1006,7 +1016,7 @@ test.describe('UpTillDawn role-tour browser validation', () => {
       // actions explicitly so the release gate cannot mistake green tests
       // for comprehensive E2E coverage.
       const actionCoverage = controlInventory.map(route => {
-        const attempted = interactionAudit.filter(action => action.path === route.path && !action.error);
+        const attempted = interactionAudit.filter(action => action.path === route.path && !action.error && ['navigation', 'disclosure', 'tab'].includes(action.kind));
         const actionable = route.controls.filter(control => control.actionable && !['a'].includes(control.kind));
         const unexercised = actionable.filter(control =>
           !attempted.some(action =>
