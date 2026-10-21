@@ -744,6 +744,51 @@ test.describe('UpTillDawn role-tour browser validation', () => {
         contentType: 'application/json',
       });
       console.log(`[${role}] Accessible control naming audit: ${unnamedActions.length} unnamed interactive controls`);
+      // Real, non-destructive interactions: exercise native disclosure controls
+      // and accessible tabs on each discovered route. Never click unknown
+      // buttons (which could save, delete or send real user data).
+      const interactionAudit: Array<{ path: string; kind: string; label: string; result: string; error?: string }> = [];
+      for (const path of uniquePaths) {
+        const interactionPage = await page.context().newPage();
+        try {
+          await interactionPage.goto(new URL(path, baseURL!).toString(), { waitUntil: 'domcontentloaded', timeout: 20000 });
+          await expect(interactionPage.locator('main').first()).toBeVisible({ timeout: 10000 });
+          const summaries = interactionPage.locator('main details > summary:visible');
+          const summaryCount = await summaries.count();
+          for (let index = 0; index < summaryCount; index++) {
+            const summary = summaries.nth(index);
+            const label = (await summary.innerText()).trim().slice(0, 100);
+            const details = summary.locator('xpath=..');
+            const initiallyOpen = await details.evaluate(node => (node as HTMLDetailsElement).open);
+            await summary.click({ timeout: 8000 });
+            await expect.poll(() => details.evaluate(node => (node as HTMLDetailsElement).open)).toBe(!initiallyOpen);
+            await summary.click({ timeout: 8000 });
+            await expect.poll(() => details.evaluate(node => (node as HTMLDetailsElement).open)).toBe(initiallyOpen);
+            interactionAudit.push({ path, kind: 'disclosure', label, result: 'opened-and-restored' });
+          }
+          const tabs = interactionPage.locator('main [role="tab"]:visible');
+          const tabCount = await tabs.count();
+          if (tabCount > 1) {
+            const targetTab = tabs.filter({ 'aria-selected': 'false' }).first();
+            if (await targetTab.count()) {
+              const label = (await targetTab.innerText()).trim().slice(0, 100);
+              await targetTab.click({ timeout: 8000 });
+              await expect(targetTab, `${role} ${path}: tab click did not activate selected tab`).toHaveAttribute('aria-selected', 'true', { timeout: 10000 });
+              interactionAudit.push({ path, kind: 'tab', label, result: 'clicked-and-selected' });
+            }
+          }
+        } catch (error) {
+          interactionAudit.push({ path, kind: 'interaction-error', label: '', result: 'failed', error: String(error).slice(0, 600) });
+        } finally {
+          await interactionPage.close();
+        }
+      }
+      await testInfo.attach(`${role.toLowerCase()}-real-safe-interactions.json`, {
+        body: JSON.stringify({ role, interactionAudit }, null, 2), contentType: 'application/json',
+      });
+      console.log(`[${role}] Real safe interactions: ${JSON.stringify(interactionAudit)}`);
+      const interactionErrors = interactionAudit.filter(item => item.error);
+      expect(interactionErrors, `${role}: real UI interaction failures`).toHaveLength(0);
       const inventoryErrors = controlInventory.filter(item => item.error);
       expect(inventoryErrors, `${role}: routes could not be inventoried: ${JSON.stringify(inventoryErrors.map(item => ({ path: item.path, error: item.error })))}`).toHaveLength(0);
       console.log(`[${role}] Navigation route audit: ${JSON.stringify(routeChecks)}`);
