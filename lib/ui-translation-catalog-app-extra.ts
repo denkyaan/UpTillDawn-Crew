@@ -2,6 +2,14 @@ export type ExtraCatalogLocale = 'nl' | 'fr' | 'en' | 'de'
 type Row = { fr:string; en:string; de:string }
 
 export const APP_EXTRA_TRANSLATIONS: Record<string,Row> = {
+  "Overzicht van portaalroltoewijzingen.": { fr:"Aperçu des attributions de rôles des portails.", en:"Overview of portal role assignments.", de:"Übersicht der Portalrollenzuweisungen." },
+  "Portaalrol beheren": { fr:"Gérer le rôle du portail", en:"Manage portal role", de:"Portalrolle verwalten" },
+  "Gebruikers-ID": { fr:"Identifiant utilisateur", en:"User ID", de:"Benutzer-ID" },
+  "Actie": { fr:"Action", en:"Action", de:"Aktion" },
+  "Toewijzen": { fr:"Attribuer", en:"Assign", de:"Zuweisen" },
+  "Goedkeuren": { fr:"Approuver", en:"Approve", de:"Genehmigen" },
+  "Intrekken": { fr:"Révoquer", en:"Revoke", de:"Widerrufen" },
+  "Rolwijziging uitvoeren": { fr:"Appliquer le changement de rôle", en:"Apply role change", de:"Rollenänderung ausführen" },
   "Overzicht van portaalroltoewijzingen. Wijzigingen zijn nog niet beschikbaar.": { fr:"Aperçu des attributions de rôles de portail. Les modifications ne sont pas encore disponibles.", en:"Overview of portal role assignments. Changes are not available yet.", de:"Übersicht der Portalrollenzuweisungen. Änderungen sind noch nicht verfügbar." },
   "Bekijk mijn portaalrollen →": { fr:"Voir mes rôles de portail →", en:"View my portal roles →", de:"Meine Portalrollen ansehen →" },
   "Portaalrollen": { fr:"Rôles des portails", en:"Portal roles", de:"Portalrollen" },
