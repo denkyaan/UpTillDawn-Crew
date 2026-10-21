@@ -6,10 +6,18 @@ import { createClient } from '@/lib/supabase/crew-server'
 export const dynamic = 'force-dynamic'
 
 const translations = {
-  nl: { title: 'Portaalrollen', description: 'Overzicht van je eigen roltoewijzingen. Wijzigingen zijn nog niet beschikbaar.', empty: 'Er zijn nog geen roltoewijzingen.', error: 'Roltoewijzingen kunnen niet worden geladen.', back: 'Terug naar portalen', person: 'Gebruiker', portal: 'Portaal', role: 'Rol', status: 'Status', approved: 'Goedgekeurd', pending: 'In afwachting', revoked: 'Ingetrokken' },
-  fr: { title: 'Rôles des portails', description: 'Aperçu de vos propres rôles attribués. Les modifications ne sont pas encore disponibles.', empty: 'Aucun rôle attribué.', error: 'Impossible de charger les rôles attribués.', back: 'Retour aux portails', person: 'Utilisateur', portal: 'Portail', role: 'Rôle', status: 'Statut', approved: 'Approuvé', pending: 'En attente', revoked: 'Révoqué' },
-  en: { title: 'Portal roles', description: 'Overview of your own role assignments. Changes are not available yet.', empty: 'No role assignments yet.', error: 'Role assignments could not be loaded.', back: 'Back to portals', person: 'User', portal: 'Portal', role: 'Role', status: 'Status', approved: 'Approved', pending: 'Pending', revoked: 'Revoked' },
-  de: { title: 'Portalrollen', description: 'Übersicht deiner eigenen Rollenzuweisungen. Änderungen sind noch nicht verfügbar.', empty: 'Noch keine Rollenzuweisungen.', error: 'Rollenzuweisungen konnten nicht geladen werden.', back: 'Zurück zu den Portalen', person: 'Benutzer', portal: 'Portal', role: 'Rolle', status: 'Status', approved: 'Genehmigt', pending: 'Ausstehend', revoked: 'Widerrufen' },
+  title: 'Portaalrollen',
+  description: 'Overzicht van je eigen roltoewijzingen. Wijzigingen zijn nog niet beschikbaar.',
+  empty: 'Er zijn nog geen roltoewijzingen.',
+  error: 'Roltoewijzingen kunnen niet worden geladen.',
+  back: 'Terug naar portalen',
+  person: 'Gebruiker',
+  portal: 'Portaal',
+  role: 'Rol',
+  status: 'Status',
+  approved: 'Goedgekeurd',
+  pending: 'In afwachting',
+  revoked: 'Ingetrokken',
 } as const
 
 export default async function PortalRolesPage() {
@@ -23,7 +31,7 @@ export default async function PortalRolesPage() {
     .select('id,user_id,portal,role,approved,revoked_at')
     .eq('user_id', current.id).order('created_at', { ascending: false }).limit(100)
 
-  const t = translations.nl
+  const t = translations
   return <main className="mx-auto max-w-5xl space-y-5 p-6">
     <Link href="/portals" className="text-sm text-violet-400">{t.back}</Link>
     <h1 className="text-2xl font-bold">{t.title}</h1>
