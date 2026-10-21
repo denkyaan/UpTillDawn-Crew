@@ -22,8 +22,8 @@ export default function LoginPage() {
   const t = copy[locale]
   const portals = [
     { title: t.events, description: t.eventsDetail, href: '/login/staff', icon: Users },
-    { title: t.promotion, description: t.promotionDetail, href: '/login/staff?next=%2Fportals%2Fpromotion', icon: Megaphone },
-    { title: t.admin, description: t.adminDetail, href: '/login/admin', icon: ShieldCheck },
+    { title: t.promotion, description: t.promotionDetail, href: '/login/promotion', icon: Megaphone },
+    { title: t.admin, description: t.adminDetail, href: '/login/administration', icon: ShieldCheck },
   ]
   return <main className="min-h-screen bg-black px-5 py-12 text-white">
     <div className="mx-auto max-w-xl space-y-7">
