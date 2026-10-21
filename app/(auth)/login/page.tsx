@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useSyncExternalStore } from 'react'
 import Link from 'next/link'
 import { Users, Megaphone, ShieldCheck } from 'lucide-react'
 import { LANGUAGE_APPLIED_EVENT, initialUiLocale, parseUiLocale, type SupportedUiLocale } from '@/lib/locale-preferences'
@@ -14,13 +14,11 @@ const copy = {
 } as const
 
 export default function LoginPage() {
-  const [locale, setLocale] = useState<SupportedUiLocale>('nl')
-  useEffect(() => {
-    setLocale(initialUiLocale())
-    const sync = (event: Event) => setLocale(parseUiLocale((event as CustomEvent<string>).detail) || initialUiLocale())
-    window.addEventListener(LANGUAGE_APPLIED_EVENT, sync)
-    return () => window.removeEventListener(LANGUAGE_APPLIED_EVENT, sync)
-  }, [])
+  const locale = useSyncExternalStore(
+    (notify) => { window.addEventListener(LANGUAGE_APPLIED_EVENT, notify); return () => window.removeEventListener(LANGUAGE_APPLIED_EVENT, notify) },
+    () => parseUiLocale(document.documentElement.lang) || initialUiLocale(),
+    () => 'nl' as SupportedUiLocale,
+  )
   const t = copy[locale]
   const portals = [
     { title: t.events, description: t.eventsDetail, href: '/login/staff', icon: Users },
