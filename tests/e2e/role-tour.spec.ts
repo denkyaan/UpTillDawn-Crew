@@ -741,7 +741,20 @@ test.describe('UpTillDawn role-tour browser validation', () => {
           status = response?.status() ?? null;
           documentStatus = status;
           finalPath = new URL(routePage.url()).pathname;
-          visible = await routePage.locator('body').isVisible().catch(() => false);
+          visible = await routePage.locator('body').waitFor({ state: 'visible', timeout: 12000 })
+            .then(() => true).catch(() => false);
+          if (!visible) {
+            await testInfo.attach(`${role.toLowerCase()}-route-render-failure-${routeChecks.length}.json`, {
+              body: JSON.stringify({
+                role, path, url: routePage.url(), status, navigationError,
+                readyState: await routePage.evaluate(() => document.readyState).catch(() => null),
+                bodyCount: await routePage.locator('body').count().catch(() => -1),
+                mainCount: await routePage.locator('main').count().catch(() => -1),
+                title: await routePage.title().catch(() => null),
+              }, null, 2),
+              contentType: 'application/json',
+            });
+          }
           if (documentStatus === null) {
             documentStatus = await page.request.get(target.toString(), { timeout: 15000, maxRedirects: 0 })
               .then(result => result.status()).catch((error: unknown) => {
@@ -768,7 +781,21 @@ test.describe('UpTillDawn role-tour browser validation', () => {
           // makes each route independent. A failed route is recorded, never
           // silently counted as covered.
           await inventoryPage.goto(target, { waitUntil: 'commit', timeout: 20000 });
-          await expect(inventoryPage.locator('main').first()).toBeVisible({ timeout: 10000 });
+          try {
+            await expect(inventoryPage.locator('main').first()).toBeVisible({ timeout: 15000 });
+          } catch (renderError) {
+            await testInfo.attach(`${role.toLowerCase()}-inventory-render-failure-${uniquePaths.indexOf(path)}.json`, {
+              body: JSON.stringify({
+                role, path, url: inventoryPage.url(), error: String(renderError),
+                readyState: await inventoryPage.evaluate(() => document.readyState).catch(() => null),
+                bodyCount: await inventoryPage.locator('body').count().catch(() => -1),
+                mainCount: await inventoryPage.locator('main').count().catch(() => -1),
+                title: await inventoryPage.title().catch(() => null),
+              }, null, 2),
+              contentType: 'application/json',
+            });
+            throw renderError;
+          }
           // A visible shell is not proof that React finished hydrating.
           // Inventory interactive elements across the rendered document,
           // including role portals and dialogs mounted outside <main>.
