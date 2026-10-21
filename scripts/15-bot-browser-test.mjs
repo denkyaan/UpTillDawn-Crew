@@ -161,7 +161,19 @@ try {
     const expectedName = `E2E ${role.toUpperCase()} ${String(index + 1).padStart(2, '0')}`
     const context = await browser.newContext({ locale, viewport })
     const page = await context.newPage()
-    const diagnostics={consoleErrors:[],pageErrors:[]}
+    const diagnostics={consoleErrors:[],pageErrors:[],httpErrors:[]}
+    page.on('response',async response=>{
+      if(response.status()<400||diagnostics.httpErrors.length>=25)return
+      const url=new URL(response.url())
+      const safePath=url.pathname
+      // Never log auth credentials, tokens, query strings or request bodies.
+      const isAuth=/\\/auth\\/v1\\//.test(safePath)
+      const body=isAuth?'[auth response omitted]':
+        (await response.text().catch(()=>'<unavailable>')).slice(0,350)
+          .replace(/(Bearer\\s+)[^\\s"']+/gi,'$1[redacted]')
+          .replace(/("(?:token|access_token|refresh_token|password|apikey)"\\s*:\\s*")[^"]+/gi,'$1[redacted]')
+      diagnostics.httpErrors.push({status:response.status(),method:response.request().method(),path:safePath,body})
+    })
     page.on('console',message=>{
       if(message.type()==='error')diagnostics.consoleErrors.push(message.text().slice(0,500))
     })
