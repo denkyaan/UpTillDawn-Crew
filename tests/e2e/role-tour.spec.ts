@@ -816,7 +816,26 @@ test.describe('UpTillDawn role-tour browser validation', () => {
       // Non-destructive route coverage: visit every same-origin, visible navigation destination.
       console.log(`[${role}] Route audit started with ${navigation.length} navigation links`);
       const routeChecks: Array<{ path: string; finalPath: string; status: number | null; visible: boolean; navigationError: string | null; documentStatus: number | null }> = [];
-      const uniquePaths = [...new Set(navigation.map(item => item.href).filter((href): href is string => Boolean(href && href.startsWith('/') && !href.startsWith('//'))))];
+      // Re-discover navigation after onboarding: login-time links may be a stale shell.
+      const discoveryPage = await page.context().newPage();
+      let hydratedLinks: Array<{ href: string | null; label: string }> = [];
+      try {
+        await discoveryPage.goto(new URL('/', baseURL!).toString(), { waitUntil: 'commit', timeout: 20000 });
+        await expect(discoveryPage.locator('body')).toBeVisible({ timeout: 15000 });
+        await expect.poll(async () => discoveryPage.locator('nav a[href]:visible, [role="navigation"] a[href]:visible, aside a[href]:visible').count(), { timeout: 15000 }).toBeGreaterThan(0);
+        hydratedLinks = await discoveryPage.locator('nav a[href]:visible, [role="navigation"] a[href]:visible, aside a[href]:visible').evaluateAll(nodes =>
+          nodes.map(node => ({ href: node.getAttribute('href'), label: (node.textContent || '').trim().slice(0, 100) }))
+        );
+      } finally {
+        await discoveryPage.close();
+      }
+      const uniquePaths = [...new Set([...hydratedLinks.map(item => item.href), ...navigation.map(item => item.href)]
+        .filter((href): href is string => Boolean(href && href.startsWith('/') && !href.startsWith('//'))))];
+      await testInfo.attach(`${role.toLowerCase()}-route-discovery.json`, {
+        body: JSON.stringify({ role, initialCount: navigation.length, hydratedLinks, uniquePaths }, null, 2),
+        contentType: 'application/json',
+      });
+      console.log(`[${role}] Role route discovery: ${JSON.stringify({ initial: navigation.length, hydrated: hydratedLinks.length, unique: uniquePaths.length })}`);
       for (const path of uniquePaths) {
         console.log(`[${role}] Route audit visiting ${path}`);
         const target = new URL(path, baseURL!);
