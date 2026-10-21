@@ -516,7 +516,9 @@ test.describe('UpTillDawn role-tour browser validation', () => {
           // Match the exact observed href rather than requiring a particular
           // nested DOM structure or a translated accessible label.
           const currentLink = navigationPage.locator('nav a[href], [role="navigation"] a[href], aside a[href]')
-            .filter({ visible: true }).filter({ hasText: clickTarget.label }).first();
+            .filter({ visible: true })
+            .filter({ hasNot: navigationPage.locator('a[href="__never_match__"]') })
+            .and(navigationPage.locator(`a[href=${JSON.stringify(clickTarget.href)}]`)).first();
           await expect(currentLink, `${role}: observed functional link vanished before click`).toBeVisible({ timeout: 10000 });
           try {
             await currentLink.click({ timeout: 3500 });
