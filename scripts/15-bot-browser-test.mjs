@@ -167,11 +167,11 @@ try {
       const url=new URL(response.url())
       const safePath=url.pathname
       // Never log auth credentials, tokens, query strings or request bodies.
-      const isAuth=/\\/auth\\/v1\\//.test(safePath)
+      const isAuth=safePath.includes('/auth/v1/')
       const body=isAuth?'[auth response omitted]':
         (await response.text().catch(()=>'<unavailable>')).slice(0,350)
-          .replace(/(Bearer\\s+)[^\\s"']+/gi,'$1[redacted]')
-          .replace(/("(?:token|access_token|refresh_token|password|apikey)"\\s*:\\s*")[^"]+/gi,'$1[redacted]')
+          .replace(/(Bearer\s+)[^\s"']+/gi,'$1[redacted]')
+          .replace(/("(?:token|access_token|refresh_token|password|apikey)"\s*:\s*")[^"]+/gi,'$1[redacted]')
       diagnostics.httpErrors.push({status:response.status(),method:response.request().method(),path:safePath,body})
     })
     page.on('console',message=>{
