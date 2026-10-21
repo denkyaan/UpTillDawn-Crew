@@ -493,6 +493,34 @@ test.describe('UpTillDawn role-tour browser validation', () => {
           await navigationPage.close();
         }
       }
+      // The staging role accounts are reused across CI runs. Reset only
+      // browser-local tour state for this isolated test account, so the
+      // first-chapter assertions cannot inherit a previous run's 5/11.
+      // Never alter profiles, events, server records or other user data.
+      const clearedTourKeys = await page.evaluate(() => {
+        const cleared: string[] = [];
+        for (const key of Object.keys(localStorage)) {
+          if (key.startsWith('uptilldawn-tour-progress:')) {
+            localStorage.removeItem(key);
+            cleared.push(key);
+          }
+        }
+        for (const key of ['uptilldawn-tour-active-v8', 'uptilldawn-tour-preview-route']) {
+          if (sessionStorage.getItem(key) !== null) {
+            sessionStorage.removeItem(key);
+            cleared.push(key);
+          }
+        }
+        return cleared;
+      });
+      await testInfo.attach(`${role.toLowerCase()}-tour-test-state-reset.json`, {
+        body: JSON.stringify({ role, clearedTourKeys }, null, 2),
+        contentType: 'application/json',
+      });
+      if (clearedTourKeys.length > 0) {
+        await page.reload({ waitUntil: 'domcontentloaded' });
+        await expect(page.locator('body')).toBeVisible({ timeout: 15000 });
+      }
       const startTour = page.locator('#app-scroll').getByRole('button', { name: /rondleiding starten|start tour|commencer la visite|rundgang starten|hervatten|resume|reprendre|fortsetzen/i }).first();
       if (!trainingStartedByWelcome) await expect(startTour).toBeVisible({ timeout: 10000 });
       await page.screenshot({ path: testInfo.outputPath(`${role.toLowerCase()}-training-index.png`), fullPage: true });
