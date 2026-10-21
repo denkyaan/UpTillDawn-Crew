@@ -87,7 +87,11 @@ jobs:
       - name: Exclude staging-only migration from local database replay
         run: |
           mkdir -p /tmp/upt-staging-only-migrations
-          mv supabase/migrations/20261013110000_training_scenarios_staging.sql /tmp/upt-staging-only-migrations/
+          # Exclude all migrations explicitly scoped to the real staging project.
+          for file in supabase/migrations/*_staging.sql; do
+            [ -f "$file" ] || continue
+            mv "$file" /tmp/upt-staging-only-migrations/
+          done
 
       - name: Start isolated Supabase stack
         run: npx --yes supabase@2.117.0 start -x studio,imgproxy,inbucket,edge-runtime,logflare,vector,realtime
