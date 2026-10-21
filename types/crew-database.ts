@@ -4583,6 +4583,15 @@ export type Database = {
         Args: { p_blocked: boolean; p_reason?: string; p_user: string }
         Returns: undefined
       }
+      upt_admin_set_portal_role: {
+        Args: {
+          p_action: string
+          p_portal: string
+          p_role: string
+          p_user_id: string
+        }
+        Returns: string
+      }
       upt_admin_system_health: {
         Args: never
         Returns: {
@@ -5336,10 +5345,6 @@ export type Database = {
       upt_moderate_message: {
         Args: { p_message: string; p_reason: string }
         Returns: undefined
-      }
-      upt_admin_set_portal_role: {
-        Args: { p_user_id: string; p_portal: string; p_role: string; p_action: string }
-        Returns: string
       }
       upt_my_portal_assignments: {
         Args: never
