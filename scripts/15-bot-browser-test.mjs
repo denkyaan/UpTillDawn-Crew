@@ -11,7 +11,9 @@ if (!testPassword || !supabaseUrl || !serviceRoleKey || !anonKey) {
   process.exit(1)
 }
 
-const roles = ['admin', 'responsible', ...Array(13).fill('staff')]
+const botCount = Number(process.env.BOT_COUNT || 15)
+if (![5, 15].includes(botCount)) throw new Error('BOT_COUNT must be 5 or 15')
+const roles = ['admin', 'responsible', ...Array(botCount - 2).fill('staff')]
 const locales = ['nl', 'fr', 'en', 'de']
 const viewports = [
   { width: 390, height: 844 },
@@ -951,4 +953,4 @@ if (failures.length) {
   process.exit(1)
 }
 
-console.log('PASS: 15 concurrent authenticated browser bots + protected event workflow surfaces across Admin/Responsible/Staff, NL/FR/EN/DE and mobile/tablet/desktop viewports')
+console.log(`PASS: ${botCount} authenticated browser bots + protected event workflow surfaces across Admin/Responsible/Staff, NL/FR/EN/DE and mobile/tablet/desktop viewports`)
