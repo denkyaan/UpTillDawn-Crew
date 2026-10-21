@@ -1220,8 +1220,27 @@ test.describe('UpTillDawn role-tour browser validation', () => {
           }
           // Return to the original route before exercising disclosures/tabs.
           if (navigationExercised) {
-            await interactionPage.goto(interactionUrl, { waitUntil: 'commit', timeout: 20000 });
-            await expect(interactionPage.locator('main').first()).toBeVisible({ timeout: 12000 });
+            const returnAttempts: Array<{ attempt: number; error: string | null; url: string }> = [];
+            let returned = false;
+            for (let attempt = 1; attempt <= 2 && !returned; attempt++) {
+              let error: string | null = null;
+              try {
+                await interactionPage.goto(interactionUrl, { waitUntil: 'commit', timeout: 20000 });
+                await expect(interactionPage.locator('main').first()).toBeVisible({ timeout: 12000 });
+                returned = true;
+              } catch (caught) {
+                error = String(caught).slice(0, 600);
+              }
+              returnAttempts.push({ attempt, error, url: interactionPage.url() });
+              if (!returned && attempt === 1) {
+                await interactionPage.goto('about:blank', { waitUntil: 'commit', timeout: 5000 }).catch(() => {});
+              }
+            }
+            await testInfo.attach(`${role.toLowerCase()}-interaction-return-${uniquePaths.indexOf(path)}.json`, {
+              body: JSON.stringify({ role, path, returnAttempts }, null, 2),
+              contentType: 'application/json',
+            });
+            expect(returned, `${role} ${path}: return navigation failed: ${JSON.stringify(returnAttempts)}`).toBe(true);
           }
           const summaries = interactionPage.locator('main details > summary:visible');
           const summaryCount = await summaries.count();
