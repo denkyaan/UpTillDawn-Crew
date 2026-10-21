@@ -379,7 +379,7 @@ test.describe('UpTillDawn role-tour browser validation', () => {
           await navigationPage.close();
         }
       }
-      const startTour = page.getByRole('button', { name: /rondleiding starten|start tour|commencer la visite|rundgang starten|hervatten|resume|reprendre|fortsetzen/i });
+      const startTour = page.locator('#app-scroll').getByRole('button', { name: /rondleiding starten|start tour|commencer la visite|rundgang starten|hervatten|resume|reprendre|fortsetzen/i }).first();
       if (!trainingStartedByWelcome) await expect(startTour).toBeVisible({ timeout: 10000 });
       await page.screenshot({ path: testInfo.outputPath(`${role.toLowerCase()}-training-index.png`), fullPage: true });
       // A visible button can still be disabled or covered. Capture actionability before a bounded click.
