@@ -5337,6 +5337,10 @@ export type Database = {
         Args: { p_message: string; p_reason: string }
         Returns: undefined
       }
+      upt_admin_set_portal_role: {
+        Args: { p_user_id: string; p_portal: string; p_role: string; p_action: string }
+        Returns: string
+      }
       upt_my_portal_assignments: {
         Args: never
         Returns: {
