@@ -494,11 +494,14 @@ try {
         }
         const before=await page.evaluate(key=>JSON.parse(localStorage.getItem(key)||'null'),progressKey)
         if(!before?.activeKey)throw new Error('general tour did not initialize active progress')
-        await primary.evaluate(button=>button.click())
-        // The compact tour advances through React state before persistence.
-        // Assert the next highlighted action first, then verify persisted progress.
-        await page.locator('[data-tour-demo="primary-action"]').first().waitFor({state:'visible',timeout:30000})
-        await page.waitForTimeout(250)
+        await primary.click()
+        // Wait for the actual persisted transition, not merely for an element
+        // that was already visible before the action.
+        await page.waitForFunction(({key,previous})=>{
+          const next=JSON.parse(localStorage.getItem(key)||'null')
+          return Boolean(next?.activeKey&&next.activeKey!==previous&&
+            Array.isArray(next.completed)&&next.completed.includes(previous))
+        },{key:progressKey,previous:before.activeKey},{timeout:15000})
         const advanced=await page.evaluate(key=>JSON.parse(localStorage.getItem(key)||'null'),progressKey)
         if(
           !advanced?.activeKey||
