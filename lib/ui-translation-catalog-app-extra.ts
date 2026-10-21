@@ -5,6 +5,7 @@ export const APP_EXTRA_TRANSLATIONS: Record<string,Row> = {
   "Overzicht van portaalroltoewijzingen.": { fr:"Aperçu des attributions de rôles des portails.", en:"Overview of portal role assignments.", de:"Übersicht der Portalrollenzuweisungen." },
   "Portaalrol beheren": { fr:"Gérer le rôle du portail", en:"Manage portal role", de:"Portalrolle verwalten" },
   "Gebruikers-ID": { fr:"Identifiant utilisateur", en:"User ID", de:"Benutzer-ID" },
+  "Actie": { fr:"Action", en:"Action", de:"Aktion" },
   "Toewijzen": { fr:"Attribuer", en:"Assign", de:"Zuweisen" },
   "Goedkeuren": { fr:"Approuver", en:"Approve", de:"Genehmigen" },
   "Intrekken": { fr:"Révoquer", en:"Revoke", de:"Widerrufen" },
