@@ -455,8 +455,20 @@ test.describe('UpTillDawn role-tour browser validation', () => {
           // on this page and click by exact href, not translated label.
           // Wait for client-side role navigation to render rather than taking
           // an immediate snapshot after DOMContentLoaded.
-          await navigationPage.locator('nav a[href]:visible, [role="navigation"] a[href]:visible, aside a[href]:visible')
-            .first().waitFor({ state: 'visible', timeout: 15000 }).catch(() => {});
+          const roleNavigationLinks = navigationPage.locator('nav a[href]:visible, [role="navigation"] a[href]:visible, aside a[href]:visible');
+          // A visible brand/home link is not evidence that role navigation has hydrated.
+          // Poll for a usable feature destination; preserve a hard failure if none renders.
+          await expect.poll(async () => {
+            const links = await roleNavigationLinks.evaluateAll(nodes => nodes.map(node =>
+              (node as HTMLAnchorElement).getAttribute('href')
+            ));
+            return links.filter(href => {
+              if (!href?.startsWith('/') || href.startsWith('//')) return false;
+              const pathname = new URL(href, baseURL!).pathname;
+              return pathname !== '/' && pathname !== authenticatedPath &&
+                !['login', 'logout', 'signup', 'auth'].includes(pathname.split('/')[1]);
+            }).length;
+          }, { message: `${role}: no hydrated functional navigation destination`, timeout: 20000 }).toBeGreaterThan(0);
           const currentLinks = await navigationPage.locator('nav a[href], [role="navigation"] a[href], aside a[href]')
             .evaluateAll(links => links.filter(link => {
               const element = link as HTMLAnchorElement;
