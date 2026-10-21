@@ -842,6 +842,34 @@ test.describe('UpTillDawn role-tour browser validation', () => {
         await discoveryPage.goto(new URL('/', baseURL!).toString(), { waitUntil: 'commit', timeout: 20000 });
         await expect(discoveryPage.locator('body')).toBeVisible({ timeout: 15000 });
         await expect.poll(async () => discoveryPage.locator('nav a[href]:visible, [role="navigation"] a[href]:visible, aside a[href]:visible').count(), { timeout: 15000 }).toBeGreaterThan(0);
+        // A fresh authenticated page can display first-login onboarding again.
+        // Capture the overlay and all navigation semantics before interpreting
+        // a single visible home link as complete role navigation.
+        const discoverySurface = await discoveryPage.evaluate(() => {
+          const visible = (node: Element) => {
+            const element = node as HTMLElement;
+            const style = getComputedStyle(element);
+            return style.display !== 'none' && style.visibility !== 'hidden' && element.getClientRects().length > 0;
+          };
+          const snapshot = (selector: string) => [...document.querySelectorAll(selector)].filter(visible).map(node => ({
+            tag: node.tagName.toLowerCase(),
+            text: ((node as HTMLElement).innerText || node.getAttribute('aria-label') || '').trim().slice(0, 100),
+            href: node.getAttribute('href'),
+            role: node.getAttribute('role'),
+          }));
+          return {
+            path: location.pathname,
+            dialogs: snapshot('[role="dialog"], [role="alertdialog"], [aria-modal="true"]'),
+            navAnchors: snapshot('nav a, aside a, [role="navigation"] a'),
+            navButtons: snapshot('nav button, aside button, [role="navigation"] button'),
+            mainHeadings: snapshot('main h1, main h2'),
+          };
+        });
+        await testInfo.attach(`${role.toLowerCase()}-discovery-surface.json`, {
+          body: JSON.stringify({ role, discoverySurface }, null, 2),
+          contentType: 'application/json',
+        });
+        console.log(`[${role}] Discovery surface: ${JSON.stringify({ dialogs: discoverySurface.dialogs.length, navAnchors: discoverySurface.navAnchors.length, navButtons: discoverySurface.navButtons.length, mainHeadings: discoverySurface.mainHeadings.length })}`);
         hydratedLinks = await discoveryPage.locator('nav a[href]:visible, [role="navigation"] a[href]:visible, aside a[href]:visible').evaluateAll(nodes =>
           nodes.map(node => ({ href: node.getAttribute('href'), label: (node.textContent || '').trim().slice(0, 100) }))
         );
