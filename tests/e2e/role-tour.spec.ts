@@ -953,7 +953,7 @@ test.describe('UpTillDawn role-tour browser validation', () => {
             if (!href?.startsWith('/') || href.startsWith('//')) continue;
             const destination = new URL(href, baseURL!).pathname;
             if (destination === new URL(interactionPage.url()).pathname ||
-                /^\\/(login|logout|signup|auth)(\\/|$)/.test(destination)) continue;
+                /^\/(login|logout|signup|auth)(\/|$)/.test(destination)) continue;
             navigationCandidates.push({
               index: linkIndex, destination,
               label: (await link.innerText().catch(() => '')).trim().slice(0, 100),
