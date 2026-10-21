@@ -12,8 +12,9 @@ if (!testPassword || !supabaseUrl || !serviceRoleKey || !anonKey) {
 }
 
 const botCount = Number(process.env.BOT_COUNT || 15)
-if (![5, 15].includes(botCount)) throw new Error('BOT_COUNT must be 5 or 15')
-const roles = ['admin', 'responsible', ...Array(botCount - 2).fill('staff')]
+if (![1, 3, 15].includes(botCount)) throw new Error('BOT_COUNT must be 1, 3 or 15')
+const roles = botCount === 1 ? [process.env.BOT_DEBUG_ROLE || 'admin'] : ['admin', 'responsible', ...Array(botCount - 2).fill('staff')]
+if (roles.some(role => !['admin', 'responsible', 'staff'].includes(role))) throw new Error('BOT_DEBUG_ROLE must be admin, responsible or staff')
 const locales = ['nl', 'fr', 'en', 'de']
 const viewports = [
   { width: 390, height: 844 },
