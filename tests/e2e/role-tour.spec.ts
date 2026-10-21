@@ -848,6 +848,38 @@ test.describe('UpTillDawn role-tour browser validation', () => {
       } finally {
         await discoveryPage.close();
       }
+      // Admin navigation may use in-page tabs rather than URL anchors.
+      // Record the actual visible tab/button structure without triggering writes.
+      const adminSurface = role === 'ADMIN' ? await page.evaluate(() => {
+        const visible = (node: Element) => {
+          const element = node as HTMLElement;
+          const style = getComputedStyle(element);
+          return style.display !== 'none' && style.visibility !== 'hidden' && element.getClientRects().length > 0;
+        };
+        const inspect = (selector: string) => [...document.querySelectorAll(selector)].filter(visible).map(node => ({
+          tag: node.tagName.toLowerCase(),
+          label: ((node as HTMLElement).innerText || node.getAttribute('aria-label') || '').trim().slice(0, 100),
+          role: node.getAttribute('role'),
+          href: node.getAttribute('href'),
+          ariaControls: node.getAttribute('aria-controls'),
+          ariaSelected: node.getAttribute('aria-selected'),
+          dataState: node.getAttribute('data-state'),
+        }));
+        return {
+          urlPath: location.pathname,
+          tabs: inspect('[role="tab"], [role="tablist"] button, [aria-controls][role="button"]'),
+          navigationButtons: inspect('nav button, aside button, [role="navigation"] button'),
+          mainHeadings: inspect('main h1, main h2, main h3'),
+          mainButtons: inspect('main button').slice(0, 80),
+        };
+      }) : null;
+      if (adminSurface) {
+        await testInfo.attach('admin-functional-surface.json', {
+          body: JSON.stringify({ role, adminSurface }, null, 2),
+          contentType: 'application/json',
+        });
+        console.log(`[ADMIN] Functional surface: ${JSON.stringify({ tabs: adminSurface.tabs.length, navigationButtons: adminSurface.navigationButtons.length, mainButtons: adminSurface.mainButtons.length, headings: adminSurface.mainHeadings.length })}`);
+      }
       const uniquePaths = [...new Set([...hydratedLinks.map(item => item.href), ...navigation.map(item => item.href)]
         .filter((href): href is string => Boolean(href && href.startsWith('/') && !href.startsWith('//'))))];
       await testInfo.attach(`${role.toLowerCase()}-route-discovery.json`, {
