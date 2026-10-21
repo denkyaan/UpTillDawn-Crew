@@ -844,7 +844,7 @@ test.describe('UpTillDawn role-tour browser validation', () => {
         } catch (error) {
           // Preserve the failure: a timed-out navigation is NOT successful route coverage.
           // Capture a separate HTTP probe to distinguish server delay from browser lifecycle stalls.
-          let httpProbe: { status: number | null; error: string | null } = { status: null, error: null };
+          const httpProbe: { status: number | null; error: string | null } = { status: null, error: null };
           try {
             const response = await page.request.get(new URL('/', baseURL!).toString(), { timeout: 10000, maxRedirects: 3 });
             httpProbe.status = response.status();
