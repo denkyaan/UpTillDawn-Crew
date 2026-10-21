@@ -966,7 +966,7 @@ test.describe('UpTillDawn role-tour browser validation', () => {
         contentType: 'application/json',
       });
       console.log(`[${role}] Role route discovery: ${JSON.stringify({ initial: navigation.length, hydrated: hydratedLinks.length, unique: uniquePaths.length })}`);
-      const discoveredFeaturePaths = uniquePaths.filter(path => path !== '/' && !/^\\/(login|logout|signup|auth)(\\/|$)/.test(path));
+      const discoveredFeaturePaths = uniquePaths.filter(path => path !== '/' && !/^\/(login|logout|signup|auth)(\/|$)/.test(path));
       await testInfo.attach(`${role.toLowerCase()}-feature-route-coverage.json`, {
         body: JSON.stringify({ role, discoveredFeaturePaths, complete: discoveredFeaturePaths.length > 0 }, null, 2),
         contentType: 'application/json',
