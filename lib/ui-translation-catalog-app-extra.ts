@@ -2,6 +2,7 @@ export type ExtraCatalogLocale = 'nl' | 'fr' | 'en' | 'de'
 type Row = { fr:string; en:string; de:string }
 
 export const APP_EXTRA_TRANSLATIONS: Record<string,Row> = {
+  "Overzicht van portaalroltoewijzingen. Wijzigingen zijn nog niet beschikbaar.": { fr:"Aperçu des attributions de rôles de portail. Les modifications ne sont pas encore disponibles.", en:"Overview of portal role assignments. Changes are not available yet.", de:"Übersicht der Portalrollenzuweisungen. Änderungen sind noch nicht verfügbar." },
   "Bekijk mijn portaalrollen →": { fr:"Voir mes rôles de portail →", en:"View my portal roles →", de:"Meine Portalrollen ansehen →" },
   "Portaalrollen": { fr:"Rôles des portails", en:"Portal roles", de:"Portalrollen" },
   "Overzicht van je eigen roltoewijzingen. Wijzigingen zijn nog niet beschikbaar.": { fr:"Aperçu de vos propres rôles attribués. Les modifications ne sont pas encore disponibles.", en:"Overview of your own role assignments. Changes are not available yet.", de:"Übersicht deiner eigenen Rollenzuweisungen. Änderungen sind noch nicht verfügbar." },
