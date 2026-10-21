@@ -2,6 +2,8 @@ export type ExtraCatalogLocale = 'nl' | 'fr' | 'en' | 'de'
 type Row = { fr:string; en:string; de:string }
 
 export const APP_EXTRA_TRANSLATIONS: Record<string,Row> = {
+  "Opnieuw toewijzen": { fr:"Réattribuer", en:"Reassign", de:"Erneut zuweisen" },
+  "Rol intrekken?": { fr:"Révoquer ce rôle ?", en:"Revoke this role?", de:"Diese Rolle entziehen?" },
   "Portaal": { fr:"Portail", en:"Portal", de:"Portal" },
   "Eventmedewerker": { fr:"Personnel événementiel", en:"Event staff", de:"Veranstaltungspersonal" },
   "Eventverantwoordelijke": { fr:"Responsable événementiel", en:"Event lead", de:"Veranstaltungsleitung" },
