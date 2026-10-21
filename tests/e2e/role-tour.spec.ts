@@ -204,6 +204,26 @@ test.describe('UpTillDawn role-tour browser validation', () => {
         html: button.outerHTML.slice(0, 500),
       }));
       console.log(`[${role}] Submit state: ${JSON.stringify(loginSubmitState)}`);
+      // Record real main-frame redirects without logging cookies or tokens.
+      const loginNavigationEvents: Array<{ kind: string; path: string; status?: number; redirectedFrom?: string }> = [];
+      page.on('request', request => {
+        if (!request.isNavigationRequest() || request.frame() !== page.mainFrame()) return;
+        const url = new URL(request.url());
+        if (url.origin === new URL(baseURL!).origin) loginNavigationEvents.push({ kind: 'request', path: url.pathname });
+      });
+      page.on('response', response => {
+        const request = response.request();
+        if (!request.isNavigationRequest()) return;
+        const url = new URL(response.url());
+        if (url.origin !== new URL(baseURL!).origin) return;
+        const from = request.redirectedFrom();
+        loginNavigationEvents.push({ kind: 'response', path: url.pathname, status: response.status(), redirectedFrom: from ? new URL(from.url()).pathname : undefined });
+      });
+      page.on('framenavigated', frame => {
+        if (frame !== page.mainFrame()) return;
+        const url = new URL(frame.url());
+        if (url.origin === new URL(baseURL!).origin) loginNavigationEvents.push({ kind: 'committed', path: url.pathname });
+      });
       await submit.click();
       // Some staging pages hydrate after the initial click. Retry the real submit once
       // only if there was no navigation and no same-origin POST at all.
@@ -220,11 +240,11 @@ test.describe('UpTillDawn role-tour browser validation', () => {
       // The admin login uses a document navigation via /api/auth/admin-login.
       // Inspecting body before that navigation settles races the old document
       // being destroyed and causes a false timeout.
-      await page.waitForLoadState('domcontentloaded', { timeout: 30000 }).catch(() => {});
+      await page.waitForLoadState('domcontentloaded', { timeout: 15000 }).catch(error => console.log(`[${role}] DOMContentLoaded delayed: ${String(error).slice(0, 250)}`));
       try {
         await expect(page.locator('body')).toBeVisible({ timeout: 30000 });
       } catch (error) {
-        const diagnostic = { role, url: page.url(), authResponses, formPosts, serverFailures };
+        const diagnostic = { role, url: page.url(), loginNavigationEvents, authResponses, formPosts, serverFailures };
         console.error(`[${role}] Login document navigation diagnostic: ${JSON.stringify(diagnostic)}`);
         await testInfo.attach(`${role.toLowerCase()}-login-document-navigation.json`, {
           body: JSON.stringify(diagnostic, null, 2), contentType: 'application/json',
@@ -237,7 +257,7 @@ test.describe('UpTillDawn role-tour browser validation', () => {
       } catch (error) {
         const visibleAlert = await page.locator('[role="alert"], [aria-live="assertive"], [data-sonner-toast]').allTextContents().catch(() => []);
         const inputState = await page.locator('input[type="email"], input[type="password"]').evaluateAll(inputs => inputs.map(input => ({ type: (input as HTMLInputElement).type, valid: (input as HTMLInputElement).validity.valid, validationMessage: (input as HTMLInputElement).validationMessage })));
-        const diagnostic = { role, currentPath: new URL(page.url()).pathname, authResponses, formPosts, loginSubmitState, visibleAlert: visibleAlert.map(t => t.slice(0, 250)), inputState, serverFailures };
+        const diagnostic = { role, currentPath: new URL(page.url()).pathname, loginNavigationEvents, authResponses, formPosts, loginSubmitState, visibleAlert: visibleAlert.map(t => t.slice(0, 250)), inputState, serverFailures };
         console.error(`[${role}] Login diagnostic: ${JSON.stringify(diagnostic)}`);
         await testInfo.attach(`${role.toLowerCase()}-login-diagnostic.json`, { body: JSON.stringify(diagnostic, null, 2), contentType: 'application/json' });
         await page.screenshot({ path: testInfo.outputPath(`${role.toLowerCase()}-login-failure.png`), fullPage: true });
