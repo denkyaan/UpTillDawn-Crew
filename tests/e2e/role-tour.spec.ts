@@ -103,7 +103,10 @@ test.describe('Workplace tour scope and new-chapter contracts', () => {
 });
 
 test.describe('UpTillDawn role-tour browser validation', () => {
-  test.setTimeout(120_000);
+  // Role inspection now includes route visits, control inventories and real
+  // reversible interactions. Keep the full audit intact instead of allowing
+  // the old 120s tour-only budget to terminate the browser mid-inventory.
+  test.setTimeout(360_000);
   for (const role of roles) {
     test(role + ' authenticated tour inspection', async ({ page }, testInfo) => {
       test.skip(!baseURL, 'E2E_BASE_URL must target an isolated staging deployment');
