@@ -990,6 +990,35 @@ test.describe('UpTillDawn role-tour browser validation', () => {
             });
           }
           navigationCandidates.sort((a, b) => Number(a.destination === '/') - Number(b.destination === '/'));
+          // Inspect up to three distinct feature destinations without invoking
+          // destructive buttons or modifying staging records. A home/logo click
+          // alone must not be reported as feature navigation coverage.
+          const distinctFeatureCandidates = navigationCandidates
+            .filter(candidate => candidate.destination !== '/')
+            .filter((candidate, index, all) => all.findIndex(item => item.destination === candidate.destination) === index)
+            .slice(0, 3);
+          const featureNavigationResults: Array<{ destination: string; status: string; finalPath: string }> = [];
+          for (const candidate of distinctFeatureCandidates) {
+            const featurePage = await page.context().newPage();
+            try {
+              await featurePage.goto(interactionUrl, { waitUntil: 'commit', timeout: 20000 });
+              await expect(featurePage.locator('main').first()).toBeVisible({ timeout: 12000 });
+              const featureLink = featurePage.locator('nav a[href], [role="navigation"] a[href], aside a[href]')
+                .and(featurePage.locator(`a[href=${JSON.stringify(candidate.destination)}]`)).first();
+              await expect(featureLink).toBeVisible({ timeout: 15000 });
+              await featureLink.click({ timeout: 10000, noWaitAfter: true });
+              await expect.poll(() => new URL(featurePage.url()).pathname, { timeout: 15000 }).toBe(candidate.destination);
+              await expect(featurePage.locator('main').first()).toBeVisible({ timeout: 15000 });
+              featureNavigationResults.push({ destination: candidate.destination, status: 'clicked-and-rendered', finalPath: new URL(featurePage.url()).pathname });
+              interactionAudit.push({ path, kind: 'feature-navigation', label: candidate.label || candidate.destination, result: `clicked:${candidate.destination}` });
+            } finally {
+              await featurePage.close();
+            }
+          }
+          await testInfo.attach(`${role.toLowerCase()}-feature-navigation-${uniquePaths.indexOf(path)}.json`, {
+            body: JSON.stringify({ role, path, candidateCount: distinctFeatureCandidates.length, featureNavigationResults }, null, 2),
+            contentType: 'application/json',
+          });
           let navigationExercised = false;
           for (const candidate of navigationCandidates) {
             const link = routeNavigation.nth(candidate.index);
