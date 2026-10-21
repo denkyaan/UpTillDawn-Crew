@@ -235,7 +235,9 @@ jobs:
           cat /tmp/uptilldawn-bot-app.log
           exit 1
 
-      - name: Run 15 concurrent authenticated browser bots
+      - name: Run 5 focused authenticated browser bots
+        env:
+          BOT_COUNT: '5'
         run: |
           set -euo pipefail
           for attempt in 1 2; do
@@ -250,6 +252,11 @@ jobs:
             fi
           done
           exit 1
+
+      - name: Run 15 authenticated browser bots (after 5 pass)
+        env:
+          BOT_COUNT: '15'
+        run: node scripts/15-bot-browser-test.mjs
 
       - name: Full application surface inventory gate
         run: |
