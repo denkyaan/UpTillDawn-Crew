@@ -46,6 +46,7 @@ export default async function PortalSelector() {
     <header>
       <h1 className="text-2xl font-bold">Mijn portalen</h1>
       <p className="mt-2 text-sm text-muted-foreground">Kies een portaal waarvoor je toegang hebt. Nieuwe rollen worden pas actief na goedkeuring.</p>
+      <Link href="/portals/roles" className="mt-3 inline-flex rounded-lg border px-3 py-2 text-sm font-medium text-violet-400 hover:border-violet-500">Bekijk mijn portaalrollen →</Link>
     </header>
     {error && <p role="alert" className="rounded-xl border border-amber-500/50 p-4 text-sm">Portaalrechten kunnen momenteel niet worden opgehaald. Je bestaande evenemententoegang blijft beschikbaar.</p>}
     {portals.length === 0 && <p className="rounded-xl border p-4">Er is nog geen portaal voor je account goedgekeurd. Neem contact op met een beheerder.</p>}
