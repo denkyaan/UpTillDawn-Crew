@@ -1,40 +1,35 @@
--- V2.1 portal entitlements must remain private, unapproved by default,
--- and unavailable for mutation by ordinary authenticated users.
-begin;
-select plan(9);
-
-select has_table('public','portal_role_assignments','Portal grants table exists');
-select has_column('public','portal_role_assignments','revoked_at','Revocation is tracked');
-select has_function('public','upt_my_portal_assignments',array[]::text[],'Self-service entitlement RPC exists');
-select results_eq(
-  $$select relrowsecurity from pg_class where oid='public.portal_role_assignments'::regclass$$,
-  $$values(true)$$,
-  'RLS is enabled'
-);
-select results_eq(
-  $$select count(*)::integer from pg_policies where schemaname='public' and tablename='portal_role_assignments' and cmd in ('INSERT','UPDATE','DELETE','ALL')$$,
-  $$values(0)$$,
-  'No permissive mutation policies exist'
-);
-select results_eq(
-  $$select has_table_privilege('authenticated','public.portal_role_assignments','INSERT')$$,
-  $$values(false)$$,
-  'Authenticated cannot insert portal grants'
-);
-select results_eq(
-  $$select has_table_privilege('authenticated','public.portal_role_assignments','UPDATE')$$,
-  $$values(false)$$,
-  'Authenticated cannot update portal grants'
-);
-select results_eq(
-  $$select has_table_privilege('authenticated','public.portal_role_assignments','DELETE')$$,
-  $$values(false)$$,
-  'Authenticated cannot delete portal grants'
-);
-select results_eq(
-  $$select prosecdef from pg_proc where oid='public.upt_my_portal_assignments()'::regprocedure$$,
-  $$values(false)$$,
-  'Entitlement RPC does not bypass RLS'
-);
-select * from finish();
-rollback;
+-- Native PostgreSQL regression assertions; no pgTAP extension dependency.
+do $$
+declare
+  v_count integer;
+begin
+  if to_regclass('public.portal_role_assignments') is null then
+    raise exception 'Portal grants table missing';
+  end if;
+  if not exists (
+    select 1 from information_schema.columns
+    where table_schema='public' and table_name='portal_role_assignments' and column_name='revoked_at'
+  ) then
+    raise exception 'Revocation field missing';
+  end if;
+  if to_regprocedure('public.upt_my_portal_assignments()') is null then
+    raise exception 'Entitlement RPC missing';
+  end if;
+  if not (select relrowsecurity from pg_class where oid='public.portal_role_assignments'::regclass) then
+    raise exception 'Portal grants RLS disabled';
+  end if;
+  select count(*) into v_count from pg_policies
+  where schemaname='public' and tablename='portal_role_assignments'
+    and cmd in ('INSERT','UPDATE','DELETE','ALL');
+  if v_count <> 0 then
+    raise exception 'Unexpected portal grant mutation policy: %', v_count;
+  end if;
+  if has_table_privilege('authenticated','public.portal_role_assignments','INSERT')
+    or has_table_privilege('authenticated','public.portal_role_assignments','UPDATE')
+    or has_table_privilege('authenticated','public.portal_role_assignments','DELETE') then
+    raise exception 'Authenticated role has portal grant mutation privilege';
+  end if;
+  if (select prosecdef from pg_proc where oid='public.upt_my_portal_assignments()'::regprocedure) then
+    raise exception 'Entitlement RPC must remain SECURITY INVOKER';
+  end if;
+end $$;
