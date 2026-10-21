@@ -839,7 +839,35 @@ test.describe('UpTillDawn role-tour browser validation', () => {
       const discoveryPage = await page.context().newPage();
       let hydratedLinks: Array<{ href: string | null; label: string }> = [];
       try {
-        await discoveryPage.goto(new URL('/', baseURL!).toString(), { waitUntil: 'commit', timeout: 20000 });
+        try {
+          await discoveryPage.goto(new URL('/', baseURL!).toString(), { waitUntil: 'commit', timeout: 20000 });
+        } catch (error) {
+          // Preserve the failure: a timed-out navigation is NOT successful route coverage.
+          // Capture a separate HTTP probe to distinguish server delay from browser lifecycle stalls.
+          let httpProbe: { status: number | null; error: string | null } = { status: null, error: null };
+          try {
+            const response = await page.request.get(new URL('/', baseURL!).toString(), { timeout: 10000, maxRedirects: 3 });
+            httpProbe.status = response.status();
+          } catch (probeError) {
+            httpProbe.error = String(probeError).slice(0, 600);
+          }
+          const diagnostic = {
+            role,
+            requestedPath: '/',
+            currentPath: new URL(discoveryPage.url()).pathname,
+            navigationError: String(error).slice(0, 1200),
+            httpProbe,
+            authenticatedLandingPath: authenticatedPath,
+            previouslyObservedNavigation: navigation,
+            serverFailures,
+          };
+          console.error(`[${role}] Discovery navigation failure: ${JSON.stringify(diagnostic)}`);
+          await testInfo.attach(`${role.toLowerCase()}-discovery-navigation-failure.json`, {
+            body: JSON.stringify(diagnostic, null, 2), contentType: 'application/json',
+          });
+          await discoveryPage.screenshot({ path: testInfo.outputPath(`${role.toLowerCase()}-discovery-navigation-failure.png`), fullPage: true, timeout: 5000 }).catch(() => {});
+          throw error;
+        }
         await expect(discoveryPage.locator('body')).toBeVisible({ timeout: 15000 });
         // A single logo link is only the loading shell, not hydrated role navigation.
         // Observe a stable non-home destination before treating discovery as complete.
