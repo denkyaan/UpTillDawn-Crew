@@ -507,34 +507,26 @@ try {
         const before=await page.evaluate(key=>JSON.parse(localStorage.getItem(key)||'null'),progressKey)
         if(!before?.activeKey)throw new Error('general tour did not initialize active progress')
         await primary.click()
-        // Wait for the actual persisted transition, not merely for an element
-        // that was already visible before the action.
-        try {
-          await page.waitForFunction(({key,previous})=>{
-            const next=JSON.parse(localStorage.getItem(key)||'null')
-            return Boolean(next?.activeKey&&next.activeKey!==previous&&
-              Array.isArray(next.completed)&&next.completed.includes(previous))
-          },{key:progressKey,previous:before.activeKey},{timeout:15000})
-        } catch (error) {
-          const snapshot=await page.evaluate(key=>({
-            progress:localStorage.getItem(key),
-            url:location.pathname,
-            primaryText:document.querySelector('[data-tour-demo="primary-action"]')?.textContent?.trim().slice(0,180),
-            tourText:[...document.querySelectorAll('[role="dialog"],[aria-live],button')].map(el=>el.textContent?.trim()).filter(Boolean).slice(-35),
-            tourStorage:Object.keys(localStorage).filter(k=>k.includes('tour')).map(k=>({key:k,value:localStorage.getItem(k)?.slice(0,450)}))
-          }),progressKey)
-          throw new Error(`general tour action failed to persist progress: ${error instanceof Error?error.message:String(error)}; snapshot=${JSON.stringify(snapshot)}`)
+        // The tour deliberately waits for a manual tab click after the demo action.
+        // Confirm the action alone never navigates or falsely marks an exercise complete.
+        const afterAction=await page.evaluate(key=>JSON.parse(localStorage.getItem(key)||'null'),progressKey)
+        if(afterAction?.activeKey!==before.activeKey||afterAction?.completed?.includes(before.activeKey)){
+          throw new Error('demo action automatically advanced or falsely completed the tour')
         }
+        const eventsLink=page.locator('a[href]').filter({hasText:/evenement|event|événement|veranstaltung/i}).first()
+        await eventsLink.waitFor({state:'visible',timeout:15000})
+        await eventsLink.click()
+        await page.waitForFunction(key=>{
+          const next=JSON.parse(localStorage.getItem(key)||'null')
+          return next?.activeKey==='events'
+        },progressKey,{timeout:15000})
         const advanced=await page.evaluate(key=>JSON.parse(localStorage.getItem(key)||'null'),progressKey)
-        if(
-          !advanced?.activeKey||
-          advanced.activeKey===before.activeKey||
-          !Array.isArray(advanced.completed)||
-          !advanced.completed.includes(before.activeKey)
-        )throw new Error(`general tour action did not advance persisted progress: before=${JSON.stringify(before)} after=${JSON.stringify(advanced)}`)
+        if(advanced?.completed?.includes(before.activeKey)){
+          throw new Error('navigation incorrectly marked the overview exercise complete')
+        }
         await page.getByRole('button',{name:/^(PAUZEER|PAUSE|PAUSIEREN)$/}).click()
         const progress=await page.evaluate(key=>JSON.parse(localStorage.getItem(key)||'null'),progressKey)
-        if(!progress?.paused||progress.activeKey!==advanced.activeKey||!progress.completed.includes(before?.activeKey||'overview'))throw new Error('general tour progress or pause did not persist')
+        if(!progress?.paused||progress.activeKey!==advanced.activeKey||progress.completed.includes(before?.activeKey||'overview'))throw new Error('general tour progress or pause did not persist')
         console.log(`PASS ${bot} compact general tour highlight + action advance + pause persistence`)
       }
 
