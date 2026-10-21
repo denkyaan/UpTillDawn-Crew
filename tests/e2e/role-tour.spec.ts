@@ -929,6 +929,36 @@ test.describe('UpTillDawn role-tour browser validation', () => {
         });
         console.log(`[ADMIN] Functional surface: ${JSON.stringify({ tabs: adminSurface.tabs.length, navigationButtons: adminSurface.navigationButtons.length, mainButtons: adminSurface.mainButtons.length, headings: adminSurface.mainHeadings.length })}`);
       }
+      // Compare the actual post-onboarding page with the fresh discovery page.
+      // Do not record cookies, tokens, localStorage values or personal data.
+      const compareNavigationContext = async (candidate: typeof page) => candidate.evaluate(() => {
+        const links = [...document.querySelectorAll('nav a[href], aside a[href], [role="navigation"] a[href]')]
+          .filter(node => (node as HTMLElement).getClientRects().length > 0)
+          .map(node => node.getAttribute('href'))
+          .filter((href): href is string => Boolean(href));
+        return {
+          path: location.pathname,
+          readyState: document.readyState,
+          visibleFeatureHrefs: [...new Set(links.filter(href => href.startsWith('/') && href !== '/'))],
+          visibleNavLinkCount: links.length,
+          mainVisible: [...document.querySelectorAll('main')].some(node => (node as HTMLElement).getClientRects().length > 0),
+          dialogCount: [...document.querySelectorAll('[role="dialog"], [aria-modal="true"]')].filter(node => (node as HTMLElement).getClientRects().length > 0).length,
+        };
+      });
+      const originalContext = await compareNavigationContext(page);
+      // The discovery page was closed after its snapshot, so compare the
+      // persisted hydrated links against the live original page.
+      const navigationComparison = {
+        role,
+        originalContext,
+        discoveryFeatureHrefs: hydratedLinks.map(item => item.href).filter(href => href && href !== '/'),
+        loginFeatureHrefs: navigation.map(item => item.href).filter(href => href && href !== '/'),
+      };
+      await testInfo.attach(`${role.toLowerCase()}-navigation-context-comparison.json`, {
+        body: JSON.stringify(navigationComparison, null, 2),
+        contentType: 'application/json',
+      });
+      console.log(`[${role}] Navigation context comparison: ${JSON.stringify({ original: originalContext.visibleFeatureHrefs.length, discovery: navigationComparison.discoveryFeatureHrefs.length, login: navigationComparison.loginFeatureHrefs.length, originalPath: originalContext.path })}`);
       const uniquePaths = [...new Set([...hydratedLinks.map(item => item.href), ...navigation.map(item => item.href)]
         .filter((href): href is string => Boolean(href && href.startsWith('/') && !href.startsWith('//'))))];
       await testInfo.attach(`${role.toLowerCase()}-route-discovery.json`, {
