@@ -12,6 +12,9 @@ begin
   ) then
     raise exception 'Revocation field missing';
   end if;
+  if not exists (select 1 from pg_policies where schemaname='public' and tablename='portal_role_assignments' and policyname='portal_role_admin_read' and cmd='SELECT') then
+    raise exception 'Admin read policy missing';
+  end if;
   if to_regprocedure('public.upt_my_portal_assignments()') is null then
     raise exception 'Entitlement RPC missing';
   end if;
