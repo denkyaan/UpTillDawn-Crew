@@ -726,21 +726,34 @@ test.describe('UpTillDawn role-tour browser validation', () => {
         console.log(`[${role}] Route audit visiting ${path}`);
         const target = new URL(path, baseURL!);
         let navigationError: string | null = null;
-        const response = await page.goto(target.toString(), { waitUntil: 'domcontentloaded', timeout: 20000 }).catch((error: unknown) => {
-          navigationError = String(error);
-          return null;
-        });
-        const finalPath = new URL(page.url()).pathname;
-        const visible = await page.locator('body').isVisible().catch(() => false);
-        // A Next.js client-side route may not yield a document response.
-        // Preserve the real failure reason and independently probe HTTP without
-        // treating a rendered body as proof of a successful server response.
-        const documentStatus = response ? response.status() : await page.request.get(target.toString(), { timeout: 15000, maxRedirects: 0 }).then(result => result.status()).catch((error: unknown) => {
-          console.error(`[${role}] Route audit HTTP probe failed ${path}: ${String(error)}`);
-          return null;
-        });
-        routeChecks.push({ path, finalPath, status: response?.status() ?? null, visible, navigationError, documentStatus });
-        console.log(`[${role}] Route audit result ${path}: status=${response?.status() ?? 'null'} httpProbe=${documentStatus ?? 'null'} final=${finalPath} navigationError=${navigationError ?? 'none'}`);
+        // Probe in a fresh page: a previous timed-out navigation must not
+        // contaminate the next route or the active tour session.
+        const routePage = await page.context().newPage();
+        let status: number | null = null;
+        let finalPath = '';
+        let visible = false;
+        let documentStatus: number | null = null;
+        try {
+          const response = await routePage.goto(target.toString(), { waitUntil: 'commit', timeout: 20000 }).catch((error: unknown) => {
+            navigationError = String(error);
+            return null;
+          });
+          status = response?.status() ?? null;
+          documentStatus = status;
+          finalPath = new URL(routePage.url()).pathname;
+          visible = await routePage.locator('body').isVisible().catch(() => false);
+          if (documentStatus === null) {
+            documentStatus = await page.request.get(target.toString(), { timeout: 15000, maxRedirects: 0 })
+              .then(result => result.status()).catch((error: unknown) => {
+                console.error(`[${role}] Route audit HTTP probe failed ${path}: ${String(error)}`);
+                return null;
+              });
+          }
+        } finally {
+          await routePage.close();
+        }
+        routeChecks.push({ path, finalPath, status, visible, navigationError, documentStatus });
+        console.log(`[${role}] Route audit result ${path}: status=${status ?? 'null'} httpProbe=${documentStatus ?? 'null'} final=${finalPath} navigationError=${navigationError ?? 'none'}`);
         if (routeChecks.length <= 2) await page.screenshot({ path: testInfo.outputPath(`${role.toLowerCase()}-route-${routeChecks.length}.png`), fullPage: false, timeout: 5000 }).catch(error => console.log(`[${role}] optional route screenshot skipped: ${String(error)}`));
       }
       // Inventory the actual visible, enabled and disabled controls on every
