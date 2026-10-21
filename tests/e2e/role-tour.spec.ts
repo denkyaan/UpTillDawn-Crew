@@ -409,17 +409,43 @@ test.describe('UpTillDawn role-tour browser validation', () => {
             return true;
           };
           await finishNavigationWelcome();
-          const clickTarget = functionalLinks[0];
+          // The landing page's earlier link text can become stale after
+          // onboarding or role hydration. Re-read the actual visible anchors
+          // on this page and click by exact href, not translated label.
+          const currentLinks = await navigationPage.locator('nav a[href], [role="navigation"] a[href], aside a[href]')
+            .evaluateAll(links => links.filter(link => {
+              const element = link as HTMLAnchorElement;
+              const style = getComputedStyle(element);
+              return style.display !== 'none' && style.visibility !== 'hidden' &&
+                element.getClientRects().length > 0;
+            }).map(link => ({
+              href: (link as HTMLAnchorElement).getAttribute('href'),
+              label: (link.textContent || '').trim().slice(0, 100),
+            })));
+          const availableFunctionalLinks = currentLinks.filter(link => {
+            if (!link.href?.startsWith('/') || link.href.startsWith('//')) return false;
+            const pathname = new URL(link.href, baseURL!).pathname;
+            return pathname !== '/' && pathname !== authenticatedPath &&
+              !['login', 'logout', 'signup', 'auth'].includes(pathname.split('/')[1]);
+          });
+          await testInfo.attach(`${role.toLowerCase()}-current-navigation-links.json`, {
+            body: JSON.stringify({ role, authenticatedPath, currentLinks, availableFunctionalLinks }, null, 2),
+            contentType: 'application/json',
+          });
+          expect(availableFunctionalLinks.length,
+            `${role}: no visible functional links after onboarding; compare current-navigation-links.json`).toBeGreaterThan(0);
+          const clickTarget = availableFunctionalLinks[0];
           const targetPath = new URL(clickTarget.href!, baseURL!).pathname;
-          const actualLink = navigationPage.locator('nav a[href], [role="navigation"] a[href], aside a[href]')
-            .filter({ visible: true }).filter({ hasText: clickTarget.text }).first();
-          await expect(actualLink, `${role}: visible functional navigation link missing`).toBeVisible({ timeout: 10000 });
+          // Match the exact observed href rather than requiring a particular
+          // nested DOM structure or a translated accessible label.
+          const currentLink = navigationPage.locator('nav a[href], [role="navigation"] a[href], aside a[href]')
+            .filter({ visible: true }).filter({ hasText: clickTarget.label }).first();
+          await expect(currentLink, `${role}: observed functional link vanished before click`).toBeVisible({ timeout: 10000 });
           try {
-            await actualLink.click({ timeout: 3500 });
+            await currentLink.click({ timeout: 3500 });
           } catch (clickError) {
-            // Retry only if a real, known onboarding dialog appeared late.
             if (!(await finishNavigationWelcome())) throw clickError;
-            await actualLink.click({ timeout: 10000 });
+            await currentLink.click({ timeout: 10000 });
           }
           await expect.poll(() => new URL(navigationPage.url()).pathname, { timeout: 15000 }).toBe(targetPath);
           await testInfo.attach(`${role.toLowerCase()}-real-navigation-click.json`, {
