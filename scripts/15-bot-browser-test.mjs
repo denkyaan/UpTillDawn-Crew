@@ -509,11 +509,22 @@ try {
         await primary.click()
         // Wait for the actual persisted transition, not merely for an element
         // that was already visible before the action.
-        await page.waitForFunction(({key,previous})=>{
-          const next=JSON.parse(localStorage.getItem(key)||'null')
-          return Boolean(next?.activeKey&&next.activeKey!==previous&&
-            Array.isArray(next.completed)&&next.completed.includes(previous))
-        },{key:progressKey,previous:before.activeKey},{timeout:15000})
+        try {
+          await page.waitForFunction(({key,previous})=>{
+            const next=JSON.parse(localStorage.getItem(key)||'null')
+            return Boolean(next?.activeKey&&next.activeKey!==previous&&
+              Array.isArray(next.completed)&&next.completed.includes(previous))
+          },{key:progressKey,previous:before.activeKey},{timeout:15000})
+        } catch (error) {
+          const snapshot=await page.evaluate(key=>({
+            progress:localStorage.getItem(key),
+            url:location.pathname,
+            primaryText:document.querySelector('[data-tour-demo="primary-action"]')?.textContent?.trim().slice(0,180),
+            tourText:[...document.querySelectorAll('[role="dialog"],[aria-live],button')].map(el=>el.textContent?.trim()).filter(Boolean).slice(-35),
+            tourStorage:Object.keys(localStorage).filter(k=>k.includes('tour')).map(k=>({key:k,value:localStorage.getItem(k)?.slice(0,450)}))
+          }),progressKey)
+          throw new Error(`general tour action failed to persist progress: ${error instanceof Error?error.message:String(error)}; snapshot=${JSON.stringify(snapshot)}`)
+        }
         const advanced=await page.evaluate(key=>JSON.parse(localStorage.getItem(key)||'null'),progressKey)
         if(
           !advanced?.activeKey||
