@@ -165,7 +165,7 @@ jobs:
             .trimEnd() + '\n'
           // Staging-only tables are intentionally absent from isolated CI replay.
           const expected = readFileSync('types/crew-database.ts', 'utf8')
-            .replace(/      training_scenario_members: \\{[\\s\\S]*?(?=      admin_role_modes: \\{)/, '')
+            .replace(/      training_scenario_members: \{[\s\S]*?(?=      admin_role_modes: \{)/, '')
           writeFileSync('/tmp/expected-crew-database.ts', normalize(expected))
           writeFileSync('/tmp/actual-crew-database.ts', normalize(readFileSync('/tmp/crew-database.ts', 'utf8')))
           NODE
