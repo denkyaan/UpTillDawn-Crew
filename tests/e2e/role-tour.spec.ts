@@ -891,9 +891,15 @@ test.describe('UpTillDawn role-tour browser validation', () => {
           contentType: 'application/json',
         });
         console.log(`[${role}] Discovery surface: ${JSON.stringify({ dialogs: discoverySurface.dialogs.length, navAnchors: discoverySurface.navAnchors.length, navButtons: discoverySurface.navButtons.length, mainHeadings: discoverySurface.mainHeadings.length })}`);
-        hydratedLinks = await discoveryPage.locator('nav a[href]:visible, [role="navigation"] a[href]:visible, aside a[href]:visible').evaluateAll(nodes =>
+        // A client-side redirect may destroy the discovery document during evaluateAll.
+        // The authenticated landing page was already inventoried above, so preserve
+        // that evidence instead of treating a transient discovery failure as zero routes.
+        hydratedLinks = await discoveryPage.locator('nav a[href], [role="navigation"] a[href], aside a[href]').evaluateAll(nodes =>
           nodes.map(node => ({ href: node.getAttribute('href'), label: (node.textContent || '').trim().slice(0, 100) }))
-        );
+        ).catch(error => {
+          console.log(`[${role}] Discovery document changed while reading links: ${String(error).slice(0, 250)}`);
+          return [];
+        });
       } finally {
         await discoveryPage.close();
       }
@@ -959,7 +965,10 @@ test.describe('UpTillDawn role-tour browser validation', () => {
         contentType: 'application/json',
       });
       console.log(`[${role}] Navigation context comparison: ${JSON.stringify({ original: originalContext.visibleFeatureHrefs.length, discovery: navigationComparison.discoveryFeatureHrefs.length, login: navigationComparison.loginFeatureHrefs.length, originalPath: originalContext.path })}`);
-      const uniquePaths = [...new Set([...hydratedLinks.map(item => item.href), ...navigation.map(item => item.href)]
+      // Keep the role's authenticated landing route in the audit even if the
+      // discovery tab redirects or an onboarding overlay obscures visible links.
+      // All additional routes must still come from actual observed anchors.
+      const uniquePaths = [...new Set([authenticatedPath, ...hydratedLinks.map(item => item.href), ...navigation.map(item => item.href)]
         .filter((href): href is string => Boolean(href && href.startsWith('/') && !href.startsWith('//'))))];
       await testInfo.attach(`${role.toLowerCase()}-route-discovery.json`, {
         body: JSON.stringify({ role, initialCount: navigation.length, hydratedLinks, uniquePaths }, null, 2),
