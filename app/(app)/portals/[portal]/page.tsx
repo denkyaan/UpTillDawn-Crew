@@ -13,8 +13,8 @@ export default async function PortalPage({ params }: { params: Promise<{ portal:
   if (!current) redirect('/login')
   const supabase = await createClient()
   const { data, error } = await supabase.rpc('upt_my_portal_assignments')
-  if (error) return <main className="p-6"><h1 className="text-xl font-bold">Portaal niet beschikbaar</h1><p className="mt-3">De toegangscontrole kan momenteel niet worden uitgevoerd. Probeer later opnieuw.</p><Link href="/portals" className="mt-4 inline-block text-violet-400">Terug naar portalen</Link></main>
-  if (!canOpenPortal(portal, (data ?? []) as PortalAssignment[], {
+  if (error && !current.isAdmin) return <main className="p-6"><h1 className="text-xl font-bold">Portaal niet beschikbaar</h1><p className="mt-3">De toegangscontrole kan momenteel niet worden uitgevoerd. Probeer later opnieuw.</p><Link href="/portals" className="mt-4 inline-block text-violet-400">Terug naar portalen</Link></main>
+  if (!current.isAdmin && !canOpenPortal(portal, (data ?? []) as PortalAssignment[], {
     approved: current.approved,
     blocked: current.account_blocked === true,
   })) notFound()
