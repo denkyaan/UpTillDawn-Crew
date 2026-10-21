@@ -260,7 +260,7 @@ export async function signIn(formData: FormData) {
             (requestedPortal === 'promotion' ? ['promoter', 'admin'].includes(entry.role) : ['administrative_staff', 'admin'].includes(entry.role)))
     }
     const hasPermanentAdminAccess = isOwner === true || (profile.approved === true && role === 'admin')
-    const allowed = requestedPortal === 'promotion' || requestedPortal === 'administration' ? assignedPortalAccess : requestedPortal === 'admin' ? hasPermanentAdminAccess : requestedPortal === 'responsible' ? role === 'responsible_lead' || hasPermanentAdminAccess : role === 'staff' || role === 'responsible_lead' || hasPermanentAdminAccess
+    const allowed = requestedPortal === 'promotion' || requestedPortal === 'administration' ? (assignedPortalAccess || hasPermanentAdminAccess) : requestedPortal === 'admin' ? hasPermanentAdminAccess : requestedPortal === 'responsible' ? role === 'responsible_lead' || hasPermanentAdminAccess : role === 'staff' || role === 'responsible_lead' || hasPermanentAdminAccess
     if (!allowed) {
         await notifySecurity('denied', 'wrong_portal')
         await supabase.auth.signOut()
