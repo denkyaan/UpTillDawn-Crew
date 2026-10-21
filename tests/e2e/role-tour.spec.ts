@@ -511,22 +511,41 @@ test.describe('UpTillDawn role-tour browser validation', () => {
           }
           expect(availableFunctionalLinks.length,
             `${role}: no visible functional links after onboarding; compare current-navigation-links.json`).toBeGreaterThan(0);
-          const clickTarget = availableFunctionalLinks[0];
-          const targetPath = new URL(clickTarget.href!, baseURL!).pathname;
-          // Match the exact observed href rather than requiring a particular
-          // nested DOM structure or a translated accessible label.
-          const currentLink = navigationPage.locator('nav a[href], [role="navigation"] a[href], aside a[href]')
-            .filter({ visible: true })
-            .filter({ hasNot: navigationPage.locator('a[href="__never_match__"]') })
-            .and(navigationPage.locator(`a[href=${JSON.stringify(clickTarget.href)}]`)).first();
-          await expect(currentLink, `${role}: observed functional link vanished before click`).toBeVisible({ timeout: 10000 });
-          try {
-            await currentLink.click({ timeout: 3500 });
-          } catch (clickError) {
-            if (!(await finishNavigationWelcome())) throw clickError;
-            await currentLink.click({ timeout: 10000 });
+          // Hydration can replace navigation between discovery and click.
+          // Re-read candidates for each attempt; never retry a stale locator.
+          const clickAttempts: Array<{ attempt: number; candidates: string[]; chosen: string | null; error: string | null; finalPath: string }> = [];
+          let targetPath = '';
+          let navigationClicked = false;
+          for (let attempt = 1; attempt <= 2 && !navigationClicked; attempt++) {
+            await finishNavigationWelcome();
+            const liveCandidates = await navigationPage.locator('nav a[href]:visible, [role="navigation"] a[href]:visible, aside a[href]:visible')
+              .evaluateAll(nodes => nodes.map(node => (node as HTMLAnchorElement).getAttribute('href'))
+                .filter((href): href is string => Boolean(href && href.startsWith('/') && !href.startsWith('//') && href !== '/')));
+            const candidates = [...new Set(liveCandidates)].filter(href =>
+              !['login', 'logout', 'signup', 'auth'].includes(new URL(href, baseURL!).pathname.split('/')[1]));
+            const chosen = candidates[0] ?? null;
+            let error: string | null = null;
+            if (chosen) {
+              targetPath = new URL(chosen, baseURL!).pathname;
+              try {
+                const liveLink = navigationPage.locator('nav a[href]:visible, [role="navigation"] a[href]:visible, aside a[href]:visible')
+                  .and(navigationPage.locator(`a[href=${JSON.stringify(chosen)}]`)).first();
+                await liveLink.click({ timeout: 7000, noWaitAfter: true });
+                await expect.poll(() => new URL(navigationPage.url()).pathname, { timeout: 12000 }).toBe(targetPath);
+                navigationClicked = true;
+              } catch (caught) {
+                error = String(caught).slice(0, 500);
+              }
+            } else {
+              error = 'No visible feature destination after onboarding';
+            }
+            clickAttempts.push({ attempt, candidates, chosen, error, finalPath: new URL(navigationPage.url()).pathname });
           }
-          await expect.poll(() => new URL(navigationPage.url()).pathname, { timeout: 15000 }).toBe(targetPath);
+          await testInfo.attach(`${role.toLowerCase()}-navigation-attempts.json`, {
+            body: JSON.stringify({ role, clickAttempts }, null, 2),
+            contentType: 'application/json',
+          });
+          expect(navigationClicked, `${role}: no successful feature navigation: ${JSON.stringify(clickAttempts)}`).toBe(true);
           await testInfo.attach(`${role.toLowerCase()}-real-navigation-click.json`, {
             body: JSON.stringify({ role, targetPath, finalPath: new URL(navigationPage.url()).pathname }, null, 2),
             contentType: 'application/json',
