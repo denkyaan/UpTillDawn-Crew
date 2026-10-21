@@ -617,7 +617,7 @@ test.describe('UpTillDawn role-tour browser validation', () => {
         body: JSON.stringify({ role, progressLabel, progressState }, null, 2),
         contentType: 'application/json',
       });
-      expect(progressLabel, `${role}: expected fresh tour at 1/N, received ${progressLabel}; inspect tour-progress-source artifact`).toMatch(/\\b1\\/\\d+\\b/);
+      expect(progressLabel, `${role}: expected fresh tour at 1/N, received ${progressLabel}; inspect tour-progress-source artifact`).toMatch(/\b1\/\d+\b/);
       console.log(`[${role}] Active tour progress: ${progressLabel}`);
       await testInfo.attach(`${role.toLowerCase()}-active-tour.json`, {
         body: JSON.stringify({ role, progressLabel, path: new URL(page.url()).pathname }, null, 2),
