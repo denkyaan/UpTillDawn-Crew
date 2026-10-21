@@ -412,6 +412,10 @@ test.describe('UpTillDawn role-tour browser validation', () => {
           // The landing page's earlier link text can become stale after
           // onboarding or role hydration. Re-read the actual visible anchors
           // on this page and click by exact href, not translated label.
+          // Wait for client-side role navigation to render rather than taking
+          // an immediate snapshot after DOMContentLoaded.
+          await navigationPage.locator('nav a[href]:visible, [role="navigation"] a[href]:visible, aside a[href]:visible')
+            .first().waitFor({ state: 'visible', timeout: 15000 }).catch(() => {});
           const currentLinks = await navigationPage.locator('nav a[href], [role="navigation"] a[href], aside a[href]')
             .evaluateAll(links => links.filter(link => {
               const element = link as HTMLAnchorElement;
@@ -432,6 +436,26 @@ test.describe('UpTillDawn role-tour browser validation', () => {
             body: JSON.stringify({ role, authenticatedPath, currentLinks, availableFunctionalLinks }, null, 2),
             contentType: 'application/json',
           });
+          if (availableFunctionalLinks.length === 0) {
+            await testInfo.attach(`${role.toLowerCase()}-navigation-session-diagnostics.json`, {
+              body: JSON.stringify({
+                role, expectedAuthenticatedPath: authenticatedPath,
+                actualUrl: navigationPage.url(),
+                title: await navigationPage.title().catch(() => null),
+                readyState: await navigationPage.evaluate(() => document.readyState).catch(() => null),
+                bodyText: (await navigationPage.locator('body').innerText().catch(() => '')).slice(0, 3000),
+                allAnchors: await navigationPage.locator('a[href]').evaluateAll(nodes =>
+                  nodes.map(node => ({
+                    href: node.getAttribute('href'),
+                    label: (node.textContent || '').trim().slice(0, 80),
+                    visible: (node as HTMLElement).getClientRects().length > 0,
+                  })).slice(0, 80)
+                ).catch(() => []),
+                visibleDialogs: await navigationPage.locator('[role="dialog"]:visible').allInnerTexts().catch(() => []),
+              }, null, 2),
+              contentType: 'application/json',
+            });
+          }
           expect(availableFunctionalLinks.length,
             `${role}: no visible functional links after onboarding; compare current-navigation-links.json`).toBeGreaterThan(0);
           const clickTarget = availableFunctionalLinks[0];
