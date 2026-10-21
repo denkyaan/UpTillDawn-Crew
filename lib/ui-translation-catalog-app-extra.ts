@@ -2,6 +2,21 @@ export type ExtraCatalogLocale = 'nl' | 'fr' | 'en' | 'de'
 type Row = { fr:string; en:string; de:string }
 
 export const APP_EXTRA_TRANSLATIONS: Record<string,Row> = {
+  "Portaal niet beschikbaar": { fr:"Portail indisponible", en:"Portal unavailable", de:"Portal nicht verfügbar" },
+  "De toegangscontrole kan momenteel niet worden uitgevoerd. Probeer later opnieuw.": { fr:"La vérification des accès est momentanément indisponible. Réessayez plus tard.", en:"Access verification is currently unavailable. Try again later.", de:"Die Zugriffsprüfung ist derzeit nicht verfügbar. Versuche es später erneut." },
+  "Terug naar portalen": { fr:"Retour aux portails", en:"Back to portals", de:"Zurück zu den Portalen" },
+  "← Alle portalen": { fr:"← Tous les portails", en:"← All portals", de:"← Alle Portale" },
+  "Je toegang tot dit portaal is bevestigd. De specifieke V2.1-werkprocessen worden nog ontwikkeld; er zijn hier nog geen bewerkbare functies beschikbaar.": { fr:"Votre accès à ce portail est confirmé. Les processus V2.1 sont encore en développement ; aucune fonction modifiable n'est disponible ici.", en:"Your access to this portal is confirmed. V2.1 workflows are still in development; no editable features are available here yet.", de:"Dein Zugriff auf dieses Portal ist bestätigt. Die V2.1-Abläufe werden noch entwickelt; hier sind noch keine bearbeitbaren Funktionen verfügbar." },
+  "Evenementen, shifts, werkplaatsen, briefings en operationele taken.": { fr:"Événements, équipes, postes de travail, briefings et tâches opérationnelles.", en:"Events, shifts, workplaces, briefings and operational tasks.", de:"Veranstaltungen, Schichten, Arbeitsplätze, Briefings und operative Aufgaben." },
+  "Promotie": { fr:"Promotion", en:"Promotion", de:"Promotion" },
+  "Promotiecampagnes en de bijbehorende werkprocessen.": { fr:"Campagnes promotionnelles et processus associés.", en:"Promotion campaigns and related workflows.", de:"Werbekampagnen und zugehörige Arbeitsabläufe." },
+  "Administratie": { fr:"Administration", en:"Administration", de:"Verwaltung" },
+  "Administratieve taken en financiële opvolging.": { fr:"Tâches administratives et suivi financier.", en:"Administrative tasks and financial tracking.", de:"Verwaltungsaufgaben und Finanzübersicht." },
+  "Mijn portalen": { fr:"Mes portails", en:"My portals", de:"Meine Portale" },
+  "Kies een portaal waarvoor je toegang hebt. Nieuwe rollen worden pas actief na goedkeuring.": { fr:"Choisissez un portail auquel vous avez accès. Les nouveaux rôles ne deviennent actifs qu'après approbation.", en:"Choose a portal you can access. New roles become active only after approval.", de:"Wähle ein Portal, auf das du Zugriff hast. Neue Rollen werden erst nach Genehmigung aktiv." },
+  "Portaalrechten kunnen momenteel niet worden opgehaald. Je bestaande evenemententoegang blijft beschikbaar.": { fr:"Les autorisations des portails sont momentanément indisponibles. Votre accès existant aux événements reste disponible.", en:"Portal permissions are currently unavailable. Your existing event access remains available.", de:"Portalberechtigungen sind derzeit nicht abrufbar. Dein bestehender Veranstaltungszugang bleibt verfügbar." },
+  "Er is nog geen portaal voor je account goedgekeurd. Neem contact op met een beheerder.": { fr:"Aucun portail n'a encore été approuvé pour votre compte. Contactez un administrateur.", en:"No portal has been approved for your account yet. Contact an administrator.", de:"Für dein Konto wurde noch kein Portal genehmigt. Wende dich an einen Administrator." },
+  "Open portaal →": { fr:"Ouvrir le portail →", en:"Open portal →", de:"Portal öffnen →" },
   "Rondleiding": { fr:"Visite guidée", en:"Tour", de:"Rundgang" },
   "Bekijk de interactieve uitleg voor de rol die je momenteel gebruikt.": { fr:"Consultez le guide interactif pour le rôle que vous utilisez actuellement.", en:"View the interactive guide for the role you are currently using.", de:"Sieh dir die interaktive Anleitung für deine aktuell verwendete Rolle an." },
   "Welkom, verantwoordelijke": { fr:"Bienvenue, responsable", en:"Welcome, responsible lead", de:"Willkommen, Verantwortliche/r" },
