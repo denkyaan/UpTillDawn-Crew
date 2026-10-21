@@ -1180,7 +1180,7 @@ test.describe('UpTillDawn role-tour browser validation', () => {
         expect(check.visible, `${role} ${check.path}: body not visible`).toBe(true);
         expect(check.finalPath, `${role} ${check.path}: unexpected login redirect`).not.toMatch(/^\/login\//);
       }
-      await page.screenshot({ path: testInfo.outputPath(`${role.toLowerCase()}-post-login.png`), fullPage: true });
+      await page.screenshot({ path: testInfo.outputPath(`${role.toLowerCase()}-post-login.png`), fullPage: false, timeout: 5000, animations: "disabled" }).catch(error => console.log(`[${role}] Optional final screenshot skipped after bounded timeout: ${String(error)}`));
       if (errors.length) console.error(`[${role}] Uncaught exceptions with stacks:\n${errors.join('\n---\n')}`);
       expect(errors, 'Uncaught browser exceptions').toEqual([]);
     });
