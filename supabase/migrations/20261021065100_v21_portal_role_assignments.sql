@@ -52,5 +52,5 @@ $$;
 
 revoke all on function public.upt_my_portal_assignments() from public,anon;
 grant execute on function public.upt_my_portal_assignments() to authenticated;
-revoke all on public.portal_role_assignments from anon;
+revoke all on public.portal_role_assignments from anon, authenticated;
 grant select on public.portal_role_assignments to authenticated;
