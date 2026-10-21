@@ -82,6 +82,13 @@ jobs:
             npx --yes supabase@2.117.0 init
           fi
 
+      # This migration explicitly requires the real staging project ref and must never
+      # be replayed against a local CI database. Keep its guard unchanged.
+      - name: Exclude staging-only migration from local database replay
+        run: |
+          mkdir -p /tmp/upt-staging-only-migrations
+          mv supabase/migrations/20261013110000_training_scenarios_staging.sql /tmp/upt-staging-only-migrations/
+
       - name: Start isolated Supabase stack
         run: npx --yes supabase@2.117.0 start -x studio,imgproxy,inbucket,edge-runtime,logflare,vector,realtime
 
