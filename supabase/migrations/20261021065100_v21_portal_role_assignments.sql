@@ -25,6 +25,9 @@ create index if not exists portal_role_assignments_user_idx
   on public.portal_role_assignments(user_id,portal)
   where approved and revoked_at is null;
 
+create index if not exists portal_role_assignments_approved_by_idx
+  on public.portal_role_assignments(approved_by);
+
 alter table public.portal_role_assignments enable row level security;
 
 -- Deliberately no authenticated INSERT/UPDATE/DELETE policy.
