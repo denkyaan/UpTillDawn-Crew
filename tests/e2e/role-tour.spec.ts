@@ -841,7 +841,28 @@ test.describe('UpTillDawn role-tour browser validation', () => {
       try {
         await discoveryPage.goto(new URL('/', baseURL!).toString(), { waitUntil: 'commit', timeout: 20000 });
         await expect(discoveryPage.locator('body')).toBeVisible({ timeout: 15000 });
-        await expect.poll(async () => discoveryPage.locator('nav a[href]:visible, [role="navigation"] a[href]:visible, aside a[href]:visible').count(), { timeout: 15000 }).toBeGreaterThan(0);
+        // A single logo link is only the loading shell, not hydrated role navigation.
+        // Observe a stable non-home destination before treating discovery as complete.
+        const hydrationSamples: Array<{ path: string; navHrefs: string[]; mainVisible: boolean }> = [];
+        try {
+          await expect.poll(async () => {
+            const navHrefs = await discoveryPage.locator('nav a[href]:visible, [role="navigation"] a[href]:visible, aside a[href]:visible').evaluateAll(nodes =>
+              nodes.map(node => node.getAttribute('href')).filter((href): href is string => Boolean(href))
+            );
+            hydrationSamples.push({
+              path: new URL(discoveryPage.url()).pathname,
+              navHrefs,
+              mainVisible: await discoveryPage.locator('main:visible').count() > 0,
+            });
+            return navHrefs.filter(href => href.startsWith('/') && href !== '/' && !/^\\/(login|logout|signup|auth)(\\/|$)/.test(href)).length;
+          }, { timeout: 20000, intervals: [500, 1000, 2000] }).toBeGreaterThan(0);
+        } catch (error) {
+          console.log(`[${role}] Discovery hydration incomplete: ${String(error)}`);
+        }
+        await testInfo.attach(`${role.toLowerCase()}-discovery-hydration.json`, {
+          body: JSON.stringify({ role, samples: hydrationSamples.slice(-25) }, null, 2),
+          contentType: 'application/json',
+        });
         // A fresh authenticated page can display first-login onboarding again.
         // Capture the overlay and all navigation semantics before interpreting
         // a single visible home link as complete role navigation.
@@ -915,6 +936,13 @@ test.describe('UpTillDawn role-tour browser validation', () => {
         contentType: 'application/json',
       });
       console.log(`[${role}] Role route discovery: ${JSON.stringify({ initial: navigation.length, hydrated: hydratedLinks.length, unique: uniquePaths.length })}`);
+      const discoveredFeaturePaths = uniquePaths.filter(path => path !== '/' && !/^\\/(login|logout|signup|auth)(\\/|$)/.test(path));
+      await testInfo.attach(`${role.toLowerCase()}-feature-route-coverage.json`, {
+        body: JSON.stringify({ role, discoveredFeaturePaths, complete: discoveredFeaturePaths.length > 0 }, null, 2),
+        contentType: 'application/json',
+      });
+      expect(discoveredFeaturePaths.length, `${role}: only the landing shell was discovered; functional role navigation is not covered`).toBeGreaterThan(0);
+
       for (const path of uniquePaths) {
         console.log(`[${role}] Route audit visiting ${path}`);
         const target = new URL(path, baseURL!);
