@@ -2,6 +2,7 @@
 
 import { useSyncExternalStore } from 'react'
 import Link from 'next/link'
+import Image from 'next/image'
 import { Users, Megaphone, ShieldCheck } from 'lucide-react'
 import { LANGUAGE_APPLIED_EVENT, initialUiLocale, parseUiLocale, type SupportedUiLocale } from '@/lib/locale-preferences'
 import { LanguageSwitcher } from '@/components/language-switcher'
@@ -27,7 +28,7 @@ export default function LoginPage() {
   ]
   return <main className="min-h-screen bg-black px-5 py-12 text-white">
     <div className="mx-auto max-w-xl space-y-7">
-      <header className="text-center"><h1 className="text-3xl font-bold">{t.heading}</h1><p className="mt-3 text-zinc-400">{t.choose}</p></header>
+      <header className="text-center"><Image src="/uptilldawn-logo.jpeg" alt="Up Till Dawn" width={500} height={320} priority className="mx-auto h-auto max-h-64 w-full max-w-md object-contain" /><h1 className="sr-only">{t.heading}</h1><p className="mt-3 text-zinc-400">{t.choose}</p></header>
       <nav aria-label={t.nav} className="space-y-3">{portals.map(({title,description,href,icon:Icon})=><Link key={href} href={href} className="flex items-center gap-4 rounded-2xl border border-white/20 bg-zinc-950 p-5 hover:border-violet-400 focus-visible:outline-2 focus-visible:outline-violet-400"><Icon className="h-7 w-7 shrink-0 text-violet-400" aria-hidden="true"/><span><strong className="block text-lg">{title}</strong><span className="text-sm text-zinc-400">{description}</span></span></Link>)}</nav>
       <p className="text-center text-sm text-zinc-400">{t.noAccount} <Link className="text-white underline" href="/signup">{t.register}</Link></p>
       <LanguageSwitcher dark />
