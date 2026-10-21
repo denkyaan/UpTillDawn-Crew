@@ -362,14 +362,42 @@ test.describe('UpTillDawn role-tour browser validation', () => {
             waitUntil: 'domcontentloaded', timeout: 20000,
           });
           const blockingDialog = navigationPage.locator('[role="dialog"][aria-modal="true"]:visible');
-          const blockingTexts = await blockingDialog.allInnerTexts();
-          expect(blockingTexts, `${role}: unexpected dialog blocks functional navigation`).toEqual([]);
+          // Onboarding may appear only after client hydration, including after
+          // the first actionability check. Complete the actual dialog controls.
+          const finishNavigationWelcome = async () => {
+            const visibleDialogs = await blockingDialog.allInnerTexts();
+            if (!visibleDialogs.length) return false;
+            const knownWelcome = visibleDialogs.every(text =>
+              /je profiel is opgeslagen|your profile has been saved|votre profil a été enregistré|dein profil wurde gespeichert|start tour|start rondleiding|commencer la visite|rundgang starten|start training|commencer la formation|training starten/i.test(text)
+            );
+            expect(knownWelcome, `${role}: unexpected dialog blocks functional navigation: ${JSON.stringify(visibleDialogs)}`).toBe(true);
+            const welcome = blockingDialog.first();
+            const proceed = welcome.getByRole('button', { name: /start rondleiding|start tour|commencer la visite|rundgang starten/i }).first();
+            if (await proceed.isVisible().catch(() => false)) {
+              await proceed.click({ timeout: 8000, noWaitAfter: true });
+            }
+            const training = navigationPage.getByRole('dialog').getByRole('button', {
+              name: /start training|commencer la formation|training starten/i,
+            }).first();
+            if (await training.isVisible().catch(() => false)) {
+              await training.click({ timeout: 8000, noWaitAfter: true });
+            }
+            await expect(blockingDialog, `${role}: onboarding dialog still blocks navigation`).toHaveCount(0, { timeout: 10000 });
+            return true;
+          };
+          await finishNavigationWelcome();
           const clickTarget = functionalLinks[0];
           const targetPath = new URL(clickTarget.href!, baseURL!).pathname;
           const actualLink = navigationPage.locator('nav a[href], [role="navigation"] a[href], aside a[href]')
             .filter({ visible: true }).filter({ hasText: clickTarget.text }).first();
           await expect(actualLink, `${role}: visible functional navigation link missing`).toBeVisible({ timeout: 10000 });
-          await actualLink.click({ timeout: 10000 });
+          try {
+            await actualLink.click({ timeout: 3500 });
+          } catch (clickError) {
+            // Retry only if a real, known onboarding dialog appeared late.
+            if (!(await finishNavigationWelcome())) throw clickError;
+            await actualLink.click({ timeout: 10000 });
+          }
           await expect.poll(() => new URL(navigationPage.url()).pathname, { timeout: 15000 }).toBe(targetPath);
           await testInfo.attach(`${role.toLowerCase()}-real-navigation-click.json`, {
             body: JSON.stringify({ role, targetPath, finalPath: new URL(navigationPage.url()).pathname }, null, 2),
