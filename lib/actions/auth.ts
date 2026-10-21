@@ -253,7 +253,7 @@ export async function signIn(formData: FormData) {
         if (assignmentError) {
             await notifySecurity('denied', 'portal_access_unavailable')
             await supabase.auth.signOut()
-            return { error: 'Portaalrechten konden niet worden gecontroleerd.', code: 'portal_access_unavailable' }
+            return { error: 'Aanmelden mislukt. Probeer opnieuw.', code: 'portal_access_unavailable' }
         }
         assignedPortalAccess = (assignments ?? []).some((entry: { portal: string; role: string; approved: boolean; revoked_at: string | null }) =>
             entry.portal === requestedPortal && entry.approved && !entry.revoked_at &&
@@ -280,13 +280,13 @@ export async function signIn(formData: FormData) {
 
     await notifySecurity('success', 'login_success')
 
-    const redirectTo = requestedPortal === 'promotion' || requestedPortal === 'administration'
-        ? '/portals/' + requestedPortal
-        : isOwner === true
-        ? `/maker-mode?portal=${requestedPortal}`
-        : requestedPortal === 'admin'
-            ? '/admin'
-            : '/'
+    const redirectTo = isOwner === true
+        ? (requestedPortal === 'promotion' || requestedPortal === 'administration' ? '/portals/' + requestedPortal : `/maker-mode?portal=${requestedPortal}`)
+        : requestedPortal === 'promotion' || requestedPortal === 'administration'
+            ? '/portals/' + requestedPortal
+            : requestedPortal === 'admin'
+                ? '/admin'
+                : '/'
 
     return { success: true, redirectTo }
 }
