@@ -2,6 +2,16 @@ export type ExtraCatalogLocale = 'nl' | 'fr' | 'en' | 'de'
 type Row = { fr:string; en:string; de:string }
 
 export const APP_EXTRA_TRANSLATIONS: Record<string,Row> = {
+  "events": { fr:"Événements", en:"Events", de:"Veranstaltungen" },
+  "promotion": { fr:"Promotion", en:"Promotion", de:"Promotion" },
+  "administration": { fr:"Administration", en:"Administration", de:"Verwaltung" },
+  "event_staff": { fr:"Personnel événementiel", en:"Event staff", de:"Veranstaltungspersonal" },
+  "event_responsible": { fr:"Responsable événementiel", en:"Event lead", de:"Veranstaltungsleitung" },
+  "promoter": { fr:"Promoteur", en:"Promoter", de:"Promoter" },
+  "administrative_staff": { fr:"Personnel administratif", en:"Administrative staff", de:"Verwaltungspersonal" },
+  "Geen toegang": { fr:"Accès refusé", en:"Access denied", de:"Zugriff verweigert" },
+  "Ongeldige rolwijziging": { fr:"Modification de rôle invalide", en:"Invalid role change", de:"Ungültige Rollenänderung" },
+  "Rolwijziging niet uitgevoerd": { fr:"Modification de rôle non effectuée", en:"Role change not completed", de:"Rollenänderung nicht ausgeführt" },
   "Overzicht van portaalroltoewijzingen.": { fr:"Aperçu des attributions de rôles des portails.", en:"Overview of portal role assignments.", de:"Übersicht der Portalrollenzuweisungen." },
   "Portaalrol beheren": { fr:"Gérer le rôle du portail", en:"Manage portal role", de:"Portalrolle verwalten" },
   "Gebruikers-ID": { fr:"Identifiant utilisateur", en:"User ID", de:"Benutzer-ID" },
