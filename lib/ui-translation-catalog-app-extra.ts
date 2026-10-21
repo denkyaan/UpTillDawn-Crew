@@ -162,7 +162,6 @@ export const APP_EXTRA_TRANSLATIONS: Record<string,Row> = {
   "Betaling": { fr:"Paiement", en:"Payment", de:"Zahlung" },
   "Bedrag": { fr:"Montant", en:"Amount", de:"Betrag" },
   "Medewerker": { fr:"Employé", en:"Employee", de:"Mitarbeiter" },
-  "Actie": { fr:"Action", en:"Action", de:"Aktion" },
   "REFUND": { fr:"REMBOURSEMENT", en:"REFUND", de:"ERSTATTUNG" },
   "TERUGBOEKEN": { fr:"REMBOURSER", en:"REFUND", de:"ERSTATTEN" },
   "Reden": { fr:"Raison", en:"Reason", de:"Grund" },
