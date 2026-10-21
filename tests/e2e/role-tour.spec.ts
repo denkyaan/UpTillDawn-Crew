@@ -754,8 +754,34 @@ test.describe('UpTillDawn role-tour browser validation', () => {
       for (const path of uniquePaths) {
         const interactionPage = await page.context().newPage();
         try {
-          await interactionPage.goto(new URL(path, baseURL!).toString(), { waitUntil: 'domcontentloaded', timeout: 20000 });
-          await expect(interactionPage.locator('main').first()).toBeVisible({ timeout: 10000 });
+          const interactionUrl = new URL(path, baseURL!).toString();
+          const navigationAttempts: Array<{ attempt: number; error: string | null; finalUrl: string; readyState: string | null; mainVisible: boolean }> = [];
+          let interactionReady = false;
+          for (let attempt = 1; attempt <= 2 && !interactionReady; attempt++) {
+            let navigationError: string | null = null;
+            try {
+              // 'commit' confirms a real document response without waiting for
+              // slow third-party scripts or a delayed DOMContentLoaded event.
+              await interactionPage.goto(interactionUrl, { waitUntil: 'commit', timeout: 15000 });
+              await expect(interactionPage.locator('main').first()).toBeVisible({ timeout: 12000 });
+              interactionReady = true;
+            } catch (error) {
+              navigationError = String(error).slice(0, 600);
+            }
+            const readyState = await interactionPage.evaluate(() => document.readyState).catch(() => null);
+            const mainVisible = await interactionPage.locator('main').first().isVisible().catch(() => false);
+            navigationAttempts.push({ attempt, error: navigationError, finalUrl: interactionPage.url(), readyState, mainVisible });
+            if (!interactionReady && attempt === 1) {
+              // Recreate the page after a stalled navigation; never mark a
+              // timed-out attempt as success based on a stale body.
+              await interactionPage.goto('about:blank', { waitUntil: 'commit', timeout: 5000 }).catch(() => {});
+            }
+          }
+          await testInfo.attach(`${role.toLowerCase()}-interaction-navigation-${uniquePaths.indexOf(path)}.json`, {
+            body: JSON.stringify({ role, path, navigationAttempts }, null, 2),
+            contentType: 'application/json',
+          });
+          expect(interactionReady, `${role} ${path}: navigation did not render usable main: ${JSON.stringify(navigationAttempts)}`).toBe(true);
           const summaries = interactionPage.locator('main details > summary:visible');
           const summaryCount = await summaries.count();
           for (let index = 0; index < summaryCount; index++) {
