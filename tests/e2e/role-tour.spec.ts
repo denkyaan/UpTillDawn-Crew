@@ -253,11 +253,24 @@ test.describe('UpTillDawn role-tour browser validation', () => {
       }
       await expect(page.locator('body')).not.toContainText(/invalid login credentials|ongeldige inloggegevens/i);
       try {
-        await expect.poll(() => new URL(page.url()).pathname, { timeout: 15000 }).not.toMatch(/^\/login\//);
+        // Staging may finish Supabase auth and role resolution after the
+        // initial form submission. Wait for the real redirect; never infer
+        // authentication from a button click or a successful HTTP response.
+        await expect.poll(() => new URL(page.url()).pathname, {
+          timeout: 30000, intervals: [250, 500, 1000, 2000],
+          message: `${role}: login did not redirect after submit`,
+        }).not.toMatch(/^\/login\//);
       } catch (error) {
         const visibleAlert = await page.locator('[role="alert"], [aria-live="assertive"], [data-sonner-toast]').allTextContents().catch(() => []);
         const inputState = await page.locator('input[type="email"], input[type="password"]').evaluateAll(inputs => inputs.map(input => ({ type: (input as HTMLInputElement).type, valid: (input as HTMLInputElement).validity.valid, validationMessage: (input as HTMLInputElement).validationMessage })));
-        const diagnostic = { role, currentPath: new URL(page.url()).pathname, loginNavigationEvents, authResponses, formPosts, loginSubmitState, visibleAlert: visibleAlert.map(t => t.slice(0, 250)), inputState, serverFailures };
+        const diagnostic = {
+          role, currentPath: new URL(page.url()).pathname,
+          documentReadyState: await page.evaluate(() => document.readyState).catch(() => null),
+          loginNavigationEvents, authResponses, formPosts, loginSubmitState,
+          roleRpcDiagnostics,
+          visibleAlert: visibleAlert.map(t => t.slice(0, 250)), inputState, serverFailures,
+          visibleBodyText: (await page.locator('body').innerText().catch(() => '')).slice(0, 1200),
+        };
         console.error(`[${role}] Login diagnostic: ${JSON.stringify(diagnostic)}`);
         await testInfo.attach(`${role.toLowerCase()}-login-diagnostic.json`, { body: JSON.stringify(diagnostic, null, 2), contentType: 'application/json' });
         await page.screenshot({ path: testInfo.outputPath(`${role.toLowerCase()}-login-failure.png`), fullPage: true });
