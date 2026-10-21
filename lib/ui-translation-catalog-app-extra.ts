@@ -2,6 +2,16 @@ export type ExtraCatalogLocale = 'nl' | 'fr' | 'en' | 'de'
 type Row = { fr:string; en:string; de:string }
 
 export const APP_EXTRA_TRANSLATIONS: Record<string,Row> = {
+  "Eventmedewerker": { fr:"Personnel événementiel", en:"Event staff", de:"Veranstaltungspersonal" },
+  "Eventverantwoordelijke": { fr:"Responsable événementiel", en:"Event lead", de:"Veranstaltungsleitung" },
+  "Promotiemedewerker": { fr:"Personnel promotionnel", en:"Promotion staff", de:"Promotionsteam" },
+  "Administratief medewerker": { fr:"Personnel administratif", en:"Administrative staff", de:"Verwaltungspersonal" },
+  "Medewerker zoeken": { fr:"Rechercher un employé", en:"Search staff", de:"Mitarbeiter suchen" },
+  "Gebruiker": { fr:"Utilisateur", en:"User", de:"Benutzer" },
+  "Evenementen": { fr:"Événements", en:"Events", de:"Veranstaltungen" },
+  "Bezig met opslaan...": { fr:"Enregistrement en cours...", en:"Saving...", de:"Wird gespeichert..." },
+  "Rolwijziging opgeslagen.": { fr:"Modification du rôle enregistrée.", en:"Role change saved.", de:"Rollenänderung gespeichert." },
+  "Rolwijziging niet uitgevoerd.": { fr:"Modification de rôle non effectuée.", en:"Role change not completed.", de:"Rollenänderung nicht ausgeführt." },
   "events": { fr:"Événements", en:"Events", de:"Veranstaltungen" },
   "promotion": { fr:"Promotion", en:"Promotion", de:"Promotion" },
   "administration": { fr:"Administration", en:"Administration", de:"Verwaltung" },
