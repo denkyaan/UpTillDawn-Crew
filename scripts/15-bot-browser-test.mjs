@@ -11,7 +11,10 @@ if (!testPassword || !supabaseUrl || !serviceRoleKey || !anonKey) {
   process.exit(1)
 }
 
-const roles = ['admin', 'responsible', ...Array(13).fill('staff')]
+const botCount = Number(process.env.BOT_COUNT || 15)
+if (![1, 3, 15].includes(botCount)) throw new Error('BOT_COUNT must be 1, 3 or 15')
+const roles = botCount === 1 ? [process.env.BOT_DEBUG_ROLE || 'admin'] : ['admin', 'responsible', ...Array(botCount - 2).fill('staff')]
+if (roles.some(role => !['admin', 'responsible', 'staff'].includes(role))) throw new Error('BOT_DEBUG_ROLE must be admin, responsible or staff')
 const locales = ['nl', 'fr', 'en', 'de']
 const viewports = [
   { width: 390, height: 844 },
@@ -161,7 +164,19 @@ try {
     const expectedName = `E2E ${role.toUpperCase()} ${String(index + 1).padStart(2, '0')}`
     const context = await browser.newContext({ locale, viewport })
     const page = await context.newPage()
-    const diagnostics={consoleErrors:[],pageErrors:[]}
+    const diagnostics={consoleErrors:[],pageErrors:[],httpErrors:[]}
+    page.on('response',async response=>{
+      if(response.status()<400||diagnostics.httpErrors.length>=25)return
+      const url=new URL(response.url())
+      const safePath=url.pathname
+      // Never log auth credentials, tokens, query strings or request bodies.
+      const isAuth=safePath.includes('/auth/v1/')
+      const body=isAuth?'[auth response omitted]':
+        (await response.text().catch(()=>'<unavailable>')).slice(0,350)
+          .replace(/(Bearer\s+)[^\s"']+/gi,'$1[redacted]')
+          .replace(/("(?:token|access_token|refresh_token|password|apikey)"\s*:\s*")[^"]+/gi,'$1[redacted]')
+      diagnostics.httpErrors.push({status:response.status(),method:response.request().method(),path:safePath,body})
+    })
     page.on('console',message=>{
       if(message.type()==='error')diagnostics.consoleErrors.push(message.text().slice(0,500))
     })
@@ -268,7 +283,10 @@ try {
           timeout: 45000,
         })
         const form = page.locator('form').filter({ has: page.locator('input[name="response"][value="can"]') }).first()
-        if (await form.count() !== 1) throw new Error('availability action form missing')
+        if (await form.count() !== 1) {
+          const diagnostic=await page.evaluate(()=>({url:location.href,title:document.title,body:document.body.innerText.slice(0,1500),forms:[...document.forms].map(f=>({action:f.action,fields:[...f.querySelectorAll('input')].map(i=>i.name).slice(0,12)}))}))
+          throw new Error(`availability action form missing: ${JSON.stringify(diagnostic)}`)
+        }
         await form.locator('input[name="response"][value="can"]').check()
         await form.locator('input[name="setup_available"][value="yes"]').check()
         await form.locator('input[name="breakdown_available"][value="yes"]').check()
@@ -494,28 +512,34 @@ try {
         }
         const before=await page.evaluate(key=>JSON.parse(localStorage.getItem(key)||'null'),progressKey)
         if(!before?.activeKey)throw new Error('general tour did not initialize active progress')
-        await primary.evaluate(button=>button.click())
-        // The compact tour advances through React state before persistence.
-        // Assert the next highlighted action first, then verify persisted progress.
-        await page.locator('[data-tour-demo="primary-action"]').first().waitFor({state:'visible',timeout:30000})
-        await page.waitForTimeout(250)
+        await primary.click()
+        // The tour deliberately waits for a manual tab click after the demo action.
+        // Confirm the action alone never navigates or falsely marks an exercise complete.
+        const afterAction=await page.evaluate(key=>JSON.parse(localStorage.getItem(key)||'null'),progressKey)
+        if(afterAction?.activeKey!==before.activeKey||afterAction?.completed?.includes(before.activeKey)){
+          throw new Error('demo action automatically advanced or falsely completed the tour')
+        }
+        const eventsLink=page.locator('a[href][data-layout-key="events"]:visible').first()
+        await eventsLink.waitFor({state:'visible',timeout:15000})
+        await eventsLink.click()
+        await page.waitForFunction(key=>{
+          const next=JSON.parse(localStorage.getItem(key)||'null')
+          return next?.activeKey==='events'
+        },progressKey,{timeout:15000})
         const advanced=await page.evaluate(key=>JSON.parse(localStorage.getItem(key)||'null'),progressKey)
-        if(
-          !advanced?.activeKey||
-          advanced.activeKey===before.activeKey||
-          !Array.isArray(advanced.completed)||
-          !advanced.completed.includes(before.activeKey)
-        )throw new Error(`general tour action did not advance persisted progress: before=${JSON.stringify(before)} after=${JSON.stringify(advanced)}`)
+        if(advanced?.completed?.includes(before.activeKey)){
+          throw new Error('navigation incorrectly marked the overview exercise complete')
+        }
         await page.getByRole('button',{name:/^(PAUZEER|PAUSE|PAUSIEREN)$/}).click()
         const progress=await page.evaluate(key=>JSON.parse(localStorage.getItem(key)||'null'),progressKey)
-        if(!progress?.paused||progress.activeKey!==advanced.activeKey||!progress.completed.includes(before?.activeKey||'overview'))throw new Error('general tour progress or pause did not persist')
+        if(!progress?.paused||progress.activeKey!==advanced.activeKey||progress.completed.includes(before?.activeKey||'overview'))throw new Error('general tour progress or pause did not persist')
         console.log(`PASS ${bot} compact general tour highlight + action advance + pause persistence`)
       }
 
       if(diagnostics.pageErrors.length)throw new Error(`Unhandled browser errors: ${JSON.stringify(diagnostics.pageErrors)}`)
       console.log(`PASS ${bot} authenticated + workflow surfaces ${viewport.width}x${viewport.height}`)
     } catch (error) {
-      failures.push(`${bot}: ${error instanceof Error ? error.message : String(error)}; pageErrors=${JSON.stringify(diagnostics.pageErrors)}; consoleErrors=${JSON.stringify(diagnostics.consoleErrors.slice(-5))}`)
+      failures.push(`${bot}: ${error instanceof Error ? error.message : String(error)}; pageErrors=${JSON.stringify(diagnostics.pageErrors)}; consoleErrors=${JSON.stringify(diagnostics.consoleErrors.slice(-5))}; httpErrors=${JSON.stringify(diagnostics.httpErrors.slice(-12))}`)
     } finally {
       await context.close()
     }
@@ -725,7 +749,11 @@ try {
     try{
       await staffTs.page.goto(`${baseUrl}/timesheets?event=00000000-0000-4000-8000-00000000e2e1`,{waitUntil:'networkidle',timeout:45000})
       const submit=staffTs.page.locator('[data-action="timesheet-submit"]')
-      if(await submit.count()!==1)throw new Error('timesheet submit action missing')
+      if(await submit.count()!==1){
+        const {data:ownRows,error:ownError}=await lifecycleAdmin.from('timesheets').select('id,status,user_id').eq('event_id','00000000-0000-4000-8000-00000000e2e1').eq('user_id',(await lifecycleAdmin.auth.admin.listUsers({perPage:1000})).data?.users?.find(u=>u.email==='bot-03-staff-en@bots.uptilldawn.test')?.id||'00000000-0000-0000-0000-000000000000')
+        const diagnostic=await staffTs.page.evaluate(()=>({url:location.href,body:document.body.innerText.slice(0,1600),status:document.querySelector('[data-timesheet-own-status]')?.textContent,actions:[...document.querySelectorAll('[data-action]')].map(el=>el.getAttribute('data-action'))}))
+        throw new Error(`timesheet submit action missing: ${JSON.stringify({diagnostic,ownRows,ownError:ownError?.message})}`)
+      }
       const [submitResponse]=await Promise.all([
         staffTs.page.waitForResponse(r=>r.request().method()==='POST'&&r.url().includes('/rpc/upt_submit_timesheet'),{timeout:30000}),
         submit.click(),
@@ -933,4 +961,4 @@ if (failures.length) {
   process.exit(1)
 }
 
-console.log('PASS: 15 concurrent authenticated browser bots + protected event workflow surfaces across Admin/Responsible/Staff, NL/FR/EN/DE and mobile/tablet/desktop viewports')
+console.log(`PASS: ${botCount} authenticated browser bots + protected event workflow surfaces across Admin/Responsible/Staff, NL/FR/EN/DE and mobile/tablet/desktop viewports`)
