@@ -38,6 +38,208 @@ export type Database = {
         Update: { id?: string; owner_id?: string; name?: string; payload?: Json; updated_at?: string }
         Relationships: []
       }
+      admin_counterparties: {
+        Row: {
+          address: Json
+          created_at: string
+          email: string | null
+          enterprise_number: string | null
+          id: string
+          kind: string
+          name: string
+          peppol_endpoint: string | null
+          updated_at: string
+          vat_number: string | null
+        }
+        Insert: {
+          address?: Json
+          created_at?: string
+          email?: string | null
+          enterprise_number?: string | null
+          id?: string
+          kind: string
+          name: string
+          peppol_endpoint?: string | null
+          updated_at?: string
+          vat_number?: string | null
+        }
+        Update: {
+          address?: Json
+          created_at?: string
+          email?: string | null
+          enterprise_number?: string | null
+          id?: string
+          kind?: string
+          name?: string
+          peppol_endpoint?: string | null
+          updated_at?: string
+          vat_number?: string | null
+        }
+        Relationships: []
+      }
+      admin_financial_audit: {
+        Row: {
+          actor_id: string | null
+          created_at: string
+          document_id: string
+          id: number
+          new_record: Json | null
+          old_record: Json | null
+          operation: string
+        }
+        Insert: {
+          actor_id?: string | null
+          created_at?: string
+          document_id: string
+          id?: never
+          new_record?: Json | null
+          old_record?: Json | null
+          operation: string
+        }
+        Update: {
+          actor_id?: string | null
+          created_at?: string
+          document_id?: string
+          id?: never
+          new_record?: Json | null
+          old_record?: Json | null
+          operation?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "admin_financial_audit_document_id_fkey"
+            columns: ["document_id"]
+            isOneToOne: false
+            referencedRelation: "admin_financial_documents"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      admin_financial_documents: {
+        Row: {
+          approved_at: string | null
+          approved_by: string | null
+          counterparty_id: string | null
+          created_at: string
+          created_by: string
+          currency: string
+          document_number: string | null
+          due_date: string | null
+          event_id: string | null
+          external_reference: string | null
+          gross_amount: number | null
+          id: string
+          issue_date: string | null
+          kind: string
+          net_amount: number
+          notes: string | null
+          peppol_message_id: string | null
+          peppol_status: string
+          status: string
+          tax_amount: number
+          updated_at: string
+        }
+        Insert: {
+          approved_at?: string | null
+          approved_by?: string | null
+          counterparty_id?: string | null
+          created_at?: string
+          created_by?: string
+          currency?: string
+          document_number?: string | null
+          due_date?: string | null
+          event_id?: string | null
+          external_reference?: string | null
+          gross_amount?: number | null
+          id?: string
+          issue_date?: string | null
+          kind: string
+          net_amount?: number
+          notes?: string | null
+          peppol_message_id?: string | null
+          peppol_status?: string
+          status?: string
+          tax_amount?: number
+          updated_at?: string
+        }
+        Update: {
+          approved_at?: string | null
+          approved_by?: string | null
+          counterparty_id?: string | null
+          created_at?: string
+          created_by?: string
+          currency?: string
+          document_number?: string | null
+          due_date?: string | null
+          event_id?: string | null
+          external_reference?: string | null
+          gross_amount?: number | null
+          id?: string
+          issue_date?: string | null
+          kind?: string
+          net_amount?: number
+          notes?: string | null
+          peppol_message_id?: string | null
+          peppol_status?: string
+          status?: string
+          tax_amount?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "admin_financial_documents_counterparty_id_fkey"
+            columns: ["counterparty_id"]
+            isOneToOne: false
+            referencedRelation: "admin_counterparties"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "admin_financial_documents_event_id_fkey"
+            columns: ["event_id"]
+            isOneToOne: false
+            referencedRelation: "events"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      admin_financial_lines: {
+        Row: {
+          created_at: string
+          description: string
+          document_id: string
+          id: string
+          quantity: number
+          unit_price: number
+          vat_rate: number
+        }
+        Insert: {
+          created_at?: string
+          description: string
+          document_id: string
+          id?: string
+          quantity?: number
+          unit_price?: number
+          vat_rate?: number
+        }
+        Update: {
+          created_at?: string
+          description?: string
+          document_id?: string
+          id?: string
+          quantity?: number
+          unit_price?: number
+          vat_rate?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "admin_financial_lines_document_id_fkey"
+            columns: ["document_id"]
+            isOneToOne: false
+            referencedRelation: "admin_financial_documents"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       admin_role_modes: {
         Row: {
           active_role: string
@@ -4714,6 +4916,7 @@ export type Database = {
         Args: { p_event: string; p_workplace: string }
         Returns: boolean
       }
+      upt_can_manage_administration: { Args: never; Returns: boolean }
       upt_can_manage_task: {
         Args: { p_task: string; p_uid?: string }
         Returns: boolean
