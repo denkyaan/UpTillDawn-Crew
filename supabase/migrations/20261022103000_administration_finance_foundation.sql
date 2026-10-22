@@ -98,4 +98,12 @@ create policy admin_financial_lines_update on public.admin_financial_lines for u
  using (public.upt_can_manage_administration() and exists (select 1 from public.admin_financial_documents d where d.id = document_id and d.status = 'draft'))
  with check (public.upt_can_manage_administration() and exists (select 1 from public.admin_financial_documents d where d.id = document_id and d.status = 'draft'));
 create policy admin_financial_audit_read on public.admin_financial_audit for select to authenticated using (public.upt_can_manage_administration());
+-- Index every foreign key to support referential integrity checks and joins.
+create index if not exists admin_financial_documents_counterparty_idx on public.admin_financial_documents(counterparty_id);
+create index if not exists admin_financial_documents_event_idx on public.admin_financial_documents(event_id);
+create index if not exists admin_financial_documents_created_by_idx on public.admin_financial_documents(created_by);
+create index if not exists admin_financial_documents_approved_by_idx on public.admin_financial_documents(approved_by);
+create index if not exists admin_financial_lines_document_idx on public.admin_financial_lines(document_id);
+create index if not exists admin_financial_audit_document_idx on public.admin_financial_audit(document_id);
+create index if not exists admin_financial_audit_actor_idx on public.admin_financial_audit(actor_id);
 -- No delete grants, no provider credentials, no automatic posting or Peppol sending.
