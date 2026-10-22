@@ -3,6 +3,10 @@ export type ExtendedUiLocale = 'nl' | 'fr' | 'en' | 'de'
 type Row = { fr: string; en: string; de: string }
 
 const EXTENSIONS: Record<string, Row> = {
+  'Klanten en leveranciers': { fr: 'Clients et fournisseurs', en: 'Customers and suppliers', de: 'Kunden und Lieferanten' },
+  'Clients et fournisseurs': { fr: 'Clients et fournisseurs', en: 'Customers and suppliers', de: 'Kunden und Lieferanten' },
+  'Customers and suppliers': { fr: 'Clients et fournisseurs', en: 'Customers and suppliers', de: 'Kunden und Lieferanten' },
+  'Kunden und Lieferanten': { fr: 'Clients et fournisseurs', en: 'Customers and suppliers', de: 'Kunden und Lieferanten' },
   'Tableau de bord administratif': { fr: 'Tableau de bord administratif', en: 'Administration dashboard', de: 'Verwaltungsübersicht' },
   'Administration dashboard': { fr: 'Tableau de bord administratif', en: 'Administration dashboard', de: 'Verwaltungsübersicht' },
   'Verwaltungsübersicht': { fr: 'Tableau de bord administratif', en: 'Administration dashboard', de: 'Verwaltungsübersicht' },
