@@ -1,4 +1,3 @@
-import type { SupabaseClient } from '@supabase/supabase-js'
 import Link from 'next/link'
 import { revalidatePath } from 'next/cache'
 import { redirect } from 'next/navigation'
@@ -22,6 +21,13 @@ const documentKinds = {
 } as const
 const kindValues = ['purchase_invoice','sales_invoice','expense','credit_note','quote'] as const
 
+const actionLabels = {
+ nl: {review:'Ter controle indienen',approved:'Goedkeuren (Admin)',issued:'Als uitgereikt markeren',paid:'Als betaald markeren',void:'Annuleren'},
+ fr: {review:'Soumettre à vérification',approved:'Approuver (Admin)',issued:'Marquer comme émis',paid:'Marquer comme payé',void:'Annuler'},
+ en: {review:'Submit for review',approved:'Approve (Admin)',issued:'Mark as issued',paid:'Mark as paid',void:'Void'},
+ de: {review:'Zur Prüfung einreichen',approved:'Genehmigen (Admin)',issued:'Als ausgestellt markieren',paid:'Als bezahlt markieren',void:'Stornieren'},
+} as const
+const transitions:Record<string,string[]> = {draft:['review'],review:['approved'],approved:['issued','paid','void'],issued:['paid','void']}
 const statusLabels = {
  nl: {draft:'Concept',review:'Ter controle',approved:'Goedgekeurd',issued:'Uitgereikt',paid:'Betaald',void:'Geannuleerd'},
  fr: {draft:'Brouillon',review:'À vérifier',approved:'Approuvé',issued:'Émis',paid:'Payé',void:'Annulé'},
@@ -49,12 +55,12 @@ async function requireAdministration() {
  if (!current.isAdmin && !canOpenPortal('administration',(data ?? []) as PortalAssignment[],{
    approved:current.approved,blocked:current.account_blocked===true,
  })) redirect('/portals')
- return supabase
+ return {supabase,isAdmin:current.isAdmin}
 }
 
 async function createDraft(formData:FormData) {
  'use server'
- const supabase = (await requireAdministration()) as unknown as SupabaseClient
+ const {supabase} = await requireAdministration()
  const kind = String(formData.get('kind') ?? '')
  const allowed = ['sales_invoice','purchase_invoice','credit_note','expense','quote']
  if (!allowed.includes(kind)) return
@@ -72,9 +78,33 @@ async function createDraft(formData:FormData) {
  redirect('/portals/administration/finance')
 }
 
+async function updateFinancialStatus(formData:FormData) {
+ 'use server'
+ const {supabase,isAdmin} = await requireAdministration()
+ const id = String(formData.get('document_id') ?? '')
+ const status = String(formData.get('status') ?? '')
+ if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id)) return
+ const allowed = isAdmin ? ['review','approved','issued','paid','void'] : ['review']
+ if (!allowed.includes(status)) return
+ const {data:existing,error:lookupError} = await supabase.from('admin_financial_documents').select('status').eq('id',id).single()
+ if (lookupError || !existing) return
+ const transitions:Record<string,string[]> = {
+  draft:['review'],review:['approved'],approved:['issued','paid','void'],issued:['paid','void']
+ }
+ if (!transitions[existing.status]?.includes(status)) return
+ const {data:{user}} = await supabase.auth.getUser()
+ if (!user) return
+ const patch:Record<string,unknown> = {status}
+ if (status==='approved') {patch.approved_by=user.id;patch.approved_at=new Date().toISOString()}
+ const {error} = await supabase.from('admin_financial_documents').update(patch).eq('id',id).eq('status',existing.status)
+ if (error) redirect('/portals/administration/finance?error=1')
+ revalidatePath('/portals/administration/finance')
+ redirect('/portals/administration/finance')
+}
+
 export const dynamic = 'force-dynamic'
 export default async function FinancePage({searchParams}:{searchParams:Promise<{error?:string}>}) {
- const supabase = (await requireAdministration()) as unknown as SupabaseClient
+ const {supabase,isAdmin} = await requireAdministration()
  const locale = await requestUiLocale()
  const t = copy[locale]
  const params = await searchParams
@@ -105,7 +135,9 @@ export default async function FinancePage({searchParams}:{searchParams:Promise<{
    {error ? <p role="alert">{t.error}</p> : !documents?.length ? <p className="text-muted-foreground">{t.empty}</p> :
     <div className="space-y-3">{documents.map(d=><article key={d.id} className="flex flex-wrap items-center justify-between gap-2 border-b pb-3">
      <div><p className="font-semibold">{d.document_number || translatedLabel(kindLabels[locale],d.kind)}</p><p className="text-xs text-muted-foreground">{translatedLabel(kindLabels[locale],d.kind)} · {translatedLabel(statusLabels[locale],d.status)}</p></div>
-     <strong>{new Intl.NumberFormat(locale==='nl'?'nl-BE':locale==='fr'?'fr-BE':locale==='de'?'de-BE':'en-BE',{style:'currency',currency:d.currency}).format(Number(d.gross_amount))}</strong>
+     <div className="flex flex-wrap items-center gap-2">
+     {(transitions[d.status]??[]).filter(next=>isAdmin || next==='review').map(next=><form key={next} action={updateFinancialStatus}><input type="hidden" name="document_id" value={d.id}/><input type="hidden" name="status" value={next}/><button type="submit" className="rounded-lg border border-violet-500 px-3 py-2 text-xs font-semibold text-violet-400">{translatedLabel(actionLabels[locale],next)}</button></form>)}
+     <strong>{new Intl.NumberFormat(locale==='nl'?'nl-BE':locale==='fr'?'fr-BE':locale==='de'?'de-BE':'en-BE',{style:'currency',currency:d.currency}).format(Number(d.gross_amount))}</strong></div>
     </article>)}</div>}
   </section>
  </main>
