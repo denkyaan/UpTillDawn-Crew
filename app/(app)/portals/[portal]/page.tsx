@@ -1,4 +1,5 @@
 import Link from 'next/link'
+import {PortalGuidedTour} from '@/components/portal-guided-tour'
 import { cookies, headers } from 'next/headers'
 import { parseAcceptLanguage, parseUiLocale } from '@/lib/locale-preferences'
 import { notFound, redirect } from 'next/navigation'
@@ -52,36 +53,37 @@ export default async function PortalPage({ params }: { params: Promise<{ portal:
 
   return <main className="mx-auto max-w-4xl space-y-6 p-6">
     <Link href="/portals" className="text-sm text-violet-400">{t.back}</Link>
-    <header><h1 className="text-2xl font-bold">{promotion ? t.promotion : t.administration}</h1></header>
+    <header data-portal-tour="portal-overview"><h1 className="text-2xl font-bold">{promotion ? t.promotion : t.administration}</h1></header>
+    <PortalGuidedTour portal={portal} locale={locale}/>
     {promotion ? <div className="grid gap-4 sm:grid-cols-2">
-      <section className="rounded-2xl border bg-card p-5">
+      <section data-portal-tour="portal-chats" className="rounded-2xl border bg-card p-5">
         <h2 className="font-semibold">{t.chats}</h2>
         <p className="mt-2 text-sm text-muted-foreground">{t.chatDesc}</p>
         {promotionChats.length ? <ul className="mt-3 space-y-2">{promotionChats.map(channel => <li key={channel.id}><Link href={`/chat?channel=${encodeURIComponent(channel.id)}`} className="text-violet-400 underline">{channel.name}</Link></li>)}</ul> : <p className="mt-3 text-sm text-muted-foreground">{t.promoChatEmpty}</p>}
         <Link href="/chat" className="mt-4 inline-flex rounded-lg bg-violet-600 px-4 py-2 text-sm font-medium text-white">{t.chatLink}</Link>
       </section>
-      <section className="rounded-2xl border bg-card p-5">
+      <section data-portal-tour="portal-tasks" className="rounded-2xl border bg-card p-5">
         <h2 className="font-semibold">{t.tasks}</h2>
         <p className="mt-2 text-sm text-muted-foreground">{t.taskDesc}</p>
         <Link href="/tasks" className="mt-4 inline-flex rounded-lg bg-violet-600 px-4 py-2 text-sm font-medium text-white">{t.taskLink}</Link>
       </section>
-      <section className="rounded-2xl border bg-card p-5">
+      <section data-portal-tour="portal-notifications" className="rounded-2xl border bg-card p-5">
         <h2 className="font-semibold">{t.meldingen}</h2>
         <p className="mt-2 text-sm text-muted-foreground">{t.meldingenDesc}</p>
         <Link href="/notifications" className="mt-4 inline-flex rounded-lg bg-violet-600 px-4 py-2 text-sm font-medium text-white">{t.meldingenLink}</Link>
       </section>
     </div> : <div className="grid gap-4 sm:grid-cols-2">
-      <section className="rounded-2xl border bg-card p-5">
+      <section data-portal-tour="portal-finance" className="rounded-2xl border bg-card p-5">
         <h2 className="font-semibold">{t.administration}</h2>
         <p className="mt-2 text-sm text-muted-foreground">{t.financeDesc}</p>
         <Link href="/portals/administration/finance" className="mt-4 inline-flex rounded-lg bg-violet-600 px-4 py-2 text-sm font-medium text-white">{t.administration} →</Link>
       </section>
-      <section className="rounded-2xl border bg-card p-5 sm:col-span-2">
+      <section data-portal-tour="portal-timesheets" className="rounded-2xl border bg-card p-5 sm:col-span-2">
         <h2 className="font-semibold">{locale==='nl'?'Ingediende werkstaten':locale==='fr'?'Feuilles de temps soumises':locale==='de'?'Eingereichte Stundenzettel':'Submitted timesheets'}</h2>
         <p className="mt-2 text-sm text-muted-foreground">{locale==='nl'?'Ingediende uren verschijnen hier automatisch na indiening. Goedkeuring blijft voorbehouden aan bevoegde beheerders.':locale==='fr'?'Les heures soumises apparaissent automatiquement ici. La validation reste réservée aux responsables autorisés.':locale==='de'?'Eingereichte Stunden erscheinen hier automatisch. Die Freigabe bleibt berechtigten Administratoren vorbehalten.':'Submitted hours appear here automatically. Approval remains restricted to authorized administrators.'}</p>
         {submittedTimesheets?.error ? <p role="alert" className="mt-3 text-sm text-amber-500">{t.unavailableDesc}</p> : submittedTimesheets?.data?.length ? <ul className="mt-3 space-y-2">{submittedTimesheets.data.map(row=><li key={row.id} className="flex flex-wrap items-center justify-between gap-2 rounded-lg border p-3"><span className="text-sm">{row.submitted_at ? new Date(row.submitted_at).toLocaleString(locale==='nl'?'nl-BE':locale==='fr'?'fr-BE':locale==='de'?'de-BE':'en-BE') : '—'} · {row.user_id.slice(0,8)}</span><Link className="text-sm text-violet-400 underline" href={`/timesheets?event=${encodeURIComponent(row.event_id)}`}>{locale==='nl'?'Bekijken':locale==='fr'?'Consulter':locale==='de'?'Ansehen':'View'}</Link></li>)}</ul> : <p className="mt-3 text-sm text-muted-foreground">{locale==='nl'?'Geen ingediende werkstaten.':locale==='fr'?'Aucune feuille soumise.':locale==='de'?'Keine eingereichten Stundenzettel.':'No submitted timesheets.'}</p>}
       </section>
-      <section className="rounded-2xl border bg-card p-5 sm:col-span-2">
+      <section data-portal-tour="portal-inventory" className="rounded-2xl border bg-card p-5 sm:col-span-2">
         <h2 className="font-semibold">{locale==='nl'?'Inventarisafwijkingen':locale==='fr'?'Écarts de stock':locale==='de'?'Bestandsabweichungen':'Inventory discrepancies'}</h2>
         {inventoryAlerts?.error ? <p role="alert" className="mt-2 text-sm text-amber-500">{t.unavailableDesc}</p> : inventoryAlerts?.data?.length ? <ul className="mt-3 space-y-2">{inventoryAlerts.data.map(item=><li key={item.id} className="flex flex-wrap items-center justify-between gap-2 rounded-lg border p-3"><span>{item.name} · {locale==='nl'?'Ontbrekend':locale==='fr'?'Manquant':locale==='de'?'Fehlend':'Missing'}: {item.missing_quantity} · {locale==='nl'?'Beschadigd':locale==='fr'?'Endommagé':locale==='de'?'Beschädigt':'Damaged'}: {item.damaged_quantity}</span><Link href="/inventory" className="text-violet-400 underline">{locale==='nl'?'Inventaris':locale==='fr'?'Inventaire':locale==='de'?'Inventar':'Inventory'}</Link></li>)}</ul> : <p className="mt-2 text-sm text-muted-foreground">{locale==='nl'?'Geen afwijkingen zichtbaar.':locale==='fr'?'Aucun écart visible.':locale==='de'?'Keine Abweichungen sichtbar.':'No discrepancies visible.'}</p>}
       </section>
