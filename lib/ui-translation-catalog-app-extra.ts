@@ -2,6 +2,9 @@ export type ExtraCatalogLocale = 'nl' | 'fr' | 'en' | 'de'
 type Row = { fr:string; en:string; de:string }
 
 export const APP_EXTRA_TRANSLATIONS: Record<string,Row> = {
+  "Titel": {fr:"Titre",en:"Title",de:"Titel"},
+  "Titre": {fr:"Titre",en:"Title",de:"Titel"},
+  "Title": {fr:"Titre",en:"Title",de:"Titel"},
   "Administratieve werkroosters": {fr:"Plannings administratifs",en:"Administrative rosters",de:"Administrative Dienstpläne"},
   "Plannings administratifs": {fr:"Plannings administratifs",en:"Administrative rosters",de:"Administrative Dienstpläne"},
   "Administrative rosters": {fr:"Plannings administratifs",en:"Administrative rosters",de:"Administrative Dienstpläne"},
