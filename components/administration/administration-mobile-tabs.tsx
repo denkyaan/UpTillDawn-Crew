@@ -1,7 +1,7 @@
 "use client"
 import Link from "next/link"
 import { usePathname } from "next/navigation"
-import { useEffect, useState } from "react"
+import { useState } from "react"
 import { administrationModules } from "@/lib/administration/modules"
 import type { SupportedUiLocale } from "@/lib/locale-preferences"
 
@@ -17,7 +17,6 @@ function href(slug:string){return slug==="dashboard"?"/portals/administration":s
 export function AdministrationMobileTabs({locale}:{locale:SupportedUiLocale}){
  const pathname=usePathname()
  const [expanded,setExpanded]=useState<string|null>(null)
- useEffect(()=>setExpanded(null),[pathname])
  const current=categories.find(group=>group.slugs.some(slug=>href(slug)===pathname))
  const selected=categories.find(group=>group.id===expanded)
  return <div className="relative shrink-0 border-t border-border bg-card lg:hidden">
@@ -25,9 +24,9 @@ export function AdministrationMobileTabs({locale}:{locale:SupportedUiLocale}){
    <div className="mb-2 flex items-center justify-between gap-2 px-2"><span className="text-sm font-bold">{selected.name[locale]}</span><button type="button" onClick={()=>setExpanded(null)} aria-label={({nl:"Sluiten",fr:"Fermer",en:"Close",de:"Schließen"} as const)[locale]} className="rounded-lg px-3 py-2 text-sm text-muted-foreground">✕</button></div>
    <div className="grid grid-cols-2 gap-2">
     {selected.slugs.map(slug=>{
-     const module=administrationModules.find(item=>item.slug===slug)
-     if(!module)return null
-     return <Link key={slug} href={href(slug)} onClick={()=>setExpanded(null)} className={`rounded-xl border p-3 text-sm font-semibold ${pathname===href(slug)?"border-violet-500 bg-violet-600 text-white":"border-border text-foreground hover:border-violet-500"}`}>{module.title[locale]}</Link>
+     const adminModule=administrationModules.find(item=>item.slug===slug)
+     if(!adminModule)return null
+     return <Link key={slug} href={href(slug)} onClick={()=>setExpanded(null)} className={`rounded-xl border p-3 text-sm font-semibold ${pathname===href(slug)?"border-violet-500 bg-violet-600 text-white":"border-border text-foreground hover:border-violet-500"}`}>{adminModule.title[locale]}</Link>
     })}
    </div>
   </div>}
