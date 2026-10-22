@@ -8,8 +8,8 @@ import { canOpenPortal, type PortalAssignment } from "@/lib/portal-access"
 
 export default async function AdministrationModulePage({params}:{params:Promise<{slug:string}>}){
  const {slug}=await params
- const module=administrationModules.find(item=>item.slug===slug&&slug!=="dashboard"&&slug!=="finance")
- if(!module)notFound()
+ const adminModule=administrationModules.find(item=>item.slug===slug&&slug!=="dashboard"&&slug!=="finance")
+ if(!adminModule)notFound()
  const current=await getCurrentUser()
  if(!current)redirect("/login")
  if(!current.approved||Boolean(current.account_blocked))redirect("/portals")
@@ -26,7 +26,7 @@ export default async function AdministrationModulePage({params}:{params:Promise<
   </div>
   <header className="rounded-2xl border border-violet-500/25 bg-gradient-to-br from-violet-500/10 via-card to-card p-6 sm:p-10">
    <p className="mb-3 text-xs font-semibold uppercase tracking-[0.2em] text-violet-400">{t.workspace}</p>
-   <h1 className="text-3xl font-bold tracking-tight sm:text-4xl">{module.title[locale]}</h1>
+   <h1 className="text-3xl font-bold tracking-tight sm:text-4xl">{adminModule.title[locale]}</h1>
    <p className="mt-4 max-w-2xl text-sm leading-7 text-muted-foreground">{t.preview}</p>
   </header>
   <section aria-label={t.readOnly} className="rounded-2xl border border-dashed border-border bg-card p-6 sm:p-10">
