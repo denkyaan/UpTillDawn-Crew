@@ -1,5 +1,6 @@
 import Link from 'next/link'
 import {PortalGuidedTour} from '@/components/portal-guided-tour'
+import {AdministrationNavigation} from '@/components/administration/administration-navigation'
 import { cookies, headers } from 'next/headers'
 import { parseAcceptLanguage, parseUiLocale } from '@/lib/locale-preferences'
 import { notFound, redirect } from 'next/navigation'
@@ -62,6 +63,7 @@ export default async function PortalPage({ params }: { params: Promise<{ portal:
     <Link href="/portals" className="text-sm text-violet-400">{t.back}</Link>
     <header data-portal-tour="portal-overview"><h1 className="text-2xl font-bold">{promotion ? t.promotion : t.administration}</h1></header>
     <PortalGuidedTour portal={portal} locale={locale}/>
+    {!promotion && <AdministrationNavigation locale={locale}/> }
     {!promotion && <section className="space-y-4" aria-label={adminDashboardCopy[locale].title}>
       <div className="rounded-2xl border border-violet-500/40 bg-violet-500/10 p-5">
         <h2 className="text-xl font-bold">{adminDashboardCopy[locale].title}</h2>
