@@ -55,6 +55,25 @@ export default async function PortalPage({ params }: { params: Promise<{ portal:
     <Link href="/portals" className="text-sm text-violet-400">{t.back}</Link>
     <header data-portal-tour="portal-overview"><h1 className="text-2xl font-bold">{promotion ? t.promotion : t.administration}</h1></header>
     <PortalGuidedTour portal={portal} locale={locale}/>
+    {!promotion && <section className="space-y-4" aria-label="Administration dashboard">
+      <div className="rounded-2xl border border-violet-500/40 bg-violet-500/10 p-5">
+        <h2 className="text-xl font-bold">{locale==='nl'?'Administratief dashboard':locale==='fr'?'Tableau de bord administratif':locale==='de'?'Verwaltungsübersicht':'Administration dashboard'}</h2>
+        <p className="mt-2 text-sm text-muted-foreground">{locale==='nl'?'Beheer financiële documenten, ingediende uren, personeelsplanning en operationele opvolging vanuit één overzicht.':locale==='fr'?'Gérez les documents financiers, les heures soumises, la planification et le suivi opérationnel.':locale==='de'?'Finanzdokumente, Arbeitszeiten, Personalplanung und operative Aufgaben zentral verwalten.':'Manage financial documents, submitted hours, staffing schedules and operations in one place.'}</p>
+      </div>
+      <div className="grid gap-3 sm:grid-cols-2">
+       {[
+        {href:'/portals/administration/finance',nl:'Financiën & documenten',fr:'Finances et documents',de:'Finanzen & Dokumente',en:'Finance & documents',descNl:'Facturen, uitgaven, bijlagen en betalingsstatussen',descEn:'Invoices, expenses, attachments and payment statuses'},
+        {href:'/timesheets',nl:'Werkuren & goedkeuringen',fr:'Heures et validations',de:'Arbeitszeiten & Freigaben',en:'Hours & approvals',descNl:'Ingediende werkstaten opvolgen',descEn:'Review submitted timesheets'},
+        {href:'/shifts',nl:'Werkroosters & shifts',fr:'Plannings et shifts',de:'Dienstpläne & Schichten',en:'Schedules & shifts',descNl:'Bestaande shiftplanning openen',descEn:'Open existing shift scheduling'},
+        {href:'/tasks',nl:'Administratieve taken',fr:'Tâches administratives',de:'Verwaltungsaufgaben',en:'Administrative tasks',descNl:'Taken, prioriteiten en opvolging',descEn:'Tasks, priorities and follow-up'},
+        {href:'/inventory',nl:'Inventaris',fr:'Inventaire',de:'Inventar',en:'Inventory',descNl:'Voorraad en afwijkingen opvolgen',descEn:'Review inventory and discrepancies'},
+        {href:'/events',nl:'Evenementen',fr:'Événements',de:'Veranstaltungen',en:'Events',descNl:'Evenementen en operationele context',descEn:'Events and operational context'},
+       ].map(item=><Link key={item.href} href={item.href} className="block rounded-xl border bg-card p-4 transition-colors hover:border-violet-500">
+         <span className="font-semibold text-violet-400">{item[locale]} →</span>
+         <p className="mt-2 text-xs text-muted-foreground">{locale==='nl'?item.descNl:item.descEn}</p>
+       </Link>)}
+      </div>
+    </section>}
     {promotion ? <div className="grid gap-4 sm:grid-cols-2">
       <section data-portal-tour="portal-chats" className="rounded-2xl border bg-card p-5">
         <h2 className="font-semibold">{t.chats}</h2>
