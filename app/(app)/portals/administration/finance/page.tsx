@@ -1,3 +1,4 @@
+import type { SupabaseClient } from '@supabase/supabase-js'
 import { randomUUID } from 'node:crypto'
 import { validateUploadSecurity, safeUploadName } from '@/lib/upload-security'
 import Link from 'next/link'
@@ -126,7 +127,7 @@ async function uploadFinancialAttachment(formData:FormData) {
  const path=user.id+'/'+randomUUID()+'.'+validation.extension
  const {error:uploadError}=await supabase.storage.from('admin-financial-attachments').upload(path,file,{contentType:validation.mime,upsert:false})
  if(uploadError) redirect('/portals/administration/finance?error=1')
- const {error:linkError}=await supabase.from('admin_financial_attachments').insert({
+ const {error:linkError}=await (supabase as unknown as SupabaseClient).from('admin_financial_attachments').insert({
   document_id:documentId,storage_path:path,original_name:safeUploadName(file.name),
   mime_type:validation.mime,size_bytes:validation.size,uploaded_by:user.id
  })
@@ -144,7 +145,7 @@ export default async function FinancePage({searchParams}:{searchParams:Promise<{
  const {data:documents,error} = await supabase.from('admin_financial_documents')
    .select('id,kind,document_number,net_amount,tax_amount,gross_amount,currency,status,created_at')
    .order('created_at',{ascending:false}).limit(100)
- const {data:attachments}=await supabase.from('admin_financial_attachments').select('id,document_id,original_name,created_at').order('created_at',{ascending:false}).limit(200)
+ const {data:attachments}=await (supabase as unknown as SupabaseClient).from('admin_financial_attachments').select('id,document_id,original_name,created_at').order('created_at',{ascending:false}).limit(200)
  const money = (amount:number) => new Intl.NumberFormat(locale==='nl'?'nl-BE':locale==='fr'?'fr-BE':locale==='de'?'de-BE':'en-BE',{style:'currency',currency:'EUR'}).format(amount)
  const paidTotal=(documents??[]).filter(d=>d.status==='paid').reduce((sum,d)=>sum+Number(d.gross_amount),0)
  const unpaidTotal=(documents??[]).filter(d=>['approved','issued','review'].includes(d.status)).reduce((sum,d)=>sum+Number(d.gross_amount),0)
