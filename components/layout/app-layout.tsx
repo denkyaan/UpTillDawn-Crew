@@ -1,5 +1,6 @@
-import { AdministrationMobileTabs } from "@/components/administration/administration-mobile-tabs"
 "use client"
+
+import { AdministrationMobileTabs } from "@/components/administration/administration-mobile-tabs"
 
 import { useCallback, useEffect, useMemo, useState } from "react"
 import Link from "next/link"
