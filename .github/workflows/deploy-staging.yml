@@ -16,6 +16,7 @@ jobs:
     environment: staging
     permissions:
       contents: read
+      actions: read
     env:
       NEXT_PUBLIC_SUPABASE_URL: https://npbjrtiolqperdgljnhi.supabase.co
       NEXT_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.STAGING_SUPABASE_ANON_KEY }}
@@ -45,6 +46,32 @@ jobs:
           npm run lint
           npm run typecheck
           npm test
+      - name: Require successful 15-bot integration CI for exact commit
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+        run: |
+          set -euo pipefail
+          target="$GITHUB_SHA"
+          echo "Waiting for V2.1 integration and 15 authenticated browser bots on $target"
+          for attempt in $(seq 1 90); do
+            result=$(gh api "repos/$GH_REPO/actions/workflows/v21-staging-integration-ci.yml/runs?head_sha=$target&per_page=30" --jq '[.workflow_runs[] | select(.head_sha == "'$target'" and .event == "push")] | sort_by(.created_at) | last | [.status,.conclusion] | @tsv')
+            status=$(printf '%s' "$result" | cut -f1)
+            conclusion=$(printf '%s' "$result" | cut -f2)
+            if [ "$status" = "completed" ]; then
+              if [ "$conclusion" = "success" ]; then
+                echo "PASS: complete bot integration gate succeeded for $target"
+                exit 0
+              fi
+              echo "::error::Bot integration gate failed: $conclusion"
+              exit 1
+            fi
+            echo "Bot integration gate: ${status:-pending} (attempt $attempt/90)"
+            sleep 30
+          done
+          echo "::error::Timed out waiting for 15-bot integration gate; deployment blocked"
+          exit 1
       - name: Build staging Worker
         run: npm run build:cloudflare
       - name: Staging dry-run
