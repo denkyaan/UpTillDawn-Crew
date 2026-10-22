@@ -31,6 +31,20 @@ async function createProposal(form:FormData){
  if(error)throw new Error("Roster proposal could not be created")
  revalidatePath(route)
 }
+async function shiftAction(form:FormData){
+ "use server"
+ const {db,user}=await context()
+ const id=String(form.get("id")??"")
+ const shift=String(form.get("shift")??"")
+ if(!/^[0-9a-f-]{36}$/i.test(id))return
+ const rpc=String(form.get("action"))==="target"?"upt_admin_roster_target":"upt_admin_roster_apply"
+ if(rpc==="upt_admin_roster_apply"&&!user.isAdmin)throw new Error("Admin required")
+ if(rpc==="upt_admin_roster_target"&&!/^[0-9a-f-]{36}$/i.test(shift))return
+ const args=rpc==="upt_admin_roster_target"?{p_id:id,p_shift:shift}:{p_id:id}
+ const {error}=await (db as unknown as SupabaseClient).rpc(rpc,args)
+ if(error)throw new Error("Roster shift action failed")
+ revalidatePath(route)
+}
 async function changeStatus(form:FormData){
  "use server"
  const {db,user}=await context()
@@ -51,7 +65,7 @@ export default async function RostersPage(){
  en:{heading:"Administrative rosters",intro:"Create a draft and submit it for another Admin to review. Approval does not yet modify operational shifts.",title:"Title",event:"Event",start:"Start",end:"End",details:"Details",create:"Create draft",submit:"Submit to Admin",approve:"Approve",reject:"Reject",note:"Rejection reason",empty:"No proposals yet",error:"Records unavailable",draft:"Draft",submitted:"Submitted",approved:"Approved",rejected:"Rejected"},
  de:{heading:"Administrative Dienstpläne",intro:"Entwurf erstellen und einem anderen Admin zur Prüfung vorlegen. Freigaben ändern noch keine Schichten.",title:"Titel",event:"Event",start:"Beginn",end:"Ende",details:"Details",create:"Entwurf erstellen",submit:"Einreichen",approve:"Genehmigen",reject:"Ablehnen",note:"Ablehnungsgrund",empty:"Noch keine Vorschläge",error:"Daten nicht verfügbar",draft:"Entwurf",submitted:"Eingereicht",approved:"Genehmigt",rejected:"Abgelehnt"}
  } as const)[locale]
- const [events,proposals]=await Promise.all([db.from("events").select("id,name").order("name").limit(100),(db as unknown as SupabaseClient).from("admin_roster_proposals").select("id,title,details,status,proposed_start,proposed_end,created_by,review_note,event_id").order("created_at",{ascending:false}).limit(100)])
+ const [events,proposals,shifts]=await Promise.all([db.from("events").select("id,name").order("name").limit(100),(db as unknown as SupabaseClient).from("admin_roster_proposals").select("id,title,details,status,proposed_start,proposed_end,created_by,review_note,event_id,target_shift_id,applied_at").order("created_at",{ascending:false}).limit(100),db.from("shifts").select("id,event_id,scheduled_start,scheduled_end").order("scheduled_start",{ascending:false}).limit(200)])
  return <main className="mx-auto w-full max-w-5xl space-y-5 p-4 sm:p-6">
   <header><h1 className="text-2xl font-bold">{l.heading}</h1><p className="mt-2 text-sm text-muted-foreground">{l.intro}</p></header>
   <form action={createProposal} className="grid gap-3 rounded-2xl border bg-card p-5 sm:grid-cols-2">
@@ -66,6 +80,8 @@ export default async function RostersPage(){
    <div className="flex justify-between gap-3"><strong>{p.title}</strong><span className="text-xs text-violet-400">{l[p.status as keyof typeof l]??p.status}</span></div>
    <p className="text-sm text-muted-foreground">{new Date(p.proposed_start).toLocaleString(locale)} – {new Date(p.proposed_end).toLocaleString(locale)}</p>
    {p.details&&<p className="text-sm">{p.details}</p>}{p.review_note&&<p className="text-sm">{p.review_note}</p>}
+   {p.status==="draft"&&<form action={shiftAction} className="flex flex-wrap gap-2"><input type="hidden" name="id" value={p.id}/><select required name="shift" defaultValue={p.target_shift_id??""} className="min-w-48 flex-1 rounded-lg border bg-background p-2"><option value="" disabled>Shift</option>{(shifts.data??[]).filter(x=>x.event_id===p.event_id).map(x=><option key={x.id} value={x.id}>{new Date(x.scheduled_start).toLocaleString(locale)} – {new Date(x.scheduled_end).toLocaleString(locale)}</option>)}</select><button name="action" value="target" className="rounded-lg border px-3 py-2 text-sm">Shift</button></form>}
+   {p.status==="approved"&&p.target_shift_id&&!p.applied_at&&user.isAdmin&&<form action={shiftAction}><input type="hidden" name="id" value={p.id}/><button name="action" value="apply" className="rounded-lg bg-violet-600 px-3 py-2 text-sm text-white">Apply to shift</button></form>}
    {p.status==="draft"&&<form action={changeStatus}><input type="hidden" name="id" value={p.id}/><button name="action" value="submit" className="rounded-lg bg-violet-600 px-4 py-2 text-sm text-white">{l.submit}</button></form>}
    {p.status==="submitted"&&user.isAdmin&&p.created_by!==user.id&&<form action={changeStatus} className="flex flex-wrap gap-2"><input type="hidden" name="id" value={p.id}/><input name="note" placeholder={l.note} className="min-w-48 flex-1 rounded-lg border bg-background p-2"/><button name="action" value="approve" className="rounded-lg bg-violet-600 px-3 py-2 text-sm text-white">{l.approve}</button><button name="action" value="reject" className="rounded-lg border px-3 py-2 text-sm">{l.reject}</button></form>}
   </article>)}</section>
