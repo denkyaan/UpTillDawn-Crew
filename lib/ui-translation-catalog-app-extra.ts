@@ -2,6 +2,15 @@ export type ExtraCatalogLocale = 'nl' | 'fr' | 'en' | 'de'
 type Row = { fr:string; en:string; de:string }
 
 export const APP_EXTRA_TRANSLATIONS: Record<string,Row> = {
+  "Financiële administratie": {fr:"Administration financière",en:"Financial administration",de:"Finanzverwaltung"},
+  "Administration financière": {fr:"Administration financière",en:"Financial administration",de:"Finanzverwaltung"},
+  "Financial administration": {fr:"Administration financière",en:"Financial administration",de:"Finanzverwaltung"},
+  "Finanzverwaltung": {fr:"Administration financière",en:"Financial administration",de:"Finanzverwaltung"},
+  "Purchase invoice": {fr:"Facture fournisseur",en:"Purchase invoice",de:"Eingangsrechnung"},
+  "Sales invoice": {fr:"Facture client",en:"Sales invoice",de:"Ausgangsrechnung"},
+  "Expense": {fr:"Dépense",en:"Expense",de:"Ausgabe"},
+  "Credit note": {fr:"Note de crédit",en:"Credit note",de:"Gutschrift"},
+  "Quote": {fr:"Devis",en:"Quote",de:"Angebot"},
   "Opnieuw toewijzen": { fr:"Réattribuer", en:"Reassign", de:"Erneut zuweisen" },
   "Rol intrekken?": { fr:"Révoquer ce rôle ?", en:"Revoke this role?", de:"Diese Rolle entziehen?" },
   "Portaal": { fr:"Portail", en:"Portal", de:"Portal" },
