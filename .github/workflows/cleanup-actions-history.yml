@@ -22,23 +22,20 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          # Keep all runs from the last 14 days, plus at least 10 latest
-          # completed runs per workflow. Never delete active or current runs.
-          cutoff="$(date -u -d '14 days ago' +%s)"
-          mapfile -t workflows < <(gh api --paginate "/repos/$REPO/actions/workflows?per_page=100" --jq '.workflows[].id')
+          # Retain only the newest completed run per workflow.\n          mapfile -t workflows < <(gh api --paginate "/repos/$REPO/actions/workflows?per_page=100" --jq '.workflows[].id')
           for workflow in "${workflows[@]}"; do
             echo "::group::Workflow $workflow"
             mapfile -t runs < <(gh api --paginate "/repos/$REPO/actions/workflows/$workflow/runs?per_page=100" --jq '.workflow_runs[] | [.id,.status,.created_at] | @tsv')
             kept=0
             for run in "${runs[@]}"; do
-              IFS=$'\t' read -r id status created <<< "$run"
+              IFS=
+          done
+\t' read -r id status created <<< "$run"
               [ "$id" = "$CURRENT_RUN_ID" ] && continue
               [ "$status" = "completed" ] || continue
               kept=$((kept + 1))
-              [ "$kept" -le 10 ] && continue
-              timestamp="$(date -u -d "$created" +%s)"
-              [ "$timestamp" -ge "$cutoff" ] && continue
-              echo "Deleting expired run $id ($created)"
+              [ "$kept" -eq 1 ] && continue
+              echo "Deleting superseded completed run $id"
               gh api --method DELETE "/repos/$REPO/actions/runs/$id"
             done
             echo "::endgroup::"
