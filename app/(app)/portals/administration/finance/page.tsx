@@ -22,6 +22,23 @@ const documentKinds = {
 } as const
 const kindValues = ['purchase_invoice','sales_invoice','expense','credit_note','quote'] as const
 
+const statusLabels = {
+ nl: {draft:'Concept',review:'Ter controle',approved:'Goedgekeurd',issued:'Uitgereikt',paid:'Betaald',void:'Geannuleerd'},
+ fr: {draft:'Brouillon',review:'À vérifier',approved:'Approuvé',issued:'Émis',paid:'Payé',void:'Annulé'},
+ en: {draft:'Draft',review:'In review',approved:'Approved',issued:'Issued',paid:'Paid',void:'Void'},
+ de: {draft:'Entwurf',review:'In Prüfung',approved:'Genehmigt',issued:'Ausgestellt',paid:'Bezahlt',void:'Storniert'},
+} as const
+const kindLabels = {
+ nl: {sales_invoice:'Verkoopfactuur',purchase_invoice:'Aankoopfactuur',credit_note:'Creditnota',expense:'Uitgave',quote:'Offerte'},
+ fr: {sales_invoice:'Facture de vente',purchase_invoice:'Facture d’achat',credit_note:'Note de crédit',expense:'Dépense',quote:'Devis'},
+ en: {sales_invoice:'Sales invoice',purchase_invoice:'Purchase invoice',credit_note:'Credit note',expense:'Expense',quote:'Quote'},
+ de: {sales_invoice:'Ausgangsrechnung',purchase_invoice:'Eingangsrechnung',credit_note:'Gutschrift',expense:'Ausgabe',quote:'Angebot'},
+} as const
+function translatedLabel<T extends string>(labels:Record<string,T>,value:string):string {
+ return labels[value] ?? value
+}
+
+
 async function requireAdministration() {
  const current = await getCurrentUser()
  if (!current) redirect('/login')
@@ -87,7 +104,7 @@ export default async function FinancePage({searchParams}:{searchParams:Promise<{
   <section className="rounded-2xl border bg-card p-5">
    {error ? <p role="alert">{t.error}</p> : !documents?.length ? <p className="text-muted-foreground">{t.empty}</p> :
     <div className="space-y-3">{documents.map(d=><article key={d.id} className="flex flex-wrap items-center justify-between gap-2 border-b pb-3">
-     <div><p className="font-semibold">{d.document_number || d.kind}</p><p className="text-xs text-muted-foreground">{d.kind} · {d.status}</p></div>
+     <div><p className="font-semibold">{d.document_number || translatedLabel(kindLabels[locale],d.kind)}</p><p className="text-xs text-muted-foreground">{translatedLabel(kindLabels[locale],d.kind)} · {translatedLabel(statusLabels[locale],d.status)}</p></div>
      <strong>{new Intl.NumberFormat(locale==='nl'?'nl-BE':locale==='fr'?'fr-BE':locale==='de'?'de-BE':'en-BE',{style:'currency',currency:d.currency}).format(Number(d.gross_amount))}</strong>
     </article>)}</div>}
   </section>
