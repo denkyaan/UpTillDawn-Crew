@@ -1,3 +1,4 @@
+import { AdministrationMobileTabs } from "@/components/administration/administration-mobile-tabs"
 "use client"
 
 import { useCallback, useEffect, useMemo, useState } from "react"
@@ -36,8 +37,6 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
   const [context,setContext]=useState<RoleUiContext>(emptyContext)
   const [rules,setRules]=useState<RoleUiRule[]>([])
   const [adminAiOpen,setAdminAiOpen]=useState(false)
-  const [administrationMenuOpen,setAdministrationMenuOpen]=useState(false)
-  useEffect(()=>setAdministrationMenuOpen(false),[pathname])
   const [tourPreview,setTourPreview]=useState(false)
   const [trainingLocale,setTrainingLocale]=useState<SupportedUiLocale>("nl")
   const [trainingChatUnlocked,setTrainingChatUnlocked]=useState(false)
@@ -254,12 +253,6 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
   // Administration uses the same app shell as operational Admin: branded
   // sidebar, shared topbar and mobile bottom navigation. Only the tab set differs.
   if(pathname==="/portals/administration"||pathname.startsWith("/portals/administration/")){
-    const adminTabs=[
-      {href:"/portals/administration",label:({nl:"Overzicht",fr:"Accueil",en:"Overview",de:"Übersicht"} as Record<SupportedUiLocale,string>)[trainingLocale]},
-      {href:"/portals/administration/finance",label:({nl:"Financiën",fr:"Finances",en:"Finance",de:"Finanzen"} as Record<SupportedUiLocale,string>)[trainingLocale]},
-      {href:"/portals/administration/modules/tasks",label:({nl:"Taken",fr:"Tâches",en:"Tasks",de:"Aufgaben"} as Record<SupportedUiLocale,string>)[trainingLocale]},
-    ]
-    const moreLabel=({nl:"Meer",fr:"Plus",en:"More",de:"Mehr"} as Record<SupportedUiLocale,string>)[trainingLocale]
     return <div className="flex h-dvh overflow-hidden bg-background">
       <aside className="hidden h-dvh w-[250px] shrink-0 flex-col overflow-hidden border-r border-border bg-card lg:flex">
         <Link href="/portals/administration" className="flex h-16 shrink-0 items-center gap-3 border-b border-border px-5">
@@ -276,17 +269,9 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
           <Link href="/portals" className="text-xs font-semibold text-violet-400">{({nl:"Alle portalen",fr:"Tous les portails",en:"All portals",de:"Alle Portale"} as Record<SupportedUiLocale,string>)[trainingLocale]} →</Link>
         </div>
         <div id="app-scroll" className="min-h-0 flex-1 overflow-y-auto scroll-smooth bg-background">
-          <main className="min-h-full pb-24 lg:pb-0">
-            {administrationMenuOpen?<div className="mx-auto max-w-3xl space-y-3 p-4 lg:hidden">
-              <h1 className="text-xl font-bold">{({nl:"Administratiemodules",fr:"Modules administratifs",en:"Administration modules",de:"Verwaltungsmodule"} as Record<SupportedUiLocale,string>)[trainingLocale]}</h1>
-              <AdministrationNavigation locale={trainingLocale}/>
-            </div>:children}
-          </main>
+          <main className="min-h-full pb-24 lg:pb-0">{children}</main>
         </div>
-        <nav aria-label={({nl:"Administratie",fr:"Administration",en:"Administration",de:"Verwaltung"} as Record<SupportedUiLocale,string>)[trainingLocale]} className="grid shrink-0 grid-cols-4 border-t border-border bg-card pb-[env(safe-area-inset-bottom)] lg:hidden">
-          {adminTabs.map(tab=><Link key={tab.href} href={tab.href} onClick={()=>setAdministrationMenuOpen(false)} aria-current={!administrationMenuOpen&&pathname===tab.href?"page":undefined} className={`flex min-h-14 items-center justify-center px-1 py-3 text-center text-[11px] font-semibold ${!administrationMenuOpen&&pathname===tab.href?"border-t-2 border-violet-500 text-violet-400":"text-muted-foreground"}`}>{tab.label}</Link>)}
-          <button type="button" onClick={()=>setAdministrationMenuOpen(value=>!value)} aria-expanded={administrationMenuOpen} className={`flex min-h-14 items-center justify-center px-1 py-3 text-center text-[11px] font-semibold ${administrationMenuOpen?"border-t-2 border-violet-500 text-violet-400":"text-muted-foreground"}`}>{moreLabel}</button>
-        </nav>
+        <AdministrationMobileTabs locale={trainingLocale}/>
       </div>
     </div>
   }
