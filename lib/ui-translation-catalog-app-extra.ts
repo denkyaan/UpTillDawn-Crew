@@ -2,6 +2,22 @@ export type ExtraCatalogLocale = 'nl' | 'fr' | 'en' | 'de'
 type Row = { fr:string; en:string; de:string }
 
 export const APP_EXTRA_TRANSLATIONS: Record<string,Row> = {
+  "Ingediende werkstaten": {fr:"Feuilles de temps soumises",en:"Submitted timesheets",de:"Eingereichte Stundenzettel"},
+  "Feuilles de temps soumises": {fr:"Feuilles de temps soumises",en:"Submitted timesheets",de:"Eingereichte Stundenzettel"},
+  "Submitted timesheets": {fr:"Feuilles de temps soumises",en:"Submitted timesheets",de:"Eingereichte Stundenzettel"},
+  "Eingereichte Stundenzettel": {fr:"Feuilles de temps soumises",en:"Submitted timesheets",de:"Eingereichte Stundenzettel"},
+  "Ingediende uren verschijnen hier automatisch na indiening. Goedkeuring blijft voorbehouden aan bevoegde beheerders.": {fr:"Les heures soumises apparaissent automatiquement ici. La validation reste réservée aux responsables autorisés.",en:"Submitted hours appear here automatically. Approval remains restricted to authorized administrators.",de:"Eingereichte Stunden erscheinen hier automatisch. Die Freigabe bleibt berechtigten Administratoren vorbehalten."},
+  "Les heures soumises apparaissent automatiquement ici. La validation reste réservée aux responsables autorisés.": {fr:"Les heures soumises apparaissent automatiquement ici. La validation reste réservée aux responsables autorisés.",en:"Submitted hours appear here automatically. Approval remains restricted to authorized administrators.",de:"Eingereichte Stunden erscheinen hier automatisch. Die Freigabe bleibt berechtigten Administratoren vorbehalten."},
+  "Submitted hours appear here automatically. Approval remains restricted to authorized administrators.": {fr:"Les heures soumises apparaissent automatiquement ici. La validation reste réservée aux responsables autorisés.",en:"Submitted hours appear here automatically. Approval remains restricted to authorized administrators.",de:"Eingereichte Stunden erscheinen hier automatisch. Die Freigabe bleibt berechtigten Administratoren vorbehalten."},
+  "Eingereichte Stunden erscheinen hier automatisch. Die Freigabe bleibt berechtigten Administratoren vorbehalten.": {fr:"Les heures soumises apparaissent automatiquement ici. La validation reste réservée aux responsables autorisés.",en:"Submitted hours appear here automatically. Approval remains restricted to authorized administrators.",de:"Eingereichte Stunden erscheinen hier automatisch. Die Freigabe bleibt berechtigten Administratoren vorbehalten."},
+  "Bekijken": {fr:"Consulter",en:"View",de:"Ansehen"},
+  "Consulter": {fr:"Consulter",en:"View",de:"Ansehen"},
+  "View": {fr:"Consulter",en:"View",de:"Ansehen"},
+  "Ansehen": {fr:"Consulter",en:"View",de:"Ansehen"},
+  "Geen ingediende werkstaten.": {fr:"Aucune feuille soumise.",en:"No submitted timesheets.",de:"Keine eingereichten Stundenzettel."},
+  "Aucune feuille soumise.": {fr:"Aucune feuille soumise.",en:"No submitted timesheets.",de:"Keine eingereichten Stundenzettel."},
+  "No submitted timesheets.": {fr:"Aucune feuille soumise.",en:"No submitted timesheets.",de:"Keine eingereichten Stundenzettel."},
+  "Keine eingereichten Stundenzettel.": {fr:"Aucune feuille soumise.",en:"No submitted timesheets.",de:"Keine eingereichten Stundenzettel."},
   "Financiële administratie": {fr:"Administration financière",en:"Financial administration",de:"Finanzverwaltung"},
   "Administration financière": {fr:"Administration financière",en:"Financial administration",de:"Finanzverwaltung"},
   "Financial administration": {fr:"Administration financière",en:"Financial administration",de:"Finanzverwaltung"},
