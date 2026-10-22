@@ -283,7 +283,7 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
         <div id="app-scroll" className="min-h-0 flex-1 overflow-y-auto scroll-smooth bg-background">
           <main className="min-h-full pb-24 lg:pb-0">{children}</main>
         </div>
-        <nav aria-label="Administration" className="grid shrink-0 grid-cols-4 border-t border-border bg-card pb-[env(safe-area-inset-bottom)] lg:hidden">
+        <nav aria-label={({nl:"Administratie",fr:"Administration",en:"Administration",de:"Verwaltung"} as Record<SupportedUiLocale,string>)[trainingLocale]} className="grid shrink-0 grid-cols-4 border-t border-border bg-card pb-[env(safe-area-inset-bottom)] lg:hidden">
           {adminTabs.map(tab=><Link key={tab.href} href={tab.href} aria-current={pathname===tab.href?"page":undefined} className={`flex min-h-14 items-center justify-center px-1 py-3 text-center text-[11px] font-semibold ${pathname===tab.href?"border-t-2 border-violet-500 text-violet-400":"text-muted-foreground"}`}>{tab.label}</Link>)}
         </nav>
       </div>
