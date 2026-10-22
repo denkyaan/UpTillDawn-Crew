@@ -14,7 +14,7 @@ const categories=[
  {id:"promotion",name:{nl:"Promotie",fr:"Promotion",en:"Promotion",de:"Werbung"},icon:Megaphone,slugs:["marketing","sponsors"]},
  {id:"management",name:{nl:"Beheer",fr:"Gestion",en:"Manage",de:"Verwaltung"},icon:Settings2,slugs:["documents","reports","notifications","automations","ai","settings"]},
 ] as const
-function href(slug:string){return slug==="dashboard"?"/portals/administration":slug==="finance"?"/portals/administration/finance":"/portals/administration/modules/"+slug}
+function href(slug:string){return slug==="dashboard"?"/portals/administration":slug==="finance"?"/portals/administration/finance":slug==="contacts"?"/portals/administration/contacts":"/portals/administration/modules/"+slug}
 export function AdministrationMobileTabs({locale}:{locale:SupportedUiLocale}){
  const pathname=usePathname()
  const [expanded,setExpanded]=useState<string|null>(null)
