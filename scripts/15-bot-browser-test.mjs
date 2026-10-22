@@ -152,7 +152,10 @@ try {
   // single CI Next server measures app behavior instead of artificial overload.
   // Three simultaneous actors keep role coverage concurrent without starving
   // the single CI Next.js server during hydrated mobile assertions.
-  const smokeConcurrency=3
+  const requestedConcurrency=Number(process.env.BOT_SMOKE_CONCURRENCY || 3)
+  if (!Number.isInteger(requestedConcurrency) || requestedConcurrency < 1 || requestedConcurrency > 5) throw new Error('BOT_SMOKE_CONCURRENCY must be an integer from 1 to 5')
+  const smokeConcurrency=Math.min(requestedConcurrency,roles.length)
+  console.log(`Browser smoke: ${roles.length} actors, ${smokeConcurrency} concurrent sessions`)
   for(let batchStart=0;batchStart<roles.length;batchStart+=smokeConcurrency){
     const batch=roles.slice(batchStart,batchStart+smokeConcurrency)
     await Promise.all(batch.map(async (role, offset) => {
