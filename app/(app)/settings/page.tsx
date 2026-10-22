@@ -30,7 +30,9 @@ export default async function Page({searchParams}:{searchParams?:Promise<{tour?:
     photoUrl=signed?.signedUrl||null
   }
   const isAdmin=current?.isAdmin===true
-  const isMaker=user.email?.toLowerCase()==='maker@uptilldawn' && current?.isAdmin===true
+  // Maker login may resolve to the canonical account email; never authorize by the entered alias.
+  const {data:isOwner}=await s.rpc('upt_current_is_owner')
+  const isMaker=isOwner===true
 
   return <main className="mx-auto max-w-6xl space-y-6 p-5 pb-28">
     <header>
