@@ -106,4 +106,6 @@ create index if not exists admin_financial_documents_approved_by_idx on public.a
 create index if not exists admin_financial_lines_document_idx on public.admin_financial_lines(document_id);
 create index if not exists admin_financial_audit_document_idx on public.admin_financial_audit(document_id);
 create index if not exists admin_financial_audit_actor_idx on public.admin_financial_audit(actor_id);
+-- Trigger functions must never be directly callable by application roles.
+revoke execute on function public.upt_admin_financial_audit_trigger() from public, anon, authenticated;
 -- No delete grants, no provider credentials, no automatic posting or Peppol sending.
