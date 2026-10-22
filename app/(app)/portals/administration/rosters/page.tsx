@@ -25,7 +25,9 @@ async function createProposal(form:FormData){
  const start=String(form.get("start")??"")
  const end=String(form.get("end")??"")
  if(!/^[0-9a-f-]{36}$/i.test(event)||!title||!start||!end)return
- const {error}=await (db as unknown as SupabaseClient).rpc("upt_admin_roster_create",{p_event:event,p_title:title,p_details:String(form.get("details")??""),p_start:new Date(start).toISOString(),p_end:new Date(end).toISOString()})
+ const startAt=new Date(start),endAt=new Date(end)
+ if(!Number.isFinite(startAt.getTime())||!Number.isFinite(endAt.getTime())||endAt<=startAt)throw new Error("Invalid roster time range")
+ const {error}=await (db as unknown as SupabaseClient).rpc("upt_admin_roster_create",{p_event:event,p_title:title,p_details:String(form.get("details")??""),p_start:startAt.toISOString(),p_end:endAt.toISOString()})
  if(error)throw new Error("Roster proposal could not be created")
  revalidatePath(route)
 }
