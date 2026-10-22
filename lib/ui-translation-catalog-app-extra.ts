@@ -2,6 +2,10 @@ export type ExtraCatalogLocale = 'nl' | 'fr' | 'en' | 'de'
 type Row = { fr:string; en:string; de:string }
 
 export const APP_EXTRA_TRANSLATIONS: Record<string,Row> = {
+  "Contacten en leveranciers": {fr:"Contacts et fournisseurs",en:"Contacts and suppliers",de:"Kontakte und Lieferanten"},
+  "Contacts et fournisseurs": {fr:"Contacts et fournisseurs",en:"Contacts and suppliers",de:"Kontakte und Lieferanten"},
+  "Contacts and suppliers": {fr:"Contacts et fournisseurs",en:"Contacts and suppliers",de:"Kontakte und Lieferanten"},
+  "Kontakte und Lieferanten": {fr:"Contacts et fournisseurs",en:"Contacts and suppliers",de:"Kontakte und Lieferanten"},
   "Administratief dashboard": { fr: "Tableau de bord administratif", en: "Administration dashboard", de: "Verwaltungsübersicht" },
   "Tableau de bord administratif": { fr: "Tableau de bord administratif", en: "Administration dashboard", de: "Verwaltungsübersicht" },
   "Administration dashboard": { fr: "Tableau de bord administratif", en: "Administration dashboard", de: "Verwaltungsübersicht" },
