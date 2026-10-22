@@ -7,7 +7,7 @@ on:
 
 concurrency:
   group: uptilldawn-staging
-  cancel-in-progress: false
+  cancel-in-progress: true
 
 jobs:
   staging:
@@ -40,12 +40,9 @@ jobs:
           node-version: 24
           cache: npm
       - name: Install
-        run: npm ci
-      - name: Validate
-        run: |
-          npm run lint
-          npm run typecheck
-          npm test
+        run: npm ci --prefer-offline --no-audit --no-fund
+      # The exact commit is already checked by the required integration workflow.
+      # Avoid repeating its lint, typecheck and Node test suite here.
       - name: Require successful 15-bot integration CI for exact commit
         shell: bash
         env:
@@ -55,7 +52,7 @@ jobs:
           set -euo pipefail
           target="$GITHUB_SHA"
           echo "Waiting for V2.1 integration and 15 authenticated browser bots on $target"
-          for attempt in $(seq 1 90); do
+          for attempt in $(seq 1 120); do
             result=$(gh api "repos/$GH_REPO/actions/workflows/v21-staging-integration-ci.yml/runs?head_sha=$target&per_page=30" --jq '[.workflow_runs[] | select(.head_sha == "'$target'" and .event == "push")] | sort_by(.created_at) | last | [.status,.conclusion] | @tsv')
             status=$(printf '%s' "$result" | cut -f1)
             conclusion=$(printf '%s' "$result" | cut -f2)
@@ -68,7 +65,7 @@ jobs:
               exit 1
             fi
             echo "Bot integration gate: ${status:-pending} (attempt $attempt/90)"
-            sleep 30
+            sleep 10
           done
           echo "::error::Timed out waiting for 15-bot integration gate; deployment blocked"
           exit 1
