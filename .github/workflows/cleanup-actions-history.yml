@@ -24,12 +24,12 @@ jobs:
           # Keep the newest 20 completed runs per workflow, and never delete
           # a run younger than seven days or the currently executing run.
           cutoff="$(date -u -d '7 days ago' +%s)"
-          workflows="$(gh api --retry 3 "/repos/$REPO/actions/workflows?per_page=100" --jq '.workflows[].id')"
+          workflows="$(gh api "/repos/$REPO/actions/workflows?per_page=100" --jq '.workflows[].id')"
           while IFS= read -r workflow; do
             [ -n "$workflow" ] || continue
             echo "Checking workflow $workflow"
             # One bounded API response per workflow avoids fragile paginated pipes.
-            if ! response="$(gh api --retry 3 "/repos/$REPO/actions/workflows/$workflow/runs?per_page=100&status=completed")"; then
+            if ! response="$(gh api "/repos/$REPO/actions/workflows/$workflow/runs?per_page=100&status=completed")"; then
               echo "::warning::Could not fetch runs for workflow $workflow; skipping"
               continue
             fi
@@ -46,7 +46,7 @@ jobs:
               created_epoch="$(date -u -d "$created" +%s)" || continue
               [ "$created_epoch" -ge "$cutoff" ] && continue
               echo "Removing old completed run $id"
-              if ! gh api --retry 3 --method DELETE "/repos/$REPO/actions/runs/$id"; then
+              if ! gh api --method DELETE "/repos/$REPO/actions/runs/$id"; then
                 echo "::warning::Could not delete run $id; continuing"
               fi
             done <<< "$entries"
