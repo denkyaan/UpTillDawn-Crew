@@ -2,6 +2,7 @@ export type ExtraCatalogLocale = 'nl' | 'fr' | 'en' | 'de'
 type Row = { fr:string; en:string; de:string }
 
 export const APP_EXTRA_TRANSLATIONS: Record<string,Row> = {
+  "Meldingsinstellingen": { fr:"Paramètres des notifications", en:"Notification settings", de:"Benachrichtigungseinstellungen" },
   "Rondleiding": { fr:"Visite guidée", en:"Tour", de:"Rundgang" },
   "Bekijk de interactieve uitleg voor de rol die je momenteel gebruikt.": { fr:"Consultez le guide interactif pour le rôle que vous utilisez actuellement.", en:"View the interactive guide for the role you are currently using.", de:"Sieh dir die interaktive Anleitung für deine aktuell verwendete Rolle an." },
   "Welkom, verantwoordelijke": { fr:"Bienvenue, responsable", en:"Welcome, responsible lead", de:"Willkommen, Verantwortliche/r" },
