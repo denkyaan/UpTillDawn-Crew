@@ -13,7 +13,7 @@ async function access(){
  const db=await createClient()
  if(!user.isAdmin){
   const {data,error}=await db.rpc("upt_my_portal_assignments")
-  if(error||!canOpenPortal("administration",(data??[]) as PortalAssignment[],{approved:user.approved,blocked:user.account_blocked===true}))redirect("/portals")
+  if(error||!canOpenPortal("administration",(data??[]) as PortalAssignment[],{approved:user.approved,blocked:Boolean(user.account_blocked)}))redirect("/portals")
  }
  return db
 }
@@ -33,12 +33,12 @@ export const dynamic="force-dynamic"
 export default async function ContactsPage(){
  const db=await access()
  const locale=await requestUiLocale()
- const labels={
+ const labels=({
   nl:{title:"Contacten en leveranciers",intro:"Beheer klanten, leveranciers en hun facturatiegegevens.",name:"Naam",type:"Soort",email:"E-mail",vat:"Btw-nummer",save:"Contact toevoegen",empty:"Nog geen contacten",customer:"Klant",supplier:"Leverancier",both:"Beide",error:"Contacten kunnen niet worden geladen."},
   fr:{title:"Contacts et fournisseurs",intro:"Gérez les clients, fournisseurs et leurs données de facturation.",name:"Nom",type:"Type",email:"E-mail",vat:"N° TVA",save:"Ajouter",empty:"Aucun contact",customer:"Client",supplier:"Fournisseur",both:"Les deux",error:"Contacts indisponibles."},
   en:{title:"Contacts and suppliers",intro:"Manage customers, suppliers and billing details.",name:"Name",type:"Type",email:"Email",vat:"VAT number",save:"Add contact",empty:"No contacts yet",customer:"Customer",supplier:"Supplier",both:"Both",error:"Contacts unavailable."},
   de:{title:"Kontakte und Lieferanten",intro:"Kunden, Lieferanten und Rechnungsdaten verwalten.",name:"Name",type:"Typ",email:"E-Mail",vat:"USt-ID",save:"Kontakt hinzufügen",empty:"Noch keine Kontakte",customer:"Kunde",supplier:"Lieferant",both:"Beide",error:"Kontakte nicht verfügbar."}
- }[locale]
+ } as const)[locale]
  const {data,error}=await db.from("admin_counterparties").select("id,name,kind,email,vat_number").order("name").limit(100)
  return <main className="mx-auto w-full max-w-5xl space-y-5 p-4 sm:p-6">
   <header><h1 className="text-2xl font-bold">{labels.title}</h1><p className="mt-2 text-sm text-muted-foreground">{labels.intro}</p></header>
