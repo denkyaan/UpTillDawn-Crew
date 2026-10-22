@@ -2,6 +2,7 @@ import Link from 'next/link'
 import { createClient } from '@/lib/supabase/crew-server'
 import { ProfileForm } from '@/components/crew/profile-form'
 import { LanguageSwitcher } from '@/components/language-switcher'
+import { PushNotificationSettings } from '@/components/push-notification-settings'
 import { getCurrentUser } from '@/lib/actions/auth'
 import { RestartRoleTourButton } from '@/components/role-app-tour'
 import { SandboxRoleModule,type TrainingRole } from '@/components/training/sandbox-role-module'
@@ -29,6 +30,7 @@ export default async function Page({searchParams}:{searchParams?:Promise<{tour?:
     photoUrl=signed?.signedUrl||null
   }
   const isAdmin=current?.isAdmin===true
+  const isMaker=user.email?.toLowerCase()==='maker@uptilldawn' && current?.isAdmin===true
 
   return <main className="mx-auto max-w-6xl space-y-6 p-5 pb-28">
     <header>
@@ -55,7 +57,7 @@ export default async function Page({searchParams}:{searchParams?:Promise<{tour?:
           <AdminCard href="/admin/platform#automatiseringen" title="Meldingen" description="Bekijk operationele meldingen, herinneringen en automatische waarschuwingen."/>
           <AdminCard href="/operations#excel-export" title="Excel-export" description="Exporteer uren en administratieve gegevens vanuit de werkurenworkflow."/>
           <AdminCard href="/audit" title="Auditlog" description="Bekijk wijzigingshistoriek en administratieve acties voor controle en traceerbaarheid."/>
-          <AdminCard href="/god-mode/login" title="God Mode" description="Makeromgeving voor diepgaande interface-, workflow-, automatiserings- en codewijzigingen."/>
+          {isMaker&&<AdminCard href="/god-mode/login" title="God Mode" description="Makeromgeving voor diepgaande interface-, workflow-, automatiserings- en codewijzigingen."/>}
         </div></div>
       </div>
     </section>}
@@ -65,6 +67,11 @@ export default async function Page({searchParams}:{searchParams?:Promise<{tour?:
       {error||!profile
         ? <p>Profiel kon niet worden geladen.</p>
         : <ProfileForm id={user.id} initial={profile} photoUrl={photoUrl} preferredWorkplaceId={preference||null} workplaceOptions={(workplaceOptions||[]).map(option=>({id:option.id,name:option.name}))} isAdminProfile={current?.realRole==='admin'}/>}
+    </section>
+
+    <section className="rounded-2xl border p-4">
+      <h2 className="mb-2 text-xl font-black">Meldingsinstellingen</h2>
+      <PushNotificationSettings/>
     </section>
 
     <section className="rounded-2xl border p-4">
