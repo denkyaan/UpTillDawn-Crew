@@ -8,6 +8,7 @@ on:
       - '.github/workflows/v21-staging-integration-ci.yml'
       - 'supabase/migrations/20261022233500_admin_roster_fk_indexes.sql'
       - 'scripts/15-bot-browser-test.mjs'
+      - 'types/crew-database.ts'
       - 'supabase/migrations/20261022235000_admin_roster_explicit_identity.sql'
 
 # Revalidate the complete pipeline on the regenerated Next.js security lockfile.
