@@ -17,7 +17,7 @@ const copy = {
 async function requireAdministration() {
  const current = await getCurrentUser()
  if (!current) redirect('/login')
- if (!current.approved || current.account_blocked === true) redirect('/portals')
+ if (!current.approved || Boolean(current.account_blocked)) redirect('/portals')
  const supabase = await createClient()
  const { data, error } = await supabase.rpc('upt_my_portal_assignments')
  if (error && !current.isAdmin) redirect('/portals')
