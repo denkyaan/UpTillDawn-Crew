@@ -53,6 +53,47 @@ export type Database = {
         }
         Relationships: []
       }
+      admin_financial_attachments: {
+        Row: {
+          created_at: string
+          document_id: string
+          id: string
+          mime_type: string
+          original_name: string
+          size_bytes: number
+          storage_path: string
+          uploaded_by: string
+        }
+        Insert: {
+          created_at?: string
+          document_id: string
+          id?: string
+          mime_type: string
+          original_name: string
+          size_bytes: number
+          storage_path: string
+          uploaded_by?: string
+        }
+        Update: {
+          created_at?: string
+          document_id?: string
+          id?: string
+          mime_type?: string
+          original_name?: string
+          size_bytes?: number
+          storage_path?: string
+          uploaded_by?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "admin_financial_attachments_document_id_fkey"
+            columns: ["document_id"]
+            isOneToOne: false
+            referencedRelation: "admin_financial_documents"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       admin_financial_audit: {
         Row: {
           actor_id: string | null
@@ -216,30 +257,6 @@ export type Database = {
           },
         ]
       }
-      training_scenario_members: {
-        Row: { scenario_id: string; user_id: string; created_at: string }
-        Insert: { scenario_id: string; user_id: string; created_at?: string }
-        Update: { scenario_id?: string; user_id?: string; created_at?: string }
-        Relationships: []
-      }
-      training_progress: {
-        Row: { participant_id: string; scenario_id: string; role: string; results: Json; updated_at: string }
-        Insert: { participant_id: string; scenario_id: string; role: string; results?: Json; updated_at?: string }
-        Update: { participant_id?: string; scenario_id?: string; role?: string; results?: Json; updated_at?: string }
-        Relationships: []
-      }
-      training_questions: {
-        Row: { id: string; scenario_id: string; participant_id: string; role: string; question: string; answer: string | null; status: string; created_at: string; answered_at: string | null }
-        Insert: { id?: string; scenario_id: string; participant_id: string; role: string; question: string; answer?: string | null; status?: string; created_at?: string; answered_at?: string | null }
-        Update: { id?: string; scenario_id?: string; participant_id?: string; role?: string; question?: string; answer?: string | null; status?: string; created_at?: string; answered_at?: string | null }
-        Relationships: []
-      }
-      training_scenarios: {
-        Row: { id: string; owner_id: string; name: string; payload: Json; updated_at: string }
-        Insert: { id?: string; owner_id: string; name?: string; payload?: Json; updated_at?: string }
-        Update: { id?: string; owner_id?: string; name?: string; payload?: Json; updated_at?: string }
-        Relationships: []
-      }
       admin_role_modes: {
         Row: {
           active_role: string
@@ -257,6 +274,78 @@ export type Database = {
           user_id?: string
         }
         Relationships: []
+      }
+      admin_roster_proposals: {
+        Row: {
+          applied_at: string | null
+          applied_by: string | null
+          created_at: string
+          created_by: string
+          details: string
+          event_id: string
+          id: string
+          proposed_end: string
+          proposed_start: string
+          review_note: string | null
+          reviewed_at: string | null
+          reviewed_by: string | null
+          status: string
+          target_shift_id: string | null
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          applied_at?: string | null
+          applied_by?: string | null
+          created_at?: string
+          created_by?: string
+          details?: string
+          event_id: string
+          id?: string
+          proposed_end: string
+          proposed_start: string
+          review_note?: string | null
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          status?: string
+          target_shift_id?: string | null
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          applied_at?: string | null
+          applied_by?: string | null
+          created_at?: string
+          created_by?: string
+          details?: string
+          event_id?: string
+          id?: string
+          proposed_end?: string
+          proposed_start?: string
+          review_note?: string | null
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          status?: string
+          target_shift_id?: string | null
+          title?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "admin_roster_proposals_event_id_fkey"
+            columns: ["event_id"]
+            isOneToOne: false
+            referencedRelation: "events"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "admin_roster_proposals_target_shift_id_fkey"
+            columns: ["target_shift_id"]
+            isOneToOne: false
+            referencedRelation: "shifts"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       artist_backstage_checklists: {
         Row: {
@@ -4013,6 +4102,132 @@ export type Database = {
           },
         ]
       }
+      training_progress: {
+        Row: {
+          participant_id: string
+          results: Json
+          role: string
+          scenario_id: string
+          updated_at: string
+        }
+        Insert: {
+          participant_id: string
+          results?: Json
+          role: string
+          scenario_id: string
+          updated_at?: string
+        }
+        Update: {
+          participant_id?: string
+          results?: Json
+          role?: string
+          scenario_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "training_progress_scenario_id_fkey"
+            columns: ["scenario_id"]
+            isOneToOne: false
+            referencedRelation: "training_scenarios"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      training_questions: {
+        Row: {
+          answer: string | null
+          answered_at: string | null
+          created_at: string
+          id: string
+          participant_id: string
+          question: string
+          role: string
+          scenario_id: string
+          status: string
+        }
+        Insert: {
+          answer?: string | null
+          answered_at?: string | null
+          created_at?: string
+          id?: string
+          participant_id: string
+          question: string
+          role: string
+          scenario_id: string
+          status?: string
+        }
+        Update: {
+          answer?: string | null
+          answered_at?: string | null
+          created_at?: string
+          id?: string
+          participant_id?: string
+          question?: string
+          role?: string
+          scenario_id?: string
+          status?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "training_questions_scenario_id_fkey"
+            columns: ["scenario_id"]
+            isOneToOne: false
+            referencedRelation: "training_scenarios"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      training_scenario_members: {
+        Row: {
+          created_at: string
+          scenario_id: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          scenario_id: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          scenario_id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "training_scenario_members_scenario_id_fkey"
+            columns: ["scenario_id"]
+            isOneToOne: false
+            referencedRelation: "training_scenarios"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      training_scenarios: {
+        Row: {
+          id: string
+          name: string
+          owner_id: string
+          payload: Json
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          name?: string
+          owner_id: string
+          payload?: Json
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          name?: string
+          owner_id?: string
+          payload?: Json
+          updated_at?: string
+        }
+        Relationships: []
+      }
       upload_security_scans: {
         Row: {
           attempts: number
@@ -4800,6 +5015,26 @@ export type Database = {
       upt_admin_review_early_start: {
         Args: { p_review: string; p_start?: string }
         Returns: string
+      }
+      upt_admin_roster_apply: { Args: { p_id: string }; Returns: undefined }
+      upt_admin_roster_create: {
+        Args: {
+          p_details: string
+          p_end: string
+          p_event: string
+          p_start: string
+          p_title: string
+        }
+        Returns: string
+      }
+      upt_admin_roster_review: {
+        Args: { p_approve: boolean; p_id: string; p_note?: string }
+        Returns: undefined
+      }
+      upt_admin_roster_submit: { Args: { p_id: string }; Returns: undefined }
+      upt_admin_roster_target: {
+        Args: { p_id: string; p_shift: string }
+        Returns: undefined
       }
       upt_admin_set_account: {
         Args: { p_approved: boolean; p_role: string; p_user: string }
