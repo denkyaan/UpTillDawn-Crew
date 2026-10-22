@@ -261,6 +261,7 @@ jobs:
       - name: Run 3 focused authenticated browser bots
         env:
           BOT_COUNT: '3'
+          BOT_SMOKE_CONCURRENCY: '3'
         run: |
           set -euo pipefail
           for attempt in 1 2; do
@@ -287,6 +288,7 @@ jobs:
       - name: Run 15 authenticated browser bots (after 3 pass)
         env:
           BOT_COUNT: '15'
+          BOT_SMOKE_CONCURRENCY: '4'
         run: node scripts/15-bot-browser-test.mjs
 
       - name: Full application surface inventory gate
