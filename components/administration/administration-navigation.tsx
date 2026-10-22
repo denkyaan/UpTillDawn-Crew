@@ -13,7 +13,7 @@ const groups=[
  {id:"management",titles:{nl:"Documenten & beheer",fr:"Documents et gestion",en:"Documents & management",de:"Dokumente & Verwaltung"},slugs:["documents","reports","notifications","automations","ai","settings"]},
 ] as const
 
-function hrefFor(slug:string){return slug==="dashboard"?"/portals/administration":slug==="finance"?"/portals/administration/finance":"/portals/administration/modules/"+slug}
+function hrefFor(slug:string){return slug==="dashboard"?"/portals/administration":slug==="finance"?"/portals/administration/finance":slug==="contacts"?"/portals/administration/contacts":"/portals/administration/modules/"+slug}
 
 export function AdministrationNavigation({locale}:{locale:SupportedUiLocale}){
  const pathname=usePathname()
