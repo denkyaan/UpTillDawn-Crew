@@ -249,22 +249,36 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
   const showUrgent=!pathname.startsWith("/chat")&&!isAdmin&&showIncidents&&effectiveContext.shiftActive&&(!tourPreview||(trainingHelpUnlocked&&!trainingComplete&&trainingNavTarget==="operations"))
   const showFloatingChat=showChat
 
-  // Administration has its own shell: operational crew tours, role navigation and AI
-  // must not leak into the separate business administration portal.
+  // Administration uses the same app shell as operational Admin: branded
+  // sidebar, shared topbar and mobile bottom navigation. Only the tab set differs.
   if(pathname==="/portals/administration"||pathname.startsWith("/portals/administration/")){
-    return <div className="flex h-dvh flex-col overflow-hidden bg-background">
-      <div className="border-b bg-card px-4 py-3 sm:px-6">
-        <div className="mx-auto flex max-w-7xl flex-wrap items-center justify-between gap-3">
-          <div><p className="text-xs font-bold uppercase tracking-widest text-violet-400">Up Till Dawn</p><p className="text-lg font-bold">{({nl:"Eventorganisatie & administratie",fr:"Organisation & administration",en:"Event management & administration",de:"Eventorganisation & Verwaltung"} as Record<SupportedUiLocale,string>)[trainingLocale]}</p></div>
-          <Link href="/portals" className="rounded-lg border px-3 py-2 text-sm font-semibold text-violet-400">{({nl:"Alle portalen",fr:"Tous les portails",en:"All portals",de:"Alle Portale"} as Record<SupportedUiLocale,string>)[trainingLocale]} →</Link>
+    const adminTabs=[
+      {href:"/portals/administration",label:({nl:"Overzicht",fr:"Accueil",en:"Overview",de:"Übersicht"} as Record<SupportedUiLocale,string>)[trainingLocale]},
+      {href:"/portals/administration/finance",label:({nl:"Financiën",fr:"Finances",en:"Finance",de:"Finanzen"} as Record<SupportedUiLocale,string>)[trainingLocale]},
+      {href:"/portals/administration/modules/tasks",label:({nl:"Taken",fr:"Tâches",en:"Tasks",de:"Aufgaben"} as Record<SupportedUiLocale,string>)[trainingLocale]},
+      {href:"/portals/administration/modules/events",label:({nl:"Evenementen",fr:"Événements",en:"Events",de:"Events"} as Record<SupportedUiLocale,string>)[trainingLocale]},
+    ]
+    return <div className="flex h-dvh overflow-hidden bg-background">
+      <aside className="hidden h-dvh w-[250px] shrink-0 flex-col overflow-hidden border-r border-border bg-card lg:flex">
+        <Link href="/portals/administration" className="flex h-16 shrink-0 items-center gap-3 border-b border-border px-5">
+          <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-violet-600 text-lg font-black text-white">U</span>
+          <span className="min-w-0"><span className="block text-sm font-black tracking-wide">UP TILL DAWN</span><span className="block text-[10px] uppercase tracking-[.18em] text-muted-foreground">{({nl:"Administratie",fr:"Administration",en:"Administration",de:"Verwaltung"} as Record<SupportedUiLocale,string>)[trainingLocale]}</span></span>
+        </Link>
+        <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain p-3"><AdministrationNavigation locale={trainingLocale}/></div>
+        <Link href="/portals" className="shrink-0 border-t border-border p-4 text-xs font-semibold text-violet-400 hover:underline">{({nl:"Alle portalen",fr:"Tous les portails",en:"All portals",de:"Alle Portale"} as Record<SupportedUiLocale,string>)[trainingLocale]} →</Link>
+      </aside>
+      <div className="flex min-w-0 flex-1 flex-col overflow-hidden">
+        <Topbar notificationMissed={notificationMissed}/>
+        <div className="flex shrink-0 items-center justify-between gap-2 border-b border-border px-4 py-2 lg:hidden">
+          <span className="text-xs font-bold uppercase tracking-widest text-violet-400">{({nl:"Administratie",fr:"Administration",en:"Administration",de:"Verwaltung"} as Record<SupportedUiLocale,string>)[trainingLocale]}</span>
+          <Link href="/portals" className="text-xs font-semibold text-violet-400">{({nl:"Alle portalen",fr:"Tous les portails",en:"All portals",de:"Alle Portale"} as Record<SupportedUiLocale,string>)[trainingLocale]} →</Link>
         </div>
-      </div>
-      <div className="flex min-h-0 flex-1 flex-col lg:flex-row">
-        <aside className="hidden w-72 shrink-0 overflow-y-auto border-r bg-card p-4 lg:block"><AdministrationNavigation locale={trainingLocale}/></aside>
-        <div id="app-scroll" className="min-w-0 flex-1 overflow-y-auto">
-          <div className="mx-auto max-w-7xl px-3 pt-4 lg:hidden"><AdministrationNavigation locale={trainingLocale}/></div>
-          <div className="mx-auto max-w-7xl">{children}</div>
+        <div id="app-scroll" className="min-h-0 flex-1 overflow-y-auto scroll-smooth bg-background">
+          <main className="min-h-full pb-24 lg:pb-0">{children}</main>
         </div>
+        <nav aria-label="Administration" className="grid shrink-0 grid-cols-4 border-t border-border bg-card pb-[env(safe-area-inset-bottom)] lg:hidden">
+          {adminTabs.map(tab=><Link key={tab.href} href={tab.href} aria-current={pathname===tab.href?"page":undefined} className={`flex min-h-14 items-center justify-center px-1 py-3 text-center text-[11px] font-semibold ${pathname===tab.href?"border-t-2 border-violet-500 text-violet-400":"text-muted-foreground"}`}>{tab.label}</Link>)}
+        </nav>
       </div>
     </div>
   }
