@@ -34,6 +34,9 @@ export default async function PortalPage({ params }: { params: Promise<{ portal:
 
   if (!current.approved || current.account_blocked === true) redirect('/portals')
 
+  const submittedTimesheets = portal === 'administration'
+    ? await supabase.from('timesheets').select('id,event_id,user_id,status,submitted_at').eq('status','submitted').order('submitted_at',{ascending:false}).limit(100)
+    : null
   const promotion = portal === 'promotion'
   // Database RLS controls which organization chats this user may see.
   const promotionChats = promotion
@@ -69,6 +72,11 @@ export default async function PortalPage({ params }: { params: Promise<{ portal:
         <h2 className="font-semibold">{t.administration}</h2>
         <p className="mt-2 text-sm text-muted-foreground">{t.financeDesc}</p>
         <Link href="/portals/administration/finance" className="mt-4 inline-flex rounded-lg bg-violet-600 px-4 py-2 text-sm font-medium text-white">{t.administration} →</Link>
+      </section>
+      <section className="rounded-2xl border bg-card p-5 sm:col-span-2">
+        <h2 className="font-semibold">{locale==='nl'?'Ingediende werkstaten':locale==='fr'?'Feuilles de temps soumises':locale==='de'?'Eingereichte Stundenzettel':'Submitted timesheets'}</h2>
+        <p className="mt-2 text-sm text-muted-foreground">{locale==='nl'?'Ingediende uren verschijnen hier automatisch na indiening. Goedkeuring blijft voorbehouden aan bevoegde beheerders.':locale==='fr'?'Les heures soumises apparaissent automatiquement ici. La validation reste réservée aux responsables autorisés.':locale==='de'?'Eingereichte Stunden erscheinen hier automatisch. Die Freigabe bleibt berechtigten Administratoren vorbehalten.':'Submitted hours appear here automatically. Approval remains restricted to authorized administrators.'}</p>
+        {submittedTimesheets?.error ? <p role="alert" className="mt-3 text-sm text-amber-500">{t.unavailableDesc}</p> : submittedTimesheets?.data?.length ? <ul className="mt-3 space-y-2">{submittedTimesheets.data.map(row=><li key={row.id} className="flex flex-wrap items-center justify-between gap-2 rounded-lg border p-3"><span className="text-sm">{row.submitted_at ? new Date(row.submitted_at).toLocaleString(locale==='nl'?'nl-BE':locale==='fr'?'fr-BE':locale==='de'?'de-BE':'en-BE') : '—'} · {row.user_id.slice(0,8)}</span><Link className="text-sm text-violet-400 underline" href={`/timesheets?event=${encodeURIComponent(row.event_id)}`}>{locale==='nl'?'Bekijken':locale==='fr'?'Consulter':locale==='de'?'Ansehen':'View'}</Link></li>)}</ul> : <p className="mt-3 text-sm text-muted-foreground">{locale==='nl'?'Geen ingediende werkstaten.':locale==='fr'?'Aucune feuille soumise.':locale==='de'?'Keine eingereichten Stundenzettel.':'No submitted timesheets.'}</p>}
       </section>
       {current.isAdmin && <section className="rounded-2xl border bg-card p-5">
         <h2 className="font-semibold">{t.sales}</h2>
