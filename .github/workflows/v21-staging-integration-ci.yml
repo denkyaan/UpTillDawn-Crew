@@ -47,14 +47,26 @@ jobs:
         continue-on-error: true
         run: npm audit --audit-level=high
 
-      - name: Lint
-        run: npm run lint
-
-      - name: Typecheck
-        run: npm run typecheck
-
-      - name: Test
-        run: npm test
+      - name: Parallel lint, typecheck and unit tests
+        shell: bash
+        run: |
+          set -uo pipefail
+          npm run lint > /tmp/upt-lint.log 2>&1 & lint_pid=$!
+          npm run typecheck > /tmp/upt-typecheck.log 2>&1 & types_pid=$!
+          npm test > /tmp/upt-tests.log 2>&1 & tests_pid=$!
+          failed=0
+          for entry in "lint:$lint_pid" "typecheck:$types_pid" "tests:$tests_pid"; do
+            label="${entry%%:*}"
+            pid="${entry#*:}"
+            if wait "$pid"; then
+              echo "PASS: $label"
+            else
+              echo "::error::$label failed"
+              failed=1
+            fi
+            cat "/tmp/upt-$label.log"
+          done
+          exit "$failed"
 
       - name: PWA cross-device and offline contract
         run: node --test tests/pwa-cross-device-offline-regression.test.mjs
@@ -216,10 +228,21 @@ jobs:
           test "$briefing_seed_count" = "0"
           echo "PASS: bot03 briefing fixture starts unacknowledged"
 
+      - name: Cache Playwright Chromium
+        id: chromium-cache
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/ms-playwright
+          key: playwright-chromium-1.62.1-${{ runner.os }}-${{ runner.arch }}
+
       - name: Install isolated browser test runtime
         run: |
-          npm install --no-save --package-lock=false playwright@1.62.1
-          npx playwright install --with-deps chromium
+          npm install --no-save --package-lock=false --prefer-offline --no-audit --no-fund playwright@1.62.1
+          if [ "${{ steps.chromium-cache.outputs.cache-hit }}" = "true" ]; then
+            npx playwright install-deps chromium
+          else
+            npx playwright install --with-deps chromium
+          fi
 
       - name: Build application
         run: npm run build:next
