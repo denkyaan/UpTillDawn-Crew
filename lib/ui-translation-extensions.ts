@@ -3,6 +3,9 @@ export type ExtendedUiLocale = 'nl' | 'fr' | 'en' | 'de'
 type Row = { fr: string; en: string; de: string }
 
 const EXTENSIONS: Record<string, Row> = {
+  'Tableau de bord administratif': { fr: 'Tableau de bord administratif', en: 'Administration dashboard', de: 'Verwaltungsübersicht' },
+  'Administration dashboard': { fr: 'Tableau de bord administratif', en: 'Administration dashboard', de: 'Verwaltungsübersicht' },
+  'Verwaltungsübersicht': { fr: 'Tableau de bord administratif', en: 'Administration dashboard', de: 'Verwaltungsübersicht' },
   'Administratief dashboard': { fr: 'Tableau de bord administratif', en: 'Administration dashboard', de: 'Verwaltungsübersicht' },
   'Operationeel overzicht laden…': { fr: 'Chargement de l’aperçu opérationnel…', en: 'Loading operational overview…', de: 'Betriebsübersicht wird geladen…' },
   'Importeer briefing': { fr: 'Importer le briefing', en: 'Import briefing', de: 'Briefing importieren' },
