@@ -19,11 +19,8 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          # Limit cleanup to recent history: unbounded pagination can fail mid-stream
-          # and removing every historical run destroys useful failure diagnostics.
-          # Keep the newest 20 completed runs per workflow, and never delete
-          # a run younger than seven days or the currently executing run.
-          cutoff="$(date -u -d '7 days ago' +%s)"
+          # Retain exactly one latest completed run per workflow,
+          # whether successful or failed. Never remove active/current runs.
           workflows="$(gh api "/repos/$REPO/actions/workflows?per_page=100" --jq '.workflows[].id')"
           while IFS= read -r workflow; do
             [ -n "$workflow" ] || continue
@@ -42,9 +39,8 @@ jobs:
               [ -n "$id" ] || continue
               kept=$((kept + 1))
               [ "$id" = "$CURRENT_RUN_ID" ] && continue
-              [ "$kept" -le 20 ] && continue
-              created_epoch="$(date -u -d "$created" +%s)" || continue
-              [ "$created_epoch" -ge "$cutoff" ] && continue
+              [ "$kept" -le 1 ] && continue
+
               echo "Removing old completed run $id"
               if ! gh api --method DELETE "/repos/$REPO/actions/runs/$id"; then
                 echo "::warning::Could not delete run $id; continuing"
