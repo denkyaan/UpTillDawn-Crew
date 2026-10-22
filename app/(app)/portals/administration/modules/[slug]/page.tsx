@@ -94,6 +94,7 @@ export default async function AdministrationModulePage({params}:{params:Promise<
    <p className="mt-2 text-sm text-muted-foreground">{({nl:"Open het bestaande financiële register om concepten, bijlagen, betalingsstatussen en goedkeuringsstappen te beheren.",fr:"Ouvrez le registre financier pour gérer brouillons, pièces jointes, paiements et validations.",en:"Open the existing financial register to manage drafts, attachments, payment status and approval steps.",de:"Öffnen Sie das Finanzregister für Entwürfe, Anhänge, Zahlungsstatus und Freigaben."} as const)[locale]}</p>
    <Link href="/portals/administration/finance" className="mt-4 inline-flex rounded-lg bg-violet-600 px-4 py-3 text-sm font-semibold text-white hover:bg-violet-700">{u.finance} →</Link>
   </section>}
+  {slug==="staff"&&<section className="rounded-2xl border bg-card p-5"><Link href="/portals/administration/rosters" className="inline-flex rounded-lg bg-violet-600 px-4 py-3 text-sm font-semibold text-white hover:bg-violet-700">{({nl:"Administratieve werkroosters",fr:"Plannings administratifs",en:"Administrative rosters",de:"Administrative Dienstpläne"} as const)[locale]} →</Link></section>}
   {financeRelated.has(slug)&&<section className="rounded-2xl border bg-card p-5">
    <h2 className="font-semibold">{u.related}</h2>
    <Link href="/portals/administration/finance" className="mt-3 inline-flex rounded-lg bg-violet-600 px-4 py-3 text-sm font-semibold text-white hover:bg-violet-700">{u.finance} →</Link>
