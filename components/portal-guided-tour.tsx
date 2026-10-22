@@ -14,18 +14,21 @@ const titles={
  promotion:{nl:['Overzicht','Promotiechats','Promotietaken','Meldingen'],fr:['Aperçu','Discussions promotion','Tâches promotion','Notifications'],en:['Overview','Promotion chats','Promotion tasks','Notifications'],de:['Übersicht','Promotion-Chats','Promotion-Aufgaben','Benachrichtigungen']},
  administration:{nl:['Overzicht','Financiële documenten','Ingediende werkstaten','Inventarisafwijkingen'],fr:['Aperçu','Documents financiers','Feuilles de temps','Écarts de stock'],en:['Overview','Financial documents','Submitted timesheets','Inventory discrepancies'],de:['Übersicht','Finanzdokumente','Eingereichte Stundenzettel','Bestandsabweichungen']},
 } as const
+const PROMOTION_TARGETS=['portal-overview','portal-chats','portal-tasks','portal-notifications'] as const
+const ADMINISTRATION_TARGETS=['portal-overview','portal-finance','portal-timesheets','portal-inventory'] as const
+
 export function PortalGuidedTour({portal,locale}:{portal:Portal;locale:Locale}){
  const [active,setActive]=useState(false)
  const [step,setStep]=useState(0)
  const [completed,setCompleted]=useState(false)
  const t=translations[locale]
  const labels=titles[portal][locale]
- const targets=portal==='promotion'?['portal-overview','portal-chats','portal-tasks','portal-notifications']:['portal-overview','portal-finance','portal-timesheets','portal-inventory']
+ const targets=portal==='promotion'?PROMOTION_TARGETS:ADMINISTRATION_TARGETS
  useEffect(()=>{
   if(!active)return
   const element=document.querySelector('[data-portal-tour="'+targets[step]+'"]')
   element?.scrollIntoView({block:'nearest',behavior:'smooth'})
- },[active,step,portal])
+ },[active,step,targets])
  const begin=()=>{setStep(0);setCompleted(false);setActive(true)}
  return <div data-no-translate className="space-y-3">
   {!active?<button type="button" onClick={begin} className="rounded-lg border border-violet-500 px-4 py-2 font-semibold text-violet-400">{completed?t.restart:t.start}</button>:
