@@ -32,6 +32,8 @@ export default async function PortalPage({ params }: { params: Promise<{ portal:
     blocked: current.account_blocked === true,
   })) notFound()
 
+  if (!current.approved || current.account_blocked === true) redirect('/portals')
+
   const promotion = portal === 'promotion'
   // Database RLS controls which organization chats this user may see.
   const promotionChats = promotion
