@@ -1,17 +1,18 @@
 "use client"
 import Link from "next/link"
+import { LayoutDashboard, CalendarDays, Wallet, Users, Megaphone, Settings2 } from "lucide-react"
 import { usePathname } from "next/navigation"
 import { useState } from "react"
 import { administrationModules } from "@/lib/administration/modules"
 import type { SupportedUiLocale } from "@/lib/locale-preferences"
 
 const categories=[
- {id:"overview",name:{nl:"Overzicht",fr:"Accueil",en:"Overview",de:"Übersicht"},slugs:["dashboard"]},
- {id:"events",name:{nl:"Evenementen",fr:"Événements",en:"Events",de:"Events"},slugs:["events","artists","contracts","logistics","permits"]},
- {id:"finance",name:{nl:"Financiën",fr:"Finances",en:"Finance",de:"Finanzen"},slugs:["finance","invoices","banking","ticketing"]},
- {id:"operations",name:{nl:"Organisatie",fr:"Organisation",en:"Operations",de:"Organisation"},slugs:["staff","inventory","tasks","contacts"]},
- {id:"promotion",name:{nl:"Promotie",fr:"Promotion",en:"Promotion",de:"Werbung"},slugs:["marketing","sponsors"]},
- {id:"management",name:{nl:"Beheer",fr:"Gestion",en:"Manage",de:"Verwaltung"},slugs:["documents","reports","notifications","automations","ai","settings"]},
+ {id:"overview",name:{nl:"Overzicht",fr:"Accueil",en:"Overview",de:"Übersicht"},icon:LayoutDashboard,slugs:["dashboard"]},
+ {id:"events",name:{nl:"Evenementen",fr:"Événements",en:"Events",de:"Events"},icon:CalendarDays,slugs:["events","artists","contracts","logistics","permits"]},
+ {id:"finance",name:{nl:"Financiën",fr:"Finances",en:"Finance",de:"Finanzen"},icon:Wallet,slugs:["finance","invoices","banking","ticketing"]},
+ {id:"operations",name:{nl:"Organisatie",fr:"Organisation",en:"Operations",de:"Organisation"},icon:Users,slugs:["staff","inventory","tasks","contacts"]},
+ {id:"promotion",name:{nl:"Promotie",fr:"Promotion",en:"Promotion",de:"Werbung"},icon:Megaphone,slugs:["marketing","sponsors"]},
+ {id:"management",name:{nl:"Beheer",fr:"Gestion",en:"Manage",de:"Verwaltung"},icon:Settings2,slugs:["documents","reports","notifications","automations","ai","settings"]},
 ] as const
 function href(slug:string){return slug==="dashboard"?"/portals/administration":slug==="finance"?"/portals/administration/finance":"/portals/administration/modules/"+slug}
 export function AdministrationMobileTabs({locale}:{locale:SupportedUiLocale}){
@@ -30,13 +31,13 @@ export function AdministrationMobileTabs({locale}:{locale:SupportedUiLocale}){
     })}
    </div>
   </div>}
-  <nav aria-label={({nl:"Administratietabs",fr:"Onglets administratifs",en:"Administration tabs",de:"Verwaltungsregister"} as const)[locale]} className="flex w-full overflow-x-auto overscroll-x-contain pb-[env(safe-area-inset-bottom)]">
+  <nav aria-label={({nl:"Administratietabs",fr:"Onglets administratifs",en:"Administration tabs",de:"Verwaltungsregister"} as const)[locale]} className="grid w-full grid-cols-6 pb-[env(safe-area-inset-bottom)]">
    {categories.map(group=>{
     const active=expanded===group.id||(!expanded&&current?.id===group.id)
-    return <button key={group.id} type="button" aria-expanded={expanded===group.id} onClick={()=>{
-      if(group.id==="overview"){setExpanded(expanded===group.id?null:group.id);return}
-      setExpanded(value=>value===group.id?null:group.id)
-     }} className={`min-h-16 min-w-[88px] flex-1 shrink-0 border-t-2 px-2 py-3 text-center text-xs font-semibold ${active?"border-violet-500 text-violet-400":"border-transparent text-muted-foreground"}`}>{group.name[locale]}</button>
+    const Icon=group.icon
+    return group.id==="overview"
+     ? <Link key={group.id} href="/portals/administration" onClick={()=>setExpanded(null)} aria-current={pathname==="/portals/administration"?"page":undefined} className={`flex min-h-16 min-w-0 flex-col items-center justify-center gap-1 border-t-2 px-0.5 py-2 text-center text-[9px] font-semibold ${active?"border-violet-500 text-violet-400":"border-transparent text-muted-foreground"}`}><Icon className="h-5 w-5 shrink-0"/><span className="w-full truncate">{group.name[locale]}</span></Link>
+     : <button key={group.id} type="button" aria-expanded={expanded===group.id} onClick={()=>setExpanded(value=>value===group.id?null:group.id)} className={`flex min-h-16 min-w-0 flex-col items-center justify-center gap-1 border-t-2 px-0.5 py-2 text-center text-[9px] font-semibold ${active?"border-violet-500 text-violet-400":"border-transparent text-muted-foreground"}`}><Icon className="h-5 w-5 shrink-0"/><span className="w-full truncate">{group.name[locale]}</span></button>
    })}
   </nav>
  </div>
