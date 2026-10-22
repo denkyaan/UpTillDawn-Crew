@@ -40,7 +40,7 @@ concurrency:
 jobs:
   repair:
     if: github.ref == 'refs/heads/staging' && vars.ENABLE_STAGING_SELF_HEAL == 'true'
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-26.04-arm
     environment: staging
     timeout-minutes: 55
     env:
@@ -67,7 +67,7 @@ jobs:
           cache: npm
 
       - name: Install
-        run: npm ci
+        run: npm ci --prefer-offline --no-audit --no-fund
 
       - name: Autonomous repair loop
         env:
