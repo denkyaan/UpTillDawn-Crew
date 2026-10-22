@@ -4,6 +4,7 @@ import { useCallback, useEffect, useMemo, useState } from "react"
 import Link from "next/link"
 import { usePathname } from "next/navigation"
 import { AppSidebar } from "@/components/layout/sidebar"
+import { AdministrationNavigation } from "@/components/administration/administration-navigation"
 import { Topbar } from "@/components/layout/topbar"
 import { MobileBottomNav } from "@/components/layout/mobile-nav"
 import { FloatingChatButton } from "@/components/layout/floating-chat-button"
@@ -247,6 +248,26 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
   const featureVisibility={overview:showOverview,events:showEvents,operations:showOperations,workplaces:showWorkplaces,inventory:showInventory,guestlist:showGuestlist,sales:showSales,shifts:showShifts,briefings:showBriefings,tasks:showTasks,chat:showChat,crew:showCrew,incidents:showIncidents,exports:showExports,personnel:showPersonnel,platform:showPlatform,settings:showSettings}
   const showUrgent=!pathname.startsWith("/chat")&&!isAdmin&&showIncidents&&effectiveContext.shiftActive&&(!tourPreview||(trainingHelpUnlocked&&!trainingComplete&&trainingNavTarget==="operations"))
   const showFloatingChat=showChat
+
+  // Administration has its own shell: operational crew tours, role navigation and AI
+  // must not leak into the separate business administration portal.
+  if(pathname==="/portals/administration"||pathname.startsWith("/portals/administration/")){
+    return <div className="flex h-dvh flex-col overflow-hidden bg-background">
+      <div className="border-b bg-card px-4 py-3 sm:px-6">
+        <div className="mx-auto flex max-w-7xl flex-wrap items-center justify-between gap-3">
+          <div><p className="text-xs font-bold uppercase tracking-widest text-violet-400">Up Till Dawn</p><p className="text-lg font-bold">{({nl:"Eventorganisatie & administratie",fr:"Organisation & administration",en:"Event management & administration",de:"Eventorganisation & Verwaltung"} as Record<SupportedUiLocale,string>)[trainingLocale]}</p></div>
+          <Link href="/portals" className="rounded-lg border px-3 py-2 text-sm font-semibold text-violet-400">{({nl:"Alle portalen",fr:"Tous les portails",en:"All portals",de:"Alle Portale"} as Record<SupportedUiLocale,string>)[trainingLocale]} →</Link>
+        </div>
+      </div>
+      <div className="flex min-h-0 flex-1 flex-col lg:flex-row">
+        <aside className="hidden w-72 shrink-0 overflow-y-auto border-r bg-card p-4 lg:block"><AdministrationNavigation locale={trainingLocale}/></aside>
+        <div id="app-scroll" className="min-w-0 flex-1 overflow-y-auto">
+          <div className="mx-auto max-w-7xl px-3 pt-4 lg:hidden"><AdministrationNavigation locale={trainingLocale}/></div>
+          <div className="mx-auto max-w-7xl">{children}</div>
+        </div>
+      </div>
+    </div>
+  }
 
   return <div className="flex h-dvh bg-background print:block print:h-auto">
     <RoleAppTour/>
