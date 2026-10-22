@@ -82,6 +82,11 @@ jobs:
             npx --yes supabase@2.117.0 init
           fi
 
+      - name: Clear stale local Supabase containers
+        run: |
+          npx --yes supabase@2.117.0 stop --no-backup || true
+          docker ps -aq --filter "name=supabase_inbucket_" | xargs -r docker rm -f
+
       - name: Start isolated Supabase stack
         run: npx --yes supabase@2.117.0 start -x studio,imgproxy,inbucket,edge-runtime,logflare,vector,realtime
 
