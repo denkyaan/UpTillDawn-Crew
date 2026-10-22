@@ -1,3 +1,4 @@
+import type { SupabaseClient } from "@supabase/supabase-js"
 import { revalidatePath } from "next/cache"
 import { redirect } from "next/navigation"
 import { getCurrentUser } from "@/lib/actions/auth"
@@ -24,7 +25,7 @@ async function createProposal(form:FormData){
  const start=String(form.get("start")??"")
  const end=String(form.get("end")??"")
  if(!/^[0-9a-f-]{36}$/i.test(event)||!title||!start||!end)return
- const {error}=await db.rpc("upt_admin_roster_create",{p_event:event,p_title:title,p_details:String(form.get("details")??""),p_start:new Date(start).toISOString(),p_end:new Date(end).toISOString()})
+ const {error}=await (db as unknown as SupabaseClient).rpc("upt_admin_roster_create",{p_event:event,p_title:title,p_details:String(form.get("details")??""),p_start:new Date(start).toISOString(),p_end:new Date(end).toISOString()})
  if(error)throw new Error("Roster proposal could not be created")
  revalidatePath(route)
 }
@@ -34,7 +35,7 @@ async function changeStatus(form:FormData){
  const id=String(form.get("id")??"")
  const action=String(form.get("action")??"")
  if(!/^[0-9a-f-]{36}$/i.test(id))return
- const result=action==="submit"?await db.rpc("upt_admin_roster_submit",{p_id:id}):user.isAdmin&&["approve","reject"].includes(action)?await db.rpc("upt_admin_roster_review",{p_id:id,p_approve:action==="approve",p_note:String(form.get("note")??"")}):null
+ const result=action==="submit"?await (db as unknown as SupabaseClient).rpc("upt_admin_roster_submit",{p_id:id}):user.isAdmin&&["approve","reject"].includes(action)?await (db as unknown as SupabaseClient).rpc("upt_admin_roster_review",{p_id:id,p_approve:action==="approve",p_note:String(form.get("note")??"")}):null
  if(result?.error)throw new Error("Roster transition failed")
  revalidatePath(route)
 }
@@ -48,7 +49,7 @@ export default async function RostersPage(){
  en:{heading:"Administrative rosters",intro:"Create a draft and submit it for another Admin to review. Approval does not yet modify operational shifts.",title:"Title",event:"Event",start:"Start",end:"End",details:"Details",create:"Create draft",submit:"Submit to Admin",approve:"Approve",reject:"Reject",note:"Rejection reason",empty:"No proposals yet",error:"Records unavailable",draft:"Draft",submitted:"Submitted",approved:"Approved",rejected:"Rejected"},
  de:{heading:"Administrative Dienstpläne",intro:"Entwurf erstellen und einem anderen Admin zur Prüfung vorlegen. Freigaben ändern noch keine Schichten.",title:"Titel",event:"Event",start:"Beginn",end:"Ende",details:"Details",create:"Entwurf erstellen",submit:"Einreichen",approve:"Genehmigen",reject:"Ablehnen",note:"Ablehnungsgrund",empty:"Noch keine Vorschläge",error:"Daten nicht verfügbar",draft:"Entwurf",submitted:"Eingereicht",approved:"Genehmigt",rejected:"Abgelehnt"}
  } as const)[locale]
- const [events,proposals]=await Promise.all([db.from("events").select("id,name").order("name").limit(100),db.from("admin_roster_proposals").select("id,title,details,status,proposed_start,proposed_end,created_by,review_note,event_id").order("created_at",{ascending:false}).limit(100)])
+ const [events,proposals]=await Promise.all([db.from("events").select("id,name").order("name").limit(100),(db as unknown as SupabaseClient).from("admin_roster_proposals").select("id,title,details,status,proposed_start,proposed_end,created_by,review_note,event_id").order("created_at",{ascending:false}).limit(100)])
  return <main className="mx-auto w-full max-w-5xl space-y-5 p-4 sm:p-6">
   <header><h1 className="text-2xl font-bold">{l.heading}</h1><p className="mt-2 text-sm text-muted-foreground">{l.intro}</p></header>
   <form action={createProposal} className="grid gap-3 rounded-2xl border bg-card p-5 sm:grid-cols-2">
