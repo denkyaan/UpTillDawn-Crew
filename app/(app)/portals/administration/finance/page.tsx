@@ -1,3 +1,5 @@
+import { randomUUID } from 'node:crypto'
+import { validateUploadSecurity, safeUploadName } from '@/lib/upload-security'
 import Link from 'next/link'
 import { revalidatePath } from 'next/cache'
 import { redirect } from 'next/navigation'
@@ -21,6 +23,12 @@ const documentKinds = {
 } as const
 const kindValues = ['purchase_invoice','sales_invoice','expense','credit_note','quote'] as const
 
+const uploadLabels = {
+ nl:{upload:'Bijlage toevoegen',file:'Factuur, bestelbon of betalingsbewijs (PDF of afbeelding, max. 20 MB)',attachments:'Bijlagen',failed:'Bijlage kon niet worden opgeslagen.'},
+ fr:{upload:'Ajouter une pièce jointe',file:'Facture, bon de commande ou preuve de paiement (PDF ou image, 20 Mo max.)',attachments:'Pièces jointes',failed:'Impossible d’enregistrer le fichier.'},
+ en:{upload:'Attach document',file:'Invoice, purchase order or payment proof (PDF or image, max 20 MB)',attachments:'Attachments',failed:'Attachment could not be saved.'},
+ de:{upload:'Beleg hinzufügen',file:'Rechnung, Bestellung oder Zahlungsnachweis (PDF oder Bild, max. 20 MB)',attachments:'Anhänge',failed:'Anhang konnte nicht gespeichert werden.'},
+} as const
 const actionLabels = {
  nl: {review:'Ter controle indienen',approved:'Goedkeuren (Admin)',issued:'Als uitgereikt markeren',paid:'Als betaald markeren',void:'Annuleren'},
  fr: {review:'Soumettre à vérification',approved:'Approuver (Admin)',issued:'Marquer comme émis',paid:'Marquer comme payé',void:'Annuler'},
@@ -102,6 +110,31 @@ async function updateFinancialStatus(formData:FormData) {
  redirect('/portals/administration/finance')
 }
 
+async function uploadFinancialAttachment(formData:FormData) {
+ 'use server'
+ const {supabase} = await requireAdministration()
+ const documentId=String(formData.get('document_id')??'')
+ const file=formData.get('file')
+ if(!/^[0-9a-f-]{36}$/i.test(documentId) || !(file instanceof File)) return
+ const {data:document}=await supabase.from('admin_financial_documents').select('id,status').eq('id',documentId).single()
+ if(!document || !['draft','review'].includes(document.status)) return
+ let validation
+ try {validation=await validateUploadSecurity(file)} catch {redirect('/portals/administration/finance?error=1')}
+ if(!['application/pdf','image/jpeg','image/png','image/webp'].includes(validation.mime)) redirect('/portals/administration/finance?error=1')
+ const {data:{user}}=await supabase.auth.getUser()
+ if(!user) return
+ const path=user.id+'/'+randomUUID()+'.'+validation.extension
+ const {error:uploadError}=await supabase.storage.from('admin-financial-attachments').upload(path,file,{contentType:validation.mime,upsert:false})
+ if(uploadError) redirect('/portals/administration/finance?error=1')
+ const {error:linkError}=await supabase.from('admin_financial_attachments').insert({
+  document_id:documentId,storage_path:path,original_name:safeUploadName(file.name),
+  mime_type:validation.mime,size_bytes:validation.size,uploaded_by:user.id
+ })
+ if(linkError) redirect('/portals/administration/finance?error=1')
+ revalidatePath('/portals/administration/finance')
+ redirect('/portals/administration/finance')
+}
+
 export const dynamic = 'force-dynamic'
 export default async function FinancePage({searchParams}:{searchParams:Promise<{error?:string}>}) {
  const {supabase,isAdmin} = await requireAdministration()
@@ -111,6 +144,7 @@ export default async function FinancePage({searchParams}:{searchParams:Promise<{
  const {data:documents,error} = await supabase.from('admin_financial_documents')
    .select('id,kind,document_number,net_amount,tax_amount,gross_amount,currency,status,created_at')
    .order('created_at',{ascending:false}).limit(100)
+ const {data:attachments}=await supabase.from('admin_financial_attachments').select('id,document_id,original_name,created_at').order('created_at',{ascending:false}).limit(200)
  const money = (amount:number) => new Intl.NumberFormat(locale==='nl'?'nl-BE':locale==='fr'?'fr-BE':locale==='de'?'de-BE':'en-BE',{style:'currency',currency:'EUR'}).format(amount)
  const paidTotal=(documents??[]).filter(d=>d.status==='paid').reduce((sum,d)=>sum+Number(d.gross_amount),0)
  const unpaidTotal=(documents??[]).filter(d=>['approved','issued','review'].includes(d.status)).reduce((sum,d)=>sum+Number(d.gross_amount),0)
@@ -135,6 +169,14 @@ export default async function FinancePage({searchParams}:{searchParams:Promise<{
    {error ? <p role="alert">{t.error}</p> : !documents?.length ? <p className="text-muted-foreground">{t.empty}</p> :
     <div className="space-y-3">{documents.map(d=><article key={d.id} className="flex flex-wrap items-center justify-between gap-2 border-b pb-3">
      <div><p className="font-semibold">{d.document_number || translatedLabel(kindLabels[locale],d.kind)}</p><p className="text-xs text-muted-foreground">{translatedLabel(kindLabels[locale],d.kind)} · {translatedLabel(statusLabels[locale],d.status)}</p></div>
+     <div className="w-full space-y-2">
+      {(attachments??[]).filter(a=>a.document_id===d.id).map(a=><p key={a.id} className="text-xs text-muted-foreground">{uploadLabels[locale].attachments}: {a.original_name}</p>)}
+      {['draft','review'].includes(d.status)&&<form action={uploadFinancialAttachment} encType="multipart/form-data" className="flex flex-wrap items-end gap-2">
+       <input type="hidden" name="document_id" value={d.id}/>
+       <label className="text-xs">{uploadLabels[locale].file}<input name="file" type="file" required accept=".pdf,.jpg,.jpeg,.png,.webp" className="block max-w-64 text-xs"/></label>
+       <button className="rounded-lg border border-violet-500 px-3 py-2 text-xs font-semibold text-violet-400" type="submit">{uploadLabels[locale].upload}</button>
+      </form>}
+     </div>
      <div className="flex flex-wrap items-center gap-2">
      {(transitions[d.status]??[]).filter(next=>isAdmin || next==='review').map(next=><form key={next} action={updateFinancialStatus}><input type="hidden" name="document_id" value={d.id}/><input type="hidden" name="status" value={next}/><button type="submit" className="rounded-lg border border-violet-500 px-3 py-2 text-xs font-semibold text-violet-400">{translatedLabel(actionLabels[locale],next)}</button></form>)}
      <strong>{new Intl.NumberFormat(locale==='nl'?'nl-BE':locale==='fr'?'fr-BE':locale==='de'?'de-BE':'en-BE',{style:'currency',currency:d.currency}).format(Number(d.gross_amount))}</strong></div>
