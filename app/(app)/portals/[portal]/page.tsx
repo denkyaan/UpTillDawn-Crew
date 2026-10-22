@@ -1,14 +1,16 @@
 import Link from 'next/link'
+import { cookies, headers } from 'next/headers'
+import { parseAcceptLanguage, parseUiLocale } from '@/lib/locale-preferences'
 import { notFound, redirect } from 'next/navigation'
 import { getCurrentUser } from '@/lib/actions/auth'
 import { createClient } from '@/lib/supabase/crew-server'
 import { canOpenPortal, type PortalAssignment } from '@/lib/portal-access'
 
 const portalCopy = {
-  nl: { chatDesc: "Open de bestaande chatkanalen waarvoor je toegang hebt.", chatLink: "Chats →", taskDesc: "Bekijk je bestaande opdrachten.", taskLink: "Taken →", financeDesc: "Financiële workflows zijn nog niet beschikbaar.", reportDesc: "Bestaande rapportage voor beheerders.", salesLink: "Sales →" },
-  fr: { chatDesc: "Ouvrez les canaux de discussion auxquels vous avez accès.", chatLink: "Discussions →", taskDesc: "Consultez vos tâches existantes.", taskLink: "Tâches →", financeDesc: "Les processus financiers ne sont pas encore disponibles.", reportDesc: "Rapports existants réservés aux administrateurs.", salesLink: "Ventes →" },
-  en: { chatDesc: "Open the existing chat channels you can access.", chatLink: "Chats →", taskDesc: "View your existing tasks.", taskLink: "Tasks →", financeDesc: "Financial workflows are not yet available.", reportDesc: "Existing reports for administrators.", salesLink: "Sales →" },
-  de: { chatDesc: "Öffne die bestehenden Chatkanäle, auf die du Zugriff hast.", chatLink: "Chats →", taskDesc: "Sieh dir deine bestehenden Aufgaben an.", taskLink: "Aufgaben →", financeDesc: "Finanzielle Abläufe sind noch nicht verfügbar.", reportDesc: "Bestehende Berichte für Administratoren.", salesLink: "Verkäufe →" },
+  nl: { chatDesc: "Open de bestaande chatkanalen waarvoor je toegang hebt.", chatLink: "Chats →", taskDesc: "Bekijk je bestaande opdrachten.", taskLink: "Taken →", financeDesc: "Financiële workflows zijn nog niet beschikbaar.", reportDesc: "Bestaande rapportage voor beheerders.", salesLink: "Sales →", back: "← Alle portalen", promotion: "Promotie", administration: "Administratie", chats: "Chats", tasks: "Taken", sales: "Sales" },
+  fr: { chatDesc: "Ouvrez les canaux de discussion auxquels vous avez accès.", chatLink: "Discussions →", taskDesc: "Consultez vos tâches existantes.", taskLink: "Tâches →", financeDesc: "Les processus financiers ne sont pas encore disponibles.", reportDesc: "Rapports existants réservés aux administrateurs.", salesLink: "Ventes →", back: "← Tous les portails", promotion: "Promotion", administration: "Administration", chats: "Discussions", tasks: "Tâches", sales: "Ventes" },
+  en: { chatDesc: "Open the existing chat channels you can access.", chatLink: "Chats →", taskDesc: "View your existing tasks.", taskLink: "Tasks →", financeDesc: "Financial workflows are not yet available.", reportDesc: "Existing reports for administrators.", salesLink: "Sales →", back: "← All portals", promotion: "Promotion", administration: "Administration", chats: "Chats", tasks: "Tasks", sales: "Sales" },
+  de: { chatDesc: "Öffne die bestehenden Chatkanäle, auf die du Zugriff hast.", chatLink: "Chats →", taskDesc: "Sieh dir deine bestehenden Aufgaben an.", taskLink: "Aufgaben →", financeDesc: "Finanzielle Abläufe sind noch nicht verfügbar.", reportDesc: "Bestehende Berichte für Administratoren.", salesLink: "Verkäufe →", back: "← Alle Portale", promotion: "Promotion", administration: "Verwaltung", chats: "Chats", tasks: "Aufgaben", sales: "Verkäufe" },
 } as const
 
 export const dynamic = 'force-dynamic'
@@ -27,28 +29,31 @@ export default async function PortalPage({ params }: { params: Promise<{ portal:
   })) notFound()
 
   const promotion = portal === 'promotion'
-  const t = portalCopy['nl']
+  const requestHeaders = await headers()
+  const cookieLocale = parseUiLocale((await cookies()).get('uptilldawn-language')?.value)
+  const locale = cookieLocale ?? parseAcceptLanguage(requestHeaders.get('accept-language')) ?? 'nl'
+  const t = portalCopy[locale]
   return <main className="mx-auto max-w-4xl space-y-6 p-6">
-    <Link href="/portals" className="text-sm text-violet-400">← Alle portalen</Link>
-    <header><h1 className="text-2xl font-bold">{promotion ? 'Promotie' : 'Administratie'}</h1></header>
+    <Link href="/portals" className="text-sm text-violet-400">{t.back}</Link>
+    <header><h1 className="text-2xl font-bold">{promotion ? t.promotion : t.administration}</h1></header>
     {promotion ? <div className="grid gap-4 sm:grid-cols-2">
       <section className="rounded-2xl border bg-card p-5">
-        <h2 className="font-semibold">Chats</h2>
+        <h2 className="font-semibold">{t.chats}</h2>
         <p className="mt-2 text-sm text-muted-foreground">{t.chatDesc}</p>
         <Link href="/chat" className="mt-4 inline-flex rounded-lg bg-violet-600 px-4 py-2 text-sm font-medium text-white">{t.chatLink}</Link>
       </section>
       <section className="rounded-2xl border bg-card p-5">
-        <h2 className="font-semibold">Taken</h2>
+        <h2 className="font-semibold">{t.tasks}</h2>
         <p className="mt-2 text-sm text-muted-foreground">{t.taskDesc}</p>
         <Link href="/tasks" className="mt-4 inline-flex rounded-lg bg-violet-600 px-4 py-2 text-sm font-medium text-white">{t.taskLink}</Link>
       </section>
     </div> : <div className="grid gap-4 sm:grid-cols-2">
       <section className="rounded-2xl border bg-card p-5">
-        <h2 className="font-semibold">Administratie</h2>
+        <h2 className="font-semibold">{t.administration}</h2>
         <p className="mt-2 text-sm text-muted-foreground">{t.financeDesc}</p>
       </section>
       {current.isAdmin && <section className="rounded-2xl border bg-card p-5">
-        <h2 className="font-semibold">Sales</h2>
+        <h2 className="font-semibold">{t.sales}</h2>
         <p className="mt-2 text-sm text-muted-foreground">{t.reportDesc}</p>
         <Link href="/sales" className="mt-4 inline-flex rounded-lg bg-violet-600 px-4 py-2 text-sm font-medium text-white">{t.salesLink}</Link>
       </section>}
