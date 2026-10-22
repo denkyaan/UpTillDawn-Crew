@@ -273,6 +273,13 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
           <span className="text-xs font-bold uppercase tracking-widest text-violet-400">{({nl:"Administratie",fr:"Administration",en:"Administration",de:"Verwaltung"} as Record<SupportedUiLocale,string>)[trainingLocale]}</span>
           <Link href="/portals" className="text-xs font-semibold text-violet-400">{({nl:"Alle portalen",fr:"Tous les portails",en:"All portals",de:"Alle Portale"} as Record<SupportedUiLocale,string>)[trainingLocale]} →</Link>
         </div>
+        <details className="group shrink-0 border-b border-border bg-card lg:hidden">
+          <summary className="flex min-h-11 cursor-pointer list-none items-center justify-between px-4 py-2 text-sm font-semibold text-violet-400 [&::-webkit-details-marker]:hidden">
+            <span>{({nl:"Alle administratiemodules",fr:"Tous les modules administratifs",en:"All administration modules",de:"Alle Verwaltungsmodule"} as Record<SupportedUiLocale,string>)[trainingLocale]}</span>
+            <span aria-hidden="true" className="group-open:rotate-90">▸</span>
+          </summary>
+          <div className="max-h-[45dvh] overflow-y-auto border-t border-border p-3"><AdministrationNavigation locale={trainingLocale}/></div>
+        </details>
         <div id="app-scroll" className="min-h-0 flex-1 overflow-y-auto scroll-smooth bg-background">
           <main className="min-h-full pb-24 lg:pb-0">{children}</main>
         </div>
