@@ -39,6 +39,8 @@ const ui={
 } as const
 const financeRelated=new Set(["invoices","banking","documents","reports"])
 
+export const dynamic = "force-dynamic"
+
 export default async function AdministrationModulePage({params}:{params:Promise<{slug:string}>}){
  const {slug}=await params
  const adminModule=administrationModules.find(item=>item.slug===slug&&slug!=="dashboard"&&slug!=="finance")
