@@ -624,6 +624,26 @@ try {
     return {context,page}
   }
 
+  // Administration roster browser checks use real authenticated sessions, not service-role bypass.
+  try {
+    const adminRoster=await loginLifecycle('admin',0)
+    try {
+      await adminRoster.page.goto(`${baseUrl}/portals/administration/rosters`,{waitUntil:'domcontentloaded',timeout:45000})
+      await adminRoster.page.getByRole('heading',{name:/administrative rosters|administratieve werkroosters|plannings administratifs|administrative dienstpläne/i}).waitFor({timeout:20000})
+      if(await adminRoster.page.locator('form input[name="title"]').count()!==1)throw new Error('Admin roster creation form missing')
+      if(await adminRoster.page.locator('form select[name="event"]').count()!==1)throw new Error('Admin roster event selection missing')
+    } finally {await adminRoster.context.close()}
+    const staffRoster=await loginLifecycle('staff',2)
+    try {
+      await staffRoster.page.goto(`${baseUrl}/portals/administration/rosters`,{waitUntil:'domcontentloaded',timeout:45000})
+      await staffRoster.page.waitForTimeout(1200)
+      if(await staffRoster.page.locator('form input[name="title"]').count())throw new Error('Staff gained access to Administration roster creation')
+    } finally {await staffRoster.context.close()}
+    console.log('PASS authenticated Admin roster UI and Staff access denial')
+  } catch(error) {
+    failures.push(`administration-roster-browser: ${error instanceof Error?error.message:String(error)}`)
+  }
+
   try{
     // The concurrent smoke phase may still touch the isolated event after bot03.
     // Re-establish the operational clock here, immediately before attendance,
