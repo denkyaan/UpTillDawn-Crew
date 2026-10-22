@@ -1,3 +1,4 @@
+import type { SupabaseClient } from '@supabase/supabase-js'
 import Link from 'next/link'
 import { revalidatePath } from 'next/cache'
 import { redirect } from 'next/navigation'
@@ -27,7 +28,7 @@ async function requireAdministration() {
 
 async function createDraft(formData:FormData) {
  'use server'
- const supabase = await requireAdministration()
+ const supabase = (await requireAdministration()) as unknown as SupabaseClient
  const kind = String(formData.get('kind') ?? '')
  const allowed = ['sales_invoice','purchase_invoice','credit_note','expense','quote']
  if (!allowed.includes(kind)) return
@@ -47,7 +48,7 @@ async function createDraft(formData:FormData) {
 
 export const dynamic = 'force-dynamic'
 export default async function FinancePage({searchParams}:{searchParams:Promise<{error?:string}>}) {
- const supabase = await requireAdministration()
+ const supabase = (await requireAdministration()) as unknown as SupabaseClient
  const locale = await requestUiLocale()
  const t = copy[locale]
  const params = await searchParams
