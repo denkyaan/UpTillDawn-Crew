@@ -8,10 +8,10 @@ import { canOpenPortal, type PortalAssignment } from '@/lib/portal-access'
 import { requestUiLocale } from '@/lib/server-locale'
 
 const copy = {
- nl: {title:'Financiële administratie',intro:'Registreer conceptdocumenten. Definitieve goedkeuring en Peppol-verzending zijn nog niet actief.',new:'Nieuw concept',kind:'Documenttype',number:'Documentnummer',net:'Bedrag excl. btw',tax:'Btw-bedrag',notes:'Notities',save:'Concept opslaan',empty:'Nog geen financiële documenten.',back:'Administratie',error:'Document kon niet worden opgeslagen.',currency:'Valuta',due:'Vervaldatum',party:'Klant of leverancier',none:'Geen relatie',party:'Klant of leverancier',none:'Geen relatie',issue:'Factuurdatum',due:'Vervaldatum',status:'Status',total:'Totaal',overdue:'Vervallen'},
- fr: {title:'Administration financière',intro:'Enregistrez des brouillons. La validation définitive et l’envoi Peppol ne sont pas encore actifs.',new:'Nouveau brouillon',kind:'Type de document',number:'Numéro du document',net:'Montant hors TVA',tax:'Montant TVA',notes:'Notes',save:'Enregistrer le brouillon',empty:'Aucun document financier.',back:'Administration',error:'Impossible d’enregistrer le document.',currency:'Devise',due:'Échéance',party:'Client ou fournisseur',none:'Aucun contact',party:'Client ou fournisseur',none:'Aucun contact',issue:'Date de facture',due:'Échéance',status:'Statut',total:'Total',overdue:'En retard'},
- en: {title:'Financial administration',intro:'Record draft documents. Final approval and Peppol sending are not active yet.',new:'New draft',kind:'Document type',number:'Document number',net:'Net amount',tax:'VAT amount',notes:'Notes',save:'Save draft',empty:'No financial documents yet.',back:'Administration',error:'Document could not be saved.',currency:'Currency',due:'Due date',party:'Customer or supplier',none:'No counterparty',party:'Customer or supplier',none:'No counterparty',issue:'Invoice date',due:'Due date',status:'Status',total:'Total',overdue:'Overdue'},
- de: {title:'Finanzverwaltung',intro:'Erfasse Entwürfe. Endgültige Freigabe und Peppol-Versand sind noch nicht aktiv.',new:'Neuer Entwurf',kind:'Dokumenttyp',number:'Dokumentnummer',net:'Nettobetrag',tax:'MwSt.-Betrag',notes:'Notizen',save:'Entwurf speichern',empty:'Noch keine Finanzdokumente.',back:'Verwaltung',error:'Dokument konnte nicht gespeichert werden.',currency:'Währung',due:'Fälligkeitsdatum',party:'Kunde oder Lieferant',none:'Kein Kontakt',party:'Kunde oder Lieferant',none:'Kein Kontakt',issue:'Rechnungsdatum',due:'Fälligkeitsdatum',status:'Status',total:'Gesamt',overdue:'Überfällig'},
+ nl: {title:'Financiële administratie',intro:'Registreer conceptdocumenten. Definitieve goedkeuring en Peppol-verzending zijn nog niet actief.',new:'Nieuw concept',kind:'Documenttype',number:'Documentnummer',net:'Bedrag excl. btw',tax:'Btw-bedrag',notes:'Notities',save:'Concept opslaan',empty:'Nog geen financiële documenten.',back:'Administratie',error:'Document kon niet worden opgeslagen.',currency:'Valuta',review:'Ter controle',approve:'Goedkeuren',void:'Ongeldig maken',actionError:'Statuswijziging mislukt.',due:'Vervaldatum',party:'Klant of leverancier',none:'Geen relatie',party:'Klant of leverancier',none:'Geen relatie',issue:'Factuurdatum',due:'Vervaldatum',status:'Status',total:'Totaal',overdue:'Vervallen'},
+ fr: {title:'Administration financière',intro:'Enregistrez des brouillons. La validation définitive et l’envoi Peppol ne sont pas encore actifs.',new:'Nouveau brouillon',kind:'Type de document',number:'Numéro du document',net:'Montant hors TVA',tax:'Montant TVA',notes:'Notes',save:'Enregistrer le brouillon',empty:'Aucun document financier.',back:'Administration',error:'Impossible d’enregistrer le document.',currency:'Devise',review:'À vérifier',approve:'Approuver',void:'Annuler',actionError:'Échec du changement de statut.',due:'Échéance',party:'Client ou fournisseur',none:'Aucun contact',party:'Client ou fournisseur',none:'Aucun contact',issue:'Date de facture',due:'Échéance',status:'Statut',total:'Total',overdue:'En retard'},
+ en: {title:'Financial administration',intro:'Record draft documents. Final approval and Peppol sending are not active yet.',new:'New draft',kind:'Document type',number:'Document number',net:'Net amount',tax:'VAT amount',notes:'Notes',save:'Save draft',empty:'No financial documents yet.',back:'Administration',error:'Document could not be saved.',currency:'Currency',review:'Submit for review',approve:'Approve',void:'Void',actionError:'Could not change status.',due:'Due date',party:'Customer or supplier',none:'No counterparty',party:'Customer or supplier',none:'No counterparty',issue:'Invoice date',due:'Due date',status:'Status',total:'Total',overdue:'Overdue'},
+ de: {title:'Finanzverwaltung',intro:'Erfasse Entwürfe. Endgültige Freigabe und Peppol-Versand sind noch nicht aktiv.',new:'Neuer Entwurf',kind:'Dokumenttyp',number:'Dokumentnummer',net:'Nettobetrag',tax:'MwSt.-Betrag',notes:'Notizen',save:'Entwurf speichern',empty:'Noch keine Finanzdokumente.',back:'Verwaltung',error:'Dokument konnte nicht gespeichert werden.',currency:'Währung',review:'Zur Prüfung',approve:'Genehmigen',void:'Stornieren',actionError:'Statusänderung fehlgeschlagen.',due:'Fälligkeitsdatum',party:'Kunde oder Lieferant',none:'Kein Kontakt',party:'Kunde oder Lieferant',none:'Kein Kontakt',issue:'Rechnungsdatum',due:'Fälligkeitsdatum',status:'Status',total:'Gesamt',overdue:'Überfällig'},
 } as const
 
 async function requireAdministration() {
@@ -56,9 +56,37 @@ async function createDraft(formData:FormData) {
  redirect('/portals/administration/finance')
 }
 
+async function changeDocumentStatus(formData:FormData) {
+ 'use server'
+ const current = await getCurrentUser()
+ if (!current) redirect('/login')
+ const db = (await requireAdministration()) as unknown as SupabaseClient
+ const id = String(formData.get('id') ?? '')
+ const transition = String(formData.get('transition') ?? '')
+ if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(id)) return
+ const rules:Record<string,{from:string,to:string,admin:boolean}> = {
+  review:{from:'draft',to:'review',admin:false},
+  approve:{from:'review',to:'approved',admin:true},
+  void:{from:'approved',to:'void',admin:true},
+ }
+ const rule=rules[transition]
+ if (!rule || (rule.admin && !current.isAdmin)) redirect('/portals/administration/finance?error=1')
+ const payload:Record<string,string> = {status:rule.to}
+ if (transition==='approve') {
+  payload.approved_by=current.id
+  payload.approved_at=new Date().toISOString()
+ }
+ const {data,error}=await db.from('admin_financial_documents').update(payload).eq('id',id).eq('status',rule.from).select('id').maybeSingle()
+ if (error || !data) redirect('/portals/administration/finance?error=1')
+ revalidatePath('/portals/administration/finance')
+ revalidatePath('/portals/administration')
+ redirect('/portals/administration/finance')
+}
+
 export const dynamic = 'force-dynamic'
 export default async function FinancePage({searchParams}:{searchParams:Promise<{error?:string}>}) {
  const supabase = (await requireAdministration()) as unknown as SupabaseClient
+ const current = await getCurrentUser()
  const locale = await requestUiLocale()
  const t = copy[locale]
  const params = await searchParams
@@ -92,6 +120,12 @@ export default async function FinancePage({searchParams}:{searchParams:Promise<{
     <div className="space-y-3">{documents.map(d=><article key={d.id} className="flex flex-wrap items-center justify-between gap-2 border-b pb-3">
      <div><p className="font-semibold">{d.document_number || d.kind}</p><p className="text-xs text-muted-foreground">{d.kind} · {d.status}{d.due_date ? ` · ${t.due}: ${d.due_date}` : ''}{d.due_date && d.due_date < new Date().toISOString().slice(0,10) && !['paid','void'].includes(d.status) ? ` · ${t.overdue}` : ''}</p></div>
      <strong>{new Intl.NumberFormat(locale==='nl'?'nl-BE':locale==='fr'?'fr-BE':locale==='de'?'de-BE':'en-BE',{style:'currency',currency:d.currency}).format(Number(d.gross_amount))}</strong>
+     <form action={changeDocumentStatus} className="flex flex-wrap gap-2">
+      <input type="hidden" name="id" value={d.id}/>
+      {d.status==='draft' && <button name="transition" value="review" className="rounded-lg border px-3 py-2 text-sm">{t.review}</button>}
+      {current?.isAdmin && d.status==='review' && <button name="transition" value="approve" className="rounded-lg border px-3 py-2 text-sm">{t.approve}</button>}
+      {current?.isAdmin && d.status==='approved' && <button name="transition" value="void" className="rounded-lg border px-3 py-2 text-sm">{t.void}</button>}
+     </form>
     </article>)}</div>}
   </section>
  </main>
