@@ -52,6 +52,13 @@ export default async function AdministrationModulePage({params}:{params:Promise<
  const {data,error}=await supabase.rpc("upt_my_portal_assignments")
  if(error&&!current.isAdmin)redirect("/portals")
  if(!current.isAdmin&&!canOpenPortal("administration",(data??[]) as PortalAssignment[],{approved:current.approved,blocked:current.account_blocked===true}))redirect("/portals")
+ const liveRecords = slug==="events"
+  ? await supabase.from("events").select("id,name,status,start_at").order("start_at",{ascending:false}).limit(30)
+  : slug==="staff"
+    ? await supabase.from("timesheets").select("id,status,submitted_at,event_id").order("submitted_at",{ascending:false}).limit(30)
+    : slug==="inventory"
+      ? await supabase.from("inventory_items").select("id,name,missing_quantity,damaged_quantity,event_id").limit(30)
+      : null
  const locale=await requestUiLocale()
  const t=administrationCopy[locale]
  const u=ui[locale]
@@ -67,6 +74,12 @@ export default async function AdministrationModulePage({params}:{params:Promise<
    <h1 className="mt-2 text-2xl font-bold tracking-tight sm:text-3xl">{adminModule.title[locale]}</h1>
    <p className="mt-3 max-w-3xl text-sm leading-6 text-muted-foreground">{u.notice}</p>
   </header>
+  {liveRecords&&<section className="rounded-2xl border bg-card p-5">
+   <h2 className="text-lg font-semibold">{({nl:"Actuele gegevens",fr:"Données actuelles",en:"Live records",de:"Aktuelle Daten"} as const)[locale]}</h2>
+   {liveRecords.error?<p className="mt-3 text-sm text-muted-foreground">{({nl:"Gegevens niet beschikbaar voor deze gebruiker.",fr:"Données indisponibles pour cet utilisateur.",en:"Records unavailable for this user.",de:"Daten für diesen Benutzer nicht verfügbar."} as const)[locale]}</p>
+    :!liveRecords.data?.length?<p className="mt-3 text-sm text-muted-foreground">{({nl:"Geen records gevonden.",fr:"Aucun enregistrement trouvé.",en:"No records found.",de:"Keine Einträge gefunden."} as const)[locale]}</p>
+    :<div className="mt-3 space-y-2">{liveRecords.data.map((record,index)=><div key={String(record.id??index)} className="flex items-center justify-between gap-3 rounded-lg border p-3 text-sm"><span className="min-w-0 truncate font-medium">{String("name" in record?record.name??record.id:record.id)}</span><span className="shrink-0 text-xs text-muted-foreground">{String("status" in record?record.status??"—":("missing_quantity" in record?record.missing_quantity??0:0))}</span></div>)}</div>}
+  </section>}
   <section className="grid gap-4 md:grid-cols-3" aria-label={u.section}>
    {sections.map((section,index)=><article key={index} className="flex min-h-48 flex-col rounded-2xl border bg-card p-5">
     <div className="mb-4 flex items-start justify-between gap-3"><h2 className="font-semibold">{section[locale]}</h2><span aria-hidden="true" className="text-violet-400">◈</span></div>
