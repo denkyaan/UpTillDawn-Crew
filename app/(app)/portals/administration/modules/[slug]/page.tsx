@@ -1,5 +1,5 @@
 import Link from "next/link"
-import { notFound } from "next/navigation"
+import { notFound, redirect } from "next/navigation"
 import { requestUiLocale } from "@/lib/server-locale"
 import { administrationModules, administrationCopy } from "@/lib/administration/modules"
 import { getCurrentUser } from "@/lib/actions/auth"
@@ -10,11 +10,13 @@ export default async function AdministrationModulePage({params}:{params:Promise<
  const {slug}=await params
  const module=administrationModules.find(item=>item.slug===slug&&slug!=="dashboard"&&slug!=="finance")
  if(!module)notFound()
- const user=await getCurrentUser()
- if(!user)notFound()
+ const current=await getCurrentUser()
+ if(!current)redirect("/login")
+ if(!current.approved||Boolean(current.account_blocked))redirect("/portals")
  const supabase=await createClient()
- const {data:assignments,error}=await supabase.from("portal_assignments").select("*").eq("user_id",user.id)
- if(error||!canOpenPortal("administration",(assignments??[]) as PortalAssignment[]))notFound()
+ const {data,error}=await supabase.rpc("upt_my_portal_assignments")
+ if(error&&!current.isAdmin)redirect("/portals")
+ if(!current.isAdmin&&!canOpenPortal("administration",(data??[]) as PortalAssignment[],{approved:current.approved,blocked:current.account_blocked===true}))redirect("/portals")
  const locale=await requestUiLocale()
  const t=administrationCopy[locale]
  return <main className="mx-auto w-full max-w-6xl space-y-6 p-4 sm:p-8">
