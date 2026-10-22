@@ -1,20 +1,17 @@
 name: Cleanup Actions History
-
 on:
   workflow_dispatch:
   schedule:
-    - cron: "17 3 * * *"
-
+    - cron: '17 3 * * *'
 permissions:
   actions: write
   contents: read
-
 jobs:
   cleanup:
     runs-on: ubuntu-latest
     timeout-minutes: 30
     steps:
-      - name: Retain recent completed runs for every workflow
+      - name: Retain newest completed run per workflow
         env:
           GH_TOKEN: ${{ github.token }}
           REPO: ${{ github.repository }}
@@ -22,21 +19,19 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          # Retain only the newest completed run per workflow.\n          mapfile -t workflows < <(gh api --paginate "/repos/$REPO/actions/workflows?per_page=100" --jq '.workflows[].id')
-          for workflow in "${workflows[@]}"; do
-            echo "::group::Workflow $workflow"
-            mapfile -t runs < <(gh api --paginate "/repos/$REPO/actions/workflows/$workflow/runs?per_page=100" --jq '.workflow_runs[] | [.id,.status,.created_at] | @tsv')
+          gh api --paginate "/repos/$REPO/actions/workflows?per_page=100" --jq '.workflows[].id' | while read -r workflow; do
+            [ -n "$workflow" ] || continue
+            echo "Checking workflow $workflow"
             kept=0
-            for run in "${runs[@]}"; do
-              IFS=
-          done
-\t' read -r id status created <<< "$run"
+            gh api --paginate "/repos/$REPO/actions/workflows/$workflow/runs?per_page=100" --jq '.workflow_runs[] | select(.status == "completed") | .id' | while read -r id; do
+              [ -n "$id" ] || continue
               [ "$id" = "$CURRENT_RUN_ID" ] && continue
-              [ "$status" = "completed" ] || continue
-              kept=$((kept + 1))
-              [ "$kept" -eq 1 ] && continue
-              echo "Deleting superseded completed run $id"
-              gh api --method DELETE "/repos/$REPO/actions/runs/$id"
+              if [ "$kept" -eq 0 ]; then
+                kept=1
+                echo "Keeping latest completed run $id"
+              else
+                echo "Removing older completed run $id"
+                gh api --method DELETE "/repos/$REPO/actions/runs/$id"
+              fi
             done
-            echo "::endgroup::"
           done
