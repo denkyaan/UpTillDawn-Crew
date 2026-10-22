@@ -41,9 +41,9 @@ jobs:
           cache: npm
       - name: Install
         run: npm ci --prefer-offline --no-audit --no-fund
-      # The exact commit is already checked by the required integration workflow.
-      # Avoid repeating its lint, typecheck and Node test suite here.
-      - name: Require successful 15-bot integration CI for exact commit
+      # Fast checks gate every staging deploy. Full 15-bot validation is
+      # explicitly dispatched for release candidates, not every staging push.
+      - name: Require successful fast validation for exact commit
         shell: bash
         env:
           GH_TOKEN: ${{ github.token }}
@@ -51,23 +51,23 @@ jobs:
         run: |
           set -euo pipefail
           target="$GITHUB_SHA"
-          echo "Waiting for V2.1 integration and 15 authenticated browser bots on $target"
-          for attempt in $(seq 1 120); do
-            result=$(gh api "repos/$GH_REPO/actions/workflows/v21-staging-integration-ci.yml/runs?head_sha=$target&per_page=30" --jq '[.workflow_runs[] | select(.head_sha == "'$target'" and .event == "push")] | sort_by(.created_at) | last | [.status,.conclusion] | @tsv')
+          echo "Waiting for fast validation on $target"
+          for attempt in $(seq 1 90); do
+            result=$(gh api "repos/$GH_REPO/actions/workflows/fast-change-validation.yml/runs?head_sha=$target&per_page=30" --jq '[.workflow_runs[] | select(.head_sha == "'$target'" and .event == "push")] | sort_by(.created_at) | last | [.status,.conclusion] | @tsv')
             status=$(printf '%s' "$result" | cut -f1)
             conclusion=$(printf '%s' "$result" | cut -f2)
             if [ "$status" = "completed" ]; then
               if [ "$conclusion" = "success" ]; then
-                echo "PASS: complete bot integration gate succeeded for $target"
+                echo "PASS: fast validation succeeded for $target"
                 exit 0
               fi
-              echo "::error::Bot integration gate failed: $conclusion"
+              echo "::error::Fast validation failed: $conclusion"
               exit 1
             fi
-            echo "Bot integration gate: ${status:-pending} (attempt $attempt/90)"
+            echo "Fast validation: ${status:-pending} (attempt $attempt/90)"
             sleep 10
           done
-          echo "::error::Timed out waiting for 15-bot integration gate; deployment blocked"
+          echo "::error::Timed out waiting for fast validation; deployment blocked"
           exit 1
       - name: Build staging Worker
         run: npm run build:cloudflare
