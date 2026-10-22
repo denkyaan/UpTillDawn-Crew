@@ -7,11 +7,11 @@ import { administrationModules, administrationCopy } from "@/lib/administration/
 export function AdministrationNavigation({locale}:{locale:SupportedUiLocale}){
  const pathname=usePathname()
  const t=administrationCopy[locale]
- return <nav aria-label={t.navigation} className="grid grid-cols-2 gap-2 sm:grid-cols-3 xl:grid-cols-2">
+ return <nav aria-label={t.navigation} className="space-y-1">
   {administrationModules.map(item=>{
    const href=item.slug==="dashboard"?"/portals/administration":item.slug==="finance"?"/portals/administration/finance":"/portals/administration/modules/"+item.slug
    const active=pathname===href
-   return <Link key={item.slug} href={href} aria-current={active?"page":undefined} className={`flex min-h-12 items-center gap-2 rounded-xl border px-3 py-3 text-sm font-medium transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-violet-500 ${active?"border-violet-500 bg-violet-500/15 text-violet-300":"border-border bg-card/70 text-foreground hover:border-violet-500/60 hover:bg-violet-500/10"}`}>
+   return <Link key={item.slug} href={href} aria-current={active?"page":undefined} className={`flex min-h-11 items-center gap-3 rounded-xl px-3 py-3 text-sm font-semibold transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-violet-500 ${active?"bg-violet-600 text-white":"text-muted-foreground hover:bg-muted hover:text-foreground"}`}>
     <span className="min-w-0 flex-1">{item.title[locale]}</span>
     <span aria-hidden="true" className="text-violet-400">→</span>
    </Link>
