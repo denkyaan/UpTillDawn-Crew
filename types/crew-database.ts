@@ -14,30 +14,6 @@ export type Database = {
   }
   public: {
     Tables: {
-      training_scenario_members: {
-        Row: { scenario_id: string; user_id: string; created_at: string }
-        Insert: { scenario_id: string; user_id: string; created_at?: string }
-        Update: { scenario_id?: string; user_id?: string; created_at?: string }
-        Relationships: []
-      }
-      training_progress: {
-        Row: { participant_id: string; scenario_id: string; role: string; results: Json; updated_at: string }
-        Insert: { participant_id: string; scenario_id: string; role: string; results?: Json; updated_at?: string }
-        Update: { participant_id?: string; scenario_id?: string; role?: string; results?: Json; updated_at?: string }
-        Relationships: []
-      }
-      training_questions: {
-        Row: { id: string; scenario_id: string; participant_id: string; role: string; question: string; answer: string | null; status: string; created_at: string; answered_at: string | null }
-        Insert: { id?: string; scenario_id: string; participant_id: string; role: string; question: string; answer?: string | null; status?: string; created_at?: string; answered_at?: string | null }
-        Update: { id?: string; scenario_id?: string; participant_id?: string; role?: string; question?: string; answer?: string | null; status?: string; created_at?: string; answered_at?: string | null }
-        Relationships: []
-      }
-      training_scenarios: {
-        Row: { id: string; owner_id: string; name: string; payload: Json; updated_at: string }
-        Insert: { id?: string; owner_id: string; name?: string; payload?: Json; updated_at?: string }
-        Update: { id?: string; owner_id?: string; name?: string; payload?: Json; updated_at?: string }
-        Relationships: []
-      }
       admin_counterparties: {
         Row: {
           address: Json
@@ -239,6 +215,30 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      training_scenario_members: {
+        Row: { scenario_id: string; user_id: string; created_at: string }
+        Insert: { scenario_id: string; user_id: string; created_at?: string }
+        Update: { scenario_id?: string; user_id?: string; created_at?: string }
+        Relationships: []
+      }
+      training_progress: {
+        Row: { participant_id: string; scenario_id: string; role: string; results: Json; updated_at: string }
+        Insert: { participant_id: string; scenario_id: string; role: string; results?: Json; updated_at?: string }
+        Update: { participant_id?: string; scenario_id?: string; role?: string; results?: Json; updated_at?: string }
+        Relationships: []
+      }
+      training_questions: {
+        Row: { id: string; scenario_id: string; participant_id: string; role: string; question: string; answer: string | null; status: string; created_at: string; answered_at: string | null }
+        Insert: { id?: string; scenario_id: string; participant_id: string; role: string; question: string; answer?: string | null; status?: string; created_at?: string; answered_at?: string | null }
+        Update: { id?: string; scenario_id?: string; participant_id?: string; role?: string; question?: string; answer?: string | null; status?: string; created_at?: string; answered_at?: string | null }
+        Relationships: []
+      }
+      training_scenarios: {
+        Row: { id: string; owner_id: string; name: string; payload: Json; updated_at: string }
+        Insert: { id?: string; owner_id: string; name?: string; payload?: Json; updated_at?: string }
+        Update: { id?: string; owner_id?: string; name?: string; payload?: Json; updated_at?: string }
+        Relationships: []
       }
       admin_role_modes: {
         Row: {
