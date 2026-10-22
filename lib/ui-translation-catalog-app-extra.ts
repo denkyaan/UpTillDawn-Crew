@@ -2,6 +2,14 @@ export type ExtraCatalogLocale = 'nl' | 'fr' | 'en' | 'de'
 type Row = { fr:string; en:string; de:string }
 
 export const APP_EXTRA_TRANSLATIONS: Record<string,Row> = {
+  "Administratief dashboard": { fr: "Tableau de bord administratif", en: "Administration dashboard", de: "Verwaltungsübersicht" },
+  "Tableau de bord administratif": { fr: "Tableau de bord administratif", en: "Administration dashboard", de: "Verwaltungsübersicht" },
+  "Administration dashboard": { fr: "Tableau de bord administratif", en: "Administration dashboard", de: "Verwaltungsübersicht" },
+  "Verwaltungsübersicht": { fr: "Tableau de bord administratif", en: "Administration dashboard", de: "Verwaltungsübersicht" },
+  "Beheer financiële documenten, ingediende uren, personeelsplanning en operationele opvolging vanuit één overzicht.": { fr: "Gérez les documents financiers, les heures soumises, la planification et le suivi opérationnel.", en: "Manage financial documents, submitted hours, staffing schedules and operations in one place.", de: "Finanzdokumente, Arbeitszeiten, Personalplanung und operative Aufgaben zentral verwalten." },
+  "Gérez les documents financiers, les heures soumises, la planification et le suivi opérationnel.": { fr: "Gérez les documents financiers, les heures soumises, la planification et le suivi opérationnel.", en: "Manage financial documents, submitted hours, staffing schedules and operations in one place.", de: "Finanzdokumente, Arbeitszeiten, Personalplanung und operative Aufgaben zentral verwalten." },
+  "Manage financial documents, submitted hours, staffing schedules and operations in one place.": { fr: "Gérez les documents financiers, les heures soumises, la planification et le suivi opérationnel.", en: "Manage financial documents, submitted hours, staffing schedules and operations in one place.", de: "Finanzdokumente, Arbeitszeiten, Personalplanung und operative Aufgaben zentral verwalten." },
+  "Finanzdokumente, Arbeitszeiten, Personalplanung und operative Aufgaben zentral verwalten.": { fr: "Gérez les documents financiers, les heures soumises, la planification et le suivi opérationnel.", en: "Manage financial documents, submitted hours, staffing schedules and operations in one place.", de: "Finanzdokumente, Arbeitszeiten, Personalplanung und operative Aufgaben zentral verwalten." },
   "Inventarisafwijkingen": { fr: "Écarts de stock", en: "Inventory discrepancies", de: "Bestandsabweichungen" },
   "Écarts de stock": { fr: "Écarts de stock", en: "Inventory discrepancies", de: "Bestandsabweichungen" },
   "Inventory discrepancies": { fr: "Écarts de stock", en: "Inventory discrepancies", de: "Bestandsabweichungen" },
