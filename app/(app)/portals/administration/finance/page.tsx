@@ -94,7 +94,7 @@ async function updateFinancialStatus(formData:FormData) {
  if (!transitions[existing.status]?.includes(status)) return
  const {data:{user}} = await supabase.auth.getUser()
  if (!user) return
- const patch:Record<string,unknown> = {status}
+ const patch:{status:string;approved_by?:string;approved_at?:string} = {status}
  if (status==='approved') {patch.approved_by=user.id;patch.approved_at=new Date().toISOString()}
  const {error} = await supabase.from('admin_financial_documents').update(patch).eq('id',id).eq('status',existing.status)
  if (error) redirect('/portals/administration/finance?error=1')
