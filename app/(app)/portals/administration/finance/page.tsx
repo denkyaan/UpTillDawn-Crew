@@ -14,6 +14,14 @@ const copy = {
  de: {title:'Finanzverwaltung',intro:'Erfasse Entwürfe. Endgültige Freigabe und Peppol-Versand sind noch nicht aktiv.',new:'Neuer Entwurf',kind:'Dokumenttyp',number:'Dokumentnummer',net:'Nettobetrag',tax:'MwSt.-Betrag',notes:'Notizen',save:'Entwurf speichern',empty:'Noch keine Finanzdokumente.',back:'Verwaltung',error:'Dokument konnte nicht gespeichert werden.',currency:'Währung', totals:'Finanzübersicht', count:'Dokumente', outstanding:'Unbezahlt', paid:'Bezahlt', draft:'Entwürfe'},
 } as const
 
+const documentKinds = {
+ nl: ['Aankoopfactuur','Verkoopfactuur','Uitgave','Creditnota','Offerte'],
+ fr: ['Facture d’achat','Facture de vente','Dépense','Note de crédit','Devis'],
+ en: ['Purchase invoice','Sales invoice','Expense','Credit note','Quote'],
+ de: ['Eingangsrechnung','Ausgangsrechnung','Ausgabe','Gutschrift','Angebot'],
+} as const
+const kindValues = ['purchase_invoice','sales_invoice','expense','credit_note','quote'] as const
+
 async function requireAdministration() {
  const current = await getCurrentUser()
  if (!current) redirect('/login')
@@ -67,7 +75,7 @@ export default async function FinancePage({searchParams}:{searchParams:Promise<{
   <section className="rounded-2xl border bg-card p-5">
    <h2 className="mb-4 text-lg font-bold">{t.new}</h2>
    <form action={createDraft} className="grid gap-3 sm:grid-cols-2">
-    <label className="space-y-1 text-sm">{t.kind}<select name="kind" required className="block w-full rounded-lg border bg-background p-3"><option value="purchase_invoice">Purchase invoice</option><option value="sales_invoice">Sales invoice</option><option value="expense">Expense</option><option value="credit_note">Credit note</option><option value="quote">Quote</option></select></label>
+    <label className="space-y-1 text-sm">{t.kind}<select name="kind" required className="block w-full rounded-lg border bg-background p-3">{kindValues.map((kind,index)=><option key={kind} value={kind}>{documentKinds[locale][index]}</option>)}</select></label>
     <label className="space-y-1 text-sm">{t.number}<input name="document_number" maxLength={100} className="block w-full rounded-lg border bg-background p-3"/></label>
     <label className="space-y-1 text-sm">{t.net}<input name="net_amount" type="number" min="0" max="999999999" step="0.01" required className="block w-full rounded-lg border bg-background p-3"/></label>
     <label className="space-y-1 text-sm">{t.tax}<input name="tax_amount" type="number" min="0" max="999999999" step="0.01" required className="block w-full rounded-lg border bg-background p-3"/></label>
