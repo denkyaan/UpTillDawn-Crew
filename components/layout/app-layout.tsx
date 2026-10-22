@@ -37,6 +37,7 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
   const [rules,setRules]=useState<RoleUiRule[]>([])
   const [adminAiOpen,setAdminAiOpen]=useState(false)
   const [administrationMenuOpen,setAdministrationMenuOpen]=useState(false)
+  useEffect(()=>setAdministrationMenuOpen(false),[pathname])
   const [tourPreview,setTourPreview]=useState(false)
   const [trainingLocale,setTrainingLocale]=useState<SupportedUiLocale>("nl")
   const [trainingChatUnlocked,setTrainingChatUnlocked]=useState(false)
