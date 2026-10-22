@@ -82,6 +82,11 @@ jobs:
             npx --yes supabase@2.117.0 init
           fi
 
+      - name: Clear stale local Supabase containers
+        run: |
+          npx --yes supabase@2.117.0 stop --no-backup || true
+          docker ps -aq --filter "name=supabase_inbucket_" | xargs -r docker rm -f
+
       - name: Start isolated Supabase stack
         run: npx --yes supabase@2.117.0 start -x studio,imgproxy,inbucket,edge-runtime,logflare,vector,realtime
 
@@ -140,6 +145,16 @@ jobs:
             echo "- Offline replay/time dependency security: PASS"
             echo "- Storage and new-feature security surfaces: PASS"
           } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Generate local database types for review
+        run: npx --yes supabase@2.117.0 gen types typescript --local --schema public > /tmp/crew-database.ts
+
+      - name: Upload generated database types
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: generated-crew-database-types
+          path: /tmp/crew-database.ts
+          retention-days: 3
 
       - name: Verify generated database types
         run: |

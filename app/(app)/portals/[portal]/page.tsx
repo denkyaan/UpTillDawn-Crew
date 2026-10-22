@@ -66,6 +66,7 @@ export default async function PortalPage({ params }: { params: Promise<{ portal:
       <section className="rounded-2xl border bg-card p-5">
         <h2 className="font-semibold">{t.administration}</h2>
         <p className="mt-2 text-sm text-muted-foreground">{t.financeDesc}</p>
+        <Link href="/portals/administration/finance" className="mt-4 inline-flex rounded-lg bg-violet-600 px-4 py-2 text-sm font-medium text-white">{t.administration} →</Link>
       </section>
       {current.isAdmin && <section className="rounded-2xl border bg-card p-5">
         <h2 className="font-semibold">{t.sales}</h2>
