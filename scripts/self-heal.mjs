@@ -119,9 +119,14 @@ function commitAndPush(){
  sh('git',['config','user.email','self-healing@users.noreply.github.com'])
  sh('git',['add','--all'])
  try{sh('git',['diff','--cached','--quiet']);return false}catch{}
- sh('git',['commit','-m',`fix(self-heal): repair error ${reportId}`])
- sh('git',['pull','--rebase','origin','main'])
- sh('git',['push','origin','HEAD:main'])
+ const safeReportId=String(reportId||'unknown').replace(/[^a-zA-Z0-9-]/g,'').slice(0,60)
+ const branch='self-heal/'+safeReportId
+ sh('git',['switch','-c',branch])
+ sh('git',['commit','-m',`fix(self-heal): propose repair for ${safeReportId}`])
+ sh('git',['push','origin','HEAD:refs/heads/'+branch])
+ sh('gh',['pr','create','--repo',repo,'--base','main','--head',branch,
+   '--title',`fix(self-heal): review repair ${safeReportId}`,
+   '--body','Automated bounded repair candidate. Requires CI, staging/E2E verification and approval before merging. No production release has been performed.'])
  return true
 }
 async function releaseCheck(){
@@ -147,10 +152,8 @@ async function loop(){
   const validation=runValidation()
   if(!validation.ok){repairFeedback=validation.feedback;console.error(repairFeedback);continue}
   if(!commitAndPush()){repairFeedback='Validated proposal contained no committable change.';continue}
-  const released=await releaseCheck()
-  if(released.ok){await markResolved();console.log('Self-healing release verified and report marked auto_resolved.');return}
-  repairFeedback=released.feedback
-  console.error(repairFeedback)
+  console.log('Self-healing repair PR opened. Awaiting independent CI, staging/E2E validation and approval; report remains unresolved.')
+  return
  }
  console.error(`Autonomous repair exhausted ${maxAttempts} attempts. Report remains registered for technical follow-up. Last evidence: ${repairFeedback}`)
  throw new Error('Self-healing kon de fout niet autonoom oplossen na '+maxAttempts+' pogingen.')
