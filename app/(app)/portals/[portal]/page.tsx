@@ -7,6 +7,13 @@ import { getCurrentUser } from '@/lib/actions/auth'
 import { createClient } from '@/lib/supabase/crew-server'
 import { canOpenPortal, type PortalAssignment } from '@/lib/portal-access'
 
+const adminDashboardCopy = {
+ nl:{title:'Administratief dashboard',description:'Beheer financiële documenten, ingediende uren, personeelsplanning en operationele opvolging vanuit één overzicht.'},
+ fr:{title:'Tableau de bord administratif',description:'Gérez les documents financiers, les heures soumises, la planification et le suivi opérationnel.'},
+ en:{title:'Administration dashboard',description:'Manage financial documents, submitted hours, staffing schedules and operations in one place.'},
+ de:{title:'Verwaltungsübersicht',description:'Finanzdokumente, Arbeitszeiten, Personalplanung und operative Aufgaben zentral verwalten.'},
+} as const
+
 const portalCopy = {
   nl: { unavailable: "Portaal niet beschikbaar", unavailableDesc: "De toegangscontrole kan momenteel niet worden uitgevoerd. Probeer later opnieuw.", returnToPortals: "Terug naar portalen", promoChatEmpty: "Er zijn nog geen promotiegesprekken beschikbaar voor jouw account.", chatDesc: "Open de bestaande chatkanalen waarvoor je toegang hebt.", chatLink: "Chats →", taskDesc: "Bekijk je bestaande opdrachten.", taskLink: "Taken →", financeDesc: "Open het financiële overzicht voor documenten, inkomsten, uitgaven en betalingsopvolging.", reportDesc: "Bestaande rapportage voor beheerders.", salesLink: "Sales →", back: "← Alle portalen", promotion: "Promotie", administration: "Administratie", meldingen: "Meldingen",meldingenDesc: "Bekijk nieuwe berichten, opdrachten en updates.",meldingenLink: "Meldingen →", chats: "Chats", tasks: "Taken", sales: "Sales" },
   fr: { unavailable: "Portail indisponible", unavailableDesc: "Le contrôle d’accès ne peut pas être effectué actuellement. Veuillez réessayer plus tard.", returnToPortals: "Retour aux portails", promoChatEmpty: "Aucune discussion promotionnelle disponible pour votre compte.", chatDesc: "Ouvrez les canaux de discussion auxquels vous avez accès.", chatLink: "Discussions →", taskDesc: "Consultez vos tâches existantes.", taskLink: "Tâches →", financeDesc: "Ouvrez le suivi financier des documents, recettes, dépenses et paiements.", reportDesc: "Rapports existants réservés aux administrateurs.", salesLink: "Ventes →", back: "← Tous les portails", promotion: "Promotion", administration: "Administration", meldingen: "Notifications",meldingenDesc: "Consultez les nouveaux messages, tâches et mises à jour.",meldingenLink: "Notifications →", chats: "Discussions", tasks: "Tâches", sales: "Ventes" },
@@ -55,10 +62,10 @@ export default async function PortalPage({ params }: { params: Promise<{ portal:
     <Link href="/portals" className="text-sm text-violet-400">{t.back}</Link>
     <header data-portal-tour="portal-overview"><h1 className="text-2xl font-bold">{promotion ? t.promotion : t.administration}</h1></header>
     <PortalGuidedTour portal={portal} locale={locale}/>
-    {!promotion && <section className="space-y-4" aria-label="Administration dashboard">
+    {!promotion && <section className="space-y-4" aria-label={adminDashboardCopy[locale].title}>
       <div className="rounded-2xl border border-violet-500/40 bg-violet-500/10 p-5">
-        <h2 className="text-xl font-bold">{locale==='nl'?'Administratief dashboard':locale==='fr'?'Tableau de bord administratif':locale==='de'?'Verwaltungsübersicht':'Administration dashboard'}</h2>
-        <p className="mt-2 text-sm text-muted-foreground">{locale==='nl'?'Beheer financiële documenten, ingediende uren, personeelsplanning en operationele opvolging vanuit één overzicht.':locale==='fr'?'Gérez les documents financiers, les heures soumises, la planification et le suivi opérationnel.':locale==='de'?'Finanzdokumente, Arbeitszeiten, Personalplanung und operative Aufgaben zentral verwalten.':'Manage financial documents, submitted hours, staffing schedules and operations in one place.'}</p>
+        <h2 className="text-xl font-bold">{adminDashboardCopy[locale].title}</h2>
+        <p className="mt-2 text-sm text-muted-foreground">{adminDashboardCopy[locale].description}</p>
       </div>
       <div className="grid gap-3 sm:grid-cols-2">
        {[
