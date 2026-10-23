@@ -1,4 +1,5 @@
 import { redirect } from 'next/navigation'
+import { PortalSwitcher } from '@/components/layout/portal-switcher'
 import { AppLayout } from '@/components/layout/app-layout'
 import { ReturnAfterLogin } from '@/components/auth/return-after-login'
 import { GlobalOfflineContentSync } from '@/components/crew/global-offline-content-sync'
@@ -11,5 +12,5 @@ export default async function AuthenticatedLayout({ children }: { children: Reac
  const user = { id: current.id }
 
 
- return <AppLayout><ReturnAfterLogin /><GlobalOfflineContentSync userId={user.id}/><ErrorReportBridge/>{children}</AppLayout>
+ return <AppLayout><ReturnAfterLogin /><PortalSwitcher /><GlobalOfflineContentSync userId={user.id}/><ErrorReportBridge/>{children}</AppLayout>
 }

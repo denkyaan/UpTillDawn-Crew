@@ -1,5 +1,6 @@
 import Link from 'next/link'
 import { redirect } from 'next/navigation'
+import { cookies } from 'next/headers'
 import { getCurrentUser } from '@/lib/actions/auth'
 import { createClient } from '@/lib/supabase/crew-server'
 import { accessiblePortals, type PortalAssignment, type Portal } from '@/lib/portal-access'
@@ -38,9 +39,14 @@ export default async function PortalSelector() {
 
   // Legacy event users must retain access during the additive V2.1 rollout.
   const portals: Portal[] = [...new Set<Portal>([
+    ...(current.isOwner ? ['events' as const,'promotion' as const,'administration' as const] : []),
     ...(current.role === 'staff' || current.role === 'responsible_lead' || current.isAdmin ? ['events' as const] : []),
     ...assigned,
   ])]
+
+  if (portals.length === 1) redirect(portalDetails[portals[0]].href)
+  const last = (await cookies()).get('uptilldawn-last-portal')?.value
+  if (portals.length > 1 && last && portals.includes(last as Portal)) redirect(portalDetails[last as Portal].href)
 
   return <main className="mx-auto max-w-4xl space-y-6 p-4 md:p-8">
     <header>
