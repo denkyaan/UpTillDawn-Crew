@@ -27,6 +27,9 @@ export default async function Page() {
     s.from('crew_notifications')
       .select('id,title,body,kind,link,read_at,created_at')
       .eq('user_id', user.id)
+      // Internal error-analysis reports belong in the admin diagnostics
+      // workflow, not in ordinary staff notification feeds.
+      .neq('kind', 'error_report')
       .order('created_at', { ascending: false })
       .limit(100),
     s.rpc('upt_notification_badge_count'),

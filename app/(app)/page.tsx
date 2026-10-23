@@ -185,6 +185,16 @@ export default async function Dashboard({searchParams}:{searchParams?:Promise<{t
   if(!current)return null
   const params=searchParams?await searchParams:{}
   if(current.isAdmin)redirect('/admin')
+  // Accounts with an administrative assignment should land in their own
+  // workspace rather than the event-staff overview.
+  const supabase = await createClient()
+  const { data: portalAssignments, error: portalError } = await supabase.rpc('upt_my_portal_assignments')
+  if (!portalError && portalAssignments?.some(assignment =>
+    assignment.portal === 'administration'
+    && assignment.role === 'administrative_staff'
+    && assignment.approved === true
+    && assignment.revoked_at === null
+  )) redirect('/portals/administration')
   if(params.tour==='1')return <TourActiveEventDemo role={current.role==='responsible_lead'?'responsible_lead':'employee'}/>
   return <main className="mx-auto max-w-7xl space-y-7 p-4 pb-28 md:p-8">
     <div>
