@@ -3,6 +3,10 @@ export type ExtendedUiLocale = 'nl' | 'fr' | 'en' | 'de'
 type Row = { fr: string; en: string; de: string }
 
 const EXTENSIONS: Record<string, Row> = {
+  'Promotieblokkeringen': { fr: 'Blocages promotion', en: 'Promotion restrictions', de: 'Promotion-Sperren' },
+  'Blocages promotion': { fr: 'Blocages promotion', en: 'Promotion restrictions', de: 'Promotion-Sperren' },
+  'Promotion restrictions': { fr: 'Blocages promotion', en: 'Promotion restrictions', de: 'Promotion-Sperren' },
+  'Promotion-Sperren': { fr: 'Blocages promotion', en: 'Promotion restrictions', de: 'Promotion-Sperren' },
   'Promotietaken': { fr: 'Tâches promotionnelles', en: 'Promotion tasks', de: 'Promotionaufgaben' },
   'Tâches promotionnelles': { fr: 'Tâches promotionnelles', en: 'Promotion tasks', de: 'Promotionaufgaben' },
   'Promotion tasks': { fr: 'Tâches promotionnelles', en: 'Promotion tasks', de: 'Promotionaufgaben' },
