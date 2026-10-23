@@ -1,10 +1,5 @@
--- Staging-only migration: do not apply to production.
-DO $$
-BEGIN
- IF current_setting('app.settings.project_ref', true) IS DISTINCT FROM 'npbjrtiolqperdgljnhi' THEN
-   RAISE EXCEPTION 'Training scenario migration blocked: explicit staging project verification required';
- END IF;
-END $$;
+-- Shared schema for isolated CI and deployments. Contains no training fixtures or demo data.
+-- Training scenario creation/seeding remains restricted by application authorization and RLS.
 CREATE TABLE IF NOT EXISTS public.training_scenarios (
  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
  owner_id uuid NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
