@@ -59,7 +59,9 @@ export function AppSidebar({
    const fallbackLabel=getDefaultRoleUiLabel(roleKey,i.key,i.label)
    const label=featureLabels[i.key] || fallbackLabel
    const help=featureHelp(i.key,label)
-   return <Link data-layout-key={i.key} key={i.key} href={href} title={help.description} aria-description={help.description} className={cn("flex items-center gap-3 rounded-xl px-3 py-3 text-sm font-semibold",active?"bg-violet-600 text-white":"text-muted-foreground hover:bg-muted hover:text-foreground")}>
+   return <Link data-layout-key={i.key} key={i.key} href={href} title={help.description} aria-description={help.description} onClick={()=>{
+    if(tourPreview)dispatchEvent(new CustomEvent("uptilldawn-training-tab-selected",{detail:{key:i.key}}))
+   }} className={cn("flex items-center gap-3 rounded-xl px-3 py-3 text-sm font-semibold",active?"bg-violet-600 text-white":"text-muted-foreground hover:bg-muted hover:text-foreground")}>
     <span className="relative"><Icon className="h-5 w-5"/>{count>0&&<span className="absolute -right-3 -top-3 flex h-5 min-w-5 items-center justify-center rounded-full bg-red-600 px-1 text-[10px] font-black leading-none text-white">{count>99?"99+":count}</span>}</span>{label}
    </Link>
   })}</nav>

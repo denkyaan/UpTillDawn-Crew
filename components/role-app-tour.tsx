@@ -10,6 +10,7 @@ import {parseUiLocale,LANGUAGE_APPLIED_EVENT} from "@/lib/locale-preferences"
 import type {ExtendedUiLocale} from "@/lib/ui-translation-extensions"
 import {TourControlCenter} from "@/components/training/tour-control-center"
 import {TOUR_SESSION_KEY,getTourChapters,tourProgressKey,type TourMode} from "@/lib/tour-training"
+import {practiceDoneKey} from "@/lib/training-exercise-catalog"
 
 type TourText={nl:string;en:string;fr:string;de:string}
 type Copy=string|TourText
@@ -209,6 +210,9 @@ export function RoleAppTour(){
   const [open,setOpen]=useState(false)
   const [choice,setChoice]=useState(false)
   const [welcome,setWelcome]=useState(false)
+  // An old tour session may exist when the account still needs a profile.
+  // Nothing from that session is rendered until the server confirms completion.
+  const [profileGate,setProfileGate]=useState<"checking"|"blocked"|"ready">("checking")
   // Keep SSR and the first hydration render identical. Device/manual locale is
   // applied only after mount; this removes the React #418 hydration mismatch.
   const [locale,setLocale]=useState<ExtendedUiLocale>("nl")
@@ -244,6 +248,18 @@ export function RoleAppTour(){
       if(preferredName)sessionStorage.setItem("uptilldawn-training-preferred-workplace",preferredName)
       else sessionStorage.removeItem("uptilldawn-training-preferred-workplace")
       const state=data?.[0]
+      // Approval grants access to the app, but the mandatory profile must be
+      // completed and saved before onboarding or the role tour can begin.
+      // Fail closed if profile-completion state cannot be verified.
+      if(!state){setProfileGate("blocked");setChoice(false);setOpen(false);setWelcome(false);return}
+      if(state.required&&!state.completed){
+        setProfileGate("blocked")
+        setChoice(false);setOpen(false);setWelcome(false)
+        sessionStorage.removeItem(TOUR_SESSION_KEY)
+        if(location.pathname!=="/settings")router.replace("/settings?complete-profile=1")
+        return
+      }
+      setProfileGate("ready")
       const saved=localStorage.getItem(storageKey(user.id,role))
       const previous=localStorage.getItem(storageKey(user.id,role,PREVIOUS_VERSION))
 
@@ -269,10 +285,6 @@ export function RoleAppTour(){
         try{scoped=JSON.parse(localStorage.getItem(tourProgressKey(user.id,scopedRole,preferredName))||"null")}catch{}
         const completed=new Set(Array.isArray(scoped?.completed)?scoped.completed:[])
         if(scopedChapters.some(chapter=>!completed.has(chapter.key))){setTourMode("full");setChoice(true);return}
-      }
-      if(state?.required&&!state.completed){
-        if(location.pathname!=="/settings")router.replace("/settings?complete-profile=1")
-        return
       }
       if(saved==="completed"){
         setChoice(false)
@@ -309,6 +321,12 @@ export function RoleAppTour(){
       }
       if(chapter){
         const key=tourProgressKey(user.id,nextRole,workplace??preferredWorkplace)
+        // A manual restart means repeating every operation, not replaying
+        // stored checkmarks from the previous hands-on training session.
+        if(reset){
+          localStorage.removeItem(practiceDoneKey(key))
+          sessionStorage.removeItem("uptilldawn-lab-model:"+key)
+        }
         let existing:{completed?:string[];skipped?:string[]}={}
         try{existing=JSON.parse(localStorage.getItem(key)||"{}")}catch{}
         localStorage.setItem(key,JSON.stringify({
@@ -337,7 +355,9 @@ export function RoleAppTour(){
   },[loading,preferredWorkplace,role,router,user])
 
   useEffect(()=>{
-    if(!user||!role)return
+    // Do not resurrect a stored training session or preview sandbox until
+    // the mandatory profile gate has been verified for this login.
+    if(!user||!role||profileGate!=="ready")return
     const restore=()=>{
       try{
         const saved=JSON.parse(sessionStorage.getItem(TOUR_SESSION_KEY)||"null") as {active?:boolean;role?:UiRole;mode?:TourMode;workplace?:string}|null
@@ -364,7 +384,7 @@ export function RoleAppTour(){
     addEventListener("uptilldawn-tour-stop",stop)
     addEventListener("uptilldawn-tour-finished",finish)
     return()=>{removeEventListener("uptilldawn-tour-stop",stop);removeEventListener("uptilldawn-tour-finished",finish)}
-  },[role,setPreview,user])
+  },[profileGate,role,setPreview,user])
 
   if(!user||!role||!activeRole)return null
 
@@ -392,15 +412,15 @@ export function RoleAppTour(){
   }
 
   return <>
-    <TourControlCenter active={open} userId={user.id} role={activeRole} preferredWorkplace={preferredWorkplace} mode={tourMode}/>
-    {welcome&&<div data-no-translate className="fixed inset-0 z-[145] flex items-end justify-center bg-black/60 p-4 sm:items-center" role="dialog" aria-modal="true">
+    <TourControlCenter active={open&&profileGate==="ready"} userId={user.id} role={activeRole} preferredWorkplace={preferredWorkplace} mode={tourMode}/>
+    {profileGate==="ready"&&welcome&&<div data-no-translate className="fixed inset-0 z-[145] flex items-end justify-center bg-transparent p-4 sm:items-center" role="dialog" aria-modal="true">
       <section className="w-full max-w-md rounded-2xl border bg-background p-5 shadow-2xl">
         <h2 className="text-xl font-black">{resolve(UI_COPY.promptTitle)}</h2>
         <p className="mt-3 text-sm leading-6 text-muted-foreground">{resolve(UI_COPY.promptBody)}</p>
         <button onClick={beginTraining} className="mt-5 w-full rounded-xl bg-violet-600 px-4 py-3 font-black text-white">{resolve(UI_COPY.welcomeContinue)}</button>
       </section>
     </div>}
-    {choice&&<div data-no-translate className="fixed inset-0 z-[140] flex items-end justify-center bg-black/60 p-4 sm:items-center" role="dialog" aria-modal="true">
+    {profileGate==="ready"&&choice&&<div data-no-translate className="fixed inset-0 z-[140] flex items-end justify-center bg-transparent p-4 sm:items-center" role="dialog" aria-modal="true">
       <section className="w-full max-w-md rounded-2xl border bg-background p-5 shadow-2xl">
         <h2 className="text-xl font-black">{resolve(UI_COPY.promptTitle)}</h2>
         <p className="mt-2 text-sm text-muted-foreground">{resolve(UI_COPY.promptBody)}</p>

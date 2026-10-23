@@ -2,6 +2,7 @@
 
 import {useEffect,useMemo,useState} from "react"
 import {useAuth,type UiRole} from "@/lib/providers"
+import {SandboxHelpTraining} from "@/components/training/sandbox-help-training"
 import {activeUiLocale,LANGUAGE_APPLIED_EVENT,type SupportedUiLocale} from "@/lib/locale-preferences"
 import {getTourChapters,tourProgressKey,TOUR_VERSION,TOUR_WORKFLOW_KEY,type TourMode,type TourRole,type TourScenario} from "@/lib/tour-training"
 
@@ -17,7 +18,7 @@ function progressFor(userId:string,role:TourRole,first:string,workplace?:string)
   return {version:TOUR_VERSION,activeKey:first,completed:[],skipped:[],paused:false} satisfies Progress
 }
 
-export function TourHelpIndex(){
+export function TourHelpIndex({training=false}:{training?:boolean}){
   const {user,roles,isOwner,realIsAdmin,setRoleMode}=useAuth()
   const role=(roles[0]||"employee") as TourRole
   const [locale,setLocale]=useState<SupportedUiLocale>("nl")
@@ -72,6 +73,7 @@ export function TourHelpIndex(){
 
     <section className="space-y-3"><h2 className="text-xl font-black">{c(locale,"Hoofdstukken","Chapters","Chapitres","Kapitel")}</h2><div className="grid gap-2">{chapters.map((chapter,index)=>{const done=progress.completed.includes(chapter.key),skipped=progress.skipped.includes(chapter.key),isNew=chapter.newSince===TOUR_VERSION&&!done;return <button key={chapter.key} onClick={()=>void start(role,{chapter:chapter.key})} className="flex items-center gap-3 rounded-xl border p-3 text-left hover:border-violet-500/60"><span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full border text-sm font-black">{done?"✓":skipped?"–":index+1}</span><span className="min-w-0 flex-1"><span className="flex items-center gap-2 font-black">{chapter.title[locale]}{isNew&&<span className="rounded-full border border-emerald-500/50 px-2 py-0.5 text-[9px] text-emerald-500">{c(locale,"NIEUW","NEW","NOUVEAU","NEU")}</span>}</span><span className="mt-1 block text-xs text-muted-foreground">{chapter.description[locale]}</span></span></button>})}</div></section>
 
+    {training&&<SandboxHelpTraining role={role}/>}
     <section className="rounded-2xl border p-4 text-sm text-muted-foreground"><p className="font-bold text-foreground">{c(locale,"Veilige trainingsmodus","Safe training mode","Mode de formation sûr","Sicherer Trainingsmodus")}</p><p className="mt-2">{c(locale,"Push-, locatie-, camera- en selfiepermissies worden tijdens de demo niet echt aangevraagd. Ontbrekende tourdoelen herstellen automatisch naar de pagina en worden technisch gelogd voor Error AI.","Push, location, camera and selfie permissions are not actually requested during the demo. Missing tour targets automatically recover to the page and are technically logged for Error AI.","Les autorisations push, localisation, caméra et selfie ne sont pas réellement demandées pendant la démo. Les cibles de visite manquantes reviennent automatiquement à la page et sont journalisées pour Error AI.","Push-, Standort-, Kamera- und Selfie-Berechtigungen werden während der Demo nicht tatsächlich angefordert. Fehlende Tourziele werden automatisch auf die Seite zurückgesetzt und für Error AI protokolliert.")}</p></section>
   </main>
 }

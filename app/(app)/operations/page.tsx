@@ -1,3 +1,4 @@
+import { SandboxAdminManager } from '@/components/training/sandbox-admin-manager'
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase/crew-server'
 import { getCurrentUser } from '@/lib/actions/auth'
@@ -6,6 +7,8 @@ import OperationsClient from './operations-client'
 import type { Tables, Database } from '@/types/crew-database'
 import { ShiftHandoverPanel, type HandoverCandidate, type HandoverScope, type HandoverView } from '@/components/responsible/shift-handover-panel'
 import { SandboxOperations } from '@/components/training/sandbox-operations'
+import { SandboxLifecycleTraining } from '@/components/training/sandbox-lifecycle-training'
+import { SandboxOperationalDrill } from '@/components/training/sandbox-operational-drill'
 
 export const dynamic='force-dynamic'
 
@@ -15,7 +18,7 @@ export default async function Page({searchParams}:{searchParams?:Promise<{event?
   const current=await getCurrentUser()
   if(!current)redirect('/login')
 
-  if(params.tour==='1')return <SandboxOperations userName={current.full_name||'Crew'} role={current.role}/>
+  if(params.tour==='1')return <>{current.role==='admin'?<SandboxAdminManager module="operations"/>:<SandboxOperations userName={current.full_name||'Crew'} role={current.role}/>}<SandboxOperationalDrill role={current.role}/><SandboxLifecycleTraining role={current.role}/></>
 
   const role=current.role
   const isAdmin=role==='admin'

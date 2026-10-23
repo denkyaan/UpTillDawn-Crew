@@ -94,6 +94,9 @@ jobs:
             npx --yes supabase@2.117.0 init
           fi
 
+      - name: Assign conflict-free isolated Supabase ports
+        run: python3 scripts/configure-isolated-supabase-ci.py
+
       - name: Start isolated Supabase stack
         run: npx --yes supabase@2.117.0 start -x studio,imgproxy,inbucket,edge-runtime,logflare,vector,realtime
 
@@ -101,10 +104,9 @@ jobs:
         run: npx --yes supabase@2.117.0 db reset --local --no-seed
 
       - name: Run SQL regression suites
-        env:
-          PGURL: postgresql://postgres:postgres@127.0.0.1:54322/postgres
         run: |
           set -euo pipefail
+          PGURL="$CI_SUPABASE_DB_URL"
           for file in tests/sql/*.sql; do
             echo "::group::$file"
             psql "$PGURL" -v ON_ERROR_STOP=1 -f "$file"
@@ -112,10 +114,9 @@ jobs:
           done
 
       - name: Full event lifecycle release gate
-        env:
-          PGURL: postgresql://postgres:postgres@127.0.0.1:54322/postgres
         run: |
           set -euo pipefail
+          PGURL="$CI_SUPABASE_DB_URL"
           lifecycle_suites=(
             tests/sql/15-bot-full-event.sql
             tests/sql/qr-attendance-workflow.sql
@@ -202,7 +203,7 @@ jobs:
             echo "BOT_SUPABASE_URL=$api_url"
             echo "BOT_SERVICE_ROLE_KEY=$service_key"
             echo "BOT_TEST_PASSWORD=$bot_password"
-            echo "BOT_DB_URL=postgresql://postgres:postgres@127.0.0.1:54322/postgres"
+            echo "BOT_DB_URL=$CI_SUPABASE_DB_URL"
           } >> "$GITHUB_ENV"
 
       - name: Prepare isolated authentication fixtures
@@ -244,7 +245,7 @@ jobs:
           cat /tmp/uptilldawn-bot-app.log
           exit 1
 
-      - name: Run 15 concurrent authenticated browser bots
+      - name: Run 15 full cross-role browser tours with bounded concurrency
         run: |
           set -euo pipefail
           for attempt in 1 2; do

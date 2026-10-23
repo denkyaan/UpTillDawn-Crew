@@ -1,4 +1,5 @@
 import { createClient } from '@supabase/supabase-js'
+import {botMatrix} from './bot-role-matrix.mjs'
 
 const supabaseUrl = process.env.BOT_SUPABASE_URL || process.env.NEXT_PUBLIC_SUPABASE_URL
 const serviceRoleKey = process.env.BOT_SERVICE_ROLE_KEY
@@ -9,8 +10,7 @@ if (!supabaseUrl || !serviceRoleKey || !password) {
   process.exit(1)
 }
 
-const roles = ['admin', 'responsible', ...Array(13).fill('staff')]
-const locales = ['nl', 'fr', 'en', 'de']
+const roles = botMatrix.map(({role})=>role)
 const dbRoles = {
   admin: 'admin',
   responsible: 'responsible_lead',
@@ -28,7 +28,7 @@ const created = []
 
 for (let index = 0; index < roles.length; index += 1) {
   const portalRole = roles[index]
-  const locale = locales[index % locales.length]
+  const locale = botMatrix[index].locale
   const bot = `bot-${String(index + 1).padStart(2, '0')}-${portalRole}-${locale}`
   const email = `${bot}@bots.uptilldawn.test`
   const fullName = `E2E ${portalRole.toUpperCase()} ${String(index + 1).padStart(2, '0')}`

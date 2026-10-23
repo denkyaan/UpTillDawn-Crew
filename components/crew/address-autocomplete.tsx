@@ -2,6 +2,7 @@
 
 import { useEffect,useId,useState } from "react"
 import { humanizeAppError } from "@/lib/client-error-message"
+import {activeUiLocale,LANGUAGE_APPLIED_EVENT,type SupportedUiLocale} from "@/lib/locale-preferences"
 
 type Suggestion={
   id:string
@@ -33,6 +34,15 @@ export function AddressAutocomplete({
   const [active,setActive]=useState(-1)
   const [loading,setLoading]=useState(false)
   const [error,setError]=useState("")
+  const [locale,setLocale]=useState<SupportedUiLocale>("nl")
+  const t=(nl:string,en:string,fr:string,de:string)=>({nl,en,fr,de})[locale]
+  const lookupError=t("Adressen konden niet worden opgezocht.","Addresses could not be retrieved.","Impossible de rechercher les adresses.","Adressen konnten nicht abgerufen werden.")
+  useEffect(()=>{
+    const frame=requestAnimationFrame(()=>setLocale(activeUiLocale()))
+    const apply=()=>setLocale(activeUiLocale())
+    addEventListener(LANGUAGE_APPLIED_EVENT,apply)
+    return()=>{cancelAnimationFrame(frame);removeEventListener(LANGUAGE_APPLIED_EVENT,apply)}
+  },[])
 
   useEffect(()=>{
     if(!focused||value.trim().length<2)return
@@ -41,20 +51,20 @@ export function AddressAutocomplete({
       try{
         setLoading(true);setError("")
         const htmlLang=document.documentElement.lang.slice(0,2).toLowerCase()
-        const lang=["nl","fr","en"].includes(htmlLang)?htmlLang:"nl"
+        const lang=["nl","fr","en","de"].includes(htmlLang)?htmlLang:"nl"
         const response=await fetch("/api/geocode/autocomplete?q="+encodeURIComponent(value.trim())+"&lang="+lang,{
           signal:controller.signal,headers:{Accept:"application/json"},
         })
         const payload=await response.json() as {results?:Suggestion[];error?:string}
-        if(!response.ok){setSuggestions([]);setError(humanizeAppError(payload.error||"Adressen konden niet worden opgezocht."));return}
+        if(!response.ok){setSuggestions([]);setError(locale==="nl"?humanizeAppError(payload.error||lookupError):lookupError);return}
         setSuggestions(payload.results||[]);setActive(-1)
       }catch(fetchError){
         if(fetchError instanceof DOMException&&fetchError.name==="AbortError")return
-        setSuggestions([]);setError(humanizeAppError(fetchError))
+        setSuggestions([]);setError(locale==="nl"?humanizeAppError(fetchError):lookupError)
       }finally{if(!controller.signal.aborted)setLoading(false)}
     },300)
     return()=>{window.clearTimeout(timer);controller.abort()}
-  },[focused,value])
+  },[focused,value,lookupError,locale])
 
   function choose(item:Suggestion){
     setValue(item.formatted)
@@ -89,11 +99,11 @@ export function AddressAutocomplete({
         else if(e.key==="Enter"&&active>=0){e.preventDefault();choose(suggestions[active])}
         else if(e.key==="Escape"){setSuggestions([]);setActive(-1)}
       }}
-      placeholder="Begin straat, nummer of gemeente te typen"
+      placeholder={t("Begin straat, nummer of gemeente te typen","Start typing a street, number or town","Commencez à saisir une rue, un numéro ou une commune","Straße, Hausnummer oder Ort eingeben")}
       className="mt-1 block w-full rounded-xl border bg-background p-3"
     />
     {focused&&<div id={listId} role="listbox" className="absolute z-40 mt-1 max-h-72 w-full overflow-y-auto rounded-xl border bg-background shadow-xl">
-      {loading&&<p className="p-3 text-sm text-muted-foreground">Adressen zoeken…</p>}
+      {loading&&<p className="p-3 text-sm text-muted-foreground">{t("Adressen zoeken…","Searching addresses…","Recherche d’adresses…","Adressen werden gesucht…")}</p>}
       {!loading&&suggestions.map((item,index)=><button
         key={item.id}
         type="button"
@@ -106,7 +116,7 @@ export function AddressAutocomplete({
         <span className="block font-semibold">{item.addressLine1||item.name}</span>
         <span className="block text-xs text-muted-foreground">{item.formatted}</span>
       </button>)}
-      {!loading&&value.trim().length>=2&&!suggestions.length&&!error&&<p className="p-3 text-sm text-muted-foreground">Geen adressen gevonden.</p>}
+      {!loading&&value.trim().length>=2&&!suggestions.length&&!error&&<p className="p-3 text-sm text-muted-foreground">{t("Geen adressen gevonden.","No addresses found.","Aucune adresse trouvée.","Keine Adressen gefunden.")}</p>}
       {error&&<p className="p-3 text-sm text-red-500">{error}</p>}
     </div>}
   </label>
