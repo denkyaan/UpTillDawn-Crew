@@ -34,8 +34,8 @@ export default async function PortalPage({ params }: { params: Promise<{ portal:
   const t = portalCopy[locale]
   const supabase = await createClient()
   const { data, error } = await supabase.rpc('upt_my_portal_assignments')
-  if (error && !current.isAdmin) return <main className="p-6"><h1 className="text-xl font-bold">{t.unavailable}</h1><p className="mt-3">{t.unavailableDesc}</p><Link href="/portals" className="mt-4 inline-block text-violet-400">{t.returnToPortals}</Link></main>
-  if (!current.isAdmin && !canOpenPortal(portal, (data ?? []) as PortalAssignment[], {
+  if (error && !current.isAdmin && !current.isOwner) return <main className="p-6"><h1 className="text-xl font-bold">{t.unavailable}</h1><p className="mt-3">{t.unavailableDesc}</p><Link href="/portals" className="mt-4 inline-block text-violet-400">{t.returnToPortals}</Link></main>
+  if (!current.isAdmin && !current.isOwner && !canOpenPortal(portal, (data ?? []) as PortalAssignment[], {
     approved: current.approved,
     blocked: current.account_blocked === true,
   })) return <main className="mx-auto max-w-3xl space-y-4 p-6" role="alert">
@@ -44,7 +44,7 @@ export default async function PortalPage({ params }: { params: Promise<{ portal:
     <Link href="/portals/roles" className="inline-flex rounded-lg border border-violet-500 px-4 py-2 text-violet-400">{({nl:"Mijn portaalrollen",fr:"Mes rôles de portail",en:"My portal roles",de:"Meine Portalrollen"} as const)[locale]}</Link>
   </main>
 
-  if (!current.approved || current.account_blocked === true) redirect('/portals')
+  if ((!current.approved || current.account_blocked === true) && !current.isOwner) redirect('/portals')
 
   const submittedTimesheets = portal === 'administration'
     ? await supabase.from('timesheets').select('id,event_id,user_id,status,submitted_at').eq('status','submitted').order('submitted_at',{ascending:false}).limit(100)

@@ -47,11 +47,11 @@ export default async function AdministrationModulePage({params}:{params:Promise<
  if(!adminModule)notFound()
  const current=await getCurrentUser()
  if(!current)redirect("/login")
- if(!current.approved||Boolean(current.account_blocked))redirect("/portals")
+ if((!current.approved||Boolean(current.account_blocked))&&!current.isOwner)redirect("/portals")
  const supabase=await createClient()
  const {data,error}=await supabase.rpc("upt_my_portal_assignments")
- if(error&&!current.isAdmin)redirect("/portals")
- if(!current.isAdmin&&!canOpenPortal("administration",(data??[]) as PortalAssignment[],{approved:current.approved,blocked:current.account_blocked===true}))redirect("/portals")
+ if(error&&!current.isAdmin && !current.isOwner)redirect("/portals")
+ if(!current.isAdmin && !current.isOwner&&!canOpenPortal("administration",(data??[]) as PortalAssignment[],{approved:current.approved,blocked:current.account_blocked===true}))redirect("/portals")
  const liveRecords = slug==="events"
   ? await supabase.from("events").select("id,name,status,start_at").order("start_at",{ascending:false}).limit(30)
   : slug==="staff"

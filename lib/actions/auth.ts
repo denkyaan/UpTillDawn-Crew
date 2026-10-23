@@ -396,10 +396,7 @@ export const getCurrentUser = cache(async function getCurrentUser() {
     const realRole = profile.role
     // Owner status must be resolved before ordinary block/approval gates so a
     // legacy or accidental personnel flag can never lock the maker out.
-    const needsOwnerCheck = Boolean(profile.account_blocked) || !profile.approved || realRole === 'admin'
-    const { data: ownerFlag } = needsOwnerCheck
-        ? await supabase.rpc('upt_current_is_owner')
-        : { data: false }
+    const { data: ownerFlag } = await supabase.rpc('upt_current_is_owner')
     const isOwner = ownerFlag === true
     if (profile.account_blocked && !isOwner) return null
     if (!profile.approved && !isOwner) return null
