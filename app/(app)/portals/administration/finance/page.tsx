@@ -8,10 +8,10 @@ import { canOpenPortal, type PortalAssignment } from '@/lib/portal-access'
 import { requestUiLocale } from '@/lib/server-locale'
 
 const copy = {
- nl: {title:'Financiële administratie',intro:'Registreer conceptdocumenten. Definitieve goedkeuring en Peppol-verzending zijn nog niet actief.',new:'Nieuw concept',kind:'Documenttype',number:'Documentnummer',net:'Bedrag excl. btw',tax:'Btw-bedrag',notes:'Notities',save:'Concept opslaan',empty:'Nog geen financiële documenten.',back:'Administratie',error:'Document kon niet worden opgeslagen.',currency:'Valuta',review:'Ter controle',approve:'Goedkeuren',void:'Ongeldig maken',actionError:'Statuswijziging mislukt.',due:'Vervaldatum',party:'Klant of leverancier',none:'Geen relatie',party:'Klant of leverancier',none:'Geen relatie',issue:'Factuurdatum',due:'Vervaldatum',status:'Status',total:'Totaal',overdue:'Vervallen'},
- fr: {title:'Administration financière',intro:'Enregistrez des brouillons. La validation définitive et l’envoi Peppol ne sont pas encore actifs.',new:'Nouveau brouillon',kind:'Type de document',number:'Numéro du document',net:'Montant hors TVA',tax:'Montant TVA',notes:'Notes',save:'Enregistrer le brouillon',empty:'Aucun document financier.',back:'Administration',error:'Impossible d’enregistrer le document.',currency:'Devise',review:'À vérifier',approve:'Approuver',void:'Annuler',actionError:'Échec du changement de statut.',due:'Échéance',party:'Client ou fournisseur',none:'Aucun contact',party:'Client ou fournisseur',none:'Aucun contact',issue:'Date de facture',due:'Échéance',status:'Statut',total:'Total',overdue:'En retard'},
- en: {title:'Financial administration',intro:'Record draft documents. Final approval and Peppol sending are not active yet.',new:'New draft',kind:'Document type',number:'Document number',net:'Net amount',tax:'VAT amount',notes:'Notes',save:'Save draft',empty:'No financial documents yet.',back:'Administration',error:'Document could not be saved.',currency:'Currency',review:'Submit for review',approve:'Approve',void:'Void',actionError:'Could not change status.',due:'Due date',party:'Customer or supplier',none:'No counterparty',party:'Customer or supplier',none:'No counterparty',issue:'Invoice date',due:'Due date',status:'Status',total:'Total',overdue:'Overdue'},
- de: {title:'Finanzverwaltung',intro:'Erfasse Entwürfe. Endgültige Freigabe und Peppol-Versand sind noch nicht aktiv.',new:'Neuer Entwurf',kind:'Dokumenttyp',number:'Dokumentnummer',net:'Nettobetrag',tax:'MwSt.-Betrag',notes:'Notizen',save:'Entwurf speichern',empty:'Noch keine Finanzdokumente.',back:'Verwaltung',error:'Dokument konnte nicht gespeichert werden.',currency:'Währung',review:'Zur Prüfung',approve:'Genehmigen',void:'Stornieren',actionError:'Statusänderung fehlgeschlagen.',due:'Fälligkeitsdatum',party:'Kunde oder Lieferant',none:'Kein Kontakt',party:'Kunde oder Lieferant',none:'Kein Kontakt',issue:'Rechnungsdatum',due:'Fälligkeitsdatum',status:'Status',total:'Gesamt',overdue:'Überfällig'},
+ nl: {title:'Financiële administratie',intro:'Registreer conceptdocumenten. Definitieve goedkeuring en Peppol-verzending zijn nog niet actief.',new:'Nieuw concept',kind:'Documenttype',number:'Documentnummer',net:'Bedrag excl. btw',tax:'Btw-bedrag',notes:'Notities',save:'Concept opslaan',empty:'Nog geen financiële documenten.',back:'Administratie',error:'Document kon niet worden opgeslagen.',currency:'Valuta',review:'Ter controle',approve:'Goedkeuren',void:'Ongeldig maken',actionError:'Statuswijziging mislukt.',due:'Vervaldatum',party:'Klant of leverancier',none:'Geen relatie',issue:'Factuurdatum',status:'Status',total:'Totaal',overdue:'Vervallen'},
+ fr: {title:'Administration financière',intro:'Enregistrez des brouillons. La validation définitive et l’envoi Peppol ne sont pas encore actifs.',new:'Nouveau brouillon',kind:'Type de document',number:'Numéro du document',net:'Montant hors TVA',tax:'Montant TVA',notes:'Notes',save:'Enregistrer le brouillon',empty:'Aucun document financier.',back:'Administration',error:'Impossible d’enregistrer le document.',currency:'Devise',review:'À vérifier',approve:'Approuver',void:'Annuler',actionError:'Échec du changement de statut.',due:'Échéance',party:'Client ou fournisseur',none:'Aucun contact',issue:'Date de facture',status:'Statut',total:'Total',overdue:'En retard'},
+ en: {title:'Financial administration',intro:'Record draft documents. Final approval and Peppol sending are not active yet.',new:'New draft',kind:'Document type',number:'Document number',net:'Net amount',tax:'VAT amount',notes:'Notes',save:'Save draft',empty:'No financial documents yet.',back:'Administration',error:'Document could not be saved.',currency:'Currency',review:'Submit for review',approve:'Approve',void:'Void',actionError:'Could not change status.',due:'Due date',party:'Customer or supplier',none:'No counterparty',issue:'Invoice date',status:'Status',total:'Total',overdue:'Overdue'},
+ de: {title:'Finanzverwaltung',intro:'Erfasse Entwürfe. Endgültige Freigabe und Peppol-Versand sind noch nicht aktiv.',new:'Neuer Entwurf',kind:'Dokumenttyp',number:'Dokumentnummer',net:'Nettobetrag',tax:'MwSt.-Betrag',notes:'Notizen',save:'Entwurf speichern',empty:'Noch keine Finanzdokumente.',back:'Verwaltung',error:'Dokument konnte nicht gespeichert werden.',currency:'Währung',review:'Zur Prüfung',approve:'Genehmigen',void:'Stornieren',actionError:'Statusänderung fehlgeschlagen.',due:'Fälligkeitsdatum',party:'Kunde oder Lieferant',none:'Kein Kontakt',issue:'Rechnungsdatum',status:'Status',total:'Gesamt',overdue:'Überfällig'},
 } as const
 
 async function requireAdministration() {
@@ -41,15 +41,12 @@ async function createDraft(formData:FormData) {
  const counterpartyId = String(formData.get('counterparty_id') ?? '')
  if (dueDate && (!/^\d{4}-\d{2}-\d{2}$/.test(dueDate) || Number.isNaN(Date.parse(dueDate)))) return
  if (counterpartyId && !/^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(counterpartyId)) return
- const counterpartyId = String(formData.get('counterparty_id') ?? '')
  const issueDate = String(formData.get('issue_date') ?? '')
- const dueDate = String(formData.get('due_date') ?? '')
- if (counterpartyId && !/^[0-9a-f-]{36}$/i.test(counterpartyId)) return
- if ([issueDate,dueDate].some(value => value && !/^\d{4}-\d{2}-\d{2}$/.test(value))) return
+ if (issueDate && (!/^\d{4}-\d{2}-\d{2}$/.test(issueDate) || Number.isNaN(Date.parse(issueDate)))) return
  const { error } = await supabase.from('admin_financial_documents').insert({
    counterparty_id:counterpartyId || null, issue_date:issueDate || null, due_date:dueDate || null,
    kind, document_number:documentNumber || null, net_amount:net, tax_amount:tax,
-   notes:notes || null, due_date:dueDate || null, counterparty_id:counterpartyId || null, status:'draft', currency:'EUR',
+   notes:notes || null, status:'draft', currency:'EUR',
  })
  if (error) redirect('/portals/administration/finance?error=1')
  revalidatePath('/portals/administration/finance')
@@ -91,9 +88,8 @@ export default async function FinancePage({searchParams}:{searchParams:Promise<{
  const t = copy[locale]
  const params = await searchParams
  const {data:counterparties} = await supabase.from('admin_counterparties').select('id,name').order('name').limit(200)
- const {data:counterparties} = await supabase.from('admin_counterparties').select('id,name').order('name').limit(200)
  const {data:documents,error} = await supabase.from('admin_financial_documents')
-   .select('id,kind,document_number,net_amount,tax_amount,gross_amount,currency,status,due_date,created_at,due_date,counterparty_id')
+   .select('id,kind,document_number,net_amount,tax_amount,gross_amount,currency,status,due_date,created_at,counterparty_id')
    .order('created_at',{ascending:false}).limit(100)
  return <main className="mx-auto max-w-5xl space-y-6 p-4 pb-28 md:p-8">
   <Link className="text-violet-400" href="/portals/administration">← {t.back}</Link>
@@ -108,8 +104,6 @@ export default async function FinancePage({searchParams}:{searchParams:Promise<{
     <label className="space-y-1 text-sm">{t.due}<input type="date" name="due_date" className="block w-full rounded-lg border bg-background p-3"/></label>
     <label className="space-y-1 text-sm">{t.net}<input name="net_amount" type="number" min="0" max="999999999" step="0.01" required className="block w-full rounded-lg border bg-background p-3"/></label>
     <label className="space-y-1 text-sm">{t.tax}<input name="tax_amount" type="number" min="0" max="999999999" step="0.01" required className="block w-full rounded-lg border bg-background p-3"/></label>
-    <label className="space-y-1 text-sm">{t.due}<input name="due_date" type="date" className="block w-full rounded-lg border bg-background p-3"/></label>
-    <label className="space-y-1 text-sm">{t.party}<select name="counterparty_id" className="block w-full rounded-lg border bg-background p-3"><option value="">{t.none}</option>{counterparties?.map(p=><option key={p.id} value={p.id}>{p.name}</option>)}</select></label>
     <label className="space-y-1 text-sm sm:col-span-2">{t.notes}<textarea name="notes" maxLength={2000} className="block w-full rounded-lg border bg-background p-3"/></label>
     <button type="submit" className="rounded-lg bg-violet-600 px-4 py-3 font-semibold text-white">{t.save}</button>
    </form>
