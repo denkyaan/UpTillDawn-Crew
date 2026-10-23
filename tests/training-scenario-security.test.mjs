@@ -3,9 +3,11 @@ import assert from "node:assert/strict"
 import {readFileSync} from "node:fs"
 
 const sql=readFileSync(new URL("../supabase/migrations/20261013110000_training_scenarios_staging.sql",import.meta.url),"utf8")
-test("training scenario migration explicitly refuses unverified projects",()=>{
- assert.match(sql,/current_setting\('app\.settings\.project_ref', true\) IS DISTINCT FROM 'npbjrtiolqperdgljnhi'/)
- assert.match(sql,/RAISE EXCEPTION/)
+test("training scenario schema migration remains portable and never seeds staging data",()=>{
+ assert.doesNotMatch(sql,/current_setting\\('app\\.settings\\.project_ref'/)
+ assert.doesNotMatch(sql,/RAISE EXCEPTION/)
+ assert.match(sql,/CREATE TABLE IF NOT EXISTS public\\.training_scenarios/)
+ assert.doesNotMatch(sql,/INSERT INTO public\\.training_scenarios/i)
 })
 test("training scenarios are isolated to their owner",()=>{
  assert.match(sql,/ENABLE ROW LEVEL SECURITY/)
