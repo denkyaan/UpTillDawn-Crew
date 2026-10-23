@@ -75,15 +75,15 @@ export default async function PortalPage({ params }: { params: Promise<{ portal:
       </div>
       <div className="grid gap-3 sm:grid-cols-2">
        {[
-        {href:'/portals/administration/finance',nl:'Financiën & documenten',fr:'Finances et documents',de:'Finanzen & Dokumente',en:'Finance & documents',descNl:'Facturen, uitgaven, bijlagen en betalingsstatussen',descEn:'Invoices, expenses, attachments and payment statuses'},
-        {href:'/portals/administration/modules/staff',nl:'Werkuren & goedkeuringen',fr:'Heures et validations',de:'Arbeitszeiten & Freigaben',en:'Hours & approvals',descNl:'Ingediende werkstaten opvolgen',descEn:'Review submitted timesheets'},
+        {href:'/portals/administration/finance',nl:'Financiën & documenten',fr:'Finances et documents',de:'Finanzen & Dokumente',en:'Finance & documents',descNl:'Facturen, uitgaven, bijlagen en betalingsstatussen',descFr:'Factures, dépenses, pièces jointes et statuts de paiement',descDe:'Rechnungen, Ausgaben, Anhänge und Zahlungsstatus',descEn:'Invoices, expenses, attachments and payment statuses'},
+        {href:'/portals/administration/modules/staff',nl:'Werkuren & goedkeuringen',fr:'Heures et validations',de:'Arbeitszeiten & Freigaben',en:'Hours & approvals',descNl:'Ingediende werkstaten opvolgen',descFr:'Suivre les feuilles de temps soumises',descDe:'Eingereichte Stundenzettel verfolgen',descEn:'Review submitted timesheets'},
         {href:'/portals/administration/rosters',nl:'Werkroosters & shifts',fr:'Plannings et shifts',de:'Dienstpläne & Schichten',en:'Schedules & shifts',descNl:'Roosters opstellen, indienen en ter goedkeuring voorleggen',descEn:'Create, submit and review roster proposals',descFr:'Créer, soumettre et valider des propositions de planning',descDe:'Dienstplanvorschläge erstellen, einreichen und prüfen'},
-        {href:'/portals/administration/modules/tasks',nl:'Administratieve taken',fr:'Tâches administratives',de:'Verwaltungsaufgaben',en:'Administrative tasks',descNl:'Taken, prioriteiten en opvolging',descEn:'Tasks, priorities and follow-up'},
-        {href:'/portals/administration/modules/inventory',nl:'Inventaris',fr:'Inventaire',de:'Inventar',en:'Inventory',descNl:'Voorraad en afwijkingen opvolgen',descEn:'Review inventory and discrepancies'},
-        {href:'/portals/administration/modules/events',nl:'Evenementen',fr:'Événements',de:'Veranstaltungen',en:'Events',descNl:'Evenementen en operationele context',descEn:'Events and operational context'},
+        {href:'/portals/administration/modules/tasks',nl:'Administratieve taken',fr:'Tâches administratives',de:'Verwaltungsaufgaben',en:'Administrative tasks',descNl:'Taken, prioriteiten en opvolging',descFr:'Tâches, priorités et suivi',descDe:'Aufgaben, Prioritäten und Nachverfolgung',descEn:'Tasks, priorities and follow-up'},
+        {href:'/portals/administration/modules/inventory',nl:'Inventaris',fr:'Inventaire',de:'Inventar',en:'Inventory',descNl:'Voorraad en afwijkingen opvolgen',descFr:'Suivre les stocks et les écarts',descDe:'Bestand und Abweichungen verfolgen',descEn:'Review inventory and discrepancies'},
+        {href:'/portals/administration/modules/events',nl:'Evenementen',fr:'Événements',de:'Veranstaltungen',en:'Events',descNl:'Evenementen en operationele context',descFr:'Événements et contexte opérationnel',descDe:'Veranstaltungen und operativer Kontext',descEn:'Events and operational context'},
        ].map(item=><Link key={item.href} href={item.href} className="block rounded-xl border bg-card p-4 transition-colors hover:border-violet-500">
          <span className="font-semibold text-violet-400">{item[locale]} →</span>
-         <p className="mt-2 text-xs text-muted-foreground">{locale==='nl'?item.descNl:locale==='fr'?('descFr' in item?item.descFr:item[locale]):locale==='de'?('descDe' in item?item.descDe:item[locale]):item.descEn}</p>
+         <p className="mt-2 text-xs text-muted-foreground">{locale==='nl'?item.descNl:locale==='fr'?('descFr' in item?item.descFr:item.descEn):locale==='de'?('descDe' in item?item.descDe:item.descEn):item.descEn}</p>
        </Link>)}
       </div>
     </section>}
