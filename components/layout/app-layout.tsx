@@ -60,7 +60,7 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
   const order=effectiveRules.map(rule=>rule.feature_key)
   const labels=Object.fromEntries(effectiveRules.map(rule=>[rule.feature_key,rule.label]))
 
-  const personalRoute=pathname.startsWith("/settings")||pathname.startsWith("/notifications")
+  const personalRoute=pathname.startsWith("/settings")||pathname.startsWith("/notifications")||pathname.startsWith("/portals")
   const currentFeature=
     personalRoute?null:
     pathname==="/"||pathname==="/admin"?"overview":
@@ -241,7 +241,7 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
     {/* Mobile shell lives at the AppLayout root so iOS fixed positioning is not
         clipped by the nested overflow scroll container. */}
     <div className="print:hidden">
-      <MobileBottomNav chatMissed={chatMissed} incidentMissed={incidentMissed} taskMissed={taskMissed} notificationFeatureCounts={notificationFeatureCounts} featureOrder={order} featureLabels={labels} featureVisibility={featureVisibility} assignedEvent={effectiveContext.assignedEvent} shiftActive={effectiveContext.shiftActive}/>
+      {!pathname.startsWith("/portals/")&&<MobileBottomNav chatMissed={chatMissed} incidentMissed={incidentMissed} taskMissed={taskMissed} notificationFeatureCounts={notificationFeatureCounts} featureOrder={order} featureLabels={labels} featureVisibility={featureVisibility} assignedEvent={effectiveContext.assignedEvent} shiftActive={effectiveContext.shiftActive}/>}
     </div>
     {showFloatingChat&&!pathname.startsWith("/chat")&&<FloatingChatButton count={chatMissed} stackedAboveAdminAi={Boolean(isAdmin)} href="/chat"/>}
 

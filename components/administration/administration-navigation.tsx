@@ -1,40 +1,28 @@
 "use client"
+
+import { useState } from "react"
 import Link from "next/link"
 import { usePathname } from "next/navigation"
-import type { SupportedUiLocale } from "@/lib/locale-preferences"
-import { administrationModules, administrationCopy } from "@/lib/administration/modules"
+import { ChevronDown, LayoutDashboard, FileText, CalendarDays, ListTodo } from "lucide-react"
+import { administrationModules } from "@/lib/administration/modules"
+import { activeUiLocale } from "@/lib/locale-preferences"
 
-const groups=[
- {id:"overview",titles:{nl:"Overzicht",fr:"Vue d'ensemble",en:"Overview",de:"Übersicht"},slugs:["dashboard"]},
- {id:"events",titles:{nl:"Evenementen & productie",fr:"Événements et production",en:"Events & production",de:"Events & Produktion"},slugs:["events","artists","contracts","logistics","permits"]},
- {id:"finance",titles:{nl:"Financiën & verkoop",fr:"Finances et ventes",en:"Finance & sales",de:"Finanzen & Vertrieb"},slugs:["finance","invoices","banking","ticketing"]},
- {id:"operations",titles:{nl:"Personeel & organisatie",fr:"Personnel et organisation",en:"People & operations",de:"Personal & Organisation"},slugs:["staff","inventory","tasks","contacts"]},
- {id:"growth",titles:{nl:"Promotie & partners",fr:"Promotion et partenaires",en:"Promotion & partners",de:"Werbung & Partner"},slugs:["marketing","sponsors"]},
- {id:"management",titles:{nl:"Documenten & beheer",fr:"Documents et gestion",en:"Documents & management",de:"Dokumente & Verwaltung"},slugs:["documents","reports","notifications","automations","ai","settings"]},
-] as const
-
-function hrefFor(slug:string){return slug==="dashboard"?"/portals/administration":slug==="finance"?"/portals/administration/finance":slug==="contacts"?"/portals/administration/contacts":"/portals/administration/modules/"+slug}
-
-export function AdministrationNavigation({locale}:{locale:SupportedUiLocale}){
+export function AdministrationNavigation() {
  const pathname=usePathname()
- const t=administrationCopy[locale]
- return <nav aria-label={t.navigation} className="space-y-1">
-  {groups.map(group=>{
-   const selected=group.slugs.some(slug=>pathname===hrefFor(slug))
-   return <details key={group.id} open={selected?true:undefined} className="group rounded-xl">
-    <summary className={`flex min-h-11 cursor-pointer list-none items-center justify-between gap-2 rounded-xl px-3 py-3 text-sm font-semibold marker:hidden [&::-webkit-details-marker]:hidden ${selected?"bg-violet-500/15 text-violet-300":"text-muted-foreground hover:bg-muted hover:text-foreground"}`}>
-     <span>{group.titles[locale]}</span><span aria-hidden="true" className="text-xs transition-transform group-open:rotate-90">▸</span>
-    </summary>
-    <div className="ml-3 space-y-1 border-l border-border py-1 pl-2">
-     {group.slugs.map(slug=>{
-      const item=administrationModules.find(entry=>entry.slug===slug)
-      if(!item)return null
-      const href=hrefFor(slug)
-      const active=pathname===href
-      return <Link key={slug} href={href} aria-current={active?"page":undefined} className={`flex min-h-10 items-center rounded-lg px-3 py-2 text-sm transition-colors ${active?"bg-violet-600 font-semibold text-white":"text-muted-foreground hover:bg-muted hover:text-foreground"}`}>{item.title[locale]}</Link>
-     })}
-    </div>
-   </details>
-  })}
+ const [expanded,setExpanded]=useState(false)
+ const locale=activeUiLocale()
+ const items=[
+  {slug:"dashboard",href:"/portals/administration",title:{nl:"Overzicht",fr:"Vue d'ensemble",en:"Overview",de:"Übersicht"}[locale],icon:LayoutDashboard},
+  {slug:"finance",href:"/portals/administration/finance",title:{nl:"Financiën",fr:"Finances",en:"Finance",de:"Finanzen"}[locale],icon:FileText},
+  {slug:"rosters",href:"/portals/administration/rosters",title:{nl:"Werkroosters",fr:"Plannings",en:"Rosters",de:"Dienstpläne"}[locale],icon:CalendarDays},
+  ...administrationModules.filter(m=>m.slug!=="dashboard"&&m.slug!=="finance").map(m=>({slug:m.slug,href:`/portals/administration/modules/${m.slug}`,title:m.title[locale],icon:ListTodo})),
+ ]
+ const active=items.findIndex(item=>pathname===item.href||(item.slug==="dashboard"&&pathname==="/portals/administration/overview"))
+ const first=Math.max(0,Math.min(items.length-3,active-1))
+ const shown=items.slice(first,first+3)
+ const itemLink=(item:typeof items[number])=>{const Icon=item.icon;return <Link key={item.slug} href={item.href} onClick={()=>setExpanded(false)} aria-current={pathname===item.href?"page":undefined} className={`flex min-w-0 flex-1 flex-col items-center justify-center gap-1 rounded-lg px-2 py-2 text-xs ${pathname===item.href?"bg-violet-500/15 text-violet-400":"text-muted-foreground"}`}><Icon className="h-5 w-5"/><span className="max-w-full truncate">{item.title}</span></Link>}
+ return <nav aria-label="Administratie navigatie" className="fixed inset-x-0 bottom-0 z-[65] border-t bg-card pb-[env(safe-area-inset-bottom)] lg:hidden">
+  {expanded&&<div className="absolute inset-x-0 bottom-full max-h-[65dvh] overflow-y-auto border-t bg-card p-3 shadow-2xl"><div className="grid grid-cols-3 gap-2">{items.map(item=>itemLink(item))}</div></div>}
+  <div className="flex items-stretch gap-1 p-2">{shown.map(item=>itemLink(item))}<button type="button" aria-label={expanded?"Sluit administratieve tabs":"Alle administratieve tabs"} aria-expanded={expanded} onClick={()=>setExpanded(!expanded)} className="flex w-14 shrink-0 items-center justify-center rounded-xl bg-violet-500/15 text-violet-400"><ChevronDown className={`h-6 w-6 transition-transform ${expanded?"rotate-180":""}`}/></button></div>
  </nav>
 }
