@@ -55,14 +55,12 @@ export default async function PromotionDisciplinePage(){
  const db=await createClient()
  const {data,error}=await db.rpc("upt_admin_promotion_discipline_list" as never)
  const rows=(data??[]) as {user_id:string;strikes:number;suspension_count:number;blocked_until:string|null;permanently_blocked:boolean}[]
- const {data:pendingEvidence,error:pendingError}=await db.from("promotion_evidence" as never).select("id,assignment_id,submitted_by,submitted_at,verification_status,verification_details").in("verification_status",["pending","inconclusive"]).order("submitted_at",{ascending:false}).limit(50)
- const pendingRows=(pendingEvidence??[]) as unknown as {id:string;assignment_id:string;submitted_by:string;submitted_at:string;verification_status:string;verification_details:Record<string,unknown>}[]
+ const {data:pendingEvidence,error:pendingError}=await db.from("promotion_evidence" as never).select("id,assignment_id,submitted_by,submitted_at,verification_status,verification_details,storage_path").in("verification_status",["pending","inconclusive"]).order("submitted_at",{ascending:false}).limit(50)
+ const pendingRows=(pendingEvidence??[]) as unknown as {id:string;assignment_id:string;submitted_by:string;submitted_at:string;verification_status:string;verification_details:Record<string,unknown>;storage_path:string}[]
  // Storage signed URLs are short-lived and never expose the private bucket publicly.
  const evidenceLinks=await Promise.all(pendingRows.map(async e=>{
-  const {data:record}=await db.from("promotion_evidence" as never).select("storage_path").eq("id",e.id).maybeSingle()
-  const path=(record as {storage_path?:string}|null)?.storage_path
-  if(!path)return {id:e.id,url:null}
-  const {data:signed}=await db.storage.from("work-media").createSignedUrl(path,300)
+  if(!e.storage_path)return {id:e.id,url:null}
+  const {data:signed}=await db.storage.from("work-media").createSignedUrl(e.storage_path,300)
   return {id:e.id,url:signed?.signedUrl??null}
  }))
  const evidenceUrlById=new Map(evidenceLinks.map(e=>[e.id,e.url]))
