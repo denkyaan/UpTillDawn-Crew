@@ -103,10 +103,10 @@ test('normal chat and incident navigation no longer uses tour URLs',async()=>{
     read('components/layout/floating-chat-button.tsx'),
   ])
   assert.doesNotMatch(layout,/tourPreview|chat\\?tour=1|incidents\\?tour=1/)
-  assert.match(layout,/href="\\/chat"/)
-  assert.match(layout,/href="\\/incidents"/)
+  assert.ok(layout.includes('href="/chat"'))
+  assert.ok(layout.includes('href="/incidents"'))
   assert.match(floating,/href = "\/chat"/)
-  assert.match(floating,/router\\.push\\(href\\)/)
+  assert.ok(floating.includes("router.push(href)"))
 })
 
 test('driver sandbox visibly separates driving time and mileage and explains arrival notification',async()=>{
