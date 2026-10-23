@@ -1,12 +1,13 @@
 -- Validate promotion evidence registration within the database, not in browser input.
 create or replace function public.upt_submit_promotion_evidence(p_assignment uuid,p_storage_path text,p_sha256 text)
 returns uuid language plpgsql security definer set search_path='' as $$
-declare v_actor uuid:=auth.uid();v_id uuid;
+declare v_actor uuid:=auth.uid();v_id uuid;v_status text;
 begin
  if v_actor is null then raise exception 'Login required' using errcode='42501';end if;
  if public.upt_promotion_is_blocked(v_actor) then raise exception 'Promotion blocked' using errcode='42501';end if;
- if not exists(select 1 from public.task_assignments where id=p_assignment and user_id=v_actor)
- then raise exception 'Assignment not found' using errcode='42501';end if;
+ select status::text into v_status from public.task_assignments where id=p_assignment and user_id=v_actor for update;
+ if not found then raise exception 'Assignment not found' using errcode='42501';end if;
+ if upper(coalesce(v_status,'')) in ('COMPLETED','COMPLETE','DONE','CANCELLED','CANCELED') then raise exception 'Assignment closed' using errcode='42501';end if;
  if p_storage_path not like v_actor::text||'/promotion/%' or p_storage_path like '%..%'
  or p_sha256 !~ '^[0-9a-f]{64}$'
  then raise exception 'Invalid evidence metadata' using errcode='22023';end if;
