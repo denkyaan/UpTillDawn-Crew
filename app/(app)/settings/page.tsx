@@ -3,19 +3,15 @@ import { createClient } from '@/lib/supabase/crew-server'
 import { ProfileForm } from '@/components/crew/profile-form'
 import { LanguageSwitcher } from '@/components/language-switcher'
 import { getCurrentUser } from '@/lib/actions/auth'
-import { RestartRoleTourButton } from '@/components/role-app-tour'
-import { SandboxRoleModule,type TrainingRole } from '@/components/training/sandbox-role-module'
 
 export const dynamic='force-dynamic'
 
 const AdminCard=({href,title,description}:{href:string;title:string;description:string})=><Link href={href} className="rounded-2xl border p-4 transition hover:border-violet-500/60 hover:bg-muted/30"><h2 className="font-black">{title}</h2><p className="mt-1 text-sm text-muted-foreground">{description}</p></Link>
 
-export default async function Page({searchParams}:{searchParams?:Promise<{tour?:string}>}){
-  const params=searchParams?await searchParams:{}
+export default async function Page(){
   const s=await createClient()
   const [{data:{user}},current]=await Promise.all([s.auth.getUser(),getCurrentUser()])
   if(!user)return null
-  if(params.tour==='1'&&current)return <SandboxRoleModule role={current.role as TrainingRole} module="settings"/>
 
   const [{data,error},{data:preference},{data:workplaceOptions}]=await Promise.all([
     s.rpc('upt_own_profile_details'),
@@ -65,13 +61,6 @@ export default async function Page({searchParams}:{searchParams?:Promise<{tour?:
       {error||!profile
         ? <p>Profiel kon niet worden geladen.</p>
         : <ProfileForm id={user.id} initial={profile} photoUrl={photoUrl} preferredWorkplaceId={preference||null} workplaceOptions={(workplaceOptions||[]).map(option=>({id:option.id,name:option.name}))} isAdminProfile={current?.realRole==='admin'}/>}
-    </section>
-
-    <section className="rounded-2xl border p-4">
-      <h2 className="mb-2 text-xl font-black">Rondleiding</h2>
-      <p className="mb-3 text-sm text-muted-foreground">Bekijk de interactieve uitleg voor de rol die je momenteel gebruikt.</p>
-      <RestartRoleTourButton/>
-      <Link href="/help" className="mt-3 inline-flex rounded-xl border px-4 py-3 font-bold">Rondleidingen & training</Link>
     </section>
 
     <section className="rounded-2xl border p-4">
