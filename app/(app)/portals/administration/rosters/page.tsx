@@ -1,0 +1,90 @@
+import type { SupabaseClient } from "@supabase/supabase-js"
+import { revalidatePath } from "next/cache"
+import { redirect } from "next/navigation"
+import { getCurrentUser } from "@/lib/actions/auth"
+import { createClient } from "@/lib/supabase/crew-server"
+import { canOpenPortal, type PortalAssignment } from "@/lib/portal-access"
+import { requestUiLocale } from "@/lib/server-locale"
+const route="/portals/administration/rosters"
+async function context(){
+ const user=await getCurrentUser()
+ if(!user)redirect("/login")
+ if(!user.approved||user.account_blocked)redirect("/portals")
+ const db=await createClient()
+ if(!user.isAdmin){
+  const {data,error}=await db.rpc("upt_my_portal_assignments")
+  if(error||!canOpenPortal("administration",(data??[]) as PortalAssignment[],{approved:user.approved,blocked:Boolean(user.account_blocked)}))redirect("/portals")
+ }
+ return {db,user}
+}
+async function createProposal(form:FormData){
+ "use server"
+ const {db}=await context()
+ const event=String(form.get("event")??"")
+ const title=String(form.get("title")??"").trim()
+ const start=String(form.get("start")??"")
+ const end=String(form.get("end")??"")
+ if(!/^[0-9a-f-]{36}$/i.test(event)||!title||!start||!end)return
+ const startAt=new Date(start),endAt=new Date(end)
+ if(!Number.isFinite(startAt.getTime())||!Number.isFinite(endAt.getTime())||endAt<=startAt)throw new Error("Invalid roster time range")
+ const {error}=await (db as unknown as SupabaseClient).rpc("upt_admin_roster_create",{p_event:event,p_title:title,p_details:String(form.get("details")??""),p_start:startAt.toISOString(),p_end:endAt.toISOString()})
+ if(error)throw new Error("Roster proposal could not be created")
+ revalidatePath(route)
+}
+async function shiftAction(form:FormData){
+ "use server"
+ const {db,user}=await context()
+ const id=String(form.get("id")??"")
+ const shift=String(form.get("shift")??"")
+ if(!/^[0-9a-f-]{36}$/i.test(id))return
+ const rpc=String(form.get("action"))==="target"?"upt_admin_roster_target":"upt_admin_roster_apply"
+ if(rpc==="upt_admin_roster_apply"&&!user.isAdmin)throw new Error("Admin required")
+ if(rpc==="upt_admin_roster_target"&&!/^[0-9a-f-]{36}$/i.test(shift))return
+ const args=rpc==="upt_admin_roster_target"?{p_id:id,p_shift:shift}:{p_id:id}
+ const {error}=await (db as unknown as SupabaseClient).rpc(rpc,args)
+ if(error)throw new Error("Roster shift action failed")
+ revalidatePath(route)
+}
+async function changeStatus(form:FormData){
+ "use server"
+ const {db,user}=await context()
+ const id=String(form.get("id")??"")
+ const action=String(form.get("action")??"")
+ if(!/^[0-9a-f-]{36}$/i.test(id))return
+ const result=action==="submit"?await (db as unknown as SupabaseClient).rpc("upt_admin_roster_submit",{p_id:id}):user.isAdmin&&["approve","reject"].includes(action)?await (db as unknown as SupabaseClient).rpc("upt_admin_roster_review",{p_id:id,p_approve:action==="approve",p_note:String(form.get("note")??"")}):null
+ if(result?.error)throw new Error("Roster transition failed")
+ revalidatePath(route)
+}
+export const dynamic="force-dynamic"
+export default async function RostersPage(){
+ const {db,user}=await context()
+ const locale=await requestUiLocale()
+ const l=({
+ nl:{heading:"Administratieve werkroosters",intro:"Maak een roosterontwerp, dien het in en laat een andere Admin beslissen. Goedgekeurde voorstellen worden pas na een afzonderlijke Admin-actie op de gekozen shift toegepast.",title:"Titel",event:"Evenement",start:"Begin",end:"Einde",details:"Toelichting",create:"Ontwerp maken",submit:"Voorleggen aan Admin",approve:"Goedkeuren",reject:"Afwijzen",note:"Reden bij afwijzing",empty:"Nog geen voorstellen",error:"Gegevens niet beschikbaar",draft:"Ontwerp",submitted:"Ingediend",approved:"Goedgekeurd",rejected:"Afgewezen",target:"Shift selecteren",apply:"Toepassen op shift",applied:"Toegepast"},
+ fr:{heading:"Plannings administratifs",intro:"Créez un projet, soumettez-le à un autre administrateur. Les propositions approuvées sont appliquées uniquement après une action distincte de l’Admin.",title:"Titre",event:"Événement",start:"Début",end:"Fin",details:"Détails",create:"Créer",submit:"Soumettre",approve:"Approuver",reject:"Refuser",note:"Motif du refus",empty:"Aucune proposition",error:"Données indisponibles",draft:"Brouillon",submitted:"Soumis",approved:"Approuvé",rejected:"Refusé",target:"Sélectionner le service",apply:"Appliquer au service",applied:"Appliqué"},
+ en:{heading:"Administrative rosters",intro:"Create a draft and submit it for another Admin to review. Approved proposals change the selected shift only after a separate Admin action.",title:"Title",event:"Event",start:"Start",end:"End",details:"Details",create:"Create draft",submit:"Submit to Admin",approve:"Approve",reject:"Reject",note:"Rejection reason",empty:"No proposals yet",error:"Records unavailable",draft:"Draft",submitted:"Submitted",approved:"Approved",rejected:"Rejected",target:"Select shift",apply:"Apply to shift",applied:"Applied"},
+ de:{heading:"Administrative Dienstpläne",intro:"Entwurf erstellen und einem anderen Admin zur Prüfung vorlegen. Genehmigte Vorschläge ändern die ausgewählte Schicht erst nach einer separaten Admin-Aktion.",title:"Titel",event:"Event",start:"Beginn",end:"Ende",details:"Details",create:"Entwurf erstellen",submit:"Einreichen",approve:"Genehmigen",reject:"Ablehnen",note:"Ablehnungsgrund",empty:"Noch keine Vorschläge",error:"Daten nicht verfügbar",draft:"Entwurf",submitted:"Eingereicht",approved:"Genehmigt",rejected:"Abgelehnt",target:"Schicht auswählen",apply:"Auf Schicht anwenden",applied:"Angewendet"}
+ } as const)[locale]
+ const [events,proposals,shifts]=await Promise.all([db.from("events").select("id,name").order("name").limit(100),(db as unknown as SupabaseClient).from("admin_roster_proposals").select("id,title,details,status,proposed_start,proposed_end,created_by,review_note,event_id,target_shift_id,applied_at").order("created_at",{ascending:false}).limit(100),db.from("shifts").select("id,event_id,scheduled_start,scheduled_end").order("scheduled_start",{ascending:false}).limit(200)])
+ return <main className="mx-auto w-full max-w-5xl space-y-5 p-4 sm:p-6">
+  <header><h1 className="text-2xl font-bold">{l.heading}</h1><p className="mt-2 text-sm text-muted-foreground">{l.intro}</p></header>
+  <form action={createProposal} className="grid gap-3 rounded-2xl border bg-card p-5 sm:grid-cols-2">
+   <label className="text-sm">{l.title}<input required maxLength={180} name="title" className="mt-1 w-full rounded-lg border bg-background p-3"/></label>
+   <label className="text-sm">{l.event}<select required name="event" className="mt-1 w-full rounded-lg border bg-background p-3">{(events.data??[]).map(e=><option key={e.id} value={e.id}>{e.name}</option>)}</select></label>
+   <label className="text-sm">{l.start}<input required type="datetime-local" name="start" className="mt-1 w-full rounded-lg border bg-background p-3"/></label>
+   <label className="text-sm">{l.end}<input required type="datetime-local" name="end" className="mt-1 w-full rounded-lg border bg-background p-3"/></label>
+   <label className="text-sm sm:col-span-2">{l.details}<textarea name="details" maxLength={2000} className="mt-1 w-full rounded-lg border bg-background p-3"/></label>
+   <button disabled={!events.data?.length} className="rounded-xl bg-violet-600 px-4 py-3 font-semibold text-white sm:col-span-2">{l.create}</button>
+  </form>
+  <section className="space-y-3">{proposals.error?<p>{l.error}</p>:!proposals.data?.length?<p>{l.empty}</p>:proposals.data.map(p=><article key={p.id} className="space-y-3 rounded-xl border bg-card p-4">
+   <div className="flex justify-between gap-3"><strong>{p.title}</strong><span className="text-xs text-violet-400">{l[p.status as keyof typeof l]??p.status}</span></div>
+   <p className="text-sm text-muted-foreground">{new Date(p.proposed_start).toLocaleString(locale)} – {new Date(p.proposed_end).toLocaleString(locale)}</p>
+   {p.details&&<p className="text-sm">{p.details}</p>}{p.review_note&&<p className="text-sm">{p.review_note}</p>}
+   {p.status==="draft"&&<form action={shiftAction} className="flex flex-wrap gap-2"><input type="hidden" name="id" value={p.id}/><select required name="shift" defaultValue={p.target_shift_id??""} className="min-w-48 flex-1 rounded-lg border bg-background p-2"><option value="" disabled>Shift</option>{(shifts.data??[]).filter(x=>x.event_id===p.event_id).map(x=><option key={x.id} value={x.id}>{new Date(x.scheduled_start).toLocaleString(locale)} – {new Date(x.scheduled_end).toLocaleString(locale)}</option>)}</select><button name="action" value="target" className="rounded-lg border px-3 py-2 text-sm">{l.target}</button></form>}
+   {p.applied_at&&<p className="text-sm text-muted-foreground">{l.applied}</p>}
+   {p.status==="approved"&&p.target_shift_id&&!p.applied_at&&user.isAdmin&&<form action={shiftAction}><input type="hidden" name="id" value={p.id}/><button name="action" value="apply" className="rounded-lg bg-violet-600 px-3 py-2 text-sm text-white">{l.apply}</button></form>}
+   {p.status==="draft"&&<form action={changeStatus}><input type="hidden" name="id" value={p.id}/><button name="action" value="submit" className="rounded-lg bg-violet-600 px-4 py-2 text-sm text-white">{l.submit}</button></form>}
+   {p.status==="submitted"&&user.isAdmin&&p.created_by!==user.id&&<form action={changeStatus} className="flex flex-wrap gap-2"><input type="hidden" name="id" value={p.id}/><input name="note" placeholder={l.note} className="min-w-48 flex-1 rounded-lg border bg-background p-2"/><button name="action" value="approve" className="rounded-lg bg-violet-600 px-3 py-2 text-sm text-white">{l.approve}</button><button name="action" value="reject" className="rounded-lg border px-3 py-2 text-sm">{l.reject}</button></form>}
+  </article>)}</section>
+ </main>
+}

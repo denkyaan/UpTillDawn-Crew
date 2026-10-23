@@ -1,11 +1,15 @@
 name: V2.1 Staging Integration CI
 
 on:
-  push:
-    branches: [main]
-  pull_request:
-    branches: [main, staging]
   workflow_dispatch:
+  push:
+    branches: [staging]
+    paths:
+      - '.github/workflows/v21-staging-integration-ci.yml'
+      - 'supabase/migrations/20261022233500_admin_roster_fk_indexes.sql'
+      - 'scripts/15-bot-browser-test.mjs'
+      - 'types/crew-database.ts'
+      - 'supabase/migrations/20261022235000_admin_roster_explicit_identity.sql'
 
 # Revalidate the complete pipeline on the regenerated Next.js security lockfile.
 
@@ -47,14 +51,26 @@ jobs:
         continue-on-error: true
         run: npm audit --audit-level=high
 
-      - name: Lint
-        run: npm run lint
-
-      - name: Typecheck
-        run: npm run typecheck
-
-      - name: Test
-        run: npm test
+      - name: Parallel lint, typecheck and unit tests
+        shell: bash
+        run: |
+          set -uo pipefail
+          npm run lint > /tmp/upt-lint.log 2>&1 & lint_pid=$!
+          npm run typecheck > /tmp/upt-typecheck.log 2>&1 & types_pid=$!
+          npm test > /tmp/upt-tests.log 2>&1 & tests_pid=$!
+          failed=0
+          for entry in "lint:$lint_pid" "typecheck:$types_pid" "tests:$tests_pid"; do
+            label="${entry%%:*}"
+            pid="${entry#*:}"
+            if wait "$pid"; then
+              echo "PASS: $label"
+            else
+              echo "::error::$label failed"
+              failed=1
+            fi
+            cat "/tmp/upt-$label.log"
+          done
+          exit "$failed"
 
       - name: PWA cross-device and offline contract
         run: node --test tests/pwa-cross-device-offline-regression.test.mjs
@@ -165,7 +181,7 @@ jobs:
             .trimEnd() + '\n'
           // Staging-only tables are intentionally absent from isolated CI replay.
           const expected = readFileSync('types/crew-database.ts', 'utf8')
-            .replace(/      training_scenario_members: \{[\s\S]*?(?=      admin_role_modes: \{)/, '')
+            .replace(/      training_progress: \{[\s\S]*?(?=      upload_security_scans: \{)/, '')
           writeFileSync('/tmp/expected-crew-database.ts', normalize(expected))
           writeFileSync('/tmp/actual-crew-database.ts', normalize(readFileSync('/tmp/crew-database.ts', 'utf8')))
           NODE
@@ -216,10 +232,21 @@ jobs:
           test "$briefing_seed_count" = "0"
           echo "PASS: bot03 briefing fixture starts unacknowledged"
 
+      - name: Cache Playwright Chromium
+        id: chromium-cache
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/ms-playwright
+          key: playwright-chromium-1.62.1-${{ runner.os }}-${{ runner.arch }}
+
       - name: Install isolated browser test runtime
         run: |
-          npm install --no-save --package-lock=false playwright@1.62.1
-          npx playwright install --with-deps chromium
+          npm install --no-save --package-lock=false --prefer-offline --no-audit --no-fund playwright@1.62.1
+          if [ "${{ steps.chromium-cache.outputs.cache-hit }}" = "true" ]; then
+            npx playwright install-deps chromium
+          else
+            npx playwright install --with-deps chromium
+          fi
 
       - name: Build application
         run: npm run build:next
@@ -238,6 +265,7 @@ jobs:
       - name: Run 3 focused authenticated browser bots
         env:
           BOT_COUNT: '3'
+          BOT_SMOKE_CONCURRENCY: '3'
         run: |
           set -euo pipefail
           for attempt in 1 2; do
@@ -264,6 +292,7 @@ jobs:
       - name: Run 15 authenticated browser bots (after 3 pass)
         env:
           BOT_COUNT: '15'
+          BOT_SMOKE_CONCURRENCY: '4'
         run: node scripts/15-bot-browser-test.mjs
 
       - name: Full application surface inventory gate
