@@ -1,9 +1,4 @@
--- Staging-only migration: apply exclusively to project npbjrtiolqperdgljnhi.
-DO $$ BEGIN
- IF current_setting('app.settings.project_ref',true) IS DISTINCT FROM 'npbjrtiolqperdgljnhi' THEN
-  RAISE EXCEPTION 'Staging project verification required';
- END IF;
-END $$;
+-- Portable training schema; no staging-specific fixture data.
 CREATE TABLE IF NOT EXISTS public.training_progress (
  participant_id uuid NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
  scenario_id uuid NOT NULL REFERENCES public.training_scenarios(id) ON DELETE CASCADE,
