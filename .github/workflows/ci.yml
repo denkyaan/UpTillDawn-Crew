@@ -165,7 +165,7 @@ jobs:
           // active schema types strictly, while ignoring only those four obsolete
           // table definitions until the non-destructive retirement migration lands.
           const omitLegacyTrainingTables = (source) => source.replace(
-            /^      training_(?:progress|questions|scenario_members|scenarios): \\{[\\s\\S]*?^      \\}\\n/gm,
+            /^      training_(?:progress|questions|scenario_members|scenarios): \{[\s\S]*?^      \}\n/gm,
             '',
           )
           const normalize = (source) => omitLegacyTrainingTables(source)
