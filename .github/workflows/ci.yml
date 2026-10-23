@@ -2,9 +2,9 @@ name: CI
 
 on:
   push:
-    branches: [main]
+    branches: [main, staging, 'feat/admin-portal-dashboard-v22']
   pull_request:
-    branches: [main]
+    branches: [main, staging]
   workflow_dispatch:
 
 # Revalidate the complete pipeline on the regenerated Next.js security lockfile.
