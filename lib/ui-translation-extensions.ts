@@ -3,6 +3,10 @@ export type ExtendedUiLocale = 'nl' | 'fr' | 'en' | 'de'
 type Row = { fr: string; en: string; de: string }
 
 const EXTENSIONS: Record<string, Row> = {
+  'Promotietaken': { fr: 'Tâches promotionnelles', en: 'Promotion tasks', de: 'Promotionaufgaben' },
+  'Tâches promotionnelles': { fr: 'Tâches promotionnelles', en: 'Promotion tasks', de: 'Promotionaufgaben' },
+  'Promotion tasks': { fr: 'Tâches promotionnelles', en: 'Promotion tasks', de: 'Promotionaufgaben' },
+  'Promotionaufgaben': { fr: 'Tâches promotionnelles', en: 'Promotion tasks', de: 'Promotionaufgaben' },
   'Klanten en leveranciers': { fr: 'Clients et fournisseurs', en: 'Customers and suppliers', de: 'Kunden und Lieferanten' },
   'Clients et fournisseurs': { fr: 'Clients et fournisseurs', en: 'Customers and suppliers', de: 'Kunden und Lieferanten' },
   'Customers and suppliers': { fr: 'Clients et fournisseurs', en: 'Customers and suppliers', de: 'Kunden und Lieferanten' },
