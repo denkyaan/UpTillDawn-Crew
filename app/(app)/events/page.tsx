@@ -1,6 +1,4 @@
 import Link from 'next/link'
-import { SandboxEvents } from '@/components/training/sandbox-events'
-import { SandboxAdminEvent } from '@/components/training/sandbox-admin-event'
 import { DateInput } from '@/components/crew/date-input'
 import { AdminOnly } from '@/components/auth/admin-only'
 import { GeoapifyPlaceFields } from '@/components/events/geoapify-place-fields'
@@ -26,12 +24,11 @@ import {
 export const dynamic = 'force-dynamic'
 const input='rounded-lg border bg-background p-3'
 
-export default async function Page({searchParams}:{searchParams?:Promise<{event?:string;tour?:string}>}){
+export default async function Page({searchParams}:{searchParams?:Promise<{event?:string}>}){
   const params=searchParams?await searchParams:{}
   const s=await createClient()
   const user=await getCurrentUser()
   if(!user)return null
-  if(params.tour==='1')return user.isAdmin?<SandboxAdminEvent/>:<SandboxEvents/>
 
   const [eventsResult,membershipResult,shiftResult,startedResult,availabilityResult,responsibleResult,emergencyResult]=await Promise.all([
     s.from('events').select('id,name,venue,address,start_at,end_at,registration_deadline,max_joiners,status,latitude,longitude,checkin_radius_m,archived_at,archived_by,archive_reason,restored_at,restored_by,pre_archive_status').order('start_at'),

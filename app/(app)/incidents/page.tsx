@@ -1,4 +1,3 @@
-import { SandboxIncidents } from '@/components/training/sandbox-feature-pages'
 import { createClient } from '@/lib/supabase/crew-server'
 import { IncidentForm } from '@/components/crew/incident-form'
 import { IncidentControls } from '@/components/crew/incident-controls'
@@ -13,12 +12,11 @@ function isVideo(path:string|null){
   return Boolean(path&&/\.(mp4|webm|mov)(?:$|\?)/i.test(path))
 }
 
-export default async function Page({searchParams}:{searchParams?:Promise<{event?:string;workplace?:string;user?:string;focus?:string;tour?:string}>}){
+export default async function Page({searchParams}:{searchParams?:Promise<{event?:string;workplace?:string;user?:string;focus?:string}>}){
   const params=searchParams?await searchParams:{}
   const s=await createClient()
   const current=await getCurrentUser()
   if(!current)return null
-  if(params.tour==='1')return <SandboxIncidents/>
   const user={id:current.id}
   const now=new Date().toISOString()
 

@@ -1,5 +1,3 @@
-import { SandboxAdminBuilder } from '@/components/training/sandbox-admin-builder'
-import { SandboxSharedRecords } from '@/components/training/sandbox-shared-records'
 import { redirect } from 'next/navigation'
 import { getCurrentUser } from '@/lib/actions/auth'
 import { createClient } from '@/lib/supabase/crew-server'
@@ -22,11 +20,10 @@ type Workplace={
   events:{id:string;name:string;status:string;end_at:string}|null
 }
 
-export default async function InventoryPage({searchParams}:{searchParams?:Promise<{event?:string;workplace?:string;tour?:string}>}){
+export default async function InventoryPage({searchParams}:{searchParams?:Promise<{event?:string;workplace?:string}>}){
   const params=searchParams?await searchParams:{}
   const current=await getCurrentUser()
   if(!current)redirect('/login')
-  if(params.tour==='1')return current.role==='admin'?<SandboxAdminBuilder kind="inventory"/>:<SandboxSharedRecords kind="inventory"/>
   const isAdmin=current.role==='admin'
   const isResponsible=current.role==='responsible_lead'
   const isStaff=current.role==='staff'
