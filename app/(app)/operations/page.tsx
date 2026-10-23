@@ -5,17 +5,15 @@ import { redirect } from 'next/navigation'
 import OperationsClient from './operations-client'
 import type { Tables, Database } from '@/types/crew-database'
 import { ShiftHandoverPanel, type HandoverCandidate, type HandoverScope, type HandoverView } from '@/components/responsible/shift-handover-panel'
-import { SandboxOperations } from '@/components/training/sandbox-operations'
 
 export const dynamic='force-dynamic'
 
-export default async function Page({searchParams}:{searchParams?:Promise<{event?:string;workplace?:string;user?:string;focus?:string;tour?:string}>}){
+export default async function Page({searchParams}:{searchParams?:Promise<{event?:string;workplace?:string;user?:string;focus?:string}>}){
   const params=searchParams?await searchParams:{}
   const s=await createClient()
   const current=await getCurrentUser()
   if(!current)redirect('/login')
 
-  if(params.tour==='1')return <SandboxOperations userName={current.full_name||'Crew'} role={current.role}/>
 
   const role=current.role
   const isAdmin=role==='admin'

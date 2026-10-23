@@ -1,5 +1,3 @@
-import { SandboxSharedRecords } from '@/components/training/sandbox-shared-records'
-import { SandboxAdminBuilder } from '@/components/training/sandbox-admin-builder'
 import { createTask, removeTaskAssignment } from '@/lib/actions/uptilldawn'
 import { createClient } from '@/lib/supabase/crew-server'
 import { TaskControls } from '@/components/crew/task-controls'
@@ -21,12 +19,11 @@ export const dynamic = 'force-dynamic'
 type CrewOption = { id: string; full_name: string | null }
 type WorkplaceOption = { id: string; name: string; event_id: string; events: { name: string } | null }
 
-export default async function Page({searchParams}:{searchParams?:Promise<{event?:string;workplace?:string;user?:string;tour?:string}>}) {
+export default async function Page({searchParams}:{searchParams?:Promise<{event?:string;workplace?:string;user?:string}>}) {
   const params=searchParams?await searchParams:{}
   const s = await createClient()
   const current = await getCurrentUser()
   if (!current) return null
-  if(params.tour==='1')return current.role==='admin'?<SandboxAdminBuilder kind="tasks"/>:<SandboxSharedRecords kind="tasks"/>
   const user = { id: current.id }
 
   const [

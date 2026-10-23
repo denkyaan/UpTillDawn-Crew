@@ -11,19 +11,7 @@ test('runtime translation waits until after app children hydration',async()=>{
  assert.match(sync,/setTimeout\(\(\)=>\s*\{[\s\S]*requestAnimationFrame\(\(\)=>\s*\{[\s\S]*requestAnimationFrame\([\s\S]*\},1200\)/)
 })
 
-test('event tour follows the current interactive action',async()=>{
- const source=await readFile(new URL('../components/training/sandbox-events.tsx',import.meta.url),'utf8')
- assert.match(source,/data-tour-demo=\{!open\?"primary-action":undefined\}/)
- assert.match(source,/data-tour-demo=\{open&&!saved\?"primary-action":undefined\}/)
- const tour=await readFile(new URL('../components/training/tour-control-center.tsx',import.meta.url),'utf8')
- assert.match(tour,/nestedPrimary=container\?\.querySelector\('\[data-tour-demo="primary-action"\]:not\(:disabled\)'\)/)
- assert.match(tour,/fallbackAction=container\?\.querySelector\('button:not\(:disabled\), summary, input:not\(:disabled\)'\)/)
- assert.match(tour,/const found=exactPrimary\|\|nestedPrimary\|\|fallbackAction\|\|container/)
-})
-
-
-test('tour panel text never blocks the highlighted page action',async()=>{
- const source=await readFile(new URL('../components/training/tour-control-center.tsx',import.meta.url),'utf8')
- assert.match(source,/data-tour-panel[\s\S]*pointer-events-none/)
- assert.match(source,/pointer-events-auto[\s\S]*PAUZEER/)
+test('operational hydration is independent of retired tour overlays',async()=>{
+ const layout=await readFile(new URL('../components/layout/app-layout.tsx',import.meta.url),'utf8')
+ assert.doesNotMatch(layout,/RoleAppTour|TourControlCenter|SandboxRoleModule/)
 })

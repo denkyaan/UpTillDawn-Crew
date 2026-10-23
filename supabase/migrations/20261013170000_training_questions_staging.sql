@@ -1,10 +1,4 @@
--- Training questions: staging only; never execute against production.
-DO $$ BEGIN
- IF current_setting('app.settings.project_ref',true) IS DISTINCT FROM 'npbjrtiolqperdgljnhi' THEN
-  RAISE EXCEPTION 'Staging project verification required';
- END IF;
-END $$;
-
+-- Portable training schema; no staging-specific fixture data.
 CREATE TABLE IF NOT EXISTS public.training_questions (
  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
  scenario_id uuid NOT NULL REFERENCES public.training_scenarios(id) ON DELETE CASCADE,

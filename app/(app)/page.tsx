@@ -8,7 +8,6 @@ import { AssignedEventOnly } from '@/components/auth/assigned-event-only'
 import { getCurrentUser } from '@/lib/actions/auth'
 import { ResponsibleLivePersonnel, type ResponsibleLivePerson } from '@/components/responsible/responsible-live-personnel'
 import { StaffWorkplacePersonnel, type StaffWorkplacePerson } from '@/components/crew/staff-workplace-personnel'
-import { TourActiveEventDemo } from '@/components/tour-active-event-demo'
 
 export const dynamic = 'force-dynamic'
 
@@ -20,7 +19,7 @@ function Card({ href, icon: Icon, title, value }: { href: string; icon: typeof C
   </Link>
 }
 
-async function DashboardOverview({current,tour=false}:{current:NonNullable<Awaited<ReturnType<typeof getCurrentUser>>>;tour?:boolean}) {
+async function DashboardOverview({current}:{current:NonNullable<Awaited<ReturnType<typeof getCurrentUser>>>}) {
   const user={id:current.id}
   // Keep identity visible independently from the data-heavy overview below.
   // The authenticated shell can render the user's name without a duplicate profile lookup.
@@ -129,7 +128,7 @@ async function DashboardOverview({current,tour=false}:{current:NonNullable<Await
 
   return <>{hasLoadError && <p className="rounded-xl border border-amber-500/40 p-4">Een deel van de realtime gegevens is tijdelijk niet beschikbaar. De beschikbare onderdelen blijven bruikbaar.</p>}
     <section className="grid gap-4 md:grid-cols-3">
-      <Card href={tour?"/events?tour=1":"/events"} icon={CalendarDays} title="Evenementen" value={tour?1:events.length}/>
+      <Card href="/events" icon={CalendarDays} title="Evenementen" value={events.length}/>
       <AssignedEventOnly available={hasEventAssignment}><Card href="/workplaces" icon={Clock3} title="Werkplaatsen & shifts" value={shifts.length}/></AssignedEventOnly>
       {hasActiveIncidentContext && <ManagerOnly><Card href="/incidents" icon={AlertTriangle} title="Open incidenten" value={activeIncidentCount}/></ManagerOnly>}
     </section>
@@ -174,18 +173,16 @@ async function DashboardOverview({current,tour=false}:{current:NonNullable<Await
     <section>
       <h2 className="mb-3 text-lg font-bold">Komende evenementen</h2>
       <div className="grid gap-3">
-        {tour ? <Link href="/events?tour=1" className="flex items-center justify-between rounded-2xl border border-violet-500 bg-card p-4 ring-4 ring-violet-500/70 ring-offset-2 ring-offset-background"><div><div className="font-bold">{["UpTillDawn Trainingsavond","UpTillDawn Training Night","Soirée d’entraînement UpTillDawn","UpTillDawn Trainingsabend"][0]}</div><div className="flex gap-2 text-sm text-muted-foreground"><MapPin className="h-4 w-4"/>{["Trainingslocatie","Training Venue","Lieu d’entraînement","Trainingsort"][0]}</div></div><ArrowRight className="h-5 w-5"/></Link> : events.length ? events.slice(0, 3).map(event => <Link href="/events" key={event.id} className="flex items-center justify-between rounded-2xl border border-border bg-card p-4"><div><div className="font-bold">{event.name}</div><div className="flex gap-2 text-sm text-muted-foreground"><MapPin className="h-4 w-4"/>{event.venue || 'Locatie nog niet ingesteld'}</div></div><ArrowRight className="h-5 w-5"/></Link>) : <div className="rounded-2xl border border-dashed p-8 text-center text-muted-foreground">Geen evenementen beschikbaar.</div>}
+        {events.length ? events.slice(0, 3).map(event => <Link href="/events" key={event.id} className="flex items-center justify-between rounded-2xl border border-border bg-card p-4"><div><div className="font-bold">{event.name}</div><div className="flex gap-2 text-sm text-muted-foreground"><MapPin className="h-4 w-4"/>{event.venue || 'Locatie nog niet ingesteld'}</div></div><ArrowRight className="h-5 w-5"/></Link>) : <div className="rounded-2xl border border-dashed p-8 text-center text-muted-foreground">Geen evenementen beschikbaar.</div>}
       </div>
     </section>
 </>
 }
 
-export default async function Dashboard({searchParams}:{searchParams?:Promise<{tour?:string}>}) {
+export default async function Dashboard() {
   const current=await getCurrentUser()
   if(!current)return null
-  const params=searchParams?await searchParams:{}
   if(current.isAdmin)redirect('/admin')
-  if(params.tour==='1')return <TourActiveEventDemo role={current.role==='responsible_lead'?'responsible_lead':'employee'}/>
   return <main className="mx-auto max-w-7xl space-y-7 p-4 pb-28 md:p-8">
     <div>
       <p className="text-xs font-bold tracking-[.2em] text-violet-400">UP TILL DAWN PERSONEELSBEHEER</p>
@@ -193,7 +190,7 @@ export default async function Dashboard({searchParams}:{searchParams?:Promise<{t
       <p className="text-muted-foreground">Je operationele personeelsoverzicht.</p>
     </div>
     <Suspense fallback={<section className="rounded-2xl border border-dashed p-6 text-sm text-muted-foreground">Operationeel overzicht laden…</section>}>
-      <DashboardOverview current={current} tour={params.tour==='1'}/>
+      <DashboardOverview current={current}/>
     </Suspense>
   </main>
 }

@@ -3,6 +3,14 @@ export type ExtendedUiLocale = 'nl' | 'fr' | 'en' | 'de'
 type Row = { fr: string; en: string; de: string }
 
 const EXTENSIONS: Record<string, Row> = {
+  'Klanten en leveranciers': { fr: 'Clients et fournisseurs', en: 'Customers and suppliers', de: 'Kunden und Lieferanten' },
+  'Clients et fournisseurs': { fr: 'Clients et fournisseurs', en: 'Customers and suppliers', de: 'Kunden und Lieferanten' },
+  'Customers and suppliers': { fr: 'Clients et fournisseurs', en: 'Customers and suppliers', de: 'Kunden und Lieferanten' },
+  'Kunden und Lieferanten': { fr: 'Clients et fournisseurs', en: 'Customers and suppliers', de: 'Kunden und Lieferanten' },
+  'Tableau de bord administratif': { fr: 'Tableau de bord administratif', en: 'Administration dashboard', de: 'Verwaltungsübersicht' },
+  'Administration dashboard': { fr: 'Tableau de bord administratif', en: 'Administration dashboard', de: 'Verwaltungsübersicht' },
+  'Verwaltungsübersicht': { fr: 'Tableau de bord administratif', en: 'Administration dashboard', de: 'Verwaltungsübersicht' },
+  'Administratief dashboard': { fr: 'Tableau de bord administratif', en: 'Administration dashboard', de: 'Verwaltungsübersicht' },
   'Operationeel overzicht laden…': { fr: 'Chargement de l’aperçu opérationnel…', en: 'Loading operational overview…', de: 'Betriebsübersicht wird geladen…' },
   'Importeer briefing': { fr: 'Importer le briefing', en: 'Import briefing', de: 'Briefing importieren' },
   'Importeer een bestaand briefingbestand. De titel en algemene instructies worden automatisch uitgelezen en ingevuld.': { fr: 'Importez un fichier de briefing existant. Le titre et les instructions générales sont lus et remplis automatiquement.', en: 'Import an existing briefing file. The title and general instructions are read and filled in automatically.', de: 'Importieren Sie eine vorhandene Briefing-Datei. Titel und allgemeine Anweisungen werden automatisch ausgelesen und ausgefüllt.' },

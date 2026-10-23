@@ -2,6 +2,14 @@ export type ExtraCatalogLocale = 'nl' | 'fr' | 'en' | 'de'
 type Row = { fr:string; en:string; de:string }
 
 export const APP_EXTRA_TRANSLATIONS: Record<string,Row> = {
+  "Help & ondersteuning": {fr:"Aide et assistance",en:"Help & support",de:"Hilfe & Unterstützung"},
+  "Hulp bij het gebruik van het operationele platform.": {fr:"Aide à l’utilisation de la plateforme opérationnelle.",en:"Help using the operational platform.",de:"Hilfe bei der Nutzung der operativen Plattform."},
+  "Beschikbaarheid en evenementinformatie.": {fr:"Disponibilités et informations sur les événements.",en:"Availability and event information.",de:"Verfügbarkeit und Veranstaltungsinformationen."},
+  "Briefings": {fr:"Briefings",en:"Briefings",de:"Briefings"},
+  "Instructies lezen en bevestigen.": {fr:"Lire et confirmer les instructions.",en:"Read and acknowledge instructions.",de:"Anweisungen lesen und bestätigen."},
+  "Aanwezigheid, pauzes en urenregistratie.": {fr:"Présences, pauses et suivi des heures.",en:"Attendance, breaks and time tracking.",de:"Anwesenheit, Pausen und Zeiterfassung."},
+  "Account- en appinstellingen.": {fr:"Paramètres du compte et de l’application.",en:"Account and app settings.",de:"Konto- und App-Einstellungen."},
+  "Voor vragen over een evenement kun je contact opnemen met je verantwoordelijke of een beheerder via de chat.": {fr:"Pour toute question sur un événement, contactez votre responsable ou un administrateur via le chat.",en:"For event questions, contact your supervisor or an administrator through chat.",de:"Bei Fragen zu einer Veranstaltung kontaktiere deine verantwortliche Person oder einen Administrator über den Chat."},
   "Apply to shift": {fr:"Appliquer au service",en:"Apply to shift",de:"Auf Schicht anwenden"},
   "Titre": {fr:"Titre",en:"Title",de:"Titel"},
   "Title": {fr:"Titre",en:"Title",de:"Titel"},

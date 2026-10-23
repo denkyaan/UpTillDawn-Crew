@@ -6,7 +6,6 @@ import { DateInput } from '@/components/crew/date-input'
 import { PlatformAiAssistant } from '@/components/admin/platform-ai-assistant'
 import { platformModuleHelp } from '@/lib/ui-field-help'
 import { AutomationManager } from '@/components/admin/automation-manager'
-import { SandboxRoleModule } from '@/components/training/sandbox-role-module'
 import {
   applyEventTemplate, applyPlanningRecommendation, captureEventTemplate, createKnowledgeArticle,
   createQrResource, dismissPlanningRecommendation, generateEventReport, generatePlanningRecommendations,
@@ -27,11 +26,9 @@ type CommandCenter={
 
 const input='rounded-xl border bg-background p-3'
 
-export default async function PlatformCenter({searchParams}:{searchParams?:Promise<{tour?:string}>}){
-  const params=searchParams?await searchParams:{}
+export default async function PlatformCenter(){
   const current=await getCurrentUser()
   if(!current?.isAdmin)redirect('/')
-  if(params.tour==='1')return <SandboxRoleModule role="admin" module="platform"/>
   const s=await createClient()
   const now=new Date().toISOString()
 

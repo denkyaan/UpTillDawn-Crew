@@ -3,7 +3,6 @@
 import Image from "next/image"
 import Link from "next/link"
 import { usePathname } from "next/navigation"
-import { useEffect, useState } from "react"
 import { useAuth } from "@/lib/providers"
 import { cn } from "@/lib/utils"
 import { Shield } from "lucide-react"
@@ -23,16 +22,13 @@ export function AppSidebar({
 }) {
  const pathname=usePathname()
  const {roles,isAdmin}=useAuth()
- const [tourPreview,setTourPreview]=useState(false)
  const adminContext=useAdminSelection()
  const roleKey:RoleRuleRole=roles.includes("admin")?"admin":roles.includes("responsible_lead")?"responsible_lead":"staff"
  const order=new Map(featureOrder.map((key,index)=>[key,index]))
- useEffect(()=>{const on=(e:Event)=>setTourPreview(Boolean((e as CustomEvent<{active?:boolean}>).detail?.active));addEventListener("uptilldawn-tour-preview",on);return()=>removeEventListener("uptilldawn-tour-preview",on)},[])
  const visible=NAV_ITEMS.filter(i=>{
    if(!roles.some(r=>i.roles.includes(r))) return false
    if(i.key==="shifts") return false
-   if(!tourPreview&&Object.prototype.hasOwnProperty.call(featureVisibility,i.key)&&!featureVisibility[i.key]) return false
-   if(tourPreview) return true
+   if(Object.prototype.hasOwnProperty.call(featureVisibility,i.key)&&!featureVisibility[i.key]) return false
    if(i.key==="operations") return showOperations
    if(i.key==="events") return showEvents
    if(i.key==="tasks") return showTasks
@@ -51,7 +47,7 @@ export function AppSidebar({
   <nav className="min-h-0 flex-1 space-y-1 overflow-y-auto overscroll-contain p-3 pb-6">{visible.map(i=>{
    const baseHref=i.href==='/'&&isAdmin?'/admin':i.href
    const rawHref=isAdmin?adminContext.href(baseHref):baseHref
-   const href=tourPreview?rawHref+(rawHref.includes("?")?"&":"?")+"tour=1":rawHref
+   const href=rawHref
    const active=rawHref==='/'?pathname==='/':pathname.startsWith(rawHref.split("?")[0])
    const Icon=i.icon
    const activityCount=i.key==="chat"?chatMissed:i.key==="incidents"?incidentMissed:i.key==="tasks"?taskMissed:0

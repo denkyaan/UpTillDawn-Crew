@@ -1,5 +1,3 @@
-import { SandboxSharedRecords } from '@/components/training/sandbox-shared-records'
-import { SandboxAdminBuilder } from '@/components/training/sandbox-admin-builder'
 import { createClient } from '@/lib/supabase/crew-server'
 import { addWorkplace,assignResponsible,demoteResponsibleToStaff,updateWorkplace } from '@/lib/actions/uptilldawn'
 import { AdminOnly } from '@/components/auth/admin-only'
@@ -17,12 +15,11 @@ export const dynamic='force-dynamic'
 
 type Person={id:string;full_name:string|null;role?:string|null}
 
-export default async function Page({searchParams}:{searchParams?:Promise<{event?:string;workplace?:string;tour?:string}>}){
+export default async function Page({searchParams}:{searchParams?:Promise<{event?:string;workplace?:string}>}){
   const params=searchParams?await searchParams:{}
   const s=await createClient()
   const current=await getCurrentUser()
   if(!current)return null
-  if(params.tour==='1')return ( current.role==='admin' )?<><SandboxAdminBuilder kind="workplaces"/><SandboxAdminBuilder kind="drivers"/></>:<><SandboxSharedRecords kind="workplaces"/><SandboxSharedRecords kind="drivers"/></>
   const user={id:current.id}
   const requestNow=new Date().toISOString()
 
