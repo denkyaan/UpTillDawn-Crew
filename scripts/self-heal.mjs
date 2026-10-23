@@ -119,10 +119,34 @@ function commitAndPush(){
  sh('git',['config','user.email','self-healing@users.noreply.github.com'])
  sh('git',['add','--all'])
  try{sh('git',['diff','--cached','--quiet']);return false}catch{}
- sh('git',['commit','-m',`fix(self-heal): repair error ${reportId}`])
- sh('git',['pull','--rebase','origin','main'])
- sh('git',['push','origin','HEAD:main'])
+ const safeReportId=String(reportId||'unknown').replace(/[^a-zA-Z0-9-]/g,'').slice(0,60)
+ const branch='self-heal/'+safeReportId
+ sh('git',['switch','-c',branch])
+ sh('git',['commit','-m',`fix(self-heal): propose repair for ${safeReportId}`])
+ sh('git',['push','origin','HEAD:refs/heads/'+branch])
  return true
+}
+async function waitForCandidateCI(){
+ const sha=sh('git',['rev-parse','HEAD'])
+ const deadline=Date.now()+20*60*1000
+ while(Date.now()<deadline){
+  const runs=JSON.parse(sh('gh',['api',`repos/${repo}/actions/runs?head_sha=${sha}&per_page=30`]))
+  const ci=runs.workflow_runs?.find(x=>x.name==='CI')
+  if(ci?.status==='completed'){
+   if(ci.conclusion!=='success')throw new Error('Candidate CI failed: '+ci.html_url)
+   return
+  }
+  await new Promise(resolve=>setTimeout(resolve,15000))
+ }
+ throw new Error('Candidate CI did not finish in time; main remains unchanged.')
+}
+function promoteValidatedCandidate(){
+ // Fast-forward only: if main advanced, stop rather than overwrite or bypass checks.
+ sh('git',['fetch','origin','main'])
+ const base=sh('git',['merge-base','HEAD','origin/main'])
+ const remote=sh('git',['rev-parse','origin/main'])
+ if(base!==remote)throw new Error('Main advanced during validation; candidate requires revalidation.')
+ sh('git',['push','origin','HEAD:refs/heads/main'])
 }
 async function releaseCheck(){
  try{await verify();return {ok:true,feedback:''}}
@@ -147,10 +171,12 @@ async function loop(){
   const validation=runValidation()
   if(!validation.ok){repairFeedback=validation.feedback;console.error(repairFeedback);continue}
   if(!commitAndPush()){repairFeedback='Validated proposal contained no committable change.';continue}
+  await waitForCandidateCI()
+  promoteValidatedCandidate()
   const released=await releaseCheck()
-  if(released.ok){await markResolved();console.log('Self-healing release verified and report marked auto_resolved.');return}
+  if(released.ok){await markResolved();console.log('Candidate CI green, main updated, production deployment verified.');return}
   repairFeedback=released.feedback
-  console.error(repairFeedback)
+  throw new Error('Post-deployment verification failed: '+repairFeedback)
  }
  console.error(`Autonomous repair exhausted ${maxAttempts} attempts. Report remains registered for technical follow-up. Last evidence: ${repairFeedback}`)
  throw new Error('Self-healing kon de fout niet autonoom oplossen na '+maxAttempts+' pogingen.')
