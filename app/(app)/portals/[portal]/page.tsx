@@ -1,4 +1,5 @@
 import Link from 'next/link'
+import { administrationModules } from '@/lib/administration/modules'
 import {PortalGuidedTour} from '@/components/portal-guided-tour'
 import { cookies, headers } from 'next/headers'
 import { parseAcceptLanguage, parseUiLocale } from '@/lib/locale-preferences'
@@ -87,6 +88,14 @@ export default async function PortalPage({ params }: { params: Promise<{ portal:
        </Link>)}
       </div>
     </section>}
+    {!promotion && <nav aria-label={adminDashboardCopy[locale].title} className="rounded-2xl border bg-card p-5">
+      <h2 className="text-lg font-semibold">{({nl:'Alle administratieve modules',fr:'Tous les modules administratifs',en:'All administration modules',de:'Alle Verwaltungsmodule'} as const)[locale]}</h2>
+      <p className="mt-2 text-sm text-muted-foreground">{({nl:'Open een module. Sommige onderdelen zijn nog in ontwikkeling.',fr:'Ouvrez un module. Certaines fonctions sont encore en développement.',en:'Open a module. Some features are still under development.',de:'Öffnen Sie ein Modul. Einige Funktionen befinden sich noch in Entwicklung.'} as const)[locale]}</p>
+      <div className="mt-4 grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
+       {administrationModules.filter(module=>module.slug!=='dashboard').map(module=><Link key={module.slug} href={module.slug==='finance'?'/portals/administration/finance':`/portals/administration/modules/${module.slug}`} className="rounded-lg border px-3 py-3 text-sm font-medium transition-colors hover:border-violet-500 focus-visible:outline focus-visible:outline-2 focus-visible:outline-violet-500">{module.title[locale]} →</Link>)}
+       <Link href="/portals/administration/rosters" className="rounded-lg border px-3 py-3 text-sm font-medium transition-colors hover:border-violet-500 focus-visible:outline focus-visible:outline-2 focus-visible:outline-violet-500">{({nl:'Werkroosters en goedkeuring',fr:'Plannings et validation',en:'Rosters and approval',de:'Dienstpläne und Freigabe'} as const)[locale]} →</Link>
+      </div>
+    </nav>}
     {promotion ? <div className="grid gap-4 sm:grid-cols-2">
       <section data-portal-tour="portal-chats" className="rounded-2xl border bg-card p-5">
         <h2 className="font-semibold">{t.chats}</h2>
