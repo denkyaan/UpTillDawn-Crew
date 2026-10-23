@@ -10,7 +10,7 @@ export default async function PromotionLayout({children}:{children:React.ReactNo
  if(!current)redirect("/login")
  const {data,error}=await (await createClient()).rpc("upt_my_portal_assignments")
  if(!current.isOwner&&!current.isAdmin&&(error||!canOpenPortal("promotion",(data??[]) as PortalAssignment[],{approved:current.approved,blocked:current.account_blocked===true})))redirect("/portals")
- const {data:blocked,error:blockError}=await (await createClient()).rpc("upt_promotion_is_blocked")
+ const {data:blocked,error:blockError}=await (await createClient()).rpc("upt_promotion_is_blocked" as never)
  if(!current.isOwner&&!current.isAdmin&&(blockError||blocked))redirect("/portals")
  const locale=await requestUiLocale()
  const tabs=[
