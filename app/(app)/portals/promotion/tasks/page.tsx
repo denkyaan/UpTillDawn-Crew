@@ -6,10 +6,10 @@ import {redirect} from "next/navigation"
 import {revalidatePath} from "next/cache"
 export const dynamic="force-dynamic"
 const labels={
- nl:{title:"Promotietaken",intro:"Bekijk je toegewezen promotieopdrachten. Taken buiten evenementen blijven beschikbaar.",empty:"Geen promotietaken toegewezen.",error:"Taken kunnen momenteel niet worden geladen.",status:"Status",start:"Start",complete:"Voltooien",back:"Terug naar promotie"},
- fr:{title:"Tâches promotionnelles",intro:"Consultez vos missions promotionnelles, même hors événement.",empty:"Aucune tâche promotionnelle attribuée.",error:"Impossible de charger les tâches.",status:"Statut",start:"Commencer",complete:"Terminer",back:"Retour à la promotion"},
- en:{title:"Promotion tasks",intro:"Review your assigned promotion work, including tasks outside events.",empty:"No promotion tasks assigned.",error:"Tasks are currently unavailable.",status:"Status",start:"Start",complete:"Complete",back:"Back to promotion"},
- de:{title:"Promotionaufgaben",intro:"Deine zugewiesenen Promotionaufgaben, auch außerhalb von Events.",empty:"Keine Promotionaufgaben zugewiesen.",error:"Aufgaben derzeit nicht verfügbar.",status:"Status",start:"Starten",complete:"Abschließen",back:"Zurück zur Promotion"},
+ nl:{title:"Promotietaken",intro:"Bekijk je toegewezen promotieopdrachten. Taken buiten evenementen blijven beschikbaar.",empty:"Geen promotietaken toegewezen.",error:"Taken kunnen momenteel niet worden geladen.",status:"Status",start:"Start",complete:"Voltooien",history:"Taakhistoriek",back:"Terug naar promotie"},
+ fr:{title:"Tâches promotionnelles",intro:"Consultez vos missions promotionnelles, même hors événement.",empty:"Aucune tâche promotionnelle attribuée.",error:"Impossible de charger les tâches.",status:"Statut",start:"Commencer",complete:"Terminer",history:"Historique des tâches",back:"Retour à la promotion"},
+ en:{title:"Promotion tasks",intro:"Review your assigned promotion work, including tasks outside events.",empty:"No promotion tasks assigned.",error:"Tasks are currently unavailable.",status:"Status",start:"Start",complete:"Complete",history:"Task history",back:"Back to promotion"},
+ de:{title:"Promotionaufgaben",intro:"Deine zugewiesenen Promotionaufgaben, auch außerhalb von Events.",empty:"Keine Promotionaufgaben zugewiesen.",error:"Aufgaben derzeit nicht verfügbar.",status:"Status",start:"Starten",complete:"Abschließen",history:"Aufgabenverlauf",back:"Zurück zur Promotion"},
 } as const
 async function changePromotionTaskStatus(formData:FormData){
  "use server"
@@ -19,7 +19,8 @@ async function changePromotionTaskStatus(formData:FormData){
  const status=String(formData.get("status")??"")
  if(!/^[0-9a-f]{8}-[0-9a-f-]{27,}$/i.test(id)||!["IN PROGRESS","COMPLETED"].includes(status))return
  const db=await createClient()
- await db.rpc("upt_update_task_status",{p_assignment:id,p_status:status})
+ const {error}=await db.rpc("upt_update_task_status",{p_assignment:id,p_status:status})
+ if(error)throw new Error("Task status update failed")
  revalidatePath("/portals/promotion/tasks")
 }
 export default async function PromotionTasks(){
@@ -32,6 +33,7 @@ export default async function PromotionTasks(){
  return <main className="mx-auto max-w-4xl space-y-5 p-4 sm:p-6">
   <Link href="/portals/promotion" className="text-sm text-violet-400">← {t.back}</Link>
   <header><h1 className="text-2xl font-bold">{t.title}</h1><p className="mt-2 text-sm text-muted-foreground">{t.intro}</p></header>
+  <p className="text-xs text-muted-foreground">{t.history}</p>
   {error?<p role="alert">{t.error}</p>:!data?.length?<p className="rounded-xl border p-5 text-muted-foreground">{t.empty}</p>:<ul className="space-y-3">{data.map(item=><li key={item.id} className="rounded-xl border bg-card p-4"><h2 className="font-semibold">{item.tasks?.title??"—"}</h2>{item.tasks?.description&&<p className="mt-2 whitespace-pre-wrap text-sm text-muted-foreground">{item.tasks.description}</p>}<p className="mt-3 text-xs text-violet-400">{t.status}: {item.status}</p>{item.status!=="COMPLETED"&&<form action={changePromotionTaskStatus} className="mt-3"><input type="hidden" name="assignment_id" value={item.id}/><button type="submit" name="status" value={item.status==="NOT STARTED"?"IN PROGRESS":"COMPLETED"} className="rounded-lg bg-violet-600 px-3 py-2 text-sm font-semibold text-white">{item.status==="NOT STARTED"?t.start:t.complete}</button></form>}</li>)}</ul>}
  </main>
 }
