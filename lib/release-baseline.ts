@@ -1,2 +1,2 @@
 // Keep synchronized with the newest committed Supabase migration; CI enforces this.
-export const EXPECTED_DB_MIGRATION_VERSION='20261023235930' as const
+export const EXPECTED_DB_MIGRATION_VERSION='20261023235945' as const
