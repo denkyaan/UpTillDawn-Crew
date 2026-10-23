@@ -34,17 +34,8 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
   const [context,setContext]=useState<RoleUiContext>(emptyContext)
   const [rules,setRules]=useState<RoleUiRule[]>([])
   const [adminAiOpen,setAdminAiOpen]=useState(false)
-  const [tourPreview,setTourPreview]=useState(false)
-  const [trainingLocale,setTrainingLocale]=useState<SupportedUiLocale>("nl")
-  const [trainingChatUnlocked,setTrainingChatUnlocked]=useState(false)
-  const [trainingHelpUnlocked,setTrainingHelpUnlocked]=useState(false)
-  const [trainingComplete,setTrainingComplete]=useState(false)
-  const [trainingNavTarget,setTrainingNavTarget]=useState<string|null>(null)
-  const [trainingWorkplace,setTrainingWorkplace]=useState("")
-  useEffect(()=>{const on=(e:Event)=>{const active=Boolean((e as CustomEvent<{active?:boolean}>).detail?.active);setTourPreview(active);if(active)setTrainingWorkplace(sessionStorage.getItem("uptilldawn-training-preferred-workplace")||"")};addEventListener("uptilldawn-tour-preview",on);return()=>removeEventListener("uptilldawn-tour-preview",on)},[])
-  useEffect(()=>{const apply=()=>setTrainingLocale(activeUiLocale());apply();addEventListener(LANGUAGE_APPLIED_EVENT,apply);return()=>removeEventListener(LANGUAGE_APPLIED_EVENT,apply)},[])
-  useEffect(()=>{const load=()=>{try{const s=JSON.parse(sessionStorage.getItem("uptilldawn-training-workflow-v3")||"{}");setTrainingNavTarget(s.navTarget||null)}catch{setTrainingNavTarget(null)}};load();const on=(e:Event)=>setTrainingNavTarget((e as CustomEvent<{target?:string}>).detail?.target||null);addEventListener("uptilldawn-training-nav-target",on);return()=>removeEventListener("uptilldawn-training-nav-target",on)},[pathname,tourPreview])
-  useEffect(()=>{const load=()=>{try{const s=JSON.parse(sessionStorage.getItem("uptilldawn-training-workflow-v3")||"{}");setTrainingChatUnlocked(Boolean(s.chatTourCompleted||sessionStorage.getItem("chatTourCompleted")==="1"));setTrainingHelpUnlocked(Boolean(s.helpTourCompleted));setTrainingComplete(Boolean(s.trainingComplete))}catch{setTrainingChatUnlocked(false);setTrainingHelpUnlocked(false);setTrainingComplete(false)}};load();const onChat=()=>load();const onHelp=()=>load();addEventListener("uptilldawn-training-chat-completed",onChat);addEventListener("uptilldawn-training-help-completed",onHelp);addEventListener("uptilldawn-training-completed",onHelp);return()=>{removeEventListener("uptilldawn-training-chat-completed",onChat);removeEventListener("uptilldawn-training-help-completed",onHelp);removeEventListener("uptilldawn-training-completed",onHelp)}},[tourPreview])
+  const [uiLocale,setUiLocale]=useState<SupportedUiLocale>("nl")
+  useEffect(()=>{const apply=()=>setUiLocale(activeUiLocale());apply();addEventListener(LANGUAGE_APPLIED_EVENT,apply);return()=>removeEventListener(LANGUAGE_APPLIED_EVENT,apply)},[])
 
   const activeUiRole=roles[0]
   const roleKey=activeUiRole==="responsible_lead"?"responsible_lead":activeUiRole==="admin"?"admin":activeUiRole==="employee"?"staff":null
@@ -60,9 +51,8 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
 
   const effectiveRules=rules.length?rules:defaultRules
   const ruleMap=useMemo(()=>new Map(effectiveRules.map(rule=>[rule.feature_key,rule])),[effectiveRules])
-  const previewAll=tourPreview
-  const sandboxContext:RoleUiContext={assignedEvent:true,assignedWorkplaceRole:true,eventActive:true,shiftActive:true}
-  const effectiveContext=tourPreview?sandboxContext:context
+  const previewAll=false
+  const effectiveContext=context
   const feature=(key:string,fallback:boolean)=>{
     const rule=ruleMap.get(key)
     return rule?ruleMatches(rule,effectiveContext,previewAll):fallback
@@ -232,8 +222,7 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
   const showOperations=feature("operations",isAdmin?true:context.shiftActive)
   const showWorkplaces=feature("workplaces",Boolean(isAdmin)||context.assignedWorkplaceRole)
   const showInventory=feature("inventory",context.assignedWorkplaceRole)
-  const trainingEntrance=/inkom|entrance|guest/i.test(trainingWorkplace)
-  const showGuestlist=feature("guestlist",Boolean(isAdmin)||context.assignedEvent)&&(!tourPreview||Boolean(isAdmin)||trainingEntrance)
+  const showGuestlist=feature("guestlist",Boolean(isAdmin)||context.assignedEvent)
   const showSales=Boolean(isAdmin)&&feature("sales",true)
   const showTasks=feature("tasks",Boolean(isAdmin)||context.shiftActive)
   const showIncidents=feature("incidents",isAdmin?true:context.shiftActive)
@@ -244,7 +233,7 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
   const showSettings=feature("settings",true)
   const showPlatform=feature("platform",Boolean(isAdmin))
   const featureVisibility={overview:showOverview,events:showEvents,operations:showOperations,workplaces:showWorkplaces,inventory:showInventory,guestlist:showGuestlist,sales:showSales,shifts:showShifts,briefings:showBriefings,tasks:showTasks,chat:showChat,crew:showCrew,incidents:showIncidents,exports:showExports,personnel:showPersonnel,platform:showPlatform,settings:showSettings}
-  const showUrgent=!pathname.startsWith("/chat")&&!isAdmin&&showIncidents&&effectiveContext.shiftActive&&(!tourPreview||(trainingHelpUnlocked&&!trainingComplete&&trainingNavTarget==="operations"))
+  const showUrgent=!pathname.startsWith("/chat")&&!isAdmin&&showIncidents&&effectiveContext.shiftActive
   const showFloatingChat=showChat
 
   return <div className="flex h-dvh bg-background print:block print:h-auto">
@@ -254,27 +243,25 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
     <div className="print:hidden">
       <MobileBottomNav chatMissed={chatMissed} incidentMissed={incidentMissed} taskMissed={taskMissed} notificationFeatureCounts={notificationFeatureCounts} featureOrder={order} featureLabels={labels} featureVisibility={featureVisibility} assignedEvent={effectiveContext.assignedEvent} shiftActive={effectiveContext.shiftActive}/>
     </div>
-    {showFloatingChat&&(!tourPreview? !pathname.startsWith("/chat") : trainingChatUnlocked&&!trainingComplete&&pathname.startsWith("/chat")&&trainingNavTarget==="__chat_button")&&<div className={tourPreview?"rounded-full ring-4 ring-violet-500/60 animate-pulse":undefined}><FloatingChatButton count={chatMissed} stackedAboveAdminAi={Boolean(isAdmin)} href={tourPreview?"/chat?tour=1":"/chat"}/></div>}
-    {tourPreview&&trainingComplete&&showFloatingChat&&!pathname.startsWith("/chat")&&<FloatingChatButton count={chatMissed} stackedAboveAdminAi={Boolean(isAdmin)} href={tourPreview?"/chat?tour=1":"/chat"}/>}
+    {showFloatingChat&&!pathname.startsWith("/chat")&&<FloatingChatButton count={chatMissed} stackedAboveAdminAi={Boolean(isAdmin)} href="/chat"/>}
 
     <div className="print:hidden"><AppSidebar chatMissed={chatMissed} incidentMissed={incidentMissed} taskMissed={taskMissed} notificationFeatureCounts={notificationFeatureCounts} showOperations={showOperations} showEvents={showEvents} showTasks={showTasks} showBriefings={showBriefings} showShifts={showShifts} showWorkplaces={showWorkplaces} showIncidents={showIncidents} featureOrder={order} featureLabels={labels} featureVisibility={featureVisibility}/></div>
     <div className="flex flex-1 flex-col overflow-hidden print:block print:overflow-visible">
-      <div className="print:hidden"><Topbar notificationMissed={notificationMissed}/><QueueStatus/>{isAdmin&&<AdminContextBar/>}{!tourPreview&&<nav aria-label={({nl:"Portaalnavigatie",fr:"Navigation des portails",en:"Portal navigation",de:"Portalnavigation"} as Record<SupportedUiLocale,string>)[trainingLocale]} className="border-b px-4 py-2"><Link href="/portals" className="inline-flex rounded-lg border border-violet-500/50 px-3 py-1.5 text-xs font-semibold text-violet-400 focus-visible:outline focus-visible:outline-2 focus-visible:outline-violet-500">{({nl:"Mijn portalen",fr:"Mes portails",en:"My portals",de:"Meine Portale"} as Record<SupportedUiLocale,string>)[trainingLocale]} →</Link></nav>}</div>
+      <div className="print:hidden"><Topbar notificationMissed={notificationMissed}/><QueueStatus/>{isAdmin&&<AdminContextBar/>}{<nav aria-label={({nl:"Portaalnavigatie",fr:"Navigation des portails",en:"Portal navigation",de:"Portalnavigation"} as Record<SupportedUiLocale,string>)[uiLocale]} className="border-b px-4 py-2"><Link href="/portals" className="inline-flex rounded-lg border border-violet-500/50 px-3 py-1.5 text-xs font-semibold text-violet-400 focus-visible:outline focus-visible:outline-2 focus-visible:outline-violet-500">{({nl:"Mijn portalen",fr:"Mes portails",en:"My portals",de:"Meine Portale"} as Record<SupportedUiLocale,string>)[uiLocale]} →</Link></nav>}</div>
       <div id="app-scroll" className="flex-1 overflow-y-auto bg-background scroll-smooth print:overflow-visible">
         <main className="min-h-[calc(100dvh-theme(spacing.16)-theme(spacing.12))] pb-20 lg:pb-0 print:min-h-0 print:pb-0">
           {!currentVisible&&!previewAll
             ? <div className="m-4 rounded-2xl border p-6 text-muted-foreground">Deze functie is verborgen voor jouw rol of huidige context.</div>
             : <>
-                {tourPreview&&<div className="mx-3 mt-2 text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">{({nl:"Trainingsmodus · fictieve gegevens",en:"Training mode · fictional data",fr:"Mode entraînement · données fictives",de:"Trainingsmodus · fiktive Daten"} as Record<SupportedUiLocale,string>)[trainingLocale]}</div>}
                 {!currentUsable&&!previewAll&&<p className="m-3 rounded-xl border p-3 text-sm text-muted-foreground">Alleen-lezen: deze functie is zichtbaar, maar momenteel niet bruikbaar voor jouw rol.</p>}
                 <div inert={contentLocked&&!previewAll}>{children}</div>
               </>}
         </main>
       </div>
     </div>
-    {isAdmin&&!tourPreview&&<div className="fixed bottom-20 right-4 z-[70] print:hidden lg:bottom-4"><button type="button" aria-expanded={adminAiOpen} onClick={()=>setAdminAiOpen(value=>!value)} className="rounded-full bg-violet-600 px-5 py-3 font-black text-white shadow-xl">ADMIN AI</button>{adminAiOpen&&<div className="absolute bottom-14 right-0 w-[min(92vw,430px)] max-h-[75vh] overflow-auto rounded-2xl border bg-background p-4 shadow-2xl"><PlatformAiAssistant contextKey={currentFeature||undefined} contextLabel={labels[currentFeature||""]} compact/></div>}</div>}
+    {isAdmin&&<div className="fixed bottom-20 right-4 z-[70] print:hidden lg:bottom-4"><button type="button" aria-expanded={adminAiOpen} onClick={()=>setAdminAiOpen(value=>!value)} className="rounded-full bg-violet-600 px-5 py-3 font-black text-white shadow-xl">ADMIN AI</button>{adminAiOpen&&<div className="absolute bottom-14 right-0 w-[min(92vw,430px)] max-h-[75vh] overflow-auto rounded-2xl border bg-background p-4 shadow-2xl"><PlatformAiAssistant contextKey={currentFeature||undefined} contextLabel={labels[currentFeature||""]} compact/></div>}</div>}
     {!pathname.startsWith("/chat")&&<>
-      {showUrgent&&<Link href={tourPreview?"/incidents?tour=1":"/incidents"} className={`fixed bottom-20 left-4 z-50 rounded-full bg-red-600 px-5 py-4 font-black text-white print:hidden lg:hidden ${tourPreview&&trainingHelpUnlocked&&!trainingComplete&&trainingNavTarget==="operations"?"ring-4 ring-violet-500/60 animate-pulse":""}`}>{({nl:"HELP",en:"HELP",fr:"AIDE",de:"HILFE"} as Record<SupportedUiLocale,string>)[trainingLocale]}<CountBadge count={incidentMissed}/></Link>}
+      {showUrgent&&<Link href="/incidents" className="fixed bottom-20 left-4 z-50 rounded-full bg-red-600 px-5 py-4 font-black text-white print:hidden lg:hidden">{({nl:"HELP",en:"HELP",fr:"AIDE",de:"HILFE"} as Record<SupportedUiLocale,string>)[uiLocale]}<CountBadge count={incidentMissed}/></Link>}
     </>}
   </div>
 }
