@@ -95,7 +95,11 @@ jobs:
           fi
 
       - name: Start isolated Supabase stack
-        run: npx --yes supabase@2.117.0 start -x studio,imgproxy,inbucket,edge-runtime,logflare,vector,realtime
+        run: |
+          set -euo pipefail
+          # Exclude optional services and prevent a stale local container from retaining test ports.
+          npx --yes supabase@2.117.0 stop --no-backup || true
+          npx --yes supabase@2.117.0 start -x studio,imgproxy,inbucket,edge-runtime,logflare,vector,realtime
 
       - name: Replay every migration from zero
         run: npx --yes supabase@2.117.0 db reset --local --no-seed
