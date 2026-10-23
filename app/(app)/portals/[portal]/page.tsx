@@ -38,7 +38,11 @@ export default async function PortalPage({ params }: { params: Promise<{ portal:
   if (!current.isAdmin && !canOpenPortal(portal, (data ?? []) as PortalAssignment[], {
     approved: current.approved,
     blocked: current.account_blocked === true,
-  })) notFound()
+  })) return <main className="mx-auto max-w-3xl space-y-4 p-6" role="alert">
+    <h1 className="text-2xl font-bold">{({nl:"Geen toegang tot dit portaal",fr:"Accès à ce portail refusé",en:"No access to this portal",de:"Kein Zugang zu diesem Portal"} as const)[locale]}</h1>
+    <p>{({nl:"Je account heeft geen goedgekeurde rol voor dit portaal. Controleer je portaalrollen of vraag een beheerder om toegang.",fr:"Votre compte ne possède pas de rôle approuvé pour ce portail. Vérifiez vos rôles ou contactez un administrateur.",en:"Your account has no approved role for this portal. Check your portal roles or contact an administrator.",de:"Dein Konto hat keine genehmigte Rolle für dieses Portal. Prüfe deine Portalrollen oder kontaktiere einen Administrator."} as const)[locale]}</p>
+    <Link href="/portals/roles" className="inline-flex rounded-lg border border-violet-500 px-4 py-2 text-violet-400">{({nl:"Mijn portaalrollen",fr:"Mes rôles de portail",en:"My portal roles",de:"Meine Portalrollen"} as const)[locale]}</Link>
+  </main>
 
   if (!current.approved || current.account_blocked === true) redirect('/portals')
 
