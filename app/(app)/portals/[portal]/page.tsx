@@ -83,7 +83,7 @@ export default async function PortalPage({ params }: { params: Promise<{ portal:
         {href:'/portals/administration/modules/events',nl:'Evenementen',fr:'Événements',de:'Veranstaltungen',en:'Events',descNl:'Evenementen en operationele context',descFr:'Événements et contexte opérationnel',descDe:'Veranstaltungen und operativer Kontext',descEn:'Events and operational context'},
        ].map(item=><Link key={item.href} href={item.href} className="block rounded-xl border bg-card p-4 transition-colors hover:border-violet-500">
          <span className="font-semibold text-violet-400">{item[locale]} →</span>
-         <p className="mt-2 text-xs text-muted-foreground">{locale==='nl'?item.descNl:locale==='fr'?('descFr' in item?item.descFr:item.descEn):locale==='de'?('descDe' in item?item.descDe:item.descEn):item.descEn}</p>
+         <p className="mt-2 text-xs text-muted-foreground">{locale==='nl'?item.descNl:locale==='fr'?item.descFr:locale==='de'?item.descDe:item.descEn}</p>
        </Link>)}
       </div>
     </section>}
