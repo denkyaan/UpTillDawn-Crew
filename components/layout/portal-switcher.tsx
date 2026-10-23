@@ -3,7 +3,6 @@ import {getCurrentUser} from "@/lib/actions/auth"
 import {createClient} from "@/lib/supabase/crew-server"
 import {accessiblePortals,type PortalAssignment,type Portal} from "@/lib/portal-access"
 import {requestUiLocale} from "@/lib/server-locale"
-const href:Record<Portal,string>={events:"/",promotion:"/portals/promotion",administration:"/portals/administration"}
 export async function PortalSwitcher(){
  const current=await getCurrentUser()
  if(!current)return null
