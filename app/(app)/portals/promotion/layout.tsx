@@ -13,7 +13,7 @@ export default async function PromotionLayout({children}:{children:React.ReactNo
  const locale=await requestUiLocale()
  const tabs=[
   {href:"/portals/promotion",name:{nl:"Overzicht",fr:"Aperçu",en:"Overview",de:"Übersicht"},icon:"⌂"},
-  {href:"/tasks",name:{nl:"Taken",fr:"Tâches",en:"Tasks",de:"Aufgaben"},icon:"☑"},
+  {href:"/portals/promotion/tasks",name:{nl:"Taken",fr:"Tâches",en:"Tasks",de:"Aufgaben"},icon:"☑"},
   {href:"/chat",name:{nl:"Chats",fr:"Discussions",en:"Chats",de:"Chats"},icon:"◉"},
   {href:"/notifications",name:{nl:"Meldingen",fr:"Notifications",en:"Alerts",de:"Meldungen"},icon:"♧"},
  ] as const
