@@ -374,6 +374,8 @@ test.describe('UpTillDawn role-tour browser validation', () => {
         const buttons = await welcome.getByRole('button').allTextContents();
         console.log(`[${role}] Welcome dialog: ${JSON.stringify({ text: dialogText, buttons })}`);
         await testInfo.attach(`${role.toLowerCase()}-onboarding-dialog.json`, { body: JSON.stringify({ role, text: dialogText, buttons }, null, 2), contentType: 'application/json' });
+        // The welcome dialog has two valid stages. On a delayed mount it can
+        // already be at START TRAINING, so do not require START TOUR again.
         const proceed = welcome.getByRole('button', { name: /start rondleiding|start tour|commencer la visite|rundgang starten/i }).first();
         const beginTraining = page.getByRole('dialog').getByRole('button', { name: /start training|commencer la formation|training starten/i }).first();
         if (await proceed.isVisible().catch(() => false)) {
