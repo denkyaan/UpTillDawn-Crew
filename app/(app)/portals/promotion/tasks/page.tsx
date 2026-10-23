@@ -38,6 +38,11 @@ async function submitPromotionEvidence(formData:FormData){
  const {data:assigned,error:assignmentError}=await db.from("task_assignments").select("id").eq("id",assignment).eq("user_id",user.id).maybeSingle()
  if(assignmentError||!assigned)throw new Error("Assignment unavailable")
  const bytes=Buffer.from(await file.arrayBuffer())
+ // Validate actual file signatures, not only browser-supplied MIME types.
+ const isJpeg=bytes.length>=4&&bytes[0]===0xff&&bytes[1]===0xd8&&bytes[2]===0xff
+ const isPng=bytes.length>=24&&bytes.subarray(0,8).equals(Buffer.from([137,80,78,71,13,10,26,10]))&&bytes.toString("ascii",12,16)==="IHDR"
+ const isWebp=bytes.length>=16&&bytes.toString("ascii",0,4)==="RIFF"&&bytes.toString("ascii",8,12)==="WEBP"
+ if(!((file.type==="image/jpeg"&&isJpeg)||(file.type==="image/png"&&isPng)||(file.type==="image/webp"&&isWebp)))throw new Error("Image format does not match file contents")
  const sha=createHash("sha256").update(bytes).digest("hex")
  const ext=file.type==="image/png"?"png":file.type==="image/webp"?"webp":"jpg"
  const path=`${user.id}/promotion/${randomUUID()}.${ext}`
