@@ -4,25 +4,9 @@ import {readFile} from 'node:fs/promises'
 
 const read=path=>readFile(new URL('../'+path,import.meta.url),'utf8')
 
-test('role tour is hydration-safe and opens real tabs without full reloads',async()=>{
-  const [tour,layout,mobile,controller]=await Promise.all([
-    read('components/role-app-tour.tsx'),
-    read('components/layout/app-layout.tsx'),
-    read('components/layout/mobile-nav.tsx'),
-    read('components/training/tour-control-center.tsx'),
-  ])
-  assert.match(tour,/useState<ExtendedUiLocale>\("nl"\)/)
-  assert.doesNotMatch(tour,/initialUiLocale\(/)
-  assert.match(tour,/<TourControlCenter active=\{open\}/)
-  assert.doesNotMatch(tour,/router\.push\(step\.route\)/)
-  assert.match(controller,/document\.addEventListener\("click",onNavigationClick,true\)/)
-  assert.doesNotMatch(controller,/location\.assign\(/)
-  assert.doesNotMatch(tour,/location\.assign\(step\.route\)/)
-  assert.match(tour,/inside:\[/)
-  assert.match(tour,/ROLE_FEATURES\.responsible_lead\.map/)
-  assert.match(tour,/ROLE_FEATURES\.admin\.map/)
-  assert.match(layout,/const currentUsable=previewAll\|\|/)
-  assert.doesNotMatch(mobile,/if\(detail\?\.active\)setExpanded\(true\)/)
+test('retired role tour is absent from the operational layout',async()=>{
+ const layout=await read('components/layout/app-layout.tsx')
+ assert.doesNotMatch(layout,/RoleAppTour|TourControlCenter|tourPreview/)
 })
 
 test('registration queues the PWA install prompt even before an auth session exists',async()=>{
