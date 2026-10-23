@@ -63,7 +63,6 @@ export default async function PortalPage({ params }: { params: Promise<{ portal:
     : []
 
   return <main className="mx-auto max-w-4xl space-y-6 p-6">
-    <Link href="/portals" className="text-sm text-violet-400">{t.back}</Link>
     <header><h1 className="text-2xl font-bold">{promotion ? t.promotion : t.administration}</h1></header>
     {!promotion && <section className="grid grid-cols-2 gap-3 sm:grid-cols-4" aria-label={adminDashboardCopy[locale].title}>
       <article className="rounded-xl border bg-card p-4"><p className="text-xs text-muted-foreground">{({nl:"Ingediende werkstaten",fr:"Feuilles soumises",en:"Submitted timesheets",de:"Eingereichte Stundenzettel"} as const)[locale]}</p><p className="mt-2 text-2xl font-bold">{submittedTimesheets?.error?"—":submittedTimesheets?.data?.length??0}</p><Link href="/portals/administration/modules/staff" className="mt-2 inline-block text-xs font-semibold text-violet-400">→</Link></article>
@@ -98,6 +97,7 @@ export default async function PortalPage({ params }: { params: Promise<{ portal:
        <Link href="/portals/administration/rosters" className="rounded-lg border px-3 py-3 text-sm font-medium transition-colors hover:border-violet-500 focus-visible:outline focus-visible:outline-2 focus-visible:outline-violet-500">{({nl:'Werkroosters en goedkeuring',fr:'Plannings et validation',en:'Rosters and approval',de:'Dienstpläne und Freigabe'} as const)[locale]} →</Link>
       </div>
     </nav>}
+    {promotion && <p className="text-sm text-muted-foreground">{({nl:"Je promotiewerkplek: bekijk je opdrachten, overleg met het team en volg nieuwe meldingen. Publicaties en bewijsstukken worden alleen als voltooid beschouwd na controle.",fr:"Votre espace promotion : tâches, discussions et notifications. Les publications et preuves nécessitent une vérification.",en:"Your promotion workspace: tasks, team chats and notifications. Posts and evidence require verification before completion.",de:"Dein Promotion-Arbeitsbereich: Aufgaben, Teamchats und Meldungen. Veröffentlichungen und Nachweise erfordern eine Prüfung."} as const)[locale]}</p>}
     {promotion ? <div className="grid gap-4 sm:grid-cols-2">
       <section className="rounded-2xl border bg-card p-5">
         <h2 className="font-semibold">{t.chats}</h2>
