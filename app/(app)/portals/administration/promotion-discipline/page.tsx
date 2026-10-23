@@ -33,6 +33,10 @@ async function registerReference(form:FormData){
  if(!/^[0-9a-f-]{36}$/i.test(task)||!(file instanceof File)||!["image/jpeg","image/png","image/webp"].includes(file.type)||file.size<1||file.size>10*1024*1024)throw new Error("Invalid reference")
  const db=await createClient()
  const bytes=Buffer.from(await file.arrayBuffer())
+ const isJpeg=bytes.length>=4&&bytes[0]===0xff&&bytes[1]===0xd8&&bytes[2]===0xff
+ const isPng=bytes.length>=24&&bytes.subarray(0,8).equals(Buffer.from([137,80,78,71,13,10,26,10]))&&bytes.toString("ascii",12,16)==="IHDR"
+ const isWebp=bytes.length>=16&&bytes.toString("ascii",0,4)==="RIFF"&&bytes.toString("ascii",8,12)==="WEBP"
+ if(!((file.type==="image/jpeg"&&isJpeg)||(file.type==="image/png"&&isPng)||(file.type==="image/webp"&&isWebp)))throw new Error("Invalid reference image format")
  const sha=createHash("sha256").update(bytes).digest("hex")
  const ext=file.type==="image/png"?"png":file.type==="image/webp"?"webp":"jpg"
  const path=`${actor.id}/promotion-reference/${randomUUID()}.${ext}`
