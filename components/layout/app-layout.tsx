@@ -13,7 +13,6 @@ import { useAuth } from "@/lib/providers"
 import { getDefaultRoleUiRules, ruleMatches, ruleUsable, type RoleUiContext, type RoleUiRule } from "@/lib/role-ui"
 import { AdminContextBar } from "@/components/admin/admin-context-bar"
 import { PlatformAiAssistant } from "@/components/admin/platform-ai-assistant"
-import { RoleAppTour } from "@/components/role-app-tour"
 import { LANGUAGE_APPLIED_EVENT, activeUiLocale, type SupportedUiLocale } from "@/lib/locale-preferences"
 
 function CountBadge({ count }: { count: number }) {
@@ -249,7 +248,7 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
   const showFloatingChat=showChat
 
   return <div className="flex h-dvh bg-background print:block print:h-auto">
-    <RoleAppTour/>
+
     {/* Mobile shell lives at the AppLayout root so iOS fixed positioning is not
         clipped by the nested overflow scroll container. */}
     <div className="print:hidden">
