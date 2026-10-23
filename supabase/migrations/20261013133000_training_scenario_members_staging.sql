@@ -1,10 +1,4 @@
--- Staging only. Run after verifying the Supabase project in the dashboard.
-DO $$ BEGIN
- IF current_setting('app.settings.project_ref',true) IS DISTINCT FROM 'npbjrtiolqperdgljnhi' THEN
-  RAISE EXCEPTION 'Staging project verification required';
- END IF;
-END $$;
-
+-- Portable training membership schema. No staging fixtures or seed data.
 CREATE TABLE IF NOT EXISTS public.training_scenario_members (
  scenario_id uuid NOT NULL REFERENCES public.training_scenarios(id) ON DELETE CASCADE,
  user_id uuid NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
