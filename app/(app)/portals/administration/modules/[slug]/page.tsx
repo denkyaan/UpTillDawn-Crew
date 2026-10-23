@@ -52,6 +52,16 @@ export default async function AdministrationModulePage({params}:{params:Promise<
  const {data,error}=await supabase.rpc("upt_my_portal_assignments")
  if(error&&!current.isAdmin && !current.isOwner)redirect("/portals")
  if(!current.isAdmin && !current.isOwner&&!canOpenPortal("administration",(data??[]) as PortalAssignment[],{approved:current.approved,blocked:current.account_blocked===true}))redirect("/portals")
+ // Use the real operational workflows instead of presenting placeholder cards.
+ const operationalRoutes:Record<string,string>={
+  tasks:"/tasks",
+  notifications:"/notifications",
+  invoices:"/portals/administration/finance",
+  banking:"/portals/administration/finance",
+  documents:"/portals/administration/finance",
+  staff:"/portals/administration/rosters",
+ }
+ if(operationalRoutes[slug])redirect(operationalRoutes[slug])
  const liveRecords = slug==="events"
   ? await supabase.from("events").select("id,name,status,start_at").order("start_at",{ascending:false}).limit(30)
   : slug==="staff"
