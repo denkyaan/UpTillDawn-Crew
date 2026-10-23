@@ -2756,6 +2756,57 @@ export type Database = {
           },
         ]
       }
+      portal_role_assignments: {
+        Row: {
+          approved: boolean
+          approved_at: string | null
+          approved_by: string | null
+          created_at: string
+          id: string
+          portal: string
+          revoked_at: string | null
+          role: string
+          user_id: string
+        }
+        Insert: {
+          approved?: boolean
+          approved_at?: string | null
+          approved_by?: string | null
+          created_at?: string
+          id?: string
+          portal: string
+          revoked_at?: string | null
+          role: string
+          user_id: string
+        }
+        Update: {
+          approved?: boolean
+          approved_at?: string | null
+          approved_by?: string | null
+          created_at?: string
+          id?: string
+          portal?: string
+          revoked_at?: string | null
+          role?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "portal_role_assignments_approved_by_fkey"
+            columns: ["approved_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "portal_role_assignments_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       profiles: {
         Row: {
           account_blocked: boolean
@@ -4532,6 +4583,15 @@ export type Database = {
         Args: { p_blocked: boolean; p_reason?: string; p_user: string }
         Returns: undefined
       }
+      upt_admin_set_portal_role: {
+        Args: {
+          p_action: string
+          p_portal: string
+          p_role: string
+          p_user_id: string
+        }
+        Returns: string
+      }
       upt_admin_system_health: {
         Args: never
         Returns: {
@@ -5285,6 +5345,15 @@ export type Database = {
       upt_moderate_message: {
         Args: { p_message: string; p_reason: string }
         Returns: undefined
+      }
+      upt_my_portal_assignments: {
+        Args: never
+        Returns: {
+          approved: boolean
+          portal: string
+          revoked_at: string
+          role: string
+        }[]
       }
       upt_notification_badge_count: { Args: never; Returns: number }
       upt_operational_alerts: {
