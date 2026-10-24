@@ -20,6 +20,8 @@ async function changePromotionTaskStatus(formData:FormData){
  const status=String(formData.get("status")??"")
  if(!/^[0-9a-f]{8}-[0-9a-f-]{27,}$/i.test(id)||status!=="IN PROGRESS")return
  const db=await createClient()
+ const {data:blocked,error:blockError}=await db.rpc("upt_promotion_is_blocked" as never)
+ if(blockError||blocked)throw new Error("Promotion access blocked")
  const {error}=await db.rpc("upt_update_task_status",{p_assignment:id,p_status:status})
  if(error)throw new Error("Task status update failed")
  revalidatePath("/portals/promotion/tasks")
