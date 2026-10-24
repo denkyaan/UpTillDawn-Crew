@@ -66,7 +66,7 @@ export function PromotionVisualReview({evidenceUrl,referenceUrls,locale}:{eviden
   }
   void run()
   return ()=>{active=false}
- },[evidenceUrl,referenceUrls.join("|")])
+ },[evidenceUrl,referenceUrls])
  return <div className="mt-2 space-y-1">
   <button type="button" onClick={compare} disabled={busy} className="rounded border border-violet-500 px-2 py-1 text-xs disabled:opacity-50">{busy?t.busy:t.button}</button>
   {score!==null&&<p>{t.result}: {Math.round(score*100)}%</p>}
