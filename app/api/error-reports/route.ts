@@ -13,7 +13,7 @@ const reportSchema=z.object({
   errorMessage:z.string().trim().min(1).max(4000),
   stackTrace:z.string().max(12000).optional().default(''),
   source:z.enum(['boundary','runtime','promise','manual','api']).default('manual'),
-  clientContext:z.record(z.unknown()).optional().default({}),
+  clientContext:z.record(z.string(),z.unknown()).optional().default({}),
 }).strict()
 
 function crossSite(request:Request){
