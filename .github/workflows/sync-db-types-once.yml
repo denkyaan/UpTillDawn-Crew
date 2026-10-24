@@ -1,0 +1,29 @@
+name: Synchronize generated database types
+on:
+  push:
+    branches: [staging]
+    paths:
+      - .github/workflows/sync-db-types-once.yml
+permissions:
+  contents: write
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: true
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - run: npx --yes supabase@2.117.0 start
+      - name: Regenerate authoritative schema types
+        run: npx --yes supabase@2.117.0 gen types typescript --local --schema public > types/crew-database.ts
+      - name: Commit generated schema
+        run: |
+          if git diff --quiet -- types/crew-database.ts; then exit 0; fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add types/crew-database.ts
+          git commit -m "chore(db): sync generated Supabase schema types"
+          git push origin HEAD:staging
