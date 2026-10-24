@@ -1,6 +1,6 @@
 "use client"
 
-import {useState} from "react"
+import {useEffect,useState} from "react"
 import {comparePromotionImages} from "@/lib/promotion-image-similarity.mjs"
 
 type Locale="nl"|"fr"|"en"|"de"
@@ -47,6 +47,26 @@ export function PromotionVisualReview({evidenceUrl,referenceUrls,locale}:{eviden
   }catch{setError(true)}
   finally{setBusy(false)}
  }
+ useEffect(()=>{
+  // Recalculate when an administrator opens the review page or signed URLs rotate.
+  // This remains local and does not change verification status or issue strikes.
+  let active=true
+  async function run(){
+   setBusy(true);setError(false);setScore(null)
+   try{
+    const evidence=await pixels(evidenceUrl)
+    let best=0
+    for(const url of referenceUrls.slice(0,10)){
+     const reference=await pixels(url)
+     best=Math.max(best,comparePromotionImages(reference,evidence))
+    }
+    if(active)setScore(best)
+   }catch{if(active)setError(true)}
+   finally{if(active)setBusy(false)}
+  }
+  void run()
+  return ()=>{active=false}
+ },[evidenceUrl,referenceUrls.join("|")])
  return <div className="mt-2 space-y-1">
   <button type="button" onClick={compare} disabled={busy} className="rounded border border-violet-500 px-2 py-1 text-xs disabled:opacity-50">{busy?t.busy:t.button}</button>
   {score!==null&&<p>{t.result}: {Math.round(score*100)}%</p>}
