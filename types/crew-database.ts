@@ -7,11 +7,6 @@ export type Json =
   | Json[]
 
 export type Database = {
-  // Allows to automatically instantiate createClient with right options
-  // instead of createClient<Database, { PostgrestVersion: 'XX' }>(URL, KEY)
-  __InternalSupabase: {
-    PostgrestVersion: "14.5"
-  }
   public: {
     Tables: {
       admin_counterparties: {
@@ -3203,6 +3198,192 @@ export type Database = {
           },
         ]
       }
+      promotion_discipline: {
+        Row: {
+          blocked_until: string | null
+          permanently_blocked: boolean
+          strikes: number
+          suspension_count: number
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          blocked_until?: string | null
+          permanently_blocked?: boolean
+          strikes?: number
+          suspension_count?: number
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          blocked_until?: string | null
+          permanently_blocked?: boolean
+          strikes?: number
+          suspension_count?: number
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "promotion_discipline_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: true
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      promotion_evidence: {
+        Row: {
+          assignment_id: string
+          evidence_sha256: string
+          id: string
+          reference_sha256: string | null
+          reference_source: string | null
+          storage_path: string
+          submitted_at: string
+          submitted_by: string
+          verification_details: Json
+          verification_status: string
+          verified_at: string | null
+        }
+        Insert: {
+          assignment_id: string
+          evidence_sha256: string
+          id?: string
+          reference_sha256?: string | null
+          reference_source?: string | null
+          storage_path: string
+          submitted_at?: string
+          submitted_by: string
+          verification_details?: Json
+          verification_status?: string
+          verified_at?: string | null
+        }
+        Update: {
+          assignment_id?: string
+          evidence_sha256?: string
+          id?: string
+          reference_sha256?: string | null
+          reference_source?: string | null
+          storage_path?: string
+          submitted_at?: string
+          submitted_by?: string
+          verification_details?: Json
+          verification_status?: string
+          verified_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "promotion_evidence_assignment_id_fkey"
+            columns: ["assignment_id"]
+            isOneToOne: false
+            referencedRelation: "task_assignments"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "promotion_evidence_submitted_by_fkey"
+            columns: ["submitted_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      promotion_reference_media: {
+        Row: {
+          created_at: string
+          created_by: string
+          id: string
+          sha256: string
+          storage_path: string
+          task_id: string
+        }
+        Insert: {
+          created_at?: string
+          created_by: string
+          id?: string
+          sha256: string
+          storage_path: string
+          task_id: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string
+          id?: string
+          sha256?: string
+          storage_path?: string
+          task_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "promotion_reference_media_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "promotion_reference_media_task_id_fkey"
+            columns: ["task_id"]
+            isOneToOne: false
+            referencedRelation: "tasks"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      promotion_violations: {
+        Row: {
+          created_at: string
+          details: string
+          id: string
+          reason: string
+          recorded_by: string
+          task_assignment_id: string | null
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          details: string
+          id?: string
+          reason: string
+          recorded_by: string
+          task_assignment_id?: string | null
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          details?: string
+          id?: string
+          reason?: string
+          recorded_by?: string
+          task_assignment_id?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "promotion_violations_recorded_by_fkey"
+            columns: ["recorded_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "promotion_violations_task_assignment_id_fkey"
+            columns: ["task_assignment_id"]
+            isOneToOne: false
+            referencedRelation: "task_assignments"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "promotion_violations_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       push_subscriptions: {
         Row: {
           auth_key: string
@@ -4997,6 +5178,29 @@ export type Database = {
           isSetofReturn: true
         }
       }
+      upt_admin_promotion_discipline_list: {
+        Args: never
+        Returns: {
+          blocked_until: string
+          permanently_blocked: boolean
+          strikes: number
+          suspension_count: number
+          user_id: string
+        }[]
+      }
+      upt_admin_record_promotion_violation: {
+        Args: {
+          p_assignment: string
+          p_details: string
+          p_reason: string
+          p_user: string
+        }
+        Returns: number
+      }
+      upt_admin_register_promotion_reference: {
+        Args: { p_path: string; p_sha256: string; p_task: string }
+        Returns: string
+      }
       upt_admin_release_readiness_snapshot: {
         Args: never
         Returns: {
@@ -5015,6 +5219,10 @@ export type Database = {
       upt_admin_review_early_start: {
         Args: { p_review: string; p_start?: string }
         Returns: string
+      }
+      upt_admin_review_promotion_evidence: {
+        Args: { p_details: string; p_evidence: string; p_status: string }
+        Returns: undefined
       }
       upt_admin_roster_apply: { Args: { p_id: string }; Returns: undefined }
       upt_admin_roster_create: {
@@ -5073,6 +5281,10 @@ export type Database = {
           recent_audit_24h: number
           unread_notifications: number
         }[]
+      }
+      upt_admin_unblock_promotion: {
+        Args: { p_reason: string; p_user: string }
+        Returns: undefined
       }
       upt_apply_event_template: {
         Args: {
@@ -5868,6 +6080,7 @@ export type Database = {
           name: string
         }[]
       }
+      upt_promotion_is_blocked: { Args: { p_user?: string }; Returns: boolean }
       upt_push_delivery_config: {
         Args: never
         Returns: {
@@ -6388,6 +6601,10 @@ export type Database = {
         Returns: undefined
       }
       upt_stop_work: { Args: { p_work_session: string }; Returns: undefined }
+      upt_submit_promotion_evidence: {
+        Args: { p_assignment: string; p_sha256: string; p_storage_path: string }
+        Returns: string
+      }
       upt_submit_timesheet: { Args: { p_event: string }; Returns: string }
       upt_swap_candidates: {
         Args: { p_shift: string }
@@ -6641,3 +6858,4 @@ export const Constants = {
     Enums: {},
   },
 } as const
+
