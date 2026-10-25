@@ -1,6 +1,6 @@
 "use client"
 
-import {useEffect,useState} from "react"
+import {useEffect,useRef,useState} from "react"
 import {comparePromotionImages} from "@/lib/promotion-image-similarity.mjs"
 
 type Locale="nl"|"fr"|"en"|"de"
@@ -34,7 +34,10 @@ export function PromotionVisualReview({evidenceUrl,referenceUrls,locale}:{eviden
  const [busy,setBusy]=useState(false)
  const [error,setError]=useState(false)
  const t=copy[locale]
+ // A retry or changed signed URL invalidates any earlier in-flight result.
+ const requestId=useRef(0)
  async function compare(){
+  const current=++requestId.current
   setBusy(true);setError(false);setScore(null)
   try{
    const evidence=await pixels(evidenceUrl)
@@ -43,29 +46,19 @@ export function PromotionVisualReview({evidenceUrl,referenceUrls,locale}:{eviden
     const reference=await pixels(url)
     best=Math.max(best,comparePromotionImages(reference,evidence))
    }
-   setScore(best)
-  }catch{setError(true)}
-  finally{setBusy(false)}
+   if(current===requestId.current)setScore(best)
+  }catch{
+   if(current===requestId.current)setError(true)
+  }finally{
+   if(current===requestId.current)setBusy(false)
+  }
  }
  useEffect(()=>{
-  // Recalculate when an administrator opens the review page or signed URLs rotate.
-  // This remains local and does not change verification status or issue strikes.
-  let active=true
-  async function run(){
-   setBusy(true);setError(false);setScore(null)
-   try{
-    const evidence=await pixels(evidenceUrl)
-    let best=0
-    for(const url of referenceUrls.slice(0,10)){
-     const reference=await pixels(url)
-     best=Math.max(best,comparePromotionImages(reference,evidence))
-    }
-    if(active)setScore(best)
-   }catch{if(active)setError(true)}
-   finally{if(active)setBusy(false)}
-  }
-  void run()
-  return ()=>{active=false}
+  void compare()
+  return ()=>{requestId.current++}
+  // Re-run only when the signed URLs change; the callback is intentionally
+  // scoped to the current render so it uses the matching evidence/reference set.
+  // eslint-disable-next-line react-hooks/exhaustive-deps
  },[evidenceUrl,referenceUrls])
  return <div className="mt-2 space-y-1">
   <button type="button" onClick={compare} disabled={busy} className="rounded border border-violet-500 px-2 py-1 text-xs disabled:opacity-50">{busy?t.busy:t.button}</button>
