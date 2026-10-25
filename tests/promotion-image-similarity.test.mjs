@@ -38,3 +38,10 @@ test('image comparison is deterministic without modifying input buffers',()=>{
  assert.deepEqual(a.data,beforeA)
  assert.deepEqual(b.data,beforeB)
 })
+
+test('non-byte pixel arrays are rejected before scoring',()=>{
+ const valid=image(32,32,(x,y)=>(x+y)%256)
+ const invalid={...valid,data:new Float64Array(valid.data.length)}
+ assert.throws(()=>comparePromotionImages(invalid,valid),TypeError)
+ assert.throws(()=>comparePromotionImages(valid,invalid),TypeError)
+})
