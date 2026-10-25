@@ -18,3 +18,12 @@ test('unrelated visual patterns score below an identical match',()=>{
 test('invalid pixel buffers are rejected',()=>{
  assert.throws(()=>comparePromotionImages({width:64,height:64,data:new Uint8Array(5)},image(64,64,()=>0)),TypeError)
 })
+
+test('landscape artwork is found without squashing its aspect ratio',()=>{
+ const artwork=image(80,40,(x,y)=>((x*13+y*37)^((x*y)%239))%256)
+ const screenshot=image(120,120,(x,y)=>{
+  if(x>=20&&x<100&&y>=40&&y<80)return artwork.data[((y-40)*80+(x-20))*4]
+  return 245
+ })
+ assert.ok(comparePromotionImages(artwork,screenshot)>0.9)
+})
