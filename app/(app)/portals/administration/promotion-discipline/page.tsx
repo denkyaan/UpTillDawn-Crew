@@ -79,7 +79,16 @@ export default async function PromotionDisciplinePage(){
   return {id:e.id,url:signed?.signedUrl??null}
  }))
  const evidenceUrlById=new Map(evidenceLinks.map(e=>[e.id,e.url]))
- const {data:referenceRows,error:referenceError}=await db.from("promotion_reference_media" as never).select("id,task_id,storage_path,created_at").order("created_at",{ascending:false}).limit(500)
+ // References are loaded only for the tasks associated with the visible evidence.
+ // This avoids losing an older campaign's reference to a global result limit.
+ const evidenceAssignmentIds=[...new Set(pendingRows.map(e=>e.assignment_id))]
+ const {data:referenceAssignments}=evidenceAssignmentIds.length
+  ?await db.from("task_assignments").select("id,task_id").in("id",evidenceAssignmentIds)
+  :{data:[] as {id:string;task_id:string}[]}
+ const referenceTaskIds=[...new Set((referenceAssignments??[]).map(a=>a.task_id))]
+ const {data:referenceRows,error:referenceError}=referenceTaskIds.length
+  ?await db.from("promotion_reference_media" as never).select("id,task_id,storage_path,created_at").in("task_id",referenceTaskIds).order("created_at",{ascending:false}).limit(500)
+  :{data:[],error:null}
  const references=(referenceRows??[]) as unknown as {id:string;task_id:string;storage_path:string;created_at:string}[]
  const referenceLinks=await Promise.all(references.map(async r=>{
   if(!r.storage_path)return {id:r.id,url:null}
