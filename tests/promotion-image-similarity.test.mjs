@@ -27,3 +27,14 @@ test('landscape artwork is found without squashing its aspect ratio',()=>{
  })
  assert.ok(comparePromotionImages(artwork,screenshot)>0.9)
 })
+
+test('image comparison is deterministic without modifying input buffers',()=>{
+ const a=image(64,32,(x,y)=>(x*11+y*19)%256)
+ const b=image(100,100,(x,y)=>(x*7+y*23)%256)
+ const beforeA=Uint8Array.from(a.data)
+ const beforeB=Uint8Array.from(b.data)
+ const first=comparePromotionImages(a,b)
+ assert.equal(comparePromotionImages(a,b),first)
+ assert.deepEqual(a.data,beforeA)
+ assert.deepEqual(b.data,beforeB)
+})
