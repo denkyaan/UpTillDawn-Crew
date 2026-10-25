@@ -54,8 +54,10 @@ export function PromotionVisualReview({evidenceUrl,referenceUrls,locale}:{eviden
   }
  }
  useEffect(()=>{
-  void compare()
-  return ()=>{requestId.current++}
+  const scheduled=Promise.resolve().then(()=>compare())
+  const currentRequest=requestId
+  void scheduled
+  return ()=>{currentRequest.current++}
   // Re-run only when the signed URLs change; the callback is intentionally
   // scoped to the current render so it uses the matching evidence/reference set.
   // eslint-disable-next-line react-hooks/exhaustive-deps
