@@ -36,6 +36,7 @@ export function PromotionVisualReview({evidenceUrl,referenceUrls,locale}:{eviden
  const t=copy[locale]
  // A retry or changed signed URL invalidates any earlier in-flight result.
  const requestId=useRef(0)
+ const mounted=useRef(true)
  async function compare(){
   const current=++requestId.current
   setBusy(true);setError(false);setScore(null)
@@ -46,7 +47,7 @@ export function PromotionVisualReview({evidenceUrl,referenceUrls,locale}:{eviden
     const reference=await pixels(url)
     best=Math.max(best,comparePromotionImages(reference,evidence))
    }
-   if(current===requestId.current)setScore(best)
+   if(mounted.current&&current===requestId.current)setScore(best)
   }catch{
    if(current===requestId.current)setError(true)
   }finally{
@@ -54,10 +55,12 @@ export function PromotionVisualReview({evidenceUrl,referenceUrls,locale}:{eviden
   }
  }
  useEffect(()=>{
-  const scheduled=Promise.resolve().then(()=>compare())
+  mounted.current=true
   const currentRequest=requestId
+  const currentMounted=mounted
+  const scheduled=Promise.resolve().then(()=>{if(currentMounted.current)void compare()})
   void scheduled
-  return ()=>{currentRequest.current++}
+  return ()=>{currentMounted.current=false;currentRequest.current++}
   // Re-run only when the signed URLs change; the callback is intentionally
   // scoped to the current render so it uses the matching evidence/reference set.
   // eslint-disable-next-line react-hooks/exhaustive-deps
