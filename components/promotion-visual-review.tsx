@@ -18,6 +18,10 @@ async function pixels(url:string){
  if(blob.size>10*1024*1024||!blob.type.startsWith("image/"))throw new Error("Invalid image")
  const bitmap=await createImageBitmap(blob)
  try{
+  // File size alone does not constrain decoded image memory. Reject oversized
+  // dimensions before drawing to canvas on resource-constrained devices.
+  if(bitmap.width<1||bitmap.height<1||bitmap.width>12000||bitmap.height>12000||bitmap.width*bitmap.height>32_000_000)
+   throw new Error("Image dimensions exceed safe limits")
   const factor=Math.min(1,512/Math.max(bitmap.width,bitmap.height))
   const width=Math.max(1,Math.round(bitmap.width*factor))
   const height=Math.max(1,Math.round(bitmap.height*factor))
