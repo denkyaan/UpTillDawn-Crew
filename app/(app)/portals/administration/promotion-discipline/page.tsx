@@ -79,7 +79,7 @@ export default async function PromotionDisciplinePage(){
   return {id:e.id,url:signed?.signedUrl??null}
  }))
  const evidenceUrlById=new Map(evidenceLinks.map(e=>[e.id,e.url]))
- const {data:referenceRows,error:referenceError}=await db.from("promotion_reference_media" as never).select("id,task_id,storage_path,created_at").order("created_at",{ascending:false}).limit(50)
+ const {data:referenceRows,error:referenceError}=await db.from("promotion_reference_media" as never).select("id,task_id,storage_path,created_at").order("created_at",{ascending:false}).limit(500)
  const references=(referenceRows??[]) as unknown as {id:string;task_id:string;storage_path:string;created_at:string}[]
  const referenceLinks=await Promise.all(references.map(async r=>{
   if(!r.storage_path)return {id:r.id,url:null}
@@ -87,6 +87,8 @@ export default async function PromotionDisciplinePage(){
   return {id:r.id,url:signed?.signedUrl??null}
  }))
  const referenceUrlById=new Map(referenceLinks.map(r=>[r.id,r.url]))
+ // Fetch the newest registered references for every task, not just the newest
+ // 50 globally; older tasks must remain reviewable after newer campaigns upload.
  const {data:taskRows,error:taskError}=await db.from("tasks").select("id,title").order("created_at",{ascending:false}).limit(100)
  const assignmentIds=[...new Set(pendingRows.map(e=>e.assignment_id))]
  const {data:evidenceAssignments}=assignmentIds.length
