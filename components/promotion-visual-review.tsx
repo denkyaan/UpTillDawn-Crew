@@ -43,10 +43,18 @@ export function PromotionVisualReview({evidenceUrl,referenceUrls,locale}:{eviden
   try{
    const evidence=await pixels(evidenceUrl)
    let best=0
+   let compared=0
+   // One expired or corrupt reference must not hide other valid comparisons.
    for(const url of referenceUrls.slice(0,10)){
-    const reference=await pixels(url)
-    best=Math.max(best,comparePromotionImages(reference,evidence))
+    try{
+     const reference=await pixels(url)
+     best=Math.max(best,comparePromotionImages(reference,evidence))
+     compared++
+    }catch{
+     // Continue with the other official references.
+    }
    }
+   if(compared===0)throw new Error("No reference images available")
    if(mounted.current&&current===requestId.current)setScore(best)
   }catch{
    if(current===requestId.current)setError(true)
