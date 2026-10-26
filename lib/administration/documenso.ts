@@ -36,3 +36,8 @@ export async function checkSigningConnection():Promise<SigningConnectionStatus>{
   return {configured:true,healthy,certificateReady,reason:healthy&&certificateReady?"ready":"certificate_missing"}
  }catch{return {configured:true,healthy:false,certificateReady:false,reason:"unreachable"}}
 }
+
+/** Explicitly disabled until a validated document-upload and signing flow exists. */
+export function signingDispatchEnabled():false{
+ return false
+}
