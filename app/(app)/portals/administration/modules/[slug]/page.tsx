@@ -41,9 +41,9 @@ const financeRelated=new Set(["invoices","banking","documents","reports"])
 
 export const dynamic = "force-dynamic"
 
-export default async function AdministrationModulePage({params,searchParams}:{params:Promise<{slug:string}>;searchParams?:Promise<{event?:string}>}){
+export default async function AdministrationModulePage({params,searchParams}:{params:Promise<{slug:string}>;searchParams?:Promise<{event?:string;page?:string}>}){
  const {slug}=await params
- const {event:requestedEvent}=await (searchParams??Promise.resolve({event:undefined}))
+ const {event:requestedEvent,page:requestedPage}=await (searchParams??Promise.resolve({event:undefined,page:undefined}))
  const adminModule=administrationModules.find(item=>item.slug===slug&&slug!=="dashboard"&&slug!=="finance")
  if(!adminModule)notFound()
  const current=await getCurrentUser()
@@ -65,12 +65,17 @@ export default async function AdministrationModulePage({params,searchParams}:{pa
 
  }
  if(operationalRoutes[slug])redirect(operationalRoutes[slug])
+ const parsedPage=Number(requestedPage)
+ const inventoryPage=Number.isSafeInteger(parsedPage)&&parsedPage>0&&parsedPage<=10000?parsedPage:1
+ const inventoryPageSize=100
+ const inventoryStart=(inventoryPage-1)*inventoryPageSize
  const inventoryFilterEvents=slug==="inventory" ? await supabase.from("events").select("id,name").order("start_at",{ascending:false}).limit(100) : null
  const selectedEvent=inventoryFilterEvents?.data?.some(event=>event.id===requestedEvent)?requestedEvent:null
+ const inventoryCount=slug==="inventory" ? await (selectedEvent?supabase.from("inventory_items").select("id",{count:"exact",head:true}).eq("event_id",selectedEvent):supabase.from("inventory_items").select("id",{count:"exact",head:true})) : null
  const liveRecords = slug==="events"
   ? await supabase.from("events").select("id,name,status,start_at").order("start_at",{ascending:false}).limit(30)
   : slug==="inventory"
-    ? await (selectedEvent?supabase.from("inventory_items").select("id,name,missing_quantity,damaged_quantity,event_id").eq("event_id",selectedEvent):supabase.from("inventory_items").select("id,name,missing_quantity,damaged_quantity,event_id")).limit(100)
+    ? await (selectedEvent?supabase.from("inventory_items").select("id,name,missing_quantity,damaged_quantity,event_id").eq("event_id",selectedEvent):supabase.from("inventory_items").select("id,name,missing_quantity,damaged_quantity,event_id")).range(inventoryStart,inventoryStart+inventoryPageSize-1)
     : null
  const inventoryEventIds=slug==="inventory"&&liveRecords?.data
   ? [...new Set(liveRecords.data.flatMap(record=>"event_id" in record&&record.event_id?[record.event_id]:[]))]
@@ -114,8 +119,9 @@ export default async function AdministrationModulePage({params,searchParams}:{pa
     {(inventoryFilterEvents?.data??[]).map(event=><Link key={event.id} href={`/portals/administration/modules/inventory?event=${encodeURIComponent(event.id)}`} aria-current={selectedEvent===event.id?"page":undefined} className={`rounded-lg border px-3 py-2 text-sm ${selectedEvent===event.id?"border-violet-500 font-semibold":"hover:border-violet-400"}`}>{event.name}</Link>)}
    </div>}
   </section>}
+  {slug==="inventory"&&inventoryCount?.error&&<p role="status" className="text-sm text-muted-foreground">{({nl:"Totaal aantal materialen niet beschikbaar.",fr:"Nombre total d’articles indisponible.",en:"Total item count unavailable.",de:"Gesamtanzahl der Artikel nicht verfügbar."} as const)[locale]}</p>}
   {slug==="inventory"&&inventorySummary.size>0&&<section className="rounded-2xl border bg-card p-5">
-   <h2 className="text-lg font-semibold">{({nl:"Afwijkingen per evenement",fr:"Écarts par événement",en:"Discrepancies by event",de:"Abweichungen pro Veranstaltung"} as const)[locale]}</h2>
+   <h2 className="text-lg font-semibold">{({nl:"Afwijkingen per evenement (huidige pagina)",fr:"Écarts par événement (page actuelle)",en:"Discrepancies by event (current page)",de:"Abweichungen pro Veranstaltung (aktuelle Seite)"} as const)[locale]}</h2>
    <div className="mt-3 space-y-2">{[...inventorySummary.entries()].map(([eventId,summary])=><div key={eventId} className="flex flex-wrap items-center justify-between gap-2 rounded-lg border p-3 text-sm">
     <span className="font-medium">{inventoryEvents?.error ? ({nl:"Evenementgegevens niet beschikbaar",fr:"Données événement indisponibles",en:"Event details unavailable",de:"Veranstaltungsdaten nicht verfügbar"} as const)[locale] : inventoryEventNames.get(eventId)??({nl:"Onbekend evenement",fr:"Événement inconnu",en:"Unknown event",de:"Unbekannte Veranstaltung"} as const)[locale]}</span>
     <span className="text-xs text-muted-foreground">{({nl:"Materialen",fr:"Articles",en:"Items",de:"Artikel"} as const)[locale]}: {summary.items} · {({nl:"Ontbreekt",fr:"Manquant",en:"Missing",de:"Fehlt"} as const)[locale]}: {summary.missing} · {({nl:"Beschadigd",fr:"Endommagé",en:"Damaged",de:"Beschädigt"} as const)[locale]}: {summary.damaged}</span>
@@ -127,6 +133,13 @@ export default async function AdministrationModulePage({params,searchParams}:{pa
     :!liveRecords.data?.length?<p className="mt-3 text-sm text-muted-foreground">{({nl:"Geen records gevonden.",fr:"Aucun enregistrement trouvé.",en:"No records found.",de:"Keine Einträge gefunden."} as const)[locale]}</p>
     :<div className="mt-3 space-y-2">{liveRecords.data.map((record,index)=><div key={String(record.id??index)} className="flex items-center justify-between gap-3 rounded-lg border p-3 text-sm"><span className="min-w-0 truncate font-medium">{String(record.name ?? record.id)}{slug==="inventory"&&"event_id" in record&&record.event_id&&<span className="block text-xs font-normal text-muted-foreground">{({nl:"Evenement",fr:"Événement",en:"Event",de:"Veranstaltung"} as const)[locale]}: {inventoryEvents?.error ? ({nl:"Evenementgegevens niet beschikbaar",fr:"Données événement indisponibles",en:"Event details unavailable",de:"Veranstaltungsdaten nicht verfügbar"} as const)[locale] : inventoryEventNames.get(record.event_id)??({nl:"Onbekend evenement",fr:"Événement inconnu",en:"Unknown event",de:"Unbekannte Veranstaltung"} as const)[locale]}</span>}</span><span className="shrink-0 text-xs text-muted-foreground">{slug==="inventory" ? `${({nl:"Ontbreekt",fr:"Manquant",en:"Missing",de:"Fehlt"} as const)[locale]}: ${"missing_quantity" in record ? record.missing_quantity ?? 0 : 0} · ${({nl:"Beschadigd",fr:"Endommagé",en:"Damaged",de:"Beschädigt"} as const)[locale]}: ${"damaged_quantity" in record ? record.damaged_quantity ?? 0 : 0}` : String("status" in record ? record.status ?? "—" : "—")}</span></div>)}</div>}
   </section>}
+  {slug==="inventory"&&liveRecords&&!liveRecords.error&&<nav aria-label={({nl:"Inventarispagina's",fr:"Pages d’inventaire",en:"Inventory pages",de:"Inventarseiten"} as const)[locale]} className="flex flex-wrap items-center justify-between gap-3 rounded-xl border p-3 text-sm">
+   <span>{({nl:"Pagina",fr:"Page",en:"Page",de:"Seite"} as const)[locale]} {inventoryPage}{inventoryCount?.count!=null?` · ${inventoryCount.count} ${({nl:"materialen",fr:"articles",en:"items",de:"Artikel"} as const)[locale]}`:""}</span>
+   <div className="flex gap-2">
+    {inventoryPage>1&&<Link className="rounded-lg border px-3 py-2" href={`/portals/administration/modules/inventory?page=${inventoryPage-1}${selectedEvent?`&event=${encodeURIComponent(selectedEvent)}`:""}`}>{({nl:"Vorige",fr:"Précédente",en:"Previous",de:"Zurück"} as const)[locale]}</Link>}
+    {(inventoryCount?.count!=null?inventoryPage*inventoryPageSize<inventoryCount.count:(liveRecords.data?.length??0)===inventoryPageSize)&&<Link className="rounded-lg border px-3 py-2" href={`/portals/administration/modules/inventory?page=${inventoryPage+1}${selectedEvent?`&event=${encodeURIComponent(selectedEvent)}`:""}`}>{({nl:"Volgende",fr:"Suivante",en:"Next",de:"Weiter"} as const)[locale]}</Link>}
+   </div>
+  </nav>}
   <section className="grid gap-4 md:grid-cols-3" aria-label={u.section}>
    {sections.map((section,index)=><article key={index} className="flex min-h-48 flex-col rounded-2xl border bg-card p-5">
     <div className="mb-4 flex items-start justify-between gap-3"><h2 className="font-semibold">{section[locale]}</h2><span aria-hidden="true" className="text-violet-400">◈</span></div>
