@@ -63,6 +63,7 @@ export default async function AdministrationModulePage({params,searchParams}:{pa
   staff:"/portals/administration/rosters",
   reports:"/portals/administration/finance",
   contacts:"/portals/administration/contacts",
+  marketing:"/portals/administration/promotion-discipline",
 
  }
  if(operationalRoutes[slug])redirect(operationalRoutes[slug])
