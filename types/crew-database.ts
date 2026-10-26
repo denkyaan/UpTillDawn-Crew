@@ -85,6 +85,44 @@ export type Database = {
           },
         ]
       }
+      admin_artist_agreement_signature_requests: {
+        Row: {
+          agreement_version_id: string
+          cancelled_at: string | null
+          created_at: string
+          created_by: string
+          id: string
+          recipient_email: string
+          status: string
+        }
+        Insert: {
+          agreement_version_id: string
+          cancelled_at?: string | null
+          created_at?: string
+          created_by?: string
+          id?: string
+          recipient_email: string
+          status?: string
+        }
+        Update: {
+          agreement_version_id?: string
+          cancelled_at?: string | null
+          created_at?: string
+          created_by?: string
+          id?: string
+          recipient_email?: string
+          status?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "admin_artist_agreement_signature_requests_agreement_version_id_fkey"
+            columns: ["agreement_version_id"]
+            isOneToOne: false
+            referencedRelation: "admin_artist_agreement_versions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       admin_artist_bookings: {
         Row: {
           agreement_cancellation_terms: string | null
