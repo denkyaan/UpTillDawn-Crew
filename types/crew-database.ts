@@ -46,10 +46,10 @@ export type Database = {
       }
       admin_artist_bookings: {
         Row: {
-          agreement_payment_terms: string | null
           agreement_cancellation_terms: string | null
-          agreement_liability_terms: string | null
           agreement_governing_law: string | null
+          agreement_liability_terms: string | null
+          agreement_payment_terms: string | null
           agency_contact_id: string | null
           artist_name: string
           created_at: string
@@ -66,10 +66,10 @@ export type Database = {
           updated_at: string
         }
         Insert: {
-          agreement_payment_terms?: string | null
           agreement_cancellation_terms?: string | null
-          agreement_liability_terms?: string | null
           agreement_governing_law?: string | null
+          agreement_liability_terms?: string | null
+          agreement_payment_terms?: string | null
           agency_contact_id?: string | null
           artist_name: string
           created_at?: string
@@ -86,10 +86,10 @@ export type Database = {
           updated_at?: string
         }
         Update: {
-          agreement_payment_terms?: string | null
           agreement_cancellation_terms?: string | null
-          agreement_liability_terms?: string | null
           agreement_governing_law?: string | null
+          agreement_liability_terms?: string | null
+          agreement_payment_terms?: string | null
           agency_contact_id?: string | null
           artist_name?: string
           created_at?: string
