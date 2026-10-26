@@ -77,24 +77,35 @@ export default async function AdministrationModulePage({params,searchParams}:{pa
   : slug==="inventory"
     ? await (selectedEvent?supabase.from("inventory_items").select("id,name,missing_quantity,damaged_quantity,event_id").eq("event_id",selectedEvent):supabase.from("inventory_items").select("id,name,missing_quantity,damaged_quantity,event_id")).range(inventoryStart,inventoryStart+inventoryPageSize-1)
     : null
- const inventoryEventIds=slug==="inventory"&&liveRecords?.data
-  ? [...new Set(liveRecords.data.flatMap(record=>"event_id" in record&&record.event_id?[record.event_id]:[]))]
+ // Read every inventory row for accurate totals; never label partial results as complete.
+ const summaryRows:{event_id:string|null;missing_quantity:number|null;damaged_quantity:number|null}[]=[]
+ let summaryComplete=slug==="inventory"&&inventoryCount?.count!=null&&inventoryCount.count<=5000
+ if(summaryComplete){
+  for(let offset=0;offset<(inventoryCount?.count??0);offset+=500){
+   const batch=await (selectedEvent?supabase.from("inventory_items").select("event_id,missing_quantity,damaged_quantity").eq("event_id",selectedEvent):supabase.from("inventory_items").select("event_id,missing_quantity,damaged_quantity")).order("id").range(offset,offset+499)
+   if(batch.error||!batch.data){summaryComplete=false;break}
+   summaryRows.push(...batch.data)
+   if(batch.data.length<Math.min(500,(inventoryCount?.count??0)-offset)){summaryComplete=false;break}
+  }
+ }
+ const inventorySummary=new Map<string,{missing:number;damaged:number;items:number}>()
+ if(summaryComplete){
+  for(const record of summaryRows){
+   if(!record.event_id)continue
+   const summary=inventorySummary.get(record.event_id)??{missing:0,damaged:0,items:0}
+   summary.missing+=Number(record.missing_quantity??0)
+   summary.damaged+=Number(record.damaged_quantity??0)
+   summary.items+=1
+   inventorySummary.set(record.event_id,summary)
+  }
+ }
+ const inventoryEventIds=slug==="inventory"
+  ? [...new Set([...(liveRecords?.data??[]).flatMap(record=>"event_id" in record&&record.event_id?[record.event_id]:[]),...inventorySummary.keys()])]
   : []
  const inventoryEvents=inventoryEventIds.length
   ? await supabase.from("events").select("id,name").in("id",inventoryEventIds)
   : null
  const inventoryEventNames=new Map((inventoryEvents?.data??[]).map(event=>[event.id,event.name]))
- const inventorySummary=new Map<string,{missing:number;damaged:number;items:number}>()
- if(slug==="inventory"&&!liveRecords?.error){
-  for(const record of liveRecords?.data??[]){
-   if(!("event_id" in record)||!record.event_id)continue
-   const summary=inventorySummary.get(record.event_id)??{missing:0,damaged:0,items:0}
-   summary.missing+=Number("missing_quantity" in record?record.missing_quantity??0:0)
-   summary.damaged+=Number("damaged_quantity" in record?record.damaged_quantity??0:0)
-   summary.items+=1
-   inventorySummary.set(record.event_id,summary)
-  }
- }
  const locale=await requestUiLocale()
  const t=administrationCopy[locale]
  const u=ui[locale]
@@ -120,8 +131,9 @@ export default async function AdministrationModulePage({params,searchParams}:{pa
    </div>}
   </section>}
   {slug==="inventory"&&inventoryCount?.error&&<p role="status" className="text-sm text-muted-foreground">{({nl:"Totaal aantal materialen niet beschikbaar.",fr:"Nombre total d’articles indisponible.",en:"Total item count unavailable.",de:"Gesamtanzahl der Artikel nicht verfügbar."} as const)[locale]}</p>}
+  {slug==="inventory"&&!summaryComplete&&!liveRecords?.error&&<p role="status" className="rounded-xl border p-3 text-sm text-muted-foreground">{({nl:"Volledige afwijkingstotalen zijn niet beschikbaar (meer dan 5.000 materialen of een onvolledige opvraging). De materialenlijst blijft bruikbaar.",fr:"Totaux complets indisponibles (plus de 5 000 articles ou lecture incomplète). La liste reste accessible.",en:"Complete discrepancy totals are unavailable (over 5,000 items or an incomplete query). The item list remains available.",de:"Vollständige Abweichungssummen nicht verfügbar (über 5.000 Artikel oder unvollständige Abfrage). Die Artikelliste bleibt verfügbar."} as const)[locale]}</p>}
   {slug==="inventory"&&inventorySummary.size>0&&<section className="rounded-2xl border bg-card p-5">
-   <h2 className="text-lg font-semibold">{({nl:"Afwijkingen per evenement (huidige pagina)",fr:"Écarts par événement (page actuelle)",en:"Discrepancies by event (current page)",de:"Abweichungen pro Veranstaltung (aktuelle Seite)"} as const)[locale]}</h2>
+   <h2 className="text-lg font-semibold">{({nl:"Afwijkingen per evenement",fr:"Écarts par événement",en:"Discrepancies by event",de:"Abweichungen pro Veranstaltung"} as const)[locale]}</h2>
    <div className="mt-3 space-y-2">{[...inventorySummary.entries()].map(([eventId,summary])=><div key={eventId} className="flex flex-wrap items-center justify-between gap-2 rounded-lg border p-3 text-sm">
     <span className="font-medium">{inventoryEvents?.error ? ({nl:"Evenementgegevens niet beschikbaar",fr:"Données événement indisponibles",en:"Event details unavailable",de:"Veranstaltungsdaten nicht verfügbar"} as const)[locale] : inventoryEventNames.get(eventId)??({nl:"Onbekend evenement",fr:"Événement inconnu",en:"Unknown event",de:"Unbekannte Veranstaltung"} as const)[locale]}</span>
     <span className="text-xs text-muted-foreground">{({nl:"Materialen",fr:"Articles",en:"Items",de:"Artikel"} as const)[locale]}: {summary.items} · {({nl:"Ontbreekt",fr:"Manquant",en:"Missing",de:"Fehlt"} as const)[locale]}: {summary.missing} · {({nl:"Beschadigd",fr:"Endommagé",en:"Damaged",de:"Beschädigt"} as const)[locale]}: {summary.damaged}</span>
