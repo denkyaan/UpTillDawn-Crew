@@ -27,6 +27,31 @@ async function saveTerms(form:FormData){
  revalidatePath(base+"/"+id+"/agreement")
  redirect(base+"/"+id+"/agreement")
 }
+async function snapshotAgreement(form:FormData){
+ "use server"
+ const id=String(form.get("id")??"")
+ if(!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id))notFound()
+ const user=await getCurrentUser()
+ if(!user)redirect("/login")
+ if((!user.approved||user.account_blocked)&&!user.isOwner)redirect("/portals")
+ const db=await createClient()
+ if(!user.isAdmin&&!user.isOwner){
+  const {data,error}=await db.rpc("upt_my_portal_assignments")
+  if(error||!canOpenPortal("administration",(data??[]) as PortalAssignment[],{approved:user.approved,blocked:Boolean(user.account_blocked)}))redirect("/portals")
+ }
+ const {data:booking,error}=await db.from("admin_artist_bookings").select("id,artist_name,status,event_id,agency_contact_id,performance_at,fee_amount,currency,rider_notes,agreement_payment_terms,agreement_cancellation_terms,agreement_liability_terms,agreement_governing_law").eq("id",id).single()
+ if(error||!booking||booking.status==="cancelled")throw new Error("Agreement unavailable")
+ if(!booking.agency_contact_id||!booking.performance_at||booking.fee_amount===null||!booking.agreement_payment_terms||!booking.agreement_cancellation_terms||!booking.agreement_liability_terms||!booking.agreement_governing_law)throw new Error("Complete agreement terms first")
+ const {data:agency}=await db.from("admin_counterparties").select("name,email").eq("id",booking.agency_contact_id).maybeSingle()
+ const {data:event}=await db.from("events").select("name,start_at").eq("id",booking.event_id).maybeSingle()
+ if(!agency?.name||!agency.email||!event?.name)throw new Error("Agency and event required")
+ const snapshot={...booking,agency_name:agency.name,agency_email:agency.email,event_name:event.name,event_start_at:event.start_at}
+ const {data:latest}=await db.from("admin_artist_agreement_versions").select("version_number").eq("booking_id",id).order("version_number",{ascending:false}).limit(1).maybeSingle()
+ const {error:insertError}=await db.from("admin_artist_agreement_versions").insert({booking_id:id,version_number:(latest?.version_number??0)+1,snapshot})
+ if(insertError)throw new Error("Agreement version could not be saved; retry if another user created a version")
+ revalidatePath(base+"/"+id+"/agreement")
+ redirect(base+"/"+id+"/agreement")
+}
 const base="/portals/administration/modules/artists"
 export default async function AgreementDraft({params}:{params:Promise<{id:string}>}){
  const {id}=await params
@@ -45,6 +70,7 @@ export default async function AgreementDraft({params}:{params:Promise<{id:string
   db.from("events").select("name,start_at").eq("id",booking.event_id).maybeSingle(),
   booking.agency_contact_id?db.from("admin_counterparties").select("name,email").eq("id",booking.agency_contact_id).maybeSingle():Promise.resolve({data:null})
  ])
+ const {data:versions}=await db.from("admin_artist_agreement_versions").select("id,version_number,created_at,snapshot").eq("booking_id",id).order("version_number",{ascending:false}).limit(20)
  const locale=await requestUiLocale()
  const copy=({
   nl:{back:"Terug naar boeking",title:"Concept boekingsafspraak",warning:"Dit is een intern concept, geen ondertekend contract. Controleer alle voorwaarden en laat beide partijen expliciet akkoord gaan.",artist:"Artiest",agency:"Agentschap",event:"Evenement",performance:"Optreden",fee:"Afgesproken vergoeding",rider:"Rider en afspraken",missing:"Nog niet ingevuld",status:"Boekingsstatus",terms:"Aan te vullen vóór ondertekening",conditions:"Betalingsvoorwaarden, annulering, technische verplichtingen, aansprakelijkheid, toepasselijk recht en handtekeningen zijn nog niet vastgelegd.",noSend:"Dit concept wordt niet automatisch verzonden of ondertekend."},
@@ -97,6 +123,11 @@ export default async function AgreementDraft({params}:{params:Promise<{id:string
    ] as [string,string,string|null][]).map(([name,label,value])=><label key={name} className="text-sm font-semibold">{label}<textarea name={name} maxLength={3000} rows={3} defaultValue={value??""} disabled={booking.status==="confirmed"||booking.status==="cancelled"} className="mt-1 w-full rounded-lg border bg-background p-3 font-normal"/></label>)}
    {booking.status!=="confirmed"&&booking.status!=="cancelled"&&<button className="rounded-xl bg-violet-600 px-4 py-3 font-semibold text-white">{({nl:"Voorwaarden opslaan",fr:"Enregistrer les conditions",en:"Save conditions",de:"Bedingungen speichern"} as const)[locale]}</button>}
   </form>
+  <section className="space-y-3 rounded-2xl border p-5">
+   <h2 className="font-semibold">{({nl:"Contractversies",fr:"Versions du contrat",en:"Agreement versions",de:"Vertragsversionen"} as const)[locale]}</h2>
+   {missingFields.length===0&&booking.status!=="cancelled"&&<form action={snapshotAgreement}><input type="hidden" name="id" value={booking.id}/><button className="rounded-xl border px-4 py-3 text-sm font-semibold">{({nl:"Nieuwe conceptversie vastleggen",fr:"Enregistrer une version du projet",en:"Save new draft version",de:"Neue Entwurfsversion speichern"} as const)[locale]}</button></form>}
+   <ol className="space-y-2 text-sm">{(versions??[]).map(version=><li key={version.id} className="rounded-lg border p-3"><strong>v{version.version_number}</strong> · {new Intl.DateTimeFormat(({nl:"nl-BE",fr:"fr-BE",en:"en-GB",de:"de-DE"} as const)[locale],{dateStyle:"medium",timeStyle:"short"}).format(new Date(version.created_at))}<details className="mt-2"><summary className="cursor-pointer">{({nl:"Opgeslagen inhoud bekijken",fr:"Voir le contenu enregistré",en:"View saved content",de:"Gespeicherten Inhalt ansehen"} as const)[locale]}</summary><pre className="mt-2 overflow-x-auto whitespace-pre-wrap break-words text-xs">{JSON.stringify(version.snapshot,null,2)}</pre></details></li>)}</ol>
+  </section>
   <p className="text-sm text-muted-foreground">{copy.noSend}</p>
  </main>
 }
