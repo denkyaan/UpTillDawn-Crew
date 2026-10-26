@@ -23,6 +23,9 @@ export async function verifyArchivedContractPdf(input:{
  try{manifest=JSON.parse(new TextDecoder("utf-8",{fatal:true}).decode(evidence))}catch{throw new Error("Invalid contract archive manifest")}
  const expected=await buildContractPdfManifest(document,pdf)
  const actual=manifest as Partial<ContractPdfManifest>|null
+ const fileDigest=expected.pdfSha256
+ const pdfName=pdfPath.split("/").at(-1)
+ if(pdfName!=="draft-"+fileDigest+".pdf")throw new Error("Archived PDF digest does not match manifest")
  if(!actual||typeof actual!=="object"||
   actual.schemaVersion!==expected.schemaVersion||
   actual.reference!==expected.reference||
