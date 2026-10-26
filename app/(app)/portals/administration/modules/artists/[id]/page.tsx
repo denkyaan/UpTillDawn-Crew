@@ -50,10 +50,16 @@ async function updateBooking(form:FormData){
  const followUpDate=followUpInput?new Date(`${followUpInput}Z`):null
  if(followUpDate&&(!Number.isFinite(followUpDate.getTime())||followUpDate.getTime()<Date.now()-60000))throw new Error("Invalid follow-up date")
  if(!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id)||!["enquiry","negotiating","confirmed","cancelled"].includes(status)||rider_notes.length>5000||internal_notes.length>5000)throw new Error("Invalid booking update")
- const {data:booking,error:readError}=await db.from("admin_artist_bookings").select("id,status,internal_notes").eq("id",id).single()
+ const {data:booking,error:readError}=await db.from("admin_artist_bookings").select("id,status,internal_notes,agency_contact_id,performance_at,fee_amount").eq("id",id).single()
  if(readError||!booking)notFound()
  const transitions:Record<string,string[]>={enquiry:["enquiry","negotiating","cancelled"],negotiating:["negotiating","confirmed","cancelled"],confirmed:["confirmed","cancelled"],cancelled:["cancelled"]}
  if(!transitions[booking.status]?.includes(status))throw new Error("Invalid booking status transition")
+ if(status==="confirmed"&&booking.status!=="confirmed"){
+  if(!booking.agency_contact_id||!booking.performance_at||booking.fee_amount===null)throw new Error("Complete the agency, performance date and agreed fee before confirming")
+  const {data:agency,error:agencyError}=await db.from("admin_counterparties").select("id,email").eq("id",booking.agency_contact_id).maybeSingle()
+  if(agencyError||!agency?.email||!/^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$/.test(agency.email))throw new Error("A valid agency email is required before confirmation")
+ }
+
  const history=(booking.internal_notes??"").split("\n").filter(line=>/^\[\d{4}-\d{2}-\d{2}T.*\] \[(email_sent|reply_received|follow_up)\] \[[0-9a-f-]{36}\] /.test(line))
  const notes=[internal_notes,...history].filter(Boolean).join("\n")
  const updateQuery=db.from("admin_artist_bookings").update({status,rider_notes:rider_notes||null,internal_notes:notes||null,follow_up_at:["confirmed","cancelled"].includes(status)?null:followUpDate?.toISOString()??null,updated_at:new Date().toISOString()}).eq("id",id).eq("status",booking.status)
@@ -107,6 +113,7 @@ export default async function BookingDetail({params}:{params:Promise<{id:string}
   </form>
   <form action={updateBooking} className="grid gap-4 rounded-2xl border bg-card p-5">
    <input type="hidden" name="id" value={booking.id}/>
+   {booking.status!=="confirmed"&&booking.status!=="cancelled"&&<p className="rounded-lg border p-3 text-sm text-muted-foreground">{({nl:"Voor bevestiging zijn een agentschap met geldig e-mailadres, een optreedtijdstip en een overeengekomen vergoeding verplicht. Bevestiging verstuurt geen e-mail of contract automatisch.",fr:"La confirmation exige une agence avec une adresse e-mail valide, une date de prestation et un cachet convenu. Aucun e-mail ni contrat n’est envoyé automatiquement.",en:"Confirmation requires an agency with a valid email, a performance date and an agreed fee. No email or contract is sent automatically.",de:"Zur Bestätigung sind eine Agentur mit gültiger E-Mail-Adresse, ein Auftrittstermin und eine vereinbarte Gage erforderlich. E-Mails oder Verträge werden nicht automatisch versendet."} as const)[locale]}</p>}
    <label className="text-sm font-semibold">{labels.status}<select name="status" defaultValue={booking.status} className="mt-1 w-full rounded-lg border bg-background p-3">{(allowed[booking.status]??[booking.status as "enquiry"]).map(status=><option key={status} value={status}>{labels[status]}</option>)}</select></label>
    <label className="text-sm font-semibold">{labels.rider}<textarea name="rider_notes" maxLength={5000} rows={5} defaultValue={booking.rider_notes??""} className="mt-1 w-full rounded-lg border bg-background p-3"/></label>
    <label className="text-sm font-semibold">{labels.followUp}<input type="datetime-local" name="follow_up_at" defaultValue={booking.follow_up_at?new Date(booking.follow_up_at).toISOString().slice(0,16):""} className="mt-1 w-full rounded-lg border bg-background p-3"/></label>
