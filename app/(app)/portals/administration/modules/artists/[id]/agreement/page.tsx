@@ -6,6 +6,7 @@ import { createClient } from "@/lib/supabase/crew-server"
 import { canOpenPortal, type PortalAssignment } from "@/lib/portal-access"
 import { requestUiLocale } from "@/lib/server-locale"
 import { checkSigningConnection, signingDispatchEnabled } from "@/lib/administration/documenso"
+import { refreshContractSigningStatus } from "@/lib/administration/contract-signing-refresh"
 
 export const dynamic="force-dynamic"
 async function saveTerms(form:FormData){
@@ -122,6 +123,29 @@ async function cancelSignaturePreparation(form:FormData){
  revalidatePath(base+"/"+id+"/agreement")
  redirect(base+"/"+id+"/agreement")
 }
+async function refreshSigning(form:FormData){
+ "use server"
+ const bookingId=String(form.get("booking_id")??"")
+ const versionId=String(form.get("version_id")??"")
+ const version=Number(form.get("version")??0)
+ const uuid=/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
+ if(!uuid.test(bookingId)||!uuid.test(versionId)||!Number.isSafeInteger(version)||version<1)notFound()
+ const user=await getCurrentUser()
+ if(!user)redirect("/login")
+ if((!user.approved||user.account_blocked)&&!user.isOwner)redirect("/portals")
+ const db=await createClient()
+ if(!user.isAdmin&&!user.isOwner){
+  const {data,error}=await db.rpc("upt_my_portal_assignments")
+  if(error||!canOpenPortal("administration",(data??[]) as PortalAssignment[],{approved:user.approved,blocked:Boolean(user.account_blocked)}))redirect("/portals")
+ }
+ const {data:approved}=await db.from("admin_artist_agreement_versions").select("id")
+  .eq("id",versionId).eq("booking_id",bookingId).eq("version_number",version)
+  .not("approved_at","is",null).maybeSingle()
+ if(!approved)throw new Error("Approved agreement version required")
+ await refreshContractSigningStatus({documentType:"artist",documentId:versionId,version})
+ revalidatePath(base+"/"+bookingId+"/agreement")
+ redirect(base+"/"+bookingId+"/agreement")
+}
 const base="/portals/administration/modules/artists"
 export default async function AgreementDraft({params}:{params:Promise<{id:string}>}){
  const {id}=await params
@@ -142,6 +166,10 @@ export default async function AgreementDraft({params}:{params:Promise<{id:string
  ])
  const {data:versions}=await db.from("admin_artist_agreement_versions").select("id,version_number,created_at,created_by,approved_at,snapshot").eq("booking_id",id).order("version_number",{ascending:false}).limit(20)
  const {data:signatureRequests}=await db.from("admin_artist_agreement_signature_requests").select("id,agreement_version_id,recipient_email,created_at,status").in("agreement_version_id",(versions??[]).map(version=>version.id).length?(versions??[]).map(version=>version.id):["00000000-0000-0000-0000-000000000000"]).order("created_at",{ascending:false}).limit(30)
+ const {data:signingLedger}=await db.from("administration_contract_signing_requests" as never)
+  .select("document_id,document_version,status,envelope_id,signed_pdf_path")
+  .eq("document_type","artist").in("document_id",(versions??[]).map(v=>v.id).length?(versions??[]).map(v=>v.id):["00000000-0000-0000-0000-000000000000"])
+ const signingRows=(signingLedger??[]) as unknown as {document_id:string;document_version:number;status:string;envelope_id:string|null;signed_pdf_path:string|null}[]
  const signingConnection=await checkSigningConnection()
  const canDispatch=signingDispatchEnabled()
  const locale=await requestUiLocale()
@@ -208,6 +236,18 @@ export default async function AgreementDraft({params}:{params:Promise<{id:string
 
    <p className="text-sm">{({nl:"Enkel intern goedgekeurde versies. Dit registreert een voorbereiding en verstuurt nog geen uitnodiging.",fr:"Versions approuvées uniquement. Cette étape prépare une demande sans envoyer d’invitation.",en:"Approved versions only. This records a preparation and does not send an invitation.",de:"Nur genehmigte Versionen. Dies erfasst eine Vorbereitung und versendet keine Einladung."} as const)[locale]}</p>
    {(versions??[]).filter(version=>Boolean(version.approved_at)).map(version=><form key={version.id} action={prepareSignature} className="flex flex-wrap items-end gap-2 rounded-lg border p-3"><input type="hidden" name="id" value={booking.id}/><input type="hidden" name="version_id" value={version.id}/><label className="flex-1 text-sm">{({nl:"Ontvanger",fr:"Destinataire",en:"Recipient",de:"Empfänger"} as const)[locale]} · {version.version_number}<input type="email" name="recipient_email" required maxLength={320} defaultValue={agencyResult.data?.email??""} className="mt-1 w-full rounded-lg border bg-background p-2"/></label><button className="rounded-lg border px-3 py-2 text-sm font-semibold">{({nl:"Voorbereiden",fr:"Préparer",en:"Prepare",de:"Vorbereiten"} as const)[locale]}</button></form>)}
+   <div className="space-y-2 text-sm" aria-label="Documenso signing status">
+    {signingRows.map(record=><div key={record.document_id} className="rounded-lg border p-3">
+     <p className="font-semibold">{({nl:"Ondertekenstatus",fr:"État de signature",en:"Signing status",de:"Signaturstatus"} as const)[locale]} · v{record.document_version}: {record.status}</p>
+     <p className="text-muted-foreground">{record.signed_pdf_path?({nl:"Ondertekend document gearchiveerd",fr:"Document signé archivé",en:"Signed document archived",de:"Signiertes Dokument archiviert"} as const)[locale]:({nl:"Nog geen ondertekend document in archief",fr:"Aucun document signé archivé",en:"No signed document archived yet",de:"Noch kein signiertes Dokument archiviert"} as const)[locale]}</p>
+     {record.envelope_id&&<form action={refreshSigning} className="mt-2">
+      <input type="hidden" name="booking_id" value={booking.id}/>
+      <input type="hidden" name="version_id" value={record.document_id}/>
+      <input type="hidden" name="version" value={record.document_version}/>
+      <button className="rounded-lg border px-3 py-2 font-semibold">{({nl:"Status vernieuwen",fr:"Actualiser le statut",en:"Refresh status",de:"Status aktualisieren"} as const)[locale]}</button>
+     </form>}
+    </div>)}
+   </div>
    <ul className="space-y-1 text-sm">{(signatureRequests??[]).map(request=><li key={request.id} className="rounded-lg border p-2">{request.recipient_email} · {new Date(request.created_at).toLocaleDateString()} · {request.status==="cancelled"?({nl:"Geannuleerd",fr:"Annulé",en:"Cancelled",de:"Storniert"} as const)[locale]:({nl:"Voorbereid",fr:"Préparé",en:"Prepared",de:"Vorbereitet"} as const)[locale]}{request.status==="prepared"&&<form action={cancelSignaturePreparation} className="mt-2"><input type="hidden" name="id" value={booking.id}/><input type="hidden" name="request_id" value={request.id}/><button className="rounded-lg border px-3 py-2">{({nl:"Voorbereiding annuleren",fr:"Annuler la préparation",en:"Cancel preparation",de:"Vorbereitung stornieren"} as const)[locale]}</button></form>}</li>)}</ul>
   </section>
   <p className="text-sm text-muted-foreground">{copy.noSend}</p>
