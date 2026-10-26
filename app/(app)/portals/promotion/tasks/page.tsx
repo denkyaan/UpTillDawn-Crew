@@ -40,6 +40,7 @@ async function submitPromotionEvidence(formData:FormData){
  const {data:assigned,error:assignmentError}=await db.from("task_assignments").select("id,status").eq("id",assignment).eq("user_id",user.id).maybeSingle()
  if(assignmentError||!assigned||(assigned.status==="COMPLETED"||assigned.status==="CANCELLED"))throw new Error("Assignment unavailable or already completed")
  const bytes=Buffer.from(await file.arrayBuffer())
+ if(bytes.length!==file.size||bytes.length>10*1024*1024)throw new Error("Invalid image size")
  // Validate actual file signatures, not only browser-supplied MIME types.
  const isJpeg=bytes.length>=4&&bytes[0]===0xff&&bytes[1]===0xd8&&bytes[2]===0xff
  const isPng=bytes.length>=24&&bytes.subarray(0,8).equals(Buffer.from([137,80,78,71,13,10,26,10]))&&bytes.toString("ascii",12,16)==="IHDR"
