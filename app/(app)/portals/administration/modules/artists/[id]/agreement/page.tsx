@@ -31,6 +31,14 @@ export default async function AgreementDraft({params}:{params:Promise<{id:string
   en:{back:"Back to booking",title:"Booking agreement draft",warning:"Internal draft only, not a signed contract. Review all terms and obtain explicit agreement from both parties.",artist:"Artist",agency:"Agency",event:"Event",performance:"Performance",fee:"Agreed fee",rider:"Rider and agreements",missing:"Not provided",status:"Booking status",terms:"Complete before signing",conditions:"Payment terms, cancellation, technical obligations, liability, governing law and signatures have not been agreed here.",noSend:"This draft is not automatically sent or signed."},
   de:{back:"Zurück zur Buchung",title:"Entwurf der Buchungsvereinbarung",warning:"Nur interner Entwurf, kein unterzeichneter Vertrag. Alle Bedingungen prüfen und die ausdrückliche Zustimmung beider Parteien einholen.",artist:"Künstler",agency:"Agentur",event:"Veranstaltung",performance:"Auftritt",fee:"Vereinbarte Gage",rider:"Rider und Vereinbarungen",missing:"Nicht angegeben",status:"Buchungsstatus",terms:"Vor Unterzeichnung ergänzen",conditions:"Zahlungsbedingungen, Stornierung, technische Pflichten, Haftung, anwendbares Recht und Unterschriften sind noch festzulegen.",noSend:"Dieser Entwurf wird weder automatisch versendet noch unterzeichnet."}
  } as const)[locale]
+ const missingFields=[
+  !agencyResult.data?.name&&copy.agency,
+  !agencyResult.data?.email&&copy.agency,
+  !eventResult.data?.name&&copy.event,
+  !booking.performance_at&&copy.performance,
+  booking.fee_amount===null&&copy.fee,
+  !booking.rider_notes&&copy.rider
+ ].filter((item):item is string=>typeof item==="string")
  const date=booking.performance_at?new Intl.DateTimeFormat(({nl:"nl-BE",fr:"fr-BE",en:"en-GB",de:"de-DE"} as const)[locale],{dateStyle:"full",timeStyle:"short",timeZone:"Europe/Brussels"}).format(new Date(booking.performance_at)):copy.missing
  return <main className="mx-auto w-full max-w-3xl space-y-5 p-4 sm:p-6">
   <Link href={`${base}/${booking.id}`} className="text-sm font-semibold text-violet-400">← {copy.back}</Link>
@@ -39,6 +47,10 @@ export default async function AgreementDraft({params}:{params:Promise<{id:string
   <dl className="grid gap-3 rounded-2xl border bg-card p-5 text-sm">
    {([[copy.artist,booking.artist_name],[copy.agency,agencyResult.data?.name??copy.missing],[copy.event,eventResult.data?.name??copy.missing],[copy.performance,date],[copy.fee,booking.fee_amount!=null?`${booking.fee_amount} ${booking.currency}`:copy.missing],[copy.status,booking.status],[copy.rider,booking.rider_notes||copy.missing]] as [string,string][]).map(([label,value])=><div key={label} className="border-b pb-2"><dt className="font-semibold">{label}</dt><dd className="mt-1 whitespace-pre-wrap break-words">{value}</dd></div>)}
   </dl>
+  {missingFields.length>0&&<section role="status" className="rounded-2xl border p-5">
+   <h2 className="font-semibold">{copy.terms}</h2>
+   <ul className="mt-2 list-inside list-disc text-sm">{[...new Set(missingFields)].map(field=><li key={field}>{field}</li>)}</ul>
+  </section>}
   <section className="rounded-2xl border p-5"><h2 className="font-semibold">{copy.terms}</h2><p className="mt-2 text-sm">{copy.conditions}</p></section>
   <p className="text-sm text-muted-foreground">{copy.noSend}</p>
  </main>
