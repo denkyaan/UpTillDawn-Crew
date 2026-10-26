@@ -65,8 +65,9 @@ export default async function PromotionTasks(){
  const locale=await requestUiLocale()
  const t=labels[locale]
  const db=await createClient()
- const {data:promotionBlocked}=await db.rpc("upt_promotion_is_blocked" as never)
- const isPromotionBlocked=promotionBlocked===true
+ const {data:promotionBlocked,error:promotionBlockError}=await db.rpc("upt_promotion_is_blocked" as never)
+ // Fail closed when the restriction check cannot be completed.
+ const isPromotionBlocked=promotionBlockError!==null||promotionBlocked!==false
  const {data:evidence}=await db.from("promotion_evidence" as never).select("assignment_id,verification_status,verification_details,submitted_at").eq("submitted_by",user.id).order("submitted_at",{ascending:false}).limit(100)
  const evidenceRows=(evidence??[]) as unknown as {assignment_id:string;verification_status:string;verification_details:unknown;submitted_at:string}[]
  const precheckLabels={nl:{exact_file_match:"Bestand identiek aan referentie; publicatie niet bevestigd",no_exact_file_match:"Geen exacte bestandsovereenkomst; controle nodig",no_reference:"Geen officieel referentiemateriaal beschikbaar"},fr:{exact_file_match:"Fichier identique à la référence ; publication non confirmée",no_exact_file_match:"Aucune correspondance exacte ; vérification requise",no_reference:"Aucune référence officielle disponible"},en:{exact_file_match:"File matches reference; publication not verified",no_exact_file_match:"No exact file match; review needed",no_reference:"No official reference available"},de:{exact_file_match:"Datei entspricht der Referenz; Veröffentlichung nicht bestätigt",no_exact_file_match:"Keine exakte Übereinstimmung; Prüfung nötig",no_reference:"Kein offizielles Referenzmaterial verfügbar"}} as const
