@@ -30,7 +30,10 @@ async function pixels(url:string){
   const ctx=canvas.getContext("2d",{willReadFrequently:true})
   if(!ctx)throw new Error("Canvas unavailable")
   ctx.drawImage(bitmap,0,0,width,height)
-  return {width,height,data:ctx.getImageData(0,0,width,height).data}
+  const data=ctx.getImageData(0,0,width,height).data
+  // Release the canvas backing store immediately after reading its pixels.
+  canvas.width=0;canvas.height=0
+  return {width,height,data}
  }finally{bitmap.close()}
 }
 export function PromotionVisualReview({evidenceUrl,referenceUrls,locale}:{evidenceUrl:string;referenceUrls:string[];locale:Locale}){
