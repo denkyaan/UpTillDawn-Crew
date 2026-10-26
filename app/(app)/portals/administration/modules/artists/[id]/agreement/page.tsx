@@ -33,7 +33,7 @@ export default async function AgreementDraft({params}:{params:Promise<{id:string
  } as const)[locale]
  const missingFields=[
   !agencyResult.data?.name&&copy.agency,
-  !agencyResult.data?.email&&copy.agency,
+  !agencyResult.data?.email&&"Email",
   !eventResult.data?.name&&copy.event,
   !booking.performance_at&&copy.performance,
   booking.fee_amount===null&&copy.fee,
@@ -45,7 +45,7 @@ export default async function AgreementDraft({params}:{params:Promise<{id:string
   <h1 className="text-2xl font-bold">{copy.title}</h1>
   <p role="status" className="rounded-xl border p-4 text-sm">{copy.warning}</p>
   <dl className="grid gap-3 rounded-2xl border bg-card p-5 text-sm">
-   {([[copy.artist,booking.artist_name],[copy.agency,agencyResult.data?.name??copy.missing],[copy.event,eventResult.data?.name??copy.missing],[copy.performance,date],[copy.fee,booking.fee_amount!=null?`${booking.fee_amount} ${booking.currency}`:copy.missing],[copy.status,booking.status],[copy.rider,booking.rider_notes||copy.missing]] as [string,string][]).map(([label,value])=><div key={label} className="border-b pb-2"><dt className="font-semibold">{label}</dt><dd className="mt-1 whitespace-pre-wrap break-words">{value}</dd></div>)}
+   {([[copy.artist,booking.artist_name],[copy.agency,agencyResult.data?.name??copy.missing],["Email",agencyResult.data?.email??copy.missing],[copy.event,eventResult.data?.name??copy.missing],[copy.performance,date],[copy.fee,booking.fee_amount!=null?new Intl.NumberFormat(({nl:"nl-BE",fr:"fr-BE",en:"en-GB",de:"de-DE"} as const)[locale],{style:"currency",currency:booking.currency}).format(booking.fee_amount):copy.missing],[copy.status,booking.status],[copy.rider,booking.rider_notes||copy.missing]] as [string,string][]).map(([label,value])=><div key={label} className="border-b pb-2"><dt className="font-semibold">{label}</dt><dd className="mt-1 whitespace-pre-wrap break-words">{value}</dd></div>)}
   </dl>
   {missingFields.length>0&&<section role="status" className="rounded-2xl border p-5">
    <h2 className="font-semibold">{copy.terms}</h2>
