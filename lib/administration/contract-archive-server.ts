@@ -44,6 +44,12 @@ export async function downloadContractArchive(path:string,client:ArchiveStorageC
  const {data,error}=await client.storage.from(CONTRACT_ARCHIVE_BUCKET).download(path)
  if(error||!data)throw new Error("Contract archive download failed")
  const bytes=new Uint8Array(await data.arrayBuffer())
+ if(bytes.byteLength===0||bytes.byteLength>15*1024*1024)throw new Error("Contract archive file size invalid")
+ const kind=path.split("/").at(-1)?.startsWith("evidence-")?"evidence":"pdf"
+ if(kind==="pdf"&&new TextDecoder().decode(bytes.slice(0,5))!=="%PDF-")throw new Error("Contract archive PDF header invalid")
+ if(kind==="evidence"){
+  try{JSON.parse(new TextDecoder("utf-8",{fatal:true}).decode(bytes))}catch{throw new Error("Contract archive evidence JSON invalid")}
+ }
  const expected=path.split("/").at(-1)?.match(/-([a-f0-9]{64})\.(pdf|json)$/)?.[1]
  if(!expected||await digestHex(bytes)!==expected)throw new Error("Contract archive integrity check failed")
  return bytes
