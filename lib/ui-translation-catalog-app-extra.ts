@@ -2,6 +2,7 @@ export type ExtraCatalogLocale = 'nl' | 'fr' | 'en' | 'de'
 type Row = { fr:string; en:string; de:string }
 
 export const APP_EXTRA_TRANSLATIONS: Record<string,Row> = {
+  "DJ-boeking toevoegen": {fr:"Ajouter une réservation DJ",en:"Add DJ booking",de:"DJ-Buchung hinzufügen"},
   "Help & ondersteuning": {fr:"Aide et assistance",en:"Help & support",de:"Hilfe & Unterstützung"},
   "Hulp bij het gebruik van het operationele platform.": {fr:"Aide à l’utilisation de la plateforme opérationnelle.",en:"Help using the operational platform.",de:"Hilfe bei der Nutzung der operativen Plattform."},
   "Beschikbaarheid en evenementinformatie.": {fr:"Disponibilités et informations sur les événements.",en:"Availability and event information.",de:"Verfügbarkeit und Veranstaltungsinformationen."},
