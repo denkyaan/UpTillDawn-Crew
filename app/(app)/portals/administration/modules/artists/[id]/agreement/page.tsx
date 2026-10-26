@@ -52,6 +52,27 @@ async function snapshotAgreement(form:FormData){
  revalidatePath(base+"/"+id+"/agreement")
  redirect(base+"/"+id+"/agreement")
 }
+async function approveAgreement(form:FormData){
+ "use server"
+ const id=String(form.get("id")??"")
+ const versionId=String(form.get("version_id")??"")
+ const uuid=/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
+ if(!uuid.test(id)||!uuid.test(versionId))notFound()
+ const user=await getCurrentUser()
+ if(!user)redirect("/login")
+ if((!user.approved||user.account_blocked)&&!user.isOwner)redirect("/portals")
+ const db=await createClient()
+ if(!user.isAdmin&&!user.isOwner){
+  const {data,error}=await db.rpc("upt_my_portal_assignments")
+  if(error||!canOpenPortal("administration",(data??[]) as PortalAssignment[],{approved:user.approved,blocked:Boolean(user.account_blocked)}))redirect("/portals")
+ }
+ const {data:version,error:readError}=await db.from("admin_artist_agreement_versions").select("id,created_by,approved_at").eq("id",versionId).eq("booking_id",id).maybeSingle()
+ if(readError||!version||version.approved_at||version.created_by===user.id)throw new Error("Approval requires a different authorized user")
+ const {data,error}=await db.from("admin_artist_agreement_versions").update({approved_by:user.id,approved_at:new Date().toISOString()}).eq("id",versionId).eq("booking_id",id).is("approved_at",null).select("id").maybeSingle()
+ if(error||!data)throw new Error("Agreement approval was not saved")
+ revalidatePath(base+"/"+id+"/agreement")
+ redirect(base+"/"+id+"/agreement")
+}
 const base="/portals/administration/modules/artists"
 export default async function AgreementDraft({params}:{params:Promise<{id:string}>}){
  const {id}=await params
@@ -70,7 +91,7 @@ export default async function AgreementDraft({params}:{params:Promise<{id:string
   db.from("events").select("name,start_at").eq("id",booking.event_id).maybeSingle(),
   booking.agency_contact_id?db.from("admin_counterparties").select("name,email").eq("id",booking.agency_contact_id).maybeSingle():Promise.resolve({data:null})
  ])
- const {data:versions}=await db.from("admin_artist_agreement_versions").select("id,version_number,created_at,snapshot").eq("booking_id",id).order("version_number",{ascending:false}).limit(20)
+ const {data:versions}=await db.from("admin_artist_agreement_versions").select("id,version_number,created_at,created_by,approved_at,snapshot").eq("booking_id",id).order("version_number",{ascending:false}).limit(20)
  const locale=await requestUiLocale()
  const copy=({
   nl:{back:"Terug naar boeking",title:"Concept boekingsafspraak",warning:"Dit is een intern concept, geen ondertekend contract. Controleer alle voorwaarden en laat beide partijen expliciet akkoord gaan.",artist:"Artiest",agency:"Agentschap",event:"Evenement",performance:"Optreden",fee:"Afgesproken vergoeding",rider:"Rider en afspraken",missing:"Nog niet ingevuld",status:"Boekingsstatus",terms:"Aan te vullen vóór ondertekening",conditions:"Betalingsvoorwaarden, annulering, technische verplichtingen, aansprakelijkheid, toepasselijk recht en handtekeningen zijn nog niet vastgelegd.",noSend:"Dit concept wordt niet automatisch verzonden of ondertekend."},
@@ -126,7 +147,7 @@ export default async function AgreementDraft({params}:{params:Promise<{id:string
   <section className="space-y-3 rounded-2xl border p-5">
    <h2 className="font-semibold">{({nl:"Contractversies",fr:"Versions du contrat",en:"Agreement versions",de:"Vertragsversionen"} as const)[locale]}</h2>
    {missingFields.length===0&&booking.status!=="cancelled"&&<form action={snapshotAgreement}><input type="hidden" name="id" value={booking.id}/><button className="rounded-xl border px-4 py-3 text-sm font-semibold">{({nl:"Nieuwe conceptversie vastleggen",fr:"Enregistrer une version du projet",en:"Save new draft version",de:"Neue Entwurfsversion speichern"} as const)[locale]}</button></form>}
-   <ol className="space-y-2 text-sm">{(versions??[]).map(version=><li key={version.id} className="rounded-lg border p-3"><strong>{version.version_number}</strong> · {new Intl.DateTimeFormat(({nl:"nl-BE",fr:"fr-BE",en:"en-GB",de:"de-DE"} as const)[locale],{dateStyle:"medium",timeStyle:"short"}).format(new Date(version.created_at))}<details className="mt-2"><summary className="cursor-pointer">{({nl:"Opgeslagen inhoud bekijken",fr:"Voir le contenu enregistré",en:"View saved content",de:"Gespeicherten Inhalt ansehen"} as const)[locale]}</summary><pre className="mt-2 overflow-x-auto whitespace-pre-wrap break-words text-xs">{JSON.stringify(version.snapshot,null,2)}</pre></details></li>)}</ol>
+   <ol className="space-y-2 text-sm">{(versions??[]).map(version=><li key={version.id} className="rounded-lg border p-3"><strong>{version.version_number}</strong> · {new Intl.DateTimeFormat(({nl:"nl-BE",fr:"fr-BE",en:"en-GB",de:"de-DE"} as const)[locale],{dateStyle:"medium",timeStyle:"short"}).format(new Date(version.created_at))}{version.approved_at?<span className="ml-2">{({nl:"Intern goedgekeurd",fr:"Approuvé en interne",en:"Internally approved",de:"Intern genehmigt"} as const)[locale]}</span>:version.created_by!==user.id?<form action={approveAgreement} className="mt-2"><input type="hidden" name="id" value={booking.id}/><input type="hidden" name="version_id" value={version.id}/><button className="rounded-lg border px-3 py-2 font-semibold">{({nl:"Intern goedkeuren",fr:"Approuver en interne",en:"Approve internally",de:"Intern genehmigen"} as const)[locale]}</button></form>:<span className="ml-2">{({nl:"Wacht op tweede goedkeurder",fr:"En attente d'un autre approbateur",en:"Awaiting another approver",de:"Wartet auf zweite Freigabe"} as const)[locale]}</span>}<details className="mt-2"><summary className="cursor-pointer">{({nl:"Opgeslagen inhoud bekijken",fr:"Voir le contenu enregistré",en:"View saved content",de:"Gespeicherten Inhalt ansehen"} as const)[locale]}</summary><pre className="mt-2 overflow-x-auto whitespace-pre-wrap break-words text-xs">{JSON.stringify(version.snapshot,null,2)}</pre></details></li>)}</ol>
   </section>
   <p className="text-sm text-muted-foreground">{copy.noSend}</p>
  </main>
