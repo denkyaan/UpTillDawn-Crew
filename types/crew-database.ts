@@ -53,6 +53,7 @@ export type Database = {
           currency: string
           event_id: string
           fee_amount: number | null
+          follow_up_at: string | null
           id: string
           internal_notes: string | null
           performance_at: string | null
@@ -68,6 +69,7 @@ export type Database = {
           currency?: string
           event_id: string
           fee_amount?: number | null
+          follow_up_at?: string | null
           id?: string
           internal_notes?: string | null
           performance_at?: string | null
@@ -83,6 +85,7 @@ export type Database = {
           currency?: string
           event_id?: string
           fee_amount?: number | null
+          follow_up_at?: string | null
           id?: string
           internal_notes?: string | null
           performance_at?: string | null
