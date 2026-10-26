@@ -52,6 +52,11 @@ export default async function AgreementDraft({params}:{params:Promise<{id:string
    <ul className="mt-2 list-inside list-disc text-sm">{[...new Set(missingFields)].map(field=><li key={field}>{field}</li>)}</ul>
   </section>}
   <section className="rounded-2xl border p-5"><h2 className="font-semibold">{copy.terms}</h2><p className="mt-2 text-sm">{copy.conditions}</p></section>
+  <section className="space-y-3 rounded-2xl border p-5">
+   <h2 className="font-semibold">{({nl:"Contractcontrole",fr:"Vérification du contrat",en:"Contract review",de:"Vertragsprüfung"} as const)[locale]}</h2>
+   <p className="text-sm text-muted-foreground">{({nl:"Leg vóór verzending schriftelijk vast: betaaltermijn, annuleringsregeling, technische rider, aansprakelijkheid en toepasselijk recht. Laat beide partijen de definitieve versie goedkeuren.",fr:"Avant tout envoi, précisez par écrit les délais de paiement, l’annulation, le rider technique, la responsabilité et le droit applicable. Faites approuver la version finale par les deux parties.",en:"Before sending, document payment terms, cancellation, technical rider, liability and governing law in writing. Obtain both parties’ approval of the final version.",de:"Vor dem Versand Zahlungsfristen, Stornierung, technischen Rider, Haftung und anwendbares Recht schriftlich festhalten. Die endgültige Fassung von beiden Parteien genehmigen lassen."} as const)[locale]}</p>
+   <Link href={`${base}/${booking.id}`} className="inline-flex rounded-xl border px-4 py-3 text-sm font-semibold">{copy.back}</Link>
+  </section>
   <p className="text-sm text-muted-foreground">{copy.noSend}</p>
  </main>
 }
