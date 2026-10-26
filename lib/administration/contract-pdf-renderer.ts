@@ -31,7 +31,22 @@ export function createContractPdfRenderer():ContractPdfRenderer{
   }
   const length=Number(response.headers.get("content-length")??"0")
   if(length>15*1024*1024)throw new Error("Rendered PDF too large")
-  const bytes=new Uint8Array(await response.arrayBuffer())
+  const reader=response.body?.getReader()
+  if(!reader)throw new Error("PDF renderer returned an empty stream")
+  const chunks:Uint8Array[]=[]
+  let total=0
+  try{
+   while(true){
+    const {done,value}=await reader.read()
+    if(done)break
+    total+=value.byteLength
+    if(total>15*1024*1024)throw new Error("Rendered PDF too large")
+    chunks.push(value)
+   }
+  }finally{reader.releaseLock()}
+  const bytes=new Uint8Array(total)
+  let offset=0
+  for(const chunk of chunks){bytes.set(chunk,offset);offset+=chunk.byteLength}
   if(bytes.byteLength===0||bytes.byteLength>15*1024*1024||
    new TextDecoder().decode(bytes.slice(0,5))!=="%PDF-"){
    throw new Error("Renderer returned invalid PDF")
