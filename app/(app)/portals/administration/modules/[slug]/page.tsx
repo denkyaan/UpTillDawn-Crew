@@ -74,7 +74,9 @@ export default async function AdministrationModulePage({params,searchParams}:{pa
  const inventoryFilterEvents=slug==="inventory" ? await supabase.from("events").select("id,name").order("start_at",{ascending:false}).limit(100) : null
  const selectedEvent=inventoryFilterEvents?.data?.some(event=>event.id===requestedEvent)?requestedEvent:null
  const inventoryCount=slug==="inventory" ? await (selectedEvent?supabase.from("inventory_items").select("id",{count:"exact",head:true}).eq("event_id",selectedEvent):supabase.from("inventory_items").select("id",{count:"exact",head:true})) : null
- const artistBookings=slug==="artists"?await supabase.from("admin_artist_bookings").select("id,artist_name,status,event_id,performance_at,fee_amount,currency").order("created_at",{ascending:false}).limit(30):null
+ const artistBookings=slug==="artists"?await supabase.from("admin_artist_bookings").select("id,artist_name,status,event_id,performance_at,fee_amount,currency,follow_up_at").order("created_at",{ascending:false}).limit(30):null
+ const artistFollowUps=slug==="artists"?await supabase.from("admin_artist_bookings").select("id,artist_name,status,follow_up_at").not("follow_up_at","is",null).in("status",["enquiry","negotiating"]).order("follow_up_at",{ascending:true}).limit(100):null
+ const artistNow=Date.now()
  const artistEventCount=slug==="artists"?await supabase.from("events").select("id",{count:"exact",head:true}):null
  const liveRecords = (slug==="events"||slug==="artists")
   ? await supabase.from("events").select("id,name,status,start_at").order("start_at",{ascending:false}).limit(30)
@@ -127,6 +129,17 @@ export default async function AdministrationModulePage({params,searchParams}:{pa
   </header>
   {slug==="artists"&&<section className="rounded-2xl border bg-card p-5">
    <Link href="/portals/administration/modules/artists/new" className="mb-3 inline-flex rounded-xl bg-violet-600 px-4 py-2 text-sm font-semibold text-white">{({nl:"DJ-boeking toevoegen",fr:"Ajouter une réservation DJ",en:"Add DJ booking",de:"DJ-Buchung hinzufügen"} as const)[locale]}</Link>
+   <div className="mb-5 rounded-xl border p-4">
+    <h3 className="font-semibold">{({nl:"Openstaande DJ-opvolgingen",fr:"Suivis DJ en attente",en:"Pending DJ follow-ups",de:"Offene DJ-Nachverfolgungen"} as const)[locale]}</h3>
+    {artistFollowUps?.error?<p role="status" className="mt-2 text-sm text-muted-foreground">{({nl:"Opvolgingen konden niet worden geladen.",fr:"Impossible de charger les suivis.",en:"Follow-ups could not be loaded.",de:"Nachverfolgungen konnten nicht geladen werden."} as const)[locale]}</p>
+    :artistFollowUps?.data?.length?<ul className="mt-3 divide-y">{artistFollowUps.data.map(item=>{
+     const overdue=!!item.follow_up_at&&new Date(item.follow_up_at).getTime()<artistNow
+     return <li key={item.id} className="flex flex-wrap items-center justify-between gap-3 py-2 text-sm">
+      <Link href={`/portals/administration/modules/artists/${item.id}`} className="font-medium text-violet-400 hover:underline">{item.artist_name}</Link>
+      <span className={overdue?"font-semibold text-red-500":"text-muted-foreground"}>{overdue?({nl:"Achterstallig",fr:"En retard",en:"Overdue",de:"Überfällig"} as const)[locale]:({nl:"Gepland",fr:"Planifié",en:"Scheduled",de:"Geplant"} as const)[locale]} · {item.follow_up_at?new Intl.DateTimeFormat(({nl:"nl-BE",fr:"fr-BE",en:"en-GB",de:"de-DE"} as const)[locale],{dateStyle:"medium",timeStyle:"short",timeZone:"Europe/Brussels"}).format(new Date(item.follow_up_at)):"—"}</span>
+     </li>
+    })}</ul>:<p className="mt-2 text-sm text-muted-foreground">{({nl:"Geen openstaande opvolgingen.",fr:"Aucun suivi en attente.",en:"No pending follow-ups.",de:"Keine offenen Nachverfolgungen."} as const)[locale]}</p>}
+   </div>
    <h2 className="text-lg font-semibold">{({nl:"DJ-boekingsregister",fr:"Registre des réservations DJ",en:"DJ booking register",de:"DJ-Buchungsregister"} as const)[locale]}</h2>
    {artistBookings?.error?<p role="status" className="mt-3 text-sm text-muted-foreground">{({nl:"Boekingen konden niet worden geladen. Controleer of de databasemigratie is toegepast.",fr:"Impossible de charger les réservations. Vérifiez la migration de la base de données.",en:"Bookings could not be loaded. Check whether the database migration has been applied.",de:"Buchungen konnten nicht geladen werden. Prüfen Sie, ob die Datenbankmigration angewendet wurde."} as const)[locale]}</p>
    :artistBookings?.data?.length?<ul className="mt-3 divide-y">{artistBookings.data.map(booking=><li key={booking.id} className="flex flex-wrap items-center justify-between gap-3 py-3 text-sm"><div><Link href={`/portals/administration/modules/artists/${booking.id}`} className="font-semibold text-violet-400 hover:underline">{booking.artist_name}</Link><p className="text-muted-foreground">{booking.performance_at?new Intl.DateTimeFormat(({nl:"nl-BE",fr:"fr-BE",en:"en-GB",de:"de-DE"} as const)[locale],{dateStyle:"medium",timeStyle:"short",timeZone:"Europe/Brussels"}).format(new Date(booking.performance_at)):"—"}</p></div><span className="rounded-full border px-3 py-1 text-xs">{({enquiry:({nl:"Aanvraag",fr:"Demande",en:"Enquiry",de:"Anfrage"} as const)[locale],negotiating:({nl:"Onderhandeling",fr:"Négociation",en:"Negotiating",de:"Verhandlung"} as const)[locale],confirmed:({nl:"Bevestigd",fr:"Confirmé",en:"Confirmed",de:"Bestätigt"} as const)[locale],cancelled:({nl:"Geannuleerd",fr:"Annulé",en:"Cancelled",de:"Storniert"} as const)[locale]} as Record<string,string>)[booking.status]??booking.status}</span></li>)}</ul>
