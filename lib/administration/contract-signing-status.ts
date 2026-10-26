@@ -26,5 +26,6 @@ export async function checkContractSigningState(input:{
  current:ContractSigningState
 }):Promise<ContractSigningState>{
  const remote=await getContractSigningStatus(input.envelopeId)
+ if(remote.id!==input.envelopeId)throw new Error("Remote signing envelope identity mismatch")
  return reconcileSigningState(input.current,remote.status)
 }
