@@ -61,13 +61,12 @@ export default async function AdministrationModulePage({params}:{params:Promise<
   documents:"/portals/administration/finance",
   staff:"/portals/administration/rosters",
   reports:"/portals/administration/finance",
+  inventory:"/inventory",
  }
  if(operationalRoutes[slug])redirect(operationalRoutes[slug])
  const liveRecords = slug==="events"
   ? await supabase.from("events").select("id,name,status,start_at").order("start_at",{ascending:false}).limit(30)
-  : slug==="inventory"
-      ? await supabase.from("inventory_items").select("id,name,missing_quantity,damaged_quantity,event_id").limit(30)
-      : null
+  : null
  const locale=await requestUiLocale()
  const t=administrationCopy[locale]
  const u=ui[locale]
