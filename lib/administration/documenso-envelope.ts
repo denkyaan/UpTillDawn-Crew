@@ -64,7 +64,7 @@ export async function getContractSigningStatus(id:string):Promise<{
 }>{
  if(!/^[a-zA-Z0-9_-]{1,128}$/.test(id))throw new Error("Invalid envelope ID")
  const data=await request("/envelope/"+encodeURIComponent(id))
- if(!data||typeof data!=="object"||!("status" in data)||
+ if(!data||typeof data!=="object"||!("id" in data)||data.id!==id||!("status" in data)||
   !["DRAFT","PENDING","COMPLETED","REJECTED","CANCELLED"].includes(String(data.status))){
   throw new Error("Invalid Documenso status")
  }
