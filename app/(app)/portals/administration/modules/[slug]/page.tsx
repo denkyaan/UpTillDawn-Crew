@@ -74,7 +74,7 @@ export default async function AdministrationModulePage({params,searchParams}:{pa
  const inventoryFilterEvents=slug==="inventory" ? await supabase.from("events").select("id,name").order("start_at",{ascending:false}).limit(100) : null
  const selectedEvent=inventoryFilterEvents?.data?.some(event=>event.id===requestedEvent)?requestedEvent:null
  const inventoryCount=slug==="inventory" ? await (selectedEvent?supabase.from("inventory_items").select("id",{count:"exact",head:true}).eq("event_id",selectedEvent):supabase.from("inventory_items").select("id",{count:"exact",head:true})) : null
- const liveRecords = slug==="events"
+ const liveRecords = (slug==="events"||slug==="artists")
   ? await supabase.from("events").select("id,name,status,start_at").order("start_at",{ascending:false}).limit(30)
   : slug==="inventory"
     ? await (selectedEvent?supabase.from("inventory_items").select("id,name,missing_quantity,damaged_quantity,event_id").eq("event_id",selectedEvent):supabase.from("inventory_items").select("id,name,missing_quantity,damaged_quantity,event_id")).order("id").range(inventoryStart,inventoryStart+inventoryPageSize-1)
@@ -130,6 +130,12 @@ export default async function AdministrationModulePage({params,searchParams}:{pa
     <Link href="/portals/administration/contacts" className="rounded-lg border px-4 py-2 text-sm font-semibold hover:border-violet-400">{({nl:"Contacten openen",fr:"Ouvrir les contacts",en:"Open contacts",de:"Kontakte öffnen"} as const)[locale]}</Link>
     <Link href="/portals/administration/modules/events" className="rounded-lg border px-4 py-2 text-sm font-semibold hover:border-violet-400">{({nl:"Evenementen openen",fr:"Ouvrir les événements",en:"Open events",de:"Veranstaltungen öffnen"} as const)[locale]}</Link>
    </div>
+  </section>}
+  {slug==="artists"&&<section className="rounded-2xl border bg-card p-5">
+   <h2 className="text-lg font-semibold">{({nl:"Evenementen voor boekingsplanning",fr:"Événements pour les réservations",en:"Events for booking planning",de:"Veranstaltungen für Buchungen"} as const)[locale]}</h2>
+   {liveRecords?.error?<p role="status" className="mt-3 text-sm text-muted-foreground">{({nl:"Evenementen konden niet worden geladen.",fr:"Impossible de charger les événements.",en:"Unable to load events.",de:"Veranstaltungen konnten nicht geladen werden."} as const)[locale]}</p>
+   :liveRecords?.data?.length?<ul className="mt-3 divide-y">{liveRecords.data.map(event=><li key={event.id} className="flex flex-wrap items-center justify-between gap-2 py-3 text-sm"><span className="font-medium">{event.name}</span><span className="text-muted-foreground">{event.start_at?new Date(event.start_at).toLocaleDateString(locale):"—"} · {event.status}</span></li>)}</ul>
+   :<p className="mt-3 text-sm text-muted-foreground">{({nl:"Geen evenementen beschikbaar.",fr:"Aucun événement disponible.",en:"No events available.",de:"Keine Veranstaltungen verfügbar."} as const)[locale]}</p>}
   </section>}
   {slug==="marketing"&&<section className="rounded-2xl border bg-card p-5">
    <h2 className="text-lg font-semibold">{({nl:"Promotiebeheer",fr:"Gestion de la promotion",en:"Promotion management",de:"Promotion verwalten"} as const)[locale]}</h2>
