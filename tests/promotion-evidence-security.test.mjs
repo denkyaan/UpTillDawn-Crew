@@ -11,7 +11,8 @@ test('promotion evidence upload checks magic bytes, ownership and blocking',asyn
  assert.match(page,/Image format does not match file contents/)
  assert.match(page,/upt_promotion_is_blocked/)
  assert.match(page,/\.eq\("user_id",user\.id\)/)
- assert.match(page,/if\(saveError\)\{/)\n assert.match(page,/if\(cleanupError\)throw new Error\("Evidence registration failed; uploaded file cleanup also failed"\)/)
+ assert.match(page,/if\(saveError\)\{/)
+ assert.match(page,/if\(cleanupError\)throw new Error\("Evidence registration failed; uploaded file cleanup also failed"\)/)
 })
 test('database checks image MIME and size and preserves audit trail',async()=>{
  const sql=await read('supabase/migrations/20261025110000_promotion_evidence_submission_hardening.sql')
