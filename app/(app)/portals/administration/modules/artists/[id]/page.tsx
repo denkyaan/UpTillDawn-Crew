@@ -29,6 +29,13 @@ async function recordCommunication(form:FormData){
  if(error||!booking)notFound()
  const {error:insertError}=await db.from("admin_artist_booking_communications").insert({booking_id:id,kind,details})
  if(insertError)throw new Error("Communication record could not be saved")
+ // Recording an actual follow-up closes its outstanding reminder. Other contact
+ // types must not silently clear a scheduled follow-up.
+ if(kind==="follow_up"){
+  const {error:clearError}=await db.from("admin_artist_bookings").update({follow_up_at:null,updated_at:new Date().toISOString()}).eq("id",id).in("status",["enquiry","negotiating"])
+  if(clearError)throw new Error("Follow-up was recorded, but its reminder could not be cleared")
+ }
+ revalidatePath(base)
  revalidatePath(`${base}/${id}`)
  redirect(`${base}/${id}`)
 }
