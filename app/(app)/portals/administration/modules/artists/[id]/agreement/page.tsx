@@ -58,7 +58,11 @@ export default async function AgreementDraft({params}:{params:Promise<{id:string
   !eventResult.data?.name&&copy.event,
   !booking.performance_at&&copy.performance,
   booking.fee_amount===null&&copy.fee,
-  !booking.rider_notes&&copy.rider
+  !booking.rider_notes&&copy.rider,
+  !booking.agreement_payment_terms&&({nl:"Betalingsvoorwaarden",fr:"Conditions de paiement",en:"Payment terms",de:"Zahlungsbedingungen"} as const)[locale],
+  !booking.agreement_cancellation_terms&&({nl:"Annuleringsvoorwaarden",fr:"Conditions d’annulation",en:"Cancellation terms",de:"Stornierungsbedingungen"} as const)[locale],
+  !booking.agreement_liability_terms&&({nl:"Aansprakelijkheid",fr:"Responsabilité",en:"Liability",de:"Haftung"} as const)[locale],
+  !booking.agreement_governing_law&&({nl:"Toepasselijk recht",fr:"Droit applicable",en:"Governing law",de:"Anwendbares Recht"} as const)[locale]
  ].filter(Boolean).map(String)
  const date=booking.performance_at?new Intl.DateTimeFormat(({nl:"nl-BE",fr:"fr-BE",en:"en-GB",de:"de-DE"} as const)[locale],{dateStyle:"full",timeStyle:"short",timeZone:"Europe/Brussels"}).format(new Date(booking.performance_at)):copy.missing
  return <main className="mx-auto w-full max-w-3xl space-y-5 p-4 sm:p-6">
@@ -66,7 +70,11 @@ export default async function AgreementDraft({params}:{params:Promise<{id:string
   <h1 className="text-2xl font-bold">{copy.title}</h1>
   <p role="status" className="rounded-xl border p-4 text-sm">{copy.warning}</p>
   <dl className="grid gap-3 rounded-2xl border bg-card p-5 text-sm">
-   {([[copy.artist,booking.artist_name],[copy.agency,agencyResult.data?.name??copy.missing],["Email",agencyResult.data?.email??copy.missing],[copy.event,eventResult.data?.name??copy.missing],[copy.performance,date],[copy.fee,booking.fee_amount!=null?new Intl.NumberFormat(({nl:"nl-BE",fr:"fr-BE",en:"en-GB",de:"de-DE"} as const)[locale],{style:"currency",currency:booking.currency}).format(booking.fee_amount):copy.missing],[copy.status,booking.status],[copy.rider,booking.rider_notes||copy.missing]] as [string,string][]).map(([label,value])=><div key={label} className="border-b pb-2"><dt className="font-semibold">{label}</dt><dd className="mt-1 whitespace-pre-wrap break-words">{value}</dd></div>)}
+   {([[copy.artist,booking.artist_name],[copy.agency,agencyResult.data?.name??copy.missing],["Email",agencyResult.data?.email??copy.missing],[copy.event,eventResult.data?.name??copy.missing],[copy.performance,date],[copy.fee,booking.fee_amount!=null?new Intl.NumberFormat(({nl:"nl-BE",fr:"fr-BE",en:"en-GB",de:"de-DE"} as const)[locale],{style:"currency",currency:booking.currency}).format(booking.fee_amount):copy.missing],[copy.status,booking.status],[copy.rider,booking.rider_notes||copy.missing],
+   [({nl:"Betalingsvoorwaarden",fr:"Conditions de paiement",en:"Payment terms",de:"Zahlungsbedingungen"} as const)[locale],booking.agreement_payment_terms||copy.missing],
+   [({nl:"Annuleringsvoorwaarden",fr:"Conditions d’annulation",en:"Cancellation terms",de:"Stornierungsbedingungen"} as const)[locale],booking.agreement_cancellation_terms||copy.missing],
+   [({nl:"Aansprakelijkheid",fr:"Responsabilité",en:"Liability",de:"Haftung"} as const)[locale],booking.agreement_liability_terms||copy.missing],
+   [({nl:"Toepasselijk recht",fr:"Droit applicable",en:"Governing law",de:"Anwendbares Recht"} as const)[locale],booking.agreement_governing_law||copy.missing]] as [string,string][]).map(([label,value])=><div key={label} className="border-b pb-2"><dt className="font-semibold">{label}</dt><dd className="mt-1 whitespace-pre-wrap break-words">{value}</dd></div>)}
   </dl>
   {missingFields.length>0&&<section role="status" className="rounded-2xl border p-5">
    <h2 className="font-semibold">{copy.terms}</h2>
