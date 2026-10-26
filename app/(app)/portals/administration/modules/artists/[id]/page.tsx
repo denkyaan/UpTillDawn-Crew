@@ -30,8 +30,8 @@ async function recordCommunication(form:FormData){
  const {data:{user}}=await db.auth.getUser()
  if(!user)redirect("/login")
  const timestamp=new Date().toISOString()
- const entry=`[${timestamp}] [${kind}] [${user.id}] ${details.replaceAll("\\n"," ")}`
- const notes=[booking.internal_notes??"",entry].filter(Boolean).join("\\n")
+ const entry=`[${timestamp}] [${kind}] [${user.id}] ${details.replaceAll("\n"," ")}`
+ const notes=[booking.internal_notes??"",entry].filter(Boolean).join("\n")
  if(notes.length>20000)throw new Error("Communication history is full")
  const query=db.from("admin_artist_bookings").update({internal_notes:notes,updated_at:timestamp}).eq("id",id)
  const {data:updated,error:updateError}=await (booking.internal_notes===null?query.is("internal_notes",null):query.eq("internal_notes",booking.internal_notes)).select("id").maybeSingle()
@@ -51,8 +51,8 @@ async function updateBooking(form:FormData){
  if(readError||!booking)notFound()
  const transitions:Record<string,string[]>={enquiry:["enquiry","negotiating","cancelled"],negotiating:["negotiating","confirmed","cancelled"],confirmed:["confirmed","cancelled"],cancelled:["cancelled"]}
  if(!transitions[booking.status]?.includes(status))throw new Error("Invalid booking status transition")
- const history=(booking.internal_notes??"").split("\\n").filter(line=>/^\\[\\d{4}-\\d{2}-\\d{2}T.*\\] \\[(email_sent|reply_received|follow_up)\\] \\[[0-9a-f-]{36}\\] /.test(line))
- const notes=[internal_notes,...history].filter(Boolean).join("\\n")
+ const history=(booking.internal_notes??"").split("\n").filter(line=>/^\[\d{4}-\d{2}-\d{2}T.*\] \[(email_sent|reply_received|follow_up)\] \[[0-9a-f-]{36}\] /.test(line))
+ const notes=[internal_notes,...history].filter(Boolean).join("\n")
  const updateQuery=db.from("admin_artist_bookings").update({status,rider_notes:rider_notes||null,internal_notes:notes||null,updated_at:new Date().toISOString()}).eq("id",id).eq("status",booking.status)
  const {error}=await (booking.internal_notes===null?updateQuery.is("internal_notes",null):updateQuery.eq("internal_notes",booking.internal_notes)).select("id").single()
  if(error)throw new Error("Booking update failed")
@@ -80,8 +80,8 @@ export default async function BookingDetail({params}:{params:Promise<{id:string}
  const subject=`Up Till Dawn — ${booking.artist_name} — ${event?.name??""} — ${labels[booking.status as "enquiry"|"negotiating"|"confirmed"|"cancelled"]}`
  const body=[`${booking.artist_name} — ${event?.name??""}`,date??"",`${labels.status}: ${labels[booking.status as "enquiry"|"negotiating"|"confirmed"|"cancelled"]}`,booking.fee_amount!=null?`${booking.fee_amount} ${booking.currency}`:"",booking.rider_notes??""].filter(Boolean).join("\\n\\n")
  const mailto=agency?.email&&/^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$/.test(agency.email)?`mailto:${encodeURIComponent(agency.email)}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`:null
- const logEntries=(booking.internal_notes??"").split("\\n").filter(line=>/^\\[\\d{4}-\\d{2}-\\d{2}T.*\\] \\[(email_sent|reply_received|follow_up)\\] \\[[0-9a-f-]{36}\\] /.test(line))
- const editableNotes=(booking.internal_notes??"").split("\\n").filter(line=>!logEntries.includes(line)).join("\\n")
+ const logEntries=(booking.internal_notes??"").split("\n").filter(line=>/^\[\d{4}-\d{2}-\d{2}T.*\] \[(email_sent|reply_received|follow_up)\] \[[0-9a-f-]{36}\] /.test(line))
+ const editableNotes=(booking.internal_notes??"").split("\n").filter(line=>!logEntries.includes(line)).join("\n")
  const allowed:Record<string,("enquiry"|"negotiating"|"confirmed"|"cancelled")[]>={enquiry:["enquiry","negotiating","cancelled"],negotiating:["negotiating","confirmed","cancelled"],confirmed:["confirmed","cancelled"],cancelled:["cancelled"]}
  return <main className="mx-auto w-full max-w-3xl space-y-5 p-4 sm:p-6">
   <Link href={base} className="text-sm font-semibold text-violet-400">← {labels.back}</Link>
