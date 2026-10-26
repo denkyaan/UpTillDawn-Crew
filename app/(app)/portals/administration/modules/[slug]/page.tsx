@@ -75,7 +75,7 @@ export default async function AdministrationModulePage({params,searchParams}:{pa
  const liveRecords = slug==="events"
   ? await supabase.from("events").select("id,name,status,start_at").order("start_at",{ascending:false}).limit(30)
   : slug==="inventory"
-    ? await (selectedEvent?supabase.from("inventory_items").select("id,name,missing_quantity,damaged_quantity,event_id").eq("event_id",selectedEvent):supabase.from("inventory_items").select("id,name,missing_quantity,damaged_quantity,event_id")).range(inventoryStart,inventoryStart+inventoryPageSize-1)
+    ? await (selectedEvent?supabase.from("inventory_items").select("id,name,missing_quantity,damaged_quantity,event_id").eq("event_id",selectedEvent):supabase.from("inventory_items").select("id,name,missing_quantity,damaged_quantity,event_id")).order("id").range(inventoryStart,inventoryStart+inventoryPageSize-1)
     : null
  // Read every inventory row for accurate totals; never label partial results as complete.
  const summaryRows:{event_id:string|null;missing_quantity:number|null;damaged_quantity:number|null}[]=[]
@@ -91,16 +91,16 @@ export default async function AdministrationModulePage({params,searchParams}:{pa
  const inventorySummary=new Map<string,{missing:number;damaged:number;items:number}>()
  if(summaryComplete){
   for(const record of summaryRows){
-   if(!record.event_id)continue
-   const summary=inventorySummary.get(record.event_id)??{missing:0,damaged:0,items:0}
+   const eventKey=record.event_id??"__unassigned__"
+   const summary=inventorySummary.get(eventKey)??{missing:0,damaged:0,items:0}
    summary.missing+=Number(record.missing_quantity??0)
    summary.damaged+=Number(record.damaged_quantity??0)
    summary.items+=1
-   inventorySummary.set(record.event_id,summary)
+   inventorySummary.set(eventKey,summary)
   }
  }
  const inventoryEventIds=slug==="inventory"
-  ? [...new Set([...(liveRecords?.data??[]).flatMap(record=>"event_id" in record&&record.event_id?[record.event_id]:[]),...inventorySummary.keys()])]
+  ? [...new Set([...(liveRecords?.data??[]).flatMap(record=>"event_id" in record&&record.event_id?[record.event_id]:[]),...[...inventorySummary.keys()].filter(id=>id!=="__unassigned__")])]
   : []
  const inventoryEvents=inventoryEventIds.length
   ? await supabase.from("events").select("id,name").in("id",inventoryEventIds)
@@ -135,7 +135,7 @@ export default async function AdministrationModulePage({params,searchParams}:{pa
   {slug==="inventory"&&inventorySummary.size>0&&<section className="rounded-2xl border bg-card p-5">
    <h2 className="text-lg font-semibold">{({nl:"Afwijkingen per evenement",fr:"Écarts par événement",en:"Discrepancies by event",de:"Abweichungen pro Veranstaltung"} as const)[locale]}</h2>
    <div className="mt-3 space-y-2">{[...inventorySummary.entries()].map(([eventId,summary])=><div key={eventId} className="flex flex-wrap items-center justify-between gap-2 rounded-lg border p-3 text-sm">
-    <span className="font-medium">{inventoryEvents?.error ? ({nl:"Evenementgegevens niet beschikbaar",fr:"Données événement indisponibles",en:"Event details unavailable",de:"Veranstaltungsdaten nicht verfügbar"} as const)[locale] : inventoryEventNames.get(eventId)??({nl:"Onbekend evenement",fr:"Événement inconnu",en:"Unknown event",de:"Unbekannte Veranstaltung"} as const)[locale]}</span>
+    <span className="font-medium">{eventId==="__unassigned__"?({nl:"Niet aan evenement gekoppeld",fr:"Sans événement associé",en:"Not linked to an event",de:"Keiner Veranstaltung zugeordnet"} as const)[locale]:inventoryEvents?.error ? ({nl:"Evenementgegevens niet beschikbaar",fr:"Données événement indisponibles",en:"Event details unavailable",de:"Veranstaltungsdaten nicht verfügbar"} as const)[locale] : inventoryEventNames.get(eventId)??({nl:"Onbekend evenement",fr:"Événement inconnu",en:"Unknown event",de:"Unbekannte Veranstaltung"} as const)[locale]}</span>
     <span className="text-xs text-muted-foreground">{({nl:"Materialen",fr:"Articles",en:"Items",de:"Artikel"} as const)[locale]}: {summary.items} · {({nl:"Ontbreekt",fr:"Manquant",en:"Missing",de:"Fehlt"} as const)[locale]}: {summary.missing} · {({nl:"Beschadigd",fr:"Endommagé",en:"Damaged",de:"Beschädigt"} as const)[locale]}: {summary.damaged}</span>
    </div>)}</div>
   </section>}
