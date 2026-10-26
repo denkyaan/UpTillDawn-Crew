@@ -2,7 +2,7 @@ import "server-only"
 import {CONTRACT_ARCHIVE_BUCKET,contractArchivePath,isContractArchivePath,type ContractArchiveDocumentType,type ContractArchiveKind} from "./contract-archive"
 
 /** Privileged storage operations: call only after independent administration authorization. */
-type ArchiveStorageClient={
+export type ArchiveStorageClient={
  storage:{from(bucket:string):{
   upload(path:string,bytes:Uint8Array,options:{contentType:string;upsert:boolean;cacheControl:string}):Promise<{error:unknown}>
   download(path:string):Promise<{data:Blob|null;error:unknown}>
