@@ -39,7 +39,7 @@ test('promotion task actions recheck block state server-side',async()=>{
 test('cancelled promotion assignments cannot submit evidence server-side',async()=>{
  const page=await read('app/(app)/portals/promotion/tasks/page.tsx')
  const submission=page.slice(page.indexOf('async function submitPromotionEvidence'),page.indexOf('export default async function PromotionTasks'))
- assert.match(submission,/assigned\.status==="COMPLETED"\|\|assigned\.status==="CANCELLED"/)
+ assert.match(submission,/assigned\.status!=="IN PROGRESS"/)
  assert.match(submission,/\.eq\("user_id",user\.id\)/)
 })
 
