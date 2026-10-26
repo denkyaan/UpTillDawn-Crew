@@ -40,19 +40,32 @@ export default async function BookingDetail({params}:{params:Promise<{id:string}
  const {id}=await params
  if(!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id))notFound()
  const db=await access()
- const {data:booking,error}=await db.from("admin_artist_bookings").select("id,artist_name,status,rider_notes,internal_notes").eq("id",id).single()
+ const {data:booking,error}=await db.from("admin_artist_bookings").select("id,artist_name,status,rider_notes,internal_notes,event_id,agency_contact_id,performance_at,fee_amount,currency").eq("id",id).single()
  if(error||!booking)notFound()
+ const [eventResult,agencyResult]=await Promise.all([db.from("events").select("name,start_at").eq("id",booking.event_id).maybeSingle(),booking.agency_contact_id?db.from("admin_counterparties").select("name,email").eq("id",booking.agency_contact_id).maybeSingle():Promise.resolve({data:null})])
+ const event=eventResult.data
+ const agency=agencyResult.data
  const locale=await requestUiLocale()
  const labels=({
- nl:{back:"Terug naar boekingen",status:"Boekingsstatus",rider:"Rider en afspraken",notes:"Interne notities",save:"Wijzigingen opslaan",enquiry:"Aanvraag",negotiating:"Onderhandeling",confirmed:"Bevestigd",cancelled:"Geannuleerd"},
- fr:{back:"Retour aux réservations",status:"Statut de réservation",rider:"Rider et accords",notes:"Notes internes",save:"Enregistrer les modifications",enquiry:"Demande",negotiating:"Négociation",confirmed:"Confirmé",cancelled:"Annulé"},
- en:{back:"Back to bookings",status:"Booking status",rider:"Rider and agreements",notes:"Internal notes",save:"Save changes",enquiry:"Enquiry",negotiating:"Negotiating",confirmed:"Confirmed",cancelled:"Cancelled"},
- de:{back:"Zurück zu Buchungen",status:"Buchungsstatus",rider:"Rider und Vereinbarungen",notes:"Interne Notizen",save:"Änderungen speichern",enquiry:"Anfrage",negotiating:"Verhandlung",confirmed:"Bestätigt",cancelled:"Storniert"}
+ nl:{communication:"Communicatie met artiest / agentschap",recipient:"Ontvanger",noEmail:"Geen e-mailadres bij het agentschap. Voeg dit toe bij Contacten.",draft:"E-mailconcept openen",review:"Controleer de gegevens en verstuur de e-mail zelf vanuit je mailapp. Er wordt niets automatisch verzonden.",back:"Terug naar boekingen",status:"Boekingsstatus",rider:"Rider en afspraken",notes:"Interne notities",save:"Wijzigingen opslaan",enquiry:"Aanvraag",negotiating:"Onderhandeling",confirmed:"Bevestigd",cancelled:"Geannuleerd"},
+ fr:{communication:"Communication avec l’artiste / l’agence",recipient:"Destinataire",noEmail:"Aucune adresse e-mail pour cette agence. Ajoutez-la dans Contacts.",draft:"Ouvrir le brouillon",review:"Vérifiez les informations et envoyez le message depuis votre messagerie. Aucun envoi automatique.",back:"Retour aux réservations",status:"Statut de réservation",rider:"Rider et accords",notes:"Notes internes",save:"Enregistrer les modifications",enquiry:"Demande",negotiating:"Négociation",confirmed:"Confirmé",cancelled:"Annulé"},
+ en:{communication:"Artist / agency communication",recipient:"Recipient",noEmail:"No email address for this agency. Add one in Contacts.",draft:"Open email draft",review:"Review the details and send the email yourself from your mail app. Nothing is sent automatically.",back:"Back to bookings",status:"Booking status",rider:"Rider and agreements",notes:"Internal notes",save:"Save changes",enquiry:"Enquiry",negotiating:"Negotiating",confirmed:"Confirmed",cancelled:"Cancelled"},
+ de:{communication:"Kommunikation mit Künstler / Agentur",recipient:"Empfänger",noEmail:"Keine E-Mail-Adresse für diese Agentur. Ergänzen Sie diese unter Kontakte.",draft:"E-Mail-Entwurf öffnen",review:"Prüfen Sie die Angaben und senden Sie die E-Mail selbst. Es wird nichts automatisch versendet.",back:"Zurück zu Buchungen",status:"Buchungsstatus",rider:"Rider und Vereinbarungen",notes:"Interne Notizen",save:"Änderungen speichern",enquiry:"Anfrage",negotiating:"Verhandlung",confirmed:"Bestätigt",cancelled:"Storniert"}
  } as const)[locale]
+ const date=booking.performance_at?new Intl.DateTimeFormat(({nl:"nl-BE",fr:"fr-BE",en:"en-GB",de:"de-DE"} as const)[locale],{dateStyle:"full",timeStyle:"short",timeZone:"Europe/Brussels"}).format(new Date(booking.performance_at)):null
+ const subject=`Up Till Dawn — ${booking.artist_name} — ${event?.name??""} — ${labels[booking.status as "enquiry"|"negotiating"|"confirmed"|"cancelled"]}`
+ const body=[`${booking.artist_name} — ${event?.name??""}`,date??"",`${labels.status}: ${labels[booking.status as "enquiry"|"negotiating"|"confirmed"|"cancelled"]}`,booking.fee_amount!=null?`${booking.fee_amount} ${booking.currency}`:"",booking.rider_notes??""].filter(Boolean).join("\\n\\n")
+ const mailto=agency?.email&&/^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$/.test(agency.email)?`mailto:${encodeURIComponent(agency.email)}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`:null
  const allowed:Record<string,("enquiry"|"negotiating"|"confirmed"|"cancelled")[]>={enquiry:["enquiry","negotiating","cancelled"],negotiating:["negotiating","confirmed","cancelled"],confirmed:["confirmed","cancelled"],cancelled:["cancelled"]}
  return <main className="mx-auto w-full max-w-3xl space-y-5 p-4 sm:p-6">
   <Link href={base} className="text-sm font-semibold text-violet-400">← {labels.back}</Link>
   <h1 className="text-2xl font-bold">{booking.artist_name}</h1>
+  <section className="space-y-3 rounded-2xl border bg-card p-5">
+   <h2 className="text-lg font-semibold">{labels.communication}</h2>
+   <p className="text-sm">{labels.recipient}: {agency?.name??"—"} · {agency?.email??"—"}</p>
+   {mailto?<a href={mailto} className="inline-flex rounded-xl bg-violet-600 px-4 py-3 text-sm font-semibold text-white">{labels.draft}</a>:<p className="text-sm text-muted-foreground">{labels.noEmail} <Link href="/portals/administration/contacts" className="text-violet-400 underline">Contacts</Link></p>}
+   <p className="text-xs text-muted-foreground">{labels.review}</p>
+  </section>
   <form action={updateBooking} className="grid gap-4 rounded-2xl border bg-card p-5">
    <input type="hidden" name="id" value={booking.id}/>
    <label className="text-sm font-semibold">{labels.status}<select name="status" defaultValue={booking.status} className="mt-1 w-full rounded-lg border bg-background p-3">{(allowed[booking.status]??[booking.status as "enquiry"]).map(status=><option key={status} value={status}>{labels[status]}</option>)}</select></label>
