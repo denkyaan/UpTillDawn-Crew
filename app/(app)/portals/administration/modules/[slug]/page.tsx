@@ -62,6 +62,7 @@ export default async function AdministrationModulePage({params,searchParams}:{pa
   documents:"/portals/administration/finance",
   staff:"/portals/administration/rosters",
   reports:"/portals/administration/finance",
+  contacts:"/portals/administration/contacts",
 
  }
  if(operationalRoutes[slug])redirect(operationalRoutes[slug])
