@@ -73,6 +73,32 @@ async function approveAgreement(form:FormData){
  revalidatePath(base+"/"+id+"/agreement")
  redirect(base+"/"+id+"/agreement")
 }
+async function prepareSignature(form:FormData){
+ "use server"
+ const id=String(form.get("id")??"")
+ const versionId=String(form.get("version_id")??"")
+ const email=String(form.get("recipient_email")??"").trim().toLowerCase()
+ if(!/^[0-9a-f-]{36}$/i.test(id)||!/^[0-9a-f-]{36}$/i.test(versionId))notFound()
+ if(email.length>320||!email.includes("@"))throw new Error("Invalid recipient email")
+ const user=await getCurrentUser()
+ if(!user)redirect("/login")
+ if((!user.approved||user.account_blocked)&&!user.isOwner)redirect("/portals")
+ const db=await createClient()
+ if(!user.isAdmin&&!user.isOwner){
+  const {data,error}=await db.rpc("upt_my_portal_assignments")
+  if(error||!canOpenPortal("administration",(data??[]) as PortalAssignment[],{approved:user.approved,blocked:Boolean(user.account_blocked)}))redirect("/portals")
+ }
+ const {data:version}=await db.from("admin_artist_agreement_versions").select("approved_at").eq("id",versionId).eq("booking_id",id).maybeSingle()
+ if(!version?.approved_at)throw new Error("Approval required")
+ const {data:booking}=await db.from("admin_artist_bookings").select("agency_contact_id,status").eq("id",id).maybeSingle()
+ if(!booking?.agency_contact_id||booking.status==="cancelled")throw new Error("Booking unavailable")
+ const {data:agency}=await db.from("admin_counterparties").select("email").eq("id",booking.agency_contact_id).maybeSingle()
+ if(agency?.email?.trim().toLowerCase()!==email)throw new Error("Agency email mismatch")
+ const {error}=await db.from("admin_artist_agreement_signature_requests").insert({agreement_version_id:versionId,recipient_email:email})
+ if(error)throw new Error("Unable to prepare signature")
+ revalidatePath(base+"/"+id+"/agreement")
+ redirect(base+"/"+id+"/agreement")
+}
 const base="/portals/administration/modules/artists"
 export default async function AgreementDraft({params}:{params:Promise<{id:string}>}){
  const {id}=await params
