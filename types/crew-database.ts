@@ -46,6 +46,8 @@ export type Database = {
       }
       admin_artist_agreement_versions: {
         Row: {
+          approved_at: string | null
+          approved_by: string | null
           booking_id: string
           created_at: string
           created_by: string
@@ -54,6 +56,8 @@ export type Database = {
           version_number: number
         }
         Insert: {
+          approved_at?: string | null
+          approved_by?: string | null
           booking_id: string
           created_at?: string
           created_by?: string
@@ -62,6 +66,8 @@ export type Database = {
           version_number: number
         }
         Update: {
+          approved_at?: string | null
+          approved_by?: string | null
           booking_id?: string
           created_at?: string
           created_by?: string
