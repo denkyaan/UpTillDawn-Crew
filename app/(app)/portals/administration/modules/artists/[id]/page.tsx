@@ -18,6 +18,26 @@ async function access(){
  }
  return db
 }
+async function recordCommunication(form:FormData){
+ "use server"
+ const db=await access()
+ const id=String(form.get("id")??"")
+ const kind=String(form.get("kind")??"")
+ const details=String(form.get("details")??"").trim()
+ if(!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id)||!["email_sent","reply_received","follow_up"].includes(kind)||details.length<3||details.length>1500)throw new Error("Invalid communication record")
+ const {data:booking,error}=await db.from("admin_artist_bookings").select("id,internal_notes").eq("id",id).single()
+ if(error||!booking)notFound()
+ const {data:{user}}=await db.auth.getUser()
+ if(!user)redirect("/login")
+ const timestamp=new Date().toISOString()
+ const entry=`[${timestamp}] [${kind}] [${user.id}] ${details.replaceAll("\\n"," ")}`
+ const notes=[booking.internal_notes??"",entry].filter(Boolean).join("\\n")
+ if(notes.length>20000)throw new Error("Communication history is full")
+ const {data:updated,error:updateError}=await db.from("admin_artist_bookings").update({internal_notes:notes,updated_at:timestamp}).eq("id",id).eq("internal_notes",booking.internal_notes).select("id").maybeSingle()
+ if(updateError||!updated)throw new Error("Concurrent booking update; reload and try again")
+ revalidatePath(`${base}/${id}`)
+ redirect(`${base}/${id}`)
+}
 async function updateBooking(form:FormData){
  "use server"
  const db=await access()
@@ -66,6 +86,13 @@ export default async function BookingDetail({params}:{params:Promise<{id:string}
    {mailto?<a href={mailto} className="inline-flex rounded-xl bg-violet-600 px-4 py-3 text-sm font-semibold text-white">{labels.draft}</a>:<p className="text-sm text-muted-foreground">{labels.noEmail} <Link href="/portals/administration/contacts" className="text-violet-400 underline">{labels.contacts}</Link></p>}
    <p className="text-xs text-muted-foreground">{labels.review}</p>
   </section>
+  <form action={recordCommunication} className="grid gap-3 rounded-2xl border bg-card p-5">
+   <h2 className="text-lg font-semibold">{labels.history}</h2>
+   <input type="hidden" name="id" value={booking.id}/>
+   <label className="text-sm font-semibold">{labels.kind}<select name="kind" className="mt-1 w-full rounded-lg border bg-background p-3"><option value="email_sent">{labels.sent}</option><option value="reply_received">{labels.reply}</option><option value="follow_up">{labels.followup}</option></select></label>
+   <label className="text-sm font-semibold">{labels.details}<textarea name="details" required minLength={3} maxLength={1500} rows={3} className="mt-1 w-full rounded-lg border bg-background p-3"/></label>
+   <button className="rounded-xl border px-4 py-3 font-semibold">{labels.record}</button>
+  </form>
   <form action={updateBooking} className="grid gap-4 rounded-2xl border bg-card p-5">
    <input type="hidden" name="id" value={booking.id}/>
    <label className="text-sm font-semibold">{labels.status}<select name="status" defaultValue={booking.status} className="mt-1 w-full rounded-lg border bg-background p-3">{(allowed[booking.status]??[booking.status as "enquiry"]).map(status=><option key={status} value={status}>{labels[status]}</option>)}</select></label>
