@@ -63,7 +63,7 @@ export default async function AdministrationModulePage({params,searchParams}:{pa
   staff:"/portals/administration/rosters",
   reports:"/portals/administration/finance",
   contacts:"/portals/administration/contacts",
-  marketing:"/portals/administration/promotion-discipline",
+
 
  }
  if(operationalRoutes[slug])redirect(operationalRoutes[slug])
@@ -123,6 +123,14 @@ export default async function AdministrationModulePage({params,searchParams}:{pa
    <h1 className="mt-2 text-2xl font-bold tracking-tight sm:text-3xl">{adminModule.title[locale]}</h1>
    <p className="mt-3 max-w-3xl text-sm leading-6 text-muted-foreground">{u.notice}</p>
   </header>
+  {slug==="marketing"&&<section className="rounded-2xl border bg-card p-5">
+   <h2 className="text-lg font-semibold">{({nl:"Promotiebeheer",fr:"Gestion de la promotion",en:"Promotion management",de:"Promotion verwalten"} as const)[locale]}</h2>
+   <p className="mt-2 text-sm text-muted-foreground">{({nl:"Beheer promotietaken via het promotieportaal. Strikes en blokkeringen worden afzonderlijk beheerd.",fr:"Gérez les tâches promotionnelles dans le portail promotion. Les avertissements et blocages sont gérés séparément.",en:"Manage promotion tasks in the promotion portal. Strikes and restrictions are managed separately.",de:"Promotionsaufgaben werden im Promotionsportal verwaltet. Verwarnungen und Sperren werden separat verwaltet."} as const)[locale]}</p>
+   <div className="mt-4 flex flex-wrap gap-3">
+    <Link href="/portals/promotion/tasks" className="rounded-lg border px-4 py-2 text-sm font-semibold hover:border-violet-400">{({nl:"Promotietaken",fr:"Tâches promotionnelles",en:"Promotion tasks",de:"Promotionsaufgaben"} as const)[locale]}</Link>
+    <Link href="/portals/administration/promotion-discipline" className="rounded-lg border px-4 py-2 text-sm font-semibold hover:border-violet-400">{({nl:"Strikes en blokkeringen",fr:"Avertissements et blocages",en:"Strikes and restrictions",de:"Verwarnungen und Sperren"} as const)[locale]}</Link>
+   </div>
+  </section>}
   {slug==="inventory"&&requestedEvent&&!selectedEvent&&<p role="status" className="rounded-xl border border-amber-500/40 bg-amber-500/10 p-4 text-sm">{inventoryFilterEvents?.error?({nl:"De evenementenfilter is tijdelijk niet beschikbaar. Alle toegankelijke materialen worden getoond.",fr:"Le filtre d’événements est temporairement indisponible. Tous les articles accessibles sont affichés.",en:"The event filter is temporarily unavailable. All accessible items are shown.",de:"Der Veranstaltungsfilter ist vorübergehend nicht verfügbar. Alle zugänglichen Artikel werden angezeigt."} as const)[locale]:({nl:"Dit evenement is niet beschikbaar. Alle toegankelijke materialen worden getoond.",fr:"Cet événement est indisponible. Tous les articles accessibles sont affichés.",en:"This event is unavailable. All accessible items are shown.",de:"Diese Veranstaltung ist nicht verfügbar. Alle zugänglichen Artikel werden angezeigt."} as const)[locale]}</p>}
   {slug==="inventory"&&<section className="rounded-2xl border bg-card p-5">
    <h2 className="text-lg font-semibold">{({nl:"Filter op evenement",fr:"Filtrer par événement",en:"Filter by event",de:"Nach Veranstaltung filtern"} as const)[locale]}</h2>
