@@ -60,6 +60,7 @@ export default async function AdministrationModulePage({params}:{params:Promise<
   banking:"/portals/administration/finance",
   documents:"/portals/administration/finance",
   staff:"/portals/administration/rosters",
+  reports:"/portals/administration/overview",
  }
  if(operationalRoutes[slug])redirect(operationalRoutes[slug])
  const liveRecords = slug==="events"
