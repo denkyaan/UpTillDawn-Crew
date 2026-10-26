@@ -77,13 +77,6 @@ export type Database = {
             referencedRelation: "admin_artist_bookings"
             referencedColumns: ["id"]
           },
-          {
-            foreignKeyName: "admin_artist_agreement_versions_created_by_fkey"
-            columns: ["created_by"]
-            isOneToOne: false
-            referencedRelation: "users"
-            referencedColumns: ["id"]
-          },
         ]
       }
       admin_artist_bookings: {
