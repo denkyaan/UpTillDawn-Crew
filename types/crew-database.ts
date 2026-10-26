@@ -9,6 +9,41 @@ export type Json =
 export type Database = {
   public: {
     Tables: {
+      admin_artist_booking_communications: {
+        Row: {
+          actor_id: string
+          booking_id: string
+          created_at: string
+          details: string
+          id: string
+          kind: string
+        }
+        Insert: {
+          actor_id?: string
+          booking_id: string
+          created_at?: string
+          details: string
+          id?: string
+          kind: string
+        }
+        Update: {
+          actor_id?: string
+          booking_id?: string
+          created_at?: string
+          details?: string
+          id?: string
+          kind?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "admin_artist_booking_communications_booking_id_fkey"
+            columns: ["booking_id"]
+            isOneToOne: false
+            referencedRelation: "admin_artist_bookings"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       admin_artist_bookings: {
         Row: {
           agency_contact_id: string | null
