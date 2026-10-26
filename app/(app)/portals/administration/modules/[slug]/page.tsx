@@ -123,6 +123,14 @@ export default async function AdministrationModulePage({params,searchParams}:{pa
    <h1 className="mt-2 text-2xl font-bold tracking-tight sm:text-3xl">{adminModule.title[locale]}</h1>
    <p className="mt-3 max-w-3xl text-sm leading-6 text-muted-foreground">{u.notice}</p>
   </header>
+  {slug==="artists"&&<section className="rounded-2xl border bg-card p-5">
+   <h2 className="text-lg font-semibold">{({nl:"DJ-bookings voorbereiden",fr:"Préparer les réservations DJ",en:"Prepare DJ bookings",de:"DJ-Buchungen vorbereiten"} as const)[locale]}</h2>
+   <p className="mt-2 text-sm text-muted-foreground">{({nl:"Leg eerst de artiest of het agentschap vast als contact. Gebruik de evenementenplanning om de datum te controleren. Boekingen en bevestigingsmails worden hier nog niet automatisch aangemaakt.",fr:"Enregistrez d'abord l'artiste ou l'agence comme contact. Vérifiez la date dans les événements. Les réservations et confirmations automatiques ne sont pas encore disponibles.",en:"Register the artist or agency as a contact first, then check the event date. Booking records and confirmation emails are not yet created automatically.",de:"Erfassen Sie zuerst Künstler oder Agentur als Kontakt und prüfen Sie das Veranstaltungsdatum. Buchungen und Bestätigungen werden noch nicht automatisch erstellt."} as const)[locale]}</p>
+   <div className="mt-4 flex flex-wrap gap-3">
+    <Link href="/portals/administration/contacts" className="rounded-lg border px-4 py-2 text-sm font-semibold hover:border-violet-400">{({nl:"Contacten openen",fr:"Ouvrir les contacts",en:"Open contacts",de:"Kontakte öffnen"} as const)[locale]}</Link>
+    <Link href="/portals/administration/modules/events" className="rounded-lg border px-4 py-2 text-sm font-semibold hover:border-violet-400">{({nl:"Evenementen openen",fr:"Ouvrir les événements",en:"Open events",de:"Veranstaltungen öffnen"} as const)[locale]}</Link>
+   </div>
+  </section>}
   {slug==="marketing"&&<section className="rounded-2xl border bg-card p-5">
    <h2 className="text-lg font-semibold">{({nl:"Promotiebeheer",fr:"Gestion de la promotion",en:"Promotion management",de:"Promotion verwalten"} as const)[locale]}</h2>
    <p className="mt-2 text-sm text-muted-foreground">{({nl:"Beheer promotietaken via het promotieportaal. Strikes en blokkeringen worden afzonderlijk beheerd.",fr:"Gérez les tâches promotionnelles dans le portail promotion. Les avertissements et blocages sont gérés séparément.",en:"Manage promotion tasks in the promotion portal. Strikes and restrictions are managed separately.",de:"Promotionsaufgaben werden im Promotionsportal verwaltet. Verwarnungen und Sperren werden separat verwaltet."} as const)[locale]}</p>
