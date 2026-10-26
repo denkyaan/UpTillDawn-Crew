@@ -1,0 +1,25 @@
+import "server-only"
+import {getContractSigningStatus} from "./documenso-envelope"
+import {reconcileSigningState} from "./contract-signing-status"
+import type {SigningLedger,SigningRecord} from "./contract-signing-ledger"
+
+/**
+ * Safe retry of an existing signing request. Does not create or send an
+ * envelope. Concurrent workers must use conditional database transitions.
+ */
+export async function retryContractSigningSync(input:{
+ record:SigningRecord
+ ledger:SigningLedger
+}):Promise<{state:SigningRecord["state"];updated:boolean}>{
+ const {record,ledger}=input
+ if(!record.envelopeId)throw new Error("Signing request has no envelope")
+ const remote=await getContractSigningStatus(record.envelopeId)
+ if(remote.id!==record.envelopeId)throw new Error("Signing envelope mismatch")
+ const next=reconcileSigningState(record.state,remote.status)
+ if(next===record.state)return {state:next,updated:false}
+ const updated=await ledger.transition({
+  envelopeId:record.envelopeId,expectedState:record.state,nextState:next
+ })
+ if(!updated)throw new Error("Signing state changed concurrently; retry after reload")
+ return {state:next,updated:true}
+}
