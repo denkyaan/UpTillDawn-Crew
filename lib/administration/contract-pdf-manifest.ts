@@ -1,5 +1,5 @@
 import type {ContractDocument} from "./contract-document"
-import {canonicalContractBytes,contractSha256} from "./contract-integrity"
+import {contractSha256} from "./contract-integrity"
 
 /** Immutable evidence manifest for a generated contract PDF.
  * The PDF file hash is independent from the canonical source-document hash.
