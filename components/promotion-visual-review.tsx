@@ -27,13 +27,16 @@ async function pixels(url:string){
   const height=Math.max(1,Math.round(bitmap.height*factor))
   const canvas=document.createElement("canvas")
   canvas.width=width;canvas.height=height
-  const ctx=canvas.getContext("2d",{willReadFrequently:true})
-  if(!ctx)throw new Error("Canvas unavailable")
-  ctx.drawImage(bitmap,0,0,width,height)
-  const data=ctx.getImageData(0,0,width,height).data
-  // Release the canvas backing store immediately after reading its pixels.
-  canvas.width=0;canvas.height=0
-  return {width,height,data}
+  try{
+   const ctx=canvas.getContext("2d",{willReadFrequently:true})
+   if(!ctx)throw new Error("Canvas unavailable")
+   ctx.drawImage(bitmap,0,0,width,height)
+   const data=ctx.getImageData(0,0,width,height).data
+   return {width,height,data}
+  }finally{
+   // Release canvas backing memory even if drawing or pixel reading fails.
+   canvas.width=0;canvas.height=0
+  }
  }finally{bitmap.close()}
 }
 export function PromotionVisualReview({evidenceUrl,referenceUrls,locale}:{evidenceUrl:string;referenceUrls:string[];locale:Locale}){
