@@ -42,3 +42,11 @@ test('cancelled promotion assignments cannot submit evidence server-side',async(
  assert.match(submission,/assigned\.status==="COMPLETED"\|\|assigned\.status==="CANCELLED"/)
  assert.match(submission,/\.eq\("user_id",user\.id\)/)
 })
+
+test('promotion evidence validates actual byte count before storage upload',async()=>{
+ const page=await read('app/(app)/portals/promotion/tasks/page.tsx')
+ const submission=page.slice(page.indexOf('async function submitPromotionEvidence'),page.indexOf('export default async function PromotionTasks'))
+ assert.match(submission,/bytes\.length!==file\.size/)
+ assert.match(submission,/bytes\.length>10\*1024\*1024/)
+ assert.ok(submission.indexOf('bytes.length!==file.size')<submission.indexOf('.storage.from("work-media").upload('))
+})
