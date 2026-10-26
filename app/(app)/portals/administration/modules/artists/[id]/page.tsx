@@ -47,11 +47,13 @@ async function updateBooking(form:FormData){
  const rider_notes=String(form.get("rider_notes")??"").trim()
  const internal_notes=String(form.get("internal_notes")??"").trim()
  if(!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id)||!["enquiry","negotiating","confirmed","cancelled"].includes(status)||rider_notes.length>5000||internal_notes.length>5000)throw new Error("Invalid booking update")
- const {data:booking,error:readError}=await db.from("admin_artist_bookings").select("id,status").eq("id",id).single()
+ const {data:booking,error:readError}=await db.from("admin_artist_bookings").select("id,status,internal_notes").eq("id",id).single()
  if(readError||!booking)notFound()
  const transitions:Record<string,string[]>={enquiry:["enquiry","negotiating","cancelled"],negotiating:["negotiating","confirmed","cancelled"],confirmed:["confirmed","cancelled"],cancelled:["cancelled"]}
  if(!transitions[booking.status]?.includes(status))throw new Error("Invalid booking status transition")
- const {error}=await db.from("admin_artist_bookings").update({status,rider_notes:rider_notes||null,internal_notes:internal_notes||null,updated_at:new Date().toISOString()}).eq("id",id).eq("status",booking.status).select("id").single()
+ const history=(booking.internal_notes??"").split("\\n").filter(line=>/^\\[\\d{4}-\\d{2}-\\d{2}T.*\\] \\[(email_sent|reply_received|follow_up)\\] \\[[0-9a-f-]{36}\\] /.test(line))
+ const notes=[internal_notes,...history].filter(Boolean).join("\\n")
+ const {error}=await db.from("admin_artist_bookings").update({status,rider_notes:rider_notes||null,internal_notes:notes||null,updated_at:new Date().toISOString()}).eq("id",id).eq("status",booking.status).eq("internal_notes",booking.internal_notes??"").select("id").single()
  if(error)throw new Error("Booking update failed")
  revalidatePath(base)
  redirect(base)
@@ -77,6 +79,8 @@ export default async function BookingDetail({params}:{params:Promise<{id:string}
  const subject=`Up Till Dawn — ${booking.artist_name} — ${event?.name??""} — ${labels[booking.status as "enquiry"|"negotiating"|"confirmed"|"cancelled"]}`
  const body=[`${booking.artist_name} — ${event?.name??""}`,date??"",`${labels.status}: ${labels[booking.status as "enquiry"|"negotiating"|"confirmed"|"cancelled"]}`,booking.fee_amount!=null?`${booking.fee_amount} ${booking.currency}`:"",booking.rider_notes??""].filter(Boolean).join("\\n\\n")
  const mailto=agency?.email&&/^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$/.test(agency.email)?`mailto:${encodeURIComponent(agency.email)}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`:null
+ const logEntries=(booking.internal_notes??"").split("\\n").filter(line=>/^\\[\\d{4}-\\d{2}-\\d{2}T.*\\] \\[(email_sent|reply_received|follow_up)\\] \\[[0-9a-f-]{36}\\] /.test(line))
+ const editableNotes=(booking.internal_notes??"").split("\\n").filter(line=>!logEntries.includes(line)).join("\\n")
  const allowed:Record<string,("enquiry"|"negotiating"|"confirmed"|"cancelled")[]>={enquiry:["enquiry","negotiating","cancelled"],negotiating:["negotiating","confirmed","cancelled"],confirmed:["confirmed","cancelled"],cancelled:["cancelled"]}
  return <main className="mx-auto w-full max-w-3xl space-y-5 p-4 sm:p-6">
   <Link href={base} className="text-sm font-semibold text-violet-400">← {labels.back}</Link>
@@ -89,6 +93,7 @@ export default async function BookingDetail({params}:{params:Promise<{id:string}
   </section>
   <form action={recordCommunication} className="grid gap-3 rounded-2xl border bg-card p-5">
    <h2 className="text-lg font-semibold">{labels.history}</h2>
+   {logEntries.length>0&&<ol className="max-h-64 space-y-2 overflow-auto rounded-lg border p-3 text-xs">{logEntries.slice().reverse().map((entry,index)=><li key={index} className="whitespace-pre-wrap break-words border-b pb-2 last:border-0">{entry}</li>)}</ol>}
    <input type="hidden" name="id" value={booking.id}/>
    <label className="text-sm font-semibold">{labels.kind}<select name="kind" className="mt-1 w-full rounded-lg border bg-background p-3"><option value="email_sent">{labels.sent}</option><option value="reply_received">{labels.reply}</option><option value="follow_up">{labels.followup}</option></select></label>
    <label className="text-sm font-semibold">{labels.details}<textarea name="details" required minLength={3} maxLength={1500} rows={3} className="mt-1 w-full rounded-lg border bg-background p-3"/></label>
@@ -98,7 +103,7 @@ export default async function BookingDetail({params}:{params:Promise<{id:string}
    <input type="hidden" name="id" value={booking.id}/>
    <label className="text-sm font-semibold">{labels.status}<select name="status" defaultValue={booking.status} className="mt-1 w-full rounded-lg border bg-background p-3">{(allowed[booking.status]??[booking.status as "enquiry"]).map(status=><option key={status} value={status}>{labels[status]}</option>)}</select></label>
    <label className="text-sm font-semibold">{labels.rider}<textarea name="rider_notes" maxLength={5000} rows={5} defaultValue={booking.rider_notes??""} className="mt-1 w-full rounded-lg border bg-background p-3"/></label>
-   <label className="text-sm font-semibold">{labels.notes}<textarea name="internal_notes" maxLength={5000} rows={5} defaultValue={booking.internal_notes??""} className="mt-1 w-full rounded-lg border bg-background p-3"/></label>
+   <label className="text-sm font-semibold">{labels.notes}<textarea name="internal_notes" maxLength={5000} rows={5} defaultValue={editableNotes} className="mt-1 w-full rounded-lg border bg-background p-3"/></label>
    <button className="rounded-xl bg-violet-600 px-4 py-3 font-semibold text-white">{labels.save}</button>
   </form>
  </main>
