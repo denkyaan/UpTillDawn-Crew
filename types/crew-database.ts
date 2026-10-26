@@ -44,6 +44,48 @@ export type Database = {
           },
         ]
       }
+      admin_artist_agreement_versions: {
+        Row: {
+          booking_id: string
+          created_at: string
+          created_by: string
+          id: string
+          snapshot: Json
+          version_number: number
+        }
+        Insert: {
+          booking_id: string
+          created_at?: string
+          created_by?: string
+          id?: string
+          snapshot: Json
+          version_number: number
+        }
+        Update: {
+          booking_id?: string
+          created_at?: string
+          created_by?: string
+          id?: string
+          snapshot?: Json
+          version_number?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "admin_artist_agreement_versions_booking_id_fkey"
+            columns: ["booking_id"]
+            isOneToOne: false
+            referencedRelation: "admin_artist_bookings"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "admin_artist_agreement_versions_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       admin_artist_bookings: {
         Row: {
           agreement_cancellation_terms: string | null
