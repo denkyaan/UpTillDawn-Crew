@@ -41,9 +41,9 @@ const financeRelated=new Set(["invoices","banking","documents","reports"])
 
 export const dynamic = "force-dynamic"
 
-export default async function AdministrationModulePage({params,searchParams}:{params:Promise<{slug:string}>;searchParams:Promise<{event?:string}>}){
+export default async function AdministrationModulePage({params,searchParams}:{params:Promise<{slug:string}>;searchParams?:Promise<{event?:string}>}){
  const {slug}=await params
- const {event:requestedEvent}=await searchParams
+ const {event:requestedEvent}=await (searchParams??Promise.resolve({event:undefined}))
  const adminModule=administrationModules.find(item=>item.slug===slug&&slug!=="dashboard"&&slug!=="finance")
  if(!adminModule)notFound()
  const current=await getCurrentUser()
