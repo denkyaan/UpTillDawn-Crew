@@ -38,7 +38,7 @@ async function submitPromotionEvidence(formData:FormData){
  const {data:blocked,error:blockError}=await db.rpc("upt_promotion_is_blocked" as never)
  if(blockError||blocked)throw new Error("Promotion access blocked")
  const {data:assigned,error:assignmentError}=await db.from("task_assignments").select("id,status").eq("id",assignment).eq("user_id",user.id).maybeSingle()
- if(assignmentError||!assigned||assigned.status==="COMPLETED")throw new Error("Assignment unavailable or already completed")
+ if(assignmentError||!assigned||(assigned.status==="COMPLETED"||assigned.status==="CANCELLED"))throw new Error("Assignment unavailable or already completed")
  const bytes=Buffer.from(await file.arrayBuffer())
  // Validate actual file signatures, not only browser-supplied MIME types.
  const isJpeg=bytes.length>=4&&bytes[0]===0xff&&bytes[1]===0xd8&&bytes[2]===0xff
