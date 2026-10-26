@@ -41,8 +41,9 @@ const financeRelated=new Set(["invoices","banking","documents","reports"])
 
 export const dynamic = "force-dynamic"
 
-export default async function AdministrationModulePage({params}:{params:Promise<{slug:string}>}){
+export default async function AdministrationModulePage({params,searchParams}:{params:Promise<{slug:string}>;searchParams:Promise<{event?:string}>}){
  const {slug}=await params
+ const {event:requestedEvent}=await searchParams
  const adminModule=administrationModules.find(item=>item.slug===slug&&slug!=="dashboard"&&slug!=="finance")
  if(!adminModule)notFound()
  const current=await getCurrentUser()
@@ -64,10 +65,12 @@ export default async function AdministrationModulePage({params}:{params:Promise<
 
  }
  if(operationalRoutes[slug])redirect(operationalRoutes[slug])
+ const inventoryFilterEvents=slug==="inventory" ? await supabase.from("events").select("id,name").order("start_at",{ascending:false}).limit(100) : null
+ const selectedEvent=inventoryFilterEvents?.data?.some(event=>event.id===requestedEvent)?requestedEvent:null
  const liveRecords = slug==="events"
   ? await supabase.from("events").select("id,name,status,start_at").order("start_at",{ascending:false}).limit(30)
   : slug==="inventory"
-    ? await supabase.from("inventory_items").select("id,name,missing_quantity,damaged_quantity,event_id").limit(30)
+    ? await (selectedEvent?supabase.from("inventory_items").select("id,name,missing_quantity,damaged_quantity,event_id").eq("event_id",selectedEvent):supabase.from("inventory_items").select("id,name,missing_quantity,damaged_quantity,event_id")).limit(100)
     : null
  const inventoryEventIds=slug==="inventory"&&liveRecords?.data
   ? [...new Set(liveRecords.data.flatMap(record=>"event_id" in record&&record.event_id?[record.event_id]:[]))]
@@ -102,6 +105,14 @@ export default async function AdministrationModulePage({params}:{params:Promise<
    <h1 className="mt-2 text-2xl font-bold tracking-tight sm:text-3xl">{adminModule.title[locale]}</h1>
    <p className="mt-3 max-w-3xl text-sm leading-6 text-muted-foreground">{u.notice}</p>
   </header>
+  {slug==="inventory"&&<section className="rounded-2xl border bg-card p-5">
+   <h2 className="text-lg font-semibold">{({nl:"Filter op evenement",fr:"Filtrer par événement",en:"Filter by event",de:"Nach Veranstaltung filtern"} as const)[locale]}</h2>
+   {inventoryFilterEvents?.error?<p className="mt-2 text-sm text-muted-foreground">{({nl:"Evenementen konden niet worden geladen.",fr:"Impossible de charger les événements.",en:"Events could not be loaded.",de:"Veranstaltungen konnten nicht geladen werden."} as const)[locale]}</p>
+   :<div className="mt-3 flex flex-wrap gap-2">
+    <Link href="/portals/administration/modules/inventory" aria-current={!selectedEvent?"page":undefined} className={`rounded-lg border px-3 py-2 text-sm ${!selectedEvent?"border-violet-500 font-semibold":"hover:border-violet-400"}`}>{({nl:"Alle evenementen",fr:"Tous les événements",en:"All events",de:"Alle Veranstaltungen"} as const)[locale]}</Link>
+    {(inventoryFilterEvents?.data??[]).map(event=><Link key={event.id} href={`/portals/administration/modules/inventory?event=${encodeURIComponent(event.id)}`} aria-current={selectedEvent===event.id?"page":undefined} className={`rounded-lg border px-3 py-2 text-sm ${selectedEvent===event.id?"border-violet-500 font-semibold":"hover:border-violet-400"}`}>{event.name}</Link>)}
+   </div>}
+  </section>}
   {slug==="inventory"&&inventorySummary.size>0&&<section className="rounded-2xl border bg-card p-5">
    <h2 className="text-lg font-semibold">{({nl:"Afwijkingen per evenement",fr:"Écarts par événement",en:"Discrepancies by event",de:"Abweichungen pro Veranstaltung"} as const)[locale]}</h2>
    <div className="mt-3 space-y-2">{[...inventorySummary.entries()].map(([eventId,summary])=><div key={eventId} className="flex flex-wrap items-center justify-between gap-2 rounded-lg border p-3 text-sm">
