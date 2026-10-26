@@ -38,7 +38,7 @@ export default async function AgreementDraft({params}:{params:Promise<{id:string
   !booking.performance_at&&copy.performance,
   booking.fee_amount===null&&copy.fee,
   !booking.rider_notes&&copy.rider
- ].filter((item):item is string=>typeof item==="string")
+ ].filter(Boolean).map(String)
  const date=booking.performance_at?new Intl.DateTimeFormat(({nl:"nl-BE",fr:"fr-BE",en:"en-GB",de:"de-DE"} as const)[locale],{dateStyle:"full",timeStyle:"short",timeZone:"Europe/Brussels"}).format(new Date(booking.performance_at)):copy.missing
  return <main className="mx-auto w-full max-w-3xl space-y-5 p-4 sm:p-6">
   <Link href={`${base}/${booking.id}`} className="text-sm font-semibold text-violet-400">← {copy.back}</Link>
