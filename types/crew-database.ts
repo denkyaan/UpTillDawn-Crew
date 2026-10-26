@@ -5566,6 +5566,10 @@ export type Database = {
         Args: { p_task: string; p_uid?: string }
         Returns: boolean
       }
+      upt_cancel_artist_signature_preparation: {
+        Args: { p_request_id: string }
+        Returns: boolean
+      }
       upt_cancel_inventory_settlement: {
         Args: { p_request: string }
         Returns: undefined
