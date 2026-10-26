@@ -4,6 +4,7 @@ import {createClient} from "@/lib/supabase/crew-server"
 import {canOpenPortal,type PortalAssignment} from "@/lib/portal-access"
 import {buildContractDocument} from "@/lib/administration/contract-document"
 import {renderContractPrintHtml} from "@/lib/administration/contract-print"
+import {contractSha256} from "@/lib/administration/contract-integrity"
 
 export const dynamic="force-dynamic"
 
@@ -42,12 +43,14 @@ export async function GET(_request:Request,{params}:{params:Promise<{id:string;v
   recipient:{name:str("agency_name"),email:str("agency_email")},
   terms,approvedAt:version.approved_at
  })
+ const digest=await contractSha256(doc)
  const html=renderContractPrintHtml(doc)
  return new Response(html,{headers:{
   "Content-Type":"text/html; charset=utf-8",
   "Cache-Control":"private, no-store",
   "Content-Security-Policy":"default-src 'none'; style-src 'unsafe-inline'; base-uri 'none'; form-action 'none'; frame-ancestors 'none'",
   "X-Content-Type-Options":"nosniff",
+  "X-Contract-SHA256":digest,
   "Content-Disposition":'inline; filename="agreement-'+version.version_number+'.html"'
  }})
 }
