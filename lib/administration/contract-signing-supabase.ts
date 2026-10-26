@@ -5,7 +5,9 @@ import {createSigningLedger,type SigningLedgerStore} from "./contract-signing-le
 import type {SigningRecord} from "./contract-signing-ledger"
 import type {ContractSigningState} from "./contract-signing-status"
 
-const TABLE="administration_contract_signing_requests"
+const TABLE="administration_contract_signing_requests" as const
+// Table introduced after the current generated Database types. Restrict
+// the temporary cast to this table until the schema types are regenerated.
 type SigningRow={
  document_type:"artist"|"staff"
  document_id:string
@@ -29,9 +31,10 @@ const map=(row:SigningRow):SigningRecord=>({
 export async function authorizedSigningLedger(){
  await authorizedContractStorage()
  const db=await createClient()
+ const table=()=>db.from(TABLE as never) as ReturnType<typeof db.from> 
  const store:SigningLedgerStore={
   async find(documentType,documentId,version){
-   const {data,error}=await db.from(TABLE).select(
+   const {data,error}=await table().select(
     "document_type,document_id,document_version,document_sha256,envelope_id,status,signed_pdf_path"
    ).eq("document_type",documentType).eq("document_id",documentId)
     .eq("document_version",version).maybeSingle()
@@ -39,7 +42,7 @@ export async function authorizedSigningLedger(){
    return data?map(data as SigningRow):null
   },
   async attach(input){
-   const {data,error}=await db.from(TABLE).update({envelope_id:input.envelopeId,updated_at:new Date().toISOString()})
+   const {data,error}=await table().update({envelope_id:input.envelopeId,updated_at:new Date().toISOString()})
     .eq("document_type",input.documentType).eq("document_id",input.documentId)
     .eq("document_version",input.version).eq("document_sha256",input.sourceSha256)
     .is("envelope_id",null).eq("status","draft").select("id")
@@ -50,13 +53,13 @@ export async function authorizedSigningLedger(){
    const changes:Record<string,string>={status:input.nextState,updated_at:new Date().toISOString()}
    if(input.nextState==="completed")changes.completed_at=new Date().toISOString()
    if(input.nextState==="sent")changes.dispatched_at=new Date().toISOString()
-   const {data,error}=await db.from(TABLE).update(changes)
+   const {data,error}=await table().update(changes)
     .eq("envelope_id",input.envelopeId).eq("status",input.expectedState).select("id")
    if(error)throw new Error("Signing state transition denied")
    return data?.length??0
   },
   async saveSignedPdf(envelopeId,path){
-   const {data,error}=await db.from(TABLE).update({
+   const {data,error}=await table().update({
     signed_pdf_path:path,updated_at:new Date().toISOString()
    }).eq("envelope_id",envelopeId).eq("status","completed")
     .is("signed_pdf_path",null).select("id")
