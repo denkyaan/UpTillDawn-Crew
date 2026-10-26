@@ -38,7 +38,7 @@ async function submitPromotionEvidence(formData:FormData){
  const {data:blocked,error:blockError}=await db.rpc("upt_promotion_is_blocked" as never)
  if(blockError||blocked)throw new Error("Promotion access blocked")
  const {data:assigned,error:assignmentError}=await db.from("task_assignments").select("id,status").eq("id",assignment).eq("user_id",user.id).maybeSingle()
- if(assignmentError||!assigned||(assigned.status==="COMPLETED"||assigned.status==="CANCELLED"))throw new Error("Assignment unavailable or already completed")
+ if(assignmentError||!assigned||assigned.status!=="IN PROGRESS")throw new Error("Assignment must be in progress to submit evidence")
  const bytes=Buffer.from(await file.arrayBuffer())
  if(bytes.length!==file.size||bytes.length>10*1024*1024)throw new Error("Invalid image size")
  // Validate actual file signatures, not only browser-supplied MIME types.
