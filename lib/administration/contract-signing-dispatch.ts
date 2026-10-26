@@ -28,7 +28,12 @@ export async function dispatchApprovedSigningEnvelope(input:{
  })
  if(!latest||latest.sourceSha256!==input.record.sourceSha256||
   latest.envelopeId!==input.record.envelopeId)throw new Error("Signing ledger changed; reload")
- if(latest.state==="sent")return "already_sent"
+ if(latest.state==="sent"){
+  if(!latest.envelopeId)throw new Error("Sent signing record has no envelope")
+  const remoteSent=await getContractSigningStatus(latest.envelopeId)
+  if(remoteSent.id!==latest.envelopeId||remoteSent.status!=="PENDING")throw new Error("Remote signing status needs reconciliation")
+  return "already_sent"
+ }
  const readiness=await checkContractDispatchReadiness({
   document:input.document,record:latest,pdf:input.pdf,recipientEmail:input.recipientEmail
  })
@@ -36,9 +41,11 @@ export async function dispatchApprovedSigningEnvelope(input:{
  const envelopeId=latest.envelopeId
  if(!envelopeId)throw new Error("Missing signing envelope")
  const remote=await getContractSigningStatus(envelopeId)
+ if(remote.id!==envelopeId)throw new Error("Remote envelope identity mismatch")
  const state=reconcileSigningState(latest.state,remote.status)
  if(state==="sent"){
-  await input.ledger.transition({envelopeId,expectedState:"draft",nextState:"sent"})
+  const reconciled=await input.ledger.transition({envelopeId,expectedState:"draft",nextState:"sent"})
+  if(!reconciled)throw new Error("Signing ledger conflict; reload before retry")
   return "already_sent"
  }
  if(state!=="draft")throw new Error("Signing envelope is no longer dispatchable")
