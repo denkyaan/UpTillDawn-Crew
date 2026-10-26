@@ -1,6 +1,9 @@
 import "server-only"
 import type {SigningLedger,SigningRecord} from "./contract-signing-ledger"
 import {retrieveAndArchiveSignedContract} from "./contract-signed-retrieve"
+import {downloadContractArchive} from "./contract-archive-server"
+import {getContractSigningStatus} from "./documenso-envelope"
+import {contractArchivePath} from "./contract-archive"
 import type {ArchiveStorageClient} from "./contract-archive-server"
 
 /**
@@ -16,7 +19,20 @@ export async function recoverSignedContractArchive(input:{
 }):Promise<{path:string;recovered:boolean}>{
  const {record,ledger,client}=input
  if(record.state!=="completed"||!record.envelopeId)throw new Error("Contract not completed")
- if(record.signedPdfPath)return {path:record.signedPdfPath,recovered:false}
+ if(!input.approvedVersionVerified)throw new Error("Approved version required")
+ if(record.signedPdfPath){
+  const prefix=record.documentType+"/"+record.documentId+"/v"+record.version+"/"
+  if(!record.signedPdfPath.startsWith(prefix+"signed-"))throw new Error("Signed PDF path does not match approved version")
+  const remote=await getContractSigningStatus(record.envelopeId)
+  if(remote.id!==record.envelopeId||remote.status!=="COMPLETED")throw new Error("Remote signature completion not verified")
+  const bytes=await downloadContractArchive(record.signedPdfPath,client)
+  const digest=Array.from(new Uint8Array(await crypto.subtle.digest("SHA-256",bytes)),b=>b.toString(16).padStart(2,"0")).join("")
+  if(record.signedPdfPath!==contractArchivePath({
+   documentType:record.documentType,documentId:record.documentId,
+   version:record.version,kind:"signed",sha256:digest
+  }))throw new Error("Signed PDF archive identity mismatch")
+  return {path:record.signedPdfPath,recovered:false}
+ }
  const archive=await retrieveAndArchiveSignedContract({
   documentType:record.documentType,documentId:record.documentId,
   version:record.version,persistedEnvelopeId:record.envelopeId,
