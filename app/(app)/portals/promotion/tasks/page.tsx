@@ -52,7 +52,11 @@ async function submitPromotionEvidence(formData:FormData){
  const {error:uploadError}=await db.storage.from("work-media").upload(path,bytes,{contentType:file.type,upsert:false})
  if(uploadError)throw new Error("Evidence upload failed")
  const {error:saveError}=await db.rpc("upt_submit_promotion_evidence" as never,{p_assignment:assignment,p_storage_path:path,p_sha256:sha} as never)
- if(saveError){await db.storage.from("work-media").remove([path]);throw new Error("Evidence registration failed")}
+ if(saveError){
+  const {error:cleanupError}=await db.storage.from("work-media").remove([path])
+  if(cleanupError)throw new Error("Evidence registration failed; uploaded file cleanup also failed")
+  throw new Error("Evidence registration failed")
+ }
  revalidatePath("/portals/promotion/tasks")
 }
 export default async function PromotionTasks(){
