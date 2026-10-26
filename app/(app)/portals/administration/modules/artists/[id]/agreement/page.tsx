@@ -99,6 +99,28 @@ async function prepareSignature(form:FormData){
  revalidatePath(base+"/"+id+"/agreement")
  redirect(base+"/"+id+"/agreement")
 }
+async function cancelSignaturePreparation(form:FormData){
+ "use server"
+ const id=String(form.get("id")??"")
+ const requestId=String(form.get("request_id")??"")
+ if(!/^[0-9a-f-]{36}$/i.test(id)||!/^[0-9a-f-]{36}$/i.test(requestId))notFound()
+ const user=await getCurrentUser()
+ if(!user)redirect("/login")
+ if((!user.approved||user.account_blocked)&&!user.isOwner)redirect("/portals")
+ const db=await createClient()
+ if(!user.isAdmin&&!user.isOwner){
+  const {data,error}=await db.rpc("upt_my_portal_assignments")
+  if(error||!canOpenPortal("administration",(data??[]) as PortalAssignment[],{approved:user.approved,blocked:Boolean(user.account_blocked)}))redirect("/portals")
+ }
+ const {data:request,error:requestError}=await db.from("admin_artist_agreement_signature_requests").select("id,agreement_version_id,status").eq("id",requestId).maybeSingle()
+ if(requestError||!request||request.status!=="prepared")throw new Error("Preparation unavailable")
+ const {data:version}=await db.from("admin_artist_agreement_versions").select("id").eq("id",request.agreement_version_id).eq("booking_id",id).maybeSingle()
+ if(!version)notFound()
+ const {data,error}=await db.rpc("upt_cancel_artist_signature_preparation",{p_request_id:requestId})
+ if(error||!data)throw new Error("Preparation could not be cancelled")
+ revalidatePath(base+"/"+id+"/agreement")
+ redirect(base+"/"+id+"/agreement")
+}
 const base="/portals/administration/modules/artists"
 export default async function AgreementDraft({params}:{params:Promise<{id:string}>}){
  const {id}=await params
@@ -180,7 +202,7 @@ export default async function AgreementDraft({params}:{params:Promise<{id:string
    <h2 className="font-semibold">{({nl:"Ondertekening voorbereiden",fr:"Préparer la signature",en:"Prepare signing",de:"Unterschrift vorbereiten"} as const)[locale]}</h2>
    <p className="text-sm">{({nl:"Enkel intern goedgekeurde versies. Dit registreert een voorbereiding en verstuurt nog geen uitnodiging.",fr:"Versions approuvées uniquement. Cette étape prépare une demande sans envoyer d’invitation.",en:"Approved versions only. This records a preparation and does not send an invitation.",de:"Nur genehmigte Versionen. Dies erfasst eine Vorbereitung und versendet keine Einladung."} as const)[locale]}</p>
    {(versions??[]).filter(version=>Boolean(version.approved_at)).map(version=><form key={version.id} action={prepareSignature} className="flex flex-wrap items-end gap-2 rounded-lg border p-3"><input type="hidden" name="id" value={booking.id}/><input type="hidden" name="version_id" value={version.id}/><label className="flex-1 text-sm">{({nl:"Ontvanger",fr:"Destinataire",en:"Recipient",de:"Empfänger"} as const)[locale]} · {version.version_number}<input type="email" name="recipient_email" required maxLength={320} defaultValue={agencyResult.data?.email??""} className="mt-1 w-full rounded-lg border bg-background p-2"/></label><button className="rounded-lg border px-3 py-2 text-sm font-semibold">{({nl:"Voorbereiden",fr:"Préparer",en:"Prepare",de:"Vorbereiten"} as const)[locale]}</button></form>)}
-   <ul className="space-y-1 text-sm">{(signatureRequests??[]).map(request=><li key={request.id} className="rounded-lg border p-2">{request.recipient_email} · {new Date(request.created_at).toLocaleDateString()} · {({nl:"Voorbereid",fr:"Préparé",en:"Prepared",de:"Vorbereitet"} as const)[locale]}</li>)}</ul>
+   <ul className="space-y-1 text-sm">{(signatureRequests??[]).map(request=><li key={request.id} className="rounded-lg border p-2">{request.recipient_email} · {new Date(request.created_at).toLocaleDateString()} · {request.status==="cancelled"?({nl:"Geannuleerd",fr:"Annulé",en:"Cancelled",de:"Storniert"} as const)[locale]:({nl:"Voorbereid",fr:"Préparé",en:"Prepared",de:"Vorbereitet"} as const)[locale]}{request.status==="prepared"&&<form action={cancelSignaturePreparation} className="mt-2"><input type="hidden" name="id" value={booking.id}/><input type="hidden" name="request_id" value={request.id}/><button className="rounded-lg border px-3 py-2">{({nl:"Voorbereiding annuleren",fr:"Annuler la préparation",en:"Cancel preparation",de:"Vorbereitung stornieren"} as const)[locale]}</button></form>}</li>)}</ul>
   </section>
   <p className="text-sm text-muted-foreground">{copy.noSend}</p>
  </main>
