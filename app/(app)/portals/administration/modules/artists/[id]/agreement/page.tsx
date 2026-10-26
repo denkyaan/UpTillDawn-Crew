@@ -1,4 +1,5 @@
 import Link from "next/link"
+import { revalidatePath } from "next/cache"
 import { notFound, redirect } from "next/navigation"
 import { getCurrentUser } from "@/lib/actions/auth"
 import { createClient } from "@/lib/supabase/crew-server"
@@ -6,6 +7,26 @@ import { canOpenPortal, type PortalAssignment } from "@/lib/portal-access"
 import { requestUiLocale } from "@/lib/server-locale"
 
 export const dynamic="force-dynamic"
+async function saveTerms(form:FormData){
+ "use server"
+ const id=String(form.get("id")??"")
+ if(!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id))notFound()
+ const user=await getCurrentUser()
+ if(!user)redirect("/login")
+ if((!user.approved||user.account_blocked)&&!user.isOwner)redirect("/portals")
+ const db=await createClient()
+ if(!user.isAdmin&&!user.isOwner){
+  const {data,error}=await db.rpc("upt_my_portal_assignments")
+  if(error||!canOpenPortal("administration",(data??[]) as PortalAssignment[],{approved:user.approved,blocked:Boolean(user.account_blocked)}))redirect("/portals")
+ }
+ const fields=["agreement_payment_terms","agreement_cancellation_terms","agreement_liability_terms","agreement_governing_law"] as const
+ const values=Object.fromEntries(fields.map(field=>[field,String(form.get(field)??"").trim()||null]))
+ if(Object.values(values).some(value=>value!==null&&value.length>3000))throw new Error("Agreement condition is too long")
+ const {data,error}=await db.from("admin_artist_bookings").update({...values,updated_at:new Date().toISOString()}).eq("id",id).in("status",["enquiry","negotiating"]).select("id").maybeSingle()
+ if(error||!data)throw new Error("Agreement terms cannot be changed for this booking")
+ revalidatePath(base+"/"+id+"/agreement")
+ redirect(base+"/"+id+"/agreement")
+}
 const base="/portals/administration/modules/artists"
 export default async function AgreementDraft({params}:{params:Promise<{id:string}>}){
  const {id}=await params
@@ -18,7 +39,7 @@ export default async function AgreementDraft({params}:{params:Promise<{id:string
   const {data,error}=await db.rpc("upt_my_portal_assignments")
   if(error||!canOpenPortal("administration",(data??[]) as PortalAssignment[],{approved:user.approved,blocked:Boolean(user.account_blocked)}))redirect("/portals")
  }
- const {data:booking,error}=await db.from("admin_artist_bookings").select("id,artist_name,status,event_id,agency_contact_id,performance_at,fee_amount,currency,rider_notes").eq("id",id).single()
+ const {data:booking,error}=await db.from("admin_artist_bookings").select("id,artist_name,status,event_id,agency_contact_id,performance_at,fee_amount,currency,rider_notes,agreement_payment_terms,agreement_cancellation_terms,agreement_liability_terms,agreement_governing_law").eq("id",id).single()
  if(error||!booking)notFound()
  const [eventResult,agencyResult]=await Promise.all([
   db.from("events").select("name,start_at").eq("id",booking.event_id).maybeSingle(),
@@ -57,6 +78,17 @@ export default async function AgreementDraft({params}:{params:Promise<{id:string
    <p className="text-sm text-muted-foreground">{({nl:"Leg vóór verzending schriftelijk vast: betaaltermijn, annuleringsregeling, technische rider, aansprakelijkheid en toepasselijk recht. Laat beide partijen de definitieve versie goedkeuren.",fr:"Avant tout envoi, précisez par écrit les délais de paiement, l’annulation, le rider technique, la responsabilité et le droit applicable. Faites approuver la version finale par les deux parties.",en:"Before sending, document payment terms, cancellation, technical rider, liability and governing law in writing. Obtain both parties’ approval of the final version.",de:"Vor dem Versand Zahlungsfristen, Stornierung, technischen Rider, Haftung und anwendbares Recht schriftlich festhalten. Die endgültige Fassung von beiden Parteien genehmigen lassen."} as const)[locale]}</p>
    <Link href={`${base}/${booking.id}`} className="inline-flex rounded-xl border px-4 py-3 text-sm font-semibold">{copy.back}</Link>
   </section>
+  <form action={saveTerms} className="grid gap-3 rounded-2xl border p-5">
+   <input type="hidden" name="id" value={booking.id}/>
+   <h2 className="font-semibold">{copy.terms}</h2>
+   {([
+    ["agreement_payment_terms",{nl:"Betalingsvoorwaarden",fr:"Conditions de paiement",en:"Payment terms",de:"Zahlungsbedingungen"}[locale],booking.agreement_payment_terms],
+    ["agreement_cancellation_terms",{nl:"Annuleringsvoorwaarden",fr:"Conditions d’annulation",en:"Cancellation terms",de:"Stornierungsbedingungen"}[locale],booking.agreement_cancellation_terms],
+    ["agreement_liability_terms",{nl:"Aansprakelijkheid",fr:"Responsabilité",en:"Liability",de:"Haftung"}[locale],booking.agreement_liability_terms],
+    ["agreement_governing_law",{nl:"Toepasselijk recht",fr:"Droit applicable",en:"Governing law",de:"Anwendbares Recht"}[locale],booking.agreement_governing_law]
+   ] as [string,string,string|null][]).map(([name,label,value])=><label key={name} className="text-sm font-semibold">{label}<textarea name={name} maxLength={3000} rows={3} defaultValue={value??""} disabled={booking.status==="confirmed"||booking.status==="cancelled"} className="mt-1 w-full rounded-lg border bg-background p-3 font-normal"/></label>)}
+   {booking.status!=="confirmed"&&booking.status!=="cancelled"&&<button className="rounded-xl bg-violet-600 px-4 py-3 font-semibold text-white">{({nl:"Voorwaarden opslaan",fr:"Enregistrer les conditions",en:"Save conditions",de:"Bedingungen speichern"} as const)[locale]}</button>}
+  </form>
   <p className="text-sm text-muted-foreground">{copy.noSend}</p>
  </main>
 }
