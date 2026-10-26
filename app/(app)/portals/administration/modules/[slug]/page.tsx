@@ -76,6 +76,17 @@ export default async function AdministrationModulePage({params}:{params:Promise<
   ? await supabase.from("events").select("id,name").in("id",inventoryEventIds)
   : null
  const inventoryEventNames=new Map((inventoryEvents?.data??[]).map(event=>[event.id,event.name]))
+ const inventorySummary=new Map<string,{missing:number;damaged:number;items:number}>()
+ if(slug==="inventory"&&!liveRecords?.error){
+  for(const record of liveRecords?.data??[]){
+   if(!("event_id" in record)||!record.event_id)continue
+   const summary=inventorySummary.get(record.event_id)??{missing:0,damaged:0,items:0}
+   summary.missing+=Number("missing_quantity" in record?record.missing_quantity??0:0)
+   summary.damaged+=Number("damaged_quantity" in record?record.damaged_quantity??0:0)
+   summary.items+=1
+   inventorySummary.set(record.event_id,summary)
+  }
+ }
  const locale=await requestUiLocale()
  const t=administrationCopy[locale]
  const u=ui[locale]
@@ -91,6 +102,13 @@ export default async function AdministrationModulePage({params}:{params:Promise<
    <h1 className="mt-2 text-2xl font-bold tracking-tight sm:text-3xl">{adminModule.title[locale]}</h1>
    <p className="mt-3 max-w-3xl text-sm leading-6 text-muted-foreground">{u.notice}</p>
   </header>
+  {slug==="inventory"&&inventorySummary.size>0&&<section className="rounded-2xl border bg-card p-5">
+   <h2 className="text-lg font-semibold">{({nl:"Afwijkingen per evenement",fr:"Écarts par événement",en:"Discrepancies by event",de:"Abweichungen pro Veranstaltung"} as const)[locale]}</h2>
+   <div className="mt-3 space-y-2">{[...inventorySummary.entries()].map(([eventId,summary])=><div key={eventId} className="flex flex-wrap items-center justify-between gap-2 rounded-lg border p-3 text-sm">
+    <span className="font-medium">{inventoryEventNames.get(eventId)??({nl:"Onbekend evenement",fr:"Événement inconnu",en:"Unknown event",de:"Unbekannte Veranstaltung"} as const)[locale]}</span>
+    <span className="text-xs text-muted-foreground">{({nl:"Materialen",fr:"Articles",en:"Items",de:"Artikel"} as const)[locale]}: {summary.items} · {({nl:"Ontbreekt",fr:"Manquant",en:"Missing",de:"Fehlt"} as const)[locale]}: {summary.missing} · {({nl:"Beschadigd",fr:"Endommagé",en:"Damaged",de:"Beschädigt"} as const)[locale]}: {summary.damaged}</span>
+   </div>)}</div>
+  </section>}
   {liveRecords&&<section className="rounded-2xl border bg-card p-5">
    <h2 className="text-lg font-semibold">{({nl:"Actuele gegevens",fr:"Données actuelles",en:"Live records",de:"Aktuelle Daten"} as const)[locale]}</h2>
    {liveRecords.error?<p className="mt-3 text-sm text-muted-foreground">{({nl:"Gegevens niet beschikbaar voor deze gebruiker.",fr:"Données indisponibles pour cet utilisateur.",en:"Records unavailable for this user.",de:"Daten für diesen Benutzer nicht verfügbar."} as const)[locale]}</p>
