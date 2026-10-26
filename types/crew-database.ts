@@ -9,6 +9,69 @@ export type Json =
 export type Database = {
   public: {
     Tables: {
+      admin_artist_bookings: {
+        Row: {
+          agency_contact_id: string | null
+          artist_name: string
+          created_at: string
+          created_by: string
+          currency: string
+          event_id: string
+          fee_amount: number | null
+          id: string
+          internal_notes: string | null
+          performance_at: string | null
+          rider_notes: string | null
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          agency_contact_id?: string | null
+          artist_name: string
+          created_at?: string
+          created_by?: string
+          currency?: string
+          event_id: string
+          fee_amount?: number | null
+          id?: string
+          internal_notes?: string | null
+          performance_at?: string | null
+          rider_notes?: string | null
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          agency_contact_id?: string | null
+          artist_name?: string
+          created_at?: string
+          created_by?: string
+          currency?: string
+          event_id?: string
+          fee_amount?: number | null
+          id?: string
+          internal_notes?: string | null
+          performance_at?: string | null
+          rider_notes?: string | null
+          status?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "admin_artist_bookings_agency_contact_id_fkey"
+            columns: ["agency_contact_id"]
+            isOneToOne: false
+            referencedRelation: "admin_counterparties"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "admin_artist_bookings_event_id_fkey"
+            columns: ["event_id"]
+            isOneToOne: false
+            referencedRelation: "events"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       admin_counterparties: {
         Row: {
           address: Json
