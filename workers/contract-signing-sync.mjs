@@ -63,7 +63,9 @@ export default {
    const declared=request.headers.get("content-length")
    if(declared!==null&&(!/^[0-9]+$/.test(declared)||Number(declared)>2048))return json({error:"Request too large"},413)
    const body=await readBounded(request.body,2048)
-   const input=JSON.parse(new TextDecoder("utf-8",{fatal:true}).decode(body))
+   let input
+   try{input=JSON.parse(new TextDecoder("utf-8",{fatal:true}).decode(body))}
+   catch(error){if(error instanceof SyntaxError||error instanceof TypeError)return json({error:"Invalid JSON request"},400);throw error}
    if(!input||typeof input!=="object"||Array.isArray(input)||Object.keys(input).length!==1||!Object.hasOwn(input,"envelopeId")||!validId(input.envelopeId))return json({error:"Invalid envelope"},400)
    const base=new URL(env.SUPABASE_URL)
    const provider=new URL(env.DOCUMENSO_URL)
