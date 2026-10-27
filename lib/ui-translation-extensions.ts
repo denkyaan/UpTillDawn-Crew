@@ -3,6 +3,8 @@ export type ExtendedUiLocale = 'nl' | 'fr' | 'en' | 'de'
 type Row = { fr: string; en: string; de: string }
 
 const EXTENSIONS: Record<string, Row> = {
+  "Posez vos questions administratives. L'assistant ne modifie rien et n'effectue aucun paiement.": { fr: "Posez vos questions administratives. L'assistant ne modifie rien et n'effectue aucun paiement.", en: "Ask about administration and follow-ups. The assistant cannot change records or make payments.", de: "Stelle Fragen zur Verwaltung. Der Assistent ändert keine Daten und führt keine Zahlungen aus." },
+  "Que dois-je traiter aujourd'hui ?": { fr: "Que dois-je traiter aujourd'hui ?", en: "What needs my attention today?", de: "Was braucht heute meine Aufmerksamkeit?" },
   'Administratieve AI-assistent': { fr: 'Assistant IA administratif', en: 'Administration AI assistant', de: 'Verwaltungs-KI-Assistent' },
   'Assistant IA administratif': { fr: 'Assistant IA administratif', en: 'Administration AI assistant', de: 'Verwaltungs-KI-Assistent' },
   'Administration AI assistant': { fr: 'Assistant IA administratif', en: 'Administration AI assistant', de: 'Verwaltungs-KI-Assistent' },
