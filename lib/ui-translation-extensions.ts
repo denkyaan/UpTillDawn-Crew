@@ -3,6 +3,10 @@ export type ExtendedUiLocale = 'nl' | 'fr' | 'en' | 'de'
 type Row = { fr: string; en: string; de: string }
 
 const EXTENSIONS: Record<string, Row> = {
+  "Notities met AI-werkruimte bewerken": { fr: "Modifier les notes dans l’espace IA", en: "Edit notes in AI workspace", de: "Notizen im KI-Arbeitsbereich bearbeiten" },
+  "Modifier les notes dans l’espace IA": { fr: "Modifier les notes dans l’espace IA", en: "Edit notes in AI workspace", de: "Notizen im KI-Arbeitsbereich bearbeiten" },
+  "Edit notes in AI workspace": { fr: "Modifier les notes dans l’espace IA", en: "Edit notes in AI workspace", de: "Notizen im KI-Arbeitsbereich bearbeiten" },
+  "Notizen im KI-Arbeitsbereich bearbeiten": { fr: "Modifier les notes dans l’espace IA", en: "Edit notes in AI workspace", de: "Notizen im KI-Arbeitsbereich bearbeiten" },
   "Interne boekingsnotities wijzigen": { fr: "Modifier les notes internes", en: "Edit internal booking notes", de: "Interne Buchungsnotizen ändern" },
   "Modifier les notes internes": { fr: "Modifier les notes internes", en: "Edit internal booking notes", de: "Interne Buchungsnotizen ändern" },
   "Edit internal booking notes": { fr: "Modifier les notes internes", en: "Edit internal booking notes", de: "Interne Buchungsnotizen ändern" },
