@@ -17,10 +17,13 @@ export async function checkContractDispatchReadiness(input:{
  const blockers:DispatchReadiness["blockers"][number][]=[]
  const {document,record,pdf}=input
  if(!record||document.reference!==record.documentType+"-"+record.documentId+"-v"+record.version)blockers.push("identity")
- if(!Number.isFinite(Date.parse(document.approvedAt)))blockers.push("approval")
+ const approvalTime=Date.parse(document.approvedAt)
+ if(!Number.isFinite(approvalTime)||approvalTime>Date.now())blockers.push("approval")
  if(!record||await contractSha256(document)!==record.sourceSha256)blockers.push("digest")
- if(!input.recipientEmail.trim()||
-  document.parties.recipient.email.toLowerCase()!==input.recipientEmail.trim().toLowerCase())blockers.push("recipient")
+ const recipient=input.recipientEmail.trim().toLowerCase()
+ const approvedRecipient=document.parties.recipient.email.trim().toLowerCase()
+ if(!/^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$/.test(recipient)||
+  recipient!==approvedRecipient)blockers.push("recipient")
  if(!record?.envelopeId||!/^[a-zA-Z0-9_-]{1,128}$/.test(record.envelopeId))blockers.push("envelope")
  if(record?.state!=="draft")blockers.push("state")
  if(!pdf||pdf.length<5||pdf.length>15*1024*1024||
