@@ -74,10 +74,20 @@ async function createCounterparty(formData:FormData) {
  const name=String(formData.get('name')??'').trim()
  const kind=String(formData.get('kind')??'')
  const email=String(formData.get('email')??'').trim()
+ const streetAddress=String(formData.get('street_address')??'').trim()
+ const postalCode=String(formData.get('postal_code')??'').trim()
+ const city=String(formData.get('city')??'').trim()
+ const countryCode=String(formData.get('country_code')??'').trim().toUpperCase()
+ const iban=String(formData.get('iban')??'').replace(/\\s+/g,'').toUpperCase()
+ const bic=String(formData.get('bic')??'').replace(/\\s+/g,'').toUpperCase()
+ const paymentTermsRaw=String(formData.get('payment_terms_days')??'').trim()
+ const paymentTermsDays=paymentTermsRaw===''?null:Number(paymentTermsRaw)
+ if(streetAddress.length>300||postalCode.length>32||city.length>120||(countryCode&&!/^[A-Z]{2}$/.test(countryCode))||(iban&&!/^[A-Z]{2}[0-9]{2}[A-Z0-9]{11,30}$/.test(iban))||(bic&&!/^[A-Z0-9]{8}([A-Z0-9]{3})?$/.test(bic))||(paymentTermsDays!==null&&(!Number.isInteger(paymentTermsDays)||paymentTermsDays<0||paymentTermsDays>365)))redirect('/portals/administration/finance?error=1')
+ const billingDetails={street_address:streetAddress||null,postal_code:postalCode||null,city:city||null,country_code:countryCode||null,iban:iban||null,bic:bic||null,payment_terms_days:paymentTermsDays}
  const vatNumber=String(formData.get('vat_number')??'').trim()
  const enterpriseNumber=String(formData.get('enterprise_number')??'').trim()
  if(!name||name.length>200||!['customer','supplier','both'].includes(kind)||email.length>320||(email&&!/^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$/.test(email))||vatNumber.length>32||enterpriseNumber.length>32)redirect('/portals/administration/finance?error=1')
- const {error}=await supabase.from('admin_counterparties').insert({name,kind,email:email||null,vat_number:vatNumber||null,enterprise_number:enterpriseNumber||null})
+ const {error}=await supabase.from('admin_counterparties').insert({name,kind,email:email||null,vat_number:vatNumber||null,enterprise_number:enterpriseNumber||null,...billingDetails})
  if(error)redirect('/portals/administration/finance?error=1')
  revalidatePath('/portals/administration/finance')
  redirect('/portals/administration/finance')
@@ -90,11 +100,21 @@ async function updateCounterparty(formData:FormData) {
  const name=String(formData.get('name')??'').trim()
  const kind=String(formData.get('kind')??'')
  const email=String(formData.get('email')??'').trim()
+ const streetAddress=String(formData.get('street_address')??'').trim()
+ const postalCode=String(formData.get('postal_code')??'').trim()
+ const city=String(formData.get('city')??'').trim()
+ const countryCode=String(formData.get('country_code')??'').trim().toUpperCase()
+ const iban=String(formData.get('iban')??'').replace(/\\s+/g,'').toUpperCase()
+ const bic=String(formData.get('bic')??'').replace(/\\s+/g,'').toUpperCase()
+ const paymentTermsRaw=String(formData.get('payment_terms_days')??'').trim()
+ const paymentTermsDays=paymentTermsRaw===''?null:Number(paymentTermsRaw)
+ if(streetAddress.length>300||postalCode.length>32||city.length>120||(countryCode&&!/^[A-Z]{2}$/.test(countryCode))||(iban&&!/^[A-Z]{2}[0-9]{2}[A-Z0-9]{11,30}$/.test(iban))||(bic&&!/^[A-Z0-9]{8}([A-Z0-9]{3})?$/.test(bic))||(paymentTermsDays!==null&&(!Number.isInteger(paymentTermsDays)||paymentTermsDays<0||paymentTermsDays>365)))redirect('/portals/administration/finance?error=1')
+ const billingDetails={street_address:streetAddress||null,postal_code:postalCode||null,city:city||null,country_code:countryCode||null,iban:iban||null,bic:bic||null,payment_terms_days:paymentTermsDays}
  const vatNumber=String(formData.get('vat_number')??'').trim()
  const enterpriseNumber=String(formData.get('enterprise_number')??'').trim()
  const uuid=/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
  if(!uuid.test(id)||!name||name.length>200||!['customer','supplier','both'].includes(kind)||email.length>320||(email&&!/^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$/.test(email))||vatNumber.length>32||enterpriseNumber.length>32)redirect('/portals/administration/finance?error=1')
- const {data,error}=await supabase.from('admin_counterparties').update({name,kind,email:email||null,vat_number:vatNumber||null,enterprise_number:enterpriseNumber||null}).eq('id',id).select('id')
+ const {data,error}=await supabase.from('admin_counterparties').update({name,kind,email:email||null,vat_number:vatNumber||null,enterprise_number:enterpriseNumber||null,...billingDetails}).eq('id',id).select('id')
  if(error||data?.length!==1)redirect('/portals/administration/finance?error=1')
  revalidatePath('/portals/administration/finance')
  redirect('/portals/administration/finance')
@@ -311,7 +331,7 @@ export default async function FinancePage({searchParams}:{searchParams:Promise<{
  const {data:documents,error} = await supabase.from('admin_financial_documents')
    .select('id,kind,document_number,net_amount,tax_amount,gross_amount,currency,status,created_at,original_invoice_id,due_date,issue_date,counterparty_id')
    .order('created_at',{ascending:false}).limit(100)
- const {data:counterparties}=await supabase.from('admin_counterparties').select('id,name,kind,email,vat_number,enterprise_number').order('name').limit(500)
+ const {data:counterparties}=await supabase.from('admin_counterparties').select('id,name,kind,email,vat_number,enterprise_number,street_address,postal_code,city,country_code,iban,bic,payment_terms_days').order('name').limit(500)
  const originalInvoices=(documents??[]).filter(d=>['sales_invoice','purchase_invoice'].includes(d.kind)&&['approved','issued','paid'].includes(d.status))
  const {data:paymentRows}=await (supabase as unknown as SupabaseClient).from('admin_financial_payments').select('id,document_id,amount,paid_on,bank_reference').order('created_at',{ascending:false}).limit(1000)
  const payments=(paymentRows??[]) as {id:string;document_id:string;amount:number;paid_on:string;bank_reference:string|null}[]
@@ -347,6 +367,14 @@ export default async function FinancePage({searchParams}:{searchParams:Promise<{
     <input name="email" type="email" maxLength={320} aria-label={({nl:'E-mailadres',fr:'Adresse e-mail',en:'Email address',de:'E-Mail-Adresse'} as const)[locale]} className="rounded border bg-background p-2"/>
     <input name="vat_number" maxLength={32} aria-label={({nl:'Btw-nummer',fr:'Numéro TVA',en:'VAT number',de:'USt-IdNr.'} as const)[locale]} placeholder={({nl:'Btw-nummer',fr:'Numéro TVA',en:'VAT number',de:'USt-IdNr.'} as const)[locale]} className="rounded border bg-background p-2"/>
     <input name="enterprise_number" maxLength={32} aria-label={({nl:'Ondernemingsnummer',fr:'Numéro d’entreprise',en:'Enterprise number',de:'Unternehmensnummer'} as const)[locale]} placeholder={({nl:'Ondernemingsnummer',fr:'Numéro d’entreprise',en:'Enterprise number',de:'Unternehmensnummer'} as const)[locale]} className="rounded border bg-background p-2"/>
+
+    <label>{({nl:'Straat en huisnummer',fr:'Rue et numéro',en:'Street address',de:'Straße und Hausnummer'} as const)[locale]}<input name="street_address" maxLength={300} className="block w-full rounded border bg-background p-2"/></label>
+    <label>{({nl:'Postcode',fr:'Code postal',en:'Postal code',de:'Postleitzahl'} as const)[locale]}<input name="postal_code" maxLength={32} className="block w-full rounded border bg-background p-2"/></label>
+    <label>{({nl:'Gemeente',fr:'Ville',en:'City',de:'Ort'} as const)[locale]}<input name="city" maxLength={120} className="block w-full rounded border bg-background p-2"/></label>
+    <label>{({nl:'Landcode (BE)',fr:'Code pays (BE)',en:'Country code (BE)',de:'Ländercode (BE)'} as const)[locale]}<input name="country_code" maxLength={2} placeholder="BE" className="block w-full rounded border bg-background p-2"/></label>
+    <label>IBAN<input name="iban" maxLength={42} className="block w-full rounded border bg-background p-2"/></label>
+    <label>BIC<input name="bic" maxLength={11} className="block w-full rounded border bg-background p-2"/></label>
+    <label>{({nl:'Betaaltermijn (dagen)',fr:'Délai de paiement (jours)',en:'Payment terms (days)',de:'Zahlungsfrist (Tage)'} as const)[locale]}<input type="number" min={0} max={365} name="payment_terms_days" className="block w-full rounded border bg-background p-2"/></label>
     <button type="submit" className="rounded bg-violet-600 px-3 py-2 font-semibold text-white">{({nl:'Relatie toevoegen',fr:'Ajouter un contact',en:'Add counterparty',de:'Geschäftspartner hinzufügen'} as const)[locale]}</button>
    </form>
    <div className="space-y-3 text-sm">{(counterparties??[]).map(party=><details key={party.id} className="rounded-lg border p-3"><summary className="cursor-pointer font-semibold">{party.name} · {party.kind} {party.email?'· '+party.email:''}</summary><form action={updateCounterparty} className="mt-3 grid gap-2 sm:grid-cols-2">
@@ -356,6 +384,14 @@ export default async function FinancePage({searchParams}:{searchParams:Promise<{
     <label>{({nl:'E-mailadres',fr:'Adresse e-mail',en:'Email address',de:'E-Mail-Adresse'} as const)[locale]}<input name="email" type="email" defaultValue={party.email??''} maxLength={320} className="block w-full rounded border bg-background p-2"/></label>
     <label>{({nl:'Btw-nummer',fr:'Numéro TVA',en:'VAT number',de:'USt-IdNr.'} as const)[locale]}<input name="vat_number" defaultValue={party.vat_number??''} maxLength={32} className="block w-full rounded border bg-background p-2"/></label>
     <label>{({nl:'Ondernemingsnummer',fr:'Numéro d’entreprise',en:'Enterprise number',de:'Unternehmensnummer'} as const)[locale]}<input name="enterprise_number" defaultValue={party.enterprise_number??''} maxLength={32} className="block w-full rounded border bg-background p-2"/></label>
+
+    <label>{({nl:'Straat en huisnummer',fr:'Rue et numéro',en:'Street address',de:'Straße und Hausnummer'} as const)[locale]}<input name="street_address" maxLength={300} defaultValue={party.street_address??''} className="block w-full rounded border bg-background p-2"/></label>
+    <label>{({nl:'Postcode',fr:'Code postal',en:'Postal code',de:'Postleitzahl'} as const)[locale]}<input name="postal_code" maxLength={32} defaultValue={party.postal_code??''} className="block w-full rounded border bg-background p-2"/></label>
+    <label>{({nl:'Gemeente',fr:'Ville',en:'City',de:'Ort'} as const)[locale]}<input name="city" maxLength={120} defaultValue={party.city??''} className="block w-full rounded border bg-background p-2"/></label>
+    <label>{({nl:'Landcode (BE)',fr:'Code pays (BE)',en:'Country code (BE)',de:'Ländercode (BE)'} as const)[locale]}<input name="country_code" maxLength={2} defaultValue={party.country_code??''} placeholder="BE" className="block w-full rounded border bg-background p-2"/></label>
+    <label>IBAN<input name="iban" maxLength={42} defaultValue={party.iban??''} className="block w-full rounded border bg-background p-2"/></label>
+    <label>BIC<input name="bic" maxLength={11} defaultValue={party.bic??''} className="block w-full rounded border bg-background p-2"/></label>
+    <label>{({nl:'Betaaltermijn (dagen)',fr:'Délai de paiement (jours)',en:'Payment terms (days)',de:'Zahlungsfrist (Tage)'} as const)[locale]}<input type="number" min={0} max={365} name="payment_terms_days" defaultValue={party.payment_terms_days??''} className="block w-full rounded border bg-background p-2"/></label>
     <button type="submit" className="rounded border border-violet-500 px-3 py-2 text-violet-400">{({nl:'Wijzigingen opslaan',fr:'Enregistrer les modifications',en:'Save changes',de:'Änderungen speichern'} as const)[locale]}</button>
    </form></details>)}</div>
   </section>
