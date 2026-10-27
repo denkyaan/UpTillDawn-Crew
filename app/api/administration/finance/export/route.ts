@@ -14,7 +14,7 @@ export async function GET(){
   if(error||!canOpenPortal('administration',(data??[]) as PortalAssignment[],{approved:current.approved,blocked:current.account_blocked===true}))
    return NextResponse.json({error:'Forbidden'},{status:403})
  }
- const documents: {id:string;kind:string;document_number:string|null;status:string;currency:string;gross_amount:number;due_date:string|null;issue_date:string|null}[]=[]
+ const documents: {id:string;kind:string;document_number:string|null;status:string;currency:string;gross_amount:number|null;due_date:string|null;issue_date:string|null}[]=[]
  const payments: {document_id:string;amount:number}[]=[]
  for(let offset=0;offset<10000;offset+=500){
   const {data,error}=await db.from('admin_financial_documents').select('id,kind,document_number,status,currency,gross_amount,due_date,issue_date').order('id').range(offset,offset+499)
@@ -38,7 +38,7 @@ export async function GET(){
  for(const doc of documents){
   const paid=byDocument.get(doc.id)??0
   const outstanding=Math.max(0,Number(doc.gross_amount)-paid)
-  rows.push([doc.id,doc.document_number,doc.kind,doc.status,doc.issue_date,doc.due_date,doc.currency,doc.gross_amount.toString(),paid.toFixed(2),outstanding.toFixed(2),outstanding>0?financialAging(doc.due_date,today):'settled'])
+  rows.push([doc.id,doc.document_number,doc.kind,doc.status,doc.issue_date,doc.due_date,doc.currency,Number(doc.gross_amount).toFixed(2),paid.toFixed(2),outstanding.toFixed(2),outstanding>0?financialAging(doc.due_date,today):'settled'])
  }
  return new NextResponse(financeCsv(rows),{headers:{'Content-Type':'text/csv; charset=utf-8','Content-Disposition':'attachment; filename="administration-finance.csv"','Cache-Control':'private, no-store','X-Content-Type-Options':'nosniff'}})
 }
