@@ -83,6 +83,23 @@ async function createCounterparty(formData:FormData) {
  redirect('/portals/administration/finance')
 }
 
+async function updateCounterparty(formData:FormData) {
+ 'use server'
+ const {supabase}=await requireAdministration()
+ const id=String(formData.get('counterparty_id')??'')
+ const name=String(formData.get('name')??'').trim()
+ const kind=String(formData.get('kind')??'')
+ const email=String(formData.get('email')??'').trim()
+ const vatNumber=String(formData.get('vat_number')??'').trim()
+ const enterpriseNumber=String(formData.get('enterprise_number')??'').trim()
+ const uuid=/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
+ if(!uuid.test(id)||!name||name.length>200||!['customer','supplier','both'].includes(kind)||email.length>320||(email&&!/^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$/.test(email))||vatNumber.length>32||enterpriseNumber.length>32)redirect('/portals/administration/finance?error=1')
+ const {data,error}=await supabase.from('admin_counterparties').update({name,kind,email:email||null,vat_number:vatNumber||null,enterprise_number:enterpriseNumber||null}).eq('id',id).select('id')
+ if(error||data?.length!==1)redirect('/portals/administration/finance?error=1')
+ revalidatePath('/portals/administration/finance')
+ redirect('/portals/administration/finance')
+}
+
 async function createDraft(formData:FormData) {
  'use server'
  const {supabase} = await requireAdministration()
@@ -299,7 +316,15 @@ export default async function FinancePage({searchParams}:{searchParams:Promise<{
     <input name="enterprise_number" maxLength={32} aria-label={({nl:'Ondernemingsnummer',fr:'Numéro d’entreprise',en:'Enterprise number',de:'Unternehmensnummer'} as const)[locale]} placeholder={({nl:'Ondernemingsnummer',fr:'Numéro d’entreprise',en:'Enterprise number',de:'Unternehmensnummer'} as const)[locale]} className="rounded border bg-background p-2"/>
     <button type="submit" className="rounded bg-violet-600 px-3 py-2 font-semibold text-white">{({nl:'Relatie toevoegen',fr:'Ajouter un contact',en:'Add counterparty',de:'Geschäftspartner hinzufügen'} as const)[locale]}</button>
    </form>
-   <div className="space-y-1 text-sm">{(counterparties??[]).map(party=><p key={party.id}>{party.name} · {party.kind} {party.email?'· '+party.email:''} {party.vat_number?'· '+party.vat_number:''}</p>)}</div>
+   <div className="space-y-3 text-sm">{(counterparties??[]).map(party=><details key={party.id} className="rounded-lg border p-3"><summary className="cursor-pointer font-semibold">{party.name} · {party.kind} {party.email?'· '+party.email:''}</summary><form action={updateCounterparty} className="mt-3 grid gap-2 sm:grid-cols-2">
+    <input type="hidden" name="counterparty_id" value={party.id}/>
+    <label>{({nl:'Naam',fr:'Nom',en:'Name',de:'Name'} as const)[locale]}<input name="name" defaultValue={party.name} required maxLength={200} className="block w-full rounded border bg-background p-2"/></label>
+    <label>{({nl:'Type relatie',fr:'Type de relation',en:'Relationship type',de:'Beziehungstyp'} as const)[locale]}<select name="kind" defaultValue={party.kind} className="block w-full rounded border bg-background p-2"><option value="customer">{({nl:'Klant',fr:'Client',en:'Customer',de:'Kunde'} as const)[locale]}</option><option value="supplier">{({nl:'Leverancier',fr:'Fournisseur',en:'Supplier',de:'Lieferant'} as const)[locale]}</option><option value="both">{({nl:'Beide',fr:'Les deux',en:'Both',de:'Beides'} as const)[locale]}</option></select></label>
+    <label>{({nl:'E-mailadres',fr:'Adresse e-mail',en:'Email address',de:'E-Mail-Adresse'} as const)[locale]}<input name="email" type="email" defaultValue={party.email??''} maxLength={320} className="block w-full rounded border bg-background p-2"/></label>
+    <label>{({nl:'Btw-nummer',fr:'Numéro TVA',en:'VAT number',de:'USt-IdNr.'} as const)[locale]}<input name="vat_number" defaultValue={party.vat_number??''} maxLength={32} className="block w-full rounded border bg-background p-2"/></label>
+    <label>{({nl:'Ondernemingsnummer',fr:'Numéro d’entreprise',en:'Enterprise number',de:'Unternehmensnummer'} as const)[locale]}<input name="enterprise_number" defaultValue={party.enterprise_number??''} maxLength={32} className="block w-full rounded border bg-background p-2"/></label>
+    <button type="submit" className="rounded border border-violet-500 px-3 py-2 text-violet-400">{({nl:'Wijzigingen opslaan',fr:'Enregistrer les modifications',en:'Save changes',de:'Änderungen speichern'} as const)[locale]}</button>
+   </form></details>)}</div>
   </section>
   <section className="rounded-2xl border bg-card p-5">
    <h2 className="mb-4 text-lg font-bold">{t.new}</h2>
