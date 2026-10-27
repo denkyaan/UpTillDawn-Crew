@@ -21,3 +21,15 @@ test("line totals are recomputed server-side and header overrides are blocked",(
  assert.match(sql,/pg_trigger_depth\(\) <= 1/)
  assert.match(sql,/revoke execute on function public\.upt_admin_recalculate_financial_lines\(\)/)
 })
+
+test("draft invoice lines can be removed only with scoped ownership and database policy",()=>{
+ const mutation=readFileSync("supabase/migrations/20261027183000_administration_invoice_line_mutations.sql","utf8")
+ assert.match(finance,/async function removeInvoiceLine\(/)
+ assert.match(finance,/document\?\.status!=='draft'/)
+ assert.match(finance,/\.delete\(\)\.eq\('id',lineId\)\.eq\('document_id',documentId\)/)
+ assert.match(finance,/action=\{removeInvoiceLine\}/)
+ assert.match(mutation,/create policy admin_financial_lines_delete/)
+ assert.match(mutation,/d\.status='draft'/)
+ assert.match(mutation,/new\.document_id is distinct from old\.document_id/)
+ assert.match(mutation,/revoke execute on function public\.upt_admin_guard_invoice_line_owner/)
+})
