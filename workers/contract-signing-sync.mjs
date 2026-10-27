@@ -1,6 +1,7 @@
 // Isolated Cloudflare Worker: never import this into the Next.js application.
 // Bind SUPABASE_URL, SUPABASE_SECRET, DOCUMENSO_URL, DOCUMENSO_TOKEN
 // and INTERNAL_SIGNING_TOKEN only to this worker. No public route is enabled.
+class PayloadTooLargeError extends Error {}
 const validId=value=>typeof value==="string"&&/^[A-Za-z0-9_-]{1,128}$/.test(value)
 const allowed={draft:["sent","completed","rejected","cancelled"],sent:["completed","rejected","cancelled"]}
 const mapStatus={DRAFT:"draft",PENDING:"sent",COMPLETED:"completed",REJECTED:"rejected",CANCELLED:"cancelled"}
@@ -29,7 +30,7 @@ async function readBounded(stream,maxBytes){
    const {done,value}=await reader.read()
    if(done)break
    total+=value.byteLength
-   if(total>maxBytes)throw Error("Payload too large")
+   if(total>maxBytes)throw new PayloadTooLargeError("Payload too large")
    chunks.push(value)
   }
  }catch(error){
@@ -84,6 +85,9 @@ export default {
    const result=await boundedJson(await fetch(rpcUrl,{method:"POST",redirect:"error",headers:{...headers,"content-type":"application/json"},body:JSON.stringify({p_envelope_id:input.envelopeId,p_expected_status:current,p_next_status:next})}))
    if(result!==true)return json({error:"Concurrent signing update"},409)
    return json({state:next,updated:true})
-  }catch{return json({error:"Signing synchronization unavailable"},502)}
+  }catch(error){
+   if(error instanceof PayloadTooLargeError)return json({error:"Request too large"},413)
+   return json({error:"Signing synchronization unavailable"},502)
+  }
  }
 }
