@@ -7,7 +7,8 @@ const allowed={draft:["sent","completed","rejected","cancelled"],sent:["complete
 const mapStatus={DRAFT:"draft",PENDING:"sent",COMPLETED:"completed",REJECTED:"rejected",CANCELLED:"cancelled"}
 const unsafeHost=hostname=>{
  const host=hostname.toLowerCase().replace(/\.$/,"")
- if(host==="localhost"||host.endsWith(".localhost")||host.endsWith(".local")||host.endsWith(".internal"))return true
+ if(host.length===0||host.includes("%"))return true
+ if(host==="localhost"||host.endsWith(".localhost")||host.endsWith(".local")||host.endsWith(".internal")||host.endsWith(".test")||host.endsWith(".invalid"))return true
  if(host.startsWith("[")&&host.endsWith("]"))return true
  if(/^[0-9.]+$/.test(host)){
   const parts=host.split(".").map(Number)
