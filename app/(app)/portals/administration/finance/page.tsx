@@ -87,7 +87,7 @@ async function createCounterparty(formData:FormData) {
  const vatNumber=String(formData.get('vat_number')??'').trim()
  const enterpriseNumber=String(formData.get('enterprise_number')??'').trim()
  if(!name||name.length>200||!['customer','supplier','both'].includes(kind)||email.length>320||(email&&!/^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$/.test(email))||vatNumber.length>32||enterpriseNumber.length>32)redirect('/portals/administration/finance?error=1')
- const {error}=await supabase.from('admin_counterparties').insert({name,kind,email:email||null,vat_number:vatNumber||null,enterprise_number:enterpriseNumber||null,...billingDetails})
+ const {error}=await (supabase as unknown as SupabaseClient).from('admin_counterparties').insert({name,kind,email:email||null,vat_number:vatNumber||null,enterprise_number:enterpriseNumber||null,...billingDetails})
  if(error)redirect('/portals/administration/finance?error=1')
  revalidatePath('/portals/administration/finance')
  redirect('/portals/administration/finance')
@@ -114,7 +114,7 @@ async function updateCounterparty(formData:FormData) {
  const enterpriseNumber=String(formData.get('enterprise_number')??'').trim()
  const uuid=/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
  if(!uuid.test(id)||!name||name.length>200||!['customer','supplier','both'].includes(kind)||email.length>320||(email&&!/^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$/.test(email))||vatNumber.length>32||enterpriseNumber.length>32)redirect('/portals/administration/finance?error=1')
- const {data,error}=await supabase.from('admin_counterparties').update({name,kind,email:email||null,vat_number:vatNumber||null,enterprise_number:enterpriseNumber||null,...billingDetails}).eq('id',id).select('id')
+ const {data,error}=await (supabase as unknown as SupabaseClient).from('admin_counterparties').update({name,kind,email:email||null,vat_number:vatNumber||null,enterprise_number:enterpriseNumber||null,...billingDetails}).eq('id',id).select('id')
  if(error||data?.length!==1)redirect('/portals/administration/finance?error=1')
  revalidatePath('/portals/administration/finance')
  redirect('/portals/administration/finance')
@@ -331,7 +331,7 @@ export default async function FinancePage({searchParams}:{searchParams:Promise<{
  const {data:documents,error} = await supabase.from('admin_financial_documents')
    .select('id,kind,document_number,net_amount,tax_amount,gross_amount,currency,status,created_at,original_invoice_id,due_date,issue_date,counterparty_id')
    .order('created_at',{ascending:false}).limit(100)
- const {data:counterparties}=await supabase.from('admin_counterparties').select('id,name,kind,email,vat_number,enterprise_number,street_address,postal_code,city,country_code,iban,bic,payment_terms_days').order('name').limit(500)
+ const {data:counterparties}=await (supabase as unknown as SupabaseClient).from('admin_counterparties').select('id,name,kind,email,vat_number,enterprise_number,street_address,postal_code,city,country_code,iban,bic,payment_terms_days').order('name').limit(500)
  const originalInvoices=(documents??[]).filter(d=>['sales_invoice','purchase_invoice'].includes(d.kind)&&['approved','issued','paid'].includes(d.status))
  const {data:paymentRows}=await (supabase as unknown as SupabaseClient).from('admin_financial_payments').select('id,document_id,amount,paid_on,bank_reference').order('created_at',{ascending:false}).limit(1000)
  const payments=(paymentRows??[]) as {id:string;document_id:string;amount:number;paid_on:string;bank_reference:string|null}[]
