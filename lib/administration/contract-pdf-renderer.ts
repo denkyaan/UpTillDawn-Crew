@@ -29,8 +29,10 @@ export function createContractPdfRenderer():ContractPdfRenderer{
   if(!response.ok||!response.headers.get("content-type")?.toLowerCase().includes("application/pdf")){
    throw new Error("Contract PDF rendering failed")
   }
-  const length=Number(response.headers.get("content-length")??"0")
-  if(length>15*1024*1024)throw new Error("Rendered PDF too large")
+  const lengthHeader=response.headers.get("content-length")
+  const length=lengthHeader===null?null:Number(lengthHeader)
+  if(length!==null&&(!Number.isSafeInteger(length)||length<0))throw new Error("Invalid renderer response length")
+  if(length!==null&&length>15*1024*1024)throw new Error("Rendered PDF too large")
   const reader=response.body?.getReader()
   if(!reader)throw new Error("PDF renderer returned an empty stream")
   const chunks:Uint8Array[]=[]
