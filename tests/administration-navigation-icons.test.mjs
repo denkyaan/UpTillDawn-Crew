@@ -13,3 +13,14 @@ test('mobile navigation has fixed category and subtab controls without popup',()
  assert.match(nav,/aria-pressed=\{selected\.key===group\.key\}/)
  assert.match(nav,/className="fixed inset-x-0 bottom-0/)
 })
+
+test('subtabs remain compact and accessible on mobile',()=>{
+ assert.match(nav,/grid grid-cols-3 gap-1\.5/)
+ assert.match(nav,/aria-current=\{pathname===route\(slug\)\?"page":undefined\}/)
+ assert.match(nav,/pathname\.startsWith\(route\(slug\)\+"\/"\)/)
+ assert.doesNotMatch(nav,/overflow-y-auto|bottom-full/)
+})
+test('administration layout reserves space for fixed navigation',()=>{
+ const layout=readFileSync('app/(app)/portals/administration/layout.tsx','utf8')
+ assert.match(layout,/pb-64 lg:pb-0/)
+})
