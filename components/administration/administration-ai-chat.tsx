@@ -14,7 +14,7 @@ const suggestions:Record<SupportedUiLocale,string[]>={
  en:["Which admin items need attention?","Which artists need follow-up?","Are there submitted timesheets?"],
  de:["Welche Verwaltungsvorgänge brauchen Aufmerksamkeit?","Welche Künstler benötigen Nachverfolgung?","Gibt es eingereichte Arbeitszeiten?"]
 }
-export function AdministrationAiChat({locale}:{locale:SupportedUiLocale}){
+export function AdministrationAiChat({locale,initialBookingId}:{locale:SupportedUiLocale;initialBookingId?:string}){
  const t=copy[locale]
  const [message,setMessage]=useState("")
  const [history,setHistory]=useState<Array<{role:"user"|"assistant";content:string}>>([])
@@ -42,7 +42,7 @@ export function AdministrationAiChat({locale}:{locale:SupportedUiLocale}){
   </form>
   {history.length>0&&<button type="button" disabled={busy} onClick={()=>{setHistory([]);setMessage("");setError("")}} className="rounded-lg border px-3 py-2 text-sm disabled:opacity-50">{t.clear}</button>}
   {error&&<p role="alert" className="rounded-xl border p-3 text-sm">{error}</p>}
-  <AdministrationAiBookingNotes locale={locale}/>
+  <AdministrationAiBookingNotes locale={locale} initialBookingId={initialBookingId}/>
   {history.length>0&&<div role="log" aria-live="polite" aria-relevant="additions" className="max-h-96 space-y-3 overflow-y-auto rounded-xl border p-3">{history.map((entry,index)=><div key={index} className={entry.role==="user"?"ml-6 whitespace-pre-wrap rounded-xl bg-violet-500/10 p-3 text-sm":"mr-6 whitespace-pre-wrap rounded-xl bg-muted p-3 text-sm"}>{entry.content}</div>)}</div>}
  </section>
 }
