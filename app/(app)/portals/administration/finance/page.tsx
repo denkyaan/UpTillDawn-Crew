@@ -316,6 +316,16 @@ async function updatePaymentReminder(formData:FormData) {
  const id=String(formData.get('reminder_id')??'')
  const status=String(formData.get('status')??'')
  if(!isAdmin||!['approved','cancelled'].includes(status)||!/^[0-9a-f]{8}-[0-9a-f-]{27,}$/i.test(id))redirect('/portals/administration/finance?error=1')
+ if(status==='approved'){
+  const {data:reminder,error:reminderError}=await (supabase as unknown as SupabaseClient).from('admin_payment_reminders').select('document_id').eq('id',id).eq('status','draft').maybeSingle()
+  if(reminderError||!reminder)redirect('/portals/administration/finance?error=1')
+  const {data:invoice,error:invoiceError}=await supabase.from('admin_financial_documents').select('kind,status,due_date,gross_amount').eq('id',reminder.document_id).maybeSingle()
+  if(invoiceError||!invoice||invoice.kind!=='sales_invoice'||!['approved','issued'].includes(invoice.status)||!invoice.due_date||invoice.due_date>=new Date().toISOString().slice(0,10))redirect('/portals/administration/finance?error=1')
+  const {data:payments,error:paymentsError}=await (supabase as unknown as SupabaseClient).from('admin_financial_payments').select('amount').eq('document_id',reminder.document_id)
+  if(paymentsError)redirect('/portals/administration/finance?error=1')
+  const paid=(payments??[]).reduce((sum:number,p:{amount:number})=>sum+Number(p.amount),0)
+  if(!Number.isFinite(paid)||Number(invoice.gross_amount)-paid<=0.005)redirect('/portals/administration/finance?error=1')
+ }
  const {data:{user}}=await supabase.auth.getUser()
  if(!user)redirect('/login')
  const patch=status==='approved'?{status,approved_by:user.id,approved_at:new Date().toISOString()}:{status}
