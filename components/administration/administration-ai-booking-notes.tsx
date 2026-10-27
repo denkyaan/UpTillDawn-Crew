@@ -1,5 +1,5 @@
 "use client"
-import {useEffect,useState} from "react"
+import {useCallback,useEffect,useState} from "react"
 import type {SupportedUiLocale} from "@/lib/locale-preferences"
 const labels={
  nl:{title:"Interne boekingsnotities wijzigen",id:"Boeking-ID",load:"Boeking ophalen",notes:"Nieuwe interne notities",save:"Bevestigen en opslaan",cancel:"Annuleren",success:"Notities opgeslagen.",error:"De wijziging kon niet worden uitgevoerd. Herlaad de boeking.",locked:"Geannuleerde boekingen zijn vergrendeld."},
@@ -15,8 +15,7 @@ export function AdministrationAiBookingNotes({locale,initialBookingId}:{locale:S
  const [notes,setNotes]=useState("")
  const [busy,setBusy]=useState(false)
  const [feedback,setFeedback]=useState("")
- useEffect(()=>{if(initialBookingId&&/^[0-9a-f-]{36}$/i.test(initialBookingId)){void load(initialBookingId)}},[initialBookingId])
- async function load(targetId=id){
+ const load=useCallback(async (targetId:string){
   if(busy)return
   setBusy(true);setFeedback("");setBooking(null)
   try{
@@ -26,7 +25,8 @@ export function AdministrationAiBookingNotes({locale,initialBookingId}:{locale:S
    setBooking(payload.booking)
    setNotes((payload.booking.internal_notes??"").split("\n").filter(line=>!/^\[\d{4}-\d{2}-\d{2}T.*\] \[(email_sent|reply_received|follow_up)\] \[[0-9a-f-]{36}\] /.test(line)).join("\n"))
   }catch{setFeedback(t.error)}finally{setBusy(false)}
- }
+ },[busy,t.error])
+ useEffect(()=>{if(initialBookingId&&/^[0-9a-f-]{36}$/i.test(initialBookingId)){void load(initialBookingId)}},[initialBookingId,load])
  async function save(){
   if(!booking||busy||booking.status==="cancelled")return
   setBusy(true);setFeedback("")
