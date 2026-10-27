@@ -24,6 +24,8 @@ const map=(row:SigningRow):SigningRecord=>{
   !/^[a-f0-9]{64}$/.test(row.document_sha256)||
   !["draft","sent","completed","rejected","cancelled"].includes(row.status)||
   (row.envelope_id!==null&&!/^[A-Za-z0-9_-]{1,128}$/.test(row.envelope_id))||
+  (row.status!=="draft"&&row.envelope_id===null)||
+  (row.signed_pdf_path!==null&&(row.status!=="completed"||row.envelope_id===null))||
   (row.signed_pdf_path!==null&&
    !new RegExp("^"+row.document_type+"/"+row.document_id+"/v"+row.document_version+"/signed-[a-f0-9]{64}[.]pdf$").test(row.signed_pdf_path))){
   throw new Error("Invalid signing ledger record")
