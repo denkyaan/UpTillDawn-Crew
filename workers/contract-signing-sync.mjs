@@ -2,6 +2,7 @@
 // Bind SUPABASE_URL, SUPABASE_SECRET, DOCUMENSO_URL, DOCUMENSO_TOKEN
 // and INTERNAL_SIGNING_TOKEN only to this worker. No public route is enabled.
 class PayloadTooLargeError extends Error {}
+class UpstreamPayloadTooLargeError extends Error {}
 const validId=value=>typeof value==="string"&&/^[A-Za-z0-9_-]{1,128}$/.test(value)
 const allowed={draft:["sent","completed","rejected","cancelled"],sent:["completed","rejected","cancelled"]}
 const mapStatus={DRAFT:"draft",PENDING:"sent",COMPLETED:"completed",REJECTED:"rejected",CANCELLED:"cancelled"}
@@ -50,7 +51,8 @@ async function boundedJson(response){
  if(!/^application\/json(?:\s*;\s*charset\s*=\s*(?:utf-8|"utf-8"))?$/i.test(response.headers.get("content-type")||""))throw Error("Upstream JSON content type required")
  const rawLength=response.headers.get("content-length")
  if(rawLength!==null&&(!/^[0-9]+$/.test(rawLength)||Number(rawLength)>65536))throw Error("Upstream response too large")
- const bytes=await readBounded(response.body,65536)
+ let bytes
+ try{bytes=await readBounded(response.body,65536)}catch(error){if(error instanceof PayloadTooLargeError)throw new UpstreamPayloadTooLargeError("Upstream response too large");throw error}
  return JSON.parse(new TextDecoder("utf-8",{fatal:true}).decode(bytes))
 }
 
