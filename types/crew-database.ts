@@ -279,6 +279,13 @@ export type Database = {
             referencedRelation: "admin_financial_documents"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "admin_financial_attachments_document_id_fkey"
+            columns: ["document_id"]
+            isOneToOne: false
+            referencedRelation: "admin_financial_payment_balances"
+            referencedColumns: ["document_id"]
+          },
         ]
       }
       admin_financial_audit: {
@@ -316,6 +323,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "admin_financial_documents"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "admin_financial_audit_document_id_fkey"
+            columns: ["document_id"]
+            isOneToOne: false
+            referencedRelation: "admin_financial_payment_balances"
+            referencedColumns: ["document_id"]
           },
         ]
       }
@@ -394,13 +408,6 @@ export type Database = {
         }
         Relationships: [
           {
-            foreignKeyName: "admin_financial_documents_original_invoice_id_fkey"
-            columns: ["original_invoice_id"]
-            isOneToOne: false
-            referencedRelation: "admin_financial_documents"
-            referencedColumns: ["id"]
-          },
-          {
             foreignKeyName: "admin_financial_documents_counterparty_id_fkey"
             columns: ["counterparty_id"]
             isOneToOne: false
@@ -413,6 +420,20 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "events"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "admin_financial_documents_original_invoice_id_fkey"
+            columns: ["original_invoice_id"]
+            isOneToOne: false
+            referencedRelation: "admin_financial_documents"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "admin_financial_documents_original_invoice_id_fkey"
+            columns: ["original_invoice_id"]
+            isOneToOne: false
+            referencedRelation: "admin_financial_payment_balances"
+            referencedColumns: ["document_id"]
           },
         ]
       }
@@ -451,6 +472,118 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "admin_financial_documents"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "admin_financial_lines_document_id_fkey"
+            columns: ["document_id"]
+            isOneToOne: false
+            referencedRelation: "admin_financial_payment_balances"
+            referencedColumns: ["document_id"]
+          },
+        ]
+      }
+      admin_financial_payments: {
+        Row: {
+          amount: number
+          bank_reference: string | null
+          created_at: string
+          created_by: string
+          document_id: string
+          id: string
+          note: string | null
+          paid_on: string
+        }
+        Insert: {
+          amount: number
+          bank_reference?: string | null
+          created_at?: string
+          created_by?: string
+          document_id: string
+          id?: string
+          note?: string | null
+          paid_on: string
+        }
+        Update: {
+          amount?: number
+          bank_reference?: string | null
+          created_at?: string
+          created_by?: string
+          document_id?: string
+          id?: string
+          note?: string | null
+          paid_on?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "admin_financial_payments_document_id_fkey"
+            columns: ["document_id"]
+            isOneToOne: false
+            referencedRelation: "admin_financial_documents"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "admin_financial_payments_document_id_fkey"
+            columns: ["document_id"]
+            isOneToOne: false
+            referencedRelation: "admin_financial_payment_balances"
+            referencedColumns: ["document_id"]
+          },
+        ]
+      }
+      admin_payment_reminders: {
+        Row: {
+          approved_at: string | null
+          approved_by: string | null
+          body: string
+          created_at: string
+          created_by: string
+          document_id: string
+          id: string
+          recipient_email: string
+          reminder_number: number
+          status: string
+          subject: string
+        }
+        Insert: {
+          approved_at?: string | null
+          approved_by?: string | null
+          body: string
+          created_at?: string
+          created_by?: string
+          document_id: string
+          id?: string
+          recipient_email: string
+          reminder_number: number
+          status?: string
+          subject: string
+        }
+        Update: {
+          approved_at?: string | null
+          approved_by?: string | null
+          body?: string
+          created_at?: string
+          created_by?: string
+          document_id?: string
+          id?: string
+          recipient_email?: string
+          reminder_number?: number
+          status?: string
+          subject?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "admin_payment_reminders_document_id_fkey"
+            columns: ["document_id"]
+            isOneToOne: false
+            referencedRelation: "admin_financial_documents"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "admin_payment_reminders_document_id_fkey"
+            columns: ["document_id"]
+            isOneToOne: false
+            referencedRelation: "admin_financial_payment_balances"
+            referencedColumns: ["document_id"]
           },
         ]
       }
@@ -5287,7 +5420,15 @@ export type Database = {
       }
     }
     Views: {
-      [_ in never]: never
+      admin_financial_payment_balances: {
+        Row: {
+          document_id: string | null
+          gross_amount: number | null
+          outstanding_amount: number | null
+          paid_amount: number | null
+        }
+        Relationships: []
+      }
     }
     Functions: {
       upt_accept_shift_handover: {
@@ -6641,6 +6782,14 @@ export type Database = {
           p_operation: string
         }
         Returns: string
+      }
+      upt_server_transition_contract_signing: {
+        Args: {
+          p_envelope_id: string
+          p_expected_status: string
+          p_next_status: string
+        }
+        Returns: boolean
       }
       upt_set_admin_role_mode: { Args: { p_role: string }; Returns: string }
       upt_set_chat_mute: {
