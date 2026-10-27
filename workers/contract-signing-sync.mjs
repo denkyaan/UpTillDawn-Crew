@@ -46,7 +46,7 @@ export default {
    if(declared!==null&&(!/^[0-9]+$/.test(declared)||Number(declared)>2048))return json({error:"Request too large"},413)
    const body=await readBounded(request.body,2048)
    const input=JSON.parse(new TextDecoder("utf-8",{fatal:true}).decode(body))
-   if(!input||typeof input!=="object"||Array.isArray(input)||!validId(input.envelopeId))return json({error:"Invalid envelope"},400)
+   if(!input||typeof input!=="object"||Array.isArray(input)||Object.keys(input).length!==1||!Object.hasOwn(input,"envelopeId")||!validId(input.envelopeId))return json({error:"Invalid envelope"},400)
    const base=new URL(env.SUPABASE_URL)
    const provider=new URL(env.DOCUMENSO_URL)
    if(base.protocol!=="https:"||provider.protocol!=="https:"||base.username||base.password||provider.username||provider.password||base.search||base.hash||provider.search||provider.hash||base.pathname!=="/"||provider.pathname!=="/")throw Error("Trusted HTTPS endpoints required")
