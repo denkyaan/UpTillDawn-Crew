@@ -18,7 +18,7 @@ test("isolated signing worker has no public endpoint",async()=>{
 test("isolated signing worker rejects oversized body without content-length",async()=>{
  const env={INTERNAL_SIGNING_TOKEN:"internal",SUPABASE_SECRET:"secret",SUPABASE_URL:"https://db.example",DOCUMENSO_URL:"https://sign.example",DOCUMENSO_TOKEN:"token"}
  const request=new Request("https://worker.example/internal/signing/sync",{
-  method:"POST",headers:{authorization:"Bearer internal","content-type":"application/json","content-type":"application/json"},
+  method:"POST",headers:{authorization:"Bearer internal","content-type":"application/json"},
   body:new ReadableStream({start(controller){controller.enqueue(new TextEncoder().encode("x".repeat(3000)));controller.close()}}),
   duplex:"half"
  })
@@ -36,7 +36,7 @@ test("isolated signing worker rejects declared oversized body",async()=>{
 test("isolated signing worker refuses credential-bearing upstream URLs before network access",async()=>{
  const env={INTERNAL_SIGNING_TOKEN:"internal",SUPABASE_SECRET:"secret",SUPABASE_URL:"https://user:password@db.example",DOCUMENSO_URL:"https://sign.example",DOCUMENSO_TOKEN:"token"}
  const response=await worker.fetch(new Request("https://worker.example/internal/signing/sync",{
-  method:"POST",headers:{authorization:"Bearer internal","content-type":"application/json","content-type":"application/json"},
+  method:"POST",headers:{authorization:"Bearer internal","content-type":"application/json"},
   body:JSON.stringify({envelopeId:"abc"})
  }),env)
  assert.equal(response.status,502)
@@ -60,7 +60,7 @@ test("isolated worker rejects upstream URLs with unexpected path prefixes",async
 test("isolated worker rejects unexpected request fields before network access",async()=>{
  const env={INTERNAL_SIGNING_TOKEN:"internal",SUPABASE_SECRET:"secret",SUPABASE_URL:"https://db.example",DOCUMENSO_URL:"https://sign.example",DOCUMENSO_TOKEN:"token"}
  const response=await worker.fetch(new Request("https://worker.example/internal/signing/sync",{
-  method:"POST",headers:{authorization:"Bearer internal","content-type":"application/json","content-type":"application/json"},
+  method:"POST",headers:{authorization:"Bearer internal","content-type":"application/json"},
   body:JSON.stringify({envelopeId:"abc",nextState:"completed"})
  }),env)
  assert.equal(response.status,400)
@@ -82,4 +82,23 @@ test("isolated worker blocks private, local and metadata upstream hosts",async()
   }),env)
   assert.equal(response.status,502,host)
  }
+})
+
+test("isolated worker rejects null provider response without updating ledger",async()=>{
+ const env={INTERNAL_SIGNING_TOKEN:"internal",SUPABASE_SECRET:"secret",SUPABASE_URL:"https://db.example",DOCUMENSO_URL:"https://sign.example",DOCUMENSO_TOKEN:"token"}
+ const originalFetch=globalThis.fetch
+ let calls=0
+ globalThis.fetch=async()=>{
+  calls++
+  if(calls===1)return new Response(JSON.stringify([{envelope_id:"abc",status:"sent",signed_pdf_path:null}]),{status:200})
+  if(calls===2)return new Response("null",{status:200})
+  throw Error("Unexpected database mutation")
+ }
+ try{
+  const response=await worker.fetch(new Request("https://worker.example/internal/signing/sync",{
+   method:"POST",headers:{authorization:"Bearer internal","content-type":"application/json"},body:JSON.stringify({envelopeId:"abc"})
+  }),env)
+  assert.equal(response.status,409)
+  assert.equal(calls,2)
+ }finally{globalThis.fetch=originalFetch}
 })
