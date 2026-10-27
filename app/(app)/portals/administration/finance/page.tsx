@@ -1,3 +1,4 @@
+import {financialAging} from '@/lib/administration/finance-report'
 import type { SupabaseClient } from '@supabase/supabase-js'
 import { randomUUID } from 'node:crypto'
 import { validateUploadSecurity, safeUploadName } from '@/lib/upload-security'
@@ -202,7 +203,7 @@ export default async function FinancePage({searchParams}:{searchParams:Promise<{
  const t = copy[locale]
  const params = await searchParams
  const {data:documents,error} = await supabase.from('admin_financial_documents')
-   .select('id,kind,document_number,net_amount,tax_amount,gross_amount,currency,status,created_at,original_invoice_id')
+   .select('id,kind,document_number,net_amount,tax_amount,gross_amount,currency,status,created_at,original_invoice_id,due_date')
    .order('created_at',{ascending:false}).limit(100)
  const originalInvoices=(documents??[]).filter(d=>['sales_invoice','purchase_invoice'].includes(d.kind)&&['approved','issued','paid'].includes(d.status))
  const {data:paymentRows}=await (supabase as unknown as SupabaseClient).from('admin_financial_payments').select('id,document_id,amount,paid_on,bank_reference').order('created_at',{ascending:false}).limit(1000)
@@ -213,11 +214,22 @@ export default async function FinancePage({searchParams}:{searchParams:Promise<{
  const paymentTotalFor=(id:string)=>payments.filter(p=>p.document_id===id).reduce((sum,p)=>sum+Number(p.amount),0)
  const paidTotal=(documents??[]).filter(d=>['approved','issued','paid'].includes(d.status)).reduce((sum,d)=>sum+paymentTotalFor(d.id),0)
  const unpaidTotal=(documents??[]).filter(d=>['approved','issued','paid','review'].includes(d.status)).reduce((sum,d)=>sum+Math.max(0,Number(d.gross_amount)-paymentTotalFor(d.id)),0)
+ const today=new Date().toISOString().slice(0,10)
+ const overdueDocuments=(documents??[]).filter(d=>['approved','issued'].includes(d.status)&&Number(d.gross_amount)>paymentTotalFor(d.id)&&d.due_date&&d.due_date<today)
+ const overdueTotal=overdueDocuments.reduce((sum,d)=>sum+Math.max(0,Number(d.gross_amount)-paymentTotalFor(d.id)),0)
+ const agingCounts={overdue_1_30:0,overdue_31_60:0,overdue_61_plus:0}
+ for(const d of overdueDocuments){const bucket=financialAging(d.due_date,today);if(bucket in agingCounts)agingCounts[bucket as keyof typeof agingCounts]++}
  const draftCount=(documents??[]).filter(d=>d.status==='draft').length
  return <main className="mx-auto max-w-5xl space-y-6 p-4 pb-28 md:p-8">
   <Link className="text-violet-400" href="/portals/administration">← {t.back}</Link>
   <header><h1 className="text-3xl font-black">{t.title}</h1><p className="mt-2 text-muted-foreground">{t.intro}</p></header>
   <section className="rounded-2xl border bg-card p-5"><h2 className="mb-3 font-bold">{t.totals}</h2><div className="grid gap-3 sm:grid-cols-4">{[[t.count,String(documents?.length??0)],[t.draft,String(draftCount)],[t.outstanding,money(unpaidTotal)],[t.paid,money(paidTotal)]].map(([label,value])=><div key={label} className="rounded-lg border p-3"><p className="text-sm text-muted-foreground">{label}</p><strong>{value}</strong></div>)}</div></section>
+  <section className="rounded-2xl border bg-card p-5 space-y-3">
+   <div className="flex flex-wrap items-center justify-between gap-3"><h2 className="font-bold">{({nl:'Vervallen facturen',fr:'Factures échues',en:'Overdue invoices',de:'Überfällige Rechnungen'} as const)[locale]}</h2><a href="/api/administration/finance/export" className="rounded-lg border border-violet-500 px-3 py-2 text-sm font-semibold text-violet-400">{({nl:'Financieel CSV-overzicht exporteren',fr:'Exporter le rapport financier CSV',en:'Export finance CSV report',de:'Finanzbericht als CSV exportieren'} as const)[locale]}</a></div>
+   <p className="text-sm">{({nl:'Totaal vervallen',fr:'Total échu',en:'Total overdue',de:'Gesamt überfällig'} as const)[locale]}: <strong>{money(overdueTotal)}</strong></p>
+   <div className="grid grid-cols-3 gap-2 text-xs">{([['1–30',agingCounts.overdue_1_30],['31–60',agingCounts.overdue_31_60],['61+',agingCounts.overdue_61_plus]] as const).map(([label,count])=><div key={label} className="rounded-lg border p-3"><p>{label} {({nl:'dagen',fr:'jours',en:'days',de:'Tage'} as const)[locale]}</p><strong>{count}</strong></div>)}</div>
+   <p className="text-xs text-muted-foreground">{({nl:'Overzicht op basis van de recentste 100 documenten; CSV bevat alle beschikbare documenten binnen de exportlimiet.',fr:'Vue basée sur les 100 derniers documents ; le CSV comprend les documents disponibles dans la limite d’export.',en:'Dashboard uses the latest 100 documents; CSV includes available records within export limits.',de:'Übersicht der letzten 100 Dokumente; CSV enthält verfügbare Datensätze innerhalb des Exportlimits.'} as const)[locale]}</p>
+  </section>
   <section className="rounded-2xl border bg-card p-5">
    <h2 className="mb-4 text-lg font-bold">{t.new}</h2>
    <form action={createDraft} className="grid gap-3 sm:grid-cols-2">
