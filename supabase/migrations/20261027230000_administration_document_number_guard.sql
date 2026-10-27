@@ -7,6 +7,16 @@ begin
  if new.document_number is not null then
   new.document_number=nullif(btrim(new.document_number),'');
  end if;
+ if new.document_number is not null then
+  perform pg_advisory_xact_lock(hashtextextended(new.kind||':'||lower(new.document_number),0));
+  if exists (
+   select 1 from public.admin_financial_documents d
+   where d.kind=new.kind and lower(btrim(d.document_number))=lower(new.document_number)
+    and d.id is distinct from new.id
+  ) and (tg_op='INSERT' or new.document_number is distinct from old.document_number or new.kind is distinct from old.kind) then
+   raise exception 'Duplicate financial document number for this document type';
+  end if;
+ end if;
  if new.status in ('review','approved','issued','paid') and new.kind in ('sales_invoice','purchase_invoice','credit_note')
    and new.document_number is null then
   raise exception 'Financial document number is required before review';
