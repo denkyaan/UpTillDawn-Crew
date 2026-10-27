@@ -75,6 +75,10 @@ export default async function PortalPage({ params }: { params: Promise<{ portal:
         <h2 className="text-xl font-bold">{adminDashboardCopy[locale].title}</h2>
         <p className="mt-2 text-sm text-muted-foreground">{adminDashboardCopy[locale].description}</p>
       </div>
+      <Link href="/portals/administration/modules/ai" className="flex items-center justify-between gap-4 rounded-xl border border-violet-500/50 bg-card p-4 transition-colors hover:border-violet-500 focus-visible:outline focus-visible:outline-2 focus-visible:outline-violet-500">
+        <span><span className="block font-semibold text-violet-400">{({nl:"AI-assistent",fr:"Assistant IA",en:"AI assistant",de:"KI-Assistent"} as const)[locale]}</span><span className="mt-1 block text-sm text-muted-foreground">{({nl:"Open de administratieve AI-werkruimte voor documentverwerking, voorstellen en controle.",fr:"Ouvrez l'espace IA administratif pour les documents, les propositions et la validation.",en:"Open the administration AI workspace for documents, suggestions and review.",de:"Öffne den Verwaltungs-KI-Bereich für Dokumente, Vorschläge und Prüfung."} as const)[locale]}</span></span>
+        <span aria-hidden="true" className="text-2xl text-violet-400">✦</span>
+      </Link>
       <div className="grid gap-3 sm:grid-cols-2">
        {[
         {href:'/portals/administration/finance',nl:'Financiën & documenten',fr:'Finances et documents',de:'Finanzen & Dokumente',en:'Finance & documents',descNl:'Facturen, uitgaven, bijlagen en betalingsstatussen',descFr:'Factures, dépenses, pièces jointes et statuts de paiement',descDe:'Rechnungen, Ausgaben, Anhänge und Zahlungsstatus',descEn:'Invoices, expenses, attachments and payment statuses'},
