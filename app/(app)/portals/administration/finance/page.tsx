@@ -375,6 +375,15 @@ async function updateFinancialStatus(formData:FormData) {
   draft:['review'],review:['approved'],approved:['issued','paid','void'],issued:['paid','void']
  }
  if (!transitions[existing.status]?.includes(status)) return
+ if(status==='paid'){
+  const {data:invoice,error:invoiceError}=await supabase.from('admin_financial_documents').select('gross_amount').eq('id',id).maybeSingle()
+  if(invoiceError||!invoice||!Number.isFinite(Number(invoice.gross_amount))||Number(invoice.gross_amount)<=0)redirect('/portals/administration/finance?error=1')
+  const {data:payments,error:paymentsError}=await (supabase as unknown as SupabaseClient).from('admin_financial_payments').select('amount').eq('document_id',id)
+  if(paymentsError)redirect('/portals/administration/finance?error=1')
+  const paidCents=(payments??[]).reduce((sum:number,p:{amount:number})=>sum+Math.round(Number(p.amount)*100),0)
+  const invoiceCents=Math.round(Number(invoice.gross_amount)*100)
+  if(!Number.isSafeInteger(paidCents)||paidCents!==invoiceCents)redirect('/portals/administration/finance?error=1')
+ }
  const {data:{user}} = await supabase.auth.getUser()
  if (!user) return
  const patch:{status:string;approved_by?:string;approved_at?:string} = {status}
