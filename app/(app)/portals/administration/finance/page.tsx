@@ -68,6 +68,21 @@ async function requireAdministration() {
  return {supabase,isAdmin:current.isAdmin || current.isOwner}
 }
 
+async function createCounterparty(formData:FormData) {
+ 'use server'
+ const {supabase}=await requireAdministration()
+ const name=String(formData.get('name')??'').trim()
+ const kind=String(formData.get('kind')??'')
+ const email=String(formData.get('email')??'').trim()
+ const vatNumber=String(formData.get('vat_number')??'').trim()
+ const enterpriseNumber=String(formData.get('enterprise_number')??'').trim()
+ if(!name||name.length>200||!['customer','supplier','both'].includes(kind)||email.length>320||(email&&!/^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$/.test(email))||vatNumber.length>32||enterpriseNumber.length>32)redirect('/portals/administration/finance?error=1')
+ const {error}=await supabase.from('admin_counterparties').insert({name,kind,email:email||null,vat_number:vatNumber||null,enterprise_number:enterpriseNumber||null})
+ if(error)redirect('/portals/administration/finance?error=1')
+ revalidatePath('/portals/administration/finance')
+ redirect('/portals/administration/finance')
+}
+
 async function createDraft(formData:FormData) {
  'use server'
  const {supabase} = await requireAdministration()
@@ -79,6 +94,13 @@ async function createDraft(formData:FormData) {
  if (!Number.isFinite(net) || !Number.isFinite(tax) || net < 0 || tax < 0 || net > 999999999 || tax > 999999999) return
  const documentNumber = String(formData.get('document_number') ?? '').trim().slice(0,100)
  const notes = String(formData.get('notes') ?? '').trim().slice(0,2000)
+ const counterpartyId=String(formData.get('counterparty_id')??'')
+ const uuid=/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
+ if(counterpartyId&&!uuid.test(counterpartyId))redirect('/portals/administration/finance?error=1')
+ if(counterpartyId){
+  const {data:party}=await supabase.from('admin_counterparties').select('id,kind').eq('id',counterpartyId).single()
+  if(!party||(kind==='sales_invoice'&&!['customer','both'].includes(party.kind))||(kind==='purchase_invoice'&&!['supplier','both'].includes(party.kind)))redirect('/portals/administration/finance?error=1')
+ }
  const originalInvoiceId=String(formData.get('original_invoice_id')??'')
  if(kind==='credit_note'){
   if(!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(originalInvoiceId))redirect('/portals/administration/finance?error=1')
@@ -88,7 +110,7 @@ async function createDraft(formData:FormData) {
 
  const { error } = await supabase.from('admin_financial_documents').insert({
    kind, document_number:documentNumber || null, net_amount:net, tax_amount:tax,
-   notes:notes || null, status:'draft', currency:'EUR',
+   notes:notes || null, status:'draft', currency:'EUR', counterparty_id:counterpartyId||null,
    original_invoice_id:kind==='credit_note'?originalInvoiceId:null,
  })
  if (error) redirect('/portals/administration/finance?error=1')
@@ -237,8 +259,9 @@ export default async function FinancePage({searchParams}:{searchParams:Promise<{
  const t = copy[locale]
  const params = await searchParams
  const {data:documents,error} = await supabase.from('admin_financial_documents')
-   .select('id,kind,document_number,net_amount,tax_amount,gross_amount,currency,status,created_at,original_invoice_id,due_date')
+   .select('id,kind,document_number,net_amount,tax_amount,gross_amount,currency,status,created_at,original_invoice_id,due_date,counterparty_id')
    .order('created_at',{ascending:false}).limit(100)
+ const {data:counterparties}=await supabase.from('admin_counterparties').select('id,name,kind,email,vat_number,enterprise_number').order('name').limit(500)
  const originalInvoices=(documents??[]).filter(d=>['sales_invoice','purchase_invoice'].includes(d.kind)&&['approved','issued','paid'].includes(d.status))
  const {data:paymentRows}=await (supabase as unknown as SupabaseClient).from('admin_financial_payments').select('id,document_id,amount,paid_on,bank_reference').order('created_at',{ascending:false}).limit(1000)
  const payments=(paymentRows??[]) as {id:string;document_id:string;amount:number;paid_on:string;bank_reference:string|null}[]
@@ -266,10 +289,23 @@ export default async function FinancePage({searchParams}:{searchParams:Promise<{
    <div className="grid grid-cols-3 gap-2 text-xs">{([['1–30',agingCounts.overdue_1_30],['31–60',agingCounts.overdue_31_60],['61+',agingCounts.overdue_61_plus]] as const).map(([label,count])=><div key={label} className="rounded-lg border p-3"><p>{label} {({nl:'dagen',fr:'jours',en:'days',de:'Tage'} as const)[locale]}</p><strong>{count}</strong></div>)}</div>
    <p className="text-xs text-muted-foreground">{({nl:'Overzicht op basis van de recentste 100 documenten; CSV bevat alle beschikbare documenten binnen de exportlimiet.',fr:'Vue basée sur les 100 derniers documents ; le CSV comprend les documents disponibles dans la limite d’export.',en:'Dashboard uses the latest 100 documents; CSV includes available records within export limits.',de:'Übersicht der letzten 100 Dokumente; CSV enthält verfügbare Datensätze innerhalb des Exportlimits.'} as const)[locale]}</p>
   </section>
+  <section className="rounded-2xl border bg-card p-5 space-y-3">
+   <h2 className="text-lg font-bold">{({nl:'Klanten en leveranciers',fr:'Clients et fournisseurs',en:'Customers and suppliers',de:'Kunden und Lieferanten'} as const)[locale]}</h2>
+   <form action={createCounterparty} className="grid gap-2 sm:grid-cols-2">
+    <input name="name" required maxLength={200} aria-label={({nl:'Naam',fr:'Nom',en:'Name',de:'Name'} as const)[locale]} placeholder={({nl:'Naam',fr:'Nom',en:'Name',de:'Name'} as const)[locale]} className="rounded border bg-background p-2"/>
+    <select name="kind" required aria-label={({nl:'Type relatie',fr:'Type de relation',en:'Relationship type',de:'Beziehungstyp'} as const)[locale]} className="rounded border bg-background p-2"><option value="customer">{({nl:'Klant',fr:'Client',en:'Customer',de:'Kunde'} as const)[locale]}</option><option value="supplier">{({nl:'Leverancier',fr:'Fournisseur',en:'Supplier',de:'Lieferant'} as const)[locale]}</option><option value="both">{({nl:'Beide',fr:'Les deux',en:'Both',de:'Beides'} as const)[locale]}</option></select>
+    <input name="email" type="email" maxLength={320} aria-label={({nl:'E-mailadres',fr:'Adresse e-mail',en:'Email address',de:'E-Mail-Adresse'} as const)[locale]} className="rounded border bg-background p-2"/>
+    <input name="vat_number" maxLength={32} aria-label={({nl:'Btw-nummer',fr:'Numéro TVA',en:'VAT number',de:'USt-IdNr.'} as const)[locale]} placeholder={({nl:'Btw-nummer',fr:'Numéro TVA',en:'VAT number',de:'USt-IdNr.'} as const)[locale]} className="rounded border bg-background p-2"/>
+    <input name="enterprise_number" maxLength={32} aria-label={({nl:'Ondernemingsnummer',fr:'Numéro d’entreprise',en:'Enterprise number',de:'Unternehmensnummer'} as const)[locale]} placeholder={({nl:'Ondernemingsnummer',fr:'Numéro d’entreprise',en:'Enterprise number',de:'Unternehmensnummer'} as const)[locale]} className="rounded border bg-background p-2"/>
+    <button type="submit" className="rounded bg-violet-600 px-3 py-2 font-semibold text-white">{({nl:'Relatie toevoegen',fr:'Ajouter un contact',en:'Add counterparty',de:'Geschäftspartner hinzufügen'} as const)[locale]}</button>
+   </form>
+   <div className="space-y-1 text-sm">{(counterparties??[]).map(party=><p key={party.id}>{party.name} · {party.kind} {party.email?'· '+party.email:''} {party.vat_number?'· '+party.vat_number:''}</p>)}</div>
+  </section>
   <section className="rounded-2xl border bg-card p-5">
    <h2 className="mb-4 text-lg font-bold">{t.new}</h2>
    <form action={createDraft} className="grid gap-3 sm:grid-cols-2">
     <label className="space-y-1 text-sm">{t.kind}<select name="kind" required className="block w-full rounded-lg border bg-background p-3">{kindValues.map((kind,index)=><option key={kind} value={kind}>{documentKinds[locale][index]}</option>)}</select></label>
+    <label className="space-y-1 text-sm sm:col-span-2">{({nl:'Klant of leverancier',fr:'Client ou fournisseur',en:'Customer or supplier',de:'Kunde oder Lieferant'} as const)[locale]}<select name="counterparty_id" className="block w-full rounded-lg border bg-background p-3"><option value="">—</option>{(counterparties??[]).map(party=><option key={party.id} value={party.id}>{party.name} · {party.kind}</option>)}</select></label>
     <label className="space-y-1 text-sm sm:col-span-2">{({nl:'Oorspronkelijke factuur (verplicht bij creditnota)',fr:'Facture d’origine (obligatoire pour un avoir)',en:'Original invoice (required for credit note)',de:'Ursprüngliche Rechnung (bei Gutschrift erforderlich)'} as const)[locale]}<select name="original_invoice_id" className="block w-full rounded-lg border bg-background p-3"><option value="">—</option>{originalInvoices.map(invoice=><option key={invoice.id} value={invoice.id}>{invoice.document_number||invoice.id} · {money(Number(invoice.gross_amount))}</option>)}</select></label>
     <label className="space-y-1 text-sm">{t.number}<input name="document_number" maxLength={100} className="block w-full rounded-lg border bg-background p-3"/></label>
     <label className="space-y-1 text-sm">{t.net}<input name="net_amount" type="number" min="0" max="999999999" step="0.01" required className="block w-full rounded-lg border bg-background p-3"/></label>
@@ -284,6 +320,7 @@ export default async function FinancePage({searchParams}:{searchParams:Promise<{
     <div className="space-y-3">{documents.map(d=><article key={d.id} className="flex flex-wrap items-center justify-between gap-2 border-b pb-3">
      <div><p className="font-semibold">{d.document_number || translatedLabel(kindLabels[locale],d.kind)}</p><p className="text-xs text-muted-foreground">{translatedLabel(kindLabels[locale],d.kind)} · {translatedLabel(statusLabels[locale],d.status)}{d.original_invoice_id&&<> · {({nl:'Factuur',fr:'Facture',en:'Invoice',de:'Rechnung'} as const)[locale]}: {documents?.find(invoice=>invoice.id===d.original_invoice_id)?.document_number||d.original_invoice_id}</>}</p></div>
      <div className="w-full space-y-2">
+      {d.counterparty_id&&<p className="text-xs text-muted-foreground">{({nl:'Relatie',fr:'Contact',en:'Counterparty',de:'Geschäftspartner'} as const)[locale]}: {counterparties?.find(p=>p.id===d.counterparty_id)?.name??d.counterparty_id}</p>}
       {['approved','issued','paid'].includes(d.status)&&<div className="rounded-lg border p-3 text-xs">
        <p>{({nl:'Geregistreerde betalingen',fr:'Paiements enregistrés',en:'Recorded payments',de:'Erfasste Zahlungen'} as const)[locale]}: {money(paymentTotalFor(d.id))}</p>
        <p>{({nl:'Openstaand saldo',fr:'Solde restant',en:'Outstanding balance',de:'Offener Betrag'} as const)[locale]}: {money(Math.max(0,Number(d.gross_amount)-payments.filter(p=>p.document_id===d.id).reduce((sum,p)=>sum+Number(p.amount),0)))}</p>
