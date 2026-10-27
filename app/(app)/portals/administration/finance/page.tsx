@@ -235,7 +235,7 @@ async function updateDraftNotes(formData:FormData) {
  const {supabase}=await requireAdministration()
  const id=String(formData.get('document_id')??'')
  const notes=String(formData.get('notes')??'').trim()
- if(!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id)||notes.length>2000)redirect('/portals/administration/finance?error=1')
+ if(!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id)||notes.length>2000)redirect('/portals/administration/finance?error=1')
  const {data,error}=await supabase.from('admin_financial_documents').update({notes:notes||null}).eq('id',id).eq('status','draft').select('id')
  if(error||data?.length!==1)redirect('/portals/administration/finance?error=1')
  revalidatePath('/portals/administration/finance')
