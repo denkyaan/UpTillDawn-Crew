@@ -218,3 +218,23 @@ test("isolated worker rejects deceptive upstream JSON media types",async()=>{
   }
  }finally{globalThis.fetch=originalFetch}
 })
+
+test("isolated worker accepts quoted UTF-8 JSON charset from upstream",async()=>{
+ const env={INTERNAL_SIGNING_TOKEN:"internal",SUPABASE_SECRET:"secret",SUPABASE_URL:"https://db.example",DOCUMENSO_URL:"https://sign.example",DOCUMENSO_TOKEN:"token"}
+ const originalFetch=globalThis.fetch
+ let calls=0
+ globalThis.fetch=async()=>{
+  calls++
+  if(calls===1)return new Response(JSON.stringify([{envelope_id:"abc",status:"sent",signed_pdf_path:null}]),{headers:{"content-type":'application/json; charset="utf-8"'}})
+  if(calls===2)return new Response(JSON.stringify({id:"abc",status:"PENDING"}),{headers:{"content-type":"application/json; charset=UTF-8"}})
+  throw Error("Unexpected mutation")
+ }
+ try{
+  const response=await worker.fetch(new Request("https://worker.example/internal/signing/sync",{
+   method:"POST",headers:{authorization:"Bearer internal","content-type":"application/json"},body:JSON.stringify({envelopeId:"abc"})
+  }),env)
+  assert.equal(response.status,200)
+  assert.deepEqual(await response.json(),{state:"sent",updated:false})
+  assert.equal(calls,2)
+ }finally{globalThis.fetch=originalFetch}
+})
