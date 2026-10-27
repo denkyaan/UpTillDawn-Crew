@@ -192,6 +192,25 @@ async function removeInvoiceLine(formData:FormData) {
  redirect('/portals/administration/finance')
 }
 
+async function updateDraftCounterparty(formData:FormData) {
+ 'use server'
+ const {supabase}=await requireAdministration()
+ const id=String(formData.get('document_id')??'')
+ const counterpartyId=String(formData.get('counterparty_id')??'')
+ const uuid=/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
+ if(!uuid.test(id)||(counterpartyId&&!uuid.test(counterpartyId)))redirect('/portals/administration/finance?error=1')
+ const {data:document,error:documentError}=await supabase.from('admin_financial_documents').select('kind,status').eq('id',id).maybeSingle()
+ if(documentError||!document||document.status!=='draft')redirect('/portals/administration/finance?error=1')
+ if(counterpartyId){
+  const {data:party,error:partyError}=await supabase.from('admin_counterparties').select('kind').eq('id',counterpartyId).maybeSingle()
+  if(partyError||!party||(document.kind==='sales_invoice'&&!['customer','both'].includes(party.kind))||(document.kind==='purchase_invoice'&&!['supplier','both'].includes(party.kind)))redirect('/portals/administration/finance?error=1')
+ }
+ const {data,error}=await supabase.from('admin_financial_documents').update({counterparty_id:counterpartyId||null}).eq('id',id).eq('status','draft').select('id')
+ if(error||data?.length!==1)redirect('/portals/administration/finance?error=1')
+ revalidatePath('/portals/administration/finance')
+ redirect('/portals/administration/finance')
+}
+
 async function updateDraftDocumentNumber(formData:FormData) {
  'use server'
  const {supabase}=await requireAdministration()
@@ -426,6 +445,7 @@ export default async function FinancePage({searchParams}:{searchParams:Promise<{
        ].filter(Boolean)
        return <p className="rounded-lg border p-2 text-xs" role="status">{missing.length?<> {({nl:'Ontbreekt vóór controle',fr:'Manquant avant vérification',en:'Missing before review',de:'Fehlt vor der Prüfung'} as const)[locale]}: {missing.join(' · ')}</>:({nl:'Klaar om ter controle in te dienen',fr:'Prêt pour vérification',en:'Ready for review',de:'Bereit zur Prüfung'} as const)[locale]}</p>
       })()}
+      {d.status==='draft'&&<form action={updateDraftCounterparty} className="flex flex-wrap items-end gap-2 text-xs"><input type="hidden" name="document_id" value={d.id}/><label>{({nl:'Klant of leverancier',fr:'Client ou fournisseur',en:'Customer or supplier',de:'Kunde oder Lieferant'} as const)[locale]}<select name="counterparty_id" defaultValue={d.counterparty_id??''} className="block max-w-full rounded border bg-background p-2"><option value="">{({nl:'Geen relatie',fr:'Aucun contact',en:'No counterparty',de:'Kein Geschäftspartner'} as const)[locale]}</option>{(counterparties??[]).filter(p=>d.kind==='sales_invoice'?['customer','both'].includes(p.kind):d.kind==='purchase_invoice'?['supplier','both'].includes(p.kind):true).map(p=><option key={p.id} value={p.id}>{p.name}</option>)}</select></label><button type="submit" className="rounded border border-violet-500 px-3 py-2 text-violet-400">{({nl:'Relatie opslaan',fr:'Enregistrer le contact',en:'Save counterparty',de:'Geschäftspartner speichern'} as const)[locale]}</button></form>}
       {d.status==='draft'&&<form action={updateDraftDocumentNumber} className="flex flex-wrap items-end gap-2 text-xs"><input type="hidden" name="document_id" value={d.id}/><label>{t.number}<input name="document_number" maxLength={100} defaultValue={d.document_number??''} className="block rounded border bg-background p-2"/></label><button type="submit" className="rounded border border-violet-500 px-3 py-2 text-violet-400">{({nl:'Nummer opslaan',fr:'Enregistrer le numéro',en:'Save number',de:'Nummer speichern'} as const)[locale]}</button></form>}
       {(d.issue_date||d.due_date)&&<p className="text-xs text-muted-foreground">{({nl:'Factuurdatum',fr:'Date de facture',en:'Issue date',de:'Rechnungsdatum'} as const)[locale]}: {d.issue_date||'—'} · {({nl:'Vervaldatum',fr:'Date d’échéance',en:'Due date',de:'Fälligkeitsdatum'} as const)[locale]}: {d.due_date||'—'}</p>}
       {d.status==='draft'&&<form action={updateInvoiceDates} className="flex flex-wrap items-end gap-2 text-xs"><input type="hidden" name="document_id" value={d.id}/><label>{({nl:'Factuurdatum',fr:'Date de facture',en:'Issue date',de:'Rechnungsdatum'} as const)[locale]}<input type="date" name="issue_date" defaultValue={d.issue_date??''} className="block rounded border bg-background p-2"/></label><label>{({nl:'Vervaldatum',fr:'Date d’échéance',en:'Due date',de:'Fälligkeitsdatum'} as const)[locale]}<input type="date" name="due_date" defaultValue={d.due_date??''} className="block rounded border bg-background p-2"/></label><button type="submit" className="rounded border border-violet-500 px-3 py-2 text-violet-400">{({nl:'Datums opslaan',fr:'Enregistrer les dates',en:'Save dates',de:'Daten speichern'} as const)[locale]}</button></form>}
