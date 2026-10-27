@@ -9,37 +9,40 @@ export type Json =
 export type Database = {
   public: {
     Tables: {
-      admin_artist_booking_communications: {
+      admin_artist_agreement_signature_requests: {
         Row: {
-          actor_id: string
-          booking_id: string
+          agreement_version_id: string
+          cancelled_at: string | null
           created_at: string
-          details: string
+          created_by: string
           id: string
-          kind: string
+          recipient_email: string
+          status: string
         }
         Insert: {
-          actor_id?: string
-          booking_id: string
+          agreement_version_id: string
+          cancelled_at?: string | null
           created_at?: string
-          details: string
+          created_by?: string
           id?: string
-          kind: string
+          recipient_email: string
+          status?: string
         }
         Update: {
-          actor_id?: string
-          booking_id?: string
+          agreement_version_id?: string
+          cancelled_at?: string | null
           created_at?: string
-          details?: string
+          created_by?: string
           id?: string
-          kind?: string
+          recipient_email?: string
+          status?: string
         }
         Relationships: [
           {
-            foreignKeyName: "admin_artist_booking_communications_booking_id_fkey"
-            columns: ["booking_id"]
+            foreignKeyName: "admin_artist_agreement_signature_requ_agreement_version_id_fkey"
+            columns: ["agreement_version_id"]
             isOneToOne: false
-            referencedRelation: "admin_artist_bookings"
+            referencedRelation: "admin_artist_agreement_versions"
             referencedColumns: ["id"]
           },
         ]
@@ -85,51 +88,48 @@ export type Database = {
           },
         ]
       }
-      admin_artist_agreement_signature_requests: {
+      admin_artist_booking_communications: {
         Row: {
-          agreement_version_id: string
-          cancelled_at: string | null
+          actor_id: string
+          booking_id: string
           created_at: string
-          created_by: string
+          details: string
           id: string
-          recipient_email: string
-          status: string
+          kind: string
         }
         Insert: {
-          agreement_version_id: string
-          cancelled_at?: string | null
+          actor_id?: string
+          booking_id: string
           created_at?: string
-          created_by?: string
+          details: string
           id?: string
-          recipient_email: string
-          status?: string
+          kind: string
         }
         Update: {
-          agreement_version_id?: string
-          cancelled_at?: string | null
+          actor_id?: string
+          booking_id?: string
           created_at?: string
-          created_by?: string
+          details?: string
           id?: string
-          recipient_email?: string
-          status?: string
+          kind?: string
         }
         Relationships: [
           {
-            foreignKeyName: "admin_artist_agreement_signature_requests_agreement_version_id_fkey"
-            columns: ["agreement_version_id"]
+            foreignKeyName: "admin_artist_booking_communications_booking_id_fkey"
+            columns: ["booking_id"]
             isOneToOne: false
-            referencedRelation: "admin_artist_agreement_versions"
+            referencedRelation: "admin_artist_bookings"
             referencedColumns: ["id"]
           },
         ]
       }
       admin_artist_bookings: {
         Row: {
+          agency_contact_id: string | null
           agreement_cancellation_terms: string | null
           agreement_governing_law: string | null
           agreement_liability_terms: string | null
           agreement_payment_terms: string | null
-          agency_contact_id: string | null
           artist_name: string
           created_at: string
           created_by: string
@@ -145,11 +145,11 @@ export type Database = {
           updated_at: string
         }
         Insert: {
+          agency_contact_id?: string | null
           agreement_cancellation_terms?: string | null
           agreement_governing_law?: string | null
           agreement_liability_terms?: string | null
           agreement_payment_terms?: string | null
-          agency_contact_id?: string | null
           artist_name: string
           created_at?: string
           created_by?: string
@@ -165,11 +165,11 @@ export type Database = {
           updated_at?: string
         }
         Update: {
+          agency_contact_id?: string | null
           agreement_cancellation_terms?: string | null
           agreement_governing_law?: string | null
           agreement_liability_terms?: string | null
           agreement_payment_terms?: string | null
-          agency_contact_id?: string | null
           artist_name?: string
           created_at?: string
           created_by?: string
@@ -533,6 +533,54 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      administration_contract_signing_requests: {
+        Row: {
+          completed_at: string | null
+          created_at: string
+          dispatched_at: string | null
+          document_id: string
+          document_sha256: string
+          document_type: string
+          document_version: number
+          envelope_id: string | null
+          id: string
+          recipient_email: string
+          signed_pdf_path: string | null
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          completed_at?: string | null
+          created_at?: string
+          dispatched_at?: string | null
+          document_id: string
+          document_sha256: string
+          document_type: string
+          document_version: number
+          envelope_id?: string | null
+          id?: string
+          recipient_email: string
+          signed_pdf_path?: string | null
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          completed_at?: string | null
+          created_at?: string
+          dispatched_at?: string | null
+          document_id?: string
+          document_sha256?: string
+          document_type?: string
+          document_version?: number
+          envelope_id?: string | null
+          id?: string
+          recipient_email?: string
+          signed_pdf_path?: string | null
+          status?: string
+          updated_at?: string
+        }
+        Relationships: []
       }
       artist_backstage_checklists: {
         Row: {
@@ -6259,6 +6307,15 @@ export type Database = {
         }[]
       }
       upt_own_workplace_preference: { Args: never; Returns: string }
+      upt_prepare_artist_contract_signing: {
+        Args: {
+          p_recipient_email: string
+          p_source_sha256: string
+          p_version: number
+          p_version_id: string
+        }
+        Returns: string
+      }
       upt_private_chat_peers: {
         Args: never
         Returns: {
