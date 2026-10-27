@@ -177,6 +177,25 @@ async function addInvoiceLine(formData:FormData) {
  redirect('/portals/administration/finance')
 }
 
+async function updateInvoiceLine(formData:FormData) {
+ 'use server'
+ const {supabase}=await requireAdministration()
+ const documentId=String(formData.get('document_id')??'')
+ const lineId=String(formData.get('line_id')??'')
+ const description=String(formData.get('description')??'').trim()
+ const quantity=Number(formData.get('quantity'))
+ const unitPrice=Number(formData.get('unit_price'))
+ const vatRate=Number(formData.get('vat_rate'))
+ const uuid=/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
+ if(!uuid.test(documentId)||!uuid.test(lineId)||!description||description.length>500||![quantity,unitPrice,vatRate].every(Number.isFinite)||quantity<=0||quantity>100000||unitPrice<0||unitPrice>999999999||vatRate<0||vatRate>100)redirect('/portals/administration/finance?error=1')
+ const {data:document,error:lookupError}=await supabase.from('admin_financial_documents').select('status').eq('id',documentId).maybeSingle()
+ if(lookupError||document?.status!=='draft')redirect('/portals/administration/finance?error=1')
+ const {data,error}=await supabase.from('admin_financial_lines').update({description,quantity,unit_price:unitPrice,vat_rate:vatRate}).eq('id',lineId).eq('document_id',documentId).select('id')
+ if(error||data?.length!==1)redirect('/portals/administration/finance?error=1')
+ revalidatePath('/portals/administration/finance')
+ redirect('/portals/administration/finance')
+}
+
 async function removeInvoiceLine(formData:FormData) {
  'use server'
  const {supabase}=await requireAdministration()
@@ -474,7 +493,7 @@ export default async function FinancePage({searchParams}:{searchParams:Promise<{
        </form>
       </div>}
       {(attachments??[]).filter(a=>a.document_id===d.id).map(a=><p key={a.id} className="text-xs text-muted-foreground">{uploadLabels[locale].attachments}: {a.original_name}</p>)}
-      {(lines??[]).filter(line=>line.document_id===d.id).map(line=><div key={line.id} className="flex flex-wrap items-center justify-between gap-2 text-xs text-muted-foreground"><p>{line.description} · {line.quantity} × {money(Number(line.unit_price))} · {line.vat_rate}%</p>{d.status==='draft'&&<form action={removeInvoiceLine}><input type="hidden" name="document_id" value={d.id}/><input type="hidden" name="line_id" value={line.id}/><button type="submit" className="rounded border px-2 py-1 text-red-400">{({nl:'Regel verwijderen',fr:'Supprimer la ligne',en:'Remove line',de:'Position entfernen'} as const)[locale]}</button></form>}</div>)}
+      {(lines??[]).filter(line=>line.document_id===d.id).map(line=><div key={line.id} className="flex flex-wrap items-center justify-between gap-2 text-xs text-muted-foreground"><p>{line.description} · {line.quantity} × {money(Number(line.unit_price))} · {line.vat_rate}%</p>{d.status==='draft'&&<details className="w-full rounded border p-2"><summary className="cursor-pointer">{({nl:'Regel aanpassen',fr:'Modifier la ligne',en:'Edit line',de:'Position bearbeiten'} as const)[locale]}</summary><form action={updateInvoiceLine} className="mt-2 grid gap-2 sm:grid-cols-4"><input type="hidden" name="document_id" value={d.id}/><input type="hidden" name="line_id" value={line.id}/><label>{({nl:'Omschrijving',fr:'Description',en:'Description',de:'Beschreibung'} as const)[locale]}<input name="description" required maxLength={500} defaultValue={line.description} className="block w-full rounded border bg-background p-2"/></label><label>{({nl:'Aantal',fr:'Quantité',en:'Quantity',de:'Menge'} as const)[locale]}<input name="quantity" type="number" step="0.001" min="0.001" max="100000" required defaultValue={line.quantity} className="block w-full rounded border bg-background p-2"/></label><label>{({nl:'Eenheidsprijs',fr:'Prix unitaire',en:'Unit price',de:'Einzelpreis'} as const)[locale]}<input name="unit_price" type="number" step="0.01" min="0" required defaultValue={line.unit_price} className="block w-full rounded border bg-background p-2"/></label><label>{({nl:'Btw-percentage',fr:'Taux TVA',en:'VAT rate',de:'MwSt.-Satz'} as const)[locale]}<input name="vat_rate" type="number" step="0.01" min="0" max="100" required defaultValue={line.vat_rate} className="block w-full rounded border bg-background p-2"/></label><button type="submit" className="rounded border border-violet-500 px-3 py-2 text-violet-400 sm:col-span-4">{({nl:'Regel opslaan',fr:'Enregistrer la ligne',en:'Save line',de:'Position speichern'} as const)[locale]}</button></form></details>}{d.status==='draft'&&<form action={removeInvoiceLine}><input type="hidden" name="document_id" value={d.id}/><input type="hidden" name="line_id" value={line.id}/><button type="submit" className="rounded border px-2 py-1 text-red-400">{({nl:'Regel verwijderen',fr:'Supprimer la ligne',en:'Remove line',de:'Position entfernen'} as const)[locale]}</button></form>}</div>)}
       {d.status==='draft'&&<form action={addInvoiceLine} className="grid gap-2 rounded-lg border p-3 sm:grid-cols-5">
        <input type="hidden" name="document_id" value={d.id}/>
        <input name="description" aria-label={({nl:"Omschrijving",fr:"Description",en:"Description",de:"Beschreibung"} as const)[locale]} placeholder={({nl:'Omschrijving',fr:'Description',en:'Description',de:'Beschreibung'} as const)[locale]} maxLength={500} required className="rounded border bg-background p-2 text-xs sm:col-span-2"/>
