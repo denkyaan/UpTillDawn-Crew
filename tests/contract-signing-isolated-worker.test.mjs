@@ -238,3 +238,21 @@ test("isolated worker accepts quoted UTF-8 JSON charset from upstream",async()=>
   assert.equal(calls,2)
  }finally{globalThis.fetch=originalFetch}
 })
+
+test("isolated worker blocks reserved IPv4 endpoints before any network access",async()=>{
+ const env={INTERNAL_SIGNING_TOKEN:"internal",SUPABASE_SECRET:"secret",SUPABASE_URL:"https://db.example",DOCUMENSO_URL:"https://sign.example",DOCUMENSO_TOKEN:"token"}
+ const originalFetch=globalThis.fetch
+ let calls=0
+ globalThis.fetch=async()=>{calls++;throw Error("Reserved address must not be contacted")}
+ try{
+  for(const address of ["192.0.0.8","192.0.2.1","192.88.99.1","198.51.100.2","203.0.113.3"]){
+   for(const key of ["SUPABASE_URL","DOCUMENSO_URL"]){
+    const response=await worker.fetch(new Request("https://worker.example/internal/signing/sync",{
+     method:"POST",headers:{authorization:"Bearer internal","content-type":"application/json"},body:JSON.stringify({envelopeId:"abc"})
+    }),{...env,[key]:"https://"+address})
+    assert.equal(response.status,502,key+" "+address)
+   }
+  }
+  assert.equal(calls,0)
+ }finally{globalThis.fetch=originalFetch}
+})
