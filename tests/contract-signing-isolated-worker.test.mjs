@@ -203,7 +203,7 @@ test("isolated worker rejects deceptive upstream JSON media types",async()=>{
  const env={INTERNAL_SIGNING_TOKEN:"internal",SUPABASE_SECRET:"secret",SUPABASE_URL:"https://db.example",DOCUMENSO_URL:"https://sign.example",DOCUMENSO_TOKEN:"token"}
  const originalFetch=globalThis.fetch
  try{
-  for(const mediaType of ["application/jsonp","application/json; charset=iso-8859-1","application/json; unexpected=true"]){
+  for(const mediaType of ["application/jsonp","application/json; charset=iso-8859-1","application/json; unexpected=true",'application/json; charset="utf-8','application/json; charset=utf-8"']){
    let calls=0
    globalThis.fetch=async()=>{
     calls++
