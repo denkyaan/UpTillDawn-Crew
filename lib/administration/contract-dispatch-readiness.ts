@@ -22,7 +22,7 @@ export async function checkContractDispatchReadiness(input:{
  if(!record||await contractSha256(document)!==record.sourceSha256)blockers.push("digest")
  const recipient=input.recipientEmail.trim().toLowerCase()
  const approvedRecipient=document.parties.recipient.email.trim().toLowerCase()
- if(!/^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$/.test(recipient)||
+ if(!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(recipient)||
   recipient!==approvedRecipient)blockers.push("recipient")
  if(!record?.envelopeId||!/^[a-zA-Z0-9_-]{1,128}$/.test(record.envelopeId))blockers.push("envelope")
  if(record?.state!=="draft")blockers.push("state")
