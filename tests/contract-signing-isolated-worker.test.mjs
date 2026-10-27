@@ -56,3 +56,12 @@ test("isolated worker rejects upstream URLs with unexpected path prefixes",async
  }),env)
  assert.equal(response.status,502)
 })
+
+test("isolated worker rejects unexpected request fields before network access",async()=>{
+ const env={INTERNAL_SIGNING_TOKEN:"internal",SUPABASE_SECRET:"secret",SUPABASE_URL:"https://db.example",DOCUMENSO_URL:"https://sign.example",DOCUMENSO_TOKEN:"token"}
+ const response=await worker.fetch(new Request("https://worker.example/internal/signing/sync",{
+  method:"POST",headers:{authorization:"Bearer internal","content-type":"application/json"},
+  body:JSON.stringify({envelopeId:"abc",nextState:"completed"})
+ }),env)
+ assert.equal(response.status,400)
+})
