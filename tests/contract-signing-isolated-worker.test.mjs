@@ -145,3 +145,19 @@ test("isolated worker refuses malformed ledger rows before contacting provider",
   }finally{globalThis.fetch=originalFetch}
  }
 })
+
+test("isolated worker refuses nonstandard upstream HTTPS ports before network access",async()=>{
+ const base={INTERNAL_SIGNING_TOKEN:"internal",SUPABASE_SECRET:"secret",SUPABASE_URL:"https://db.example",DOCUMENSO_URL:"https://sign.example",DOCUMENSO_TOKEN:"token"}
+ const originalFetch=globalThis.fetch
+ let calls=0
+ globalThis.fetch=async()=>{calls++;throw Error("Network must not be reached")}
+ try{
+  for(const env of [{...base,SUPABASE_URL:"https://db.example:8443"},{...base,DOCUMENSO_URL:"https://sign.example:8443"}]){
+   const response=await worker.fetch(new Request("https://worker.example/internal/signing/sync",{
+    method:"POST",headers:{authorization:"Bearer internal","content-type":"application/json"},body:JSON.stringify({envelopeId:"abc"})
+   }),env)
+   assert.equal(response.status,502)
+  }
+  assert.equal(calls,0)
+ }finally{globalThis.fetch=originalFetch}
+})
