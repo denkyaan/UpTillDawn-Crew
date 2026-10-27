@@ -127,6 +127,25 @@ async function removeInvoiceLine(formData:FormData) {
  redirect('/portals/administration/finance')
 }
 
+async function recordFinancialPayment(formData:FormData) {
+ 'use server'
+ const {supabase}=await requireAdministration()
+ const documentId=String(formData.get('document_id')??'')
+ const amount=Number(formData.get('amount'))
+ const paidOn=String(formData.get('paid_on')??'')
+ const bankReference=String(formData.get('bank_reference')??'').trim()
+ const uuid=/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
+ if(!uuid.test(documentId)||!Number.isFinite(amount)||amount<=0||amount>999999999||!/^[0-9]{4}-[0-9]{2}-[0-9]{2}$/.test(paidOn)||bankReference.length>200)redirect('/portals/administration/finance?error=1')
+ const {data:document}=await supabase.from('admin_financial_documents').select('status').eq('id',documentId).single()
+ if(!document||!['approved','issued','paid'].includes(document.status))redirect('/portals/administration/finance?error=1')
+ const {error}=await (supabase as unknown as SupabaseClient).from('admin_financial_payments').insert({
+  document_id:documentId,amount,paid_on:paidOn,bank_reference:bankReference||null
+ })
+ if(error)redirect('/portals/administration/finance?error=1')
+ revalidatePath('/portals/administration/finance')
+ redirect('/portals/administration/finance')
+}
+
 async function updateFinancialStatus(formData:FormData) {
  'use server'
  const {supabase,isAdmin} = await requireAdministration()
@@ -186,6 +205,8 @@ export default async function FinancePage({searchParams}:{searchParams:Promise<{
    .select('id,kind,document_number,net_amount,tax_amount,gross_amount,currency,status,created_at,original_invoice_id')
    .order('created_at',{ascending:false}).limit(100)
  const originalInvoices=(documents??[]).filter(d=>['sales_invoice','purchase_invoice'].includes(d.kind)&&['approved','issued','paid'].includes(d.status))
+ const {data:paymentRows}=await (supabase as unknown as SupabaseClient).from('admin_financial_payments').select('id,document_id,amount,paid_on,bank_reference').order('created_at',{ascending:false}).limit(1000)
+ const payments=(paymentRows??[]) as {id:string;document_id:string;amount:number;paid_on:string;bank_reference:string|null}[]
  const {data:lines}=await supabase.from('admin_financial_lines').select('id,document_id,description,quantity,unit_price,vat_rate').order('created_at',{ascending:true}).limit(500)
  const {data:attachments}=await (supabase as unknown as SupabaseClient).from('admin_financial_attachments').select('id,document_id,original_name,created_at').order('created_at',{ascending:false}).limit(200)
  const money = (amount:number) => new Intl.NumberFormat(locale==='nl'?'nl-BE':locale==='fr'?'fr-BE':locale==='de'?'de-BE':'en-BE',{style:'currency',currency:'EUR'}).format(amount)
@@ -214,6 +235,18 @@ export default async function FinancePage({searchParams}:{searchParams:Promise<{
     <div className="space-y-3">{documents.map(d=><article key={d.id} className="flex flex-wrap items-center justify-between gap-2 border-b pb-3">
      <div><p className="font-semibold">{d.document_number || translatedLabel(kindLabels[locale],d.kind)}</p><p className="text-xs text-muted-foreground">{translatedLabel(kindLabels[locale],d.kind)} · {translatedLabel(statusLabels[locale],d.status)}{d.original_invoice_id&&<> · {({nl:'Factuur',fr:'Facture',en:'Invoice',de:'Rechnung'} as const)[locale]}: {documents?.find(invoice=>invoice.id===d.original_invoice_id)?.document_number||d.original_invoice_id}</>}</p></div>
      <div className="w-full space-y-2">
+      {['approved','issued','paid'].includes(d.status)&&<div className="rounded-lg border p-3 text-xs">
+       <p>{({nl:'Geregistreerde betalingen',fr:'Paiements enregistrés',en:'Recorded payments',de:'Erfasste Zahlungen'} as const)[locale]}: {money(payments.filter(p=>p.document_id===d.id).reduce((sum,p)=>sum+Number(p.amount),0))}</p>
+       <p>{({nl:'Openstaand saldo',fr:'Solde restant',en:'Outstanding balance',de:'Offener Betrag'} as const)[locale]}: {money(Math.max(0,Number(d.gross_amount)-payments.filter(p=>p.document_id===d.id).reduce((sum,p)=>sum+Number(p.amount),0)))}</p>
+       {payments.filter(p=>p.document_id===d.id).map(p=><p key={p.id}>{p.paid_on} · {money(Number(p.amount))} {p.bank_reference||''}</p>)}
+       <form action={recordFinancialPayment} className="mt-2 grid gap-2 sm:grid-cols-4">
+        <input type="hidden" name="document_id" value={d.id}/>
+        <input name="amount" aria-label={({nl:'Betalingsbedrag',fr:'Montant du paiement',en:'Payment amount',de:'Zahlungsbetrag'} as const)[locale]} type="number" min="0.01" step="0.01" required className="rounded border bg-background p-2"/>
+        <input name="paid_on" aria-label={({nl:'Betaaldatum',fr:'Date du paiement',en:'Payment date',de:'Zahlungsdatum'} as const)[locale]} type="date" required className="rounded border bg-background p-2"/>
+        <input name="bank_reference" aria-label={({nl:'Bankreferentie',fr:'Référence bancaire',en:'Bank reference',de:'Bankreferenz'} as const)[locale]} maxLength={200} className="rounded border bg-background p-2"/>
+        <button type="submit" className="rounded border border-violet-500 px-3 py-2 text-violet-400">{({nl:'Betaling registreren',fr:'Enregistrer le paiement',en:'Record payment',de:'Zahlung erfassen'} as const)[locale]}</button>
+       </form>
+      </div>}
       {(attachments??[]).filter(a=>a.document_id===d.id).map(a=><p key={a.id} className="text-xs text-muted-foreground">{uploadLabels[locale].attachments}: {a.original_name}</p>)}
       {(lines??[]).filter(line=>line.document_id===d.id).map(line=><div key={line.id} className="flex flex-wrap items-center justify-between gap-2 text-xs text-muted-foreground"><p>{line.description} · {line.quantity} × {money(Number(line.unit_price))} · {line.vat_rate}%</p>{d.status==='draft'&&<form action={removeInvoiceLine}><input type="hidden" name="document_id" value={d.id}/><input type="hidden" name="line_id" value={line.id}/><button type="submit" className="rounded border px-2 py-1 text-red-400">{({nl:'Regel verwijderen',fr:'Supprimer la ligne',en:'Remove line',de:'Position entfernen'} as const)[locale]}</button></form>}</div>)}
       {d.status==='draft'&&<form action={addInvoiceLine} className="grid gap-2 rounded-lg border p-3 sm:grid-cols-5">
