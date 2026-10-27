@@ -1,5 +1,6 @@
 "use client"
 import {useId,useState} from "react"
+import {AdministrationAiBookingNotes} from "@/components/administration/administration-ai-booking-notes"
 import type {SupportedUiLocale} from "@/lib/locale-preferences"
 const copy={
  nl:{title:"Administratieve AI-assistent",description:"Stel vragen over administratie en opvolging. De assistent voert geen wijzigingen of betalingen uit.",placeholder:"Wat vraagt vandaag mijn aandacht?",send:"Vraag stellen",busy:"Bezig…",error:"De AI-assistent is momenteel niet beschikbaar.",empty:"Geen antwoord ontvangen.",clear:"Gesprek wissen",invalid:"Controleer je vraag en probeer opnieuw."},
@@ -41,6 +42,7 @@ export function AdministrationAiChat({locale}:{locale:SupportedUiLocale}){
   </form>
   {history.length>0&&<button type="button" disabled={busy} onClick={()=>{setHistory([]);setMessage("");setError("")}} className="rounded-lg border px-3 py-2 text-sm disabled:opacity-50">{t.clear}</button>}
   {error&&<p role="alert" className="rounded-xl border p-3 text-sm">{error}</p>}
+  <AdministrationAiBookingNotes locale={locale}/>
   {history.length>0&&<div role="log" aria-live="polite" aria-relevant="additions" className="max-h-96 space-y-3 overflow-y-auto rounded-xl border p-3">{history.map((entry,index)=><div key={index} className={entry.role==="user"?"ml-6 whitespace-pre-wrap rounded-xl bg-violet-500/10 p-3 text-sm":"mr-6 whitespace-pre-wrap rounded-xl bg-muted p-3 text-sm"}>{entry.content}</div>)}</div>}
  </section>
 }
