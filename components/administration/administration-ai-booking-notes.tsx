@@ -15,7 +15,7 @@ export function AdministrationAiBookingNotes({locale,initialBookingId}:{locale:S
  const [notes,setNotes]=useState("")
  const [busy,setBusy]=useState(false)
  const [feedback,setFeedback]=useState("")
- const load=useCallback(async (targetId:string){
+ const load=useCallback(async (targetId:string)=>{
   if(busy)return
   setBusy(true);setFeedback("");setBooking(null)
   try{
