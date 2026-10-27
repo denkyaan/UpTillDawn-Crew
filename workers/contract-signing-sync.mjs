@@ -45,6 +45,7 @@ async function readBounded(stream,maxBytes){
 }
 async function boundedJson(response){
  if(!response.ok)throw Error("Upstream rejected request")
+ if(!/^application\/json(?:\s*;|$)/i.test(response.headers.get("content-type")||""))throw Error("Upstream JSON content type required")
  const rawLength=response.headers.get("content-length")
  if(rawLength!==null&&(!/^[0-9]+$/.test(rawLength)||Number(rawLength)>65536))throw Error("Upstream response too large")
  const bytes=await readBounded(response.body,65536)
