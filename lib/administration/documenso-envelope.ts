@@ -20,9 +20,24 @@ async function request(path:string,options:RequestInit={}):Promise<unknown>{
  const sizeHeader=response.headers.get("content-length")
  const size=sizeHeader===null?null:Number(sizeHeader)
  if(size!==null&&(!Number.isSafeInteger(size)||size<0||size>65536))throw new Error("Documenso response length invalid")
- const body=await response.text()
- if(body.length>65536)throw new Error("Documenso response too large")
- try{return JSON.parse(body) as unknown}catch{throw new Error("Invalid Documenso JSON response")}
+ const reader=response.body?.getReader()
+ if(!reader)throw new Error("Documenso returned an empty response")
+ const chunks:Uint8Array[]=[]
+ let total=0
+ try{
+  while(true){
+   const {done,value}=await reader.read()
+   if(done)break
+   total+=value.byteLength
+   if(total>65536){await reader.cancel();throw new Error("Documenso response too large")}
+   chunks.push(value)
+  }
+ }finally{reader.releaseLock()}
+ const bytes=new Uint8Array(total)
+ let offset=0
+ for(const chunk of chunks){bytes.set(chunk,offset);offset+=chunk.byteLength}
+ try{return JSON.parse(new TextDecoder("utf-8",{fatal:true}).decode(bytes)) as unknown}
+ catch{throw new Error("Invalid Documenso JSON response")}
 }
 function envelopeId(value:unknown):string{
  if(!value||typeof value!=="object"||!("id" in value)||typeof value.id!=="string"||
