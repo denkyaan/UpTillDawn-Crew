@@ -49,24 +49,24 @@ export default {
    if(!validId(input.envelopeId))return json({error:"Invalid envelope"},400)
    const base=new URL(env.SUPABASE_URL)
    const provider=new URL(env.DOCUMENSO_URL)
-   if(base.protocol!=="https:"||provider.protocol!=="https:")throw Error("HTTPS required")
+   if(base.protocol!=="https:"||provider.protocol!=="https:"||base.username||base.password||provider.username||provider.password||base.search||base.hash||provider.search||provider.hash)throw Error("Trusted HTTPS endpoints required")
    const headers={apikey:env.SUPABASE_SECRET,authorization:`Bearer ${env.SUPABASE_SECRET}`}
    const ledgerUrl=new URL("/rest/v1/administration_contract_signing_requests",base)
    ledgerUrl.searchParams.set("select","envelope_id,status,signed_pdf_path")
    ledgerUrl.searchParams.set("envelope_id",`eq.${input.envelopeId}`)
-   const ledgerResponse=await fetch(ledgerUrl,{headers})
+   const ledgerResponse=await fetch(ledgerUrl,{headers,redirect:"error"})
    const rows=await boundedJson(ledgerResponse)
    if(!Array.isArray(rows)||rows.length!==1||rows[0].envelope_id!==input.envelopeId||rows[0].signed_pdf_path)return json({error:"Ledger not eligible"},409)
    const current=rows[0].status
    if(!allowed[current])return json({state:current,updated:false})
    const remoteUrl=new URL("/api/v2/envelope/"+encodeURIComponent(input.envelopeId),provider)
-   const remote=await boundedJson(await fetch(remoteUrl,{headers:{authorization:`Bearer ${env.DOCUMENSO_TOKEN}`}}))
+   const remote=await boundedJson(await fetch(remoteUrl,{headers:{authorization:`Bearer ${env.DOCUMENSO_TOKEN}`},redirect:"error"}))
    if(remote.id!==input.envelopeId||!Object.hasOwn(mapStatus,remote.status))return json({error:"Remote evidence mismatch"},409)
    const next=mapStatus[remote.status]
    if(next===current)return json({state:current,updated:false})
    if(!allowed[current].includes(next))return json({error:"Invalid state transition"},409)
    const rpcUrl=new URL("/rest/v1/rpc/upt_server_transition_contract_signing",base)
-   const result=await boundedJson(await fetch(rpcUrl,{method:"POST",headers:{...headers,"content-type":"application/json"},body:JSON.stringify({p_envelope_id:input.envelopeId,p_expected_status:current,p_next_status:next})}))
+   const result=await boundedJson(await fetch(rpcUrl,{method:"POST",redirect:"error",headers:{...headers,"content-type":"application/json"},body:JSON.stringify({p_envelope_id:input.envelopeId,p_expected_status:current,p_next_status:next})}))
    if(result!==true)return json({error:"Concurrent signing update"},409)
    return json({state:next,updated:true})
   }catch{return json({error:"Signing synchronization unavailable"},502)}
