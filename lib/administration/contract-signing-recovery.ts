@@ -33,6 +33,9 @@ export async function recoverSignedContractArchive(input:{
   }))throw new Error("Signed PDF archive identity mismatch")
   return {path:record.signedPdfPath,recovered:false}
  }
+ const latest=await ledger.load({documentType:record.documentType,documentId:record.documentId,version:record.version})
+ if(!latest||latest.envelopeId!==record.envelopeId||latest.sourceSha256!==record.sourceSha256||latest.state!=="completed")throw new Error("Stale signing record")
+ if(latest.signedPdfPath)throw new Error("Signed PDF already recorded")
  const archive=await retrieveAndArchiveSignedContract({
   documentType:record.documentType,documentId:record.documentId,
   version:record.version,persistedEnvelopeId:record.envelopeId,
