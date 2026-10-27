@@ -1,5 +1,5 @@
 "use client"
-import {useCallback,useEffect,useState} from "react"
+import {useCallback,useEffect,useRef,useState} from "react"
 import type {SupportedUiLocale} from "@/lib/locale-preferences"
 const labels={
  nl:{title:"Interne boekingsnotities wijzigen",id:"Boeking-ID",load:"Boeking ophalen",notes:"Nieuwe interne notities",save:"Bevestigen en opslaan",cancel:"Annuleren",success:"Notities opgeslagen.",error:"De wijziging kon niet worden uitgevoerd. Herlaad de boeking.",locked:"Geannuleerde boekingen zijn vergrendeld."},
@@ -15,8 +15,11 @@ export function AdministrationAiBookingNotes({locale,initialBookingId}:{locale:S
  const [notes,setNotes]=useState("")
  const [busy,setBusy]=useState(false)
  const [feedback,setFeedback]=useState("")
+ const busyRef=useRef(false)
+ const initialLoadRef=useRef<string|null>(null)
  const load=useCallback(async (targetId:string)=>{
-  if(busy)return
+  if(busyRef.current)return
+  busyRef.current=true
   setBusy(true);setFeedback("");setBooking(null)
   try{
    const response=await fetch("/api/administration/assistant/booking-notes?bookingId="+encodeURIComponent(targetId),{cache:"no-store"})
@@ -24,9 +27,9 @@ export function AdministrationAiBookingNotes({locale,initialBookingId}:{locale:S
    if(!response.ok||!payload.booking){setFeedback(t.error);return}
    setBooking(payload.booking)
    setNotes((payload.booking.internal_notes??"").split("\n").filter(line=>!/^\[\d{4}-\d{2}-\d{2}T.*\] \[(email_sent|reply_received|follow_up)\] \[[0-9a-f-]{36}\] /.test(line)).join("\n"))
-  }catch{setFeedback(t.error)}finally{setBusy(false)}
- },[busy,t.error])
- useEffect(()=>{if(initialBookingId&&/^[0-9a-f-]{36}$/i.test(initialBookingId)){void load(initialBookingId)}},[initialBookingId,load])
+  }catch{setFeedback(t.error)}finally{busyRef.current=false;setBusy(false)}
+ },[t.error])
+ useEffect(()=>{if(initialBookingId&&initialLoadRef.current!==initialBookingId&&/^[0-9a-f-]{36}$/i.test(initialBookingId)){initialLoadRef.current=initialBookingId;queueMicrotask(()=>{void load(initialBookingId)})}},[initialBookingId,load])
  async function save(){
   if(!booking||busy||booking.status==="cancelled")return
   setBusy(true);setFeedback("")
