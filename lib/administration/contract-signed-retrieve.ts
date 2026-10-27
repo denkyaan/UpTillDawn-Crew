@@ -33,8 +33,10 @@ export async function retrieveAndArchiveSignedContract(input:{
  if(!response.ok||!response.headers.get("content-type")?.includes("application/pdf")){
   throw new Error("Signed PDF retrieval failed")
  }
- const size=Number(response.headers.get("content-length")??"0")
- if(size>15*1024*1024)throw new Error("Signed PDF exceeds size limit")
+ const lengthHeader=response.headers.get("content-length")
+ const size=lengthHeader===null?null:Number(lengthHeader)
+ if(size!==null&&(!Number.isSafeInteger(size)||size<0))throw new Error("Invalid signed PDF content length")
+ if(size!==null&&size>15*1024*1024)throw new Error("Signed PDF exceeds size limit")
  const reader=response.body?.getReader()
  if(!reader)throw new Error("Signed PDF response is empty")
  const chunks:Uint8Array[]=[]
