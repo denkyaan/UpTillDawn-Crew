@@ -41,3 +41,18 @@ test("isolated signing worker refuses credential-bearing upstream URLs before ne
  }),env)
  assert.equal(response.status,502)
 })
+
+test("isolated worker rejects null JSON input without network access",async()=>{
+ const env={INTERNAL_SIGNING_TOKEN:"internal",SUPABASE_SECRET:"secret",SUPABASE_URL:"https://db.example",DOCUMENSO_URL:"https://sign.example",DOCUMENSO_TOKEN:"token"}
+ const response=await worker.fetch(new Request("https://worker.example/internal/signing/sync",{
+  method:"POST",headers:{authorization:"Bearer internal"},body:"null"
+ }),env)
+ assert.equal(response.status,400)
+})
+test("isolated worker rejects upstream URLs with unexpected path prefixes",async()=>{
+ const env={INTERNAL_SIGNING_TOKEN:"internal",SUPABASE_SECRET:"secret",SUPABASE_URL:"https://db.example/untrusted",DOCUMENSO_URL:"https://sign.example",DOCUMENSO_TOKEN:"token"}
+ const response=await worker.fetch(new Request("https://worker.example/internal/signing/sync",{
+  method:"POST",headers:{authorization:"Bearer internal"},body:JSON.stringify({envelopeId:"abc"})
+ }),env)
+ assert.equal(response.status,502)
+})
