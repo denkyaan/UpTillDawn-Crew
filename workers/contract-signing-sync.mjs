@@ -73,7 +73,7 @@ export default {
    ledgerUrl.searchParams.set("envelope_id",`eq.${input.envelopeId}`)
    const ledgerResponse=await fetch(ledgerUrl,{headers,redirect:"error"})
    const rows=await boundedJson(ledgerResponse)
-   if(!Array.isArray(rows)||rows.length!==1||!rows[0]||rows[0].envelope_id!==input.envelopeId||rows[0].signed_pdf_path!==null||!["draft","sent","completed","rejected","cancelled"].includes(rows[0].status))return json({error:"Ledger not eligible"},409)
+   if(!Array.isArray(rows)||rows.length!==1||!rows[0]||typeof rows[0]!=="object"||Array.isArray(rows[0])||rows[0].envelope_id!==input.envelopeId||rows[0].signed_pdf_path!==null||typeof rows[0].status!=="string"||!["draft","sent","completed","rejected","cancelled"].includes(rows[0].status))return json({error:"Ledger not eligible"},409)
    const current=rows[0].status
    if(!allowed[current])return json({state:current,updated:false})
    const remoteUrl=new URL("/api/v2/envelope/"+encodeURIComponent(input.envelopeId),provider)
