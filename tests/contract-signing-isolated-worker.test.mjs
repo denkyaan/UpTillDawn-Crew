@@ -121,6 +121,8 @@ test("isolated worker reconciles completed provider state using conditional data
   assert.equal(response.status,200)
   assert.deepEqual(await response.json(),{state:"completed",updated:true})
   assert.equal(calls.length,3)
+  assert.ok(calls.every(call=>call.options.cache==="no-store"),"Signing synchronization must bypass upstream caches")
+  assert.ok(calls.every(call=>call.options.redirect==="error"),"Signing synchronization must reject redirects")
   assert.match(calls[2].url,/\/rpc\/upt_server_transition_contract_signing$/)
   assert.deepEqual(JSON.parse(calls[2].options.body),{p_envelope_id:"abc",p_expected_status:"sent",p_next_status:"completed"})
  }finally{globalThis.fetch=originalFetch}
