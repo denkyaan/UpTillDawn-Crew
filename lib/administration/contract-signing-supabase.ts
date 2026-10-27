@@ -32,7 +32,8 @@ const map=(row:SigningRow):SigningRecord=>{
  documentType:row.document_type,documentId:row.document_id,
  version:row.document_version,sourceSha256:row.document_sha256,
  envelopeId:row.envelope_id,state:row.status,signedPdfPath:row.signed_pdf_path
-})
+ })
+}
 
 /**
  * Uses the authenticated session only. The signing ledger currently has
