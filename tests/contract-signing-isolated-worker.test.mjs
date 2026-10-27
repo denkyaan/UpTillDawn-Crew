@@ -23,7 +23,7 @@ test("isolated signing worker rejects oversized body without content-length",asy
   duplex:"half"
  })
  const response=await worker.fetch(request,env)
- assert.equal(response.status,502)
+ assert.equal(response.status,413)
 })
 test("isolated signing worker rejects declared oversized body",async()=>{
  const env={INTERNAL_SIGNING_TOKEN:"internal",SUPABASE_SECRET:"secret",SUPABASE_URL:"https://db.example",DOCUMENSO_URL:"https://sign.example",DOCUMENSO_TOKEN:"token"}
@@ -100,5 +100,28 @@ test("isolated worker rejects null provider response without updating ledger",as
   }),env)
   assert.equal(response.status,409)
   assert.equal(calls,2)
+ }finally{globalThis.fetch=originalFetch}
+})
+
+test("isolated worker reconciles completed provider state using conditional database transition",async()=>{
+ const env={INTERNAL_SIGNING_TOKEN:"internal",SUPABASE_SECRET:"secret",SUPABASE_URL:"https://db.example",DOCUMENSO_URL:"https://sign.example",DOCUMENSO_TOKEN:"token"}
+ const originalFetch=globalThis.fetch
+ const calls=[]
+ globalThis.fetch=async (url,options={})=>{
+  calls.push({url:String(url),options})
+  if(calls.length===1)return new Response(JSON.stringify([{envelope_id:"abc",status:"sent",signed_pdf_path:null}]))
+  if(calls.length===2)return new Response(JSON.stringify({id:"abc",status:"COMPLETED"}))
+  if(calls.length===3)return new Response("true")
+  throw Error("Unexpected network request")
+ }
+ try{
+  const response=await worker.fetch(new Request("https://worker.example/internal/signing/sync",{
+   method:"POST",headers:{authorization:"Bearer internal","content-type":"application/json"},body:JSON.stringify({envelopeId:"abc"})
+  }),env)
+  assert.equal(response.status,200)
+  assert.deepEqual(await response.json(),{state:"completed",updated:true})
+  assert.equal(calls.length,3)
+  assert.match(calls[2].url,/\/rpc\/upt_server_transition_contract_signing$/)
+  assert.deepEqual(JSON.parse(calls[2].options.body),{p_envelope_id:"abc",p_expected_status:"sent",p_next_status:"completed"})
  }finally{globalThis.fetch=originalFetch}
 })
