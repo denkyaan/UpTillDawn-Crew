@@ -5,14 +5,36 @@ const validId=value=>typeof value==="string"&&/^[A-Za-z0-9_-]{1,128}$/.test(valu
 const allowed={draft:["sent","completed","rejected","cancelled"],sent:["completed","rejected","cancelled"]}
 const mapStatus={DRAFT:"draft",PENDING:"sent",COMPLETED:"completed",REJECTED:"rejected",CANCELLED:"cancelled"}
 const json=(body,status=200)=>new Response(JSON.stringify(body),{status,headers:{"content-type":"application/json","cache-control":"no-store"}})
+async function readBounded(stream,maxBytes){
+ if(!stream)return new Uint8Array()
+ const reader=stream.getReader()
+ const chunks=[]
+ let total=0
+ try{
+  while(true){
+   const {done,value}=await reader.read()
+   if(done)break
+   total+=value.byteLength
+   if(total>maxBytes)throw Error("Payload too large")
+   chunks.push(value)
+  }
+ }catch(error){
+  await reader.cancel().catch(()=>{})
+  throw error
+ }finally{reader.releaseLock()}
+ const bytes=new Uint8Array(total)
+ let offset=0
+ for(const chunk of chunks){bytes.set(chunk,offset);offset+=chunk.byteLength}
+ return bytes
+}
 async function boundedJson(response){
  if(!response.ok)throw Error("Upstream rejected request")
- const size=Number(response.headers.get("content-length")||0)
- if(!Number.isSafeInteger(size)||size>65536)throw Error("Upstream response too large")
- const text=await response.text()
- if(text.length>65536)throw Error("Upstream response too large")
- return JSON.parse(text)
+ const rawLength=response.headers.get("content-length")
+ if(rawLength!==null&&(!/^[0-9]+$/.test(rawLength)||Number(rawLength)>65536))throw Error("Upstream response too large")
+ const bytes=await readBounded(response.body,65536)
+ return JSON.parse(new TextDecoder("utf-8",{fatal:true}).decode(bytes))
 }
+
 export default {
  async fetch(request,env){
   if(request.method!=="POST"||new URL(request.url).pathname!=="/internal/signing/sync")return json({error:"Not found"},404)
@@ -20,8 +42,10 @@ export default {
   const provided=request.headers.get("authorization")
   if(provided!==`Bearer ${env.INTERNAL_SIGNING_TOKEN}`)return json({error:"Unauthorized"},401)
   try{
-   if(Number(request.headers.get("content-length")||0)>2048)return json({error:"Request too large"},413)
-   const input=await request.json()
+   const declared=request.headers.get("content-length")
+   if(declared!==null&&(!/^[0-9]+$/.test(declared)||Number(declared)>2048))return json({error:"Request too large"},413)
+   const body=await readBounded(request.body,2048)
+   const input=JSON.parse(new TextDecoder("utf-8",{fatal:true}).decode(body))
    if(!validId(input.envelopeId))return json({error:"Invalid envelope"},400)
    const base=new URL(env.SUPABASE_URL)
    const provider=new URL(env.DOCUMENSO_URL)
