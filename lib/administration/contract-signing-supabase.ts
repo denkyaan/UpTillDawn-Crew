@@ -17,7 +17,16 @@ type SigningRow={
  status:ContractSigningState
  signed_pdf_path:string|null
 }
-const map=(row:SigningRow):SigningRecord=>({
+const map=(row:SigningRow):SigningRecord=>{
+ if(!["artist","staff"].includes(row.document_type)||
+  !/^[0-9a-f-]{36}$/i.test(row.document_id)||
+  !Number.isSafeInteger(row.document_version)||row.document_version<1||
+  !/^[a-f0-9]{64}$/.test(row.document_sha256)||
+  !["draft","sent","completed","rejected","cancelled"].includes(row.status)||
+  (row.envelope_id!==null&&!/^[A-Za-z0-9_-]{1,128}$/.test(row.envelope_id))){
+  throw new Error("Invalid signing ledger record")
+ }
+ return ({
  documentType:row.document_type,documentId:row.document_id,
  version:row.document_version,sourceSha256:row.document_sha256,
  envelopeId:row.envelope_id,state:row.status,signedPdfPath:row.signed_pdf_path
