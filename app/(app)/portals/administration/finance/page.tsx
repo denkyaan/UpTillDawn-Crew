@@ -128,6 +128,40 @@ async function removeInvoiceLine(formData:FormData) {
  redirect('/portals/administration/finance')
 }
 
+async function createPaymentReminder(formData:FormData) {
+ 'use server'
+ const {supabase}=await requireAdministration()
+ const documentId=String(formData.get('document_id')??'')
+ const recipient=String(formData.get('recipient_email')??'').trim()
+ const subject=String(formData.get('subject')??'').trim()
+ const body=String(formData.get('body')??'').trim()
+ const uuid=/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
+ if(!uuid.test(documentId)||recipient.length<3||recipient.length>320||!recipient.includes('@')||subject.length<1||subject.length>200||body.length<1||body.length>10000)redirect('/portals/administration/finance?error=1')
+ const {data:existing,error:lookupError}=await (supabase as unknown as SupabaseClient).from('admin_payment_reminders').select('reminder_number').eq('document_id',documentId).order('reminder_number',{ascending:false}).limit(1)
+ if(lookupError)redirect('/portals/administration/finance?error=1')
+ const next=(Number(existing?.[0]?.reminder_number??0))+1
+ if(next>9)redirect('/portals/administration/finance?error=1')
+ const {error}=await (supabase as unknown as SupabaseClient).from('admin_payment_reminders').insert({document_id:documentId,reminder_number:next,recipient_email:recipient,subject,body,status:'draft'})
+ if(error)redirect('/portals/administration/finance?error=1')
+ revalidatePath('/portals/administration/finance')
+ redirect('/portals/administration/finance')
+}
+
+async function updatePaymentReminder(formData:FormData) {
+ 'use server'
+ const {supabase,isAdmin}=await requireAdministration()
+ const id=String(formData.get('reminder_id')??'')
+ const status=String(formData.get('status')??'')
+ if(!isAdmin||!['approved','cancelled'].includes(status)||!/^[0-9a-f]{8}-[0-9a-f-]{27,}$/i.test(id))redirect('/portals/administration/finance?error=1')
+ const {data:{user}}=await supabase.auth.getUser()
+ if(!user)redirect('/login')
+ const patch=status==='approved'?{status,approved_by:user.id,approved_at:new Date().toISOString()}:{status}
+ const {data,error}=await (supabase as unknown as SupabaseClient).from('admin_payment_reminders').update(patch).eq('id',id).eq('status','draft').select('id')
+ if(error||data?.length!==1)redirect('/portals/administration/finance?error=1')
+ revalidatePath('/portals/administration/finance')
+ redirect('/portals/administration/finance')
+}
+
 async function recordFinancialPayment(formData:FormData) {
  'use server'
  const {supabase}=await requireAdministration()
@@ -208,6 +242,8 @@ export default async function FinancePage({searchParams}:{searchParams:Promise<{
  const originalInvoices=(documents??[]).filter(d=>['sales_invoice','purchase_invoice'].includes(d.kind)&&['approved','issued','paid'].includes(d.status))
  const {data:paymentRows}=await (supabase as unknown as SupabaseClient).from('admin_financial_payments').select('id,document_id,amount,paid_on,bank_reference').order('created_at',{ascending:false}).limit(1000)
  const payments=(paymentRows??[]) as {id:string;document_id:string;amount:number;paid_on:string;bank_reference:string|null}[]
+ const {data:reminderRows}=await (supabase as unknown as SupabaseClient).from('admin_payment_reminders').select('id,document_id,reminder_number,status,recipient_email,subject,created_at').order('created_at',{ascending:false}).limit(500)
+ const reminders=(reminderRows??[]) as {id:string;document_id:string;reminder_number:number;status:string;recipient_email:string;subject:string;created_at:string}[]
  const {data:lines}=await supabase.from('admin_financial_lines').select('id,document_id,description,quantity,unit_price,vat_rate').order('created_at',{ascending:true}).limit(500)
  const {data:attachments}=await (supabase as unknown as SupabaseClient).from('admin_financial_attachments').select('id,document_id,original_name,created_at').order('created_at',{ascending:false}).limit(200)
  const money = (amount:number) => new Intl.NumberFormat(locale==='nl'?'nl-BE':locale==='fr'?'fr-BE':locale==='de'?'de-BE':'en-BE',{style:'currency',currency:'EUR'}).format(amount)
@@ -259,6 +295,17 @@ export default async function FinancePage({searchParams}:{searchParams:Promise<{
         <input name="bank_reference" aria-label={({nl:'Bankreferentie',fr:'Référence bancaire',en:'Bank reference',de:'Bankreferenz'} as const)[locale]} maxLength={200} className="rounded border bg-background p-2"/>
         <button type="submit" className="rounded border border-violet-500 px-3 py-2 text-violet-400">{({nl:'Betaling registreren',fr:'Enregistrer le paiement',en:'Record payment',de:'Zahlung erfassen'} as const)[locale]}</button>
        </form>}
+      </div>}
+      {['sales_invoice','purchase_invoice'].includes(d.kind)&&['approved','issued'].includes(d.status)&&d.due_date&&d.due_date<today&&Number(d.gross_amount)>paymentTotalFor(d.id)&&<div className="space-y-2 rounded-lg border p-3 text-xs">
+       <h3 className="font-semibold">{({nl:'Betalingsherinneringen (geen automatische verzending)',fr:'Rappels de paiement (aucun envoi automatique)',en:'Payment reminders (no automatic sending)',de:'Zahlungserinnerungen (kein automatischer Versand)'} as const)[locale]}</h3>
+       {reminders.filter(r=>r.document_id===d.id).map(r=><div key={r.id} className="flex flex-wrap items-center gap-2"><span>#{r.reminder_number} · {r.subject} · {r.recipient_email} · {r.status}</span>{isAdmin&&r.status==='draft'&&(['approved','cancelled'] as const).map(status=><form key={status} action={updatePaymentReminder}><input type="hidden" name="reminder_id" value={r.id}/><input type="hidden" name="status" value={status}/><button type="submit" className="rounded border px-2 py-1">{status==='approved'?({nl:'Goedkeuren',fr:'Approuver',en:'Approve',de:'Genehmigen'} as const)[locale]:({nl:'Annuleren',fr:'Annuler',en:'Cancel',de:'Stornieren'} as const)[locale]}</button></form>)}</div>)}
+       <form action={createPaymentReminder} className="grid gap-2 sm:grid-cols-2">
+        <input type="hidden" name="document_id" value={d.id}/>
+        <input type="email" name="recipient_email" required maxLength={320} aria-label={({nl:'E-mailadres ontvanger',fr:'E-mail du destinataire',en:'Recipient email',de:'Empfänger-E-Mail'} as const)[locale]} placeholder="email@example.com" className="rounded border bg-background p-2"/>
+        <input name="subject" required maxLength={200} aria-label={({nl:'Onderwerp herinnering',fr:'Objet du rappel',en:'Reminder subject',de:'Betreff der Erinnerung'} as const)[locale]} placeholder={({nl:'Betalingsherinnering',fr:'Rappel de paiement',en:'Payment reminder',de:'Zahlungserinnerung'} as const)[locale]} className="rounded border bg-background p-2"/>
+        <textarea name="body" required maxLength={10000} aria-label={({nl:'Tekst herinnering',fr:'Texte du rappel',en:'Reminder message',de:'Erinnerungstext'} as const)[locale]} className="rounded border bg-background p-2 sm:col-span-2" rows={3}/>
+        <button type="submit" className="rounded border border-violet-500 px-3 py-2 text-violet-400 sm:col-span-2">{({nl:'Herinnering als concept bewaren',fr:'Enregistrer le rappel en brouillon',en:'Save reminder draft',de:'Erinnerungsentwurf speichern'} as const)[locale]}</button>
+       </form>
       </div>}
       {(attachments??[]).filter(a=>a.document_id===d.id).map(a=><p key={a.id} className="text-xs text-muted-foreground">{uploadLabels[locale].attachments}: {a.original_name}</p>)}
       {(lines??[]).filter(line=>line.document_id===d.id).map(line=><div key={line.id} className="flex flex-wrap items-center justify-between gap-2 text-xs text-muted-foreground"><p>{line.description} · {line.quantity} × {money(Number(line.unit_price))} · {line.vat_rate}%</p>{d.status==='draft'&&<form action={removeInvoiceLine}><input type="hidden" name="document_id" value={d.id}/><input type="hidden" name="line_id" value={line.id}/><button type="submit" className="rounded border px-2 py-1 text-red-400">{({nl:'Regel verwijderen',fr:'Supprimer la ligne',en:'Remove line',de:'Position entfernen'} as const)[locale]}</button></form>}</div>)}
