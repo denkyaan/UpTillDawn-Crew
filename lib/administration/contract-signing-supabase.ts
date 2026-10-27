@@ -64,11 +64,12 @@ export async function authorizedSigningLedger(){
    return data?.length??0
   },
   async change(input){
+   if(input.expectedState===input.nextState)throw new Error("Signing status transition must change state")
    const changes:Record<string,string>={status:input.nextState,updated_at:new Date().toISOString()}
    if(input.nextState==="completed")changes.completed_at=new Date().toISOString()
    if(input.nextState==="sent")changes.dispatched_at=new Date().toISOString()
    const {data,error}=await table().update(changes)
-    .eq("envelope_id",input.envelopeId).eq("status",input.expectedState).select("id")
+    .eq("envelope_id",input.envelopeId).eq("status",input.expectedState).is("signed_pdf_path",null).select("id")
    if(error)throw new Error("Signing state transition denied")
    return data?.length??0
   },
