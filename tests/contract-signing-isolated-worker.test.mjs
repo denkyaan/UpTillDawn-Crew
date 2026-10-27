@@ -256,3 +256,42 @@ test("isolated worker blocks reserved IPv4 endpoints before any network access",
   assert.equal(calls,0)
  }finally{globalThis.fetch=originalFetch}
 })
+
+test("isolated worker refuses concurrent ledger transition without reporting success",async()=>{
+ const env={INTERNAL_SIGNING_TOKEN:"internal",SUPABASE_SECRET:"secret",SUPABASE_URL:"https://db.example",DOCUMENSO_URL:"https://sign.example",DOCUMENSO_TOKEN:"token"}
+ const originalFetch=globalThis.fetch
+ const calls=[]
+ globalThis.fetch=async(url,options)=>{
+  calls.push({url:String(url),options})
+  const payload=calls.length===1?[{envelope_id:"abc",status:"sent",signed_pdf_path:null}]:calls.length===2?{id:"abc",status:"COMPLETED"}:false
+  return new Response(JSON.stringify(payload),{headers:{"content-type":"application/json"}})
+ }
+ try{
+  const response=await worker.fetch(new Request("https://worker.example/internal/signing/sync",{
+   method:"POST",headers:{authorization:"Bearer internal","content-type":"application/json"},body:JSON.stringify({envelopeId:"abc"})
+  }),env)
+  assert.equal(response.status,409)
+  assert.deepEqual(await response.json(),{error:"Concurrent signing update"})
+  assert.equal(calls.length,3)
+  assert.deepEqual(JSON.parse(calls[2].options.body),{p_envelope_id:"abc",p_expected_status:"sent",p_next_status:"completed"})
+ }finally{globalThis.fetch=originalFetch}
+})
+
+test("isolated worker rejects oversized upstream responses without contacting later services",async()=>{
+ const env={INTERNAL_SIGNING_TOKEN:"internal",SUPABASE_SECRET:"secret",SUPABASE_URL:"https://db.example",DOCUMENSO_URL:"https://sign.example",DOCUMENSO_TOKEN:"token"}
+ const originalFetch=globalThis.fetch
+ try{
+  for(const responseFactory of [
+   ()=>new Response("x",{headers:{"content-type":"application/json","content-length":"65537"}}),
+   ()=>new Response(JSON.stringify([{envelope_id:"abc",status:"sent",signed_pdf_path:null}])+" ".repeat(66000),{headers:{"content-type":"application/json"}})
+  ]){
+   let calls=0
+   globalThis.fetch=async()=>{calls++;if(calls===1)return responseFactory();throw Error("Must not contact provider")}
+   const response=await worker.fetch(new Request("https://worker.example/internal/signing/sync",{
+    method:"POST",headers:{authorization:"Bearer internal","content-type":"application/json"},body:JSON.stringify({envelopeId:"abc"})
+   }),env)
+   assert.equal(response.status,502)
+   assert.equal(calls,1)
+  }
+ }finally{globalThis.fetch=originalFetch}
+})
