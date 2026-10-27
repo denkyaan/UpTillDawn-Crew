@@ -295,6 +295,21 @@ async function createPaymentReminder(formData:FormData) {
  redirect('/portals/administration/finance')
 }
 
+async function editPaymentReminderDraft(formData:FormData) {
+ 'use server'
+ const {supabase}=await requireAdministration()
+ const id=String(formData.get('reminder_id')??'')
+ const recipient=String(formData.get('recipient_email')??'').trim()
+ const subject=String(formData.get('subject')??'').trim()
+ const body=String(formData.get('body')??'').trim()
+ const uuid=/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
+ if(!uuid.test(id)||recipient.length>320||!/^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$/.test(recipient)||!subject||subject.length>200||!body||body.length>10000)redirect('/portals/administration/finance?error=1')
+ const {data,error}=await (supabase as unknown as SupabaseClient).from('admin_payment_reminders').update({recipient_email:recipient,subject,body}).eq('id',id).eq('status','draft').select('id')
+ if(error||data?.length!==1)redirect('/portals/administration/finance?error=1')
+ revalidatePath('/portals/administration/finance')
+ redirect('/portals/administration/finance')
+}
+
 async function updatePaymentReminder(formData:FormData) {
  'use server'
  const {supabase,isAdmin}=await requireAdministration()
@@ -391,8 +406,8 @@ export default async function FinancePage({searchParams}:{searchParams:Promise<{
  const originalInvoices=(documents??[]).filter(d=>['sales_invoice','purchase_invoice'].includes(d.kind)&&['approved','issued','paid'].includes(d.status))
  const {data:paymentRows}=await (supabase as unknown as SupabaseClient).from('admin_financial_payments').select('id,document_id,amount,paid_on,bank_reference').order('created_at',{ascending:false}).limit(1000)
  const payments=(paymentRows??[]) as {id:string;document_id:string;amount:number;paid_on:string;bank_reference:string|null}[]
- const {data:reminderRows}=await (supabase as unknown as SupabaseClient).from('admin_payment_reminders').select('id,document_id,reminder_number,status,recipient_email,subject,created_at').order('created_at',{ascending:false}).limit(500)
- const reminders=(reminderRows??[]) as {id:string;document_id:string;reminder_number:number;status:string;recipient_email:string;subject:string;created_at:string}[]
+ const {data:reminderRows}=await (supabase as unknown as SupabaseClient).from('admin_payment_reminders').select('id,document_id,reminder_number,status,recipient_email,subject,body,created_at').order('created_at',{ascending:false}).limit(500)
+ const reminders=(reminderRows??[]) as {id:string;document_id:string;reminder_number:number;status:string;recipient_email:string;subject:string;body:string;created_at:string}[]
  const {data:lines}=await supabase.from('admin_financial_lines').select('id,document_id,description,quantity,unit_price,vat_rate').order('created_at',{ascending:true}).limit(500)
  const {data:attachments}=await (supabase as unknown as SupabaseClient).from('admin_financial_attachments').select('id,document_id,original_name,created_at').order('created_at',{ascending:false}).limit(200)
  const money = (amount:number) => new Intl.NumberFormat(locale==='nl'?'nl-BE':locale==='fr'?'fr-BE':locale==='de'?'de-BE':'en-BE',{style:'currency',currency:'EUR'}).format(amount)
@@ -503,6 +518,7 @@ export default async function FinancePage({searchParams}:{searchParams:Promise<{
       {['sales_invoice','purchase_invoice'].includes(d.kind)&&['approved','issued'].includes(d.status)&&d.due_date&&d.due_date<today&&Number(d.gross_amount)>paymentTotalFor(d.id)&&<div className="space-y-2 rounded-lg border p-3 text-xs">
        <h3 className="font-semibold">{({nl:'Betalingsherinneringen (geen automatische verzending)',fr:'Rappels de paiement (aucun envoi automatique)',en:'Payment reminders (no automatic sending)',de:'Zahlungserinnerungen (kein automatischer Versand)'} as const)[locale]}</h3>
        {reminders.filter(r=>r.document_id===d.id).map(r=><div key={r.id} className="flex flex-wrap items-center gap-2"><span>#{r.reminder_number} · {r.subject} · {r.recipient_email} · {r.status}</span>{isAdmin&&r.status==='draft'&&(['approved','cancelled'] as const).map(status=><form key={status} action={updatePaymentReminder}><input type="hidden" name="reminder_id" value={r.id}/><input type="hidden" name="status" value={status}/><button type="submit" className="rounded border px-2 py-1">{status==='approved'?({nl:'Goedkeuren',fr:'Approuver',en:'Approve',de:'Genehmigen'} as const)[locale]:({nl:'Annuleren',fr:'Annuler',en:'Cancel',de:'Stornieren'} as const)[locale]}</button></form>)}</div>)}
+       {reminders.filter(r=>r.document_id===d.id&&r.status==='draft').map(r=><details key={r.id} className="rounded border p-2"><summary className="cursor-pointer text-xs">{({nl:'Herinneringsconcept bewerken',fr:'Modifier le brouillon de rappel',en:'Edit reminder draft',de:'Erinnerungsentwurf bearbeiten'} as const)[locale]} #{r.reminder_number}</summary><form action={editPaymentReminderDraft} className="mt-2 grid gap-2 sm:grid-cols-2"><input type="hidden" name="reminder_id" value={r.id}/><input type="email" name="recipient_email" required maxLength={320} defaultValue={r.recipient_email} aria-label={({nl:'Ontvanger',fr:'Destinataire',en:'Recipient',de:'Empfänger'} as const)[locale]} className="rounded border bg-background p-2"/><input name="subject" required maxLength={200} defaultValue={r.subject} aria-label={({nl:'Onderwerp',fr:'Objet',en:'Subject',de:'Betreff'} as const)[locale]} className="rounded border bg-background p-2"/><textarea name="body" required maxLength={10000} defaultValue={r.body} rows={3} aria-label={({nl:'Bericht',fr:'Message',en:'Message',de:'Nachricht'} as const)[locale]} className="rounded border bg-background p-2 sm:col-span-2"/><button type="submit" className="rounded border border-violet-500 px-3 py-2 text-violet-400 sm:col-span-2">{({nl:'Concept opslaan',fr:'Enregistrer le brouillon',en:'Save draft',de:'Entwurf speichern'} as const)[locale]}</button></form></details>)}
        <form action={createPaymentReminder} className="grid gap-2 sm:grid-cols-2">
         <input type="hidden" name="document_id" value={d.id}/>
         <input type="email" name="recipient_email" required maxLength={320} aria-label={({nl:'E-mailadres ontvanger',fr:'E-mail du destinataire',en:'Recipient email',de:'Empfänger-E-Mail'} as const)[locale]} placeholder={({nl:"E-mailadres",fr:"Adresse e-mail",en:"Email address",de:"E-Mail-Adresse"} as const)[locale]} className="rounded border bg-background p-2"/>
