@@ -210,8 +210,9 @@ export default async function FinancePage({searchParams}:{searchParams:Promise<{
  const {data:lines}=await supabase.from('admin_financial_lines').select('id,document_id,description,quantity,unit_price,vat_rate').order('created_at',{ascending:true}).limit(500)
  const {data:attachments}=await (supabase as unknown as SupabaseClient).from('admin_financial_attachments').select('id,document_id,original_name,created_at').order('created_at',{ascending:false}).limit(200)
  const money = (amount:number) => new Intl.NumberFormat(locale==='nl'?'nl-BE':locale==='fr'?'fr-BE':locale==='de'?'de-BE':'en-BE',{style:'currency',currency:'EUR'}).format(amount)
- const paidTotal=(documents??[]).filter(d=>d.status==='paid').reduce((sum,d)=>sum+Number(d.gross_amount),0)
- const unpaidTotal=(documents??[]).filter(d=>['approved','issued','review'].includes(d.status)).reduce((sum,d)=>sum+Number(d.gross_amount),0)
+ const paymentTotalFor=(id:string)=>payments.filter(p=>p.document_id===id).reduce((sum,p)=>sum+Number(p.amount),0)
+ const paidTotal=(documents??[]).filter(d=>['approved','issued','paid'].includes(d.status)).reduce((sum,d)=>sum+paymentTotalFor(d.id),0)
+ const unpaidTotal=(documents??[]).filter(d=>['approved','issued','paid','review'].includes(d.status)).reduce((sum,d)=>sum+Math.max(0,Number(d.gross_amount)-paymentTotalFor(d.id)),0)
  const draftCount=(documents??[]).filter(d=>d.status==='draft').length
  return <main className="mx-auto max-w-5xl space-y-6 p-4 pb-28 md:p-8">
   <Link className="text-violet-400" href="/portals/administration">← {t.back}</Link>
@@ -236,16 +237,16 @@ export default async function FinancePage({searchParams}:{searchParams:Promise<{
      <div><p className="font-semibold">{d.document_number || translatedLabel(kindLabels[locale],d.kind)}</p><p className="text-xs text-muted-foreground">{translatedLabel(kindLabels[locale],d.kind)} · {translatedLabel(statusLabels[locale],d.status)}{d.original_invoice_id&&<> · {({nl:'Factuur',fr:'Facture',en:'Invoice',de:'Rechnung'} as const)[locale]}: {documents?.find(invoice=>invoice.id===d.original_invoice_id)?.document_number||d.original_invoice_id}</>}</p></div>
      <div className="w-full space-y-2">
       {['approved','issued','paid'].includes(d.status)&&<div className="rounded-lg border p-3 text-xs">
-       <p>{({nl:'Geregistreerde betalingen',fr:'Paiements enregistrés',en:'Recorded payments',de:'Erfasste Zahlungen'} as const)[locale]}: {money(payments.filter(p=>p.document_id===d.id).reduce((sum,p)=>sum+Number(p.amount),0))}</p>
+       <p>{({nl:'Geregistreerde betalingen',fr:'Paiements enregistrés',en:'Recorded payments',de:'Erfasste Zahlungen'} as const)[locale]}: {money(paymentTotalFor(d.id))}</p>
        <p>{({nl:'Openstaand saldo',fr:'Solde restant',en:'Outstanding balance',de:'Offener Betrag'} as const)[locale]}: {money(Math.max(0,Number(d.gross_amount)-payments.filter(p=>p.document_id===d.id).reduce((sum,p)=>sum+Number(p.amount),0)))}</p>
        {payments.filter(p=>p.document_id===d.id).map(p=><p key={p.id}>{p.paid_on} · {money(Number(p.amount))} {p.bank_reference||''}</p>)}
-       <form action={recordFinancialPayment} className="mt-2 grid gap-2 sm:grid-cols-4">
+       {Number(d.gross_amount)>paymentTotalFor(d.id)&&<form action={recordFinancialPayment} className="mt-2 grid gap-2 sm:grid-cols-4">
         <input type="hidden" name="document_id" value={d.id}/>
         <input name="amount" aria-label={({nl:'Betalingsbedrag',fr:'Montant du paiement',en:'Payment amount',de:'Zahlungsbetrag'} as const)[locale]} type="number" min="0.01" step="0.01" required className="rounded border bg-background p-2"/>
         <input name="paid_on" aria-label={({nl:'Betaaldatum',fr:'Date du paiement',en:'Payment date',de:'Zahlungsdatum'} as const)[locale]} type="date" required className="rounded border bg-background p-2"/>
         <input name="bank_reference" aria-label={({nl:'Bankreferentie',fr:'Référence bancaire',en:'Bank reference',de:'Bankreferenz'} as const)[locale]} maxLength={200} className="rounded border bg-background p-2"/>
         <button type="submit" className="rounded border border-violet-500 px-3 py-2 text-violet-400">{({nl:'Betaling registreren',fr:'Enregistrer le paiement',en:'Record payment',de:'Zahlung erfassen'} as const)[locale]}</button>
-       </form>
+       </form>}
       </div>}
       {(attachments??[]).filter(a=>a.document_id===d.id).map(a=><p key={a.id} className="text-xs text-muted-foreground">{uploadLabels[locale].attachments}: {a.original_name}</p>)}
       {(lines??[]).filter(line=>line.document_id===d.id).map(line=><div key={line.id} className="flex flex-wrap items-center justify-between gap-2 text-xs text-muted-foreground"><p>{line.description} · {line.quantity} × {money(Number(line.unit_price))} · {line.vat_rate}%</p>{d.status==='draft'&&<form action={removeInvoiceLine}><input type="hidden" name="document_id" value={d.id}/><input type="hidden" name="line_id" value={line.id}/><button type="submit" className="rounded border px-2 py-1 text-red-400">{({nl:'Regel verwijderen',fr:'Supprimer la ligne',en:'Remove line',de:'Position entfernen'} as const)[locale]}</button></form>}</div>)}
@@ -264,7 +265,7 @@ export default async function FinancePage({searchParams}:{searchParams:Promise<{
       </form>}
      </div>
      <div className="flex flex-wrap items-center gap-2">
-     {(transitions[d.status]??[]).filter(next=>isAdmin || next==='review').map(next=><form key={next} action={updateFinancialStatus}><input type="hidden" name="document_id" value={d.id}/><input type="hidden" name="status" value={next}/><button type="submit" className="rounded-lg border border-violet-500 px-3 py-2 text-xs font-semibold text-violet-400">{translatedLabel(actionLabels[locale],next)}</button></form>)}
+     {(transitions[d.status]??[]).filter(next=>(isAdmin || next==='review') && (next!=='paid' || (Number(d.gross_amount)>0 && paymentTotalFor(d.id)===Number(d.gross_amount))) && (next!=='void' || paymentTotalFor(d.id)===0)).map(next=><form key={next} action={updateFinancialStatus}><input type="hidden" name="document_id" value={d.id}/><input type="hidden" name="status" value={next}/><button type="submit" className="rounded-lg border border-violet-500 px-3 py-2 text-xs font-semibold text-violet-400">{translatedLabel(actionLabels[locale],next)}</button></form>)}
      <strong>{new Intl.NumberFormat(locale==='nl'?'nl-BE':locale==='fr'?'fr-BE':locale==='de'?'de-BE':'en-BE',{style:'currency',currency:d.currency}).format(Number(d.gross_amount))}</strong></div>
     </article>)}</div>}
   </section>
