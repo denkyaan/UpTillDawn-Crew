@@ -102,6 +102,7 @@ export default async function BookingDetail({params}:{params:Promise<{id:string}
    <p className="text-sm">{labels.recipient}: {agency?.name??"—"} · {agency?.email??"—"}</p>
    {mailto?<a href={mailto} className="inline-flex rounded-xl bg-violet-600 px-4 py-3 text-sm font-semibold text-white">{labels.draft}</a>:<p className="text-sm text-muted-foreground">{labels.noEmail} <Link href="/portals/administration/contacts" className="text-violet-400 underline">{labels.contacts}</Link></p>}
    <p className="text-xs text-muted-foreground">{labels.review}</p>
+   <Link href={`/portals/administration/modules/ai?bookingId=${booking.id}`} className="inline-flex rounded-xl border px-4 py-3 text-sm font-semibold">{({nl:"Notities met AI-werkruimte bewerken",fr:"Modifier les notes dans l’espace IA",en:"Edit notes in AI workspace",de:"Notizen im KI-Arbeitsbereich bearbeiten"} as const)[locale]}</Link>
    <Link href={`${base}/${booking.id}/agreement`} className="inline-flex rounded-xl border px-4 py-3 text-sm font-semibold">{({nl:"Boekingsafspraak voorbereiden",fr:"Préparer l’accord de réservation",en:"Prepare booking agreement",de:"Buchungsvereinbarung vorbereiten"} as const)[locale]}</Link>
   </section>
   <form action={recordCommunication} className="grid gap-3 rounded-2xl border bg-card p-5">
