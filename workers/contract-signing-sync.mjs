@@ -76,7 +76,7 @@ export default {
    if(!allowed[current])return json({state:current,updated:false})
    const remoteUrl=new URL("/api/v2/envelope/"+encodeURIComponent(input.envelopeId),provider)
    const remote=await boundedJson(await fetch(remoteUrl,{headers:{authorization:`Bearer ${env.DOCUMENSO_TOKEN}`},redirect:"error"}))
-   if(remote.id!==input.envelopeId||!Object.hasOwn(mapStatus,remote.status))return json({error:"Remote evidence mismatch"},409)
+   if(!remote||typeof remote!=="object"||Array.isArray(remote)||remote.id!==input.envelopeId||typeof remote.status!=="string"||!Object.hasOwn(mapStatus,remote.status))return json({error:"Remote evidence mismatch"},409)
    const next=mapStatus[remote.status]
    if(next===current)return json({state:current,updated:false})
    if(!allowed[current].includes(next))return json({error:"Invalid state transition"},409)
