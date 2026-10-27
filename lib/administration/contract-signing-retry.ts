@@ -20,7 +20,11 @@ export async function retryContractSigningSync(input:{
  if(current.state!==record.state)throw new Error("Signing state changed; reload before synchronization")
  const remote=await getContractSigningStatus(record.envelopeId)
  if(remote.id!==record.envelopeId)throw new Error("Signing envelope mismatch")
- const next=reconcileSigningState(current.state,remote.status)
+ const afterRemote=await ledger.load({documentType:record.documentType,documentId:record.documentId,version:record.version})
+ if(!afterRemote||afterRemote.envelopeId!==record.envelopeId||afterRemote.sourceSha256!==record.sourceSha256||afterRemote.state!==current.state||afterRemote.signedPdfPath!==current.signedPdfPath){
+  throw new Error("Signing ledger changed during remote status lookup; reload")
+ }
+ const next=reconcileSigningState(afterRemote.state,remote.status)
  if(next===current.state)return {state:next,updated:false}
  const updated=await ledger.transition({
   envelopeId:current.envelopeId!,expectedState:current.state,nextState:next
