@@ -1,5 +1,5 @@
 import "server-only"
-import {getDocumensoConfig} from "./documenso"
+import {getDocumensoConfig,signingDispatchEnabled} from "./documenso"
 
 /** Documenso v2 envelope API; deliberately separates creation from sending. */
 function api(){
@@ -53,6 +53,7 @@ export async function distributeContractSigningDraft(input:{
  dispatchApproved:boolean
 }):Promise<void>{
  if(input.dispatchApproved!==true)throw new Error("Contract dispatch approval required")
+ if(!signingDispatchEnabled())throw new Error("Documenso distribution is disabled")
  if(!/^[a-zA-Z0-9_-]{1,128}$/.test(input.envelopeId))throw new Error("Invalid envelope ID")
  await request("/envelope/distribute",{
   method:"POST",headers:{"Content-Type":"application/json"},
