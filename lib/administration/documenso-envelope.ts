@@ -15,7 +15,14 @@ async function request(path:string,options:RequestInit={}):Promise<unknown>{
   cache:"no-store",redirect:"error",signal:AbortSignal.timeout(20000)
  })
  if(!response.ok)throw new Error("Documenso request failed ("+response.status+")")
- return response.json()
+ const contentType=response.headers.get("content-type")??""
+ if(!contentType.toLowerCase().includes("application/json"))throw new Error("Documenso returned a non-JSON response")
+ const sizeHeader=response.headers.get("content-length")
+ const size=sizeHeader===null?null:Number(sizeHeader)
+ if(size!==null&&(!Number.isSafeInteger(size)||size<0||size>65536))throw new Error("Documenso response length invalid")
+ const body=await response.text()
+ if(body.length>65536)throw new Error("Documenso response too large")
+ try{return JSON.parse(body) as unknown}catch{throw new Error("Invalid Documenso JSON response")}
 }
 function envelopeId(value:unknown):string{
  if(!value||typeof value!=="object"||!("id" in value)||typeof value.id!=="string"||
