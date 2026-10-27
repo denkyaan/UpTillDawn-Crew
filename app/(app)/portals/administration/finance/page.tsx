@@ -264,11 +264,22 @@ async function updateInvoiceDates(formData:FormData) {
  const {supabase}=await requireAdministration()
  const id=String(formData.get('document_id')??'')
  const issueDate=String(formData.get('issue_date')??'')
- const dueDate=String(formData.get('due_date')??'')
+ let dueDate=String(formData.get('due_date')??'')
+ const useTerms=formData.get('use_payment_terms')==='on'
  const uuid=/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
  const datePattern=/^\\d{4}-\\d{2}-\\d{2}$/
  const validDate=(value:string)=>!value||(datePattern.test(value)&&!Number.isNaN(Date.parse(value))&&new Date(value).toISOString().slice(0,10)===value)
  if(!uuid.test(id)||!validDate(issueDate)||!validDate(dueDate)||(dueDate&&(!issueDate||dueDate<issueDate)))redirect('/portals/administration/finance?error=1')
+ if(useTerms){
+  if(!issueDate)redirect('/portals/administration/finance?error=1')
+  const {data:document,error:documentError}=await supabase.from('admin_financial_documents').select('kind,counterparty_id').eq('id',id).eq('status','draft').maybeSingle()
+  if(documentError||!document||!['sales_invoice','purchase_invoice'].includes(document.kind)||!document.counterparty_id)redirect('/portals/administration/finance?error=1')
+  const {data:party,error:partyError}=await (supabase as unknown as SupabaseClient).from('admin_counterparties').select('payment_terms_days').eq('id',document.counterparty_id).maybeSingle()
+  if(partyError||!party||!Number.isInteger(party.payment_terms_days)||party.payment_terms_days<0||party.payment_terms_days>365)redirect('/portals/administration/finance?error=1')
+  const due=new Date(issueDate+'T12:00:00Z')
+  due.setUTCDate(due.getUTCDate()+party.payment_terms_days)
+  dueDate=due.toISOString().slice(0,10)
+ }
  const {data,error}=await supabase.from('admin_financial_documents').update({issue_date:issueDate||null,due_date:dueDate||null}).eq('id',id).eq('status','draft').select('id')
  if(error||data?.length!==1)redirect('/portals/administration/finance?error=1')
  revalidatePath('/portals/administration/finance')
@@ -532,7 +543,7 @@ export default async function FinancePage({searchParams}:{searchParams:Promise<{
       {d.status==='draft'&&<form action={updateDraftNotes} className="grid gap-2 text-xs sm:grid-cols-[1fr_auto] sm:items-end"><input type="hidden" name="document_id" value={d.id}/><label>{({nl:'Notities bij document',fr:'Notes du document',en:'Document notes',de:'Dokumentnotizen'} as const)[locale]}<textarea name="notes" maxLength={2000} defaultValue={d.notes??''} rows={2} className="block w-full rounded border bg-background p-2"/></label><button type="submit" className="rounded border border-violet-500 px-3 py-2 text-violet-400">{({nl:'Notities opslaan',fr:'Enregistrer les notes',en:'Save notes',de:'Notizen speichern'} as const)[locale]}</button></form>}
       {d.status==='draft'&&<form action={updateDraftDocumentNumber} className="flex flex-wrap items-end gap-2 text-xs"><input type="hidden" name="document_id" value={d.id}/><label>{t.number}<input name="document_number" maxLength={100} defaultValue={d.document_number??''} className="block rounded border bg-background p-2"/></label><button type="submit" className="rounded border border-violet-500 px-3 py-2 text-violet-400">{({nl:'Nummer opslaan',fr:'Enregistrer le numéro',en:'Save number',de:'Nummer speichern'} as const)[locale]}</button></form>}
       {(d.issue_date||d.due_date)&&<p className="text-xs text-muted-foreground">{({nl:'Factuurdatum',fr:'Date de facture',en:'Issue date',de:'Rechnungsdatum'} as const)[locale]}: {d.issue_date||'—'} · {({nl:'Vervaldatum',fr:'Date d’échéance',en:'Due date',de:'Fälligkeitsdatum'} as const)[locale]}: {d.due_date||'—'}</p>}
-      {d.status==='draft'&&<form action={updateInvoiceDates} className="flex flex-wrap items-end gap-2 text-xs"><input type="hidden" name="document_id" value={d.id}/><label>{({nl:'Factuurdatum',fr:'Date de facture',en:'Issue date',de:'Rechnungsdatum'} as const)[locale]}<input type="date" name="issue_date" defaultValue={d.issue_date??''} className="block rounded border bg-background p-2"/></label><label>{({nl:'Vervaldatum',fr:'Date d’échéance',en:'Due date',de:'Fälligkeitsdatum'} as const)[locale]}<input type="date" name="due_date" defaultValue={d.due_date??''} className="block rounded border bg-background p-2"/></label><button type="submit" className="rounded border border-violet-500 px-3 py-2 text-violet-400">{({nl:'Datums opslaan',fr:'Enregistrer les dates',en:'Save dates',de:'Daten speichern'} as const)[locale]}</button></form>}
+      {d.status==='draft'&&<form action={updateInvoiceDates} className="flex flex-wrap items-end gap-2 text-xs"><input type="hidden" name="document_id" value={d.id}/><label>{({nl:'Factuurdatum',fr:'Date de facture',en:'Issue date',de:'Rechnungsdatum'} as const)[locale]}<input type="date" name="issue_date" defaultValue={d.issue_date??''} className="block rounded border bg-background p-2"/></label><label>{({nl:'Vervaldatum',fr:'Date d’échéance',en:'Due date',de:'Fälligkeitsdatum'} as const)[locale]}<input type="date" name="due_date" defaultValue={d.due_date??''} className="block rounded border bg-background p-2"/></label><label className="flex items-center gap-2"><input type="checkbox" name="use_payment_terms"/>{({nl:'Vervaldatum berekenen via betalingstermijn',fr:'Calculer l’échéance selon les conditions de paiement',en:'Calculate due date from payment terms',de:'Fälligkeit aus Zahlungsziel berechnen'} as const)[locale]}</label><button type="submit" className="rounded border border-violet-500 px-3 py-2 text-violet-400">{({nl:'Datums opslaan',fr:'Enregistrer les dates',en:'Save dates',de:'Daten speichern'} as const)[locale]}</button></form>}
       {d.counterparty_id&&<p className="text-xs text-muted-foreground">{({nl:'Relatie',fr:'Contact',en:'Counterparty',de:'Geschäftspartner'} as const)[locale]}: {counterparties?.find(p=>p.id===d.counterparty_id)?.name??d.counterparty_id}</p>}
       {['approved','issued','paid'].includes(d.status)&&<div className="rounded-lg border p-3 text-xs">
        <p>{({nl:'Geregistreerde betalingen',fr:'Paiements enregistrés',en:'Recorded payments',de:'Erfasste Zahlungen'} as const)[locale]}: {money(paymentTotalFor(d.id))}</p>
