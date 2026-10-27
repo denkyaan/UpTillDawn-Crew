@@ -196,3 +196,23 @@ test("isolated worker returns 400 for malformed or non-UTF8 JSON without upstrea
   assert.equal(calls,0)
  }finally{globalThis.fetch=originalFetch}
 })
+
+test("isolated worker rejects deceptive upstream JSON media types",async()=>{
+ const env={INTERNAL_SIGNING_TOKEN:"internal",SUPABASE_SECRET:"secret",SUPABASE_URL:"https://db.example",DOCUMENSO_URL:"https://sign.example",DOCUMENSO_TOKEN:"token"}
+ const originalFetch=globalThis.fetch
+ try{
+  for(const mediaType of ["application/jsonp","application/json; charset=iso-8859-1","application/json; unexpected=true"]){
+   let calls=0
+   globalThis.fetch=async()=>{
+    calls++
+    if(calls===1)return new Response(JSON.stringify([{envelope_id:"abc",status:"sent",signed_pdf_path:null}]),{headers:{"content-type":mediaType}})
+    throw Error("Provider must not be contacted")
+   }
+   const response=await worker.fetch(new Request("https://worker.example/internal/signing/sync",{
+    method:"POST",headers:{authorization:"Bearer internal","content-type":"application/json"},body:JSON.stringify({envelopeId:"abc"})
+   }),env)
+   assert.equal(response.status,502,mediaType)
+   assert.equal(calls,1)
+  }
+ }finally{globalThis.fetch=originalFetch}
+})
