@@ -13,3 +13,8 @@ test("archive recovery rechecks concurrency and refuses conflicting evidence",()
  assert.match(source,/current\.signedPdfPath===archive\.path/)
  assert.match(source,/Conflicting signed PDF archive already recorded/)
 })
+
+test("already archived signed contracts must still have PDF header and bounded size",()=>{
+ assert.match(source,/bytes\.length<5\|\|bytes\.length>15\*1024\*1024/)
+ assert.match(source,/String\.fromCharCode\(\.\.\.bytes\.slice\(0,5\)\)!=="%PDF-"/)
+})
