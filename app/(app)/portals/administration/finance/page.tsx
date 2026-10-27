@@ -344,8 +344,15 @@ async function recordFinancialPayment(formData:FormData) {
  const bankReference=String(formData.get('bank_reference')??'').trim()
  const uuid=/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
  if(!uuid.test(documentId)||!Number.isFinite(amount)||amount<=0||amount>999999999||!/^[0-9]{4}-[0-9]{2}-[0-9]{2}$/.test(paidOn)||bankReference.length>200)redirect('/portals/administration/finance?error=1')
- const {data:document}=await supabase.from('admin_financial_documents').select('status').eq('id',documentId).single()
- if(!document||!['approved','issued','paid'].includes(document.status))redirect('/portals/administration/finance?error=1')
+ const validDate=!Number.isNaN(Date.parse(paidOn))&&new Date(paidOn).toISOString().slice(0,10)===paidOn
+ if(!validDate||!Number.isInteger(Math.round(amount*100))||Math.abs(amount*100-Math.round(amount*100))>0.000001)redirect('/portals/administration/finance?error=1')
+ const {data:document,error:documentError}=await supabase.from('admin_financial_documents').select('status,gross_amount').eq('id',documentId).maybeSingle()
+ if(documentError||!document||!['approved','issued','paid'].includes(document.status))redirect('/portals/administration/finance?error=1')
+ const {data:existingPayments,error:paymentsError}=await (supabase as unknown as SupabaseClient).from('admin_financial_payments').select('amount').eq('document_id',documentId)
+ if(paymentsError)redirect('/portals/administration/finance?error=1')
+ const paidCents=(existingPayments??[]).reduce((sum:number,p:{amount:number})=>sum+Math.round(Number(p.amount)*100),0)
+ const remainingCents=Math.round(Number(document.gross_amount)*100)-paidCents
+ if(!Number.isSafeInteger(remainingCents)||remainingCents<=0||Math.round(amount*100)>remainingCents)redirect('/portals/administration/finance?error=1')
  const {error}=await (supabase as unknown as SupabaseClient).from('admin_financial_payments').insert({
   document_id:documentId,amount,paid_on:paidOn,bank_reference:bankReference||null
  })
