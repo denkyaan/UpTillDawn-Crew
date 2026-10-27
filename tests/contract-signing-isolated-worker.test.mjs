@@ -75,7 +75,7 @@ test("isolated worker requires JSON media type",async()=>{
 })
 
 test("isolated worker blocks private, local and metadata upstream hosts",async()=>{
- for(const host of ["localhost","127.0.0.1","10.0.0.5","172.16.0.1","192.168.1.2","169.254.169.254","service.internal","[::1]"]){
+ for(const host of ["localhost","127.0.0.1","10.0.0.5","172.16.0.1","192.168.1.2","169.254.169.254","service.internal","service.test","service.invalid","[::1]"]){
   const env={INTERNAL_SIGNING_TOKEN:"internal",SUPABASE_SECRET:"secret",SUPABASE_URL:"https://db.example",DOCUMENSO_URL:"https://"+host,DOCUMENSO_TOKEN:"token"}
   const response=await worker.fetch(new Request("https://worker.example/internal/signing/sync",{
    method:"POST",headers:{authorization:"Bearer internal","content-type":"application/json"},body:JSON.stringify({envelopeId:"abc"})
