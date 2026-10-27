@@ -7,6 +7,12 @@ const copy={
  en:{title:"Administration AI assistant",description:"Ask about administration and follow-ups. The assistant cannot change records or make payments.",placeholder:"What needs my attention today?",send:"Ask AI",busy:"Working…",error:"The AI assistant is unavailable.",empty:"No answer received.",clear:"Clear conversation",invalid:"Check your question and try again."},
  de:{title:"Verwaltungs-KI-Assistent",description:"Stelle Fragen zur Verwaltung. Der Assistent ändert keine Daten und führt keine Zahlungen aus.",placeholder:"Was braucht heute meine Aufmerksamkeit?",send:"KI fragen",busy:"Wird bearbeitet…",error:"Der KI-Assistent ist nicht verfügbar.",empty:"Keine Antwort erhalten.",clear:"Gespräch löschen",invalid:"Überprüfe deine Frage und versuche es erneut."}
 } as const
+const suggestions:Record<SupportedUiLocale,string[]>={
+ nl:["Welke administratie vraagt aandacht?","Welke artiesten hebben opvolging nodig?","Zijn er openstaande werkuren?"],
+ fr:["Quels dossiers demandent une attention ?","Quels artistes nécessitent un suivi ?","Y a-t-il des heures en attente ?"],
+ en:["Which admin items need attention?","Which artists need follow-up?","Are there submitted timesheets?"],
+ de:["Welche Verwaltungsvorgänge brauchen Aufmerksamkeit?","Welche Künstler benötigen Nachverfolgung?","Gibt es eingereichte Arbeitszeiten?"]
+}
 export function AdministrationAiChat({locale}:{locale:SupportedUiLocale}){
  const t=copy[locale]
  const [message,setMessage]=useState("")
@@ -27,6 +33,7 @@ export function AdministrationAiChat({locale}:{locale:SupportedUiLocale}){
  }
  return <section className="space-y-4 rounded-2xl border bg-card p-5">
   <header><h1 className="text-2xl font-bold">{t.title}</h1><p className="mt-2 text-sm text-muted-foreground">{t.description}</p></header>
+  <div className="flex flex-wrap gap-2" aria-label={t.title}>{suggestions[locale].map(prompt=><button key={prompt} type="button" disabled={busy} onClick={()=>setMessage(prompt)} className="rounded-full border px-3 py-2 text-left text-sm hover:bg-muted disabled:opacity-50">{prompt}</button>)}</div>
   <form onSubmit={e=>{e.preventDefault();void submit()}} className="space-y-3">
    <label htmlFor={inputId} className="sr-only">{t.title}</label>
    <textarea id={inputId} value={message} onChange={e=>setMessage(e.target.value)} maxLength={4000} rows={5} placeholder={t.placeholder} className="w-full rounded-xl border bg-background p-3"/>
