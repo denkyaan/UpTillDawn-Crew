@@ -1,4 +1,5 @@
 import "server-only"
+import type {SupabaseClient} from "@supabase/supabase-js"
 import {createClient} from "@/lib/supabase/crew-server"
 import {authorizedContractStorage} from "./contract-archive-access"
 import {createSigningLedger,type SigningLedgerStore} from "./contract-signing-ledger-adapter"
@@ -45,7 +46,7 @@ const map=(row:SigningRow):SigningRecord=>{
 export async function authorizedSigningLedger(){
  await authorizedContractStorage()
  const db=await createClient()
- const table=()=>db.from(TABLE as never) as ReturnType<typeof db.from> 
+ const table=()=> (db as unknown as SupabaseClient).from(TABLE) 
  const store:SigningLedgerStore={
   async find(documentType,documentId,version){
    const {data,error}=await table().select(
@@ -53,7 +54,7 @@ export async function authorizedSigningLedger(){
    ).eq("document_type",documentType).eq("document_id",documentId)
     .eq("document_version",version).maybeSingle()
    if(error)throw new Error("Signing ledger read denied")
-   return data?map(data as SigningRow):null
+   return data?map(data as unknown as SigningRow):null
   },
   async attach(input){
    const {data,error}=await table().update({envelope_id:input.envelopeId,updated_at:new Date().toISOString()})
