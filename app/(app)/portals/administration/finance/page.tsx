@@ -190,13 +190,13 @@ export default async function FinancePage({searchParams}:{searchParams:Promise<{
      <div><p className="font-semibold">{d.document_number || translatedLabel(kindLabels[locale],d.kind)}</p><p className="text-xs text-muted-foreground">{translatedLabel(kindLabels[locale],d.kind)} · {translatedLabel(statusLabels[locale],d.status)}</p></div>
      <div className="w-full space-y-2">
       {(attachments??[]).filter(a=>a.document_id===d.id).map(a=><p key={a.id} className="text-xs text-muted-foreground">{uploadLabels[locale].attachments}: {a.original_name}</p>)}
-      {(lines??[]).filter(line=>line.document_id===d.id).map(line=><p key={line.id} className="text-xs text-muted-foreground">{line.description} · {line.quantity} × {money(Number(line.unit_price))} · {line.vat_rate}% btw</p>)}
+      {(lines??[]).filter(line=>line.document_id===d.id).map(line=><p key={line.id} className="text-xs text-muted-foreground">{line.description} · {line.quantity} × {money(Number(line.unit_price))} · {line.vat_rate}%</p>)}
       {d.status==='draft'&&<form action={addInvoiceLine} className="grid gap-2 rounded-lg border p-3 sm:grid-cols-5">
        <input type="hidden" name="document_id" value={d.id}/>
-       <input name="description" aria-label="Description" placeholder={({nl:'Omschrijving',fr:'Description',en:'Description',de:'Beschreibung'} as const)[locale]} maxLength={500} required className="rounded border bg-background p-2 text-xs sm:col-span-2"/>
-       <input name="quantity" aria-label="Quantity" type="number" min="0.001" max="100000" step="0.001" defaultValue="1" required className="rounded border bg-background p-2 text-xs"/>
-       <input name="unit_price" aria-label="Unit price" type="number" min="0" max="999999999" step="0.0001" placeholder="€" required className="rounded border bg-background p-2 text-xs"/>
-       <input name="vat_rate" aria-label="VAT percentage" type="number" min="0" max="100" step="0.01" defaultValue="21" required className="rounded border bg-background p-2 text-xs"/>
+       <input name="description" aria-label={({nl:"Omschrijving",fr:"Description",en:"Description",de:"Beschreibung"} as const)[locale]} placeholder={({nl:'Omschrijving',fr:'Description',en:'Description',de:'Beschreibung'} as const)[locale]} maxLength={500} required className="rounded border bg-background p-2 text-xs sm:col-span-2"/>
+       <input name="quantity" aria-label={({nl:"Aantal",fr:"Quantité",en:"Quantity",de:"Menge"} as const)[locale]} type="number" min="0.001" max="100000" step="0.001" defaultValue="1" required className="rounded border bg-background p-2 text-xs"/>
+       <input name="unit_price" aria-label={({nl:"Eenheidsprijs",fr:"Prix unitaire",en:"Unit price",de:"Einzelpreis"} as const)[locale]} type="number" min="0" max="999999999" step="0.0001" placeholder="€" required className="rounded border bg-background p-2 text-xs"/>
+       <input name="vat_rate" aria-label={({nl:"Btw-percentage",fr:"Pourcentage TVA",en:"VAT percentage",de:"Mehrwertsteuersatz"} as const)[locale]} type="number" min="0" max="100" step="0.01" defaultValue="21" required className="rounded border bg-background p-2 text-xs"/>
        <button type="submit" className="rounded-lg bg-violet-600 px-3 py-2 text-xs font-semibold text-white sm:col-span-5">{({nl:'Factuurregel toevoegen',fr:'Ajouter une ligne',en:'Add invoice line',de:'Rechnungsposition hinzufügen'} as const)[locale]}</button>
       </form>}
       {['draft','review'].includes(d.status)&&<form action={uploadFinancialAttachment} encType="multipart/form-data" className="flex flex-wrap items-end gap-2">
