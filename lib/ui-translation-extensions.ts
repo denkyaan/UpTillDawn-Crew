@@ -3,6 +3,18 @@ export type ExtendedUiLocale = 'nl' | 'fr' | 'en' | 'de'
 type Row = { fr: string; en: string; de: string }
 
 const EXTENSIONS: Record<string, Row> = {
+  'Administratieve AI-assistent': { fr: 'Assistant IA administratif', en: 'Administration AI assistant', de: 'Verwaltungs-KI-Assistent' },
+  'Assistant IA administratif': { fr: 'Assistant IA administratif', en: 'Administration AI assistant', de: 'Verwaltungs-KI-Assistent' },
+  'Administration AI assistant': { fr: 'Assistant IA administratif', en: 'Administration AI assistant', de: 'Verwaltungs-KI-Assistent' },
+  'Verwaltungs-KI-Assistent': { fr: 'Assistant IA administratif', en: 'Administration AI assistant', de: 'Verwaltungs-KI-Assistent' },
+  'Stel vragen over administratie en opvolging. De assistent voert geen wijzigingen of betalingen uit.': { fr: 'Posez vos questions administratives. L\'assistant ne modifie rien et n\'effectue aucun paiement.', en: 'Ask about administration and follow-ups. The assistant cannot change records or make payments.', de: 'Stelle Fragen zur Verwaltung. Der Assistent ändert keine Daten und führt keine Zahlungen aus.' },
+  'Posez vos questions administratives. L\'assistant ne modifie rien et n\'effectue aucun paiement.': { fr: 'Posez vos questions administratives. L\'assistant ne modifie rien et n\'effectue aucun paiement.', en: 'Ask about administration and follow-ups. The assistant cannot change records or make payments.', de: 'Stelle Fragen zur Verwaltung. Der Assistent ändert keine Daten und führt keine Zahlungen aus.' },
+  'Ask about administration and follow-ups. The assistant cannot change records or make payments.': { fr: 'Posez vos questions administratives. L\'assistant ne modifie rien et n\'effectue aucun paiement.', en: 'Ask about administration and follow-ups. The assistant cannot change records or make payments.', de: 'Stelle Fragen zur Verwaltung. Der Assistent ändert keine Daten und führt keine Zahlungen aus.' },
+  'Stelle Fragen zur Verwaltung. Der Assistent ändert keine Daten und führt keine Zahlungen aus.': { fr: 'Posez vos questions administratives. L\'assistant ne modifie rien et n\'effectue aucun paiement.', en: 'Ask about administration and follow-ups. The assistant cannot change records or make payments.', de: 'Stelle Fragen zur Verwaltung. Der Assistent ändert keine Daten und führt keine Zahlungen aus.' },
+  'Wat vraagt vandaag mijn aandacht?': { fr: 'Que dois-je traiter aujourd\'hui ?', en: 'What needs my attention today?', de: 'Was braucht heute meine Aufmerksamkeit?' },
+  'Que dois-je traiter aujourd\'hui ?': { fr: 'Que dois-je traiter aujourd\'hui ?', en: 'What needs my attention today?', de: 'Was braucht heute meine Aufmerksamkeit?' },
+  'What needs my attention today?': { fr: 'Que dois-je traiter aujourd\'hui ?', en: 'What needs my attention today?', de: 'Was braucht heute meine Aufmerksamkeit?' },
+  'Was braucht heute meine Aufmerksamkeit?': { fr: 'Que dois-je traiter aujourd\'hui ?', en: 'What needs my attention today?', de: 'Was braucht heute meine Aufmerksamkeit?' },
   'Promotieblokkeringen': { fr: 'Blocages promotion', en: 'Promotion restrictions', de: 'Promotion-Sperren' },
   'Blocages promotion': { fr: 'Blocages promotion', en: 'Promotion restrictions', de: 'Promotion-Sperren' },
   'Promotion restrictions': { fr: 'Blocages promotion', en: 'Promotion restrictions', de: 'Promotion-Sperren' },
