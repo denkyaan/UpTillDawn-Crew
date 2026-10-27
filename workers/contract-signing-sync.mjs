@@ -66,7 +66,7 @@ export default {
    if(!input||typeof input!=="object"||Array.isArray(input)||Object.keys(input).length!==1||!Object.hasOwn(input,"envelopeId")||!validId(input.envelopeId))return json({error:"Invalid envelope"},400)
    const base=new URL(env.SUPABASE_URL)
    const provider=new URL(env.DOCUMENSO_URL)
-   if(base.protocol!=="https:"||provider.protocol!=="https:"||base.username||base.password||provider.username||provider.password||base.search||base.hash||provider.search||provider.hash||base.pathname!=="/"||provider.pathname!=="/"||unsafeHost(base.hostname)||unsafeHost(provider.hostname))throw Error("Trusted HTTPS endpoints required")
+   if(base.protocol!=="https:"||provider.protocol!=="https:"||base.username||base.password||provider.username||provider.password||base.search||base.hash||provider.search||provider.hash||base.pathname!=="/"||provider.pathname!=="/"||base.port||provider.port||unsafeHost(base.hostname)||unsafeHost(provider.hostname))throw Error("Trusted HTTPS endpoints required")
    const headers={apikey:env.SUPABASE_SECRET,authorization:`Bearer ${env.SUPABASE_SECRET}`}
    const ledgerUrl=new URL("/rest/v1/administration_contract_signing_requests",base)
    ledgerUrl.searchParams.set("select","envelope_id,status,signed_pdf_path")
