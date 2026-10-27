@@ -3,6 +3,14 @@ export type ExtendedUiLocale = 'nl' | 'fr' | 'en' | 'de'
 type Row = { fr: string; en: string; de: string }
 
 const EXTENSIONS: Record<string, Row> = {
+  "Gesprek wissen": { fr: "Effacer la conversation", en: "Clear conversation", de: "Gespräch löschen" },
+  "Effacer la conversation": { fr: "Effacer la conversation", en: "Clear conversation", de: "Gespräch löschen" },
+  "Clear conversation": { fr: "Effacer la conversation", en: "Clear conversation", de: "Gespräch löschen" },
+  "Gespräch löschen": { fr: "Effacer la conversation", en: "Clear conversation", de: "Gespräch löschen" },
+  "Controleer je vraag en probeer opnieuw.": { fr: "Vérifiez votre question et réessayez.", en: "Check your question and try again.", de: "Überprüfe deine Frage und versuche es erneut." },
+  "Vérifiez votre question et réessayez.": { fr: "Vérifiez votre question et réessayez.", en: "Check your question and try again.", de: "Überprüfe deine Frage und versuche es erneut." },
+  "Check your question and try again.": { fr: "Vérifiez votre question et réessayez.", en: "Check your question and try again.", de: "Überprüfe deine Frage und versuche es erneut." },
+  "Überprüfe deine Frage und versuche es erneut.": { fr: "Vérifiez votre question et réessayez.", en: "Check your question and try again.", de: "Überprüfe deine Frage und versuche es erneut." },
   "Posez vos questions administratives. L'assistant ne modifie rien et n'effectue aucun paiement.": { fr: "Posez vos questions administratives. L'assistant ne modifie rien et n'effectue aucun paiement.", en: "Ask about administration and follow-ups. The assistant cannot change records or make payments.", de: "Stelle Fragen zur Verwaltung. Der Assistent ändert keine Daten und führt keine Zahlungen aus." },
   "Que dois-je traiter aujourd'hui ?": { fr: "Que dois-je traiter aujourd'hui ?", en: "What needs my attention today?", de: "Was braucht heute meine Aufmerksamkeit?" },
   'Administratieve AI-assistent': { fr: 'Assistant IA administratif', en: 'Administration AI assistant', de: 'Verwaltungs-KI-Assistent' },
