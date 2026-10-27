@@ -4,6 +4,20 @@
 const validId=value=>typeof value==="string"&&/^[A-Za-z0-9_-]{1,128}$/.test(value)
 const allowed={draft:["sent","completed","rejected","cancelled"],sent:["completed","rejected","cancelled"]}
 const mapStatus={DRAFT:"draft",PENDING:"sent",COMPLETED:"completed",REJECTED:"rejected",CANCELLED:"cancelled"}
+const unsafeHost=hostname=>{
+ const host=hostname.toLowerCase().replace(/\.$/,"")
+ if(host==="localhost"||host.endsWith(".localhost")||host.endsWith(".local")||host.endsWith(".internal"))return true
+ if(host.startsWith("[")&&host.endsWith("]"))return true
+ if(/^[0-9.]+$/.test(host)){
+  const parts=host.split(".").map(Number)
+  if(parts.length!==4||parts.some(x=>!Number.isInteger(x)||x<0||x>255))return true
+  return parts[0]===0||parts[0]===10||parts[0]===127||parts[0]>=224||
+   (parts[0]===169&&parts[1]===254)||(parts[0]===172&&parts[1]>=16&&parts[1]<=31)||
+   (parts[0]===192&&parts[1]===168)||(parts[0]===100&&parts[1]>=64&&parts[1]<=127)||
+   (parts[0]===198&&(parts[1]===18||parts[1]===19))
+ }
+ return false
+}
 const json=(body,status=200)=>new Response(JSON.stringify(body),{status,headers:{"content-type":"application/json","cache-control":"no-store"}})
 async function readBounded(stream,maxBytes){
  if(!stream)return new Uint8Array()
@@ -50,7 +64,7 @@ export default {
    if(!input||typeof input!=="object"||Array.isArray(input)||Object.keys(input).length!==1||!Object.hasOwn(input,"envelopeId")||!validId(input.envelopeId))return json({error:"Invalid envelope"},400)
    const base=new URL(env.SUPABASE_URL)
    const provider=new URL(env.DOCUMENSO_URL)
-   if(base.protocol!=="https:"||provider.protocol!=="https:"||base.username||base.password||provider.username||provider.password||base.search||base.hash||provider.search||provider.hash||base.pathname!=="/"||provider.pathname!=="/")throw Error("Trusted HTTPS endpoints required")
+   if(base.protocol!=="https:"||provider.protocol!=="https:"||base.username||base.password||provider.username||provider.password||base.search||base.hash||provider.search||provider.hash||base.pathname!=="/"||provider.pathname!=="/"||unsafeHost(base.hostname)||unsafeHost(provider.hostname))throw Error("Trusted HTTPS endpoints required")
    const headers={apikey:env.SUPABASE_SECRET,authorization:`Bearer ${env.SUPABASE_SECRET}`}
    const ledgerUrl=new URL("/rest/v1/administration_contract_signing_requests",base)
    ledgerUrl.searchParams.set("select","envelope_id,status,signed_pdf_path")
