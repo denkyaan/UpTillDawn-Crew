@@ -7,5 +7,7 @@ test("signing sync reloads the ledger before remote reconciliation",()=>{
  assert.match(source,/current\.envelopeId!==record\.envelopeId/)
  assert.match(source,/current\.sourceSha256!==record\.sourceSha256/)
  assert.match(source,/current\.state!==record\.state/)
- assert.match(source,/reconcileSigningState\(current\.state,remote\.status\)/)
+ assert.match(source,/reconcileSigningState\(afterRemote\.state,remote\.status\)/)
+ assert.match(source,/afterRemote\.state!==current\.state/)
+ assert.match(source,/afterRemote\.signedPdfPath!==current\.signedPdfPath/)
 })
