@@ -15,7 +15,9 @@ const unsafeHost=hostname=>{
   if(parts.length!==4||parts.some(x=>!Number.isInteger(x)||x<0||x>255))return true
   return parts[0]===0||parts[0]===10||parts[0]===127||parts[0]>=224||
    (parts[0]===169&&parts[1]===254)||(parts[0]===172&&parts[1]>=16&&parts[1]<=31)||
-   (parts[0]===192&&parts[1]===168)||(parts[0]===100&&parts[1]>=64&&parts[1]<=127)||
+   (parts[0]===192&&(parts[1]===168||(parts[1]===0&&parts[2]===0)||(parts[1]===0&&parts[2]===2)||(parts[1]===88&&parts[2]===99)))||
+   (parts[0]===198&&parts[1]===51&&parts[2]===100)||(parts[0]===203&&parts[1]===0&&parts[2]===113)||
+   (parts[0]===100&&parts[1]>=64&&parts[1]<=127)||
    (parts[0]===198&&(parts[1]===18||parts[1]===19))
  }
  return false
