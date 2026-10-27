@@ -337,6 +337,7 @@ export type Database = {
           kind: string
           net_amount: number
           notes: string | null
+          original_invoice_id: string | null
           peppol_message_id: string | null
           peppol_status: string
           status: string
@@ -360,6 +361,7 @@ export type Database = {
           kind: string
           net_amount?: number
           notes?: string | null
+          original_invoice_id?: string | null
           peppol_message_id?: string | null
           peppol_status?: string
           status?: string
@@ -383,6 +385,7 @@ export type Database = {
           kind?: string
           net_amount?: number
           notes?: string | null
+          original_invoice_id?: string | null
           peppol_message_id?: string | null
           peppol_status?: string
           status?: string
@@ -390,6 +393,13 @@ export type Database = {
           updated_at?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "admin_financial_documents_original_invoice_id_fkey"
+            columns: ["original_invoice_id"]
+            isOneToOne: false
+            referencedRelation: "admin_financial_documents"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "admin_financial_documents_counterparty_id_fkey"
             columns: ["counterparty_id"]
