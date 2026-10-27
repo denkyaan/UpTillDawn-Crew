@@ -32,3 +32,12 @@ test("isolated signing worker rejects declared oversized body",async()=>{
  }),env)
  assert.equal(response.status,413)
 })
+
+test("isolated signing worker refuses credential-bearing upstream URLs before network access",async()=>{
+ const env={INTERNAL_SIGNING_TOKEN:"internal",SUPABASE_SECRET:"secret",SUPABASE_URL:"https://user:password@db.example",DOCUMENSO_URL:"https://sign.example",DOCUMENSO_TOKEN:"token"}
+ const response=await worker.fetch(new Request("https://worker.example/internal/signing/sync",{
+  method:"POST",headers:{authorization:"Bearer internal","content-type":"application/json"},
+  body:JSON.stringify({envelopeId:"abc"})
+ }),env)
+ assert.equal(response.status,502)
+})
