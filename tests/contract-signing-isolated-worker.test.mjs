@@ -125,3 +125,23 @@ test("isolated worker reconciles completed provider state using conditional data
   assert.deepEqual(JSON.parse(calls[2].options.body),{p_envelope_id:"abc",p_expected_status:"sent",p_next_status:"completed"})
  }finally{globalThis.fetch=originalFetch}
 })
+
+test("isolated worker refuses malformed ledger rows before contacting provider",async()=>{
+ const env={INTERNAL_SIGNING_TOKEN:"internal",SUPABASE_SECRET:"secret",SUPABASE_URL:"https://db.example",DOCUMENSO_URL:"https://sign.example",DOCUMENSO_TOKEN:"token"}
+ const originalFetch=globalThis.fetch
+ for(const row of [null,[],{envelope_id:"abc",status:"sent",signed_pdf_path:"signed.pdf"},{envelope_id:"wrong",status:"sent",signed_pdf_path:null}]){
+  let calls=0
+  globalThis.fetch=async()=>{
+   calls++
+   if(calls===1)return new Response(JSON.stringify([row]))
+   throw Error("Provider must not be contacted")
+  }
+  try{
+   const response=await worker.fetch(new Request("https://worker.example/internal/signing/sync",{
+    method:"POST",headers:{authorization:"Bearer internal","content-type":"application/json"},body:JSON.stringify({envelopeId:"abc"})
+   }),env)
+   assert.equal(response.status,409)
+   assert.equal(calls,1)
+  }finally{globalThis.fetch=originalFetch}
+ }
+})
