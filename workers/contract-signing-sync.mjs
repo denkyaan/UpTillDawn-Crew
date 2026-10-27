@@ -74,19 +74,19 @@ export default {
    const ledgerUrl=new URL("/rest/v1/administration_contract_signing_requests",base)
    ledgerUrl.searchParams.set("select","envelope_id,status,signed_pdf_path")
    ledgerUrl.searchParams.set("envelope_id",`eq.${input.envelopeId}`)
-   const ledgerResponse=await fetch(ledgerUrl,{headers,redirect:"error"})
+   const ledgerResponse=await fetch(ledgerUrl,{headers,redirect:"error",cache:"no-store"})
    const rows=await boundedJson(ledgerResponse)
    if(!Array.isArray(rows)||rows.length!==1||!rows[0]||typeof rows[0]!=="object"||Array.isArray(rows[0])||rows[0].envelope_id!==input.envelopeId||rows[0].signed_pdf_path!==null||typeof rows[0].status!=="string"||!["draft","sent","completed","rejected","cancelled"].includes(rows[0].status))return json({error:"Ledger not eligible"},409)
    const current=rows[0].status
    if(!allowed[current])return json({state:current,updated:false})
    const remoteUrl=new URL("/api/v2/envelope/"+encodeURIComponent(input.envelopeId),provider)
-   const remote=await boundedJson(await fetch(remoteUrl,{headers:{authorization:`Bearer ${env.DOCUMENSO_TOKEN}`},redirect:"error"}))
+   const remote=await boundedJson(await fetch(remoteUrl,{headers:{authorization:`Bearer ${env.DOCUMENSO_TOKEN}`},redirect:"error",cache:"no-store"}))
    if(!remote||typeof remote!=="object"||Array.isArray(remote)||remote.id!==input.envelopeId||typeof remote.status!=="string"||!Object.hasOwn(mapStatus,remote.status))return json({error:"Remote evidence mismatch"},409)
    const next=mapStatus[remote.status]
    if(next===current)return json({state:current,updated:false})
    if(!allowed[current].includes(next))return json({error:"Invalid state transition"},409)
    const rpcUrl=new URL("/rest/v1/rpc/upt_server_transition_contract_signing",base)
-   const result=await boundedJson(await fetch(rpcUrl,{method:"POST",redirect:"error",headers:{...headers,"content-type":"application/json"},body:JSON.stringify({p_envelope_id:input.envelopeId,p_expected_status:current,p_next_status:next})}))
+   const result=await boundedJson(await fetch(rpcUrl,{method:"POST",redirect:"error",cache:"no-store",headers:{...headers,"content-type":"application/json"},body:JSON.stringify({p_envelope_id:input.envelopeId,p_expected_status:current,p_next_status:next})}))
    if(result!==true)return json({error:"Concurrent signing update"},409)
    return json({state:next,updated:true})
   }catch(error){
