@@ -1,0 +1,15 @@
+import test from 'node:test'
+import assert from 'node:assert/strict'
+import {readFileSync} from 'node:fs'
+const nav=readFileSync('components/administration/administration-navigation.tsx','utf8')
+test('all administration subtabs have contextual icons',()=>{
+ const slugs=[...nav.matchAll(/slugs:\[([^\]]+)\]/g)].flatMap(x=>[...x[1].matchAll(/"([^"]+)"/g)].map(y=>y[1]))
+ const map=nav.slice(nav.indexOf('const subtabIcons:'),nav.indexOf('export function AdministrationNavigation'))
+ for(const slug of slugs)assert.ok(map.includes(slug.includes('-')?'"'+slug+'"':slug+':'),slug+' icon missing')
+ assert.match(nav,/const Icon=subtabIcons\[slug\]/)
+})
+test('mobile navigation has fixed category and subtab controls without popup',()=>{
+ assert.doesNotMatch(nav,/ChevronDown|setOpened|absolute inset-x-0 bottom-full/)
+ assert.match(nav,/aria-pressed=\{selected\.key===group\.key\}/)
+ assert.match(nav,/className="fixed inset-x-0 bottom-0/)
+})
