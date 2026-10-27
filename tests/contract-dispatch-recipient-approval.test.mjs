@@ -21,3 +21,7 @@ test("recipient pattern accepts normal email and rejects spaces and missing doma
  assert.equal(pattern.test("artist name@example.com"),false)
  assert.equal(pattern.test("artist@example\\com"),false)
 })
+
+test("dispatch rejects signing records with an existing signed archive",()=>{
+ assert.match(source,/record\?\.signedPdfPath!==null/)
+})
