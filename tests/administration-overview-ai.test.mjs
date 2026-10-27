@@ -2,9 +2,12 @@ import test from 'node:test'
 import assert from 'node:assert/strict'
 import {readFileSync} from 'node:fs'
 const page=readFileSync('app/(app)/portals/[portal]/page.tsx','utf8')
-test('administration overview shows a direct AI assistant entry in all four languages',()=>{
+const chat=readFileSync('components/administration/administration-ai-chat.tsx','utf8')
+test('administration overview embeds usable AI chat and retains workspace link',()=>{
  const section=page.slice(page.indexOf('{!promotion && <section className="space-y-4"'),page.indexOf('{!promotion && <nav'))
+ assert.match(section,/<AdministrationAiChat locale=\{locale\}/)
  assert.match(section,/href="\/portals\/administration\/modules\/ai"/)
- for(const label of ['AI-assistent','Assistant IA','AI assistant','KI-Assistent'])assert.ok(section.includes(label),label)
- assert.match(section,/focus-visible:outline/)
+ assert.match(chat,/fetch\("\/api\/administration\/assistant"/)
+ assert.match(chat,/onSubmit=/)
+ for(const label of ['Open AI-werkruimte',"Ouvrir l'espace IA",'Open AI workspace','KI-Arbeitsbereich öffnen'])assert.ok(section.includes(label),label)
 })
