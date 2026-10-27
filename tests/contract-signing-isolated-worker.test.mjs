@@ -179,3 +179,20 @@ test("isolated worker rejects non-JSON upstream evidence without contacting sign
   assert.equal(calls,1)
  }finally{globalThis.fetch=originalFetch}
 })
+
+test("isolated worker returns 400 for malformed or non-UTF8 JSON without upstream calls",async()=>{
+ const env={INTERNAL_SIGNING_TOKEN:"internal",SUPABASE_SECRET:"secret",SUPABASE_URL:"https://db.example",DOCUMENSO_URL:"https://sign.example",DOCUMENSO_TOKEN:"token"}
+ const originalFetch=globalThis.fetch
+ let calls=0
+ globalThis.fetch=async()=>{calls++;throw Error("Unexpected network call")}
+ try{
+  for(const body of ['{"envelopeId":',new Uint8Array([0xff,0xfe])]){
+   const response=await worker.fetch(new Request("https://worker.example/internal/signing/sync",{
+    method:"POST",headers:{authorization:"Bearer internal","content-type":"application/json"},body
+   }),env)
+   assert.equal(response.status,400)
+   assert.deepEqual(await response.json(),{error:"Invalid JSON request"})
+  }
+  assert.equal(calls,0)
+ }finally{globalThis.fetch=originalFetch}
+})
