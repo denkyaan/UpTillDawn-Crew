@@ -2,7 +2,7 @@ name: CI
 
 on:
   push:
-    branches: [main, staging, 'feat/admin-portal-dashboard-v22']
+    branches: [main, 'feat/admin-portal-dashboard-v22']
   pull_request:
     branches: [main, staging]
   workflow_dispatch:
