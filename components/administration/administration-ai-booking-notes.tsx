@@ -1,5 +1,5 @@
 "use client"
-import {useState} from "react"
+import {useEffect,useState} from "react"
 import type {SupportedUiLocale} from "@/lib/locale-preferences"
 const labels={
  nl:{title:"Interne boekingsnotities wijzigen",id:"Boeking-ID",load:"Boeking ophalen",notes:"Nieuwe interne notities",save:"Bevestigen en opslaan",cancel:"Annuleren",success:"Notities opgeslagen.",error:"De wijziging kon niet worden uitgevoerd. Herlaad de boeking.",locked:"Geannuleerde boekingen zijn vergrendeld."},
@@ -8,18 +8,19 @@ const labels={
  de:{title:"Interne Buchungsnotizen ändern",id:"Buchungs-ID",load:"Buchung laden",notes:"Neue interne Notizen",save:"Bestätigen und speichern",cancel:"Abbrechen",success:"Notizen gespeichert.",error:"Änderung fehlgeschlagen. Buchung neu laden.",locked:"Stornierte Buchungen sind gesperrt."}
 } as const
 type Booking={id:string;artist_name:string;status:string;internal_notes:string|null}
-export function AdministrationAiBookingNotes({locale}:{locale:SupportedUiLocale}){
+export function AdministrationAiBookingNotes({locale,initialBookingId}:{locale:SupportedUiLocale;initialBookingId?:string}){
  const t=labels[locale]
- const [id,setId]=useState("")
+ const [id,setId]=useState(initialBookingId??"")
  const [booking,setBooking]=useState<Booking|null>(null)
  const [notes,setNotes]=useState("")
  const [busy,setBusy]=useState(false)
  const [feedback,setFeedback]=useState("")
- async function load(){
+ useEffect(()=>{if(initialBookingId&&/^[0-9a-f-]{36}$/i.test(initialBookingId)){void load(initialBookingId)}},[initialBookingId])
+ async function load(targetId=id){
   if(busy)return
   setBusy(true);setFeedback("");setBooking(null)
   try{
-   const response=await fetch("/api/administration/assistant/booking-notes?bookingId="+encodeURIComponent(id),{cache:"no-store"})
+   const response=await fetch("/api/administration/assistant/booking-notes?bookingId="+encodeURIComponent(targetId),{cache:"no-store"})
    const payload=await response.json() as {booking?:Booking}
    if(!response.ok||!payload.booking){setFeedback(t.error);return}
    setBooking(payload.booking)
@@ -37,7 +38,7 @@ export function AdministrationAiBookingNotes({locale}:{locale:SupportedUiLocale}
  }
  return <section className="space-y-3 rounded-2xl border bg-card p-5">
   <h2 className="text-lg font-semibold">{t.title}</h2>
-  <form onSubmit={event=>{event.preventDefault();void load()}} className="flex flex-wrap gap-2">
+  <form onSubmit={event=>{event.preventDefault();void load(id)}} className="flex flex-wrap gap-2">
    <label className="min-w-0 flex-1 text-sm">{t.id}<input value={id} onChange={event=>{setId(event.target.value);setBooking(null)}} required maxLength={36} className="mt-1 w-full rounded-lg border bg-background p-2"/></label>
    <button type="submit" disabled={busy} className="self-end rounded-lg border px-3 py-2 text-sm disabled:opacity-50">{t.load}</button>
   </form>
