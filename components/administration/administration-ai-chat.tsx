@@ -21,7 +21,7 @@ export function AdministrationAiChat({locale}:{locale:SupportedUiLocale}){
   try{
    const response=await fetch("/api/administration/assistant",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({message:value,locale,history:history.slice(-8)})})
    const payload=await response.json() as {answer?:string;error?:string}
-   if(response.ok&&payload.answer){setHistory(previous=>[...previous,{role:"user",content:value},{role:"assistant",content:payload.answer!}].slice(-20));setMessage("")}
+   if(response.ok&&payload.answer){setHistory(previous=>[...previous,{role:"user" as const,content:value},{role:"assistant" as const,content:payload.answer!}].slice(-20));setMessage("")}
    else setError(t.error)
   }catch{setError(t.error)}finally{setBusy(false)}
  }
