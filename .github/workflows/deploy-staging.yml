@@ -74,7 +74,26 @@ jobs:
       - name: Staging dry-run
         run: npx wrangler deploy --dry-run --config wrangler.staging.jsonc
       - name: Deploy staging only
-        run: npx wrangler deploy --config wrangler.staging.jsonc
+        shell: bash
+        run: |
+          set -euo pipefail
+          # Cloudflare asset-upload sessions can fail transiently with API 10013.
+          # Retry only that exact error; all other failures remain immediate.
+          for attempt in 1 2 3; do
+            log=$(mktemp)
+            if npx wrangler deploy --config wrangler.staging.jsonc 2>&1 | tee "$log"; then
+              rm -f "$log"
+              exit 0
+            fi
+            if ! grep -qE '(code: 10013|\\[code: 10013\\])' "$log" || [ "$attempt" -eq 3 ]; then
+              rm -f "$log"
+              echo "::error::Staging deployment failed (attempt $attempt/3)"
+              exit 1
+            fi
+            rm -f "$log"
+            echo "::warning::Cloudflare asset-upload API 10013; retrying staging deploy ($attempt/3)"
+            sleep $((attempt * 15))
+          done
       - name: Configure staging-only self-healing dispatcher
         shell: bash
         env:
