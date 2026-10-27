@@ -1,0 +1,34 @@
+"use client"
+import {useState} from "react"
+import type {SupportedUiLocale} from "@/lib/locale-preferences"
+const copy={
+ nl:{title:"Administratieve AI-assistent",description:"Stel vragen over administratie en opvolging. De assistent voert geen wijzigingen of betalingen uit.",placeholder:"Wat vraagt vandaag mijn aandacht?",send:"Vraag stellen",busy:"Bezig…",error:"De AI-assistent is momenteel niet beschikbaar.",empty:"Geen antwoord ontvangen."},
+ fr:{title:"Assistant IA administratif",description:"Posez vos questions administratives. L'assistant ne modifie rien et n'effectue aucun paiement.",placeholder:"Que dois-je traiter aujourd'hui ?",send:"Envoyer",busy:"En cours…",error:"L'assistant IA est indisponible.",empty:"Aucune réponse reçue."},
+ en:{title:"Administration AI assistant",description:"Ask about administration and follow-ups. The assistant cannot change records or make payments.",placeholder:"What needs my attention today?",send:"Ask AI",busy:"Working…",error:"The AI assistant is unavailable.",empty:"No answer received."},
+ de:{title:"Verwaltungs-KI-Assistent",description:"Stelle Fragen zur Verwaltung. Der Assistent ändert keine Daten und führt keine Zahlungen aus.",placeholder:"Was braucht heute meine Aufmerksamkeit?",send:"KI fragen",busy:"Wird bearbeitet…",error:"Der KI-Assistent ist nicht verfügbar.",empty:"Keine Antwort erhalten."}
+} as const
+export function AdministrationAiChat({locale}:{locale:SupportedUiLocale}){
+ const t=copy[locale]
+ const [message,setMessage]=useState("")
+ const [answer,setAnswer]=useState("")
+ const [busy,setBusy]=useState(false)
+ async function submit(){
+  const value=message.trim()
+  if(!value||busy)return
+  setBusy(true);setAnswer("")
+  try{
+   const response=await fetch("/api/administration/assistant",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({message:value,locale})})
+   const payload=await response.json() as {answer?:string;error?:string}
+   setAnswer(response.ok?(payload.answer||t.empty):t.error)
+  }catch{setAnswer(t.error)}finally{setBusy(false)}
+ }
+ return <section className="space-y-4 rounded-2xl border bg-card p-5">
+  <header><h1 className="text-2xl font-bold">{t.title}</h1><p className="mt-2 text-sm text-muted-foreground">{t.description}</p></header>
+  <form onSubmit={e=>{e.preventDefault();void submit()}} className="space-y-3">
+   <label htmlFor="administration-ai-question" className="sr-only">{t.title}</label>
+   <textarea id="administration-ai-question" value={message} onChange={e=>setMessage(e.target.value)} maxLength={4000} rows={5} placeholder={t.placeholder} className="w-full rounded-xl border bg-background p-3"/>
+   <button type="submit" disabled={busy||!message.trim()} className="rounded-xl bg-violet-600 px-4 py-3 font-semibold text-white disabled:opacity-50">{busy?t.busy:t.send}</button>
+  </form>
+  {answer&&<div aria-live="polite" className="whitespace-pre-wrap rounded-xl bg-muted p-4 text-sm">{answer}</div>}
+ </section>
+}
