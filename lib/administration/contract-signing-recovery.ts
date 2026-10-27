@@ -41,6 +41,10 @@ export async function recoverSignedContractArchive(input:{
   version:record.version,persistedEnvelopeId:record.envelopeId,
   approvedVersionVerified:input.approvedVersionVerified,client
  })
+ const current=await ledger.load({documentType:record.documentType,documentId:record.documentId,version:record.version})
+ if(!current||current.envelopeId!==record.envelopeId||current.state!=="completed"||current.sourceSha256!==record.sourceSha256)throw new Error("Signing record changed after archival")
+ if(current.signedPdfPath===archive.path)return {path:archive.path,recovered:false}
+ if(current.signedPdfPath)throw new Error("Conflicting signed PDF archive already recorded")
  const saved=await ledger.recordSignedPdf({envelopeId:record.envelopeId,path:archive.path})
  if(!saved)throw new Error("Signed PDF archived but ledger update requires reconciliation")
  return {path:archive.path,recovered:true}
