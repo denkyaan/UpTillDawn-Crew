@@ -172,6 +172,18 @@ async function removeInvoiceLine(formData:FormData) {
  redirect('/portals/administration/finance')
 }
 
+async function updateDraftDocumentNumber(formData:FormData) {
+ 'use server'
+ const {supabase}=await requireAdministration()
+ const id=String(formData.get('document_id')??'')
+ const documentNumber=String(formData.get('document_number')??'').trim()
+ if(!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id)||documentNumber.length>100)redirect('/portals/administration/finance?error=1')
+ const {data,error}=await supabase.from('admin_financial_documents').update({document_number:documentNumber||null}).eq('id',id).eq('status','draft').select('id')
+ if(error||data?.length!==1)redirect('/portals/administration/finance?error=1')
+ revalidatePath('/portals/administration/finance')
+ redirect('/portals/administration/finance')
+}
+
 async function updateInvoiceDates(formData:FormData) {
  'use server'
  const {supabase}=await requireAdministration()
@@ -368,6 +380,7 @@ export default async function FinancePage({searchParams}:{searchParams:Promise<{
     <div className="space-y-3">{documents.map(d=><article key={d.id} className="flex flex-wrap items-center justify-between gap-2 border-b pb-3">
      <div><p className="font-semibold">{d.document_number || translatedLabel(kindLabels[locale],d.kind)}</p><p className="text-xs text-muted-foreground">{translatedLabel(kindLabels[locale],d.kind)} · {translatedLabel(statusLabels[locale],d.status)}{d.original_invoice_id&&<> · {({nl:'Factuur',fr:'Facture',en:'Invoice',de:'Rechnung'} as const)[locale]}: {documents?.find(invoice=>invoice.id===d.original_invoice_id)?.document_number||d.original_invoice_id}</>}</p></div>
      <div className="w-full space-y-2">
+      {d.status==='draft'&&<form action={updateDraftDocumentNumber} className="flex flex-wrap items-end gap-2 text-xs"><input type="hidden" name="document_id" value={d.id}/><label>{t.number}<input name="document_number" maxLength={100} defaultValue={d.document_number??''} className="block rounded border bg-background p-2"/></label><button type="submit" className="rounded border border-violet-500 px-3 py-2 text-violet-400">{({nl:'Nummer opslaan',fr:'Enregistrer le numéro',en:'Save number',de:'Nummer speichern'} as const)[locale]}</button></form>}
       {(d.issue_date||d.due_date)&&<p className="text-xs text-muted-foreground">{({nl:'Factuurdatum',fr:'Date de facture',en:'Issue date',de:'Rechnungsdatum'} as const)[locale]}: {d.issue_date||'—'} · {({nl:'Vervaldatum',fr:'Date d’échéance',en:'Due date',de:'Fälligkeitsdatum'} as const)[locale]}: {d.due_date||'—'}</p>}
       {d.status==='draft'&&<form action={updateInvoiceDates} className="flex flex-wrap items-end gap-2 text-xs"><input type="hidden" name="document_id" value={d.id}/><label>{({nl:'Factuurdatum',fr:'Date de facture',en:'Issue date',de:'Rechnungsdatum'} as const)[locale]}<input type="date" name="issue_date" defaultValue={d.issue_date??''} className="block rounded border bg-background p-2"/></label><label>{({nl:'Vervaldatum',fr:'Date d’échéance',en:'Due date',de:'Fälligkeitsdatum'} as const)[locale]}<input type="date" name="due_date" defaultValue={d.due_date??''} className="block rounded border bg-background p-2"/></label><button type="submit" className="rounded border border-violet-500 px-3 py-2 text-violet-400">{({nl:'Datums opslaan',fr:'Enregistrer les dates',en:'Save dates',de:'Daten speichern'} as const)[locale]}</button></form>}
       {d.counterparty_id&&<p className="text-xs text-muted-foreground">{({nl:'Relatie',fr:'Contact',en:'Counterparty',de:'Geschäftspartner'} as const)[locale]}: {counterparties?.find(p=>p.id===d.counterparty_id)?.name??d.counterparty_id}</p>}
