@@ -90,8 +90,8 @@ test("isolated worker rejects null provider response without updating ledger",as
  let calls=0
  globalThis.fetch=async()=>{
   calls++
-  if(calls===1)return new Response(JSON.stringify([{envelope_id:"abc",status:"sent",signed_pdf_path:null}]),{status:200})
-  if(calls===2)return new Response("null",{status:200})
+  if(calls===1)return new Response(JSON.stringify([{envelope_id:"abc",status:"sent",signed_pdf_path:null}]),{status:200,headers:{"content-type":"application/json"}})
+  if(calls===2)return new Response("null",{status:200,headers:{"content-type":"application/json"}})
   throw Error("Unexpected database mutation")
  }
  try{
@@ -109,9 +109,9 @@ test("isolated worker reconciles completed provider state using conditional data
  const calls=[]
  globalThis.fetch=async (url,options={})=>{
   calls.push({url:String(url),options})
-  if(calls.length===1)return new Response(JSON.stringify([{envelope_id:"abc",status:"sent",signed_pdf_path:null}]))
-  if(calls.length===2)return new Response(JSON.stringify({id:"abc",status:"COMPLETED"}))
-  if(calls.length===3)return new Response("true")
+  if(calls.length===1)return new Response(JSON.stringify([{envelope_id:"abc",status:"sent",signed_pdf_path:null}]),{headers:{"content-type":"application/json"}})
+  if(calls.length===2)return new Response(JSON.stringify({id:"abc",status:"COMPLETED"}),{headers:{"content-type":"application/json"}})
+  if(calls.length===3)return new Response("true",{headers:{"content-type":"application/json"}})
   throw Error("Unexpected network request")
  }
  try{
@@ -133,7 +133,7 @@ test("isolated worker refuses malformed ledger rows before contacting provider",
   let calls=0
   globalThis.fetch=async()=>{
    calls++
-   if(calls===1)return new Response(JSON.stringify([row]))
+   if(calls===1)return new Response(JSON.stringify([row]),{headers:{"content-type":"application/json"}})
    throw Error("Provider must not be contacted")
   }
   try{
@@ -159,5 +159,23 @@ test("isolated worker refuses nonstandard upstream HTTPS ports before network ac
    assert.equal(response.status,502)
   }
   assert.equal(calls,0)
+ }finally{globalThis.fetch=originalFetch}
+})
+
+test("isolated worker rejects non-JSON upstream evidence without contacting signing provider",async()=>{
+ const env={INTERNAL_SIGNING_TOKEN:"internal",SUPABASE_SECRET:"secret",SUPABASE_URL:"https://db.example",DOCUMENSO_URL:"https://sign.example",DOCUMENSO_TOKEN:"token"}
+ const originalFetch=globalThis.fetch
+ let calls=0
+ globalThis.fetch=async()=>{
+  calls++
+  if(calls===1)return new Response(JSON.stringify([{envelope_id:"abc",status:"sent",signed_pdf_path:null}]),{headers:{"content-type":"text/plain"}})
+  throw Error("Unexpected provider request")
+ }
+ try{
+  const response=await worker.fetch(new Request("https://worker.example/internal/signing/sync",{
+   method:"POST",headers:{authorization:"Bearer internal","content-type":"application/json"},body:JSON.stringify({envelopeId:"abc"})
+  }),env)
+  assert.equal(response.status,502)
+  assert.equal(calls,1)
  }finally{globalThis.fetch=originalFetch}
 })
