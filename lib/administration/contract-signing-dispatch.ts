@@ -1,6 +1,7 @@
 import "server-only"
 import type {ContractDocument} from "./contract-document"
 import type {SigningRecord,SigningLedger} from "./contract-signing-ledger"
+import {signingDispatchEnabled} from "./documenso"
 import {checkContractDispatchReadiness} from "./contract-dispatch-readiness"
 import {distributeContractSigningDraft,getContractSigningStatus} from "./documenso-envelope"
 import {reconcileSigningState} from "./contract-signing-status"
@@ -22,6 +23,7 @@ export async function dispatchApprovedSigningEnvelope(input:{
  confirmedByOperator:boolean
 }):Promise<"sent"|"already_sent">{
  if(input.confirmedByOperator!==true)throw new Error("Explicit dispatch confirmation required")
+ if(!signingDispatchEnabled())throw new Error("Signing dispatch disabled until trusted backend and provider validation are complete")
  const latest=await input.ledger.load({
   documentType:input.record.documentType,
   documentId:input.record.documentId,version:input.record.version
