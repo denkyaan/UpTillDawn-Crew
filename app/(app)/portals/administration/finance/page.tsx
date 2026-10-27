@@ -279,6 +279,12 @@ async function createPaymentReminder(formData:FormData) {
  const body=String(formData.get('body')??'').trim()
  const uuid=/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
  if(!uuid.test(documentId)||recipient.length<3||recipient.length>320||!recipient.includes('@')||subject.length<1||subject.length>200||body.length<1||body.length>10000)redirect('/portals/administration/finance?error=1')
+ const {data:invoice,error:invoiceError}=await supabase.from('admin_financial_documents').select('id,kind,status,gross_amount,due_date').eq('id',documentId).maybeSingle()
+ if(invoiceError||!invoice||invoice.kind!=='sales_invoice'||!['approved','issued'].includes(invoice.status)||!invoice.due_date||invoice.due_date>=new Date().toISOString().slice(0,10))redirect('/portals/administration/finance?error=1')
+ const {data:paymentRows,error:paymentError}=await (supabase as unknown as SupabaseClient).from('admin_financial_payments').select('amount').eq('document_id',documentId)
+ if(paymentError)redirect('/portals/administration/finance?error=1')
+ const paid=(paymentRows??[]).reduce((total:number,p:{amount:number})=>total+Number(p.amount),0)
+ if(!Number.isFinite(paid)||Number(invoice.gross_amount)-paid<=0.005)redirect('/portals/administration/finance?error=1')
  const {data:existing,error:lookupError}=await (supabase as unknown as SupabaseClient).from('admin_payment_reminders').select('reminder_number').eq('document_id',documentId).order('reminder_number',{ascending:false}).limit(1)
  if(lookupError)redirect('/portals/administration/finance?error=1')
  const next=(Number(existing?.[0]?.reminder_number??0))+1
