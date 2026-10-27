@@ -24,10 +24,12 @@ async function createProposal(form:FormData){
  const title=String(form.get("title")??"").trim()
  const start=String(form.get("start")??"")
  const end=String(form.get("end")??"")
- if(!/^[0-9a-f-]{36}$/i.test(event)||!title||!start||!end)return
+ if(!/^[0-9a-f]{8}(?:-[0-9a-f]{4}){3}-[0-9a-f]{12}$/i.test(event)||!title||title.length>180||!start||!end)return
+ const details=String(form.get("details")??"")
+ if(details.length>2000)throw new Error("Roster details too long")
  const startAt=new Date(start),endAt=new Date(end)
  if(!Number.isFinite(startAt.getTime())||!Number.isFinite(endAt.getTime())||endAt<=startAt)throw new Error("Invalid roster time range")
- const {error}=await (db as unknown as SupabaseClient).rpc("upt_admin_roster_create",{p_event:event,p_title:title,p_details:String(form.get("details")??""),p_start:startAt.toISOString(),p_end:endAt.toISOString()})
+ const {error}=await (db as unknown as SupabaseClient).rpc("upt_admin_roster_create",{p_event:event,p_title:title,p_details:details,p_start:startAt.toISOString(),p_end:endAt.toISOString()})
  if(error)throw new Error("Roster proposal could not be created")
  revalidatePath(route)
 }
@@ -37,7 +39,9 @@ async function shiftAction(form:FormData){
  const id=String(form.get("id")??"")
  const shift=String(form.get("shift")??"")
  if(!/^[0-9a-f-]{36}$/i.test(id))return
- const rpc=String(form.get("action"))==="target"?"upt_admin_roster_target":"upt_admin_roster_apply"
+ const action=String(form.get("action")??"")
+ if(!["target","apply"].includes(action))throw new Error("Unknown roster action")
+ const rpc=action==="target"?"upt_admin_roster_target":"upt_admin_roster_apply"
  if(rpc==="upt_admin_roster_apply"&&!user.isAdmin)throw new Error("Admin required")
  if(rpc==="upt_admin_roster_target"&&!/^[0-9a-f-]{36}$/i.test(shift))return
  const args=rpc==="upt_admin_roster_target"?{p_id:id,p_shift:shift}:{p_id:id}
@@ -51,7 +55,10 @@ async function changeStatus(form:FormData){
  const id=String(form.get("id")??"")
  const action=String(form.get("action")??"")
  if(!/^[0-9a-f-]{36}$/i.test(id))return
- const result=action==="submit"?await (db as unknown as SupabaseClient).rpc("upt_admin_roster_submit",{p_id:id}):user.isAdmin&&["approve","reject"].includes(action)?await (db as unknown as SupabaseClient).rpc("upt_admin_roster_review",{p_id:id,p_approve:action==="approve",p_note:String(form.get("note")??"")}):null
+ if(!["submit","approve","reject"].includes(action))throw new Error("Unknown roster status action")
+ const note=String(form.get("note")??"").trim()
+ if(note.length>2000||(action==="reject"&&!note))throw new Error("Rejection requires a reason")
+ const result=action==="submit"?await (db as unknown as SupabaseClient).rpc("upt_admin_roster_submit",{p_id:id}):user.isAdmin&&["approve","reject"].includes(action)?await (db as unknown as SupabaseClient).rpc("upt_admin_roster_review",{p_id:id,p_approve:action==="approve",p_note:note}):null
  if(result?.error)throw new Error("Roster transition failed")
  revalidatePath(route)
 }
