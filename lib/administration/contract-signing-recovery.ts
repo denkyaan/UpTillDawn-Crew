@@ -30,6 +30,9 @@ export async function recoverSignedContractArchive(input:{
   const remote=await getContractSigningStatus(record.envelopeId)
   if(remote.id!==record.envelopeId||remote.status!=="COMPLETED")throw new Error("Remote signature completion not verified")
   const bytes=await downloadContractArchive(record.signedPdfPath,client)
+  if(bytes.length<5||bytes.length>15*1024*1024||String.fromCharCode(...bytes.slice(0,5))!=="%PDF-"){
+   throw new Error("Stored signed contract is not a valid PDF")
+  }
   const digest=Array.from(new Uint8Array(await crypto.subtle.digest("SHA-256",bytes)),b=>b.toString(16).padStart(2,"0")).join("")
   if(record.signedPdfPath!==contractArchivePath({
    documentType:record.documentType,documentId:record.documentId,
