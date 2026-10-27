@@ -18,7 +18,7 @@ test("isolated signing worker has no public endpoint",async()=>{
 test("isolated signing worker rejects oversized body without content-length",async()=>{
  const env={INTERNAL_SIGNING_TOKEN:"internal",SUPABASE_SECRET:"secret",SUPABASE_URL:"https://db.example",DOCUMENSO_URL:"https://sign.example",DOCUMENSO_TOKEN:"token"}
  const request=new Request("https://worker.example/internal/signing/sync",{
-  method:"POST",headers:{authorization:"Bearer internal","content-type":"application/json"},
+  method:"POST",headers:{authorization:"Bearer internal","content-type":"application/json","content-type":"application/json"},
   body:new ReadableStream({start(controller){controller.enqueue(new TextEncoder().encode("x".repeat(3000)));controller.close()}}),
   duplex:"half"
  })
@@ -28,7 +28,7 @@ test("isolated signing worker rejects oversized body without content-length",asy
 test("isolated signing worker rejects declared oversized body",async()=>{
  const env={INTERNAL_SIGNING_TOKEN:"internal",SUPABASE_SECRET:"secret",SUPABASE_URL:"https://db.example",DOCUMENSO_URL:"https://sign.example",DOCUMENSO_TOKEN:"token"}
  const response=await worker.fetch(new Request("https://worker.example/internal/signing/sync",{
-  method:"POST",headers:{authorization:"Bearer internal","content-length":"3000"},body:"{}"
+  method:"POST",headers:{authorization:"Bearer internal","content-type":"application/json","content-length":"3000"},body:"{}"
  }),env)
  assert.equal(response.status,413)
 })
@@ -36,7 +36,7 @@ test("isolated signing worker rejects declared oversized body",async()=>{
 test("isolated signing worker refuses credential-bearing upstream URLs before network access",async()=>{
  const env={INTERNAL_SIGNING_TOKEN:"internal",SUPABASE_SECRET:"secret",SUPABASE_URL:"https://user:password@db.example",DOCUMENSO_URL:"https://sign.example",DOCUMENSO_TOKEN:"token"}
  const response=await worker.fetch(new Request("https://worker.example/internal/signing/sync",{
-  method:"POST",headers:{authorization:"Bearer internal","content-type":"application/json"},
+  method:"POST",headers:{authorization:"Bearer internal","content-type":"application/json","content-type":"application/json"},
   body:JSON.stringify({envelopeId:"abc"})
  }),env)
  assert.equal(response.status,502)
@@ -45,14 +45,14 @@ test("isolated signing worker refuses credential-bearing upstream URLs before ne
 test("isolated worker rejects null JSON input without network access",async()=>{
  const env={INTERNAL_SIGNING_TOKEN:"internal",SUPABASE_SECRET:"secret",SUPABASE_URL:"https://db.example",DOCUMENSO_URL:"https://sign.example",DOCUMENSO_TOKEN:"token"}
  const response=await worker.fetch(new Request("https://worker.example/internal/signing/sync",{
-  method:"POST",headers:{authorization:"Bearer internal"},body:"null"
+  method:"POST",headers:{authorization:"Bearer internal","content-type":"application/json"},body:"null"
  }),env)
  assert.equal(response.status,400)
 })
 test("isolated worker rejects upstream URLs with unexpected path prefixes",async()=>{
  const env={INTERNAL_SIGNING_TOKEN:"internal",SUPABASE_SECRET:"secret",SUPABASE_URL:"https://db.example/untrusted",DOCUMENSO_URL:"https://sign.example",DOCUMENSO_TOKEN:"token"}
  const response=await worker.fetch(new Request("https://worker.example/internal/signing/sync",{
-  method:"POST",headers:{authorization:"Bearer internal"},body:JSON.stringify({envelopeId:"abc"})
+  method:"POST",headers:{authorization:"Bearer internal","content-type":"application/json"},body:JSON.stringify({envelopeId:"abc"})
  }),env)
  assert.equal(response.status,502)
 })
@@ -60,8 +60,16 @@ test("isolated worker rejects upstream URLs with unexpected path prefixes",async
 test("isolated worker rejects unexpected request fields before network access",async()=>{
  const env={INTERNAL_SIGNING_TOKEN:"internal",SUPABASE_SECRET:"secret",SUPABASE_URL:"https://db.example",DOCUMENSO_URL:"https://sign.example",DOCUMENSO_TOKEN:"token"}
  const response=await worker.fetch(new Request("https://worker.example/internal/signing/sync",{
-  method:"POST",headers:{authorization:"Bearer internal","content-type":"application/json"},
+  method:"POST",headers:{authorization:"Bearer internal","content-type":"application/json","content-type":"application/json"},
   body:JSON.stringify({envelopeId:"abc",nextState:"completed"})
  }),env)
  assert.equal(response.status,400)
+})
+
+test("isolated worker requires JSON media type",async()=>{
+ const env={INTERNAL_SIGNING_TOKEN:"internal",SUPABASE_SECRET:"secret",SUPABASE_URL:"https://db.example",DOCUMENSO_URL:"https://sign.example",DOCUMENSO_TOKEN:"token"}
+ const response=await worker.fetch(new Request("https://worker.example/internal/signing/sync",{
+  method:"POST",headers:{authorization:"Bearer internal","content-type":"text/plain"},body:JSON.stringify({envelopeId:"abc"})
+ }),env)
+ assert.equal(response.status,415)
 })
