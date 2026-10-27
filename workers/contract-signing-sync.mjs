@@ -41,6 +41,7 @@ export default {
   if(!env.INTERNAL_SIGNING_TOKEN||!env.SUPABASE_SECRET||!env.SUPABASE_URL||!env.DOCUMENSO_URL||!env.DOCUMENSO_TOKEN)return json({error:"Not configured"},503)
   const provided=request.headers.get("authorization")
   if(provided!==`Bearer ${env.INTERNAL_SIGNING_TOKEN}`)return json({error:"Unauthorized"},401)
+  if(!/^application\/json(?:\s*;\s*charset=utf-8)?$/i.test(request.headers.get("content-type")||""))return json({error:"JSON content type required"},415)
   try{
    const declared=request.headers.get("content-length")
    if(declared!==null&&(!/^[0-9]+$/.test(declared)||Number(declared)>2048))return json({error:"Request too large"},413)
