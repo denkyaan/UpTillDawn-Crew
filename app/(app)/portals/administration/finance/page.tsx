@@ -104,6 +104,21 @@ async function addInvoiceLine(formData:FormData) {
  redirect('/portals/administration/finance')
 }
 
+async function removeInvoiceLine(formData:FormData) {
+ 'use server'
+ const {supabase}=await requireAdministration()
+ const documentId=String(formData.get('document_id')??'')
+ const lineId=String(formData.get('line_id')??'')
+ const uuid=/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
+ if(!uuid.test(documentId)||!uuid.test(lineId))redirect('/portals/administration/finance?error=1')
+ const {data:document,error:lookupError}=await supabase.from('admin_financial_documents').select('id,status').eq('id',documentId).single()
+ if(lookupError||document?.status!=='draft')redirect('/portals/administration/finance?error=1')
+ const {data:deleted,error}=await supabase.from('admin_financial_lines').delete().eq('id',lineId).eq('document_id',documentId).select('id')
+ if(error||deleted?.length!==1)redirect('/portals/administration/finance?error=1')
+ revalidatePath('/portals/administration/finance')
+ redirect('/portals/administration/finance')
+}
+
 async function updateFinancialStatus(formData:FormData) {
  'use server'
  const {supabase,isAdmin} = await requireAdministration()
@@ -190,7 +205,7 @@ export default async function FinancePage({searchParams}:{searchParams:Promise<{
      <div><p className="font-semibold">{d.document_number || translatedLabel(kindLabels[locale],d.kind)}</p><p className="text-xs text-muted-foreground">{translatedLabel(kindLabels[locale],d.kind)} · {translatedLabel(statusLabels[locale],d.status)}</p></div>
      <div className="w-full space-y-2">
       {(attachments??[]).filter(a=>a.document_id===d.id).map(a=><p key={a.id} className="text-xs text-muted-foreground">{uploadLabels[locale].attachments}: {a.original_name}</p>)}
-      {(lines??[]).filter(line=>line.document_id===d.id).map(line=><p key={line.id} className="text-xs text-muted-foreground">{line.description} · {line.quantity} × {money(Number(line.unit_price))} · {line.vat_rate}%</p>)}
+      {(lines??[]).filter(line=>line.document_id===d.id).map(line=><div key={line.id} className="flex flex-wrap items-center justify-between gap-2 text-xs text-muted-foreground"><p>{line.description} · {line.quantity} × {money(Number(line.unit_price))} · {line.vat_rate}%</p>{d.status==='draft'&&<form action={removeInvoiceLine}><input type="hidden" name="document_id" value={d.id}/><input type="hidden" name="line_id" value={line.id}/><button type="submit" className="rounded border px-2 py-1 text-red-400">{({nl:'Regel verwijderen',fr:'Supprimer la ligne',en:'Remove line',de:'Position entfernen'} as const)[locale]}</button></form>}</div>)}
       {d.status==='draft'&&<form action={addInvoiceLine} className="grid gap-2 rounded-lg border p-3 sm:grid-cols-5">
        <input type="hidden" name="document_id" value={d.id}/>
        <input name="description" aria-label={({nl:"Omschrijving",fr:"Description",en:"Description",de:"Beschreibung"} as const)[locale]} placeholder={({nl:'Omschrijving',fr:'Description',en:'Description',de:'Beschreibung'} as const)[locale]} maxLength={500} required className="rounded border bg-background p-2 text-xs sm:col-span-2"/>
