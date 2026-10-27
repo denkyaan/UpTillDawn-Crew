@@ -3,6 +3,18 @@ export type ExtendedUiLocale = 'nl' | 'fr' | 'en' | 'de'
 type Row = { fr: string; en: string; de: string }
 
 const EXTENSIONS: Record<string, Row> = {
+  "Welke administratie vraagt aandacht?": { fr: "Quels dossiers demandent une attention ?", en: "Which admin items need attention?", de: "Welche Verwaltungsvorgänge brauchen Aufmerksamkeit?" },
+  "Quels dossiers demandent une attention ?": { fr: "Quels dossiers demandent une attention ?", en: "Which admin items need attention?", de: "Welche Verwaltungsvorgänge brauchen Aufmerksamkeit?" },
+  "Which admin items need attention?": { fr: "Quels dossiers demandent une attention ?", en: "Which admin items need attention?", de: "Welche Verwaltungsvorgänge brauchen Aufmerksamkeit?" },
+  "Welche Verwaltungsvorgänge brauchen Aufmerksamkeit?": { fr: "Quels dossiers demandent une attention ?", en: "Which admin items need attention?", de: "Welche Verwaltungsvorgänge brauchen Aufmerksamkeit?" },
+  "Welke artiesten hebben opvolging nodig?": { fr: "Quels artistes nécessitent un suivi ?", en: "Which artists need follow-up?", de: "Welche Künstler benötigen Nachverfolgung?" },
+  "Quels artistes nécessitent un suivi ?": { fr: "Quels artistes nécessitent un suivi ?", en: "Which artists need follow-up?", de: "Welche Künstler benötigen Nachverfolgung?" },
+  "Which artists need follow-up?": { fr: "Quels artistes nécessitent un suivi ?", en: "Which artists need follow-up?", de: "Welche Künstler benötigen Nachverfolgung?" },
+  "Welche Künstler benötigen Nachverfolgung?": { fr: "Quels artistes nécessitent un suivi ?", en: "Which artists need follow-up?", de: "Welche Künstler benötigen Nachverfolgung?" },
+  "Zijn er openstaande werkuren?": { fr: "Y a-t-il des heures en attente ?", en: "Are there submitted timesheets?", de: "Gibt es eingereichte Arbeitszeiten?" },
+  "Y a-t-il des heures en attente ?": { fr: "Y a-t-il des heures en attente ?", en: "Are there submitted timesheets?", de: "Gibt es eingereichte Arbeitszeiten?" },
+  "Are there submitted timesheets?": { fr: "Y a-t-il des heures en attente ?", en: "Are there submitted timesheets?", de: "Gibt es eingereichte Arbeitszeiten?" },
+  "Gibt es eingereichte Arbeitszeiten?": { fr: "Y a-t-il des heures en attente ?", en: "Are there submitted timesheets?", de: "Gibt es eingereichte Arbeitszeiten?" },
   "Gesprek wissen": { fr: "Effacer la conversation", en: "Clear conversation", de: "Gespräch löschen" },
   "Effacer la conversation": { fr: "Effacer la conversation", en: "Clear conversation", de: "Gespräch löschen" },
   "Clear conversation": { fr: "Effacer la conversation", en: "Clear conversation", de: "Gespräch löschen" },
