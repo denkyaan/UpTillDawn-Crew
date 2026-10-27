@@ -15,7 +15,7 @@ export function createSigningLedger(store:SigningLedgerStore):SigningLedger{
  return {
   load:({documentType,documentId,version})=>store.find(documentType,documentId,version),
   async attachEnvelope(input){
-   if(!/^[a-zA-Z0-9_-]{1,128}$/.test(input.envelopeId)||! /^[a-f0-9]{64}$/.test(input.sourceSha256))throw new Error("Invalid envelope attachment")
+   if(!/^[a-zA-Z0-9_-]{1,128}$/.test(input.envelopeId)||!/^[a-f0-9]{64}$/.test(input.sourceSha256))throw new Error("Invalid envelope attachment")
    const changed=await store.attach(input)
    if(changed!==1)throw new Error("Signing envelope already attached or contract not approved")
   },
