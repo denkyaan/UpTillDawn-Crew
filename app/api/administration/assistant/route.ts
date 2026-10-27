@@ -16,22 +16,23 @@ export async function POST(request:Request){
  if((accessError&&!user.isAdmin&&!user.isOwner)||(!user.isAdmin&&!user.isOwner&&!canOpenPortal("administration",(assignments??[]) as PortalAssignment[],{approved:user.approved,blocked:user.account_blocked===true})))return Response.json({error:"Forbidden"},{status:403})
  const parsed=schema.safeParse(await request.json().catch(()=>null))
  if(!parsed.success)return Response.json({error:"Invalid request"},{status:400})
- const [rosters,timesheets,inventory,artists,documents,reminders]=await Promise.all([
+ const [rosters,timesheets,inventory,artists,documents,reminders,submittedTimesheetCount]=await Promise.all([
   db.from("admin_roster_proposals").select("status,title,proposed_start").limit(30),
   db.from("timesheets").select("status,submitted_at").eq("status","submitted").limit(100),
   db.from("inventory_items").select("name,missing_quantity,damaged_quantity").or("missing_quantity.gt.0,damaged_quantity.gt.0").limit(100),
   db.from("admin_artist_bookings").select("artist_name,status,follow_up_at,performance_at").in("status",["enquiry","negotiating","confirmed"]).order("follow_up_at",{ascending:true,nullsFirst:false}).limit(30),
   db.from("admin_financial_documents").select("document_number,kind,status,currency,gross_amount,due_date").limit(50),
-  db.from("admin_payment_reminders").select("status,created_at").limit(30)
+  db.from("admin_payment_reminders").select("status,created_at").limit(30),
+  db.from("timesheets").select("id",{count:"exact",head:true}).eq("status","submitted")
  ])
  const context={
   rosters:rosters.error?{available:false}:rosters.data,
-  submittedTimesheets:timesheets.error?{available:false}:timesheets.data?.length,
+  submittedTimesheets:submittedTimesheetCount.error||submittedTimesheetCount.count==null?{available:false}: {count:submittedTimesheetCount.count,complete:true},
   inventoryDiscrepancies:inventory.error?{available:false}:inventory.data,
   artistBookings:artists.error?{available:false}:artists.data,
   financialDocuments:documents.error?{available:false}:documents.data,
   paymentReminders:reminders.error?{available:false}:reminders.data,
-  limits:"All lists are limited samples, not complete totals. Do not infer payment status from invoices alone. Do not claim Peppol, signatures, email or bank transfers are executed. Financial and legal decisions require human approval."
+  limits:"Submitted timesheets count is exact only when complete=true. All other lists are limited samples, not complete totals. Do not infer payment status from invoices alone. Do not claim Peppol, signatures, email or bank transfers are executed. Financial and legal decisions require human approval."
  }
  let ai:{run:(model:string,input:Record<string,unknown>)=>Promise<unknown>}|undefined
  try{ai=(getCloudflareContext().env as {AI?:typeof ai}).AI}catch{}
