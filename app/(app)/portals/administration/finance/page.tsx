@@ -110,6 +110,11 @@ async function createDraft(formData:FormData) {
  const tax = Number(formData.get('tax_amount'))
  if (!Number.isFinite(net) || !Number.isFinite(tax) || net < 0 || tax < 0 || net > 999999999 || tax > 999999999) return
  const documentNumber = String(formData.get('document_number') ?? '').trim().slice(0,100)
+ const issueDate=String(formData.get('issue_date')??'')
+ const dueDate=String(formData.get('due_date')??'')
+ const datePattern=/^\\d{4}-\\d{2}-\\d{2}$/
+ const validDate=(value:string)=>!value||(datePattern.test(value)&&!Number.isNaN(Date.parse(value))&&new Date(value).toISOString().slice(0,10)===value)
+ if(!validDate(issueDate)||!validDate(dueDate)||(dueDate&&(!issueDate||dueDate<issueDate)))redirect('/portals/administration/finance?error=1')
  const notes = String(formData.get('notes') ?? '').trim().slice(0,2000)
  const counterpartyId=String(formData.get('counterparty_id')??'')
  const uuid=/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
@@ -127,7 +132,7 @@ async function createDraft(formData:FormData) {
 
  const { error } = await supabase.from('admin_financial_documents').insert({
    kind, document_number:documentNumber || null, net_amount:net, tax_amount:tax,
-   notes:notes || null, status:'draft', currency:'EUR', counterparty_id:counterpartyId||null,
+   notes:notes || null, status:'draft', currency:'EUR', counterparty_id:counterpartyId||null, issue_date:issueDate||null,due_date:dueDate||null,
    original_invoice_id:kind==='credit_note'?originalInvoiceId:null,
  })
  if (error) redirect('/portals/administration/finance?error=1')
@@ -163,6 +168,22 @@ async function removeInvoiceLine(formData:FormData) {
  if(lookupError||document?.status!=='draft')redirect('/portals/administration/finance?error=1')
  const {data:deleted,error}=await supabase.from('admin_financial_lines').delete().eq('id',lineId).eq('document_id',documentId).select('id')
  if(error||deleted?.length!==1)redirect('/portals/administration/finance?error=1')
+ revalidatePath('/portals/administration/finance')
+ redirect('/portals/administration/finance')
+}
+
+async function updateInvoiceDates(formData:FormData) {
+ 'use server'
+ const {supabase}=await requireAdministration()
+ const id=String(formData.get('document_id')??'')
+ const issueDate=String(formData.get('issue_date')??'')
+ const dueDate=String(formData.get('due_date')??'')
+ const uuid=/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
+ const datePattern=/^\\d{4}-\\d{2}-\\d{2}$/
+ const validDate=(value:string)=>!value||(datePattern.test(value)&&!Number.isNaN(Date.parse(value))&&new Date(value).toISOString().slice(0,10)===value)
+ if(!uuid.test(id)||!validDate(issueDate)||!validDate(dueDate)||(dueDate&&(!issueDate||dueDate<issueDate)))redirect('/portals/administration/finance?error=1')
+ const {data,error}=await supabase.from('admin_financial_documents').update({issue_date:issueDate||null,due_date:dueDate||null}).eq('id',id).eq('status','draft').select('id')
+ if(error||data?.length!==1)redirect('/portals/administration/finance?error=1')
  revalidatePath('/portals/administration/finance')
  redirect('/portals/administration/finance')
 }
@@ -276,7 +297,7 @@ export default async function FinancePage({searchParams}:{searchParams:Promise<{
  const t = copy[locale]
  const params = await searchParams
  const {data:documents,error} = await supabase.from('admin_financial_documents')
-   .select('id,kind,document_number,net_amount,tax_amount,gross_amount,currency,status,created_at,original_invoice_id,due_date,counterparty_id')
+   .select('id,kind,document_number,net_amount,tax_amount,gross_amount,currency,status,created_at,original_invoice_id,due_date,issue_date,counterparty_id')
    .order('created_at',{ascending:false}).limit(100)
  const {data:counterparties}=await supabase.from('admin_counterparties').select('id,name,kind,email,vat_number,enterprise_number').order('name').limit(500)
  const originalInvoices=(documents??[]).filter(d=>['sales_invoice','purchase_invoice'].includes(d.kind)&&['approved','issued','paid'].includes(d.status))
@@ -333,6 +354,8 @@ export default async function FinancePage({searchParams}:{searchParams:Promise<{
     <label className="space-y-1 text-sm sm:col-span-2">{({nl:'Klant of leverancier',fr:'Client ou fournisseur',en:'Customer or supplier',de:'Kunde oder Lieferant'} as const)[locale]}<select name="counterparty_id" className="block w-full rounded-lg border bg-background p-3"><option value="">—</option>{(counterparties??[]).map(party=><option key={party.id} value={party.id}>{party.name} · {party.kind}</option>)}</select></label>
     <label className="space-y-1 text-sm sm:col-span-2">{({nl:'Oorspronkelijke factuur (verplicht bij creditnota)',fr:'Facture d’origine (obligatoire pour un avoir)',en:'Original invoice (required for credit note)',de:'Ursprüngliche Rechnung (bei Gutschrift erforderlich)'} as const)[locale]}<select name="original_invoice_id" className="block w-full rounded-lg border bg-background p-3"><option value="">—</option>{originalInvoices.map(invoice=><option key={invoice.id} value={invoice.id}>{invoice.document_number||invoice.id} · {money(Number(invoice.gross_amount))}</option>)}</select></label>
     <label className="space-y-1 text-sm">{t.number}<input name="document_number" maxLength={100} className="block w-full rounded-lg border bg-background p-3"/></label>
+    <label className="space-y-1 text-sm">{({nl:'Factuurdatum',fr:'Date de facture',en:'Issue date',de:'Rechnungsdatum'} as const)[locale]}<input type="date" name="issue_date" className="block w-full rounded-lg border bg-background p-3"/></label>
+    <label className="space-y-1 text-sm">{({nl:'Vervaldatum',fr:'Date d’échéance',en:'Due date',de:'Fälligkeitsdatum'} as const)[locale]}<input type="date" name="due_date" className="block w-full rounded-lg border bg-background p-3"/></label>
     <label className="space-y-1 text-sm">{t.net}<input name="net_amount" type="number" min="0" max="999999999" step="0.01" required className="block w-full rounded-lg border bg-background p-3"/></label>
     <label className="space-y-1 text-sm">{t.tax}<input name="tax_amount" type="number" min="0" max="999999999" step="0.01" required className="block w-full rounded-lg border bg-background p-3"/></label>
     <label className="space-y-1 text-sm sm:col-span-2">{t.notes}<textarea name="notes" maxLength={2000} className="block w-full rounded-lg border bg-background p-3"/></label>
@@ -345,6 +368,8 @@ export default async function FinancePage({searchParams}:{searchParams:Promise<{
     <div className="space-y-3">{documents.map(d=><article key={d.id} className="flex flex-wrap items-center justify-between gap-2 border-b pb-3">
      <div><p className="font-semibold">{d.document_number || translatedLabel(kindLabels[locale],d.kind)}</p><p className="text-xs text-muted-foreground">{translatedLabel(kindLabels[locale],d.kind)} · {translatedLabel(statusLabels[locale],d.status)}{d.original_invoice_id&&<> · {({nl:'Factuur',fr:'Facture',en:'Invoice',de:'Rechnung'} as const)[locale]}: {documents?.find(invoice=>invoice.id===d.original_invoice_id)?.document_number||d.original_invoice_id}</>}</p></div>
      <div className="w-full space-y-2">
+      {(d.issue_date||d.due_date)&&<p className="text-xs text-muted-foreground">{({nl:'Factuurdatum',fr:'Date de facture',en:'Issue date',de:'Rechnungsdatum'} as const)[locale]}: {d.issue_date||'—'} · {({nl:'Vervaldatum',fr:'Date d’échéance',en:'Due date',de:'Fälligkeitsdatum'} as const)[locale]}: {d.due_date||'—'}</p>}
+      {d.status==='draft'&&<form action={updateInvoiceDates} className="flex flex-wrap items-end gap-2 text-xs"><input type="hidden" name="document_id" value={d.id}/><label>{({nl:'Factuurdatum',fr:'Date de facture',en:'Issue date',de:'Rechnungsdatum'} as const)[locale]}<input type="date" name="issue_date" defaultValue={d.issue_date??''} className="block rounded border bg-background p-2"/></label><label>{({nl:'Vervaldatum',fr:'Date d’échéance',en:'Due date',de:'Fälligkeitsdatum'} as const)[locale]}<input type="date" name="due_date" defaultValue={d.due_date??''} className="block rounded border bg-background p-2"/></label><button type="submit" className="rounded border border-violet-500 px-3 py-2 text-violet-400">{({nl:'Datums opslaan',fr:'Enregistrer les dates',en:'Save dates',de:'Daten speichern'} as const)[locale]}</button></form>}
       {d.counterparty_id&&<p className="text-xs text-muted-foreground">{({nl:'Relatie',fr:'Contact',en:'Counterparty',de:'Geschäftspartner'} as const)[locale]}: {counterparties?.find(p=>p.id===d.counterparty_id)?.name??d.counterparty_id}</p>}
       {['approved','issued','paid'].includes(d.status)&&<div className="rounded-lg border p-3 text-xs">
        <p>{({nl:'Geregistreerde betalingen',fr:'Paiements enregistrés',en:'Recorded payments',de:'Erfasste Zahlungen'} as const)[locale]}: {money(paymentTotalFor(d.id))}</p>
