@@ -87,6 +87,23 @@ async function createDraft(formData:FormData) {
  redirect('/portals/administration/finance')
 }
 
+async function addInvoiceLine(formData:FormData) {
+ 'use server'
+ const {supabase}=await requireAdministration()
+ const documentId=String(formData.get('document_id')??'')
+ const description=String(formData.get('description')??'').trim()
+ const quantity=Number(formData.get('quantity'))
+ const unitPrice=Number(formData.get('unit_price'))
+ const vatRate=Number(formData.get('vat_rate'))
+ if(!/^[0-9a-f]{8}-[0-9a-f-]{27}$/i.test(documentId)||!description||description.length>500||![quantity,unitPrice,vatRate].every(Number.isFinite)||quantity<=0||quantity>100000||unitPrice<0||unitPrice>999999999||vatRate<0||vatRate>100)redirect('/portals/administration/finance?error=1')
+ const {data:document}=await supabase.from('admin_financial_documents').select('id,status').eq('id',documentId).single()
+ if(!document||document.status!=='draft')redirect('/portals/administration/finance?error=1')
+ const {error}=await supabase.from('admin_financial_lines').insert({document_id:documentId,description,quantity,unit_price:unitPrice,vat_rate:vatRate})
+ if(error)redirect('/portals/administration/finance?error=1')
+ revalidatePath('/portals/administration/finance')
+ redirect('/portals/administration/finance')
+}
+
 async function updateFinancialStatus(formData:FormData) {
  'use server'
  const {supabase,isAdmin} = await requireAdministration()
@@ -145,6 +162,7 @@ export default async function FinancePage({searchParams}:{searchParams:Promise<{
  const {data:documents,error} = await supabase.from('admin_financial_documents')
    .select('id,kind,document_number,net_amount,tax_amount,gross_amount,currency,status,created_at')
    .order('created_at',{ascending:false}).limit(100)
+ const {data:lines}=await supabase.from('admin_financial_lines').select('id,document_id,description,quantity,unit_price,vat_rate').order('created_at',{ascending:true}).limit(500)
  const {data:attachments}=await (supabase as unknown as SupabaseClient).from('admin_financial_attachments').select('id,document_id,original_name,created_at').order('created_at',{ascending:false}).limit(200)
  const money = (amount:number) => new Intl.NumberFormat(locale==='nl'?'nl-BE':locale==='fr'?'fr-BE':locale==='de'?'de-BE':'en-BE',{style:'currency',currency:'EUR'}).format(amount)
  const paidTotal=(documents??[]).filter(d=>d.status==='paid').reduce((sum,d)=>sum+Number(d.gross_amount),0)
@@ -172,6 +190,15 @@ export default async function FinancePage({searchParams}:{searchParams:Promise<{
      <div><p className="font-semibold">{d.document_number || translatedLabel(kindLabels[locale],d.kind)}</p><p className="text-xs text-muted-foreground">{translatedLabel(kindLabels[locale],d.kind)} · {translatedLabel(statusLabels[locale],d.status)}</p></div>
      <div className="w-full space-y-2">
       {(attachments??[]).filter(a=>a.document_id===d.id).map(a=><p key={a.id} className="text-xs text-muted-foreground">{uploadLabels[locale].attachments}: {a.original_name}</p>)}
+      {(lines??[]).filter(line=>line.document_id===d.id).map(line=><p key={line.id} className="text-xs text-muted-foreground">{line.description} · {line.quantity} × {money(Number(line.unit_price))} · {line.vat_rate}% btw</p>)}
+      {d.status==='draft'&&<form action={addInvoiceLine} className="grid gap-2 rounded-lg border p-3 sm:grid-cols-5">
+       <input type="hidden" name="document_id" value={d.id}/>
+       <input name="description" aria-label="Description" placeholder={({nl:'Omschrijving',fr:'Description',en:'Description',de:'Beschreibung'} as const)[locale]} maxLength={500} required className="rounded border bg-background p-2 text-xs sm:col-span-2"/>
+       <input name="quantity" aria-label="Quantity" type="number" min="0.001" max="100000" step="0.001" defaultValue="1" required className="rounded border bg-background p-2 text-xs"/>
+       <input name="unit_price" aria-label="Unit price" type="number" min="0" max="999999999" step="0.0001" placeholder="€" required className="rounded border bg-background p-2 text-xs"/>
+       <input name="vat_rate" aria-label="VAT percentage" type="number" min="0" max="100" step="0.01" defaultValue="21" required className="rounded border bg-background p-2 text-xs"/>
+       <button type="submit" className="rounded-lg bg-violet-600 px-3 py-2 text-xs font-semibold text-white sm:col-span-5">{({nl:'Factuurregel toevoegen',fr:'Ajouter une ligne',en:'Add invoice line',de:'Rechnungsposition hinzufügen'} as const)[locale]}</button>
+      </form>}
       {['draft','review'].includes(d.status)&&<form action={uploadFinancialAttachment} encType="multipart/form-data" className="flex flex-wrap items-end gap-2">
        <input type="hidden" name="document_id" value={d.id}/>
        <label className="text-xs">{uploadLabels[locale].file}<input name="file" type="file" required accept=".pdf,.jpg,.jpeg,.png,.webp" className="block max-w-64 text-xs"/></label>
