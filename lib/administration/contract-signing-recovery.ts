@@ -20,6 +20,10 @@ export async function recoverSignedContractArchive(input:{
  const {record,ledger,client}=input
  if(record.state!=="completed"||!record.envelopeId)throw new Error("Contract not completed")
  if(!input.approvedVersionVerified)throw new Error("Approved version required")
+ const persisted=await ledger.load({documentType:record.documentType,documentId:record.documentId,version:record.version})
+ if(!persisted||persisted.envelopeId!==record.envelopeId||persisted.sourceSha256!==record.sourceSha256||persisted.state!=="completed"||persisted.signedPdfPath!==record.signedPdfPath){
+  throw new Error("Signing ledger changed; reload before archive recovery")
+ }
  if(record.signedPdfPath){
   const prefix=record.documentType+"/"+record.documentId+"/v"+record.version+"/"
   if(!record.signedPdfPath.startsWith(prefix+"signed-"))throw new Error("Signed PDF path does not match approved version")
