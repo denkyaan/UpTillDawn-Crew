@@ -5,7 +5,7 @@ const chat=readFileSync("components/administration/administration-ai-chat.tsx","
 const editor=readFileSync("components/administration/administration-ai-booking-notes.tsx","utf8")
 const route=readFileSync("app/api/administration/assistant/booking-notes/route.ts","utf8")
 test("administration AI exposes explicit confirmed booking note workflow",()=>{
- assert.match(chat,/<AdministrationAiBookingNotes locale=\{locale\}\/>/)
+ assert.match(chat,/<AdministrationAiBookingNotes locale=\{locale\} initialBookingId=\{initialBookingId\}\/>/)
  assert.match(editor,/confirmed:true/)
  assert.match(editor,/expectedNotes:booking\.internal_notes/)
  assert.match(editor,/booking\.status==="cancelled"/)
