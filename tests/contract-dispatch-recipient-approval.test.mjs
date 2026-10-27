@@ -9,3 +9,15 @@ test("dispatch requires a syntactically valid recipient matching the approved do
  assert.match(source,/recipient!==approvedRecipient/)
  assert.match(source,/test\(recipient\)/)
 })
+
+test("recipient pattern accepts normal email and rejects spaces and missing domain dot",()=>{
+ const line=source.split("\n").find(line=>line.includes(".test(recipient)"))
+ assert.ok(line,"recipient validation regex missing")
+ const literal=line.trim().match(/^if\(!(.+)\.test\(recipient\)\|\|$/)?.[1]
+ assert.ok(literal,"recipient validation expression changed")
+ const pattern=new Function("return "+literal)()
+ assert.equal(pattern.test("artist@example.com"),true)
+ assert.equal(pattern.test("artist@examplecom"),false)
+ assert.equal(pattern.test("artist name@example.com"),false)
+ assert.equal(pattern.test("artist@example\\com"),false)
+})
