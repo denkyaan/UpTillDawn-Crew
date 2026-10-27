@@ -48,9 +48,11 @@ export async function retrieveAndArchiveSignedContract(input:{
    chunks.push(next.value)
   }
  }finally{reader.releaseLock()}
+ if(total<5)throw new Error("Signed PDF response too short")
  const pdf=new Uint8Array(total)
  let offset=0
  for(const chunk of chunks){pdf.set(chunk,offset);offset+=chunk.length}
+ if(new TextDecoder().decode(pdf.slice(0,5))!=="%PDF-")throw new Error("Invalid signed PDF header")
  return archiveCompletedSignedContract({
   documentType:input.documentType,documentId:input.documentId,
   version:input.version,envelopeId:input.persistedEnvelopeId,
