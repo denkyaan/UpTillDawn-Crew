@@ -131,7 +131,7 @@ async function createDraft(formData:FormData) {
  if (!Number.isFinite(net) || !Number.isFinite(tax) || net < 0 || tax < 0 || net > 999999999 || tax > 999999999) return
  const documentNumber = String(formData.get('document_number') ?? '').trim().slice(0,100)
  const issueDate=String(formData.get('issue_date')??'')
- const dueDate=String(formData.get('due_date')??'')
+ let dueDate=String(formData.get('due_date')??'')
  const datePattern=/^\\d{4}-\\d{2}-\\d{2}$/
  const validDate=(value:string)=>!value||(datePattern.test(value)&&!Number.isNaN(Date.parse(value))&&new Date(value).toISOString().slice(0,10)===value)
  if(!validDate(issueDate)||!validDate(dueDate)||(dueDate&&(!issueDate||dueDate<issueDate)))redirect('/portals/administration/finance?error=1')
@@ -140,8 +140,13 @@ async function createDraft(formData:FormData) {
  const uuid=/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
  if(counterpartyId&&!uuid.test(counterpartyId))redirect('/portals/administration/finance?error=1')
  if(counterpartyId){
-  const {data:party}=await supabase.from('admin_counterparties').select('id,kind').eq('id',counterpartyId).single()
-  if(!party||(kind==='sales_invoice'&&!['customer','both'].includes(party.kind))||(kind==='purchase_invoice'&&!['supplier','both'].includes(party.kind)))redirect('/portals/administration/finance?error=1')
+  const {data:party,error:partyError}=await (supabase as unknown as SupabaseClient).from('admin_counterparties').select('id,kind,payment_terms_days').eq('id',counterpartyId).single()
+  if(partyError||!party||(kind==='sales_invoice'&&!['customer','both'].includes(party.kind))||(kind==='purchase_invoice'&&!['supplier','both'].includes(party.kind)))redirect('/portals/administration/finance?error=1')
+  if(!dueDate&&issueDate&&['sales_invoice','purchase_invoice'].includes(kind)&&Number.isInteger(party.payment_terms_days)&&party.payment_terms_days>=0&&party.payment_terms_days<=365){
+   const due=new Date(issueDate+'T12:00:00Z')
+   due.setUTCDate(due.getUTCDate()+party.payment_terms_days)
+   dueDate=due.toISOString().slice(0,10)
+  }
  }
  const originalInvoiceId=String(formData.get('original_invoice_id')??'')
  if(kind==='credit_note'){
