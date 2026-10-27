@@ -16,7 +16,7 @@ const messages={
 async function unblock(form:FormData){
  "use server"
  const actor=await getCurrentUser()
- if(!actor?.isAdmin&&!actor?.isOwner)throw new Error("Admin required")
+ if(!actor?.realIsAdmin&&!actor?.isOwner)throw new Error("Admin required")
  const user=String(form.get("user")??"")
  const reason=String(form.get("reason")??"").trim()
  if(!/^[0-9a-f-]{36}$/i.test(user)||reason.length<10)throw new Error("Invalid unblock request")
@@ -28,7 +28,7 @@ async function unblock(form:FormData){
 async function registerReference(form:FormData){
  "use server"
  const actor=await getCurrentUser()
- if(!actor?.isAdmin&&!actor?.isOwner)throw new Error("Admin required")
+ if(!actor?.realIsAdmin&&!actor?.isOwner)throw new Error("Admin required")
  const task=String(form.get("task_id")??"")
  const file=form.get("reference")
  if(!/^[0-9a-f-]{36}$/i.test(task)||!(file instanceof File)||!["image/jpeg","image/png","image/webp"].includes(file.type)||file.size<1||file.size>10*1024*1024)throw new Error("Invalid reference")
@@ -51,7 +51,7 @@ async function registerReference(form:FormData){
 async function reviewEvidence(form:FormData){
  "use server"
  const actor=await getCurrentUser()
- if(!actor?.isAdmin&&!actor?.isOwner)throw new Error("Admin required")
+ if(!actor?.realIsAdmin&&!actor?.isOwner)throw new Error("Admin required")
  const evidence=String(form.get("evidence_id")??"")
  const status=String(form.get("status")??"")
  const reason=String(form.get("reason")??"").trim()
