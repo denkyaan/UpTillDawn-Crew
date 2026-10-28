@@ -13,6 +13,7 @@ type Booking={id:string;artist_name:string;status:string;internal_notes:string|n
 export function AdministrationAiBookingNotes({locale,initialBookingId}:{locale:SupportedUiLocale;initialBookingId?:string}){
  const t=labels[locale]
  const [id,setId]=useState(initialBookingId??"")
+ const [manualId,setManualId]=useState(initialBookingId??"")
  const [booking,setBooking]=useState<Booking|null>(null)
  const [audit,setAudit]=useState<AuditEntry[]>([])
  const [choices,setChoices]=useState<Array<Pick<Booking,"id"|"artist_name"|"status">>>([])
@@ -37,7 +38,7 @@ export function AdministrationAiBookingNotes({locale,initialBookingId}:{locale:S
  function chooseBooking(targetId:string){
   if(busyRef.current||busy||targetId===id)return
   if(!mayLeave())return
-  ++requestRef.current;selectionRef.current=targetId;setId(targetId);setBooking(null);setNotes("");setInstruction("");setConflict(false)
+  ++requestRef.current;selectionRef.current=targetId;setId(targetId);setManualId(targetId);setBooking(null);setNotes("");setInstruction("");setConflict(false)
   if(targetId)void load(targetId)
  }
  const load=useCallback(async (targetId:string)=>{
@@ -111,8 +112,8 @@ export function AdministrationAiBookingNotes({locale,initialBookingId}:{locale:S
   <h2 className="text-lg font-semibold">{t.title}</h2>
   <form onSubmit={event=>{event.preventDefault();void listBookings(0)}} className="flex flex-wrap items-end gap-2"><label className="min-w-0 flex-1 text-sm">{t.search}<input value={search} maxLength={80} onChange={event=>setSearch(event.target.value)} className="mt-1 w-full rounded-lg border bg-background p-2"/></label><button type="submit" disabled={busy} className="rounded-lg border px-3 py-2 text-sm">{t.refresh}</button></form>
   <div className="flex flex-wrap items-end gap-2"><label className="min-w-0 flex-1 text-sm">{t.choose}<select disabled={busy} value={choices.some(item=>item.id===id)?id:""} onChange={event=>chooseBooking(event.target.value)} className="mt-1 w-full rounded-lg border bg-background p-2"><option value="">{t.choose}</option>{choices.map(item=><option key={item.id} value={item.id}>{item.artist_name} · {item.status}</option>)}</select></label><button type="button" disabled={busy||page===0} onClick={()=>void listBookings(page-1)} className="rounded-lg border px-3 py-2 text-sm disabled:opacity-50">{t.previous}</button><button type="button" disabled={busy||!hasMore} onClick={()=>void listBookings(page+1)} className="rounded-lg border px-3 py-2 text-sm disabled:opacity-50">{t.next}</button></div>
-  <form onSubmit={event=>{event.preventDefault();if(mayLeave())void load(id)}} className="flex flex-wrap gap-2">
-   <label className="min-w-0 flex-1 text-sm">{t.id}<input disabled={busy} value={id} onChange={event=>chooseBooking(event.target.value)} required maxLength={36} className="mt-1 w-full rounded-lg border bg-background p-2"/></label>
+  <form onSubmit={event=>{event.preventDefault();if(!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(manualId)){setFeedback(t.error);return}if(mayLeave()){setId(manualId);void load(manualId)}}} className="flex flex-wrap gap-2">
+   <label className="min-w-0 flex-1 text-sm">{t.id}<input disabled={busy} value={manualId} onChange={event=>setManualId(event.target.value)} required maxLength={36} className="mt-1 w-full rounded-lg border bg-background p-2"/></label>
    <button type="submit" disabled={busy} className="self-end rounded-lg border px-3 py-2 text-sm disabled:opacity-50">{t.load}</button>
   </form>
   {booking&&<div className="space-y-3 rounded-xl border p-3">
