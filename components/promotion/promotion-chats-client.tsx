@@ -7,10 +7,10 @@ type Room="general"|"announcements"
 type Message={id:string;room:Room;sender_id:string;body:string;created_at:string}
 type Locale="nl"|"fr"|"en"|"de"
 const copy={
- nl:{general:"Algemeen",announcements:"Aankondigingen",send:"Versturen",placeholder:"Schrijf een bericht...",readonly:"Alleen admins kunnen aankondigingen plaatsen.",error:"Bericht kon niet worden verzonden.",load:"Berichten konden niet worden geladen.",empty:"Nog geen berichten."},
- fr:{general:"Général",announcements:"Annonces",send:"Envoyer",placeholder:"Écrire un message...",readonly:"Seuls les admins peuvent publier des annonces.",error:"Envoi impossible.",load:"Impossible de charger les messages.",empty:"Aucun message."},
- en:{general:"General",announcements:"Announcements",send:"Send",placeholder:"Write a message...",readonly:"Only admins can post announcements.",error:"Message could not be sent.",load:"Messages could not be loaded.",empty:"No messages yet."},
- de:{general:"Allgemein",announcements:"Ankündigungen",send:"Senden",placeholder:"Nachricht schreiben...",readonly:"Nur Admins können Ankündigungen veröffentlichen.",error:"Nachricht konnte nicht gesendet werden.",load:"Nachrichten konnten nicht geladen werden.",empty:"Noch keine Nachrichten."}
+ nl:{general:"Algemeen",announcements:"Aankondigingen",send:"Versturen",placeholder:"Schrijf een bericht…",readonly:"Alleen admins kunnen aankondigingen plaatsen.",error:"Bericht kon niet worden verzonden.",load:"Berichten konden niet worden geladen.",empty:"Nog geen berichten."},
+ fr:{general:"Général",announcements:"Annonces",send:"Envoyer",placeholder:"Écrire un message…",readonly:"Seuls les admins peuvent publier des annonces.",error:"Envoi impossible.",load:"Impossible de charger les messages.",empty:"Aucun message."},
+ en:{general:"General",announcements:"Announcements",send:"Send",placeholder:"Write a message…",readonly:"Only admins can post announcements.",error:"Message could not be sent.",load:"Messages could not be loaded.",empty:"No messages yet."},
+ de:{general:"Allgemein",announcements:"Ankündigungen",send:"Senden",placeholder:"Nachricht schreiben…",readonly:"Nur Admins können Ankündigungen veröffentlichen.",error:"Nachricht konnte nicht gesendet werden.",load:"Nachrichten konnten nicht geladen werden.",empty:"Noch keine Nachrichten."}
 } as const
 export function PromotionChatsClient({locale,userId,isAdmin,names}:{locale:Locale;userId:string;isAdmin:boolean;names:Record<string,string>}){
  const [room,setRoom]=useState<Room>("general")
@@ -26,9 +26,9 @@ export function PromotionChatsClient({locale,userId,isAdmin,names}:{locale:Local
   setMessages(((data||[]) as unknown as Message[]).reverse())
  },[room,l.load])
  useEffect(()=>{
-  void load()
+  const initial=window.setTimeout(()=>void load(),0)
   const interval=window.setInterval(()=>{if(document.visibilityState==="visible")void load()},10000)
-  return()=>clearInterval(interval)
+  return()=>{clearTimeout(initial);clearInterval(interval)}
  },[load])
  async function send(){
   const message=body.trim()
