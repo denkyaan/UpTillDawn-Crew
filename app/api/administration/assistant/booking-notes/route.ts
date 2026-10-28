@@ -21,9 +21,16 @@ export async function GET(request:Request){
   if(error||!canOpenPortal("administration",(data??[]) as PortalAssignment[],{approved:user.approved,blocked:Boolean(user.account_blocked)}))return Response.json({error:"Forbidden"},{status:403})
  }
  if(!bookingId){
-  const {data,error}=await db.from("admin_artist_bookings").select("id,artist_name,status").neq("status","cancelled").order("artist_name",{ascending:true}).limit(100)
+  const params=new URL(request.url).searchParams
+  const search=(params.get("search")??"").trim()
+  const page=Number(params.get("page")??"0")
+  if(search.length>80||!Number.isSafeInteger(page)||page<0||page>1000)return Response.json({error:"Invalid search"},{status:400})
+  const pageSize=25
+  let query=db.from("admin_artist_bookings").select("id,artist_name,status").neq("status","cancelled")
+  if(search)query=query.ilike("artist_name",`%${search.replace(/[%,_\\]/g,"")} %`.replace(/ %$/,"%"))
+  const {data,error}=await query.order("artist_name",{ascending:true}).order("id",{ascending:true}).range(page*pageSize,(page+1)*pageSize)
   if(error)return Response.json({error:"Read failed"},{status:500})
-  return Response.json({bookings:data??[],limited:true})
+  return Response.json({bookings:(data??[]).slice(0,pageSize),hasMore:(data??[]).length>pageSize,page})
  }
  const {data,error}=await db.from("admin_artist_bookings").select("id,artist_name,status,internal_notes").eq("id",bookingId).maybeSingle()
  if(error)return Response.json({error:"Read failed"},{status:500})
