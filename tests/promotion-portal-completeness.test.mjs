@@ -6,7 +6,7 @@ const tasks=readFileSync('app/(app)/portals/promotion/tasks/page.tsx','utf8')
 const discipline=readFileSync('app/(app)/portals/administration/promotion-discipline/page.tsx','utf8')
 test('promotion overview exposes chat and tasks in four languages',()=>{
  for(const locale of ['nl','fr','en','de'])assert.match(home,new RegExp('\\b'+locale+':\\{'))
- assert.match(home,/href="\/chat"/)
+ assert.match(home,/href="\/portals\/promotion\/chats"/)
  assert.match(home,/href="\/portals\/promotion\/tasks"/)
  assert.match(home,/upt_promotion_is_blocked/)
  assert.match(home,/task_assignments/)
