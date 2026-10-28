@@ -41,6 +41,9 @@ export async function POST(request:Request){
   const extracted=response.trim().replace(/^\x60\x60\x60(?:json)?\s*/i,"").replace(/\s*\x60\x60\x60$/,"")
   const proposal=z.object({notes:z.string().max(5000)}).strict().safeParse(JSON.parse(extracted))
   if(!proposal.success||proposal.data.notes.split("\n").some(line=>auditLine.test(line))||(sensitiveOutput.test(proposal.data.notes)&&!sensitiveOutput.test(current)))return Response.json({error:"Invalid AI proposal"},{status:502})
+  const {data:latest,error:latestError}=await db.from("admin_artist_bookings").select("status,internal_notes").eq("id",booking.id).maybeSingle()
+  if(latestError)return Response.json({error:"Read failed"},{status:500})
+  if(!latest||latest.status==="cancelled"||latest.internal_notes!==parsed.data.expectedNotes)return Response.json({error:"Booking changed during AI generation"},{status:409})
   if(proposal.data.notes===current)return Response.json({notes:current,unchanged:true,expectedNotes:booking.internal_notes,bookingId:booking.id})
   return Response.json({notes:proposal.data.notes,unchanged:false,expectedNotes:booking.internal_notes,bookingId:booking.id})
  }catch{return Response.json({error:"AI proposal failed"},{status:502})}
