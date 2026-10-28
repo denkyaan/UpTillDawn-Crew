@@ -27,6 +27,7 @@ export function AdministrationAiBookingNotes({locale,initialBookingId}:{locale:S
  const busyRef=useRef(false)
  const initialLoadRef=useRef<string|null>(null)
  const selectionRef=useRef(initialBookingId??"")
+ const requestRef=useRef(0)
  const hasDraft=Boolean(booking&&notes!==editableNotes(booking.internal_notes))
  const originalLines=booking?editableNotes(booking.internal_notes).split("\n"):[]
  const draftLines=notes.split("\n")
@@ -36,23 +37,24 @@ export function AdministrationAiBookingNotes({locale,initialBookingId}:{locale:S
  function chooseBooking(targetId:string){
   if(targetId===id)return
   if(!mayLeave())return
-  selectionRef.current=targetId;setId(targetId);setBooking(null);setNotes("");setInstruction("");setConflict(false)
+  ++requestRef.current;selectionRef.current=targetId;setId(targetId);setBooking(null);setNotes("");setInstruction("");setConflict(false)
   if(targetId)void load(targetId)
  }
  const load=useCallback(async (targetId:string)=>{
   if(busyRef.current)return
   busyRef.current=true
+  const requestId=++requestRef.current
   selectionRef.current=targetId
   setBusy(true);setFeedback("");setConflict(false);setBooking(null)
   try{
    const response=await fetch("/api/administration/assistant/booking-notes?bookingId="+encodeURIComponent(targetId),{cache:"no-store"})
    const payload=await response.json() as {booking?:Booking;audit?:AuditEntry[]|null}
-   if(selectionRef.current!==targetId)return
+   if(selectionRef.current!==targetId||requestRef.current!==requestId)return
    if(!response.ok||!payload.booking){setFeedback(t.error);return}
    setBooking(payload.booking)
    setAudit(payload.audit??[])
    setNotes(editableNotes(payload.booking.internal_notes))
-  }catch{setFeedback(t.error)}finally{busyRef.current=false;setBusy(false)}
+  }catch{if(selectionRef.current===targetId&&requestRef.current===requestId)setFeedback(t.error)}finally{busyRef.current=false;setBusy(false)}
  },[t.error])
  useEffect(()=>{if(initialBookingId&&initialLoadRef.current!==initialBookingId&&/^[0-9a-f-]{36}$/i.test(initialBookingId)){initialLoadRef.current=initialBookingId;queueMicrotask(()=>{void load(initialBookingId)})}},[initialBookingId,load])
  async function listBookings(nextPage=0){
@@ -69,27 +71,31 @@ export function AdministrationAiBookingNotes({locale,initialBookingId}:{locale:S
   if(!booking||busy||conflict||!instruction.trim())return
   if(!mayLeave())return
   const targetId=booking.id
+  const requestId=++requestRef.current
   setBusy(true);setFeedback("")
   try{
    const response=await fetch("/api/administration/assistant/booking-notes/propose",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({bookingId:booking.id,instruction,locale})})
    const payload=await response.json() as {notes?:string;expectedNotes?:string|null;unchanged?:boolean}
-   if(selectionRef.current!==targetId)return
+   if(selectionRef.current!==targetId||requestRef.current!==requestId)return
    if(!response.ok||typeof payload.notes!=="string"||payload.expectedNotes!==booking.internal_notes){setFeedback(t.error);return}
    setNotes(payload.notes);setFeedback(payload.unchanged?t.unchanged:t.proposed)
-  }catch{setFeedback(t.error)}finally{setBusy(false)}
+  }catch{if(selectionRef.current===targetId&&requestRef.current===requestId)setFeedback(t.error)}finally{setBusy(false)}
  }
  async function save(){
   if(!booking||busy||conflict||booking.status==="cancelled")return
+  const targetId=booking.id
+  const requestId=++requestRef.current
   setBusy(true);setFeedback("")
   try{
    const response=await fetch("/api/administration/assistant/booking-notes",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({bookingId:booking.id,expectedNotes:booking.internal_notes,notes,confirmed:true})})
+   if(selectionRef.current!==targetId||requestRef.current!==requestId)return
    if(response.status===409){setConflict(true);setFeedback(t.conflict);return}
    if(!response.ok){setFeedback(t.error);return}
    const result=await response.json() as {saved?:boolean;unchanged?:boolean}
    if(result.unchanged){setFeedback(t.unchanged);return}
    if(!result.saved){setFeedback(t.error);return}
    setBooking(null);setNotes("");setFeedback(t.success)
-  }catch{setBooking(null);setFeedback(t.error)}finally{setBusy(false)}
+  }catch{if(selectionRef.current===targetId&&requestRef.current===requestId)setFeedback(t.error)}finally{setBusy(false)}
  }
  return <section className="space-y-3 rounded-2xl border bg-card p-5">
   <h2 className="text-lg font-semibold">{t.title}</h2>
