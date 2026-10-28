@@ -2,6 +2,11 @@ export type ExtraCatalogLocale = 'nl' | 'fr' | 'en' | 'de'
 type Row = { fr:string; en:string; de:string }
 
 export const APP_EXTRA_TRANSLATIONS: Record<string,Row> = {
+  "Rolwijziging opgeslagen. Vernieuw de pagina voor de actuele rollen.": {fr:"Modification du rôle enregistrée. Actualisez la page pour voir les rôles actuels.",en:"Role change saved. Refresh the page to see current roles.",de:"Rollenänderung gespeichert. Aktualisiere die Seite, um die aktuellen Rollen zu sehen."},
+  "Extra portaalrollen": {fr:"Rôles supplémentaires des portails",en:"Additional portal roles",de:"Zusätzliche Portalrollen"},
+  "Een medewerker kan tegelijk toegang hebben tot Evenementen, Promotie en Administratie. De basisrol blijft afzonderlijk bestaan.": {fr:"Un membre du personnel peut accéder simultanément aux événements, à la promotion et à l'administration. Le rôle principal reste distinct.",en:"A staff member can access Events, Promotion and Administration simultaneously. The primary role remains separate.",de:"Eine Person kann gleichzeitig auf Events, Promotion und Verwaltung zugreifen. Die Hauptrolle bleibt separat."},
+  "Wacht op goedkeuring": {fr:"En attente d'approbation",en:"Pending approval",de:"Wartet auf Genehmigung"},
+  "Extra rol toewijzen": {fr:"Attribuer un rôle supplémentaire",en:"Assign additional role",de:"Zusätzliche Rolle zuweisen"},
   "Privéchat starten": {fr:"Démarrer une discussion privée",en:"Start private chat",de:"Privatchat starten"},
   "Démarrer une discussion privée": {fr:"Démarrer une discussion privée",en:"Start private chat",de:"Privatchat starten"},
   "Start private chat": {fr:"Démarrer une discussion privée",en:"Start private chat",de:"Privatchat starten"},
