@@ -25,7 +25,7 @@ export default async function PromotionHome(){
  } as const
  const t=copy[locale]
  return <main className="mx-auto max-w-5xl space-y-6 px-4 py-6 sm:px-8 sm:py-8">
-  <header className="space-y-2"><p className="text-xs font-semibold uppercase tracking-[0.18em] text-violet-400">Up Till Dawn / Promotion</p><h1 className="text-2xl font-bold tracking-tight sm:text-3xl">{t.heading}</h1><p className="max-w-2xl text-sm text-muted-foreground">{t.intro}</p></header>
+  <header className="space-y-2"><p className="text-xs font-semibold uppercase tracking-[0.18em] text-violet-400">{({nl:"Up Till Dawn / Promotie",fr:"Up Till Dawn / Promotion",en:"Up Till Dawn / Promotion",de:"Up Till Dawn / Promotion"} as const)[locale]}</p><h1 className="text-2xl font-bold tracking-tight sm:text-3xl">{t.heading}</h1><p className="max-w-2xl text-sm text-muted-foreground">{t.intro}</p></header>
   {isBlocked&&<p role="alert" className="rounded-xl border border-amber-500/60 bg-amber-500/10 p-4 text-sm">{t.blocked}</p>}
   {error&&<p role="alert" className="rounded-xl border border-destructive/60 p-4 text-sm">{t.error}</p>}
   <section aria-label={t.open} className="grid grid-cols-3 gap-2 sm:gap-4">
