@@ -2,7 +2,10 @@ name: CI
 
 on:
   push:
-    branches: [main, 'feat/admin-portal-dashboard-v22']
+    branches: [main, 'feat/admin-portal-dashboard-v22', staging]
+    paths:
+      - '.github/workflows/ci.yml'
+      - '.github/release-validation/**'
   pull_request:
     branches: [main, staging]
   workflow_dispatch:
