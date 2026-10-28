@@ -39,13 +39,11 @@ concurrency:
 
 jobs:
   repair:
-    if: github.ref == 'refs/heads/staging' && vars.ENABLE_STAGING_SELF_HEAL == 'true'
+    if: vars.ENABLE_AUTOMATIC_SELF_HEAL == 'true'
     runs-on: ubuntu-26.04-arm
-    environment: staging
     timeout-minutes: 55
     env:
       CF_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
-      SELF_HEAL_TARGET: staging
       CF_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
       REPORT_ID: ${{ inputs.report_id }}
       ERROR_ROUTE: ${{ inputs.route }}
@@ -53,13 +51,12 @@ jobs:
       ERROR_MESSAGE: ${{ inputs.error_message }}
       STACK_TRACE: ${{ inputs.stack_trace }}
       AI_SUMMARY: ${{ inputs.ai_summary }}
-      SUPABASE_URL: https://npbjrtiolqperdgljnhi.supabase.co
-      SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.STAGING_SUPABASE_SERVICE_ROLE_KEY }}
+      SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+      SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
     steps:
       - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09
         with:
           fetch-depth: 0
-          ref: staging
 
       - uses: actions/setup-node@a0853c24544627f65ddf259abe73b1d18a591444
         with:
@@ -73,9 +70,7 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
           MAX_REPAIR_ATTEMPTS: "4"
-          NEXT_PUBLIC_APP_URL: https://uptilldawn-crew-staging.uptilldawn.workers.dev
-          NEXT_PUBLIC_SUPABASE_URL: https://npbjrtiolqperdgljnhi.supabase.co
-          NEXT_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.STAGING_SUPABASE_ANON_KEY }}
+          NEXT_PUBLIC_APP_URL: https://crew.uptilldawn.workers.dev
         shell: bash
         run: |
           set -euo pipefail

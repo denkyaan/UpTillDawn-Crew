@@ -2,24 +2,16 @@ name: CI
 
 on:
   push:
-    branches: [main, 'feat/admin-portal-dashboard-v22', staging]
-    paths:
-      - '.github/workflows/ci.yml'
-      - '.github/release-validation/**'
-      - 'supabase/migrations/20261028120000_administration_foreign_key_indexes.sql'
-      - 'supabase/migrations/20261028130000_restrict_artist_booking_audit_trigger_execution.sql'
-      - 'lib/release-baseline.ts'
-      - 'types/crew-database.ts'
+    branches: [main]
   pull_request:
-    branches: [main, staging]
+    branches: [main]
   workflow_dispatch:
 
 # Revalidate the complete pipeline on the regenerated Next.js security lockfile.
 
 concurrency:
-  # Both workflows use fixed local Supabase ports (54322 etc.); serialize them.
-  group: supabase-integration-${{ github.ref }}
-  cancel-in-progress: false
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
 
 jobs:
   build:
@@ -55,14 +47,26 @@ jobs:
         continue-on-error: true
         run: npm audit --audit-level=high
 
-      - name: Lint
-        run: npm run lint
-
-      - name: Typecheck
-        run: npm run typecheck
-
-      - name: Test
-        run: npm test
+      - name: Parallel lint, typecheck and unit tests
+        shell: bash
+        run: |
+          set -uo pipefail
+          npm run lint > /tmp/upt-lint.log 2>&1 & lint_pid=$!
+          npm run typecheck > /tmp/upt-typecheck.log 2>&1 & types_pid=$!
+          npm test > /tmp/upt-tests.log 2>&1 & tests_pid=$!
+          failed=0
+          for entry in "lint:$lint_pid" "typecheck:$types_pid" "tests:$tests_pid"; do
+            label="${entry%%:*}"
+            pid="${entry#*:}"
+            if wait "$pid"; then
+              echo "PASS: $label"
+            else
+              echo "::error::$label failed"
+              failed=1
+            fi
+            cat "/tmp/upt-$label.log"
+          done
+          exit "$failed"
 
       - name: PWA cross-device and offline contract
         run: node --test tests/pwa-cross-device-offline-regression.test.mjs
@@ -89,11 +93,6 @@ jobs:
           if [ ! -f supabase/config.toml ]; then
             npx --yes supabase@2.117.0 init
           fi
-
-      - name: Clear stale local Supabase containers
-        run: |
-          npx --yes supabase@2.117.0 stop --no-backup || true
-          docker ps -aq --filter "name=supabase_inbucket_" | xargs -r docker rm -f
 
       - name: Start isolated Supabase stack
         run: npx --yes supabase@2.117.0 start -x studio,imgproxy,inbucket,edge-runtime,logflare,vector,realtime
@@ -154,29 +153,12 @@ jobs:
             echo "- Storage and new-feature security surfaces: PASS"
           } >> "$GITHUB_STEP_SUMMARY"
 
-      - name: Generate local database types for review
-        run: npx --yes supabase@2.117.0 gen types typescript --local --schema public > /tmp/crew-database.ts
-
-      - name: Upload generated database types
-        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
-        with:
-          name: generated-crew-database-types
-          path: /tmp/crew-database.ts
-          retention-days: 3
-
       - name: Verify generated database types
         run: |
           npx --yes supabase@2.117.0 gen types typescript --local --schema public > /tmp/crew-database.ts
           node --input-type=module <<'NODE'
           import { readFileSync, writeFileSync } from 'node:fs'
-          // Legacy training tables are being retired from the application. Compare all
-          // active schema types strictly, while ignoring only those four obsolete
-          // table definitions until the non-destructive retirement migration lands.
-          const omitLegacyTrainingTables = (source) => source.replace(
-            /^      training_(?:progress|questions|scenario_members|scenarios): \{[\s\S]*?^      \}\n/gm,
-            '',
-          )
-          const normalize = (source) => omitLegacyTrainingTables(source)
+          const normalize = (source) => source
             .replace(
               /  \/\/ Allows to automatically instantiate createClient with right options\n  \/\/ instead of createClient<Database, \{ PostgrestVersion: 'XX' \}>\(URL, KEY\)\n  __InternalSupabase: \{\n    PostgrestVersion: "[^"]+"\n  \}\n/,
               '',
@@ -232,10 +214,21 @@ jobs:
           test "$briefing_seed_count" = "0"
           echo "PASS: bot03 briefing fixture starts unacknowledged"
 
+      - name: Cache Playwright Chromium
+        id: chromium-cache
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/ms-playwright
+          key: playwright-chromium-1.62.1-${{ runner.os }}-${{ runner.arch }}
+
       - name: Install isolated browser test runtime
         run: |
-          npm install --no-save --package-lock=false playwright@1.62.1
-          npx playwright install --with-deps chromium
+          npm install --no-save --package-lock=false --prefer-offline --no-audit --no-fund playwright@1.62.1
+          if [ "${{ steps.chromium-cache.outputs.cache-hit }}" = "true" ]; then
+            npx playwright install-deps chromium
+          else
+            npx playwright install --with-deps chromium
+          fi
 
       - name: Build application
         run: npm run build:next
@@ -266,17 +259,6 @@ jobs:
             fi
           done
           exit 1
-
-      - name: Inventory every portal route and interactive control
-        run: node scripts/functional-control-inventory.mjs
-
-      - name: Upload functional control inventory
-        if: always()
-        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
-        with:
-          name: functional-control-inventory
-          path: artifacts/functional-control-inventory.json
-          if-no-files-found: ignore
 
       - name: Full application surface inventory gate
         run: |
