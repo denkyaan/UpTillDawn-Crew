@@ -70,6 +70,7 @@ export function RoleQuickAction({ userId, portal, role, action }: {
         try {
           await changePortalRole(form)
           setResult('Rolwijziging opgeslagen.')
+          router.refresh()
         } catch {
           setResult('Rolwijziging niet uitgevoerd.')
         }
