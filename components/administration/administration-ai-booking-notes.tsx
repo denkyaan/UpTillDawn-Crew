@@ -2,16 +2,17 @@
 import {useCallback,useEffect,useRef,useState} from "react"
 import type {SupportedUiLocale} from "@/lib/locale-preferences"
 const labels={
- nl:{title:"Interne boekingsnotities wijzigen",id:"Boeking-ID",load:"Boeking ophalen",notes:"Nieuwe interne notities",save:"Bevestigen en opslaan",cancel:"Annuleren",success:"Notities opgeslagen.",error:"De wijziging kon niet worden uitgevoerd. Herlaad de boeking.",locked:"Geannuleerde boekingen zijn vergrendeld."},
- fr:{title:"Modifier les notes internes",id:"Identifiant de réservation",load:"Charger la réservation",notes:"Nouvelles notes internes",save:"Confirmer et enregistrer",cancel:"Annuler",success:"Notes enregistrées.",error:"Modification impossible. Rechargez la réservation.",locked:"Les réservations annulées sont verrouillées."},
- en:{title:"Edit internal booking notes",id:"Booking ID",load:"Load booking",notes:"New internal notes",save:"Confirm and save",cancel:"Cancel",success:"Notes saved.",error:"Update failed. Reload the booking.",locked:"Cancelled bookings are locked."},
- de:{title:"Interne Buchungsnotizen ändern",id:"Buchungs-ID",load:"Buchung laden",notes:"Neue interne Notizen",save:"Bestätigen und speichern",cancel:"Abbrechen",success:"Notizen gespeichert.",error:"Änderung fehlgeschlagen. Buchung neu laden.",locked:"Stornierte Buchungen sind gesperrt."}
+ nl:{title:"Interne boekingsnotities wijzigen",id:"Boeking-ID",load:"Boeking ophalen",notes:"Nieuwe interne notities",save:"Bevestigen en opslaan",cancel:"Annuleren",success:"Notities opgeslagen.",error:"De wijziging kon niet worden uitgevoerd. Herlaad de boeking.",locked:"Geannuleerde boekingen zijn vergrendeld.",choose:"Kies een artiestenboeking",refresh:"Boekingen laden"},
+ fr:{title:"Modifier les notes internes",id:"Identifiant de réservation",load:"Charger la réservation",notes:"Nouvelles notes internes",save:"Confirmer et enregistrer",cancel:"Annuler",success:"Notes enregistrées.",error:"Modification impossible. Rechargez la réservation.",locked:"Les réservations annulées sont verrouillées.",choose:"Choisir une réservation",refresh:"Charger les réservations"},
+ en:{title:"Edit internal booking notes",id:"Booking ID",load:"Load booking",notes:"New internal notes",save:"Confirm and save",cancel:"Cancel",success:"Notes saved.",error:"Update failed. Reload the booking.",locked:"Cancelled bookings are locked.",choose:"Choose an artist booking",refresh:"Load bookings"},
+ de:{title:"Interne Buchungsnotizen ändern",id:"Buchungs-ID",load:"Buchung laden",notes:"Neue interne Notizen",save:"Bestätigen und speichern",cancel:"Abbrechen",success:"Notizen gespeichert.",error:"Änderung fehlgeschlagen. Buchung neu laden.",locked:"Stornierte Buchungen sind gesperrt.",choose:"Künstlerbuchung auswählen",refresh:"Buchungen laden"}
 } as const
 type Booking={id:string;artist_name:string;status:string;internal_notes:string|null}
 export function AdministrationAiBookingNotes({locale,initialBookingId}:{locale:SupportedUiLocale;initialBookingId?:string}){
  const t=labels[locale]
  const [id,setId]=useState(initialBookingId??"")
  const [booking,setBooking]=useState<Booking|null>(null)
+ const [choices,setChoices]=useState<Array<Pick<Booking,"id"|"artist_name"|"status">>>([])
  const [notes,setNotes]=useState("")
  const [busy,setBusy]=useState(false)
  const [feedback,setFeedback]=useState("")
@@ -30,6 +31,16 @@ export function AdministrationAiBookingNotes({locale,initialBookingId}:{locale:S
   }catch{setFeedback(t.error)}finally{busyRef.current=false;setBusy(false)}
  },[t.error])
  useEffect(()=>{if(initialBookingId&&initialLoadRef.current!==initialBookingId&&/^[0-9a-f-]{36}$/i.test(initialBookingId)){initialLoadRef.current=initialBookingId;queueMicrotask(()=>{void load(initialBookingId)})}},[initialBookingId,load])
+ async function listBookings(){
+  if(busy)return
+  setBusy(true);setFeedback("")
+  try{
+   const response=await fetch("/api/administration/assistant/booking-notes",{cache:"no-store"})
+   const payload=await response.json() as {bookings?:Array<Pick<Booking,"id"|"artist_name"|"status">>}
+   if(!response.ok||!payload.bookings){setFeedback(t.error);return}
+   setChoices(payload.bookings)
+  }catch{setFeedback(t.error)}finally{setBusy(false)}
+ }
  async function save(){
   if(!booking||busy||booking.status==="cancelled")return
   setBusy(true);setFeedback("")
@@ -41,6 +52,7 @@ export function AdministrationAiBookingNotes({locale,initialBookingId}:{locale:S
  }
  return <section className="space-y-3 rounded-2xl border bg-card p-5">
   <h2 className="text-lg font-semibold">{t.title}</h2>
+  <div className="flex flex-wrap items-end gap-2"><label className="min-w-0 flex-1 text-sm">{t.choose}<select value={choices.some(item=>item.id===id)?id:""} onChange={event=>{setId(event.target.value);setBooking(null);if(event.target.value)void load(event.target.value)}} className="mt-1 w-full rounded-lg border bg-background p-2"><option value="">{t.choose}</option>{choices.map(item=><option key={item.id} value={item.id}>{item.artist_name} · {item.status}</option>)}</select></label><button type="button" disabled={busy} onClick={()=>void listBookings()} className="rounded-lg border px-3 py-2 text-sm disabled:opacity-50">{t.refresh}</button></div>
   <form onSubmit={event=>{event.preventDefault();void load(id)}} className="flex flex-wrap gap-2">
    <label className="min-w-0 flex-1 text-sm">{t.id}<input value={id} onChange={event=>{setId(event.target.value);setBooking(null)}} required maxLength={36} className="mt-1 w-full rounded-lg border bg-background p-2"/></label>
    <button type="submit" disabled={busy} className="self-end rounded-lg border px-3 py-2 text-sm disabled:opacity-50">{t.load}</button>
