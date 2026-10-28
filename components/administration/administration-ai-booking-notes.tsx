@@ -67,6 +67,7 @@ export function AdministrationAiBookingNotes({locale,initialBookingId}:{locale:S
  }
  async function propose(){
   if(!booking||busy||conflict||!instruction.trim())return
+  if(!mayLeave())return
   const targetId=booking.id
   setBusy(true);setFeedback("")
   try{
