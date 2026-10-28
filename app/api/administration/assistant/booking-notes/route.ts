@@ -14,11 +14,16 @@ export async function GET(request:Request){
  if(!user)return Response.json({error:"Unauthorized"},{status:401})
  if((!user.approved||user.account_blocked)&&!user.isOwner)return Response.json({error:"Forbidden"},{status:403})
  const bookingId=new URL(request.url).searchParams.get("bookingId")
- if(!bookingId||!z.string().uuid().safeParse(bookingId).success)return Response.json({error:"Invalid booking"},{status:400})
+ if(bookingId&&!z.string().uuid().safeParse(bookingId).success)return Response.json({error:"Invalid booking"},{status:400})
  const db=await createClient()
  if(!user.isAdmin&&!user.isOwner){
   const {data,error}=await db.rpc("upt_my_portal_assignments")
   if(error||!canOpenPortal("administration",(data??[]) as PortalAssignment[],{approved:user.approved,blocked:Boolean(user.account_blocked)}))return Response.json({error:"Forbidden"},{status:403})
+ }
+ if(!bookingId){
+  const {data,error}=await db.from("admin_artist_bookings").select("id,artist_name,status").neq("status","cancelled").order("artist_name",{ascending:true}).limit(100)
+  if(error)return Response.json({error:"Read failed"},{status:500})
+  return Response.json({bookings:data??[],limited:true})
  }
  const {data,error}=await db.from("admin_artist_bookings").select("id,artist_name,status,internal_notes").eq("id",bookingId).maybeSingle()
  if(error)return Response.json({error:"Read failed"},{status:500})
