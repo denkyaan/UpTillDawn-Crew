@@ -12,7 +12,7 @@ const labels={
 } as const
 export function PromotionPresence({userId,locale}:{userId:string;locale:Locale}){
  const [seen,setSeen]=useState<string|null>(null)
- const [now,setNow]=useState(Date.now())
+ const [now,setNow]=useState(0)
  useEffect(()=>{
   const db=createClient()
   let active=true
