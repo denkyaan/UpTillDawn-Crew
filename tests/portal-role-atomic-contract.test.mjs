@@ -27,3 +27,23 @@ test('admin portal assignment read policy remains restricted to approved admins'
  assert.match(sql,/actor\.approved=true/)
  assert.match(sql,/actor\.account_blocked=false/)
 })
+
+test('role management keeps self-account read-only and blocks duplicate active grants',async()=>{
+ const [crew,ui]=await Promise.all([read('app/(app)/crew/page.tsx'),read('components/admin/personnel-portal-roles.tsx')])
+ assert.match(crew,/readOnly=\{own\}/)
+ assert.match(ui,/const activeSelected=Boolean\(selectedAssignment\?\.approved\)/)
+ assert.match(ui,/activeSelected\?<span/)
+ assert.match(ui,/pendingSelected\?<button/)
+ assert.match(ui,/disabled=\{pending\}/)
+ assert.match(ui,/router\.refresh\(\)/)
+})
+
+test('SQL lifecycle verifies approved entitlement, denied non-admin writes and revocation',async()=>{
+ const sql=await read('tests/sql/v21-portal-role-lifecycle.sql')
+ assert.match(sql,/assign_approved/)
+ assert.match(sql,/Atomic approved grant not visible to recipient/)
+ assert.match(sql,/Duplicate active atomic grant unexpectedly succeeded/)
+ assert.match(sql,/Non-admin mutation unexpectedly succeeded/)
+ assert.match(sql,/Revoked grant still authorizes recipient/)
+ assert.match(sql,/^rollback;\s*$/m)
+})
