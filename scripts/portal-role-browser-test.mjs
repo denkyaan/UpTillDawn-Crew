@@ -41,10 +41,15 @@ try{
       if(!response?.ok()||actual!==route)throw Error(`${entry.name} allowed ${route} failed: HTTP ${response?.status()}, landed ${actual}`)
       if(!(await page.locator('body').innerText()).trim())throw Error(`${entry.name}: blank portal`)
      }else{
-      if(actual===route&&response?.ok()){
-       const body=(await page.locator('body').innerText()).toLowerCase()
-       if(!/not found|niet gevonden|geen toegang|access denied|forbidden|404/.test(body))throw Error(`${entry.name} accessed unauthorized portal ${route}`)
-      }
+      // Next.js streams the initial HTML before async server authorization resolves.
+      // Wait for the eventual access-denied UI or server redirect, not the shell.
+      await page.waitForFunction((blockedRoute)=>{
+       const pathname=window.location.pathname
+       const body=(document.body?.innerText||'').toLowerCase()
+       return pathname!==blockedRoute || /not found|niet gevonden|geen toegang|no access|accès à ce portail refusé|kein zugang|access denied|forbidden|404/.test(body)
+      },route,{timeout:20000}).catch(async()=>{
+       throw Error(`${entry.name} unauthorized portal ${route} remained accessible: ${page.url()} :: ${(await page.locator('body').innerText()).slice(0,300)}`)
+      })
      }
     }
     console.log(`PASS: ${entry.name} authenticates, opens own portal, and cannot open the other portal`)
