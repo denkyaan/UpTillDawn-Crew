@@ -9,7 +9,8 @@ test("administration AI exposes explicit confirmed booking note workflow",()=>{
  assert.match(editor,/confirmed:true/)
  assert.match(editor,/expectedNotes:booking\.internal_notes/)
  assert.match(editor,/booking\.status==="cancelled"/)
- assert.match(editor,/if\(!response\.ok\)\{setBooking\(null\)/)
+ assert.match(editor,/if\(response\.status===409\)\{setConflict\(true\)/)
+ assert.match(editor,/if\(!response\.ok\)\{setFeedback\(t\.error\)/)
 })
 test("booking note preview requires access and reads only safe fields",()=>{
  assert.match(route,/export async function GET/)
