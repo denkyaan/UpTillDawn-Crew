@@ -21,13 +21,16 @@ export function AdministrationAiBookingNotes({locale,initialBookingId}:{locale:S
  const [feedback,setFeedback]=useState("")
  const busyRef=useRef(false)
  const initialLoadRef=useRef<string|null>(null)
+ const selectionRef=useRef(initialBookingId??"")
  const load=useCallback(async (targetId:string)=>{
   if(busyRef.current)return
   busyRef.current=true
+  selectionRef.current=targetId
   setBusy(true);setFeedback("");setBooking(null)
   try{
    const response=await fetch("/api/administration/assistant/booking-notes?bookingId="+encodeURIComponent(targetId),{cache:"no-store"})
    const payload=await response.json() as {booking?:Booking;audit?:AuditEntry[]|null}
+   if(selectionRef.current!==targetId)return
    if(!response.ok||!payload.booking){setFeedback(t.error);return}
    setBooking(payload.booking)
    setAudit(payload.audit??[])
@@ -47,10 +50,12 @@ export function AdministrationAiBookingNotes({locale,initialBookingId}:{locale:S
  }
  async function propose(){
   if(!booking||busy||!instruction.trim())return
+  const targetId=booking.id
   setBusy(true);setFeedback("")
   try{
    const response=await fetch("/api/administration/assistant/booking-notes/propose",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({bookingId:booking.id,instruction,locale})})
    const payload=await response.json() as {notes?:string;expectedNotes?:string|null}
+   if(selectionRef.current!==targetId)return
    if(!response.ok||typeof payload.notes!=="string"||payload.expectedNotes!==booking.internal_notes){setFeedback(t.error);return}
    setNotes(payload.notes);setFeedback(t.proposed)
   }catch{setFeedback(t.error)}finally{setBusy(false)}
@@ -61,14 +66,17 @@ export function AdministrationAiBookingNotes({locale,initialBookingId}:{locale:S
   try{
    const response=await fetch("/api/administration/assistant/booking-notes",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({bookingId:booking.id,expectedNotes:booking.internal_notes,notes,confirmed:true})})
    if(!response.ok){setBooking(null);setFeedback(t.error);return}
+   const result=await response.json() as {saved?:boolean;unchanged?:boolean}
+   if(result.unchanged){setFeedback(t.unchanged);return}
+   if(!result.saved){setFeedback(t.error);return}
    setBooking(null);setNotes("");setFeedback(t.success)
   }catch{setBooking(null);setFeedback(t.error)}finally{setBusy(false)}
  }
  return <section className="space-y-3 rounded-2xl border bg-card p-5">
   <h2 className="text-lg font-semibold">{t.title}</h2>
-  <div className="flex flex-wrap items-end gap-2"><label className="min-w-0 flex-1 text-sm">{t.choose}<select value={choices.some(item=>item.id===id)?id:""} onChange={event=>{setId(event.target.value);setBooking(null);if(event.target.value)void load(event.target.value)}} className="mt-1 w-full rounded-lg border bg-background p-2"><option value="">{t.choose}</option>{choices.map(item=><option key={item.id} value={item.id}>{item.artist_name} · {item.status}</option>)}</select></label><button type="button" disabled={busy} onClick={()=>void listBookings()} className="rounded-lg border px-3 py-2 text-sm disabled:opacity-50">{t.refresh}</button></div>
+  <div className="flex flex-wrap items-end gap-2"><label className="min-w-0 flex-1 text-sm">{t.choose}<select value={choices.some(item=>item.id===id)?id:""} onChange={event=>{selectionRef.current=event.target.value;setId(event.target.value);setBooking(null);if(event.target.value)void load(event.target.value)}} className="mt-1 w-full rounded-lg border bg-background p-2"><option value="">{t.choose}</option>{choices.map(item=><option key={item.id} value={item.id}>{item.artist_name} · {item.status}</option>)}</select></label><button type="button" disabled={busy} onClick={()=>void listBookings()} className="rounded-lg border px-3 py-2 text-sm disabled:opacity-50">{t.refresh}</button></div>
   <form onSubmit={event=>{event.preventDefault();void load(id)}} className="flex flex-wrap gap-2">
-   <label className="min-w-0 flex-1 text-sm">{t.id}<input value={id} onChange={event=>{setId(event.target.value);setBooking(null)}} required maxLength={36} className="mt-1 w-full rounded-lg border bg-background p-2"/></label>
+   <label className="min-w-0 flex-1 text-sm">{t.id}<input value={id} onChange={event=>{selectionRef.current=event.target.value;setId(event.target.value);setBooking(null)}} required maxLength={36} className="mt-1 w-full rounded-lg border bg-background p-2"/></label>
    <button type="submit" disabled={busy} className="self-end rounded-lg border px-3 py-2 text-sm disabled:opacity-50">{t.load}</button>
   </form>
   {booking&&<div className="space-y-3 rounded-xl border p-3">
@@ -77,7 +85,7 @@ export function AdministrationAiBookingNotes({locale,initialBookingId}:{locale:S
     <label className="block text-sm">{t.instruction}<textarea rows={2} maxLength={1000} value={instruction} onChange={event=>setInstruction(event.target.value)} className="mt-1 w-full rounded-lg border bg-background p-2"/></label><button type="button" disabled={busy||instruction.trim().length<5} onClick={()=>void propose()} className="rounded-lg border border-violet-500 px-3 py-2 text-sm disabled:opacity-50">{t.generate}</button>
     <label className="block text-sm">{t.notes}<textarea rows={5} maxLength={5000} value={notes} onChange={event=>setNotes(event.target.value)} className="mt-1 w-full rounded-lg border bg-background p-2"/></label>
     <div className="rounded-lg border p-3 text-sm"><p className="font-semibold">{t.preview}</p><p className="whitespace-pre-wrap break-words text-muted-foreground">{booking.internal_notes??"—"}</p><hr className="my-2"/><p className="whitespace-pre-wrap break-words">{notes||"—"}</p></div>
-    <div className="flex flex-wrap gap-2"><button type="button" disabled={busy||notes===(booking.internal_notes??"")} onClick={()=>void save()} className="rounded-lg bg-violet-600 px-3 py-2 text-sm font-semibold text-white disabled:opacity-50">{t.save}</button><button type="button" disabled={busy} onClick={()=>setBooking(null)} className="rounded-lg border px-3 py-2 text-sm">{t.cancel}</button></div>
+    <div className="flex flex-wrap gap-2"><button type="button" disabled={busy||notes===(booking.internal_notes??"").split("\n").filter(line=>!/^^\[/.test(line)).join("\n")} onClick={()=>void save()} className="rounded-lg bg-violet-600 px-3 py-2 text-sm font-semibold text-white disabled:opacity-50">{t.save}</button><button type="button" disabled={busy} onClick={()=>setBooking(null)} className="rounded-lg border px-3 py-2 text-sm">{t.cancel}</button></div>
    </>}
   </div>}
   {booking&&audit.length>0&&<section className="space-y-2 rounded-xl border p-3"><h3 className="font-semibold">{t.audit}</h3><ol className="space-y-1 text-xs">{audit.map(entry=><li key={entry.id}>{new Date(entry.changed_at).toLocaleString()} · {t.before}: {entry.previous_length} · {t.after}: {entry.new_length}</li>)}</ol></section>}
