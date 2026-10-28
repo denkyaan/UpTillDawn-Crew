@@ -9,6 +9,7 @@ on:
       - 'supabase/migrations/20261028120000_administration_foreign_key_indexes.sql'
       - 'supabase/migrations/20261028130000_restrict_artist_booking_audit_trigger_execution.sql'
       - 'lib/release-baseline.ts'
+      - 'types/crew-database.ts'
   pull_request:
     branches: [main, staging]
   workflow_dispatch:
