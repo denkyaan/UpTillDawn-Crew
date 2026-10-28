@@ -7,13 +7,642 @@ export type Json =
   | Json[]
 
 export type Database = {
-  // Allows to automatically instantiate createClient with right options
-  // instead of createClient<Database, { PostgrestVersion: 'XX' }>(URL, KEY)
-  __InternalSupabase: {
-    PostgrestVersion: "14.5"
-  }
   public: {
     Tables: {
+      admin_artist_agreement_signature_requests: {
+        Row: {
+          agreement_version_id: string
+          cancelled_at: string | null
+          created_at: string
+          created_by: string
+          id: string
+          recipient_email: string
+          status: string
+        }
+        Insert: {
+          agreement_version_id: string
+          cancelled_at?: string | null
+          created_at?: string
+          created_by?: string
+          id?: string
+          recipient_email: string
+          status?: string
+        }
+        Update: {
+          agreement_version_id?: string
+          cancelled_at?: string | null
+          created_at?: string
+          created_by?: string
+          id?: string
+          recipient_email?: string
+          status?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "admin_artist_agreement_signature_requ_agreement_version_id_fkey"
+            columns: ["agreement_version_id"]
+            isOneToOne: false
+            referencedRelation: "admin_artist_agreement_versions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      admin_artist_agreement_versions: {
+        Row: {
+          approved_at: string | null
+          approved_by: string | null
+          booking_id: string
+          created_at: string
+          created_by: string
+          id: string
+          snapshot: Json
+          version_number: number
+        }
+        Insert: {
+          approved_at?: string | null
+          approved_by?: string | null
+          booking_id: string
+          created_at?: string
+          created_by?: string
+          id?: string
+          snapshot: Json
+          version_number: number
+        }
+        Update: {
+          approved_at?: string | null
+          approved_by?: string | null
+          booking_id?: string
+          created_at?: string
+          created_by?: string
+          id?: string
+          snapshot?: Json
+          version_number?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "admin_artist_agreement_versions_booking_id_fkey"
+            columns: ["booking_id"]
+            isOneToOne: false
+            referencedRelation: "admin_artist_bookings"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      admin_artist_booking_communications: {
+        Row: {
+          actor_id: string
+          booking_id: string
+          created_at: string
+          details: string
+          id: string
+          kind: string
+        }
+        Insert: {
+          actor_id?: string
+          booking_id: string
+          created_at?: string
+          details: string
+          id?: string
+          kind: string
+        }
+        Update: {
+          actor_id?: string
+          booking_id?: string
+          created_at?: string
+          details?: string
+          id?: string
+          kind?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "admin_artist_booking_communications_booking_id_fkey"
+            columns: ["booking_id"]
+            isOneToOne: false
+            referencedRelation: "admin_artist_bookings"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      admin_artist_booking_note_audit: {
+        Row: {
+          actor_id: string | null
+          booking_id: string
+          changed_at: string
+          id: string
+          new_length: number
+          previous_length: number
+        }
+        Insert: {
+          actor_id?: string | null
+          booking_id: string
+          changed_at?: string
+          id?: string
+          new_length: number
+          previous_length: number
+        }
+        Update: {
+          actor_id?: string | null
+          booking_id?: string
+          changed_at?: string
+          id?: string
+          new_length?: number
+          previous_length?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "admin_artist_booking_note_audit_booking_id_fkey"
+            columns: ["booking_id"]
+            isOneToOne: false
+            referencedRelation: "admin_artist_bookings"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      admin_artist_bookings: {
+        Row: {
+          agency_contact_id: string | null
+          agreement_cancellation_terms: string | null
+          agreement_governing_law: string | null
+          agreement_liability_terms: string | null
+          agreement_payment_terms: string | null
+          artist_name: string
+          created_at: string
+          created_by: string
+          currency: string
+          event_id: string
+          fee_amount: number | null
+          follow_up_at: string | null
+          id: string
+          internal_notes: string | null
+          performance_at: string | null
+          rider_notes: string | null
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          agency_contact_id?: string | null
+          agreement_cancellation_terms?: string | null
+          agreement_governing_law?: string | null
+          agreement_liability_terms?: string | null
+          agreement_payment_terms?: string | null
+          artist_name: string
+          created_at?: string
+          created_by?: string
+          currency?: string
+          event_id: string
+          fee_amount?: number | null
+          follow_up_at?: string | null
+          id?: string
+          internal_notes?: string | null
+          performance_at?: string | null
+          rider_notes?: string | null
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          agency_contact_id?: string | null
+          agreement_cancellation_terms?: string | null
+          agreement_governing_law?: string | null
+          agreement_liability_terms?: string | null
+          agreement_payment_terms?: string | null
+          artist_name?: string
+          created_at?: string
+          created_by?: string
+          currency?: string
+          event_id?: string
+          fee_amount?: number | null
+          follow_up_at?: string | null
+          id?: string
+          internal_notes?: string | null
+          performance_at?: string | null
+          rider_notes?: string | null
+          status?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "admin_artist_bookings_agency_contact_id_fkey"
+            columns: ["agency_contact_id"]
+            isOneToOne: false
+            referencedRelation: "admin_counterparties"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "admin_artist_bookings_event_id_fkey"
+            columns: ["event_id"]
+            isOneToOne: false
+            referencedRelation: "events"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      admin_counterparties: {
+        Row: {
+          address: Json
+          bic: string | null
+          city: string | null
+          country_code: string | null
+          created_at: string
+          email: string | null
+          enterprise_number: string | null
+          iban: string | null
+          id: string
+          kind: string
+          name: string
+          payment_terms_days: number | null
+          peppol_endpoint: string | null
+          postal_code: string | null
+          street_address: string | null
+          updated_at: string
+          vat_number: string | null
+        }
+        Insert: {
+          address?: Json
+          bic?: string | null
+          city?: string | null
+          country_code?: string | null
+          created_at?: string
+          email?: string | null
+          enterprise_number?: string | null
+          iban?: string | null
+          id?: string
+          kind: string
+          name: string
+          payment_terms_days?: number | null
+          peppol_endpoint?: string | null
+          postal_code?: string | null
+          street_address?: string | null
+          updated_at?: string
+          vat_number?: string | null
+        }
+        Update: {
+          address?: Json
+          bic?: string | null
+          city?: string | null
+          country_code?: string | null
+          created_at?: string
+          email?: string | null
+          enterprise_number?: string | null
+          iban?: string | null
+          id?: string
+          kind?: string
+          name?: string
+          payment_terms_days?: number | null
+          peppol_endpoint?: string | null
+          postal_code?: string | null
+          street_address?: string | null
+          updated_at?: string
+          vat_number?: string | null
+        }
+        Relationships: []
+      }
+      admin_financial_attachments: {
+        Row: {
+          created_at: string
+          document_id: string
+          id: string
+          mime_type: string
+          original_name: string
+          size_bytes: number
+          storage_path: string
+          uploaded_by: string
+        }
+        Insert: {
+          created_at?: string
+          document_id: string
+          id?: string
+          mime_type: string
+          original_name: string
+          size_bytes: number
+          storage_path: string
+          uploaded_by?: string
+        }
+        Update: {
+          created_at?: string
+          document_id?: string
+          id?: string
+          mime_type?: string
+          original_name?: string
+          size_bytes?: number
+          storage_path?: string
+          uploaded_by?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "admin_financial_attachments_document_id_fkey"
+            columns: ["document_id"]
+            isOneToOne: false
+            referencedRelation: "admin_financial_documents"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "admin_financial_attachments_document_id_fkey"
+            columns: ["document_id"]
+            isOneToOne: false
+            referencedRelation: "admin_financial_payment_balances"
+            referencedColumns: ["document_id"]
+          },
+        ]
+      }
+      admin_financial_audit: {
+        Row: {
+          actor_id: string | null
+          created_at: string
+          document_id: string
+          id: number
+          new_record: Json | null
+          old_record: Json | null
+          operation: string
+        }
+        Insert: {
+          actor_id?: string | null
+          created_at?: string
+          document_id: string
+          id?: never
+          new_record?: Json | null
+          old_record?: Json | null
+          operation: string
+        }
+        Update: {
+          actor_id?: string | null
+          created_at?: string
+          document_id?: string
+          id?: never
+          new_record?: Json | null
+          old_record?: Json | null
+          operation?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "admin_financial_audit_document_id_fkey"
+            columns: ["document_id"]
+            isOneToOne: false
+            referencedRelation: "admin_financial_documents"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "admin_financial_audit_document_id_fkey"
+            columns: ["document_id"]
+            isOneToOne: false
+            referencedRelation: "admin_financial_payment_balances"
+            referencedColumns: ["document_id"]
+          },
+        ]
+      }
+      admin_financial_documents: {
+        Row: {
+          approved_at: string | null
+          approved_by: string | null
+          counterparty_id: string | null
+          created_at: string
+          created_by: string
+          currency: string
+          document_number: string | null
+          due_date: string | null
+          event_id: string | null
+          external_reference: string | null
+          gross_amount: number | null
+          id: string
+          issue_date: string | null
+          kind: string
+          net_amount: number
+          notes: string | null
+          original_invoice_id: string | null
+          peppol_message_id: string | null
+          peppol_status: string
+          status: string
+          tax_amount: number
+          updated_at: string
+        }
+        Insert: {
+          approved_at?: string | null
+          approved_by?: string | null
+          counterparty_id?: string | null
+          created_at?: string
+          created_by?: string
+          currency?: string
+          document_number?: string | null
+          due_date?: string | null
+          event_id?: string | null
+          external_reference?: string | null
+          gross_amount?: number | null
+          id?: string
+          issue_date?: string | null
+          kind: string
+          net_amount?: number
+          notes?: string | null
+          original_invoice_id?: string | null
+          peppol_message_id?: string | null
+          peppol_status?: string
+          status?: string
+          tax_amount?: number
+          updated_at?: string
+        }
+        Update: {
+          approved_at?: string | null
+          approved_by?: string | null
+          counterparty_id?: string | null
+          created_at?: string
+          created_by?: string
+          currency?: string
+          document_number?: string | null
+          due_date?: string | null
+          event_id?: string | null
+          external_reference?: string | null
+          gross_amount?: number | null
+          id?: string
+          issue_date?: string | null
+          kind?: string
+          net_amount?: number
+          notes?: string | null
+          original_invoice_id?: string | null
+          peppol_message_id?: string | null
+          peppol_status?: string
+          status?: string
+          tax_amount?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "admin_financial_documents_counterparty_id_fkey"
+            columns: ["counterparty_id"]
+            isOneToOne: false
+            referencedRelation: "admin_counterparties"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "admin_financial_documents_event_id_fkey"
+            columns: ["event_id"]
+            isOneToOne: false
+            referencedRelation: "events"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "admin_financial_documents_original_invoice_id_fkey"
+            columns: ["original_invoice_id"]
+            isOneToOne: false
+            referencedRelation: "admin_financial_documents"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "admin_financial_documents_original_invoice_id_fkey"
+            columns: ["original_invoice_id"]
+            isOneToOne: false
+            referencedRelation: "admin_financial_payment_balances"
+            referencedColumns: ["document_id"]
+          },
+        ]
+      }
+      admin_financial_lines: {
+        Row: {
+          created_at: string
+          description: string
+          document_id: string
+          id: string
+          quantity: number
+          unit_price: number
+          vat_rate: number
+        }
+        Insert: {
+          created_at?: string
+          description: string
+          document_id: string
+          id?: string
+          quantity?: number
+          unit_price?: number
+          vat_rate?: number
+        }
+        Update: {
+          created_at?: string
+          description?: string
+          document_id?: string
+          id?: string
+          quantity?: number
+          unit_price?: number
+          vat_rate?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "admin_financial_lines_document_id_fkey"
+            columns: ["document_id"]
+            isOneToOne: false
+            referencedRelation: "admin_financial_documents"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "admin_financial_lines_document_id_fkey"
+            columns: ["document_id"]
+            isOneToOne: false
+            referencedRelation: "admin_financial_payment_balances"
+            referencedColumns: ["document_id"]
+          },
+        ]
+      }
+      admin_financial_payments: {
+        Row: {
+          amount: number
+          bank_reference: string | null
+          created_at: string
+          created_by: string
+          document_id: string
+          id: string
+          note: string | null
+          paid_on: string
+        }
+        Insert: {
+          amount: number
+          bank_reference?: string | null
+          created_at?: string
+          created_by?: string
+          document_id: string
+          id?: string
+          note?: string | null
+          paid_on: string
+        }
+        Update: {
+          amount?: number
+          bank_reference?: string | null
+          created_at?: string
+          created_by?: string
+          document_id?: string
+          id?: string
+          note?: string | null
+          paid_on?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "admin_financial_payments_document_id_fkey"
+            columns: ["document_id"]
+            isOneToOne: false
+            referencedRelation: "admin_financial_documents"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "admin_financial_payments_document_id_fkey"
+            columns: ["document_id"]
+            isOneToOne: false
+            referencedRelation: "admin_financial_payment_balances"
+            referencedColumns: ["document_id"]
+          },
+        ]
+      }
+      admin_payment_reminders: {
+        Row: {
+          approved_at: string | null
+          approved_by: string | null
+          body: string
+          created_at: string
+          created_by: string
+          document_id: string
+          id: string
+          recipient_email: string
+          reminder_number: number
+          status: string
+          subject: string
+        }
+        Insert: {
+          approved_at?: string | null
+          approved_by?: string | null
+          body: string
+          created_at?: string
+          created_by?: string
+          document_id: string
+          id?: string
+          recipient_email: string
+          reminder_number: number
+          status?: string
+          subject: string
+        }
+        Update: {
+          approved_at?: string | null
+          approved_by?: string | null
+          body?: string
+          created_at?: string
+          created_by?: string
+          document_id?: string
+          id?: string
+          recipient_email?: string
+          reminder_number?: number
+          status?: string
+          subject?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "admin_payment_reminders_document_id_fkey"
+            columns: ["document_id"]
+            isOneToOne: false
+            referencedRelation: "admin_financial_documents"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "admin_payment_reminders_document_id_fkey"
+            columns: ["document_id"]
+            isOneToOne: false
+            referencedRelation: "admin_financial_payment_balances"
+            referencedColumns: ["document_id"]
+          },
+        ]
+      }
       admin_role_modes: {
         Row: {
           active_role: string
@@ -29,6 +658,126 @@ export type Database = {
           active_role?: string
           updated_at?: string
           user_id?: string
+        }
+        Relationships: []
+      }
+      admin_roster_proposals: {
+        Row: {
+          applied_at: string | null
+          applied_by: string | null
+          created_at: string
+          created_by: string
+          details: string
+          event_id: string
+          id: string
+          proposed_end: string
+          proposed_start: string
+          review_note: string | null
+          reviewed_at: string | null
+          reviewed_by: string | null
+          status: string
+          target_shift_id: string | null
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          applied_at?: string | null
+          applied_by?: string | null
+          created_at?: string
+          created_by?: string
+          details?: string
+          event_id: string
+          id?: string
+          proposed_end: string
+          proposed_start: string
+          review_note?: string | null
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          status?: string
+          target_shift_id?: string | null
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          applied_at?: string | null
+          applied_by?: string | null
+          created_at?: string
+          created_by?: string
+          details?: string
+          event_id?: string
+          id?: string
+          proposed_end?: string
+          proposed_start?: string
+          review_note?: string | null
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          status?: string
+          target_shift_id?: string | null
+          title?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "admin_roster_proposals_event_id_fkey"
+            columns: ["event_id"]
+            isOneToOne: false
+            referencedRelation: "events"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "admin_roster_proposals_target_shift_id_fkey"
+            columns: ["target_shift_id"]
+            isOneToOne: false
+            referencedRelation: "shifts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      administration_contract_signing_requests: {
+        Row: {
+          completed_at: string | null
+          created_at: string
+          dispatched_at: string | null
+          document_id: string
+          document_sha256: string
+          document_type: string
+          document_version: number
+          envelope_id: string | null
+          id: string
+          recipient_email: string
+          signed_pdf_path: string | null
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          completed_at?: string | null
+          created_at?: string
+          dispatched_at?: string | null
+          document_id: string
+          document_sha256: string
+          document_type: string
+          document_version: number
+          envelope_id?: string | null
+          id?: string
+          recipient_email: string
+          signed_pdf_path?: string | null
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          completed_at?: string | null
+          created_at?: string
+          dispatched_at?: string | null
+          document_id?: string
+          document_sha256?: string
+          document_type?: string
+          document_version?: number
+          envelope_id?: string | null
+          id?: string
+          recipient_email?: string
+          signed_pdf_path?: string | null
+          status?: string
+          updated_at?: string
         }
         Relationships: []
       }
@@ -2756,6 +3505,57 @@ export type Database = {
           },
         ]
       }
+      portal_role_assignments: {
+        Row: {
+          approved: boolean
+          approved_at: string | null
+          approved_by: string | null
+          created_at: string
+          id: string
+          portal: string
+          revoked_at: string | null
+          role: string
+          user_id: string
+        }
+        Insert: {
+          approved?: boolean
+          approved_at?: string | null
+          approved_by?: string | null
+          created_at?: string
+          id?: string
+          portal: string
+          revoked_at?: string | null
+          role: string
+          user_id: string
+        }
+        Update: {
+          approved?: boolean
+          approved_at?: string | null
+          approved_by?: string | null
+          created_at?: string
+          id?: string
+          portal?: string
+          revoked_at?: string | null
+          role?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "portal_role_assignments_approved_by_fkey"
+            columns: ["approved_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "portal_role_assignments_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       profiles: {
         Row: {
           account_blocked: boolean
@@ -2833,6 +3633,192 @@ export type Database = {
             columns: ["preferred_workplace_id"]
             isOneToOne: false
             referencedRelation: "workplace_catalog"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      promotion_discipline: {
+        Row: {
+          blocked_until: string | null
+          permanently_blocked: boolean
+          strikes: number
+          suspension_count: number
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          blocked_until?: string | null
+          permanently_blocked?: boolean
+          strikes?: number
+          suspension_count?: number
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          blocked_until?: string | null
+          permanently_blocked?: boolean
+          strikes?: number
+          suspension_count?: number
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "promotion_discipline_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: true
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      promotion_evidence: {
+        Row: {
+          assignment_id: string
+          evidence_sha256: string
+          id: string
+          reference_sha256: string | null
+          reference_source: string | null
+          storage_path: string
+          submitted_at: string
+          submitted_by: string
+          verification_details: Json
+          verification_status: string
+          verified_at: string | null
+        }
+        Insert: {
+          assignment_id: string
+          evidence_sha256: string
+          id?: string
+          reference_sha256?: string | null
+          reference_source?: string | null
+          storage_path: string
+          submitted_at?: string
+          submitted_by: string
+          verification_details?: Json
+          verification_status?: string
+          verified_at?: string | null
+        }
+        Update: {
+          assignment_id?: string
+          evidence_sha256?: string
+          id?: string
+          reference_sha256?: string | null
+          reference_source?: string | null
+          storage_path?: string
+          submitted_at?: string
+          submitted_by?: string
+          verification_details?: Json
+          verification_status?: string
+          verified_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "promotion_evidence_assignment_id_fkey"
+            columns: ["assignment_id"]
+            isOneToOne: false
+            referencedRelation: "task_assignments"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "promotion_evidence_submitted_by_fkey"
+            columns: ["submitted_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      promotion_reference_media: {
+        Row: {
+          created_at: string
+          created_by: string
+          id: string
+          sha256: string
+          storage_path: string
+          task_id: string
+        }
+        Insert: {
+          created_at?: string
+          created_by: string
+          id?: string
+          sha256: string
+          storage_path: string
+          task_id: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string
+          id?: string
+          sha256?: string
+          storage_path?: string
+          task_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "promotion_reference_media_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "promotion_reference_media_task_id_fkey"
+            columns: ["task_id"]
+            isOneToOne: false
+            referencedRelation: "tasks"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      promotion_violations: {
+        Row: {
+          created_at: string
+          details: string
+          id: string
+          reason: string
+          recorded_by: string
+          task_assignment_id: string | null
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          details: string
+          id?: string
+          reason: string
+          recorded_by: string
+          task_assignment_id?: string | null
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          details?: string
+          id?: string
+          reason?: string
+          recorded_by?: string
+          task_assignment_id?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "promotion_violations_recorded_by_fkey"
+            columns: ["recorded_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "promotion_violations_task_assignment_id_fkey"
+            columns: ["task_assignment_id"]
+            isOneToOne: false
+            referencedRelation: "task_assignments"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "promotion_violations_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
             referencedColumns: ["id"]
           },
         ]
@@ -3736,6 +4722,132 @@ export type Database = {
           },
         ]
       }
+      training_progress: {
+        Row: {
+          participant_id: string
+          results: Json
+          role: string
+          scenario_id: string
+          updated_at: string
+        }
+        Insert: {
+          participant_id: string
+          results?: Json
+          role: string
+          scenario_id: string
+          updated_at?: string
+        }
+        Update: {
+          participant_id?: string
+          results?: Json
+          role?: string
+          scenario_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "training_progress_scenario_id_fkey"
+            columns: ["scenario_id"]
+            isOneToOne: false
+            referencedRelation: "training_scenarios"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      training_questions: {
+        Row: {
+          answer: string | null
+          answered_at: string | null
+          created_at: string
+          id: string
+          participant_id: string
+          question: string
+          role: string
+          scenario_id: string
+          status: string
+        }
+        Insert: {
+          answer?: string | null
+          answered_at?: string | null
+          created_at?: string
+          id?: string
+          participant_id: string
+          question: string
+          role: string
+          scenario_id: string
+          status?: string
+        }
+        Update: {
+          answer?: string | null
+          answered_at?: string | null
+          created_at?: string
+          id?: string
+          participant_id?: string
+          question?: string
+          role?: string
+          scenario_id?: string
+          status?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "training_questions_scenario_id_fkey"
+            columns: ["scenario_id"]
+            isOneToOne: false
+            referencedRelation: "training_scenarios"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      training_scenario_members: {
+        Row: {
+          created_at: string
+          scenario_id: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          scenario_id: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          scenario_id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "training_scenario_members_scenario_id_fkey"
+            columns: ["scenario_id"]
+            isOneToOne: false
+            referencedRelation: "training_scenarios"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      training_scenarios: {
+        Row: {
+          id: string
+          name: string
+          owner_id: string
+          payload: Json
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          name?: string
+          owner_id: string
+          payload?: Json
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          name?: string
+          owner_id?: string
+          payload?: Json
+          updated_at?: string
+        }
+        Relationships: []
+      }
       upload_security_scans: {
         Row: {
           attempts: number
@@ -4364,7 +5476,15 @@ export type Database = {
       }
     }
     Views: {
-      [_ in never]: never
+      admin_financial_payment_balances: {
+        Row: {
+          document_id: string | null
+          gross_amount: number | null
+          outstanding_amount: number | null
+          paid_amount: number | null
+        }
+        Relationships: []
+      }
     }
     Functions: {
       upt_accept_shift_handover: {
@@ -4505,6 +5625,29 @@ export type Database = {
           isSetofReturn: true
         }
       }
+      upt_admin_promotion_discipline_list: {
+        Args: never
+        Returns: {
+          blocked_until: string
+          permanently_blocked: boolean
+          strikes: number
+          suspension_count: number
+          user_id: string
+        }[]
+      }
+      upt_admin_record_promotion_violation: {
+        Args: {
+          p_assignment: string
+          p_details: string
+          p_reason: string
+          p_user: string
+        }
+        Returns: number
+      }
+      upt_admin_register_promotion_reference: {
+        Args: { p_path: string; p_sha256: string; p_task: string }
+        Returns: string
+      }
       upt_admin_release_readiness_snapshot: {
         Args: never
         Returns: {
@@ -4524,6 +5667,30 @@ export type Database = {
         Args: { p_review: string; p_start?: string }
         Returns: string
       }
+      upt_admin_review_promotion_evidence: {
+        Args: { p_details: string; p_evidence: string; p_status: string }
+        Returns: undefined
+      }
+      upt_admin_roster_apply: { Args: { p_id: string }; Returns: undefined }
+      upt_admin_roster_create: {
+        Args: {
+          p_details: string
+          p_end: string
+          p_event: string
+          p_start: string
+          p_title: string
+        }
+        Returns: string
+      }
+      upt_admin_roster_review: {
+        Args: { p_approve: boolean; p_id: string; p_note?: string }
+        Returns: undefined
+      }
+      upt_admin_roster_submit: { Args: { p_id: string }; Returns: undefined }
+      upt_admin_roster_target: {
+        Args: { p_id: string; p_shift: string }
+        Returns: undefined
+      }
       upt_admin_set_account: {
         Args: { p_approved: boolean; p_role: string; p_user: string }
         Returns: undefined
@@ -4531,6 +5698,15 @@ export type Database = {
       upt_admin_set_personnel_block: {
         Args: { p_blocked: boolean; p_reason?: string; p_user: string }
         Returns: undefined
+      }
+      upt_admin_set_portal_role: {
+        Args: {
+          p_action: string
+          p_portal: string
+          p_role: string
+          p_user_id: string
+        }
+        Returns: string
       }
       upt_admin_system_health: {
         Args: never
@@ -4552,6 +5728,10 @@ export type Database = {
           recent_audit_24h: number
           unread_notifications: number
         }[]
+      }
+      upt_admin_unblock_promotion: {
+        Args: { p_reason: string; p_user: string }
+        Returns: undefined
       }
       upt_apply_event_template: {
         Args: {
@@ -4630,6 +5810,7 @@ export type Database = {
         Args: { p_event: string; p_workplace: string }
         Returns: boolean
       }
+      upt_can_manage_administration: { Args: never; Returns: boolean }
       upt_can_manage_task: {
         Args: { p_task: string; p_uid?: string }
         Returns: boolean
@@ -4638,6 +5819,10 @@ export type Database = {
       upt_can_read_profile_photo: { Args: { p_path: string }; Returns: boolean }
       upt_can_read_task: {
         Args: { p_task: string; p_uid?: string }
+        Returns: boolean
+      }
+      upt_cancel_artist_signature_preparation: {
+        Args: { p_request_id: string }
         Returns: boolean
       }
       upt_cancel_inventory_settlement: {
@@ -5286,6 +6471,15 @@ export type Database = {
         Args: { p_message: string; p_reason: string }
         Returns: undefined
       }
+      upt_my_portal_assignments: {
+        Args: never
+        Returns: {
+          approved: boolean
+          portal: string
+          revoked_at: string
+          role: string
+        }[]
+      }
       upt_notification_badge_count: { Args: never; Returns: number }
       upt_operational_alerts: {
         Args: never
@@ -5320,6 +6514,15 @@ export type Database = {
         }[]
       }
       upt_own_workplace_preference: { Args: never; Returns: string }
+      upt_prepare_artist_contract_signing: {
+        Args: {
+          p_recipient_email: string
+          p_source_sha256: string
+          p_version: number
+          p_version_id: string
+        }
+        Returns: string
+      }
       upt_private_chat_peers: {
         Args: never
         Returns: {
@@ -5337,6 +6540,7 @@ export type Database = {
           name: string
         }[]
       }
+      upt_promotion_is_blocked: { Args: { p_user?: string }; Returns: boolean }
       upt_push_delivery_config: {
         Args: never
         Returns: {
@@ -5635,6 +6839,14 @@ export type Database = {
         }
         Returns: string
       }
+      upt_server_transition_contract_signing: {
+        Args: {
+          p_envelope_id: string
+          p_expected_status: string
+          p_next_status: string
+        }
+        Returns: boolean
+      }
       upt_set_admin_role_mode: { Args: { p_role: string }; Returns: string }
       upt_set_chat_mute: {
         Args: { p_channel: string; p_mode: string }
@@ -5857,6 +7069,10 @@ export type Database = {
         Returns: undefined
       }
       upt_stop_work: { Args: { p_work_session: string }; Returns: undefined }
+      upt_submit_promotion_evidence: {
+        Args: { p_assignment: string; p_sha256: string; p_storage_path: string }
+        Returns: string
+      }
       upt_submit_timesheet: { Args: { p_event: string }; Returns: string }
       upt_swap_candidates: {
         Args: { p_shift: string }
@@ -6110,3 +7326,4 @@ export const Constants = {
     Enums: {},
   },
 } as const
+

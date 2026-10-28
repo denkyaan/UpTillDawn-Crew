@@ -20,16 +20,16 @@ test('admin first-use state guides a clean production into the first real event'
   for(const locale of ['nl','fr','en','de'])assert.match(component,new RegExp('\\n  '+locale+':\\{'))
 })
 
-test('first-use account flow keeps profile completion tour and PWA installation gates',async()=>{
-  const [signup,tour,prompt]=await Promise.all([
+test('first-use account flow retains profile completion and PWA installation without a tour',async()=>{
+  const [signup,settings,prompt,layout]=await Promise.all([
     read('app/(auth)/signup/page.tsx'),
-    read('components/role-app-tour.tsx'),
+    read('app/(app)/settings/page.tsx'),
     read('components/first-use-install-prompt.tsx'),
+    read('components/layout/app-layout.tsx'),
   ])
   assert.match(signup,/queuePwaInstallPrompt\(\)/)
-  assert.match(tour,/upt_current_profile_completion/)
-  assert.match(tour,/\/settings\?complete-profile=1/)
-  assert.match(tour,/uptilldawn-profile-completed/)
+  assert.match(settings,/complete-profile|profile/i)
+  assert.doesNotMatch(layout,/RoleAppTour|TourControlCenter/)
   assert.match(prompt,/PWA_INSTALL_PROMPT_PENDING_KEY/)
 })
 

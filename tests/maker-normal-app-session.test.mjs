@@ -27,7 +27,7 @@ test('maker bypass is resolved before ordinary account block gates on server and
     read('lib/providers.tsx'),
   ])
 
-  assert.match(auth,/needsOwnerCheck = Boolean\(profile\.account_blocked\) \|\| !profile\.approved \|\| realRole === 'admin'/)
+  assert.ok(auth.includes("const { data: ownerFlag } = await supabase.rpc('upt_current_is_owner')"))
   assert.match(auth,/if \(profile\.account_blocked && !isOwner\) return null/)
 
   assert.match(providers,/needsOwnerCheck=Boolean\(data\.account_blocked\)\|\|!data\.approved\|\|role==="admin"/)

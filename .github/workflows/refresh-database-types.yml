@@ -1,0 +1,48 @@
+name: Refresh database types (staging)
+on:
+  push:
+    branches: [staging]
+    paths:
+      - 'supabase/migrations/**'
+      - '.github/workflows/refresh-database-types.yml'
+  workflow_dispatch:
+permissions:
+  contents: write
+concurrency:
+  group: staging-db-types
+  cancel-in-progress: true
+jobs:
+  refresh:
+    runs-on: ubuntu-26.04-arm
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5.1.0
+        with:
+          ref: staging
+          persist-credentials: true
+      - uses: actions/setup-node@a0853c24544627f65ddf259abe73b1d18a591444 # v5.0.0
+        with:
+          node-version: 24
+      - name: Initialize local Supabase
+        run: |
+          if [ ! -f supabase/config.toml ]; then
+            npx --yes supabase@2.117.0 init
+          fi
+          npx --yes supabase@2.117.0 start -x studio,imgproxy,inbucket,edge-runtime,logflare,vector,realtime
+          npx --yes supabase@2.117.0 db reset --local --no-seed
+      - name: Generate types from actual migrations
+        run: npx --yes supabase@2.117.0 gen types typescript --local --schema public > types/crew-database.ts
+      - name: Commit generated types only if changed
+        run: |
+          if git diff --quiet -- types/crew-database.ts; then
+            echo 'Database types already current'
+            exit 0
+          fi
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add types/crew-database.ts
+          git commit -m 'chore(db): synchronize generated types with staging migrations'
+          git push origin HEAD:staging
+      - name: Stop local Supabase
+        if: always()
+        run: npx --yes supabase@2.117.0 stop --no-backup || true

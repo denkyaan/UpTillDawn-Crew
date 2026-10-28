@@ -20,7 +20,7 @@ export async function POST(request: Request) {
     const {client,token} = await authorizeStudio(request)
     const input = z.object({
       table: z.string().min(1).max(100), operation: z.enum(['insert','update','delete']),
-      key: z.record(z.unknown()), before: z.record(z.unknown()).nullable(), values: z.record(z.unknown()),
+      key: z.record(z.string(),z.unknown()), before: z.record(z.string(),z.unknown()).nullable(), values: z.record(z.string(),z.unknown()),
     }).strict().parse(await studioBody(request))
     const {data,error} = await client.rpc('upt_god_data_mutate', {
       p_token: token, p_table: input.table, p_operation: input.operation,

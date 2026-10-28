@@ -50,7 +50,9 @@ test('release candidate: one 15-person event gate covers the complete operationa
   const browser=await read('scripts/15-bot-browser-test.mjs')
   assert.ok(ci.includes('tests/sql/15-bot-full-event.sql'))
   for(const lifecycle of ['availability','briefing','guestlist','check-in','break-start','break-stop','checkout','timesheet','inventory','chat','incident','closure']) assert.ok(browser.toLowerCase().includes(lifecycle),lifecycle)
-  assert.match(browser,/const roles = \['admin', 'responsible', \.\.\.Array\(13\)\.fill\('staff'\)\]/)
+  assert.match(browser,/const roles = botCount === 1/)
+  assert.match(browser,/Array\(botCount - 2\)\.fill\('staff'\)/)
+  assert.match(browser,/\[1, 3, 15\]\.includes\(botCount\)/)
   assert.match(browser,/const locales = \['nl', 'fr', 'en', 'de'\]/)
 })
 

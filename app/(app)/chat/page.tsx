@@ -1,14 +1,12 @@
 import { createClient } from '@/lib/supabase/crew-server'
 import { ChatClient } from '@/components/crew/chat-client'
 import { getCurrentUser } from '@/lib/actions/auth'
-import { SandboxRoleModule,type TrainingRole } from '@/components/training/sandbox-role-module'
 
 export const dynamic='force-dynamic'
 
-export default async function Page({searchParams}:{searchParams?:Promise<{event?:string;workplace?:string;private?:string;channel?:string;message?:string;tour?:string}>}){
+export default async function Page({searchParams}:{searchParams?:Promise<{event?:string;workplace?:string;private?:string;channel?:string;message?:string}>}){
   const params=searchParams?await searchParams:{}
   const s=await createClient();const current=await getCurrentUser();if(!current)return null
-  if(params.tour==='1')return <SandboxRoleModule role={current.role as TrainingRole} module="chat"/>
   const user={id:current.id}
   const [{data:channels,error},{data:directory},{data:privatePeers},{data:channelSummaries},{data:activeEvents},{data:chatEvents}]=await Promise.all([
     s.from('chat_channels').select('*').in('kind',['organization','event','workplace','private']).order('created_at'),

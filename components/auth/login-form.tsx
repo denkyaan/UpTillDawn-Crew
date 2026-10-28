@@ -3,7 +3,7 @@
 import { useState, useTransition } from "react"
 import Link from "next/link"
 import Image from "next/image"
-import { Menu, X, Eye, EyeOff, Loader2, AlertCircle, ArrowRight, ShieldCheck, Users, UserCog } from "lucide-react"
+import { Menu, X, Eye, EyeOff, Loader2, AlertCircle, ArrowRight, ShieldCheck, Users, UserCog, Megaphone, BriefcaseBusiness } from "lucide-react"
 import { signIn } from "@/lib/actions/auth"
 import { LanguageSwitcher } from "@/components/language-switcher"
 
@@ -11,6 +11,8 @@ const portals = {
   staff: { label: "Personeel", icon: Users },
   responsible: { label: "Verantwoordelijke", icon: UserCog },
   admin: { label: "Beheerder", icon: ShieldCheck },
+  promotion: { label: "Promotie", icon: Megaphone },
+  administration: { label: "Administratie", icon: BriefcaseBusiness },
 } as const
 
 type Portal = keyof typeof portals
@@ -71,17 +73,17 @@ export function LoginForm({
 
       {menuOpen && (
         <div className="fixed left-5 top-20 z-50 w-64 rounded-2xl border border-white/15 bg-zinc-950/95 p-2 shadow-2xl backdrop-blur-xl">
-          {(Object.keys(portals) as Portal[]).map(key => {
+          <p className="px-4 py-2 text-xs font-semibold uppercase tracking-wide text-zinc-400">Evenementen</p>
+          {(['staff', 'responsible'] as const).map(key => {
             const Icon = portals[key].icon
-            return (
-              <a
-                key={key}
-                href={`/login/${key}`}
-                className={`flex items-center gap-3 rounded-xl px-4 py-3 text-sm font-bold transition ${portal === key ? "bg-white text-black" : "text-white hover:bg-white/10"}`}
-              >
-                <Icon className="h-5 w-5" />{portals[key].label}
-              </a>
-            )
+            return <Link key={key} href={`/login/${key}`} onClick={() => setMenuOpen(false)} aria-current={portal === key ? 'page' : undefined} className={`flex items-center gap-3 rounded-xl px-4 py-3 text-sm font-bold transition ${portal === key ? 'bg-white text-black' : 'text-white hover:bg-white/10'}`}><Icon className="h-5 w-5" />{portals[key].label}</Link>
+          })}
+          <p className="px-4 py-2 text-xs font-semibold uppercase tracking-wide text-zinc-400">Promotie</p>
+          <Link href="/login/promotion" onClick={() => setMenuOpen(false)} aria-current={portal === 'promotion' ? 'page' : undefined} className={`flex items-center gap-3 rounded-xl px-4 py-3 text-sm font-bold transition ${portal === 'promotion' ? 'bg-white text-black' : 'text-white hover:bg-white/10'}`}><Megaphone className="h-5 w-5" />Promotie</Link>
+          <p className="px-4 py-2 text-xs font-semibold uppercase tracking-wide text-zinc-400">{portals.admin.label} / {portals.administration.label}</p>
+          {(['admin', 'administration'] as const).map(key => {
+            const Icon = portals[key].icon
+            return <Link key={key} href={`/login/${key}`} onClick={() => setMenuOpen(false)} aria-current={portal === key ? 'page' : undefined} className={`flex items-center gap-3 rounded-xl px-4 py-3 text-sm font-bold transition ${portal === key ? 'bg-white text-black' : 'text-white hover:bg-white/10'}`}><Icon className="h-5 w-5" />{portals[key].label}</Link>
           })}
         </div>
       )}

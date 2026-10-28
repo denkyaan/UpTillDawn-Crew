@@ -24,7 +24,9 @@ test('reported code faults can enter the bounded autonomous repair pipeline',asy
  assert.match(controller,/Gebruik confidence als diagnostische indicatie/)
  assert.match(controller,/supabase\/migrations\//)
  assert.match(controller,/CI werd niet groen/)
- assert.match(controller,/Productiedeploy werd niet bevestigd/)
+ assert.match(controller,/Staging-only guard/)
+ assert.match(controller,/HEAD:staging/)
+ assert.match(controller,/Deploy Staging/)
  assert.match(controller,/gh.*issue.*create/s)
 })
 

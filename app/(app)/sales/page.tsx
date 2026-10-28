@@ -1,4 +1,3 @@
-import { SandboxSales } from '@/components/training/sandbox-feature-pages'
 import {redirect} from 'next/navigation'
 import {getCurrentUser} from '@/lib/actions/auth'
 import {createClient} from '@/lib/supabase/crew-server'
@@ -26,14 +25,13 @@ type Transaction={
 export default async function SalesPage({
   searchParams,
 }:{
-  searchParams:Promise<{event?:string;workplace?:string;tour?:string}>
+  searchParams:Promise<{event?:string;workplace?:string}>
 }){
   const current=await getCurrentUser()
   if(!current)redirect('/login')
 
   const s=await createClient()
   const params=await searchParams
-  if(params.tour==='1')return <SandboxSales role={current.role}/>
   const isAdmin=current.isAdmin===true
 
   let events:EventRow[]=[]

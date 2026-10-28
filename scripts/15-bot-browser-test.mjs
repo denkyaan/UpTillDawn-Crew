@@ -11,7 +11,10 @@ if (!testPassword || !supabaseUrl || !serviceRoleKey || !anonKey) {
   process.exit(1)
 }
 
-const roles = ['admin', 'responsible', ...Array(13).fill('staff')]
+const botCount = Number(process.env.BOT_COUNT || 15)
+if (![1, 3, 15].includes(botCount)) throw new Error('BOT_COUNT must be 1, 3 or 15')
+const roles = botCount === 1 ? [process.env.BOT_DEBUG_ROLE || 'admin'] : ['admin', 'responsible', ...Array(botCount - 2).fill('staff')]
+if (roles.some(role => !['admin', 'responsible', 'staff'].includes(role))) throw new Error('BOT_DEBUG_ROLE must be admin, responsible or staff')
 const locales = ['nl', 'fr', 'en', 'de']
 const viewports = [
   { width: 390, height: 844 },
@@ -149,7 +152,9 @@ try {
   // single CI Next server measures app behavior instead of artificial overload.
   // Three simultaneous actors keep role coverage concurrent without starving
   // the single CI Next.js server during hydrated mobile assertions.
-  const smokeConcurrency=3
+  const requestedConcurrency=Number(process.env.BOT_SMOKE_CONCURRENCY || 3)
+  if(!Number.isInteger(requestedConcurrency)||requestedConcurrency<1||requestedConcurrency > 5)throw new Error('BOT_SMOKE_CONCURRENCY must be an integer between 1 and 5')
+  const smokeConcurrency=Math.min(requestedConcurrency,roles.length)
   for(let batchStart=0;batchStart<roles.length;batchStart+=smokeConcurrency){
     const batch=roles.slice(batchStart,batchStart+smokeConcurrency)
     await Promise.all(batch.map(async (role, offset) => {
@@ -161,7 +166,19 @@ try {
     const expectedName = `E2E ${role.toUpperCase()} ${String(index + 1).padStart(2, '0')}`
     const context = await browser.newContext({ locale, viewport })
     const page = await context.newPage()
-    const diagnostics={consoleErrors:[],pageErrors:[]}
+    const diagnostics={consoleErrors:[],pageErrors:[],httpErrors:[]}
+    page.on('response',async response=>{
+      if(response.status()<400||diagnostics.httpErrors.length>=25)return
+      const url=new URL(response.url())
+      const safePath=url.pathname
+      // Never log auth credentials, tokens, query strings or request bodies.
+      const isAuth=safePath.includes('/auth/v1/')
+      const body=isAuth?'[auth response omitted]':
+        (await response.text().catch(()=>'<unavailable>')).slice(0,350)
+          .replace(/(Bearer\s+)[^\s"']+/gi,'$1[redacted]')
+          .replace(/("(?:token|access_token|refresh_token|password|apikey)"\s*:\s*")[^"]+/gi,'$1[redacted]')
+      diagnostics.httpErrors.push({status:response.status(),method:response.request().method(),path:safePath,body})
+    })
     page.on('console',message=>{
       if(message.type()==='error')diagnostics.consoleErrors.push(message.text().slice(0,500))
     })
@@ -212,17 +229,9 @@ try {
         await page.waitForFunction(() => document.readyState === 'interactive' || document.readyState === 'complete', null, { timeout: 45000 })
       }
 
-      // Existing seeded bots exercise operational UI here, not onboarding.
-      // Persist postponement explicitly so the modal cannot race later workflow
-      // actions. The dedicated tour block below resets and starts the tour.
-      const tourRole=role==='staff'?'employee':role==='responsible'?'responsible_lead':'admin'
+      // Confirm the seeded authenticated profile is available without tour state.
       const profile=await lifecycleAdmin.from('profiles').select('id').eq('full_name',expectedName).single()
       if(profile.error||!profile.data?.id)throw new Error('browser bot profile unavailable')
-      await page.evaluate(({userId,tourRole})=>{
-        localStorage.setItem(`uptilldawn-app-tour:${userId}:${tourRole}:v8`,'postponed')
-      },{userId:profile.data.id,tourRole})
-      // localStorage is already updated in this live document. Avoid a second
-      // navigation here: it races Next/RSC redirects and can abort the page.
       await page.waitForLoadState('domcontentloaded',{timeout:15000}).catch(()=>{})
 
       const body = await page.locator('body').innerText()
@@ -255,6 +264,47 @@ try {
         }
       }
 
+      // Exercise deployed portal pages with a real authenticated Admin browser,
+      // not only source-file existence checks. Admin has authorized portal access.
+      if (index === 0) {
+        const portalRoutes=[
+          '/portals/administration',
+          '/portals/administration/overview',
+          '/portals/administration/finance',
+          '/portals/administration/rosters',
+          '/portals/administration/modules/artists',
+          '/portals/administration/modules/documents',
+          '/portals/administration/modules/invoices',
+          '/portals/administration/modules/banking',
+          '/portals/administration/modules/inventory',
+          '/portals/administration/modules/notifications',
+          '/portals/administration/modules/reports',
+          '/portals/administration/modules/settings',
+          '/portals/promotion',
+          '/portals/promotion/tasks',
+        ]
+        for(const route of portalRoutes){
+          const routePage=await context.newPage()
+          try {
+          const response=await gotoWithTransientRetry(routePage,`${baseUrl}${route}`,{waitUntil:'domcontentloaded',timeout:45000})
+          if(!response?.ok())throw new Error(`portal browser ${route}: HTTP ${response?.status()}`)
+          const current=new URL(routePage.url(),baseUrl).pathname
+          if(current.startsWith('/login')||current==='/portals')throw new Error(`portal browser ${route}: unexpected redirect to ${current}`)
+          const mainText=(await routePage.locator('body').innerText()).trim()
+          if(!mainText||/404\\s*\\|\\s*This page could not be found|This page could not be found/i.test(mainText))throw new Error(`portal browser ${route}: empty or not-found UI`)
+          if(await routePage.locator('main').count()===0)console.log(`portal browser ${route}: page renders without main landmark`)
+          } finally {
+            await routePage.close()
+          }
+        }
+        await gotoWithTransientRetry(page,`${baseUrl}/portals/promotion`,{waitUntil:'domcontentloaded'})
+        const tasksLink=page.locator('a[href="/portals/promotion/tasks"]').first()
+        if(await tasksLink.count()!==1)throw new Error('promotion tasks navigation link missing')
+        await tasksLink.click()
+        await page.waitForURL(url=>url.pathname==='/portals/promotion/tasks',{timeout:20000})
+        console.log('PASS: authenticated Admin browser traversed Administration/Promotion portal routes and clicked Promotion tasks')
+      }
+
       // Bot03 still gets runtime-i18n coverage on its isolated real workflow
       // routes, without the generic crawl mutating its navigation/session state.
       if (index === 2) await assertRuntimeLocale(page, locale, bot, page.url())
@@ -268,7 +318,10 @@ try {
           timeout: 45000,
         })
         const form = page.locator('form').filter({ has: page.locator('input[name="response"][value="can"]') }).first()
-        if (await form.count() !== 1) throw new Error('availability action form missing')
+        if (await form.count() !== 1) {
+          const diagnostic=await page.evaluate(()=>({url:location.href,title:document.title,body:document.body.innerText.slice(0,1500),forms:[...document.forms].map(f=>({action:f.action,fields:[...f.querySelectorAll('input')].map(i=>i.name).slice(0,12)}))}))
+          throw new Error(`availability action form missing: ${JSON.stringify(diagnostic)}`)
+        }
         await form.locator('input[name="response"][value="can"]').check()
         await form.locator('input[name="setup_available"][value="yes"]').check()
         await form.locator('input[name="breakdown_available"][value="yes"]').check()
@@ -447,75 +500,17 @@ try {
         await incidentForm.locator('[role="status"]').waitFor({state:'visible',timeout:15000})
       }
 
-      // Exercise the compact general first-use tour without coupling the
-      // browser smoke run to a hard-coded chapter route. The controller itself
-      // owns role-specific chapter order; the browser verifies the highlighted
-      // action, contextual feedback event and persisted pause state.
+      // Verify removed training routes cannot override authenticated operational pages.
       if(index<4){
-        const progressKey=`uptilldawn-tour-progress:${profile.data.id}:${tourRole}:general:v8`
-        await page.evaluate(({tourRole,userId,progressKey})=>{
-          localStorage.setItem(`uptilldawn-app-tour:${userId}:${tourRole}:v8`,'postponed')
-          localStorage.removeItem(progressKey)
-          sessionStorage.setItem('uptilldawn-tour-active-v8',JSON.stringify({active:true,role:tourRole,mode:'full',workplace:''}))
-          sessionStorage.removeItem('uptilldawn-training-preferred-workplace')
-          sessionStorage.removeItem('uptilldawn-training-workflow-v3')
-        },{tourRole,userId:profile.data.id,progressKey})
-        await page.goto(`${baseUrl}${role==='admin'?'/admin':'/'}?tour=1`,{waitUntil:'networkidle',timeout:45000})
-        const primary=page.locator('[data-tour-demo="primary-action"]').first()
-        await primary.waitFor({state:'visible',timeout:30000})
-        const primaryBox=await primary.boundingBox()
-        await page.waitForFunction(()=>{
-          const overlays=[...document.querySelectorAll('div[aria-hidden].fixed')]
-          return overlays.some(node=>{
-            const style=getComputedStyle(node)
-            return style.pointerEvents==='none'&&node.getBoundingClientRect().width>0
-          })
-        },null,{timeout:10000})
-        const aligned=await primary.evaluate(button=>{
-          const b=button.getBoundingClientRect()
-          return [...document.querySelectorAll('div[aria-hidden].fixed')].some(node=>{
-            const r=node.getBoundingClientRect()
-            return getComputedStyle(node).pointerEvents==='none'&&
-              Math.abs((b.left+b.width/2)-(r.left+r.width/2))<=8&&
-              Math.abs((b.top+b.height/2)-(r.top+r.height/2))<=8
-          })
-        })
-        if(!primaryBox||!aligned){
-          const geometry=await page.evaluate(()=>{
-            const primary=document.querySelector('[data-tour-demo="primary-action"]')
-            const b=primary?.getBoundingClientRect()
-            const overlays=[...document.querySelectorAll('div[aria-hidden].fixed')].map(node=>{
-              const r=node.getBoundingClientRect(),style=getComputedStyle(node)
-              return {className:node.className,pointerEvents:style.pointerEvents,left:r.left,top:r.top,width:r.width,height:r.height}
-            })
-            return {viewport:{width:innerWidth,height:innerHeight,scrollX,scrollY},primary:b?{left:b.left,top:b.top,width:b.width,height:b.height}:null,overlays}
-          })
-          throw new Error(`tour spotlight is not aligned with the primary action; geometry=${JSON.stringify(geometry)}`)
-        }
-        const before=await page.evaluate(key=>JSON.parse(localStorage.getItem(key)||'null'),progressKey)
-        if(!before?.activeKey)throw new Error('general tour did not initialize active progress')
-        await primary.evaluate(button=>button.click())
-        // The compact tour advances through React state before persistence.
-        // Assert the next highlighted action first, then verify persisted progress.
-        await page.locator('[data-tour-demo="primary-action"]').first().waitFor({state:'visible',timeout:30000})
-        await page.waitForTimeout(250)
-        const advanced=await page.evaluate(key=>JSON.parse(localStorage.getItem(key)||'null'),progressKey)
-        if(
-          !advanced?.activeKey||
-          advanced.activeKey===before.activeKey||
-          !Array.isArray(advanced.completed)||
-          !advanced.completed.includes(before.activeKey)
-        )throw new Error(`general tour action did not advance persisted progress: before=${JSON.stringify(before)} after=${JSON.stringify(advanced)}`)
-        await page.getByRole('button',{name:/^(PAUZEER|PAUSE|PAUSIEREN)$/}).click()
-        const progress=await page.evaluate(key=>JSON.parse(localStorage.getItem(key)||'null'),progressKey)
-        if(!progress?.paused||progress.activeKey!==advanced.activeKey||!progress.completed.includes(before?.activeKey||'overview'))throw new Error('general tour progress or pause did not persist')
-        console.log(`PASS ${bot} compact general tour highlight + action advance + pause persistence`)
+        await page.goto(`${baseUrl}${role==='admin'?'/admin':'/'}?tour=1`,{waitUntil:'domcontentloaded',timeout:45000})
+        if(await page.locator('[data-tour-demo="primary-action"]').count())throw new Error('retired training demo unexpectedly rendered')
+        if(await page.locator('body').innerText()==='')throw new Error('empty operational page after legacy tour query')
       }
 
       if(diagnostics.pageErrors.length)throw new Error(`Unhandled browser errors: ${JSON.stringify(diagnostics.pageErrors)}`)
       console.log(`PASS ${bot} authenticated + workflow surfaces ${viewport.width}x${viewport.height}`)
     } catch (error) {
-      failures.push(`${bot}: ${error instanceof Error ? error.message : String(error)}; pageErrors=${JSON.stringify(diagnostics.pageErrors)}; consoleErrors=${JSON.stringify(diagnostics.consoleErrors.slice(-5))}`)
+      failures.push(`${bot}: ${error instanceof Error ? error.message : String(error)}; pageErrors=${JSON.stringify(diagnostics.pageErrors)}; consoleErrors=${JSON.stringify(diagnostics.consoleErrors.slice(-5))}; httpErrors=${JSON.stringify(diagnostics.httpErrors.slice(-12))}`)
     } finally {
       await context.close()
     }
@@ -725,7 +720,11 @@ try {
     try{
       await staffTs.page.goto(`${baseUrl}/timesheets?event=00000000-0000-4000-8000-00000000e2e1`,{waitUntil:'networkidle',timeout:45000})
       const submit=staffTs.page.locator('[data-action="timesheet-submit"]')
-      if(await submit.count()!==1)throw new Error('timesheet submit action missing')
+      if(await submit.count()!==1){
+        const {data:ownRows,error:ownError}=await lifecycleAdmin.from('timesheets').select('id,status,user_id').eq('event_id','00000000-0000-4000-8000-00000000e2e1').eq('user_id',(await lifecycleAdmin.auth.admin.listUsers({perPage:1000})).data?.users?.find(u=>u.email==='bot-03-staff-en@bots.uptilldawn.test')?.id||'00000000-0000-0000-0000-000000000000')
+        const diagnostic=await staffTs.page.evaluate(()=>({url:location.href,body:document.body.innerText.slice(0,1600),status:document.querySelector('[data-timesheet-own-status]')?.textContent,actions:[...document.querySelectorAll('[data-action]')].map(el=>el.getAttribute('data-action'))}))
+        throw new Error(`timesheet submit action missing: ${JSON.stringify({diagnostic,ownRows,ownError:ownError?.message})}`)
+      }
       const [submitResponse]=await Promise.all([
         staffTs.page.waitForResponse(r=>r.request().method()==='POST'&&r.url().includes('/rpc/upt_submit_timesheet'),{timeout:30000}),
         submit.click(),
@@ -933,4 +932,4 @@ if (failures.length) {
   process.exit(1)
 }
 
-console.log('PASS: 15 concurrent authenticated browser bots + protected event workflow surfaces across Admin/Responsible/Staff, NL/FR/EN/DE and mobile/tablet/desktop viewports')
+console.log(`PASS: ${botCount} authenticated browser bots + protected event workflow surfaces across Admin/Responsible/Staff, NL/FR/EN/DE and mobile/tablet/desktop viewports`)
