@@ -74,9 +74,10 @@ export function AdministrationAiBookingNotes({locale,initialBookingId}:{locale:S
   const requestId=++requestRef.current
   setBusy(true);setFeedback("")
   try{
-   const response=await fetch("/api/administration/assistant/booking-notes/propose",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({bookingId:booking.id,instruction,locale})})
+   const response=await fetch("/api/administration/assistant/booking-notes/propose",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({bookingId:booking.id,expectedNotes:booking.internal_notes,instruction,locale})})
    const payload=await response.json() as {notes?:string;expectedNotes?:string|null;unchanged?:boolean}
    if(selectionRef.current!==targetId||requestRef.current!==requestId)return
+   if(response.status===409){setConflict(true);setFeedback(t.conflict);return}
    if(!response.ok||typeof payload.notes!=="string"||payload.expectedNotes!==booking.internal_notes){setFeedback(t.error);return}
    setNotes(payload.notes);setFeedback(payload.unchanged?t.unchanged:t.proposed)
   }catch{if(selectionRef.current===targetId&&requestRef.current===requestId)setFeedback(t.error)}finally{setBusy(false)}
