@@ -108,6 +108,15 @@ export function ChatClient({channels,defaultChannelId,userId,crewDirectory,isAdm
   const [searchBusy,setSearchBusy]=useState(false)
   const [pinsOpen,setPinsOpen]=useState(false)
   const [profileOpen,setProfileOpen]=useState(false)
+  const [readersMessage,setReadersMessage]=useState<string|null>(null)
+  const [readers,setReaders]=useState<{user_id:string;full_name:string;read_at:string}[]>([])
+  const [readersLoading,setReadersLoading]=useState(false)
+  async function showReaders(messageId:string){
+    setReadersMessage(messageId);setReaders([]);setReadersLoading(true)
+    const {data,error}=await createClient().rpc('upt_chat_message_readers' as never,{p_message:messageId} as never)
+    if(!error)setReaders((data||[]) as {user_id:string;full_name:string;read_at:string}[])
+    setReadersLoading(false)
+  }
   const [highlightedMessageId,setHighlightedMessageId]=useState<string|null>(null)
   const unreadCutoffs=useRef<Record<string,string|null>>(Object.fromEntries(Object.entries(initialChannelStates).map(([id,state])=>[id,state.last_read_at||null])))
   const endRef=useRef<HTMLDivElement>(null)
@@ -664,7 +673,7 @@ export function ChatClient({channels,defaultChannelId,userId,crewDirectory,isAdm
 
   if(!selectedChannel)return <section className="rounded-2xl border p-6"><h1 className="text-2xl font-black">Chat</h1><p className="mt-2 text-muted-foreground">Er zijn momenteel geen beschikbare chats.</p></section>
 
-  return <section className="relative flex min-h-[calc(100dvh-9rem)] flex-col overflow-hidden bg-background md:min-h-[70vh] md:rounded-3xl md:border">
+  return <><div role="dialog" aria-label={translateRuntimeUi('Gelezen door',uiLocale)} className={readersMessage?"fixed inset-0 z-[100] flex items-end justify-center bg-black/60 p-4 sm:items-center":"hidden"}>{readersMessage&&<div className="w-full max-w-md rounded-2xl border bg-background p-5 shadow-xl"><div className="mb-4 flex items-center justify-between"><h2 className="font-bold">{translateRuntimeUi('Gelezen door',uiLocale)}</h2><button type="button" onClick={()=>setReadersMessage(null)} aria-label="Close"><X className="h-5 w-5"/></button></div>{readersLoading?<p className="text-sm text-muted-foreground">…</p>:readers.length?readers.map(person=><div key={person.user_id} className="flex items-center gap-3 border-t py-3"><ChannelAvatar src={profilePhotoUrls[person.user_id]} size="sm"/><span className="font-medium">{person.full_name}</span></div>):<p className="text-sm text-muted-foreground">{translateRuntimeUi('Nog niet gelezen',uiLocale)}</p>}</div>}</div><section className="relative flex min-h-[calc(100dvh-9rem)] flex-col overflow-hidden bg-background md:min-h-[70vh] md:rounded-3xl md:border">
     <header className="sticky top-0 z-30 border-b bg-background/95 px-3 py-3 backdrop-blur md:px-4">
       <div className="flex items-center gap-2">
         <button type="button" onClick={()=>setPickerOpen(open=>!open)} className="flex min-w-0 flex-1 items-center gap-3 rounded-2xl p-1 text-left hover:bg-muted/60">
@@ -779,6 +788,7 @@ export function ChatClient({channels,defaultChannelId,userId,crewDirectory,isAdm
                 <time>{timestamp}</time>
                 {isPinned&&<span className="inline-flex items-center gap-0.5 font-semibold"><Pin className="h-3 w-3"/>{translateRuntimeUi('Vastgepind',uiLocale)}</span>}
                 {mine&&selectedChannel.kind==='private'&&selectedChannel.name!=='Up Till Dawn · persoonlijk'&&<span className="inline-flex items-center gap-1 font-semibold">{peerRead&&privatePeerIds[selectedChannel.id]&&profilePhotoUrls[privatePeerIds[selectedChannel.id]]?<img src={profilePhotoUrls[privatePeerIds[selectedChannel.id]]} alt={privatePeerNames[selectedChannel.id]||''} className="h-5 w-5 rounded-full border object-cover"/>:null}{translateRuntimeUi(peerRead?'Gelezen':'Afgeleverd',uiLocale)}</span>}
+                {mine&&!moderated&&<button type="button" onClick={()=>void showReaders(message.id)} className="font-semibold underline">{translateRuntimeUi('Gelezen door',uiLocale)}</button>}
                 {!moderated&&!isSystem&&message.body&&<button type="button" disabled={translating===message.id} onClick={()=>translated?setTranslations(previous=>{const next={...previous};delete next[message.id];return next}):void translateMessage(message.id,message.body||'')} className="underline">{translated?'Origineel':translating===message.id?'Vertalen…':'Vertaal'}</button>}
                 {!moderated&&selectedChannel.name!=='Up Till Dawn · persoonlijk'&&<button type="button" onClick={()=>{setReplyTo(message);setPendingDraftReplyId(null);requestAnimationFrame(()=>textareaRef.current?.focus())}} className="font-semibold underline">{translateRuntimeUi('Antwoorden',uiLocale)}</button>}
                 {!moderated&&currentState?.can_pin&&<button type="button" onClick={()=>void togglePin(message.id,!isPinned)} className="font-semibold underline">{translateRuntimeUi(isPinned?'Pin verwijderen':'Vastpinnen',uiLocale)}</button>}
@@ -827,7 +837,7 @@ export function ChatClient({channels,defaultChannelId,userId,crewDirectory,isAdm
       <p className="mt-1 text-center text-[10px] text-muted-foreground">Enter = nieuwe regel · verzenden gebeurt met de knop.</p>
       {status&&<p className="mt-2 text-center text-xs text-muted-foreground">{status}</p>}
     </div>}
-  </section>
+  </section></>
 }
 
 function ChannelButton({channel,selected,onChoose,name,image,unread,mentions}:{channel:Tables<'chat_channels'>;selected:string;onChoose:(id:string)=>void;name:string;image?:string;unread:number;mentions:number}){
