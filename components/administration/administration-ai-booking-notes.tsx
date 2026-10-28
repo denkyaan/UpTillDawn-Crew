@@ -32,8 +32,13 @@ export function AdministrationAiBookingNotes({locale,initialBookingId}:{locale:S
  const hasDraft=Boolean(booking&&notes!==editableNotes(booking.internal_notes))
  const originalLines=booking?editableNotes(booking.internal_notes).split("\n"):[]
  const draftLines=notes.split("\n")
- const addedLines=draftLines.filter(line=>line&&!originalLines.includes(line))
- const removedLines=originalLines.filter(line=>line&&!draftLines.includes(line))
+ const lineChanges=(source:string[],target:string[])=>{
+  const remaining=new Map<string,number>()
+  for(const line of source)if(line)remaining.set(line,(remaining.get(line)??0)+1)
+  return target.filter(line=>{if(!line)return false;const count=remaining.get(line)??0;if(count){remaining.set(line,count-1);return false}return true})
+ }
+ const addedLines=lineChanges(originalLines,draftLines)
+ const removedLines=lineChanges(draftLines,originalLines)
  function mayLeave(){return !hasDraft||window.confirm(t.leave)}
  function chooseBooking(targetId:string){
   if(busyRef.current||busy||targetId===id)return
@@ -123,7 +128,7 @@ export function AdministrationAiBookingNotes({locale,initialBookingId}:{locale:S
     {conflict&&<div role="alert" className="flex flex-wrap items-center gap-2"><p>{t.conflict}</p><button type="button" onClick={()=>void load(booking.id)} className="rounded-lg border px-3 py-2 text-sm">{t.reload}</button></div>}
     <label className="block text-sm">{t.instruction}<textarea rows={2} maxLength={1000} value={instruction} onChange={event=>setInstruction(event.target.value)} className="mt-1 w-full rounded-lg border bg-background p-2"/></label><button type="button" disabled={busy||conflict||instruction.trim().length<5} onClick={()=>void propose()} className="rounded-lg border border-violet-500 px-3 py-2 text-sm disabled:opacity-50">{t.generate}</button>
     <label className="block text-sm">{t.notes}<textarea rows={5} maxLength={5000} value={notes} onChange={event=>setNotes(event.target.value)} className="mt-1 w-full rounded-lg border bg-background p-2"/></label>
-    <div className="rounded-lg border p-3 text-sm"><p className="font-semibold">{t.preview}</p><p className="text-xs">{t.added}: {addedLines.length} · {t.removed}: {removedLines.length}</p><p className="whitespace-pre-wrap break-words text-muted-foreground">{booking.internal_notes??"—"}</p><hr className="my-2"/><p className="whitespace-pre-wrap break-words">{notes||"—"}</p></div>
+    <div className="rounded-lg border p-3 text-sm"><p className="font-semibold">{t.preview}</p><p className="text-xs">{t.added}: {addedLines.length} · {t.removed}: {removedLines.length}</p><p className="whitespace-pre-wrap break-words text-muted-foreground">{editableNotes(booking.internal_notes)||"—"}</p><hr className="my-2"/><p className="whitespace-pre-wrap break-words">{notes||"—"}</p></div>
     <div className="flex flex-wrap gap-2"><button type="button" disabled={busy||conflict||notes===editableNotes(booking.internal_notes)} onClick={()=>void save()} className="rounded-lg bg-violet-600 px-3 py-2 text-sm font-semibold text-white disabled:opacity-50">{t.save}</button><button type="button" disabled={busy} onClick={()=>{setNotes(editableNotes(booking.internal_notes));setInstruction("");setFeedback("")}} className="rounded-lg border px-3 py-2 text-sm">{t.discard}</button><button type="button" disabled={busy} onClick={()=>{if(mayLeave()){setBooking(null);setNotes("");setInstruction("")}}} className="rounded-lg border px-3 py-2 text-sm">{t.cancel}</button></div>
    </>}
   </div>}
