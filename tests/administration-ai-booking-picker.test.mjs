@@ -14,6 +14,7 @@ test("booking picker lists only authorized non-cancelled bookings and no sensiti
 test("booking picker uses explicit user selection and retains confirmation on save",()=>{
  assert.match(editor,/async function listBookings\(/)
  assert.match(editor,/choices\.map\(item=><option/)
- assert.match(editor,/void load\(event\.target\.value\)/)
+ assert.match(editor,/chooseBooking\(event\.target\.value\)/)
+ assert.match(editor,/if\(!mayLeave\(\)\)return/)
  assert.match(editor,/confirmed:true/)
 })
