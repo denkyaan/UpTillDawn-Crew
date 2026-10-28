@@ -54,11 +54,20 @@ try{
     }
     // Verify non-owner users cannot enter the Maker chooser or God Studio.
     for (const path of ['/maker-mode?portal=admin', '/god-mode']) {
-      await page.goto(`${base}${path}`, {waitUntil:'domcontentloaded',timeout:45000})
       const route=path.split('?')[0]
-      await page.waitForFunction(expected => window.location.pathname !== expected,route,{timeout:20000})
-      const landed=new URL(page.url()).pathname
-      if(landed===route)throw new Error(`${entry.name} reached protected route ${route}`)
+      // Server redirects can interrupt the navigation while Next.js commits RSC.
+      // Use a fresh page so the previous denied-route redirect cannot race it.
+      const protectedPage=await context.newPage()
+      try {
+        try {
+          await protectedPage.goto(`${base}${path}`, {waitUntil:'commit',timeout:45000})
+        } catch (error) {
+          if(!/ERR_ABORTED|interrupted by another navigation/i.test(String(error)))throw error
+        }
+        await protectedPage.waitForFunction(expected => window.location.pathname !== expected,route,{timeout:20000})
+      } finally {
+        await protectedPage.close()
+      }
     }
     console.log(`PASS: ${entry.name} denied Maker and God Studio routes`)
     console.log(`PASS: ${entry.name} authenticates, opens own portal, and cannot open the other portal`)
