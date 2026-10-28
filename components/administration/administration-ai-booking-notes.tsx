@@ -94,12 +94,14 @@ export function AdministrationAiBookingNotes({locale,initialBookingId}:{locale:S
    const result=await response.json() as {saved?:boolean;unchanged?:boolean}
    if(result.unchanged){setFeedback(t.unchanged);return}
    if(!result.saved){setFeedback(t.error);return}
-   const refreshed=await fetch("/api/administration/assistant/booking-notes?bookingId="+encodeURIComponent(targetId),{cache:"no-store"})
+   let refreshed:Response
+   try{refreshed=await fetch("/api/administration/assistant/booking-notes?bookingId="+encodeURIComponent(targetId),{cache:"no-store"})}
+   catch{setBooking(null);setNotes("");setFeedback(t.success);return}
    if(selectionRef.current!==targetId||requestRef.current!==requestId)return
    if(!refreshed.ok){setBooking(null);setNotes("");setFeedback(t.success);return}
-   const latest=await refreshed.json() as {booking?:Booking;audit?:AuditEntry[]|null}
+   const latest=await refreshed.json().catch(()=>null) as {booking?:Booking;audit?:AuditEntry[]|null}|null
    if(selectionRef.current!==targetId||requestRef.current!==requestId)return
-   if(latest.booking){setBooking(latest.booking);setNotes(editableNotes(latest.booking.internal_notes));setAudit(latest.audit??[])}
+   if(latest?.booking){setBooking(latest.booking);setNotes(editableNotes(latest.booking.internal_notes));setAudit(latest.audit??[])}
    else {setBooking(null);setNotes("")}
    setInstruction("");setFeedback(t.success)
   }catch{if(selectionRef.current===targetId&&requestRef.current===requestId)setFeedback(t.error)}finally{setBusy(false)}
