@@ -2,6 +2,14 @@ export type ExtraCatalogLocale = 'nl' | 'fr' | 'en' | 'de'
 type Row = { fr:string; en:string; de:string }
 
 export const APP_EXTRA_TRANSLATIONS: Record<string,Row> = {
+  "Privéchat starten": {fr:"Démarrer une discussion privée",en:"Start private chat",de:"Privatchat starten"},
+  "Démarrer une discussion privée": {fr:"Démarrer une discussion privée",en:"Start private chat",de:"Privatchat starten"},
+  "Start private chat": {fr:"Démarrer une discussion privée",en:"Start private chat",de:"Privatchat starten"},
+  "Privatchat starten": {fr:"Démarrer une discussion privée",en:"Start private chat",de:"Privatchat starten"},
+  "Privéchat kon niet worden geopend.": {fr:"Impossible d'ouvrir la discussion privée.",en:"Could not open private chat.",de:"Privatchat konnte nicht geöffnet werden."},
+  "Impossible d'ouvrir la discussion privée.": {fr:"Impossible d'ouvrir la discussion privée.",en:"Could not open private chat.",de:"Privatchat konnte nicht geöffnet werden."},
+  "Could not open private chat.": {fr:"Impossible d'ouvrir la discussion privée.",en:"Could not open private chat.",de:"Privatchat konnte nicht geöffnet werden."},
+  "Privatchat konnte nicht geöffnet werden.": {fr:"Impossible d'ouvrir la discussion privée.",en:"Could not open private chat.",de:"Privatchat konnte nicht geöffnet werden."},
   "Schrijf een bericht…": {fr:"Écrire un message…",en:"Write a message…",de:"Nachricht schreiben…"},
   "Écrire un message…": {fr:"Écrire un message…",en:"Write a message…",de:"Nachricht schreiben…"},
   "Write a message…": {fr:"Écrire un message…",en:"Write a message…",de:"Nachricht schreiben…"},
