@@ -4,7 +4,7 @@ import { getCurrentUser } from '@/lib/actions/auth'
 
 export const dynamic='force-dynamic'
 
-export default async function Page({searchParams}:{searchParams?:Promise<{event?:string;workplace?:string;private?:string;channel?:string;message?:string}>}){
+export default async function Page({searchParams}:{searchParams?:Promise<{event?:string;workplace?:string;private?:string;channel?:string;message?:string;administration?:string}>}){
   const params=searchParams?await searchParams:{}
   const s=await createClient();const current=await getCurrentUser();if(!current)return null
   const user={id:current.id}
@@ -27,7 +27,7 @@ export default async function Page({searchParams}:{searchParams?:Promise<{event?
   // second assignment policy in the UI: that can only hide channels the database
   // has explicitly authorized, especially during the three-day post-event window.
   const readable=(channels||[]).filter(channel=>['organization','event','workplace','private'].includes(channel.kind))
-  const ordered=[...readable].sort((a,b)=>{const weight=(kind:string)=>kind==='private'?0:kind==='organization'?1:kind==='event'?2:3;const byKind=weight(a.kind)-weight(b.kind);return byKind||(a.name||'').localeCompare(b.name||'','nl')})
+  const ordered=[...readable].sort((a,b)=>{const pin=(c:typeof a)=>params.administration==='1'&&c.kind==='private'&&c.name==='Up Till Dawn · persoonlijk'?0:1;const byPin=pin(a)-pin(b);if(byPin)return byPin;const weight=(kind:string)=>kind==='private'?0:kind==='organization'?1:kind==='event'?2:3;const byKind=weight(a.kind)-weight(b.kind);return byKind||(a.name||'').localeCompare(b.name||'','nl')})
   const eventImages=new Map((chatEvents||[]).map(event=>[event.id,event.image_url]))
   const privatePeerNames=Object.fromEntries((privatePeers||[]).map(peer=>[peer.channel_id,peer.full_name||'Privéchat']))
   const privatePeerIds=Object.fromEntries((privatePeers||[]).map(peer=>[peer.channel_id,peer.user_id]))
@@ -41,6 +41,7 @@ export default async function Page({searchParams}:{searchParams?:Promise<{event?
   const activeIds=new Set((activeEvents||[]).map(event=>event.id))
   const defaultChannelId=
     (params.channel?ordered.find(channel=>channel.id===params.channel)?.id:null)
+    ||(params.administration==='1'?ordered.find(channel=>channel.kind==='private'&&channel.name==='Up Till Dawn · persoonlijk')?.id:null)
     ||(params.private==='1'?ordered.find(channel=>channel.kind==='private'&&channel.name==='Up Till Dawn · persoonlijk')?.id:null)
     ||(params.workplace?ordered.find(channel=>channel.kind==='workplace'&&channel.workplace_id===params.workplace)?.id:null)
     ||(params.event?ordered.find(channel=>channel.kind==='event'&&channel.event_id===params.event)?.id:null)
