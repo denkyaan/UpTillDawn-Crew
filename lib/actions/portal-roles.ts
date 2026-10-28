@@ -29,6 +29,8 @@ export async function changePortalRole(formData: FormData): Promise<void> {
     p_user_id: userId, p_portal: portal, p_role: role, p_action: action,
   })
   if (error) throw new Error('Rolwijziging niet uitgevoerd')
+  revalidatePath('/crew')
+  revalidatePath('/portals/administration/personnel')
   revalidatePath('/portals/roles')
   revalidatePath('/portals')
 }
