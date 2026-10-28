@@ -6,6 +6,7 @@ import { setPersonnelBlock,setPersonnelRole } from '@/lib/actions/personnel'
 import { nlRole } from '@/lib/ui-nl'
 import { PendingSubmitButton } from '@/components/ui/pending-submit-button'
 import { PersonnelDeleteButton } from '@/components/admin/personnel-delete-button'
+import { PersonnelPortalRoles } from '@/components/admin/personnel-portal-roles'
 
 export const dynamic='force-dynamic'
 
@@ -33,7 +34,7 @@ export default async function Page({searchParams}:{searchParams?:Promise<{user?:
     </main>
   }
 
-  const [{data,error},{data:shiftRows},{data:taskRows}]=await Promise.all([
+  const [{data,error},{data:shiftRows},{data:taskRows},{data:portalAssignments}]=await Promise.all([
     s.rpc('upt_admin_personnel_details_v2'),
     s.from('shifts')
       .select('id,user_id,event_id,workplace_id,role_name,scheduled_start,scheduled_end,status,response_status,events(name),workplaces(name)')
@@ -42,6 +43,7 @@ export default async function Page({searchParams}:{searchParams?:Promise<{user?:
       .order('scheduled_start')
       .limit(1000),
     s.from('task_assignments').select('id,user_id,status').neq('status','COMPLETED').limit(2000),
+    s.from('portal_role_assignments').select('user_id,portal,role,approved,revoked_at').limit(5000),
   ])
   const crew=(data||[]).filter(person=>person.approved).sort((a,b)=>Number(b.id===params.user)-Number(a.id===params.user))
   const photos=new Map<string,string>()
@@ -101,6 +103,7 @@ export default async function Page({searchParams}:{searchParams?:Promise<{user?:
           {future.length>0&&<div className="mt-4 space-y-2"><b className="text-sm">Komende shifts</b>{future.slice(0,5).map(shift=><div key={shift.id} className="rounded-lg border p-2 text-xs"><b>{shift.events?.name||'Evenement'} · {shift.workplaces?.name||'Werkplek'}</b><p className="text-muted-foreground">{new Date(shift.scheduled_start).toLocaleString('nl-BE')} → {new Date(shift.scheduled_end).toLocaleString('nl-BE')} · {shift.role_name}</p></div>)}</div>}
         </details>
 
+        {!own&&<PersonnelPortalRoles userId={person.id} assignments={(portalAssignments||[]).filter(a=>a.user_id===person.id)}/>}
         <div className="mt-4 grid gap-3 md:grid-cols-2">
           <form action={setPersonnelRole} className="grid gap-2 rounded-xl border p-3">
             <input type="hidden" name="user_id" value={person.id}/>
