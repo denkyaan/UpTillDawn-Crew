@@ -44,6 +44,19 @@ begin
  exception when insufficient_privilege then null;
  end;
 
+ -- Atomic grant: assign and approve together, without a pending intermediate state.
+ perform set_config('request.jwt.claim.sub','b9100000-0000-4000-8000-000000000001',true);
+ perform public.upt_admin_set_portal_role('b9100000-0000-4000-8000-000000000003','administration','administrative_staff','assign_approved');
+ perform set_config('request.jwt.claim.sub','b9100000-0000-4000-8000-000000000003',true);
+ select count(*) into v_count from public.upt_my_portal_assignments()
+ where portal='administration' and role='administrative_staff' and approved and revoked_at is null;
+ if v_count<>1 then raise exception 'Atomic approved grant not visible to recipient'; end if;
+ perform set_config('request.jwt.claim.sub','b9100000-0000-4000-8000-000000000001',true);
+ begin
+   perform public.upt_admin_set_portal_role('b9100000-0000-4000-8000-000000000003','administration','administrative_staff','assign_approved');
+   raise exception 'Duplicate active atomic grant unexpectedly succeeded';
+ exception when invalid_parameter_value then null;
+ end;
  -- Revoke as admin, then verify the recipient loses access.
  perform set_config('request.jwt.claim.sub','b9100000-0000-4000-8000-000000000001',true);
  perform public.upt_admin_set_portal_role('b9100000-0000-4000-8000-000000000002','promotion','promoter','revoke');
