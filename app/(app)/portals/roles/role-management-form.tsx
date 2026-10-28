@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useTransition } from 'react'
+import { useRouter } from 'next/navigation'
 import { changePortalRole } from '@/lib/actions/portal-roles'
 
 type UserOption = { id: string; full_name: string | null }
@@ -11,10 +12,11 @@ const roles: Record<string, { value: string; label: string }[]> = {
 }
 
 export function RoleManagementForm({ users }: { users: UserOption[] }) {
+  const router = useRouter()
   const [portal, setPortal] = useState('events')
   const [result, setResult] = useState('')
   const [pending, startTransition] = useTransition()
-  const [action, setAction] = useState('assign')
+  const [action, setAction] = useState('assign_approved')
   const [role, setRole] = useState('event_staff')
   const [userId, setUserId] = useState(users[0]?.id ?? '')
   const [search, setSearch] = useState('')
@@ -26,6 +28,7 @@ export function RoleManagementForm({ users }: { users: UserOption[] }) {
       try {
         await changePortalRole(formData)
         setResult('Rolwijziging opgeslagen.')
+        router.refresh()
       } catch {
         setResult('Rolwijziging niet uitgevoerd.')
       }
@@ -37,7 +40,7 @@ export function RoleManagementForm({ users }: { users: UserOption[] }) {
     <label className="grid gap-1 text-sm">Gebruiker<select required name="user_id" value={userId} onChange={e => setUserId(e.target.value)} className="rounded border bg-background p-2">{matches.map(user => <option key={user.id} value={user.id}>{user.full_name || user.id}</option>)}</select></label>
     <label className="grid gap-1 text-sm">Portaal<select name="portal" value={portal} onChange={e => { setPortal(e.target.value); setRole(roles[e.target.value][0].value) }} className="rounded border bg-background p-2"><option value="events">Evenementen</option><option value="promotion">Promotie</option><option value="administration">Administratie</option></select></label>
     <label className="grid gap-1 text-sm">Rol<select name="role" value={role} onChange={e => setRole(e.target.value)} className="rounded border bg-background p-2">{roles[portal].map(item => <option key={item.value} value={item.value}>{item.label}</option>)}</select></label>
-    <label className="grid gap-1 text-sm">Actie<select name="action" value={action} onChange={e => setAction(e.target.value)} className="rounded border bg-background p-2"><option value="assign">Toewijzen</option><option value="approve">Goedkeuren</option><option value="revoke">Intrekken</option></select></label>
+    <label className="grid gap-1 text-sm">Actie<select name="action" value={action} onChange={e => setAction(e.target.value)} className="rounded border bg-background p-2"><option value="assign_approved">Toewijzen en goedkeuren</option><option value="approve">Goedkeuren</option><option value="revoke">Intrekken</option></select></label>
     <button disabled={pending || !userId || !matches.some(user => user.id === userId)} type="submit" className="rounded bg-violet-600 px-4 py-2 font-medium text-white disabled:opacity-50">{pending ? 'Bezig met opslaan...' : 'Rolwijziging uitvoeren'}</button>
     {result && <p role="status" aria-live="polite" className="sm:col-span-2">{result}</p>}
   </form>
@@ -47,10 +50,11 @@ export function RoleQuickAction({ userId, portal, role, action }: {
   userId: string
   portal: string
   role: string
-  action: 'assign' | 'approve' | 'revoke'
+  action: 'assign_approved' | 'approve' | 'revoke'
 }) {
   const [pending, startTransition] = useTransition()
   const [result, setResult] = useState('')
+  const router = useRouter()
   const label = action === 'approve' ? 'Goedkeuren' : action === 'revoke' ? 'Intrekken' : 'Opnieuw toewijzen'
 
   return <div className="flex flex-col gap-1">
