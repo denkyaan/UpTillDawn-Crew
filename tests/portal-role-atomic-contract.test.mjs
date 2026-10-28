@@ -8,7 +8,7 @@ test('personnel role control uses a single atomic grant',async()=>{
  assert.match(ui,/update\("assign_approved"\)/)
  assert.doesNotMatch(ui,/if\s*\(action\s*===\s*["']assign["']\)/)
  assert.match(action,/assign_approved/)
- assert.match(action,/current\.realIsAdmin/)
+ assert.match(action,/current\?\.realIsAdmin/)
  assert.match(action,/userId === current\.id/)
 })
 
