@@ -47,3 +47,12 @@ test('SQL lifecycle verifies approved entitlement, denied non-admin writes and r
  assert.match(sql,/Revoked grant still authorizes recipient/)
  assert.match(sql,/^rollback;\s*$/m)
 })
+
+test('separate role management screen never submits the disabled legacy assign action',async()=>{
+ const [page,form]=await Promise.all([read('app/(app)/portals/roles/page.tsx'),read('app/(app)/portals/roles/role-management-form.tsx')])
+ assert.match(page,/row\.revoked_at \? "assign_approved"/)
+ assert.match(form,/useState\('assign_approved'\)/)
+ assert.match(form,/<option value="assign_approved">/)
+ assert.doesNotMatch(form,/<option value="assign">/)
+ assert.match(form,/router\.refresh\(\)/)
+})
