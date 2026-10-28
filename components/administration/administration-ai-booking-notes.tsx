@@ -29,6 +29,7 @@ export function AdministrationAiBookingNotes({locale,initialBookingId}:{locale:S
  const initialLoadRef=useRef<string|null>(null)
  const selectionRef=useRef(initialBookingId??"")
  const requestRef=useRef(0)
+ const listRequestRef=useRef(0)
  const hasDraft=Boolean(booking&&notes!==editableNotes(booking.internal_notes))
  const originalLines=booking?editableNotes(booking.internal_notes).split("\n"):[]
  const draftLines=notes.split("\n")
@@ -65,13 +66,16 @@ export function AdministrationAiBookingNotes({locale,initialBookingId}:{locale:S
  useEffect(()=>{if(initialBookingId&&initialLoadRef.current!==initialBookingId&&/^[0-9a-f-]{36}$/i.test(initialBookingId)){initialLoadRef.current=initialBookingId;queueMicrotask(()=>{void load(initialBookingId)})}},[initialBookingId,load])
  async function listBookings(nextPage=0){
   if(busy)return
+  const listRequestId=++listRequestRef.current
+  const query=search.trim()
   setBusy(true);setFeedback("")
   try{
-   const response=await fetch("/api/administration/assistant/booking-notes?search="+encodeURIComponent(search.trim())+"&page="+nextPage,{cache:"no-store"})
+   const response=await fetch("/api/administration/assistant/booking-notes?search="+encodeURIComponent(query)+"&page="+nextPage,{cache:"no-store"})
    const payload=await response.json() as {bookings?:Array<Pick<Booking,"id"|"artist_name"|"status">>;hasMore?:boolean}
+   if(listRequestId!==listRequestRef.current)return
    if(!response.ok||!payload.bookings){setFeedback(t.error);return}
    setChoices(payload.bookings);setPage(nextPage);setHasMore(Boolean(payload.hasMore))
-  }catch{setFeedback(t.error)}finally{setBusy(false)}
+  }catch{if(listRequestId===listRequestRef.current)setFeedback(t.error)}finally{setBusy(false)}
  }
  async function propose(){
   if(!booking||busy||conflict||!instruction.trim())return
