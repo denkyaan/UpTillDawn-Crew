@@ -267,6 +267,17 @@ jobs:
           done
           exit 1
 
+      - name: Inventory every portal route and interactive control
+        run: node scripts/functional-control-inventory.mjs
+
+      - name: Upload functional control inventory
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: functional-control-inventory
+          path: artifacts/functional-control-inventory.json
+          if-no-files-found: ignore
+
       - name: Full application surface inventory gate
         run: |
           set -euo pipefail
