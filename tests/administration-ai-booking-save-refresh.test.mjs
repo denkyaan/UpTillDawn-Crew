@@ -11,6 +11,6 @@ test("confirmed booking note save reloads current booking and audit history",()=
  assert.match(editor,/setNotes\(editableNotes\(latest\.booking\.internal_notes\)\)/)
 })
 test("successful write is not presented as failed when follow-up refresh fails",()=>{
- assert.match(editor,/catch\{setBooking\(null\);setNotes\(""\);setFeedback\(t\.success\);return\}/)
- assert.match(editor,/if\(!refreshed\.ok\)\{setBooking\(null\);setNotes\(""\);setFeedback\(t\.success\);return\}/)
+ assert.match(editor,/catch\{setBooking\(null\);setNotes\(""\);setSavedRefreshPending\(true\);setFeedback\(t\.success\);return\}/)
+ assert.match(editor,/if\(!refreshed\.ok\)\{setBooking\(null\);setNotes\(""\);setSavedRefreshPending\(true\);setFeedback\(t\.success\);return\}/)
 })
