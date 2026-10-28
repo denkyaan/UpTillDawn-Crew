@@ -1,4 +1,5 @@
 import Link from "next/link"
+import {MessagesSquare,ClipboardCheck,ArrowUpRight,Clock3,CheckCircle2} from "lucide-react"
 import {redirect} from "next/navigation"
 import {getCurrentUser} from "@/lib/actions/auth"
 import {createClient} from "@/lib/supabase/crew-server"
@@ -23,12 +24,17 @@ export default async function PromotionHome(){
   de:{heading:"Promotionübersicht",intro:"Kommuniziere mit dem Team und verfolge deine Aufgaben.",chat:"Chats",chatDetail:"Promotion- und Event-Chats öffnen.",tasks:"Aufgabenliste",tasksDetail:"Aufgaben, Fristen und Nachweise ansehen.",open:"Offene Aufgaben",notStarted:"Noch nicht begonnen",inProgress:"In Bearbeitung",partial:"Mindestens (maximal 500 Aufgaben geladen)",blocked:"Dein Promotionzugang ist gesperrt. Neue Aufgaben und Nachweise sind nicht verfügbar.",error:"Aufgaben konnten nicht geladen werden."}
  } as const
  const t=copy[locale]
- return <main className="mx-auto max-w-4xl space-y-6 p-4 sm:p-6"><header><h1 className="text-3xl font-black">{t.heading}</h1><p className="mt-2 text-muted-foreground">{t.intro}</p></header>
- {isBlocked&&<p role="alert" className="rounded-xl border border-amber-500 p-4">{t.blocked}</p>}
- {error&&<p role="alert" className="rounded-xl border p-3">{t.error}</p>}
- {!error&&<p className="rounded-xl border p-4 text-sm">{t.open}: <strong>{countIsPartial?t.partial+" ": ""}{open}</strong> · {t.notStarted}: <strong>{notStarted}</strong> · {t.inProgress}: <strong>{inProgress}</strong></p>}
- <div className="grid gap-4 sm:grid-cols-2">
-  <Link href="/chat" className="rounded-2xl border bg-card p-6 hover:border-violet-500 focus-visible:outline focus-visible:outline-2 focus-visible:outline-violet-500"><span aria-hidden className="text-3xl">◉</span><h2 className="mt-3 text-xl font-bold">{t.chat}</h2><p className="mt-2 text-sm text-muted-foreground">{t.chatDetail}</p></Link>
-  <Link href="/portals/promotion/tasks" className="rounded-2xl border bg-card p-6 hover:border-violet-500 focus-visible:outline focus-visible:outline-2 focus-visible:outline-violet-500"><span aria-hidden className="text-3xl">☑</span><h2 className="mt-3 text-xl font-bold">{t.tasks}</h2><p className="mt-2 text-sm text-muted-foreground">{t.tasksDetail}</p></Link>
- </div></main>
+ return <main className="mx-auto max-w-5xl space-y-6 px-4 py-6 sm:px-8 sm:py-8">
+  <header className="space-y-2"><p className="text-xs font-semibold uppercase tracking-[0.18em] text-violet-400">Up Till Dawn / Promotion</p><h1 className="text-2xl font-bold tracking-tight sm:text-3xl">{t.heading}</h1><p className="max-w-2xl text-sm text-muted-foreground">{t.intro}</p></header>
+  {isBlocked&&<p role="alert" className="rounded-xl border border-amber-500/60 bg-amber-500/10 p-4 text-sm">{t.blocked}</p>}
+  {error&&<p role="alert" className="rounded-xl border border-destructive/60 p-4 text-sm">{t.error}</p>}
+  <section aria-label={t.open} className="grid grid-cols-3 gap-2 sm:gap-4">
+   {[{label:t.open,value:open,icon:ClipboardCheck},{label:t.notStarted,value:notStarted,icon:Clock3},{label:t.inProgress,value:inProgress,icon:CheckCircle2}].map(stat=>{const Icon=stat.icon;return <div key={stat.label} className="min-w-0 rounded-2xl border bg-card p-3 sm:p-5"><Icon aria-hidden="true" className="mb-3 h-5 w-5 text-violet-400"/><p className="text-2xl font-bold tabular-nums">{error?"—":stat.value}</p><p className="mt-1 text-xs leading-snug text-muted-foreground">{stat.label}</p></div>})}
+  </section>
+  {countIsPartial&&!error&&<p className="text-xs text-muted-foreground">{t.partial}</p>}
+  <section className="grid gap-3 sm:grid-cols-2" aria-label={t.heading}>
+   <Link href="/portals/promotion/tasks" className="group flex min-h-36 items-start gap-4 rounded-2xl border bg-card p-5 transition-colors hover:border-violet-500/60 hover:bg-violet-500/5 focus-visible:outline-2 focus-visible:outline-violet-500"><span className="rounded-xl bg-violet-500/10 p-3 text-violet-400"><ClipboardCheck className="h-6 w-6"/></span><span className="min-w-0 flex-1"><span className="block text-lg font-semibold">{t.tasks}</span><span className="mt-1 block text-sm leading-relaxed text-muted-foreground">{t.tasksDetail}</span></span><ArrowUpRight aria-hidden className="h-5 w-5 text-muted-foreground transition-transform group-hover:translate-x-0.5 group-hover:-translate-y-0.5"/></Link>
+   <Link href="/chat" className="group flex min-h-36 items-start gap-4 rounded-2xl border bg-card p-5 transition-colors hover:border-violet-500/60 hover:bg-violet-500/5 focus-visible:outline-2 focus-visible:outline-violet-500"><span className="rounded-xl bg-violet-500/10 p-3 text-violet-400"><MessagesSquare className="h-6 w-6"/></span><span className="min-w-0 flex-1"><span className="block text-lg font-semibold">{t.chat}</span><span className="mt-1 block text-sm leading-relaxed text-muted-foreground">{t.chatDetail}</span></span><ArrowUpRight aria-hidden className="h-5 w-5 text-muted-foreground transition-transform group-hover:translate-x-0.5 group-hover:-translate-y-0.5"/></Link>
+  </section>
+ </main>
 }
