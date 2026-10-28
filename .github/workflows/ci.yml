@@ -6,6 +6,8 @@ on:
     paths:
       - '.github/workflows/ci.yml'
       - '.github/release-validation/**'
+      - 'supabase/migrations/20261028120000_administration_foreign_key_indexes.sql'
+      - 'lib/release-baseline.ts'
   pull_request:
     branches: [main, staging]
   workflow_dispatch:
