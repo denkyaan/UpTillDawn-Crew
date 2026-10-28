@@ -234,18 +234,19 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
   const showPlatform=feature("platform",Boolean(isAdmin))
   const featureVisibility={overview:showOverview,events:showEvents,operations:showOperations,workplaces:showWorkplaces,inventory:showInventory,guestlist:showGuestlist,sales:showSales,shifts:showShifts,briefings:showBriefings,tasks:showTasks,chat:showChat,crew:showCrew,incidents:showIncidents,exports:showExports,personnel:showPersonnel,platform:showPlatform,settings:showSettings}
   const showUrgent=!pathname.startsWith("/chat")&&!isAdmin&&showIncidents&&effectiveContext.shiftActive
-  const showFloatingChat=showChat
+  const inDedicatedPortal=pathname.startsWith("/portals/promotion")||pathname.startsWith("/portals/administration")
+  const showFloatingChat=showChat&&!inDedicatedPortal
 
   return <div className="flex h-dvh bg-background print:block print:h-auto">
 
     {/* Mobile shell lives at the AppLayout root so iOS fixed positioning is not
         clipped by the nested overflow scroll container. */}
     <div className="print:hidden">
-      {!pathname.startsWith("/portals/")&&<MobileBottomNav chatMissed={chatMissed} incidentMissed={incidentMissed} taskMissed={taskMissed} notificationFeatureCounts={notificationFeatureCounts} featureOrder={order} featureLabels={labels} featureVisibility={featureVisibility} assignedEvent={effectiveContext.assignedEvent} shiftActive={effectiveContext.shiftActive}/>}
+      {!inDedicatedPortal&&!pathname.startsWith("/portals/")&&<MobileBottomNav chatMissed={chatMissed} incidentMissed={incidentMissed} taskMissed={taskMissed} notificationFeatureCounts={notificationFeatureCounts} featureOrder={order} featureLabels={labels} featureVisibility={featureVisibility} assignedEvent={effectiveContext.assignedEvent} shiftActive={effectiveContext.shiftActive}/>}
     </div>
     {showFloatingChat&&!pathname.startsWith("/chat")&&<FloatingChatButton count={chatMissed} stackedAboveAdminAi={Boolean(isAdmin)} href="/chat"/>}
 
-    <div className="print:hidden"><AppSidebar chatMissed={chatMissed} incidentMissed={incidentMissed} taskMissed={taskMissed} notificationFeatureCounts={notificationFeatureCounts} showOperations={showOperations} showEvents={showEvents} showTasks={showTasks} showBriefings={showBriefings} showShifts={showShifts} showWorkplaces={showWorkplaces} showIncidents={showIncidents} featureOrder={order} featureLabels={labels} featureVisibility={featureVisibility}/></div>
+    {!inDedicatedPortal&&<div className="print:hidden"><AppSidebar chatMissed={chatMissed} incidentMissed={incidentMissed} taskMissed={taskMissed} notificationFeatureCounts={notificationFeatureCounts} showOperations={showOperations} showEvents={showEvents} showTasks={showTasks} showBriefings={showBriefings} showShifts={showShifts} showWorkplaces={showWorkplaces} showIncidents={showIncidents} featureOrder={order} featureLabels={labels} featureVisibility={featureVisibility}/></div>}
     <div className="flex flex-1 flex-col overflow-hidden print:block print:overflow-visible">
       <div className="print:hidden"><Topbar notificationMissed={notificationMissed}/><QueueStatus/>{isAdmin&&<AdminContextBar/>}</div>
       <div id="app-scroll" className="flex-1 overflow-y-auto bg-background scroll-smooth print:overflow-visible">
