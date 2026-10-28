@@ -27,7 +27,7 @@ export async function GET(request:Request){
   if(search.length>80||!Number.isSafeInteger(page)||page<0||page>1000)return Response.json({error:"Invalid search"},{status:400})
   const pageSize=25
   let query=db.from("admin_artist_bookings").select("id,artist_name,status").neq("status","cancelled")
-  if(search)query=query.ilike("artist_name",`%${search.replace(/[%,_\\]/g,"")} %`.replace(/ %$/,"%"))
+  if(search)query=query.ilike("artist_name",`%${search.replace(/[%,_\\]/g,"")}%`)
   const {data,error}=await query.order("artist_name",{ascending:true}).order("id",{ascending:true}).range(page*pageSize,(page+1)*pageSize)
   if(error)return Response.json({error:"Read failed"},{status:500})
   return Response.json({bookings:(data??[]).slice(0,pageSize),hasMore:(data??[]).length>pageSize,page})
