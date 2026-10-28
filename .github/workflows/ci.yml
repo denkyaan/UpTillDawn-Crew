@@ -7,6 +7,7 @@ on:
       - '.github/workflows/ci.yml'
       - '.github/release-validation/**'
       - 'supabase/migrations/20261028120000_administration_foreign_key_indexes.sql'
+      - 'supabase/migrations/20261028130000_restrict_artist_booking_audit_trigger_execution.sql'
       - 'lib/release-baseline.ts'
   pull_request:
     branches: [main, staging]
