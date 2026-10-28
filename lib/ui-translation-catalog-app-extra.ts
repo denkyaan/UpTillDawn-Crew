@@ -2,6 +2,8 @@ export type ExtraCatalogLocale = 'nl' | 'fr' | 'en' | 'de'
 type Row = { fr:string; en:string; de:string }
 
 export const APP_EXTRA_TRANSLATIONS: Record<string,Row> = {
+  "Toewijzen en goedkeuren": {fr:"Attribuer et approuver",en:"Assign and approve",de:"Zuweisen und genehmigen"},
+
   "Rol al actief": {fr:"Rôle déjà actif",en:"Role already active",de:"Rolle bereits aktiv"},
   "Rol goedkeuren": {fr:"Approuver le rôle",en:"Approve role",de:"Rolle genehmigen"},
   "Rolwijziging opgeslagen. Vernieuw de pagina voor de actuele rollen.": {fr:"Modification du rôle enregistrée. Actualisez la page pour voir les rôles actuels.",en:"Role change saved. Refresh the page to see current roles.",de:"Rollenänderung gespeichert. Aktualisiere die Seite, um die aktuellen Rollen zu sehen."},
