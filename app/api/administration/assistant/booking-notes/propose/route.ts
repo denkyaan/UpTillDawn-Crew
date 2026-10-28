@@ -6,6 +6,8 @@ import {canOpenPortal,type PortalAssignment} from "@/lib/portal-access"
 export const runtime="nodejs"
 const schema=z.object({bookingId:z.string().uuid(),instruction:z.string().trim().min(5).max(1000),locale:z.enum(["nl","fr","en","de"])}).strict()
 const auditLine=/^\[\d{4}-\d{2}-\d{2}T.*\] \[(email_sent|reply_received|follow_up)\] \[[0-9a-f-]{36}\] /
+const sensitiveRequest=/\b(?:iban|swift|bic|bank(?:rekening|account)?|rekeningnummer|account\s*number|payment|betaling|factuur|invoice|contract|overeenkomst|signature|handtekening|rijksregister|national\s*id|passport|paspoort|password|wachtwoord|token|api\s*key|credit\s*card|kredietkaart|salary|loon|salaris|prix|prijs|price|montant|betrag|zahlung|rechnung|vertrag|unterschrift|kennwort)\b/i
+const sensitiveOutput=/(?:\b[A-Z]{2}\d{2}[A-Z0-9 ]{11,30}\b|\b(?:iban|swift|bic|bankrekening|rekeningnummer|account number|password|wachtwoord|api key|rijksregister|national id|passport|paspoort)\s*[:=])/i
 export async function POST(request:Request){
  const origin=request.headers.get("origin")
  if(request.headers.get("sec-fetch-site")==="cross-site"||(origin&&origin!==new URL(request.url).origin))return Response.json({error:"Forbidden"},{status:403})
@@ -24,6 +26,7 @@ export async function POST(request:Request){
  if(!booking)return Response.json({error:"Not found"},{status:404})
  if(booking.status==="cancelled")return Response.json({error:"Cancelled booking is locked"},{status:409})
  const current=(booking.internal_notes??"").split("\n").filter(line=>!auditLine.test(line)).join("\n")
+ if(sensitiveRequest.test(parsed.data.instruction))return Response.json({error:"Sensitive booking changes require manual review outside AI notes"},{status:422})
  let ai:{run:(model:string,input:Record<string,unknown>)=>Promise<unknown>}|undefined
  try{ai=(getCloudflareContext().env as {AI?:typeof ai}).AI}catch{}
  if(!ai)return Response.json({error:"AI unavailable"},{status:503})
@@ -36,7 +39,7 @@ export async function POST(request:Request){
   if(typeof response!=="string")return Response.json({error:"Invalid AI output"},{status:502})
   const extracted=response.trim().replace(/^\x60\x60\x60(?:json)?\s*/i,"").replace(/\s*\x60\x60\x60$/,"")
   const proposal=z.object({notes:z.string().max(5000)}).strict().safeParse(JSON.parse(extracted))
-  if(!proposal.success||proposal.data.notes.split("\n").some(line=>auditLine.test(line)))return Response.json({error:"Invalid AI proposal"},{status:502})
+  if(!proposal.success||proposal.data.notes.split("\n").some(line=>auditLine.test(line))||sensitiveOutput.test(proposal.data.notes)&&!sensitiveOutput.test(current))return Response.json({error:"Invalid AI proposal"},{status:502})
   if(proposal.data.notes===current)return Response.json({notes:current,unchanged:true,expectedNotes:booking.internal_notes,bookingId:booking.id})
   return Response.json({notes:proposal.data.notes,unchanged:false,expectedNotes:booking.internal_notes,bookingId:booking.id})
  }catch{return Response.json({error:"AI proposal failed"},{status:502})}
