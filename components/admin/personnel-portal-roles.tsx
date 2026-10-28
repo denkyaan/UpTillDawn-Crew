@@ -18,7 +18,7 @@ export function PersonnelPortalRoles({userId,assignments,readOnly=false}:{userId
   setMessage("")
   const form=new FormData()
   form.set("user_id",userId);form.set("portal",p);form.set("role",r);form.set("action",action)
-  start(async()=>{try{await changePortalRole(form)setMessage("Rolwijziging opgeslagen.");router.refresh()}catch{setMessage("Rolwijziging niet uitgevoerd.");router.refresh()}})
+  start(async()=>{try{await changePortalRole(form);setMessage("Rolwijziging opgeslagen.");router.refresh()}catch{setMessage("Rolwijziging niet uitgevoerd.");router.refresh()}})
  }
  return <section className="mt-3 space-y-3 rounded-xl border p-3">
   <h3 className="font-semibold">Extra portaalrollen</h3>
