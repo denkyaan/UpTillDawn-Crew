@@ -28,7 +28,7 @@ export async function GET(request:Request){
  const {data,error}=await db.from("admin_artist_bookings").select("id,artist_name,status,internal_notes").eq("id",bookingId).maybeSingle()
  if(error)return Response.json({error:"Read failed"},{status:500})
  if(!data)return Response.json({error:"Not found"},{status:404})
- const {data:audit,error:auditError}=await db.from("admin_artist_booking_note_audit" as "admin_artist_bookings").select("id,actor_id,changed_at,previous_length,new_length").eq("booking_id",bookingId).order("changed_at",{ascending:false}).limit(10)
+ const {data:audit,error:auditError}=await db.from("admin_artist_booking_note_audit" as "admin_artist_bookings").select("*").filter("booking_id","eq",bookingId).order("changed_at",{ascending:false}).limit(10)
  return Response.json({booking:data,audit:auditError?null:audit})
 }
 export async function POST(request:Request){
