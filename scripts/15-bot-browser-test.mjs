@@ -264,6 +264,42 @@ try {
         }
       }
 
+      // Exercise deployed portal pages with a real authenticated Admin browser,
+      // not only source-file existence checks. Admin has authorized portal access.
+      if (index === 0) {
+        const portalRoutes=[
+          '/portals/administration',
+          '/portals/administration/overview',
+          '/portals/administration/finance',
+          '/portals/administration/rosters',
+          '/portals/administration/modules/artists',
+          '/portals/administration/modules/documents',
+          '/portals/administration/modules/invoices',
+          '/portals/administration/modules/banking',
+          '/portals/administration/modules/inventory',
+          '/portals/administration/modules/notifications',
+          '/portals/administration/modules/reports',
+          '/portals/administration/modules/settings',
+          '/portals/promotion',
+          '/portals/promotion/tasks',
+        ]
+        for(const route of portalRoutes){
+          const response=await gotoWithTransientRetry(page,`${baseUrl}${route}`,{waitUntil:'domcontentloaded',timeout:45000})
+          if(!response?.ok())throw new Error(`portal browser ${route}: HTTP ${response?.status()}`)
+          const current=new URL(page.url(),baseUrl).pathname
+          if(current.startsWith('/login')||current==='/portals')throw new Error(`portal browser ${route}: unexpected redirect to ${current}`)
+          const mainText=(await page.locator('body').innerText()).trim()
+          if(!mainText||/404\\s*\\|\\s*This page could not be found|This page could not be found/i.test(mainText))throw new Error(`portal browser ${route}: empty or not-found UI`)
+          if(await page.locator('main').count()===0)console.log(`portal browser ${route}: page renders without main landmark`)
+        }
+        await gotoWithTransientRetry(page,`${baseUrl}/portals/promotion`,{waitUntil:'domcontentloaded'})
+        const tasksLink=page.locator('a[href="/portals/promotion/tasks"]').first()
+        if(await tasksLink.count()!==1)throw new Error('promotion tasks navigation link missing')
+        await tasksLink.click()
+        await page.waitForURL(url=>url.pathname==='/portals/promotion/tasks',{timeout:20000})
+        console.log('PASS: authenticated Admin browser traversed Administration/Promotion portal routes and clicked Promotion tasks')
+      }
+
       // Bot03 still gets runtime-i18n coverage on its isolated real workflow
       // routes, without the generic crawl mutating its navigation/session state.
       if (index === 2) await assertRuntimeLocale(page, locale, bot, page.url())
