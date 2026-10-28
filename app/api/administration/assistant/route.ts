@@ -16,7 +16,10 @@ export async function POST(request:Request){
  if((accessError&&!user.isAdmin&&!user.isOwner)||(!user.isAdmin&&!user.isOwner&&!canOpenPortal("administration",(assignments??[]) as PortalAssignment[],{approved:user.approved,blocked:user.account_blocked===true})))return Response.json({error:"Forbidden"},{status:403})
  const parsed=schema.safeParse(await request.json().catch(()=>null))
  if(!parsed.success)return Response.json({error:"Invalid request"},{status:400})
- const [rosters,inventory,artists,documents,reminders,submittedTimesheetCount,financialDocumentCount,openArtistBookingCount,pendingRosterCount]=await Promise.all([
+ const now=new Date()
+ const today=now.toISOString().slice(0,10)
+ const nextWeek=new Date(now.getTime()+7*86400000).toISOString()
+ const [rosters,inventory,artists,documents,reminders,submittedTimesheetCount,financialDocumentCount,openArtistBookingCount,pendingRosterCount,overdueDocumentCount,upcomingFollowUpCount,inventoryDiscrepancyCount]=await Promise.all([
   db.from("admin_roster_proposals").select("status,title,proposed_start").limit(30),
   db.from("inventory_items").select("name,missing_quantity,damaged_quantity").or("missing_quantity.gt.0,damaged_quantity.gt.0").limit(100),
   db.from("admin_artist_bookings").select("artist_name,status,follow_up_at,performance_at").in("status",["enquiry","negotiating","confirmed"]).order("follow_up_at",{ascending:true,nullsFirst:false}).limit(30),
@@ -25,7 +28,10 @@ export async function POST(request:Request){
   db.from("timesheets").select("id",{count:"exact",head:true}).eq("status","submitted"),
   db.from("admin_financial_documents").select("id",{count:"exact",head:true}).in("status",["review","approved","issued"]),
   db.from("admin_artist_bookings").select("id",{count:"exact",head:true}).in("status",["enquiry","negotiating"]),
-  db.from("admin_roster_proposals").select("id",{count:"exact",head:true}).eq("status","submitted")
+  db.from("admin_roster_proposals").select("id",{count:"exact",head:true}).eq("status","submitted"),
+  db.from("admin_financial_documents").select("id",{count:"exact",head:true}).in("status",["review","approved","issued"]).lt("due_date",today),
+  db.from("admin_artist_bookings").select("id",{count:"exact",head:true}).in("status",["enquiry","negotiating","confirmed"]).gte("follow_up_at",now.toISOString()).lte("follow_up_at",nextWeek),
+  db.from("inventory_items").select("id",{count:"exact",head:true}).or("missing_quantity.gt.0,damaged_quantity.gt.0")
  ])
  const context={
   generatedAt:new Date().toISOString(),
@@ -35,11 +41,14 @@ export async function POST(request:Request){
   financialDocumentsAwaitingCompletion:financialDocumentCount.error||financialDocumentCount.count==null?{available:false}:{count:financialDocumentCount.count,complete:true,statuses:["review","approved","issued"]},
   artistBookingsInProgress:openArtistBookingCount.error||openArtistBookingCount.count==null?{available:false}:{count:openArtistBookingCount.count,complete:true,statuses:["enquiry","negotiating"]},
   submittedRosterProposals:pendingRosterCount.error||pendingRosterCount.count==null?{available:false}:{count:pendingRosterCount.count,complete:true},
+  financialDocumentsPastDueDate:overdueDocumentCount.error||overdueDocumentCount.count==null?{available:false}:{count:overdueDocumentCount.count,complete:true,asOfDate:today,statuses:["review","approved","issued"],note:"Due date has passed; this is not proof that payment is outstanding."},
+  artistFollowUpsNextSevenDays:upcomingFollowUpCount.error||upcomingFollowUpCount.count==null?{available:false}:{count:upcomingFollowUpCount.count,complete:true,from:now.toISOString(),through:nextWeek,statuses:["enquiry","negotiating","confirmed"]},
+  inventoryItemsWithDiscrepancies:inventoryDiscrepancyCount.error||inventoryDiscrepancyCount.count==null?{available:false}:{count:inventoryDiscrepancyCount.count,complete:true},
   inventoryDiscrepancies:inventory.error?{available:false}:inventory.data,
   artistBookings:artists.error?{available:false}:artists.data,
   financialDocuments:documents.error?{available:false}:documents.data,
   paymentReminders:reminders.error?{available:false}:reminders.data,
-  limits:"Counts marked complete=true are exact for their explicitly listed statuses only. Other lists are limited samples, not complete totals. Do not infer payment status from invoices alone. Do not claim Peppol, signatures, email or bank transfers are executed. Financial and legal decisions require human approval."
+  limits:"Counts marked complete=true are exact for their explicitly listed statuses only. Other lists are limited samples, not complete totals. Do not infer payment status from invoices alone. Past-due documents are not necessarily unpaid. Follow-up counts include only scheduled follow_up_at values in the next seven days. Do not claim Peppol, signatures, email or bank transfers are executed. Financial and legal decisions require human approval."
  }
  let ai:{run:(model:string,input:Record<string,unknown>)=>Promise<unknown>}|undefined
  try{ai=(getCloudflareContext().env as {AI?:typeof ai}).AI}catch{}
