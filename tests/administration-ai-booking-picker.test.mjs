@@ -6,8 +6,10 @@ const editor=readFileSync("components/administration/administration-ai-booking-n
 test("booking picker lists only authorized non-cancelled bookings and no sensitive fields",()=>{
  assert.match(route,/canOpenPortal\("administration"/)
  assert.match(route,/select\("id,artist_name,status"\)\.neq\("status","cancelled"\)/)
- assert.match(route,/\.limit\(100\)/)
- assert.match(route,/return Response\.json\(\{bookings:data\?\?\[\],limited:true\}\)/)
+ assert.match(route,/pageSize=25/)
+ assert.match(route,/\.range\(page\*pageSize,\(page\+1\)\*pageSize\)/)
+ assert.match(route,/\.ilike\("artist_name"/)
+ assert.match(route,/hasMore:\(data\?\?\[\]\)\.length>pageSize/)
 })
 test("booking picker uses explicit user selection and retains confirmation on save",()=>{
  assert.match(editor,/async function listBookings\(/)
