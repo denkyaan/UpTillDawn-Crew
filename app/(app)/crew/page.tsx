@@ -82,7 +82,7 @@ export default async function Page({searchParams}:{searchParams?:Promise<{user?:
           <div className="min-w-0 flex-1">
             <div className="flex flex-wrap items-center gap-2"><h2 className="text-lg font-black">{person.full_name||'Naam ontbreekt'}</h2>{person.account_blocked&&<span className="rounded-full border border-red-500/50 px-2 py-1 text-xs font-black text-red-500">GEBLOKKEERD</span>}</div>
             <p className="break-all text-sm text-muted-foreground">{person.email||'Geen e-mail'}</p>
-            <p className="text-sm text-muted-foreground">{nlRole(person.role)} · {future.length} komende shift(s) · {taskCount.get(person.id)||0} open taak/toewijzing(en)</p>
+            <p className="text-sm text-muted-foreground">{nlRole(person.role)} · {(portalAssignments||[]).filter(a=>a.user_id===person.id&&a.approved&&!a.revoked_at).map(a=>a.portal==="promotion"?"Promotie":a.portal==="administration"?"Administratie":a.role==="event_responsible"?"Evenementverantwoordelijke":"Evenementpersoneel").join(" · ")}{(portalAssignments||[]).some(a=>a.user_id===person.id&&a.approved&&!a.revoked_at)?" · ":""}{future.length} komende shift(s) · {taskCount.get(person.id)||0} open taak/toewijzing(en)</p>
           </div>
         </div>
 
@@ -103,7 +103,7 @@ export default async function Page({searchParams}:{searchParams?:Promise<{user?:
           {future.length>0&&<div className="mt-4 space-y-2"><b className="text-sm">Komende shifts</b>{future.slice(0,5).map(shift=><div key={shift.id} className="rounded-lg border p-2 text-xs"><b>{shift.events?.name||'Evenement'} · {shift.workplaces?.name||'Werkplek'}</b><p className="text-muted-foreground">{new Date(shift.scheduled_start).toLocaleString('nl-BE')} → {new Date(shift.scheduled_end).toLocaleString('nl-BE')} · {shift.role_name}</p></div>)}</div>}
         </details>
 
-        {!own&&<PersonnelPortalRoles userId={person.id} assignments={(portalAssignments||[]).filter(a=>a.user_id===person.id)}/>}
+        <PersonnelPortalRoles userId={person.id} readOnly={own} assignments={(portalAssignments||[]).filter(a=>a.user_id===person.id)}/>
         <div className="mt-4 grid gap-3 md:grid-cols-2">
           <form action={setPersonnelRole} className="grid gap-2 rounded-xl border p-3">
             <input type="hidden" name="user_id" value={person.id}/>
