@@ -53,7 +53,7 @@ export default async function PortalRolesPage() {
       : !data?.length ? <p className="rounded-xl border p-4">{t.empty}</p>
       : <div className="overflow-x-auto rounded-xl border"><table className="w-full text-left text-sm">
         <thead><tr className="border-b bg-card"><th className="p-3">{t.person}</th><th className="p-3">{t.portal}</th><th className="p-3">{t.role}</th><th className="p-3">{t.status}</th>{current.realIsAdmin && <th className="p-3">{t.action}</th>}</tr></thead>
-        <tbody>{data.map(row => <tr key={row.id} className="border-b last:border-b-0"><td className="p-3 text-xs">{names.get(row.user_id) ?? row.user_id}</td><td className="p-3">{row.portal}</td><td className="p-3">{row.role}</td><td className="p-3">{row.revoked_at ? t.revoked : row.approved ? t.approved : t.pending}</td>{current.realIsAdmin && <td className="p-3"><RoleQuickAction userId={row.user_id} portal={row.portal} role={row.role} action={row.revoked_at ? "assign" : row.approved ? "revoke" : "approve"} /></td>}</tr>)}</tbody>
+        <tbody>{data.map(row => <tr key={row.id} className="border-b last:border-b-0"><td className="p-3 text-xs">{names.get(row.user_id) ?? row.user_id}</td><td className="p-3">{row.portal}</td><td className="p-3">{row.role}</td><td className="p-3">{row.revoked_at ? t.revoked : row.approved ? t.approved : t.pending}</td>{current.realIsAdmin && <td className="p-3"><RoleQuickAction userId={row.user_id} portal={row.portal} role={row.role} action={row.revoked_at ? "assign_approved" : row.approved ? "revoke" : "approve"} /></td>}</tr>)}</tbody>
       </table></div>}
   </main>
 }
