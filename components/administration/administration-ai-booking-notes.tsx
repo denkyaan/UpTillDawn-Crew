@@ -56,10 +56,10 @@ export function AdministrationAiBookingNotes({locale,initialBookingId}:{locale:S
   setBusy(true);setFeedback("")
   try{
    const response=await fetch("/api/administration/assistant/booking-notes/propose",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({bookingId:booking.id,instruction,locale})})
-   const payload=await response.json() as {notes?:string;expectedNotes?:string|null}
+   const payload=await response.json() as {notes?:string;expectedNotes?:string|null;unchanged?:boolean}
    if(selectionRef.current!==targetId)return
    if(!response.ok||typeof payload.notes!=="string"||payload.expectedNotes!==booking.internal_notes){setFeedback(t.error);return}
-   setNotes(payload.notes);setFeedback(t.proposed)
+   setNotes(payload.notes);setFeedback(payload.unchanged?t.unchanged:t.proposed)
   }catch{setFeedback(t.error)}finally{setBusy(false)}
  }
  async function save(){
