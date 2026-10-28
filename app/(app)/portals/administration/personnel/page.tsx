@@ -3,7 +3,7 @@ import {requestUiLocale} from "@/lib/server-locale"
 import {getCurrentUser} from "@/lib/actions/auth"
 import {redirect} from "next/navigation"
 import Image from "next/image"
-import Link from "next/link"
+import {AdministrationPrivateChatButton} from "@/components/administration/administration-private-chat-button"
 
 export const dynamic="force-dynamic"
 export default async function AdministrationPersonnel(){
@@ -20,6 +20,6 @@ export default async function AdministrationPersonnel(){
  return <main className="mx-auto max-w-5xl space-y-5 p-4 sm:p-8"><h1 className="text-2xl font-bold">{title} · {members.length}</h1>
  {error?<p role="alert">{empty}</p>:<div className="grid gap-3 sm:grid-cols-2">{members.map(m=><article key={m.id} className="flex items-center gap-3 rounded-xl border bg-card p-4">
  <div className="relative h-12 w-12 shrink-0 overflow-hidden rounded-full bg-violet-500/10">{photos[m.id]?<Image src={photos[m.id]} alt="" fill sizes="48px" unoptimized className="object-cover"/>:<span className="grid h-full place-items-center font-semibold">{(m.full_name||"?").slice(0,1)}</span>}</div>
- <div className="min-w-0"><p className="truncate font-semibold">{m.full_name}</p>{m.phone_number&&<a className="text-sm text-violet-400 underline" href={`tel:${m.phone_number}`}>{m.phone_number}</a>}<p><Link href="/portals/administration/chat" className="text-xs text-muted-foreground underline">{({nl:"Chat openen",fr:"Ouvrir le chat",en:"Open chat",de:"Chat öffnen"} as const)[locale]}</Link></p></div>
+ <div className="min-w-0"><p className="truncate font-semibold">{m.full_name}</p>{m.phone_number&&<a className="text-sm text-violet-400 underline" href={`tel:${m.phone_number}`}>{m.phone_number}</a>}{m.id!==user.id&&<AdministrationPrivateChatButton personId={m.id} locale={locale}/>}</div>
  </article>)}{!members.length&&<p>{empty}</p>}</div>}</main>
 }
