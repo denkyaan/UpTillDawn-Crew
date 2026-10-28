@@ -55,8 +55,6 @@ export default async function AdministrationModulePage({params,searchParams}:{pa
  if(!current.isAdmin && !current.isOwner&&!canOpenPortal("administration",(data??[]) as PortalAssignment[],{approved:current.approved,blocked:current.account_blocked===true}))redirect("/portals")
  // Use the real operational workflows instead of presenting placeholder cards.
  const operationalRoutes:Record<string,string>={
-  tasks:"/tasks",
-  notifications:"/notifications",
   invoices:"/portals/administration/finance",
   banking:"/portals/administration/finance",
   documents:"/portals/administration/finance",
