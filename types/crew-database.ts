@@ -123,6 +123,41 @@ export type Database = {
           },
         ]
       }
+      admin_artist_booking_note_audit: {
+        Row: {
+          actor_id: string | null
+          booking_id: string
+          changed_at: string
+          id: string
+          new_length: number
+          previous_length: number
+        }
+        Insert: {
+          actor_id?: string | null
+          booking_id: string
+          changed_at?: string
+          id?: string
+          new_length: number
+          previous_length: number
+        }
+        Update: {
+          actor_id?: string | null
+          booking_id?: string
+          changed_at?: string
+          id?: string
+          new_length?: number
+          previous_length?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "admin_artist_booking_note_audit_booking_id_fkey"
+            columns: ["booking_id"]
+            isOneToOne: false
+            referencedRelation: "admin_artist_bookings"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       admin_artist_bookings: {
         Row: {
           agency_contact_id: string | null
@@ -204,37 +239,58 @@ export type Database = {
       admin_counterparties: {
         Row: {
           address: Json
+          bic: string | null
+          city: string | null
+          country_code: string | null
           created_at: string
           email: string | null
           enterprise_number: string | null
+          iban: string | null
           id: string
           kind: string
           name: string
+          payment_terms_days: number | null
           peppol_endpoint: string | null
+          postal_code: string | null
+          street_address: string | null
           updated_at: string
           vat_number: string | null
         }
         Insert: {
           address?: Json
+          bic?: string | null
+          city?: string | null
+          country_code?: string | null
           created_at?: string
           email?: string | null
           enterprise_number?: string | null
+          iban?: string | null
           id?: string
           kind: string
           name: string
+          payment_terms_days?: number | null
           peppol_endpoint?: string | null
+          postal_code?: string | null
+          street_address?: string | null
           updated_at?: string
           vat_number?: string | null
         }
         Update: {
           address?: Json
+          bic?: string | null
+          city?: string | null
+          country_code?: string | null
           created_at?: string
           email?: string | null
           enterprise_number?: string | null
+          iban?: string | null
           id?: string
           kind?: string
           name?: string
+          payment_terms_days?: number | null
           peppol_endpoint?: string | null
+          postal_code?: string | null
+          street_address?: string | null
           updated_at?: string
           vat_number?: string | null
         }
