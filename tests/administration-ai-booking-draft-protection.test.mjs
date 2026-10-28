@@ -7,7 +7,8 @@ test("booking draft requires explicit discard before changing booking",()=>{
  assert.match(ui,/window\.confirm\(t\.leave\)/)
  assert.match(ui,/if\(!mayLeave\(\)\)return/)
  assert.match(ui,/onChange=\{event=>chooseBooking\(event\.target\.value\)\}/)
- assert.match(ui,/if\(mayLeave\(\)\)void load\(id\)/)
+ assert.match(ui,/if\(mayLeave\(\)\)\{setId\(manualId\);void load\(manualId\)\}/)
+ assert.match(ui,/onChange=\{event=>setManualId\(event\.target\.value\)\}/)
 })
 test("review shows changed-line counts and localized confirmation",()=>{
  assert.match(ui,/addedLines\.length/)
