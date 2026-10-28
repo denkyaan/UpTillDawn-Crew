@@ -2,6 +2,8 @@ export type ExtraCatalogLocale = 'nl' | 'fr' | 'en' | 'de'
 type Row = { fr:string; en:string; de:string }
 
 export const APP_EXTRA_TRANSLATIONS: Record<string,Row> = {
+  "Rol al actief": {fr:"Rôle déjà actif",en:"Role already active",de:"Rolle bereits aktiv"},
+  "Rol goedkeuren": {fr:"Approuver le rôle",en:"Approve role",de:"Rolle genehmigen"},
   "Rolwijziging opgeslagen. Vernieuw de pagina voor de actuele rollen.": {fr:"Modification du rôle enregistrée. Actualisez la page pour voir les rôles actuels.",en:"Role change saved. Refresh the page to see current roles.",de:"Rollenänderung gespeichert. Aktualisiere die Seite, um die aktuellen Rollen zu sehen."},
   "Extra portaalrollen": {fr:"Rôles supplémentaires des portails",en:"Additional portal roles",de:"Zusätzliche Portalrollen"},
   "Een medewerker kan tegelijk toegang hebben tot Evenementen, Promotie en Administratie. De basisrol blijft afzonderlijk bestaan.": {fr:"Un membre du personnel peut accéder simultanément aux événements, à la promotion et à l'administration. Le rôle principal reste distinct.",en:"A staff member can access Events, Promotion and Administration simultaneously. The primary role remains separate.",de:"Eine Person kann gleichzeitig auf Events, Promotion und Verwaltung zugreifen. Die Hauptrolle bleibt separat."},
