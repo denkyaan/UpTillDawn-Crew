@@ -1,9 +1,9 @@
-import {PromotionPresence} from "@/components/promotion/promotion-presence"
+import {PromotionStaffList} from "@/components/promotion/promotion-staff-list"
 import {redirect} from "next/navigation"
 import {getCurrentUser} from "@/lib/actions/auth"
 import {createClient} from "@/lib/supabase/crew-server"
 import {requestUiLocale} from "@/lib/server-locale"
-import {Users,UserRound} from "lucide-react"
+import {Users} from "lucide-react"
 /* eslint-disable @next/next/no-img-element */
 
 export const dynamic="force-dynamic"
@@ -27,6 +27,6 @@ export default async function PromotionStaff(){
  return <main className="mx-auto max-w-4xl space-y-6 p-4 sm:p-8">
  <header className="space-y-2"><h1 className="flex items-center gap-3 text-2xl font-bold"><Users className="h-6 w-6 text-violet-400"/>{copy[locale].heading}</h1></header>
  {error&&<p role="alert" className="rounded-xl border border-amber-500/50 p-4 text-sm">{copy[locale].empty}</p>}
- {groups.map(group=><section key={group.label} className="space-y-3"><h2 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">{group.label} · {group.items.length}</h2><div className="divide-y rounded-2xl border bg-card">{group.items.map(person=><div key={person.id} className="flex items-center gap-3 p-3"><span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-violet-500/10 text-violet-400">{photos[person.id]?<img src={photos[person.id]} alt="" className="h-full w-full rounded-full object-cover"/>:<UserRound className="h-5 w-5"/>}</span><div className="min-w-0"><p className="truncate font-semibold">{person.full_name}</p><p className="text-xs text-muted-foreground">{group.label}</p><PromotionPresence userId={person.id} locale={locale}/></div></div>)}{!group.items.length&&<p className="p-4 text-sm text-muted-foreground">{copy[locale].empty}</p>}</div></section>)}
+ {groups.map(group=><section key={group.label} className="space-y-3"><h2 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">{group.label} · {group.items.length}</h2><PromotionStaffList members={group.items} photos={photos} locale={locale} empty={copy[locale].empty}/></section>)}
  </main>
 }
