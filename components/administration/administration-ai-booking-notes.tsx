@@ -8,6 +8,7 @@ const labels={
  de:{title:"Interne Buchungsnotizen ändern",id:"Buchungs-ID",load:"Buchung laden",notes:"Neue interne Notizen",save:"Bestätigen und speichern",cancel:"Abbrechen",success:"Notizen gespeichert.",error:"Änderung fehlgeschlagen. Buchung neu laden.",locked:"Stornierte Buchungen sind gesperrt.",choose:"Künstlerbuchung auswählen",refresh:"Buchungen laden",audit:"Letzte Änderungen",before:"Vorherige Länge",after:"Neue Länge",changed:"Geändert",preview:"Änderung prüfen",unchanged:"Keine Änderungen",instruction:"Was soll die KI an diesen Notizen ändern?",generate:"KI-Vorschlag erstellen",proposed:"Vorschlag bereit. Vor dem Speichern prüfen."}
 } as const
 type AuditEntry={id:string;actor_id:string|null;changed_at:string;previous_length:number;new_length:number}
+const editableNotes=(value:string|null)=>(value??"").split("\n").filter(line=>!/^\[\d{4}-\d{2}-\d{2}T.*\] \[(email_sent|reply_received|follow_up)\] \[[0-9a-f-]{36}\] /.test(line)).join("\n")
 type Booking={id:string;artist_name:string;status:string;internal_notes:string|null}
 export function AdministrationAiBookingNotes({locale,initialBookingId}:{locale:SupportedUiLocale;initialBookingId?:string}){
  const t=labels[locale]
@@ -34,7 +35,7 @@ export function AdministrationAiBookingNotes({locale,initialBookingId}:{locale:S
    if(!response.ok||!payload.booking){setFeedback(t.error);return}
    setBooking(payload.booking)
    setAudit(payload.audit??[])
-   setNotes((payload.booking.internal_notes??"").split("\n").filter(line=>!/^\[\d{4}-\d{2}-\d{2}T.*\] \[(email_sent|reply_received|follow_up)\] \[[0-9a-f-]{36}\] /.test(line)).join("\n"))
+   setNotes(editableNotes(payload.booking.internal_notes))
   }catch{setFeedback(t.error)}finally{busyRef.current=false;setBusy(false)}
  },[t.error])
  useEffect(()=>{if(initialBookingId&&initialLoadRef.current!==initialBookingId&&/^[0-9a-f-]{36}$/i.test(initialBookingId)){initialLoadRef.current=initialBookingId;queueMicrotask(()=>{void load(initialBookingId)})}},[initialBookingId,load])
