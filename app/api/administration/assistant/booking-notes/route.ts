@@ -52,9 +52,11 @@ export async function POST(request:Request){
  if(booking.internal_notes!==expectedNotes)return Response.json({error:"Notes changed; refresh before saving"},{status:409})
  // Never let AI-assisted edits overwrite communication audit entries embedded in notes.
  const auditLine=/^\[\d{4}-\d{2}-\d{2}T.*\] \[(email_sent|reply_received|follow_up)\] \[[0-9a-f-]{36}\] /
+ if(notes.split("\n").some(line=>auditLine.test(line)))return Response.json({error:"Communication history is immutable"},{status:400})
  const preserved=(booking.internal_notes??"").split("\n").filter(line=>auditLine.test(line))
  const newNotes=[notes,...preserved].filter(Boolean).join("\n")
  if(newNotes.length>5000)return Response.json({error:"Notes too long"},{status:400})
+ if(newNotes===(booking.internal_notes??""))return Response.json({saved:false,unchanged:true,bookingId})
  const query=db.from("admin_artist_bookings").update({internal_notes:newNotes||null,updated_at:new Date().toISOString()}).eq("id",bookingId).eq("status",booking.status)
  const {data:updated,error:writeError}=await (expectedNotes===null?query.is("internal_notes",null):query.eq("internal_notes",expectedNotes)).select("id").maybeSingle()
  if(writeError)return Response.json({error:"Write failed"},{status:500})
