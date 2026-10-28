@@ -2,10 +2,10 @@
 import {useCallback,useEffect,useRef,useState} from "react"
 import type {SupportedUiLocale} from "@/lib/locale-preferences"
 const labels={
- nl:{title:"Interne boekingsnotities wijzigen",id:"Boeking-ID",load:"Boeking ophalen",notes:"Nieuwe interne notities",save:"Bevestigen en opslaan",cancel:"Annuleren",success:"Notities opgeslagen.",error:"De wijziging kon niet worden uitgevoerd. Herlaad de boeking.",locked:"Geannuleerde boekingen zijn vergrendeld.",choose:"Kies een artiestenboeking",refresh:"Boekingen laden",audit:"Recente wijzigingen",before:"Vorige lengte",after:"Nieuwe lengte",changed:"Gewijzigd",preview:"Wijziging controleren",unchanged:"Geen wijzigingen"},
- fr:{title:"Modifier les notes internes",id:"Identifiant de réservation",load:"Charger la réservation",notes:"Nouvelles notes internes",save:"Confirmer et enregistrer",cancel:"Annuler",success:"Notes enregistrées.",error:"Modification impossible. Rechargez la réservation.",locked:"Les réservations annulées sont verrouillées.",choose:"Choisir une réservation",refresh:"Charger les réservations",audit:"Modifications récentes",before:"Longueur précédente",after:"Nouvelle longueur",changed:"Modifié",preview:"Vérifier la modification",unchanged:"Aucune modification"},
- en:{title:"Edit internal booking notes",id:"Booking ID",load:"Load booking",notes:"New internal notes",save:"Confirm and save",cancel:"Cancel",success:"Notes saved.",error:"Update failed. Reload the booking.",locked:"Cancelled bookings are locked.",choose:"Choose an artist booking",refresh:"Load bookings",audit:"Recent changes",before:"Previous length",after:"New length",changed:"Changed",preview:"Review changes",unchanged:"No changes"},
- de:{title:"Interne Buchungsnotizen ändern",id:"Buchungs-ID",load:"Buchung laden",notes:"Neue interne Notizen",save:"Bestätigen und speichern",cancel:"Abbrechen",success:"Notizen gespeichert.",error:"Änderung fehlgeschlagen. Buchung neu laden.",locked:"Stornierte Buchungen sind gesperrt.",choose:"Künstlerbuchung auswählen",refresh:"Buchungen laden",audit:"Letzte Änderungen",before:"Vorherige Länge",after:"Neue Länge",changed:"Geändert",preview:"Änderung prüfen",unchanged:"Keine Änderungen"}
+ nl:{title:"Interne boekingsnotities wijzigen",id:"Boeking-ID",load:"Boeking ophalen",notes:"Nieuwe interne notities",save:"Bevestigen en opslaan",cancel:"Annuleren",success:"Notities opgeslagen.",error:"De wijziging kon niet worden uitgevoerd. Herlaad de boeking.",locked:"Geannuleerde boekingen zijn vergrendeld.",choose:"Kies een artiestenboeking",refresh:"Boekingen laden",audit:"Recente wijzigingen",before:"Vorige lengte",after:"Nieuwe lengte",changed:"Gewijzigd",preview:"Wijziging controleren",unchanged:"Geen wijzigingen",instruction:"Wat moet AI aan deze notities aanpassen?",generate:"AI-voorstel maken",proposed:"AI-voorstel klaar. Controleer vóór opslaan."},
+ fr:{title:"Modifier les notes internes",id:"Identifiant de réservation",load:"Charger la réservation",notes:"Nouvelles notes internes",save:"Confirmer et enregistrer",cancel:"Annuler",success:"Notes enregistrées.",error:"Modification impossible. Rechargez la réservation.",locked:"Les réservations annulées sont verrouillées.",choose:"Choisir une réservation",refresh:"Charger les réservations",audit:"Modifications récentes",before:"Longueur précédente",after:"Nouvelle longueur",changed:"Modifié",preview:"Vérifier la modification",unchanged:"Aucune modification",instruction:"Quelle modification proposer ?",generate:"Générer une proposition IA",proposed:"Proposition prête. Vérifiez avant de sauvegarder."},
+ en:{title:"Edit internal booking notes",id:"Booking ID",load:"Load booking",notes:"New internal notes",save:"Confirm and save",cancel:"Cancel",success:"Notes saved.",error:"Update failed. Reload the booking.",locked:"Cancelled bookings are locked.",choose:"Choose an artist booking",refresh:"Load bookings",audit:"Recent changes",before:"Previous length",after:"New length",changed:"Changed",preview:"Review changes",unchanged:"No changes",instruction:"What should AI change in these notes?",generate:"Generate AI proposal",proposed:"Proposal ready. Review before saving."},
+ de:{title:"Interne Buchungsnotizen ändern",id:"Buchungs-ID",load:"Buchung laden",notes:"Neue interne Notizen",save:"Bestätigen und speichern",cancel:"Abbrechen",success:"Notizen gespeichert.",error:"Änderung fehlgeschlagen. Buchung neu laden.",locked:"Stornierte Buchungen sind gesperrt.",choose:"Künstlerbuchung auswählen",refresh:"Buchungen laden",audit:"Letzte Änderungen",before:"Vorherige Länge",after:"Neue Länge",changed:"Geändert",preview:"Änderung prüfen",unchanged:"Keine Änderungen",instruction:"Was soll die KI an diesen Notizen ändern?",generate:"KI-Vorschlag erstellen",proposed:"Vorschlag bereit. Vor dem Speichern prüfen."}
 } as const
 type AuditEntry={id:string;actor_id:string|null;changed_at:string;previous_length:number;new_length:number}
 type Booking={id:string;artist_name:string;status:string;internal_notes:string|null}
@@ -16,6 +16,7 @@ export function AdministrationAiBookingNotes({locale,initialBookingId}:{locale:S
  const [audit,setAudit]=useState<AuditEntry[]>([])
  const [choices,setChoices]=useState<Array<Pick<Booking,"id"|"artist_name"|"status">>>([])
  const [notes,setNotes]=useState("")
+ const [instruction,setInstruction]=useState("")
  const [busy,setBusy]=useState(false)
  const [feedback,setFeedback]=useState("")
  const busyRef=useRef(false)
@@ -44,6 +45,16 @@ export function AdministrationAiBookingNotes({locale,initialBookingId}:{locale:S
    setChoices(payload.bookings)
   }catch{setFeedback(t.error)}finally{setBusy(false)}
  }
+ async function propose(){
+  if(!booking||busy||!instruction.trim())return
+  setBusy(true);setFeedback("")
+  try{
+   const response=await fetch("/api/administration/assistant/booking-notes/propose",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({bookingId:booking.id,instruction,locale})})
+   const payload=await response.json() as {notes?:string;expectedNotes?:string|null}
+   if(!response.ok||typeof payload.notes!=="string"||payload.expectedNotes!==booking.internal_notes){setFeedback(t.error);return}
+   setNotes(payload.notes);setFeedback(t.proposed)
+  }catch{setFeedback(t.error)}finally{setBusy(false)}
+ }
  async function save(){
   if(!booking||busy||booking.status==="cancelled")return
   setBusy(true);setFeedback("")
@@ -63,6 +74,7 @@ export function AdministrationAiBookingNotes({locale,initialBookingId}:{locale:S
   {booking&&<div className="space-y-3 rounded-xl border p-3">
    <p className="font-semibold">{booking.artist_name}</p>
    {booking.status==="cancelled"?<p role="alert">{t.locked}</p>:<>
+    <label className="block text-sm">{t.instruction}<textarea rows={2} maxLength={1000} value={instruction} onChange={event=>setInstruction(event.target.value)} className="mt-1 w-full rounded-lg border bg-background p-2"/></label><button type="button" disabled={busy||instruction.trim().length<5} onClick={()=>void propose()} className="rounded-lg border border-violet-500 px-3 py-2 text-sm disabled:opacity-50">{t.generate}</button>
     <label className="block text-sm">{t.notes}<textarea rows={5} maxLength={5000} value={notes} onChange={event=>setNotes(event.target.value)} className="mt-1 w-full rounded-lg border bg-background p-2"/></label>
     <div className="rounded-lg border p-3 text-sm"><p className="font-semibold">{t.preview}</p><p className="whitespace-pre-wrap break-words text-muted-foreground">{booking.internal_notes??"—"}</p><hr className="my-2"/><p className="whitespace-pre-wrap break-words">{notes||"—"}</p></div>
     <div className="flex flex-wrap gap-2"><button type="button" disabled={busy||notes===(booking.internal_notes??"")} onClick={()=>void save()} className="rounded-lg bg-violet-600 px-3 py-2 text-sm font-semibold text-white disabled:opacity-50">{t.save}</button><button type="button" disabled={busy} onClick={()=>setBooking(null)} className="rounded-lg border px-3 py-2 text-sm">{t.cancel}</button></div>
