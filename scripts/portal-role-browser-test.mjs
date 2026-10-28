@@ -52,6 +52,15 @@ try{
       })
      }
     }
+    // Verify non-owner users cannot enter the Maker chooser or God Studio.
+    for (const path of ['/maker-mode?portal=admin', '/god-mode']) {
+      await page.goto(`${base}${path}`, {waitUntil:'domcontentloaded',timeout:45000})
+      const route=path.split('?')[0]
+      await page.waitForFunction(expected => window.location.pathname !== expected,route,{timeout:20000})
+      const landed=new URL(page.url()).pathname
+      if(landed===route)throw new Error(`${entry.name} reached protected route ${route}`)
+    }
+    console.log(`PASS: ${entry.name} denied Maker and God Studio routes`)
     console.log(`PASS: ${entry.name} authenticates, opens own portal, and cannot open the other portal`)
    }finally{await context.close()}
   }finally{
