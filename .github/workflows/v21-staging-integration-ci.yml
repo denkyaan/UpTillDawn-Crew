@@ -99,16 +99,10 @@ jobs:
             npx --yes supabase@2.117.0 init
           fi
 
-      # This migration explicitly requires the real staging project ref and must never
-      # be replayed against a local CI database. Keep its guard unchanged.
-      - name: Exclude staging-only migration from local database replay
+      - name: Clear stale local Supabase containers
         run: |
-          mkdir -p /tmp/upt-staging-only-migrations
-          # Exclude all migrations explicitly scoped to the real staging project.
-          for file in supabase/migrations/*_staging.sql; do
-            [ -f "$file" ] || continue
-            mv "$file" /tmp/upt-staging-only-migrations/
-          done
+          npx --yes supabase@2.117.0 stop --no-backup || true
+          docker ps -aq --filter "name=supabase_inbucket_" | xargs -r docker rm -f
 
       - name: Start isolated Supabase stack
         run: npx --yes supabase@2.117.0 start -x studio,imgproxy,inbucket,edge-runtime,logflare,vector,realtime
