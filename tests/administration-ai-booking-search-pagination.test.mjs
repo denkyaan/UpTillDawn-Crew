@@ -12,7 +12,8 @@ test("artist search is bounded, excludes cancelled bookings and uses determinist
  assert.match(route,/\.slice\(0,pageSize\)/)
 })
 test("selector exposes localized search and bounded next/previous navigation",()=>{
- assert.match(ui,/encodeURIComponent\(search\.trim\(\)\)/)
+ assert.match(ui,/const query=search\.trim\(\)/)
+ assert.match(ui,/encodeURIComponent\(query\)/)
  assert.match(ui,/void listBookings\(page-1\)/)
  assert.match(ui,/void listBookings\(page\+1\)/)
  assert.match(ui,/setHasMore\(Boolean\(payload\.hasMore\)\)/)
