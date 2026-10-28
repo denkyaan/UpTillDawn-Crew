@@ -20,7 +20,7 @@ export async function changePortalRole(formData: FormData): Promise<void> {
   const role = String(formData.get('role') ?? '')
   const action = String(formData.get('action') ?? '')
   if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(userId) ||
-      !valid[portal]?.includes(role) || !['assign', 'approve', 'revoke'].includes(action) ||
+      !valid[portal]?.includes(role) || !['assign', 'assign_approved', 'approve', 'revoke'].includes(action) ||
       userId === current.id) {
     throw new Error('Ongeldige rolwijziging')
   }
