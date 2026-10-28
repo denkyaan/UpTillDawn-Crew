@@ -284,13 +284,18 @@ try {
           '/portals/promotion/tasks',
         ]
         for(const route of portalRoutes){
-          const response=await gotoWithTransientRetry(page,`${baseUrl}${route}`,{waitUntil:'domcontentloaded',timeout:45000})
+          const routePage=await context.newPage()
+          try {
+          const response=await gotoWithTransientRetry(routePage,`${baseUrl}${route}`,{waitUntil:'domcontentloaded',timeout:45000})
           if(!response?.ok())throw new Error(`portal browser ${route}: HTTP ${response?.status()}`)
-          const current=new URL(page.url(),baseUrl).pathname
+          const current=new URL(routePage.url(),baseUrl).pathname
           if(current.startsWith('/login')||current==='/portals')throw new Error(`portal browser ${route}: unexpected redirect to ${current}`)
-          const mainText=(await page.locator('body').innerText()).trim()
+          const mainText=(await routePage.locator('body').innerText()).trim()
           if(!mainText||/404\\s*\\|\\s*This page could not be found|This page could not be found/i.test(mainText))throw new Error(`portal browser ${route}: empty or not-found UI`)
-          if(await page.locator('main').count()===0)console.log(`portal browser ${route}: page renders without main landmark`)
+          if(await routePage.locator('main').count()===0)console.log(`portal browser ${route}: page renders without main landmark`)
+          } finally {
+            await routePage.close()
+          }
         }
         await gotoWithTransientRetry(page,`${baseUrl}/portals/promotion`,{waitUntil:'domcontentloaded'})
         const tasksLink=page.locator('a[href="/portals/promotion/tasks"]').first()
