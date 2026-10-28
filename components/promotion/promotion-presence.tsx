@@ -1,6 +1,6 @@
 "use client"
 import {useEffect,useState} from "react"
-import {createClient} from "@/lib/supabase/client"
+import {createClient} from "@/lib/supabase/crew-client"
 
 type Locale="nl"|"fr"|"en"|"de"
 type Presence={user_id:string;last_seen_at:string}
