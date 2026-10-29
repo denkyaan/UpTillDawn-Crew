@@ -40,7 +40,7 @@ export default async function PortalRolesPage() {
   if (!current.realIsAdmin) query = query.eq('user_id', current.id)
   const { data, error } = await query.order('created_at', { ascending: false }).limit(100)
 
-  const { data: users } = current.realIsAdmin ? await supabase.from('profiles').select('id,full_name').eq('approved', true).eq('account_blocked', false).neq('id', current.id).order('full_name').limit(500) : { data: null }
+  const { data: users } = current.realIsAdmin && current.approved && !current.account_blocked ? await supabase.from('profiles').select('id,full_name').eq('approved', true).eq('account_blocked', false).neq('id', current.id).order('full_name').limit(500) : { data: null }
 
   const names = new Map((users ?? []).map(user => [user.id, user.full_name || user.id]))
   const t = translations
@@ -48,12 +48,12 @@ export default async function PortalRolesPage() {
     <Link href="/portals" className="text-sm text-violet-400">{t.back}</Link>
     <h1 className="text-2xl font-bold">{t.title}</h1>
     <p className="text-sm text-muted-foreground">{t.description}</p>
-    {current.realIsAdmin && <section className="space-y-3 rounded-xl border p-4"><h2 className="font-semibold">{t.manage}</h2><RoleManagementForm users={users ?? []} /></section>}
+    {current.realIsAdmin && current.approved && !current.account_blocked && <section className="space-y-3 rounded-xl border p-4"><h2 className="font-semibold">{t.manage}</h2><RoleManagementForm users={users ?? []} /></section>}
     {error ? <p role="alert" className="rounded-xl border border-amber-500/50 p-4">{t.error}</p>
       : !data?.length ? <p className="rounded-xl border p-4">{t.empty}</p>
       : <div className="overflow-x-auto rounded-xl border"><table className="w-full text-left text-sm">
-        <thead><tr className="border-b bg-card"><th className="p-3">{t.person}</th><th className="p-3">{t.portal}</th><th className="p-3">{t.role}</th><th className="p-3">{t.status}</th>{current.realIsAdmin && <th className="p-3">{t.action}</th>}</tr></thead>
-        <tbody>{data.map(row => <tr key={row.id} className="border-b last:border-b-0"><td className="p-3 text-xs">{names.get(row.user_id) ?? row.user_id}</td><td className="p-3">{row.portal}</td><td className="p-3">{row.role}</td><td className="p-3">{row.revoked_at ? t.revoked : row.approved ? t.approved : t.pending}</td>{current.realIsAdmin && <td className="p-3"><RoleQuickAction userId={row.user_id} portal={row.portal} role={row.role} action={row.revoked_at ? "assign_approved" : row.approved ? "revoke" : "approve"} /></td>}</tr>)}</tbody>
+        <thead><tr className="border-b bg-card"><th className="p-3">{t.person}</th><th className="p-3">{t.portal}</th><th className="p-3">{t.role}</th><th className="p-3">{t.status}</th>{current.realIsAdmin && current.approved && !current.account_blocked && <th className="p-3">{t.action}</th>}</tr></thead>
+        <tbody>{data.map(row => <tr key={row.id} className="border-b last:border-b-0"><td className="p-3 text-xs">{names.get(row.user_id) ?? row.user_id}</td><td className="p-3">{row.portal}</td><td className="p-3">{row.role}</td><td className="p-3">{row.revoked_at ? t.revoked : row.approved ? t.approved : t.pending}</td>{current.realIsAdmin && current.approved && !current.account_blocked && <td className="p-3"><RoleQuickAction userId={row.user_id} portal={row.portal} role={row.role} action={row.revoked_at ? "assign_approved" : row.approved ? "revoke" : "approve"} /></td>}</tr>)}</tbody>
       </table></div>}
   </main>
 }
