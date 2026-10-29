@@ -61,9 +61,9 @@ const operationalModuleLabels={
 
 export const dynamic = "force-dynamic"
 
-export default async function AdministrationModulePage({params,searchParams}:{params:Promise<{slug:string}>;searchParams?:Promise<{event?:string;page?:string}>}){
+export default async function AdministrationModulePage({params,searchParams}:{params:Promise<{slug:string}>;searchParams?:Promise<{event?:string;page?:string;invoiceKind?:string;invoiceStatus?:string}>}){
  const {slug}=await params
- const {event:requestedEvent,page:requestedPage}=await (searchParams??Promise.resolve({event:undefined,page:undefined}))
+ const {event:requestedEvent,page:requestedPage,invoiceKind,invoiceStatus}=await (searchParams??Promise.resolve({event:undefined,page:undefined,invoiceKind:undefined,invoiceStatus:undefined}))
  const adminModule=administrationModules.find(item=>item.slug===slug&&slug!=="dashboard"&&slug!=="finance")
  if(!adminModule)notFound()
  const current=await getCurrentUser()
@@ -95,7 +95,9 @@ export default async function AdministrationModulePage({params,searchParams}:{pa
  const aiTimesheetRows=slug==="ai"?await supabase.from("timesheets").select("id,status").eq("status","submitted").limit(50):null
  const paymentRows=slug==="banking"?await supabase.from("admin_financial_payments").select("id,document_id,amount,paid_on").order("paid_on",{ascending:false}).limit(50):null
  const reminderRows=slug==="banking"?await supabase.from("admin_payment_reminders").select("id,document_id,status,reminder_number,subject,recipient_email,created_at").order("created_at",{ascending:false}).limit(50):null
- const invoiceSummaryRows=slug==="invoices"?await supabase.from("admin_financial_documents").select("id,kind,status,gross_amount,due_date").in("kind",["sales_invoice","purchase_invoice"]).order("due_date",{ascending:true}).limit(100):null
+ const invoiceKindFilter=invoiceKind==="sales_invoice"||invoiceKind==="purchase_invoice"?invoiceKind:null
+ const invoiceStatusFilter=invoiceStatus&&["draft","review","approved","issued","paid","cancelled"].includes(invoiceStatus)?invoiceStatus:null
+ const invoiceSummaryRows=slug==="invoices"?await (()=>{let query=supabase.from("admin_financial_documents").select("id,kind,status,gross_amount,due_date").in("kind",["sales_invoice","purchase_invoice"]);if(invoiceKindFilter)query=query.eq("kind",invoiceKindFilter);if(invoiceStatusFilter)query=query.eq("status",invoiceStatusFilter);return query.order("due_date",{ascending:true}).limit(100)})():null
  const taskRows=slug==="tasks"?await supabase.from("tasks").select("id,title,status").limit(50):null
  const eventRows=slug==="events"?await supabase.from("events").select("id,name,status,start_at").order("start_at",{ascending:false}).limit(50):null
  const notificationRows=slug==="notifications"?await supabase.from("crew_notifications").select("id,kind,link,read_at").eq("user_id",current.id).order("id",{ascending:false}).limit(50):null
@@ -154,6 +156,12 @@ export default async function AdministrationModulePage({params,searchParams}:{pa
   </header>
   {slug==="invoices"&&<section className="rounded-2xl border bg-card p-5">
    <h2 className="text-lg font-semibold">{({nl:"Facturenregister",fr:"Registre des factures",en:"Invoice register",de:"Rechnungsregister"} as const)[locale]}</h2>
+   <form method="get" className="mt-3 flex flex-wrap items-end gap-3">
+    <label className="flex flex-col gap-1 text-sm"><span>{({nl:"Factuurtype",fr:"Type de facture",en:"Invoice type",de:"Rechnungstyp"} as const)[locale]}</span><select name="invoiceKind" defaultValue={invoiceKindFilter??""} className="rounded-lg border bg-background px-3 py-2"><option value="">{({nl:"Alle types",fr:"Tous les types",en:"All types",de:"Alle Typen"} as const)[locale]}</option><option value="sales_invoice">{({nl:"Verkoop",fr:"Vente",en:"Sales",de:"Verkauf"} as const)[locale]}</option><option value="purchase_invoice">{({nl:"Aankoop",fr:"Achat",en:"Purchase",de:"Einkauf"} as const)[locale]}</option></select></label>
+    <label className="flex flex-col gap-1 text-sm"><span>Status</span><select name="invoiceStatus" defaultValue={invoiceStatusFilter??""} className="rounded-lg border bg-background px-3 py-2"><option value="">{({nl:"Alle statussen",fr:"Tous les statuts",en:"All statuses",de:"Alle Status"} as const)[locale]}</option>{["draft","review","approved","issued","paid","cancelled"].map(status=><option key={status} value={status}>{status}</option>)}</select></label>
+    <button type="submit" className="rounded-lg bg-violet-600 px-4 py-2 text-sm font-semibold text-white">{({nl:"Filter toepassen",fr:"Appliquer les filtres",en:"Apply filters",de:"Filter anwenden"} as const)[locale]}</button>
+    <Link href="/portals/administration/modules/invoices" className="rounded-lg border px-4 py-2 text-sm">{({nl:"Wissen",fr:"Effacer",en:"Clear",de:"Zurücksetzen"} as const)[locale]}</Link>
+   </form>
    {invoiceSummaryRows?.error?<p role="alert" className="mt-3 text-sm text-muted-foreground">{({nl:"Facturen konden niet worden geladen.",fr:"Impossible de charger les factures.",en:"Unable to load invoices.",de:"Rechnungen konnten nicht geladen werden."} as const)[locale]}</p>:invoiceSummaryRows?.data?.length?<div className="mt-3 overflow-x-auto"><table className="w-full text-left text-sm"><thead><tr className="border-b"><th className="py-2 pr-3">{({nl:"Type",fr:"Type",en:"Type",de:"Typ"} as const)[locale]}</th><th className="py-2 pr-3">Status</th><th className="py-2 pr-3">{({nl:"Bedrag",fr:"Montant",en:"Amount",de:"Betrag"} as const)[locale]}</th><th className="py-2">{({nl:"Vervaldatum",fr:"Échéance",en:"Due date",de:"Fälligkeit"} as const)[locale]}</th></tr></thead><tbody>{invoiceSummaryRows.data.map(doc=><tr key={doc.id} className="border-b"><td className="py-2 pr-3">{doc.kind==="sales_invoice"?({nl:"Verkoop",fr:"Vente",en:"Sales",de:"Verkauf"} as const)[locale]:({nl:"Aankoop",fr:"Achat",en:"Purchase",de:"Einkauf"} as const)[locale]}</td><td className="py-2 pr-3">{doc.status}</td><td className="py-2 pr-3">{Number(doc.gross_amount).toLocaleString(locale==="nl"?"nl-BE":locale==="fr"?"fr-BE":locale==="de"?"de-DE":"en-GB",{minimumFractionDigits:2,maximumFractionDigits:2})}</td><td className="py-2">{doc.due_date??"—"}</td></tr>)}</tbody></table></div>:<p className="mt-3 text-sm text-muted-foreground">{({nl:"Geen facturen gevonden.",fr:"Aucune facture.",en:"No invoices found.",de:"Keine Rechnungen gefunden."} as const)[locale]}</p>}
    <p className="mt-3 text-xs text-muted-foreground">{({nl:"Maximaal 100 facturen; bedragen volgen de geregistreerde documentwaarden.",fr:"100 factures maximum ; montants selon les documents enregistrés.",en:"Up to 100 invoices; amounts reflect recorded document values.",de:"Maximal 100 Rechnungen; Beträge entsprechen den gespeicherten Dokumentwerten."} as const)[locale]}</p>
   </section>}
