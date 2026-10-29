@@ -56,3 +56,11 @@ test('separate role management screen never submits the disabled legacy assign a
  assert.doesNotMatch(form,/<option value="assign">/)
  assert.match(form,/router\.refresh\(\)/)
 })
+
+test('filtered personnel selection cannot silently submit a hidden user',async()=>{
+ const form=await read('app/(app)/portals/roles/role-management-form.tsx')
+ assert.match(form,/const selectedUserVisible = matches\.some\(user => user\.id === userId\)/)
+ assert.match(form,/value=\{selectedUserVisible \? userId : ""\}/)
+ assert.match(form,/!selectedUserVisible && <option value="" disabled>/)
+ assert.match(form,/disabled=\{pending \|\| !userId \|\| !selectedUserVisible\}/)
+})
