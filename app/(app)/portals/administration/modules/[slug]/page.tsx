@@ -60,6 +60,8 @@ export default async function AdministrationModulePage({params,searchParams}:{pa
  const inventoryFilterEvents=slug==="inventory" ? await supabase.from("events").select("id,name").order("start_at",{ascending:false}).limit(100) : null
  const selectedEvent=inventoryFilterEvents?.data?.some(event=>event.id===requestedEvent)?requestedEvent:null
  const inventoryCount=slug==="inventory" ? await (selectedEvent?supabase.from("inventory_items").select("id",{count:"exact",head:true}).eq("event_id",selectedEvent):supabase.from("inventory_items").select("id",{count:"exact",head:true})) : null
+ const submittedHours=slug==="staff"?await supabase.from("timesheets").select("id,user_id,event_id,status,submitted_at").eq("status","submitted").order("submitted_at",{ascending:false}).limit(50):null
+ const pendingTasks=slug==="tasks"?await supabase.from("tasks").select("id,title,status").limit(50):null
  const artistBookings=slug==="artists"?await supabase.from("admin_artist_bookings").select("id,artist_name,status,event_id,performance_at,fee_amount,currency,follow_up_at").order("created_at",{ascending:false}).limit(30):null
  const artistFollowUps=slug==="artists"?await supabase.from("admin_artist_bookings").select("id,artist_name,status,follow_up_at").not("follow_up_at","is",null).in("status",["enquiry","negotiating"]).order("follow_up_at",{ascending:true}).limit(100):null
  const artistNow=new Date().getTime()
@@ -113,6 +115,11 @@ export default async function AdministrationModulePage({params,searchParams}:{pa
    <h1 className="mt-2 text-2xl font-bold tracking-tight sm:text-3xl">{adminModule.title[locale]}</h1>
    <p className="mt-3 max-w-3xl text-sm leading-6 text-muted-foreground">{u.notice}</p>
   </header>
+  {slug==="staff"&&<section className="rounded-2xl border bg-card p-5">
+   <h2 className="text-lg font-semibold">{({nl:"Ingediende werkuren",fr:"Heures soumises",en:"Submitted timesheets",de:"Eingereichte Arbeitszeiten"} as const)[locale]}</h2>
+   {submittedHours?.error?<p role="alert" className="mt-3 text-sm text-muted-foreground">{({nl:"Werkuren konden niet worden geladen.",fr:"Impossible de charger les heures.",en:"Unable to load timesheets.",de:"Arbeitszeiten konnten nicht geladen werden."} as const)[locale]}</p>:submittedHours?.data?.length?<ul className="mt-3 divide-y">{submittedHours.data.map(hour=><li key={hour.id} className="flex flex-wrap justify-between gap-2 py-3 text-sm"><span className="font-medium">{hour.user_id} · {hour.event_id}</span><span className="text-muted-foreground">{hour.submitted_at?new Intl.DateTimeFormat(({nl:"nl-BE",fr:"fr-BE",en:"en-GB",de:"de-DE"} as const)[locale],{dateStyle:"medium",timeStyle:"short"}).format(new Date(hour.submitted_at)):"—"} · {hour.status}</span></li>)}</ul>:<p className="mt-3 text-sm text-muted-foreground">{({nl:"Geen ingediende werkuren.",fr:"Aucune heure soumise.",en:"No submitted timesheets.",de:"Keine eingereichten Arbeitszeiten."} as const)[locale]}</p>}
+   <Link href="/portals/administration/rosters" className="mt-4 inline-flex rounded-lg border px-4 py-2 text-sm font-semibold">{({nl:"Werkroosters beheren",fr:"Gérer les plannings",en:"Manage rosters",de:"Dienstpläne verwalten"} as const)[locale]}</Link>
+  </section>}
   {slug==="artists"&&<section className="rounded-2xl border bg-card p-5">
    <Link href="/portals/administration/modules/artists/new" className="mb-3 inline-flex rounded-xl bg-violet-600 px-4 py-2 text-sm font-semibold text-white">{({nl:"DJ-boeking toevoegen",fr:"Ajouter une réservation DJ",en:"Add DJ booking",de:"DJ-Buchung hinzufügen"} as const)[locale]}</Link>
    <div className="mb-5 rounded-xl border p-4">
