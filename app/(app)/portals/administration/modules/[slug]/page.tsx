@@ -38,6 +38,26 @@ const ui={
  de:{section:"Arbeitsübersicht",notAvailable:"Noch keine aktiven Daten in diesem Bereich",pending:"Funktion in Vorbereitung",related:"Zugehörige Verwaltung",finance:"Finanzdokumente öffnen",back:"Zur Übersicht",notice:"Die Oberfläche ist verfügbar. Neue Verarbeitungen werden erst nach Implementierung und Prüfung aktiviert."},
 } as const
 const financeRelated=new Set(["invoices","banking","documents","reports"])
+const operationalModuleLinks:Record<string,string>={
+ artists:"/portals/administration/modules/artists/new",
+ contracts:"/portals/administration/modules/artists",
+ staff:"/portals/administration/rosters",
+ invoices:"/portals/administration/finance",
+ banking:"/portals/administration/finance",
+ documents:"/portals/administration/finance",
+ reports:"/portals/administration/finance",
+ contacts:"/portals/administration/counterparties",
+ sponsors:"/portals/administration/counterparties",
+ marketing:"/portals/administration/promotion-discipline",
+ inventory:"/portals/administration/modules/inventory",
+ logistics:"/portals/administration/modules/inventory",
+ tasks:"/tasks",
+ notifications:"/notifications",
+}
+const operationalModuleLabels={
+ nl:"Open bestaande beheerfunctie",fr:"Ouvrir la fonction de gestion",en:"Open existing management workflow",de:"Vorhandene Verwaltungsfunktion öffnen",
+} as const
+
 
 export const dynamic = "force-dynamic"
 
@@ -270,7 +290,7 @@ export default async function AdministrationModulePage({params,searchParams}:{pa
     <div className="mb-4 flex items-start justify-between gap-3"><h2 className="font-semibold">{section[locale]}</h2><span aria-hidden="true" className="text-violet-400">◈</span></div>
     <div className="mt-auto rounded-xl border border-dashed bg-background/50 p-4">
      <p className="text-sm text-muted-foreground">{u.notAvailable}</p>
-     <p className="mt-3 text-xs font-medium text-violet-400">{u.pending}</p>
+     {operationalModuleLinks[slug]?<Link href={operationalModuleLinks[slug]} className="mt-3 inline-flex rounded-lg border px-3 py-2 text-xs font-semibold text-violet-400 hover:border-violet-400">{operationalModuleLabels[locale]} →</Link>:<p className="mt-3 text-xs font-medium text-violet-400">{u.pending}</p>}
     </div>
    </article>)}
   </section>
