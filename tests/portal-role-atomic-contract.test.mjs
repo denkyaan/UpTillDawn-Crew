@@ -64,3 +64,10 @@ test('filtered personnel selection cannot silently submit a hidden user',async()
  assert.match(form,/!selectedUserVisible && <option value="" disabled>/)
  assert.match(form,/disabled=\{pending \|\| !userId \|\| !selectedUserVisible\}/)
 })
+
+test('blocked or unapproved admins never see role mutation controls',async()=>{
+ const page=await read('app/(app)/portals/roles/page.tsx')
+ assert.match(page,/current\.realIsAdmin && current\.approved && !current\.account_blocked \? await supabase\.from\('profiles'\)/)
+ assert.match(page,/current\.realIsAdmin && current\.approved && !current\.account_blocked && <section/)
+ assert.match(page,/current\.realIsAdmin && current\.approved && !current\.account_blocked && <td/)
+})
