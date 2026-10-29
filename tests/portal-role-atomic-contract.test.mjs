@@ -67,7 +67,14 @@ test('filtered personnel selection cannot silently submit a hidden user',async()
 
 test('blocked or unapproved admins never see role mutation controls',async()=>{
  const page=await read('app/(app)/portals/roles/page.tsx')
- assert.match(page,/current\.realIsAdmin && current\.approved && !current\.account_blocked \? await supabase\.from\('profiles'\)/)
- assert.match(page,/current\.realIsAdmin && current\.approved && !current\.account_blocked && <section/)
- assert.match(page,/current\.realIsAdmin && current\.approved && !current\.account_blocked && <td/)
+ assert.match(page,/const canManage = current\.realIsAdmin && current\.approved && !current\.account_blocked/)
+ assert.match(page,/canManage && <section/)
+ assert.match(page,/canManage && <td/)
+})
+
+test('role listing uses the same active-admin gate as mutation controls',async()=>{
+ const page=await read('app/(app)/portals/roles/page.tsx')
+ assert.match(page,/if \(!canManage\) query = query\.eq\('user_id', current\.id\)/)
+ assert.match(page,/const \{ data: users \} = canManage \?/)
+ assert.match(page,/canManage && <th/)
 })
