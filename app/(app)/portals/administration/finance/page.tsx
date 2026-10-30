@@ -296,6 +296,30 @@ async function updateInvoiceDates(formData:FormData) {
  redirect('/portals/administration/finance')
 }
 
+async function reminderOutstanding(supabase:SupabaseClient,documentId:string,grossAmount:number):Promise<number|null>{
+ if(!Number.isFinite(grossAmount)||grossAmount<=0)return null
+ const [payments,credits]=await Promise.all([
+  supabase.from('admin_financial_payments').select('amount',{count:'exact'}).eq('document_id',documentId).limit(1000),
+  supabase.from('admin_financial_documents').select('gross_amount,status',{count:'exact'}).eq('kind','credit_note').eq('original_invoice_id',documentId).limit(1000),
+ ])
+ if(payments.error||credits.error||payments.count===null||credits.count===null||payments.count>1000||credits.count>1000||payments.data?.length!==payments.count||credits.data?.length!==credits.count)return null
+ let paidCents=0
+ for(const payment of payments.data??[]){
+  if(payment.amount===null||!Number.isFinite(Number(payment.amount))||Number(payment.amount)<0)return null
+  paidCents+=Math.round(Number(payment.amount)*100)
+ }
+ let creditedCents=0
+ for(const credit of credits.data??[]){
+  if(!['approved','issued','paid'].includes(credit.status))continue
+  if(credit.gross_amount===null||!Number.isFinite(Number(credit.gross_amount))||Number(credit.gross_amount)<0)return null
+  creditedCents+=Math.round(Number(credit.gross_amount)*100)
+ }
+ return (Math.round(grossAmount*100)-paidCents-creditedCents)/100
+}
+function belgianToday():string{
+ return new Intl.DateTimeFormat('en-CA',{timeZone:'Europe/Brussels',year:'numeric',month:'2-digit',day:'2-digit'}).format(new Date())
+}
+
 async function createPaymentReminder(formData:FormData) {
  'use server'
  const {supabase}=await requireAdministration()
@@ -306,11 +330,9 @@ async function createPaymentReminder(formData:FormData) {
  const uuid=/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
  if(!uuid.test(documentId)||recipient.length<3||recipient.length>320||!recipient.includes('@')||subject.length<1||subject.length>200||body.length<1||body.length>10000)redirect('/portals/administration/finance?error=1')
  const {data:invoice,error:invoiceError}=await supabase.from('admin_financial_documents').select('id,kind,status,gross_amount,due_date').eq('id',documentId).maybeSingle()
- if(invoiceError||!invoice||invoice.kind!=='sales_invoice'||!['approved','issued'].includes(invoice.status)||!invoice.due_date||invoice.due_date>=new Date().toISOString().slice(0,10))redirect('/portals/administration/finance?error=1')
- const {data:paymentRows,error:paymentError}=await (supabase as unknown as SupabaseClient).from('admin_financial_payments').select('amount').eq('document_id',documentId)
- if(paymentError)redirect('/portals/administration/finance?error=1')
- const paid=(paymentRows??[]).reduce((total:number,p:{amount:number})=>total+Number(p.amount),0)
- if(!Number.isFinite(paid)||Number(invoice.gross_amount)-paid<=0.005)redirect('/portals/administration/finance?error=1')
+ if(invoiceError||!invoice||invoice.kind!=='sales_invoice'||!['approved','issued'].includes(invoice.status)||!invoice.due_date||invoice.due_date>=belgianToday())redirect('/portals/administration/finance?error=1')
+ const outstanding=await reminderOutstanding(supabase as unknown as SupabaseClient,documentId,Number(invoice.gross_amount))
+ if(outstanding===null||outstanding<=0.005)redirect('/portals/administration/finance?error=1')
  const {data:existing,error:lookupError}=await (supabase as unknown as SupabaseClient).from('admin_payment_reminders').select('reminder_number').eq('document_id',documentId).order('reminder_number',{ascending:false}).limit(1)
  if(lookupError)redirect('/portals/administration/finance?error=1')
  const next=(Number(existing?.[0]?.reminder_number??0))+1
@@ -346,11 +368,9 @@ async function updatePaymentReminder(formData:FormData) {
   const {data:reminder,error:reminderError}=await (supabase as unknown as SupabaseClient).from('admin_payment_reminders').select('document_id').eq('id',id).eq('status','draft').maybeSingle()
   if(reminderError||!reminder)redirect('/portals/administration/finance?error=1')
   const {data:invoice,error:invoiceError}=await supabase.from('admin_financial_documents').select('kind,status,due_date,gross_amount').eq('id',reminder.document_id).maybeSingle()
-  if(invoiceError||!invoice||invoice.kind!=='sales_invoice'||!['approved','issued'].includes(invoice.status)||!invoice.due_date||invoice.due_date>=new Date().toISOString().slice(0,10))redirect('/portals/administration/finance?error=1')
-  const {data:payments,error:paymentsError}=await (supabase as unknown as SupabaseClient).from('admin_financial_payments').select('amount').eq('document_id',reminder.document_id)
-  if(paymentsError)redirect('/portals/administration/finance?error=1')
-  const paid=(payments??[]).reduce((sum:number,p:{amount:number})=>sum+Number(p.amount),0)
-  if(!Number.isFinite(paid)||Number(invoice.gross_amount)-paid<=0.005)redirect('/portals/administration/finance?error=1')
+  if(invoiceError||!invoice||invoice.kind!=='sales_invoice'||!['approved','issued'].includes(invoice.status)||!invoice.due_date||invoice.due_date>=belgianToday())redirect('/portals/administration/finance?error=1')
+  const outstanding=await reminderOutstanding(supabase as unknown as SupabaseClient,reminder.document_id,Number(invoice.gross_amount))
+  if(outstanding===null||outstanding<=0.005)redirect('/portals/administration/finance?error=1')
  }
  const {data:{user}}=await supabase.auth.getUser()
  if(!user)redirect('/login')
