@@ -74,7 +74,6 @@ try{
        try{
         await tab.goto(base+route,{waitUntil:'domcontentloaded',timeout:30000})
         const href=tab.locator('a[href="'+target.replaceAll('"','\\"')+'"]:visible').first()
-        if(await href.count()===0)throw Error('linked navigation control missing: '+target)
         await href.click({timeout:15000})
         await tab.waitForURL(u=>u.pathname===new URL(target,base).pathname,{timeout:20000})
         await tab.waitForLoadState('domcontentloaded')

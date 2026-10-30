@@ -34,3 +34,5 @@ Notification routing verifies the normalized URL origin, including control-chara
 Every concrete administration page is checked against its navigation category, including the existing contacts module and its dedicated contact/counterparty aliases. Local Node suite: 762 passed.
 
 The focused navigation browser suite passes for Admin and administrative employee on mobile and desktop, and all 15 authenticated bots pass. The broad navigation inventory must click visible controls: a desktop-only profile link is hidden at its mobile viewport. That scanner now selects visible links; desktop profile navigation remains exercised by the focused suite.
+
+The broad scanner also waits for each visible link via Playwright click's normal auto-wait, rather than failing an immediate DOM count while a fresh tab is still rendering streamed page content. The focused navigation suite and all 15 bots pass again; the remaining failures were that premature scanner check.
