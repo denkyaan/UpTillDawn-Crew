@@ -214,6 +214,17 @@ jobs:
           test "$briefing_seed_count" = "0"
           echo "PASS: bot03 briefing fixture starts unacknowledged"
 
+      - name: Run complete financial transaction and non-admin RLS integration suites
+        shell: bash
+        run: |
+          set -euo pipefail
+          admin_id="$(psql "$BOT_DB_URL" -v ON_ERROR_STOP=1 -Atc "SELECT id FROM public.profiles WHERE full_name='E2E ADMIN 01' LIMIT 1")"
+          staff_id="$(psql "$BOT_DB_URL" -v ON_ERROR_STOP=1 -Atc "SELECT id FROM public.profiles WHERE full_name='E2E STAFF 03' LIMIT 1")"
+          test -n "$admin_id" && test -n "$staff_id"
+          psql "$BOT_DB_URL" -v ON_ERROR_STOP=1 -v TEST_ADMIN_ID="$admin_id" -f tests/sql/administration-finance-integration.sql
+          psql "$BOT_DB_URL" -v ON_ERROR_STOP=1 -v TEST_NON_ADMIN_ID="$staff_id" -f tests/sql/administration-finance-rls.sql
+          echo "PASS: financial invoice/payment/credit and non-admin RLS regression suites"
+
       - name: Cache Playwright Chromium
         id: chromium-cache
         uses: actions/cache@v4
