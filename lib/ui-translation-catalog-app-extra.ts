@@ -2,6 +2,9 @@ export type ExtraCatalogLocale = 'nl' | 'fr' | 'en' | 'de'
 type Row = { fr:string; en:string; de:string }
 
 export const APP_EXTRA_TRANSLATIONS: Record<string,Row> = {
+  "Mon profil":{fr:"Mon profil",en:"My profile",de:"Mein Profil"},
+  "My profile":{fr:"Mon profil",en:"My profile",de:"Mein Profil"},
+  "Mein Profil":{fr:"Mon profil",en:"My profile",de:"Mein Profil"},
   "Betalingsafstemming": {fr:"Rapprochement des paiements",en:"Payment reconciliation",de:"Zahlungsabgleich"},
   "Rapprochement des paiements": {fr:"Rapprochement des paiements",en:"Payment reconciliation",de:"Zahlungsabgleich"},
   "Payment reconciliation": {fr:"Rapprochement des paiements",en:"Payment reconciliation",de:"Zahlungsabgleich"},

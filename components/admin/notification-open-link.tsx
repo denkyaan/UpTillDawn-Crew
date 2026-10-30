@@ -4,6 +4,8 @@ import Link from "next/link"
 import type { ComponentProps } from "react"
 import { useAdminSelection, type AdminSelection } from "@/lib/admin-selection-context"
 import { useAuth } from "@/lib/providers"
+import { usePathname } from "next/navigation"
+import { administrationNotificationHref } from "@/lib/administration/navigation"
 
 function selectionFromHref(href:string):Partial<AdminSelection>{
   try{
@@ -28,12 +30,15 @@ export function NotificationOpenLink({
 }:Omit<ComponentProps<typeof Link>,"href"> & {href:string}){
   const admin=useAdminSelection()
   const {isAdmin}=useAuth()
+  const pathname=usePathname()
+  const target=pathname.startsWith("/portals/administration/")?administrationNotificationHref(href):href
+  if(!target)return null
   return <Link
     {...props}
-    href={href}
+    href={target}
     onClick={event=>{
       if(isAdmin){
-        const context=selectionFromHref(href)
+        const context=selectionFromHref(target)
         if(Object.values(context).some(Boolean))admin.setSelection(context)
       }
       props.onClick?.(event)

@@ -4,7 +4,7 @@
 - Transactional, authorized CSV ticket ingestion with immutable import receipts, repeat-import detection and conflict rollback; persisted revenue summaries.
 - Payroll CSV export of approved/locked, closed time records with explicit recorded-break columns and no wage inference.
 - Admin-only, idempotent inventory receipt against approved event-linked purchase invoice quantities, stock movements and audit.
-- Editable operational cases for permits, logistics and tasks; submit, independent Admin review, completion, audit and scheduled deadline notifications with deduplication and retry.
+- Editable operational cases for permits, logistics and tasks; submit, Admin review, completion, audit and scheduled deadline notifications with deduplication and retry.
 - Complete invoice/payment/approved-credit snapshots for finance totals and individual balances, including credit-adjusted paid/void actions.
 - Repair input validation for dates, emails and spaced bank identifiers. Correct contract archive regex escaping and final Admin approval boundaries.
 - Restore staging installations missing the original booking/contract and promotion schemas. Recovery migrations skip original schema creation on clean replays.

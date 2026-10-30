@@ -1155,6 +1155,8 @@ export async function markNotificationRead(fd:FormData){
  const s=await createClient()
  const {error}=await s.rpc('upt_mark_notification_read',{p_notification:uuid.parse(fd.get('notification_id'))})
  check(error);await revalidatePath('/notifications')
+ await revalidatePath('/portals/administration/modules/notifications')
+ await revalidatePath('/portals/promotion/notifications')
 }
 export async function archiveEvent(fd:FormData){const {s}=await adminClient();const {error}=await s.rpc('upt_archive_event',{p_event:uuid.parse(fd.get('event_id'))});check(error);await revalidatePath('/events');await markSaveSuccess('event_archived')}
 export async function duplicateEvent(fd:FormData){const {s}=await adminClient();const [start,end]=dates(fd,'start_at','end_at');const {error}=await s.rpc('upt_duplicate_event',{p_event:uuid.parse(fd.get('event_id')),p_name:text.parse(fd.get('name')),p_start:start,p_end:end});check(error);await revalidatePath('/events');await markSaveSuccess('event_duplicated')}

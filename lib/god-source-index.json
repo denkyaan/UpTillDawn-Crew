@@ -2706,7 +2706,7 @@
     "line": 130,
     "kind": "Link",
     "label": "{locale==='nl'?'Bekijken':locale==='fr'?'Consulter':locale==='de'?'Ansehen':'View'}",
-    "handler": "href={`/timesheets?event=${encodeURIComponent(row.event_id)}`}"
+    "handler": "href={`/portals/administration/timesheets?event=${encodeURIComponent(row.event_id)}`}"
   },
   {
     "file": "app/(app)/portals/[portal]/page.tsx",
@@ -2720,7 +2720,7 @@
     "line": 134,
     "kind": "Link",
     "label": "{locale==='nl'?'Inventaris':locale==='fr'?'Inventaire':locale==='de'?'Inventar':'Inventory'}",
-    "handler": "href=\"/inventory\""
+    "handler": "href=\"/portals/administration/modules/inventory\""
   },
   {
     "file": "app/(app)/portals/[portal]/page.tsx",
@@ -2734,7 +2734,7 @@
     "line": 139,
     "kind": "Link",
     "label": "{t.salesLink}",
-    "handler": "href=\"/sales\""
+    "handler": "href=\"/portals/administration/sales\""
   },
   {
     "file": "app/(app)/portals/administration/chat/page.tsx",
@@ -3704,7 +3704,7 @@
   },
   {
     "file": "app/(app)/portals/administration/layout.tsx",
-    "line": 2,
+    "line": 4,
     "kind": "functie",
     "label": "AdministrationLayout",
     "handler": "AdministrationLayout"
@@ -3987,7 +3987,7 @@
     "line": 278,
     "kind": "Link",
     "label": "{({nl:\"Taken beheren\",fr:\"Gérer les tâches\",en:\"Manage tasks\",de:\"Aufgaben verwalten\"} as const)[locale]}",
-    "handler": "href=\"/tasks\""
+    "handler": "href=\"#administration-work-queue\""
   },
   {
     "file": "app/(app)/portals/administration/modules/[slug]/page.tsx",
@@ -4008,7 +4008,7 @@
     "line": 287,
     "kind": "Link",
     "label": "{({nl:\"Alle meldingen beheren\",fr:\"Gérer toutes les notifications\",en:\"Manage all notifications\",de:\"Alle Benachrichtigungen verwalten\"} as const)[locale]}",
-    "handler": "href=\"/notifications\""
+    "handler": "href=\"/portals/administration/modules/notifications\""
   },
   {
     "file": "app/(app)/portals/administration/modules/[slug]/page.tsx",
@@ -4197,7 +4197,7 @@
     "line": 383,
     "kind": "Link",
     "label": "{({nl:\"Open meldingen\",fr:\"Ouvrir les notifications\",en:\"Open notifications\",de:\"Benachrichtigungen öffnen\"} as const)[locale]} →",
-    "handler": "href=\"/notifications\""
+    "handler": "href=\"/portals/administration/modules/notifications\""
   },
   {
     "file": "app/(app)/portals/administration/modules/[slug]/page.tsx",
@@ -4211,7 +4211,7 @@
     "line": 387,
     "kind": "Link",
     "label": "{({nl:\"Open taken\",fr:\"Ouvrir les tâches\",en:\"Open tasks\",de:\"Aufgaben öffnen\"} as const)[locale]} →",
-    "handler": "href=\"/tasks\""
+    "handler": "href=\"#administration-work-queue\""
   },
   {
     "file": "app/(app)/portals/administration/modules/[slug]/page.tsx",
@@ -4938,8 +4938,8 @@
     "file": "app/(app)/portals/administration/modules/notifications/page.tsx",
     "line": 5,
     "kind": "functie",
-    "label": "Page",
-    "handler": "Page"
+    "label": "AdministrationNotifications",
+    "handler": "AdministrationNotifications"
   },
   {
     "file": "app/(app)/portals/administration/modules/permits/page.tsx",
@@ -5024,6 +5024,27 @@
     "kind": "a",
     "label": "{m.phone_number}",
     "handler": "href={`tel:${m.phone_number}`}"
+  },
+  {
+    "file": "app/(app)/portals/administration/profile/page.tsx",
+    "line": 9,
+    "kind": "functie",
+    "label": "AdministrationProfile",
+    "handler": "AdministrationProfile"
+  },
+  {
+    "file": "app/(app)/portals/administration/profile/page.tsx",
+    "line": 18,
+    "kind": "h1",
+    "label": "{t.title}",
+    "handler": ""
+  },
+  {
+    "file": "app/(app)/portals/administration/profile/page.tsx",
+    "line": 20,
+    "kind": "h2",
+    "label": "{t.language}",
+    "handler": ""
   },
   {
     "file": "app/(app)/portals/administration/promotion-discipline/page.tsx",
@@ -5338,6 +5359,34 @@
     "line": 94,
     "kind": "button",
     "label": "{l.reject}",
+    "handler": ""
+  },
+  {
+    "file": "app/(app)/portals/administration/sales/page.tsx",
+    "line": 7,
+    "kind": "functie",
+    "label": "AdministrationSales",
+    "handler": "AdministrationSales"
+  },
+  {
+    "file": "app/(app)/portals/administration/timesheets/page.tsx",
+    "line": 10,
+    "kind": "functie",
+    "label": "AdministrationTimesheets",
+    "handler": "AdministrationTimesheets"
+  },
+  {
+    "file": "app/(app)/portals/administration/timesheets/page.tsx",
+    "line": 22,
+    "kind": "h1",
+    "label": "{t.title}",
+    "handler": ""
+  },
+  {
+    "file": "app/(app)/portals/administration/timesheets/page.tsx",
+    "line": 23,
+    "kind": "h2",
+    "label": "{names?.data?.find(profile=>profile.id===row.user_id)?.full_name??row.user_id}",
     "handler": ""
   },
   {
@@ -7099,14 +7148,14 @@
   },
   {
     "file": "components/admin/admin-context-bar.tsx",
-    "line": 10,
+    "line": 11,
     "kind": "functie",
     "label": "AdminContextBar",
     "handler": "AdminContextBar"
   },
   {
     "file": "components/admin/admin-context-bar.tsx",
-    "line": 47,
+    "line": 51,
     "kind": "button",
     "label": "",
     "handler": "onClick={clearSelection}"
@@ -7323,17 +7372,17 @@
   },
   {
     "file": "components/admin/notification-open-link.tsx",
-    "line": 24,
+    "line": 26,
     "kind": "functie",
     "label": "NotificationOpenLink",
     "handler": "NotificationOpenLink"
   },
   {
     "file": "components/admin/notification-open-link.tsx",
-    "line": 31,
+    "line": 36,
     "kind": "Link",
     "label": "{children}",
-    "handler": "href={href} onClick={event=>{\n      if(isAdmin){\n        const context=selectionFromHref(href)\n        if(Object.values(context).some(Boolean))admin.setSelection(context)\n      }\n      props.onClick?.(event)\n    }}"
+    "handler": "href={target} onClick={event=>{\n      if(isAdmin){\n        const context=selectionFromHref(target)\n        if(Object.values(context).some(Boolean))admin.setSelection(context)\n      }\n      props.onClick?.(event)\n    }}"
   },
   {
     "file": "components/admin/personnel-delete-button.tsx",
@@ -7694,31 +7743,31 @@
   },
   {
     "file": "components/administration/administration-navigation.tsx",
-    "line": 25,
+    "line": 20,
     "kind": "functie",
     "label": "AdministrationNavigation",
     "handler": "AdministrationNavigation"
   },
   {
     "file": "components/administration/administration-navigation.tsx",
-    "line": 32,
+    "line": 28,
     "kind": "Link",
     "label": "",
     "handler": "href=\"/portals/administration/chat\""
   },
   {
     "file": "components/administration/administration-navigation.tsx",
-    "line": 33,
+    "line": 29,
     "kind": "Link",
     "label": "{title}",
     "handler": "href={route(slug)} onClick={()=>setSelectedCategory(null)}"
   },
   {
     "file": "components/administration/administration-navigation.tsx",
-    "line": 34,
+    "line": 30,
     "kind": "button",
     "label": "{group.title[locale]}",
-    "handler": "onClick={()=>group.key===\"overview\"?window.location.assign(\"/portals/administration\"):setSelectedCategory(group.key)}"
+    "handler": "onClick={()=>group.key===\"overview\"?window.location.assign(\"/portals/administration\"):setSelectedCategory({key:group.key,pathname})}"
   },
   {
     "file": "components/administration/administration-private-chat-button.tsx",
@@ -7934,7 +7983,7 @@
     "file": "components/administration/operational-work-queue.tsx",
     "line": 60,
     "kind": "form",
-    "label": "{['open','rejected'].includes(row.status)&& {t.submit} } {row.status==='submitted'&&access.user.realIsAdmin&&row.created_by!==access.user.id&& {t.approve} {t.reject} } {row.status=",
+    "label": "{['open','rejected'].includes(row.status)&& {t.submit} } {row.status==='submitted'&&access.user.realIsAdmin&& {t.approve} {t.reject} } {row.status==='approved'&& {t.complete} }",
     "handler": "action={saveCase}"
   },
   {
@@ -13028,35 +13077,35 @@
   },
   {
     "file": "components/layout/topbar.tsx",
-    "line": 9,
+    "line": 10,
     "kind": "functie",
     "label": "Topbar",
     "handler": "Topbar"
   },
   {
     "file": "components/layout/topbar.tsx",
-    "line": 16,
+    "line": 20,
     "kind": "Link",
     "label": "Up Till Dawn",
-    "handler": "href={isAdmin?\"/admin\":\"/\"}"
-  },
-  {
-    "file": "components/layout/topbar.tsx",
-    "line": 22,
-    "kind": "Link",
-    "label": "Meldingen 🔔 {notificationMissed>0&& {notificationMissed>99?\"99+\":notificationMissed} }",
-    "handler": "href=\"/notifications\""
+    "handler": "href={administration?\"/portals/administration\":promotion?\"/portals/promotion\":isAdmin?\"/admin\":\"/\"}"
   },
   {
     "file": "components/layout/topbar.tsx",
     "line": 26,
     "kind": "Link",
-    "label": "Profiel",
-    "handler": "href=\"/settings\""
+    "label": "Meldingen 🔔 {notificationMissed>0&& {notificationMissed>99?\"99+\":notificationMissed} }",
+    "handler": "href={administration?\"/portals/administration/modules/notifications\":promotion?\"/portals/promotion/notifications\":\"/notifications\"}"
   },
   {
     "file": "components/layout/topbar.tsx",
-    "line": 27,
+    "line": 30,
+    "kind": "Link",
+    "label": "Profiel",
+    "handler": "href={administration?\"/portals/administration/profile\":\"/settings\"}"
+  },
+  {
+    "file": "components/layout/topbar.tsx",
+    "line": 31,
     "kind": "button",
     "label": "{loggingOut?\"…\":\"Uitloggen\"}",
     "handler": "onClick={()=>startLogout(async()=>{\n      await disablePushNotifications().catch(()=>{})\n      await signOut()\n    })}"
@@ -14183,77 +14232,77 @@
   },
   {
     "file": "lib/actions/uptilldawn.ts",
-    "line": 1159,
+    "line": 1161,
     "kind": "functie",
     "label": "archiveEvent",
     "handler": "archiveEvent"
   },
   {
     "file": "lib/actions/uptilldawn.ts",
-    "line": 1160,
+    "line": 1162,
     "kind": "functie",
     "label": "duplicateEvent",
     "handler": "duplicateEvent"
   },
   {
     "file": "lib/actions/uptilldawn.ts",
-    "line": 1161,
+    "line": 1163,
     "kind": "functie",
     "label": "createEventDocument",
     "handler": "createEventDocument"
   },
   {
     "file": "lib/actions/uptilldawn.ts",
-    "line": 1193,
+    "line": 1195,
     "kind": "functie",
     "label": "createInventoryTextEntry",
     "handler": "createInventoryTextEntry"
   },
   {
     "file": "lib/actions/uptilldawn.ts",
-    "line": 1226,
+    "line": 1228,
     "kind": "functie",
     "label": "createPriceListTextEntry",
     "handler": "createPriceListTextEntry"
   },
   {
     "file": "lib/actions/uptilldawn.ts",
-    "line": 1250,
+    "line": 1252,
     "kind": "functie",
     "label": "createPriceListDocument",
     "handler": "createPriceListDocument"
   },
   {
     "file": "lib/actions/uptilldawn.ts",
-    "line": 1260,
+    "line": 1262,
     "kind": "functie",
     "label": "archiveEventDocument",
     "handler": "archiveEventDocument"
   },
   {
     "file": "lib/actions/uptilldawn.ts",
-    "line": 1269,
+    "line": 1271,
     "kind": "functie",
     "label": "updateEventEmergencyInformation",
     "handler": "updateEventEmergencyInformation"
   },
   {
     "file": "lib/actions/uptilldawn.ts",
-    "line": 1282,
+    "line": 1284,
     "kind": "functie",
     "label": "updateEvent",
     "handler": "updateEvent"
   },
   {
     "file": "lib/actions/uptilldawn.ts",
-    "line": 1302,
+    "line": 1304,
     "kind": "functie",
     "label": "deleteEvent",
     "handler": "deleteEvent"
   },
   {
     "file": "lib/actions/uptilldawn.ts",
-    "line": 1309,
+    "line": 1311,
     "kind": "functie",
     "label": "createDriverTransportTask",
     "handler": "createDriverTransportTask"
@@ -14677,6 +14726,27 @@
     "kind": "functie",
     "label": "financialAging",
     "handler": "financialAging"
+  },
+  {
+    "file": "lib/administration/navigation.ts",
+    "line": 10,
+    "kind": "functie",
+    "label": "administrationRoute",
+    "handler": "administrationRoute"
+  },
+  {
+    "file": "lib/administration/navigation.ts",
+    "line": 17,
+    "kind": "functie",
+    "label": "administrationCategoryForPath",
+    "handler": "administrationCategoryForPath"
+  },
+  {
+    "file": "lib/administration/navigation.ts",
+    "line": 28,
+    "kind": "functie",
+    "label": "administrationNotificationHref",
+    "handler": "administrationNotificationHref"
   },
   {
     "file": "lib/administration/payment-ledger-adapter.ts",
@@ -17116,7 +17186,7 @@
   },
   {
     "file": "lib/ui-translation-catalog-app-extra.ts",
-    "line": 815,
+    "line": 818,
     "kind": "functie",
     "label": "translateAppExtraUi",
     "handler": "translateAppExtraUi"

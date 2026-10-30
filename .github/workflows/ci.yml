@@ -263,6 +263,9 @@ jobs:
           cat /tmp/uptilldawn-bot-app.log
           exit 1
 
+      - name: Administration subtab and portal context browser regression
+        run: node scripts/administration-navigation-e2e.mjs
+
       - name: Run 15 concurrent authenticated browser bots
         run: |
           set -euo pipefail

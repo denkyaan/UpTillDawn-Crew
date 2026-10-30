@@ -58,8 +58,8 @@ const operationalModuleLinks:Record<string,string>={
  marketing:"/portals/administration/promotion-discipline",
  inventory:"/portals/administration/modules/inventory",
  logistics:"/portals/administration/modules/inventory",
- tasks:"/tasks",
- notifications:"/notifications",
+ tasks:"#administration-work-queue",
+ notifications:"/portals/administration/modules/notifications",
 }
 const operationalModuleLabels={
  nl:"Open bestaande beheerfunctie",fr:"Ouvrir la fonction de gestion",en:"Open existing management workflow",de:"Vorhandene Verwaltungsfunktion öffnen",
@@ -275,7 +275,7 @@ export default async function AdministrationModulePage({params,searchParams}:{pa
   {slug==="tasks"&&<section className="rounded-2xl border bg-card p-5">
    <h2 className="text-lg font-semibold">{({nl:"Actuele taken",fr:"Tâches actuelles",en:"Current tasks",de:"Aktuelle Aufgaben"} as const)[locale]}</h2>
    {taskRows?.error?<p role="alert" className="mt-3 text-sm text-muted-foreground">{({nl:"Taken konden niet worden geladen.",fr:"Impossible de charger les tâches.",en:"Unable to load tasks.",de:"Aufgaben konnten nicht geladen werden."} as const)[locale]}</p>:taskRows?.data?.length?<ul className="mt-3 divide-y">{taskRows.data.map(item=><li key={item.id} className="flex flex-wrap justify-between gap-2 py-3 text-sm"><span className="font-medium">{item.title}</span><span className="text-muted-foreground">{item.status}</span></li>)}</ul>:<p className="mt-3 text-sm text-muted-foreground">{({nl:"Geen taken gevonden.",fr:"Aucune tâche.",en:"No tasks found.",de:"Keine Aufgaben gefunden."} as const)[locale]}</p>}
-   <Link href="/tasks" className="mt-4 inline-flex rounded-lg border px-4 py-2 text-sm font-semibold">{({nl:"Taken beheren",fr:"Gérer les tâches",en:"Manage tasks",de:"Aufgaben verwalten"} as const)[locale]}</Link>
+   <Link href="#administration-work-queue" className="mt-4 inline-flex rounded-lg border px-4 py-2 text-sm font-semibold">{({nl:"Taken beheren",fr:"Gérer les tâches",en:"Manage tasks",de:"Aufgaben verwalten"} as const)[locale]}</Link>
   </section>}
   {slug==="events"&&<section className="rounded-2xl border bg-card p-5">
    <h2 className="text-lg font-semibold">{({nl:"Evenementenregister",fr:"Registre des événements",en:"Event register",de:"Veranstaltungsregister"} as const)[locale]}</h2>
@@ -284,7 +284,7 @@ export default async function AdministrationModulePage({params,searchParams}:{pa
   {slug==="notifications"&&<section className="rounded-2xl border bg-card p-5">
    <h2 className="text-lg font-semibold">{({nl:"Mijn meldingen",fr:"Mes notifications",en:"My notifications",de:"Meine Benachrichtigungen"} as const)[locale]}</h2>
    {notificationRows?.error?<p role="alert" className="mt-3 text-sm text-muted-foreground">{({nl:"Meldingen konden niet worden geladen.",fr:"Impossible de charger les notifications.",en:"Unable to load notifications.",de:"Benachrichtigungen konnten nicht geladen werden."} as const)[locale]}</p>:notificationRows?.data?.length?<ul className="mt-3 divide-y">{notificationRows.data.map(item=><li key={item.id} className="flex flex-wrap items-center justify-between gap-3 py-3 text-sm"><span className="font-medium">{item.kind}</span><span className="text-xs text-muted-foreground">{item.read_at?({nl:"Gelezen",fr:"Lu",en:"Read",de:"Gelesen"} as const)[locale]:({nl:"Ongelezen",fr:"Non lu",en:"Unread",de:"Ungelesen"} as const)[locale]}</span></li>)}</ul>:<p className="mt-3 text-sm text-muted-foreground">{({nl:"Geen meldingen gevonden.",fr:"Aucune notification.",en:"No notifications found.",de:"Keine Benachrichtigungen gefunden."} as const)[locale]}</p>}
-   <Link href="/notifications" className="mt-4 inline-flex rounded-lg border px-4 py-2 text-sm font-semibold">{({nl:"Alle meldingen beheren",fr:"Gérer toutes les notifications",en:"Manage all notifications",de:"Alle Benachrichtigungen verwalten"} as const)[locale]}</Link>
+   <Link href="/portals/administration/modules/notifications" className="mt-4 inline-flex rounded-lg border px-4 py-2 text-sm font-semibold">{({nl:"Alle meldingen beheren",fr:"Gérer toutes les notifications",en:"Manage all notifications",de:"Alle Benachrichtigungen verwalten"} as const)[locale]}</Link>
   </section>}
   {slug==="staff"&&<section className="rounded-2xl border bg-card p-5">
    <h2 className="text-lg font-semibold">{({nl:"Ingediende werkuren",fr:"Heures soumises",en:"Submitted timesheets",de:"Eingereichte Arbeitszeiten"} as const)[locale]}</h2>
@@ -380,11 +380,11 @@ export default async function AdministrationModulePage({params,searchParams}:{pa
   {slug==="notifications"&&<section className="rounded-2xl border bg-card p-5">
    <h2 className="text-lg font-semibold">{({nl:"Meldingen beheren",fr:"Gérer les notifications",en:"Manage notifications",de:"Benachrichtigungen verwalten"} as const)[locale]}</h2>
    <p className="mt-2 text-sm text-muted-foreground">{({nl:"Open de bestaande meldingenpagina om berichten en actiepunten te bekijken.",fr:"Ouvrez la page des notifications pour consulter les messages et actions.",en:"Open the existing notifications page to review messages and action items.",de:"Öffnen Sie die Benachrichtigungsseite, um Nachrichten und Aufgaben zu prüfen."} as const)[locale]}</p>
-   <Link href="/notifications" className="mt-4 inline-flex rounded-lg bg-violet-600 px-4 py-3 text-sm font-semibold text-white hover:bg-violet-700">{({nl:"Open meldingen",fr:"Ouvrir les notifications",en:"Open notifications",de:"Benachrichtigungen öffnen"} as const)[locale]} →</Link>
+   <Link href="/portals/administration/modules/notifications" className="mt-4 inline-flex rounded-lg bg-violet-600 px-4 py-3 text-sm font-semibold text-white hover:bg-violet-700">{({nl:"Open meldingen",fr:"Ouvrir les notifications",en:"Open notifications",de:"Benachrichtigungen öffnen"} as const)[locale]} →</Link>
   </section>}
   {slug==="tasks"&&<section className="rounded-2xl border bg-card p-5">
    <h2 className="text-lg font-semibold">{({nl:"Taken opvolgen",fr:"Suivi des tâches",en:"Track tasks",de:"Aufgaben verfolgen"} as const)[locale]}</h2>
-   <Link href="/tasks" className="mt-4 inline-flex rounded-lg bg-violet-600 px-4 py-3 text-sm font-semibold text-white hover:bg-violet-700">{({nl:"Open taken",fr:"Ouvrir les tâches",en:"Open tasks",de:"Aufgaben öffnen"} as const)[locale]} →</Link>
+   <Link href="#administration-work-queue" className="mt-4 inline-flex rounded-lg bg-violet-600 px-4 py-3 text-sm font-semibold text-white hover:bg-violet-700">{({nl:"Open taken",fr:"Ouvrir les tâches",en:"Open tasks",de:"Aufgaben öffnen"} as const)[locale]} →</Link>
   </section>}
   {slug==="staff"&&<section className="rounded-2xl border bg-card p-5"><Link href="/portals/administration/rosters" className="inline-flex rounded-lg bg-violet-600 px-4 py-3 text-sm font-semibold text-white hover:bg-violet-700">{({nl:"Administratieve werkroosters",fr:"Plannings administratifs",en:"Administrative rosters",de:"Administrative Dienstpläne"} as const)[locale]} →</Link></section>}
   {financeRelated.has(slug)&&<section className="rounded-2xl border bg-card p-5">
