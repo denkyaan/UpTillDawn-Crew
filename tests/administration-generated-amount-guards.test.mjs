@@ -22,3 +22,9 @@ test('invoice review cannot proceed with zero total',()=>{
  assert.match(sql,/\(new\.net_amount\+new\.tax_amount\)<=0/)
  assert.match(sql,/Invoice amount must be positive before review/)
 })
+
+test('null invoice and credit-note totals are rejected explicitly',()=>{
+ assert.match(sql,/if \(new\.net_amount\+new\.tax_amount\) is null or \(new\.net_amount\+new\.tax_amount\)<0 then/)
+ assert.match(sql,/if new\.status in \('review','approved','issued','paid'\) and \(\(new\.net_amount\+new\.tax_amount\) is null or \(new\.net_amount\+new\.tax_amount\)<=0\) then/)
+ assert.match(sql,/if \(new\.net_amount\+new\.tax_amount\) is null or \(new\.net_amount\+new\.tax_amount\)<=0 then\s+raise exception 'Invoice amount must be positive before review'/)
+})
