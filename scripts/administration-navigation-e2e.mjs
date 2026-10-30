@@ -19,7 +19,7 @@ try{
   if(error||!data.session)throw Error(role.name+' login failed: '+error?.message)
   for(const viewport of [{width:390,height:844},{width:1280,height:800}]){
    const context=await browser.newContext({viewport,locale:'en'})
-   await context.addInitScript(()=>localStorage.setItem('uptilldawn-admin-selection-v1',JSON.stringify({eventId:'00000000-0000-4000-8000-00000000e2e1',workplaceId:null,userId:null,shiftId:null,focus:null})))
+   await context.addInitScript(()=>{localStorage.setItem('uptilldawn-admin-selection-v1',JSON.stringify({eventId:'00000000-0000-4000-8000-00000000e2e1',workplaceId:null,userId:null,shiftId:null,focus:null}));sessionStorage.setItem('uptilldawn-return-after-login','/events')})
    const page=await context.newPage(),errors=[]
    page.on('pageerror',error=>errors.push(error.message))
    try{
@@ -35,7 +35,9 @@ try{
       const link=page.locator(`[data-administration-subtab="${slug}"]`)
       const target=await link.getAttribute('href')
       assert.ok(target.startsWith('/portals/administration/'))
+      const documentRequest=page.waitForRequest(request=>request.isNavigationRequest()&&request.resourceType()==='document'&&new URL(request.url()).pathname===target)
       await link.click()
+      await documentRequest
       await page.waitForURL(u=>u.pathname===target,{timeout:30000})
       await page.waitForLoadState('networkidle',{timeout:10000}).catch(()=>{})
       assert.equal(await page.locator(`[data-administration-category="${category}"]`).getAttribute('aria-pressed'),'true',slug+' lost its category')
@@ -63,6 +65,19 @@ try{
    }finally{await context.close()}
   }
  }
+ const loginContext=await browser.newContext({viewport:{width:390,height:844},locale:'en'})
+ try{
+  const loginPage=await loginContext.newPage()
+  await loginPage.goto(base+'/login/administration',{waitUntil:'networkidle'})
+  await loginPage.locator('input[name="email"]').fill('bot-01-admin-nl@bots.uptilldawn.test')
+  await loginPage.locator('input[name="password"]').fill(password)
+  await loginPage.locator('button[type="submit"]').click()
+  await loginPage.waitForURL('**/portals/administration',{timeout:30000})
+  assert.equal(new URL(loginPage.url()).pathname,'/portals/administration')
+  checks.push({role:'Admin real login',path:'/portals/administration'})
+  console.log('PASS administration sign-in through the real login form')
+ }catch(error){failures.push({role:'Admin real login',error:String(error.message||error)})}
+ finally{await loginContext.close()}
 }finally{await browser.close()}
 await writeFile('test-results/administration-navigation/result.json',JSON.stringify({checks,failures},null,2))
 console.log(JSON.stringify({clicks:checks.length,failures},null,2))

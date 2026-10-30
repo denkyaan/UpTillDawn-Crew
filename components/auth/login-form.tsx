@@ -40,6 +40,8 @@ export function LoginForm({
     if (requestedNext && requestedNext.startsWith("/") && !requestedNext.startsWith("//") && !requestedNext.includes("\\")) {
       formData.set("next", requestedNext)
       window.sessionStorage.setItem("uptilldawn-return-after-login", requestedNext)
+    } else {
+      window.sessionStorage.removeItem("uptilldawn-return-after-login")
     }
     startTransition(async () => {
       try {

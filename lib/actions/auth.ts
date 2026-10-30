@@ -247,8 +247,9 @@ export async function signIn(formData: FormData) {
     }
 
     const role = profile.role
+    const hasPermanentAdminAccess = isOwner === true || (profile.approved === true && role === 'admin')
     let assignedPortalAccess = false
-    if (requestedPortal === 'promotion' || requestedPortal === 'administration') {
+    if ((requestedPortal === 'promotion' || requestedPortal === 'administration') && !hasPermanentAdminAccess) {
         const { data: assignments, error: assignmentError } = await supabase.rpc('upt_my_portal_assignments')
         if (assignmentError) {
             await notifySecurity('denied', 'portal_access_unavailable')
@@ -259,7 +260,6 @@ export async function signIn(formData: FormData) {
             entry.portal === requestedPortal && entry.approved && !entry.revoked_at &&
             (requestedPortal === 'promotion' ? ['promoter', 'admin'].includes(entry.role) : ['administrative_staff', 'admin'].includes(entry.role)))
     }
-    const hasPermanentAdminAccess = isOwner === true || (profile.approved === true && role === 'admin')
     const allowed = requestedPortal === 'promotion' || requestedPortal === 'administration' ? (assignedPortalAccess || hasPermanentAdminAccess) : requestedPortal === 'admin' ? hasPermanentAdminAccess : requestedPortal === 'responsible' ? role === 'responsible_lead' || hasPermanentAdminAccess : role === 'staff' || role === 'responsible_lead' || hasPermanentAdminAccess
     if (!allowed) {
         await notifySecurity('denied', 'wrong_portal')
@@ -268,7 +268,7 @@ export async function signIn(formData: FormData) {
     }
 
     if (hasPermanentAdminAccess) {
-        const requestedRoleMode = requestedPortal === 'admin' ? 'admin' : requestedPortal === 'responsible' ? 'responsible_lead' : 'staff'
+        const requestedRoleMode = requestedPortal === 'admin' || requestedPortal === 'administration' ? 'admin' : requestedPortal === 'responsible' ? 'responsible_lead' : 'staff'
         const { data: roleMode, error: roleModeError } = await supabase.rpc('upt_set_admin_role_mode', { p_role: requestedRoleMode })
         if (roleModeError || roleMode !== requestedRoleMode) { await notifySecurity('denied', 'role_mode_error'); await supabase.auth.signOut(); return { error: 'De gekozen rolweergave kon niet worden geactiveerd.', code: 'role_mode_error' } }
     }

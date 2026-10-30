@@ -7758,9 +7758,9 @@
   {
     "file": "components/administration/administration-navigation.tsx",
     "line": 29,
-    "kind": "Link",
+    "kind": "a",
     "label": "{title}",
-    "handler": "href={route(slug)} onClick={()=>setSelectedCategory(null)}"
+    "handler": "href={route(slug)}"
   },
   {
     "file": "components/administration/administration-navigation.tsx",
@@ -8191,91 +8191,91 @@
   },
   {
     "file": "components/auth/login-form.tsx",
-    "line": 64,
+    "line": 66,
     "kind": "button",
     "label": "{menuOpen ? : }",
     "handler": "onClick={() => setMenuOpen(v => !v)}"
   },
   {
     "file": "components/auth/login-form.tsx",
-    "line": 79,
+    "line": 81,
     "kind": "Link",
     "label": "{portals[key].label}",
     "handler": "href={`/login/${key}`} onClick={() => setMenuOpen(false)}"
   },
   {
     "file": "components/auth/login-form.tsx",
-    "line": 82,
+    "line": 84,
     "kind": "Link",
     "label": "Promotie",
     "handler": "href=\"/login/promotion\" onClick={() => setMenuOpen(false)}"
   },
   {
     "file": "components/auth/login-form.tsx",
-    "line": 86,
+    "line": 88,
     "kind": "Link",
     "label": "{portals[key].label}",
     "handler": "href={`/login/${key}`} onClick={() => setMenuOpen(false)}"
   },
   {
     "file": "components/auth/login-form.tsx",
-    "line": 101,
+    "line": 103,
     "kind": "h1",
     "label": "{portals[portal].label}",
     "handler": ""
   },
   {
     "file": "components/auth/login-form.tsx",
-    "line": 112,
+    "line": 114,
     "kind": "form",
     "label": "Login Wachtwoord Wachtwoord vergeten? setShowPassword(v => !v)} className=\"absolute right-4 top-1/2 -translate-y-1/2 text-zinc-400 hover:text-white\"> {showPassword ? : } {isPending",
     "handler": "action={nativeAction} onSubmit={nativeAction ? undefined : handleSubmit}"
   },
   {
     "file": "components/auth/login-form.tsx",
-    "line": 118,
+    "line": 120,
     "kind": "input",
     "label": "",
     "handler": ""
   },
   {
     "file": "components/auth/login-form.tsx",
-    "line": 121,
+    "line": 123,
     "kind": "input",
     "label": "",
     "handler": ""
   },
   {
     "file": "components/auth/login-form.tsx",
-    "line": 126,
+    "line": 128,
     "kind": "Link",
     "label": "Wachtwoord vergeten?",
     "handler": "href=\"/forgot-password\""
   },
   {
     "file": "components/auth/login-form.tsx",
-    "line": 129,
+    "line": 131,
     "kind": "input",
     "label": "",
     "handler": ""
   },
   {
     "file": "components/auth/login-form.tsx",
-    "line": 130,
+    "line": 132,
     "kind": "button",
     "label": "{showPassword ? : }",
     "handler": "onClick={() => setShowPassword(v => !v)}"
   },
   {
     "file": "components/auth/login-form.tsx",
-    "line": 135,
+    "line": 137,
     "kind": "button",
     "label": "{isPending ? Inloggen… : Inloggen }",
     "handler": ""
   },
   {
     "file": "components/auth/login-form.tsx",
-    "line": 141,
+    "line": 143,
     "kind": "Link",
     "label": "Account aanmaken",
     "handler": "href=\"/signup\""
