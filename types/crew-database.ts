@@ -3637,6 +3637,38 @@ export type Database = {
           },
         ]
       }
+      promotion_chat_messages: {
+        Row: {
+          body: string
+          created_at: string
+          id: string
+          room: string
+          sender_id: string
+        }
+        Insert: {
+          body: string
+          created_at?: string
+          id?: string
+          room: string
+          sender_id: string
+        }
+        Update: {
+          body?: string
+          created_at?: string
+          id?: string
+          room?: string
+          sender_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "promotion_chat_messages_sender_id_fkey"
+            columns: ["sender_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       promotion_discipline: {
         Row: {
           blocked_until: string | null
@@ -5862,6 +5894,15 @@ export type Database = {
           unread_count: number
         }[]
       }
+      upt_chat_message_readers: {
+        Args: { p_message: string }
+        Returns: {
+          full_name: string
+          profile_photo_url: string
+          read_at: string
+          user_id: string
+        }[]
+      }
       upt_chat_pins: {
         Args: { p_channel: string }
         Returns: {
@@ -6540,7 +6581,25 @@ export type Database = {
           name: string
         }[]
       }
+      upt_promotion_chat_allowed: { Args: never; Returns: boolean }
+      upt_promotion_directory: {
+        Args: never
+        Returns: {
+          full_name: string
+          id: string
+          portal_label: string
+          profile_photo_url: string
+        }[]
+      }
       upt_promotion_is_blocked: { Args: { p_user?: string }; Returns: boolean }
+      upt_promotion_presence: {
+        Args: never
+        Returns: {
+          last_seen_at: string
+          user_id: string
+        }[]
+      }
+      upt_promotion_presence_ping: { Args: never; Returns: undefined }
       upt_push_delivery_config: {
         Args: never
         Returns: {
