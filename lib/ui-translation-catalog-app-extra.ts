@@ -2,6 +2,7 @@ export type ExtraCatalogLocale = 'nl' | 'fr' | 'en' | 'de'
 type Row = { fr:string; en:string; de:string }
 
 export const APP_EXTRA_TRANSLATIONS: Record<string,Row> = {
+  "Factuurdetails": {fr:"Détails de la facture",en:"Invoice details",de:"Rechnungsdetails"},
   "Kies een medewerker": {fr:"Choisissez un membre du personnel",en:"Select a staff member",de:"Mitarbeitende auswählen"},
   "Toewijzen en goedkeuren": {fr:"Attribuer et approuver",en:"Assign and approve",de:"Zuweisen und genehmigen"},
 
