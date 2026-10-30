@@ -17,3 +17,13 @@ test('finance UI prepares reminder drafts without sending email',()=>{
  assert.match(page,/action=\{updatePaymentReminder\}/)
  assert.match(page,/no automatic sending/)
 })
+
+test('draft and approval both reconcile credit notes before permitting reminders',()=>{
+ assert.match(page,/async function reminderOutstanding/)
+ assert.match(page,/\.eq\('kind','credit_note'\)\.eq\('original_invoice_id',documentId\)/)
+ assert.match(page,/\['approved','issued','paid'\]\.includes\(credit\.status\)/)
+ assert.match(page,/reminderOutstanding\(supabase as unknown as SupabaseClient,documentId/)
+ assert.match(page,/reminderOutstanding\(supabase as unknown as SupabaseClient,reminder\.document_id/)
+ assert.match(page,/outstanding===null\|\|outstanding<=0\.005/)
+ assert.match(page,/invoice\.due_date>=belgianToday\(\)/)
+})
