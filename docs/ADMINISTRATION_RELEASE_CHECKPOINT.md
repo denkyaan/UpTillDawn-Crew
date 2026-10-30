@@ -16,3 +16,7 @@ Full application completion remains blocked on external banking/Peppol/accountin
 The first full run found an unindexed promotion-chat sender foreign key. The sender index is added, and staging legacy index parity is restored. The complete public foreign-key index check now passes on staging. Expected migration: 20261030161753.
 
 All eight authenticated HTTP/form workflow checks passed, including four-locale page rendering.
+
+## Acceptance iteration 3
+
+The SQL security-surface gate found delegated presence authorization without an explicit top-level caller guard. Presence now checks the authenticated approved caller directly. Scoped promotion suspensions also deny chat and directory access. The SQL security-surface suite and positive/negative suspension checks pass on staging. Expected migration: 20261030172206.
