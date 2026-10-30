@@ -23,8 +23,8 @@ begin
   if new.currency is distinct from original_record.currency then
    raise exception 'Credit note currency must match invoice';
   end if;
-  if (new.net_amount+new.tax_amount)<0 then raise exception 'Credit note amount must be non-negative'; end if;
-  if new.status in ('review','approved','issued','paid') and (new.net_amount+new.tax_amount)<=0 then
+  if (new.net_amount+new.tax_amount) is null or (new.net_amount+new.tax_amount)<0 then raise exception 'Credit note amount must be non-negative'; end if;
+  if new.status in ('review','approved','issued','paid') and ((new.net_amount+new.tax_amount) is null or (new.net_amount+new.tax_amount)<=0) then
    raise exception 'Credit note amount must be positive before review';
   end if;
   if new.status in ('approved','issued','paid') then
@@ -98,7 +98,7 @@ begin
   if new.issue_date is null or new.due_date is null then
    raise exception 'Invoice requires issue and due dates before review';
   end if;
-  if (new.net_amount+new.tax_amount)<=0 then
+  if (new.net_amount+new.tax_amount) is null or (new.net_amount+new.tax_amount)<=0 then
    raise exception 'Invoice amount must be positive before review';
   end if;
  end if;
