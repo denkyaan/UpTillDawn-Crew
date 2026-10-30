@@ -27,3 +27,16 @@ test('draft and approval both reconcile credit notes before permitting reminders
  assert.match(page,/outstanding===null\|\|outstanding<=0\.005/)
  assert.match(page,/invoice\.due_date>=belgianToday\(\)/)
 })
+
+test('database trigger enforces credit-adjusted overdue sales invoices',()=>{
+ const migration=readFileSync('supabase/migrations/20261030123000_administration_reminder_credit_balance_guard.sql','utf8')
+ assert.match(migration,/create or replace function public\.upt_admin_guard_payment_reminder/)
+ assert.match(migration,/original_doc\.kind<>'sales_invoice'/)
+ assert.match(migration,/original_invoice_id=new\.document_id/)
+ assert.match(migration,/status in \('approved','issued','paid'\)/)
+ assert.match(migration,/original_doc\.gross_amount<=paid_total\+credited_total/)
+ assert.match(migration,/Europe\/Brussels/)
+ assert.match(migration,/new\.status<>'cancelled'/)
+ assert.match(migration,/not public\.upt_is_admin\(\)/)
+ assert.match(migration,/revoke execute on function/)
+})
