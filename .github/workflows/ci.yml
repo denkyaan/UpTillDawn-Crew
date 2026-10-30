@@ -109,7 +109,7 @@ jobs:
           for file in tests/sql/*.sql; do
             # These suites require the dedicated users seeded later in this job.
             case "$file" in
-              tests/sql/administration-finance-integration.sql|tests/sql/administration-finance-rls.sql|tests/sql/administration-workflow-integration.sql) continue ;;
+              tests/sql/administration-finance-integration.sql|tests/sql/administration-finance-rls.sql|tests/sql/administration-workflow-integration.sql|tests/sql/administration-peppol-integration.sql) continue ;;
             esac
             echo "::group::$file"
             psql "$PGURL" -v ON_ERROR_STOP=1 -f "$file"
@@ -231,6 +231,7 @@ jobs:
           office_id=$(psql "$BOT_DB_URL" -Atc "select id from auth.users where email='bot-04-staff-de@bots.uptilldawn.test';")
           test -n "$office_id"
           psql "$BOT_DB_URL" -v ON_ERROR_STOP=1 -v TEST_ADMIN_ID="$admin_id" -v TEST_STAFF_ID="$staff_id" -v TEST_OFFICE_ID="$office_id" -f tests/sql/administration-workflow-integration.sql
+          psql "$BOT_DB_URL" -v ON_ERROR_STOP=1 -v TEST_ADMIN_ID="$admin_id" -v TEST_STAFF_ID="$staff_id" -v TEST_OFFICE_ID="$office_id" -f tests/sql/administration-peppol-integration.sql
           echo "PASS: financial invoice/payment/credit and non-admin RLS regression suites"
 
       - name: Cache Playwright Chromium
@@ -287,6 +288,10 @@ jobs:
 
       - name: Transactional administration workflow E2E
         run: node scripts/administration-completion-e2e.mjs
+      - name: Peppol approval and XML export browser E2E
+        run: node scripts/administration-peppol-e2e.mjs
+      - name: Peppol UBL and business rule validation
+        uses: ./.github/actions/peppol-validation
 
       - name: Verify authenticated E2E interaction inventory
         shell: bash

@@ -1,3 +1,5 @@
+import PeppolDocumentFields from '@/components/administration/peppol-document-fields'
+import {peppolFieldLabels,localeIndex} from '@/lib/administration/peppol-copy'
 import {financialAmountCents,totalFinancialCents,reconcileFinanceInvoice} from '@/lib/administration/finance-reconciliation'
 import type { SupabaseClient } from '@supabase/supabase-js'
 import { randomUUID } from 'node:crypto'
@@ -11,10 +13,10 @@ import { canOpenPortal, type PortalAssignment } from '@/lib/portal-access'
 import { requestUiLocale } from '@/lib/server-locale'
 
 const copy = {
- nl: {title:'Financiële administratie',intro:'Registreer conceptdocumenten. Definitieve goedkeuring en Peppol-verzending zijn nog niet actief.',new:'Nieuw concept',kind:'Documenttype',number:'Documentnummer',net:'Bedrag excl. btw',tax:'Btw-bedrag',notes:'Notities',save:'Concept opslaan',empty:'Nog geen financiële documenten.',back:'Administratie',error:'Document kon niet worden opgeslagen.',currency:'Valuta', totals:'Financieel overzicht', count:'Documenten', outstanding:'Nog niet betaald', paid:'Betaald', draft:'Concepten'},
- fr: {title:'Administration financière',intro:'Enregistrez des brouillons. La validation définitive et l’envoi Peppol ne sont pas encore actifs.',new:'Nouveau brouillon',kind:'Type de document',number:'Numéro du document',net:'Montant hors TVA',tax:'Montant TVA',notes:'Notes',save:'Enregistrer le brouillon',empty:'Aucun document financier.',back:'Administration',error:'Impossible d’enregistrer le document.',currency:'Devise', totals:'Vue financière', count:'Documents', outstanding:'Non payés', paid:'Payés', draft:'Brouillons'},
- en: {title:'Financial administration',intro:'Record draft documents. Final approval and Peppol sending are not active yet.',new:'New draft',kind:'Document type',number:'Document number',net:'Net amount',tax:'VAT amount',notes:'Notes',save:'Save draft',empty:'No financial documents yet.',back:'Administration',error:'Document could not be saved.',currency:'Currency', totals:'Financial overview', count:'Documents', outstanding:'Unpaid', paid:'Paid', draft:'Drafts'},
- de: {title:'Finanzverwaltung',intro:'Erfasse Entwürfe. Endgültige Freigabe und Peppol-Versand sind noch nicht aktiv.',new:'Neuer Entwurf',kind:'Dokumenttyp',number:'Dokumentnummer',net:'Nettobetrag',tax:'MwSt.-Betrag',notes:'Notizen',save:'Entwurf speichern',empty:'Noch keine Finanzdokumente.',back:'Verwaltung',error:'Dokument konnte nicht gespeichert werden.',currency:'Währung', totals:'Finanzübersicht', count:'Dokumente', outstanding:'Unbezahlt', paid:'Bezahlt', draft:'Entwürfe'},
+ nl: {title:'Financiële administratie',intro:'Registreer conceptdocumenten. Admin beheert de definitieve goedkeuring. Peppol-bestanden kunnen worden voorbereid; verzending wordt afzonderlijk aangesloten.',new:'Nieuw concept',kind:'Documenttype',number:'Documentnummer',net:'Bedrag excl. btw',tax:'Btw-bedrag',notes:'Notities',save:'Concept opslaan',empty:'Nog geen financiële documenten.',back:'Administratie',error:'Document kon niet worden opgeslagen.',currency:'Valuta', totals:'Financieel overzicht', count:'Documenten', outstanding:'Nog niet betaald', paid:'Betaald', draft:'Concepten'},
+ fr: {title:'Administration financière',intro:'Enregistrez des brouillons. Admin gère l’approbation définitive. Les fichiers Peppol peuvent être préparés ; l’envoi sera connecté séparément.',new:'Nouveau brouillon',kind:'Type de document',number:'Numéro du document',net:'Montant hors TVA',tax:'Montant TVA',notes:'Notes',save:'Enregistrer le brouillon',empty:'Aucun document financier.',back:'Administration',error:'Impossible d’enregistrer le document.',currency:'Devise', totals:'Vue financière', count:'Documents', outstanding:'Non payés', paid:'Payés', draft:'Brouillons'},
+ en: {title:'Financial administration',intro:'Record draft documents. Admin handles final approval. Peppol files can be prepared; sending is connected separately.',new:'New draft',kind:'Document type',number:'Document number',net:'Net amount',tax:'VAT amount',notes:'Notes',save:'Save draft',empty:'No financial documents yet.',back:'Administration',error:'Document could not be saved.',currency:'Currency', totals:'Financial overview', count:'Documents', outstanding:'Unpaid', paid:'Paid', draft:'Drafts'},
+ de: {title:'Finanzverwaltung',intro:'Erfasse Entwürfe. Admin verwaltet die endgültige Freigabe. Peppol-Dateien können vorbereitet werden; der Versand wird separat eingerichtet.',new:'Neuer Entwurf',kind:'Dokumenttyp',number:'Dokumentnummer',net:'Nettobetrag',tax:'MwSt.-Betrag',notes:'Notizen',save:'Entwurf speichern',empty:'Noch keine Finanzdokumente.',back:'Verwaltung',error:'Dokument konnte nicht gespeichert werden.',currency:'Währung', totals:'Finanzübersicht', count:'Dokumente', outstanding:'Unbezahlt', paid:'Bezahlt', draft:'Entwürfe'},
 } as const
 
 const documentKinds = {
@@ -86,8 +88,10 @@ async function createCounterparty(formData:FormData) {
  const billingDetails={street_address:streetAddress||null,postal_code:postalCode||null,city:city||null,country_code:countryCode||null,iban:iban||null,bic:bic||null,payment_terms_days:paymentTermsDays}
  const vatNumber=String(formData.get('vat_number')??'').trim()
  const enterpriseNumber=String(formData.get('enterprise_number')??'').trim()
+ const peppolEndpoint=String(formData.get('peppol_endpoint')??'').trim()
+ if(peppolEndpoint.length>200||/[\u0000-\u001f]/.test(peppolEndpoint))redirect('/portals/administration/finance?error=1')
  if(!name||name.length>200||!['customer','supplier','both'].includes(kind)||email.length>320||(email&&!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email))||vatNumber.length>32||enterpriseNumber.length>32)redirect('/portals/administration/finance?error=1')
- const {error}=await (supabase as unknown as SupabaseClient).from('admin_counterparties').insert({name,kind,email:email||null,vat_number:vatNumber||null,enterprise_number:enterpriseNumber||null,...billingDetails})
+ const {error}=await (supabase as unknown as SupabaseClient).from('admin_counterparties').insert({name,kind,email:email||null,vat_number:vatNumber||null,enterprise_number:enterpriseNumber||null,peppol_endpoint:peppolEndpoint||null,...billingDetails})
  if(error)redirect('/portals/administration/finance?error=1')
  revalidatePath('/portals/administration/finance')
  redirect('/portals/administration/finance')
@@ -112,9 +116,11 @@ async function updateCounterparty(formData:FormData) {
  const billingDetails={street_address:streetAddress||null,postal_code:postalCode||null,city:city||null,country_code:countryCode||null,iban:iban||null,bic:bic||null,payment_terms_days:paymentTermsDays}
  const vatNumber=String(formData.get('vat_number')??'').trim()
  const enterpriseNumber=String(formData.get('enterprise_number')??'').trim()
+ const peppolEndpoint=String(formData.get('peppol_endpoint')??'').trim()
+ if(peppolEndpoint.length>200||/[\u0000-\u001f]/.test(peppolEndpoint))redirect('/portals/administration/finance?error=1')
  const uuid=/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
  if(!uuid.test(id)||!name||name.length>200||!['customer','supplier','both'].includes(kind)||email.length>320||(email&&!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email))||vatNumber.length>32||enterpriseNumber.length>32)redirect('/portals/administration/finance?error=1')
- const {data,error}=await (supabase as unknown as SupabaseClient).from('admin_counterparties').update({name,kind,email:email||null,vat_number:vatNumber||null,enterprise_number:enterpriseNumber||null,...billingDetails}).eq('id',id).select('id')
+ const {data,error}=await (supabase as unknown as SupabaseClient).from('admin_counterparties').update({name,kind,email:email||null,vat_number:vatNumber||null,enterprise_number:enterpriseNumber||null,peppol_endpoint:peppolEndpoint||null,...billingDetails}).eq('id',id).select('id')
  if(error||data?.length!==1)redirect('/portals/administration/finance?error=1')
  revalidatePath('/portals/administration/finance')
  redirect('/portals/administration/finance')
@@ -491,16 +497,16 @@ export default async function FinancePage({searchParams}:{searchParams:Promise<{
  const t = copy[locale]
  const params = await searchParams
  const {data:documents,error} = await supabase.from('admin_financial_documents')
-   .select('id,kind,document_number,net_amount,tax_amount,gross_amount,currency,status,created_at,original_invoice_id,due_date,issue_date,counterparty_id,notes')
+   .select('id,kind,document_number,net_amount,tax_amount,gross_amount,currency,status,created_at,original_invoice_id,due_date,issue_date,counterparty_id,notes,buyer_reference,order_reference,delivery_date,delivery_country')
    .order('created_at',{ascending:false}).limit(100)
- const {data:counterparties}=await (supabase as unknown as SupabaseClient).from('admin_counterparties').select('id,name,kind,email,vat_number,enterprise_number,street_address,postal_code,city,country_code,iban,bic,payment_terms_days').order('name').limit(500)
+ const {data:counterparties}=await (supabase as unknown as SupabaseClient).from('admin_counterparties').select('id,name,kind,email,vat_number,enterprise_number,street_address,postal_code,city,country_code,iban,bic,payment_terms_days,peppol_endpoint').order('name').limit(500)
  const {data:financeEvents}=await supabase.from('events').select('id,name').order('start_at',{ascending:false}).limit(200)
  const originalInvoices=(documents??[]).filter(d=>['sales_invoice','purchase_invoice'].includes(d.kind)&&['approved','issued','paid'].includes(d.status))
  const {data:paymentRows}=await (supabase as unknown as SupabaseClient).from('admin_financial_payments').select('id,document_id,amount,paid_on,bank_reference').order('created_at',{ascending:false}).limit(1000)
  const payments=(paymentRows??[]) as {id:string;document_id:string;amount:number;paid_on:string;bank_reference:string|null}[]
  const {data:reminderRows}=await (supabase as unknown as SupabaseClient).from('admin_payment_reminders').select('id,document_id,reminder_number,status,recipient_email,subject,body,created_at').order('created_at',{ascending:false}).limit(500)
  const reminders=(reminderRows??[]) as {id:string;document_id:string;reminder_number:number;status:string;recipient_email:string;subject:string;body:string;created_at:string}[]
- const {data:lines}=await supabase.from('admin_financial_lines').select('id,document_id,description,quantity,unit_price,vat_rate').order('created_at',{ascending:true}).limit(500)
+ const {data:lines}=await supabase.from('admin_financial_lines').select('id,document_id,description,quantity,unit_price,vat_rate,unit_code,vat_category,vat_exemption_reason').order('created_at',{ascending:true}).limit(500)
  const {data:attachments}=await (supabase as unknown as SupabaseClient).from('admin_financial_attachments').select('id,document_id,original_name,created_at').order('created_at',{ascending:false}).limit(200)
  const [ledgerSummary,documentBalances]=await Promise.all([(supabase as unknown as SupabaseClient).rpc('upt_administration_finance_summary'),(supabase as unknown as SupabaseClient).rpc('upt_administration_document_balances',{p_ids:(documents??[]).map(d=>d.id)})])
  if(ledgerSummary.error||documentBalances.error||!ledgerSummary.data||!Array.isArray(documentBalances.data)||documentBalances.data.length!==(documents?.length??0))throw new Error('Financial ledger unavailable')
@@ -540,6 +546,7 @@ export default async function FinancePage({searchParams}:{searchParams:Promise<{
     <label>{({nl:'Gemeente',fr:'Ville',en:'City',de:'Ort'} as const)[locale]}<input name="city" maxLength={120} className="block w-full rounded border bg-background p-2"/></label>
     <label>{({nl:'Landcode (BE)',fr:'Code pays (BE)',en:'Country code (BE)',de:'Ländercode (BE)'} as const)[locale]}<input name="country_code" maxLength={2} placeholder="BE" className="block w-full rounded border bg-background p-2"/></label>
     <label>IBAN<input name="iban" maxLength={42} className="block w-full rounded border bg-background p-2"/></label>
+    <label>{peppolFieldLabels.peppol_endpoint[localeIndex[locale]]}<input name="peppol_endpoint" maxLength={200} className="block w-full rounded border bg-background p-2"/></label>
     <label>BIC<input name="bic" maxLength={11} className="block w-full rounded border bg-background p-2"/></label>
     <label>{({nl:'Betaaltermijn (dagen)',fr:'Délai de paiement (jours)',en:'Payment terms (days)',de:'Zahlungsfrist (Tage)'} as const)[locale]}<input type="number" min={0} max={365} name="payment_terms_days" className="block w-full rounded border bg-background p-2"/></label>
     <button type="submit" className="rounded bg-violet-600 px-3 py-2 font-semibold text-white">{({nl:'Relatie toevoegen',fr:'Ajouter un contact',en:'Add counterparty',de:'Geschäftspartner hinzufügen'} as const)[locale]}</button>
@@ -557,6 +564,7 @@ export default async function FinancePage({searchParams}:{searchParams:Promise<{
     <label>{({nl:'Gemeente',fr:'Ville',en:'City',de:'Ort'} as const)[locale]}<input name="city" maxLength={120} defaultValue={party.city??''} className="block w-full rounded border bg-background p-2"/></label>
     <label>{({nl:'Landcode (BE)',fr:'Code pays (BE)',en:'Country code (BE)',de:'Ländercode (BE)'} as const)[locale]}<input name="country_code" maxLength={2} defaultValue={party.country_code??''} placeholder="BE" className="block w-full rounded border bg-background p-2"/></label>
     <label>IBAN<input name="iban" maxLength={42} defaultValue={party.iban??''} className="block w-full rounded border bg-background p-2"/></label>
+    <label>{peppolFieldLabels.peppol_endpoint[localeIndex[locale]]}<input name="peppol_endpoint" defaultValue={party.peppol_endpoint??''} maxLength={200} className="block w-full rounded border bg-background p-2"/></label>
     <label>BIC<input name="bic" maxLength={11} defaultValue={party.bic??''} className="block w-full rounded border bg-background p-2"/></label>
     <label>{({nl:'Betaaltermijn (dagen)',fr:'Délai de paiement (jours)',en:'Payment terms (days)',de:'Zahlungsfrist (Tage)'} as const)[locale]}<input type="number" min={0} max={365} name="payment_terms_days" defaultValue={party.payment_terms_days??''} className="block w-full rounded border bg-background p-2"/></label>
     <button type="submit" className="rounded border border-violet-500 px-3 py-2 text-violet-400">{({nl:'Wijzigingen opslaan',fr:'Enregistrer les modifications',en:'Save changes',de:'Änderungen speichern'} as const)[locale]}</button>
@@ -640,6 +648,7 @@ export default async function FinancePage({searchParams}:{searchParams:Promise<{
        <button className="rounded-lg border border-violet-500 px-3 py-2 text-xs font-semibold text-violet-400" type="submit">{uploadLabels[locale].upload}</button>
       </form>}
      </div>
+     <PeppolDocumentFields document={d} lines={(lines??[]).filter(line=>line.document_id===d.id)} canEnrich={isAdmin} locale={locale}/>
      <div className="flex flex-wrap items-center gap-2">
      {(transitions[d.status]??[]).filter(next=>(isAdmin || next==='review') && (next!=='paid' || (Number(d.gross_amount)>0 && outstandingFor(d.id)===0)) && (next!=='void' || (paymentTotalFor(d.id)===0&&creditedFor(d.id)===0)) && (next!=='review' || !['sales_invoice','purchase_invoice'].includes(d.kind) || Boolean(d.counterparty_id&&d.document_number?.trim()&&d.issue_date&&d.due_date&&Number(d.gross_amount)>0))).map(next=><form key={next} action={updateFinancialStatus}><input type="hidden" name="document_id" value={d.id}/><input type="hidden" name="status" value={next}/><button type="submit" className="rounded-lg border border-violet-500 px-3 py-2 text-xs font-semibold text-violet-400">{translatedLabel(actionLabels[locale],next)}</button></form>)}
      <strong>{new Intl.NumberFormat(locale==='nl'?'nl-BE':locale==='fr'?'fr-BE':locale==='de'?'de-BE':'en-BE',{style:'currency',currency:d.currency}).format(Number(d.gross_amount))}</strong></div>

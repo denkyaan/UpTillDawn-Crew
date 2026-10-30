@@ -1,0 +1,33 @@
+name: Peppol XML validation
+description: Validate generated invoices against pinned UBL 2.1, CEN and Peppol artefacts
+runs:
+  using: composite
+  steps:
+    - uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # v6
+      with:
+        python-version: '3.12'
+    - name: Install XML validators
+      shell: bash
+      run: python -m pip install lxml==6.0.2 saxonche==12.9.0
+    - name: Fetch pinned public validation artefacts
+      shell: bash
+      run: |
+        set -euo pipefail
+        validation_root="$RUNNER_TEMP/uptilldawn-peppol-validation"
+        mkdir -p "$validation_root"
+        fetch_reference() {
+          local name="$1" repository="$2" revision="$3"
+          git init -q "$validation_root/$name"
+          git -C "$validation_root/$name" fetch --quiet --depth=1 "https://github.com/$repository.git" "$revision"
+          git -C "$validation_root/$name" checkout --quiet --detach FETCH_HEAD
+        }
+        fetch_reference peppol OpenPEPPOL/peppol-bis-invoice-3 5df0eff7c8efafd7c79c0dacce55082d175db759
+        fetch_reference schematron Schematron/schematron 77dcd36c53d12ed786c144ece3b2af7694abdc56
+        fetch_reference ubl phax/ph-ubl c98245e3631c3914663ce4cb4162b8d26aad1c02
+        fetch_reference ccts phax/ph-xsds adf5c6b6c2a8c62be66502db8aef4c60ebb9c5a0
+    - name: Check generated XML and negative controls
+      shell: bash
+      run: |
+        node --experimental-strip-types scripts/peppol-validation-fixtures.mjs
+        validation_root="$RUNNER_TEMP/uptilldawn-peppol-validation"
+        python scripts/validate-peppol.py --peppol "$validation_root/peppol" --schematron "$validation_root/schematron" --ubl "$validation_root/ubl" --ccts "$validation_root/ccts"

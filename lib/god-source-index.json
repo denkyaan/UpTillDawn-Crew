@@ -2878,94 +2878,59 @@
   },
   {
     "file": "app/(app)/portals/administration/finance/page.tsx",
-    "line": 488,
+    "line": 494,
     "kind": "functie",
     "label": "FinancePage",
     "handler": "FinancePage"
   },
   {
     "file": "app/(app)/portals/administration/finance/page.tsx",
-    "line": 520,
+    "line": 526,
     "kind": "Link",
     "label": "← {t.back}",
     "handler": "href=\"/portals/administration\""
   },
   {
     "file": "app/(app)/portals/administration/finance/page.tsx",
-    "line": 521,
+    "line": 527,
     "kind": "h1",
     "label": "{t.title}",
     "handler": ""
   },
   {
     "file": "app/(app)/portals/administration/finance/page.tsx",
-    "line": 522,
+    "line": 528,
     "kind": "h2",
     "label": "{t.totals}",
     "handler": ""
   },
   {
     "file": "app/(app)/portals/administration/finance/page.tsx",
-    "line": 524,
+    "line": 530,
     "kind": "h2",
     "label": "{({nl:'Vervallen facturen',fr:'Factures échues',en:'Overdue invoices',de:'Überfällige Rechnungen'} as const)[locale]}",
     "handler": ""
   },
   {
     "file": "app/(app)/portals/administration/finance/page.tsx",
-    "line": 524,
+    "line": 530,
     "kind": "a",
     "label": "{({nl:'Financieel CSV-overzicht exporteren',fr:'Exporter le rapport financier CSV',en:'Export finance CSV report',de:'Finanzbericht als CSV exportieren'} as const)[locale]}",
     "handler": "href=\"/api/administration/finance/export\""
   },
   {
     "file": "app/(app)/portals/administration/finance/page.tsx",
-    "line": 530,
+    "line": 536,
     "kind": "h2",
     "label": "{({nl:'Klanten en leveranciers',fr:'Clients et fournisseurs',en:'Customers and suppliers',de:'Kunden und Lieferanten'} as const)[locale]}",
     "handler": ""
   },
   {
     "file": "app/(app)/portals/administration/finance/page.tsx",
-    "line": 531,
+    "line": 537,
     "kind": "form",
     "label": "{({nl:'Klant',fr:'Client',en:'Customer',de:'Kunde'} as const)[locale]} {({nl:'Leverancier',fr:'Fournisseur',en:'Supplier',de:'Lieferant'} as const)[locale]} {({nl:'Beide',fr:'Les d",
     "handler": "action={createCounterparty}"
-  },
-  {
-    "file": "app/(app)/portals/administration/finance/page.tsx",
-    "line": 532,
-    "kind": "input",
-    "label": "",
-    "handler": ""
-  },
-  {
-    "file": "app/(app)/portals/administration/finance/page.tsx",
-    "line": 533,
-    "kind": "select",
-    "label": "{({nl:'Klant',fr:'Client',en:'Customer',de:'Kunde'} as const)[locale]} {({nl:'Leverancier',fr:'Fournisseur',en:'Supplier',de:'Lieferant'} as const)[locale]} {({nl:'Beide',fr:'Les d",
-    "handler": ""
-  },
-  {
-    "file": "app/(app)/portals/administration/finance/page.tsx",
-    "line": 534,
-    "kind": "input",
-    "label": "",
-    "handler": ""
-  },
-  {
-    "file": "app/(app)/portals/administration/finance/page.tsx",
-    "line": 535,
-    "kind": "input",
-    "label": "",
-    "handler": ""
-  },
-  {
-    "file": "app/(app)/portals/administration/finance/page.tsx",
-    "line": 536,
-    "kind": "input",
-    "label": "",
-    "handler": ""
   },
   {
     "file": "app/(app)/portals/administration/finance/page.tsx",
@@ -2977,8 +2942,8 @@
   {
     "file": "app/(app)/portals/administration/finance/page.tsx",
     "line": 539,
-    "kind": "input",
-    "label": "",
+    "kind": "select",
+    "label": "{({nl:'Klant',fr:'Client',en:'Customer',de:'Kunde'} as const)[locale]} {({nl:'Leverancier',fr:'Fournisseur',en:'Supplier',de:'Lieferant'} as const)[locale]} {({nl:'Beide',fr:'Les d",
     "handler": ""
   },
   {
@@ -3004,13 +2969,6 @@
   },
   {
     "file": "app/(app)/portals/administration/finance/page.tsx",
-    "line": 543,
-    "kind": "input",
-    "label": "",
-    "handler": ""
-  },
-  {
-    "file": "app/(app)/portals/administration/finance/page.tsx",
     "line": 544,
     "kind": "input",
     "label": "",
@@ -3019,16 +2977,23 @@
   {
     "file": "app/(app)/portals/administration/finance/page.tsx",
     "line": 545,
-    "kind": "button",
-    "label": "{({nl:'Relatie toevoegen',fr:'Ajouter un contact',en:'Add counterparty',de:'Geschäftspartner hinzufügen'} as const)[locale]}",
+    "kind": "input",
+    "label": "",
+    "handler": ""
+  },
+  {
+    "file": "app/(app)/portals/administration/finance/page.tsx",
+    "line": 546,
+    "kind": "input",
+    "label": "",
     "handler": ""
   },
   {
     "file": "app/(app)/portals/administration/finance/page.tsx",
     "line": 547,
-    "kind": "form",
-    "label": "{({nl:'Naam',fr:'Nom',en:'Name',de:'Name'} as const)[locale]} {({nl:'Type relatie',fr:'Type de relation',en:'Relationship type',de:'Beziehungstyp'} as const)[locale]} {({nl:'Klant'",
-    "handler": "action={updateCounterparty}"
+    "kind": "input",
+    "label": "",
+    "handler": ""
   },
   {
     "file": "app/(app)/portals/administration/finance/page.tsx",
@@ -3047,8 +3012,8 @@
   {
     "file": "app/(app)/portals/administration/finance/page.tsx",
     "line": 550,
-    "kind": "select",
-    "label": "{({nl:'Klant',fr:'Client',en:'Customer',de:'Kunde'} as const)[locale]} {({nl:'Leverancier',fr:'Fournisseur',en:'Supplier',de:'Lieferant'} as const)[locale]} {({nl:'Beide',fr:'Les d",
+    "kind": "input",
+    "label": "",
     "handler": ""
   },
   {
@@ -3061,16 +3026,16 @@
   {
     "file": "app/(app)/portals/administration/finance/page.tsx",
     "line": 552,
-    "kind": "input",
-    "label": "",
+    "kind": "button",
+    "label": "{({nl:'Relatie toevoegen',fr:'Ajouter un contact',en:'Add counterparty',de:'Geschäftspartner hinzufügen'} as const)[locale]}",
     "handler": ""
   },
   {
     "file": "app/(app)/portals/administration/finance/page.tsx",
-    "line": 553,
-    "kind": "input",
-    "label": "",
-    "handler": ""
+    "line": 554,
+    "kind": "form",
+    "label": "{({nl:'Naam',fr:'Nom',en:'Name',de:'Name'} as const)[locale]} {({nl:'Type relatie',fr:'Type de relation',en:'Relationship type',de:'Beziehungstyp'} as const)[locale]} {({nl:'Klant'",
+    "handler": "action={updateCounterparty}"
   },
   {
     "file": "app/(app)/portals/administration/finance/page.tsx",
@@ -3089,8 +3054,8 @@
   {
     "file": "app/(app)/portals/administration/finance/page.tsx",
     "line": 557,
-    "kind": "input",
-    "label": "",
+    "kind": "select",
+    "label": "{({nl:'Klant',fr:'Client',en:'Customer',de:'Kunde'} as const)[locale]} {({nl:'Leverancier',fr:'Fournisseur',en:'Supplier',de:'Lieferant'} as const)[locale]} {({nl:'Beide',fr:'Les d",
     "handler": ""
   },
   {
@@ -3116,252 +3081,259 @@
   },
   {
     "file": "app/(app)/portals/administration/finance/page.tsx",
-    "line": 561,
+    "line": 562,
     "kind": "input",
     "label": "",
     "handler": ""
   },
   {
     "file": "app/(app)/portals/administration/finance/page.tsx",
-    "line": 562,
+    "line": 563,
+    "kind": "input",
+    "label": "",
+    "handler": ""
+  },
+  {
+    "file": "app/(app)/portals/administration/finance/page.tsx",
+    "line": 564,
+    "kind": "input",
+    "label": "",
+    "handler": ""
+  },
+  {
+    "file": "app/(app)/portals/administration/finance/page.tsx",
+    "line": 565,
+    "kind": "input",
+    "label": "",
+    "handler": ""
+  },
+  {
+    "file": "app/(app)/portals/administration/finance/page.tsx",
+    "line": 566,
+    "kind": "input",
+    "label": "",
+    "handler": ""
+  },
+  {
+    "file": "app/(app)/portals/administration/finance/page.tsx",
+    "line": 567,
+    "kind": "input",
+    "label": "",
+    "handler": ""
+  },
+  {
+    "file": "app/(app)/portals/administration/finance/page.tsx",
+    "line": 568,
+    "kind": "input",
+    "label": "",
+    "handler": ""
+  },
+  {
+    "file": "app/(app)/portals/administration/finance/page.tsx",
+    "line": 569,
+    "kind": "input",
+    "label": "",
+    "handler": ""
+  },
+  {
+    "file": "app/(app)/portals/administration/finance/page.tsx",
+    "line": 570,
     "kind": "button",
     "label": "{({nl:'Wijzigingen opslaan',fr:'Enregistrer les modifications',en:'Save changes',de:'Änderungen speichern'} as const)[locale]}",
     "handler": ""
   },
   {
     "file": "app/(app)/portals/administration/finance/page.tsx",
-    "line": 566,
+    "line": 574,
     "kind": "h2",
     "label": "{t.new}",
     "handler": ""
   },
   {
     "file": "app/(app)/portals/administration/finance/page.tsx",
-    "line": 567,
+    "line": 575,
     "kind": "form",
     "label": "{({nl:'Evenement',fr:'Événement',en:'Event',de:'Veranstaltung'} as const)[locale]} — {(financeEvents??[]).map(event=> {event.name} )} {t.kind} {kindValues.map((kind,index)=> {docum",
     "handler": "action={createDraft}"
   },
   {
     "file": "app/(app)/portals/administration/finance/page.tsx",
-    "line": 568,
+    "line": 576,
     "kind": "select",
     "label": "— {(financeEvents??[]).map(event=> {event.name} )}",
     "handler": ""
   },
   {
     "file": "app/(app)/portals/administration/finance/page.tsx",
-    "line": 569,
+    "line": 577,
     "kind": "select",
     "label": "{kindValues.map((kind,index)=> {documentKinds[locale][index]} )}",
     "handler": ""
   },
   {
     "file": "app/(app)/portals/administration/finance/page.tsx",
-    "line": 570,
+    "line": 578,
     "kind": "select",
     "label": "— {(counterparties??[]).map(party=> {party.name} · {party.kind} )}",
     "handler": ""
   },
   {
     "file": "app/(app)/portals/administration/finance/page.tsx",
-    "line": 571,
+    "line": 579,
     "kind": "select",
     "label": "— {originalInvoices.map(invoice=> {invoice.document_number||invoice.id} · {money(Number(invoice.gross_amount))} )}",
     "handler": ""
   },
   {
     "file": "app/(app)/portals/administration/finance/page.tsx",
-    "line": 572,
+    "line": 580,
     "kind": "input",
     "label": "",
     "handler": ""
   },
   {
     "file": "app/(app)/portals/administration/finance/page.tsx",
-    "line": 573,
+    "line": 581,
     "kind": "input",
     "label": "",
     "handler": ""
   },
   {
     "file": "app/(app)/portals/administration/finance/page.tsx",
-    "line": 574,
+    "line": 582,
     "kind": "input",
     "label": "",
     "handler": ""
   },
   {
     "file": "app/(app)/portals/administration/finance/page.tsx",
-    "line": 575,
+    "line": 583,
     "kind": "input",
     "label": "",
     "handler": ""
   },
   {
     "file": "app/(app)/portals/administration/finance/page.tsx",
-    "line": 576,
+    "line": 584,
     "kind": "input",
     "label": "",
     "handler": ""
   },
   {
     "file": "app/(app)/portals/administration/finance/page.tsx",
-    "line": 577,
+    "line": 585,
     "kind": "textarea",
     "label": "",
     "handler": ""
   },
   {
     "file": "app/(app)/portals/administration/finance/page.tsx",
-    "line": 578,
+    "line": 586,
     "kind": "button",
     "label": "{t.save}",
     "handler": ""
   },
   {
     "file": "app/(app)/portals/administration/finance/page.tsx",
-    "line": 597,
+    "line": 605,
     "kind": "form",
     "label": "{({nl:'Klant of leverancier',fr:'Client ou fournisseur',en:'Customer or supplier',de:'Kunde oder Lieferant'} as const)[locale]} {({nl:'Geen relatie',fr:'Aucun contact',en:'No count",
     "handler": "action={updateDraftCounterparty}"
   },
   {
     "file": "app/(app)/portals/administration/finance/page.tsx",
-    "line": 597,
+    "line": 605,
     "kind": "input",
     "label": "",
     "handler": ""
   },
   {
     "file": "app/(app)/portals/administration/finance/page.tsx",
-    "line": 597,
+    "line": 605,
     "kind": "select",
     "label": "{({nl:'Geen relatie',fr:'Aucun contact',en:'No counterparty',de:'Kein Geschäftspartner'} as const)[locale]} {(counterparties??[]).filter(p=>d.kind==='sales_invoice'?['customer','bo",
     "handler": ""
   },
   {
     "file": "app/(app)/portals/administration/finance/page.tsx",
-    "line": 597,
+    "line": 605,
     "kind": "input",
     "label": "",
     "handler": ""
   },
   {
     "file": "app/(app)/portals/administration/finance/page.tsx",
-    "line": 597,
+    "line": 605,
     "kind": "button",
     "label": "{({nl:'Relatie opslaan',fr:'Enregistrer le contact',en:'Save counterparty',de:'Geschäftspartner speichern'} as const)[locale]}",
     "handler": ""
   },
   {
     "file": "app/(app)/portals/administration/finance/page.tsx",
-    "line": 598,
+    "line": 606,
     "kind": "form",
     "label": "{({nl:'Notities bij document',fr:'Notes du document',en:'Document notes',de:'Dokumentnotizen'} as const)[locale]} {({nl:'Notities opslaan',fr:'Enregistrer les notes',en:'Save notes",
     "handler": "action={updateDraftNotes}"
   },
   {
     "file": "app/(app)/portals/administration/finance/page.tsx",
-    "line": 598,
+    "line": 606,
     "kind": "input",
     "label": "",
     "handler": ""
   },
   {
     "file": "app/(app)/portals/administration/finance/page.tsx",
-    "line": 598,
+    "line": 606,
     "kind": "textarea",
     "label": "",
     "handler": ""
   },
   {
     "file": "app/(app)/portals/administration/finance/page.tsx",
-    "line": 598,
+    "line": 606,
     "kind": "button",
     "label": "{({nl:'Notities opslaan',fr:'Enregistrer les notes',en:'Save notes',de:'Notizen speichern'} as const)[locale]}",
     "handler": ""
   },
   {
     "file": "app/(app)/portals/administration/finance/page.tsx",
-    "line": 599,
+    "line": 607,
     "kind": "form",
     "label": "{t.number} {({nl:'Nummer opslaan',fr:'Enregistrer le numéro',en:'Save number',de:'Nummer speichern'} as const)[locale]}",
     "handler": "action={updateDraftDocumentNumber}"
   },
   {
     "file": "app/(app)/portals/administration/finance/page.tsx",
-    "line": 599,
+    "line": 607,
     "kind": "input",
     "label": "",
     "handler": ""
   },
   {
     "file": "app/(app)/portals/administration/finance/page.tsx",
-    "line": 599,
+    "line": 607,
     "kind": "input",
     "label": "",
     "handler": ""
   },
   {
     "file": "app/(app)/portals/administration/finance/page.tsx",
-    "line": 599,
+    "line": 607,
     "kind": "button",
     "label": "{({nl:'Nummer opslaan',fr:'Enregistrer le numéro',en:'Save number',de:'Nummer speichern'} as const)[locale]}",
     "handler": ""
   },
   {
     "file": "app/(app)/portals/administration/finance/page.tsx",
-    "line": 601,
+    "line": 609,
     "kind": "form",
     "label": "{({nl:'Factuurdatum',fr:'Date de facture',en:'Issue date',de:'Rechnungsdatum'} as const)[locale]} {({nl:'Vervaldatum',fr:'Date d’échéance',en:'Due date',de:'Fälligkeitsdatum'} as c",
     "handler": "action={updateInvoiceDates}"
   },
   {
     "file": "app/(app)/portals/administration/finance/page.tsx",
-    "line": 601,
-    "kind": "input",
-    "label": "",
-    "handler": ""
-  },
-  {
-    "file": "app/(app)/portals/administration/finance/page.tsx",
-    "line": 601,
-    "kind": "input",
-    "label": "",
-    "handler": ""
-  },
-  {
-    "file": "app/(app)/portals/administration/finance/page.tsx",
-    "line": 601,
-    "kind": "input",
-    "label": "",
-    "handler": ""
-  },
-  {
-    "file": "app/(app)/portals/administration/finance/page.tsx",
-    "line": 601,
-    "kind": "input",
-    "label": "",
-    "handler": ""
-  },
-  {
-    "file": "app/(app)/portals/administration/finance/page.tsx",
-    "line": 601,
-    "kind": "button",
-    "label": "{({nl:'Datums opslaan',fr:'Enregistrer les dates',en:'Save dates',de:'Daten speichern'} as const)[locale]}",
-    "handler": ""
-  },
-  {
-    "file": "app/(app)/portals/administration/finance/page.tsx",
-    "line": 607,
-    "kind": "form",
-    "label": "{({nl:'Betaling registreren',fr:'Enregistrer le paiement',en:'Record payment',de:'Zahlung erfassen'} as const)[locale]}",
-    "handler": "action={recordFinancialPayment}"
-  },
-  {
-    "file": "app/(app)/portals/administration/finance/page.tsx",
-    "line": 608,
+    "line": 609,
     "kind": "input",
     "label": "",
     "handler": ""
@@ -3375,234 +3347,164 @@
   },
   {
     "file": "app/(app)/portals/administration/finance/page.tsx",
-    "line": 610,
+    "line": 609,
     "kind": "input",
     "label": "",
     "handler": ""
   },
   {
     "file": "app/(app)/portals/administration/finance/page.tsx",
-    "line": 611,
+    "line": 609,
     "kind": "input",
     "label": "",
     "handler": ""
   },
   {
     "file": "app/(app)/portals/administration/finance/page.tsx",
-    "line": 612,
+    "line": 609,
+    "kind": "button",
+    "label": "{({nl:'Datums opslaan',fr:'Enregistrer les dates',en:'Save dates',de:'Daten speichern'} as const)[locale]}",
+    "handler": ""
+  },
+  {
+    "file": "app/(app)/portals/administration/finance/page.tsx",
+    "line": 615,
+    "kind": "form",
+    "label": "{({nl:'Betaling registreren',fr:'Enregistrer le paiement',en:'Record payment',de:'Zahlung erfassen'} as const)[locale]}",
+    "handler": "action={recordFinancialPayment}"
+  },
+  {
+    "file": "app/(app)/portals/administration/finance/page.tsx",
+    "line": 616,
+    "kind": "input",
+    "label": "",
+    "handler": ""
+  },
+  {
+    "file": "app/(app)/portals/administration/finance/page.tsx",
+    "line": 617,
+    "kind": "input",
+    "label": "",
+    "handler": ""
+  },
+  {
+    "file": "app/(app)/portals/administration/finance/page.tsx",
+    "line": 618,
+    "kind": "input",
+    "label": "",
+    "handler": ""
+  },
+  {
+    "file": "app/(app)/portals/administration/finance/page.tsx",
+    "line": 619,
+    "kind": "input",
+    "label": "",
+    "handler": ""
+  },
+  {
+    "file": "app/(app)/portals/administration/finance/page.tsx",
+    "line": 620,
     "kind": "button",
     "label": "{({nl:'Betaling registreren',fr:'Enregistrer le paiement',en:'Record payment',de:'Zahlung erfassen'} as const)[locale]}",
     "handler": ""
   },
   {
     "file": "app/(app)/portals/administration/finance/page.tsx",
-    "line": 616,
+    "line": 624,
     "kind": "h3",
     "label": "{({nl:'Betalingsherinneringen (geen automatische verzending)',fr:'Rappels de paiement (aucun envoi automatique)',en:'Payment reminders (no automatic sending)',de:'Zahlungserinnerun",
     "handler": ""
   },
   {
     "file": "app/(app)/portals/administration/finance/page.tsx",
-    "line": 617,
+    "line": 625,
     "kind": "form",
     "label": "{status==='approved'?({nl:'Goedkeuren',fr:'Approuver',en:'Approve',de:'Genehmigen'} as const)[locale]:({nl:'Annuleren',fr:'Annuler',en:'Cancel',de:'Stornieren'} as const)[locale]}",
     "handler": "action={updatePaymentReminder}"
   },
   {
     "file": "app/(app)/portals/administration/finance/page.tsx",
-    "line": 617,
+    "line": 625,
     "kind": "input",
     "label": "",
     "handler": ""
   },
   {
     "file": "app/(app)/portals/administration/finance/page.tsx",
-    "line": 617,
+    "line": 625,
     "kind": "input",
     "label": "",
     "handler": ""
   },
   {
     "file": "app/(app)/portals/administration/finance/page.tsx",
-    "line": 617,
+    "line": 625,
     "kind": "button",
     "label": "{status==='approved'?({nl:'Goedkeuren',fr:'Approuver',en:'Approve',de:'Genehmigen'} as const)[locale]:({nl:'Annuleren',fr:'Annuler',en:'Cancel',de:'Stornieren'} as const)[locale]}",
     "handler": ""
   },
   {
     "file": "app/(app)/portals/administration/finance/page.tsx",
-    "line": 618,
+    "line": 626,
     "kind": "form",
     "label": "{({nl:'Concept opslaan',fr:'Enregistrer le brouillon',en:'Save draft',de:'Entwurf speichern'} as const)[locale]}",
     "handler": "action={editPaymentReminderDraft}"
   },
   {
     "file": "app/(app)/portals/administration/finance/page.tsx",
-    "line": 618,
+    "line": 626,
     "kind": "input",
     "label": "",
     "handler": ""
   },
   {
     "file": "app/(app)/portals/administration/finance/page.tsx",
-    "line": 618,
+    "line": 626,
     "kind": "input",
     "label": "",
     "handler": ""
   },
   {
     "file": "app/(app)/portals/administration/finance/page.tsx",
-    "line": 618,
+    "line": 626,
     "kind": "input",
     "label": "",
     "handler": ""
   },
   {
     "file": "app/(app)/portals/administration/finance/page.tsx",
-    "line": 618,
+    "line": 626,
     "kind": "textarea",
     "label": "",
     "handler": ""
   },
   {
     "file": "app/(app)/portals/administration/finance/page.tsx",
-    "line": 618,
+    "line": 626,
     "kind": "button",
     "label": "{({nl:'Concept opslaan',fr:'Enregistrer le brouillon',en:'Save draft',de:'Entwurf speichern'} as const)[locale]}",
     "handler": ""
   },
   {
     "file": "app/(app)/portals/administration/finance/page.tsx",
-    "line": 619,
+    "line": 627,
     "kind": "form",
     "label": "{({nl:'Herinnering als concept bewaren',fr:'Enregistrer le rappel en brouillon',en:'Save reminder draft',de:'Erinnerungsentwurf speichern'} as const)[locale]}",
     "handler": "action={createPaymentReminder}"
   },
   {
     "file": "app/(app)/portals/administration/finance/page.tsx",
-    "line": 620,
-    "kind": "input",
-    "label": "",
-    "handler": ""
-  },
-  {
-    "file": "app/(app)/portals/administration/finance/page.tsx",
-    "line": 621,
-    "kind": "input",
-    "label": "",
-    "handler": ""
-  },
-  {
-    "file": "app/(app)/portals/administration/finance/page.tsx",
-    "line": 622,
-    "kind": "input",
-    "label": "",
-    "handler": ""
-  },
-  {
-    "file": "app/(app)/portals/administration/finance/page.tsx",
-    "line": 623,
-    "kind": "textarea",
-    "label": "",
-    "handler": ""
-  },
-  {
-    "file": "app/(app)/portals/administration/finance/page.tsx",
-    "line": 624,
-    "kind": "button",
-    "label": "{({nl:'Herinnering als concept bewaren',fr:'Enregistrer le rappel en brouillon',en:'Save reminder draft',de:'Erinnerungsentwurf speichern'} as const)[locale]}",
-    "handler": ""
-  },
-  {
-    "file": "app/(app)/portals/administration/finance/page.tsx",
-    "line": 628,
-    "kind": "form",
-    "label": "{({nl:'Omschrijving',fr:'Description',en:'Description',de:'Beschreibung'} as const)[locale]} {({nl:'Aantal',fr:'Quantité',en:'Quantity',de:'Menge'} as const)[locale]} {({nl:'Eenhei",
-    "handler": "action={updateInvoiceLine}"
-  },
-  {
-    "file": "app/(app)/portals/administration/finance/page.tsx",
     "line": 628,
     "kind": "input",
     "label": "",
-    "handler": ""
-  },
-  {
-    "file": "app/(app)/portals/administration/finance/page.tsx",
-    "line": 628,
-    "kind": "input",
-    "label": "",
-    "handler": ""
-  },
-  {
-    "file": "app/(app)/portals/administration/finance/page.tsx",
-    "line": 628,
-    "kind": "input",
-    "label": "",
-    "handler": ""
-  },
-  {
-    "file": "app/(app)/portals/administration/finance/page.tsx",
-    "line": 628,
-    "kind": "input",
-    "label": "",
-    "handler": ""
-  },
-  {
-    "file": "app/(app)/portals/administration/finance/page.tsx",
-    "line": 628,
-    "kind": "input",
-    "label": "",
-    "handler": ""
-  },
-  {
-    "file": "app/(app)/portals/administration/finance/page.tsx",
-    "line": 628,
-    "kind": "input",
-    "label": "",
-    "handler": ""
-  },
-  {
-    "file": "app/(app)/portals/administration/finance/page.tsx",
-    "line": 628,
-    "kind": "button",
-    "label": "{({nl:'Regel opslaan',fr:'Enregistrer la ligne',en:'Save line',de:'Position speichern'} as const)[locale]}",
-    "handler": ""
-  },
-  {
-    "file": "app/(app)/portals/administration/finance/page.tsx",
-    "line": 628,
-    "kind": "form",
-    "label": "{({nl:'Regel verwijderen',fr:'Supprimer la ligne',en:'Remove line',de:'Position entfernen'} as const)[locale]}",
-    "handler": "action={removeInvoiceLine}"
-  },
-  {
-    "file": "app/(app)/portals/administration/finance/page.tsx",
-    "line": 628,
-    "kind": "input",
-    "label": "",
-    "handler": ""
-  },
-  {
-    "file": "app/(app)/portals/administration/finance/page.tsx",
-    "line": 628,
-    "kind": "input",
-    "label": "",
-    "handler": ""
-  },
-  {
-    "file": "app/(app)/portals/administration/finance/page.tsx",
-    "line": 628,
-    "kind": "button",
-    "label": "{({nl:'Regel verwijderen',fr:'Supprimer la ligne',en:'Remove line',de:'Position entfernen'} as const)[locale]}",
     "handler": ""
   },
   {
     "file": "app/(app)/portals/administration/finance/page.tsx",
     "line": 629,
-    "kind": "form",
-    "label": "{({nl:'Factuurregel toevoegen',fr:'Ajouter une ligne',en:'Add invoice line',de:'Rechnungsposition hinzufügen'} as const)[locale]}",
-    "handler": "action={addInvoiceLine}"
+    "kind": "input",
+    "label": "",
+    "handler": ""
   },
   {
     "file": "app/(app)/portals/administration/finance/page.tsx",
@@ -3614,44 +3516,107 @@
   {
     "file": "app/(app)/portals/administration/finance/page.tsx",
     "line": 631,
-    "kind": "input",
+    "kind": "textarea",
     "label": "",
     "handler": ""
   },
   {
     "file": "app/(app)/portals/administration/finance/page.tsx",
     "line": 632,
-    "kind": "input",
-    "label": "",
-    "handler": ""
-  },
-  {
-    "file": "app/(app)/portals/administration/finance/page.tsx",
-    "line": 633,
-    "kind": "input",
-    "label": "",
-    "handler": ""
-  },
-  {
-    "file": "app/(app)/portals/administration/finance/page.tsx",
-    "line": 634,
-    "kind": "input",
-    "label": "",
-    "handler": ""
-  },
-  {
-    "file": "app/(app)/portals/administration/finance/page.tsx",
-    "line": 635,
     "kind": "button",
-    "label": "{({nl:'Factuurregel toevoegen',fr:'Ajouter une ligne',en:'Add invoice line',de:'Rechnungsposition hinzufügen'} as const)[locale]}",
+    "label": "{({nl:'Herinnering als concept bewaren',fr:'Enregistrer le rappel en brouillon',en:'Save reminder draft',de:'Erinnerungsentwurf speichern'} as const)[locale]}",
+    "handler": ""
+  },
+  {
+    "file": "app/(app)/portals/administration/finance/page.tsx",
+    "line": 636,
+    "kind": "form",
+    "label": "{({nl:'Omschrijving',fr:'Description',en:'Description',de:'Beschreibung'} as const)[locale]} {({nl:'Aantal',fr:'Quantité',en:'Quantity',de:'Menge'} as const)[locale]} {({nl:'Eenhei",
+    "handler": "action={updateInvoiceLine}"
+  },
+  {
+    "file": "app/(app)/portals/administration/finance/page.tsx",
+    "line": 636,
+    "kind": "input",
+    "label": "",
+    "handler": ""
+  },
+  {
+    "file": "app/(app)/portals/administration/finance/page.tsx",
+    "line": 636,
+    "kind": "input",
+    "label": "",
+    "handler": ""
+  },
+  {
+    "file": "app/(app)/portals/administration/finance/page.tsx",
+    "line": 636,
+    "kind": "input",
+    "label": "",
+    "handler": ""
+  },
+  {
+    "file": "app/(app)/portals/administration/finance/page.tsx",
+    "line": 636,
+    "kind": "input",
+    "label": "",
+    "handler": ""
+  },
+  {
+    "file": "app/(app)/portals/administration/finance/page.tsx",
+    "line": 636,
+    "kind": "input",
+    "label": "",
+    "handler": ""
+  },
+  {
+    "file": "app/(app)/portals/administration/finance/page.tsx",
+    "line": 636,
+    "kind": "input",
+    "label": "",
+    "handler": ""
+  },
+  {
+    "file": "app/(app)/portals/administration/finance/page.tsx",
+    "line": 636,
+    "kind": "button",
+    "label": "{({nl:'Regel opslaan',fr:'Enregistrer la ligne',en:'Save line',de:'Position speichern'} as const)[locale]}",
+    "handler": ""
+  },
+  {
+    "file": "app/(app)/portals/administration/finance/page.tsx",
+    "line": 636,
+    "kind": "form",
+    "label": "{({nl:'Regel verwijderen',fr:'Supprimer la ligne',en:'Remove line',de:'Position entfernen'} as const)[locale]}",
+    "handler": "action={removeInvoiceLine}"
+  },
+  {
+    "file": "app/(app)/portals/administration/finance/page.tsx",
+    "line": 636,
+    "kind": "input",
+    "label": "",
+    "handler": ""
+  },
+  {
+    "file": "app/(app)/portals/administration/finance/page.tsx",
+    "line": 636,
+    "kind": "input",
+    "label": "",
+    "handler": ""
+  },
+  {
+    "file": "app/(app)/portals/administration/finance/page.tsx",
+    "line": 636,
+    "kind": "button",
+    "label": "{({nl:'Regel verwijderen',fr:'Supprimer la ligne',en:'Remove line',de:'Position entfernen'} as const)[locale]}",
     "handler": ""
   },
   {
     "file": "app/(app)/portals/administration/finance/page.tsx",
     "line": 637,
     "kind": "form",
-    "label": "{uploadLabels[locale].file} {uploadLabels[locale].upload}",
-    "handler": "action={uploadFinancialAttachment}"
+    "label": "{({nl:'Factuurregel toevoegen',fr:'Ajouter une ligne',en:'Add invoice line',de:'Rechnungsposition hinzufügen'} as const)[locale]}",
+    "handler": "action={addInvoiceLine}"
   },
   {
     "file": "app/(app)/portals/administration/finance/page.tsx",
@@ -3670,34 +3635,83 @@
   {
     "file": "app/(app)/portals/administration/finance/page.tsx",
     "line": 640,
+    "kind": "input",
+    "label": "",
+    "handler": ""
+  },
+  {
+    "file": "app/(app)/portals/administration/finance/page.tsx",
+    "line": 641,
+    "kind": "input",
+    "label": "",
+    "handler": ""
+  },
+  {
+    "file": "app/(app)/portals/administration/finance/page.tsx",
+    "line": 642,
+    "kind": "input",
+    "label": "",
+    "handler": ""
+  },
+  {
+    "file": "app/(app)/portals/administration/finance/page.tsx",
+    "line": 643,
+    "kind": "button",
+    "label": "{({nl:'Factuurregel toevoegen',fr:'Ajouter une ligne',en:'Add invoice line',de:'Rechnungsposition hinzufügen'} as const)[locale]}",
+    "handler": ""
+  },
+  {
+    "file": "app/(app)/portals/administration/finance/page.tsx",
+    "line": 645,
+    "kind": "form",
+    "label": "{uploadLabels[locale].file} {uploadLabels[locale].upload}",
+    "handler": "action={uploadFinancialAttachment}"
+  },
+  {
+    "file": "app/(app)/portals/administration/finance/page.tsx",
+    "line": 646,
+    "kind": "input",
+    "label": "",
+    "handler": ""
+  },
+  {
+    "file": "app/(app)/portals/administration/finance/page.tsx",
+    "line": 647,
+    "kind": "input",
+    "label": "",
+    "handler": ""
+  },
+  {
+    "file": "app/(app)/portals/administration/finance/page.tsx",
+    "line": 648,
     "kind": "button",
     "label": "{uploadLabels[locale].upload}",
     "handler": ""
   },
   {
     "file": "app/(app)/portals/administration/finance/page.tsx",
-    "line": 644,
+    "line": 653,
     "kind": "form",
     "label": "{translatedLabel(actionLabels[locale],next)}",
     "handler": "action={updateFinancialStatus}"
   },
   {
     "file": "app/(app)/portals/administration/finance/page.tsx",
-    "line": 644,
+    "line": 653,
     "kind": "input",
     "label": "",
     "handler": ""
   },
   {
     "file": "app/(app)/portals/administration/finance/page.tsx",
-    "line": 644,
+    "line": 653,
     "kind": "input",
     "label": "",
     "handler": ""
   },
   {
     "file": "app/(app)/portals/administration/finance/page.tsx",
-    "line": 644,
+    "line": 653,
     "kind": "button",
     "label": "{translatedLabel(actionLabels[locale],next)}",
     "handler": ""
@@ -4914,6 +4928,20 @@
     "handler": "href=\"/portals/administration/finance\""
   },
   {
+    "file": "app/(app)/portals/administration/modules/invoices/[id]/peppol/page.tsx",
+    "line": 10,
+    "kind": "functie",
+    "label": "Page",
+    "handler": "Page"
+  },
+  {
+    "file": "app/(app)/portals/administration/modules/invoices/[id]/peppol/page.tsx",
+    "line": 19,
+    "kind": "Link",
+    "label": "← {peppolCopy[locale].finance}",
+    "handler": "href=\"/portals/administration/modules/invoices\""
+  },
+  {
     "file": "app/(app)/portals/administration/modules/invoices/page.tsx",
     "line": 5,
     "kind": "functie",
@@ -4957,7 +4985,7 @@
   },
   {
     "file": "app/(app)/portals/administration/modules/settings/page.tsx",
-    "line": 5,
+    "line": 6,
     "kind": "functie",
     "label": "Page",
     "handler": "Page"
@@ -6692,6 +6720,20 @@
     "handler": "GET"
   },
   {
+    "file": "app/api/administration/peppol/prepare/route.ts",
+    "line": 20,
+    "kind": "functie",
+    "label": "GET",
+    "handler": "GET"
+  },
+  {
+    "file": "app/api/administration/peppol/prepare/route.ts",
+    "line": 21,
+    "kind": "functie",
+    "label": "POST",
+    "handler": "POST"
+  },
+  {
     "file": "app/api/administration/ticketing/import/route.ts",
     "line": 9,
     "kind": "functie",
@@ -7784,6 +7826,69 @@
     "handler": "onClick={()=>void open()}"
   },
   {
+    "file": "components/administration/billing-profile.tsx",
+    "line": 40,
+    "kind": "functie",
+    "label": "BillingProfile",
+    "handler": "BillingProfile"
+  },
+  {
+    "file": "components/administration/billing-profile.tsx",
+    "line": 49,
+    "kind": "h2",
+    "label": "{t.company}",
+    "handler": ""
+  },
+  {
+    "file": "components/administration/billing-profile.tsx",
+    "line": 51,
+    "kind": "form",
+    "label": "{billingFields.map(key=> {peppolFieldLabels[key][index]} )} {t.save}",
+    "handler": "action={save}"
+  },
+  {
+    "file": "components/administration/billing-profile.tsx",
+    "line": 51,
+    "kind": "input",
+    "label": "",
+    "handler": ""
+  },
+  {
+    "file": "components/administration/billing-profile.tsx",
+    "line": 52,
+    "kind": "input",
+    "label": "",
+    "handler": ""
+  },
+  {
+    "file": "components/administration/billing-profile.tsx",
+    "line": 53,
+    "kind": "button",
+    "label": "{t.save}",
+    "handler": ""
+  },
+  {
+    "file": "components/administration/billing-profile.tsx",
+    "line": 56,
+    "kind": "form",
+    "label": "0} type=\"submit\" className=\"rounded-lg border border-violet-500 px-4 py-3 disabled:opacity-50\">{t.approve}",
+    "handler": "action={approve}"
+  },
+  {
+    "file": "components/administration/billing-profile.tsx",
+    "line": 56,
+    "kind": "input",
+    "label": "",
+    "handler": ""
+  },
+  {
+    "file": "components/administration/billing-profile.tsx",
+    "line": 56,
+    "kind": "button",
+    "label": "{t.approve}",
+    "handler": ""
+  },
+  {
     "file": "components/administration/finance-reconciliation-summary.tsx",
     "line": 5,
     "kind": "functie",
@@ -8048,6 +8153,160 @@
     "kind": "button",
     "label": "{t.complete}",
     "handler": ""
+  },
+  {
+    "file": "components/administration/peppol-document-fields.tsx",
+    "line": 41,
+    "kind": "functie",
+    "label": "PeppolDocumentFields",
+    "handler": "PeppolDocumentFields"
+  },
+  {
+    "file": "components/administration/peppol-document-fields.tsx",
+    "line": 45,
+    "kind": "Link",
+    "label": "{t.title}",
+    "handler": "href={`/portals/administration/modules/invoices/${doc.id}/peppol`}"
+  },
+  {
+    "file": "components/administration/peppol-document-fields.tsx",
+    "line": 46,
+    "kind": "form",
+    "label": "{(['buyer_reference','order_reference','delivery_date','delivery_country'] as const).map(key=> {peppolFieldLabels[key][index]} )} {t.metadataSave}",
+    "handler": "action={saveReferences}"
+  },
+  {
+    "file": "components/administration/peppol-document-fields.tsx",
+    "line": 46,
+    "kind": "input",
+    "label": "",
+    "handler": ""
+  },
+  {
+    "file": "components/administration/peppol-document-fields.tsx",
+    "line": 47,
+    "kind": "input",
+    "label": "",
+    "handler": ""
+  },
+  {
+    "file": "components/administration/peppol-document-fields.tsx",
+    "line": 48,
+    "kind": "button",
+    "label": "{t.metadataSave}",
+    "handler": ""
+  },
+  {
+    "file": "components/administration/peppol-document-fields.tsx",
+    "line": 50,
+    "kind": "form",
+    "label": "{line.description} {t.unit} {line.unit_code&&!(line.unit_code in units)&& {line.unit_code} }{Object.entries(units).map(([code,label])=> {label[index]} ({code}) )} {t.vat} {t.automa",
+    "handler": "action={saveLine}"
+  },
+  {
+    "file": "components/administration/peppol-document-fields.tsx",
+    "line": 50,
+    "kind": "input",
+    "label": "",
+    "handler": ""
+  },
+  {
+    "file": "components/administration/peppol-document-fields.tsx",
+    "line": 50,
+    "kind": "input",
+    "label": "",
+    "handler": ""
+  },
+  {
+    "file": "components/administration/peppol-document-fields.tsx",
+    "line": 51,
+    "kind": "select",
+    "label": "{line.unit_code&&!(line.unit_code in units)&& {line.unit_code} } {Object.entries(units).map(([code,label])=> {label[index]} ({code}) )}",
+    "handler": ""
+  },
+  {
+    "file": "components/administration/peppol-document-fields.tsx",
+    "line": 52,
+    "kind": "select",
+    "label": "{t.automatic} {peppolVatCategories.map(code=> {vatLabels[code][index]} ({code}) )}",
+    "handler": ""
+  },
+  {
+    "file": "components/administration/peppol-document-fields.tsx",
+    "line": 53,
+    "kind": "input",
+    "label": "",
+    "handler": ""
+  },
+  {
+    "file": "components/administration/peppol-document-fields.tsx",
+    "line": 54,
+    "kind": "button",
+    "label": "{t.metadataSave}",
+    "handler": ""
+  },
+  {
+    "file": "components/administration/peppol-preparation.tsx",
+    "line": 8,
+    "kind": "functie",
+    "label": "PeppolPreparation",
+    "handler": "PeppolPreparation"
+  },
+  {
+    "file": "components/administration/peppol-preparation.tsx",
+    "line": 23,
+    "kind": "h1",
+    "label": "{t.title}",
+    "handler": ""
+  },
+  {
+    "file": "components/administration/peppol-preparation.tsx",
+    "line": 24,
+    "kind": "Link",
+    "label": "{t.settings}",
+    "handler": "href=\"/portals/administration/modules/settings\""
+  },
+  {
+    "file": "components/administration/peppol-preparation.tsx",
+    "line": 25,
+    "kind": "button",
+    "label": "{pending?t.pending:t.check}",
+    "handler": "onClick={()=>void execute(false)}"
+  },
+  {
+    "file": "components/administration/peppol-preparation.tsx",
+    "line": 27,
+    "kind": "h2",
+    "label": "{t.missing}",
+    "handler": ""
+  },
+  {
+    "file": "components/administration/peppol-preparation.tsx",
+    "line": 28,
+    "kind": "button",
+    "label": "{t.download}",
+    "handler": "onClick={()=>void execute(true)}"
+  },
+  {
+    "file": "components/administration/portal-access-notice.tsx",
+    "line": 4,
+    "kind": "functie",
+    "label": "AdministrationAccessNotice",
+    "handler": "AdministrationAccessNotice"
+  },
+  {
+    "file": "components/administration/portal-access-notice.tsx",
+    "line": 13,
+    "kind": "h1",
+    "label": "{status===503?t.unavailable:t.denied}",
+    "handler": ""
+  },
+  {
+    "file": "components/administration/portal-access-notice.tsx",
+    "line": 15,
+    "kind": "Link",
+    "label": "{status===401?t.login:t.roles}",
+    "handler": "href={status===401?'/login/administration':'/portals/roles'}"
   },
   {
     "file": "components/administration/ticket-import-preview.tsx",
@@ -14749,6 +15008,13 @@
     "handler": "administrationNotificationHref"
   },
   {
+    "file": "lib/administration/page-access.ts",
+    "line": 7,
+    "kind": "functie",
+    "label": "administrationPageAccess",
+    "handler": "administrationPageAccess"
+  },
+  {
     "file": "lib/administration/payment-ledger-adapter.ts",
     "line": 4,
     "kind": "functie",
@@ -14775,6 +15041,62 @@
     "kind": "functie",
     "label": "payrollCsv",
     "handler": "payrollCsv"
+  },
+  {
+    "file": "lib/administration/peppol-server.ts",
+    "line": 6,
+    "kind": "functie",
+    "label": "billingParty",
+    "handler": "billingParty"
+  },
+  {
+    "file": "lib/administration/peppol-server.ts",
+    "line": 9,
+    "kind": "functie",
+    "label": "loadPeppolPreparation",
+    "handler": "loadPeppolPreparation"
+  },
+  {
+    "file": "lib/administration/peppol.ts",
+    "line": 12,
+    "kind": "functie",
+    "label": "peppolDecimal",
+    "handler": "peppolDecimal"
+  },
+  {
+    "file": "lib/administration/peppol.ts",
+    "line": 24,
+    "kind": "functie",
+    "label": "belgianEnterpriseValid",
+    "handler": "belgianEnterpriseValid"
+  },
+  {
+    "file": "lib/administration/peppol.ts",
+    "line": 25,
+    "kind": "functie",
+    "label": "peppolEndpointValid",
+    "handler": "peppolEndpointValid"
+  },
+  {
+    "file": "lib/administration/peppol.ts",
+    "line": 47,
+    "kind": "functie",
+    "label": "peppolIbanValid",
+    "handler": "peppolIbanValid"
+  },
+  {
+    "file": "lib/administration/peppol.ts",
+    "line": 53,
+    "kind": "functie",
+    "label": "peppolPartyIssues",
+    "handler": "peppolPartyIssues"
+  },
+  {
+    "file": "lib/administration/peppol.ts",
+    "line": 75,
+    "kind": "functie",
+    "label": "preparePeppol",
+    "handler": "preparePeppol"
   },
   {
     "file": "lib/administration/ticket-import.ts",

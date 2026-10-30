@@ -10,7 +10,7 @@ test('billing migration restricts bank formats, addresses and payment terms',()=
 })
 test('create and edit counterparty include billing details',()=>{
  assert.match(page,/const billingDetails=/)
- assert.match(page,/enterprise_number:enterpriseNumber\|\|null,\.\.\.billingDetails/g)
+ assert.match(page,/enterprise_number:enterpriseNumber\|\|null,[^\n]*\.\.\.billingDetails/g)
  assert.match(page,/name="payment_terms_days"/)
  assert.match(page,/name="street_address"/)
  assert.match(page,/name="iban"/)

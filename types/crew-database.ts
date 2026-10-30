@@ -257,6 +257,84 @@ export type Database = {
         }
         Relationships: []
       }
+      admin_billing_profile: {
+        Row: {
+          approved_at: string | null
+          approved_by: string | null
+          city: string
+          country_code: string
+          enterprise_number: string
+          iban: string
+          name: string
+          peppol_endpoint: string
+          postal_code: string
+          singleton: boolean
+          street_address: string
+          tax_registration: string
+          updated_at: string
+          updated_by: string | null
+          vat_number: string
+        }
+        Insert: {
+          approved_at?: string | null
+          approved_by?: string | null
+          city?: string
+          country_code?: string
+          enterprise_number?: string
+          iban?: string
+          name?: string
+          peppol_endpoint?: string
+          postal_code?: string
+          singleton?: boolean
+          street_address?: string
+          tax_registration?: string
+          updated_at?: string
+          updated_by?: string | null
+          vat_number?: string
+        }
+        Update: {
+          approved_at?: string | null
+          approved_by?: string | null
+          city?: string
+          country_code?: string
+          enterprise_number?: string
+          iban?: string
+          name?: string
+          peppol_endpoint?: string
+          postal_code?: string
+          singleton?: boolean
+          street_address?: string
+          tax_registration?: string
+          updated_at?: string
+          updated_by?: string | null
+          vat_number?: string
+        }
+        Relationships: []
+      }
+      admin_billing_profile_audit: {
+        Row: {
+          actor_id: string | null
+          created_at: string
+          id: number
+          new_record: Json | null
+          old_record: Json | null
+        }
+        Insert: {
+          actor_id?: string | null
+          created_at?: string
+          id?: never
+          new_record?: Json | null
+          old_record?: Json | null
+        }
+        Update: {
+          actor_id?: string | null
+          created_at?: string
+          id?: never
+          new_record?: Json | null
+          old_record?: Json | null
+        }
+        Relationships: []
+      }
       admin_counterparties: {
         Row: {
           address: Json
@@ -414,10 +492,13 @@ export type Database = {
         Row: {
           approved_at: string | null
           approved_by: string | null
+          buyer_reference: string | null
           counterparty_id: string | null
           created_at: string
           created_by: string
           currency: string
+          delivery_country: string | null
+          delivery_date: string | null
           document_number: string | null
           due_date: string | null
           event_id: string | null
@@ -428,6 +509,7 @@ export type Database = {
           kind: string
           net_amount: number
           notes: string | null
+          order_reference: string | null
           original_invoice_id: string | null
           peppol_message_id: string | null
           peppol_status: string
@@ -438,10 +520,13 @@ export type Database = {
         Insert: {
           approved_at?: string | null
           approved_by?: string | null
+          buyer_reference?: string | null
           counterparty_id?: string | null
           created_at?: string
           created_by?: string
           currency?: string
+          delivery_country?: string | null
+          delivery_date?: string | null
           document_number?: string | null
           due_date?: string | null
           event_id?: string | null
@@ -452,6 +537,7 @@ export type Database = {
           kind: string
           net_amount?: number
           notes?: string | null
+          order_reference?: string | null
           original_invoice_id?: string | null
           peppol_message_id?: string | null
           peppol_status?: string
@@ -462,10 +548,13 @@ export type Database = {
         Update: {
           approved_at?: string | null
           approved_by?: string | null
+          buyer_reference?: string | null
           counterparty_id?: string | null
           created_at?: string
           created_by?: string
           currency?: string
+          delivery_country?: string | null
+          delivery_date?: string | null
           document_number?: string | null
           due_date?: string | null
           event_id?: string | null
@@ -476,6 +565,7 @@ export type Database = {
           kind?: string
           net_amount?: number
           notes?: string | null
+          order_reference?: string | null
           original_invoice_id?: string | null
           peppol_message_id?: string | null
           peppol_status?: string
@@ -521,7 +611,10 @@ export type Database = {
           document_id: string
           id: string
           quantity: number
+          unit_code: string
           unit_price: number
+          vat_category: string | null
+          vat_exemption_reason: string | null
           vat_rate: number
         }
         Insert: {
@@ -530,7 +623,10 @@ export type Database = {
           document_id: string
           id?: string
           quantity?: number
+          unit_code?: string
           unit_price?: number
+          vat_category?: string | null
+          vat_exemption_reason?: string | null
           vat_rate?: number
         }
         Update: {
@@ -539,7 +635,10 @@ export type Database = {
           document_id?: string
           id?: string
           quantity?: number
+          unit_code?: string
           unit_price?: number
+          vat_category?: string | null
+          vat_exemption_reason?: string | null
           vat_rate?: number
         }
         Relationships: [
@@ -7662,4 +7761,3 @@ export const Constants = {
     Enums: {},
   },
 } as const
-

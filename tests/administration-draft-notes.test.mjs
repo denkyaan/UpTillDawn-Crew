@@ -9,7 +9,7 @@ test('draft notes edit validates document and restricts changes to drafts',()=>{
  assert.match(a,/\.eq\('status','draft'\)/)
 })
 test('financial draft notes are loaded and editable in four languages',()=>{
- assert.match(page,/counterparty_id,notes'\)/)
+ assert.match(page,/counterparty_id,notes(?:,[a-z_]+)*'\)/)
  assert.match(page,/action=\{updateDraftNotes\}/)
  assert.match(page,/nl:'Notities bij document',fr:'Notes du document',en:'Document notes',de:'Dokumentnotizen'/)
 })
