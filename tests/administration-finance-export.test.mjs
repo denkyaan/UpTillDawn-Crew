@@ -47,3 +47,13 @@ test('payment ledger rejects invalid values and sums in integer cents',()=>{
  assert.match(api,/Number\.isFinite\(Number\(payment\.amount\)\)/)
  assert.match(api,/Math\.round\(Number\(payment\.amount\)\*100\)/)
 })
+
+test('finance export rejects incomplete paginated snapshots and distinguishes exact limit',()=>{
+ assert.match(api,/documentTotal=count/)
+ assert.match(api,/paymentTotal=count/)
+ assert.match(api,/documents\.length!==documentTotal/)
+ assert.match(api,/payments\.length!==paymentTotal/)
+ assert.match(api,/documentTotal>10000/)
+ assert.match(api,/paymentTotal>50000/)
+ assert.match(api,/count:'exact'/)
+})
