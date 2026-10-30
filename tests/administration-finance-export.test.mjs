@@ -74,3 +74,14 @@ test('export exposes financial reconciliation exceptions',()=>{
  assert.match(api,/Reconciliation issues/)
  assert.match(api,/reconciliation\?\.issues\.join/)
 })
+
+test('finance export rejects orphan ledger entries and unsafe aggregate totals',()=>{
+ assert.match(api,/Payment references a missing document/)
+ assert.match(api,/Credit note references a missing invoice/)
+ assert.match(api,/Credit note has an invalid original invoice/)
+ assert.match(api,/Payment total overflow/)
+ assert.match(api,/Credit note total overflow/)
+ assert.match(api,/Number\.isSafeInteger\(nextPaid\)/)
+ assert.match(api,/Number\.isSafeInteger\(nextCredit\)/)
+ assert.match(api,/documentById\.get\(doc\.original_invoice_id\)/)
+})
