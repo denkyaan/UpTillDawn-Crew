@@ -20,6 +20,17 @@ BEGIN
   IF NOT blocked THEN
     RAISE EXCEPTION 'Non-admin was allowed to create a financial counterparty';
   END IF;
-  RAISE NOTICE 'PASS: non-admin counterparty insert denied by RLS';
+  blocked := false;
+  BEGIN
+    INSERT INTO public.admin_financial_documents
+      (kind,status,created_by,net_amount,tax_amount,currency)
+      VALUES ('sales_invoice','draft',auth.uid(),100,21,'EUR');
+  EXCEPTION WHEN insufficient_privilege THEN
+    blocked := true;
+  END;
+  IF NOT blocked THEN
+    RAISE EXCEPTION 'Non-admin was allowed to create a financial document';
+  END IF;
+  RAISE NOTICE 'PASS: non-admin counterparty and financial document inserts denied by RLS';
 END $$;
 ROLLBACK;
