@@ -274,6 +274,27 @@ jobs:
       - name: Full authenticated Administration browser E2E
         run: node scripts/administration-full-browser-e2e.mjs
 
+      - name: Verify authenticated E2E interaction inventory
+        shell: bash
+        run: |
+          set -euo pipefail
+          node --input-type=module <<'NODE'
+          import { readFileSync } from 'node:fs'
+          const file='test-results/portal-e2e/interaction-inventory.json'
+          const {inventory}=JSON.parse(readFileSync(file,'utf8'))
+          if(!Array.isArray(inventory)||inventory.length===0)throw Error('Missing runtime interaction inventory')
+          const roles=new Set(inventory.map(row=>row.role))
+          for(const role of ['admin','responsible','staff']){
+            if(!roles.has(role))throw Error('Missing authenticated inventory for '+role)
+          }
+          const count=inventory.reduce((n,row)=>n+row.controls.length,0)
+          if(count===0)throw Error('No rendered interactive controls were inventoried')
+          const unidentified=inventory.flatMap(row=>row.controls.filter(c=>!c.label&&!c.action).map(c=>row.role+' '+row.route+' '+c.tag))
+          console.log('E2E control inventory:',JSON.stringify({routes:inventory.length,controls:count,unidentified:unidentified.length,roles:[...roles]}))
+          if(unidentified.length)console.log('Unidentified controls (sample):',unidentified.slice(0,30).join(' | '))
+          console.log('PASS: role-specific runtime interaction inventory generated (not full functional coverage)')
+          NODE
+
       - name: Full application surface inventory gate
         run: |
           set -euo pipefail
