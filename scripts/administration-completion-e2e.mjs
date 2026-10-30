@@ -35,6 +35,7 @@ let lastAction
 async function clickAndSettle(page,button){
  const path=new URL(page.url()).pathname
  const form=button.locator('xpath=ancestor::form[1]')
+ const formHandle=await form.elementHandle()
  const fields=await form.evaluate(form=>Object.fromEntries([...new FormData(form)].filter(([name])=>!name.startsWith('$ACTION_'))))
  const response=page.waitForResponse(r=>{
   const request=r.request(),target=new URL(r.url())
@@ -44,13 +45,18 @@ async function clickAndSettle(page,button){
  await button.click()
  const result=await response
  lastAction={path,fields,status:result.status(),redirect:result.headers()['x-action-redirect']??result.headers()['location']??null}
- let timer
- try{
-  const finished=await Promise.race([result.finished(),new Promise((_,reject)=>{timer=setTimeout(()=>reject(Error('Server action response exceeded 30 seconds: '+JSON.stringify(lastAction))),30000)})])
-  assert.equal(finished,null,'server action response did not finish')
- }finally{clearTimeout(timer)}
  assert.ok(result.status()<400,'server action returned '+result.status())
  assert.ok(!lastAction.redirect?.includes('error=1'),'server action rejected the form: '+JSON.stringify(lastAction))
+ // RSC action responses can stay streamed after the UI commit. Wait for the
+ // actual form reset or transition, rather than the document's old networkidle.
+ const resetField=['name','document_number','description','title'].find(name=>fields[name])
+ if(resetField){
+  await page.waitForFunction(({form,name})=>!form.isConnected||form.querySelector(`input[name="${name}"]`)?.value==='',{form:formHandle,name:resetField},{timeout:30000})
+ }else if(fields.request){
+  await page.locator(`input[name="request"][value="${fields.request}"]`).waitFor({state:'detached',timeout:30000})
+ }else{
+  await button.waitFor({state:'detached',timeout:30000})
+ }
 }
 async function assertState(db,id,status){const row=await one(db.from('admin_financial_documents').select('status').eq('id',id));assert.equal(row.status,status)}
 await mkdir('test-results/administration-completion',{recursive:true})

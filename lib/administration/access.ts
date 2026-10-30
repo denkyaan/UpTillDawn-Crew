@@ -1,6 +1,7 @@
 import "server-only"
 import {getCurrentUser} from "@/lib/actions/auth"
 import {createClient} from "@/lib/supabase/crew-server"
+import {requestHasSameOrigin} from "@/lib/request-origin"
 
 /** Resolve permissions from the database on every request, including revoked assignments. */
 export async function administrationAccess(){
@@ -15,6 +16,5 @@ export async function administrationAccess(){
 
 /** Browser mutations must originate from this application. */
 export function sameOrigin(request:Request):boolean{
- const origin=request.headers.get("origin")
- return origin!==null&&origin===new URL(request.url).origin
+ return requestHasSameOrigin(request)
 }

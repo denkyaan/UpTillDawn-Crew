@@ -74,7 +74,7 @@ try{
  const saleId=prefix+'-SALE',header='external_id,event_id,quantity,gross_amount,currency,sold_at\n'
  const csv=header+`${saleId},${created.eventId},2,30.00,EUR,2026-10-30T00:30:00+02:00\n`
  async function importCsv(who,text,origin=base){const f=new FormData();f.set('eventId',created.eventId);f.set('source','ticketplatform');f.set('file',new File([text],'sales.csv',{type:'text/csv'}));return fetch(base+'/api/administration/ticketing/import',{method:'POST',headers:{cookie:who.cookie,origin},body:f})}
- let r=await importCsv(office,csv);assert.equal(r.status,200);assert.equal((await r.json()).result.inserted,1)
+ let r=await importCsv(office,csv);let imported=await r.json();assert.equal(r.status,200,JSON.stringify(imported));assert.equal(imported.result.inserted,1)
  r=await importCsv(office,csv);assert.equal(r.status,200);assert.equal((await r.json()).result.inserted,0)
  const conflict=header+`${prefix}-NEW,${created.eventId},1,5.00,EUR,2026-10-30T12:00:00Z\n`+`${saleId},${created.eventId},2,99.00,EUR,2026-10-30T00:30:00+02:00\n`
  assert.equal((await importCsv(office,conflict)).status,409)

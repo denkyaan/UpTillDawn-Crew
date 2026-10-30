@@ -14372,14 +14372,14 @@
   },
   {
     "file": "lib/administration/access.ts",
-    "line": 6,
+    "line": 7,
     "kind": "functie",
     "label": "administrationAccess",
     "handler": "administrationAccess"
   },
   {
     "file": "lib/administration/access.ts",
-    "line": 17,
+    "line": 18,
     "kind": "functie",
     "label": "sameOrigin",
     "handler": "sameOrigin"
@@ -16714,6 +16714,13 @@
     "kind": "functie",
     "label": "releaseReadiness",
     "handler": "releaseReadiness"
+  },
+  {
+    "file": "lib/request-origin.ts",
+    "line": 2,
+    "kind": "functie",
+    "label": "requestHasSameOrigin",
+    "handler": "requestHasSameOrigin"
   },
   {
     "file": "lib/request-timeout-policy.ts",
