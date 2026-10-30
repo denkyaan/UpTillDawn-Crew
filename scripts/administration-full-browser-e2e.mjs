@@ -25,6 +25,7 @@ const surfaces=['/','/events','/workplaces','/briefings','/inventory','/guestlis
 const failures=[]
 const findings=[]
 const interactionInventory=[]
+const clickedNavigation=[]
 await mkdir('test-results/portal-e2e',{recursive:true})
 const browser=await chromium.launch({headless:true})
 try{
@@ -55,7 +56,7 @@ try{
      const body=(await page.locator('body').innerText()).trim()
      if(!response||response.status()>=500)throw Error('HTTP '+response?.status())
      if(!body)throw Error('empty page')
-     if(/404\s*\\|\s*this page could not be found|application error|internal server error/i.test(body))throw Error('application/404 screen')
+     if(/404\s*\|\s*this page could not be found|application error|internal server error/i.test(body))throw Error('application/404 screen')
      if(errors.length)throw Error('uncaught JS: '+errors.join('; ').slice(0,350))
      if(role.name==='admin'&&route.startsWith('/portals/')&&(path.startsWith('/login')||path==='/portals'))throw Error('authorized portal redirected to '+path)
      const links=await page.locator('a[href]').evaluateAll(els=>els.map(el=>({href:el.getAttribute('href'),label:(el.textContent||'').trim()})).filter(x=>x.href?.startsWith('/')&&!x.href.startsWith('//')))
@@ -76,8 +77,9 @@ try{
         await href.click({timeout:15000})
         await tab.waitForURL(u=>u.pathname===new URL(target,base).pathname,{timeout:20000})
         await tab.waitForLoadState('domcontentloaded')
+        clickedNavigation.push({role:role.name,from:route,to:target})
         const text=(await tab.locator('body').innerText()).trim()
-        if(!text||/404|application error|internal server error/i.test(text))throw Error('clicked destination rendered error: '+target)
+        if(!text||/404\s*\|\s*this page could not be found|application error|internal server error/i.test(text))throw Error('clicked destination rendered error: '+target)
        }finally{await tab.close()}
       }
      }
@@ -90,6 +92,6 @@ try{
   finally{await context.close()}
  }
 }finally{await browser.close()}
-await writeFile('test-results/portal-e2e/interaction-inventory.json',JSON.stringify({inventory:interactionInventory},null,2))
+await writeFile('test-results/portal-e2e/interaction-inventory.json',JSON.stringify({inventory:interactionInventory,clickedNavigation},null,2))
 console.log(JSON.stringify({visited:findings.length,findings,failures,inventoryPath:'test-results/portal-e2e/interaction-inventory.json'},null,2))
 if(failures.length)process.exitCode=1
