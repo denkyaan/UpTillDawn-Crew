@@ -31,9 +31,22 @@ async function browserContext(browser,account,locale='en'){
  assert.equal(response.status(),200,'authenticated session bridge')
  return context
 }
+let lastAction
 async function clickAndSettle(page,button){
- const response=page.waitForResponse(r=>r.request().method()==='POST'&&new URL(r.url()).origin===new URL(base).origin,{timeout:45000})
- await button.click();const result=await response;assert.ok(result.status()<500,'server action returned '+result.status());await page.waitForLoadState('networkidle',{timeout:10000}).catch(()=>{})
+ const path=new URL(page.url()).pathname
+ const form=button.locator('xpath=ancestor::form[1]')
+ const fields=await form.evaluate(form=>Object.fromEntries([...new FormData(form)].filter(([name])=>!name.startsWith('$ACTION_'))))
+ const response=page.waitForResponse(r=>{
+  const request=r.request(),target=new URL(r.url())
+  return request.method()==='POST'&&target.origin===new URL(base).origin&&target.pathname===path
+   &&(request.isNavigationRequest()||Boolean(request.headers()['next-action']))
+ },{timeout:45000})
+ await button.click()
+ const result=await response
+ lastAction={path,fields,status:result.status(),redirect:result.headers()['x-action-redirect']??result.headers()['location']??null}
+ assert.equal(await result.finished(),null,'server action response did not finish')
+ assert.ok(result.status()<400,'server action returned '+result.status())
+ assert.ok(!lastAction.redirect?.includes('error=1'),'server action rejected the form: '+JSON.stringify(lastAction))
 }
 async function assertState(db,id,status){const row=await one(db.from('admin_financial_documents').select('status').eq('id',id));assert.equal(row.status,status)}
 await mkdir('test-results/administration-completion',{recursive:true})
@@ -141,11 +154,19 @@ try{
   await context.close()
  }
  ok('Promotion opens and Administration routes render in all four locales at mobile width')
-}catch(e){failure=e;console.error('FAIL:',e.message)}
+}catch(e){
+ failure=e;console.error('FAIL:',e.message)
+ console.error('Last submitted form:',JSON.stringify(lastAction??null))
+ const pages=browser.contexts().flatMap(context=>context.pages()).slice(0,4)
+ for(const [index,page] of pages.entries()){
+  console.error('Failure page:',page.url(),await page.getByRole('alert').allTextContents().catch(()=>[]))
+  await page.screenshot({path:`test-results/administration-completion/failure-${index}.png`,fullPage:true}).catch(()=>{})
+ }
+}
 finally{
  await browser.close()
  await writeFile('test-results/administration-completion/manifest.json',JSON.stringify(created,null,2))
- await writeFile('test-results/administration-completion/result.json',JSON.stringify({checks,passed:checks.length,failed:failure?failure.message:null},null,2))
+ await writeFile('test-results/administration-completion/result.json',JSON.stringify({checks,passed:checks.length,failed:failure?failure.message:null,lastAction},null,2))
 }
 if(failure)throw failure
 console.log('PASS:',checks.length,'verified administration workflow checks')

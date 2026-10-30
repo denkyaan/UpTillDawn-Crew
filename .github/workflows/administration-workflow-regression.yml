@@ -1,0 +1,115 @@
+name: Administration workflow regression
+
+on:
+  push:
+    branches: [staging]
+    paths:
+      - '.github/workflows/administration-workflow-regression.yml'
+      - 'scripts/administration-completion-e2e.mjs'
+      - 'scripts/administration-http-integration.mjs'
+      - 'app/(app)/portals/administration/finance/**'
+  workflow_dispatch:
+
+concurrency:
+  group: administration-workflow-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  transactional-workflows:
+    runs-on: ubuntu-26.04-arm
+    timeout-minutes: 25
+    env:
+      NEXT_PUBLIC_APP_URL: http://127.0.0.1:3000
+      BOT_TEST_BASE_URL: http://127.0.0.1:3000
+      UPT_E2E_SESSION_BRIDGE: '1'
+    steps:
+      - name: Checkout
+        uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5.1.0
+      - name: Set up Node.js
+        uses: actions/setup-node@a0853c24544627f65ddf259abe73b1d18a591444 # v5.0.0
+        with:
+          node-version: 24
+          cache: npm
+      - name: Install dependencies
+        run: npm ci --prefer-offline --no-audit --no-fund
+      - name: Initialize isolated Supabase
+        run: |
+          if [ ! -f supabase/config.toml ]; then
+            npx --yes supabase@2.117.0 init
+          fi
+          npx --yes supabase@2.117.0 start -x studio,imgproxy,inbucket,edge-runtime,logflare,vector,realtime
+          npx --yes supabase@2.117.0 db reset --local --no-seed
+      - name: Export disposable local credentials
+        run: |
+          set -euo pipefail
+          eval "$(npx --yes supabase@2.117.0 status -o env)"
+          api_url="${API_URL:-${SUPABASE_URL:-}}"
+          public_key="${ANON_KEY:-${PUBLISHABLE_KEY:-}}"
+          service_key="${SERVICE_ROLE_KEY:-${SECRET_KEY:-}}"
+          test -n "$api_url"
+          test -n "$public_key"
+          test -n "$service_key"
+          bot_password="$(openssl rand -base64 24 | tr -d '\n')Aa1!"
+          echo "::add-mask::$service_key"
+          echo "::add-mask::$bot_password"
+          {
+            echo "NEXT_PUBLIC_SUPABASE_URL=$api_url"
+            echo "NEXT_PUBLIC_SUPABASE_ANON_KEY=$public_key"
+            echo "BOT_SUPABASE_URL=$api_url"
+            echo "BOT_SERVICE_ROLE_KEY=$service_key"
+            echo "BOT_TEST_PASSWORD=$bot_password"
+            echo "BOT_DB_URL=postgresql://postgres:postgres@127.0.0.1:54322/postgres"
+          } >> "$GITHUB_ENV"
+      - name: Seed isolated roles
+        run: |
+          psql "$BOT_DB_URL" -v ON_ERROR_STOP=1 -c "DROP TRIGGER IF EXISTS on_auth_user_created ON auth.users;"
+          node scripts/seed-15-bot-users.mjs
+      - name: Install browser runtime
+        run: |
+          npm install --no-save --package-lock=false --prefer-offline --no-audit --no-fund playwright@1.62.1
+          npx playwright install --with-deps chromium
+      - name: Build application
+        run: npm run build:next
+      - name: Start application
+        id: application
+        run: |
+          npm start > /tmp/uptilldawn-workflow-app.log 2>&1 &
+          echo $! > /tmp/uptilldawn-workflow-app.pid
+          for i in {1..60}; do
+            if curl --fail --silent http://127.0.0.1:3000/login/staff >/dev/null; then exit 0; fi
+            sleep 1
+          done
+          cat /tmp/uptilldawn-workflow-app.log
+          exit 1
+      - name: Verify rendered server forms and database persistence
+        run: node scripts/administration-http-integration.mjs
+      - name: Verify real browser submissions and access boundaries
+        if: ${{ !cancelled() && steps.application.outcome == 'success' }}
+        run: node scripts/administration-completion-e2e.mjs
+      - name: Collect workflow diagnostics
+        if: always()
+        run: |
+          mkdir -p test-results/administration-workflow
+          if [ -f /tmp/uptilldawn-workflow-app.log ]; then
+            cp /tmp/uptilldawn-workflow-app.log test-results/administration-workflow/application.log
+          fi
+      - name: Retain this run's workflow evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: administration-workflow-evidence
+          path: |
+            test-results/administration-http/
+            test-results/administration-completion/
+            test-results/administration-workflow/
+          retention-days: 7
+      - name: Stop isolated services
+        if: always()
+        run: |
+          if [ -f /tmp/uptilldawn-workflow-app.pid ]; then
+            kill "$(cat /tmp/uptilldawn-workflow-app.pid)" 2>/dev/null || true
+          fi
+          npx --yes supabase@2.117.0 stop --no-backup
