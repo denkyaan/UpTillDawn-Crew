@@ -260,6 +260,9 @@ jobs:
           done
           exit 1
 
+      - name: Full authenticated Administration browser E2E
+        run: node scripts/administration-full-browser-e2e.mjs
+
       - name: Full application surface inventory gate
         run: |
           set -euo pipefail
