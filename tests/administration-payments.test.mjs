@@ -18,3 +18,13 @@ test('finance UI records partial payments and shows outstanding balances',()=>{
  assert.match(page,/name="paid_on"/)
  assert.match(page,/Outstanding balance/)
 })
+
+test('new settlement guard rejects credits after payments and payments after credits',()=>{
+ const migration=readFileSync('supabase/migrations/20261030130000_administration_credit_adjusted_settlement.sql','utf8')
+ assert.match(migration,/paid_total\+credited_total\+new\.amount>doc\.gross_amount/)
+ assert.match(migration,/credited\+paid_total\+new\.gross_amount>original_record\.gross_amount/)
+ assert.match(migration,/where id=new\.document_id for update/)
+ assert.match(migration,/where id=new\.original_invoice_id for update/)
+ assert.match(migration,/with \(security_invoker=true\)/)
+ assert.match(migration,/status in \('approved','issued','paid'\)/)
+})
