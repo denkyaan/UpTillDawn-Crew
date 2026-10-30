@@ -54,7 +54,7 @@ try{
      const body=(await page.locator('body').innerText()).trim()
      if(!response||response.status()>=500)throw Error('HTTP '+response?.status())
      if(!body)throw Error('empty page')
-     if(/404\\s*\\|\\s*this page could not be found|application error|internal server error/i.test(body))throw Error('application/404 screen')
+     if(/404\s*\\|\s*this page could not be found|application error|internal server error/i.test(body))throw Error('application/404 screen')
      if(errors.length)throw Error('uncaught JS: '+errors.join('; ').slice(0,350))
      if(role.name==='admin'&&route.startsWith('/portals/')&&(path.startsWith('/login')||path==='/portals'))throw Error('authorized portal redirected to '+path)
      const links=await page.locator('a[href]').evaluateAll(els=>els.map(el=>({href:el.getAttribute('href'),label:(el.textContent||'').trim()})).filter(x=>x.href?.startsWith('/')&&!x.href.startsWith('//')))
@@ -65,13 +65,12 @@ try{
       // Verify navigation targets actually work through a user click, using a separate tab.
       const targets=[...new Set(links.map(x=>x.href.split('?')[0]))].filter(x=>x.startsWith('/portals/administration/')).slice(0,35)
       for(const target of targets){
-       const candidate=page.locator('a[href]').filter({visible:true})
        // Navigate from the current page in a disposable authenticated tab to avoid changing traversal state.
        const tab=await context.newPage()
        try{
         const result=await tab.goto(base+target,{waitUntil:'domcontentloaded',timeout:30000})
         const text=(await tab.locator('body').innerText()).trim()
-        if(!result||result.status()>=400||/404\\s*\\|\\s*this page could not be found|application error/i.test(text))throw Error('linked destination '+target+' failed')
+        if(!result||result.status()>=400||/404\s*\\|\s*this page could not be found|application error/i.test(text))throw Error('linked destination '+target+' failed')
        }finally{await tab.close()}
       }
      }
