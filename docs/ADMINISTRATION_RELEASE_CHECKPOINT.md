@@ -28,3 +28,5 @@ The 15-bot run found a language hydration error in the administration navigation
 Temporary staging QA fixtures were removed and their cleanup migration is recorded. Final review of operational cases remains Admin-only and also permits an Admin to review an Admin-created case. Contract and roster approval rules are unchanged. Latest staging migration: 20261030174239.
 
 Mobile chat and Admin AI buttons are positioned above the expanded subtabs so they cannot cover navigation targets. The header identifies the selected portal for administrative staff.
+
+Notification routing verifies the normalized URL origin, including control-character variants of external URLs. Its positive context-preservation and negative URL tests pass.

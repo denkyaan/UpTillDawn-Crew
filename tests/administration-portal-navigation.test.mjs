@@ -33,7 +33,7 @@ test('notification destinations preserve event and chat context within administr
 })
 
 test('unsafe and unsupported notification targets cannot open the personnel portal',()=>{
- for(const value of [null,'https://example.com','//example.com','/\\example.com','/operations','/events/123/command','/portals/promotion']){
+ for(const value of [null,'https://example.com','//example.com','/\\example.com','/\n/example.com/portals/administration/finance','/\t/example.com/portals/administration/finance','/operations','/events/123/command','/portals/promotion']){
   assert.equal(administrationNotificationHref(value),null,value)
  }
 })
