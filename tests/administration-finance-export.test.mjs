@@ -36,3 +36,14 @@ test('export has deterministic payment pagination and rejects blocked accounts a
  assert.match(api,/Number\.isFinite\(gross\)/)
  assert.match(api,/Europe\/Brussels/)
 })
+
+test('credit notes are not counted as open invoices in finance CSV',()=>{
+ assert.match(api,/doc\.kind==='sales_invoice'\|\|doc\.kind==='purchase_invoice'/)
+ assert.match(api,/'not_applicable'/)
+ assert.match(api,/creditsByInvoice\.get\(doc\.id\)/)
+})
+test('payment ledger rejects invalid values and sums in integer cents',()=>{
+ assert.match(api,/payment\.amount===null/)
+ assert.match(api,/Number\.isFinite\(Number\(payment\.amount\)\)/)
+ assert.match(api,/Math\.round\(Number\(payment\.amount\)\*100\)/)
+})
