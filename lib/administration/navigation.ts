@@ -10,7 +10,7 @@ export const administrationNavigationGroups = [
 export function administrationRoute(slug:string):string {
  if(slug==="dashboard")return "/portals/administration"
  if(["personnel","chat","finance","rosters","promotion-discipline","timesheets","profile","sales"].includes(slug))return "/portals/administration/"+slug
- if(slug==="contacts")return "/portals/administration/contacts"
+
  return "/portals/administration/modules/"+slug
 }
 
@@ -18,7 +18,7 @@ export function administrationCategoryForPath(pathname:string):string {
  if(pathname==="/portals/administration/sales")return "finance"
  if(pathname==="/portals/administration/profile")return "management"
  if(pathname==="/portals/administration/timesheets")return "planning"
- if(pathname==="/portals/administration/counterparties")return "relations"
+ if(["/portals/administration/counterparties","/portals/administration/contacts"].includes(pathname))return "relations"
  return administrationNavigationGroups.find(group=>group.slugs.some(slug=>
   pathname===administrationRoute(slug)||(slug!=="dashboard"&&pathname.startsWith(administrationRoute(slug)+"/"))
  ))?.key??"overview"

@@ -1,5 +1,7 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
+import {readdirSync} from 'node:fs'
+import {join} from 'node:path'
 import {administrationNavigationGroups,administrationRoute,administrationCategoryForPath,administrationNotificationHref} from '../lib/administration/navigation.ts'
 
 test('every administration subtab retains its category after navigation',()=>{
@@ -20,8 +22,17 @@ test('dashboard prefix does not swallow invoice and artist detail routes',()=>{
 })
 
 test('shared administration pages retain their navigation category',()=>{
- for(const [slug,category] of [['timesheets','planning'],['profile','management'],['sales','finance'],['counterparties','relations']]){
+ for(const [slug,category] of [['timesheets','planning'],['profile','management'],['sales','finance'],['counterparties','relations'],['contacts','relations']]){
   assert.equal(administrationCategoryForPath('/portals/administration/'+slug),category)
+ }
+})
+
+test('every concrete administration page retains a category, including existing module aliases',()=>{
+ const walk=dir=>readdirSync(dir,{withFileTypes:true}).flatMap(entry=>entry.isDirectory()?walk(join(dir,entry.name)):[join(dir,entry.name)])
+ for(const file of walk('app/(app)/portals/administration').filter(file=>file.endsWith('/page.tsx')&&!file.includes('['))){
+  const path=file.replace('app/(app)','').replace('/page.tsx','')
+  if(path==='/portals/administration'||path==='/portals/administration/overview')continue
+  assert.notEqual(administrationCategoryForPath(path),'overview',path+' lost its module category')
  }
 })
 

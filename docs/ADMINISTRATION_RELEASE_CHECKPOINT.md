@@ -30,3 +30,5 @@ Temporary staging QA fixtures were removed and their cleanup migration is record
 Mobile chat and Admin AI buttons are positioned above the expanded subtabs so they cannot cover navigation targets. The header identifies the selected portal for administrative staff.
 
 Notification routing verifies the normalized URL origin, including control-character variants of external URLs. Its positive context-preservation and negative URL tests pass.
+
+Every concrete administration page is checked against its navigation category, including the existing contacts module and its dedicated contact/counterparty aliases. Local Node suite: 762 passed.
