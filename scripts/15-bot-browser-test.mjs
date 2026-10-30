@@ -305,6 +305,23 @@ try {
             await routePage.close()
           }
         }
+        // Exercise real navigation clicks for financial modules, not just direct URL loads.
+        await gotoWithTransientRetry(page,`${baseUrl}/portals/administration`,{waitUntil:'domcontentloaded'})
+        const financialDestinations=[
+          '/portals/administration/finance',
+          '/portals/administration/modules/invoices',
+          '/portals/administration/modules/banking',
+        ]
+        for(const destination of financialDestinations){
+          const target=page.locator(`a[href="${destination}"]`).first()
+          if(await target.count()!==1)throw new Error(`administration financial navigation link missing: ${destination}`)
+          await target.click()
+          await page.waitForURL(url=>url.pathname===destination,{timeout:20000})
+          const destinationText=(await page.locator('body').innerText()).trim()
+          if(!destinationText||/404\\s*\\|\\s*This page could not be found|application error/i.test(destinationText))throw new Error(`administration financial click failed: ${destination}`)
+          await gotoWithTransientRetry(page,`${baseUrl}/portals/administration`,{waitUntil:'domcontentloaded'})
+        }
+        console.log('PASS: authenticated Admin clicked finance, invoices and banking navigation')
         await gotoWithTransientRetry(page,`${baseUrl}/portals/promotion`,{waitUntil:'domcontentloaded'})
         const tasksLink=page.locator('a[href="/portals/promotion/tasks"]').first()
         if(await tasksLink.count()!==1)throw new Error('promotion tasks navigation link missing')
