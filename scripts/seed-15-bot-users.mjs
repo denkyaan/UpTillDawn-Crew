@@ -64,6 +64,10 @@ for (let index = 0; index < roles.length; index += 1) {
   created.push({ bot, email, portalRole, userId: data.user.id })
 }
 
+// A multi-role account verifies administration navigation without granting Admin.
+const {error:officeRoleError}=await supabase.from('portal_role_assignments').insert({user_id:created[3].userId,portal:'administration',role:'administrative_staff',approved:true,approved_by:created[0].userId,approved_at:new Date().toISOString()})
+if(officeRoleError)throw officeRoleError
+
 console.log(`PASS: seeded ${created.length} isolated authenticated browser-bot accounts`)
 
 

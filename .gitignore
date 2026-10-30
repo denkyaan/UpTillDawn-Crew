@@ -36,3 +36,6 @@ supabase/.temp/
 .open-next/
 .wrangler/
 .dev.vars*
+
+# Browser regression artifacts
+test-results/

@@ -11,7 +11,9 @@ test('admin overview degrades per datasource instead of blanking the dashboard',
 })
 test('mobile admin AI sits above bottom navigation and chat stacks above it',async()=>{
  const [layout,chat]=await Promise.all([read('components/layout/app-layout.tsx'),read('components/layout/floating-chat-button.tsx')])
- assert.match(layout,/fixed bottom-20 right-4/)
+ assert.match(layout,/fixed right-4/)
+ assert.match(layout,/bottom-20 lg:bottom-4/)
+ assert.ok(layout.includes('inDedicatedPortal?"bottom-[calc(21rem+env(safe-area-inset-bottom))]'))
  assert.match(layout,/stackedAboveAdminAi=\{Boolean\(isAdmin\)\}/)
  assert.match(chat,/stackedAboveAdminAi \? "9\.5rem" : "5rem"/)
 })

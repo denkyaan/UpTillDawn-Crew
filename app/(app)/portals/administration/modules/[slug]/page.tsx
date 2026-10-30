@@ -1,3 +1,5 @@
+import AdministrationAccessNotice from '@/components/administration/portal-access-notice'
+import {administrationPageAccess} from '@/lib/administration/page-access'
 import Link from "next/link"
 import { notFound, redirect } from "next/navigation"
 import { requestUiLocale } from "@/lib/server-locale"
@@ -42,6 +44,8 @@ const financeRelated=new Set(["invoices","banking","documents","reports"])
 export const dynamic = "force-dynamic"
 
 export default async function AdministrationModulePage({params,searchParams}:{params:Promise<{slug:string}>;searchParams?:Promise<{event?:string;page?:string}>}){
+ const pageAccess=await administrationPageAccess()
+ if(!pageAccess.ok)return <AdministrationAccessNotice status={pageAccess.status}/>
  const {slug}=await params
  const {event:requestedEvent,page:requestedPage}=await (searchParams??Promise.resolve({event:undefined,page:undefined}))
  const adminModule=administrationModules.find(item=>item.slug===slug&&slug!=="dashboard"&&slug!=="finance")
@@ -53,20 +57,6 @@ export default async function AdministrationModulePage({params,searchParams}:{pa
  const {data,error}=await supabase.rpc("upt_my_portal_assignments")
  if(error&&!current.isAdmin && !current.isOwner)redirect("/portals")
  if(!current.isAdmin && !current.isOwner&&!canOpenPortal("administration",(data??[]) as PortalAssignment[],{approved:current.approved,blocked:current.account_blocked===true}))redirect("/portals")
- // Use the real operational workflows instead of presenting placeholder cards.
- const operationalRoutes:Record<string,string>={
-  tasks:"/tasks",
-  notifications:"/notifications",
-  invoices:"/portals/administration/finance",
-  banking:"/portals/administration/finance",
-  documents:"/portals/administration/finance",
-  staff:"/portals/administration/rosters",
-  reports:"/portals/administration/finance",
-  contacts:"/portals/administration/contacts",
-
-
- }
- if(operationalRoutes[slug])redirect(operationalRoutes[slug])
  const parsedPage=Number(requestedPage)
  const inventoryPage=Number.isSafeInteger(parsedPage)&&parsedPage>0&&parsedPage<=10000?parsedPage:1
  const inventoryPageSize=100

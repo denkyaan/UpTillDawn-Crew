@@ -1,3 +1,5 @@
+import AdministrationAccessNotice from '@/components/administration/portal-access-notice'
+import {administrationPageAccess} from '@/lib/administration/page-access'
 import type { SupabaseClient } from "@supabase/supabase-js"
 import { revalidatePath } from "next/cache"
 import { redirect } from "next/navigation"
@@ -64,6 +66,8 @@ async function changeStatus(form:FormData){
 }
 export const dynamic="force-dynamic"
 export default async function RostersPage(){
+ const pageAccess=await administrationPageAccess()
+ if(!pageAccess.ok)return <AdministrationAccessNotice status={pageAccess.status}/>
  const {db,user}=await context()
  const locale=await requestUiLocale()
  const l=({

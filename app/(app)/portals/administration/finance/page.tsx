@@ -1,3 +1,5 @@
+import AdministrationAccessNotice from '@/components/administration/portal-access-notice'
+import {administrationPageAccess} from '@/lib/administration/page-access'
 import {financialAging} from '@/lib/administration/finance-report'
 import type { SupabaseClient } from '@supabase/supabase-js'
 import { randomUUID } from 'node:crypto'
@@ -447,6 +449,8 @@ async function uploadFinancialAttachment(formData:FormData) {
 
 export const dynamic = 'force-dynamic'
 export default async function FinancePage({searchParams}:{searchParams:Promise<{error?:string}>}) {
+ const pageAccess=await administrationPageAccess()
+ if(!pageAccess.ok)return <AdministrationAccessNotice status={pageAccess.status}/>
  const {supabase,isAdmin} = await requireAdministration()
  const locale = await requestUiLocale()
  const t = copy[locale]

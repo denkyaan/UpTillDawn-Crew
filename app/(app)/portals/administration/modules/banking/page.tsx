@@ -1,7 +1,3 @@
-import AdministrationModulePage from "../[slug]/page"
-
-export const dynamic = "force-dynamic"
-
-export default function Page(){
- return AdministrationModulePage({params:Promise.resolve({slug:"banking"})})
-}
+import FinancePage from "../../finance/page"
+export const dynamic="force-dynamic"
+export default function Page(){return FinancePage({searchParams:Promise.resolve({})})}

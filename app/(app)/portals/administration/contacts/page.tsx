@@ -1,3 +1,5 @@
+import AdministrationAccessNotice from '@/components/administration/portal-access-notice'
+import {administrationPageAccess} from '@/lib/administration/page-access'
 import { revalidatePath } from "next/cache"
 import { redirect } from "next/navigation"
 import { getCurrentUser } from "@/lib/actions/auth"
@@ -31,6 +33,8 @@ async function addContact(form:FormData){
 }
 export const dynamic="force-dynamic"
 export default async function ContactsPage(){
+ const pageAccess=await administrationPageAccess()
+ if(!pageAccess.ok)return <AdministrationAccessNotice status={pageAccess.status}/>
  const db=await access()
  const locale=await requestUiLocale()
  const labels=({

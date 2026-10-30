@@ -1,9 +1,10 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
 import {readFileSync} from 'node:fs'
+import {administrationNavigationGroups} from '../lib/administration/navigation.ts'
 const nav=readFileSync('components/administration/administration-navigation.tsx','utf8')
 test('all administration subtabs have contextual icons',()=>{
- const slugs=[...nav.matchAll(/slugs:\[([^\]]+)\]/g)].flatMap(x=>[...x[1].matchAll(/"([^"]+)"/g)].map(y=>y[1]))
+ const slugs=administrationNavigationGroups.flatMap(group=>group.slugs)
  const map=nav.slice(nav.indexOf('const subtabIcons:'),nav.indexOf('export function AdministrationNavigation'))
  for(const slug of slugs)assert.ok(map.includes(slug.includes('-')?'"'+slug+'"':slug+':'),slug+' icon missing')
  assert.match(nav,/const Icon=subtabIcons\[slug\]/)
@@ -17,7 +18,7 @@ test('mobile navigation has fixed category and subtab controls without popup',()
 test('subtabs remain compact and accessible on mobile',()=>{
  assert.match(nav,/grid grid-cols-3 gap-1\.5/)
  assert.match(nav,/aria-current=\{pathname===route\(slug\)\?"page":undefined\}/)
- assert.match(nav,/pathname\.startsWith\(route\(slug\)\+"\/"\)/)
+ assert.match(nav,/administrationCategoryForPath\(pathname\)/)
  assert.doesNotMatch(nav,/overflow-y-auto|bottom-full/)
 })
 test('administration layout reserves space for fixed navigation',()=>{

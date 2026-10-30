@@ -6,8 +6,12 @@ import { useAdminSelection } from "@/lib/admin-selection-context"
 import { createClient } from "@/lib/supabase/crew-client"
 import { ContextLink } from "@/components/admin/context-link"
 import { featureHelp } from "@/lib/ui-field-help"
+import {usePathname} from "next/navigation"
 
 export function AdminContextBar(){
+  const pathname=usePathname()
+  const administration=pathname==="/portals/administration"||pathname.startsWith("/portals/administration/")
+  const route=(staff:string,admin:string)=>administration?"/portals/administration/"+admin:staff
   const {selection,clearSelection}=useAdminSelection()
   const s=useMemo(()=>createClient(),[])
   const [names,setNames]=useState<{event?:string;workplace?:string;user?:string}>({})
@@ -36,14 +40,14 @@ export function AdminContextBar(){
       {selection.workplaceId&&<span className="rounded-full border px-2 py-1">Werkplek: {names.workplace||"geselecteerd"}</span>}
       {selection.userId&&<span className="rounded-full border px-2 py-1">Persoon: {names.user||"geselecteerd"}</span>}
       <div className="ml-auto flex flex-wrap gap-1">
-        <ContextLink href="/events" title={featureHelp("events","Event").description} className="rounded-lg px-2 py-1 hover:bg-muted">Event</ContextLink>
-        <ContextLink href="/workplaces" title={featureHelp("workplaces","Planning").description} className="rounded-lg px-2 py-1 hover:bg-muted">Planning</ContextLink>
-        <ContextLink href="/operations" title={featureHelp("operations","Werkuren").description} className="rounded-lg px-2 py-1 hover:bg-muted">Werkuren</ContextLink>
-        <ContextLink href="/tasks" title={featureHelp("tasks","Taken").description} className="rounded-lg px-2 py-1 hover:bg-muted">Taken</ContextLink>
-        <ContextLink href="/sales" title={featureHelp("sales","Sales").description} className="rounded-lg px-2 py-1 hover:bg-muted">Sales</ContextLink>
-        {selection.eventId&&<ContextLink href="/briefings" title={featureHelp("briefings","Briefing").description} className="rounded-lg px-2 py-1 hover:bg-muted">Briefing</ContextLink>}
-        {selection.workplaceId&&<ContextLink href="/inventory" title={featureHelp("inventory","Inventaris").description} className="rounded-lg px-2 py-1 hover:bg-muted">Inventaris</ContextLink>}
-        {selection.workplaceId&&<ContextLink href="/guestlist" title={featureHelp("guestlist","Inkom & Guestlist").description} className="rounded-lg px-2 py-1 hover:bg-muted">Inkom & Guestlist</ContextLink>}
+        <ContextLink href={route("/events","modules/events")} title={featureHelp("events","Event").description} className="rounded-lg px-2 py-1 hover:bg-muted">Event</ContextLink>
+        <ContextLink href={route("/workplaces","rosters")} title={featureHelp("workplaces","Planning").description} className="rounded-lg px-2 py-1 hover:bg-muted">Planning</ContextLink>
+        <ContextLink href={route("/operations","timesheets")} title={featureHelp("operations","Werkuren").description} className="rounded-lg px-2 py-1 hover:bg-muted">Werkuren</ContextLink>
+        <ContextLink href={route("/tasks","modules/tasks")} title={featureHelp("tasks","Taken").description} className="rounded-lg px-2 py-1 hover:bg-muted">Taken</ContextLink>
+        <ContextLink href={route("/sales","sales")} title={featureHelp("sales","Sales").description} className="rounded-lg px-2 py-1 hover:bg-muted">Sales</ContextLink>
+        {selection.eventId&&!administration&&<ContextLink href="/briefings" title={featureHelp("briefings","Briefing").description} className="rounded-lg px-2 py-1 hover:bg-muted">Briefing</ContextLink>}
+        {selection.workplaceId&&<ContextLink href={route("/inventory","modules/inventory")} title={featureHelp("inventory","Inventaris").description} className="rounded-lg px-2 py-1 hover:bg-muted">Inventaris</ContextLink>}
+        {selection.workplaceId&&!administration&&<ContextLink href="/guestlist" title={featureHelp("guestlist","Inkom & Guestlist").description} className="rounded-lg px-2 py-1 hover:bg-muted">Inkom & Guestlist</ContextLink>}
         <button type="button" onClick={clearSelection} className="rounded-lg p-1.5 hover:bg-muted" aria-label="Context wissen" title="Wis de actieve event- en werkplekcontext"><X className="h-4 w-4"/></button>
       </div>
     </div>
