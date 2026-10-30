@@ -44,7 +44,11 @@ async function clickAndSettle(page,button){
  await button.click()
  const result=await response
  lastAction={path,fields,status:result.status(),redirect:result.headers()['x-action-redirect']??result.headers()['location']??null}
- assert.equal(await result.finished(),null,'server action response did not finish')
+ let timer
+ try{
+  const finished=await Promise.race([result.finished(),new Promise((_,reject)=>{timer=setTimeout(()=>reject(Error('Server action response exceeded 30 seconds: '+JSON.stringify(lastAction))),30000)})])
+  assert.equal(finished,null,'server action response did not finish')
+ }finally{clearTimeout(timer)}
  assert.ok(result.status()<400,'server action returned '+result.status())
  assert.ok(!lastAction.redirect?.includes('error=1'),'server action rejected the form: '+JSON.stringify(lastAction))
 }
@@ -160,7 +164,7 @@ try{
  const pages=browser.contexts().flatMap(context=>context.pages()).slice(0,4)
  for(const [index,page] of pages.entries()){
   console.error('Failure page:',page.url(),await page.getByRole('alert').allTextContents().catch(()=>[]))
-  await page.screenshot({path:`test-results/administration-completion/failure-${index}.png`,fullPage:true}).catch(()=>{})
+  await page.screenshot({path:`test-results/administration-completion/failure-${index}.png`,fullPage:true,timeout:5000}).catch(()=>{})
  }
 }
 finally{
