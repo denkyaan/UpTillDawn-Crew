@@ -25,8 +25,8 @@ test('export reconciles approved credit notes and payments without treating draf
  assert.match(api,/creditsByInvoice=new Map/)
  assert.match(api,/\['approved','issued','paid'\]\.includes\(doc\.status\)/)
  assert.match(api,/doc\.original_invoice_id/)
- assert.match(api,/gross-paid-credits/)
- assert.match(api,/paid\+credits-gross/)
+ assert.match(api,/reconciliation\.outstandingCents/)
+ assert.match(api,/reconciliation\.overpaymentCents/)
  assert.match(api,/Outstanding after credits/)
  assert.match(api,/Overpayment after credits/)
 })
@@ -67,4 +67,10 @@ test('finance export detects changing counts and unstable pagination',()=>{
  assert.match(api,/key<=previousPaymentId/)
  assert.match(api,/Document pagination changed during export/)
  assert.match(api,/Payment pagination changed during export/)
+})
+
+test('export exposes financial reconciliation exceptions',()=>{
+ assert.match(api,/reconcileFinanceInvoice/)
+ assert.match(api,/Reconciliation issues/)
+ assert.match(api,/reconciliation\?\.issues\.join/)
 })
