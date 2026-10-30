@@ -260,7 +260,7 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
         </main>
       </div>
     </div>
-    {isAdmin&&<div className="fixed bottom-20 right-4 z-[70] print:hidden lg:bottom-4"><button type="button" aria-expanded={adminAiOpen} onClick={()=>setAdminAiOpen(value=>!value)} className="rounded-full bg-violet-600 px-5 py-3 font-black text-white shadow-xl">ADMIN AI</button>{adminAiOpen&&<div className="absolute bottom-14 right-0 w-[min(92vw,430px)] max-h-[75vh] overflow-auto rounded-2xl border bg-background p-4 shadow-2xl"><PlatformAiAssistant contextKey={currentFeature||undefined} contextLabel={labels[currentFeature||""]} compact/></div>}</div>}
+    {isAdmin&&<div className={`fixed right-4 z-[70] print:hidden ${inDedicatedPortal?"bottom-[calc(21rem+env(safe-area-inset-bottom))] lg:bottom-20":"bottom-20 lg:bottom-4"}`}><button type="button" aria-expanded={adminAiOpen} onClick={()=>setAdminAiOpen(value=>!value)} className="rounded-full bg-violet-600 px-5 py-3 font-black text-white shadow-xl">ADMIN AI</button>{adminAiOpen&&<div className="absolute bottom-14 right-0 w-[min(92vw,430px)] max-h-[75vh] overflow-auto rounded-2xl border bg-background p-4 shadow-2xl"><PlatformAiAssistant contextKey={currentFeature||undefined} contextLabel={labels[currentFeature||""]} compact/></div>}</div>}
     {!pathname.startsWith("/chat")&&<>
       {showUrgent&&<Link href="/incidents" className="fixed bottom-20 left-4 z-50 rounded-full bg-red-600 px-5 py-4 font-black text-white print:hidden lg:hidden">{({nl:"HELP",en:"HELP",fr:"AIDE",de:"HILFE"} as Record<SupportedUiLocale,string>)[uiLocale]}<CountBadge count={incidentMissed}/></Link>}
     </>}

@@ -26,3 +26,5 @@ The SQL security-surface gate found delegated presence authorization without an 
 The 15-bot run found a language hydration error in the administration navigation. Its first render now uses the server-provided locale. A user also reproduced portal escape through shared personnel links. Administration retains its own routes for notifications, timesheets, profile and sales, including topbar and notification targets. Category detection no longer treats every subpage as the dashboard. Navigation is available on desktop as well as mobile. A focused authenticated click test runs before the 15-bot suite for both Admin and administrative employee.
 
 Temporary staging QA fixtures were removed and their cleanup migration is recorded. Final review of operational cases remains Admin-only and also permits an Admin to review an Admin-created case. Contract and roster approval rules are unchanged. Latest staging migration: 20261030174239.
+
+Mobile chat and Admin AI buttons are positioned above the expanded subtabs so they cannot cover navigation targets. The header identifies the selected portal for administrative staff.

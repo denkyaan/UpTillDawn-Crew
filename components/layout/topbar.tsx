@@ -14,7 +14,7 @@ export function Topbar({notificationMissed=0}:{notificationMissed?:number}){
  const name=useDisplayName()
  const {roles,isAdmin}=useAuth()
  const [loggingOut,startLogout]=useTransition()
- const roleLabel=roles.includes("admin")?"Beheerder":roles.includes("responsible_lead")?"Verantwoordelijke":"Personeel"
+ const roleLabel=administration?"Administratie":promotion?"Promotie":roles.includes("admin")?"Beheerder":roles.includes("responsible_lead")?"Verantwoordelijke":"Personeel"
 
  return <header className="flex min-h-16 min-w-0 items-center justify-between gap-2 border-b bg-card px-3 sm:gap-3 sm:px-4">
   <Link href={administration?"/portals/administration":promotion?"/portals/promotion":isAdmin?"/admin":"/"} className="flex min-w-0 shrink items-center gap-2 font-black">
