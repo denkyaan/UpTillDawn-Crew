@@ -19,7 +19,7 @@ try{
   if(error||!data.session)throw Error(role.name+' login failed: '+error?.message)
   for(const viewport of [{width:390,height:844},{width:1280,height:800}]){
    const context=await browser.newContext({viewport,locale:'en'})
-   await context.addInitScript(()=>localStorage.setItem('uptilldawn-admin-selection-v1',JSON.stringify({eventId:'00000000-0000-4000-8000-00000000e2e1',workplaceId:null,userId:null,shiftId:null,focus:null})))
+   await context.addInitScript(()=>{localStorage.setItem('uptilldawn-admin-selection-v1',JSON.stringify({eventId:'00000000-0000-4000-8000-00000000e2e1',workplaceId:null,userId:null,shiftId:null,focus:null}));sessionStorage.setItem('uptilldawn-return-after-login','/events')})
    const page=await context.newPage(),errors=[]
    page.on('pageerror',error=>errors.push(error.message))
    try{
@@ -35,7 +35,9 @@ try{
       const link=page.locator(`[data-administration-subtab="${slug}"]`)
       const target=await link.getAttribute('href')
       assert.ok(target.startsWith('/portals/administration/'))
+      const documentRequest=page.waitForRequest(request=>request.isNavigationRequest()&&request.resourceType()==='document'&&new URL(request.url()).pathname===target)
       await link.click()
+      await documentRequest
       await page.waitForURL(u=>u.pathname===target,{timeout:30000})
       await page.waitForLoadState('networkidle',{timeout:10000}).catch(()=>{})
       assert.equal(await page.locator(`[data-administration-category="${category}"]`).getAttribute('aria-pressed'),'true',slug+' lost its category')
