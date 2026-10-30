@@ -64,6 +64,19 @@ try{
    }finally{await context.close()}
   }
  }
+ const loginContext=await browser.newContext({viewport:{width:390,height:844},locale:'en'})
+ try{
+  const loginPage=await loginContext.newPage()
+  await loginPage.goto(base+'/login/administration',{waitUntil:'networkidle'})
+  await loginPage.locator('input[name="email"]').fill('bot-01-admin-nl@bots.uptilldawn.test')
+  await loginPage.locator('input[name="password"]').fill(password)
+  await loginPage.locator('button[type="submit"]').click()
+  await loginPage.waitForURL('**/portals/administration',{timeout:30000})
+  assert.equal(new URL(loginPage.url()).pathname,'/portals/administration')
+  checks.push({role:'Admin real login',path:'/portals/administration'})
+  console.log('PASS administration sign-in through the real login form')
+ }catch(error){failures.push({role:'Admin real login',error:String(error.message||error)})}
+ finally{await loginContext.close()}
  const staff=createClient(url,key,{auth:{persistSession:false,autoRefreshToken:false}})
  const {data:staffAuth,error:staffError}=await staff.auth.signInWithPassword({email:'bot-03-staff-en@bots.uptilldawn.test',password})
  if(staffError||!staffAuth.session)throw Error('Staff negative fixture login failed')
