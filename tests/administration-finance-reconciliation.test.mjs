@@ -1,5 +1,6 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
+import {readFileSync} from 'node:fs'
 import {reconcileFinanceInvoice} from '../lib/administration/finance-reconciliation.ts'
 test('partial payments and credits reconcile in integer cents',()=>{
  assert.deepEqual(reconcileFinanceInvoice(10001,4000,3001,'issued'),{outstandingCents:3000,overpaymentCents:0,issues:[]})
@@ -18,4 +19,13 @@ test('invalid cents and overflow fail closed',()=>{
  for(const amount of [-1,0.1,Infinity,NaN,Number.MAX_SAFE_INTEGER+1])
   assert.throws(()=>reconcileFinanceInvoice(amount,0,0,'issued'))
  assert.throws(()=>reconcileFinanceInvoice(100,Number.MAX_SAFE_INTEGER,1,'issued'))
+})
+
+test('invoice details and finance CSV both use shared reconciliation',()=>{
+ const detail=readFileSync('app/(app)/portals/administration/modules/invoices/[id]/page.tsx','utf8')
+ const csv=readFileSync('app/api/administration/finance/export/route.ts','utf8')
+ assert.match(detail,/reconcileFinanceInvoice\(Math\.round\(invoiceAmount\*100\)/)
+ assert.match(detail,/reconciliation\.outstandingCents\/100/)
+ assert.match(detail,/reconciliation\.overpaymentCents\/100/)
+ assert.match(csv,/reconcileFinanceInvoice\(/)
 })
