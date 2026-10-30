@@ -1,4 +1,5 @@
 import {financialAging} from '@/lib/administration/finance-report'
+import {financialAmountCents,totalFinancialCents,reconcileFinanceInvoice} from '@/lib/administration/finance-reconciliation'
 import type { SupabaseClient } from '@supabase/supabase-js'
 import { randomUUID } from 'node:crypto'
 import { validateUploadSecurity, safeUploadName } from '@/lib/upload-security'
@@ -381,6 +382,27 @@ async function updatePaymentReminder(formData:FormData) {
  redirect('/portals/administration/finance')
 }
 
+
+/** Query every relevant ledger entry, never assuming the first PostgREST page is complete.
+ * Database triggers remain the authoritative protection against concurrent settlements. */
+async function loadFinancialSettlement(db:SupabaseClient,documentId:string){
+ const [{data:document,error:documentError},{data:payments,error:paymentsError,count:paymentCount},{data:credits,error:creditsError,count:creditCount}]=await Promise.all([
+  db.from('admin_financial_documents').select('kind,status,gross_amount').eq('id',documentId).maybeSingle(),
+  db.from('admin_financial_payments').select('amount',{count:'exact'}).eq('document_id',documentId).limit(1000),
+  db.from('admin_financial_documents').select('gross_amount',{count:'exact'}).eq('kind','credit_note').eq('original_invoice_id',documentId).in('status',['approved','issued','paid']).limit(1000)
+ ])
+ if(documentError||!document||paymentsError||creditsError||paymentCount===null||creditCount===null||paymentCount>1000||creditCount>1000||payments?.length!==paymentCount||credits?.length!==creditCount)return null
+ try{
+  const grossCents=financialAmountCents(document.gross_amount)
+  const paidCents=totalFinancialCents((payments??[]).map(payment=>payment.amount))
+  const creditedCents=totalFinancialCents((credits??[]).map(credit=>credit.gross_amount))
+  const reconciliation=reconcileFinanceInvoice(grossCents,paidCents,creditedCents,document.status)
+  return {...document,grossCents,paidCents,creditedCents,...reconciliation}
+ }catch{
+  return null
+ }
+}
+
 async function recordFinancialPayment(formData:FormData) {
  'use server'
  const {supabase}=await requireAdministration()
@@ -391,15 +413,14 @@ async function recordFinancialPayment(formData:FormData) {
  const uuid=/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
  if(!uuid.test(documentId)||!Number.isFinite(amount)||amount<=0||amount>999999999||!/^[0-9]{4}-[0-9]{2}-[0-9]{2}$/.test(paidOn)||bankReference.length>200)redirect('/portals/administration/finance?error=1')
  const validDate=!Number.isNaN(Date.parse(paidOn))&&new Date(paidOn).toISOString().slice(0,10)===paidOn
- if(!validDate||!Number.isInteger(Math.round(amount*100))||Math.abs(amount*100-Math.round(amount*100))>0.000001)redirect('/portals/administration/finance?error=1')
- const {data:document,error:documentError}=await supabase.from('admin_financial_documents').select('status,gross_amount').eq('id',documentId).maybeSingle()
- if(documentError||!document||!['approved','issued','paid'].includes(document.status))redirect('/portals/administration/finance?error=1')
- const {data:existingPayments,error:paymentsError}=await (supabase as unknown as SupabaseClient).from('admin_financial_payments').select('amount').eq('document_id',documentId)
- if(paymentsError)redirect('/portals/administration/finance?error=1')
- const paidCents=(existingPayments??[]).reduce((sum:number,p:{amount:number})=>sum+Math.round(Number(p.amount)*100),0)
- const remainingCents=Math.round(Number(document.gross_amount)*100)-paidCents
- if(!Number.isSafeInteger(remainingCents)||remainingCents<=0||Math.round(amount*100)>remainingCents)redirect('/portals/administration/finance?error=1')
- const {error}=await (supabase as unknown as SupabaseClient).from('admin_financial_payments').insert({
+ if(!validDate)redirect('/portals/administration/finance?error=1')
+ let amountCents:number
+ try {amountCents=financialAmountCents(amount)}catch{redirect('/portals/administration/finance?error=1')}
+ if(amountCents<=0)redirect('/portals/administration/finance?error=1')
+ const db=supabase as unknown as SupabaseClient
+ const settlement=await loadFinancialSettlement(db,documentId)
+ if(!settlement||!['approved','issued','paid'].includes(settlement.status)||amountCents>settlement.outstandingCents)redirect('/portals/administration/finance?error=1')
+ const {error}=await db.from('admin_financial_payments').insert({
   document_id:documentId,amount,paid_on:paidOn,bank_reference:bankReference||null
  })
  if(error)redirect('/portals/administration/finance?error=1')
@@ -422,37 +443,16 @@ async function updateFinancialStatus(formData:FormData) {
  }
  if (!transitions[existing.status]?.includes(status)) return
  if(status==='paid'){
-  const {data:invoice,error:invoiceError}=await supabase.from('admin_financial_documents').select('kind,gross_amount').eq('id',id).maybeSingle()
-  if(invoiceError||!invoice||!Number.isFinite(Number(invoice.gross_amount))||Number(invoice.gross_amount)<=0)redirect('/portals/administration/finance?error=1')
-  const grossCents=Math.round(Number(invoice.gross_amount)*100)
-  if(!Number.isSafeInteger(grossCents))redirect('/portals/administration/finance?error=1')
-  const db=supabase as unknown as SupabaseClient
-  const [{data:payments,error:paymentsError,count:paymentCount},{data:credits,error:creditsError,count:creditCount}]=await Promise.all([
-   db.from('admin_financial_payments').select('amount',{count:'exact'}).eq('document_id',id).limit(1000),
-   db.from('admin_financial_documents').select('gross_amount,status',{count:'exact'}).eq('kind','credit_note').eq('original_invoice_id',id).limit(1000)
-  ])
-  if(paymentsError||creditsError||paymentCount===null||creditCount===null||paymentCount>1000||creditCount>1000||payments?.length!==paymentCount||credits?.length!==creditCount)redirect('/portals/administration/finance?error=1')
-  let paidCents=0
-  for(const payment of payments??[]){
-   const value=Number(payment.amount)
-   if(payment.amount===null||!Number.isFinite(value)||value<=0||!Number.isSafeInteger(Math.round(value*100)))redirect('/portals/administration/finance?error=1')
-   paidCents+=Math.round(value*100)
-  }
-  let creditCents=0
-  for(const credit of credits??[]){
-   if(!['approved','issued','paid'].includes(credit.status))continue
-   const value=Number(credit.gross_amount)
-   if(credit.gross_amount===null||!Number.isFinite(value)||value<0||!Number.isSafeInteger(Math.round(value*100)))redirect('/portals/administration/finance?error=1')
-   creditCents+=Math.round(value*100)
-  }
-  if(!Number.isSafeInteger(paidCents)||!Number.isSafeInteger(creditCents)||paidCents+creditCents!==grossCents)redirect('/portals/administration/finance?error=1')
+  const settlement=await loadFinancialSettlement(supabase as unknown as SupabaseClient,id)
+  if(!settlement||settlement.grossCents<=0||settlement.outstandingCents!==0||settlement.overpaymentCents!==0)
+   redirect('/portals/administration/finance?error=1')
  }
  const {data:{user}} = await supabase.auth.getUser()
  if (!user) return
  const patch:{status:string;approved_by?:string;approved_at?:string} = {status}
  if (status==='approved') {patch.approved_by=user.id;patch.approved_at=new Date().toISOString()}
- const {error} = await supabase.from('admin_financial_documents').update(patch).eq('id',id).eq('status',existing.status)
- if (error) redirect('/portals/administration/finance?error=1')
+ const {data:updated,error} = await supabase.from('admin_financial_documents').update(patch).eq('id',id).eq('status',existing.status).select('id')
+ if (error||updated?.length!==1) redirect('/portals/administration/finance?error=1')
  revalidatePath('/portals/administration/finance')
  redirect('/portals/administration/finance')
 }

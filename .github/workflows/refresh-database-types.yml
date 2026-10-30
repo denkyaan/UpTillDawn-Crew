@@ -42,6 +42,14 @@ jobs:
           git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
           git add types/crew-database.ts
           git commit -m 'chore(db): synchronize generated types with staging migrations'
+          # Other staging commits can arrive while the local database is starting.
+          # Never force-push stale generated types over newer migration changes.
+          git fetch origin staging
+          if ! git diff --quiet HEAD origin/staging -- supabase/migrations; then
+            echo '::notice::New migrations arrived; a newer refresh run will regenerate types'
+            exit 0
+          fi
+          git rebase origin/staging
           git push origin HEAD:staging
       - name: Stop local Supabase
         if: always()

@@ -1,7 +1,7 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
 import {readFileSync} from 'node:fs'
-import {reconcileFinanceInvoice} from '../lib/administration/finance-reconciliation.ts'
+import {reconcileFinanceInvoice,financialAmountCents,totalFinancialCents} from '../lib/administration/finance-reconciliation.ts'
 test('partial payments and credits reconcile in integer cents',()=>{
  assert.deepEqual(reconcileFinanceInvoice(10001,4000,3001,'issued'),{outstandingCents:3000,overpaymentCents:0,issues:[]})
 })
@@ -28,4 +28,13 @@ test('invoice details and finance CSV both use shared reconciliation',()=>{
  assert.match(detail,/reconciliation\.outstandingCents\/100/)
  assert.match(detail,/reconciliation\.overpaymentCents\/100/)
  assert.match(csv,/reconcileFinanceInvoice\(/)
+})
+
+test('monetary parsing accepts exact cents and rejects malformed precision',()=>{
+ assert.equal(financialAmountCents('12.34'),1234)
+ assert.equal(financialAmountCents(0),0)
+ assert.equal(totalFinancialCents(['0.10','0.20','99.70']),10000)
+ for(const invalid of [null,undefined,'',false,'NaN',-0.01,0.001,Infinity,Number.MAX_SAFE_INTEGER])
+  assert.throws(()=>financialAmountCents(invalid))
+ assert.throws(()=>totalFinancialCents([Number.MAX_SAFE_INTEGER/100,1]))
 })
