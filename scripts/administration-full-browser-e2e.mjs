@@ -1,6 +1,6 @@
 import { chromium } from 'playwright'
 import { createClient } from '@supabase/supabase-js'
-import { mkdir } from 'node:fs/promises'
+import { mkdir, writeFile } from 'node:fs/promises'
 
 const base=process.env.BOT_TEST_BASE_URL||'http://127.0.0.1:3000'
 const url=process.env.BOT_SUPABASE_URL||process.env.NEXT_PUBLIC_SUPABASE_URL
@@ -24,6 +24,7 @@ const portals=[
 const surfaces=['/','/events','/workplaces','/briefings','/inventory','/guestlist','/chat','/operations','/tasks','/timesheets','/incidents','/notifications','/personnel','/sales','/settings','/exports','/audit']
 const failures=[]
 const findings=[]
+const interactionInventory=[]
 await mkdir('test-results/portal-e2e',{recursive:true})
 const browser=await chromium.launch({headless:true})
 try{
@@ -60,7 +61,9 @@ try{
      const links=await page.locator('a[href]').evaluateAll(els=>els.map(el=>({href:el.getAttribute('href'),label:(el.textContent||'').trim()})).filter(x=>x.href?.startsWith('/')&&!x.href.startsWith('//')))
      const buttons=await page.getByRole('button').count()
      const forms=await page.locator('form').count()
-     findings.push({role:role.name,route,actual:path,links:links.length,buttons,forms})
+     const controls=await page.locator('button,input,select,textarea,[role="button"],[role="switch"],[role="checkbox"]').evaluateAll(elements=>elements.map(el=>({tag:el.tagName.toLowerCase(),type:el.getAttribute('type')||'',action:el.getAttribute('data-action')||'',label:(el.getAttribute('aria-label')||el.getAttribute('name')||el.textContent||'').trim().slice(0,100),disabled:el.matches(':disabled')||el.getAttribute('aria-disabled')==='true'})))
+     interactionInventory.push({role:role.name,route,controls})
+     findings.push({role:role.name,route,actual:path,links:links.length,buttons,forms,controls:controls.length})
      if(role.name==='admin'&&route.startsWith('/portals/administration')){
       // Exercise actual user clicks, rather than treating direct URL requests as navigation coverage.
       const targets=[...new Set(links.map(x=>x.href).filter(x=>x.startsWith('/portals/administration/')))].slice(0,35)
@@ -87,5 +90,6 @@ try{
   finally{await context.close()}
  }
 }finally{await browser.close()}
-console.log(JSON.stringify({visited:findings.length,findings,failures},null,2))
+await writeFile('test-results/portal-e2e/interaction-inventory.json',JSON.stringify({inventory:interactionInventory},null,2))
+console.log(JSON.stringify({visited:findings.length,findings,failures,inventoryPath:'test-results/portal-e2e/interaction-inventory.json'},null,2))
 if(failures.length)process.exitCode=1
