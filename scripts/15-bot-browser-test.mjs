@@ -286,6 +286,8 @@ try {
         for(const route of portalRoutes){
           const routePage=await context.newPage()
           try {
+          const browserErrors=[]
+          routePage.on('pageerror',error=>browserErrors.push(String(error?.message||error)))
           const response=await gotoWithTransientRetry(routePage,`${baseUrl}${route}`,{waitUntil:'domcontentloaded',timeout:45000})
           if(!response?.ok())throw new Error(`portal browser ${route}: HTTP ${response?.status()}`)
           const current=new URL(routePage.url(),baseUrl).pathname
@@ -293,6 +295,12 @@ try {
           const mainText=(await routePage.locator('body').innerText()).trim()
           if(!mainText||/404\\s*\\|\\s*This page could not be found|This page could not be found/i.test(mainText))throw new Error(`portal browser ${route}: empty or not-found UI`)
           if(await routePage.locator('main').count()===0)console.log(`portal browser ${route}: page renders without main landmark`)
+          if(route.startsWith('/portals/administration')){
+            await routePage.waitForLoadState('networkidle',{timeout:12000}).catch(()=>{})
+            if(browserErrors.length)throw new Error(`administration browser ${route}: uncaught JavaScript error: ${browserErrors.join(' | ')}`)
+            const hydratedText=(await routePage.locator('body').innerText()).trim()
+            if(/application error|an error occurred in the client|internal server error/i.test(hydratedText))throw new Error(`administration browser ${route}: application runtime error`)
+          }
           } finally {
             await routePage.close()
           }
