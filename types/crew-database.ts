@@ -236,6 +236,27 @@ export type Database = {
           },
         ]
       }
+      admin_automation_runs: {
+        Row: {
+          completed_at: string
+          delivered: number
+          error_code: string | null
+          id: string
+        }
+        Insert: {
+          completed_at?: string
+          delivered?: number
+          error_code?: string | null
+          id?: string
+        }
+        Update: {
+          completed_at?: string
+          delivered?: number
+          error_code?: string | null
+          id?: string
+        }
+        Relationships: []
+      }
       admin_counterparties: {
         Row: {
           address: Json
@@ -586,6 +607,133 @@ export type Database = {
           },
         ]
       }
+      admin_inventory_receipts: {
+        Row: {
+          item_id: string
+          line_id: string
+          quantity: number
+          received_at: string
+          received_by: string
+          request_id: string
+        }
+        Insert: {
+          item_id: string
+          line_id: string
+          quantity: number
+          received_at?: string
+          received_by: string
+          request_id: string
+        }
+        Update: {
+          item_id?: string
+          line_id?: string
+          quantity?: number
+          received_at?: string
+          received_by?: string
+          request_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "admin_inventory_receipts_item_id_fkey"
+            columns: ["item_id"]
+            isOneToOne: false
+            referencedRelation: "inventory_items"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "admin_inventory_receipts_line_id_fkey"
+            columns: ["line_id"]
+            isOneToOne: false
+            referencedRelation: "admin_financial_lines"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      admin_obligation_notifications: {
+        Row: {
+          delivered_at: string
+          due_at: string
+          obligation_id: string
+          user_id: string
+        }
+        Insert: {
+          delivered_at?: string
+          due_at: string
+          obligation_id: string
+          user_id: string
+        }
+        Update: {
+          delivered_at?: string
+          due_at?: string
+          obligation_id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "admin_obligation_notifications_obligation_id_fkey"
+            columns: ["obligation_id"]
+            isOneToOne: false
+            referencedRelation: "admin_operational_obligations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      admin_operational_obligations: {
+        Row: {
+          approved_at: string | null
+          approved_by: string | null
+          created_at: string
+          created_by: string
+          details: string
+          due_at: string
+          event_id: string | null
+          id: string
+          kind: string
+          review_note: string
+          status: string
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          approved_at?: string | null
+          approved_by?: string | null
+          created_at?: string
+          created_by?: string
+          details?: string
+          due_at: string
+          event_id?: string | null
+          id?: string
+          kind: string
+          review_note?: string
+          status?: string
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          approved_at?: string | null
+          approved_by?: string | null
+          created_at?: string
+          created_by?: string
+          details?: string
+          due_at?: string
+          event_id?: string | null
+          id?: string
+          kind?: string
+          review_note?: string
+          status?: string
+          title?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "admin_operational_obligations_event_id_fkey"
+            columns: ["event_id"]
+            isOneToOne: false
+            referencedRelation: "events"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       admin_payment_reminders: {
         Row: {
           approved_at: string | null
@@ -729,6 +877,107 @@ export type Database = {
             columns: ["target_shift_id"]
             isOneToOne: false
             referencedRelation: "shifts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      admin_ticket_imports: {
+        Row: {
+          created_at: string
+          created_by: string
+          event_id: string
+          file_sha256: string
+          gross_cents: number
+          id: string
+          inserted_rows: number
+          payload_sha256: string
+          quantity: number
+          skipped_rows: number
+          source: string
+        }
+        Insert: {
+          created_at?: string
+          created_by: string
+          event_id: string
+          file_sha256: string
+          gross_cents: number
+          id?: string
+          inserted_rows: number
+          payload_sha256: string
+          quantity: number
+          skipped_rows: number
+          source: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string
+          event_id?: string
+          file_sha256?: string
+          gross_cents?: number
+          id?: string
+          inserted_rows?: number
+          payload_sha256?: string
+          quantity?: number
+          skipped_rows?: number
+          source?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "admin_ticket_imports_event_id_fkey"
+            columns: ["event_id"]
+            isOneToOne: false
+            referencedRelation: "events"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      admin_ticket_sales: {
+        Row: {
+          currency: string
+          event_id: string
+          external_id: string
+          gross_cents: number
+          id: string
+          import_id: string
+          quantity: number
+          sold_at: string
+          source: string
+        }
+        Insert: {
+          currency: string
+          event_id: string
+          external_id: string
+          gross_cents: number
+          id?: string
+          import_id: string
+          quantity: number
+          sold_at: string
+          source: string
+        }
+        Update: {
+          currency?: string
+          event_id?: string
+          external_id?: string
+          gross_cents?: number
+          id?: string
+          import_id?: string
+          quantity?: number
+          sold_at?: string
+          source?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "admin_ticket_sales_event_id_fkey"
+            columns: ["event_id"]
+            isOneToOne: false
+            referencedRelation: "events"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "admin_ticket_sales_import_id_fkey"
+            columns: ["import_id"]
+            isOneToOne: false
+            referencedRelation: "admin_ticket_imports"
             referencedColumns: ["id"]
           },
         ]
@@ -5765,6 +6014,15 @@ export type Database = {
         Args: { p_reason: string; p_user: string }
         Returns: undefined
       }
+      upt_administration_document_balances: {
+        Args: { p_ids: string[] }
+        Returns: Json
+      }
+      upt_administration_finance_summary: { Args: never; Returns: Json }
+      upt_administration_payroll_rows: {
+        Args: { p_event: string }
+        Returns: Json
+      }
       upt_apply_event_template: {
         Args: {
           p_address?: string
@@ -6405,6 +6663,15 @@ export type Database = {
           user_id: string
         }[]
       }
+      upt_import_ticket_sales: {
+        Args: {
+          p_event: string
+          p_rows: Json
+          p_sha256: string
+          p_source: string
+        }
+        Returns: Json
+      }
       upt_inventory_asset_by_code: {
         Args: { p_code: string }
         Returns: {
@@ -6620,6 +6887,15 @@ export type Database = {
       upt_reassign_shift: {
         Args: { p_reason: string; p_shift: string; p_user: string }
         Returns: undefined
+      }
+      upt_receive_invoice_inventory: {
+        Args: {
+          p_item: string
+          p_line: string
+          p_quantity: number
+          p_request: string
+        }
+        Returns: boolean
       }
       upt_recovery_readiness: { Args: never; Returns: Json }
       upt_remove_operational_checklist_item: {
@@ -7153,6 +7429,7 @@ export type Database = {
         Args: { p_event: string }
         Returns: Json
       }
+      upt_ticket_sales_summary: { Args: { p_event?: string }; Returns: Json }
       upt_toggle_chat_pin: {
         Args: { p_message: string; p_pinned: boolean }
         Returns: undefined
