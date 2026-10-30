@@ -36,3 +36,6 @@ supabase/.temp/
 .open-next/
 .wrangler/
 .dev.vars*
+
+# Local browser QA artifacts
+test-results/

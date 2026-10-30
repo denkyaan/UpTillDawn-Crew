@@ -1,0 +1,12 @@
+name: Full staging acceptance
+on:
+  push:
+    branches: [staging]
+    paths: ['docs/ADMINISTRATION_RELEASE_CHECKPOINT.md']
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  complete-application-checks:
+    uses: ./.github/workflows/ci.yml
+    secrets: inherit

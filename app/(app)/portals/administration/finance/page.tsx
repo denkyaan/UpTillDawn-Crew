@@ -1,4 +1,3 @@
-import {financialAging} from '@/lib/administration/finance-report'
 import {financialAmountCents,totalFinancialCents,reconcileFinanceInvoice} from '@/lib/administration/finance-reconciliation'
 import type { SupabaseClient } from '@supabase/supabase-js'
 import { randomUUID } from 'node:crypto'
@@ -79,15 +78,15 @@ async function createCounterparty(formData:FormData) {
  const postalCode=String(formData.get('postal_code')??'').trim()
  const city=String(formData.get('city')??'').trim()
  const countryCode=String(formData.get('country_code')??'').trim().toUpperCase()
- const iban=String(formData.get('iban')??'').replace(/\\s+/g,'').toUpperCase()
- const bic=String(formData.get('bic')??'').replace(/\\s+/g,'').toUpperCase()
+ const iban=String(formData.get('iban')??'').replace(/\s+/g,'').toUpperCase()
+ const bic=String(formData.get('bic')??'').replace(/\s+/g,'').toUpperCase()
  const paymentTermsRaw=String(formData.get('payment_terms_days')??'').trim()
  const paymentTermsDays=paymentTermsRaw===''?null:Number(paymentTermsRaw)
  if(streetAddress.length>300||postalCode.length>32||city.length>120||(countryCode&&!/^[A-Z]{2}$/.test(countryCode))||(iban&&!/^[A-Z]{2}[0-9]{2}[A-Z0-9]{11,30}$/.test(iban))||(bic&&!/^[A-Z0-9]{8}([A-Z0-9]{3})?$/.test(bic))||(paymentTermsDays!==null&&(!Number.isInteger(paymentTermsDays)||paymentTermsDays<0||paymentTermsDays>365)))redirect('/portals/administration/finance?error=1')
  const billingDetails={street_address:streetAddress||null,postal_code:postalCode||null,city:city||null,country_code:countryCode||null,iban:iban||null,bic:bic||null,payment_terms_days:paymentTermsDays}
  const vatNumber=String(formData.get('vat_number')??'').trim()
  const enterpriseNumber=String(formData.get('enterprise_number')??'').trim()
- if(!name||name.length>200||!['customer','supplier','both'].includes(kind)||email.length>320||(email&&!/^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$/.test(email))||vatNumber.length>32||enterpriseNumber.length>32)redirect('/portals/administration/finance?error=1')
+ if(!name||name.length>200||!['customer','supplier','both'].includes(kind)||email.length>320||(email&&!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email))||vatNumber.length>32||enterpriseNumber.length>32)redirect('/portals/administration/finance?error=1')
  const {error}=await (supabase as unknown as SupabaseClient).from('admin_counterparties').insert({name,kind,email:email||null,vat_number:vatNumber||null,enterprise_number:enterpriseNumber||null,...billingDetails})
  if(error)redirect('/portals/administration/finance?error=1')
  revalidatePath('/portals/administration/finance')
@@ -105,8 +104,8 @@ async function updateCounterparty(formData:FormData) {
  const postalCode=String(formData.get('postal_code')??'').trim()
  const city=String(formData.get('city')??'').trim()
  const countryCode=String(formData.get('country_code')??'').trim().toUpperCase()
- const iban=String(formData.get('iban')??'').replace(/\\s+/g,'').toUpperCase()
- const bic=String(formData.get('bic')??'').replace(/\\s+/g,'').toUpperCase()
+ const iban=String(formData.get('iban')??'').replace(/\s+/g,'').toUpperCase()
+ const bic=String(formData.get('bic')??'').replace(/\s+/g,'').toUpperCase()
  const paymentTermsRaw=String(formData.get('payment_terms_days')??'').trim()
  const paymentTermsDays=paymentTermsRaw===''?null:Number(paymentTermsRaw)
  if(streetAddress.length>300||postalCode.length>32||city.length>120||(countryCode&&!/^[A-Z]{2}$/.test(countryCode))||(iban&&!/^[A-Z]{2}[0-9]{2}[A-Z0-9]{11,30}$/.test(iban))||(bic&&!/^[A-Z0-9]{8}([A-Z0-9]{3})?$/.test(bic))||(paymentTermsDays!==null&&(!Number.isInteger(paymentTermsDays)||paymentTermsDays<0||paymentTermsDays>365)))redirect('/portals/administration/finance?error=1')
@@ -114,7 +113,7 @@ async function updateCounterparty(formData:FormData) {
  const vatNumber=String(formData.get('vat_number')??'').trim()
  const enterpriseNumber=String(formData.get('enterprise_number')??'').trim()
  const uuid=/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
- if(!uuid.test(id)||!name||name.length>200||!['customer','supplier','both'].includes(kind)||email.length>320||(email&&!/^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$/.test(email))||vatNumber.length>32||enterpriseNumber.length>32)redirect('/portals/administration/finance?error=1')
+ if(!uuid.test(id)||!name||name.length>200||!['customer','supplier','both'].includes(kind)||email.length>320||(email&&!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email))||vatNumber.length>32||enterpriseNumber.length>32)redirect('/portals/administration/finance?error=1')
  const {data,error}=await (supabase as unknown as SupabaseClient).from('admin_counterparties').update({name,kind,email:email||null,vat_number:vatNumber||null,enterprise_number:enterpriseNumber||null,...billingDetails}).eq('id',id).select('id')
  if(error||data?.length!==1)redirect('/portals/administration/finance?error=1')
  revalidatePath('/portals/administration/finance')
@@ -133,12 +132,15 @@ async function createDraft(formData:FormData) {
  const documentNumber = String(formData.get('document_number') ?? '').trim().slice(0,100)
  const issueDate=String(formData.get('issue_date')??'')
  let dueDate=String(formData.get('due_date')??'')
- const datePattern=/^\\d{4}-\\d{2}-\\d{2}$/
+ const datePattern=/^\d{4}-\d{2}-\d{2}$/
  const validDate=(value:string)=>!value||(datePattern.test(value)&&!Number.isNaN(Date.parse(value))&&new Date(value).toISOString().slice(0,10)===value)
  if(!validDate(issueDate)||!validDate(dueDate)||(dueDate&&(!issueDate||dueDate<issueDate)))redirect('/portals/administration/finance?error=1')
  const notes = String(formData.get('notes') ?? '').trim().slice(0,2000)
+ const eventId=String(formData.get('event_id')??'')
  const counterpartyId=String(formData.get('counterparty_id')??'')
  const uuid=/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
+ if(eventId&&!uuid.test(eventId))redirect('/portals/administration/finance?error=1')
+ if(eventId){const {data:event,error:eventError}=await supabase.from('events').select('id').eq('id',eventId).maybeSingle();if(eventError||!event)redirect('/portals/administration/finance?error=1')}
  if(counterpartyId&&!uuid.test(counterpartyId))redirect('/portals/administration/finance?error=1')
  if(counterpartyId){
   const {data:party,error:partyError}=await (supabase as unknown as SupabaseClient).from('admin_counterparties').select('id,kind,payment_terms_days').eq('id',counterpartyId).single()
@@ -157,7 +159,7 @@ async function createDraft(formData:FormData) {
  }
 
  const { error } = await supabase.from('admin_financial_documents').insert({
-   kind, document_number:documentNumber || null, net_amount:net, tax_amount:tax,
+   kind, document_number:documentNumber || null, net_amount:net, tax_amount:tax, event_id:eventId||null,
    notes:notes || null, status:'draft', currency:'EUR', counterparty_id:counterpartyId||null, issue_date:issueDate||null,due_date:dueDate||null,
    original_invoice_id:kind==='credit_note'?originalInvoiceId:null,
  })
@@ -278,7 +280,7 @@ async function updateInvoiceDates(formData:FormData) {
  let dueDate=String(formData.get('due_date')??'')
  const useTerms=formData.get('use_payment_terms')==='on'
  const uuid=/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
- const datePattern=/^\\d{4}-\\d{2}-\\d{2}$/
+ const datePattern=/^\d{4}-\d{2}-\d{2}$/
  const validDate=(value:string)=>!value||(datePattern.test(value)&&!Number.isNaN(Date.parse(value))&&new Date(value).toISOString().slice(0,10)===value)
  if(!uuid.test(id)||!validDate(issueDate)||!validDate(dueDate)||(dueDate&&(!issueDate||dueDate<issueDate)))redirect('/portals/administration/finance?error=1')
  if(useTerms){
@@ -352,7 +354,7 @@ async function editPaymentReminderDraft(formData:FormData) {
  const subject=String(formData.get('subject')??'').trim()
  const body=String(formData.get('body')??'').trim()
  const uuid=/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
- if(!uuid.test(id)||recipient.length>320||!/^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$/.test(recipient)||!subject||subject.length>200||!body||body.length>10000)redirect('/portals/administration/finance?error=1')
+ if(!uuid.test(id)||recipient.length>320||!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(recipient)||!subject||subject.length>200||!body||body.length>10000)redirect('/portals/administration/finance?error=1')
  const {data,error}=await (supabase as unknown as SupabaseClient).from('admin_payment_reminders').update({recipient_email:recipient,subject,body}).eq('id',id).eq('status','draft').select('id')
  if(error||data?.length!==1)redirect('/portals/administration/finance?error=1')
  revalidatePath('/portals/administration/finance')
@@ -492,6 +494,7 @@ export default async function FinancePage({searchParams}:{searchParams:Promise<{
    .select('id,kind,document_number,net_amount,tax_amount,gross_amount,currency,status,created_at,original_invoice_id,due_date,issue_date,counterparty_id,notes')
    .order('created_at',{ascending:false}).limit(100)
  const {data:counterparties}=await (supabase as unknown as SupabaseClient).from('admin_counterparties').select('id,name,kind,email,vat_number,enterprise_number,street_address,postal_code,city,country_code,iban,bic,payment_terms_days').order('name').limit(500)
+ const {data:financeEvents}=await supabase.from('events').select('id,name').order('start_at',{ascending:false}).limit(200)
  const originalInvoices=(documents??[]).filter(d=>['sales_invoice','purchase_invoice'].includes(d.kind)&&['approved','issued','paid'].includes(d.status))
  const {data:paymentRows}=await (supabase as unknown as SupabaseClient).from('admin_financial_payments').select('id,document_id,amount,paid_on,bank_reference').order('created_at',{ascending:false}).limit(1000)
  const payments=(paymentRows??[]) as {id:string;document_id:string;amount:number;paid_on:string;bank_reference:string|null}[]
@@ -499,25 +502,29 @@ export default async function FinancePage({searchParams}:{searchParams:Promise<{
  const reminders=(reminderRows??[]) as {id:string;document_id:string;reminder_number:number;status:string;recipient_email:string;subject:string;body:string;created_at:string}[]
  const {data:lines}=await supabase.from('admin_financial_lines').select('id,document_id,description,quantity,unit_price,vat_rate').order('created_at',{ascending:true}).limit(500)
  const {data:attachments}=await (supabase as unknown as SupabaseClient).from('admin_financial_attachments').select('id,document_id,original_name,created_at').order('created_at',{ascending:false}).limit(200)
+ const [ledgerSummary,documentBalances]=await Promise.all([(supabase as unknown as SupabaseClient).rpc('upt_administration_finance_summary'),(supabase as unknown as SupabaseClient).rpc('upt_administration_document_balances',{p_ids:(documents??[]).map(d=>d.id)})])
+ if(ledgerSummary.error||documentBalances.error||!ledgerSummary.data||!Array.isArray(documentBalances.data)||documentBalances.data.length!==(documents?.length??0))throw new Error('Financial ledger unavailable')
+ const balances=new Map<string,{paid_cents:string;credited_cents:string;outstanding_cents:string}>((documentBalances.data as {id:string;paid_cents:string;credited_cents:string;outstanding_cents:string}[]).map(row=>[row.id,row]))
+ const exactMoney=(cents:string)=>{const value=BigInt(cents);return new Intl.NumberFormat(locale).format(value/BigInt(100))+(locale==='en'?'.':',')+String(value%BigInt(100)).padStart(2,'0')+' EUR'}
+ const creditedFor=(id:string)=>Number(balances.get(id)?.credited_cents??'0')/100
+ const outstandingFor=(id:string)=>Number(balances.get(id)?.outstanding_cents??'0')/100
  const money = (amount:number) => new Intl.NumberFormat(locale==='nl'?'nl-BE':locale==='fr'?'fr-BE':locale==='de'?'de-BE':'en-BE',{style:'currency',currency:'EUR'}).format(amount)
- const paymentTotalFor=(id:string)=>payments.filter(p=>p.document_id===id).reduce((sum,p)=>sum+Number(p.amount),0)
- const paidTotal=(documents??[]).filter(d=>['approved','issued','paid'].includes(d.status)).reduce((sum,d)=>sum+paymentTotalFor(d.id),0)
- const unpaidTotal=(documents??[]).filter(d=>['approved','issued','paid','review'].includes(d.status)).reduce((sum,d)=>sum+Math.max(0,Number(d.gross_amount)-paymentTotalFor(d.id)),0)
- const today=new Date().toISOString().slice(0,10)
- const overdueDocuments=(documents??[]).filter(d=>['approved','issued'].includes(d.status)&&Number(d.gross_amount)>paymentTotalFor(d.id)&&d.due_date&&d.due_date<today)
- const overdueTotal=overdueDocuments.reduce((sum,d)=>sum+Math.max(0,Number(d.gross_amount)-paymentTotalFor(d.id)),0)
- const agingCounts={overdue_1_30:0,overdue_31_60:0,overdue_61_plus:0}
- for(const d of overdueDocuments){const bucket=financialAging(d.due_date,today);if(bucket in agingCounts)agingCounts[bucket as keyof typeof agingCounts]++}
- const draftCount=(documents??[]).filter(d=>d.status==='draft').length
+ const paymentTotalFor=(id:string)=>Number(balances.get(id)?.paid_cents??'0')/100
+ const paidTotal=ledgerSummary.data.paid_cents as string
+ const unpaidTotal=ledgerSummary.data.outstanding_cents as string
+ const overdueTotal=ledgerSummary.data.overdue_cents as string
+ const agingCounts={overdue_1_30:ledgerSummary.data.overdue_1_30 as string,overdue_31_60:ledgerSummary.data.overdue_31_60 as string,overdue_61_plus:ledgerSummary.data.overdue_61_plus as string}
+ const draftCount=ledgerSummary.data.drafts as string
+ const today=new Intl.DateTimeFormat('en-CA',{timeZone:'Europe/Brussels',year:'numeric',month:'2-digit',day:'2-digit'}).format(new Date())
  return <main className="mx-auto max-w-5xl space-y-6 p-4 pb-28 md:p-8">
   <Link className="text-violet-400" href="/portals/administration">← {t.back}</Link>
   <header><h1 className="text-3xl font-black">{t.title}</h1><p className="mt-2 text-muted-foreground">{t.intro}</p></header>
-  <section className="rounded-2xl border bg-card p-5"><h2 className="mb-3 font-bold">{t.totals}</h2><div className="grid gap-3 sm:grid-cols-4">{[[t.count,String(documents?.length??0)],[t.draft,String(draftCount)],[t.outstanding,money(unpaidTotal)],[t.paid,money(paidTotal)]].map(([label,value])=><div key={label} className="rounded-lg border p-3"><p className="text-sm text-muted-foreground">{label}</p><strong>{value}</strong></div>)}</div></section>
+  <section className="rounded-2xl border bg-card p-5"><h2 className="mb-3 font-bold">{t.totals}</h2><div className="grid gap-3 sm:grid-cols-4">{[[t.count,String(ledgerSummary.data.documents)],[t.draft,String(draftCount)],[t.outstanding,exactMoney(unpaidTotal)],[t.paid,exactMoney(paidTotal)]].map(([label,value])=><div key={label} className="rounded-lg border p-3"><p className="text-sm text-muted-foreground">{label}</p><strong>{value}</strong></div>)}</div></section>
   <section className="rounded-2xl border bg-card p-5 space-y-3">
    <div className="flex flex-wrap items-center justify-between gap-3"><h2 className="font-bold">{({nl:'Vervallen facturen',fr:'Factures échues',en:'Overdue invoices',de:'Überfällige Rechnungen'} as const)[locale]}</h2><a href="/api/administration/finance/export" className="rounded-lg border border-violet-500 px-3 py-2 text-sm font-semibold text-violet-400">{({nl:'Financieel CSV-overzicht exporteren',fr:'Exporter le rapport financier CSV',en:'Export finance CSV report',de:'Finanzbericht als CSV exportieren'} as const)[locale]}</a></div>
-   <p className="text-sm">{({nl:'Totaal vervallen',fr:'Total échu',en:'Total overdue',de:'Gesamt überfällig'} as const)[locale]}: <strong>{money(overdueTotal)}</strong></p>
+   <p className="text-sm">{({nl:'Totaal vervallen',fr:'Total échu',en:'Total overdue',de:'Gesamt überfällig'} as const)[locale]}: <strong>{exactMoney(overdueTotal)}</strong></p>
    <div className="grid grid-cols-3 gap-2 text-xs">{([['1–30',agingCounts.overdue_1_30],['31–60',agingCounts.overdue_31_60],['61+',agingCounts.overdue_61_plus]] as const).map(([label,count])=><div key={label} className="rounded-lg border p-3"><p>{label} {({nl:'dagen',fr:'jours',en:'days',de:'Tage'} as const)[locale]}</p><strong>{count}</strong></div>)}</div>
-   <p className="text-xs text-muted-foreground">{({nl:'Overzicht op basis van de recentste 100 documenten; CSV bevat alle beschikbare documenten binnen de exportlimiet.',fr:'Vue basée sur les 100 derniers documents ; le CSV comprend les documents disponibles dans la limite d’export.',en:'Dashboard uses the latest 100 documents; CSV includes available records within export limits.',de:'Übersicht der letzten 100 Dokumente; CSV enthält verfügbare Datensätze innerhalb des Exportlimits.'} as const)[locale]}</p>
+   <p className="text-xs text-muted-foreground">{({nl:'De totalen omvatten alle facturen, betalingen en goedgekeurde creditnota’s. Hieronder staan de recentste 100 documenten.',fr:'Les totaux incluent toutes les factures, tous les paiements et les avoirs approuvés. Les 100 derniers documents sont affichés ci-dessous.',en:'Totals include all invoices, payments and approved credit notes. The latest 100 documents are shown below.',de:'Summen enthalten alle Rechnungen, Zahlungen und genehmigten Gutschriften. Unten stehen die letzten 100 Dokumente.'} as const)[locale]}</p>
   </section>
   <section className="rounded-2xl border bg-card p-5 space-y-3">
    <h2 className="text-lg font-bold">{({nl:'Klanten en leveranciers',fr:'Clients et fournisseurs',en:'Customers and suppliers',de:'Kunden und Lieferanten'} as const)[locale]}</h2>
@@ -558,6 +565,7 @@ export default async function FinancePage({searchParams}:{searchParams:Promise<{
   <section className="rounded-2xl border bg-card p-5">
    <h2 className="mb-4 text-lg font-bold">{t.new}</h2>
    <form action={createDraft} className="grid gap-3 sm:grid-cols-2">
+    <label className="space-y-1 text-sm">{({nl:'Evenement',fr:'Événement',en:'Event',de:'Veranstaltung'} as const)[locale]}<select name="event_id" className="block w-full rounded-lg border bg-background p-3"><option value="">—</option>{(financeEvents??[]).map(event=><option key={event.id} value={event.id}>{event.name}</option>)}</select></label>
     <label className="space-y-1 text-sm">{t.kind}<select name="kind" required className="block w-full rounded-lg border bg-background p-3">{kindValues.map((kind,index)=><option key={kind} value={kind}>{documentKinds[locale][index]}</option>)}</select></label>
     <label className="space-y-1 text-sm sm:col-span-2">{({nl:'Klant of leverancier',fr:'Client ou fournisseur',en:'Customer or supplier',de:'Kunde oder Lieferant'} as const)[locale]}<select name="counterparty_id" className="block w-full rounded-lg border bg-background p-3"><option value="">—</option>{(counterparties??[]).map(party=><option key={party.id} value={party.id}>{party.name} · {party.kind}</option>)}</select></label>
     <label className="space-y-1 text-sm sm:col-span-2">{({nl:'Oorspronkelijke factuur (verplicht bij creditnota)',fr:'Facture d’origine (obligatoire pour un avoir)',en:'Original invoice (required for credit note)',de:'Ursprüngliche Rechnung (bei Gutschrift erforderlich)'} as const)[locale]}<select name="original_invoice_id" className="block w-full rounded-lg border bg-background p-3"><option value="">—</option>{originalInvoices.map(invoice=><option key={invoice.id} value={invoice.id}>{invoice.document_number||invoice.id} · {money(Number(invoice.gross_amount))}</option>)}</select></label>
@@ -592,11 +600,11 @@ export default async function FinancePage({searchParams}:{searchParams:Promise<{
       {(d.issue_date||d.due_date)&&<p className="text-xs text-muted-foreground">{({nl:'Factuurdatum',fr:'Date de facture',en:'Issue date',de:'Rechnungsdatum'} as const)[locale]}: {d.issue_date||'—'} · {({nl:'Vervaldatum',fr:'Date d’échéance',en:'Due date',de:'Fälligkeitsdatum'} as const)[locale]}: {d.due_date||'—'}</p>}
       {d.status==='draft'&&<form action={updateInvoiceDates} className="flex flex-wrap items-end gap-2 text-xs"><input type="hidden" name="document_id" value={d.id}/><label>{({nl:'Factuurdatum',fr:'Date de facture',en:'Issue date',de:'Rechnungsdatum'} as const)[locale]}<input type="date" name="issue_date" defaultValue={d.issue_date??''} className="block rounded border bg-background p-2"/></label><label>{({nl:'Vervaldatum',fr:'Date d’échéance',en:'Due date',de:'Fälligkeitsdatum'} as const)[locale]}<input type="date" name="due_date" defaultValue={d.due_date??''} className="block rounded border bg-background p-2"/></label><label className="flex items-center gap-2"><input type="checkbox" name="use_payment_terms"/>{({nl:'Vervaldatum berekenen via betalingstermijn',fr:'Calculer l’échéance selon les conditions de paiement',en:'Calculate due date from payment terms',de:'Fälligkeit aus Zahlungsziel berechnen'} as const)[locale]}</label><button type="submit" className="rounded border border-violet-500 px-3 py-2 text-violet-400">{({nl:'Datums opslaan',fr:'Enregistrer les dates',en:'Save dates',de:'Daten speichern'} as const)[locale]}</button></form>}
       {d.counterparty_id&&<p className="text-xs text-muted-foreground">{({nl:'Relatie',fr:'Contact',en:'Counterparty',de:'Geschäftspartner'} as const)[locale]}: {counterparties?.find(p=>p.id===d.counterparty_id)?.name??d.counterparty_id}</p>}
-      {['approved','issued','paid'].includes(d.status)&&<div className="rounded-lg border p-3 text-xs">
+      {['sales_invoice','purchase_invoice'].includes(d.kind)&&['approved','issued','paid'].includes(d.status)&&<div className="rounded-lg border p-3 text-xs">
        <p>{({nl:'Geregistreerde betalingen',fr:'Paiements enregistrés',en:'Recorded payments',de:'Erfasste Zahlungen'} as const)[locale]}: {money(paymentTotalFor(d.id))}</p>
-       <p>{({nl:'Openstaand saldo',fr:'Solde restant',en:'Outstanding balance',de:'Offener Betrag'} as const)[locale]}: {money(Math.max(0,Number(d.gross_amount)-payments.filter(p=>p.document_id===d.id).reduce((sum,p)=>sum+Number(p.amount),0)))}</p>
+       <p>{({nl:'Openstaand saldo',fr:'Solde restant',en:'Outstanding balance',de:'Offener Betrag'} as const)[locale]}: {money(outstandingFor(d.id))}</p>
        {payments.filter(p=>p.document_id===d.id).map(p=><p key={p.id}>{p.paid_on} · {money(Number(p.amount))} {p.bank_reference||''}</p>)}
-       {Number(d.gross_amount)>paymentTotalFor(d.id)&&<form action={recordFinancialPayment} className="mt-2 grid gap-2 sm:grid-cols-4">
+       {outstandingFor(d.id)>0&&<form action={recordFinancialPayment} className="mt-2 grid gap-2 sm:grid-cols-4">
         <input type="hidden" name="document_id" value={d.id}/>
         <input name="amount" aria-label={({nl:'Betalingsbedrag',fr:'Montant du paiement',en:'Payment amount',de:'Zahlungsbetrag'} as const)[locale]} type="number" min="0.01" step="0.01" required className="rounded border bg-background p-2"/>
         <input name="paid_on" aria-label={({nl:'Betaaldatum',fr:'Date du paiement',en:'Payment date',de:'Zahlungsdatum'} as const)[locale]} type="date" required className="rounded border bg-background p-2"/>
@@ -604,7 +612,7 @@ export default async function FinancePage({searchParams}:{searchParams:Promise<{
         <button type="submit" className="rounded border border-violet-500 px-3 py-2 text-violet-400">{({nl:'Betaling registreren',fr:'Enregistrer le paiement',en:'Record payment',de:'Zahlung erfassen'} as const)[locale]}</button>
        </form>}
       </div>}
-      {['sales_invoice','purchase_invoice'].includes(d.kind)&&['approved','issued'].includes(d.status)&&d.due_date&&d.due_date<today&&Number(d.gross_amount)>paymentTotalFor(d.id)&&<div className="space-y-2 rounded-lg border p-3 text-xs">
+      {['sales_invoice','purchase_invoice'].includes(d.kind)&&['approved','issued'].includes(d.status)&&d.due_date&&d.due_date<today&&outstandingFor(d.id)>0&&<div className="space-y-2 rounded-lg border p-3 text-xs">
        <h3 className="font-semibold">{({nl:'Betalingsherinneringen (geen automatische verzending)',fr:'Rappels de paiement (aucun envoi automatique)',en:'Payment reminders (no automatic sending)',de:'Zahlungserinnerungen (kein automatischer Versand)'} as const)[locale]}</h3>
        {reminders.filter(r=>r.document_id===d.id).map(r=><div key={r.id} className="flex flex-wrap items-center gap-2"><span>#{r.reminder_number} · {r.subject} · {r.recipient_email} · {r.status}</span>{isAdmin&&r.status==='draft'&&(['approved','cancelled'] as const).map(status=><form key={status} action={updatePaymentReminder}><input type="hidden" name="reminder_id" value={r.id}/><input type="hidden" name="status" value={status}/><button type="submit" className="rounded border px-2 py-1">{status==='approved'?({nl:'Goedkeuren',fr:'Approuver',en:'Approve',de:'Genehmigen'} as const)[locale]:({nl:'Annuleren',fr:'Annuler',en:'Cancel',de:'Stornieren'} as const)[locale]}</button></form>)}</div>)}
        {reminders.filter(r=>r.document_id===d.id&&r.status==='draft').map(r=><details key={r.id} className="rounded border p-2"><summary className="cursor-pointer text-xs">{({nl:'Herinneringsconcept bewerken',fr:'Modifier le brouillon de rappel',en:'Edit reminder draft',de:'Erinnerungsentwurf bearbeiten'} as const)[locale]} #{r.reminder_number}</summary><form action={editPaymentReminderDraft} className="mt-2 grid gap-2 sm:grid-cols-2"><input type="hidden" name="reminder_id" value={r.id}/><input type="email" name="recipient_email" required maxLength={320} defaultValue={r.recipient_email} aria-label={({nl:'Ontvanger',fr:'Destinataire',en:'Recipient',de:'Empfänger'} as const)[locale]} className="rounded border bg-background p-2"/><input name="subject" required maxLength={200} defaultValue={r.subject} aria-label={({nl:'Onderwerp',fr:'Objet',en:'Subject',de:'Betreff'} as const)[locale]} className="rounded border bg-background p-2"/><textarea name="body" required maxLength={10000} defaultValue={r.body} rows={3} aria-label={({nl:'Bericht',fr:'Message',en:'Message',de:'Nachricht'} as const)[locale]} className="rounded border bg-background p-2 sm:col-span-2"/><button type="submit" className="rounded border border-violet-500 px-3 py-2 text-violet-400 sm:col-span-2">{({nl:'Concept opslaan',fr:'Enregistrer le brouillon',en:'Save draft',de:'Entwurf speichern'} as const)[locale]}</button></form></details>)}
@@ -633,7 +641,7 @@ export default async function FinancePage({searchParams}:{searchParams:Promise<{
       </form>}
      </div>
      <div className="flex flex-wrap items-center gap-2">
-     {(transitions[d.status]??[]).filter(next=>(isAdmin || next==='review') && (next!=='paid' || (Number(d.gross_amount)>0 && paymentTotalFor(d.id)===Number(d.gross_amount))) && (next!=='void' || paymentTotalFor(d.id)===0) && (next!=='review' || !['sales_invoice','purchase_invoice'].includes(d.kind) || Boolean(d.counterparty_id&&d.document_number?.trim()&&d.issue_date&&d.due_date&&Number(d.gross_amount)>0))).map(next=><form key={next} action={updateFinancialStatus}><input type="hidden" name="document_id" value={d.id}/><input type="hidden" name="status" value={next}/><button type="submit" className="rounded-lg border border-violet-500 px-3 py-2 text-xs font-semibold text-violet-400">{translatedLabel(actionLabels[locale],next)}</button></form>)}
+     {(transitions[d.status]??[]).filter(next=>(isAdmin || next==='review') && (next!=='paid' || (Number(d.gross_amount)>0 && outstandingFor(d.id)===0)) && (next!=='void' || (paymentTotalFor(d.id)===0&&creditedFor(d.id)===0)) && (next!=='review' || !['sales_invoice','purchase_invoice'].includes(d.kind) || Boolean(d.counterparty_id&&d.document_number?.trim()&&d.issue_date&&d.due_date&&Number(d.gross_amount)>0))).map(next=><form key={next} action={updateFinancialStatus}><input type="hidden" name="document_id" value={d.id}/><input type="hidden" name="status" value={next}/><button type="submit" className="rounded-lg border border-violet-500 px-3 py-2 text-xs font-semibold text-violet-400">{translatedLabel(actionLabels[locale],next)}</button></form>)}
      <strong>{new Intl.NumberFormat(locale==='nl'?'nl-BE':locale==='fr'?'fr-BE':locale==='de'?'de-BE':'en-BE',{style:'currency',currency:d.currency}).format(Number(d.gross_amount))}</strong></div>
     </article>)}</div>}
   </section>

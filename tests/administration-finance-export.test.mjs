@@ -17,7 +17,7 @@ test('financial export requires authenticated portal access and paginates',()=>{
 })
 test('dashboard shows overdue buckets and export link',()=>{
  assert.match(page,/agingCounts/)
- assert.match(page,/financialAging\(d\.due_date,today\)/)
+ assert.match(page,/upt_administration_finance_summary/)
  assert.match(page,/\/api\/administration\/finance\/export/)
 })
 

@@ -15,7 +15,8 @@ test('next.config.mjs loads and exports a valid config object', async () => {
   assert.ok(config, 'next.config.mjs must have a default export')
   assert.equal(typeof config, 'object')
   assert.equal(config.images?.unoptimized, true)
-  assert.equal(config.experimental?.serverActions, undefined, 'production/test config must not allow Codespaces Server Action origins')
+  assert.equal(config.experimental?.serverActions?.allowedOrigins, undefined, 'production/test config must not allow Codespaces Server Action origins')
+  assert.equal(config.experimental?.serverActions?.bodySizeLimit, '21mb', 'validated 20 MB documents need multipart overhead')
 })
 
 test('core entry points exist', async () => {

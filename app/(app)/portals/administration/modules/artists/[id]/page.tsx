@@ -42,6 +42,7 @@ async function recordCommunication(form:FormData){
 async function updateBooking(form:FormData){
  "use server"
  const db=await access()
+ const operator=await getCurrentUser()
  const id=String(form.get("id")??"")
  const status=String(form.get("status")??"")
  const rider_notes=String(form.get("rider_notes")??"").trim()
@@ -53,11 +54,12 @@ async function updateBooking(form:FormData){
  const {data:booking,error:readError}=await db.from("admin_artist_bookings").select("id,status,internal_notes,agency_contact_id,performance_at,fee_amount").eq("id",id).single()
  if(readError||!booking)notFound()
  const transitions:Record<string,string[]>={enquiry:["enquiry","negotiating","cancelled"],negotiating:["negotiating","confirmed","cancelled"],confirmed:["confirmed","cancelled"],cancelled:["cancelled"]}
+ if(status!==booking.status&&(["confirmed","cancelled"].includes(status)||["confirmed","cancelled"].includes(booking.status))&&!operator?.realIsAdmin&&!operator?.isOwner)throw new Error("Admin required")
  if(!transitions[booking.status]?.includes(status))throw new Error("Invalid booking status transition")
  if(status==="confirmed"&&booking.status!=="confirmed"){
   if(!booking.agency_contact_id||!booking.performance_at||booking.fee_amount===null)throw new Error("Complete the agency, performance date and agreed fee before confirming")
   const {data:agency,error:agencyError}=await db.from("admin_counterparties").select("id,email").eq("id",booking.agency_contact_id).maybeSingle()
-  if(agencyError||!agency?.email||!/^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$/.test(agency.email))throw new Error("A valid agency email is required before confirmation")
+  if(agencyError||!agency?.email||!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(agency.email))throw new Error("A valid agency email is required before confirmation")
  }
 
  const history=(booking.internal_notes??"").split("\n").filter(line=>/^\[\d{4}-\d{2}-\d{2}T.*\] \[(email_sent|reply_received|follow_up)\] \[[0-9a-f-]{36}\] /.test(line))
@@ -73,6 +75,7 @@ export default async function BookingDetail({params}:{params:Promise<{id:string}
  const {id}=await params
  if(!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id))notFound()
  const db=await access()
+ const operator=await getCurrentUser()
  const {data:booking,error}=await db.from("admin_artist_bookings").select("id,artist_name,status,rider_notes,internal_notes,event_id,agency_contact_id,performance_at,fee_amount,currency,follow_up_at").eq("id",id).single()
  if(error||!booking)notFound()
  const [eventResult,agencyResult]=await Promise.all([db.from("events").select("name,start_at").eq("id",booking.event_id).maybeSingle(),booking.agency_contact_id?db.from("admin_counterparties").select("name,email").eq("id",booking.agency_contact_id).maybeSingle():Promise.resolve({data:null})])
@@ -89,8 +92,8 @@ export default async function BookingDetail({params}:{params:Promise<{id:string}
  } as const)[locale]
  const date=booking.performance_at?new Intl.DateTimeFormat(({nl:"nl-BE",fr:"fr-BE",en:"en-GB",de:"de-DE"} as const)[locale],{dateStyle:"full",timeStyle:"short",timeZone:"Europe/Brussels"}).format(new Date(booking.performance_at)):null
  const subject=`Up Till Dawn — ${booking.artist_name} — ${event?.name??""} — ${labels[booking.status as "enquiry"|"negotiating"|"confirmed"|"cancelled"]}`
- const body=[`${booking.artist_name} — ${event?.name??""}`,date??"",`${labels.status}: ${labels[booking.status as "enquiry"|"negotiating"|"confirmed"|"cancelled"]}`,booking.fee_amount!=null?`${booking.fee_amount} ${booking.currency}`:"",booking.rider_notes??""].filter(Boolean).join("\\n\\n")
- const mailto=agency?.email&&/^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$/.test(agency.email)?`mailto:${encodeURIComponent(agency.email)}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`:null
+ const body=[`${booking.artist_name} — ${event?.name??""}`,date??"",`${labels.status}: ${labels[booking.status as "enquiry"|"negotiating"|"confirmed"|"cancelled"]}`,booking.fee_amount!=null?`${booking.fee_amount} ${booking.currency}`:"",booking.rider_notes??""].filter(Boolean).join("\n\n")
+ const mailto=agency?.email&&/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(agency.email)?`mailto:${encodeURIComponent(agency.email)}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`:null
  const logEntries=(booking.internal_notes??"").split("\n").filter(line=>/^\[\d{4}-\d{2}-\d{2}T.*\] \[(email_sent|reply_received|follow_up)\] \[[0-9a-f-]{36}\] /.test(line))
  const editableNotes=(booking.internal_notes??"").split("\n").filter(line=>!logEntries.includes(line)).join("\n")
  const allowed:Record<string,("enquiry"|"negotiating"|"confirmed"|"cancelled")[]>={enquiry:["enquiry","negotiating","cancelled"],negotiating:["negotiating","confirmed","cancelled"],confirmed:["confirmed","cancelled"],cancelled:["cancelled"]}
@@ -116,7 +119,7 @@ export default async function BookingDetail({params}:{params:Promise<{id:string}
   <form action={updateBooking} className="grid gap-4 rounded-2xl border bg-card p-5">
    <input type="hidden" name="id" value={booking.id}/>
    {booking.status!=="confirmed"&&booking.status!=="cancelled"&&<p className="rounded-lg border p-3 text-sm text-muted-foreground">{({nl:"Voor bevestiging zijn een agentschap met geldig e-mailadres, een optreedtijdstip en een overeengekomen vergoeding verplicht. Bevestiging verstuurt geen e-mail of contract automatisch.",fr:"La confirmation exige une agence avec une adresse e-mail valide, une date de prestation et un cachet convenu. Aucun e-mail ni contrat n’est envoyé automatiquement.",en:"Confirmation requires an agency with a valid email, a performance date and an agreed fee. No email or contract is sent automatically.",de:"Zur Bestätigung sind eine Agentur mit gültiger E-Mail-Adresse, ein Auftrittstermin und eine vereinbarte Gage erforderlich. E-Mails oder Verträge werden nicht automatisch versendet."} as const)[locale]}</p>}
-   <label className="text-sm font-semibold">{labels.status}<select name="status" defaultValue={booking.status} className="mt-1 w-full rounded-lg border bg-background p-3">{(allowed[booking.status]??[booking.status as "enquiry"]).map(status=><option key={status} value={status}>{labels[status]}</option>)}</select></label>
+   <label className="text-sm font-semibold">{labels.status}<select name="status" defaultValue={booking.status} className="mt-1 w-full rounded-lg border bg-background p-3">{(allowed[booking.status]??[booking.status as "enquiry"]).filter(status=>operator?.realIsAdmin||operator?.isOwner||status===booking.status||["enquiry","negotiating"].includes(status)).map(status=><option key={status} value={status}>{labels[status]}</option>)}</select></label>
    <label className="text-sm font-semibold">{labels.rider}<textarea name="rider_notes" maxLength={5000} rows={5} defaultValue={booking.rider_notes??""} className="mt-1 w-full rounded-lg border bg-background p-3"/></label>
    <label className="text-sm font-semibold">{labels.followUp}<input type="datetime-local" name="follow_up_at" defaultValue={booking.follow_up_at?new Date(booking.follow_up_at).toISOString().slice(0,16):""} className="mt-1 w-full rounded-lg border bg-background p-3"/></label>
    <label className="text-sm font-semibold">{labels.notes}<textarea name="internal_notes" maxLength={5000} rows={5} defaultValue={editableNotes} className="mt-1 w-full rounded-lg border bg-background p-3"/></label>

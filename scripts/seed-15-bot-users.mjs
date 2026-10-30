@@ -64,6 +64,11 @@ for (let index = 0; index < roles.length; index += 1) {
   created.push({ bot, email, portalRole, userId: data.user.id })
 }
 
+// Separate multi-role accounts exercise administrative and promotion access.
+for(const [index,portal,role] of [[3,'administration','administrative_staff'],[4,'promotion','promoter']]){
+ const {error}=await supabase.from('portal_role_assignments').insert({user_id:created[index].userId,portal,role,approved:true,approved_by:created[0].userId,approved_at:new Date().toISOString()})
+ if(error)throw error
+}
 console.log(`PASS: seeded ${created.length} isolated authenticated browser-bot accounts`)
 
 

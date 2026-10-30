@@ -25,8 +25,8 @@ const contentSecurityPolicy = [
 const nextConfig = {
   experimental: {
     serverActions: process.env.NODE_ENV === 'development'
-      ? { allowedOrigins: ['*.app.github.dev', 'localhost:3000'] }
-      : undefined,
+      ? { bodySizeLimit: '21mb', allowedOrigins: ['*.app.github.dev', 'localhost:3000'] }
+      : { bodySizeLimit: '21mb' },
   },
   images: {
     // OpenNext/Cloudflare serves local application assets directly.

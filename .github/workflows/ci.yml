@@ -6,6 +6,7 @@ on:
   pull_request:
     branches: [main]
   workflow_dispatch:
+  workflow_call:
 
 # Revalidate the complete pipeline on the regenerated Next.js security lockfile.
 
@@ -106,6 +107,10 @@ jobs:
         run: |
           set -euo pipefail
           for file in tests/sql/*.sql; do
+            # These suites require the dedicated users seeded later in this job.
+            case "$file" in
+              tests/sql/administration-finance-integration.sql|tests/sql/administration-finance-rls.sql|tests/sql/administration-workflow-integration.sql) continue ;;
+            esac
             echo "::group::$file"
             psql "$PGURL" -v ON_ERROR_STOP=1 -f "$file"
             echo "::endgroup::"
@@ -223,6 +228,9 @@ jobs:
           test -n "$admin_id" && test -n "$staff_id"
           psql "$BOT_DB_URL" -v ON_ERROR_STOP=1 -v TEST_ADMIN_ID="$admin_id" -f tests/sql/administration-finance-integration.sql
           psql "$BOT_DB_URL" -v ON_ERROR_STOP=1 -v TEST_NON_ADMIN_ID="$staff_id" -f tests/sql/administration-finance-rls.sql
+          office_id=$(psql "$BOT_DB_URL" -Atc "select id from auth.users where email='bot-04-staff-de@bots.uptilldawn.test';")
+          test -n "$office_id"
+          psql "$BOT_DB_URL" -v ON_ERROR_STOP=1 -v TEST_ADMIN_ID="$admin_id" -v TEST_STAFF_ID="$staff_id" -v TEST_OFFICE_ID="$office_id" -f tests/sql/administration-workflow-integration.sql
           echo "PASS: financial invoice/payment/credit and non-admin RLS regression suites"
 
       - name: Cache Playwright Chromium
@@ -273,6 +281,9 @@ jobs:
 
       - name: Full authenticated Administration browser E2E
         run: node scripts/administration-full-browser-e2e.mjs
+
+      - name: Transactional administration workflow E2E
+        run: node scripts/administration-completion-e2e.mjs
 
       - name: Verify authenticated E2E interaction inventory
         shell: bash

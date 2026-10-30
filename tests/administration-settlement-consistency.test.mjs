@@ -10,7 +10,7 @@ test('paid status requires full recorded settlement and void forbids prior payme
 })
 test('financial overview and actions use ledger amounts',()=>{
  assert.match(page,/const paymentTotalFor=/)
- assert.match(page,/sum\+paymentTotalFor\(d\.id\)/)
+ assert.match(page,/upt_administration_document_balances/)
  assert.match(page,/next!=='paid'/)
  assert.match(page,/next!=='void'/)
 })
