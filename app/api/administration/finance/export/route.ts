@@ -59,17 +59,26 @@ export async function GET(){
  if(paymentTotal!==null&&paymentTotal>50000)return NextResponse.json({error:'Export exceeds 50000 payments; narrow the dataset before exporting'},{status:413})
  if(paymentTotal===null||payments.length!==paymentTotal)return NextResponse.json({error:'Incomplete payment export'},{status:503})
  const byDocument=new Map<string,number>()
+ const documentIds=new Set(documents.map(doc=>doc.id))
  for(const payment of payments){
+  if(!documentIds.has(payment.document_id))return NextResponse.json({error:'Payment references a missing document'},{status:409})
   if(payment.amount===null||!Number.isFinite(Number(payment.amount))||Number(payment.amount)<0||!Number.isSafeInteger(Math.round(Number(payment.amount)*100)))
    return NextResponse.json({error:'Invalid payment amount in export'},{status:422})
-  byDocument.set(payment.document_id,(byDocument.get(payment.document_id)??0)+Math.round(Number(payment.amount)*100))
+  const nextPaid=(byDocument.get(payment.document_id)??0)+Math.round(Number(payment.amount)*100)
+  if(!Number.isSafeInteger(nextPaid))return NextResponse.json({error:'Payment total overflow'},{status:422})
+  byDocument.set(payment.document_id,nextPaid)
  }
  const creditsByInvoice=new Map<string,number>()
  for(const doc of documents){
-  if(doc.kind!=='credit_note'||!doc.original_invoice_id||!['approved','issued','paid'].includes(doc.status))continue
+  if(doc.kind!=='credit_note'||!['approved','issued','paid'].includes(doc.status))continue
+  if(!doc.original_invoice_id||!documentIds.has(doc.original_invoice_id))return NextResponse.json({error:'Credit note references a missing invoice'},{status:409})
+  const original=documents.find(invoice=>invoice.id===doc.original_invoice_id)
+  if(!original||!['sales_invoice','purchase_invoice'].includes(original.kind)||original.currency!==doc.currency)return NextResponse.json({error:'Credit note has an invalid original invoice'},{status:422})
   const amount=Number(doc.gross_amount)
   if(!Number.isFinite(amount)||amount<0||!Number.isSafeInteger(Math.round(amount*100)))return NextResponse.json({error:'Invalid credit note amount'},{status:422})
-  creditsByInvoice.set(doc.original_invoice_id,(creditsByInvoice.get(doc.original_invoice_id)??0)+Math.round(amount*100))
+  const nextCredit=(creditsByInvoice.get(doc.original_invoice_id)??0)+Math.round(amount*100)
+  if(!Number.isSafeInteger(nextCredit))return NextResponse.json({error:'Credit note total overflow'},{status:422})
+  creditsByInvoice.set(doc.original_invoice_id,nextCredit)
  }
  const today=new Intl.DateTimeFormat('en-CA',{timeZone:'Europe/Brussels',year:'numeric',month:'2-digit',day:'2-digit'}).format(new Date())
  const rows:unknown[][]=[['Document ID','Number','Type','Status','Issue date','Due date','Currency','Gross amount','Paid amount','Approved credit notes','Outstanding after credits','Overpayment after credits','Aging','Reconciliation issues']]
