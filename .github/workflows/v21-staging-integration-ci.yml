@@ -108,6 +108,10 @@ jobs:
         run: |
           set -euo pipefail
           for file in tests/sql/*.sql; do
+            # These suites run below after the dedicated users have been seeded.
+            case "$file" in
+              tests/sql/administration-finance-integration.sql|tests/sql/administration-finance-rls.sql|tests/sql/administration-workflow-integration.sql|tests/sql/administration-peppol-integration.sql) continue ;;
+            esac
             echo "::group::$file"
             psql "$PGURL" -v ON_ERROR_STOP=1 -f "$file"
             echo "::endgroup::"
@@ -217,6 +221,20 @@ jobs:
           briefing_seed_count="$(psql "$BOT_DB_URL" -v ON_ERROR_STOP=1 -Atc "SELECT count(*) FROM public.briefing_acknowledgements ba JOIN auth.users u ON u.id=ba.user_id WHERE ba.briefing_id='00000000-0000-4000-8000-00000000e2e3'::uuid AND lower(u.email)=lower('bot-03-staff-en@bots.uptilldawn.test');")"
           test "$briefing_seed_count" = "0"
           echo "PASS: bot03 briefing fixture starts unacknowledged"
+
+      - name: Run administration transaction and role integration suites
+        shell: bash
+        run: |
+          set -euo pipefail
+          admin_id="$(psql "$BOT_DB_URL" -v ON_ERROR_STOP=1 -Atc "SELECT id FROM auth.users WHERE email='bot-01-admin-nl@bots.uptilldawn.test'")"
+          office_id="$(psql "$BOT_DB_URL" -v ON_ERROR_STOP=1 -Atc "SELECT id FROM auth.users WHERE email='bot-04-staff-de@bots.uptilldawn.test'")"
+          staff_id="$(psql "$BOT_DB_URL" -v ON_ERROR_STOP=1 -Atc "SELECT id FROM auth.users WHERE email='bot-03-staff-en@bots.uptilldawn.test'")"
+          test -n "$admin_id" && test -n "$office_id" && test -n "$staff_id"
+          for file in tests/sql/administration-finance-integration.sql tests/sql/administration-finance-rls.sql tests/sql/administration-workflow-integration.sql tests/sql/administration-peppol-integration.sql; do
+            echo "::group::$file"
+            psql "$BOT_DB_URL" -v ON_ERROR_STOP=1 -v TEST_ADMIN_ID="$admin_id" -v TEST_OFFICE_ID="$office_id" -v TEST_STAFF_ID="$staff_id" -v TEST_NON_ADMIN_ID="$staff_id" -f "$file"
+            echo "::endgroup::"
+          done
 
       - name: Cache Playwright Chromium
         id: chromium-cache

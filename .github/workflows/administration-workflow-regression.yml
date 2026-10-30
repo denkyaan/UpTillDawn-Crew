@@ -22,6 +22,9 @@ on:
       - 'scripts/validate-peppol.py'
       - 'tests/fixtures/peppol-input.mjs'
       - 'tests/sql/administration-peppol-integration.sql'
+      - 'tests/sql/administration-finance-integration.sql'
+      - 'tests/sql/administration-finance-rls.sql'
+      - 'tests/sql/administration-workflow-integration.sql'
   workflow_dispatch:
 
 concurrency:
@@ -81,13 +84,18 @@ jobs:
         run: |
           psql "$BOT_DB_URL" -v ON_ERROR_STOP=1 -c "DROP TRIGGER IF EXISTS on_auth_user_created ON auth.users;"
           node scripts/seed-15-bot-users.mjs
-      - name: Verify Peppol database permissions and rounding
+      - name: Verify administration transactions, database permissions and rounding
         run: |
           set -euo pipefail
-          admin_id="$(psql "$BOT_DB_URL" -Atc "select id from auth.users where email='bot-01-admin-nl@bots.uptilldawn.test'")"
-          office_id="$(psql "$BOT_DB_URL" -Atc "select id from auth.users where email='bot-04-staff-de@bots.uptilldawn.test'")"
-          staff_id="$(psql "$BOT_DB_URL" -Atc "select id from auth.users where email='bot-03-staff-en@bots.uptilldawn.test'")"
-          psql "$BOT_DB_URL" -v ON_ERROR_STOP=1 -v TEST_ADMIN_ID="$admin_id" -v TEST_OFFICE_ID="$office_id" -v TEST_STAFF_ID="$staff_id" -f tests/sql/administration-peppol-integration.sql
+          admin_id="$(psql "$BOT_DB_URL" -v ON_ERROR_STOP=1 -Atc "SELECT id FROM auth.users WHERE email='bot-01-admin-nl@bots.uptilldawn.test'")"
+          office_id="$(psql "$BOT_DB_URL" -v ON_ERROR_STOP=1 -Atc "SELECT id FROM auth.users WHERE email='bot-04-staff-de@bots.uptilldawn.test'")"
+          staff_id="$(psql "$BOT_DB_URL" -v ON_ERROR_STOP=1 -Atc "SELECT id FROM auth.users WHERE email='bot-03-staff-en@bots.uptilldawn.test'")"
+          test -n "$admin_id" && test -n "$office_id" && test -n "$staff_id"
+          for file in tests/sql/administration-finance-integration.sql tests/sql/administration-finance-rls.sql tests/sql/administration-workflow-integration.sql tests/sql/administration-peppol-integration.sql; do
+            echo "::group::$file"
+            psql "$BOT_DB_URL" -v ON_ERROR_STOP=1 -v TEST_ADMIN_ID="$admin_id" -v TEST_OFFICE_ID="$office_id" -v TEST_STAFF_ID="$staff_id" -v TEST_NON_ADMIN_ID="$staff_id" -f "$file"
+            echo "::endgroup::"
+          done
       - name: Cache Chromium
         id: chromium-cache
         uses: actions/cache@v4
