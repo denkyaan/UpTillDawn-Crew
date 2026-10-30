@@ -17,21 +17,29 @@ export async function GET(){
  }
  const documents: {id:string;kind:string;document_number:string|null;status:string;currency:string;gross_amount:number|null;due_date:string|null;issue_date:string|null;original_invoice_id:string|null}[]=[]
  const payments: {document_id:string;amount:number}[]=[]
+ let documentTotal:number|null=null
+ let paymentTotal:number|null=null
  for(let offset=0;offset<10000;offset+=500){
-  const {data,error}=await db.from('admin_financial_documents').select('id,kind,document_number,status,currency,gross_amount,due_date,issue_date,original_invoice_id').order('id').range(offset,offset+499)
+  const {data,error,count}=await db.from('admin_financial_documents').select('id,kind,document_number,status,currency,gross_amount,due_date,issue_date,original_invoice_id',{count:'exact'}).order('id').range(offset,offset+499)
   if(error)return NextResponse.json({error:'Financial documents unavailable'},{status:503})
+  if(count===null||!Number.isSafeInteger(count))return NextResponse.json({error:'Document count unavailable'},{status:503})
+  documentTotal=count
   documents.push(...(data??[]))
   if((data??[]).length<500)break
  }
- if(documents.length>=10000)return NextResponse.json({error:'Export exceeds 10000 documents; narrow the dataset before exporting'},{status:413})
- const typed=db as unknown as {from:(name:string)=>{select:(columns:string)=>{order:(column:string,options?:{ascending:boolean})=>{order:(column:string,options?:{ascending:boolean})=>{range:(from:number,to:number)=>Promise<{data:{document_id:string;amount:number}[]|null;error:unknown}>}}}}}
+ if(documentTotal!==null&&documentTotal>10000)return NextResponse.json({error:'Export exceeds 10000 documents; narrow the dataset before exporting'},{status:413})
+ if(documentTotal===null||documents.length!==documentTotal)return NextResponse.json({error:'Incomplete document export'},{status:503})
+ const typed=db as unknown as {from:(name:string)=>{select:(columns:string,options?:{count:'exact'})=>{order:(column:string,options?:{ascending:boolean})=>{order:(column:string,options?:{ascending:boolean})=>{range:(from:number,to:number)=>Promise<{data:{document_id:string;amount:number}[]|null;error:unknown;count:number|null}>}}}}}
  for(let offset=0;offset<50000;offset+=500){
-  const {data,error}=await typed.from('admin_financial_payments').select('document_id,amount').order('document_id').order('id').range(offset,offset+499)
+  const {data,error,count}=await typed.from('admin_financial_payments').select('document_id,amount',{count:'exact'}).order('document_id').order('id').range(offset,offset+499)
   if(error)return NextResponse.json({error:'Payments unavailable'},{status:503})
+  if(count===null||!Number.isSafeInteger(count))return NextResponse.json({error:'Payment count unavailable'},{status:503})
+  paymentTotal=count
   payments.push(...(data??[]))
   if((data??[]).length<500)break
  }
- if(payments.length>=50000)return NextResponse.json({error:'Export exceeds 50000 payments; narrow the dataset before exporting'},{status:413})
+ if(paymentTotal!==null&&paymentTotal>50000)return NextResponse.json({error:'Export exceeds 50000 payments; narrow the dataset before exporting'},{status:413})
+ if(paymentTotal===null||payments.length!==paymentTotal)return NextResponse.json({error:'Incomplete payment export'},{status:503})
  const byDocument=new Map<string,number>()
  for(const payment of payments){
   if(payment.amount===null||!Number.isFinite(Number(payment.amount))||Number(payment.amount)<0)
