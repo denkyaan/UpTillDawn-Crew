@@ -17,5 +17,5 @@ test('draft with recorded payment is flagged',()=>{
 test('invalid cents and overflow fail closed',()=>{
  for(const amount of [-1,0.1,Infinity,NaN,Number.MAX_SAFE_INTEGER+1])
   assert.throws(()=>reconcileFinanceInvoice(amount,0,0,'issued'))
- assert.throws(()=>reconcileFinanceInvoice(Number.MAX_SAFE_INTEGER,1,0,'issued'))
+ assert.throws(()=>reconcileFinanceInvoice(100,Number.MAX_SAFE_INTEGER,1,'issued'))
 })
