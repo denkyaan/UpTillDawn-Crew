@@ -61,9 +61,9 @@ const operationalModuleLabels={
 
 export const dynamic = "force-dynamic"
 
-export default async function AdministrationModulePage({params,searchParams}:{params:Promise<{slug:string}>;searchParams?:Promise<{event?:string;page?:string;invoiceKind?:string;invoiceStatus?:string;invoicePage?:string}>}){
+export default async function AdministrationModulePage({params,searchParams}:{params:Promise<{slug:string}>;searchParams?:Promise<{event?:string;page?:string;invoiceKind?:string;invoiceStatus?:string;invoicePage?:string;invoiceNumber?:string}>}){
  const {slug}=await params
- const {event:requestedEvent,page:requestedPage,invoiceKind,invoiceStatus,invoicePage}=await (searchParams??Promise.resolve({event:undefined,page:undefined,invoiceKind:undefined,invoiceStatus:undefined,invoicePage:undefined}))
+ const {event:requestedEvent,page:requestedPage,invoiceKind,invoiceStatus,invoicePage,invoiceNumber}=await (searchParams??Promise.resolve({event:undefined,page:undefined,invoiceKind:undefined,invoiceStatus:undefined,invoicePage:undefined,invoiceNumber:undefined}))
  const adminModule=administrationModules.find(item=>item.slug===slug&&slug!=="dashboard"&&slug!=="finance")
  if(!adminModule)notFound()
  const current=await getCurrentUser()
@@ -97,11 +97,12 @@ export default async function AdministrationModulePage({params,searchParams}:{pa
  const reminderRows=slug==="banking"?await supabase.from("admin_payment_reminders").select("id,document_id,status,reminder_number,subject,recipient_email,created_at").order("created_at",{ascending:false}).limit(50):null
  const invoiceKindFilter=invoiceKind==="sales_invoice"||invoiceKind==="purchase_invoice"?invoiceKind:null
  const invoiceStatusFilter=invoiceStatus&&["draft","review","approved","issued","paid","cancelled"].includes(invoiceStatus)?invoiceStatus:null
+ const invoiceNumberFilter=typeof invoiceNumber==="string"?invoiceNumber.trim().slice(0,80):""
  const invoicePageNumber=Number(invoicePage)
  const currentInvoicePage=Number.isSafeInteger(invoicePageNumber)&&invoicePageNumber>=1&&invoicePageNumber<=10000?invoicePageNumber:1
  const invoicePageSize=50
  const invoiceOffset=(currentInvoicePage-1)*invoicePageSize
- const invoiceSummaryRows=slug==="invoices"?await (()=>{let query=supabase.from("admin_financial_documents").select("id,kind,status,gross_amount,due_date,document_number,currency").in("kind",["sales_invoice","purchase_invoice"]);if(invoiceKindFilter)query=query.eq("kind",invoiceKindFilter);if(invoiceStatusFilter)query=query.eq("status",invoiceStatusFilter);return query.order("due_date",{ascending:true}).range(invoiceOffset,invoiceOffset+invoicePageSize)})():null
+ const invoiceSummaryRows=slug==="invoices"?await (()=>{let query=supabase.from("admin_financial_documents").select("id,kind,status,gross_amount,due_date,document_number,currency").in("kind",["sales_invoice","purchase_invoice"]);if(invoiceKindFilter)query=query.eq("kind",invoiceKindFilter);if(invoiceStatusFilter)query=query.eq("status",invoiceStatusFilter);if(invoiceNumberFilter)query=query.ilike("document_number",`%${invoiceNumberFilter.replace(/[%,_\\]/g,"")} %`.trim());return query.order("due_date",{ascending:true}).range(invoiceOffset,invoiceOffset+invoicePageSize)})():null
  const taskRows=slug==="tasks"?await supabase.from("tasks").select("id,title,status").limit(50):null
  const eventRows=slug==="events"?await supabase.from("events").select("id,name,status,start_at").order("start_at",{ascending:false}).limit(50):null
  const notificationRows=slug==="notifications"?await supabase.from("crew_notifications").select("id,kind,link,read_at").eq("user_id",current.id).order("id",{ascending:false}).limit(50):null
@@ -163,6 +164,7 @@ export default async function AdministrationModulePage({params,searchParams}:{pa
    <form method="get" className="mt-3 flex flex-wrap items-end gap-3">
     <label className="flex flex-col gap-1 text-sm"><span>{({nl:"Factuurtype",fr:"Type de facture",en:"Invoice type",de:"Rechnungstyp"} as const)[locale]}</span><select name="invoiceKind" defaultValue={invoiceKindFilter??""} className="rounded-lg border bg-background px-3 py-2"><option value="">{({nl:"Alle types",fr:"Tous les types",en:"All types",de:"Alle Typen"} as const)[locale]}</option><option value="sales_invoice">{({nl:"Verkoop",fr:"Vente",en:"Sales",de:"Verkauf"} as const)[locale]}</option><option value="purchase_invoice">{({nl:"Aankoop",fr:"Achat",en:"Purchase",de:"Einkauf"} as const)[locale]}</option></select></label>
     <label className="flex flex-col gap-1 text-sm"><span>Status</span><select name="invoiceStatus" defaultValue={invoiceStatusFilter??""} className="rounded-lg border bg-background px-3 py-2"><option value="">{({nl:"Alle statussen",fr:"Tous les statuts",en:"All statuses",de:"Alle Status"} as const)[locale]}</option>{["draft","review","approved","issued","paid","cancelled"].map(status=><option key={status} value={status}>{status}</option>)}</select></label>
+    <label className="flex flex-col gap-1 text-sm"><span>{({nl:"Factuurnummer",fr:"Numéro de facture",en:"Invoice number",de:"Rechnungsnummer"} as const)[locale]}</span><input type="search" name="invoiceNumber" maxLength={80} defaultValue={invoiceNumberFilter} className="rounded-lg border bg-background px-3 py-2" /></label>
     <button type="submit" className="rounded-lg bg-violet-600 px-4 py-2 text-sm font-semibold text-white">{({nl:"Filter toepassen",fr:"Appliquer les filtres",en:"Apply filters",de:"Filter anwenden"} as const)[locale]}</button>
     <Link href="/portals/administration/modules/invoices" className="rounded-lg border px-4 py-2 text-sm">{({nl:"Wissen",fr:"Effacer",en:"Clear",de:"Zurücksetzen"} as const)[locale]}</Link>
    </form>
@@ -173,9 +175,9 @@ export default async function AdministrationModulePage({params,searchParams}:{pa
    </div>}
    <div className="mt-3 text-sm text-muted-foreground" role="status">{({nl:"Getoonde facturen",fr:"Factures affichées",en:"Displayed invoices",de:"Angezeigte Rechnungen"} as const)[locale]}: {Math.min(invoiceSummaryRows?.data?.length??0,invoicePageSize)}</div>
    <nav aria-label={({nl:"Facturenpagina’s",fr:"Pagination des factures",en:"Invoice pagination",de:"Rechnungsseiten"} as const)[locale]} className="mt-4 flex flex-wrap items-center gap-3 text-sm">
-    {currentInvoicePage>1&&<Link className="rounded-lg border px-3 py-2" href={`/portals/administration/modules/invoices?${new URLSearchParams({...(invoiceKindFilter?{invoiceKind:invoiceKindFilter}:{}),...(invoiceStatusFilter?{invoiceStatus:invoiceStatusFilter}:{}),invoicePage:String(currentInvoicePage-1)}).toString()}`}>{({nl:"Vorige",fr:"Précédent",en:"Previous",de:"Zurück"} as const)[locale]}</Link>}
+    {currentInvoicePage>1&&<Link className="rounded-lg border px-3 py-2" href={`/portals/administration/modules/invoices?${new URLSearchParams({...(invoiceKindFilter?{invoiceKind:invoiceKindFilter}:{}),...(invoiceStatusFilter?{invoiceStatus:invoiceStatusFilter}:{}),...(invoiceNumberFilter?{invoiceNumber:invoiceNumberFilter}:{}),invoicePage:String(currentInvoicePage-1)}).toString()}`}>{({nl:"Vorige",fr:"Précédent",en:"Previous",de:"Zurück"} as const)[locale]}</Link>}
     <span>{({nl:"Pagina",fr:"Page",en:"Page",de:"Seite"} as const)[locale]} {currentInvoicePage}</span>
-    {(invoiceSummaryRows?.data?.length??0)>invoicePageSize&&<Link className="rounded-lg border px-3 py-2" href={`/portals/administration/modules/invoices?${new URLSearchParams({...(invoiceKindFilter?{invoiceKind:invoiceKindFilter}:{}),...(invoiceStatusFilter?{invoiceStatus:invoiceStatusFilter}:{}),invoicePage:String(currentInvoicePage+1)}).toString()}`}>{({nl:"Volgende",fr:"Suivant",en:"Next",de:"Weiter"} as const)[locale]}</Link>}
+    {(invoiceSummaryRows?.data?.length??0)>invoicePageSize&&<Link className="rounded-lg border px-3 py-2" href={`/portals/administration/modules/invoices?${new URLSearchParams({...(invoiceKindFilter?{invoiceKind:invoiceKindFilter}:{}),...(invoiceStatusFilter?{invoiceStatus:invoiceStatusFilter}:{}),...(invoiceNumberFilter?{invoiceNumber:invoiceNumberFilter}:{}),invoicePage:String(currentInvoicePage+1)}).toString()}`}>{({nl:"Volgende",fr:"Suivant",en:"Next",de:"Weiter"} as const)[locale]}</Link>}
    </nav>
    <p className="mt-3 text-xs text-muted-foreground">{({nl:"50 facturen per pagina; bedragen volgen de geregistreerde documentwaarden.",fr:"50 factures par page ; montants selon les documents enregistrés.",en:"50 invoices per page; amounts reflect recorded document values.",de:"50 Rechnungen pro Seite; Beträge entsprechen den gespeicherten Dokumentwerten."} as const)[locale]}</p>
   </section>}
