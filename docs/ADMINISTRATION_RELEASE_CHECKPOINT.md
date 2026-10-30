@@ -10,3 +10,9 @@ Date: 2026-10-30 (Europe/Brussels)
 - This file deliberately requests the complete application CI and browser acceptance once for this candidate.
 
 Full application completion remains blocked on external banking/Peppol/accounting/signing/OCR/promotion-verification integrations and any failures found by full acceptance. This checkpoint is not a production-release certificate.
+
+## Acceptance iteration 2
+
+The first full run found an unindexed promotion-chat sender foreign key. The sender index is added, and staging legacy index parity is restored. The complete public foreign-key index check now passes on staging. Expected migration: 20261030161753.
+
+All eight authenticated HTTP/form workflow checks passed, including four-locale page rendering.

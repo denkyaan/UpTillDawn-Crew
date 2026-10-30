@@ -23,3 +23,8 @@ This project is not declared fully finished. Real bank connectivity, provider-sp
 
 ## Deployment boundary
 Staging changes are authorized. Complete application CI is deliberately triggered by the release checkpoint file, not every staging push. Production release requires full acceptance evidence.
+
+## Additional verified evidence
+- Eight authenticated native HTTP/form workflow checks passed against the application and staging database, including four-locale rendering and promotion routes.
+- The first full CI found the promotion-chat sender FK index missing. The index and staging legacy-index parity are repaired; the complete public FK index check now passes. Full CI is rerun on the corrected candidate.
+- Documenso Community Edition self-hosting is the established free-service choice. Bank and accounting vendors have not been specified. Peppol preparation, external service wiring and automated document/evidence verification must still be completed and verified.
