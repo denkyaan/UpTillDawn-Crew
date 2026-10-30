@@ -254,6 +254,7 @@ jobs:
         run: npm run build:next
 
       - name: Start application
+        id: application
         run: |
           npm start > /tmp/uptilldawn-bot-app.log 2>&1 &
           echo $! > /tmp/uptilldawn-bot-app.pid
@@ -289,8 +290,10 @@ jobs:
       - name: Transactional administration workflow E2E
         run: node scripts/administration-completion-e2e.mjs
       - name: Peppol approval and XML export browser E2E
+        if: ${{ !cancelled() && steps.application.outcome == 'success' }}
         run: node scripts/administration-peppol-e2e.mjs
       - name: Peppol UBL and business rule validation
+        if: ${{ !cancelled() && steps.application.outcome == 'success' }}
         uses: ./.github/actions/peppol-validation
 
       - name: Verify authenticated E2E interaction inventory

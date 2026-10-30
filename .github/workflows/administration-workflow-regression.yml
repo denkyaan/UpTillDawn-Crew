@@ -6,6 +6,7 @@ on:
     paths:
       - '.github/workflows/administration-workflow-regression.yml'
       - 'scripts/administration-completion-e2e.mjs'
+      - 'scripts/browser-navigation.mjs'
       - 'scripts/administration-http-integration.mjs'
       - 'app/(app)/portals/administration/finance/**'
       - 'app/(app)/portals/administration/modules/settings/**'
@@ -120,8 +121,10 @@ jobs:
         if: ${{ !cancelled() && steps.application.outcome == 'success' }}
         run: node scripts/administration-completion-e2e.mjs
       - name: Verify Peppol company approval and browser export
+        if: ${{ !cancelled() && steps.application.outcome == 'success' }}
         run: node scripts/administration-peppol-e2e.mjs
       - name: Validate generated Peppol XML
+        if: ${{ !cancelled() && steps.application.outcome == 'success' }}
         uses: ./.github/actions/peppol-validation
       - name: Collect workflow diagnostics
         if: always()

@@ -2,6 +2,7 @@ import assert from 'node:assert/strict'
 import {mkdir,writeFile,readFile} from 'node:fs/promises'
 import {randomUUID} from 'node:crypto'
 import {chromium} from 'playwright'
+import {gotoReady} from './browser-navigation.mjs'
 import {createClient} from '@supabase/supabase-js'
 import {peppolInput} from '../tests/fixtures/peppol-input.mjs'
 
@@ -17,7 +18,7 @@ const ok=message=>{checks.push(message);console.log('PASS:',message)}
 let failure
 try{
  const office=await actor('bot-04-staff-de@bots.uptilldawn.test'),admin=await actor('bot-01-admin-nl@bots.uptilldawn.test'),staff=await actor('bot-03-staff-en@bots.uptilldawn.test')
- await office.page.goto(base+'/portals/administration/modules/settings',{waitUntil:'networkidle'})
+ await gotoReady(office.page,base+'/portals/administration/modules/settings')
  const region=office.page.getByRole('region',{name:'Your billing organization'})
  for(const [name,value]of Object.entries(fixture.seller))await region.locator(`input[name="${name}"]`).fill(value)
  await submit(office.page,region.getByRole('button',{name:'Save company details'}))
@@ -27,14 +28,14 @@ try{
  assert.equal(await region.getByRole('button',{name:'Approve company details (Admin)'}).count(),0)
  const forged=await office.db.from('admin_billing_profile').update({approved_by:office.user.id,approved_at:new Date().toISOString()}).eq('singleton',true);assert.equal(forged.error?.code,'42501')
  ok('Office saves company data through Settings and cannot approve it')
- await admin.page.goto(base+'/portals/administration/modules/settings',{waitUntil:'networkidle'})
+ await gotoReady(admin.page,base+'/portals/administration/modules/settings')
  await submit(admin.page,admin.page.getByRole('button',{name:'Approve company details (Admin)'}))
  await admin.page.getByRole('status').filter({hasText:'Approved company details'}).waitFor()
  ok('Admin approves the saved company through the actual Settings form')
  const customer=await one(office.db.from('admin_counterparties').insert({...fixture.buyer,name:prefix+' Customer',kind:'customer'}).select('id'))
  const document=await one(office.db.from('admin_financial_documents').insert({kind:'sales_invoice',document_number:prefix,counterparty_id:customer.id,issue_date:'2026-10-30',due_date:'2026-11-13',buyer_reference:'TEST-PO',net_amount:0,tax_amount:0}).select('id'))
  const line=fixture.lines[0];const createdLine=await one(office.db.from('admin_financial_lines').insert({document_id:document.id,description:line.description,quantity:line.quantity,unit_price:line.unit_price,vat_rate:line.vat_rate,vat_category:line.vat_category,unit_code:line.unit_code}).select('id'))
- await office.page.goto(base+`/portals/administration/modules/invoices/${document.id}/peppol`,{waitUntil:'networkidle'})
+ await gotoReady(office.page,base+`/portals/administration/modules/invoices/${document.id}/peppol`)
  const references=office.page.locator('details').filter({has:office.page.locator('input[name="buyer_reference"]')})
  await references.locator('summary').click()
  const referenceForm=references.locator('form').filter({has:office.page.locator('input[name="buyer_reference"]')})
@@ -48,10 +49,10 @@ try{
  assert.equal((await one(office.db.from('admin_financial_lines').select('unit_code').eq('id',createdLine.id))).unit_code,'DAY')
  ok('Customer references and invoice line units persist through the preparation forms')
  const {error:reviewError}=await office.db.from('admin_financial_documents').update({status:'review'}).eq('id',document.id);assert.equal(reviewError,null)
- await admin.page.goto(base+'/portals/administration/finance',{waitUntil:'networkidle'})
+ await gotoReady(admin.page,base+'/portals/administration/finance')
  const approval=admin.page.locator(`form:has(input[name="document_id"][value="${document.id}"]):has(input[name="status"][value="approved"]) button`)
  await submit(admin.page,approval);await approval.waitFor({state:'detached'})
- await office.page.goto(base+`/portals/administration/modules/invoices/${document.id}/peppol`,{waitUntil:'networkidle'})
+ await gotoReady(office.page,base+`/portals/administration/modules/invoices/${document.id}/peppol`)
  await office.page.getByRole('button',{name:'Check data',exact:true}).click()
  await office.page.getByRole('status').filter({hasText:'The data checks passed'}).waitFor()
  const download=office.page.waitForEvent('download');await office.page.getByRole('button',{name:'Download XML',exact:true}).click();await (await download).saveAs(output+'/outbound.xml')
@@ -65,7 +66,7 @@ try{
  const denied=await staff.context.request.get(base+'/api/administration/peppol/prepare?documentId='+document.id);assert.equal(denied.status(),403)
  const foreign=await office.context.request.post(base+'/api/administration/peppol/prepare',{headers:{origin:'https://foreign.invalid'},data:{documentId:document.id}});assert.equal(foreign.status(),403)
  ok('Peppol preview denies ordinary staff and export rejects foreign origins')
- await office.page.goto(base+'/portals/administration/modules/settings',{waitUntil:'networkidle'})
+ await gotoReady(office.page,base+'/portals/administration/modules/settings')
  await region.locator('input[name="name"]').fill('Changed example company')
  await submit(office.page,region.getByRole('button',{name:'Save company details'}))
  await office.page.getByRole('status').filter({hasText:'Not yet approved by Admin'}).waitFor()

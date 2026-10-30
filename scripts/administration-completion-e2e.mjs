@@ -3,6 +3,7 @@ import {readFile,mkdir,writeFile} from 'node:fs/promises'
 import {randomUUID} from 'node:crypto'
 import {createClient} from '@supabase/supabase-js'
 import {chromium} from 'playwright'
+import {gotoReady} from './browser-navigation.mjs'
 
 const base=process.env.BOT_TEST_BASE_URL||'http://localhost:3000'
 const url=process.env.BOT_SUPABASE_URL||process.env.NEXT_PUBLIC_SUPABASE_URL
@@ -159,7 +160,7 @@ try{
  for(const locale of ['nl','fr','en','de']){
   const context=await browserContext(browser,office,locale),tab=await context.newPage()
   for(const path of ['/portals/administration','/portals/administration/modules/ticketing','/portals/administration/modules/banking','/portals/administration/modules/inventory','/portals/administration/modules/permits','/portals/administration/modules/automations']){
-   const errors=[];tab.on('pageerror',e=>errors.push(e.message));const r=await tab.goto(base+path,{waitUntil:'domcontentloaded'});assert.ok(r.status()<400,path+' HTTP '+r.status());assert.equal(errors.length,0);const body=await tab.locator('body').innerText();assert.ok(!/application error|internal server error|404\s*\|/i.test(body));assert.ok(!new URL(tab.url()).pathname.startsWith('/login'))
+   const errors=[];tab.on('pageerror',e=>errors.push(e.message));const r=await gotoReady(tab,base+path);assert.ok(r.status()<400,path+' HTTP '+r.status());assert.equal(errors.length,0);const body=await tab.locator('body').innerText();assert.ok(!/application error|internal server error|404\s*\|/i.test(body));assert.equal(new URL(tab.url()).pathname,path)
   }
   await context.close()
  }
