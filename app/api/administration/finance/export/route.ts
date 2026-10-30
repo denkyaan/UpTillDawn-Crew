@@ -81,9 +81,9 @@ export async function GET(){
    return NextResponse.json({error:'Invalid financial amount in export'},{status:422})
   const invoice=doc.kind==='sales_invoice'||doc.kind==='purchase_invoice'
   const reconciliation=invoice?reconcileFinanceInvoice(Math.round(gross*100),byDocument.get(doc.id)??0,creditsByInvoice.get(doc.id)??0,doc.status):null
-  const outstanding=doc.kind==='sales_invoice'||doc.kind==='purchase_invoice'?Math.max(0,Math.round((gross-paid-credits)*100)/100):0
-  const overpayment=doc.kind==='sales_invoice'||doc.kind==='purchase_invoice'?Math.max(0,Math.round((paid+credits-gross)*100)/100):0
-  rows.push([doc.id,doc.document_number,doc.kind,doc.status,doc.issue_date,doc.due_date,doc.currency,gross.toFixed(2),paid.toFixed(2),credits.toFixed(2),outstanding.toFixed(2),overpayment.toFixed(2),doc.kind==='sales_invoice'||doc.kind==='purchase_invoice'?(outstanding>0?financialAging(doc.due_date,today):'settled'):'not_applicable'])
+  const outstanding=reconciliation?reconciliation.outstandingCents/100:0
+  const overpayment=reconciliation?reconciliation.overpaymentCents/100:0
+  rows.push([doc.id,doc.document_number,doc.kind,doc.status,doc.issue_date,doc.due_date,doc.currency,gross.toFixed(2),paid.toFixed(2),credits.toFixed(2),outstanding.toFixed(2),overpayment.toFixed(2),doc.kind==='sales_invoice'||doc.kind==='purchase_invoice'?(outstanding>0?financialAging(doc.due_date,today):'settled'):'not_applicable',reconciliation?.issues.join('; ')??''])
  }
  return new NextResponse(financeCsv(rows),{headers:{'Content-Type':'text/csv; charset=utf-8','Content-Disposition':'attachment; filename="administration-finance.csv"','Cache-Control':'private, no-store','X-Content-Type-Options':'nosniff'}})
 }
