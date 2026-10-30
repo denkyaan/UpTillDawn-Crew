@@ -422,13 +422,30 @@ async function updateFinancialStatus(formData:FormData) {
  }
  if (!transitions[existing.status]?.includes(status)) return
  if(status==='paid'){
-  const {data:invoice,error:invoiceError}=await supabase.from('admin_financial_documents').select('gross_amount').eq('id',id).maybeSingle()
+  const {data:invoice,error:invoiceError}=await supabase.from('admin_financial_documents').select('kind,gross_amount').eq('id',id).maybeSingle()
   if(invoiceError||!invoice||!Number.isFinite(Number(invoice.gross_amount))||Number(invoice.gross_amount)<=0)redirect('/portals/administration/finance?error=1')
-  const {data:payments,error:paymentsError}=await (supabase as unknown as SupabaseClient).from('admin_financial_payments').select('amount').eq('document_id',id)
-  if(paymentsError)redirect('/portals/administration/finance?error=1')
-  const paidCents=(payments??[]).reduce((sum:number,p:{amount:number})=>sum+Math.round(Number(p.amount)*100),0)
-  const invoiceCents=Math.round(Number(invoice.gross_amount)*100)
-  if(!Number.isSafeInteger(paidCents)||paidCents!==invoiceCents)redirect('/portals/administration/finance?error=1')
+  const grossCents=Math.round(Number(invoice.gross_amount)*100)
+  if(!Number.isSafeInteger(grossCents))redirect('/portals/administration/finance?error=1')
+  const db=supabase as unknown as SupabaseClient
+  const [{data:payments,error:paymentsError,count:paymentCount},{data:credits,error:creditsError,count:creditCount}]=await Promise.all([
+   db.from('admin_financial_payments').select('amount',{count:'exact'}).eq('document_id',id).limit(1000),
+   db.from('admin_financial_documents').select('gross_amount,status',{count:'exact'}).eq('kind','credit_note').eq('original_invoice_id',id).limit(1000)
+  ])
+  if(paymentsError||creditsError||paymentCount===null||creditCount===null||paymentCount>1000||creditCount>1000||payments?.length!==paymentCount||credits?.length!==creditCount)redirect('/portals/administration/finance?error=1')
+  let paidCents=0
+  for(const payment of payments??[]){
+   const value=Number(payment.amount)
+   if(payment.amount===null||!Number.isFinite(value)||value<=0||!Number.isSafeInteger(Math.round(value*100)))redirect('/portals/administration/finance?error=1')
+   paidCents+=Math.round(value*100)
+  }
+  let creditCents=0
+  for(const credit of credits??[]){
+   if(!['approved','issued','paid'].includes(credit.status))continue
+   const value=Number(credit.gross_amount)
+   if(credit.gross_amount===null||!Number.isFinite(value)||value<0||!Number.isSafeInteger(Math.round(value*100)))redirect('/portals/administration/finance?error=1')
+   creditCents+=Math.round(value*100)
+  }
+  if(!Number.isSafeInteger(paidCents)||!Number.isSafeInteger(creditCents)||paidCents+creditCents!==grossCents)redirect('/portals/administration/finance?error=1')
  }
  const {data:{user}} = await supabase.auth.getUser()
  if (!user) return
