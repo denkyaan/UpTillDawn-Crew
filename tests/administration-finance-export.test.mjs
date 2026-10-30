@@ -57,3 +57,14 @@ test('finance export rejects incomplete paginated snapshots and distinguishes ex
  assert.match(api,/paymentTotal>50000/)
  assert.match(api,/count:'exact'/)
 })
+
+test('finance export detects changing counts and unstable pagination',()=>{
+ assert.match(api,/documentTotal!==null&&documentTotal!==count/)
+ assert.match(api,/paymentTotal!==null&&paymentTotal!==count/)
+ assert.match(api,/seenDocumentIds\.has\(doc\.id\)/)
+ assert.match(api,/seenPaymentIds\.has\(payment\.id\)/)
+ assert.match(api,/doc\.id<=previousDocumentId/)
+ assert.match(api,/key<=previousPaymentId/)
+ assert.match(api,/Document pagination changed during export/)
+ assert.match(api,/Payment pagination changed during export/)
+})
