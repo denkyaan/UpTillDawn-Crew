@@ -18,13 +18,13 @@ export default async function InvoiceDetails({params}:{params:Promise<{id:string
  const {data:doc,error}=await supabase.from("admin_financial_documents").select("id,kind,status,document_number,issue_date,due_date,currency,net_amount,tax_amount,gross_amount,notes,original_invoice_id").eq("id",id).in("kind",["sales_invoice","purchase_invoice"]).maybeSingle()
  if(error||!doc)notFound()
  const [{data:payments,error:paymentsError,count:paymentCount},{data:reminders,error:remindersError,count:reminderTotal}]=await Promise.all([
-  supabase.from("admin_financial_payments").select("id,amount,paid_on,bank_reference,note",{count:"exact"}).eq("document_id",id).order("paid_on",{ascending:false}).limit(100),
+  supabase.from("admin_financial_payments").select("id,amount,paid_on,bank_reference,note",{count:"exact"}).eq("document_id",id).order("paid_on",{ascending:false}).order("id",{ascending:false}).limit(100),
   supabase.from("admin_payment_reminders").select("id,reminder_number,subject,recipient_email,status,created_at",{count:"exact"}).eq("document_id",id).order("created_at",{ascending:false}).limit(100)
  ])
- const {data:creditNotes,error:creditNotesError,count:creditNoteCount}=await supabase.from("admin_financial_documents").select("id,document_number,status,issue_date,gross_amount,currency",{count:"exact"}).eq("kind","credit_note").eq("original_invoice_id",id).order("issue_date",{ascending:false}).limit(100)
+ const {data:creditNotes,error:creditNotesError,count:creditNoteCount}=await supabase.from("admin_financial_documents").select("id,document_number,status,issue_date,gross_amount,currency",{count:"exact"}).eq("kind","credit_note").eq("original_invoice_id",id).order("issue_date",{ascending:false}).order("id",{ascending:false}).limit(100)
  const [paymentTotals,creditTotals]=await Promise.all([
-  paymentCount!==null&&paymentCount>100?supabase.from("admin_financial_payments").select("amount").eq("document_id",id).range(100,999):Promise.resolve({data:[],error:null}),
-  creditNoteCount!==null&&creditNoteCount>100?supabase.from("admin_financial_documents").select("gross_amount,status").eq("kind","credit_note").eq("original_invoice_id",id).range(100,999):Promise.resolve({data:[],error:null})
+  paymentCount!==null&&paymentCount>100?supabase.from("admin_financial_payments").select("amount").eq("document_id",id).order("paid_on",{ascending:false}).order("id",{ascending:false}).range(100,999):Promise.resolve({data:[],error:null}),
+  creditNoteCount!==null&&creditNoteCount>100?supabase.from("admin_financial_documents").select("gross_amount,status").eq("kind","credit_note").eq("original_invoice_id",id).order("issue_date",{ascending:false}).order("id",{ascending:false}).range(100,999):Promise.resolve({data:[],error:null})
  ])
  const locale=await requestUiLocale()
  const labels={
@@ -64,7 +64,7 @@ export default async function InvoiceDetails({params}:{params:Promise<{id:string
   else if(!creditsComplete&&invoiceAmount>0&&overpaid>0)checks.push(labels.excess)
   if(fullReconciliation&&invoiceAmount>0&&finalBalance===0&&!closed)checks.push(labels.fullySettled)
  }
- const progress=invoiceAmount>0?Math.min(100,Math.max(0,Math.round((recordedAmount+creditTotal)/invoiceAmount*100))):0
+ const progress=fullReconciliation&&invoiceAmount>0?Math.min(100,Math.max(0,Math.round((recordedAmount+creditTotal)/invoiceAmount*100))):0
  const latestReminder=reminders?.[0]
  const statusMismatch=fullReconciliation&&doc.status==="paid"&&finalBalance>0
  const fields=[[labels.number,doc.document_number],[labels.kind,doc.kind],[labels.status,doc.status],[labels.issue,doc.issue_date],[labels.due,doc.due_date],[labels.net,money(doc.net_amount)],[labels.tax,money(doc.tax_amount)],[labels.gross,money(doc.gross_amount)],[labels.notes,doc.notes]] as const
