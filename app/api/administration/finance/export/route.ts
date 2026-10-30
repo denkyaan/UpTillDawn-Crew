@@ -16,26 +16,43 @@ export async function GET(){
    return NextResponse.json({error:'Forbidden'},{status:403})
  }
  const documents: {id:string;kind:string;document_number:string|null;status:string;currency:string;gross_amount:number|null;due_date:string|null;issue_date:string|null;original_invoice_id:string|null}[]=[]
- const payments: {document_id:string;amount:number}[]=[]
+ const payments: {id:string;document_id:string;amount:number}[]=[]
+ const seenDocumentIds=new Set<string>()
+ const seenPaymentIds=new Set<string>()
+ let previousDocumentId=''
+ let previousPaymentId=''
  let documentTotal:number|null=null
  let paymentTotal:number|null=null
  for(let offset=0;offset<10000;offset+=500){
   const {data,error,count}=await db.from('admin_financial_documents').select('id,kind,document_number,status,currency,gross_amount,due_date,issue_date,original_invoice_id',{count:'exact'}).order('id').range(offset,offset+499)
   if(error)return NextResponse.json({error:'Financial documents unavailable'},{status:503})
   if(count===null||!Number.isSafeInteger(count))return NextResponse.json({error:'Document count unavailable'},{status:503})
+  if(documentTotal!==null&&documentTotal!==count)return NextResponse.json({error:'Document count changed during export'},{status:409})
   documentTotal=count
-  documents.push(...(data??[]))
+  for(const doc of data??[]){
+   if(!doc.id||seenDocumentIds.has(doc.id)||doc.id<=previousDocumentId)return NextResponse.json({error:'Document pagination changed during export'},{status:409})
+   seenDocumentIds.add(doc.id)
+   previousDocumentId=doc.id
+   documents.push(doc)
+  }
   if((data??[]).length<500)break
  }
  if(documentTotal!==null&&documentTotal>10000)return NextResponse.json({error:'Export exceeds 10000 documents; narrow the dataset before exporting'},{status:413})
  if(documentTotal===null||documents.length!==documentTotal)return NextResponse.json({error:'Incomplete document export'},{status:503})
- const typed=db as unknown as {from:(name:string)=>{select:(columns:string,options?:{count:'exact'})=>{order:(column:string,options?:{ascending:boolean})=>{order:(column:string,options?:{ascending:boolean})=>{range:(from:number,to:number)=>Promise<{data:{document_id:string;amount:number}[]|null;error:unknown;count:number|null}>}}}}}
+ const typed=db as unknown as {from:(name:string)=>{select:(columns:string,options?:{count:'exact'})=>{order:(column:string,options?:{ascending:boolean})=>{order:(column:string,options?:{ascending:boolean})=>{range:(from:number,to:number)=>Promise<{data:{id:string;document_id:string;amount:number}[]|null;error:unknown;count:number|null}>}}}}}
  for(let offset=0;offset<50000;offset+=500){
-  const {data,error,count}=await typed.from('admin_financial_payments').select('document_id,amount',{count:'exact'}).order('document_id').order('id').range(offset,offset+499)
+  const {data,error,count}=await typed.from('admin_financial_payments').select('id,document_id,amount',{count:'exact'}).order('document_id').order('id').range(offset,offset+499)
   if(error)return NextResponse.json({error:'Payments unavailable'},{status:503})
   if(count===null||!Number.isSafeInteger(count))return NextResponse.json({error:'Payment count unavailable'},{status:503})
+  if(paymentTotal!==null&&paymentTotal!==count)return NextResponse.json({error:'Payment count changed during export'},{status:409})
   paymentTotal=count
-  payments.push(...(data??[]))
+  for(const payment of data??[]){
+   const key=payment.document_id+'|'+payment.id
+   if(!payment.id||!payment.document_id||seenPaymentIds.has(payment.id)||key<=previousPaymentId)return NextResponse.json({error:'Payment pagination changed during export'},{status:409})
+   seenPaymentIds.add(payment.id)
+   previousPaymentId=key
+   payments.push(payment)
+  }
   if((data??[]).length<500)break
  }
  if(paymentTotal!==null&&paymentTotal>50000)return NextResponse.json({error:'Export exceeds 50000 payments; narrow the dataset before exporting'},{status:413})
