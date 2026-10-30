@@ -4,6 +4,7 @@ import {getCurrentUser} from "@/lib/actions/auth"
 import {createClient} from "@/lib/supabase/crew-server"
 import {canOpenPortal,type PortalAssignment} from "@/lib/portal-access"
 import {requestUiLocale} from "@/lib/server-locale"
+import {reconcileFinanceInvoice} from "@/lib/administration/finance-reconciliation"
 
 export default async function InvoiceDetails({params}:{params:Promise<{id:string}>}){
  const {id}=await params
@@ -35,7 +36,7 @@ export default async function InvoiceDetails({params}:{params:Promise<{id:string
  }[locale]
  const money=(value:number|null)=>value==null?"—":new Intl.NumberFormat(locale==="nl"?"nl-BE":locale==="fr"?"fr-BE":locale==="de"?"de-DE":"en-GB",{minimumFractionDigits:2,maximumFractionDigits:2}).format(value)+" "+(doc.currency??"EUR")
  const allPaymentAmounts=[...(payments??[]),...(paymentTotals.data??[])]
- const validPaymentAmounts=allPaymentAmounts.every(payment=>payment.amount!==null&&Number.isFinite(Number(payment.amount)))
+ const validPaymentAmounts=allPaymentAmounts.every(payment=>payment.amount!==null&&Number.isFinite(Number(payment.amount))&&Number(payment.amount)>=0&&Number.isSafeInteger(Math.round(Number(payment.amount)*100)))
  const recordedAmount=allPaymentAmounts.reduce((sum,payment)=>sum+Math.round(Number(payment.amount??0)*100),0)/100
  const invoiceAmount=Number(doc.gross_amount??0)
  const outstanding=Math.max(0,Math.round((invoiceAmount-recordedAmount)*100)/100)
@@ -49,12 +50,15 @@ export default async function InvoiceDetails({params}:{params:Promise<{id:string
  const allCredits=[...(creditNotes??[]),...(creditTotals.data??[])]
  const creditsComplete=!creditNotesError&&!creditTotals.error&&creditNoteCount!==null&&creditNoteCount<=1000&&allCredits.length===creditNoteCount
  const approvedCredits=allCredits.filter(note=>["approved","issued","paid"].includes(note.status))
- const validCreditAmounts=approvedCredits.every(note=>note.gross_amount!==null&&Number.isFinite(Number(note.gross_amount)))
+ const validCreditAmounts=approvedCredits.every(note=>note.gross_amount!==null&&Number.isFinite(Number(note.gross_amount))&&Number(note.gross_amount)>=0&&Number.isSafeInteger(Math.round(Number(note.gross_amount)*100)))
  const creditTotal=approvedCredits.reduce((sum,note)=>sum+Math.round(Number(note.gross_amount??0)*100),0)/100
  const remainingAfterCredits=Math.max(0,Math.round((invoiceAmount-creditTotal)*100)/100)
- const finalBalance=Math.max(0,Math.round((invoiceAmount-creditTotal-recordedAmount)*100)/100)
- const finalOverpayment=Math.max(0,Math.round((creditTotal+recordedAmount-invoiceAmount)*100)/100)
- const fullReconciliation=creditsComplete&&validCreditAmounts&&completePaymentHistory&&doc.gross_amount!==null&&Number.isFinite(Number(doc.gross_amount))
+ const validInvoiceAmount=doc.gross_amount!==null&&Number.isFinite(invoiceAmount)&&invoiceAmount>=0&&Number.isSafeInteger(Math.round(invoiceAmount*100))
+ const safeReconciliation=creditsComplete&&validCreditAmounts&&completePaymentHistory&&validInvoiceAmount&&Number.isSafeInteger(Math.round(recordedAmount*100))&&Number.isSafeInteger(Math.round(creditTotal*100))
+ const reconciliation=safeReconciliation?reconcileFinanceInvoice(Math.round(invoiceAmount*100),Math.round(recordedAmount*100),Math.round(creditTotal*100),doc.status):null
+ const finalBalance=reconciliation?reconciliation.outstandingCents/100:0
+ const finalOverpayment=reconciliation?reconciliation.overpaymentCents/100:0
+ const fullReconciliation=reconciliation!==null
  const checks:string[]=[]
  if(completePaymentHistory){
   if(fullReconciliation&&creditTotal>invoiceAmount)checks.push(labels.excessCredits)
