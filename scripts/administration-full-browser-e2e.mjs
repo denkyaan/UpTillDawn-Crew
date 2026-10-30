@@ -67,12 +67,13 @@ try{
      findings.push({role:role.name,route,actual:path,links:links.length,buttons,forms,controls:controls.length})
      if(role.name==='admin'&&route.startsWith('/portals/administration')){
       // Exercise actual user clicks, rather than treating direct URL requests as navigation coverage.
-      const targets=[...new Set(links.map(x=>x.href).filter(x=>x.startsWith('/portals/administration/')))].slice(0,35)
+      const visibleLinks=await page.locator('a[href]:visible').evaluateAll(els=>els.map(el=>el.getAttribute('href')).filter(Boolean))
+      const targets=[...new Set(visibleLinks.filter(href=>href.startsWith('/portals/administration/')))].slice(0,35)
       for(const target of targets){
        const tab=await context.newPage()
        try{
         await tab.goto(base+route,{waitUntil:'domcontentloaded',timeout:30000})
-        const href=tab.locator('a[href="'+target.replaceAll('"','\\"')+'"]').first()
+        const href=tab.locator('a[href="'+target.replaceAll('"','\\"')+'"]:visible').first()
         if(await href.count()===0)throw Error('linked navigation control missing: '+target)
         await href.click({timeout:15000})
         await tab.waitForURL(u=>u.pathname===new URL(target,base).pathname,{timeout:20000})

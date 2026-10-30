@@ -32,3 +32,5 @@ Mobile chat and Admin AI buttons are positioned above the expanded subtabs so th
 Notification routing verifies the normalized URL origin, including control-character variants of external URLs. Its positive context-preservation and negative URL tests pass.
 
 Every concrete administration page is checked against its navigation category, including the existing contacts module and its dedicated contact/counterparty aliases. Local Node suite: 762 passed.
+
+The focused navigation browser suite passes for Admin and administrative employee on mobile and desktop, and all 15 authenticated bots pass. The broad navigation inventory must click visible controls: a desktop-only profile link is hidden at its mobile viewport. That scanner now selects visible links; desktop profile navigation remains exercised by the focused suite.
