@@ -7,7 +7,7 @@ const sql=readFileSync('supabase/migrations/20261030143000_administration_genera
 test('all invoice BEFORE triggers use base amounts, never NEW generated gross',()=>{
  for(const name of ['upt_admin_guard_credit_note','upt_admin_guard_financial_settlement','upt_admin_require_invoice_review_fields'])
   assert.match(sql,new RegExp('create or replace function public\\.'+name+'\\('))
- assert.doesNotMatch(sql,/new\.gross_amount/i)
+ assert.doesNotMatch(sql.split('\n').filter(line=>!line.trim().startsWith('--')).join('\n'),/new\.gross_amount/i)
  assert.match(sql,/\(new\.net_amount\+new\.tax_amount\)/)
 })
 test('paid invoices require actual full credit-adjusted settlement and void is blocked',()=>{
