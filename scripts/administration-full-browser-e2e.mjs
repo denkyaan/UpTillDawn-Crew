@@ -62,15 +62,19 @@ try{
      const forms=await page.locator('form').count()
      findings.push({role:role.name,route,actual:path,links:links.length,buttons,forms})
      if(role.name==='admin'&&route.startsWith('/portals/administration')){
-      // Verify navigation targets actually work through a user click, using a separate tab.
-      const targets=[...new Set(links.map(x=>x.href.split('?')[0]))].filter(x=>x.startsWith('/portals/administration/')).slice(0,35)
+      // Exercise actual user clicks, rather than treating direct URL requests as navigation coverage.
+      const targets=[...new Set(links.map(x=>x.href).filter(x=>x.startsWith('/portals/administration/')))].slice(0,35)
       for(const target of targets){
-       // Navigate from the current page in a disposable authenticated tab to avoid changing traversal state.
        const tab=await context.newPage()
        try{
-        const result=await tab.goto(base+target,{waitUntil:'domcontentloaded',timeout:30000})
+        await tab.goto(base+route,{waitUntil:'domcontentloaded',timeout:30000})
+        const href=tab.locator('a[href="'+target.replaceAll('"','\\"')+'"]').first()
+        if(await href.count()===0)throw Error('linked navigation control missing: '+target)
+        await href.click({timeout:15000})
+        await tab.waitForURL(u=>u.pathname===new URL(target,base).pathname,{timeout:20000})
+        await tab.waitForLoadState('domcontentloaded')
         const text=(await tab.locator('body').innerText()).trim()
-        if(!result||result.status()>=400||/404\s*\\|\s*this page could not be found|application error/i.test(text))throw Error('linked destination '+target+' failed')
+        if(!text||/404|application error|internal server error/i.test(text))throw Error('clicked destination rendered error: '+target)
        }finally{await tab.close()}
       }
      }
