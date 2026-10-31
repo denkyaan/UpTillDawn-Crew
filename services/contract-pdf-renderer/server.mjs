@@ -13,7 +13,7 @@ function authorized(header){
  const actual=Buffer.from(header)
  return actual.length===expected.length&&timingSafeEqual(actual,expected)
 }
-const browser=await chromium.launch({headless:true,args:['--no-sandbox']})
+const browser=await chromium.launch({headless:true})
 const server=createServer(async(req,res)=>{
  const reply=(status,message)=>{res.writeHead(status,{'Content-Type':'text/plain; charset=utf-8','Cache-Control':'no-store'});res.end(message)}
  if(req.method!=='POST'||req.url!=='/')return reply(404,'Not found')
