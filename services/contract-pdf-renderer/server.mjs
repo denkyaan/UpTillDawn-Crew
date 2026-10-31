@@ -25,7 +25,7 @@ const server=createServer(async(req,res)=>{
   let size=0
   for await(const chunk of req){
    size+=chunk.length
-   if(size>maxHtml){req.destroy();return reply(413,'HTML too large')}
+   if(size>maxHtml)return reply(413,'HTML too large')
    chunks.push(chunk)
   }
   const html=new TextDecoder('utf-8',{fatal:true}).decode(Buffer.concat(chunks))
