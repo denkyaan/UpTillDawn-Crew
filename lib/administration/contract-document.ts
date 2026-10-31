@@ -34,12 +34,13 @@ const clean=(value:string,max:number)=>{
  return normalized
 }
 export function buildContractDocument(input:ContractDocumentInput):ContractDocument{
- if(!/^[0-9a-f]{8}-[0-9a-f-]{27}$/i.test(input.documentId))throw new Error("Invalid contract ID")
+ if(!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(input.documentId))throw new Error("Invalid contract ID")
  if(!Number.isSafeInteger(input.version)||input.version<1)throw new Error("Invalid contract version")
- if(!Number.isFinite(Date.parse(input.approvedAt))||!Number.isFinite(Date.parse(input.eventDate)))throw new Error("Invalid contract dates")
+ if(!input.approvedAt?.trim()||!input.eventDate?.trim()||!Number.isFinite(Date.parse(input.approvedAt))||!Number.isFinite(Date.parse(input.eventDate)))throw new Error("Invalid contract dates")
+ if(Date.parse(input.approvedAt)>Date.now()+60_000)throw new Error("Contract approval cannot be in the future")
  const party=(value:ContractParty):ContractParty=>({
   name:clean(value.name,240),
-  email:clean(value.email,320).toLowerCase(),
+  email:(()=>{const email=clean(value.email,320).toLowerCase();if(!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email))throw new Error("Invalid contract party email");return email})(),
   country:value.country?clean(value.country,100):null
  })
  const clauses=Object.entries(input.terms).sort(([a],[b])=>a.localeCompare(b)).map(([heading,body])=>({
