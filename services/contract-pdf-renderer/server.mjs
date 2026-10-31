@@ -43,12 +43,12 @@ const server=createServer(async(req,res)=>{
   if(!html.trim())return reply(400,'Empty document')
   const context=await browser.newContext({javaScriptEnabled:false,serviceWorkers:'block',acceptDownloads:false})
   try{
-   const page=await context.newPage()
    await context.route('**/*',route=>{
     const url=route.request().url()
     if(url.startsWith('data:')||url.startsWith('about:'))return route.continue()
     return route.abort()
    })
+   const page=await context.newPage()
    await page.setContent(html,{waitUntil:'load',timeout:15000})
    const pdf=await page.pdf({format:'A4',printBackground:true,preferCSSPageSize:true,timeout:20000})
    if(pdf.length<5||pdf.length>maxPdf||pdf.subarray(0,5).toString()!=='%PDF-')throw Error('Invalid PDF output')
