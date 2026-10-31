@@ -29,7 +29,12 @@ export async function archiveApprovedContractPdf(input:{
  // This detects missing, corrupted or inaccessible storage objects immediately.
  const storedPdf=await downloadContractArchive(archivedPdf.path,client)
  const storedEvidence=await downloadContractArchive(archivedManifest.path,client)
- const evidence=JSON.parse(new TextDecoder().decode(storedEvidence)) as Record<string,unknown>
+ let evidence:Record<string,unknown>
+ try{
+  const parsed:unknown=JSON.parse(new TextDecoder("utf-8",{fatal:true}).decode(storedEvidence))
+  if(!parsed||typeof parsed!=="object"||Array.isArray(parsed))throw new Error("Invalid evidence")
+  evidence=parsed as Record<string,unknown>
+ }catch{throw new Error("Contract archive evidence invalid")}
  if(storedPdf.byteLength!==manifest.pdfSize||
     evidence.schemaVersion!==manifest.schemaVersion||
     evidence.reference!==manifest.reference||
