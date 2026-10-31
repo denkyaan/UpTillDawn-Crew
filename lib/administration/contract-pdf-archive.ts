@@ -31,6 +31,7 @@ export async function archiveApprovedContractPdf(input:{
  const storedEvidence=await downloadContractArchive(archivedManifest.path,client)
  const evidence=JSON.parse(new TextDecoder().decode(storedEvidence)) as Record<string,unknown>
  if(storedPdf.byteLength!==manifest.pdfSize||
+    evidence.schemaVersion!==manifest.schemaVersion||
     evidence.reference!==manifest.reference||
     evidence.sourceSha256!==manifest.sourceSha256||
     evidence.pdfSha256!==manifest.pdfSha256||
