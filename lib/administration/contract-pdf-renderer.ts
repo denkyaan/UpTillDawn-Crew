@@ -10,6 +10,7 @@ export function createContractPdfRenderer():ContractPdfRenderer{
  const endpoint=process.env.CONTRACT_PDF_RENDER_URL
  const token=process.env.CONTRACT_PDF_RENDER_TOKEN
  if(!endpoint||!token)throw new Error("Contract PDF rendering is not configured")
+ if(Buffer.byteLength(token,"utf8")<32||/[\r\n]/.test(token))throw new Error("Invalid PDF renderer authentication token")
  let url:URL
  try{url=new URL(endpoint)}catch{throw new Error("Invalid PDF renderer URL")}
  if(url.protocol!=="https:"||url.username||url.password||url.hash||url.search||
