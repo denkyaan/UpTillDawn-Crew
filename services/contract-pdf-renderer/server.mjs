@@ -38,7 +38,7 @@ const server=createServer(async(req,res)=>{
   const context=await browser.newContext({javaScriptEnabled:false,serviceWorkers:'block',acceptDownloads:false})
   try{
    const page=await context.newPage()
-   await page.route('**/*',route=>{
+   await context.route('**/*',route=>{
     const url=route.request().url()
     if(url.startsWith('data:')||url.startsWith('about:'))return route.continue()
     return route.abort()
