@@ -37,7 +37,7 @@ const server=createServer(async(req,res)=>{
   if(!html.trim())return reply(400,'Empty document')
   const context=await browser.newContext({javaScriptEnabled:false,serviceWorkers:'block',acceptDownloads:false})
   try{
-   page=await context.newPage()
+   const page=await context.newPage()
    await page.route('**/*',route=>{
     const url=route.request().url()
     if(url.startsWith('data:')||url.startsWith('about:'))return route.continue()
