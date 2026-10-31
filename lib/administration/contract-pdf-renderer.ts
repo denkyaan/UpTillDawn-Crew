@@ -10,7 +10,7 @@ export function createContractPdfRenderer():ContractPdfRenderer{
  const endpoint=process.env.CONTRACT_PDF_RENDER_URL
  const token=process.env.CONTRACT_PDF_RENDER_TOKEN
  if(!endpoint||!token)throw new Error("Contract PDF rendering is not configured")
- if(Buffer.byteLength(token,"utf8")<32||/[\r\n]/.test(token))throw new Error("Invalid PDF renderer authentication token")
+ if(new TextEncoder().encode(token).byteLength<32||/[\r\n]/.test(token))throw new Error("Invalid PDF renderer authentication token")
  let url:URL
  try{url=new URL(endpoint)}catch{throw new Error("Invalid PDF renderer URL")}
  if(url.protocol!=="https:"||url.username||url.password||url.hash||url.search||
@@ -18,7 +18,7 @@ export function createContractPdfRenderer():ContractPdfRenderer{
   throw new Error("PDF renderer must use a dedicated HTTPS endpoint")
  }
  return async(html:string)=>{
-  if(html.length>512_000)throw new Error("Contract HTML exceeds renderer limit")
+  if(new TextEncoder().encode(html).byteLength>512_000)throw new Error("Contract HTML exceeds renderer limit")
   const response=await fetch(url.toString(),{
    method:"POST",
    headers:{"Authorization":"Bearer "+token,"Content-Type":"text/html; charset=utf-8","Accept":"application/pdf"},
@@ -27,7 +27,7 @@ export function createContractPdfRenderer():ContractPdfRenderer{
    redirect:"error",
    signal:AbortSignal.timeout(30_000)
   })
-  if(!response.ok||!response.headers.get("content-type")?.toLowerCase().includes("application/pdf")){
+  if(!response.ok||!/^application\/pdf(?:\s*;|\s*$)/i.test(response.headers.get("content-type")??"")){
    throw new Error("Contract PDF rendering failed")
   }
   const lengthHeader=response.headers.get("content-length")
