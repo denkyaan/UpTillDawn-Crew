@@ -26,6 +26,8 @@ export async function generateAndArchiveContract(input:{
  const {document,documentType,documentId,version,renderer,client}=input
  if(document.reference!==documentType+"-"+documentId+"-v"+version)throw new Error("Contract identity mismatch")
  if(!document.approvedAt||typeof document.approvedAt!=="string"||!Number.isFinite(Date.parse(document.approvedAt)))throw new Error("Contract approval required")
+ if(Date.parse(document.approvedAt)>Date.now()+60_000)throw new Error("Contract approval cannot be in the future")
+ if(document.status!=="draft_for_signature")throw new Error("Contract is not ready for signature")
  const html=renderContractPrintHtml(document)
  const pdf=await renderer(html)
  if(!(pdf instanceof Uint8Array))throw new Error("PDF renderer returned invalid output")
