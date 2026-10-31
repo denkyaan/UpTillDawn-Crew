@@ -7,6 +7,8 @@ const secret=process.env.CONTRACT_PDF_RENDER_TOKEN
 if(!secret||Buffer.byteLength(secret)<32||/[\r\n]/.test(secret))throw Error('CONTRACT_PDF_RENDER_TOKEN must be at least 32 bytes')
 const maxHtml=512_000
 const maxPdf=15*1024*1024
+const maxConcurrent=2
+let active=0
 const expected=Buffer.from('Bearer '+secret)
 function authorized(header){
  if(typeof header!=='string'||Buffer.byteLength(header)>4096)return false
@@ -19,7 +21,8 @@ const server=createServer(async(req,res)=>{
  if(req.method!=='POST'||req.url!=='/')return reply(404,'Not found')
  if(!authorized(req.headers.authorization))return reply(401,'Unauthorized')
  if(!/^text\/html(?:\s*;|$)/i.test(req.headers['content-type']||''))return reply(415,'Expected text/html')
- let page
+ if(active>=maxConcurrent){res.setHeader('Retry-After','2');return reply(503,'Renderer busy')}
+ active++
  try{
   const chunks=[]
   let size=0
@@ -28,7 +31,9 @@ const server=createServer(async(req,res)=>{
    if(size>maxHtml)return reply(413,'HTML too large')
    chunks.push(chunk)
   }
-  const html=new TextDecoder('utf-8',{fatal:true}).decode(Buffer.concat(chunks))
+  let html
+  try{html=new TextDecoder('utf-8',{fatal:true}).decode(Buffer.concat(chunks))}
+  catch{return reply(400,'Invalid UTF-8 document')}
   if(!html.trim())return reply(400,'Empty document')
   const context=await browser.newContext({javaScriptEnabled:false,serviceWorkers:'block',acceptDownloads:false})
   try{
@@ -45,6 +50,7 @@ const server=createServer(async(req,res)=>{
    res.end(pdf)
   }finally{await context.close()}
  }catch(e){console.error('Contract PDF render failed:',e instanceof Error?e.message:'unknown');if(!res.headersSent)reply(500,'PDF rendering failed');else res.destroy()}
+ finally{active--}
 })
 server.requestTimeout=35000
 server.headersTimeout=10000
