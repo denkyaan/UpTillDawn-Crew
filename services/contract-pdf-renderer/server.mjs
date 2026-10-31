@@ -4,12 +4,13 @@ import {chromium} from 'playwright'
 
 const port=Number(process.env.PORT||8080)
 const secret=process.env.CONTRACT_PDF_RENDER_TOKEN
-if(!secret||Buffer.byteLength(secret)<32)throw Error('CONTRACT_PDF_RENDER_TOKEN must be at least 32 bytes')
+if(!secret||Buffer.byteLength(secret)<32||/[\r\n]/.test(secret))throw Error('CONTRACT_PDF_RENDER_TOKEN must be at least 32 bytes')
 const maxHtml=512_000
 const maxPdf=15*1024*1024
 const expected=Buffer.from('Bearer '+secret)
 function authorized(header){
- const actual=Buffer.from(header||'')
+ if(typeof header!=='string'||Buffer.byteLength(header)>4096)return false
+ const actual=Buffer.from(header)
  return actual.length===expected.length&&timingSafeEqual(actual,expected)
 }
 const browser=await chromium.launch({headless:true,args:['--no-sandbox']})
@@ -24,10 +25,10 @@ const server=createServer(async(req,res)=>{
   let size=0
   for await(const chunk of req){
    size+=chunk.length
-   if(size>maxHtml)return reply(413,'HTML too large')
+   if(size>maxHtml){req.destroy();return reply(413,'HTML too large')}
    chunks.push(chunk)
   }
-  const html=Buffer.concat(chunks).toString('utf8')
+  const html=new TextDecoder('utf-8',{fatal:true}).decode(Buffer.concat(chunks))
   if(!html.trim())return reply(400,'Empty document')
   const context=await browser.newContext({javaScriptEnabled:false,serviceWorkers:'block',acceptDownloads:false})
   try{
