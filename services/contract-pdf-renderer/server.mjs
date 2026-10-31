@@ -21,6 +21,12 @@ const server=createServer(async(req,res)=>{
  if(req.method!=='POST'||req.url!=='/')return reply(404,'Not found')
  if(!authorized(req.headers.authorization))return reply(401,'Unauthorized')
  if(!/^text\/html(?:\s*;|$)/i.test(req.headers['content-type']||''))return reply(415,'Expected text/html')
+ const declaredLength=req.headers['content-length']
+ if(declaredLength!==undefined){
+  const length=Number(declaredLength)
+  if(!Number.isSafeInteger(length)||length<0)return reply(400,'Invalid Content-Length')
+  if(length>maxHtml)return reply(413,'HTML too large')
+ }
  if(active>=maxConcurrent){res.setHeader('Retry-After','2');return reply(503,'Renderer busy')}
  active++
  try{
