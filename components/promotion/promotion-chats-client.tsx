@@ -32,7 +32,8 @@ export function PromotionChatsClient({locale,userId,isAdmin,names}:{locale:Local
  useEffect(()=>{
   const initial=window.setTimeout(()=>void load(),0)
   const interval=window.setInterval(()=>{if(document.visibilityState==="visible")void load()},10000)
-  return()=>{sequence.current++;clearTimeout(initial);clearInterval(interval)}
+  const activeSequence=sequence
+  return()=>{activeSequence.current++;clearTimeout(initial);clearInterval(interval)}
  },[load])
  async function send(){
   const message=body.trim()
