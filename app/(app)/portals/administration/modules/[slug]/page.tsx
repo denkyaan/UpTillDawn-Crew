@@ -85,6 +85,8 @@ export default async function AdministrationModulePage({params,searchParams}:{pa
  const inventoryStart=(inventoryPage-1)*inventoryPageSize
  const inventoryFilterEvents=slug==="inventory" ? await supabase.from("events").select("id,name").order("start_at",{ascending:false}).limit(100) : null
  const selectedEvent=slug==="inventory"&&typeof requestedEvent==="string"&&/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(requestedEvent)?requestedEvent:null
+ const selectedInventoryEvent=selectedEvent&&!inventoryFilterEvents?.data?.some(event=>event.id===selectedEvent)?await supabase.from("events").select("id,name").eq("id",selectedEvent).maybeSingle():null
+ const inventoryEventChoices=[...(inventoryFilterEvents?.data??[]),...(selectedInventoryEvent?.data?[selectedInventoryEvent.data]:[])]
  const inventoryCount=slug==="inventory" ? await (selectedEvent?supabase.from("inventory_items").select("id",{count:"exact",head:true}).eq("event_id",selectedEvent):supabase.from("inventory_items").select("id",{count:"exact",head:true})) : null
  const submittedHours=slug==="staff"?await supabase.from("timesheets").select("id,user_id,event_id,status,submitted_at").eq("status","submitted").order("submitted_at",{ascending:false}).limit(50):null
  const financialRows=financeRelated.has(slug)?await supabase.from("admin_financial_documents").select("id,kind,status,gross_amount,due_date").order("due_date",{ascending:false}).limit(50):null
@@ -337,7 +339,7 @@ export default async function AdministrationModulePage({params,searchParams}:{pa
    {inventoryFilterEvents?.error?<p className="mt-2 text-sm text-muted-foreground">{({nl:"Evenementen konden niet worden geladen.",fr:"Impossible de charger les événements.",en:"Events could not be loaded.",de:"Veranstaltungen konnten nicht geladen werden."} as const)[locale]}</p>
    :<div className="mt-3 flex flex-wrap gap-2">
     <Link href="/portals/administration/modules/inventory" aria-current={!selectedEvent?"page":undefined} className={`rounded-lg border px-3 py-2 text-sm ${!selectedEvent?"border-violet-500 font-semibold":"hover:border-violet-400"}`}>{({nl:"Alle evenementen",fr:"Tous les événements",en:"All events",de:"Alle Veranstaltungen"} as const)[locale]}</Link>
-    {(inventoryFilterEvents?.data??[]).map(event=><Link key={event.id} href={`/portals/administration/modules/inventory?event=${encodeURIComponent(event.id)}`} aria-current={selectedEvent===event.id?"page":undefined} className={`rounded-lg border px-3 py-2 text-sm ${selectedEvent===event.id?"border-violet-500 font-semibold":"hover:border-violet-400"}`}>{event.name}</Link>)}
+    {inventoryEventChoices.map(event=><Link key={event.id} href={`/portals/administration/modules/inventory?event=${encodeURIComponent(event.id)}`} aria-current={selectedEvent===event.id?"page":undefined} className={`rounded-lg border px-3 py-2 text-sm ${selectedEvent===event.id?"border-violet-500 font-semibold":"hover:border-violet-400"}`}>{event.name}</Link>)}
    </div>}
   </section>}
   {slug==="inventory"&&inventoryCount?.error&&<p role="status" className="text-sm text-muted-foreground">{({nl:"Totaal aantal materialen niet beschikbaar.",fr:"Nombre total d’articles indisponible.",en:"Total item count unavailable.",de:"Gesamtanzahl der Artikel nicht verfügbar."} as const)[locale]}</p>}
