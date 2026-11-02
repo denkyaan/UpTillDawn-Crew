@@ -56,6 +56,7 @@ export function createContractPdfRenderer():ContractPdfRenderer{
   let offset=0
   for(const chunk of chunks){bytes.set(chunk,offset);offset+=chunk.byteLength}
   if(length!==null&&bytes.byteLength!==length)throw new Error("Renderer response length mismatch")
+  if(response.headers.get("content-encoding")&&!["identity"].includes((response.headers.get("content-encoding")??"").toLowerCase()))throw new Error("Compressed PDF responses are not supported")
   if(bytes.byteLength===0||bytes.byteLength>15*1024*1024||
    new TextDecoder().decode(bytes.slice(0,5))!=="%PDF-"){
    throw new Error("Renderer returned invalid PDF")
