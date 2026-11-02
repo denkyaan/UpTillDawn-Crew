@@ -39,7 +39,7 @@ concurrency:
 
 jobs:
   repair:
-    if: vars.ENABLE_AUTOMATIC_SELF_HEAL == 'true'
+    if: vars.ENABLE_AUTOMATIC_SELF_HEAL == 'true' && github.ref == 'refs/heads/staging'
     environment: staging
     runs-on: ubuntu-26.04-arm
     timeout-minutes: 55
@@ -92,6 +92,7 @@ jobs:
       - name: Autonomous repair loop
         env:
           GH_TOKEN: ${{ github.token }}
+          SELF_HEAL_TARGET: staging
           MAX_REPAIR_ATTEMPTS: "4"
           NEXT_PUBLIC_APP_URL: https://crew.uptilldawn.workers.dev
         shell: bash
