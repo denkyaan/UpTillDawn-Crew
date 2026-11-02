@@ -7,6 +7,7 @@ import { canOpenPortal, type PortalAssignment } from "@/lib/portal-access"
 import { requestUiLocale } from "@/lib/server-locale"
 import { checkSigningConnection, signingDispatchEnabled } from "@/lib/administration/documenso"
 import { refreshContractSigningStatus } from "@/lib/administration/contract-signing-refresh"
+import { createApprovedArtistVersionVerifier, type ApprovedArtistVersionReader } from "@/lib/administration/contract-approval-verifier"
 
 export const dynamic="force-dynamic"
 async function saveTerms(form:FormData){
@@ -93,6 +94,8 @@ async function prepareSignature(form:FormData){
  }
  const {data:version,error:versionError}=await db.from("admin_artist_agreement_versions").select("id,version_number,approved_at").eq("id",versionId).eq("booking_id",id).maybeSingle()
  if(versionError||!version?.approved_at||!Number.isSafeInteger(version.version_number)||version.version_number<1)throw new Error("Approved agreement version required")
+ const approvalVerified=await createApprovedArtistVersionVerifier(db as unknown as ApprovedArtistVersionReader)({documentType:"artist",documentId:versionId,version:version.version_number,approvedAt:version.approved_at})
+ if(!approvalVerified)throw new Error("Approved agreement version verification failed")
  const {data:booking}=await db.from("admin_artist_bookings").select("agency_contact_id,status").eq("id",id).maybeSingle()
  if(!booking?.agency_contact_id||booking.status==="cancelled")throw new Error("Booking unavailable")
  const {data:agency}=await db.from("admin_counterparties").select("email").eq("id",booking.agency_contact_id).maybeSingle()
