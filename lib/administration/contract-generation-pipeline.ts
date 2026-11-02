@@ -22,7 +22,7 @@ export async function generateAndArchiveContract(input:{
  version:number
  renderer:ContractPdfRenderer
  client:ArchiveStorageClient
- assertApprovedVersion:(identity:{documentType:ContractArchiveDocumentType;documentId:string;version:number;approvedAt:string})=>Promise<boolean>
+ assertApprovedVersion?:(identity:{documentType:ContractArchiveDocumentType;documentId:string;version:number;approvedAt:string})=>Promise<boolean>
 }){
  const {document,documentType,documentId,version,renderer,client,assertApprovedVersion}=input
  if(document.reference!==documentType+"-"+documentId+"-v"+version)throw new Error("Contract identity mismatch")
