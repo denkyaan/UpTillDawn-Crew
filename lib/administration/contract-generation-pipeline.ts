@@ -35,6 +35,9 @@ export async function generateAndArchiveContract(input:{
  const html=renderContractPrintHtml(document)
  const pdf=await renderer(html)
  if(!(pdf instanceof Uint8Array))throw new Error("PDF renderer returned invalid output")
+ // Rendering is asynchronous: recheck persisted approval before the first storage write.
+ const stillApproved=await assertApprovedVersion({documentType,documentId,version,approvedAt:document.approvedAt})
+ if(stillApproved!==true)throw new Error("Contract approval changed during rendering")
  const archived=await archiveApprovedContractPdf({document,documentType,documentId,version,pdf,client})
  await verifyArchivedContractPdf({
   document,pdfPath:archived.pdfPath,manifestPath:archived.manifestPath,client
