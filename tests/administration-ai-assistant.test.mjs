@@ -16,3 +16,15 @@ test('administration AI has real interactive form and four languages',()=>{
  assert.match(chat,/fetch\("\/api\/administration\/assistant"/)
  for(const locale of ['nl','fr','en','de'])assert.match(chat,new RegExp('\\b'+locale+':\\{title:'))
 })
+
+test('cross-portal AI keeps separate endpoints, permissions and compact mobile chat',()=>{
+ const layout=readFileSync('components/layout/app-layout.tsx','utf8')
+ const adminApi=readFileSync('app/api/admin-assistant/route.ts','utf8')
+ const adminPage=readFileSync('app/(app)/portals/administration/modules/ai/page.tsx','utf8')
+ assert.match(layout,/aiWorkspace==="admin"\?<PlatformAiAssistant/)
+ assert.match(layout,/<AdministrationAiChat locale=\{uiLocale\} compact\/>/)
+ assert.match(chat,/!compact&&<AdministrationAiBookingNotes/)
+ assert.match(adminPage,/\(user\.isAdmin\|\|user\.isOwner\)&&<details/)
+ assert.match(adminApi,/if\(!approved\|\|!isAdmin\)return Response\.json/)
+ assert.match(api,/canOpenPortal\("administration"/)
+})
