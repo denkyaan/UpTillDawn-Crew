@@ -328,6 +328,15 @@ jobs:
           console.log('PASS: role-specific runtime interaction inventory generated (not full functional coverage)')
           NODE
 
+      - name: Publish authenticated UI coverage evidence
+        if: ${{ always() }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: authenticated-ui-inventory
+          path: test-results/portal-e2e/interaction-inventory.json
+          if-no-files-found: warn
+          retention-days: 14
+
       - name: Full application surface inventory gate
         run: |
           set -euo pipefail
