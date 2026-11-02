@@ -55,7 +55,6 @@ const operationalModuleLinks:Record<string,string>={
  reports:"/portals/administration/finance",
  contacts:"/portals/administration/counterparties",
  sponsors:"/portals/administration/counterparties",
- marketing:"/portals/administration/modules/marketing",
  inventory:"/portals/administration/modules/inventory",
  logistics:"/portals/administration/modules/inventory",
  tasks:"#administration-work-queue",
