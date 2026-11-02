@@ -21,20 +21,21 @@ jobs:
           set -euo pipefail
           # Retain exactly one latest completed run per workflow,
           # whether successful or failed. Never remove active/current runs.
-          workflows="$(gh api "/repos/$REPO/actions/workflows?per_page=100" --jq '.workflows[].id')"
+          workflows="$(gh api --paginate "/repos/$REPO/actions/workflows?per_page=100" --jq '.workflows[].id')"
           while IFS= read -r workflow; do
             [ -n "$workflow" ] || continue
             echo "Checking workflow $workflow"
-            # One bounded API response per workflow avoids fragile paginated pipes.
-            if ! response="$(gh api "/repos/$REPO/actions/workflows/$workflow/runs?per_page=100&status=completed")"; then
+            # Paginate all completed runs; one page leaves older history untouched.
+            if ! response="$(gh api --paginate --slurp "/repos/$REPO/actions/workflows/$workflow/runs?per_page=100&status=completed")"; then
               echo "::warning::Could not fetch runs for workflow $workflow; skipping"
               continue
             fi
-            if ! entries="$(printf '%s' "$response" | jq -r '.workflow_runs | sort_by(.created_at) | reverse | .[] | [.id,.created_at] | @tsv')"; then
+            if ! entries="$(printf '%s' "$response" | jq -r '[.[].workflow_runs[]] | unique_by(.id) | sort_by(.created_at, .id) | reverse | .[] | [.id,.created_at] | @tsv')"; then
               echo "::warning::Invalid workflow response for $workflow; skipping"
               continue
             fi
             kept=0
+            removed=0
             while IFS=$'\t' read -r id created; do
               [ -n "$id" ] || continue
               kept=$((kept + 1))
@@ -42,8 +43,11 @@ jobs:
               [ "$kept" -le 1 ] && continue
 
               echo "Removing old completed run $id"
-              if ! gh api --method DELETE "/repos/$REPO/actions/runs/$id"; then
+              if gh api --method DELETE "/repos/$REPO/actions/runs/$id"; then
+                removed=$((removed + 1))
+              else
                 echo "::warning::Could not delete run $id; continuing"
               fi
             done <<< "$entries"
+            echo "Workflow $workflow: deleted $removed older completed runs"
           done <<< "$workflows"
