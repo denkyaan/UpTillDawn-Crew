@@ -325,6 +325,13 @@ jobs:
           const unidentified=inventory.flatMap(row=>row.controls.filter(c=>!c.label&&!c.action).map(c=>row.role+' '+row.route+' '+c.tag))
           console.log('E2E control inventory:',JSON.stringify({routes:inventory.length,controls:count,unidentified:unidentified.length,roles:[...roles]}))
           if(unidentified.length)console.log('Unidentified controls (sample):',unidentified.slice(0,30).join(' | '))
+          // Baseline from the last fully successful CI run (41438280566).
+          // Do not allow coverage to silently shrink or unlabeled controls to grow.
+          const baseline={routes:65,controls:1386,unidentified:87}
+          if(inventory.length<baseline.routes)throw Error('Authenticated route coverage regressed: '+inventory.length+' < '+baseline.routes)
+          if(count<baseline.controls)throw Error('Interactive control coverage regressed: '+count+' < '+baseline.controls)
+          if(unidentified.length>baseline.unidentified)throw Error('Unidentified interactive controls increased: '+unidentified.length+' > '+baseline.unidentified)
+          console.log('PASS: authenticated UI inventory meets verified baseline',JSON.stringify(baseline))
           console.log('PASS: role-specific runtime interaction inventory generated (not full functional coverage)')
           NODE
 
