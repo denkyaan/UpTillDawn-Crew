@@ -35,6 +35,8 @@ try{
  assert.equal(empty.status,400)
  const oversized=await request('x'.repeat(512001))
  assert.equal(oversized.status,413)
+ const unicodeOversized=await request('€'.repeat(180000))
+ assert.equal(unicodeOversized.status,413)
  const rendered=await request('<!doctype html><html><body><h1>Contract test</h1><p>Unicode: é €</p></body></html>')
  assert.equal(rendered.status,200)
  assert.match(rendered.headers.get('content-type')||'',/^application\/pdf/)
