@@ -9,7 +9,7 @@ test("AI submitted timesheet total uses an exact count query",()=>{
  assert.doesNotMatch(api,/timesheets\.data\?\.length/)
 })
 test("AI context labels live evidence and bounded lists",()=>{
- assert.match(api,/generatedAt:new Date\(\)\.toISOString\(\)/)
+ assert.match(api,/generatedAt:now\.toISOString\(\)/)
  assert.match(api,/Other lists are limited samples/)
  assert.match(api,/Do not treat sampled records as exhaustive/)
  assert.match(api,/You cannot approve, modify, send, pay or sign anything/)
