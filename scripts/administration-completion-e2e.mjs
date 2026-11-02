@@ -162,7 +162,10 @@ try{
   assert.equal(response.status(),200,'Promotion route HTTP 200: '+route)
   assert.equal(new URL(promotionPage.url()).pathname,route,'Promotion route must not redirect: '+route)
   assert.equal(await promotionPage.locator('[data-layout-key]').count(),0,'Promotion must not render staff navigation: '+route)
-  assert.ok(!/application error|internal server error|404\s*\|/i.test(await promotionPage.locator('body').innerText()),'Promotion error page: '+route)
+  const promotionBody=await promotionPage.locator('body').innerText()
+  const promotionError=/application error|internal server error|404\\s*\\|/i.exec(promotionBody)
+  if(promotionError)console.error('Promotion error diagnostics:',JSON.stringify({route,match:promotionError[0],context:promotionBody.slice(Math.max(0,promotionError.index-160),promotionError.index+240)}))
+  assert.ok(!promotionError,'Promotion error page: '+route)
  }
  const taskLinks=await promotionPage.locator('a[href]').evaluateAll(nodes=>nodes.map(node=>node.getAttribute('href')).filter(Boolean))
  assert.ok(taskLinks.every(href=>!href.startsWith('/portals/staff')&&!href.startsWith('/login/staff')),'Promotion task links must not enter staff portal')
