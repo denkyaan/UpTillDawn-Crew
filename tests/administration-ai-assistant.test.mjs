@@ -52,3 +52,15 @@ test('administration AI responses are private and never cached',()=>{
  assert.match(chat,/cache:"no-store"/)
  assert.match(api,/generatedAt:now\.toISOString\(\)/)
 })
+
+test('operational Admin AI isolates events, limits data exposure and avoids false totals',()=>{
+ const endpoint=readFileSync('app/api/admin-assistant/route.ts','utf8')
+ const client=readFileSync('components/admin/platform-ai-assistant.tsx','utf8')
+ assert.match(endpoint,/artistPresence:eventId\?artistPresence\.filter\(row=>row\.eventId===eventId\):artistPresence/)
+ assert.doesNotMatch(endpoint,/spots_checked_in,notes/)
+ assert.match(endpoint,/dataLimitations:/)
+ assert.match(endpoint,/Cache-Control':'no-store'/)
+ assert.match(client,/cache:'no-store'/)
+ assert.match(client,/response\.json\(\)\.catch/)
+ assert.match(client,/aria-busy=\{busy\}/)
+})
