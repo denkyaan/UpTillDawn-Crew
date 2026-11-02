@@ -84,7 +84,7 @@ export default async function AdministrationModulePage({params,searchParams}:{pa
  const inventoryPageSize=100
  const inventoryStart=(inventoryPage-1)*inventoryPageSize
  const inventoryFilterEvents=slug==="inventory" ? await supabase.from("events").select("id,name").order("start_at",{ascending:false}).limit(100) : null
- const selectedEvent=inventoryFilterEvents?.data?.some(event=>event.id===requestedEvent)?requestedEvent:null
+ const selectedEvent=slug==="inventory"&&typeof requestedEvent==="string"&&/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(requestedEvent)?requestedEvent:null
  const inventoryCount=slug==="inventory" ? await (selectedEvent?supabase.from("inventory_items").select("id",{count:"exact",head:true}).eq("event_id",selectedEvent):supabase.from("inventory_items").select("id",{count:"exact",head:true})) : null
  const submittedHours=slug==="staff"?await supabase.from("timesheets").select("id,user_id,event_id,status,submitted_at").eq("status","submitted").order("submitted_at",{ascending:false}).limit(50):null
  const financialRows=financeRelated.has(slug)?await supabase.from("admin_financial_documents").select("id,kind,status,gross_amount,due_date").order("due_date",{ascending:false}).limit(50):null
