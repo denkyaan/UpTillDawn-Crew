@@ -10,6 +10,11 @@ export type ArchiveStorageClient={
 }
 /** Inject an authorized server-side storage client; never embed privileged keys here. */
 
+function validPdf(bytes:Uint8Array):boolean{
+ if(bytes.byteLength<10||new TextDecoder().decode(bytes.slice(0,5))!=="%PDF-")return false
+ return /%%EOF\s*$/.test(new TextDecoder("latin1").decode(bytes.slice(-1024)))
+}
+
 async function digestHex(bytes:Uint8Array):Promise<string>{
  const hash=await crypto.subtle.digest("SHA-256",bytes)
  return Array.from(new Uint8Array(hash),b=>b.toString(16).padStart(2,"0")).join("")
@@ -24,8 +29,7 @@ export async function uploadContractArchive(input:{
 }):Promise<{path:string;sha256:string}>{
  const {bytes,kind,client}=input
  if(bytes.byteLength===0||bytes.byteLength>15*1024*1024)throw new Error("Contract archive file size invalid")
- const magic=Array.from(bytes.slice(0,5)).map(b=>String.fromCharCode(b)).join("")
- if(kind!=="evidence"&&magic!=="%PDF-")throw new Error("Contract archive requires a PDF")
+ if(kind!=="evidence"&&!validPdf(bytes))throw new Error("Contract archive requires a complete PDF")
  if(kind==="evidence"){
   try{JSON.parse(new TextDecoder("utf-8",{fatal:true}).decode(bytes))}catch{throw new Error("Contract evidence requires valid JSON")}
  }
@@ -46,7 +50,7 @@ export async function downloadContractArchive(path:string,client:ArchiveStorageC
  const bytes=new Uint8Array(await data.arrayBuffer())
  if(bytes.byteLength===0||bytes.byteLength>15*1024*1024)throw new Error("Contract archive file size invalid")
  const kind=path.split("/").at(-1)?.startsWith("evidence-")?"evidence":"pdf"
- if(kind==="pdf"&&new TextDecoder().decode(bytes.slice(0,5))!=="%PDF-")throw new Error("Contract archive PDF header invalid")
+ if(kind==="pdf"&&!validPdf(bytes))throw new Error("Contract archive PDF invalid or incomplete")
  if(kind==="evidence"){
   try{JSON.parse(new TextDecoder("utf-8",{fatal:true}).decode(bytes))}catch{throw new Error("Contract archive evidence JSON invalid")}
  }
