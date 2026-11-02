@@ -26,7 +26,7 @@ export function administrationCategoryForPath(pathname:string):string {
 
 /** Resolve shared notification targets without leaving the administration shell. */
 export function administrationNotificationHref(value:string|null):string|null {
- if(!value?.startsWith("/")||value.startsWith("//")||value.includes("\\"))return null
+ if(!value?.startsWith("/")||value.startsWith("//")||value.includes("\\")||/[\u0000-\u001f\u007f]/.test(value))return null
  const url=new URL(value,"https://uptilldawn.local");if(url.origin!=="https://uptilldawn.local")return null
  if(url.pathname==="/portals/administration"||url.pathname.startsWith("/portals/administration/"))return value
  // Other portal URLs must never be followed from an administration notification.
