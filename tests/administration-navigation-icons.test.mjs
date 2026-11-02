@@ -17,7 +17,8 @@ test('mobile navigation has fixed category and subtab controls without popup',()
 
 test('subtabs remain compact and accessible on mobile',()=>{
  assert.match(nav,/grid grid-cols-3 gap-1\.5/)
- assert.match(nav,/aria-current=\{pathname===route\(slug\)\?"page":undefined\}/)
+ assert.match(nav,/aria-current=\{isActiveSubtab\(slug\)\?"page":undefined\}/)
+ assert.match(nav,/pathname\.startsWith\(route\(slug\)\+"\/"\)/)
  assert.match(nav,/administrationCategoryForPath\(pathname\)/)
  assert.doesNotMatch(nav,/overflow-y-auto|bottom-full/)
 })
