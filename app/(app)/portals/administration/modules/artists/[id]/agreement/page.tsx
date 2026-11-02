@@ -49,8 +49,11 @@ async function snapshotAgreement(form:FormData){
  const {data:event}=await db.from("events").select("name,start_at").eq("id",booking.event_id).maybeSingle()
  if(!agency?.name||!agency.email||!event?.name)throw new Error("Agency and event required")
  const snapshot={...booking,agency_name:agency.name,agency_email:agency.email,event_name:event.name,event_start_at:event.start_at}
- const {data:latest}=await db.from("admin_artist_agreement_versions").select("version_number").eq("booking_id",id).order("version_number",{ascending:false}).limit(1).maybeSingle()
- const {error:insertError}=await db.from("admin_artist_agreement_versions").insert({booking_id:id,version_number:(latest?.version_number??0)+1,snapshot})
+ const {data:latest,error:latestError}=await db.from("admin_artist_agreement_versions").select("version_number").eq("booking_id",id).order("version_number",{ascending:false}).limit(1).maybeSingle()
+ if(latestError)throw new Error("Unable to determine latest agreement version")
+ const nextVersion=(latest?.version_number??0)+1
+ if(!Number.isSafeInteger(nextVersion)||nextVersion<1)throw new Error("Invalid next agreement version")
+ const {error:insertError}=await db.from("admin_artist_agreement_versions").insert({booking_id:id,version_number:nextVersion,snapshot})
  if(insertError)throw new Error("Agreement version could not be saved; retry if another user created a version")
  revalidatePath(base+"/"+id+"/agreement")
  redirect(base+"/"+id+"/agreement")
