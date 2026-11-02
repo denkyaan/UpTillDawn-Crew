@@ -26,7 +26,7 @@ export function AdministrationAiChat({locale,initialBookingId,compact=false}:{lo
   if(!value||busy)return
   setBusy(true);setError("")
   try{
-   const response=await fetch("/api/administration/assistant",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({message:value,locale,history:history.slice(-8)})})
+   const response=await fetch("/api/administration/assistant",{method:"POST",cache:"no-store",headers:{"Content-Type":"application/json"},body:JSON.stringify({message:value,locale,history:history.slice(-8)})})
    const payload=await response.json().catch(()=>({})) as {answer?:string;error?:string}
    if(response.ok&&typeof payload.answer==="string"&&payload.answer.trim()){setHistory(previous=>[...previous,{role:"user" as const,content:value},{role:"assistant" as const,content:payload.answer!}].slice(-20));setMessage("")}
    else setError(response.status===400?t.invalid:t.error)
