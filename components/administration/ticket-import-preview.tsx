@@ -11,7 +11,7 @@ const copy={
 } as const
 export default function TicketImportPreview({events,locale}:{events:{id:string;name:string}[];locale:SupportedUiLocale}){
  const t=copy[locale],router=useRouter(),revision=useRef(0)
- const [eventId,setEventId]=useState(events[0]?.id??""),[source,setSource]=useState("ticketplatform")
+ const [eventId,setEventId]=useState(events[0]?.id??""),[source,setSource]=useState("eventix")
  const [csv,setCsv]=useState<string|null>(null),[file,setFile]=useState<File|null>(null)
  const [feedback,setFeedback]=useState(""),[busy,setBusy]=useState(false)
  const result=csv!==null&&eventId?validateTicketSalesCsv(csv,eventId):null
@@ -28,8 +28,9 @@ export default function TicketImportPreview({events,locale}:{events:{id:string;n
   const form=new FormData();form.set("eventId",eventId);form.set("source",source);form.set("file",file)
   try{
    const response=await fetch("/api/administration/ticketing/import",{method:"POST",body:form})
-   const body=await response.json()
+   const body=await response.json().catch(()=>({}))
    if(!response.ok){setFeedback(response.status===409?t.conflict:t.error);return}
+   if(!body.result||!Number.isSafeInteger(body.result.inserted)||!Number.isSafeInteger(body.result.skipped)){setFeedback(t.error);return}
    setFeedback(`${t.saved}: ${body.result.inserted} · ${t.skipped}: ${body.result.skipped}`);router.refresh()
   }catch{setFeedback(t.error)}finally{setBusy(false)}
  }
