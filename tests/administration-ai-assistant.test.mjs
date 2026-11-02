@@ -24,7 +24,16 @@ test('cross-portal AI keeps separate endpoints, permissions and compact mobile c
  assert.match(layout,/aiWorkspace==="admin"\?<PlatformAiAssistant/)
  assert.match(layout,/<AdministrationAiChat locale=\{uiLocale\} compact\/>/)
  assert.match(chat,/!compact&&<AdministrationAiBookingNotes/)
- assert.match(adminPage,/\(user\.isAdmin\|\|user\.isOwner\)&&<details/)
+ assert.match(adminPage,/Boolean\(adminAccess\)&&<details/)
  assert.match(adminApi,/if\(!approved\|\|!isAdmin\)return Response\.json/)
  assert.match(api,/canOpenPortal\("administration"/)
+})
+
+test('operational assistant receives UI locale and enforces the same admin permission',()=>{
+ const client=readFileSync('components/admin/platform-ai-assistant.tsx','utf8')
+ const endpoint=readFileSync('app/api/admin-assistant/route.ts','utf8')
+ assert.match(client,/JSON.stringify\(\{message:value,locale,eventId,contextKey\}\)/)
+ assert.match(endpoint,/locale:z.enum\(\['nl','fr','en','de'\]\)/)
+ assert.match(endpoint,/locale:parsed.data.locale/)
+ assert.match(page,/upt_is_admin/)
 })
