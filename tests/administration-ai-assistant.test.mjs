@@ -45,3 +45,10 @@ test('administration AI handles malformed responses and Belgian due dates',()=>{
  assert.match(api,/timeZone:"Europe\/Brussels"/)
  assert.match(api,/businessTimezone:"Europe\/Brussels"/)
 })
+
+test('administration AI responses are private and never cached',()=>{
+ assert.match(api,/export const dynamic="force-dynamic"/)
+ assert.match(api,/headers:\{"Cache-Control":"no-store"\}/)
+ assert.match(chat,/cache:"no-store"/)
+ assert.match(api,/generatedAt:now\.toISOString\(\)/)
+})
