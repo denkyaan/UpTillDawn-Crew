@@ -26,17 +26,18 @@ export function PlatformAiAssistant({eventId,contextLabel,contextKey,compact=fal
     try{
       const response=await fetch('/api/admin-assistant',{
         method:'POST',
+        cache:'no-store',
         headers:{'Content-Type':'application/json'},
         body:JSON.stringify({message:value,locale,eventId,contextKey}),
       })
-      const payload=await response.json() as {answer?:string;error?:string}
-      setAnswer(payload.answer||(response.ok?t.empty:humanizeAppError(payload.error)))
+      const payload=await response.json().catch(()=>({})) as {answer?:string;error?:string}
+      setAnswer(response.ok?(typeof payload.answer==='string'&&payload.answer.trim()?payload.answer:t.empty):humanizeAppError(payload.error))
     }catch{
       setAnswer(t.unavailable)
     }finally{setBusy(false)}
   }
 
-  return <section className={compact?'space-y-3':'space-y-3 rounded-2xl border p-4'}>
+  return <section aria-busy={busy} className={compact?'space-y-3':'space-y-3 rounded-2xl border p-4'}>
     <div>
       <h2 className="text-xl font-black">{t.title}{contextLabel?' · '+contextLabel:''}</h2>
       <p className="text-sm text-muted-foreground">{t.description}</p>
