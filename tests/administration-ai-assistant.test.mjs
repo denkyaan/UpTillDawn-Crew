@@ -71,3 +71,12 @@ test('operational AI identifies failed queries rather than claiming zero records
  assert.match(endpoint,/unavailableSources:/)
  assert.match(endpoint,/Meld expliciet de namen uit unavailableSources/)
 })
+
+test('operational sales AI never classifies unknown payments as card or sales as tokens',()=>{
+ const endpoint=readFileSync('app/api/admin-assistant/route.ts','utf8')
+ assert.match(endpoint,/tx\.payment_method==='card'/)
+ assert.match(endpoint,/bucket\.otherPayment\+=amount/)
+ assert.match(endpoint,/tx\.sale_category==='tokens'/)
+ assert.match(endpoint,/bucket\.otherCategory\+=amount/)
+ assert.match(endpoint,/salesClassification:/)
+})
