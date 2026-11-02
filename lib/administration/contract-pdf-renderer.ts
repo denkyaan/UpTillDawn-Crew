@@ -51,6 +51,10 @@ export function createContractPdfRenderer():ContractPdfRenderer{
     if(total>15*1024*1024)throw new Error("Rendered PDF too large")
     chunks.push(value)
    }
+  }catch(error){
+   // Stop downloading immediately when the remote renderer exceeds limits or fails.
+   await reader.cancel().catch(()=>{})
+   throw error
   }finally{reader.releaseLock()}
   const bytes=new Uint8Array(total)
   let offset=0
