@@ -27,7 +27,7 @@ export function PlatformAiAssistant({eventId,contextLabel,contextKey,compact=fal
       const response=await fetch('/api/admin-assistant',{
         method:'POST',
         headers:{'Content-Type':'application/json'},
-        body:JSON.stringify({message:value,eventId,contextKey}),
+        body:JSON.stringify({message:value,locale,eventId,contextKey}),
       })
       const payload=await response.json() as {answer?:string;error?:string}
       setAnswer(payload.answer||(response.ok?t.empty:humanizeAppError(payload.error)))
