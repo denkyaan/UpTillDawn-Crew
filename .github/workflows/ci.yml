@@ -96,7 +96,18 @@ jobs:
           fi
 
       - name: Start isolated Supabase stack
-        run: npx --yes supabase@2.117.0 start -x studio,imgproxy,inbucket,edge-runtime,logflare,vector,realtime
+        run: |
+          set -euo pipefail
+          echo 'Checking local Supabase ports before startup'
+          for port in 54321 54322 54323 54324 54327; do
+            if sudo ss -ltnp "( sport = :$port )" | grep -q LISTEN; then
+              echo "::error::Port $port is already occupied on the runner"
+              sudo ss -ltnp "( sport = :$port )" || true
+              docker ps --format 'table {{.Names}}\t{{.Ports}}' || true
+              exit 1
+            fi
+          done
+          npx --yes supabase@2.117.0 start -x studio,imgproxy,inbucket,edge-runtime,logflare,vector,realtime
 
       - name: Replay every migration from zero
         run: npx --yes supabase@2.117.0 db reset --local --no-seed
