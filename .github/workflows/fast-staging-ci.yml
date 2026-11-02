@@ -1,0 +1,56 @@
+name: Fast Staging CI
+
+on:
+  push:
+    branches: [staging]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: fast-staging-ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  validate:
+    runs-on: ubuntu-26.04-arm
+    timeout-minutes: 25
+    env:
+      NEXT_PUBLIC_SUPABASE_URL: https://placeholder.supabase.co
+      NEXT_PUBLIC_SUPABASE_ANON_KEY: placeholder-anon-key
+      NEXT_PUBLIC_APP_URL: http://127.0.0.1:3000
+    steps:
+      - name: Checkout
+        uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5.1.0
+      - name: Set up Node.js
+        uses: actions/setup-node@a0853c24544627f65ddf259abe73b1d18a591444 # v5.0.0
+        with:
+          node-version: 24
+          cache: npm
+      - name: Install dependencies
+        run: npm ci
+      - name: Production dependency audit
+        run: npm audit --omit=dev --audit-level=high
+      - name: Parallel lint, typecheck and unit tests
+        shell: bash
+        run: |
+          set -uo pipefail
+          npm run lint > /tmp/upt-lint.log 2>&1 & lint_pid=$!
+          npm run typecheck > /tmp/upt-typecheck.log 2>&1 & types_pid=$!
+          npm test > /tmp/upt-tests.log 2>&1 & tests_pid=$!
+          failed=0
+          for entry in "lint:$lint_pid" "typecheck:$types_pid" "tests:$tests_pid"; do
+            label="${entry%%:*}"
+            pid="${entry#*:}"
+            if wait "$pid"; then
+              echo "PASS: $label"
+            else
+              echo "::error::$label failed"
+              failed=1
+            fi
+            cat "/tmp/upt-$label.log"
+          done
+          exit "$failed"
+      - name: Build Next.js
+        run: npm run build:next
