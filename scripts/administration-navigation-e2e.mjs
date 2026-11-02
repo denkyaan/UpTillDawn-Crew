@@ -29,15 +29,17 @@ try{
     assert.equal(response.status(),200)
     for(const [category,slugs] of Object.entries(groups)){
      const available=slugs.filter(slug=>slug!=='promotion-discipline'||role.name==='Admin')
-     const targets=viewport.width<1000?available:[available[0],available.at(-1)]
+     const targets=available
      for(const slug of targets){
       await page.locator(`[data-administration-category="${category}"]`).click()
       const link=page.locator(`[data-administration-subtab="${slug}"]`)
       const target=await link.getAttribute('href')
       assert.ok(target.startsWith('/portals/administration/'))
-      const documentRequest=page.waitForRequest(request=>request.isNavigationRequest()&&request.resourceType()==='document'&&new URL(request.url()).pathname===target)
+      const documentResponse=page.waitForResponse(response=>response.request().isNavigationRequest()&&response.request().resourceType()==='document'&&new URL(response.url()).pathname===target,{timeout:30000})
       await link.click()
-      await documentRequest
+      const navigation=await documentResponse
+      assert.equal(navigation.status(),200,slug+' returned HTTP '+navigation.status())
+      assert.equal(navigation.request().redirectedFrom(),null,slug+' unexpectedly redirected')
       await page.waitForURL(u=>u.pathname===target,{timeout:30000})
       await page.waitForLoadState('networkidle',{timeout:10000}).catch(()=>{})
       assert.equal(await page.locator(`[data-administration-category="${category}"]`).getAttribute('aria-pressed'),'true',slug+' lost its category')
