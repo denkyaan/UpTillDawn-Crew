@@ -50,10 +50,13 @@ export function createContractPdfRenderer():ContractPdfRenderer{
   const bytes=new Uint8Array(total)
   let offset=0
   for(const chunk of chunks){bytes.set(chunk,offset);offset+=chunk.byteLength}
+  if(length!==null&&bytes.byteLength!==length)throw new Error("Renderer response length mismatch")
   if(bytes.byteLength===0||bytes.byteLength>15*1024*1024||
    new TextDecoder().decode(bytes.slice(0,5))!=="%PDF-"){
    throw new Error("Renderer returned invalid PDF")
   }
+  const tail=new TextDecoder("latin1").decode(bytes.slice(-1024))
+  if(!/%%EOF\s*$/.test(tail))throw new Error("Renderer returned incomplete PDF")
   return bytes
  }
 }
