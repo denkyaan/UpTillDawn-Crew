@@ -16,11 +16,14 @@ const roles=[
 ]
 const portals=[
   '/portals/administration','/portals/administration/overview',
+  '/portals/administration/personnel','/portals/administration/chat','/portals/administration/contacts','/portals/administration/counterparties','/portals/administration/timesheets','/portals/administration/sales','/portals/administration/profile',
   '/portals/administration/finance','/portals/administration/rosters',
   '/portals/administration/modules/artists','/portals/administration/modules/documents',
+  '/portals/administration/modules/events','/portals/administration/modules/contracts','/portals/administration/modules/staff','/portals/administration/modules/tasks','/portals/administration/modules/logistics','/portals/administration/modules/permits','/portals/administration/modules/sponsors','/portals/administration/modules/marketing','/portals/administration/modules/automations','/portals/administration/modules/ai','/portals/administration/modules/ticketing',
   '/portals/administration/modules/invoices','/portals/administration/modules/banking',
   '/portals/administration/modules/inventory','/portals/administration/modules/notifications',
   '/portals/administration/modules/reports','/portals/administration/modules/settings',
+  '/portals/administration/modules/contacts',
   '/portals/promotion','/portals/promotion/tasks',
 ]
 const surfaces=['/','/events','/workplaces','/briefings','/inventory','/guestlist','/chat','/operations','/tasks','/timesheets','/incidents','/notifications','/personnel','/sales','/settings','/exports','/audit']
@@ -34,7 +37,7 @@ try{
  for(const role of roles){
   const context=await browser.newContext({viewport:{width:390,height:844},locale:role.locale,acceptDownloads:true})
   const page=await context.newPage()
-  const email=`bot-${String(role.index).padStart(2,'0')}-${role.name}-${role.locale}@bots.uptilldawn.test`
+  const email=role.name==='administration'?'bot-04-staff-de@bots.uptilldawn.test':`bot-${String(role.index).padStart(2,'0')}-${role.name}-${role.locale}@bots.uptilldawn.test`
   try{
    if(role.name==='admin'){
     const response=await context.request.post(base+'/api/auth/admin-login',{form:{email,password},maxRedirects:0})
@@ -46,7 +49,7 @@ try{
     const response=await context.request.post(base+'/api/test-auth-session',{data:{access_token:data.session.access_token,refresh_token:data.session.refresh_token}})
     if(!response.ok())throw Error('session bridge HTTP '+response.status())
    }
-   const routes=role.name==='admin'?[...surfaces,...portals]:role.name==='administration'?portals.filter(route=>route.startsWith('/portals/administration')):role.name==='promotion'?portals.filter(route=>route.startsWith('/portals/promotion')):surfaces
+   const routes=role.name==='admin'?[...surfaces,...portals]:role.name==='administration'?portals.filter(route=>route.startsWith('/portals/administration')&&!route.includes('promotion-discipline')):role.name==='promotion'?portals.filter(route=>route.startsWith('/portals/promotion')):surfaces
    for(const route of routes){
     const errors=[]
     const handler=error=>errors.push(String(error.message||error))
@@ -56,7 +59,7 @@ try{
      await page.waitForLoadState('networkidle',{timeout:7000}).catch(()=>{})
      const path=new URL(page.url()).pathname
      const body=(await page.locator('body').innerText()).trim()
-     if(!response||response.status()>=500)throw Error('HTTP '+response?.status())
+     if(!response||response.status()>=400)throw Error('HTTP '+response?.status())
      if(!body)throw Error('empty page')
      if(/404\s*\|\s*this page could not be found|application error|internal server error/i.test(body))throw Error('application/404 screen')
      if(errors.length)throw Error('uncaught JS: '+errors.join('; ').slice(0,350))
