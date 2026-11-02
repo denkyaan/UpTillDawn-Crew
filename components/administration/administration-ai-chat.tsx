@@ -14,7 +14,7 @@ const suggestions:Record<SupportedUiLocale,string[]>={
  en:["Which admin items need attention?","Which artists need follow-up?","Are there submitted timesheets?"],
  de:["Welche Verwaltungsvorgänge brauchen Aufmerksamkeit?","Welche Künstler benötigen Nachverfolgung?","Gibt es eingereichte Arbeitszeiten?"]
 }
-export function AdministrationAiChat({locale,initialBookingId}:{locale:SupportedUiLocale;initialBookingId?:string}){
+export function AdministrationAiChat({locale,initialBookingId,compact=false}:{locale:SupportedUiLocale;initialBookingId?:string;compact?:boolean}){
  const t=copy[locale]
  const [message,setMessage]=useState("")
  const [history,setHistory]=useState<Array<{role:"user"|"assistant";content:string}>>([])
@@ -32,8 +32,8 @@ export function AdministrationAiChat({locale,initialBookingId}:{locale:Supported
    else setError(response.status===400?t.invalid:t.error)
   }catch{setError(t.error)}finally{setBusy(false)}
  }
- return <section className="space-y-4 rounded-2xl border bg-card p-5">
-  <header><h1 className="text-2xl font-bold">{t.title}</h1><p className="mt-2 text-sm text-muted-foreground">{t.description}</p></header>
+ return <section className={compact?"space-y-3":"space-y-4 rounded-2xl border bg-card p-5"}>
+  <header><h1 className={compact?"text-lg font-bold":"text-2xl font-bold"}>{t.title}</h1><p className="mt-2 text-sm text-muted-foreground">{t.description}</p></header>
   <div className="flex flex-wrap gap-2" aria-label={t.title}>{suggestions[locale].map(prompt=><button key={prompt} type="button" disabled={busy} onClick={()=>setMessage(prompt)} className="rounded-full border px-3 py-2 text-left text-sm hover:bg-muted disabled:opacity-50">{prompt}</button>)}</div>
   <form onSubmit={e=>{e.preventDefault();void submit()}} className="space-y-3">
    <label htmlFor={inputId} className="sr-only">{t.title}</label>
@@ -42,7 +42,7 @@ export function AdministrationAiChat({locale,initialBookingId}:{locale:Supported
   </form>
   {history.length>0&&<button type="button" disabled={busy} onClick={()=>{setHistory([]);setMessage("");setError("")}} className="rounded-lg border px-3 py-2 text-sm disabled:opacity-50">{t.clear}</button>}
   {error&&<p role="alert" className="rounded-xl border p-3 text-sm">{error}</p>}
-  <AdministrationAiBookingNotes locale={locale} initialBookingId={initialBookingId}/>
+  {!compact&&<AdministrationAiBookingNotes locale={locale} initialBookingId={initialBookingId}/>}
   {history.length>0&&<div role="log" aria-live="polite" aria-relevant="additions" className="max-h-96 space-y-3 overflow-y-auto rounded-xl border p-3">{history.map((entry,index)=><div key={index} className={entry.role==="user"?"ml-6 whitespace-pre-wrap rounded-xl bg-violet-500/10 p-3 text-sm":"mr-6 whitespace-pre-wrap rounded-xl bg-muted p-3 text-sm"}>{entry.content}</div>)}</div>}
  </section>
 }
