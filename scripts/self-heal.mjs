@@ -174,6 +174,7 @@ async function verify(){
  }
  if(!ci||ci.conclusion!=='success')throw new Error('Self-healing CI werd niet groen.')
  if(ci.head_branch!=='staging')throw new Error('Verkeerde deployment branch.')
+ if(ci.head_sha!==sha)throw new Error('Deployment commit komt niet overeen met de herstelcommit.')
  const base='https://uptilldawn-crew-staging.uptilldawn.workers.dev'
  const target=route.startsWith('/')&&!route.startsWith('//')?base+route.split('?')[0]:base
  const response=await fetch(target,{redirect:'manual',signal:AbortSignal.timeout(15000)})
