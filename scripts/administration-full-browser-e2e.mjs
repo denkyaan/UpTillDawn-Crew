@@ -11,6 +11,8 @@ const roles=[
   {name:'admin',index:1,locale:'nl'},
   {name:'responsible',index:2,locale:'fr'},
   {name:'staff',index:3,locale:'en'},
+  {name:'administration',index:4,locale:'de'},
+  {name:'promotion',index:5,locale:'nl'},
 ]
 const portals=[
   '/portals/administration','/portals/administration/overview',
@@ -44,7 +46,7 @@ try{
     const response=await context.request.post(base+'/api/test-auth-session',{data:{access_token:data.session.access_token,refresh_token:data.session.refresh_token}})
     if(!response.ok())throw Error('session bridge HTTP '+response.status())
    }
-   const routes=role.name==='admin'?[...surfaces,...portals]:surfaces
+   const routes=role.name==='admin'?[...surfaces,...portals]:role.name==='administration'?portals.filter(route=>route.startsWith('/portals/administration')):role.name==='promotion'?portals.filter(route=>route.startsWith('/portals/promotion')):surfaces
    for(const route of routes){
     const errors=[]
     const handler=error=>errors.push(String(error.message||error))
@@ -58,14 +60,15 @@ try{
      if(!body)throw Error('empty page')
      if(/404\s*\|\s*this page could not be found|application error|internal server error/i.test(body))throw Error('application/404 screen')
      if(errors.length)throw Error('uncaught JS: '+errors.join('; ').slice(0,350))
-     if(role.name==='admin'&&route.startsWith('/portals/')&&(path.startsWith('/login')||path==='/portals'))throw Error('authorized portal redirected to '+path)
+     if(['admin','administration','promotion'].includes(role.name)&&route.startsWith('/portals/')&&path!==route)throw Error('authorized portal redirected from '+route+' to '+path)
+     if(role.name==='administration'&&route.startsWith('/portals/administration')&&await page.locator('[data-layout-key]').count())throw Error('administration rendered personnel navigation')
      const links=await page.locator('a[href]').evaluateAll(els=>els.map(el=>({href:el.getAttribute('href'),label:(el.textContent||'').trim()})).filter(x=>x.href?.startsWith('/')&&!x.href.startsWith('//')))
      const buttons=await page.getByRole('button').count()
      const forms=await page.locator('form').count()
      const controls=await page.locator('button,input,select,textarea,[role="button"],[role="switch"],[role="checkbox"]').evaluateAll(elements=>elements.map(el=>({tag:el.tagName.toLowerCase(),type:el.getAttribute('type')||'',action:el.getAttribute('data-action')||'',label:(el.getAttribute('aria-label')||el.getAttribute('name')||el.textContent||'').trim().slice(0,100),disabled:el.matches(':disabled')||el.getAttribute('aria-disabled')==='true'})))
      interactionInventory.push({role:role.name,route,controls})
      findings.push({role:role.name,route,actual:path,links:links.length,buttons,forms,controls:controls.length})
-     if(role.name==='admin'&&route.startsWith('/portals/administration')){
+     if(['admin','administration'].includes(role.name)&&route.startsWith('/portals/administration')){
       // Exercise actual user clicks, rather than treating direct URL requests as navigation coverage.
       const visibleLinks=await page.locator('a[href]:visible').evaluateAll(els=>els.map(el=>el.getAttribute('href')).filter(Boolean))
       const targets=[...new Set(visibleLinks.filter(href=>href.startsWith('/portals/administration/')))].slice(0,35)
@@ -80,6 +83,7 @@ try{
         clickedNavigation.push({role:role.name,from:route,to:target})
         const text=(await tab.locator('body').innerText()).trim()
         if(!text||/404\s*\|\s*this page could not be found|application error|internal server error/i.test(text))throw Error('clicked destination rendered error: '+target)
+        if(await tab.locator('[data-layout-key]').count())throw Error('clicked administration destination rendered personnel navigation: '+target)
        }finally{await tab.close()}
       }
      }
