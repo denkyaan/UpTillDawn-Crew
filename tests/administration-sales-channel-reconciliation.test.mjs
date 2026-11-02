@@ -1,0 +1,25 @@
+import test from 'node:test'
+import assert from 'node:assert/strict'
+import {reconcileExternalSales} from '../lib/administration/sales-channel-reconciliation.ts'
+const payment=(overrides={})=>({provider:'sumup',transactionId:'tx1',eventId:'event1',category:'tickets',amountCents:2500,currency:'EUR',status:'paid',saleReference:'order1',...overrides})
+test('groups tickets, merch and tokens without double counting matching cross-provider sales',()=>{
+ const result=reconcileExternalSales([payment(),payment({provider:'eventix',transactionId:'ticket1'}),payment({transactionId:'tx2',category:'merch',saleReference:'shirt1',amountCents:1500}),payment({transactionId:'tx3',category:'tokens',saleReference:'tokens1',amountCents:1000})])
+ assert.deepEqual(result.totals,{tickets:2500,merch:1500,tokens:1000})
+ assert.equal(result.duplicates.length,1)
+})
+test('does not merge sales based on matching amount alone',()=>{
+ const result=reconcileExternalSales([payment(),payment({transactionId:'tx2',saleReference:'order2'})])
+ assert.equal(result.totals.tickets,5000)
+})
+test('unmatched and pending payments cannot enter booked revenue',()=>{
+ const result=reconcileExternalSales([payment({saleReference:null}),payment({transactionId:'tx2',status:'pending'})])
+ assert.equal(result.totals.tickets,0);assert.equal(result.unmatched.length,1);assert.equal(result.pending.length,1)
+})
+test('conflicting duplicate transaction and inconsistent cross-provider sale are flagged',()=>{
+ const result=reconcileExternalSales([payment(),payment({amountCents:100}),payment({provider:'eventix',transactionId:'ticket1',amountCents:100})])
+ assert.equal(result.conflicts.length,2);assert.equal(result.totals.tickets,2500)
+})
+test('refunds reduce revenue and invalid amounts are rejected',()=>{
+ const result=reconcileExternalSales([payment(),payment({transactionId:'refund1',saleReference:'refund1',status:'refunded',amountCents:500}),payment({transactionId:'bad',amountCents:NaN})])
+ assert.equal(result.totals.tickets,2000);assert.equal(result.conflicts.length,1)
+})
