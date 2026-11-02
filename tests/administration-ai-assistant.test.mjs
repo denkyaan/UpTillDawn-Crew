@@ -64,3 +64,10 @@ test('operational Admin AI isolates events, limits data exposure and avoids fals
  assert.match(client,/response\.json\(\)\.catch/)
  assert.match(client,/aria-busy=\{busy\}/)
 })
+
+test('operational AI identifies failed queries rather than claiming zero records',()=>{
+ const endpoint=readFileSync('app/api/admin-assistant/route.ts','utf8')
+ for(const name of ['eventsError','alertsError','incidentsError','inventoryError','recoveryError','guestlistError','backstageError','salesError','registersError'])assert.ok(endpoint.includes(name),name)
+ assert.match(endpoint,/unavailableSources:/)
+ assert.match(endpoint,/Meld expliciet de namen uit unavailableSources/)
+})
