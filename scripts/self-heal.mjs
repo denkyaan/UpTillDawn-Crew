@@ -1,4 +1,5 @@
 import {readFile,writeFile} from 'node:fs/promises'
+import {appendFileSync} from 'node:fs'
 import {execFileSync} from 'node:child_process'
 
 const repo=process.env.GITHUB_REPOSITORY||'denkyaan/UpTillDawn-Crew'
@@ -96,7 +97,7 @@ function output(changed,summary){
  if(out)requireWrite(out,`changed=${changed?'true':'false'}\nsummary<<EOF\n${String(summary).slice(0,2000)}\nEOF\n`)
  console.log(summary)
 }
-function requireWrite(path,text){execFileSync('bash',['-lc',`cat >> "$1" <<'__UPT__'\n${text}__UPT__`,'_',path])}
+function requireWrite(path,text){appendFileSync(path,text,{encoding:'utf8'})}
 
 function runValidation(){
  const commands=[
