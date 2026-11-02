@@ -34,7 +34,9 @@ try{
       await page.locator(`[data-administration-category="${category}"]`).click()
       const link=page.locator(`[data-administration-subtab="${slug}"]`)
       const target=await link.getAttribute('href')
-      assert.ok(target.startsWith('/portals/administration/'))
+      assert.ok(target?.startsWith('/portals/administration/'),slug+' must remain inside administration')
+      assert.equal(await link.count(),1,slug+' must have exactly one navigation link')
+      assert.equal(await link.isVisible(),true,slug+' navigation link must be visible')
       const documentResponse=page.waitForResponse(response=>response.request().isNavigationRequest()&&response.request().resourceType()==='document'&&new URL(response.url()).pathname===target,{timeout:30000})
       await link.click()
       const navigation=await documentResponse
