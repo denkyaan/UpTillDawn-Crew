@@ -14,7 +14,12 @@ export function createContractPdfRenderer():ContractPdfRenderer{
  let url:URL
  try{url=new URL(endpoint)}catch{throw new Error("Invalid PDF renderer URL")}
  if(url.protocol!=="https:"||url.username||url.password||url.hash||url.search||
-  !url.hostname||url.hostname==="localhost"||url.hostname.endsWith(".local")){
+  !url.hostname||url.hostname==="localhost"||url.hostname.endsWith(".local")||
+  url.hostname.endsWith(".internal")||url.hostname.endsWith(".localhost")||
+  /^(?:127|10|0|192\.168)\./.test(url.hostname)||
+  /^172\.(?:1[6-9]|2[0-9]|3[01])\./.test(url.hostname)||
+  /^169\.254\./.test(url.hostname)||
+  url.hostname.startsWith("[")||/^\d+(?:\.\d+){3}$/.test(url.hostname)){
   throw new Error("PDF renderer must use a dedicated HTTPS endpoint")
  }
  return async(html:string)=>{
