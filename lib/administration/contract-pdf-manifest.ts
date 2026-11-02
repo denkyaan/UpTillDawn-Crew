@@ -15,6 +15,8 @@ export type ContractPdfManifest={
 export async function buildContractPdfManifest(document:ContractDocument,pdf:Uint8Array):Promise<ContractPdfManifest>{
  if(pdf.byteLength===0||pdf.byteLength>15*1024*1024)throw new Error("Invalid contract PDF size")
  if(new TextDecoder().decode(pdf.slice(0,5))!=="%PDF-")throw new Error("Invalid contract PDF header")
+ if(!/%%EOF\s*$/.test(new TextDecoder("latin1").decode(pdf.slice(-1024))))throw new Error("Incomplete contract PDF")
+ if(document.status!=="draft_for_signature"||!Number.isFinite(Date.parse(document.approvedAt)))throw new Error("Contract approval invalid")
  const pdfHash=await crypto.subtle.digest("SHA-256",pdf)
  const pdfSha256=Array.from(new Uint8Array(pdfHash),b=>b.toString(16).padStart(2,"0")).join("")
  return {
