@@ -11,7 +11,7 @@ export default async function PromotionHome(){
  const locale=await requestUiLocale()
  const db=await createClient()
  const {data:blocked,error:blockError}=await db.rpc("upt_promotion_is_blocked" as never)
- const isBlocked=!current.isOwner&&!current.realIsAdmin&&(blockError!==null||blocked!==false)
+ const isBlocked=blockError!==null||blocked!==false
  const {data:assignments,error}=await db.from("task_assignments").select("id,status").eq("user_id",current.id).limit(500)
  const notStarted=(assignments??[]).filter(item=>item.status==="NOT STARTED").length
  const inProgress=(assignments??[]).filter(item=>item.status==="IN PROGRESS").length
