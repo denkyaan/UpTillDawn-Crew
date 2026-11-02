@@ -11,7 +11,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 30
     steps:
-      - name: Retain newest completed run per workflow
+      - name: Retain newest completed run per workflow and branch
         env:
           GH_TOKEN: ${{ github.token }}
           REPO: ${{ github.repository }}
@@ -19,52 +19,38 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          # Retain the newest completed run separately for main and staging.
-          # Never delete active runs or the currently running cleanup.
           workflows="$(gh api --paginate "/repos/$REPO/actions/workflows?per_page=100" --jq '.workflows[].id')"
           while IFS= read -r workflow; do
             [ -n "$workflow" ] || continue
             echo "Checking workflow $workflow"
-            # Paginate all completed runs; one page leaves older history untouched.
             if ! response="$(gh api --paginate --slurp "/repos/$REPO/actions/workflows/$workflow/runs?per_page=100&status=completed")"; then
-              echo "::warning::Could not fetch runs for workflow $workflow; skipping"
+              echo "::warning::Could not fetch runs for workflow $workflow"
               continue
             fi
             if ! entries="$(printf '%s' "$response" | jq -r '[.[].workflow_runs[] | select(.head_branch == "main" or .head_branch == "staging")] | unique_by(.id) | sort_by(.created_at, .id) | reverse | .[] | [.id,.head_branch] | @tsv')"; then
-              echo "::warning::Invalid workflow response for $workflow; skipping"
+              echo "::warning::Could not parse workflow runs for $workflow"
               continue
             fi
             kept_main=0
             kept_staging=0
             removed=0
-            while IFS=
-
-              echo "Removing old completed run $id"
-              if gh api --method DELETE "/repos/$REPO/actions/runs/$id"; then
-                removed=$((removed + 1))
-              else
-                echo "::warning::Could not delete run $id; continuing"
-              fi
-            done <<< "$entries"
-            echo "Workflow $workflow: deleted $removed older completed runs (main and staging)"
-          done <<< "$workflows"
-\t' read -r id branch; do
+            while IFS=$'\t' read -r id branch; do
               [ -n "$id" ] || continue
-              if [ "$branch" = main ]; then
+              if [ "$branch" = "main" ]; then
                 kept_main=$((kept_main + 1))
-                [ "$kept_main" -le 1 ] && continue
-              else
+                [ "$kept_main" -eq 1 ] && continue
+              elif [ "$branch" = "staging" ]; then
                 kept_staging=$((kept_staging + 1))
-                [ "$kept_staging" -le 1 ] && continue
+                [ "$kept_staging" -eq 1 ] && continue
+              else
+                continue
               fi
               [ "$id" = "$CURRENT_RUN_ID" ] && continue
-
-              echo "Removing old completed run $id"
               if gh api --method DELETE "/repos/$REPO/actions/runs/$id"; then
                 removed=$((removed + 1))
               else
-                echo "::warning::Could not delete run $id; continuing"
+                echo "::warning::Could not delete run $id"
               fi
             done <<< "$entries"
-            echo "Workflow $workflow: deleted $removed older completed runs"
+            echo "Workflow $workflow: deleted $removed old completed runs"
           done <<< "$workflows"
