@@ -119,7 +119,11 @@ function commitAndPush(){
  if(process.env.GITHUB_REF!=='refs/heads/staging'||process.env.SELF_HEAL_TARGET!=='staging')throw new Error('Production push forbidden.')
  sh('git',['config','user.name','UpTillDawn Self-Healing AI'])
  sh('git',['config','user.email','self-healing@users.noreply.github.com'])
- sh('git',['add','--all'])
+ const changed=sh('git',['status','--porcelain','--untracked-files=all']).split('\n').filter(Boolean)
+ const paths=changed.map(line=>line.slice(3).trim())
+ if(paths.some(path=>!editable(path)))throw new Error('Self-healing detected changes outside allowed source paths; refusing commit.')
+ if(!paths.length)return false
+ sh('git',['add','--',...paths])
  try{sh('git',['diff','--cached','--quiet']);return false}catch{}
  sh('git',['commit','-m',`fix(self-heal): repair error ${reportId}`])
  sh('git',['pull','--rebase','origin','staging'])
