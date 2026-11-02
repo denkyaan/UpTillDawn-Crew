@@ -37,6 +37,8 @@ try{
       assert.ok(target?.startsWith('/portals/administration/'),slug+' must remain inside administration')
       assert.equal(await link.count(),1,slug+' must have exactly one navigation link')
       assert.equal(await link.isVisible(),true,slug+' navigation link must be visible')
+      assert.equal(await link.isEnabled(),true,slug+' navigation link must be enabled')
+      assert.ok(!target.includes('/login/'),slug+' must not redirect to login')
       const documentResponse=page.waitForResponse(response=>response.request().isNavigationRequest()&&response.request().resourceType()==='document'&&new URL(response.url()).pathname===target,{timeout:30000})
       await link.click()
       const navigation=await documentResponse
@@ -47,17 +49,22 @@ try{
       assert.equal(await page.locator(`[data-administration-category="${category}"]`).getAttribute('aria-pressed'),'true',slug+' lost its category')
       assert.equal(await page.locator(`[data-administration-subtab="${slug}"]`).getAttribute('aria-current'),'page',slug+' lost active subtab')
       assert.equal(await page.locator('[data-layout-key]').count(),0,slug+' rendered personnel navigation')
+      assert.ok(new URL(page.url()).pathname.startsWith('/portals/administration/'),slug+' left the administration portal')
       assert.ok(!/application error|internal server error|this page could not be found/i.test(await page.locator('body').innerText()))
       checks.push({role:role.name,width:viewport.width,category,slug,path:new URL(page.url()).pathname})
      }
     }
     const header=page.locator('header').first()
-    await header.locator('a[href="/portals/administration/modules/notifications"]').click()
+    const notificationLink=header.locator('a[href="/portals/administration/modules/notifications"]')
+    assert.equal(await notificationLink.count(),1,'administration notifications link missing')
+    await notificationLink.click()
     await page.waitForURL('**/portals/administration/modules/notifications')
+    assert.equal(await page.locator('[data-layout-key]').count(),0,'notifications rendered personnel navigation')
     // The profile link is visible at desktop width; both dedicated routes must keep the shell.
     if(viewport.width>=1000){
      await header.locator('a[href="/portals/administration/profile"]').click()
      await page.waitForURL('**/portals/administration/profile')
+     assert.equal(await page.locator('[data-layout-key]').count(),0,'profile rendered personnel navigation')
     }
     await header.locator('a[href="/portals/administration"]').click()
     await page.waitForURL('**/portals/administration')
