@@ -4,6 +4,7 @@ import {createClient} from "@/lib/supabase/crew-server"
 import {getCurrentUser} from "@/lib/actions/auth"
 import {canOpenPortal,type PortalAssignment} from "@/lib/portal-access"
 export const runtime="nodejs"
+export const dynamic="force-dynamic"
 const schema=z.object({message:z.string().trim().min(1).max(4000),locale:z.enum(["nl","fr","en","de"]),history:z.array(z.object({role:z.enum(["user","assistant"]),content:z.string().trim().min(1).max(4000)})).max(8).default([])})
 export async function POST(request:Request){
  const origin=request.headers.get("origin")
@@ -63,6 +64,6 @@ export async function POST(request:Request){
   ],max_tokens:900,temperature:0.1})
   const answer=(raw as {response?:unknown})?.response
   if(typeof answer!=="string"||!answer.trim())return Response.json({error:"No response"},{status:502})
-  return Response.json({answer})
+  return Response.json({answer},{headers:{"Cache-Control":"no-store"}})
  }catch{return Response.json({error:"AI failed"},{status:502})}
 }
