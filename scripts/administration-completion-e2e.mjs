@@ -163,7 +163,7 @@ try{
   assert.equal(new URL(promotionPage.url()).pathname,route,'Promotion route must not redirect: '+route)
   assert.equal(await promotionPage.locator('[data-layout-key]').count(),0,'Promotion must not render staff navigation: '+route)
   const promotionBody=await promotionPage.locator('body').innerText()
-  const promotionError=/application error|internal server error|404\\s*\\|/i.exec(promotionBody)
+  const promotionError=/application error|internal server error|404\s*\|/i.exec(promotionBody)
   if(promotionError)console.error('Promotion error diagnostics:',JSON.stringify({route,match:promotionError[0],context:promotionBody.slice(Math.max(0,promotionError.index-160),promotionError.index+240)}))
   assert.ok(!promotionError,'Promotion error page: '+route)
  }
@@ -186,7 +186,7 @@ try{
    await clicked.waitForURL(location=>location.pathname===expected,{timeout:20000})
    assert.equal(new URL(clicked.url()).pathname,expected,'Promotion link unexpectedly redirected: '+target)
    assert.equal(await clicked.locator('[data-layout-key]').count(),0,'Promotion link rendered staff navigation: '+target)
-   assert.ok(!/application error|internal server error|404\\s*\\|/i.test(await clicked.locator('body').innerText()),'Promotion link rendered error: '+target)
+   assert.ok(!/application error|internal server error|404\s*\|/i.test(await clicked.locator('body').innerText()),'Promotion link rendered error: '+target)
   }finally{await clicked.close()}
  }
  ok('Promotion internal task links navigate inside their own portal')
