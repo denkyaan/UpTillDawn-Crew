@@ -94,7 +94,11 @@ async function propose(){
 }
 function output(changed,summary){
  const out=process.env.GITHUB_OUTPUT
- if(out)requireWrite(out,`changed=${changed?'true':'false'}\nsummary<<EOF\n${String(summary).slice(0,2000)}\nEOF\n`)
+ if(out){
+  const safeSummary=String(summary).slice(0,2000).replace(/\r/g,'')
+  const delimiter='UPT_SUMMARY_'+crypto.randomUUID().replace(/-/g,'')
+  requireWrite(out,`changed=${changed?'true':'false'}\nsummary<<${delimiter}\n${safeSummary}\n${delimiter}\n`)
+ }
  console.log(summary)
 }
 function requireWrite(path,text){appendFileSync(path,text,{encoding:'utf8'})}
