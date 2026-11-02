@@ -24,10 +24,13 @@ export async function verifyArchivedContractPdf(input:{
  try{manifest=JSON.parse(new TextDecoder("utf-8",{fatal:true}).decode(evidence))}catch{throw new Error("Invalid contract archive manifest")}
  const expected=await buildContractPdfManifest(document,pdf)
  const actual=manifest as Partial<ContractPdfManifest>|null
- const fileDigest=expected.pdfSha256
  const pdfName=pdfPath.split("/").at(-1)
- if(pdfName!=="draft-"+fileDigest+".pdf")throw new Error("Archived PDF digest does not match manifest")
- if(!actual||typeof actual!=="object"||
+ if(pdfName!=="draft-"+expected.pdfSha256+".pdf")throw new Error("Archived PDF digest does not match manifest")
+ // The evidence filename must be content-addressed too, not merely valid JSON.
+ const evidenceHash=await crypto.subtle.digest("SHA-256",evidence)
+ const evidenceSha256=Array.from(new Uint8Array(evidenceHash),b=>b.toString(16).padStart(2,"0")).join("")
+ if(manifestPath.split("/").at(-1)!=="evidence-"+evidenceSha256+".json")throw new Error("Archived evidence digest mismatch")
+ if(!actual||typeof actual!=="object"||Array.isArray(actual)||
   actual.schemaVersion!==expected.schemaVersion||
   actual.reference!==expected.reference||
   actual.sourceSha256!==expected.sourceSha256||
