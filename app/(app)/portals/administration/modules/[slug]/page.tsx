@@ -158,7 +158,7 @@ export default async function AdministrationModulePage({params,searchParams}:{pa
  const inventoryEvents=inventoryEventIds.length
   ? await supabase.from("events").select("id,name").in("id",inventoryEventIds)
   : null
- const inventoryEventNames=new Map((inventoryEvents?.data??[]).map(event=>[event.id,event.name]))
+ const inventoryEventNames=new Map([...inventoryEventChoices,...(inventoryEvents?.data??[])].map(event=>[event.id,event.name]))
  const locale=await requestUiLocale()
  const t=administrationCopy[locale]
  const u=ui[locale]
