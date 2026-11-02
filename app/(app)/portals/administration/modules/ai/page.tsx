@@ -4,6 +4,7 @@ import {createClient} from "@/lib/supabase/crew-server"
 import {canOpenPortal,type PortalAssignment} from "@/lib/portal-access"
 import {requestUiLocale} from "@/lib/server-locale"
 import {AdministrationAiChat} from "@/components/administration/administration-ai-chat"
+import {PlatformAiAssistant} from "@/components/admin/platform-ai-assistant"
 
 export const dynamic="force-dynamic"
 export default async function AdministrationAiPage({searchParams}:{searchParams:Promise<{bookingId?:string}>}){
@@ -17,5 +18,5 @@ export default async function AdministrationAiPage({searchParams}:{searchParams:
  const {bookingId}=await searchParams
  const initialBookingId=bookingId&&/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(bookingId)?bookingId:undefined
  const locale=await requestUiLocale()
- return <main className="mx-auto max-w-4xl space-y-5 p-4 sm:p-6"><AdministrationAiChat locale={locale} initialBookingId={initialBookingId}/></main>
+ return <main className="mx-auto max-w-4xl space-y-5 p-4 sm:p-6">{(user.isAdmin||user.isOwner)&&<details className="rounded-2xl border bg-card p-4"><summary className="cursor-pointer font-semibold">Admin AI</summary><div className="mt-4"><PlatformAiAssistant compact/></div></details>}<AdministrationAiChat locale={locale} initialBookingId={initialBookingId}/></main>
 }
