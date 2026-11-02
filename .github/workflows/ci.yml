@@ -317,8 +317,18 @@ jobs:
           const {inventory}=JSON.parse(readFileSync(file,'utf8'))
           if(!Array.isArray(inventory)||inventory.length===0)throw Error('Missing runtime interaction inventory')
           const roles=new Set(inventory.map(row=>row.role))
-          for(const role of ['admin','responsible','staff']){
+          for(const role of ['admin','responsible','staff','administration','promotion']){
             if(!roles.has(role))throw Error('Missing authenticated inventory for '+role)
+          }
+          const requiredPortalRoutes={
+            administration:['/portals/administration','/portals/administration/modules/invoices','/portals/administration/modules/banking'],
+            promotion:['/portals/promotion','/portals/promotion/tasks'],
+          }
+          for(const [role,routes] of Object.entries(requiredPortalRoutes)){
+            const visited=new Set(inventory.filter(row=>row.role===role).map(row=>row.route))
+            for(const route of routes){
+              if(!visited.has(route))throw Error('Missing authenticated '+role+' browser coverage for '+route)
+            }
           }
           const count=inventory.reduce((n,row)=>n+row.controls.length,0)
           if(count===0)throw Error('No rendered interactive controls were inventoried')
