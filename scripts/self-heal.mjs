@@ -153,6 +153,9 @@ async function loop(){
   if(released.ok){await markResolved();console.log('Self-healing release verified and report marked auto_resolved.');return}
   repairFeedback=released.feedback
   console.error(repairFeedback)
+  // A commit has already been pushed. Never reset to the original base or push
+  // another candidate until the failed staging release has been investigated.
+  throw new Error('Staging release verification failed after push; manual rollback/review required: '+repairFeedback)
  }
  console.error(`Autonomous repair exhausted ${maxAttempts} attempts. Report remains registered for technical follow-up. Last evidence: ${repairFeedback}`)
  throw new Error('Self-healing kon de fout niet autonoom oplossen na '+maxAttempts+' pogingen.')
@@ -173,7 +176,7 @@ async function verify(){
  const base='https://uptilldawn-crew-staging.uptilldawn.workers.dev'
  const target=route.startsWith('/')&&!route.startsWith('//')?base+route.split('?')[0]:base
  const response=await fetch(target,{redirect:'manual'})
- if(response.status>=500)throw new Error('Productiecontrole faalt met HTTP '+response.status)
+ if(!response.ok)throw new Error('Staging route verification failed with HTTP '+response.status)
  console.log(`Self-healing staging bevestigd: deploy #${ci.run_number}, HTTP ${response.status}`)
 }
 async function markResolved(){
