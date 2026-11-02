@@ -37,3 +37,11 @@ test('operational assistant receives UI locale and enforces the same admin permi
  assert.match(endpoint,/locale:parsed.data.locale/)
  assert.match(page,/upt_is_admin/)
 })
+
+test('administration AI handles malformed responses and Belgian due dates',()=>{
+ assert.match(chat,/response\.json\(\)\.catch\(\(\)=>\(\{\}\)\)/)
+ assert.match(chat,/typeof payload\.answer==="string"&&payload\.answer\.trim\(\)/)
+ assert.match(chat,/aria-busy=\{busy\}/)
+ assert.match(api,/timeZone:"Europe\/Brussels"/)
+ assert.match(api,/businessTimezone:"Europe\/Brussels"/)
+})
