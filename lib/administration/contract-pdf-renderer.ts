@@ -59,8 +59,10 @@ export function createContractPdfRenderer():ContractPdfRenderer{
   const bytes=new Uint8Array(total)
   let offset=0
   for(const chunk of chunks){bytes.set(chunk,offset);offset+=chunk.byteLength}
+  // Fetch can transparently decompress a response; encoded Content-Length is then unreliable.
+  const encoding=(response.headers.get("content-encoding")??"identity").trim().toLowerCase()
+  if(encoding!=="identity")throw new Error("Compressed PDF responses are not supported")
   if(length!==null&&bytes.byteLength!==length)throw new Error("Renderer response length mismatch")
-  if(response.headers.get("content-encoding")&&!["identity"].includes((response.headers.get("content-encoding")??"").toLowerCase()))throw new Error("Compressed PDF responses are not supported")
   if(bytes.byteLength===0||bytes.byteLength>15*1024*1024||
    new TextDecoder().decode(bytes.slice(0,5))!=="%PDF-"){
    throw new Error("Renderer returned invalid PDF")
