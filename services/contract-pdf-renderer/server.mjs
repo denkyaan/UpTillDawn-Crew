@@ -8,6 +8,7 @@ if(!secret||Buffer.byteLength(secret)<32||/[\r\n]/.test(secret))throw Error('CON
 const maxHtml=512_000
 const maxPdf=15*1024*1024
 const maxConcurrent=2
+const maxRenderDuration=25_000
 let active=0
 const expected=Buffer.from('Bearer '+secret)
 function authorized(header){
@@ -49,6 +50,7 @@ const server=createServer(async(req,res)=>{
     return route.abort()
    })
    const page=await context.newPage()
+   page.setDefaultTimeout(maxRenderDuration)
    await page.setContent(html,{waitUntil:'load',timeout:15000})
    const pdf=await page.pdf({format:'A4',printBackground:true,preferCSSPageSize:true,timeout:20000})
    if(pdf.length<5||pdf.length>maxPdf||pdf.subarray(0,5).toString()!=='%PDF-')throw Error('Invalid PDF output')
