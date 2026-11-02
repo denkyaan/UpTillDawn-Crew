@@ -55,11 +55,11 @@ const operationalModuleLinks:Record<string,string>={
  reports:"/portals/administration/finance",
  contacts:"/portals/administration/counterparties",
  sponsors:"/portals/administration/counterparties",
- marketing:"/portals/administration/promotion-discipline",
+ marketing:"/portals/administration/modules/marketing",
  inventory:"/portals/administration/modules/inventory",
  logistics:"/portals/administration/modules/inventory",
  tasks:"#administration-work-queue",
- notifications:"/portals/administration/modules/notifications",
+ notifications:"/portals/administration",
 }
 const operationalModuleLabels={
  nl:"Open bestaande beheerfunctie",fr:"Ouvrir la fonction de gestion",en:"Open existing management workflow",de:"Vorhandene Verwaltungsfunktion öffnen",
@@ -380,7 +380,7 @@ export default async function AdministrationModulePage({params,searchParams}:{pa
   {slug==="notifications"&&<section className="rounded-2xl border bg-card p-5">
    <h2 className="text-lg font-semibold">{({nl:"Meldingen beheren",fr:"Gérer les notifications",en:"Manage notifications",de:"Benachrichtigungen verwalten"} as const)[locale]}</h2>
    <p className="mt-2 text-sm text-muted-foreground">{({nl:"Open de bestaande meldingenpagina om berichten en actiepunten te bekijken.",fr:"Ouvrez la page des notifications pour consulter les messages et actions.",en:"Open the existing notifications page to review messages and action items.",de:"Öffnen Sie die Benachrichtigungsseite, um Nachrichten und Aufgaben zu prüfen."} as const)[locale]}</p>
-   <Link href="/portals/administration/modules/notifications" className="mt-4 inline-flex rounded-lg bg-violet-600 px-4 py-3 text-sm font-semibold text-white hover:bg-violet-700">{({nl:"Open meldingen",fr:"Ouvrir les notifications",en:"Open notifications",de:"Benachrichtigungen öffnen"} as const)[locale]} →</Link>
+   <Link href="/portals/administration" className="mt-4 inline-flex rounded-lg bg-violet-600 px-4 py-3 text-sm font-semibold text-white hover:bg-violet-700">{({nl:"Open meldingen",fr:"Ouvrir les notifications",en:"Open notifications",de:"Benachrichtigungen öffnen"} as const)[locale]} →</Link>
   </section>}
   {slug==="tasks"&&<section className="rounded-2xl border bg-card p-5">
    <h2 className="text-lg font-semibold">{({nl:"Taken opvolgen",fr:"Suivi des tâches",en:"Track tasks",de:"Aufgaben verfolgen"} as const)[locale]}</h2>
