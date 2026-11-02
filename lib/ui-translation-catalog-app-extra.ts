@@ -2,6 +2,18 @@ export type ExtraCatalogLocale = 'nl' | 'fr' | 'en' | 'de'
 type Row = { fr:string; en:string; de:string }
 
 export const APP_EXTRA_TRANSLATIONS: Record<string,Row> = {
+  "Analyseert de huidige operationele context. Voert geen wijzigingen uit.": {fr:"Analyse le contexte opérationnel actuel sans effectuer de modifications.",en:"Analyzes current operational context without making changes.",de:"Analysiert den aktuellen Betriebsstatus, ohne Änderungen vorzunehmen."},
+  "Analyse le contexte opérationnel actuel sans effectuer de modifications.": {fr:"Analyse le contexte opérationnel actuel sans effectuer de modifications.",en:"Analyzes current operational context without making changes.",de:"Analysiert den aktuellen Betriebsstatus, ohne Änderungen vorzunehmen."},
+  "Analyzes current operational context without making changes.": {fr:"Analyse le contexte opérationnel actuel sans effectuer de modifications.",en:"Analyzes current operational context without making changes.",de:"Analysiert den aktuellen Betriebsstatus, ohne Änderungen vorzunehmen."},
+  "Analysiert den aktuellen Betriebsstatus, ohne Änderungen vorzunehmen.": {fr:"Analyse le contexte opérationnel actuel sans effectuer de modifications.",en:"Analyzes current operational context without making changes.",de:"Analysiert den aktuellen Betriebsstatus, ohne Änderungen vorzunehmen."},
+  "Welke operationele problemen vragen aandacht?": {fr:"Quels problèmes opérationnels demandent une attention ?",en:"Which operational issues need attention?",de:"Welche betrieblichen Probleme brauchen Aufmerksamkeit?"},
+  "Quels problèmes opérationnels demandent une attention ?": {fr:"Quels problèmes opérationnels demandent une attention ?",en:"Which operational issues need attention?",de:"Welche betrieblichen Probleme brauchen Aufmerksamkeit?"},
+  "Which operational issues need attention?": {fr:"Quels problèmes opérationnels demandent une attention ?",en:"Which operational issues need attention?",de:"Welche betrieblichen Probleme brauchen Aufmerksamkeit?"},
+  "Welche betrieblichen Probleme brauchen Aufmerksamkeit?": {fr:"Quels problèmes opérationnels demandent une attention ?",en:"Which operational issues need attention?",de:"Welche betrieblichen Probleme brauchen Aufmerksamkeit?"},
+  "Admin AI-assistent": {fr:"Assistant IA Admin",en:"Admin AI assistant",de:"Admin-KI-Assistent"},
+  "Assistant IA Admin": {fr:"Assistant IA Admin",en:"Admin AI assistant",de:"Admin-KI-Assistent"},
+  "Admin AI assistant": {fr:"Assistant IA Admin",en:"Admin AI assistant",de:"Admin-KI-Assistent"},
+  "Admin-KI-Assistent": {fr:"Assistant IA Admin",en:"Admin AI assistant",de:"Admin-KI-Assistent"},
   "Mon profil":{fr:"Mon profil",en:"My profile",de:"Mein Profil"},
   "My profile":{fr:"Mon profil",en:"My profile",de:"Mein Profil"},
   "Mein Profil":{fr:"Mon profil",en:"My profile",de:"Mein Profil"},
