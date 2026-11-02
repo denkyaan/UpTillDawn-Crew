@@ -2,6 +2,7 @@ import FinanceReconciliationSummary from "@/components/administration/finance-re
 import OperationalWorkQueue from "@/components/administration/operational-work-queue"
 import InventoryReceipts from "@/components/administration/inventory-receipts"
 import TicketSalesOverview from "@/components/administration/ticket-sales-overview"
+import EventixIntegration from "@/components/administration/eventix-integration"
 import type {SupabaseClient} from "@supabase/supabase-js"
 import Link from "next/link"
 import TicketImportPreview from "@/components/administration/ticket-import-preview"
@@ -252,6 +253,7 @@ export default async function AdministrationModulePage({params,searchParams}:{pa
   </section>}
   {["logistics","permits","tasks"].includes(slug)&&<OperationalWorkQueue kind={slug as "logistics"|"permits"|"tasks"} locale={locale} events={workQueueEvents?.data??[]}/>}
   {slug==="inventory"&&<InventoryReceipts locale={locale}/>}
+  {slug==="ticketing"&&<EventixIntegration locale={locale}/>}
   {slug==="ticketing"&&<TicketSalesOverview locale={locale} events={ticketEventRows?.data??[]}/>}
   {slug==="ticketing"&&!ticketEventRows?.error&&<TicketImportPreview events={(ticketEventRows?.data??[]).map(event=>({id:event.id,name:event.name}))} locale={locale}/>}
   {slug==="ticketing"&&<section className="rounded-2xl border bg-card p-5">
