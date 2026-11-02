@@ -121,6 +121,8 @@ function commitAndPush(){
  sh('git',['config','user.email','self-healing@users.noreply.github.com'])
  const changed=sh('git',['status','--porcelain','--untracked-files=all']).split('\n').filter(Boolean)
  const paths=changed.map(line=>line.slice(3).trim())
+ // Reject renames, copies and deletions: the AI is only authorized to edit existing files.
+ if(changed.some(line=>/^[RCDAU?!]/.test(line.slice(0,2))||/[RCDAU?!]/.test(line[1])||line.includes(' -> ')))throw new Error('Self-healing detected unsupported file status; refusing commit.')
  if(paths.some(path=>!editable(path)))throw new Error('Self-healing detected changes outside allowed source paths; refusing commit.')
  if(!paths.length)return false
  sh('git',['add','--',...paths])
