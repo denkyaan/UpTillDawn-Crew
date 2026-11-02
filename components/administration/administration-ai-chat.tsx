@@ -27,15 +27,15 @@ export function AdministrationAiChat({locale,initialBookingId,compact=false}:{lo
   setBusy(true);setError("")
   try{
    const response=await fetch("/api/administration/assistant",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({message:value,locale,history:history.slice(-8)})})
-   const payload=await response.json() as {answer?:string;error?:string}
-   if(response.ok&&payload.answer){setHistory(previous=>[...previous,{role:"user" as const,content:value},{role:"assistant" as const,content:payload.answer!}].slice(-20));setMessage("")}
+   const payload=await response.json().catch(()=>({})) as {answer?:string;error?:string}
+   if(response.ok&&typeof payload.answer==="string"&&payload.answer.trim()){setHistory(previous=>[...previous,{role:"user" as const,content:value},{role:"assistant" as const,content:payload.answer!}].slice(-20));setMessage("")}
    else setError(response.status===400?t.invalid:t.error)
   }catch{setError(t.error)}finally{setBusy(false)}
  }
  return <section className={compact?"space-y-3":"space-y-4 rounded-2xl border bg-card p-5"}>
   <header><h1 className={compact?"text-lg font-bold":"text-2xl font-bold"}>{t.title}</h1><p className="mt-2 text-sm text-muted-foreground">{t.description}</p></header>
   <div className="flex flex-wrap gap-2" aria-label={t.title}>{suggestions[locale].map(prompt=><button key={prompt} type="button" disabled={busy} onClick={()=>setMessage(prompt)} className="rounded-full border px-3 py-2 text-left text-sm hover:bg-muted disabled:opacity-50">{prompt}</button>)}</div>
-  <form onSubmit={e=>{e.preventDefault();void submit()}} className="space-y-3">
+  <form aria-busy={busy} onSubmit={e=>{e.preventDefault();void submit()}} className="space-y-3">
    <label htmlFor={inputId} className="sr-only">{t.title}</label>
    <textarea id={inputId} value={message} onChange={e=>setMessage(e.target.value)} maxLength={4000} rows={5} placeholder={t.placeholder} className="w-full rounded-xl border bg-background p-3"/>
    <button type="submit" disabled={busy||!message.trim()} className="rounded-xl bg-violet-600 px-4 py-3 font-semibold text-white disabled:opacity-50">{busy?t.busy:t.send}</button>
