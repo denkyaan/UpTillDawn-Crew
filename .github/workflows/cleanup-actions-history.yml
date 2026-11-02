@@ -19,16 +19,19 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
+          failures=0
           workflows="$(gh api --paginate "/repos/$REPO/actions/workflows?per_page=100" --jq '.workflows[].id')"
           while IFS= read -r workflow; do
             [ -n "$workflow" ] || continue
             echo "Checking workflow $workflow"
             if ! response="$(gh api --paginate --slurp "/repos/$REPO/actions/workflows/$workflow/runs?per_page=100&status=completed")"; then
-              echo "::warning::Could not fetch runs for workflow $workflow"
+              echo "::error::Could not fetch runs for workflow $workflow"
+              failures=$((failures + 1))
               continue
             fi
             if ! entries="$(printf '%s' "$response" | jq -r '[.[].workflow_runs[] | select(.head_branch == "main" or .head_branch == "staging")] | unique_by(.id) | sort_by(.created_at, .id) | reverse | .[] | [.id,.head_branch] | @tsv')"; then
-              echo "::warning::Could not parse workflow runs for $workflow"
+              echo "::error::Could not parse workflow runs for $workflow"
+              failures=$((failures + 1))
               continue
             fi
             kept_main=0
@@ -49,8 +52,13 @@ jobs:
               if gh api --method DELETE "/repos/$REPO/actions/runs/$id"; then
                 removed=$((removed + 1))
               else
-                echo "::warning::Could not delete run $id"
+                echo "::error::Could not delete run $id"
+                failures=$((failures + 1))
               fi
             done <<< "$entries"
             echo "Workflow $workflow: deleted $removed old completed runs"
           done <<< "$workflows"
+          if [ "$failures" -gt 0 ]; then
+            echo "::error::Cleanup had $failures API or deletion errors"
+            exit 1
+          fi
