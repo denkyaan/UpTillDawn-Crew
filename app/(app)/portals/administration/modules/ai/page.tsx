@@ -18,5 +18,6 @@ export default async function AdministrationAiPage({searchParams}:{searchParams:
  const {bookingId}=await searchParams
  const initialBookingId=bookingId&&/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(bookingId)?bookingId:undefined
  const locale=await requestUiLocale()
- return <main className="mx-auto max-w-4xl space-y-5 p-4 sm:p-6">{(user.isAdmin||user.isOwner)&&<details className="rounded-2xl border bg-card p-4"><summary className="cursor-pointer font-semibold">Admin AI</summary><div className="mt-4"><PlatformAiAssistant compact/></div></details>}<AdministrationAiChat locale={locale} initialBookingId={initialBookingId}/></main>
+ const {data:adminAccess}=await db.rpc('upt_is_admin',{uid:user.id})
+ return <main className="mx-auto max-w-4xl space-y-5 p-4 sm:p-6">{Boolean(adminAccess)&&<details className="rounded-2xl border bg-card p-4"><summary className="cursor-pointer font-semibold">Admin AI</summary><div className="mt-4"><PlatformAiAssistant compact/></div></details>}<AdministrationAiChat locale={locale} initialBookingId={initialBookingId}/></main>
 }
