@@ -36,7 +36,7 @@ permissions:
 
 jobs:
   transactional-workflows:
-    runs-on: ubuntu-26.04-arm
+    runs-on: ubuntu-24.04
     timeout-minutes: 25
     env:
       NEXT_PUBLIC_APP_URL: http://127.0.0.1:3000
