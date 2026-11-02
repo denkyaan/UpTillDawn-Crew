@@ -176,7 +176,7 @@ async function verify(){
  if(ci.head_branch!=='staging')throw new Error('Verkeerde deployment branch.')
  const base='https://uptilldawn-crew-staging.uptilldawn.workers.dev'
  const target=route.startsWith('/')&&!route.startsWith('//')?base+route.split('?')[0]:base
- const response=await fetch(target,{redirect:'manual'})
+ const response=await fetch(target,{redirect:'manual',signal:AbortSignal.timeout(15000)})
  if(!response.ok)throw new Error('Staging route verification failed with HTTP '+response.status)
  console.log(`Self-healing staging bevestigd: deploy #${ci.run_number}, HTTP ${response.status}`)
 }
