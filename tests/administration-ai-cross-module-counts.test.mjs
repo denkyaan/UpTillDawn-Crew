@@ -4,7 +4,7 @@ import {readFileSync} from "node:fs"
 const route=readFileSync("app/api/administration/assistant/route.ts","utf8")
 test("administration AI integrates bounded exact counts across financial, artist and inventory modules",()=>{
  for(const key of ["financialDocumentsPastDueDate","artistFollowUpsNextSevenDays","inventoryItemsWithDiscrepancies"])assert.ok(route.includes(key))
- assert.match(route,/const today=now\.toISOString\(\)\.slice\(0,10\)/)
+ assert.match(route,/const today=new Intl\.DateTimeFormat\("en-CA",\{timeZone:"Europe\/Brussels"/)
  assert.match(route,/const nextWeek=new Date\(now\.getTime\(\)\+7\*86400000\)\.toISOString\(\)/)
  assert.match(route,/\.lt\("due_date",today\)/)
  assert.match(route,/\.gte\("follow_up_at",now\.toISOString\(\)\)\.lte\("follow_up_at",nextWeek\)/)
