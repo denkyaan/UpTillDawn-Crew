@@ -164,6 +164,11 @@ try{
   assert.equal(await promotionPage.locator('[data-layout-key]').count(),0,'Promotion must not render staff navigation: '+route)
   assert.ok(!/application error|internal server error|404\\s*\\|/i.test(await promotionPage.locator('body').innerText()),'Promotion error page: '+route)
  }
+ const taskLinks=await promotionPage.locator('a[href]').evaluateAll(nodes=>nodes.map(node=>node.getAttribute('href')).filter(Boolean))
+ assert.ok(taskLinks.every(href=>!href.startsWith('/portals/staff')&&!href.startsWith('/login/staff')),'Promotion task links must not enter staff portal')
+ const taskButtons=await promotionPage.locator('button:visible').count()
+ const taskForms=await promotionPage.locator('form').count()
+ console.log('Promotion tasks interactive surface:',JSON.stringify({taskButtons,taskForms,taskLinks:taskLinks.length}))
  ok('Promotion landing and tasks load without redirect or staff navigation')
  for(const locale of ['nl','fr','en','de']){
   const context=await browserContext(browser,office,locale),tab=await context.newPage()
