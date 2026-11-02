@@ -26,7 +26,7 @@ export async function POST(request:Request){
   const parsed=schema.safeParse(await request.json().catch(()=>null))
   if(!parsed.success)return Response.json({error:'Ongeldige AI-aanvraag.'},{status:400})
 
-  const [{data:events},{data:alerts},{data:incidents},{data:inventory},{data:recovery},{data:guestlist},{data:backstage},{data:sales},{data:registers}]=await Promise.all([
+  const [{data:events,error:eventsError},{data:alerts,error:alertsError},{data:incidents,error:incidentsError},{data:inventory,error:inventoryError},{data:recovery,error:recoveryError},{data:guestlist,error:guestlistError},{data:backstage,error:backstageError},{data:sales,error:salesError},{data:registers,error:registersError}]=await Promise.all([
     s.from('events').select('id,name,status,start_at,end_at').neq('status','archived').order('start_at').limit(20),
     s.rpc('upt_operational_alerts'),
     s.from('incidents').select('event_id,workplace_id,status,urgency,category,created_at').is('resolved_at',null).limit(50),
@@ -80,6 +80,7 @@ export async function POST(request:Request){
     sales:[...salesByEvent.entries()].filter(([id])=>!eventId||id===eventId).map(([eventId,value])=>({eventId,...value})),
     cashRegisters:inEvent(registers||[]),
     recovery,
+    unavailableSources:[['events',eventsError],['operationalAlerts',alertsError],['incidents',incidentsError],['inventory',inventoryError],['recovery',recoveryError],['guestlist',guestlistError],['backstage',backstageError],['sales',salesError],['registers',registersError]].filter(([,error])=>Boolean(error)).map(([name])=>name),
     dataLimitations:'Operational records and sales are capped samples, not exhaustive totals. Do not claim complete revenue, cash balance, inventory, guestlist or incident counts from these samples. Never infer success when a query is unavailable.',
   }
 
