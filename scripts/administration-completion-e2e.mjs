@@ -169,6 +169,25 @@ try{
  const taskButtons=await promotionPage.locator('button:visible').count()
  const taskForms=await promotionPage.locator('form').count()
  console.log('Promotion tasks interactive surface:',JSON.stringify({taskButtons,taskForms,taskLinks:taskLinks.length}))
+ const internalTaskLinks=[...new Set(taskLinks.filter(href=>href.startsWith('/portals/promotion/')))]
+ for(const target of internalTaskLinks){
+  const link=promotionPage.locator('a[href="'+target.replaceAll('"','\\"')+'"]:visible').first()
+  if(!await link.count())continue
+  const clicked=await promoContext.newPage()
+  try{
+   await clicked.goto(base+'/portals/promotion/tasks',{waitUntil:'domcontentloaded'})
+   const candidate=clicked.locator('a[href="'+target.replaceAll('"','\\"')+'"]:visible').first()
+   if(!await candidate.count())continue
+   await candidate.click()
+   const expected=new URL(target,base).pathname
+   await clicked.waitForURL(location=>location.pathname===expected,{timeout:20000})
+   assert.equal(new URL(clicked.url()).pathname,expected,'Promotion link unexpectedly redirected: '+target)
+   assert.equal(await clicked.locator('[data-layout-key]').count(),0,'Promotion link rendered staff navigation: '+target)
+   assert.ok(!/application error|internal server error|404\\s*\\|/i.test(await clicked.locator('body').innerText()),'Promotion link rendered error: '+target)
+  }finally{await clicked.close()}
+ }
+ ok('Promotion internal task links navigate inside their own portal')
+
  ok('Promotion landing and tasks load without redirect or staff navigation')
  for(const locale of ['nl','fr','en','de']){
   const context=await browserContext(browser,promo,locale)
