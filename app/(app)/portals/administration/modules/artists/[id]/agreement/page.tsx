@@ -83,7 +83,7 @@ async function prepareSignature(form:FormData){
  const versionId=String(form.get("version_id")??"")
  const email=String(form.get("recipient_email")??"").trim().toLowerCase()
  if(!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id)||!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(versionId))notFound()
- if(email.length>320||!email.includes("@"))throw new Error("Invalid recipient email")
+ if(email.length>320||!email.match(/^[^\s@]+@[^\s@]+\.[^\s@]+$/))throw new Error("Invalid recipient email")
  const user=await getCurrentUser()
  if(!user)redirect("/login")
  if((!user.approved||user.account_blocked)&&!user.isOwner)redirect("/portals")
