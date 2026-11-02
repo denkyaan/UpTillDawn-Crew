@@ -20,6 +20,15 @@ test('conflicting duplicate transaction and inconsistent cross-provider sale are
  assert.equal(result.conflicts.length,2);assert.equal(result.totals.tickets,2500)
 })
 test('refunds reduce revenue and invalid amounts are rejected',()=>{
- const result=reconcileExternalSales([payment(),payment({transactionId:'refund1',saleReference:'refund1',status:'refunded',amountCents:500}),payment({transactionId:'bad',amountCents:NaN})])
+ const result=reconcileExternalSales([payment(),payment({transactionId:'refund1',status:'refunded',amountCents:500}),payment({transactionId:'bad',amountCents:NaN})])
  assert.equal(result.totals.tickets,2000);assert.equal(result.conflicts.length,1)
+})
+
+test('refunds without a linked sale or larger than original are held for review',()=>{
+ const r=reconcileExternalSales([payment({transactionId:'orphan',status:'refunded',saleReference:'unknown',amountCents:100}),payment(),payment({transactionId:'large',status:'refunded',amountCents:2600})])
+ assert.equal(r.totals.tickets,2500);assert.equal(r.conflicts.length,2)
+})
+test('multiple refunds against same sale cannot double deduct',()=>{
+ const r=reconcileExternalSales([payment(),payment({transactionId:'refund1',status:'refunded',amountCents:500}),payment({transactionId:'refund2',status:'refunded',amountCents:500})])
+ assert.equal(r.totals.tickets,2000);assert.equal(r.conflicts.length,1)
 })
