@@ -40,7 +40,16 @@ export async function uploadContractArchive(input:{
   upsert:false,
   cacheControl:"0"
  })
- if(error)throw new Error("Contract archive upload failed")
+ if(error){
+  // Content-addressed archives are immutable. A concurrent retry may have
+  // already uploaded these exact bytes; never overwrite or trust an error alone.
+  try{
+   const existing=await downloadContractArchive(path,client)
+   if(existing.byteLength!==bytes.byteLength||await digestHex(existing)!==sha256){
+    throw new Error("Existing archive does not match upload")
+   }
+  }catch{throw new Error("Contract archive upload failed")}
+ }
  return {path,sha256}
 }
 export async function downloadContractArchive(path:string,client:ArchiveStorageClient):Promise<Uint8Array>{
