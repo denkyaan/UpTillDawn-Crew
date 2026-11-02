@@ -53,15 +53,17 @@ export async function POST(request:Request){
       backstage:(backstage||[]).find(item=>item.guestlist_entry_id===row.id)?.artist_received??null,
     }))
 
-  const salesByEvent=new Map<string,{net:number;cash:number;card:number;merch:number;tokens:number}>()
+  const salesByEvent=new Map<string,{net:number;cash:number;card:number;otherPayment:number;merch:number;tokens:number;otherCategory:number}>()
   for(const tx of sales||[]){
-    const bucket=salesByEvent.get(tx.event_id)||{net:0,cash:0,card:0,merch:0,tokens:0}
+    const bucket=salesByEvent.get(tx.event_id)||{net:0,cash:0,card:0,otherPayment:0,merch:0,tokens:0,otherCategory:0}
     const amount=Number(tx.total_cents||0)*(tx.transaction_type==='refund'?-1:1)
     bucket.net+=amount
     if(tx.payment_method==='cash')bucket.cash+=amount
-    else bucket.card+=amount
+    else if(tx.payment_method==='card')bucket.card+=amount
+    else bucket.otherPayment+=amount
     if(tx.sale_category==='merch')bucket.merch+=amount
-    else bucket.tokens+=amount
+    else if(tx.sale_category==='tokens')bucket.tokens+=amount
+    else bucket.otherCategory+=amount
     salesByEvent.set(tx.event_id,bucket)
   }
 
@@ -81,6 +83,7 @@ export async function POST(request:Request){
     cashRegisters:inEvent(registers||[]),
     recovery,
     unavailableSources:[['events',eventsError],['operationalAlerts',alertsError],['incidents',incidentsError],['inventory',inventoryError],['recovery',recoveryError],['guestlist',guestlistError],['backstage',backstageError],['sales',salesError],['registers',registersError]].filter(([,error])=>Boolean(error)).map(([name])=>name),
+    salesClassification:'Cash and card totals only include explicitly labelled transactions; unknown payment methods and categories are reported separately.',
     dataLimitations:'Operational records and sales are capped samples, not exhaustive totals. Do not claim complete revenue, cash balance, inventory, guestlist or incident counts from these samples. Never infer success when a query is unavailable.',
   }
 
