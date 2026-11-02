@@ -44,7 +44,7 @@ async function snapshotAgreement(form:FormData){
  }
  const {data:booking,error}=await db.from("admin_artist_bookings").select("id,artist_name,status,event_id,agency_contact_id,performance_at,fee_amount,currency,rider_notes,agreement_payment_terms,agreement_cancellation_terms,agreement_liability_terms,agreement_governing_law").eq("id",id).single()
  if(error||!booking||booking.status==="cancelled")throw new Error("Agreement unavailable")
- if(!booking.agency_contact_id||!booking.performance_at||booking.fee_amount===null||!booking.agreement_payment_terms||!booking.agreement_cancellation_terms||!booking.agreement_liability_terms||!booking.agreement_governing_law)throw new Error("Complete agreement terms first")
+ if(!booking.agency_contact_id||!booking.performance_at||booking.fee_amount===null||!booking.rider_notes?.trim()||!booking.agreement_payment_terms||!booking.agreement_cancellation_terms||!booking.agreement_liability_terms||!booking.agreement_governing_law)throw new Error("Complete agreement terms first")
  const {data:agency}=await db.from("admin_counterparties").select("name,email").eq("id",booking.agency_contact_id).maybeSingle()
  const {data:event}=await db.from("events").select("name,start_at").eq("id",booking.event_id).maybeSingle()
  if(!agency?.name||!agency.email||!event?.name)throw new Error("Agency and event required")
