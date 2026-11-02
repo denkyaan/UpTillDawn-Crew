@@ -34,9 +34,10 @@ export async function POST(request:Request){
   db.from("inventory_items").select("id",{count:"exact",head:true}).or("missing_quantity.gt.0,damaged_quantity.gt.0")
  ])
  const context={
-  generatedAt:new Date().toISOString(),
+  generatedAt:now.toISOString(),
   source:"Live read-only queries under the signed-in user permissions",
   businessTimezone:"Europe/Brussels",
+  financialDateInterpretation:"Dates are interpreted in Europe/Brussels local calendar time; records are samples unless a complete exact count is supplied.",
   rosters:rosters.error?{available:false}:rosters.data,
   submittedTimesheets:submittedTimesheetCount.error||submittedTimesheetCount.count==null?{available:false}: {count:submittedTimesheetCount.count,complete:true},
   financialDocumentsAwaitingCompletion:financialDocumentCount.error||financialDocumentCount.count==null?{available:false}:{count:financialDocumentCount.count,complete:true,statuses:["review","approved","issued"]},
