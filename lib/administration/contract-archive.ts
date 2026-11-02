@@ -28,6 +28,6 @@ export function isContractArchivePath(path:string):boolean{
  if(parts.length!==4)return false
  const [documentType,documentId,version,file]=parts
  if(documentType!=="artist"&&documentType!=="staff")return false
- if(!uuid.test(documentId)||!/^v[1-9][0-9]*$/.test(version))return false
+ if(!uuid.test(documentId)||!/^v[1-9][0-9]*$/.test(version)||!Number.isSafeInteger(Number(version.slice(1))))return false
  return /^(draft|signed)-[a-f0-9]{64}\.pdf$/.test(file)||/^evidence-[a-f0-9]{64}\.json$/.test(file)
 }
