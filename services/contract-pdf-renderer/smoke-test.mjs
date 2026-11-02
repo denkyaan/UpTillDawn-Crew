@@ -43,6 +43,10 @@ try{
  const pdf=new Uint8Array(await rendered.arrayBuffer())
  assert.equal(new TextDecoder().decode(pdf.slice(0,5)),'%PDF-')
  assert.ok(pdf.byteLength>100,'PDF should not be empty')
+ const external=await request('<html><body><img src="https://example.com/tracking.png"><p>Offline PDF</p></body></html>')
+ assert.equal(external.status,200,'External image requests must not break isolated PDF rendering')
+ const externalPdf=new Uint8Array(await external.arrayBuffer())
+ assert.equal(new TextDecoder().decode(externalPdf.slice(0,5)),'%PDF-')
  console.log('Contract PDF renderer smoke test passed')
 }finally{
  child.kill('SIGTERM')
