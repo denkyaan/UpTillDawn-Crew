@@ -156,7 +156,15 @@ try{
  const forbiddenPayroll=await staffContext.request.get(base+'/api/administration/payroll/export?event='+created.eventId);assert.equal(forbiddenPayroll.status(),403)
  ok('Payroll export denies ordinary staff')
  const promoContext=await browserContext(browser,promo)
- const promotionPage=await promoContext.newPage();response=await promotionPage.goto(base+'/portals/promotion',{waitUntil:'networkidle'});assert.equal(response.status(),200);assert.ok(!new URL(promotionPage.url()).pathname.startsWith('/login'))
+ const promotionPage=await promoContext.newPage()
+ for(const route of ['/portals/promotion','/portals/promotion/tasks']){
+  response=await promotionPage.goto(base+route,{waitUntil:'networkidle'})
+  assert.equal(response.status(),200,'Promotion route HTTP 200: '+route)
+  assert.equal(new URL(promotionPage.url()).pathname,route,'Promotion route must not redirect: '+route)
+  assert.equal(await promotionPage.locator('[data-layout-key]').count(),0,'Promotion must not render staff navigation: '+route)
+  assert.ok(!/application error|internal server error|404\\s*\\|/i.test(await promotionPage.locator('body').innerText()),'Promotion error page: '+route)
+ }
+ ok('Promotion landing and tasks load without redirect or staff navigation')
  for(const locale of ['nl','fr','en','de']){
   const context=await browserContext(browser,office,locale),tab=await context.newPage()
   for(const path of ['/portals/administration','/portals/administration/modules/ticketing','/portals/administration/modules/banking','/portals/administration/modules/inventory','/portals/administration/modules/permits','/portals/administration/modules/automations']){
