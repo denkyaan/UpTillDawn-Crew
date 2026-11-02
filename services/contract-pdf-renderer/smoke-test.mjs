@@ -2,12 +2,13 @@ import assert from 'node:assert/strict'
 import {spawn} from 'node:child_process'
 import {randomBytes} from 'node:crypto'
 import {setTimeout as delay} from 'node:timers/promises'
+import {fileURLToPath} from 'node:url'
 
 const token=randomBytes(40).toString('hex')
 const port=18080+Math.floor(Math.random()*1000)
 const url=`http://127.0.0.1:${port}/`
 const child=spawn(process.execPath,['server.mjs'],{
- cwd:new URL('.',import.meta.url).pathname,
+ cwd:fileURLToPath(new URL('.',import.meta.url)),
  env:{...process.env,PORT:String(port),CONTRACT_PDF_RENDER_TOKEN:token},
  stdio:['ignore','pipe','pipe']
 })
