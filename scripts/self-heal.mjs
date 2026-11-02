@@ -127,8 +127,12 @@ function commitAndPush(){
  if(!paths.length)return false
  sh('git',['add','--',...paths])
  try{sh('git',['diff','--cached','--quiet']);return false}catch{}
+ // Never rebase a previously validated repair onto newer, unvalidated code.
+ sh('git',['fetch','origin','staging'])
+ const remoteHead=sh('git',['rev-parse','refs/remotes/origin/staging'])
+ const localHead=sh('git',['rev-parse','HEAD'])
+ if(remoteHead!==localHead)throw new Error('Staging changed during self-healing validation; restart diagnosis on the latest commit.')
  sh('git',['commit','-m',`fix(self-heal): repair error ${reportId}`])
- sh('git',['pull','--rebase','origin','staging'])
  sh('git',['push','origin','HEAD:staging'])
  return true
 }
