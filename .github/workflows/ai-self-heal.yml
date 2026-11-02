@@ -40,6 +40,7 @@ concurrency:
 jobs:
   repair:
     if: vars.ENABLE_AUTOMATIC_SELF_HEAL == 'true'
+    environment: staging
     runs-on: ubuntu-26.04-arm
     timeout-minutes: 55
     env:
@@ -71,7 +72,7 @@ jobs:
             missing=1
           fi
           if (( missing )); then
-            echo 'Configure repository Actions secrets before running AI Self Healing.' >> "$GITHUB_STEP_SUMMARY"
+            echo 'Configure CLOUDFLARE_ACCOUNT_ID and CLOUDFLARE_API_TOKEN in the staging environment secrets before running AI Self Healing.' >> "$GITHUB_STEP_SUMMARY"
             exit 1
           fi
           echo 'Cloudflare AI credentials are configured.' >> "$GITHUB_STEP_SUMMARY"
