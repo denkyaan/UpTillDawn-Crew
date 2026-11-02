@@ -10,7 +10,6 @@ export const APP_EXTRA_TRANSLATIONS: Record<string,Row> = {
   "Quels problèmes opérationnels demandent une attention ?": {fr:"Quels problèmes opérationnels demandent une attention ?",en:"Which operational issues need attention?",de:"Welche betrieblichen Probleme brauchen Aufmerksamkeit?"},
   "Which operational issues need attention?": {fr:"Quels problèmes opérationnels demandent une attention ?",en:"Which operational issues need attention?",de:"Welche betrieblichen Probleme brauchen Aufmerksamkeit?"},
   "Welche betrieblichen Probleme brauchen Aufmerksamkeit?": {fr:"Quels problèmes opérationnels demandent une attention ?",en:"Which operational issues need attention?",de:"Welche betrieblichen Probleme brauchen Aufmerksamkeit?"},
-  "Admin AI-assistent": {fr:"Assistant IA Admin",en:"Admin AI assistant",de:"Admin-KI-Assistent"},
   "Assistant IA Admin": {fr:"Assistant IA Admin",en:"Admin AI assistant",de:"Admin-KI-Assistent"},
   "Admin AI assistant": {fr:"Assistant IA Admin",en:"Admin AI assistant",de:"Admin-KI-Assistent"},
   "Admin-KI-Assistent": {fr:"Assistant IA Admin",en:"Admin AI assistant",de:"Admin-KI-Assistent"},
