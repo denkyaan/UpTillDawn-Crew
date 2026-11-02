@@ -19,8 +19,8 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          # Retain exactly one latest completed run per workflow,
-          # whether successful or failed. Never remove active/current runs.
+          # Retain the newest completed run separately for main and staging.
+          # Never delete active runs or the currently running cleanup.
           workflows="$(gh api --paginate "/repos/$REPO/actions/workflows?per_page=100" --jq '.workflows[].id')"
           while IFS= read -r workflow; do
             [ -n "$workflow" ] || continue
@@ -30,17 +30,34 @@ jobs:
               echo "::warning::Could not fetch runs for workflow $workflow; skipping"
               continue
             fi
-            if ! entries="$(printf '%s' "$response" | jq -r '[.[].workflow_runs[]] | unique_by(.id) | sort_by(.created_at, .id) | reverse | .[] | [.id,.created_at] | @tsv')"; then
+            if ! entries="$(printf '%s' "$response" | jq -r '[.[].workflow_runs[] | select(.head_branch == "main" or .head_branch == "staging")] | unique_by(.id) | sort_by(.created_at, .id) | reverse | .[] | [.id,.head_branch] | @tsv')"; then
               echo "::warning::Invalid workflow response for $workflow; skipping"
               continue
             fi
-            kept=0
+            kept_main=0
+            kept_staging=0
             removed=0
-            while IFS=$'\t' read -r id created; do
+            while IFS=
+
+              echo "Removing old completed run $id"
+              if gh api --method DELETE "/repos/$REPO/actions/runs/$id"; then
+                removed=$((removed + 1))
+              else
+                echo "::warning::Could not delete run $id; continuing"
+              fi
+            done <<< "$entries"
+            echo "Workflow $workflow: deleted $removed older completed runs (main and staging)"
+          done <<< "$workflows"
+\t' read -r id branch; do
               [ -n "$id" ] || continue
-              kept=$((kept + 1))
+              if [ "$branch" = main ]; then
+                kept_main=$((kept_main + 1))
+                [ "$kept_main" -le 1 ] && continue
+              else
+                kept_staging=$((kept_staging + 1))
+                [ "$kept_staging" -le 1 ] && continue
+              fi
               [ "$id" = "$CURRENT_RUN_ID" ] && continue
-              [ "$kept" -le 1 ] && continue
 
               echo "Removing old completed run $id"
               if gh api --method DELETE "/repos/$REPO/actions/runs/$id"; then
