@@ -17,7 +17,7 @@ export async function POST(request:Request){
  const parsed=schema.safeParse(await request.json().catch(()=>null))
  if(!parsed.success)return Response.json({error:"Invalid request"},{status:400})
  const now=new Date()
- const today=now.toISOString().slice(0,10)
+ const today=new Intl.DateTimeFormat("en-CA",{timeZone:"Europe/Brussels",year:"numeric",month:"2-digit",day:"2-digit"}).format(now)
  const nextWeek=new Date(now.getTime()+7*86400000).toISOString()
  const [rosters,inventory,artists,documents,reminders,submittedTimesheetCount,financialDocumentCount,openArtistBookingCount,pendingRosterCount,overdueDocumentCount,upcomingFollowUpCount,inventoryDiscrepancyCount]=await Promise.all([
   db.from("admin_roster_proposals").select("status,title,proposed_start").limit(30),
@@ -36,6 +36,7 @@ export async function POST(request:Request){
  const context={
   generatedAt:new Date().toISOString(),
   source:"Live read-only queries under the signed-in user permissions",
+  businessTimezone:"Europe/Brussels",
   rosters:rosters.error?{available:false}:rosters.data,
   submittedTimesheets:submittedTimesheetCount.error||submittedTimesheetCount.count==null?{available:false}: {count:submittedTimesheetCount.count,complete:true},
   financialDocumentsAwaitingCompletion:financialDocumentCount.error||financialDocumentCount.count==null?{available:false}:{count:financialDocumentCount.count,complete:true,statuses:["review","approved","issued"]},
