@@ -13,6 +13,7 @@ import { useAuth } from "@/lib/providers"
 import { getDefaultRoleUiRules, ruleMatches, ruleUsable, type RoleUiContext, type RoleUiRule } from "@/lib/role-ui"
 import { AdminContextBar } from "@/components/admin/admin-context-bar"
 import { PlatformAiAssistant } from "@/components/admin/platform-ai-assistant"
+import { AdministrationAiChat } from "@/components/administration/administration-ai-chat"
 import { LANGUAGE_APPLIED_EVENT, activeUiLocale, type SupportedUiLocale } from "@/lib/locale-preferences"
 
 function CountBadge({ count }: { count: number }) {
@@ -34,6 +35,7 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
   const [context,setContext]=useState<RoleUiContext>(emptyContext)
   const [rules,setRules]=useState<RoleUiRule[]>([])
   const [adminAiOpen,setAdminAiOpen]=useState(false)
+  const [aiWorkspace,setAiWorkspace]=useState<"admin"|"administration">("admin")
   const [uiLocale,setUiLocale]=useState<SupportedUiLocale>("nl")
   useEffect(()=>{const apply=()=>setUiLocale(activeUiLocale());apply();addEventListener(LANGUAGE_APPLIED_EVENT,apply);return()=>removeEventListener(LANGUAGE_APPLIED_EVENT,apply)},[])
 
@@ -260,7 +262,7 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
         </main>
       </div>
     </div>
-    {isAdmin&&<div className={`fixed right-4 z-[70] print:hidden ${inDedicatedPortal?"bottom-[calc(5rem+env(safe-area-inset-bottom))] lg:bottom-20":"bottom-20 lg:bottom-4"}`}><button type="button" aria-expanded={adminAiOpen} onClick={()=>setAdminAiOpen(value=>!value)} className="rounded-full bg-violet-600 px-5 py-3 font-black text-white shadow-xl">ADMIN AI</button>{adminAiOpen&&<div className="absolute bottom-14 right-0 w-[min(92vw,430px)] max-h-[75vh] overflow-auto rounded-2xl border bg-background p-4 shadow-2xl"><PlatformAiAssistant contextKey={currentFeature||undefined} contextLabel={labels[currentFeature||""]} compact/></div>}</div>}
+    {isAdmin&&<div className={`fixed right-4 z-[70] print:hidden ${inDedicatedPortal?"bottom-[calc(5rem+env(safe-area-inset-bottom))] lg:bottom-20":"bottom-20 lg:bottom-4"}`}><button type="button" aria-expanded={adminAiOpen} onClick={()=>setAdminAiOpen(value=>!value)} className="rounded-full bg-violet-600 px-5 py-3 font-black text-white shadow-xl">ADMIN AI</button>{adminAiOpen&&<div className="absolute bottom-14 right-0 w-[min(92vw,430px)] max-h-[75vh] overflow-auto rounded-2xl border bg-background p-4 shadow-2xl"><div className="space-y-3"><div className="flex gap-2"><button type="button" aria-pressed={aiWorkspace==="admin"} onClick={()=>setAiWorkspace("admin")} className={`rounded-lg border px-3 py-2 text-sm ${aiWorkspace==="admin"?"border-violet-500 text-violet-400":""}`}>Admin AI</button><button type="button" aria-pressed={aiWorkspace==="administration"} onClick={()=>setAiWorkspace("administration")} className={`rounded-lg border px-3 py-2 text-sm ${aiWorkspace==="administration"?"border-violet-500 text-violet-400":""}`}>Administratie AI</button></div>{aiWorkspace==="admin"?<PlatformAiAssistant contextKey={currentFeature||undefined} contextLabel={labels[currentFeature||""]} compact/>:<AdministrationAiChat locale={uiLocale}/>}</div></div>}</div>}
     {!pathname.startsWith("/chat")&&<>
       {showUrgent&&<Link href="/incidents" className="fixed bottom-20 left-4 z-50 rounded-full bg-red-600 px-5 py-4 font-black text-white print:hidden lg:hidden">{({nl:"HELP",en:"HELP",fr:"AIDE",de:"HILFE"} as Record<SupportedUiLocale,string>)[uiLocale]}<CountBadge count={incidentMissed}/></Link>}
     </>}
