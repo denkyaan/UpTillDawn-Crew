@@ -7,6 +7,7 @@ test('route changes leave mobile subtabs collapsed while active category remains
  assert.match(role,/selectedGroup\?\.pathname===pathname&&availableGroups\.some\(group=>group\.key===selectedGroup\.key\)\?selectedGroup\.key:"home"/)
  assert.match(role,/activeGroup==="home"&&currentGroup===group\.key/)
  assert.match(role,/aria-expanded=\{group\.key==="home"\?undefined:activeGroup===group\.key\}/)
+ assert.match(role,/data-role-category=\{group\.key\} aria-pressed=\{active\}/)
 })
 test('administration navigation does not open the panel merely because a module route is active',()=>{
  assert.match(administration,/selectedCategory\?\.pathname===pathname\?selectedCategory\.key:"overview"/)
