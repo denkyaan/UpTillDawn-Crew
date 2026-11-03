@@ -19,10 +19,11 @@ export function reconcileExternalSales(payments:readonly ExternalPayment[]):Sale
  const accepted:ExternalPayment[]=[],pending:ExternalPayment[]=[],duplicates:string[]=[],conflicts:string[]=[],unmatched:string[]=[]
  const totals:Record<SaleCategory,number>={tickets:0,merch:0,tokens:0}
  const ids=new Map<string,ExternalPayment>(),sales=new Map<string,ExternalPayment>()
- const refunds=new Set<string>()
- for(const p of payments){
+ const refundedCents=new Map<string,number>()
+ // Process paid records before refunds so provider delivery order cannot create false orphan refunds.
+ for(const p of [...payments].sort((a,b)=>Number(a?.status==='refunded')-Number(b?.status==='refunded'))){
   const id=p.provider+':'+p.transactionId
-  if(typeof p.transactionId!=='string'||!p.transactionId.trim()||typeof p.eventId!=='string'||!p.eventId.trim()||!categories.includes(p.category)||!Number.isSafeInteger(p.amountCents)||p.amountCents<0||p.currency!=='EUR'||!['paid','pending','refunded'].includes(p.status)){
+  if(typeof p.transactionId!=='string'||!p.transactionId.trim()||typeof p.eventId!=='string'||!p.eventId.trim()||!categories.includes(p.category)||!Number.isSafeInteger(p.amountCents)||p.amountCents<0||(p.status==='refunded'&&p.amountCents===0)||p.currency!=='EUR'||!['paid','pending','refunded'].includes(p.status)){
    conflicts.push(id);continue
   }
   const transactionKey=JSON.stringify([p.provider,p.transactionId])
@@ -40,12 +41,13 @@ export function reconcileExternalSales(payments:readonly ExternalPayment[]):Sale
   // A refund must match a previously accepted paid sale, not an unrelated reference.
   if(p.status==='refunded'){
    const original=sales.get(saleKey)
-   if(!original||original.status!=='paid'||p.amountCents>original.amountCents||refunds.has(saleKey)){
+   const alreadyRefunded=refundedCents.get(saleKey)??0
+   if(!original||original.status!=='paid'||p.amountCents>original.amountCents-alreadyRefunded){
     conflicts.push(id);continue
    }
    const next=totals[p.category]-p.amountCents
    if(!Number.isSafeInteger(next)){conflicts.push(id);continue}
-   refunds.add(saleKey);accepted.push(p);totals[p.category]=next;continue
+   refundedCents.set(saleKey,alreadyRefunded+p.amountCents);accepted.push(p);totals[p.category]=next;continue
   }
   const prior=sales.get(saleKey)
   if(prior){
