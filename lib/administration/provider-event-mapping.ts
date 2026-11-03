@@ -13,7 +13,7 @@ export function validateProviderEventMappings(input:readonly ProviderEventMappin
   if(!m||!['eventix','sumup'].includes(m.provider)||typeof m.externalEventId!=='string'||!external.test(m.externalEventId)||typeof m.eventId!=='string'||!uuid.test(m.eventId)||typeof m.enabled!=='boolean'){
    errors.push('Invalid provider event mapping at row '+(i+1));continue
   }
-  const key=m.provider+':'+m.externalEventId
+  const key=JSON.stringify([m.provider,m.externalEventId])
   if(seen.has(key)){
    errors.push('Duplicate provider event mapping at row '+(i+1));continue
   }
@@ -24,6 +24,6 @@ export function validateProviderEventMappings(input:readonly ProviderEventMappin
 }
 /** Unmapped or disabled external events must never be silently imported. */
 export function resolveProviderEvent(provider:Provider,externalEventId:string,mappings:readonly ProviderEventMapping[]):string|null{
- const matches=mappings.filter(m=>m.enabled&&m.provider===provider&&m.externalEventId===externalEventId)
+ const matches=mappings.filter(m=>m.enabled&&m.provider===provider&&m.externalEventId===externalEventId&&uuid.test(m.eventId))
  return matches.length===1?matches[0].eventId:null
 }
