@@ -12,12 +12,16 @@ export function ReturnAfterLogin() {
     if (!target) return
     window.sessionStorage.removeItem('uptilldawn-return-after-login')
     const currentPortal=pathname.startsWith('/portals/administration')?'/portals/administration':pathname.startsWith('/portals/promotion')?'/portals/promotion':null
-    if(currentPortal){
-      try{const destination=new URL(target,window.location.origin);if(destination.origin!==window.location.origin)return;const path=destination.pathname;if(path!==currentPortal&&!path.startsWith(currentPortal+'/'))return}catch{return}
-    }
-    if (target.startsWith('/') && !target.startsWith('//') && !target.includes('\\') && target !== pathname) {
-      router.replace(target)
-    }
+    // Resolve and validate every saved destination, not only administration routes.
+    // Reject encoded separators and control characters before client-side routing.
+    if (!target.startsWith('/') || target.startsWith('//') || target.includes('\\') ||
+        /[\\u0000-\\u001f\\u007f]/.test(target) || /%2f|%5c/i.test(target)) return
+    let destination:URL
+    try { destination=new URL(target,window.location.origin) } catch { return }
+    if(destination.origin!==window.location.origin)return
+    const path=destination.pathname
+    if(currentPortal && path!==currentPortal && !path.startsWith(currentPortal+'/'))return
+    if(pathname!==path || destination.search || destination.hash)router.replace(path+destination.search+destination.hash)
   }, [pathname, router])
 
   return null
