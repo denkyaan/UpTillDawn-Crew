@@ -24,7 +24,7 @@ async function createProposal(form:FormData){
  const title=String(form.get("title")??"").trim()
  const start=String(form.get("start")??"")
  const end=String(form.get("end")??"")
- if(!/^[0-9a-f]{8}(?:-[0-9a-f]{4}){3}-[0-9a-f]{12}$/i.test(event)||!title||title.length>180||!start||!end)return
+ if(!/^[0-9a-f]{8}(?:-[0-9a-f]{4}){3}-[0-9a-f]{12}$/i.test(event)||!title||title.length>180||!start||!end)throw new Error("Invalid roster proposal")
  const details=String(form.get("details")??"")
  if(details.length>2000)throw new Error("Roster details too long")
  const startAt=new Date(start),endAt=new Date(end)
@@ -54,11 +54,16 @@ async function changeStatus(form:FormData){
  const {db,user}=await context()
  const id=String(form.get("id")??"")
  const action=String(form.get("action")??"")
- if(!/^[0-9a-f-]{36}$/i.test(id))return
+ if(!/^[0-9a-f]{8}(?:-[0-9a-f]{4}){3}-[0-9a-f]{12}$/i.test(id))throw new Error("Invalid roster identifier")
  if(!["submit","approve","reject"].includes(action))throw new Error("Unknown roster status action")
  const note=String(form.get("note")??"").trim()
  if(note.length>2000||(action==="reject"&&!note))throw new Error("Rejection requires a reason")
  if(action!=="submit"&&!user.isAdmin&&!user.isOwner)throw new Error("Admin required for roster review")
+ if(action!=="submit"){
+  const {data:proposal,error:lookupError}=await (db as unknown as SupabaseClient).from("admin_roster_proposals").select("created_by,status").eq("id",id).maybeSingle()
+  if(lookupError||!proposal||proposal.status!=="submitted")throw new Error("Roster is not awaiting review")
+  if(proposal.created_by===user.id)throw new Error("Roster creator cannot review their own proposal")
+ }
  const result=action==="submit"?await (db as unknown as SupabaseClient).rpc("upt_admin_roster_submit",{p_id:id}):await (db as unknown as SupabaseClient).rpc("upt_admin_roster_review",{p_id:id,p_approve:action==="approve",p_note:note})
  if(result.error)throw new Error("Roster transition failed")
  revalidatePath(route)
