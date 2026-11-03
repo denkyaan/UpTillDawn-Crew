@@ -23,3 +23,11 @@ test('activation requires administration access and request payloads have real b
  assert.match(post,/\.from\("events"\)/)
  assert.match(post,/event_not_found/)
 })
+
+test('mapping activation updates only enabled column; database trigger owns updated_at',()=>{
+ const patch=read('../app/api/administration/provider-mappings/[id]/route.ts')
+ assert.match(patch,/\.update\(\{enabled:input\.enabled\}\)/)
+ assert.doesNotMatch(patch,/updated_at:new Date/)
+ const migration=read('../supabase/migrations/20261103123000_provider_mapping_administration_permissions.sql')
+ assert.match(migration,/new\.updated_at:=now\(\)/)
+})
