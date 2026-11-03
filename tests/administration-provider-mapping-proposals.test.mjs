@@ -24,3 +24,8 @@ test('existing mappings are never overwritten or silently activated',()=>{
 test('separate providers may have the same external identifier',()=>{
  const r=run([base,{...base,provider:'sumup'}]);assert.equal(r.proposals.length,2)
 })
+
+test('oversized evidence cannot create an automatic mapping proposal',()=>{
+ const r=run([{...base,evidenceId:'x'.repeat(513)}])
+ assert.equal(r.proposals.length,0);assert.equal(r.review.length,1)
+})
