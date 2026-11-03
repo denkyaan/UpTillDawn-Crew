@@ -8,13 +8,13 @@ export function proposeProviderEventMappings(candidates:readonly ProviderEventCa
  const proposals:MappingProposal[]=[],review:string[]=[]
  const byExternal=new Map<string,ProviderEventCandidate[]>()
  for(const candidate of candidates){
-  const key=String(candidate.provider)+':'+String(candidate.externalEventId)
+  const key=JSON.stringify([candidate.provider,candidate.externalEventId])
   const group=byExternal.get(key)??[]
   group.push(candidate);byExternal.set(key,group)
  }
  for(const [key,group] of byExternal){
   const first=group[0]
-  if(group.length!==1||first.source!=='verified-provider-id'||!first.evidenceId.trim()||!knownEventIds.has(first.internalEventId)){
+  if(group.length!==1||first.source!=='verified-provider-id'||typeof first.evidenceId!=='string'||!first.evidenceId.trim()||first.evidenceId.length>512||!knownEventIds.has(first.internalEventId)){
    review.push(key);continue
   }
   const check=validateProviderEventMappings([{provider:first.provider,externalEventId:first.externalEventId,eventId:first.internalEventId,enabled:false}])
