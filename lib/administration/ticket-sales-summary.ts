@@ -12,3 +12,17 @@ export function validateTicketSalesSummary(value:unknown):value is TicketSalesSu
    &&nonNegativeInteger(r.sale_rows)&&nonNegativeInteger(r.quantity)&&nonNegativeInteger(r.gross_cents)
  })
 }
+
+/** Aggregate exact integer cents without converting database values to floating point. */
+export function ticketSalesTotals(rows:readonly TicketSalesSummary[]):{saleRows:bigint;quantity:bigint;grossCents:bigint}{
+ return rows.reduce((sum,row)=>({
+  saleRows:sum.saleRows+BigInt(row.sale_rows),
+  quantity:sum.quantity+BigInt(row.quantity),
+  grossCents:sum.grossCents+BigInt(row.gross_cents),
+ }),{saleRows:0n,quantity:0n,grossCents:0n})
+}
+export function formatTicketEuro(cents:bigint,locale:string):string{
+ const whole=cents/100n
+ const fraction=String(cents%100n).padStart(2,'0')
+ return new Intl.NumberFormat(locale).format(whole)+(['nl','fr','de'].includes(locale)?',':'.')+fraction+' EUR'
+}
