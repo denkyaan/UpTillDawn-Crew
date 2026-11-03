@@ -8,8 +8,11 @@ export const dynamic="force-dynamic"
 export default async function PromotionLayout({children}:{children:React.ReactNode}){
  const current=await getCurrentUser()
  if(!current)redirect("/login")
- const {data,error}=await (await createClient()).rpc("upt_my_portal_assignments")
- if(!current.isOwner&&!current.realIsAdmin&&(error||!canOpenPortal("promotion",(data??[]) as PortalAssignment[],{approved:current.approved,blocked:current.account_blocked===true})))redirect("/portals")
+ if((!current.approved||current.account_blocked)&&!current.isOwner)redirect("/portals")
+ if(!current.isOwner&&!current.realIsAdmin){
+  const {data,error}=await (await createClient()).rpc("upt_my_portal_assignments")
+  if(error||!canOpenPortal("promotion",(data??[]) as PortalAssignment[],{approved:current.approved,blocked:current.account_blocked===true}))redirect("/portals")
+ }
  const locale=await requestUiLocale()
  return <><div className="pb-24">{children}</div><PromotionBottomNav locale={locale}/></>
 }
