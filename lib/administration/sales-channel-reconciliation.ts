@@ -22,7 +22,7 @@ export function reconcileExternalSales(payments:readonly ExternalPayment[]):Sale
  const refunds=new Set<string>()
  for(const p of payments){
   const id=p.provider+':'+p.transactionId
-  if(!p.transactionId||!p.eventId||!categories.includes(p.category)||!Number.isSafeInteger(p.amountCents)||p.amountCents<0||p.currency!=='EUR'||!['paid','pending','refunded'].includes(p.status)){
+  if(typeof p.transactionId!=='string'||!p.transactionId.trim()||typeof p.eventId!=='string'||!p.eventId.trim()||!categories.includes(p.category)||!Number.isSafeInteger(p.amountCents)||p.amountCents<0||p.currency!=='EUR'||!['paid','pending','refunded'].includes(p.status)){
    conflicts.push(id);continue
   }
   const previous=ids.get(id)
@@ -33,8 +33,8 @@ export function reconcileExternalSales(payments:readonly ExternalPayment[]):Sale
   }
   ids.set(id,p)
   if(p.status==='pending'){pending.push(p);continue}
-  if(!p.saleReference){unmatched.push(id);continue}
-  const saleKey=p.eventId+':'+p.category+':'+p.saleReference
+  if(typeof p.saleReference!=='string'||!p.saleReference.trim()){unmatched.push(id);continue}
+  const saleKey=JSON.stringify([p.eventId,p.category,p.saleReference])
   // Refunds are separate ledger movements, never duplicates of the original sale.
   // A refund must match a previously accepted paid sale, not an unrelated reference.
   if(p.status==='refunded'){
@@ -48,7 +48,7 @@ export function reconcileExternalSales(payments:readonly ExternalPayment[]):Sale
   }
   const prior=sales.get(saleKey)
   if(prior){
-   if(prior.status===p.status&&prior.amountCents===p.amountCents){duplicates.push(id)}
+   if(prior.status===p.status&&prior.amountCents===p.amountCents&&prior.currency===p.currency){duplicates.push(id)}
    else conflicts.push(id)
    continue
   }
