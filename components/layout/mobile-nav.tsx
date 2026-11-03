@@ -73,7 +73,8 @@ export function MobileBottomNav({
  }
  const isActive=(item:NavigationItem)=>{
    const href=hrefFor(item)
-   return href==='/'?pathname==='/':pathname.startsWith(href)
+   const path=href.split('?')[0]
+   return path==='/'?pathname==='/':pathname===path||pathname.startsWith(path+'/')
  }
 
  const contextualKeys=tourPreview?[]:roleKey==="staff"
@@ -161,6 +162,7 @@ export function MobileBottomNav({
  const currentGroup=availableGroups.find(group=>group.entries.some(isActive))?.key??"home"
  const activeGroup=selectedGroup?.pathname===pathname&&availableGroups.some(group=>group.key===selectedGroup.key)?selectedGroup.key:currentGroup
  const selectedEntries=availableGroups.find(group=>group.key===activeGroup)?.entries??[]
+ useEffect(()=>{const onKey=(event:KeyboardEvent)=>{if(event.key==="Escape")setSelectedGroup({key:"home",pathname})};window.addEventListener("keydown",onKey);return()=>window.removeEventListener("keydown",onKey)},[pathname])
  useEffect(()=>{window.dispatchEvent(new CustomEvent("uptilldawn-navigation-expanded",{detail:{open:activeGroup!=="home"&&!tourPreview}}));return()=>{window.dispatchEvent(new CustomEvent("uptilldawn-navigation-expanded",{detail:{open:false}}))}},[activeGroup,tourPreview])
  if(!tourPreview)return <nav aria-label={{nl:"Mobiele navigatie",en:"Mobile navigation",fr:"Navigation mobile",de:"Mobile Navigation"}[trainingLocale]} className="fixed inset-x-0 bottom-0 z-50 border-t border-border bg-card pb-[env(safe-area-inset-bottom)] lg:hidden">
   {activeGroup!=="home"&&<div id="role-navigation-subtabs" className="border-b bg-card p-2">

@@ -25,6 +25,7 @@ export function AdministrationNavigation({initialLocale,canManagePromotion}:{ini
  const current=administrationCategoryForPath(pathname)
  const selected=categories.find(group=>group.key===(selectedCategory?.pathname===pathname?selectedCategory.key:current))!
  const visible=selected.key!=="overview"
+ useEffect(()=>{const onKey=(event:KeyboardEvent)=>{if(event.key==="Escape")setSelectedCategory({key:"overview",pathname})};window.addEventListener("keydown",onKey);return()=>window.removeEventListener("keydown",onKey)},[pathname])
  useEffect(()=>{window.dispatchEvent(new CustomEvent("uptilldawn-navigation-expanded",{detail:{open:visible}}));return()=>{window.dispatchEvent(new CustomEvent("uptilldawn-navigation-expanded",{detail:{open:false}}))}},[visible])
  const isActiveSubtab=(slug:string)=>pathname===route(slug)||(pathname.startsWith(route(slug)+"/")&&slug!=="dashboard")
  return <><nav aria-label={({nl:"Administratie navigatie",fr:"Navigation administrative",en:"Administration navigation",de:"Verwaltungsnavigation"} as const)[locale]} className="fixed inset-x-0 bottom-0 z-[65] border-t bg-card pb-[env(safe-area-inset-bottom)] lg:sticky lg:top-0 lg:inset-x-auto lg:border-x lg:rounded-xl">

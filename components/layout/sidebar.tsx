@@ -57,6 +57,7 @@ export function AppSidebar({
  const currentGroup=availableGroups.find(group=>group.entries.some(item=>routeActive(item.href==="/"&&isAdmin?"/admin":item.href)))?.key??"home"
  const activeGroup=selectedGroup?.pathname===pathname&&availableGroups.some(group=>group.key===selectedGroup.key)?selectedGroup.key:currentGroup
  const selectedEntries=availableGroups.find(group=>group.key===activeGroup)?.entries??[]
+ useEffect(()=>{const onKey=(event:KeyboardEvent)=>{if(event.key==="Escape")setSelectedGroup({key:"home",pathname})};window.addEventListener("keydown",onKey);return()=>window.removeEventListener("keydown",onKey)},[pathname])
 
  return <aside className="hidden lg:flex w-[250px] h-dvh sticky top-0 min-h-0 flex-col overflow-hidden border-r border-border bg-card">
   <Link href={isAdmin?"/admin":"/"} className="h-16 flex items-center gap-3 px-5 border-b border-border">
