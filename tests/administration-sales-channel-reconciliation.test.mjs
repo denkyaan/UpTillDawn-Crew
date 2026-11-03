@@ -32,3 +32,19 @@ test('multiple refunds against same sale cannot double deduct',()=>{
  const r=reconcileExternalSales([payment(),payment({transactionId:'refund1',status:'refunded',amountCents:500}),payment({transactionId:'refund2',status:'refunded',amountCents:500})])
  assert.equal(r.totals.tickets,2000);assert.equal(r.conflicts.length,1)
 })
+
+test('rejects blank external transaction and event identities',()=>{
+ const r=reconcileExternalSales([payment({transactionId:' '}),payment({transactionId:'tx2',eventId:' '})])
+ assert.equal(r.accepted.length,0);assert.equal(r.conflicts.length,2)
+})
+test('blank sale references remain unmatched rather than booked',()=>{
+ const r=reconcileExternalSales([payment({saleReference:' '})])
+ assert.equal(r.totals.tickets,0);assert.equal(r.unmatched.length,1)
+})
+test('structured sale keys prevent colon-delimiter collisions across event and sale identifiers',()=>{
+ const r=reconcileExternalSales([
+  payment({eventId:'event:1',saleReference:'order'}),
+  payment({transactionId:'tx2',eventId:'event',saleReference:'1:order'})
+ ])
+ assert.equal(r.totals.tickets,5000);assert.equal(r.duplicates.length,0)
+})
