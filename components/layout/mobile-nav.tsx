@@ -114,7 +114,7 @@ export function MobileBottomNav({
    const active=isActive(item)
    const Icon=item.icon
    const count=badgeCount(item.key)
-   const label=featureLabels[item.key] || getDefaultRoleUiLabel(roleKey,item.key,item.label)
+   const label=item.key==="incidents"?({nl:"Incidenten",fr:"Incidents",en:"Incidents",de:"Vorfälle"} as const)[trainingLocale]:item.key==="help"?({nl:"Helpcentrum",fr:"Centre d’aide",en:"Help centre",de:"Hilfezentrum"} as const)[trainingLocale]:featureLabels[item.key] || getDefaultRoleUiLabel(roleKey,item.key,item.label)
    const help=featureHelp(item.key,label)
    const trainingLocked=tourPreview&&Boolean(trainingNavTarget)&&trainingNavTarget!==item.key
    return <Link
@@ -144,7 +144,7 @@ export function MobileBottomNav({
     </span>
     {expandedItem
       ? <span className="min-w-0"><span className="block truncate">{label}</span><span className="mt-0.5 block line-clamp-2 text-[10px] font-normal text-muted-foreground">{help.description}</span></span>
-      : <span className="max-w-full truncate">{label}</span>}
+      : <span className="min-w-0 max-w-full break-words text-center leading-tight">{label}</span>}
    </Link>
  }
 

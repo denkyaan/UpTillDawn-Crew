@@ -24,7 +24,7 @@ export function AppSidebar({
 }) {
  const pathname=usePathname()
  const [locale,setLocale]=useState<SupportedUiLocale>("nl")
- const [selectedGroup,setSelectedGroup]=useState<string|null>(null)
+ const [selectedGroup,setSelectedGroup]=useState<{key:string;pathname:string}|null>(null)
  useEffect(()=>{const apply=()=>setLocale(activeUiLocale());apply();addEventListener(LANGUAGE_APPLIED_EVENT,apply);return()=>removeEventListener(LANGUAGE_APPLIED_EVENT,apply)},[])
  const {roles,isAdmin}=useAuth()
  const adminContext=useAdminSelection()
@@ -55,7 +55,7 @@ export function AppSidebar({
  const availableGroups=groups.map(group=>({...group,entries:group.keys.map(key=>visible.find(item=>item.key===key)).filter((item):item is (typeof visible)[number]=>Boolean(item))})).filter(group=>group.entries.length>0)
  const routeActive=(href:string)=>href==="/"?pathname==="/":pathname===href||pathname.startsWith(href+"/")
  const currentGroup=availableGroups.find(group=>group.entries.some(item=>routeActive(item.href==="/"&&isAdmin?"/admin":item.href)))?.key??"home"
- const activeGroup=selectedGroup&&availableGroups.some(group=>group.key===selectedGroup)?selectedGroup:currentGroup
+ const activeGroup=selectedGroup?.pathname===pathname&&availableGroups.some(group=>group.key===selectedGroup.key)?selectedGroup.key:currentGroup
  const selectedEntries=availableGroups.find(group=>group.key===activeGroup)?.entries??[]
 
  return <aside className="hidden lg:flex w-[250px] h-dvh sticky top-0 min-h-0 flex-col overflow-hidden border-r border-border bg-card">
@@ -64,14 +64,14 @@ export function AppSidebar({
    <div><div className="font-black tracking-wide">UP TILL DAWN</div><div className="text-[10px] text-muted-foreground tracking-[.18em]">PERSONEELSBEHEER</div></div>
   </Link>
   <nav aria-label={{nl:"Navigatie",fr:"Navigation",en:"Navigation",de:"Navigation"}[locale]} className="min-h-0 flex-1 overflow-y-auto overscroll-contain p-3 pb-6">
-   <div className="grid grid-cols-3 gap-1">{availableGroups.map(group=>{const Icon=group.icon;return <button key={group.key} type="button" data-role-category={group.key} aria-pressed={activeGroup===group.key} onClick={()=>setSelectedGroup(group.key)} className={cn("flex min-w-0 flex-col items-center gap-1 rounded-lg p-2 text-[11px]",activeGroup===group.key?"bg-violet-500/15 text-violet-400":"text-muted-foreground")}><Icon className="h-5 w-5"/><span className="truncate">{group.title[locale]}</span></button>})}</div>
+   <div className="grid grid-cols-3 gap-1">{availableGroups.map(group=>{const Icon=group.icon;return <button key={group.key} type="button" data-role-category={group.key} aria-pressed={activeGroup===group.key} onClick={()=>setSelectedGroup({key:group.key,pathname})} className={cn("flex min-w-0 flex-col items-center gap-1 rounded-lg p-2 text-[11px]",activeGroup===group.key?"bg-violet-500/15 text-violet-400":"text-muted-foreground")}><Icon className="h-5 w-5"/><span className="truncate">{group.title[locale]}</span></button>})}</div>
    <div className="mt-4 space-y-1 border-t pt-3">{selectedEntries.map(i=>{
     const baseHref=i.href==="/"&&isAdmin?"/admin":i.href
     const href=isAdmin?adminContext.href(baseHref):baseHref
     const active=routeActive(baseHref)
     const Icon=i.icon
     const count=Math.max(i.key==="chat"?chatMissed:i.key==="incidents"?incidentMissed:i.key==="tasks"?taskMissed:0,notificationFeatureCounts[i.key]??0)
-    const label=featureLabels[i.key]||getDefaultRoleUiLabel(roleKey,i.key,i.label)
+    const label=i.key==="incidents"?({nl:"Incidenten",fr:"Incidents",en:"Incidents",de:"Vorfälle"} as const)[locale]:i.key==="help"?({nl:"Helpcentrum",fr:"Centre d’aide",en:"Help centre",de:"Hilfezentrum"} as const)[locale]:featureLabels[i.key]||getDefaultRoleUiLabel(roleKey,i.key,i.label)
     const help=featureHelp(i.key,label)
     return <Link data-layout-key={i.key} key={i.key} href={href} title={help.description} aria-description={help.description} className={cn("flex items-center gap-3 rounded-xl px-3 py-3 text-sm font-semibold",active?"bg-violet-600 text-white":"text-muted-foreground hover:bg-muted hover:text-foreground")}><span className="relative"><Icon className="h-5 w-5"/>{count>0&&<span className="absolute -right-3 -top-3 flex h-5 min-w-5 items-center justify-center rounded-full bg-red-600 px-1 text-[10px] font-black leading-none text-white">{count>99?"99+":count}</span>}</span>{label}</Link>
    })}</div>
