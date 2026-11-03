@@ -7,7 +7,7 @@ export async function GET(){
  const access=await administrationAccess()
  if(!access.ok)return respond({error:"access_denied"},access.status)
  const {data,error}=await access.db.from("admin_provider_event_mappings").select("id,provider,external_event_id,event_id,enabled,created_at").order("created_at",{ascending:false}).limit(200)
- return error?respond({error:"mapping_read_failed"},503):respond({mappings:data??[]})
+ return error?respond({error:"mapping_read_failed"},503):respond({mappings:data??[],canActivate:Boolean(access.user.isAdmin||access.user.isOwner)})
 }
 export async function POST(request:Request){
  if(!sameOrigin(request))return respond({error:"forbidden"},403)
