@@ -15,7 +15,7 @@ export function ReturnAfterLogin() {
     // Resolve and validate every saved destination, not only administration routes.
     // Reject encoded separators and control characters before client-side routing.
     if (!target.startsWith('/') || target.startsWith('//') || target.includes('\\') ||
-        /[\\u0000-\\u001f\\u007f]/.test(target) || /%2f|%5c/i.test(target)) return
+        /[\u0000-\u001f\u007f]/.test(target) || /%2f|%5c/i.test(target)) return
     let destination:URL
     try { destination=new URL(target,window.location.origin) } catch { return }
     if(destination.origin!==window.location.origin)return
