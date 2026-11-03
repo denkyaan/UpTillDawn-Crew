@@ -890,6 +890,47 @@ export type Database = {
           },
         ]
       }
+      admin_provider_event_mappings: {
+        Row: {
+          created_at: string
+          created_by: string
+          enabled: boolean
+          event_id: string
+          external_event_id: string
+          id: string
+          provider: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string
+          enabled?: boolean
+          event_id: string
+          external_event_id: string
+          id?: string
+          provider: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string
+          enabled?: boolean
+          event_id?: string
+          external_event_id?: string
+          id?: string
+          provider?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "admin_provider_event_mappings_event_id_fkey"
+            columns: ["event_id"]
+            isOneToOne: false
+            referencedRelation: "events"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       admin_role_modes: {
         Row: {
           active_role: string
