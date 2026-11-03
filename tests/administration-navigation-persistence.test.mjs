@@ -1,7 +1,7 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
 import {readFileSync} from 'node:fs'
-import {administrationNavigationGroups,administrationRoute,administrationCategoryForPath} from '../lib/administration/navigation.ts'
+import {administrationNavigationGroups,administrationRoute,administrationCategoryForPath,administrationNotificationHref} from '../lib/administration/navigation.ts'
 const source=readFileSync(new URL('../components/administration/administration-navigation.tsx',import.meta.url),'utf8')
 test('all administration category subtabs resolve inside the administration portal',()=>{
  for(const group of administrationNavigationGroups){
@@ -27,4 +27,12 @@ test('administration subtabs use client navigation without reloading the portal 
  assert.match(source,/import Link from "next\/link"/)
  assert.match(source,/return <Link key=\{slug\} data-administration-subtab=\{slug\} href=\{route\(slug\)\}/)
  assert.doesNotMatch(source,/return <a key=\{slug\} data-administration-subtab/)
+})
+
+test('administration notification links reject external, encoded and cross-portal destinations',()=>{
+ for(const value of ['//example.com','/portals/promotion','/portals/staff','/portals/administration/%2e%2e/promotion','/portals/administration/%2f%2fevil','/portals/administration/%5cother','/portals/administration/\\\\other','/%00bad']){
+  assert.equal(administrationNotificationHref(value),null,value)
+ }
+ assert.equal(administrationNotificationHref('/tasks?event=123'),'/portals/administration/modules/tasks?event=123')
+ assert.equal(administrationNotificationHref('/portals/administration/invoices'),'/portals/administration/invoices')
 })
