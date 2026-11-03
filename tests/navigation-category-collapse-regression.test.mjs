@@ -13,6 +13,6 @@ test('administration subtab categories toggle closed on a second tap even on mod
  assert.match(administration,/selectedCategory\?\.pathname===pathname/)
 })
 test('expanding subtabs closes the AI dialog so it does not reappear unexpectedly',()=>{
- assert.match(shell,/if\(navigationExpanded\)setAdminAiOpen\(false\)/)
+ assert.match(shell,/if\(open\)setAdminAiOpen\(false\)/)
  assert.match(shell,/isAdmin&&!navigationExpanded/)
 })
