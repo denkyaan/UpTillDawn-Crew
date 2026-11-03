@@ -46,6 +46,6 @@ export function canOpenPortal(
 export function safeNotificationPath(value: unknown): string {
   if (typeof value !== "string" || !value.startsWith("/") ||
       value.startsWith("//") || value.includes("\\") ||
-      /[\u0000-\u001f\u007f]/.test(value)) return "/notifications"
+      /[\u0000-\u001f\u007f]/.test(value) || /%2f|%5c|%2e/i.test(value)) return "/notifications"
   return value
 }
