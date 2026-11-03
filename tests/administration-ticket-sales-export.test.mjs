@@ -27,3 +27,16 @@ test('ticket overview provides export only when valid saved sales exist and supp
  assert.match(ui,/validateTicketSalesSummary\(data\)/)
  for(const locale of ['nl','fr','en','de'])assert.match(ui,new RegExp('\\b'+locale+':\\{'))
 })
+
+test('per-event ticket exports validate the requested event and restrict rows',()=>{
+ const route=read('../app/api/administration/ticketing/export/route.ts')
+ assert.match(route,/new URL\(request\.url\)\.searchParams\.get\('event'\)/)
+ assert.match(route,/error:'invalid_event'/)
+ assert.match(route,/data\.filter\(row=>row\.event_id\.toLowerCase\(\)===eventId\.toLowerCase\(\)\)/)
+ assert.match(route,/\.\.\.selected\.map\(row=>/)
+})
+test('per-event ticket export is linked from localized ticket rows',()=>{
+ const ui=read('../components/administration/ticket-sales-overview.tsx')
+ assert.match(ui,/export\?event='\+encodeURIComponent\(row\.event_id\)/)
+ for(const locale of ['nl','fr','en','de'])assert.match(ui,new RegExp('\\b'+locale+':\\{[^\\n]*eventExport:'))
+})
