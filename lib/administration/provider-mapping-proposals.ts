@@ -1,4 +1,4 @@
-import {validateProviderEventMappings,type Provider,type ProviderEventMapping} from './provider-event-mapping'
+import {validateProviderEventMappings,type Provider,type ProviderEventMapping} from './provider-event-mapping.ts'
 
 /** Side-effect-free, fail-closed proposal engine. Never enables or writes a mapping. */
 export type ProviderEventCandidate={provider:Provider;externalEventId:string;internalEventId:string;source:'verified-provider-id'|'name-match'|'manual';evidenceId:string}
