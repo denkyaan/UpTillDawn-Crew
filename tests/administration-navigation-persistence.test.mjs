@@ -22,3 +22,9 @@ test('finance and planning nested routes retain their correct category',()=>{
  assert.equal(administrationCategoryForPath('/portals/administration/modules/invoices/123/peppol'),'finance')
  assert.equal(administrationCategoryForPath('/portals/administration/modules/artists/123/agreement'),'planning')
 })
+
+test('administration subtabs use client navigation without reloading the portal shell',()=>{
+ assert.match(source,/import Link from "next\/link"/)
+ assert.match(source,/return <Link key=\{slug\} data-administration-subtab=\{slug\} href=\{route\(slug\)\}/)
+ assert.doesNotMatch(source,/return <a key=\{slug\} data-administration-subtab/)
+})
