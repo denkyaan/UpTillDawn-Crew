@@ -27,7 +27,7 @@ async function requirePromotionAccess(){
 const validAssignmentId=(id:string)=>/^[0-9a-f]{8}(?:-[0-9a-f]{4}){3}-[0-9a-f]{12}$/i.test(id)
 async function changePromotionTaskStatus(formData:FormData){
  "use server"
- const {user,db}=await requirePromotionAccess()
+ const {db}=await requirePromotionAccess()
  const id=String(formData.get("assignment_id")??"")
  const status=String(formData.get("status")??"")
  if(!validAssignmentId(id)||status!=="IN PROGRESS")throw new Error("Invalid promotion task transition")
