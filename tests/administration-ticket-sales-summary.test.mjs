@@ -1,6 +1,6 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
-import {validateTicketSalesSummary,ticketSalesTotals,formatTicketEuro} from '../lib/administration/ticket-sales-summary.ts'
+import {validateTicketSalesSummary,ticketSalesTotals,ticketSalesByEvent,formatTicketEuro} from '../lib/administration/ticket-sales-summary.ts'
 const row=(overrides={})=>({event_id:'123e4567-e89b-42d3-a456-426614174000',source:'eventix',sale_rows:'2',quantity:'3',gross_cents:'1500',...overrides})
 test('accepts valid stored ticket summary records',()=>{assert.equal(validateTicketSalesSummary([row()]),true);assert.equal(validateTicketSalesSummary([]),true)})
 test('rejects malformed IDs, nonnumeric values and oversized totals',()=>{
@@ -25,4 +25,21 @@ test('formats integer cents in supported UI locales',()=>{
  assert.equal(formatTicketEuro(12345n,'nl'),'123,45 EUR')
  assert.equal(formatTicketEuro(12345n,'en'),'123.45 EUR')
  assert.equal(formatTicketEuro(5n,'de'),'0,05 EUR')
+})
+
+test('groups provider rows per event without merging different events',()=>{
+ const a='123e4567-e89b-42d3-a456-426614174000'
+ const b='123e4567-e89b-42d3-a456-426614174001'
+ const events=ticketSalesByEvent([row({event_id:a,source:'eventix',quantity:'2',gross_cents:'1200'}),row({event_id:a,source:'sumup',quantity:'1',gross_cents:'500'}),row({event_id:b,source:'eventix',quantity:'3',gross_cents:'2000'})])
+ assert.equal(events.length,2)
+ assert.equal(events[0].sourceCount,2)
+ assert.equal(events[0].quantity,BigInt(3))
+ assert.equal(events[0].grossCents,BigInt(1700))
+ assert.equal(events[1].grossCents,BigInt(2000))
+})
+test('repeated source rows count as one provider but retain every sale',()=>{
+ const events=ticketSalesByEvent([row(),row({quantity:'4',gross_cents:'2500'})])
+ assert.equal(events[0].sourceCount,1)
+ assert.equal(events[0].quantity,BigInt(7))
+ assert.equal(events[0].saleRows,BigInt(4))
 })
