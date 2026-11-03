@@ -2,6 +2,10 @@ export type ExtraCatalogLocale = 'nl' | 'fr' | 'en' | 'de'
 type Row = { fr:string; en:string; de:string }
 
 export const APP_EXTRA_TRANSLATIONS: Record<string,Row> = {
+  "Evenementkoppelingen beheren": {fr:"Gérer les associations d’événements",en:"Manage event mappings",de:"Ereigniszuordnungen verwalten"},
+  "Gérer les associations d’événements": {fr:"Gérer les associations d’événements",en:"Manage event mappings",de:"Ereigniszuordnungen verwalten"},
+  "Manage event mappings": {fr:"Gérer les associations d’événements",en:"Manage event mappings",de:"Ereigniszuordnungen verwalten"},
+  "Ereigniszuordnungen verwalten": {fr:"Gérer les associations d’événements",en:"Manage event mappings",de:"Ereigniszuordnungen verwalten"},
   "Analyseert de huidige operationele context. Voert geen wijzigingen uit.": {fr:"Analyse le contexte opérationnel actuel sans effectuer de modifications.",en:"Analyzes current operational context without making changes.",de:"Analysiert den aktuellen Betriebsstatus, ohne Änderungen vorzunehmen."},
   "Analyse le contexte opérationnel actuel sans effectuer de modifications.": {fr:"Analyse le contexte opérationnel actuel sans effectuer de modifications.",en:"Analyzes current operational context without making changes.",de:"Analysiert den aktuellen Betriebsstatus, ohne Änderungen vorzunehmen."},
   "Analyzes current operational context without making changes.": {fr:"Analyse le contexte opérationnel actuel sans effectuer de modifications.",en:"Analyzes current operational context without making changes.",de:"Analysiert den aktuellen Betriebsstatus, ohne Änderungen vorzunehmen."},
