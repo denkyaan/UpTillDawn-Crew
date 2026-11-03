@@ -11,7 +11,8 @@ test('all administration subtabs have contextual icons',()=>{
 })
 test('mobile navigation has fixed category and subtab controls without popup',()=>{
  assert.doesNotMatch(nav,/ChevronDown|setOpened|absolute inset-x-0 bottom-full/)
- assert.match(nav,/aria-pressed=\{selected\.key===group\.key\}/)
+ assert.match(nav,/aria-pressed=\{active\}/)
+ assert.match(nav,/const active=group\.key===selected\.key\|\|\(selected\.key==="overview"&&group\.key===current\)/)
  assert.match(nav,/className="fixed inset-x-0 bottom-0/)
 })
 
