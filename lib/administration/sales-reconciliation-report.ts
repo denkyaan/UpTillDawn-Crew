@@ -28,9 +28,18 @@ export function buildSalesReconciliationReport(payments:readonly ExternalPayment
    events.set(payment.eventId,event)
   }
   const sign=payment.status==='refunded'?-1:1
-  event.netCents[payment.category]+=sign*payment.amountCents
-  if(payment.status==='refunded')event.refundedCents[payment.category]+=payment.amountCents
-  else event.paidCents[payment.category]+=payment.amountCents
+  const nextNet=event.netCents[payment.category]+sign*payment.amountCents
+  if(!Number.isSafeInteger(nextNet))throw new RangeError('Unsafe event sales total')
+  event.netCents[payment.category]=nextNet
+  if(payment.status==='refunded'){
+   const nextRefunded=event.refundedCents[payment.category]+payment.amountCents
+   if(!Number.isSafeInteger(nextRefunded))throw new RangeError('Unsafe refunded sales total')
+   event.refundedCents[payment.category]=nextRefunded
+  }else{
+   const nextPaid=event.paidCents[payment.category]+payment.amountCents
+   if(!Number.isSafeInteger(nextPaid))throw new RangeError('Unsafe paid sales total')
+   event.paidCents[payment.category]=nextPaid
+  }
   event.acceptedTransactions++
  }
  return {
