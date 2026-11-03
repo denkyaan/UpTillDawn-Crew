@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react"
 import Link from "next/link"
 import { usePathname } from "next/navigation"
-import { ChevronDown, ChevronUp } from "lucide-react"
+import { ChevronDown, ChevronUp, LayoutDashboard, CalendarDays, Clock3, Users, MessageCircle, Settings } from "lucide-react"
 import { NAV_ITEMS, type NavigationItem } from "@/components/layout/navigation-items"
 import { useAuth } from "@/lib/providers"
 import { cn } from "@/lib/utils"
@@ -40,6 +40,7 @@ export function MobileBottomNav({
 }) {
  const pathname=usePathname()
  const [expanded,setExpanded]=useState(false)
+ const [selectedGroup,setSelectedGroup]=useState<string|null>(null)
  const [tourPreview,setTourPreview]=useState(false)
  const [sandboxHelp,setSandboxHelp]=useState("")
  const [trainingNavTarget,setTrainingNavTarget]=useState<string|null>(null)
@@ -145,6 +146,28 @@ export function MobileBottomNav({
       : <span className="max-w-full truncate">{label}</span>}
    </Link>
  }
+
+
+ const groupedNavigation=[
+  {key:"home",icon:LayoutDashboard,labels:{nl:"Home",fr:"Accueil",en:"Home",de:"Start"},keys:["overview"]},
+  {key:"events",icon:CalendarDays,labels:{nl:"Events",fr:"Événements",en:"Events",de:"Events"},keys:["events","briefings","guestlist"]},
+  {key:"work",icon:Clock3,labels:{nl:"Werk",fr:"Travail",en:"Work",de:"Arbeit"},keys:["operations","workplaces","tasks","inventory","sales"]},
+  {key:"team",icon:Users,labels:{nl:"Team",fr:"Équipe",en:"Team",de:"Team"},keys:["crew","personnel","exports","platform"]},
+  {key:"support",icon:MessageCircle,labels:{nl:"Contact",fr:"Contact",en:"Contact",de:"Kontakt"},keys:["chat","incidents","help"]},
+  {key:"manage",icon:Settings,labels:{nl:"Beheer",fr:"Gestion",en:"Manage",de:"Verwaltung"},keys:["settings"]},
+ ] as const
+ const availableGroups=groupedNavigation.map(group=>({...group,entries:group.keys.map(key=>items.find(item=>item.key===key)).filter((item):item is NavigationItem=>Boolean(item))})).filter(group=>group.entries.length>0)
+ const currentGroup=availableGroups.find(group=>group.entries.some(isActive))?.key??"home"
+ const activeGroup=selectedGroup??currentGroup
+ const selectedEntries=availableGroups.find(group=>group.key===activeGroup)?.entries??[]
+ if(!tourPreview)return <nav aria-label={{nl:"Mobiele navigatie",en:"Mobile navigation",fr:"Navigation mobile",de:"Mobile Navigation"}[trainingLocale]} className="fixed inset-x-0 bottom-0 z-50 border-t border-border bg-card pb-[env(safe-area-inset-bottom)] lg:hidden">
+  {activeGroup!=="home"&&<div id="role-navigation-subtabs" className="border-b bg-card p-2">
+   <div className="grid grid-cols-3 gap-1.5">{selectedEntries.map(item=><NavItem key={item.key} item={item} expandedItem/>)}</div>
+  </div>}
+  <div className="grid gap-0.5 px-1 py-2" style={{gridTemplateColumns:`repeat(${availableGroups.length},minmax(0,1fr))`}}>
+   {availableGroups.map(group=>{const Icon=group.icon;const active=activeGroup===group.key;return <button type="button" key={group.key} data-role-category={group.key} aria-expanded={group.key==="home"?undefined:active} aria-controls={group.key==="home"?undefined:"role-navigation-subtabs"} onClick={()=>{if(group.key==="home"){setSelectedGroup(null);window.location.assign(isAdmin?"/admin":"/");return}setSelectedGroup(group.key)}} className={cn("flex min-w-0 flex-col items-center justify-center gap-1 rounded-lg px-0.5 py-2 text-[10px]",active?"bg-violet-500/15 text-violet-400":"text-muted-foreground")}><Icon className="h-5 w-5"/><span className="max-w-full truncate">{group.labels[trainingLocale]}</span></button>})}
+  </div>
+ </nav>
 
  return <>{tourPreview&&sandboxHelp&&<div className="fixed inset-x-3 bottom-[calc(4.5rem+env(safe-area-inset-bottom))] z-[170] rounded-2xl border border-violet-500/40 bg-background/95 p-4 shadow-2xl backdrop-blur"><p className="text-sm font-bold">{sandboxHelp}</p><button type="button" onClick={()=>setSandboxHelp("")} className="mt-2 rounded-lg border px-3 py-2 text-xs font-bold">{{nl:"BEGREPEN",en:"GOT IT",fr:"COMPRIS",de:"VERSTANDEN"}[trainingLocale]}</button></div>}<nav aria-label={{nl:"Mobiele navigatie",en:"Mobile navigation",fr:"Navigation mobile",de:"Mobile Navigation"}[trainingLocale]} className="fixed inset-x-0 bottom-0 z-50 min-h-14 border-t border-border bg-card/95 pb-[env(safe-area-inset-bottom)] backdrop-blur lg:hidden">
   {expanded&&
