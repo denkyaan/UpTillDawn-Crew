@@ -6,7 +6,7 @@ import {financeCsv} from '@/lib/administration/finance-report'
 export const dynamic='force-dynamic'
 type TicketSummary={event_id:string;source:string;sale_rows:string;quantity:string;gross_cents:string}
 const digits=(value:unknown)=>typeof value==='string'&&/^\\d+$/.test(value)&&BigInt(value)<=BigInt(Number.MAX_SAFE_INTEGER)
-const uuid=/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
+const uuid=/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
 /** Download stored ticket sales only. No live Eventix/SumUp sync is implied. */
 export async function GET(){
  const access=await administrationAccess()
