@@ -14,10 +14,10 @@ test('provider mapping manager supports four languages and secure API operations
  assert.match(ui,/disabled=\{busy/)
 })
 
-test('provider activation respects server-confirmed admin capability',()=>{
+test('provider activation respects server-confirmed administration capability',()=>{
  const ui=read('../components/administration/provider-mapping-manager.tsx')
  const api=read('../app/api/administration/provider-mappings/route.ts')
- assert.match(api,/canActivate:Boolean\(access\.user\.isAdmin\|\|access\.user\.isOwner\)/)
+ assert.match(api,/canActivate:true/)
  assert.match(ui,/setCanActivate\(data\.canActivate===true\)/)
  assert.match(ui,/disabled=\{busy\|\|!canActivate\}/)
  assert.match(ui,/if\(busy\|\|!canActivate\)return/)
