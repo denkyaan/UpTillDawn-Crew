@@ -28,9 +28,9 @@ test('refunds without a linked sale or larger than original are held for review'
  const r=reconcileExternalSales([payment({transactionId:'orphan',status:'refunded',saleReference:'unknown',amountCents:100}),payment(),payment({transactionId:'large',status:'refunded',amountCents:2600})])
  assert.equal(r.totals.tickets,2500);assert.equal(r.conflicts.length,2)
 })
-test('multiple refunds against same sale cannot double deduct',()=>{
+test('multiple distinct partial refunds can be applied up to the original sale amount',()=>{
  const r=reconcileExternalSales([payment(),payment({transactionId:'refund1',status:'refunded',amountCents:500}),payment({transactionId:'refund2',status:'refunded',amountCents:500})])
- assert.equal(r.totals.tickets,2000);assert.equal(r.conflicts.length,1)
+ assert.equal(r.totals.tickets,1500);assert.equal(r.conflicts.length,0)
 })
 
 test('rejects blank external transaction and event identities',()=>{
@@ -47,4 +47,18 @@ test('structured sale keys prevent colon-delimiter collisions across event and s
   payment({transactionId:'tx2',eventId:'event',saleReference:'1:order'})
  ])
  assert.equal(r.totals.tickets,5000);assert.equal(r.duplicates.length,0)
+})
+
+test('refund arriving before original sale is reconciled once paid record is verified',()=>{
+ const r=reconcileExternalSales([payment({transactionId:'refund1',status:'refunded',amountCents:500}),payment()])
+ assert.equal(r.totals.tickets,2000);assert.equal(r.conflicts.length,0)
+})
+test('cumulative partial refunds cannot exceed the original paid amount',()=>{
+ const r=reconcileExternalSales([payment(),payment({transactionId:'refund1',status:'refunded',amountCents:2000}),payment({transactionId:'refund2',status:'refunded',amountCents:600})])
+ assert.equal(r.totals.tickets,500);assert.equal(r.conflicts.length,1)
+})
+test('duplicate refund transactions are idempotent and zero refunds are rejected',()=>{
+ const refund=payment({transactionId:'refund1',status:'refunded',amountCents:500})
+ const r=reconcileExternalSales([payment(),refund,refund,payment({transactionId:'zero',status:'refunded',amountCents:0})])
+ assert.equal(r.totals.tickets,2000);assert.equal(r.duplicates.length,1);assert.equal(r.conflicts.length,1)
 })
