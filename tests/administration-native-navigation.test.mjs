@@ -14,3 +14,12 @@ test('login clears stale return targets and confines portal return navigation',(
  assert.match(restore,/destination.origin!==window.location.origin/)
  assert.match(restore,/!path.startsWith\(currentPortal\+'\/'\)/)
 })
+
+test('post-login return targets are normalized and validated across portals',()=>{
+ const restore=readFileSync('components/auth/return-after-login.tsx','utf8')
+ assert.match(restore,/new URL\(target,window\.location\.origin\)/)
+ assert.match(restore,/destination\.origin!==window\.location\.origin/)
+ assert.match(restore,/\/%2f\|%5c\/i\.test\(target\)/)
+ assert.match(restore,/path!==currentPortal && !path\.startsWith\(currentPortal\+'\/'\)/)
+ assert.match(restore,/router\.replace\(path\+destination\.search\+destination\.hash\)/)
+})
