@@ -56,7 +56,7 @@ test('CSV exports separate booked revenue from review exceptions',()=>{
  ])
  const csv=salesReconciliationCsv(report)
  const exceptions=salesReconciliationExceptionsCsv(report)
- assert.match(csv,/event_id;category;paid_cents;refunded_cents;net_cents;accepted_transactions/)
+ assert.match(csv,/"event_id";"category";"paid_cents";"refunded_cents";"net_cents";"accepted_transactions"/)
  assert.match(csv,/event1/)
  assert.doesNotMatch(csv,/unmatched/)
  assert.match(exceptions,/conflicts/)
