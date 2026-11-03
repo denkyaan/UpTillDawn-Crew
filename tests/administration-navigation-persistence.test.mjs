@@ -12,8 +12,9 @@ test('all administration category subtabs resolve inside the administration port
   }
  }
 })
-test('subtabs remain visible on module routes after navigation',()=>{
+test('subtabs remain accessible but start collapsed on module routes after navigation',()=>{
  assert.match(source,/const visible=selected\.key!=="overview"/)
+ assert.match(source,/selectedCategory\?\.pathname===pathname\?selectedCategory\.key:"overview"/)
  assert.ok(!source.includes('const visible=selected.key!=="overview"&&selectedCategory?.pathname===pathname'))
  assert.match(source,/data-administration-subtab=\{slug\}/)
 })
