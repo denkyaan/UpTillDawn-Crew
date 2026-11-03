@@ -373,7 +373,7 @@ export default async function AdministrationModulePage({params,searchParams}:{pa
     <div className="mb-4 flex items-start justify-between gap-3"><h2 className="font-semibold">{section[locale]}</h2><span aria-hidden="true" className="text-violet-400">◈</span></div>
     <div className="mt-auto rounded-xl border border-dashed bg-background/50 p-4">
      <p className="text-sm text-muted-foreground">{u.notAvailable}</p>
-     {operationalModuleLinks[slug]?<Link href={operationalModuleLinks[slug]} className="mt-3 inline-flex rounded-lg border px-3 py-2 text-xs font-semibold text-violet-400 hover:border-violet-400">{operationalModuleLabels[locale]} →</Link>:<p className="mt-3 text-xs font-medium text-violet-400">{u.pending}</p>}
+     {operationalModuleLinks[slug]&&operationalModuleLinks[slug]!==`/portals/administration/modules/${slug}`?<Link href={operationalModuleLinks[slug]} className="mt-3 inline-flex rounded-lg border px-3 py-2 text-xs font-semibold text-violet-400 hover:border-violet-400">{operationalModuleLabels[locale]} →</Link>:<p className="mt-3 text-xs font-medium text-violet-400">{u.pending}</p>}
     </div>
    </article>)}
   </section>
