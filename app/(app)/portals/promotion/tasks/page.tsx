@@ -27,12 +27,14 @@ async function requirePromotionAccess(){
 const validAssignmentId=(id:string)=>/^[0-9a-f]{8}(?:-[0-9a-f]{4}){3}-[0-9a-f]{12}$/i.test(id)
 async function changePromotionTaskStatus(formData:FormData){
  "use server"
- const {db}=await requirePromotionAccess()
+ const {user,db}=await requirePromotionAccess()
  const id=String(formData.get("assignment_id")??"")
  const status=String(formData.get("status")??"")
  if(!validAssignmentId(id)||status!=="IN PROGRESS")throw new Error("Invalid promotion task transition")
  const {data:blocked,error:blockError}=await db.rpc("upt_promotion_is_blocked" as never)
  if(blockError||blocked)throw new Error("Promotion access blocked")
+ const {data:assigned,error:assignmentError}=await db.from("task_assignments").select("id,status").eq("id",id).eq("user_id",user.id).maybeSingle()
+ if(assignmentError||!assigned||assigned.status!=="NOT STARTED")throw new Error("Only your not-started assignment can be started")
  const {error}=await db.rpc("upt_update_task_status",{p_assignment:id,p_status:status})
  if(error)throw new Error("Task status update failed")
  revalidatePath("/portals/promotion/tasks")
