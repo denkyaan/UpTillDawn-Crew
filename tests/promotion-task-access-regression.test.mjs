@@ -14,3 +14,10 @@ test('promotion task and evidence inputs reject malformed identifiers',()=>{
  assert.match(source,/Invalid promotion evidence submission/)
  assert.match(source,/\.eq\("user_id",user\.id\)\.maybeSingle\(\)/)
 })
+
+test('starting promotion work requires ownership and the not-started state',()=>{
+ assert.match(source,/\.eq\("id",id\)\.eq\("user_id",user\.id\)\.maybeSingle\(\)/)
+ assert.match(source,/assigned\.status!=="NOT STARTED"/)
+ assert.match(source,/Only your not-started assignment can be started/)
+ assert.match(source,/upt_update_task_status/)
+})
