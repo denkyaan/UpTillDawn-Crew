@@ -12,7 +12,7 @@ test('role categories preserve existing visibility and permission filters',()=>{
 test('role category navigation has bounded subtab height and active route fallback',()=>{
  assert.match(nav,/max-h-\[38dvh\]/)
  assert.match(nav,/currentGroup=availableGroups\.find/)
- assert.match(nav,/activeGroup=selectedGroup&&availableGroups\.some/)
+ assert.match(nav,/activeGroup=selectedGroup\?\.pathname===pathname&&availableGroups\.some/)
  assert.match(nav,/role-navigation-subtabs/)
 })
 test('each role navigation category points to known feature keys',()=>{

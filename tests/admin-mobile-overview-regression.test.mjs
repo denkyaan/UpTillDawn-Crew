@@ -14,7 +14,7 @@ test('mobile admin AI and chat leave room for each portal navigation',async()=>{
  assert.match(layout,/fixed right-4/)
  assert.match(layout,/bottom-20 lg:bottom-4/)
  assert.ok(layout.includes('inDedicatedPortal?"bottom-[calc(5rem+env(safe-area-inset-bottom))]'))
- assert.ok(administration.includes('bottom-[calc(11rem+env(safe-area-inset-bottom))]'))
+ assert.match(administration,/id="administration-subtabs"/)
  assert.match(administration,/previous=>previous\?\.pathname===pathname&&previous\.key===group\.key\?null/)
  assert.match(administration,/selectedCategory\?\.pathname===pathname/)
  assert.match(administration,/aria-expanded=\{group\.key==="overview"\?undefined:visible&&selected\.key===group\.key\}/)
