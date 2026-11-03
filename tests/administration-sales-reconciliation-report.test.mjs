@@ -35,3 +35,14 @@ test('report does not mutate provider input or expose pending as accepted',()=>{
  assert.equal(r.acceptedCount,1)
  assert.equal(rows[0].amountCents,2000)
 })
+
+test('report includes multiple partial refunds even when delivered before the sale',()=>{
+ const r=buildSalesReconciliationReport([
+  payment({transactionId:'r1',status:'refunded',amountCents:300}),
+  payment({transactionId:'r2',status:'refunded',amountCents:400}),
+  payment()
+ ])
+ assert.equal(r.totals.tickets,1300)
+ assert.equal(r.events[0].refundedCents.tickets,700)
+ assert.equal(r.exceptions.conflicts.length,0)
+})
