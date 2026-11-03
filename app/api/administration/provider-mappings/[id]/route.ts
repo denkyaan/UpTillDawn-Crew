@@ -6,7 +6,6 @@ export async function PATCH(request:Request,{params}:{params:Promise<{id:string}
  if(!sameOrigin(request))return reply({error:"forbidden"},403)
  const access=await administrationAccess()
  if(!access.ok)return reply({error:"access_denied"},access.status)
- if(!access.user.isAdmin&&!access.user.isOwner)return reply({error:"admin_approval_required"},403)
  const {id}=await params
  if(!/^[0-9a-f]{8}(?:-[0-9a-f]{4}){3}-[0-9a-f]{12}$/i.test(id))return reply({error:"invalid_id"},422)
  let body:unknown
