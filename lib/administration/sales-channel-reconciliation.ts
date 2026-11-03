@@ -25,13 +25,14 @@ export function reconcileExternalSales(payments:readonly ExternalPayment[]):Sale
   if(typeof p.transactionId!=='string'||!p.transactionId.trim()||typeof p.eventId!=='string'||!p.eventId.trim()||!categories.includes(p.category)||!Number.isSafeInteger(p.amountCents)||p.amountCents<0||p.currency!=='EUR'||!['paid','pending','refunded'].includes(p.status)){
    conflicts.push(id);continue
   }
-  const previous=ids.get(id)
+  const transactionKey=JSON.stringify([p.provider,p.transactionId])
+  const previous=ids.get(transactionKey)
   if(previous){
    if(JSON.stringify(previous)===JSON.stringify(p))duplicates.push(id)
    else conflicts.push(id)
    continue
   }
-  ids.set(id,p)
+  ids.set(transactionKey,p)
   if(p.status==='pending'){pending.push(p);continue}
   if(typeof p.saleReference!=='string'||!p.saleReference.trim()){unmatched.push(id);continue}
   const saleKey=JSON.stringify([p.eventId,p.category,p.saleReference])
