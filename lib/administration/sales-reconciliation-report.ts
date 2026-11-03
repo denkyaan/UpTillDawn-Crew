@@ -1,4 +1,5 @@
 import {reconcileExternalSales,type ExternalPayment,type SaleCategory} from './sales-channel-reconciliation.ts'
+import {financeCsv} from './finance-report.ts'
 
 export type EventSalesReport={
  eventId:string;
@@ -43,4 +44,23 @@ export function buildSalesReconciliationReport(payments:readonly ExternalPayment
   },
   acceptedCount:reconciled.accepted.length
  }
+}
+
+/** Export only accepted reconciled movements. Exceptions remain separate and cannot be mistaken for booked revenue. */
+export function salesReconciliationCsv(report:SalesReconciliationReport):string{
+ const rows:(string|number)[][]=[['event_id','category','paid_cents','refunded_cents','net_cents','accepted_transactions']]
+ for(const event of report.events){
+  for(const category of ['tickets','merch','tokens'] as const){
+   rows.push([event.eventId,category,event.paidCents[category],event.refundedCents[category],event.netCents[category],event.acceptedTransactions])
+  }
+ }
+ return financeCsv(rows)
+}
+/** A separate exception export supports manual review without leaking provider credentials. */
+export function salesReconciliationExceptionsCsv(report:SalesReconciliationReport):string{
+ const rows:(string|number)[][]=[['type','transaction_reference']]
+ for(const type of ['conflicts','unmatched','duplicates','pending'] as const){
+  for(const id of report.exceptions[type])rows.push([type,id])
+ }
+ return financeCsv(rows)
 }
