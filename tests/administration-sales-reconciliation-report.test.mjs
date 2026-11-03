@@ -1,6 +1,6 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
-import {buildSalesReconciliationReport} from '../lib/administration/sales-reconciliation-report.ts'
+import {buildSalesReconciliationReport,salesReconciliationCsv,salesReconciliationExceptionsCsv} from '../lib/administration/sales-reconciliation-report.ts'
 const payment=(overrides={})=>({provider:'sumup',transactionId:'t1',eventId:'event1',category:'tickets',amountCents:2000,currency:'EUR',status:'paid',saleReference:'sale1',...overrides})
 test('reports net sales per event and category with explicit refunds',()=>{
  const r=buildSalesReconciliationReport([
@@ -45,4 +45,26 @@ test('report includes multiple partial refunds even when delivered before the sa
  assert.equal(r.totals.tickets,1300)
  assert.equal(r.events[0].refundedCents.tickets,700)
  assert.equal(r.exceptions.conflicts.length,0)
+})
+
+test('CSV exports separate booked revenue from review exceptions',()=>{
+ const report=buildSalesReconciliationReport([
+  payment(),
+  payment({transactionId:'bad',amountCents:-1}),
+  payment({transactionId:'pending',status:'pending'}),
+  payment({transactionId:'unmatched',saleReference:null})
+ ])
+ const csv=salesReconciliationCsv(report)
+ const exceptions=salesReconciliationExceptionsCsv(report)
+ assert.match(csv,/event_id;category;paid_cents;refunded_cents;net_cents;accepted_transactions/)
+ assert.match(csv,/event1/)
+ assert.doesNotMatch(csv,/unmatched/)
+ assert.match(exceptions,/conflicts/)
+ assert.match(exceptions,/pending/)
+ assert.match(exceptions,/unmatched/)
+})
+test('CSV export escapes formula-like event identifiers',()=>{
+ const report=buildSalesReconciliationReport([payment({eventId:'=HYPERLINK(1)'})])
+ const csv=salesReconciliationCsv(report)
+ assert.match(csv,/"'=HYPERLINK\(1\)"/)
 })
