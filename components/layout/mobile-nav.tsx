@@ -144,7 +144,7 @@ export function MobileBottomNav({
      {count>0&&<span className="absolute -right-3 -top-3 flex h-5 min-w-5 items-center justify-center rounded-full bg-red-600 px-1 text-[10px] font-black leading-none text-white shadow ring-2 ring-card">{count>99?"99+":count}</span>}
     </span>
     {expandedItem
-      ? <span className="min-w-0"><span className="block truncate">{label}</span><span className="mt-0.5 block line-clamp-2 text-[10px] font-normal text-muted-foreground">{help.description}</span></span>
+      ? <span className="min-w-0 flex-1"><span className="block whitespace-normal break-words leading-snug">{label}</span><span className="mt-0.5 block line-clamp-2 text-[10px] font-normal text-muted-foreground">{help.description}</span></span>
       : <span className="min-w-0 max-w-full break-words text-center leading-tight">{label}</span>}
    </Link>
  }
