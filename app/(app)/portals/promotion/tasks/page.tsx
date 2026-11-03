@@ -5,6 +5,7 @@ import {createClient} from "@/lib/supabase/crew-server"
 import {getCurrentUser} from "@/lib/actions/auth"
 import {redirect} from "next/navigation"
 import {revalidatePath} from "next/cache"
+import {canOpenPortal,type PortalAssignment} from "@/lib/portal-access"
 export const dynamic="force-dynamic"
 const labels={
  nl:{title:"Promotietaken",intro:"Bekijk je toegewezen promotieopdrachten. Taken buiten evenementen blijven beschikbaar.",empty:"Geen promotietaken toegewezen.",error:"Taken kunnen momenteel niet worden geladen.",status:"Status",start:"Start",complete:"Voltooien",history:"Taakhistoriek",back:"Terug naar promotie"},
@@ -12,14 +13,24 @@ const labels={
  en:{title:"Promotion tasks",intro:"Review your assigned promotion work, including tasks outside events.",empty:"No promotion tasks assigned.",error:"Tasks are currently unavailable.",status:"Status",start:"Start",complete:"Complete",history:"Task history",back:"Back to promotion"},
  de:{title:"Promotionaufgaben",intro:"Deine zugewiesenen Promotionaufgaben, auch außerhalb von Events.",empty:"Keine Promotionaufgaben zugewiesen.",error:"Aufgaben derzeit nicht verfügbar.",status:"Status",start:"Starten",complete:"Abschließen",history:"Aufgabenverlauf",back:"Zurück zur Promotion"},
 } as const
+async function requirePromotionAccess(){
+ const user=await getCurrentUser()
+ if(!user)redirect("/login")
+ if((!user.approved||user.account_blocked)&&!user.isOwner)throw new Error("Promotion access denied")
+ const db=await createClient()
+ if(!user.isOwner&&!user.realIsAdmin){
+  const {data,error}=await db.rpc("upt_my_portal_assignments")
+  if(error||!canOpenPortal("promotion",(data??[]) as PortalAssignment[],{approved:user.approved,blocked:user.account_blocked===true}))throw new Error("Promotion access denied")
+ }
+ return {user,db}
+}
+const validAssignmentId=(id:string)=>/^[0-9a-f]{8}(?:-[0-9a-f]{4}){3}-[0-9a-f]{12}$/i.test(id)
 async function changePromotionTaskStatus(formData:FormData){
  "use server"
- const current=await getCurrentUser()
- if(!current)redirect("/login")
+ const {user,db}=await requirePromotionAccess()
  const id=String(formData.get("assignment_id")??"")
  const status=String(formData.get("status")??"")
- if(!/^[0-9a-f]{8}-[0-9a-f-]{27,}$/i.test(id)||status!=="IN PROGRESS")return
- const db=await createClient()
+ if(!validAssignmentId(id)||status!=="IN PROGRESS")throw new Error("Invalid promotion task transition")
  const {data:blocked,error:blockError}=await db.rpc("upt_promotion_is_blocked" as never)
  if(blockError||blocked)throw new Error("Promotion access blocked")
  const {error}=await db.rpc("upt_update_task_status",{p_assignment:id,p_status:status})
@@ -28,13 +39,11 @@ async function changePromotionTaskStatus(formData:FormData){
 }
 async function submitPromotionEvidence(formData:FormData){
  "use server"
- const user=await getCurrentUser()
- if(!user)redirect("/login")
+ const {user,db}=await requirePromotionAccess()
  const assignment=String(formData.get("assignment_id")??"")
  const file=formData.get("evidence")
- if(!/^[0-9a-f]{8}-[0-9a-f-]{27,}$/i.test(assignment)||!(file instanceof File))return
+ if(!validAssignmentId(assignment)||!(file instanceof File))throw new Error("Invalid promotion evidence submission")
  if(!["image/jpeg","image/png","image/webp"].includes(file.type)||file.size<1||file.size>10*1024*1024)throw new Error("Invalid image")
- const db=await createClient()
  const {data:blocked,error:blockError}=await db.rpc("upt_promotion_is_blocked" as never)
  if(blockError||blocked)throw new Error("Promotion access blocked")
  const {data:assigned,error:assignmentError}=await db.from("task_assignments").select("id,status").eq("id",assignment).eq("user_id",user.id).maybeSingle()
@@ -60,11 +69,9 @@ async function submitPromotionEvidence(formData:FormData){
  revalidatePath("/portals/promotion/tasks")
 }
 export default async function PromotionTasks(){
- const user=await getCurrentUser()
- if(!user)redirect("/login")
+ const {user,db}=await requirePromotionAccess()
  const locale=await requestUiLocale()
  const t=labels[locale]
- const db=await createClient()
  const {data:promotionBlocked,error:promotionBlockError}=await db.rpc("upt_promotion_is_blocked" as never)
  // Fail closed when the restriction check cannot be completed.
  const isPromotionBlocked=promotionBlockError!==null||promotionBlocked!==false
