@@ -22,7 +22,7 @@ export function ticketSalesTotals(rows:readonly TicketSalesSummary[]):{saleRows:
  }),{saleRows:BigInt(0),quantity:BigInt(0),grossCents:BigInt(0)})
 }
 export function formatTicketEuro(cents:bigint,locale:string):string{
- const whole=cents/10BigInt(0)
- const fraction=String(cents%10BigInt(0)).padStart(2,'0')
+ const whole=cents/BigInt(100)
+ const fraction=String(cents%BigInt(100)).padStart(2,'0')
  return new Intl.NumberFormat(locale).format(whole)+(['nl','fr','de'].includes(locale)?',':'.')+fraction+' EUR'
 }
