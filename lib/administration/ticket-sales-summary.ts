@@ -26,3 +26,17 @@ export function formatTicketEuro(cents:bigint,locale:string):string{
  const fraction=String(cents%BigInt(100)).padStart(2,'0')
  return new Intl.NumberFormat(locale).format(whole)+(['nl','fr','de'].includes(locale)?',':'.')+fraction+' EUR'
 }
+
+/** Build stable per-event subtotals across sources, without floating-point arithmetic. */
+export function ticketSalesByEvent(rows:readonly TicketSalesSummary[]):{eventId:string;sourceCount:number;saleRows:bigint;quantity:bigint;grossCents:bigint}[]{
+ const grouped=new Map<string,{eventId:string;sources:Set<string>;saleRows:bigint;quantity:bigint;grossCents:bigint}>()
+ for(const row of rows){
+  let entry=grouped.get(row.event_id)
+  if(!entry){entry={eventId:row.event_id,sources:new Set(),saleRows:BigInt(0),quantity:BigInt(0),grossCents:BigInt(0)};grouped.set(row.event_id,entry)}
+  entry.sources.add(row.source)
+  entry.saleRows+=BigInt(row.sale_rows)
+  entry.quantity+=BigInt(row.quantity)
+  entry.grossCents+=BigInt(row.gross_cents)
+ }
+ return [...grouped.values()].map(({eventId,sources,saleRows,quantity,grossCents})=>({eventId,sourceCount:sources.size,saleRows,quantity,grossCents})).sort((a,b)=>a.eventId.localeCompare(b.eventId))
+}
