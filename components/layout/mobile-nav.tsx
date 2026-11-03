@@ -158,14 +158,14 @@ export function MobileBottomNav({
  ] as const
  const availableGroups=groupedNavigation.map(group=>({...group,entries:group.keys.map(key=>items.find(item=>item.key===key)).filter((item):item is NavigationItem=>Boolean(item))})).filter(group=>group.entries.length>0)
  const currentGroup=availableGroups.find(group=>group.entries.some(isActive))?.key??"home"
- const activeGroup=selectedGroup??currentGroup
+ const activeGroup=selectedGroup&&availableGroups.some(group=>group.key===selectedGroup)?selectedGroup:currentGroup
  const selectedEntries=availableGroups.find(group=>group.key===activeGroup)?.entries??[]
  if(!tourPreview)return <nav aria-label={{nl:"Mobiele navigatie",en:"Mobile navigation",fr:"Navigation mobile",de:"Mobile Navigation"}[trainingLocale]} className="fixed inset-x-0 bottom-0 z-50 border-t border-border bg-card pb-[env(safe-area-inset-bottom)] lg:hidden">
   {activeGroup!=="home"&&<div id="role-navigation-subtabs" className="border-b bg-card p-2">
-   <div className="grid grid-cols-3 gap-1.5">{selectedEntries.map(item=><NavItem key={item.key} item={item} expandedItem/>)}</div>
+   <div className="grid max-h-[38dvh] grid-cols-3 gap-1.5 overflow-y-auto overscroll-contain">{selectedEntries.map(item=><NavItem key={item.key} item={item} expandedItem/>)}</div>
   </div>}
   <div className="grid gap-0.5 px-1 py-2" style={{gridTemplateColumns:`repeat(${availableGroups.length},minmax(0,1fr))`}}>
-   {availableGroups.map(group=>{const Icon=group.icon;const active=activeGroup===group.key;return <button type="button" key={group.key} data-role-category={group.key} aria-expanded={group.key==="home"?undefined:active} aria-controls={group.key==="home"?undefined:"role-navigation-subtabs"} onClick={()=>{if(group.key==="home"){setSelectedGroup(null);window.location.assign(isAdmin?"/admin":"/");return}setSelectedGroup(group.key)}} className={cn("flex min-w-0 flex-col items-center justify-center gap-1 rounded-lg px-0.5 py-2 text-[10px]",active?"bg-violet-500/15 text-violet-400":"text-muted-foreground")}><Icon className="h-5 w-5"/><span className="max-w-full truncate">{group.labels[trainingLocale]}</span></button>})}
+   {availableGroups.map(group=>{const Icon=group.icon;const active=activeGroup===group.key;return <button type="button" key={group.key} data-role-category={group.key} aria-expanded={group.key==="home"?undefined:active} aria-controls={group.key==="home"?undefined:"role-navigation-subtabs"} onClick={()=>{if(group.key==="home"){setSelectedGroup(null);window.location.assign(isAdmin?"/admin":"/");return}setSelectedGroup(previous=>previous===group.key&&currentGroup!==group.key?null:group.key)}} className={cn("flex min-w-0 flex-col items-center justify-center gap-1 rounded-lg px-0.5 py-2 text-[10px]",active?"bg-violet-500/15 text-violet-400":"text-muted-foreground")}><Icon className="h-5 w-5"/><span className="max-w-full truncate">{group.labels[trainingLocale]}</span></button>})}
   </div>
  </nav>
 
