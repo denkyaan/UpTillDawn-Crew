@@ -14,3 +14,13 @@ test('new mappings are disabled and identity cannot be edited',()=>{
  assert.match(patch,/Object\.keys\(input\)\.length!==1/)
  assert.match(patch,/typeof input\.enabled!=="boolean"/)
 })
+
+test('activation requires administrator and request payloads have real byte limits',()=>{
+ const post=read('../app/api/administration/provider-mappings/route.ts')
+ const patch=read('../app/api/administration/provider-mappings/[id]/route.ts')
+ assert.match(patch,/!access\.user\.isAdmin&&!access\.user\.isOwner/)
+ assert.match(patch,/admin_approval_required/)
+ for(const source of [post,patch]){assert.match(source,/request\.text\(\)/);assert.match(source,/TextEncoder\(\)/)}
+ assert.match(post,/\.from\("events"\)/)
+ assert.match(post,/event_not_found/)
+})
