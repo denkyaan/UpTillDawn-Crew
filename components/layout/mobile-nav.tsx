@@ -128,7 +128,7 @@ export function MobileBottomNav({
       if(trainingLocked){event.preventDefault();return}
       if(tourPreview&&trainingNavTarget===item.key){try{const s=JSON.parse(sessionStorage.getItem("uptilldawn-training-workflow-v3")||"{}");sessionStorage.setItem("uptilldawn-training-workflow-v3",JSON.stringify({...s,navTarget:null}))}catch{};setTrainingNavTarget(null)}
       setExpanded(false)
-
+      setSelectedGroup({key:"home",pathname})
     }}
     className={cn(
       expandedItem
