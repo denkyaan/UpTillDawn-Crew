@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react"
 import Link from "next/link"
-import { usePathname } from "next/navigation"
+import { usePathname, useRouter } from "next/navigation"
 import { ChevronDown, ChevronUp, LayoutDashboard, CalendarDays, Clock3, Users, MessageCircle, Settings } from "lucide-react"
 import { NAV_ITEMS, type NavigationItem } from "@/components/layout/navigation-items"
 import { useAuth } from "@/lib/providers"
@@ -39,6 +39,7 @@ export function MobileBottomNav({
   shiftActive?:boolean
 }) {
  const pathname=usePathname()
+ const router=useRouter()
  const [expanded,setExpanded]=useState(false)
  const [selectedGroup,setSelectedGroup]=useState<{key:string;pathname:string}|null>(null)
  const [tourPreview,setTourPreview]=useState(false)
@@ -166,7 +167,7 @@ export function MobileBottomNav({
    <div className="grid max-h-[38dvh] grid-cols-3 gap-1.5 overflow-y-auto overscroll-contain">{selectedEntries.map(item=><NavItem key={item.key} item={item}/>)}</div>
   </div>}
   <div className="grid gap-0.5 px-1 py-2" style={{gridTemplateColumns:`repeat(${availableGroups.length},minmax(0,1fr))`}}>
-   {availableGroups.map(group=>{const Icon=group.icon;const active=activeGroup===group.key;return <button type="button" key={group.key} data-role-category={group.key} aria-expanded={group.key==="home"?undefined:active} aria-controls={group.key==="home"?undefined:"role-navigation-subtabs"} onClick={()=>{if(group.key==="home"){setSelectedGroup(null);window.location.assign(isAdmin?"/admin":"/");return}setSelectedGroup({key:group.key,pathname})}} className={cn("flex min-w-0 flex-col items-center justify-center gap-1 rounded-lg px-0.5 py-2 text-[10px]",active?"bg-violet-500/15 text-violet-400":"text-muted-foreground")}><Icon className="h-5 w-5"/><span className="max-w-full truncate">{group.labels[trainingLocale]}</span></button>})}
+   {availableGroups.map(group=>{const Icon=group.icon;const active=activeGroup===group.key;return <button type="button" key={group.key} data-role-category={group.key} aria-expanded={group.key==="home"?undefined:active} aria-controls={group.key==="home"?undefined:"role-navigation-subtabs"} onClick={()=>{if(group.key==="home"){setSelectedGroup(null);router.push(isAdmin?"/admin":"/");return}setSelectedGroup({key:group.key,pathname})}} className={cn("flex min-w-0 flex-col items-center justify-center gap-1 rounded-lg px-0.5 py-2 text-[10px]",active?"bg-violet-500/15 text-violet-400":"text-muted-foreground")}><Icon className="h-5 w-5"/><span className="max-w-full truncate">{group.labels[trainingLocale]}</span></button>})}
   </div>
  </nav>
 

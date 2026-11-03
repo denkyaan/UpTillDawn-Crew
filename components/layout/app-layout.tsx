@@ -239,7 +239,7 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
   const featureVisibility={overview:showOverview,events:showEvents,operations:showOperations,workplaces:showWorkplaces,inventory:showInventory,guestlist:showGuestlist,sales:showSales,shifts:showShifts,briefings:showBriefings,tasks:showTasks,chat:showChat,crew:showCrew,incidents:showIncidents,exports:showExports,personnel:showPersonnel,platform:showPlatform,settings:showSettings}
   const showUrgent=!pathname.startsWith("/chat")&&!isAdmin&&showIncidents&&effectiveContext.shiftActive
   const inDedicatedPortal=pathname.startsWith("/portals/promotion")||pathname.startsWith("/portals/administration")
-  const showFloatingChat=showChat&&!inDedicatedPortal
+  const showFloatingChat=showChat&&!inDedicatedPortal&&!navigationExpanded
 
   return <div className="flex h-dvh bg-background print:block print:h-auto">
 
