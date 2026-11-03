@@ -20,7 +20,8 @@ test('subtabs remain compact and accessible on mobile',()=>{
  assert.match(nav,/aria-current=\{isActiveSubtab\(slug\)\?"page":undefined\}/)
  assert.match(nav,/pathname\.startsWith\(route\(slug\)\+"\/"\)/)
  assert.match(nav,/administrationCategoryForPath\(pathname\)/)
- assert.doesNotMatch(nav,/overflow-y-auto|bottom-full/)
+ assert.match(nav,/max-h-\[38dvh\].*overflow-y-auto/)
+ assert.doesNotMatch(nav,/absolute inset-x-0 bottom-full/)
 })
 test('administration layout reserves space for fixed navigation',()=>{
  const layout=readFileSync('app/(app)/portals/administration/layout.tsx','utf8')
