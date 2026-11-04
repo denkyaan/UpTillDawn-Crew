@@ -1,10 +1,8 @@
 name: Fast Change Validation
 
 on:
-  push:
-    branches: [staging]
   pull_request:
-    branches: [main, staging]
+    branches: [main]
   workflow_dispatch:
 
 concurrency:
