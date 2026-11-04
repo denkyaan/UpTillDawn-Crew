@@ -1,26 +1,29 @@
-# UpTillDawn Crew build status
+# UpTillDawn Crew — build and release status
 
-`main` is the canonical production branch.
+`main` is the canonical application branch. Historical build numbers and commits in Git history are not proof that the current commit has passed.
 
-## Release gate
+## Approved GitHub Actions workflows
 
-The CI release gate runs the full validation chain on one hosted runner to avoid multi-runner queue fragmentation:
+Only these five workflows are maintained:
 
-- production dependency audit;
-- ESLint;
-- TypeScript;
-- Node regression suite;
-- Next.js production build;
-- Cloudflare Worker build;
-- Wrangler deployment dry-run;
-- isolated local Supabase startup;
-- replay of all repository migrations from zero;
-- every SQL regression suite;
-- generated public database type parity;
-- 15 authenticated browser bots and persistence checks.
+1. **Cleanup** — scheduled GitHub Actions history retention.
+2. **CI production** — full application validation, available for manual dispatch, pull requests, and reusable workflow calls.
+3. **Deploy production** — manually initiated production deployment, gated on successful full CI for the exact commit.
+4. **CI main** — fast lint, typecheck, unit tests, dependency audit and the five-workflow inventory guard on changes to `main` and pull requests.
+5. **Deploy main** — main-test deployment triggered by completion of **CI main**; its own deployment conditions determine whether it proceeds.
 
-A successful CI run triggers the Cloudflare production workflow, which repeats critical static/build checks, validates production Supabase RPC contracts, deploys the Worker + public alias and performs public HTTP/manifest/service-worker smoke checks.
+Do not add a sixth GitHub Actions workflow. Extend an existing one and update its validation when new automation is needed.
 
-Last fully verified release before the first-use cleanup: CI #2811 and Deploy Cloudflare #1034 on commit `e35ccff73570b7db0650c15341c4b3fc41f43dfc`.
+## Full validation scope
 
-See `UPTILLDAWN_IMPLEMENTATION_STATUS.md`, `docs/FIRST_USE.md` and `DEPLOYMENT.md`.
+`CI production` includes production dependency audit, ESLint, TypeScript, Node regression tests, Next.js and Cloudflare builds, Wrangler dry-run, isolated Supabase migration replay, SQL regressions, generated database type checks and authenticated browser test suites.
+
+A green fast `CI main` run does **not** replace full production CI or prove that all external services and live user journeys work.
+
+## Release safety
+
+Production deployment is not automatic merely because `CI main` succeeds. The manual `Deploy production` workflow checks the exact release commit against full CI. The separate main-test deployment is not a production release.
+
+The old staging environment was retired in November 2026. Historical staging test evidence is retained in `docs/` but is not an active deployment gate.
+
+For current results, inspect the actual run, job conclusions and logs in GitHub Actions. See `DEPLOYMENT.md` and `docs/RECOVERY_AND_RELEASE_GATE.md` for deployment and recovery details.
