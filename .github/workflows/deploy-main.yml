@@ -20,8 +20,8 @@ jobs:
     timeout-minutes: 30
     environment: main-test
     env:
-      NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.MAIN_SUPABASE_URL }}
-      NEXT_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.MAIN_SUPABASE_ANON_KEY }}
+      NEXT_PUBLIC_SUPABASE_URL: https://npbjrtiolqperdgljnhi.supabase.co
+      NEXT_PUBLIC_SUPABASE_ANON_KEY: sb_publishable_zStTw3n8wZ271PehDRDvGg_rs0JOy84
       NEXT_PUBLIC_APP_URL: https://uptilldawn-main.workers.dev
       CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
       CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
