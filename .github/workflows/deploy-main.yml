@@ -153,6 +153,23 @@ jobs:
               exit 1
             fi
           done
+          # A redirect to login is acceptable for protected routes, but must not
+          # silently mask a broken public login page or a missing static asset.
+          for path in /login /login/admin /login/administration /login/promotion /manifest.webmanifest; do
+            code="$(curl -sS --max-time 25 -o /tmp/main-public-body -w '%{http_code}' "${NEXT_PUBLIC_APP_URL}${path}")"
+            echo "Public route ${path} without redirects: HTTP ${code}"
+            if [ "$code" != 200 ] || [ ! -s /tmp/main-public-body ]; then
+              echo "::error::Public entrypoint ${path} must respond HTTP 200 without redirect"
+              exit 1
+            fi
+          done
+          node --input-type=module -e '
+            const url = process.env.NEXT_PUBLIC_APP_URL + "/manifest.webmanifest";
+            const response = await fetch(url);
+            const manifest = await response.json();
+            if (!manifest.name && !manifest.short_name) throw new Error("PWA manifest missing app name");
+            console.log("PWA manifest parsed and app name verified");
+          '
 
       - name: Retire obsolete staging Worker after main passes smoke tests
         shell: bash
