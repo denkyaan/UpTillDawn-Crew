@@ -37,3 +37,14 @@ test('briefing editor reads the selected event and workplace rather than the ini
  assert.match(page,/eventContexts=\{eventContexts\}/)
  assert.match(page,/workplaceContexts=\{workplaceContexts\}/)
 })
+
+
+test('draft review identifies unresolved instructions and displays localized review checklist',()=>{
+ assert.match(template,/export function unresolvedCrewBriefingFields/)
+ assert.match(template,/new Set\(matches\.map/)
+ assert.match(template,/export function crewBriefingReadiness/)
+ assert.match(editor,/unresolvedCrewBriefingFields\(body\)/)
+ assert.match(editor,/unresolved\.length>0/)
+ assert.match(editor,/role="status"/)
+ for(const label of ['Nog in te vullen velden','Champs à vérifier','Fields requiring review','Zu prüfende Felder'])assert.ok(editor.includes(label),label)
+})
