@@ -16,7 +16,7 @@ permissions:
 
 jobs:
   fast:
-    runs-on: ubuntu-26.04-arm
+    runs-on: ubuntu-latest
     timeout-minutes: 15
     env:
       NEXT_PUBLIC_SUPABASE_URL: https://placeholder.supabase.co
