@@ -76,9 +76,9 @@ jobs:
       - name: Run production-style dry run contract
         run: node --test tests/production-dry-run-contract.test.mjs
 
-      - name: Build Next.js
-        run: npm run build:next
-
+      # OpenNext's Cloudflare build already invokes next build internally.
+      # The separate authenticated E2E build below is required because it
+      # embeds the isolated Supabase URL/key into NEXT_PUBLIC_* bundles.
       - name: Build Cloudflare Worker
         run: npm run build:cloudflare
 
