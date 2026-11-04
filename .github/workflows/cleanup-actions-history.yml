@@ -50,7 +50,7 @@ jobs:
                 kept_success=1
                 continue
               fi
-              if [ "$branch" = "main" ] && [ "$conclusion" != "success" ] && [ "$kept_failure" -eq 0 ]; then
+              if [ "$branch" = "main" ] && [ "$conclusion" = "failure" ] && [ "$kept_failure" -eq 0 ]; then
                 kept_failure=1
                 continue
               fi
