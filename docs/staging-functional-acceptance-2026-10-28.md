@@ -1,5 +1,7 @@
 # UpTillDawn Crew — staging functional acceptance (2026-10-28)
 
+> **Archived evidence — not a current deployment gate.** This report describes the retired staging environment as it existed on 2026-10-28. The staging Worker has since been confirmed absent (Cloudflare HTTP 404 in the Cleanup job on 2026-11-04). Current CI and main-test deployment results must be checked in the five active GitHub Actions workflows. Do not interpret the historical PASS below as current production acceptance.
+
 ## Verified CI evidence
 
 - Branch: `staging`, commit `0a4b8bf81a86a139bdc4bf120095d629943cde3c`.
