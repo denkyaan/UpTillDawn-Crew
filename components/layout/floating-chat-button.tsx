@@ -71,6 +71,12 @@ export function FloatingChatButton({ count = 0, stackedAboveAdminAi = false, hre
     onPointerMove={onPointerMove}
     onPointerUp={finish}
     onPointerCancel={() => { drag.current = null }}
+    onKeyDown={(event) => {
+      if (event.key === "Enter" || event.key === " ") {
+        event.preventDefault()
+        if (!event.repeat) router.push(href)
+      }
+    }}
     aria-label={count ? `Chat, ${count} gemiste berichten. Sleep om te verplaatsen.` : "Chat. Sleep om te verplaatsen."}
     title="Chat — sleep om te verplaatsen"
     style={position ? { left: position.x, top: position.y } : { right: "1rem", bottom: stackedAboveAdminAi ? "9.5rem" : "5rem" }}
