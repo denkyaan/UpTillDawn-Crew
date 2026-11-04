@@ -14,8 +14,36 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  validate-trigger:
+    runs-on: ubuntu-latest
+    timeout-minutes: 3
+    outputs:
+      eligible: ${{ steps.check.outputs.eligible }}
+    steps:
+      - name: Explain deployment eligibility
+        id: check
+        env:
+          SOURCE_EVENT: ${{ github.event.workflow_run.event }}
+          SOURCE_RESULT: ${{ github.event.workflow_run.conclusion }}
+          SOURCE_BRANCH: ${{ github.event.workflow_run.head_branch }}
+          SOURCE_SHA: ${{ github.event.workflow_run.head_sha }}
+        shell: bash
+        run: |
+          echo "Validation event: ${SOURCE_EVENT}"
+          echo "Validation result: ${SOURCE_RESULT}"
+          echo "Validation branch: ${SOURCE_BRANCH}"
+          echo "Validated SHA: ${SOURCE_SHA}"
+          if [[ "${SOURCE_EVENT}" == push && "${SOURCE_RESULT}" == success && "${SOURCE_BRANCH}" == main && -n "${SOURCE_SHA}" ]]; then
+            echo 'eligible=true' >> "$GITHUB_OUTPUT"
+            echo 'Main deployment is eligible.'
+          else
+            echo 'eligible=false' >> "$GITHUB_OUTPUT"
+            echo 'Deployment intentionally skipped: only successful main push validation can deploy.'
+          fi
+
   deploy:
-    if: github.event.workflow_run.conclusion == 'success' && github.event.workflow_run.event == 'push' && github.event.workflow_run.head_branch == 'main'
+    needs: validate-trigger
+    if: needs.validate-trigger.outputs.eligible == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 30
     environment: main-test
