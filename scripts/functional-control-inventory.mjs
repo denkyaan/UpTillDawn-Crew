@@ -20,7 +20,7 @@ const routes=routeFiles.map(file=>({file:relative('.',file),route:'/'+relative('
 const roleNames=['admin','responsible','staff','administration','promotion','maker']
 const testNames=tests.map(p=>p.toLowerCase())
 const roleCoverage=roleNames.map(role=>({role,hasDedicatedTest:testNames.some(p=>p.includes(role)),inBrowserSuite:new RegExp('\\b'+role+'\\b','i').test(browser)}))
-const report={generatedAt:new Date().toISOString(),note:'Static inventory, not proof of interactive behavior. Only authenticated browser interactions plus persistence and real staging evidence can establish functioning controls.',routeCount:routes.length,controlCount:controls.length,controlKinds:Object.fromEntries([...new Set(controls.map(x=>x.kind))].map(k=>[k,controls.filter(x=>x.kind===k).length])),controlsWithoutInlineHandler:controls.filter(x=>!x.hasHandler).length,roleCoverage,routes,controls}
+const report={generatedAt:new Date().toISOString(),note:'Static inventory, not proof of interactive behavior. Only authenticated browser interactions, persistence checks and real environment evidence can establish functioning controls.',routeCount:routes.length,controlCount:controls.length,controlKinds:Object.fromEntries([...new Set(controls.map(x=>x.kind))].map(k=>[k,controls.filter(x=>x.kind===k).length])),controlsWithoutInlineHandler:controls.filter(x=>!x.hasHandler).length,roleCoverage,routes,controls}
 mkdirSync('artifacts',{recursive:true})
 writeFileSync('artifacts/functional-control-inventory.json',JSON.stringify(report,null,2)+'\n')
 console.log(JSON.stringify({routeCount:report.routeCount,controlCount:report.controlCount,controlsWithoutInlineHandler:report.controlsWithoutInlineHandler,roleCoverage},null,2))
