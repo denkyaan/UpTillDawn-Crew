@@ -1,4 +1,4 @@
-name: Fast Change Validation
+name: CI main
 
 on:
   push:
