@@ -1,5 +1,7 @@
 # UpTillDawn Crew implementation status
 
+> **Historisch implementatielogboek (oktober 2026).** De hieronder genoemde commits, aantallen en CI-/deploymentresultaten beschrijven eerdere releases; ze zijn geen actuele status van `main`. Voor actuele resultaten gelden uitsluitend de vijf workflows **Cleanup**, **CI production**, **Deploy production**, **CI main** en **Deploy main**. De voormalige stagingomgeving is buiten gebruik; een geslaagde CI-run bewijst op zichzelf geen live functionele acceptatie.
+
 ## Production baseline
 
 ### Canonical default — 2026-10-06
