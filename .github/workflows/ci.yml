@@ -76,9 +76,9 @@ jobs:
       - name: Run production-style dry run contract
         run: node --test tests/production-dry-run-contract.test.mjs
 
-      - name: Build Next.js
-        run: npm run build:next
-
+      # OpenNext's Cloudflare build already invokes next build internally.
+      # The separate authenticated E2E build below is required because it
+      # embeds the isolated Supabase URL/key into NEXT_PUBLIC_* bundles.
       - name: Build Cloudflare Worker
         run: npm run build:cloudflare
 
@@ -118,7 +118,7 @@ jobs:
           for file in tests/sql/*.sql; do
             # These suites require the dedicated users seeded later in this job.
             case "$file" in
-              tests/sql/administration-finance-integration.sql|tests/sql/administration-finance-rls.sql|tests/sql/administration-workflow-integration.sql|tests/sql/administration-peppol-integration.sql) continue ;;
+              tests/sql/administration-finance-integration.sql|tests/sql/administration-finance-rls.sql|tests/sql/administration-workflow-integration.sql|tests/sql/administration-peppol-integration.sql|tests/sql/15-bot-full-event.sql|tests/sql/qr-attendance-workflow.sql|tests/sql/operational-security.sql|tests/sql/chat-lifecycle.sql|tests/sql/queued-upload-security.sql|tests/sql/timesheet-lifecycle.sql|tests/sql/release-access-matrix.sql|tests/sql/privilege-matrix.sql|tests/sql/responsible-read-scope.sql|tests/sql/responsible-event-selection-guard.sql|tests/sql/offline-revocation-replay.sql|tests/sql/offline-time-dependencies.sql|tests/sql/storage-security.sql|tests/sql/new-feature-security.sql) continue ;;
             esac
             echo "::group::$file"
             psql "$PGURL" -v ON_ERROR_STOP=1 -f "$file"
@@ -293,11 +293,14 @@ jobs:
           done
           exit 1
 
-      - name: Full authenticated Administration browser E2E
-        run: node scripts/administration-full-browser-e2e.mjs
-
+      # Run the higher-signal transactional gate first. A broken finance,
+      # ticketing or inventory workflow should fail before the expensive
+      # read-only cross-portal browser inventory.
       - name: Transactional administration workflow E2E
         run: node scripts/administration-completion-e2e.mjs
+
+      - name: Full authenticated Administration browser E2E
+        run: node scripts/administration-full-browser-e2e.mjs
       - name: Peppol approval and XML export browser E2E
         if: ${{ !cancelled() && steps.application.outcome == 'success' }}
         run: node scripts/administration-peppol-e2e.mjs

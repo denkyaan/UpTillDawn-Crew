@@ -39,15 +39,24 @@ try{
       assert.equal(await link.isVisible(),true,slug+' navigation link must be visible')
       assert.equal(await link.isEnabled(),true,slug+' navigation link must be enabled')
       assert.ok(!target.includes('/login/'),slug+' must not redirect to login')
-      const documentResponse=page.waitForResponse(response=>response.request().isNavigationRequest()&&response.request().resourceType()==='document'&&new URL(response.url()).pathname===target,{timeout:30000})
+      // Next.js may navigate through its client router without a document request.
+      // Assert the final URL and rendered portal state instead of requiring a
+      // network response that is absent for legitimate client-side navigation.
       await link.click()
-      const navigation=await documentResponse
-      assert.equal(navigation.status(),200,slug+' returned HTTP '+navigation.status())
-      assert.equal(navigation.request().redirectedFrom(),null,slug+' unexpectedly redirected')
       await page.waitForURL(u=>u.pathname===target,{timeout:30000})
+      const directResponse=await context.request.get(base+target,{maxRedirects:0})
+      assert.equal(directResponse.status(),200,slug+' direct route returned HTTP '+directResponse.status())
       await page.waitForLoadState('networkidle',{timeout:10000}).catch(()=>{})
+      // The subtab drawer intentionally closes after navigation. Reopen the
+      // category to inspect the active subtab instead of waiting on a hidden
+      // and unmounted link.
       assert.equal(await page.locator(`[data-administration-category="${category}"]`).getAttribute('aria-pressed'),'true',slug+' lost its category')
+      assert.equal(await page.locator(`[data-administration-category="${category}"]`).getAttribute('aria-expanded'),'false',slug+' drawer did not close after navigation')
+      await page.locator(`[data-administration-category="${category}"]`).click()
       assert.equal(await page.locator(`[data-administration-subtab="${slug}"]`).getAttribute('aria-current'),'page',slug+' lost active subtab')
+      // Restore the closed-drawer state before testing the next subtab.
+      await page.locator(`[data-administration-category="${category}"]`).click()
+      assert.equal(await page.locator(`[data-administration-category="${category}"]`).getAttribute('aria-expanded'),'false',slug+' drawer did not close on toggle')
       assert.equal(await page.locator('[data-layout-key]').count(),0,slug+' rendered personnel navigation')
       assert.ok(new URL(page.url()).pathname.startsWith('/portals/administration/'),slug+' left the administration portal')
       assert.ok(!/application error|internal server error|this page could not be found/i.test(await page.locator('body').innerText()))

@@ -129,7 +129,7 @@ try{
  await importer.getByRole('button',{name:'Save sales',exact:true}).click();await importer.getByRole('status').filter({hasText:'Duplicates skipped: 1'}).waitFor({timeout:30000})
  ok('Ticket CSV UI saves sales and replays an identical file without duplicating revenue')
  const conflictCsv=header+`${prefix}-NEW,${created.eventId},1,5.00,EUR,2026-10-30T12:00:00Z\n`+`${external},${created.eventId},2,99.00,EUR,2026-10-30T00:30:00+02:00\n`
- const conflict=await officeContext.request.post(base+'/api/administration/ticketing/import',{headers:{origin:base},multipart:{eventId:created.eventId,source:'ticketplatform',file:{name:'conflict.csv',mimeType:'text/csv',buffer:Buffer.from(conflictCsv)}}})
+ const conflict=await officeContext.request.post(base+'/api/administration/ticketing/import',{headers:{origin:base},multipart:{eventId:created.eventId,source:'eventix',file:{name:'conflict.csv',mimeType:'text/csv',buffer:Buffer.from(conflictCsv)}}})
  assert.equal(conflict.status(),409)
  const absent=await office.db.from('admin_ticket_sales').select('id').eq('external_id',prefix+'-NEW');assert.equal(absent.data.length,0)
  const noAccess=await staffContext.request.post(base+'/api/administration/ticketing/import',{headers:{origin:base},multipart:{eventId:created.eventId,source:'ticketplatform',file:{name:'sales.csv',mimeType:'text/csv',buffer:Buffer.from(csv)}}});assert.equal(noAccess.status(),403)

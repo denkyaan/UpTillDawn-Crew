@@ -37,7 +37,7 @@ try{
  for(const role of roles){
   const context=await browser.newContext({viewport:{width:390,height:844},locale:role.locale,acceptDownloads:true})
   const page=await context.newPage()
-  const email=role.name==='administration'?'bot-04-staff-de@bots.uptilldawn.test':`bot-${String(role.index).padStart(2,'0')}-${role.name}-${role.locale}@bots.uptilldawn.test`
+  const email=role.name==='administration'?'bot-04-staff-de@bots.uptilldawn.test':role.name==='promotion'?'bot-05-staff-nl@bots.uptilldawn.test':`bot-${String(role.index).padStart(2,'0')}-${role.name}-${role.locale}@bots.uptilldawn.test`
   try{
    if(role.name==='admin'){
     const response=await context.request.post(base+'/api/auth/admin-login',{form:{email,password},maxRedirects:0})
@@ -63,7 +63,10 @@ try{
      if(!body)throw Error('empty page')
      if(/404\s*\|\s*this page could not be found|application error|internal server error/i.test(body))throw Error('application/404 screen')
      if(errors.length)throw Error('uncaught JS: '+errors.join('; ').slice(0,350))
-     if(['admin','administration','promotion'].includes(role.name)&&route.startsWith('/portals/')&&path!==route)throw Error('authorized portal redirected from '+route+' to '+path)
+     // Canonical overview redirects to the portal home. Sales is deliberately
+     // admin-only; an administrative_staff account must be redirected away.
+     const expectedPath=route==='/portals/administration/overview'?'/portals/administration':role.name==='administration'&&route==='/portals/administration/sales'?'/portals/administration':route
+     if(['admin','administration','promotion'].includes(role.name)&&route.startsWith('/portals/')&&path!==expectedPath)throw Error('unexpected portal redirect from '+route+' to '+path+' (expected '+expectedPath+')')
      if(role.name==='administration'&&route.startsWith('/portals/administration')&&await page.locator('[data-layout-key]').count())throw Error('administration rendered personnel navigation')
      if(role.name==='promotion'&&route.startsWith('/portals/promotion')&&await page.locator('[data-layout-key]').count())throw Error('promotion rendered personnel navigation')
      if(route.startsWith('/portals/administration')&&/\/portals\/(staff|responsible|promotion)(\/|$)/.test(path))throw Error('administration entered another role portal')
