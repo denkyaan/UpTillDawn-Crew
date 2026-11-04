@@ -2,7 +2,7 @@
 import {useEffect,useRef,useState} from 'react'
 import {activeUiLocale,LANGUAGE_APPLIED_EVENT,type SupportedUiLocale} from '@/lib/locale-preferences'
 import {humanizeAppError} from '@/lib/client-error-message'
-import {generateCrewBriefingDraft,type CrewBriefingEventContext} from '@/lib/crew-briefing-template'
+import {generateCrewBriefingDraft,unresolvedCrewBriefingFields,type CrewBriefingEventContext} from '@/lib/crew-briefing-template'
 const templateLabels={
  nl:{button:'Gebruik crewbriefing-sjabloon',confirm:'Bestaande titel en tekst vervangen door het crewbriefing-sjabloon?',success:'Sjabloon ingevuld. Vervang alle velden tussen [ ] door de juiste eventinformatie voordat je publiceert.'},
  fr:{button:'Utiliser le modèle de briefing',confirm:'Remplacer le titre et le texte existants par le modèle de briefing ?',success:'Modèle inséré. Remplacez tous les champs entre [ ] par les informations de l’événement avant publication.'},
@@ -17,6 +17,7 @@ export function BriefingAnalysisFields({defaultTitle='',defaultBody='',bodyPlace
  useEffect(()=>{const apply=()=>setLocale(activeUiLocale());apply();window.addEventListener(LANGUAGE_APPLIED_EVENT,apply);return()=>window.removeEventListener(LANGUAGE_APPLIED_EVENT,apply)},[])
  const t=templateLabels[locale]
  const [title,setTitle]=useState(defaultTitle),[body,setBody]=useState(defaultBody),[busy,setBusy]=useState(false),[message,setMessage]=useState(''),extractedRef=useRef<HTMLInputElement>(null)
+ const unresolved=unresolvedCrewBriefingFields(body)
  async function analyze(file:File){
   setBusy(true);setMessage('Bestand wordt gelezen…');if(extractedRef.current)extractedRef.current.value=''
   try{
@@ -41,5 +42,6 @@ export function BriefingAnalysisFields({defaultTitle='',defaultBody='',bodyPlace
   <button type="button" className="rounded-lg border px-3 py-2 text-sm font-semibold" onClick={event=>{if((title.trim()||body.trim())&&!window.confirm(t.confirm))return;const form=event.currentTarget.closest('form');const data=form?new FormData(form):null;const workplaceId=String(data?.get('workplace_id')||'');const selectedEventId=String(data?.get('event_id')||'');const workplace=workplaceContexts.find(item=>item.id===workplaceId&&(!selectedEventId||item.event_id===selectedEventId));const eventId=selectedEventId||workplace?.event_id||'';const context=eventContexts.find(item=>item.id===eventId);const draft=generateCrewBriefingDraft({...context,name:context?.name||eventName,workplace:workplace?.name});setTitle(draft.title);setBody(draft.body);setMessage(t.success)}}>{t.button}</button>
   <input name="title" required placeholder="Titel" className="border bg-background p-3" value={title} onChange={event=>setTitle(event.target.value)}/>
   <textarea name="body" required placeholder={bodyPlaceholder} className="min-h-28 border bg-background p-3" value={body} onChange={event=>setBody(event.target.value)}/>
+  {unresolved.length>0&&<div role="status" className="rounded-lg border border-amber-500/40 bg-amber-500/10 p-3 text-sm"><strong>{locale==='fr'?'Champs à vérifier':locale==='en'?'Fields requiring review':locale==='de'?'Zu prüfende Felder':'Nog in te vullen velden'} ({unresolved.length})</strong><ul className="mt-2 list-disc pl-5">{unresolved.map(item=><li key={item}>{item}</li>)}</ul></div>}
  </>
 }
