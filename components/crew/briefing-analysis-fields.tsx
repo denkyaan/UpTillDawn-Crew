@@ -2,7 +2,7 @@
 import {useEffect,useRef,useState} from 'react'
 import {activeUiLocale,LANGUAGE_APPLIED_EVENT,type SupportedUiLocale} from '@/lib/locale-preferences'
 import {humanizeAppError} from '@/lib/client-error-message'
-import {CREW_BRIEFING_TEMPLATE_TITLE,CREW_BRIEFING_TEMPLATE_BODY} from '@/lib/crew-briefing-template'
+import {generateCrewBriefingDraft} from '@/lib/crew-briefing-template'
 const templateLabels={
  nl:{button:'Gebruik crewbriefing-sjabloon',confirm:'Bestaande titel en tekst vervangen door het crewbriefing-sjabloon?',success:'Sjabloon ingevuld. Vervang alle velden tussen [ ] door de juiste eventinformatie voordat je publiceert.'},
  fr:{button:'Utiliser le modèle de briefing',confirm:'Remplacer le titre et le texte existants par le modèle de briefing ?',success:'Modèle inséré. Remplacez tous les champs entre [ ] par les informations de l’événement avant publication.'},
@@ -38,7 +38,7 @@ export function BriefingAnalysisFields({defaultTitle='',defaultBody='',bodyPlace
    <span className="text-xs text-muted-foreground">PDF, DOCX, PPTX, XLSX, TXT, CSV, JPG, PNG of WEBP · maximaal 20 MB. Afbeeldingen in DOCX, PPTX en XLSX worden waar mogelijk automatisch als bijlage toegevoegd.</span>
    {message&&<span className="text-xs">{message}</span>}
   </div>
-  <button type="button" className="rounded-lg border px-3 py-2 text-sm font-semibold" onClick={()=>{if((title.trim()||body.trim())&&!window.confirm(t.confirm))return;setTitle(eventName?CREW_BRIEFING_TEMPLATE_TITLE.replace('[evenement]',eventName):CREW_BRIEFING_TEMPLATE_TITLE);setBody(eventName?CREW_BRIEFING_TEMPLATE_BODY.replace('Evenement: [naam]',`Evenement: ${eventName}`):CREW_BRIEFING_TEMPLATE_BODY);setMessage(t.success)}}>{t.button}</button>
+  <button type="button" className="rounded-lg border px-3 py-2 text-sm font-semibold" onClick={()=>{if((title.trim()||body.trim())&&!window.confirm(t.confirm))return;const draft=generateCrewBriefingDraft({name:eventName});setTitle(draft.title);setBody(draft.body);setMessage(t.success)}}>{t.button}</button>
   <input name="title" required placeholder="Titel" className="border bg-background p-3" value={title} onChange={event=>setTitle(event.target.value)}/>
   <textarea name="body" required placeholder={bodyPlaceholder} className="min-h-28 border bg-background p-3" value={body} onChange={event=>setBody(event.target.value)}/>
  </>
