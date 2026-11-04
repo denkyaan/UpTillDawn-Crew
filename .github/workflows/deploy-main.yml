@@ -171,5 +171,3 @@ jobs:
             console.log("PWA manifest parsed and app name verified");
           '
 
-      # Staging retirement is intentionally gated on the separate authenticated
-      # full E2E workflow; public HTTP smoke tests are not sufficient evidence.
