@@ -15,11 +15,11 @@ export function administrationRoute(slug:string):string {
 }
 
 export function administrationCategoryForPath(pathname:string):string {
- if(pathname==="/portals/administration/sales")return "finance"
+ if(pathname==="/portals/administration/sales"||pathname.startsWith("/portals/administration/sales/"))return "finance"
  if(pathname.startsWith("/portals/administration/modules/artists/"))return "planning"
  if(pathname.startsWith("/portals/administration/modules/invoices/"))return "finance"
- if(pathname==="/portals/administration/profile")return "management"
- if(pathname==="/portals/administration/timesheets")return "planning"
+ if(pathname==="/portals/administration/profile"||pathname.startsWith("/portals/administration/profile/"))return "management"
+ if(pathname==="/portals/administration/timesheets"||pathname.startsWith("/portals/administration/timesheets/"))return "planning"
  if(["/portals/administration/counterparties","/portals/administration/contacts"].includes(pathname))return "relations"
  return administrationNavigationGroups.find(group=>group.slugs.some(slug=>
   pathname===administrationRoute(slug)||(slug!=="dashboard"&&pathname.startsWith(administrationRoute(slug)+"/"))
