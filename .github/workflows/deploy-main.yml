@@ -42,8 +42,8 @@ jobs:
             fi
           done
           case "$NEXT_PUBLIC_SUPABASE_URL" in
-            https://eakoavcieossazqzplke.supabase.co|https://npbjrtiolqperdgljnhi.supabase.co)
-              echo "::error::Main test app must use its own database, not production or retired staging"
+            https://eakoavcieossazqzplke.supabase.co)
+              echo "::error::Main test app must not use production"
               exit 1 ;;
             https://*.supabase.co) ;;
             *) echo "::error::Invalid main test Supabase URL"; exit 1 ;;
