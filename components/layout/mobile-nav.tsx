@@ -60,7 +60,7 @@ export function MobileBottomNav({
    return Math.max(activityCount,notificationFeatureCounts[key]??0)
  }
 
- const NavItem=({item,expandedItem=false}:{item:NavigationItem;expandedItem?:boolean})=>{
+ const NavItem=({item}:{item:NavigationItem})=>{
    const href=hrefFor(item)
    const active=isActive(item)
    const Icon=item.icon
@@ -74,9 +74,7 @@ export function MobileBottomNav({
     aria-description={help.description}
     onClick={()=>{setSelectedGroup({key:"home",pathname})}}
     className={cn(
-      expandedItem
-        ?"flex min-h-16 items-center gap-3 rounded-xl px-3 py-2 text-sm font-semibold"
-        :"flex min-w-0 flex-1 flex-col items-center justify-center gap-1 rounded-lg px-1 py-1.5 text-[9px] font-semibold",
+      "flex min-w-0 flex-1 flex-col items-center justify-center gap-1 rounded-lg px-1 py-1.5 text-[9px] font-semibold",
       active?"bg-violet-500/10 text-violet-400":"text-muted-foreground"
     )}
    >
@@ -84,9 +82,7 @@ export function MobileBottomNav({
      <Icon className="h-5 w-5"/>
      {count>0&&<span className="absolute -right-3 -top-3 flex h-5 min-w-5 items-center justify-center rounded-full bg-red-600 px-1 text-[10px] font-black leading-none text-white shadow ring-2 ring-card">{count>99?"99+":count}</span>}
     </span>
-    {expandedItem
-      ? <span className="min-w-0 flex-1"><span className="block whitespace-normal break-words leading-snug">{label}</span><span className="mt-0.5 block line-clamp-2 text-[10px] font-normal text-muted-foreground">{help.description}</span></span>
-      : <span className="min-w-0 max-w-full break-words text-center leading-tight">{label}</span>}
+    <span className="min-w-0 max-w-full whitespace-normal break-words text-center leading-tight">{label}</span>
    </Link>
  }
 
