@@ -62,13 +62,12 @@ async function requireAdministration() {
  if (!current) redirect('/login')
  if ((!current.approved || Boolean(current.account_blocked)) && !current.isOwner) redirect('/portals')
  const supabase = await createClient()
- if (!current.realIsAdmin && !current.isOwner) {
-  const { data, error } = await supabase.rpc('upt_my_portal_assignments')
-  if (error || !canOpenPortal('administration',(data ?? []) as PortalAssignment[],{
+ const { data, error } = await supabase.rpc('upt_my_portal_assignments')
+ if (error && !current.isAdmin && !current.isOwner) redirect('/portals')
+ if (!current.isAdmin && !current.isOwner && !canOpenPortal('administration',(data ?? []) as PortalAssignment[],{
    approved:current.approved,blocked:current.account_blocked===true,
-  })) redirect('/portals')
- }
- return {supabase,isAdmin:current.realIsAdmin || current.isOwner}
+ })) redirect('/portals')
+ return {supabase,isAdmin:current.isAdmin || current.isOwner}
 }
 
 async function createCounterparty(formData:FormData) {
