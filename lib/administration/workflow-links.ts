@@ -7,7 +7,6 @@ export const administrationWorkflowLinks:Record<string,string>={
  banking:"/portals/administration/finance",
  documents:"/portals/administration/finance",
  reports:"/portals/administration/finance",
- settings:"/portals/administration/profile",
  contacts:"/portals/administration/counterparties",
  sponsors:"/portals/administration/counterparties",
  logistics:"/portals/administration/modules/inventory",
