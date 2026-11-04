@@ -293,11 +293,14 @@ jobs:
           done
           exit 1
 
-      - name: Full authenticated Administration browser E2E
-        run: node scripts/administration-full-browser-e2e.mjs
-
+      # Run the higher-signal transactional gate first. A broken finance,
+      # ticketing or inventory workflow should fail before the expensive
+      # read-only cross-portal browser inventory.
       - name: Transactional administration workflow E2E
         run: node scripts/administration-completion-e2e.mjs
+
+      - name: Full authenticated Administration browser E2E
+        run: node scripts/administration-full-browser-e2e.mjs
       - name: Peppol approval and XML export browser E2E
         if: ${{ !cancelled() && steps.application.outcome == 'success' }}
         run: node scripts/administration-peppol-e2e.mjs
