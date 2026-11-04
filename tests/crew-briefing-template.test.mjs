@@ -13,6 +13,12 @@ test('crew briefing template covers the supplied operational briefing structure'
  assert.match(editor,/\{t.button\}/)
  assert.match(editor,/window\.confirm/)
  assert.match(page,/BriefingAnalysisFields eventName=/)
- assert.match(editor,/CREW_BRIEFING_TEMPLATE_TITLE\.replace\(/)
- assert.match(editor,/CREW_BRIEFING_TEMPLATE_BODY\.replace\(/)
+ assert.match(editor,/generateCrewBriefingDraft\(\{name:eventName\}\)/)
+ assert.match(editor,/setBody\(draft\.body\)/)
+})
+
+test('draft generation supports verified event and workplace metadata',()=>{
+ for(const field of ['date','startTime','endTime','address','workplace'])assert.match(template,new RegExp(field))
+ assert.match(template,/safeBriefingValue/)
+ assert.match(template,/return \{title:.*body\}/)
 })
