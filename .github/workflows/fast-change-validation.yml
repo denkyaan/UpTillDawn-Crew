@@ -25,6 +25,23 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5.1.0
+      - name: Enforce exactly five approved workflow files
+        shell: bash
+        run: |
+          set -euo pipefail
+          expected="$(printf '%s\n' \
+            '.github/workflows/ci.yml' \
+            '.github/workflows/cleanup-actions-history.yml' \
+            '.github/workflows/deploy-cloudflare.yml' \
+            '.github/workflows/deploy-main.yml' \
+            '.github/workflows/fast-change-validation.yml' | sort)"
+          actual="$(find .github/workflows -maxdepth 1 -type f | sort)"
+          if [ "$actual" != "$expected" ]; then
+            echo "::error::Only the five approved GitHub Actions workflows may exist."
+            diff -u <(printf '%s\n' "$expected") <(printf '%s\n' "$actual") || true
+            exit 1
+          fi
+          echo "Approved workflow inventory: exactly five files"
       - name: Set up Node.js
         uses: actions/setup-node@a0853c24544627f65ddf259abe73b1d18a591444 # v5.0.0
         with:
