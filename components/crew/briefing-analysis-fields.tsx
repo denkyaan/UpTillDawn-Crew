@@ -5,7 +5,7 @@ import {CREW_BRIEFING_TEMPLATE_TITLE,CREW_BRIEFING_TEMPLATE_BODY} from '@/lib/cr
 const ACCEPT='.pdf,.docx,.pptx,.xlsx,.txt,.csv,image/jpeg,image/png,image/webp'
 type ExtractedImage={name:string;mimeType:string;base64:string}
 function decodedFile(image:ExtractedImage){const binary=atob(image.base64),bytes=new Uint8Array(binary.length);for(let i=0;i<binary.length;i++)bytes[i]=binary.charCodeAt(i);return new File([bytes],image.name,{type:image.mimeType})}
-export function BriefingAnalysisFields({defaultTitle='',defaultBody='',bodyPlaceholder='Algemene instructie'}:{defaultTitle?:string;defaultBody?:string;bodyPlaceholder?:string}){
+export function BriefingAnalysisFields({defaultTitle='',defaultBody='',bodyPlaceholder='Algemene instructie',eventName}:{defaultTitle?:string;defaultBody?:string;bodyPlaceholder?:string;eventName?:string}){
  const [title,setTitle]=useState(defaultTitle),[body,setBody]=useState(defaultBody),[busy,setBusy]=useState(false),[message,setMessage]=useState(''),extractedRef=useRef<HTMLInputElement>(null)
  async function analyze(file:File){
   setBusy(true);setMessage('Bestand wordt gelezen…');if(extractedRef.current)extractedRef.current.value=''
@@ -28,7 +28,7 @@ export function BriefingAnalysisFields({defaultTitle='',defaultBody='',bodyPlace
    <span className="text-xs text-muted-foreground">PDF, DOCX, PPTX, XLSX, TXT, CSV, JPG, PNG of WEBP · maximaal 20 MB. Afbeeldingen in DOCX, PPTX en XLSX worden waar mogelijk automatisch als bijlage toegevoegd.</span>
    {message&&<span className="text-xs">{message}</span>}
   </div>
-  <button type="button" className="rounded-lg border px-3 py-2 text-sm font-semibold" onClick={()=>{if((title.trim()||body.trim())&&!window.confirm("Bestaande titel en tekst vervangen door het crewbriefing-sjabloon?"))return;setTitle(CREW_BRIEFING_TEMPLATE_TITLE);setBody(CREW_BRIEFING_TEMPLATE_BODY);setMessage("Sjabloon ingevuld. Vervang alle velden tussen [ ] door de juiste eventinformatie voordat je publiceert.")}}>Gebruik crewbriefing-sjabloon</button>
+  <button type="button" className="rounded-lg border px-3 py-2 text-sm font-semibold" onClick={()=>{if((title.trim()||body.trim())&&!window.confirm("Bestaande titel en tekst vervangen door het crewbriefing-sjabloon?"))return;setTitle(eventName?CREW_BRIEFING_TEMPLATE_TITLE.replace('[evenement]',eventName):CREW_BRIEFING_TEMPLATE_TITLE);setBody(eventName?CREW_BRIEFING_TEMPLATE_BODY.replace('Evenement: [naam]',`Evenement: ${eventName}`):CREW_BRIEFING_TEMPLATE_BODY);setMessage("Sjabloon ingevuld. Vervang alle velden tussen [ ] door de juiste eventinformatie voordat je publiceert.")}}>Gebruik crewbriefing-sjabloon</button>
   <input name="title" required placeholder="Titel" className="border bg-background p-3" value={title} onChange={event=>setTitle(event.target.value)}/>
   <textarea name="body" required placeholder={bodyPlaceholder} className="min-h-28 border bg-background p-3" value={body} onChange={event=>setBody(event.target.value)}/>
  </>
