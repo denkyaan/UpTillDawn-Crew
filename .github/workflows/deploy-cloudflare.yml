@@ -41,7 +41,7 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          count="$(gh api "repos/${GITHUB_REPOSITORY}/actions/workflows/ci.yml/runs?head_sha=${GITHUB_SHA}&status=success&per_page=100" --jq '[.workflow_runs[] | select(.head_sha == env.GITHUB_SHA and .event == "push" and .conclusion == "success")] | length')"
+          count="$(gh api "repos/${GITHUB_REPOSITORY}/actions/workflows/ci.yml/runs?head_sha=${GITHUB_SHA}&status=success&per_page=100" --jq '[.workflow_runs[] | select(.head_sha == env.GITHUB_SHA and (.event == "workflow_dispatch" or .event == "push") and .conclusion == "success")] | length')"
           if [ "$count" -lt 1 ]; then
             echo "::error::Production release blocked: full CI has not passed for ${GITHUB_SHA}"
             exit 1
