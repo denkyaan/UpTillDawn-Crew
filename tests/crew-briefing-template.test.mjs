@@ -8,7 +8,9 @@ const editor=readFileSync(new URL('../components/crew/briefing-analysis-fields.t
 test('crew briefing template covers the supplied operational briefing structure',()=>{
  for(const section of ['EVENTGEGEVENS','BELANGRIJK','ALGEMENE AFSPRAKEN','LOCATIE & BEREIKBAARHEID','AANKOMST & CHECK-IN','CONTACTPERSONEN','WERKPOSTINSTRUCTIES','MATERIAAL & CHECKLISTS','AFSLUITEN & AFTEKENEN','VRAGEN & WIJZIGINGEN'])assert.ok(template.includes(section),section)
  assert.match(template,/Weeztix Scan gebruiken indien van toepassing/)
- assert.match(editor,/Gebruik crewbriefing-sjabloon/)
+ assert.match(editor,/button:'Gebruik crewbriefing-sjabloon'/)
+ assert.match(editor,/templateLabels\[locale\]/)
+ assert.match(editor,/\{t.button\}/)
  assert.match(editor,/window\.confirm/)
  assert.match(page,/BriefingAnalysisFields eventName=/)
  assert.match(editor,/CREW_BRIEFING_TEMPLATE_TITLE\.replace\(/)
