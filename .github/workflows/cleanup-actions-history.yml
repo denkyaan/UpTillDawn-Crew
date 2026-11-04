@@ -11,7 +11,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 30
     steps:
-      - name: Retain latest main run per workflow; remove obsolete staging history
+      - name: Retain newest completed main run per workflow; purge retired branch runs
         env:
           GH_TOKEN: ${{ github.token }}
           REPO: ${{ github.repository }}
@@ -29,23 +29,18 @@ jobs:
               failures=$((failures + 1))
               continue
             fi
-            if ! entries="$(printf '%s' "$response" | jq -r '[.[].workflow_runs[] | select(.head_branch == "main" or .head_branch == "staging")] | unique_by(.id) | sort_by(.created_at, .id) | reverse | .[] | [.id,.head_branch] | @tsv')"; then
+            if ! entries="$(printf '%s' "$response" | jq -r '[.[].workflow_runs[] | select(.id != null)] | unique_by(.id) | sort_by(.created_at, .id) | reverse | .[] | [.id,.head_branch] | @tsv')"; then
               echo "::error::Could not parse workflow runs for $workflow"
               failures=$((failures + 1))
               continue
             fi
             kept_main=0
-            kept_staging=0
             removed=0
             while IFS=$'\t' read -r id branch; do
               [ -n "$id" ] || continue
               if [ "$branch" = "main" ]; then
                 kept_main=$((kept_main + 1))
                 [ "$kept_main" -eq 1 ] && continue
-              elif [ "$branch" = "staging" ]; then
-                kept_staging=$((kept_staging + 1))
-              else
-                continue
               fi
               [ "$id" = "$CURRENT_RUN_ID" ] && continue
               if gh api --method DELETE "/repos/$REPO/actions/runs/$id"; then
@@ -55,7 +50,7 @@ jobs:
                 failures=$((failures + 1))
               fi
             done <<< "$entries"
-            echo "Workflow $workflow: deleted $removed old completed runs (including retired staging)"
+            echo "Workflow $workflow: deleted $removed old completed runs (including retired and deleted branches)"
           done <<< "$workflows"
           if [ "$failures" -gt 0 ]; then
             echo "::error::Cleanup had $failures API or deletion errors"
