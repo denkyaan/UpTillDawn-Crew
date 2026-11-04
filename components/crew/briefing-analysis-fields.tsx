@@ -2,7 +2,7 @@
 import {useEffect,useRef,useState} from 'react'
 import {activeUiLocale,LANGUAGE_APPLIED_EVENT,type SupportedUiLocale} from '@/lib/locale-preferences'
 import {humanizeAppError} from '@/lib/client-error-message'
-import {generateCrewBriefingDraft} from '@/lib/crew-briefing-template'
+import {generateCrewBriefingDraft,type CrewBriefingEventContext} from '@/lib/crew-briefing-template'
 const templateLabels={
  nl:{button:'Gebruik crewbriefing-sjabloon',confirm:'Bestaande titel en tekst vervangen door het crewbriefing-sjabloon?',success:'Sjabloon ingevuld. Vervang alle velden tussen [ ] door de juiste eventinformatie voordat je publiceert.'},
  fr:{button:'Utiliser le modèle de briefing',confirm:'Remplacer le titre et le texte existants par le modèle de briefing ?',success:'Modèle inséré. Remplacez tous les champs entre [ ] par les informations de l’événement avant publication.'},
@@ -12,7 +12,7 @@ const templateLabels={
 const ACCEPT='.pdf,.docx,.pptx,.xlsx,.txt,.csv,image/jpeg,image/png,image/webp'
 type ExtractedImage={name:string;mimeType:string;base64:string}
 function decodedFile(image:ExtractedImage){const binary=atob(image.base64),bytes=new Uint8Array(binary.length);for(let i=0;i<binary.length;i++)bytes[i]=binary.charCodeAt(i);return new File([bytes],image.name,{type:image.mimeType})}
-export function BriefingAnalysisFields({defaultTitle='',defaultBody='',bodyPlaceholder='Algemene instructie',eventName}:{defaultTitle?:string;defaultBody?:string;bodyPlaceholder?:string;eventName?:string}){
+export function BriefingAnalysisFields({defaultTitle='',defaultBody='',bodyPlaceholder='Algemene instructie',eventName,eventContexts=[],workplaceContexts=[]}:{defaultTitle?:string;defaultBody?:string;bodyPlaceholder?:string;eventName?:string;eventContexts?:Array<{id:string}&CrewBriefingEventContext>;workplaceContexts?:Array<{id:string;event_id:string;name:string}>}){
  const [locale,setLocale]=useState<SupportedUiLocale>('nl')
  useEffect(()=>{const apply=()=>setLocale(activeUiLocale());apply();window.addEventListener(LANGUAGE_APPLIED_EVENT,apply);return()=>window.removeEventListener(LANGUAGE_APPLIED_EVENT,apply)},[])
  const t=templateLabels[locale]
@@ -38,7 +38,7 @@ export function BriefingAnalysisFields({defaultTitle='',defaultBody='',bodyPlace
    <span className="text-xs text-muted-foreground">PDF, DOCX, PPTX, XLSX, TXT, CSV, JPG, PNG of WEBP · maximaal 20 MB. Afbeeldingen in DOCX, PPTX en XLSX worden waar mogelijk automatisch als bijlage toegevoegd.</span>
    {message&&<span className="text-xs">{message}</span>}
   </div>
-  <button type="button" className="rounded-lg border px-3 py-2 text-sm font-semibold" onClick={()=>{if((title.trim()||body.trim())&&!window.confirm(t.confirm))return;const draft=generateCrewBriefingDraft({name:eventName});setTitle(draft.title);setBody(draft.body);setMessage(t.success)}}>{t.button}</button>
+  <button type="button" className="rounded-lg border px-3 py-2 text-sm font-semibold" onClick={event=>{if((title.trim()||body.trim())&&!window.confirm(t.confirm))return;const form=event.currentTarget.closest('form');const data=form?new FormData(form):null;const workplaceId=String(data?.get('workplace_id')||'');const workplace=workplaceContexts.find(item=>item.id===workplaceId);const eventId=String(data?.get('event_id')||workplace?.event_id||'');const context=eventContexts.find(item=>item.id===eventId);const draft=generateCrewBriefingDraft({...context,name:context?.name||eventName,workplace:workplace?.name});setTitle(draft.title);setBody(draft.body);setMessage(t.success)}}>{t.button}</button>
   <input name="title" required placeholder="Titel" className="border bg-background p-3" value={title} onChange={event=>setTitle(event.target.value)}/>
   <textarea name="body" required placeholder={bodyPlaceholder} className="min-h-28 border bg-background p-3" value={body} onChange={event=>setBody(event.target.value)}/>
  </>
