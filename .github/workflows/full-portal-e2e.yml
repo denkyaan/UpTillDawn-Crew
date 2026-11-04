@@ -31,6 +31,24 @@ jobs:
           node-version: 24
           cache: npm
       - run: npm ci --no-audit --no-fund
+      - name: Diagnose test configuration without exposing credentials
+        shell: bash
+        run: |
+          set -euo pipefail
+          missing=0
+          for key in E2E_BASE_URL E2E_ADMIN_EMAIL E2E_ADMIN_PASSWORD E2E_ADMINISTRATION_EMAIL E2E_ADMINISTRATION_PASSWORD E2E_STAFF_EMAIL E2E_STAFF_PASSWORD E2E_RESPONSIBLE_EMAIL E2E_RESPONSIBLE_PASSWORD E2E_PROMOTION_EMAIL E2E_PROMOTION_PASSWORD; do
+            if [ -z "${!key:-}" ]; then
+              echo "::error title=Missing test configuration::Configure repository Actions secret or variable $key"
+              missing=1
+            else
+              echo "Configured: $key"
+            fi
+          done
+          if [ "$missing" -ne 0 ]; then
+            echo "::error::Authenticated browser regression cannot run without isolated test accounts; refusing to report false success"
+            exit 1
+          fi
+          curl -fsSL --retry 3 --max-time 30 -o /dev/null "$E2E_BASE_URL/login"
       - name: Install isolated Playwright runner
         run: npm install --no-save --package-lock=false --ignore-scripts playwright@1.58.2 && npx playwright install --with-deps chromium
       - name: Verify all five role logins and navigate their portals
