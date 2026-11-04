@@ -171,14 +171,5 @@ jobs:
             console.log("PWA manifest parsed and app name verified");
           '
 
-      - name: Retire obsolete staging Worker after main passes smoke tests
-        shell: bash
-        run: |
-          set -euo pipefail
-          # Keep the repurposed Supabase test database. Delete only the obsolete
-          # Cloudflare staging Worker after the replacement is proven reachable.
-          if npx wrangler delete --name uptilldawn-crew-staging --force; then
-            echo "Obsolete staging Worker removed."
-          else
-            echo "::warning::Could not retire old staging Worker automatically; main app deployment remains valid."
-          fi
+      # Staging retirement is intentionally gated on the separate authenticated
+      # full E2E workflow; public HTTP smoke tests are not sufficient evidence.
