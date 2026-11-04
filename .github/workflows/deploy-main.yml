@@ -76,6 +76,23 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          code="$(curl --retry 3 --retry-delay 2 -L -sS -o /tmp/main-home.html -w '%{http_code}' "$NEXT_PUBLIC_APP_URL/")"
-          test "$code" -ge 200 && test "$code" -lt 400
-          test -s /tmp/main-home.html
+          for path in / /login/admin /login/staff /manifest.webmanifest; do
+            code="$(curl --retry 5 --retry-all-errors --retry-delay 2 -L -sS -o /tmp/main-smoke-body -w '%{http_code}' "${NEXT_PUBLIC_APP_URL}${path}")"
+            echo "Main test ${path}: HTTP ${code}"
+            if [ "$code" -lt 200 ] || [ "$code" -ge 400 ] || [ ! -s /tmp/main-smoke-body ]; then
+              echo "::error::Main app smoke test failed at ${path} (HTTP ${code})"
+              exit 1
+            fi
+          done
+
+      - name: Retire obsolete staging Worker after main passes smoke tests
+        shell: bash
+        run: |
+          set -euo pipefail
+          # Keep the repurposed Supabase test database. Delete only the obsolete
+          # Cloudflare staging Worker after the replacement is proven reachable.
+          if npx wrangler delete --name uptilldawn-crew-staging --force; then
+            echo "Obsolete staging Worker removed."
+          else
+            echo "::warning::Could not retire old staging Worker automatically; main app deployment remains valid."
+          fi
