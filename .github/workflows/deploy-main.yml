@@ -1,8 +1,8 @@
-name: Deploy Main Test App
+name: Deploy main
 
 on:
   workflow_run:
-    workflows: ["Fast Change Validation"]
+    workflows: ["CI main"]
     types: [completed]
     branches: [main]
 
