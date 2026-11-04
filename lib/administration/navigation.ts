@@ -15,6 +15,7 @@ export function administrationRoute(slug:string):string {
 }
 
 export function administrationCategoryForPath(pathname:string):string {
+ if(pathname==="/portals/administration/counterparties"||pathname.startsWith("/portals/administration/counterparties/"))return "relations"
  if(pathname==="/portals/administration/sales"||pathname.startsWith("/portals/administration/sales/"))return "finance"
  if(pathname.startsWith("/portals/administration/modules/artists/"))return "planning"
  if(pathname.startsWith("/portals/administration/modules/invoices/"))return "finance"
@@ -32,6 +33,7 @@ export function administrationNotificationHref(value:string|null):string|null {
  let url:URL
  try{url=new URL(value,"https://uptilldawn.local")}catch{return null}
  if(url.origin!=="https://uptilldawn.local")return null
+ if(url.pathname==="/portals/administration/invoices"||url.pathname.startsWith("/portals/administration/invoices/"))return administrationRoute("invoices")+url.pathname.slice("/portals/administration/invoices".length)+url.search+url.hash
  if(url.pathname==="/portals/administration"||url.pathname.startsWith("/portals/administration/"))return value
  // Other portal URLs must never be followed from an administration notification.
  if(url.pathname.startsWith("/portals/"))return null
