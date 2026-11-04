@@ -109,14 +109,40 @@ jobs:
       - name: Deploy main test Worker only
         run: npx wrangler deploy --config wrangler.main.jsonc
 
+      - name: Diagnose Cloudflare workers.dev routing
+        shell: bash
+        run: |
+          set -euo pipefail
+          # This endpoint returns account metadata, never print credentials.
+          result="$(curl -sS --max-time 15 -H "Authorization: Bearer ${CLOUDFLARE_API_TOKEN}" "https://api.cloudflare.com/client/v4/accounts/${CLOUDFLARE_ACCOUNT_ID}/workers/subdomain")"
+          echo "$result" | node -e '
+            let data = ""; process.stdin.on("data", c => data += c);
+            process.stdin.on("end", () => {
+              try {
+                const v = JSON.parse(data);
+                console.log("Cloudflare account workers.dev subdomain:", v.result?.subdomain || "(unavailable)");
+                if (!v.success) console.log("Cloudflare subdomain API errors:", JSON.stringify((v.errors || []).map(e => ({code:e.code,message:e.message}))));
+                const configured = new URL(process.env.NEXT_PUBLIC_APP_URL).hostname;
+                const expected = v.result?.subdomain ? "uptilldawn-main." + v.result.subdomain + ".workers.dev" : null;
+                if (expected && configured !== expected) {
+                  console.error("::error::Wrong NEXT_PUBLIC_APP_URL hostname. Configured: " + configured + "; actual Cloudflare worker host: " + expected);
+                  process.exitCode = 1;
+                }
+              } catch { console.log("::warning::Cloudflare subdomain response could not be parsed"); }
+            });'
+
       - name: Smoke test main app
         shell: bash
         run: |
           set -euo pipefail
           for path in / /login/admin /login/staff /manifest.webmanifest; do
-            code="$(curl --retry 5 --retry-all-errors --retry-delay 2 -L -sS -o /tmp/main-smoke-body -w '%{http_code}' "${NEXT_PUBLIC_APP_URL}${path}")"
+            code="$(curl --retry 5 --retry-all-errors --retry-delay 2 -L -sS --max-time 25 -D /tmp/main-smoke-headers -o /tmp/main-smoke-body -w '%{http_code}' "${NEXT_PUBLIC_APP_URL}${path}")"
             echo "Main test ${path}: HTTP ${code}"
             if [ "$code" -lt 200 ] || [ "$code" -ge 400 ] || [ ! -s /tmp/main-smoke-body ]; then
+              echo "Response headers (safe subset):"
+              grep -iE '^(HTTP/|server:|content-type:|cf-ray:|location:)' /tmp/main-smoke-headers || true
+              echo "Response body (first 500 characters):"
+              head -c 500 /tmp/main-smoke-body | tr '\\n' ' '; echo
               echo "::error::Main app smoke test failed at ${path} (HTTP ${code})"
               exit 1
             fi
