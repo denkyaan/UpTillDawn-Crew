@@ -68,3 +68,15 @@ export function generateCrewBriefingDraft(context: CrewBriefingEventContext) {
  for(const [placeholder,replacement] of replacements)if(replacement)body=body.replace(placeholder,replacement)
  return {title:name?CREW_BRIEFING_TEMPLATE_TITLE.replace('[evenement]',name):CREW_BRIEFING_TEMPLATE_TITLE,body}
 }
+
+
+/** Review markers deliberately left in a draft; never treat these as confirmed instructions. */
+export function unresolvedCrewBriefingFields(body:string):string[]{
+ const matches=body.match(/\[[^\]\r\n]{2,160}\]/g)||[]
+ return [...new Set(matches.map(item=>item.slice(1,-1).trim()))]
+}
+
+export function crewBriefingReadiness(body:string):{ready:boolean;missing:string[]}{
+ const missing=unresolvedCrewBriefingFields(body)
+ return {ready:body.trim().length>0&&missing.length===0,missing}
+}
