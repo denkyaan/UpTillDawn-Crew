@@ -1,10 +1,10 @@
 export const administrationNavigationGroups = [
  {key:"overview",title:{nl:"Overzicht",fr:"Aperçu",en:"Overview",de:"Übersicht"},slugs:["dashboard"]},
- {key:"planning",title:{nl:"Planning",fr:"Planification",en:"Planning",de:"Planung"},slugs:["events","artists","contracts","staff","tasks","rosters"]},
- {key:"finance",title:{nl:"Financiën",fr:"Finances",en:"Finance",de:"Finanzen"},slugs:["finance","invoices","banking","ticketing","reports"]},
+ {key:"planning",title:{nl:"Planning",fr:"Planification",en:"Planning",de:"Planung"},slugs:["events","artists","contracts","staff","tasks","rosters","timesheets"]},
+ {key:"finance",title:{nl:"Financiën",fr:"Finances",en:"Finance",de:"Finanzen"},slugs:["finance","invoices","banking","ticketing","reports","sales"]},
  {key:"operations",title:{nl:"Operaties",fr:"Opérations",en:"Operations",de:"Betrieb"},slugs:["inventory","logistics","documents","permits"]},
  {key:"relations",title:{nl:"Relaties",fr:"Relations",en:"Relations",de:"Kontakte"},slugs:["personnel","chat","contacts","sponsors","marketing"]},
- {key:"management",title:{nl:"Beheer",fr:"Gestion",en:"Management",de:"Verwaltung"},slugs:["notifications","automations","ai","promotion-discipline","settings"]},
+ {key:"management",title:{nl:"Beheer",fr:"Gestion",en:"Management",de:"Verwaltung"},slugs:["notifications","automations","ai","promotion-discipline","settings","profile"]},
 ] as const
 
 export function administrationRoute(slug:string):string {
