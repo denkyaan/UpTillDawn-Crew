@@ -1,4 +1,4 @@
-name: Cleanup Actions History
+name: Cleanup
 
 on:
   workflow_dispatch:
