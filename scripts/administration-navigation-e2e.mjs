@@ -54,6 +54,9 @@ try{
       assert.equal(await page.locator(`[data-administration-category="${category}"]`).getAttribute('aria-expanded'),'false',slug+' drawer did not close after navigation')
       await page.locator(`[data-administration-category="${category}"]`).click()
       assert.equal(await page.locator(`[data-administration-subtab="${slug}"]`).getAttribute('aria-current'),'page',slug+' lost active subtab')
+      // Restore the closed-drawer state before testing the next subtab.
+      await page.locator(`[data-administration-category="${category}"]`).click()
+      assert.equal(await page.locator(`[data-administration-category="${category}"]`).getAttribute('aria-expanded'),'false',slug+' drawer did not close on toggle')
       assert.equal(await page.locator('[data-layout-key]').count(),0,slug+' rendered personnel navigation')
       assert.ok(new URL(page.url()).pathname.startsWith('/portals/administration/'),slug+' left the administration portal')
       assert.ok(!/application error|internal server error|this page could not be found/i.test(await page.locator('body').innerText()))
