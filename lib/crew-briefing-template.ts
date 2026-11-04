@@ -50,7 +50,7 @@ export interface CrewBriefingEventContext {
 }
 
 function safeBriefingValue(value: string | null | undefined): string | undefined {
- const clean=value?.replace(/[\\r\\n\\t]+/g,' ').trim()
+ const clean=value?.replace(/[\r\n\t]+/g,' ').trim()
  return clean || undefined
 }
 
