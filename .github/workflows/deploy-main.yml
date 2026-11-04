@@ -1,0 +1,76 @@
+name: Deploy Main Test App
+
+on:
+  workflow_run:
+    workflows: ["Fast Change Validation"]
+    types: [completed]
+    branches: [main]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: uptilldawn-main-app
+  cancel-in-progress: true
+
+jobs:
+  deploy:
+    if: github.event.workflow_run.conclusion == 'success' && github.event.workflow_run.event == 'push' && github.event.workflow_run.head_branch == 'main'
+    runs-on: ubuntu-26.04-arm
+    timeout-minutes: 30
+    environment: main-test
+    env:
+      NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.MAIN_SUPABASE_URL }}
+      NEXT_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.MAIN_SUPABASE_ANON_KEY }}
+      NEXT_PUBLIC_APP_URL: https://uptilldawn-main.workers.dev
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+    steps:
+      - name: Checkout exact validated commit
+        uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5.1.0
+        with:
+          ref: ${{ github.event.workflow_run.head_sha }}
+
+      - name: Validate isolated main configuration
+        shell: bash
+        run: |
+          set -euo pipefail
+          for key in NEXT_PUBLIC_SUPABASE_URL NEXT_PUBLIC_SUPABASE_ANON_KEY CLOUDFLARE_API_TOKEN CLOUDFLARE_ACCOUNT_ID; do
+            if [ -z "${!key:-}" ]; then
+              echo "::error::Missing required main-test secret: $key"
+              exit 1
+            fi
+          done
+          case "$NEXT_PUBLIC_SUPABASE_URL" in
+            https://eakoavcieossazqzplke.supabase.co|https://npbjrtiolqperdgljnhi.supabase.co)
+              echo "::error::Main test app must use its own database, not production or retired staging"
+              exit 1 ;;
+            https://*.supabase.co) ;;
+            *) echo "::error::Invalid main test Supabase URL"; exit 1 ;;
+          esac
+
+      - name: Set up Node.js
+        uses: actions/setup-node@a0853c24544627f65ddf259abe73b1d18a591444 # v5.0.0
+        with:
+          node-version: 24
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci --prefer-offline --no-audit --no-fund
+
+      - name: Build main app Worker
+        run: npm run build:cloudflare
+
+      - name: Validate Worker bundle
+        run: npx wrangler deploy --dry-run --config wrangler.main.jsonc
+
+      - name: Deploy main test Worker only
+        run: npx wrangler deploy --config wrangler.main.jsonc
+
+      - name: Smoke test main app
+        shell: bash
+        run: |
+          set -euo pipefail
+          code="$(curl --retry 3 --retry-delay 2 -L -sS -o /tmp/main-home.html -w '%{http_code}' "$NEXT_PUBLIC_APP_URL/")"
+          test "$code" -ge 200 && test "$code" -lt 400
+          test -s /tmp/main-home.html
