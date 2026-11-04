@@ -2,7 +2,7 @@ name: Contract PDF renderer
 
 on:
   push:
-    branches: [staging]
+    branches: [main]
     paths:
       - 'services/contract-pdf-renderer/**'
       - '.github/workflows/contract-pdf-renderer.yml'
