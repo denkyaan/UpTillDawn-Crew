@@ -11,7 +11,7 @@ async function context(){
  if(!user)redirect("/login")
  if((!user.approved||user.account_blocked)&&!user.isOwner)redirect("/portals")
  const db=await createClient()
- if(!user.isAdmin&&!user.isOwner){
+ if(!user.realIsAdmin&&!user.isOwner){
   const {data,error}=await db.rpc("upt_my_portal_assignments")
   if(error||!canOpenPortal("administration",(data??[]) as PortalAssignment[],{approved:user.approved,blocked:Boolean(user.account_blocked)}))redirect("/portals")
  }
@@ -42,7 +42,7 @@ async function shiftAction(form:FormData){
  const action=String(form.get("action")??"")
  if(!["target","apply"].includes(action))throw new Error("Unknown roster action")
  const rpc=action==="target"?"upt_admin_roster_target":"upt_admin_roster_apply"
- if(rpc==="upt_admin_roster_apply"&&!user.isAdmin&&!user.isOwner)throw new Error("Admin required")
+ if(rpc==="upt_admin_roster_apply"&&!user.realIsAdmin&&!user.isOwner)throw new Error("Admin required")
  if(rpc==="upt_admin_roster_target"&&!/^[0-9a-f]{8}(?:-[0-9a-f]{4}){3}-[0-9a-f]{12}$/i.test(shift))throw new Error("Invalid shift identifier")
  const args=rpc==="upt_admin_roster_target"?{p_id:id,p_shift:shift}:{p_id:id}
  const {error}=await (db as unknown as SupabaseClient).rpc(rpc,args)
@@ -58,7 +58,7 @@ async function changeStatus(form:FormData){
  if(!["submit","approve","reject"].includes(action))throw new Error("Unknown roster status action")
  const note=String(form.get("note")??"").trim()
  if(note.length>2000||(action==="reject"&&!note))throw new Error("Rejection requires a reason")
- if(action!=="submit"&&!user.isAdmin&&!user.isOwner)throw new Error("Admin required for roster review")
+ if(action!=="submit"&&!user.realIsAdmin&&!user.isOwner)throw new Error("Admin required for roster review")
  if(action!=="submit"){
   const {data:proposal,error:lookupError}=await (db as unknown as SupabaseClient).from("admin_roster_proposals").select("created_by,status").eq("id",id).maybeSingle()
   if(lookupError||!proposal||proposal.status!=="submitted")throw new Error("Roster is not awaiting review")
@@ -95,9 +95,9 @@ export default async function RostersPage(){
    {p.details&&<p className="text-sm">{p.details}</p>}{p.review_note&&<p className="text-sm">{p.review_note}</p>}
    {p.status==="draft"&&<form action={shiftAction} className="flex flex-wrap gap-2"><input type="hidden" name="id" value={p.id}/><select required name="shift" defaultValue={p.target_shift_id??""} className="min-w-48 flex-1 rounded-lg border bg-background p-2"><option value="" disabled>Shift</option>{(shifts.data??[]).filter(x=>x.event_id===p.event_id).map(x=><option key={x.id} value={x.id}>{new Date(x.scheduled_start).toLocaleString(locale)} – {new Date(x.scheduled_end).toLocaleString(locale)}</option>)}</select><button name="action" value="target" className="rounded-lg border px-3 py-2 text-sm">{l.target}</button></form>}
    {p.applied_at&&<p className="text-sm text-muted-foreground">{l.applied}</p>}
-   {p.status==="approved"&&p.target_shift_id&&!p.applied_at&&(user.isAdmin||user.isOwner)&&<form action={shiftAction}><input type="hidden" name="id" value={p.id}/><button name="action" value="apply" className="rounded-lg bg-violet-600 px-3 py-2 text-sm text-white">{l.apply}</button></form>}
+   {p.status==="approved"&&p.target_shift_id&&!p.applied_at&&(user.realIsAdmin||user.isOwner)&&<form action={shiftAction}><input type="hidden" name="id" value={p.id}/><button name="action" value="apply" className="rounded-lg bg-violet-600 px-3 py-2 text-sm text-white">{l.apply}</button></form>}
    {p.status==="draft"&&<form action={changeStatus}><input type="hidden" name="id" value={p.id}/><button name="action" value="submit" className="rounded-lg bg-violet-600 px-4 py-2 text-sm text-white">{l.submit}</button></form>}
-   {p.status==="submitted"&&(user.isAdmin||user.isOwner)&&p.created_by!==user.id&&<form action={changeStatus} className="flex flex-wrap gap-2"><input type="hidden" name="id" value={p.id}/><input name="note" placeholder={l.note} className="min-w-48 flex-1 rounded-lg border bg-background p-2"/><button name="action" value="approve" className="rounded-lg bg-violet-600 px-3 py-2 text-sm text-white">{l.approve}</button><button name="action" value="reject" className="rounded-lg border px-3 py-2 text-sm">{l.reject}</button></form>}
+   {p.status==="submitted"&&(user.realIsAdmin||user.isOwner)&&p.created_by!==user.id&&<form action={changeStatus} className="flex flex-wrap gap-2"><input type="hidden" name="id" value={p.id}/><input name="note" placeholder={l.note} className="min-w-48 flex-1 rounded-lg border bg-background p-2"/><button name="action" value="approve" className="rounded-lg bg-violet-600 px-3 py-2 text-sm text-white">{l.approve}</button><button name="action" value="reject" className="rounded-lg border px-3 py-2 text-sm">{l.reject}</button></form>}
   </article>)}</section>
  </main>
 }
