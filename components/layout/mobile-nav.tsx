@@ -165,7 +165,7 @@ export function MobileBottomNav({
  useEffect(()=>{const onKey=(event:KeyboardEvent)=>{if(event.key==="Escape")setSelectedGroup({key:"home",pathname})};window.addEventListener("keydown",onKey);return()=>window.removeEventListener("keydown",onKey)},[pathname])
  useEffect(()=>{window.dispatchEvent(new CustomEvent("uptilldawn-navigation-expanded",{detail:{open:activeGroup!=="home"&&!tourPreview}}));return()=>{window.dispatchEvent(new CustomEvent("uptilldawn-navigation-expanded",{detail:{open:false}}))}},[activeGroup,tourPreview])
  if(!tourPreview)return <nav aria-label={{nl:"Mobiele navigatie",en:"Mobile navigation",fr:"Navigation mobile",de:"Mobile Navigation"}[trainingLocale]} className="fixed inset-x-0 bottom-0 z-50 border-t border-border bg-card pb-[env(safe-area-inset-bottom)] lg:hidden">
-  {activeGroup!=="home"&&<div id="role-navigation-subtabs" className="border-b bg-card p-2">
+  {activeGroup!=="home"&&<div id="role-navigation-subtabs" role="region" aria-label={{nl:"Subnavigatie",fr:"Sous-navigation",en:"Subnavigation",de:"Unternavigation"}[trainingLocale]} className="border-b bg-card p-2">
    <div className="grid max-h-[38dvh] grid-cols-3 gap-1.5 overflow-x-hidden overflow-y-auto overscroll-contain">{selectedEntries.map(item=><NavItem key={item.key} item={item}/>)}</div>
   </div>}
   <div className="grid gap-0.5 px-1 py-2" style={{gridTemplateColumns:`repeat(${availableGroups.length},minmax(0,1fr))`}}>
