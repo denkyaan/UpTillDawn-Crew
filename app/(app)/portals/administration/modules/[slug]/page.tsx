@@ -64,10 +64,9 @@ export default async function AdministrationModulePage({params,searchParams}:{pa
  if(!current)redirect("/login")
  if((!current.approved||Boolean(current.account_blocked))&&!current.isOwner)redirect("/portals")
  const supabase=await createClient()
- if(!current.realIsAdmin&&!current.isOwner){
-  const {data,error}=await supabase.rpc("upt_my_portal_assignments")
-  if(error||!canOpenPortal("administration",(data??[]) as PortalAssignment[],{approved:current.approved,blocked:current.account_blocked===true}))redirect("/portals")
- }
+ const {data,error}=await supabase.rpc("upt_my_portal_assignments")
+ if(error&&!current.isAdmin && !current.isOwner)redirect("/portals")
+ if(!current.isAdmin && !current.isOwner&&!canOpenPortal("administration",(data??[]) as PortalAssignment[],{approved:current.approved,blocked:current.account_blocked===true}))redirect("/portals")
  const parsedPage=Number(requestedPage)
  const inventoryPage=Number.isSafeInteger(parsedPage)&&parsedPage>0&&parsedPage<=10000?parsedPage:1
  const inventoryPageSize=100
