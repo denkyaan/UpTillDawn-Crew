@@ -39,3 +39,32 @@ AFSLUITEN & AFTEKENEN
 
 VRAGEN & WIJZIGINGEN
 [Contactkanaal voor vragen en wijzigingen tijdens het evenement]`
+
+export interface CrewBriefingEventContext {
+ name?: string | null
+ date?: string | null
+ startTime?: string | null
+ endTime?: string | null
+ address?: string | null
+ workplace?: string | null
+}
+
+function safeBriefingValue(value: string | null | undefined): string | undefined {
+ const clean=value?.replace(/[\\r\\n\\t]+/g,' ').trim()
+ return clean || undefined
+}
+
+/** Pre-fill only verified event data; unresolved placeholders remain visible for review. */
+export function generateCrewBriefingDraft(context: CrewBriefingEventContext) {
+ const name=safeBriefingValue(context.name)
+ const replacements: Array<[string,string|undefined]>=[
+  ['Evenement: [naam]',name?`Evenement: ${name}`:undefined],
+  ['Datum: [datum]',safeBriefingValue(context.date)?.replace(/^/,'Datum: ')],
+  ['Eventuren: [start – einde]',context.startTime&&context.endTime?`Eventuren: ${safeBriefingValue(context.startTime)} – ${safeBriefingValue(context.endTime)}`:undefined],
+  ['Adres: [locatie]',safeBriefingValue(context.address)?.replace(/^/,'Adres: ')],
+  ['[Per werkpost de taken, hulpmiddelen en escalatieprocedure]',safeBriefingValue(context.workplace)?.replace(/^/,'Werkpost: ')]
+ ]
+ let body: string=CREW_BRIEFING_TEMPLATE_BODY
+ for(const [placeholder,replacement] of replacements)if(replacement)body=body.replace(placeholder,replacement)
+ return {title:name?CREW_BRIEFING_TEMPLATE_TITLE.replace('[evenement]',name):CREW_BRIEFING_TEMPLATE_TITLE,body}
+}
