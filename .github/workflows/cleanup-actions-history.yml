@@ -11,7 +11,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 30
     steps:
-      - name: Retain newest completed run per workflow and branch
+      - name: Retain latest main run per workflow; remove obsolete staging history
         env:
           GH_TOKEN: ${{ github.token }}
           REPO: ${{ github.repository }}
@@ -44,7 +44,6 @@ jobs:
                 [ "$kept_main" -eq 1 ] && continue
               elif [ "$branch" = "staging" ]; then
                 kept_staging=$((kept_staging + 1))
-                [ "$kept_staging" -eq 1 ] && continue
               else
                 continue
               fi
@@ -56,7 +55,7 @@ jobs:
                 failures=$((failures + 1))
               fi
             done <<< "$entries"
-            echo "Workflow $workflow: deleted $removed old completed runs"
+            echo "Workflow $workflow: deleted $removed old completed runs (including retired staging)"
           done <<< "$workflows"
           if [ "$failures" -gt 0 ]; then
             echo "::error::Cleanup had $failures API or deletion errors"
