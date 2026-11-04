@@ -42,3 +42,12 @@ test('counterparty records stay in relations when navigating to details',()=>{
  assert.equal(administrationCategoryForPath('/portals/administration/counterparties'),'relations')
  assert.equal(administrationCategoryForPath('/portals/administration/counterparties/123'),'relations')
 })
+
+test('legacy administration module notifications stay inside the administration portal',()=>{
+ for(const slug of ['invoices','banking','ticketing','inventory','reports','documents','artists','contracts']){
+  assert.equal(administrationNotificationHref('/portals/administration/'+slug),administrationRoute(slug),slug)
+  assert.equal(administrationNotificationHref('/portals/administration/'+slug+'/record?filter=open#details'),administrationRoute(slug)+'/record?filter=open#details',slug)
+ }
+ assert.equal(administrationNotificationHref('/portals/administration/invoices-other'),'/portals/administration/invoices-other')
+ assert.equal(administrationNotificationHref('/portals/promotion/tasks'),null)
+})
