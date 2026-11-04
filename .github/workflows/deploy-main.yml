@@ -16,7 +16,7 @@ concurrency:
 jobs:
   deploy:
     if: github.event.workflow_run.conclusion == 'success' && github.event.workflow_run.event == 'push' && github.event.workflow_run.head_branch == 'main'
-    runs-on: ubuntu-26.04-arm
+    runs-on: ubuntu-latest
     timeout-minutes: 30
     environment: main-test
     env:
@@ -26,6 +26,11 @@ jobs:
       CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
       CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
     steps:
+      - name: Report main deployment context
+        run: |
+          echo "Main test deploy started for validated commit ${{ github.event.workflow_run.head_sha }}"
+          echo "Environment: main-test; Worker: uptilldawn-main"
+
       - name: Checkout exact validated commit
         uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5.1.0
         with:
