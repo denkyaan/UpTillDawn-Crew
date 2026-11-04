@@ -1,5 +1,7 @@
 # Full staging acceptance checkpoint
 
+> **Historical checkpoint only.** The staging environment and its dedicated workflow have been retired. This file records October 2026 acceptance iterations; it does not trigger CI, certify current production readiness, or authorize deployment. Use the five active GitHub Actions workflows for current results.
+
 Date: 2026-10-30 (Europe/Brussels)
 
 - Application implementation commit: b7c921723bfa6a7e9065d22af26a7de3e9619826.
