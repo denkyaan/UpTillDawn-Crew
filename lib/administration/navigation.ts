@@ -21,6 +21,7 @@ export function administrationCategoryForPath(pathname:string):string {
  if(pathname.startsWith("/portals/administration/modules/invoices/"))return "finance"
  if(pathname==="/portals/administration/profile"||pathname.startsWith("/portals/administration/profile/"))return "management"
  if(pathname==="/portals/administration/timesheets"||pathname.startsWith("/portals/administration/timesheets/"))return "planning"
+ if(["/portals/administration/counterparties","/portals/administration/contacts"].includes(pathname))return "relations"
  return administrationNavigationGroups.find(group=>group.slugs.some(slug=>
   pathname===administrationRoute(slug)||(slug!=="dashboard"&&pathname.startsWith(administrationRoute(slug)+"/"))
  ))?.key??"overview"
@@ -32,19 +33,7 @@ export function administrationNotificationHref(value:string|null):string|null {
  let url:URL
  try{url=new URL(value,"https://uptilldawn.local")}catch{return null}
  if(url.origin!=="https://uptilldawn.local")return null
- const legacyModuleRoutes:Record<string,string>={
-  "/portals/administration/invoices":"invoices",
-  "/portals/administration/banking":"banking",
-  "/portals/administration/ticketing":"ticketing",
-  "/portals/administration/inventory":"inventory",
-  "/portals/administration/reports":"reports",
-  "/portals/administration/documents":"documents",
-  "/portals/administration/artists":"artists",
-  "/portals/administration/contracts":"contracts",
- }
- for(const [legacy,slug] of Object.entries(legacyModuleRoutes)){
-  if(url.pathname===legacy||url.pathname.startsWith(legacy+"/"))return administrationRoute(slug)+url.pathname.slice(legacy.length)+url.search+url.hash
- }
+ if(url.pathname==="/portals/administration/invoices"||url.pathname.startsWith("/portals/administration/invoices/"))return administrationRoute("invoices")+url.pathname.slice("/portals/administration/invoices".length)+url.search+url.hash
  if(url.pathname==="/portals/administration"||url.pathname.startsWith("/portals/administration/"))return value
  // Other portal URLs must never be followed from an administration notification.
  if(url.pathname.startsWith("/portals/"))return null
