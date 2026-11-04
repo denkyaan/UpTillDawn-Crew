@@ -1,10 +1,7 @@
 name: Deploy Cloudflare
 
 on:
-  workflow_run:
-    workflows: ["CI"]
-    types: [completed]
-    branches: [main]
+  workflow_dispatch:
 
 concurrency:
   group: uptilldawn-production
@@ -12,7 +9,7 @@ concurrency:
 
 jobs:
   deploy:
-    if: github.event.workflow_run.conclusion == 'success' && vars.ENABLE_AUTOMATIC_PRODUCTION_DEPLOY == 'true'
+    if: github.ref == 'refs/heads/main'
     runs-on: ubuntu-26.04-arm
     environment: production
     permissions:
@@ -29,14 +26,13 @@ jobs:
       - name: Checkout
         uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5.1.0
         with:
-          ref: ${{ github.event.workflow_run.head_sha }}
+          ref: ${{ github.sha }}
 
-      - name: Verify automatic deploy source
+      - name: Verify release source
         shell: bash
         run: |
-          test "${{ github.event.workflow_run.head_branch }}" = "main"
-          test "${{ github.event.workflow_run.conclusion }}" = "success"
-          echo "Deploying tested main commit ${{ github.event.workflow_run.head_sha }}."
+          test "${{ github.ref }}" = "refs/heads/main"
+          echo "Production release requested for ${{ github.sha }}."
 
       - name: Validate required production secrets
         shell: bash
