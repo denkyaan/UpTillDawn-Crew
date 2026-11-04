@@ -74,6 +74,216 @@ jobs:
               exit 1
             fi
           done
+          # Reject invalid HTTP header characters before Wrangler receives the token.
+          # Never print secret contents, even when malformed.
+          if [[ "$CLOUDFLARE_API_TOKEN" == *
+            https://eakoavcieossazqzplke.supabase.co)
+              echo "::error::Main test app must not use production"
+              exit 1 ;;
+            https://*.supabase.co) ;;
+            *) echo "::error::Invalid main test Supabase URL"; exit 1 ;;
+          esac
+
+      - name: Set up Node.js
+        uses: actions/setup-node@a0853c24544627f65ddf259abe73b1d18a591444 # v5.0.0
+        with:
+          node-version: 24
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci --prefer-offline --no-audit --no-fund
+
+      - name: Build main app Worker
+        run: npm run build:cloudflare
+
+      - name: Validate Worker bundle
+        run: npx wrangler deploy --dry-run --config wrangler.main.jsonc
+
+      - name: Deploy main test Worker only
+        run: npx wrangler deploy --config wrangler.main.jsonc
+
+      - name: Smoke test main app
+        shell: bash
+        run: |
+          set -euo pipefail
+          for path in / /login/admin /login/staff /manifest.webmanifest; do
+            code="$(curl --retry 5 --retry-all-errors --retry-delay 2 -L -sS -o /tmp/main-smoke-body -w '%{http_code}' "${NEXT_PUBLIC_APP_URL}${path}")"
+            echo "Main test ${path}: HTTP ${code}"
+            if [ "$code" -lt 200 ] || [ "$code" -ge 400 ] || [ ! -s /tmp/main-smoke-body ]; then
+              echo "::error::Main app smoke test failed at ${path} (HTTP ${code})"
+              exit 1
+            fi
+          done
+
+      - name: Retire obsolete staging Worker after main passes smoke tests
+        shell: bash
+        run: |
+          set -euo pipefail
+          # Keep the repurposed Supabase test database. Delete only the obsolete
+          # Cloudflare staging Worker after the replacement is proven reachable.
+          if npx wrangler delete --name uptilldawn-crew-staging --force; then
+            echo "Obsolete staging Worker removed."
+          else
+            echo "::warning::Could not retire old staging Worker automatically; main app deployment remains valid."
+          fi
+\\r'* || "$CLOUDFLARE_API_TOKEN" == *
+            https://eakoavcieossazqzplke.supabase.co)
+              echo "::error::Main test app must not use production"
+              exit 1 ;;
+            https://*.supabase.co) ;;
+            *) echo "::error::Invalid main test Supabase URL"; exit 1 ;;
+          esac
+
+      - name: Set up Node.js
+        uses: actions/setup-node@a0853c24544627f65ddf259abe73b1d18a591444 # v5.0.0
+        with:
+          node-version: 24
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci --prefer-offline --no-audit --no-fund
+
+      - name: Build main app Worker
+        run: npm run build:cloudflare
+
+      - name: Validate Worker bundle
+        run: npx wrangler deploy --dry-run --config wrangler.main.jsonc
+
+      - name: Deploy main test Worker only
+        run: npx wrangler deploy --config wrangler.main.jsonc
+
+      - name: Smoke test main app
+        shell: bash
+        run: |
+          set -euo pipefail
+          for path in / /login/admin /login/staff /manifest.webmanifest; do
+            code="$(curl --retry 5 --retry-all-errors --retry-delay 2 -L -sS -o /tmp/main-smoke-body -w '%{http_code}' "${NEXT_PUBLIC_APP_URL}${path}")"
+            echo "Main test ${path}: HTTP ${code}"
+            if [ "$code" -lt 200 ] || [ "$code" -ge 400 ] || [ ! -s /tmp/main-smoke-body ]; then
+              echo "::error::Main app smoke test failed at ${path} (HTTP ${code})"
+              exit 1
+            fi
+          done
+
+      - name: Retire obsolete staging Worker after main passes smoke tests
+        shell: bash
+        run: |
+          set -euo pipefail
+          # Keep the repurposed Supabase test database. Delete only the obsolete
+          # Cloudflare staging Worker after the replacement is proven reachable.
+          if npx wrangler delete --name uptilldawn-crew-staging --force; then
+            echo "Obsolete staging Worker removed."
+          else
+            echo "::warning::Could not retire old staging Worker automatically; main app deployment remains valid."
+          fi
+\\n'* ]]; then
+            echo "::error::CLOUDFLARE_API_TOKEN contains a newline or carriage return. Replace the repository secret with the single-line raw API token (not a pasted JSON block)."
+            exit 1
+          fi
+          if [[ "$CLOUDFLARE_ACCOUNT_ID" == *
+            https://eakoavcieossazqzplke.supabase.co)
+              echo "::error::Main test app must not use production"
+              exit 1 ;;
+            https://*.supabase.co) ;;
+            *) echo "::error::Invalid main test Supabase URL"; exit 1 ;;
+          esac
+
+      - name: Set up Node.js
+        uses: actions/setup-node@a0853c24544627f65ddf259abe73b1d18a591444 # v5.0.0
+        with:
+          node-version: 24
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci --prefer-offline --no-audit --no-fund
+
+      - name: Build main app Worker
+        run: npm run build:cloudflare
+
+      - name: Validate Worker bundle
+        run: npx wrangler deploy --dry-run --config wrangler.main.jsonc
+
+      - name: Deploy main test Worker only
+        run: npx wrangler deploy --config wrangler.main.jsonc
+
+      - name: Smoke test main app
+        shell: bash
+        run: |
+          set -euo pipefail
+          for path in / /login/admin /login/staff /manifest.webmanifest; do
+            code="$(curl --retry 5 --retry-all-errors --retry-delay 2 -L -sS -o /tmp/main-smoke-body -w '%{http_code}' "${NEXT_PUBLIC_APP_URL}${path}")"
+            echo "Main test ${path}: HTTP ${code}"
+            if [ "$code" -lt 200 ] || [ "$code" -ge 400 ] || [ ! -s /tmp/main-smoke-body ]; then
+              echo "::error::Main app smoke test failed at ${path} (HTTP ${code})"
+              exit 1
+            fi
+          done
+
+      - name: Retire obsolete staging Worker after main passes smoke tests
+        shell: bash
+        run: |
+          set -euo pipefail
+          # Keep the repurposed Supabase test database. Delete only the obsolete
+          # Cloudflare staging Worker after the replacement is proven reachable.
+          if npx wrangler delete --name uptilldawn-crew-staging --force; then
+            echo "Obsolete staging Worker removed."
+          else
+            echo "::warning::Could not retire old staging Worker automatically; main app deployment remains valid."
+          fi
+\\r'* || "$CLOUDFLARE_ACCOUNT_ID" == *
+            https://eakoavcieossazqzplke.supabase.co)
+              echo "::error::Main test app must not use production"
+              exit 1 ;;
+            https://*.supabase.co) ;;
+            *) echo "::error::Invalid main test Supabase URL"; exit 1 ;;
+          esac
+
+      - name: Set up Node.js
+        uses: actions/setup-node@a0853c24544627f65ddf259abe73b1d18a591444 # v5.0.0
+        with:
+          node-version: 24
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci --prefer-offline --no-audit --no-fund
+
+      - name: Build main app Worker
+        run: npm run build:cloudflare
+
+      - name: Validate Worker bundle
+        run: npx wrangler deploy --dry-run --config wrangler.main.jsonc
+
+      - name: Deploy main test Worker only
+        run: npx wrangler deploy --config wrangler.main.jsonc
+
+      - name: Smoke test main app
+        shell: bash
+        run: |
+          set -euo pipefail
+          for path in / /login/admin /login/staff /manifest.webmanifest; do
+            code="$(curl --retry 5 --retry-all-errors --retry-delay 2 -L -sS -o /tmp/main-smoke-body -w '%{http_code}' "${NEXT_PUBLIC_APP_URL}${path}")"
+            echo "Main test ${path}: HTTP ${code}"
+            if [ "$code" -lt 200 ] || [ "$code" -ge 400 ] || [ ! -s /tmp/main-smoke-body ]; then
+              echo "::error::Main app smoke test failed at ${path} (HTTP ${code})"
+              exit 1
+            fi
+          done
+
+      - name: Retire obsolete staging Worker after main passes smoke tests
+        shell: bash
+        run: |
+          set -euo pipefail
+          # Keep the repurposed Supabase test database. Delete only the obsolete
+          # Cloudflare staging Worker after the replacement is proven reachable.
+          if npx wrangler delete --name uptilldawn-crew-staging --force; then
+            echo "Obsolete staging Worker removed."
+          else
+            echo "::warning::Could not retire old staging Worker automatically; main app deployment remains valid."
+          fi
+\\n'* ]]; then
+            echo "::error::CLOUDFLARE_ACCOUNT_ID contains a newline or carriage return. Replace the repository secret with the plain account ID."
+            exit 1
+          fi
           case "$NEXT_PUBLIC_SUPABASE_URL" in
             https://eakoavcieossazqzplke.supabase.co)
               echo "::error::Main test app must not use production"
