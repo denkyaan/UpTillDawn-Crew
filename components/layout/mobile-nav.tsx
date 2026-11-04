@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react"
 import Link from "next/link"
 import { usePathname, useRouter } from "next/navigation"
-import { LayoutDashboard, CalendarDays, Clock3, Users, MessageCircle, Settings } from "lucide-react"
+import { ChevronDown, ChevronUp, LayoutDashboard, CalendarDays, Clock3, Users, MessageCircle, Settings } from "lucide-react"
 import { NAV_ITEMS, type NavigationItem } from "@/components/layout/navigation-items"
 import { useAuth } from "@/lib/providers"
 import { cn } from "@/lib/utils"
@@ -11,6 +11,11 @@ import { getDefaultRoleUiLabel, type RoleRuleRole } from "@/lib/role-ui"
 import { featureHelp } from "@/lib/ui-field-help"
 import { useAdminSelection } from "@/lib/admin-selection-context"
 import { LANGUAGE_APPLIED_EVENT, activeUiLocale, type SupportedUiLocale } from "@/lib/locale-preferences"
+
+const ASSIGNED_EVENT_KEYS=["events","briefings","workplaces"] as const
+const STAFF_ACTIVE_SHIFT_KEYS=["operations","workplaces","briefings","tasks"] as const
+const RESPONSIBLE_ACTIVE_SHIFT_KEYS=["operations","workplaces","incidents"] as const // Help is surfaced through the incidents/help operational action
+const RESPONSIBLE_ASSIGNED_EVENT_KEYS=["events","briefings","workplaces","inventory"] as const
 
 export function MobileBottomNav({
   chatMissed=0,
@@ -33,21 +38,38 @@ export function MobileBottomNav({
   assignedEvent?:boolean
   shiftActive?:boolean
 }) {
- void assignedEvent
- void shiftActive
  const pathname=usePathname()
  const router=useRouter()
+ const [expanded,setExpanded]=useState(false)
  const [selectedGroup,setSelectedGroup]=useState<{key:string;pathname:string}|null>(null)
- const [locale,setLocale]=useState<SupportedUiLocale>("nl")
+ const [tourPreview,setTourPreview]=useState(false)
+ const [sandboxHelp,setSandboxHelp]=useState("")
+ const [trainingNavTarget,setTrainingNavTarget]=useState<string|null>(null)
+ const [trainingLocale,setTrainingLocale]=useState<SupportedUiLocale>("nl")
  const {roles,isAdmin}=useAuth()
  const adminContext=useAdminSelection()
  const roleKey:RoleRuleRole=roles.includes("admin")?"admin":roles.includes("responsible_lead")?"responsible_lead":"staff"
  const order=new Map(featureOrder.map((key,index)=>[key,index]))
- useEffect(()=>{const apply=()=>setLocale(activeUiLocale());apply();addEventListener(LANGUAGE_APPLIED_EVENT,apply);return()=>removeEventListener(LANGUAGE_APPLIED_EVENT,apply)},[])
- const items=NAV_ITEMS.filter(i=>roles.some(r=>i.roles.includes(r))&&i.key!=="shifts"&&featureVisibility[i.key]!==false).sort((a,b)=>(order.get(a.key)??999)-(order.get(b.key)??999))
+ useEffect(()=>{const on=(e:Event)=>{const detail=(e as CustomEvent<{active?:boolean}>).detail;const active=Boolean(detail?.active);setTourPreview(active);if(!active)setExpanded(false)};addEventListener("uptilldawn-tour-preview",on);return()=>removeEventListener("uptilldawn-tour-preview",on)},[])
+ useEffect(()=>{const load=()=>{try{const s=JSON.parse(sessionStorage.getItem("uptilldawn-training-workflow-v3")||"{}");setTrainingNavTarget(s.navTarget||null)}catch{setTrainingNavTarget(null)}};const id=requestAnimationFrame(load);return()=>cancelAnimationFrame(id)},[pathname])
+ useEffect(()=>{const on=(e:Event)=>setTrainingNavTarget((e as CustomEvent<{target?:string}>).detail?.target||null);addEventListener("uptilldawn-training-nav-target",on);return()=>removeEventListener("uptilldawn-training-nav-target",on)},[])
+ useEffect(()=>{const apply=()=>setTrainingLocale(activeUiLocale());apply();addEventListener(LANGUAGE_APPLIED_EVENT,apply);return()=>removeEventListener(LANGUAGE_APPLIED_EVENT,apply)},[])
+
+ // During the guided tour expose the complete role navigation regardless of
+ // event/shift assignment. This is preview-only; backend permissions remain unchanged.
+ const items=NAV_ITEMS.filter(i=>{
+   if(!roles.some(r=>i.roles.includes(r))) return false
+   if(i.key==="shifts") return false
+   if(!tourPreview&&Object.prototype.hasOwnProperty.call(featureVisibility,i.key)&&!featureVisibility[i.key]) return false
+   return true
+ }).sort((a,b)=>(order.get(a.key)??999)-(order.get(b.key)??999))
+
  const hrefFor=(item:NavigationItem)=>{
-  const base=item.href==='/'&&isAdmin?'/admin':item.href
-  return isAdmin?adminContext.href(base):base
+   const base=item.href==='/'&&isAdmin?'/admin':item.href
+   const href=isAdmin?adminContext.href(base):base
+   if(!tourPreview)return href
+   const join=href.includes("?")?"&":"?"
+   return href+join+"tour=1"
  }
  const isActive=(item:NavigationItem)=>{
    const href=hrefFor(item)
@@ -55,34 +77,75 @@ export function MobileBottomNav({
    return path==='/'?pathname==='/':pathname===path||pathname.startsWith(path+'/')
  }
 
+ const contextualKeys=tourPreview?[]:roleKey==="staff"
+   ? shiftActive
+     ? STAFF_ACTIVE_SHIFT_KEYS
+     : assignedEvent
+       ? ASSIGNED_EVENT_KEYS
+       : []
+   : roleKey==="responsible_lead"
+     ? shiftActive
+       ? RESPONSIBLE_ACTIVE_SHIFT_KEYS
+       : assignedEvent
+         ? RESPONSIBLE_ASSIGNED_EVENT_KEYS
+         : []
+     : []
+
+ const contextualItems=contextualKeys
+   .map(key=>items.find(item=>item.key===key))
+   .filter((item):item is NavigationItem=>Boolean(item))
+
+ const activeIndex=items.findIndex(isActive)
+ const fallbackItems=items.length<=3
+   ? items
+   : activeIndex<=0
+     ? items.slice(0,3)
+     : activeIndex>=items.length-1
+       ? items.slice(-3)
+       : items.slice(activeIndex-1,activeIndex+2)
+ const compactItems=contextualItems.length?contextualItems:fallbackItems
+
  const badgeCount=(key:string)=>{
    const activityCount=key==="chat"?chatMissed:key==="incidents"?incidentMissed:key==="tasks"?taskMissed:0
    return Math.max(activityCount,notificationFeatureCounts[key]??0)
  }
 
- const NavItem=({item}:{item:NavigationItem})=>{
+ const NavItem=({item,expandedItem=false}:{item:NavigationItem;expandedItem?:boolean})=>{
    const href=hrefFor(item)
    const active=isActive(item)
    const Icon=item.icon
    const count=badgeCount(item.key)
-   const label=item.key==="incidents"?({nl:"Incidenten",fr:"Incidents",en:"Incidents",de:"Vorfälle"} as const)[locale]:item.key==="help"?({nl:"Helpcentrum",fr:"Centre d’aide",en:"Help centre",de:"Hilfezentrum"} as const)[locale]:featureLabels[item.key] || getDefaultRoleUiLabel(roleKey,item.key,item.label)
+   const label=item.key==="incidents"?({nl:"Incidenten",fr:"Incidents",en:"Incidents",de:"Vorfälle"} as const)[trainingLocale]:item.key==="help"?({nl:"Helpcentrum",fr:"Centre d’aide",en:"Help centre",de:"Hilfezentrum"} as const)[trainingLocale]:featureLabels[item.key] || getDefaultRoleUiLabel(roleKey,item.key,item.label)
    const help=featureHelp(item.key,label)
+   const trainingLocked=tourPreview&&Boolean(trainingNavTarget)&&trainingNavTarget!==item.key
    return <Link
     data-layout-key={item.key}
-    href={href}
+    href={trainingLocked?"#":href}
+    aria-disabled={trainingLocked}
     title={help.description}
     aria-description={help.description}
-    onClick={()=>{setSelectedGroup({key:"home",pathname})}}
+    onClick={(event)=>{
+      if(trainingLocked){event.preventDefault();return}
+      if(tourPreview&&trainingNavTarget===item.key){try{const s=JSON.parse(sessionStorage.getItem("uptilldawn-training-workflow-v3")||"{}");sessionStorage.setItem("uptilldawn-training-workflow-v3",JSON.stringify({...s,navTarget:null}))}catch{};setTrainingNavTarget(null)}
+      setExpanded(false)
+      setSelectedGroup({key:"home",pathname})
+    }}
     className={cn(
-      "flex min-w-0 flex-1 flex-col items-center justify-center gap-1 rounded-lg px-1 py-1.5 text-[9px] font-semibold",
-      active?"bg-violet-500/10 text-violet-400":"text-muted-foreground"
+      expandedItem
+        ?"flex min-h-16 items-center gap-3 rounded-xl px-3 py-2 text-sm font-semibold"
+        :"flex min-w-0 flex-1 flex-col items-center justify-center gap-1 rounded-lg px-1 py-1.5 text-[9px] font-semibold",
+      active?"bg-violet-500/10 text-violet-400":"text-muted-foreground",
+      trainingNavTarget===item.key&&item.key!=="chat"?"ring-4 ring-violet-500 ring-inset animate-pulse":"",
+      trainingLocked?"pointer-events-auto cursor-not-allowed opacity-35":"",
     )}
    >
     <span className="relative shrink-0">
      <Icon className="h-5 w-5"/>
      {count>0&&<span className="absolute -right-3 -top-3 flex h-5 min-w-5 items-center justify-center rounded-full bg-red-600 px-1 text-[10px] font-black leading-none text-white shadow ring-2 ring-card">{count>99?"99+":count}</span>}
     </span>
-    <span className="min-w-0 max-w-full whitespace-normal break-words text-center leading-tight">{label}</span>
+    {expandedItem
+      ? <span className="min-w-0 flex-1"><span className="block whitespace-normal break-words leading-snug">{label}</span><span className="mt-0.5 block line-clamp-2 text-[10px] font-normal text-muted-foreground">{help.description}</span></span>
+      : <span className="min-w-0 max-w-full break-words text-center leading-tight">{label}</span>}
    </Link>
  }
 
@@ -100,14 +163,44 @@ export function MobileBottomNav({
  const activeGroup=selectedGroup?.pathname===pathname&&availableGroups.some(group=>group.key===selectedGroup.key)?selectedGroup.key:"home"
  const selectedEntries=availableGroups.find(group=>group.key===activeGroup)?.entries??[]
  useEffect(()=>{const onKey=(event:KeyboardEvent)=>{if(event.key==="Escape")setSelectedGroup({key:"home",pathname})};window.addEventListener("keydown",onKey);return()=>window.removeEventListener("keydown",onKey)},[pathname])
- useEffect(()=>{window.dispatchEvent(new CustomEvent("uptilldawn-navigation-expanded",{detail:{open:activeGroup!=="home"}}));return()=>{window.dispatchEvent(new CustomEvent("uptilldawn-navigation-expanded",{detail:{open:false}}))}},[activeGroup])
- return <nav aria-label={{nl:"Mobiele navigatie",en:"Mobile navigation",fr:"Navigation mobile",de:"Mobile Navigation"}[locale]} className="fixed inset-x-0 bottom-0 z-50 border-t border-border bg-card pb-[env(safe-area-inset-bottom)] lg:hidden">
+ useEffect(()=>{window.dispatchEvent(new CustomEvent("uptilldawn-navigation-expanded",{detail:{open:activeGroup!=="home"&&!tourPreview}}));return()=>{window.dispatchEvent(new CustomEvent("uptilldawn-navigation-expanded",{detail:{open:false}}))}},[activeGroup,tourPreview])
+ if(!tourPreview)return <nav aria-label={{nl:"Mobiele navigatie",en:"Mobile navigation",fr:"Navigation mobile",de:"Mobile Navigation"}[trainingLocale]} className="fixed inset-x-0 bottom-0 z-50 border-t border-border bg-card pb-[env(safe-area-inset-bottom)] lg:hidden">
   {activeGroup!=="home"&&<div id="role-navigation-subtabs" className="border-b bg-card p-2">
    <div className="grid max-h-[38dvh] grid-cols-3 gap-1.5 overflow-x-hidden overflow-y-auto overscroll-contain">{selectedEntries.map(item=><NavItem key={item.key} item={item}/>)}</div>
   </div>}
   <div className="grid gap-0.5 px-1 py-2" style={{gridTemplateColumns:`repeat(${availableGroups.length},minmax(0,1fr))`}}>
-   {availableGroups.map(group=>{const Icon=group.icon;const active=activeGroup===group.key||(activeGroup==="home"&&currentGroup===group.key);return <button type="button" key={group.key} data-role-category={group.key} aria-pressed={active} aria-label={group.labels[locale]} aria-expanded={group.key==="home"?undefined:activeGroup===group.key} aria-controls={group.key==="home"||activeGroup!==group.key?undefined:"role-navigation-subtabs"} onClick={()=>{if(group.key==="home"){setSelectedGroup(null);router.push(isAdmin?"/admin":"/");return}setSelectedGroup(previous=>({key:previous?.pathname===pathname&&previous.key===group.key?"home":group.key,pathname}))}} className={cn("flex min-w-0 flex-col items-center justify-center gap-1 rounded-lg px-0.5 py-2 text-[10px]",active?"bg-violet-500/15 text-violet-400":"text-muted-foreground")}><Icon className="h-5 w-5"/><span className="w-full min-w-0 break-words text-center leading-tight">{group.labels[locale]}</span></button>})}
+   {availableGroups.map(group=>{const Icon=group.icon;const active=activeGroup===group.key||(activeGroup==="home"&&currentGroup===group.key);return <button type="button" key={group.key} data-role-category={group.key} aria-pressed={active} aria-label={group.labels[trainingLocale]} aria-expanded={group.key==="home"?undefined:activeGroup===group.key} aria-controls={group.key==="home"||activeGroup!==group.key?undefined:"role-navigation-subtabs"} onClick={()=>{if(group.key==="home"){setSelectedGroup(null);router.push(isAdmin?"/admin":"/");return}setSelectedGroup(previous=>({key:previous?.pathname===pathname&&previous.key===group.key?"home":group.key,pathname}))}} className={cn("flex min-w-0 flex-col items-center justify-center gap-1 rounded-lg px-0.5 py-2 text-[10px]",active?"bg-violet-500/15 text-violet-400":"text-muted-foreground")}><Icon className="h-5 w-5"/><span className="w-full min-w-0 break-words text-center leading-tight">{group.labels[trainingLocale]}</span></button>})}
   </div>
  </nav>
 
+ return <>{tourPreview&&sandboxHelp&&<div className="fixed inset-x-3 bottom-[calc(4.5rem+env(safe-area-inset-bottom))] z-[170] rounded-2xl border border-violet-500/40 bg-background/95 p-4 shadow-2xl backdrop-blur"><p className="text-sm font-bold">{sandboxHelp}</p><button type="button" onClick={()=>setSandboxHelp("")} className="mt-2 rounded-lg border px-3 py-2 text-xs font-bold">{{nl:"BEGREPEN",en:"GOT IT",fr:"COMPRIS",de:"VERSTANDEN"}[trainingLocale]}</button></div>}<nav aria-label={{nl:"Mobiele navigatie",en:"Mobile navigation",fr:"Navigation mobile",de:"Mobile Navigation"}[trainingLocale]} className="fixed inset-x-0 bottom-0 z-50 min-h-14 border-t border-border bg-card/95 pb-[env(safe-area-inset-bottom)] backdrop-blur lg:hidden">
+  {expanded&&
+   <div className="absolute inset-x-0 bottom-full max-h-[60dvh] overflow-y-auto border-t border-border bg-card/98 p-3 shadow-2xl">
+    <div className="grid grid-cols-2 gap-2">
+     {items.map(item=><NavItem key={item.key} item={item} expandedItem/>)}
+    </div>
+   </div>
+  }
+
+  <div className="flex items-stretch gap-1 px-2 py-1.5">
+   <div className="flex min-w-0 flex-1 items-stretch gap-1">
+    {compactItems.map(item=><NavItem key={item.key} item={item}/>)}
+   </div>
+   {items.length>compactItems.length&&
+    <button
+     type="button"
+     aria-label={expanded?{nl:"Navigatie inklappen",en:"Collapse navigation",fr:"Réduire la navigation",de:"Navigation einklappen"}[trainingLocale]:{nl:"Navigatie uitklappen",en:"Expand navigation",fr:"Développer la navigation",de:"Navigation ausklappen"}[trainingLocale]}
+     aria-expanded={expanded}
+     onClick={()=>{setExpanded(value=>!value);if(!expanded&&trainingNavTarget){const messages={workplaces:{nl:"Open nu Werkplaatsen & shifts.",en:"Now open Workplaces & shifts.",fr:"Ouvrez maintenant Postes de travail & shifts.",de:"Öffne jetzt Arbeitsplätze & Schichten."},briefings:{nl:"Open nu Briefing.",en:"Now open Briefing.",fr:"Ouvrez maintenant Briefing.",de:"Öffne jetzt Briefing."},operations:{nl:"Open nu Mijn werkuren.",en:"Now open My work hours.",fr:"Ouvrez maintenant Mes heures de travail.",de:"Öffne jetzt Meine Arbeitszeiten."},tasks:{nl:"Open nu Taken.",en:"Now open Tasks.",fr:"Ouvrez maintenant Tâches.",de:"Öffne jetzt Aufgaben."},incidents:{nl:"Open nu Help / Incidenten.",en:"Now open Help / Incidents.",fr:"Ouvrez maintenant Aide / Incidents.",de:"Öffne jetzt Hilfe / Vorfälle."},inventory:{nl:"Open nu Inventaris.",en:"Now open Inventory.",fr:"Ouvrez maintenant Inventaire.",de:"Öffne jetzt Inventar."},guestlist:{nl:"Open nu Inkom & Guestlist.",en:"Now open Entrance & Guestlist.",fr:"Ouvrez maintenant Entrée & Guestlist.",de:"Öffne jetzt Eingang & Gästeliste."},sales:{nl:"Open nu Verkoop.",en:"Now open Sales.",fr:"Ouvrez maintenant Ventes.",de:"Öffne jetzt Verkauf."},chat:{nl:"Open nu Chats.",en:"Now open Chats.",fr:"Ouvrez maintenant Chats.",de:"Öffne jetzt Chats."},crew:{nl:"Open nu Personeel.",en:"Now open Staff.",fr:"Ouvrez maintenant Personnel.",de:"Öffne jetzt Personal."},personnel:{nl:"Open nu Goedkeuringen.",en:"Now open Approvals.",fr:"Ouvrez maintenant Approbations.",de:"Öffne jetzt Genehmigungen."},exports:{nl:"Open nu Excel.",en:"Now open Excel.",fr:"Ouvrez maintenant Excel.",de:"Öffne jetzt Excel."},platform:{nl:"Open nu Platformbeheer.",en:"Now open Platform management.",fr:"Ouvrez maintenant Gestion de la plateforme.",de:"Öffne jetzt Plattformverwaltung."},settings:{nl:"Open nu Beheer / Profiel.",en:"Now open Management / Profile.",fr:"Ouvrez maintenant Gestion / Profil.",de:"Öffne jetzt Verwaltung / Profil."}};const m=messages[trainingNavTarget as keyof typeof messages]?.[trainingLocale];if(m)setSandboxHelp(m)}}}
+     className={cn(
+       "flex w-11 shrink-0 items-center justify-center rounded-lg border border-border",
+       expanded?"bg-violet-500/10 text-violet-400":"text-muted-foreground",
+       trainingNavTarget&&!expanded?"ring-4 ring-violet-500 animate-pulse":"",
+     )}
+    >
+     {expanded?<ChevronDown className="h-5 w-5"/>:<ChevronUp className="h-5 w-5"/>}
+    </button>
+   }
+  </div>
+ </nav></>
 }
