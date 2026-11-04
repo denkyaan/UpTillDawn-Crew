@@ -13,7 +13,7 @@ test('crew briefing template covers the supplied operational briefing structure'
  assert.match(editor,/\{t.button\}/)
  assert.match(editor,/window\.confirm/)
  assert.match(page,/BriefingAnalysisFields eventName=/)
- assert.match(editor,/generateCrewBriefingDraft\(\{name:eventName\}\)/)
+ assert.match(editor,/generateCrewBriefingDraft\(\{\.\.\.context,/)
  assert.match(editor,/setBody\(draft\.body\)/)
 })
 
