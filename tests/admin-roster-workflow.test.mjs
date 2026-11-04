@@ -21,5 +21,5 @@ test('roster UI requires authentication and uses server-only review actions',asy
  assert.match(source,/upt_admin_roster_submit/)
  assert.match(source,/upt_admin_roster_review/)
  assert.match(source,/p\.created_by!==user\.id/)
- assert.match(source,/user\.isAdmin/)
+ assert.match(source,/user\.realIsAdmin/)
 })
