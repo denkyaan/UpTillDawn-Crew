@@ -100,6 +100,12 @@ jobs:
       - name: Install dependencies
         run: npm ci --prefer-offline --no-audit --no-fund
 
+      - name: Run automated unit and integration tests
+        run: npm test
+
+      - name: Check TypeScript
+        run: npm run typecheck
+
       - name: Build main app Worker
         run: npm run build:cloudflare
 
@@ -135,7 +141,7 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          for path in / /login/admin /login/staff /manifest.webmanifest; do
+          for path in / /login /login/admin /login/administration /login/promotion /login/staff /portals/administration /portals/promotion /admin /events /personnel /workplaces /chat /manifest.webmanifest; do
             code="$(curl --retry 5 --retry-all-errors --retry-delay 2 -L -sS --max-time 25 -D /tmp/main-smoke-headers -o /tmp/main-smoke-body -w '%{http_code}' "${NEXT_PUBLIC_APP_URL}${path}")"
             echo "Main test ${path}: HTTP ${code}"
             if [ "$code" -lt 200 ] || [ "$code" -ge 400 ] || [ ! -s /tmp/main-smoke-body ]; then
