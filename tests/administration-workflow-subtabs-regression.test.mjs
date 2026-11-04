@@ -9,6 +9,7 @@ for(const [slug,group] of expected){
   assert.ok(administrationNavigationGroups.find(g=>g.key===group)?.slugs.includes(slug))
   assert.equal(administrationRoute(slug),'/portals/administration/'+slug)
   assert.equal(administrationCategoryForPath(administrationRoute(slug)),group)
+  assert.equal(administrationCategoryForPath(administrationRoute(slug)+'/details'),group)
   assert.match(source,new RegExp(slug+':'))
  })
 }
