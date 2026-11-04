@@ -24,3 +24,13 @@ test('roster review enforces separation of duties server-side',()=>{
  assert.match(source,/Roster creator cannot review their own proposal/)
  assert.match(source,/Invalid roster proposal/)
 })
+
+test('target shift is verified against the proposal event and draft state',()=>{
+ assert.match(source,/proposalResult\.data\.event_id!==shiftResult\.data\.event_id/)
+ assert.match(source,/proposalResult\.data\.status!=="draft"/)
+ assert.match(source,/Shift must belong to the draft roster event/)
+})
+test('roster privilege bypass and review actions require verified admin',()=>{
+ assert.doesNotMatch(source,/user\.isAdmin/)
+ assert.match(source,/user\.realIsAdmin/)
+})
