@@ -67,7 +67,14 @@ jobs:
           done
           exit "$failed"
 
-      # The three release-contract suites run in npm test above; do not run them twice.
+      - name: PWA cross-device and offline contract
+        run: node --test tests/pwa-cross-device-offline-regression.test.mjs
+
+      - name: Six-domain release candidate acceptance
+        run: node --test tests/final-six-domain-release-candidate.test.mjs
+
+      - name: Run production-style dry run contract
+        run: node --test tests/production-dry-run-contract.test.mjs
 
       - name: Build Next.js
         run: npm run build:next
