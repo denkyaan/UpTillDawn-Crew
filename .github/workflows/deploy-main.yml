@@ -22,7 +22,7 @@ jobs:
     env:
       NEXT_PUBLIC_SUPABASE_URL: https://npbjrtiolqperdgljnhi.supabase.co
       NEXT_PUBLIC_SUPABASE_ANON_KEY: sb_publishable_zStTw3n8wZ271PehDRDvGg_rs0JOy84
-      NEXT_PUBLIC_APP_URL: https://uptilldawn-main.workers.dev
+      NEXT_PUBLIC_APP_URL: https://uptilldawn-main.uptilldawn.workers.dev
       CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
       CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
     steps:
