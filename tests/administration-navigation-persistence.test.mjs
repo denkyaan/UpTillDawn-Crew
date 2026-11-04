@@ -42,3 +42,10 @@ test('counterparty records stay in relations when navigating to details',()=>{
  assert.equal(administrationCategoryForPath('/portals/administration/counterparties'),'relations')
  assert.equal(administrationCategoryForPath('/portals/administration/counterparties/123'),'relations')
 })
+
+test('administration notification links reject literal traversal and normalize safe in-portal paths',()=>{
+ for(const value of ['/portals/administration/../promotion','/portals/administration/modules/../../promotion','/portals/administration/./../staff']){
+  assert.equal(administrationNotificationHref(value),null,value)
+ }
+ assert.equal(administrationNotificationHref('/portals/administration/modules/./tasks?view=mine#today'),'/portals/administration/modules/tasks?view=mine#today')
+})
