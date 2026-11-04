@@ -33,12 +33,13 @@ jobs:
           echo "Validation result: ${SOURCE_RESULT}"
           echo "Validation branch: ${SOURCE_BRANCH}"
           echo "Validated SHA: ${SOURCE_SHA}"
-          if [[ "${SOURCE_EVENT}" == push && "${SOURCE_RESULT}" == success && "${SOURCE_BRANCH}" == main && -n "${SOURCE_SHA}" ]]; then
+          current_sha="$(git ls-remote https://github.com/${{ github.repository }}.git refs/heads/main | cut -f1)"
+          if [[ "${SOURCE_EVENT}" == push && "${SOURCE_RESULT}" == success && "${SOURCE_BRANCH}" == main && -n "${SOURCE_SHA}" && "${SOURCE_SHA}" == "${current_sha}" ]]; then
             echo 'eligible=true' >> "$GITHUB_OUTPUT"
             echo 'Main deployment is eligible.'
           else
             echo 'eligible=false' >> "$GITHUB_OUTPUT"
-            echo 'Deployment intentionally skipped: only successful main push validation can deploy.'
+            echo 'Deployment intentionally skipped: requires successful CI for current main HEAD.'
           fi
 
   deploy:
@@ -63,21 +64,6 @@ jobs:
         uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5.1.0
         with:
           ref: ${{ github.event.workflow_run.head_sha }}
-
-      - name: Reject superseded main commits
-        shell: bash
-        env:
-          GH_TOKEN: ${{ github.token }}
-          VALIDATED_SHA: ${{ github.event.workflow_run.head_sha }}
-          REPO: ${{ github.repository }}
-        run: |
-          set -euo pipefail
-          current_sha="$(gh api "/repos/$REPO/commits/main" --jq '.sha')"
-          if [ "$VALIDATED_SHA" != "$current_sha" ]; then
-            echo "::notice::Skipping obsolete main-test deploy: validated $VALIDATED_SHA, current main $current_sha"
-            exit 1
-          fi
-          echo "Main HEAD still matches validated commit"
 
       - name: Validate isolated main configuration
         shell: bash
