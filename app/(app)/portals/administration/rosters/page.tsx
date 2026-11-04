@@ -44,6 +44,13 @@ async function shiftAction(form:FormData){
  const rpc=action==="target"?"upt_admin_roster_target":"upt_admin_roster_apply"
  if(rpc==="upt_admin_roster_apply"&&!user.realIsAdmin&&!user.isOwner)throw new Error("Admin required")
  if(rpc==="upt_admin_roster_target"&&!/^[0-9a-f]{8}(?:-[0-9a-f]{4}){3}-[0-9a-f]{12}$/i.test(shift))throw new Error("Invalid shift identifier")
+ if(rpc==="upt_admin_roster_target"){
+  const [proposalResult,shiftResult]=await Promise.all([
+   (db as unknown as SupabaseClient).from("admin_roster_proposals").select("event_id,status").eq("id",id).maybeSingle(),
+   db.from("shifts").select("event_id").eq("id",shift).maybeSingle()
+  ])
+  if(proposalResult.error||shiftResult.error||!proposalResult.data||!shiftResult.data||proposalResult.data.status!=="draft"||proposalResult.data.event_id!==shiftResult.data.event_id)throw new Error("Shift must belong to the draft roster event")
+ }
  const args=rpc==="upt_admin_roster_target"?{p_id:id,p_shift:shift}:{p_id:id}
  const {error}=await (db as unknown as SupabaseClient).rpc(rpc,args)
  if(error)throw new Error("Roster shift action failed")
