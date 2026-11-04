@@ -2,7 +2,7 @@ name: Administration workflow regression
 
 on:
   push:
-    branches: [staging]
+    branches: [main]
     paths:
       - '.github/workflows/administration-workflow-regression.yml'
       - 'scripts/administration-completion-e2e.mjs'
