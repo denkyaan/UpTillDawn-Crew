@@ -47,7 +47,12 @@ try{
       const directResponse=await context.request.get(base+target,{maxRedirects:0})
       assert.equal(directResponse.status(),200,slug+' direct route returned HTTP '+directResponse.status())
       await page.waitForLoadState('networkidle',{timeout:10000}).catch(()=>{})
+      // The subtab drawer intentionally closes after navigation. Reopen the
+      // category to inspect the active subtab instead of waiting on a hidden
+      // and unmounted link.
       assert.equal(await page.locator(`[data-administration-category="${category}"]`).getAttribute('aria-pressed'),'true',slug+' lost its category')
+      assert.equal(await page.locator(`[data-administration-category="${category}"]`).getAttribute('aria-expanded'),'false',slug+' drawer did not close after navigation')
+      await page.locator(`[data-administration-category="${category}"]`).click()
       assert.equal(await page.locator(`[data-administration-subtab="${slug}"]`).getAttribute('aria-current'),'page',slug+' lost active subtab')
       assert.equal(await page.locator('[data-layout-key]').count(),0,slug+' rendered personnel navigation')
       assert.ok(new URL(page.url()).pathname.startsWith('/portals/administration/'),slug+' left the administration portal')
