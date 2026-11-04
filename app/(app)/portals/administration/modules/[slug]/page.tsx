@@ -102,7 +102,7 @@ export default async function AdministrationModulePage({params,searchParams}:{pa
  const invoiceSortFilter=invoiceSort==="due_desc"||invoiceSort==="issued_desc"||invoiceSort==="amount_desc"||invoiceSort==="amount_asc"?invoiceSort:"due_asc"
  const invoiceToday=new Date().toISOString().slice(0,10)
  const invoicePageNumber=Number(invoicePage)
- const currentInvoicePage=Number.isSafeInteger(invoicePageNumber)&&invoicePageNumber>=1&&invoicePageNumber<=10000?invoicePageNumber:1
+ const currentInvoicePage=typeof invoicePage==="string"&&/^[1-9][0-9]{0,3}$/.test(invoicePage)&&Number.isSafeInteger(invoicePageNumber)?invoicePageNumber:1
  const invoicePageSize=50
  const invoiceOffset=(currentInvoicePage-1)*invoicePageSize
  const invoiceSummaryRows=slug==="invoices"?await (()=>{let query=supabase.from("admin_financial_documents").select("id,kind,status,gross_amount,due_date,document_number,currency,issue_date",{count:"exact"}).in("kind",["sales_invoice","purchase_invoice"]);if(invoiceKindFilter)query=query.eq("kind",invoiceKindFilter);if(invoiceStatusFilter)query=query.eq("status",invoiceStatusFilter);if(invoiceNumberFilter)query=query.ilike("document_number",`%${invoiceNumberFilter.replace(/[%,_\\]/g,"")}%`);if(invoiceFromFilter)query=query.gte("issue_date",invoiceFromFilter);if(invoiceToFilter)query=query.lte("issue_date",invoiceToFilter);if(invoiceOverdueFilter)query=query.lt("due_date",invoiceToday).not("status","in",'("paid","cancelled")');return query.order(invoiceSortFilter.startsWith("amount")?"gross_amount":invoiceSortFilter==="issued_desc"?"issue_date":"due_date",{ascending:invoiceSortFilter==="due_asc"||invoiceSortFilter==="amount_asc",nullsFirst:false}).order("id",{ascending:true}).range(invoiceOffset,invoiceOffset+invoicePageSize-1)})():null
