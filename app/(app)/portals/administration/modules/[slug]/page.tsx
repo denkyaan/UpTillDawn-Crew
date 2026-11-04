@@ -68,7 +68,7 @@ export default async function AdministrationModulePage({params,searchParams}:{pa
  if(error&&!current.isAdmin && !current.isOwner)redirect("/portals")
  if(!current.isAdmin && !current.isOwner&&!canOpenPortal("administration",(data??[]) as PortalAssignment[],{approved:current.approved,blocked:current.account_blocked===true}))redirect("/portals")
  const parsedPage=Number(requestedPage)
- const inventoryPage=Number.isSafeInteger(parsedPage)&&parsedPage>0&&parsedPage<=10000?parsedPage:1
+ const inventoryPage=typeof requestedPage==="string"&&/^[1-9][0-9]{0,3}$/.test(requestedPage)&&Number.isSafeInteger(parsedPage)?parsedPage:1
  const inventoryPageSize=100
  const inventoryStart=(inventoryPage-1)*inventoryPageSize
  const inventoryFilterEvents=slug==="inventory" ? await supabase.from("events").select("id,name").order("start_at",{ascending:false}).limit(100) : null
