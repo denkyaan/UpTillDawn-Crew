@@ -45,6 +45,7 @@ export interface CrewBriefingEventContext {
  date?: string | null
  startTime?: string | null
  endTime?: string | null
+ endDate?: string | null
  address?: string | null
  workplace?: string | null
 }
@@ -59,10 +60,13 @@ export function generateCrewBriefingDraft(context: CrewBriefingEventContext) {
  const name=safeBriefingValue(context.name)
  const startTime=safeBriefingValue(context.startTime)
  const endTime=safeBriefingValue(context.endTime)
+ const endDate=safeBriefingValue(context.endDate)
+ const startDate=safeBriefingValue(context.date)
+ const eventEnd=endTime&&endDate&&startDate&&endDate!==startDate?`${endTime} (${endDate})`:endTime
  const replacements: Array<[string,string|undefined]>=[
   ['Evenement: [naam]',name?`Evenement: ${name}`:undefined],
   ['Datum: [datum]',safeBriefingValue(context.date)?.replace(/^/,'Datum: ')],
-  ['Eventuren: [start – einde]',startTime&&endTime?`Eventuren: ${startTime} – ${endTime}`:undefined],
+  ['Eventuren: [start – einde]',startTime&&eventEnd?`Eventuren: ${startTime} – ${eventEnd}`:undefined],
   ['Adres: [locatie]',safeBriefingValue(context.address)?.replace(/^/,'Adres: ')],
   ['[Per werkpost de taken, hulpmiddelen en escalatieprocedure]',safeBriefingValue(context.workplace)?.replace(/^/,'Werkpost: ')]
  ]
