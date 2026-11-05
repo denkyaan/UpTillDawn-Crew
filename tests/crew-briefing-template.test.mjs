@@ -74,3 +74,11 @@ test('briefing event formatting falls back safely for unsupported timezones',()=
  assert.match(page,/try\{return new Intl\.DateTimeFormat\('nl-BE',\{timeZone:timezone,\.\.\.options\}\)\.format\(date\)\}catch\{return new Intl\.DateTimeFormat\('nl-BE',\{timeZone:'Europe\/Brussels',\.\.\.options\}\)\.format\(date\)\}/)
  assert.match(page,/Number\.isNaN\(date\.getTime\(\)\)/)
 })
+
+test('empty imported briefing text is rejected before replacing existing draft',()=>{
+ const guard=editor.indexOf("if(!result.title?.trim()&&!result.instructions?.trim())throw new Error")
+ const titleWrite=editor.indexOf("setTitle(result.title||'')")
+ const bodyWrite=editor.indexOf("setBody(result.instructions||'')")
+ assert.ok(guard>0&&titleWrite>guard&&bodyWrite>guard)
+ assert.match(editor,/Geen leesbare briefingtekst gevonden/)
+})
