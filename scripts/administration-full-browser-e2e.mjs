@@ -109,11 +109,15 @@ try{
         const finalPath=new URL(tab.url()).pathname
         if(finalPath!==expectedClickedPath)throw Error('hydrated navigation '+route+' -> '+target+' ended at '+finalPath+' (expected '+expectedClickedPath+')')
         if(await tab.locator('[data-layout-key]').count())throw Error('hydrated administration subtab rendered personnel navigation: '+target)
-        clickedNavigation.push({role:role.name,from:route,to:target,actual:finalPath})
         const text=(await tab.locator('body').innerText()).trim()
         if(!text||/404\s*\|\s*this page could not be found|application error|internal server error/i.test(text))throw Error('clicked destination rendered error: '+target)
         if(clickedPageErrors.length)throw Error('clicked destination uncaught JS: '+target+': '+clickedPageErrors.join('; ').slice(0,350))
         if(await tab.locator('[data-layout-key]').count())throw Error('clicked administration destination rendered personnel navigation: '+target)
+        clickedNavigation.push({role:role.name,from:route,to:target,actual:finalPath})
+       }catch(error){
+        const screenshotName='test-results/portal-e2e/'+role.name+'-clicked-'+route.replace(/[^a-z0-9]/gi,'_')+'-to-'+target.replace(/[^a-z0-9]/gi,'_')+'.png'
+        await tab.screenshot({path:screenshotName,fullPage:true,timeout:5000}).catch(()=>{})
+        throw error
        }finally{await tab.close()}
       }
      }
