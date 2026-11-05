@@ -63,3 +63,9 @@ test('switching event does not silently reuse the initially selected event name'
  assert.match(editor,/name:context\?\.name\|\|\(!selectedEventId\?eventName:undefined\)/)
  assert.match(editor,/workplaceContexts\.find\(item=>item\.id===workplaceId&&\(!selectedEventId\|\|item\.event_id===selectedEventId\)\)/)
 })
+
+test('briefing review status communicates ready and incomplete states accessibly',()=>{
+ assert.match(editor,/aria-live="polite"/)
+ assert.match(editor,/review\.ready\?'border-emerald-500\/40 bg-emerald-500\/10':'border-amber-500\/40 bg-amber-500\/10'/)
+ assert.match(editor,/review\.ready\?t\.ready:t\.review/)
+})
