@@ -39,8 +39,11 @@ export function PromotionChatsClient({locale,userId,isAdmin,names}:{locale:Local
   const message=body.trim()
   if(!message||busy||(room==="announcements"&&!isAdmin))return
   setBusy(true);setError("")
+  const submittedRoom=room
+  const submittedSequence=sequence.current
   const db=createClient()
-  const {error:failure}=await db.from("promotion_chat_messages" as never).insert({room,sender_id:userId,body:message} as never)
+  const {error:failure}=await db.from("promotion_chat_messages" as never).insert({room:submittedRoom,sender_id:userId,body:message} as never)
+  if(submittedSequence!==sequence.current)return
   if(failure)setError(l.error)
   else {setBody("");await load()}
   setBusy(false)
