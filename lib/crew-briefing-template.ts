@@ -83,7 +83,7 @@ export function crewBriefingReadiness(body:string):{ready:boolean;missing:string
 
 /** Structured, non-blocking readiness checks; avoid treating draft instructions as verified facts. */
 export function crewBriefingReview(title:string,body:string){
- const missing=unresolvedCrewBriefingFields(body)
+ const missing=[...new Set([...unresolvedCrewBriefingFields(title),...unresolvedCrewBriefingFields(body)])]
  const issues:('title'|'body'|'placeholders')[]=[]
  if(!title.trim())issues.push('title')
  if(!body.trim())issues.push('body')
