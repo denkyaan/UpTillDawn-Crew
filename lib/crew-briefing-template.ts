@@ -60,7 +60,7 @@ export function generateCrewBriefingDraft(context: CrewBriefingEventContext) {
  const replacements: Array<[string,string|undefined]>=[
   ['Evenement: [naam]',name?`Evenement: ${name}`:undefined],
   ['Datum: [datum]',safeBriefingValue(context.date)?.replace(/^/,'Datum: ')],
-  ['Eventuren: [start – einde]',context.startTime&&context.endTime?`Eventuren: ${safeBriefingValue(context.startTime)} – ${safeBriefingValue(context.endTime)}`:undefined],
+  ['Eventuren: [start – einde]',safeBriefingValue(context.startTime)&&safeBriefingValue(context.endTime)?`Eventuren: ${safeBriefingValue(context.startTime)} – ${safeBriefingValue(context.endTime)}`:undefined],
   ['Adres: [locatie]',safeBriefingValue(context.address)?.replace(/^/,'Adres: ')],
   ['[Per werkpost de taken, hulpmiddelen en escalatieprocedure]',safeBriefingValue(context.workplace)?.replace(/^/,'Werkpost: ')]
  ]
@@ -79,4 +79,14 @@ export function unresolvedCrewBriefingFields(body:string):string[]{
 export function crewBriefingReadiness(body:string):{ready:boolean;missing:string[]}{
  const missing=unresolvedCrewBriefingFields(body)
  return {ready:body.trim().length>0&&missing.length===0,missing}
+}
+
+/** Structured, non-blocking readiness checks; avoid treating draft instructions as verified facts. */
+export function crewBriefingReview(title:string,body:string){
+ const missing=unresolvedCrewBriefingFields(body)
+ const issues:('title'|'body'|'placeholders')[]=[]
+ if(!title.trim())issues.push('title')
+ if(!body.trim())issues.push('body')
+ if(missing.length)issues.push('placeholders')
+ return {ready:issues.length===0,issues,missing}
 }
