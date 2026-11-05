@@ -14,3 +14,9 @@ test("room switching is disabled while a message is being submitted",()=>{
  assert.match(source,/disabled=\{busy\} onClick=\{\(\)=>\{if\(sending\.current\)return/)
  assert.doesNotMatch(source,/setBusy\(false\)\}\} className/)
 })
+
+test("chat send lock is released even if the database request rejects",()=>{
+ assert.match(source,/async function send\(\)[\s\S]*?try\{/)
+ assert.match(source,/catch\{\s*setError\(l\.error\)/)
+ assert.match(source,/finally\{\s*sending\.current=false\s*setBusy\(false\)/)
+})
