@@ -36,7 +36,7 @@ export function AssignmentScopeFields({
   defaultWorkplaceId?: string
   defaultPersonId?: string
 }) {
-  const validDefaultWorkplaceId = workplaces.some(workplace => workplace.id === defaultWorkplaceId) ? defaultWorkplaceId : ""
+  const validDefaultWorkplaceId = workplaces.some(workplace => workplace.id === defaultWorkplaceId && events.some(event => event.id === workplace.event_id) && (!defaultEventId || workplace.event_id === defaultEventId)) ? defaultWorkplaceId : ""
   const workplaceEventId = validDefaultWorkplaceId ? workplaces.find(workplace => workplace.id === validDefaultWorkplaceId)?.event_id || "" : ""
   const validDefaultEventId = events.some(event => event.id === defaultEventId)
     ? defaultEventId
@@ -49,14 +49,14 @@ export function AssignmentScopeFields({
   const [personId, setPersonId] = useState(validDefaultPersonId)
 
   const visibleWorkplaces = useMemo(
-    () => showEventSelect && eventId
+    () => eventId
       ? workplaces.filter(workplace => workplace.event_id === eventId)
       : workplaces,
     [eventId, showEventSelect, workplaces],
   )
 
   const effectiveEventId = workplaceId
-    ? workplaces.find(workplace => workplace.id === workplaceId)?.event_id || eventId
+    ? visibleWorkplaces.find(workplace => workplace.id === workplaceId)?.event_id || eventId
     : eventId
 
   const allowedUserIds = useMemo(() => {
