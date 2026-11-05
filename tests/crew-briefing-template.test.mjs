@@ -46,7 +46,7 @@ test('draft review identifies unresolved instructions and displays localized rev
  assert.match(editor,/crewBriefingReview\(title,body\)/)
  assert.match(editor,/review\.issues\.includes\('title'\)/)
  assert.match(editor,/role="status"/)
- assert.match(editor,/\{t\.review\}/)
+ assert.match(editor,/review\.ready\?t\.ready:t\.review/)
  for(const label of ['Nog in te vullen velden','Champs à vérifier','Fields requiring review','Zu prüfende Felder'])assert.ok(editor.includes(label),label)
 })
 
