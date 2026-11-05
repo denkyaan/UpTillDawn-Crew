@@ -143,3 +143,10 @@ test('full browser E2E accepts canonical administration overview redirect for cl
  assert.match(browser,/target==='\/portals\/administration\/overview'\?'\/portals\/administration':target/)
  assert.match(browser,/new URL\(expectedClickedPath,base\)\.pathname/)
 })
+
+test('assignment person selection cannot retain a default outside the event and workplace scope',()=>{
+ const source=readFileSync(new URL('../components/crew/assignment-scope-fields.tsx',import.meta.url),'utf8')
+ assert.match(source,/value=\{allowedUserIds\.has\(personId\) \? personId : ""\}/)
+ assert.match(source,/member\.event_id === effectiveEventId/)
+ assert.match(source,/member\.workplace_id === workplaceId/)
+})
