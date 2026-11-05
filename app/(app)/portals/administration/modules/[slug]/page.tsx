@@ -317,7 +317,7 @@ export default async function AdministrationModulePage({params,searchParams}:{pa
   </section>}
   {slug==="marketing"&&<section className="rounded-2xl border bg-card p-5">
    <h2 className="text-lg font-semibold">{({nl:"Promotiebeheer",fr:"Gestion de la promotion",en:"Promotion management",de:"Promotion verwalten"} as const)[locale]}</h2>
-   <p className="mt-2 text-sm text-muted-foreground">{({nl:"Beheer promotietaken via het promotieportaal. Strikes en blokkeringen worden afzonderlijk beheerd.",fr:"Gérez les tâches promotionnelles dans Administration. Les avertissements et blocages sont gérés séparément.",en:"Manage promotion tasks inside Administration. Strikes and restrictions are managed separately.",de:"Promotionsaufgaben werden in der Verwaltung verwaltet. Verwarnungen und Sperren werden separat verwaltet."} as const)[locale]}</p>
+   <p className="mt-2 text-sm text-muted-foreground">{({nl:"Beheer promotietaken binnen Administratie. Strikes en blokkeringen worden afzonderlijk beheerd.",fr:"Gérez les tâches promotionnelles dans Administration. Les avertissements et blocages sont gérés séparément.",en:"Manage promotion tasks inside Administration. Strikes and restrictions are managed separately.",de:"Promotionsaufgaben werden in der Verwaltung verwaltet. Verwarnungen und Sperren werden separat verwaltet."} as const)[locale]}</p>
    <div className="mt-4 flex flex-wrap gap-3">
     <Link href="/portals/administration/promotion-tasks" className="rounded-lg border px-4 py-2 text-sm font-semibold hover:border-violet-400">{({nl:"Promotietaken",fr:"Tâches promotionnelles",en:"Promotion tasks",de:"Promotionsaufgaben"} as const)[locale]}</Link>
     <Link href="/portals/administration/promotion-discipline" className="rounded-lg border px-4 py-2 text-sm font-semibold hover:border-violet-400">{({nl:"Strikes en blokkeringen",fr:"Avertissements et blocages",en:"Strikes and restrictions",de:"Verwarnungen und Sperren"} as const)[locale]}</Link>
@@ -354,12 +354,13 @@ export default async function AdministrationModulePage({params,searchParams}:{pa
     {(inventoryCount?.count!=null?inventoryPage*inventoryPageSize<inventoryCount.count:(liveRecords.data?.length??0)===inventoryPageSize)&&<Link className="rounded-lg border px-3 py-2" href={`/portals/administration/modules/inventory?page=${inventoryPage+1}${selectedEvent?`&event=${encodeURIComponent(selectedEvent)}`:""}`}>{({nl:"Volgende",fr:"Suivante",en:"Next",de:"Weiter"} as const)[locale]}</Link>}
    </div>
   </nav>}
+  {administrationWorkflowHref(slug)&&<div className="rounded-xl border border-violet-500/30 bg-card p-4"><Link href={administrationWorkflowHref(slug)!} className="inline-flex rounded-lg border border-violet-500/50 px-4 py-3 text-sm font-semibold text-violet-400 hover:border-violet-400">{operationalModuleLabels[locale]} →</Link></div>}
   <section className="grid gap-4 md:grid-cols-3" aria-label={u.section}>
    {sections.map((section,index)=><article key={index} className="flex min-h-48 flex-col rounded-2xl border bg-card p-5">
     <div className="mb-4 flex items-start justify-between gap-3"><h2 className="font-semibold">{section[locale]}</h2><span aria-hidden="true" className="text-violet-400">◈</span></div>
     <div className="mt-auto rounded-xl border border-dashed bg-background/50 p-4">
      <p className="text-sm text-muted-foreground">{u.notAvailable}</p>
-     {administrationWorkflowHref(slug)?<Link href={administrationWorkflowHref(slug)!} className="mt-3 inline-flex rounded-lg border px-3 py-2 text-xs font-semibold text-violet-400 hover:border-violet-400">{operationalModuleLabels[locale]} →</Link>:<p className="mt-3 text-xs font-medium text-violet-400">{u.pending}</p>}
+     <p className="mt-3 text-xs font-medium text-violet-400">{u.pending}</p>
     </div>
    </article>)}
   </section>
