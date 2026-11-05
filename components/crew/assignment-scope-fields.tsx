@@ -144,7 +144,7 @@ export function AssignmentScopeFields({
           required
           disabled={!effectiveEventId && !workplaceId}
           className="border bg-background p-3 disabled:opacity-50"
-          value={personId}
+          value={allowedUserIds.has(personId) ? personId : ""}
           onChange={event => setPersonId(event.target.value)}
         >
           <option value="">Medewerker…</option>
