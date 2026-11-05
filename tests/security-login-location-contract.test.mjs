@@ -28,12 +28,12 @@ test('alert clearly labels approximate IP location and links to map only when pr
 })
 
 
-test('full production CI runs on main pushes but not on pull requests', () => {
+test('full production CI is separate from main pushes', () => {
   const workflow = readFileSync(new URL('../.github/workflows/ci.yml', import.meta.url), 'utf8')
   const triggers = workflow.split(/^on:\s*$/m)[1]?.split(/^\S/m)[0] || ''
   assert.match(triggers, /^\s+workflow_dispatch:/m)
   assert.match(triggers, /^\s+workflow_call:/m)
-  assert.match(triggers, /^\s+push:\s*\n\s+branches: \[main\]/m)
+  assert.doesNotMatch(triggers, /^\s+push:/m)
   assert.doesNotMatch(triggers, /^\s+(?:pull_request|schedule):/m)
 })
 
