@@ -69,3 +69,8 @@ test('briefing review status communicates ready and incomplete states accessibly
  assert.match(editor,/review\.ready\?'border-emerald-500\/40 bg-emerald-500\/10':'border-amber-500\/40 bg-amber-500\/10'/)
  assert.match(editor,/review\.ready\?t\.ready:t\.review/)
 })
+
+test('briefing event formatting falls back safely for unsupported timezones',()=>{
+ assert.match(page,/try\{return new Intl\.DateTimeFormat\('nl-BE',\{timeZone:timezone,\.\.\.options\}\)\.format\(date\)\}catch\{return new Intl\.DateTimeFormat\('nl-BE',\{timeZone:'Europe\/Brussels',\.\.\.options\}\)\.format\(date\)\}/)
+ assert.match(page,/Number\.isNaN\(date\.getTime\(\)\)/)
+})
