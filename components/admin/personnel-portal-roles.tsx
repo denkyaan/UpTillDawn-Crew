@@ -15,6 +15,8 @@ export function PersonnelPortalRoles({userId,assignments,readOnly=false}:{userId
  const activeSelected=Boolean(selectedAssignment?.approved)
  const pendingSelected=Boolean(selectedAssignment&&!selectedAssignment.approved)
  function update(action:"assign_approved"|"approve"|"revoke",p=portal,r=role){
+  if(pending)return
+  if(action==="revoke"&&!window.confirm("Deze portaalrol intrekken? De medewerker verliest de bijbehorende toegang."))return
   setMessage("")
   const form=new FormData()
   form.set("user_id",userId);form.set("portal",p);form.set("role",r);form.set("action",action)
