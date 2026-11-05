@@ -2,6 +2,10 @@ name: Deploy production
 
 on:
   workflow_dispatch:
+  workflow_run:
+    workflows: ["CI production"]
+    types: [completed]
+    branches: [main]
 
 concurrency:
   group: uptilldawn-production
@@ -9,7 +13,9 @@ concurrency:
 
 jobs:
   deploy:
-    if: github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main'
+    if: >-
+      (github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main') ||
+      (github.event_name == 'workflow_run' && github.event.workflow_run.conclusion == 'success' && github.event.workflow_run.event == 'workflow_dispatch' && github.event.workflow_run.head_branch == 'main')
     runs-on: ubuntu-26.04-arm
     environment: production
     permissions:
@@ -48,7 +54,7 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          count="$(gh api "repos/${GITHUB_REPOSITORY}/actions/workflows/ci.yml/runs?head_sha=${RELEASE_SHA}&status=success&per_page=100" --jq '[.workflow_runs[] | select(.head_sha == env.RELEASE_SHA and (.event == "workflow_dispatch" or .event == "push") and .conclusion == "success")] | length')"
+          count="$(gh api "repos/${GITHUB_REPOSITORY}/actions/workflows/ci.yml/runs?head_sha=${RELEASE_SHA}&status=success&per_page=100" --jq '[.workflow_runs[] | select(.head_sha == env.RELEASE_SHA and (.event == "workflow_dispatch") and .conclusion == "success")] | length')"
           if [ "$count" -lt 1 ]; then
             echo "::error::Production release blocked: full CI has not passed for ${RELEASE_SHA}"
             exit 1
