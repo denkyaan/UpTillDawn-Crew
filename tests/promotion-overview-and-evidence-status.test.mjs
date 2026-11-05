@@ -42,3 +42,8 @@ test("promotion evidence history is scoped to the current assignment page",()=>{
  assert.match(tasks,/\.limit\(1000\)/)
  assert.match(tasks,/evidenceRows\.length===1000/)
 })
+
+test("promotion pagination never links outside its accepted numeric page range",()=>{
+ assert.match(tasks,/page<9999&&\(data\?\.length\?\?0\)>100/)
+ assert.match(tasks,/\?page=\$\{page\+1\}/)
+})
