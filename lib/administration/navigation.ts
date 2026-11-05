@@ -15,6 +15,7 @@ export function administrationRoute(slug:string):string {
 }
 
 export function administrationCategoryForPath(pathname:string):string {
+ if(pathname==="/portals/administration/promotion-tasks"||pathname.startsWith("/portals/administration/promotion-tasks/"))return "relations"
  if(pathname==="/portals/administration/counterparties"||pathname.startsWith("/portals/administration/counterparties/"))return "relations"
  if(pathname==="/portals/administration/sales"||pathname.startsWith("/portals/administration/sales/"))return "finance"
  if(pathname.startsWith("/portals/administration/modules/artists/"))return "planning"

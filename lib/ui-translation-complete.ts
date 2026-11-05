@@ -4,6 +4,10 @@ type Row = { fr: string; en: string; de: string }
 // Canonical Dutch UI strings that were historically present only in the NL/FR/EN table.
 // Keep every row complete: missing translations must never silently fall back to Dutch.
 const ROWS: Record<string, Row> = {
+  'Promotietaken beheren': { fr: 'Gestion des tâches promotionnelles', en: 'Manage promotion tasks', de: 'Promotionsaufgaben verwalten' },
+  'Gestion des tâches promotionnelles': { fr: 'Gestion des tâches promotionnelles', en: 'Manage promotion tasks', de: 'Promotionsaufgaben verwalten' },
+  'Manage promotion tasks': { fr: 'Gestion des tâches promotionnelles', en: 'Manage promotion tasks', de: 'Promotionsaufgaben verwalten' },
+  'Promotionsaufgaben verwalten': { fr: 'Gestion des tâches promotionnelles', en: 'Manage promotion tasks', de: 'Promotionsaufgaben verwalten' },
   'Admin-login tijdelijk geblokkeerd': { fr: 'Connexion administrateur temporairement bloquée', en: 'Admin login temporarily blocked', de: 'Admin-Anmeldung vorübergehend gesperrt' },
   'Inkom': { fr: 'Entrée', en: 'Entrance', de: 'Eingang' },
   'Ticket scan': { fr: 'Contrôle des billets', en: 'Ticket scan', de: 'Ticketkontrolle' },

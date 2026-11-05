@@ -317,9 +317,9 @@ export default async function AdministrationModulePage({params,searchParams}:{pa
   </section>}
   {slug==="marketing"&&<section className="rounded-2xl border bg-card p-5">
    <h2 className="text-lg font-semibold">{({nl:"Promotiebeheer",fr:"Gestion de la promotion",en:"Promotion management",de:"Promotion verwalten"} as const)[locale]}</h2>
-   <p className="mt-2 text-sm text-muted-foreground">{({nl:"Beheer promotietaken via het promotieportaal. Strikes en blokkeringen worden afzonderlijk beheerd.",fr:"Gérez les tâches promotionnelles dans le portail promotion. Les avertissements et blocages sont gérés séparément.",en:"Manage promotion tasks in the promotion portal. Strikes and restrictions are managed separately.",de:"Promotionsaufgaben werden im Promotionsportal verwaltet. Verwarnungen und Sperren werden separat verwaltet."} as const)[locale]}</p>
+   <p className="mt-2 text-sm text-muted-foreground">{({nl:"Beheer promotietaken via het promotieportaal. Strikes en blokkeringen worden afzonderlijk beheerd.",fr:"Gérez les tâches promotionnelles dans Administration. Les avertissements et blocages sont gérés séparément.",en:"Manage promotion tasks inside Administration. Strikes and restrictions are managed separately.",de:"Promotionsaufgaben werden in der Verwaltung verwaltet. Verwarnungen und Sperren werden separat verwaltet."} as const)[locale]}</p>
    <div className="mt-4 flex flex-wrap gap-3">
-    <Link href="/portals/promotion/tasks" className="rounded-lg border px-4 py-2 text-sm font-semibold hover:border-violet-400">{({nl:"Promotietaken",fr:"Tâches promotionnelles",en:"Promotion tasks",de:"Promotionsaufgaben"} as const)[locale]}</Link>
+    <Link href="/portals/administration/promotion-tasks" className="rounded-lg border px-4 py-2 text-sm font-semibold hover:border-violet-400">{({nl:"Promotietaken",fr:"Tâches promotionnelles",en:"Promotion tasks",de:"Promotionsaufgaben"} as const)[locale]}</Link>
     <Link href="/portals/administration/promotion-discipline" className="rounded-lg border px-4 py-2 text-sm font-semibold hover:border-violet-400">{({nl:"Strikes en blokkeringen",fr:"Avertissements et blocages",en:"Strikes and restrictions",de:"Verwarnungen und Sperren"} as const)[locale]}</Link>
    </div>
   </section>}
