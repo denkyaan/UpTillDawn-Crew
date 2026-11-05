@@ -78,8 +78,8 @@ export function generateCrewBriefingDraft(context: CrewBriefingEventContext) {
 
 /** Review markers deliberately left in a draft; never treat these as confirmed instructions. */
 export function unresolvedCrewBriefingFields(body:string):string[]{
- const matches=body.match(/\[[^\]\r\n]{2,160}\]/g)||[]
- return [...new Set(matches.map(item=>item.slice(1,-1).trim()))]
+ const matches=body.match(/\[[^\]\r\n]{0,160}\]/g)||[]
+ return [...new Set(matches.map(item=>item.slice(1,-1).trim()||'leeg invulveld'))]
 }
 
 export function crewBriefingReadiness(body:string):{ready:boolean;missing:string[]}{
