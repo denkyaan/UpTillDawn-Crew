@@ -57,10 +57,12 @@ function safeBriefingValue(value: string | null | undefined): string | undefined
 /** Pre-fill only verified event data; unresolved placeholders remain visible for review. */
 export function generateCrewBriefingDraft(context: CrewBriefingEventContext) {
  const name=safeBriefingValue(context.name)
+ const startTime=safeBriefingValue(context.startTime)
+ const endTime=safeBriefingValue(context.endTime)
  const replacements: Array<[string,string|undefined]>=[
   ['Evenement: [naam]',name?`Evenement: ${name}`:undefined],
   ['Datum: [datum]',safeBriefingValue(context.date)?.replace(/^/,'Datum: ')],
-  ['Eventuren: [start – einde]',safeBriefingValue(context.startTime)&&safeBriefingValue(context.endTime)?`Eventuren: ${safeBriefingValue(context.startTime)} – ${safeBriefingValue(context.endTime)}`:undefined],
+  ['Eventuren: [start – einde]',startTime&&endTime?`Eventuren: ${startTime} – ${endTime}`:undefined],
   ['Adres: [locatie]',safeBriefingValue(context.address)?.replace(/^/,'Adres: ')],
   ['[Per werkpost de taken, hulpmiddelen en escalatieprocedure]',safeBriefingValue(context.workplace)?.replace(/^/,'Werkpost: ')]
  ]
