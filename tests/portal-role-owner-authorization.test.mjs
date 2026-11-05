@@ -25,3 +25,13 @@ test('portal access is independently checked on server for both protected portal
   assert.match(source,/canOpenPortal\(/)
  }
 })
+
+test('role revocation requires explicit confirmation in both management interfaces',()=>{
+ const personnel=readFileSync(new URL('../components/admin/personnel-portal-roles.tsx',import.meta.url),'utf8')
+ const form=readFileSync(new URL('../app/(app)/portals/roles/role-management-form.tsx',import.meta.url),'utf8')
+ assert.match(personnel,/action==="revoke"&&!window\.confirm\(/)
+ assert.match(form,/formData\.get\('action'\) === 'revoke' && !window\.confirm\(/)
+ assert.match(form,/action === 'revoke' && !window\.confirm\(/)
+ assert.match(personnel,/if\(pending\)return/)
+ assert.match(form,/if \(pending\) return/)
+})
