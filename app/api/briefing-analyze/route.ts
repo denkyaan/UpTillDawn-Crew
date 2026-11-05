@@ -32,7 +32,7 @@ export async function POST(request:Request){
   const outputText=result.output_text||result.output?.flatMap(item=>item.content||[]).find(item=>item.type==='output_text')?.text
   if(!outputText)return NextResponse.json({error:'Geen analyse ontvangen.'},{status:502})
   const parsed=parseJsonObject(outputText);const title=typeof parsed.title==='string'?parsed.title.trim():'';const instructions=typeof parsed.instructions==='string'?parsed.instructions.trim():''
-  if(!title||!instructions)return NextResponse.json({error:'Onvolledige analyse ontvangen.'},{status:502})
+  if(!title&&!instructions)return NextResponse.json({error:'Geen leesbare briefingtekst gevonden.'},{status:422})
   return NextResponse.json({title,instructions})
  }catch{return NextResponse.json({error:'Documentanalyse kon niet worden verwerkt.'},{status:502})}
  finally{await fetch(`https://api.openai.com/v1/files/${encodeURIComponent(uploadedFile.id)}`,{method:'DELETE',headers:{Authorization:`Bearer ${apiKey}`}}).catch(()=>undefined)}
