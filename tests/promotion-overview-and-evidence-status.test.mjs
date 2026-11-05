@@ -23,3 +23,8 @@ test("promotion evidence history failures are visible in all supported languages
  assert.match(tasks,/evidenceError&&<p role="alert"/)
  for(const label of ["Bewijsstatussen konden niet","Les statuts des preuves","Evidence statuses are unavailable","Nachweisstatus nicht verfügbar"])assert.ok(tasks.includes(label))
 })
+
+test("promotion pagination accepts numeric pages beyond the first",()=>{
+ assert.ok(tasks.includes(String.raw`/^[1-9]\\d{0,3}$/.test(rawPage)`))
+ assert.doesNotMatch(tasks,/\\\\d\{0,3\}/)
+})
