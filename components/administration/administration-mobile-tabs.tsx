@@ -4,6 +4,7 @@ import { LayoutDashboard, CalendarDays, Wallet, Users, Megaphone, Settings2 } fr
 import { usePathname } from "next/navigation"
 import { useState } from "react"
 import { administrationModules } from "@/lib/administration/modules"
+import { administrationRoute, administrationCategoryForPath } from "@/lib/administration/navigation"
 import type { SupportedUiLocale } from "@/lib/locale-preferences"
 
 const categories=[
@@ -14,11 +15,11 @@ const categories=[
  {id:"promotion",name:{nl:"Promotie",fr:"Promotion",en:"Promotion",de:"Werbung"},icon:Megaphone,slugs:["marketing","sponsors"]},
  {id:"management",name:{nl:"Beheer",fr:"Gestion",en:"Manage",de:"Verwaltung"},icon:Settings2,slugs:["documents","reports","notifications","automations","ai","settings"]},
 ] as const
-function href(slug:string){return slug==="dashboard"?"/portals/administration":slug==="finance"?"/portals/administration/finance":slug==="contacts"?"/portals/administration/contacts":"/portals/administration/modules/"+slug}
+function href(slug:string){return administrationRoute(slug)}
 export function AdministrationMobileTabs({locale}:{locale:SupportedUiLocale}){
  const pathname=usePathname()
  const [expanded,setExpanded]=useState<string|null>(null)
- const current=categories.find(group=>group.slugs.some(slug=>href(slug)===pathname))
+ const current=categories.find(group=>group.slugs.some(slug=>href(slug)===pathname))??categories.find(group=>group.id===administrationCategoryForPath(pathname))
  const selected=categories.find(group=>group.id===expanded)
  return <div className="relative shrink-0 border-t border-border bg-card lg:hidden">
   {selected&&<div className="absolute bottom-full left-0 right-0 max-h-[50dvh] overflow-y-auto rounded-t-2xl border border-border bg-card p-3 shadow-2xl">
