@@ -24,6 +24,8 @@ export function RoleManagementForm({ users }: { users: UserOption[] }) {
   const selectedUserVisible = matches.some(user => user.id === userId)
 
   function submit(formData: FormData) {
+    if (pending) return
+    if (formData.get('action') === 'revoke' && !window.confirm('Deze portaalrol intrekken? De medewerker verliest de bijbehorende toegang.')) return
     setResult('')
     startTransition(async () => {
       try {
@@ -60,7 +62,8 @@ export function RoleQuickAction({ userId, portal, role, action }: {
 
   return <div className="flex flex-col gap-1">
     <button type="button" disabled={pending} className="rounded border border-violet-500 px-3 py-1 text-violet-400 disabled:opacity-50" onClick={() => {
-      if (action === 'revoke' && !window.confirm('Rol intrekken?')) return
+      if (pending) return
+      if (action === 'revoke' && !window.confirm('Deze portaalrol intrekken? De medewerker verliest de bijbehorende toegang.')) return
       const form = new FormData()
       form.set('user_id', userId)
       form.set('portal', portal)
