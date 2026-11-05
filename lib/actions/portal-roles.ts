@@ -12,7 +12,7 @@ const valid: Record<string, readonly string[]> = {
 
 export async function changePortalRole(formData: FormData): Promise<void> {
   const current = await getCurrentUser()
-  if (!current?.realIsAdmin || !current.approved || current.account_blocked) {
+  if (!current || (!current.isOwner && (!current.realIsAdmin || !current.approved || current.account_blocked))) {
     throw new Error('Geen toegang')
   }
   const userId = String(formData.get('user_id') ?? '')
