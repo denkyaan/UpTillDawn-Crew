@@ -28,3 +28,10 @@ test("promotion pagination accepts numeric pages beyond the first",()=>{
  assert.ok(tasks.includes(String.raw`/^[1-9]\d{0,3}$/.test(rawPage)`))
  assert.doesNotMatch(tasks,/\\\\d\{0,3\}/)
 })
+
+test("promotion evidence histories use one indexed lookup per assignment",()=>{
+ assert.match(tasks,/new Map<string,typeof evidenceRows>\(\)/)
+ assert.match(tasks,/evidenceByAssignment\.set\(entry\.assignment_id,history\)/)
+ assert.match(tasks,/evidenceByAssignment\.get\(item\.id\)/)
+ assert.doesNotMatch(tasks,/evidenceRows\.(?:find|filter)\(/)
+})
