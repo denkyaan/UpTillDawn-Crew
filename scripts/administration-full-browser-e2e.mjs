@@ -87,9 +87,15 @@ try{
        try{
         await tab.goto(base+route,{waitUntil:'domcontentloaded',timeout:30000})
         const href=tab.locator('a[href="'+target.replaceAll('"','\\"')+'"]:visible').first()
-        await href.click({timeout:15000})
         const expectedClickedPath=target==='/portals/administration/overview'?'/portals/administration':target
-        await tab.waitForURL(u=>u.pathname===new URL(expectedClickedPath,base).pathname,{timeout:20000,waitUntil:'commit'})
+        try {
+         await Promise.all([
+          tab.waitForURL(u=>u.pathname===new URL(expectedClickedPath,base).pathname,{timeout:20000,waitUntil:'commit'}),
+          href.click({timeout:15000}),
+         ])
+        } catch (error) {
+         throw Error('navigation '+route+' -> '+target+' expected '+expectedClickedPath+' but reached '+new URL(tab.url()).pathname+': '+String(error.message||error))
+        }
         await tab.waitForLoadState('domcontentloaded')
         clickedNavigation.push({role:role.name,from:route,to:target})
         const text=(await tab.locator('body').innerText()).trim()
