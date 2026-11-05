@@ -35,13 +35,18 @@ export default async function Page(){
  const approvedChecksDurationMs=dashboardTimestamp()-queriesStartedAt-initialQueriesDurationMs
  const primaryOverviewSources=[events,sessions,pendingIns,pendingOuts,incidents,assignments,shifts,profiles,workplaces,syncIssues,approvedChecks,responsibleAssignments,pendingProfiles,operationalAlerts]
  const eventRows=events.data||[],sessionRows=sessions.data||[],inRows=pendingIns.data||[],outRows=pendingOuts.data||[],incidentRows=incidents.data||[],openAssignmentCount=assignments.count??0,shiftRows=shifts.data||[],profileRows=profiles.data||[],workplaceRows=workplaces.data||[],pendingSyncCount=syncIssues.count??0,checkRows=approvedChecks.data||[],responsibleRows=responsibleAssignments.data||[],pendingProfileRows=pendingProfiles.data||[],alertRows=operationalAlerts.data||[]
- // A past event must not trigger the first-use wizard simply because it is no longer upcoming.
- const historicalEventCheck=events.error||eventRows.length?null:await s.from('events').select('id',{count:'exact',head:true}).limit(1)
- const showFirstUse=!events.error&&!eventRows.length&&!historicalEventCheck?.error&&historicalEventCheck?.count===0
- const activeSessionIds=sessionRows.map(row=>row.id);const sessionBreaks=activeSessionIds.length?await s.from('break_sessions').select('id,work_session_id,started_at,ended_at').in('work_session_id',activeSessionIds).order('started_at'):{data:[],error:null}
+ // Secondary lookups are independent: run them concurrently to reduce dashboard latency.
+ const activeSessionIds=sessionRows.map(row=>row.id)
+ const [historicalEventCheck,sessionBreaks]=await Promise.all([
+  events.error||eventRows.length?Promise.resolve(null):s.from('events').select('id').limit(1),
+  activeSessionIds.length?s.from('break_sessions').select('id,work_session_id,started_at,ended_at').in('work_session_id',activeSessionIds).order('started_at'):Promise.resolve({data:[],error:null}),
+ ])
+ // A past event must not trigger first-use just because it is no longer upcoming.
+ const showFirstUse=!events.error&&!eventRows.length&&!historicalEventCheck?.error&&historicalEventCheck?.data?.length===0
  const sourceNames=['events','sessions','pendingIns','pendingOuts','incidents','assignments','shifts','profiles','workplaces','syncIssues','approvedChecks','responsibleAssignments','pendingProfiles','operationalAlerts'] as const
  const failedSourceNames:string[]=sourceNames.filter((_,index)=>Boolean(primaryOverviewSources[index].error))
  if(sessionBreaks.error)failedSourceNames.push('sessionBreaks')
+ if(historicalEventCheck?.error)failedSourceNames.push('historicalEventCheck')
  const failedOverviewSources=failedSourceNames.length
  console.info('[admin-dashboard] data timings', { authDurationMs, initialQueriesDurationMs, approvedChecksDurationMs, totalDataDurationMs:dashboardTimestamp()-dashboardStartedAt, failedSources:failedOverviewSources, failedSourceNames })
  const sessionBreakRows=sessionBreaks.data||[];const breaksBySession=new Map<string,typeof sessionBreakRows>();for(const item of sessionBreakRows){const group=breaksBySession.get(item.work_session_id)||[];group.push(item);breaksBySession.set(item.work_session_id,group)};const activeBreakRows=sessionBreakRows.filter(row=>!row.ended_at);const activeEvents=eventRows.filter(e=>Date.parse(e.start_at)<=nowMs&&Date.parse(e.end_at)>=nowMs);const approvedCheckKeys=new Set(checkRows.map(check=>`${check.user_id}:${check.event_id}:${check.workplace_id}`));const missing=shiftRows.filter(shift=>!approvedCheckKeys.has(`${shift.user_id}:${shift.event_id}:${shift.workplace_id}`));const people=new Map(profileRows.map(p=>[p.id,p]));const eventMap=new Map(eventRows.map(e=>[e.id,e]));const workplaceMap=new Map(workplaceRows.map(w=>[w.id,w]));const shiftMap=new Map(shiftRows.map(x=>[x.id,x]));const activeSessionByShift=new Map(sessionRows.filter(ws=>ws.shift_id).map(ws=>[ws.shift_id!,ws]));const responsibleKeys=new Set(responsibleRows.map(row=>`${row.workplace_id}:${row.user_id}`))
