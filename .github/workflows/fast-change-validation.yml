@@ -6,6 +6,12 @@ on:
   pull_request:
     branches: [main]
   workflow_dispatch:
+    inputs:
+      release_production:
+        description: 'Start CI production after successful CI main'
+        type: boolean
+        required: true
+        default: false
 
 concurrency:
   group: fast-validation-${{ github.ref }}
@@ -13,6 +19,7 @@ concurrency:
 
 permissions:
   contents: read
+  actions: write
 
 jobs:
   fast:
@@ -71,3 +78,22 @@ jobs:
           exit "$failed"
       - name: Production dependency security gate
         run: npm audit --omit=dev --audit-level=high
+
+  release-production:
+    needs: fast
+    if: ${{ github.event_name == 'workflow_dispatch' && inputs.release_production == true && github.ref == 'refs/heads/main' }}
+    runs-on: ubuntu-latest
+    permissions:
+      actions: write
+      contents: read
+    steps:
+      - name: Dispatch production CI after successful main CI
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          current_sha="$(gh api "repos/${GITHUB_REPOSITORY}/git/ref/heads/main" --jq '.object.sha')"
+          test "$current_sha" = "$GITHUB_SHA" || { echo "::error::Main changed; refusing stale release"; exit 1; }
+          gh api -X POST "repos/${GITHUB_REPOSITORY}/actions/workflows/ci.yml/dispatches" -f ref=main
+          echo "Explicit production CI requested for ${GITHUB_SHA}"
