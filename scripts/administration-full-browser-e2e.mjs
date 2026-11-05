@@ -84,6 +84,8 @@ try{
       const targets=[...new Set(visibleLinks.filter(href=>href.startsWith('/portals/administration/')&&(role.name==='admin'||href!=='/portals/administration/sales')))].slice(0,35)
       for(const target of targets){
        const tab=await context.newPage()
+       const clickedPageErrors=[]
+       tab.on('pageerror',error=>clickedPageErrors.push(String(error.message||error)))
        try{
         await tab.goto(base+route,{waitUntil:'domcontentloaded',timeout:30000})
         const href=tab.locator('a[href="'+target.replaceAll('"','\\"')+'"]:visible').first()
@@ -110,6 +112,7 @@ try{
         clickedNavigation.push({role:role.name,from:route,to:target,actual:finalPath})
         const text=(await tab.locator('body').innerText()).trim()
         if(!text||/404\s*\|\s*this page could not be found|application error|internal server error/i.test(text))throw Error('clicked destination rendered error: '+target)
+        if(clickedPageErrors.length)throw Error('clicked destination uncaught JS: '+target+': '+clickedPageErrors.join('; ').slice(0,350))
         if(await tab.locator('[data-layout-key]').count())throw Error('clicked administration destination rendered personnel navigation: '+target)
        }finally{await tab.close()}
       }
