@@ -6,6 +6,8 @@ export type SecurityLoginEmail = {
   canonicalLogin?: string | null
   portal: 'staff' | 'responsible' | 'admin'
   ip?: string | null
+  latitude?: string | null
+  longitude?: string | null
   approximateLocation?: string | null
   userAgent?: string | null
   reason?: string | null
@@ -18,6 +20,14 @@ function escapeHtml(value: string) {
     .replaceAll('>', '&gt;')
     .replaceAll('"', '&quot;')
     .replaceAll("'", '&#039;')
+}
+
+function ipCoordinates(latitude?: string | null, longitude?: string | null) {
+  if (!latitude || !longitude) return null
+  const lat = Number(latitude)
+  const lon = Number(longitude)
+  if (!Number.isFinite(lat) || !Number.isFinite(lon) || lat < -90 || lat > 90 || lon < -180 || lon > 180) return null
+  return { lat, lon, label: lat.toFixed(5) + ', ' + lon.toFixed(5), url: 'https://www.google.com/maps?q=' + encodeURIComponent(lat + ',' + lon) }
 }
 
 function label(outcome: SecurityLoginOutcome) {
@@ -68,6 +78,7 @@ export async function sendSecurityLoginEmail(event: SecurityLoginEmail): Promise
   const canonical = event.canonicalLogin && event.canonicalLogin !== event.login ? event.canonicalLogin : null
   const ip = event.ip || 'onbekend'
   const location = event.approximateLocation || 'onbekend'
+  const coordinates = ipCoordinates(event.latitude, event.longitude)
   const agent = event.userAgent || 'onbekend'
   const { device, browser } = describeDevice(event.userAgent)
   const reason = event.reason || '—'
@@ -81,6 +92,8 @@ export async function sendSecurityLoginEmail(event: SecurityLoginEmail): Promise
     canonical ? `Gekoppeld account: ${canonical}` : null,
     `IP-adres: ${ip}`,
     `Adres / locatie (benadering): ${location}`,
+    `IP-geolocatiecoördinaten (benadering): ${coordinates?.label || 'niet beschikbaar'}`,
+    coordinates ? `Kaart (IP-geolocatie): ${coordinates.url}` : null,
     `Toestel: ${device}`,
     `Browser: ${browser}`,
     `User-Agent: ${agent}`,
@@ -97,7 +110,7 @@ export async function sendSecurityLoginEmail(event: SecurityLoginEmail): Promise
       ${canonical ? `<tr><td><strong>Gekoppeld account</strong></td><td>${escapeHtml(canonical)}</td></tr>` : ''}
       <tr><td><strong>IP-adres</strong></td><td>${escapeHtml(ip)}</td></tr>
       <tr><td><strong>Adres / locatie (benadering)</strong></td><td>${escapeHtml(location)}</td></tr>
-      <tr><td><strong>Toestel</strong></td><td>${escapeHtml(device)}</td></tr>
+      <tr><td><strong>IP-geolocatiecoördinaten (benadering)</strong></td><td>${escapeHtml(coordinates?.label || 'niet beschikbaar')}</td></tr>\n      ${coordinates ? `<tr><td><strong>Kaart (IP-geolocatie)</strong></td><td><a href="${escapeHtml(coordinates.url)}">Bekijk geschatte locatie op Google Maps</a></td></tr>` : ''}\n      <tr><td><strong>Toestel</strong></td><td>${escapeHtml(device)}</td></tr>
       <tr><td><strong>Browser</strong></td><td>${escapeHtml(browser)}</td></tr>
       <tr><td><strong>User-Agent</strong></td><td>${escapeHtml(agent)}</td></tr>
       <tr><td><strong>Reden</strong></td><td>${escapeHtml(reason)}</td></tr>
