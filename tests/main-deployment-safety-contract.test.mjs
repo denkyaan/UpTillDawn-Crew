@@ -3,6 +3,7 @@ import assert from "node:assert/strict"
 import {readFileSync} from "node:fs"
 
 const main=readFileSync(".github/workflows/deploy-main.yml","utf8")
+const mainCi=readFileSync(".github/workflows/fast-change-validation.yml","utf8")
 const production=readFileSync(".github/workflows/deploy-cloudflare.yml","utf8")
 const productionCi=readFileSync(".github/workflows/ci.yml","utf8")
 
@@ -40,4 +41,14 @@ test("production deploy follows successful manually dispatched CI only",()=>{
  assert.match(production,/environment: production/)
  assert.match(production,/head_sha=\$\{RELEASE_SHA\}/)
  assert.match(production,/Revalidate release SHA immediately before production deployment/)
+})
+
+test("main CI requires explicit release input before dispatching production CI",()=>{
+ assert.match(mainCi,/release_production:/)
+ assert.match(mainCi,/default: false/)
+ assert.match(mainCi,/needs: fast/)
+ assert.match(mainCi,/github.event_name == 'workflow_dispatch'/)
+ assert.match(mainCi,/inputs.release_production == true/)
+ assert.match(mainCi,/actions\/workflows\/ci\.yml\/dispatches/)
+ assert.match(mainCi,/current_sha.*GITHUB_SHA/)
 })
