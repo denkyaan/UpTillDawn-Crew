@@ -109,3 +109,12 @@ test('briefing import panel labels are translated across all supported locales',
   assert.match(editor,new RegExp(`\\{t\\.${key}\\}`))
  }
 })
+
+test('briefing analysis API allows partial extraction and rejects empty content',()=>{
+ const api=readFileSync(new URL('../app/api/briefing-analyze/route.ts',import.meta.url),'utf8')
+ assert.match(api,/if\(!title&&!instructions\)return NextResponse\.json/)
+ assert.match(api,/return NextResponse\.json\(\{title,instructions\}\)/)
+ assert.doesNotMatch(api,/if\(!title\|\|!instructions\)/)
+ assert.match(editor,/if\(result\.title\?\.trim\(\)\)setTitle\(result\.title\)/)
+ assert.match(editor,/if\(result\.instructions\?\.trim\(\)\)setBody\(result\.instructions\)/)
+})
