@@ -41,3 +41,10 @@ test('readiness includes unresolved event placeholders in the briefing title',()
  assert.deepEqual(review.missing,['evenement'])
  assert.deepEqual(crewBriefingReview('Briefing [contact]','Bel [contact]').missing,['contact'])
 })
+
+test('event time fields are normalized consistently and remain incomplete without both endpoints',()=>{
+ const valid=generateCrewBriefingDraft({startTime:' 18:00\t',endTime:'\n02:00 '})
+ assert.ok(valid.body.includes('Eventuren: 18:00 – 02:00'))
+ const incomplete=generateCrewBriefingDraft({startTime:'18:00',endTime:'  '})
+ assert.ok(incomplete.body.includes('Eventuren: [start – einde]'))
+})
