@@ -14,8 +14,13 @@ test('administration workflow targets exist and never loop to the current module
  }
 })
 test('unsupported module actions are not presented as working links',()=>{
- for(const slug of ['inventory','notifications','marketing','settings','automations','permits'])assert.equal(administrationWorkflowHref(slug),null)
+ for(const slug of ['inventory','notifications','settings','automations','permits'])assert.equal(administrationWorkflowHref(slug),null)
  const page=readFileSync('app/(app)/portals/administration/modules/[slug]/page.tsx','utf8')
  assert.match(page,/administrationWorkflowHref\(slug\)/)
  assert.ok(!page.includes('operationalModuleLinks'))
+})
+
+test('marketing primary action stays in administration and opens promotion management',()=>{
+ assert.equal(administrationWorkflowHref('marketing'),'/portals/administration/promotion-tasks')
+ assert.ok(existsSync('app/(app)/portals/administration/promotion-tasks/page.tsx'))
 })

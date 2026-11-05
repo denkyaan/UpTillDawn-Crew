@@ -10,6 +10,7 @@ export const administrationWorkflowLinks:Record<string,string>={
  contacts:"/portals/administration/counterparties",
  sponsors:"/portals/administration/counterparties",
  logistics:"/portals/administration/modules/inventory",
+ marketing:"/portals/administration/promotion-tasks",
  tasks:"#administration-work-queue"
 }
 export function administrationWorkflowHref(slug:string):string|null{
