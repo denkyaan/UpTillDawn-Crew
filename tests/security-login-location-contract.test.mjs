@@ -35,3 +35,9 @@ test('full production CI is opt-in, not triggered by ordinary pull requests or p
   assert.match(triggers, /^\s+workflow_call:/m)
   assert.doesNotMatch(triggers, /^\s+(?:push|pull_request|schedule):/m)
 })
+
+test('admin login checks and logs RPC audit errors without failing authentication', () => {
+  assert.match(route, /const \{ error: auditError \} = await supabase\.rpc\('upt_admin_login_success'/)
+  assert.match(route, /if \(auditError\) \{/)
+  assert.match(route, /success audit rejected/)
+})
