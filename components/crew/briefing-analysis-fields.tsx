@@ -25,7 +25,7 @@ export function BriefingAnalysisFields({defaultTitle='',defaultBody='',bodyPlace
    const analysisForm=new FormData();analysisForm.set('file',file)
    const mediaForm=new FormData();mediaForm.set('file',file)
    const [analysisResponse,mediaResponse]=await Promise.all([fetch('/api/briefing-analyze',{method:'POST',body:analysisForm}),fetch('/api/briefing-extract-media',{method:'POST',body:mediaForm})])
-   const result=await analysisResponse.json() as {title?:string;instructions?:string;error?:string};if(!analysisResponse.ok)throw new Error(humanizeAppError(result.error||'Analyse mislukt.'));setTitle(result.title||'');setBody(result.instructions||'')
+   const result=await analysisResponse.json() as {title?:string;instructions?:string;error?:string};if(!analysisResponse.ok)throw new Error(humanizeAppError(result.error||'Analyse mislukt.'));if(!result.title?.trim()&&!result.instructions?.trim())throw new Error('Geen leesbare briefingtekst gevonden. Controleer het bestand of vul de briefing handmatig in.');setTitle(result.title||'');setBody(result.instructions||'')
    let extracted=0
    if(mediaResponse.ok&&extractedRef.current){const media=await mediaResponse.json() as {images?:ExtractedImage[]};const transfer=new DataTransfer();for(const image of media.images||[])transfer.items.add(decodedFile(image));extracted=transfer.files.length;extractedRef.current.files=transfer.files}
    setMessage(extracted?`Titel en instructies zijn ingevuld. ${extracted} ingesloten afbeelding${extracted===1?'':'en'} wordt automatisch als bijlage opgeslagen. Controleer alles voor opslaan.`:'Titel en instructies zijn automatisch ingevuld. Controleer ze voor opslaan.')
