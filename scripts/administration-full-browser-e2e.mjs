@@ -77,11 +77,12 @@ try{
      const controls=await page.locator('button,input,select,textarea,[role="button"],[role="switch"],[role="checkbox"]').evaluateAll(elements=>elements.map(el=>({tag:el.tagName.toLowerCase(),type:el.getAttribute('type')||'',action:el.getAttribute('data-action')||'',label:(el.getAttribute('aria-label')||el.getAttribute('name')||el.textContent||'').trim().slice(0,100),disabled:el.matches(':disabled')||el.getAttribute('aria-disabled')==='true'})))
      interactionInventory.push({role:role.name,route,controls})
      findings.push({role:role.name,route,actual:path,links:links.length,buttons,forms,controls:controls.length})
-     if(['admin','administration'].includes(role.name)&&route.startsWith('/portals/administration')){
+     if((['admin','administration'].includes(role.name)&&route.startsWith('/portals/administration'))||(role.name==='promotion'&&route.startsWith('/portals/promotion'))){
       // Exercise actual user clicks, rather than treating direct URL requests as navigation coverage.
       const visibleLinks=await page.locator('a[href]:visible').evaluateAll(els=>els.map(el=>el.getAttribute('href')).filter(Boolean))
       // Do not click admin-only Sales as an administrative_staff user: the access guard correctly redirects to portal home.
-      const targets=[...new Set(visibleLinks.filter(href=>href.startsWith('/portals/administration/')&&(role.name==='admin'||href!=='/portals/administration/sales')))].slice(0,35)
+      const portalPrefix=role.name==='promotion'?'/portals/promotion/':'/portals/administration/'
+      const targets=[...new Set(visibleLinks.filter(href=>href.startsWith(portalPrefix)&&(role.name==='admin'||href!=='/portals/administration/sales')))].slice(0,35)
       for(const target of targets){
        const tab=await context.newPage()
        const clickedPageErrors=[]
@@ -112,7 +113,7 @@ try{
         const text=(await tab.locator('body').innerText()).trim()
         if(!text||/404\s*\|\s*this page could not be found|application error|internal server error/i.test(text))throw Error('clicked destination rendered error: '+target)
         if(clickedPageErrors.length)throw Error('clicked destination uncaught JS: '+target+': '+clickedPageErrors.join('; ').slice(0,350))
-        if(await tab.locator('[data-layout-key]').count())throw Error('clicked administration destination rendered personnel navigation: '+target)
+        if(await tab.locator('[data-layout-key]').count())throw Error('clicked portal destination rendered personnel navigation: '+target)
         clickedNavigation.push({role:role.name,from:route,to:target,actual:finalPath})
        }catch(error){
         const screenshotName='test-results/portal-e2e/'+role.name+'-clicked-'+route.replace(/[^a-z0-9]/gi,'_')+'-to-'+target.replace(/[^a-z0-9]/gi,'_')+'.png'
