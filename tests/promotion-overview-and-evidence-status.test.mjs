@@ -11,10 +11,12 @@ test("promotion overview separates pending from active work using exact counts",
  assert.doesNotMatch(home,/countIsPartial/)
  for(const label of ["Nog te starten","À commencer","Not started","Noch nicht begonnen"])assert.ok(home.includes(label))
 })
-test("promotion task list clearly discloses its 100-item limit in all four languages",()=>{
- assert.match(tasks,/\.order\("created_at",\{ascending:false\}\)\.limit\(100\)/)
- assert.match(tasks,/data\?\.length===100/)
- for(const label of ["Enkel de 100 recentste toegewezen taken","Seules les 100 dernières tâches attribuées","Only the 100 most recent assigned tasks","Nur die 100 neuesten zugewiesenen Aufgaben"])assert.ok(tasks.includes(label))
+test("promotion task list supports stable paginated access in all four languages",()=>{
+ assert.match(tasks,/\.order\("created_at",\{ascending:false\}\)\.order\("id",\{ascending:false\}\)\.range\(offset,offset\+100\)/)
+ assert.match(tasks,/data\.slice\(0,100\)/)
+ assert.match(tasks,/page>1/)
+ assert.match(tasks,/data\?\.length\?\?0\)>100/)
+ for(const label of ["Vorige","Précédent","Previous","Zurück","Volgende","Suivant","Next","Weiter"])assert.ok(tasks.includes(label))
 })
 test("promotion evidence history failures are visible in all supported languages",()=>{
  assert.match(tasks,/data:evidence,error:evidenceError/)
