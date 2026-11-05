@@ -52,7 +52,7 @@ export function AssignmentScopeFields({
     () => eventId
       ? workplaces.filter(workplace => workplace.event_id === eventId)
       : workplaces,
-    [eventId, showEventSelect, workplaces],
+    [eventId, workplaces],
   )
 
   const effectiveEventId = workplaceId
