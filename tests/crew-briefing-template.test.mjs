@@ -43,9 +43,23 @@ test('draft review identifies unresolved instructions and displays localized rev
  assert.match(template,/export function unresolvedCrewBriefingFields/)
  assert.match(template,/new Set\(matches\.map/)
  assert.match(template,/export function crewBriefingReadiness/)
- assert.match(editor,/unresolvedCrewBriefingFields\(body\)/)
- assert.match(editor,/unresolved\.length>0/)
+ assert.match(editor,/crewBriefingReview\(title,body\)/)
+ assert.match(editor,/review\.issues\.includes\('title'\)/)
  assert.match(editor,/role="status"/)
- assert.match(editor,/\{t\.review\}/)
+ assert.match(editor,/review\.ready\?t\.ready:t\.review/)
  for(const label of ['Nog in te vullen velden','Champs à vérifier','Fields requiring review','Zu prüfende Felder'])assert.ok(editor.includes(label),label)
+})
+
+test('briefing readiness checks missing title, body and unresolved markers without blocking publishing',()=>{
+ assert.match(template,/export function crewBriefingReview/)
+ assert.match(template,/if\(!title\.trim\(\)\)issues\.push\('title'\)/)
+ assert.match(template,/if\(!body\.trim\(\)\)issues\.push\('body'\)/)
+ assert.match(template,/if\(missing\.length\)issues\.push\('placeholders'\)/)
+ assert.match(editor,/review\.ready\?t\.ready:t\.review/)
+ for(const label of ['Titel ontbreekt','Titre manquant','Title missing','Titel fehlt'])assert.ok(editor.includes(label),label)
+})
+
+test('switching event does not silently reuse the initially selected event name',()=>{
+ assert.match(editor,/name:context\?\.name\|\|\(!selectedEventId\?eventName:undefined\)/)
+ assert.match(editor,/workplaceContexts\.find\(item=>item\.id===workplaceId&&\(!selectedEventId\|\|item\.event_id===selectedEventId\)\)/)
 })

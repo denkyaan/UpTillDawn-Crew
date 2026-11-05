@@ -2,12 +2,12 @@
 import {useEffect,useRef,useState} from 'react'
 import {activeUiLocale,LANGUAGE_APPLIED_EVENT,type SupportedUiLocale} from '@/lib/locale-preferences'
 import {humanizeAppError} from '@/lib/client-error-message'
-import {generateCrewBriefingDraft,unresolvedCrewBriefingFields,type CrewBriefingEventContext} from '@/lib/crew-briefing-template'
+import {generateCrewBriefingDraft,crewBriefingReview,type CrewBriefingEventContext} from '@/lib/crew-briefing-template'
 const templateLabels={
- nl:{button:'Gebruik crewbriefing-sjabloon',confirm:'Bestaande titel en tekst vervangen door het crewbriefing-sjabloon?',success:'Sjabloon ingevuld. Vervang alle velden tussen [ ] door de juiste eventinformatie voordat je publiceert.',review:'Nog in te vullen velden'},
- fr:{button:'Utiliser le modèle de briefing',confirm:'Remplacer le titre et le texte existants par le modèle de briefing ?',success:'Modèle inséré. Remplacez tous les champs entre [ ] par les informations de l’événement avant publication.',review:'Champs à vérifier'},
- en:{button:'Use crew briefing template',confirm:'Replace the existing title and text with the crew briefing template?',success:'Template inserted. Replace all fields in [ ] with the correct event information before publishing.',review:'Fields requiring review'},
- de:{button:'Crewbriefing-Vorlage verwenden',confirm:'Vorhandenen Titel und Text durch die Crewbriefing-Vorlage ersetzen?',success:'Vorlage eingefügt. Ersetzen Sie vor der Veröffentlichung alle Felder in [ ] durch die korrekten Eventinformationen.',review:'Zu prüfende Felder'}
+ nl:{button:'Gebruik crewbriefing-sjabloon',confirm:'Bestaande titel en tekst vervangen door het crewbriefing-sjabloon?',success:'Sjabloon ingevuld. Vervang alle velden tussen [ ] door de juiste eventinformatie voordat je publiceert.',review:'Nog in te vullen velden',ready:'Briefing klaar voor controle',titleMissing:'Titel ontbreekt',bodyMissing:'Instructies ontbreken'},
+ fr:{button:'Utiliser le modèle de briefing',confirm:'Remplacer le titre et le texte existants par le modèle de briefing ?',success:'Modèle inséré. Remplacez tous les champs entre [ ] par les informations de l’événement avant publication.',review:'Champs à vérifier',ready:'Briefing prêt pour vérification',titleMissing:'Titre manquant',bodyMissing:'Instructions manquantes'},
+ en:{button:'Use crew briefing template',confirm:'Replace the existing title and text with the crew briefing template?',success:'Template inserted. Replace all fields in [ ] with the correct event information before publishing.',review:'Fields requiring review',ready:'Briefing ready for review',titleMissing:'Title missing',bodyMissing:'Instructions missing'},
+ de:{button:'Crewbriefing-Vorlage verwenden',confirm:'Vorhandenen Titel und Text durch die Crewbriefing-Vorlage ersetzen?',success:'Vorlage eingefügt. Ersetzen Sie vor der Veröffentlichung alle Felder in [ ] durch die korrekten Eventinformationen.',review:'Zu prüfende Felder',ready:'Briefing bereit zur Prüfung',titleMissing:'Titel fehlt',bodyMissing:'Anweisungen fehlen'}
 } as const
 const ACCEPT='.pdf,.docx,.pptx,.xlsx,.txt,.csv,image/jpeg,image/png,image/webp'
 type ExtractedImage={name:string;mimeType:string;base64:string}
@@ -17,7 +17,8 @@ export function BriefingAnalysisFields({defaultTitle='',defaultBody='',bodyPlace
  useEffect(()=>{const apply=()=>setLocale(activeUiLocale());apply();window.addEventListener(LANGUAGE_APPLIED_EVENT,apply);return()=>window.removeEventListener(LANGUAGE_APPLIED_EVENT,apply)},[])
  const t=templateLabels[locale]
  const [title,setTitle]=useState(defaultTitle),[body,setBody]=useState(defaultBody),[busy,setBusy]=useState(false),[message,setMessage]=useState(''),extractedRef=useRef<HTMLInputElement>(null)
- const unresolved=unresolvedCrewBriefingFields(body)
+ const review=crewBriefingReview(title,body)
+ const unresolved=review.missing
  async function analyze(file:File){
   setBusy(true);setMessage('Bestand wordt gelezen…');if(extractedRef.current)extractedRef.current.value=''
   try{
@@ -39,9 +40,9 @@ export function BriefingAnalysisFields({defaultTitle='',defaultBody='',bodyPlace
    <span className="text-xs text-muted-foreground">PDF, DOCX, PPTX, XLSX, TXT, CSV, JPG, PNG of WEBP · maximaal 20 MB. Afbeeldingen in DOCX, PPTX en XLSX worden waar mogelijk automatisch als bijlage toegevoegd.</span>
    {message&&<span className="text-xs">{message}</span>}
   </div>
-  <button type="button" className="rounded-lg border px-3 py-2 text-sm font-semibold" onClick={event=>{if((title.trim()||body.trim())&&!window.confirm(t.confirm))return;const form=event.currentTarget.closest('form');const data=form?new FormData(form):null;const workplaceId=String(data?.get('workplace_id')||'');const selectedEventId=String(data?.get('event_id')||'');const workplace=workplaceContexts.find(item=>item.id===workplaceId&&(!selectedEventId||item.event_id===selectedEventId));const eventId=selectedEventId||workplace?.event_id||'';const context=eventContexts.find(item=>item.id===eventId);const draft=generateCrewBriefingDraft({...context,name:context?.name||eventName,workplace:workplace?.name});setTitle(draft.title);setBody(draft.body);setMessage(t.success)}}>{t.button}</button>
+  <button type="button" className="rounded-lg border px-3 py-2 text-sm font-semibold" onClick={event=>{if((title.trim()||body.trim())&&!window.confirm(t.confirm))return;const form=event.currentTarget.closest('form');const data=form?new FormData(form):null;const workplaceId=String(data?.get('workplace_id')||'');const selectedEventId=String(data?.get('event_id')||'');const workplace=workplaceContexts.find(item=>item.id===workplaceId&&(!selectedEventId||item.event_id===selectedEventId));const eventId=selectedEventId||workplace?.event_id||'';const context=eventContexts.find(item=>item.id===eventId);const draft=generateCrewBriefingDraft({...context,name:context?.name||(!selectedEventId?eventName:undefined),workplace:workplace?.name});setTitle(draft.title);setBody(draft.body);setMessage(t.success)}}>{t.button}</button>
   <input name="title" required placeholder="Titel" className="border bg-background p-3" value={title} onChange={event=>setTitle(event.target.value)}/>
   <textarea name="body" required placeholder={bodyPlaceholder} className="min-h-28 border bg-background p-3" value={body} onChange={event=>setBody(event.target.value)}/>
-  {unresolved.length>0&&<div role="status" className="rounded-lg border border-amber-500/40 bg-amber-500/10 p-3 text-sm"><strong>{t.review} ({unresolved.length})</strong><ul className="mt-2 list-disc pl-5">{unresolved.map(item=><li key={item}>{item}</li>)}</ul></div>}
+  {(title.trim()||body.trim())&&<div role="status" className="rounded-lg border border-amber-500/40 bg-amber-500/10 p-3 text-sm"><strong>{review.ready?t.ready:t.review}</strong>{!review.ready&&<ul className="mt-2 list-disc pl-5">{review.issues.includes('title')&&<li>{t.titleMissing}</li>}{review.issues.includes('body')&&<li>{t.bodyMissing}</li>}{unresolved.map(item=><li key={item}>{item}</li>)}</ul>}</div>}
  </>
 }
