@@ -2,6 +2,10 @@ name: Deploy production
 
 on:
   workflow_dispatch:
+  workflow_run:
+    workflows: ["CI production"]
+    types: [completed]
+    branches: [main]
 
 concurrency:
   group: uptilldawn-production
@@ -9,13 +13,16 @@ concurrency:
 
 jobs:
   deploy:
-    if: github.ref == 'refs/heads/main'
+    if: >-
+      (github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main') ||
+      (github.event_name == 'workflow_run' && github.event.workflow_run.conclusion == 'success' && github.event.workflow_run.event == 'push' && github.event.workflow_run.head_branch == 'main')
     runs-on: ubuntu-26.04-arm
     environment: production
+    env:
+      RELEASE_SHA: ${{ github.event.workflow_run.head_sha || github.sha }}
     permissions:
       contents: read
       actions: read
-    env:
       # Public production Supabase config. Keep this pinned so production cannot
       # accidentally deploy against the preview project.
       NEXT_PUBLIC_SUPABASE_URL: https://eakoavcieossazqzplke.supabase.co
@@ -27,13 +34,19 @@ jobs:
       - name: Checkout
         uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5.1.0
         with:
-          ref: ${{ github.sha }}
+          ref: ${{ env.RELEASE_SHA }}
 
       - name: Verify release source
         shell: bash
         run: |
           test "${{ github.ref }}" = "refs/heads/main"
-          echo "Production release requested for ${{ github.sha }}."
+          test "$(git rev-parse HEAD)" = "$RELEASE_SHA"
+          current_sha="$(git ls-remote origin refs/heads/main | cut -f1)"
+          if [ "$current_sha" != "$RELEASE_SHA" ]; then
+            echo "::error::Main moved since validation; refusing stale production release."
+            exit 1
+          fi
+          echo "Production release requested for $RELEASE_SHA."
 
       - name: Require successful full CI for exact release commit
         env:
@@ -41,9 +54,9 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          count="$(gh api "repos/${GITHUB_REPOSITORY}/actions/workflows/ci.yml/runs?head_sha=${GITHUB_SHA}&status=success&per_page=100" --jq '[.workflow_runs[] | select(.head_sha == env.GITHUB_SHA and (.event == "workflow_dispatch" or .event == "push") and .conclusion == "success")] | length')"
+          count="$(gh api "repos/${GITHUB_REPOSITORY}/actions/workflows/ci.yml/runs?head_sha=${RELEASE_SHA}&status=success&per_page=100" --jq '[.workflow_runs[] | select(.head_sha == env.RELEASE_SHA and (.event == "workflow_dispatch" or .event == "push") and .conclusion == "success")] | length')"
           if [ "$count" -lt 1 ]; then
-            echo "::error::Production release blocked: full CI has not passed for ${GITHUB_SHA}"
+            echo "::error::Production release blocked: full CI has not passed for ${RELEASE_SHA}"
             exit 1
           fi
 
@@ -225,6 +238,16 @@ jobs:
           fi
           if [ -n "${TRANSLATION_API_KEY:-}" ]; then
             printf '%s' "$TRANSLATION_API_KEY" | npx wrangler secret put TRANSLATION_API_KEY
+          fi
+
+      - name: Revalidate release SHA immediately before production deployment
+        shell: bash
+        run: |
+          set -euo pipefail
+          current_sha="$(git ls-remote origin refs/heads/main | cut -f1)"
+          if [ "$current_sha" != "$RELEASE_SHA" ]; then
+            echo "::error::Main advanced after CI; refusing stale production deployment."
+            exit 1
           fi
 
       - name: Deploy production Worker
