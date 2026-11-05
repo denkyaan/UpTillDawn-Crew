@@ -87,3 +87,9 @@ test('partial imported briefing content preserves any existing field not extract
  assert.match(editor,/if\(result\.title\?\.trim\(\)\)setTitle\(result\.title\)/)
  assert.match(editor,/if\(result\.instructions\?\.trim\(\)\)setBody\(result\.instructions\)/)
 })
+
+test('import confirmation reports only fields actually extracted',()=>{
+ assert.match(editor,/result\.title\?\.trim\(\)\?'titel':null/)
+ assert.match(editor,/result\.instructions\?\.trim\(\)\?'instructies':null/)
+ assert.match(editor,/importedParts.*geïmporteerd/)
+})
