@@ -35,3 +35,10 @@ test("promotion evidence histories use one indexed lookup per assignment",()=>{
  assert.match(tasks,/evidenceByAssignment\.get\(item\.id\)/)
  assert.doesNotMatch(tasks,/evidenceRows\.(?:find|filter)\(/)
 })
+
+test("promotion evidence history is scoped to the current assignment page",()=>{
+ assert.match(tasks,/visibleAssignmentIds=\(data\?\?\[\]\)\.slice\(0,100\)\.map\(item=>item\.id\)/)
+ assert.match(tasks,/\.in\("assignment_id",visibleAssignmentIds\)/)
+ assert.match(tasks,/\.limit\(1000\)/)
+ assert.match(tasks,/evidenceRows\.length===1000/)
+})
