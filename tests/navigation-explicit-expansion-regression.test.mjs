@@ -17,5 +17,5 @@ test('administration navigation does not open the panel merely because a module 
 
 test('subtab selection closes role and administration panels immediately',()=>{
  assert.match(role,/setSelectedGroup\(\{key:"home",pathname\}\)/)
- assert.match(administration,/onClick=\{\(\)=>setSelectedCategory\(\{key:"overview",pathname\}\)\}/)
+ assert.match(administration,/onClick=\{\(\)=>setSelectedCategory\(null\)\}/)
 })
