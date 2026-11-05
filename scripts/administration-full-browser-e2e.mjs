@@ -100,7 +100,13 @@ try{
          throw Error('navigation '+route+' -> '+target+' expected '+expectedClickedPath+' but reached '+actualPath+': '+String(error.message||error)+' (screenshot: '+screenshotName+')')
         }
         await tab.waitForLoadState('domcontentloaded',{timeout:15000})
-        clickedNavigation.push({role:role.name,from:route,to:target,actual:new URL(tab.url()).pathname})
+        // Client-side hydration may redirect after the initial navigation commit.
+        // Verify the final route after the page has rendered, not just the first URL.
+        await tab.locator('body').waitFor({state:'visible',timeout:15000})
+        await tab.waitForTimeout(250)
+        const finalPath=new URL(tab.url()).pathname
+        if(finalPath!==expectedClickedPath)throw Error('hydrated navigation '+route+' -> '+target+' ended at '+finalPath+' (expected '+expectedClickedPath+')')
+        clickedNavigation.push({role:role.name,from:route,to:target,actual:finalPath})
         const text=(await tab.locator('body').innerText()).trim()
         if(!text||/404\s*\|\s*this page could not be found|application error|internal server error/i.test(text))throw Error('clicked destination rendered error: '+target)
         if(await tab.locator('[data-layout-key]').count())throw Error('clicked administration destination rendered personnel navigation: '+target)
