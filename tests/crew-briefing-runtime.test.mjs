@@ -33,3 +33,11 @@ test('generator strips control characters from external event values',()=>{
  assert.ok(draft.body.includes('Adres: Site A'))
  assert.equal(draft.title.includes('\n'),false)
 })
+
+test('readiness includes unresolved event placeholders in the briefing title',()=>{
+ const review=crewBriefingReview('Crewbriefing – [evenement]','Alle instructies zijn ingevuld.')
+ assert.equal(review.ready,false)
+ assert.deepEqual(review.issues,['placeholders'])
+ assert.deepEqual(review.missing,['evenement'])
+ assert.deepEqual(crewBriefingReview('Briefing [contact]','Bel [contact]').missing,['contact'])
+})
