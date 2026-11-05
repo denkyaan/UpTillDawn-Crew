@@ -127,3 +127,13 @@ test('briefing document endpoints validate signatures and unsafe filenames befor
   assert.match(source,/status:400/)
  }
 })
+
+test('assignment scope rejects cross-event workplace defaults and filters workplaces for selected event',()=>{
+ const scope=readFileSync(new URL('../components/crew/assignment-scope-fields.tsx',import.meta.url),'utf8')
+ assert.match(scope,/workplace\.event_id === defaultEventId/)
+ assert.match(scope,/events\.some\(event => event\.id === workplace\.event_id\)/)
+ assert.match(scope,/eventId\s*\? workplaces\.filter\(workplace => workplace\.event_id === eventId\)/)
+ assert.match(scope,/visibleWorkplaces\.find\(workplace => workplace\.id === workplaceId\)/)
+ assert.match(scope,/setWorkplaceId\(""\)/)
+ assert.match(scope,/setPersonId\(""\)/)
+})
