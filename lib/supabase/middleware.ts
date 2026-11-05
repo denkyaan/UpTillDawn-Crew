@@ -34,6 +34,16 @@ function isPublicPath(pathname: string) {
 }
 
 export async function updateSession(request: NextRequest) {
+    // Login and API routes handle their own authorization. Avoid an unnecessary
+    // Supabase auth request on every public page, API call and login attempt.
+    // Signup/password recovery keep the existing authenticated redirect below.
+    const pathname = request.nextUrl.pathname
+    if (isPublicPath(pathname) &&
+        pathname !== '/signup' && !pathname.startsWith('/signup/') &&
+        pathname !== '/forgot-password' && !pathname.startsWith('/forgot-password/')) {
+        return NextResponse.next({ request })
+    }
+
     let supabaseResponse = NextResponse.next({ request })
 
     const supabase = createServerClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!, {
@@ -55,8 +65,6 @@ export async function updateSession(request: NextRequest) {
 
     // Refresh and validate the session server-side.
     const { data: { user } } = await supabase.auth.getUser()
-    const pathname = request.nextUrl.pathname
-
     // Application pages are private by default. API routes remain responsible
     // for their own authentication/authorization so public auth/support APIs
     // can continue to operate without being accidentally hidden by middleware.
