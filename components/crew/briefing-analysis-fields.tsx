@@ -28,7 +28,7 @@ export function BriefingAnalysisFields({defaultTitle='',defaultBody='',bodyPlace
    const result=await analysisResponse.json() as {title?:string;instructions?:string;error?:string};if(!analysisResponse.ok)throw new Error(humanizeAppError(result.error||'Analyse mislukt.'));if(!result.title?.trim()&&!result.instructions?.trim())throw new Error('Geen leesbare briefingtekst gevonden. Controleer het bestand of vul de briefing handmatig in.');if(result.title?.trim())setTitle(result.title);if(result.instructions?.trim())setBody(result.instructions)
    let extracted=0
    if(mediaResponse.ok&&extractedRef.current){const media=await mediaResponse.json() as {images?:ExtractedImage[]};const transfer=new DataTransfer();for(const image of media.images||[])transfer.items.add(decodedFile(image));extracted=transfer.files.length;extractedRef.current.files=transfer.files}
-   setMessage(extracted?`Titel en instructies zijn ingevuld. ${extracted} ingesloten afbeelding${extracted===1?'':'en'} wordt automatisch als bijlage opgeslagen. Controleer alles voor opslaan.`:'Titel en instructies zijn automatisch ingevuld. Controleer ze voor opslaan.')
+   const importedParts=[result.title?.trim()?'titel':null,result.instructions?.trim()?'instructies':null].filter(Boolean).join(' en ');setMessage(extracted?`${importedParts} geïmporteerd. ${extracted} ingesloten afbeelding${extracted===1?'':'en'} wordt automatisch als bijlage opgeslagen. Controleer alles voor opslaan.`:`${importedParts} geïmporteerd. Controleer de briefing voor opslaan.`)
   }catch(error){setMessage(humanizeAppError(error))}finally{setBusy(false)}
  }
  return <>
