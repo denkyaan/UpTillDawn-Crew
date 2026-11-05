@@ -88,8 +88,11 @@ test('partial imported briefing content preserves any existing field not extract
  assert.match(editor,/if\(result\.instructions\?\.trim\(\)\)setBody\(result\.instructions\)/)
 })
 
-test('import confirmation reports only fields actually extracted',()=>{
- assert.match(editor,/result\.title\?\.trim\(\)\?'titel':null/)
- assert.match(editor,/result\.instructions\?\.trim\(\)\?'instructies':null/)
- assert.match(editor,/importedParts.*geïmporteerd/)
+test('import confirmation reports extracted fields using four-language labels',()=>{
+ assert.match(editor,/result\.title\?\.trim\(\)\?t\.importTitle:null/)
+ assert.match(editor,/result\.instructions\?\.trim\(\)\?t\.importBody:null/)
+ assert.match(editor,/\.join\(t\.importJoin\)/)
+ assert.match(editor,/t\.importDone/)
+ assert.match(editor,/t\.importImages/)
+ for(const locale of ['nl','fr','en','de'])assert.match(editor,new RegExp(`${locale}:\\{[^\\n]+importTitle:.*importBody:.*importJoin:.*importDone:.*importImages:`))
 })
