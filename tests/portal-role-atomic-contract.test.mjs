@@ -8,7 +8,7 @@ test('personnel role control uses a single atomic grant',async()=>{
  assert.match(ui,/update\("assign_approved"\)/)
  assert.doesNotMatch(ui,/if\s*\(action\s*===\s*["']assign["']\)/)
  assert.match(action,/assign_approved/)
- assert.match(action,/current\?\.realIsAdmin/)
+ assert.match(action,/!current\.isOwner && \(!current\.realIsAdmin \|\| !current\.approved \|\| current\.account_blocked\)/)
  assert.match(action,/userId === current\.id/)
 })
 
@@ -67,7 +67,7 @@ test('filtered personnel selection cannot silently submit a hidden user',async()
 
 test('blocked or unapproved admins never see role mutation controls',async()=>{
  const page=await read('app/(app)/portals/roles/page.tsx')
- assert.match(page,/const canManage = current\.realIsAdmin && current\.approved && !current\.account_blocked/)
+ assert.match(page,/const canManage = current\.isOwner \|\| \(current\.realIsAdmin && current\.approved && !current\.account_blocked\)/)
  assert.match(page,/canManage && <section/)
  assert.match(page,/canManage && <td/)
 })
