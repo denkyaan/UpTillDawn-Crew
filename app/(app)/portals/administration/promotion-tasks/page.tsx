@@ -16,7 +16,7 @@ const labels={
 export default async function AdministrationPromotionTasks(){
  const actor=await getCurrentUser()
  if(!actor)redirect("/login")
- if(!actor.isAdmin&&!actor.isOwner)redirect("/portals/administration")
+ // The administration layout already enforces approved Administration portal access.
  const locale=await requestUiLocale()
  const t=labels[locale]
  const db=await createClient()
