@@ -56,3 +56,10 @@ test('overnight events show the ending calendar date to avoid ambiguous shift ho
  assert.ok(sameDay.body.includes('Eventuren: 12:00 – 18:00'))
  assert.equal(sameDay.body.includes('(05/11/2026)'),false)
 })
+
+test('review flags blank and single-character bracket placeholders',()=>{
+ assert.deepEqual(unresolvedCrewBriefingFields('Contact: [] of [ ] en [x]'),['leeg invulveld','x'])
+ const review=crewBriefingReview('Briefing','Contact: [ ]')
+ assert.equal(review.ready,false)
+ assert.deepEqual(review.missing,['leeg invulveld'])
+})
