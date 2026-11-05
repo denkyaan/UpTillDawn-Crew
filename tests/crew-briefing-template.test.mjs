@@ -77,8 +77,13 @@ test('briefing event formatting falls back safely for unsupported timezones',()=
 
 test('empty imported briefing text is rejected before replacing existing draft',()=>{
  const guard=editor.indexOf("if(!result.title?.trim()&&!result.instructions?.trim())throw new Error")
- const titleWrite=editor.indexOf("setTitle(result.title||'')")
- const bodyWrite=editor.indexOf("setBody(result.instructions||'')")
+ const titleWrite=editor.indexOf('if(result.title?.trim())setTitle(result.title)')
+ const bodyWrite=editor.indexOf('if(result.instructions?.trim())setBody(result.instructions)')
  assert.ok(guard>0&&titleWrite>guard&&bodyWrite>guard)
  assert.match(editor,/Geen leesbare briefingtekst gevonden/)
+})
+
+test('partial imported briefing content preserves any existing field not extracted',()=>{
+ assert.match(editor,/if\(result\.title\?\.trim\(\)\)setTitle\(result\.title\)/)
+ assert.match(editor,/if\(result\.instructions\?\.trim\(\)\)setBody\(result\.instructions\)/)
 })
