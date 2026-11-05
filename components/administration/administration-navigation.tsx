@@ -23,7 +23,6 @@ export function AdministrationNavigation({initialLocale,canManagePromotion}:{ini
  const [locale,setLocale]=useState(initialLocale)
  useEffect(()=>{const apply=()=>setLocale(activeUiLocale());apply();addEventListener(LANGUAGE_APPLIED_EVENT,apply);return()=>removeEventListener(LANGUAGE_APPLIED_EVENT,apply)},[])
  const [selectedCategory,setSelectedCategory]=useState<{key:string;pathname:string}|null>(null)
- useEffect(()=>{setSelectedCategory(null)},[pathname])
  const current=administrationCategoryForPath(pathname)
  const selected=categories.find(group=>group.key===(selectedCategory?.pathname===pathname?selectedCategory.key:"overview"))!
  const visible=selected.key!=="overview"
