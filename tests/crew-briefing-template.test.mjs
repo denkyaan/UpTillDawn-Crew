@@ -58,3 +58,8 @@ test('briefing readiness checks missing title, body and unresolved markers witho
  assert.match(editor,/review\.ready\?t\.ready:t\.review/)
  for(const label of ['Titel ontbreekt','Titre manquant','Title missing','Titel fehlt'])assert.ok(editor.includes(label),label)
 })
+
+test('switching event does not silently reuse the initially selected event name',()=>{
+ assert.match(editor,/name:context\?\.name\|\|\(!selectedEventId\?eventName:undefined\)/)
+ assert.match(editor,/workplaceContexts\.find\(item=>item\.id===workplaceId&&\(!selectedEventId\|\|item\.event_id===selectedEventId\)\)/)
+})
