@@ -99,8 +99,8 @@ try{
          await tab.screenshot({path:screenshotName,fullPage:true,timeout:5000}).catch(()=>{})
          throw Error('navigation '+route+' -> '+target+' expected '+expectedClickedPath+' but reached '+actualPath+': '+String(error.message||error)+' (screenshot: '+screenshotName+')')
         }
-        await tab.waitForLoadState('domcontentloaded')
-        clickedNavigation.push({role:role.name,from:route,to:target})
+        await tab.waitForLoadState('domcontentloaded',{timeout:15000})
+        clickedNavigation.push({role:role.name,from:route,to:target,actual:new URL(tab.url()).pathname})
         const text=(await tab.locator('body').innerText()).trim()
         if(!text||/404\s*\|\s*this page could not be found|application error|internal server error/i.test(text))throw Error('clicked destination rendered error: '+target)
         if(await tab.locator('[data-layout-key]').count())throw Error('clicked administration destination rendered personnel navigation: '+target)
