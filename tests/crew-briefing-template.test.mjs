@@ -80,7 +80,7 @@ test('empty imported briefing text is rejected before replacing existing draft',
  const titleWrite=editor.indexOf('if(result.title?.trim())setTitle(result.title)')
  const bodyWrite=editor.indexOf('if(result.instructions?.trim())setBody(result.instructions)')
  assert.ok(guard>0&&titleWrite>guard&&bodyWrite>guard)
- assert.match(editor,/Geen leesbare briefingtekst gevonden/)
+ assert.match(editor,/throw new Error\(t\.importEmpty\)/)
 })
 
 test('partial imported briefing content preserves any existing field not extracted',()=>{
@@ -95,4 +95,10 @@ test('import confirmation reports extracted fields using four-language labels',(
  assert.match(editor,/t\.importDone/)
  assert.match(editor,/t\.importImages/)
  for(const locale of ['nl','fr','en','de'])assert.match(editor,new RegExp(`${locale}:\\{[^\\n]+importTitle:.*importBody:.*importJoin:.*importDone:.*importImages:`))
+})
+
+test('briefing import progress and error states are localized',()=>{
+ assert.match(editor,/setMessage\(t\.importReading\)/)
+ assert.match(editor,/result\.error\|\|t\.importFailed/)
+ for(const locale of ['nl','fr','en','de'])assert.match(editor,new RegExp(`${locale}:\\{[^\\n]+importEmpty:.*importReading:.*importFailed:`))
 })
