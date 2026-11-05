@@ -25,20 +25,16 @@ test("main deployment checks the tested SHA again immediately before deploy",()=
  assert.match(main.slice(deploy),/wrangler deploy --config wrangler\.main\.jsonc/)
 })
 
-test("production CI runs automatically on main changes",()=>{
- assert.match(productionCi,/push:\s*\n\s*branches: \[main\]/)
+test("production CI is not started by main pushes",()=>{
  assert.match(productionCi,/workflow_dispatch:/)
+ assert.match(productionCi,/workflow_call:/)
+ assert.doesNotMatch(productionCi,/\n\s+push:/)
 })
 
-test("production deploy runs only after successful full CI for the exact current main SHA",()=>{
- assert.match(production,/workflow_run:\s*\n\s*workflows: \["CI production"\]/)
- assert.match(production,/workflow_run\.conclusion == 'success'/)
- assert.match(production,/workflow_run\.event == 'push'/)
- assert.match(production,/RELEASE_SHA:.*workflow_run\.head_sha/)
- assert.match(production,/ref: \$\{\{ env\.RELEASE_SHA \}\}/)
- assert.match(production,/head_sha=\$\{RELEASE_SHA\}/)
- assert.match(production,/current_sha.*RELEASE_SHA/)
- assert.match(production,/Revalidate release SHA immediately before production deployment/)
- assert.match(production,/environment: production/)
+test("production deployment requires a separate manual release and exact validated SHA",()=>{
  assert.match(production,/workflow_dispatch:/)
+ assert.doesNotMatch(production,/workflow_run:/)
+ assert.match(production,/environment: production/)
+ assert.match(production,/head_sha=\$\{RELEASE_SHA\}/)
+ assert.match(production,/Revalidate release SHA immediately before production deployment/)
 })
