@@ -14,5 +14,5 @@ test('approved check-ins, historical existence and session breaks share one depe
  assert.match(source,/const \[approvedChecks,historicalEventCheck,sessionBreaks\]=await Promise\.all\(\[/)
  assert.match(source,/relevantEventIds\.length\?s\.from\('check_ins'\)/)
  assert.match(source,/activeSessionIds\.length\?s\.from\('break_sessions'\)/)
- assert.match(source,/approvedChecks\.error/)
+ assert.match(source,/primaryOverviewSources=\[events,sessions,pendingIns,pendingOuts,incidents,assignments,shifts,profiles,workplaces,syncIssues,approvedChecks/)
 })
