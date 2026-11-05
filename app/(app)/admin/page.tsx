@@ -35,6 +35,9 @@ export default async function Page(){
  const approvedChecksDurationMs=dashboardTimestamp()-queriesStartedAt-initialQueriesDurationMs
  const primaryOverviewSources=[events,sessions,pendingIns,pendingOuts,incidents,assignments,shifts,profiles,workplaces,syncIssues,approvedChecks,responsibleAssignments,pendingProfiles,operationalAlerts]
  const eventRows=events.data||[],sessionRows=sessions.data||[],inRows=pendingIns.data||[],outRows=pendingOuts.data||[],incidentRows=incidents.data||[],assignmentRows=assignments.data||[],shiftRows=shifts.data||[],profileRows=profiles.data||[],workplaceRows=workplaces.data||[],syncRows=syncIssues.data||[],checkRows=approvedChecks.data||[],responsibleRows=responsibleAssignments.data||[],pendingProfileRows=pendingProfiles.data||[],alertRows=operationalAlerts.data||[]
+ // A past event must not trigger the first-use wizard simply because it is no longer upcoming.
+ const historicalEventCheck=events.error||eventRows.length?null:await s.from('events').select('id',{count:'exact',head:true}).limit(1)
+ const showFirstUse=!events.error&&!eventRows.length&&!historicalEventCheck?.error&&historicalEventCheck?.count===0
  const activeSessionIds=sessionRows.map(row=>row.id);const sessionBreaks=activeSessionIds.length?await s.from('break_sessions').select('id,work_session_id,started_at,ended_at').in('work_session_id',activeSessionIds).order('started_at'):{data:[],error:null}
  const sourceNames=['events','sessions','pendingIns','pendingOuts','incidents','assignments','shifts','profiles','workplaces','syncIssues','approvedChecks','responsibleAssignments','pendingProfiles','operationalAlerts'] as const
  const failedSourceNames:string[]=sourceNames.filter((_,index)=>Boolean(primaryOverviewSources[index].error))
@@ -129,7 +132,7 @@ export default async function Page(){
   }]:[]),
  ]
  return <main className="mx-auto max-w-7xl space-y-7 p-4 pb-28 md:p-8"><RealtimeRefresh/><div className="flex flex-wrap items-end justify-between gap-3"><div><p className="text-xs font-bold tracking-[.2em] text-violet-400">UP TILL DAWN BEHEER</p><h1 className="text-3xl font-black">Operationeel command center</h1><p className="text-muted-foreground">Realtime serverstatus voor personeel, goedkeuringen, help oproepen, taken en synchronisatie.</p></div><div className="flex flex-wrap gap-2"><Link href="/chat" className="rounded-xl border border-violet-500 px-4 py-2 font-semibold text-violet-400">Chats</Link><Link href="/admin/time-records" className="rounded-xl border px-4 py-3">Tijdcorrecties</Link></div></div>
- {!eventRows.length&&<FirstUseReadiness pendingApprovals={pendingProfileRows.length} approvedCrew={profileRows.length}/>}
+ {showFirstUse&&<FirstUseReadiness pendingApprovals={pendingProfileRows.length} approvedCrew={profileRows.length}/>}
  <PlatformAiAssistant/>
  {failedOverviewSources>0&&<p role="status" className="rounded-xl border border-amber-500/50 p-3 text-sm text-muted-foreground">Een deel van de realtime beheergegevens is tijdelijk niet beschikbaar. De beschikbare onderdelen blijven bruikbaar.</p>}
  <section className="space-y-3 rounded-2xl border p-4">
