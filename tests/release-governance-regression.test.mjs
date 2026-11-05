@@ -7,8 +7,7 @@ const security = readFileSync('tests/sql/security-definer-surface.sql', 'utf8')
 
 test('production deploy requires validated current main SHA after full CI', () => {
   assert.match(deploy, /workflow_dispatch:/)
-  assert.match(deploy, /workflow_run:/)
-  assert.match(deploy, /workflow_run\.conclusion == 'success'/)
+  assert.doesNotMatch(deploy, /workflow_run:/)
   assert.match(deploy, /github\.ref == 'refs\/heads\/main'/)
   assert.match(deploy, /environment: production/)
   assert.match(deploy, /Require successful full CI for exact release commit/)
