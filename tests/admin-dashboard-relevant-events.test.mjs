@@ -7,3 +7,10 @@ test('admin live dashboard only loads non-archived events that have not ended',(
  assert.match(source,/activeEvents=eventRows\.filter/)
  assert.match(source,/eventRows\.filter\(event=>Date\.parse\(event\.end_at\)>=nowMs\)/)
 })
+
+test('first-use wizard is only shown when no event has ever existed',()=>{
+ assert.match(source,/historicalEventCheck=events\.error\|\|eventRows\.length\?null:await s\.from\('events'\)\.select\('id',\{count:'exact',head:true\}\)/)
+ assert.match(source,/historicalEventCheck\?\.count===0/)
+ assert.match(source,/\{showFirstUse&&<FirstUseReadiness/)
+ assert.doesNotMatch(source,/\{!eventRows\.length&&<FirstUseReadiness/)
+})
