@@ -118,3 +118,12 @@ test('briefing analysis API allows partial extraction and rejects empty content'
  assert.match(editor,/if\(result\.title\?\.trim\(\)\)setTitle\(result\.title\)/)
  assert.match(editor,/if\(result\.instructions\?\.trim\(\)\)setBody\(result\.instructions\)/)
 })
+
+test('briefing document endpoints validate signatures and unsafe filenames before parsing',()=>{
+ for(const endpoint of ['briefing-analyze','briefing-extract-media']){
+  const source=readFileSync(new URL(`../app/api/${endpoint}/route.ts`,import.meta.url),'utf8')
+  assert.match(source,/import \{ validateUploadSecurity \} from '@\/lib\/upload-security'/)
+  assert.match(source,/await validateUploadSecurity\(file\)/)
+  assert.match(source,/status:400/)
+ }
+})
