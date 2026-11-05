@@ -10,7 +10,8 @@ test('admin first-use state guides a clean production into the first real event'
     read('app/(app)/events/page.tsx'),
     read('components/admin/first-use-readiness.tsx'),
   ])
-  assert.match(admin,/!eventRows\.length&&<FirstUseReadiness/)
+  assert.match(admin,/showFirstUse&&<FirstUseReadiness/)
+  assert.match(admin,/historicalEventCheck\?\.count===0/)
   assert.match(events,/id="event-aanmaken"/)
   assert.match(component,/\/events#event-aanmaken/)
   assert.match(component,/\/personnel/)
