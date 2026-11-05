@@ -32,6 +32,8 @@ export async function POST(request: NextRequest) {
     request.headers.get('cf-region'),
     request.headers.get('cf-ipcountry'),
   ].filter(Boolean).join(', ') || null
+  const latitude = request.headers.get('cf-iplatitude')
+  const longitude = request.headers.get('cf-iplongitude')
   const userAgent = request.headers.get('user-agent')
 
   const notify = async (
@@ -45,6 +47,8 @@ export async function POST(request: NextRequest) {
       portal: 'admin',
       ip: ip ?? undefined,
       approximateLocation: approximateLocation ?? undefined,
+      latitude: latitude ?? undefined,
+      longitude: longitude ?? undefined,
       userAgent: userAgent ?? undefined,
       reason,
     }).catch(() => false)
