@@ -14,6 +14,6 @@ test("suspended promotion members can read their suspension notice without bypas
  assert.match(tasks,/!isPromotionBlocked&&item\.status==="IN PROGRESS"/)
 })
 test("promotion task history clearly discloses bounded evidence listing",()=>{
- assert.match(tasks,/evidenceRows\.length===100/)
- for(const phrase of ["100 recentste bewijsindieningen","100 derniers dépôts","100 most recent evidence","100 neuesten Nachweise"])assert.ok(tasks.includes(phrase))
+ assert.match(tasks,/evidenceRows\.length===1000/)
+ for(const phrase of ["1000 recentste bewijsindieningen","1000 derniers dépôts","1000 most recent evidence","1000 neuesten Nachweise"])assert.ok(tasks.includes(phrase))
 })
