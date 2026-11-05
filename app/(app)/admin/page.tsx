@@ -1,3 +1,4 @@
+import { dashboardTimestamp } from '@/lib/admin-dashboard-timing'
 import Link from 'next/link'
 import { redirect } from 'next/navigation'
 import { getCurrentUser } from '@/lib/actions/auth'
@@ -15,27 +16,27 @@ export const dynamic = 'force-dynamic'
 function Stat({href,label,value,detail}:{href:string;label:string;value:number;detail?:string}){return <Link href={href} className="rounded-2xl border bg-card p-5"><p className="text-sm text-muted-foreground">{label}</p><p className="mt-2 text-3xl font-black">{value}</p>{detail&&<p className="mt-1 text-xs text-muted-foreground">{detail}</p>}</Link>}
 
 export default async function Page(){
- const dashboardStartedAt=Date.now()
+ const dashboardStartedAt=dashboardTimestamp()
  const current=await getCurrentUser();if(!current?.isAdmin) redirect('/')
- const authDurationMs=Date.now()-dashboardStartedAt
+ const authDurationMs=dashboardTimestamp()-dashboardStartedAt
  const s=await createClient();const now=new Date();const nowMs=now.getTime();const soon=new Date(nowMs+60*60*1000)
- const queriesStartedAt=Date.now()
+ const queriesStartedAt=dashboardTimestamp()
  const [events,sessions,pendingIns,pendingOuts,incidents,assignments,shifts,profiles,workplaces,syncIssues,responsibleAssignments,pendingProfiles,operationalAlerts]=await Promise.all([
   s.from('events').select('id,name,start_at,end_at,status').neq('status','archived').order('start_at'),s.from('work_sessions').select('id,user_id,event_id,shift_id,started_at').is('ended_at',null).order('started_at'),s.from('check_ins').select('id,user_id,event_id,workplace_id,requested_at').eq('status','pending').order('requested_at'),s.from('check_outs').select('id,user_id,event_id,workplace_id,requested_at').eq('status','pending').order('requested_at'),s.from('incidents').select('id,event_id,workplace_id,message,status,urgency,escalated_at,created_at').neq('status','resolved').order('created_at',{ascending:false}),s.from('task_assignments').select('id,status').neq('status','COMPLETED'),s.from('shifts').select('id,user_id,event_id,workplace_id,role_name,scheduled_start,scheduled_end,status').neq('status','cancelled').lte('scheduled_start',soon.toISOString()).gte('scheduled_end',now.toISOString()),s.rpc('upt_admin_operational_profiles'),s.from('workplaces').select('id,event_id,name'),s.from('offline_operation_records').select('id,status').neq('status','synced').limit(100),s.from('responsible_assignments').select('workplace_id,user_id'),s.rpc('upt_admin_pending_profiles'),s.rpc('upt_operational_alerts'),
  ])
- const initialQueriesDurationMs=Date.now()-queriesStartedAt
+ const initialQueriesDurationMs=dashboardTimestamp()-queriesStartedAt
  // Only load approved check-ins for events with currently relevant shifts.
  // Previously this loaded every historical approved check-in on every Admin visit.
  const relevantEventIds=[...new Set((shifts.data||[]).map(shift=>shift.event_id).filter(Boolean))]
  const approvedChecks=relevantEventIds.length
   ?await s.from('check_ins').select('user_id,event_id,workplace_id').eq('status','approved').in('event_id',relevantEventIds)
   :{data:[],error:null}
- const approvedChecksDurationMs=Date.now()-queriesStartedAt-initialQueriesDurationMs
+ const approvedChecksDurationMs=dashboardTimestamp()-queriesStartedAt-initialQueriesDurationMs
  const primaryOverviewSources=[events,sessions,pendingIns,pendingOuts,incidents,assignments,shifts,profiles,workplaces,syncIssues,approvedChecks,responsibleAssignments,pendingProfiles,operationalAlerts]
  const eventRows=events.data||[],sessionRows=sessions.data||[],inRows=pendingIns.data||[],outRows=pendingOuts.data||[],incidentRows=incidents.data||[],assignmentRows=assignments.data||[],shiftRows=shifts.data||[],profileRows=profiles.data||[],workplaceRows=workplaces.data||[],syncRows=syncIssues.data||[],checkRows=approvedChecks.data||[],responsibleRows=responsibleAssignments.data||[],pendingProfileRows=pendingProfiles.data||[],alertRows=operationalAlerts.data||[]
  const activeSessionIds=sessionRows.map(row=>row.id);const sessionBreaks=activeSessionIds.length?await s.from('break_sessions').select('id,work_session_id,started_at,ended_at').in('work_session_id',activeSessionIds).order('started_at'):{data:[],error:null}
  const failedOverviewSources=primaryOverviewSources.filter(result=>result.error).length+(sessionBreaks.error?1:0)
- console.info('[admin-dashboard] data timings', { authDurationMs, initialQueriesDurationMs, approvedChecksDurationMs, totalDataDurationMs:Date.now()-dashboardStartedAt, failedSources:failedOverviewSources })
+ console.info('[admin-dashboard] data timings', { authDurationMs, initialQueriesDurationMs, approvedChecksDurationMs, totalDataDurationMs:dashboardTimestamp()-dashboardStartedAt, failedSources:failedOverviewSources })
  const sessionBreakRows=sessionBreaks.data||[];const breaksBySession=new Map<string,typeof sessionBreakRows>();for(const item of sessionBreakRows){const group=breaksBySession.get(item.work_session_id)||[];group.push(item);breaksBySession.set(item.work_session_id,group)};const activeBreakRows=sessionBreakRows.filter(row=>!row.ended_at);const activeEvents=eventRows.filter(e=>Date.parse(e.start_at)<=nowMs&&Date.parse(e.end_at)>=nowMs);const approvedCheckKeys=new Set(checkRows.map(check=>`${check.user_id}:${check.event_id}:${check.workplace_id}`));const missing=shiftRows.filter(shift=>!approvedCheckKeys.has(`${shift.user_id}:${shift.event_id}:${shift.workplace_id}`));const people=new Map(profileRows.map(p=>[p.id,p]));const eventMap=new Map(eventRows.map(e=>[e.id,e]));const workplaceMap=new Map(workplaceRows.map(w=>[w.id,w]));const shiftMap=new Map(shiftRows.map(x=>[x.id,x]));const activeSessionByShift=new Map(sessionRows.filter(ws=>ws.shift_id).map(ws=>[ws.shift_id!,ws]));const responsibleKeys=new Set(responsibleRows.map(row=>`${row.workplace_id}:${row.user_id}`))
  const activeEventIds=new Set(activeEvents.map(event=>event.id));const operationalAlertRows=alertRows.filter(alert=>activeEventIds.has(alert.event_id))
  const activePersonnel=sessionRows.flatMap(ws=>{const person=people.get(ws.user_id);const shift=ws.shift_id?shiftMap.get(ws.shift_id):undefined;if(!person||!shift)return [];const workplace=workplaceMap.get(shift.workplace_id);const isResponsible=responsibleKeys.has(`${shift.workplace_id}:${ws.user_id}`);const isOperationalPerson=isResponsible||person.role==='staff'||person.role==='responsible_lead';if(!isOperationalPerson)return [];return [{sessionId:ws.id,name:person.full_name||'Personeelslid',role:isResponsible?'Verantwoordelijke':'Personeel',title:shift.role_name||'Personeel',workplaceId:shift.workplace_id,workplaceName:workplace?.name||'Werkplek',startedAt:ws.started_at,breaks:(breaksBySession.get(ws.id)||[]).map(row=>({id:row.id,startedAt:row.started_at,endedAt:row.ended_at})),isResponsible}]})
