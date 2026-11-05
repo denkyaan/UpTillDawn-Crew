@@ -83,6 +83,7 @@ try{
       // Do not click admin-only Sales as an administrative_staff user: the access guard correctly redirects to portal home.
       const portalPrefix=role.name==='promotion'?'/portals/promotion/':'/portals/administration/'
       const targets=[...new Set(visibleLinks.filter(href=>href.startsWith(portalPrefix)&&(role.name==='admin'||href!=='/portals/administration/sales')))].slice(0,35)
+      if(role.name==='promotion'&&route==='/portals/promotion'&&!targets.includes('/portals/promotion/tasks'))throw Error('promotion home missing tasks navigation')
       for(const target of targets){
        const tab=await context.newPage()
        const clickedPageErrors=[]
@@ -109,7 +110,7 @@ try{
         await tab.waitForTimeout(250)
         const finalPath=new URL(tab.url()).pathname
         if(finalPath!==expectedClickedPath)throw Error('hydrated navigation '+route+' -> '+target+' ended at '+finalPath+' (expected '+expectedClickedPath+')')
-        if(await tab.locator('[data-layout-key]').count())throw Error('hydrated administration subtab rendered personnel navigation: '+target)
+        if(await tab.locator('[data-layout-key]').count())throw Error('hydrated portal subtab rendered personnel navigation: '+target)
         const text=(await tab.locator('body').innerText()).trim()
         if(!text||/404\s*\|\s*this page could not be found|application error|internal server error/i.test(text))throw Error('clicked destination rendered error: '+target)
         if(clickedPageErrors.length)throw Error('clicked destination uncaught JS: '+target+': '+clickedPageErrors.join('; ').slice(0,350))
