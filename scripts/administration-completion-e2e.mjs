@@ -217,6 +217,19 @@ try{
   }
   await context.close()
  }
+ const marketingTab=await officeContext.newPage()
+ try{
+  await gotoReady(marketingTab,base+'/portals/administration/modules/marketing')
+  const promotionManagement=marketingTab.locator('a[href="/portals/administration/promotion-tasks"]').first()
+  assert.equal(await promotionManagement.count(),1,'Administration marketing must link to internal promotion management')
+  await promotionManagement.click()
+  await marketingTab.waitForURL(url=>url.pathname==='/portals/administration/promotion-tasks',{timeout:20000})
+  assert.equal(new URL(marketingTab.url()).pathname,'/portals/administration/promotion-tasks')
+  assert.ok(!/application error|internal server error|(?:^|\\n)404\\s*\\|/i.test(await marketingTab.locator('body').innerText()))
+  const review=marketingTab.locator('a[href="/portals/administration/promotion-discipline"]')
+  assert.equal(await review.count(),1,'Administration promotion management must expose evidence and strike review')
+  ok('Administration Marketing to Promotion tasks remains within administration')
+ }finally{await marketingTab.close()}
  ok('Promotion opens and Administration routes render in all four locales at mobile width')
 }catch(e){
  failure=e;console.error('FAIL:',e.message)
