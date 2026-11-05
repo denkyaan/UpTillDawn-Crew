@@ -119,6 +119,21 @@ jobs:
       - name: Validate Worker bundle
         run: npx wrangler deploy --dry-run --config wrangler.main.jsonc
 
+      - name: Revalidate current main commit before deployment
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+          VALIDATED_SHA: ${{ github.event.workflow_run.head_sha }}
+        run: |
+          set -euo pipefail
+          current_sha="$(gh api "/repos/$REPO/commits/main" --jq '.sha')"
+          if [[ "$current_sha" != "$VALIDATED_SHA" ]]; then
+            echo "::error::Main advanced from validated commit $VALIDATED_SHA to $current_sha. Refusing stale deployment."
+            exit 1
+          fi
+          echo "Validated commit is still main HEAD: $VALIDATED_SHA"
+
       - name: Deploy main test Worker only
         run: npx wrangler deploy --config wrangler.main.jsonc
 
