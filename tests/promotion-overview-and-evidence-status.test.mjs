@@ -25,6 +25,6 @@ test("promotion evidence history failures are visible in all supported languages
 })
 
 test("promotion pagination accepts numeric pages beyond the first",()=>{
- assert.ok(tasks.includes(String.raw`/^[1-9]\\d{0,3}$/.test(rawPage)`))
+ assert.ok(tasks.includes(String.raw`/^[1-9]\d{0,3}$/.test(rawPage)`))
  assert.doesNotMatch(tasks,/\\\\d\{0,3\}/)
 })
