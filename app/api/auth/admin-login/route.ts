@@ -91,12 +91,15 @@ export async function POST(request: NextRequest) {
 
   phase = 'success_audit'
   try {
-    await supabase.rpc('upt_admin_login_success', {
+    const { error: auditError } = await supabase.rpc('upt_admin_login_success', {
       p_login: email,
       p_ip: ip ?? undefined,
       p_location: approximateLocation ?? undefined,
       p_user_agent: userAgent ?? undefined,
     })
+    if (auditError) {
+      console.error('[admin-login] success audit rejected', { message: auditError.message })
+    }
   } catch (auditError) {
     console.error('[admin-login] success audit failed', {
       message: auditError instanceof Error ? auditError.message : String(auditError),
