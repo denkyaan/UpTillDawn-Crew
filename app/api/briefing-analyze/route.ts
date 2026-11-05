@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/crew-server'
+import { validateUploadSecurity } from '@/lib/upload-security'
 
 export const runtime = 'nodejs'
 const MAX_FILE_SIZE = 20 * 1024 * 1024
@@ -19,6 +20,7 @@ export async function POST(request:Request){
  if(!(file instanceof File))return NextResponse.json({error:'Geen bestand ontvangen.'},{status:400})
  if(file.size<=0||file.size>MAX_FILE_SIZE)return NextResponse.json({error:'Bestand is leeg of groter dan 20 MB.'},{status:400})
  if(!ALLOWED_TYPES.has(file.type))return NextResponse.json({error:'Dit bestandstype wordt niet ondersteund.'},{status:415})
+ try{await validateUploadSecurity(file)}catch{return NextResponse.json({error:'Ongeldig of onveilig briefingbestand.'},{status:400})}
  const apiKey=process.env.OPENAI_API_KEY
  if(!apiKey)return NextResponse.json({error:'Documentanalyse is niet geconfigureerd.'},{status:503})
  const upload=new FormData();upload.set('purpose','user_data');upload.set('file',file,file.name)
