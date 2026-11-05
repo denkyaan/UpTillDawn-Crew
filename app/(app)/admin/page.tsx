@@ -29,18 +29,17 @@ export default async function Page(){
  // Only load approved check-ins for events with currently relevant shifts.
  // Previously this loaded every historical approved check-in on every Admin visit.
  const relevantEventIds=[...new Set((shifts.data||[]).map(shift=>shift.event_id).filter(Boolean))]
- const approvedChecks=relevantEventIds.length
-  ?await s.from('check_ins').select('user_id,event_id,workplace_id').eq('status','approved').in('event_id',relevantEventIds)
-  :{data:[],error:null}
- const approvedChecksDurationMs=dashboardTimestamp()-queriesStartedAt-initialQueriesDurationMs
- const primaryOverviewSources=[events,sessions,pendingIns,pendingOuts,incidents,assignments,shifts,profiles,workplaces,syncIssues,approvedChecks,responsibleAssignments,pendingProfiles,operationalAlerts]
- const eventRows=events.data||[],sessionRows=sessions.data||[],inRows=pendingIns.data||[],outRows=pendingOuts.data||[],incidentRows=incidents.data||[],openAssignmentCount=assignments.count??0,shiftRows=shifts.data||[],profileRows=profiles.data||[],workplaceRows=workplaces.data||[],pendingSyncCount=syncIssues.count??0,checkRows=approvedChecks.data||[],responsibleRows=responsibleAssignments.data||[],pendingProfileRows=pendingProfiles.data||[],alertRows=operationalAlerts.data||[]
- // Secondary lookups are independent: run them concurrently to reduce dashboard latency.
+ // All three follow-up lookups depend only on the initial query results; fan them out together.
+ const eventRows=events.data||[],sessionRows=sessions.data||[]
  const activeSessionIds=sessionRows.map(row=>row.id)
- const [historicalEventCheck,sessionBreaks]=await Promise.all([
+ const [approvedChecks,historicalEventCheck,sessionBreaks]=await Promise.all([
+  relevantEventIds.length?s.from('check_ins').select('user_id,event_id,workplace_id').eq('status','approved').in('event_id',relevantEventIds):Promise.resolve({data:[],error:null}),
   events.error||eventRows.length?Promise.resolve(null):s.from('events').select('id').limit(1),
   activeSessionIds.length?s.from('break_sessions').select('id,work_session_id,started_at,ended_at').in('work_session_id',activeSessionIds).order('started_at'):Promise.resolve({data:[],error:null}),
  ])
+ const approvedChecksDurationMs=dashboardTimestamp()-queriesStartedAt-initialQueriesDurationMs
+ const primaryOverviewSources=[events,sessions,pendingIns,pendingOuts,incidents,assignments,shifts,profiles,workplaces,syncIssues,approvedChecks,responsibleAssignments,pendingProfiles,operationalAlerts]
+ const inRows=pendingIns.data||[],outRows=pendingOuts.data||[],incidentRows=incidents.data||[],openAssignmentCount=assignments.count??0,shiftRows=shifts.data||[],profileRows=profiles.data||[],workplaceRows=workplaces.data||[],pendingSyncCount=syncIssues.count??0,checkRows=approvedChecks.data||[],responsibleRows=responsibleAssignments.data||[],pendingProfileRows=pendingProfiles.data||[],alertRows=operationalAlerts.data||[]
  // A past event must not trigger first-use just because it is no longer upcoming.
  const showFirstUse=!events.error&&!eventRows.length&&!historicalEventCheck?.error&&historicalEventCheck?.data?.length===0
  const sourceNames=['events','sessions','pendingIns','pendingOuts','incidents','assignments','shifts','profiles','workplaces','syncIssues','approvedChecks','responsibleAssignments','pendingProfiles','operationalAlerts'] as const
