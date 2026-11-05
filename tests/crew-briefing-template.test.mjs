@@ -102,3 +102,10 @@ test('briefing import progress and error states are localized',()=>{
  assert.match(editor,/result\.error\|\|t\.importFailed/)
  for(const locale of ['nl','fr','en','de'])assert.match(editor,new RegExp(`${locale}:\\{[^\\n]+importEmpty:.*importReading:.*importFailed:`))
 })
+
+test('briefing import panel labels are translated across all supported locales',()=>{
+ for(const key of ['importHeading','importDescription','importFormats','titlePlaceholder']){
+  for(const locale of ['nl','fr','en','de'])assert.match(editor,new RegExp(`${locale}:\\{[^\\n]+${key}:`))
+  assert.match(editor,new RegExp(`\\{t\\.${key}\\}`))
+ }
+})
