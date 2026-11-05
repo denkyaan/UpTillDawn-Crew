@@ -106,6 +106,7 @@ try{
         await tab.waitForTimeout(250)
         const finalPath=new URL(tab.url()).pathname
         if(finalPath!==expectedClickedPath)throw Error('hydrated navigation '+route+' -> '+target+' ended at '+finalPath+' (expected '+expectedClickedPath+')')
+        if(await tab.locator('[data-layout-key]').count())throw Error('hydrated administration subtab rendered personnel navigation: '+target)
         clickedNavigation.push({role:role.name,from:route,to:target,actual:finalPath})
         const text=(await tab.locator('body').innerText()).trim()
         if(!text||/404\s*\|\s*this page could not be found|application error|internal server error/i.test(text))throw Error('clicked destination rendered error: '+target)
