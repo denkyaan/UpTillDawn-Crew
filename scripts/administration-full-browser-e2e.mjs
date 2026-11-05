@@ -108,7 +108,8 @@ try{
         // Verify the final route after the page has rendered, not just the first URL.
         await tab.locator('body').waitFor({state:'visible',timeout:15000})
         await tab.waitForTimeout(250)
-        const finalPath=new URL(tab.url()).pathname
+        const finalUrl=new URL(tab.url())
+        const finalPath=finalUrl.pathname+finalUrl.search
         if(finalPath!==expectedClickedPath)throw Error('hydrated navigation '+route+' -> '+target+' ended at '+finalPath+' (expected '+expectedClickedPath+')')
         if(await tab.locator('[data-layout-key]').count())throw Error('hydrated portal subtab rendered personnel navigation: '+target)
         const text=(await tab.locator('body').innerText()).trim()
