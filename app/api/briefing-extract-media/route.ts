@@ -1,6 +1,7 @@
 import { inflateRawSync } from 'node:zlib'
 import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/crew-server'
+import { validateUploadSecurity } from '@/lib/upload-security'
 
 export const runtime = 'nodejs'
 const MAX_FILE_SIZE = 20 * 1024 * 1024
@@ -56,6 +57,7 @@ export async function POST(request:Request){
  const form=await request.formData(),file=form.get('file');if(!(file instanceof File))return NextResponse.json({error:'Geen bestand ontvangen.'},{status:400})
  const prefix=OFFICE_TYPES.get(file.type);if(!prefix)return NextResponse.json({images:[]})
  if(file.size<=0||file.size>MAX_FILE_SIZE)return NextResponse.json({error:'Bestand is leeg of groter dan 20 MB.'},{status:400})
+ try{await validateUploadSecurity(file)}catch{return NextResponse.json({error:'Ongeldig of onveilig briefingbestand.'},{status:400})}
  try{
   const buffer=Buffer.from(await file.arrayBuffer()),entries=zipEntries(buffer).filter(entry=>entry.name.startsWith(prefix)&&!entry.name.endsWith('/')),images:Array<{name:string;mimeType:string;base64:string}>=[];let total=0
   for(const entry of entries){if(images.length>=MAX_IMAGES)break;const ext=entry.name.split('.').pop()?.toLowerCase()||'',mimeType=IMAGE_TYPES[ext];if(!mimeType||entry.uncompressedSize>MAX_IMAGE_BYTES||total+entry.uncompressedSize>MAX_TOTAL_IMAGE_BYTES)continue;const bytes=extract(buffer,entry);total+=bytes.length;images.push({name:safeName(entry.name,images.length),mimeType,base64:bytes.toString('base64')})}
