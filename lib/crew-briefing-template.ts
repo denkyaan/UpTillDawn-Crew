@@ -45,6 +45,7 @@ export interface CrewBriefingEventContext {
  date?: string | null
  startTime?: string | null
  endTime?: string | null
+ endDate?: string | null
  address?: string | null
  workplace?: string | null
 }
@@ -57,10 +58,15 @@ function safeBriefingValue(value: string | null | undefined): string | undefined
 /** Pre-fill only verified event data; unresolved placeholders remain visible for review. */
 export function generateCrewBriefingDraft(context: CrewBriefingEventContext) {
  const name=safeBriefingValue(context.name)
+ const startTime=safeBriefingValue(context.startTime)
+ const endTime=safeBriefingValue(context.endTime)
+ const endDate=safeBriefingValue(context.endDate)
+ const startDate=safeBriefingValue(context.date)
+ const eventEnd=endTime&&endDate&&startDate&&endDate!==startDate?`${endTime} (${endDate})`:endTime
  const replacements: Array<[string,string|undefined]>=[
   ['Evenement: [naam]',name?`Evenement: ${name}`:undefined],
   ['Datum: [datum]',safeBriefingValue(context.date)?.replace(/^/,'Datum: ')],
-  ['Eventuren: [start – einde]',safeBriefingValue(context.startTime)&&safeBriefingValue(context.endTime)?`Eventuren: ${safeBriefingValue(context.startTime)} – ${safeBriefingValue(context.endTime)}`:undefined],
+  ['Eventuren: [start – einde]',startTime&&eventEnd?`Eventuren: ${startTime} – ${eventEnd}`:undefined],
   ['Adres: [locatie]',safeBriefingValue(context.address)?.replace(/^/,'Adres: ')],
   ['[Per werkpost de taken, hulpmiddelen en escalatieprocedure]',safeBriefingValue(context.workplace)?.replace(/^/,'Werkpost: ')]
  ]
@@ -72,8 +78,8 @@ export function generateCrewBriefingDraft(context: CrewBriefingEventContext) {
 
 /** Review markers deliberately left in a draft; never treat these as confirmed instructions. */
 export function unresolvedCrewBriefingFields(body:string):string[]{
- const matches=body.match(/\[[^\]\r\n]{2,160}\]/g)||[]
- return [...new Set(matches.map(item=>item.slice(1,-1).trim()))]
+ const matches=body.match(/\[[^\]\r\n]{0,160}\]/g)||[]
+ return [...new Set(matches.map(item=>item.slice(1,-1).trim()||'leeg invulveld'))]
 }
 
 export function crewBriefingReadiness(body:string):{ready:boolean;missing:string[]}{

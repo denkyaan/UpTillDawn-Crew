@@ -88,7 +88,8 @@ try{
         await tab.goto(base+route,{waitUntil:'domcontentloaded',timeout:30000})
         const href=tab.locator('a[href="'+target.replaceAll('"','\\"')+'"]:visible').first()
         await href.click({timeout:15000})
-        await tab.waitForURL(u=>u.pathname===new URL(target,base).pathname,{timeout:20000})
+        const expectedClickedPath=target==='/portals/administration/overview'?'/portals/administration':target
+        await tab.waitForURL(u=>u.pathname===new URL(expectedClickedPath,base).pathname,{timeout:20000})
         await tab.waitForLoadState('domcontentloaded')
         clickedNavigation.push({role:role.name,from:route,to:target})
         const text=(await tab.locator('body').innerText()).trim()

@@ -41,3 +41,25 @@ test('readiness includes unresolved event placeholders in the briefing title',()
  assert.deepEqual(review.missing,['evenement'])
  assert.deepEqual(crewBriefingReview('Briefing [contact]','Bel [contact]').missing,['contact'])
 })
+
+test('event time fields are normalized consistently and remain incomplete without both endpoints',()=>{
+ const valid=generateCrewBriefingDraft({startTime:' 18:00\t',endTime:'\n02:00 '})
+ assert.ok(valid.body.includes('Eventuren: 18:00 – 02:00'))
+ const incomplete=generateCrewBriefingDraft({startTime:'18:00',endTime:'  '})
+ assert.ok(incomplete.body.includes('Eventuren: [start – einde]'))
+})
+
+test('overnight events show the ending calendar date to avoid ambiguous shift hours',()=>{
+ const overnight=generateCrewBriefingDraft({date:'05/11/2026',endDate:'06/11/2026',startTime:'22:00',endTime:'04:00'})
+ assert.ok(overnight.body.includes('Eventuren: 22:00 – 04:00 (06/11/2026)'))
+ const sameDay=generateCrewBriefingDraft({date:'05/11/2026',endDate:'05/11/2026',startTime:'12:00',endTime:'18:00'})
+ assert.ok(sameDay.body.includes('Eventuren: 12:00 – 18:00'))
+ assert.equal(sameDay.body.includes('(05/11/2026)'),false)
+})
+
+test('review flags blank and single-character bracket placeholders',()=>{
+ assert.deepEqual(unresolvedCrewBriefingFields('Contact: [] of [ ] en [x]'),['leeg invulveld','x'])
+ const review=crewBriefingReview('Briefing','Contact: [ ]')
+ assert.equal(review.ready,false)
+ assert.deepEqual(review.missing,['leeg invulveld'])
+})

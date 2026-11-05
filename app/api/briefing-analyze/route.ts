@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/crew-server'
+import { validateUploadSecurity } from '@/lib/upload-security'
 
 export const runtime = 'nodejs'
 const MAX_FILE_SIZE = 20 * 1024 * 1024
@@ -19,6 +20,7 @@ export async function POST(request:Request){
  if(!(file instanceof File))return NextResponse.json({error:'Geen bestand ontvangen.'},{status:400})
  if(file.size<=0||file.size>MAX_FILE_SIZE)return NextResponse.json({error:'Bestand is leeg of groter dan 20 MB.'},{status:400})
  if(!ALLOWED_TYPES.has(file.type))return NextResponse.json({error:'Dit bestandstype wordt niet ondersteund.'},{status:415})
+ try{await validateUploadSecurity(file)}catch{return NextResponse.json({error:'Ongeldig of onveilig briefingbestand.'},{status:400})}
  const apiKey=process.env.OPENAI_API_KEY
  if(!apiKey)return NextResponse.json({error:'Documentanalyse is niet geconfigureerd.'},{status:503})
  const upload=new FormData();upload.set('purpose','user_data');upload.set('file',file,file.name)
@@ -32,7 +34,7 @@ export async function POST(request:Request){
   const outputText=result.output_text||result.output?.flatMap(item=>item.content||[]).find(item=>item.type==='output_text')?.text
   if(!outputText)return NextResponse.json({error:'Geen analyse ontvangen.'},{status:502})
   const parsed=parseJsonObject(outputText);const title=typeof parsed.title==='string'?parsed.title.trim():'';const instructions=typeof parsed.instructions==='string'?parsed.instructions.trim():''
-  if(!title||!instructions)return NextResponse.json({error:'Onvolledige analyse ontvangen.'},{status:502})
+  if(!title&&!instructions)return NextResponse.json({error:'Geen leesbare briefingtekst gevonden.'},{status:422})
   return NextResponse.json({title,instructions})
  }catch{return NextResponse.json({error:'Documentanalyse kon niet worden verwerkt.'},{status:502})}
  finally{await fetch(`https://api.openai.com/v1/files/${encodeURIComponent(uploadedFile.id)}`,{method:'DELETE',headers:{Authorization:`Bearer ${apiKey}`}}).catch(()=>undefined)}
