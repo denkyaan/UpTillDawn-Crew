@@ -6,7 +6,7 @@ test('administration subtabs expose a labelled region and preserve navigation be
  const source=readFileSync('components/administration/administration-navigation.tsx','utf8')
  assert.ok(source.includes('id="administration-subtabs" role="region" aria-label={selected.title[locale]}'))
  assert.ok(source.includes('aria-controls={group.key==="overview"'))
- assert.ok(source.includes('onClick={()=>setSelectedCategory({key:"overview",pathname})}'))
+ assert.ok(source.includes('onClick={()=>setSelectedCategory(null)}'))
 })
 test('role subtabs expose a translated region and retain close-on-navigation behavior',()=>{
  const source=readFileSync('components/layout/mobile-nav.tsx','utf8')
