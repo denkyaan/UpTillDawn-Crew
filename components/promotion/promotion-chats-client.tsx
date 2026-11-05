@@ -43,13 +43,18 @@ export function PromotionChatsClient({locale,userId,isAdmin,names}:{locale:Local
   setBusy(true);setError("")
   const submittedRoom=room
 
-  const db=createClient()
-  const {error:failure}=await db.from("promotion_chat_messages" as never).insert({room:submittedRoom,sender_id:userId,body:message} as never)
-
-  if(failure)setError(l.error)
-  else {setBody("");await load()}
-  sending.current=false
-  setBusy(false)
+  try{
+   const db=createClient()
+   const {error:failure}=await db.from("promotion_chat_messages" as never).insert({room:submittedRoom,sender_id:userId,body:message} as never)
+   if(failure){setError(l.error);return}
+   setBody("")
+   await load()
+  }catch{
+   setError(l.error)
+  }finally{
+   sending.current=false
+   setBusy(false)
+  }
  }
  return <section className="space-y-4">
  <div className="grid grid-cols-2 gap-2">{(["general","announcements"] as Room[]).map(r=><button key={r} type="button" disabled={busy} onClick={()=>{if(sending.current)return;sequence.current++;setRoom(r);setMessages([]);setError("")}} className={`rounded-xl border p-3 font-semibold disabled:opacity-50 ${room===r?"border-violet-500 bg-violet-500/10 text-violet-400":"border-border"}`}>{l[r]}</button>)}</div>
