@@ -11,6 +11,14 @@ function loginUrl(request: NextRequest, error?: string) {
 
 export async function POST(request: NextRequest) {
   let phase = 'form'
+  const startedAt = Date.now()
+  let phaseStartedAt = startedAt
+  const enterPhase = (next: string) => {
+    const now = Date.now()
+    console.info('[admin-login] phase timing', { phase, durationMs: now - phaseStartedAt })
+    phase = next
+    phaseStartedAt = now
+  }
   try {
   const formData = await request.formData()
   const submittedLogin = String(formData.get('email') || '').trim().toLowerCase()
@@ -21,7 +29,7 @@ export async function POST(request: NextRequest) {
   }
 
   const email = resolveLoginEmail(submittedLogin)
-  phase = 'supabase_client'
+  enterPhase('supabase_client')
   const supabase = await createClient()
   const ip = request.headers.get('cf-connecting-ip')
     || request.headers.get('x-forwarded-for')?.split(',')[0]?.trim()
@@ -54,14 +62,14 @@ export async function POST(request: NextRequest) {
     }).catch(() => false)
   }
 
-  phase = 'password_auth'
+  enterPhase('password_auth')
   const { data, error } = await supabase.auth.signInWithPassword({ email, password })
   if (error || !data.user) {
     await notify('failure', 'invalid_credentials')
     return NextResponse.redirect(loginUrl(request, 'Foute logingegevens of u heeft geen toegang tot deze rol.'), 303)
   }
 
-  phase = 'admin_access'
+  enterPhase('admin_access')
   const [{ data: profileRows, error: profileError }, { data: isOwner }] = await Promise.all([
     supabase.rpc('upt_current_profile'),
     supabase.rpc('upt_current_is_owner'),
@@ -78,7 +86,7 @@ export async function POST(request: NextRequest) {
     return NextResponse.redirect(loginUrl(request, 'Foute logingegevens of u heeft geen toegang tot deze rol.'), 303)
   }
 
-  phase = 'role_mode'
+  enterPhase('role_mode')
   const { data: roleMode, error: roleModeError } = await supabase.rpc('upt_set_admin_role_mode', {
     p_role: 'admin',
   })
@@ -89,7 +97,7 @@ export async function POST(request: NextRequest) {
     return NextResponse.redirect(loginUrl(request, 'De beheerdermodus kon niet worden geactiveerd.'), 303)
   }
 
-  phase = 'success_audit'
+  enterPhase('success_audit')
   try {
     const { error: auditError } = await supabase.rpc('upt_admin_login_success', {
       p_login: email,
@@ -114,15 +122,17 @@ export async function POST(request: NextRequest) {
     })
   }
 
-  phase = 'redirect'
+  enterPhase('redirect')
   const destination = isOwner === true
     ? new URL('/maker-mode?portal=admin', request.url)
     : new URL('/admin', request.url)
 
+  console.info('[admin-login] completed', { durationMs: Date.now() - startedAt, destination: isOwner === true ? 'maker' : 'admin' })
   return NextResponse.redirect(destination, 303)
   } catch (error) {
     console.error('[admin-login] unhandled failure', {
       phase,
+      durationMs: Date.now() - startedAt,
       message: error instanceof Error ? error.message : String(error),
     })
     return NextResponse.redirect(
