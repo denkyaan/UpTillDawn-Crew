@@ -94,7 +94,10 @@ try{
           href.click({timeout:15000}),
          ])
         } catch (error) {
-         throw Error('navigation '+route+' -> '+target+' expected '+expectedClickedPath+' but reached '+new URL(tab.url()).pathname+': '+String(error.message||error))
+         const actualPath=new URL(tab.url()).pathname
+         const screenshotName='test-results/portal-e2e/'+role.name+'-clicked-'+route.replace(/[^a-z0-9]/gi,'_')+'-to-'+target.replace(/[^a-z0-9]/gi,'_')+'.png'
+         await tab.screenshot({path:screenshotName,fullPage:true,timeout:5000}).catch(()=>{})
+         throw Error('navigation '+route+' -> '+target+' expected '+expectedClickedPath+' but reached '+actualPath+': '+String(error.message||error)+' (screenshot: '+screenshotName+')')
         }
         await tab.waitForLoadState('domcontentloaded')
         clickedNavigation.push({role:role.name,from:route,to:target})
