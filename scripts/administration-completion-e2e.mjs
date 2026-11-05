@@ -225,7 +225,11 @@ try{
   await promotionManagement.click()
   await marketingTab.waitForURL(url=>url.pathname==='/portals/administration/promotion-tasks',{timeout:20000})
   assert.equal(new URL(marketingTab.url()).pathname,'/portals/administration/promotion-tasks')
-  assert.ok(!/application error|internal server error|(?:^|\\n)404\\s*\\|/i.test(await marketingTab.locator('body').innerText()))
+  const promotionBody=await marketingTab.locator('body').innerText()
+  const promotionErrors=[]
+  marketingTab.on('pageerror',error=>promotionErrors.push(error.message))
+  assert.ok(!/application error|internal server error|(?:^|\n)404\s*\|/i.test(promotionBody),'Administration promotion tasks rendered an error at '+marketingTab.url()+': '+promotionBody.slice(0,1600))
+  assert.deepEqual(promotionErrors,[],'Administration promotion tasks client errors')
   const review=marketingTab.locator('a[href="/portals/administration/promotion-discipline"]')
   assert.equal(await review.count(),1,'Administration promotion management must expose evidence and strike review')
   ok('Administration Marketing to Promotion tasks remains within administration')
