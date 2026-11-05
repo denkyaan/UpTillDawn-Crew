@@ -48,7 +48,8 @@ export async function POST(request: NextRequest) {
     outcome: 'success' | 'failure' | 'blocked' | 'denied',
     reason: string,
   ) => {
-    await sendSecurityLoginEmail({
+    const notificationStartedAt = Date.now()
+    const delivered = await sendSecurityLoginEmail({
       outcome,
       login: submittedLogin,
       canonicalLogin: email,
@@ -60,11 +61,17 @@ export async function POST(request: NextRequest) {
       userAgent: userAgent ?? undefined,
       reason,
     }).catch(() => false)
+    console.info('[admin-login] security notification timing', {
+      outcome,
+      durationMs: Date.now() - notificationStartedAt,
+      delivered,
+    })
   }
 
   enterPhase('password_auth')
   const { data, error } = await supabase.auth.signInWithPassword({ email, password })
   if (error || !data.user) {
+    enterPhase('failure_notification')
     await notify('failure', 'invalid_credentials')
     return NextResponse.redirect(loginUrl(request, 'Foute logingegevens of u heeft geen toegang tot deze rol.'), 303)
   }
@@ -81,6 +88,7 @@ export async function POST(request: NextRequest) {
   )
 
   if (!hasAdminAccess) {
+    enterPhase('denied_notification')
     await notify('denied', 'wrong_portal')
     await supabase.auth.signOut()
     return NextResponse.redirect(loginUrl(request, 'Foute logingegevens of u heeft geen toegang tot deze rol.'), 303)
@@ -92,6 +100,7 @@ export async function POST(request: NextRequest) {
   })
 
   if (roleModeError || roleMode !== 'admin') {
+    enterPhase('role_mode_notification')
     await notify('denied', 'role_mode_error')
     await supabase.auth.signOut()
     return NextResponse.redirect(loginUrl(request, 'De beheerdermodus kon niet worden geactiveerd.'), 303)
@@ -114,6 +123,7 @@ export async function POST(request: NextRequest) {
     })
   }
 
+  enterPhase('success_notification')
   try {
     await notify('success', 'login_success')
   } catch (notifyError) {
