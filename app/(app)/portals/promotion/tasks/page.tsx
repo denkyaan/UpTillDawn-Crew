@@ -77,10 +77,6 @@ export default async function PromotionTasks({searchParams}:{searchParams:Promis
  const {data:promotionBlocked,error:promotionBlockError}=await db.rpc("upt_promotion_is_blocked" as never)
  // Fail closed when the restriction check cannot be completed.
  const isPromotionBlocked=promotionBlockError!==null||promotionBlocked!==false
- const {data:evidence,error:evidenceError}=await db.from("promotion_evidence" as never).select("assignment_id,verification_status,verification_details,submitted_at").eq("submitted_by",user.id).order("submitted_at",{ascending:false}).limit(100)
- const evidenceRows=(evidence??[]) as unknown as {assignment_id:string;verification_status:string;verification_details:unknown;submitted_at:string}[]
- const evidenceByAssignment=new Map<string,typeof evidenceRows>()
- for(const entry of evidenceRows){const history=evidenceByAssignment.get(entry.assignment_id)??[];history.push(entry);evidenceByAssignment.set(entry.assignment_id,history)}
  const precheckLabels={nl:{exact_file_match:"Bestand identiek aan referentie; publicatie niet bevestigd",no_exact_file_match:"Geen exacte bestandsovereenkomst; controle nodig",no_reference:"Geen officieel referentiemateriaal beschikbaar"},fr:{exact_file_match:"Fichier identique à la référence ; publication non confirmée",no_exact_file_match:"Aucune correspondance exacte ; vérification requise",no_reference:"Aucune référence officielle disponible"},en:{exact_file_match:"File matches reference; publication not verified",no_exact_file_match:"No exact file match; review needed",no_reference:"No official reference available"},de:{exact_file_match:"Datei entspricht der Referenz; Veröffentlichung nicht bestätigt",no_exact_file_match:"Keine exakte Übereinstimmung; Prüfung nötig",no_reference:"Kein offizielles Referenzmaterial verfügbar"}} as const
  const evidenceStatusLabels={
   nl:{pending:"In afwachting",verified:"Geverifieerd",rejected:"Afgewezen",inconclusive:"Verder onderzoek nodig"},
@@ -98,11 +94,16 @@ export default async function PromotionTasks({searchParams}:{searchParams:Promis
  const page=/^[1-9]\d{0,3}$/.test(rawPage)?Number(rawPage):1
  const offset=(page-1)*100
  const {data,error}=await db.from("task_assignments").select("id,status,created_at,tasks(id,title,description,event_id,updated_at)").eq("user_id",user.id).order("created_at",{ascending:false}).order("id",{ascending:false}).range(offset,offset+100)
+ const visibleAssignmentIds=(data??[]).slice(0,100).map(item=>item.id)
+ const {data:evidence,error:evidenceError}=visibleAssignmentIds.length?await db.from("promotion_evidence" as never).select("assignment_id,verification_status,verification_details,submitted_at").eq("submitted_by",user.id).in("assignment_id",visibleAssignmentIds).order("submitted_at",{ascending:false}).limit(1000):{data:[],error:null}
+ const evidenceRows=(evidence??[]) as unknown as {assignment_id:string;verification_status:string;verification_details:unknown;submitted_at:string}[]
+ const evidenceByAssignment=new Map<string,typeof evidenceRows>()
+ for(const entry of evidenceRows){const history=evidenceByAssignment.get(entry.assignment_id)??[];history.push(entry);evidenceByAssignment.set(entry.assignment_id,history)}
  return <main className="mx-auto max-w-4xl space-y-5 p-4 sm:p-6">
   <Link href="/portals/promotion" className="text-sm text-violet-400">← {t.back}</Link>
   <header><h1 className="text-2xl font-bold">{t.title}</h1><p className="mt-2 text-sm text-muted-foreground">{t.intro}</p></header>
   <p className="text-xs text-muted-foreground">{({nl:"Pagina",fr:"Page",en:"Page",de:"Seite"} as const)[locale]} {page}</p>
-  {evidenceRows.length===100&&<p role="status" className="rounded-lg border p-3 text-sm">{({nl:"Enkel de 100 recentste bewijsindieningen worden getoond.",fr:"Seuls les 100 derniers dépôts de preuves sont affichés.",en:"Only the 100 most recent evidence submissions are shown.",de:"Nur die 100 neuesten Nachweise werden angezeigt."} as const)[locale]}</p>}
+  {evidenceRows.length===1000&&<p role="status" className="rounded-lg border p-3 text-sm">{({nl:"Enkel de 1000 recentste bewijsindieningen voor deze takenpagina worden getoond.",fr:"Seuls les 1000 derniers dépôts de preuves pour cette page de tâches sont affichés.",en:"Only the 1000 most recent evidence submissions for this task page are shown.",de:"Nur die 1000 neuesten Nachweise für diese Aufgabenseite werden angezeigt."} as const)[locale]}</p>}
   {evidenceError&&<p role="alert" className="rounded-lg border border-amber-500 p-3 text-sm">{({nl:"Bewijsstatussen konden niet geladen worden. Controleer je indieningen later opnieuw.",fr:"Les statuts des preuves sont indisponibles. Réessayez plus tard.",en:"Evidence statuses are unavailable. Check your submissions again later.",de:"Nachweisstatus nicht verfügbar. Bitte später erneut prüfen."} as const)[locale]}</p>}
   {isPromotionBlocked&&<p role="alert" className="rounded-lg border border-amber-500 p-3 text-sm">{({nl:"Je promotietoegang is tijdelijk of definitief geblokkeerd. Je kunt geen promotietaken starten of bewijzen indienen.",fr:"Votre accès à la promotion est suspendu. Vous ne pouvez pas démarrer des tâches ni envoyer des preuves.",en:"Your promotion access is restricted. You cannot start tasks or submit evidence.",de:"Dein Promotionzugang ist gesperrt. Du kannst keine Aufgaben starten oder Nachweise einreichen."} as const)[locale]}</p>}
   <p className="text-xs text-muted-foreground">{t.history}</p>
