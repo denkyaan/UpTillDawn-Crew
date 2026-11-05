@@ -80,7 +80,8 @@ try{
      if(['admin','administration'].includes(role.name)&&route.startsWith('/portals/administration')){
       // Exercise actual user clicks, rather than treating direct URL requests as navigation coverage.
       const visibleLinks=await page.locator('a[href]:visible').evaluateAll(els=>els.map(el=>el.getAttribute('href')).filter(Boolean))
-      const targets=[...new Set(visibleLinks.filter(href=>href.startsWith('/portals/administration/')))].slice(0,35)
+      // Do not click admin-only Sales as an administrative_staff user: the access guard correctly redirects to portal home.
+      const targets=[...new Set(visibleLinks.filter(href=>href.startsWith('/portals/administration/')&&(role.name==='admin'||href!=='/portals/administration/sales')))].slice(0,35)
       for(const target of targets){
        const tab=await context.newPage()
        try{
