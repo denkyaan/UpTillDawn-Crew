@@ -40,7 +40,8 @@ test('admin overview uses one authoritative break-session dataset',async()=>{
  const breakQueries=[...source.matchAll(/s\.from\('break_sessions'\)/g)]
  assert.equal(breakQueries.length,1)
  assert.match(source,/activeBreakRows=sessionBreakRows\.filter\(row=>!row\.ended_at\)/)
- assert.match(source,/sessionBreaks\.error\?1:0/)
+ assert.match(source,/if\(sessionBreaks\.error\)failedSourceNames\.push\('sessionBreaks'\)/)
+ assert.match(source,/const failedOverviewSources=failedSourceNames\.length/)
 })
 
 test('admin overview keeps the established default navigation and excludes retired surfaces',async()=>{
