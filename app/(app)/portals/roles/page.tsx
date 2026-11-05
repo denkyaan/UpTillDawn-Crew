@@ -34,7 +34,7 @@ export default async function PortalRolesPage() {
   
 
   // RLS remains authoritative; the UI additionally gates management to active admins.
-  const canManage = current.realIsAdmin && current.approved && !current.account_blocked
+  const canManage = current.isOwner || (current.realIsAdmin && current.approved && !current.account_blocked)
   const supabase = await createClient()
   let query = supabase.from('portal_role_assignments')
     .select('id,user_id,portal,role,approved,revoked_at')
