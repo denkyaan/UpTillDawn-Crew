@@ -93,7 +93,7 @@ export default async function PromotionTasks({searchParams}:{searchParams:Promis
   de:{"NOT STARTED":"Noch nicht begonnen","IN PROGRESS":"In Bearbeitung","COMPLETED":"Abgeschlossen","CANCELLED":"Abgebrochen"}
  } as const
  const rawPage=(await searchParams).page??"1"
- const page=/^[1-9]\\d{0,3}$/.test(rawPage)?Number(rawPage):1
+ const page=/^[1-9]\d{0,3}$/.test(rawPage)?Number(rawPage):1
  const offset=(page-1)*100
  const {data,error}=await db.from("task_assignments").select("id,status,created_at,tasks(id,title,description,event_id,updated_at)").eq("user_id",user.id).order("created_at",{ascending:false}).order("id",{ascending:false}).range(offset,offset+100)
  return <main className="mx-auto max-w-4xl space-y-5 p-4 sm:p-6">
