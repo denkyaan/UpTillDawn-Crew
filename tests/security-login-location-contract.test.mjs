@@ -28,7 +28,7 @@ test('alert clearly labels approximate IP location and links to map only when pr
 })
 
 
-test('full production CI is opt-in, not triggered by ordinary pull requests or pushes', () => {
+test('full production CI runs on main pushes but not on pull requests', () => {
   const workflow = readFileSync(new URL('../.github/workflows/ci.yml', import.meta.url), 'utf8')
   const triggers = workflow.split(/^on:\s*$/m)[1]?.split(/^\S/m)[0] || ''
   assert.match(triggers, /^\s+workflow_dispatch:/m)
