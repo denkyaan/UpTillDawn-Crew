@@ -39,9 +39,13 @@ jobs:
           if [[ "${SOURCE_EVENT}" == push && "${SOURCE_RESULT}" == success && "${SOURCE_BRANCH}" == main && -n "${SOURCE_SHA}" && "${SOURCE_SHA}" == "${current_sha}" ]]; then
             echo 'eligible=true' >> "$GITHUB_OUTPUT"
             echo 'Main deployment is eligible.'
+          elif [[ "${SOURCE_RESULT}" != success ]]; then
+            echo 'eligible=false' >> "$GITHUB_OUTPUT"
+            echo "::error::Main deployment blocked: CI concluded ${SOURCE_RESULT} for ${SOURCE_SHA}."
+            exit 1
           else
             echo 'eligible=false' >> "$GITHUB_OUTPUT"
-            echo 'Deployment intentionally skipped: requires successful CI for current main HEAD.'
+            echo 'Deployment intentionally skipped: requires successful push CI for current main HEAD.'
           fi
 
   deploy:
