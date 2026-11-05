@@ -22,7 +22,7 @@ export default async function Page(){
  const s=await createClient();const now=new Date();const nowMs=now.getTime();const soon=new Date(nowMs+60*60*1000)
  const queriesStartedAt=dashboardTimestamp()
  const [events,sessions,pendingIns,pendingOuts,incidents,assignments,shifts,profiles,workplaces,syncIssues,responsibleAssignments,pendingProfiles,operationalAlerts]=await Promise.all([
-  s.from('events').select('id,name,start_at,end_at,status').neq('status','archived').gte('end_at',now.toISOString()).order('start_at'),s.from('work_sessions').select('id,user_id,event_id,shift_id,started_at').is('ended_at',null).order('started_at'),s.from('check_ins').select('id,user_id,event_id,workplace_id,requested_at').eq('status','pending').order('requested_at'),s.from('check_outs').select('id,user_id,event_id,workplace_id,requested_at').eq('status','pending').order('requested_at'),s.from('incidents').select('id,event_id,workplace_id,message,status,urgency,escalated_at,created_at').neq('status','resolved').order('created_at',{ascending:false}),s.from('task_assignments').select('id',{count:'exact',head:true}).neq('status','COMPLETED'),s.from('shifts').select('id,user_id,event_id,workplace_id,role_name,scheduled_start,scheduled_end,status').neq('status','cancelled').lte('scheduled_start',soon.toISOString()).gte('scheduled_end',now.toISOString()),s.rpc('upt_admin_operational_profiles'),s.from('workplaces').select('id,event_id,name'),s.from('offline_operation_records').select('id,status').neq('status','synced').limit(100),s.from('responsible_assignments').select('workplace_id,user_id'),s.rpc('upt_admin_pending_profiles'),s.rpc('upt_operational_alerts'),
+  s.from('events').select('id,name,start_at,end_at,status').neq('status','archived').gte('end_at',now.toISOString()).order('start_at'),s.from('work_sessions').select('id,user_id,event_id,shift_id,started_at').is('ended_at',null).order('started_at'),s.from('check_ins').select('id,user_id,event_id,workplace_id,requested_at').eq('status','pending').order('requested_at'),s.from('check_outs').select('id,user_id,event_id,workplace_id,requested_at').eq('status','pending').order('requested_at'),s.from('incidents').select('id,event_id,workplace_id,message,status,urgency,escalated_at,created_at').neq('status','resolved').order('created_at',{ascending:false}),s.from('task_assignments').select('id',{count:'exact',head:true}).neq('status','COMPLETED'),s.from('shifts').select('id,user_id,event_id,workplace_id,role_name,scheduled_start,scheduled_end,status').neq('status','cancelled').lte('scheduled_start',soon.toISOString()).gte('scheduled_end',now.toISOString()),s.rpc('upt_admin_operational_profiles'),s.from('workplaces').select('id,event_id,name'),s.from('offline_operation_records').select('id',{count:'exact',head:true}).neq('status','synced'),s.from('responsible_assignments').select('workplace_id,user_id'),s.rpc('upt_admin_pending_profiles'),s.rpc('upt_operational_alerts'),
  ])
  const initialQueriesDurationMs=dashboardTimestamp()-queriesStartedAt
  // The dashboard only renders active or upcoming events; avoid loading historical event rows.
@@ -34,7 +34,7 @@ export default async function Page(){
   :{data:[],error:null}
  const approvedChecksDurationMs=dashboardTimestamp()-queriesStartedAt-initialQueriesDurationMs
  const primaryOverviewSources=[events,sessions,pendingIns,pendingOuts,incidents,assignments,shifts,profiles,workplaces,syncIssues,approvedChecks,responsibleAssignments,pendingProfiles,operationalAlerts]
- const eventRows=events.data||[],sessionRows=sessions.data||[],inRows=pendingIns.data||[],outRows=pendingOuts.data||[],incidentRows=incidents.data||[],openAssignmentCount=assignments.count??0,shiftRows=shifts.data||[],profileRows=profiles.data||[],workplaceRows=workplaces.data||[],syncRows=syncIssues.data||[],checkRows=approvedChecks.data||[],responsibleRows=responsibleAssignments.data||[],pendingProfileRows=pendingProfiles.data||[],alertRows=operationalAlerts.data||[]
+ const eventRows=events.data||[],sessionRows=sessions.data||[],inRows=pendingIns.data||[],outRows=pendingOuts.data||[],incidentRows=incidents.data||[],openAssignmentCount=assignments.count??0,shiftRows=shifts.data||[],profileRows=profiles.data||[],workplaceRows=workplaces.data||[],pendingSyncCount=syncIssues.count??0,checkRows=approvedChecks.data||[],responsibleRows=responsibleAssignments.data||[],pendingProfileRows=pendingProfiles.data||[],alertRows=operationalAlerts.data||[]
  // A past event must not trigger the first-use wizard simply because it is no longer upcoming.
  const historicalEventCheck=events.error||eventRows.length?null:await s.from('events').select('id',{count:'exact',head:true}).limit(1)
  const showFirstUse=!events.error&&!eventRows.length&&!historicalEventCheck?.error&&historicalEventCheck?.count===0
@@ -122,10 +122,10 @@ export default async function Page(){
    context:{focus:'open-tasks'},
    priority:'normal' as const,
   }]:[]),
-  ...(syncRows.length?[{
+  ...(pendingSyncCount?[{
    key:'sync:problems',
    title:'SYNCHRONISATIE CONTROLEREN',
-   detail:syncRows.length+' serveroperatie(s) zijn nog niet gesynchroniseerd.',
+   detail:pendingSyncCount+' serveroperatie(s) zijn nog niet gesynchroniseerd.',
    href:'/sync',
    context:{focus:'sync'},
    priority:'high' as const,

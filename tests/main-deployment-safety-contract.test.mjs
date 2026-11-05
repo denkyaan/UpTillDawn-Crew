@@ -22,7 +22,14 @@ test("main deployment checks the tested SHA again immediately before deploy",()=
  const deploy=main.indexOf("name: Deploy main test Worker only")
  assert.ok(recheck>0&&deploy>recheck)
  assert.match(main.slice(recheck,deploy),/current_sha.*VALIDATED_SHA/)
- assert.match(main.slice(recheck,deploy),/exit 1/)
+ assert.match(main.slice(recheck,deploy),/current=false/)
+ assert.match(main.slice(recheck,deploy),/current=true/)
+ assert.match(main.slice(deploy),/if: steps\.current-main\.outputs\.current == 'true'/)
+ for(const step of ["Diagnose Cloudflare workers.dev routing","Smoke test main app"]){
+  const offset=main.indexOf("name: "+step)
+  assert.ok(offset>0)
+  assert.match(main.slice(offset,offset+200),/if: steps\.current-main\.outputs\.current == 'true'/)
+ }
  assert.match(main.slice(deploy),/wrangler deploy --config wrangler\.main\.jsonc/)
 })
 
