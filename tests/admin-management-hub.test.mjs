@@ -16,3 +16,13 @@ test('management hub links to existing admin routes and guarded promotion workfl
  assert.ok(layout.includes('!user.isOwner&&!user.realIsAdmin'))
  assert.ok(layout.includes('canOpenPortal("administration"'))
 })
+
+test('admin promotion moderation stays in admin route and invalidates both portal views',()=>{
+ const adminRoute=readFileSync('app/(app)/admin/management/promotion-discipline/page.tsx','utf8')
+ const moderation=readFileSync('app/(app)/portals/administration/promotion-discipline/page.tsx','utf8')
+ assert.ok(adminRoute.includes('export default PromotionDisciplinePage'))
+ assert.ok(adminRoute.includes('portals/administration/promotion-discipline/page'))
+ assert.ok(hub.includes('href:"/admin/management/promotion-discipline"'))
+ assert.equal(moderation.split('revalidatePath("/admin/management/promotion-discipline")').length-1,3)
+ assert.ok(moderation.includes('actor.realIsAdmin'))
+})
