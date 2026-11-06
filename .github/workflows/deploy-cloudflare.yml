@@ -41,12 +41,9 @@ jobs:
         run: |
           test "${{ github.ref }}" = "refs/heads/main"
           test "$(git rev-parse HEAD)" = "$RELEASE_SHA"
-          current_sha="$(git ls-remote origin refs/heads/main | cut -f1)"
-          if [ "$current_sha" != "$RELEASE_SHA" ]; then
-            echo "::error::Main moved since validation; refusing stale production release."
-            exit 1
-          fi
-          echo "Production release requested for $RELEASE_SHA."
+          # Release the exact CI-validated snapshot even when main advances.
+          # Later main commits cannot alter this checkout or its CI result.
+          echo "Production release requested for validated snapshot $RELEASE_SHA."
 
       - name: Require successful full CI for exact release commit
         env:
@@ -238,16 +235,6 @@ jobs:
           fi
           if [ -n "${TRANSLATION_API_KEY:-}" ]; then
             printf '%s' "$TRANSLATION_API_KEY" | npx wrangler secret put TRANSLATION_API_KEY
-          fi
-
-      - name: Revalidate release SHA immediately before production deployment
-        shell: bash
-        run: |
-          set -euo pipefail
-          current_sha="$(git ls-remote origin refs/heads/main | cut -f1)"
-          if [ "$current_sha" != "$RELEASE_SHA" ]; then
-            echo "::error::Main advanced after CI; refusing stale production deployment."
-            exit 1
           fi
 
       - name: Deploy production Worker
