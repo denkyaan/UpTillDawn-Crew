@@ -24,3 +24,11 @@ test('notification action stays inside the notifications module',()=>{
  assert.match(page,/id="administration-notifications"/)
  assert.match(page,/href="#administration-notifications"[^\n]*Open meldingen/)
 })
+
+test('notification read action is restricted to the current user and approved administration access',()=>{
+ const source=readFileSync('app/(app)/portals/administration/modules/[slug]/page.tsx','utf8')
+ assert.ok(source.includes('async function markAdministrationNotificationRead(formData:FormData)'))
+ assert.ok(source.includes(".eq('user_id',current.id).is('read_at',null)"))
+ assert.ok(source.includes("canOpenPortal('administration'"))
+ assert.ok(source.includes('action={markAdministrationNotificationRead}'))
+})
