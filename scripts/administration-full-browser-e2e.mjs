@@ -114,7 +114,7 @@ try{
         // Inventory filtering must actually select the clicked event, not merely update the address bar.
         if(finalUrl.pathname==='/portals/administration/modules/inventory'&&finalUrl.searchParams.has('event')){
          const activeEventLink=tab.locator('a[aria-current="page"][href="'+target.replaceAll('"','\\"')+'"]')
-         if(await activeEventLink.count()!==1)throw Error('inventory event filter did not activate the selected event: '+target)
+         await activeEventLink.waitFor({state:'visible',timeout:10000}).catch(()=>{throw Error('inventory event filter did not activate the selected event: '+target)})
         }
         if(await tab.locator('[data-layout-key]').count())throw Error('hydrated portal subtab rendered personnel navigation: '+target)
         const text=(await tab.locator('body').innerText()).trim()
