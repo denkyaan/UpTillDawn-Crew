@@ -7,10 +7,10 @@ import { canOpenPortal, type PortalAssignment } from '@/lib/portal-access'
 import { requestUiLocale } from '@/lib/server-locale'
 
 const translations = {
- nl:{title:'Klanten en leveranciers',new:'Nieuwe relatie',name:'Naam',kind:'Type',customer:'Klant',supplier:'Leverancier',both:'Beide',vat:'Btw-nummer',enterprise:'Ondernemingsnummer',email:'E-mail',save:'Opslaan',search:'Zoek relaties',searchButton:'Zoeken',allKinds:'Alle types',clear:'Wis filter',edit:'Relatie bewerken',update:'Wijzigingen opslaan',empty:'Nog geen relaties.',error:'Opslaan of laden mislukt.',back:'Administratie'},
- fr:{title:'Clients et fournisseurs',new:'Nouveau contact',name:'Nom',kind:'Type',customer:'Client',supplier:'Fournisseur',both:'Les deux',vat:'Numéro TVA',enterprise:'Numéro d’entreprise',email:'E-mail',save:'Enregistrer',search:'Rechercher des contacts',searchButton:'Rechercher',allKinds:'Tous les types',clear:'Effacer le filtre',edit:'Modifier le contact',update:'Enregistrer les modifications',empty:'Aucun contact.',error:'Échec de l’enregistrement ou du chargement.',back:'Administration'},
- en:{title:'Customers and suppliers',new:'New counterparty',name:'Name',kind:'Type',customer:'Customer',supplier:'Supplier',both:'Both',vat:'VAT number',enterprise:'Enterprise number',email:'Email',save:'Save',search:'Search counterparties',searchButton:'Search',allKinds:'All types',clear:'Clear filter',edit:'Edit counterparty',update:'Save changes',empty:'No counterparties yet.',error:'Could not save or load.',back:'Administration'},
- de:{title:'Kunden und Lieferanten',new:'Neuer Kontakt',name:'Name',kind:'Typ',customer:'Kunde',supplier:'Lieferant',both:'Beides',vat:'USt-IdNr.',enterprise:'Unternehmensnummer',email:'E-Mail',save:'Speichern',search:'Kontakte suchen',searchButton:'Suchen',allKinds:'Alle Typen',clear:'Filter löschen',edit:'Kontakt bearbeiten',update:'Änderungen speichern',empty:'Noch keine Kontakte.',error:'Speichern oder Laden fehlgeschlagen.',back:'Verwaltung'},
+ nl:{title:'Klanten en leveranciers',new:'Nieuwe relatie',name:'Naam',kind:'Type',customer:'Klant',supplier:'Leverancier',both:'Beide',vat:'Btw-nummer',enterprise:'Ondernemingsnummer',email:'E-mail',save:'Opslaan',search:'Zoek relaties',searchButton:'Zoeken',allKinds:'Alle types',previous:'Vorige',next:'Volgende',page:'Pagina',clear:'Wis filter',edit:'Relatie bewerken',update:'Wijzigingen opslaan',empty:'Nog geen relaties.',error:'Opslaan of laden mislukt.',back:'Administratie'},
+ fr:{title:'Clients et fournisseurs',new:'Nouveau contact',name:'Nom',kind:'Type',customer:'Client',supplier:'Fournisseur',both:'Les deux',vat:'Numéro TVA',enterprise:'Numéro d’entreprise',email:'E-mail',save:'Enregistrer',search:'Rechercher des contacts',searchButton:'Rechercher',allKinds:'Tous les types',previous:'Précédent',next:'Suivant',page:'Page',clear:'Effacer le filtre',edit:'Modifier le contact',update:'Enregistrer les modifications',empty:'Aucun contact.',error:'Échec de l’enregistrement ou du chargement.',back:'Administration'},
+ en:{title:'Customers and suppliers',new:'New counterparty',name:'Name',kind:'Type',customer:'Customer',supplier:'Supplier',both:'Both',vat:'VAT number',enterprise:'Enterprise number',email:'Email',save:'Save',search:'Search counterparties',searchButton:'Search',allKinds:'All types',previous:'Previous',next:'Next',page:'Page',clear:'Clear filter',edit:'Edit counterparty',update:'Save changes',empty:'No counterparties yet.',error:'Could not save or load.',back:'Administration'},
+ de:{title:'Kunden und Lieferanten',new:'Neuer Kontakt',name:'Name',kind:'Typ',customer:'Kunde',supplier:'Lieferant',both:'Beides',vat:'USt-IdNr.',enterprise:'Unternehmensnummer',email:'E-Mail',save:'Speichern',search:'Kontakte suchen',searchButton:'Suchen',allKinds:'Alle Typen',previous:'Zurück',next:'Weiter',page:'Seite',clear:'Filter löschen',edit:'Kontakt bearbeiten',update:'Änderungen speichern',empty:'Noch keine Kontakte.',error:'Speichern oder Laden fehlgeschlagen.',back:'Verwaltung'},
 } as const
 
 async function authorizedClient() {
@@ -58,7 +58,7 @@ async function updateCounterparty(formData:FormData) {
 }
 
 export const dynamic = 'force-dynamic'
-export default async function CounterpartiesPage({searchParams}:{searchParams:Promise<{error?:string;edit?:string;q?:string;kind?:string}>}) {
+export default async function CounterpartiesPage({searchParams}:{searchParams:Promise<{error?:string;edit?:string;q?:string;kind?:string;page?:string}>}) {
  const db = await authorizedClient()
  const locale = await requestUiLocale()
  const t = translations[locale]
@@ -69,7 +69,14 @@ export default async function CounterpartiesPage({searchParams}:{searchParams:Pr
  let listQuery=db.from('admin_counterparties').select('id,name,kind,vat_number,enterprise_number,email')
  if(query)listQuery=listQuery.ilike('name',`%${escapedQuery}%`)
  if(kindFilter)listQuery=listQuery.eq('kind',kindFilter)
- const {data,error} = await listQuery.order('name').limit(200)
+ const pageSize=50
+ const requestedPage=typeof params.page==='string'&&/^[1-9]\\d{0,5}$/.test(params.page)?Number(params.page):1
+ const page=Math.min(requestedPage,100000)
+ const offset=(page-1)*pageSize
+ const {data,error}=await listQuery.order('name').order('id').range(offset,offset+pageSize)
+ const hasNext=(data?.length??0)>pageSize
+ const rows=data?.slice(0,pageSize)
+ const pageHref=(target:number)=>'/portals/administration/counterparties?'+new URLSearchParams({...query?{q:query}:{},...kindFilter?{kind:kindFilter}:{},page:String(target)}).toString()
  const selectedId=typeof params.edit==='string'&&/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(params.edit)?params.edit:null
  const selected=selectedId?await db.from('admin_counterparties').select('id,name,kind,vat_number,enterprise_number,email').eq('id',selectedId).maybeSingle():null
  return <main className="mx-auto max-w-5xl space-y-6 p-4 pb-28 md:p-8">
@@ -106,7 +113,8 @@ export default async function CounterpartiesPage({searchParams}:{searchParams:Pr
    </form>
   </section>}
   <section className="rounded-2xl border bg-card p-5">
-   {error ? <p role="alert">{t.error}</p> : !data?.length ? <p className="text-muted-foreground">{t.empty}</p> : <div className="space-y-3">{data.map(item=><article key={item.id} className="border-b pb-3"><div className="flex items-center justify-between gap-3"><p className="font-semibold">{item.name}</p><Link href={`/portals/administration/counterparties?edit=${encodeURIComponent(item.id)}`} className="rounded-lg border px-3 py-2 text-sm text-violet-400">{t.edit}</Link></div><p className="text-sm text-muted-foreground">{item.kind} · {[item.vat_number,item.enterprise_number,item.email].filter(Boolean).join(' · ')}</p></article>)}</div>}
+   {error ? <p role="alert">{t.error}</p> : !rows?.length ? <p className="text-muted-foreground">{t.empty}</p> : <div className="space-y-3">{rows.map(item=><article key={item.id} className="border-b pb-3"><div className="flex items-center justify-between gap-3"><p className="font-semibold">{item.name}</p><Link href={`/portals/administration/counterparties?edit=${encodeURIComponent(item.id)}`} className="rounded-lg border px-3 py-2 text-sm text-violet-400">{t.edit}</Link></div><p className="text-sm text-muted-foreground">{item.kind} · {[item.vat_number,item.enterprise_number,item.email].filter(Boolean).join(' · ')}</p></article>)}</div>}
   </section>
+  {!error&&(page>1||hasNext)&&<nav aria-label={t.page} className="flex items-center justify-between gap-3 rounded-xl border p-3"><span className="text-sm">{t.page} {page}</span><div className="flex gap-2">{page>1&&<Link href={pageHref(page-1)} className="rounded-lg border px-3 py-2 text-sm">{t.previous}</Link>}{hasNext&&<Link href={pageHref(page+1)} className="rounded-lg border px-3 py-2 text-sm">{t.next}</Link>}</div></nav>}
  </main>
 }
