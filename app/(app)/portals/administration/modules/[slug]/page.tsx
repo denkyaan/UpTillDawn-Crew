@@ -81,7 +81,7 @@ export default async function AdministrationModulePage({params,searchParams}:{pa
  const financialRows=financeRelated.has(slug)?await supabase.from("admin_financial_documents").select("id,kind,status,gross_amount,due_date").order("due_date",{ascending:false}).limit(50):null
  const counterpartyRows=["contacts","sponsors"].includes(slug)?await supabase.from("admin_counterparties").select("id,name,kind").order("name",{ascending:true}).limit(100):null
  const movementRows=slug==="logistics"?await supabase.from("inventory_movements").select("*").limit(50):null
- const ticketEventRows=slug==="ticketing"?await supabase.from("events").select("id,name,status,start_at").order("start_at",{ascending:false}).limit(50):null
+ const ticketEventRows=slug==="ticketing"?await supabase.from("events").select("id,name,status,start_at").order("start_at",{ascending:false,nullsFirst:false}).order("id",{ascending:true}).limit(50):null
  const contractBookingRows=slug==="contracts"?await supabase.from("admin_artist_bookings").select("id,artist_name,status,performance_at").order("created_at",{ascending:false}).limit(50):null
  const permitEventRows=slug==="permits"?await supabase.from("events").select("id,name,status,start_at").order("start_at",{ascending:false}).limit(50):null
  const marketingEventRows=slug==="marketing"?await supabase.from("events").select("id,name,status,start_at").order("start_at",{ascending:false}).limit(50):null
