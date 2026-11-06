@@ -86,8 +86,8 @@ test('event membership and profile lookup support bounded server-side batches',(
 })
 
 test('promotion assignment controls fail closed on incomplete result sets',()=>{
- assert.ok(page.includes('.in("task_id",taskIds).limit(1001)'))
- assert.ok(page.includes('const assignmentOverflow=(assignments?.length??0)>1000'))
+ assert.ok(page.includes('.select("id,task_id,user_id",{count:"exact"}).in("task_id",taskIds).limit(1000)'))
+ assert.ok(page.includes('const assignmentOverflow=assignmentTotal===null||assignmentTotal>(assignments?.length??0)'))
  assert.ok(page.includes('!assignmentError&&!assignmentOverflow&&<form'))
  assert.ok(page.includes('!assignmentError&&!assignmentOverflow&&<section'))
  assert.ok(page.includes('assignmentError||assignmentOverflow'))
