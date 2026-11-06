@@ -1,4 +1,5 @@
 import { dashboardTimestamp } from '@/lib/admin-dashboard-timing'
+import {requestUiLocale} from '@/lib/server-locale'
 import Link from 'next/link'
 import { redirect } from 'next/navigation'
 import { getCurrentUser } from '@/lib/actions/auth'
@@ -17,6 +18,7 @@ function Stat({href,label,value,detail}:{href:string;label:string;value:number;d
 
 export default async function Page(){
  const dashboardStartedAt=dashboardTimestamp()
+ const locale=await requestUiLocale()
  const current=await getCurrentUser();if(!current?.isAdmin) redirect('/')
  const authDurationMs=dashboardTimestamp()-dashboardStartedAt
  const s=await createClient();const now=new Date();const nowMs=now.getTime();const soon=new Date(nowMs+60*60*1000)
@@ -135,7 +137,7 @@ export default async function Page(){
    priority:'high' as const,
   }]:[]),
  ]
- return <main className="mx-auto max-w-7xl space-y-7 p-4 pb-28 md:p-8"><RealtimeRefresh/><div className="flex flex-wrap items-end justify-between gap-3"><div><p className="text-xs font-bold tracking-[.2em] text-violet-400">UP TILL DAWN BEHEER</p><h1 className="text-3xl font-black">Operationeel command center</h1><p className="text-muted-foreground">Realtime serverstatus voor personeel, goedkeuringen, help oproepen, taken en synchronisatie.</p></div><div className="flex flex-wrap gap-2"><Link href="/chat" className="rounded-xl border border-violet-500 px-4 py-2 font-semibold text-violet-400">Chats</Link><Link href="/admin/time-records" className="rounded-xl border px-4 py-3">Tijdcorrecties</Link><Link href="/admin/management" className="rounded-xl border border-violet-500 px-4 py-3 font-semibold text-violet-400">Centraal beheer</Link></div></div>
+ return <main className="mx-auto max-w-7xl space-y-7 p-4 pb-28 md:p-8"><RealtimeRefresh/><div className="flex flex-wrap items-end justify-between gap-3"><div><p className="text-xs font-bold tracking-[.2em] text-violet-400">UP TILL DAWN BEHEER</p><h1 className="text-3xl font-black">Operationeel command center</h1><p className="text-muted-foreground">Realtime serverstatus voor personeel, goedkeuringen, help oproepen, taken en synchronisatie.</p></div><div className="flex flex-wrap gap-2"><Link href="/chat" className="rounded-xl border border-violet-500 px-4 py-2 font-semibold text-violet-400">Chats</Link><Link href="/admin/time-records" className="rounded-xl border px-4 py-3">Tijdcorrecties</Link><Link href="/admin/management" className="rounded-xl border border-violet-500 px-4 py-3 font-semibold text-violet-400">{({nl:"Centraal beheer",fr:"Gestion centrale",en:"Central management",de:"Zentrale Verwaltung"} as const)[locale]}</Link></div></div>
  {showFirstUse&&<FirstUseReadiness pendingApprovals={pendingProfileRows.length} approvedCrew={profileRows.length}/>}
  <PlatformAiAssistant/>
  {failedOverviewSources>0&&<p role="status" className="rounded-xl border border-amber-500/50 p-3 text-sm text-muted-foreground">Een deel van de realtime beheergegevens is tijdelijk niet beschikbaar. De beschikbare onderdelen blijven bruikbaar.</p>}
