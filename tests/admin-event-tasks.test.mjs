@@ -51,3 +51,10 @@ test('admin assignment lists show staff names and fail closed on incomplete dire
  assert.ok(page.includes('assignmentNamesIncomplete'))
  assert.ok(page.includes('!assignedProfilesError&&!assignmentNamesIncomplete'))
 })
+
+test('task editing uses authenticated audited RPC and bounded fields',()=>{
+ assert.ok(page.includes('action={editEventTask}'))
+ assert.ok(page.includes('upt_admin_update_event_task'))
+ assert.ok(page.includes('title.length>200||description.length>4000'))
+ assert.ok(page.includes('revalidatePath("/tasks")'))
+})
