@@ -41,10 +41,9 @@ test("production CI is not started by main pushes",()=>{
 
 test("production deploy follows successful manually dispatched CI only",()=>{
  assert.match(production,/workflow_dispatch:/)
- assert.match(production,/workflow_run:/)
- assert.match(production,/workflow_run\.conclusion == 'success'/)
- assert.match(production,/workflow_run\.event == 'workflow_dispatch'/)
- assert.match(production,/workflow_run\.head_branch == 'main'/)
+ assert.doesNotMatch(production,/workflow_run:/)
+ assert.match(productionCi,/dispatch-production-deploy:/)
+ assert.match(productionCi,/actions\/workflows\/deploy-cloudflare\.yml\/dispatches/)
  assert.match(production,/environment: production/)
  assert.match(production,/head_sha=\$\{RELEASE_SHA\}/)
  assert.match(production,/ref: \$\{\{ env\.RELEASE_SHA \}\}/)
