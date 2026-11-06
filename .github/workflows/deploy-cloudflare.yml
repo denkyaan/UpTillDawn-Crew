@@ -19,7 +19,7 @@ jobs:
     runs-on: ubuntu-26.04-arm
     environment: production
     permissions:
-      contents: read
+      contents: write
       actions: read
     env:
       RELEASE_SHA: ${{ github.event.workflow_run.head_sha || github.sha }}
@@ -237,6 +237,20 @@ jobs:
             printf '%s' "$TRANSLATION_API_KEY" | npx wrangler secret put TRANSLATION_API_KEY
           fi
 
+      - name: Prevent production rollback to an older validated commit
+        shell: bash
+        run: |
+          set -euo pipefail
+          git fetch --no-tags origin "+refs/tags/production-current:refs/tags/production-current" 2>/dev/null || true
+          if git rev-parse -q --verify refs/tags/production-current >/dev/null; then
+            git fetch --unshallow origin 2>/dev/null || git fetch origin
+            deployed_sha="$(git rev-parse refs/tags/production-current^{commit})"
+            if ! git merge-base --is-ancestor "$deployed_sha" "$RELEASE_SHA"; then
+              echo "::error::Refusing rollback or divergent release: production-current=$deployed_sha candidate=$RELEASE_SHA"
+              exit 1
+            fi
+          fi
+
       - name: Deploy production Worker
         run: npm run deploy:cloudflare
 
@@ -288,6 +302,20 @@ jobs:
             echo "::error::Production service-worker smoke failed"
             exit 1
           fi
+
+      - name: Record successfully verified production release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          ref="repos/${GITHUB_REPOSITORY}/git/refs/tags/production-current"
+          if gh api "$ref" >/dev/null 2>&1; then
+            gh api -X PATCH "$ref" -f sha="$RELEASE_SHA" -F force=true >/dev/null
+          else
+            gh api -X POST "repos/${GITHUB_REPOSITORY}/git/refs" -f ref="refs/tags/production-current" -f sha="$RELEASE_SHA" >/dev/null
+          fi
+          echo "Recorded verified production release $RELEASE_SHA"
 
       - name: Report Worker exceptions and tail diagnostics
         if: always()
