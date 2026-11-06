@@ -11,3 +11,12 @@ test('authorized administration personnel can open promotion tasks through porta
  assert.doesNotMatch(page,/!actor\.isAdmin&&!actor\.isOwner/)
  assert.match(page,/href="\/portals\/administration\/promotion-discipline"/)
 })
+
+test('administration promotion tasks support filtered stable pagination',()=>{
+ const page=readFileSync('app/(app)/portals/administration/promotion-tasks/page.tsx','utf8')
+ assert.ok(page.includes('tasksQuery.ilike("title"'))
+ assert.ok(page.includes('.order("created_at",{ascending:false}).order("id",{ascending:false}).range(offset,offset+pageSize)'))
+ assert.ok(page.includes('name="q" defaultValue={q}'))
+ assert.ok(page.includes('href={pageHref(page+1)}'))
+ for(const label of ['Zoek promotietaken','Rechercher des tâches','Search promotion tasks','Promotionsaufgaben suchen'])assert.ok(page.includes(label))
+})
