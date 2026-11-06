@@ -20,3 +20,12 @@ test('event task overview stays within admin and has all locales',()=>{
  for(const locale of ['nl:','fr:','en:','de:'])assert.ok(page.includes(locale))
  assert.ok(!page.includes('href="/portals/administration'))
 })
+
+test('admin creates tasks through existing authorized server action with eligible event members',()=>{
+ assert.ok(page.includes('form action={createTask}'))
+ assert.ok(page.includes('name="event_id" value={selectedEvent}'))
+ assert.ok(page.includes('name="user_id" required'))
+ assert.ok(page.includes('.eq("response","can")'))
+ assert.ok(page.includes('.eq("approved",true)'))
+ assert.ok(page.includes('directoryIncomplete'))
+})
