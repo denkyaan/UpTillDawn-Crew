@@ -81,14 +81,14 @@ export default async function AdministrationModulePage({params,searchParams}:{pa
  const financialRows=financeRelated.has(slug)?await supabase.from("admin_financial_documents").select("id,kind,status,gross_amount,due_date").order("due_date",{ascending:false}).limit(50):null
  const counterpartyRows=["contacts","sponsors"].includes(slug)?await supabase.from("admin_counterparties").select("id,name,kind").order("name",{ascending:true}).limit(100):null
  const movementRows=slug==="logistics"?await supabase.from("inventory_movements").select("*").limit(50):null
- const ticketEventRows=slug==="ticketing"?await supabase.from("events").select("id,name,status,start_at").order("start_at",{ascending:false}).limit(50):null
+ const ticketEventRows=slug==="ticketing"?await supabase.from("events").select("id,name,status,start_at").order("start_at",{ascending:false,nullsFirst:false}).order("id",{ascending:true}).limit(50):null
  const contractBookingRows=slug==="contracts"?await supabase.from("admin_artist_bookings").select("id,artist_name,status,performance_at").order("created_at",{ascending:false}).limit(50):null
  const permitEventRows=slug==="permits"?await supabase.from("events").select("id,name,status,start_at").order("start_at",{ascending:false}).limit(50):null
  const marketingEventRows=slug==="marketing"?await supabase.from("events").select("id,name,status,start_at").order("start_at",{ascending:false}).limit(50):null
  const settingsAssignmentRows=slug==="settings"?await supabase.from("portal_role_assignments").select("id,user_id,portal,approved").eq("portal","administration").limit(50):null
  const workQueueEvents=["logistics","permits","tasks","staff","reports"].includes(slug)?await supabase.from("events").select("id,name").order("start_at",{ascending:false}).limit(100):null
  const automationRuns=slug==="automations"?await (supabase as unknown as SupabaseClient).from("admin_automation_runs").select("id,completed_at,delivered,error_code").order("completed_at",{ascending:false}).limit(20):null
- const automationTaskRows=slug==="automations"?await supabase.from("tasks").select("id,title,status").limit(50):null
+ const automationTaskRows=slug==="automations"?await supabase.from("tasks").select("id,title,status").order("id",{ascending:false}).limit(50):null
  const reportTimesheetRows=slug==="reports"?await supabase.from("timesheets").select("id,status").limit(100):null
  const aiFinancialRows=slug==="ai"?await supabase.from("admin_financial_documents").select("id,kind,status").eq("status","review").limit(50):null
  const aiTimesheetRows=slug==="ai"?await supabase.from("timesheets").select("id,status").eq("status","submitted").limit(50):null
