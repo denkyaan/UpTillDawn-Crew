@@ -84,3 +84,12 @@ test('event membership and profile lookup support bounded server-side batches',(
  assert.ok(page.includes('memberIds.slice(offset,offset+200)'))
  assert.ok(page.includes('if(offset===9000)memberListTruncated=true'))
 })
+
+test('promotion assignment controls fail closed on incomplete result sets',()=>{
+ assert.ok(page.includes('.in("task_id",taskIds).limit(1001)'))
+ assert.ok(page.includes('const assignmentOverflow=(assignments?.length??0)>1000'))
+ assert.ok(page.includes('!assignmentError&&!assignmentOverflow&&<form'))
+ assert.ok(page.includes('!assignmentError&&!assignmentOverflow&&<section'))
+ assert.ok(page.includes('assignmentError||assignmentOverflow'))
+ assert.ok(page.includes('"/admin/management":"/portals/administration/modules/marketing"'))
+})
