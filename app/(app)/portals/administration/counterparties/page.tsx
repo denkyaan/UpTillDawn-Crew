@@ -16,21 +16,24 @@ const translations = {
 async function authorizedClient() {
  const user = await getCurrentUser()
  if (!user) redirect('/login')
+ if ((!user.approved || Boolean(user.account_blocked)) && !user.isOwner) redirect('/portals')
  const db = await createClient()
- const {data,error} = await db.rpc('upt_my_portal_assignments')
- if (!user.isAdmin && (error || !canOpenPortal('administration',(data ?? []) as PortalAssignment[],{approved:user.approved,blocked:user.account_blocked===true}))) redirect('/portals')
+ if (!user.realIsAdmin && !user.isOwner) {
+  const {data,error} = await db.rpc('upt_my_portal_assignments')
+  if (error || !canOpenPortal('administration',(data ?? []) as PortalAssignment[],{approved:user.approved,blocked:user.account_blocked===true})) redirect('/portals')
+ }
  return db
 }
 
 async function addCounterparty(formData:FormData) {
  'use server'
  const db = await authorizedClient()
- const name = String(formData.get('name') ?? '').trim().slice(0,200)
+ const name = String(formData.get('name') ?? '').trim()
  const kind = String(formData.get('kind') ?? '')
- const vat_number = String(formData.get('vat_number') ?? '').trim().slice(0,40)
- const enterprise_number = String(formData.get('enterprise_number') ?? '').trim().slice(0,40)
- const email = String(formData.get('email') ?? '').trim().slice(0,254)
- if (!name || !['customer','supplier','both'].includes(kind) || (email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email))) redirect('/portals/administration/counterparties?error=1')
+ const vat_number = String(formData.get('vat_number') ?? '').trim()
+ const enterprise_number = String(formData.get('enterprise_number') ?? '').trim()
+ const email = String(formData.get('email') ?? '').trim()
+ if (!name || name.length>200 || vat_number.length>40 || enterprise_number.length>40 || email.length>254 || !['customer','supplier','both'].includes(kind) || (email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email))) redirect('/portals/administration/counterparties?error=1')
  const {error} = await db.from('admin_counterparties').insert({name,kind,vat_number:vat_number||null,enterprise_number:enterprise_number||null,email:email||null})
  if (error) redirect('/portals/administration/counterparties?error=1')
  revalidatePath('/portals/administration/counterparties')
