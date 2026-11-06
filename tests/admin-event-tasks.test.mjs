@@ -8,6 +8,10 @@ test('admin event task overview enforces role and approval',()=>{
  assert.ok(page.includes('actor.account_blocked'))
  assert.ok(page.includes('.not("event_id","is",null)'))
  assert.ok(page.includes('.range((page-1)*30,page*30)'))
+ assert.ok(page.includes('requestedEvent&&!event'))
+ assert.ok(page.includes('query=query.eq("event_id",event)'))
+ assert.ok(page.includes('eventNames.get(task.event_id)'))
+ assert.ok(page.includes('encodeURIComponent(event)'))
 })
 test('event task overview stays within admin and has all locales',()=>{
  assert.ok(hub.includes('href:"/admin/management/event-tasks"'))
