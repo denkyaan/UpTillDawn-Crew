@@ -11,7 +11,7 @@ test('admin management hub is authenticated and linked from dashboard',()=>{
 })
 test('management hub links to existing admin routes and guarded promotion workflows',()=>{
  for(const href of ['/personnel','/admin/time-records','/shifts','/tasks','/events','/crew','/inventory','/incidents','/admin/platform','/sales','/exports'])assert.ok(hub.includes('href:"'+href+'"'))
- for(const href of ['/portals/administration/promotion-tasks','/portals/administration/promotion-discipline'])assert.ok(hub.includes('href:"'+href+'"'))
+ for(const href of ['/portals/administration/promotion-tasks','/admin/management/promotion-discipline'])assert.ok(hub.includes('href:"'+href+'"'))
  const layout=readFileSync('app/(app)/portals/administration/layout.tsx','utf8')
  assert.ok(layout.includes('!user.isOwner&&!user.realIsAdmin'))
  assert.ok(layout.includes('canOpenPortal("administration"'))
