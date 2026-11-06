@@ -26,6 +26,8 @@ export function AdministrationNavigation({initialLocale,canManagePromotion}:{ini
  const current=administrationCategoryForPath(pathname)
  const selected=categories.find(group=>group.key===(selectedCategory?.pathname===pathname?selectedCategory.key:"overview"))!
  const visible=selected.key!=="overview"
+ // Opening a different page must close the previous category panel, including browser back/forward.
+ useEffect(()=>{setSelectedCategory(null)},[pathname])
  useEffect(()=>{const onKey=(event:KeyboardEvent)=>{if(event.key==="Escape")setSelectedCategory({key:"overview",pathname})};window.addEventListener("keydown",onKey);return()=>window.removeEventListener("keydown",onKey)},[pathname])
  useEffect(()=>{window.dispatchEvent(new CustomEvent("uptilldawn-navigation-expanded",{detail:{open:visible}}));return()=>{window.dispatchEvent(new CustomEvent("uptilldawn-navigation-expanded",{detail:{open:false}}))}},[visible])
  const isActiveSubtab=(slug:string)=>pathname===route(slug)||(pathname.startsWith(route(slug)+"/")&&slug!=="dashboard")
