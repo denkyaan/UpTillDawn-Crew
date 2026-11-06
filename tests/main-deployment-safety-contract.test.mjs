@@ -61,4 +61,6 @@ test("main CI requires explicit release input before dispatching production CI",
  assert.match(mainCi,/inputs.release_production == true/)
  assert.match(mainCi,/actions\/workflows\/ci\.yml\/dispatches/)
  assert.match(mainCi,/current_sha.*GITHUB_SHA/)
+ assert.doesNotMatch(mainCi,/Main changed; refusing stale release/)
+ assert.match(mainCi,/dispatches" -f ref=main/)
 })
