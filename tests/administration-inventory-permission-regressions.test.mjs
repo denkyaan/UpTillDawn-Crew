@@ -19,6 +19,7 @@ test('inventory preserves event search params and applies event scope to records
 
 test('office staff cannot follow admin-only promotion discipline navigation',()=>{
  assert.match(modulePage,/\(current\.realIsAdmin\|\|current\.isOwner\).*href="\/portals\/administration\/promotion-discipline"/)
- assert.match(disciplinePage,/actor\\.realIsAdmin&&!actor\\.isOwner/)
- assert.match(disciplinePage,/actor\\.realIsAdmin&&!actor\\.isOwner/)
+ assert.match(disciplinePage,/!actor\.realIsAdmin&&!actor\.isOwner/)
+ assert.match(disciplinePage,/actor\.approved&&!actor\.isOwner/)
+ assert.match(disciplinePage,/actor\.account_blocked&&!actor\.isOwner/)
 })
