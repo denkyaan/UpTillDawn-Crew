@@ -50,7 +50,7 @@ async function updateCounterparty(formData:FormData) {
  const vat_number = String(formData.get('vat_number') ?? '').trim()
  const enterprise_number = String(formData.get('enterprise_number') ?? '').trim()
  const email = String(formData.get('email') ?? '').trim()
- if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id) || !name || name.length>200 || !['customer','supplier','both'].includes(kind) || vat_number.length>40 || enterprise_number.length>40 || email.length>254 || (email && !/^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$/.test(email))) redirect('/portals/administration/counterparties?error=1')
+ if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id) || !name || name.length>200 || !['customer','supplier','both'].includes(kind) || vat_number.length>40 || enterprise_number.length>40 || email.length>254 || (email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email))) redirect('/portals/administration/counterparties?error=1')
  const {data,error} = await db.from('admin_counterparties').update({name,kind,vat_number:vat_number||null,enterprise_number:enterprise_number||null,email:email||null}).eq('id',id).select('id').maybeSingle()
  if (error || !data) redirect('/portals/administration/counterparties?error=1')
  revalidatePath('/portals/administration/counterparties')
