@@ -69,3 +69,10 @@ test('promotion assignments use approved event-member picker instead of UUID ent
  assert.ok(!page.includes('<input name="user_id" required pattern='))
  for(const label of ['Kies een medewerker','Choisir un membre','Choose a staff member','Mitarbeiter auswählen'])assert.ok(page.includes(label))
 })
+
+test('assignment management shows member names and refuses incomplete member directories',()=>{
+ assert.ok(page.includes('names.get(assignment.user_id)??assignment.user_id'))
+ assert.ok(page.includes('memberListTruncated=(memberships?.length??0)>=1000||memberIds.length>=1000'))
+ assert.ok(page.includes('!memberListTruncated&&<form'))
+ assert.ok(page.includes('membersError||profilesError||memberListTruncated'))
+})
