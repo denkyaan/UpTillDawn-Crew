@@ -30,3 +30,9 @@ test('counterparty creation rejects oversized input rather than silently truncat
  assert.ok(counterparties.includes('enterprise_number.length>40'))
  assert.ok(counterparties.includes('email.length>254'))
 })
+
+test('counterparty edit email validation accepts standard addresses and rejects malformed ones',()=>{
+ const source=counterparties.slice(counterparties.indexOf('async function updateCounterparty'),counterparties.indexOf('export const dynamic'))
+ assert.ok(source.includes('/^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$/'))
+ assert.ok(!source.includes('/^[^\\\\s@]+@[^\\\\s@]+\\\\.[^\\\\s@]+$/'))
+})
