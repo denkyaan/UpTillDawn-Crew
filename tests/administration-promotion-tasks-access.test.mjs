@@ -27,3 +27,11 @@ test('promotion task overview exposes instructions and event scope in four langu
  assert.ok(page.includes('task.event_id?'))
  for(const label of ['Algemene taak','Tâche générale','General task','Allgemeine Aufgabe'])assert.ok(page.includes(label))
 })
+
+test('promotion task scope filters are database-side and survive pagination',()=>{
+ assert.ok(page.includes('tasksQuery.not("event_id","is",null)'))
+ assert.ok(page.includes('tasksQuery.is("event_id",null)'))
+ assert.ok(page.includes('name="scope" defaultValue={scope}'))
+ assert.ok(page.includes('...(scope!=="all"?{scope}:{})'))
+ for(const label of ['Alle taken','Toutes les tâches','All tasks','Alle Aufgaben'])assert.ok(page.includes(label))
+})
