@@ -38,7 +38,7 @@ test('promotion task scope filters are database-side and survive pagination',()=
 
 test('promotion task assignment totals are scoped to admin-visible rows',()=>{
  assert.ok(page.includes('(actor.realIsAdmin||actor.isOwner)&&taskIds.length'))
- assert.ok(page.includes('db.from("task_assignments").select("id,task_id,user_id").in("task_id",taskIds)'))
+ assert.ok(page.includes('db.from("task_assignments").select("id,task_id,user_id",{count:"exact"}).in("task_id",taskIds)'))
  assert.ok(page.includes('(actor.realIsAdmin||actor.isOwner)&&!assignmentError'))
  assert.ok(page.includes('assignmentCounts.get(task.id)??0'))
  for(const label of ['Toewijzingen','Affectations','Assignments','Zuweisungen'])assert.ok(page.includes(label))
