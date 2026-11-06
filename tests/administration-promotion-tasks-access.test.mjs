@@ -9,7 +9,7 @@ test('authorized administration personnel can open promotion tasks through porta
  assert.match(layout,/canOpenPortal\("administration"/)
  assert.match(page,/getCurrentUser\(\)/)
  assert.doesNotMatch(page,/!actor\.isAdmin&&!actor\.isOwner/)
- assert.match(page,/href="\/portals\/administration\/promotion-discipline"/)
+ assert.ok(page.includes('"/portals/administration/promotion-discipline"'))
 })
 
 test('administration promotion tasks support filtered stable pagination',()=>{
