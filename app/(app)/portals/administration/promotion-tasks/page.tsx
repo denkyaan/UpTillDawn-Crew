@@ -30,7 +30,7 @@ export default async function AdministrationPromotionTasks({searchParams}:{searc
  const {data,error}=await tasksQuery.order("created_at",{ascending:false}).order("id",{ascending:false}).range(offset,offset+pageSize)
  const hasNext=(data?.length??0)>pageSize
  const rows=data?.slice(0,pageSize)??[]
- const pageHref=(target:number)=>"/portals/administration/promotion-tasks?"+new URLSearchParams({...q?{q}:{},page:String(target)}).toString()
+ const pageHref=(target:number)=>"/portals/administration/promotion-tasks?"+new URLSearchParams({...(q?{q}:{}),page:String(target)}).toString()
  return <main className="mx-auto max-w-4xl space-y-5 p-4 pb-36 sm:p-6">
   <Link href="/portals/administration/modules/marketing" className="text-sm text-violet-400">← {t.back}</Link>
   <header className="space-y-2"><h1 className="text-2xl font-bold">{t.title}</h1><p className="text-sm text-muted-foreground">{t.intro}</p></header>
