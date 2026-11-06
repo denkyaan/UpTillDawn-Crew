@@ -66,8 +66,8 @@ export default async function AdministrationPromotionTasks({searchParams,adminVi
  const hasNext=(data?.length??0)>pageSize
  const rows=data?.slice(0,pageSize)??[]
  const taskIds=rows.map(task=>task.id)
- const {data:assignments,error:assignmentError}=(actor.realIsAdmin||actor.isOwner)&&taskIds.length?await db.from("task_assignments").select("id,task_id,user_id").in("task_id",taskIds).limit(1001):{data:[],error:null}
- const assignmentOverflow=(assignments?.length??0)>1000
+ const {data:assignments,error:assignmentError,count:assignmentTotal}=(actor.realIsAdmin||actor.isOwner)&&taskIds.length?await db.from("task_assignments").select("id,task_id,user_id",{count:"exact"}).in("task_id",taskIds).limit(1000):{data:[],error:null,count:0}
+ const assignmentOverflow=assignmentTotal===null||assignmentTotal>(assignments?.length??0)
  const assignmentCounts=new Map<string,number>()
  for(const assignment of assignments??[])assignmentCounts.set(assignment.task_id,(assignmentCounts.get(assignment.task_id)??0)+1)
  const assignmentsByTask=new Map<string,Array<{id:string;user_id:string}>>()
