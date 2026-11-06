@@ -35,3 +35,13 @@ test('multi-assignment uses repeated user_id fields and invalid event does not s
  assert.ok(page.includes('requestedEvent?(event??null)'))
  assert.ok(page.includes('!selectedEvent||!eligible.length'))
 })
+
+test('admin task assignment changes require authorization and audited RPCs',()=>{
+ assert.ok(page.includes('actor.realIsAdmin'))
+ assert.ok(page.includes('actor.account_blocked'))
+ assert.ok(page.includes('upt_assign_task'))
+ assert.ok(page.includes('upt_remove_task_assignment'))
+ assert.ok(page.includes('revalidatePath("/admin/management/event-tasks")'))
+ assert.ok(page.includes('assignmentOverflow'))
+ assert.ok(page.includes('action={updateAssignment}'))
+})
