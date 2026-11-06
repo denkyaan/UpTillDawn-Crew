@@ -24,6 +24,7 @@ async function unblock(form:FormData){
  const {error}=await db.rpc("upt_admin_unblock_promotion" as never,{p_user:user,p_reason:reason} as never)
  if(error)throw new Error("Could not lift restriction")
  revalidatePath("/portals/administration/promotion-discipline")
+ revalidatePath("/admin/management/promotion-discipline")
 }
 async function registerReference(form:FormData){
  "use server"
@@ -47,6 +48,7 @@ async function registerReference(form:FormData){
  const {error}=await db.rpc("upt_admin_register_promotion_reference" as never,{p_task:task,p_path:path,p_sha256:sha} as never)
  if(error){await db.storage.from("work-media").remove([path]);throw new Error("Reference registration failed")}
  revalidatePath("/portals/administration/promotion-discipline")
+ revalidatePath("/admin/management/promotion-discipline")
 }
 async function reviewEvidence(form:FormData){
  "use server"
@@ -61,6 +63,7 @@ async function reviewEvidence(form:FormData){
  const {error}=await db.rpc("upt_admin_review_promotion_evidence" as never,{p_evidence:evidence,p_status:status,p_details:reason} as never)
  if(error)throw new Error("Could not save evidence review")
  revalidatePath("/portals/administration/promotion-discipline")
+ revalidatePath("/admin/management/promotion-discipline")
 }
 export default async function PromotionDisciplinePage(){
  const actor=await getCurrentUser()
