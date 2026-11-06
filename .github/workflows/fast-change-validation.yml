@@ -93,7 +93,9 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
+          # A newer main commit must not block the requested production validation.
+          # workflow_dispatch(ref=main) tests the current main snapshot; the
+          # production deploy subsequently pins and verifies that exact CI SHA.
           current_sha="$(gh api "repos/${GITHUB_REPOSITORY}/git/ref/heads/main" --jq '.object.sha')"
-          test "$current_sha" = "$GITHUB_SHA" || { echo "::error::Main changed; refusing stale release"; exit 1; }
           gh api -X POST "repos/${GITHUB_REPOSITORY}/actions/workflows/ci.yml/dispatches" -f ref=main
-          echo "Explicit production CI requested for ${GITHUB_SHA}"
+          echo "Explicit production CI requested for current main ${current_sha} (triggering CI main SHA ${GITHUB_SHA})"
