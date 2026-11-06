@@ -41,6 +41,7 @@ async function removePromotionAssignment(form:FormData){
  const {error}=await db.rpc("upt_remove_task_assignment",{p_assignment:id})
  if(error)throw new Error("Could not remove task assignment")
  revalidatePath("/portals/administration/promotion-tasks")
+ revalidatePath("/admin/management/promotion-tasks")
 }
 
 export default async function AdministrationPromotionTasks({searchParams,adminView=false}:{searchParams:Promise<{q?:string;page?:string;scope?:string}>;adminView?:boolean}){
