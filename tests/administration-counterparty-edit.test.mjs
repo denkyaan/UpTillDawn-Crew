@@ -36,3 +36,12 @@ test('counterparty edit email validation accepts standard addresses and rejects 
  assert.ok(source.includes('/^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$/'))
  assert.ok(!source.includes('/^[^\\\\s@]+@[^\\\\s@]+\\\\.[^\\\\s@]+$/'))
 })
+
+test('counterparty search filters in the database rather than only the first 200 results',()=>{
+ const page=readFileSync('app/(app)/portals/administration/counterparties/page.tsx','utf8')
+ assert.ok(page.includes('role="search"'))
+ assert.ok(page.includes("listQuery.ilike('name'"))
+ assert.ok(page.includes("query.trim()")||page.includes("params.q.trim()"))
+ assert.ok(page.includes("listQuery.order('name').limit(200)"))
+ for(const label of ['Zoek relaties','Rechercher des contacts','Search counterparties','Kontakte suchen'])assert.ok(page.includes(label))
+})
