@@ -47,7 +47,10 @@ test("production deploy follows successful manually dispatched CI only",()=>{
  assert.match(production,/workflow_run\.head_branch == 'main'/)
  assert.match(production,/environment: production/)
  assert.match(production,/head_sha=\$\{RELEASE_SHA\}/)
- assert.match(production,/Revalidate release SHA immediately before production deployment/)
+ assert.match(production,/ref: \$\{\{ env\.RELEASE_SHA \}\}/)
+ assert.match(production,/test "\$\(git rev-parse HEAD\)" = "\$RELEASE_SHA"/)
+ assert.doesNotMatch(production,/Main moved since validation; refusing stale production release/)
+ assert.doesNotMatch(production,/Revalidate release SHA immediately before production deployment/)
 })
 
 test("main CI requires explicit release input before dispatching production CI",()=>{
