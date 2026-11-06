@@ -16,3 +16,17 @@ test('linked invoice directions remain valid after role changes',()=>{
  assert.match(sql,/must retain supplier role/)
  assert.match(sql,/new\.updated_at=now\(\)/)
 })
+
+const counterparties=readFileSync('app/(app)/portals/administration/counterparties/page.tsx','utf8')
+test('counterparty actions enforce the same account and portal gates as administration layout',()=>{
+ assert.ok(counterparties.includes('!user.approved || Boolean(user.account_blocked)'))
+ assert.ok(counterparties.includes('!user.realIsAdmin && !user.isOwner'))
+ assert.ok(counterparties.includes("canOpenPortal('administration'"))
+ assert.ok(counterparties.includes('async function updateCounterparty'))
+})
+test('counterparty creation rejects oversized input rather than silently truncating it',()=>{
+ assert.ok(counterparties.includes('name.length>200'))
+ assert.ok(counterparties.includes('vat_number.length>40'))
+ assert.ok(counterparties.includes('enterprise_number.length>40'))
+ assert.ok(counterparties.includes('email.length>254'))
+})
