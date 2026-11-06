@@ -94,7 +94,7 @@ try{
         const expectedClickedPath=target==='/portals/administration/overview'?'/portals/administration':target
         try {
          await Promise.all([
-          tab.waitForURL(u=>u.pathname===new URL(expectedClickedPath,base).pathname,{timeout:20000,waitUntil:'commit'}),
+          tab.waitForURL(u=>u.pathname+u.search===expectedClickedPath,{timeout:20000,waitUntil:'commit'}),
           href.click({timeout:15000}),
          ])
         } catch (error) {

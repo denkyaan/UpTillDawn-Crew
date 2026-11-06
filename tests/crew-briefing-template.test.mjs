@@ -141,7 +141,7 @@ test('assignment scope rejects cross-event workplace defaults and filters workpl
 test('full browser E2E accepts canonical administration overview redirect for clicked links',()=>{
  const browser=readFileSync(new URL('../scripts/administration-full-browser-e2e.mjs',import.meta.url),'utf8')
  assert.match(browser,/target==='\/portals\/administration\/overview'\?'\/portals\/administration':target/)
- assert.match(browser,/new URL\(expectedClickedPath,base\)\.pathname/)
+ assert.match(browser,/u\.pathname\+u\.search===expectedClickedPath/)
 })
 
 test('assignment person selection cannot retain a default outside the event and workplace scope',()=>{
