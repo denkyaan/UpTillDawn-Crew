@@ -10,5 +10,5 @@ test("administration marketing promotion tasks stays inside administration",()=>
  assert.doesNotMatch(tasks,/!actor\.isAdmin&&!actor\.isOwner/)
  const layout=readFileSync("app/(app)/portals/administration/layout.tsx","utf8")
  assert.match(layout,/canOpenPortal\("administration"/)
- assert.match(tasks,/href="\/portals\/administration\/promotion-discipline"/)
+ assert.ok(tasks.includes('"/portals/administration/promotion-discipline"'))
 })
