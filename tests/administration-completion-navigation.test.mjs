@@ -50,3 +50,13 @@ test('administration notification links use safe route resolver rather than raw 
  assert.ok(!source.includes('href={item.link}'))
  for(const label of ['Openen','Ouvrir','Open','Öffnen'])assert.ok(source.includes(label))
 })
+
+test('actual administration notification route forwards pagination to inbox',()=>{
+ const wrapper=readFileSync('app/(app)/portals/administration/modules/notifications/page.tsx','utf8')
+ const inbox=readFileSync('app/(app)/notifications/page.tsx','utf8')
+ assert.ok(wrapper.includes("scope:'administration'"))
+ assert.ok(wrapper.includes('searchParams={Promise.resolve({page'))
+ assert.ok(inbox.includes('.range(offset,offset+pageSize)'))
+ assert.ok(inbox.includes('visibleRows=data?.slice(0,pageSize)'))
+ assert.ok(inbox.includes('href={pageHref(page+1)}'))
+})
