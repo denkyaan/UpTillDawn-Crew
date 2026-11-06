@@ -66,3 +66,11 @@ test('task creation prioritizes next upcoming event and assignment statuses are 
  assert.ok(page.includes('.select("id,task_id,user_id,status")'))
  assert.ok(page.includes('{item.status}'))
 })
+
+test('task progress and completion confirmation are derived from persisted assignments',()=>{
+ assert.ok(page.includes('.select("id,task_id,user_id,status,confirmed_at")'))
+ assert.ok(page.includes('item.status==="COMPLETED"'))
+ assert.ok(page.includes('item.confirmed_at'))
+ assert.ok(page.includes('new Date(item.confirmed_at).toLocaleString(locale)'))
+ assert.ok(page.includes('!assignmentError&&!assignmentOverflow'))
+})
