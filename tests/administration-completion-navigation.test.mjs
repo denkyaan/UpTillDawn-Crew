@@ -15,6 +15,6 @@ test('relations navigation exposes implemented administration destinations',()=>
 })
 
 test('navigation closes expanded subtabs on pathname changes',()=>{
- assert.match(tabs,/useEffect\(\(\)=>\{setSelectedCategory\(null\)\},\[pathname\]\)/)
+ assert.match(tabs,/selectedCategory\?\.pathname===pathname/)
  assert.match(tabs,/onClick=\{\(\)=>setSelectedCategory\(null\)\}/)
 })
