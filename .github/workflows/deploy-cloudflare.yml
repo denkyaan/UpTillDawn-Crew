@@ -7,10 +7,6 @@ on:
         description: 'Exact commit SHA with successful full CI production (optional; defaults to current main)'
         type: string
         required: false
-  workflow_run:
-    workflows: ["CI production"]
-    types: [completed]
-    branches: [main]
 
 concurrency:
   group: uptilldawn-production
@@ -18,16 +14,14 @@ concurrency:
 
 jobs:
   deploy:
-    if: >-
-      (github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main') ||
-      (github.event_name == 'workflow_run' && github.event.workflow_run.conclusion == 'success' && github.event.workflow_run.event == 'workflow_dispatch' && github.event.workflow_run.head_branch == 'main')
+    if: github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main'
     runs-on: ubuntu-26.04-arm
     environment: production
     permissions:
       contents: write
       actions: read
     env:
-      RELEASE_SHA: ${{ github.event.workflow_run.head_sha || inputs.release_sha || github.sha }}
+      RELEASE_SHA: ${{ inputs.release_sha || github.sha }}
       # Public production Supabase config. Keep this pinned so production cannot
       # accidentally deploy against the preview project.
       NEXT_PUBLIC_SUPABASE_URL: https://eakoavcieossazqzplke.supabase.co
