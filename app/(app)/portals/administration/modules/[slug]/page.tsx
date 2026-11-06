@@ -92,7 +92,7 @@ export const dynamic = "force-dynamic"
 
 export default async function AdministrationModulePage({params,searchParams}:{params:Promise<{slug:string}>;searchParams?:Promise<{event?:string;page?:string;invoiceKind?:string;invoiceStatus?:string;invoicePage?:string;invoiceNumber?:string;invoiceFrom?:string;invoiceTo?:string;invoiceOverdue?:string;invoiceSort?:string;notificationPage?:string}>}){
  const {slug}=await params
- const {event:requestedEvent,page:requestedPage,invoiceKind,invoiceStatus,invoicePage,invoiceNumber,invoiceFrom,invoiceTo,invoiceOverdue,invoiceSort,notificationPage}=await (searchParams??Promise.resolve({event:undefined,page:undefined,invoiceKind:undefined,invoiceStatus:undefined,invoicePage:undefined,invoiceNumber:undefined,invoiceFrom:undefined,invoiceTo:undefined,invoiceOverdue:undefined,invoiceSort:undefined}))
+ const {event:requestedEvent,page:requestedPage,invoiceKind,invoiceStatus,invoicePage,invoiceNumber,invoiceFrom,invoiceTo,invoiceOverdue,invoiceSort,notificationPage}=await (searchParams??Promise.resolve({event:undefined,page:undefined,invoiceKind:undefined,invoiceStatus:undefined,invoicePage:undefined,invoiceNumber:undefined,invoiceFrom:undefined,invoiceTo:undefined,invoiceOverdue:undefined,invoiceSort:undefined,notificationPage:undefined}))
  const adminModule=administrationModules.find(item=>item.slug===slug&&slug!=="dashboard"&&slug!=="finance")
  if(!adminModule)notFound()
  const current=await getCurrentUser()
