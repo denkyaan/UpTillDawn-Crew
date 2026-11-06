@@ -42,3 +42,11 @@ test('bulk notification read only updates unread notifications owned by the curr
  assert.ok(source.includes('action={markAllAdministrationNotificationsRead}'))
  for(const label of ['Alles als gelezen markeren','Tout marquer comme lu','Mark all as read','Alle als gelesen markieren'])assert.ok(source.includes(label))
 })
+
+test('administration notification links use safe route resolver rather than raw database links',()=>{
+ const source=readFileSync('app/(app)/portals/administration/modules/[slug]/page.tsx','utf8')
+ assert.ok(source.includes('administrationNotificationHref(item.link)'))
+ assert.ok(source.includes('href={administrationNotificationHref(item.link)!}'))
+ assert.ok(!source.includes('href={item.link}'))
+ for(const label of ['Openen','Ouvrir','Open','Öffnen'])assert.ok(source.includes(label))
+})
