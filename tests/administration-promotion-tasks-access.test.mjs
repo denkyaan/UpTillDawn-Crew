@@ -72,7 +72,15 @@ test('promotion assignments use approved event-member picker instead of UUID ent
 
 test('assignment management shows member names and refuses incomplete member directories',()=>{
  assert.ok(page.includes('names.get(assignment.user_id)??assignment.user_id'))
- assert.ok(page.includes('memberListTruncated=(memberships?.length??0)>=1000||memberIds.length>=1000'))
+ assert.ok(page.includes('if(offset===9000)memberListTruncated=true'))
  assert.ok(page.includes('!memberListTruncated&&<form'))
  assert.ok(page.includes('membersError||profilesError||memberListTruncated'))
+})
+
+test('event membership and profile lookup support bounded server-side batches',()=>{
+ assert.ok(page.includes('for(let offset=0;offset<10000;offset+=1000)'))
+ assert.ok(page.includes('.order("event_id").order("user_id").range(offset,offset+999)'))
+ assert.ok(page.includes('for(let offset=0;offset<memberIds.length;offset+=200)'))
+ assert.ok(page.includes('memberIds.slice(offset,offset+200)'))
+ assert.ok(page.includes('if(offset===9000)memberListTruncated=true'))
 })
