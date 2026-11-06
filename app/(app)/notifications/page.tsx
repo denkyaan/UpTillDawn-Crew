@@ -67,6 +67,6 @@ export default async function Page({searchParams}:{searchParams?:Promise<{page?:
         </div>
       </article>
     })}
-    {!error&&(page>1||hasNext)&&<nav aria-label="Notification pages" className="flex items-center justify-between gap-3"><span>{translateRuntimeUi('Pagina',locale)} {page}</span><div className="flex gap-2">{page>1&&<Link href={pageHref(page-1)} className="rounded-lg border px-3 py-2">{translateRuntimeUi('Vorige',locale)}</Link>}{hasNext&&<Link href={pageHref(page+1)} className="rounded-lg border px-3 py-2">{translateRuntimeUi('Volgende',locale)}</Link>}</div></nav>}
+    {!error&&(page>1||hasNext)&&<nav aria-label={translateRuntimeUi("Meldingspagina’s",locale)} className="flex items-center justify-between gap-3"><span>{translateRuntimeUi('Pagina',locale)} {page}</span><div className="flex gap-2">{page>1&&<Link href={pageHref(page-1)} className="rounded-lg border px-3 py-2">{translateRuntimeUi('Vorige',locale)}</Link>}{hasNext&&<Link href={pageHref(page+1)} className="rounded-lg border px-3 py-2">{translateRuntimeUi('Volgende',locale)}</Link>}</div></nav>}
   </main>
 }
