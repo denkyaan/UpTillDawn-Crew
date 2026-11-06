@@ -38,7 +38,7 @@ test('promotion task scope filters are database-side and survive pagination',()=
 
 test('promotion task assignment totals are scoped to admin-visible rows',()=>{
  assert.ok(page.includes('(actor.realIsAdmin||actor.isOwner)&&taskIds.length'))
- assert.ok(page.includes('db.from("task_assignments").select("task_id").in("task_id",taskIds)'))
+ assert.ok(page.includes('db.from("task_assignments").select("id,task_id,user_id").in("task_id",taskIds)'))
  assert.ok(page.includes('(actor.realIsAdmin||actor.isOwner)&&!assignmentError'))
  assert.ok(page.includes('assignmentCounts.get(task.id)??0'))
  for(const label of ['Toewijzingen','Affectations','Assignments','Zuweisungen'])assert.ok(page.includes(label))
@@ -51,4 +51,12 @@ test('promotion task assignment uses admin-only audited RPC and requires event s
  assert.ok(page.includes('db.rpc("upt_assign_task",{p_task:task,p_user:user})'))
  assert.ok(page.includes('action={assignPromotionTask}'))
  for(const label of ['Medewerker toewijzen','Affecter un membre','Assign staff member','Mitarbeiter zuweisen'])assert.ok(page.includes(label))
+})
+
+test('administrators can revoke task assignments through existing authorized RPC',()=>{
+ assert.ok(page.includes('async function removePromotionAssignment(form:FormData)'))
+ assert.ok(page.includes('db.rpc("upt_remove_task_assignment",{p_assignment:id})'))
+ assert.ok(page.includes('action={removePromotionAssignment}'))
+ assert.ok(page.includes('assignmentsByTask.get(task.id)'))
+ for(const label of ['Toewijzing verwijderen','Supprimer l’affectation','Remove assignment','Zuweisung entfernen'])assert.ok(page.includes(label))
 })
