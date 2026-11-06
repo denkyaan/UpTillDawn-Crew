@@ -5,23 +5,23 @@ import {getCurrentUser} from "@/lib/actions/auth"
 
 export const dynamic="force-dynamic"
 
-const copy0={nl:copy0[locale],fr:"Décisions et contrôles de l’organisation.",en:"Decisions and organizational controls.",de:"Entscheidungen und Organisationskontrollen."} as const
-const copy1={nl:copy1[locale],fr:"Approbations du personnel",en:"Staff approvals",de:"Personal-Freigaben"} as const
-const copy2={nl:copy2[locale],fr:"Heures et corrections",en:"Hours and time corrections",de:"Arbeitszeiten und Korrekturen"} as const
-const copy3={nl:copy3[locale],fr:"Plannings et services",en:"Rosters and shifts",de:"Dienstpläne und Schichten"} as const
-const copy4={nl:copy4[locale],fr:"Gestion de l’organisation",en:"Organization management",de:"Organisationsverwaltung"} as const
-const copy5={nl:copy5[locale],fr:"Fonctions opérationnelles gérées par Admin.",en:"Operations managed directly by Admin.",de:"Direkt von Admin verwaltete Funktionen."} as const
-const copy6={nl:copy6[locale],fr:"Tâches et affectations",en:"Tasks and assignments",de:"Aufgaben und Zuweisungen"} as const
-const copy7={nl:copy7[locale],fr:"Supervision financière",en:"Financial oversight",de:"Finanzaufsicht"} as const
-const copy8={nl:copy8[locale],fr:"Données de vente et exports disponibles.",en:"Available sales data and exports.",de:"Verfügbare Verkaufsdaten und Exporte."} as const
-const copy9={nl:copy9[locale],fr:"Ventes et revenus",en:"Sales and revenue",de:"Verkäufe und Erlöse"} as const
-const copy10={nl:copy10[locale],fr:"Exports Excel",en:"Excel exports",de:"Excel-Exporte"} as const
-const copy11={nl:copy11[locale],fr:"← Administration",en:copy11[locale],de:copy11[locale]} as const
-const copy12={nl:copy12[locale],fr:"Gestion centrale",en:"Central management",de:"Zentrale Verwaltung"} as const
-const copy13={nl:copy13[locale],fr:"Approbations, gestion et finances depuis le portail Admin. Les fonctions existantes restent sur leurs routes sécurisées.",en:"Approvals, management and financial oversight from Admin. Existing features remain on their secured routes.",de:"Freigaben, Verwaltung und Finanzaufsicht im Admin-Portal. Bestehende Funktionen bleiben auf ihren geschützten Routen."} as const
+const copy0={nl:"Beslissingen en controles voor de organisatie.",fr:"Décisions et contrôles de l’organisation.",en:"Decisions and organizational controls.",de:"Entscheidungen und Organisationskontrollen."} as const
+const copy1={nl:"Personeelsgoedkeuringen",fr:"Approbations du personnel",en:"Staff approvals",de:"Personal-Freigaben"} as const
+const copy2={nl:"Werkuren en tijdcorrecties",fr:"Heures et corrections",en:"Hours and time corrections",de:"Arbeitszeiten und Korrekturen"} as const
+const copy3={nl:"Werkroosters en diensten",fr:"Plannings et services",en:"Rosters and shifts",de:"Dienstpläne und Schichten"} as const
+const copy4={nl:"Organisatiebeheer",fr:"Gestion de l’organisation",en:"Organization management",de:"Organisationsverwaltung"} as const
+const copy5={nl:"Operationele functies die Admin rechtstreeks beheert.",fr:"Fonctions opérationnelles gérées par Admin.",en:"Operations managed directly by Admin.",de:"Direkt von Admin verwaltete Funktionen."} as const
+const copy6={nl:"Taken en toewijzingen",fr:"Tâches et affectations",en:"Tasks and assignments",de:"Aufgaben und Zuweisungen"} as const
+const copy7={nl:"Financieel toezicht",fr:"Supervision financière",en:"Financial oversight",de:"Finanzaufsicht"} as const
+const copy8={nl:"Beschikbare verkoopgegevens en exports.",fr:"Données de vente et exports disponibles.",en:"Available sales data and exports.",de:"Verfügbare Verkaufsdaten und Exporte."} as const
+const copy9={nl:"Verkoop en opbrengsten",fr:"Ventes et revenus",en:"Sales and revenue",de:"Verkäufe und Erlöse"} as const
+const copy10={nl:"Excel-exports",fr:"Exports Excel",en:"Excel exports",de:"Excel-Exporte"} as const
+const copy11={nl:"← Admin",fr:"← Administration",en:"← Admin",de:"← Admin"} as const
+const copy12={nl:"Centraal beheer",fr:"Gestion centrale",en:"Central management",de:"Zentrale Verwaltung"} as const
+const copy13={nl:"Goedkeuringen, organisatiebeheer en financieel toezicht vanuit het Admin-portaal. Bestaande functies blijven in hun huidige beveiligde routes.",fr:"Approbations, gestion et finances depuis le portail Admin. Les fonctions existantes restent sur leurs routes sécurisées.",en:"Approvals, management and financial oversight from Admin. Existing features remain on their secured routes.",de:"Freigaben, Verwaltung und Finanzaufsicht im Admin-Portal. Bestehende Funktionen bleiben auf ihren geschützten Routen."} as const
 const groups=(locale:Awaited<ReturnType<typeof requestUiLocale>>)=>[
- {title:"Goedkeuringen",description:copy0[locale],links:[{label:copy1[locale],href:"/personnel"},{label:copy2[locale],href:"/admin/time-records"},{label:copy3[locale],href:"/shifts"}]},
- {title:copy4[locale],description:copy5[locale],links:[{label:copy6[locale],href:"/tasks"},{label:"Evenementen",href:"/events"},{label:"Personeel",href:"/crew"},{label:"Inventaris",href:"/inventory"},{label:"Incidenten",href:"/incidents"},{label:"Platformbeheer",href:"/admin/platform"}]},
+ {title:{nl:"Goedkeuringen",fr:"Approbations",en:"Approvals",de:"Freigaben"}[locale],description:copy0[locale],links:[{label:copy1[locale],href:"/personnel"},{label:copy2[locale],href:"/admin/time-records"},{label:copy3[locale],href:"/shifts"}]},
+ {title:copy4[locale],description:copy5[locale],links:[{label:copy6[locale],href:"/tasks"},{label:{nl:"Evenementen",fr:"Événements",en:"Events",de:"Veranstaltungen"}[locale],href:"/events"},{label:{nl:"Personeel",fr:"Personnel",en:"Staff",de:"Personal"}[locale],href:"/crew"},{label:{nl:"Inventaris",fr:"Inventaire",en:"Inventory",de:"Inventar"}[locale],href:"/inventory"},{label:{nl:"Incidenten",fr:"Incidents",en:"Incidents",de:"Vorfälle"}[locale],href:"/incidents"},{label:{nl:"Platformbeheer",fr:"Gestion de plateforme",en:"Platform management",de:"Plattformverwaltung"}[locale],href:"/admin/platform"}]},
  {title:copy7[locale],description:copy8[locale],links:[{label:copy9[locale],href:"/sales"},{label:copy10[locale],href:"/exports"}]},
 ] as const
 
