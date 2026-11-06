@@ -436,3 +436,23 @@ jobs:
       - name: Stop isolated Supabase stack
         if: always()
         run: npx --yes supabase@2.117.0 stop --no-backup
+
+  dispatch-production-deploy:
+    name: Dispatch verified production release
+    needs: build
+    if: ${{ github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main' }}
+    runs-on: ubuntu-latest
+    permissions:
+      actions: write
+      contents: read
+    steps:
+      - name: Start deployment for exact fully validated SHA
+        env:
+          GH_TOKEN: ${{ github.token }}
+          VALIDATED_SHA: ${{ github.sha }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "${#VALIDATED_SHA}" -eq 40
+          gh api -X POST "repos/${GITHUB_REPOSITORY}/actions/workflows/deploy-cloudflare.yml/dispatches" -f ref=main -f "inputs[release_sha]=${VALIDATED_SHA}"
+          echo "Requested production deploy for fully validated SHA ${VALIDATED_SHA}"
