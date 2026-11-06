@@ -54,3 +54,14 @@ test('counterparty filters combine server-side name and role conditions',()=>{
  assert.ok(source.includes('(query||kindFilter)'))
  for(const label of ['Alle types','Tous les types','All types','Alle Typen'])assert.ok(source.includes(label))
 })
+
+test('counterparty pagination preserves filters and uses deterministic database ordering',()=>{
+ const source=readFileSync('app/(app)/portals/administration/counterparties/page.tsx','utf8')
+ assert.ok(source.includes(".order('name').order('id').range(offset,offset+pageSize)"))
+ assert.ok(source.includes('const hasNext=(data?.length??0)>pageSize'))
+ assert.ok(source.includes('const rows=data?.slice(0,pageSize)'))
+ assert.ok(source.includes('...(query?{q:query}:{})'))
+ assert.ok(source.includes('...(kindFilter?{kind:kindFilter}:{})'))
+ assert.ok(source.includes('href={pageHref(page+1)}'))
+ assert.ok(source.includes('href={pageHref(page-1)}'))
+})
