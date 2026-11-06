@@ -110,7 +110,7 @@ try{
         await tab.waitForTimeout(250)
         const finalUrl=new URL(tab.url())
         const finalPath=finalUrl.pathname+finalUrl.search
-        if(finalPath!==expectedClickedPath)throw Error('hydrated navigation '+route+' -> '+target+' ended at '+finalPath+' (expected '+expectedClickedPath+')')
+        if(finalPath!==expectedClickedPath)throw Error('hydrated navigation '+route+' -> '+target+' ended at '+finalPath+' (expected '+expectedClickedPath+'); page title='+await tab.title()+'; body='+((await tab.locator('body').innerText()).slice(0,500)))
         if(await tab.locator('[data-layout-key]').count())throw Error('hydrated portal subtab rendered personnel navigation: '+target)
         const text=(await tab.locator('body').innerText()).trim()
         if(!text||/404\s*\|\s*this page could not be found|application error|internal server error/i.test(text))throw Error('clicked destination rendered error: '+target)
