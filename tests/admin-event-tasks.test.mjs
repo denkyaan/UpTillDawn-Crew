@@ -58,3 +58,11 @@ test('task editing uses authenticated audited RPC and bounded fields',()=>{
  assert.ok(page.includes('title.length>200||description.length>4000'))
  assert.ok(page.includes('revalidatePath("/tasks")'))
 })
+
+test('task creation prioritizes next upcoming event and assignment statuses are visible',()=>{
+ assert.ok(page.includes('.gte("start_at",new Date().toISOString())'))
+ assert.ok(page.includes('upcomingEvent?.id'))
+ assert.ok(page.includes('upcomingError?null'))
+ assert.ok(page.includes('.select("id,task_id,user_id,status")'))
+ assert.ok(page.includes('{item.status}'))
+})
