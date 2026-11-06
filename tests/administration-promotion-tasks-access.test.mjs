@@ -73,7 +73,7 @@ test('promotion assignments use approved event-member picker instead of UUID ent
 test('assignment management shows member names and refuses incomplete member directories',()=>{
  assert.ok(page.includes('names.get(assignment.user_id)??assignment.user_id'))
  assert.ok(page.includes('if(offset===9000)memberListTruncated=true'))
- assert.ok(page.includes('!memberListTruncated&&<form'))
+ assert.ok(page.includes('!memberListTruncated&&!assignmentError&&!assignmentOverflow&&<form'))
  assert.ok(page.includes('membersError||profilesError||memberListTruncated'))
 })
 
