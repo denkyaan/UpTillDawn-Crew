@@ -69,11 +69,28 @@ export default async function AdministrationPromotionTasks({searchParams}:{searc
  const assignmentsByTask=new Map<string,Array<{id:string;user_id:string}>>()
  for(const assignment of assignments??[]){const group=assignmentsByTask.get(assignment.task_id)??[];group.push({id:assignment.id,user_id:assignment.user_id});assignmentsByTask.set(assignment.task_id,group)}
  const eventIds=[...new Set(rows.map(task=>task.event_id).filter((id):id is string=>Boolean(id)))]
- const {data:memberships,error:membersError}=(actor.realIsAdmin||actor.isOwner)&&eventIds.length?await db.from("event_members").select("event_id,user_id").in("event_id",eventIds).limit(1000):{data:[],error:null}
+ const membershipPages:Array<{event_id:string;user_id:string}>=[]
+ let membersError=false
+ let memberListTruncated=false
+ if((actor.realIsAdmin||actor.isOwner)&&eventIds.length){
+  for(let offset=0;offset<10000;offset+=1000){
+   const {data,error:pageError}=await db.from("event_members").select("event_id,user_id").in("event_id",eventIds).order("event_id").order("user_id").range(offset,offset+999)
+   if(pageError){membersError=true;break}
+   membershipPages.push(...(data??[]))
+   if((data?.length??0)<1000)break
+   if(offset===9000)memberListTruncated=true
+  }
+ }
+ const memberships=membershipPages
  const memberIds=[...new Set([...(memberships??[]).map(member=>member.user_id),...(assignments??[]).map(assignment=>assignment.user_id)])]
- const {data:profiles,error:profilesError}=memberIds.length?await db.from("profiles").select("id,full_name").eq("approved",true).in("id",memberIds).limit(1000):{data:[],error:null}
- const names=new Map((profiles??[]).map(profile=>[profile.id,profile.full_name||profile.id]))
- const memberListTruncated=(memberships?.length??0)>=1000||memberIds.length>=1000
+ const profiles:Array<{id:string;full_name:string|null}>=[]
+ let profilesError=false
+ for(let offset=0;offset<memberIds.length;offset+=200){
+  const {data,error:batchError}=await db.from("profiles").select("id,full_name").eq("approved",true).in("id",memberIds.slice(offset,offset+200))
+  if(batchError){profilesError=true;break}
+  profiles.push(...(data??[]))
+ }
+ const names=new Map(profiles.map(profile=>[profile.id,profile.full_name||profile.id]))
  const membersByEvent=new Map<string,Array<{id:string;name:string}>>()
  for(const membership of memberships??[]){if(!names.has(membership.user_id))continue;const group=membersByEvent.get(membership.event_id)??[];group.push({id:membership.user_id,name:names.get(membership.user_id)!});membersByEvent.set(membership.event_id,group)}
  for(const group of membersByEvent.values())group.sort((a,b)=>a.name.localeCompare(b.name,locale))
