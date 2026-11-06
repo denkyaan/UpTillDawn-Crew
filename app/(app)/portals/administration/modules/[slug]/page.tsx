@@ -1,3 +1,4 @@
+import { revalidatePath } from 'next/cache'
 import {invoiceDateRange} from "@/lib/administration/invoice-filter-validation"
 import {administrationWorkflowHref} from "@/lib/administration/workflow-links"
 import FinanceReconciliationSummary from "@/components/administration/finance-reconciliation-summary"
@@ -17,6 +18,23 @@ import { getCurrentUser } from "@/lib/actions/auth"
 import { createClient } from "@/lib/supabase/crew-server"
 import { canOpenPortal, type PortalAssignment } from "@/lib/portal-access"
 import type { SupportedUiLocale } from "@/lib/locale-preferences"
+
+async function markAdministrationNotificationRead(formData:FormData){
+ 'use server'
+ const current=await getCurrentUser()
+ if(!current)redirect('/login')
+ if((!current.approved||current.account_blocked)&&!current.isOwner)redirect('/portals')
+ const db=await createClient()
+ if(!current.isOwner&&!current.realIsAdmin){
+  const {data,error}=await db.rpc('upt_my_portal_assignments')
+  if(error||!canOpenPortal('administration',(data??[]) as PortalAssignment[],{approved:current.approved,blocked:current.account_blocked===true}))redirect('/portals')
+ }
+ const id=String(formData.get('notification_id')??'')
+ if(!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id))return
+ const {error}=await db.from('crew_notifications').update({read_at:new Date().toISOString()}).eq('id',id).eq('user_id',current.id).is('read_at',null)
+ if(error)throw new Error('Unable to update notification')
+ revalidatePath('/portals/administration/modules/notifications')
+}
 
 type Translation=Record<SupportedUiLocale,string>
 const text=(nl:string,fr:string,en:string,de:string):Translation=>({nl,fr,en,de})
@@ -274,7 +292,7 @@ export default async function AdministrationModulePage({params,searchParams}:{pa
   </section>}
   {slug==="notifications"&&<section id="administration-notifications" className="scroll-mt-24 rounded-2xl border bg-card p-5">
    <h2 className="text-lg font-semibold">{({nl:"Mijn meldingen",fr:"Mes notifications",en:"My notifications",de:"Meine Benachrichtigungen"} as const)[locale]}</h2>
-   {notificationRows?.error?<p role="alert" className="mt-3 text-sm text-muted-foreground">{({nl:"Meldingen konden niet worden geladen.",fr:"Impossible de charger les notifications.",en:"Unable to load notifications.",de:"Benachrichtigungen konnten nicht geladen werden."} as const)[locale]}</p>:notificationRows?.data?.length?<ul className="mt-3 divide-y">{notificationRows.data.map(item=><li key={item.id} className="flex flex-wrap items-center justify-between gap-3 py-3 text-sm"><span className="font-medium">{item.kind}</span><span className="text-xs text-muted-foreground">{item.read_at?({nl:"Gelezen",fr:"Lu",en:"Read",de:"Gelesen"} as const)[locale]:({nl:"Ongelezen",fr:"Non lu",en:"Unread",de:"Ungelesen"} as const)[locale]}</span></li>)}</ul>:<p className="mt-3 text-sm text-muted-foreground">{({nl:"Geen meldingen gevonden.",fr:"Aucune notification.",en:"No notifications found.",de:"Keine Benachrichtigungen gefunden."} as const)[locale]}</p>}
+   {notificationRows?.error?<p role="alert" className="mt-3 text-sm text-muted-foreground">{({nl:"Meldingen konden niet worden geladen.",fr:"Impossible de charger les notifications.",en:"Unable to load notifications.",de:"Benachrichtigungen konnten nicht geladen werden."} as const)[locale]}</p>:notificationRows?.data?.length?<ul className="mt-3 divide-y">{notificationRows.data.map(item=><li key={item.id} className="flex flex-wrap items-center justify-between gap-3 py-3 text-sm"><span className="font-medium">{item.kind}</span><div className="flex items-center gap-3"><span className="text-xs text-muted-foreground">{item.read_at?({nl:"Gelezen",fr:"Lu",en:"Read",de:"Gelesen"} as const)[locale]:({nl:"Ongelezen",fr:"Non lu",en:"Unread",de:"Ungelesen"} as const)[locale]}</span>{!item.read_at&&<form action={markAdministrationNotificationRead}><input type="hidden" name="notification_id" value={item.id}/><button type="submit" className="rounded-lg border px-3 py-2 text-xs font-medium">{({nl:"Markeer gelezen",fr:"Marquer comme lu",en:"Mark read",de:"Als gelesen markieren"} as const)[locale]}</button></form>}</div></li>)}</ul>:<p className="mt-3 text-sm text-muted-foreground">{({nl:"Geen meldingen gevonden.",fr:"Aucune notification.",en:"No notifications found.",de:"Keine Benachrichtigungen gefunden."} as const)[locale]}</p>}
    <p className="mt-4 text-xs text-muted-foreground">{({nl:"Meldingen zijn hierboven zichtbaar. Open een melding via de bijbehorende veilige doelpagina.",fr:"Les notifications sont affichées ci-dessus. Ouvrez leur destination autorisée.",en:"Notifications are listed above. Open their authorized destination when available.",de:"Benachrichtigungen stehen oben. Öffnen Sie bei Bedarf das zulässige Ziel."} as const)[locale]}</p>
   </section>}
   {slug==="staff"&&<section className="rounded-2xl border bg-card p-5">
