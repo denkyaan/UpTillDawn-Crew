@@ -32,3 +32,13 @@ test('notification read action is restricted to the current user and approved ad
  assert.ok(source.includes("canOpenPortal('administration'"))
  assert.ok(source.includes('action={markAdministrationNotificationRead}'))
 })
+
+test('bulk notification read only updates unread notifications owned by the current user',()=>{
+ const source=readFileSync('app/(app)/portals/administration/modules/[slug]/page.tsx','utf8')
+ const action=source.slice(source.indexOf('async function markAllAdministrationNotificationsRead'),source.indexOf('type Translation='))
+ assert.ok(action.includes('getCurrentUser()'))
+ assert.ok(action.includes("canOpenPortal('administration'"))
+ assert.ok(action.includes(".eq('user_id',current.id).is('read_at',null)"))
+ assert.ok(source.includes('action={markAllAdministrationNotificationsRead}'))
+ for(const label of ['Alles als gelezen markeren','Tout marquer comme lu','Mark all as read','Alle als gelesen markieren'])assert.ok(source.includes(label))
+})
