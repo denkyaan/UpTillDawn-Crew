@@ -43,3 +43,12 @@ test('promotion task assignment totals are scoped to admin-visible rows',()=>{
  assert.ok(page.includes('assignmentCounts.get(task.id)??0'))
  for(const label of ['Toewijzingen','Affectations','Assignments','Zuweisungen'])assert.ok(page.includes(label))
 })
+
+test('promotion task assignment uses admin-only audited RPC and requires event scope',()=>{
+ assert.ok(page.includes('async function assignPromotionTask(form:FormData)'))
+ assert.ok(page.includes('!actor.realIsAdmin&&!actor.isOwner'))
+ assert.ok(page.includes('!target?.event_id'))
+ assert.ok(page.includes('db.rpc("upt_assign_task",{p_task:task,p_user:user})'))
+ assert.ok(page.includes('action={assignPromotionTask}'))
+ for(const label of ['Medewerker toewijzen','Affecter un membre','Assign staff member','Mitarbeiter zuweisen'])assert.ok(page.includes(label))
+})
