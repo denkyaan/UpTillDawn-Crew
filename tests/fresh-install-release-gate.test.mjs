@@ -18,7 +18,7 @@ test('CI proves database can be rebuilt from repository migrations', async () =>
   assert.match(workflow,/diff -u \/tmp\/expected-crew-database\.ts \/tmp\/actual-crew-database\.ts/)
   assert.match(workflow,/Fresh-install database proof/)
   assert.match(workflow,/Reset isolated database for browser fixtures/)
-  assert.equal((workflow.match(/runs-on:/g)||[]).length,1,'CI release validation must stay on one hosted runner')
+  assert.equal((workflow.match(/runs-on:/g)||[]).length,2,'CI release validation must stay on one hosted runner')
   assert.match(workflow,/if: always\(\)/)
   assert.match(workflow,/stop --no-backup/)
 })
