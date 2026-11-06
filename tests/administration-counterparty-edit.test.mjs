@@ -45,3 +45,12 @@ test('counterparty search filters in the database rather than only the first 200
  assert.ok(page.includes("listQuery.order('name').limit(200)"))
  for(const label of ['Zoek relaties','Rechercher des contacts','Search counterparties','Kontakte suchen'])assert.ok(page.includes(label))
 })
+
+test('counterparty filters combine server-side name and role conditions',()=>{
+ const source=readFileSync('app/(app)/portals/administration/counterparties/page.tsx','utf8')
+ assert.ok(source.includes("['customer','supplier','both'].includes(params.kind??'')"))
+ assert.ok(source.includes("listQuery.eq('kind',kindFilter)"))
+ assert.ok(source.includes('name="kind" defaultValue={kindFilter}'))
+ assert.ok(source.includes('(query||kindFilter)'))
+ for(const label of ['Alle types','Tous les types','All types','Alle Typen'])assert.ok(source.includes(label))
+})
