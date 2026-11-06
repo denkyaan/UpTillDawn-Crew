@@ -29,3 +29,9 @@ test('admin creates tasks through existing authorized server action with eligibl
  assert.ok(page.includes('.eq("approved",true)'))
  assert.ok(page.includes('directoryIncomplete'))
 })
+
+test('multi-assignment uses repeated user_id fields and invalid event does not select another event',()=>{
+ assert.ok(page.includes('name="user_id" required multiple'))
+ assert.ok(page.includes('requestedEvent?(event??null)'))
+ assert.ok(page.includes('!selectedEvent||!eligible.length'))
+})
