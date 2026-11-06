@@ -60,3 +60,12 @@ test('administrators can revoke task assignments through existing authorized RPC
  assert.ok(page.includes('assignmentsByTask.get(task.id)'))
  for(const label of ['Toewijzing verwijderen','Supprimer l’affectation','Remove assignment','Zuweisung entfernen'])assert.ok(page.includes(label))
 })
+
+test('promotion assignments use approved event-member picker instead of UUID entry',()=>{
+ assert.ok(page.includes('db.from("event_members").select("event_id,user_id")'))
+ assert.ok(page.includes('db.from("profiles").select("id,full_name").eq("approved",true)'))
+ assert.ok(page.includes('<select name="user_id" required'))
+ assert.ok(page.includes('assignmentsByTask.get(task.id)??[]'))
+ assert.ok(!page.includes('<input name="user_id" required pattern='))
+ for(const label of ['Kies een medewerker','Choisir un membre','Choose a staff member','Mitarbeiter auswählen'])assert.ok(page.includes(label))
+})
