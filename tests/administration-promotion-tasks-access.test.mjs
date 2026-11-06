@@ -20,3 +20,10 @@ test('administration promotion tasks support filtered stable pagination',()=>{
  assert.ok(page.includes('href={pageHref(page+1)}'))
  for(const label of ['Zoek promotietaken','Rechercher des tâches','Search promotion tasks','Promotionsaufgaben suchen'])assert.ok(page.includes(label))
 })
+
+test('promotion task overview exposes instructions and event scope in four languages',()=>{
+ assert.ok(page.includes('.select("id,title,description,event_id,created_at")'))
+ assert.ok(page.includes('task.description&&'))
+ assert.ok(page.includes('task.event_id?'))
+ for(const label of ['Algemene taak','Tâche générale','General task','Allgemeine Aufgabe'])assert.ok(page.includes(label))
+})
