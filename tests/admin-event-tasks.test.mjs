@@ -1,0 +1,18 @@
+import test from 'node:test'
+import assert from 'node:assert/strict'
+import {readFileSync} from 'node:fs'
+const page=readFileSync('app/(app)/admin/management/event-tasks/page.tsx','utf8')
+const hub=readFileSync('app/(app)/admin/management/page.tsx','utf8')
+test('admin event task overview enforces role and approval',()=>{
+ assert.ok(page.includes('!actor?.isAdmin'))
+ assert.ok(page.includes('actor.account_blocked'))
+ assert.ok(page.includes('.not("event_id","is",null)'))
+ assert.ok(page.includes('.range((page-1)*30,page*30)'))
+})
+test('event task overview stays within admin and has all locales',()=>{
+ assert.ok(hub.includes('href:"/admin/management/event-tasks"'))
+ assert.ok(page.includes('href="/admin/management"'))
+ assert.ok(page.includes('href="/tasks"'))
+ for(const locale of ['nl:','fr:','en:','de:'])assert.ok(page.includes(locale))
+ assert.ok(!page.includes('href="/portals/administration'))
+})
