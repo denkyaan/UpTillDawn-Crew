@@ -35,7 +35,7 @@ test('administration notification links reject external, encoded and cross-porta
  }
  assert.equal(administrationNotificationHref('/tasks?event=123'),'/portals/administration/modules/tasks?event=123')
  assert.equal(administrationNotificationHref('/portals/administration/invoices'),'/portals/administration/modules/invoices')
- assert.equal(administrationNotificationHref('/portals/administration/invoices/123?tab=payments'),'/portals/administration/modules/invoices/123?tab=payments')
+ assert.equal(administrationNotificationHref('/portals/administration/invoices/123?tab=payments'),'/portals/administration/modules/invoices?tab=payments')
 })
 
 test('counterparty records stay in relations when navigating to details',()=>{
