@@ -88,7 +88,7 @@ export default async function AdministrationModulePage({params,searchParams}:{pa
  const settingsAssignmentRows=slug==="settings"?await supabase.from("portal_role_assignments").select("id,user_id,portal,approved").eq("portal","administration").limit(50):null
  const workQueueEvents=["logistics","permits","tasks","staff","reports"].includes(slug)?await supabase.from("events").select("id,name").order("start_at",{ascending:false}).limit(100):null
  const automationRuns=slug==="automations"?await (supabase as unknown as SupabaseClient).from("admin_automation_runs").select("id,completed_at,delivered,error_code").order("completed_at",{ascending:false}).limit(20):null
- const automationTaskRows=slug==="automations"?await supabase.from("tasks").select("id,title,status").limit(50):null
+ const automationTaskRows=slug==="automations"?await supabase.from("tasks").select("id,title,status").order("id",{ascending:false}).limit(50):null
  const reportTimesheetRows=slug==="reports"?await supabase.from("timesheets").select("id,status").limit(100):null
  const aiFinancialRows=slug==="ai"?await supabase.from("admin_financial_documents").select("id,kind,status").eq("status","review").limit(50):null
  const aiTimesheetRows=slug==="ai"?await supabase.from("timesheets").select("id,status").eq("status","submitted").limit(50):null
