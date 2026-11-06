@@ -7,10 +7,10 @@ import { canOpenPortal, type PortalAssignment } from '@/lib/portal-access'
 import { requestUiLocale } from '@/lib/server-locale'
 
 const translations = {
- nl:{title:'Klanten en leveranciers',new:'Nieuwe relatie',name:'Naam',kind:'Type',customer:'Klant',supplier:'Leverancier',both:'Beide',vat:'Btw-nummer',enterprise:'Ondernemingsnummer',email:'E-mail',save:'Opslaan',search:'Zoek relaties',searchButton:'Zoeken',clear:'Wis filter',edit:'Relatie bewerken',update:'Wijzigingen opslaan',empty:'Nog geen relaties.',error:'Opslaan of laden mislukt.',back:'Administratie'},
- fr:{title:'Clients et fournisseurs',new:'Nouveau contact',name:'Nom',kind:'Type',customer:'Client',supplier:'Fournisseur',both:'Les deux',vat:'Numéro TVA',enterprise:'Numéro d’entreprise',email:'E-mail',save:'Enregistrer',search:'Rechercher des contacts',searchButton:'Rechercher',clear:'Effacer le filtre',edit:'Modifier le contact',update:'Enregistrer les modifications',empty:'Aucun contact.',error:'Échec de l’enregistrement ou du chargement.',back:'Administration'},
- en:{title:'Customers and suppliers',new:'New counterparty',name:'Name',kind:'Type',customer:'Customer',supplier:'Supplier',both:'Both',vat:'VAT number',enterprise:'Enterprise number',email:'Email',save:'Save',search:'Search counterparties',searchButton:'Search',clear:'Clear filter',edit:'Edit counterparty',update:'Save changes',empty:'No counterparties yet.',error:'Could not save or load.',back:'Administration'},
- de:{title:'Kunden und Lieferanten',new:'Neuer Kontakt',name:'Name',kind:'Typ',customer:'Kunde',supplier:'Lieferant',both:'Beides',vat:'USt-IdNr.',enterprise:'Unternehmensnummer',email:'E-Mail',save:'Speichern',search:'Kontakte suchen',searchButton:'Suchen',clear:'Filter löschen',edit:'Kontakt bearbeiten',update:'Änderungen speichern',empty:'Noch keine Kontakte.',error:'Speichern oder Laden fehlgeschlagen.',back:'Verwaltung'},
+ nl:{title:'Klanten en leveranciers',new:'Nieuwe relatie',name:'Naam',kind:'Type',customer:'Klant',supplier:'Leverancier',both:'Beide',vat:'Btw-nummer',enterprise:'Ondernemingsnummer',email:'E-mail',save:'Opslaan',search:'Zoek relaties',searchButton:'Zoeken',allKinds:'Alle types',clear:'Wis filter',edit:'Relatie bewerken',update:'Wijzigingen opslaan',empty:'Nog geen relaties.',error:'Opslaan of laden mislukt.',back:'Administratie'},
+ fr:{title:'Clients et fournisseurs',new:'Nouveau contact',name:'Nom',kind:'Type',customer:'Client',supplier:'Fournisseur',both:'Les deux',vat:'Numéro TVA',enterprise:'Numéro d’entreprise',email:'E-mail',save:'Enregistrer',search:'Rechercher des contacts',searchButton:'Rechercher',allKinds:'Tous les types',clear:'Effacer le filtre',edit:'Modifier le contact',update:'Enregistrer les modifications',empty:'Aucun contact.',error:'Échec de l’enregistrement ou du chargement.',back:'Administration'},
+ en:{title:'Customers and suppliers',new:'New counterparty',name:'Name',kind:'Type',customer:'Customer',supplier:'Supplier',both:'Both',vat:'VAT number',enterprise:'Enterprise number',email:'Email',save:'Save',search:'Search counterparties',searchButton:'Search',allKinds:'All types',clear:'Clear filter',edit:'Edit counterparty',update:'Save changes',empty:'No counterparties yet.',error:'Could not save or load.',back:'Administration'},
+ de:{title:'Kunden und Lieferanten',new:'Neuer Kontakt',name:'Name',kind:'Typ',customer:'Kunde',supplier:'Lieferant',both:'Beides',vat:'USt-IdNr.',enterprise:'Unternehmensnummer',email:'E-Mail',save:'Speichern',search:'Kontakte suchen',searchButton:'Suchen',allKinds:'Alle Typen',clear:'Filter löschen',edit:'Kontakt bearbeiten',update:'Änderungen speichern',empty:'Noch keine Kontakte.',error:'Speichern oder Laden fehlgeschlagen.',back:'Verwaltung'},
 } as const
 
 async function authorizedClient() {
@@ -58,15 +58,17 @@ async function updateCounterparty(formData:FormData) {
 }
 
 export const dynamic = 'force-dynamic'
-export default async function CounterpartiesPage({searchParams}:{searchParams:Promise<{error?:string;edit?:string;q?:string}>}) {
+export default async function CounterpartiesPage({searchParams}:{searchParams:Promise<{error?:string;edit?:string;q?:string;kind?:string}>}) {
  const db = await authorizedClient()
  const locale = await requestUiLocale()
  const t = translations[locale]
  const params = await searchParams
  const query=typeof params.q==='string'?params.q.trim().slice(0,100):''
+ const kindFilter=['customer','supplier','both'].includes(params.kind??'')?params.kind:''
  const escapedQuery=query.replace(/[\\\\%_]/g,match=>'\\\\'+match)
  let listQuery=db.from('admin_counterparties').select('id,name,kind,vat_number,enterprise_number,email')
  if(query)listQuery=listQuery.ilike('name',`%${escapedQuery}%`)
+ if(kindFilter)listQuery=listQuery.eq('kind',kindFilter)
  const {data,error} = await listQuery.order('name').limit(200)
  const selectedId=typeof params.edit==='string'&&/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(params.edit)?params.edit:null
  const selected=selectedId?await db.from('admin_counterparties').select('id,name,kind,vat_number,enterprise_number,email').eq('id',selectedId).maybeSingle():null
@@ -75,8 +77,9 @@ export default async function CounterpartiesPage({searchParams}:{searchParams:Pr
   <h1 className="text-3xl font-bold">{t.title}</h1>
   <form method="get" action="/portals/administration/counterparties" role="search" className="flex flex-wrap items-end gap-3 rounded-2xl border bg-card p-4">
    <label className="min-w-0 flex-1 text-sm">{t.search}<input type="search" name="q" maxLength={100} defaultValue={query} className="mt-1 block w-full rounded-lg border bg-background p-3"/></label>
+   <label className="text-sm">{t.kind}<select name="kind" defaultValue={kindFilter} className="mt-1 block rounded-lg border bg-background p-3"><option value="">{t.allKinds}</option><option value="customer">{t.customer}</option><option value="supplier">{t.supplier}</option><option value="both">{t.both}</option></select></label>
    <button type="submit" className="rounded-lg bg-violet-600 px-4 py-3 font-semibold text-white">{t.searchButton}</button>
-   {query&&<Link href="/portals/administration/counterparties" className="rounded-lg border px-4 py-3 text-sm">{t.clear}</Link>}
+   {(query||kindFilter)&&<Link href="/portals/administration/counterparties" className="rounded-lg border px-4 py-3 text-sm">{t.clear}</Link>}
   </form>
   <section className="rounded-2xl border bg-card p-5">
    <h2 className="mb-4 font-semibold">{t.new}</h2>
