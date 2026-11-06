@@ -26,3 +26,15 @@ test('admin promotion moderation stays in admin route and invalidates both porta
  assert.equal(moderation.split('revalidatePath("/admin/management/promotion-discipline")').length-1,3)
  assert.ok(moderation.includes('actor.realIsAdmin'))
 })
+
+test('native admin promotion tasks preserve search, pagination and privileged access',()=>{
+ const route=readFileSync('app/(app)/admin/management/promotion-tasks/page.tsx','utf8')
+ const shared=readFileSync('app/(app)/portals/administration/promotion-tasks/page.tsx','utf8')
+ assert.ok(route.includes('adminView'))
+ assert.ok(shared.includes('if(adminView&&('))
+ assert.ok(shared.includes('const basePath=adminView?"/admin/management/promotion-tasks"'))
+ assert.ok(shared.includes('action={basePath}'))
+ assert.ok(shared.includes('href={pageHref(page+1)}'))
+ assert.ok(shared.includes('"/admin/management/promotion-discipline"'))
+ assert.equal(shared.split('revalidatePath("/admin/management/promotion-tasks")').length-1,2)
+})
