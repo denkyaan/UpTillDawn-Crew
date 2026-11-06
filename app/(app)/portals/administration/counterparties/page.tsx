@@ -76,7 +76,7 @@ export default async function CounterpartiesPage({searchParams}:{searchParams:Pr
  const {data,error}=await listQuery.order('name').order('id').range(offset,offset+pageSize)
  const hasNext=(data?.length??0)>pageSize
  const rows=data?.slice(0,pageSize)
- const pageHref=(target:number)=>'/portals/administration/counterparties?'+new URLSearchParams({...query?{q:query}:{},...kindFilter?{kind:kindFilter}:{},page:String(target)}).toString()
+ const pageHref=(target:number)=>'/portals/administration/counterparties?'+new URLSearchParams({...(query?{q:query}:{}),...(kindFilter?{kind:kindFilter}:{}),page:String(target)}).toString()
  const selectedId=typeof params.edit==='string'&&/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(params.edit)?params.edit:null
  const selected=selectedId?await db.from('admin_counterparties').select('id,name,kind,vat_number,enterprise_number,email').eq('id',selectedId).maybeSingle():null
  return <main className="mx-auto max-w-5xl space-y-6 p-4 pb-28 md:p-8">
