@@ -45,3 +45,9 @@ test('admin task assignment changes require authorization and audited RPCs',()=>
  assert.ok(page.includes('assignmentOverflow'))
  assert.ok(page.includes('action={updateAssignment}'))
 })
+
+test('admin assignment lists show staff names and fail closed on incomplete directory',()=>{
+ assert.ok(page.includes('assignedNames.get(item.user_id)'))
+ assert.ok(page.includes('assignmentNamesIncomplete'))
+ assert.ok(page.includes('!assignedProfilesError&&!assignmentNamesIncomplete'))
+})
