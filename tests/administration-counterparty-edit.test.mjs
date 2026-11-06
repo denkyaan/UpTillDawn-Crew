@@ -42,7 +42,7 @@ test('counterparty search filters in the database rather than only the first 200
  assert.ok(page.includes('role="search"'))
  assert.ok(page.includes("listQuery.ilike('name'"))
  assert.ok(page.includes("query.trim()")||page.includes("params.q.trim()"))
- assert.ok(page.includes("listQuery.order('name').limit(200)"))
+ assert.ok(page.includes("listQuery.order('name').order('id').range(offset,offset+pageSize)"))
  for(const label of ['Zoek relaties','Rechercher des contacts','Search counterparties','Kontakte suchen'])assert.ok(page.includes(label))
 })
 
