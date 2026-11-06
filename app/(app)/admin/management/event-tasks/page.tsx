@@ -21,9 +21,11 @@ export default async function AdminEventTasks({searchParams}:{searchParams:Promi
  const db=await createClient()
  const {data:events,error:eventsError}=await db.from("events").select("id,name").order("start_at",{ascending:false}).limit(300)
  const eventIds=new Set((events??[]).map(event=>event.id))
- const event=typeof params.event==="string"&&eventIds.has(params.event)?params.event:null
+ const requestedEvent=typeof params.event==="string"&&params.event.length>0?params.event:null
+ const event=requestedEvent&&eventIds.has(requestedEvent)?requestedEvent:null
  let query=db.from("tasks").select("id,title,description,event_id,created_at").not("event_id","is",null)
  if(event)query=query.eq("event_id",event)
+ if(requestedEvent&&!event)query=query.eq("event_id",requestedEvent)
  const {data,error}=await query.order("created_at",{ascending:false}).order("id",{ascending:false}).range((page-1)*30,page*30)
  const eventNames=new Map((events??[]).map(item=>[item.id,item.name]))
  const rows=(data??[]).slice(0,30)
