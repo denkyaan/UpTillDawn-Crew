@@ -21,6 +21,6 @@ test('navigation closes expanded subtabs on pathname changes',()=>{
 
 test('notification action stays inside the notifications module',()=>{
  const page=readFileSync('app/(app)/portals/administration/modules/[slug]/page.tsx','utf8')
- assert.match(page,/id="administration-live-records"/)
- assert.match(page,/href="#administration-live-records"[^\n]*Open meldingen/)
+ assert.match(page,/id="administration-notifications"/)
+ assert.match(page,/href="#administration-notifications"[^\n]*Open meldingen/)
 })
