@@ -1,3 +1,5 @@
+import { administrationNotificationHref } from "@/lib/administration/navigation"
+import { revalidatePath } from 'next/cache'
 import {invoiceDateRange} from "@/lib/administration/invoice-filter-validation"
 import {administrationWorkflowHref} from "@/lib/administration/workflow-links"
 import FinanceReconciliationSummary from "@/components/administration/finance-reconciliation-summary"
@@ -17,6 +19,38 @@ import { getCurrentUser } from "@/lib/actions/auth"
 import { createClient } from "@/lib/supabase/crew-server"
 import { canOpenPortal, type PortalAssignment } from "@/lib/portal-access"
 import type { SupportedUiLocale } from "@/lib/locale-preferences"
+
+async function markAdministrationNotificationRead(formData:FormData){
+ 'use server'
+ const current=await getCurrentUser()
+ if(!current)redirect('/login')
+ if((!current.approved||current.account_blocked)&&!current.isOwner)redirect('/portals')
+ const db=await createClient()
+ if(!current.isOwner&&!current.realIsAdmin){
+  const {data,error}=await db.rpc('upt_my_portal_assignments')
+  if(error||!canOpenPortal('administration',(data??[]) as PortalAssignment[],{approved:current.approved,blocked:current.account_blocked===true}))redirect('/portals')
+ }
+ const id=String(formData.get('notification_id')??'')
+ if(!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id))return
+ const {error}=await db.from('crew_notifications').update({read_at:new Date().toISOString()}).eq('id',id).eq('user_id',current.id).is('read_at',null)
+ if(error)throw new Error('Unable to update notification')
+ revalidatePath('/portals/administration/modules/notifications')
+}
+
+async function markAllAdministrationNotificationsRead(){
+ 'use server'
+ const current=await getCurrentUser()
+ if(!current)redirect('/login')
+ if((!current.approved||current.account_blocked)&&!current.isOwner)redirect('/portals')
+ const db=await createClient()
+ if(!current.isOwner&&!current.realIsAdmin){
+  const {data,error}=await db.rpc('upt_my_portal_assignments')
+  if(error||!canOpenPortal('administration',(data??[]) as PortalAssignment[],{approved:current.approved,blocked:current.account_blocked===true}))redirect('/portals')
+ }
+ const {error}=await db.from('crew_notifications').update({read_at:new Date().toISOString()}).eq('user_id',current.id).is('read_at',null)
+ if(error)throw new Error('Unable to mark notifications as read')
+ revalidatePath('/portals/administration/modules/notifications')
+}
 
 type Translation=Record<SupportedUiLocale,string>
 const text=(nl:string,fr:string,en:string,de:string):Translation=>({nl,fr,en,de})
@@ -56,9 +90,9 @@ const operationalModuleLabels={
 
 export const dynamic = "force-dynamic"
 
-export default async function AdministrationModulePage({params,searchParams}:{params:Promise<{slug:string}>;searchParams?:Promise<{event?:string;page?:string;invoiceKind?:string;invoiceStatus?:string;invoicePage?:string;invoiceNumber?:string;invoiceFrom?:string;invoiceTo?:string;invoiceOverdue?:string;invoiceSort?:string}>}){
+export default async function AdministrationModulePage({params,searchParams}:{params:Promise<{slug:string}>;searchParams?:Promise<{event?:string;page?:string;invoiceKind?:string;invoiceStatus?:string;invoicePage?:string;invoiceNumber?:string;invoiceFrom?:string;invoiceTo?:string;invoiceOverdue?:string;invoiceSort?:string;notificationPage?:string}>}){
  const {slug}=await params
- const {event:requestedEvent,page:requestedPage,invoiceKind,invoiceStatus,invoicePage,invoiceNumber,invoiceFrom,invoiceTo,invoiceOverdue,invoiceSort}=await (searchParams??Promise.resolve({event:undefined,page:undefined,invoiceKind:undefined,invoiceStatus:undefined,invoicePage:undefined,invoiceNumber:undefined,invoiceFrom:undefined,invoiceTo:undefined,invoiceOverdue:undefined,invoiceSort:undefined}))
+ const {event:requestedEvent,page:requestedPage,invoiceKind,invoiceStatus,invoicePage,invoiceNumber,invoiceFrom,invoiceTo,invoiceOverdue,invoiceSort,notificationPage}=await (searchParams??Promise.resolve({event:undefined,page:undefined,invoiceKind:undefined,invoiceStatus:undefined,invoicePage:undefined,invoiceNumber:undefined,invoiceFrom:undefined,invoiceTo:undefined,invoiceOverdue:undefined,invoiceSort:undefined,notificationPage:undefined}))
  const adminModule=administrationModules.find(item=>item.slug===slug&&slug!=="dashboard"&&slug!=="finance")
  if(!adminModule)notFound()
  const current=await getCurrentUser()
@@ -108,7 +142,12 @@ export default async function AdministrationModulePage({params,searchParams}:{pa
  const invoiceSummaryRows=slug==="invoices"?await (()=>{let query=supabase.from("admin_financial_documents").select("id,kind,status,gross_amount,due_date,document_number,currency,issue_date",{count:"exact"}).in("kind",["sales_invoice","purchase_invoice"]);if(invoiceKindFilter)query=query.eq("kind",invoiceKindFilter);if(invoiceStatusFilter)query=query.eq("status",invoiceStatusFilter);if(invoiceNumberFilter)query=query.ilike("document_number",`%${invoiceNumberFilter.replace(/[%,_\\]/g,"")}%`);if(invoiceFromFilter)query=query.gte("issue_date",invoiceFromFilter);if(invoiceToFilter)query=query.lte("issue_date",invoiceToFilter);if(invoiceOverdueFilter)query=query.lt("due_date",invoiceToday).not("status","in",'("paid","cancelled")');return query.order(invoiceSortFilter.startsWith("amount")?"gross_amount":invoiceSortFilter==="issued_desc"?"issue_date":"due_date",{ascending:invoiceSortFilter==="due_asc"||invoiceSortFilter==="amount_asc",nullsFirst:false}).order("id",{ascending:true}).range(invoiceOffset,invoiceOffset+invoicePageSize-1)})():null
  const taskRows=slug==="tasks"?await supabase.from("tasks").select("id,title,status").limit(50):null
  const eventRows=slug==="events"?await supabase.from("events").select("id,name,status,start_at").order("start_at",{ascending:false}).limit(50):null
- const notificationRows=slug==="notifications"?await supabase.from("crew_notifications").select("id,kind,link,read_at").eq("user_id",current.id).order("id",{ascending:false}).limit(50):null
+ const notificationPageNumber=typeof notificationPage==="string"&&/^[1-9]\\d{0,4}$/.test(notificationPage)?Number(notificationPage):1
+ const notificationPageSize=50
+ const notificationOffset=(notificationPageNumber-1)*notificationPageSize
+ const notificationRows=slug==="notifications"?await supabase.from("crew_notifications").select("id,kind,link,read_at").eq("user_id",current.id).order("id",{ascending:false}).range(notificationOffset,notificationOffset+notificationPageSize):null
+ const notificationHasNext=(notificationRows?.data?.length??0)>notificationPageSize
+ const visibleNotifications=notificationRows?.data?.slice(0,notificationPageSize)??[]
  const artistBookings=slug==="artists"?await supabase.from("admin_artist_bookings").select("id,artist_name,status,event_id,performance_at,fee_amount,currency,follow_up_at").order("created_at",{ascending:false}).limit(30):null
  const artistFollowUps=slug==="artists"?await supabase.from("admin_artist_bookings").select("id,artist_name,status,follow_up_at").not("follow_up_at","is",null).in("status",["enquiry","negotiating"]).order("follow_up_at",{ascending:true}).limit(100):null
  const artistNow=new Date().getTime()
@@ -272,9 +311,10 @@ export default async function AdministrationModulePage({params,searchParams}:{pa
    <h2 className="text-lg font-semibold">{({nl:"Evenementenregister",fr:"Registre des événements",en:"Event register",de:"Veranstaltungsregister"} as const)[locale]}</h2>
    {eventRows?.error?<p role="alert" className="mt-3 text-sm text-muted-foreground">{({nl:"Evenementen konden niet worden geladen.",fr:"Impossible de charger les événements.",en:"Unable to load events.",de:"Veranstaltungen konnten nicht geladen werden."} as const)[locale]}</p>:eventRows?.data?.length?<ul className="mt-3 divide-y">{eventRows.data.map(item=><li key={item.id} className="flex flex-wrap justify-between gap-2 py-3 text-sm"><span className="font-medium">{item.name}</span><span className="text-muted-foreground">{item.status}</span></li>)}</ul>:<p className="mt-3 text-sm text-muted-foreground">{({nl:"Geen evenementen gevonden.",fr:"Aucun événement.",en:"No events found.",de:"Keine Veranstaltungen gefunden."} as const)[locale]}</p>}
   </section>}
-  {slug==="notifications"&&<section className="rounded-2xl border bg-card p-5">
-   <h2 className="text-lg font-semibold">{({nl:"Mijn meldingen",fr:"Mes notifications",en:"My notifications",de:"Meine Benachrichtigungen"} as const)[locale]}</h2>
-   {notificationRows?.error?<p role="alert" className="mt-3 text-sm text-muted-foreground">{({nl:"Meldingen konden niet worden geladen.",fr:"Impossible de charger les notifications.",en:"Unable to load notifications.",de:"Benachrichtigungen konnten nicht geladen werden."} as const)[locale]}</p>:notificationRows?.data?.length?<ul className="mt-3 divide-y">{notificationRows.data.map(item=><li key={item.id} className="flex flex-wrap items-center justify-between gap-3 py-3 text-sm"><span className="font-medium">{item.kind}</span><span className="text-xs text-muted-foreground">{item.read_at?({nl:"Gelezen",fr:"Lu",en:"Read",de:"Gelesen"} as const)[locale]:({nl:"Ongelezen",fr:"Non lu",en:"Unread",de:"Ungelesen"} as const)[locale]}</span></li>)}</ul>:<p className="mt-3 text-sm text-muted-foreground">{({nl:"Geen meldingen gevonden.",fr:"Aucune notification.",en:"No notifications found.",de:"Keine Benachrichtigungen gefunden."} as const)[locale]}</p>}
+  {slug==="notifications"&&<section id="administration-notifications" className="scroll-mt-24 rounded-2xl border bg-card p-5">
+   <div className="flex flex-wrap items-center justify-between gap-3"><h2 className="text-lg font-semibold">{({nl:"Mijn meldingen",fr:"Mes notifications",en:"My notifications",de:"Meine Benachrichtigungen"} as const)[locale]}</h2>{visibleNotifications.some(item=>!item.read_at)&&<form action={markAllAdministrationNotificationsRead}><button type="submit" className="rounded-lg border px-3 py-2 text-sm font-medium">{({nl:"Alles als gelezen markeren",fr:"Tout marquer comme lu",en:"Mark all as read",de:"Alle als gelesen markieren"} as const)[locale]}</button></form>}</div>
+   {notificationRows?.error?<p role="alert" className="mt-3 text-sm text-muted-foreground">{({nl:"Meldingen konden niet worden geladen.",fr:"Impossible de charger les notifications.",en:"Unable to load notifications.",de:"Benachrichtigungen konnten nicht geladen werden."} as const)[locale]}</p>:visibleNotifications.length?<ul className="mt-3 divide-y">{visibleNotifications.map(item=><li key={item.id} className="flex flex-wrap items-center justify-between gap-3 py-3 text-sm"><div className="min-w-0"><span className="font-medium">{item.kind}</span>{administrationNotificationHref(item.link)&&<Link href={administrationNotificationHref(item.link)!} className="ml-3 inline-flex rounded-lg border px-3 py-2 text-xs text-violet-400">{({nl:"Openen",fr:"Ouvrir",en:"Open",de:"Öffnen"} as const)[locale]}</Link>}</div><div className="flex items-center gap-3"><span className="text-xs text-muted-foreground">{item.read_at?({nl:"Gelezen",fr:"Lu",en:"Read",de:"Gelesen"} as const)[locale]:({nl:"Ongelezen",fr:"Non lu",en:"Unread",de:"Ungelesen"} as const)[locale]}</span>{!item.read_at&&<form action={markAdministrationNotificationRead}><input type="hidden" name="notification_id" value={item.id}/><button type="submit" className="rounded-lg border px-3 py-2 text-xs font-medium">{({nl:"Markeer gelezen",fr:"Marquer comme lu",en:"Mark read",de:"Als gelesen markieren"} as const)[locale]}</button></form>}</div></li>)}</ul>:<p className="mt-3 text-sm text-muted-foreground">{({nl:"Geen meldingen gevonden.",fr:"Aucune notification.",en:"No notifications found.",de:"Keine Benachrichtigungen gefunden."} as const)[locale]}</p>}
+   {!notificationRows?.error&&(notificationPageNumber>1||notificationHasNext)&&<nav aria-label={({nl:"Meldingspagina’s",fr:"Pages des notifications",en:"Notification pages",de:"Benachrichtigungsseiten"} as const)[locale]} className="mt-4 flex items-center justify-between gap-3"><span className="text-sm">{({nl:"Pagina",fr:"Page",en:"Page",de:"Seite"} as const)[locale]} {notificationPageNumber}</span><div className="flex gap-2">{notificationPageNumber>1&&<Link href={`/portals/administration/modules/notifications?notificationPage=${notificationPageNumber-1}`} className="rounded-lg border px-3 py-2 text-sm">{({nl:"Vorige",fr:"Précédent",en:"Previous",de:"Zurück"} as const)[locale]}</Link>}{notificationHasNext&&<Link href={`/portals/administration/modules/notifications?notificationPage=${notificationPageNumber+1}`} className="rounded-lg border px-3 py-2 text-sm">{({nl:"Volgende",fr:"Suivant",en:"Next",de:"Weiter"} as const)[locale]}</Link>}</div></nav>}
    <p className="mt-4 text-xs text-muted-foreground">{({nl:"Meldingen zijn hierboven zichtbaar. Open een melding via de bijbehorende veilige doelpagina.",fr:"Les notifications sont affichées ci-dessus. Ouvrez leur destination autorisée.",en:"Notifications are listed above. Open their authorized destination when available.",de:"Benachrichtigungen stehen oben. Öffnen Sie bei Bedarf das zulässige Ziel."} as const)[locale]}</p>
   </section>}
   {slug==="staff"&&<section className="rounded-2xl border bg-card p-5">
@@ -341,7 +381,7 @@ export default async function AdministrationModulePage({params,searchParams}:{pa
     <span className="text-xs text-muted-foreground">{({nl:"Materialen",fr:"Articles",en:"Items",de:"Artikel"} as const)[locale]}: {summary.items} · {({nl:"Ontbreekt",fr:"Manquant",en:"Missing",de:"Fehlt"} as const)[locale]}: {summary.missing} · {({nl:"Beschadigd",fr:"Endommagé",en:"Damaged",de:"Beschädigt"} as const)[locale]}: {summary.damaged}</span>
    </div>)}</div>
   </section>}
-  {liveRecords&&<section className="rounded-2xl border bg-card p-5">
+  {liveRecords&&<section id="administration-live-records" className="scroll-mt-24 rounded-2xl border bg-card p-5">
    <h2 className="text-lg font-semibold">{({nl:"Actuele gegevens",fr:"Données actuelles",en:"Live records",de:"Aktuelle Daten"} as const)[locale]}</h2>
    {liveRecords.error?<p className="mt-3 text-sm text-muted-foreground">{({nl:"Gegevens niet beschikbaar voor deze gebruiker.",fr:"Données indisponibles pour cet utilisateur.",en:"Records unavailable for this user.",de:"Daten für diesen Benutzer nicht verfügbar."} as const)[locale]}</p>
     :!liveRecords.data?.length?<p className="mt-3 text-sm text-muted-foreground">{({nl:"Geen records gevonden.",fr:"Aucun enregistrement trouvé.",en:"No records found.",de:"Keine Einträge gefunden."} as const)[locale]}</p>
@@ -372,7 +412,7 @@ export default async function AdministrationModulePage({params,searchParams}:{pa
   {slug==="notifications"&&<section className="rounded-2xl border bg-card p-5">
    <h2 className="text-lg font-semibold">{({nl:"Meldingen beheren",fr:"Gérer les notifications",en:"Manage notifications",de:"Benachrichtigungen verwalten"} as const)[locale]}</h2>
    <p className="mt-2 text-sm text-muted-foreground">{({nl:"Open de bestaande meldingenpagina om berichten en actiepunten te bekijken.",fr:"Ouvrez la page des notifications pour consulter les messages et actions.",en:"Open the existing notifications page to review messages and action items.",de:"Öffnen Sie die Benachrichtigungsseite, um Nachrichten und Aufgaben zu prüfen."} as const)[locale]}</p>
-   <Link href="/portals/administration" className="mt-4 inline-flex rounded-lg bg-violet-600 px-4 py-3 text-sm font-semibold text-white hover:bg-violet-700">{({nl:"Open meldingen",fr:"Ouvrir les notifications",en:"Open notifications",de:"Benachrichtigungen öffnen"} as const)[locale]} →</Link>
+   <Link href="#administration-notifications" className="mt-4 inline-flex rounded-lg bg-violet-600 px-4 py-3 text-sm font-semibold text-white hover:bg-violet-700">{({nl:"Open meldingen",fr:"Ouvrir les notifications",en:"Open notifications",de:"Benachrichtigungen öffnen"} as const)[locale]} →</Link>
   </section>}
   {slug==="tasks"&&<section className="rounded-2xl border bg-card p-5">
    <h2 className="text-lg font-semibold">{({nl:"Taken opvolgen",fr:"Suivi des tâches",en:"Track tasks",de:"Aufgaben verfolgen"} as const)[locale]}</h2>

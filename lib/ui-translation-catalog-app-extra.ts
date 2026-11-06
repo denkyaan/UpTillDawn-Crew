@@ -2,6 +2,12 @@ export type ExtraCatalogLocale = 'nl' | 'fr' | 'en' | 'de'
 type Row = { fr:string; en:string; de:string }
 
 export const APP_EXTRA_TRANSLATIONS: Record<string,Row> = {
+  "Description": {fr:"Description",en:"Description",de:"Beschreibung"},
+  "Beschreibung": {fr:"Description",en:"Description",de:"Beschreibung"},
+  "Evenementtaken en promotie": {fr:"Tâches événementielles et promotion",en:"Event tasks and promotion",de:"Eventaufgaben und Promotion"},
+  "Tâches événementielles et promotion": {fr:"Tâches événementielles et promotion",en:"Event tasks and promotion",de:"Eventaufgaben und Promotion"},
+  "Event tasks and promotion": {fr:"Tâches événementielles et promotion",en:"Event tasks and promotion",de:"Eventaufgaben und Promotion"},
+  "Eventaufgaben und Promotion": {fr:"Tâches événementielles et promotion",en:"Event tasks and promotion",de:"Eventaufgaben und Promotion"},
   "Evenementkoppelingen beheren": {fr:"Gérer les associations d’événements",en:"Manage event mappings",de:"Ereigniszuordnungen verwalten"},
   "Gérer les associations d’événements": {fr:"Gérer les associations d’événements",en:"Manage event mappings",de:"Ereigniszuordnungen verwalten"},
   "Manage event mappings": {fr:"Gérer les associations d’événements",en:"Manage event mappings",de:"Ereigniszuordnungen verwalten"},

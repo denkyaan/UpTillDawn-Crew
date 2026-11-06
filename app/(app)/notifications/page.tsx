@@ -1,3 +1,4 @@
+import Link from 'next/link'
 import { createClient } from '@/lib/supabase/crew-server'
 import { markNotificationRead } from '@/lib/actions/uptilldawn'
 import { nlStatus } from '@/lib/ui-nl'
@@ -18,7 +19,11 @@ function safeNotificationLink(value:string|null){
     : null
 }
 
-export default async function Page() {
+export default async function Page({searchParams}:{searchParams?:Promise<{page?:string;scope?:string}>}={}) {
+  const params=await (searchParams??Promise.resolve({page:undefined,scope:undefined}))
+  const page=typeof params.page==='string'&&/^[1-9]\\d{0,4}$/.test(params.page)?Number(params.page):1
+  const pageSize=50
+  const offset=(page-1)*pageSize
   const [s,locale] = await Promise.all([createClient(),requestUiLocale()])
   const { data: { user } } = await s.auth.getUser()
   if (!user) return null
@@ -28,17 +33,21 @@ export default async function Page() {
       .select('id,title,body,kind,link,read_at,created_at')
       .eq('user_id', user.id)
       .order('created_at', { ascending: false })
-      .limit(100),
+      .range(offset,offset+pageSize),
     s.rpc('upt_notification_badge_count'),
   ])
 
+  const hasNext=(data?.length??0)>pageSize
+  const visibleRows=data?.slice(0,pageSize)
+  const prefix=params.scope==='administration'?'/portals/administration/modules/notifications':'/notifications'
+  const pageHref=(target:number)=>prefix+'?page='+target+(params.scope==='administration'?'&scope=administration':'')
   if(badgeError)console.error('[Notifications] badge count',badgeError.code)
 
   return <main className="space-y-4 p-4 md:p-8">
     <NotificationBadgeSync count={badgeCount??0}/>
     <h1 className="text-3xl font-black">{translateRuntimeUi("Meldingen",locale)}</h1>
     <PushNotificationSettings/>
-    {error ? <p>{translateRuntimeUi("Meldingen konden niet worden geladen.",locale)}</p> : !data?.length ? <p>{translateRuntimeUi("Geen meldingen.",locale)}</p> : data.map(n => {
+    {error ? <p>{translateRuntimeUi("Meldingen konden niet worden geladen.",locale)}</p> : !visibleRows?.length ? <p>{translateRuntimeUi("Geen meldingen.",locale)}</p> : visibleRows.map(n => {
       const safeLink=safeNotificationLink(n.link)
       return <article key={n.id} className={`rounded-xl border p-4 ${n.read_at ? '' : 'border-violet-500'}`}>
         <div className="flex flex-wrap items-start justify-between gap-3">
@@ -58,5 +67,6 @@ export default async function Page() {
         </div>
       </article>
     })}
+    {!error&&(page>1||hasNext)&&<nav aria-label={translateRuntimeUi("Meldingspagina’s",locale)} className="flex items-center justify-between gap-3"><span>{translateRuntimeUi('Pagina',locale)} {page}</span><div className="flex gap-2">{page>1&&<Link href={pageHref(page-1)} className="rounded-lg border px-3 py-2">{translateRuntimeUi('Vorige',locale)}</Link>}{hasNext&&<Link href={pageHref(page+1)} className="rounded-lg border px-3 py-2">{translateRuntimeUi('Volgende',locale)}</Link>}</div></nav>}
   </main>
 }
