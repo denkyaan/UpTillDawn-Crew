@@ -1,3 +1,4 @@
+import {invoiceDateRange} from "@/lib/administration/invoice-filter-validation"
 import {administrationWorkflowHref} from "@/lib/administration/workflow-links"
 import FinanceReconciliationSummary from "@/components/administration/finance-reconciliation-summary"
 import OperationalWorkQueue from "@/components/administration/operational-work-queue"
@@ -96,8 +97,7 @@ export default async function AdministrationModulePage({params,searchParams}:{pa
  const invoiceKindFilter=invoiceKind==="sales_invoice"||invoiceKind==="purchase_invoice"?invoiceKind:null
  const invoiceStatusFilter=invoiceStatus&&["draft","review","approved","issued","paid","cancelled"].includes(invoiceStatus)?invoiceStatus:null
  const invoiceNumberFilter=typeof invoiceNumber==="string"?invoiceNumber.trim().slice(0,80):""
- const invoiceFromFilter=typeof invoiceFrom==="string"&&/^\d{4}-\d{2}-\d{2}$/.test(invoiceFrom)?invoiceFrom:""
- const invoiceToFilter=typeof invoiceTo==="string"&&/^\d{4}-\d{2}-\d{2}$/.test(invoiceTo)?invoiceTo:""
+ const {from:invoiceFromFilter,to:invoiceToFilter}=invoiceDateRange(invoiceFrom,invoiceTo)
  const invoiceOverdueFilter=invoiceOverdue==="1"
  const invoiceSortFilter=invoiceSort==="due_desc"||invoiceSort==="issued_desc"||invoiceSort==="amount_desc"||invoiceSort==="amount_asc"?invoiceSort:"due_asc"
  const invoiceToday=new Date().toISOString().slice(0,10)
