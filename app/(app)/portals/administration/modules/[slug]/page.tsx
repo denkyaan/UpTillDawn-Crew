@@ -341,7 +341,7 @@ export default async function AdministrationModulePage({params,searchParams}:{pa
     <span className="text-xs text-muted-foreground">{({nl:"Materialen",fr:"Articles",en:"Items",de:"Artikel"} as const)[locale]}: {summary.items} · {({nl:"Ontbreekt",fr:"Manquant",en:"Missing",de:"Fehlt"} as const)[locale]}: {summary.missing} · {({nl:"Beschadigd",fr:"Endommagé",en:"Damaged",de:"Beschädigt"} as const)[locale]}: {summary.damaged}</span>
    </div>)}</div>
   </section>}
-  {liveRecords&&<section className="rounded-2xl border bg-card p-5">
+  {liveRecords&&<section id="administration-live-records" className="scroll-mt-24 rounded-2xl border bg-card p-5">
    <h2 className="text-lg font-semibold">{({nl:"Actuele gegevens",fr:"Données actuelles",en:"Live records",de:"Aktuelle Daten"} as const)[locale]}</h2>
    {liveRecords.error?<p className="mt-3 text-sm text-muted-foreground">{({nl:"Gegevens niet beschikbaar voor deze gebruiker.",fr:"Données indisponibles pour cet utilisateur.",en:"Records unavailable for this user.",de:"Daten für diesen Benutzer nicht verfügbar."} as const)[locale]}</p>
     :!liveRecords.data?.length?<p className="mt-3 text-sm text-muted-foreground">{({nl:"Geen records gevonden.",fr:"Aucun enregistrement trouvé.",en:"No records found.",de:"Keine Einträge gefunden."} as const)[locale]}</p>
@@ -372,7 +372,7 @@ export default async function AdministrationModulePage({params,searchParams}:{pa
   {slug==="notifications"&&<section className="rounded-2xl border bg-card p-5">
    <h2 className="text-lg font-semibold">{({nl:"Meldingen beheren",fr:"Gérer les notifications",en:"Manage notifications",de:"Benachrichtigungen verwalten"} as const)[locale]}</h2>
    <p className="mt-2 text-sm text-muted-foreground">{({nl:"Open de bestaande meldingenpagina om berichten en actiepunten te bekijken.",fr:"Ouvrez la page des notifications pour consulter les messages et actions.",en:"Open the existing notifications page to review messages and action items.",de:"Öffnen Sie die Benachrichtigungsseite, um Nachrichten und Aufgaben zu prüfen."} as const)[locale]}</p>
-   <Link href="/portals/administration" className="mt-4 inline-flex rounded-lg bg-violet-600 px-4 py-3 text-sm font-semibold text-white hover:bg-violet-700">{({nl:"Open meldingen",fr:"Ouvrir les notifications",en:"Open notifications",de:"Benachrichtigungen öffnen"} as const)[locale]} →</Link>
+   <Link href="#administration-live-records" className="mt-4 inline-flex rounded-lg bg-violet-600 px-4 py-3 text-sm font-semibold text-white hover:bg-violet-700">{({nl:"Open meldingen",fr:"Ouvrir les notifications",en:"Open notifications",de:"Benachrichtigungen öffnen"} as const)[locale]} →</Link>
   </section>}
   {slug==="tasks"&&<section className="rounded-2xl border bg-card p-5">
    <h2 className="text-lg font-semibold">{({nl:"Taken opvolgen",fr:"Suivi des tâches",en:"Track tasks",de:"Aufgaben verfolgen"} as const)[locale]}</h2>
