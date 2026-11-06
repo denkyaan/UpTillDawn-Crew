@@ -111,6 +111,11 @@ try{
         const finalUrl=new URL(tab.url())
         const finalPath=finalUrl.pathname+finalUrl.search
         if(finalPath!==expectedClickedPath)throw Error('hydrated navigation '+route+' -> '+target+' ended at '+finalPath+' (expected '+expectedClickedPath+'); page title='+await tab.title()+'; body='+((await tab.locator('body').innerText()).slice(0,500)))
+        // Inventory filtering must actually select the clicked event, not merely update the address bar.
+        if(finalUrl.pathname==='/portals/administration/modules/inventory'&&finalUrl.searchParams.has('event')){
+         const activeEventLink=tab.locator('a[aria-current="page"][href="'+target.replaceAll('"','\\"')+'"]')
+         if(await activeEventLink.count()!==1)throw Error('inventory event filter did not activate the selected event: '+target)
+        }
         if(await tab.locator('[data-layout-key]').count())throw Error('hydrated portal subtab rendered personnel navigation: '+target)
         const text=(await tab.locator('body').innerText()).trim()
         if(!text||/404\s*\|\s*this page could not be found|application error|internal server error/i.test(text))throw Error('clicked destination rendered error: '+target)
