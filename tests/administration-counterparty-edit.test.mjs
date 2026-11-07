@@ -78,3 +78,13 @@ test('counterparty edit lookup failures are visible rather than silently hidden'
  assert.ok(counterparties.includes('const selectedError=Boolean(selectedId&&selected?.error)'))
  assert.ok(counterparties.includes('{selectedError&&<p role="alert"'))
 })
+
+test('counterparty edits return to the same filtered page after saving or validation failure',()=>{
+ assert.ok(counterparties.includes('function counterpartyReturnPath(formData:FormData)'))
+ for(const name of ['return_q','return_kind','return_page'])assert.ok(counterparties.includes('name="'+name+'"'))
+ const action=counterparties.slice(counterparties.indexOf('async function updateCounterparty'),counterparties.indexOf('export const dynamic'))
+ assert.ok(action.includes('const returnPath=counterpartyReturnPath(formData)'))
+ assert.ok(action.includes('redirect(returnPath)'))
+ assert.ok(action.includes("redirect(returnPath+(returnPath.includes('?')?'&':'?')+'error=1')"))
+ assert.ok(counterparties.includes("['customer','supplier','both'].includes(kind)"))
+})
