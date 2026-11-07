@@ -135,7 +135,7 @@ async function createDraft(formData:FormData) {
  const netRaw=String(formData.get('net_amount')??'').trim()
  const taxRaw=String(formData.get('tax_amount')??'').trim()
  // Reject empty and over-precise amounts server-side, even when browser validation is bypassed.
- const validAmount=(value:string)=>/^(?:0|[1-9]\\d{0,8})(?:\\.\\d{1,2})?$/.test(value)
+ const validAmount=(value:string)=>/^(?:0|[1-9]\d{0,8})(?:\.\d{1,2})?$/.test(value)
  if(!validAmount(netRaw)||!validAmount(taxRaw))redirect('/portals/administration/finance?error=1')
  const net=Number(netRaw)
  const tax=Number(taxRaw)
@@ -421,7 +421,7 @@ async function recordFinancialPayment(formData:FormData) {
  const documentId=String(formData.get('document_id')??'')
  const amountRaw=String(formData.get('amount')??'').trim()
  // Financial payments must be entered as exact decimal cents, never rounded from excess precision.
- if(!/^(?:0|[1-9]\\d{0,8})(?:\\.\\d{1,2})?$/.test(amountRaw))redirect('/portals/administration/finance?error=1')
+ if(!/^(?:0|[1-9]\d{0,8})(?:\.\d{1,2})?$/.test(amountRaw))redirect('/portals/administration/finance?error=1')
  const amount=Number(amountRaw)
  const paidOn=String(formData.get('paid_on')??'')
  const bankReference=String(formData.get('bank_reference')??'').trim()
