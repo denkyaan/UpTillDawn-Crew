@@ -93,3 +93,12 @@ test('promotion assignment controls fail closed on incomplete result sets',()=>{
  assert.ok(page.includes('assignmentError||assignmentOverflow'))
  assert.ok(page.includes('"/admin/management":"/portals/administration/modules/marketing"'))
 })
+
+test('promotion assignment server action rejects forged non-member or unapproved user IDs',()=>{
+ const action=page.slice(page.indexOf('async function assignPromotionTask('),page.indexOf('async function removePromotionAssignment('))
+ assert.ok(action.includes('.from("event_members").select("user_id").eq("event_id",target.event_id).eq("user_id",user).maybeSingle()'))
+ assert.ok(action.includes('if(membershipError||!membership)throw'))
+ assert.ok(action.includes('.from("profiles").select("id").eq("id",user).eq("approved",true).maybeSingle()'))
+ assert.ok(action.includes('if(profileError||!profile)throw'))
+ assert.ok(action.indexOf('if(profileError||!profile)throw')<action.indexOf('db.rpc("upt_assign_task"'))
+})
