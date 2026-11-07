@@ -41,20 +41,30 @@ async function addCounterparty(formData:FormData) {
 }
 
 
+function counterpartyReturnPath(formData:FormData){
+ const q=String(formData.get('return_q')??'').trim().slice(0,100)
+ const kind=String(formData.get('return_kind')??'')
+ const rawPage=String(formData.get('return_page')??'')
+ const page=/^[1-9]\\d{0,5}$/.test(rawPage)?Math.min(Number(rawPage),100000):1
+ const params=new URLSearchParams({...(q?{q}:{}),...(['customer','supplier','both'].includes(kind)?{kind}:{}),...(page>1?{page:String(page)}:{})})
+ return '/portals/administration/counterparties'+(params.size?'?'+params.toString():'')
+}
+
 async function updateCounterparty(formData:FormData) {
  'use server'
  const db = await authorizedClient()
+ const returnPath=counterpartyReturnPath(formData)
  const id = String(formData.get('id') ?? '')
  const name = String(formData.get('name') ?? '').trim()
  const kind = String(formData.get('kind') ?? '')
  const vat_number = String(formData.get('vat_number') ?? '').trim()
  const enterprise_number = String(formData.get('enterprise_number') ?? '').trim()
  const email = String(formData.get('email') ?? '').trim()
- if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id) || !name || name.length>200 || !['customer','supplier','both'].includes(kind) || vat_number.length>40 || enterprise_number.length>40 || email.length>254 || (email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email))) redirect('/portals/administration/counterparties?error=1')
+ if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id) || !name || name.length>200 || !['customer','supplier','both'].includes(kind) || vat_number.length>40 || enterprise_number.length>40 || email.length>254 || (email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email))) redirect(returnPath+(returnPath.includes('?')?'&':'?')+'error=1')
  const {data,error} = await db.from('admin_counterparties').update({name,kind,vat_number:vat_number||null,enterprise_number:enterprise_number||null,email:email||null}).eq('id',id).select('id').maybeSingle()
- if (error || !data) redirect('/portals/administration/counterparties?error=1')
+ if (error || !data) redirect(returnPath+(returnPath.includes('?')?'&':'?')+'error=1')
  revalidatePath('/portals/administration/counterparties')
- redirect('/portals/administration/counterparties')
+ redirect(returnPath)
 }
 
 export const dynamic = 'force-dynamic'
@@ -107,6 +117,7 @@ export default async function CounterpartiesPage({searchParams}:{searchParams:Pr
    <h2 className="mb-4 font-semibold">{t.edit}: {selected.data.name}</h2>
    <form action={updateCounterparty} className="grid gap-3 sm:grid-cols-2">
     <input type="hidden" name="id" value={selected.data.id}/>
+    <input type="hidden" name="return_q" value={query}/><input type="hidden" name="return_kind" value={kindFilter}/><input type="hidden" name="return_page" value={page}/>
     <label className="text-sm">{t.name}<input required name="name" maxLength={200} defaultValue={selected.data.name} className="mt-1 block w-full rounded-lg border bg-background p-3"/></label>
     <label className="text-sm">{t.kind}<select name="kind" defaultValue={selected.data.kind} className="mt-1 block w-full rounded-lg border bg-background p-3"><option value="customer">{t.customer}</option><option value="supplier">{t.supplier}</option><option value="both">{t.both}</option></select></label>
     <label className="text-sm">{t.vat}<input name="vat_number" maxLength={40} defaultValue={selected.data.vat_number??''} className="mt-1 block w-full rounded-lg border bg-background p-3"/></label>
