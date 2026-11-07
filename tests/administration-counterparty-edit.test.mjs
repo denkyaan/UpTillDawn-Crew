@@ -65,3 +65,16 @@ test('counterparty pagination preserves filters and uses deterministic database 
  assert.ok(source.includes('href={pageHref(page+1)}'))
  assert.ok(source.includes('href={pageHref(page-1)}'))
 })
+
+test('editing a counterparty retains the active search, kind and page context',()=>{
+ assert.ok(counterparties.includes('const editHref=(id:string)'))
+ assert.ok(counterparties.includes('...(query?{q:query}:{})'))
+ assert.ok(counterparties.includes('...(kindFilter?{kind:kindFilter}:{})'))
+ assert.ok(counterparties.includes('...(page>1?{page:String(page)}:{})'))
+ assert.ok(counterparties.includes('href={editHref(item.id)}'))
+})
+
+test('counterparty edit lookup failures are visible rather than silently hidden',()=>{
+ assert.ok(counterparties.includes('const selectedError=Boolean(selectedId&&selected?.error)'))
+ assert.ok(counterparties.includes('{selectedError&&<p role="alert"'))
+})
