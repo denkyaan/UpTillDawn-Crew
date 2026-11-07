@@ -62,7 +62,7 @@ test('administrators can revoke task assignments through existing authorized RPC
 })
 
 test('promotion assignments use approved event-member picker instead of UUID entry',()=>{
- assert.ok(page.includes('db.from("event_members").select("event_id,user_id")'))
+ assert.ok(page.includes('db.from("event_members").select("event_id,user_id",{count:"exact"})'))
  assert.ok(page.includes('db.from("profiles").select("id,full_name").eq("approved",true)'))
  assert.ok(page.includes('<select name="user_id" required'))
  assert.ok(page.includes('assignmentsByTask.get(task.id)??[]'))
@@ -112,4 +112,11 @@ test('promotion task server actions apply the same owner exception as admin page
   assert.ok(action.includes('!actor.realIsAdmin&&!actor.isOwner'))
  }
  assert.ok(page.includes('adminView&&(!actor.realIsAdmin&&!actor.isOwner||!actor.approved&&!actor.isOwner||actor.account_blocked&&!actor.isOwner)'))
+})
+
+test('event membership paging compares exact count before reporting overflow',()=>{
+ assert.ok(page.includes('.select("event_id,user_id",{count:"exact"}).in("event_id",eventIds)'))
+ assert.ok(page.includes('if(pageError||memberTotal===null){membersError=true;break}'))
+ assert.ok(page.includes('if(membershipPages.length>=memberTotal)break'))
+ assert.ok(page.includes('if((data?.length??0)<1000){memberListTruncated=true;break}'))
 })
