@@ -1,0 +1,13 @@
+# Production schema readiness — 2026-11-07
+
+Production currently reports migration `20261007034820`. Read-only checks confirm that its public schema has no portal-role assignments or Administration finance, inventory-receipt, ticket-sales, case and provider-mapping tables. Anonymous zero-row PostgREST probes return HTTP 404 / `PGRST205` for all ten required release relations. Production data has not been migrated by this bundle.
+
+There are 103 source migration files after that production version, ending at `20261107184322`. This is a platform upgrade, not just the latest reminder-column migration. Historical migrations include training setup and its later removal; the complete sequence needs dependency and data-change review before production application. Missing older history entries must not be treated as permission to replay a restored schema blindly.
+
+The production deployment now checks required relations and columns before installing dependencies, publishing a Worker or changing runtime secrets. Probes select zero rows with the existing publishable key. An exact PostgreSQL table-permission denial is accepted only after its relation/columns resolve; missing columns, missing relations, invalid keys, unrelated privilege errors, malformed responses and unexpected rows block release. The probe neither reads private records nor uses a service-role key. PostgreSQL column-resolution behavior was verified with an anonymous-role, zero-row query against main-test.
+
+This contract verifies the specified Administration schema surface. It does not replace migration-history review, RLS/functional tests, upgrade testing with existing data, or external integration acceptance.
+
+The failed full-CI run `42410857328` reproduced generated-type drift in reminder revisions and the event-task RPC declaration. The checked-in snapshot has been regenerated and normalized using the same rule as CI. All earlier steps in that run, including fresh migration replay, SQL release suites and the Cloudflare build/dry-run, passed; authenticated browser stages did not run.
+
+Main commits containing `[full-ci]` now opt into the existing complete isolated validation after fast checks. This reuses the approved workflow without adding workflow files. Normal pushes retain fast checks. Called validation receives the push event and cannot satisfy the manual-event condition that dispatches a production release. The caller context is retained as documented in [GitHub's reusable-workflow reference](https://docs.github.com/en/actions/reference/workflows-and-actions/reusing-workflow-configurations). Manual production release still requires a successful exact-SHA full production run and the production schema contract.

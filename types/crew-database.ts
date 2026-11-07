@@ -844,6 +844,7 @@ export type Database = {
           id: string
           recipient_email: string
           reminder_number: number
+          revision: number
           status: string
           subject: string
         }
@@ -857,6 +858,7 @@ export type Database = {
           id?: string
           recipient_email: string
           reminder_number: number
+          revision?: number
           status?: string
           subject: string
         }
@@ -870,6 +872,7 @@ export type Database = {
           id?: string
           recipient_email?: string
           reminder_number?: number
+          revision?: number
           status?: string
           subject?: string
         }
@@ -6154,6 +6157,10 @@ export type Database = {
         Args: { p_reason: string; p_user: string }
         Returns: undefined
       }
+      upt_admin_update_event_task: {
+        Args: { p_description: string; p_task: string; p_title: string }
+        Returns: string
+      }
       upt_administration_document_balances: {
         Args: { p_ids: string[] }
         Returns: Json
@@ -6219,7 +6226,6 @@ export type Database = {
         Args: { p_done: boolean; p_item: string }
         Returns: undefined
       }
-      upt_admin_update_event_task: { Args: { p_task: string; p_title: string; p_description: string }; Returns: string }
       upt_assign_task: {
         Args: { p_task: string; p_user: string }
         Returns: string
@@ -7803,4 +7809,3 @@ export const Constants = {
     Enums: {},
   },
 } as const
-

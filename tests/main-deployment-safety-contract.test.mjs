@@ -33,10 +33,23 @@ test("main deployment checks the tested SHA again immediately before deploy",()=
  assert.match(main.slice(deploy),/wrangler deploy --config wrangler\.main\.jsonc/)
 })
 
-test("production CI is not started by main pushes",()=>{
+test("production CI has no blanket push trigger",()=>{
  assert.match(productionCi,/workflow_dispatch:/)
  assert.match(productionCi,/workflow_call:/)
  assert.doesNotMatch(productionCi,/\n\s+push:/)
+})
+
+test("full validation on main requires an explicit commit opt-in and cannot dispatch production",()=>{
+ const job=mainCi.match(/\n  full-validation:([\s\S]*?)\n  release-production:/)?.[1]
+ assert.ok(job)
+ assert.match(job,/needs: fast/)
+ assert.match(job,/github\.event_name == 'push'/)
+ assert.match(job,/github\.ref == 'refs\/heads\/main'/)
+ assert.match(job,/contains\(github\.event\.head_commit\.message, '\[full-ci\]'\)/)
+ assert.match(job,/uses: \.\/\.github\/workflows\/ci\.yml/)
+ assert.doesNotMatch(job,/dispatches|secrets: inherit/)
+ const productionDispatch=productionCi.slice(productionCi.indexOf('  dispatch-production-deploy:'))
+ assert.match(productionDispatch,/github\.event_name == 'workflow_dispatch' && github\.ref == 'refs\/heads\/main'/)
 })
 
 test("production deploy follows successful manually dispatched CI only",()=>{

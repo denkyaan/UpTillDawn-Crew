@@ -92,6 +92,9 @@ jobs:
           node-version: 24
           cache: npm
 
+      - name: Verify production administration schema before release
+        run: node scripts/production-schema-contract.mjs
+
       - name: Install dependencies
         run: npm ci
 

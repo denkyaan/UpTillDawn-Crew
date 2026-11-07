@@ -79,6 +79,12 @@ jobs:
       - name: Production dependency security gate
         run: npm audit --omit=dev --audit-level=high
 
+  full-validation:
+    name: Full validation (explicit commit opt-in)
+    needs: fast
+    if: ${{ github.event_name == 'push' && github.ref == 'refs/heads/main' && contains(github.event.head_commit.message, '[full-ci]') }}
+    uses: ./.github/workflows/ci.yml
+
   release-production:
     needs: fast
     if: ${{ github.event_name == 'workflow_dispatch' && inputs.release_production == true && github.ref == 'refs/heads/main' }}
