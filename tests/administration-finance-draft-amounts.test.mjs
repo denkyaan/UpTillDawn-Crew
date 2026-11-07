@@ -50,3 +50,12 @@ test('failed financial attachment metadata insert cleans up uploaded private sto
  assert.ok(action.indexOf(".remove([path])")>action.indexOf("if(linkError){"))
  assert.ok(action.indexOf(".remove([path])")<action.indexOf("redirect('/portals/administration/finance?error=1')",action.indexOf("if(linkError){")))
 })
+
+test('adding invoice lines validates the complete canonical document UUID',()=>{
+ const start=source.indexOf('async function addInvoiceLine(')
+ const end=source.indexOf('async function updateInvoiceLine(',start)
+ assert.ok(start>=0&&end>start)
+ const action=source.slice(start,end)
+ assert.ok(action.includes("if(!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(documentId)"))
+ assert.ok(action.includes("document.status!=='draft'"))
+})
