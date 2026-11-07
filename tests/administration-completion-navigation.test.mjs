@@ -66,3 +66,11 @@ test('administration bottom navigation highlights exactly one category',()=>{
  assert.ok(!tabs.includes('group.key===selected.key||(selected.key==="overview"&&group.key===current)'))
  assert.ok(tabs.includes('aria-pressed={active}'))
 })
+
+test('shared administration notification inbox resolves links inside administration portal',()=>{
+ const inbox=readFileSync('app/(app)/notifications/page.tsx','utf8')
+ assert.ok(inbox.includes("import { administrationNotificationHref } from '@/lib/administration/navigation'"))
+ assert.ok(inbox.includes("params.scope==='administration'?administrationNotificationHref(n.link):safeNotificationLink(n.link)"))
+ assert.ok(inbox.includes('<NotificationOpenLink href={safeLink}'))
+ assert.ok(navigation.includes('if(url.pathname.startsWith("/portals/"))return null'))
+})
