@@ -63,7 +63,7 @@ test('administrators can revoke task assignments through existing authorized RPC
 
 test('promotion assignments use approved event-member picker instead of UUID entry',()=>{
  assert.ok(page.includes('db.from("event_members").select("event_id,user_id",{count:"exact"})'))
- assert.ok(page.includes('db.from("profiles").select("id,full_name").eq("approved",true)'))
+ assert.ok(page.includes('db.from("profiles").select("id,full_name",{count:"exact"}).eq("approved",true)'))
  assert.ok(page.includes('<select name="user_id" required'))
  assert.ok(page.includes('assignmentsByTask.get(task.id)??[]'))
  assert.ok(!page.includes('<input name="user_id" required pattern='))
@@ -127,4 +127,10 @@ test('promotion assignment removal cannot be used to revoke unrelated non-event 
  assert.ok(action.includes('db.from("tasks").select("id,event_id").eq("id",assignment.task_id).maybeSingle()'))
  assert.ok(action.includes('if(taskLookupError||!eventTask?.event_id)throw'))
  assert.ok(action.indexOf('if(taskLookupError||!eventTask?.event_id)throw')<action.indexOf('db.rpc("upt_remove_task_assignment"'))
+})
+
+test('approved profile directory fails closed if database returns a partial batch',()=>{
+ assert.ok(page.includes('.select("id,full_name",{count:"exact"}).eq("approved",true).in("id",memberIds.slice(offset,offset+200))'))
+ assert.ok(page.includes('if(batchError||profileTotal===null||profileTotal>(data?.length??0)){profilesError=true;break}'))
+ assert.ok(page.includes('!membersError&&!profilesError&&!memberListTruncated'))
 })
