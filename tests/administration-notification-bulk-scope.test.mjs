@@ -23,3 +23,9 @@ test('single and bulk read refresh administration and shared notification inboxe
   assert.ok(action.includes(".eq('user_id',current.id).is('read_at',null)"))
  }
 })
+
+test('notification pagination does not expose next-page navigation on database errors',()=>{
+ assert.ok(source.includes('const notificationHasNext=!notificationRows?.error&&(notificationRows?.data?.length??0)>notificationPageSize'))
+ assert.ok(source.includes('const visibleNotifications=notificationRows?.error?[]:(notificationRows?.data?.slice(0,notificationPageSize)??[])'))
+ assert.ok(source.includes('notificationRows?.error?<p role="alert"'))
+})
