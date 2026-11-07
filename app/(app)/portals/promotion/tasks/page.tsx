@@ -1,3 +1,4 @@
+import {listPage} from "@/lib/list-query"
 import Link from "next/link"
 import {createHash,randomUUID} from "node:crypto"
 import {requestUiLocale} from "@/lib/server-locale"
@@ -91,7 +92,7 @@ export default async function PromotionTasks({searchParams}:{searchParams:Promis
   de:{"NOT STARTED":"Noch nicht begonnen","IN PROGRESS":"In Bearbeitung","COMPLETED":"Abgeschlossen","CANCELLED":"Abgebrochen"}
  } as const
  const rawPage=(await searchParams).page??"1"
- const page=/^[1-9]\d{0,3}$/.test(rawPage)?Number(rawPage):1
+ const page=listPage(rawPage,9999)
  const offset=(page-1)*100
  const {data,error}=await db.from("task_assignments").select("id,status,created_at,tasks(id,title,description,event_id,updated_at)").eq("user_id",user.id).order("created_at",{ascending:false}).order("id",{ascending:false}).range(offset,offset+100)
  const visibleAssignmentIds=(data??[]).slice(0,100).map(item=>item.id)

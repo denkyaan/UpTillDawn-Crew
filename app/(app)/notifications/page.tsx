@@ -1,3 +1,4 @@
+import {listPage} from "@/lib/list-query"
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase/crew-server'
 import { markNotificationRead } from '@/lib/actions/uptilldawn'
@@ -22,7 +23,7 @@ function safeNotificationLink(value:string|null){
 
 export default async function Page({searchParams}:{searchParams?:Promise<{page?:string;scope?:string}>}={}) {
   const params=await (searchParams??Promise.resolve({page:undefined,scope:undefined}))
-  const page=typeof params.page==='string'&&/^[1-9]\\d{0,4}$/.test(params.page)?Number(params.page):1
+ const page=listPage(params.page,99999)
   const pageSize=50
   const offset=(page-1)*pageSize
   const [s,locale] = await Promise.all([createClient(),requestUiLocale()])

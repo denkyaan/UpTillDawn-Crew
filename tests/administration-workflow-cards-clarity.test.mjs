@@ -5,7 +5,8 @@ const source=readFileSync('app/(app)/portals/administration/modules/[slug]/page.
 test('unfinished administration sections do not repeat the same unrelated workflow action',()=>{
  assert.match(source,/administrationWorkflowHref\(slug\)&&<div/)
  assert.doesNotMatch(source,/\{administrationWorkflowHref\(slug\)\?<Link/)
- assert.match(source,/\{u\.notAvailable\}/)
+ assert.doesNotMatch(source,/\{u\.pending\}/)
+ assert.match(source,/administrationWorkspaceIntro\[slug\]/)
 })
 test('marketing instructions keep users in administration',()=>{
  assert.match(source,/Beheer promotietaken binnen Administratie/)

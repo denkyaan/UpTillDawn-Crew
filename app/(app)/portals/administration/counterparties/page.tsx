@@ -1,3 +1,4 @@
+import {listPage,escapeLikeSearch} from "@/lib/list-query"
 import Link from 'next/link'
 import { redirect } from 'next/navigation'
 import { revalidatePath } from 'next/cache'
@@ -45,7 +46,7 @@ function counterpartyReturnPath(formData:FormData){
  const q=String(formData.get('return_q')??'').trim().slice(0,100)
  const kind=String(formData.get('return_kind')??'')
  const rawPage=String(formData.get('return_page')??'')
- const page=/^[1-9]\\d{0,5}$/.test(rawPage)?Math.min(Number(rawPage),100000):1
+ const page=listPage(rawPage,100000)
  const params=new URLSearchParams({...(q?{q}:{}),...(['customer','supplier','both'].includes(kind)?{kind}:{}),...(page>1?{page:String(page)}:{})})
  return '/portals/administration/counterparties'+(params.size?'?'+params.toString():'')
 }
@@ -75,12 +76,12 @@ export default async function CounterpartiesPage({searchParams}:{searchParams:Pr
  const params = await searchParams
  const query=typeof params.q==='string'?params.q.trim().slice(0,100):''
  const kindFilter=['customer','supplier','both'].includes(params.kind??'')?params.kind:''
- const escapedQuery=query.replace(/[\\\\%_]/g,match=>'\\\\'+match)
+ const escapedQuery=escapeLikeSearch(query)
  let listQuery=db.from('admin_counterparties').select('id,name,kind,vat_number,enterprise_number,email')
  if(query)listQuery=listQuery.ilike('name',`%${escapedQuery}%`)
  if(kindFilter)listQuery=listQuery.eq('kind',kindFilter)
  const pageSize=50
- const requestedPage=typeof params.page==='string'&&/^[1-9]\\d{0,5}$/.test(params.page)?Number(params.page):1
+ const requestedPage=listPage(params.page)
  const page=Math.min(requestedPage,100000)
  const offset=(page-1)*pageSize
  const {data,error}=await listQuery.order('name').order('id').range(offset,offset+pageSize)

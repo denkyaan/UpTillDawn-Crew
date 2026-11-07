@@ -1,3 +1,4 @@
+import {listPage,escapeLikeSearch} from "@/lib/list-query"
 import Link from "next/link"
 import {revalidatePath} from "next/cache"
 import {redirect} from "next/navigation"
@@ -63,13 +64,13 @@ export default async function AdministrationPromotionTasks({searchParams,adminVi
  const params=await searchParams
  const q=typeof params.q==="string"?params.q.trim().slice(0,100):""
  const scope=params.scope==="event"||params.scope==="general"?params.scope:"all"
- const page=typeof params.page==="string"&&/^[1-9]\\d{0,4}$/.test(params.page)?Number(params.page):1
+ const page=listPage(params.page,99999)
  const pageSize=50
  const offset=(page-1)*pageSize
  let tasksQuery=db.from("tasks").select("id,title,description,event_id,created_at")
  if(scope==="event")tasksQuery=tasksQuery.not("event_id","is",null)
  if(scope==="general")tasksQuery=tasksQuery.is("event_id",null)
- if(q)tasksQuery=tasksQuery.ilike("title",`%${q.replace(/[\\\\%_]/g,match=>"\\\\"+match)}%`)
+ if(q)tasksQuery=tasksQuery.ilike("title",`%${escapeLikeSearch(q)}%`)
  const {data,error}=await tasksQuery.order("created_at",{ascending:false}).order("id",{ascending:false}).range(offset,offset+pageSize)
  const hasNext=(data?.length??0)>pageSize
  const rows=data?.slice(0,pageSize)??[]
