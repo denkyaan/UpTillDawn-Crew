@@ -99,8 +99,8 @@ export default async function AdministrationPromotionTasks({searchParams,adminVi
  const profiles:Array<{id:string;full_name:string|null}>=[]
  let profilesError=false
  for(let offset=0;offset<memberIds.length;offset+=200){
-  const {data,error:batchError}=await db.from("profiles").select("id,full_name").eq("approved",true).in("id",memberIds.slice(offset,offset+200))
-  if(batchError){profilesError=true;break}
+  const {data,error:batchError,count:profileTotal}=await db.from("profiles").select("id,full_name",{count:"exact"}).eq("approved",true).in("id",memberIds.slice(offset,offset+200))
+  if(batchError||profileTotal===null||profileTotal>(data?.length??0)){profilesError=true;break}
   profiles.push(...(data??[]))
  }
  const names=new Map(profiles.map(profile=>[profile.id,profile.full_name||profile.id]))
