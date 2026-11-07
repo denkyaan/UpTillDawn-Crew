@@ -40,3 +40,13 @@ test('financial attachment uploads require canonical UUIDs and editable document
  assert.ok(action.includes("validateUploadSecurity(file)"))
  assert.ok(action.includes("upsert:false"))
 })
+
+test('failed financial attachment metadata insert cleans up uploaded private storage object',()=>{
+ const start=source.indexOf('async function uploadFinancialAttachment(')
+ const end=source.indexOf('\nexport const dynamic',start)
+ const action=source.slice(start,end)
+ assert.ok(action.includes("if(linkError){"))
+ assert.ok(action.includes(".from('admin-financial-attachments').remove([path])"))
+ assert.ok(action.indexOf(".remove([path])")>action.indexOf("if(linkError){"))
+ assert.ok(action.indexOf(".remove([path])")<action.indexOf("redirect('/portals/administration/finance?error=1')",action.indexOf("if(linkError){")))
+})
