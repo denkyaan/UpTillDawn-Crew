@@ -11,3 +11,15 @@ test('notification bulk action checks unread records across every page',()=>{
 test('bulk read label explicitly states that it includes other pages in all four locales',()=>{
  for(const label of ['ook andere pagina’s','toutes les pages','all pages','alle Seiten'])assert.ok(source.includes(label))
 })
+
+test('single and bulk read refresh administration and shared notification inboxes',()=>{
+ for(const name of ['markAdministrationNotificationRead','markAllAdministrationNotificationsRead']){
+  const start=source.indexOf('async function '+name+'(')
+  const end=source.indexOf('\n}',start)
+  assert.ok(start>=0&&end>start)
+  const action=source.slice(start,end)
+  assert.ok(action.includes("revalidatePath('/portals/administration/modules/notifications')"))
+  assert.ok(action.includes("revalidatePath('/notifications')"))
+  assert.ok(action.includes(".eq('user_id',current.id).is('read_at',null)"))
+ }
+})
