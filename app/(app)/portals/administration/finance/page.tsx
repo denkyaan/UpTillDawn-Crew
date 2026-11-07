@@ -132,9 +132,13 @@ async function createDraft(formData:FormData) {
  const kind = String(formData.get('kind') ?? '')
  const allowed = ['sales_invoice','purchase_invoice','credit_note','expense','quote']
  if (!allowed.includes(kind)) return
- const net = Number(formData.get('net_amount'))
- const tax = Number(formData.get('tax_amount'))
- if (!Number.isFinite(net) || !Number.isFinite(tax) || net < 0 || tax < 0 || net > 999999999 || tax > 999999999) return
+ const netRaw=String(formData.get('net_amount')??'').trim()
+ const taxRaw=String(formData.get('tax_amount')??'').trim()
+ // Reject empty and over-precise amounts server-side, even when browser validation is bypassed.
+ const validAmount=(value:string)=>/^(?:0|[1-9]\\d{0,8})(?:\\.\\d{1,2})?$/.test(value)
+ if(!validAmount(netRaw)||!validAmount(taxRaw))redirect('/portals/administration/finance?error=1')
+ const net=Number(netRaw)
+ const tax=Number(taxRaw)
  const documentNumber = String(formData.get('document_number') ?? '').trim().slice(0,100)
  const issueDate=String(formData.get('issue_date')??'')
  let dueDate=String(formData.get('due_date')??'')
