@@ -35,6 +35,7 @@ async function markAdministrationNotificationRead(formData:FormData){
  const {error}=await db.from('crew_notifications').update({read_at:new Date().toISOString()}).eq('id',id).eq('user_id',current.id).is('read_at',null)
  if(error)throw new Error('Unable to update notification')
  revalidatePath('/portals/administration/modules/notifications')
+ revalidatePath('/notifications')
 }
 
 async function markAllAdministrationNotificationsRead(){
@@ -50,6 +51,7 @@ async function markAllAdministrationNotificationsRead(){
  const {error}=await db.from('crew_notifications').update({read_at:new Date().toISOString()}).eq('user_id',current.id).is('read_at',null)
  if(error)throw new Error('Unable to mark notifications as read')
  revalidatePath('/portals/administration/modules/notifications')
+ revalidatePath('/notifications')
 }
 
 type Translation=Record<SupportedUiLocale,string>
