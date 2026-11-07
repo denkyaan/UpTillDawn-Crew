@@ -59,3 +59,16 @@ test('adding invoice lines validates the complete canonical document UUID',()=>{
  assert.ok(action.includes("if(!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(documentId)"))
  assert.ok(action.includes("document.status!=='draft'"))
 })
+
+test('invoice line create and update reject empty and over-precise numeric inputs',()=>{
+ for(const [name,next] of [['addInvoiceLine','updateInvoiceLine'],['updateInvoiceLine','removeInvoiceLine']]){
+  const start=source.indexOf('async function '+name+'(')
+  const end=source.indexOf('async function '+next+'(',start+1)
+  const action=source.slice(start,end)
+  assert.ok(action.includes("const quantityRaw=String(formData.get('quantity')??'').trim()"))
+  assert.ok(action.includes("const unitPriceRaw=String(formData.get('unit_price')??'').trim()"))
+  assert.ok(action.includes("const vatRateRaw=String(formData.get('vat_rate')??'').trim()"))
+  assert.ok(action.includes("if(!validDecimal(quantityRaw)||!validDecimal(unitPriceRaw)||!validDecimal(vatRateRaw))redirect("))
+  assert.ok(action.indexOf('if(!validDecimal(')<action.indexOf('const quantity=Number(quantityRaw)'))
+ }
+})
