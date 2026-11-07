@@ -82,3 +82,15 @@ test('counterparty payment terms validate stored issue dates before arithmetic',
  assert.ok(action.includes('new Date(issueDate).toISOString().slice(0,10)!==issueDate'))
  assert.ok(action.indexOf('new Date(issueDate).toISOString().slice(0,10)!==issueDate')<action.indexOf('due.setUTCDate('))
 })
+
+test('payment reminders reuse exact-cent settlement and reject overpayment',()=>{
+ const start=source.indexOf('async function reminderOutstanding(')
+ const end=source.indexOf('function belgianToday()',start)
+ assert.ok(start>=0&&end>start)
+ const action=source.slice(start,end)
+ assert.ok(action.includes('loadFinancialSettlement(supabase,documentId)'))
+ assert.ok(action.includes("settlement.kind!=='sales_invoice'"))
+ assert.ok(action.includes('settlement.overpaymentCents!==0'))
+ assert.ok(action.includes('settlement.outstandingCents/100'))
+ assert.ok(!action.includes('Math.round('))
+})
