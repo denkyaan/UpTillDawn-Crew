@@ -378,7 +378,7 @@ async function updatePaymentReminder(formData:FormData) {
  const {supabase,isAdmin}=await requireAdministration()
  const id=String(formData.get('reminder_id')??'')
  const status=String(formData.get('status')??'')
- if(!isAdmin||!['approved','cancelled'].includes(status)||!/^[0-9a-f]{8}-[0-9a-f-]{27,}$/i.test(id))redirect('/portals/administration/finance?error=1')
+ if(!isAdmin||!['approved','cancelled'].includes(status)||!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id))redirect('/portals/administration/finance?error=1')
  if(status==='approved'){
   const {data:reminder,error:reminderError}=await (supabase as unknown as SupabaseClient).from('admin_payment_reminders').select('document_id').eq('id',id).eq('status','draft').maybeSingle()
   if(reminderError||!reminder)redirect('/portals/administration/finance?error=1')
