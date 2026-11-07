@@ -82,10 +82,11 @@ export default async function AdministrationPromotionTasks({searchParams,adminVi
  let memberListTruncated=false
  if((actor.realIsAdmin||actor.isOwner)&&eventIds.length){
   for(let offset=0;offset<10000;offset+=1000){
-   const {data,error:pageError}=await db.from("event_members").select("event_id,user_id").in("event_id",eventIds).order("event_id").order("user_id").range(offset,offset+999)
-   if(pageError){membersError=true;break}
+   const {data,error:pageError,count:memberTotal}=await db.from("event_members").select("event_id,user_id",{count:"exact"}).in("event_id",eventIds).order("event_id").order("user_id").range(offset,offset+999)
+   if(pageError||memberTotal===null){membersError=true;break}
    membershipPages.push(...(data??[]))
-   if((data?.length??0)<1000)break
+   if(membershipPages.length>=memberTotal)break
+   if((data?.length??0)<1000){memberListTruncated=true;break}
    if(offset===9000)memberListTruncated=true
   }
  }
