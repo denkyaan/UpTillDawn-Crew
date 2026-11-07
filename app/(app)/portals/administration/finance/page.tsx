@@ -186,7 +186,7 @@ async function addInvoiceLine(formData:FormData) {
  const quantity=Number(formData.get('quantity'))
  const unitPrice=Number(formData.get('unit_price'))
  const vatRate=Number(formData.get('vat_rate'))
- if(!/^[0-9a-f]{8}-[0-9a-f-]{27}$/i.test(documentId)||!description||description.length>500||![quantity,unitPrice,vatRate].every(Number.isFinite)||quantity<=0||quantity>100000||unitPrice<0||unitPrice>999999999||vatRate<0||vatRate>100)redirect('/portals/administration/finance?error=1')
+ if(!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(documentId)||!description||description.length>500||![quantity,unitPrice,vatRate].every(Number.isFinite)||quantity<=0||quantity>100000||unitPrice<0||unitPrice>999999999||vatRate<0||vatRate>100)redirect('/portals/administration/finance?error=1')
  const {data:document}=await supabase.from('admin_financial_documents').select('id,status').eq('id',documentId).single()
  if(!document||document.status!=='draft')redirect('/portals/administration/finance?error=1')
  const {error}=await supabase.from('admin_financial_lines').insert({document_id:documentId,description,quantity,unit_price:unitPrice,vat_rate:vatRate})
