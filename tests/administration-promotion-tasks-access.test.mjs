@@ -120,3 +120,11 @@ test('event membership paging compares exact count before reporting overflow',()
  assert.ok(page.includes('if(membershipPages.length>=memberTotal)break'))
  assert.ok(page.includes('if((data?.length??0)<1000){memberListTruncated=true;break}'))
 })
+
+test('promotion assignment removal cannot be used to revoke unrelated non-event tasks',()=>{
+ const action=page.slice(page.indexOf('async function removePromotionAssignment('),page.indexOf('export default async function AdministrationPromotionTasks('))
+ assert.ok(action.includes('db.from("task_assignments").select("task_id").eq("id",id).maybeSingle()'))
+ assert.ok(action.includes('db.from("tasks").select("id,event_id").eq("id",assignment.task_id).maybeSingle()'))
+ assert.ok(action.includes('if(taskLookupError||!eventTask?.event_id)throw'))
+ assert.ok(action.indexOf('if(taskLookupError||!eventTask?.event_id)throw')<action.indexOf('db.rpc("upt_remove_task_assignment"'))
+})
