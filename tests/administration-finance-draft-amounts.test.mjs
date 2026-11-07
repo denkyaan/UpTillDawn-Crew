@@ -18,3 +18,14 @@ test('financial draft amount format rejects empty, negative and over-precise val
  for(const value of ['0','0.00','12','12.5','12.50','999999999.99'])assert.equal(validAmount(value),true,value)
  for(const value of ['',' ','-1','1.234','1e3','Infinity','NaN','01','1000000000','1,50'])assert.equal(validAmount(value),false,value)
 })
+
+test('payment recording rejects fractional cents before reconciliation or database writes',()=>{
+ const start=source.indexOf('async function recordFinancialPayment(')
+ const end=source.indexOf('async function updateFinancialStatus(',start)
+ assert.ok(start>=0&&end>start)
+ const action=source.slice(start,end)
+ assert.ok(action.includes("String(formData.get('amount')??'').trim()"))
+ assert.ok(action.includes('if(!/^(?:0|[1-9]\\d{0,8})(?:\\.\\d{1,2})?$/.test(amountRaw))redirect('))
+ assert.ok(action.indexOf('.test(amountRaw)')<action.indexOf('const amount=Number(amountRaw)'))
+ assert.ok(action.includes('amountCents>settlement.outstandingCents'))
+})
