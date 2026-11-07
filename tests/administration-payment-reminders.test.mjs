@@ -20,8 +20,10 @@ test('finance UI prepares reminder drafts without sending email',()=>{
 
 test('draft and approval both reconcile credit notes before permitting reminders',()=>{
  assert.match(page,/async function reminderOutstanding/)
- assert.match(page,/\.eq\('kind','credit_note'\)\.eq\('original_invoice_id',documentId\)/)
- assert.match(page,/\['approved','issued','paid'\]\.includes\(credit\.status\)/)
+ assert.match(page,/loadFinancialSettlement\(supabase,documentId\)/)
+ assert.match(page,/settlement\.kind!=='sales_invoice'/)
+ assert.match(page,/settlement\.overpaymentCents!==0/)
+ assert.match(page,/settlement\.outstandingCents\/100/)
  assert.match(page,/reminderOutstanding\(supabase as unknown as SupabaseClient,documentId/)
  assert.match(page,/reminderOutstanding\(supabase as unknown as SupabaseClient,reminder\.document_id/)
  assert.match(page,/outstanding===null\|\|outstanding<=0\.005/)
