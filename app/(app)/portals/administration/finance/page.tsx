@@ -492,7 +492,12 @@ async function uploadFinancialAttachment(formData:FormData) {
   document_id:documentId,storage_path:path,original_name:safeUploadName(file.name),
   mime_type:validation.mime,size_bytes:validation.size,uploaded_by:user.id
  })
- if(linkError) redirect('/portals/administration/finance?error=1')
+ if(linkError){
+  // Avoid orphaned private files when the attachment metadata cannot be persisted.
+  const {error:cleanupError}=await supabase.storage.from('admin-financial-attachments').remove([path])
+  if(cleanupError)console.error('[Finance] attachment cleanup failed',cleanupError.code)
+  redirect('/portals/administration/finance?error=1')
+ }
  revalidatePath('/portals/administration/finance')
  redirect('/portals/administration/finance')
 }
