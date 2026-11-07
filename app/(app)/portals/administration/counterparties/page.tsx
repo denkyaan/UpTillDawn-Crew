@@ -77,8 +77,10 @@ export default async function CounterpartiesPage({searchParams}:{searchParams:Pr
  const hasNext=(data?.length??0)>pageSize
  const rows=data?.slice(0,pageSize)
  const pageHref=(target:number)=>'/portals/administration/counterparties?'+new URLSearchParams({...(query?{q:query}:{}),...(kindFilter?{kind:kindFilter}:{}),page:String(target)}).toString()
+ const editHref=(id:string)=>'/portals/administration/counterparties?'+new URLSearchParams({...(query?{q:query}:{}),...(kindFilter?{kind:kindFilter}:{}),...(page>1?{page:String(page)}:{}),edit:id}).toString()
  const selectedId=typeof params.edit==='string'&&/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(params.edit)?params.edit:null
  const selected=selectedId?await db.from('admin_counterparties').select('id,name,kind,vat_number,enterprise_number,email').eq('id',selectedId).maybeSingle():null
+ const selectedError=Boolean(selectedId&&selected?.error)
  return <main className="mx-auto max-w-5xl space-y-6 p-4 pb-28 md:p-8">
   <Link href="/portals/administration" className="text-violet-400">← {t.back}</Link>
   <h1 className="text-3xl font-bold">{t.title}</h1>
@@ -100,6 +102,7 @@ export default async function CounterpartiesPage({searchParams}:{searchParams:Pr
    </form>
    {params.error==='1' && <p role="alert" className="mt-3 text-red-400">{t.error}</p>}
   </section>
+  {selectedError&&<p role="alert" className="rounded-xl border p-3 text-red-400">{t.error}</p>}
   {selected?.data&&<section className="rounded-2xl border bg-card p-5">
    <h2 className="mb-4 font-semibold">{t.edit}: {selected.data.name}</h2>
    <form action={updateCounterparty} className="grid gap-3 sm:grid-cols-2">
@@ -113,7 +116,7 @@ export default async function CounterpartiesPage({searchParams}:{searchParams:Pr
    </form>
   </section>}
   <section className="rounded-2xl border bg-card p-5">
-   {error ? <p role="alert">{t.error}</p> : !rows?.length ? <p className="text-muted-foreground">{t.empty}</p> : <div className="space-y-3">{rows.map(item=><article key={item.id} className="border-b pb-3"><div className="flex items-center justify-between gap-3"><p className="font-semibold">{item.name}</p><Link href={`/portals/administration/counterparties?edit=${encodeURIComponent(item.id)}`} className="rounded-lg border px-3 py-2 text-sm text-violet-400">{t.edit}</Link></div><p className="text-sm text-muted-foreground">{item.kind} · {[item.vat_number,item.enterprise_number,item.email].filter(Boolean).join(' · ')}</p></article>)}</div>}
+   {error ? <p role="alert">{t.error}</p> : !rows?.length ? <p className="text-muted-foreground">{t.empty}</p> : <div className="space-y-3">{rows.map(item=><article key={item.id} className="border-b pb-3"><div className="flex items-center justify-between gap-3"><p className="font-semibold">{item.name}</p><Link href={editHref(item.id)} className="rounded-lg border px-3 py-2 text-sm text-violet-400">{t.edit}</Link></div><p className="text-sm text-muted-foreground">{item.kind} · {[item.vat_number,item.enterprise_number,item.email].filter(Boolean).join(' · ')}</p></article>)}</div>}
   </section>
   {!error&&(page>1||hasNext)&&<nav aria-label={t.page} className="flex items-center justify-between gap-3 rounded-xl border p-3"><span className="text-sm">{t.page} {page}</span><div className="flex gap-2">{page>1&&<Link href={pageHref(page-1)} className="rounded-lg border px-3 py-2 text-sm">{t.previous}</Link>}{hasNext&&<Link href={pageHref(page+1)} className="rounded-lg border px-3 py-2 text-sm">{t.next}</Link>}</div></nav>}
  </main>
