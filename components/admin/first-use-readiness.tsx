@@ -2,7 +2,7 @@
 
 import Link from "next/link"
 import {useEffect,useState} from "react"
-import {CalendarDays,CheckCircle2,ClipboardList,GraduationCap,Users,Warehouse} from "lucide-react"
+import {CalendarDays,CheckCircle2,ClipboardList,LifeBuoy,Users,Warehouse} from "lucide-react"
 import {
   LANGUAGE_APPLIED_EVENT,
   activeUiLocale,
@@ -19,7 +19,7 @@ const COPY={
   nl:{
     eyebrow:"EERSTE GEBRUIK",
     heading:"Klaar voor je eerste echte evenement",
-    intro:"Er staat nog geen productie-evenement in de app. Start hieronder; trainingsdata blijven volledig gescheiden van echte gegevens.",
+    intro:"Maak een evenement aan en regel vervolgens je crew, planning en briefing.",
     crew:(approved:number,pending:number)=>`${approved} goedgekeurde account(s) · ${pending} aanvraag/aanvragen open`,
     createTitle:"1. Maak het eerste evenement",
     createBody:"Naam, locatie, start/einde, aanmelddeadline, capaciteit en GPS-radius vormen de basis. De standaard werkplekken worden automatisch klaargezet.",
@@ -33,15 +33,15 @@ const COPY={
     briefingTitle:"4. Maak briefing en operationele voorbereiding af",
     briefingBody:"Vul briefing, checklist, inventaris, prijslijsten, guestlist en overige eventinformatie in voordat de crew start.",
     briefingAction:"BRIEFING OPENEN",
-    trainingTitle:"5. Controleer de workflow in Training",
-    trainingBody:"De rondleiding gebruikt uitsluitend fictieve sandboxgegevens en wijzigt geen productie-event, uren of crewdata.",
-    trainingAction:"TRAINING OPENEN",
-    ready:"Productiestaat is schoon: geen echt evenement is nog aangemaakt. Je kunt veilig vanaf stap 1 beginnen.",
+    helpTitle:"5. Raadpleeg het helpcentrum",
+    helpBody:"Bekijk de uitleg over evenementen, planning, urenregistratie en de dagelijkse werking.",
+    helpAction:"HELPCENTRUM OPENEN",
+    ready:"Begin met het aanmaken van je eerste evenement.",
   },
   en:{
     eyebrow:"FIRST USE",
     heading:"Ready for your first real event",
-    intro:"There is no production event in the app yet. Start below; training data stays fully separated from real data.",
+    intro:"Create an event, then arrange your crew, schedule and briefing.",
     crew:(approved:number,pending:number)=>`${approved} approved account(s) · ${pending} request(s) pending`,
     createTitle:"1. Create the first event",
     createBody:"Name, location, start/end, registration deadline, capacity and GPS radius form the basis. Standard workplaces are prepared automatically.",
@@ -55,15 +55,15 @@ const COPY={
     briefingTitle:"4. Finish briefing and operational preparation",
     briefingBody:"Complete the briefing, checklist, inventory, price lists, guest list and other event information before crew starts.",
     briefingAction:"OPEN BRIEFING",
-    trainingTitle:"5. Verify the workflow in Training",
-    trainingBody:"The tour uses fictional sandbox data only and never changes production events, work hours or crew data.",
-    trainingAction:"OPEN TRAINING",
-    ready:"Production state is clean: no real event has been created yet. You can safely start at step 1.",
+    helpTitle:"5. Visit the help centre",
+    helpBody:"Find guidance on events, scheduling, time tracking and daily operations.",
+    helpAction:"OPEN HELP CENTRE",
+    ready:"Start by creating your first event.",
   },
   fr:{
     eyebrow:"PREMIÈRE UTILISATION",
     heading:"Prêt pour votre premier vrai événement",
-    intro:"Aucun événement de production n’est encore présent dans l’application. Commencez ci-dessous ; les données de formation restent totalement séparées des données réelles.",
+    intro:"Créez un événement, puis organisez l’équipe, le planning et le briefing.",
     crew:(approved:number,pending:number)=>`${approved} compte(s) approuvé(s) · ${pending} demande(s) en attente`,
     createTitle:"1. Créez le premier événement",
     createBody:"Nom, lieu, début/fin, délai d’inscription, capacité et rayon GPS constituent la base. Les postes standard sont préparés automatiquement.",
@@ -77,15 +77,15 @@ const COPY={
     briefingTitle:"4. Finalisez briefing et préparation opérationnelle",
     briefingBody:"Complétez briefing, checklist, inventaire, listes de prix, guestlist et autres informations avant le début de l’équipe.",
     briefingAction:"OUVRIR LE BRIEFING",
-    trainingTitle:"5. Vérifiez le workflow dans Training",
-    trainingBody:"La visite utilise uniquement des données sandbox fictives et ne modifie jamais les événements, heures ou données d’équipe de production.",
-    trainingAction:"OUVRIR TRAINING",
-    ready:"L’état de production est propre : aucun vrai événement n’a encore été créé. Vous pouvez commencer en toute sécurité à l’étape 1.",
+    helpTitle:"5. Consultez le centre d’aide",
+    helpBody:"Consultez les explications sur les événements, le planning, le suivi des heures et les opérations quotidiennes.",
+    helpAction:"OUVRIR LE CENTRE D’AIDE",
+    ready:"Commencez par créer votre premier événement.",
   },
   de:{
     eyebrow:"ERSTE NUTZUNG",
     heading:"Bereit für dein erstes echtes Event",
-    intro:"In der App gibt es noch kein Produktions-Event. Starte unten; Trainingsdaten bleiben vollständig von echten Daten getrennt.",
+    intro:"Erstelle ein Event und organisiere anschließend Crew, Schichten und Briefing.",
     crew:(approved:number,pending:number)=>`${approved} genehmigte(s) Konto/Konten · ${pending} offene Anfrage(n)`,
     createTitle:"1. Erstelle das erste Event",
     createBody:"Name, Ort, Start/Ende, Anmeldefrist, Kapazität und GPS-Radius bilden die Basis. Standard-Arbeitsplätze werden automatisch vorbereitet.",
@@ -99,10 +99,10 @@ const COPY={
     briefingTitle:"4. Briefing und operative Vorbereitung abschließen",
     briefingBody:"Fülle Briefing, Checkliste, Inventar, Preislisten, Gästeliste und weitere Eventinformationen aus, bevor die Crew startet.",
     briefingAction:"BRIEFING ÖFFNEN",
-    trainingTitle:"5. Prüfe den Ablauf im Training",
-    trainingBody:"Die Führung nutzt ausschließlich fiktive Sandboxdaten und verändert keine Produktions-Events, Arbeitszeiten oder Crewdaten.",
-    trainingAction:"TRAINING ÖFFNEN",
-    ready:"Der Produktionsstand ist sauber: Es wurde noch kein echtes Event erstellt. Du kannst sicher bei Schritt 1 beginnen.",
+    helpTitle:"5. Öffne das Hilfezentrum",
+    helpBody:"Hier findest du Erklärungen zu Events, Planung, Zeiterfassung und dem täglichen Ablauf.",
+    helpAction:"HILFEZENTRUM ÖFFNEN",
+    ready:"Beginne mit dem Erstellen deines ersten Events.",
   },
 } as const
 
@@ -111,7 +111,7 @@ const STEPS=[
   {icon:Users,headingKey:"crewTitle",bodyKey:"crewBody",actionKey:"crewAction",href:"/personnel"},
   {icon:Warehouse,headingKey:"planningTitle",bodyKey:"planningBody",actionKey:"planningAction",href:"/workplaces"},
   {icon:ClipboardList,headingKey:"briefingTitle",bodyKey:"briefingBody",actionKey:"briefingAction",href:"/briefings"},
-  {icon:GraduationCap,headingKey:"trainingTitle",bodyKey:"trainingBody",actionKey:"trainingAction",href:"/help"},
+  {icon:LifeBuoy,headingKey:"helpTitle",bodyKey:"helpBody",actionKey:"helpAction",href:"/help"},
 ] as const
 
 export function FirstUseReadiness({pendingApprovals,approvedCrew}:Props){

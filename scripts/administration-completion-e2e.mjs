@@ -3,7 +3,7 @@ import {readFile,mkdir,writeFile} from 'node:fs/promises'
 import {randomUUID} from 'node:crypto'
 import {createClient} from '@supabase/supabase-js'
 import {chromium} from 'playwright'
-import {gotoReady,browserTimeoutMs} from './browser-navigation.mjs'
+import {gotoReady,browserTimeoutMs,openInventoryReceiptForm} from './browser-navigation.mjs'
 
 const base=process.env.BOT_TEST_BASE_URL||'http://localhost:3000'
 const url=process.env.BOT_SUPABASE_URL||process.env.NEXT_PUBLIC_SUPABASE_URL
@@ -52,9 +52,9 @@ async function clickAndSettle(page,button){
  // actual form reset or transition, rather than the document's old networkidle.
  const resetField=['name','document_number','description','title'].find(name=>fields[name])
  if(resetField){
-  await page.waitForFunction(({form,name})=>!form.isConnected||form.querySelector(`input[name="${name}"]`)?.value==='',{form:formHandle,name:resetField},{timeout:browserTimeoutMs})
+  await page.waitForFunction(({form,name})=>!form.isConnected||!form.getClientRects().length||form.querySelector(`input[name="${name}"]`)?.value==='',{form:formHandle,name:resetField},{timeout:browserTimeoutMs})
  }else if(fields.request){
-  await page.locator(`input[name="request"][value="${fields.request}"]`).waitFor({state:'detached',timeout:browserTimeoutMs})
+  await page.locator(`form:visible input[name="request"][value="${fields.request}"]`).waitFor({state:'detached',timeout:browserTimeoutMs})
  }else{
   await button.waitFor({state:'detached',timeout:browserTimeoutMs})
  }
@@ -70,7 +70,7 @@ try{
  let response=await gotoReady(page,base+'/portals/administration/finance')
  assert.equal(response.status(),200)
  assert.equal(new URL(page.url()).pathname,'/portals/administration/finance')
- const counterpartyForm=page.locator('form').filter({has:page.locator('input[name="name"]')}).first()
+ const counterpartyForm=page.locator('form:visible').filter({has:page.locator('input[name="name"]')}).first()
  await counterpartyForm.locator('input[name="name"]').fill(prefix+' Supplier')
  await counterpartyForm.locator('select[name="kind"]').selectOption('both')
  await counterpartyForm.locator('input[name="email"]').fill('sales@artist.agency')
@@ -78,7 +78,7 @@ try{
  await clickAndSettle(page,counterpartyForm.getByRole('button'))
  const party=await one(office.db.from('admin_counterparties').select('id,iban,email').eq('name',prefix+' Supplier'))
  created.counterpartyIds.push(party.id);assert.equal(party.iban,'BE68539007547034');assert.equal(party.email,'sales@artist.agency');ok('Counterparty UI persists a valid email and normalizes a spaced IBAN')
- const draft=page.locator('form').filter({has:page.locator('input[name="net_amount"]')})
+ const draft=page.locator('form:visible').filter({has:page.locator('input[name="net_amount"]')})
  await draft.locator('select[name="kind"]').selectOption('purchase_invoice')
  await draft.locator('input[name="document_number"]').fill(prefix+'-BUY')
  await draft.locator('select[name="counterparty_id"]').selectOption(party.id)
@@ -89,25 +89,24 @@ try{
  await clickAndSettle(page,draft.getByRole('button'))
  const document=await one(office.db.from('admin_financial_documents').select('id,event_id,status').eq('document_number',prefix+'-BUY'))
  created.documentIds.push(document.id);assert.equal(document.event_id,created.eventId)
- const lineForm=page.locator('form').filter({has:page.locator(`input[name="document_id"][value="${document.id}"]`)}).filter({has:page.locator('input[name="description"]')}).filter({has:page.locator('input[name="quantity"]')}).last()
+ const lineForm=page.locator('form:visible').filter({has:page.locator(`input[name="document_id"][value="${document.id}"]`)}).filter({has:page.locator('input[name="description"]')}).filter({has:page.locator('input[name="quantity"]')}).last()
  await lineForm.locator('input[name="description"]').fill(prefix+' Equipment')
  await lineForm.locator('input[name="quantity"]').fill('2');await lineForm.locator('input[name="unit_price"]').fill('10');await lineForm.locator('input[name="vat_rate"]').fill('0')
  await clickAndSettle(page,lineForm.getByRole('button'))
  const line=await one(office.db.from('admin_financial_lines').select('id,quantity').eq('document_id',document.id))
- const review=page.locator(`form:has(input[name="document_id"][value="${document.id}"]):has(input[name="status"][value="review"])`)
+ const review=page.locator(`form:visible:has(input[name="document_id"][value="${document.id}"]):has(input[name="status"][value="review"])`)
  await clickAndSettle(page,review.getByRole('button'));await assertState(office.db,document.id,'review');ok('Purchase invoice UI creates dated event-linked draft, line and review submission')
  const forged=await office.db.from('admin_financial_documents').update({status:'approved',approved_by:office.user.id,approved_at:new Date().toISOString()}).eq('id',document.id).select('id')
  assert.ok(forged.error||!forged.data?.length);await assertState(admin.db,document.id,'review');ok('Administrative employee cannot approve their invoice through direct API')
  await gotoReady(adminPage,base+'/portals/administration/finance')
- const approve=adminPage.locator(`form:has(input[name="document_id"][value="${document.id}"]):has(input[name="status"][value="approved"])`)
+ const approve=adminPage.locator(`form:visible:has(input[name="document_id"][value="${document.id}"]):has(input[name="status"][value="approved"])`)
  await clickAndSettle(adminPage,approve.getByRole('button'));await assertState(admin.db,document.id,'approved');ok('Admin approval persists through the actual invoice UI')
  const workplace=await one(admin.db.from('workplaces').insert({event_id:created.eventId,name:prefix,sort_order:1,is_active:true}).select('id'));created.workplaceIds.push(workplace.id)
  const itemResult=await admin.db.rpc('upt_create_inventory_item',{p_workplace:workplace.id,p_name:prefix+' Equipment',p_category:'test',p_quantity:1,p_item_kind:'asset'})
  if(itemResult.error)throw itemResult.error
  const item=await one(admin.db.from('inventory_items').select('id,total_quantity').eq('workplace_id',workplace.id).eq('name',prefix+' Equipment'));created.itemIds.push(item.id)
  await gotoReady(adminPage,base+'/portals/administration/modules/inventory')
- const receiptForm=adminPage.locator(`form:has(input[name="line"][value="${line.id}"])`)
- await receiptForm.locator('xpath=ancestor::details[1]').evaluate(e=>{e.open=true})
+ const receiptForm=await openInventoryReceiptForm(adminPage,line.id)
  const receiptRequest=await receiptForm.locator('input[name="request"]').inputValue()
  await receiptForm.locator('select[name="item"]').selectOption(item.id);await receiptForm.locator('input[name="quantity"]').fill('2')
  await clickAndSettle(adminPage,receiptForm.getByRole('button'))
@@ -136,20 +135,20 @@ try{
  const crossOrigin=await officeContext.request.post(base+'/api/administration/ticketing/import',{headers:{origin:'https://invalid.example'},multipart:{eventId:created.eventId,source:'ticketplatform',file:{name:'sales.csv',mimeType:'text/csv',buffer:Buffer.from(csv)}}});assert.equal(crossOrigin.status(),403)
  ok('Conflicting ticket batch rolls back all rows; staff and foreign origins are denied')
  await gotoReady(page,base+'/portals/administration/modules/permits')
- const caseForm=page.locator('form').filter({has:page.locator('input[name="title"]')}).first()
+ const caseForm=page.locator('form:visible').filter({has:page.locator('input[name="title"]')}).first()
  await caseForm.locator('input[name="title"]').fill(prefix+' Permit')
  await caseForm.locator('input[name="deadline"]').fill(new Date(Date.now()+86400000*7).toISOString().slice(0,10))
  await caseForm.locator('select[name="event"]').selectOption(created.eventId)
  await clickAndSettle(page,caseForm.getByRole('button'))
  const obligation=await one(office.db.from('admin_operational_obligations').select('id').eq('title',prefix+' Permit'));created.obligationIds.push(obligation.id)
- let submit=page.locator(`form:has(input[name="id"][value="${obligation.id}"]):has(button[value="submitted"])`)
+ let submit=page.locator(`form:visible:has(input[name="id"][value="${obligation.id}"]):has(button[value="submitted"])`)
  await clickAndSettle(page,submit.locator('button[value="submitted"]'))
  const selfApprove=await office.db.from('admin_operational_obligations').update({status:'approved'}).eq('id',obligation.id).select('id');assert.ok(selfApprove.error||!selfApprove.data?.length)
  await gotoReady(adminPage,base+'/portals/administration/modules/permits')
- const caseReview=adminPage.locator(`form:has(input[name="id"][value="${obligation.id}"]):has(button[value="approved"])`)
+ const caseReview=adminPage.locator(`form:visible:has(input[name="id"][value="${obligation.id}"]):has(button[value="approved"])`)
  await clickAndSettle(adminPage,caseReview.locator('button[value="approved"]'))
  await gotoReady(page,page.url())
- const complete=page.locator(`form:has(input[name="id"][value="${obligation.id}"]):has(button[value="completed"])`)
+ const complete=page.locator(`form:visible:has(input[name="id"][value="${obligation.id}"]):has(button[value="completed"])`)
  await clickAndSettle(page,complete.locator('button[value="completed"]'))
  assert.equal((await one(office.db.from('admin_operational_obligations').select('status').eq('id',obligation.id))).status,'completed')
  ok('Permit case UI submits, requires Admin approval and persists employee completion')

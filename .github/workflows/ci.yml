@@ -306,6 +306,18 @@ jobs:
         if: ${{ !cancelled() && steps.application.outcome == 'success' }}
         uses: ./.github/actions/peppol-validation
 
+      - name: Publish browser workflow diagnostics
+        if: ${{ always() }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: browser-workflow-diagnostics
+          path: |
+            test-results/administration-completion/
+            test-results/peppol-e2e/
+            test-results/portal-e2e/
+          if-no-files-found: ignore
+          retention-days: 7
+
       - name: Verify authenticated E2E interaction inventory
         shell: bash
         run: |
