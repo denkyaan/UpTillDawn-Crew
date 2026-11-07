@@ -17,7 +17,7 @@ const labels={
 async function assignPromotionTask(form:FormData){
  "use server"
  const actor=await getCurrentUser()
- if(!actor||( !actor.realIsAdmin&&!actor.isOwner)||(!actor.approved&&!actor.isOwner)||actor.account_blocked)throw new Error("Admin authorization required")
+ if(!actor||( !actor.realIsAdmin&&!actor.isOwner)||(!actor.approved&&!actor.isOwner)||(actor.account_blocked&&!actor.isOwner))throw new Error("Admin authorization required")
  const task=String(form.get("task_id")??"")
  const user=String(form.get("user_id")??"")
  const uuid=/^[0-9a-f]{8}(?:-[0-9a-f]{4}){3}-[0-9a-f]{12}$/i
@@ -38,7 +38,7 @@ async function assignPromotionTask(form:FormData){
 async function removePromotionAssignment(form:FormData){
  "use server"
  const actor=await getCurrentUser()
- if(!actor||(!actor.realIsAdmin&&!actor.isOwner)||(!actor.approved&&!actor.isOwner)||actor.account_blocked)throw new Error("Admin authorization required")
+ if(!actor||(!actor.realIsAdmin&&!actor.isOwner)||(!actor.approved&&!actor.isOwner)||(actor.account_blocked&&!actor.isOwner))throw new Error("Admin authorization required")
  const id=String(form.get("assignment_id")??"")
  if(!/^[0-9a-f]{8}(?:-[0-9a-f]{4}){3}-[0-9a-f]{12}$/i.test(id))throw new Error("Invalid assignment")
  const db=await createClient()
