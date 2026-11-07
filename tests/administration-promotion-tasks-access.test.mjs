@@ -102,3 +102,14 @@ test('promotion assignment server action rejects forged non-member or unapproved
  assert.ok(action.includes('if(profileError||!profile)throw'))
  assert.ok(action.indexOf('if(profileError||!profile)throw')<action.indexOf('db.rpc("upt_assign_task"'))
 })
+
+test('promotion task server actions apply the same owner exception as admin page access',()=>{
+ const assign=page.slice(page.indexOf('async function assignPromotionTask('),page.indexOf('async function removePromotionAssignment('))
+ const remove=page.slice(page.indexOf('async function removePromotionAssignment('),page.indexOf('export default async function AdministrationPromotionTasks('))
+ for(const action of [assign,remove]){
+  assert.ok(action.includes('(actor.account_blocked&&!actor.isOwner)'))
+  assert.ok(action.includes('!actor.approved&&!actor.isOwner'))
+  assert.ok(action.includes('!actor.realIsAdmin&&!actor.isOwner'))
+ }
+ assert.ok(page.includes('adminView&&(!actor.realIsAdmin&&!actor.isOwner||!actor.approved&&!actor.isOwner||actor.account_blocked&&!actor.isOwner)'))
+})
