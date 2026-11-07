@@ -149,8 +149,8 @@ export default async function AdministrationModulePage({params,searchParams}:{pa
  const notificationOffset=(notificationPageNumber-1)*notificationPageSize
  const notificationRows=slug==="notifications"?await supabase.from("crew_notifications").select("id,kind,link,read_at").eq("user_id",current.id).order("id",{ascending:false}).range(notificationOffset,notificationOffset+notificationPageSize):null
  const unreadNotificationCount=slug==="notifications"?await supabase.from("crew_notifications").select("id",{count:"exact",head:true}).eq("user_id",current.id).is("read_at",null):null
- const notificationHasNext=(notificationRows?.data?.length??0)>notificationPageSize
- const visibleNotifications=notificationRows?.data?.slice(0,notificationPageSize)??[]
+ const notificationHasNext=!notificationRows?.error&&(notificationRows?.data?.length??0)>notificationPageSize
+ const visibleNotifications=notificationRows?.error?[]:(notificationRows?.data?.slice(0,notificationPageSize)??[])
  const artistBookings=slug==="artists"?await supabase.from("admin_artist_bookings").select("id,artist_name,status,event_id,performance_at,fee_amount,currency,follow_up_at").order("created_at",{ascending:false}).limit(30):null
  const artistFollowUps=slug==="artists"?await supabase.from("admin_artist_bookings").select("id,artist_name,status,follow_up_at").not("follow_up_at","is",null).in("status",["enquiry","negotiating"]).order("follow_up_at",{ascending:true}).limit(100):null
  const artistNow=new Date().getTime()
