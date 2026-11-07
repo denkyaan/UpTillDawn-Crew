@@ -42,7 +42,7 @@ async function removePromotionAssignment(form:FormData){
  const id=String(form.get("assignment_id")??"")
  if(!/^[0-9a-f]{8}(?:-[0-9a-f]{4}){3}-[0-9a-f]{12}$/i.test(id))throw new Error("Invalid assignment")
  const db=await createClient()
- const {data:assignment,error:lookupError}=await db.from("task_assignments").select("task_id,tasks!inner(event_id)").eq("id",id).maybeSingle()
+ const {data:assignment,error:lookupError}=await db.from("task_assignments").select("task_id").eq("id",id).maybeSingle()
  if(lookupError||!assignment)throw new Error("Assignment not found")
  const {data:eventTask,error:taskLookupError}=await db.from("tasks").select("id,event_id").eq("id",assignment.task_id).maybeSingle()
  if(taskLookupError||!eventTask?.event_id)throw new Error("Only event task assignments can be removed through this workflow")
