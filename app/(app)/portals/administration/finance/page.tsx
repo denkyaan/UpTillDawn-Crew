@@ -495,7 +495,7 @@ async function uploadFinancialAttachment(formData:FormData) {
  if(linkError){
   // Avoid orphaned private files when the attachment metadata cannot be persisted.
   const {error:cleanupError}=await supabase.storage.from('admin-financial-attachments').remove([path])
-  if(cleanupError)console.error('[Finance] attachment cleanup failed',cleanupError.code)
+  if(cleanupError)console.error('[Finance] attachment cleanup failed',cleanupError.message)
   redirect('/portals/administration/finance?error=1')
  }
  revalidatePath('/portals/administration/finance')
