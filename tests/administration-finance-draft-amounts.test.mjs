@@ -29,3 +29,14 @@ test('payment recording rejects fractional cents before reconciliation or databa
  assert.ok(action.indexOf('.test(amountRaw)')<action.indexOf('const amount=Number(amountRaw)'))
  assert.ok(action.includes('amountCents>settlement.outstandingCents'))
 })
+
+test('financial attachment uploads require canonical UUIDs and editable document states',()=>{
+ const start=source.indexOf('async function uploadFinancialAttachment(')
+ const end=source.indexOf('\nexport const dynamic',start)
+ assert.ok(start>=0&&end>start)
+ const action=source.slice(start,end)
+ assert.ok(action.includes("if(!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(documentId)"))
+ assert.ok(action.includes("!['draft','review'].includes(document.status)"))
+ assert.ok(action.includes("validateUploadSecurity(file)"))
+ assert.ok(action.includes("upsert:false"))
+})
