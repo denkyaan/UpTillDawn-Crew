@@ -7,6 +7,7 @@ import { NotificationBadgeSync } from '@/components/notification-badge-sync'
 import { NotificationOpenLink } from '@/components/admin/notification-open-link'
 import { requestUiLocale } from '@/lib/server-locale'
 import { translateRuntimeUi } from '@/lib/ui-translation-runtime'
+import { administrationNotificationHref } from '@/lib/administration/navigation'
 
 export const dynamic = 'force-dynamic'
 
@@ -48,7 +49,7 @@ export default async function Page({searchParams}:{searchParams?:Promise<{page?:
     <h1 className="text-3xl font-black">{translateRuntimeUi("Meldingen",locale)}</h1>
     <PushNotificationSettings/>
     {error ? <p>{translateRuntimeUi("Meldingen konden niet worden geladen.",locale)}</p> : !visibleRows?.length ? <p>{translateRuntimeUi("Geen meldingen.",locale)}</p> : visibleRows.map(n => {
-      const safeLink=safeNotificationLink(n.link)
+      const safeLink=params.scope==='administration'?administrationNotificationHref(n.link):safeNotificationLink(n.link)
       return <article key={n.id} className={`rounded-xl border p-4 ${n.read_at ? '' : 'border-violet-500'}`}>
         <div className="flex flex-wrap items-start justify-between gap-3">
           <div>
