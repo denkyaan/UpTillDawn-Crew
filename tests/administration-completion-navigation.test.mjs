@@ -40,7 +40,7 @@ test('bulk notification read only updates unread notifications owned by the curr
  assert.ok(action.includes("canOpenPortal('administration'"))
  assert.ok(action.includes(".eq('user_id',current.id).is('read_at',null)"))
  assert.ok(source.includes('action={markAllAdministrationNotificationsRead}'))
- for(const label of ['Alles als gelezen markeren','Tout marquer comme lu','Mark all as read','Alle als gelesen markieren'])assert.ok(source.includes(label))
+ for(const label of ['Alle meldingen als gelezen markeren (ook andere pagina’s)','Marquer toutes les notifications comme lues (toutes les pages)','Mark all notifications as read (all pages)','Alle Benachrichtigungen als gelesen markieren (alle Seiten)'])assert.ok(source.includes(label))
 })
 
 test('administration notification links use safe route resolver rather than raw database links',()=>{
