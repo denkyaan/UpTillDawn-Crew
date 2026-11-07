@@ -6219,6 +6219,7 @@ export type Database = {
         Args: { p_done: boolean; p_item: string }
         Returns: undefined
       }
+      upt_admin_update_event_task: { Args: { p_task: string; p_title: string; p_description: string }; Returns: string }
       upt_assign_task: {
         Args: { p_task: string; p_user: string }
         Returns: string

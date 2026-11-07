@@ -3,7 +3,7 @@ import {readFile,mkdir,writeFile} from 'node:fs/promises'
 import {randomUUID} from 'node:crypto'
 import {createClient} from '@supabase/supabase-js'
 import {chromium} from 'playwright'
-import {gotoReady} from './browser-navigation.mjs'
+import {gotoReady,browserTimeoutMs} from './browser-navigation.mjs'
 
 const base=process.env.BOT_TEST_BASE_URL||'http://localhost:3000'
 const url=process.env.BOT_SUPABASE_URL||process.env.NEXT_PUBLIC_SUPABASE_URL
@@ -27,7 +27,8 @@ const [admin,office,staff,promo]=await Promise.all(['admin','administration','st
 const ok=(name)=>{checks.push(name);console.log('PASS:',name)}
 const one=async(query)=>{const {data,error}=await query.single();if(error)throw Error(error.message);return data}
 async function browserContext(browser,account,locale='en'){
- const context=await browser.newContext({viewport:{width:390,height:844},locale,acceptDownloads:true})
+ const context=await browser.newContext({viewport:{width:390,height:844},locale,acceptDownloads:true,ignoreHTTPSErrors:process.env.PLAYWRIGHT_IGNORE_HTTPS_ERRORS==='1'})
+ context.setDefaultTimeout(browserTimeoutMs)
  const response=await context.request.post(base+'/api/test-auth-session',{data:{access_token:account.session.access_token,refresh_token:account.session.refresh_token}})
  assert.equal(response.status(),200,'authenticated session bridge')
  return context
@@ -42,9 +43,8 @@ async function clickAndSettle(page,button){
   const request=r.request(),target=new URL(r.url())
   return request.method()==='POST'&&target.origin===new URL(base).origin&&target.pathname===path
    &&(request.isNavigationRequest()||Boolean(request.headers()['next-action']))
- },{timeout:45000})
- await button.click()
- const result=await response
+ },{timeout:Math.max(45000,browserTimeoutMs)})
+ const [result]=await Promise.all([response,button.click()])
  lastAction={path,fields,status:result.status(),redirect:result.headers()['x-action-redirect']??result.headers()['location']??null}
  assert.ok(result.status()<400,'server action returned '+result.status())
  assert.ok(!lastAction.redirect?.includes('error=1'),'server action rejected the form: '+JSON.stringify(lastAction))
@@ -52,11 +52,11 @@ async function clickAndSettle(page,button){
  // actual form reset or transition, rather than the document's old networkidle.
  const resetField=['name','document_number','description','title'].find(name=>fields[name])
  if(resetField){
-  await page.waitForFunction(({form,name})=>!form.isConnected||form.querySelector(`input[name="${name}"]`)?.value==='',{form:formHandle,name:resetField},{timeout:30000})
+  await page.waitForFunction(({form,name})=>!form.isConnected||form.querySelector(`input[name="${name}"]`)?.value==='',{form:formHandle,name:resetField},{timeout:browserTimeoutMs})
  }else if(fields.request){
-  await page.locator(`input[name="request"][value="${fields.request}"]`).waitFor({state:'detached',timeout:30000})
+  await page.locator(`input[name="request"][value="${fields.request}"]`).waitFor({state:'detached',timeout:browserTimeoutMs})
  }else{
-  await button.waitFor({state:'detached',timeout:30000})
+  await button.waitFor({state:'detached',timeout:browserTimeoutMs})
  }
 }
 async function assertState(db,id,status){const row=await one(db.from('admin_financial_documents').select('status').eq('id',id));assert.equal(row.status,status)}
@@ -65,9 +65,9 @@ const browser=await chromium.launch({headless:true,executablePath:process.env.PL
 let failure
 try{
  if(!created.eventId){const event=await one(admin.db.from('events').insert({name:prefix,start_at:new Date(Date.now()+86400000).toISOString(),end_at:new Date(Date.now()+172800000).toISOString(),start_date:new Date(Date.now()+86400000).toISOString(),end_date:new Date(Date.now()+172800000).toISOString(),status:'scheduled',created_by:admin.user.id,onboarding_required:false}).select('id'));created.eventId=event.id}
- const officeContext=await browserContext(browser,office),adminContext=await browserContext(browser,admin),staffContext=await browserContext(browser,staff)
+ const [officeContext,adminContext,staffContext]=await Promise.all([browserContext(browser,office),browserContext(browser,admin),browserContext(browser,staff)])
  const page=await officeContext.newPage(),adminPage=await adminContext.newPage()
- let response=await page.goto(base+'/portals/administration/finance',{waitUntil:'networkidle'})
+ let response=await gotoReady(page,base+'/portals/administration/finance')
  assert.equal(response.status(),200)
  assert.equal(new URL(page.url()).pathname,'/portals/administration/finance')
  const counterpartyForm=page.locator('form').filter({has:page.locator('input[name="name"]')}).first()
@@ -98,14 +98,14 @@ try{
  await clickAndSettle(page,review.getByRole('button'));await assertState(office.db,document.id,'review');ok('Purchase invoice UI creates dated event-linked draft, line and review submission')
  const forged=await office.db.from('admin_financial_documents').update({status:'approved',approved_by:office.user.id,approved_at:new Date().toISOString()}).eq('id',document.id).select('id')
  assert.ok(forged.error||!forged.data?.length);await assertState(admin.db,document.id,'review');ok('Administrative employee cannot approve their invoice through direct API')
- await adminPage.goto(base+'/portals/administration/finance',{waitUntil:'networkidle'})
+ await gotoReady(adminPage,base+'/portals/administration/finance')
  const approve=adminPage.locator(`form:has(input[name="document_id"][value="${document.id}"]):has(input[name="status"][value="approved"])`)
  await clickAndSettle(adminPage,approve.getByRole('button'));await assertState(admin.db,document.id,'approved');ok('Admin approval persists through the actual invoice UI')
  const workplace=await one(admin.db.from('workplaces').insert({event_id:created.eventId,name:prefix,sort_order:1,is_active:true}).select('id'));created.workplaceIds.push(workplace.id)
  const itemResult=await admin.db.rpc('upt_create_inventory_item',{p_workplace:workplace.id,p_name:prefix+' Equipment',p_category:'test',p_quantity:1,p_item_kind:'asset'})
  if(itemResult.error)throw itemResult.error
  const item=await one(admin.db.from('inventory_items').select('id,total_quantity').eq('workplace_id',workplace.id).eq('name',prefix+' Equipment'));created.itemIds.push(item.id)
- await adminPage.goto(base+'/portals/administration/modules/inventory',{waitUntil:'networkidle'})
+ await gotoReady(adminPage,base+'/portals/administration/modules/inventory')
  const receiptForm=adminPage.locator(`form:has(input[name="line"][value="${line.id}"])`)
  await receiptForm.locator('xpath=ancestor::details[1]').evaluate(e=>{e.open=true})
  const receiptRequest=await receiptForm.locator('input[name="request"]').inputValue()
@@ -117,7 +117,7 @@ try{
  const denied=await office.db.rpc('upt_receive_invoice_inventory',{p_request:randomUUID(),p_line:line.id,p_item:item.id,p_quantity:1});assert.ok(denied.error)
  assert.equal((await one(admin.db.from('inventory_items').select('total_quantity').eq('id',item.id))).total_quantity,3)
  ok('Inventory UI receives approved purchases; replay, over-receipt and employee writes cannot inflate stock')
- await page.goto(base+'/portals/administration/modules/ticketing',{waitUntil:'networkidle'})
+ await gotoReady(page,base+'/portals/administration/modules/ticketing')
  const importer=page.getByRole('region',{name:'Import ticket sales'})
  await importer.locator('select').selectOption(created.eventId)
  const external=prefix+'-SALE'
@@ -135,7 +135,7 @@ try{
  const noAccess=await staffContext.request.post(base+'/api/administration/ticketing/import',{headers:{origin:base},multipart:{eventId:created.eventId,source:'ticketplatform',file:{name:'sales.csv',mimeType:'text/csv',buffer:Buffer.from(csv)}}});assert.equal(noAccess.status(),403)
  const crossOrigin=await officeContext.request.post(base+'/api/administration/ticketing/import',{headers:{origin:'https://invalid.example'},multipart:{eventId:created.eventId,source:'ticketplatform',file:{name:'sales.csv',mimeType:'text/csv',buffer:Buffer.from(csv)}}});assert.equal(crossOrigin.status(),403)
  ok('Conflicting ticket batch rolls back all rows; staff and foreign origins are denied')
- await page.goto(base+'/portals/administration/modules/permits',{waitUntil:'networkidle'})
+ await gotoReady(page,base+'/portals/administration/modules/permits')
  const caseForm=page.locator('form').filter({has:page.locator('input[name="title"]')}).first()
  await caseForm.locator('input[name="title"]').fill(prefix+' Permit')
  await caseForm.locator('input[name="deadline"]').fill(new Date(Date.now()+86400000*7).toISOString().slice(0,10))
@@ -145,10 +145,10 @@ try{
  let submit=page.locator(`form:has(input[name="id"][value="${obligation.id}"]):has(button[value="submitted"])`)
  await clickAndSettle(page,submit.locator('button[value="submitted"]'))
  const selfApprove=await office.db.from('admin_operational_obligations').update({status:'approved'}).eq('id',obligation.id).select('id');assert.ok(selfApprove.error||!selfApprove.data?.length)
- await adminPage.goto(base+'/portals/administration/modules/permits',{waitUntil:'networkidle'})
+ await gotoReady(adminPage,base+'/portals/administration/modules/permits')
  const caseReview=adminPage.locator(`form:has(input[name="id"][value="${obligation.id}"]):has(button[value="approved"])`)
  await clickAndSettle(adminPage,caseReview.locator('button[value="approved"]'))
- await page.reload({waitUntil:'networkidle'})
+ await gotoReady(page,page.url())
  const complete=page.locator(`form:has(input[name="id"][value="${obligation.id}"]):has(button[value="completed"])`)
  await clickAndSettle(page,complete.locator('button[value="completed"]'))
  assert.equal((await one(office.db.from('admin_operational_obligations').select('status').eq('id',obligation.id))).status,'completed')
@@ -158,7 +158,7 @@ try{
  const promoContext=await browserContext(browser,promo)
  const promotionPage=await promoContext.newPage()
  for(const route of ['/portals/promotion','/portals/promotion/tasks']){
-  response=await promotionPage.goto(base+route,{waitUntil:'networkidle'})
+  response=await gotoReady(promotionPage,base+route)
   assert.equal(response.status(),200,'Promotion route HTTP 200: '+route)
   assert.equal(new URL(promotionPage.url()).pathname,route,'Promotion route must not redirect: '+route)
   assert.equal(await promotionPage.locator('[data-layout-key]').count(),0,'Promotion must not render staff navigation: '+route)

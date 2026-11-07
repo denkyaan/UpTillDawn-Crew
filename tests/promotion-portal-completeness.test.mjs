@@ -16,6 +16,6 @@ test('promotion evidence status uses localized labels',()=>{
  assert.match(tasks,/File matches reference; publication not verified/)
 })
 test('promotion discipline honors permanent admin role',()=>{
- assert.match(discipline,/actor\?\.realIsAdmin/)
+ assert.match(discipline,/!actor\.realIsAdmin&&!actor\.isOwner/)
  assert.doesNotMatch(discipline,/!actor\?\.isAdmin&&!actor\?\.isOwner/)
 })

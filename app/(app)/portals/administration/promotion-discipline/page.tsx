@@ -16,22 +16,23 @@ const messages={
 async function unblock(form:FormData){
  "use server"
  const actor=await getCurrentUser()
- if(!actor?.realIsAdmin&&!actor?.isOwner)throw new Error("Admin required")
+ if(!actor||( !actor.realIsAdmin&&!actor.isOwner)||(!actor.approved&&!actor.isOwner)||(actor.account_blocked&&!actor.isOwner))throw new Error("Admin required")
  const user=String(form.get("user")??"")
  const reason=String(form.get("reason")??"").trim()
- if(!/^[0-9a-f-]{36}$/i.test(user)||reason.length<10)throw new Error("Invalid unblock request")
+ if(!/^[0-9a-f]{8}(?:-[0-9a-f]{4}){3}-[0-9a-f]{12}$/i.test(user)||reason.length<10)throw new Error("Invalid unblock request")
  const db=await createClient()
  const {error}=await db.rpc("upt_admin_unblock_promotion" as never,{p_user:user,p_reason:reason} as never)
  if(error)throw new Error("Could not lift restriction")
  revalidatePath("/portals/administration/promotion-discipline")
+ revalidatePath("/admin/management/promotion-discipline")
 }
 async function registerReference(form:FormData){
  "use server"
  const actor=await getCurrentUser()
- if(!actor?.realIsAdmin&&!actor?.isOwner)throw new Error("Admin required")
+ if(!actor||( !actor.realIsAdmin&&!actor.isOwner)||(!actor.approved&&!actor.isOwner)||(actor.account_blocked&&!actor.isOwner))throw new Error("Admin required")
  const task=String(form.get("task_id")??"")
  const file=form.get("reference")
- if(!/^[0-9a-f-]{36}$/i.test(task)||!(file instanceof File)||!["image/jpeg","image/png","image/webp"].includes(file.type)||file.size<1||file.size>10*1024*1024)throw new Error("Invalid reference")
+ if(!/^[0-9a-f]{8}(?:-[0-9a-f]{4}){3}-[0-9a-f]{12}$/i.test(task)||!(file instanceof File)||!["image/jpeg","image/png","image/webp"].includes(file.type)||file.size<1||file.size>10*1024*1024)throw new Error("Invalid reference")
  const db=await createClient()
  const bytes=Buffer.from(await file.arrayBuffer())
  if(bytes.length!==file.size||bytes.length<1||bytes.length>10*1024*1024)throw new Error("Invalid reference image size")
@@ -47,25 +48,27 @@ async function registerReference(form:FormData){
  const {error}=await db.rpc("upt_admin_register_promotion_reference" as never,{p_task:task,p_path:path,p_sha256:sha} as never)
  if(error){await db.storage.from("work-media").remove([path]);throw new Error("Reference registration failed")}
  revalidatePath("/portals/administration/promotion-discipline")
+ revalidatePath("/admin/management/promotion-discipline")
 }
 async function reviewEvidence(form:FormData){
  "use server"
  const actor=await getCurrentUser()
- if(!actor?.realIsAdmin&&!actor?.isOwner)throw new Error("Admin required")
+ if(!actor||( !actor.realIsAdmin&&!actor.isOwner)||(!actor.approved&&!actor.isOwner)||(actor.account_blocked&&!actor.isOwner))throw new Error("Admin required")
  const evidence=String(form.get("evidence_id")??"")
  const status=String(form.get("status")??"")
  const reason=String(form.get("reason")??"").trim()
- if(!/^[0-9a-f-]{36}$/i.test(evidence)||!["verified","rejected","inconclusive"].includes(status)||reason.length<10)
+ if(!/^[0-9a-f]{8}(?:-[0-9a-f]{4}){3}-[0-9a-f]{12}$/i.test(evidence)||!["verified","rejected","inconclusive"].includes(status)||reason.length<10)
   throw new Error("Invalid evidence review")
  const db=await createClient()
  const {error}=await db.rpc("upt_admin_review_promotion_evidence" as never,{p_evidence:evidence,p_status:status,p_details:reason} as never)
  if(error)throw new Error("Could not save evidence review")
  revalidatePath("/portals/administration/promotion-discipline")
+ revalidatePath("/admin/management/promotion-discipline")
 }
 export default async function PromotionDisciplinePage(){
  const actor=await getCurrentUser()
  if(!actor)redirect("/login")
- if(!actor.isAdmin&&!actor.isOwner)redirect("/portals/administration")
+ if((!actor.realIsAdmin&&!actor.isOwner)||(!actor.approved&&!actor.isOwner)||(actor.account_blocked&&!actor.isOwner))redirect("/portals/administration")
  const locale=await requestUiLocale()
  const t=messages[locale]
  const db=await createClient()
@@ -115,7 +118,7 @@ export default async function PromotionDisciplinePage(){
   referenceIdsByTask.set(reference.task_id,[...(referenceIdsByTask.get(reference.task_id)??[]),reference.id])
  }
  return <main className="mx-auto max-w-4xl space-y-5 p-4 sm:p-6">
- <Link href="/portals/administration" className="text-sm text-violet-400">← {t.back}</Link>
+ <Link href={actor.realIsAdmin||actor.isOwner?"/admin/management":"/portals/administration"} className="text-sm text-violet-400">← {t.back}</Link>
  <h1 className="text-2xl font-bold">{t.title}</h1><section className="space-y-2 rounded-xl border p-4"><h2 className="font-semibold">{({nl:"Bewijs in afwachting van controle",fr:"Preuves en attente de vérification",en:"Evidence awaiting verification",de:"Nachweise zur Überprüfung"} as const)[locale]}</h2>{pendingError?<p role="alert">{t.error}</p>:pendingRows.length===0?<p className="text-sm text-muted-foreground">{({nl:"Geen openstaande bewijzen.",fr:"Aucune preuve en attente.",en:"No pending evidence.",de:"Keine offenen Nachweise."} as const)[locale]}</p>:<ul className="space-y-2">{pendingRows.map(e=><li key={e.id} className="rounded-lg border p-2 text-xs"><p className="font-semibold">{evidenceTaskByAssignment.get(e.assignment_id)??e.assignment_id}</p><p className="break-all text-muted-foreground">{e.submitted_by} · {e.assignment_id}</p><p>{e.verification_status} · {new Date(e.submitted_at).toLocaleString(locale)}</p><p>{String(e.verification_details?.reference_check??"—")}</p><p className="text-amber-600">{({nl:"Niet automatisch geverifieerd: publicatiebewijs en inhoud vereisen onafhankelijke controle.",fr:"Non vérifié automatiquement : la publication et le contenu exigent une vérification indépendante.",en:"Not automatically verified: publication and content require independent review.",de:"Nicht automatisch verifiziert: Veröffentlichung und Inhalt erfordern eine unabhängige Prüfung."} as const)[locale]}</p>{(referenceIdsByTask.get(evidenceTaskIdByAssignment.get(e.assignment_id)??"")??[]).map(refId=>referenceUrlById.get(refId)?<span key={refId} className="ml-3"><a href={referenceUrlById.get(refId)??"#"} target="_blank" rel="noopener noreferrer" className="text-violet-400 underline">{({nl:"Bijhorende referentie (5 min)",fr:"Référence associée (5 min)",en:"Matching reference (5 min)",de:"Zugehörige Referenz (5 Min.)"} as const)[locale]}</a></span>:null)}{evidenceUrlById.get(e.id)&&(referenceIdsByTask.get(evidenceTaskIdByAssignment.get(e.assignment_id)??"")??[]).some(refId=>referenceUrlById.has(refId))&&<PromotionVisualReview locale={locale} evidenceUrl={evidenceUrlById.get(e.id)!} referenceUrls={(referenceIdsByTask.get(evidenceTaskIdByAssignment.get(e.assignment_id)??"")??[]).map(refId=>referenceUrlById.get(refId)).filter((url):url is string=>Boolean(url))}/>} {evidenceUrlById.get(e.id)&&<a href={evidenceUrlById.get(e.id)??"#"} target="_blank" rel="noopener noreferrer" className="text-violet-400 underline">{({nl:"Screenshot bekijken (5 min)",fr:"Voir la capture (5 min)",en:"View screenshot (5 min)",de:"Screenshot ansehen (5 Min.)"} as const)[locale]}</a>}<form action={reviewEvidence} className="mt-3 space-y-2 rounded-lg border p-2">
  <input type="hidden" name="evidence_id" value={e.id}/>
  <label className="block">{({nl:"Beoordeling",fr:"Décision",en:"Review decision",de:"Prüfentscheidung"} as const)[locale]}

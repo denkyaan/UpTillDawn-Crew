@@ -16,3 +16,75 @@ test('linked invoice directions remain valid after role changes',()=>{
  assert.match(sql,/must retain supplier role/)
  assert.match(sql,/new\.updated_at=now\(\)/)
 })
+
+const counterparties=readFileSync('app/(app)/portals/administration/counterparties/page.tsx','utf8')
+test('counterparty actions enforce the same account and portal gates as administration layout',()=>{
+ assert.ok(counterparties.includes('!user.approved || Boolean(user.account_blocked)'))
+ assert.ok(counterparties.includes('!user.realIsAdmin && !user.isOwner'))
+ assert.ok(counterparties.includes("canOpenPortal('administration'"))
+ assert.ok(counterparties.includes('async function updateCounterparty'))
+})
+test('counterparty creation rejects oversized input rather than silently truncating it',()=>{
+ assert.ok(counterparties.includes('name.length>200'))
+ assert.ok(counterparties.includes('vat_number.length>40'))
+ assert.ok(counterparties.includes('enterprise_number.length>40'))
+ assert.ok(counterparties.includes('email.length>254'))
+})
+
+test('counterparty edit email validation accepts standard addresses and rejects malformed ones',()=>{
+ const source=counterparties.slice(counterparties.indexOf('async function updateCounterparty'),counterparties.indexOf('export const dynamic'))
+ assert.ok(source.includes('/^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$/'))
+ assert.ok(!source.includes('/^[^\\\\s@]+@[^\\\\s@]+\\\\.[^\\\\s@]+$/'))
+})
+
+test('counterparty search filters in the database rather than only the first 200 results',()=>{
+ const page=readFileSync('app/(app)/portals/administration/counterparties/page.tsx','utf8')
+ assert.ok(page.includes('role="search"'))
+ assert.ok(page.includes("listQuery.ilike('name'"))
+ assert.ok(page.includes("query.trim()")||page.includes("params.q.trim()"))
+ assert.ok(page.includes("listQuery.order('name').order('id').range(offset,offset+pageSize)"))
+ for(const label of ['Zoek relaties','Rechercher des contacts','Search counterparties','Kontakte suchen'])assert.ok(page.includes(label))
+})
+
+test('counterparty filters combine server-side name and role conditions',()=>{
+ const source=readFileSync('app/(app)/portals/administration/counterparties/page.tsx','utf8')
+ assert.ok(source.includes("['customer','supplier','both'].includes(params.kind??'')"))
+ assert.ok(source.includes("listQuery.eq('kind',kindFilter)"))
+ assert.ok(source.includes('name="kind" defaultValue={kindFilter}'))
+ assert.ok(source.includes('(query||kindFilter)'))
+ for(const label of ['Alle types','Tous les types','All types','Alle Typen'])assert.ok(source.includes(label))
+})
+
+test('counterparty pagination preserves filters and uses deterministic database ordering',()=>{
+ const source=readFileSync('app/(app)/portals/administration/counterparties/page.tsx','utf8')
+ assert.ok(source.includes(".order('name').order('id').range(offset,offset+pageSize)"))
+ assert.ok(source.includes('const hasNext=(data?.length??0)>pageSize'))
+ assert.ok(source.includes('const rows=data?.slice(0,pageSize)'))
+ assert.ok(source.includes('...(query?{q:query}:{})'))
+ assert.ok(source.includes('...(kindFilter?{kind:kindFilter}:{})'))
+ assert.ok(source.includes('href={pageHref(page+1)}'))
+ assert.ok(source.includes('href={pageHref(page-1)}'))
+})
+
+test('editing a counterparty retains the active search, kind and page context',()=>{
+ assert.ok(counterparties.includes('const editHref=(id:string)'))
+ assert.ok(counterparties.includes('...(query?{q:query}:{})'))
+ assert.ok(counterparties.includes('...(kindFilter?{kind:kindFilter}:{})'))
+ assert.ok(counterparties.includes('...(page>1?{page:String(page)}:{})'))
+ assert.ok(counterparties.includes('href={editHref(item.id)}'))
+})
+
+test('counterparty edit lookup failures are visible rather than silently hidden',()=>{
+ assert.ok(counterparties.includes('const selectedError=Boolean(selectedId&&selected?.error)'))
+ assert.ok(counterparties.includes('{selectedError&&<p role="alert"'))
+})
+
+test('counterparty edits return to the same filtered page after saving or validation failure',()=>{
+ assert.ok(counterparties.includes('function counterpartyReturnPath(formData:FormData)'))
+ for(const name of ['return_q','return_kind','return_page'])assert.ok(counterparties.includes('name="'+name+'"'))
+ const action=counterparties.slice(counterparties.indexOf('async function updateCounterparty'),counterparties.indexOf('export const dynamic'))
+ assert.ok(action.includes('const returnPath=counterpartyReturnPath(formData)'))
+ assert.ok(action.includes('redirect(returnPath)'))
+ assert.ok(action.includes("redirect(returnPath+(returnPath.includes('?')?'&':'?')+'error=1')"))
+ assert.ok(counterparties.includes("['customer','supplier','both'].includes(kind)"))
+})

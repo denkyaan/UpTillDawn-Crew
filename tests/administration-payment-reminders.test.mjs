@@ -20,8 +20,10 @@ test('finance UI prepares reminder drafts without sending email',()=>{
 
 test('draft and approval both reconcile credit notes before permitting reminders',()=>{
  assert.match(page,/async function reminderOutstanding/)
- assert.match(page,/\.eq\('kind','credit_note'\)\.eq\('original_invoice_id',documentId\)/)
- assert.match(page,/\['approved','issued','paid'\]\.includes\(credit\.status\)/)
+ assert.match(page,/loadFinancialSettlement\(supabase,documentId\)/)
+ assert.match(page,/settlement\.kind!=='sales_invoice'/)
+ assert.match(page,/settlement\.overpaymentCents!==0/)
+ assert.match(page,/settlement\.outstandingCents\/100/)
  assert.match(page,/reminderOutstanding\(supabase as unknown as SupabaseClient,documentId/)
  assert.match(page,/reminderOutstanding\(supabase as unknown as SupabaseClient,reminder\.document_id/)
  assert.match(page,/outstanding===null\|\|outstanding<=0\.005/)
@@ -39,4 +41,14 @@ test('database trigger enforces credit-adjusted overdue sales invoices',()=>{
  assert.match(migration,/new\.status<>'cancelled'/)
  assert.match(migration,/not public\.upt_is_admin\(\)/)
  assert.match(migration,/revoke execute on function/)
+})
+
+test('admin reminder approval and cancellation require a canonical UUID',()=>{
+ const start=page.indexOf('async function updatePaymentReminder(')
+ const end=page.indexOf('async function loadFinancialSettlement(',start)
+ assert.ok(start>=0&&end>start)
+ const action=page.slice(start,end)
+ assert.ok(action.includes("!isAdmin||!['approved','cancelled'].includes(status)"))
+ assert.ok(action.includes("/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id)"))
+ assert.ok(action.includes(".eq('status','draft').eq('revision',revision).select('id')"))
 })

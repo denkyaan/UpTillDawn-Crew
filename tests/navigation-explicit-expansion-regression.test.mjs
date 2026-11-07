@@ -11,7 +11,7 @@ test('route changes leave mobile subtabs collapsed while active category remains
 })
 test('administration navigation does not open the panel merely because a module route is active',()=>{
  assert.match(administration,/selectedCategory\?\.pathname===pathname\?selectedCategory\.key:"overview"/)
- assert.match(administration,/selected\.key==="overview"&&group\.key===current/)
+ assert.match(administration,/const active=visible\?group\.key===selected\.key:group\.key===current/)
  assert.match(administration,/const visible=selected\.key!=="overview"/)
 })
 

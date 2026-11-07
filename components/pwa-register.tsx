@@ -25,6 +25,7 @@ export function PwaRegister(){
     let updateReloadPending=false
     let activationRequested=false
     let waitingWorker:ServiceWorker|null=null
+    let activeController=navigator.serviceWorker.controller
     let lastFreshAt=0
     let freshnessRun:Promise<void>|null=null
 
@@ -127,6 +128,11 @@ export function PwaRegister(){
       if(event.persisted)void keepFresh({force:true})
     }
     const onControllerChange=()=>{
+      const previousController=activeController
+      activeController=navigator.serviceWorker.controller
+      // The first install claims this page without changing its application
+      // version. Reload only for a replacement, so an open form is preserved.
+      if(!previousController||!activeController||previousController===activeController)return
       updateReloadPending=true
       void safelyReloadForUpdate()
     }

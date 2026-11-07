@@ -1,6 +1,7 @@
 import test from "node:test"
 import assert from "node:assert/strict"
 import {readFileSync} from "node:fs"
+import {listPage} from '../lib/list-query.ts'
 const home=readFileSync("app/(app)/portals/promotion/page.tsx","utf8")
 const tasks=readFileSync("app/(app)/portals/promotion/tasks/page.tsx","utf8")
 test("promotion overview separates pending from active work using exact counts",()=>{
@@ -25,7 +26,9 @@ test("promotion evidence history failures are visible in all supported languages
 })
 
 test("promotion pagination accepts numeric pages beyond the first",()=>{
- assert.ok(tasks.includes(String.raw`/^[1-9]\d{0,3}$/.test(rawPage)`))
+ assert.ok(tasks.includes('listPage(rawPage,9999)'))
+ assert.equal(listPage('2',9999),2)
+ assert.equal(listPage('51',9999),51)
  assert.doesNotMatch(tasks,/\\\\d\{0,3\}/)
 })
 
