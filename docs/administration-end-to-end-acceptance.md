@@ -40,7 +40,7 @@ Status: **implementation in progress**. This document is not evidence that a fea
 - Partial payments, VAT arithmetic, rounding, credit notes, overdue, reconciliation.
 - Schedule creation/overlap/review/approve/publish notifications.
 - Four-locale navigation, iPhone-sized viewport, route existence, error states.
-- Real staging deployment smoke test with seeded non-sensitive test accounts and cleanup.
+- Main-test deployment smoke test with seeded non-sensitive test accounts and cleanup. The legacy Supabase project name does not imply a staging deployment.
 - Never merge to production solely because build succeeds.
 
 ## Delivery rule

@@ -1,6 +1,6 @@
 export default function Loading() {
   return (
-    <div className="p-4 md:p-6 space-y-5 max-w-screen-2xl mx-auto animate-pulse">
+    <div data-route-loading="true" className="p-4 md:p-6 space-y-5 max-w-screen-2xl mx-auto animate-pulse">
       {/* Hero banner skeleton */}
       <div className="h-44 rounded-3xl bg-muted/40" />
       {/* 3-col grid */}

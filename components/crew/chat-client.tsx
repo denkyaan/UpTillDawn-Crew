@@ -801,7 +801,7 @@ export function ChatClient({channels,defaultChannelId,userId,crewDirectory,isAdm
       <div ref={endRef}/>
     </div>
 
-    {selectedChannel.name!=='Up Till Dawn · persoonlijk'&&<div className="relative sticky bottom-0 z-20 border-t bg-background/95 p-3 backdrop-blur">
+    {selectedChannel.name!=='Up Till Dawn · persoonlijk'&&<div className={`relative sticky bottom-0 z-20 border-t bg-background/95 p-3 backdrop-blur${isAdmin?' pb-20':''}`}>
       {mentionState&&<div className="absolute bottom-full left-3 right-3 z-30 mb-2 max-h-56 overflow-y-auto rounded-2xl border bg-card p-1 shadow-2xl">
         {mentionCandidates.length
           ?mentionCandidates.map(person=><button key={person.id} type="button" onMouseDown={event=>event.preventDefault()} onClick={()=>selectMention(person)} className="flex w-full items-center gap-3 rounded-xl px-3 py-2 text-left hover:bg-muted">

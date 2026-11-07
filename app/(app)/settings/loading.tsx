@@ -1,6 +1,6 @@
 export default function Loading() {
   return (
-    <div className="p-4 md:p-6 space-y-5 animate-pulse max-w-2xl">
+    <div data-route-loading="true" className="p-4 md:p-6 space-y-5 animate-pulse max-w-2xl">
       <div className="h-7 w-28 rounded-xl bg-muted/60" />
       <div className="rounded-2xl bg-muted/30 p-6 space-y-5">
         <div className="h-5 w-40 rounded-lg bg-muted/50" />

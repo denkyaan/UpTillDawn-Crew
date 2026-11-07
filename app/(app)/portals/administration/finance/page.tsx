@@ -547,19 +547,24 @@ export default async function FinancePage({searchParams}:{searchParams:Promise<{
  const locale = await requestUiLocale()
  const t = copy[locale]
  const params = await searchParams
- const {data:documents,error} = await supabase.from('admin_financial_documents')
+ // These reads have no data dependency. Serial requests add a round trip for
+ // every register and can leave mobile users in the page skeleton for too long.
+ const [{data:documents,error},{data:counterparties},{data:financeEvents},{data:paymentRows},{data:reminderRows},{data:lines},{data:attachments},ledgerSummary]=await Promise.all([
+  supabase.from('admin_financial_documents')
    .select('id,kind,document_number,net_amount,tax_amount,gross_amount,currency,status,created_at,original_invoice_id,due_date,issue_date,counterparty_id,notes,buyer_reference,order_reference,delivery_date,delivery_country')
-   .order('created_at',{ascending:false}).limit(100)
- const {data:counterparties}=await (supabase as unknown as SupabaseClient).from('admin_counterparties').select('id,name,kind,email,vat_number,enterprise_number,street_address,postal_code,city,country_code,iban,bic,payment_terms_days,peppol_endpoint').order('name').limit(500)
- const {data:financeEvents}=await supabase.from('events').select('id,name').order('start_at',{ascending:false}).limit(200)
+   .order('created_at',{ascending:false}).limit(100),
+  (supabase as unknown as SupabaseClient).from('admin_counterparties').select('id,name,kind,email,vat_number,enterprise_number,street_address,postal_code,city,country_code,iban,bic,payment_terms_days,peppol_endpoint').order('name').limit(500),
+  supabase.from('events').select('id,name').order('start_at',{ascending:false}).limit(200),
+  (supabase as unknown as SupabaseClient).from('admin_financial_payments').select('id,document_id,amount,paid_on,bank_reference').order('created_at',{ascending:false}).limit(1000),
+  (supabase as unknown as SupabaseClient).from('admin_payment_reminders').select('id,document_id,reminder_number,status,recipient_email,subject,body,created_at,revision').order('created_at',{ascending:false}).limit(500),
+  supabase.from('admin_financial_lines').select('id,document_id,description,quantity,unit_price,vat_rate,unit_code,vat_category,vat_exemption_reason').order('created_at',{ascending:true}).limit(500),
+  (supabase as unknown as SupabaseClient).from('admin_financial_attachments').select('id,document_id,original_name,created_at').order('created_at',{ascending:false}).limit(200),
+  (supabase as unknown as SupabaseClient).rpc('upt_administration_finance_summary'),
+ ])
  const originalInvoices=(documents??[]).filter(d=>['sales_invoice','purchase_invoice'].includes(d.kind)&&['approved','issued','paid'].includes(d.status))
- const {data:paymentRows}=await (supabase as unknown as SupabaseClient).from('admin_financial_payments').select('id,document_id,amount,paid_on,bank_reference').order('created_at',{ascending:false}).limit(1000)
  const payments=(paymentRows??[]) as {id:string;document_id:string;amount:number;paid_on:string;bank_reference:string|null}[]
- const {data:reminderRows}=await (supabase as unknown as SupabaseClient).from('admin_payment_reminders').select('id,document_id,reminder_number,status,recipient_email,subject,body,created_at,revision').order('created_at',{ascending:false}).limit(500)
  const reminders=(reminderRows??[]) as {id:string;document_id:string;reminder_number:number;status:string;recipient_email:string;subject:string;body:string;created_at:string;revision:number}[]
- const {data:lines}=await supabase.from('admin_financial_lines').select('id,document_id,description,quantity,unit_price,vat_rate,unit_code,vat_category,vat_exemption_reason').order('created_at',{ascending:true}).limit(500)
- const {data:attachments}=await (supabase as unknown as SupabaseClient).from('admin_financial_attachments').select('id,document_id,original_name,created_at').order('created_at',{ascending:false}).limit(200)
- const [ledgerSummary,documentBalances]=await Promise.all([(supabase as unknown as SupabaseClient).rpc('upt_administration_finance_summary'),(supabase as unknown as SupabaseClient).rpc('upt_administration_document_balances',{p_ids:(documents??[]).map(d=>d.id)})])
+ const documentBalances=await (supabase as unknown as SupabaseClient).rpc('upt_administration_document_balances',{p_ids:(documents??[]).map(d=>d.id)})
  if(ledgerSummary.error||documentBalances.error||!ledgerSummary.data||!Array.isArray(documentBalances.data)||documentBalances.data.length!==(documents?.length??0))throw new Error('Financial ledger unavailable')
  const balances=new Map<string,{paid_cents:string;credited_cents:string;outstanding_cents:string}>((documentBalances.data as {id:string;paid_cents:string;credited_cents:string;outstanding_cents:string}[]).map(row=>[row.id,row]))
  const exactMoney=(cents:string)=>{const value=BigInt(cents);return new Intl.NumberFormat(locale).format(value/BigInt(100))+(locale==='en'?'.':',')+String(value%BigInt(100)).padStart(2,'0')+' EUR'}
