@@ -395,7 +395,7 @@ export default async function AdministrationModulePage({params,searchParams}:{pa
    </div>
   </nav>}
   {administrationWorkflowHref(slug)&&<div className="rounded-xl border border-violet-500/30 bg-card p-4"><Link href={administrationWorkflowHref(slug)!} className="inline-flex rounded-lg border border-violet-500/50 px-4 py-3 text-sm font-semibold text-violet-400 hover:border-violet-400">{operationalModuleLabels[locale]} →</Link></div>}
-  <section className="grid gap-4 md:grid-cols-3" aria-label={u.section}>
+  {!administrationWorkflowHref(slug)&&<section className="grid gap-4 md:grid-cols-3" aria-label={u.section}>
    {sections.map((section,index)=><article key={index} className="flex min-h-48 flex-col rounded-2xl border bg-card p-5">
     <div className="mb-4 flex items-start justify-between gap-3"><h2 className="font-semibold">{section[locale]}</h2><span aria-hidden="true" className="text-violet-400">◈</span></div>
     <div className="mt-auto rounded-xl border border-dashed bg-background/50 p-4">
@@ -403,7 +403,7 @@ export default async function AdministrationModulePage({params,searchParams}:{pa
      <p className="mt-3 text-xs font-medium text-violet-400">{u.pending}</p>
     </div>
    </article>)}
-  </section>
+  </section>}
   {(slug==="invoices"||slug==="banking")&&<section className="rounded-2xl border border-violet-500/40 bg-card p-5">
    <h2 className="text-lg font-semibold">{({nl:"Financiële documenten beheren",fr:"Gérer les documents financiers",en:"Manage financial documents",de:"Finanzdokumente verwalten"} as const)[locale]}</h2>
    <p className="mt-2 text-sm text-muted-foreground">{({nl:"Open het bestaande financiële register om concepten, bijlagen, betalingsstatussen en goedkeuringsstappen te beheren.",fr:"Ouvrez le registre financier pour gérer brouillons, pièces jointes, paiements et validations.",en:"Open the existing financial register to manage drafts, attachments, payment status and approval steps.",de:"Öffnen Sie das Finanzregister für Entwürfe, Anhänge, Zahlungsstatus und Freigaben."} as const)[locale]}</p>
