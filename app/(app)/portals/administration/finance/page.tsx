@@ -419,7 +419,10 @@ async function recordFinancialPayment(formData:FormData) {
  'use server'
  const {supabase}=await requireAdministration()
  const documentId=String(formData.get('document_id')??'')
- const amount=Number(formData.get('amount'))
+ const amountRaw=String(formData.get('amount')??'').trim()
+ // Financial payments must be entered as exact decimal cents, never rounded from excess precision.
+ if(!/^(?:0|[1-9]\\d{0,8})(?:\\.\\d{1,2})?$/.test(amountRaw))redirect('/portals/administration/finance?error=1')
+ const amount=Number(amountRaw)
  const paidOn=String(formData.get('paid_on')??'')
  const bankReference=String(formData.get('bank_reference')??'').trim()
  const uuid=/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
