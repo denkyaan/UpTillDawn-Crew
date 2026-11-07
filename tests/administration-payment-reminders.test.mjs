@@ -50,5 +50,5 @@ test('admin reminder approval and cancellation require a canonical UUID',()=>{
  const action=page.slice(start,end)
  assert.ok(action.includes("!isAdmin||!['approved','cancelled'].includes(status)"))
  assert.ok(action.includes("/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id)"))
- assert.ok(action.includes(".eq('status','draft').select('id')"))
+ assert.ok(action.includes(".eq('status','draft').eq('revision',revision).select('id')"))
 })

@@ -362,13 +362,17 @@ async function editPaymentReminderDraft(formData:FormData) {
  'use server'
  const {supabase}=await requireAdministration()
  const id=String(formData.get('reminder_id')??'')
+ const revisionRaw=String(formData.get('expected_revision')??'')
+ const revision=Number(revisionRaw)
+ if(!/^[1-9]\d{0,9}$/.test(revisionRaw)||!Number.isSafeInteger(revision)||revision>2147483647)redirect('/portals/administration/finance?error=1')
  const recipient=String(formData.get('recipient_email')??'').trim()
  const subject=String(formData.get('subject')??'').trim()
  const body=String(formData.get('body')??'').trim()
  const uuid=/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
  if(!uuid.test(id)||recipient.length>320||!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(recipient)||!subject||subject.length>200||!body||body.length>10000)redirect('/portals/administration/finance?error=1')
- const {data,error}=await (supabase as unknown as SupabaseClient).from('admin_payment_reminders').update({recipient_email:recipient,subject,body}).eq('id',id).eq('status','draft').select('id')
- if(error||data?.length!==1)redirect('/portals/administration/finance?error=1')
+ const {data,error}=await (supabase as unknown as SupabaseClient).from('admin_payment_reminders').update({recipient_email:recipient,subject,body}).eq('id',id).eq('status','draft').eq('revision',revision).select('id')
+ if(error)redirect('/portals/administration/finance?error=1')
+ if(data?.length!==1)redirect('/portals/administration/finance?conflict=1')
  revalidatePath('/portals/administration/finance')
  redirect('/portals/administration/finance')
 }
@@ -377,11 +381,15 @@ async function updatePaymentReminder(formData:FormData) {
  'use server'
  const {supabase,isAdmin}=await requireAdministration()
  const id=String(formData.get('reminder_id')??'')
+ const revisionRaw=String(formData.get('expected_revision')??'')
+ const revision=Number(revisionRaw)
+ if(!/^[1-9]\d{0,9}$/.test(revisionRaw)||!Number.isSafeInteger(revision)||revision>2147483647)redirect('/portals/administration/finance?error=1')
  const status=String(formData.get('status')??'')
  if(!isAdmin||!['approved','cancelled'].includes(status)||!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id))redirect('/portals/administration/finance?error=1')
  if(status==='approved'){
   const {data:reminder,error:reminderError}=await (supabase as unknown as SupabaseClient).from('admin_payment_reminders').select('document_id').eq('id',id).eq('status','draft').maybeSingle()
-  if(reminderError||!reminder)redirect('/portals/administration/finance?error=1')
+  if(reminderError)redirect('/portals/administration/finance?error=1')
+  if(!reminder)redirect('/portals/administration/finance?conflict=1')
   const {data:invoice,error:invoiceError}=await supabase.from('admin_financial_documents').select('kind,status,due_date,gross_amount').eq('id',reminder.document_id).maybeSingle()
   if(invoiceError||!invoice||invoice.kind!=='sales_invoice'||!['approved','issued'].includes(invoice.status)||!invoice.due_date||invoice.due_date>=belgianToday())redirect('/portals/administration/finance?error=1')
   const outstanding=await reminderOutstanding(supabase as unknown as SupabaseClient,reminder.document_id)
@@ -390,8 +398,9 @@ async function updatePaymentReminder(formData:FormData) {
  const {data:{user}}=await supabase.auth.getUser()
  if(!user)redirect('/login')
  const patch=status==='approved'?{status,approved_by:user.id,approved_at:new Date().toISOString()}:{status}
- const {data,error}=await (supabase as unknown as SupabaseClient).from('admin_payment_reminders').update(patch).eq('id',id).eq('status','draft').select('id')
- if(error||data?.length!==1)redirect('/portals/administration/finance?error=1')
+ const {data,error}=await (supabase as unknown as SupabaseClient).from('admin_payment_reminders').update(patch).eq('id',id).eq('status','draft').eq('revision',revision).select('id')
+ if(error)redirect('/portals/administration/finance?error=1')
+ if(data?.length!==1)redirect('/portals/administration/finance?conflict=1')
  revalidatePath('/portals/administration/finance')
  redirect('/portals/administration/finance')
 }
@@ -421,6 +430,9 @@ async function recordFinancialPayment(formData:FormData) {
  'use server'
  const {supabase}=await requireAdministration()
  const documentId=String(formData.get('document_id')??'')
+ // Repeated submissions of this rendered form share a ledger primary key.
+ // This also prevents duplicates when no bank reference was entered.
+ const paymentId=String(formData.get('payment_id')??'')
  const amountRaw=String(formData.get('amount')??'').trim()
  // Financial payments must be entered as exact decimal cents, never rounded from excess precision.
  if(!/^(?:0|[1-9]\d{0,8})(?:\.\d{1,2})?$/.test(amountRaw))redirect('/portals/administration/finance?error=1')
@@ -428,19 +440,44 @@ async function recordFinancialPayment(formData:FormData) {
  const paidOn=String(formData.get('paid_on')??'')
  const bankReference=String(formData.get('bank_reference')??'').trim()
  const uuid=/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
- if(!uuid.test(documentId)||!Number.isFinite(amount)||amount<=0||amount>999999999||!/^[0-9]{4}-[0-9]{2}-[0-9]{2}$/.test(paidOn)||bankReference.length>200)redirect('/portals/administration/finance?error=1')
+ if(!uuid.test(documentId)||!uuid.test(paymentId)||!Number.isFinite(amount)||amount<=0||amount>999999999||!/^[0-9]{4}-[0-9]{2}-[0-9]{2}$/.test(paidOn)||bankReference.length>200)redirect('/portals/administration/finance?error=1')
  const validDate=!Number.isNaN(Date.parse(paidOn))&&new Date(paidOn).toISOString().slice(0,10)===paidOn
  if(!validDate)redirect('/portals/administration/finance?error=1')
  let amountCents:number
  try {amountCents=financialAmountCents(amount)}catch{redirect('/portals/administration/finance?error=1')}
  if(amountCents<=0)redirect('/portals/administration/finance?error=1')
  const db=supabase as unknown as SupabaseClient
+ const matchesPayment=(payment:{document_id:string;amount:unknown;paid_on:string;bank_reference:string|null})=>
+  payment.document_id===documentId&&Number(payment.amount)===amount&&payment.paid_on===paidOn&&payment.bank_reference===(bankReference||null)
+ const existingPayment=async()=>{
+  const {data,error}=await db.from('admin_financial_payments').select('document_id,amount,paid_on,bank_reference').eq('id',paymentId).maybeSingle()
+  if(error)redirect('/portals/administration/finance?error=1')
+  return data
+ }
+ // A response can be lost after a successful insert. Recognize an exact replay
+ // before checking the now-reduced balance, without accepting altered payloads.
+ const previous=await existingPayment()
+ if(previous){
+  if(!matchesPayment(previous))redirect('/portals/administration/finance?error=1')
+  revalidatePath('/portals/administration/finance')
+  redirect('/portals/administration/finance')
+ }
+ const requireRecordedReplay=async()=>{
+  const recorded=await existingPayment()
+  if(!recorded||!matchesPayment(recorded))redirect('/portals/administration/finance?error=1')
+ }
  const settlement=await loadFinancialSettlement(db,documentId)
- if(!settlement||!['approved','issued','paid'].includes(settlement.status)||amountCents>settlement.outstandingCents)redirect('/portals/administration/finance?error=1')
- const {error}=await db.from('admin_financial_payments').insert({
-  document_id:documentId,amount,paid_on:paidOn,bank_reference:bankReference||null
- })
- if(error)redirect('/portals/administration/finance?error=1')
+ if(!settlement||!['approved','issued','paid'].includes(settlement.status)||amountCents>settlement.outstandingCents){
+  // A concurrent replay may have used the remaining balance after our lookup.
+  await requireRecordedReplay()
+ }else{
+  const {error}=await db.from('admin_financial_payments').insert({
+   id:paymentId,document_id:documentId,amount,paid_on:paidOn,bank_reference:bankReference||null
+  })
+  // Primary-key uniqueness decides the winner if both requests passed the
+  // balance check. Do not treat unrelated insert failures as successful replays.
+  if(error)await requireRecordedReplay()
+ }
  revalidatePath('/portals/administration/finance')
  redirect('/portals/administration/finance')
 }
@@ -505,7 +542,7 @@ async function uploadFinancialAttachment(formData:FormData) {
 }
 
 export const dynamic = 'force-dynamic'
-export default async function FinancePage({searchParams}:{searchParams:Promise<{error?:string}>}) {
+export default async function FinancePage({searchParams}:{searchParams:Promise<{error?:string;conflict?:string}>}) {
  const {supabase,isAdmin} = await requireAdministration()
  const locale = await requestUiLocale()
  const t = copy[locale]
@@ -518,8 +555,8 @@ export default async function FinancePage({searchParams}:{searchParams:Promise<{
  const originalInvoices=(documents??[]).filter(d=>['sales_invoice','purchase_invoice'].includes(d.kind)&&['approved','issued','paid'].includes(d.status))
  const {data:paymentRows}=await (supabase as unknown as SupabaseClient).from('admin_financial_payments').select('id,document_id,amount,paid_on,bank_reference').order('created_at',{ascending:false}).limit(1000)
  const payments=(paymentRows??[]) as {id:string;document_id:string;amount:number;paid_on:string;bank_reference:string|null}[]
- const {data:reminderRows}=await (supabase as unknown as SupabaseClient).from('admin_payment_reminders').select('id,document_id,reminder_number,status,recipient_email,subject,body,created_at').order('created_at',{ascending:false}).limit(500)
- const reminders=(reminderRows??[]) as {id:string;document_id:string;reminder_number:number;status:string;recipient_email:string;subject:string;body:string;created_at:string}[]
+ const {data:reminderRows}=await (supabase as unknown as SupabaseClient).from('admin_payment_reminders').select('id,document_id,reminder_number,status,recipient_email,subject,body,created_at,revision').order('created_at',{ascending:false}).limit(500)
+ const reminders=(reminderRows??[]) as {id:string;document_id:string;reminder_number:number;status:string;recipient_email:string;subject:string;body:string;created_at:string;revision:number}[]
  const {data:lines}=await supabase.from('admin_financial_lines').select('id,document_id,description,quantity,unit_price,vat_rate,unit_code,vat_category,vat_exemption_reason').order('created_at',{ascending:true}).limit(500)
  const {data:attachments}=await (supabase as unknown as SupabaseClient).from('admin_financial_attachments').select('id,document_id,original_name,created_at').order('created_at',{ascending:false}).limit(200)
  const [ledgerSummary,documentBalances]=await Promise.all([(supabase as unknown as SupabaseClient).rpc('upt_administration_finance_summary'),(supabase as unknown as SupabaseClient).rpc('upt_administration_document_balances',{p_ids:(documents??[]).map(d=>d.id)})])
@@ -600,6 +637,7 @@ export default async function FinancePage({searchParams}:{searchParams:Promise<{
     <button type="submit" className="rounded-lg bg-violet-600 px-4 py-3 font-semibold text-white">{t.save}</button>
    </form>
    {params.error==='1' && <p role="alert" className="mt-3 text-sm text-red-400">{t.error}</p>}
+   {params.conflict==='1' && <p role="alert" className="mt-3 text-sm text-red-400">{({nl:'Dit concept is intussen gewijzigd. Controleer de nieuwste inhoud voordat je opnieuw opslaat of goedkeurt.',fr:'Ce brouillon a été modifié entre-temps. Vérifiez son contenu actuel avant de l’enregistrer ou de l’approuver.',en:'This draft has changed. Review the latest content before saving or approving it again.',de:'Dieser Entwurf wurde inzwischen geändert. Prüfe den aktuellen Inhalt, bevor du ihn erneut speicherst oder genehmigst.'} as const)[locale]}</p>}
   </section>
   <section className="rounded-2xl border bg-card p-5">
    {error ? <p role="alert">{t.error}</p> : !documents?.length ? <p className="text-muted-foreground">{t.empty}</p> :
@@ -628,6 +666,7 @@ export default async function FinancePage({searchParams}:{searchParams:Promise<{
        {payments.filter(p=>p.document_id===d.id).map(p=><p key={p.id}>{p.paid_on} · {money(Number(p.amount))} {p.bank_reference||''}</p>)}
        {outstandingFor(d.id)>0&&<form action={recordFinancialPayment} className="mt-2 grid gap-2 sm:grid-cols-4">
         <input type="hidden" name="document_id" value={d.id}/>
+        <input type="hidden" name="payment_id" value={randomUUID()}/>
         <input name="amount" aria-label={({nl:'Betalingsbedrag',fr:'Montant du paiement',en:'Payment amount',de:'Zahlungsbetrag'} as const)[locale]} type="number" min="0.01" step="0.01" required className="rounded border bg-background p-2"/>
         <input name="paid_on" aria-label={({nl:'Betaaldatum',fr:'Date du paiement',en:'Payment date',de:'Zahlungsdatum'} as const)[locale]} type="date" required className="rounded border bg-background p-2"/>
         <input name="bank_reference" aria-label={({nl:'Bankreferentie',fr:'Référence bancaire',en:'Bank reference',de:'Bankreferenz'} as const)[locale]} maxLength={200} className="rounded border bg-background p-2"/>
@@ -636,8 +675,8 @@ export default async function FinancePage({searchParams}:{searchParams:Promise<{
       </div>}
       {['sales_invoice','purchase_invoice'].includes(d.kind)&&['approved','issued'].includes(d.status)&&d.due_date&&d.due_date<today&&outstandingFor(d.id)>0&&<div className="space-y-2 rounded-lg border p-3 text-xs">
        <h3 className="font-semibold">{({nl:'Betalingsherinneringen (geen automatische verzending)',fr:'Rappels de paiement (aucun envoi automatique)',en:'Payment reminders (no automatic sending)',de:'Zahlungserinnerungen (kein automatischer Versand)'} as const)[locale]}</h3>
-       {reminders.filter(r=>r.document_id===d.id).map(r=><div key={r.id} className="flex flex-wrap items-center gap-2"><span>#{r.reminder_number} · {r.subject} · {r.recipient_email} · {r.status}</span>{isAdmin&&r.status==='draft'&&(['approved','cancelled'] as const).map(status=><form key={status} action={updatePaymentReminder}><input type="hidden" name="reminder_id" value={r.id}/><input type="hidden" name="status" value={status}/><button type="submit" className="rounded border px-2 py-1">{status==='approved'?({nl:'Goedkeuren',fr:'Approuver',en:'Approve',de:'Genehmigen'} as const)[locale]:({nl:'Annuleren',fr:'Annuler',en:'Cancel',de:'Stornieren'} as const)[locale]}</button></form>)}</div>)}
-       {reminders.filter(r=>r.document_id===d.id&&r.status==='draft').map(r=><details key={r.id} className="rounded border p-2"><summary className="cursor-pointer text-xs">{({nl:'Herinneringsconcept bewerken',fr:'Modifier le brouillon de rappel',en:'Edit reminder draft',de:'Erinnerungsentwurf bearbeiten'} as const)[locale]} #{r.reminder_number}</summary><form action={editPaymentReminderDraft} className="mt-2 grid gap-2 sm:grid-cols-2"><input type="hidden" name="reminder_id" value={r.id}/><input type="email" name="recipient_email" required maxLength={320} defaultValue={r.recipient_email} aria-label={({nl:'Ontvanger',fr:'Destinataire',en:'Recipient',de:'Empfänger'} as const)[locale]} className="rounded border bg-background p-2"/><input name="subject" required maxLength={200} defaultValue={r.subject} aria-label={({nl:'Onderwerp',fr:'Objet',en:'Subject',de:'Betreff'} as const)[locale]} className="rounded border bg-background p-2"/><textarea name="body" required maxLength={10000} defaultValue={r.body} rows={3} aria-label={({nl:'Bericht',fr:'Message',en:'Message',de:'Nachricht'} as const)[locale]} className="rounded border bg-background p-2 sm:col-span-2"/><button type="submit" className="rounded border border-violet-500 px-3 py-2 text-violet-400 sm:col-span-2">{({nl:'Concept opslaan',fr:'Enregistrer le brouillon',en:'Save draft',de:'Entwurf speichern'} as const)[locale]}</button></form></details>)}
+       {reminders.filter(r=>r.document_id===d.id).map(r=><div key={r.id} className="flex flex-wrap items-center gap-2"><span>#{r.reminder_number} · {r.subject} · {r.recipient_email} · {r.status}</span>{isAdmin&&r.status==='draft'&&(['approved','cancelled'] as const).map(status=><form key={status} action={updatePaymentReminder}><input type="hidden" name="reminder_id" value={r.id}/><input type="hidden" name="expected_revision" value={r.revision}/><input type="hidden" name="status" value={status}/><button type="submit" className="rounded border px-2 py-1">{status==='approved'?({nl:'Goedkeuren',fr:'Approuver',en:'Approve',de:'Genehmigen'} as const)[locale]:({nl:'Annuleren',fr:'Annuler',en:'Cancel',de:'Stornieren'} as const)[locale]}</button></form>)}</div>)}
+       {reminders.filter(r=>r.document_id===d.id&&r.status==='draft').map(r=><details key={r.id} className="rounded border p-2"><summary className="cursor-pointer text-xs">{({nl:'Herinneringsconcept bewerken',fr:'Modifier le brouillon de rappel',en:'Edit reminder draft',de:'Erinnerungsentwurf bearbeiten'} as const)[locale]} #{r.reminder_number}</summary><form action={editPaymentReminderDraft} className="mt-2 grid gap-2 sm:grid-cols-2"><input type="hidden" name="reminder_id" value={r.id}/><input type="hidden" name="expected_revision" value={r.revision}/><input type="email" name="recipient_email" required maxLength={320} defaultValue={r.recipient_email} aria-label={({nl:'Ontvanger',fr:'Destinataire',en:'Recipient',de:'Empfänger'} as const)[locale]} className="rounded border bg-background p-2"/><input name="subject" required maxLength={200} defaultValue={r.subject} aria-label={({nl:'Onderwerp',fr:'Objet',en:'Subject',de:'Betreff'} as const)[locale]} className="rounded border bg-background p-2"/><textarea name="body" required maxLength={10000} defaultValue={r.body} rows={3} aria-label={({nl:'Bericht',fr:'Message',en:'Message',de:'Nachricht'} as const)[locale]} className="rounded border bg-background p-2 sm:col-span-2"/><button type="submit" className="rounded border border-violet-500 px-3 py-2 text-violet-400 sm:col-span-2">{({nl:'Concept opslaan',fr:'Enregistrer le brouillon',en:'Save draft',de:'Entwurf speichern'} as const)[locale]}</button></form></details>)}
        <form action={createPaymentReminder} className="grid gap-2 sm:grid-cols-2">
         <input type="hidden" name="document_id" value={d.id}/>
         <input type="email" name="recipient_email" required maxLength={320} aria-label={({nl:'E-mailadres ontvanger',fr:'E-mail du destinataire',en:'Recipient email',de:'Empfänger-E-Mail'} as const)[locale]} placeholder={({nl:"E-mailadres",fr:"Adresse e-mail",en:"Email address",de:"E-Mail-Adresse"} as const)[locale]} className="rounded border bg-background p-2"/>
