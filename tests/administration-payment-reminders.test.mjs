@@ -42,3 +42,13 @@ test('database trigger enforces credit-adjusted overdue sales invoices',()=>{
  assert.match(migration,/not public\.upt_is_admin\(\)/)
  assert.match(migration,/revoke execute on function/)
 })
+
+test('admin reminder approval and cancellation require a canonical UUID',()=>{
+ const start=page.indexOf('async function updatePaymentReminder(')
+ const end=page.indexOf('async function loadFinancialSettlement(',start)
+ assert.ok(start>=0&&end>start)
+ const action=page.slice(start,end)
+ assert.ok(action.includes("!isAdmin||!['approved','cancelled'].includes(status)"))
+ assert.ok(action.includes("/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id)"))
+ assert.ok(action.includes(".eq('status','draft').select('id')"))
+})
