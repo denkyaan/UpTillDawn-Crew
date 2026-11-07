@@ -253,6 +253,10 @@ async function updateDraftCounterparty(formData:FormData) {
  if(documentError||!document||document.status!=='draft')redirect('/portals/administration/finance?error=1')
  let calculatedDueDate:string|null=null
  if(useTerms&&(!counterpartyId||!document.issue_date||!['sales_invoice','purchase_invoice'].includes(document.kind)))redirect('/portals/administration/finance?error=1')
+ if(useTerms){
+  const issueDate=document.issue_date as string
+  if(!/^\d{4}-\d{2}-\d{2}$/.test(issueDate)||Number.isNaN(Date.parse(issueDate))||new Date(issueDate).toISOString().slice(0,10)!==issueDate)redirect('/portals/administration/finance?error=1')
+ }
  if(counterpartyId){
   const {data:party,error:partyError}=await (supabase as unknown as SupabaseClient).from('admin_counterparties').select('kind,payment_terms_days').eq('id',counterpartyId).maybeSingle()
   if(partyError||!party||(document.kind==='sales_invoice'&&!['customer','both'].includes(party.kind))||(document.kind==='purchase_invoice'&&!['supplier','both'].includes(party.kind)))redirect('/portals/administration/finance?error=1')
