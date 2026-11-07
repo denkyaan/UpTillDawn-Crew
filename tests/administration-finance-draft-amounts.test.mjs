@@ -72,3 +72,13 @@ test('invoice line create and update reject empty and over-precise numeric input
   assert.ok(action.indexOf('if(!validDecimal(')<action.indexOf('const quantity=Number(quantityRaw)'))
  }
 })
+
+test('counterparty payment terms validate stored issue dates before arithmetic',()=>{
+ const start=source.indexOf('async function updateDraftCounterparty(')
+ const end=source.indexOf('async function updateDraftNotes(',start)
+ assert.ok(start>=0&&end>start)
+ const action=source.slice(start,end)
+ assert.ok(action.includes('Number.isNaN(Date.parse(issueDate))'))
+ assert.ok(action.includes('new Date(issueDate).toISOString().slice(0,10)!==issueDate'))
+ assert.ok(action.indexOf('new Date(issueDate).toISOString().slice(0,10)!==issueDate')<action.indexOf('due.setUTCDate('))
+})
