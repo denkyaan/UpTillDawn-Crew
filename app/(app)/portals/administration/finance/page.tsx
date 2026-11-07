@@ -477,7 +477,7 @@ async function uploadFinancialAttachment(formData:FormData) {
  const {supabase} = await requireAdministration()
  const documentId=String(formData.get('document_id')??'')
  const file=formData.get('file')
- if(!/^[0-9a-f-]{36}$/i.test(documentId) || !(file instanceof File)) return
+ if(!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(documentId) || !(file instanceof File)) return
  const {data:document}=await supabase.from('admin_financial_documents').select('id,status').eq('id',documentId).single()
  if(!document || !['draft','review'].includes(document.status)) return
  let validation
