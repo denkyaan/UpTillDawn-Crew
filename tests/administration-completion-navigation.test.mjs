@@ -60,3 +60,9 @@ test('actual administration notification route forwards pagination to inbox',()=
  assert.ok(inbox.includes('visibleRows=data?.slice(0,pageSize)'))
  assert.ok(inbox.includes('href={pageHref(page+1)}'))
 })
+
+test('administration bottom navigation highlights exactly one category',()=>{
+ assert.ok(tabs.includes('const active=visible?group.key===selected.key:group.key===current'))
+ assert.ok(!tabs.includes('group.key===selected.key||(selected.key==="overview"&&group.key===current)'))
+ assert.ok(tabs.includes('aria-pressed={active}'))
+})
