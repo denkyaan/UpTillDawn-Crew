@@ -33,7 +33,7 @@ test('export reconciles approved credit notes and payments without treating draf
 test('export has deterministic payment pagination and rejects blocked accounts and invalid amounts',()=>{
  assert.match(api,/\.order\('document_id'\)\.order\('id'\)/)
  assert.match(api,/current\.account_blocked===true/)
- assert.match(api,/Number\.isFinite\(gross\)/)
+ assert.match(api,/safeFinancialCents\(doc\.gross_amount\)/)
  assert.match(api,/Europe\/Brussels/)
 })
 
@@ -42,10 +42,16 @@ test('credit notes are not counted as open invoices in finance CSV',()=>{
  assert.match(api,/'not_applicable'/)
  assert.match(api,/creditsByInvoice\.get\(doc\.id\)/)
 })
-test('payment ledger rejects invalid values and sums in integer cents',()=>{
- assert.match(api,/payment\.amount===null/)
- assert.match(api,/Number\.isFinite\(Number\(payment\.amount\)\)/)
- assert.match(api,/Math\.round\(Number\(payment\.amount\)\*100\)/)
+test('finance export uses exact cents for payments, credits and gross amounts',()=>{
+ assert.match(api,/import \{reconcileFinanceInvoice,financialAmountCents\}/)
+ assert.match(api,/financialAmountCents\(value\)/)
+ assert.match(api,/safeFinancialCents\(payment\.amount\)/)
+ assert.match(api,/safeFinancialCents\(doc\.gross_amount\)/)
+ assert.match(api,/const nextPaid=\(byDocument\.get\(payment\.document_id\)\?\?0\)\+paymentCents/)
+ assert.match(api,/const nextCredit=\(creditsByInvoice\.get\(doc\.original_invoice_id\)\?\?0\)\+creditCents/)
+ assert.match(api,/reconcileFinanceInvoice\(grossCents,/)
+ assert.doesNotMatch(api,/Math\.round\(Number\(payment\.amount\)\*100\)/)
+ assert.doesNotMatch(api,/Math\.round\(gross\*100\)/)
 })
 
 test('finance export rejects incomplete paginated snapshots and distinguishes exact limit',()=>{
