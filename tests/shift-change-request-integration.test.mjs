@@ -99,3 +99,23 @@ test('shift change foreign keys have dedicated covering indexes', async () => {
   assert.match(source,/shift_change_requests_requester_fk_idx/)
   assert.match(source,/shift_change_requests_decided_by_fk_idx/)
 })
+
+test('shift approvals fail closed on missing identity and invalid request metadata',()=>{
+ const base={id:'request-1',type:'replacement',shiftId:'shift-1',requesterId:'user-1',replacementUserId:'user-2',status:'pending',createdAt:0}
+ for(const patch of [{id:''},{shiftId:' '},{requesterId:''},{createdAt:NaN},{createdAt:Infinity},{type:'unknown'},{status:'approved'}]){
+  assert.equal(shiftChangeIsReadyForApproval({...base,...patch}),false,JSON.stringify(patch))
+ }
+})
+test('replacement approval requires a distinct nominated colleague',()=>{
+ const base={id:'request-1',type:'swap',shiftId:'shift-1',requesterId:'user-1',replacementUserId:'user-2',status:'pending',createdAt:0}
+ for(const replacementUserId of ['', ' ',null,'user-1',' user-1 ']){
+  assert.equal(shiftChangeIsReadyForApproval({...base,replacementUserId}),false,String(replacementUserId))
+ }
+ assert.equal(shiftChangeIsReadyForApproval(base),true)
+ assert.equal(shiftChangeIsReadyForApproval({...base,type:'replacement'}),true)
+})
+test('open shift claims cannot carry an unexpected replacement identity',()=>{
+ const base={id:'request-1',type:'claim-open-shift',shiftId:'shift-1',requesterId:'user-1',status:'pending',createdAt:0}
+ assert.equal(shiftChangeIsReadyForApproval(base),true)
+ assert.equal(shiftChangeIsReadyForApproval({...base,replacementUserId:'user-2'}),false)
+})

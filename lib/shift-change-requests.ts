@@ -20,5 +20,9 @@ export function shiftChangeNeedsReplacement(request: ShiftChangeRequest): boolea
 }
 
 export function shiftChangeIsReadyForApproval(request: ShiftChangeRequest): boolean {
-  return shiftChangeIsActionable(request) && (!shiftChangeNeedsReplacement(request) || Boolean(request.replacementUserId))
+  if(!shiftChangeIsActionable(request)||!request.id?.trim()||!request.shiftId?.trim()||!request.requesterId?.trim()||!Number.isFinite(request.createdAt))return false
+  if(!['swap','replacement','claim-open-shift'].includes(request.type))return false
+  if(!shiftChangeNeedsReplacement(request))return !request.replacementUserId?.trim()
+  const replacement=request.replacementUserId?.trim()
+  return Boolean(replacement&&replacement!==request.requesterId.trim())
 }
