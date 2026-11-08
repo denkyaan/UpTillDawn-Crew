@@ -12,7 +12,8 @@ test('crew self-service supports availability and explicit shift responses', asy
 test('shift change requests require approval and replacement where applicable', async () => {
   const source = await readFile(new URL('../lib/shift-change-requests.ts', import.meta.url), 'utf8')
   for (const value of ['swap','replacement','claim-open-shift','pending','approved','rejected','cancelled']) assert.ok(source.includes(`'${value}'`))
-  assert.match(source, /Boolean\(request\.replacementUserId\)/)
+  assert.match(source, /shiftChangeNeedsReplacement\(request\)/)
+  assert.match(source, /replacement!==request\.requesterId\.trim\(\)/)
 })
 
 test('required checklist items and photo evidence block premature close', async () => {
