@@ -20,6 +20,7 @@ export function incidentRequiresImmediatePush(category: IncidentCategory, urgenc
 
 export function incidentNeedsEscalation(status: IncidentStatus, createdAt: number, now = Date.now(), escalationMinutes = 5): boolean {
   return status === 'new' && Number.isFinite(createdAt) && Number.isFinite(now) &&
-    Number.isFinite(escalationMinutes) && escalationMinutes >= 0 &&
-    now >= createdAt && now - createdAt >= Math.max(1, escalationMinutes) * 60_000
+    Number.isFinite(escalationMinutes) && escalationMinutes > 0 &&
+    createdAt >= 0 && now >= 0 &&
+    now >= createdAt && now - createdAt >= escalationMinutes * 60_000
 }
