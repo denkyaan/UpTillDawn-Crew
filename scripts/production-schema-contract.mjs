@@ -2,6 +2,7 @@ import {pathToFileURL} from 'node:url'
 
 const productionOrigin='https://eakoavcieossazqzplke.supabase.co'
 const relations=[
+ ['tasks',['id','event_id','promotion_only']],
  ['portal_role_assignments',['user_id','portal','approved']],
  ['admin_counterparties',['id','name','kind']],
  ['admin_financial_documents',['id','status','gross_amount','original_invoice_id','due_date','issue_date']],

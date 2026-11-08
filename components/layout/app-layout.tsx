@@ -180,7 +180,7 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
 
     if(pathname.startsWith("/tasks")){window.localStorage.setItem(taskKey,nowIso);setTaskMissed(0)}
     else if(activeUiRole==="admin"){
-      const {count}=await supabase.from("task_assignments").select("id",{count:"exact",head:true}).gt("created_at",taskSince).neq("status","COMPLETED")
+      const {count}=await supabase.from("task_assignments").select("id,tasks!inner(event_id)",{count:"exact",head:true}).not("tasks.event_id","is",null).gt("created_at",taskSince).neq("status","COMPLETED")
       setTaskMissed(count??0)
     }else{
       const {data:taskRows}=await supabase.from("task_assignments")
@@ -190,7 +190,7 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
         .limit(1000)
       const count=(taskRows||[]).filter(row=>{
         const task=row.tasks
-        if(!task)return false
+        if(!task?.event_id)return false
         if(activeUiRole==="employee")return row.user_id===user.id&&activeShiftEventIds.has(task.event_id)
         if(row.user_id===user.id&&activeShiftEventIds.has(task.event_id))return true
         return Boolean(task.workplace_id&&activeResponsibleWorkplaceIds.has(task.workplace_id))

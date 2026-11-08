@@ -4,6 +4,7 @@ import {randomUUID} from 'node:crypto'
 import {createClient} from '@supabase/supabase-js'
 import {chromium} from 'playwright'
 import {gotoReady,browserTimeoutMs,openInventoryReceiptForm} from './browser-navigation.mjs'
+import {promotionTaskWorkflow} from './promotion-task-workflow-e2e.mjs'
 
 const base=process.env.BOT_TEST_BASE_URL||'http://localhost:3000'
 const url=process.env.BOT_SUPABASE_URL||process.env.NEXT_PUBLIC_SUPABASE_URL
@@ -166,6 +167,7 @@ try{
   if(promotionError)console.error('Promotion error diagnostics:',JSON.stringify({route,match:promotionError[0],context:promotionBody.slice(Math.max(0,promotionError.index-160),promotionError.index+240)}))
   assert.ok(!promotionError,'Promotion error page: '+route)
  }
+ await promotionTaskWorkflow({base,prefix,adminPage,promotionPage,admin,promo,office,staff,created,ok,browser,browserContext})
  const taskLinks=await promotionPage.locator('a[href]').evaluateAll(nodes=>nodes.map(node=>node.getAttribute('href')).filter(Boolean))
  assert.ok(taskLinks.every(href=>!href.startsWith('/portals/staff')&&!href.startsWith('/login/staff')),'Promotion task links must not enter staff portal')
  const taskButtons=await promotionPage.locator('button:visible').count()

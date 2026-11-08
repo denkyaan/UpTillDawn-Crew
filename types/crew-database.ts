@@ -4857,8 +4857,9 @@ export type Database = {
           created_at: string
           created_by: string | null
           description: string | null
-          event_id: string
+          event_id: string | null
           id: string
+          promotion_only: boolean
           status: string
           title: string
           updated_at: string
@@ -4871,8 +4872,9 @@ export type Database = {
           created_at?: string
           created_by?: string | null
           description?: string | null
-          event_id: string
+          event_id?: string | null
           id?: string
+          promotion_only?: boolean
           status?: string
           title: string
           updated_at?: string
@@ -4885,8 +4887,9 @@ export type Database = {
           created_at?: string
           created_by?: string | null
           description?: string | null
-          event_id?: string
+          event_id?: string | null
           id?: string
+          promotion_only?: boolean
           status?: string
           title?: string
           updated_at?: string
@@ -5936,6 +5939,10 @@ export type Database = {
         }
         Returns: string
       }
+      upt_admin_assign_promotion_task: {
+        Args: { p_task: string; p_user: string }
+        Returns: string
+      }
       upt_admin_correct_time: {
         Args: {
           p_corrected_value: string
@@ -5943,6 +5950,15 @@ export type Database = {
           p_reason: string
           p_target_id: string
           p_target_type: string
+        }
+        Returns: string
+      }
+      upt_admin_create_promotion_task: {
+        Args: {
+          p_description: string
+          p_request: string
+          p_title: string
+          p_users: string[]
         }
         Returns: string
       }
@@ -6059,6 +6075,13 @@ export type Database = {
           user_id: string
         }[]
       }
+      upt_admin_promotion_task_members: {
+        Args: never
+        Returns: {
+          full_name: string
+          user_id: string
+        }[]
+      }
       upt_admin_record_promotion_violation: {
         Args: {
           p_assignment: string
@@ -6159,6 +6182,15 @@ export type Database = {
       }
       upt_admin_update_event_task: {
         Args: { p_description: string; p_task: string; p_title: string }
+        Returns: string
+      }
+      upt_admin_update_promotion_task: {
+        Args: {
+          p_description: string
+          p_expected_updated_at: string
+          p_task: string
+          p_title: string
+        }
         Returns: string
       }
       upt_administration_document_balances: {
@@ -7535,6 +7567,10 @@ export type Database = {
       upt_start_error_report_ai: {
         Args: { p_report: string }
         Returns: boolean
+      }
+      upt_start_promotion_task: {
+        Args: { p_assignment: string }
+        Returns: string
       }
       upt_start_work: {
         Args: { p_event: string; p_shift?: string }

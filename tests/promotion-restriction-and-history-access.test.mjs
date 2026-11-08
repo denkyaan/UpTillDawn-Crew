@@ -10,7 +10,7 @@ test("suspended promotion members can read their suspension notice without bypas
  assert.match(home,/isBlocked&&<p role="alert"/)
  assert.match(tasks,/isPromotionBlocked&&<p role="alert"/)
  assert.match(tasks,/if\(blockError\|\|blocked\)throw new Error\("Promotion access blocked"\)/)
- assert.match(tasks,/!isPromotionBlocked&&item\.status==="NOT STARTED"/)
+ assert.match(tasks,/!isPromotionBlocked&&\(item\.status==="NOT STARTED"/)
  assert.match(tasks,/!isPromotionBlocked&&item\.status==="IN PROGRESS"/)
 })
 test("promotion task history clearly discloses bounded evidence listing",()=>{

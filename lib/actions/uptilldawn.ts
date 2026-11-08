@@ -1090,7 +1090,7 @@ export async function removeTaskAssignment(fd:FormData){
  const {data:assignment,error:assignmentError}=await s.from('task_assignments').select('tasks(event_id,workplace_id)').eq('id',assignmentId).single()
  check(assignmentError)
  const task=assignment?.tasks
- if(!task)throw new Error('Taaktoewijzing niet gevonden.')
+ if(!task?.event_id)throw new Error('Gebruik het promotiebeheer voor taken zonder evenement.')
 
  if(profile.role==='responsible_lead'){
   if(!task.workplace_id)throw new Error('Je kunt alleen taken beheren binnen je eigen toegewezen werkplek.')

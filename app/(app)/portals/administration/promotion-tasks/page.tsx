@@ -5,6 +5,8 @@ import {redirect} from "next/navigation"
 import {getCurrentUser} from "@/lib/actions/auth"
 import {createClient} from "@/lib/supabase/crew-server"
 import {requestUiLocale} from "@/lib/server-locale"
+import {GeneralPromotionTaskCreate,GeneralPromotionTaskControls,PromotionTaskFeedback,type PromotionMember} from "@/components/administration/general-promotion-tasks"
+import {removeGeneralPromotionAssignment} from "@/lib/actions/promotion-tasks"
 
 export const dynamic="force-dynamic"
 
@@ -46,6 +48,7 @@ async function removePromotionAssignment(form:FormData){
  const {data:assignment,error:lookupError}=await db.from("task_assignments").select("task_id").eq("id",id).maybeSingle()
  if(lookupError||!assignment)throw new Error("Assignment not found")
  const {data:eventTask,error:taskLookupError}=await db.from("tasks").select("id,event_id").eq("id",assignment.task_id).maybeSingle()
+ if(!taskLookupError&&eventTask&&eventTask.event_id===null){await removeGeneralPromotionAssignment(form);return}
  if(taskLookupError||!eventTask?.event_id)throw new Error("Only event task assignments can be removed through this workflow")
  const {error}=await db.rpc("upt_remove_task_assignment",{p_assignment:id})
  if(error)throw new Error("Could not remove task assignment")
@@ -53,7 +56,7 @@ async function removePromotionAssignment(form:FormData){
  revalidatePath("/admin/management/promotion-tasks")
 }
 
-export default async function AdministrationPromotionTasks({searchParams,adminView=false}:{searchParams:Promise<{q?:string;page?:string;scope?:string}>;adminView?:boolean}){
+export default async function AdministrationPromotionTasks({searchParams,adminView=false}:{searchParams:Promise<{q?:string;page?:string;scope?:string;action_error?:string;saved?:string}>;adminView?:boolean}){
  const actor=await getCurrentUser()
  if(!actor)redirect("/login")
  if(adminView&&(!actor.realIsAdmin&&!actor.isOwner||!actor.approved&&!actor.isOwner||actor.account_blocked&&!actor.isOwner))redirect("/admin")
@@ -67,13 +70,24 @@ export default async function AdministrationPromotionTasks({searchParams,adminVi
  const page=listPage(params.page,99999)
  const pageSize=50
  const offset=(page-1)*pageSize
- let tasksQuery=db.from("tasks").select("id,title,description,event_id,created_at")
+ let tasksQuery=db.from("tasks").select("id,title,description,event_id,created_at,updated_at,promotion_only")
  if(scope==="event")tasksQuery=tasksQuery.not("event_id","is",null)
  if(scope==="general")tasksQuery=tasksQuery.is("event_id",null)
  if(q)tasksQuery=tasksQuery.ilike("title",`%${escapeLikeSearch(q)}%`)
  const {data,error}=await tasksQuery.order("created_at",{ascending:false}).order("id",{ascending:false}).range(offset,offset+pageSize)
  const hasNext=(data?.length??0)>pageSize
  const rows=data?.slice(0,pageSize)??[]
+ const promotionMembers:PromotionMember[]=[]
+ let promotionMembersIncomplete=false
+ if(actor.realIsAdmin||actor.isOwner){
+  for(let memberOffset=0;memberOffset<10000;memberOffset+=1000){
+   const {data:members,error:memberError,count}=await db.rpc("upt_admin_promotion_task_members",undefined,{count:"exact"}).order("full_name").order("user_id").range(memberOffset,memberOffset+999)
+   if(memberError||count===null){promotionMembersIncomplete=true;break}
+   promotionMembers.push(...(members??[]))
+   if(promotionMembers.length>=count)break
+   if((members?.length??0)<1000||memberOffset===9000){promotionMembersIncomplete=true;break}
+  }
+ }
  const taskIds=rows.map(task=>task.id)
  const {data:assignments,error:assignmentError,count:assignmentTotal}=(actor.realIsAdmin||actor.isOwner)&&taskIds.length?await db.from("task_assignments").select("id,task_id,user_id",{count:"exact"}).in("task_id",taskIds).limit(1000):{data:[],error:null,count:0}
  const assignmentOverflow=assignmentTotal===null||assignmentTotal>(assignments?.length??0)
@@ -105,18 +119,22 @@ export default async function AdministrationPromotionTasks({searchParams,adminVi
   profiles.push(...(data??[]))
  }
  const names=new Map(profiles.map(profile=>[profile.id,profile.full_name||profile.id]))
+ for(const member of promotionMembers)names.set(member.user_id,member.full_name||member.user_id)
  const membersByEvent=new Map<string,Array<{id:string;name:string}>>()
  for(const membership of memberships??[]){if(!names.has(membership.user_id))continue;const group=membersByEvent.get(membership.event_id)??[];group.push({id:membership.user_id,name:names.get(membership.user_id)!});membersByEvent.set(membership.event_id,group)}
  for(const group of membersByEvent.values())group.sort((a,b)=>a.name.localeCompare(b.name,locale))
  const basePath=adminView?"/admin/management/promotion-tasks":"/portals/administration/promotion-tasks"
  const pageHref=(target:number)=>basePath+"?"+new URLSearchParams({...(q?{q}:{}),...(scope!=="all"?{scope}:{}),page:String(target)}).toString()
+ const returnState={adminView,q,scope,page}
  return <main className="mx-auto max-w-4xl space-y-5 p-4 pb-36 sm:p-6">
   <Link href={adminView?"/admin/management":"/portals/administration/modules/marketing"} className="text-sm text-violet-400">← {t.back}</Link>
   <header className="space-y-2"><h1 className="text-2xl font-bold">{t.title}</h1><p className="text-sm text-muted-foreground">{t.intro}</p></header>
+  <PromotionTaskFeedback locale={locale} error={params.action_error} saved={params.saved}/>
+  {(actor.realIsAdmin||actor.isOwner)&&<GeneralPromotionTaskCreate locale={locale} members={promotionMembers} incomplete={promotionMembersIncomplete} state={returnState}/>}
   <form method="get" action={basePath} role="search" className="flex flex-wrap gap-2"><input name="q" defaultValue={q} aria-label={t.search} placeholder={t.search} className="min-w-0 flex-1 rounded-lg border bg-background p-3"/><select name="scope" defaultValue={scope} aria-label={t.scope} className="rounded-lg border bg-background p-3"><option value="all">{t.all}</option><option value="event">{t.eventOnly}</option><option value="general">{t.generalOnly}</option></select><button className="rounded-lg border px-4 py-2">{t.find}</button>{(q||scope!=="all")&&<Link href={basePath} className="rounded-lg border px-4 py-2">{t.clear}</Link>}</form>
   <Link href={adminView?"/admin/management/promotion-discipline":"/portals/administration/promotion-discipline"} className="inline-flex rounded-xl border border-violet-500/40 px-4 py-3 font-semibold text-violet-400">{t.review}</Link>
   {(actor.realIsAdmin||actor.isOwner)&&(assignmentError||assignmentOverflow)&&<p role="alert">{t.assignmentError}</p>}
-  {error?<p role="alert" className="rounded-xl border p-4">{t.error}</p>:!rows.length?<p className="rounded-xl border p-4 text-muted-foreground">{t.empty}</p>:<ul className="space-y-2">{rows.map(task=><li key={task.id} className="rounded-xl border bg-card p-4"><p className="font-semibold">{task.title}</p>{task.description&&<p className="mt-2 whitespace-pre-wrap text-sm text-muted-foreground">{task.description}</p>}<p className="mt-2 text-xs text-muted-foreground">{task.event_id?`${t.event}: ${task.event_id}`:t.general}</p>{(actor.realIsAdmin||actor.isOwner)&&task.event_id&&!membersError&&!profilesError&&!memberListTruncated&&!assignmentError&&!assignmentOverflow&&<form action={assignPromotionTask} className="mt-3 flex flex-wrap items-end gap-2"><input type="hidden" name="task_id" value={task.id}/><label className="flex min-w-0 flex-1 flex-col gap-1 text-xs">{t.choose}<select name="user_id" required defaultValue="" className="rounded-lg border bg-background p-2"><option value="" disabled>{t.choose}</option>{(membersByEvent.get(task.event_id)??[]).filter(member=>!(assignmentsByTask.get(task.id)??[]).some(assignment=>assignment.user_id===member.id)).map(member=><option key={member.id} value={member.id}>{member.name}</option>)}</select></label><button className="rounded-lg border px-3 py-2 text-sm">{t.assign}</button></form>}{(actor.realIsAdmin||actor.isOwner)&&!assignmentError&&!assignmentOverflow&&<section aria-label={t.assignmentList} className="mt-3 space-y-2"><p className="text-xs text-muted-foreground">{t.assigned}: {assignmentCounts.get(task.id)??0}</p>{(assignmentsByTask.get(task.id)??[]).map(assignment=><form key={assignment.id} action={removePromotionAssignment} className="flex flex-wrap items-center justify-between gap-2 rounded-lg border p-2"><span className="break-all text-xs">{t.member}: {names.get(assignment.user_id)??assignment.user_id}</span><input type="hidden" name="assignment_id" value={assignment.id}/><button className="rounded-lg border px-3 py-2 text-xs">{t.remove}</button></form>)}</section>}<p className="mt-1 text-xs text-muted-foreground">{t.created}: {new Date(task.created_at).toLocaleDateString(locale)}</p></li>)}</ul>}
+  {error?<p role="alert" className="rounded-xl border p-4">{t.error}</p>:!rows.length?<p className="rounded-xl border p-4 text-muted-foreground">{t.empty}</p>:<ul className="space-y-2">{rows.map(task=><li key={task.id} className="rounded-xl border bg-card p-4"><p className="font-semibold">{task.title}</p>{task.description&&<p className="mt-2 whitespace-pre-wrap text-sm text-muted-foreground">{task.description}</p>}<p className="mt-2 text-xs text-muted-foreground">{task.event_id?`${t.event}: ${task.event_id}`:t.general}</p>{(actor.realIsAdmin||actor.isOwner)&&task.event_id&&!membersError&&!profilesError&&!memberListTruncated&&!assignmentError&&!assignmentOverflow&&<form action={assignPromotionTask} className="mt-3 flex flex-wrap items-end gap-2"><input type="hidden" name="task_id" value={task.id}/><label className="flex min-w-0 flex-1 flex-col gap-1 text-xs">{t.choose}<select name="user_id" required defaultValue="" className="rounded-lg border bg-background p-2"><option value="" disabled>{t.choose}</option>{(membersByEvent.get(task.event_id)??[]).filter(member=>!(assignmentsByTask.get(task.id)??[]).some(assignment=>assignment.user_id===member.id)).map(member=><option key={member.id} value={member.id}>{member.name}</option>)}</select></label><button className="rounded-lg border px-3 py-2 text-sm">{t.assign}</button></form>}{(actor.realIsAdmin||actor.isOwner)&&!assignmentError&&!assignmentOverflow&&<section aria-label={t.assignmentList} className="mt-3 space-y-2"><p className="text-xs text-muted-foreground">{t.assigned}: {assignmentCounts.get(task.id)??0}</p>{(assignmentsByTask.get(task.id)??[]).map(assignment=><form key={assignment.id} action={removePromotionAssignment} className="flex flex-wrap items-center justify-between gap-2 rounded-lg border p-2"><span className="break-all text-xs">{t.member}: {names.get(assignment.user_id)??assignment.user_id}</span><input type="hidden" name="assignment_id" value={assignment.id}/><input type="hidden" name="admin_view" value={adminView?"1":"0"}/><input type="hidden" name="return_q" value={q}/><input type="hidden" name="return_scope" value={scope}/><input type="hidden" name="return_page" value={page}/><button className="rounded-lg border px-3 py-2 text-xs">{t.remove}</button></form>)}</section>}{(actor.realIsAdmin||actor.isOwner)&&task.promotion_only&&!task.event_id&&<GeneralPromotionTaskControls locale={locale} task={task} members={promotionMembers} incomplete={promotionMembersIncomplete||Boolean(assignmentError)||assignmentOverflow} assigned={(assignmentsByTask.get(task.id)??[]).map(assignment=>assignment.user_id)} state={returnState}/>}<p className="mt-1 text-xs text-muted-foreground">{t.created}: {new Date(task.created_at).toLocaleDateString(locale)}</p></li>)}</ul>}
   {(membersError||profilesError||memberListTruncated)&&<p role="alert" className="rounded-xl border p-3">{t.membersError}</p>}
   {assignmentError&&<p role="alert" className="rounded-xl border p-3">{t.assignmentError}</p>}
   {!error&&(page>1||hasNext)&&<nav aria-label={t.page} className="flex items-center justify-between gap-3 rounded-xl border p-3"><span className="text-sm">{t.page} {page}</span><div className="flex gap-2">{page>1&&<Link href={pageHref(page-1)} className="rounded-lg border px-3 py-2 text-sm">{t.previous}</Link>}{hasNext&&<Link href={pageHref(page+1)} className="rounded-lg border px-3 py-2 text-sm">{t.next}</Link>}</div></nav>}

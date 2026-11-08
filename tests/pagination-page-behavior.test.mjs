@@ -17,7 +17,7 @@ function database(target){
  const calls=[]
  const db={
   auth:{getUser:async()=>({data:{user:{id:userId}},error:null})},
-  rpc:async name=>({data:name==='upt_promotion_is_blocked'?false:name==='upt_notification_badge_count'?0:[],error:null}),
+  rpc:name=>name==='upt_admin_promotion_task_members'?{order(){return this},range:async()=>({data:[],error:null,count:0})}:Promise.resolve({data:name==='upt_promotion_is_blocked'?false:name==='upt_notification_badge_count'?0:[],error:null}),
   from:table=>{
    const operations=[]
    const query=new Proxy({}, {get(_target,key){

@@ -77,19 +77,18 @@ export default async function Page({searchParams}:{searchParams?:Promise<{event?
       .map(row => row.workplace_id),
   )
 
-  let visibleAssignments = data || []
+  let visibleAssignments = (data || []).filter(item=>Boolean(item.tasks?.event_id))
   if (!isAdmin && isResponsible) {
     visibleAssignments = visibleAssignments.filter(item => {
       const task = item.tasks
-      if (!task) return false
+      if (!task?.event_id) return false
       if (item.user_id === user.id && activeShiftEventIds.has(task.event_id)) return true
       return Boolean(task.workplace_id && activeResponsibleWorkplaceIds.has(task.workplace_id))
     })
   } else if (!isAdmin) {
     visibleAssignments = visibleAssignments.filter(item =>
       item.user_id === user.id
-      && Boolean(item.tasks)
-      && activeShiftEventIds.has(item.tasks!.event_id),
+      && Boolean(item.tasks?.event_id && activeShiftEventIds.has(item.tasks.event_id)),
     )
   }
   visibleAssignments=[...visibleAssignments].sort((a,b)=>{
@@ -263,7 +262,7 @@ export default async function Page({searchParams}:{searchParams?:Promise<{event?
         </form></ManagerOnly>}
       </article>
       return t.user_id === user.id
-        ? <StaffAvailability key={t.id} available={Boolean(task && activeEventIds.has(task.event_id))}>{article}</StaffAvailability>
+        ? <StaffAvailability key={t.id} available={Boolean(task?.event_id && activeEventIds.has(task.event_id))}>{article}</StaffAvailability>
         : <ManagerOnly key={t.id}>{article}</ManagerOnly>
     })}
   </main>

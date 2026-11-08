@@ -39,7 +39,7 @@ export function GlobalOfflineContentSync({userId}:{userId:string}){
     ...(briefings||[]).map(row=>({...row,kind:'general' as const})),
     ...(personal||[]).map(row=>({...row,kind:'personal' as const})),
    ]
-   const taskItems:OfflineTask[]=(assignments||[]).flatMap(row=>row.tasks?[{id:row.id,title:row.tasks.title,description:row.tasks.description,status:row.status,event_id:row.tasks.event_id,workplace_id:row.tasks.workplace_id}]:[])
+   const taskItems:OfflineTask[]=(assignments||[]).flatMap(row=>row.tasks?.event_id?[{id:row.id,title:row.tasks.title,description:row.tasks.description,status:row.status,event_id:row.tasks.event_id,workplace_id:row.tasks.workplace_id}]:[])
    const emergencyItems:OfflineEmergencyInfo[]=(emergency||[]).map(row=>({event_id:row.event_id,event_name:row.events?.name||'Evenement',event_address:row.events?.address||'',emergency_number:row.emergency_number,first_aid_contact:row.first_aid_contact,security_contact:row.security_contact,assembly_point:row.assembly_point,procedure:row.procedure,updated_at:row.updated_at}))
    const eventItems:OfflineEvent[]=(eventMemberships||[]).flatMap(row=>row.events?[{id:row.events.id,name:row.events.name,address:row.events.address,start_at:row.events.start_at,end_at:row.events.end_at,status:row.events.status}]:[])
    const eventIds=new Set(eventItems.map(item=>item.id))

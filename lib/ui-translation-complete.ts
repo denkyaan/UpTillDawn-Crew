@@ -4,6 +4,13 @@ type Row = { fr: string; en: string; de: string }
 // Canonical Dutch UI strings that were historically present only in the NL/FR/EN table.
 // Keep every row complete: missing translations must never silently fall back to Dutch.
 const ROWS: Record<string, Row> = {
+  'Nom de la tâche': { fr: 'Nom de la tâche', en: 'Task name', de: 'Aufgabenname' },
+  'Task name': { fr: 'Nom de la tâche', en: 'Task name', de: 'Aufgabenname' },
+  'Aufgabenname': { fr: 'Nom de la tâche', en: 'Task name', de: 'Aufgabenname' },
+  'Omschrijving en publicatielinks': { fr: 'Description et liens de publication', en: 'Description and publication links', de: 'Beschreibung und Veröffentlichungslinks' },
+  'Description et liens de publication': { fr: 'Description et liens de publication', en: 'Description and publication links', de: 'Beschreibung und Veröffentlichungslinks' },
+  'Description and publication links': { fr: 'Description et liens de publication', en: 'Description and publication links', de: 'Beschreibung und Veröffentlichungslinks' },
+  'Beschreibung und Veröffentlichungslinks': { fr: 'Description et liens de publication', en: 'Description and publication links', de: 'Beschreibung und Veröffentlichungslinks' },
   'Promotietaken beheren': { fr: 'Gestion des tâches promotionnelles', en: 'Manage promotion tasks', de: 'Promotionsaufgaben verwalten' },
   'Gestion des tâches promotionnelles': { fr: 'Gestion des tâches promotionnelles', en: 'Manage promotion tasks', de: 'Promotionsaufgaben verwalten' },
   'Manage promotion tasks': { fr: 'Gestion des tâches promotionnelles', en: 'Manage promotion tasks', de: 'Promotionsaufgaben verwalten' },

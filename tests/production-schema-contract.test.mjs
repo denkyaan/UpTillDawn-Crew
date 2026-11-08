@@ -18,9 +18,13 @@ test('the production probe selects zero rows and accepts resolved private relati
   const table=endpoint.pathname.split('/').at(-1)
   return table==='portal_role_assignments'?response(200,[]):response(401,{code:'42501',message:'permission denied for table '+table})
  }})
- assert.equal(checks.length,10)
+ assert.equal(checks.length,11)
  assert.equal(requests.length,checks.length)
  assert.ok(requests.some(endpoint=>endpoint.pathname.endsWith('/admin_payment_reminders')&&endpoint.searchParams.get('select').split(',').includes('revision')))
+})
+
+test('promotion task storage must be upgraded before deploying the new management flow',async()=>{
+ await assert.rejects(()=>checkProductionSchema({url,key,fetcher:async endpoint=>endpoint.pathname.endsWith('/tasks')&&endpoint.searchParams.get('select').includes('promotion_only')?response(400,{code:'42703'}):response(200,[])}),/tasks: HTTP 400/)
 })
 
 test('a missing finance table blocks release even when auth RPCs would exist',async()=>{

@@ -22,7 +22,7 @@ test('administration promotion tasks support filtered stable pagination',()=>{
 })
 
 test('promotion task overview exposes instructions and event scope in four languages',()=>{
- assert.ok(page.includes('.select("id,title,description,event_id,created_at")'))
+ assert.ok(page.includes('.select("id,title,description,event_id,created_at,updated_at,promotion_only")'))
  assert.ok(page.includes('task.description&&'))
  assert.ok(page.includes('task.event_id?'))
  for(const label of ['Algemene taak','Tâche générale','General task','Allgemeine Aufgabe'])assert.ok(page.includes(label))
