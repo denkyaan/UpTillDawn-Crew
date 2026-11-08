@@ -8,15 +8,20 @@ export interface WorkplaceCapacity {
 export type StaffingState = 'understaffed' | 'target' | 'overstaffed'
 
 export function workplaceStaffingState(capacity: WorkplaceCapacity, assignedStaff: number): StaffingState {
-  if (assignedStaff < Math.max(0, capacity.minimumStaff)) return 'understaffed'
+  if (!workplaceCapacityIsValid(capacity) || !Number.isSafeInteger(assignedStaff) || assignedStaff < 0) return 'understaffed'
+  if (assignedStaff < capacity.minimumStaff) return 'understaffed'
   if (capacity.maximumStaff != null && assignedStaff > Math.max(capacity.minimumStaff, capacity.maximumStaff)) return 'overstaffed'
   return 'target'
 }
 
 export function staffNeededForTarget(capacity: WorkplaceCapacity, assignedStaff: number): number {
+  if (!workplaceCapacityIsValid(capacity) || !Number.isSafeInteger(assignedStaff) || assignedStaff < 0) return 0
   return Math.max(0, capacity.targetStaff - assignedStaff)
 }
 
 export function workplaceCapacityIsValid(capacity: WorkplaceCapacity): boolean {
-  return capacity.minimumStaff >= 0 && capacity.targetStaff >= capacity.minimumStaff && (capacity.maximumStaff == null || capacity.maximumStaff >= capacity.targetStaff)
+  return Boolean(capacity.workplaceId?.trim()) &&
+    Number.isSafeInteger(capacity.minimumStaff) && capacity.minimumStaff >= 0 &&
+    Number.isSafeInteger(capacity.targetStaff) && capacity.targetStaff >= capacity.minimumStaff &&
+    (capacity.maximumStaff == null || (Number.isSafeInteger(capacity.maximumStaff) && capacity.maximumStaff >= capacity.targetStaff))
 }
