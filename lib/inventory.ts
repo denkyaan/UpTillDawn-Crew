@@ -42,3 +42,42 @@ export function inventoryCountsAreValid(item: InventoryItem): boolean {
   return values.every(value=>Number.isSafeInteger(value)&&value>=0)
     && inventoryAccountedQuantity(item)===item.totalQuantity
 }
+
+/** Pure inventory movements: callers must persist the updated item and audit trail atomically. */
+export type InventoryMovementKind = 'issue' | 'return' | 'damage' | 'missing' | 'recover'
+
+export function applyInventoryMovement(item: InventoryItem, kind: InventoryMovementKind, quantity: number): InventoryItem {
+  if (!item.id?.trim() || !item.name?.trim() || !inventoryCountsAreValid(item)) throw new Error('Invalid inventory item')
+  if (!Number.isSafeInteger(quantity) || quantity <= 0) throw new Error('Invalid inventory movement quantity')
+  const available = item.availableQuantity
+  const issued = item.issuedQuantity ?? 0
+  const damaged = item.damagedQuantity ?? 0
+  const missing = item.missingQuantity ?? 0
+  let next: InventoryItem
+  switch (kind) {
+    case 'issue':
+      if (available < quantity) throw new Error('Insufficient available inventory')
+      next = {...item, availableQuantity: available - quantity, issuedQuantity: issued + quantity}
+      break
+    case 'return':
+      if (issued < quantity) throw new Error('Insufficient issued inventory')
+      next = {...item, availableQuantity: available + quantity, issuedQuantity: issued - quantity}
+      break
+    case 'damage':
+      if (issued < quantity) throw new Error('Insufficient issued inventory')
+      next = {...item, issuedQuantity: issued - quantity, damagedQuantity: damaged + quantity}
+      break
+    case 'missing':
+      if (issued < quantity) throw new Error('Insufficient issued inventory')
+      next = {...item, issuedQuantity: issued - quantity, missingQuantity: missing + quantity}
+      break
+    case 'recover':
+      if (missing < quantity) throw new Error('Insufficient missing inventory')
+      next = {...item, missingQuantity: missing - quantity, availableQuantity: available + quantity}
+      break
+    default:
+      throw new Error('Unsupported inventory movement')
+  }
+  if (!inventoryCountsAreValid(next)) throw new Error('Inventory movement violates quantity conservation')
+  return next
+}
