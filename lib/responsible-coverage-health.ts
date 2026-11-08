@@ -16,7 +16,7 @@ export interface ResponsibleCoverageGap {
 }
 
 function validShift(shift: ScheduledCoverageShift): boolean {
-  return Number.isFinite(shift.startsAt) && Number.isFinite(shift.endsAt) && shift.endsAt > shift.startsAt
+  return Boolean(shift.userId?.trim() && shift.workplaceId?.trim()) && Number.isFinite(shift.startsAt) && Number.isFinite(shift.endsAt) && shift.startsAt >= 0 && shift.endsAt > shift.startsAt
 }
 
 export function responsibleCoverageGaps(
@@ -24,12 +24,13 @@ export function responsibleCoverageGaps(
   shifts: readonly ScheduledCoverageShift[],
   assignments: readonly ResponsibleWorkplaceAssignment[],
 ): ResponsibleCoverageGap[] {
+  if (!workplaceId?.trim()) return []
   const workplaceShifts = shifts.filter((shift) => shift.workplaceId === workplaceId && validShift(shift))
   if (!workplaceShifts.length) return []
 
   const responsibleIds = new Set(
     assignments
-      .filter((assignment) => assignment.workplaceId === workplaceId)
+      .filter((assignment) => assignment.workplaceId === workplaceId && Boolean(assignment.userId?.trim()))
       .map((assignment) => assignment.userId),
   )
   const boundaries = [...new Set(workplaceShifts.flatMap((shift) => [shift.startsAt, shift.endsAt]))].sort((a, b) => a - b)
@@ -57,5 +58,8 @@ export function responsibleCoverageIsComplete(
   shifts: readonly ScheduledCoverageShift[],
   assignments: readonly ResponsibleWorkplaceAssignment[],
 ): boolean {
+  if (!workplaceId?.trim()) return false
+  const relevant = shifts.filter(shift => shift.workplaceId === workplaceId)
+  if (relevant.some(shift => !validShift(shift))) return false
   return responsibleCoverageGaps(workplaceId, shifts, assignments).length === 0
 }
