@@ -38,7 +38,11 @@ export function administrationNotificationHref(value:string|null):string|null {
  if(url.pathname==="/portals/administration/invoices")return administrationRoute("invoices")+url.search+url.hash
  // Legacy invoice deep links must not be rewritten to nonexistent module subroutes.
  if(url.pathname.startsWith("/portals/administration/invoices/"))return administrationRoute("invoices")+url.search+url.hash
- if(url.pathname==="/portals/administration"||url.pathname.startsWith("/portals/administration/"))return url.pathname+url.search+url.hash
+ if(url.pathname.startsWith("/portals/administration/modules/invoices/"))return administrationRoute("invoices")+url.search+url.hash
+ if(url.pathname==="/portals/administration")return url.pathname+url.search+url.hash
+ const knownRoutes=administrationNavigationGroups.flatMap(group=>group.slugs.map(administrationRoute))
+ if(knownRoutes.some(route=>route!=="/portals/administration"&&(url.pathname===route||(url.pathname.startsWith(route+"/")&&!route.endsWith("/modules/invoices")))))
+  return url.pathname+url.search+url.hash
  // Other portal URLs must never be followed from an administration notification.
  if(url.pathname.startsWith("/portals/"))return null
  const routes:Record<string,string>={
