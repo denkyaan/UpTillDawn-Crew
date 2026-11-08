@@ -46,6 +46,15 @@ export function canOpenPortal(
 export function safeNotificationPath(value: unknown): string {
   if (typeof value !== "string" || !value.startsWith("/") ||
       value.startsWith("//") || value.includes("\\") ||
-      /[\u0000-\u001f\u007f]/.test(value) || /%2f|%5c|%2e/i.test(value)) return "/notifications"
-  return value
+      /[\u0000-\u001f\u007f]/.test(value)) return "/notifications"
+  const rawPath = value.split(/[?#]/, 1)[0]
+  if (/%(?:2e|2f|5c|0[0-9a-f]|1[0-9a-f]|7f|25(?:2e|2f|5c|0[0-9a-f]|1[0-9a-f]|7f))/i.test(rawPath) ||
+      rawPath.split("/").includes("..")) return "/notifications"
+  let url: URL
+  try { url = new URL(value, "https://uptilldawn.local") }
+  catch { return "/notifications" }
+  if (url.origin !== "https://uptilldawn.local") return "/notifications"
+  const normalizedPath = rawPath.replace(/\/\.\//g, "/").replace(/\/\.$/, "/")
+  if (normalizedPath !== url.pathname) return "/notifications"
+  return url.pathname + url.search + url.hash
 }
