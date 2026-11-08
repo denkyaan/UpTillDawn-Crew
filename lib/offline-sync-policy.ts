@@ -60,6 +60,6 @@ export function planOfflineMutations(mutations: readonly OfflineMutation[], comp
     visited.add(id)
   }
   for (const mutation of mutations) visit(mutation.id)
-  return mutations.filter(mutation => mutationCanSync(mutation, completedIds))
+  return mutations.filter(mutation => !completedIds.has(mutation.id) && mutationCanSync(mutation, completedIds))
     .sort((a,b) => a.createdAt - b.createdAt || a.id.localeCompare(b.id))
 }
