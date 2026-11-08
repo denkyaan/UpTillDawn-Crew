@@ -16,7 +16,7 @@ export function notificationIsUnread(state: NotificationReadState): boolean {
 }
 
 export function notificationCanMarkRead(state: NotificationReadState): boolean {
-  return !state.readAt && !state.dismissedAt
+  return validNotificationState(state) && state.readAt == null && state.dismissedAt == null
 }
 
 export function notificationCanDismiss(state: NotificationReadState): boolean {
