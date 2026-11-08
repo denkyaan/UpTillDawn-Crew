@@ -16,8 +16,14 @@ export default async function Page({searchParams}:{searchParams?:Promise<{event?
  const s=await createClient();const locale=await requestUiLocale();const copy=COPY[locale];const isAdmin=current.role==='admin'||current.realIsAdmin||current.isOwner;const isResponsible=current.role==='responsible_lead'
  let eventId=params.event
  if(eventId&&!/^[0-9a-f]{8}(?:-[0-9a-f]{4}){3}-[0-9a-f]{12}$/i.test(eventId))eventId=undefined
- const {data:availableEvents}=isAdmin?await s.from('events').select('id,name').neq('status','archived').order('start_at',{ascending:false}).limit(100):await s.from('event_members').select('event_id,events(id,name)').eq('user_id',current.id).limit(100)
- const eventOptions=isAdmin?(availableEvents||[]).map(row=>({id:row.id,name:row.name})):(availableEvents||[]).flatMap(row=>{const event=Array.isArray(row.events)?row.events[0]:row.events;return event?[{id:event.id,name:event.name}]:[]})
+ const eventOptions:{id:string;name:string}[]=[]
+ if(isAdmin){
+  const {data}=await s.from('events').select('id,name').neq('status','archived').order('start_at',{ascending:false}).limit(100)
+  eventOptions.push(...(data??[]).map(row=>({id:row.id,name:row.name})))
+ }else{
+  const {data}=await s.from('event_members').select('event_id,events(id,name)').eq('user_id',current.id).limit(100)
+  eventOptions.push(...(data??[]).flatMap(row=>row.events?[{id:row.events.id,name:row.events.name}]:[]))
+ }
  if(!eventId)eventId=eventOptions[0]?.id
  if(!eventId)return <main className="p-8"><h1 className="text-3xl font-black">{copy.title}</h1><p className="mt-4">{copy.empty}</p></main>
  const {data:rows,error}=await s.from('timesheets').select('id,event_id,user_id,status,rejection_reason').eq('event_id',eventId).order('updated_at',{ascending:false})
