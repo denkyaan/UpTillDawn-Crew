@@ -9,12 +9,16 @@ export interface WorkplaceTransfer {
 }
 
 export function workplaceTransferIsValid(transfer: WorkplaceTransfer): boolean {
-  return transfer.originalWorkplaceId !== transfer.temporaryWorkplaceId && (!transfer.endsAt || transfer.endsAt > transfer.startsAt)
+  return Boolean(transfer.userId?.trim() && transfer.eventId?.trim() && transfer.originalWorkplaceId?.trim() && transfer.temporaryWorkplaceId?.trim()) &&
+    transfer.originalWorkplaceId !== transfer.temporaryWorkplaceId &&
+    Number.isFinite(transfer.startsAt) &&
+    (transfer.endsAt == null || (Number.isFinite(transfer.endsAt) && transfer.endsAt > transfer.startsAt))
 }
 
 export function workplaceForTime(originalWorkplaceId: string, transfers: readonly WorkplaceTransfer[], at: number): string {
+  if (!Number.isFinite(at) || !originalWorkplaceId?.trim()) return originalWorkplaceId
   const active = transfers
-    .filter((transfer) => transfer.originalWorkplaceId === originalWorkplaceId && transfer.startsAt <= at && (!transfer.endsAt || transfer.endsAt > at))
+    .filter((transfer) => workplaceTransferIsValid(transfer) && transfer.originalWorkplaceId === originalWorkplaceId && transfer.startsAt <= at && (transfer.endsAt == null || transfer.endsAt > at))
     .sort((a, b) => b.startsAt - a.startsAt)[0]
   return active?.temporaryWorkplaceId ?? originalWorkplaceId
 }
