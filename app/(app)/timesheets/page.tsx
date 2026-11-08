@@ -1,4 +1,5 @@
 import {redirect} from 'next/navigation'
+import Link from 'next/link'
 import {createClient} from '@/lib/supabase/crew-server'
 import {getCurrentUser} from '@/lib/actions/auth'
 import {requestUiLocale} from '@/lib/server-locale'
@@ -12,9 +13,12 @@ const COPY={
 } as const
 export default async function Page({searchParams}:{searchParams?:Promise<{event?:string}>}){
  const params=searchParams?await searchParams:{};const current=await getCurrentUser();if(!current)redirect('/login')
- const s=await createClient();const locale=await requestUiLocale();const copy=COPY[locale];const isAdmin=current.role==='admin';const isResponsible=current.role==='responsible_lead'
+ const s=await createClient();const locale=await requestUiLocale();const copy=COPY[locale];const isAdmin=current.role==='admin'||current.realIsAdmin||current.isOwner;const isResponsible=current.role==='responsible_lead'
  let eventId=params.event
- if(!eventId){const {data}=await s.from('event_members').select('event_id').eq('user_id',current.id).limit(1).maybeSingle();eventId=data?.event_id}
+ if(eventId&&!/^[0-9a-f]{8}(?:-[0-9a-f]{4}){3}-[0-9a-f]{12}$/i.test(eventId))eventId=undefined
+ const {data:availableEvents}=isAdmin?await s.from('events').select('id,name').neq('status','archived').order('start_at',{ascending:false}).limit(100):await s.from('event_members').select('event_id,events(id,name)').eq('user_id',current.id).limit(100)
+ const eventOptions=isAdmin?(availableEvents||[]).map(row=>({id:row.id,name:row.name})):(availableEvents||[]).flatMap(row=>{const event=Array.isArray(row.events)?row.events[0]:row.events;return event?[{id:event.id,name:event.name}]:[]})
+ if(!eventId)eventId=eventOptions[0]?.id
  if(!eventId)return <main className="p-8"><h1 className="text-3xl font-black">{copy.title}</h1><p className="mt-4">{copy.empty}</p></main>
  const {data:rows,error}=await s.from('timesheets').select('id,event_id,user_id,status,rejection_reason').eq('event_id',eventId).order('updated_at',{ascending:false})
  if(error)return <main className="p-8">{copy.empty}</main>
@@ -29,5 +33,5 @@ export default async function Page({searchParams}:{searchParams?:Promise<{event?
  const names:Record<string,string>=Object.fromEntries((profileRows||[]).filter((p):p is typeof p & {full_name:string}=>typeof p.full_name==='string'&&p.full_name.trim().length>0).map(p=>[p.id,p.full_name]))
  const driverTotals=[...new Set((driveRows||[]).map(d=>d.user_id))].map(userId=>{const sessions=(workRows||[]).filter(w=>w.user_id===userId);const drives=(driveRows||[]).filter(d=>d.user_id===userId);const totalSeconds=sessions.reduce((n,w)=>n+Math.max(0,(Date.parse(w.ended_at||new Date().toISOString())-Date.parse(w.started_at))/1000),0);const drivingSeconds=drives.reduce((n,d)=>n+Math.max(0,(Date.parse(d.ended_at||new Date().toISOString())-Date.parse(d.started_at))/1000),0);return {userId,name:(profileRows||[]).find(p=>p.id===userId)?.full_name||'Driver',eventSeconds:Math.max(0,totalSeconds-drivingSeconds),drivingSeconds,km:drives.reduce((n,d)=>n+Number(d.actual_km??d.expected_km??0),0),rides:drives.length}})
  const duration=(seconds:number)=>`${Math.floor(seconds/3600)}u ${Math.floor(seconds%3600/60)}m`
- return <main className="space-y-6 p-4 pb-28 md:p-8"><h1 className="text-3xl font-black">{copy.title}</h1><TimesheetControls eventId={eventId} userId={current.id} isAdmin={isAdmin} isResponsible={isResponsible} own={own} rows={rows||[]} names={names} copy={copy}/>{driverTotals.length>0&&<section className="space-y-3 rounded-2xl border p-4"><h2 className="text-xl font-bold">Driver</h2>{driverTotals.map(row=><article key={row.userId} className="rounded-xl border p-3"><p className="font-bold">{row.name}</p><p className="text-sm">{driverLabels.event} {duration(row.eventSeconds)} · {driverLabels.driving} {duration(row.drivingSeconds)} · {driverLabels.total} {duration(row.eventSeconds+row.drivingSeconds)} · {row.km.toFixed(1)} km · {row.rides} {driverLabels.rides}</p></article>)}</section>}</main>
+ return <main className="space-y-6 p-4 pb-28 md:p-8"><h1 className="text-3xl font-black">{copy.title}</h1><nav aria-label={copy.title} className="flex flex-wrap gap-2">{eventOptions.map(event=><Link key={event.id} aria-current={event.id===eventId?'page':undefined} className={event.id===eventId?'rounded-lg bg-violet-600 px-3 py-2 text-white':'rounded-lg border px-3 py-2'} href={'/timesheets?event='+encodeURIComponent(event.id)}>{event.name}</Link>)}</nav><TimesheetControls eventId={eventId} userId={current.id} isAdmin={isAdmin} isResponsible={isResponsible} own={own} rows={rows||[]} names={names} copy={copy}/>{driverTotals.length>0&&<section className="space-y-3 rounded-2xl border p-4"><h2 className="text-xl font-bold">Driver</h2>{driverTotals.map(row=><article key={row.userId} className="rounded-xl border p-3"><p className="font-bold">{row.name}</p><p className="text-sm">{driverLabels.event} {duration(row.eventSeconds)} · {driverLabels.driving} {duration(row.drivingSeconds)} · {driverLabels.total} {duration(row.eventSeconds+row.drivingSeconds)} · {row.km.toFixed(1)} km · {row.rides} {driverLabels.rides}</p></article>)}</section>}</main>
 }
