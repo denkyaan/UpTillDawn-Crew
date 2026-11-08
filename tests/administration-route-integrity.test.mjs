@@ -28,3 +28,25 @@ test('legacy invoice detail notifications resolve to an existing administration 
   assert.equal(administrationNotificationHref(url),expected,url)
  }
 })
+
+test('notification deep links are limited to registered administration destinations',()=>{
+ for(const group of administrationNavigationGroups){
+  for(const slug of group.slugs){
+   const route=administrationRoute(slug)
+   assert.equal(administrationNotificationHref(route+'?source=alert'),route+'?source=alert',slug)
+  }
+ }
+ for(const url of [
+  '/portals/administration/does-not-exist',
+  '/portals/administration/api/private',
+  '/portals/administration/modules/does-not-exist',
+  '/portals/administration/modules/invoices/unknown'
+ ]){
+  if(url.endsWith('/modules/invoices/unknown')){
+   assert.equal(administrationNotificationHref(url),administrationRoute('invoices'))
+  }else{
+   assert.equal(administrationNotificationHref(url),null,url)
+  }
+ }
+ assert.equal(administrationNotificationHref('/portals/administration/finance?tab=payments'),'/portals/administration/finance?tab=payments')
+})
