@@ -25,7 +25,7 @@ test('rejects ambiguous quantity strings without persisting partial ticket batch
  }
 })
 test('rejects control characters in external ticket IDs',()=>{
- for(const id of ['A\\tB','A\\nB','A\\rB','A'+String.fromCharCode(0)+'B']){
+ for(const id of ['A\tB','A\nB','A\rB','A'+String.fromCharCode(0)+'B']){
   const result=validateTicketSalesCsv(header+row.replace('A1','"'+id+'"'),'evt-1')
   assert.ok(result.errors.length>0,JSON.stringify(id))
   assert.equal(result.rows.length,0,JSON.stringify(id))
