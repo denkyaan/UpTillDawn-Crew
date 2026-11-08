@@ -11,7 +11,7 @@ const TRANSITIONS: Record<TaskStatus, readonly TaskStatus[]> = {
 }
 
 export function canTransitionTask(from: TaskStatus, to: TaskStatus): boolean {
-  return TRANSITIONS[from].includes(to)
+  return Object.prototype.hasOwnProperty.call(TRANSITIONS,from) && TRANSITIONS[from].includes(to)
 }
 
 export function taskIsActionable(status: TaskStatus): boolean {
@@ -19,5 +19,5 @@ export function taskIsActionable(status: TaskStatus): boolean {
 }
 
 export function taskIsOverdue(status: TaskStatus, dueAt: number | null | undefined, now = Date.now()): boolean {
-  return taskIsActionable(status) && dueAt != null && dueAt < now
+  return taskIsActionable(status) && dueAt != null && Number.isFinite(dueAt) && dueAt >= 0 && Number.isFinite(now) && now >= 0 && dueAt < now
 }

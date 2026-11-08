@@ -22,7 +22,7 @@ export function checklistItemIsComplete(item: ChecklistItem): boolean {
 }
 
 export function checklistCanClose(checklist: OperationalChecklist): boolean {
-  if (!checklist.id?.trim() || !Array.isArray(checklist.items) || checklist.items.length === 0) return false
+  if (!checklist.id?.trim() || !['opening','closing','safety','custom'].includes(checklist.kind) || !Array.isArray(checklist.items) || checklist.items.length === 0) return false
   const ids = checklist.items.map((item) => item.id?.trim())
   if (ids.some((id) => !id) || new Set(ids).size !== ids.length) return false
   return checklist.items.filter((item) => item.required).every(checklistItemIsComplete)
@@ -30,5 +30,7 @@ export function checklistCanClose(checklist: OperationalChecklist): boolean {
 
 export function checklistCompletionRate(checklist: OperationalChecklist): number {
   if (!Array.isArray(checklist.items) || !checklist.items.length) return 0
+  const ids=checklist.items.map(item=>item.id?.trim())
+  if (ids.some(id=>!id) || new Set(ids).size!==ids.length) return 0
   return checklist.items.filter(checklistItemIsComplete).length / checklist.items.length
 }
