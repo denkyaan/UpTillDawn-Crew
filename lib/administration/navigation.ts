@@ -41,7 +41,7 @@ export function administrationNotificationHref(value:string|null):string|null {
  if(/%(?:0[0-9a-f]|1[0-9a-f]|7f|25(?:0[0-9a-f]|1[0-9a-f]|7f|2e|2f|5c))/i.test(rawPath))return null
  // Permit harmless "/./" normalization, while rejecting parent traversal.
  if(rawPath.split("/").includes(".."))return null
- const normalizedPath=rawPath.replace(/\\/\.\\/(?=[^/])/g,"/").replace(/\\/\\.$/,"/")
+ const normalizedPath=rawPath.replace(/\/\.\//g,"/").replace(/\/\.$/,"/")
  if(normalizedPath!==url.pathname)return null
  if(url.pathname==="/portals/administration/invoices")return administrationRoute("invoices")+url.search+url.hash
  // Legacy invoice deep links must not be rewritten to nonexistent module subroutes.
