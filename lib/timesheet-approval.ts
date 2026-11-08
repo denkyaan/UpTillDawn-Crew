@@ -10,16 +10,20 @@ export interface TimesheetApproval {
   rejectionReason?: string | null
 }
 
+function validTimesheetIdentity(timesheet: TimesheetApproval): boolean {
+  return Boolean(timesheet.userId?.trim() && timesheet.eventId?.trim())
+}
+
 export function timesheetCanSubmit(timesheet: TimesheetApproval): boolean {
-  return timesheet.status === 'open' || timesheet.status === 'rejected'
+  return validTimesheetIdentity(timesheet) && (timesheet.status === 'open' || timesheet.status === 'rejected')
 }
 
 export function timesheetCanReview(timesheet: TimesheetApproval): boolean {
-  return timesheet.status === 'submitted'
+  return validTimesheetIdentity(timesheet) && timesheet.status === 'submitted'
 }
 
 export function timesheetCanLock(timesheet: TimesheetApproval): boolean {
-  return timesheet.status === 'approved'
+  return validTimesheetIdentity(timesheet) && timesheet.status === 'approved'
 }
 
 export function rejectedTimesheetHasReason(timesheet: TimesheetApproval): boolean {

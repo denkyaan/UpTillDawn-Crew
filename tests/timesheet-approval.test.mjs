@@ -45,3 +45,11 @@ test('non-rejected timesheets never require a rejection reason',()=>{
     assert.equal(rejectedTimesheetHasReason(sheet(status)),true,status)
   }
 })
+
+test('timesheet lifecycle gates reject missing staff or event identity',()=>{
+ for(const patch of [{userId:''},{userId:' '},{eventId:''},{eventId:' '}]){
+  assert.equal(timesheetCanSubmit(sheet('open',patch)),false)
+  assert.equal(timesheetCanReview(sheet('submitted',patch)),false)
+  assert.equal(timesheetCanLock(sheet('approved',patch)),false)
+ }
+})
