@@ -59,9 +59,7 @@ export function administrationNotificationHref(value:string|null):string|null {
  const artistBase=administrationRoute("artists")
  const artistDetail=new RegExp("^"+artistBase+"/[0-9a-f-]{36}(?:/agreement(?:/signing-check/[0-9a-f-]{36})?)?$","i")
  if(artistDetail.test(url.pathname))return url.pathname+url.search+url.hash
- const invoiceBase=administrationRoute("invoices")
- const invoicePeppol=new RegExp("^"+invoiceBase+"/[0-9a-f-]{36}/peppol$","i")
- if(invoicePeppol.test(url.pathname))return url.pathname+url.search+url.hash
+ // Invoice Peppol links are handled above, before the legacy invoice fallback.
  // Other portal URLs must never be followed from an administration notification.
  if(url.pathname.startsWith("/portals/"))return null
  const routes:Record<string,string>={
