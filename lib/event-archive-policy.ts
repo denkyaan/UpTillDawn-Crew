@@ -8,12 +8,16 @@ export interface EventArchiveRecord {
   restoredAt?: number | null
 }
 
+function validArchiveTimestamp(value: number | null | undefined): boolean {
+  return typeof value === 'number' && Number.isFinite(value) && value >= 0
+}
+
 export function eventCanArchive(record: EventArchiveRecord): boolean {
-  return record.state === 'completed' && Boolean(record.completedAt)
+  return Boolean(record.eventId?.trim()) && record.state === 'completed' && validArchiveTimestamp(record.completedAt)
 }
 
 export function eventCanRestore(record: EventArchiveRecord): boolean {
-  return record.state === 'archived' && Boolean(record.archivedAt)
+  return Boolean(record.eventId?.trim()) && record.state === 'archived' && validArchiveTimestamp(record.archivedAt)
 }
 
 export function eventIsReadOnly(record: EventArchiveRecord): boolean {
