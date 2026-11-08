@@ -44,7 +44,9 @@ export function administrationNotificationHref(value:string|null):string|null {
  const normalizedPath=rawPath.replace(/\/\.\//g,"/").replace(/\/\.$/,"/")
  if(normalizedPath!==url.pathname)return null
  if(url.pathname==="/portals/administration/invoices")return administrationRoute("invoices")+url.search+url.hash
- // Legacy invoice deep links must not be rewritten to nonexistent module subroutes.
+ // Preserve existing invoice detail pages for valid IDs; unknown legacy links fall back to the overview.
+ const invoiceDetail=/^\/portals\/administration\/(?:modules\/)?invoices\/([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})$/i.exec(url.pathname)
+ if(invoiceDetail)return administrationRoute("invoices")+"/"+invoiceDetail[1]+url.search+url.hash
  if(url.pathname.startsWith("/portals/administration/invoices/"))return administrationRoute("invoices")+url.search+url.hash
  if(url.pathname.startsWith("/portals/administration/modules/invoices/"))return administrationRoute("invoices")+url.search+url.hash
  if(url.pathname==="/portals/administration")return url.pathname+url.search+url.hash

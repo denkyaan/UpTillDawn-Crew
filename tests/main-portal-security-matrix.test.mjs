@@ -51,3 +51,15 @@ test('valid administration notification targets retain search and fragments',()=
  }
  assert.equal(safeNotificationPath('/notifications?search=%252e%252e#today'),'/notifications?search=%252e%252e#today')
 })
+
+test('invoice notifications open real UUID detail pages instead of silently dropping context',()=>{
+ const id='123e4567-e89b-42d3-a456-426614174000'
+ for(const path of [
+  '/portals/administration/invoices/'+id,
+  '/portals/administration/modules/invoices/'+id,
+ ]){
+  assert.equal(administrationNotificationHref(path+'?tab=payments#history'),administrationRoute('invoices')+'/'+id+'?tab=payments#history')
+ }
+ assert.equal(administrationNotificationHref('/portals/administration/invoices/not-a-uuid'),administrationRoute('invoices'))
+ assert.equal(administrationNotificationHref('/portals/administration/modules/invoices/not-a-uuid'),administrationRoute('invoices'))
+})
