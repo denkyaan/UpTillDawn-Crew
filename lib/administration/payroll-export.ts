@@ -6,13 +6,13 @@ function exactSeconds(value:number|string):number {
   if(!Number.isSafeInteger(value)||value<0)throw Error('Invalid approved payroll row')
   return value
  }
- if(!/^(?:0|[1-9]\\d*)$/.test(value))throw Error('Invalid approved payroll row')
+ if(!/^(?:0|[1-9]\d*)$/.test(value))throw Error('Invalid approved payroll row')
  const parsed=Number(value)
  if(!Number.isSafeInteger(parsed))throw Error('Invalid approved payroll row')
  return parsed
 }
 function exactUtcTimestamp(value:string):number {
- if(typeof value!=='string'||!/^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}(?:\\.\\d{1,3})?Z$/.test(value))throw Error('Invalid approved payroll row')
+ if(typeof value!=='string'||!/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d{1,3})?Z$/.test(value))throw Error('Invalid approved payroll row')
  const parsed=Date.parse(value)
  if(!Number.isFinite(parsed)||new Date(parsed).toISOString().slice(0,19)!==value.slice(0,19))throw Error('Invalid approved payroll row')
  return parsed
