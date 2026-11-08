@@ -68,3 +68,18 @@ test('CSV export escapes formula-like event identifiers',()=>{
  const csv=salesReconciliationCsv(report)
  assert.match(csv,/"'=HYPERLINK\(1\)"/)
 })
+
+test('consolidated event net balances match paid minus refunds across categories',()=>{
+ const report=buildSalesReconciliationReport([
+  payment(),
+  payment({transactionId:'r1',status:'refunded',amountCents:400}),
+  payment({transactionId:'m1',eventId:'event2',category:'merch',saleReference:'shirt',amountCents:1500}),
+  payment({transactionId:'m2',eventId:'event2',category:'merch',saleReference:'shirt',status:'refunded',amountCents:200}),
+  payment({transactionId:'k1',eventId:'event3',category:'tokens',saleReference:'tokens',amountCents:800})
+ ])
+ assert.deepEqual(report.totals,{tickets:1600,merch:1300,tokens:800})
+ for(const category of ['tickets','merch','tokens']){
+  assert.equal(report.events.reduce((sum,event)=>sum+event.netCents[category],0),report.totals[category])
+  for(const event of report.events)assert.equal(event.paidCents[category]-event.refundedCents[category],event.netCents[category])
+ }
+})

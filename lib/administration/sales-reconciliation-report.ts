@@ -42,6 +42,19 @@ export function buildSalesReconciliationReport(payments:readonly ExternalPayment
   }
   event.acceptedTransactions++
  }
+ // Verify event-level accounting balances before exposing or exporting a report.
+ const summed=zero()
+ for(const event of events.values()){
+  for(const category of ['tickets','merch','tokens'] as const){
+   if(event.paidCents[category]-event.refundedCents[category]!==event.netCents[category])
+    throw new Error('Sales reconciliation event balance mismatch')
+   summed[category]+=event.netCents[category]
+   if(!Number.isSafeInteger(summed[category]))throw new RangeError('Unsafe consolidated sales total')
+  }
+ }
+ for(const category of ['tickets','merch','tokens'] as const){
+  if(summed[category]!==reconciled.totals[category])throw new Error('Sales reconciliation consolidated balance mismatch')
+ }
  return {
   events:[...events.values()].sort((a,b)=>a.eventId.localeCompare(b.eventId)),
   totals:{...reconciled.totals},

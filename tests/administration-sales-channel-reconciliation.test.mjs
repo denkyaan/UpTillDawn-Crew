@@ -89,3 +89,16 @@ test('pending callback with conflicting identity remains flagged even after sett
  assert.equal(r.totals.tickets,2500)
  assert.equal(r.conflicts.length,1)
 })
+
+test('stale pending with mismatched settled amount is a conflict, not a duplicate',()=>{
+ const r=reconcileExternalSales([payment({status:'pending',amountCents:1500}),payment()])
+ assert.equal(r.totals.tickets,2500)
+ assert.equal(r.conflicts.length,1)
+ assert.equal(r.duplicates.length,0)
+})
+test('pending snapshots matching settled amount are idempotent',()=>{
+ const r=reconcileExternalSales([payment({status:'pending'}),payment(),payment({status:'pending'})])
+ assert.equal(r.totals.tickets,2500)
+ assert.equal(r.duplicates.length,2)
+ assert.equal(r.conflicts.length,0)
+})
