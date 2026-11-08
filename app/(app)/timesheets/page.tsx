@@ -6,10 +6,10 @@ import {requestUiLocale} from '@/lib/server-locale'
 import TimesheetControls from '@/components/crew/timesheet-controls'
 export const dynamic='force-dynamic'
 const COPY={
- nl:{title:'Werkstaten',mine:'Mijn werkstaat',team:'Werkstaten team',submit:'INDIENEN',resubmit:'OPNIEUW INDIENEN',approve:'GOEDKEUREN',reject:'AFWIJZEN',lock:'VERGRENDELEN',reason:'Reden van afwijzing',empty:'Geen werkstaten beschikbaar.',working:'Bezig…',statuses:{open:'Open',submitted:'Ingediend',approved:'Goedgekeurd',rejected:'Afgewezen',locked:'Vergrendeld'}},
- fr:{title:'Feuilles de temps',mine:'Ma feuille de temps',team:"Feuilles de temps de l'équipe",submit:'SOUMETTRE',resubmit:'SOUMETTRE À NOUVEAU',approve:'APPROUVER',reject:'REFUSER',lock:'VERROUILLER',reason:'Motif du refus',empty:'Aucune feuille de temps disponible.',working:'Traitement…',statuses:{open:'Ouvert',submitted:'Soumis',approved:'Approuvé',rejected:'Refusé',locked:'Verrouillé'}},
- en:{title:'Timesheets',mine:'My timesheet',team:'Team timesheets',submit:'SUBMIT',resubmit:'RESUBMIT',approve:'APPROVE',reject:'REJECT',lock:'LOCK',reason:'Rejection reason',empty:'No timesheets available.',working:'Working…',statuses:{open:'Open',submitted:'Submitted',approved:'Approved',rejected:'Rejected',locked:'Locked'}},
- de:{title:'Stundenzettel',mine:'Mein Stundenzettel',team:'Team-Stundenzettel',submit:'EINREICHEN',resubmit:'ERNEUT EINREICHEN',approve:'GENEHMIGEN',reject:'ABLEHNEN',lock:'SPERREN',reason:'Ablehnungsgrund',empty:'Keine Stundenzettel verfügbar.',working:'Wird verarbeitet…',statuses:{open:'Offen',submitted:'Eingereicht',approved:'Genehmigt',rejected:'Abgelehnt',locked:'Gesperrt'}}
+ nl:{title:'Werkstaten',mine:'Mijn werkstaat',team:'Werkstaten team',submit:'INDIENEN',resubmit:'OPNIEUW INDIENEN',approve:'GOEDKEUREN',reject:'AFWIJZEN',lock:'VERGRENDELEN',reason:'Reden van afwijzing',empty:'Geen werkstaten beschikbaar.',loadError:'Werkstaten konden niet worden geladen.',working:'Bezig…',statuses:{open:'Open',submitted:'Ingediend',approved:'Goedgekeurd',rejected:'Afgewezen',locked:'Vergrendeld'}},
+ fr:{title:'Feuilles de temps',mine:'Ma feuille de temps',team:"Feuilles de temps de l'équipe",submit:'SOUMETTRE',resubmit:'SOUMETTRE À NOUVEAU',approve:'APPROUVER',reject:'REFUSER',lock:'VERROUILLER',reason:'Motif du refus',empty:'Aucune feuille de temps disponible.',loadError:'Impossible de charger les feuilles de temps.',working:'Traitement…',statuses:{open:'Ouvert',submitted:'Soumis',approved:'Approuvé',rejected:'Refusé',locked:'Verrouillé'}},
+ en:{title:'Timesheets',mine:'My timesheet',team:'Team timesheets',submit:'SUBMIT',resubmit:'RESUBMIT',approve:'APPROVE',reject:'REJECT',lock:'LOCK',reason:'Rejection reason',empty:'No timesheets available.',loadError:'Unable to load timesheets.',working:'Working…',statuses:{open:'Open',submitted:'Submitted',approved:'Approved',rejected:'Rejected',locked:'Locked'}},
+ de:{title:'Stundenzettel',mine:'Mein Stundenzettel',team:'Team-Stundenzettel',submit:'EINREICHEN',resubmit:'ERNEUT EINREICHEN',approve:'GENEHMIGEN',reject:'ABLEHNEN',lock:'SPERREN',reason:'Ablehnungsgrund',empty:'Keine Stundenzettel verfügbar.',loadError:'Stundenzettel konnten nicht geladen werden.',working:'Wird verarbeitet…',statuses:{open:'Offen',submitted:'Eingereicht',approved:'Genehmigt',rejected:'Abgelehnt',locked:'Gesperrt'}}
 } as const
 export default async function Page({searchParams}:{searchParams?:Promise<{event?:string}>}){
  const params=searchParams?await searchParams:{};const current=await getCurrentUser();if(!current)redirect('/login')
@@ -17,18 +17,22 @@ export default async function Page({searchParams}:{searchParams?:Promise<{event?
  let eventId=params.event
  if(eventId&&!/^[0-9a-f]{8}(?:-[0-9a-f]{4}){3}-[0-9a-f]{12}$/i.test(eventId))eventId=undefined
  const eventOptions:{id:string;name:string}[]=[]
+ let eventLoadError=false
  if(isAdmin){
-  const {data}=await s.from('events').select('id,name').neq('status','archived').order('start_at',{ascending:false}).limit(100)
+  const {data,error}=await s.from('events').select('id,name').neq('status','archived').order('start_at',{ascending:false}).limit(100)
+  if(error)eventLoadError=true
   eventOptions.push(...(data??[]).map(row=>({id:row.id,name:row.name})))
  }else{
-  const {data}=await s.from('event_members').select('event_id,events(id,name)').eq('user_id',current.id).limit(100)
+  const {data,error}=await s.from('event_members').select('event_id,events(id,name)').eq('user_id',current.id).limit(100)
+  if(error)eventLoadError=true
   eventOptions.push(...(data??[]).flatMap(row=>row.events?[{id:row.events.id,name:row.events.name}]:[]))
  }
+ if(eventLoadError)return <main className="p-8"><h1 className="text-3xl font-black">{copy.title}</h1><p role="alert" className="mt-4">{copy.loadError}</p></main>
  if(eventId&&!eventOptions.some(event=>event.id===eventId))eventId=undefined
  if(!eventId)eventId=eventOptions[0]?.id
  if(!eventId)return <main className="p-8"><h1 className="text-3xl font-black">{copy.title}</h1><p className="mt-4">{copy.empty}</p></main>
  const {data:rows,error}=await s.from('timesheets').select('id,event_id,user_id,status,rejection_reason').eq('event_id',eventId).order('updated_at',{ascending:false})
- if(error)return <main className="p-8">{copy.empty}</main>
+ if(error)return <main className="p-8"><h1 className="text-3xl font-black">{copy.title}</h1><p role="alert" className="mt-4">{copy.loadError}</p></main>
  const own=(rows||[]).find(r=>r.user_id===current.id)||null
  const visibleUserIds=(isAdmin||isResponsible?[...new Set((rows||[]).map(r=>r.user_id))]:[current.id]);if(!visibleUserIds.length)visibleUserIds.push(current.id)
  const driverLabels={nl:{event:'Event',driving:'Rijtijd',total:'Totaal',rides:'ritten'},en:{event:'Event',driving:'Driving',total:'Total',rides:'rides'},fr:{event:'Événement',driving:'Conduite',total:'Total',rides:'trajets'},de:{event:'Event',driving:'Fahrzeit',total:'Gesamt',rides:'Fahrten'}}[locale]
