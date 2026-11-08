@@ -8,7 +8,7 @@ export function payrollCsv(rows:readonly PayrollRow[]):string{
  for(const row of rows){
   const gross=Number(row.gross_seconds),pause=Number(row.break_seconds),net=Number(row.net_seconds)
   const start=Date.parse(row.started_at),end=Date.parse(row.ended_at)
-  if(!row.session_id||seen.has(row.session_id)||!['approved','locked'].includes(row.timesheet_status)||![gross,pause,net].every(v=>Number.isFinite(v)&&v>=0)||!Number.isFinite(start)||!Number.isFinite(end)||end<start||Math.abs(gross-pause-net)>0.001||Math.abs((end-start)/1000-gross)>0.001)throw Error('Invalid approved payroll row')
+  if(!row.session_id?.trim()||!row.event_id?.trim()||!row.user_id?.trim()||!row.event_name?.trim()||seen.has(row.session_id)||!['approved','locked'].includes(row.timesheet_status)||![gross,pause,net].every(v=>Number.isSafeInteger(v)&&v>=0)||!Number.isFinite(start)||!Number.isFinite(end)||end<start||!Number.isSafeInteger((end-start)/1000)||gross-pause!==net||(end-start)/1000!==gross)throw Error('Invalid approved payroll row')
   seen.add(row.session_id)
   output.push([row.session_id,row.event_id,row.event_name,row.user_id,row.full_name,row.timesheet_status,new Date(start).toISOString(),new Date(end).toISOString(),gross,pause,net,(net/3600).toFixed(6)])
  }
