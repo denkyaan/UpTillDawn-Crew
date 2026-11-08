@@ -37,3 +37,27 @@ test('accepts canonical positive quantities and preserves exact totals',()=>{
  assert.equal(result.quantity,5)
  assert.equal(result.grossCents,4690)
 })
+
+test('quoted ticket IDs may end immediately before CSV delimiter',()=>{
+ const result=validateTicketSalesCsv(header+row.replace('A1','"A,1"'),'evt-1')
+ assert.equal(result.errors.length,0)
+ assert.equal(result.rows[0].externalId,'A,1')
+})
+test('rejects non-delimiter bytes following a closing quote',()=>{
+ for(const id of ['"A"garbage','"A" ','"A"\\t','"A""B"suffix']){
+  const result=validateTicketSalesCsv(header+row.replace('A1',id),'evt-1')
+  assert.ok(result.errors.length>0,id)
+  assert.equal(result.rows.length,0)
+ }
+})
+test('supports escaped double quotes within a quoted external ticket ID',()=>{
+ const result=validateTicketSalesCsv(header+row.replace('A1','"A""B"'),'evt-1')
+ assert.equal(result.errors.length,0)
+ assert.equal(result.rows[0].externalId,'A"B')
+})
+test('rejects unterminated quoted CSV rows atomically',()=>{
+ const result=validateTicketSalesCsv(header+row+'"broken,evt-1,1,1.00,EUR,2026-10-30T12:00:00Z','evt-1')
+ assert.ok(result.errors.length>0)
+ assert.equal(result.rows.length,0)
+ assert.equal(result.quantity,0)
+})
