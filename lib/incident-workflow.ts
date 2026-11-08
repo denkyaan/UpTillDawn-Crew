@@ -15,6 +15,7 @@ export function canTransitionIncident(from: IncidentStatus, to: IncidentStatus):
 }
 
 export function incidentRequiresImmediatePush(category: IncidentCategory, urgency: IncidentUrgency): boolean {
+  if (!['normal','high','urgent'].includes(urgency) || !['medical','safety','security','equipment','technical','staff','general'].includes(category)) return false
   return urgency === 'urgent' || category === 'medical' || category === 'safety' || category === 'security'
 }
 
