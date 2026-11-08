@@ -36,6 +36,11 @@ jobs:
           echo "Validation branch: ${SOURCE_BRANCH}"
           echo "Validated SHA: ${SOURCE_SHA}"
           current_sha="$(gh api "/repos/$REPO/commits/main" --jq '.sha')"
+          if [[ -z "${SOURCE_SHA}" || "${SOURCE_SHA}" != "${current_sha}" ]]; then
+            echo 'eligible=false' >> "$GITHUB_OUTPUT"
+            echo 'Deployment intentionally skipped: this CI run has been superseded by current main.'
+            exit 0
+          fi
           if [[ "${SOURCE_EVENT}" == push && "${SOURCE_RESULT}" == success && "${SOURCE_BRANCH}" == main && -n "${SOURCE_SHA}" && "${SOURCE_SHA}" == "${current_sha}" ]]; then
             echo 'eligible=true' >> "$GITHUB_OUTPUT"
             echo 'Main deployment is eligible.'
