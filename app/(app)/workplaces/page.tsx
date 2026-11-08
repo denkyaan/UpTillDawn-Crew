@@ -456,8 +456,8 @@ export default async function Page({searchParams}:{searchParams?:Promise<{event?
                 <textarea name="description" maxLength={1000} defaultValue={workplace.description||''} placeholder="Omschrijving (optioneel)" className="rounded-lg border bg-background p-2"/>
                 <input type="hidden" name="sort_order" value={workplace.sort_order}/>
                 <div className="grid gap-2 md:grid-cols-2">
-                  <label className="grid gap-1 text-sm">Standaard startuur<DateInput name="default_shift_start" initial={workplace.default_shift_start||undefined} required/></label>
-                  <label className="grid gap-1 text-sm">Standaard einduur<DateInput name="default_shift_end" initial={workplace.default_shift_end||undefined} required/></label>
+                  <DateInput name="default_shift_start" label="Standaard startuur" initial={workplace.default_shift_start||undefined} required/>
+                  <DateInput name="default_shift_end" label="Standaard einduur" initial={workplace.default_shift_end||undefined} required/>
                 </div>
                 <p className="text-xs text-muted-foreground">Nieuwe personeelsdiensten op deze werkplek nemen deze uren standaard over.</p>
                                 <div className="grid gap-2 sm:grid-cols-3">

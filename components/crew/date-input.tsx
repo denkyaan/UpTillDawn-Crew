@@ -1,28 +1,35 @@
 'use client'
 
-import { useState } from 'react'
+import { useState,useSyncExternalStore } from 'react'
+import {localDateInputValue,localDateInputLabel} from '@/lib/date-input'
 
-function localInputValue(iso?: string) {
-  if (!iso) return ''
-  const d = new Date(iso)
-  if (Number.isNaN(d.getTime())) return ''
-  return new Date(d.getTime() - d.getTimezoneOffset() * 60_000).toISOString().slice(0, 16)
+function subscribeTimezone(update:()=>void){
+ window.addEventListener('focus',update)
+ return()=>window.removeEventListener('focus',update)
 }
 
-export function DateInput({ name, initial, required = true }: { name: string; initial?: string; required?: boolean }) {
+export function DateInput({ name, initial, required = true,label }: { name: string; initial?: string; required?: boolean;label?:string }) {
   const [iso, setIso] = useState(initial || '')
-  const [local, setLocal] = useState(() => localInputValue(initial))
+  const [editedLocal,setEditedLocal]=useState<string|null>(null)
+  // SSR and the hydration render use UTC; only the subscribed client snapshot
+  // applies the device offset. Saved UTC instants never change during hydration.
+  const offset=useSyncExternalStore(subscribeTimezone,()=>{
+    const date=new Date(iso||Date.now())
+    return Number.isFinite(date.getTime())?date.getTimezoneOffset():0
+  },()=>0)
+  const local=editedLocal??localDateInputValue(iso,offset)
 
   return <label className="grid gap-1 text-sm">
-    {name.includes('end') ? 'Einde' : 'Begin'} (lokale tijd)
+    <span>{label??localDateInputLabel(name)} <span className="text-xs text-muted-foreground">Lokale tijd</span></span>
     <input
       type="datetime-local"
       required={required}
       value={local}
       className="rounded-lg border bg-background p-3"
       onChange={e => {
-        setLocal(e.target.value)
-        setIso(e.target.value ? new Date(e.target.value).toISOString() : '')
+        setEditedLocal(e.target.value)
+        const date=new Date(e.target.value)
+        setIso(e.target.value&&Number.isFinite(date.getTime())?date.toISOString():'')
       }}
     />
     <input type="hidden" name={name} value={iso}/>

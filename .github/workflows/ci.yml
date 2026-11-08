@@ -123,6 +123,49 @@ jobs:
             echo "::endgroup::"
           done
 
+      - name: Verify generated database types
+        run: |
+          npx --yes supabase@2.117.0 gen types typescript --local --schema public > /tmp/crew-database.ts
+          node --input-type=module <<'NODE'
+          import { readFileSync, writeFileSync } from 'node:fs'
+          const normalize = (source) => source
+            .replace(
+              /  \/\/ Allows to automatically instantiate createClient with right options\n  \/\/ instead of createClient<Database, \{ PostgrestVersion: 'XX' \}>\(URL, KEY\)\n  __InternalSupabase: \{\n    PostgrestVersion: "[^"]+"\n  \}\n/,
+              '',
+            )
+            .trimEnd() + '\n'
+          writeFileSync('/tmp/expected-crew-database.ts', normalize(readFileSync('types/crew-database.ts', 'utf8')))
+          writeFileSync('/tmp/actual-crew-database.ts', normalize(readFileSync('/tmp/crew-database.ts', 'utf8')))
+          NODE
+          diff -u /tmp/expected-crew-database.ts /tmp/actual-crew-database.ts
+
+      - name: Record replay proof
+        run: |
+          migration_count=$(find supabase/migrations -maxdepth 1 -type f -name '*.sql' | wc -l | tr -d ' ')
+          sql_suite_count=$(find tests/sql -maxdepth 1 -type f -name '*.sql' | wc -l | tr -d ' ')
+          {
+            echo "## Fresh-install database proof"
+            echo "- Source commit: \`${GITHUB_SHA}\`"
+            echo "- Migrations replayed: ${migration_count}"
+            echo "- SQL suites: ${sql_suite_count}"
+            echo "- Generated types: exact match"
+          } >> "$GITHUB_STEP_SUMMARY"
+      - name: Verify existing-data production platform upgrade
+        env:
+          PGURL: postgresql://postgres:postgres@127.0.0.1:54322/postgres
+        run: |
+          set -euo pipefail
+          # Reconstruct the pre-platform source baseline only on the isolated stack.
+          npx --yes supabase@2.117.0 db reset --local --no-seed --version 20261007035500
+          export PGOPTIONS='-c upt.isolated_upgrade_fixture=1'
+          psql "$PGURL" -v ON_ERROR_STOP=1 --single-transaction -f tests/fixtures/production-upgrade-before.sql
+          node scripts/build-production-upgrade.mjs /tmp/upt-production-upgrade.sql
+          psql "$PGURL" -v ON_ERROR_STOP=1 --single-transaction -f /tmp/upt-production-upgrade.sql
+          psql "$PGURL" -v ON_ERROR_STOP=1 --single-transaction -f tests/fixtures/production-upgrade-after.sql
+          # A second application must safely skip the complete platform.
+          psql "$PGURL" -v ON_ERROR_STOP=1 --single-transaction -f /tmp/upt-production-upgrade.sql
+          echo 'PASS: existing-data upgrade, preserved legacy rows and idempotent reapplication' >> "$GITHUB_STEP_SUMMARY"
+
       - name: Full event lifecycle release gate
         env:
           PGURL: postgresql://postgres:postgres@127.0.0.1:54322/postgres
@@ -165,35 +208,6 @@ jobs:
             echo "- Storage and new-feature security surfaces: PASS"
           } >> "$GITHUB_STEP_SUMMARY"
 
-      - name: Verify generated database types
-        run: |
-          npx --yes supabase@2.117.0 gen types typescript --local --schema public > /tmp/crew-database.ts
-          node --input-type=module <<'NODE'
-          import { readFileSync, writeFileSync } from 'node:fs'
-          const normalize = (source) => source
-            .replace(
-              /  \/\/ Allows to automatically instantiate createClient with right options\n  \/\/ instead of createClient<Database, \{ PostgrestVersion: 'XX' \}>\(URL, KEY\)\n  __InternalSupabase: \{\n    PostgrestVersion: "[^"]+"\n  \}\n/,
-              '',
-            )
-            .trimEnd() + '\n'
-          writeFileSync('/tmp/expected-crew-database.ts', normalize(readFileSync('types/crew-database.ts', 'utf8')))
-          writeFileSync('/tmp/actual-crew-database.ts', normalize(readFileSync('/tmp/crew-database.ts', 'utf8')))
-          NODE
-          diff -u /tmp/expected-crew-database.ts /tmp/actual-crew-database.ts
-
-      - name: Record replay proof
-        run: |
-          migration_count=$(find supabase/migrations -maxdepth 1 -type f -name '*.sql' | wc -l | tr -d ' ')
-          sql_suite_count=$(find tests/sql -maxdepth 1 -type f -name '*.sql' | wc -l | tr -d ' ')
-          {
-            echo "## Fresh-install database proof"
-            echo "- Source commit: \`${GITHUB_SHA}\`"
-            echo "- Migrations replayed: ${migration_count}"
-            echo "- SQL suites: ${sql_suite_count}"
-            echo "- Generated types: exact match"
-          } >> "$GITHUB_STEP_SUMMARY"
-      - name: Reset isolated database for browser fixtures
-        run: npx --yes supabase@2.117.0 db reset --local --no-seed
 
       - name: Export isolated bot credentials
         run: |

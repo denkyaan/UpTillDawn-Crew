@@ -38,7 +38,7 @@ test('promotion task scope filters are database-side and survive pagination',()=
 
 test('promotion task assignment totals are scoped to admin-visible rows',()=>{
  assert.ok(page.includes('(actor.realIsAdmin||actor.isOwner)&&taskIds.length'))
- assert.ok(page.includes('db.from("task_assignments").select("id,task_id,user_id",{count:"exact"}).in("task_id",taskIds)'))
+ assert.ok(page.includes('db.from("task_assignments").select("id,task_id,user_id,status,confirmed_at",{count:"exact"}).in("task_id",taskIds)'))
  assert.ok(page.includes('(actor.realIsAdmin||actor.isOwner)&&!assignmentError'))
  assert.ok(page.includes('assignmentCounts.get(task.id)??0'))
  for(const label of ['Toewijzingen','Affectations','Assignments','Zuweisungen'])assert.ok(page.includes(label))
@@ -86,7 +86,7 @@ test('event membership and profile lookup support bounded server-side batches',(
 })
 
 test('promotion assignment controls fail closed on incomplete result sets',()=>{
- assert.ok(page.includes('.select("id,task_id,user_id",{count:"exact"}).in("task_id",taskIds).limit(1000)'))
+ assert.ok(page.includes('.select("id,task_id,user_id,status,confirmed_at",{count:"exact"}).in("task_id",taskIds).limit(1000)'))
  assert.ok(page.includes('const assignmentOverflow=assignmentTotal===null||assignmentTotal>(assignments?.length??0)'))
  assert.ok(page.includes('!assignmentError&&!assignmentOverflow&&<form'))
  assert.ok(page.includes('!assignmentError&&!assignmentOverflow&&<section'))

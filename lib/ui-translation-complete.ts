@@ -4,6 +4,8 @@ type Row = { fr: string; en: string; de: string }
 // Canonical Dutch UI strings that were historically present only in the NL/FR/EN table.
 // Keep every row complete: missing translations must never silently fall back to Dutch.
 const ROWS: Record<string, Row> = {
+  'Instagram': { fr: 'Instagram', en: 'Instagram', de: 'Instagram' },
+  'Lokale tijd': { fr: 'Heure locale', en: 'Local time', de: 'Ortszeit' },
   'Nom de la tâche': { fr: 'Nom de la tâche', en: 'Task name', de: 'Aufgabenname' },
   'Task name': { fr: 'Nom de la tâche', en: 'Task name', de: 'Aufgabenname' },
   'Aufgabenname': { fr: 'Nom de la tâche', en: 'Task name', de: 'Aufgabenname' },

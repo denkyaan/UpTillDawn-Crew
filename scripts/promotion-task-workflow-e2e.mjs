@@ -20,7 +20,7 @@ export async function promotionTaskWorkflow({base,prefix,adminPage,promotionPage
  const taskId=await form.locator('input[name="request"]').inputValue()
  const title=prefix+' Promotion campaign',updatedTitle=title+' updated'
  await form.getByLabel('Task name',{exact:true}).fill(title)
- await form.getByLabel('Description and publication links').fill('Share the official campaign on Instagram and Facebook.')
+ await form.getByLabel('Description and publication links').fill('Share the campaign: https://www.instagram.com/ https://www.facebook.com/')
  await form.locator('select[name="user_id"]').selectOption(promo.user.id)
  await submit(adminPage,form.getByRole('button',{name:'Create task',exact:true}))
  await adminPage.waitForURL(u=>u.pathname===route&&u.searchParams.get('saved')==='1')
@@ -30,7 +30,7 @@ export async function promotionTaskWorkflow({base,prefix,adminPage,promotionPage
  assert.equal(task.event_id,null);assert.equal(task.promotion_only,true);assert.equal(task.title,title)
  const assignment=await record(promo.db.from('task_assignments').select('id,status,confirmed_at').eq('task_id',taskId).eq('user_id',promo.user.id))
  assert.equal(assignment.status,'NOT STARTED');assert.equal(assignment.confirmed_at,null)
- const replay=await admin.db.rpc('upt_admin_create_promotion_task',{p_request:taskId,p_title:title,p_description:'Share the official campaign on Instagram and Facebook.',p_users:[promo.user.id]})
+ const replay=await admin.db.rpc('upt_admin_create_promotion_task',{p_request:taskId,p_title:title,p_description:'Share the campaign: https://www.instagram.com/ https://www.facebook.com/',p_users:[promo.user.id]})
  assert.ifError(replay.error);assert.equal(replay.data,taskId)
  const {count,error:countError}=await admin.db.from('task_assignments').select('id',{count:'exact',head:true}).eq('task_id',taskId)
  assert.ifError(countError);assert.equal(count,1)
@@ -41,6 +41,9 @@ export async function promotionTaskWorkflow({base,prefix,adminPage,promotionPage
  ok('Admin mobile UI creates a general promotion task; exact replay and denied employee creation preserve assignments')
 
  await gotoReady(promotionPage,base+'/portals/promotion/tasks')
+ const publicationCard=promotionPage.locator('li:visible').filter({hasText:title})
+ assert.equal(await publicationCard.getByRole('link',{name:'Instagram',exact:true}).getAttribute('href'),'https://www.instagram.com/')
+ assert.equal(await publicationCard.getByRole('link',{name:'Facebook',exact:true}).getAttribute('target'),'_blank')
  const ownCard=()=>promotionPage.locator(`li:visible:has(input[name="assignment_id"][value="${assignment.id}"])`)
  await submit(promotionPage,ownCard().getByRole('button',{name:'Start',exact:true}))
  await ownCard().locator('input[name="evidence"]').waitFor({state:'visible'})
@@ -87,6 +90,8 @@ export async function promotionTaskWorkflow({base,prefix,adminPage,promotionPage
  const completedCard=promotionPage.locator('li:visible').filter({hasText:updatedTitle})
  assert.ok((await completedCard.innerText()).includes('Completed'))
  assert.equal(await completedCard.locator('input[type="file"]').count(),0)
+ await gotoReady(adminPage,base+route)
+ assert.ok((await adminPage.locator('li:visible').filter({hasText:updatedTitle}).innerText()).includes('Completed'),'Admin management must show per-member completion')
  ok('Promotion uploads private image evidence; only Admin review completes the assignment and updates its visible history')
 
  const headings={nl:'Algemene promotietaak aanmaken',fr:'Créer une tâche promotionnelle générale',en:'Create general promotion task',de:'Allgemeine Promotionsaufgabe erstellen'}

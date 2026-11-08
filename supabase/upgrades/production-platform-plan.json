@@ -1,0 +1,548 @@
+{
+  "baselineVersion": "20261007034820",
+  "localBaselineVersion": "20261007035500",
+  "targetVersion": "20261108092251",
+  "columnContract": "04fe951fd62b6cde1957f70cc5494161",
+  "baseTables": [
+    "admin_role_modes",
+    "artist_backstage_checklists",
+    "artist_hospitality_items",
+    "automation_rules",
+    "break_sessions",
+    "briefing_acknowledgements",
+    "briefings",
+    "chat_channels",
+    "chat_members",
+    "check_ins",
+    "check_outs",
+    "checklist_items",
+    "configuration_versions",
+    "crew_notifications",
+    "driver_sessions",
+    "driver_task_details",
+    "event_availability",
+    "event_documents",
+    "event_emergency_information",
+    "event_guestlist_entries",
+    "event_guestlist_settings",
+    "event_members",
+    "event_onboarding_progress",
+    "event_report_snapshots",
+    "event_templates",
+    "events",
+    "feature_rollouts",
+    "incidents",
+    "inventory_issues",
+    "inventory_items",
+    "inventory_movements",
+    "inventory_settlement_requests",
+    "knowledge_articles",
+    "message_attachments",
+    "messages",
+    "offline_operation_records",
+    "operational_checklist_template_items",
+    "operational_checklist_templates",
+    "operational_checklists",
+    "personal_instruction_acknowledgements",
+    "personal_instructions",
+    "planning_recommendations",
+    "profiles",
+    "push_subscriptions",
+    "qr_resources",
+    "recovery_checks",
+    "responsible_assignments",
+    "role_ui_rules",
+    "sales_registers",
+    "sales_transactions",
+    "shifts",
+    "staff_pay_rates",
+    "task_assignments",
+    "tasks",
+    "time_corrections",
+    "time_review_requests",
+    "timesheets",
+    "upload_security_scans",
+    "upt_audit_logs",
+    "user_error_reports",
+    "work_attachments",
+    "work_sessions",
+    "workplace_catalog",
+    "workplace_catalog_items",
+    "workplace_inventory_notes",
+    "workplace_transitions",
+    "workplaces"
+  ],
+  "newTables": [
+    "admin_artist_agreement_signature_requests",
+    "admin_artist_agreement_versions",
+    "admin_artist_booking_communications",
+    "admin_artist_booking_note_audit",
+    "admin_artist_bookings",
+    "admin_automation_runs",
+    "admin_billing_profile",
+    "admin_billing_profile_audit",
+    "admin_counterparties",
+    "admin_financial_attachments",
+    "admin_financial_audit",
+    "admin_financial_documents",
+    "admin_financial_lines",
+    "admin_financial_payments",
+    "admin_inventory_receipts",
+    "admin_obligation_notifications",
+    "admin_operational_obligations",
+    "admin_payment_reminders",
+    "admin_provider_event_mappings",
+    "admin_roster_proposals",
+    "admin_ticket_imports",
+    "admin_ticket_sales",
+    "administration_contract_signing_requests",
+    "portal_role_assignments",
+    "promotion_chat_messages",
+    "promotion_discipline",
+    "promotion_evidence",
+    "promotion_reference_media",
+    "promotion_violations"
+  ],
+  "migrations": [
+    {
+      "file": "20261007035500_close_anonymous_admin_lockout_surface.sql",
+      "sha256": "f5e683e18cdbdd310b582a0c0888e56855143ffeb2b866e8adc40ffa9c0523af"
+    },
+    {
+      "file": "20261021065100_v21_portal_role_assignments.sql",
+      "sha256": "fff595c77be9319f430332f1d163cdb5627f99ebca898fbda9fc207537c6b984"
+    },
+    {
+      "file": "20261021114500_v21_admin_portal_grants_read.sql",
+      "sha256": "5da307b3ad1503c7ba1ade5b2dde599af32414eea45e7c9ec6f0260bf94f73ca"
+    },
+    {
+      "file": "20261021123000_v21_admin_portal_role_mutations.sql",
+      "sha256": "addd906336c7b3c3f3df98f5e696d423932d1084f689aac696de64ba860bfd8f"
+    },
+    {
+      "file": "20261021133000_v21_portal_entitlement_read_security.sql",
+      "sha256": "174b5e60618fc4bb5d7d31eab0d17eb692df42e775450e28812d51907e3f88f5"
+    },
+    {
+      "file": "20261021170000_fix_chat_summaries_conflict_column_ambiguity.sql",
+      "sha256": "ce356fc5c3a52099c1b66a227515297574e5608924afe2877692cd48127ea8df"
+    },
+    {
+      "file": "20261022103000_administration_finance_foundation.sql",
+      "sha256": "0c507af13d4faba117fd4f3b1a27731ee4b17f0ac63b627765d40219c2da0f34"
+    },
+    {
+      "file": "20261022173000_administration_operational_intake.sql",
+      "sha256": "9255228c90296593b83a229b0ba1fe8a1b6e26f0a3ddb501db9fa9417619d7bb"
+    },
+    {
+      "file": "20261022190500_financial_attachments.sql",
+      "sha256": "55d6590813d7d4bc712961f41cffb5d8d883afd08bbf7b9912315a9a37e5a162"
+    },
+    {
+      "file": "20261022213000_admin_roster_proposals.sql",
+      "sha256": "567b505792b09167c03427a494094c05b22a5526cf74040bf1361cc89903f07a"
+    },
+    {
+      "file": "20261022223000_admin_roster_shift_link.sql",
+      "sha256": "83067c3f30cf6b4ba431a99bd768286529a3aaa91c5ada43eac22d86d889f929"
+    },
+    {
+      "file": "20261022224500_admin_roster_target_selection.sql",
+      "sha256": "44f7a862b77cd72b3585128da9289e1588ac5bf3793f09092d65e88a4836d7e1"
+    },
+    {
+      "file": "20261022231000_admin_roster_shift_safety.sql",
+      "sha256": "85f8faf79168ee069c090cc00b74ea54f381a5bdb26f1b08d9e819142eeb5d5f"
+    },
+    {
+      "file": "20261022233500_admin_roster_fk_indexes.sql",
+      "sha256": "1bc8891ba180d0b909d400c52ae90831bca297346b5d4c647963241675f980df"
+    },
+    {
+      "file": "20261022235000_admin_roster_explicit_identity.sql",
+      "sha256": "8e91fefc515ab22708d3d3bf0aa8cd0363f386d636d3094b82f5c2788486b052"
+    },
+    {
+      "file": "20261023150000_promotion_discipline.sql",
+      "sha256": "9d29f872830d7c5a5f70885d2063321553bf6e8a247be4c1bd845d98ddb1de29"
+    },
+    {
+      "file": "20261023160000_promotion_admin_discipline_list.sql",
+      "sha256": "f5382cb632fd4e8641e3551d3700e775961878f138681d792401ecd8a54ce824"
+    },
+    {
+      "file": "20261023170000_promotion_evidence_foundation.sql",
+      "sha256": "8e91997205dd6167f5a0a2ce913782cf0c64aa0f5d55c6dd77539b2d24be2103"
+    },
+    {
+      "file": "20261023180000_promotion_evidence_submission.sql",
+      "sha256": "1a59527c01b8056f278e741ea749875c3b7716f188b7f9de3ec5e90f3bdf73ea"
+    },
+    {
+      "file": "20261023190000_promotion_duplicate_evidence.sql",
+      "sha256": "ac5cafec7edf6cd303a920dc3f04254cc79626b47320151cd7536f7e18b7a52f"
+    },
+    {
+      "file": "20261023200000_promotion_review_audit.sql",
+      "sha256": "b9a333bc5aacdd1e1389da6acfd826c8b5d51eb3c3792fedf57a6e1618b5104d"
+    },
+    {
+      "file": "20261023210000_promotion_block_privacy.sql",
+      "sha256": "8696119469d40706aedf99b45e2c7e134ffab297a97a7619824020118d8f27ba"
+    },
+    {
+      "file": "20261023220000_promotion_reference_metadata.sql",
+      "sha256": "6f5ecd9d1c1894425e7fb3874dc5b9532a14bd7f42f122a010b12d8711abc52b"
+    },
+    {
+      "file": "20261023230000_promotion_reference_registration.sql",
+      "sha256": "d3f0c34f7ed61257a8bc0d2a6bd2d17655e41d62b5bb2c5a90578918e2556447"
+    },
+    {
+      "file": "20261023235000_promotion_reference_precheck.sql",
+      "sha256": "5a37ba4541a03fec6991f823e0b8d600ef66443ce9499929f014a6b55cc83944"
+    },
+    {
+      "file": "20261023235900_promotion_fk_indexes.sql",
+      "sha256": "32540d65ad7694d859ac0bfdb7676a5b6a87300cbc266468fd8d634751a0d104"
+    },
+    {
+      "file": "20261023235930_promotion_duplicate_precheck_preservation.sql",
+      "sha256": "4f5dc9e049343db583d561a6d64945efc1e1f23b56130ae70b0c2ab138aea672"
+    },
+    {
+      "file": "20261023235945_promotion_trigger_privileges.sql",
+      "sha256": "48776bf4149732e7f0f3b01996c5cf0578c1b8227dc0998c31a38883febe6d11"
+    },
+    {
+      "file": "20261025100000_promotion_reference_review_signals.sql",
+      "sha256": "58421d7c10ac1ccbfdeb73c7edb07d571e87296c09264dd2d4a37a9acbe32fee"
+    },
+    {
+      "file": "20261025110000_promotion_evidence_submission_hardening.sql",
+      "sha256": "99b778237724affcb6996360d2c12883e53a39ee77eb8091884a458184ccb1ab"
+    },
+    {
+      "file": "20261025120000_promotion_reference_upload_hardening.sql",
+      "sha256": "5716197809ac597af43de67d229b826817a0fd44815023752611cbaa06f06843"
+    },
+    {
+      "file": "20261025130000_promotion_review_signal_preservation.sql",
+      "sha256": "e135389e2fa07b295f3f0948bb295dc818c600ac3b96882452140e8f4e2cbab7"
+    },
+    {
+      "file": "20261026135000_admin_artist_bookings.sql",
+      "sha256": "ad9dc1408404ab3ecd450a0324ae1fa2aa30843c0a2c4826a7576f954c588813"
+    },
+    {
+      "file": "20261026150000_admin_artist_booking_communications.sql",
+      "sha256": "a4af6d6945dd6758b37d9eeb9a9769db0580edfa1db34394fa469cd0fcdb605a"
+    },
+    {
+      "file": "20261026151000_admin_artist_booking_follow_up.sql",
+      "sha256": "63b6d3744e4dd45c4dc53fbb2e7000512a798ed5a8a78cf973a46eddc1bfba58"
+    },
+    {
+      "file": "20261026152000_admin_artist_communication_actor_index.sql",
+      "sha256": "40678a707d52d963ea147c03c93ec9938faf1113e0dec31192a058736b1e3ae6"
+    },
+    {
+      "file": "20261026160000_admin_artist_agreement_terms.sql",
+      "sha256": "08b933e7843480e08829f57b3ce38949eb17f575a649bc8c3c0ac3a645cfa369"
+    },
+    {
+      "file": "20261026163000_artist_agreement_versions.sql",
+      "sha256": "b439b4fde3be32db392b1839f2e8ea69a25c04f38e5bdefbabbdfae2992ce078"
+    },
+    {
+      "file": "20261026170000_artist_agreement_internal_approval.sql",
+      "sha256": "27671c1eff90647b7599827417c0c8a46cc449a8a8d80b008e3f66782de4b82c"
+    },
+    {
+      "file": "20261026173000_artist_agreement_signature_requests.sql",
+      "sha256": "5fec664bcc76461e7816ad163e00e49f7b9adc94aeb0ab9dfbbd5220e2f8bc06"
+    },
+    {
+      "file": "20261026180000_artist_signature_preparation_cancellation.sql",
+      "sha256": "10cc768fbb02d8310e128632e19dffa29fcb0560850f426722606d0c00965224"
+    },
+    {
+      "file": "20261026183000_artist_signature_preparation_dedup.sql",
+      "sha256": "a4baa6b06ee1f79a61dcde7cd58c328cfdc957cc862826af06e90e9d09859717"
+    },
+    {
+      "file": "20261026190000_private_contract_archive_bucket.sql",
+      "sha256": "22f957706ca53b91eef51189b9307f3cb8712080e9d36824ccb5ad14a7c6ca88"
+    },
+    {
+      "file": "20261026193000_contract_archive_approved_artist_read.sql",
+      "sha256": "c6e5ee26eecffba1bec9c911c73be6429f42bd0ee110b488e03815fdbe804de8"
+    },
+    {
+      "file": "20261026213000_administration_contract_signing_ledger.sql",
+      "sha256": "06abcbb009042eb5917eda7c52f7d5c8dfcbe1cb750095661c9a55a270c29564"
+    },
+    {
+      "file": "20261026214500_administration_signing_approved_artist_access.sql",
+      "sha256": "bd47209fd0da0864e10aaa5b2dc835c2fe225b01af57221d0f2f20529eb84911"
+    },
+    {
+      "file": "20261026220000_contract_signing_immutable_state_guard.sql",
+      "sha256": "eb0d52f51c0c2cb44f3e2684f8e92ee50dd856ad9dc3aef6b04314c665085770"
+    },
+    {
+      "file": "20261026221500_artist_signing_prepare_rpc.sql",
+      "sha256": "3bbf3cfde991307b03244550f104c2cd86e1dc25eae1f192127bf1c4d74ad4c4"
+    },
+    {
+      "file": "20261026233000_signing_ledger_block_client_forgery.sql",
+      "sha256": "24c6165bcfeb26f36e02fecd8b67c5f5c34ed9dfadbb3efff760bd449d4de8e4"
+    },
+    {
+      "file": "20261027064500_contract_trigger_execute_hardening.sql",
+      "sha256": "a93fac889b2c0606ecb967951c568bb01adffd73f43ea32cd4ca9af3bf0156ad"
+    },
+    {
+      "file": "20261027090000_server_signing_transition_cas.sql",
+      "sha256": "f50a5c1ee7c06005cfb3aa79898cd2e434b51d2d64228c33bd96a2b744e1567d"
+    },
+    {
+      "file": "20261027170000_administration_invoice_line_totals.sql",
+      "sha256": "949d5dc735c7b6da194057e30aa2c83634c3c00ed0172d7cab90e255f5522530"
+    },
+    {
+      "file": "20261027183000_administration_invoice_line_mutations.sql",
+      "sha256": "e60d6bc1368b0530bf2370c4a05c3b06bfeb7887298759d8fe0a06a78bbd141d"
+    },
+    {
+      "file": "20261027190000_administration_financial_approval_guard.sql",
+      "sha256": "a903b352e8c210d5a65f610e0f45f9ad0038c664bc18b17d5bae141bfd454fce"
+    },
+    {
+      "file": "20261027193000_administration_credit_note_links.sql",
+      "sha256": "079025cec22f1177dfccb02be32cf0b1845482b875222472f573d3ffd0781a93"
+    },
+    {
+      "file": "20261027200000_administration_payment_ledger.sql",
+      "sha256": "42a1c62d78a900ec380ad110c779683411b05d7ff1edae2de0c264e432ceddf4"
+    },
+    {
+      "file": "20261027203000_administration_settlement_consistency.sql",
+      "sha256": "508777887608ad3ec0fe8697bb2e37a486ffdff1c75517435601ee88e178f57b"
+    },
+    {
+      "file": "20261027210000_administration_payment_reminders.sql",
+      "sha256": "00b620146c9b7cb5695de2cb55d00f950a7a9eeddc37fa1a272d9b57b1b7e51c"
+    },
+    {
+      "file": "20261027213000_administration_counterparty_validation.sql",
+      "sha256": "4d962de8549261f4b79831c2bda2a85953d466d71502eb8597350cf662cb97fd"
+    },
+    {
+      "file": "20261027220000_administration_counterparty_edit_guard.sql",
+      "sha256": "45f1f4be6b1bd1e390ec694e7f3cc6b5dca1c348c8049f0fdeb9bf097f43d320"
+    },
+    {
+      "file": "20261027223000_administration_invoice_due_dates.sql",
+      "sha256": "d922b27b58473bf6bcc6bf7b4686d552d694761ff5214d2f09f1777ec03ad732"
+    },
+    {
+      "file": "20261027230000_administration_document_number_guard.sql",
+      "sha256": "4086b8f2cc35a2f33e41b95774050fc5bc10a626c44a1ed78a68496a4098b5a8"
+    },
+    {
+      "file": "20261027233000_administration_invoice_review_readiness.sql",
+      "sha256": "4aec65501858ea9b061e0a04a3a046ac4ba0b2bf8d50dd7159612eb44f47a716"
+    },
+    {
+      "file": "20261027234500_administration_counterparty_billing_details.sql",
+      "sha256": "7d8c6121474500925253d670e71033239e84d623e50c3ae87c7c1715d6ff0112"
+    },
+    {
+      "file": "20261028080000_admin_artist_booking_note_audit.sql",
+      "sha256": "9abfefe6401f455753b233f822987a06b93d5081c45bf393d737e6de203d66ad"
+    },
+    {
+      "file": "20261028120000_administration_foreign_key_indexes.sql",
+      "sha256": "18c8542273f2d3e1c5d44f3066781d20e9ab7fab5931feb6f742b06c3772be17"
+    },
+    {
+      "file": "20261028130000_restrict_artist_booking_audit_trigger_execution.sql",
+      "sha256": "91ca4de3d7bf9e5ecf75435888f8144bf38fb3cb72be4790825c9c8d6693cefe"
+    },
+    {
+      "file": "20261028191000_promotion_directory.sql",
+      "sha256": "945d35d29bccd8b984e75d8abaa7414d9d6131a5bbc9250ea8ae2693779dad19"
+    },
+    {
+      "file": "20261028192000_chat_read_receipts.sql",
+      "sha256": "b01e966e0ae20aa961aaf08784ab59461dd4def8b8b59a18c34cbf7244fbeac6"
+    },
+    {
+      "file": "20261028193000_promotion_directory_role_scoping.sql",
+      "sha256": "be21da2c55eb013900095c7cfe56948affc8b90aa453d33e8d87374d2741d78b"
+    },
+    {
+      "file": "20261028194000_promotion_presence.sql",
+      "sha256": "c62b408b9eea042fee1872ce6ad1feee496258b027880ed9d36e75a903482917"
+    },
+    {
+      "file": "20261028195000_promotion_chat_rooms.sql",
+      "sha256": "653f386869f0122492e76a675b6a6a17af0ef42845c0805b33ee2287fdfb7cc2"
+    },
+    {
+      "file": "20261028210000_portal_role_admin_read.sql",
+      "sha256": "7018c51e852784301f797b29ce100e88c26e7dede3d8f18108ca092db8e33667"
+    },
+    {
+      "file": "20261028213000_atomic_portal_role_approval.sql",
+      "sha256": "b51eb3e9d5cc1cd4e045c5a3c9c6a142eb94d01db51434c0dc5249942ab7f2da"
+    },
+    {
+      "file": "20261030123000_administration_reminder_credit_balance_guard.sql",
+      "sha256": "e788a367884087b8427f972667a327e4125ffc9ca893ac78c064b5482c704bdc"
+    },
+    {
+      "file": "20261030130000_administration_credit_adjusted_settlement.sql",
+      "sha256": "f0afc559330c158a25e06b7ac3303957b3d6a732104c9d2e6f7234d304359ccb"
+    },
+    {
+      "file": "20261030133000_administration_paid_invoice_settlement_guard.sql",
+      "sha256": "d3b4d288565893350ea2a95f46cda9e70fd96eb0fd2950e2cba37795b9cb5817"
+    },
+    {
+      "file": "20261030140000_administration_settlement_guard_alignment.sql",
+      "sha256": "869a3f7fcbaa39426621de73a872ad4b8cd36fd6b8779a64a780dd194f3afc66"
+    },
+    {
+      "file": "20261030143000_administration_generated_invoice_guard_fix.sql",
+      "sha256": "6447896c929f9266366e5a4ed2e30145640d7fa4a04490e0e0925bcdb238e470"
+    },
+    {
+      "file": "20261030144607_administration_completion_workflows.sql",
+      "sha256": "02d356e129a2dde2ad9d10bd1243b55cec8ca1a0e240ef7f7dd3344c3db2df24"
+    },
+    {
+      "file": "20261030145621_administration_inventory_deadlines.sql",
+      "sha256": "d0db02a41850084c0df52ab50186926a769e6f1b6839ac64b64c7ba022ee7842"
+    },
+    {
+      "file": "20261030150311_administration_final_regression_guards.sql",
+      "sha256": "c1a5de0040595582bb9137721afe4327c0a36b8122f5d5ab09eb96a171909802"
+    },
+    {
+      "file": "20261030161606_promotion_chat_sender_index.sql",
+      "sha256": "ed5ea94e96172735c03f4be9362cc86b35063860514efe68947b92f2598d3c74"
+    },
+    {
+      "file": "20261030172206_promotion_presence_authorization.sql",
+      "sha256": "87288e81066978d3f5aebc04f5406ee0636b991606c86464a0a8454dd8f64f3f"
+    },
+    {
+      "file": "20261030174239_administration_case_admin_approval.sql",
+      "sha256": "c2085b553d41283192808ced350df04f6ebdf3a3e4760c65b74588787a534931"
+    },
+    {
+      "file": "20261030205235_administration_peppol_preparation.sql",
+      "sha256": "aff1c39a8e8edcad1f942cc99eea2244f02a1579212778befb2f4fab2aed71ea"
+    },
+    {
+      "file": "20261103090000_provider_event_mappings.sql",
+      "sha256": "062754fc633a5c3bc9bad899b8fa142a8d817227d0438c059dd03d552df66791"
+    },
+    {
+      "file": "20261103120000_provider_mapping_activation_guard.sql",
+      "sha256": "abf41911003acbab547686dc2e5058feed7b6261da46b91a690490bc2e89c280"
+    },
+    {
+      "file": "20261103123000_provider_mapping_administration_permissions.sql",
+      "sha256": "8c275dd1172f129a6ff939908b1b1ee1dfa0bd7e5f96cafea7ace4da5b8a43f6"
+    },
+    {
+      "file": "20261104170000_provider_mapping_created_by_fk_index.sql",
+      "sha256": "26d7142e6ed0009b114f95c737f3711ee19fa7bb9494fc67ee4fac4732460bec"
+    },
+    {
+      "file": "20261104213000_promotion_evidence_requires_active_assignment.sql",
+      "sha256": "e5254e04b3df1c48fc5ddacc9a0cbf6c787c6e7ad6bf43f9945708497ee36840"
+    },
+    {
+      "file": "20261106180000_admin_event_task_edit.sql",
+      "sha256": "a1d3985d6d12682c5b28c9943913fd56a720f4f5c275c5eb21ef4d482f53cd47"
+    },
+    {
+      "file": "20261107184322_administration_finance_concurrency.sql",
+      "sha256": "0aacd31922bf2ae24cf33f1ca0be74d50361747b704540ed374756b5088092c5"
+    },
+    {
+      "file": "20261108015413_promotion_task_management.sql",
+      "sha256": "ac2e6491b3c1de87e9ec0d649fe41d006f912c86673ae6b4f2eee6f7e7d2fb8c"
+    },
+    {
+      "file": "20261108020003_promotion_evidence_task_completion.sql",
+      "sha256": "e2d89c75f7d4ec05a1f74b73ada903104522eefd244fd5b668aaa3661787d2b1"
+    },
+    {
+      "file": "20261108092251_promotion_task_unchanged_edit.sql",
+      "sha256": "7398ac340d3d69c7f1486b53f7ef30b5d55661a7b8d93d5ddde25ca705e47c6c"
+    }
+  ],
+  "excluded": [
+    {
+      "file": "20261013110000_training_scenarios_staging.sql",
+      "sha256": "32b72f1fa7f79cbefb338f7c5c5500e83f15a9cef319ebb9b2379f5997e40f0a",
+      "reason": "Retired training; test database only."
+    },
+    {
+      "file": "20261013133000_training_scenario_members_staging.sql",
+      "sha256": "f96a323dabfaec2f93b2d77914b7883dc8b5e2bcae3b289d9138e602d9193442",
+      "reason": "Retired training; test database only."
+    },
+    {
+      "file": "20261013170000_training_questions_staging.sql",
+      "sha256": "35e5599d52ec1dacf0fd2918edc505b4b54ff3b3b9ed7fd3687cf0795cedfc8e",
+      "reason": "Retired training; test database only."
+    },
+    {
+      "file": "20261013180000_training_progress_staging.sql",
+      "sha256": "b9c8c84ddf6648df0e488726447b083804e3f8f7d57784e38fd1fff4494b8a96",
+      "reason": "Retired training; test database only."
+    },
+    {
+      "file": "20261014061500_training_owner_progress_staging.sql",
+      "sha256": "91e7ef33f279e2c3a8ee8865097c68fe561d19b579fd898805055e0c25c49376",
+      "reason": "Retired training; test database only."
+    },
+    {
+      "file": "20261023090000_legacy_training_fk_indexes.sql",
+      "sha256": "09b6f37a5a93eebeb17585e7f42d653603ec7b28bcc2b82f2f7c37e3e574f2ee",
+      "reason": "Only indexes retired training tables."
+    },
+    {
+      "file": "20261030145023_administration_restore_booking_schema.sql",
+      "sha256": "6a92992df4dec12b7783ad126f5fd0e70345e139bbeaea2ef7696f5c654ae64e",
+      "reason": "Recovery fallback; original booking migrations are included."
+    },
+    {
+      "file": "20261030155150_promotion_restore_staging_schema.sql",
+      "sha256": "acdebb9cafa9e2075c71d44b1a4f959c8b429ead4e425ab304727c0d4174e071",
+      "reason": "Recovery fallback; original promotion migrations are included."
+    },
+    {
+      "file": "20261030161753_remaining_fk_index_parity.sql",
+      "sha256": "78fd346c720c6922309de190c6e95d11ffc22850bf98dc287b6b7ea4531e8b3a",
+      "reason": "Only indexes retired training tables."
+    },
+    {
+      "file": "20261030173257_cleanup_transient_staging_qa.sql",
+      "sha256": "67e5d5ef09c06b9703084685e9c9ad92ad4ac5a9823ab2a370d2bf9e0c9b9b37",
+      "reason": "Deletes historical QA fixtures; excluded from production upgrade."
+    }
+  ],
+  "alignment": {
+    "file": "core-function-alignment.sql",
+    "sha256": "02b2e990070ab884cb51beb29028f0b22f99c4dd489f9d3da14dbef9864f1446"
+  }
+}

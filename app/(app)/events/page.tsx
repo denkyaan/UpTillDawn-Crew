@@ -96,7 +96,7 @@ export default async function Page({searchParams}:{searchParams?:Promise<{event?
           <div className="grid gap-3 md:grid-cols-3">
             <DateInput name="start_at" required={false}/>
             <DateInput name="end_at" required={false}/>
-            <label className="grid gap-1 text-sm">Aanmelddeadline (leeg = start evenement)<DateInput name="registration_deadline" required={false}/></label>
+            <DateInput name="registration_deadline" label="Aanmelddeadline (leeg = start evenement)" required={false}/>
             <label className="grid gap-1 text-sm">Maximum bevestigde deelnemers<input name="max_joiners" type="number" min="1" max="10000" placeholder="Onbeperkt" className={input}/></label>
             <label className="grid gap-1 text-sm">GPS-radius (m)<input name="radius" type="number" defaultValue="100" min="10" max="10000" className={input}/></label>
           </div>
@@ -375,7 +375,7 @@ export default async function Page({searchParams}:{searchParams?:Promise<{event?
                 <div className="grid gap-3 md:grid-cols-3">
                   <DateInput name="start_at" initial={event.start_at}/>
                   <DateInput name="end_at" initial={event.end_at}/>
-                  <label className="grid gap-1 text-sm">Aanmelddeadline<DateInput name="registration_deadline" initial={registrationDeadline}/></label>
+                  <DateInput name="registration_deadline" label="Aanmelddeadline (leeg = start evenement)" initial={registrationDeadline} required={false}/>
                   <label className="grid gap-1 text-sm">Maximum bevestigde deelnemers<input name="max_joiners" type="number" min="1" max="10000" defaultValue={event.max_joiners??''} placeholder="Onbeperkt" className={input}/></label>
                   <label className="grid gap-1 text-sm">GPS-radius (m)<input name="radius" type="number" min={10} max={10000} defaultValue={event.checkin_radius_m} className={input}/></label>
                 </div>
