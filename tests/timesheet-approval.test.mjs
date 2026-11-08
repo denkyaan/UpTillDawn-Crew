@@ -19,7 +19,9 @@ const sheet=(status,extra={})=>({
 })
 
 test('timesheet submit gate only permits open and rejected states',()=>{
-  for(const status of ['open','rejected']) assert.equal(timesheetCanSubmit(sheet(status)),true,status)
+  assert.equal(timesheetCanSubmit(sheet('open')),true)
+  assert.equal(timesheetCanSubmit(sheet('rejected',{submittedAt:10,reviewedAt:20,reviewedBy:'admin',rejectionReason:'Missing hours'})),true)
+  assert.equal(timesheetCanSubmit(sheet('rejected')),false)
   for(const status of ['submitted','approved','locked']) assert.equal(timesheetCanSubmit(sheet(status)),false,status)
 })
 
