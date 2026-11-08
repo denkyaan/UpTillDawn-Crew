@@ -17,7 +17,7 @@ function validTimestamp(value: number | null | undefined): boolean {
 function validReviewHistory(timesheet: TimesheetApproval): boolean {
   if (!validTimestamp(timesheet.submittedAt) || !validTimestamp(timesheet.reviewedAt)) return false
   if (timesheet.reviewedAt != null && (timesheet.submittedAt == null || timesheet.reviewedAt < timesheet.submittedAt)) return false
-  if (timesheet.reviewedAt != null !== Boolean(timesheet.reviewedBy?.trim())) return false
+  if ((timesheet.reviewedAt != null) !== Boolean(timesheet.reviewedBy?.trim())) return false
   return true
 }
 
