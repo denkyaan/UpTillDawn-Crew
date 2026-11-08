@@ -125,7 +125,7 @@ export default async function AdministrationModulePage({params,searchParams}:{pa
  const notificationPageNumber=listPage(notificationPage,99999)
  const notificationPageSize=50
  const notificationOffset=(notificationPageNumber-1)*notificationPageSize
- const notificationRows=slug==="notifications"?await supabase.from("crew_notifications").select("id,kind,link,read_at").eq("user_id",current.id).order("id",{ascending:false}).range(notificationOffset,notificationOffset+notificationPageSize):null
+ const notificationRows=slug==="notifications"?await supabase.from("crew_notifications").select("id,kind,link,read_at").eq("user_id",current.id).order("created_at",{ascending:false}).order("id",{ascending:false}).range(notificationOffset,notificationOffset+notificationPageSize):null
  const unreadNotificationCount=slug==="notifications"?await supabase.from("crew_notifications").select("id",{count:"exact",head:true}).eq("user_id",current.id).is("read_at",null):null
  const notificationHasNext=!notificationRows?.error&&(notificationRows?.data?.length??0)>notificationPageSize
  const visibleNotifications=notificationRows?.error?[]:(notificationRows?.data?.slice(0,notificationPageSize)??[])
