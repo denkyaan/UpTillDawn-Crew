@@ -9,7 +9,8 @@ test('event cards preserve selected event when opening timesheet workflow',()=>{
 })
 test('timesheets list admin events independently of own event membership',()=>{
  assert.match(timesheets,/current\.realIsAdmin\|\|current\.isOwner/)
- assert.match(timesheets,/isAdmin\?await s\.from\('events'\)/)
+ assert.match(timesheets,/if\(isAdmin\)\{/)
+ assert.match(timesheets,/s\.from\('events'\)\.select\('id,name'\)/)
  assert.match(timesheets,/await s\.from\('event_members'\)/)
  assert.match(timesheets,/eventOptions\.map\(event=>/)
  assert.match(timesheets,/encodeURIComponent\(event\.id\)/)
