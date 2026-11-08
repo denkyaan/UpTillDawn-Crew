@@ -17,6 +17,7 @@ function validTimestamp(value: number | null | undefined): boolean {
 function validReviewHistory(timesheet: TimesheetApproval): boolean {
   if (!validTimestamp(timesheet.submittedAt) || !validTimestamp(timesheet.reviewedAt)) return false
   if (timesheet.reviewedAt != null && (timesheet.submittedAt == null || timesheet.reviewedAt < timesheet.submittedAt)) return false
+  if (timesheet.submittedAt == null && timesheet.reviewedAt != null) return false
   if ((timesheet.reviewedAt != null) !== Boolean(timesheet.reviewedBy?.trim())) return false
   return true
 }
@@ -26,7 +27,7 @@ function validTimesheetIdentity(timesheet: TimesheetApproval): boolean {
 }
 
 export function timesheetCanSubmit(timesheet: TimesheetApproval): boolean {
-  return validTimesheetIdentity(timesheet) && (timesheet.status === 'open' || timesheet.status === 'rejected')
+  return validTimesheetIdentity(timesheet) && (timesheet.status === 'open' || (timesheet.status === 'rejected' && timesheet.reviewedAt != null && Boolean(timesheet.rejectionReason?.trim())))
 }
 
 export function timesheetCanReview(timesheet: TimesheetApproval): boolean {
