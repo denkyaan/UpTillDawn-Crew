@@ -13,9 +13,10 @@ export function shiftReminderAt(kind: ShiftReminderKind, context: ShiftReminderC
 }
 
 export function shiftReminderShouldSend(kind: ShiftReminderKind, context: ShiftReminderContext, now = Date.now()): boolean {
-  if (!Number.isFinite(context.shiftStartsAt) || !Number.isFinite(now)) return false
+  if (!Number.isFinite(context.shiftStartsAt) || context.shiftStartsAt < 0 || !Number.isFinite(now) || now < 0) return false
   if (!['day-before','hours-before','start-soon','late-check-in'].includes(kind)) return false
-  if (context.checkedInAt != null && !Number.isFinite(context.checkedInAt)) return false
+  if (context.checkedInAt != null && (!Number.isFinite(context.checkedInAt) || context.checkedInAt < 0)) return false
   if (kind === 'late-check-in' && context.checkedInAt != null) return false
+  if (context.checkedInAt != null && context.checkedInAt <= now) return false
   return now >= shiftReminderAt(kind, context)
 }
