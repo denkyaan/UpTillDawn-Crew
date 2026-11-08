@@ -29,3 +29,10 @@ test('notification pagination does not expose next-page navigation on database e
  assert.ok(source.includes('const visibleNotifications=notificationRows?.error?[]:(notificationRows?.data?.slice(0,notificationPageSize)??[])'))
  assert.ok(source.includes('notificationRows?.error?<p role="alert"'))
 })
+
+test('administration inbox pages are chronological with stable UUID tie-breaking',()=>{
+ const query=source.match(/const notificationRows=slug==="notifications"[^\n]+/)
+ assert.ok(query,'notification query exists')
+ assert.ok(query[0].includes('.eq("user_id",current.id).order("created_at",{ascending:false}).order("id",{ascending:false})'))
+ assert.ok(query[0].includes('.range(notificationOffset,notificationOffset+notificationPageSize)'))
+})
