@@ -13,8 +13,9 @@ export interface BriefingConfirmation {
 }
 
 export function briefingNeedsConfirmation(version: BriefingVersion, confirmation?: BriefingConfirmation | null): boolean {
-  if (!Number.isSafeInteger(version.version) || version.version < 1 || !version.id?.trim() || !version.eventId?.trim() || !Number.isFinite(version.publishedAt)) return true
-  if (!confirmation || !confirmation.userId?.trim() || !Number.isSafeInteger(confirmation.briefingVersion) || confirmation.briefingVersion < 1 || !Number.isFinite(confirmation.confirmedAt)) return true
+  if (!Number.isSafeInteger(version.version) || version.version < 1 || !version.id?.trim() || !version.eventId?.trim() || !Number.isFinite(version.publishedAt) || version.publishedAt < 0) return true
+  if (!confirmation || !confirmation.userId?.trim() || !Number.isSafeInteger(confirmation.briefingVersion) || confirmation.briefingVersion < 1 || !Number.isFinite(confirmation.confirmedAt) || confirmation.confirmedAt < 0) return true
+  if (confirmation.briefingVersion > version.version) return true
   if (confirmation.confirmedAt < version.publishedAt && confirmation.briefingVersion >= version.version) return true
   if (confirmation.briefingVersion < version.version) return version.requiresReconfirmation
   return false
