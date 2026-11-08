@@ -50,3 +50,20 @@ test('notification deep links are limited to registered administration destinati
  }
  assert.equal(administrationNotificationHref('/portals/administration/finance?tab=payments'),'/portals/administration/finance?tab=payments')
 })
+
+test('notification paths reject URL normalization and encoded control characters',()=>{
+ for(const url of [
+  '/portals/administration/finance/../finance',
+  '/portals/administration/finance/%252e%252e/profile',
+  '/portals/administration/finance/%252fadmin',
+  '/portals/administration/finance/%250a',
+  '/portals/administration/finance/%0a',
+  '/portals/administration/finance/%7f',
+ ]){
+  assert.equal(administrationNotificationHref(url),null,url)
+ }
+ assert.equal(
+  administrationNotificationHref('/portals/administration/finance?search=%252e%252e'),
+  '/portals/administration/finance?search=%252e%252e',
+ )
+})
