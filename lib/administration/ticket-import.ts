@@ -53,10 +53,10 @@ export function validateTicketSalesCsv(csv:string,expectedEventId:string,maxRows
   const [externalId,eventId,rawQuantity,rawGross,rawCurrency,rawDate]=records[i].map(x=>x.trim())
   const line=i+1
   if(records[i].length!==6){result.errors.push({line,message:'Incorrect number of columns'});continue}
-  if(!externalId||externalId.length>160||/^[=+@\-\t\r]/.test(externalId)||ids.has(externalId)){result.errors.push({line,message:'Missing, oversized or duplicate external ID'});continue}
+  if(!externalId||externalId.length>160||/[\u0000-\u001f\u007f]/.test(externalId)||/^[=+@\-]/.test(externalId)||ids.has(externalId)){result.errors.push({line,message:'Missing, oversized or duplicate external ID'});continue}
   if(eventId!==expectedEventId){result.errors.push({line,message:'Event mismatch'});continue}
   const quantity=Number(rawQuantity),grossCents=moneyToCents(rawGross)
-  if(!/^\d+$/.test(rawQuantity)||!Number.isSafeInteger(quantity)||quantity<1||quantity>100000||!Number.isSafeInteger(result.quantity+quantity)){result.errors.push({line,message:'Invalid quantity'});continue}
+  if(!/^[1-9]\d*$/.test(rawQuantity)||!Number.isSafeInteger(quantity)||quantity<1||quantity>100000||!Number.isSafeInteger(result.quantity+quantity)){result.errors.push({line,message:'Invalid quantity'});continue}
   if(grossCents===null||!Number.isSafeInteger(result.grossCents+grossCents)){result.errors.push({line,message:'Invalid gross amount'});continue}
   if(rawCurrency!=='EUR'){result.errors.push({line,message:'Unsupported currency'});continue}
   const timestamp=Date.parse(rawDate)
