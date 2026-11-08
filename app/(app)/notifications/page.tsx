@@ -3,7 +3,6 @@ import Link from 'next/link'
 import { createClient } from '@/lib/supabase/crew-server'
 import { markNotificationRead } from '@/lib/actions/uptilldawn'
 import { nlStatus } from '@/lib/ui-nl'
-import { PushNotificationSettings } from '@/components/push-notification-settings'
 import { NotificationBadgeSync } from '@/components/notification-badge-sync'
 import { NotificationOpenLink } from '@/components/admin/notification-open-link'
 import { requestUiLocale } from '@/lib/server-locale'
@@ -47,7 +46,6 @@ export default async function Page({searchParams}:{searchParams?:Promise<{page?:
   return <main className="space-y-4 p-4 md:p-8">
     <NotificationBadgeSync count={badgeCount??0}/>
     <h1 className="text-3xl font-black">{translateRuntimeUi("Meldingen",locale)}</h1>
-    <PushNotificationSettings/>
     {error ? <p>{translateRuntimeUi("Meldingen konden niet worden geladen.",locale)}</p> : !visibleRows?.length ? <p>{translateRuntimeUi("Geen meldingen.",locale)}</p> : visibleRows.map(n => {
       const safeLink=params.scope==='administration'?administrationNotificationHref(n.link):safeNotificationLink(n.link)
       return <article key={n.id} className={`rounded-xl border p-4 ${n.read_at ? '' : 'border-violet-500'}`}>
