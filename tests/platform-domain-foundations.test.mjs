@@ -20,5 +20,6 @@ test('urgent operational notifications cannot be bundled', async () => {
 test('live operations alert rules cover attendance and break failures', async () => {
   const source = await readFile(new URL('../lib/operations-alerts.ts', import.meta.url), 'utf8')
   for (const alert of ['no-show','late-check-in','shift-overrun','missing-checkout','long-break','understaffed']) assert.ok(source.includes(`'${alert}'`))
-  assert.match(source, /activeCount < Math\.max\(0, minimumRequired\)/)
+  assert.match(source, /Number\.isSafeInteger\(value\)/)
+  assert.match(source, /activeCount < minimumRequired/)
 })
