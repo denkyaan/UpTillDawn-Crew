@@ -31,7 +31,7 @@ export function reconcileExternalSales(payments:readonly ExternalPayment[]):Sale
   const transactionKey=JSON.stringify([p.provider,p.transactionId])
   const previous=ids.get(transactionKey)
   if(previous){
-   if(JSON.stringify(previous)===JSON.stringify(p)||previous.status==='paid'&&p.status==='pending'&&previous.eventId===p.eventId&&previous.category===p.category&&previous.currency===p.currency&&previous.saleReference===p.saleReference){
+   if(JSON.stringify(previous)===JSON.stringify(p)||previous.status==='paid'&&p.status==='pending'&&previous.eventId===p.eventId&&previous.category===p.category&&previous.currency===p.currency&&previous.saleReference===p.saleReference&&previous.amountCents===p.amountCents){
     duplicates.push(id)
    }else conflicts.push(id)
    continue
