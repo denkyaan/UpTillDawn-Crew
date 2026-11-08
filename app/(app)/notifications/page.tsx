@@ -9,16 +9,14 @@ import { NotificationOpenLink } from '@/components/admin/notification-open-link'
 import { requestUiLocale } from '@/lib/server-locale'
 import { translateRuntimeUi } from '@/lib/ui-translation-runtime'
 import { administrationNotificationHref } from '@/lib/administration/navigation'
+import { safeNotificationPath } from '@/lib/portal-access'
 
 export const dynamic = 'force-dynamic'
 
-function safeNotificationLink(value:string|null){
-  return value
-    && value.startsWith('/')
-    && !value.startsWith('//')
-    && !value.includes('\\')
-    ? value
-    : null
+function safeNotificationLink(value:string|null):string|null {
+  if (!value) return null
+  const safe=safeNotificationPath(value)
+  return safe==='/notifications' && value!=='/notifications' ? null : safe
 }
 
 export default async function Page({searchParams}:{searchParams?:Promise<{page?:string;scope?:string}>}={}) {
@@ -34,6 +32,7 @@ export default async function Page({searchParams}:{searchParams?:Promise<{page?:
     s.from('crew_notifications')
       .select('id,title,body,kind,link,read_at,created_at')
       .eq('user_id', user.id)
+      .neq('kind', 'error_report')
       .order('created_at', { ascending: false })
       .range(offset,offset+pageSize),
     s.rpc('upt_notification_badge_count'),
