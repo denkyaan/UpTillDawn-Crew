@@ -70,6 +70,12 @@ from public.task_assignments a where a.task_id=(select id from ptm_ids where nam
 select set_config('request.jwt.claim.sub',(select id::text from ptm_ids where name='admin'),true);
 set local role authenticated;
 do $$begin
+ perform public.upt_admin_update_promotion_task((select id from ptm_ids where name='task'),'General campaign','Publish official media',
+  (select seen_at from ptm_ids where name='task'));
+ if (select updated_at from public.tasks where id=(select id from ptm_ids where name='task')) is distinct from (select seen_at from ptm_ids where name='task') then
+  raise exception 'Unchanged save invalidated existing evidence';end if;
+ if not exists(select 1 from public.task_assignments where task_id=(select id from ptm_ids where name='task') and user_id=(select id from ptm_ids where name='promo') and confirmed_at is not null) then
+  raise exception 'Unchanged save cleared task confirmation';end if;
  perform public.upt_admin_update_promotion_task((select id from ptm_ids where name='task'),'Updated campaign','New instructions',
   (select seen_at from ptm_ids where name='task'));
  begin
