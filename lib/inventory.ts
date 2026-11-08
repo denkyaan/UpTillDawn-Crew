@@ -14,13 +14,14 @@ export interface InventoryItem {
 }
 
 export function inventoryAvailability(item: InventoryItem): 'empty' | 'low' | 'available' {
+  if (!inventoryCountsAreValid(item)) return 'empty'
   if (item.availableQuantity <= 0) return 'empty'
   if (item.totalQuantity > 0 && item.availableQuantity / item.totalQuantity <= 0.2) return 'low'
   return 'available'
 }
 
 export function canIssueInventory(item: InventoryItem, quantity = 1): boolean {
-  return quantity > 0 && item.availableQuantity >= quantity
+  return Boolean(item.id?.trim() && item.name?.trim()) && inventoryCountsAreValid(item) && Number.isSafeInteger(quantity) && quantity > 0 && item.availableQuantity >= quantity
 }
 
 export function inventoryAccountedQuantity(item: InventoryItem): number {
@@ -38,6 +39,6 @@ export function inventoryCountsAreValid(item: InventoryItem): boolean {
     item.damagedQuantity ?? 0,
     item.missingQuantity ?? 0,
   ]
-  return values.every(value=>Number.isInteger(value)&&value>=0)
+  return values.every(value=>Number.isSafeInteger(value)&&value>=0)
     && inventoryAccountedQuantity(item)===item.totalQuantity
 }
