@@ -5,16 +5,22 @@ export type TimeSegment={sessionId:string;userId:string;eventId:string;workplace
 export function allocateTime(sessions:TimeSession[],breaks:TimeBreak[],transitions:Transition[],now:number):TimeSegment[]{
  const rows:TimeSegment[]=[];const allowance=new Map<string,number>(),previousEnd=new Map<string,number>()
  const sessionIds=new Set<string>()
+ const sessionBounds=new Map<string,{start:number;end:number}>()
  for(const session of sessions){
   if(!session.id?.trim()||!session.user_id?.trim()||!session.event_id?.trim()||sessionIds.has(session.id))throw new Error('Invalid or duplicate work session identity')
   sessionIds.add(session.id)
+  const start=Date.parse(session.started_at),end=session.ended_at?Date.parse(session.ended_at):now
+  if(!Number.isFinite(start)||!Number.isFinite(end)||end<start)throw new Error('Invalid work interval')
+  sessionBounds.set(session.id,{start,end})
  }
  for(const entry of breaks){
   const begin=Date.parse(entry.started_at),finish=entry.ended_at?Date.parse(entry.ended_at):now
-  if(!sessionIds.has(entry.work_session_id)||!Number.isFinite(begin)||!Number.isFinite(finish)||finish<begin)throw new Error('Invalid break interval')
+  const bounds=sessionBounds.get(entry.work_session_id)
+  if(!bounds||!Number.isFinite(begin)||!Number.isFinite(finish)||finish<begin||begin<bounds.start||finish>bounds.end)throw new Error('Invalid break interval')
  }
  for(const entry of transitions){
-  if(!sessionIds.has(entry.work_session_id)||!entry.to_workplace_id?.trim()||!Number.isFinite(Date.parse(entry.confirmed_at)))throw new Error('Invalid workplace transition')
+  const bounds=sessionBounds.get(entry.work_session_id),at=Date.parse(entry.confirmed_at)
+  if(!bounds||!entry.to_workplace_id?.trim()||!Number.isFinite(at)||at<bounds.start||at>=bounds.end)throw new Error('Invalid workplace transition')
  }
  for(const s of [...sessions].sort((a,b)=>Date.parse(a.started_at)-Date.parse(b.started_at)||a.id.localeCompare(b.id))){
  const start=Date.parse(s.started_at),end=s.ended_at?Date.parse(s.ended_at):now,key=`${s.user_id}:${s.event_id}`

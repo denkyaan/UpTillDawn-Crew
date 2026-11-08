@@ -37,3 +37,28 @@ test('rejects orphan and malformed workplace transitions',()=>{
   assert.throws(()=>allocateTime([first],[],[{...good,...patch}],0),/Invalid workplace transition/)
  }
 })
+
+test('rejects breaks that cross a work-session boundary',()=>{
+ const first=session('a','2026-01-01T08:00Z','2026-01-01T12:00Z')
+ for(const [started_at,ended_at] of [
+  ['2026-01-01T07:59Z','2026-01-01T09:00Z'],
+  ['2026-01-01T11:00Z','2026-01-01T12:01Z'],
+  ['2026-01-01T13:00Z','2026-01-01T14:00Z']
+ ]){
+  assert.throws(()=>allocateTime([first],[{work_session_id:'a',started_at,ended_at}],[],0),/Invalid break interval/)
+ }
+})
+test('rejects workplace transitions outside their session',()=>{
+ const first=session('a','2026-01-01T08:00Z','2026-01-01T12:00Z')
+ for(const confirmed_at of ['2026-01-01T07:59Z','2026-01-01T12:00Z','2026-01-01T12:01Z']){
+  assert.throws(()=>allocateTime([first],[],[{work_session_id:'a',to_workplace_id:'ticket',confirmed_at}],0),/Invalid workplace transition/)
+ }
+})
+test('preserves valid in-session breaks and workplace transitions',()=>{
+ const first=session('a','2026-01-01T08:00Z','2026-01-01T12:00Z')
+ const rows=allocateTime([first],[{work_session_id:'a',started_at:'2026-01-01T09:00Z',ended_at:'2026-01-01T09:30Z'}],[{work_session_id:'a',to_workplace_id:'ticket',confirmed_at:'2026-01-01T10:00Z'}],0)
+ assert.equal(rows.length,2)
+ assert.equal(rows.reduce((total,row)=>total+row.grossSeconds,0),14400)
+ assert.equal(rows.reduce((total,row)=>total+row.regularBreakSeconds,0),1800)
+ assert.equal(rows[1].workplaceId,'ticket')
+})
