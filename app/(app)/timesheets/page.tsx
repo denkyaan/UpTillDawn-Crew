@@ -24,6 +24,7 @@ export default async function Page({searchParams}:{searchParams?:Promise<{event?
   const {data}=await s.from('event_members').select('event_id,events(id,name)').eq('user_id',current.id).limit(100)
   eventOptions.push(...(data??[]).flatMap(row=>row.events?[{id:row.events.id,name:row.events.name}]:[]))
  }
+ if(eventId&&!eventOptions.some(event=>event.id===eventId))eventId=undefined
  if(!eventId)eventId=eventOptions[0]?.id
  if(!eventId)return <main className="p-8"><h1 className="text-3xl font-black">{copy.title}</h1><p className="mt-4">{copy.empty}</p></main>
  const {data:rows,error}=await s.from('timesheets').select('id,event_id,user_id,status,rejection_reason').eq('event_id',eventId).order('updated_at',{ascending:false})
