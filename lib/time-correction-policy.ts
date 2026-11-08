@@ -12,13 +12,16 @@ export interface TimeCorrection {
 }
 
 export function timeCorrectionIsValid(correction: TimeCorrection): boolean {
-  return Boolean(correction.entryId.trim() && correction.requestedBy.trim() && correction.explanation.trim()) && correction.originalMinutes >= 0 && correction.correctedMinutes >= 0
+  return Boolean(correction.entryId?.trim() && correction.requestedBy?.trim() && correction.explanation?.trim()) &&
+    Number.isSafeInteger(correction.originalMinutes) && correction.originalMinutes >= 0 &&
+    Number.isSafeInteger(correction.correctedMinutes) && correction.correctedMinutes >= 0
 }
 
 export function timeCorrectionChangesValue(correction: TimeCorrection): boolean {
-  return correction.originalMinutes !== correction.correctedMinutes
+  return timeCorrectionIsValid(correction) && correction.originalMinutes !== correction.correctedMinutes
 }
 
 export function timeCorrectionIsApproved(correction: TimeCorrection): boolean {
-  return Boolean(correction.approvedBy?.trim() && correction.approvedAt)
+  return timeCorrectionIsValid(correction) && Boolean(correction.approvedBy?.trim()) &&
+    correction.approvedAt != null && Number.isFinite(correction.approvedAt) && correction.approvedAt >= 0
 }
