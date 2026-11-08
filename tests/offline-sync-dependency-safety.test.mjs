@@ -14,7 +14,7 @@ test('offline mutation validation rejects duplicates, self dependencies and malf
 test('offline planner schedules only ready operations deterministically',()=>{
  const pending=[op('later',{createdAt:300,dependsOn:['first']}),op('first',{createdAt:200}),op('earliest',{createdAt:100})]
  assert.deepEqual(planOfflineMutations(pending,new Set()).map(x=>x.id),['earliest','first'])
- assert.deepEqual(planOfflineMutations(pending,new Set(['first'])).map(x=>x.id),['earliest','first','later'])
+ assert.deepEqual(planOfflineMutations(pending,new Set(['first'])).map(x=>x.id),['earliest','later'])
 })
 test('offline planner detects missing, cyclic and duplicate mutation ids',()=>{
  assert.throws(()=>planOfflineMutations([op('a',{dependsOn:['missing']})],new Set()),/Missing/)

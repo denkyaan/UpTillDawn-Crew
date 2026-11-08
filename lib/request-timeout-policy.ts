@@ -9,9 +9,11 @@ export const REQUEST_TIMEOUT_MS: Record<RequestClass, number> = {
 }
 
 export function requestTimeoutMs(requestClass: RequestClass): number {
+  if (!Object.prototype.hasOwnProperty.call(REQUEST_TIMEOUT_MS,requestClass)) throw new Error('Invalid request class')
   return REQUEST_TIMEOUT_MS[requestClass]
 }
 
 export function requestTimedOut(startedAt: number, requestClass: RequestClass, now = Date.now()): boolean {
-  return now - startedAt >= requestTimeoutMs(requestClass)
+  const timeout = requestTimeoutMs(requestClass)
+  return Number.isFinite(startedAt) && startedAt >= 0 && Number.isFinite(now) && now >= startedAt && now - startedAt >= timeout
 }
