@@ -13,6 +13,8 @@ export interface TimeCorrection {
 
 export function timeCorrectionIsValid(correction: TimeCorrection): boolean {
   return Boolean(correction.entryId?.trim() && correction.requestedBy?.trim() && correction.explanation?.trim()) &&
+    ['forgot-check-in','forgot-check-out','wrong-time','break-correction','admin-correction'].includes(correction.reason) &&
+    ((correction.approvedAt == null && !correction.approvedBy?.trim()) || (correction.approvedAt != null && Boolean(correction.approvedBy?.trim()) && Number.isFinite(correction.approvedAt) && correction.approvedAt >= 0)) &&
     Number.isSafeInteger(correction.originalMinutes) && correction.originalMinutes >= 0 &&
     Number.isSafeInteger(correction.correctedMinutes) && correction.correctedMinutes >= 0
 }
