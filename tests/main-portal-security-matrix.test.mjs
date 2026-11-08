@@ -80,3 +80,17 @@ test('administration notifications reject nested URLs without actual detail page
   '/portals/administration/modules/invoices/'+id+'/peppol',
  ])assert.equal(administrationNotificationHref(url),url,url)
 })
+
+test('artist notification detail links require real UUID structure',()=>{
+ const invalid=[
+  '------------------------------------',
+  '123e4567e89b42d3a456426614174000----',
+  '123e4567-e89b-42d3-a456-42661417400-',
+  '123e4567-e89b-42d3-a456-426614174000/unknown',
+ ]
+ for(const id of invalid){
+  assert.equal(administrationNotificationHref('/portals/administration/modules/artists/'+id),null,id)
+ }
+ const id='123e4567-e89b-42d3-a456-426614174000'
+ assert.equal(administrationNotificationHref('/portals/administration/modules/artists/'+id+'/agreement/signing-check/'+id),'/portals/administration/modules/artists/'+id+'/agreement/signing-check/'+id)
+})

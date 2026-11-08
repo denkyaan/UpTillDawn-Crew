@@ -57,7 +57,8 @@ export function administrationNotificationHref(value:string|null):string|null {
   return url.pathname+url.search+url.hash
  // Only artists and invoices expose record detail pages; other module subpaths lead to 404.
  const artistBase=administrationRoute("artists")
- const artistDetail=new RegExp("^"+artistBase+"/[0-9a-f-]{36}(?:/agreement(?:/signing-check/[0-9a-f-]{36})?)?$","i")
+ const uuid="[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}"
+ const artistDetail=new RegExp("^"+artistBase+"/"+uuid+"(?:/agreement(?:/signing-check/"+uuid+")?)?$","i")
  if(artistDetail.test(url.pathname))return url.pathname+url.search+url.hash
  // Invoice Peppol links are handled above, before the legacy invoice fallback.
  // Other portal URLs must never be followed from an administration notification.
