@@ -86,3 +86,15 @@ test('handover foreign keys have dedicated covering indexes', async () => {
   assert.match(source, /shift_handovers_workplace_fk_idx/)
   assert.match(source, /shift_handovers_outgoing_fk_idx/)
 })
+
+test('handover acceptance requires distinct responsible people and complete scope',()=>{
+ const base={id:'h1',eventId:'e1',workplaceId:'w1',outgoingResponsibleId:'r1',incomingResponsibleId:'r2',status:'ready',openTaskIds:[],openIncidentIds:[],createdAt:0}
+ assert.equal(handoverCanBeAccepted(base),true)
+ for(const patch of [{id:''},{eventId:' '},{workplaceId:''},{outgoingResponsibleId:''},{incomingResponsibleId:' '},{incomingResponsibleId:'r1'},{incomingResponsibleId:' r1 '},{createdAt:NaN},{createdAt:Infinity},{acceptedAt:100},{openTaskIds:null},{openIncidentIds:null}]){
+  assert.equal(handoverCanBeAccepted({...base,...patch}),false,JSON.stringify(patch))
+ }
+})
+test('handover acceptance remains restricted to ready status',()=>{
+ const base={id:'h1',eventId:'e1',workplaceId:'w1',outgoingResponsibleId:'r1',incomingResponsibleId:'r2',openTaskIds:[],openIncidentIds:[],createdAt:0}
+ for(const status of ['draft','accepted','invalid'])assert.equal(handoverCanBeAccepted({...base,status}),false,status)
+})

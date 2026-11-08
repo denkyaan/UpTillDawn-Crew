@@ -16,7 +16,15 @@ export interface ShiftHandover {
 }
 
 export function handoverCanBeAccepted(handover: ShiftHandover): boolean {
-  return handover.status === 'ready' && Boolean(handover.incomingResponsibleId)
+  const incoming=handover.incomingResponsibleId?.trim()
+  return handover.status === 'ready' && Boolean(
+    handover.id?.trim() && handover.eventId?.trim() && handover.workplaceId?.trim() &&
+    handover.outgoingResponsibleId?.trim() && incoming &&
+    incoming !== handover.outgoingResponsibleId.trim() &&
+    Number.isFinite(handover.createdAt) &&
+    (handover.acceptedAt == null) &&
+    Array.isArray(handover.openTaskIds) && Array.isArray(handover.openIncidentIds)
+  )
 }
 
 export function handoverHasOpenWork(handover: ShiftHandover): boolean {
