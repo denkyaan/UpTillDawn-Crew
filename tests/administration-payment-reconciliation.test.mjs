@@ -58,3 +58,26 @@ test('zero-value documents reconcile without phantom outstanding balance',()=>{
  assert.equal(r.lines[0].state,'settled')
  assert.equal(r.balanced,true)
 })
+
+test('unpayable documents cannot be marked balanced even with zero gross and no payments',()=>{
+ for(const status of ['draft','review','void','unknown']){
+  const r=reconcilePayments([{...doc('a',0),status}],[])
+  assert.equal(r.lines[0].state,'settled')
+  assert.equal(r.balanced,false)
+  assert.ok(r.errors.some(error=>error.includes('Non-payable document status')))
+ }
+})
+test('paid document with an outstanding balance is explicitly flagged',()=>{
+ const r=reconcilePayments([{...doc('a',100),status:'paid'}],[pay('p','a',30)])
+ assert.equal(r.lines[0].remainingCents,70)
+ assert.equal(r.lines[0].state,'partial')
+ assert.ok(r.errors.some(error=>error.includes('Paid document has outstanding balance')))
+})
+test('reconciliation scales across many documents and preserves independent allocations',()=>{
+ const documents=Array.from({length:2000},(_,i)=>doc('doc-'+i,100))
+ const payments=Array.from({length:2000},(_,i)=>pay('payment-'+i,'doc-'+i,100))
+ const r=reconcilePayments(documents,payments)
+ assert.equal(r.lines.length,2000)
+ assert.equal(r.balanced,true)
+ assert.equal(r.errors.length,0)
+})
