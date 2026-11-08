@@ -14,3 +14,26 @@ test('rejects trailing garbage after quoted field',()=>{assert.ok(validateTicket
 test('rejects formula-like external IDs',()=>{for(const id of ['=cmd','+cmd','-cmd','@cmd'])assert.ok(validateTicketSalesCsv(header+row.replace('A1',id),'evt-1').errors.length)})
 test('rejects impossible calendar timestamps',()=>{assert.ok(validateTicketSalesCsv(header+row.replace('2026-10-30','2026-02-30'),'evt-1').errors.length)})
 test('rejects embedded quotes outside quoted fields',()=>{assert.ok(validateTicketSalesCsv(header+row.replace('A1','A"B'),'evt-1').errors.length)})
+
+test('rejects ambiguous quantity strings without persisting partial ticket batches',()=>{
+ for(const quantity of ['00','01','0002','1e2','+2','2.0','-2']){
+  const result=validateTicketSalesCsv(header+row+row.replace('A1','B2').replace(',2,',','+quantity+','),'evt-1')
+  assert.ok(result.errors.length>0,quantity)
+  assert.equal(result.rows.length,0,quantity)
+  assert.equal(result.grossCents,0,quantity)
+  assert.equal(result.quantity,0,quantity)
+ }
+})
+test('rejects control characters in external ticket IDs',()=>{
+ for(const id of ['A\\tB','A\\nB','A\\rB','A'+String.fromCharCode(0)+'B']){
+  const result=validateTicketSalesCsv(header+row.replace('A1','"'+id+'"'),'evt-1')
+  assert.ok(result.errors.length>0)
+  assert.equal(result.rows.length,0)
+ }
+})
+test('accepts canonical positive quantities and preserves exact totals',()=>{
+ const result=validateTicketSalesCsv(header+row+row.replace('A1','B2').replace(',2,',',3,'),'evt-1')
+ assert.equal(result.errors.length,0)
+ assert.equal(result.quantity,5)
+ assert.equal(result.grossCents,4690)
+})
