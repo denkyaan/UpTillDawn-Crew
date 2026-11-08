@@ -6,7 +6,7 @@ import {productionUpgrade} from '../scripts/build-production-upgrade.mjs'
 const plan=JSON.parse(readFileSync('supabase/upgrades/production-platform-plan.json','utf8'))
 test('upgrade accounts for all post-baseline sources and preserves the reviewed SQL order',()=>{
  const result=productionUpgrade()
- assert.equal(result.plan.migrations.length,96)
+ assert.equal(result.plan.migrations.length,97)
  assert.equal(result.plan.excluded.length,10)
  assert.equal(result.sha256.length,64)
  let previous=-1

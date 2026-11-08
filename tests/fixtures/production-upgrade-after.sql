@@ -24,6 +24,10 @@ select set_config('request.jwt.claim.sub','',false);
 delete from public.events where id=(select id from upt_upgrade_fixture.ids where name='event');
 delete from public.crew_notifications where user_id in(select id from upt_upgrade_fixture.ids where name in ('admin','staff'));
 delete from auth.users where id in(select id from upt_upgrade_fixture.ids where name in ('admin','staff'));
-update cron.job j set active=s.active from upt_upgrade_fixture.cron_state s where j.jobid=s.jobid;
+do $$declare job record;begin
+ for job in select * from upt_upgrade_fixture.cron_state loop
+  perform cron.alter_job(job.jobid,active:=job.active);
+ end loop;
+end;$$;
 drop schema upt_upgrade_fixture cascade;
 select 'PASS: existing-data platform upgrade and legacy access preservation' as result;

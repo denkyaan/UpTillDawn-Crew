@@ -6,6 +6,8 @@ import {GuestlistEntranceClient,type GuestlistEntry} from '@/components/crew/gue
 import {BackstageArtistChecklist,type ArtistChecklistRow} from '@/components/crew/backstage-artist-checklist'
 import {GuestlistImportForm} from '@/components/crew/guestlist-import-form'
 import {PlatformAiAssistant} from '@/components/admin/platform-ai-assistant'
+import {WeeztixScannerPanel} from '@/components/crew/weeztix-scanner-panel'
+import {requestUiLocale} from '@/lib/server-locale'
 
 export const dynamic='force-dynamic'
 
@@ -20,6 +22,7 @@ export default async function GuestlistPage({
   if(!current)redirect('/login')
   const s=await createClient()
   const params=await searchParams
+  const locale=await requestUiLocale()
   const isAdmin=current.isAdmin===true
 
   let events:EventRow[]=[]
@@ -120,6 +123,8 @@ export default async function GuestlistPage({
         {params.workplace&&<input type="hidden" name="workplace" value={params.workplace}/>}<button className="rounded-xl border px-4 py-3 font-bold">EVENEMENT OPENEN</button>
       </form>
     </header>
+
+    {canCheckIn&&<WeeztixScannerPanel eventName={selected.name} canManage={isAdmin||ownResponsible.some(row=>row.event_id===selected.id)} initialLocale={locale}/>}
 
     {isAdmin&&<section className="grid gap-4 lg:grid-cols-2" data-tour="guestlist-create">
       <div className="lg:col-span-2"><h2 className="text-2xl font-black">Guestlist maken & beheren</h2><p className="mt-1 text-sm text-muted-foreground">Voeg gasten en artiesten handmatig toe of importeer een bestaand bestand.</p></div>

@@ -1,7 +1,7 @@
 {
   "baselineVersion": "20261007034820",
   "localBaselineVersion": "20261007035500",
-  "targetVersion": "20261108092251",
+  "targetVersion": "20261108104525",
   "columnContract": "04fe951fd62b6cde1957f70cc5494161",
   "baseTables": [
     "admin_role_modes",
@@ -487,6 +487,10 @@
     {
       "file": "20261108092251_promotion_task_unchanged_edit.sql",
       "sha256": "7398ac340d3d69c7f1486b53f7ef30b5d55661a7b8d93d5ddde25ca705e47c6c"
+    },
+    {
+      "file": "20261108104525_financial_attachment_path.sql",
+      "sha256": "657e456b9e00dc66db680c5ebd9223af2ccc59ecb3f2293d7be9a9fdf6891292"
     }
   ],
   "excluded": [

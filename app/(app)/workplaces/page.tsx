@@ -10,6 +10,9 @@ import { WorkplaceShiftPlanner, type WorkplacePlannerPerson, type WorkplacePlann
 import { DateInput } from '@/components/crew/date-input'
 import { ShiftChangeCenter, type ClaimableShift, type ShiftChangeRequestView, type ShiftReplacementCandidate, type ShiftSwapCandidate } from '@/components/crew/shift-change-controls'
 import { ContextLink } from '@/components/admin/context-link'
+import { WeeztixScannerPanel } from '@/components/crew/weeztix-scanner-panel'
+import { isEntranceWorkplace } from '@/lib/weeztix-scanner'
+import { requestUiLocale } from '@/lib/server-locale'
 
 export const dynamic='force-dynamic'
 
@@ -17,6 +20,7 @@ type Person={id:string;full_name:string|null;role?:string|null}
 
 export default async function Page({searchParams}:{searchParams?:Promise<{event?:string;workplace?:string}>}){
   const params=searchParams?await searchParams:{}
+  const locale=await requestUiLocale()
   const s=await createClient()
   const current=await getCurrentUser()
   if(!current)return null
@@ -478,6 +482,8 @@ export default async function Page({searchParams}:{searchParams?:Promise<{event?
             <ContextLink href="/tasks" context={{eventId:workplace.event_id,workplaceId:workplace.id,focus:'tasks'}} className="rounded-lg border px-3 py-2 text-xs font-bold" title="Open taken in de context van deze werkplek.">Taken</ContextLink>
             <ContextLink href="/briefings" context={{eventId:workplace.event_id,workplaceId:workplace.id,focus:'briefing'}} className="rounded-lg border px-3 py-2 text-xs font-bold" title="Open briefing en checklists voor deze werkplek.">Briefing</ContextLink>
           </div></div>}
+
+          {isEntranceWorkplace(workplace.name)&&<WeeztixScannerPanel eventName={workplace.events?.name||''} canManage={isAdmin||isResponsible} initialLocale={locale}/>}
 
           <div className="mt-3 space-y-3">
             <WorkplaceShiftPlanner

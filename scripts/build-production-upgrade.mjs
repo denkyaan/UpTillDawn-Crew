@@ -40,7 +40,8 @@ begin
  select count(*) into v_existing from unnest(array[${required}]) as t(name) where to_regclass('public.'||t.name) is not null;
  if v_existing=${plan.newTables.length}
   and exists(select 1 from information_schema.columns where table_schema='public' and table_name='tasks' and column_name='promotion_only')
-  and exists(select 1 from information_schema.columns where table_schema='public' and table_name='admin_payment_reminders' and column_name='revision') then
+  and exists(select 1 from information_schema.columns where table_schema='public' and table_name='admin_payment_reminders' and column_name='revision')
+  and exists(select 1 from pg_constraint where conrelid=to_regclass('public.admin_financial_attachments') and conname='admin_financial_attachment_path' and position('[.]' in pg_get_constraintdef(oid))>0) then
   raise notice 'Platform schema already present; upgrade skipped';return;
  end if;
  if v_existing<>0 then raise exception 'Partial platform installation requires a separate reviewed upgrade';end if;

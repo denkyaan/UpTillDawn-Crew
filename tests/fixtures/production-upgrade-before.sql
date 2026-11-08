@@ -8,7 +8,11 @@ revoke all on schema upt_upgrade_fixture from public,anon,authenticated;
 create table upt_upgrade_fixture.ids(name text primary key,id uuid not null default gen_random_uuid());
 insert into upt_upgrade_fixture.ids(name) values('admin'),('staff'),('event'),('workplace'),('task'),('item');
 create table upt_upgrade_fixture.cron_state as select jobid,active from cron.job;
-update cron.job set active=false;
+do $$declare job record;begin
+ for job in select * from upt_upgrade_fixture.cron_state loop
+  perform cron.alter_job(job.jobid,active:=false);
+ end loop;
+end;$$;
 insert into auth.users(id,email) select id,id::text||'@upgrade-preservation.test' from upt_upgrade_fixture.ids where name in ('admin','staff');
 update public.profiles p set approved=true,account_blocked=false,role=case when i.name='admin' then 'admin' else 'staff' end,
  full_name='Upgrade preservation '||i.name from upt_upgrade_fixture.ids i where p.id=i.id;

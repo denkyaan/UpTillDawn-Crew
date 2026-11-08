@@ -4,8 +4,8 @@ The inspected production database is at migration `20261007034820` and has 67
 public application tables. Its Administration and Promotion platform tables are
 absent. Main has the corresponding features and a newer task schema.
 
-`supabase/upgrades/production-platform-plan.json` accounts for all 106 later
-source migration files. The upgrade includes 96 and excludes ten historical
+`supabase/upgrades/production-platform-plan.json` accounts for all 107 later
+source migration files. The upgrade includes 97 and excludes ten historical
 training, training-index, recovery-only and QA-cleanup migrations. Every source
 has a SHA-256 digest; changed or unaccounted sources stop the builder. The
 existing historical files are preserved.
@@ -15,7 +15,9 @@ contract, refuses partial platform installations, uses a short lock timeout and
 serializes concurrent attempts. A complete installation is skipped. It adds the
 platform tables and policies, private buckets and the administrative deadline
 job. It aligns eighteen existing core functions with the implementation already
-verified on main, without copying account records or runtime secrets.
+verified on main, without copying account records or runtime secrets. The final migration also
+repairs the financial attachment path constraint, whose over-escaped dot
+rejected the normal UUID filenames produced by uploads.
 
 Generate the reviewed SQL without connecting to any database:
 

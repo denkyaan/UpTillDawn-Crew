@@ -90,6 +90,29 @@ try{
  await clickAndSettle(page,draft.getByRole('button'))
  const document=await one(office.db.from('admin_financial_documents').select('id,event_id,status').eq('document_number',prefix+'-BUY'))
  created.documentIds.push(document.id);assert.equal(document.event_id,created.eventId)
+ const attachmentBytes=Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAusB9Y9Z1WQAAAAASUVORK5CYII=','base64')
+ const attachmentName=prefix+'-proof.png'
+ const attachmentForm=page.locator(`form:visible:has(input[name="document_id"][value="${document.id}"]):has(input[name="file"])`)
+ await attachmentForm.locator('input[name="file"]').setInputFiles({name:attachmentName,mimeType:'image/png',buffer:attachmentBytes})
+ const [attachmentResponse]=await Promise.all([
+  page.waitForResponse(r=>r.request().method()==='POST'&&new URL(r.url()).pathname==='/portals/administration/finance',{timeout:browserTimeoutMs}),
+  attachmentForm.getByRole('button',{name:'Attach document',exact:true}).click(),
+ ])
+ assert.ok(attachmentResponse.status()<400,'Attachment upload action must succeed')
+ assert.ok(!attachmentResponse.headers()['x-action-redirect']?.includes('error=1'),'Attachment upload action must persist metadata')
+ const attachment=await one(office.db.from('admin_financial_attachments').select('id,original_name').eq('document_id',document.id))
+ assert.equal(attachment.original_name,attachmentName)
+ await gotoReady(page,base+'/portals/administration/finance')
+ const attachmentLink=page.getByRole('link',{name:attachmentName,exact:true})
+ assert.equal(await attachmentLink.getAttribute('href'),'/api/administration/finance/attachments/'+attachment.id)
+ const [download]=await Promise.all([page.waitForEvent('download',{timeout:browserTimeoutMs}),attachmentLink.click()])
+ assert.equal(download.suggestedFilename(),attachmentName)
+ const downloadStream=await download.createReadStream(),chunks=[]
+ for await(const chunk of downloadStream)chunks.push(chunk)
+ assert.deepEqual(Buffer.concat(chunks),attachmentBytes,'Private attachment downloads preserve the uploaded bytes')
+ assert.equal((await staffContext.request.get(base+'/api/administration/finance/attachments/'+attachment.id)).status(),403)
+ assert.equal((await officeContext.request.get(base+'/api/administration/finance/attachments/'+randomUUID())).status(),404)
+ ok('Financial attachment UI uploads, persists and downloads exact private bytes while denying staff')
  const lineForm=page.locator('form:visible').filter({has:page.locator(`input[name="document_id"][value="${document.id}"]`)}).filter({has:page.locator('input[name="description"]')}).filter({has:page.locator('input[name="quantity"]')}).last()
  await lineForm.locator('input[name="description"]').fill(prefix+' Equipment')
  await lineForm.locator('input[name="quantity"]').fill('2');await lineForm.locator('input[name="unit_price"]').fill('10');await lineForm.locator('input[name="vat_rate"]').fill('0')
@@ -102,7 +125,27 @@ try{
  await gotoReady(adminPage,base+'/portals/administration/finance')
  const approve=adminPage.locator(`form:visible:has(input[name="document_id"][value="${document.id}"]):has(input[name="status"][value="approved"])`)
  await clickAndSettle(adminPage,approve.getByRole('button'));await assertState(admin.db,document.id,'approved');ok('Admin approval persists through the actual invoice UI')
- const workplace=await one(admin.db.from('workplaces').insert({event_id:created.eventId,name:prefix,sort_order:1,is_active:true}).select('id'));created.workplaceIds.push(workplace.id)
+ const workplace=await one(admin.db.from('workplaces').insert({event_id:created.eventId,name:'Ticket scan / Inkom',sort_order:1,is_active:true}).select('id'));created.workplaceIds.push(workplace.id)
+ const bar=await one(admin.db.from('workplaces').insert({event_id:created.eventId,name:'Bar',sort_order:2,is_active:true}).select('id'));created.workplaceIds.push(bar.id)
+ await gotoReady(adminPage,base+'/workplaces?event='+created.eventId)
+ const scanner=adminPage.locator('#workplace-'+workplace.id+' [data-weeztix-scanner]')
+ await scanner.getByRole('heading',{name:'Scan tickets at the entrance',exact:true}).waitFor()
+ const destinations={
+  'Scanner for iPhone':'https://apps.apple.com/be/app/weeztix-ticket-scanner/id1327353743',
+  'Scanner for Android':'https://play.google.com/store/apps/details?id=com.scantickets.app.eventix',
+  'Manage scanner login':'https://dashboard.weeztix.com',
+ }
+ for(const [name,href] of Object.entries(destinations)){
+  const link=scanner.getByRole('link',{name,exact:true})
+  assert.equal(await link.getAttribute('href'),href)
+  assert.equal(await link.getAttribute('target'),'_blank')
+ }
+ assert.equal(await adminPage.locator('#workplace-'+bar.id+' [data-weeztix-scanner]').count(),0,'Ticket scanner must not appear on a bar workplace')
+ await scanner.getByText('Prepare for entrance control',{exact:true}).click()
+ await scanner.getByRole('link',{name:'Scanner guide',exact:true}).waitFor({state:'visible'})
+ await gotoReady(adminPage,base+'/guestlist?event='+created.eventId+'&workplace='+workplace.id)
+ await adminPage.locator('[data-weeztix-scanner]').getByRole('heading',{name:'Scan tickets at the entrance',exact:true}).waitFor()
+ ok('Entrance scanner exposes verified official apps and login guidance without appearing on sales posts')
  const itemResult=await admin.db.rpc('upt_create_inventory_item',{p_workplace:workplace.id,p_name:prefix+' Equipment',p_category:'test',p_quantity:1,p_item_kind:'asset'})
  if(itemResult.error)throw itemResult.error
  const item=await one(admin.db.from('inventory_items').select('id,total_quantity').eq('workplace_id',workplace.id).eq('name',prefix+' Equipment'));created.itemIds.push(item.id)
