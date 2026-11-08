@@ -22,7 +22,7 @@ export function reconcileFinanceInvoice(grossCents:number,paidCents:number,credi
  * for missing values, fractional cents, negatives and unsafe JS magnitudes. */
 export function financialAmountCents(value:unknown):number{
  const raw=typeof value==='number'?String(value):value
- if(typeof raw!=='string'||!/^(?:0|[1-9]\\d{0,12})(?:\\.\\d{1,2})?$/.test(raw))
+ if(typeof raw!=='string'||!/^(?:0|[1-9]\d{0,12})(?:\.\d{1,2})?$/.test(raw))
   throw new Error('Invalid financial monetary amount')
  const [whole,fraction='']=raw.split('.')
  const cents=Number(whole)*100+Number(fraction.padEnd(2,'0'))
