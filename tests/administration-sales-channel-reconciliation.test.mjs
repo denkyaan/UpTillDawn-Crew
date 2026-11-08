@@ -62,3 +62,30 @@ test('duplicate refund transactions are idempotent and zero refunds are rejected
  const r=reconcileExternalSales([payment(),refund,refund,payment({transactionId:'zero',status:'refunded',amountCents:0})])
  assert.equal(r.totals.tickets,2000);assert.equal(r.duplicates.length,1);assert.equal(r.conflicts.length,1)
 })
+
+test('paid transaction wins over an earlier pending webhook for the same provider ID',()=>{
+ const pending=payment({status:'pending',amountCents:2500})
+ const paid=payment()
+ const r=reconcileExternalSales([pending,paid])
+ assert.equal(r.totals.tickets,2500)
+ assert.equal(r.accepted.length,1)
+ assert.equal(r.pending.length,0)
+ assert.equal(r.duplicates.length,1)
+ assert.equal(r.conflicts.length,0)
+})
+test('paid transaction wins regardless of input order and supports subsequent refunds',()=>{
+ const pending=payment({status:'pending'})
+ const paid=payment()
+ const refund=payment({transactionId:'refund',status:'refunded',amountCents:500})
+ for(const records of [[pending,refund,paid],[refund,paid,pending],[paid,pending,refund]]){
+  const r=reconcileExternalSales(records)
+  assert.equal(r.totals.tickets,2000)
+  assert.equal(r.conflicts.length,0)
+  assert.equal(r.duplicates.length,1)
+ }
+})
+test('pending callback with conflicting identity remains flagged even after settlement',()=>{
+ const r=reconcileExternalSales([payment({status:'pending',saleReference:'different'}),payment()])
+ assert.equal(r.totals.tickets,2500)
+ assert.equal(r.conflicts.length,1)
+})
