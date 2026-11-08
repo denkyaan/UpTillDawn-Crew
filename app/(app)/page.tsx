@@ -183,6 +183,14 @@ export default async function Dashboard() {
   const current=await getCurrentUser()
   if(!current)return null
   if(current.isAdmin)redirect('/admin')
+  // Resolve approved portal entitlements on the server; fail closed to the existing
+  // personnel dashboard if the optional entitlement lookup is unavailable.
+  const supabase=await createClient()
+  const {data:assignments,error:assignmentError}=await supabase.rpc('upt_my_portal_assignments')
+  if(!assignmentError && current.approved && !current.account_blocked &&
+     assignments?.some(grant=>grant.portal==='administration' &&
+       grant.role==='administrative_staff' && grant.approved===true && grant.revoked_at===null))
+    redirect('/portals/administration')
   return <main className="mx-auto max-w-7xl space-y-7 p-4 pb-28 md:p-8">
     <div>
       <p className="text-xs font-bold tracking-[.2em] text-violet-400">UP TILL DAWN PERSONEELSBEHEER</p>
