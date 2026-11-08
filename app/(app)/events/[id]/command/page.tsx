@@ -97,7 +97,7 @@ export default async function EventCommandPage({params}:{params:Promise<{id:stri
    <div className="flex flex-wrap gap-2">
     <Link href="/events" className="rounded-xl border px-4 py-3 font-bold">TERUG NAAR EVENTS</Link>
     <Link href={'/briefings?event='+id} className="rounded-xl border px-4 py-3 font-bold">BRIEFING</Link>
-    <Link href={'/timesheets?event='+id} className="rounded-xl border px-4 py-3 font-bold">TIMESHEETS</Link>
+    <Link href={'/timesheets?event='+id} className="rounded-xl border px-4 py-3 font-bold">Werkstaten</Link>
     <Link href={'/inventory?event='+id} className="rounded-xl border px-4 py-3 font-bold">INVENTORY</Link>
     <Link href={'/guestlist?event='+id} className="rounded-xl border px-4 py-3 font-bold">GUESTLIST</Link>
     <Link href={'/sales?event='+id} className="rounded-xl border px-4 py-3 font-bold">SALES</Link>
