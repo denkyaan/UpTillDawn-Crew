@@ -28,6 +28,19 @@ export default async function Page({searchParams,navigationBasePath='/timesheets
   eventOptions.push(...(data??[]).flatMap(row=>row.events?[{id:row.events.id,name:row.events.name}]:[]))
  }
  if(eventLoadError)return <main className="p-8"><h1 className="text-3xl font-black">{copy.title}</h1><p role="alert" className="mt-4">{copy.loadError}</p></main>
+ // Selected historical events can fall beyond the first 100 entries; resolve them separately.
+ if(eventId&&!eventOptions.some(event=>event.id===eventId)){
+  if(isAdmin){
+   const {data,error}=await s.from('events').select('id,name').eq('id',eventId).maybeSingle()
+   if(error)eventLoadError=true
+   if(data)eventOptions.unshift({id:data.id,name:data.name})
+  }else{
+   const {data,error}=await s.from('event_members').select('event_id,events(id,name)').eq('user_id',current.id).eq('event_id',eventId).maybeSingle()
+   if(error)eventLoadError=true
+   if(data?.events)eventOptions.unshift({id:data.events.id,name:data.events.name})
+  }
+ }
+ if(eventLoadError)return <main className="p-8"><h1 className="text-3xl font-black">{copy.title}</h1><p role="alert" className="mt-4">{copy.loadError}</p></main>
  if(eventId&&!eventOptions.some(event=>event.id===eventId))eventId=undefined
  if(!eventId)eventId=eventOptions[0]?.id
  if(!eventId)return <main className="p-8"><h1 className="text-3xl font-black">{copy.title}</h1><p className="mt-4">{copy.empty}</p></main>
