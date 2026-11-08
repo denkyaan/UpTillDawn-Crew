@@ -35,10 +35,22 @@ export function administrationNotificationHref(value:string|null):string|null {
  let url:URL
  try{url=new URL(value,"https://uptilldawn.local")}catch{return null}
  if(url.origin!=="https://uptilldawn.local")return null
+ // Validate the raw path separately so legitimate encoded query parameters remain usable.
+ // Reject double-encoded separators/traversal and encoded control characters before routing.
+ const rawPath=value.split(/[?#]/,1)[0]
+ if(/%(?:0[0-9a-f]|1[0-9a-f]|7f|25(?:0[0-9a-f]|1[0-9a-f]|7f|2e|2f|5c))/i.test(rawPath))return null
+ // Permit harmless "/./" normalization, while rejecting parent traversal.
+ if(rawPath.split("/").includes(".."))return null
+ const normalizedPath=rawPath.replace(/\/\.\//g,"/").replace(/\/\.$/,"/")
+ if(normalizedPath!==url.pathname)return null
  if(url.pathname==="/portals/administration/invoices")return administrationRoute("invoices")+url.search+url.hash
  // Legacy invoice deep links must not be rewritten to nonexistent module subroutes.
  if(url.pathname.startsWith("/portals/administration/invoices/"))return administrationRoute("invoices")+url.search+url.hash
- if(url.pathname==="/portals/administration"||url.pathname.startsWith("/portals/administration/"))return url.pathname+url.search+url.hash
+ if(url.pathname.startsWith("/portals/administration/modules/invoices/"))return administrationRoute("invoices")+url.search+url.hash
+ if(url.pathname==="/portals/administration")return url.pathname+url.search+url.hash
+ const knownRoutes=administrationNavigationGroups.flatMap(group=>group.slugs.map(administrationRoute))
+ if(knownRoutes.some(route=>route!=="/portals/administration"&&(url.pathname===route||(url.pathname.startsWith(route+"/")&&!route.endsWith("/modules/invoices")))))
+  return url.pathname+url.search+url.hash
  // Other portal URLs must never be followed from an administration notification.
  if(url.pathname.startsWith("/portals/"))return null
  const routes:Record<string,string>={
