@@ -35,6 +35,13 @@ export function administrationNotificationHref(value:string|null):string|null {
  let url:URL
  try{url=new URL(value,"https://uptilldawn.local")}catch{return null}
  if(url.origin!=="https://uptilldawn.local")return null
+ // Validate the raw path separately so legitimate encoded query parameters remain usable.
+ // Reject double-encoded separators/traversal and encoded control characters before routing.
+ const rawPath=value.split(/[?#]/,1)[0]
+ if(/%(?:0[0-9a-f]|1[0-9a-f]|7f|25(?:2e|2f|5c))/i.test(rawPath))return null
+ // URL() normalizes dot segments. A notification must not change its destination
+ // through path normalization, even when the resulting path looks authorized.
+ if(rawPath!==url.pathname)return null
  if(url.pathname==="/portals/administration/invoices")return administrationRoute("invoices")+url.search+url.hash
  // Legacy invoice deep links must not be rewritten to nonexistent module subroutes.
  if(url.pathname.startsWith("/portals/administration/invoices/"))return administrationRoute("invoices")+url.search+url.hash
