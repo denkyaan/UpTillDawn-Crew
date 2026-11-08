@@ -23,8 +23,8 @@ test('inventory accounting keeps all stock states balanced', () => {
   assert.equal(canIssueInventory(item,4),true)
   assert.equal(canIssueInventory(item,5),false)
   assert.equal(inventoryAvailability(item),'available')
-  assert.equal(inventoryAvailability({...item,availableQuantity:2}),'low')
-  assert.equal(inventoryAvailability({...item,availableQuantity:0}),'empty')
+  assert.equal(inventoryAvailability({...item,availableQuantity:2,issuedQuantity:5}),'low')
+  assert.equal(inventoryAvailability({...item,availableQuantity:0,issuedQuantity:7}),'empty')
 })
 
 test('inventory schema uses explicit stock buckets RLS and RPC-only mutations', async () => {
