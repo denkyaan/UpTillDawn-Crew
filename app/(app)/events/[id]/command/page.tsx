@@ -97,6 +97,7 @@ export default async function EventCommandPage({params}:{params:Promise<{id:stri
    <div className="flex flex-wrap gap-2">
     <Link href="/events" className="rounded-xl border px-4 py-3 font-bold">TERUG NAAR EVENTS</Link>
     <Link href={'/briefings?event='+id} className="rounded-xl border px-4 py-3 font-bold">BRIEFING</Link>
+    <Link href={'/timesheets?event='+id} className="rounded-xl border px-4 py-3 font-bold">Werkstaten</Link>
     <Link href={'/inventory?event='+id} className="rounded-xl border px-4 py-3 font-bold">INVENTORY</Link>
     <Link href={'/guestlist?event='+id} className="rounded-xl border px-4 py-3 font-bold">GUESTLIST</Link>
     <Link href={'/sales?event='+id} className="rounded-xl border px-4 py-3 font-bold">SALES</Link>
@@ -142,8 +143,8 @@ export default async function EventCommandPage({params}:{params:Promise<{id:stri
   </section>
 
   <section className="grid gap-3 lg:grid-cols-2">
-   <Requirement label="Verantwoordelijken" ok={r.responsiblesReady} detail={snapshot.staffing.responsibles+' van '+snapshot.staffing.workplaces+' werkplekken hebben een verantwoordelijke'} href="/workplaces"/>
-   <Requirement label="Bezetting" ok={r.staffingReady} detail={snapshot.staffing.scheduledCrew+' personeelsleden ingepland'} href="/shifts"/>
+   <Requirement label="Verantwoordelijken" ok={r.responsiblesReady} detail={snapshot.staffing.responsibles+' van '+snapshot.staffing.workplaces+' werkplekken hebben een verantwoordelijke'} href={"/workplaces?event="+encodeURIComponent(id)}/>
+   <Requirement label="Bezetting" ok={r.staffingReady} detail={snapshot.staffing.scheduledCrew+' personeelsleden ingepland'} href={"/workplaces?event="+encodeURIComponent(id)}/>
    <Requirement label="Briefing" ok={r.briefingReady} detail={snapshot.briefing.required+' verplichte briefing(s)'} href={'/briefings?event='+id}/>
    <Requirement label="Openingschecklists" ok={r.openingReady} detail={snapshot.checklists.openingCompleted+'/'+snapshot.checklists.openingTotal+' afgerond'} href={'/briefings?event='+id}/>
    <Requirement label="Inventory" ok={r.inventoryReady} detail={snapshot.inventory.lowStock+' lage voorraad · '+snapshot.inventory.missing+' ontbreekt · '+snapshot.inventory.damaged+' kapot'} href={'/inventory?event='+id}/>
