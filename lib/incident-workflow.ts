@@ -11,7 +11,7 @@ const TRANSITIONS: Record<IncidentStatus, readonly IncidentStatus[]> = {
 }
 
 export function canTransitionIncident(from: IncidentStatus, to: IncidentStatus): boolean {
-  return TRANSITIONS[from].includes(to)
+  return Object.prototype.hasOwnProperty.call(TRANSITIONS,from) && TRANSITIONS[from].includes(to)
 }
 
 export function incidentRequiresImmediatePush(category: IncidentCategory, urgency: IncidentUrgency): boolean {
@@ -19,5 +19,7 @@ export function incidentRequiresImmediatePush(category: IncidentCategory, urgenc
 }
 
 export function incidentNeedsEscalation(status: IncidentStatus, createdAt: number, now = Date.now(), escalationMinutes = 5): boolean {
-  return status === 'new' && now - createdAt >= Math.max(1, escalationMinutes) * 60_000
+  return status === 'new' && Number.isFinite(createdAt) && Number.isFinite(now) &&
+    Number.isFinite(escalationMinutes) && escalationMinutes >= 0 &&
+    now >= createdAt && now - createdAt >= Math.max(1, escalationMinutes) * 60_000
 }

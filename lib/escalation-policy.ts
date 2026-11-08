@@ -21,5 +21,7 @@ export function escalationDelayMs(type: EscalationType): number {
 }
 
 export function escalationIsDue(context: EscalationContext, now = Date.now()): boolean {
-  return !context.resolvedAt && now - context.createdAt >= escalationDelayMs(context.type)
+  return context.resolvedAt == null && Number.isFinite(context.createdAt) && Number.isFinite(now) &&
+    ['late-check-in','unresolved-help','urgent-incident','unfilled-shift'].includes(context.type) &&
+    now >= context.createdAt && now - context.createdAt >= escalationDelayMs(context.type)
 }
