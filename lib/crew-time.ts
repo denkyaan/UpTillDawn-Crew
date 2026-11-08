@@ -4,6 +4,18 @@ export type Transition={work_session_id:string;to_workplace_id:string;confirmed_
 export type TimeSegment={sessionId:string;userId:string;eventId:string;workplaceId:string|null;start:number;end:number;grossSeconds:number;regularBreakSeconds:number;excessBreakSeconds:number;netSeconds:number}
 export function allocateTime(sessions:TimeSession[],breaks:TimeBreak[],transitions:Transition[],now:number):TimeSegment[]{
  const rows:TimeSegment[]=[];const allowance=new Map<string,number>(),previousEnd=new Map<string,number>()
+ const sessionIds=new Set<string>()
+ for(const session of sessions){
+  if(!session.id?.trim()||!session.user_id?.trim()||!session.event_id?.trim()||sessionIds.has(session.id))throw new Error('Invalid or duplicate work session identity')
+  sessionIds.add(session.id)
+ }
+ for(const entry of breaks){
+  const begin=Date.parse(entry.started_at),finish=entry.ended_at?Date.parse(entry.ended_at):now
+  if(!sessionIds.has(entry.work_session_id)||!Number.isFinite(begin)||!Number.isFinite(finish)||finish<begin)throw new Error('Invalid break interval')
+ }
+ for(const entry of transitions){
+  if(!sessionIds.has(entry.work_session_id)||!entry.to_workplace_id?.trim()||!Number.isFinite(Date.parse(entry.confirmed_at)))throw new Error('Invalid workplace transition')
+ }
  for(const s of [...sessions].sort((a,b)=>Date.parse(a.started_at)-Date.parse(b.started_at)||a.id.localeCompare(b.id))){
  const start=Date.parse(s.started_at),end=s.ended_at?Date.parse(s.ended_at):now,key=`${s.user_id}:${s.event_id}`
  if(!Number.isFinite(start)||!Number.isFinite(end)||end<start)throw new Error('Invalid work interval')
