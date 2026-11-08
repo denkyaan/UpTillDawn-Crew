@@ -37,3 +37,15 @@ test('notification paths reject external, encoded traversal and control-characte
  }
  assert.equal(safeNotificationPath('/notifications?tab=unread'),'/notifications?tab=unread')
 })
+
+test('shared notification targets reject parent traversal and double-encoded path controls',()=>{
+ for(const input of [
+  '/../admin','/notifications/../admin','/notifications/%252e%252e/admin',
+  '/notifications/%252fadmin','/notifications/%250a','/notifications/%0a',
+  '/notifications/%7f','/notifications/%5cadmin',
+ ]){
+  assert.equal(safeNotificationPath(input),'/notifications',input)
+ }
+ assert.equal(safeNotificationPath('/notifications/./detail?search=%252e%252e#recent'),'/notifications/detail?search=%252e%252e#recent')
+ assert.equal(safeNotificationPath('/notifications?tab=unread#today'),'/notifications?tab=unread#today')
+})
