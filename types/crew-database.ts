@@ -6279,6 +6279,16 @@ export type Database = {
         Args: { p_event: string; p_workplace: string }
         Returns: boolean
       }
+      upt_administration_timesheet_labels: {
+        Args: { p_timesheet_ids: string[] }
+        Returns: {
+          timesheet_id: string
+          user_id: string
+          crew_name: string | null
+          event_id: string
+          event_name: string | null
+        }[]
+      }
       upt_can_manage_administration: { Args: never; Returns: boolean }
       upt_can_manage_task: {
         Args: { p_task: string; p_uid?: string }
