@@ -21,7 +21,7 @@ export function reconcilePayments(documents:readonly ReconciliationDocument[],pa
    errors.push(`Invalid payment amount/currency: ${payment.id}`);continue
   }
   if(!seenDocs.has(payment.documentId)){unmatchedPaymentIds.push(payment.id);continue}
-  if(invalidDocs.has(payment.documentId)){errors.push(`Payment references invalid document: ${payment.id}`);continue}
+  if(invalidDocs.has(payment.documentId)){errors.push(`Payment references ${['draft','review','void'].includes(documentById.get(payment.documentId)?.status??'')?'non-payable':'invalid'} document: ${payment.id}`);continue}
   const target=documentById.get(payment.documentId)
   if(!target||!['approved','issued','paid'].includes(target.status)){
    errors.push(`Payment references non-payable document: ${payment.id}`);continue
