@@ -10,5 +10,6 @@ test('payment recording rejects overpayments and invalid dates using shared ledg
  assert.match(action,/loadFinancialSettlement\(db,documentId\)/)
  assert.match(action,/amountCents>settlement\.outstandingCents/)
  assert.match(action,/\['approved','issued','paid'\]\.includes\(settlement\.status\)/)
- assert.match(amounts,/Math\.abs\(rawCents-cents\)>0\.000001/)
+ assert.match(amounts,/raw\.split\('\.'\)/)
+ assert.match(amounts,/Number\.isSafeInteger\(cents\)/)
 })

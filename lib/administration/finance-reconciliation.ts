@@ -21,11 +21,12 @@ export function reconcileFinanceInvoice(grossCents:number,paidCents:number,credi
 /** Convert a Postgres numeric monetary amount to exact integer cents. Fail closed
  * for missing values, fractional cents, negatives and unsafe JS magnitudes. */
 export function financialAmountCents(value:unknown):number{
- const amount=typeof value==='number'?value:typeof value==='string'&&value.trim()!==''?Number(value):NaN
- const rawCents=amount*100
- const cents=Math.round(rawCents)
- if(!Number.isFinite(amount)||amount<0||!Number.isSafeInteger(cents)||Math.abs(rawCents-cents)>0.000001)
+ const raw=typeof value==='number'?String(value):value
+ if(typeof raw!=='string'||!/^(?:0|[1-9]\d{0,12})(?:\.\d{1,2})?$/.test(raw))
   throw new Error('Invalid financial monetary amount')
+ const [whole,fraction='']=raw.split('.')
+ const cents=Number(whole)*100+Number(fraction.padEnd(2,'0'))
+ if(!Number.isSafeInteger(cents))throw new Error('Financial total overflow')
  return cents
 }
 export function totalFinancialCents(amounts:readonly unknown[]):number{

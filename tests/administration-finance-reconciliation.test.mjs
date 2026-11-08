@@ -38,3 +38,13 @@ test('monetary parsing accepts exact cents and rejects malformed precision',()=>
   assert.throws(()=>financialAmountCents(invalid))
  assert.throws(()=>totalFinancialCents([Number.MAX_SAFE_INTEGER/100,1]))
 })
+
+test('financial amounts are converted as decimal cents without float tolerance',()=>{
+ for(const [amount,cents] of [['0.01',1],['0.10',10],['999999999999.99',99999999999999],['12',1200],[0.1,10],[12.34,1234]]){
+  assert.equal(financialAmountCents(amount),cents)
+ }
+ for(const invalid of ['0.001','1.999','1e2','1,20',' 12.34 ','01.20','-0.01','99999999999999.99',1e-7,1e21]){
+  assert.throws(()=>financialAmountCents(invalid),String(invalid))
+ }
+ assert.equal(totalFinancialCents(Array.from({length:1000},()=> '0.01')),1000)
+})
