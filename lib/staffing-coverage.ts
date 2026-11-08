@@ -19,7 +19,20 @@ export interface CoverageWindow {
 }
 
 export function assignmentCoversRequirement(assignment: StaffAssignment, requirement: CoverageRequirement): boolean {
-  return assignment.workplaceId === requirement.workplaceId && assignment.startsAt <= requirement.startsAt && assignment.endsAt >= requirement.endsAt
+  return validCoverageRequirement(requirement) && validStaffAssignment(assignment) && assignment.workplaceId === requirement.workplaceId && assignment.startsAt <= requirement.startsAt && assignment.endsAt >= requirement.endsAt
+}
+
+function validCoverageRequirement(requirement: CoverageRequirement): boolean {
+  return Boolean(requirement.workplaceId?.trim()) &&
+    Number.isFinite(requirement.startsAt) && Number.isFinite(requirement.endsAt) &&
+    requirement.startsAt >= 0 && requirement.endsAt > requirement.startsAt &&
+    Number.isSafeInteger(requirement.requiredStaff) && requirement.requiredStaff >= 0
+}
+
+function validStaffAssignment(assignment: StaffAssignment): boolean {
+  return Boolean(assignment.workplaceId?.trim()) &&
+    Number.isFinite(assignment.startsAt) && Number.isFinite(assignment.endsAt) &&
+    assignment.startsAt >= 0 && assignment.endsAt > assignment.startsAt
 }
 
 export function coverageCount(requirement: CoverageRequirement, assignments: readonly StaffAssignment[]): number {
@@ -27,6 +40,7 @@ export function coverageCount(requirement: CoverageRequirement, assignments: rea
 }
 
 export function coverageShortfall(requirement: CoverageRequirement, assignments: readonly StaffAssignment[]): number {
+  if (!validCoverageRequirement(requirement)) return Number.POSITIVE_INFINITY
   return Math.max(0, requirement.requiredStaff - coverageCount(requirement, assignments))
 }
 
@@ -38,14 +52,13 @@ export function coverageWindows(
   requirement: CoverageRequirement,
   assignments: readonly StaffAssignment[],
 ): CoverageWindow[] {
-  if (!Number.isFinite(requirement.startsAt) || !Number.isFinite(requirement.endsAt) || requirement.endsAt <= requirement.startsAt) {
+  if (!validCoverageRequirement(requirement)) {
     return []
   }
 
   const relevant = assignments.filter((assignment) =>
     assignment.workplaceId === requirement.workplaceId
-    && Number.isFinite(assignment.startsAt)
-    && Number.isFinite(assignment.endsAt)
+    && validStaffAssignment(assignment)
     && assignment.endsAt > requirement.startsAt
     && assignment.startsAt < requirement.endsAt
     && assignment.endsAt > assignment.startsAt
