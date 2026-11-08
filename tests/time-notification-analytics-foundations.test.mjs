@@ -12,7 +12,7 @@ test('overtime calculations are configurable and break-aware', async () => {
 test('time corrections require reason and auditable review state', async () => {
   const source = await readFile(new URL('../lib/time-correction.ts', import.meta.url), 'utf8')
   for (const status of ['pending','approved','rejected','cancelled']) assert.ok(source.includes(`'${status}'`))
-  assert.match(source, /request\.reason\.trim\(\)/)
+  assert.match(source, /request\.reason\?\.trim\(\)/)
   assert.match(source, /reviewedBy/)
 })
 
