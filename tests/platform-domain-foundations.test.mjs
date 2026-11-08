@@ -14,7 +14,7 @@ test('urgent operational notifications cannot be bundled', async () => {
   assert.match(source, /category === 'incident' \|\| category === 'help'/)
   assert.match(source, /priority: 'urgent'/)
   assert.match(source, /bundle: false/)
-  assert.match(source, /encodeURIComponent\(entityId\)/)
+  assert.match(source, /encodeURIComponent\(entityId\.trim\(\)\)/)
 })
 
 test('live operations alert rules cover attendance and break failures', async () => {
