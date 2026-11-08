@@ -28,3 +28,15 @@ test('rejects fractional, negative and inconsistent timesheet seconds',()=>{
 test('escapes spreadsheet formulas in names',()=>{
  assert.match(payrollCsv([{...row,full_name:'=SUM(1,2)'}]),/'=SUM\(1,2\)/)
 })
+
+test('rejects coercible payroll durations instead of silently converting them',()=>{
+ for(const invalid of ['', ' ', '1e3', '01', '+10', '-0', '1.0', '0x10', 'Infinity', '9007199254740992']){
+  assert.throws(()=>payrollCsv([{...row,break_seconds:invalid}]))
+ }
+ assert.match(payrollCsv([{...row,gross_seconds:'7200',break_seconds:'1800',net_seconds:'5400'}]),/1\.500000/)
+})
+test('rejects malformed, offset and impossible UTC payroll timestamps',()=>{
+ for(const invalid of ['2026-11-08','2026-11-08T10:00:00+01:00','2026-02-30T10:00:00Z','2026-11-08T25:00:00Z','2026-11-08T10:00:00.1234Z','not-a-date']){
+  assert.throws(()=>payrollCsv([{...row,started_at:invalid}]))
+ }
+})
