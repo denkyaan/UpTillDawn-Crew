@@ -51,8 +51,15 @@ export function administrationNotificationHref(value:string|null):string|null {
  if(url.pathname.startsWith("/portals/administration/modules/invoices/"))return administrationRoute("invoices")+url.search+url.hash
  if(url.pathname==="/portals/administration")return url.pathname+url.search+url.hash
  const knownRoutes=administrationNavigationGroups.flatMap(group=>group.slugs.map(administrationRoute))
- if(knownRoutes.some(route=>route!=="/portals/administration"&&(url.pathname===route||(url.pathname.startsWith(route+"/")&&!route.endsWith("/modules/invoices")))))
+ if(knownRoutes.some(route=>route!=="/portals/administration"&&url.pathname===route))
   return url.pathname+url.search+url.hash
+ // Only artists and invoices expose record detail pages; other module subpaths lead to 404.
+ const artistBase=administrationRoute("artists")
+ const artistDetail=new RegExp("^"+artistBase+"/[0-9a-f-]{36}(?:/agreement(?:/signing-check/[0-9a-f-]{36})?)?$","i")
+ if(artistDetail.test(url.pathname))return url.pathname+url.search+url.hash
+ const invoiceBase=administrationRoute("invoices")
+ const invoicePeppol=new RegExp("^"+invoiceBase+"/[0-9a-f-]{36}/peppol$","i")
+ if(invoicePeppol.test(url.pathname))return url.pathname+url.search+url.hash
  // Other portal URLs must never be followed from an administration notification.
  if(url.pathname.startsWith("/portals/"))return null
  const routes:Record<string,string>={
