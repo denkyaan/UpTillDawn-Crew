@@ -10,7 +10,7 @@ test('timesheet status is translated across all four locales',()=>{
  assert.match(controls,/copy\.statuses\[own\?\.status/)
 })
 test('reviewer sees permitted profile names with fallback for missing profiles',()=>{
- assert.match(page,/const names=Object\.fromEntries/)
+ assert.match(page,/const names(?::Record<string,string>)?=Object\.fromEntries/)
  assert.match(page,/names=\{names\}/)
  assert.match(controls,/names\[r\.user_id\]\|\|r\.user_id/)
 })
