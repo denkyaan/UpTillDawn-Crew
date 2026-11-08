@@ -2,6 +2,7 @@ import Link from 'next/link'
 import { createClient } from '@/lib/supabase/crew-server'
 import { ProfileForm } from '@/components/crew/profile-form'
 import { LanguageSwitcher } from '@/components/language-switcher'
+import { PushNotificationSettings } from '@/components/push-notification-settings'
 import { getCurrentUser } from '@/lib/actions/auth'
 
 export const dynamic='force-dynamic'
@@ -25,6 +26,7 @@ export default async function Page(){
     photoUrl=signed?.signedUrl||null
   }
   const isAdmin=current?.isAdmin===true
+  const {data:isOwner}=await s.rpc('upt_current_is_owner')
 
   return <main className="mx-auto max-w-6xl space-y-6 p-5 pb-28">
     <header>
@@ -51,7 +53,7 @@ export default async function Page(){
           <AdminCard href="/admin/platform#automatiseringen" title="Meldingen" description="Bekijk operationele meldingen, herinneringen en automatische waarschuwingen."/>
           <AdminCard href="/operations#excel-export" title="Excel-export" description="Exporteer uren en administratieve gegevens vanuit de werkurenworkflow."/>
           <AdminCard href="/audit" title="Auditlog" description="Bekijk wijzigingshistoriek en administratieve acties voor controle en traceerbaarheid."/>
-          <AdminCard href="/god-mode/login" title="God Mode" description="Makeromgeving voor diepgaande interface-, workflow-, automatiserings- en codewijzigingen."/>
+          {isOwner===true&&<AdminCard href="/god-mode/login" title="God Mode" description="Makeromgeving voor diepgaande interface-, workflow-, automatiserings- en codewijzigingen."/>}
         </div></div>
       </div>
     </section>}
@@ -62,6 +64,8 @@ export default async function Page(){
         ? <p>Profiel kon niet worden geladen.</p>
         : <ProfileForm id={user.id} initial={profile} photoUrl={photoUrl} preferredWorkplaceId={preference||null} workplaceOptions={(workplaceOptions||[]).map(option=>({id:option.id,name:option.name}))} isAdminProfile={current?.realRole==='admin'}/>}
     </section>
+
+    <PushNotificationSettings/>
 
     <section className="rounded-2xl border p-4">
       <h2 className="mb-2 text-xl font-black">Taal</h2>
