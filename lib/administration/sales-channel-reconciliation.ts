@@ -20,8 +20,10 @@ export function reconcileExternalSales(payments:readonly ExternalPayment[]):Sale
  const totals:Record<SaleCategory,number>={tickets:0,merch:0,tokens:0}
  const ids=new Map<string,ExternalPayment>(),sales=new Map<string,ExternalPayment>()
  const refundedCents=new Map<string,number>()
- // Process paid records before refunds so provider delivery order cannot create false orphan refunds.
- for(const p of [...payments].sort((a,b)=>Number(a?.status==='refunded')-Number(b?.status==='refunded'))){
+ // Provider callbacks may arrive out of order. Final paid states supersede stale
+ // pending snapshots of the same transaction; refunds require the paid sale first.
+ const priority=(status:ExternalPayment['status'])=>status==='paid'?0:status==='pending'?1:2
+ for(const p of [...payments].sort((a,b)=>priority(a.status)-priority(b.status))){
   const id=p.provider+':'+p.transactionId
   if(typeof p.transactionId!=='string'||!p.transactionId.trim()||typeof p.eventId!=='string'||!p.eventId.trim()||!categories.includes(p.category)||!Number.isSafeInteger(p.amountCents)||p.amountCents<0||(p.status==='refunded'&&p.amountCents===0)||p.currency!=='EUR'||!['paid','pending','refunded'].includes(p.status)){
    conflicts.push(id);continue
@@ -29,8 +31,9 @@ export function reconcileExternalSales(payments:readonly ExternalPayment[]):Sale
   const transactionKey=JSON.stringify([p.provider,p.transactionId])
   const previous=ids.get(transactionKey)
   if(previous){
-   if(JSON.stringify(previous)===JSON.stringify(p))duplicates.push(id)
-   else conflicts.push(id)
+   if(JSON.stringify(previous)===JSON.stringify(p)||previous.status==='paid'&&p.status==='pending'&&previous.eventId===p.eventId&&previous.category===p.category&&previous.currency===p.currency&&previous.saleReference===p.saleReference){
+    duplicates.push(id)
+   }else conflicts.push(id)
    continue
   }
   ids.set(transactionKey,p)
