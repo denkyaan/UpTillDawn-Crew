@@ -13,7 +13,7 @@ const NEXT_PHASES: Record<EventPhase, readonly EventPhase[]> = {
 }
 
 export function canTransitionEvent(from: EventPhase, to: EventPhase): boolean {
-  return NEXT_PHASES[from].includes(to)
+  return Object.prototype.hasOwnProperty.call(NEXT_PHASES,from) && NEXT_PHASES[from].includes(to)
 }
 
 export function eventIsOperational(phase: EventPhase): boolean {
