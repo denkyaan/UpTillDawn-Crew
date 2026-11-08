@@ -208,7 +208,7 @@ export default async function Page({searchParams}:{searchParams?:Promise<{event?
             <ContextLink href="/timesheets" context={{eventId:event.id}} className="inline-flex rounded-xl border px-3 py-2 text-sm font-bold">Werkstaten</ContextLink>
             {user.isAdmin&&<ContextLink href="/workplaces" context={{eventId:event.id}} className="inline-flex rounded-xl border px-3 py-2 text-sm font-bold" title="Open werkplaatsen, verantwoordelijken, personeel en shifts voor dit evenement.">Werkplaatsen & shifts</ContextLink>}
           </div>
-          {!user.isAdmin&&assigned&&<Link href={'/onboarding?event='+event.id} className="inline-flex rounded-xl border px-3 py-2 text-sm font-bold">Onboarding openen</Link>}
+          {!user.isAdmin&&assigned&&<Link href={'/briefings?event='+encodeURIComponent(event.id)} className="inline-flex rounded-xl border px-3 py-2 text-sm font-bold">Briefing</Link>}
           <EmergencyInformationPanel
             compact
             canEdit={user.isAdmin}
