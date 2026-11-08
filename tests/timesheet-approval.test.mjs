@@ -25,12 +25,12 @@ test('timesheet submit gate only permits open and rejected states',()=>{
 
 test('timesheet review gate only permits submitted state',()=>{
   for(const status of ['open','rejected','approved','locked']) assert.equal(timesheetCanReview(sheet(status)),false,status)
-  assert.equal(timesheetCanReview(sheet('submitted')),true)
+  assert.equal(timesheetCanReview(sheet('submitted',{submittedAt:10})),true)
 })
 
 test('timesheet lock gate only permits approved state',()=>{
   for(const status of ['open','submitted','rejected','locked']) assert.equal(timesheetCanLock(sheet(status)),false,status)
-  assert.equal(timesheetCanLock(sheet('approved')),true)
+  assert.equal(timesheetCanLock(sheet('approved',{submittedAt:10,reviewedAt:20,reviewedBy:'admin'})),true)
 })
 
 test('rejected timesheets require a non-whitespace rejection reason',()=>{
