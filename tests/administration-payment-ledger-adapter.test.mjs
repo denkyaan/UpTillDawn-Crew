@@ -5,3 +5,11 @@ test('exact decimal conversion',()=>{assert.equal(euroToCents('100.01'),10001);a
 test('rejects malformed monetary values',()=>{for(const value of ['1.999','-1','1e3','1,20',null,Infinity])assert.throws(()=>euroToCents(value))})
 test('reconciles persisted records',()=>{const result=reconcileStoredLedger([{id:'a',gross_amount:'100.01',status:'issued',currency:'EUR'}],[{id:'p',document_id:'a',amount:'100.01'}]);assert.equal(result.balanced,true)})
 test('rejects invalid persisted amount',()=>assert.throws(()=>reconcileStoredLedger([{id:'a',gross_amount:'0.001',status:'issued',currency:'EUR'}],[])))
+
+test('persisted draft and void documents cannot absorb payments',()=>{
+ for(const status of ['draft','void']){
+  const result=reconcileStoredLedger([{id:'a',gross_amount:'100.00',status,currency:'EUR'}],[{id:'p',document_id:'a',amount:'100.00'}])
+  assert.equal(result.lines[0].paidCents,0)
+  assert.equal(result.balanced,false)
+ }
+})

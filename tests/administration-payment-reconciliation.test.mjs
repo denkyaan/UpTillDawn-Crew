@@ -35,3 +35,26 @@ test('invalid document amounts are not silently settled by valid payments',()=>{
  assert.equal(result.lines[0].paidCents,0)
  assert.ok(result.errors.length>=2)
 })
+
+test('payments cannot settle draft, review or void documents',()=>{
+ for(const status of ['draft','review','void']){
+  const r=reconcilePayments([{...doc('a',100),status}],[pay('p','a',100)])
+  assert.equal(r.lines[0].paidCents,0)
+  assert.equal(r.lines[0].state,'unpaid')
+  assert.equal(r.balanced,false)
+  assert.ok(r.errors.some(error=>error.includes('non-payable document')))
+ }
+})
+test('approved, issued and paid documents accept matching payment records',()=>{
+ for(const status of ['approved','issued','paid']){
+  const r=reconcilePayments([{...doc('a',100),status}],[pay('p','a',100)])
+  assert.equal(r.balanced,true)
+  assert.equal(r.lines[0].state,'settled')
+ }
+})
+test('zero-value documents reconcile without phantom outstanding balance',()=>{
+ const r=reconcilePayments([doc('zero',0)],[])
+ assert.equal(r.lines[0].remainingCents,0)
+ assert.equal(r.lines[0].state,'settled')
+ assert.equal(r.balanced,true)
+})
