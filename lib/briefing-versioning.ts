@@ -17,7 +17,7 @@ export function briefingNeedsConfirmation(version: BriefingVersion, confirmation
   if (!confirmation || !confirmation.userId?.trim() || !Number.isSafeInteger(confirmation.briefingVersion) || confirmation.briefingVersion < 1 || !Number.isFinite(confirmation.confirmedAt) || confirmation.confirmedAt < 0) return true
   if (confirmation.briefingVersion > version.version) return true
   if (confirmation.confirmedAt < version.publishedAt && confirmation.briefingVersion >= version.version) return true
-  if (confirmation.briefingVersion < version.version) return version.requiresReconfirmation
+  if (confirmation.briefingVersion < version.version) return version.requiresReconfirmation === true
   return false
 }
 

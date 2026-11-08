@@ -13,13 +13,16 @@ function validArchiveTimestamp(value: number | null | undefined): boolean {
 }
 
 export function eventCanArchive(record: EventArchiveRecord): boolean {
-  return Boolean(record.eventId?.trim()) && record.state === 'completed' && validArchiveTimestamp(record.completedAt)
+  return Boolean(record.eventId?.trim()) && record.state === 'completed' && validArchiveTimestamp(record.completedAt) &&
+    record.archivedAt == null && record.restoredAt == null
 }
 
 export function eventCanRestore(record: EventArchiveRecord): boolean {
-  return Boolean(record.eventId?.trim()) && record.state === 'archived' && validArchiveTimestamp(record.archivedAt)
+  return Boolean(record.eventId?.trim()) && record.state === 'archived' && validArchiveTimestamp(record.archivedAt) &&
+    (record.completedAt == null || (validArchiveTimestamp(record.completedAt) && record.completedAt <= record.archivedAt!)) &&
+    (record.restoredAt == null || (validArchiveTimestamp(record.restoredAt) && record.restoredAt < record.archivedAt!))
 }
 
 export function eventIsReadOnly(record: EventArchiveRecord): boolean {
-  return record.state === 'archived'
+  return Boolean(record.eventId?.trim()) && record.state === 'archived'
 }
