@@ -21,5 +21,5 @@ export function eventIsOperational(phase: EventPhase): boolean {
 }
 
 export function eventIsEditable(phase: EventPhase): boolean {
-  return phase !== 'archived'
+  return Object.prototype.hasOwnProperty.call(NEXT_PHASES,phase) && phase !== 'archived'
 }

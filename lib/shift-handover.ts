@@ -26,7 +26,7 @@ export function handoverCanBeAccepted(handover: ShiftHandover): boolean {
     handover.id?.trim() && handover.eventId?.trim() && handover.workplaceId?.trim() &&
     handover.outgoingResponsibleId?.trim() && incoming &&
     incoming !== handover.outgoingResponsibleId.trim() &&
-    Number.isFinite(handover.createdAt) &&
+    Number.isFinite(handover.createdAt) && handover.createdAt >= 0 &&
     (handover.acceptedAt == null) &&
     validOpenWorkIds(handover.openTaskIds) && validOpenWorkIds(handover.openIncidentIds)
   )
