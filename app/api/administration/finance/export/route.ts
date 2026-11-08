@@ -3,8 +3,12 @@ import {getCurrentUser} from '@/lib/actions/auth'
 import {createClient} from '@/lib/supabase/crew-server'
 import {canOpenPortal,type PortalAssignment} from '@/lib/portal-access'
 import {financeCsv,financialAging} from '@/lib/administration/finance-report'
-import {reconcileFinanceInvoice} from '@/lib/administration/finance-reconciliation'
+import {reconcileFinanceInvoice,financialAmountCents} from '@/lib/administration/finance-reconciliation'
 
+/** Reject invalid database money instead of silently rounding fractional cents. */
+function safeFinancialCents(value:unknown):number|null{
+ try{return financialAmountCents(value)}catch{return null}
+}
 export const dynamic='force-dynamic'
 export async function GET(){
  const current=await getCurrentUser()
@@ -62,9 +66,9 @@ export async function GET(){
  const documentById=new Map(documents.map(doc=>[doc.id,doc] as const))
  for(const payment of payments){
   if(!documentById.has(payment.document_id))return NextResponse.json({error:'Payment references a missing document'},{status:409})
-  if(payment.amount===null||!Number.isFinite(Number(payment.amount))||Number(payment.amount)<0||!Number.isSafeInteger(Math.round(Number(payment.amount)*100)))
-   return NextResponse.json({error:'Invalid payment amount in export'},{status:422})
-  const nextPaid=(byDocument.get(payment.document_id)??0)+Math.round(Number(payment.amount)*100)
+  const paymentCents=safeFinancialCents(payment.amount)
+  if(paymentCents===null)return NextResponse.json({error:'Invalid payment amount in export'},{status:422})
+  const nextPaid=(byDocument.get(payment.document_id)??0)+paymentCents
   if(!Number.isSafeInteger(nextPaid))return NextResponse.json({error:'Payment total overflow'},{status:422})
   byDocument.set(payment.document_id,nextPaid)
  }
@@ -74,22 +78,22 @@ export async function GET(){
   if(!doc.original_invoice_id||!documentById.has(doc.original_invoice_id))return NextResponse.json({error:'Credit note references a missing invoice'},{status:409})
   const original=documentById.get(doc.original_invoice_id)
   if(!original||!['sales_invoice','purchase_invoice'].includes(original.kind)||original.currency!==doc.currency)return NextResponse.json({error:'Credit note has an invalid original invoice'},{status:422})
-  const amount=Number(doc.gross_amount)
-  if(!Number.isFinite(amount)||amount<0||!Number.isSafeInteger(Math.round(amount*100)))return NextResponse.json({error:'Invalid credit note amount'},{status:422})
-  const nextCredit=(creditsByInvoice.get(doc.original_invoice_id)??0)+Math.round(amount*100)
+  const creditCents=safeFinancialCents(doc.gross_amount)
+  if(creditCents===null)return NextResponse.json({error:'Invalid credit note amount'},{status:422})
+  const nextCredit=(creditsByInvoice.get(doc.original_invoice_id)??0)+creditCents
   if(!Number.isSafeInteger(nextCredit))return NextResponse.json({error:'Credit note total overflow'},{status:422})
   creditsByInvoice.set(doc.original_invoice_id,nextCredit)
  }
  const today=new Intl.DateTimeFormat('en-CA',{timeZone:'Europe/Brussels',year:'numeric',month:'2-digit',day:'2-digit'}).format(new Date())
  const rows:unknown[][]=[['Document ID','Number','Type','Status','Issue date','Due date','Currency','Gross amount','Paid amount','Approved credit notes','Outstanding after credits','Overpayment after credits','Aging','Reconciliation issues']]
  for(const doc of documents){
-  const gross=Number(doc.gross_amount)
+  const grossCents=safeFinancialCents(doc.gross_amount)
+  if(grossCents===null)return NextResponse.json({error:'Invalid financial amount in export'},{status:422})
+  const gross=grossCents/100
   const paid=(byDocument.get(doc.id)??0)/100
   const credits=doc.kind==='sales_invoice'||doc.kind==='purchase_invoice'?(creditsByInvoice.get(doc.id)??0)/100:0
-  if(doc.gross_amount===null||!Number.isFinite(gross)||gross<0||!Number.isSafeInteger(Math.round(gross*100))||!Number.isFinite(paid))
-   return NextResponse.json({error:'Invalid financial amount in export'},{status:422})
   const invoice=doc.kind==='sales_invoice'||doc.kind==='purchase_invoice'
-  const reconciliation=invoice?reconcileFinanceInvoice(Math.round(gross*100),byDocument.get(doc.id)??0,creditsByInvoice.get(doc.id)??0,doc.status):null
+  const reconciliation=invoice?reconcileFinanceInvoice(grossCents,byDocument.get(doc.id)??0,creditsByInvoice.get(doc.id)??0,doc.status):null
   const outstanding=reconciliation?reconciliation.outstandingCents/100:0
   const overpayment=reconciliation?reconciliation.overpaymentCents/100:0
   rows.push([doc.id,doc.document_number,doc.kind,doc.status,doc.issue_date,doc.due_date,doc.currency,gross.toFixed(2),paid.toFixed(2),credits.toFixed(2),outstanding.toFixed(2),overpayment.toFixed(2),doc.kind==='sales_invoice'||doc.kind==='purchase_invoice'?(outstanding>0?financialAging(doc.due_date,today):'settled'):'not_applicable',reconciliation?.issues.join('; ')??''])
