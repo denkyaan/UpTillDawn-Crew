@@ -24,6 +24,6 @@ export function notificationDeepLink(category: NotificationCategory, entityId?: 
     shift: '/shifts', briefing: '/briefing', task: '/tasks', incident: '/incidents',
     help: '/help', planning: '/events', system: '/notifications',
   }
-  const route = routes[category]
-  return entityId ? `${route}?id=${encodeURIComponent(entityId)}` : route
+  const route = Object.prototype.hasOwnProperty.call(routes,category) ? routes[category] : '/notifications'
+  return entityId?.trim() ? `${route}?id=${encodeURIComponent(entityId.trim())}` : route
 }

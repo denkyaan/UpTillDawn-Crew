@@ -19,8 +19,7 @@ test('time corrections require reason and auditable review state', async () => {
 test('urgent and operational notifications never enter normal bundles', async () => {
   const source = await readFile(new URL('../lib/notification-bundling.ts', import.meta.url), 'utf8')
   assert.match(source, /candidate\.priority === 'normal'/)
-  assert.match(source, /candidate\.category !== 'incident'/)
-  assert.match(source, /candidate\.category !== 'help'/)
+  assert.match(source, /\['task','system'\]\.includes\(candidate\.category\)/)
 })
 
 test('event comparisons remain descriptive deltas', async () => {

@@ -9,7 +9,9 @@ export interface BundleCandidate {
 }
 
 export function notificationCanBundle(candidate: BundleCandidate): boolean {
-  return candidate.priority === 'normal' && candidate.category !== 'incident' && candidate.category !== 'help'
+  return Boolean(candidate.id?.trim()) && Number.isFinite(candidate.createdAt) &&
+    candidate.priority === 'normal' && ['task','system'].includes(candidate.category) &&
+    (candidate.eventId == null || Boolean(candidate.eventId.trim()))
 }
 
 export function notificationBundleKey(candidate: BundleCandidate): string | null {
@@ -18,6 +20,6 @@ export function notificationBundleKey(candidate: BundleCandidate): string | null
 }
 
 export function bundleSummary(count: number, eventName?: string | null): string {
-  const safeCount = Math.max(1, Math.floor(count))
+  const safeCount = Number.isSafeInteger(count) && count > 0 ? count : 1
   return eventName?.trim() ? `${safeCount} updates for ${eventName.trim()}` : `${safeCount} updates`
 }
