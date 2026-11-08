@@ -16,11 +16,11 @@ export interface ShiftResponseRecord {
 }
 
 export function availabilityWindowIsValid(window: AvailabilityWindow): boolean {
-  return window.endsAt > window.startsAt
+  return Number.isSafeInteger(window.startsAt) && Number.isSafeInteger(window.endsAt) && window.endsAt > window.startsAt && ['available','unavailable','preferred'].includes(window.status)
 }
 
 export function canAcceptShift(response: ShiftResponseRecord): boolean {
-  return response.response === 'pending' || response.response === 'declined'
+  return Boolean(response.shiftId?.trim() && response.userId?.trim()) && Number.isFinite(response.updatedAt) && (response.response === 'pending' || response.response === 'declined')
 }
 
 export function declineRequiresReason(response: ShiftResponseRecord): boolean {

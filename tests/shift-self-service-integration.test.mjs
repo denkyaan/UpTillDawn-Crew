@@ -1,7 +1,7 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
 import { readFile } from 'node:fs/promises'
-import { declineRequiresReason } from '../lib/crew-self-service.ts'
+import { declineRequiresReason, availabilityWindowIsValid, canAcceptShift } from '../lib/crew-self-service.ts'
 
 test('declining an assigned shift requires an explicit reason', () => {
   assert.equal(declineRequiresReason({
@@ -65,4 +65,20 @@ test('database migration makes shift response and reassignment auditable and aut
   assert.match(source, /confirmation_revision=now\(\)/)
   assert.match(source, /revoke all on function public\.upt_respond_shift/)
   assert.match(source, /revoke all on function public\.upt_reassign_shift/)
+})
+
+test('availability windows reject non-finite and fractional timestamps and unsupported statuses',()=>{
+ const base={startsAt:1000,endsAt:2000,status:'available'}
+ assert.equal(availabilityWindowIsValid(base),true)
+ for(const patch of [{startsAt:NaN},{endsAt:Infinity},{startsAt:1000.5},{endsAt:1000},{endsAt:999},{status:'unknown'}]){
+  assert.equal(availabilityWindowIsValid({...base,...patch}),false,JSON.stringify(patch))
+ }
+})
+test('shift acceptance requires valid assignee identity and response metadata',()=>{
+ const base={shiftId:'shift-1',userId:'user-1',response:'pending',updatedAt:0}
+ assert.equal(canAcceptShift(base),true)
+ assert.equal(canAcceptShift({...base,response:'declined'}),true)
+ for(const patch of [{shiftId:' '},{userId:''},{updatedAt:NaN},{updatedAt:Infinity},{response:'accepted'},{response:'unknown'}]){
+  assert.equal(canAcceptShift({...base,...patch}),false,JSON.stringify(patch))
+ }
 })
