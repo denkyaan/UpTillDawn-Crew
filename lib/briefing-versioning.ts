@@ -13,11 +13,14 @@ export interface BriefingConfirmation {
 }
 
 export function briefingNeedsConfirmation(version: BriefingVersion, confirmation?: BriefingConfirmation | null): boolean {
-  if (!confirmation) return true
+  if (!Number.isSafeInteger(version.version) || version.version < 1 || !version.id?.trim() || !version.eventId?.trim() || !Number.isFinite(version.publishedAt)) return true
+  if (!confirmation || !confirmation.userId?.trim() || !Number.isSafeInteger(confirmation.briefingVersion) || confirmation.briefingVersion < 1 || !Number.isFinite(confirmation.confirmedAt)) return true
+  if (confirmation.confirmedAt < version.publishedAt && confirmation.briefingVersion >= version.version) return true
   if (confirmation.briefingVersion < version.version) return version.requiresReconfirmation
   return false
 }
 
 export function nextBriefingVersion(currentVersion: number): number {
-  return Math.max(0, Math.floor(currentVersion)) + 1
+  if (!Number.isSafeInteger(currentVersion) || currentVersion < 0 || currentVersion >= Number.MAX_SAFE_INTEGER) throw new Error('Invalid briefing version')
+  return currentVersion + 1
 }
