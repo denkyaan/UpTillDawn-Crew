@@ -35,6 +35,8 @@ export function administrationNotificationHref(value:string|null):string|null {
  let url:URL
  try{url=new URL(value,"https://uptilldawn.local")}catch{return null}
  if(url.origin!=="https://uptilldawn.local")return null
+ // Legacy module invoice detail links also target a non-existent route; open the invoice overview instead.
+ if(url.pathname.startsWith("/portals/administration/modules/invoices/"))return administrationRoute("invoices")+url.search+url.hash
  if(url.pathname==="/portals/administration/invoices")return administrationRoute("invoices")+url.search+url.hash
  // Legacy invoice deep links must not be rewritten to nonexistent module subroutes.
  if(url.pathname.startsWith("/portals/administration/invoices/"))return administrationRoute("invoices")+url.search+url.hash
