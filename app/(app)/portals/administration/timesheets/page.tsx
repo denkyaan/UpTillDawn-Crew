@@ -14,7 +14,7 @@ export default async function AdministrationTimesheets({searchParams}:{searchPar
  const {event}=await searchParams
  const eventFilter=event&&/^[0-9a-f]{8}(?:-[0-9a-f]{4}){3}-[0-9a-f]{12}$/i.test(event)?event:null
  const locale=await requestUiLocale()
- const t=({nl:{title:'Werkstaten',empty:'Geen werkstaten beschikbaar.',error:'Werkstaten konden niet worden geladen.'},fr:{title:'Feuilles de temps',empty:'Aucune feuille disponible.',error:'Impossible de charger les feuilles de temps.'},en:{title:'Timesheets',empty:'No timesheets available.',error:'Unable to load timesheets.'},de:{title:'Stundenzettel',empty:'Keine Stundenzettel verfügbar.',error:'Stundenzettel konnten nicht geladen werden.'}} as const)[locale]
+ const t=({nl:{title:'Werkstaten',empty:'Geen werkstaten beschikbaar.',summary:'Overzicht werkstaatstatussen',error:'Werkstaten konden niet worden geladen.'},fr:{title:'Feuilles de temps',empty:'Aucune feuille disponible.',summary:'Résumé des statuts des feuilles de temps',error:'Impossible de charger les feuilles de temps.'},en:{title:'Timesheets',empty:'No timesheets available.',summary:'Timesheet status summary',error:'Unable to load timesheets.'},de:{title:'Stundenzettel',empty:'Keine Stundenzettel verfügbar.',summary:'Übersicht der Stundenzettelstatus',error:'Stundenzettel konnten nicht geladen werden.'}} as const)[locale]
  let query=access.db.from('timesheets').select('id,event_id,user_id,status,submitted_at,reviewed_at,reviewed_by,rejection_reason').order('updated_at',{ascending:false}).limit(100)
  if(eventFilter)query=query.eq('event_id',eventFilter)
  const {data,error}=await query
@@ -26,7 +26,7 @@ export default async function AdministrationTimesheets({searchParams}:{searchPar
  const profileNames=new Map((names?.data??[]).map(row=>[row.id,row.full_name]))
  const statusCounts=(data??[]).reduce<Record<string,number>>((acc,row)=>{acc[row.status]=(acc[row.status]??0)+1;return acc},{})
  return <main className="mx-auto max-w-5xl space-y-4 p-5"><h1 className="text-2xl font-bold">{t.title}</h1>
-  {!error&&<div className="flex flex-wrap gap-2" aria-label={locale==='nl'?'Overzicht werkstaatstatussen':locale==='fr'?'Résumé des statuts des feuilles de temps':locale==='de'?'Übersicht der Stundenzettelstatus':'Timesheet status summary'}>{Object.entries(statusCounts).map(([status,count])=><span key={status} className="rounded-lg border px-3 py-2 text-sm">{translateRuntimeUi(nlStatus(status),locale)}: {count}</span>)}</div>}
+  {!error&&<div className="flex flex-wrap gap-2" aria-label={t.summary}>{Object.entries(statusCounts).map(([status,count])=><span key={status} className="rounded-lg border px-3 py-2 text-sm">{translateRuntimeUi(nlStatus(status),locale)}: {count}</span>)}</div>}
   {error?<p role="alert">{t.error}</p>:!data?.length?<p>{t.empty}</p>:data.map(row=><article key={row.id} className="rounded-xl border p-4"><h2 className="font-semibold">{profileNames.get(row.user_id)||row.user_id}</h2><p>{eventNames.get(row.event_id)||row.event_id}</p><p>{translateRuntimeUi(nlStatus(row.status),locale)}</p>{row.rejection_reason&&<p>{row.rejection_reason}</p>}</article>)}
  </main>
 }
