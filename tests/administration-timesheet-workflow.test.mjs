@@ -1,0 +1,51 @@
+import test from 'node:test'
+import assert from 'node:assert/strict'
+import {readFileSync} from 'node:fs'
+
+const admin=readFileSync(new URL('../app/(app)/portals/administration/timesheets/page.tsx',import.meta.url),'utf8')
+const timesheets=readFileSync(new URL('../app/(app)/timesheets/page.tsx',import.meta.url),'utf8')
+const migration=readFileSync(new URL('../supabase/migrations/20261108194000_administration_timesheet_read_scope.sql',import.meta.url),'utf8')
+const types=readFileSync(new URL('../types/crew-database.ts',import.meta.url),'utf8')
+
+test('admin timesheet event tabs remain in administration portal and include archived history',()=>{
+ assert.match(admin,/navigationBasePath:'\/portals\/administration\/timesheets'/)
+ assert.match(timesheets,/navigationBasePath='\/timesheets'/)
+ assert.match(timesheets,/href=\{navigationBasePath\+'\?event='\+encodeURIComponent\(event\.id\)\}/)
+ assert.doesNotMatch(timesheets,/\.neq\('status','archived'\)/)
+ assert.match(timesheets,/\.eq\('id',eventId\)\.maybeSingle\(\)/)
+ assert.match(timesheets,/\.eq\('event_id',eventId\)\.maybeSingle\(\)/)
+ assert.match(timesheets,/if\(eventId&&!eventOptions\.some\(event=>event\.id===eventId\)\)eventId=undefined/)
+})
+test('administration list paginates deterministic records with filtered total and boundary protection',()=>{
+ assert.match(admin,/const PAGE_SIZE=25/)
+ assert.match(admin,/count:'exact'/)
+ assert.match(admin,/\.order\('updated_at',\{ascending:false\}\)\.order\('id',\{ascending:false\}\)/)
+ assert.match(admin,/\.range\(\(page-1\)\*PAGE_SIZE,page\*PAGE_SIZE-1\)/)
+ assert.match(admin,/if\(statusFilter\)query=query\.eq\('status',statusFilter\)/)
+ assert.match(admin,/if\(eventFilter\)query=query\.eq\('event_id',eventFilter\)/)
+ assert.match(admin,/redirect\(href\(statusFilter,Math\.ceil\(count\/PAGE_SIZE\)\)\)/)
+ assert.match(admin,/href=\{href\(statusFilter,page\+1\)\}/)
+ assert.match(admin,/href=\{href\(statusFilter,page-1\)\}/)
+})
+test('administration gets read-only timesheet RLS with workplace-scoped responsible access preserved',()=>{
+ assert.match(migration,/create policy timesheets_read on public\.timesheets[\s\S]*for select to authenticated/)
+ assert.match(migration,/public\.upt_can_manage_administration\(\)/)
+ assert.match(migration,/ra\.workplace_id[\s\S]*s\.user_id=timesheets\.user_id/)
+ assert.doesNotMatch(migration,/grant (?:insert|update|delete) on public\.timesheets/)
+ assert.doesNotMatch(admin,/upt_review_timesheet|upt_lock_timesheet/)
+})
+test('administration display-name resolver is gated, bounded and exposes only labels',()=>{
+ assert.match(migration,/function public\.upt_administration_timesheet_labels\(p_timesheet_ids uuid\[\]\)/)
+ assert.match(migration,/if not public\.upt_can_manage_administration\(\) then/)
+ assert.match(migration,/cardinality\(p_timesheet_ids\)>100/)
+ assert.match(migration,/return query[\s\S]*select t\.id,t\.user_id,p\.full_name,t\.event_id,e\.name/)
+ assert.match(migration,/revoke all on function public\.upt_administration_timesheet_labels\(uuid\[\]\) from public,anon/)
+ assert.match(types,/upt_administration_timesheet_labels: \{/)
+ assert.match(admin,/access\.db\.rpc\('upt_administration_timesheet_labels'/)
+ assert.match(admin,/labelsError/)
+})
+test('administration list supports four localized filter and pagination labels',()=>{
+ for(const locale of ['nl','fr','en','de'])assert.match(admin,new RegExp('\\b'+locale+':\\{title:'))
+ assert.match(admin,/aria-current=\{status===statusFilter\?'page':undefined\}/)
+ assert.match(admin,/translateRuntimeUi\(nlStatus\(status\),locale\)/)
+})
