@@ -20,6 +20,10 @@ export function reconcilePayments(documents:readonly ReconciliationDocument[],pa
   }
   if(!seenDocs.has(payment.documentId)){unmatchedPaymentIds.push(payment.id);continue}
   if(invalidDocs.has(payment.documentId)){errors.push(`Payment references invalid document: ${payment.id}`);continue}
+  const target=documents.find(doc=>doc.id===payment.documentId)
+  if(!target||!['approved','issued','paid'].includes(target.status)){
+   errors.push(`Payment references non-payable document: ${payment.id}`);continue
+  }
   const sum=(sums.get(payment.documentId)??0)+payment.amountCents
   if(!Number.isSafeInteger(sum)){errors.push(`Payment sum overflow: ${payment.documentId}`);continue}
   sums.set(payment.documentId,sum)
@@ -27,7 +31,7 @@ export function reconcilePayments(documents:readonly ReconciliationDocument[],pa
  const lines=documents.map(doc=>{
   const paidCents=invalidDocs.has(doc.id)?0:(sums.get(doc.id)??0);const remainingCents=doc.grossCents-paidCents
   if(!Number.isSafeInteger(remainingCents))errors.push(`Remaining balance overflow: ${doc.id}`)
-  return {documentId:doc.id,grossCents:doc.grossCents,paidCents,remainingCents,state:(paidCents===0?'unpaid':remainingCents<0?'overpaid':remainingCents===0?'settled':'partial') as ReconciliationLine['state']}
+  return {documentId:doc.id,grossCents:doc.grossCents,paidCents,remainingCents,state:(remainingCents<0?'overpaid':remainingCents===0?'settled':paidCents===0?'unpaid':'partial') as ReconciliationLine['state']}
  })
  return {lines,unmatchedPaymentIds,errors,balanced:errors.length===0&&unmatchedPaymentIds.length===0&&lines.every(line=>line.state==='settled')}
 }
