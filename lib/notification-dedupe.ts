@@ -10,8 +10,14 @@ export function notificationFingerprintKey(notification: NotificationFingerprint
   return `${notification.userId}:${notification.category}:${notification.entityId ?? 'none'}:${notification.messageKey}`
 }
 
+function validFingerprint(notification: NotificationFingerprint): boolean {
+  return Boolean(notification.userId?.trim() && notification.category?.trim() && notification.messageKey?.trim()) &&
+    Number.isFinite(notification.createdAt)
+}
+
 export function notificationsAreDuplicates(a: NotificationFingerprint, b: NotificationFingerprint, windowMs = 60_000): boolean {
-  return notificationFingerprintKey(a) === notificationFingerprintKey(b) && Math.abs(a.createdAt - b.createdAt) <= Math.max(0, windowMs)
+  return validFingerprint(a) && validFingerprint(b) && Number.isFinite(windowMs) && windowMs >= 0 &&
+    notificationFingerprintKey(a) === notificationFingerprintKey(b) && Math.abs(a.createdAt - b.createdAt) <= windowMs
 }
 
 export function deduplicateNotifications(notifications: readonly NotificationFingerprint[], windowMs = 60_000): NotificationFingerprint[] {
