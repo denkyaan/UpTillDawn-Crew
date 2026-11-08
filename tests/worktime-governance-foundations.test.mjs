@@ -28,7 +28,7 @@ test('time corrections retain reason explanation original and corrected values',
   const source = await readFile(new URL('../lib/time-correction-policy.ts', import.meta.url), 'utf8')
   assert.match(source, /originalMinutes/)
   assert.match(source, /correctedMinutes/)
-  assert.match(source, /explanation\.trim\(\)/)
+  assert.match(source, /explanation\?\.trim\(\)/)
   assert.match(source, /approvedBy/)
 })
 
