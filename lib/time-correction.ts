@@ -19,6 +19,8 @@ export function timeCorrectionIsValid(request: TimeCorrectionRequest): boolean {
   if (request.requestedStartAt != null && (!Number.isFinite(request.requestedStartAt) || request.requestedStartAt < 0)) return false
   if (request.requestedEndAt != null && (!Number.isFinite(request.requestedEndAt) || request.requestedEndAt < 0)) return false
   if (request.reviewedAt != null && (!Number.isFinite(request.reviewedAt) || request.reviewedAt < request.createdAt)) return false
+  if ((request.reviewedAt != null) !== Boolean(request.reviewedBy?.trim())) return false
+  if (!['pending','approved','rejected','cancelled'].includes(request.status)) return false
   if (request.requestedStartAt != null && request.requestedEndAt != null && request.requestedEndAt <= request.requestedStartAt) return false
   return request.requestedStartAt != null || request.requestedEndAt != null
 }
