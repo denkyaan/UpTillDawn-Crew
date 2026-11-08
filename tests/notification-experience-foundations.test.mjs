@@ -16,7 +16,8 @@ test('notification dedupe is user category entity and message scoped', async () 
 
 test('notification read state supports unread counts and dismissals', async () => {
   const source = await readFile(new URL('../lib/notification-read-state.ts', import.meta.url), 'utf8')
-  assert.match(source, /!state\.readAt && !state\.dismissedAt/)
+  assert.match(source, /state\.readAt == null && state\.dismissedAt == null/)
+  assert.match(source, /validNotificationState\(state\)/)
   assert.match(source, /state\.userId === userId/)
   assert.match(source, /unreadNotificationCount/)
 })
