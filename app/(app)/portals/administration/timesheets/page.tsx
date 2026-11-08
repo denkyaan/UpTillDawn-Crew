@@ -26,7 +26,7 @@ export default async function AdministrationTimesheets({searchParams}:{searchPar
  const profileNames=new Map((names?.data??[]).map(row=>[row.id,row.full_name]))
  const statusCounts=(data??[]).reduce<Record<string,number>>((acc,row)=>{acc[row.status]=(acc[row.status]??0)+1;return acc},{})
  return <main className="mx-auto max-w-5xl space-y-4 p-5"><h1 className="text-2xl font-bold">{t.title}</h1>
-  {!error&&<div className="flex flex-wrap gap-2" aria-label="Timesheet status summary">{Object.entries(statusCounts).map(([status,count])=><span key={status} className="rounded-lg border px-3 py-2 text-sm">{translateRuntimeUi(nlStatus(status),locale)}: {count}</span>)}</div>}
+  {!error&&<div className="flex flex-wrap gap-2" aria-label={locale==='nl'?'Overzicht werkstaatstatussen':locale==='fr'?'Résumé des statuts des feuilles de temps':locale==='de'?'Übersicht der Stundenzettelstatus':'Timesheet status summary'}>{Object.entries(statusCounts).map(([status,count])=><span key={status} className="rounded-lg border px-3 py-2 text-sm">{translateRuntimeUi(nlStatus(status),locale)}: {count}</span>)}</div>}
   {error?<p role="alert">{t.error}</p>:!data?.length?<p>{t.empty}</p>:data.map(row=><article key={row.id} className="rounded-xl border p-4"><h2 className="font-semibold">{profileNames.get(row.user_id)||row.user_id}</h2><p>{eventNames.get(row.event_id)||row.event_id}</p><p>{translateRuntimeUi(nlStatus(row.status),locale)}</p>{row.rejection_reason&&<p>{row.rejection_reason}</p>}</article>)}
  </main>
 }
