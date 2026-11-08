@@ -63,3 +63,20 @@ test('invoice notifications open real UUID detail pages instead of silently drop
  assert.equal(administrationNotificationHref('/portals/administration/invoices/not-a-uuid'),administrationRoute('invoices'))
  assert.equal(administrationNotificationHref('/portals/administration/modules/invoices/not-a-uuid'),administrationRoute('invoices'))
 })
+
+test('administration notifications reject nested URLs without actual detail pages',()=>{
+ for(const url of [
+  '/portals/administration/modules/tasks/123',
+  '/portals/administration/modules/banking/123',
+  '/portals/administration/modules/notifications/123',
+  '/portals/administration/finance/123',
+  '/portals/administration/sales/123',
+ ])assert.equal(administrationNotificationHref(url),null,url)
+ const id='123e4567-e89b-42d3-a456-426614174000'
+ for(const url of [
+  '/portals/administration/modules/artists/'+id,
+  '/portals/administration/modules/artists/'+id+'/agreement',
+  '/portals/administration/modules/artists/'+id+'/agreement/signing-check/'+id,
+  '/portals/administration/modules/invoices/'+id+'/peppol',
+ ])assert.equal(administrationNotificationHref(url),url,url)
+})

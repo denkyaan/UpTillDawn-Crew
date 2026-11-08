@@ -46,13 +46,20 @@ export function administrationNotificationHref(value:string|null):string|null {
  if(url.pathname==="/portals/administration/invoices")return administrationRoute("invoices")+url.search+url.hash
  // Preserve existing invoice detail pages for valid IDs; unknown legacy links fall back to the overview.
  const invoiceDetail=/^\/portals\/administration\/(?:modules\/)?invoices\/([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})$/i.exec(url.pathname)
+ const invoicePeppol=/^\/portals\/administration\/modules\/invoices\/([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})\/peppol$/i.exec(url.pathname)
+ if(invoicePeppol)return url.pathname+url.search+url.hash
  if(invoiceDetail)return administrationRoute("invoices")+"/"+invoiceDetail[1]+url.search+url.hash
  if(url.pathname.startsWith("/portals/administration/invoices/"))return administrationRoute("invoices")+url.search+url.hash
  if(url.pathname.startsWith("/portals/administration/modules/invoices/"))return administrationRoute("invoices")+url.search+url.hash
  if(url.pathname==="/portals/administration")return url.pathname+url.search+url.hash
  const knownRoutes=administrationNavigationGroups.flatMap(group=>group.slugs.map(administrationRoute))
- if(knownRoutes.some(route=>route!=="/portals/administration"&&(url.pathname===route||(url.pathname.startsWith(route+"/")&&!route.endsWith("/modules/invoices")))))
+ if(knownRoutes.some(route=>route!=="/portals/administration"&&url.pathname===route))
   return url.pathname+url.search+url.hash
+ // Only artists and invoices expose record detail pages; other module subpaths lead to 404.
+ const artistBase=administrationRoute("artists")
+ const artistDetail=new RegExp("^"+artistBase+"/[0-9a-f-]{36}(?:/agreement(?:/signing-check/[0-9a-f-]{36})?)?$","i")
+ if(artistDetail.test(url.pathname))return url.pathname+url.search+url.hash
+ // Invoice Peppol links are handled above, before the legacy invoice fallback.
  // Other portal URLs must never be followed from an administration notification.
  if(url.pathname.startsWith("/portals/"))return null
  const routes:Record<string,string>={
