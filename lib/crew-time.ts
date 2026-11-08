@@ -3,6 +3,7 @@ export type TimeBreak={work_session_id:string;started_at:string;ended_at:string|
 export type Transition={work_session_id:string;to_workplace_id:string;confirmed_at:string}
 export type TimeSegment={sessionId:string;userId:string;eventId:string;workplaceId:string|null;start:number;end:number;grossSeconds:number;regularBreakSeconds:number;excessBreakSeconds:number;netSeconds:number}
 export function allocateTime(sessions:TimeSession[],breaks:TimeBreak[],transitions:Transition[],now:number):TimeSegment[]{
+ if(!Number.isFinite(now)||now<0)throw new Error('Invalid allocation clock')
  const rows:TimeSegment[]=[];const allowance=new Map<string,number>(),previousEnd=new Map<string,number>()
  const sessionIds=new Set<string>()
  const sessionBounds=new Map<string,{start:number;end:number}>()
@@ -16,11 +17,15 @@ export function allocateTime(sessions:TimeSession[],breaks:TimeBreak[],transitio
  for(const entry of breaks){
   const begin=Date.parse(entry.started_at),finish=entry.ended_at?Date.parse(entry.ended_at):now
   const bounds=sessionBounds.get(entry.work_session_id)
-  if(!bounds||!Number.isFinite(begin)||!Number.isFinite(finish)||finish<begin||begin<bounds.start||finish>bounds.end)throw new Error('Invalid break interval')
+  if(!bounds||!Number.isFinite(begin)||!Number.isFinite(finish)||finish<=begin||begin<bounds.start||finish>bounds.end)throw new Error('Invalid break interval')
  }
+ const transitionTimes=new Set<string>()
  for(const entry of transitions){
   const bounds=sessionBounds.get(entry.work_session_id),at=Date.parse(entry.confirmed_at)
   if(!bounds||!entry.to_workplace_id?.trim()||!Number.isFinite(at)||at<bounds.start||at>=bounds.end)throw new Error('Invalid workplace transition')
+  const transitionKey=JSON.stringify([entry.work_session_id,at])
+  if(transitionTimes.has(transitionKey))throw new Error('Conflicting workplace transitions at the same instant')
+  transitionTimes.add(transitionKey)
  }
  for(const s of [...sessions].sort((a,b)=>Date.parse(a.started_at)-Date.parse(b.started_at)||a.id.localeCompare(b.id))){
  const start=Date.parse(s.started_at),end=s.ended_at?Date.parse(s.ended_at):now,key=`${s.user_id}:${s.event_id}`
