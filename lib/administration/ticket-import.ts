@@ -13,6 +13,7 @@ function parseCsv(input:string):string[][] {
    else cell+=ch
    continue
   }
+  if(state==='closed'&&ch!==','&&ch!=='\n'&&ch!=='\r')throw Error('Unexpected characters after closing quote')
   if(ch==='"'){
    if(state==="start"){state="quoted";continue}
    throw Error('Unexpected quote')
@@ -25,7 +26,6 @@ function parseCsv(input:string):string[][] {
    row.push(cell);if(row.some(x=>x.trim()))rows.push(row)
    row=[];cell="";state="start";continue
   }
-  if(state==="closed")throw Error('Unexpected characters after closing quote')
   if(state==="start")state="plain"
   cell+=ch
  }
