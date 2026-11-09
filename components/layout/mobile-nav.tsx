@@ -99,7 +99,7 @@ export function MobileBottomNav({
      {count>0&&<span className="absolute -right-3 -top-3 flex h-5 min-w-5 items-center justify-center rounded-full bg-red-600 px-1 text-[10px] font-black leading-none text-white shadow ring-2 ring-card">{count>99?"99+":count}</span>}
     </span>
     {expandedItem
-      ? <span className="min-w-0 flex-1"><span className="block whitespace-normal break-words leading-snug">{label}</span><span className="mt-0.5 block line-clamp-2 text-[10px] font-normal text-muted-foreground">{help.description}</span></span>
+      ? <span className="min-w-0 flex-1"><span className="block whitespace-normal break-words leading-snug">{label}</span><span className="mt-0.5 hidden min-[460px]:block line-clamp-2 text-[10px] font-normal text-muted-foreground">{help.description}</span></span>
       : <span className="min-w-0 max-w-full break-words text-center leading-tight">{label}</span>}
    </Link>
  }
@@ -128,7 +128,7 @@ export function MobileBottomNav({
  useEffect(()=>{window.dispatchEvent(new CustomEvent("uptilldawn-navigation-expanded",{detail:{open:activeGroup!=="home"}}));return()=>{window.dispatchEvent(new CustomEvent("uptilldawn-navigation-expanded",{detail:{open:false}}))}},[activeGroup])
  return <nav aria-label={{nl:"Mobiele navigatie",en:"Mobile navigation",fr:"Navigation mobile",de:"Mobile Navigation"}[uiLocale]} className="fixed inset-x-0 bottom-0 z-50 min-h-14 border-t border-border bg-card pb-[env(safe-area-inset-bottom)] lg:hidden">
   {activeGroup!=="home"&&<div id="role-navigation-subtabs" role="region" aria-label={{nl:"Subnavigatie",fr:"Sous-navigation",en:"Subnavigation",de:"Unternavigation"}[uiLocale]} className="border-b bg-card p-2">
-   <div className="grid max-h-[38dvh] grid-cols-3 gap-1.5 overflow-x-hidden overflow-y-auto overscroll-contain">{selectedEntries.map(item=><NavItem key={item.key} item={item}/>)}</div>
+   <div className="grid max-h-[38dvh] grid-cols-2 gap-2 overflow-x-hidden overflow-y-auto overscroll-contain">{selectedEntries.map(item=><NavItem key={item.key} item={item} expandedItem/>)}</div>
   </div>}
   <div className="grid gap-0.5 px-1 py-2" style={{gridTemplateColumns:`repeat(${availableGroups.length},minmax(0,1fr))`}}>
    {availableGroups.map(group=>{const Icon=group.icon;const active=activeGroup===group.key||(activeGroup==="home"&&currentGroup===group.key);return <button type="button" key={group.key} data-role-category={group.key} aria-pressed={active} aria-label={group.labels[uiLocale]} aria-expanded={group.key==="home"?undefined:activeGroup===group.key} aria-controls={group.key==="home"||activeGroup!==group.key?undefined:"role-navigation-subtabs"} onClick={()=>{if(group.key==="home"){setSelectedGroup(null);router.push(isAdmin?"/admin":"/");return}setSelectedGroup(previous=>({key:previous?.pathname===pathname&&previous.key===group.key?"home":group.key,pathname}))}} className={cn("flex min-w-0 flex-col items-center justify-center gap-1 rounded-lg px-0.5 py-2 text-[10px]",active?"bg-violet-500/15 text-violet-400":"text-muted-foreground")}><Icon className="h-5 w-5"/><span className="w-full min-w-0 break-words text-center leading-tight">{group.labels[uiLocale]}</span></button>})}

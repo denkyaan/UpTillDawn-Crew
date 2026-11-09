@@ -104,7 +104,7 @@ export default async function Page({searchParams}:{searchParams?:Promise<{feedba
        return <article key={person.id} id={person.id===params.user?'approval-user-focus':undefined} className="space-y-2 rounded-2xl border p-4">
         <div><h3 className="font-bold">{person.full_name||'Naam ontbreekt'}</h3>
          <p className="break-all text-xs text-muted-foreground">{person.email||'Geen e-mail'}</p></div>
-        <PersonnelTwoRoleEditor userId={person.id} roleOne={role.one} roleTwo={role.two} locale={locale}/>
+        <details className="rounded-xl border p-3" open={person.id===params.user?true:undefined}><summary className="cursor-pointer text-sm font-semibold">Rollen beheren · {role.one}{role.two?` + ${role.two}`:""}</summary><PersonnelTwoRoleEditor userId={person.id} roleOne={role.one} roleTwo={role.two} locale={locale}/></details>
        </article>
       })}
     </section>

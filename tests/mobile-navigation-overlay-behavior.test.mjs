@@ -10,6 +10,7 @@ test('role overview uses Next client navigation rather than document reload',()=
 })
 test('floating chat and AI both clear the expanded subtab area',()=>{
  assert.match(shell,/showFloatingChat=showChat&&!inDedicatedPortal&&!navigationExpanded/)
- assert.match(shell,/isAdmin&&!navigationExpanded/)
+ assert.match(shell,/const adminAiAction=isAdmin\?/)
+ assert.doesNotMatch(shell,/adminAiAction=isAdmin&&!navigationExpanded/)
  assert.match(shell,/uptilldawn-navigation-expanded/)
 })
