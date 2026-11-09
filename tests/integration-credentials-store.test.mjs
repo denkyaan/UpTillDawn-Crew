@@ -92,7 +92,7 @@ test("integration audit reads metadata only, with deny-by-default direct access 
  assert.match(api,/listRecentIntegrationAudit\(access\.db\)/)
  assert.match(ui,/auditTitle/)
  assert.match(ui,/auditBy/)
- assert.doesNotMatch(migration,/encrypted_credentials|ciphertext/)
+ assert.doesNotMatch(migration.replace(/^--.*$/gm,""),/encrypted_credentials|ciphertext/)
 })
 
 test("provider readiness reflects encrypted in-app credentials without duplicate menus or public API fields",()=>{

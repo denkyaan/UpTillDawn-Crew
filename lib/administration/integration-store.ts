@@ -11,7 +11,7 @@ function rpc(db:Db,action:"list"|"read"|"save"|"disconnect",provider:Integration
 }
 function masterKey():string{
  const value=process.env.UPT_INTEGRATION_ENCRYPTION_KEY
- if(!validIntegrationMasterKey(value))throw Error("integration_master_key_unavailable")
+ if(typeof value!=="string"||!validIntegrationMasterKey(value))throw Error("integration_master_key_unavailable")
  return value
 }
 /** Read metadata only; no ciphertext or secret values are returned to the browser. */
