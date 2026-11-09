@@ -1,6 +1,8 @@
 import Link from 'next/link'
 import { EXPECTED_DB_MIGRATION_VERSION } from '@/lib/release-baseline'
 import {requestUiLocale} from '@/lib/server-locale'
+import {externalServicesReadiness} from '@/lib/administration/external-services-readiness'
+import {ExternalServicesReadiness} from '@/components/admin/external-services-readiness'
 import { redirect } from 'next/navigation'
 import { getCurrentUser } from '@/lib/actions/auth'
 import { createClient } from '@/lib/supabase/crew-server'
@@ -76,6 +78,7 @@ export default async function PlatformCenter(){
   if(!current?.isAdmin)redirect('/')
   const locale=await requestUiLocale()
   const t=releaseTexts[locale]
+  const externalServices=externalServicesReadiness(process.env)
   const s=await createClient()
   const now=new Date().toISOString()
 
@@ -287,6 +290,7 @@ export default async function PlatformCenter(){
           </div>}
           <p className="mt-3 text-xs font-semibold text-amber-500">{t.external}</p>
         </div>
+        <ExternalServicesReadiness locale={locale} services={externalServices}/>
         <div className="rounded-xl border p-3 text-sm"><b>{t.environments}</b><p className="mt-1 text-muted-foreground">{t.separation}</p></div>
         <div className="rounded-xl border p-3 text-sm"><b>Recovery readiness</b><pre className="mt-2 overflow-auto whitespace-pre-wrap text-xs text-muted-foreground">{JSON.stringify(recoveryResult.data,null,2)}</pre></div>
         {(versionsResult.data||[]).map(v=><div key={v.id} className="rounded-xl border p-3 text-sm"><div className="flex flex-wrap items-center justify-between gap-2"><div><b>{v.kind}</b><p className="text-xs text-muted-foreground">{new Date(v.created_at).toLocaleString('nl-BE')} · {v.note||'zonder notitie'}</p></div><form action={restorePlatformConfiguration}><input type="hidden" name="version_id" value={v.id}/><button className="rounded-lg border border-amber-500/50 px-3 py-2 text-xs font-bold">CONFIGURATIE HERSTELLEN</button></form></div></div>)}
