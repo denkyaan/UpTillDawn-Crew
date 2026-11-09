@@ -2,6 +2,10 @@ export type CrewExtraLocale='nl'|'fr'|'en'|'de'
 type Row={fr:string;en:string;de:string}
 
 export const CREW_EXTRA_TRANSLATIONS:Record<string,Row>={
+  "Integratiewijzigingen":{fr:"Historique des intégrations",en:"Integration change history",de:"Änderungen an Integrationen"},
+  "Historique des intégrations":{fr:"Historique des intégrations",en:"Integration change history",de:"Änderungen an Integrationen"},
+  "Integration change history":{fr:"Historique des intégrations",en:"Integration change history",de:"Änderungen an Integrationen"},
+  "Änderungen an Integrationen":{fr:"Historique des intégrations",en:"Integration change history",de:"Änderungen an Integrationen"},
   "Accountgegevens veilig beheren":{fr:"Gérer les identifiants en sécurité",en:"Securely manage provider credentials",de:"Providerzugänge sicher verwalten"},
   "Gérer les identifiants en sécurité":{fr:"Gérer les identifiants en sécurité",en:"Securely manage provider credentials",de:"Providerzugänge sicher verwalten"},
   "Securely manage provider credentials":{fr:"Gérer les identifiants en sécurité",en:"Securely manage provider credentials",de:"Providerzugänge sicher verwalten"},

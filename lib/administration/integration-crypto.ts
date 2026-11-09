@@ -7,14 +7,19 @@ function bytesFromBase64(value:string):Uint8Array{
  const binary=atob(value)
  return Uint8Array.from(binary,chr=>chr.charCodeAt(0))
 }
+/** Validate the Worker-held master key's exact binary format without exposing it. */
+export function validIntegrationMasterKey(value:unknown):boolean{
+ if(typeof value!=="string")return false
+ try{return bytesFromBase64(value).length===32}catch{return false}
+}
 function bytesToBase64(value:Uint8Array):string{
  let binary=""
  for(const octet of value)binary+=String.fromCharCode(octet)
  return btoa(binary)
 }
 async function importMasterKey(value:string):Promise<CryptoKey>{
+ if(!validIntegrationMasterKey(value))throw Error("integration_master_key_unavailable")
  const bytes=bytesFromBase64(value)
- if(bytes.length!==32)throw Error("integration_master_key_unavailable")
  return crypto.subtle.importKey("raw",bytes.buffer as ArrayBuffer,"AES-GCM",false,["encrypt","decrypt"])
 }
 export async function sealIntegrationSecrets(provider:IntegrationProvider,secrets:Record<string,string>,base64Key:string):Promise<string>{

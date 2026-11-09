@@ -1,7 +1,7 @@
 import "server-only"
 import {createClient} from "@/lib/supabase/crew-server"
 import {isIntegrationProvider,integrationProviders,parseIntegrationConfiguration,type IntegrationProvider,type IntegrationSummary,type IntegrationConfiguration} from "@/lib/administration/integration-credentials"
-import {sealIntegrationSecrets,openIntegrationSecrets} from "@/lib/administration/integration-crypto"
+import {sealIntegrationSecrets,openIntegrationSecrets,validIntegrationMasterKey} from "@/lib/administration/integration-crypto"
 
 type Db=Awaited<ReturnType<typeof createClient>>
 type RpcResponse={data:unknown;error:{message?:string;code?:string}|null}
@@ -11,7 +11,7 @@ function rpc(db:Db,action:"list"|"read"|"save"|"disconnect",provider:Integration
 }
 function masterKey():string{
  const value=process.env.UPT_INTEGRATION_ENCRYPTION_KEY
- if(!value)throw Error("integration_master_key_unavailable")
+ if(!validIntegrationMasterKey(value))throw Error("integration_master_key_unavailable")
  return value
 }
 /** Read metadata only; no ciphertext or secret values are returned to the browser. */
@@ -52,3 +52,27 @@ export async function getManagedIntegrationConfig(db:Db,provider:IntegrationProv
  return validated
 }
 export function managedProviderIds():readonly IntegrationProvider[]{return integrationProviders}
+
+/** Metadata-only administration audit; includes no ciphertext or raw provider values. */
+export type IntegrationAuditEvent={
+ provider:IntegrationProvider
+ action:"connected"|"updated"|"disconnected"
+ actor_name:string
+ occurred_at:string
+}
+export async function listRecentIntegrationAudit(db:Db):Promise<IntegrationAuditEvent[]>{
+ const invoke=db.rpc as unknown as (name:string,args:{p_limit:number})=>Promise<RpcResponse>
+ const {data,error}=await invoke("upt_integration_audit_recent",{p_limit:15})
+ if(error||!Array.isArray(data))throw Error("integration_audit_unavailable")
+ const audit:IntegrationAuditEvent[]=[]
+ for(const value of data){
+  if(!value||typeof value!=="object")throw Error("integration_audit_unavailable")
+  const row=value as Record<string,unknown>
+  if(!isIntegrationProvider(row.provider)||
+     (row.action!=="connected"&&row.action!=="updated"&&row.action!=="disconnected")||
+     typeof row.actor_name!=="string"||typeof row.occurred_at!=="string")
+     throw Error("integration_audit_unavailable")
+  audit.push({provider:row.provider,action:row.action,actor_name:row.actor_name,occurred_at:row.occurred_at})
+ }
+ return audit
+}

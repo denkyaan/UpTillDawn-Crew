@@ -1,7 +1,7 @@
 import test from "node:test"
 import assert from "node:assert/strict"
 import {readFileSync} from "node:fs"
-import {sealIntegrationSecrets,openIntegrationSecrets} from "../lib/administration/integration-crypto.ts"
+import {sealIntegrationSecrets,openIntegrationSecrets,validIntegrationMasterKey} from "../lib/administration/integration-crypto.ts"
 import {parseIntegrationConfiguration,integrationProviders,integrationFields} from "../lib/administration/integration-credentials.ts"
 const src=p=>readFileSync(new URL("../"+p,import.meta.url),"utf8")
 const key=Buffer.alloc(32,11).toString("base64")
@@ -70,4 +70,36 @@ test("server-side provider tests prefer encrypted in-app configuration, not only
  assert.match(route,/checkProviderConnection\(value as ConnectionProvider,environment\)/)
  assert.match(route,/administrationPageAccess/)
  assert.match(route,/integration_storage_unavailable/)
+})
+
+test("encryption key readiness confirms correct AES-256 binary material, not mere environment presence",()=>{
+ assert.equal(validIntegrationMasterKey(key),true)
+ assert.equal(validIntegrationMasterKey(other),true)
+ for(const v of ["",undefined,"a-not-base64-secret","a".repeat(43),"AA==",key+"\n"," "+key,key.slice(0,-1)+"?"])assert.equal(validIntegrationMasterKey(v),false,String(v))
+ const api=src("app/api/administration/integrations/route.ts")
+ assert.match(api,/validIntegrationMasterKey\(process\.env\.UPT_INTEGRATION_ENCRYPTION_KEY\)/)
+})
+
+test("integration audit reads metadata only, with deny-by-default direct access and role-scoped RPC",()=>{
+ const migration=src("supabase/migrations/20261109221102_integration_audit_history_ui.sql")
+ assert.match(migration,/public\.upt_integration_audit_recent\(p_limit integer default 20\)/)
+ assert.match(migration,/public\.upt_can_manage_administration\(\)/)
+ assert.match(migration,/p\.account_blocked/)
+ assert.match(migration,/revoke all on function public\.upt_integration_audit_recent/)
+ assert.match(migration,/upt_private\.integration_connection_audit/)
+ const api=src("app/api/administration/integrations/route.ts")
+ const ui=src("components/admin/integration-credential-manager.tsx")
+ assert.match(api,/listRecentIntegrationAudit\(access\.db\)/)
+ assert.match(ui,/auditTitle/)
+ assert.match(ui,/auditBy/)
+ assert.doesNotMatch(migration,/encrypted_credentials|ciphertext/)
+})
+
+test("provider readiness reflects encrypted in-app credentials without duplicate menus or public API fields",()=>{
+ const panel=src("components/admin/external-services-readiness.tsx")
+ assert.match(panel,/administrationPageAccess\(\)/)
+ assert.match(panel,/listIntegrationSummaries\(access\.db\)/)
+ assert.match(panel,/appManaged\.has\(service\.id/)
+ assert.match(panel,/t\.states\.credentials_present/)
+ assert.equal((panel.match(/<IntegrationCredentialManager /g)||[]).length,1)
 })

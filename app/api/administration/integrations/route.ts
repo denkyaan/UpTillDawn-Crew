@@ -2,7 +2,8 @@ import {NextResponse} from "next/server"
 import {administrationPageAccess} from "@/lib/administration/page-access"
 import {requestHasSameOrigin} from "@/lib/request-origin"
 import {isIntegrationProvider} from "@/lib/administration/integration-credentials"
-import {disconnectIntegration,listIntegrationSummaries,saveIntegrationCredentials} from "@/lib/administration/integration-store"
+import {disconnectIntegration,listIntegrationSummaries,listRecentIntegrationAudit,saveIntegrationCredentials} from "@/lib/administration/integration-store"
+import {validIntegrationMasterKey} from "@/lib/administration/integration-crypto"
 
 export const dynamic="force-dynamic"
 const headers={"Cache-Control":"no-store"}
@@ -31,8 +32,8 @@ export async function GET(){
  const access=await authorized()
  if(!access.ok)return output({error:"forbidden"},access.status)
  try{
-  const integrations=await listIntegrationSummaries(access.db)
-  return output({integrations,secureStoreAvailable:Boolean(process.env.UPT_INTEGRATION_ENCRYPTION_KEY)})
+  const [integrations,audit]=await Promise.all([listIntegrationSummaries(access.db),listRecentIntegrationAudit(access.db)])
+  return output({integrations,audit,secureStoreAvailable:validIntegrationMasterKey(process.env.UPT_INTEGRATION_ENCRYPTION_KEY)})
  }catch{return output({error:"integration_storage_unavailable"},503)}
 }
 export async function POST(request:Request){

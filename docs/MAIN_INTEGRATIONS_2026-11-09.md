@@ -95,3 +95,9 @@ Voer de output uitsluitend in Cloudflare Workers → `uptilldawn-main` → Setti
 - Controleer de rollen Admin, Administratie, geblokkeerd, ingetrokken Administratie, gewone crew en anonieme requests. Verifieer daarnaast CSRF, invalid provider, overlong secrets, ongeldige URL, keyverlies, corrupte ciphertext, volledige verwijdering en audittrail. Alleen groene CI betekent **niet** automatisch gevalideerde provideroperaties.
 - De huidige **credentialtest** (SumUp, Documenso, Ponto) kan app-opgeslagen sleutels lezen via de beveiligde serverroute. Productie-uitvoering van financiële acties vergt apart business approval, consent/scope, idempotentie en audit.
 - Voor een toekomstige multi-tenant SaaS-installatie moet het single-organization schema eerst worden opgesplitst per organisatie; niet automatisch veronderstellen dat één globale providerkey voor meerdere klanten geschikt is.
+
+### Verificatie en auditstatus (vervolgbundel)
+- GET /api/administration/integrations geeft uitsluitend providerstatus, metadata en de 15 meest recente wijzigingsgebeurtenissen door via `upt_integration_audit_recent`. Geheime waarden en ciphertext worden niet teruggestuurd.
+- De gebruikersinterface toont wie welke koppeling toevoegde, wijzigde of ontkoppelde; de RPC vereist op elk verzoek een goedgekeurde, niet-geblokkeerde Admin/Administratie-account.
+- `secureStoreAvailable` betekent voortaan dat de Worker-secret de **juiste vorm** heeft: exact 32 bytes standaard-Base64. Alleen de aanwezigheid van een secret is niet genoeg. De API toont nooit de waarde.
+- Main-deploy bevat een afzonderlijke unauthenticated smoke test voor de integratiebeheerroute. Een onverwachte 200 of 500 moet deployment blokkeren.

@@ -302,6 +302,23 @@ jobs:
             if [[ "${status}" != "200" ]]; then echo "::error::Local OCR asset missing on main: ${asset}"; exit 1; fi
           done
 
+      - name: Verify integration credentials API denies unauthenticated requests
+        if: steps.current-main.outputs.current == 'true'
+        shell: bash
+        run: |
+          set -euo pipefail
+          endpoint="${NEXT_PUBLIC_APP_URL}/api/administration/integrations"
+          get_code="$(curl -sS --max-time 20 -o /dev/null -w '%{http_code}' "$endpoint")"
+          post_code="$(curl -sS --max-time 20 -X POST -H "Origin: ${NEXT_PUBLIC_APP_URL}" -H 'Content-Type: application/json' --data '{"provider":"sumup","credentials":{}}' -o /dev/null -w '%{http_code}' "$endpoint")"
+          echo "Integration API unauthenticated GET: HTTP $get_code"
+          echo "Integration API unauthenticated POST: HTTP $post_code"
+          for code in "$get_code" "$post_code"; do
+            if [[ "$code" != 401 && "$code" != 403 ]]; then
+              echo '::error::Integration credentials endpoint did not enforce authentication.'
+              exit 1
+            fi
+          done
+
       - name: Verify OCR endpoint denies unauthenticated requests
         if: steps.current-main.outputs.current == 'true'
         shell: bash
