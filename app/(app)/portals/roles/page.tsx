@@ -42,16 +42,18 @@ export default async function PortalRolesPage({searchParams}:{searchParams:Promi
  if (!canManage) query = query.eq('user_id', current.id)
  const {data,error,count}=await query.order('created_at',{ascending:false}).order('id',{ascending:false})
   .range(from,from+pageSize-1)
- const {data:users,error:usersError}=canManage?await db.from('profiles')
+ const userDirectory=canManage?await db.from('profiles')
   .select('id,full_name').eq('approved',true).eq('account_blocked',false).neq('id',current.id)
   .order('full_name').limit(500):{data:null,error:null}
+ const { data: users } = canManage ? userDirectory : {data:null}
+ const usersError=userDirectory.error
  const names=new Map((users??[]).map(user=>[user.id,user.full_name||user.id]))
  const pageHref=(target:number)=>'/portals/roles?page='+target
  return <main className="mx-auto max-w-5xl space-y-5 p-4 pb-28 md:p-8">
   <Link href="/portals" className="text-sm font-semibold text-violet-400">{t.back}</Link>
   <h1 className="text-2xl font-bold">{t.heading}</h1>
   <p className="text-sm text-muted-foreground">{t.intro}</p>
-  {canManage&&<section className="space-y-3 rounded-xl border p-4">
+  {canManage && <section className="space-y-3 rounded-xl border p-4">
    <h2 className="font-semibold">{t.manage}</h2>
    {usersError?<p role="alert" className="text-sm">{t.error}</p>:
     <RoleManagementForm users={users??[]} locale={locale}/>}
@@ -60,13 +62,13 @@ export default async function PortalRolesPage({searchParams}:{searchParams:Promi
   {error?<p role="alert" className="rounded-xl border border-amber-500/50 p-4">{t.error}</p>
    :!data?.length?<p className="rounded-xl border p-4">{t.empty}</p>:
    <div className="overflow-x-auto rounded-xl border"><table className="w-full text-left text-sm">
-    <thead><tr className="border-b bg-card"><th className="p-3">{t.person}</th><th className="p-3">{t.portal}</th><th className="p-3">{t.role}</th><th className="p-3">{t.status}</th>{canManage&&<th className="p-3">{t.action}</th>}</tr></thead>
+    <thead><tr className="border-b bg-card"><th className="p-3">{t.person}</th><th className="p-3">{t.portal}</th><th className="p-3">{t.role}</th><th className="p-3">{t.status}</th>{canManage && <th className="p-3">{t.action}</th>}</tr></thead>
     <tbody>{data.map(row=><tr key={row.id} className="border-b last:border-b-0">
      <td className="p-3 text-xs">{names.get(row.user_id)??row.user_id}</td>
      <td className="p-3">{row.portal in portalNames?portalNames[row.portal as keyof typeof portalNames][locale]:row.portal}</td>
      <td className="p-3">{row.role in roleNames?roleNames[row.role as keyof typeof roleNames][locale]:row.role}</td>
      <td className="p-3">{row.revoked_at?t.revoked:row.approved?t.approved:t.pending}</td>
-     {canManage&&<td className="p-3"><RoleQuickAction userId={row.user_id}
+     {canManage && <td className="p-3"><RoleQuickAction userId={row.user_id}
        portal={row.portal} role={row.role}
        action={row.revoked_at ? "assign_approved" : row.approved ? "revoke" : "approve"} locale={locale}/></td>}
     </tr>)}</tbody>
