@@ -7,6 +7,7 @@ import { nlRole } from '@/lib/ui-nl'
 import { PendingSubmitButton } from '@/components/ui/pending-submit-button'
 import {PersonnelTwoRoleEditor,type AssignableRole} from '@/components/admin/personnel-two-role-editor'
 import type {SupabaseClient} from '@supabase/supabase-js'
+import {requestUiLocale} from '@/lib/server-locale'
 
 export const dynamic = 'force-dynamic'
 
@@ -15,6 +16,7 @@ export default async function Page({searchParams}:{searchParams?:Promise<{feedba
   const current=await getCurrentUser()
   if(!current?.isAdmin)redirect('/')
   const s=await createClient()
+  const locale=await requestUiLocale()
   const [{data,error},{data:activeAssignments},{data:leadership},{data:storedRoles}]=await Promise.all([
    s.rpc('upt_admin_personnel_details_v2'),
    s.from('portal_role_assignments').select('user_id,portal,role,approved,revoked_at').eq('approved',true).is('revoked_at',null).limit(5000),
@@ -102,7 +104,7 @@ export default async function Page({searchParams}:{searchParams?:Promise<{feedba
        return <article key={person.id} id={person.id===params.user?'approval-user-focus':undefined} className="space-y-2 rounded-2xl border p-4">
         <div><h3 className="font-bold">{person.full_name||'Naam ontbreekt'}</h3>
          <p className="break-all text-xs text-muted-foreground">{person.email||'Geen e-mail'}</p></div>
-        <PersonnelTwoRoleEditor userId={person.id} roleOne={role.one} roleTwo={role.two}/>
+        <PersonnelTwoRoleEditor userId={person.id} roleOne={role.one} roleTwo={role.two} locale={locale}/>
        </article>
       })}
     </section>
