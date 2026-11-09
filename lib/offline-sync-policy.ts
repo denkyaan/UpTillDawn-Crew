@@ -63,3 +63,10 @@ export function planOfflineMutations(mutations: readonly OfflineMutation[], comp
   return mutations.filter(mutation => !completedIds.has(mutation.id) && mutationCanSync(mutation, completedIds))
     .sort((a,b) => a.createdAt - b.createdAt || a.id.localeCompare(b.id))
 }
+
+/** Refuse queued replay after logout or an account switch. */
+export function ensureOfflineReplayOwner(requestedUserId: string, activeUserId: string | null | undefined, kind: 'operations' | 'uploads'): void {
+  if (typeof requestedUserId !== 'string' || !requestedUserId.trim() || requestedUserId !== activeUserId) {
+    throw new Error(kind === 'uploads' ? 'UPLOAD_SESSION_MISMATCH' : 'SYNC_SESSION_MISMATCH')
+  }
+}

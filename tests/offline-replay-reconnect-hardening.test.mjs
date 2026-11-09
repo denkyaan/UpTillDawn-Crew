@@ -1,6 +1,7 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
-import {planOfflineMutations} from '../lib/offline-sync-policy.ts'
+import {planOfflineMutations,ensureOfflineReplayOwner} from '../lib/offline-sync-policy.ts'
+import {readFile} from 'node:fs/promises'
 import {reconnectDelayMs,shouldReconnect,realtimeConnectionIsStale} from '../lib/realtime-reconnect.ts'
 import {requestTimeoutMs,requestTimedOut} from '../lib/request-timeout-policy.ts'
 const op=(id,dependsOn=[])=>({id,entity:'task',entityId:'task',operation:'update',createdAt:1,retryCount:0,status:'queued',dependsOn})
@@ -25,4 +26,26 @@ test('request timeouts fail closed for unknown classes and invalid clocks',()=>{
  assert.equal(requestTimedOut(-1,'interactive',9000),false)
  assert.equal(requestTimedOut(1000,'interactive',NaN),false)
  assert.equal(requestTimedOut(1000,'interactive',900),false)
+})
+
+test('offline replay refuses signed-out, cross-user and blank identities',()=>{
+ assert.doesNotThrow(()=>ensureOfflineReplayOwner('crew-a','crew-a','operations'))
+ assert.doesNotThrow(()=>ensureOfflineReplayOwner('crew-a','crew-a','uploads'))
+ for(const current of [null,undefined,'crew-b','']){
+  assert.throws(()=>ensureOfflineReplayOwner('crew-a',current,'operations'),/SYNC_SESSION_MISMATCH/)
+  assert.throws(()=>ensureOfflineReplayOwner('crew-a',current,'uploads'),/UPLOAD_SESSION_MISMATCH/)
+ }
+ assert.throws(()=>ensureOfflineReplayOwner('  ','  ','operations'),/SYNC_SESSION_MISMATCH/)
+})
+test('live queue guards both replay locks and rechecks identities for every operation and upload',async()=>{
+ const source=await readFile(new URL('../lib/crew-queue.ts',import.meta.url),'utf8')
+ assert.match(source,/let uploadRunning:Promise<void>\|null=null/)
+ assert.match(source,/let uploadRunningUserId:string\|null=null/)
+ assert.match(source,/let runningUserId:string\|null=null/)
+ assert.match(source,/if\(uploadRunning\)[\s\S]*?ensureOfflineReplayOwner\(userId,uploadRunningUserId,'uploads'\)/)
+ assert.match(source,/if\(running\)[\s\S]*?ensureOfflineReplayOwner\(userId,runningUserId,'operations'\)/)
+ assert.match(source,/for\(const upload of await queuedUploads\(userId\)\)[\s\S]*?ensureOfflineReplayOwner\(userId,activeUser\?\.id,'uploads'\)/)
+ assert.match(source,/for\(const op of await queued\(userId\)\)[\s\S]*?ensureOfflineReplayOwner\(userId,activeUser\?\.id,'operations'\)/)
+ assert.match(source,/uploadRunning=null;uploadRunningUserId=null/)
+ assert.match(source,/running=null;runningUserId=null/)
 })
