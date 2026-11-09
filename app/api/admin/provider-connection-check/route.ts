@@ -2,6 +2,7 @@ import {NextResponse} from "next/server"
 import {administrationPageAccess} from "@/lib/administration/page-access"
 import {requestHasSameOrigin} from "@/lib/request-origin"
 import {checkProviderConnection,type ConnectionProvider} from "@/lib/administration/provider-connection-check"
+import {getManagedIntegrationConfig} from "@/lib/administration/integration-store"
 
 export const dynamic="force-dynamic"
 const fail=(error:string,status:number)=>NextResponse.json({status:"unavailable",error},{status,headers:{"Cache-Control":"no-store"}})
@@ -31,7 +32,14 @@ export async function POST(request:Request){
  if(!input||typeof input!=="object"||Array.isArray(input))return fail("invalid_request",400)
  const value=(input as {provider?:unknown}).provider
  if(value!=="sumup"&&value!=="documenso"&&value!=="banking")return fail("invalid_provider",422)
- const status=await checkProviderConnection(value as ConnectionProvider)
+ // Prefer the encrypted application-managed credentials over any legacy
+ // Worker bindings. Never return stored values or provider response bodies.
+ let environment:NodeJS.ProcessEnv=process.env
+ try{
+  const managed=await getManagedIntegrationConfig(access.db,value as ConnectionProvider)
+  if(managed)environment={...process.env,...managed}
+ }catch{return fail("integration_storage_unavailable",503)}
+ const status=await checkProviderConnection(value as ConnectionProvider,environment)
  // Even a successful credential check is not a completed integration.
  return NextResponse.json({status,scope:"credentials_only"},{headers:{"Cache-Control":"no-store"}})
 }

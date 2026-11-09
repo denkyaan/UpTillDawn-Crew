@@ -1,5 +1,6 @@
 import type {SupportedUiLocale} from "@/lib/locale-preferences"
 import {ProviderConnectionProbe} from "@/components/admin/provider-connection-probe"
+import {IntegrationCredentialManager} from "@/components/admin/integration-credential-manager"
 import {externalServicesCopy,type IntegrationReadiness} from "@/lib/administration/external-services-readiness"
 
 export function ExternalServicesReadiness({locale,services}:{locale:SupportedUiLocale;services:IntegrationReadiness[]}){
@@ -21,5 +22,6 @@ export function ExternalServicesReadiness({locale,services}:{locale:SupportedUiL
     {(service.id==="sumup"||service.id==="documenso"||service.id==="banking")&&<ProviderConnectionProbe provider={service.id} initialLocale={locale}/>}
    </article>)}
   </div>
+  <IntegrationCredentialManager initialLocale={locale}/>
  </section>
 }

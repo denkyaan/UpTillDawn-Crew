@@ -63,3 +63,35 @@ Er is geen extra tab, snelkoppeling of dashboard toegevoegd. In de bestaande ext
 - Zet geheimen alleen via Cloudflare → Workers & Pages → `uptilldawn-main` → Settings → Variables and Secrets; nooit in GitHub-broncode, screenshots of browser-URL's.
 - Na het instellen en deployen van main kan de beheerder de knoppen gebruiken. Autorisatie en read-only test moeten apart via E2E worden gecontroleerd; deze code beweert geen echte providerverbinding zonder credentials.
 - Controleer contractuele randvoorwaarden: https://developer.sumup.com/tools/authorization/api-keys/ ; https://openapi.documenso.com/ ; https://documentation.myponto.com/api/curl .
+
+
+## 2026-11-09 — Beveiligde zelfbediening voor Hoofdadmin + Administratie
+**Scope:** één UpTillDawn-organisatie, geen SaaS of multi-tenant accounts, geen nieuwe tabs of dubbele shortcuts. De bestaande gedeelde `ExternalServicesReadiness`-component op Admin → Platform en Administratie → Instellingen bevat één configuratieformulier. Bevoegdheid wordt op iedere aanvraag dubbel gecontroleerd: `administrationPageAccess` en de databasefunctie `upt_can_manage_administration`, inclusief een goedgekeurd, niet-geblokkeerd profiel.
+
+### Eenmalige technische makerinstelling
+Zet in de **main-test Cloudflare Worker** als *Secret*:
+`UPT_INTEGRATION_ENCRYPTION_KEY` — exact 32 cryptografisch willekeurige bytes, als standaard Base64-string van 44 tekens, inclusief eventuele `=` aan het einde.
+Genereer deze **lokaal** met:
+`node -e "console.log(require('node:crypto').randomBytes(32).toString('base64'))"`
+Voer de output uitsluitend in Cloudflare Workers → `uptilldawn-main` → Settings → Variables and Secrets → Secret in. Nooit in GitHub, een browsertest, SQL, logs of een ChatGPT-bericht. De key is verplicht voor het opslaan, lezen en testen van app-beheerde credentials. Maak een beveiligde backup buiten de app. Verlies ervan betekent dat reeds opgeslagen verbindingen niet meer ontsleuteld kunnen worden. **Gebruik een afzonderlijke sleutel voor production.**
+
+### Wat Admin/Administratie zelf kunnen
+- In de bestaande instellingen: **SumUp**, **Documenso Cloud**, **Ponto**, **Weeztix** of **Billit sandbox** selecteren.
+- Geheime waarden invoeren en opslaan/vervangen; eerder opgeslagen geheimen worden **niet teruggetoond**.
+- Via een bevestiging ontkoppelen. Secret ciphertext wordt dan verwijderd, auditmetadata blijft.
+- SumUp, Documenso en Ponto via de bestaande knop *Verbinding testen* uitsluitend op credentials controleren.
+- In beide portalen ziet iedereen dezelfde gedeelde verbindingen. Er worden geen nieuwe loginrollen of aparte organisatie-instellingen gemaakt.
+
+### Veiligheidsmodel
+- De hoofdapp versleutelt alle ingevulde credentials **vóór databaseopslag** met een Worker-only AES-256-GCM-key, willekeurige 96-bit nonce en providergebonden AAD. Versleutelde waarden staan uitsluitend in `upt_private.integration_connections`.
+- `anon` en `authenticated` hebben **geen directe tabelrechten** en de tabellen zijn RLS-protected. Een allowlisted `public.upt_integration_credentials` RPC draait met expliciete controle op ingelogde gebruiker, goedgekeurd niet-geblokkeerd profiel en de geautoriseerde Administratierol.
+- Bij connecteren, vervangen en ontkoppelen komt een entry in `upt_private.integration_connection_audit` met actie, tijdstip en verantwoordelijke. **Geen geheime waarde** komt in een auditentry.
+- API-responses bevatten alleen opgeslagen status en tijdstip; RPC kan aan geautoriseerde gebruikers een **onleesbare AES-ciphertext** leveren, nooit de plaintext of de masterkey.
+- CSRF-oppervlak: POST en DELETE eisen de bestaande strikte same-origin controle. Body- en veldlimieten voorkomen onbeperkte uploads. De Documenso-cloudorigin staat vast om SSRF via een door de gebruiker gekozen host te vermijden.
+- Het systeem doet géén banktransacties, contractverzending, betalingen of Peppol-verzending door het opslaan alleen. Weeztix vergt nog servergestuurde automatische OAuth-verversing en een provider-bevestigde event-allowlist voordat echte entree op app-beheerde credentials kan draaien.
+- Cloudmersive antivirus draait als centrale Supabase Edge-scanner, en blijft bewust door de Maker beheerd omdat een provider-token alleen geen scanneroperatie veilig activeert.
+
+### Acceptatie en beperkingen
+- Controleer de rollen Admin, Administratie, geblokkeerd, ingetrokken Administratie, gewone crew en anonieme requests. Verifieer daarnaast CSRF, invalid provider, overlong secrets, ongeldige URL, keyverlies, corrupte ciphertext, volledige verwijdering en audittrail. Alleen groene CI betekent **niet** automatisch gevalideerde provideroperaties.
+- De huidige **credentialtest** (SumUp, Documenso, Ponto) kan app-opgeslagen sleutels lezen via de beveiligde serverroute. Productie-uitvoering van financiële acties vergt apart business approval, consent/scope, idempotentie en audit.
+- Voor een toekomstige multi-tenant SaaS-installatie moet het single-organization schema eerst worden opgesplitst per organisatie; niet automatisch veronderstellen dat één globale providerkey voor meerdere klanten geschikt is.
