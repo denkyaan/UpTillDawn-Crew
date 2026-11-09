@@ -70,21 +70,24 @@ export function WeeztixScannerPanel({eventName,eventId,workplaceId,canManage=fal
   finally{busy.current=false;if(mounted.current)setSending(false)}
  },[eventId,workplaceId])
  const tick=useCallback(()=>{
-  if(!mounted.current||!media.current)return
-  frame.current=requestAnimationFrame(tick)
-  const now=performance.now()
-  if(now-lastDecode.current<160||busy.current)return
-  lastDecode.current=now
-  const v=video.current,c=canvas.current,qr=decoder.current
-  if(!v||!c||!qr||v.readyState<2||!v.videoWidth)return
-  const width=Math.min(v.videoWidth,720),height=Math.max(1,Math.round(width*v.videoHeight/v.videoWidth))
-  c.width=width;c.height=height
-  const ctx=c.getContext("2d",{willReadFrequently:true})
-  if(!ctx)return
-  ctx.drawImage(v,0,0,width,height)
-  const pixels=ctx.getImageData(0,0,width,height)
-  const detected=qr(pixels.data,width,height,{inversionAttempts:"attemptBoth"})
-  if(detected?.data)void send(detected.data)
+  function nextFrame(){
+   if(!mounted.current||!media.current)return
+   frame.current=requestAnimationFrame(nextFrame)
+   const now=performance.now()
+   if(now-lastDecode.current<160||busy.current)return
+   lastDecode.current=now
+   const v=video.current,c=canvas.current,qr=decoder.current
+   if(!v||!c||!qr||v.readyState<2||!v.videoWidth)return
+   const width=Math.min(v.videoWidth,720),height=Math.max(1,Math.round(width*v.videoHeight/v.videoWidth))
+   c.width=width;c.height=height
+   const ctx=c.getContext("2d",{willReadFrequently:true})
+   if(!ctx)return
+   ctx.drawImage(v,0,0,width,height)
+   const pixels=ctx.getImageData(0,0,width,height)
+   const detected=qr(pixels.data,width,height,{inversionAttempts:"attemptBoth"})
+   if(detected?.data)void send(detected.data)
+  }
+  nextFrame()
  },[send])
  async function start(){
   if(cameraLoading||cameraActive)return

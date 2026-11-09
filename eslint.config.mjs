@@ -27,6 +27,8 @@ const config = [
       '.open-next/**',
       '.wrangler/**',
       'node_modules/**',
+      // Third-party pinned QR decoder, Apache-2.0; not application source.
+      'public/vendor/jsqr-1.4.0.js',
       'next-env.d.ts',
       'tsconfig.tsbuildinfo',
     ],

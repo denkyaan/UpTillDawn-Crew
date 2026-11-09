@@ -2,6 +2,11 @@ export type CrewExtraLocale='nl'|'fr'|'en'|'de'
 type Row={fr:string;en:string;de:string}
 
 export const CREW_EXTRA_TRANSLATIONS:Record<string,Row>={
+  "Tickets scannen":{fr:"Scanner des billets",en:"Scan tickets",de:"Tickets scannen"},
+  "Scanner des billets":{fr:"Scanner des billets",en:"Scan tickets",de:"Tickets scannen"},
+  "Scan tickets":{fr:"Scanner des billets",en:"Scan tickets",de:"Tickets scannen"},
+  "iPhone":{fr:"iPhone",en:"iPhone",de:"iPhone"},
+  "Android":{fr:"Android",en:"Android",de:"Android"},
   "Straat, huisnummer, postcode en gemeente":{fr:"Rue, numéro, code postal et ville",en:"Street, number, postal code and city",de:"Straße, Hausnummer, Postleitzahl und Ort"},
   "Rue, numéro, code postal et ville":{fr:"Rue, numéro, code postal et ville",en:"Street, number, postal code and city",de:"Straße, Hausnummer, Postleitzahl und Ort"},
   "Street, number, postal code and city":{fr:"Rue, numéro, code postal et ville",en:"Street, number, postal code and city",de:"Straße, Hausnummer, Postleitzahl und Ort"},
