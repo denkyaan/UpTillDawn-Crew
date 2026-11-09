@@ -253,6 +253,44 @@ jobs:
           }
           NODE
 
+      - name: Verify integration encryption key binding (name only)
+        if: steps.current-main.outputs.current == 'true'
+        shell: bash
+        run: |
+          set -euo pipefail
+          # Never fetch a secret's value. This Cloudflare endpoint exposes only
+          # secret binding metadata for the exact main-test Worker.
+          node --input-type=module <<'NODE'
+          const url = `https://api.cloudflare.com/client/v4/accounts/${process.env.CLOUDFLARE_ACCOUNT_ID}/workers/scripts/uptilldawn-main/secrets`
+          let status = 'unverified'
+          try {
+            const response = await fetch(url, {
+              headers: {Authorization: `Bearer ${process.env.CLOUDFLARE_API_TOKEN}`},
+              cache: 'no-store',
+              signal: AbortSignal.timeout(15000),
+            })
+            if (response.ok) {
+              const payload = await response.json()
+              if (payload?.success && Array.isArray(payload.result)) {
+                status = payload.result.some(binding =>
+                  binding?.name === 'UPT_INTEGRATION_ENCRYPTION_KEY'
+                ) ? 'present' : 'missing'
+              }
+            }
+          } catch {
+            // Insufficient Cloudflare permissions or temporary lookup failure.
+          }
+          console.log('UPT_INTEGRATION_ENCRYPTION_KEY binding on uptilldawn-main: ' + status)
+          const {appendFileSync} = await import('node:fs')
+          if (process.env.GITHUB_STEP_SUMMARY) {
+            appendFileSync(process.env.GITHUB_STEP_SUMMARY,
+              '\n### Integration encryption binding check (main only)\n- Worker: uptilldawn-main\n- Encryption secret name: **' + status + '**\n- Secret value: not requested or displayed\n')
+          }
+          if (status !== 'present') {
+            console.log('::warning::Integration credential management needs a main Worker Secret UPT_INTEGRATION_ENCRYPTION_KEY (status: ' + status + ').')
+          }
+          NODE
+
       - name: Verify local-first OCR assets are reachable on main
         if: steps.current-main.outputs.current == 'true'
         shell: bash
