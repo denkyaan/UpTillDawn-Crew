@@ -2,6 +2,10 @@ export type ExtraCatalogLocale = 'nl' | 'fr' | 'en' | 'de'
 type Row = { fr:string; en:string; de:string }
 
 export const APP_EXTRA_TRANSLATIONS: Record<string,Row> = {
+  "Providerbetalingen en terugbetalingen":{fr:"Paiements et remboursements fournisseur",en:"Provider payments and refunds",de:"Anbieterzahlungen und Rückerstattungen"},
+  "Paiements et remboursements fournisseur":{fr:"Paiements et remboursements fournisseur",en:"Provider payments and refunds",de:"Anbieterzahlungen und Rückerstattungen"},
+  "Provider payments and refunds":{fr:"Paiements et remboursements fournisseur",en:"Provider payments and refunds",de:"Anbieterzahlungen und Rückerstattungen"},
+  "Anbieterzahlungen und Rückerstattungen":{fr:"Paiements et remboursements fournisseur",en:"Provider payments and refunds",de:"Anbieterzahlungen und Rückerstattungen"},
   "Gekoppelde Eventix / SumUp CSV-import":{fr:"Import CSV Eventix / SumUp associé",en:"Mapped Eventix / SumUp CSV import",de:"Zugeordneter Eventix / SumUp CSV-Import"},
   "Import CSV Eventix / SumUp associé":{fr:"Import CSV Eventix / SumUp associé",en:"Mapped Eventix / SumUp CSV import",de:"Zugeordneter Eventix / SumUp CSV-Import"},
   "Mapped Eventix / SumUp CSV import":{fr:"Import CSV Eventix / SumUp associé",en:"Mapped Eventix / SumUp CSV import",de:"Zugeordneter Eventix / SumUp CSV-Import"},

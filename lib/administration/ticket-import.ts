@@ -2,7 +2,7 @@
 export type TicketSale = {externalId:string;eventId:string;quantity:number;grossCents:number;currency:string;soldAt:string}
 export type TicketImportResult = {rows:TicketSale[];errors:{line:number;message:string}[];grossCents:number;quantity:number}
 
-function parseCsv(input:string):string[][] {
+export function parseCsv(input:string):string[][] {
  const rows:string[][]=[];let row:string[]=[];let cell="";let state:"start"|"plain"|"quoted"|"closed"="start"
  const source=input.replace(/^\uFEFF/,"")
  for(let i=0;i<source.length;i++){
