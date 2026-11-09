@@ -31,3 +31,22 @@ Migration: `supabase/migrations/20261109070000_administration_bank_statement_inv
 De webinterface en API voorzien GET, POST en PATCH, 4 talen, een CSV-voorbeeld, importpreview, de status per bankregel, paginering, openstaande factuurselectie en bevestiging voor Admin. Regresstests zijn ondergebracht in `tests/administration-bank-statement-e2e.test.mjs`.
 
 **Buiten scope:** rechtstreeks inloggen bij banken, PSD2/SEPA-afschriften ophalen, facturen automatisch markeren als betaald, automatische matching op onbewezen referenties, crediteurenbetalingen uitvoeren, refunds verzenden of productie wijzigen.
+
+## Reeds geregistreerde betalingen afstemmen (vervolgbundel)
+
+Een bankregel kan overeenkomen met een **betaling die al handmatig in het factuurregister is vastgelegd**.
+Boek deze regel nooit opnieuw. De module stelt alleen een bestaande betalingskoppeling voor wanneer
+**bankreferentie (niet leeg), boekingsdatum, bedrag en inkomend/uitgaand** exact overeenkomen.
+Bij meerdere kandidaten volgt geen automatische selectie: Admin moet de gegevens eerst verduidelijken.
+
+Met **Koppel reeds geboekte betaling** kan Admin de bestaande boeking na vergelijking met het
+originele bankafschrift bevestigen. De beveiligde RPC verifieert opnieuw rol, factuursoort,
+factuurstatus, valuta, referentie, datum, bedrag, uniciteit en de bestaande link;
+de bestaande betaling en het factuursaldo blijven volledig ongewijzigd.
+De SQL-blokkering voorkomt daarnaast dat dezelfde factuur een identieke betaling nogmaals
+uit de geïmporteerde bankregel ontvangt. Bij ontbrekende of ambigue referenties is geen
+automatische koppeling mogelijk; losse claims uit CSV vormen geen onafhankelijk bankbewijs.
+
+Aanvullende migratie: `supabase/migrations/20261109071500_admin_bank_existing_payment_link.sql`.
+Voer deze uitsluitend op de main-testdatabase uit na geslaagde snelle PR-CI.
+Regressietests: `tests/administration-bank-statement-existing-ledger.test.mjs`.

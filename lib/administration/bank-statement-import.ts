@@ -65,3 +65,24 @@ export function validateBankStatementCsv(csv:string,maxRows=500):BankStatementIm
  if(result.errors.length)return {...empty(),errors:result.errors}
  return result
 }
+
+/** Pure, fail-closed candidate filter. A bank observation is NOT a payment receipt;
+ * a candidate still requires a distinct Admin decision and database RPC validation.
+ */
+export type ExistingBankLedgerPayment={
+ id:string;documentId:string;documentNumber:string;amountCents:number;
+ paidOn:string;bankReference:string;kind:string
+}
+export function findExistingBankPaymentCandidates(
+ statement:{booked_on:string;direction:'credit'|'debit';amount_cents:number;payment_reference:string},
+ payments:readonly ExistingBankLedgerPayment[]
+):ExistingBankLedgerPayment[]{
+ if(!statement.payment_reference||statement.payment_reference.startsWith('BANKSTMT:')||
+   !Number.isSafeInteger(statement.amount_cents)||statement.amount_cents<=0)return []
+ const kind=statement.direction==='credit'?'sales_invoice':'purchase_invoice'
+ return payments.filter(payment=>payment.kind===kind&&
+  payment.paidOn===statement.booked_on&&
+  payment.amountCents===statement.amount_cents&&
+  payment.bankReference===statement.payment_reference&&
+  payment.bankReference!==''&&!payment.bankReference.startsWith('BANKSTMT:'))
+}

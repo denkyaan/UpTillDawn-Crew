@@ -52,20 +52,25 @@ export async function GET(){
  const access=await administrationAccess()
  if(!access.ok)return response({error:'access_denied'},access.status)
  const db=client(access.db)
- const [statementResult,invoiceResult,permission]=await Promise.all([
+ const [statementResult,invoiceResult,paymentResult,permission]=await Promise.all([
   db.from('admin_bank_statement_transactions')
    .select('id,transaction_id,booked_on,direction,amount_cents,currency,payment_reference,description,linked_document_id,posted_payment_id,ignored_at,ignored_reason',{count:'exact'})
    .order('booked_on',{ascending:false}).order('id',{ascending:false}).range(0,999),
   db.from('admin_financial_documents')
    .select('id,document_number,kind,status,currency',{count:'exact'})
-   .in('kind',['sales_invoice','purchase_invoice']).in('status',['approved','issued'])
+   .in('kind',['sales_invoice','purchase_invoice']).in('status',['approved','issued','paid'])
    .order('created_at',{ascending:false}).limit(500),
+  db.from('admin_financial_payments')
+   .select('id,document_id,amount,paid_on,bank_reference',{count:'exact'})
+   .order('created_at',{ascending:false}).range(0,1999),
   access.db.rpc('upt_is_admin')
  ])
  const {data:statements,error:statementsError,count:statementCount}=statementResult
  const {data:documents,error:documentsError,count:invoiceCount}=invoiceResult
+ const {data:payments,error:paymentsError,count:paymentCount}=paymentResult
  if(statementsError||statements===null||statementCount===null||statementCount>1000||statements.length!==statementCount
-   ||documentsError||documents===null||invoiceCount===null||invoiceCount>500||documents.length!==invoiceCount)
+   ||documentsError||documents===null||invoiceCount===null||invoiceCount>500||documents.length!==invoiceCount
+   ||paymentsError||payments===null||paymentCount===null||paymentCount>2000||payments.length!==paymentCount)
   return response({error:'statement_or_invoice_data_unavailable'},503)
  const ids=documents.map(document=>document.id)
  let balances:{document_id:string;outstanding_amount:unknown}[]=[]
@@ -84,7 +89,7 @@ export async function GET(){
   }
   const outputDocuments=documents.map(document=>{
    if(typeof document.id!=='string'||!uuid.test(document.id)||document.currency!=='EUR'
-      ||!['approved','issued'].includes(document.status)
+      ||!['approved','issued','paid'].includes(document.status)
       ||!['sales_invoice','purchase_invoice'].includes(document.kind))throw Error('Invalid invoice')
    const outstandingCents=byId.get(document.id)
    if(outstandingCents===undefined)throw Error('Missing balance')
@@ -92,7 +97,8 @@ export async function GET(){
     id:document.id,number:document.document_number??document.id,
     kind:document.kind,outstandingCents
    }
-  }).filter(document=>document.outstandingCents>0)
+  }).filter(document=>document.outstandingCents>0&&
+    ['approved','issued'].includes(documents.find(row=>row.id===document.id)?.status??''))
   const outputStatements=statements.map(statement=>{
    const raw=statement.amount_cents
    if((typeof raw!=='number'&&typeof raw!=='string')||!/^[1-9][0-9]{0,10}$/.test(String(raw))
@@ -103,7 +109,20 @@ export async function GET(){
     throw Error('Invalid bank record')
    return {...statement,amount_cents:Number(raw)}
   })
-  return response({statements:outputStatements,invoices:outputDocuments,
+  const eligibleDocuments=new Map(documents.map(document=>[document.id,document]))
+  const existingPayments=payments.flatMap(payment=>{
+   const document=eligibleDocuments.get(payment.document_id)
+   if(!document||typeof payment.bank_reference!=='string'||!payment.bank_reference||
+      payment.bank_reference.startsWith('BANKSTMT:'))return []
+   if(typeof payment.id!=='string'||!uuid.test(payment.id)||
+      typeof payment.paid_on!=='string'||!/^\\d{4}-\\d{2}-\\d{2}$/.test(payment.paid_on))
+    throw Error('Invalid existing payment')
+   return [{id:payment.id,documentId:payment.document_id,
+    documentNumber:document.document_number??document.id,
+    amountCents:financialAmountCents(payment.amount),paidOn:payment.paid_on,
+    bankReference:payment.bank_reference,kind:document.kind}]
+  })
+  return response({statements:outputStatements,invoices:outputDocuments,existingPayments,
    canApprove:!permission.error&&permission.data===true})
  }catch{return response({error:'invalid_bank_reconciliation_data'},503)}
 }
@@ -138,12 +157,16 @@ export async function PATCH(request:Request){
  let body:unknown
  try{body=await jsonRequest(request)}catch{return response({error:'invalid_request'},400)}
  if(!body||typeof body!=='object'||Array.isArray(body))return response({error:'invalid_request'},422)
- const {action,statementId,documentId,reason}=body as Record<string,unknown>
+ const {action,statementId,documentId,paymentId,reason}=body as Record<string,unknown>
  if(typeof statementId!=='string'||!uuid.test(statementId))return response({error:'invalid_statement'},422)
  let result
  if(action==='post'&&typeof documentId==='string'&&uuid.test(documentId)){
   result=await client(access.db).rpc('upt_admin_post_bank_statement_payment',{
    p_statement:statementId,p_document:documentId
+  })
+ }else if(action==='link'&&typeof paymentId==='string'&&uuid.test(paymentId)){
+  result=await client(access.db).rpc('upt_admin_link_existing_bank_statement_payment',{
+   p_statement:statementId,p_payment:paymentId
   })
  }else if(action==='ignore'&&typeof reason==='string'&&reason.trim().length>=5&&reason.trim().length<=500){
   result=await client(access.db).rpc('upt_admin_ignore_bank_statement',{
