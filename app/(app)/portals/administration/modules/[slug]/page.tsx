@@ -1,5 +1,7 @@
 import {listPage} from "@/lib/list-query"
 import { administrationNotificationHref } from "@/lib/administration/navigation"
+import {externalServicesReadiness} from "@/lib/administration/external-services-readiness"
+import {ExternalServicesReadiness} from "@/components/admin/external-services-readiness"
 import { revalidatePath } from 'next/cache'
 import {invoiceDateRange} from "@/lib/administration/invoice-filter-validation"
 import {administrationWorkflowHref} from "@/lib/administration/workflow-links"
@@ -265,6 +267,7 @@ export default async function AdministrationModulePage({params,searchParams}:{pa
    <h2 className="text-lg font-semibold">{({nl:"Administratieve roltoewijzingen",fr:"Attributions des rôles administratifs",en:"Administration role assignments",de:"Verwaltungsrollenzuweisungen"} as const)[locale]}</h2>
    {settingsAssignmentRows?.error?<p role="alert" className="mt-3 text-sm text-muted-foreground">{({nl:"Roltoewijzingen konden niet worden geladen.",fr:"Impossible de charger les rôles.",en:"Unable to load role assignments.",de:"Rollenzuweisungen konnten nicht geladen werden."} as const)[locale]}</p>:settingsAssignmentRows?.data?.length?<ul className="mt-3 divide-y">{settingsAssignmentRows.data.map(item=><li key={item.id} className="flex flex-wrap justify-between gap-2 py-3 text-sm"><span className="font-medium">{item.user_id}</span><span className="text-muted-foreground">{item.approved?({nl:"Goedgekeurd",fr:"Approuvé",en:"Approved",de:"Genehmigt"} as const)[locale]:({nl:"In afwachting",fr:"En attente",en:"Pending",de:"Ausstehend"} as const)[locale]}</span></li>)}</ul>:<p className="mt-3 text-sm text-muted-foreground">{({nl:"Geen roltoewijzingen gevonden.",fr:"Aucune attribution.",en:"No role assignments found.",de:"Keine Rollenzuweisungen gefunden."} as const)[locale]}</p>}
   </section>}
+  {slug==="settings"&&<ExternalServicesReadiness locale={locale} services={externalServicesReadiness(process.env)}/>}
   {slug==="contracts"&&<section className="rounded-2xl border bg-card p-5">
    <h2 className="text-lg font-semibold">{({nl:"Artiesten en contractdossiers",fr:"Artistes et dossiers contractuels",en:"Artists and contract cases",de:"Künstler und Vertragsakten"} as const)[locale]}</h2>
    {contractBookingRows?.error?<p role="alert" className="mt-3 text-sm text-muted-foreground">{({nl:"Contractdossiers konden niet worden geladen.",fr:"Impossible de charger les dossiers.",en:"Unable to load contract cases.",de:"Vertragsakten konnten nicht geladen werden."} as const)[locale]}</p>:contractBookingRows?.data?.length?<ul className="mt-3 divide-y">{contractBookingRows.data.map(item=><li key={item.id} className="flex flex-wrap items-center justify-between gap-2 py-3 text-sm"><Link href={`/portals/administration/modules/artists/${item.id}/agreement`} className="font-semibold text-violet-400 hover:underline">{item.artist_name}</Link><span className="text-muted-foreground">{item.status}</span></li>)}</ul>:<p className="mt-3 text-sm text-muted-foreground">{({nl:"Geen contractdossiers gevonden.",fr:"Aucun dossier contractuel.",en:"No contract cases found.",de:"Keine Vertragsakten gefunden."} as const)[locale]}</p>}

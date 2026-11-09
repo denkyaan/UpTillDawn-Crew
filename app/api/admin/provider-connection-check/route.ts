@@ -1,5 +1,5 @@
 import {NextResponse} from "next/server"
-import {getCurrentUser} from "@/lib/actions/auth"
+import {administrationPageAccess} from "@/lib/administration/page-access"
 import {requestHasSameOrigin} from "@/lib/request-origin"
 import {checkProviderConnection,type ConnectionProvider} from "@/lib/administration/provider-connection-check"
 
@@ -7,9 +7,10 @@ export const dynamic="force-dynamic"
 const fail=(error:string,status:number)=>NextResponse.json({status:"unavailable",error},{status,headers:{"Cache-Control":"no-store"}})
 export async function POST(request:Request){
  if(!requestHasSameOrigin(request))return fail("forbidden",403)
- const user=await getCurrentUser()
- if(!user)return fail("unauthorized",401)
- if(!user.approved||user.account_blocked||!((user.realIsAdmin||user.isOwner)))return fail("forbidden",403)
+ // Use the same verified portal permissions as Administration screens,
+ // including revocation and blocking checks. Never trust client role claims.
+ const access=await administrationPageAccess()
+ if(!access.ok)return fail(access.status===401?"unauthorized":access.status===403?"forbidden":"authorization_unavailable",access.status)
  if(!request.headers.get("content-type")?.toLowerCase().startsWith("application/json"))return fail("unsupported",415)
  // Only accept a tiny allowlisted request body, never raw credentials or URLs.
  const reader=request.body?.getReader()

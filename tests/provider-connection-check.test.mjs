@@ -4,10 +4,13 @@ import {readFileSync} from "node:fs"
 import {externalServicesReadiness} from "../lib/administration/external-services-readiness.ts"
 const read=path=>readFileSync(new URL("../"+path,import.meta.url),"utf8")
 
-test("connection probe is only available inside the existing Admin platform services panel",()=>{
+test("the existing Admin and Administration settings share a single provider connection component",()=>{
  const page=read("app/(app)/admin/platform/page.tsx")
+ const administration=read("app/(app)/portals/administration/modules/[slug]/page.tsx")
  const panel=read("components/admin/external-services-readiness.tsx")
  assert.equal((page.match(/<ExternalServicesReadiness /g)||[]).length,1)
+ assert.equal((administration.match(/<ExternalServicesReadiness /g)||[]).length,1)
+ assert.match(administration,/slug==="settings"&&<ExternalServicesReadiness locale=\{locale\} services=\{externalServicesReadiness\(process\.env\)\}/)
  assert.match(panel,/ProviderConnectionProbe/)
  assert.match(panel,/service\.id==="sumup"/)
  assert.match(panel,/service\.id==="documenso"/)
@@ -15,13 +18,16 @@ test("connection probe is only available inside the existing Admin platform serv
  assert.doesNotMatch(panel,/input[^>]+type="password"|NEXT_PUBLIC_SUMUP_API_KEY|NEXT_PUBLIC_PONTO_CLIENT_SECRET/)
 })
 
-test("connection route is protected with same-origin and head-admin identity",()=>{
+test("provider credential diagnostics grant both Head Admin and active Administration assignments",()=>{
  const route=read("app/api/admin/provider-connection-check/route.ts")
+ const permission=read("lib/administration/page-access.ts")
  assert.match(route,/requestHasSameOrigin\(request\)/)
- assert.match(route,/getCurrentUser\(\)/)
- assert.match(route,/user\.approved/)
- assert.match(route,/user\.account_blocked/)
- assert.match(route,/user\.realIsAdmin\|\|user\.isOwner/)
+ assert.match(route,/administrationPageAccess\(\)/)
+ assert.match(route,/if\(!access\.ok\)return fail/)
+ assert.match(permission,/getCurrentUser\(\)/)
+ assert.match(permission,/upt_my_portal_assignments/)
+ assert.match(permission,/canOpenPortal\('administration'/)
+ assert.match(permission,/user\.realIsAdmin\|\|user\.isOwner/)
  assert.match(route,/value!=="sumup"&&value!=="documenso"&&value!=="banking"/)
  assert.match(route,/size>256/)
  assert.match(route,/"Cache-Control":"no-store"/)
@@ -54,4 +60,16 @@ test("presence of provider credentials stays distinct from tested and enabled de
  assert.match(client,/features not activated/)
  assert.match(client,/funcies? nog niet geactiveerd|functies nog niet geactiveerd/)
  for(const label of ["nl:","fr:","en:","de:"])assert.ok(client.includes(label))
+})
+
+
+test("revoked, unapproved and blocked Administration accounts cannot access credential diagnostics",()=>{
+ const access=read("lib/administration/page-access.ts")
+ const portal=read("lib/portal-access.ts")
+ assert.match(access,/user\.approved\|\|user\.account_blocked/)
+ assert.match(portal,/assignment\.approved/)
+ assert.match(portal,/assignment\.revoked_at === null/)
+ assert.match(portal,/!account\.approved \|\| account\.blocked/)
+ const route=read("app/api/admin/provider-connection-check/route.ts")
+ assert.doesNotMatch(route,/request\.json\(\).*secret|service_role|SUPABASE_SERVICE_ROLE_KEY/)
 })
