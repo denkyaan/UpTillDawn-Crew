@@ -1,5 +1,4 @@
 import { dashboardTimestamp } from '@/lib/admin-dashboard-timing'
-import {requestUiLocale} from '@/lib/server-locale'
 import { redirect } from 'next/navigation'
 import { getCurrentUser } from '@/lib/actions/auth'
 import { createClient } from '@/lib/supabase/crew-server'
@@ -16,7 +15,6 @@ function Stat({label,value,detail}:{href?:string;label:string;value:number;detai
 
 export default async function Page(){
  const dashboardStartedAt=dashboardTimestamp()
- const locale=await requestUiLocale()
  const current=await getCurrentUser();if(!current?.isAdmin) redirect('/')
  const authDurationMs=dashboardTimestamp()-dashboardStartedAt
  const s=await createClient();const now=new Date();const nowMs=now.getTime();const soon=new Date(nowMs+60*60*1000)
