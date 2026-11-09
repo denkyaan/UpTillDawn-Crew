@@ -42,7 +42,7 @@ test('scanner accepts the finance bucket but still requires secret and scanner p
 })
 test('finance UI does not expose links for pending scans and displays four localized statuses',()=>{
  assert.match(ui,/\.from\('upload_security_scans'\)/)
- assert.match(ui,/\.eq\('bucket_id','admin-financial-attachments'\)/)
+ assert.match(ui,/href=\{'\/api\/administration\/finance\/attachments\/\'/)
  assert.match(ui,/attachmentScanLabel\(a\.storage_path\)/)
  assert.match(ui,/scanLabel\?<span/)
  assert.match(ui,/:'\/api\/administration\/finance\/attachments\/'/)
