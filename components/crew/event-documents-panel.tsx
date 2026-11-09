@@ -2,6 +2,7 @@ import { createClient } from '@/lib/supabase/crew-server'
 import { archiveEventDocument, createEventDocument, createInventoryTextEntry } from '@/lib/actions/uptilldawn'
 import { shouldCacheDocumentOffline, type EventDocumentKind } from '@/lib/document-access'
 import type { Tables } from '@/types/crew-database'
+import {requestUiLocale} from '@/lib/server-locale'
 
 export type EventDocumentWorkplaceOption={
   id:string
@@ -44,6 +45,8 @@ export async function EventDocumentsPanel({
   showTextEntry?:boolean
 }){
   const s=await createClient()
+  const locale=await requestUiLocale()
+  const scanPendingCopy={nl:'Document wordt gecontroleerd of is niet beschikbaar.',fr:'Document en cours de contrôle ou indisponible.',en:'Document is being checked or is unavailable.',de:'Dokument wird geprüft oder ist nicht verfügbar.'} as const
   let query=s
     .from('event_documents')
     .select('*')
@@ -142,7 +145,7 @@ export async function EventDocumentsPanel({
                 <p className="mt-2 text-xs text-muted-foreground">{document.file_name} · {formatBytes(Number(document.file_size_bytes))}</p>
               </div>
               <div className="flex flex-wrap gap-2">
-                {url&&<a href={url} target="_blank" rel="noreferrer" className="rounded-lg border px-3 py-2 text-sm font-bold">OPENEN</a>}
+                {url?<a href={url} target="_blank" rel="noreferrer" className="rounded-lg border px-3 py-2 text-sm font-bold">OPENEN</a>:<span role="status" className="rounded-lg border border-amber-500/40 px-3 py-2 text-xs text-muted-foreground">{scanPendingCopy[locale]}</span>}
                 {canManage&&<form action={archiveEventDocument}>
                   <input type="hidden" name="document_id" value={document.id}/>
                   <button className="rounded-lg border border-red-500/40 px-3 py-2 text-sm font-bold text-red-600">VERWIJDEREN</button>
