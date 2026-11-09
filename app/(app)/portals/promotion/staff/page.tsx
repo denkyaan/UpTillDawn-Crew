@@ -27,6 +27,6 @@ export default async function PromotionStaff(){
  return <main className="mx-auto max-w-4xl space-y-6 p-4 sm:p-8">
  <header className="space-y-2"><h1 className="flex items-center gap-3 text-2xl font-bold"><Users className="h-6 w-6 text-violet-400"/>{copy[locale].heading}</h1></header>
  {error&&<p role="alert" className="rounded-xl border border-amber-500/50 p-4 text-sm">{copy[locale].empty}</p>}
- {groups.map(group=><section key={group.label} className="space-y-3"><h2 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">{group.label} · {group.items.length}</h2><PromotionStaffList members={group.items} photos={photos} locale={locale} empty={copy[locale].empty}/></section>)}
+ {groups.map(group=><section key={group.label} className="space-y-3"><h2 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">{group.label} · {group.items.length}</h2><PromotionStaffList members={group.items} photos={photos} locale={locale} empty={copy[locale].empty} userId={current.id}/></section>)}
  </main>
 }

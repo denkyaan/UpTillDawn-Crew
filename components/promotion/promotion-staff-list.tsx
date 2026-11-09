@@ -1,14 +1,28 @@
 /* eslint-disable @next/next/no-img-element */
 "use client"
 import {useEffect,useState} from "react"
+import {useRouter} from "next/navigation"
 import {createClient} from "@/lib/supabase/crew-client"
-import {UserRound} from "lucide-react"
+import {MessageCircle,UserRound} from "lucide-react"
 
 type Member={id:string;full_name:string;portal_label:string}
 type Locale="nl"|"fr"|"en"|"de"
 type Seen={user_id:string;last_seen_at:string}
 const labels={nl:["Online","Afwezig","Offline","Nog niet actief","geleden"],fr:["En ligne","Absent","Hors ligne","Pas encore actif","plus tôt"],en:["Online","Away","Offline","Not yet active","ago"],de:["Online","Abwesend","Offline","Noch nicht aktiv","zuvor"]} as const
-export function PromotionStaffList({members,photos,locale,empty}:{members:Member[];photos:Record<string,string>;locale:Locale;empty:string}){
+export function PromotionStaffList({members,photos,locale,empty,userId}:{members:Member[];photos:Record<string,string>;locale:Locale;empty:string;userId:string}){
+ const router=useRouter()
+ const [chatBusy,setChatBusy]=useState<string|null>(null)
+ const [chatError,setChatError]=useState(false)
+ const startChat=async(id:string)=>{
+  if(id===userId||chatBusy)return
+  setChatBusy(id);setChatError(false)
+  try{
+   const {data,error}=await createClient().rpc("upt_create_private_chat",{p_user:id})
+   if(error||!data)throw new Error("Chat unavailable")
+   router.push("/portals/promotion/chats?view=private&channel="+encodeURIComponent(data))
+   router.refresh()
+  }catch{setChatError(true)}finally{setChatBusy(null)}
+ }
  const [lastSeen,setLastSeen]=useState<Record<string,string>>({})
  const [clock,setClock]=useState(0)
  useEffect(()=>{
@@ -28,9 +42,10 @@ export function PromotionStaffList({members,photos,locale,empty}:{members:Member
  const rank=(id:string)=>{const m=minutes(id);return m===null?3:m<3?0:m<15?1:2}
  const sorted=[...members].sort((a,b)=>rank(a.id)-rank(b.id)||a.full_name.localeCompare(b.full_name,locale))
  const words=labels[locale]
+ const privateLabels={nl:{chat:"Privéchat starten",error:"Privéchat kon niet worden geopend."},fr:{chat:"Démarrer une discussion privée",error:"Impossible d’ouvrir la conversation privée."},en:{chat:"Start private chat",error:"Unable to start private chat."},de:{chat:"Privatchat starten",error:"Privatchat konnte nicht geöffnet werden."}} as const
  return <div className="divide-y rounded-2xl border bg-card">{sorted.map(person=>{
   const m=minutes(person.id),r=rank(person.id)
   const ago=m===null?"":m<60?`${m} min ${words[4]}`:`${Math.floor(m/60)} u ${words[4]}`
-  return <div key={person.id} className="flex items-center gap-3 p-3"><span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-violet-500/10 text-violet-400">{photos[person.id]?<img src={photos[person.id]} alt="" className="h-full w-full rounded-full object-cover"/>:<UserRound className="h-5 w-5"/>}</span><div className="min-w-0"><p className="truncate font-semibold">{person.full_name}</p><p className="inline-flex items-center gap-1.5 text-xs text-muted-foreground"><span aria-hidden="true" className={`h-2 w-2 rounded-full ${r===0?"bg-green-500":r===1?"bg-amber-500":"bg-red-500"}`}/>{words[r]}{ago?` · ${ago}`:""}</p></div></div>
- })}{!members.length&&<p className="p-4 text-sm text-muted-foreground">{empty}</p>}</div>
+  return <div key={person.id} className="flex items-center gap-3 p-3"><span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-violet-500/10 text-violet-400">{photos[person.id]?<img src={photos[person.id]} alt="" className="h-full w-full rounded-full object-cover"/>:<UserRound className="h-5 w-5"/>}</span><div className="min-w-0 flex-1"><p className="truncate font-semibold">{person.full_name}</p><p className="inline-flex items-center gap-1.5 text-xs text-muted-foreground"><span aria-hidden="true" className={`h-2 w-2 rounded-full ${r===0?"bg-green-500":r===1?"bg-amber-500":"bg-red-500"}`}/>{words[r]}{ago?` · ${ago}`:""}</p></div>{person.id!==userId&&<button type="button" disabled={Boolean(chatBusy)} aria-label={privateLabels[locale].chat+" "+person.full_name} title={privateLabels[locale].chat} onClick={()=>void startChat(person.id)} className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border text-violet-400 disabled:opacity-40"><MessageCircle className="h-5 w-5"/></button>}</div>
+ })}{!members.length&&<p className="p-4 text-sm text-muted-foreground">{empty}</p>}{chatError&&<p role="alert" className="p-3 text-sm text-red-500">{privateLabels[locale].error}</p>}</div>
 }

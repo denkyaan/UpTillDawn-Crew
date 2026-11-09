@@ -1,10 +1,12 @@
 import { createClient } from '@/lib/supabase/crew-server'
 import { ChatClient } from '@/components/crew/chat-client'
+import { PromotionPrivateChatStarter } from '@/components/promotion/promotion-private-chat-starter'
+import { requestUiLocale } from '@/lib/server-locale'
 import { getCurrentUser } from '@/lib/actions/auth'
 
 export const dynamic='force-dynamic'
 
-export default async function Page({searchParams}:{searchParams?:Promise<{event?:string;workplace?:string;private?:string;channel?:string;message?:string;administration?:string}>}){
+export default async function Page({searchParams,promotionOnly=false}:{searchParams?:Promise<{event?:string;workplace?:string;private?:string;channel?:string;message?:string;administration?:string}>;promotionOnly?:boolean}){
   const params=searchParams?await searchParams:{}
   const s=await createClient();const current=await getCurrentUser();if(!current)return null
   const user={id:current.id}
@@ -17,8 +19,14 @@ export default async function Page({searchParams}:{searchParams?:Promise<{event?
     s.from('events').select('id,start_at,end_at,status,image_url').order('start_at'),
   ])
 
+  const promotionDirectory=promotionOnly?await s.rpc('upt_promotion_directory'):null
+  // The private-chat UI in Promotion shows only peers granted to that portal.
+  // The existing chat RPCs and RLS remain the authority for actual messages.
+  const eligiblePromotionIds=new Set((promotionDirectory?.data??[]).map(person=>person.id))
+  const privatePeerRows=(privatePeers||[]).filter(peer=>!promotionOnly||eligiblePromotionIds.has(peer.user_id))
+  const chatDirectory=promotionOnly?(promotionDirectory?.data??[]).map(person=>({id:person.id,full_name:person.full_name,phone_number:'',profile_photo_url:person.profile_photo_url})):directory||[]
   const profilePhotoUrls:Record<string,string>={}
-  await Promise.all((directory||[]).filter(member=>member.profile_photo_url).map(async member=>{
+  await Promise.all(chatDirectory.filter(member=>member.profile_photo_url).map(async member=>{
     const {data:signed}=await s.storage.from('profile-photos').createSignedUrl(member.profile_photo_url!,3600)
     if(signed?.signedUrl)profilePhotoUrls[member.id]=signed.signedUrl
   }))
@@ -26,11 +34,13 @@ export default async function Page({searchParams}:{searchParams?:Promise<{event?
   // chat_channels is already protected by upt_can_read_channel RLS. Do not apply a
   // second assignment policy in the UI: that can only hide channels the database
   // has explicitly authorized, especially during the three-day post-event window.
-  const readable=(channels||[]).filter(channel=>['organization','event','workplace','private'].includes(channel.kind))
+  const readable=(channels||[]).filter(channel=>promotionOnly
+    ? channel.kind==='private'&&channel.name===null&&privatePeerRows.some(peer=>peer.channel_id===channel.id)
+    : ['organization','event','workplace','private'].includes(channel.kind))
   const ordered=[...readable].sort((a,b)=>{const pin=(c:typeof a)=>params.administration==='1'&&c.kind==='private'&&c.name==='Up Till Dawn · persoonlijk'?0:1;const byPin=pin(a)-pin(b);if(byPin)return byPin;const weight=(kind:string)=>kind==='private'?0:kind==='organization'?1:kind==='event'?2:3;const byKind=weight(a.kind)-weight(b.kind);return byKind||(a.name||'').localeCompare(b.name||'','nl')})
   const eventImages=new Map((chatEvents||[]).map(event=>[event.id,event.image_url]))
-  const privatePeerNames=Object.fromEntries((privatePeers||[]).map(peer=>[peer.channel_id,peer.full_name||'Privéchat']))
-  const privatePeerIds=Object.fromEntries((privatePeers||[]).map(peer=>[peer.channel_id,peer.user_id]))
+  const privatePeerNames=Object.fromEntries(privatePeerRows.map(peer=>[peer.channel_id,peer.full_name||'Privéchat']))
+  const privatePeerIds=Object.fromEntries(privatePeerRows.map(peer=>[peer.channel_id,peer.user_id]))
   const initialChannelStates=Object.fromEntries((channelSummaries||[]).map(summary=>[summary.channel_id,summary]))
   const channelImages:Record<string,string>={}
   for(const channel of ordered){
@@ -50,7 +60,12 @@ export default async function Page({searchParams}:{searchParams?:Promise<{event?
     ||ordered[0]?.id
     ||''
 
-  return <main className="mx-auto max-w-4xl p-0 pb-24 md:p-8 md:pb-8">
-    {error?<p className="p-4">Gesprekken konden niet worden geladen.</p>:<ChatClient channels={ordered} defaultChannelId={defaultChannelId} userId={user.id} crewDirectory={directory||[]} isAdmin={current.role==='admin'} profilePhotoUrls={profilePhotoUrls} channelImages={channelImages} privatePeerNames={privatePeerNames} privatePeerIds={privatePeerIds} initialChannelStates={initialChannelStates} focusMessageId={params.message||null}/>} 
+  if(promotionOnly&&!ordered.length){
+    const locale=await requestUiLocale()
+    return <PromotionPrivateChatStarter locale={locale} members={promotionDirectory?.data??[]} userId={user.id}/>
+  }
+
+  return <main className={promotionOnly?"mx-auto max-w-4xl p-0 pb-2":"mx-auto max-w-4xl p-0 pb-24 md:p-8 md:pb-8"}>
+    {error?<p className="p-4">Gesprekken konden niet worden geladen.</p>:<ChatClient channels={ordered} defaultChannelId={defaultChannelId} userId={user.id} crewDirectory={chatDirectory} isAdmin={current.role==='admin'} profilePhotoUrls={profilePhotoUrls} channelImages={channelImages} privatePeerNames={privatePeerNames} privatePeerIds={privatePeerIds} initialChannelStates={initialChannelStates} focusMessageId={params.message||null} chatBasePath={promotionOnly?'/portals/promotion/chats?view=private':'/chat'}/>} 
   </main>
 }

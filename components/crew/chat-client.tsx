@@ -74,7 +74,7 @@ function detectMention(value:string,cursor:number):MentionState|null{
   return {start:at,end:cursor,query}
 }
 
-export function ChatClient({channels,defaultChannelId,userId,crewDirectory,isAdmin,profilePhotoUrls,channelImages,privatePeerNames,privatePeerIds,initialChannelStates,focusMessageId}:{channels:Tables<'chat_channels'>[];defaultChannelId:string;userId:string;crewDirectory:CrewMember[];isAdmin:boolean;profilePhotoUrls:Record<string,string>;channelImages:Record<string,string>;privatePeerNames:Record<string,string>;privatePeerIds:Record<string,string>;initialChannelStates:Record<string,ChatSummary>;focusMessageId:string|null}){
+export function ChatClient({channels,defaultChannelId,userId,crewDirectory,isAdmin,profilePhotoUrls,channelImages,privatePeerNames,privatePeerIds,initialChannelStates,focusMessageId,chatBasePath="/chat"}:{channels:Tables<'chat_channels'>[];defaultChannelId:string;userId:string;crewDirectory:CrewMember[];isAdmin:boolean;profilePhotoUrls:Record<string,string>;channelImages:Record<string,string>;privatePeerNames:Record<string,string>;privatePeerIds:Record<string,string>;initialChannelStates:Record<string,ChatSummary>;focusMessageId:string|null;chatBasePath?:string}){
   const router=useRouter()
   const [selected,setSelected]=useState(defaultChannelId||channels[0]?.id||'')
   const [cache,setCache]=useState<Record<string,ChannelCache>>({})
@@ -627,7 +627,7 @@ export function ChatClient({channels,defaultChannelId,userId,crewDirectory,isAdm
       if(!data)throw new Error('Privéchat kon niet worden gestart.')
       setPrivatePickerOpen(false)
       setPrivateSearch('')
-      router.push(`/chat?channel=${data}`)
+      router.push(`${chatBasePath}${chatBasePath.includes("?")?"&":"?"}channel=${encodeURIComponent(data)}`)
       router.refresh()
     }catch{
       setStatus('Privéchat kon niet worden gestart.')
@@ -644,7 +644,7 @@ export function ChatClient({channels,defaultChannelId,userId,crewDirectory,isAdm
       const s=createClient()
       const {error}=await s.rpc('upt_delete_private_chat',{p_channel:selectedChannel.id})
       if(error)throw error
-      router.push('/chat')
+      router.push(chatBasePath)
       router.refresh()
     }catch{
       setStatus('Privéchat kon niet worden verwijderd.')
