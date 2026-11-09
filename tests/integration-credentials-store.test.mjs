@@ -57,7 +57,7 @@ test("no provider tokens are returned from GET, save or disconnect browser respo
  assert.match(store,/openIntegrationSecrets/)
  assert.match(store,/upt_integration_credentials/)
  assert.match(wrapper,/IntegrationCredentialManager initialLocale=\{locale\}/)
- assert.match(ui,/type="password"/)
+ assert.match(ui,/\?"text":"password"/)
  assert.match(ui,/setFields\(\{\}\)/)
  assert.match(ui,/confirm/)
  assert.doesNotMatch(api,/ciphertext:|secret:|access_token:|apiKey:/)

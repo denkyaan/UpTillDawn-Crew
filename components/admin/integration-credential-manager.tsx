@@ -38,7 +38,7 @@ export function IntegrationCredentialManager({initialLocale}:{initialLocale:Supp
    if(!r.ok)throw Error("error")
    const body:unknown=await r.json()
    if(!body||typeof body!=="object"||!("integrations" in body)||!Array.isArray(body.integrations))throw Error("error")
-   if(!controller.signal.aborted)setState({integrations:body.integrations as IntegrationSummary[],secureStoreAvailable:body.secureStoreAvailable===true})
+   if(!controller.signal.aborted)setState({integrations:body.integrations as IntegrationSummary[],secureStoreAvailable:"secureStoreAvailable" in body&&body.secureStoreAvailable===true})
   }).catch(()=>{if(!controller.signal.aborted)setError("unavailable")})
   return()=>controller.abort()
  },[])
@@ -67,7 +67,7 @@ export function IntegrationCredentialManager({initialLocale}:{initialLocale:Supp
  }
  const t=copy[locale],entries=state?.integrations??[]
  const entry=entries.find(x=>x.provider===provider)
- const textOf=(code:string)=>code==="saved"?t.saved:code==="removed"?t.removed:code==="keyMissing"?t.keyMissing:code==="invalid"?t.invalid:code==="forbidden"?t.forbidden:t.unavailable
+ const textOf=(code:string)=>({saved:t.saved,removed:t.removed,keyMissing:t.keyMissing,invalid:t.invalid,forbidden:t.forbidden} as Record<string,string>)[code]??t.unavailable
  return <section className="mt-4 space-y-3 rounded-xl border p-4" aria-label={t.title}>
   <h3 className="font-semibold">{t.title}</h3>
   <p className="text-xs text-muted-foreground">{t.intro}</p>

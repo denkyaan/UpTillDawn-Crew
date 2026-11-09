@@ -2,6 +2,10 @@ export type CrewExtraLocale='nl'|'fr'|'en'|'de'
 type Row={fr:string;en:string;de:string}
 
 export const CREW_EXTRA_TRANSLATIONS:Record<string,Row>={
+  "Accountgegevens veilig beheren":{fr:"Gérer les identifiants en sécurité",en:"Securely manage provider credentials",de:"Providerzugänge sicher verwalten"},
+  "Gérer les identifiants en sécurité":{fr:"Gérer les identifiants en sécurité",en:"Securely manage provider credentials",de:"Providerzugänge sicher verwalten"},
+  "Securely manage provider credentials":{fr:"Gérer les identifiants en sécurité",en:"Securely manage provider credentials",de:"Providerzugänge sicher verwalten"},
+  "Providerzugänge sicher verwalten":{fr:"Gérer les identifiants en sécurité",en:"Securely manage provider credentials",de:"Providerzugänge sicher verwalten"},
   "unavailable":{fr:"indisponible",en:"unavailable",de:"nicht verfügbar"},
   "Tickets scannen":{fr:"Scanner des billets",en:"Scan tickets",de:"Tickets scannen"},
   "Scanner des billets":{fr:"Scanner des billets",en:"Scan tickets",de:"Tickets scannen"},
