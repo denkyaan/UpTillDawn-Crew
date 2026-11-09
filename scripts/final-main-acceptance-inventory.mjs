@@ -41,13 +41,22 @@ const missingBrowserRoles=browserRoles.filter(role=>!browser.includes("role:'"+r
 const missingLocales=['nl','fr','en','de'].filter(locale=>!browser.includes("'"+locale+"'"))
 const workflows=['ci.yml','cleanup-actions-history.yml','deploy-cloudflare.yml','deploy-main.yml','fast-change-validation.yml']
 const workflowsPresent=workflows.every(file=>existsSync(join('.github/workflows',file)))
+const packageJson=JSON.parse(readFileSync('package.json','utf8'))
+const dependencyLock=JSON.parse(readFileSync('package-lock.json','utf8'))
+const playwrightReady=Boolean(packageJson.devDependencies?.playwright==='1.65.0'
+ && dependencyLock.packages?.['']?.devDependencies?.playwright==='1.65.0'
+ && dependencyLock.packages?.['node_modules/playwright']?.version==='1.65.0'
+ && dependencyLock.packages?.['node_modules/playwright-core']?.version==='1.65.0'
+ && packageJson.scripts?.['e2e:portals']==='node scripts/e2e-all-portals.mjs')
+const ciWorkflow=readFileSync('.github/workflows/fast-change-validation.yml','utf8')
+const qaJobAvailable=ciWorkflow.includes('run_six_role_acceptance:')&&ciWorkflow.includes('browser-acceptance:')
 const summary={
  source:'static-source-audit',
  note:'File/contract presence is not successful live execution or a production release certificate.',
  roles:roles.map(role=>({name:role.name,implementationPresent:existsSync(role.route)&&existsSync(role.access),authenticatedBrowserVerified:false})),
  criticalWorkflows:criticalWorkflows.map(([name,...files])=>({name,sourceFilesPresent:files.every(path=>existsSync(path)),endToEndVerified:false})),
  integrations:integrations.map(item=>({...item,codePresent:item.code.length>0&&item.code.every(path=>existsSync(path)),liveVerified:false})),
- releaseChecks:{sixRoleBrowserHarness:!missingBrowserRoles.length,fourLanguages:!missingLocales.length,exactlyFiveWorkflows:workflowsPresent},
+ releaseChecks:{sixRoleBrowserHarness:!missingBrowserRoles.length,playwrightReady,qaJobAvailable,fourLanguages:!missingLocales.length,exactlyFiveWorkflows:workflowsPresent},
  blockers:[
   'Authenticated six-role browser matrix not executed by this static job',
   'Production schema/permission acceptance not executed on main CI',
@@ -63,7 +72,7 @@ console.log('Final acceptance inventory (STATIC ONLY)')
 for(const role of summary.roles)console.log((role.implementationPresent?'SOURCE PRESENT':'MISSING')+' role '+role.name)
 for(const item of summary.integrations)console.log('UNVERIFIED external '+item.name+(item.codePresent?' (integration code present)':' (integration implementation unconfirmed)'))
 console.log('PENDING real E2E and external providers; no production-ready claim.')
-if(missingRoutes.length||missingWorkflows.length||missingBrowserRoles.length||missingLocales.length||!workflowsPresent){
- console.error(JSON.stringify({missingRoutes,missingWorkflows,missingBrowserRoles,missingLocales,workflowsPresent}))
+if(missingRoutes.length||missingWorkflows.length||missingBrowserRoles.length||missingLocales.length||!workflowsPresent||!playwrightReady||!qaJobAvailable){
+ console.error(JSON.stringify({missingRoutes,missingWorkflows,missingBrowserRoles,missingLocales,workflowsPresent,playwrightReady,qaJobAvailable}))
  process.exitCode=1
 }

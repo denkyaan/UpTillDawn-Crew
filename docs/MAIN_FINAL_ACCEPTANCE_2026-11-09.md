@@ -62,5 +62,22 @@ Source files do not prove provider credentials or successful external transactio
 - `node scripts/final-main-acceptance-inventory.mjs` generates a static report and explicitly leaves authenticated E2E and external delivery unverified.
 - Even with a green CI/deploy on main, production acceptance remains blocked pending separate evidence.
 
+## Reproducible browser QA (new)
+
+The browser runner now has `playwright@1.65.0` and `playwright-core@1.65.0` pinned in `package-lock.json`. The project supplies `npm run e2e:portals` for six-role, four-language, mobile/desktop, denial and navigation checks. The ordinary fast CI **imports Playwright**, validating that the test dependency really installs; it does not silently mark the authenticated browser suite as passed.
+
+Use the **existing** `CI main` workflow's `workflow_dispatch` option `run_six_role_acceptance=true` after supplying twelve GitHub Actions repository secrets:
+
+- `E2E_ADMIN_EMAIL` and `E2E_ADMIN_PASSWORD`
+- `E2E_ADMINISTRATION_EMAIL` and `E2E_ADMINISTRATION_PASSWORD`
+- `E2E_PROMOTION_EMAIL` and `E2E_PROMOTION_PASSWORD`
+- `E2E_STAFF_EMAIL` and `E2E_STAFF_PASSWORD`
+- `E2E_RESPONSIBLE_EMAIL` and `E2E_RESPONSIBLE_PASSWORD`
+- `E2E_MAKER_EMAIL` and `E2E_MAKER_PASSWORD`
+
+**Dedicated isolated QA identities only**, never real crew logins, owner personal credentials or service-role keys. The existing 15-bot fixture seeder additionally refuses any Supabase host other than the main-test project and requires `UPT_QA_ALLOW_MAIN_SEED=1`; never run it with production credentials. The manual job installs Chromium and tests only `https://uptilldawn-main.uptilldawn.workers.dev`. Its structured JSON report and failure screenshots are retained as a restricted GitHub Actions artifact for seven days. A failed or blocked run is not a release approval.
+
+Local equivalent: `npm ci`, `npx playwright install --with-deps chromium`, configure the same environment variables plus `E2E_BASE_URL`, and execute `npm run e2e:portals`. The runner explicitly rejects the production URL. The browser QA job remains inside the **existing** CI main workflow: the five-workflow policy is unchanged.
+
 ## Required external actions
 Supply distinct isolated QA accounts for six roles, connect intended accounting/Peppol/ticketing/scanning/signing providers, select an OCR provider, and approve any additional Supabase restore-test project costs. Do not supply private credentials through repository source or a public issue.

@@ -9,6 +9,16 @@ if (!supabaseUrl || !serviceRoleKey || !password) {
   process.exit(1)
 }
 
+// This script creates accounts, event fixtures and chat records. A production
+// service key must never be accepted, even if supplied accidentally.
+const expectedTestHost = 'npbjrtiolqperdgljnhi.supabase.co'
+let suppliedHost
+try { suppliedHost = new URL(supabaseUrl).hostname } catch { suppliedHost = null }
+if (suppliedHost !== expectedTestHost || process.env.UPT_QA_ALLOW_MAIN_SEED !== '1') {
+  console.error('BLOCKED: QA seeding requires the isolated main-test Supabase project and explicit UPT_QA_ALLOW_MAIN_SEED=1. Production and other projects are forbidden.')
+  process.exit(2)
+}
+
 const roles = ['admin', 'responsible', ...Array(13).fill('staff')]
 const locales = ['nl', 'fr', 'en', 'de']
 const dbRoles = {
