@@ -99,8 +99,18 @@ export default async function RostersPage(){
  de:{newHeading:"Neue Schicht vorschlagen",newIntro:"Genehmigtes Eventmitglied und Arbeitsplatz wählen. Ein anderer Admin muss die neue Schicht genehmigen.",staff:"Mitarbeiter",workplace:"Arbeitsplatz",roleName:"Position",shiftKind:"Schichtart",overlap:"Überschneidung zulassen (nur mit Admin-Freigabe)",planNew:"Neue Schicht vorbereiten",newLinked:"Neue Schicht vorbereitet",newCreated:"Neue Schicht angelegt",noNewCandidates:"Keine genehmigten Eventmitglieder oder aktiven Arbeitsplätze verfügbar.",kindEvent:"Event",kindSetup:"Aufbau",kindBreakdown:"Abbau",zone:"Belgische Zeit (Europe/Brussels). Fehlende oder doppelte Uhrzeiten bei der Zeitumstellung werden abgelehnt.",heading:"Administrative Dienstpläne",intro:"Neue Schicht vorschlagen oder vorhandene ändern. Ein anderer Admin muss jeden Vorschlag prüfen und ausdrücklich anwenden.",title:"Titel",event:"Event",start:"Beginn",end:"Ende",details:"Details",create:"Entwurf erstellen",submit:"Einreichen",approve:"Genehmigen",reject:"Ablehnen",note:"Ablehnungsgrund",empty:"Noch keine Vorschläge",error:"Daten nicht verfügbar",draft:"Entwurf",submitted:"Eingereicht",approved:"Genehmigt",rejected:"Abgelehnt",target:"Schicht zuordnen",linked:"Zugeordnete Schicht",chooseShift:"Künftige Schicht ohne geleistete Arbeit auswählen",noShifts:"Keine zukünftigen Schichten für dieses Event verfügbar. Zuerst in der Admin-Planung eine Schicht erstellen.",mustLink:"Vor der Einreichung eine verfügbare Schicht zuordnen.",shiftsError:"Verfügbare Schichten konnten nicht geladen werden.",apply:"Auf Schicht anwenden",applied:"Angewendet"}
  } as const)[locale]
  const timeLabel=(iso:string)=>new Intl.DateTimeFormat(locale,{timeZone:"Europe/Brussels",dateStyle:"short",timeStyle:"short"}).format(new Date(iso))
- const [events,proposals,shifts]=await Promise.all([db.from("events").select("id,name").order("name").limit(100),(db as unknown as SupabaseClient).from("admin_roster_proposals").select("id,title,details,status,proposed_start,proposed_end,created_by,review_note,event_id,target_shift_id,applied_at").order("created_at",{ascending:false}).limit(100),(db as unknown as SupabaseClient).rpc("upt_admin_roster_shift_options")])
+ const [events,proposals,shifts,staff,workplaces]=await Promise.all([
+  db.from("events").select("id,name").order("name").limit(100),
+  (db as unknown as SupabaseClient).from("admin_roster_proposals")
+   .select("id,title,details,status,proposed_start,proposed_end,created_by,review_note,event_id,target_shift_id,applied_at,plan_kind,planned_user_id,planned_workplace_id,planned_role_name,planned_shift_kind,planned_overlap_allowed,created_shift_id")
+   .order("created_at",{ascending:false}).limit(100),
+  (db as unknown as SupabaseClient).rpc("upt_admin_roster_shift_options"),
+  (db as unknown as SupabaseClient).rpc("upt_admin_roster_staff_options"),
+  (db as unknown as SupabaseClient).rpc("upt_admin_roster_workplace_options")
+ ])
  const rosterShifts=(shifts.data??[]) as {id:string;event_id:string;scheduled_start:string;scheduled_end:string}[]
+ const rosterStaff=(staff.data??[]) as {user_id:string;event_id:string;full_name:string}[]
+ const rosterWorkplaces=(workplaces.data??[]) as {workplace_id:string;event_id:string;name:string}[]
  return <main className="mx-auto w-full max-w-5xl space-y-5 p-4 sm:p-6">
   <header><h1 className="text-2xl font-bold">{l.heading}</h1><p className="mt-2 text-sm text-muted-foreground">{l.intro}</p></header>
   <form action={createProposal} className="grid gap-3 rounded-2xl border bg-card p-5 sm:grid-cols-2">
@@ -112,15 +122,44 @@ export default async function RostersPage(){
    <label className="text-sm sm:col-span-2">{l.details}<textarea name="details" maxLength={2000} className="mt-1 w-full rounded-lg border bg-background p-3"/></label>
    <button disabled={!events.data?.length} className="rounded-xl bg-violet-600 px-4 py-3 font-semibold text-white sm:col-span-2">{l.create}</button>
   </form>
-  <section className="space-y-3">{shifts.error&&<p role="alert" className="rounded-lg border border-amber-500/50 p-3 text-sm">{l.shiftsError}</p>}{proposals.error?<p>{l.error}</p>:!proposals.data?.length?<p>{l.empty}</p>:proposals.data.map(p=>{const available=rosterShifts.filter(x=>x.event_id===p.event_id);const chosen=available.find(x=>x.id===p.target_shift_id);const canSubmit=Boolean(chosen);return <article key={p.id} className="space-y-3 rounded-xl border bg-card p-4">
+  <section className="space-y-3">{shifts.error&&<p role="alert" className="rounded-lg border border-amber-500/50 p-3 text-sm">{l.shiftsError}</p>}{proposals.error?<p>{l.error}</p>:!proposals.data?.length?<p>{l.empty}</p>:proposals.data.map(p=>{const available=rosterShifts.filter(x=>x.event_id===p.event_id);const chosen=available.find(x=>x.id===p.target_shift_id);const staffFor=rosterStaff.filter(x=>x.event_id===p.event_id);const workplacesFor=rosterWorkplaces.filter(x=>x.event_id===p.event_id);const creating=p.plan_kind==="create";const canSubmit=creating?Boolean(p.planned_user_id&&p.planned_workplace_id&&p.planned_role_name):Boolean(chosen);const optionsFailed=creating?Boolean(staff.error||workplaces.error):Boolean(shifts.error);return <article key={p.id} className="space-y-3 rounded-xl border bg-card p-4">
    <div className="flex justify-between gap-3"><strong>{p.title}</strong><span className="text-xs text-violet-400">{l[p.status as keyof typeof l]??p.status}</span></div>
    <p className="text-sm text-muted-foreground">{timeLabel(p.proposed_start)} – {timeLabel(p.proposed_end)}</p>
    {p.details&&<p className="text-sm">{p.details}</p>}{p.review_note&&<p className="text-sm">{p.review_note}</p>}
    {p.status==="draft"&&(available.length&&!shifts.error?<form action={shiftAction} className="flex flex-wrap gap-2"><input type="hidden" name="id" value={p.id}/><select required name="shift" defaultValue={chosen?.id??""} className="min-w-48 flex-1 rounded-lg border bg-background p-2"><option value="" disabled>{l.chooseShift}</option>{available.map(x=><option key={x.id} value={x.id}>{timeLabel(x.scheduled_start)} – {timeLabel(x.scheduled_end)}</option>)}</select><button name="action" value="target" className="rounded-lg border px-3 py-2 text-sm">{l.target}</button></form>:!shifts.error?<p className="text-sm text-amber-500">{l.noShifts}</p>:null)}
-   {p.status==="draft"&&chosen&&<p className="text-xs text-muted-foreground">{l.linked}: {timeLabel(chosen.scheduled_start)} – {timeLabel(chosen.scheduled_end)}</p>}
-   {p.applied_at&&<p className="text-sm text-muted-foreground">{l.applied}</p>}
-   {p.status==="approved"&&p.target_shift_id&&!p.applied_at&&(user.realIsAdmin||user.isOwner)&&<form action={shiftAction}><input type="hidden" name="id" value={p.id}/><button name="action" value="apply" className="rounded-lg bg-violet-600 px-3 py-2 text-sm text-white">{l.apply}</button></form>}
-   {p.status==="draft"&&(canSubmit&&!shifts.error?<form action={changeStatus}><input type="hidden" name="id" value={p.id}/><button name="action" value="submit" className="rounded-lg bg-violet-600 px-4 py-2 text-sm text-white">{l.submit}</button></form>:<p className="text-xs text-amber-500">{l.mustLink}</p>)}
+   {p.status==="draft"&&!creating&&chosen&&<p className="text-xs text-muted-foreground">{l.linked}: {timeLabel(chosen.scheduled_start)} – {timeLabel(chosen.scheduled_end)}</p>}
+   {p.status==="draft"&&<section className="space-y-2 rounded-lg border p-3">
+    <h3 className="font-semibold">{l.newHeading}</h3>
+    <p className="text-xs text-muted-foreground">{l.newIntro}</p>
+    {staff.error||workplaces.error?<p role="alert" className="text-sm text-amber-500">{l.error}</p>:
+     staffFor.length&&workplacesFor.length?<form action={planNewShift} className="grid gap-2 sm:grid-cols-2">
+      <input type="hidden" name="id" value={p.id}/>
+      <label className="grid gap-1 text-sm">{l.staff}
+       <select required name="staff" defaultValue={creating?p.planned_user_id??"":""} className="rounded-lg border bg-background p-2">
+        <option value="" disabled>{l.staff}</option>{staffFor.map(person=><option key={person.user_id} value={person.user_id}>{person.full_name}</option>)}
+       </select>
+      </label>
+      <label className="grid gap-1 text-sm">{l.workplace}
+       <select required name="workplace" defaultValue={creating?p.planned_workplace_id??"":""} className="rounded-lg border bg-background p-2">
+        <option value="" disabled>{l.workplace}</option>{workplacesFor.map(post=><option key={post.workplace_id} value={post.workplace_id}>{post.name}</option>)}
+       </select>
+      </label>
+      <label className="grid gap-1 text-sm">{l.roleName}
+       <input required name="role" maxLength={200} defaultValue={creating?p.planned_role_name??"Crew":"Crew"} className="rounded-lg border bg-background p-2"/>
+      </label>
+      <label className="grid gap-1 text-sm">{l.shiftKind}
+       <select name="kind" defaultValue={creating?p.planned_shift_kind??"event":"event"} className="rounded-lg border bg-background p-2">
+        <option value="event">{l.kindEvent}</option><option value="setup">{l.kindSetup}</option><option value="breakdown">{l.kindBreakdown}</option>
+       </select>
+      </label>
+      <label className="flex items-center gap-2 text-xs sm:col-span-2"><input type="checkbox" name="overlap" defaultChecked={creating&&p.planned_overlap_allowed===true}/>{l.overlap}</label>
+      <button className="rounded-lg border border-violet-500 px-3 py-2 text-sm font-semibold text-violet-400 sm:col-span-2">{l.planNew}</button>
+     </form>:<p className="text-sm text-amber-500">{l.noNewCandidates}</p>}
+   </section>}
+   {creating&&p.planned_user_id&&p.planned_workplace_id&&<p className="text-xs text-muted-foreground">{l.newLinked}: {staffFor.find(x=>x.user_id===p.planned_user_id)?.full_name??p.planned_user_id.slice(0,8)} · {workplacesFor.find(x=>x.workplace_id===p.planned_workplace_id)?.name??p.planned_workplace_id.slice(0,8)}</p>}
+   {p.applied_at&&<p className="text-sm text-muted-foreground">{l.applied}{p.created_shift_id&&<> · {l.newCreated}: {p.created_shift_id.slice(0,8)}</>}</p>}
+   {p.status==="approved"&&(creating||Boolean(p.target_shift_id))&&!p.applied_at&&(user.realIsAdmin||user.isOwner)&&<form action={shiftAction}><input type="hidden" name="id" value={p.id}/><button name="action" value="apply" className="rounded-lg bg-violet-600 px-3 py-2 text-sm text-white">{l.apply}</button></form>}
+   {p.status==="draft"&&(canSubmit&&!optionsFailed?<form action={changeStatus}><input type="hidden" name="id" value={p.id}/><button name="action" value="submit" className="rounded-lg bg-violet-600 px-4 py-2 text-sm text-white">{l.submit}</button></form>:<p className="text-xs text-amber-500">{l.mustLink}</p>)}
    {p.status==="submitted"&&(user.realIsAdmin||user.isOwner)&&p.created_by!==user.id&&<form action={changeStatus} className="flex flex-wrap gap-2"><input type="hidden" name="id" value={p.id}/><input name="note" placeholder={l.note} className="min-w-48 flex-1 rounded-lg border bg-background p-2"/><button name="action" value="approve" className="rounded-lg bg-violet-600 px-3 py-2 text-sm text-white">{l.approve}</button><button name="action" value="reject" className="rounded-lg border px-3 py-2 text-sm">{l.reject}</button></form>}
   </article>})}</section>
  </main>
