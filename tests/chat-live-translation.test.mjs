@@ -25,13 +25,13 @@ test('chat translation supports the four product locales',async()=>{
 })
 
 
-test('automatic chat translation is opt-in and follows the active app locale',async()=>{
+test('incoming chat messages translate automatically into the selected app language',async()=>{
   const chat=await readFile(new URL('../components/crew/chat-client.tsx',import.meta.url),'utf8')
-  const catalog=await readFile(new URL('../lib/ui-translation-catalog-crew-extra.ts',import.meta.url),'utf8')
-  assert.match(chat,/uptilldawn-chat-auto-translate/)
-  assert.match(chat,/localStorage\.getItem\('uptilldawn-chat-auto-translate'\)/)
-  assert.match(chat,/Chat automatisch vertalen/)
-  assert.match(chat,/liveTranslateText\(message\.body\|\|'',uiLocale\)/)
+  assert.doesNotMatch(chat,/uptilldawn-chat-auto-translate/)
+  assert.doesNotMatch(chat,/Chat automatisch vertalen<\/span>/)
+  assert.doesNotMatch(chat,/autoTranslate/)
+  assert.match(chat,/window\.addEventListener\('uptilldawn-language-applied',listener\)/)
   assert.match(chat,/setTranslations\(\{\}\)/)
-  assert.match(catalog,/["']Chat automatisch vertalen["']\s*:\s*\{[^\n]*fr:[^\n]*en:[^\n]*de:/)
+  assert.match(chat,/if\(!current\.messages\.length\)return/)
+  assert.match(chat,/liveTranslateText\(message\.body\|\|'',uiLocale\)/)
 })

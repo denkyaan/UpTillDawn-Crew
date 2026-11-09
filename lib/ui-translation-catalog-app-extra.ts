@@ -2,6 +2,9 @@ export type ExtraCatalogLocale = 'nl' | 'fr' | 'en' | 'de'
 type Row = { fr:string; en:string; de:string }
 
 export const APP_EXTRA_TRANSLATIONS: Record<string,Row> = {
+  "Algemene chat evenementen":{fr:"Chat général événements",en:"General events chat",de:"Allgemeiner Event-Chat"},
+  "Admin · Administratie":{fr:"Admin · Administration",en:"Admin · Administration",de:"Admin · Verwaltung"},
+  "Algemene chat promotie":{fr:"Chat général promotion",en:"General promotion chat",de:"Allgemeiner Promotion-Chat"},
   "Privégesprek starten":{fr:"Démarrer une discussion privée",en:"Start a private chat",de:"Privatchat starten"},
   "Start a private conversation":{fr:"Démarrer une conversation privée",en:"Start a private conversation",de:"Privatgespräch beginnen"},
   "Rollen beheren ·":{fr:"Gérer les rôles ·",en:"Manage roles ·",de:"Rollen verwalten ·"},

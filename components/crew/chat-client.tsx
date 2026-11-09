@@ -89,7 +89,6 @@ export function ChatClient({channels,defaultChannelId,userId,crewDirectory,isAdm
   const [uiLocale,setUiLocale]=useState<LiveTranslationLocale>('nl')
   const [translations,setTranslations]=useState<Record<string,string>>({})
   const [translating,setTranslating]=useState<string|null>(null)
-  const [autoTranslate,setAutoTranslate]=useState(false)
   const [replyTo,setReplyTo]=useState<Tables<'messages'>|null>(null)
   const [pendingDraftReplyId,setPendingDraftReplyId]=useState<string|null>(null)
   const [peopleByChannel,setPeopleByChannel]=useState<Record<string,ChatPerson[]>>({})
@@ -128,10 +127,6 @@ export function ChatClient({channels,defaultChannelId,userId,crewDirectory,isAdm
   const draftFilesRef=useRef(new Map<string,File|null>())
   const initialDraftLoadedRef=useRef(false)
 
-  useEffect(()=>{
-    const stored=window.localStorage.getItem('uptilldawn-chat-auto-translate')==='1'
-    queueMicrotask(()=>setAutoTranslate(stored))
-  },[])
 
   const effectiveSelected=selected&&channels.some(channel=>channel.id===selected)?selected:defaultChannelId||channels[0]?.id||''
   const current=cache[effectiveSelected]||{messages:[],attachments:{},replyTargets:{},hasMore:false}
@@ -307,7 +302,11 @@ export function ChatClient({channels,defaultChannelId,userId,crewDirectory,isAdm
     })
   },[crewDirectory,privateSearch,userId])
 
-  const channelName=(channel:Tables<'chat_channels'>)=>channel.kind==='private'?(channel.name==='Up Till Dawn · persoonlijk'?'Up Till Dawn':privatePeerNames[channel.id]||translateRuntimeUi('Privéchat',uiLocale)):channel.kind==='organization'?'Algemene chat':channel.kind==='workplace'?(channel.name||'Werkplekchat'):(channel.name||'Eventchat')
+  const channelName=(channel:Tables<'chat_channels'>)=>channel.kind==='private'
+    ?(channel.name==='Up Till Dawn · persoonlijk'?'Up Till Dawn':privatePeerNames[channel.id]||translateRuntimeUi('Privéchat',uiLocale))
+    :channel.kind==='organization'
+      ?(channel.name==='Admin · Administratie'?(chatBasePath.startsWith('/portals/administration')?'Admin':'Administratie'):channel.name||'Algemene chat evenementen')
+      :channel.kind==='workplace'?(channel.name||'Werkplekchat'):(channel.name||'Eventchat')
   const privateChannels=channels.filter(channel=>channel.kind==='private')
   const eventChannels=channels.filter(channel=>channel.kind==='event')
   const workplaceChannels=channels.filter(channel=>channel.kind==='workplace')
@@ -556,7 +555,7 @@ export function ChatClient({channels,defaultChannelId,userId,crewDirectory,isAdm
   }
 
   useEffect(()=>{
-    if(!autoTranslate||!current.messages.length)return
+    if(!current.messages.length)return
     let cancelled=false
     const pending=current.messages.slice(-20).filter(message=>message.sender_id!==null&&message.sender_id!==userId&&!message.moderated_at&&message.body?.trim()&&!translations[message.id])
     if(!pending.length)return
@@ -573,7 +572,7 @@ export function ChatClient({channels,defaultChannelId,userId,crewDirectory,isAdm
       }
     })()
     return()=>{cancelled=true}
-  },[autoTranslate,current.messages,translations,uiLocale,userId])
+  },[current.messages,translations,uiLocale,userId])
 
   async function sendMessage(){
     const trimmed=body.trim()
@@ -682,10 +681,6 @@ export function ChatClient({channels,defaultChannelId,userId,crewDirectory,isAdm
           <div className="min-w-0 flex-1"><p className="truncate text-base font-black">{channelName(selectedChannel)}</p><p className="text-xs text-muted-foreground">Tik om van chat te wisselen</p></div>
           <ChevronDown className={`h-5 w-5 shrink-0 ${pickerOpen?'rotate-180':''}`}/>
         </button>
-        <label className="flex shrink-0 items-center gap-2 rounded-xl border px-2 py-2 text-[11px] font-semibold text-muted-foreground">
-          <input type="checkbox" checked={autoTranslate} onChange={event=>{const enabled=event.target.checked;setAutoTranslate(enabled);window.localStorage.setItem('uptilldawn-chat-auto-translate',enabled?'1':'0')}}/>
-          <span className="hidden sm:inline">Chat automatisch vertalen</span><span className="sm:hidden" aria-label="Chat automatisch vertalen">Auto</span>
-        </label>
         <button type="button" onClick={()=>{setPrivatePickerOpen(open=>!open);setPickerOpen(false)}} className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl border bg-card" aria-label={translateRuntimeUi('Nieuwe privéchat',uiLocale)} title={translateRuntimeUi('Nieuwe privéchat',uiLocale)}><MessageCirclePlus className="h-5 w-5"/></button>
         {selectedChannel.kind==='private'&&selectedChannel.name!=='Up Till Dawn · persoonlijk'&&<button type="button" disabled={busy} onClick={()=>void deletePrivateChat()} className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl border bg-card" aria-label={translateRuntimeUi('Privéchat verwijderen',uiLocale)} title={translateRuntimeUi('Privéchat verwijderen',uiLocale)}><Trash2 className="h-5 w-5"/></button>}
       </div>

@@ -29,7 +29,7 @@ export function PromotionPrivateChatStarter({locale,members,userId}:{locale:Supp
   try{
    const {data,error:failure}=await createClient().rpc("upt_create_private_chat",{p_user:user})
    if(failure||!data)throw new Error("Private chat unavailable")
-   router.push("/portals/promotion/chats?view=private&channel="+encodeURIComponent(data))
+   router.push("/portals/promotion/chats?channel="+encodeURIComponent(data))
    router.refresh()
   }catch{setError(t.error)}finally{setBusy(false)}
  }

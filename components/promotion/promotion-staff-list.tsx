@@ -19,7 +19,7 @@ export function PromotionStaffList({members,photos,locale,empty,userId}:{members
   try{
    const {data,error}=await createClient().rpc("upt_create_private_chat",{p_user:id})
    if(error||!data)throw new Error("Chat unavailable")
-   router.push("/portals/promotion/chats?view=private&channel="+encodeURIComponent(data))
+   router.push("/portals/promotion/chats?channel="+encodeURIComponent(data))
    router.refresh()
   }catch{setChatError(true)}finally{setChatBusy(null)}
  }

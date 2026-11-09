@@ -38,5 +38,5 @@ test('Promotion chat uses the shared conversation layout with accessible mobile 
  assert.match(chat,/promotion_chat_messages/)
  assert.match(chat,/followLatest\.current/)
  assert.doesNotMatch(chat,/h-\[55vh\]/)
- assert.match(page,/<PromotionChatsClient locale=\{locale\}/)
+ assert.match(page,/<SharedChatPage promotionOnly/)
 })
