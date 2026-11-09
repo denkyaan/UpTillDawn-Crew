@@ -81,8 +81,11 @@ export function SyncCenter() {
       await synchronize(authenticatedUserId)
       await refresh()
       setMessage('Synchronisatie opnieuw uitgevoerd. Alleen serverbevestigde acties zijn verwijderd uit de wachtrij.')
-    } catch {
-      setMessage('Synchronisatie werd onderbroken. Acties en bestanden blijven lokaal bewaard.')
+    } catch (error) {
+      const reason = error instanceof Error ? error.message : ''
+      setMessage(reason.includes('SESSION_MISMATCH')
+        ? 'Je sessie is gewijzigd. Meld je opnieuw aan; acties en bestanden blijven lokaal bewaard.'
+        : 'Synchronisatie werd onderbroken. Acties en bestanden blijven lokaal bewaard.')
     } finally {
       setBusy(false)
     }
