@@ -25,7 +25,7 @@ export async function POST(request:Request){
  const bytes=Uint8Array.from(atob(SYNTHETIC_PNG),value=>value.charCodeAt(0))
  data.append("imageFile",new Blob([bytes],{type:"image/png"}),"uptilldawn-ocr-smoke.png")
  try{
-  const response=await fetch("https://api.cloudmersive.com/ocr/photo/toText",{
+  const response=await fetch("https://api.cloudmersive.com/ocr/image/toText",{
    method:"POST",
    headers:{Apikey:key,language:"ENG",recognitionMode:"Basic"},
    body:data,

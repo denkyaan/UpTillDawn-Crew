@@ -287,7 +287,7 @@ jobs:
           const result = await response.json().catch(() => ({}))
           const status = typeof result.status === "string" ? result.status : "invalid_test_response"
           const matched = result.matched === true
-          console.log("Main Cloudmersive synthetic OCR: " + status + ", HTTP " + response.status + ", matched=" + matched)
+          console.log("Main Cloudmersive synthetic OCR: " + status + ", HTTP " + response.status + ", provider HTTP " + (Number.isInteger(result.providerHttpStatus) ? result.providerHttpStatus : "none") + ", matched=" + matched)
           const {appendFileSync} = await import("node:fs")
           if (process.env.GITHUB_STEP_SUMMARY) {
             appendFileSync(process.env.GITHUB_STEP_SUMMARY,

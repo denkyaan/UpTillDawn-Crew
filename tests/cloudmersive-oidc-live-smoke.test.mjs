@@ -45,7 +45,7 @@ test("main-only diagnostic never exposes provider key or accepts a user document
  assert.match(route,/verifyMainDeployOIDC\(bearer\.slice\(7\)\)/)
  assert.match(route,/uptilldawn-main\.uptilldawn\.workers\.dev/)
  assert.match(route,/CLOUDMERSIVE_OCR_API_KEY/)
- assert.match(route,/api\.cloudmersive\.com\/ocr\/photo\/toText/)
+ assert.match(route,/api\.cloudmersive\.com\/ocr\/image\/toText/)
  assert.match(route,/new FormData\(\)/)
  assert.match(route,/SYNTHETIC_PNG/)
  assert.match(route,/UPTILLDAWN/)
