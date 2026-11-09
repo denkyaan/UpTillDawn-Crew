@@ -70,7 +70,7 @@ begin
   if v_head is not null then
    update public.upt_personnel_role_slots
     set role_one=case when role_one='head' then 'staff' else role_one end,
-        role_two=case when role_two='head' then null else role_two end,
+        role_two=case when role_two='head' or (role_one='head' and role_two='staff') then null else role_two end,
         updated_by=v_actor,updated_at=now()
     where user_id=v_head;
   end if;
@@ -99,9 +99,8 @@ begin
    if not exists(select 1 from public.upt_organization_leadership where slot='head' and user_id=p_user)
     then raise exception 'Head assignment did not persist' using errcode='23514';end if;
  elsif v_current_role='admin' and v_head is null then
-   -- Legacy Admin may be demoted without assigning a Head to a different user.
-   update public.profiles set role=case when 'responsible_lead'=any(array[p_role_one,p_role_two])
-     then 'responsible_lead' else 'staff' end where id=p_user;
+   -- No legacy Admin loses authority before a confirmed Head claim.
+   raise exception 'Claim Head Admin before changing a legacy Admin account' using errcode='23514';
  else
    update public.profiles set role=case when 'responsible_lead'=any(array[p_role_one,p_role_two])
      then 'responsible_lead' else 'staff' end

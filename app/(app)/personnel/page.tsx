@@ -31,7 +31,7 @@ export default async function Page({searchParams}:{searchParams?:Promise<{feedba
     if(saved)return {one:saved.role_one,two:saved.role_two}
     const slot=positions.find(row=>row.user_id===person.id)?.slot
     const one:AssignableRole=slot==='head'?'head':slot==='left_hand'?'left_hand':slot==='right_hand'?'right_hand'
-      :person.role==='admin'?'head':person.role==='responsible_lead'?'responsible_lead':'staff'
+      :person.role==='admin'&&person.id===user.id?'head':person.role==='responsible_lead'?'responsible_lead':'staff'
     const matches=(activeAssignments||[]).filter(row=>row.user_id===person.id&&row.approved&&!row.revoked_at)
     const two:AssignableRole|null=matches.some(row=>row.portal==='promotion'&&row.role==='promoter')?'promotion'
       :slot?null:matches.some(row=>row.portal==='administration'&&row.role==='administrative_staff')?'administration':null
@@ -50,7 +50,7 @@ export default async function Page({searchParams}:{searchParams?:Promise<{feedba
       <div>
         <p className="text-xs font-black uppercase tracking-[.2em] text-violet-400">TOEGANG</p>
         <h1 className="text-3xl font-black">Goedkeuringen</h1>
-        <p className="mt-1 text-sm text-muted-foreground">Behandel uitsluitend nieuwe accountaanvragen. Bestaand personeel beheer je onder Personeel.</p>
+        <p className="mt-1 text-sm text-muted-foreground">Keur nieuwe accounts goed en beheer hier Rol 1, Rol 2 en alle organisatiebevoegdheden voor goedgekeurde medewerkers.</p>
       </div>
       <span className="rounded-full border px-3 py-2 text-sm font-black">{pending.length} openstaand</span>
     </header>
