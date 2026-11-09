@@ -6,10 +6,11 @@ declare trig text;
 begin
  select pg_get_functiondef('public.upt_guard_administration_obligation()'::regprocedure)
  into guard;
- if position('created_by=auth.uid()' in guard)=0
-    or position('The submitter cannot review their own dossier' in guard)=0
-    or position('approved_by:=auth.uid()' in guard)=0 then
-  raise exception 'Operational review is missing independent Admin approval';
+ if position('created_by=auth.uid()' in guard)>0
+    or position('The submitter cannot review their own dossier' in guard)>0
+    or position('approved_by:=auth.uid()' in guard)=0
+    or position('public.upt_is_admin()' in guard)=0 then
+  raise exception 'Head must be able to approve own submitted case; non-Admin still denied';
  end if;
  select pg_get_functiondef('upt_administration_private.notify_obligation_review()'::regprocedure)
  into notifier;
@@ -35,5 +36,5 @@ begin
  if has_function_privilege('anon','upt_administration_private.notify_obligation_review()','EXECUTE') then
   raise exception 'Review notification trigger function is callable anonymously';
  end if;
- raise notice 'PASS: operational review separation, notifications and pagination';
+ raise notice 'PASS: Head final approval (including own cases), notifications and pagination';
 end $$;
