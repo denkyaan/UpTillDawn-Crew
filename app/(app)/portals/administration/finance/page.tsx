@@ -30,10 +30,10 @@ const documentKinds = {
 const kindValues = ['purchase_invoice','sales_invoice','expense','credit_note','quote'] as const
 
 const uploadLabels = {
- nl:{upload:'Bijlage toevoegen',file:'Factuur, bestelbon of betalingsbewijs (PDF of afbeelding, max. 20 MB)',attachments:'Bijlagen',failed:'Bijlage kon niet worden opgeslagen.',duplicate:'Dit bestand is al als bijlage bij dit document opgeslagen; er is geen tweede kopie toegevoegd.',fingerprint:'SHA-256'},
- fr:{upload:'Ajouter une pièce jointe',file:'Facture, bon de commande ou preuve de paiement (PDF ou image, 20 Mo max.)',attachments:'Pièces jointes',failed:'Impossible d’enregistrer le fichier.',duplicate:'Ce fichier est déjà joint à ce document. Aucune deuxième copie n’a été enregistrée.',fingerprint:'SHA-256'},
- en:{upload:'Attach document',file:'Invoice, purchase order or payment proof (PDF or image, max 20 MB)',attachments:'Attachments',failed:'Attachment could not be saved.',duplicate:'This file is already attached to this document. No duplicate copy was saved.',fingerprint:'SHA-256'},
- de:{upload:'Beleg hinzufügen',file:'Rechnung, Bestellung oder Zahlungsnachweis (PDF oder Bild, max. 20 MB)',attachments:'Anhänge',failed:'Anhang konnte nicht gespeichert werden.',duplicate:'Diese Datei ist bereits angehängt. Es wurde keine zweite Kopie gespeichert.',fingerprint:'SHA-256'},
+ nl:{upload:'Bijlage toevoegen',file:'Factuur, bestelbon of betalingsbewijs (PDF of afbeelding, max. 20 MB)',attachments:'Bijlagen',failed:'Bijlage kon niet worden opgeslagen.',duplicate:'Dit bestand is al als bijlage bij dit document opgeslagen; er is geen tweede kopie toegevoegd.',fingerprint:'SHA-256',scanPending:'Wacht op veiligheidsscan',scanFailed:'Scan mislukt; contacteer beheerder',scanBlocked:'Bijlage geblokkeerd',scanUnavailable:'Scanstatus niet beschikbaar'},
+ fr:{upload:'Ajouter une pièce jointe',file:'Facture, bon de commande ou preuve de paiement (PDF ou image, 20 Mo max.)',attachments:'Pièces jointes',failed:'Impossible d’enregistrer le fichier.',duplicate:'Ce fichier est déjà joint à ce document. Aucune deuxième copie n’a été enregistrée.',fingerprint:'SHA-256',scanPending:'En attente du contrôle de sécurité',scanFailed:'Échec du scan ; contactez un administrateur',scanBlocked:'Pièce jointe bloquée',scanUnavailable:'État du scan indisponible'},
+ en:{upload:'Attach document',file:'Invoice, purchase order or payment proof (PDF or image, max 20 MB)',attachments:'Attachments',failed:'Attachment could not be saved.',duplicate:'This file is already attached to this document. No duplicate copy was saved.',fingerprint:'SHA-256',scanPending:'Awaiting security scan',scanFailed:'Scan failed; contact an administrator',scanBlocked:'Attachment blocked',scanUnavailable:'Scan status unavailable'},
+ de:{upload:'Beleg hinzufügen',file:'Rechnung, Bestellung oder Zahlungsnachweis (PDF oder Bild, max. 20 MB)',attachments:'Anhänge',failed:'Anhang konnte nicht gespeichert werden.',duplicate:'Diese Datei ist bereits angehängt. Es wurde keine zweite Kopie gespeichert.',fingerprint:'SHA-256',scanPending:'Warten auf Sicherheitsprüfung',scanFailed:'Scan fehlgeschlagen; Admin kontaktieren',scanBlocked:'Anhang gesperrt',scanUnavailable:'Scanstatus nicht verfügbar'},
 } as const
 const actionLabels = {
  nl: {review:'Ter controle indienen',approved:'Goedkeuren (Admin)',issued:'Als uitgereikt markeren',paid:'Als betaald markeren',void:'Annuleren'},
@@ -574,9 +574,26 @@ export default async function FinancePage({searchParams}:{searchParams:Promise<{
   (supabase as unknown as SupabaseClient).from('admin_financial_payments').select('id,document_id,amount,paid_on,bank_reference').order('created_at',{ascending:false}).limit(1000),
   (supabase as unknown as SupabaseClient).from('admin_payment_reminders').select('id,document_id,reminder_number,status,recipient_email,subject,body,created_at,revision').order('created_at',{ascending:false}).limit(500),
   supabase.from('admin_financial_lines').select('id,document_id,description,quantity,unit_price,vat_rate,unit_code,vat_category,vat_exemption_reason').order('created_at',{ascending:true}).limit(500),
-  (supabase as unknown as SupabaseClient).from('admin_financial_attachments').select('id,document_id,original_name,sha256,created_at').order('created_at',{ascending:false}).limit(200),
+  (supabase as unknown as SupabaseClient).from('admin_financial_attachments').select('id,document_id,storage_path,original_name,sha256,created_at').order('created_at',{ascending:false}).limit(200),
   (supabase as unknown as SupabaseClient).rpc('upt_administration_finance_summary'),
  ])
+ // RLS exposes only registered finance scan status to authorized staff.
+ // A missing scanner or failed lookup must never render a download link.
+ const storedPaths=(attachments??[]).map(a=>a.storage_path as string)
+ const {data:attachmentScans,error:attachmentScanError}=storedPaths.length
+  ?await (supabase as unknown as SupabaseClient).from('upload_security_scans')
+    .select('storage_path,status').eq('bucket_id','admin-financial-attachments')
+    .in('storage_path',storedPaths).limit(200)
+  :{data:[],error:null}
+ const attachmentVerdicts=new Map<string,string>((attachmentScans??[]).map(row=>[row.storage_path,row.status]))
+ const attachmentScanLabel=(path:string)=>{
+  if(attachmentScanError)return uploadLabels[locale].scanUnavailable
+  const verdict=attachmentVerdicts.get(path)
+  if(verdict==='clean')return null
+  if(verdict==='infected'||verdict==='suspicious')return uploadLabels[locale].scanBlocked
+  if(verdict==='scan_failed')return uploadLabels[locale].scanFailed
+  return uploadLabels[locale].scanPending
+ }
  const originalInvoices=(documents??[]).filter(d=>['sales_invoice','purchase_invoice'].includes(d.kind)&&['approved','issued','paid'].includes(d.status))
  const payments=(paymentRows??[]) as {id:string;document_id:string;amount:number;paid_on:string;bank_reference:string|null}[]
  const reminders=(reminderRows??[]) as {id:string;document_id:string;reminder_number:number;status:string;recipient_email:string;subject:string;body:string;created_at:string;revision:number}[]
@@ -708,7 +725,7 @@ export default async function FinancePage({searchParams}:{searchParams:Promise<{
         <button type="submit" className="rounded border border-violet-500 px-3 py-2 text-violet-400 sm:col-span-2">{({nl:'Herinnering als concept bewaren',fr:'Enregistrer le rappel en brouillon',en:'Save reminder draft',de:'Erinnerungsentwurf speichern'} as const)[locale]}</button>
        </form>
       </div>}
-      {(attachments??[]).filter(a=>a.document_id===d.id).map(a=><p key={a.id} className="text-xs text-muted-foreground">{uploadLabels[locale].attachments}: <a href={'/api/administration/finance/attachments/'+a.id} className="inline-flex min-h-11 items-center break-all font-medium text-violet-700 underline underline-offset-2 dark:text-violet-300">{a.original_name}</a>{a.sha256&&<span className="ml-2 font-mono" title={a.sha256}>{uploadLabels[locale].fingerprint}: {a.sha256.slice(0,12)}…</span>}</p>)}
+      {(attachments??[]).filter(a=>a.document_id===d.id).map(a=>{const scanLabel=attachmentScanLabel(a.storage_path);return <p key={a.id} className="text-xs text-muted-foreground">{uploadLabels[locale].attachments}: {scanLabel?<span className="inline-flex min-h-11 items-center break-all" title={scanLabel}>{a.original_name} · {scanLabel}</span>:<a href={'/api/administration/finance/attachments/'+a.id} className="inline-flex min-h-11 items-center break-all font-medium text-violet-700 underline underline-offset-2 dark:text-violet-300">{a.original_name}</a>}{a.sha256&&<span className="ml-2 font-mono" title={a.sha256}>{uploadLabels[locale].fingerprint}: {a.sha256.slice(0,12)}…</span>}</p>})}
       {(lines??[]).filter(line=>line.document_id===d.id).map(line=><div key={line.id} className="flex flex-wrap items-center justify-between gap-2 text-xs text-muted-foreground"><p>{line.description} · {line.quantity} × {money(Number(line.unit_price))} · {line.vat_rate}%</p>{d.status==='draft'&&<details className="w-full rounded border p-2"><summary className="cursor-pointer">{({nl:'Regel aanpassen',fr:'Modifier la ligne',en:'Edit line',de:'Position bearbeiten'} as const)[locale]}</summary><form action={updateInvoiceLine} className="mt-2 grid gap-2 sm:grid-cols-4"><input type="hidden" name="document_id" value={d.id}/><input type="hidden" name="line_id" value={line.id}/><label>{({nl:'Omschrijving',fr:'Description',en:'Description',de:'Beschreibung'} as const)[locale]}<input name="description" required maxLength={500} defaultValue={line.description} className="block w-full rounded border bg-background p-2"/></label><label>{({nl:'Aantal',fr:'Quantité',en:'Quantity',de:'Menge'} as const)[locale]}<input name="quantity" type="number" step="0.001" min="0.001" max="100000" required defaultValue={line.quantity} className="block w-full rounded border bg-background p-2"/></label><label>{({nl:'Eenheidsprijs',fr:'Prix unitaire',en:'Unit price',de:'Einzelpreis'} as const)[locale]}<input name="unit_price" type="number" step="0.01" min="0" required defaultValue={line.unit_price} className="block w-full rounded border bg-background p-2"/></label><label>{({nl:'Btw-percentage',fr:'Taux TVA',en:'VAT rate',de:'MwSt.-Satz'} as const)[locale]}<input name="vat_rate" type="number" step="0.01" min="0" max="100" required defaultValue={line.vat_rate} className="block w-full rounded border bg-background p-2"/></label><button type="submit" className="rounded border border-violet-500 px-3 py-2 text-violet-400 sm:col-span-4">{({nl:'Regel opslaan',fr:'Enregistrer la ligne',en:'Save line',de:'Position speichern'} as const)[locale]}</button></form></details>}{d.status==='draft'&&<form action={removeInvoiceLine}><input type="hidden" name="document_id" value={d.id}/><input type="hidden" name="line_id" value={line.id}/><button type="submit" className="rounded border px-2 py-1 text-red-400">{({nl:'Regel verwijderen',fr:'Supprimer la ligne',en:'Remove line',de:'Position entfernen'} as const)[locale]}</button></form>}</div>)}
       {d.status==='draft'&&<form action={addInvoiceLine} className="grid gap-2 rounded-lg border p-3 sm:grid-cols-5">
        <input type="hidden" name="document_id" value={d.id}/>
