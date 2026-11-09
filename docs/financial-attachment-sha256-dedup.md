@@ -36,8 +36,7 @@ failed cleanup is logged for operator attention.
 - Unique duplicate enforcement applies only to non-NULL SHA-256 rows. It is
   not a universal deduplication guarantee for legacy records or direct SQL/API
   writes that omit the hash. Those paths should not be advertised as verified.
-- All existing attachment authorization/RLS, private bucket settings and
-  no-update/no-delete policies remain unchanged.
+- Existing attachment authorization/RLS and private bucket settings remain unchanged. Authenticated table-level UPDATE, DELETE, TRUNCATE, REFERENCES and TRIGGER grants are explicitly revoked: the original INSERT/SELECT functionality remains available while dangerous blanket permissions are closed. No RLS bypass via TRUNCATE is allowed for authenticated users.
 - SHA-256 proves byte identity but does **not** detect malicious software,
   establish legal provenance, classify invoice content, or prove approval.
   The separate malware scanner requires working vendor credentials. Do not
