@@ -28,7 +28,7 @@ export function RoleManagementForm({users,locale}:{users:UserOption[];locale:Sup
  const router=useRouter()
  const [portal,setPortal]=useState<Portal>('events')
  const [role,setRole]=useState('event_staff')
- const [action,setAction]=useState<RoleAction>('assign_approved')
+ const [action,setAction]=useState('assign_approved')
  const [userId,setUserId]=useState(users[0]?.id??'')
  const [search,setSearch]=useState('')
  const [result,setResult]=useState('')
@@ -38,7 +38,7 @@ export function RoleManagementForm({users,locale}:{users:UserOption[];locale:Sup
  const selectedUserVisible = matches.some(user => user.id === userId)
 
  function submit(formData:FormData){
-  if(pending)return
+  if (pending) return
   if (formData.get('action') === 'revoke' && !window.confirm(t.confirm)) return
   setResult('')
   startTransition(async()=>{
@@ -51,9 +51,9 @@ export function RoleManagementForm({users,locale}:{users:UserOption[];locale:Sup
    <input value={search} onChange={event=>setSearch(event.target.value)} className="rounded border bg-background p-2"/>
   </label>
   <label className="grid gap-1 text-sm">{t.user}
-   <select required name="user_id" value={selectedUserVisible?userId:''}
+   <select required name="user_id" value={selectedUserVisible ? userId : ""}
     onChange={event=>setUserId(event.target.value)} className="rounded border bg-background p-2">
-    {!selectedUserVisible&&<option value="" disabled>{t.choose}</option>}
+    {!selectedUserVisible && <option value="" disabled>{t.choose}</option>}
     {matches.map(user=><option key={user.id} value={user.id}>{user.full_name||user.id}</option>)}
    </select>
   </label>
@@ -84,7 +84,7 @@ export function RoleManagementForm({users,locale}:{users:UserOption[];locale:Sup
     <option value="revoke">{t.revoke}</option>
    </select>
   </label>
-  <button type="submit" disabled={pending||!userId||!selectedUserVisible}
+  <button type="submit" disabled={pending || !userId || !selectedUserVisible}
    className="rounded bg-violet-600 px-4 py-2 font-medium text-white disabled:opacity-50">
    {pending?t.busy:t.submit}
   </button>
@@ -104,7 +104,7 @@ export function RoleQuickAction({userId,portal,role,action,locale}:{
   <button type="button" disabled={pending}
    className="rounded border border-violet-500 px-3 py-1 text-violet-400 disabled:opacity-50"
    onClick={()=>{
-    if(pending)return
+    if (pending) return
     if (action === 'revoke' && !window.confirm(t.confirm)) return
     const form=new FormData()
     form.set('user_id',userId);form.set('portal',portal);form.set('role',role);form.set('action',action)
