@@ -17,6 +17,7 @@ import MappedTicketImportPreview from "@/components/administration/mapped-ticket
 import SepaExport from "@/components/administration/sepa-export"
 import ProviderTransactionWorkspace from "@/components/administration/provider-transaction-workspace"
 import BankStatementWorkspace from "@/components/administration/bank-statement-workspace"
+import ProviderBankSettlementWorkspace from "@/components/administration/provider-bank-settlement-workspace"
 import { notFound, redirect } from "next/navigation"
 import { requestUiLocale } from "@/lib/server-locale"
 import { administrationModules } from "@/lib/administration/modules"
@@ -226,6 +227,7 @@ export default async function AdministrationModulePage({params,searchParams}:{pa
   </section>}
   {slug==="banking"&&<SepaExport locale={locale}/>} 
   {slug==="banking"&&<BankStatementWorkspace locale={locale}/>} 
+  {slug==="banking"&&<ProviderBankSettlementWorkspace locale={locale}/>} 
   {slug==="banking"&&<ProviderTransactionWorkspace locale={locale} events={providerTransactionEventRows?.error?[]:providerTransactionEventRows?.data??[]}/>}
   {slug==="banking"&&<section className="rounded-2xl border bg-card p-5">
    <h2 className="text-lg font-semibold">{({nl:"Betalingen en herinneringen",fr:"Paiements et rappels",en:"Payments and reminders",de:"Zahlungen und Mahnungen"} as const)[locale]}</h2>

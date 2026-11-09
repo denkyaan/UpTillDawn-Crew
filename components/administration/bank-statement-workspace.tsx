@@ -7,10 +7,11 @@ type Statement={
  id:string;transaction_id:string;booked_on:string;direction:"credit"|"debit";
  amount_cents:number;payment_reference:string;description:string;
  linked_document_id:string|null;posted_payment_id:string|null;
- ignored_at:string|null;ignored_reason:string|null
+ ignored_at:string|null;ignored_reason:string|null;provider_settled:boolean
 }
 type Invoice={id:string;number:string;kind:"sales_invoice"|"purchase_invoice";outstandingCents:number}
 type Data={statements:Statement[];invoices:Invoice[];existingPayments:ExistingBankLedgerPayment[];canApprove:boolean}
+const providerMatched={nl:"Provideruitbetaling gekoppeld",fr:"Virement fournisseur rapproché",en:"Provider payout matched",de:"Anbieterauszahlung abgeglichen"} as const
 const translations={
  nl:{title:"Bankafschriften en factuurafstemming",intro:"Importeer genormaliseerde EUR-banktransacties. Een CSV is geen onafhankelijk geverifieerd bankbewijs. Alleen Admin kan na controle een banktransactie definitief als factuurbetaling vastleggen; de database voorkomt dubbel boeken en overbetalingen.",refresh:"Gegevens vernieuwen",upload:"CSV-bankafschrift (max. 1 MB, 500 regels)",template:"Voorbeeld-CSV downloaden",save:"Banktransacties importeren",saving:"Importeren…",valid:"CSV gecontroleerd",invalid:"Ongeldig bankafschrift. Controleer de regels en de vereiste kolommen.",linkExisting:"Koppel reeds geboekte betaling",linkConfirm:"Is deze bankregel dezelfde betaling die al in het factuurregister staat? Deze actie boekt geen tweede betaling.",linkSuccess:"Bestaande betaling veilig gekoppeld",possibleDuplicate:"Er bestaat al een overeenkomende geregistreerde betaling. Boek deze bankregel niet opnieuw.",ambiguousExisting:"Meerdere overeenkomende betalingen; controleer het register vóór je koppelt.",credit:"Bijgeschreven",debit:"Afgeschreven",rows:"Transacties",saved:"Nieuw opgeslagen",skipped:"Bestaande overgeslagen",error:"Gegevens konden niet worden geladen of opgeslagen.",conflict:"Bestaande transactie wijkt af: volledige import geweigerd.",empty:"Nog geen banktransacties geïmporteerd.",unresolved:"Nog te beoordelen",posted:"Geboekt",ignored:"Genegeerd",select:"Kies een goedgekeurde factuur",noCandidate:"Geen geschikte factuur met voldoende openstaand saldo.",approve:"Boek als factuurbetaling",approving:"Boeking controleren…",approveConfirm:"Heb je deze banktransactie gecontroleerd tegen het echte bankafschrift en wil je ze definitief als betaling boeken?",ignoredReason:"Reden voor negeren (min. 5 tekens)",ignore:"Negeer met reden",ignoreConfirm:"Deze transactie als genegeerd afsluiten?",postSuccess:"Betaling veilig vastgelegd",ignoreSuccess:"Transactie als genegeerd gemarkeerd",failedAction:"Actie geweigerd. Controleer factuur, saldo, rechten en bankreferentie.",onlyAdmin:"Alleen Admin kan betalingen bevestigen of bankregels negeren.",previous:"Vorige",next:"Volgende",showing:"Pagina",of:"van",direction:"Richting",amount:"Bedrag",reference:"Bankreferentie",noNotes:"Geen omschrijving",outstanding:"Openstaand",status:"Status"},
  fr:{title:"Relevés bancaires et rapprochement des factures",intro:"Importez les transactions bancaires EUR normalisées. Un CSV n’est pas une preuve bancaire indépendante. Seul Admin peut enregistrer un paiement après vérification; la base bloque les doublons et les trop-perçus.",refresh:"Actualiser",upload:"Relevé CSV (max. 1 Mo, 500 lignes)",template:"Télécharger le modèle CSV",save:"Importer les transactions",saving:"Import…",valid:"CSV vérifié",invalid:"Relevé incorrect. Vérifiez les colonnes et les lignes.",linkExisting:"Associer le paiement déjà enregistré",linkConfirm:"Est-ce bien le paiement déjà inscrit au registre ? Aucun deuxième paiement ne sera comptabilisé.",linkSuccess:"Paiement existant associé",possibleDuplicate:"Un paiement correspondant existe déjà. Ne comptabilisez pas ce relevé une seconde fois.",ambiguousExisting:"Plusieurs paiements correspondants ; vérifiez le registre avant de les associer.",credit:"Crédit",debit:"Débit",rows:"Transactions",saved:"Nouvelles enregistrées",skipped:"Existantes ignorées",error:"Impossible de charger ou d’enregistrer les données.",conflict:"Une transaction existante diffère : import intégral rejeté.",empty:"Aucune transaction importée.",unresolved:"À examiner",posted:"Comptabilisé",ignored:"Ignoré",select:"Sélectionner une facture approuvée",noCandidate:"Aucune facture admissible avec solde suffisant.",approve:"Enregistrer le paiement",approving:"Vérification…",approveConfirm:"Avez-vous vérifié cette transaction avec le relevé bancaire réel et souhaitez-vous l’enregistrer définitivement ?",ignoredReason:"Motif d’ignorance (5 caractères min.)",ignore:"Ignorer avec motif",ignoreConfirm:"Clôturer cette transaction comme ignorée ?",postSuccess:"Paiement enregistré",ignoreSuccess:"Transaction ignorée",failedAction:"Action refusée. Vérifiez la facture, le solde, les droits et la référence.",onlyAdmin:"Seul Admin peut confirmer des paiements ou ignorer des lignes.",previous:"Précédent",next:"Suivant",showing:"Page",of:"sur",direction:"Sens",amount:"Montant",reference:"Référence bancaire",noNotes:"Sans description",outstanding:"Solde",status:"Statut"},
@@ -102,9 +103,10 @@ export default function BankStatementWorkspace({locale}:{locale:SupportedUiLocal
  const totalPages=Math.max(1,Math.ceil(rows.length/pageSize))
  const currentPage=Math.min(page,totalPages)
  const visible=rows.slice((currentPage-1)*pageSize,currentPage*pageSize)
- const unresolved=rows.filter(row=>!row.posted_payment_id&&!row.ignored_at).length
+ const unresolved=rows.filter(row=>!row.posted_payment_id&&!row.ignored_at&&!row.provider_settled).length
  const posted=rows.filter(row=>Boolean(row.posted_payment_id)).length
  const ignored=rows.filter(row=>Boolean(row.ignored_at)).length
+ const matched=rows.filter(row=>row.provider_settled).length
  const example="transaction_id,booked_on,direction,amount,currency,payment_reference,description\n"
   +"BANK-001,2026-11-09,credit,30.00,EUR,INV-2026-001,Example invoice receipt\n"
   +"BANK-002,2026-11-09,debit,10.50,EUR,SUP-2026-001,Example supplier payment\n"
@@ -126,8 +128,8 @@ export default function BankStatementWorkspace({locale}:{locale:SupportedUiLocal
   </div>}
   {feedback&&<p role="status" className="text-sm">{feedback}</p>}
   {workspace&&!error&&<div className="space-y-3">
-   <div className="grid grid-cols-2 gap-3 sm:grid-cols-4 text-sm">
-    {([{label:t.rows,value:rows.length},{label:t.unresolved,value:unresolved},{label:t.posted,value:posted},{label:t.ignored,value:ignored}]).map(k=><div key={k.label} className="rounded-xl border p-3"><strong className="block text-xl">{k.value}</strong>{k.label}</div>)}
+   <div className="grid grid-cols-2 gap-3 sm:grid-cols-5 text-sm">
+    {([{label:t.rows,value:rows.length},{label:t.unresolved,value:unresolved},{label:t.posted,value:posted},{label:t.ignored,value:ignored},{label:providerMatched[locale],value:matched}]).map(k=><div key={k.label} className="rounded-xl border p-3"><strong className="block text-xl">{k.value}</strong>{k.label}</div>)}
    </div>
    {!workspace.canApprove&&<p className="text-sm text-muted-foreground">{t.onlyAdmin}</p>}
    {rows.length===0?<p className="text-sm">{t.empty}</p>:<>
@@ -135,7 +137,7 @@ export default function BankStatementWorkspace({locale}:{locale:SupportedUiLocal
      const candidates=workspace.invoices.filter(invoice=>
       (entry.direction==="credit"?invoice.kind==="sales_invoice":invoice.kind==="purchase_invoice")
        &&invoice.outstandingCents>=entry.amount_cents)
-     const isPosted=Boolean(entry.posted_payment_id),isIgnored=Boolean(entry.ignored_at)
+     const isPosted=Boolean(entry.posted_payment_id),isIgnored=Boolean(entry.ignored_at),isProvider=entry.provider_settled
      const existing=findExistingBankPaymentCandidates(entry,workspace.existingPayments)
      const linkCandidate=existing.length===1&&!alreadyLinked.has(existing[0].id)?existing[0]:null
      return <li key={entry.id} className="space-y-2 rounded-xl border p-3 text-sm">
@@ -145,10 +147,10 @@ export default function BankStatementWorkspace({locale}:{locale:SupportedUiLocal
       </div>
       <p className="break-all text-muted-foreground">{t.reference}: {entry.payment_reference||"—"}</p>
       <p className="break-words">{entry.description||t.noNotes}</p>
-      <p>{t.status}: <strong>{isPosted?t.posted:isIgnored?t.ignored:t.unresolved}</strong></p>
+      <p>{t.status}: <strong>{isPosted?t.posted:isIgnored?t.ignored:isProvider?providerMatched[locale]:t.unresolved}</strong></p>
       {isPosted&&<p className="break-all">{entry.linked_document_id}</p>}
       {isIgnored&&<p className="break-words">{entry.ignored_reason}</p>}
-      {!isPosted&&!isIgnored&&workspace.canApprove&&<div className="space-y-2">
+      {!isPosted&&!isIgnored&&!isProvider&&workspace.canApprove&&<div className="space-y-2">
        {existing.length>0&&<p className="text-amber-600">{existing.length>1?t.ambiguousExisting:t.possibleDuplicate}</p>}
        {linkCandidate&&<button type="button" disabled={busy} onClick={()=>void decide("link",entry,linkCandidate.id)} className="rounded-lg border border-emerald-600 px-3 py-2 font-semibold disabled:opacity-50">{t.linkExisting}: {linkCandidate.documentNumber}</button>}
        {candidates.length>0?<label className="grid gap-1">{t.select}

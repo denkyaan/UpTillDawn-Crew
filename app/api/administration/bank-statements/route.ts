@@ -52,7 +52,7 @@ export async function GET(){
  const access=await administrationAccess()
  if(!access.ok)return response({error:'access_denied'},access.status)
  const db=client(access.db)
- const [statementResult,invoiceResult,paymentResult,permission]=await Promise.all([
+ const [statementResult,invoiceResult,paymentResult,settlementResult,permission]=await Promise.all([
   db.from('admin_bank_statement_transactions')
    .select('id,transaction_id,booked_on,direction,amount_cents,currency,payment_reference,description,linked_document_id,posted_payment_id,ignored_at,ignored_reason',{count:'exact'})
    .order('booked_on',{ascending:false}).order('id',{ascending:false}).range(0,999),
@@ -63,14 +63,17 @@ export async function GET(){
   db.from('admin_financial_payments')
    .select('id,document_id,amount,paid_on,bank_reference',{count:'exact'})
    .order('created_at',{ascending:false}).range(0,1999),
+  db.from('admin_provider_bank_settlements').select('bank_statement_id',{count:'exact'}).range(0,999),
   access.db.rpc('upt_is_admin')
  ])
  const {data:statements,error:statementsError,count:statementCount}=statementResult
  const {data:documents,error:documentsError,count:invoiceCount}=invoiceResult
  const {data:payments,error:paymentsError,count:paymentCount}=paymentResult
+ const {data:providerSettlements,error:settlementError,count:settlementCount}=settlementResult
  if(statementsError||statements===null||statementCount===null||statementCount>1000||statements.length!==statementCount
    ||documentsError||documents===null||invoiceCount===null||invoiceCount>500||documents.length!==invoiceCount
-   ||paymentsError||payments===null||paymentCount===null||paymentCount>2000||payments.length!==paymentCount)
+   ||paymentsError||payments===null||paymentCount===null||paymentCount>2000||payments.length!==paymentCount
+   ||settlementError||providerSettlements===null||settlementCount===null||settlementCount>1000||providerSettlements.length!==settlementCount)
   return response({error:'statement_or_invoice_data_unavailable'},503)
  const ids=documents.map(document=>document.id)
  let balances:{document_id:string;outstanding_amount:unknown}[]=[]
@@ -99,6 +102,7 @@ export async function GET(){
    }
   }).filter(document=>document.outstandingCents>0&&
     ['approved','issued'].includes(documents.find(row=>row.id===document.id)?.status??''))
+  const settledBankIds=new Set(providerSettlements.map(row=>row.bank_statement_id))
   const outputStatements=statements.map(statement=>{
    const raw=statement.amount_cents
    if((typeof raw!=='number'&&typeof raw!=='string')||!/^[1-9][0-9]{0,10}$/.test(String(raw))
@@ -107,7 +111,7 @@ export async function GET(){
     ||!['credit','debit'].includes(statement.direction)||statement.currency!=='EUR'
     ||typeof statement.transaction_id!=='string'||typeof statement.booked_on!=='string')
     throw Error('Invalid bank record')
-   return {...statement,amount_cents:Number(raw)}
+   return {...statement,amount_cents:Number(raw),provider_settled:settledBankIds.has(statement.id)}
   })
   const eligibleDocuments=new Map(documents.map(document=>[document.id,document]))
   const existingPayments=payments.flatMap(payment=>{
