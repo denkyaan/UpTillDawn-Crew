@@ -22,6 +22,7 @@ const copy={
 type State={integrations:IntegrationSummary[];secureStoreAvailable:boolean}
 const endpoint="/api/administration/integrations"
 const defaults:Record<string,string>={DOCUMENSO_BASE_URL:"https://app.documenso.com"}
+const errorCodes={general:"unavailable",invalid:"invalid",missingKey:"keyMissing",denied:"forbidden"} as const
 export function IntegrationCredentialManager({initialLocale}:{initialLocale:SupportedUiLocale}){
  const [locale,setLocale]=useState<SupportedUiLocale>(initialLocale)
  const [provider,setProvider]=useState<IntegrationProvider>("sumup")
@@ -47,7 +48,7 @@ export function IntegrationCredentialManager({initialLocale}:{initialLocale:Supp
   if(!response.ok)throw Error("unavailable")
   const result:unknown=await response.json()
   if(!result||typeof result!=="object"||!("integrations" in result)||!Array.isArray(result.integrations))throw Error("unavailable")
-  setState({integrations:result.integrations as IntegrationSummary[],secureStoreAvailable:result.secureStoreAvailable===true})
+  setState({integrations:result.integrations as IntegrationSummary[],secureStoreAvailable:"secureStoreAvailable" in result&&result.secureStoreAvailable===true})
  }
  async function perform(method:"POST"|"DELETE"){
   if(busy)return
@@ -58,7 +59,7 @@ export function IntegrationCredentialManager({initialLocale}:{initialLocale:Supp
    if(!response.ok){
     const detail:unknown=await response.json().catch(()=>null)
     const code=detail&&typeof detail==="object"&&"error" in detail?String(detail.error):"unavailable"
-    setError(code==="invalid_credentials"?"invalid":code==="integration_master_key_unavailable"?"keyMissing":response.status===403?"forbidden":"unavailable")
+    setError(code==="invalid_credentials"?errorCodes.invalid:code==="integration_master_key_unavailable"?errorCodes.missingKey:response.status===403?errorCodes.denied:errorCodes.general)
     return
    }
    setFields({});setConfirm(false);setNotice(method==="POST"?"saved":"removed")
