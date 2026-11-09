@@ -27,8 +27,14 @@ begin
   raise exception 'Missing per-document partial uniqueness for SHA-256 attachments';
  end if;
  if has_table_privilege('authenticated','public.admin_financial_attachments','UPDATE')
-    or has_table_privilege('authenticated','public.admin_financial_attachments','DELETE') then
-  raise exception 'Financial attachment metadata must remain immutable for authenticated users';
+    or has_table_privilege('authenticated','public.admin_financial_attachments','DELETE')
+    or has_table_privilege('authenticated','public.admin_financial_attachments','TRUNCATE')
+    or has_table_privilege('authenticated','public.admin_financial_attachments','TRIGGER') then
+  raise exception 'Untrusted roles retain mutating attachment archive privileges';
+ end if;
+ if not has_table_privilege('authenticated','public.admin_financial_attachments','SELECT')
+    or not has_table_privilege('authenticated','public.admin_financial_attachments','INSERT') then
+  raise exception 'Required financial document intake/read privileges were lost';
  end if;
  raise notice 'PASS: historic attachment hashes nullable, exact 64-hex SHA-256, unique per document and immutable metadata';
 end;
