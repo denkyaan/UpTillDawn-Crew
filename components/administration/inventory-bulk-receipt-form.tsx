@@ -16,7 +16,7 @@ export function InventoryBulkReceiptForm({
  request,document,proposals,locale,
 }:{request:string;document:string;proposals:readonly InventoryReceiptProposal[];locale:SupportedUiLocale}){
  const [state,action,pending]=useActionState<BulkReceiptState,FormData>(
-  receiveAdminInventoryBatch,{ok:false,count:0,error:null})
+  receiveAdminInventoryBatch,{ok:false,count:0,code:null})
  const t=copy[locale]
  return <form action={action} className="space-y-3">
   <input type="hidden" name="request" value={request}/>
