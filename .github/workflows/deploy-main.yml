@@ -56,6 +56,9 @@ jobs:
   deploy:
     needs: validate-trigger
     if: needs.validate-trigger.outputs.eligible == 'true'
+    permissions:
+      contents: read
+      id-token: write # Signed identity for the main-only synthetic OCR test.
     runs-on: ubuntu-latest
     timeout-minutes: 30
     env:
@@ -239,7 +242,7 @@ jobs:
           console.log('CLOUDMERSIVE_OCR_API_KEY binding on uptilldawn-main: ' + status)
           if (process.env.GITHUB_STEP_SUMMARY) {
             const {appendFileSync} = await import('node:fs')
-            appendFileSync(process.env.GITHUB_STEP_SUMMARY, '\n### Cloudmersive binding check (main only)\n- Worker: uptilldawn-main\n- Secret name present: **' + status + '**\n- Actual Cloudmersive OCR request: **not executed** (requires authenticated acceptance)\n')
+            appendFileSync(process.env.GITHUB_STEP_SUMMARY, '\n### Cloudmersive binding check (main only)\n- Worker: uptilldawn-main\n- Secret name present: **' + status + '**\n- Actual Cloudmersive OCR request: checked separately with signed GitHub deploy identity\n')
           }
           NODE
 
@@ -255,5 +258,44 @@ jobs:
             exit 1
           fi
           echo 'OCR authentication gate is active on main.'
+      
+      - name: Live Cloudmersive OCR test (synthetic image, signed main deploy)
+        if: steps.current-main.outputs.current == 'true'
+        shell: bash
+        run: |
+          set -euo pipefail
+          node --input-type=module <<'NODE'
+          const audience = "uptilldawn-main-ocr-test-v1"
+          const issuerEndpoint = process.env.ACTIONS_ID_TOKEN_REQUEST_URL
+          const issuerAuth = process.env.ACTIONS_ID_TOKEN_REQUEST_TOKEN
+          if (!issuerEndpoint || !issuerAuth) throw Error("GitHub OIDC is unavailable in this deploy job")
+          const identityUrl = new URL(issuerEndpoint)
+          identityUrl.searchParams.set("audience", audience)
+          const issued = await fetch(identityUrl, {
+            headers: {Authorization: "Bearer " + issuerAuth},
+            signal: AbortSignal.timeout(15000),
+          })
+          if (!issued.ok) throw Error("GitHub OIDC identity request failed (HTTP " + issued.status + ")")
+          const body = await issued.json()
+          if (typeof body?.value !== "string") throw Error("GitHub OIDC identity missing")
+          const endpoint = process.env.NEXT_PUBLIC_APP_URL + "/api/diagnostics/cloudmersive-ocr"
+          const response = await fetch(endpoint, {
+            method: "POST",
+            headers: {Authorization: "Bearer " + body.value},
+            signal: AbortSignal.timeout(40000),
+          })
+          const result = await response.json().catch(() => ({}))
+          const status = typeof result.status === "string" ? result.status : "invalid_test_response"
+          const matched = result.matched === true
+          console.log("Main Cloudmersive synthetic OCR: " + status + ", HTTP " + response.status + ", matched=" + matched)
+          const {appendFileSync} = await import("node:fs")
+          if (process.env.GITHUB_STEP_SUMMARY) {
+            appendFileSync(process.env.GITHUB_STEP_SUMMARY,
+              "\n### Live Cloudmersive OCR check (synthetic data only)\n- Worker: uptilldawn-main\n- OCR: **" + status + "**\n- Known words recognized: " + (matched ? "yes" : "no") + "\n- No real invoice or confidential data sent.\n")
+          }
+          if (!response.ok || status !== "pass" || !matched) {
+            throw Error("Cloudmersive OCR live verification failed: " + status)
+          }
+          NODE
 
 

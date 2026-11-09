@@ -11,7 +11,7 @@ test('Deploy main checks only its own OCR secret binding by name and never leaks
  assert.match(source,/metadata\.result\.some\(entry => entry\?\.name === 'CLOUDMERSIVE_OCR_API_KEY'\)/)
  assert.match(source,/headers: \{Authorization: `Bearer \$\{token\}`\}/)
  assert.match(source,/Secret name present: \*\*/)
- assert.match(source,/Actual Cloudmersive OCR request: \*\*not executed\*\*/)
+ assert.match(source,/Actual Cloudmersive OCR request: checked separately with signed GitHub deploy identity/)
  assert.doesNotMatch(source,/console\.log\(metadata\)|console\.log\(token\)|console\.log\(account\)|process\.stdout\.write\(JSON\.stringify\(metadata/)
  assert.match(source,/if: steps\.current-main\.outputs\.current == 'true'/)
  assert.match(source,/Main deployment is eligible/)
