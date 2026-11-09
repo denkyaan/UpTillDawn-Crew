@@ -15,4 +15,6 @@ appropriate Staff or Admin dashboard; no document reload is required.
 
 Verification: `tests/mobile-navigation-retired-tour-cleanup.test.mjs` and the
 existing role, collapse, keyboard, AI overlay, label and route regression tests.
+The responsive bottom bar retains a 56px minimum height as required by the existing mobile shell contract. All server-side role and event authorization remains unchanged.
+
 Production deployment is intentionally out of scope.
