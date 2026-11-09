@@ -4,7 +4,6 @@ import { markSaveSuccess, revalidatePath } from '@/lib/save-success'
 import { z } from 'zod'
 import { createClient } from '@/lib/supabase/crew-server'
 import { fetchFacebookEventInfo } from '@/lib/facebook-event'
-import { geocodeGeoapify } from '@/lib/geoapify'
 
 const text=z.string().trim().min(1).max(200)
 
@@ -23,19 +22,16 @@ async function adminClient(){
 }
 
 async function eventLocation(fd:FormData,override?:{venue?:string|null;address?:string|null}){
- let venue=String(override?.venue??fd.get('venue')??'').trim().slice(0,200)
- let address=String(override?.address??fd.get('address')??'').trim().slice(0,500)
+ const venue=String(override?.venue??fd.get('venue')??'').trim().slice(0,200)
+ const address=String(override?.address??fd.get('address')??'').trim().slice(0,500)
  const rawLatitude=override?.address||override?.venue?'':String(fd.get('latitude')||'').trim()
  const rawLongitude=override?.address||override?.venue?'':String(fd.get('longitude')||'').trim()
- let latitude=rawLatitude?z.coerce.number().min(-90).max(90).parse(rawLatitude):null
- let longitude=rawLongitude?z.coerce.number().min(-180).max(180).parse(rawLongitude):null
+ const latitude=rawLatitude?z.coerce.number().min(-90).max(90).parse(rawLatitude):null
+ const longitude=rawLongitude?z.coerce.number().min(-180).max(180).parse(rawLongitude):null
  if((latitude===null)!==(longitude===null))throw new Error('Selecteer een geldige locatie of adres uit de suggesties.')
- if(latitude===null&&longitude===null&&(address||venue)){
-  const resolved=await geocodeGeoapify(address||venue)
-  if(!resolved)throw new Error('Geen geldige locatie gevonden. Kies een locatie of adres uit de suggesties.')
-  latitude=resolved.latitude;longitude=resolved.longitude;address=resolved.formatted
-  if(!venue)venue=resolved.name
- }
+ // No implicit geocoding: address entry must remain free, offline-capable and
+ // independent of a configured provider. GPS checks require a verified pair.
+
  return {venue,address,latitude,longitude}
 }
 

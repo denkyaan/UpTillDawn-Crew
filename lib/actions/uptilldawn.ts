@@ -164,23 +164,17 @@ function dates(fd:FormData,start:string,end:string){
  return [a,b]
 }
 async function eventLocation(fd:FormData,override?:{venue?:string|null;address?:string|null}){
- let venue=String(override?.venue??fd.get('venue')??'').trim().slice(0,200)
- let address=String(override?.address??fd.get('address')??'').trim().slice(0,500)
+ const venue=String(override?.venue??fd.get('venue')??'').trim().slice(0,200)
+ const address=String(override?.address??fd.get('address')??'').trim().slice(0,500)
  const rawLatitude=override?.address||override?.venue?'':String(fd.get('latitude')||'').trim()
  const rawLongitude=override?.address||override?.venue?'':String(fd.get('longitude')||'').trim()
- let latitude=rawLatitude?z.coerce.number().min(-90).max(90).parse(rawLatitude):null
- let longitude=rawLongitude?z.coerce.number().min(-180).max(180).parse(rawLongitude):null
+ const latitude=rawLatitude?z.coerce.number().min(-90).max(90).parse(rawLatitude):null
+ const longitude=rawLongitude?z.coerce.number().min(-180).max(180).parse(rawLongitude):null
  if((latitude===null)!==(longitude===null)){
   throw new Error('Selecteer een geldige locatie of adres uit de suggesties.')
  }
- if(latitude===null&&longitude===null&&(address||venue)){
-  const resolved=await geocodeGeoapify(address||venue)
-  if(!resolved)throw new Error('Geen geldige locatie gevonden. Kies een locatie of adres uit de suggesties.')
-  latitude=resolved.latitude
-  longitude=resolved.longitude
-  address=resolved.formatted
-  if(!venue)venue=resolved.name
- }
+ // Manual address entry never invokes a provider automatically.
+ // Unknown GPS coordinates remain null, not a fabricated or guessed location.
  return {venue,address,latitude,longitude}
 }
 function optionalIso(fd:FormData,name:string){

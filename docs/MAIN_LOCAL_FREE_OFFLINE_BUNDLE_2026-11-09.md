@@ -45,3 +45,7 @@ Local-first means no paid third-party AI API is required for routine briefing or
 - Existing counterparty, role, financial upload, Peppol and event document tests.
 - New local-first contextual address/documents regression tests.
 - End-to-end real-device tests should verify address manual/online selection, document permissions, upload quarantine/release and resume behavior after offline operation.
+
+## Event location completion — no unrequested geocoding
+
+The existing event create/update server actions used to invoke Geoapify whenever a manually typed address had no coordinates. That was a hidden paid-API dependency and could prevent creating events if the API was unconfigured. Both event action implementations now accept manual venue/address values with null coordinates without performing any provider lookup. Verified latitude/longitude from a selected suggestion or deliberate manual entry are preserved; incomplete coordinate pairs remain invalid. The event form explicitly warns that GPS-radius check-in requires accurate coordinates and cannot function without them. The separately opted-in driver routing and address autocomplete APIs are unaffected. No GPS coordinates are fabricated.
