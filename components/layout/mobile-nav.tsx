@@ -10,6 +10,7 @@ import { cn } from "@/lib/utils"
 import { getDefaultRoleUiLabel, type RoleRuleRole } from "@/lib/role-ui"
 import { featureHelp } from "@/lib/ui-field-help"
 import { useAdminSelection } from "@/lib/admin-selection-context"
+import {adminAdministrationGroupKeys,adminAdministrationLabel} from "@/lib/admin-administration-navigation"
 import { LANGUAGE_APPLIED_EVENT, activeUiLocale, type SupportedUiLocale } from "@/lib/locale-preferences"
 
 // Event/shift context prioritizes the relevant allowed links inside the
@@ -78,7 +79,7 @@ export function MobileBottomNav({
    const active=isActive(item)
    const Icon=item.icon
    const count=badgeCount(item.key)
-   const label=item.key==="incidents"?({nl:"Incidenten",fr:"Incidents",en:"Incidents",de:"Vorfälle"} as const)[uiLocale]:item.key==="help"?({nl:"Helpcentrum",fr:"Centre d’aide",en:"Help centre",de:"Hilfezentrum"} as const)[uiLocale]:featureLabels[item.key] || getDefaultRoleUiLabel(roleKey,item.key,item.label)
+   const label=item.key==="incidents"?({nl:"Incidenten",fr:"Incidents",en:"Incidents",de:"Vorfälle"} as const)[uiLocale]:item.key==="help"?({nl:"Helpcentrum",fr:"Centre d’aide",en:"Help centre",de:"Hilfezentrum"} as const)[uiLocale]:adminAdministrationLabel(item.key,uiLocale) || featureLabels[item.key] || getDefaultRoleUiLabel(roleKey,item.key,item.label)
    const help=featureHelp(item.key,label)
    return <Link
     data-layout-key={item.key}
@@ -89,17 +90,17 @@ export function MobileBottomNav({
     onClick={()=>setSelectedGroup({key:"home",pathname})}
     className={cn(
       expandedItem
-        ?"flex min-h-16 items-center gap-3 rounded-xl px-3 py-2 text-sm font-semibold"
+        ?"flex min-w-0 flex-col items-center justify-center gap-1 rounded-lg border px-1 py-2 text-center text-[11px]"
         :"flex min-w-0 flex-1 flex-col items-center justify-center gap-1 rounded-lg px-1 py-1.5 text-[9px] font-semibold",
-      active?"bg-violet-500/10 text-violet-400":"text-muted-foreground",
+      expandedItem?(active?"border-violet-500 text-violet-400":"border-border"):(active?"bg-violet-500/10 text-violet-400":"text-muted-foreground"),
     )}
    >
     <span className="relative shrink-0">
-     <Icon className="h-5 w-5"/>
+     <Icon className={expandedItem?"h-4 w-4":"h-5 w-5"}/>
      {count>0&&<span className="absolute -right-3 -top-3 flex h-5 min-w-5 items-center justify-center rounded-full bg-red-600 px-1 text-[10px] font-black leading-none text-white shadow ring-2 ring-card">{count>99?"99+":count}</span>}
     </span>
     {expandedItem
-      ? <span className="min-w-0 flex-1"><span className="block whitespace-normal break-words leading-snug">{label}</span><span className="mt-0.5 hidden min-[460px]:block line-clamp-2 text-[10px] font-normal text-muted-foreground">{help.description}</span></span>
+      ? <span className="w-full min-w-0"><span className="block whitespace-normal break-words leading-snug">{label}</span></span>
       : <span className="min-w-0 max-w-full break-words text-center leading-tight">{label}</span>}
    </Link>
  }
@@ -107,11 +108,11 @@ export function MobileBottomNav({
 
  const groupedNavigation=[
   {key:"home",icon:LayoutDashboard,labels:{nl:"Home",fr:"Accueil",en:"Home",de:"Start"},keys:["overview"]},
-  {key:"events",icon:CalendarDays,labels:{nl:"Events",fr:"Événements",en:"Events",de:"Events"},keys:["events","briefings","guestlist"]},
-  {key:"work",icon:Clock3,labels:{nl:"Werk",fr:"Travail",en:"Work",de:"Arbeit"},keys:["operations","workplaces","tasks","inventory","sales"]},
-  {key:"team",icon:Users,labels:{nl:"Team",fr:"Équipe",en:"Team",de:"Team"},keys:["crew","personnel","exports","platform"]},
-  {key:"support",icon:MessageCircle,labels:{nl:"Contact",fr:"Contact",en:"Contact",de:"Kontakt"},keys:["chat","incidents","help"]},
-  {key:"manage",icon:Settings,labels:{nl:"Beheer",fr:"Gestion",en:"Manage",de:"Verwaltung"},keys:["settings"]},
+  {key:"events",icon:CalendarDays,labels:{nl:"Events",fr:"Événements",en:"Events",de:"Events"},keys:["events","briefings","guestlist",...adminAdministrationGroupKeys.events]},
+  {key:"work",icon:Clock3,labels:{nl:"Werk",fr:"Travail",en:"Work",de:"Arbeit"},keys:["operations","workplaces","tasks","inventory","sales","exports",...adminAdministrationGroupKeys.work]},
+  {key:"team",icon:Users,labels:{nl:"Team",fr:"Équipe",en:"Team",de:"Team"},keys:["crew","personnel",...adminAdministrationGroupKeys.team]},
+  {key:"support",icon:MessageCircle,labels:{nl:"Contact",fr:"Contact",en:"Contact",de:"Kontakt"},keys:["chat","incidents","help",...adminAdministrationGroupKeys.support]},
+  {key:"manage",icon:Settings,labels:{nl:"Beheer",fr:"Gestion",en:"Manage",de:"Verwaltung"},keys:["settings","platform",...adminAdministrationGroupKeys.manage]},
  ] as const
  const availableGroups=groupedNavigation.map(group=>({...group,entries:group.keys.map(key=>items.find(item=>item.key===key)).filter((item):item is NavigationItem=>Boolean(item))})).filter(group=>group.entries.length>0)
  const currentGroup=availableGroups.find(group=>group.entries.some(isActive))?.key??"home"
@@ -128,7 +129,8 @@ export function MobileBottomNav({
  useEffect(()=>{window.dispatchEvent(new CustomEvent("uptilldawn-navigation-expanded",{detail:{open:activeGroup!=="home"}}));return()=>{window.dispatchEvent(new CustomEvent("uptilldawn-navigation-expanded",{detail:{open:false}}))}},[activeGroup])
  return <nav aria-label={{nl:"Mobiele navigatie",en:"Mobile navigation",fr:"Navigation mobile",de:"Mobile Navigation"}[uiLocale]} className="fixed inset-x-0 bottom-0 z-50 min-h-14 border-t border-border bg-card pb-[env(safe-area-inset-bottom)] lg:hidden">
   {activeGroup!=="home"&&<div id="role-navigation-subtabs" role="region" aria-label={{nl:"Subnavigatie",fr:"Sous-navigation",en:"Subnavigation",de:"Unternavigation"}[uiLocale]} className="border-b bg-card p-2">
-   <div className="grid max-h-[38dvh] grid-cols-2 gap-2 overflow-x-hidden overflow-y-auto overscroll-contain">{selectedEntries.map(item=><NavItem key={item.key} item={item} expandedItem/>)}</div>
+   <strong className="mb-2 block text-xs">{availableGroups.find(group=>group.key===activeGroup)?.labels[uiLocale]}</strong>
+   <div className="grid grid-cols-3 gap-1.5 max-h-[38dvh] overflow-x-hidden overflow-y-auto overscroll-contain">{selectedEntries.map(item=><NavItem key={item.key} item={item} expandedItem/>)}</div>
   </div>}
   <div className="grid gap-0.5 px-1 py-2" style={{gridTemplateColumns:`repeat(${availableGroups.length},minmax(0,1fr))`}}>
    {availableGroups.map(group=>{const Icon=group.icon;const active=activeGroup===group.key||(activeGroup==="home"&&currentGroup===group.key);return <button type="button" key={group.key} data-role-category={group.key} aria-pressed={active} aria-label={group.labels[uiLocale]} aria-expanded={group.key==="home"?undefined:activeGroup===group.key} aria-controls={group.key==="home"||activeGroup!==group.key?undefined:"role-navigation-subtabs"} onClick={()=>{if(group.key==="home"){setSelectedGroup(null);router.push(isAdmin?"/admin":"/");return}setSelectedGroup(previous=>({key:previous?.pathname===pathname&&previous.key===group.key?"home":group.key,pathname}))}} className={cn("flex min-w-0 flex-col items-center justify-center gap-1 rounded-lg px-0.5 py-2 text-[10px]",active?"bg-violet-500/15 text-violet-400":"text-muted-foreground")}><Icon className="h-5 w-5"/><span className="w-full min-w-0 break-words text-center leading-tight">{group.labels[uiLocale]}</span></button>})}

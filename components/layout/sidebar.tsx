@@ -12,6 +12,7 @@ import { getDefaultRoleUiLabel, type RoleRuleRole } from "@/lib/role-ui"
 import { featureHelp } from "@/lib/ui-field-help"
 import { activeUiLocale, LANGUAGE_APPLIED_EVENT, type SupportedUiLocale } from "@/lib/locale-preferences"
 import { useAdminSelection } from "@/lib/admin-selection-context"
+import {adminAdministrationGroupKeys,adminAdministrationLabel} from "@/lib/admin-administration-navigation"
 
 export function AppSidebar({
   chatMissed=0,incidentMissed=0,taskMissed=0,notificationFeatureCounts={},
@@ -47,11 +48,11 @@ export function AppSidebar({
 
  const groups=[
   {key:"home",icon:LayoutDashboard,title:{nl:"Home",fr:"Accueil",en:"Home",de:"Start"},keys:["overview"]},
-  {key:"events",icon:CalendarDays,title:{nl:"Events",fr:"Événements",en:"Events",de:"Events"},keys:["events","briefings","guestlist"]},
-  {key:"work",icon:Clock3,title:{nl:"Werk",fr:"Travail",en:"Work",de:"Arbeit"},keys:["operations","workplaces","tasks","inventory","sales"]},
-  {key:"team",icon:Users,title:{nl:"Team",fr:"Équipe",en:"Team",de:"Team"},keys:["crew","personnel","exports","platform"]},
-  {key:"support",icon:MessageCircle,title:{nl:"Contact",fr:"Contact",en:"Contact",de:"Kontakt"},keys:["chat","incidents","help"]},
-  {key:"manage",icon:Settings,title:{nl:"Beheer",fr:"Gestion",en:"Manage",de:"Verwaltung"},keys:["settings"]},
+  {key:"events",icon:CalendarDays,title:{nl:"Events",fr:"Événements",en:"Events",de:"Events"},keys:["events","briefings","guestlist",...adminAdministrationGroupKeys.events]},
+  {key:"work",icon:Clock3,title:{nl:"Werk",fr:"Travail",en:"Work",de:"Arbeit"},keys:["operations","workplaces","tasks","inventory","sales","exports",...adminAdministrationGroupKeys.work]},
+  {key:"team",icon:Users,title:{nl:"Team",fr:"Équipe",en:"Team",de:"Team"},keys:["crew","personnel",...adminAdministrationGroupKeys.team]},
+  {key:"support",icon:MessageCircle,title:{nl:"Contact",fr:"Contact",en:"Contact",de:"Kontakt"},keys:["chat","incidents","help",...adminAdministrationGroupKeys.support]},
+  {key:"manage",icon:Settings,title:{nl:"Beheer",fr:"Gestion",en:"Manage",de:"Verwaltung"},keys:["settings","platform",...adminAdministrationGroupKeys.manage]},
  ] as const
  const availableGroups=groups.map(group=>({...group,entries:group.keys.map(key=>visible.find(item=>item.key===key)).filter((item):item is (typeof visible)[number]=>Boolean(item))})).filter(group=>group.entries.length>0)
  const routeActive=(href:string)=>href==="/"?pathname==="/":pathname===href||pathname.startsWith(href+"/")
@@ -73,7 +74,7 @@ export function AppSidebar({
     const active=routeActive(baseHref)
     const Icon=i.icon
     const count=Math.max(i.key==="chat"?chatMissed:i.key==="incidents"?incidentMissed:i.key==="tasks"?taskMissed:0,notificationFeatureCounts[i.key]??0)
-    const label=i.key==="incidents"?({nl:"Incidenten",fr:"Incidents",en:"Incidents",de:"Vorfälle"} as const)[locale]:i.key==="help"?({nl:"Helpcentrum",fr:"Centre d’aide",en:"Help centre",de:"Hilfezentrum"} as const)[locale]:featureLabels[i.key]||getDefaultRoleUiLabel(roleKey,i.key,i.label)
+    const label=i.key==="incidents"?({nl:"Incidenten",fr:"Incidents",en:"Incidents",de:"Vorfälle"} as const)[locale]:i.key==="help"?({nl:"Helpcentrum",fr:"Centre d’aide",en:"Help centre",de:"Hilfezentrum"} as const)[locale]:adminAdministrationLabel(i.key,locale)||featureLabels[i.key]||getDefaultRoleUiLabel(roleKey,i.key,i.label)
     const help=featureHelp(i.key,label)
     return <Link data-layout-key={i.key} key={i.key} href={href} title={help.description} aria-description={help.description} className={cn("flex items-center gap-3 rounded-xl px-3 py-3 text-sm font-semibold",active?"bg-violet-600 text-white":"text-muted-foreground hover:bg-muted hover:text-foreground")}><span className="relative"><Icon className="h-5 w-5"/>{count>0&&<span className="absolute -right-3 -top-3 flex h-5 min-w-5 items-center justify-center rounded-full bg-red-600 px-1 text-[10px] font-black leading-none text-white">{count>99?"99+":count}</span>}</span>{label}</Link>
    })}</div>

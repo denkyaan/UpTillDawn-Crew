@@ -15,7 +15,7 @@ test('iPhone uses a screen-bounded AI panel, two-column subtabs and compact cont
  const [layout,nav,context]=['components/layout/app-layout.tsx','components/layout/mobile-nav.tsx','components/admin/admin-context-bar.tsx'].map(read)
  assert.match(layout,/fixed inset-x-3 top-/)
  assert.match(layout,/sm:absolute sm:inset-x-auto/)
- assert.match(nav,/grid-cols-2 gap-2/)
+ assert.match(nav,/grid-cols-3 gap-1\.5/)
  assert.match(nav,/item=\{item\} expandedItem/)
  assert.doesNotMatch(context,/ContextLink/)
  assert.match(context,/overflow-x-auto whitespace-nowrap/)

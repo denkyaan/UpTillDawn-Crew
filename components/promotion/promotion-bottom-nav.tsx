@@ -14,8 +14,8 @@ const tabs=[
 export function PromotionBottomNav({locale}:{locale:Locale}){
  const pathname=usePathname()
  const label={nl:"Promotienavigatie",fr:"Navigation promotion",en:"Promotion navigation",de:"Promotionnavigation"}[locale]
- return <nav aria-label={label} className="fixed inset-x-0 bottom-0 z-[65] grid grid-cols-5 border-t border-border bg-card/95 px-2 pt-2 pb-[env(safe-area-inset-bottom)] shadow-[0_-8px_24px_rgba(0,0,0,0.15)] backdrop-blur-lg lg:hidden">
- {tabs.map(tab=>{const Icon=tab.icon;const active=pathname===tab.href||(tab.href!=="/portals/promotion"&&pathname.startsWith(tab.href+"/"))
- return <Link key={tab.href} href={tab.href} aria-current={active?"page":undefined} className={`flex min-h-14 flex-col items-center justify-center gap-1 rounded-xl px-1 py-2 text-center text-[11px] font-medium transition-colors focus-visible:outline-2 focus-visible:outline-violet-500 ${active?"bg-violet-600/15 text-violet-500":"text-muted-foreground hover:bg-violet-500/10 hover:text-violet-400"}`}><Icon aria-hidden="true" className="h-5 w-5 stroke-[1.8]"/><span>{tab.name[locale]}</span></Link>})}
+ return <nav aria-label={label} className="fixed inset-x-0 bottom-0 z-[65] border-t bg-card pb-[env(safe-area-inset-bottom)] lg:hidden">
+ <div className="grid grid-cols-5 gap-0.5 px-1 py-2">{tabs.map(tab=>{const Icon=tab.icon;const active=pathname===tab.href||(tab.href!=="/portals/promotion"&&pathname.startsWith(tab.href+"/"))
+ return <Link key={tab.href} href={tab.href} aria-current={active?"page":undefined} className={`flex min-w-0 flex-col items-center justify-center gap-1 rounded-lg px-0.5 py-2 text-center text-[10px] focus-visible:outline-2 focus-visible:outline-violet-500 ${active?"bg-violet-500/15 text-violet-400":"text-muted-foreground"}`}><Icon aria-hidden="true" className="h-5 w-5 stroke-[1.8]"/><span className="w-full min-w-0 break-words text-center leading-tight">{tab.name[locale]}</span></Link>})}</div>
  </nav>
 }

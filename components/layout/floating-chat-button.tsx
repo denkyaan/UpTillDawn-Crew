@@ -79,7 +79,7 @@ export function FloatingChatButton({ count = 0, stackedAboveAdminAi = false, hre
     }}
     aria-label={count ? `Chat, ${count} gemiste berichten. Sleep om te verplaatsen.` : "Chat. Sleep om te verplaatsen."}
     title="Chat — sleep om te verplaatsen"
-    style={position ? { left: position.x, top: position.y } : { right: "1rem", bottom: stackedAboveAdminAi ? "9.5rem" : "5rem" }}
+    style={position ? { left: position.x, top: position.y } : { right: "1rem", bottom: stackedAboveAdminAi ? "calc(5.5rem + env(safe-area-inset-bottom))" : "calc(5rem + env(safe-area-inset-bottom))" }}
     className="fixed z-50 flex h-14 w-14 touch-none select-none items-center justify-center rounded-full border border-white/30 bg-black text-white shadow-lg lg:hidden"
   >
     <MessageCircle className="h-7 w-7"/>

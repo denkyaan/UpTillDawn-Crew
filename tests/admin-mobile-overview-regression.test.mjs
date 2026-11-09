@@ -20,7 +20,7 @@ test('mobile admin AI and chat leave room for each portal navigation',async()=>{
  assert.match(administration,/aria-expanded=\{group\.key==="overview"\?undefined:visible&&selected\.key===group\.key\}/)
  assert.match(administration,/id="administration-subtabs"/)
  assert.match(layout,/stackedAboveAdminAi=\{Boolean\(isAdmin\)\}/)
- assert.match(chat,/stackedAboveAdminAi \? "9\.5rem" : "5rem"/)
+ assert.match(chat,/stackedAboveAdminAi \? "calc\(5\.5rem \+ env\(safe-area-inset-bottom\)\)"/)
 })
 
 test('admin action center excludes operational alerts for non-running events',async()=>{
