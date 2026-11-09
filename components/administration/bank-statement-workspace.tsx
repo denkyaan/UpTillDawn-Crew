@@ -53,6 +53,7 @@ export default function BankStatementWorkspace({locale}:{locale:SupportedUiLocal
  }
  const preview=csv!==null?validateBankStatementCsv(csv,account):null
  const money=(cents:number)=>new Intl.NumberFormat(locale,{style:"currency",currency:"EUR"}).format(cents/100)
+ const sampleIban="BE68 5390 0754 7034" // Locale-independent example of a valid Belgian IBAN.
  const sample="transaction_reference,booking_date,amount,currency,counterparty_iban,description\nBANK-001,2026-11-09,30.00,EUR,,Invoice payment\nBANK-002,2026-11-09,-12.50,EUR,,Supplier invoice\n"
  async function importRows(){
   if(!file||!preview||preview.errors.length||busy||matching)return
@@ -88,7 +89,7 @@ export default function BankStatementWorkspace({locale}:{locale:SupportedUiLocal
   {failed&&<p role="alert" className="text-sm">{t.error}</p>}
   {!failed&&<div className="grid gap-3 rounded-xl border p-3">
    <label className="grid gap-1 text-sm">{t.account}
-    <input value={account} onChange={event=>{clearFile();setAccount(event.target.value)}} placeholder="BE68 5390 0754 7034" autoComplete="off" className="rounded-lg border bg-background p-2"/>
+    <input value={account} onChange={event=>{clearFile();setAccount(event.target.value)}} placeholder={sampleIban} autoComplete="off" className="rounded-lg border bg-background p-2"/>
    </label>
    <label className="grid gap-1 text-sm">{t.file}
     <input type="file" accept=".csv,text/csv" disabled={busy} onChange={fileChanged} className="rounded-lg border p-2"/>
