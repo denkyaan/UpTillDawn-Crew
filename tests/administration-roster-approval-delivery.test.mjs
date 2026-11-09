@@ -66,7 +66,7 @@ test('roster: UI exposes eligible shifts to administrative staff and never offer
  assert.match(ui,/available\.find\(x=>x\.id===p\.target_shift_id\)/)
  assert.match(ui,/const canSubmit=creating\?Boolean\(/)
  assert.match(ui,/:Boolean\(chosen\)/)
- assert.match(ui,/canSubmit&&!shifts\.error\?/ )
+ assert.match(ui,/canSubmit&&!optionsFailed\\?/)
  assert.match(ui,/l\.mustLink/)
  assert.match(ui,/l\.noShifts/)
  for(const locale of ['nl','fr','en','de'])assert.match(ui,new RegExp(locale+':\\{.*zone:'))
