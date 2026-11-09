@@ -200,3 +200,40 @@ begin
 end;
 $$;
 
+
+-- With one Head, their own submitted dossier must also appear in the review notification queue.
+create or replace function upt_administration_private.notify_obligation_review()
+returns trigger language plpgsql security definer set search_path=''
+as $$
+declare v_route text;
+begin
+ if old.status is not distinct from new.status then return new; end if;
+ -- The kind column is CHECK-constrained; route has no user-controlled path
+ -- segments beyond this fixed set.
+ if new.kind not in ('logistics','permits','tasks') then
+  raise exception 'Unknown administration dossier kind';
+ end if;
+ v_route:='/portals/administration/modules/'||new.kind;
+ if old.status in ('open','rejected') and new.status='submitted' then
+  insert into public.crew_notifications(user_id,title,body,kind,link)
+  select p.id,'Dossier wacht op goedkeuring',
+         left('Controleer dossier: '||new.title,500),'info',v_route
+  from public.profiles p
+  where p.approved=true
+    and coalesce(p.account_blocked,false)=false
+    and (p.role='admin' or upt_private.is_app_owner(p.id));
+ elsif old.status='submitted' and new.status in ('approved','rejected') then
+  insert into public.crew_notifications(user_id,title,body,kind,link)
+  values(new.created_by,
+    case when new.status='approved' then 'Dossier goedgekeurd'
+         else 'Dossier afgewezen' end,
+    left(new.title,500),'info',v_route);
+ elsif old.status='approved' and new.status='completed'
+   and new.created_by is distinct from auth.uid() then
+  insert into public.crew_notifications(user_id,title,body,kind,link)
+  values(new.created_by,'Dossier afgehandeld',left(new.title,500),'info',v_route);
+ end if;
+ return new;
+end;
+$$;
+
