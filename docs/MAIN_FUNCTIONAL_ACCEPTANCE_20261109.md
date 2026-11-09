@@ -21,3 +21,12 @@
 5. Protected production release validation and deployment (requires explicit user authorization).
 
 **Release decision:** main-test code/data assertions are substantially verified; **full functional acceptance remains open**, chiefly for authenticated browsers, real-device flows and external integrations. Do not label the app finished based on unit tests or green CI alone.
+
+## Additional isolated Administration acceptance (2026-11-09)
+
+- Disposable Admin creator, second Admin reviewer, administrative employee and staff accounts completed the real database integration test with full rollback.
+- Payroll snapshot reported **5,400 net seconds**; ordinary staff access was denied.
+- Administrative employee approval was denied, and the creating Admin's own approval was also denied as required by the separation-of-duties trigger. The independent Admin review and final completion succeeded.
+- Deadline notification processing produced five recipients in this fixture and **zero duplicate deliveries** on replay.
+- A separate disposable staff user was denied direct creation of both Finance counterparties and financial documents.
+- The repeatable SQL suites are `tests/sql/administration-workflow-isolated-e2e.sql` and `tests/sql/administration-finance-isolated-rls.sql`. These are database-level acceptance, not real browser/device acceptance.
