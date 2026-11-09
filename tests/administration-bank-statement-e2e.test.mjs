@@ -62,7 +62,7 @@ test('server routes fail closed and distinguish read-only import from final Admi
   'sameOrigin(request)','administrationAccess()','upt_is_admin',
   'validateBankStatementCsv','upt_admin_import_bank_statement_transactions',
   'upt_admin_post_bank_statement_payment','upt_admin_ignore_bank_statement',
-  "count>1000","invoiceCount>500","data.length!==statementCount",
+  "statementCount>1000","invoiceCount>500","data.length!==statementCount",
   'financialAmountCents','result.data',
  ]){
   assert.ok(api.includes(fragment),fragment)
