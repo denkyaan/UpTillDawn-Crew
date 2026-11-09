@@ -16,13 +16,15 @@ const formatter = new Intl.DateTimeFormat("en-GB", {
 })
 
 export class RosterTimeError extends Error {
- constructor(public readonly reason:"invalid"|"missing"|"ambiguous") {
+ readonly reason:"invalid"|"missing"|"ambiguous"
+ constructor(reason:"invalid"|"missing"|"ambiguous") {
   super(reason==="missing"
    ?"This local time does not exist in Europe/Brussels because the clock moves forward."
    :reason==="ambiguous"
     ?"This local time occurs twice in Europe/Brussels because the clock moves backward."
     :"Invalid Belgian local date and time.")
   this.name="RosterTimeError"
+  this.reason=reason
  }
 }
 
