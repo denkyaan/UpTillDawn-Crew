@@ -122,37 +122,37 @@ VALUES
 -- The existing upload hook queues originals as pending. The newer RESTRICTIVE
 -- Storage SELECT policy must block pending incident/chat originals even for
 -- their owner and assigned Responsible. Checking before clean verdict matters.
-DO $
+DO $$
 BEGIN
  IF (SELECT count(*) FROM public.upload_security_scans
      WHERE bucket_id IN ('incident-photos','chat-attachments')
        AND storage_path LIKE (SELECT id::text FROM upt_storage_ids WHERE name='staff')||'/%'
        AND status='pending') <> 2
  THEN RAISE EXCEPTION 'FAIL uploaded incident/chat media not queued as pending'; END IF;
-END $;
+END $$;
 
 SELECT set_config('request.jwt.claim.sub',(SELECT id::text FROM upt_storage_ids WHERE name='staff'),true);
 SET LOCAL ROLE authenticated;
-DO $
+DO $$
 BEGIN
  IF EXISTS(
   SELECT 1 FROM storage.objects
   WHERE bucket_id IN ('incident-photos','chat-attachments')
     AND split_part(name,'/',1)=(SELECT id::text FROM upt_storage_ids WHERE name='staff')
  ) THEN RAISE EXCEPTION 'FAIL pending originals exposed to owner'; END IF;
-END $;
+END $$;
 RESET ROLE;
 
 SELECT set_config('request.jwt.claim.sub',(SELECT id::text FROM upt_storage_ids WHERE name='lead'),true);
 SET LOCAL ROLE authenticated;
-DO $
+DO $$
 BEGIN
  IF EXISTS(
   SELECT 1 FROM storage.objects
   WHERE bucket_id IN ('incident-photos','chat-attachments')
     AND split_part(name,'/',1)=(SELECT id::text FROM upt_storage_ids WHERE name='staff')
  ) THEN RAISE EXCEPTION 'FAIL pending originals exposed to Responsible'; END IF;
-END $;
+END $$;
 RESET ROLE;
 
 -- This synthetic clean verdict exists only inside the rolled-back test
