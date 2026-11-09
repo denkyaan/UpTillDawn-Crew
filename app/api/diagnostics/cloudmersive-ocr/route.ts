@@ -30,12 +30,26 @@ export async function POST(request:Request){
    headers:{Apikey:key,language:"ENG",recognitionMode:"Basic"},
    body:data,
    signal:AbortSignal.timeout(26000),
+   redirect:"manual",
    cache:"no-store",
   })
   if(!response.ok){
    const reason=response.status===401||response.status===403?"provider_rejected_key":
     response.status===429?"quota_exceeded":response.status===402?"payment_required":"provider_http_error"
-   return reply(reason,502,{providerHttpStatus:response.status})
+   let redirectHost:string|null=null
+   try{
+    const location=response.headers.get("location")
+    if(location)redirectHost=new URL(location,response.url).hostname
+   }catch{}
+   const allowed=response.headers.get("allow")
+   const allowedMethods=allowed&&/^[A-Za-z, ]{1,100}$/.test(allowed)?allowed:null
+   return reply(reason,502,{
+    providerHttpStatus:response.status,
+    providerRedirected:response.redirected,
+    providerHost:new URL(response.url).hostname,
+    redirectHost,
+    allowedMethods
+   })
   }
   const len=Number(response.headers.get("content-length")||0)
   if(len>60000)return reply("provider_response_too_large",502)

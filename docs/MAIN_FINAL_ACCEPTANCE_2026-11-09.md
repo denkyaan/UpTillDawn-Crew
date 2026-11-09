@@ -97,3 +97,14 @@ Official API reference: https://api.cloudmersive.com/docs/ocr.asp
 Cloudmersive can return `AsyncJobStatus: STARTED` for long scanned PDFs. The main integration now supports the provider's documented `/ocr/pdf/get-job-status` endpoint. It creates a 15-minute HMAC-signed, user-bound job token (signed with the server-side provider secret), polls from the authenticated Finance panel, and resumes when the provider reports completion. The raw provider job ID is never accepted directly or placed in the browser URL. Polling is rate-bounded (12 checks per UI action, 2.5 seconds apart); the user may retry if the PDF is still being processed. User changes/file changes invalidate the in-progress browser request and expired tokens must be restarted with a new upload.
 
 The endpoint applies the same authenticated Administration access check and same-origin requirement to **both** upload and polling, validates returned response sizes even without a `Content-Length` header, and never writes recognized text to invoices or inventory. The signing checks are covered by regression tests (wrong user, invalid signature, tampered and expired token). This proves code-level protections, **not** that an actual Cloudmersive key is configured or that OCR has passed an authenticated live document test. Provider API reference: https://api.cloudmersive.com/docs/ocr.asp
+
+### Live OCR verification — 9 November 2026
+
+An isolated main-only OCR smoke test is available via `/api/diagnostics/cloudmersive-ocr`. It requires a cryptographically verified GitHub OIDC identity scoped exactly to `denkyaan/UpTillDawn-Crew`, workflow `Deploy main`, and `refs/heads/main`. It sends only a synthetic image with text "UPTILLDAWN OCR TEST", never personal documents or user credentials, and reveals no API-key values.
+
+Confirmed observations from main deployments:
+- [Run 42664525280](https://github.com/denkyaan/UpTillDawn-Crew/actions/runs/42664525280): secret binding **present**, unauthenticated user upload rejected **401**, signed synthetic call reached Cloudmersive but failed with an upstream HTTP error.
+- [Run 42665493867](https://github.com/denkyaan/UpTillDawn-Crew/actions/runs/42665493867): secret binding **present**, unauthenticated upload rejected **401**, scanned-image OCR endpoint returned upstream **HTTP 405 Method Not Allowed**. Live OCR remains **unverified / failing**; key presence alone does not prove OCR entitlement or a working provider endpoint.
+- A subsequent diagnostic run inspects redirect metadata and the upstream Allow header without showing credentials, provider response text, or any document content.
+
+The live OCR provider check is intentionally `continue-on-error` in **Deploy main**. Provider failures remain warnings and a separate manual acceptance blocker, not evidence that the Cloudflare deployment failed. Never report live OCR as passing until a successful verified result with expected test text is recorded. Production is unchanged.
