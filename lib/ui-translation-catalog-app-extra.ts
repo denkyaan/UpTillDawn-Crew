@@ -2,6 +2,10 @@ export type ExtraCatalogLocale = 'nl' | 'fr' | 'en' | 'de'
 type Row = { fr:string; en:string; de:string }
 
 export const APP_EXTRA_TRANSLATIONS: Record<string,Row> = {
+  "Factuurregels in één keer importeren":{fr:"Importer les lignes de facture en une fois",en:"Import invoice lines in bulk",de:"Rechnungspositionen gesammelt importieren"},
+  "Importer les lignes de facture en une fois":{fr:"Importer les lignes de facture en une fois",en:"Import invoice lines in bulk",de:"Rechnungspositionen gesammelt importieren"},
+  "Import invoice lines in bulk":{fr:"Importer les lignes de facture en une fois",en:"Import invoice lines in bulk",de:"Rechnungspositionen gesammelt importieren"},
+  "Rechnungspositionen gesammelt importieren":{fr:"Importer les lignes de facture en une fois",en:"Import invoice lines in bulk",de:"Rechnungspositionen gesammelt importieren"},
   "Bankafschriften en factuurafstemming":{fr:"Relevés bancaires et rapprochement des factures",en:"Bank statements and invoice matching",de:"Kontoauszüge und Rechnungsabgleich"},
   "Relevés bancaires et rapprochement des factures":{fr:"Relevés bancaires et rapprochement des factures",en:"Bank statements and invoice matching",de:"Kontoauszüge und Rechnungsabgleich"},
   "Bank statements and invoice matching":{fr:"Relevés bancaires et rapprochement des factures",en:"Bank statements and invoice matching",de:"Kontoauszüge und Rechnungsabgleich"},
