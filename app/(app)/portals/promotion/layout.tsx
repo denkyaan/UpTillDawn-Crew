@@ -1,4 +1,5 @@
 import {PromotionBottomNav} from "@/components/promotion/promotion-bottom-nav"
+import {PromotionFloatingChatButton} from "@/components/promotion/promotion-floating-chat-button"
 import {getCurrentUser} from "@/lib/actions/auth"
 import {redirect} from "next/navigation"
 import {requestUiLocale} from "@/lib/server-locale"
@@ -14,5 +15,5 @@ export default async function PromotionLayout({children}:{children:React.ReactNo
   if(error||!canOpenPortal("promotion",(data??[]) as PortalAssignment[],{approved:current.approved,blocked:current.account_blocked===true}))redirect("/portals")
  }
  const locale=await requestUiLocale()
- return <><div className="pb-24">{children}</div><PromotionBottomNav locale={locale}/></>
+ return <><div className="pb-24">{children}</div><PromotionBottomNav locale={locale}/><PromotionFloatingChatButton/></>
 }

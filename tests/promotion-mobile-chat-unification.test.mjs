@@ -1,0 +1,42 @@
+import test from 'node:test'
+import assert from 'node:assert/strict'
+import {readFileSync} from 'node:fs'
+const read=path=>readFileSync(new URL('../'+path,import.meta.url),'utf8')
+
+test('Promotion has a single notifications entry in the shared topbar',()=>{
+ const nav=read('components/promotion/promotion-bottom-nav.tsx')
+ const topbar=read('components/layout/topbar.tsx')
+ assert.match(nav,/grid grid-cols-4 gap-0\.5/)
+ assert.doesNotMatch(nav,/href:"\/portals\/promotion\/notifications"/)
+ assert.doesNotMatch(nav,/icon:Bell/)
+ assert.match(topbar,/promotion\?"\/portals\/promotion\/notifications"/)
+ for(const path of ['/portals/promotion','/portals/promotion/tasks','/portals/promotion/chats','/portals/promotion/staff'])
+  assert.ok(nav.includes('href:"'+path+'"'),path)
+})
+test('Promotion retains a draggable floating chat button without duplicating it inside chat',()=>{
+ const layout=read('app/(app)/portals/promotion/layout.tsx')
+ const wrapper=read('components/promotion/promotion-floating-chat-button.tsx')
+ const shared=read('components/layout/floating-chat-button.tsx')
+ assert.match(layout,/<PromotionFloatingChatButton\/>/)
+ assert.match(wrapper,/usePathname\(\)/)
+ assert.match(wrapper,/pathname==="\/portals\/promotion\/chats"/)
+ assert.match(wrapper,/<FloatingChatButton href="\/portals\/promotion\/chats"\/>/)
+ assert.match(shared,/touch-none select-none/)
+ assert.match(shared,/env\(safe-area-inset-bottom\)/)
+})
+test('Promotion chat uses the shared conversation layout with accessible mobile composer',()=>{
+ const chat=read('components/promotion/promotion-chats-client.tsx')
+ const page=read('app/(app)/portals/promotion/chats/page.tsx')
+ assert.match(chat,/flex h-\[calc\(100dvh-21rem-env\(safe-area-inset-bottom\)\)\]/)
+ assert.match(chat,/min-h-0 flex-1 space-y-3 overflow-y-auto/)
+ assert.match(chat,/ref=\{viewportRef\}/)
+ assert.match(chat,/<textarea rows=\{2\}/)
+ assert.match(chat,/data-action="promotion-chat-send"/)
+ assert.match(chat,/rounded-2xl px-3\.5 py-2\.5 shadow-sm/)
+ assert.match(chat,/data-promotion-room=\{r\}/)
+ assert.match(chat,/room==="announcements"&&!isAdmin/)
+ assert.match(chat,/promotion_chat_messages/)
+ assert.match(chat,/followLatest\.current/)
+ assert.doesNotMatch(chat,/h-\[55vh\]/)
+ assert.match(page,/<PromotionChatsClient locale=\{locale\}/)
+})
