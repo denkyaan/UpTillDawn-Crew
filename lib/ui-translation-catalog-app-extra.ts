@@ -2,6 +2,10 @@ export type ExtraCatalogLocale = 'nl' | 'fr' | 'en' | 'de'
 type Row = { fr:string; en:string; de:string }
 
 export const APP_EXTRA_TRANSLATIONS: Record<string,Row> = {
+  "Factuur of bon herkennen (OCR)":{fr:"Reconnaissance de facture ou reçu (OCR)",en:"Recognize invoice or receipt (OCR)",de:"Rechnung oder Beleg erkennen (OCR)"},
+  "Reconnaissance de facture ou reçu (OCR)":{fr:"Reconnaissance de facture ou reçu (OCR)",en:"Recognize invoice or receipt (OCR)",de:"Rechnung oder Beleg erkennen (OCR)"},
+  "Recognize invoice or receipt (OCR)":{fr:"Reconnaissance de facture ou reçu (OCR)",en:"Recognize invoice or receipt (OCR)",de:"Rechnung oder Beleg erkennen (OCR)"},
+  "Rechnung oder Beleg erkennen (OCR)":{fr:"Reconnaissance de facture ou reçu (OCR)",en:"Recognize invoice or receipt (OCR)",de:"Rechnung oder Beleg erkennen (OCR)"},
   "Algemene chat evenementen":{fr:"Chat général événements",en:"General events chat",de:"Allgemeiner Event-Chat"},
   "Admin · Administratie":{fr:"Admin · Administration",en:"Admin · Administration",de:"Admin · Verwaltung"},
   "Algemene chat promotie":{fr:"Chat général promotion",en:"General promotion chat",de:"Allgemeiner Promotion-Chat"},
