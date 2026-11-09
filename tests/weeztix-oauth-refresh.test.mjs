@@ -75,7 +75,7 @@ test("browser never supplies refresh tokens and OAuth status does not expose the
  assert.match(ui,/weeztixOauthReady/)
  assert.match(ui,/oauthConnect/)
  assert.match(ui,/weeztix\/start/)
- assert.match(ui,/useEffect\(\(\)=>\{setOauthResult/)
+ assert.match(ui,/useSyncExternalStore\(subscribeLocation,readOAuthResult,serverOAuthResult\)/)
  assert.match(store,/previous\.WEEZTIX_REFRESH_TOKEN/)
  assert.match(store,/weeztixOAuthReadiness/)
 })

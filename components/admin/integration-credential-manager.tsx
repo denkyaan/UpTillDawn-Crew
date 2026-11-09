@@ -1,6 +1,6 @@
 "use client"
 
-import {useEffect,useState} from "react"
+import {useEffect,useState,useSyncExternalStore} from "react"
 import type {SupportedUiLocale} from "@/lib/locale-preferences"
 import {activeUiLocale,LANGUAGE_APPLIED_EVENT} from "@/lib/locale-preferences"
 import {integrationFields,integrationProviders,type IntegrationProvider,type IntegrationSummary} from "@/lib/administration/integration-credentials"
@@ -24,12 +24,16 @@ type State={integrations:IntegrationSummary[];audit:AuditEvent[];secureStoreAvai
 const endpoint="/api/administration/integrations"
 const defaults:Record<string,string>={DOCUMENSO_BASE_URL:"https://app.documenso.com",WEEZTIX_SCANNING_ENABLED:"false"}
 const errorCodes={general:"unavailable",invalid:"invalid",missingKey:"keyMissing",denied:"forbidden"} as const
+function subscribeLocation(){return ()=>{}}
+function readOAuthResult(){return new URLSearchParams(window.location.search).get("weeztix_oauth")}
+function serverOAuthResult(){return null}
+
 export function IntegrationCredentialManager({initialLocale}:{initialLocale:SupportedUiLocale}){
  const [locale,setLocale]=useState<SupportedUiLocale>(initialLocale)
  const [provider,setProvider]=useState<IntegrationProvider>("sumup")
  const [fields,setFields]=useState<Record<string,string>>({})
  const [state,setState]=useState<State|null>(null)
- const [oauthResult]=useState<string|null>(()=>typeof window==="undefined"?null:new URLSearchParams(window.location.search).get("weeztix_oauth"))
+ const oauthResult=useSyncExternalStore(subscribeLocation,readOAuthResult,serverOAuthResult)
  const [busy,setBusy]=useState(false)
  const [confirm,setConfirm]=useState(false)
  const [notice,setNotice]=useState("")
