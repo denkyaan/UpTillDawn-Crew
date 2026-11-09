@@ -9,10 +9,10 @@ import { RoleManagementForm, RoleQuickAction } from './role-management-form'
 export const dynamic = 'force-dynamic'
 
 const copy={
- nl:{title:'Portaalrollen',description:'Goedkeuringen en rollen per portaal. Een account kan meerdere rollen hebben.',empty:'Er zijn geen roltoewijzingen op deze pagina.',error:'Roltoewijzingen konden niet worden geladen.',back:'Terug naar portalen',person:'Gebruiker',portal:'Portaal',role:'Rol',status:'Status',approved:'Goedgekeurd',pending:'In afwachting',revoked:'Ingetrokken',manage:'Portaalrollen beheren',action:'Actie',page:'Pagina',previous:'Vorige',next:'Volgende',partial:'De eerste 500 goedgekeurde medewerkers zijn beschikbaar in het toewijzingsformulier.'},
- fr:{title:'Rôles des portails',description:'Autorisations et rôles par portail. Un compte peut posséder plusieurs rôles.',empty:'Aucune attribution de rôle sur cette page.',error:'Impossible de charger les rôles.',back:'Retour aux portails',person:'Utilisateur',portal:'Portail',role:'Rôle',status:'Statut',approved:'Approuvé',pending:'En attente',revoked:'Révoqué',manage:'Gérer les rôles',action:'Action',page:'Page',previous:'Précédent',next:'Suivant',partial:'Les 500 premiers membres approuvés sont disponibles dans le formulaire.'},
- en:{title:'Portal roles',description:'Approvals and roles by portal. One account may hold multiple roles.',empty:'No role assignments on this page.',error:'Unable to load portal roles.',back:'Back to portals',person:'User',portal:'Portal',role:'Role',status:'Status',approved:'Approved',pending:'Pending',revoked:'Revoked',manage:'Manage portal roles',action:'Action',page:'Page',previous:'Previous',next:'Next',partial:'The first 500 approved staff members are available in the assignment form.'},
- de:{title:'Portalrollen',description:'Genehmigungen und Rollen je Portal. Ein Konto kann mehrere Rollen haben.',empty:'Keine Rollenzuweisungen auf dieser Seite.',error:'Portalrollen konnten nicht geladen werden.',back:'Zurück zu Portalen',person:'Benutzer',portal:'Portal',role:'Rolle',status:'Status',approved:'Genehmigt',pending:'Ausstehend',revoked:'Widerrufen',manage:'Portalrollen verwalten',action:'Aktion',page:'Seite',previous:'Zurück',next:'Weiter',partial:'Die ersten 500 genehmigten Mitarbeitenden stehen im Formular zur Verfügung.'},
+ nl:{heading:'Portaalrollen',intro:'Goedkeuringen en rollen per portaal. Een account kan meerdere rollen hebben.',empty:'Er zijn geen roltoewijzingen op deze pagina.',error:'Roltoewijzingen konden niet worden geladen.',back:'Terug naar portalen',person:'Gebruiker',portal:'Portaal',role:'Rol',status:'Status',approved:'Goedgekeurd',pending:'In afwachting',revoked:'Ingetrokken',manage:'Portaalrollen beheren',action:'Actie',page:'Pagina',previous:'Vorige',next:'Volgende',partial:'De eerste 500 goedgekeurde medewerkers zijn beschikbaar in het toewijzingsformulier.'},
+ fr:{heading:'Rôles des portails',intro:'Autorisations et rôles par portail. Un compte peut posséder plusieurs rôles.',empty:'Aucune attribution de rôle sur cette page.',error:'Impossible de charger les rôles.',back:'Retour aux portails',person:'Utilisateur',portal:'Portail',role:'Rôle',status:'Statut',approved:'Approuvé',pending:'En attente',revoked:'Révoqué',manage:'Gérer les rôles',action:'Action',page:'Page',previous:'Précédent',next:'Suivant',partial:'Les 500 premiers membres approuvés sont disponibles dans le formulaire.'},
+ en:{heading:'Portal roles',intro:'Approvals and roles by portal. One account may hold multiple roles.',empty:'No role assignments on this page.',error:'Unable to load portal roles.',back:'Back to portals',person:'User',portal:'Portal',role:'Role',status:'Status',approved:'Approved',pending:'Pending',revoked:'Revoked',manage:'Manage portal roles',action:'Action',page:'Page',previous:'Previous',next:'Next',partial:'The first 500 approved staff members are available in the assignment form.'},
+ de:{heading:'Portalrollen',intro:'Genehmigungen und Rollen je Portal. Ein Konto kann mehrere Rollen haben.',empty:'Keine Rollenzuweisungen auf dieser Seite.',error:'Portalrollen konnten nicht geladen werden.',back:'Zurück zu Portalen',person:'Benutzer',portal:'Portal',role:'Rolle',status:'Status',approved:'Genehmigt',pending:'Ausstehend',revoked:'Widerrufen',manage:'Portalrollen verwalten',action:'Aktion',page:'Seite',previous:'Zurück',next:'Weiter',partial:'Die ersten 500 genehmigten Mitarbeitenden stehen im Formular zur Verfügung.'},
 } as const
 const portalNames={
  events:{nl:'Evenementen',fr:'Événements',en:'Events',de:'Veranstaltungen'},
@@ -32,14 +32,14 @@ export default async function PortalRolesPage({searchParams}:{searchParams:Promi
  if(!current)redirect('/login')
  const locale=await requestUiLocale()
  const t=copy[locale]
- const canManage=current.isOwner||(current.realIsAdmin&&current.approved&&!current.account_blocked)
+ const canManage = current.isOwner || (current.realIsAdmin && current.approved && !current.account_blocked)
  const db=await createClient()
  const page=listPage((await searchParams).page,100000)
  const pageSize=50
  const from=(page-1)*pageSize
  let query=db.from('portal_role_assignments')
   .select('id,user_id,portal,role,approved,revoked_at',{count:'exact'})
- if(!canManage)query=query.eq('user_id',current.id)
+ if (!canManage) query = query.eq('user_id', current.id)
  const {data,error,count}=await query.order('created_at',{ascending:false}).order('id',{ascending:false})
   .range(from,from+pageSize-1)
  const {data:users,error:usersError}=canManage?await db.from('profiles')
@@ -49,8 +49,8 @@ export default async function PortalRolesPage({searchParams}:{searchParams:Promi
  const pageHref=(target:number)=>'/portals/roles?page='+target
  return <main className="mx-auto max-w-5xl space-y-5 p-4 pb-28 md:p-8">
   <Link href="/portals" className="text-sm font-semibold text-violet-400">{t.back}</Link>
-  <h1 className="text-2xl font-bold">{t.title}</h1>
-  <p className="text-sm text-muted-foreground">{t.description}</p>
+  <h1 className="text-2xl font-bold">{t.heading}</h1>
+  <p className="text-sm text-muted-foreground">{t.intro}</p>
   {canManage&&<section className="space-y-3 rounded-xl border p-4">
    <h2 className="font-semibold">{t.manage}</h2>
    {usersError?<p role="alert" className="text-sm">{t.error}</p>:
@@ -68,7 +68,7 @@ export default async function PortalRolesPage({searchParams}:{searchParams:Promi
      <td className="p-3">{row.revoked_at?t.revoked:row.approved?t.approved:t.pending}</td>
      {canManage&&<td className="p-3"><RoleQuickAction userId={row.user_id}
        portal={row.portal} role={row.role}
-       action={row.revoked_at?'assign_approved':row.approved?'revoke':'approve'} locale={locale}/></td>}
+       action={row.revoked_at ? "assign_approved" : row.approved ? "revoke" : "approve"} locale={locale}/></td>}
     </tr>)}</tbody>
    </table></div>}
   {!error&&count!==null&&(page>1||count>page*pageSize)&&<nav aria-label={t.page} className="flex items-center justify-between gap-3 rounded-xl border p-3">
