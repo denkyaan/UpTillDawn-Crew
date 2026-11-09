@@ -41,8 +41,9 @@ export default async function Page({searchParams}:{searchParams?:Promise<{page?:
 
   const hasNext=(data?.length??0)>pageSize
   const visibleRows=data?.slice(0,pageSize)
-  const prefix=params.scope==='administration'?'/portals/administration/modules/notifications':'/notifications'
-  const scopedSuffix=params.scope==='administration'?'&scope=administration':''
+  const scope=params.scope==='administration'?'administration':params.scope==='promotion'?'promotion':null
+  const prefix=scope==='administration'?'/portals/administration/modules/notifications':scope==='promotion'?'/portals/promotion/notifications':'/notifications'
+  const scopedSuffix=scope?'&scope='+scope:''
   const pageHref=(target:number)=>prefix+'?page='+target+'&view='+selectedView+scopedSuffix
   const viewHref=(view:'unread'|'all')=>prefix+'?view='+view+scopedSuffix
   const labels={
