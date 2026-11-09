@@ -15,6 +15,7 @@ import TicketImportPreview from "@/components/administration/ticket-import-previ
 import MappedTicketImportPreview from "@/components/administration/mapped-ticket-import-preview"
 import SepaExport from "@/components/administration/sepa-export"
 import ProviderTransactionWorkspace from "@/components/administration/provider-transaction-workspace"
+import BankStatementWorkspace from "@/components/administration/bank-statement-workspace"
 import { notFound, redirect } from "next/navigation"
 import { requestUiLocale } from "@/lib/server-locale"
 import { administrationModules } from "@/lib/administration/modules"
@@ -223,7 +224,8 @@ export default async function AdministrationModulePage({params,searchParams}:{pa
    <p className="mt-3 text-xs text-muted-foreground">{({nl:"50 facturen per pagina; bedragen volgen de geregistreerde documentwaarden.",fr:"50 factures par page ; montants selon les documents enregistrés.",en:"50 invoices per page; amounts reflect recorded document values.",de:"50 Rechnungen pro Seite; Beträge entsprechen den gespeicherten Dokumentwerten."} as const)[locale]}</p>
   </section>}
   {slug==="banking"&&<SepaExport locale={locale}/>} 
-  {slug==="banking"&&<ProviderTransactionWorkspace locale={locale} events={providerTransactionEventRows?.error?[]:providerTransactionEventRows?.data??[]}/>}
+  {slug==="banking"&&<ProviderTransactionWorkspace locale={locale} events={providerTransactionEventRows?.error?[]:providerTransactionEventRows?.data??[]}/>} 
+  {slug==="banking"&&<BankStatementWorkspace locale={locale}/>}
   {slug==="banking"&&<section className="rounded-2xl border bg-card p-5">
    <h2 className="text-lg font-semibold">{({nl:"Betalingen en herinneringen",fr:"Paiements et rappels",en:"Payments and reminders",de:"Zahlungen und Mahnungen"} as const)[locale]}</h2>
    {paymentRows?.error||reminderRows?.error?<p role="alert" className="mt-3 text-sm text-muted-foreground">{({nl:"Betalingsgegevens konden niet volledig worden geladen.",fr:"Impossible de charger toutes les données de paiement.",en:"Unable to load all payment records.",de:"Zahlungsdaten konnten nicht vollständig geladen werden."} as const)[locale]}</p>:<div className="mt-3 grid gap-3 sm:grid-cols-2"><div className="rounded-xl border p-4"><p className="text-2xl font-bold">{paymentRows?.data?.length??0}</p><p className="text-sm text-muted-foreground">{({nl:"Betalingsrecords (max. 50)",fr:"Paiements (max. 50)",en:"Payment records (max 50)",de:"Zahlungsdatensätze (max. 50)"} as const)[locale]}</p></div><div className="rounded-xl border p-4"><p className="text-2xl font-bold">{reminderRows?.data?.length??0}</p><p className="text-sm text-muted-foreground">{({nl:"Herinneringen (max. 50)",fr:"Rappels (max. 50)",en:"Reminders (max 50)",de:"Mahnungen (max. 50)"} as const)[locale]}</p></div></div>}

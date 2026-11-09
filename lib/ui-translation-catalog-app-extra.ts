@@ -2,6 +2,10 @@ export type ExtraCatalogLocale = 'nl' | 'fr' | 'en' | 'de'
 type Row = { fr:string; en:string; de:string }
 
 export const APP_EXTRA_TRANSLATIONS: Record<string,Row> = {
+  "Bankafschriften en factuurbetalingen afstemmen":{fr:"Rapprochement bancaire et paiements de factures",en:"Reconcile bank statements and invoice payments",de:"Kontoauszüge und Rechnungszahlungen abgleichen"},
+  "Rapprochement bancaire et paiements de factures":{fr:"Rapprochement bancaire et paiements de factures",en:"Reconcile bank statements and invoice payments",de:"Kontoauszüge und Rechnungszahlungen abgleichen"},
+  "Reconcile bank statements and invoice payments":{fr:"Rapprochement bancaire et paiements de factures",en:"Reconcile bank statements and invoice payments",de:"Kontoauszüge und Rechnungszahlungen abgleichen"},
+  "Kontoauszüge und Rechnungszahlungen abgleichen":{fr:"Rapprochement bancaire et paiements de factures",en:"Reconcile bank statements and invoice payments",de:"Kontoauszüge und Rechnungszahlungen abgleichen"},
   "Providerbetalingen en terugbetalingen":{fr:"Paiements et remboursements fournisseur",en:"Provider payments and refunds",de:"Anbieterzahlungen und Rückerstattungen"},
   "Paiements et remboursements fournisseur":{fr:"Paiements et remboursements fournisseur",en:"Provider payments and refunds",de:"Anbieterzahlungen und Rückerstattungen"},
   "Provider payments and refunds":{fr:"Paiements et remboursements fournisseur",en:"Provider payments and refunds",de:"Anbieterzahlungen und Rückerstattungen"},
