@@ -39,3 +39,10 @@ test('Admin overview has no duplicate shortcuts, floating chat or separate inlin
  assert.doesNotMatch(crew,/PersonnelPortalRoles/)
  assert.doesNotMatch(crew,/form action=\{setPersonnelRole\}/)
 })
+
+test('Admin portal chooser never exposes a second role mutation entry',()=>{
+ const chooser=read('app/(app)/portals/page.tsx')
+ const legacy=read('app/(app)/portals/roles/page.tsx')
+ assert.match(chooser,/!current\.realIsAdmin&&<Link href="\/portals\/roles"/)
+ assert.match(legacy,/if\(current\.realIsAdmin && current\.approved && !current\.account_blocked\)redirect\('\/personnel'\)/)
+})
