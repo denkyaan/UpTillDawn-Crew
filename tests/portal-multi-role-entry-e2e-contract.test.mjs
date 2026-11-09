@@ -37,7 +37,7 @@ test('permanent admins agree with actual portal layout access; owner exception i
 test('portal chooser is explicit for multi-role accounts and all links update portal cookie',()=>{
  const chooser=read('app/(app)/portals/page.tsx')
  const switchRoute=read('app/(app)/portals/switch/[portal]/route.ts')
- assert.match(chooser,/if\(portals\.length===1\)redirect\('\/portals\/switch\/'+portals\[0\]\)/)
+ assert.ok(chooser.includes("if(portals.length===1)redirect('/portals/switch/'+portals[0])"))
  assert.doesNotMatch(chooser,/portals\.length\s*>\s*1\s*&&\s*last/)
  assert.match(chooser,/href=\{'\/portals\/switch\/'\+portal\}/)
  assert.match(chooser,/userVisiblePortals\(/)
