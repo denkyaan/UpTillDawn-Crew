@@ -61,5 +61,5 @@ test("local OCR ships pinned worker/WASM/PDF/language assets on same-origin and 
  assert.match(sw,/cache\.put\(event\.request,response\.clone\(\)\)/)
  assert.match(deploy,/Verify self-hosted OCR assets built for main/)
  assert.match(deploy,/Verify local-first OCR assets are reachable on main/)
- assert.match(deploy,/vars\.ENABLE_CLOUDMERSIVE_OCR_TEST == 'true'/)
+ assert.doesNotMatch(deploy,/Live Cloudmersive OCR test|api\/diagnostics\/cloudmersive-ocr/)
 })
