@@ -2,6 +2,10 @@ export type ExtraCatalogLocale = 'nl' | 'fr' | 'en' | 'de'
 type Row = { fr:string; en:string; de:string }
 
 export const APP_EXTRA_TRANSLATIONS: Record<string,Row> = {
+  "Provideruitbetalingen koppelen aan bank":{fr:"Rapprocher les virements fournisseurs",en:"Match provider payouts to bank credits",de:"Anbieterauszahlungen mit Bankgutschriften abgleichen"},
+  "Rapprocher les virements fournisseurs":{fr:"Rapprocher les virements fournisseurs",en:"Match provider payouts to bank credits",de:"Anbieterauszahlungen mit Bankgutschriften abgleichen"},
+  "Match provider payouts to bank credits":{fr:"Rapprocher les virements fournisseurs",en:"Match provider payouts to bank credits",de:"Anbieterauszahlungen mit Bankgutschriften abgleichen"},
+  "Anbieterauszahlungen mit Bankgutschriften abgleichen":{fr:"Rapprocher les virements fournisseurs",en:"Match provider payouts to bank credits",de:"Anbieterauszahlungen mit Bankgutschriften abgleichen"},
   "Factuurregels in één keer importeren":{fr:"Importer les lignes de facture en une fois",en:"Import invoice lines in bulk",de:"Rechnungspositionen gesammelt importieren"},
   "Importer les lignes de facture en une fois":{fr:"Importer les lignes de facture en une fois",en:"Import invoice lines in bulk",de:"Rechnungspositionen gesammelt importieren"},
   "Import invoice lines in bulk":{fr:"Importer les lignes de facture en une fois",en:"Import invoice lines in bulk",de:"Rechnungspositionen gesammelt importieren"},
