@@ -1,4 +1,6 @@
 import { createClient } from '@/lib/supabase/crew-server'
+import { requestUiLocale } from '@/lib/server-locale'
+import { translateRuntimeUi } from '@/lib/ui-translation-runtime'
 import { archiveEventDocument, createEventDocument, createInventoryTextEntry } from '@/lib/actions/uptilldawn'
 import { shouldCacheDocumentOffline, type EventDocumentKind } from '@/lib/document-access'
 import type { Tables } from '@/types/crew-database'
@@ -43,6 +45,7 @@ export async function EventDocumentsPanel({
   workplaceId?:string
   showTextEntry?:boolean
 }){
+  const locale=await requestUiLocale()
   const s=await createClient()
   let query=s
     .from('event_documents')
@@ -142,7 +145,7 @@ export async function EventDocumentsPanel({
                 <p className="mt-2 text-xs text-muted-foreground">{document.file_name} · {formatBytes(Number(document.file_size_bytes))}</p>
               </div>
               <div className="flex flex-wrap gap-2">
-                {url&&<a href={url} target="_blank" rel="noreferrer" className="rounded-lg border px-3 py-2 text-sm font-bold">OPENEN</a>}
+                {url?<a href={url} target="_blank" rel="noreferrer" className="rounded-lg border px-3 py-2 text-sm font-bold">OPENEN</a>:<span role="status" className="rounded-lg border border-amber-500/30 px-3 py-2 text-sm">{translateRuntimeUi("Bijlage wacht op veiligheidscontrole",locale)}</span>}
                 {canManage&&<form action={archiveEventDocument}>
                   <input type="hidden" name="document_id" value={document.id}/>
                   <button className="rounded-lg border border-red-500/40 px-3 py-2 text-sm font-bold text-red-600">VERWIJDEREN</button>
