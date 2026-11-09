@@ -1,4 +1,5 @@
 import type {SupabaseClient} from '@supabase/supabase-js'
+import Link from 'next/link'
 import {redirect} from 'next/navigation'
 import {revalidatePath} from 'next/cache'
 import {administrationAccess} from '@/lib/administration/access'
@@ -6,10 +7,10 @@ import {administrationDeadline} from '@/lib/administration/deadline'
 import type {SupportedUiLocale} from '@/lib/locale-preferences'
 
 const copy={
- nl:{title:'Dossiers en deadlines',name:'Titel',details:'Toelichting',deadline:'Deadline (Belgische datum)',event:'Evenement',none:'Zonder evenement',save:'Wijzigingen opslaan',edit:'Dossier bewerken',create:'Dossier aanmaken',submit:'Voorleggen aan Admin',approve:'Goedkeuren',reject:'Afwijzen',complete:'Afhandelen',reason:'Reden bij afwijzing',empty:'Nog geen dossiers',error:'Dossiers konden niet worden geladen.',open:'Open',submitted:'Ter goedkeuring',approved:'Goedgekeurd',rejected:'Afgewezen',completed:'Afgehandeld',cancelled:'Geannuleerd',intro:'Leg afspraken en verplichtingen vast. Een Admin beslist over goedkeuring; na goedkeuring kan Administratie het dossier afhandelen.'},
- fr:{title:'Dossiers et échéances',name:'Titre',details:'Détails',deadline:'Échéance (date belge)',event:'Événement',none:'Sans événement',save:'Enregistrer les modifications',edit:'Modifier le dossier',create:'Créer un dossier',submit:'Soumettre à l’Admin',approve:'Approuver',reject:'Refuser',complete:'Terminer',reason:'Motif du refus',empty:'Aucun dossier',error:'Impossible de charger les dossiers.',open:'Ouvert',submitted:'À approuver',approved:'Approuvé',rejected:'Refusé',completed:'Terminé',cancelled:'Annulé',intro:'Enregistrez les accords et obligations. Un Admin approuve le dossier; l’Administration peut ensuite le terminer.'},
- en:{title:'Cases and deadlines',name:'Title',details:'Details',deadline:'Deadline (Belgian date)',event:'Event',none:'No event',save:'Save changes',edit:'Edit case',create:'Create case',submit:'Submit to Admin',approve:'Approve',reject:'Reject',complete:'Complete',reason:'Rejection reason',empty:'No cases yet',error:'Unable to load cases.',open:'Open',submitted:'Awaiting approval',approved:'Approved',rejected:'Rejected',completed:'Completed',cancelled:'Cancelled',intro:'Record agreements and obligations. An Admin approves the case; Administration can then complete it.'},
- de:{title:'Vorgänge und Fristen',name:'Titel',details:'Details',deadline:'Frist (belgisches Datum)',event:'Veranstaltung',none:'Ohne Veranstaltung',save:'Änderungen speichern',edit:'Vorgang bearbeiten',create:'Vorgang erstellen',submit:'Admin vorlegen',approve:'Genehmigen',reject:'Ablehnen',complete:'Abschließen',reason:'Ablehnungsgrund',empty:'Noch keine Vorgänge',error:'Vorgänge konnten nicht geladen werden.',open:'Offen',submitted:'Zur Freigabe',approved:'Genehmigt',rejected:'Abgelehnt',completed:'Abgeschlossen',cancelled:'Storniert',intro:'Vereinbarungen und Pflichten erfassen. Ein Admin genehmigt den Vorgang; anschließend kann die Verwaltung ihn abschließen.'},
+ nl:{filter:'Status filteren',all:'Alle statussen',previous:'Vorige',next:'Volgende',page:'Pagina',reviewer:'Een andere Admin moet het dossier beoordelen.',title:'Dossiers en deadlines',name:'Titel',details:'Toelichting',deadline:'Deadline (Belgische datum)',event:'Evenement',none:'Zonder evenement',save:'Wijzigingen opslaan',edit:'Dossier bewerken',create:'Dossier aanmaken',submit:'Voorleggen aan Admin',approve:'Goedkeuren',reject:'Afwijzen',complete:'Afhandelen',reason:'Reden bij afwijzing',empty:'Nog geen dossiers',error:'Dossiers konden niet worden geladen.',open:'Open',submitted:'Ter goedkeuring',approved:'Goedgekeurd',rejected:'Afgewezen',completed:'Afgehandeld',cancelled:'Geannuleerd',intro:'Leg afspraken en verplichtingen vast. Een Admin beslist over goedkeuring; na goedkeuring kan Administratie het dossier afhandelen.'},
+ fr:{filter:'Filtrer le statut',all:'Tous les statuts',previous:'Précédent',next:'Suivant',page:'Page',reviewer:'Un autre administrateur doit examiner ce dossier.',title:'Dossiers et échéances',name:'Titre',details:'Détails',deadline:'Échéance (date belge)',event:'Événement',none:'Sans événement',save:'Enregistrer les modifications',edit:'Modifier le dossier',create:'Créer un dossier',submit:'Soumettre à l’Admin',approve:'Approuver',reject:'Refuser',complete:'Terminer',reason:'Motif du refus',empty:'Aucun dossier',error:'Impossible de charger les dossiers.',open:'Ouvert',submitted:'À approuver',approved:'Approuvé',rejected:'Refusé',completed:'Terminé',cancelled:'Annulé',intro:'Enregistrez les accords et obligations. Un Admin approuve le dossier; l’Administration peut ensuite le terminer.'},
+ en:{filter:'Filter status',all:'All statuses',previous:'Previous',next:'Next',page:'Page',reviewer:'A different Admin must review this case.',title:'Cases and deadlines',name:'Title',details:'Details',deadline:'Deadline (Belgian date)',event:'Event',none:'No event',save:'Save changes',edit:'Edit case',create:'Create case',submit:'Submit to Admin',approve:'Approve',reject:'Reject',complete:'Complete',reason:'Rejection reason',empty:'No cases yet',error:'Unable to load cases.',open:'Open',submitted:'Awaiting approval',approved:'Approved',rejected:'Rejected',completed:'Completed',cancelled:'Cancelled',intro:'Record agreements and obligations. An Admin approves the case; Administration can then complete it.'},
+ de:{filter:'Status filtern',all:'Alle Status',previous:'Zurück',next:'Weiter',page:'Seite',reviewer:'Ein anderer Admin muss den Vorgang prüfen.',title:'Vorgänge und Fristen',name:'Titel',details:'Details',deadline:'Frist (belgisches Datum)',event:'Veranstaltung',none:'Ohne Veranstaltung',save:'Änderungen speichern',edit:'Vorgang bearbeiten',create:'Vorgang erstellen',submit:'Admin vorlegen',approve:'Genehmigen',reject:'Ablehnen',complete:'Abschließen',reason:'Ablehnungsgrund',empty:'Noch keine Vorgänge',error:'Vorgänge konnten nicht geladen werden.',open:'Offen',submitted:'Zur Freigabe',approved:'Genehmigt',rejected:'Abgelehnt',completed:'Abgeschlossen',cancelled:'Storniert',intro:'Vereinbarungen und Pflichten erfassen. Ein Admin genehmigt den Vorgang; anschließend kann die Verwaltung ihn abschließen.'},
 } as const
 type Kind='logistics'|'permits'|'tasks'
 async function saveCase(form:FormData){
@@ -35,6 +36,12 @@ async function saveCase(form:FormData){
  }else{
   if(!/^[0-9a-f-]{36}$/i.test(id)||!['submitted','approved','rejected','completed'].includes(action))throw Error('Invalid case transition')
   if(['approved','rejected'].includes(action)&&!access.user.realIsAdmin)throw Error('Admin required')
+  if(['approved','rejected'].includes(action)){
+   const {data:caseRow,error:lookupError}=await db.from('admin_operational_obligations')
+    .select('created_by').eq('id',id).eq('kind',kind).eq('status','submitted').maybeSingle()
+   if(lookupError||!caseRow||caseRow.created_by===access.user.id)
+    throw Error('Independent Admin reviewer required')
+  }
   const status=String(form.get('status')??''),note=String(form.get('note')??'').trim()
   if(note.length>2000||(action==='rejected'&&note.length<3))throw Error('Rejection reason required')
   const {data,error}=await db.from('admin_operational_obligations').update(action==='rejected'?{status:action,review_note:note}:{status:action}).eq('id',id).eq('kind',kind).eq('status',status).eq('updated_at',String(form.get('updated_at')??'')).select('id')
@@ -42,11 +49,21 @@ async function saveCase(form:FormData){
  }
  revalidatePath('/portals/administration/modules/'+kind)
 }
-export default async function OperationalWorkQueue({kind,locale,events}:{kind:Kind;locale:SupportedUiLocale;events:{id:string;name:string}[]}){
+export default async function OperationalWorkQueue({kind,locale,events,page=1,statusFilter='all'}:{kind:Kind;locale:SupportedUiLocale;events:{id:string;name:string}[];page?:number;statusFilter?:string}){
  const access=await administrationAccess()
  if(!access.ok)return null
  const t=copy[locale]
- const {data,error}=await (access.db as unknown as SupabaseClient).from('admin_operational_obligations').select('id,title,details,due_at,status,review_note,created_by,updated_at').eq('kind',kind).order('due_at').limit(100)
+ const knownStatuses=['open','submitted','approved','rejected','completed','cancelled'] as const
+ const status=knownStatuses.some(value=>value===statusFilter)?statusFilter:'all'
+ const currentPage=Number.isSafeInteger(page)&&page>=1&&page<=10000?page:1
+ const pageSize=50
+ const offset=(currentPage-1)*pageSize
+ let query=(access.db as unknown as SupabaseClient).from('admin_operational_obligations')
+  .select('id,title,details,due_at,status,review_note,created_by,updated_at',{count:'exact'}).eq('kind',kind)
+ if(status!=='all')query=query.eq('status',status)
+ const {data,error,count}=await query.order('due_at',{ascending:true})
+  .order('id',{ascending:true}).range(offset,offset+pageSize-1)
+ const pageHref=(target:number,filter=status)=>'/portals/administration/modules/'+kind+'?'+new URLSearchParams({page:String(target),...(filter==='all'?{}:{status:filter})}).toString()
  return <section id="administration-work-queue" className="space-y-4 rounded-2xl border bg-card p-5"><h2 className="text-lg font-semibold">{t.title}</h2><p className="text-sm text-muted-foreground">{t.intro}</p>
   <form action={saveCase} className="grid gap-3 sm:grid-cols-2"><input type="hidden" name="kind" value={kind}/>
    <label className="grid gap-1 text-sm">{t.name}<input required name="title" minLength={3} maxLength={180} className="rounded-lg border bg-background p-2"/></label>
@@ -55,13 +72,22 @@ export default async function OperationalWorkQueue({kind,locale,events}:{kind:Ki
    <label className="grid gap-1 text-sm">{t.details}<textarea name="details" maxLength={4000} className="rounded-lg border bg-background p-2"/></label>
    <button className="rounded-lg bg-violet-600 px-4 py-2 font-semibold text-white">{t.create}</button>
   </form>
+  <nav aria-label={t.filter} className="flex flex-wrap gap-2">{(['all',...knownStatuses] as const).map(value=><Link key={value} href={pageHref(1,value)} aria-current={status===value?'page':undefined} className={'rounded-lg border px-3 py-2 text-xs '+(status===value?'border-violet-500 font-semibold':'')}>{value==='all'?t.all:t[value]}</Link>)}</nav>
   {error?<p role="alert">{t.error}</p>:!data?.length?<p className="text-sm">{t.empty}</p>:<div className="space-y-3">{data.map(row=><article key={row.id} className="rounded-xl border p-3"><div className="flex justify-between gap-2"><strong>{row.title}</strong><span className="text-sm">{t[row.status as keyof typeof t]??row.status}</span></div><p className="mt-1 whitespace-pre-wrap text-sm">{row.details}</p><p className="mt-1 text-xs text-muted-foreground">{new Date(row.due_at).toLocaleDateString(locale,{timeZone:'Europe/Brussels'})}</p>{row.review_note&&<p className="mt-2 text-sm">{row.review_note}</p>}
    {['open','rejected'].includes(row.status)&&<details className="mt-3"><summary className="cursor-pointer text-sm text-violet-400">{t.edit}</summary><form action={saveCase} className="mt-2 grid gap-2"><input type="hidden" name="id" value={row.id}/><input type="hidden" name="kind" value={kind}/><input type="hidden" name="status" value={row.status}/><input type="hidden" name="updated_at" value={row.updated_at}/><label className="grid gap-1 text-sm">{t.name}<input required name="title" minLength={3} maxLength={180} defaultValue={row.title} className="rounded-lg border bg-background p-2"/></label><label className="grid gap-1 text-sm">{t.deadline}<input required type="date" name="deadline" defaultValue={new Intl.DateTimeFormat('en-CA',{timeZone:'Europe/Brussels',year:'numeric',month:'2-digit',day:'2-digit'}).format(new Date(row.due_at))} className="rounded-lg border bg-background p-2"/></label><label className="grid gap-1 text-sm">{t.details}<textarea name="details" maxLength={4000} defaultValue={row.details} className="rounded-lg border bg-background p-2"/></label><button name="action" value="edit" className="rounded-lg border px-3 py-2 text-sm">{t.save}</button></form></details>}
    <form action={saveCase} className="mt-3 flex flex-wrap gap-2"><input type="hidden" name="id" value={row.id}/><input type="hidden" name="kind" value={kind}/><input type="hidden" name="status" value={row.status}/><input type="hidden" name="updated_at" value={row.updated_at}/>
     {['open','rejected'].includes(row.status)&&<button name="action" value="submitted" className="rounded-lg border px-3 py-2 text-sm">{t.submit}</button>}
-    {row.status==='submitted'&&access.user.realIsAdmin&&<><input name="note" maxLength={2000} placeholder={t.reason} className="min-w-40 rounded-lg border bg-background p-2 text-sm"/><button name="action" value="approved" className="rounded-lg border px-3 py-2 text-sm">{t.approve}</button><button name="action" value="rejected" className="rounded-lg border px-3 py-2 text-sm">{t.reject}</button></>}
+    {row.status==='submitted'&&access.user.realIsAdmin&&row.created_by!==access.user.id&&<><input name="note" maxLength={2000} placeholder={t.reason} className="min-w-40 rounded-lg border bg-background p-2 text-sm"/><button name="action" value="approved" className="rounded-lg border px-3 py-2 text-sm">{t.approve}</button><button name="action" value="rejected" className="rounded-lg border px-3 py-2 text-sm">{t.reject}</button></>}
+    {row.status==='submitted'&&access.user.realIsAdmin&&row.created_by===access.user.id&&<p role="note" className="text-xs text-amber-500">{t.reviewer}</p>}
     {row.status==='approved'&&<button name="action" value="completed" className="rounded-lg border px-3 py-2 text-sm">{t.complete}</button>}
    </form>
   </article>)}</div>}
+  {!error&&count!==null&&(currentPage>1||count>currentPage*pageSize)&&<nav aria-label={t.page} className="flex items-center justify-between gap-3 rounded-lg border p-3">
+   <span className="text-sm">{t.page} {currentPage}</span>
+   <div className="flex gap-2">
+    {currentPage>1&&<Link href={pageHref(currentPage-1)} className="rounded-lg border px-3 py-2 text-sm">{t.previous}</Link>}
+    {count>currentPage*pageSize&&<Link href={pageHref(currentPage+1)} className="rounded-lg border px-3 py-2 text-sm">{t.next}</Link>}
+   </div>
+  </nav>}
  </section>
 }
