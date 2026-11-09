@@ -28,7 +28,14 @@ function ChannelAvatar({src,size='lg'}:{src?:string;size?:'sm'|'lg'}){
   </div>
 }
 
-function AttachmentView({attachment,mine}:{attachment:Attachment;mine:boolean}){
+const mediaSecurityCopy={
+ nl:'Bijlage wordt gecontroleerd of is niet beschikbaar.',
+ fr:'Pièce jointe en cours de contrôle ou indisponible.',
+ en:'Attachment is being checked or is unavailable.',
+ de:'Anhang wird geprüft oder ist nicht verfügbar.'
+} as const
+function AttachmentView({attachment,mine,locale}:{attachment:Attachment;mine:boolean;locale:LiveTranslationLocale}){
+  if(!attachment.url)return <p role="status" className="mt-2 rounded-lg border border-amber-500/30 p-2 text-xs">{mediaSecurityCopy[locale]}</p>
   if(attachment.mimeType?.startsWith('video/'))return <video src={attachment.url} controls playsInline className="mt-2 max-h-80 w-full rounded-xl border border-white/15 bg-black"/>
   if(attachment.mimeType?.startsWith('image/'))return <a href={attachment.url} target="_blank" rel="noreferrer" className="mt-2 block overflow-hidden rounded-xl border border-white/15"><img src={attachment.url} alt="Chatmedia" className="max-h-80 w-full object-contain bg-black/20"/></a>
   return <a href={attachment.url} target="_blank" rel="noreferrer" className={`mt-2 flex items-center gap-2 rounded-xl border p-3 text-sm font-bold ${mine?'border-white/20 bg-white/10':'bg-muted/50'}`}><FileText className="h-5 w-5 shrink-0"/><span>Document openen</span></a>
@@ -227,7 +234,7 @@ export function ChatClient({channels,defaultChannelId,userId,crewDirectory,isAdm
         const {data:rows}=await s.from('message_attachments').select('message_id,storage_path,mime_type').in('message_id',ids)
         const signed=await Promise.all((rows||[]).filter(row=>row.storage_path).map(async row=>{
           const {data:url}=await s.storage.from('chat-attachments').createSignedUrl(row.storage_path!,300)
-          return url?.signedUrl?{messageId:row.message_id,url:url.signedUrl,mimeType:row.mime_type}:null
+          return {messageId:row.message_id,url:url?.signedUrl??'',mimeType:row.mime_type}
         }))
         for(const item of signed)if(item)(grouped[item.messageId]||=[]).push({url:item.url,mimeType:item.mimeType})
       }
@@ -440,7 +447,7 @@ export function ChatClient({channels,defaultChannelId,userId,crewDirectory,isAdm
         const {data:attachmentRows}=await s.from('message_attachments').select('message_id,storage_path,mime_type').in('message_id',ids)
         const signed=await Promise.all((attachmentRows||[]).filter(row=>row.storage_path).map(async row=>{
           const {data:url}=await s.storage.from('chat-attachments').createSignedUrl(row.storage_path!,300)
-          return url?.signedUrl?{messageId:row.message_id,url:url.signedUrl,mimeType:row.mime_type}:null
+          return {messageId:row.message_id,url:url?.signedUrl??'',mimeType:row.mime_type}
         }))
         for(const item of signed)if(item)(olderAttachments[item.messageId]||=[]).push({url:item.url,mimeType:item.mimeType})
         const inBatch=new Set(ids)
@@ -478,7 +485,7 @@ export function ChatClient({channels,defaultChannelId,userId,crewDirectory,isAdm
     const {data:attachmentRows}=await s.from('message_attachments').select('message_id,storage_path,mime_type').eq('message_id',messageId)
     const signed=await Promise.all((attachmentRows||[]).filter(row=>row.storage_path).map(async row=>{
       const {data:url}=await s.storage.from('chat-attachments').createSignedUrl(row.storage_path!,300)
-      return url?.signedUrl?{messageId:row.message_id,url:url.signedUrl,mimeType:row.mime_type}:null
+      return {messageId:row.message_id,url:url?.signedUrl??'',mimeType:row.mime_type}
     }))
     for(const item of signed)if(item)(targetAttachments[item.messageId]||=[]).push({url:item.url,mimeType:item.mimeType})
     let replyTarget:Tables<'messages'>|null=null
@@ -783,7 +790,7 @@ export function ChatClient({channels,defaultChannelId,userId,crewDirectory,isAdm
               {moderated
                 ?<p className="whitespace-pre-wrap break-words text-sm leading-relaxed">Bericht verwijderd door beheerder</p>
                 :<p data-no-translate className="whitespace-pre-wrap break-words text-sm leading-relaxed"><MentionedText text={displayBody} people={crewDirectory} userId={userId}/></p>}
-              {!moderated&&current.attachments[message.id]?.map((attachment,index)=><AttachmentView key={index} attachment={attachment} mine={mine}/>)}
+              {!moderated&&current.attachments[message.id]?.map((attachment,index)=><AttachmentView key={index} attachment={attachment} mine={mine} locale={uiLocale}/>)}
               <div className={`mt-1.5 flex flex-wrap items-center justify-end gap-2 text-[10px] ${mine?'text-white/75':'text-muted-foreground'}`}>
                 <time>{timestamp}</time>
                 {isPinned&&<span className="inline-flex items-center gap-0.5 font-semibold"><Pin className="h-3 w-3"/>{translateRuntimeUi('Vastgepind',uiLocale)}</span>}
