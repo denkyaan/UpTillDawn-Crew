@@ -56,6 +56,6 @@ test('bank matching UI is available in all four configured languages',()=>{
  const ui=read('../components/administration/bank-statement-workspace.tsx')
  for(const key of ['nl:','fr:','en:','de:'])assert.ok(ui.includes(key))
  for(const key of ['linkExisting:','linkConfirm:','possibleDuplicate:','ambiguousExisting:']){
-  assert.equal(ui.split(key).length-1,4)
+  assert.equal(ui.split(','+key+'"').length-1,4)
  }
 })
