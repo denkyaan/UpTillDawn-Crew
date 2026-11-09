@@ -241,6 +241,8 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
   const inDedicatedPortal=pathname.startsWith("/portals/promotion")||pathname.startsWith("/portals/administration")
   const showFloatingChat=showChat&&!inDedicatedPortal&&!navigationExpanded&&pathname!=="/admin"
 
+  const adminAiAction=isAdmin&&!navigationExpanded?<div className="relative z-[70] print:hidden"><button type="button" aria-expanded={adminAiOpen} onClick={()=>setAdminAiOpen(value=>!value)} className="rounded-lg bg-violet-600 px-2 py-2 text-xs font-black text-white shadow sm:px-3"><span className="sm:hidden">AI</span><span className="hidden sm:inline">ADMIN AI</span></button>{adminAiOpen&&<div className="absolute top-[calc(100%+0.5rem)] right-0 w-[min(92vw,430px)] max-h-[75vh] overflow-auto rounded-2xl border bg-background p-4 shadow-2xl"><div className="space-y-3"><div className="flex gap-2"><button type="button" aria-pressed={aiWorkspace==="admin"} onClick={()=>setAiWorkspace("admin")} className={`rounded-lg border px-3 py-2 text-sm ${aiWorkspace==="admin"?"border-violet-500 text-violet-400":""}`}>Admin AI</button><button type="button" aria-pressed={aiWorkspace==="administration"} onClick={()=>setAiWorkspace("administration")} className={`rounded-lg border px-3 py-2 text-sm ${aiWorkspace==="administration"?"border-violet-500 text-violet-400":""}`}>{({nl:"Administratie AI",fr:"IA administrative",en:"Administration AI",de:"Verwaltungs-KI"} as const)[uiLocale]}</button></div>{aiWorkspace==="admin"?<PlatformAiAssistant contextKey={currentFeature||undefined} contextLabel={labels[currentFeature||""]} compact/>:<AdministrationAiChat locale={uiLocale} compact/>}</div></div>}</div>:null
+
   return <div className="flex h-dvh bg-background print:block print:h-auto">
 
     {/* Mobile shell lives at the AppLayout root so iOS fixed positioning is not
@@ -252,7 +254,7 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
 
     {!inDedicatedPortal&&<div className="print:hidden"><AppSidebar chatMissed={chatMissed} incidentMissed={incidentMissed} taskMissed={taskMissed} notificationFeatureCounts={notificationFeatureCounts} showOperations={showOperations} showEvents={showEvents} showTasks={showTasks} showBriefings={showBriefings} showShifts={showShifts} showWorkplaces={showWorkplaces} showIncidents={showIncidents} featureOrder={order} featureLabels={labels} featureVisibility={featureVisibility}/></div>}
     <div className="flex flex-1 flex-col overflow-hidden print:block print:overflow-visible">
-      <div className="print:hidden"><Topbar notificationMissed={notificationMissed}/><QueueStatus/>{isAdmin&&<AdminContextBar/>}</div>
+      <div className="print:hidden"><Topbar notificationMissed={notificationMissed} adminAiAction={adminAiAction}/><QueueStatus/>{isAdmin&&<AdminContextBar/>}</div>
       <div id="app-scroll" className="flex-1 overflow-y-auto bg-background scroll-smooth print:overflow-visible">
         <main className="min-h-[calc(100dvh-theme(spacing.16)-theme(spacing.12))] pb-20 lg:pb-0 print:min-h-0 print:pb-0">
           {!currentVisible&&!previewAll
@@ -264,7 +266,7 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
         </main>
       </div>
     </div>
-    {isAdmin&&!navigationExpanded&&<div className={`fixed right-4 z-[70] print:hidden ${inDedicatedPortal?"bottom-[calc(5rem+env(safe-area-inset-bottom))] lg:bottom-20":"bottom-20 lg:bottom-4"}`}><button type="button" aria-expanded={adminAiOpen} onClick={()=>setAdminAiOpen(value=>!value)} className="rounded-full bg-violet-600 px-5 py-3 font-black text-white shadow-xl">ADMIN AI</button>{adminAiOpen&&<div className="absolute bottom-14 right-0 w-[min(92vw,430px)] max-h-[75vh] overflow-auto rounded-2xl border bg-background p-4 shadow-2xl"><div className="space-y-3"><div className="flex gap-2"><button type="button" aria-pressed={aiWorkspace==="admin"} onClick={()=>setAiWorkspace("admin")} className={`rounded-lg border px-3 py-2 text-sm ${aiWorkspace==="admin"?"border-violet-500 text-violet-400":""}`}>Admin AI</button><button type="button" aria-pressed={aiWorkspace==="administration"} onClick={()=>setAiWorkspace("administration")} className={`rounded-lg border px-3 py-2 text-sm ${aiWorkspace==="administration"?"border-violet-500 text-violet-400":""}`}>{({nl:"Administratie AI",fr:"IA administrative",en:"Administration AI",de:"Verwaltungs-KI"} as const)[uiLocale]}</button></div>{aiWorkspace==="admin"?<PlatformAiAssistant contextKey={currentFeature||undefined} contextLabel={labels[currentFeature||""]} compact/>:<AdministrationAiChat locale={uiLocale} compact/>}</div></div>}</div>}
+
     {!pathname.startsWith("/chat")&&<>
       {showUrgent&&<Link href="/incidents" className="fixed bottom-20 left-4 z-50 rounded-full bg-red-600 px-5 py-4 font-black text-white print:hidden lg:hidden">{({nl:"HELP",en:"HELP",fr:"AIDE",de:"HILFE"} as Record<SupportedUiLocale,string>)[uiLocale]}<CountBadge count={incidentMissed}/></Link>}
     </>}
