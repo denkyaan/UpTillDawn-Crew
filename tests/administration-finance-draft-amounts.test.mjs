@@ -48,7 +48,11 @@ test('failed financial attachment metadata insert cleans up uploaded private sto
  assert.ok(action.includes("if(linkError){"))
  assert.ok(action.includes(".from('admin-financial-attachments').remove([path])"))
  assert.ok(action.indexOf(".remove([path])")>action.indexOf("if(linkError){"))
- assert.ok(action.indexOf(".remove([path])")<action.indexOf("redirect('/portals/administration/finance?error=1')",action.indexOf("if(linkError){")))
+ // The new workflow distinguishes duplicate fingerprints from unrelated
+ // metadata failures; every failure path must clean private storage first.
+ const cleanup=action.indexOf(".remove([path])",action.indexOf("if(linkError){"))
+ const result=action.indexOf("redirect('/portals/administration/finance?'",action.indexOf("if(linkError){"))
+ assert.ok(cleanup>=0&&result>cleanup)
 })
 
 test('adding invoice lines validates the complete canonical document UUID',()=>{

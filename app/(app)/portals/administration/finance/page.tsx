@@ -5,6 +5,7 @@ import {financialAmountCents,totalFinancialCents,reconcileFinanceInvoice} from '
 import type { SupabaseClient } from '@supabase/supabase-js'
 import { randomUUID } from 'node:crypto'
 import { validateUploadSecurity, safeUploadName } from '@/lib/upload-security'
+import { financialAttachmentPayload } from '@/lib/administration/financial-attachment-integrity'
 import Link from 'next/link'
 import { revalidatePath } from 'next/cache'
 import { redirect } from 'next/navigation'
@@ -29,10 +30,10 @@ const documentKinds = {
 const kindValues = ['purchase_invoice','sales_invoice','expense','credit_note','quote'] as const
 
 const uploadLabels = {
- nl:{upload:'Bijlage toevoegen',file:'Factuur, bestelbon of betalingsbewijs (PDF of afbeelding, max. 20 MB)',attachments:'Bijlagen',failed:'Bijlage kon niet worden opgeslagen.'},
- fr:{upload:'Ajouter une pièce jointe',file:'Facture, bon de commande ou preuve de paiement (PDF ou image, 20 Mo max.)',attachments:'Pièces jointes',failed:'Impossible d’enregistrer le fichier.'},
- en:{upload:'Attach document',file:'Invoice, purchase order or payment proof (PDF or image, max 20 MB)',attachments:'Attachments',failed:'Attachment could not be saved.'},
- de:{upload:'Beleg hinzufügen',file:'Rechnung, Bestellung oder Zahlungsnachweis (PDF oder Bild, max. 20 MB)',attachments:'Anhänge',failed:'Anhang konnte nicht gespeichert werden.'},
+ nl:{upload:'Bijlage toevoegen',file:'Factuur, bestelbon of betalingsbewijs (PDF of afbeelding, max. 20 MB)',attachments:'Bijlagen',failed:'Bijlage kon niet worden opgeslagen.',duplicate:'Dit bestand is al als bijlage bij dit document opgeslagen; er is geen tweede kopie toegevoegd.',fingerprint:'SHA-256'},
+ fr:{upload:'Ajouter une pièce jointe',file:'Facture, bon de commande ou preuve de paiement (PDF ou image, 20 Mo max.)',attachments:'Pièces jointes',failed:'Impossible d’enregistrer le fichier.',duplicate:'Ce fichier est déjà joint à ce document. Aucune deuxième copie n’a été enregistrée.',fingerprint:'SHA-256'},
+ en:{upload:'Attach document',file:'Invoice, purchase order or payment proof (PDF or image, max 20 MB)',attachments:'Attachments',failed:'Attachment could not be saved.',duplicate:'This file is already attached to this document. No duplicate copy was saved.',fingerprint:'SHA-256'},
+ de:{upload:'Beleg hinzufügen',file:'Rechnung, Bestellung oder Zahlungsnachweis (PDF oder Bild, max. 20 MB)',attachments:'Anhänge',failed:'Anhang konnte nicht gespeichert werden.',duplicate:'Diese Datei ist bereits angehängt. Es wurde keine zweite Kopie gespeichert.',fingerprint:'SHA-256'},
 } as const
 const actionLabels = {
  nl: {review:'Ter controle indienen',approved:'Goedkeuren (Admin)',issued:'Als uitgereikt markeren',paid:'Als betaald markeren',void:'Annuleren'},
@@ -525,25 +526,39 @@ async function uploadFinancialAttachment(formData:FormData) {
  if(!['application/pdf','image/jpeg','image/png','image/webp'].includes(validation.mime)) redirect('/portals/administration/finance?error=1')
  const {data:{user}}=await supabase.auth.getUser()
  if(!user) return
+ let payload
+ try {payload=await financialAttachmentPayload(file)}
+ catch {redirect('/portals/administration/finance?error=1')}
+ if(payload.bytes.byteLength!==validation.size)redirect('/portals/administration/finance?error=1')
+ // Check before uploading, then rely on the unique database index for
+ // concurrent requests. Historical objects with unknown hashes remain
+ // visible without claiming that their integrity has been established.
+ const {data:existing,error:checkError}=await (supabase as unknown as SupabaseClient)
+  .from('admin_financial_attachments').select('id')
+  .eq('document_id',documentId).eq('sha256',payload.sha256).limit(1).maybeSingle()
+ if(checkError)redirect('/portals/administration/finance?error=1')
+ if(existing)redirect('/portals/administration/finance?duplicate=1')
  const path=user.id+'/'+randomUUID()+'.'+validation.extension
- const {error:uploadError}=await supabase.storage.from('admin-financial-attachments').upload(path,file,{contentType:validation.mime,upsert:false})
+ const {error:uploadError}=await supabase.storage.from('admin-financial-attachments').upload(path,payload.bytes,{contentType:validation.mime,upsert:false})
  if(uploadError) redirect('/portals/administration/finance?error=1')
  const {error:linkError}=await (supabase as unknown as SupabaseClient).from('admin_financial_attachments').insert({
   document_id:documentId,storage_path:path,original_name:safeUploadName(file.name),
-  mime_type:validation.mime,size_bytes:validation.size,uploaded_by:user.id
+  mime_type:validation.mime,size_bytes:validation.size,uploaded_by:user.id,
+  sha256:payload.sha256,
  })
  if(linkError){
-  // Avoid orphaned private files when the attachment metadata cannot be persisted.
+  // Never leave orphan storage objects when metadata registration fails,
+  // including the race where another request inserted the same checksum.
   const {error:cleanupError}=await supabase.storage.from('admin-financial-attachments').remove([path])
   if(cleanupError)console.error('[Finance] attachment cleanup failed',cleanupError.message)
-  redirect('/portals/administration/finance?error=1')
+  redirect('/portals/administration/finance?'+(linkError.code==='23505'?'duplicate=1':'error=1'))
  }
  revalidatePath('/portals/administration/finance')
  redirect('/portals/administration/finance')
 }
 
 export const dynamic = 'force-dynamic'
-export default async function FinancePage({searchParams}:{searchParams:Promise<{error?:string;conflict?:string}>}) {
+export default async function FinancePage({searchParams}:{searchParams:Promise<{error?:string;conflict?:string;duplicate?:string}>}) {
  const {supabase,isAdmin} = await requireAdministration()
  const locale = await requestUiLocale()
  const t = copy[locale]
@@ -559,7 +574,7 @@ export default async function FinancePage({searchParams}:{searchParams:Promise<{
   (supabase as unknown as SupabaseClient).from('admin_financial_payments').select('id,document_id,amount,paid_on,bank_reference').order('created_at',{ascending:false}).limit(1000),
   (supabase as unknown as SupabaseClient).from('admin_payment_reminders').select('id,document_id,reminder_number,status,recipient_email,subject,body,created_at,revision').order('created_at',{ascending:false}).limit(500),
   supabase.from('admin_financial_lines').select('id,document_id,description,quantity,unit_price,vat_rate,unit_code,vat_category,vat_exemption_reason').order('created_at',{ascending:true}).limit(500),
-  (supabase as unknown as SupabaseClient).from('admin_financial_attachments').select('id,document_id,original_name,created_at').order('created_at',{ascending:false}).limit(200),
+  (supabase as unknown as SupabaseClient).from('admin_financial_attachments').select('id,document_id,original_name,sha256,created_at').order('created_at',{ascending:false}).limit(200),
   (supabase as unknown as SupabaseClient).rpc('upt_administration_finance_summary'),
  ])
  const originalInvoices=(documents??[]).filter(d=>['sales_invoice','purchase_invoice'].includes(d.kind)&&['approved','issued','paid'].includes(d.status))
@@ -643,6 +658,7 @@ export default async function FinancePage({searchParams}:{searchParams:Promise<{
     <button type="submit" className="rounded-lg bg-violet-600 px-4 py-3 font-semibold text-white">{t.save}</button>
    </form>
    {params.error==='1' && <p role="alert" className="mt-3 text-sm text-red-400">{t.error}</p>}
+   {params.duplicate==='1' && <p role="status" className="mt-3 text-sm text-amber-500">{uploadLabels[locale].duplicate}</p>}
    {params.conflict==='1' && <p role="alert" className="mt-3 text-sm text-red-400">{({nl:'Dit concept is intussen gewijzigd. Controleer de nieuwste inhoud voordat je opnieuw opslaat of goedkeurt.',fr:'Ce brouillon a été modifié entre-temps. Vérifiez son contenu actuel avant de l’enregistrer ou de l’approuver.',en:'This draft has changed. Review the latest content before saving or approving it again.',de:'Dieser Entwurf wurde inzwischen geändert. Prüfe den aktuellen Inhalt, bevor du ihn erneut speicherst oder genehmigst.'} as const)[locale]}</p>}
   </section>
   <InvoiceLineCsvImport locale={locale} drafts={(documents??[]).filter(d=>d.status==='draft'&&d.currency==='EUR'&&['sales_invoice','purchase_invoice'].includes(d.kind)).map(d=>({id:d.id,label:(d.document_number||d.id.slice(0,8))+' · '+translatedLabel(kindLabels[locale],d.kind)}))}/>
@@ -692,7 +708,7 @@ export default async function FinancePage({searchParams}:{searchParams:Promise<{
         <button type="submit" className="rounded border border-violet-500 px-3 py-2 text-violet-400 sm:col-span-2">{({nl:'Herinnering als concept bewaren',fr:'Enregistrer le rappel en brouillon',en:'Save reminder draft',de:'Erinnerungsentwurf speichern'} as const)[locale]}</button>
        </form>
       </div>}
-      {(attachments??[]).filter(a=>a.document_id===d.id).map(a=><p key={a.id} className="text-xs text-muted-foreground">{uploadLabels[locale].attachments}: <a href={'/api/administration/finance/attachments/'+a.id} className="inline-flex min-h-11 items-center break-all font-medium text-violet-700 underline underline-offset-2 dark:text-violet-300">{a.original_name}</a></p>)}
+      {(attachments??[]).filter(a=>a.document_id===d.id).map(a=><p key={a.id} className="text-xs text-muted-foreground">{uploadLabels[locale].attachments}: <a href={'/api/administration/finance/attachments/'+a.id} className="inline-flex min-h-11 items-center break-all font-medium text-violet-700 underline underline-offset-2 dark:text-violet-300">{a.original_name}</a>{a.sha256&&<span className="ml-2 font-mono" title={a.sha256}>{uploadLabels[locale].fingerprint}: {a.sha256.slice(0,12)}…</span>}</p>)}
       {(lines??[]).filter(line=>line.document_id===d.id).map(line=><div key={line.id} className="flex flex-wrap items-center justify-between gap-2 text-xs text-muted-foreground"><p>{line.description} · {line.quantity} × {money(Number(line.unit_price))} · {line.vat_rate}%</p>{d.status==='draft'&&<details className="w-full rounded border p-2"><summary className="cursor-pointer">{({nl:'Regel aanpassen',fr:'Modifier la ligne',en:'Edit line',de:'Position bearbeiten'} as const)[locale]}</summary><form action={updateInvoiceLine} className="mt-2 grid gap-2 sm:grid-cols-4"><input type="hidden" name="document_id" value={d.id}/><input type="hidden" name="line_id" value={line.id}/><label>{({nl:'Omschrijving',fr:'Description',en:'Description',de:'Beschreibung'} as const)[locale]}<input name="description" required maxLength={500} defaultValue={line.description} className="block w-full rounded border bg-background p-2"/></label><label>{({nl:'Aantal',fr:'Quantité',en:'Quantity',de:'Menge'} as const)[locale]}<input name="quantity" type="number" step="0.001" min="0.001" max="100000" required defaultValue={line.quantity} className="block w-full rounded border bg-background p-2"/></label><label>{({nl:'Eenheidsprijs',fr:'Prix unitaire',en:'Unit price',de:'Einzelpreis'} as const)[locale]}<input name="unit_price" type="number" step="0.01" min="0" required defaultValue={line.unit_price} className="block w-full rounded border bg-background p-2"/></label><label>{({nl:'Btw-percentage',fr:'Taux TVA',en:'VAT rate',de:'MwSt.-Satz'} as const)[locale]}<input name="vat_rate" type="number" step="0.01" min="0" max="100" required defaultValue={line.vat_rate} className="block w-full rounded border bg-background p-2"/></label><button type="submit" className="rounded border border-violet-500 px-3 py-2 text-violet-400 sm:col-span-4">{({nl:'Regel opslaan',fr:'Enregistrer la ligne',en:'Save line',de:'Position speichern'} as const)[locale]}</button></form></details>}{d.status==='draft'&&<form action={removeInvoiceLine}><input type="hidden" name="document_id" value={d.id}/><input type="hidden" name="line_id" value={line.id}/><button type="submit" className="rounded border px-2 py-1 text-red-400">{({nl:'Regel verwijderen',fr:'Supprimer la ligne',en:'Remove line',de:'Position entfernen'} as const)[locale]}</button></form>}</div>)}
       {d.status==='draft'&&<form action={addInvoiceLine} className="grid gap-2 rounded-lg border p-3 sm:grid-cols-5">
        <input type="hidden" name="document_id" value={d.id}/>
