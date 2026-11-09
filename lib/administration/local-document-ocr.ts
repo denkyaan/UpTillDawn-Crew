@@ -2,7 +2,7 @@
  * Self-hosted, client-side OCR: documents never leave the browser.
  * All worker, WASM, PDF and traineddata assets come from same-origin /vendor/ocr.
  */
-import {verifiedOcrFileType} from "./cloudmersive-ocr"
+import {verifiedOcrFileType} from "./cloudmersive-ocr.ts"
 
 export type LocalOcrLang="nld"|"fra"|"eng"|"deu"
 export type LocalOcrResult={text:string;pages:number;confidence:number|null;kind:"image"|"pdf"}
