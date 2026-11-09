@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react"
 import Image from "next/image"
 import Link from "next/link"
-import { usePathname } from "next/navigation"
+import { usePathname, useRouter } from "next/navigation"
 import { useAuth } from "@/lib/providers"
 import { cn } from "@/lib/utils"
 import { Shield, LayoutDashboard, CalendarDays, Clock3, Users, MessageCircle, Settings } from "lucide-react"
@@ -23,6 +23,7 @@ export function AppSidebar({
   featureOrder?:string[];featureLabels?:Record<string,string>;featureVisibility?:Record<string,boolean>;
 }) {
  const pathname=usePathname()
+ const router=useRouter()
  const [locale,setLocale]=useState<SupportedUiLocale>("nl")
  const [selectedGroup,setSelectedGroup]=useState<{key:string;pathname:string}|null>(null)
  useEffect(()=>{const apply=()=>setLocale(activeUiLocale());apply();addEventListener(LANGUAGE_APPLIED_EVENT,apply);return()=>removeEventListener(LANGUAGE_APPLIED_EVENT,apply)},[])
@@ -65,7 +66,7 @@ export function AppSidebar({
    <div><div className="font-black tracking-wide">UP TILL DAWN</div><div className="text-[10px] text-muted-foreground tracking-[.18em]">PERSONEELSBEHEER</div></div>
   </Link>
   <nav aria-label={{nl:"Navigatie",fr:"Navigation",en:"Navigation",de:"Navigation"}[locale]} className="min-h-0 flex-1 overflow-y-auto overscroll-contain p-3 pb-6">
-   <div className="grid grid-cols-3 gap-1">{availableGroups.map(group=>{const Icon=group.icon;return <button key={group.key} type="button" data-role-category={group.key} aria-pressed={activeGroup===group.key} onClick={()=>setSelectedGroup({key:group.key,pathname})} className={cn("flex min-w-0 flex-col items-center gap-1 rounded-lg p-2 text-[11px]",activeGroup===group.key?"bg-violet-500/15 text-violet-400":"text-muted-foreground")}><Icon className="h-5 w-5"/><span className="truncate">{group.title[locale]}</span></button>})}</div>
+   <div className="grid grid-cols-3 gap-1">{availableGroups.map(group=>{const Icon=group.icon;return <button key={group.key} type="button" data-role-category={group.key} aria-pressed={activeGroup===group.key} onClick={()=>{setSelectedGroup({key:group.key,pathname});if(group.key==="home")router.push(isAdmin?"/admin":"/")}} className={cn("flex min-w-0 flex-col items-center gap-1 rounded-lg p-2 text-[11px]",activeGroup===group.key?"bg-violet-500/15 text-violet-400":"text-muted-foreground")}><Icon className="h-5 w-5"/><span className="truncate">{group.title[locale]}</span></button>})}</div>
    <div className="mt-4 space-y-1 border-t pt-3">{selectedEntries.map(i=>{
     const baseHref=i.href==="/"&&isAdmin?"/admin":i.href
     const href=isAdmin?adminContext.href(baseHref):baseHref
