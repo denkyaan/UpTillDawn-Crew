@@ -2,6 +2,7 @@ import Link from 'next/link'
 import {redirect} from 'next/navigation'
 import {revalidatePath} from 'next/cache'
 import {createClient} from '@/lib/supabase/crew-server'
+import type {SupabaseClient} from '@supabase/supabase-js'
 import {getCurrentUser} from '@/lib/actions/auth'
 import {requestUiLocale} from '@/lib/server-locale'
 
@@ -32,7 +33,7 @@ async function assign(form:FormData){
  if(targetValue&& !/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(targetValue))throw Error('Invalid account')
  if(slot==='head'&&!targetValue)throw Error('A Head is required')
  if(slot==='head'&&form.get('confirmed')!=='yes')throw Error('Confirmation required')
- const db=await createClient()
+ const db=(await createClient()) as unknown as SupabaseClient
  const {error}=await db.rpc('upt_leadership_assign' as never,{p_slot:slot,p_user:targetValue||null} as never)
  if(error)redirect('/admin/management/leadership?error=1')
  revalidatePath('/admin/management/leadership')
