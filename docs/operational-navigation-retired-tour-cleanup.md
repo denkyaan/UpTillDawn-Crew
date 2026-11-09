@@ -18,3 +18,9 @@ existing role, collapse, keyboard, AI overlay, label and route regression tests.
 The responsive bottom bar retains a 56px minimum height as required by the existing mobile shell contract. All server-side role and event authorization remains unchanged.
 
 Production deployment is intentionally out of scope.
+
+## Orphaned tour source removal — 10 November 2026
+
+The retired Promotion/Administration guided-tour component and per-workplace tour button were removed after their navigation and rendering paths had already been retired. The non-tour event preparation checklist, required briefing acknowledgement and operational help remain in place.
+
+The source-tree regression `tests/retired-tour-code-cleanup.test.mjs` fails if either retired component or a runtime reference to it returns. This is a code cleanup only: no historical audit records, chat messages, notifications, or real event data were deleted.
