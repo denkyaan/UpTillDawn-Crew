@@ -2,7 +2,7 @@ import test from 'node:test'
 import assert from 'node:assert/strict'
 import {readFileSync} from 'node:fs'
 
-const migration=readFileSync('supabase/migrations/20261109101500_financial_attachment_malware_quarantine.sql','utf8')
+const migration=readFileSync('supabase/migrations/20261109085826_financial_attachment_malware_quarantine.sql','utf8')
 const worker=readFileSync('supabase/functions/malware-scan/index.ts','utf8')
 const api=readFileSync('app/api/administration/finance/attachments/[id]/route.ts','utf8')
 const ui=readFileSync('app/(app)/portals/administration/finance/page.tsx','utf8')
