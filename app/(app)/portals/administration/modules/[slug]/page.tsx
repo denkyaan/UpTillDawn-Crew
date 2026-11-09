@@ -6,6 +6,7 @@ import {administrationWorkflowHref} from "@/lib/administration/workflow-links"
 import FinanceReconciliationSummary from "@/components/administration/finance-reconciliation-summary"
 import OperationalWorkQueue from "@/components/administration/operational-work-queue"
 import InventoryReceipts from "@/components/administration/inventory-receipts"
+import InventoryBulkReceipts from "@/components/administration/inventory-bulk-receipts"
 import TicketSalesOverview from "@/components/administration/ticket-sales-overview"
 import EventixIntegration from "@/components/administration/eventix-integration"
 import ProviderMappingManager from "@/components/administration/provider-mapping-manager"
@@ -263,6 +264,7 @@ export default async function AdministrationModulePage({params,searchParams}:{pa
    {contractBookingRows?.error?<p role="alert" className="mt-3 text-sm text-muted-foreground">{({nl:"Contractdossiers konden niet worden geladen.",fr:"Impossible de charger les dossiers.",en:"Unable to load contract cases.",de:"Vertragsakten konnten nicht geladen werden."} as const)[locale]}</p>:contractBookingRows?.data?.length?<ul className="mt-3 divide-y">{contractBookingRows.data.map(item=><li key={item.id} className="flex flex-wrap items-center justify-between gap-2 py-3 text-sm"><Link href={`/portals/administration/modules/artists/${item.id}/agreement`} className="font-semibold text-violet-400 hover:underline">{item.artist_name}</Link><span className="text-muted-foreground">{item.status}</span></li>)}</ul>:<p className="mt-3 text-sm text-muted-foreground">{({nl:"Geen contractdossiers gevonden.",fr:"Aucun dossier contractuel.",en:"No contract cases found.",de:"Keine Vertragsakten gefunden."} as const)[locale]}</p>}
   </section>}
   {["logistics","permits","tasks"].includes(slug)&&<OperationalWorkQueue kind={slug as "logistics"|"permits"|"tasks"} locale={locale} events={workQueueEvents?.data??[]}/>}
+  {slug==="inventory"&&<InventoryBulkReceipts locale={locale}/>}
   {slug==="inventory"&&<InventoryReceipts locale={locale}/>}
   {slug==="ticketing"&&<EventixIntegration locale={locale}/>}
   {slug==="ticketing"&&!ticketEventRows?.error&&<ProviderMappingManager locale={locale} events={(ticketEventRows?.data??[]).map(event=>({id:event.id,name:event.name}))}/>}
