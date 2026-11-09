@@ -15,6 +15,9 @@ set local role authenticated;
 select public.upt_leadership_assign('head',(select id from qa_lead_users where name='head'));
 select public.upt_leadership_assign('left_hand',(select id from qa_lead_users where name='left'));
 select public.upt_leadership_assign('right_hand',(select id from qa_lead_users where name='right'));
+-- Inspect the RLS-backed role state as the test database owner. Subsequent
+-- RPC calls still impersonate each JWT actor, and must enforce the actor.
+reset role;
 do $qa$
 declare
  v_head uuid:=(select id from qa_lead_users where name='head');
