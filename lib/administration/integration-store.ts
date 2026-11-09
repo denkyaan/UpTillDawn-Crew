@@ -30,7 +30,23 @@ export async function listIntegrationSummaries(db:Db):Promise<IntegrationSummary
 export async function saveIntegrationCredentials(db:Db,provider:IntegrationProvider,fields:unknown):Promise<void>{
  const parsed=parseIntegrationConfiguration(provider,fields)
  if(!parsed)throw Error("integration_invalid_configuration")
- const cipher=await sealIntegrationSecrets(provider,parsed as Record<string,string>,masterKey())
+ let next={...parsed}
+ // Preserve an OAuth token for the same Weeztix Client when editing event
+ // settings. Replacing the manual token/client revokes the old refresh pair.
+ if(provider==="weeztix"&&!Object.prototype.hasOwnProperty.call(next,"WEEZTIX_REFRESH_TOKEN")){
+  const previous=await getManagedIntegrationConfig(db,"weeztix")
+  if(previous&&previous.WEEZTIX_CLIENT_ID===next.WEEZTIX_CLIENT_ID&&
+     previous.WEEZTIX_CLIENT_SECRET===next.WEEZTIX_CLIENT_SECRET&&
+     previous.WEEZTIX_REFRESH_TOKEN&&previous.WEEZTIX_TOKEN_EXPIRES_AT&&
+     (!next.WEEZTIX_ACCESS_TOKEN||next.WEEZTIX_ACCESS_TOKEN===previous.WEEZTIX_ACCESS_TOKEN)){
+    next={...next,WEEZTIX_ACCESS_TOKEN:previous.WEEZTIX_ACCESS_TOKEN,
+     WEEZTIX_REFRESH_TOKEN:previous.WEEZTIX_REFRESH_TOKEN,
+     WEEZTIX_TOKEN_EXPIRES_AT:previous.WEEZTIX_TOKEN_EXPIRES_AT}
+  }
+ }
+ const validated=parseIntegrationConfiguration(provider,next)
+ if(!validated)throw Error("integration_invalid_configuration")
+ const cipher=await sealIntegrationSecrets(provider,validated as Record<string,string>,masterKey())
  const {error,data}=await rpc(db,"save",provider,cipher)
  if(error||!data||typeof data!=="object"||(data as {configured?:unknown}).configured!==true)throw Error("integration_storage_unavailable")
 }
@@ -122,3 +138,9 @@ export async function releaseScopedWeeztixRefresh(db:Db,eventId:string,workplace
  await invoke("upt_weeztix_release_refresh",{p_event_id:eventId,p_workplace_id:workplaceId,p_claim_id:claimId})
 }
 
+
+/** Report OAuth readiness only, never OAuth client credentials. */
+export async function weeztixOAuthReadiness(db:Db):Promise<boolean>{
+ const settings=await getManagedIntegrationConfig(db,"weeztix")
+ return Boolean(settings?.WEEZTIX_CLIENT_ID&&settings.WEEZTIX_CLIENT_SECRET)
+}

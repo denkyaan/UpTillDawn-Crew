@@ -29,13 +29,12 @@ export function IntegrationCredentialManager({initialLocale}:{initialLocale:Supp
  const [provider,setProvider]=useState<IntegrationProvider>("sumup")
  const [fields,setFields]=useState<Record<string,string>>({})
  const [state,setState]=useState<State|null>(null)
- const [oauthResult,setOauthResult]=useState<string|null>(null)
+ const [oauthResult]=useState<string|null>(()=>typeof window==="undefined"?null:new URLSearchParams(window.location.search).get("weeztix_oauth"))
  const [busy,setBusy]=useState(false)
  const [confirm,setConfirm]=useState(false)
  const [notice,setNotice]=useState("")
  const [error,setError]=useState("")
  useEffect(()=>{const apply=()=>setLocale(activeUiLocale());apply();window.addEventListener(LANGUAGE_APPLIED_EVENT,apply);return()=>window.removeEventListener(LANGUAGE_APPLIED_EVENT,apply)},[])
- useEffect(()=>{setOauthResult(new URLSearchParams(window.location.search).get("weeztix_oauth"))},[])
  useEffect(()=>{
   const controller=new AbortController()
   fetch(endpoint,{cache:"no-store",signal:controller.signal}).then(async r=>{

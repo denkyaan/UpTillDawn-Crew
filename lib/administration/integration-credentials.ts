@@ -57,6 +57,5 @@ export function parseIntegrationConfiguration(provider:IntegrationProvider,input
   // Do not let a browser-controlled URL turn this into an SSRF proxy.
   if(valid.DOCUMENSO_BASE_URL!=="https://app.documenso.com")return null
  }
- if(provider==="weeztix"&&(!uuid.test(valid.WEEZTIX_ACTIVE_EVENT_ID)||!["true","false"].includes(valid.WEEZTIX_SCANNING_ENABLED)))return null
  return valid
 }
