@@ -1,6 +1,5 @@
--- Bundel 1: run against staging with an authorized dedicated test admin.
--- All changes are rolled back. Supply TEST_ADMIN_ID via psql variable.
--- Example: psql -v ON_ERROR_STOP=1 -v TEST_ADMIN_ID=<test-admin-uuid> -f tests/sql/administration-finance-integration.sql
+-- Standalone Admin financial lifecycle acceptance with disposable test identity.
+-- All fixture changes, including test user, are rolled back after assertions.
 BEGIN;
 CREATE TEMP TABLE qa_finance_actor(id uuid primary key default gen_random_uuid());
 INSERT INTO qa_finance_actor DEFAULT VALUES;
@@ -66,6 +65,6 @@ BEGIN
     RAISE EXCEPTION 'Unexpected void result: %',failure;
   END IF;
   RAISE NOTICE 'PASS: draft/review/approval, unpaid rejection, overpayment rejection, partial payment + credit, paid, void rejection';
-END $;
+END $$;
 SELECT 'PASS: synthetic finance draft/review/approve, credit-adjusted partial settlement, overpayment/void denial' AS result;
 ROLLBACK;
