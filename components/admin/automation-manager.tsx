@@ -68,11 +68,7 @@ export function AutomationManager({rules}:{rules:AutomationRuleView[]}){
         </summary>
         <form action={saveAutomationRule} className="space-y-3 border-t p-4">
         <input type="hidden" name="automation_key" value={rule.automation_key}/>
-        <div className="flex items-start justify-between gap-3">
-          <div>
-            <h3 className="font-black">{rule.label}</h3>
-            <p className="mt-1 text-sm text-muted-foreground">{rule.description}</p>
-          </div>
+        <div className="flex justify-end">
           <label className="flex shrink-0 items-center gap-2 rounded-full border px-3 py-2 text-xs font-bold">
             <input name="enabled" type="checkbox" defaultChecked={rule.enabled}/> Actief
           </label>

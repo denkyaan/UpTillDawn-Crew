@@ -31,7 +31,7 @@ export default async function Page({searchParams}:{searchParams?:Promise<{page?:
   const notificationQuery=s.from('crew_notifications')
     .select('id,title,body,kind,link,read_at,created_at')
     .eq('user_id',user.id)
-    .neq('kind','error_report')
+    .neq('kind', 'error_report')
     .order('created_at',{ascending:false})
     .order('id',{ascending:false})
   const [{data,error},{data:badgeCount,error:badgeError}] = await Promise.all([

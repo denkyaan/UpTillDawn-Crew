@@ -9,7 +9,7 @@ test('shared notification inbox prioritizes unread and retains complete history'
   assert.match(notifications,/const selectedView=params\.view==='all'\?'all':'unread'/)
   assert.match(notifications,/selectedView==='unread'\?notificationQuery\.is\('read_at',null\):notificationQuery/)
   assert.match(notifications,/\.eq\('user_id',user\.id\)/)
-  assert.match(notifications,/\.neq\('kind','error_report'\)/)
+  assert.match(notifications,/\.neq\('kind', 'error_report'\)/)
   assert.match(notifications,/\.order\('id',\{ascending:false\}\)/)
   assert.match(notifications,/const pageHref=.*selectedView/)
   assert.match(notifications,/aria-current=\{selectedView==='unread'/)
