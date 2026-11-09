@@ -19,5 +19,14 @@ create unique index if not exists admin_financial_attachments_document_sha256_un
  on public.admin_financial_attachments(document_id,sha256)
  where sha256 is not null;
 
+-- Historic broad grants include UPDATE/DELETE/TRUNCATE for authenticated,
+-- even though the intended attachment archive is append-only. RLS cannot
+-- protect against TRUNCATE; remove those table privileges explicitly.
+-- Keep SELECT and INSERT for the existing authorized upload and download
+-- workflows. The service role retains maintenance/migration capability.
+revoke update, delete, truncate, references, trigger
+ on table public.admin_financial_attachments
+ from authenticated, anon;
+
 comment on column public.admin_financial_attachments.sha256
  is 'SHA-256 of uploaded private storage bytes, supplied by the server-side upload workflow. NULL identifies historic unverified attachments.';
