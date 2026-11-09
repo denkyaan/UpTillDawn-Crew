@@ -35,11 +35,11 @@ export function RoleManagementForm({users,locale}:{users:UserOption[];locale:Sup
  const [pending,startTransition]=useTransition()
  const matches=users.filter(user=>(user.full_name??'').toLocaleLowerCase().includes(search.toLocaleLowerCase())||
   user.id.includes(search)).slice(0,100)
- const selectedUserVisible=matches.some(user=>user.id===userId)
+ const selectedUserVisible = matches.some(user => user.id === userId)
 
  function submit(formData:FormData){
   if(pending)return
-  if(formData.get('action')==='revoke'&&!window.confirm(t.confirm))return
+  if (formData.get('action') === 'revoke' && !window.confirm(t.confirm)) return
   setResult('')
   startTransition(async()=>{
    try{await changePortalRole(formData);setResult(t.saved);router.refresh()}
@@ -105,7 +105,7 @@ export function RoleQuickAction({userId,portal,role,action,locale}:{
    className="rounded border border-violet-500 px-3 py-1 text-violet-400 disabled:opacity-50"
    onClick={()=>{
     if(pending)return
-    if(action==='revoke'&&!window.confirm(t.confirm))return
+    if (action === 'revoke' && !window.confirm(t.confirm)) return
     const form=new FormData()
     form.set('user_id',userId);form.set('portal',portal);form.set('role',role);form.set('action',action)
     setResult('')
