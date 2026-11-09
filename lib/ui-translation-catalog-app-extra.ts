@@ -2,6 +2,10 @@ export type ExtraCatalogLocale = 'nl' | 'fr' | 'en' | 'de'
 type Row = { fr:string; en:string; de:string }
 
 export const APP_EXTRA_TRANSLATIONS: Record<string,Row> = {
+  "Factuur of bon lezen · lokaal op je toestel":{fr:"Lire une facture ou un reçu · sur cet appareil",en:"Read invoice or receipt · on this device",de:"Rechnung oder Beleg lesen · auf diesem Gerät"},
+  "Lire une facture ou un reçu · sur cet appareil":{fr:"Lire une facture ou un reçu · sur cet appareil",en:"Read invoice or receipt · on this device",de:"Rechnung oder Beleg lesen · auf diesem Gerät"},
+  "Read invoice or receipt · on this device":{fr:"Lire une facture ou un reçu · sur cet appareil",en:"Read invoice or receipt · on this device",de:"Rechnung oder Beleg lesen · auf diesem Gerät"},
+  "Rechnung oder Beleg lesen · auf diesem Gerät":{fr:"Lire une facture ou un reçu · sur cet appareil",en:"Read invoice or receipt · on this device",de:"Rechnung oder Beleg lesen · auf diesem Gerät"},
   "De PDF wordt nog verwerkt. Je kunt de voortgang opnieuw controleren.":{fr:"Le PDF est toujours en cours de traitement. Vous pouvez revérifier son état.",en:"This PDF is still being processed. You can check its progress again.",de:"Das PDF wird noch verarbeitet. Du kannst den Fortschritt erneut prüfen."},
   "Le PDF est toujours en cours de traitement. Vous pouvez revérifier son état.":{fr:"Le PDF est toujours en cours de traitement. Vous pouvez revérifier son état.",en:"This PDF is still being processed. You can check its progress again.",de:"Das PDF wird noch verarbeitet. Du kannst den Fortschritt erneut prüfen."},
   "This PDF is still being processed. You can check its progress again.":{fr:"Le PDF est toujours en cours de traitement. Vous pouvez revérifier son état.",en:"This PDF is still being processed. You can check its progress again.",de:"Das PDF wird noch verarbeitet. Du kannst den Fortschritt erneut prüfen."},

@@ -124,6 +124,14 @@ jobs:
       - name: Build main app Worker
         run: npm run build:cloudflare
 
+      - name: Verify self-hosted OCR assets built for main
+        shell: bash
+        run: |
+          set -euo pipefail
+          for asset in tesseract.min.js worker.min.js pdf.min.mjs pdf.worker.min.mjs core/tesseract-core-lstm.wasm.js core/tesseract-core-lstm.wasm lang/nld.traineddata.gz lang/fra.traineddata.gz lang/eng.traineddata.gz lang/deu.traineddata.gz manifest.json; do
+            test -s "public/vendor/ocr/$asset" || { echo "::error::Missing local OCR asset: $asset"; exit 1; }
+          done
+          echo "Self-hosted OCR assets present: no runtime third-party API needed."
       - name: Validate Worker bundle
         run: npx wrangler deploy --dry-run --config wrangler.main.jsonc
 
@@ -246,6 +254,17 @@ jobs:
           }
           NODE
 
+      - name: Verify local-first OCR assets are reachable on main
+        if: steps.current-main.outputs.current == 'true'
+        shell: bash
+        run: |
+          set -euo pipefail
+          for asset in manifest.json tesseract.min.js pdf.min.mjs worker.min.js lang/nld.traineddata.gz; do
+            status="$(curl --retry 3 --retry-all-errors -L -sS --max-time 25 -o /dev/null -w '%{http_code}' "${NEXT_PUBLIC_APP_URL}/vendor/ocr/${asset}")"
+            echo "Local OCR asset ${asset}: HTTP ${status}"
+            if [[ "${status}" != "200" ]]; then echo "::error::Local OCR asset missing on main: ${asset}"; exit 1; fi
+          done
+
       - name: Verify OCR endpoint denies unauthenticated requests
         if: steps.current-main.outputs.current == 'true'
         shell: bash
@@ -259,8 +278,8 @@ jobs:
           fi
           echo 'OCR authentication gate is active on main.'
       
-      - name: Live Cloudmersive OCR test (synthetic image, signed main deploy)
-        if: steps.current-main.outputs.current == 'true'
+      - name: Live Cloudmersive OCR test (explicit legacy provider opt-in only)
+        if: ${{ steps.current-main.outputs.current == 'true' && vars.ENABLE_CLOUDMERSIVE_OCR_TEST == 'true' }}
         continue-on-error: true # External provider outage must not invalidate a successful main app deployment.
         shell: bash
         run: |

@@ -48,9 +48,9 @@ export const externalServicesCopy={
    provider_required:"Dienstverlener kiezen",
    manual_available:"Handmatige werkwijze beschikbaar"
   },
-  names:{cloudmersive:"Cloudmersive · OCR",documenso:"Documenso · digitaal ondertekenen",peppol:"Peppol · e-facturatie",weeztix:"Weeztix · inkomscan",eventix:"Eventix / Weeztix · ticketverkoop",sumup:"SumUp · merchandising en tokens",banking:"Bank / boekhouding"},
+  names:{cloudmersive:"Cloudmersive · OCR (optioneel)",documenso:"Documenso · digitaal ondertekenen",peppol:"Peppol · e-facturatie",weeztix:"Weeztix · inkomscan",eventix:"Eventix / Weeztix · ticketverkoop",sumup:"SumUp · merchandising en tokens",banking:"Bank / boekhouding"},
   instructions:{
-   cloudmersive:"Maak een Cloudmersive API-sleutel aan en bewaar die als geheim in de main-Worker. Pas daarna een echte OCR-test uitvoeren.",
+   cloudmersive:"OCR van foto's en PDF's gebeurt standaard lokaal op het toestel zonder API. Cloudmersive is alleen een optionele externe dienst en niet nodig voor gewone factuurverwerking.",
    documenso:"Kies Documenso Cloud of een afzonderlijke beveiligde installatie, maak een team-API-token aan en stel de HTTPS-basis-URL en sleutel in. Contracten verzenden is nog uitgeschakeld.",
    peppol:"Kies een gecertificeerd Peppol Access Point met API. Registreer het ondernemingsnummer en vraag testtoegang en bezorgbevestigingen aan. UpTillDawn bereidt voorlopig alleen UBL voor.",
    weeztix:"Maak per evenement via Entréemanagement een scannerlogin/QR aan. De crew scant met de officiële Weeztix-app; hier is geen API-sleutel nodig.",
@@ -64,9 +64,9 @@ export const externalServicesCopy={
   intro:"Vérification de la configuration côté serveur. Une clé présente ne prouve pas une connexion valide. Aucun secret n'est affiché.",
   link:"Instructions officielles",
   states:{needs_configuration:"Configuration requise",credentials_present:"Paramètres présents · non vérifiés en direct",provider_required:"Choisir un prestataire",manual_available:"Procédure manuelle disponible"},
-  names:{cloudmersive:"Cloudmersive · OCR",documenso:"Documenso · signature numérique",peppol:"Peppol · facturation électronique",weeztix:"Weeztix · contrôle d'entrée",eventix:"Eventix / Weeztix · billetterie",sumup:"SumUp · produits et jetons",banking:"Banque / comptabilité"},
+  names:{cloudmersive:"Cloudmersive · OCR (facultatif)",documenso:"Documenso · signature numérique",peppol:"Peppol · facturation électronique",weeztix:"Weeztix · contrôle d'entrée",eventix:"Eventix / Weeztix · billetterie",sumup:"SumUp · produits et jetons",banking:"Banque / comptabilité"},
   instructions:{
-   cloudmersive:"Créez une clé API Cloudmersive et stockez-la comme secret dans le Worker main, puis vérifiez l'OCR avec un vrai document.",
+   cloudmersive:"L'OCR des photos et PDF s'effectue par défaut sur l'appareil sans API. Cloudmersive est facultatif et n'est pas nécessaire pour le traitement standard.",
    documenso:"Choisissez Documenso Cloud ou un hébergement sécurisé séparé, créez un jeton d'équipe et configurez l'URL HTTPS et le secret. L'envoi reste désactivé.",
    peppol:"Choisissez un point d'accès Peppol certifié avec API, enregistrez l'entreprise et demandez l'accès de test et les accusés de livraison. Seule la préparation UBL est disponible.",
    weeztix:"Créez un identifiant/QR scanner par événement dans la gestion des entrées. L'équipe utilise l'application Weeztix officielle; aucune clé API n'est requise.",
@@ -80,9 +80,9 @@ export const externalServicesCopy={
   intro:"Server-side configuration checks only. Stored credentials do not establish a working connection. Secret values are never shown.",
   link:"Official setup instructions",
   states:{needs_configuration:"Configuration required",credentials_present:"Settings present · live connection unverified",provider_required:"Select a provider",manual_available:"Manual workflow available"},
-  names:{cloudmersive:"Cloudmersive · OCR",documenso:"Documenso · e-signatures",peppol:"Peppol · e-invoicing",weeztix:"Weeztix · entrance scanning",eventix:"Eventix / Weeztix · ticketing",sumup:"SumUp · merchandise and tokens",banking:"Banking / accounting"},
+  names:{cloudmersive:"Cloudmersive · OCR (optional)",documenso:"Documenso · e-signatures",peppol:"Peppol · e-invoicing",weeztix:"Weeztix · entrance scanning",eventix:"Eventix / Weeztix · ticketing",sumup:"SumUp · merchandise and tokens",banking:"Banking / accounting"},
   instructions:{
-   cloudmersive:"Create a Cloudmersive API key, store it as a secret in the main Worker, then validate with a real OCR document.",
+   cloudmersive:"Photo and PDF OCR now runs on the device by default with no API key. Cloudmersive is optional and not required for standard invoice processing.",
    documenso:"Choose Documenso Cloud or a separately secured host, create a team API token, and configure its HTTPS origin and secret. Sending remains disabled.",
    peppol:"Select a certified Peppol Access Point offering an API, register the organization, and request test access and delivery acknowledgements. Only UBL preparation is available.",
    weeztix:"Create a scanner login/QR per event in Entrance Management. Crew members scan using the official Weeztix app; no API key is required.",
@@ -96,9 +96,9 @@ export const externalServicesCopy={
   intro:"Nur serverseitige Konfigurationsprüfung. Gespeicherte Schlüssel beweisen keine funktionierende Verbindung. Geheimnisse werden nicht angezeigt.",
   link:"Offizielle Anleitung",
   states:{needs_configuration:"Konfiguration erforderlich",credentials_present:"Einstellungen vorhanden · Verbindung nicht live geprüft",provider_required:"Dienstleister auswählen",manual_available:"Manueller Ablauf verfügbar"},
-  names:{cloudmersive:"Cloudmersive · OCR",documenso:"Documenso · digitale Signaturen",peppol:"Peppol · E-Rechnungen",weeztix:"Weeztix · Einlasskontrolle",eventix:"Eventix / Weeztix · Ticketverkauf",sumup:"SumUp · Merchandise und Token",banking:"Bank / Buchhaltung"},
+  names:{cloudmersive:"Cloudmersive · OCR (optional)",documenso:"Documenso · digitale Signaturen",peppol:"Peppol · E-Rechnungen",weeztix:"Weeztix · Einlasskontrolle",eventix:"Eventix / Weeztix · Ticketverkauf",sumup:"SumUp · Merchandise und Token",banking:"Bank / Buchhaltung"},
   instructions:{
-   cloudmersive:"Cloudmersive API-Schlüssel erstellen und als Secret im Main-Worker hinterlegen. Danach mit echtem Dokument testen.",
+   cloudmersive:"OCR für Fotos und PDF läuft standardmäßig lokal auf dem Gerät ohne API. Cloudmersive ist optional und für die normale Rechnungsverarbeitung nicht erforderlich.",
    documenso:"Documenso Cloud oder separaten sicheren Host wählen, Team-Token erstellen und HTTPS-URL sowie Schlüssel konfigurieren. Versand bleibt deaktiviert.",
    peppol:"Zertifizierten Peppol Access Point mit API auswählen, Unternehmen registrieren und Testzugang sowie Zustellbestätigungen anfordern. Bisher nur UBL-Vorbereitung.",
    weeztix:"Je Veranstaltung Scanner-Anmeldung/QR in der Einlassverwaltung erstellen. Die Crew scannt mit der offiziellen Weeztix-App ohne API-Schlüssel.",

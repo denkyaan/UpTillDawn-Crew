@@ -1,9 +1,10 @@
 const CACHE='uptilldawn-public-v12'
+const LOCAL_OCR_CACHE='uptilldawn-ocr-v1'
 const PUBLIC_ASSETS=['/offline.html','/offline-public.html','/offline-content.js','/up-till-dawn-mark.webp']
 
 self.addEventListener('install',event=>{event.waitUntil(caches.open(CACHE).then(cache=>cache.addAll(PUBLIC_ASSETS)))})
 self.addEventListener('message',event=>{if(event.data?.type==='UPT_ACTIVATE_UPDATE')event.waitUntil(self.skipWaiting())})
-self.addEventListener('activate',event=>{event.waitUntil(caches.keys().then(keys=>Promise.all(keys.filter(key=>key.startsWith('uptilldawn-')&&key!==CACHE).map(key=>caches.delete(key)))).then(()=>self.clients.claim()))})
+self.addEventListener('activate',event=>{event.waitUntil(caches.keys().then(keys=>Promise.all(keys.filter(key=>key.startsWith('uptilldawn-')&&key!==CACHE&&key!==LOCAL_OCR_CACHE).map(key=>caches.delete(key)))).then(()=>self.clients.claim()))})
 
 async function privateOfflineResponse(){
  const cached=await caches.match('/offline.html')
@@ -19,6 +20,14 @@ self.addEventListener('fetch',event=>{
  if(event.request.mode==='navigate'){
   const publicRoute=url.pathname==='/login'||url.pathname.startsWith('/login/')||url.pathname==='/signup'||url.pathname==='/forgot-password'||url.pathname==='/verify-email'||url.pathname==='/disabled'||url.pathname==='/unauthorized'||url.pathname.startsWith('/auth/')
   event.respondWith(fetch(event.request).catch(()=>publicRoute?caches.match('/offline-public.html'):privateOfflineResponse()))
+ }else if(url.pathname.startsWith('/vendor/ocr/')){
+  event.respondWith(caches.open(LOCAL_OCR_CACHE).then(async cache=>{
+   const hit=await cache.match(event.request)
+   if(hit)return hit
+   const response=await fetch(event.request)
+   if(response.ok)event.waitUntil(cache.put(event.request,response.clone()).catch(()=>{}))
+   return response
+  }))
  }else if(PUBLIC_ASSETS.includes(url.pathname))event.respondWith(caches.match(event.request).then(hit=>hit||fetch(event.request)))
 })
 

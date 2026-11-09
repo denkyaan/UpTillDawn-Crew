@@ -13,10 +13,10 @@
     "typecheck": "tsc --noEmit",
     "e2e:portals": "node scripts/e2e-all-portals.mjs",
     "test": "node --experimental-strip-types --test \"tests/**/*.test.mjs\"",
-    "build:cloudflare": "node scripts/clean-cloudflare.mjs && node scripts/patch-preview-props-manifest.mjs && opennextjs-cloudflare build",
+    "build:cloudflare": "node scripts/prepare-local-ocr.mjs && node scripts/clean-cloudflare.mjs && node scripts/patch-preview-props-manifest.mjs && opennextjs-cloudflare build",
     "preview:cloudflare": "opennextjs-cloudflare preview",
     "deploy:cloudflare": "opennextjs-cloudflare deploy",
-    "prebuild": "node scripts/god-source-index.mjs",
+    "prebuild": "node scripts/god-source-index.mjs && node scripts/prepare-local-ocr.mjs",
     "predev": "node scripts/god-source-index.mjs",
     "build:next": "next build"
   },
