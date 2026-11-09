@@ -41,6 +41,7 @@ export function GeoapifyPlaceFields({
   const [suggestions,setSuggestions]=useState<Suggestion[]>([])
   const [activeIndex,setActiveIndex]=useState(-1)
   const [loading,setLoading]=useState(false)
+  const [onlineLookup,setOnlineLookup]=useState(false)
   const [error,setError]=useState("")
 
   const query=focused==="venue"?venue:focused==="address"?address:""
@@ -50,7 +51,8 @@ export function GeoapifyPlaceFields({
   },[latitude,longitude])
 
   useEffect(()=>{
-    if(!focused||query.trim().length<2)return
+    // Manual fields are the free/offline default; Geoapify is explicit opt-in.
+    if(!onlineLookup||!focused||query.trim().length<2||!navigator.onLine)return
 
     const controller=new AbortController()
     const timer=window.setTimeout(async()=>{
@@ -84,7 +86,7 @@ export function GeoapifyPlaceFields({
       window.clearTimeout(timer)
       controller.abort()
     }
-  },[focused,query])
+  },[focused,query,onlineLookup])
 
   const clearLink=()=>{
     setLatitude("")
@@ -168,6 +170,10 @@ export function GeoapifyPlaceFields({
   }
 
   return <div className="grid gap-3 md:grid-cols-2">
+    <label className="md:col-span-2 flex items-center gap-2 text-xs">
+      <input type="checkbox" checked={onlineLookup} onChange={event=>{setOnlineLookup(event.target.checked);setSuggestions([]);setError("");setLoading(false)}}/>
+      Online locatie- en adressuggesties gebruiken (optioneel; kan API-verbruik veroorzaken)
+    </label>
     <div className="relative grid gap-1 text-sm">
       <label htmlFor={venueId}>Locatie</label>
       <input
@@ -212,11 +218,15 @@ export function GeoapifyPlaceFields({
 
     <input type="hidden" name="venue" value={venue}/>
     <input type="hidden" name="address" value={address}/>
-    <input type="hidden" name="latitude" value={latitude}/>
-    <input type="hidden" name="longitude" value={longitude}/>
+    <label className="grid gap-1 text-sm">Breedtegraad (optioneel, handmatig)
+      <input type="number" inputMode="decimal" step="any" min="-90" max="90" name="latitude" required={Boolean(longitude)} value={latitude} onChange={event=>setLatitude(event.target.value)} className="rounded-lg border bg-background p-3"/>
+    </label>
+    <label className="grid gap-1 text-sm">Lengtegraad (optioneel, handmatig)
+      <input type="number" inputMode="decimal" step="any" min="-180" max="180" name="longitude" required={Boolean(latitude)} value={longitude} onChange={event=>setLongitude(event.target.value)} className="rounded-lg border bg-background p-3"/>
+    </label>
 
     <div className="md:col-span-2 flex flex-wrap items-center gap-3 text-xs text-muted-foreground">
-      <span>Kies een suggestie om locatie, adres en GPS-coördinaten automatisch aan elkaar te koppelen.</span>
+      <span>Locatie en adres kun je zonder API handmatig invullen. GPS-coördinaten zijn optioneel en moeten gecontroleerd worden; online suggesties zijn een bewuste keuze.</span>
       {mapsUri&&<a href={mapsUri} target="_blank" rel="noreferrer" className="underline">Open adres in Google Maps</a>}
       <span>
         Powered by <a href="https://www.geoapify.com/" target="_blank" rel="noreferrer" className="underline">Geoapify</a>

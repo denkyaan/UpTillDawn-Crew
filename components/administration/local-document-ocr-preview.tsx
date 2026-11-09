@@ -4,6 +4,7 @@ import {useRef,useState} from "react"
 import type {ChangeEvent} from "react"
 import {FileScan,Copy,CheckCheck,ShieldCheck} from "lucide-react"
 import type {SupportedUiLocale} from "@/lib/locale-preferences"
+import {OfflineOcrPrepButton} from "@/components/crew/offline-ocr-prep-button"
 import {recognizeLocally,isSupportedLocalOcrLanguage,type LocalOcrLang,type LocalOcrResult} from "@/lib/administration/local-document-ocr"
 
 const copy={
@@ -119,6 +120,7 @@ export default function LocalDocumentOcrPreview({locale}:{locale:SupportedUiLoca
    <button type="button" className="inline-flex items-center gap-2 rounded-lg border px-3 py-2 text-xs" onClick={()=>{void navigator.clipboard.writeText(result.text).then(()=>setCopied(true)).catch(()=>setCopied(false))}}>{copied?<CheckCheck className="h-4 w-4"/>:<Copy className="h-4 w-4"/>}{copied?t.copied:t.copy}</button>
   </div>}
   <p className="text-xs text-amber-500">{t.note}</p>
+  <OfflineOcrPrepButton locale={locale}/>
   <p className="flex items-start gap-1.5 text-xs text-muted-foreground"><ShieldCheck className="mt-0.5 h-3.5 w-3.5 shrink-0"/>{t.privacy}</p>
  </section>
 }

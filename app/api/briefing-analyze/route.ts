@@ -21,6 +21,9 @@ export async function POST(request:Request){
  if(file.size<=0||file.size>MAX_FILE_SIZE)return NextResponse.json({error:'Bestand is leeg of groter dan 20 MB.'},{status:400})
  if(!ALLOWED_TYPES.has(file.type))return NextResponse.json({error:'Dit bestandstype wordt niet ondersteund.'},{status:415})
  try{await validateUploadSecurity(file)}catch{return NextResponse.json({error:'Ongeldig of onveilig briefingbestand.'},{status:400})}
+ // Kept only as an explicitly enabled legacy fallback. Normal briefing import
+ // is browser-local and never calls OpenAI or any other paid model provider.
+ if(process.env.UPT_ENABLE_EXTERNAL_BRIEFING_AI!=="true")return NextResponse.json({error:"Externe AI-analyse staat uit. Gebruik de lokale briefingimport."},{status:503})
  const apiKey=process.env.OPENAI_API_KEY
  if(!apiKey)return NextResponse.json({error:'Documentanalyse is niet geconfigureerd.'},{status:503})
  const upload=new FormData();upload.set('purpose','user_data');upload.set('file',file,file.name)

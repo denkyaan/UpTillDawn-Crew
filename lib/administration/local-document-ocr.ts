@@ -83,8 +83,11 @@ export async function recognizeLocally(
  file:File,language:LocalOcrLang,
  onProgress?:(progress:number,status:string)=>void,
  isCancelled?:()=>boolean,
+ options?:{maxBytes?:number},
 ):Promise<LocalOcrResult>{
- if(!file||file.size<8||file.size>maxBytes)throw new Error("local_ocr_invalid_file")
+ // Finance retains its 5 MB limit; explicit briefing import may accept 20 MB.
+ const limit=options?.maxBytes===20*1024*1024?20*1024*1024:maxBytes
+ if(!file||file.size<8||file.size>limit)throw new Error("local_ocr_invalid_file")
  if(!isSupportedLocalOcrLanguage(language))throw new Error("local_ocr_invalid_language")
  const signature=new Uint8Array(await file.slice(0,8).arrayBuffer())
  const type=verifiedOcrFileType(signature,file.type,file.name)
