@@ -28,14 +28,17 @@ test('admin portal assignment read policy remains restricted to approved admins'
  assert.match(sql,/actor\.account_blocked=false/)
 })
 
-test('role management keeps self-account read-only and blocks duplicate active grants',async()=>{
- const [crew,ui]=await Promise.all([read('app/(app)/crew/page.tsx'),read('components/admin/personnel-portal-roles.tsx')])
- assert.match(crew,/readOnly=\{own\}/)
- assert.match(ui,/const activeSelected=Boolean\(selectedAssignment\?\.approved\)/)
- assert.match(ui,/activeSelected\?<span/)
- assert.match(ui,/pendingSelected\?<button/)
- assert.match(ui,/disabled=\{pending\}/)
- assert.match(ui,/router\.refresh\(\)/)
+test('canonical Approvals editor changes two roles atomically without duplicate personnel forms',async()=>{
+ const [crew,editor,db,action]=await Promise.all([
+  read('app/(app)/crew/page.tsx'),read('components/admin/personnel-two-role-editor.tsx'),
+  read('supabase/migrations/20261109130000_personnel_dual_role_editor.sql'),
+  read('lib/actions/personnel-dual-roles.ts'),
+ ])
+ assert.doesNotMatch(crew,/PersonnelPortalRoles|setPersonnelRole/)
+ for(const value of ['name="save_slot" value="1"','name="save_slot" value="2"','value="none"'])assert.ok(editor.includes(value))
+ assert.match(db,/constraint upt_role_slots_distinct/)
+ assert.match(db,/PERSONNEL_TWO_ROLES_CHANGED/)
+ assert.match(action,/realIsAdmin/)
 })
 
 test('SQL lifecycle verifies approved entitlement, denied non-admin writes and revocation',async()=>{

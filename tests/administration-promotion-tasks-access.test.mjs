@@ -91,7 +91,7 @@ test('promotion assignment controls fail closed on incomplete result sets',()=>{
  assert.ok(page.includes('!assignmentError&&!assignmentOverflow&&<form'))
  assert.ok(page.includes('!assignmentError&&!assignmentOverflow&&<section'))
  assert.ok(page.includes('assignmentError||assignmentOverflow'))
- assert.ok(page.includes('"/admin/management":"/portals/administration/modules/marketing"'))
+ assert.ok(page.includes('"/tasks":"/portals/administration/modules/marketing"'))
 })
 
 test('promotion assignment server action rejects forged non-member or unapproved user IDs',()=>{

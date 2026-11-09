@@ -128,7 +128,7 @@ export default async function AdministrationPromotionTasks({searchParams,adminVi
  const returnState={adminView,q,scope,page}
  const assignmentStatusLabels={nl:{"NOT STARTED":"Nog te starten","IN PROGRESS":"Bezig","COMPLETED":"Voltooid"},fr:{"NOT STARTED":"À commencer","IN PROGRESS":"En cours","COMPLETED":"Terminée"},en:{"NOT STARTED":"Not started","IN PROGRESS":"In progress","COMPLETED":"Completed"},de:{"NOT STARTED":"Noch nicht begonnen","IN PROGRESS":"In Bearbeitung","COMPLETED":"Abgeschlossen"}} as const
  return <main className="mx-auto max-w-4xl space-y-5 p-4 pb-36 sm:p-6">
-  <Link href={adminView?"/admin/management":"/portals/administration/modules/marketing"} className="text-sm text-violet-400">← {t.back}</Link>
+  <Link href={adminView?"/tasks":"/portals/administration/modules/marketing"} className="text-sm text-violet-400">← {t.back}</Link>
   <header className="space-y-2"><h1 className="text-2xl font-bold">{t.title}</h1><p className="text-sm text-muted-foreground">{t.intro}</p></header>
   <PromotionTaskFeedback locale={locale} error={params.action_error} saved={params.saved}/>
   {(actor.realIsAdmin||actor.isOwner)&&<GeneralPromotionTaskCreate locale={locale} members={promotionMembers} incomplete={promotionMembersIncomplete} state={returnState}/>}

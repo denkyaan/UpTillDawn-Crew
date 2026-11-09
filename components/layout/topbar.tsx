@@ -1,5 +1,5 @@
 "use client"
-import { useTransition } from "react"
+import { useTransition, type ReactNode } from "react"
 import Image from "next/image"
 import Link from "next/link"
 import {usePathname} from "next/navigation"
@@ -7,7 +7,7 @@ import { useAuth,useDisplayName } from "@/lib/providers"
 import { signOut } from "@/lib/actions/auth"
 import { disablePushNotifications } from "@/lib/push-client"
 
-export function Topbar({notificationMissed=0}:{notificationMissed?:number}){
+export function Topbar({notificationMissed=0,adminAiAction}:{notificationMissed?:number;adminAiAction?:ReactNode}){
  const pathname=usePathname()
  const administration=pathname==="/portals/administration"||pathname.startsWith("/portals/administration/")
  const promotion=pathname==="/portals/promotion"||pathname.startsWith("/portals/promotion/")
@@ -22,6 +22,7 @@ export function Topbar({notificationMissed=0}:{notificationMissed?:number}){
    <span className="hidden min-[390px]:inline truncate">Up Till Dawn</span>
   </Link>
   <div className="flex min-w-0 shrink-0 items-center gap-2 text-[12px] sm:gap-3 sm:text-sm">
+   {adminAiAction}
    <span className="hidden sm:inline">{name} · {roleLabel}</span>
    <Link href={administration?"/portals/administration/modules/notifications":promotion?"/portals/promotion/notifications":"/notifications"} className="relative inline-flex items-center gap-1">
     <span className="hidden sm:inline">Meldingen</span><span className="sm:hidden" aria-label="Meldingen">🔔</span>

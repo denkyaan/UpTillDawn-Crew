@@ -20,7 +20,7 @@ test('admin primary navigation stays consolidated and professional',async()=>{
   for(const key of ['inventory','guestlist','briefings','exports','platform'])assert.match(rules,new RegExp(`navRule\\("admin","${key}"[^\\n]+,"never",false,false\\)`))
   assert.match(help,/Centrale actiequeue/)
   assert.match(settings,/Platform & automatiseringen/)
-  assert.match(approvals,/uitsluitend nieuwe accountaanvragen/i)
+  assert.match(approvals,/Keur nieuwe accounts goed en beheer hier Rol 1/)
   assert.match(crew,/Beheer goedgekeurde medewerkers/i)
 })
 

@@ -2,6 +2,13 @@ export type ActionUiLocale='nl'|'fr'|'en'|'de'
 type Row={fr:string;en:string;de:string}
 
 const ROWS:Record<string,Row>={
+  "Admin permission required":{fr:"Autorisation administrateur requise",en:"Admin permission required",de:"Adminberechtigung erforderlich"},
+  "Kies twee verschillende rollen":{fr:"Choisissez deux rôles différents",en:"Choose two different roles",de:"Wählen Sie zwei verschiedene Rollen"},
+  "Invalid Head transfer":{fr:"Transfert invalide de l’admin principal",en:"Invalid Head Admin transfer",de:"Ungültige Übertragung des Hauptadmins"},
+  "Alleen de Hoofdadmin kan deze wijziging uitvoeren.":{fr:"Seul l’admin principal peut effectuer cette modification.",en:"Only the Head Admin can make this change.",de:"Nur der Hauptadmin kann diese Änderung vornehmen."},
+  "Deze rollen kunnen niet gecombineerd worden of vereisen bevestiging.":{fr:"Ces rôles ne peuvent pas être combinés ou nécessitent une confirmation.",en:"These roles cannot be combined or require confirmation.",de:"Diese Rollen können nicht kombiniert werden oder erfordern eine Bestätigung."},
+  "Draag eerst de Hoofdadmin over.":{fr:"Transférez d’abord le rôle d’admin principal.",en:"Transfer Head Admin first.",de:"Übertragen Sie zuerst den Hauptadmin."},
+  "Rolwijziging niet uitgevoerd.":{fr:"Modification du rôle non effectuée.",en:"Role change not completed.",de:"Rollenänderung nicht ausgeführt."},
   "Geen toegang":{fr:"Accès refusé",en:"Access denied",de:"Zugriff verweigert"},
   "Ongeldige rolwijziging":{fr:"Modification de rôle invalide",en:"Invalid role change",de:"Ungültige Rollenänderung"},
   "Rolwijziging niet uitgevoerd":{fr:"Modification de rôle non effectuée",en:"Role change not completed",de:"Rollenänderung nicht ausgeführt"},

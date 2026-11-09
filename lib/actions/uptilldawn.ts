@@ -648,7 +648,7 @@ export async function cancelShift(fd:FormData){
 export async function approvePersonnelAccount(fd:FormData){
  const {s,user}=await adminClient()
  const id=uuid.parse(fd.get('user_id'))
- const role=z.enum(['admin','responsible_lead','staff']).parse(fd.get('role')||'staff')
+ const role=z.enum(['responsible_lead','staff']).parse(fd.get('role')||'staff')
  if(id===user.id)throw new Error('Je eigen beheeraccount is al goedgekeurd.')
  const {error}=await s.rpc('upt_admin_set_account',{p_user:id,p_approved:true,p_role:role})
  check(error)

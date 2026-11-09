@@ -11,9 +11,9 @@ test('admin overview degrades per datasource instead of blanking the dashboard',
 })
 test('mobile admin AI and chat leave room for each portal navigation',async()=>{
  const [layout,chat,administration]=await Promise.all([read('components/layout/app-layout.tsx'),read('components/layout/floating-chat-button.tsx'),read('components/administration/administration-navigation.tsx')])
- assert.match(layout,/fixed right-4/)
- assert.match(layout,/bottom-20 lg:bottom-4/)
- assert.ok(layout.includes('inDedicatedPortal?"bottom-[calc(5rem+env(safe-area-inset-bottom))]'))
+ assert.match(layout,/adminAiAction/)
+ assert.match(layout,/adminAiAction=\{adminAiAction\}/)
+ assert.match(layout,/relative z-\[70\] print:hidden/)
  assert.match(administration,/id="administration-subtabs"/)
  assert.match(administration,/previous=>previous\?\.pathname===pathname&&previous\.key===group\.key\?\{key:"overview",pathname\}/)
  assert.match(administration,/selectedCategory\?\.pathname===pathname/)
@@ -46,6 +46,7 @@ test('admin overview uses one authoritative break-session dataset',async()=>{
 
 test('admin overview keeps the established default navigation and excludes retired surfaces',async()=>{
  const source=await read('app/(app)/admin/page.tsx')
- for(const href of ['/admin/time-records','/events','/operations','/personnel','/incidents','/tasks','/crew'])assert.ok(source.includes(href),href)
+ for(const href of ['/events','/operations','/personnel','/incidents','/tasks','/crew'])assert.ok(source.includes(href),href)
+ assert.doesNotMatch(source,/href=["']\/(?:admin\/management|admin\/time-records|chat)["']/)
  assert.doesNotMatch(source,/href=["']\/admin\/(?:health|release)/)
 })
