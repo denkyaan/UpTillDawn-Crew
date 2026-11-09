@@ -9,6 +9,10 @@ export type GeoapifyLocation = {
   latitude: number
   longitude: number
   resultType: string
+  streetAddress: string
+  postalCode: string
+  city: string
+  countryCode: string
 }
 
 type RawLocation = {
@@ -20,6 +24,13 @@ type RawLocation = {
   lat?: number
   lon?: number
   result_type?: string
+  street?: string
+  housenumber?: string
+  postcode?: string
+  city?: string
+  town?: string
+  village?: string
+  country_code?: string
 }
 
 function apiKey(){
@@ -41,6 +52,10 @@ function normalize(item:RawLocation,index:number):GeoapifyLocation|null{
     latitude:item.lat,
     longitude:item.lon,
     resultType:item.result_type||"unknown",
+    streetAddress:[item.street,item.housenumber].filter(Boolean).join(" ").trim()||item.address_line1||"",
+    postalCode:item.postcode||"",
+    city:item.city||item.town||item.village||"",
+    countryCode:/^[a-z]{2}$/i.test(item.country_code||"")?item.country_code!.toUpperCase():"",
   }
 }
 

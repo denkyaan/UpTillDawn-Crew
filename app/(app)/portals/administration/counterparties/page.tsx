@@ -6,6 +6,7 @@ import { getCurrentUser } from '@/lib/actions/auth'
 import { createClient } from '@/lib/supabase/crew-server'
 import { canOpenPortal, type PortalAssignment } from '@/lib/portal-access'
 import { requestUiLocale } from '@/lib/server-locale'
+import {BillingAddressFields} from "@/components/administration/billing-address-fields"
 
 const translations = {
  nl:{title:'Klanten en leveranciers',new:'Nieuwe relatie',name:'Naam',kind:'Type',customer:'Klant',supplier:'Leverancier',both:'Beide',vat:'Btw-nummer',enterprise:'Ondernemingsnummer',email:'E-mail',save:'Opslaan',search:'Zoek relaties',searchButton:'Zoeken',allKinds:'Alle types',previous:'Vorige',next:'Volgende',page:'Pagina',clear:'Wis filter',edit:'Relatie bewerken',update:'Wijzigingen opslaan',empty:'Nog geen relaties.',error:'Opslaan of laden mislukt.',back:'Administratie'},
@@ -26,6 +27,14 @@ async function authorizedClient() {
  return db
 }
 
+function checkedBillingAddress(fd:FormData){
+ const street_address=String(fd.get('street_address')??'').trim()
+ const postal_code=String(fd.get('postal_code')??'').trim()
+ const city=String(fd.get('city')??'').trim()
+ const country_code=String(fd.get('country_code')??'').trim().toUpperCase()
+ if(street_address.length>300||postal_code.length>32||city.length>120||(country_code&&!/^[A-Z]{2}$/.test(country_code))||/[\u0000-\u001f]/.test(street_address+postal_code+city))return null
+ return {street_address:street_address||null,postal_code:postal_code||null,city:city||null,country_code:country_code||null}
+}
 async function addCounterparty(formData:FormData) {
  'use server'
  const db = await authorizedClient()
@@ -34,8 +43,10 @@ async function addCounterparty(formData:FormData) {
  const vat_number = String(formData.get('vat_number') ?? '').trim()
  const enterprise_number = String(formData.get('enterprise_number') ?? '').trim()
  const email = String(formData.get('email') ?? '').trim()
+ const billing=checkedBillingAddress(formData)
+ if (!billing)redirect('/portals/administration/counterparties?error=1')
  if (!name || name.length>200 || vat_number.length>40 || enterprise_number.length>40 || email.length>254 || !['customer','supplier','both'].includes(kind) || (email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email))) redirect('/portals/administration/counterparties?error=1')
- const {error} = await db.from('admin_counterparties').insert({name,kind,vat_number:vat_number||null,enterprise_number:enterprise_number||null,email:email||null})
+ const {error} = await db.from('admin_counterparties').insert({name,kind,vat_number:vat_number||null,enterprise_number:enterprise_number||null,email:email||null,...billing})
  if (error) redirect('/portals/administration/counterparties?error=1')
  revalidatePath('/portals/administration/counterparties')
  redirect('/portals/administration/counterparties')
@@ -61,8 +72,10 @@ async function updateCounterparty(formData:FormData) {
  const vat_number = String(formData.get('vat_number') ?? '').trim()
  const enterprise_number = String(formData.get('enterprise_number') ?? '').trim()
  const email = String(formData.get('email') ?? '').trim()
+ const billing=checkedBillingAddress(formData)
+ if (!billing)redirect(returnPath+(returnPath.includes('?')?'&':'?')+'error=1')
  if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id) || !name || name.length>200 || !['customer','supplier','both'].includes(kind) || vat_number.length>40 || enterprise_number.length>40 || email.length>254 || (email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email))) redirect(returnPath+(returnPath.includes('?')?'&':'?')+'error=1')
- const {data,error} = await db.from('admin_counterparties').update({name,kind,vat_number:vat_number||null,enterprise_number:enterprise_number||null,email:email||null}).eq('id',id).select('id').maybeSingle()
+ const {data,error} = await db.from('admin_counterparties').update({name,kind,vat_number:vat_number||null,enterprise_number:enterprise_number||null,email:email||null,...billing}).eq('id',id).select('id').maybeSingle()
  if (error || !data) redirect(returnPath+(returnPath.includes('?')?'&':'?')+'error=1')
  revalidatePath('/portals/administration/counterparties')
  redirect(returnPath)
@@ -90,7 +103,7 @@ export default async function CounterpartiesPage({searchParams}:{searchParams:Pr
  const pageHref=(target:number)=>'/portals/administration/counterparties?'+new URLSearchParams({...(query?{q:query}:{}),...(kindFilter?{kind:kindFilter}:{}),page:String(target)}).toString()
  const editHref=(id:string)=>'/portals/administration/counterparties?'+new URLSearchParams({...(query?{q:query}:{}),...(kindFilter?{kind:kindFilter}:{}),...(page>1?{page:String(page)}:{}),edit:id}).toString()
  const selectedId=typeof params.edit==='string'&&/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(params.edit)?params.edit:null
- const selected=selectedId?await db.from('admin_counterparties').select('id,name,kind,vat_number,enterprise_number,email').eq('id',selectedId).maybeSingle():null
+ const selected=selectedId?await db.from('admin_counterparties').select('id,name,kind,vat_number,enterprise_number,email,street_address,postal_code,city,country_code').eq('id',selectedId).maybeSingle():null
  const selectedError=Boolean(selectedId&&selected?.error)
  return <main className="mx-auto max-w-5xl space-y-6 p-4 pb-28 md:p-8">
   <Link href="/portals/administration" className="text-violet-400">← {t.back}</Link>
@@ -109,6 +122,7 @@ export default async function CounterpartiesPage({searchParams}:{searchParams:Pr
     <label className="text-sm">{t.vat}<input name="vat_number" maxLength={40} className="mt-1 block w-full rounded-lg border bg-background p-3"/></label>
     <label className="text-sm">{t.enterprise}<input name="enterprise_number" maxLength={40} className="mt-1 block w-full rounded-lg border bg-background p-3"/></label>
     <label className="text-sm sm:col-span-2">{t.email}<input type="email" name="email" maxLength={254} className="mt-1 block w-full rounded-lg border bg-background p-3"/></label>
+    <BillingAddressFields locale={locale}/>
     <button className="rounded-lg bg-violet-600 p-3 font-semibold text-white">{t.save}</button>
    </form>
    {params.error==='1' && <p role="alert" className="mt-3 text-red-400">{t.error}</p>}
@@ -124,6 +138,7 @@ export default async function CounterpartiesPage({searchParams}:{searchParams:Pr
     <label className="text-sm">{t.vat}<input name="vat_number" maxLength={40} defaultValue={selected.data.vat_number??''} className="mt-1 block w-full rounded-lg border bg-background p-3"/></label>
     <label className="text-sm">{t.enterprise}<input name="enterprise_number" maxLength={40} defaultValue={selected.data.enterprise_number??''} className="mt-1 block w-full rounded-lg border bg-background p-3"/></label>
     <label className="text-sm sm:col-span-2">{t.email}<input type="email" name="email" maxLength={254} defaultValue={selected.data.email??''} className="mt-1 block w-full rounded-lg border bg-background p-3"/></label>
+    <BillingAddressFields locale={locale} defaults={{street_address:selected.data.street_address,postal_code:selected.data.postal_code,city:selected.data.city,country_code:selected.data.country_code}}/>
     <button className="rounded-lg bg-violet-600 p-3 font-semibold text-white">{t.update}</button>
    </form>
   </section>}

@@ -30,3 +30,18 @@ Local-first means no paid third-party AI API is required for routine briefing or
 - Draft title/text and extracted images require review before save/publish. Existing Supabase RLS/RPC and audit controls stay active.
 - Regression: tests/offline-free-api-bundle.test.mjs, existing briefing/office/OCR/navigation/financial/malware suites, TypeScript, Cloudflare build, CI main and Deploy main.
 - A real iPhone test (scanned PDF and Office import, then offline repeat after preloading) is still required. Automated tests cannot certify storage persistence or real-world OCR accuracy.
+
+## Contextual address search and document intake (follow-up scope)
+
+- The shared AddressAutocomplete defaults to manual offline-friendly entry. The user must opt into Geoapify queries. This control is reused for personal profiles and Driver destinations.
+- Structured billing address fields are reused on canonical Customers/Suppliers, the Administration contacts entry, the Finance counterparty forms and the Peppol billing settings form. Address selection fills street, postal code, city and ISO country code; every field remains editable. Server-side validation remains authoritative.
+- Driver trip creation defaults to a manually verified route duration and distance. The Admin may explicitly opt into Geoapify routing if configured. This is not an offline trip submission: saving to shared cloud data still needs connectivity. If online routing fails, it never invents travel estimates.
+- The existing Administration > Documents module now exposes the existing event-scoped document library and the existing role-gated upload action, with per-event workpost scope and the current malware quarantine. Finance invoice attachments, guestlist document import, profile photos, incident media and event documents were already present and remain integrated rather than duplicated in new upload APIs.
+- Administrative users without the underlying manager/event-document permissions are not silently elevated. Uploading or editing another user's records still requires the existing authorization.
+- Document uploads are server-processed after connectivity is restored; do not promise offline uploads without a separately tested queue and conflict resolution. Offline-critical event document download behavior is unchanged.
+
+### Additional validation
+
+- Existing counterparty, role, financial upload, Peppol and event document tests.
+- New local-first contextual address/documents regression tests.
+- End-to-end real-device tests should verify address manual/online selection, document permissions, upload quarantine/release and resume behavior after offline operation.

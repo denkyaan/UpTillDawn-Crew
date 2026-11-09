@@ -4,6 +4,7 @@ import { getCurrentUser } from "@/lib/actions/auth"
 import { createClient } from "@/lib/supabase/crew-server"
 import { canOpenPortal, type PortalAssignment } from "@/lib/portal-access"
 import { requestUiLocale } from "@/lib/server-locale"
+import {BillingAddressFields} from "@/components/administration/billing-address-fields"
 
 const path="/portals/administration/contacts"
 async function access(){
@@ -24,8 +25,13 @@ async function addContact(form:FormData){
  const kind=String(form.get("kind")??"")
  const email=String(form.get("email")??"").trim().slice(0,254)
  const vat=String(form.get("vat")??"").trim().slice(0,40)
+ const street_address=String(form.get("street_address")??"").trim()
+ const postal_code=String(form.get("postal_code")??"").trim()
+ const city=String(form.get("city")??"").trim()
+ const country_code=String(form.get("country_code")??"").trim().toUpperCase()
+ if(street_address.length>300||postal_code.length>32||city.length>120||(country_code&&!/^[A-Z]{2}$/.test(country_code)))return
  if(!name||!["customer","supplier","both"].includes(kind)||email&&!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email))return
- const {error}=await db.from("admin_counterparties").insert({name,kind,email:email||null,vat_number:vat||null})
+ const {error}=await db.from("admin_counterparties").insert({name,kind,email:email||null,vat_number:vat||null,street_address:street_address||null,postal_code:postal_code||null,city:city||null,country_code:country_code||null})
  if(error)throw new Error("Unable to save counterparty")
  revalidatePath(path)
 }
@@ -47,6 +53,7 @@ export default async function ContactsPage(){
    <label className="text-sm font-semibold">{labels.type}<select name="kind" className="mt-1 w-full rounded-lg border bg-background p-3"><option value="supplier">{labels.supplier}</option><option value="customer">{labels.customer}</option><option value="both">{labels.both}</option></select></label>
    <label className="text-sm font-semibold">{labels.email}<input type="email" name="email" className="mt-1 w-full rounded-lg border bg-background p-3"/></label>
    <label className="text-sm font-semibold">{labels.vat}<input name="vat" maxLength={40} className="mt-1 w-full rounded-lg border bg-background p-3"/></label>
+   <BillingAddressFields locale={locale}/>
    <button className="rounded-xl bg-violet-600 px-4 py-3 font-semibold text-white sm:col-span-2">{labels.save}</button>
   </form>
   <section className="space-y-2">{error?<p>{labels.error}</p>:data?.length?data.map(item=><article key={item.id} className="rounded-xl border bg-card p-4"><div className="font-semibold">{item.name}</div><p className="mt-1 text-xs text-muted-foreground">{item.kind==="supplier"?labels.supplier:item.kind==="customer"?labels.customer:labels.both} · {item.email||"—"} · {item.vat_number||"—"}</p></article>):<p className="rounded-xl border p-5 text-sm text-muted-foreground">{labels.empty}</p>}</section>

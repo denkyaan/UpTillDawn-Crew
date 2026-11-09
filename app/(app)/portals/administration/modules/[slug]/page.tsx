@@ -17,6 +17,7 @@ import MappedTicketImportPreview from "@/components/administration/mapped-ticket
 import SepaExport from "@/components/administration/sepa-export"
 import ProviderTransactionWorkspace from "@/components/administration/provider-transaction-workspace"
 import BankStatementWorkspace from "@/components/administration/bank-statement-workspace"
+import {EventDocumentsPanel} from "@/components/crew/event-documents-panel"
 import ProviderBankSettlementWorkspace from "@/components/administration/provider-bank-settlement-workspace"
 import { notFound, redirect } from "next/navigation"
 import { requestUiLocale } from "@/lib/server-locale"
@@ -97,6 +98,9 @@ export default async function AdministrationModulePage({params,searchParams}:{pa
  const inventoryEventChoices=[...(inventoryFilterEvents?.data??[]),...(selectedInventoryEvent?.data?[selectedInventoryEvent.data]:[])]
  const inventoryCount=slug==="inventory" ? await (selectedEvent?supabase.from("inventory_items").select("id",{count:"exact",head:true}).eq("event_id",selectedEvent):supabase.from("inventory_items").select("id",{count:"exact",head:true})) : null
  const submittedHours=slug==="staff"?await supabase.from("timesheets").select("id,user_id,event_id,status,submitted_at").eq("status","submitted").order("submitted_at",{ascending:false}).limit(50):null
+ const documentEventRows=slug==="documents"?await supabase.from("events").select("id,name").order("start_at",{ascending:false}).limit(100):null
+ const documentEventId=slug==="documents"&&typeof requestedEvent==="string"&&/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(requestedEvent)&&documentEventRows?.data?.some(e=>e.id===requestedEvent)?requestedEvent:null
+ const documentWorkplaceRows=documentEventId?await supabase.from("workplaces").select("id,name").eq("event_id",documentEventId).order("name"):null
  const financialRows=financeRelated.has(slug)?await supabase.from("admin_financial_documents").select("id,kind,status,gross_amount,due_date").order("due_date",{ascending:false}).limit(50):null
  const counterpartyRows=["contacts","sponsors"].includes(slug)?await supabase.from("admin_counterparties").select("id,name,kind").order("name",{ascending:true}).limit(100):null
  const movementRows=slug==="logistics"?await supabase.from("inventory_movements").select("*").limit(50):null
@@ -286,6 +290,17 @@ export default async function AdministrationModulePage({params,searchParams}:{pa
    <h2 className="text-lg font-semibold">{({nl:"Relatieregister",fr:"Registre des relations",en:"Relationship register",de:"Kontaktregister"} as const)[locale]}</h2>
    {counterpartyRows?.error?<p role="alert" className="mt-3 text-sm text-muted-foreground">{({nl:"Relaties konden niet worden geladen.",fr:"Impossible de charger les contacts.",en:"Unable to load relationships.",de:"Kontakte konnten nicht geladen werden."} as const)[locale]}</p>:counterpartyRows?.data?.length?<ul className="mt-3 divide-y">{counterpartyRows.data.map(item=><li key={item.id} className="flex flex-wrap justify-between gap-2 py-3 text-sm"><span className="font-medium">{item.name}</span><span className="text-muted-foreground">{item.kind}</span></li>)}</ul>:<p className="mt-3 text-sm text-muted-foreground">{({nl:"Geen relaties gevonden.",fr:"Aucun contact trouvé.",en:"No relationships found.",de:"Keine Kontakte gefunden."} as const)[locale]}</p>}
    <Link href="/portals/administration/counterparties" className="mt-4 inline-flex rounded-lg border px-4 py-2 text-sm font-semibold">{({nl:"Relaties beheren",fr:"Gérer les contacts",en:"Manage relationships",de:"Kontakte verwalten"} as const)[locale]}</Link>
+  </section>}
+  {slug==="documents"&&<section className="space-y-4 rounded-2xl border bg-card p-5">
+   <h2 className="text-lg font-semibold">{({nl:"Eventdocumenten en bijlagen",fr:"Documents d’événement et pièces jointes",en:"Event documents and attachments",de:"Veranstaltungsdokumente und Anhänge"} as const)[locale]}</h2>
+   <p className="text-sm text-muted-foreground">{({nl:"Gebruik de bestaande beveiligde documentbibliotheek. Een bijlage wordt pas toegankelijk na de veiligheidscontrole en volgens de rol- en eventrechten.",fr:"Utilisez la bibliothèque sécurisée existante. Une pièce jointe n’est disponible qu’après contrôle de sécurité et selon les droits du rôle et de l’événement.",en:"Use the existing protected document library. Attachments are released only after security checks and within event/role permissions.",de:"Die bestehende geschützte Dokumentbibliothek verwenden. Anhänge werden erst nach der Sicherheitsprüfung und gemäß Rollen- und Veranstaltungsrechten freigegeben."} as const)[locale]}</p>
+   {documentEventRows?.error?<p role="alert" className="text-sm text-red-500">{u.notAvailable}</p>:<form method="get" className="flex flex-wrap items-end gap-3">
+    <label className="grid flex-1 gap-1 text-sm">{({nl:"Kies een evenement",fr:"Choisissez un événement",en:"Choose an event",de:"Veranstaltung wählen"} as const)[locale]}
+     <select name="event" defaultValue={documentEventId??""} className="rounded-lg border bg-background p-3" required><option value="">{({nl:"Evenement kiezen…",fr:"Choisir un événement…",en:"Select an event…",de:"Veranstaltung auswählen…"} as const)[locale]}</option>{(documentEventRows?.data??[]).map(event=><option key={event.id} value={event.id}>{event.name}</option>)}</select>
+    </label>
+    <button className="rounded-lg border px-4 py-3 font-semibold">{({nl:"Open documenten",fr:"Ouvrir les documents",en:"Open documents",de:"Dokumente öffnen"} as const)[locale]}</button>
+   </form>}
+   {documentEventId&&(documentWorkplaceRows?.error?<p role="alert" className="text-sm text-red-500">{u.notAvailable}</p>:<EventDocumentsPanel eventId={documentEventId} canManage={Boolean(current.realIsAdmin||current.isOwner)} allowEventWide={Boolean(current.realIsAdmin||current.isOwner)} workplaceOptions={(documentWorkplaceRows?.data??[]).map(w=>({id:w.id,label:w.name}))}/>)}
   </section>}
   {financeRelated.has(slug)&&<section className="rounded-2xl border bg-card p-5">
    <h2 className="text-lg font-semibold">{({nl:"Financieel documentenregister",fr:"Registre des documents financiers",en:"Financial document register",de:"Finanzdokumentenregister"} as const)[locale]}</h2>

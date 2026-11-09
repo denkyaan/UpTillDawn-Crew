@@ -1190,7 +1190,7 @@ export async function createEventDocument(fd:FormData){
  })
  if(error)await s.storage.from('work-media').remove([storagePath])
  check(error)
- await revalidatePath('/events');await revalidatePath('/inventory');await revalidatePath('/notifications')
+ await revalidatePath('/events');await revalidatePath('/inventory');await revalidatePath('/notifications');await revalidatePath('/portals/administration/modules/documents')
 }
 export async function createInventoryTextEntry(fd:FormData){
  const {s,user}=await adminClient()
@@ -1265,7 +1265,7 @@ export async function archiveEventDocument(fd:FormData){
  const {data:path,error}=await s.rpc('upt_archive_event_document',{p_document:uuid.parse(fd.get('document_id'))})
  check(error)
  if(path)await s.storage.from('work-media').remove([path])
- await revalidatePath('/events');await revalidatePath('/inventory')
+ await revalidatePath('/events');await revalidatePath('/inventory');await revalidatePath('/portals/administration/modules/documents')
 }
 
 export async function updateEventEmergencyInformation(fd:FormData){
@@ -1328,15 +1328,32 @@ export async function createDriverTransportTask(fd:FormData){
  if(!workplace||!/driver/i.test(workplace.name))throw new Error('Deze rit kan alleen aan een Driver-shift worden gekoppeld.')
  const event=shift.events
  if(!event)throw new Error('Evenement niet gevonden.')
- let eventPoint=event.latitude!=null&&event.longitude!=null
-  ? {latitude:Number(event.latitude),longitude:Number(event.longitude)}
-  : null
- if(!eventPoint&&event.address)eventPoint=await geocodeGeoapify(event.address)
- if(!eventPoint)throw new Error('Het evenement heeft geen bruikbaar adres.')
- const destination=await geocodeGeoapify(address)
- if(!destination)throw new Error('Het ophaal-/afzetadres kon niet worden gevonden.')
- const route=await drivingRouteGeoapify(eventPoint,destination)
- const driveMinutes=route.minutes
+ // Local-first default: an administrator may supply a verified estimate
+ // without consuming Geoapify geocoding/routing API calls.
+ const useOnlineRoute=fd.get('use_online_route')==='on'
+ let driveMinutes:number
+ let expectedKm:number
+ if(useOnlineRoute){
+  try{
+   let eventPoint=event.latitude!=null&&event.longitude!=null
+    ? {latitude:Number(event.latitude),longitude:Number(event.longitude)}
+    : null
+   if(!eventPoint&&event.address)eventPoint=await geocodeGeoapify(event.address)
+   if(!eventPoint)throw new Error('Event address unavailable')
+   const destination=await geocodeGeoapify(address)
+   if(!destination)throw new Error('Destination unavailable')
+   const route=await drivingRouteGeoapify(eventPoint,destination)
+   driveMinutes=route.minutes
+   expectedKm=route.kilometers
+  }catch{throw new Error('Online routeberekening niet beschikbaar. Schakel online route uit en vul reistijd en kilometers handmatig in.')}
+ }else{
+  const minutesRaw=String(fd.get('manual_travel_minutes')??'').trim()
+  const kmRaw=String(fd.get('manual_route_km')??'').trim()
+  if(!/^[1-9][0-9]{0,3}$/.test(minutesRaw)||!/^(?:0|[1-9][0-9]{0,3})(?:\.[0-9]{1,2})?$/.test(kmRaw))throw new Error('Vul een geldige handmatige reistijd en afstand in.')
+  driveMinutes=Number(minutesRaw)
+  expectedKm=Number(kmRaw)
+  if(driveMinutes>1440||expectedKm>2000||expectedKm<=0)throw new Error('Reistijd of afstand buiten de toegestane grenzen.')
+ }
  const notifyAt=new Date(scheduledAt.getTime()-(driveMinutes+15)*60_000).toISOString()
  const title=direction==='pickup'?`Ophalen · ${passengerName}`:`Afzetten · ${passengerName}`
  const description=`${passengerPhone} · ${address} · ${scheduledAt.toLocaleString('nl-BE')}`
@@ -1347,7 +1364,7 @@ export async function createDriverTransportTask(fd:FormData){
  const {error:detailError}=await s.rpc('upt_set_driver_task_details',{
   p_task:taskId,p_direction:direction,p_passenger_name:passengerName,p_passenger_phone:passengerPhone,
   p_address:address,p_scheduled_at:scheduledAt.toISOString(),p_estimated_drive_minutes:driveMinutes,p_notify_at:notifyAt,
-  p_expected_km:route.kilometers,p_guestlist_entry:guestlistEntryId,
+  p_expected_km:expectedKm,p_guestlist_entry:guestlistEntryId,
  })
  if(detailError){await s.from('tasks').delete().eq('id',taskId);check(detailError)}
  await revalidatePath('/workplaces');await revalidatePath('/tasks')

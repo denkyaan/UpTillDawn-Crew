@@ -5,6 +5,7 @@ import {administrationPageAccess} from '@/lib/administration/page-access'
 import {billingParty,billingFields} from '@/lib/administration/peppol-server'
 import {peppolPartyIssues,normalizeEnterprise} from '@/lib/administration/peppol'
 import {requestUiLocale} from '@/lib/server-locale'
+import {BillingAddressFields} from '@/components/administration/billing-address-fields'
 import {peppolCopy,peppolFieldLabels,localeIndex} from '@/lib/administration/peppol-copy'
 
 const path='/portals/administration/modules/settings'
@@ -49,7 +50,8 @@ export default async function BillingProfile({failed=false}:{failed?:boolean}){
   <h2 className="text-xl font-semibold">{t.company}</h2><p role="status">{profile?.approved_at?t.approved:t.unapproved}</p><p className="text-sm text-muted-foreground">{t.changed}</p>
   {failed&&<p role="alert" className="text-red-400">{t.conflict}</p>}
   <form action={save} className="grid gap-3 sm:grid-cols-2"><input type="hidden" name="version" value={profile?.updated_at??''}/>
-   {billingFields.map(key=><label key={key} className="space-y-1 text-sm">{peppolFieldLabels[key][index]}<input name={key} defaultValue={party[key]||((key==='country_code')?'BE':'')} maxLength={fieldLengths[key]} placeholder={key==='peppol_endpoint'?'0208:0123456749':undefined} className="block w-full rounded-lg border bg-background p-3"/></label>)}
+   <BillingAddressFields locale={locale} defaults={{street_address:party.street_address,postal_code:party.postal_code,city:party.city,country_code:party.country_code}}/>
+   {billingFields.filter(key=>!['street_address','postal_code','city','country_code'].includes(key)).map(key=><label key={key} className="space-y-1 text-sm">{peppolFieldLabels[key][index]}<input name={key} defaultValue={party[key]||((key==='country_code')?'BE':'')} maxLength={fieldLengths[key]} placeholder={key==='peppol_endpoint'?'0208:0123456749':undefined} className="block w-full rounded-lg border bg-background p-3"/></label>)}
    <button type="submit" className="rounded-lg bg-violet-600 px-4 py-3 text-white">{t.save}</button>
   </form>
   {profile&&!profile.approved_at&&issues.length>0&&<ul className="list-disc pl-5 text-sm">{issues.map((issue,i)=><li key={i}>{peppolFieldLabels[issue.path.split('.').at(-1) as keyof typeof peppolFieldLabels]?.[index]??t.company}: {t[issue.code]}</li>)}</ul>}

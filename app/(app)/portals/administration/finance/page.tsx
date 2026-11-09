@@ -1,3 +1,4 @@
+import {BillingAddressFields} from "@/components/administration/billing-address-fields"
 import InvoiceLineCsvImport from "@/components/administration/invoice-line-csv-import"
 import LocalDocumentOcrPreview from "@/components/administration/local-document-ocr-preview"
 import PeppolDocumentFields from '@/components/administration/peppol-document-fields'
@@ -631,10 +632,7 @@ export default async function FinancePage({searchParams}:{searchParams:Promise<{
     <input name="vat_number" maxLength={32} aria-label={({nl:'Btw-nummer',fr:'Numéro TVA',en:'VAT number',de:'USt-IdNr.'} as const)[locale]} placeholder={({nl:'Btw-nummer',fr:'Numéro TVA',en:'VAT number',de:'USt-IdNr.'} as const)[locale]} className="rounded border bg-background p-2"/>
     <input name="enterprise_number" maxLength={32} aria-label={({nl:'Ondernemingsnummer',fr:'Numéro d’entreprise',en:'Enterprise number',de:'Unternehmensnummer'} as const)[locale]} placeholder={({nl:'Ondernemingsnummer',fr:'Numéro d’entreprise',en:'Enterprise number',de:'Unternehmensnummer'} as const)[locale]} className="rounded border bg-background p-2"/>
 
-    <label>{({nl:'Straat en huisnummer',fr:'Rue et numéro',en:'Street address',de:'Straße und Hausnummer'} as const)[locale]}<input name="street_address" maxLength={300} className="block w-full rounded border bg-background p-2"/></label>
-    <label>{({nl:'Postcode',fr:'Code postal',en:'Postal code',de:'Postleitzahl'} as const)[locale]}<input name="postal_code" maxLength={32} className="block w-full rounded border bg-background p-2"/></label>
-    <label>{({nl:'Gemeente',fr:'Ville',en:'City',de:'Ort'} as const)[locale]}<input name="city" maxLength={120} className="block w-full rounded border bg-background p-2"/></label>
-    <label>{({nl:'Landcode (BE)',fr:'Code pays (BE)',en:'Country code (BE)',de:'Ländercode (BE)'} as const)[locale]}<input name="country_code" maxLength={2} placeholder="BE" className="block w-full rounded border bg-background p-2"/></label>
+    <BillingAddressFields locale={locale}/>
     <label>IBAN<input name="iban" maxLength={42} className="block w-full rounded border bg-background p-2"/></label>
     <label>{peppolFieldLabels.peppol_endpoint[localeIndex[locale]]}<input name="peppol_endpoint" maxLength={200} className="block w-full rounded border bg-background p-2"/></label>
     <label>BIC<input name="bic" maxLength={11} className="block w-full rounded border bg-background p-2"/></label>
@@ -649,10 +647,7 @@ export default async function FinancePage({searchParams}:{searchParams:Promise<{
     <label>{({nl:'Btw-nummer',fr:'Numéro TVA',en:'VAT number',de:'USt-IdNr.'} as const)[locale]}<input name="vat_number" defaultValue={party.vat_number??''} maxLength={32} className="block w-full rounded border bg-background p-2"/></label>
     <label>{({nl:'Ondernemingsnummer',fr:'Numéro d’entreprise',en:'Enterprise number',de:'Unternehmensnummer'} as const)[locale]}<input name="enterprise_number" defaultValue={party.enterprise_number??''} maxLength={32} className="block w-full rounded border bg-background p-2"/></label>
 
-    <label>{({nl:'Straat en huisnummer',fr:'Rue et numéro',en:'Street address',de:'Straße und Hausnummer'} as const)[locale]}<input name="street_address" maxLength={300} defaultValue={party.street_address??''} className="block w-full rounded border bg-background p-2"/></label>
-    <label>{({nl:'Postcode',fr:'Code postal',en:'Postal code',de:'Postleitzahl'} as const)[locale]}<input name="postal_code" maxLength={32} defaultValue={party.postal_code??''} className="block w-full rounded border bg-background p-2"/></label>
-    <label>{({nl:'Gemeente',fr:'Ville',en:'City',de:'Ort'} as const)[locale]}<input name="city" maxLength={120} defaultValue={party.city??''} className="block w-full rounded border bg-background p-2"/></label>
-    <label>{({nl:'Landcode (BE)',fr:'Code pays (BE)',en:'Country code (BE)',de:'Ländercode (BE)'} as const)[locale]}<input name="country_code" maxLength={2} defaultValue={party.country_code??''} placeholder="BE" className="block w-full rounded border bg-background p-2"/></label>
+    <BillingAddressFields locale={locale} defaults={{street_address:party.street_address,postal_code:party.postal_code,city:party.city,country_code:party.country_code}}/>
     <label>IBAN<input name="iban" maxLength={42} defaultValue={party.iban??''} className="block w-full rounded border bg-background p-2"/></label>
     <label>{peppolFieldLabels.peppol_endpoint[localeIndex[locale]]}<input name="peppol_endpoint" defaultValue={party.peppol_endpoint??''} maxLength={200} className="block w-full rounded border bg-background p-2"/></label>
     <label>BIC<input name="bic" maxLength={11} defaultValue={party.bic??''} className="block w-full rounded border bg-background p-2"/></label>
