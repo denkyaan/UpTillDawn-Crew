@@ -2,6 +2,8 @@ export type ExtraCatalogLocale = 'nl' | 'fr' | 'en' | 'de'
 type Row = { fr:string; en:string; de:string }
 
 export const APP_EXTRA_TRANSLATIONS: Record<string,Row> = {
+  "Privégesprek starten":{fr:"Démarrer une discussion privée",en:"Start a private chat",de:"Privatchat starten"},
+  "Start a private conversation":{fr:"Démarrer une conversation privée",en:"Start a private conversation",de:"Privatgespräch beginnen"},
   "Rollen beheren ·":{fr:"Gérer les rôles ·",en:"Manage roles ·",de:"Rollen verwalten ·"},
   "Shift geselecteerd":{fr:"Service sélectionné",en:"Shift selected",de:"Schicht ausgewählt"},
   "Wis de geselecteerde context":{fr:"Effacer le contexte sélectionné",en:"Clear selected context",de:"Ausgewählten Kontext löschen"},
