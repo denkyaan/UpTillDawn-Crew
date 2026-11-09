@@ -37,7 +37,7 @@ export default async function Page({searchParams}:{searchParams?:Promise<{feedba
     const matches=(activeAssignments||[]).filter(row=>row.user_id===person.id&&row.approved&&!row.revoked_at)
     const two:AssignableRole|null=matches.some(row=>row.portal==='promotion'&&row.role==='promoter')?'promotion'
       :slot?null:matches.some(row=>row.portal==='administration'&&row.role==='administrative_staff')?'administration':null
-    return {one,two:two===one?null:two}
+    return {one,two}
   }
   const pending=(data||[]).filter(person=>!person.approved).sort((a,b)=>Number(b.id===params.user)-Number(a.id===params.user))
 
