@@ -4,6 +4,9 @@ type Row = { fr: string; en: string; de: string }
 // Canonical Dutch UI strings that were historically present only in the NL/FR/EN table.
 // Keep every row complete: missing translations must never silently fall back to Dutch.
 const ROWS: Record<string, Row> = {
+  'Er zijn nog geen automatiseringen ingesteld.': { fr: 'Aucune automatisation n\'est encore configurée.', en: 'No automations have been configured yet.', de: 'Es sind noch keine Automatisierungen eingerichtet.' },
+  'controle(s) nakijken': { fr: 'contrôle(s) à vérifier', en: 'check(s) to review', de: 'Prüfung(en) kontrollieren' },
+  'Controle nakijken': { fr: 'Vérifier le contrôle', en: 'Review check', de: 'Prüfung kontrollieren' },
   'Tickets scannen aan de inkom': { fr: 'Scanner les billets à l’entrée', en: 'Scan tickets at the entrance', de: 'Tickets am Eingang scannen' },
   'Scanner les billets à l’entrée': { fr: 'Scanner les billets à l’entrée', en: 'Scan tickets at the entrance', de: 'Tickets am Eingang scannen' },
   'Scan tickets at the entrance': { fr: 'Scanner les billets à l’entrée', en: 'Scan tickets at the entrance', de: 'Tickets am Eingang scannen' },

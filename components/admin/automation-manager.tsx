@@ -41,7 +41,9 @@ const actionLabel=(value:string)=>({
   'escalate_incident':'Incident escaleren',
 }[value]||value.replaceAll('_',' '))
 
-export function AutomationManager({rules}:{rules:AutomationRuleView[]}){
+export function AutomationManager({rules,observedAt}:{rules:AutomationRuleView[];observedAt:number}){
+  const activeCount=rules.filter(rule=>rule.enabled).length
+  const staleCount=rules.filter(rule=>rule.enabled&&(!rule.last_run_at||!Number.isFinite(Date.parse(rule.last_run_at))||observedAt-Date.parse(rule.last_run_at)>15*60_000)).length
   return <section id="automatiseringen" className="scroll-mt-24 space-y-4 rounded-2xl border p-4">
     <div className="flex flex-wrap items-end justify-between gap-3">
       <div>
@@ -49,20 +51,24 @@ export function AutomationManager({rules}:{rules:AutomationRuleView[]}){
         <h2 className="text-2xl font-black">Automatiseringen</h2>
         <p className="mt-1 max-w-3xl text-sm text-muted-foreground">Beheer automatische controles, reminders en escalaties vanuit één plaats. Kritieke beslissingen zoals accountgoedkeuring, financiële correcties en verwijderingen blijven altijd handmatig.</p>
       </div>
-      <span className="rounded-full border px-3 py-2 text-xs font-black">{rules.filter(rule=>rule.enabled).length}/{rules.length} actief</span>
+      <span className="rounded-full border px-3 py-2 text-xs font-black">{activeCount}/{rules.length} actief{staleCount>0?` · ${staleCount} controle(s) nakijken`:''}</span>
     </div>
 
-    <div className="grid gap-3 xl:grid-cols-2">
+    <div className="grid gap-2">
+      {rules.length===0&&<p className="rounded-xl border p-4 text-sm text-muted-foreground">Er zijn nog geen automatiseringen ingesteld.</p>}
       {rules.map(rule=>{
         const settings=rule.settings&&typeof rule.settings==='object'&&!Array.isArray(rule.settings)?rule.settings as Record<string,unknown>:{}
         const managed=settings.managed==='built_in'?'built_in':'workflow'
-        return <form key={rule.automation_key} action={saveAutomationRule} className="space-y-3 rounded-xl border p-4">
+        const lastCheck=rule.last_run_at?Date.parse(rule.last_run_at):NaN
+        const healthLabel=!rule.enabled?'Uitgeschakeld':!Number.isFinite(lastCheck)||observedAt-lastCheck>15*60_000?'Controle nakijken':'Actief'
+        return <details key={rule.automation_key} className="rounded-xl border">
+        <summary className="flex cursor-pointer items-start justify-between gap-3 p-4 marker:text-violet-400">
+          <span className="min-w-0 flex-1"><span className="block font-bold">{rule.label}</span><span className="mt-1 block text-xs text-muted-foreground">{rule.description}</span></span>
+          <span className="shrink-0 rounded-full border px-3 py-1 text-xs font-semibold">{healthLabel}</span>
+        </summary>
+        <form action={saveAutomationRule} className="space-y-3 border-t p-4">
         <input type="hidden" name="automation_key" value={rule.automation_key}/>
-        <div className="flex items-start justify-between gap-3">
-          <div>
-            <h3 className="font-black">{rule.label}</h3>
-            <p className="mt-1 text-sm text-muted-foreground">{rule.description}</p>
-          </div>
+        <div className="flex justify-end">
           <label className="flex shrink-0 items-center gap-2 rounded-full border px-3 py-2 text-xs font-bold">
             <input name="enabled" type="checkbox" defaultChecked={rule.enabled}/> Actief
           </label>
@@ -119,7 +125,7 @@ export function AutomationManager({rules}:{rules:AutomationRuleView[]}){
           <p className="text-xs text-muted-foreground">{rule.audit_enabled?'Uitvoeringen worden gededupliceerd en gelogd.':'Audit uitgeschakeld.'} {rule.auto_action?'Automatische actie toegestaan.':'Geen destructieve automatische actie.'}</p>
           <PendingSubmitButton pendingLabel="OPSLAAN…" className="rounded-xl bg-violet-600 px-4 py-2 text-sm font-black text-white">AUTOMATISERING OPSLAAN</PendingSubmitButton>
         </div>
-      </form>})}
+      </form></details>})}
     </div>
   </section>
 }
