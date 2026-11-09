@@ -46,6 +46,7 @@ test('admin overview uses one authoritative break-session dataset',async()=>{
 
 test('admin overview keeps the established default navigation and excludes retired surfaces',async()=>{
  const source=await read('app/(app)/admin/page.tsx')
- for(const href of ['/admin/time-records','/events','/operations','/personnel','/incidents','/tasks','/crew'])assert.ok(source.includes(href),href)
+ for(const href of ['/events','/operations','/personnel','/incidents','/tasks','/crew'])assert.ok(source.includes(href),href)
+ assert.doesNotMatch(source,/href=["']\/(?:admin\/management|admin\/time-records|chat)["']/)
  assert.doesNotMatch(source,/href=["']\/admin\/(?:health|release)/)
 })

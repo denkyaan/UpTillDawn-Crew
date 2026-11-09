@@ -37,7 +37,9 @@ test('admin overview no longer exposes health or release shortcuts', async () =>
   const admin = await readFile(new URL('../app/(app)/admin/page.tsx', import.meta.url), 'utf8')
   assert.ok(!admin.includes('href="/admin/health"'))
   assert.ok(!admin.includes('href="/admin/release"'))
-  assert.ok(admin.includes('href="/admin/time-records"'))
+  assert.ok(!admin.includes('href="/admin/time-records"'))
+ const corrections=await readFile(new URL('../app/(app)/admin/time-records/page.tsx',import.meta.url),'utf8')
+ assert.ok(corrections.includes('export default'))
 })
 
 
