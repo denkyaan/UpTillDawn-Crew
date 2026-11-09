@@ -55,4 +55,5 @@ test('DB migration adds a conditional per-invoice uniqueness guard without rewri
  assert.match(sql,/\(document_id,sha256\)/)
  assert.match(sql,/where sha256 is not null/i)
  assert.doesNotMatch(sql,/update\s+public\.admin_financial_attachments/i)
+ assert.match(sql,/revoke update, delete, truncate, references, trigger/i)
 })
