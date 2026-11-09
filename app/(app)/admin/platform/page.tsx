@@ -166,7 +166,7 @@ export default async function PlatformCenter(){
 
     <PlatformAiAssistant/>
 
-    <AutomationManager rules={(automationResult.data||[]).map(rule=>({
+    <AutomationManager observedAt={Date.parse(now)} rules={(automationResult.data||[]).map(rule=>({
       ...rule,
       channels:rule.channels||[],
     }))}/>

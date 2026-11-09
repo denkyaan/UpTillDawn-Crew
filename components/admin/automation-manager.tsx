@@ -41,9 +41,9 @@ const actionLabel=(value:string)=>({
   'escalate_incident':'Incident escaleren',
 }[value]||value.replaceAll('_',' '))
 
-export function AutomationManager({rules}:{rules:AutomationRuleView[]}){
+export function AutomationManager({rules,observedAt}:{rules:AutomationRuleView[];observedAt:number}){
   const activeCount=rules.filter(rule=>rule.enabled).length
-  const staleCount=rules.filter(rule=>rule.enabled&&(!rule.last_run_at||!Number.isFinite(Date.parse(rule.last_run_at))||Date.now()-Date.parse(rule.last_run_at)>15*60_000)).length
+  const staleCount=rules.filter(rule=>rule.enabled&&(!rule.last_run_at||!Number.isFinite(Date.parse(rule.last_run_at))||observedAt-Date.parse(rule.last_run_at)>15*60_000)).length
   return <section id="automatiseringen" className="scroll-mt-24 space-y-4 rounded-2xl border p-4">
     <div className="flex flex-wrap items-end justify-between gap-3">
       <div>
@@ -60,7 +60,7 @@ export function AutomationManager({rules}:{rules:AutomationRuleView[]}){
         const settings=rule.settings&&typeof rule.settings==='object'&&!Array.isArray(rule.settings)?rule.settings as Record<string,unknown>:{}
         const managed=settings.managed==='built_in'?'built_in':'workflow'
         const lastCheck=rule.last_run_at?Date.parse(rule.last_run_at):NaN
-        const healthLabel=!rule.enabled?'Uitgeschakeld':!Number.isFinite(lastCheck)||Date.now()-lastCheck>15*60_000?'Controle nakijken':'Actief'
+        const healthLabel=!rule.enabled?'Uitgeschakeld':!Number.isFinite(lastCheck)||observedAt-lastCheck>15*60_000?'Controle nakijken':'Actief'
         return <details key={rule.automation_key} className="rounded-xl border">
         <summary className="flex cursor-pointer items-start justify-between gap-3 p-4 marker:text-violet-400">
           <span className="min-w-0 flex-1"><span className="block font-bold">{rule.label}</span><span className="mt-1 block text-xs text-muted-foreground">{rule.description}</span></span>

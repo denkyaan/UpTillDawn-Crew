@@ -27,6 +27,8 @@ test('automation settings are compact without weakening manual approval or audit
   assert.match(automations,/<details key=\{rule\.automation_key\}/)
   assert.match(automations,/<summary className=/)
   assert.match(automations,/staleCount/)
+  assert.match(automations,/observedAt/)
+  assert.doesNotMatch(automations,/Date\.now\(\)/)
   assert.match(automations,/healthLabel/)
   assert.match(automations,/saveAutomationRule/)
   assert.match(automations,/PendingSubmitButton/)
