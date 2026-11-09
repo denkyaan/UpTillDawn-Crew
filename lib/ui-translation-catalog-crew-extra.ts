@@ -2,6 +2,13 @@ export type CrewExtraLocale='nl'|'fr'|'en'|'de'
 type Row={fr:string;en:string;de:string}
 
 export const CREW_EXTRA_TRANSLATIONS:Record<string,Row>={
+  "Straat, huisnummer, postcode en gemeente":{fr:"Rue, numéro, code postal et ville",en:"Street, number, postal code and city",de:"Straße, Hausnummer, Postleitzahl und Ort"},
+  "Rue, numéro, code postal et ville":{fr:"Rue, numéro, code postal et ville",en:"Street, number, postal code and city",de:"Straße, Hausnummer, Postleitzahl und Ort"},
+  "Street, number, postal code and city":{fr:"Rue, numéro, code postal et ville",en:"Street, number, postal code and city",de:"Straße, Hausnummer, Postleitzahl und Ort"},
+  "Straße, Hausnummer, Postleitzahl und Ort":{fr:"Rue, numéro, code postal et ville",en:"Street, number, postal code and city",de:"Straße, Hausnummer, Postleitzahl und Ort"},
+  "Online routeberekening niet beschikbaar. Schakel online route uit en vul reistijd en kilometers handmatig in.":{fr:"Calcul de trajet en ligne indisponible. Désactivez-le et saisissez la durée et la distance manuellement.",en:"Online route calculation unavailable. Turn it off and enter travel time and distance manually.",de:"Online-Routenberechnung nicht verfügbar. Deaktivieren und Fahrzeit sowie Entfernung manuell eingeben."},
+  "Vul een geldige handmatige reistijd en afstand in.":{fr:"Saisissez une durée et une distance de trajet valides.",en:"Enter a valid manual travel time and distance.",de:"Gültige manuelle Fahrzeit und Entfernung eingeben."},
+  "Reistijd of afstand buiten de toegestane grenzen.":{fr:"Durée ou distance du trajet hors des limites autorisées.",en:"Travel time or distance is outside the permitted limits.",de:"Fahrzeit oder Entfernung außerhalb der zulässigen Grenzen."},
   "Werkstaten":{fr:"Feuilles de temps",en:"Timesheets",de:"Stundenzettel"},
   "Feuilles de temps":{fr:"Feuilles de temps",en:"Timesheets",de:"Stundenzettel"},
   "Timesheets":{fr:"Feuilles de temps",en:"Timesheets",de:"Stundenzettel"},

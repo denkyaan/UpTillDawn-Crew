@@ -1339,9 +1339,9 @@ export async function createDriverTransportTask(fd:FormData){
     ? {latitude:Number(event.latitude),longitude:Number(event.longitude)}
     : null
    if(!eventPoint&&event.address)eventPoint=await geocodeGeoapify(event.address)
-   if(!eventPoint)throw new Error('Event address unavailable')
+   if(!eventPoint)throw new Error()
    const destination=await geocodeGeoapify(address)
-   if(!destination)throw new Error('Destination unavailable')
+   if(!destination)throw new Error()
    const route=await drivingRouteGeoapify(eventPoint,destination)
    driveMinutes=route.minutes
    expectedKm=route.kilometers

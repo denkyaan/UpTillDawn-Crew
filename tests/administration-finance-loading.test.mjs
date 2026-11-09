@@ -17,7 +17,7 @@ function financePage(db){
  runInNewContext(compiled,{
   ...actions,exports:exported,require,
   requireAdministration:async()=>({supabase:db,isAdmin:true}),requestUiLocale:async()=> 'en',
-  Link:()=>null,PeppolDocumentFields:()=>null,InvoiceLineCsvImport:()=>null,CloudmersiveOcrPreview:()=>null,LocalDocumentOcrPreview:()=>null,peppolFieldLabels,localeIndex,
+  Link:()=>null,PeppolDocumentFields:()=>null,InvoiceLineCsvImport:()=>null,CloudmersiveOcrPreview:()=>null,LocalDocumentOcrPreview:()=>null,BillingAddressFields:()=>null,peppolFieldLabels,localeIndex,
  })
  return exported.default
 }
