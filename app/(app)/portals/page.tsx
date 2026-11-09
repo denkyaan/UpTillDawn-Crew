@@ -52,7 +52,7 @@ export default async function PortalSelector() {
   <header>
    <h1 className="text-2xl font-bold">{t.heading}</h1>
    <p className="mt-2 text-sm text-muted-foreground">{t.intro}</p>
-   <Link href="/portals/roles" className="mt-3 inline-flex rounded-lg border px-3 py-2 text-sm font-medium text-violet-400 hover:border-violet-500">{t.roles} →</Link>
+   {!current.realIsAdmin&&<Link href="/portals/roles" className="mt-3 inline-flex rounded-lg border px-3 py-2 text-sm font-medium text-violet-400 hover:border-violet-500">{t.roles} →</Link>}
   </header>
   {error&&<p role="alert" className="rounded-xl border border-amber-500/50 p-4 text-sm">{t.unavailable}</p>}
   {portals.length===0&&<p role="status" className="rounded-xl border p-4">{t.empty}</p>}

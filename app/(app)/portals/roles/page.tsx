@@ -33,6 +33,8 @@ export default async function PortalRolesPage({searchParams}:{searchParams:Promi
  const locale=await requestUiLocale()
  const t=copy[locale]
  const canManage = current.isOwner || (current.realIsAdmin && current.approved && !current.account_blocked)
+ // Existing Admin accounts use Approvals as their only role-management editor.
+ if(current.realIsAdmin && current.approved && !current.account_blocked)redirect('/personnel')
  const db=await createClient()
  const {page:requestedPage,userPage:requestedUserPage,q:requestedQuery}=await searchParams
  const page=listPage(requestedPage,100000)
