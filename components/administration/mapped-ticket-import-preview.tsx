@@ -13,6 +13,23 @@ const copy={
  de:{title:"Zugeordneter Eventix / SumUp CSV-Import",intro:"Normierte CSV-Verkäufe über eine aktivierte Eventzuordnung importieren. Die externe Event-ID wird geprüft und dem internen Event zugeordnet. Keine Live-API-Synchronisierung.",mapping:"Aktive Eventzuordnung",event:"Internes Event",file:"CSV-Datei (max. 2 MB)",template:"CSV-Vorlage für diese Zuordnung",refresh:"Zuordnungen aktualisieren",loading:"Zuordnungen laden…",empty:"Keine aktiven Zuordnungen. Zuerst oben eine Zuordnung erstellen und aktivieren.",error:"Zuordnungen konnten nicht geladen werden.",invalid:"Ungültige Datei. Externe Event-ID, Spalten, Beträge und Zeitstempel prüfen.",valid:"CSV geprüft",rows:"Verkäufe",tickets:"Tickets",gross:"Bruttoumsatz",import:"Zugeordnete Verkäufe importieren",busy:"Verkäufe speichern…",saved:"Gespeichert",skipped:"Identische Verkäufe übersprungen",conflict:"Zuordnung nicht mehr aktiv oder ein Verkauf widerspricht gespeicherten Daten. Nichts gespeichert.",failed:"Import fehlgeschlagen. Zuordnungen aktualisieren und Datei prüfen."},
 } as const
 
+/** Fetch only active, well-formed mappings. No React state is touched during effect setup. */
+async function requestActiveMappings(signal?:AbortSignal):Promise<Mapping[]>{
+ const response=await fetch("/api/administration/provider-mappings",{cache:"no-store",signal})
+ if(!response.ok)throw Error("Mapping request failed")
+ const body:unknown=await response.json()
+ if(!body||typeof body!=="object"||!Array.isArray((body as {mappings?:unknown}).mappings))throw Error("Invalid mappings")
+ return ((body as {mappings:unknown[]}).mappings).filter((value):value is Mapping=>{
+  if(!value||typeof value!=="object")return false
+  const row=value as Record<string,unknown>
+  return typeof row.id==="string"&&/^[0-9a-f-]{36}$/i.test(row.id)
+   &&(row.provider==="eventix"||row.provider==="sumup")
+   &&typeof row.external_event_id==="string"&&/^[A-Za-z0-9][A-Za-z0-9_.:-]{0,159}$/.test(row.external_event_id)
+   &&typeof row.event_id==="string"&&/^[0-9a-f-]{36}$/i.test(row.event_id)
+   &&row.enabled===true
+ })
+}
+
 export default function MappedTicketImportPreview({events,locale}:{events:EventChoice[];locale:SupportedUiLocale}){
  const t=copy[locale],router=useRouter(),revision=useRef(0)
  const [mappings,setMappings]=useState<Mapping[]>([])
@@ -21,30 +38,24 @@ export default function MappedTicketImportPreview({events,locale}:{events:EventC
  const [file,setFile]=useState<File|null>(null),[csv,setCsv]=useState<string|null>(null)
  const [feedback,setFeedback]=useState(""),[busy,setBusy]=useState(false)
 
- async function loadMappings(signal?:AbortSignal){
+ async function loadMappings(){
   try{
-   const response=await fetch("/api/administration/provider-mappings",{cache:"no-store",signal})
-   if(!response.ok)throw Error("Mapping request failed")
-   const body:unknown=await response.json()
-   if(!body||typeof body!=="object"||!Array.isArray((body as {mappings?:unknown}).mappings))throw Error("Invalid mappings")
-   const active=((body as {mappings:unknown[]}).mappings).filter((value):value is Mapping=>{
-    if(!value||typeof value!=="object")return false
-    const row=value as Record<string,unknown>
-    return typeof row.id==="string"&&/^[0-9a-f-]{36}$/i.test(row.id)
-     &&(row.provider==="eventix"||row.provider==="sumup")
-     &&typeof row.external_event_id==="string"&&/^[A-Za-z0-9][A-Za-z0-9_.:-]{0,159}$/.test(row.external_event_id)
-     &&typeof row.event_id==="string"&&/^[0-9a-f-]{36}$/i.test(row.event_id)
-     &&row.enabled===true
-   })
-   if(signal?.aborted)return
+   const active=await requestActiveMappings()
    setMappings(active)
    setMappingId(previous=>active.some(mapping=>mapping.id===previous)?previous:active[0]?.id??"")
    setLoadState("ready")
-  }catch{
-   if(!signal?.aborted)setLoadState("error")
-  }
+  }catch{setLoadState("error")}
  }
- useEffect(()=>{const controller=new AbortController();void loadMappings(controller.signal);return ()=>controller.abort()},[])
+ useEffect(()=>{
+  const controller=new AbortController()
+  void requestActiveMappings(controller.signal).then(active=>{
+   if(controller.signal.aborted)return
+   setMappings(active)
+   setMappingId(previous=>active.some(mapping=>mapping.id===previous)?previous:active[0]?.id??"")
+   setLoadState("ready")
+  }).catch(()=>{if(!controller.signal.aborted)setLoadState("error")})
+  return ()=>controller.abort()
+ },[])
  const selected=mappings.find(mapping=>mapping.id===mappingId)??null
  const eventName=events.find(event=>event.id===selected?.event_id)?.name??selected?.event_id??""
  const result=selected&&csv!==null?validateTicketSalesCsv(csv,selected.event_id,10000,selected.external_event_id):null
