@@ -26,7 +26,7 @@ const integrations=[
  {name:'Peppol live aflevering',code:['app/api/administration/peppol/prepare/route.ts'],live:'unverified',dependency:'Access point, recipient discovery, delivery receipts'},
  {name:'Bankkoppeling en boekhouding',code:['app/api/administration/bank-statements/route.ts'],live:'unverified',dependency:'Bank/provider authorization and sandbox reconciliation'},
  {name:'Documenso handtekeningendienst',code:['lib/administration/documenso.ts'],live:'unverified',dependency:'Deployed signing service, credentials and signature callback'},
- {name:'OCR factuur en inventaris',code:[],live:'missing-or-unverified',dependency:'Secure extraction provider and validated invoice/item processing'},
+ {name:'OCR factuur en inventaris',code:['app/api/administration/ocr/route.ts','components/administration/cloudmersive-ocr-preview.tsx'],live:'unverified',dependency:'Cloudmersive API key, actual document recognition, invoice-line review and inventory approval'},
  {name:'Ticketing/Eventix',code:['components/administration/eventix-integration.tsx'],live:'unverified',dependency:'Provider sandbox credentials, webhook replay and reconciliation'},
  {name:'Weeztix inkomscan',code:['components/crew/weeztix-scanner-panel.tsx'],live:'unverified',dependency:'Authorized entrance scanner test'},
  {name:'SumUp merch/tokens',code:[],live:'missing-or-unverified',dependency:'Provider integration/transaction acceptance'},

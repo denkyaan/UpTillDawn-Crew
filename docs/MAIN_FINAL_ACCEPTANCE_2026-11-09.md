@@ -43,7 +43,7 @@ Run only on localhost/isolated QA, or against main-test with explicit `E2E_ALLOW
 | Peppol | UBL preparation and validation | Access point, recipient discovery, actual delivery and receipt |
 | Bank/accounting | Statement import and reconciliation | Authorized bank-specific sandbox and accounting sync |
 | Documenso | Signing client and audited ledger | Deployed service, callbacks, signed artifact archive |
-| OCR invoices/inventory | Partial workflows; no validated live OCR integration | Provider, recognition, validation and inventory extraction |
+| OCR invoices/inventory | Cloudmersive PDF/photo OCR with bounded file validation and human-review preview inside existing finance screen | Configure secret `CLOUDMERSIVE_OCR_API_KEY` for **main**; test live recognition, structured invoice-line validation, and Admin-approved stock receipts |
 | Eventix/ticketing | Import and mapping UI | Real provider sandbox, idempotent callbacks, reconciliation |
 | Weeztix | Entrance scanner component | Authorized live scan and entry result |
 | SumUp | No verified complete connector | Authenticated sandbox transaction and merch/token settlement |
@@ -81,3 +81,13 @@ Local equivalent: `npm ci`, `npx playwright install --with-deps chromium`, confi
 
 ## Required external actions
 Supply distinct isolated QA accounts for six roles, connect intended accounting/Peppol/ticketing/scanning/signing providers, select an OCR provider, and approve any additional Supabase restore-test project costs. Do not supply private credentials through repository source or a public issue.
+
+## Cloudmersive OCR module (main)
+
+The existing Finance page now contains a protected **Invoice/receipt OCR** panel. It accepts PDF, JPEG and PNG up to 5 MB. Explicit upload sends the file to a fixed Cloudmersive endpoint with a **server-side secret**, never to a client-selected destination. The server checks the actual file header, request origin, live Administration permissions, response size, timeout and provider error.
+
+Configure `CLOUDMERSIVE_OCR_API_KEY` in the **main Cloudflare Worker secret store** (not a public `NEXT_PUBLIC_` key or repository code). When absent, the API fails closed with HTTP 503 and an actionable UI error; no fabricated extraction is returned. Cloudmersive's official API specifies `Apikey` header, `/ocr/photo/toText` for a phone photo and `/ocr/pdf/toText` for scanned PDFs. The provider can incur usage charges. Never commit the key.
+
+OCR text is a **review-only suggestion**. The original invoice must be checked, and finance/inventory state is unchanged until the existing validated invoice-row import and Admin-only receipt workflow. No provider authorization, OCR accuracy, or automated financial extraction has been verified with a live key. This module is integration-ready, **not production-certified**.
+
+Official API reference: https://api.cloudmersive.com/docs/ocr.asp

@@ -1,4 +1,5 @@
 import InvoiceLineCsvImport from "@/components/administration/invoice-line-csv-import"
+import CloudmersiveOcrPreview from "@/components/administration/cloudmersive-ocr-preview"
 import PeppolDocumentFields from '@/components/administration/peppol-document-fields'
 import {peppolFieldLabels,localeIndex} from '@/lib/administration/peppol-copy'
 import {financialAmountCents,totalFinancialCents,reconcileFinanceInvoice} from '@/lib/administration/finance-reconciliation'
@@ -678,6 +679,7 @@ export default async function FinancePage({searchParams}:{searchParams:Promise<{
    {params.duplicate==='1' && <p role="status" className="mt-3 text-sm text-amber-500">{uploadLabels[locale].duplicate}</p>}
    {params.conflict==='1' && <p role="alert" className="mt-3 text-sm text-red-400">{({nl:'Dit concept is intussen gewijzigd. Controleer de nieuwste inhoud voordat je opnieuw opslaat of goedkeurt.',fr:'Ce brouillon a été modifié entre-temps. Vérifiez son contenu actuel avant de l’enregistrer ou de l’approuver.',en:'This draft has changed. Review the latest content before saving or approving it again.',de:'Dieser Entwurf wurde inzwischen geändert. Prüfe den aktuellen Inhalt, bevor du ihn erneut speicherst oder genehmigst.'} as const)[locale]}</p>}
   </section>
+  <CloudmersiveOcrPreview locale={locale}/>
   <InvoiceLineCsvImport locale={locale} drafts={(documents??[]).filter(d=>d.status==='draft'&&d.currency==='EUR'&&['sales_invoice','purchase_invoice'].includes(d.kind)).map(d=>({id:d.id,label:(d.document_number||d.id.slice(0,8))+' · '+translatedLabel(kindLabels[locale],d.kind)}))}/>
   <section className="rounded-2xl border bg-card p-5">
    {error ? <p role="alert">{t.error}</p> : !documents?.length ? <p className="text-muted-foreground">{t.empty}</p> :
