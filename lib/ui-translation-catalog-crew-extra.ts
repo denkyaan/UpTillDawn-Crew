@@ -2,6 +2,7 @@ export type CrewExtraLocale='nl'|'fr'|'en'|'de'
 type Row={fr:string;en:string;de:string}
 
 export const CREW_EXTRA_TRANSLATIONS:Record<string,Row>={
+  "unavailable":{fr:"indisponible",en:"unavailable",de:"nicht verfügbar"},
   "Tickets scannen":{fr:"Scanner des billets",en:"Scan tickets",de:"Tickets scannen"},
   "Scanner des billets":{fr:"Scanner des billets",en:"Scan tickets",de:"Tickets scannen"},
   "Scan tickets":{fr:"Scanner des billets",en:"Scan tickets",de:"Tickets scannen"},
