@@ -91,3 +91,9 @@ Configure `CLOUDMERSIVE_OCR_API_KEY` in the **main Cloudflare Worker secret stor
 OCR text is a **review-only suggestion**. The original invoice must be checked, and finance/inventory state is unchanged until the existing validated invoice-row import and Admin-only receipt workflow. No provider authorization, OCR accuracy, or automated financial extraction has been verified with a live key. This module is integration-ready, **not production-certified**.
 
 Official API reference: https://api.cloudmersive.com/docs/ocr.asp
+
+### Asynchronous PDF OCR processing
+
+Cloudmersive can return `AsyncJobStatus: STARTED` for long scanned PDFs. The main integration now supports the provider's documented `/ocr/pdf/get-job-status` endpoint. It creates a 15-minute HMAC-signed, user-bound job token (signed with the server-side provider secret), polls from the authenticated Finance panel, and resumes when the provider reports completion. The raw provider job ID is never accepted directly or placed in the browser URL. Polling is rate-bounded (12 checks per UI action, 2.5 seconds apart); the user may retry if the PDF is still being processed. User changes/file changes invalidate the in-progress browser request and expired tokens must be restarted with a new upload.
+
+The endpoint applies the same authenticated Administration access check and same-origin requirement to **both** upload and polling, validates returned response sizes even without a `Content-Length` header, and never writes recognized text to invoices or inventory. The signing checks are covered by regression tests (wrong user, invalid signature, tampered and expired token). This proves code-level protections, **not** that an actual Cloudmersive key is configured or that OCR has passed an authenticated live document test. Provider API reference: https://api.cloudmersive.com/docs/ocr.asp

@@ -2,6 +2,7 @@ import test from 'node:test'
 import assert from 'node:assert/strict'
 import {readFileSync} from 'node:fs'
 import {normalizeCloudmersiveOcr,verifiedOcrFileType} from '../lib/administration/cloudmersive-ocr.ts'
+import {pendingPdfJobId,signOcrJob,verifyOcrJob} from '../lib/administration/cloudmersive-ocr-job.ts'
 
 const read=path=>readFileSync(new URL('../'+path,import.meta.url),'utf8')
 
@@ -68,4 +69,46 @@ test('OCR UI is integrated once into existing finance portal and never writes fi
  assert.match(panel,/reviewRequired/)
  assert.doesNotMatch(panel,/\.rpc\(|supabase|upt_admin_receive_inventory|upt_admin_import_invoice_lines/)
  for(const locale of ['nl:','fr:','en:','de:'])assert.ok(panel.includes(locale),locale)
+})
+
+
+test('async PDF job identifiers are validated and user-bound HMAC tokens cannot be forged or replayed',()=>{
+ const job='f71309ca-1479-49c2-a227-02170f8d2d5c'
+ const user='c36c6549-0959-46c7-8964-966e92145316'
+ const key='test-only-secret-never-used-in-live-worker'
+ const now=Date.UTC(2026,10,9,16,0)
+ assert.equal(pendingPdfJobId({AsyncJobStatus:'STARTED',AsyncJobID:job}),job)
+ assert.equal(pendingPdfJobId({AsyncJobStatus:'COMPLETED',AsyncJobID:job}),null)
+ assert.equal(pendingPdfJobId({AsyncJobStatus:'STARTED',AsyncJobID:'https://evil.test/?foo=x'}),null)
+ assert.equal(pendingPdfJobId({AsyncJobStatus:'STARTED',AsyncJobID:'x'}),null)
+ const token=signOcrJob(job,user,key,now)
+ assert.equal(typeof token,'string')
+ assert.ok(!token.includes(job),'provider job ID must not be exposed in a readable query string')
+ assert.equal(verifyOcrJob(token,user,key,now+1000),job)
+ assert.equal(verifyOcrJob(token,'another-user',key,now+1000),null)
+ assert.equal(verifyOcrJob(token,user,'other-key',now+1000),null)
+ assert.equal(verifyOcrJob(token,user,key,now+16*60*1000),null)
+ assert.equal(verifyOcrJob(token+'.extra',user,key,now+1000),null)
+ assert.equal(verifyOcrJob(token.slice(0,-1)+'x',user,key,now+1000),null)
+ assert.equal(signOcrJob('invalid/id',user,key,now),null)
+ assert.equal(verifyOcrJob('garbage',user,key,now),null)
+})
+
+test('pending PDF jobs poll only via authorized same-origin POST, with bounded upstream JSON',()=>{
+ const route=read('app/api/administration/ocr/route.ts')
+ assert.match(route,/verifyOcrJob\(pollToken,access\.user\.id,key\)/)
+ assert.match(route,/if\(request\.body\)return reply\(\{error:"invalid_poll_request"\},415\)/)
+ assert.match(route,/\/ocr\/pdf\/get-job-status\?/)
+ assert.match(route,/new URLSearchParams\(\{AsyncJobID:id\}\)/)
+ assert.match(route,/pendingPdfJobId\(parsed\)/)
+ assert.match(route,/signOcrJob\(job,userId,key\)/)
+ assert.match(route,/reply\(\{pending:true,token\},202\)/)
+ assert.match(route,/if\(size>MAX_RESPONSE\)\{await reader\.cancel\(\);return null\}/)
+ const ui=read('components/administration/cloudmersive-ocr-preview.tsx')
+ assert.match(ui,/headers:\{"x-ocr-job-token":token\}/)
+ assert.match(ui,/for\(let attempt=0;attempt<12;attempt\+\+\)/)
+ assert.match(ui,/revision\.current/)
+ assert.match(ui,/setStillProcessing\(true\)/)
+ assert.match(ui,/t\.check/)
+ for(const locale of ['nl:','fr:','en:','de:']) assert.ok(ui.includes(locale),locale)
 })

@@ -2,6 +2,14 @@ export type ExtraCatalogLocale = 'nl' | 'fr' | 'en' | 'de'
 type Row = { fr:string; en:string; de:string }
 
 export const APP_EXTRA_TRANSLATIONS: Record<string,Row> = {
+  "De PDF wordt nog verwerkt. Je kunt de voortgang opnieuw controleren.":{fr:"Le PDF est toujours en cours de traitement. Vous pouvez revérifier son état.",en:"This PDF is still being processed. You can check its progress again.",de:"Das PDF wird noch verarbeitet. Du kannst den Fortschritt erneut prüfen."},
+  "Le PDF est toujours en cours de traitement. Vous pouvez revérifier son état.":{fr:"Le PDF est toujours en cours de traitement. Vous pouvez revérifier son état.",en:"This PDF is still being processed. You can check its progress again.",de:"Das PDF wird noch verarbeitet. Du kannst den Fortschritt erneut prüfen."},
+  "This PDF is still being processed. You can check its progress again.":{fr:"Le PDF est toujours en cours de traitement. Vous pouvez revérifier son état.",en:"This PDF is still being processed. You can check its progress again.",de:"Das PDF wird noch verarbeitet. Du kannst den Fortschritt erneut prüfen."},
+  "Das PDF wird noch verarbeitet. Du kannst den Fortschritt erneut prüfen.":{fr:"Le PDF est toujours en cours de traitement. Vous pouvez revérifier son état.",en:"This PDF is still being processed. You can check its progress again.",de:"Das PDF wird noch verarbeitet. Du kannst den Fortschritt erneut prüfen."},
+  "Voortgang controleren":{fr:"Vérifier la progression",en:"Check progress",de:"Fortschritt prüfen"},
+  "Vérifier la progression":{fr:"Vérifier la progression",en:"Check progress",de:"Fortschritt prüfen"},
+  "Check progress":{fr:"Vérifier la progression",en:"Check progress",de:"Fortschritt prüfen"},
+  "Fortschritt prüfen":{fr:"Vérifier la progression",en:"Check progress",de:"Fortschritt prüfen"},
   "Factuur of bon herkennen (OCR)":{fr:"Reconnaissance de facture ou reçu (OCR)",en:"Recognize invoice or receipt (OCR)",de:"Rechnung oder Beleg erkennen (OCR)"},
   "Reconnaissance de facture ou reçu (OCR)":{fr:"Reconnaissance de facture ou reçu (OCR)",en:"Recognize invoice or receipt (OCR)",de:"Rechnung oder Beleg erkennen (OCR)"},
   "Recognize invoice or receipt (OCR)":{fr:"Reconnaissance de facture ou reçu (OCR)",en:"Recognize invoice or receipt (OCR)",de:"Rechnung oder Beleg erkennen (OCR)"},
