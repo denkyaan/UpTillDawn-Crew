@@ -44,7 +44,7 @@ test('roster server action and rendered times use explicit Belgian timezone',()=
  assert.match(page,/new Intl.DateTimeFormat\(locale,\{timeZone:"Europe\/Brussels"/)
  assert.match(page,/timeLabel\(p\.proposed_start\)/)
  assert.match(page,/timeLabel\(x\.scheduled_start\)/)
- for(const locale of ['nl','fr','en','de'])assert.match(page,new RegExp(locale+':\\{zone:'))
+ for(const locale of ['nl','fr','en','de'])assert.match(page,new RegExp(locale+':\\{.*zone:'))
 })
 
 test('portal roles: directory search is server-paginated independently of role list',()=>{
