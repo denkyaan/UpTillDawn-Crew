@@ -39,7 +39,7 @@ export default async function PortalRolesPage({searchParams}:{searchParams:Promi
  const directoryPage=listPage(requestedUserPage,100000)
  const directorySize=100
  const directoryOffset=(directoryPage-1)*directorySize
- const query=typeof requestedQuery==="string"?requestedQuery.trim().slice(0,80):""
+ const staffQuery=typeof requestedQuery==="string"?requestedQuery.trim().slice(0,80):""
  const likeLiteral=(value:string)=>value.replace(/[\\%_*]/g,character=>"\\"+character)
  const pageSize=50
  const from=(page-1)*pageSize
@@ -51,10 +51,10 @@ export default async function PortalRolesPage({searchParams}:{searchParams:Promi
  let directoryQuery=db.from('profiles')
   .select('id,full_name',{count:'exact'})
   .eq('approved',true).eq('account_blocked',false).neq('id',current.id)
- if(query){
-  directoryQuery=/^[0-9a-f]{8}(?:-[0-9a-f]{4}){3}-[0-9a-f]{12}$/i.test(query)
-   ?directoryQuery.eq('id',query)
-   :directoryQuery.ilike('full_name','%'+likeLiteral(query)+'%')
+ if(staffQuery){
+  directoryQuery=/^[0-9a-f]{8}(?:-[0-9a-f]{4}){3}-[0-9a-f]{12}$/i.test(staffQuery)
+   ?directoryQuery.eq('id',staffQuery)
+   :directoryQuery.ilike('full_name','%'+likeLiteral(staffQuery)+'%')
  }
  const userDirectory=canManage
   ?await directoryQuery.order('full_name',{ascending:true}).order('id',{ascending:true})
@@ -71,7 +71,7 @@ export default async function PortalRolesPage({searchParams}:{searchParams:Promi
   const out=new URLSearchParams()
   out.set('page',String(params.page??page))
   out.set('userPage',String(params.userPage??directoryPage))
-  if(params.q??query)out.set('q',params.q??query)
+  if(params.q??staffQuery)out.set('q',params.q??staffQuery)
   return '/portals/roles?'+out.toString()
  }
  const pageHref=(target:number)=>href({page:target})
@@ -83,7 +83,7 @@ export default async function PortalRolesPage({searchParams}:{searchParams:Promi
    <h2 className="font-semibold">{t.manage}</h2>
    <form action="/portals/roles" method="get" className="flex flex-wrap items-end gap-2">
     <label className="grid min-w-0 flex-1 gap-1 text-sm">{t.directorySearch}
-     <input type="search" name="q" defaultValue={query} maxLength={80}
+     <input type="search" name="q" defaultValue={staffQuery} maxLength={80}
       className="w-full rounded-lg border bg-background p-2"/>
     </label>
     <button type="submit" className="rounded-lg border px-4 py-2 text-sm font-semibold">{t.find}</button>
