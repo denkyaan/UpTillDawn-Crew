@@ -93,7 +93,7 @@ export default async function RostersPage(){
    <label className="text-sm sm:col-span-2">{l.details}<textarea name="details" maxLength={2000} className="mt-1 w-full rounded-lg border bg-background p-3"/></label>
    <button disabled={!events.data?.length} className="rounded-xl bg-violet-600 px-4 py-3 font-semibold text-white sm:col-span-2">{l.create}</button>
   </form>
-  <section className="space-y-3">{shifts.error&&<p role="alert" className="rounded-lg border border-amber-500/50 p-3 text-sm">{l.shiftsError}</p>}{proposals.error?<p>{l.error}</p>:!proposals.data?.length?<p>{l.empty}</p>:proposals.data.map(p=>{const available=rosterShifts.filter(x=>x.event_id===p.event_id);const chosen=available.find(x=>x.id===p.target_shift_id);const canSubmit=Boolean(chosen)&&new Date(p.proposed_start).getTime()>Date.now();return <article key={p.id} className="space-y-3 rounded-xl border bg-card p-4">
+  <section className="space-y-3">{shifts.error&&<p role="alert" className="rounded-lg border border-amber-500/50 p-3 text-sm">{l.shiftsError}</p>}{proposals.error?<p>{l.error}</p>:!proposals.data?.length?<p>{l.empty}</p>:proposals.data.map(p=>{const available=rosterShifts.filter(x=>x.event_id===p.event_id);const chosen=available.find(x=>x.id===p.target_shift_id);const canSubmit=Boolean(chosen);return <article key={p.id} className="space-y-3 rounded-xl border bg-card p-4">
    <div className="flex justify-between gap-3"><strong>{p.title}</strong><span className="text-xs text-violet-400">{l[p.status as keyof typeof l]??p.status}</span></div>
    <p className="text-sm text-muted-foreground">{timeLabel(p.proposed_start)} – {timeLabel(p.proposed_end)}</p>
    {p.details&&<p className="text-sm">{p.details}</p>}{p.review_note&&<p className="text-sm">{p.review_note}</p>}
