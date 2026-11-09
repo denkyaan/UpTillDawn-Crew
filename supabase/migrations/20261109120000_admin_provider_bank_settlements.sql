@@ -67,7 +67,7 @@ begin
  then raise exception 'Admin required' using errcode='42501'; end if;
  if p_statement is null or p_transactions is null or cardinality(p_transactions) not between 1 and 500
    or array_position(p_transactions,null) is not null
-   or (select count(distinct id) from unnest(p_transactions) as id)<>cardinality(p_transactions)
+   or (select count(distinct id) from unnest(p_transactions) as u(id))<>cardinality(p_transactions)
    or v_fee<0 or v_fee>99999999999
    or p_note is null or length(btrim(p_note)) not between 10 and 500
  then raise exception 'Invalid settlement request' using errcode='22023'; end if;

@@ -35,7 +35,7 @@ export default function ProviderBankSettlementWorkspace({locale}:{locale:Support
   }catch{if(!signal?.aborted){setData(null);setError(true)}}
   finally{if(!signal?.aborted)setLoading(false)}
  }
- useEffect(()=>{const abort=new AbortController();void refresh(abort.signal);return()=>abort.abort()},[])
+ useEffect(()=>{const abort=new AbortController();void Promise.resolve().then(()=>refresh(abort.signal));return()=>abort.abort()},[])
  const groups=useMemo(()=>[...new Set((data?.transactions??[]).map(row=>row.provider+'|'+row.event_id))].sort(),[data])
  const available=useMemo(()=>data?.transactions.filter(row=>row.provider+'|'+row.event_id===group).slice(0,500)??[],[data,group])
  const selected=useMemo(()=>available.filter(row=>selectedIds.includes(row.id)),[available,selectedIds])

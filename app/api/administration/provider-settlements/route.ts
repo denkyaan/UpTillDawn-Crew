@@ -5,7 +5,7 @@ import {parseCents,previewProviderSettlement,type SettlementTransaction} from '@
 export const dynamic='force-dynamic'
 const uuid=/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
 const reply=(payload:unknown,status=200)=>NextResponse.json(payload,{status,headers:{'Cache-Control':'private, no-store','X-Content-Type-Options':'nosniff'}})
-const useDb=(value:unknown)=>value as SupabaseClient
+const asDb=(value:unknown)=>value as SupabaseClient
 async function boundedJson(request:Request,maxBytes=32_000):Promise<unknown>{
  const reader=request.body?.getReader()
  if(!reader)throw Error('Missing body')
@@ -28,7 +28,7 @@ async function boundedJson(request:Request,maxBytes=32_000):Promise<unknown>{
 export async function GET(){
  const access=await administrationAccess()
  if(!access.ok)return reply({error:'access_denied'},access.status)
- const db=useDb(access.db)
+ const db=asDb(access.db)
  const [banks,provider,settlements,links,permission]=await Promise.all([
   db.from('admin_bank_statement_transactions')
    .select('id,booked_on,transaction_id,amount_cents,payment_reference,direction,currency,posted_payment_id,ignored_at',{count:'exact'})
@@ -86,7 +86,7 @@ export async function POST(request:Request){
    new Set(transactionIds).size!==transactionIds.length||parseCents(feeCents)===null||
    typeof note!=='string'||note.trim().length<10||note.trim().length>500)
   return reply({error:'invalid_settlement'},422)
- const db=useDb(access.db)
+ const db=asDb(access.db)
  const [bank,provider]=await Promise.all([
   db.from('admin_bank_statement_transactions')
    .select('id,direction,currency,amount_cents,posted_payment_id,ignored_at').eq('id',statementId).maybeSingle(),
