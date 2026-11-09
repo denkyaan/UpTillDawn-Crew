@@ -3,7 +3,7 @@ import assert from 'node:assert/strict'
 import {readFileSync} from 'node:fs'
 
 const migration=readFileSync('supabase/migrations/20261109100000_admin_obligation_review_queue.sql','utf8')
-const headMigration=readFileSync('supabase/migrations/20261109121500_single_head_and_two_deputies.sql','utf8')
+const headMigration=readFileSync('supabase/migrations/20261109112256_single_head_and_two_deputies.sql','utf8')
 const component=readFileSync('components/administration/operational-work-queue.tsx','utf8')
 const parent=readFileSync('app/(app)/portals/administration/modules/[slug]/page.tsx','utf8')
 

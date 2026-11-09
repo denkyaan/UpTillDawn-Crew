@@ -20,7 +20,7 @@ test('Finance role acceptance cannot use a real identity or retain a synthetic a
 })
 
 test('Head-only approval and 3 leadership slots are enforced in database and UI',()=>{
- const migration=read('supabase/migrations/20261109121500_single_head_and_two_deputies.sql')
+ const migration=read('supabase/migrations/20261109112256_single_head_and_two_deputies.sql')
  const guard=read('tests/sql/administration_operational_approval_queue.sql')
  const page=read('components/administration/operational-work-queue.tsx')
  const manager=read('app/(app)/admin/management/leadership/page.tsx')
