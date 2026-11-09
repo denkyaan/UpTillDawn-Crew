@@ -25,7 +25,7 @@ test('invalid, duplicate, mixed provider, wrong event, empty and negative net fa
  for(const value of ['-1','1.234','01.00','1e3','NaN','Infinity','', '1,234'])assert.equal(parseEuroFee(value),null)
 })
 test('settlements require Admin confirmation, row locks and immutable audit records',()=>{
- const sql=read('supabase/migrations/20261109120000_admin_provider_bank_settlements.sql')
+ const sql=read('supabase/migrations/20261109100617_admin_provider_bank_settlements.sql')
  for(const value of ['for update','upt_is_admin(v_actor)','upt_is_approved()','cardinality(p_transactions)',
   'admin_provider_bank_settlement_items','unique references public.admin_provider_transactions',
   'v_bank.posted_payment_id is not null','v_bank.ignored_at is not null',
