@@ -50,6 +50,25 @@ async function shiftAction(form:FormData){
  if(error)throw new Error("Roster shift action failed")
  revalidatePath(route)
 }
+async function planNewShift(form:FormData){
+ "use server"
+ const {db}=await context()
+ const id=String(form.get("id")??"")
+ const workplace=String(form.get("workplace")??"")
+ const staff=String(form.get("staff")??"")
+ const role=String(form.get("role")??"").trim()
+ const kind=String(form.get("kind")??"event")
+ const overlap=form.get("overlap")==="on"
+ const uuid=/^[0-9a-f]{8}(?:-[0-9a-f]{4}){3}-[0-9a-f]{12}$/i
+ if(![id,workplace,staff].every(value=>uuid.test(value))||
+  !role||role.length>200||!["event","setup","breakdown"].includes(kind))throw Error("Invalid roster assignment")
+ const {error}=await (db as unknown as SupabaseClient).rpc("upt_admin_roster_plan_new",{
+  p_id:id,p_workplace:workplace,p_user:staff,p_role_name:role,
+  p_shift_kind:kind,p_overlap_allowed:overlap
+ })
+ if(error)throw Error("New shift proposal could not be prepared")
+ revalidatePath(route)
+}
 async function changeStatus(form:FormData){
  "use server"
  const {db,user}=await context()
