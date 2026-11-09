@@ -3,8 +3,8 @@
 import {revalidatePath} from 'next/cache'
 import {administrationAccess} from '@/lib/administration/access'
 
-export type BulkReceiptState={ok:boolean;count:number;error:string|null}
-const invalid:BulkReceiptState={ok:false,count:0,error:'invalid'}
+export type BulkReceiptState={ok:boolean;count:number;code:string|null}
+const invalid:BulkReceiptState={ok:false,count:0,code:'invalid'}
 const uuid=/^[0-9a-f]{8}(?:-[0-9a-f]{4}){3}-[0-9a-f]{12}$/i
 
 export async function receiveAdminInventoryBatch(
@@ -13,7 +13,7 @@ export async function receiveAdminInventoryBatch(
 ):Promise<BulkReceiptState>{
  const access=await administrationAccess()
  if(!access.ok || (!access.user.realIsAdmin && !access.user.isOwner))
-  return {ok:false,count:0,error:'denied'}
+  return {ok:false,count:0,code:'denied'}
 
  const request=String(form.get('request')??'')
  const document=String(form.get('document')??'')
@@ -37,7 +37,7 @@ export async function receiveAdminInventoryBatch(
   p_request:request,p_document:document,p_rows:rows,
  } as never)
  if(error||typeof data!=='number'||data<1||data>50)
-  return {ok:false,count:0,error:'rejected'}
+  return {ok:false,count:0,code:'rejected'}
  revalidatePath('/portals/administration/modules/inventory')
- return {ok:true,count:data,error:null}
+ return {ok:true,count:data,code:null}
 }
