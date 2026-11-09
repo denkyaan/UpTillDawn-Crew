@@ -74,9 +74,9 @@ const operationalModuleLabels={
 
 export const dynamic = "force-dynamic"
 
-export default async function AdministrationModulePage({params,searchParams}:{params:Promise<{slug:string}>;searchParams?:Promise<{event?:string;page?:string;invoiceKind?:string;invoiceStatus?:string;invoicePage?:string;invoiceNumber?:string;invoiceFrom?:string;invoiceTo?:string;invoiceOverdue?:string;invoiceSort?:string;notificationPage?:string}>}){
+export default async function AdministrationModulePage({params,searchParams}:{params:Promise<{slug:string}>;searchParams?:Promise<{event?:string;page?:string;status?:string;invoiceKind?:string;invoiceStatus?:string;invoicePage?:string;invoiceNumber?:string;invoiceFrom?:string;invoiceTo?:string;invoiceOverdue?:string;invoiceSort?:string;notificationPage?:string}>}){
  const {slug}=await params
- const {event:requestedEvent,page:requestedPage,invoiceKind,invoiceStatus,invoicePage,invoiceNumber,invoiceFrom,invoiceTo,invoiceOverdue,invoiceSort,notificationPage}=await (searchParams??Promise.resolve({event:undefined,page:undefined,invoiceKind:undefined,invoiceStatus:undefined,invoicePage:undefined,invoiceNumber:undefined,invoiceFrom:undefined,invoiceTo:undefined,invoiceOverdue:undefined,invoiceSort:undefined,notificationPage:undefined}))
+ const {event:requestedEvent,page:requestedPage,status:requestedCaseStatus,invoiceKind,invoiceStatus,invoicePage,invoiceNumber,invoiceFrom,invoiceTo,invoiceOverdue,invoiceSort,notificationPage}=await (searchParams??Promise.resolve({event:undefined,page:undefined,status:undefined,invoiceKind:undefined,invoiceStatus:undefined,invoicePage:undefined,invoiceNumber:undefined,invoiceFrom:undefined,invoiceTo:undefined,invoiceOverdue:undefined,invoiceSort:undefined,notificationPage:undefined}))
  const adminModule=administrationModules.find(item=>item.slug===slug&&slug!=="dashboard"&&slug!=="finance")
  if(!adminModule)notFound()
  const current=await getCurrentUser()
@@ -263,7 +263,7 @@ export default async function AdministrationModulePage({params,searchParams}:{pa
    <h2 className="text-lg font-semibold">{({nl:"Artiesten en contractdossiers",fr:"Artistes et dossiers contractuels",en:"Artists and contract cases",de:"Künstler und Vertragsakten"} as const)[locale]}</h2>
    {contractBookingRows?.error?<p role="alert" className="mt-3 text-sm text-muted-foreground">{({nl:"Contractdossiers konden niet worden geladen.",fr:"Impossible de charger les dossiers.",en:"Unable to load contract cases.",de:"Vertragsakten konnten nicht geladen werden."} as const)[locale]}</p>:contractBookingRows?.data?.length?<ul className="mt-3 divide-y">{contractBookingRows.data.map(item=><li key={item.id} className="flex flex-wrap items-center justify-between gap-2 py-3 text-sm"><Link href={`/portals/administration/modules/artists/${item.id}/agreement`} className="font-semibold text-violet-400 hover:underline">{item.artist_name}</Link><span className="text-muted-foreground">{item.status}</span></li>)}</ul>:<p className="mt-3 text-sm text-muted-foreground">{({nl:"Geen contractdossiers gevonden.",fr:"Aucun dossier contractuel.",en:"No contract cases found.",de:"Keine Vertragsakten gefunden."} as const)[locale]}</p>}
   </section>}
-  {["logistics","permits","tasks"].includes(slug)&&<OperationalWorkQueue kind={slug as "logistics"|"permits"|"tasks"} locale={locale} events={workQueueEvents?.data??[]}/>}
+  {["logistics","permits","tasks"].includes(slug)&&<OperationalWorkQueue kind={slug as "logistics"|"permits"|"tasks"} locale={locale} events={workQueueEvents?.data??[]} page={listPage(requestedPage,10000)} statusFilter={requestedCaseStatus}/>}
   {slug==="inventory"&&<InventoryBulkReceipts locale={locale}/>}
   {slug==="inventory"&&<InventoryReceipts locale={locale}/>}
   {slug==="ticketing"&&<EventixIntegration locale={locale}/>}
