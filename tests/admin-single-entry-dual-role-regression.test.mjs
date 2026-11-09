@@ -18,7 +18,7 @@ test('role assignment screen contains two separate form saves and optional secon
  for(const loc of ['nl:','fr:','en:','de:'])assert.ok(component.includes(loc))
 })
 test('single source of Admin role changes enforces authorized RPC and sole Head',()=>{
- const migration=read('supabase/migrations/20261109130000_personnel_dual_role_editor.sql')
+ const migration=read('supabase/migrations/20261109122422_personnel_dual_role_editor.sql')
  for(const token of ['security definer',"upt_admin_set_two_personnel_roles","upt_is_admin(v_actor)","upt_is_approved()",
   "p_role_two='none'",'upt_leadership_assign','upt_personnel_role_slots','upt_audit_logs',
   "updated_by","role_two is null or role_two<>role_one","v_current_role='admin' and v_head is null"])assert.ok(migration.includes(token),token)
