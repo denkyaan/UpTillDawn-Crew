@@ -101,3 +101,12 @@ Voer de output uitsluitend in Cloudflare Workers → `uptilldawn-main` → Setti
 - De gebruikersinterface toont wie welke koppeling toevoegde, wijzigde of ontkoppelde; de RPC vereist op elk verzoek een goedgekeurde, niet-geblokkeerde Admin/Administratie-account.
 - `secureStoreAvailable` betekent voortaan dat de Worker-secret de **juiste vorm** heeft: exact 32 bytes standaard-Base64. Alleen de aanwezigheid van een secret is niet genoeg. De API toont nooit de waarde.
 - Main-deploy bevat een afzonderlijke unauthenticated smoke test voor de integratiebeheerroute. Een onverwachte 200 of 500 moet deployment blokkeren.
+
+
+### Weeztix inkomscanner: gedeelde configuratie met strikte eventbevoegdheid
+- Hoofdadmin en Administratie kunnen bij **Externe diensten → Weeztix** het provider-issued access-token en het **interne UpTillDawn-event-ID** ingeven; **Inkomscanner voor dit event activeren** is een afzonderlijke opt-in, standaard UIT.
+- Nadat de gebruiker expliciet activeert, leest de server de AES-256-GCM ciphertext uitsluitend via `upt_weeztix_scan_secrets(event_id,workplace_id)`. Deze databasefunctie controleert een goedgekeurd, niet-geblokkeerd account, het niet-gearchiveerde event, de actieve inkomwerkplek en de juiste shift of verantwoordelijke; admins hebben de bestaande adminbevoegdheid. **Geen geheim komt naar de browser.**
+- Als een app-beheerde verbinding bestaat, mag de scanner **niet** terugvallen op een legacy Cloudflare-token als deze verbinding gedeactiveerd is of een ander event betreft. Als er geen app-beheerde verbinding is, blijft de bestaande Worker-token-compatibiliteit werken, uitsluitend met de bestaande expliciete enable-flag.
+- Providerautorisatie is alleen een toegangstest voor ticketvalidatie op het door de operator beheerde event. Weeztix antwoordt 204 voor toegang of 400/403/404 voor fouten. De inkommedewerker laat nooit iemand binnen zonder bevestiging van Weeztix.
+- **Belangrijk:** Een handmatig geplaatste Weeztix access-token verloopt standaard na 3 dagen. Automatische OAuth-koppeling en single-use refresh-token-rotatie vereisen nog een geldige Weeztix OAuth Client ID/Secret en een door Hoofdadmin of Administratie geautoriseerde koppeling. Tot die tijd moet het toegangstoken worden vernieuwd via officiële Weeztix-autorisatie.
+- Er zijn nog geen echte providers gekoppeld of geverifieerd. Gebruik een evenementtest met een officieel testticket en twee rolaccounts vóór een operationele avond.

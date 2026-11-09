@@ -3,6 +3,7 @@ import {getCurrentUser} from "@/lib/actions/auth"
 import {createClient} from "@/lib/supabase/crew-server"
 import {requestHasSameOrigin} from "@/lib/request-origin"
 import {isEntranceWorkplace,validWeeztixBarcode} from "@/lib/weeztix-scanner"
+import {getScopedWeeztixScanConfig} from "@/lib/administration/integration-store"
 
 export const dynamic="force-dynamic"
 const uuid=/^[0-9a-f]{8}-(?:[0-9a-f]{4}-){3}[0-9a-f]{12}$/i
@@ -59,16 +60,31 @@ export async function POST(request:Request){
   if(shiftError||responsibleError)return fail("authorization_unavailable",503)
   if(!shift?.length&&!responsible?.length)return fail("forbidden",403)
  }
- // Never send anything upstream until the operator explicitly enables this
- // event and installs a provider-issued server-side token. No client tokens.
- if(process.env.WEEZTIX_SCANNING_ENABLED!=="true"||
-    process.env.WEEZTIX_ACTIVE_EVENT_ID!==eventId||
-    !process.env.WEEZTIX_ACCESS_TOKEN)return fail("not_configured",503)
+ // App-managed connections are now usable by assigned entrance staff.
+ // Never fall back to an older Worker token when a managed connection exists
+ // but is disabled or configured for another event.
+ let accessToken:string|undefined
+ let managed
+ try{managed=await getScopedWeeztixScanConfig(db,eventId,workplaceId)}
+ catch{return fail("authorization_unavailable",503)}
+ if(managed){
+  if(managed.WEEZTIX_SCANNING_ENABLED!=="true"||
+     managed.WEEZTIX_ACTIVE_EVENT_ID!==eventId||
+     !managed.WEEZTIX_ACCESS_TOKEN)return fail("not_configured",503)
+  accessToken=managed.WEEZTIX_ACCESS_TOKEN
+ }else{
+  // Backwards compatibility for deployments still configured with Worker-only
+  // settings. This path requires the same explicit enable flag and event scope.
+  if(process.env.WEEZTIX_SCANNING_ENABLED!=="true"||
+     process.env.WEEZTIX_ACTIVE_EVENT_ID!==eventId||
+     !process.env.WEEZTIX_ACCESS_TOKEN)return fail("not_configured",503)
+  accessToken=process.env.WEEZTIX_ACCESS_TOKEN
+ }
  let response:Response
  try{
   response=await fetch("https://api.weeztix.com/order/scanbarcode/"+encodeURIComponent(barcode),{
    method:"POST",
-   headers:{Authorization:"Bearer "+process.env.WEEZTIX_ACCESS_TOKEN,Accept:"application/json"},
+   headers:{Authorization:"Bearer "+accessToken,Accept:"application/json"},
    redirect:"error",cache:"no-store",signal:AbortSignal.timeout(8500),
   })
  }catch{return fail("provider_unavailable",503)}

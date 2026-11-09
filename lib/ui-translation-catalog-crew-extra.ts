@@ -2,6 +2,10 @@ export type CrewExtraLocale='nl'|'fr'|'en'|'de'
 type Row={fr:string;en:string;de:string}
 
 export const CREW_EXTRA_TRANSLATIONS:Record<string,Row>={
+  "Inkomscanner voor dit event activeren":{fr:"Activer le scanner d’entrée pour cet événement",en:"Enable entrance scanning for this event",de:"Einlassscanner für dieses Event aktivieren"},
+  "Activer le scanner d’entrée pour cet événement":{fr:"Activer le scanner d’entrée pour cet événement",en:"Enable entrance scanning for this event",de:"Einlassscanner für dieses Event aktivieren"},
+  "Enable entrance scanning for this event":{fr:"Activer le scanner d’entrée pour cet événement",en:"Enable entrance scanning for this event",de:"Einlassscanner für dieses Event aktivieren"},
+  "Einlassscanner für dieses Event aktivieren":{fr:"Activer le scanner d’entrée pour cet événement",en:"Enable entrance scanning for this event",de:"Einlassscanner für dieses Event aktivieren"},
   "Integratiewijzigingen":{fr:"Historique des intégrations",en:"Integration change history",de:"Änderungen an Integrationen"},
   "Historique des intégrations":{fr:"Historique des intégrations",en:"Integration change history",de:"Änderungen an Integrationen"},
   "Integration change history":{fr:"Historique des intégrations",en:"Integration change history",de:"Änderungen an Integrationen"},

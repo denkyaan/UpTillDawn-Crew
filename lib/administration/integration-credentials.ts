@@ -7,7 +7,7 @@ export const integrationFields:Record<IntegrationProvider,readonly string[]>={
  sumup:["SUMUP_API_KEY","SUMUP_MERCHANT_CODE"],
  documenso:["DOCUMENSO_BASE_URL","DOCUMENSO_API_KEY"],
  banking:["PONTO_CLIENT_ID","PONTO_CLIENT_SECRET"],
- weeztix:["WEEZTIX_ACCESS_TOKEN","WEEZTIX_ACTIVE_EVENT_ID"],
+ weeztix:["WEEZTIX_ACCESS_TOKEN","WEEZTIX_ACTIVE_EVENT_ID","WEEZTIX_SCANNING_ENABLED"],
  peppol:["BILLIT_SANDBOX_PARTY_ID","BILLIT_SANDBOX_API_KEY"]
 }
 export type IntegrationConfiguration=Partial<Record<string,string>>
@@ -31,6 +31,6 @@ export function parseIntegrationConfiguration(provider:IntegrationProvider,input
   // Do not let a browser-controlled URL turn this into an SSRF proxy.
   if(valid.DOCUMENSO_BASE_URL!=="https://app.documenso.com")return null
  }
- if(provider==="weeztix"&&!uuid.test(valid.WEEZTIX_ACTIVE_EVENT_ID))return null
+ if(provider==="weeztix"&&(!uuid.test(valid.WEEZTIX_ACTIVE_EVENT_ID)||!["true","false"].includes(valid.WEEZTIX_SCANNING_ENABLED)))return null
  return valid
 }

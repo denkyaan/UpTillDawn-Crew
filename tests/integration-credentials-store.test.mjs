@@ -23,7 +23,7 @@ test("AES-256-GCM credentials roundtrip, random IV, provider binding and tamper 
 
 test("provider credential validation blocks arbitrary fields and SSRF targets",()=>{
  assert.deepEqual(integrationProviders,["sumup","documenso","banking","weeztix","peppol"])
- for(const provider of integrationProviders)assert.ok(integrationFields[provider].length===2,provider)
+ for(const provider of integrationProviders)assert.equal(integrationFields[provider].length,provider==="weeztix"?3:2,provider)
  const good={DOCUMENSO_BASE_URL:"https://app.documenso.com",DOCUMENSO_API_KEY:"synthetic-token"}
  assert.deepEqual(parseIntegrationConfiguration("documenso",good),good)
  assert.equal(parseIntegrationConfiguration("documenso",{...good,DOCUMENSO_BASE_URL:"https://127.0.0.1"}),null)
@@ -102,4 +102,42 @@ test("provider readiness reflects encrypted in-app credentials without duplicate
  assert.match(panel,/appManaged\.has\(service\.id/)
  assert.match(panel,/t\.states\.credentials_present/)
  assert.equal((panel.match(/<IntegrationCredentialManager /g)||[]).length,1)
+})
+
+test("Weeztix scanner access requires explicit per-event activation",()=>{
+ const event="14114341-a820-4eb4-a5af-232000cf051d"
+ const credentials={WEEZTIX_ACCESS_TOKEN:"provider-issued-token",WEEZTIX_ACTIVE_EVENT_ID:event,WEEZTIX_SCANNING_ENABLED:"true"}
+ assert.deepEqual(parseIntegrationConfiguration("weeztix",credentials),credentials)
+ assert.equal(parseIntegrationConfiguration("weeztix",{...credentials,WEEZTIX_SCANNING_ENABLED:"anything"}),null)
+ assert.equal(parseIntegrationConfiguration("weeztix",{...credentials,WEEZTIX_SCANNING_ENABLED:"TRUE"}),null)
+ assert.equal(parseIntegrationConfiguration("weeztix",{...credentials,WEEZTIX_ACTIVE_EVENT_ID:"wrong-event"}),null)
+ const ui=src("components/admin/integration-credential-manager.tsx")
+ assert.match(ui,/WEEZTIX_SCANNING_ENABLED:"false"/)
+ assert.match(ui,/type="checkbox"/)
+ assert.match(ui,/event.target.checked\?"true":"false"/)
+})
+
+test("Weeztix server integration uses role-scoped encrypted credentials and fails closed",()=>{
+ const route=src("app/api/weeztix/scan/route.ts")
+ const server=src("lib/administration/integration-store.ts")
+ const migration=src("supabase/migrations/20261109223132_weeztix_scoped_encrypted_scan_settings.sql")
+ assert.match(route,/getScopedWeeztixScanConfig\(db,eventId,workplaceId\)/)
+ assert.match(route,/managed.WEEZTIX_SCANNING_ENABLED!=="true"/)
+ assert.match(route,/managed.WEEZTIX_ACTIVE_EVENT_ID!==eventId/)
+ assert.match(route,/process.env.WEEZTIX_SCANNING_ENABLED!=="true"/)
+ assert.match(route,/Authorization:"Bearer "\+accessToken/)
+ assert.match(route,/if\(response.status===204\)/)
+ assert.match(server,/upt_weeztix_scan_secrets/)
+ assert.match(server,/openIntegrationSecrets\("weeztix"/)
+ assert.match(migration,/public.upt_weeztix_scan_secrets/)
+ assert.match(migration,/auth.uid\(\)/)
+ assert.match(migration,/p.account_blocked/)
+ assert.match(migration,/public.upt_is_admin\(v_uid\)/)
+ assert.match(migration,/public.shifts/)
+ assert.match(migration,/public.responsible_assignments/)
+ assert.match(migration,/w.is_active is true/)
+ assert.match(migration,/e.status is distinct from 'archived'/)
+ assert.match(migration,/revoke all on function public.upt_weeztix_scan_secrets/)
+ assert.match(migration,/grant execute on function public.upt_weeztix_scan_secrets\(uuid,uuid\) to authenticated/)
+ assert.doesNotMatch(route,/return NextResponse.json\(\{[^}]*accessToken/)
 })

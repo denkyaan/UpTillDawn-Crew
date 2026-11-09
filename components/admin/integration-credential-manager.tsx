@@ -7,10 +7,10 @@ import {integrationFields,integrationProviders,type IntegrationProvider,type Int
 
 const names={sumup:"SumUp",documenso:"Documenso",banking:"Ponto",weeztix:"Weeztix",peppol:"Billit / Peppol"} as const
 const labels={
- nl:{SUMUP_API_KEY:"Geheime API-sleutel",SUMUP_MERCHANT_CODE:"Merchantcode",DOCUMENSO_BASE_URL:"Documenso HTTPS-adres",DOCUMENSO_API_KEY:"Documenso API-token",PONTO_CLIENT_ID:"Client ID",PONTO_CLIENT_SECRET:"Client Secret",WEEZTIX_ACCESS_TOKEN:"Weeztix access-token",WEEZTIX_ACTIVE_EVENT_ID:"UpTillDawn event-ID (UUID)",BILLIT_SANDBOX_PARTY_ID:"Billit sandbox Party ID",BILLIT_SANDBOX_API_KEY:"Billit sandbox API-sleutel"},
- fr:{SUMUP_API_KEY:"Clé API secrète",SUMUP_MERCHANT_CODE:"Code marchand",DOCUMENSO_BASE_URL:"Adresse HTTPS Documenso",DOCUMENSO_API_KEY:"Jeton API Documenso",PONTO_CLIENT_ID:"Identifiant client",PONTO_CLIENT_SECRET:"Secret client",WEEZTIX_ACCESS_TOKEN:"Jeton d'accès Weeztix",WEEZTIX_ACTIVE_EVENT_ID:"ID événement UpTillDawn (UUID)",BILLIT_SANDBOX_PARTY_ID:"Billit sandbox Party ID",BILLIT_SANDBOX_API_KEY:"Clé API sandbox Billit"},
- en:{SUMUP_API_KEY:"Secret API key",SUMUP_MERCHANT_CODE:"Merchant code",DOCUMENSO_BASE_URL:"Documenso HTTPS URL",DOCUMENSO_API_KEY:"Documenso API token",PONTO_CLIENT_ID:"Client ID",PONTO_CLIENT_SECRET:"Client Secret",WEEZTIX_ACCESS_TOKEN:"Weeztix access token",WEEZTIX_ACTIVE_EVENT_ID:"UpTillDawn event ID (UUID)",BILLIT_SANDBOX_PARTY_ID:"Billit sandbox Party ID",BILLIT_SANDBOX_API_KEY:"Billit sandbox API key"},
- de:{SUMUP_API_KEY:"Geheimer API-Schlüssel",SUMUP_MERCHANT_CODE:"Händlercode",DOCUMENSO_BASE_URL:"Documenso HTTPS-Adresse",DOCUMENSO_API_KEY:"Documenso API-Token",PONTO_CLIENT_ID:"Client ID",PONTO_CLIENT_SECRET:"Client Secret",WEEZTIX_ACCESS_TOKEN:"Weeztix Zugriffstoken",WEEZTIX_ACTIVE_EVENT_ID:"UpTillDawn Event-ID (UUID)",BILLIT_SANDBOX_PARTY_ID:"Billit Sandbox Party ID",BILLIT_SANDBOX_API_KEY:"Billit Sandbox API-Schlüssel"}
+ nl:{SUMUP_API_KEY:"Geheime API-sleutel",SUMUP_MERCHANT_CODE:"Merchantcode",DOCUMENSO_BASE_URL:"Documenso HTTPS-adres",DOCUMENSO_API_KEY:"Documenso API-token",PONTO_CLIENT_ID:"Client ID",PONTO_CLIENT_SECRET:"Client Secret",WEEZTIX_ACCESS_TOKEN:"Weeztix access-token",WEEZTIX_ACTIVE_EVENT_ID:"UpTillDawn event-ID (UUID)",BILLIT_SANDBOX_PARTY_ID:"Billit sandbox Party ID",BILLIT_SANDBOX_API_KEY:"Billit sandbox API-sleutel",WEEZTIX_SCANNING_ENABLED:"Inkomscanner voor dit event activeren"},
+ fr:{SUMUP_API_KEY:"Clé API secrète",SUMUP_MERCHANT_CODE:"Code marchand",DOCUMENSO_BASE_URL:"Adresse HTTPS Documenso",DOCUMENSO_API_KEY:"Jeton API Documenso",PONTO_CLIENT_ID:"Identifiant client",PONTO_CLIENT_SECRET:"Secret client",WEEZTIX_ACCESS_TOKEN:"Jeton d'accès Weeztix",WEEZTIX_ACTIVE_EVENT_ID:"ID événement UpTillDawn (UUID)",BILLIT_SANDBOX_PARTY_ID:"Billit sandbox Party ID",BILLIT_SANDBOX_API_KEY:"Clé API sandbox Billit",WEEZTIX_SCANNING_ENABLED:"Activer le scanner d’entrée pour cet événement"},
+ en:{SUMUP_API_KEY:"Secret API key",SUMUP_MERCHANT_CODE:"Merchant code",DOCUMENSO_BASE_URL:"Documenso HTTPS URL",DOCUMENSO_API_KEY:"Documenso API token",PONTO_CLIENT_ID:"Client ID",PONTO_CLIENT_SECRET:"Client Secret",WEEZTIX_ACCESS_TOKEN:"Weeztix access token",WEEZTIX_ACTIVE_EVENT_ID:"UpTillDawn event ID (UUID)",BILLIT_SANDBOX_PARTY_ID:"Billit sandbox Party ID",BILLIT_SANDBOX_API_KEY:"Billit sandbox API key",WEEZTIX_SCANNING_ENABLED:"Enable entrance scanning for this event"},
+ de:{SUMUP_API_KEY:"Geheimer API-Schlüssel",SUMUP_MERCHANT_CODE:"Händlercode",DOCUMENSO_BASE_URL:"Documenso HTTPS-Adresse",DOCUMENSO_API_KEY:"Documenso API-Token",PONTO_CLIENT_ID:"Client ID",PONTO_CLIENT_SECRET:"Client Secret",WEEZTIX_ACCESS_TOKEN:"Weeztix Zugriffstoken",WEEZTIX_ACTIVE_EVENT_ID:"UpTillDawn Event-ID (UUID)",BILLIT_SANDBOX_PARTY_ID:"Billit Sandbox Party ID",BILLIT_SANDBOX_API_KEY:"Billit Sandbox API-Schlüssel",WEEZTIX_SCANNING_ENABLED:"Einlassscanner für dieses Event aktivieren"}
 } as const
 const copy={
  nl:{title:"Accountgegevens veilig beheren",intro:"Hoofdadmin en Administratie gebruiken dezelfde verbindingen. Sleutels worden versleuteld en zijn na opslaan niet terug te lezen.",provider:"Dienst",configured:"Veilig opgeslagen",missing:"Nog niet gekoppeld",choose:"Kies een dienst",save:"Opslaan of vervangen",remove:"Ontkoppelen",confirm:"Definitief ontkoppelen",cancel:"Annuleren",busy:"Bezig met beveiligen…",saved:"Instellingen veilig opgeslagen. Test de verbinding hieronder.",removed:"Verbinding ontkoppeld. De oude sleutel is gewist.",unavailable:"Opslag tijdelijk niet beschikbaar.",invalid:"Controleer de ingevulde gegevens.",forbidden:"Je hebt geen bevoegdheid om deze dienst aan te passen.",keyMissing:"Eenmalige serverbeveiligingssleutel ontbreekt. De Maker moet UPT_INTEGRATION_ENCRYPTION_KEY als Cloudflare-secret instellen.",last:"Laatst aangepast",warning:"Opslaan activeert geen betalingen, Peppol-verzending of banksynchronisatie. Weeztix-tokens moeten nog automatisch vernieuwd worden.",auditTitle:"Integratiewijzigingen",auditEmpty:"Nog geen wijzigingen geregistreerd.",auditConnected:"Gekoppeld",auditUpdated:"Gewijzigd",auditDisconnected:"Ontkoppeld",auditBy:"door"},
@@ -22,7 +22,7 @@ const copy={
 type AuditEvent={provider:IntegrationProvider;action:"connected"|"updated"|"disconnected";actor_name:string;occurred_at:string}
 type State={integrations:IntegrationSummary[];audit:AuditEvent[];secureStoreAvailable:boolean}
 const endpoint="/api/administration/integrations"
-const defaults:Record<string,string>={DOCUMENSO_BASE_URL:"https://app.documenso.com"}
+const defaults:Record<string,string>={DOCUMENSO_BASE_URL:"https://app.documenso.com",WEEZTIX_SCANNING_ENABLED:"false"}
 const errorCodes={general:"unavailable",invalid:"invalid",missingKey:"keyMissing",denied:"forbidden"} as const
 export function IntegrationCredentialManager({initialLocale}:{initialLocale:SupportedUiLocale}){
  const [locale,setLocale]=useState<SupportedUiLocale>(initialLocale)
@@ -82,7 +82,12 @@ export function IntegrationCredentialManager({initialLocale}:{initialLocale:Supp
   {entry&&<p className="text-xs text-muted-foreground">{t.last}: {new Date(entry.updated_at).toLocaleString(locale)}</p>}
   {!state?.secureStoreAvailable&&<p className="text-xs text-amber-600" role="status">{t.keyMissing}</p>}
   <form className="space-y-3" autoComplete="off" onSubmit={e=>{e.preventDefault();void perform("POST")}}>
-   {integrationFields[provider].map(key=><label key={key} className="block text-sm">{labels[locale][key as keyof typeof labels.nl]}
+   {integrationFields[provider].map(key=>key==="WEEZTIX_SCANNING_ENABLED"?
+    <label key={key} className="flex min-h-11 items-center gap-3 text-sm">
+     <input type="checkbox" className="h-5 w-5" checked={(fields[key]??defaults[key])==="true"} disabled={busy} onChange={event=>setFields(old=>({...old,[key]:event.target.checked?"true":"false"}))}/>
+     {labels[locale].WEEZTIX_SCANNING_ENABLED}
+    </label>:
+    <label key={key} className="block text-sm">{labels[locale][key as keyof typeof labels.nl]}
     <input type={key==="DOCUMENSO_BASE_URL"||key==="WEEZTIX_ACTIVE_EVENT_ID"||key==="SUMUP_MERCHANT_CODE"||key==="PONTO_CLIENT_ID"||key==="BILLIT_SANDBOX_PARTY_ID"?"text":"password"} className="mt-1 w-full min-h-11 rounded-lg border bg-background px-3" required minLength={3} maxLength={4096} autoComplete="off" spellCheck={false} value={fields[key]??defaults[key]??""} onChange={e=>setFields(old=>({...old,[key]:e.target.value}))}/>
    </label>)}
    <div className="flex flex-wrap gap-2">

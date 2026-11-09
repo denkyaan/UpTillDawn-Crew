@@ -76,3 +76,22 @@ export async function listRecentIntegrationAudit(db:Db):Promise<IntegrationAudit
  }
  return audit
 }
+
+/**
+ * Only call after the existing scan route has independently validated the
+ * operator's authenticated event/workplace. The database repeats those checks,
+ * including role assignment, and returns ciphertext to the Worker only.
+ */
+export async function getScopedWeeztixScanConfig(db:Db,eventId:string,workplaceId:string):Promise<IntegrationConfiguration|null>{
+ const invoke=db.rpc as unknown as (name:string,args:{p_event_id:string;p_workplace_id:string})=>Promise<RpcResponse>
+ const {data,error}=await invoke("upt_weeztix_scan_secrets",{p_event_id:eventId,p_workplace_id:workplaceId})
+ if(error)throw Error("weeztix_credentials_forbidden")
+ if(!data||typeof data!=="object")throw Error("weeztix_credentials_unavailable")
+ const row=data as Record<string,unknown>
+ if(row.configured===false)return null
+ if(row.configured!==true||typeof row.ciphertext!=="string")throw Error("weeztix_credentials_unavailable")
+ const decoded=await openIntegrationSecrets("weeztix",row.ciphertext,masterKey())
+ const checked=parseIntegrationConfiguration("weeztix",decoded)
+ if(!checked)throw Error("weeztix_credentials_unavailable")
+ return checked
+}
