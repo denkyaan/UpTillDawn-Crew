@@ -62,7 +62,7 @@ test('admin click context persists across related modules and action-center clic
   assert.match(link,/setSelection/)
   assert.match(layout,/AdminSelectionProvider/)
   assert.match(bar,/Context wissen/)
-  assert.match(bar,/featureHelp\("inventory"/)
+  assert.doesNotMatch(bar,/ContextLink|featureHelp\(/)
   assert.match(admin,/ContextLink/)
   assert.match(admin,/focus:'checkin'/)
   assert.match(events,/focus:'briefing'/)
