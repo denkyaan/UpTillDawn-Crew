@@ -51,7 +51,7 @@ test("no provider tokens are returned from GET, save or disconnect browser respo
  const store=src("lib/administration/integration-store.ts")
  const ui=src("components/admin/integration-credential-manager.tsx")
  const wrapper=src("components/admin/external-services-readiness.tsx")
- for(const pattern of [/requestHasSameOrigin\(request\)/,/administrationPageAccess\(\)/,/smallJson\(request,10240\)/,/smallJson\(request,512\)/,/Cache-Control/,/saveIntegrationCredentials/,/disconnectIntegration/])assert.match(api,pattern)
+ for(const pattern of [/requestHasSameOrigin\(request\)/,/integrationManagementAccess\(\)/,/smallJson\(request,10240\)/,/smallJson\(request,512\)/,/Cache-Control/,/saveIntegrationCredentials/,/disconnectIntegration/])assert.match(api,pattern)
  assert.match(store,/UPT_INTEGRATION_ENCRYPTION_KEY/)
  assert.match(store,/sealIntegrationSecrets/)
  assert.match(store,/openIntegrationSecrets/)
@@ -68,7 +68,7 @@ test("server-side provider tests prefer encrypted in-app configuration, not only
  const route=src("app/api/admin/provider-connection-check/route.ts")
  assert.match(route,/getManagedIntegrationConfig\(access\.db,value as ConnectionProvider\)/)
  assert.match(route,/checkProviderConnection\(value as ConnectionProvider,environment\)/)
- assert.match(route,/administrationPageAccess/)
+ assert.match(route,/integrationManagementAccess/)
  assert.match(route,/integration_storage_unavailable/)
 })
 
