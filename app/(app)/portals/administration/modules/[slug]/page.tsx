@@ -12,6 +12,7 @@ import ProviderMappingManager from "@/components/administration/provider-mapping
 import type {SupabaseClient} from "@supabase/supabase-js"
 import Link from "next/link"
 import TicketImportPreview from "@/components/administration/ticket-import-preview"
+import MappedTicketImportPreview from "@/components/administration/mapped-ticket-import-preview"
 import SepaExport from "@/components/administration/sepa-export"
 import { notFound, redirect } from "next/navigation"
 import { requestUiLocale } from "@/lib/server-locale"
@@ -262,6 +263,7 @@ export default async function AdministrationModulePage({params,searchParams}:{pa
   {slug==="ticketing"&&!ticketEventRows?.error&&<ProviderMappingManager locale={locale} events={(ticketEventRows?.data??[]).map(event=>({id:event.id,name:event.name}))}/>}
   {slug==="ticketing"&&<TicketSalesOverview locale={locale} events={ticketEventRows?.data??[]}/>}
   {slug==="ticketing"&&!ticketEventRows?.error&&<TicketImportPreview events={(ticketEventRows?.data??[]).map(event=>({id:event.id,name:event.name}))} locale={locale}/>}
+  {slug==="ticketing"&&!ticketEventRows?.error&&<MappedTicketImportPreview events={(ticketEventRows?.data??[]).map(event=>({id:event.id,name:event.name}))} locale={locale}/>}
   {slug==="ticketing"&&<section className="rounded-2xl border bg-card p-5">
    <h2 className="text-lg font-semibold">{({nl:"Evenementen voor ticketopvolging",fr:"Événements pour le suivi des billets",en:"Events for ticket tracking",de:"Veranstaltungen zur Ticketverfolgung"} as const)[locale]}</h2>
    {ticketEventRows?.error?<p role="alert" className="mt-3 text-sm text-muted-foreground">{({nl:"Evenementen konden niet worden geladen.",fr:"Impossible de charger les événements.",en:"Unable to load events.",de:"Veranstaltungen konnten nicht geladen werden."} as const)[locale]}</p>:ticketEventRows?.data?.length?<ul className="mt-3 divide-y">{ticketEventRows.data.map(item=><li key={item.id} className="flex flex-wrap justify-between gap-2 py-3 text-sm"><span className="font-medium">{item.name}</span><span className="text-muted-foreground">{item.status}</span></li>)}</ul>:<p className="mt-3 text-sm text-muted-foreground">{({nl:"Geen evenementen gevonden.",fr:"Aucun événement.",en:"No events found.",de:"Keine Veranstaltungen gefunden."} as const)[locale]}</p>}

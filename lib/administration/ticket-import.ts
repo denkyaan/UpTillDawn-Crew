@@ -38,13 +38,17 @@ function moneyToCents(value:string):number|null {
  const [whole,fraction='']=value.split('.');const result=Number(whole)*100+Number(fraction.padEnd(2,'0'))
  return Number.isSafeInteger(result)?result:null
 }
-export function validateTicketSalesCsv(csv:string,expectedEventId:string,maxRows=10000):TicketImportResult {
+/** Optional external ID imports must first be authorized against an active mapping server-side.
+ * The normalized output always uses the internal event ID passed by the caller. */
+export function validateTicketSalesCsv(csv:string,expectedEventId:string,maxRows=10000,expectedExternalEventId?:string):TicketImportResult {
  const result:TicketImportResult={rows:[],errors:[],grossCents:0,quantity:0}
  if(typeof csv!=="string"||new TextEncoder().encode(csv).length>2_000_000)return {...result,errors:[{line:1,message:'Import exceeds file limit'}]}
  if(!expectedEventId.trim())return {...result,errors:[{line:1,message:'Missing target event'}]}
+ if(expectedExternalEventId!==undefined&&!/^[A-Za-z0-9][A-Za-z0-9_.:-]{0,159}$/.test(expectedExternalEventId))
+  return {...result,errors:[{line:1,message:'Invalid external event ID'}]}
  let records:string[][]
  try{records=parseCsv(csv)}catch(e){return {...result,errors:[{line:1,message:(e as Error).message}]}}
- const header=['external_id','event_id','quantity','gross_amount','currency','sold_at']
+ const header=['external_id',expectedExternalEventId===undefined?'event_id':'external_event_id','quantity','gross_amount','currency','sold_at']
  if(!records.length||records[0].map(x=>x.trim().toLowerCase()).join('|')!==header.join('|'))return {...result,errors:[{line:1,message:'Invalid CSV header'}]}
  if(!Number.isSafeInteger(maxRows)||maxRows<0)return {...result,errors:[{line:1,message:'Invalid row limit'}]}
  if(records.length-1>maxRows)return {...result,errors:[{line:1,message:'Import exceeds row limit'}]}
@@ -54,7 +58,7 @@ export function validateTicketSalesCsv(csv:string,expectedEventId:string,maxRows
   const line=i+1
   if(records[i].length!==6){result.errors.push({line,message:'Incorrect number of columns'});continue}
   if(!externalId||externalId.length>160||/[\u0000-\u001f\u007f]/.test(externalId)||/^[=+@\-]/.test(externalId)||ids.has(externalId)){result.errors.push({line,message:'Missing, oversized or duplicate external ID'});continue}
-  if(eventId!==expectedEventId){result.errors.push({line,message:'Event mismatch'});continue}
+  if(eventId!==(expectedExternalEventId??expectedEventId)){result.errors.push({line,message:'Event mismatch'});continue}
   const quantity=Number(rawQuantity),grossCents=moneyToCents(rawGross)
   if(!/^[1-9]\d*$/.test(rawQuantity)||!Number.isSafeInteger(quantity)||quantity<1||quantity>100000||!Number.isSafeInteger(result.quantity+quantity)){result.errors.push({line,message:'Invalid quantity'});continue}
   if(grossCents===null||!Number.isSafeInteger(result.grossCents+grossCents)){result.errors.push({line,message:'Invalid gross amount'});continue}

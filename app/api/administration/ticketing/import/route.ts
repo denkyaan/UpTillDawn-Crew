@@ -22,11 +22,25 @@ export async function POST(request:Request){
  let form:FormData
  try{form=await new Response(bytes,{headers:{"Content-Type":request.headers.get("content-type")??""}}).formData()}catch{return fail("invalid_file",400)}
  const file=form.get("file"),eventId=String(form.get("eventId")??""),source=String(form.get("source")??"").trim()
+ const mappedAttempt=form.has("mappingId")||form.has("externalEventId")
+ const mappingId=String(form.get("mappingId")??""),externalEventId=String(form.get("externalEventId")??"")
  if(!(file instanceof File)||!file.name.toLowerCase().endsWith(".csv")||file.size===0)return fail("invalid_file",422)
  if(file.size>2_000_000)return fail("file_too_large",413)
  if(!/^[0-9a-f]{8}(?:-[0-9a-f]{4}){3}-[0-9a-f]{12}$/i.test(eventId)||!/^[a-z0-9][a-z0-9_-]{0,39}$/.test(source))return fail("invalid_target",422)
+ // Mapped provider imports are bound to an enabled, immutable mapping, not
+ // a client-provided claim about which internal event a provider row belongs to.
+ if(mappedAttempt){
+  if(!["eventix","sumup"].includes(source)||!/^[0-9a-f]{8}(?:-[0-9a-f]{4}){3}-[0-9a-f]{12}$/i.test(mappingId)||!/^[A-Za-z0-9][A-Za-z0-9_.:-]{0,159}$/.test(externalEventId))
+   return fail("invalid_mapping",422)
+  const {data:mapping,error:mappingError}=await access.db.from("admin_provider_event_mappings")
+   .select("id").eq("id",mappingId).eq("provider",source)
+   .eq("external_event_id",externalEventId).eq("event_id",eventId)
+   .eq("enabled",true).maybeSingle()
+  if(mappingError)return fail("mapping_unavailable",503)
+  if(!mapping)return fail("mapping_inactive_or_mismatch",409)
+ }
  const csv=await file.text()
- const validation=validateTicketSalesCsv(csv,eventId)
+ const validation=validateTicketSalesCsv(csv,eventId,10000,mappedAttempt?externalEventId:undefined)
  if(validation.errors.length)return NextResponse.json({error:"invalid_rows",errors:validation.errors.slice(0,20)},{status:422})
  const sha=createHash("sha256").update(csv).digest("hex")
  const {data,error}=await (access.db as unknown as SupabaseClient).rpc("upt_import_ticket_sales",{
