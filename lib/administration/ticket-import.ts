@@ -68,7 +68,7 @@ export function validateTicketSalesCsv(csv:string,expectedEventId:string,maxRows
   const calendar=parts?Date.parse(parts[1]+'T00:00:00Z'):NaN
   if(!parts||!Number.isFinite(timestamp)||!Number.isFinite(calendar)||new Date(calendar).toISOString().slice(0,10)!==parts[1]||Number(parts[2])>23||Number(parts[3])>59||Number(parts[4])>59||(parts[6]!==undefined&&(Number(parts[6])>14||Number(parts[7])>59||(Number(parts[6])===14&&Number(parts[7])!==0)))){result.errors.push({line,message:'Invalid timestamp'});continue}
   ids.add(externalId)
-  result.rows.push({externalId,eventId,quantity,grossCents,currency:rawCurrency,soldAt:new Date(timestamp).toISOString()})
+  result.rows.push({externalId,eventId:expectedEventId,quantity,grossCents,currency:rawCurrency,soldAt:new Date(timestamp).toISOString()})
   result.grossCents+=grossCents;result.quantity+=quantity
  }
  // All-or-nothing: callers must never persist a partial, invalid batch.

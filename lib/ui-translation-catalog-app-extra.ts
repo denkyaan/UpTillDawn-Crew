@@ -2,6 +2,12 @@ export type ExtraCatalogLocale = 'nl' | 'fr' | 'en' | 'de'
 type Row = { fr:string; en:string; de:string }
 
 export const APP_EXTRA_TRANSLATIONS: Record<string,Row> = {
+  "Gekoppelde Eventix / SumUp CSV-import":{fr:"Import CSV Eventix / SumUp associé",en:"Mapped Eventix / SumUp CSV import",de:"Zugeordneter Eventix / SumUp CSV-Import"},
+  "Import CSV Eventix / SumUp associé":{fr:"Import CSV Eventix / SumUp associé",en:"Mapped Eventix / SumUp CSV import",de:"Zugeordneter Eventix / SumUp CSV-Import"},
+  "Mapped Eventix / SumUp CSV import":{fr:"Import CSV Eventix / SumUp associé",en:"Mapped Eventix / SumUp CSV import",de:"Zugeordneter Eventix / SumUp CSV-Import"},
+  "Zugeordneter Eventix / SumUp CSV-Import":{fr:"Import CSV Eventix / SumUp associé",en:"Mapped Eventix / SumUp CSV import",de:"Zugeordneter Eventix / SumUp CSV-Import"},
+  "Eventix":{fr:"Eventix",en:"Eventix",de:"Eventix"},
+  "SumUp":{fr:"SumUp",en:"SumUp",de:"SumUp"},
   "Description": {fr:"Description",en:"Description",de:"Beschreibung"},
   "Beschreibung": {fr:"Description",en:"Description",de:"Beschreibung"},
   "Evenementtaken en promotie": {fr:"Tâches événementielles et promotion",en:"Event tasks and promotion",de:"Eventaufgaben und Promotion"},
