@@ -12,3 +12,5 @@ UpTillDawn now supports one *manual* Admin-attested matching workflow for import
 - A bounded, same-origin, permission-checked API and database/RLS boundaries handle cross-role and concurrent writes.
 
 Verification: focused pure-accounting and source security regressions in `tests/provider-bank-settlement.test.mjs`, fast CI, main deployment and database policy/trigger inspection. Real settlement with real bank/provider data has **not** been verified and is not implied by an empty main-test ledger. No production CI/deploy or schema changes are authorized by this bundle.
+
+Main-test migration ledger: `20261109100617_admin_provider_bank_settlements.sql`. This filename matches the recorded Supabase migration version. Validate PR head CI again after any filename or release-baseline adjustment.
