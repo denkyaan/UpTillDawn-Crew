@@ -97,7 +97,7 @@ test("integration audit reads metadata only, with deny-by-default direct access 
 
 test("provider readiness reflects encrypted in-app credentials without duplicate menus or public API fields",()=>{
  const panel=src("components/admin/external-services-readiness.tsx")
- assert.match(panel,/administrationPageAccess\(\)/)
+ assert.match(panel,/integrationManagementAccess\(\)/)
  assert.match(panel,/listIntegrationSummaries\(access\.db\)/)
  assert.match(panel,/appManaged\.has\(service\.id/)
  assert.match(panel,/t\.states\.credentials_present/)
@@ -140,4 +140,29 @@ test("Weeztix server integration uses role-scoped encrypted credentials and fail
  assert.match(migration,/revoke all on function public.upt_weeztix_scan_secrets/)
  assert.match(migration,/grant execute on function public.upt_weeztix_scan_secrets\(uuid,uuid\) to authenticated/)
  assert.doesNotMatch(route,/return NextResponse.json\(\{[^}]*accessToken/)
+})
+
+
+test("business integrations exclude technical Maker ownership unless separately appointed",()=>{
+ const migration=src("supabase/migrations/20261109223852_organization_only_integration_management.sql")
+ const helper=src("lib/administration/integration-management-access.ts")
+ const api=src("app/api/administration/integrations/route.ts")
+ const probe=src("app/api/admin/provider-connection-check/route.ts")
+ const wrapper=src("components/admin/external-services-readiness.tsx")
+ assert.match(migration,/upt_organization_leadership/)
+ assert.match(migration,/l.slot='head'/)
+ assert.match(migration,/a.role='administrative_staff'/)
+ assert.match(migration,/a.approved=true and a.revoked_at is null/)
+ assert.match(migration,/p.approved=true/)
+ assert.match(migration,/p.account_blocked/)
+ assert.doesNotMatch(migration,/is_app_owner/)
+ assert.match(migration,/upt_can_manage_integrations/)
+ assert.match(migration,/upt_integration_credentials/)
+ assert.match(migration,/upt_integration_audit_recent/)
+ assert.match(helper,/integrationManagementAccess/)
+ assert.match(helper,/upt_can_manage_integrations/)
+ assert.match(helper,/data!==true/)
+ assert.match(api,/integrationManagementAccess/)
+ assert.match(probe,/integrationManagementAccess/)
+ assert.match(wrapper,/access.ok&&<IntegrationCredentialManager/)
 })

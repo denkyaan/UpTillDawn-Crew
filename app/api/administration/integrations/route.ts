@@ -1,5 +1,5 @@
 import {NextResponse} from "next/server"
-import {administrationPageAccess} from "@/lib/administration/page-access"
+import {integrationManagementAccess} from "@/lib/administration/integration-management-access"
 import {requestHasSameOrigin} from "@/lib/request-origin"
 import {isIntegrationProvider} from "@/lib/administration/integration-credentials"
 import {disconnectIntegration,listIntegrationSummaries,listRecentIntegrationAudit,saveIntegrationCredentials} from "@/lib/administration/integration-store"
@@ -25,7 +25,7 @@ async function smallJson(request:Request,limit:number):Promise<unknown>{
  return JSON.parse(new TextDecoder("utf-8",{fatal:true}).decode(bytes)) as unknown
 }
 async function authorized(){
- const access=await administrationPageAccess()
+ const access=await integrationManagementAccess()
  return access
 }
 export async function GET(){

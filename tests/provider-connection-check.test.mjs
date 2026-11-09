@@ -22,7 +22,7 @@ test("provider credential diagnostics grant both Head Admin and active Administr
  const route=read("app/api/admin/provider-connection-check/route.ts")
  const permission=read("lib/administration/page-access.ts")
  assert.match(route,/requestHasSameOrigin\(request\)/)
- assert.match(route,/administrationPageAccess\(\)/)
+ assert.match(route,/integrationManagementAccess\(\)/)
  assert.match(route,/if\(!access\.ok\)return fail/)
  assert.match(permission,/getCurrentUser\(\)/)
  assert.match(permission,/upt_my_portal_assignments/)

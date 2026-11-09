@@ -110,3 +110,8 @@ Voer de output uitsluitend in Cloudflare Workers → `uptilldawn-main` → Setti
 - Providerautorisatie is alleen een toegangstest voor ticketvalidatie op het door de operator beheerde event. Weeztix antwoordt 204 voor toegang of 400/403/404 voor fouten. De inkommedewerker laat nooit iemand binnen zonder bevestiging van Weeztix.
 - **Belangrijk:** Een handmatig geplaatste Weeztix access-token verloopt standaard na 3 dagen. Automatische OAuth-koppeling en single-use refresh-token-rotatie vereisen nog een geldige Weeztix OAuth Client ID/Secret en een door Hoofdadmin of Administratie geautoriseerde koppeling. Tot die tijd moet het toegangstoken worden vernieuwd via officiële Weeztix-autorisatie.
 - Er zijn nog geen echte providers gekoppeld of geverifieerd. Gebruik een evenementtest met een officieel testticket en twee rolaccounts vóór een operationele avond.
+
+### Scheiding technische Maker en bedrijfsbeheer
+- De bedrijfsintegratiegegevens zijn alleen toegankelijk voor de aangestelde Hoofdadmin (`upt_organization_leadership.slot='head'`) en een actief, goedgekeurd Administratie-account. Een louter technisch Maker/Owner-account krijgt **niet automatisch** toegang tot bank-, betaal- of ondertekeningscredentials.
+- De centrale `integrationManagementAccess` controleert deze bedrijfsbevoegdheid vóór API-aanroepen, en de beveiligde databasefuncties controleren dezelfde rol opnieuw. Rechten vervallen onmiddellijk wanneer een Administratie-rol wordt ingetrokken of het account geblokkeerd wordt.
+- De bestaande Admin/Administratie-instellingen blijven hetzelfde; voor de Maker verschijnen geen secretformulieren of business providerprobes zonder afzonderlijke autorisatie.

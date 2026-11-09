@@ -1,5 +1,5 @@
 import {NextResponse} from "next/server"
-import {administrationPageAccess} from "@/lib/administration/page-access"
+import {integrationManagementAccess} from "@/lib/administration/integration-management-access"
 import {requestHasSameOrigin} from "@/lib/request-origin"
 import {checkProviderConnection,type ConnectionProvider} from "@/lib/administration/provider-connection-check"
 import {getManagedIntegrationConfig} from "@/lib/administration/integration-store"
@@ -10,7 +10,7 @@ export async function POST(request:Request){
  if(!requestHasSameOrigin(request))return fail("forbidden",403)
  // Use the same verified portal permissions as Administration screens,
  // including revocation and blocking checks. Never trust client role claims.
- const access=await administrationPageAccess()
+ const access=await integrationManagementAccess()
  if(!access.ok)return fail(access.status===401?"unauthorized":access.status===403?"forbidden":"authorization_unavailable",access.status)
  if(!request.headers.get("content-type")?.toLowerCase().startsWith("application/json"))return fail("unsupported",415)
  // Only accept a tiny allowlisted request body, never raw credentials or URLs.

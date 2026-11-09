@@ -1,12 +1,12 @@
 import type {SupportedUiLocale} from "@/lib/locale-preferences"
-import {administrationPageAccess} from "@/lib/administration/page-access"
+import {integrationManagementAccess} from "@/lib/administration/integration-management-access"
 import {listIntegrationSummaries} from "@/lib/administration/integration-store"
 import {ProviderConnectionProbe} from "@/components/admin/provider-connection-probe"
 import {IntegrationCredentialManager} from "@/components/admin/integration-credential-manager"
 import {externalServicesCopy,type IntegrationReadiness} from "@/lib/administration/external-services-readiness"
 
 export async function ExternalServicesReadiness({locale,services}:{locale:SupportedUiLocale;services:IntegrationReadiness[]}){
- const access=await administrationPageAccess()
+ const access=await integrationManagementAccess()
  const stored=access.ok?await listIntegrationSummaries(access.db).catch(()=>[]):[]
  const appManaged=new Set(stored.map(row=>row.provider))
  const t=externalServicesCopy[locale]
@@ -24,9 +24,9 @@ export async function ExternalServicesReadiness({locale,services}:{locale:Suppor
      {service.setupVariables.map(name=><code key={name} className="mb-1 mr-1 inline-block rounded bg-muted px-1.5 py-0.5">{name}</code>)}
     </p>}
     {service.docsUrl&&<a href={service.docsUrl} target="_blank" rel="noopener noreferrer" className="inline-flex text-xs font-medium text-violet-400 underline">{t.link}</a>}
-    {(service.id==="sumup"||service.id==="documenso"||service.id==="banking")&&<ProviderConnectionProbe provider={service.id} initialLocale={locale}/>}
+    {access.ok&&(service.id==="sumup"||service.id==="documenso"||service.id==="banking")&&<ProviderConnectionProbe provider={service.id} initialLocale={locale}/>}
    </article>)}
   </div>
-  <IntegrationCredentialManager initialLocale={locale}/>
+  {access.ok&&<IntegrationCredentialManager initialLocale={locale}/>}
  </section>
 }
