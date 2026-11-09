@@ -16,10 +16,10 @@ test('Administration, crew and promotion use the same mobile bottom-tab styling'
  assert.match(crew,/expandedItem\?\(active\?"border-violet-500 text-violet-400":"border-border"\)/)
 })
 test('distinct Administration tools are assigned to existing Admin groups only once',()=>{
- const module=read('lib/admin-administration-navigation.ts')
+ const navigationConfig=read('lib/admin-administration-navigation.ts')
  const nav=read('components/layout/mobile-nav.tsx')
  const sidebar=read('components/layout/sidebar.tsx')
- const entries=[...module.matchAll(/\{key:"(admin-[^"]+)",slug:"([^"]+)",group:"([^"]+)"\}/g)]
+ const entries=[...navigationConfig.matchAll(/\{key:"(admin-[^"]+)",slug:"([^"]+)",group:"([^"]+)"\}/g)]
  assert.equal(entries.length,18)
  assert.equal(new Set(entries.map(item=>item[1])).size,18)
  assert.equal(new Set(entries.map(item=>item[2])).size,18)
