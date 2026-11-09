@@ -3,7 +3,8 @@ import {getCurrentUser} from "@/lib/actions/auth"
 import {createClient} from "@/lib/supabase/crew-server"
 import {requestHasSameOrigin} from "@/lib/request-origin"
 import {isEntranceWorkplace,validWeeztixBarcode} from "@/lib/weeztix-scanner"
-import {getScopedWeeztixScanConfig} from "@/lib/administration/integration-store"
+import {getScopedWeeztixConnection} from "@/lib/administration/integration-store"
+import {resolveManagedWeeztixAccessToken} from "@/lib/administration/weeztix-refresh"
 
 export const dynamic="force-dynamic"
 const uuid=/^[0-9a-f]{8}-(?:[0-9a-f]{4}-){3}[0-9a-f]{12}$/i
@@ -37,7 +38,7 @@ export async function POST(request:Request){
  if(!request.headers.get("content-type")?.toLowerCase().startsWith("application/json"))return fail("invalid_request",415)
  const user=await getCurrentUser()
  if(!user)return fail("unauthorized",401)
- if((!user.approved||user.account_blocked)&&!user.isOwner)return fail("forbidden",403)
+ if(!user.approved||user.account_blocked)return fail("forbidden",403)
  let input:unknown
  try{input=await boundedBody(request)}catch{return fail("invalid_request",400)}
  if(!input||typeof input!=="object"||Array.isArray(input))return fail("invalid_request",422)
@@ -65,13 +66,14 @@ export async function POST(request:Request){
  // but is disabled or configured for another event.
  let accessToken:string|undefined
  let managed
- try{managed=await getScopedWeeztixScanConfig(db,eventId,workplaceId)}
+ try{managed=await getScopedWeeztixConnection(db,eventId,workplaceId)}
  catch{return fail("authorization_unavailable",503)}
  if(managed){
-  if(managed.WEEZTIX_SCANNING_ENABLED!=="true"||
-     managed.WEEZTIX_ACTIVE_EVENT_ID!==eventId||
-     !managed.WEEZTIX_ACCESS_TOKEN)return fail("not_configured",503)
-  accessToken=managed.WEEZTIX_ACCESS_TOKEN
+  if(managed.config.WEEZTIX_SCANNING_ENABLED!=="true"||
+     managed.config.WEEZTIX_ACTIVE_EVENT_ID!==eventId)return fail("not_configured",503)
+  const resolved=await resolveManagedWeeztixAccessToken(db,eventId,workplaceId,managed)
+  if(!resolved.token)return fail(resolved.reason||"provider_auth_expired",503)
+  accessToken=resolved.token
  }else{
   // Backwards compatibility for deployments still configured with Worker-only
   // settings. This path requires the same explicit enable flag and event scope.

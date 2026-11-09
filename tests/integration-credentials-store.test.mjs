@@ -23,7 +23,7 @@ test("AES-256-GCM credentials roundtrip, random IV, provider binding and tamper 
 
 test("provider credential validation blocks arbitrary fields and SSRF targets",()=>{
  assert.deepEqual(integrationProviders,["sumup","documenso","banking","weeztix","peppol"])
- for(const provider of integrationProviders)assert.equal(integrationFields[provider].length,provider==="weeztix"?3:2,provider)
+ for(const provider of integrationProviders)assert.equal(integrationFields[provider].length,provider==="weeztix"?5:2,provider)
  const good={DOCUMENSO_BASE_URL:"https://app.documenso.com",DOCUMENSO_API_KEY:"synthetic-token"}
  assert.deepEqual(parseIntegrationConfiguration("documenso",good),good)
  assert.equal(parseIntegrationConfiguration("documenso",{...good,DOCUMENSO_BASE_URL:"https://127.0.0.1"}),null)
@@ -121,9 +121,9 @@ test("Weeztix server integration uses role-scoped encrypted credentials and fail
  const route=src("app/api/weeztix/scan/route.ts")
  const server=src("lib/administration/integration-store.ts")
  const migration=src("supabase/migrations/20261109223132_weeztix_scoped_encrypted_scan_settings.sql")
- assert.match(route,/getScopedWeeztixScanConfig\(db,eventId,workplaceId\)/)
- assert.match(route,/managed.WEEZTIX_SCANNING_ENABLED!=="true"/)
- assert.match(route,/managed.WEEZTIX_ACTIVE_EVENT_ID!==eventId/)
+ assert.match(route,/getScopedWeeztixConnection\(db,eventId,workplaceId\)/)
+ assert.match(route,/managed.config.WEEZTIX_SCANNING_ENABLED!=="true"/)
+ assert.match(route,/managed.config.WEEZTIX_ACTIVE_EVENT_ID!==eventId/)
  assert.match(route,/process.env.WEEZTIX_SCANNING_ENABLED!=="true"/)
  assert.match(route,/Authorization:"Bearer "\+accessToken/)
  assert.match(route,/if\(response.status===204\)/)

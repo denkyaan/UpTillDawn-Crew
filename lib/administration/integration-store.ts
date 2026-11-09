@@ -82,7 +82,8 @@ export async function listRecentIntegrationAudit(db:Db):Promise<IntegrationAudit
  * operator's authenticated event/workplace. The database repeats those checks,
  * including role assignment, and returns ciphertext to the Worker only.
  */
-export async function getScopedWeeztixScanConfig(db:Db,eventId:string,workplaceId:string):Promise<IntegrationConfiguration|null>{
+export type ScopedWeeztixConnection={config:IntegrationConfiguration;ciphertext:string}
+export async function getScopedWeeztixConnection(db:Db,eventId:string,workplaceId:string):Promise<ScopedWeeztixConnection|null>{
  const invoke=db.rpc as unknown as (name:string,args:{p_event_id:string;p_workplace_id:string})=>Promise<RpcResponse>
  const {data,error}=await invoke("upt_weeztix_scan_secrets",{p_event_id:eventId,p_workplace_id:workplaceId})
  if(error)throw Error("weeztix_credentials_forbidden")
@@ -93,5 +94,31 @@ export async function getScopedWeeztixScanConfig(db:Db,eventId:string,workplaceI
  const decoded=await openIntegrationSecrets("weeztix",row.ciphertext,masterKey())
  const checked=parseIntegrationConfiguration("weeztix",decoded)
  if(!checked)throw Error("weeztix_credentials_unavailable")
- return checked
+ return {config:checked,ciphertext:row.ciphertext}
 }
+export async function getScopedWeeztixScanConfig(db:Db,eventId:string,workplaceId:string):Promise<IntegrationConfiguration|null>{
+ return (await getScopedWeeztixConnection(db,eventId,workplaceId))?.config??null
+}
+export async function claimScopedWeeztixRefresh(db:Db,eventId:string,workplaceId:string):Promise<string|null>{
+ const invoke=db.rpc as unknown as (name:string,args:Record<string,string>)=>Promise<RpcResponse>
+ const {data,error}=await invoke("upt_weeztix_claim_refresh",{p_event_id:eventId,p_workplace_id:workplaceId})
+ if(error)throw Error("weeztix_refresh_unavailable")
+ return typeof data==="string"&&/^[0-9a-f-]{36}$/i.test(data)?data:null
+}
+export async function commitScopedWeeztixRefresh(db:Db,eventId:string,workplaceId:string,claimId:string,previousCiphertext:string,newConfig:IntegrationConfiguration):Promise<boolean>{
+ const checked=parseIntegrationConfiguration("weeztix",newConfig)
+ if(!checked)throw Error("weeztix_invalid_rotation")
+ const ciphertext=await sealIntegrationSecrets("weeztix",checked as Record<string,string>,masterKey())
+ const invoke=db.rpc as unknown as (name:string,args:Record<string,string>)=>Promise<RpcResponse>
+ const {data,error}=await invoke("upt_weeztix_commit_refresh",{
+  p_event_id:eventId,p_workplace_id:workplaceId,p_claim_id:claimId,
+  p_previous_ciphertext:previousCiphertext,p_new_ciphertext:ciphertext
+ })
+ if(error)throw Error("weeztix_refresh_unavailable")
+ return data===true
+}
+export async function releaseScopedWeeztixRefresh(db:Db,eventId:string,workplaceId:string,claimId:string):Promise<void>{
+ const invoke=db.rpc as unknown as (name:string,args:Record<string,string>)=>Promise<RpcResponse>
+ await invoke("upt_weeztix_release_refresh",{p_event_id:eventId,p_workplace_id:workplaceId,p_claim_id:claimId})
+}
+

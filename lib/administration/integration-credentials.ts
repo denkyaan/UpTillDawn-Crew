@@ -7,7 +7,7 @@ export const integrationFields:Record<IntegrationProvider,readonly string[]>={
  sumup:["SUMUP_API_KEY","SUMUP_MERCHANT_CODE"],
  documenso:["DOCUMENSO_BASE_URL","DOCUMENSO_API_KEY"],
  banking:["PONTO_CLIENT_ID","PONTO_CLIENT_SECRET"],
- weeztix:["WEEZTIX_ACCESS_TOKEN","WEEZTIX_ACTIVE_EVENT_ID","WEEZTIX_SCANNING_ENABLED"],
+ weeztix:["WEEZTIX_ACCESS_TOKEN","WEEZTIX_ACTIVE_EVENT_ID","WEEZTIX_SCANNING_ENABLED","WEEZTIX_CLIENT_ID","WEEZTIX_CLIENT_SECRET"],
  peppol:["BILLIT_SANDBOX_PARTY_ID","BILLIT_SANDBOX_API_KEY"]
 }
 export type IntegrationConfiguration=Partial<Record<string,string>>
@@ -19,6 +19,32 @@ export function isIntegrationProvider(value:unknown):value is IntegrationProvide
 export function parseIntegrationConfiguration(provider:IntegrationProvider,input:unknown):IntegrationConfiguration|null{
  if(!input||typeof input!=="object"||Array.isArray(input))return null
  const record=input as Record<string,unknown>
+ if(provider==="weeztix"){
+  const base=["WEEZTIX_ACCESS_TOKEN","WEEZTIX_ACTIVE_EVENT_ID","WEEZTIX_SCANNING_ENABLED"]
+  const client=["WEEZTIX_CLIENT_ID","WEEZTIX_CLIENT_SECRET"]
+  const rotated=["WEEZTIX_REFRESH_TOKEN","WEEZTIX_TOKEN_EXPIRES_AT"]
+  const allow=[...base,...client,...rotated]
+  if(Object.keys(record).some(key=>!allow.includes(key))||!base.every(key=>key in record))return null
+  if(client.some(key=>key in record)&&!client.every(key=>key in record))return null
+  if(rotated.some(key=>key in record)&&!rotated.every(key=>key in record))return null
+  const valid:Record<string,string>={}
+  for(const [key,raw] of Object.entries(record)){
+   if(typeof raw!=="string"||raw.trim()!==raw||raw.length>4096||/[\u0000-\u001f\u007f]/.test(raw))return null
+   if(raw!==""&&raw.length<3)return null
+   valid[key]=raw
+  }
+  if(!uuid.test(valid.WEEZTIX_ACTIVE_EVENT_ID))return null
+  if(!["true","false"].includes(valid.WEEZTIX_SCANNING_ENABLED))return null
+  const hasClient=client.every(key=>(valid[key]??"").length>=3)
+  if(!hasClient&&client.some(key=>(valid[key]??"")!==""))return null
+  if(!hasClient&&!valid.WEEZTIX_ACCESS_TOKEN)return null
+  if(rotated.every(key=>key in record)){
+   if(!hasClient||!valid.WEEZTIX_ACCESS_TOKEN||!valid.WEEZTIX_REFRESH_TOKEN||
+      !/^[0-9]{10,13}$/.test(valid.WEEZTIX_TOKEN_EXPIRES_AT)||
+      !Number.isSafeInteger(Number(valid.WEEZTIX_TOKEN_EXPIRES_AT)))return null
+  }
+  return valid
+ }
  const fields=integrationFields[provider]
  if(Object.keys(record).length!==fields.length||Object.keys(record).some(k=>!fields.includes(k)))return null
  const valid:Record<string,string>={}

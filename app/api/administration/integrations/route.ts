@@ -2,7 +2,7 @@ import {NextResponse} from "next/server"
 import {integrationManagementAccess} from "@/lib/administration/integration-management-access"
 import {requestHasSameOrigin} from "@/lib/request-origin"
 import {isIntegrationProvider} from "@/lib/administration/integration-credentials"
-import {disconnectIntegration,listIntegrationSummaries,listRecentIntegrationAudit,saveIntegrationCredentials} from "@/lib/administration/integration-store"
+import {disconnectIntegration,listIntegrationSummaries,listRecentIntegrationAudit,weeztixOAuthReadiness,saveIntegrationCredentials} from "@/lib/administration/integration-store"
 import {validIntegrationMasterKey} from "@/lib/administration/integration-crypto"
 
 export const dynamic="force-dynamic"
@@ -32,8 +32,11 @@ export async function GET(){
  const access=await authorized()
  if(!access.ok)return output({error:"forbidden"},access.status)
  try{
-  const [integrations,audit]=await Promise.all([listIntegrationSummaries(access.db),listRecentIntegrationAudit(access.db)])
-  return output({integrations,audit,secureStoreAvailable:validIntegrationMasterKey(process.env.UPT_INTEGRATION_ENCRYPTION_KEY)})
+  const [integrations,audit,weeztixOauthReady]=await Promise.all([
+   listIntegrationSummaries(access.db),listRecentIntegrationAudit(access.db),weeztixOAuthReadiness(access.db)
+  ])
+  return output({integrations,audit,weeztixOauthReady,
+   secureStoreAvailable:validIntegrationMasterKey(process.env.UPT_INTEGRATION_ENCRYPTION_KEY)})
  }catch{return output({error:"integration_storage_unavailable"},503)}
 }
 export async function POST(request:Request){
@@ -47,6 +50,13 @@ export async function POST(request:Request){
  const value=body as Record<string,unknown>
  if(!isIntegrationProvider(value.provider))return output({error:"invalid_provider"},422)
  if(Object.keys(value).some(k=>k!=="provider"&&k!=="credentials"))return output({error:"invalid_body"},400)
+ // OAuth refresh values are created and rotated server-side only, never
+ // accepted from an arbitrary browser POST.
+ if(value.provider==="weeztix"&&value.credentials&&typeof value.credentials==="object"&&!Array.isArray(value.credentials)){
+  const fields=value.credentials as Record<string,unknown>
+  if("WEEZTIX_REFRESH_TOKEN" in fields||"WEEZTIX_TOKEN_EXPIRES_AT" in fields)
+   return output({error:"invalid_body"},422)
+ }
  try{
   await saveIntegrationCredentials(access.db,value.provider,value.credentials)
   return output({ok:true,configured:true})
