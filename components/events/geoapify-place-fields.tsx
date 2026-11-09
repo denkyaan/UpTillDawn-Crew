@@ -1,6 +1,15 @@
 "use client"
 
 import { useEffect, useId, useMemo, useState } from "react"
+import {activeUiLocale,LANGUAGE_APPLIED_EVENT,type SupportedUiLocale} from "@/lib/locale-preferences"
+
+
+const localCopy={
+ nl:{lookup:"Online locatie- en adressuggesties gebruiken (optioneel; kan API-verbruik veroorzaken)",latitude:"Breedtegraad (optioneel, handmatig)",longitude:"Lengtegraad (optioneel, handmatig)",hint:"Locatie en adres kun je zonder API handmatig invullen. GPS-coördinaten zijn optioneel en moeten gecontroleerd worden; online suggesties zijn een bewuste keuze."},
+ fr:{lookup:"Utiliser les suggestions de lieux et d'adresses en ligne (facultatif, peut entraîner une utilisation de l'API)",latitude:"Latitude (facultatif, saisie manuelle)",longitude:"Longitude (facultatif, saisie manuelle)",hint:"Vous pouvez saisir le lieu et l'adresse sans API. Les coordonnées GPS sont facultatives et doivent être vérifiées ; les suggestions en ligne sont un choix explicite."},
+ en:{lookup:"Use online place and address suggestions (optional; may use API quota)",latitude:"Latitude (optional, manual)",longitude:"Longitude (optional, manual)",hint:"Enter the venue and address manually without an API. GPS coordinates are optional and must be verified; online suggestions are an explicit choice."},
+ de:{lookup:"Online-Orts- und Adressvorschläge verwenden (optional; kann API-Kontingent verbrauchen)",latitude:"Breitengrad (optional, manuell)",longitude:"Längengrad (optional, manuell)",hint:"Ort und Adresse lassen sich ohne API manuell eingeben. GPS-Koordinaten sind optional und müssen geprüft werden; Online-Vorschläge sind eine bewusste Entscheidung."}
+} as const
 
 type Props = {
   defaultVenue?: string | null
@@ -28,6 +37,9 @@ export function GeoapifyPlaceFields({
   defaultLatitude,
   defaultLongitude,
 }:Props){
+  const [locale,setLocale]=useState<SupportedUiLocale>("nl")
+  useEffect(()=>{const apply=()=>setLocale(activeUiLocale());apply();window.addEventListener(LANGUAGE_APPLIED_EVENT,apply);return()=>window.removeEventListener(LANGUAGE_APPLIED_EVENT,apply)},[])
+  const t=localCopy[locale]
   const fieldId=useId()
   const venueId=`${fieldId}-venue`
   const addressId=`${fieldId}-address`
@@ -172,7 +184,7 @@ export function GeoapifyPlaceFields({
   return <div className="grid gap-3 md:grid-cols-2">
     <label className="md:col-span-2 flex items-center gap-2 text-xs">
       <input type="checkbox" checked={onlineLookup} onChange={event=>{setOnlineLookup(event.target.checked);setSuggestions([]);setError("");setLoading(false)}}/>
-      Online locatie- en adressuggesties gebruiken (optioneel; kan API-verbruik veroorzaken)
+      {t.lookup}
     </label>
     <div className="relative grid gap-1 text-sm">
       <label htmlFor={venueId}>Locatie</label>
@@ -218,15 +230,15 @@ export function GeoapifyPlaceFields({
 
     <input type="hidden" name="venue" value={venue}/>
     <input type="hidden" name="address" value={address}/>
-    <label className="grid gap-1 text-sm">Breedtegraad (optioneel, handmatig)
+    <label className="grid gap-1 text-sm">{t.latitude}
       <input type="number" inputMode="decimal" step="any" min="-90" max="90" name="latitude" required={Boolean(longitude)} value={latitude} onChange={event=>setLatitude(event.target.value)} className="rounded-lg border bg-background p-3"/>
     </label>
-    <label className="grid gap-1 text-sm">Lengtegraad (optioneel, handmatig)
+    <label className="grid gap-1 text-sm">{t.longitude}
       <input type="number" inputMode="decimal" step="any" min="-180" max="180" name="longitude" required={Boolean(latitude)} value={longitude} onChange={event=>setLongitude(event.target.value)} className="rounded-lg border bg-background p-3"/>
     </label>
 
     <div className="md:col-span-2 flex flex-wrap items-center gap-3 text-xs text-muted-foreground">
-      <span>Locatie en adres kun je zonder API handmatig invullen. GPS-coördinaten zijn optioneel en moeten gecontroleerd worden; online suggesties zijn een bewuste keuze.</span>
+      <span>{t.hint}</span>
       {mapsUri&&<a href={mapsUri} target="_blank" rel="noreferrer" className="underline">Open adres in Google Maps</a>}
       <span>
         Powered by <a href="https://www.geoapify.com/" target="_blank" rel="noreferrer" className="underline">Geoapify</a>

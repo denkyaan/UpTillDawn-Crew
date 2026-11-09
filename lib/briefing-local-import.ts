@@ -161,7 +161,7 @@ async function imageAsBoundedPng(file:File){
  const ext=file.name.toLowerCase().split(".").pop()
  const valid=file.type==="image/webp"?imageType(file.name,head)==="image/webp":
   file.type==="image/png"?ext==="png"&&head[0]===137&&head[1]===80&&head[2]===78&&head[3]===71:
-  file.type==="image/jpeg"&&(ext==="jpg"||ext==="jpeg")&&head[0]===255&&head[1]===216&&head[2]===255:
+  file.type==="image/jpeg"?(ext==="jpg"||ext==="jpeg")&&head[0]===255&&head[1]===216&&head[2]===255:
   false
  if(!valid)throw Error("Invalid image signature")
  const bitmap=await createImageBitmap(file)
