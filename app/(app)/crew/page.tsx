@@ -2,11 +2,10 @@ import Image from 'next/image'
 import { createClient } from '@/lib/supabase/crew-server'
 import { redirect } from 'next/navigation'
 import { getCurrentUser } from '@/lib/actions/auth'
-import { setPersonnelBlock,setPersonnelRole } from '@/lib/actions/personnel'
+import { setPersonnelBlock } from '@/lib/actions/personnel'
 import { nlRole } from '@/lib/ui-nl'
 import { PendingSubmitButton } from '@/components/ui/pending-submit-button'
 import { PersonnelDeleteButton } from '@/components/admin/personnel-delete-button'
-import { PersonnelPortalRoles } from '@/components/admin/personnel-portal-roles'
 
 export const dynamic='force-dynamic'
 
@@ -103,17 +102,8 @@ export default async function Page({searchParams}:{searchParams?:Promise<{user?:
           {future.length>0&&<div className="mt-4 space-y-2"><b className="text-sm">Komende shifts</b>{future.slice(0,5).map(shift=><div key={shift.id} className="rounded-lg border p-2 text-xs"><b>{shift.events?.name||'Evenement'} · {shift.workplaces?.name||'Werkplek'}</b><p className="text-muted-foreground">{new Date(shift.scheduled_start).toLocaleString('nl-BE')} → {new Date(shift.scheduled_end).toLocaleString('nl-BE')} · {shift.role_name}</p></div>)}</div>}
         </details>
 
-        <PersonnelPortalRoles userId={person.id} readOnly={own} assignments={(portalAssignments||[]).filter(a=>a.user_id===person.id)}/>
-        <div className="mt-4 grid gap-3 md:grid-cols-2">
-          <form action={setPersonnelRole} className="grid gap-2 rounded-xl border p-3">
-            <input type="hidden" name="user_id" value={person.id}/>
-            <label className="grid gap-1 text-sm font-semibold">Rol
-              <select name="role" defaultValue={person.role} disabled={own} className="rounded-lg border bg-background p-2 disabled:opacity-50">
-                <option value="staff">Personeel</option><option value="responsible_lead">Verantwoordelijke</option><option value="admin">Beheerder</option>
-              </select>
-            </label>
-            <PendingSubmitButton disabled={own} pendingLabel="OPSLAAN…" className="rounded-lg bg-violet-600 px-4 py-2 font-bold text-white disabled:opacity-50">ROL OPSLAAN</PendingSubmitButton>
-          </form>
+
+        <div className="mt-4 grid gap-3">
 
           <div className="space-y-2 rounded-xl border p-3">
             {own?<p className="text-xs text-muted-foreground">Je eigen beheeraccount kan hier niet worden geblokkeerd, gedegradeerd of verwijderd.</p>:person.account_blocked

@@ -5,6 +5,8 @@ import { createClient } from '@/lib/supabase/crew-server'
 import { approvePersonnelAccount } from '@/lib/actions/uptilldawn'
 import { nlRole } from '@/lib/ui-nl'
 import { PendingSubmitButton } from '@/components/ui/pending-submit-button'
+import {PersonnelTwoRoleEditor,type AssignableRole} from '@/components/admin/personnel-two-role-editor'
+import type {SupabaseClient} from '@supabase/supabase-js'
 
 export const dynamic = 'force-dynamic'
 
@@ -13,7 +15,28 @@ export default async function Page({searchParams}:{searchParams?:Promise<{feedba
   const current=await getCurrentUser()
   if(!current?.isAdmin)redirect('/')
   const s=await createClient()
-  const {data,error}=await s.rpc('upt_admin_personnel_details_v2')
+  const [{data,error},{data:activeAssignments},{data:leadership},{data:storedRoles}]=await Promise.all([
+   s.rpc('upt_admin_personnel_details_v2'),
+   s.from('portal_role_assignments').select('user_id,portal,role,approved,revoked_at').eq('approved',true).is('revoked_at',null).limit(5000),
+   (s as unknown as SupabaseClient).from('upt_organization_leadership').select('slot,user_id'),
+   (s as unknown as SupabaseClient).from('upt_personnel_role_slots').select('user_id,role_one,role_two')
+  ])
+  type Leader={slot:string;user_id:string}
+  type Slots={user_id:string;role_one:AssignableRole;role_two:AssignableRole|null}
+  const positions=(leadership??[]) as Leader[]
+  const savedRoles=(storedRoles??[]) as Slots[]
+  const approved=(data||[]).filter(person=>person.approved)
+  const rolePair=(person:(typeof approved)[number]):{one:AssignableRole;two:AssignableRole|null}=>{
+    const saved=savedRoles.find(row=>row.user_id===person.id)
+    if(saved)return {one:saved.role_one,two:saved.role_two}
+    const slot=positions.find(row=>row.user_id===person.id)?.slot
+    const one:AssignableRole=slot==='head'?'head':slot==='left_hand'?'left_hand':slot==='right_hand'?'right_hand'
+      :person.role==='admin'?'head':person.role==='responsible_lead'?'responsible_lead':'staff'
+    const matches=(activeAssignments||[]).filter(row=>row.user_id===person.id&&row.approved&&!row.revoked_at)
+    const two:AssignableRole|null=matches.some(row=>row.portal==='promotion'&&row.role==='promoter')?'promotion'
+      :slot?null:matches.some(row=>row.portal==='administration'&&row.role==='administrative_staff')?'administration':null
+    return {one,two:two===one?null:two}
+  }
   const pending=(data||[]).filter(person=>!person.approved).sort((a,b)=>Number(b.id===params.user)-Number(a.id===params.user))
 
   const photos=new Map<string,string>()
@@ -32,6 +55,7 @@ export default async function Page({searchParams}:{searchParams?:Promise<{feedba
       <span className="rounded-full border px-3 py-2 text-sm font-black">{pending.length} openstaand</span>
     </header>
 
+    {params.feedback==='roles_saved'&&<p role="status" className="rounded-xl border border-emerald-500/40 p-3 font-semibold text-emerald-600">Rol gewijzigd en bevoegdheden bijgewerkt.</p>}
     {params.feedback==='approved'&&<p role="status" className="rounded-xl border border-emerald-500/40 bg-emerald-500/10 p-3 font-semibold text-emerald-600">Account goedgekeurd. De gebruiker heeft nu toegang en ontvangt hiervan een melding.</p>}
     {error&&<p className="rounded-xl border border-red-500/40 p-4 text-red-500">Accountaanvragen konden niet worden geladen.</p>}
     {!error&&!pending.length&&<p className="rounded-2xl border p-5 text-muted-foreground">Er zijn geen openstaande accountaanvragen.</p>}
@@ -62,7 +86,7 @@ export default async function Page({searchParams}:{searchParams?:Promise<{feedba
             <select name="role" defaultValue={person.role} className="rounded-xl border bg-background p-3">
               <option value="staff">Personeel</option>
               <option value="responsible_lead">Verantwoordelijke</option>
-              <option value="admin">Beheerder</option>
+
             </select>
           </label>
           <p className="text-xs text-muted-foreground">Na goedkeuring wordt toegang onmiddellijk actief en ontvangt de gebruiker een melding.</p>
@@ -70,5 +94,17 @@ export default async function Page({searchParams}:{searchParams?:Promise<{feedba
         </form>
       </div>
     </article>})}</div>
+    <section className="space-y-4" aria-label="Rollen en bevoegdheden">
+      <header><h2 className="text-xl font-bold">Rollen en bevoegdheden</h2>
+      <p className="text-sm text-muted-foreground">Alle goedgekeurde medewerkers hebben hier één of maximaal twee rollen. Hoofdadmin, Linkerhand en Rechterhand beheer je met dezelfde twee rolvelden — zonder extra beheermenu.</p></header>
+      {approved.map(person=>{
+       const role=rolePair(person)
+       return <article key={person.id} id={person.id===params.user?'approval-user-focus':undefined} className="space-y-2 rounded-2xl border p-4">
+        <div><h3 className="font-bold">{person.full_name||'Naam ontbreekt'}</h3>
+         <p className="break-all text-xs text-muted-foreground">{person.email||'Geen e-mail'}</p></div>
+        <PersonnelTwoRoleEditor userId={person.id} roleOne={role.one} roleTwo={role.two}/>
+       </article>
+      })}
+    </section>
   </main>
 }
