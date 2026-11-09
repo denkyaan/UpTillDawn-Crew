@@ -19,8 +19,10 @@ The responsive bottom bar retains a 56px minimum height as required by the exist
 
 Production deployment is intentionally out of scope.
 
-## Orphaned tour source removal — 10 November 2026
+## Verified orphan cleanup — 10 November 2026
 
-The retired Promotion/Administration guided-tour component and per-workplace tour button were removed after their navigation and rendering paths had already been retired. The non-tour event preparation checklist, required briefing acknowledgement and operational help remain in place.
+The retired Promotion/Administration guided-tour component is removed after the actual runtime import scan confirmed that it was not used. The workplace-specific tour button remains installed because `components/crew/workplace-shift-planner.tsx` actively imports and renders it. Removing it would break the working shift-planner UI.
 
-The source-tree regression `tests/retired-tour-code-cleanup.test.mjs` fails if either retired component or a runtime reference to it returns. This is a code cleanup only: no historical audit records, chat messages, notifications, or real event data were deleted.
+The source-tree regression `tests/retired-tour-code-cleanup.test.mjs` rejects revived references to the orphaned portal tour, and positively verifies that active workplace guidance remains. Existing event preparation, briefing acknowledgements, operating procedures and help remain available.
+
+No historical audit records, chat messages, notifications, credentials or real event data are deleted.
