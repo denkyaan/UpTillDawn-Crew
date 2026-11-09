@@ -1,13 +1,11 @@
 import { dashboardTimestamp } from '@/lib/admin-dashboard-timing'
 import {requestUiLocale} from '@/lib/server-locale'
-import Link from 'next/link'
 import { redirect } from 'next/navigation'
 import { getCurrentUser } from '@/lib/actions/auth'
 import { createClient } from '@/lib/supabase/crew-server'
 import { nlStatus } from '@/lib/ui-nl'
 import { AdminActivePersonnel, AdminRunningShifts } from '@/components/admin/live-operations-timers'
 import { RealtimeRefresh } from '@/components/realtime-refresh'
-import { PlatformAiAssistant } from '@/components/admin/platform-ai-assistant'
 import { ContextLink } from '@/components/admin/context-link'
 import { AdminActionCenter, type ActionQueueItem } from '@/components/admin/action-center'
 import { FirstUseReadiness } from '@/components/admin/first-use-readiness'
@@ -139,7 +137,6 @@ export default async function Page(){
  ]
  return <main className="mx-auto max-w-7xl space-y-7 p-4 pb-28 md:p-8"><RealtimeRefresh/><div className="flex flex-wrap items-end justify-between gap-3"><div><p className="text-xs font-bold tracking-[.2em] text-violet-400">UP TILL DAWN BEHEER</p><h1 className="text-3xl font-black">Operationeel command center</h1><p className="text-muted-foreground">Realtime serverstatus voor personeel, goedkeuringen, help oproepen, taken en synchronisatie.</p></div></div>
  {showFirstUse&&<FirstUseReadiness pendingApprovals={pendingProfileRows.length} approvedCrew={profileRows.length}/>}
- <PlatformAiAssistant/>
  {failedOverviewSources>0&&<p role="status" className="rounded-xl border border-amber-500/50 p-3 text-sm text-muted-foreground">Een deel van de realtime beheergegevens is tijdelijk niet beschikbaar. De beschikbare onderdelen blijven bruikbaar.</p>}
  <section className="space-y-3 rounded-2xl border p-4">
   <div className="flex items-center justify-between gap-3"><div><h2 className="text-xl font-bold">Event command centers</h2><p className="text-sm text-muted-foreground">Lopende en eerstvolgende evenementen met directe toegang tot readiness, briefing, inventory, guestlist en sales.</p></div></div>
