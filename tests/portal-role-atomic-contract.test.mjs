@@ -31,7 +31,7 @@ test('admin portal assignment read policy remains restricted to approved admins'
 test('canonical Approvals editor changes two roles atomically without duplicate personnel forms',async()=>{
  const [crew,editor,db,action]=await Promise.all([
   read('app/(app)/crew/page.tsx'),read('components/admin/personnel-two-role-editor.tsx'),
-  read('supabase/migrations/20261109130000_personnel_dual_role_editor.sql'),
+  read('supabase/migrations/20261109122422_personnel_dual_role_editor.sql'),
   read('lib/actions/personnel-dual-roles.ts'),
  ])
  assert.doesNotMatch(crew,/PersonnelPortalRoles|setPersonnelRole/)
