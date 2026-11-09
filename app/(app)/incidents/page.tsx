@@ -5,6 +5,7 @@ import { EmergencyInformationPanel } from '@/components/crew/emergency-informati
 import { nlStatus } from '@/lib/ui-nl'
 import { redirect } from 'next/navigation'
 import { getCurrentUser } from '@/lib/actions/auth'
+import {requestUiLocale} from '@/lib/server-locale'
 
 export const dynamic='force-dynamic'
 
@@ -14,6 +15,7 @@ function isVideo(path:string|null){
 
 export default async function Page({searchParams}:{searchParams?:Promise<{event?:string;workplace?:string;user?:string;focus?:string}>}){
   const params=searchParams?await searchParams:{}
+  const locale=await requestUiLocale()
   const s=await createClient()
   const current=await getCurrentUser()
   if(!current)return null
@@ -136,14 +138,20 @@ export default async function Page({searchParams}:{searchParams?:Promise<{event?
             {i.escalated_at&&<p className="mt-1 text-sm font-semibold text-red-600">Na 5 minuten zonder erkenning geëscaleerd naar admin · {new Date(i.escalated_at).toLocaleString('nl-BE')}</p>}
             {i.acknowledged_at&&<p className="text-sm text-muted-foreground">Erkend: {new Date(i.acknowledged_at).toLocaleString('nl-BE')}</p>}
             {i.resolved_at&&<p className="text-sm text-muted-foreground">Opgelost: {new Date(i.resolved_at).toLocaleString('nl-BE')}</p>}
-            {i.photo_path&&<IncidentMedia url={signedMedia.get(i.id)} video={isVideo(i.photo_path)}/>}
+            {i.photo_path&&<IncidentMedia url={signedMedia.get(i.id)} video={isVideo(i.photo_path)} locale={locale}/>}
             {manager&&<IncidentControls id={i.id} status={i.status} resolved={Boolean(i.resolved_at)}/>}
           </article>})}
   </main>
 }
 
-function IncidentMedia({url,video}:{url?:string;video:boolean}){
-  if(!url)return <span className="mt-2 block text-sm text-muted-foreground">Incidentmedia niet beschikbaar.</span>
+const mediaUnavailable={
+ nl:'Incidentmedia wordt gecontroleerd of is niet beschikbaar.',
+ fr:'Média de l’incident en cours de contrôle ou indisponible.',
+ en:'Incident media is being checked or is unavailable.',
+ de:'Vorfallmedium wird geprüft oder ist nicht verfügbar.'
+} as const
+function IncidentMedia({url,video,locale}:{url?:string;video:boolean;locale:keyof typeof mediaUnavailable}){
+  if(!url)return <span role="status" className="mt-2 block text-sm text-muted-foreground">{mediaUnavailable[locale]}</span>
   if(video)return <video src={url} controls playsInline className="mt-3 max-h-96 w-full rounded-xl border bg-black"/>
   return <a href={url} target="_blank" rel="noreferrer" className="mt-3 block overflow-hidden rounded-xl border">
     {/* eslint-disable-next-line @next/next/no-img-element */}
