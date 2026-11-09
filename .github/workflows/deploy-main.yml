@@ -204,3 +204,56 @@ jobs:
             console.log("PWA manifest parsed and app name verified");
           '
 
+      - name: Verify OCR secret binding on main Worker (names only)
+        if: steps.current-main.outputs.current == 'true'
+        shell: bash
+        run: |
+          set -euo pipefail
+          # Cloudflare returns binding metadata. Never log the response body or
+          # secret values. Check only the exact main Worker, never production.
+          node --input-type=module <<'NODE'
+          const account = process.env.CLOUDFLARE_ACCOUNT_ID
+          const token = process.env.CLOUDFLARE_API_TOKEN
+          const url = `https://api.cloudflare.com/client/v4/accounts/${account}/workers/scripts/uptilldawn-main/secrets`
+          let status = 'unverified'
+          try {
+            const response = await fetch(url, {
+              headers: {Authorization: `Bearer ${token}`},
+              signal: AbortSignal.timeout(15000),
+              cache: 'no-store',
+            })
+            if (!response.ok) {
+              console.log('::warning::Cloudflare secret-name lookup failed (HTTP ' + response.status + '); no secret values were fetched or printed.')
+            } else {
+              const metadata = await response.json()
+              if (!metadata?.success || !Array.isArray(metadata.result)) {
+                console.log('::warning::Cloudflare secret binding metadata was unavailable.')
+              } else {
+                status = metadata.result.some(entry => entry?.name === 'CLOUDMERSIVE_OCR_API_KEY') ? 'present' : 'missing'
+                if (status === 'missing') console.log('::warning::CLOUDMERSIVE_OCR_API_KEY is not bound to the main Worker.')
+              }
+            }
+          } catch {
+            console.log('::warning::Cloudflare secret-name lookup could not be completed.')
+          }
+          console.log('CLOUDMERSIVE_OCR_API_KEY binding on uptilldawn-main: ' + status)
+          if (process.env.GITHUB_STEP_SUMMARY) {
+            const {appendFileSync} = await import('node:fs')
+            appendFileSync(process.env.GITHUB_STEP_SUMMARY, '\n### Cloudmersive binding check (main only)\n- Worker: uptilldawn-main\n- Secret name present: **' + status + '**\n- Actual Cloudmersive OCR request: **not executed** (requires authenticated acceptance)\n')
+          }
+          NODE
+
+      - name: Verify OCR endpoint denies unauthenticated requests
+        if: steps.current-main.outputs.current == 'true'
+        shell: bash
+        run: |
+          set -euo pipefail
+          response_code="$(curl -sS --max-time 20 -X POST -H "Origin: ${NEXT_PUBLIC_APP_URL}" -H 'Content-Type: application/json' --data '{}' -o /tmp/main-ocr-unauthorized-response -w '%{http_code}' "${NEXT_PUBLIC_APP_URL}/api/administration/ocr")"
+          echo "Main OCR unauthenticated request: HTTP ${response_code}"
+          if [[ "${response_code}" != "401" && "${response_code}" != "403" ]]; then
+            echo "::error::OCR endpoint did not enforce authentication (unexpected HTTP ${response_code})."
+            exit 1
+          fi
+          echo 'OCR authentication gate is active on main.'
+
+
