@@ -260,11 +260,11 @@ jobs:
         uses: actions/cache@v4
         with:
           path: ~/.cache/ms-playwright
-          key: playwright-chromium-1.62.1-${{ runner.os }}-${{ runner.arch }}
+          key: playwright-chromium-1.65.0-${{ runner.os }}-${{ runner.arch }}
 
-      - name: Install isolated browser test runtime
+      - name: Install pinned browser test runtime
         run: |
-          npm install --no-save --package-lock=false --prefer-offline --no-audit --no-fund playwright@1.62.1
+          node --input-type=module -e 'const {chromium}=await import("playwright"); if(typeof chromium.launch!=="function")process.exit(1)'
           if [ "${{ steps.chromium-cache.outputs.cache-hit }}" = "true" ]; then
             npx playwright install-deps chromium
           else

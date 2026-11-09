@@ -12,10 +12,18 @@ if (!supabaseUrl || !serviceRoleKey || !password) {
 // This script creates accounts, event fixtures and chat records. A production
 // service key must never be accepted, even if supplied accidentally.
 const expectedTestHost = 'npbjrtiolqperdgljnhi.supabase.co'
-let suppliedHost
-try { suppliedHost = new URL(supabaseUrl).hostname } catch { suppliedHost = null }
-if (suppliedHost !== expectedTestHost || process.env.UPT_QA_ALLOW_MAIN_SEED !== '1') {
-  console.error('BLOCKED: QA seeding requires the isolated main-test Supabase project and explicit UPT_QA_ALLOW_MAIN_SEED=1. Production and other projects are forbidden.')
+let target
+try { target = new URL(supabaseUrl) } catch { target = null }
+const isLocalSupabase = Boolean(target
+  && target.protocol === 'http:'
+  && (target.hostname === '127.0.0.1' || target.hostname === 'localhost')
+  && target.port === '54321')
+const isApprovedMainTest = Boolean(target
+  && target.protocol === 'https:'
+  && target.hostname === expectedTestHost
+  && process.env.UPT_QA_ALLOW_MAIN_SEED === '1')
+if (!isLocalSupabase && !isApprovedMainTest) {
+  console.error('BLOCKED: QA seeding is permitted only on local Supabase port 54321, or the isolated main-test Supabase project with UPT_QA_ALLOW_MAIN_SEED=1. Production is forbidden.')
   process.exit(2)
 }
 

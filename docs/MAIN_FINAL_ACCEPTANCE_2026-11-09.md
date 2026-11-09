@@ -75,7 +75,7 @@ Use the **existing** `CI main` workflow's `workflow_dispatch` option `run_six_ro
 - `E2E_RESPONSIBLE_EMAIL` and `E2E_RESPONSIBLE_PASSWORD`
 - `E2E_MAKER_EMAIL` and `E2E_MAKER_PASSWORD`
 
-**Dedicated isolated QA identities only**, never real crew logins, owner personal credentials or service-role keys. The existing 15-bot fixture seeder additionally refuses any Supabase host other than the main-test project and requires `UPT_QA_ALLOW_MAIN_SEED=1`; never run it with production credentials. The manual job installs Chromium and tests only `https://uptilldawn-main.uptilldawn.workers.dev`. Its structured JSON report and failure screenshots are retained as a restricted GitHub Actions artifact for seven days. A failed or blocked run is not a release approval.
+**Dedicated isolated QA identities only**, never real crew logins, owner personal credentials or service-role keys. The existing 15-bot fixture seeder only permits a **local Supabase instance on port 54321**, or the isolated main-test project with explicit `UPT_QA_ALLOW_MAIN_SEED=1`; Production and other database hosts are blocked. The full local CI uses this safe local path. The manual job installs Chromium and tests only `https://uptilldawn-main.uptilldawn.workers.dev`. Its structured JSON report and failure screenshots are retained as a restricted GitHub Actions artifact for seven days. A failed or blocked run is not a release approval.
 
 Local equivalent: `npm ci`, `npx playwright install --with-deps chromium`, configure the same environment variables plus `E2E_BASE_URL`, and execute `npm run e2e:portals`. The runner explicitly rejects the production URL. The browser QA job remains inside the **existing** CI main workflow: the five-workflow policy is unchanged.
 
