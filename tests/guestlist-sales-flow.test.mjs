@@ -111,8 +111,12 @@ test('navigation exposes guestlist while Sales remains admin-only',async()=>{
 
 test('admin main dashboard exposes the AI assistant',async()=>{
   const admin=await read('app/(app)/admin/page.tsx')
-  assert.match(admin,/PlatformAiAssistant/)
-  assert.match(admin,/components\/admin\/platform-ai-assistant/)
+  const shell=await read('components/layout/app-layout.tsx')
+  const topbar=await read('components/layout/topbar.tsx')
+  assert.doesNotMatch(admin,/<PlatformAiAssistant\s*\/>/)
+  assert.match(shell,/PlatformAiAssistant/)
+  assert.match(shell,/adminAiAction/)
+  assert.match(topbar,/adminAiAction/)
 })
 
 
