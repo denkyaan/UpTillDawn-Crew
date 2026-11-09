@@ -41,8 +41,8 @@ export function InventoryBulkReceiptForm({
   {state.ok&&<p role="status" aria-live="polite" className="text-sm text-emerald-500">
    {t.done}: {state.count}
   </p>}
-  {state.error&&<p role="alert" aria-live="assertive" className="text-sm text-amber-500">
-   {t[state.error as 'invalid'|'rejected'|'denied']??t.rejected}
+  {state.code&&<p role="alert" aria-live="assertive" className="text-sm text-amber-500">
+   {t[state.code as 'invalid'|'rejected'|'denied']??t.rejected}
   </p>}
  </form>
 }
