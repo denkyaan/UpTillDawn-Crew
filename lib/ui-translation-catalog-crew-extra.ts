@@ -186,6 +186,7 @@ export const CREW_EXTRA_TRANSLATIONS:Record<string,Row>={
   "Bericht vastgepind.":{fr:"Message épinglé.",en:"Message pinned.",de:"Nachricht angepinnt."},
   "Pin verwijderd.":{fr:"Épingle retirée.",en:"Pin removed.",de:"Pin entfernt."},
   "Meldingen bijgewerkt.":{fr:"Notifications mises à jour.",en:"Notifications updated.",de:"Benachrichtigungen aktualisiert."},
+  "Je sessie is gewijzigd. Meld je opnieuw aan; acties en bestanden blijven lokaal bewaard.":{fr:"Votre session a changé. Reconnectez-vous ; les actions et fichiers restent enregistrés localement.",en:"Your session has changed. Sign in again; actions and files remain stored locally.",de:"Deine Sitzung hat sich geändert. Melde dich erneut an; Aktionen und Dateien bleiben lokal gespeichert."},
 }
 
 const CANONICAL=new Map<string,string>()
