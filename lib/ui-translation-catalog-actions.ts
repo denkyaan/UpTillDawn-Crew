@@ -246,6 +246,9 @@ const ROWS:Record<string,Row>={
   'Driver-rit kon niet worden aangemaakt.':{fr:'Le trajet chauffeur n’a pas pu être créé.',en:'The Driver trip could not be created.',de:'Die Fahrerfahrt konnte nicht erstellt werden.'},
   'Autoroute kon niet worden berekend.':{fr:'L’itinéraire routier n’a pas pu être calculé.',en:'The driving route could not be calculated.',de:'Die Fahrroute konnte nicht berechnet werden.'},
   'Autorijtijd kon niet worden berekend.':{fr:'Le temps de trajet n’a pas pu être calculé.',en:'The driving time could not be calculated.',de:'Die Fahrzeit konnte nicht berechnet werden.'},
+  'Online routeberekening niet beschikbaar. Schakel online route uit en vul reistijd en kilometers handmatig in.':{fr:'Le calcul d’itinéraire en ligne est indisponible. Désactivez-le et saisissez manuellement la durée et la distance.',en:'Online route calculation is unavailable. Turn it off and enter travel time and distance manually.',de:'Die Online-Routenberechnung ist nicht verfügbar. Deaktivieren Sie sie und geben Sie Fahrzeit und Entfernung manuell ein.'},
+  'Vul een geldige handmatige reistijd en afstand in.':{fr:'Saisissez une durée et une distance valides.',en:'Enter a valid manual travel time and distance.',de:'Geben Sie eine gültige Fahrzeit und Entfernung manuell ein.'},
+  'Reistijd of afstand buiten de toegestane grenzen.':{fr:'Durée ou distance hors des limites autorisées.',en:'Travel time or distance exceeds the permitted limits.',de:'Fahrzeit oder Entfernung liegt außerhalb der zulässigen Grenzen.'},
 }
 
 export function translateActionUi(value:string,locale:ActionUiLocale){
