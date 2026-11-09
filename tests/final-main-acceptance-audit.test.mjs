@@ -1,0 +1,65 @@
+import test from 'node:test'
+import assert from 'node:assert/strict'
+import {readFileSync} from 'node:fs'
+
+const source=(path)=>readFileSync(new URL('../'+path,import.meta.url),'utf8')
+
+test('final read-only browser acceptance covers all six roles, four languages, mobile and desktop',()=>{
+ const browser=source('scripts/e2e-all-portals.mjs')
+ for(const role of ['admin','administration','promotion','staff','responsible','maker'])
+  assert.ok(browser.includes("role:'"+role+"'"),role)
+ for(const language of ['nl','fr','en','de'])
+  assert.ok(browser.includes("'"+language+"'"),language)
+ assert.match(browser,/\{width:390,height:844\}/)
+ assert.match(browser,/\{width:1280,height:800\}/)
+ assert.match(browser,/E2E_ALLOW_MAIN_TEST/)
+ assert.ok(browser.includes("'E2E_'+role.toUpperCase()+'_EMAIL'"))
+ assert.ok(browser.includes("'E2E_'+role.toUpperCase()+'_PASSWORD'"))
+ assert.match(browser,/expectDenied\(page,pathname\)/)
+ assert.match(browser,/document\.documentElement\.scrollWidth-document\.documentElement\.clientWidth/)
+ assert.match(browser,/test-results\/final-acceptance\/report\.json/)
+ assert.match(browser,/Read-only login\/navigation\/denial\/responsive acceptance/)
+ assert.doesNotMatch(browser,/auth\.admin\.createUser|service_role|deleteUser|SUPABASE_SERVICE_ROLE/i)
+})
+
+test('CI main records static inventory and does not start production workflows',()=>{
+ const ci=source('.github/workflows/fast-change-validation.yml')
+ const inventory=source('scripts/final-main-acceptance-inventory.mjs')
+ assert.match(ci,/name: CI main/)
+ assert.match(ci,/node scripts\/final-main-acceptance-inventory\.mjs/)
+ assert.match(ci,/Authenticated end-to-end journeys: not executed in this fast CI/)
+ assert.match(ci,/if: \$\{\{ github\.event_name == 'workflow_dispatch' && inputs\.release_production == true/)
+ assert.doesNotMatch(inventory,/productionReady\s*:\s*true|endToEndVerified\s*:\s*true/)
+ for(const role of ['Admin','Administratie','Promotie','Personeel','Verantwoordelijke','Maker'])
+  assert.ok(inventory.includes("name:'"+role+"'"),role)
+ for(const provider of ['Peppol live aflevering','Bankkoppeling','Documenso','OCR','Eventix','Weeztix','SumUp','Disaster recovery','leaked-password'])
+  assert.ok(inventory.includes(provider),provider)
+ assert.match(inventory,/liveVerified:false/)
+})
+
+test('Admin existing platform UI shows real database drift/offline evidence without reintroducing staging',()=>{
+ const platform=source('app/(app)/admin/platform/page.tsx')
+ const settings=source('app/(app)/settings/page.tsx')
+ assert.match(platform,/rpc\('upt_admin_release_readiness_snapshot'\)/)
+ assert.match(platform,/EXPECTED_DB_MIGRATION_VERSION/)
+ assert.match(platform,/release\.offline_failed/)
+ assert.match(platform,/release\.offline_stale/)
+ assert.match(platform,/schemaMatches/)
+ assert.match(platform,/mainOperationalGate/)
+ for(const locale of ['nl:','fr:','en:','de:'])assert.ok(platform.includes(locale),locale)
+ assert.match(platform,/Production-CI en deployment starten uitsluitend op expliciete opdracht/)
+ assert.doesNotMatch(platform,/staging-ready/)
+ assert.doesNotMatch(settings,/href="\/operations#tijdcorrecties"/)
+ assert.doesNotMatch(settings,/title="Meldingen" description="Bekijk operationele meldingen/)
+ assert.doesNotMatch(settings,/href="\/operations#excel-export"/)
+ assert.match(settings,/href="\/operations" title="Werkurenbeheer"/)
+})
+
+test('historical release readiness redirect and approved five-workflow inventory are preserved',()=>{
+ const legacy=source('app/(app)/admin/release/page.tsx')
+ const ci=source('.github/workflows/fast-change-validation.yml')
+ assert.match(legacy,/redirect\('\/admin'\)/)
+ assert.match(ci,/Only the five approved GitHub Actions workflows/)
+ const workflows=['ci.yml','cleanup-actions-history.yml','deploy-cloudflare.yml','deploy-main.yml','fast-change-validation.yml']
+ for(const path of workflows)assert.ok(ci.includes("'.github/workflows/"+path+"'"),path)
+})

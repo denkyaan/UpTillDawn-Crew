@@ -2,7 +2,7 @@
 
 ## Production product
 
-The repository contains the following core capabilities. This list is not proof of current production or staging acceptance; see docs/ADMINISTRATION_DELIVERY_STATUS_20261030.md for current completion limits:
+The repository contains the following core capabilities. This list is not proof of current production or staging acceptance; see docs/MAIN_FINAL_ACCEPTANCE_2026-11-09.md for the current release gates:
 
 - account verification, Admin approval, role gating and maker protection;
 - event lifecycle, availability, capacity and waitlist;
@@ -31,4 +31,4 @@ Any future roadmap item should be added only when it represents a new requested 
 
 ## Administration and promotion acceptance
 
-Track current implementation and verification in `docs/ADMINISTRATION_DELIVERY_STATUS_20261030.md`. External delivery, bank/signing/OCR integrations and promotion evidence automation must be proven before calling the complete platform finished.
+Track current code, verification boundaries and remaining provider gates in `docs/MAIN_FINAL_ACCEPTANCE_2026-11-09.md`. The October 30 report is retained as a historical checkpoint. External delivery, bank/signing/OCR integrations and promotion evidence automation must be proven before calling the complete platform finished.

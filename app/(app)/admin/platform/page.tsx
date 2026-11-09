@@ -1,4 +1,6 @@
 import Link from 'next/link'
+import { EXPECTED_DB_MIGRATION_VERSION } from '@/lib/release-baseline'
+import {requestUiLocale} from '@/lib/server-locale'
 import { redirect } from 'next/navigation'
 import { getCurrentUser } from '@/lib/actions/auth'
 import { createClient } from '@/lib/supabase/crew-server'
@@ -26,15 +28,60 @@ type CommandCenter={
 
 const input='rounded-xl border bg-background p-3'
 
+const releaseTexts={
+ nl:{
+  heading:'Releasecontrole · main',intro:'Live status uit de main-testdatabase. Een geslaagde CI/deploy is geen volledige E2E-acceptatie.',
+  failed:'Releasegegevens konden niet worden geladen. Status onbekend: vrijgave geblokkeerd.',
+  schema:'Databaseschema',current:'Actueel',drift:'Afwijking · blokkerend',expected:'Verwacht',actual:'Main',
+  offline:'Offline synchronisatie',issue:'Probleem · blokkerend',clear:'Geen vastgestelde blokkade',failedCount:'Mislukt',stale:'Verouderd',pending:'In wachtrij',
+  operational:'Operationele teststatus',noKnown:'Geen schema- of synchronisatieblokkade',unknown:'Technische blokkade of onbekende status',
+  sessions:'Actieve sessies',incidents:'Open incidenten',checkins:'Check-in/out in behandeling',
+  external:'Productieacceptatie NIET bevestigd: geauthenticeerde E2E voor zes rollen, externe providerverbindingen, Peppol-aflevering, bankafstemming, contractondertekening, OCR en herstel van een fysieke backup vereisen apart bewijsmateriaal.',
+  environments:'Main / Production',separation:'Main is de ontwikkel- en testapp. Production is de gebruiksapp. Er bestaat geen staging-omgeving meer. Production-CI en deployment starten uitsluitend op expliciete opdracht.'
+ },
+ fr:{
+  heading:'Contrôle de version · main',intro:"Statut en direct de la base de test main. Une CI et un déploiement réussis ne constituent pas une recette E2E complète.",
+  failed:"Impossible de charger le statut. État inconnu : publication bloquée.",
+  schema:'Schéma de base de données',current:'À jour',drift:'Écart · bloquant',expected:'Attendu',actual:'Main',
+  offline:'Synchronisation hors ligne',issue:'Problème · bloquant',clear:'Aucun blocage détecté',failedCount:'Échecs',stale:'En retard',pending:'En attente',
+  operational:'État des tests opérationnels',noKnown:'Aucun blocage connu du schéma ou de la synchronisation',unknown:'Blocage technique ou statut inconnu',
+  sessions:'Sessions actives',incidents:'Incidents ouverts',checkins:'Pointages en attente',
+  external:"Recette de production NON confirmée : tests E2E authentifiés des six rôles, connexions externes, livraison Peppol, rapprochement bancaire, signatures, OCR et restauration d'une sauvegarde réelle exigent des preuves distinctes.",
+  environments:'Main / Production',separation:"Main sert au développement et aux tests. Production est l'application utilisée sur le terrain. Staging a été supprimé. La CI et le déploiement de Production exigent une instruction explicite."
+ },
+ en:{
+  heading:'Release checks · main',intro:'Live status from the main test database. Passing CI/deploy does not establish complete E2E acceptance.',
+  failed:'Release data could not be loaded. Status unknown; release blocked.',
+  schema:'Database schema',current:'Current',drift:'Drift · blocking',expected:'Expected',actual:'Main',
+  offline:'Offline synchronization',issue:'Problem · blocking',clear:'No known blocker',failedCount:'Failed',stale:'Stale',pending:'Pending',
+  operational:'Operational test status',noKnown:'No known schema or sync blocker',unknown:'Technical blocker or unknown state',
+  sessions:'Active sessions',incidents:'Open incidents',checkins:'Pending check-in/out',
+  external:'Production acceptance NOT confirmed: six-role authenticated E2E, external providers, Peppol delivery, bank reconciliation, document signing, OCR and physical backup restoration need separate evidence.',
+  environments:'Main / Production',separation:'Main is the development and test app. Production is the live app. Staging has been removed. Production CI/deployment starts only after an explicit instruction.'
+ },
+ de:{
+  heading:'Releasekontrolle · Main',intro:'Live-Status der Main-Testdatenbank. Erfolgreiche CI/Deploy ist kein vollständiger E2E-Nachweis.',
+  failed:'Releasedaten konnten nicht geladen werden. Status unbekannt; Freigabe gesperrt.',
+  schema:'Datenbankschema',current:'Aktuell',drift:'Abweichung · sperrend',expected:'Erwartet',actual:'Main',
+  offline:'Offline-Synchronisierung',issue:'Problem · sperrend',clear:'Keine bekannte Blockierung',failedCount:'Fehlgeschlagen',stale:'Veraltet',pending:'Ausstehend',
+  operational:'Betrieblicher Teststatus',noKnown:'Keine bekannten Schema- oder Synchronisierungsblocker',unknown:'Technischer Blocker oder unbekannter Status',
+  sessions:'Aktive Sitzungen',incidents:'Offene Vorfälle',checkins:'Offene Check-in/out',
+  external:'Produktionsabnahme NICHT bestätigt: authentifizierte E2E-Tests für sechs Rollen, externe Anbieter, Peppol-Zustellung, Bankabgleich, Signatur, OCR und Wiederherstellung eines physischen Backups erfordern eigene Nachweise.',
+  environments:'Main / Production',separation:'Main ist die Entwicklungs- und Test-App. Production ist die Live-App. Staging wurde entfernt. Production-CI und Deployment starten nur nach ausdrücklichem Auftrag.'
+ }
+} as const
+
 export default async function PlatformCenter(){
   const current=await getCurrentUser()
   if(!current?.isAdmin)redirect('/')
+  const locale=await requestUiLocale()
+  const t=releaseTexts[locale]
   const s=await createClient()
   const now=new Date().toISOString()
 
   const [
     eventsResult,recommendationsResult,featuresResult,knowledgeResult,qrResult,templatesResult,
-    versionsResult,profilesResult,workplacesResult,inventoryResult,reportsResult,recoveryResult,automationResult,
+    versionsResult,profilesResult,workplacesResult,inventoryResult,reportsResult,recoveryResult,automationResult,releaseResult,
   ]=await Promise.all([
     s.from('events').select('id,name,status,start_at,end_at,venue,address').neq('status','archived').order('start_at'),
     s.from('planning_recommendations').select('id,event_id,workplace_id,recommended_user_id,role_name,scheduled_start,scheduled_end,score,reasons,status').eq('status','proposed').order('score',{ascending:false}).limit(100),
@@ -49,6 +96,7 @@ export default async function PlatformCenter(){
     s.from('event_report_snapshots').select('id,event_id,snapshot,generated_at,generation_kind').order('generated_at',{ascending:false}).limit(20),
     s.rpc('upt_recovery_readiness'),
     s.from('automation_rules').select('automation_key,label,description,enabled,trigger_key,action_key,delay_minutes,reminder_minutes,escalation_minutes,audience,channels,auto_action,audit_enabled,cooldown_minutes,max_retries,last_run_at,settings').order('automation_key'),
+    s.rpc('upt_admin_release_readiness_snapshot'),
   ])
 
   const loadProblems=[
@@ -64,9 +112,16 @@ export default async function PlatformCenter(){
     inventoryResult.error&&'inventaris',
     reportsResult.error&&'rapportage',
     recoveryResult.error&&'recovery',
+    releaseResult.error&&'releasecontrole',
     automationResult.error&&'automatiseringen',
   ].filter((value):value is string=>Boolean(value))
 
+  const release=releaseResult.data?.[0]??null
+  const schemaMatches=Boolean(release&&release.latest_migration_version===EXPECTED_DB_MIGRATION_VERSION)
+  const offlineBlocked=Boolean(release&&(Number(release.offline_failed)>0||Number(release.offline_stale)>0))
+  // These are live operational signals only. A green schema/sync check cannot
+  // certify provider credentials, authenticated E2E or disaster recovery.
+  const mainOperationalGate=Boolean(release&&!releaseResult.error&&schemaMatches&&!offlineBlocked)
   const events=eventsResult.data||[]
   const activeEvents=events.filter(e=>e.start_at<=now&&e.end_at>=now)
   const commandCenters:CommandCenter[]=[]
@@ -222,8 +277,18 @@ export default async function PlatformCenter(){
       <article className="space-y-3 rounded-2xl border p-4">
         <div><h2 className="text-xl font-black">{platformModuleHelp('recovery').label}</h2><p className="text-sm text-muted-foreground">{platformModuleHelp('recovery').description}</p></div>
         <form action={snapshotPlatformConfiguration} className="flex flex-col gap-2 sm:flex-row"><input name="note" maxLength={1000} placeholder="Versienotitie" className={input+' flex-1'}/><button className="rounded-xl border px-4 py-3 font-bold">SNAPSHOT MAKEN</button></form>
+        <div className="rounded-xl border p-3 text-sm">
+          <b>{t.heading}</b>
+          <p className="mt-1 text-muted-foreground">{t.intro}</p>
+          {releaseResult.error||!release?<p role="alert" className="mt-2 text-red-500">{t.failed}</p>:<div className="mt-3 grid gap-2 sm:grid-cols-2">
+            <p className="rounded-lg border p-2">{t.schema}: <b className={schemaMatches?'text-emerald-500':'text-red-500'}>{schemaMatches?t.current:t.drift}</b><span className="block break-all text-xs text-muted-foreground">{t.expected}: {EXPECTED_DB_MIGRATION_VERSION} · {t.actual}: {release.latest_migration_version||'—'}</span></p>
+            <p className="rounded-lg border p-2">{t.offline}: <b className={offlineBlocked?'text-red-500':'text-emerald-500'}>{offlineBlocked?t.issue:t.clear}</b><span className="block text-xs text-muted-foreground">{t.failedCount}: {release.offline_failed} · {t.stale}: {release.offline_stale} · {t.pending}: {release.offline_pending}</span></p>
+            <p className="rounded-lg border p-2 sm:col-span-2">{t.operational}: <b>{mainOperationalGate?t.noKnown:t.unknown}</b><span className="block text-xs text-muted-foreground">{t.sessions}: {release.active_sessions} · {t.incidents}: {release.open_incidents} · {t.checkins}: {Number(release.pending_checkins)+Number(release.pending_checkouts)}</span></p>
+          </div>}
+          <p className="mt-3 text-xs font-semibold text-amber-500">{t.external}</p>
+        </div>
+        <div className="rounded-xl border p-3 text-sm"><b>{t.environments}</b><p className="mt-1 text-muted-foreground">{t.separation}</p></div>
         <div className="rounded-xl border p-3 text-sm"><b>Recovery readiness</b><pre className="mt-2 overflow-auto whitespace-pre-wrap text-xs text-muted-foreground">{JSON.stringify(recoveryResult.data,null,2)}</pre></div>
-        <div className="rounded-xl border border-amber-500/40 p-3 text-sm"><b>Staging</b><p className="mt-1 text-muted-foreground">De applicatie is staging-ready via feature rollouts en geïsoleerde CI. Een aparte Supabase databasebranch wordt pas geprovisioneerd na expliciete kostgoedkeuring.</p></div>
         {(versionsResult.data||[]).map(v=><div key={v.id} className="rounded-xl border p-3 text-sm"><div className="flex flex-wrap items-center justify-between gap-2"><div><b>{v.kind}</b><p className="text-xs text-muted-foreground">{new Date(v.created_at).toLocaleString('nl-BE')} · {v.note||'zonder notitie'}</p></div><form action={restorePlatformConfiguration}><input type="hidden" name="version_id" value={v.id}/><button className="rounded-lg border border-amber-500/50 px-3 py-2 text-xs font-bold">CONFIGURATIE HERSTELLEN</button></form></div></div>)}
       </article>
     </section>

@@ -76,6 +76,18 @@ jobs:
             cat "/tmp/fast-$label.log"
           done
           exit "$failed"
+      - name: Final six-role acceptance inventory (static evidence only)
+        shell: bash
+        run: |
+          set -euo pipefail
+          node scripts/final-main-acceptance-inventory.mjs
+          {
+            echo '## Main final acceptance (static inventory)'
+            echo 'Six role source surfaces and four-locales browser harness: present'
+            echo 'Authenticated end-to-end journeys: not executed in this fast CI'
+            echo 'Live provider delivery, disaster recovery and mobile device acceptance: unverified'
+            echo 'Full release approval remains blocked pending separate evidence.'
+          } >> "$GITHUB_STEP_SUMMARY"
       - name: Production dependency security gate
         run: npm audit --omit=dev --audit-level=high
 
