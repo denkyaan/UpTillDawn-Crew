@@ -3,7 +3,7 @@ import assert from 'node:assert/strict'
 import {readFileSync} from 'node:fs'
 const read=path=>readFileSync(new URL('../'+path,import.meta.url),'utf8')
 test('a restrictive Storage SELECT gate protects operational media from future policy additions',()=>{
- const sql=read('supabase/migrations/20261109104000_operational_media_restrictive_scan_gate.sql')
+ const sql=read('supabase/migrations/20261109102345_operational_media_restrictive_scan_gate.sql')
  assert.match(sql,/as restrictive for select to authenticated/)
  assert.match(sql,/upt_private\.storage_media_scan_is_clean\(bucket_id,name\)/)
  for(const bucket of ['chat-attachments','incident-photos','work-media'])assert.ok(sql.includes("'"+bucket+"'"))
