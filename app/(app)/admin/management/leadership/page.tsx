@@ -46,7 +46,7 @@ export default async function LeadershipManagement({searchParams}:{searchParams:
  const user=await getCurrentUser()
  if(!user?.realIsAdmin||(!user.approved&&!user.isOwner))redirect('/portals')
  const locale=await requestUiLocale()
- const t=words[locale], names=slotNames[locale], db=await createClient()
+ const t=words[locale], names=slotNames[locale], db=(await createClient()) as unknown as SupabaseClient
  const [leadership,people,search]=await Promise.all([
   db.from('upt_organization_leadership').select('slot,user_id'),
   db.rpc('upt_admin_operational_profiles'),
