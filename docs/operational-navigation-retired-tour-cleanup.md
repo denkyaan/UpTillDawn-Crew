@@ -18,3 +18,11 @@ existing role, collapse, keyboard, AI overlay, label and route regression tests.
 The responsive bottom bar retains a 56px minimum height as required by the existing mobile shell contract. All server-side role and event authorization remains unchanged.
 
 Production deployment is intentionally out of scope.
+
+## Verified orphan cleanup — 10 November 2026
+
+The retired Promotion/Administration guided-tour component is removed after the actual runtime import scan confirmed that it was not used. The workplace-specific tour button remains installed because `components/crew/workplace-shift-planner.tsx` actively imports and renders it. Removing it would break the working shift-planner UI.
+
+The source-tree regression `tests/retired-tour-code-cleanup.test.mjs` rejects revived references to the orphaned portal tour, and positively verifies that active workplace guidance remains. Existing event preparation, briefing acknowledgements, operating procedures and help remain available.
+
+No historical audit records, chat messages, notifications, credentials or real event data are deleted.
