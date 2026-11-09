@@ -10,6 +10,19 @@ At the start of this bundle, the last verified main commit was `56c2a866174f17bb
 
 Read-only main database check, 2026-11-09: last migration `20261109143414`, offline failures `0`, stale offline operations `0`, open sessions `0`. This point-in-time test does not prove production recovery or a live event.
 
+Additional live **read-only** RLS inspection on main, using existing approved accounts with their actual PostgreSQL authenticated role and emulated JWT subject inside read-only transactions (no changes made):
+
+| Test | Visible fixed conversation channels | Result |
+| --- | --- | --- |
+| Admin | Promotion, events, Admin/Administration | PASSED |
+| Administration assignment | Promotion, events, Admin/Administration | PASSED |
+| Responsible | Events only | PASSED |
+| Ordinary Staff | Events only | PASSED |
+| Anonymous (anon DB role) | Permission denied on the channels table | DENIED |
+| Promotion-only identity | Not available in current main QA accounts | BLOCKED / UNTESTED |
+
+These checks support **channel data visibility only**; they do not constitute a full UI chat test, message send/read receipt flow or role revocation E2E test. To make the mobile bug regression reproducible, the browser harness now explicitly asserts the applied HTML language and clicks the **Finance → Banking** Administration subtab, requiring navigation to remain in Administration and the expanded subtab region to close.
+
 ## Six-role acceptance matrix
 | Role | Representative flows | Browser acceptance | Real-device acceptance |
 | --- | --- | --- | --- |

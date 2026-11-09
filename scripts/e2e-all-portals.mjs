@@ -41,6 +41,29 @@ const addFailure=async(page,meta,error)=>{
  failures.push({...meta,message,screenshot})
  console.error('FAIL '+meta.role+' '+meta.locale+' '+meta.width+' '+meta.step+': '+message)
 }
+async function assertAppliedLocale(page,expected){
+ // Check the product language, not just Playwright's browser locale.
+ await page.waitForFunction(value=>document.documentElement.lang.toLowerCase().split('-')[0]===value,expected,{timeout:12000})
+ const actual=(await page.locator('html').getAttribute('lang')||'').toLowerCase().split('-')[0]
+ assert.equal(actual,expected,'Applied app language differs from requested test locale')
+}
+async function validateAdministrationSubtab(page,locale){
+ const nav=page.locator('nav').locator('[data-administration-category="finance"]')
+ await nav.waitFor({state:'visible',timeout:15000})
+ await nav.click()
+ const link=page.locator('[data-administration-subtab="banking"]')
+ await link.waitFor({state:'visible',timeout:15000})
+ const href=await link.getAttribute('href')
+ assert.ok(href?.startsWith('/portals/administration/'),'Subtab leaves Administration portal')
+ await Promise.all([
+  page.waitForURL(url=>url.pathname===href,{timeout:20000}),
+  link.click(),
+ ])
+ assert.equal(new URL(page.url()).pathname,href,'Subtab click redirected to the wrong portal')
+ await page.locator('#administration-subtabs').waitFor({state:'detached',timeout:10000})
+ await assertAppliedLocale(page,locale)
+ return {step:'clicked-administration-subtab',path:href}
+}
 async function settledRoute(page,pathname){
  const response=await page.goto(new URL(pathname,base).href,{waitUntil:'domcontentloaded',timeout:timeOut})
  await page.locator('body').waitFor({state:'visible',timeout:timeOut})
@@ -95,13 +118,23 @@ try{
       page.waitForURL(url=>!url.pathname.startsWith('/login'),{timeout:timeOut}),
       page.locator('button[type="submit"]').click(),
      ])
+     await assertAppliedLocale(page,locale)
      records.push({...meta,step:'authenticated',actual:new URL(page.url()).pathname})
      for(const pathname of config.routes){
       try{
        const result=await settledRoute(page,pathname)
+       await assertAppliedLocale(page,locale)
        records.push({...meta,step:'route',...result})
        console.log('PASS '+role+' '+locale+' '+viewport.width+' '+pathname)
       }catch(error){await addFailure(page,{...meta,step:'route-'+pathname},error)}
+     }
+     if(role==='administration'){
+      try{
+       await settledRoute(page,'/portals/administration')
+       const clicked=await validateAdministrationSubtab(page,locale)
+       records.push({...meta,...clicked})
+       console.log('PASS '+role+' '+locale+' '+viewport.width+' administration subtab navigation')
+      }catch(error){await addFailure(page,{...meta,step:'administration-subtab'},error)}
      }
      for(const pathname of config.denied){
       try{
