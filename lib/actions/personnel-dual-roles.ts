@@ -36,7 +36,7 @@ export async function savePersonnelRoleSlot(_state:RoleSaveState,form:FormData):
    error.code==='42501'?'Alleen de Hoofdadmin kan deze wijziging uitvoeren.':
    error.code==='23505'?'Deze leidinggevende functie is al toegewezen.':
    error.code==='22023'?'Deze rolcombinatie is niet toegestaan of vereist extra bevestiging.':
-   'Rolwijziging niet uitgevoerd. Meld foutcode '+(error.code||'onbekend')+'.'}
+   'Rolwijziging niet uitgevoerd.'}
  }
  revalidatePath('/personnel')
  revalidatePath('/crew')

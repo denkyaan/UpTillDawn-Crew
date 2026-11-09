@@ -2,6 +2,9 @@ export type ExtraCatalogLocale = 'nl' | 'fr' | 'en' | 'de'
 type Row = { fr:string; en:string; de:string }
 
 export const APP_EXTRA_TRANSLATIONS: Record<string,Row> = {
+  "Rollen beheren ·":{fr:"Gérer les rôles ·",en:"Manage roles ·",de:"Rollen verwalten ·"},
+  "Shift geselecteerd":{fr:"Service sélectionné",en:"Shift selected",de:"Schicht ausgewählt"},
+  "Wis de geselecteerde context":{fr:"Effacer le contexte sélectionné",en:"Clear selected context",de:"Ausgewählten Kontext löschen"},
   "Keur nieuwe accounts goed en beheer hier Rol 1, Rol 2 en alle organisatiebevoegdheden voor goedgekeurde medewerkers.":{fr:"Approuvez les nouveaux comptes et gérez ici les rôles 1 et 2 et les autorisations des employés approuvés.",en:"Approve new accounts and manage Role 1, Role 2 and all permissions of approved employees here.",de:"Neue Konten freigeben und Rolle 1, Rolle 2 und alle Berechtigungen genehmigter Mitarbeitender hier verwalten."},
   "Rol gewijzigd en bevoegdheden bijgewerkt.":{fr:"Rôle modifié et autorisations mises à jour.",en:"Role changed and permissions updated.",de:"Rolle geändert und Berechtigungen aktualisiert."},
   "Rollen en bevoegdheden":{fr:"Rôles et autorisations",en:"Roles and permissions",de:"Rollen und Berechtigungen"},

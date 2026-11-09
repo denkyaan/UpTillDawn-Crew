@@ -2,6 +2,13 @@ export type ActionUiLocale='nl'|'fr'|'en'|'de'
 type Row={fr:string;en:string;de:string}
 
 const ROWS:Record<string,Row>={
+  "Je hebt geen toestemming om rollen te wijzigen.":{fr:"Vous n'avez pas l'autorisation de modifier les rôles.",en:"You do not have permission to change roles.",de:"Du hast keine Berechtigung, Rollen zu ändern."},
+  "Ongeldige rolkeuze. Controleer de velden.":{fr:"Choix de rôle invalide. Vérifiez les champs.",en:"Invalid role selection. Check the fields.",de:"Ungültige Rollenauswahl. Prüfe die Felder."},
+  "Rol 1 en Rol 2 moeten verschillend zijn.":{fr:"Les rôles 1 et 2 doivent être différents.",en:"Role 1 and Role 2 must be different.",de:"Rolle 1 und Rolle 2 müssen unterschiedlich sein."},
+  "Deze combinatie van twee rollen is niet toegestaan. Kies een andere tweede rol.":{fr:"Cette combinaison de deux rôles n'est pas autorisée. Choisissez un autre second rôle.",en:"This two-role combination is not allowed. Choose a different second role.",de:"Diese Kombination aus zwei Rollen ist nicht zulässig. Wähle eine andere zweite Rolle."},
+  "Deze leidinggevende functie is al toegewezen.":{fr:"Cette fonction de direction est déjà attribuée.",en:"This leadership position has already been assigned.",de:"Diese Führungsposition ist bereits vergeben."},
+  "Deze rolcombinatie is niet toegestaan of vereist extra bevestiging.":{fr:"Cette combinaison de rôles est interdite ou nécessite une confirmation supplémentaire.",en:"This role combination is not allowed or requires additional confirmation.",de:"Diese Rollenkombination ist nicht zulässig oder erfordert eine zusätzliche Bestätigung."},
+  "Draag eerst de Hoofdadminrechten over.":{fr:"Transférez d'abord les droits de l'administrateur principal.",en:"Transfer Head Admin permissions first.",de:"Übertrage zuerst die Hauptadminrechte."},
   "Admin permission required":{fr:"Autorisation administrateur requise",en:"Admin permission required",de:"Adminberechtigung erforderlich"},
   "Kies twee verschillende rollen":{fr:"Choisissez deux rôles différents",en:"Choose two different roles",de:"Wählen Sie zwei verschiedene Rollen"},
   "Invalid Head transfer":{fr:"Transfert invalide de l’admin principal",en:"Invalid Head Admin transfer",de:"Ungültige Übertragung des Hauptadmins"},

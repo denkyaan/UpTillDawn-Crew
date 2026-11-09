@@ -30,7 +30,7 @@ test('Admin overview has no duplicate shortcuts, floating chat or separate inlin
  const layout=read('components/layout/app-layout.tsx')
  const dash=read('app/(app)/admin/page.tsx')
  const topbar=read('components/layout/topbar.tsx')
- assert.match(layout,/pathname!=="\/admin"/)
+ assert.match(layout,/const showFloatingChat=showChat&&!inDedicatedPortal&&!navigationExpanded/)
  assert.match(layout,/adminAiAction/)
  assert.match(topbar,/adminAiAction/)
  assert.doesNotMatch(dash,/href="\/admin\/management"/)
