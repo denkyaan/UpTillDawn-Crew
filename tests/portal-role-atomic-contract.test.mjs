@@ -75,6 +75,6 @@ test('blocked or unapproved admins never see role mutation controls',async()=>{
 test('role listing uses the same active-admin gate as mutation controls',async()=>{
  const page=await read('app/(app)/portals/roles/page.tsx')
  assert.match(page,/if \(!canManage\) query = query\.eq\('user_id', current\.id\)/)
- assert.match(page,/const \{ data: users \} = canManage \?/)
+ assert.match(page,/const userDirectory=canManage/)
  assert.match(page,/canManage && <th/)
 })
