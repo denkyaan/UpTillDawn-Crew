@@ -31,7 +31,7 @@ export default async function Page({searchParams}:{searchParams?:Promise<{feedba
     if(saved)return {one:saved.role_one,two:saved.role_two}
     const slot=positions.find(row=>row.user_id===person.id)?.slot
     const one:AssignableRole=slot==='head'?'head':slot==='left_hand'?'left_hand':slot==='right_hand'?'right_hand'
-      :person.role==='admin'&&person.id===user.id?'head':person.role==='responsible_lead'?'responsible_lead':'staff'
+      :person.role==='admin'&&person.id===current.id?'head':person.role==='responsible_lead'?'responsible_lead':'staff'
     const matches=(activeAssignments||[]).filter(row=>row.user_id===person.id&&row.approved&&!row.revoked_at)
     const two:AssignableRole|null=matches.some(row=>row.portal==='promotion'&&row.role==='promoter')?'promotion'
       :slot?null:matches.some(row=>row.portal==='administration'&&row.role==='administrative_staff')?'administration':null
