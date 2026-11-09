@@ -1,4 +1,5 @@
 import type {SupportedUiLocale} from "@/lib/locale-preferences"
+import {ProviderConnectionProbe} from "@/components/admin/provider-connection-probe"
 import {externalServicesCopy,type IntegrationReadiness} from "@/lib/administration/external-services-readiness"
 
 export function ExternalServicesReadiness({locale,services}:{locale:SupportedUiLocale;services:IntegrationReadiness[]}){
@@ -17,6 +18,7 @@ export function ExternalServicesReadiness({locale,services}:{locale:SupportedUiL
      {service.setupVariables.map(name=><code key={name} className="mb-1 mr-1 inline-block rounded bg-muted px-1.5 py-0.5">{name}</code>)}
     </p>}
     {service.docsUrl&&<a href={service.docsUrl} target="_blank" rel="noopener noreferrer" className="inline-flex text-xs font-medium text-violet-400 underline">{t.link}</a>}
+    {(service.id==="sumup"||service.id==="documenso"||service.id==="banking")&&<ProviderConnectionProbe provider={service.id} initialLocale={locale}/>}
    </article>)}
   </div>
  </section>

@@ -50,3 +50,16 @@ Alle wijzigingen blijven op **main**. Productie, productiedatabase en productie-
 2. In een echte browser 4 locales, inkomcrew/revoked crew, niet-inkomwerkpost, onbekend event en onjuist origin testen.
 3. Met officiële Weeztix testauth geldige/gebruikte/ongeldige barcode, verkeerd event, autorisatie, dubbele scans, traag/geen netwerk testen.
 4. Vendor settings en betalingen zijn configuratie-readiness, geen bewijs van echte SumUp, Peppol, bank of Documenso transactie.
+
+
+## Verbindingscontrole in de bestaande Admin → Platform-instellingen
+Er is geen extra tab, snelkoppeling of dashboard toegevoegd. In de bestaande externe-dienstenlijst heeft SumUp, Documenso en Bank een knop **Verbinding testen**.
+- De knop vraagt de server de credentials te controleren. De browser ziet uitsluitend `connected`, `not_configured`, `unauthorized` of `unavailable`, nooit tokens, bankgegevens of externe responsebodies.
+- Alleen een geauthenticeerde, actieve hoofdadmin/maker met correcte origine kan de controller bereiken.
+- **SumUp:** `GET https://api.sumup.com/v0.1/me` met server-only Bearer token, zonder verkoop of checkout.
+- **Documenso:** `GET <DOCUMENSO_BASE_URL>/api/v2/envelope?perPage=1` met officiële API-key-Authorization, zonder contractsending of documentupload. Een werkende API betekent nog geen juridisch of operationeel geaccepteerde handtekeningworkflow.
+- **Ponto:** `POST https://api.myponto.com/oauth2/token` met client_credentials. Dit is uitsluitend tokenuitgifte, geen bankkoppeling, PSD2-bankmachtiging, rekeningsynchronisatie of betaling.
+- Een succesvolle test is **alleen een credentialtest** en schakelt geen geautomatiseerde providersync of real-money acties in. Ponto/Documenso/SumUp kunnen tarieven en toestemmingen vereisen.
+- Zet geheimen alleen via Cloudflare → Workers & Pages → `uptilldawn-main` → Settings → Variables and Secrets; nooit in GitHub-broncode, screenshots of browser-URL's.
+- Na het instellen en deployen van main kan de beheerder de knoppen gebruiken. Autorisatie en read-only test moeten apart via E2E worden gecontroleerd; deze code beweert geen echte providerverbinding zonder credentials.
+- Controleer contractuele randvoorwaarden: https://developer.sumup.com/tools/authorization/api-keys/ ; https://openapi.documenso.com/ ; https://documentation.myponto.com/api/curl .
