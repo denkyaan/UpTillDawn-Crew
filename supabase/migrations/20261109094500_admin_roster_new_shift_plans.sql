@@ -262,6 +262,21 @@ begin
     or v_plan.target_shift_id is not null then
    raise exception 'Missing proposed new shift details' using errcode='22023';
   end if;
+  -- Recheck mutable eligibility at application time, after Admin approval:
+  -- staff can be blocked or moved, and a workplace can be reassigned.
+  if not exists (
+   select 1 from public.workplaces w
+   where w.id=v_plan.planned_workplace_id
+     and w.event_id=v_plan.event_id and w.is_active=true
+  ) or not exists (
+   select 1 from public.event_members em
+   join public.profiles p on p.id=em.user_id
+   where em.event_id=v_plan.event_id and em.user_id=v_plan.planned_user_id
+     and p.approved=true and coalesce(p.account_blocked,false)=false
+  ) then
+   raise exception 'Planned member or workplace is no longer eligible'
+    using errcode='22023';
+  end if;
   -- Existing canonical Admin-only RPC checks event membership, event window,
   -- capacity, all user conflicts and logs the resulting shift notification.
   v_new_shift:=public.upt_create_shift(
