@@ -58,3 +58,33 @@ export function safeNotificationPath(value: unknown): string {
   if (normalizedPath !== url.pathname) return "/notifications"
   return url.pathname + url.search + url.hash
 }
+
+/** Resolve the same visible portal set for the chooser, switch controls and
+ * server-side portal switch route. The RLS-guarded portal layout remains
+ * authoritative; this never grants database permissions.
+ */
+export type PortalIdentity = {
+  approved: boolean
+  blocked: boolean
+  isOwner: boolean
+  realIsAdmin: boolean
+  role: string
+}
+
+export function userVisiblePortals(
+  assignments: readonly PortalAssignment[],
+  identity: PortalIdentity,
+): Portal[] {
+  // The permanently verified owner has the established account-recovery exception.
+  if (identity.isOwner) return [...PORTALS]
+  if (!identity.approved || identity.blocked) return []
+  const assigned = accessiblePortals(assignments, identity)
+  // A permanent Admin is already entitled to both dedicated portals by their
+  // server layouts; temporary role previews do not confer this privilege.
+  const legacyEventAccess = identity.realIsAdmin ||
+    identity.role === "staff" || identity.role === "responsible_lead"
+  return PORTALS.filter(portal =>
+    assigned.includes(portal) || identity.realIsAdmin ||
+    (portal === "events" && legacyEventAccess),
+  )
+}
