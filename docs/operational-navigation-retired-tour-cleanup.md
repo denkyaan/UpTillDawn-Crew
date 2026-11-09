@@ -7,7 +7,7 @@ preview can override role visibility: features still require the configured role
 and the active role UI visibility rules. This does not remove the operational
 event preparation checklist or required briefing acknowledgements.
 
-The mobile menu retains six contextual role categories, four locales, badge
+The mobile menu retains six contextual role categories and ranks permitted links inside each subtab group using assigned-event/active-shift context for Staff and Responsible. It preserves four locales, badge
 counts, accessible subtab links, Escape-to-close, pathname-scoped collapse and
 the navigation-expanded event that suppresses overlapping floating chat/AI
 controls. Home on mobile and desktop now uses Next client routing to the

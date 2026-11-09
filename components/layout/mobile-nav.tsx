@@ -12,6 +12,13 @@ import { featureHelp } from "@/lib/ui-field-help"
 import { useAdminSelection } from "@/lib/admin-selection-context"
 import { LANGUAGE_APPLIED_EVENT, activeUiLocale, type SupportedUiLocale } from "@/lib/locale-preferences"
 
+// Event/shift context prioritizes the relevant allowed links inside the
+// existing role subtabs, without bypassing role visibility or re-enabling a tour.
+const ASSIGNED_EVENT_KEYS=["events","briefings","workplaces"] as const
+const STAFF_ACTIVE_SHIFT_KEYS=["operations","workplaces","briefings","tasks"] as const
+const RESPONSIBLE_ACTIVE_SHIFT_KEYS=["operations","workplaces","incidents"] as const
+const RESPONSIBLE_ASSIGNED_EVENT_KEYS=["events","briefings","workplaces","inventory"] as const
+
 export function MobileBottomNav({
   chatMissed=0,
   incidentMissed=0,
@@ -20,6 +27,8 @@ export function MobileBottomNav({
   featureOrder=[],
   featureLabels={},
   featureVisibility={},
+  assignedEvent=false,
+  shiftActive=false,
 }:{
   chatMissed?:number
   incidentMissed?:number
@@ -107,10 +116,17 @@ export function MobileBottomNav({
  const availableGroups=groupedNavigation.map(group=>({...group,entries:group.keys.map(key=>items.find(item=>item.key===key)).filter((item):item is NavigationItem=>Boolean(item))})).filter(group=>group.entries.length>0)
  const currentGroup=availableGroups.find(group=>group.entries.some(isActive))?.key??"home"
  const activeGroup=selectedGroup?.pathname===pathname&&availableGroups.some(group=>group.key===selectedGroup.key)?selectedGroup.key:"home"
- const selectedEntries=availableGroups.find(group=>group.key===activeGroup)?.entries??[]
+ const contextualKeys:readonly string[]=roleKey==="staff"
+   ?shiftActive?STAFF_ACTIVE_SHIFT_KEYS:assignedEvent?ASSIGNED_EVENT_KEYS:[]
+   :roleKey==="responsible_lead"
+     ?shiftActive?RESPONSIBLE_ACTIVE_SHIFT_KEYS:assignedEvent?RESPONSIBLE_ASSIGNED_EVENT_KEYS:[]
+     :[]
+ const priority=new Map(contextualKeys.map((key,index)=>[key,index]))
+ const selectedEntries=[...(availableGroups.find(group=>group.key===activeGroup)?.entries??[])]
+  .sort((a,b)=>(priority.get(a.key)??999)-(priority.get(b.key)??999))
  useEffect(()=>{const onKey=(event:KeyboardEvent)=>{if(event.key==="Escape")setSelectedGroup({key:"home",pathname})};window.addEventListener("keydown",onKey);return()=>window.removeEventListener("keydown",onKey)},[pathname])
  useEffect(()=>{window.dispatchEvent(new CustomEvent("uptilldawn-navigation-expanded",{detail:{open:activeGroup!=="home"}}));return()=>{window.dispatchEvent(new CustomEvent("uptilldawn-navigation-expanded",{detail:{open:false}}))}},[activeGroup])
- return <nav aria-label={{nl:"Mobiele navigatie",en:"Mobile navigation",fr:"Navigation mobile",de:"Mobile Navigation"}[uiLocale]} className="fixed inset-x-0 bottom-0 z-50 border-t border-border bg-card pb-[env(safe-area-inset-bottom)] lg:hidden">
+ return <nav aria-label={{nl:"Mobiele navigatie",en:"Mobile navigation",fr:"Navigation mobile",de:"Mobile Navigation"}[uiLocale]} className="fixed inset-x-0 bottom-0 z-50 min-h-14 border-t border-border bg-card pb-[env(safe-area-inset-bottom)] lg:hidden">
   {activeGroup!=="home"&&<div id="role-navigation-subtabs" role="region" aria-label={{nl:"Subnavigatie",fr:"Sous-navigation",en:"Subnavigation",de:"Unternavigation"}[uiLocale]} className="border-b bg-card p-2">
    <div className="grid max-h-[38dvh] grid-cols-3 gap-1.5 overflow-x-hidden overflow-y-auto overscroll-contain">{selectedEntries.map(item=><NavItem key={item.key} item={item}/>)}</div>
   </div>}

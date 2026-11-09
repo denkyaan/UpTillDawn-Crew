@@ -33,3 +33,12 @@ test('administration keeps its own context-preserving subtab panel',()=>{
  assert.match(administration,/onClick=\{\(\)=>setSelectedCategory\(null\)\}/)
  assert.match(administration,/uptilldawn-navigation-expanded/)
 })
+
+test('live event and shift context ranks permitted subtab destinations without showing hidden features',()=>{
+ for(const symbol of ['ASSIGNED_EVENT_KEYS','STAFF_ACTIVE_SHIFT_KEYS','RESPONSIBLE_ACTIVE_SHIFT_KEYS','RESPONSIBLE_ASSIGNED_EVENT_KEYS'])assert.ok(mobile.includes(symbol))
+ assert.match(mobile,/roleKey==="responsible_lead"/)
+ assert.match(mobile,/contextualKeys\.map\(\(key,index\)=>\[key,index\]\)/)
+ assert.match(mobile,/priority\.get\(a\.key\)/)
+ assert.match(mobile,/min-h-14/)
+ assert.match(mobile,/roles\.some\(r=>i\.roles\.includes\(r\)\)/)
+})
