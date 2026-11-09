@@ -59,7 +59,9 @@ test('Admin existing platform UI shows real database drift/offline evidence with
  assert.doesNotMatch(settings,/href="\/operations#tijdcorrecties"/)
  assert.doesNotMatch(settings,/title="Meldingen" description="Bekijk operationele meldingen/)
  assert.doesNotMatch(settings,/href="\/operations#excel-export"/)
- assert.match(settings,/href="\/operations" title="Werkurenbeheer"/)
+ assert.doesNotMatch(settings,/href="\/operations" title="Werkurenbeheer"/)
+ assert.match(settings,/href="\/admin\/platform#automatiseringen"/)
+ assert.match(settings,/href="\/audit" title="Auditlog"/)
 })
 
 test('historical release readiness redirect and approved five-workflow inventory are preserved',()=>{
