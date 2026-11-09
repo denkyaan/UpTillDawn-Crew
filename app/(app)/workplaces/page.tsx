@@ -483,7 +483,7 @@ export default async function Page({searchParams}:{searchParams?:Promise<{event?
             <ContextLink href="/briefings" context={{eventId:workplace.event_id,workplaceId:workplace.id,focus:'briefing'}} className="rounded-lg border px-3 py-2 text-xs font-bold" title="Open briefing en checklists voor deze werkplek.">Briefing</ContextLink>
           </div></div>}
 
-          {isEntranceWorkplace(workplace.name)&&<WeeztixScannerPanel eventName={workplace.events?.name||''} canManage={isAdmin||isResponsible} initialLocale={locale}/>}
+          {isEntranceWorkplace(workplace.name)&&<WeeztixScannerPanel eventName={workplace.events?.name||''} eventId={workplace.event_id} workplaceId={workplace.id} canManage={isAdmin||isResponsible} initialLocale={locale}/>}
 
           <div className="mt-3 space-y-3">
             <WorkplaceShiftPlanner

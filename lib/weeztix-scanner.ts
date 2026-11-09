@@ -13,3 +13,8 @@ export function isEntranceWorkplace(name:string):boolean{
  const parts=normalized.split(/\s*(?:\/|&|\+|\||[-–—])\s*/)
  return parts.some(part=>entrance.has(part))&&parts.every(part=>entrance.has(part)||part==='guestlist'||part==='guest list')
 }
+
+/** Weeztix labels are case-sensitive; reject URLs, control chars, oversized payloads and QR redirects. */
+export function validWeeztixBarcode(value:unknown):value is string{
+ return typeof value==="string"&&value.length>=6&&value.length<=160&&/^[a-zA-Z0-9_-]+$/.test(value)
+}

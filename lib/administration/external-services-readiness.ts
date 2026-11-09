@@ -30,11 +30,11 @@ export function externalServicesReadiness(env:Environment):IntegrationReadiness[
    setupVariables:["CLOUDMERSIVE_OCR_API_KEY"],docsUrl:"https://api.cloudmersive.com/docs/ocr.asp"},
   {id:"documenso",state:configuredDocumensoOrigin(env.DOCUMENSO_BASE_URL)&&configuredValue(env.DOCUMENSO_API_KEY)?"credentials_present":"needs_configuration",
    setupVariables:["DOCUMENSO_BASE_URL","DOCUMENSO_API_KEY"],docsUrl:"https://docs.documenso.com/docs/developers/getting-started/authentication"},
-  {id:"peppol",state:"provider_required",setupVariables:[],docsUrl:"https://peppol.org/members/peppol-certified-service-providers/"},
-  {id:"weeztix",state:"manual_available",setupVariables:[],docsUrl:"https://weeztix.com/help/create-scanner-login"},
+  {id:"peppol",state:configuredValue(env.BILLIT_SANDBOX_PARTY_ID)&&configuredValue(env.BILLIT_SANDBOX_API_KEY)?"credentials_present":"provider_required",setupVariables:["BILLIT_SANDBOX_PARTY_ID","BILLIT_SANDBOX_API_KEY"],docsUrl:"https://docs.billit.be/docs/sandbox-vs-production-1"},
+  {id:"weeztix",state:env.WEEZTIX_SCANNING_ENABLED==="true"&&configuredValue(env.WEEZTIX_ACCESS_TOKEN)&&configuredValue(env.WEEZTIX_ACTIVE_EVENT_ID)?"credentials_present":"manual_available",setupVariables:["WEEZTIX_ACCESS_TOKEN","WEEZTIX_ACTIVE_EVENT_ID","WEEZTIX_SCANNING_ENABLED"],docsUrl:"https://docs.weeztix.com/docs/introduction/authentication/create-client/"},
   {id:"eventix",state:"manual_available",setupVariables:[],docsUrl:"https://dashboard.weeztix.com"},
-  {id:"sumup",state:"manual_available",setupVariables:[],docsUrl:"https://developer.sumup.com/tools/authorization/api-keys/"},
-  {id:"banking",state:"manual_available",setupVariables:[],docsUrl:null}
+  {id:"sumup",state:configuredValue(env.SUMUP_API_KEY)&&configuredValue(env.SUMUP_MERCHANT_CODE)?"credentials_present":"manual_available",setupVariables:["SUMUP_API_KEY","SUMUP_MERCHANT_CODE"],docsUrl:"https://developer.sumup.com/tools/authorization/api-keys/"},
+  {id:"banking",state:configuredValue(env.PONTO_CLIENT_ID)&&configuredValue(env.PONTO_CLIENT_SECRET)?"credentials_present":"manual_available",setupVariables:["PONTO_CLIENT_ID","PONTO_CLIENT_SECRET"],docsUrl:"https://pontosupport.isabel.eu/en-US/knowledgebase/article/KA-02515"}
  ]
 }
 export const externalServicesCopy={
@@ -52,11 +52,11 @@ export const externalServicesCopy={
   instructions:{
    cloudmersive:"OCR van foto's en PDF's gebeurt standaard lokaal op het toestel zonder API. Cloudmersive is alleen een optionele externe dienst en niet nodig voor gewone factuurverwerking.",
    documenso:"Kies Documenso Cloud of een afzonderlijke beveiligde installatie, maak een team-API-token aan en stel de HTTPS-basis-URL en sleutel in. Contracten verzenden is nog uitgeschakeld.",
-   peppol:"Kies een gecertificeerd Peppol Access Point met API. Registreer het ondernemingsnummer en vraag testtoegang en bezorgbevestigingen aan. UpTillDawn bereidt voorlopig alleen UBL voor.",
-   weeztix:"Maak per evenement via Entréemanagement een scannerlogin/QR aan. De crew scant met de officiële Weeztix-app; hier is geen API-sleutel nodig.",
+   peppol:"Aanbevolen: Billit sandbox. Registreer je bedrijf, activeer Peppol en vraag API-toegang aan. UBL-voorbereiding bestaat; live verzending is nog niet ingeschakeld.",
+   weeztix:"De QR-camera zit rechtstreeks in de inkomwerkplek. Voor echte toegang: stel een server-token en het interne event-ID in en activeer scannen uitdrukkelijk. Alleen de Weeztix-server bevestigt toegang; de officiële app blijft offline reserve.",
    eventix:"Evenementkoppelingen en gecontroleerde CSV-import bestaan al. Automatische API-synchronisatie vereist een providercontract en API-documentatie.",
-   sumup:"Voor één eigen SumUp-merchant kun je in het dashboard een geheime API-sleutel aanmaken. De automatische koppeling is nog niet gebouwd; CSV-import werkt als tussenstap.",
-   banking:"Bankafschriften kunnen via gecontroleerde import verwerkt worden. Kies eerst de bank/boekhoudsoftware en de gewenste API-provider voor automatische synchronisatie."
+   sumup:"Maak een SumUp testmerchant, een geheime server-API-sleutel en noteer de merchantcode. De koppeling blijft read-only/import tot echte transacties en boekingsafstemming getest zijn.",
+   banking:"Zonder extra kosten: bankafschriften via bestaande import. Voor automatische Belgische bankmutaties: Ponto met PSD2-banktoestemming. De connector moet apart gevalideerd worden; geef nooit je bankwachtwoord aan UpTillDawn."
   }
  },
  fr:{
@@ -68,11 +68,11 @@ export const externalServicesCopy={
   instructions:{
    cloudmersive:"L'OCR des photos et PDF s'effectue par défaut sur l'appareil sans API. Cloudmersive est facultatif et n'est pas nécessaire pour le traitement standard.",
    documenso:"Choisissez Documenso Cloud ou un hébergement sécurisé séparé, créez un jeton d'équipe et configurez l'URL HTTPS et le secret. L'envoi reste désactivé.",
-   peppol:"Choisissez un point d'accès Peppol certifié avec API, enregistrez l'entreprise et demandez l'accès de test et les accusés de livraison. Seule la préparation UBL est disponible.",
-   weeztix:"Créez un identifiant/QR scanner par événement dans la gestion des entrées. L'équipe utilise l'application Weeztix officielle; aucune clé API n'est requise.",
+   peppol:"Recommandé : Billit sandbox. Enregistrez l'entreprise, activez Peppol et demandez l'accès API. Préparation UBL disponible ; envoi réel désactivé.",
+   weeztix:"Caméra QR intégrée au poste Entrée. Configurez un jeton serveur et l'identifiant de l'événement, puis activez explicitement. Seul Weeztix confirme l'entrée ; application officielle en secours hors ligne.",
    eventix:"Les associations d'événements et l'import CSV validé sont disponibles. La synchronisation API exige un accord et une documentation du prestataire.",
-   sumup:"Créez une clé API secrète dans le compte marchand SumUp. La synchronisation automatique n'est pas implémentée; utilisez l'import CSV.",
-   banking:"Import contrôlé des relevés disponible. Choisissez d'abord une banque/logiciel comptable et son fournisseur d'API."
+   sumup:"Créez un marchand SumUp sandbox, une clé API serveur et relevez le code marchand. La synchronisation réelle reste désactivée avant les tests de transactions.",
+   banking:"Sans coût API : importez les relevés. Pour synchronisation bancaire belge automatique, utilisez Ponto et le consentement PSD2 ; un connecteur validé reste nécessaire."
   }
  },
  en:{
@@ -84,11 +84,11 @@ export const externalServicesCopy={
   instructions:{
    cloudmersive:"Photo and PDF OCR now runs on the device by default with no API key. Cloudmersive is optional and not required for standard invoice processing.",
    documenso:"Choose Documenso Cloud or a separately secured host, create a team API token, and configure its HTTPS origin and secret. Sending remains disabled.",
-   peppol:"Select a certified Peppol Access Point offering an API, register the organization, and request test access and delivery acknowledgements. Only UBL preparation is available.",
-   weeztix:"Create a scanner login/QR per event in Entrance Management. Crew members scan using the official Weeztix app; no API key is required.",
+   peppol:"Recommended: Billit sandbox. Register your company, enable Peppol and request API access. UBL preparation works; live delivery is not enabled.",
+   weeztix:"QR camera is integrated in the entrance workplace. Configure a server token and the internal event ID, then enable scanning explicitly. Only Weeztix confirms admission; the official app remains the offline fallback.",
    eventix:"Event mappings and validated CSV imports are available. Automatic API synchronization requires a provider agreement and technical documentation.",
-   sumup:"Create a secret API key in your SumUp merchant dashboard. The automatic connector is not implemented; use CSV imports in the meantime.",
-   banking:"Validated statement imports are available. First select the bank/accounting product and its API provider."
+   sumup:"Create a SumUp sandbox merchant, server-only API key, and note the merchant code. Live syncing remains disabled until transaction and settlement tests pass.",
+   banking:"No extra API cost: import bank statements. For automated Belgian bank synchronization, use Ponto with PSD2 bank consent. A verified connector is still required."
   }
  },
  de:{
@@ -100,11 +100,11 @@ export const externalServicesCopy={
   instructions:{
    cloudmersive:"OCR für Fotos und PDF läuft standardmäßig lokal auf dem Gerät ohne API. Cloudmersive ist optional und für die normale Rechnungsverarbeitung nicht erforderlich.",
    documenso:"Documenso Cloud oder separaten sicheren Host wählen, Team-Token erstellen und HTTPS-URL sowie Schlüssel konfigurieren. Versand bleibt deaktiviert.",
-   peppol:"Zertifizierten Peppol Access Point mit API auswählen, Unternehmen registrieren und Testzugang sowie Zustellbestätigungen anfordern. Bisher nur UBL-Vorbereitung.",
-   weeztix:"Je Veranstaltung Scanner-Anmeldung/QR in der Einlassverwaltung erstellen. Die Crew scannt mit der offiziellen Weeztix-App ohne API-Schlüssel.",
+   peppol:"Empfohlen: Billit-Sandbox. Unternehmen registrieren, Peppol aktivieren und API-Zugang beantragen. UBL-Vorbereitung funktioniert; Live-Versand ist deaktiviert.",
+   weeztix:"Die QR-Kamera ist direkt im Einlass-Arbeitsplatz. Server-Token und interne Event-ID konfigurieren und Scannen ausdrücklich aktivieren. Nur Weeztix bestätigt Einlass; offizielle App als Offline-Reserve.",
    eventix:"Event-Zuordnungen und geprüfter CSV-Import sind verfügbar. Automatische API-Synchronisation erfordert Anbietervereinbarung und Dokumentation.",
-   sumup:"Geheimen API-Schlüssel im SumUp-Händlerkonto erstellen. Der automatische Connector fehlt noch; bis dahin CSV-Import verwenden.",
-   banking:"Geprüfter Kontoauszugsimport verfügbar. Zuerst Bank/Buchhaltungssoftware und API-Anbieter wählen."
+   sumup:"SumUp-Sandbox-Händler, geheimen Server-API-Schlüssel und Händlercode erstellen. Live-Abgleich erst nach Transaktions- und Auszahlungstests aktivieren.",
+   banking:"Ohne API-Kosten: Kontoauszüge importieren. Für automatischen belgischen Bankabgleich Ponto mit PSD2-Zustimmung wählen; Connector muss gesondert validiert werden."
   }
  }
 } as const
