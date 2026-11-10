@@ -27,14 +27,14 @@ test('main and production have their own CI and deploy workflow names',async()=>
   file('.github/workflows/fast-change-validation.yml'),
  ])
  for(const name of ['fast-change-validation.yml','deploy-main.yml','ci.yml','deploy-cloudflare.yml'])assert.ok(overview.includes(name))
- assert.match(overview,/environment:'main'|'production'/)
+ assert.ok(overview.includes("type Target='main'|'production'"))
  assert.match(overview,/deployedSha/)
  assert.match(release,/fast-change-validation\.yml\/runs\?head_sha=/)
  assert.match(release,/latest\.conclusion !== 'success'/)
  assert.doesNotMatch(release,/workflows\/ci\.yml\/runs\?head_sha=/)
  assert.match(ci,/name: CI main/)
 })
-test('production diagnostics are read-only, scoped to Maker and do not leak cross-project JWTs',async()=>{
+test('cross-environment diagnostics remain read-only while SQL writes require the authenticated target',async()=>{
  const [logs,sql,editor,server]=await Promise.all([
   file('app/api/god/logs/route.ts'),
   file('app/api/god/sql/route.ts'),
@@ -44,15 +44,16 @@ test('production diagnostics are read-only, scoped to Maker and do not leak cros
  assert.match(logs,/authorizeStudio\(request\)/)
  assert.match(logs,/upt_god_database_secret/)
  assert.match(logs,/read_only:true/)
- assert.match(logs,/GOD_ENVIRONMENTS\[target\]\.supabaseProject|eakoavcieossazqzplke/)
+ assert.match(logs,/GOD_ENVIRONMENTS\[target\]\.supabaseProject/)
  assert.doesNotMatch(logs,/service_role/)
- assert.match(sql,/production'&&body\.write/)
- assert.match(sql,/403/)
- assert.match(sql,/PROJECTS\[target\]/)
+ assert.match(sql,/requiredGodEnvironment/)
+ assert.match(sql,/body\.write&&target!==project\.id/)
+ assert.match(sql,/project\.id==='production'&&body\.productionConfirmation/)
  assert.match(sql,/read_only:readOnly/)
- assert.match(editor,/disabled=\{inProduction\}/)
+ assert.match(editor,/productionConfirmation!=='PRODUCTION'/)
  assert.match(server,/upt_god_session_valid/)
 })
+
 test('Maker log and overview endpoints never claim a successful check when the source is unavailable',async()=>{
  const [api,logs,ui]=await Promise.all([
   file('app/api/god/overview/route.ts'),
