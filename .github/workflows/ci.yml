@@ -264,6 +264,62 @@ jobs:
           test "$briefing_seed_count" = "0"
           echo "PASS: bot03 briefing fixture starts unacknowledged"
 
+      - name: Verify Responsible fixture is readable under its own RLS identity
+        run: |
+          set -euo pipefail
+          psql "$BOT_DB_URL" -v ON_ERROR_STOP=1 <<'SQL'
+          BEGIN;
+          SELECT set_config('request.jwt.claim.sub',
+            (SELECT id::text FROM auth.users WHERE email='bot-02-responsible-fr@bots.uptilldawn.test'),true);
+          SET LOCAL ROLE authenticated;
+          DO $qa$
+          DECLARE
+            expected_event uuid := '00000000-0000-4000-8000-00000000e2e1';
+            expected_workplace uuid := '00000000-0000-4000-8000-00000000e2e2';
+            assignment_count integer;
+            event_count integer;
+            workplace_count integer;
+            feature_allowed boolean;
+          BEGIN
+            SELECT count(*) INTO assignment_count
+            FROM public.responsible_assignments
+            WHERE user_id=auth.uid() AND event_id=expected_event AND workplace_id=expected_workplace;
+            SELECT count(*) INTO event_count FROM public.events WHERE id=expected_event;
+            SELECT count(*) INTO workplace_count FROM public.workplaces WHERE id=expected_workplace;
+            SELECT public.upt_feature_visible('workplaces',expected_event,expected_workplace)
+            INTO feature_allowed;
+            RAISE NOTICE 'Responsible RLS fixture: assignments=%, events=%, workplaces=%, feature=%',
+              assignment_count,event_count,workplace_count,feature_allowed;
+            IF assignment_count<>1 OR event_count<>1 OR workplace_count<>1 OR feature_allowed IS DISTINCT FROM true THEN
+              RAISE EXCEPTION 'Assigned Responsible cannot read the upcoming event/workplace through actual RLS';
+            END IF;
+          END $qa$;
+          ROLLBACK;
+          SQL
+          node --input-type=module <<'NODE'
+          import {createClient} from '@supabase/supabase-js'
+          const client=createClient(process.env.BOT_SUPABASE_URL,process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY,{
+            auth:{persistSession:false,autoRefreshToken:false}
+          })
+          const {data:session,error:authError}=await client.auth.signInWithPassword({
+            email:'bot-02-responsible-fr@bots.uptilldawn.test',
+            password:process.env.BOT_TEST_PASSWORD,
+          })
+          if(authError||!session.session)throw Error('Responsible QA account failed real password authentication')
+          const event='00000000-0000-4000-8000-00000000e2e1'
+          const workplace='00000000-0000-4000-8000-00000000e2e2'
+          const [assignment,events,workplaces]=await Promise.all([
+            client.from('responsible_assignments').select('event_id,workplace_id').eq('user_id',session.user.id),
+            client.from('events').select('id,name').eq('id',event),
+            client.from('workplaces').select('id,name,event_id').eq('id',workplace),
+          ])
+          for(const [name,result] of [['assignments',assignment],['events',events],['workplaces',workplaces]]){
+            if(result.error)throw Error('Responsible PostgREST '+name+' denied: '+result.error.code)
+            if(result.data?.length!==1)throw Error('Responsible PostgREST '+name+' expected one visible fixture; got '+(result.data?.length??0))
+          }
+          console.info('PASS: Responsible can authenticate and read assigned event, workplace and assignment via PostgREST')
+          NODE
+
       - name: Prepare separate temporary Maker identity for six-role browser QA
         run: |
           set -euo pipefail

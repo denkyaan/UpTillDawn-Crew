@@ -1,5 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { createServerClient } from '@supabase/ssr'
 import { createClient } from '@/lib/supabase/crew-server'
+import type { Database } from '@/types/crew-database'
 import { sendSecurityLoginEmail } from '@/lib/security-login-email'
 import { resolveLoginEmail } from '@/lib/maker-login'
 
@@ -10,6 +12,14 @@ function loginUrl(request: NextRequest, error?: string) {
 }
 
 export async function POST(request: NextRequest) {
+  // A native 303 redirect must explicitly forward the session cookie changes.
+  const sessionResponse = new NextResponse()
+  const redirectWithSession = (url: URL) => {
+    const response = NextResponse.redirect(url, 303)
+    for (const cookie of sessionResponse.cookies.getAll()) response.cookies.set(cookie)
+    response.headers.set('Cache-Control', 'private, no-store')
+    return response
+  }
   let phase = 'form'
   const startedAt = Date.now()
   let phaseStartedAt = startedAt
@@ -25,12 +35,28 @@ export async function POST(request: NextRequest) {
   const password = String(formData.get('password') || '')
 
   if (!submittedLogin || !password) {
-    return NextResponse.redirect(loginUrl(request, 'E-mail en wachtwoord zijn verplicht.'), 303)
+    return redirectWithSession(loginUrl(request, 'E-mail en wachtwoord zijn verplicht.'))
   }
 
   const email = resolveLoginEmail(submittedLogin)
   enterPhase('supabase_client')
-  const supabase = await createClient()
+  const supabase = createServerClient<Database>(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+    {
+      cookies: {
+        getAll() {
+          return request.cookies.getAll()
+        },
+        setAll(updates) {
+          for (const { name, value, options } of updates) {
+            request.cookies.set(name, value)
+            sessionResponse.cookies.set(name, value, options)
+          }
+        },
+      },
+    },
+  ) as Awaited<ReturnType<typeof createClient>>
   const ip = request.headers.get('cf-connecting-ip')
     || request.headers.get('x-forwarded-for')?.split(',')[0]?.trim()
     || request.headers.get('x-real-ip')
@@ -73,7 +99,7 @@ export async function POST(request: NextRequest) {
   if (error || !data.user) {
     enterPhase('failure_notification')
     await notify('failure', 'invalid_credentials')
-    return NextResponse.redirect(loginUrl(request, 'Foute logingegevens of u heeft geen toegang tot deze rol.'), 303)
+    return redirectWithSession(loginUrl(request, 'Foute logingegevens of u heeft geen toegang tot deze rol.'))
   }
 
   enterPhase('admin_access')
@@ -91,7 +117,7 @@ export async function POST(request: NextRequest) {
     enterPhase('denied_notification')
     await notify('denied', 'wrong_portal')
     await supabase.auth.signOut()
-    return NextResponse.redirect(loginUrl(request, 'Foute logingegevens of u heeft geen toegang tot deze rol.'), 303)
+    return redirectWithSession(loginUrl(request, 'Foute logingegevens of u heeft geen toegang tot deze rol.'))
   }
 
   enterPhase('role_mode')
@@ -103,7 +129,7 @@ export async function POST(request: NextRequest) {
     enterPhase('role_mode_notification')
     await notify('denied', 'role_mode_error')
     await supabase.auth.signOut()
-    return NextResponse.redirect(loginUrl(request, 'De beheerdermodus kon niet worden geactiveerd.'), 303)
+    return redirectWithSession(loginUrl(request, 'De beheerdermodus kon niet worden geactiveerd.'))
   }
 
   enterPhase('success_audit')
@@ -138,16 +164,13 @@ export async function POST(request: NextRequest) {
     : new URL('/admin', request.url)
 
   console.info('[admin-login] completed', { durationMs: Date.now() - startedAt, destination: isOwner === true ? 'maker' : 'admin' })
-  return NextResponse.redirect(destination, 303)
+  return redirectWithSession(destination)
   } catch (error) {
     console.error('[admin-login] unhandled failure', {
       phase,
       durationMs: Date.now() - startedAt,
       message: error instanceof Error ? error.message : String(error),
     })
-    return NextResponse.redirect(
-      loginUrl(request, `Admin-login kon niet worden verwerkt (fase: ${phase}). Probeer opnieuw.`),
-      303,
-    )
+    return redirectWithSession(loginUrl(request, `Admin-login kon niet worden verwerkt (fase: ${phase}). Probeer opnieuw.`))
   }
 }
