@@ -7229,6 +7229,10 @@ export type Database = {
         Args: { p_limit?: number; p_token: string }
         Returns: Json
       }
+      upt_god_maker_log_snapshot: {
+        Args: { p_token: string; p_limit?: number }
+        Returns: Json
+      }
       upt_god_is_configured: { Args: never; Returns: boolean }
       upt_god_login: {
         Args: { p_login: string; p_password: string }
