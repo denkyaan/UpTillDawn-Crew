@@ -91,14 +91,16 @@ export async function POST(request: Request) {
     const body = z.object({action: z.literal('publish'), number: z.number().int().positive(), sha: shaSchema}).strict().parse(raw)
     const pull = await github<Pull>(`/pulls/${body.number}`, key)
     if (pull.head.repo?.full_name !== STUDIO_REPOSITORY || !pull.head.ref.startsWith('god-mode/') || pull.base.ref !== 'main' || pull.head.sha !== body.sha || pull.state !== 'open') throw new StudioError('Het voorstel is gewijzigd of al gesloten.', 409)
-    const runs = await github<{workflow_runs: Run[]}>(`/actions/workflows/ci.yml/runs?head_sha=${body.sha}&per_page=100`, key)
-    const latest = [...runs.workflow_runs].sort((a,b) => b.id - a.id)[0]
-    if (!latest || latest.status !== 'completed' || latest.conclusion !== 'success') throw new StudioError('Publiceren kan pas nadat de CI-controle van deze code is geslaagd.', 409)
+    const runs = await github<{workflow_runs: (Run & {event: string; head_branch: string})[]}>(`/actions/workflows/fast-change-validation.yml/runs?head_sha=${body.sha}&per_page=100`, key)
+    const latest = runs.workflow_runs
+      .filter(run => run.head_sha === body.sha && run.head_branch === pull.head.ref && run.event === 'pull_request')
+      .sort((a,b) => b.id - a.id)[0]
+    if (!latest || latest.status !== 'completed' || latest.conclusion !== 'success') throw new StudioError('Publiceren kan pas nadat CI main voor precies deze voorstelversie is geslaagd.', 409)
     const comparison = await github<{behind_by: number}>(`/compare/main...${body.sha}`, key)
     if (comparison.behind_by > 0) throw new StudioError('Main is intussen gewijzigd. Werk het voorstel bij op GitHub en laat de tests opnieuw lopen.', 409)
     const merge = await github<{merged: boolean; sha: string}>(`/pulls/${body.number}/merge`, key, 'PUT', {sha: body.sha, merge_method: 'squash'})
     if (!merge.merged) throw new StudioError('GitHub heeft de wijziging niet samengevoegd.', 409)
-    return studioResponse({ok: true, sha: merge.sha, notice: 'Code staat op main. Cloudflare start de gekoppelde productiebuild; livegang volgt pas na een geslaagde deployment.'})
+    return studioResponse({ok: true, sha: merge.sha, notice: 'Code is samengevoegd naar main-test. Eerst CI main en daarna Deploy main; productie blijft onaangeroerd.'})
   } catch (error) {
     if (error instanceof z.ZodError) return studioResponse({error: error.issues[0]?.message || 'Ongeldige wijziging.'}, 400)
     return studioFailure(error)
