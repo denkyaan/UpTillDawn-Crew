@@ -9,25 +9,25 @@ type AuditLog={id:string;action:string;entity_type:string;created_at:string}
 type Snapshot={errors:ErrorLog[];recovery:RecoveryLog[];audit:AuditLog[]}
 type Source='errors'|'recovery'|'audit'
 const dictionary={
- nl:{heading:'App- en systeemlogs',intro:'Echte geregistreerde fout-, herstel- en auditgebeurtenissen van main-test. Geen productiegegevens.',
+ nl:{productionIntro:'Geregistreerde productie-fouten, herstelcontroles en auditgebeurtenissen. Alleen-lezen; de beheerverbinding moet toegang tot productie hebben.',heading:'App- en systeemlogs',intro:'Echte geregistreerde fout-, herstel- en auditgebeurtenissen van main-test. Geen productiegegevens.',
   refresh:'Vernieuwen',loading:'Logregistraties ophalen…',error:'De loggegevens zijn niet beschikbaar. Controleer de status van de databasekoppeling.',
   errors:'Appfouten',recovery:'Zelfherstel en controles',audit:'Wijzigingsaudit',search:'Zoeken in logs…',
   empty:'Geen registraties gevonden voor dit filter.',detail:'Details',timestamp:'Tijdstip',status:'Status',route:'Pagina',count:'Aantal meldingen',
   diagnose:'Onderzoek met AI',note:'Dit zijn opgeslagen applicatie- en databaseregistraties. Live Cloudflare-runtime- en Supabase-platformlogs zijn nog niet gekoppeld; voor CI- en deploymentlogs gebruik je Versies & CI.',
   limited:'Laatste 100 per bron',all:'Alle bronnen'},
- fr:{heading:'Journaux applicatifs et système',intro:'Erreurs, récupération et audit enregistrés sur main-test. Aucune donnée de production.',
+ fr:{productionIntro:'Erreurs, contrôles de récupération et audit de production. Lecture seule ; une connexion autorisée est nécessaire.',heading:'Journaux applicatifs et système',intro:'Erreurs, récupération et audit enregistrés sur main-test. Aucune donnée de production.',
   refresh:'Actualiser',loading:'Chargement des journaux…',error:'Journaux indisponibles. Vérifiez la connexion de la base.',
   errors:'Erreurs de l’app',recovery:'Récupération et contrôles',audit:'Audit des modifications',search:'Rechercher dans les journaux…',
   empty:'Aucun résultat pour ce filtre.',detail:'Détails',timestamp:'Date',status:'État',route:'Page',count:'Nombre de signalements',
   diagnose:'Analyser avec IA',note:'Les événements enregistrés sont affichés ici. Les journaux runtime Cloudflare et plateforme Supabase ne sont pas encore reliés ; utilisez Versions et CI pour les journaux de déploiement.',
   limited:'100 derniers par source',all:'Toutes les sources'},
- en:{heading:'App and system logs',intro:'Recorded main-test errors, recovery checks and audit events. No production data.',
+ en:{productionIntro:'Recorded production errors, recovery checks and audit events. Read only; an authorized production database connection is required.',heading:'App and system logs',intro:'Recorded main-test errors, recovery checks and audit events. No production data.',
   refresh:'Refresh',loading:'Loading logs…',error:'Logs unavailable. Check the database connection.',
   errors:'App errors',recovery:'Recovery and checks',audit:'Change audit',search:'Search logs…',
   empty:'No entries match this filter.',detail:'Details',timestamp:'Timestamp',status:'Status',route:'Page',count:'Report count',
   diagnose:'Diagnose with AI',note:'These are stored app and database records. Live Cloudflare runtime and Supabase platform logs are not yet connected; use Versions & CI for pipeline logs.',
   limited:'Latest 100 per source',all:'All sources'},
- de:{heading:'App- und Systemprotokolle',intro:'Gespeicherte Fehler-, Reparatur- und Auditereignisse der Main-Testumgebung. Keine Produktionsdaten.',
+ de:{productionIntro:'Gespeicherte Produktionsfehler, Wiederherstellungsprüfungen und Auditereignisse. Nur lesbar; ein berechtigter Datenbankzugang ist erforderlich.',heading:'App- und Systemprotokolle',intro:'Gespeicherte Fehler-, Reparatur- und Auditereignisse der Main-Testumgebung. Keine Produktionsdaten.',
   refresh:'Aktualisieren',loading:'Protokolle werden geladen…',error:'Protokolle sind nicht verfügbar. Prüfe die Datenbankverbindung.',
   errors:'App-Fehler',recovery:'Wiederherstellung und Prüfungen',audit:'Änderungsaudit',search:'Protokolle durchsuchen…',
   empty:'Keine passenden Einträge.',detail:'Details',timestamp:'Zeitpunkt',status:'Status',route:'Seite',count:'Anzahl Meldungen',
@@ -35,7 +35,7 @@ const dictionary={
   limited:'Letzte 100 je Quelle',all:'Alle Quellen'},
 } as const
 
-export function MakerLogs({onDiagnose}:{onDiagnose:(id:string,prompt:string)=>void}){
+export function MakerLogs({onDiagnose,environment}:{onDiagnose:(id:string,prompt:string)=>void;environment:'main'|'production'}){
  const locale=useSyncExternalStore(
   notify=>{window.addEventListener(LANGUAGE_APPLIED_EVENT,notify);return()=>window.removeEventListener(LANGUAGE_APPLIED_EVENT,notify)},
   ()=>parseUiLocale(document.documentElement.lang)||initialUiLocale(),
@@ -50,7 +50,7 @@ export function MakerLogs({onDiagnose}:{onDiagnose:(id:string,prompt:string)=>vo
  const [search,setSearch]=useState('')
  useEffect(()=>{
   const controller=new AbortController()
-  fetch('/api/god/logs?limit=100',{signal:controller.signal,cache:'no-store'})
+  fetch('/api/god/logs?environment='+environment+'&limit=100',{signal:controller.signal,cache:'no-store'})
    .then(async response=>{
     if(!response.ok)throw Error('Logs unavailable')
     const json=await response.json() as {logs?:Partial<Snapshot>}
@@ -61,7 +61,7 @@ export function MakerLogs({onDiagnose}:{onDiagnose:(id:string,prompt:string)=>vo
    .catch(()=>{if(!controller.signal.aborted)setError(true)})
    .finally(()=>{if(!controller.signal.aborted)setLoading(false)})
   return()=>controller.abort()
- },[generation])
+ },[generation,environment])
  const rows=useMemo(()=>{
   if(!snapshot)return []
   const all=[
@@ -76,7 +76,7 @@ export function MakerLogs({onDiagnose}:{onDiagnose:(id:string,prompt:string)=>vo
  },[snapshot,search,source])
  return <section className="space-y-4">
   <div className="flex flex-wrap items-start justify-between gap-3">
-   <div><h2 className="text-2xl font-black">{t.heading}</h2><p className="mt-1 text-sm text-muted-foreground">{t.intro}</p></div>
+   <div><h2 className="text-2xl font-black">{t.heading}</h2><p className="mt-1 text-sm text-muted-foreground">{environment==='production'?t.productionIntro:t.intro}</p></div>
    <button type="button" disabled={loading} onClick={()=>{setLoading(true);setGeneration(x=>x+1)}} className="rounded-xl border px-4 py-2 text-sm font-bold disabled:opacity-50">{t.refresh}</button>
   </div>
   <div className="grid gap-2 sm:grid-cols-4">
