@@ -80,7 +80,7 @@ async function requestSecurityContext() {
 // Supabase type snapshot. Keep this small compatibility wrapper isolated here;
 // regenerate crew-database.ts from the deployed schema when available.
 async function adminSecurityRpc<T>(supabase: Awaited<ReturnType<typeof createClient>>, fn: string, args: Record<string, unknown>) {
-    const rpc = supabase.rpc as unknown as (name: string, params: Record<string, unknown>) => Promise<{ data: T | null; error: { message?: string } | null }>
+    const rpc = supabase.rpc.bind(supabase) as unknown as (name: string, params: Record<string, unknown>) => Promise<{ data: T | null; error: { message?: string } | null }>
     return rpc(fn, args)
 }
 
