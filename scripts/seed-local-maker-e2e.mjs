@@ -17,7 +17,7 @@ const db=createClient(url,key,{auth:{persistSession:false,autoRefreshToken:false
 const {data,error}=await db.auth.admin.createUser({email,password,email_confirm:true,user_metadata:{full_name:'E2E MAKER 16'}})
 if(error||!data.user)throw Error('Unable to create isolated Maker QA identity: '+(error?.message||'no user'))
 const {error:profileError}=await db.from('profiles').upsert({
- id:data.user.id,full_name:'E2E MAKER 16',approved:true,role:'admin',
+ id:data.user.id,full_name:'E2E MAKER 16',approved:true,role:'staff',
  account_blocked:false,updated_at:new Date().toISOString(),
 },{onConflict:'id'})
 if(profileError)throw Error('Unable to create Maker QA profile: '+profileError.message)
