@@ -2,6 +2,7 @@
 import {useState} from 'react'
 import { showSaveSuccess } from '@/lib/client-save-success'
 import { humanizeAppError } from '@/lib/client-error-message'
+import {currentGodEnvironment} from '@/lib/god-mode-environments'
 
 const templates = [
   {name:'Workflowfuncties bekijken',sql:"select p.oid::regprocedure as functie, pg_get_functiondef(p.oid) as code\nfrom pg_proc p join pg_namespace n on n.oid=p.pronamespace\nwhere n.nspname='public' and p.prokind='f' and p.proname like 'upt_%'\norder by p.proname;"},
@@ -11,22 +12,25 @@ const templates = [
 ]
 
 export function GodSqlEditor(){
+  const environment=currentGodEnvironment(process.env.NEXT_PUBLIC_SUPABASE_URL)
+  const inProduction=environment==='production'
   const [sql,setSql]=useState(templates[0].sql)
   const [write,setWrite]=useState(false)
   const [confirmed,setConfirmed]=useState(false)
+  const [productionConfirmation,setProductionConfirmation]=useState('')
   const [busy,setBusy]=useState(false)
   const [result,setResult]=useState('')
   async function run(){
     if(busy)return
     setBusy(true);setResult('')
     try{
-      const response=await fetch('/api/god/sql',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action:'query',query:sql,write})})
+      const response=await fetch('/api/god/sql',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action:'query',query:sql,write,...(write&&inProduction?{productionConfirmation}: {})})})
       const data=await response.json()
       if(!response.ok)throw new Error(humanizeAppError(data.error))
-      setResult(JSON.stringify(data.data,null,2));setConfirmed(false)
+      setResult(JSON.stringify(data.data,null,2));setConfirmed(false);setProductionConfirmation('')
       if(write)showSaveSuccess()
     }catch(error){setResult(humanizeAppError(error))}
     finally{setBusy(false)}
   }
-  return <section className="space-y-4"><h2 className="text-xl font-black">Logica, workflows & SQL</h2><p className="text-sm text-muted-foreground">Open de bestaande functies en triggers, wijzig hun SQL of voeg nieuwe functies, tabellen en automatiseringen toe. Deze werkruimte voert opdrachten uit op de productiedatabase. Een broncodeherstel draait gegevenswijzigingen niet terug.</p><div className="flex flex-wrap gap-2">{templates.map(t=><button key={t.name} onClick={()=>{setSql(t.sql);setConfirmed(false)}} className="rounded-xl border px-3 py-2 text-sm">{t.name}</button>)}</div><textarea aria-label="SQL-programmering" rows={22} value={sql} spellCheck={false} onChange={e=>{setSql(e.target.value);setConfirmed(false)}} className="w-full rounded-xl border bg-background p-3 font-mono text-sm"/><label className="flex items-center gap-2"><input type="checkbox" checked={write} onChange={e=>{setWrite(e.target.checked);setConfirmed(false)}}/> Schrijven en structuurwijzigingen toestaan</label>{write&&<label className="flex items-start gap-2 rounded-xl border border-amber-500/50 p-3 text-sm"><input type="checkbox" checked={confirmed} onChange={e=>setConfirmed(e.target.checked)}/> Ik heb deze SQL gecontroleerd en wil deze wijziging uitvoeren op de live database.</label>}<button disabled={busy||!sql.trim()||(write&&!confirmed)} onClick={()=>void run()} className="rounded-xl bg-violet-600 px-5 py-3 font-bold text-white disabled:opacity-50">{busy?'UITVOEREN…':write?'WIJZIGING UITVOEREN':'ALLEEN LEZEN UITVOEREN'}</button>{result&&<pre role="status" className="max-h-[60vh] overflow-auto rounded-xl border p-3 text-xs">{result}</pre>}</section>
+  return <section className="space-y-4"><h2 className="text-xl font-black">Logica, workflows & SQL</h2><p className="text-sm text-muted-foreground">Open de bestaande functies en triggers, wijzig hun SQL of voeg nieuwe functies, tabellen en automatiseringen toe. {inProduction?'Deze werkruimte is gekoppeld aan de PRODUCTIE-database. Wijzigingen vereisen een afzonderlijke bevestiging.':'Deze SQL-werkruimte is gekoppeld aan MAIN-TEST. Productie blijft onaangeroerd.'} Een broncodeherstel draait databasewijzigingen niet terug.</p><div className="flex flex-wrap gap-2">{templates.map(t=><button key={t.name} onClick={()=>{setSql(t.sql);setConfirmed(false)}} className="rounded-xl border px-3 py-2 text-sm">{t.name}</button>)}</div><textarea aria-label="SQL-programmering" rows={22} value={sql} spellCheck={false} onChange={e=>{setSql(e.target.value);setConfirmed(false)}} className="w-full rounded-xl border bg-background p-3 font-mono text-sm"/><label className="flex items-center gap-2"><input type="checkbox" checked={write} onChange={e=>{setWrite(e.target.checked);setConfirmed(false)}}/> Schrijven en structuurwijzigingen toestaan</label>{write&&<label className="flex items-start gap-2 rounded-xl border border-amber-500/50 p-3 text-sm"><input type="checkbox" checked={confirmed} onChange={e=>setConfirmed(e.target.checked)}/> {inProduction?'Ik bevestig een wijziging aan PRODUCTIE.':'Ik bevestig deze wijziging aan MAIN-TEST.'}</label>}{write&&inProduction&&<label className="grid gap-1 rounded-xl border border-red-500/50 p-3 text-sm"><span>Typ PRODUCTION om de live databasewijziging uitdrukkelijk te bevestigen</span><input aria-label="Bevestig PRODUCTION" value={productionConfirmation} onChange={event=>setProductionConfirmation(event.target.value)} placeholder="PRODUCTION" className="rounded-lg border bg-background p-2 font-mono"/></label>}<button disabled={busy||!sql.trim()||(write&&!confirmed)||(write&&inProduction&&productionConfirmation!=='PRODUCTION')} onClick={()=>void run()} className="rounded-xl bg-violet-600 px-5 py-3 font-bold text-white disabled:opacity-50">{busy?'UITVOEREN…':write?'WIJZIGING UITVOEREN':'ALLEEN LEZEN UITVOEREN'}</button>{result&&<pre role="status" className="max-h-[60vh] overflow-auto rounded-xl border p-3 text-xs">{result}</pre>}</section>
 }
