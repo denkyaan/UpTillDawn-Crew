@@ -13,8 +13,11 @@ function downloadCredentials(accounts:QaBotProvisionState['accounts']){
  const link=document.createElement('a')
  link.href=url
  link.download='UpTillDawn-7-testbots-login.csv'
+ document.body.append(link)
  link.click()
- URL.revokeObjectURL(url)
+ link.remove()
+ // Safari on iOS may begin the download after the click handler returns.
+ window.setTimeout(()=>URL.revokeObjectURL(url),5000)
 }
 export function MakerQaBotSetup(){
  const [state,action,pending]=useActionState(provisionOwnerQaBots,initial)
