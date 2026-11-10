@@ -93,7 +93,8 @@ export function MakerOverview({navigate,environment}:{navigate:(tab:Destination)
   ()=>'nl' as SupportedUiLocale,
  )
  const t=dictionary[locale]
- const [state,setState]=useState<Overview|null>(null)
+ const [overviewState,setState]=useState<{environment:'main'|'production';data:Overview}|null>(null)
+ const state=overviewState?.environment===environment?overviewState.data:null
  const [error,setError]=useState(false)
  const [loading,setLoading]=useState(true)
  const [serial,setSerial]=useState(0)
@@ -101,7 +102,7 @@ export function MakerOverview({navigate,environment}:{navigate:(tab:Destination)
   const controller=new AbortController()
   fetch('/api/god/overview?environment='+environment,{cache:'no-store',signal:controller.signal})
    .then(async response=>{if(!response.ok)throw Error('overview');return await response.json() as Overview})
-   .then(data=>{if(!controller.signal.aborted){setState(data);setError(false)}})
+   .then(data=>{if(!controller.signal.aborted){setState({environment,data});setError(false)}})
    .catch(()=>{if(!controller.signal.aborted)setError(true)})
    .finally(()=>{if(!controller.signal.aborted)setLoading(false)})
   return()=>controller.abort()
