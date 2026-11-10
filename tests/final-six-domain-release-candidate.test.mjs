@@ -10,7 +10,7 @@ test('release candidate: God Mode owns three-role visual editing, automation, AI
   const preview=await read('app/api/god/preview-role/route.ts')
   const automation=await read('components/god-mode/god-automation-builder.tsx')
   for(const role of ['staff','responsible_lead','admin']) assert.ok(builder.includes(role),role)
-  for(const surface of ['Live Builder','AI tekstuitvoering','Automaties','Programmering','Knoppen & onderdelen','Logica & workflows','Rollen & navigatie','Versies & publicatie']) assert.ok(studio.includes(surface),surface)
+  for(const surface of ['Overzicht','Fouten & logs','AI-assistent','Layout','Technisch','Automaties','Programmering','Onderdelen','Rolnavigatie','Versies & release']) assert.ok(studio.includes(surface),surface)
   for(const capability of ['Preview toepassen','AI-codevoorstel maken','Functie / knop toevoegen','Thema & kleuren']) assert.ok(builder.includes(capability),capability)
   assert.match(preview,/upt_current_is_owner/)
   assert.match(preview,/upt_set_admin_role_mode/)
