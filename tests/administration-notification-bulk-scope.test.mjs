@@ -20,7 +20,14 @@ test('single and bulk read refresh administration and shared notification inboxe
   const action=source.slice(start,end)
   assert.ok(action.includes("revalidatePath('/portals/administration/modules/notifications')"))
   assert.ok(action.includes("revalidatePath('/notifications')"))
-  assert.ok(action.includes(".eq('user_id',current.id).is('read_at',null)"))
+  assert.doesNotMatch(action,/from\('crew_notifications'\)\.update/)
+ }
+ const single=source.slice(source.indexOf('async function markAdministrationNotificationRead'),source.indexOf('async function markAllAdministrationNotificationsRead'))
+ const bulk=source.slice(source.indexOf('async function markAllAdministrationNotificationsRead'),source.indexOf('const ui='))
+ assert.match(single,/rpc\('upt_mark_notification_read'/)
+ assert.match(bulk,/await markAllNotificationsRead\(\)/)
+ assert.match(source,/import \{markAllNotificationsRead\}/)
+
  }
 })
 

@@ -1,7 +1,8 @@
 import {listPage} from "@/lib/list-query"
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase/crew-server'
-import { markNotificationRead } from '@/lib/actions/uptilldawn'
+import { markNotificationRead, markAllNotificationsRead } from '@/lib/actions/uptilldawn'
+import {PendingSubmitButton} from '@/components/ui/pending-submit-button'
 import { nlStatus } from '@/lib/ui-nl'
 import { NotificationBadgeSync } from '@/components/notification-badge-sync'
 import { NotificationOpenLink } from '@/components/admin/notification-open-link'
@@ -47,10 +48,10 @@ export default async function Page({searchParams}:{searchParams?:Promise<{page?:
   const pageHref=(target:number)=>prefix+'?page='+target+'&view='+selectedView+scopedSuffix
   const viewHref=(view:'unread'|'all')=>prefix+'?view='+view+scopedSuffix
   const labels={
-    nl:{unread:'Ongelezen',all:'Alle meldingen',empty:'Geen ongelezen meldingen.'},
-    fr:{unread:'Non lues',all:'Toutes les notifications',empty:'Aucune notification non lue.'},
-    en:{unread:'Unread',all:'All notifications',empty:'No unread notifications.'},
-    de:{unread:'Ungelesen',all:'Alle Mitteilungen',empty:'Keine ungelesenen Mitteilungen.'},
+    nl:{unread:'Ongelezen',all:'Alle meldingen',empty:'Geen ongelezen meldingen.',clearAll:'Alles als gelezen (alle pagina’s)',clearing:'Verwerken…'},
+    fr:{unread:'Non lues',all:'Toutes les notifications',empty:'Aucune notification non lue.',clearAll:'Tout marquer comme lu (toutes les pages)',clearing:'Traitement…'},
+    en:{unread:'Unread',all:'All notifications',empty:'No unread notifications.',clearAll:'Mark all as read (all pages)',clearing:'Processing…'},
+    de:{unread:'Ungelesen',all:'Alle Mitteilungen',empty:'Keine ungelesenen Mitteilungen.',clearAll:'Alle als gelesen markieren (alle Seiten)',clearing:'Wird verarbeitet…'},
   }[locale]
   if(badgeError)console.error('[Notifications] badge count',badgeError.code)
 
@@ -61,6 +62,9 @@ export default async function Page({searchParams}:{searchParams?:Promise<{page?:
       <Link href={viewHref('unread')} aria-current={selectedView==='unread'?'page':undefined} className={`rounded-xl border px-4 py-2 text-sm font-semibold ${selectedView==='unread'?'border-violet-500 bg-violet-500/10':'hover:bg-muted/30'}`}>{labels.unread} ({badgeCount??0})</Link>
       <Link href={viewHref('all')} aria-current={selectedView==='all'?'page':undefined} className={`rounded-xl border px-4 py-2 text-sm font-semibold ${selectedView==='all'?'border-violet-500 bg-violet-500/10':'hover:bg-muted/30'}`}>{labels.all}</Link>
     </nav>
+    {!error&&!badgeError&&(badgeCount??0)>0&&<form action={markAllNotificationsRead} className="flex justify-end">
+      <PendingSubmitButton pendingLabel={labels.clearing} className="rounded-lg border px-4 py-2 text-sm font-semibold">{labels.clearAll}</PendingSubmitButton>
+    </form>}
     {error ? <p role="alert">{translateRuntimeUi("Meldingen konden niet worden geladen.",locale)}</p> : !visibleRows?.length ? <p>{selectedView==='unread'?labels.empty:translateRuntimeUi("Geen meldingen.",locale)}</p> : visibleRows.map(n => {
       const safeLink=params.scope==='administration'?administrationNotificationHref(n.link):safeNotificationLink(n.link)
       return <article key={n.id} className={`rounded-xl border p-4 ${n.read_at ? '' : 'border-violet-500'}`}>

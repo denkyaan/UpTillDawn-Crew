@@ -1152,6 +1152,36 @@ export async function markNotificationRead(fd:FormData){
  await revalidatePath('/portals/administration/modules/notifications')
  await revalidatePath('/portals/promotion/notifications')
 }
+/** Mark the current user's notifications through the existing scoped RPC.
+ * Use bounded concurrent batches, and a fixed cutoff so incoming notifications
+ * never create an unbounded loop or get marked without the user's action. */
+export async function markAllNotificationsRead(){
+ const s=await createClient()
+ const {data:{user},error:authError}=await s.auth.getUser()
+ if(authError||!user)throw new Error('Aanmelden vereist.')
+ const cutoff=new Date().toISOString()
+ for(;;){
+  const {data,error}=await s.from('crew_notifications')
+   .select('id').eq('user_id',user.id).is('read_at',null)
+   .lte('created_at',cutoff)
+   .order('created_at',{ascending:false}).order('id',{ascending:false})
+   .limit(50)
+  check(error)
+  if(!data?.length)break
+  // The database checks auth.uid() inside each RPC. Never grant browser UPDATE
+  // rights to the notifications table or accept another user's ID.
+  for(let offset=0;offset<data.length;offset+=5){
+   const results=await Promise.all(data.slice(offset,offset+5).map(row=>
+    s.rpc('upt_mark_notification_read',{p_notification:row.id})
+   ))
+   for(const result of results)check(result.error)
+  }
+  if(data.length<50)break
+ }
+ await revalidatePath('/notifications')
+ await revalidatePath('/portals/administration/modules/notifications')
+ await revalidatePath('/portals/promotion/notifications')
+}
 export async function archiveEvent(fd:FormData){const {s}=await adminClient();const {error}=await s.rpc('upt_archive_event',{p_event:uuid.parse(fd.get('event_id'))});check(error);await revalidatePath('/events');await markSaveSuccess('event_archived')}
 export async function duplicateEvent(fd:FormData){const {s}=await adminClient();const [start,end]=dates(fd,'start_at','end_at');const {error}=await s.rpc('upt_duplicate_event',{p_event:uuid.parse(fd.get('event_id')),p_name:text.parse(fd.get('name')),p_start:start,p_end:end});check(error);await revalidatePath('/events');await markSaveSuccess('event_duplicated')}
 export async function createEventDocument(fd:FormData){
