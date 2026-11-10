@@ -2,13 +2,13 @@ import test from 'node:test'
 import assert from 'node:assert/strict'
 import { readFile } from 'node:fs/promises'
 
-test('god mode opens in visual builder with all three role previews', async () => {
+test('God Mode opens in an overview with visual builder accessible and all three role previews', async () => {
   const studio = await readFile(new URL('../components/god-mode/god-studio.tsx', import.meta.url), 'utf8')
   const builder = await readFile(new URL('../components/god-mode/god-visual-builder.tsx', import.meta.url), 'utf8')
   const route = await readFile(new URL('../app/api/god/preview-role/route.ts', import.meta.url), 'utf8')
 
-  assert.ok(studio.includes("useState<Tab>('builder')"))
-  assert.ok(studio.includes("['builder','Live Builder']"))
+  assert.ok(studio.includes("useState<Tab>('overview')"))
+  assert.ok(studio.includes("['builder','Layout']"))
   assert.ok(studio.includes("['automations','Automaties']"))
   for (const role of ['staff','responsible_lead','admin']) assert.ok(builder.includes(role))
   assert.ok(builder.includes('Preview toepassen'))
