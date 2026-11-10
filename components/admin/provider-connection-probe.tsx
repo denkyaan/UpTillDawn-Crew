@@ -1,5 +1,5 @@
 "use client"
-import {useEffect,useRef,useState} from "react"
+import {useCallback,useEffect,useRef,useState} from "react"
 import type {SupportedUiLocale} from "@/lib/locale-preferences"
 import {activeUiLocale,LANGUAGE_APPLIED_EVENT} from "@/lib/locale-preferences"
 import type {ConnectionProvider,ConnectionState} from "@/lib/administration/provider-connection-check"
@@ -16,10 +16,13 @@ export function ProviderConnectionProbe({provider,initialLocale}:{provider:Conne
  const [status,setStatus]=useState<ConnectionState|null>(null)
  const [busy,setBusy]=useState(false)
  const last=useRef(0)
+ const inFlight=useRef(false)
  useEffect(()=>{const apply=()=>setLocale(activeUiLocale());apply();window.addEventListener(LANGUAGE_APPLIED_EVENT,apply);return()=>window.removeEventListener(LANGUAGE_APPLIED_EVENT,apply)},[])
- async function check(){
-  if(busy||Date.now()-last.current<12000)return
-  last.current=Date.now();setBusy(true);setStatus(null)
+ const check=useCallback(async(force=false)=>{
+  // Prevent overlapping requests. A just-saved key must be checked even if a
+  // manual test was run within the normal 12-second rate limit.
+  if(inFlight.current||(!force&&Date.now()-last.current<12000))return
+  inFlight.current=true;last.current=Date.now();setBusy(true);setStatus(null)
   try{
    const response=await fetch("/api/admin/provider-connection-check",{method:"POST",headers:{"Content-Type":"application/json"},credentials:"same-origin",cache:"no-store",body:JSON.stringify({provider})})
    if(!response.ok){setStatus("unavailable");return}
@@ -29,8 +32,17 @@ export function ProviderConnectionProbe({provider,initialLocale}:{provider:Conne
    if(state==="connected"||state==="not_configured"||state==="unauthorized"||state==="unavailable")setStatus(state)
    else setStatus("unavailable")
   }catch{setStatus("unavailable")}
-  finally{setBusy(false)}
- }
+  finally{inFlight.current=false;setBusy(false)}
+ },[provider])
+ useEffect(()=>{
+  const onChanged=(event:Event)=>{
+   if(!(event instanceof CustomEvent)||!event.detail||event.detail.provider!==provider)return
+   if(event.detail.action==="removed"){setStatus("not_configured");last.current=0;return}
+   if(event.detail.action==="saved")void check(true)
+  }
+  window.addEventListener("uptilldawn-integration-credentials-changed",onChanged)
+  return()=>window.removeEventListener("uptilldawn-integration-credentials-changed",onChanged)
+ },[provider,check])
  const t=copy[locale]
  return <div className="mt-3 space-y-2 border-t pt-3">
   <button type="button" onClick={()=>void check()} disabled={busy} className="min-h-11 rounded-lg border px-3 py-2 text-xs font-bold disabled:opacity-50">{busy?t.working:t.check}</button>
