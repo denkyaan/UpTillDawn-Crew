@@ -5,6 +5,7 @@ import path from 'node:path'
 
 const retired=[
   {path:'components/portal-guided-tour.tsx',symbol:'PortalGuidedTour',importPath:'portal-guided-tour'},
+  {path:'components/crew/workplace-tour-button.tsx',symbol:'WorkplaceTourButton',importPath:'workplace-tour-button'},
 ]
 const runtimeRoots=['app','components','lib','services','workers']
 
@@ -42,8 +43,9 @@ test('real operational event preparation stays available',async()=>{
   assert.match(workplaces,/ContextLink/)
 })
 
-test('active workplace guidance remains integrated with shift planning',async()=>{
+test('shift planning retains actual confirmation and change controls without a guided tour',async()=>{
   const source=await readFile('components/crew/workplace-shift-planner.tsx','utf8')
-  await access('components/crew/workplace-tour-button.tsx')
-  assert.match(source,/WorkplaceTourButton/)
+  assert.doesNotMatch(source,/WorkplaceTourButton|workplace-tour-button/)
+  assert.match(source,/confirmShift/)
+  assert.match(source,/OwnShiftChangeControls/)
 })

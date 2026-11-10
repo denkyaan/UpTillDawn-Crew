@@ -19,10 +19,12 @@ The responsive bottom bar retains a 56px minimum height as required by the exist
 
 Production deployment is intentionally out of scope.
 
-## Verified orphan cleanup — 10 November 2026
+## Complete guided-tour removal — 10 November 2026
 
-The retired Promotion/Administration guided-tour component is removed after the actual runtime import scan confirmed that it was not used. The workplace-specific tour button remains installed because `components/crew/workplace-shift-planner.tsx` actively imports and renders it. Removing it would break the working shift-planner UI.
+The legacy Promotion/Administration guided tour was removed previously. The final workplace-specific guided-tour button is now removed from the shift planner along with its unused component, completing the requested retirement of optional step-by-step tours.
 
-The source-tree regression `tests/retired-tour-code-cleanup.test.mjs` rejects revived references to the orphaned portal tour, and positively verifies that active workplace guidance remains. Existing event preparation, briefing acknowledgements, operating procedures and help remain available.
+The planner continues to display and execute real shift confirmation, change requests, briefing and assigned-workplace workflows. Mandatory event preparation remains distinct from a guided tour and is preserved.
 
-No historical audit records, chat messages, notifications, credentials or real event data are deleted.
+The repository-scanning regression `tests/retired-tour-code-cleanup.test.mjs` rejects reintroduced references to either retired tour and asserts that operational shift confirmation and shift-change controls still exist. No user, event, chat, payroll, inventory or other data was deleted.
+
+Production deployment remains separately controlled.
