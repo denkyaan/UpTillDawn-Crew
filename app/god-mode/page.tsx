@@ -26,7 +26,7 @@ export default async function GodModePage(){
         <p className="text-xs font-black uppercase tracking-[0.25em] text-amber-500">God Mode</p>
         <h1 className="mt-1 text-3xl font-black">App Studio</h1>
         <p className="mt-2 text-sm text-muted-foreground">Programmeer de app, bewerk gegevens en beheer logica, workflows en versies.</p>
-        <nav aria-label="God Mode omgeving" className="mt-3 flex flex-wrap gap-2">{Object.values(GOD_ENVIRONMENTS).map(item=><Link key={item.id} href={item.origin+'/god-mode'} prefetch={false} aria-current={environment.id===item.id?'page':undefined} className={'rounded-xl border px-4 py-2 text-sm font-bold '+(environment.id===item.id?'border-amber-500 bg-amber-500/15':'hover:border-violet-500')}>{item.label}{environment.id===item.id?' · ●':''}</Link>)}</nav>
+        <nav aria-label="God Mode" className="mt-3 flex flex-wrap gap-2">{Object.values(GOD_ENVIRONMENTS).map(item=><Link key={item.id} href={item.origin+'/god-mode'} prefetch={false} aria-current={environment.id===item.id?'page':undefined} className={'rounded-xl border px-4 py-2 text-sm font-bold '+(environment.id===item.id?'border-amber-500 bg-amber-500/15':'hover:border-violet-500')}>{item.label}{environment.id===item.id?' · ●':''}</Link>)}</nav>
         <div className="mt-4 flex flex-wrap gap-2"><Link href="/" className="rounded-xl border px-4 py-2 text-sm font-bold">Website openen</Link><form action={godModeLogout}><button className="rounded-xl border px-4 py-2 text-sm font-bold">God Mode afsluiten</button></form></div>
       </header>
       <UploadSecurityAudit rows={securityRows||[]}/>
