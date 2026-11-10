@@ -13,7 +13,7 @@ await mkdir(output,{recursive:true})
 const browser=await chromium.launch({headless:true})
 const one=async query=>{const {data,error}=await query.single();if(error)throw error;return data}
 async function actor(email){const db=createClient(url,key,{auth:{persistSession:false,autoRefreshToken:false}});const {data,error}=await db.auth.signInWithPassword({email,password});if(error)throw error;const context=await browser.newContext({viewport:{width:390,height:844},locale:'en',acceptDownloads:true});const response=await context.request.post(base+'/api/test-auth-session',{data:{access_token:data.session.access_token,refresh_token:data.session.refresh_token}});assert.equal(response.status(),200);return {db,context,user:data.user,page:await context.newPage()}}
-async function submit(page,button){const response=page.waitForResponse(r=>r.request().method()==='POST'&&new URL(r.url()).origin===new URL(base).origin&&Boolean(r.request().headers()['next-action']));await button.click();const result=await response;assert.ok(result.status()<400);assert.ok(!result.headers()['x-action-redirect']?.includes('error'))}
+async function submit(page,button){const response=page.waitForResponse(r=>r.request().method()==='POST'&&new URL(r.url()).origin===new URL(base).origin&&Boolean(r.request().headers()['next-action']));const [result]=await Promise.all([response,button.click()]);assert.ok(result.status()<400);assert.ok(!result.headers()['x-action-redirect']?.includes('error'))}
 const ok=message=>{checks.push(message);console.log('PASS:',message)}
 let failure
 try{
@@ -50,7 +50,12 @@ try{
  ok('Customer references and invoice line units persist through the preparation forms')
  const {error:reviewError}=await office.db.from('admin_financial_documents').update({status:'review'}).eq('id',document.id);assert.equal(reviewError,null)
  await gotoReady(admin.page,base+'/portals/administration/finance')
- const approval=admin.page.locator(`form:has(input[name="document_id"][value="${document.id}"]):has(input[name="status"][value="approved"]) button`)
+ // RSC navigation can retain a hidden copy of a form while the current
+ // invoice is visible. Never click an arbitrary duplicate: require exactly one
+ // *visible* approval control for the specific document and status.
+ const approval=admin.page.locator(`form:visible:has(input[name="document_id"][value="${document.id}"]):has(input[name="status"][value="approved"]) button[type="submit"]:visible`)
+ await approval.waitFor({state:'visible'})
+ assert.equal(await approval.count(),1,'Each invoice must expose exactly one visible Admin approval action')
  await submit(admin.page,approval);await approval.waitFor({state:'detached'})
  await gotoReady(office.page,base+`/portals/administration/modules/invoices/${document.id}/peppol`)
  await office.page.getByRole('button',{name:'Check data',exact:true}).click()

@@ -100,11 +100,39 @@ try{
  ])
  assert.ok(attachmentResponse.status()<400,'Attachment upload action must succeed')
  assert.ok(!attachmentResponse.headers()['x-action-redirect']?.includes('error=1'),'Attachment upload action must persist metadata')
- const attachment=await one(office.db.from('admin_financial_attachments').select('id,original_name').eq('document_id',document.id))
+ const attachment=await one(office.db.from('admin_financial_attachments').select('id,original_name,storage_path').eq('document_id',document.id))
  assert.equal(attachment.original_name,attachmentName)
+ const downloadPath='/api/administration/finance/attachments/'+attachment.id
+ const {data:pendingScan,error:pendingScanError}=await office.db.from('upload_security_scans')
+  .select('storage_path,status').eq('bucket_id','admin-financial-attachments').eq('storage_path',attachment.storage_path).maybeSingle()
+ assert.equal(pendingScanError,null,'Authorized Administration can inspect the private scan status')
+ assert.equal(pendingScan?.status,'pending','New finance originals must be quarantined, never automatically trusted')
+ await gotoReady(page,base+'/portals/administration/finance')
+ assert.equal(await page.getByRole('link',{name:attachmentName,exact:true}).count(),0,'Pending uploads must not expose a download link')
+ assert.equal((await officeContext.request.get(base+downloadPath)).status(),423,'Pending uploads cannot be signed by the attachment API')
+ assert.equal((await staffContext.request.get(base+downloadPath)).status(),403,'Ordinary staff cannot read quarantined attachments')
+ // A synthetic verdict is allowed ONLY in the disposable local CI stack.
+ // This does not exercise or claim a real malware scan; production must keep
+ // its trusted scanner and fail-closed quarantine before offering downloads.
+ const localHost=new URL(url).hostname
+ const localDatabase=new URL(process.env.BOT_DB_URL||'postgresql://invalid.invalid/postgres')
+ if(process.env.UPT_E2E_ALLOW_SYNTHETIC_SCAN!=='1'||
+    !['localhost','127.0.0.1'].includes(localHost)||
+    localDatabase.hostname!=='127.0.0.1'||localDatabase.port!=='54322'||
+    localDatabase.pathname!=='/postgres'||!process.env.BOT_SERVICE_ROLE_KEY)
+  throw Error('Synthetic finance scan verdict requires an explicitly enabled, disposable local CI database')
+ const scannerFixture=createClient(url,process.env.BOT_SERVICE_ROLE_KEY,{auth:{persistSession:false,autoRefreshToken:false}})
+ const now=new Date().toISOString()
+ const {data:syntheticVerdict,error:syntheticError}=await scannerFixture.from('upload_security_scans')
+  .update({status:'clean',engine:'isolated-ci-synthetic',engine_result:{successful:true,clean:true,synthetic:true},scanned_at:now,updated_at:now})
+  .eq('bucket_id','admin-financial-attachments').eq('storage_path',attachment.storage_path).eq('status','pending')
+  .select('id').maybeSingle()
+ assert.equal(syntheticError,null,'Synthetic verdict must be written to isolated CI storage only')
+ assert.ok(syntheticVerdict,'Exactly one pending test attachment must be transitioned after the quarantine assertions')
  await gotoReady(page,base+'/portals/administration/finance')
  const attachmentLink=page.getByRole('link',{name:attachmentName,exact:true})
- assert.equal(await attachmentLink.getAttribute('href'),'/api/administration/finance/attachments/'+attachment.id)
+ await attachmentLink.waitFor({state:'visible',timeout:browserTimeoutMs})
+ assert.equal(await attachmentLink.getAttribute('href'),downloadPath)
  const [download]=await Promise.all([page.waitForEvent('download',{timeout:browserTimeoutMs}),attachmentLink.click()])
  assert.equal(download.suggestedFilename(),attachmentName)
  const downloadStream=await download.createReadStream(),chunks=[]
