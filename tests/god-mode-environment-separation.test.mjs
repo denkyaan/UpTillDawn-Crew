@@ -26,13 +26,14 @@ test('Every SQL operation is bound to the active Supabase project',async()=>{
  const [route,editor]=await Promise.all([
   read('app/api/god/sql/route.ts'),read('components/god-mode/god-sql-editor.tsx'),
  ])
- assert.match(route,/requiredGodEnvironment\(process\.env\.NEXT_PUBLIC_SUPABASE_URL\)/)
- assert.match(route,/project\.supabaseProject/)
- assert.doesNotMatch(route,/const PROJECT = 'eakoavcieossazqzplke'/)
- assert.match(route,/body\.write&&environment\.id==='production'/)
- assert.match(route,/body\.productionConfirmation!=='PRODUCTION'/)
- assert.match(editor,/productionConfirmation/)
- assert.match(editor,/productionConfirmation!=='PRODUCTION'/)
+ assert.match(route,/main:'npbjrtiolqperdgljnhi'/)
+ assert.match(route,/production:'eakoavcieossazqzplke'/)
+ assert.match(route,/PROJECTS\[target\]/)
+ assert.match(route,/body\.environment==='production'&&body\.write/)
+ assert.match(route,/read_only:readOnly/)
+ assert.match(editor,/disabled=\{inProduction\}/)
+ assert.match(editor,/write:write&&!inProduction/)
+ 
 })
 test('Cross-environment logs stay read only and never forward a different Supabase JWT',async()=>{
  const route=await read('app/api/god/logs/route.ts')
