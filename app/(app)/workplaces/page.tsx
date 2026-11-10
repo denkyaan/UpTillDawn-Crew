@@ -139,10 +139,24 @@ export default async function Page({searchParams}:{searchParams?:Promise<{event?
       }]
     })
   }else{
-    const [{data:ownShifts},{data:ownResponsible}]=await Promise.all([
-      s.from('shifts').select('event_id,workplace_id,scheduled_start,scheduled_end').eq('user_id',user.id).neq('status','cancelled').neq('response_status','declined'),
-      s.from('responsible_assignments').select('event_id,workplace_id').eq('user_id',user.id),
-    ])
+    const loadOwnAssignments=async()=>{
+      const [shiftsResult,responsibleResult]=await Promise.all([
+        s.from('shifts').select('event_id,workplace_id,scheduled_start,scheduled_end').eq('user_id',user.id).neq('status','cancelled').neq('response_status','declined'),
+        s.from('responsible_assignments').select('event_id,workplace_id').eq('user_id',user.id),
+      ])
+      // A failed authorized read is not evidence of zero assignments. Never
+      // convert a transient PostgREST/RLS error into a misleading redirect.
+      if(shiftsResult.error||responsibleResult.error){
+        throw new Error('Werkplektoewijzingen konden niet worden geladen: '+(shiftsResult.error?.message||responsibleResult.error?.message))
+      }
+      return {ownShifts:shiftsResult.data||[],ownResponsible:responsibleResult.data||[]}
+    }
+    let {ownShifts,ownResponsible}=await loadOwnAssignments()
+    // A responsible lead's assignment is the source of truth for access.
+    // Recheck a suspicious empty read once before showing an unassigned state.
+    if(isResponsible&&!ownShifts.length&&!ownResponsible.length){
+      ({ownShifts,ownResponsible}=await loadOwnAssignments())
+    }
     const workplaceIds=[...new Set([
       ...(ownShifts||[]).map(row=>row.workplace_id),
       ...(ownResponsible||[]).map(row=>row.workplace_id),
@@ -151,7 +165,13 @@ export default async function Page({searchParams}:{searchParams?:Promise<{event?
       ...(ownShifts||[]).map(row=>row.event_id),
       ...(ownResponsible||[]).map(row=>row.event_id),
     ])]
-    if(!eventIds.length||!workplaceIds.length)redirect('/events')
+    if(!eventIds.length||!workplaceIds.length){
+      if(isResponsible)return <main className="space-y-3 p-4 md:p-8">
+        <h1 className="text-3xl font-black">Werkplaatsen & shifts</h1>
+        <p className="text-muted-foreground">Je hebt momenteel geen toegewezen werkplaatsen. Zodra je aan een werkplek gekoppeld wordt, verschijnt die hier.</p>
+      </main>
+      redirect('/events')
+    }
 
     const [{data:eventRows,error:eventRowsError},{data:workplaceRows,error:workplaceRowsError}]=await Promise.all([
       s.from('events').select('id,name,start_at,end_at').in('id',eventIds).neq('status','archived').order('start_at'),
@@ -170,7 +190,13 @@ export default async function Page({searchParams}:{searchParams?:Promise<{event?
     events=visibleEventRows.map(event=>({id:event.id,name:event.name}))
     const assignedEventById=new Map(visibleEventRows.map(event=>[event.id,{name:event.name,start_at:event.start_at,end_at:event.end_at}]))
     workplaces=(workplaceRows||[]).filter(workplace=>assignedEventById.has(workplace.event_id)).map(workplace=>({...workplace,events:assignedEventById.get(workplace.event_id)||null}))
-    if(!events.length||!workplaces.length)redirect('/events')
+    if(!events.length||!workplaces.length){
+      if(isResponsible)return <main className="space-y-3 p-4 md:p-8">
+        <h1 className="text-3xl font-black">Werkplaatsen & shifts</h1>
+        <p className="text-muted-foreground">Er zijn momenteel geen zichtbare toegewezen werkplaatsen voor je evenementen.</p>
+      </main>
+      redirect('/events')
+    }
 
     if(isResponsible){
       const [{data:shiftRows},{data:responsibleRows}]=await Promise.all([
