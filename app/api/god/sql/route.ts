@@ -1,17 +1,11 @@
 import { z } from 'zod'
 import { authorizeStudio, studioBody, studioFailure, studioResponse, StudioError } from '@/lib/god-studio-server'
 
-const PROJECT = 'npbjrtiolqperdgljnhi'
-const QA_URL = 'https://npbjrtiolqperdgljnhi.supabase.co'
-
-function requireMainTest(){
- if(process.env.NEXT_PUBLIC_SUPABASE_URL!==QA_URL){
-  throw new StudioError('De SQL-werkruimte is alleen beschikbaar op main-test. Productiedata worden hier niet bewerkt.',403)
- }
-}
+import {requiredGodEnvironment} from '@/lib/god-mode-environments'
 
 async function queryDatabase(credential: string, query: string, readOnly: boolean) {
-  const response = await fetch(`https://api.supabase.com/v1/projects/${PROJECT}/database/query`, {
+  const project=requiredGodEnvironment(process.env.NEXT_PUBLIC_SUPABASE_URL)
+  const response = await fetch(`https://api.supabase.com/v1/projects/${project.supabaseProject}/database/query`, {
     method:'POST', headers:{Authorization:`Bearer ${credential}`,'Content-Type':'application/json'},
     body:JSON.stringify({query,read_only:readOnly}), cache:'no-store', redirect:'manual', signal:AbortSignal.timeout(30_000),
   })
@@ -22,7 +16,7 @@ async function queryDatabase(credential: string, query: string, readOnly: boolea
 
 export async function GET(request: Request) {
   try {
-    requireMainTest()
+    requiredGodEnvironment(process.env.NEXT_PUBLIC_SUPABASE_URL)
     const {client,token}=await authorizeStudio(request)
     const {data,error}=await client.rpc('upt_god_database_secret',{p_token:token})
     if(error)throw new StudioError('Databasekoppeling niet beschikbaar.',503)
@@ -35,7 +29,7 @@ export async function POST(request: Request) {
     const {client,token}=await authorizeStudio(request)
     const body=z.discriminatedUnion('action',[
       z.object({action:z.literal('connect'),credential:z.string().trim().min(20).max(500)}).strict(),
-      z.object({action:z.literal('query'),query:z.string().trim().min(1).max(100000),write:z.boolean()}).strict(),
+      z.object({action:z.literal('query'),query:z.string().trim().min(1).max(100000),write:z.boolean(),productionConfirmation:z.literal('PRODUCTION').optional()}).strict(),
       z.object({action:z.literal('disconnect')}).strict(),
     ]).parse(await studioBody(request))
     if(body.action==='connect'){
@@ -51,7 +45,10 @@ export async function POST(request: Request) {
     }
     const {data:credential,error}=await client.rpc('upt_god_database_secret',{p_token:token})
     if(error||!credential)throw new StudioError('Koppel een Supabase Management API-sleutel in Koppelingen om SQL uit te voeren.',428)
-    return studioResponse({data:await queryDatabase(credential,body.query,!body.write)})
+    const environment=requiredGodEnvironment(process.env.NEXT_PUBLIC_SUPABASE_URL)
+    if(body.write&&environment.id==='production'&&body.productionConfirmation!=='PRODUCTION')
+      throw new StudioError('Productieschrijfacties vereisen een expliciete PRODUCTION-bevestiging.',403)
+    return studioResponse({data:await queryDatabase(credential,body.query,!body.write),environment:environment.id})
   }catch(error){
     if(error instanceof z.ZodError)return studioResponse({error:'Ongeldige SQL-aanvraag.'},400)
     return studioFailure(error)
