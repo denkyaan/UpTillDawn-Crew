@@ -81,7 +81,10 @@ export async function GET(request:Request){
   return studioResponse({
    repository:'denkyaan/UpTillDawn-Crew',branch:'main',environment:target,
    githubConnected:Boolean(credential),databaseConnected:Boolean(dbCredential),githubAvailable:mainHead!==null,
-   head:relevantHead,mainHead,deployedSha:lastSuccessfulDeploy?.head_sha||null,
+   // A workflow_dispatch head_sha can differ from the explicitly pinned release_sha.
+   // Never present it as the verified live production revision without deployment evidence.
+   head:relevantHead,mainHead,deployedSha:target==='main'?lastSuccessfulDeploy?.head_sha||null:null,
+   productionReleaseShaVerified:false,
    ci:summary(latestCi,relevantHead),deploy:summary(latestDeploy,relevantHead),
    reports,checks:{code:mainHead!==null,ci:ciRuns!==null,deploy:deployRuns!==null,reports:reports!==null},
   })
