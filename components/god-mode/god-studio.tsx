@@ -12,8 +12,10 @@ import {humanizeAppError} from '@/lib/client-error-message'
 import targets from '@/lib/god-source-index.json'
 
 const CodeEditor=dynamic(()=>import('./code-editor'),{ssr:false,loading:()=> <p>Code-editor laden…</p>})
-const tabs=[['builder','Live Builder'],['ai','AI tekstuitvoering'],['automations','Automaties'],['source','Programmering'],['elements','Knoppen & onderdelen'],['data','Gegevens'],['sql','Logica & workflows'],['roles','Rollen & navigatie'],['versions','Versies & publicatie'],['connections','Koppelingen']] as const
-type Tab=typeof tabs[number][0]
+const sections=[['overview','Overzicht'],['monitor','Fouten & logs'],['ai','AI-assistent'],['builder','Layout'],['tools','Technisch']] as const
+const tabs=[['automations','Automaties'],['source','Programmering'],['elements','Onderdelen'],['data','Gegevens'],['sql','SQL'],['roles','Rolnavigatie'],['versions','Versies & release'],['connections','Koppelingen']] as const
+type Tab=typeof tabs[number][0]|'overview'|'monitor'|'ai'|'builder'
+const toolKeys=new Set<string>(tabs.map(([key])=>key))
 type Proposal={number:number;url:string;sha:string;branch:string}
 type Commit={sha:string;html_url:string;commit:{message:string;author:{date:string}}}
 type Pull={number:number;html_url:string;title:string;head:{sha:string;ref:string}}
@@ -63,8 +65,8 @@ async function api<T>(url:string,body?:unknown,method=body?'POST':'GET'):Promise
   return data as T
 }
 
-export function GodStudio(){
-  const [tab,setTab]=useState<Tab>('builder')
+export function GodStudio({securityAudit}:{securityAudit?:React.ReactNode}){
+  const [tab,setTab]=useState<Tab>('overview')
   const [files,setFiles]=useState<SourceEntry[]>([])
   const [base,setBase]=useState('')
   const [connected,setConnected]=useState(false)
@@ -88,6 +90,11 @@ export function GodStudio(){
   const [history,setHistory]=useState<Commit[]>([])
   const [pulls,setPulls]=useState<Pull[]>([])
   const [runs,setRuns]=useState<Run[]>([])
+  const [operationsRuns,setOperationsRuns]=useState<Run[]>([])
+  const [operationsError,setOperationsError]=useState('')
+  const [lastRefreshed,setLastRefreshed]=useState('')
+  const [logSearch,setLogSearch]=useState('')
+  const [onlyOpen,setOnlyOpen]=useState(true)
   const [credential,setCredential]=useState('')
   const [databaseKey,setDatabaseKey]=useState('')
   const [elementSearch,setElementSearch]=useState('')
@@ -189,6 +196,35 @@ export function GodStudio(){
     ].filter(Boolean).join('\n')
   }
 
+  async function loadOperations(){
+    try{
+      const data=await api<{runs:Run[]}>('/api/god/source?action=operations')
+      setOperationsRuns(data.runs)
+      setOperationsError('')
+    }catch(error){
+      setOperationsError(humanizeAppError(error))
+    }
+    setLastRefreshed(new Date().toISOString())
+  }
+  useEffect(()=>{
+    let active=true
+    const refresh=()=>void api<{runs:Run[]}>('/api/god/source?action=operations').then(data=>{
+      if(active){setOperationsRuns(data.runs);setOperationsError('');setLastRefreshed(new Date().toISOString())}
+    }).catch(error=>{if(active)setOperationsError(humanizeAppError(error))})
+    refresh()
+    const interval=window.setInterval(refresh,60000)
+    return()=>{active=false;window.clearInterval(interval)}
+  },[])
+  const pendingReports=errorReports.filter(report=>!['resolved','auto_resolved'].includes(report.status))
+  const urgentReports=pendingReports.filter(report=>report.maker_action_required||['critical','high'].includes(report.ai_severity||''))
+  const filteredReports=errorReports.filter(report=>
+    (!onlyOpen||!['resolved','auto_resolved'].includes(report.status))&&
+    [report.route,report.error_name,report.error_message,report.ai_summary,report.status,report.ai_category]
+      .some(value=>(value||'').toLowerCase().includes(logSearch.trim().toLowerCase()))
+  )
+  const failedDeploys=operationsRuns.filter(run=>run.conclusion==='failure'&&['CI main','Deploy main','CI production','Deploy production'].includes(run.name))
+  const activeRoot=toolKeys.has(tab)?'tools':tab
+
   async function loadErrorReports(){
     const data=await api<{reports:RecoveryReport[]}>('/api/god/error-reports?limit=60')
     setErrorReports(data.reports)
@@ -265,8 +301,45 @@ export function GodStudio(){
   }
 
   return <div className="space-y-4">
-    <nav aria-label="God Mode gereedschappen" className="flex gap-2 overflow-x-auto rounded-2xl border p-2">{tabs.map(([key,label])=><button key={key} aria-pressed={tab===key} onClick={()=>{setTab(key);if(key==='versions')void action(loadHistory)}} className={`shrink-0 rounded-xl px-4 py-3 text-sm font-bold ${tab===key?'bg-violet-600 text-white':'hover:bg-muted'}`}>{label}</button>)}</nav>
+    <nav aria-label="Maker controlekamer" className="flex flex-wrap gap-2 rounded-2xl border p-2">{sections.map(([key,label])=><button type="button" key={key} aria-pressed={activeRoot===key} onClick={()=>setTab(key==='tools'?'source':key)} className={`rounded-xl px-4 py-3 text-sm font-bold ${activeRoot===key?'bg-violet-600 text-white':'hover:bg-muted'}`}>{label}</button>)}</nav>
+    {activeRoot==='tools'&&<nav aria-label="Geavanceerde Maker-gereedschappen" className="flex flex-wrap gap-2 rounded-xl border p-2">{tabs.map(([key,label])=><button type="button" key={key} aria-pressed={tab===key} onClick={()=>{setTab(key);if(key==='versions')void action(loadHistory)}} className={`rounded-lg px-3 py-2 text-xs font-bold ${tab===key?'bg-violet-600 text-white':'hover:bg-muted'}`}>{label}</button>)}</nav>}
     {message&&<p role="status" className="whitespace-pre-wrap rounded-xl border border-violet-500/40 p-3 text-sm">{message}</p>}
+    {tab==='overview'&&<section className="space-y-4">
+      <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+        <button type="button" onClick={()=>setTab('monitor')} className="rounded-2xl border p-4 text-left">
+          <p className="text-sm text-muted-foreground">Open foutrapporten</p><p className="mt-2 text-3xl font-black">{pendingReports.length}</p>
+        </button>
+        <button type="button" onClick={()=>setTab('monitor')} className="rounded-2xl border p-4 text-left">
+          <p className="text-sm text-muted-foreground">Dringende makeracties</p><p className="mt-2 text-3xl font-black">{urgentReports.length}</p>
+        </button>
+        <button type="button" onClick={()=>setTab('versions')} className="rounded-2xl border p-4 text-left">
+          <p className="text-sm text-muted-foreground">Mislukte recente CI/deploy-runs</p><p className="mt-2 text-3xl font-black">{failedDeploys.length}</p>
+        </button>
+        <button type="button" onClick={()=>setTab('ai')} className="rounded-2xl border p-4 text-left">
+          <p className="text-sm text-muted-foreground">AI-herstel</p><p className="mt-2 text-lg font-black">Nieuwe opdracht</p>
+        </button>
+      </div>
+      <section className="space-y-3 rounded-2xl border p-4">
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <h2 className="text-lg font-black">GitHub · CI en deployment</h2>
+          <button type="button" disabled={busy} onClick={()=>void action(loadOperations)} className="rounded-xl border px-4 py-2 text-sm">Vernieuwen</button>
+        </div>
+        {lastRefreshed&&<p className="text-xs text-muted-foreground">Laatste controle: {new Date(lastRefreshed).toLocaleString('nl-BE')} · automatische hercontrole om de minuut</p>}
+        {operationsError&&<p role="alert" className="text-sm text-amber-500">{operationsError}</p>}
+        {!operationsRuns.length&&!operationsError&&<p className="text-sm text-muted-foreground">Workflowstatus wordt geladen.</p>}
+        {operationsRuns.slice(0,10).map(run=><a key={run.id} href={run.html_url} rel="noopener noreferrer" target="_blank" className="flex flex-wrap items-center justify-between gap-2 rounded-xl border p-3 text-sm">
+          <span className="font-semibold">{run.name}</span><span>{run.conclusion||run.status}</span>
+          <span className="font-mono text-xs text-muted-foreground">{run.head_sha.slice(0,8)}</span>
+        </a>)}
+      </section>
+      {urgentReports.length>0&&<section className="rounded-2xl border border-amber-500/50 p-4">
+        <h2 className="font-black">Fouten die aandacht vereisen</h2>
+        {urgentReports.slice(0,5).map(report=><button type="button" key={report.id} onClick={()=>{setLogSearch(report.route);setTab('monitor')}} className="mt-2 block w-full rounded-xl border p-3 text-left text-sm">
+          {report.route} · {report.ai_severity||report.status} · {report.error_message.slice(0,160)}
+        </button>)}
+      </section>}
+      <p className="text-xs text-muted-foreground">Dit overzicht bevat geregistreerde appfouten en GitHub Actions. Rechtstreekse Cloudflare Worker-consolelogs zijn hier nog niet aangesloten.</p>
+    </section>}
     {tab==='builder'&&<GodVisualBuilder onOpenSource={(file,line)=>void open(file,line)} onPrepareAi={prepareAiFromBuilder}/>}
     {tab==='ai'&&<section className="space-y-5">
       <div className="space-y-3 rounded-2xl border border-violet-500/40 bg-violet-500/5 p-4">
@@ -303,33 +376,36 @@ export function GodStudio(){
         </div>}
       </div>
 
-      <div className="space-y-3 rounded-2xl border p-4">
-        <div className="flex flex-wrap items-center justify-between gap-3">
-          <div><h2 className="text-xl font-black">AI foutherstel</h2><p className="text-sm text-muted-foreground">Gebruikersrapporten worden op de achtergrond geanalyseerd. Alleen fouten waarvoor makeractie nodig is komen hier bovenaan.</p></div>
-          <button type="button" disabled={busy} onClick={()=>void action(loadErrorReports)} className="rounded-xl border px-4 py-2">Vernieuwen</button>
-        </div>
-        {!errorReports.length&&<p className="rounded-xl border border-dashed p-4 text-sm text-muted-foreground">Geen open foutrapporten.</p>}
-        {errorReports.map(report=><article key={report.id} className={"space-y-3 rounded-xl border p-4 "+(report.status==='needs_maker'?'border-amber-500/50':'')}>
+
+    </section>}
+    {tab==='monitor'&&<section className="space-y-4">
+      <div className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border p-4">
+        <div><h2 className="text-xl font-black">Fouten en diagnostiek</h2>
+        <p className="text-sm text-muted-foreground">Door de app geregistreerde fouten en uploadbeveiliging. Automatisch vernieuwen na iedere minuut is voorzien voor CI-status; foutmeldingen kun je handmatig herladen.</p></div>
+        <button type="button" disabled={busy} onClick={()=>void action(loadErrorReports)} className="rounded-xl border px-4 py-2">Fouten vernieuwen</button>
+      </div>
+      <div className="flex flex-wrap items-center gap-3 rounded-xl border p-3">
+        <input aria-label="Foutrapporten doorzoeken" value={logSearch} onChange={event=>setLogSearch(event.target.value)} placeholder="Zoek pagina, fout, ernst of status…" className="min-w-0 flex-1 rounded-xl border bg-background p-3"/>
+        <label className="flex items-center gap-2 text-sm"><input type="checkbox" checked={onlyOpen} onChange={event=>setOnlyOpen(event.target.checked)}/> Alleen open</label>
+        <span className="text-xs text-muted-foreground">{filteredReports.length} van {errorReports.length}</span>
+      </div>
+      <section className="space-y-3">
+        {filteredReports.length===0&&<p className="rounded-xl border border-dashed p-4 text-sm text-muted-foreground">Geen overeenkomende foutrapporten in de geladen selectie.</p>}
+        {filteredReports.map(report=><article key={report.id} className={`space-y-3 rounded-xl border p-4 ${report.status==='needs_maker'?'border-amber-500/50':''}`}>
           <div className="flex flex-wrap items-start justify-between gap-2">
-            <div>
-              <p className="font-bold">{report.error_name||'Fout'} · {report.route}</p>
-              <p className="mt-1 text-sm text-muted-foreground">{report.error_message}</p>
-            </div>
+            <div><p className="font-bold">{report.error_name||'Fout'} · {report.route}</p><p className="mt-1 text-sm text-muted-foreground">{report.error_message}</p></div>
             <span className="rounded-full border px-2 py-1 text-xs font-black">{reportStatusLabel(report.status)}</span>
           </div>
           {report.ai_summary&&<p className="text-sm"><b>AI-diagnose:</b> {report.ai_summary}</p>}
           {report.maker_action&&<p className="rounded-lg border border-amber-500/30 p-3 text-sm"><b>Makeractie:</b> {report.maker_action}</p>}
           <div className="flex flex-wrap gap-2">
-            <button type="button" onClick={()=>{
-              setSelectedErrorReport(report.id)
-              setTextAiPrompt(recoveryPrompt(report))
-              setTextAiResult(null)
-              window.scrollTo({top:0,behavior:'smooth'})
-            }} className="rounded-lg bg-violet-600 px-3 py-2 text-sm font-bold text-white">AI OPLOSSEN</button>
+            <button type="button" onClick={()=>{setSelectedErrorReport(report.id);setTab('ai');setTextAiPrompt(recoveryPrompt(report));setTextAiResult(null);window.scrollTo({top:0,behavior:'smooth'})}} className="rounded-lg bg-violet-600 px-3 py-2 text-sm font-bold text-white">AI OPLOSSEN</button>
             <button type="button" disabled={busy} onClick={()=>void action(()=>resolveErrorReport(report.id))} className="rounded-lg border px-3 py-2 text-sm font-bold">OPGELOST MARKEREN</button>
           </div>
         </article>)}
-      </div>
+      </section>
+      {securityAudit}
+      <p className="text-xs text-muted-foreground">Bronnen: appfoutrapporten en gescande uploads. Een volledig platformlogboek inclusief Cloudflare trace-logs vereist nog een veilige, afzonderlijke loggingkoppeling.</p>
     </section>}
     {tab==='automations'&&<GodAutomationBuilder onPrepareAi={prepareAiFromBuilder}/>}
     {tab==='source'&&<div className="space-y-4">
