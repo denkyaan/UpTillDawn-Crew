@@ -168,7 +168,7 @@ export default async function Page({searchParams}:{searchParams?:Promise<{event?
     if(!eventIds.length||!workplaceIds.length){
       if(isResponsible)return <main className="space-y-3 p-4 md:p-8">
         <h1 className="text-3xl font-black">Werkplaatsen & shifts</h1>
-        <p className="text-muted-foreground">Je hebt momenteel geen toegewezen werkplaatsen. Zodra je aan een werkplek gekoppeld wordt, verschijnt die hier.</p>
+        <p className="text-muted-foreground">Geen toegewezen werkplekken beschikbaar.</p>
       </main>
       redirect('/events')
     }
@@ -193,7 +193,7 @@ export default async function Page({searchParams}:{searchParams?:Promise<{event?
     if(!events.length||!workplaces.length){
       if(isResponsible)return <main className="space-y-3 p-4 md:p-8">
         <h1 className="text-3xl font-black">Werkplaatsen & shifts</h1>
-        <p className="text-muted-foreground">Er zijn momenteel geen zichtbare toegewezen werkplaatsen voor je evenementen.</p>
+        <p className="text-muted-foreground">Geen toegewezen werkplekken beschikbaar.</p>
       </main>
       redirect('/events')
     }
