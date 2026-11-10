@@ -8,6 +8,7 @@ type RecoveryLog={id:string;check_type:string;status:string;checked_at:string}
 type AuditLog={id:string;action:string;entity_type:string;created_at:string}
 type Snapshot={errors:ErrorLog[];recovery:RecoveryLog[];audit:AuditLog[]}
 type PlatformLog={timestamp:string;source:string;message:string}
+const EMPTY_PLATFORM_LOGS:PlatformLog[]=[]
 type Source='errors'|'recovery'|'audit'|'platform'
 const dictionary={
  nl:{productionIntro:'Geregistreerde productie-fouten, herstelcontroles en auditgebeurtenissen. Alleen-lezen; de beheerverbinding moet toegang tot productie hebben.',heading:'App- en systeemlogs',intro:'Echte geregistreerde fout-, herstel- en auditgebeurtenissen van main-test. Geen productiegegevens.',
@@ -43,14 +44,16 @@ export function MakerLogs({onDiagnose,environment}:{onDiagnose:(id:string,prompt
   ()=>'nl' as SupportedUiLocale,
  )
  const t=dictionary[locale]
- const [snapshot,setSnapshot]=useState<Snapshot|null>(null)
- const [platformLogs,setPlatformLogs]=useState<PlatformLog[]>([])
+ const [snapshotState,setSnapshot]=useState<{environment:'main'|'production';rows:Snapshot}|null>(null)
+ const [platformState,setPlatformLogs]=useState<{environment:'main'|'production';logs:PlatformLog[]}|null>(null)
  const [platformError,setPlatformError]=useState('')
  const [loading,setLoading]=useState(true)
  const [error,setError]=useState(false)
  const [generation,setGeneration]=useState(0)
  const [source,setSource]=useState<Source|'all'>('all')
  const [search,setSearch]=useState('')
+ const snapshot=snapshotState?.environment===environment?snapshotState.rows:null
+ const platformLogs=platformState?.environment===environment?platformState.logs:EMPTY_PLATFORM_LOGS
  useEffect(()=>{
   const controller=new AbortController()
   fetch('/api/god/platform-logs?environment='+environment+'&limit=100',{signal:controller.signal,cache:'no-store'})
@@ -59,8 +62,8 @@ export function MakerLogs({onDiagnose,environment}:{onDiagnose:(id:string,prompt
     if(!response.ok)throw Error(json.error||'Platform logs unavailable')
     return Array.isArray(json.logs)?json.logs:[]
    })
-   .then(logs=>{if(!controller.signal.aborted){setPlatformLogs(logs);setPlatformError('')}})
-   .catch(error=>{if(!controller.signal.aborted){setPlatformLogs([]);setPlatformError(error instanceof Error?error.message:'Platform logs unavailable')}})
+   .then(logs=>{if(!controller.signal.aborted){setPlatformLogs({environment,logs});setPlatformError('')}})
+   .catch(error=>{if(!controller.signal.aborted){setPlatformLogs({environment,logs:[]});setPlatformError(error instanceof Error?error.message:'Platform logs unavailable')}})
   return()=>controller.abort()
  },[generation,environment])
  useEffect(()=>{
@@ -72,17 +75,16 @@ export function MakerLogs({onDiagnose,environment}:{onDiagnose:(id:string,prompt
     if(!json.logs)throw Error('No logs')
     return {errors:json.logs.errors||[],recovery:json.logs.recovery||[],audit:json.logs.audit||[]}
    })
-   .then(rows=>{if(!controller.signal.aborted){setSnapshot(rows);setError(false)}})
+   .then(rows=>{if(!controller.signal.aborted){setSnapshot({environment,rows});setError(false)}})
    .catch(()=>{if(!controller.signal.aborted)setError(true)})
    .finally(()=>{if(!controller.signal.aborted)setLoading(false)})
   return()=>controller.abort()
  },[generation,environment])
  const rows=useMemo(()=>{
-  if(!snapshot)return []
   const all=[
-   ...snapshot.errors.map(r=>({key:r.id,kind:'errors' as const,date:r.created_at,heading:r.error_name||'Application error',message:r.error_message,detail:r.route,level:r.status,report:r})),
-   ...snapshot.recovery.map(r=>({key:r.id,kind:'recovery' as const,date:r.checked_at,heading:r.check_type,message:r.status,detail:'',level:r.status,report:null})),
-   ...snapshot.audit.map(r=>({key:r.id,kind:'audit' as const,date:r.created_at,heading:r.action,message:r.entity_type,detail:'',level:'',report:null})),
+   ...(snapshot?.errors||[]).map(r=>({key:r.id,kind:'errors' as const,date:r.created_at,heading:r.error_name||'Application error',message:r.error_message,detail:r.route,level:r.status,report:r})),
+   ...(snapshot?.recovery||[]).map(r=>({key:r.id,kind:'recovery' as const,date:r.checked_at,heading:r.check_type,message:r.status,detail:'',level:r.status,report:null})),
+   ...(snapshot?.audit||[]).map(r=>({key:r.id,kind:'audit' as const,date:r.created_at,heading:r.action,message:r.entity_type,detail:'',level:'',report:null})),
    ...platformLogs.map((r,i)=>({key:String(i)+'-'+r.timestamp,kind:'platform' as const,date:r.timestamp,heading:r.source,message:r.message,detail:'',level:'',report:null})),
   ]
   const needle=search.toLocaleLowerCase()
