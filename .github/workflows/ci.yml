@@ -311,7 +311,11 @@ jobs:
           exit 1
 
       - name: Administration subtab and portal context browser regression
-        run: node scripts/administration-navigation-e2e.mjs
+        run: |
+          if ! node scripts/administration-navigation-e2e.mjs; then
+            grep -F -A 7 'UPT_SETTINGS_RENDER_FAILURE' /tmp/uptilldawn-bot-app.log | tail -n 45 || true
+            exit 1
+          fi
 
       - name: Run 15 concurrent authenticated browser bots
         run: |
@@ -339,7 +343,11 @@ jobs:
         run: node scripts/administration-full-browser-e2e.mjs
       - name: Peppol approval and XML export browser E2E
         if: ${{ !cancelled() && steps.application.outcome == 'success' }}
-        run: node scripts/administration-peppol-e2e.mjs
+        run: |
+          if ! node scripts/administration-peppol-e2e.mjs; then
+            grep -F -A 7 'UPT_SETTINGS_RENDER_FAILURE' /tmp/uptilldawn-bot-app.log | tail -n 45 || true
+            exit 1
+          fi
       - name: Peppol UBL and business rule validation
         if: ${{ !cancelled() && steps.application.outcome == 'success' }}
         uses: ./.github/actions/peppol-validation

@@ -80,7 +80,9 @@ try{
     assert.deepEqual(errors,[],role.name+' uncaught browser errors')
     console.log('PASS administration navigation:',role.name,viewport.width)
    }catch(error){
-    failures.push({role:role.name,width:viewport.width,path:page.url(),error:String(error.message||error)})
+    const pageText=(await page.locator('body').innerText({timeout:3000}).catch(()=>"")).slice(0,700)
+    const http=(await context.request.get(page.url(),{maxRedirects:0,timeout:5000}).then(r=>r.status()).catch(()=>'unavailable'))
+    failures.push({role:role.name,width:viewport.width,path:page.url(),error:String(error.message||error),http,pageText,uncaught:errors.slice(0,4)})
     await page.screenshot({path:`test-results/administration-navigation/${role.name}-${viewport.width}.png`,fullPage:true}).catch(()=>{})
    }finally{await context.close()}
   }
