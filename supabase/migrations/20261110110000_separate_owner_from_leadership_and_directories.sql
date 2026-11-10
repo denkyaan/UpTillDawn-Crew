@@ -305,11 +305,11 @@ CREATE OR REPLACE FUNCTION public.upt_promotion_directory()
  SET search_path TO ''
 AS $function$
  with actor as (
-   select p.id,(p.role='admin') as is_admin
+   select p.id,public.upt_is_admin(p.id) as is_admin
    from public.profiles p
    where p.id=(select auth.uid()) and p.approved
      and not coalesce(p.account_blocked,false)
-     and (p.role='admin' or not public.upt_promotion_is_blocked(p.id))
+     and (public.upt_is_admin(p.id) or not public.upt_promotion_is_blocked(p.id))
  ), access as (
    select
      exists(select 1 from actor where is_admin)
