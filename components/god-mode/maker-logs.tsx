@@ -8,6 +8,7 @@ type RecoveryLog={id:string;check_type:string;status:string;checked_at:string}
 type AuditLog={id:string;action:string;entity_type:string;created_at:string}
 type Snapshot={errors:ErrorLog[];recovery:RecoveryLog[];audit:AuditLog[]}
 type PlatformLog={timestamp:string;source:string;message:string}
+const EMPTY_PLATFORM_LOGS:PlatformLog[]=[]
 type Source='errors'|'recovery'|'audit'|'platform'
 const dictionary={
  nl:{productionIntro:'Geregistreerde productie-fouten, herstelcontroles en auditgebeurtenissen. Alleen-lezen; de beheerverbinding moet toegang tot productie hebben.',heading:'App- en systeemlogs',intro:'Echte geregistreerde fout-, herstel- en auditgebeurtenissen van main-test. Geen productiegegevens.',
@@ -52,7 +53,7 @@ export function MakerLogs({onDiagnose,environment}:{onDiagnose:(id:string,prompt
  const [source,setSource]=useState<Source|'all'>('all')
  const [search,setSearch]=useState('')
  const snapshot=snapshotState?.environment===environment?snapshotState.rows:null
- const platformLogs=platformState?.environment===environment?platformState.logs:[]
+ const platformLogs=platformState?.environment===environment?platformState.logs:EMPTY_PLATFORM_LOGS
  useEffect(()=>{
   const controller=new AbortController()
   fetch('/api/god/platform-logs?environment='+environment+'&limit=100',{signal:controller.signal,cache:'no-store'})
