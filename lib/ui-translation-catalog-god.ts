@@ -152,6 +152,13 @@ export const GOD_TRANSLATIONS:Record<string,Row>={
   "0px":{fr:"0px",en:"0px",de:"0px"},
   "/events of actieomschrijving":{fr:"/events ou description de l’action",en:"/events or action description",de:"/events oder Aktionsbeschreibung"},
   "0.75rem":{fr:"0.75rem",en:"0.75rem",de:"0.75rem"}
+  "God Mode omgeving":{fr:"Environnement God Mode",en:"God Mode environment",de:"God-Mode-Umgebung"},
+  "Open de bestaande functies en triggers, wijzig hun SQL of voeg nieuwe functies, tabellen en automatiseringen toe.":{fr:"Consultez les fonctions et déclencheurs existants, modifiez leur SQL ou ajoutez des fonctions, tables et automatisations.",en:"Inspect existing functions and triggers, edit their SQL, or add functions, tables and automations.",de:"Vorhandene Funktionen und Trigger prüfen, SQL bearbeiten oder Funktionen, Tabellen und Automatisierungen hinzufügen."},
+  "Deze werkruimte is gekoppeld aan de PRODUCTIE-database. Wijzigingen aan productiedata zijn hier uitgeschakeld en verlopen via de gecontroleerde release.":{fr:"Cet espace est connecté à la base de PRODUCTION. Les modifications des données de production sont désactivées et nécessitent une publication contrôlée.",en:"This workspace connects to the PRODUCTION database. Production data changes are disabled here and require a controlled release.",de:"Dieser Arbeitsbereich ist mit der PRODUKTIONSdatenbank verbunden. Änderungen an Produktivdaten sind hier deaktiviert und erfordern eine kontrollierte Freigabe."},
+  "Deze SQL-werkruimte is gekoppeld aan MAIN-TEST. Productie blijft onaangeroerd.":{fr:"Cet espace SQL est connecté à MAIN-TEST. La production reste inchangée.",en:"This SQL workspace connects to MAIN-TEST. Production is untouched.",de:"Dieser SQL-Arbeitsbereich ist mit MAIN-TEST verbunden. Die Produktion bleibt unverändert."},
+  "Een broncodeherstel draait databasewijzigingen niet terug.":{fr:"Restaurer le code source ne rétablit pas les modifications de la base de données.",en:"Restoring source code does not undo database changes.",de:"Das Wiederherstellen des Quellcodes macht Datenbankänderungen nicht rückgängig."},
+  "Ik bevestig een wijziging aan PRODUCTIE.":{fr:"Je confirme une modification en PRODUCTION.",en:"I confirm a change to PRODUCTION.",de:"Ich bestätige eine Änderung an der PRODUKTION."},
+  "Ik bevestig deze wijziging aan MAIN-TEST.":{fr:"Je confirme cette modification dans MAIN-TEST.",en:"I confirm this change to MAIN-TEST.",de:"Ich bestätige diese Änderung an MAIN-TEST."},
 }
 
 const CANONICAL=new Map<string,string>()
