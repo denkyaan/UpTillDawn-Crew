@@ -148,6 +148,103 @@ BEGIN
 END $$;
 RESET ROLE;
 
+-- A separate lead has ONLY a future assignment. Their effective
+-- operational role remains staff until the event approaches; they must still
+-- be able to prepare their explicitly assigned workplace and see team shifts.
+INSERT INTO upt_scope_ids(name) VALUES
+  ('pre_lead'),('pre_event'),('pre_wp_own'),('pre_wp_other'),('pre_staff_shift');
+
+INSERT INTO auth.users(id,email)
+SELECT id, 'pre-event-'||name||'@scope.test'
+FROM upt_scope_ids WHERE name='pre_lead';
+
+UPDATE public.profiles
+SET approved=true,role='responsible_lead',full_name='Pre Event Responsible'
+WHERE id=(SELECT id FROM upt_scope_ids WHERE name='pre_lead');
+
+INSERT INTO public.events(id,name,start_date,end_date,start_at,end_at,status,created_by)
+VALUES (
+  (SELECT id FROM upt_scope_ids WHERE name='pre_event'),
+  'Upcoming workplace RLS rollback',
+  now()+interval '2 hours',now()+interval '10 hours',
+  now()+interval '2 hours',now()+interval '10 hours',
+  'scheduled',
+  (SELECT id FROM upt_scope_ids WHERE name='lead')
+);
+
+INSERT INTO public.workplaces(id,event_id,name,sort_order)
+VALUES
+  ((SELECT id FROM upt_scope_ids WHERE name='pre_wp_own'),
+   (SELECT id FROM upt_scope_ids WHERE name='pre_event'),
+   'Assigned upcoming workplace',10),
+  ((SELECT id FROM upt_scope_ids WHERE name='pre_wp_other'),
+   (SELECT id FROM upt_scope_ids WHERE name='pre_event'),
+   'Unassigned upcoming workplace',20);
+
+INSERT INTO public.event_members(event_id,user_id,event_role)
+VALUES
+  ((SELECT id FROM upt_scope_ids WHERE name='pre_event'),
+   (SELECT id FROM upt_scope_ids WHERE name='pre_lead'),'responsible_lead'),
+  ((SELECT id FROM upt_scope_ids WHERE name='pre_event'),
+   (SELECT id FROM upt_scope_ids WHERE name='staff'),'employee');
+
+INSERT INTO public.responsible_assignments(event_id,workplace_id,user_id)
+VALUES (
+  (SELECT id FROM upt_scope_ids WHERE name='pre_event'),
+  (SELECT id FROM upt_scope_ids WHERE name='pre_wp_own'),
+  (SELECT id FROM upt_scope_ids WHERE name='pre_lead')
+);
+
+INSERT INTO public.shifts(
+ id,event_id,workplace_id,user_id,role_name,
+ start_time,end_time,scheduled_start,scheduled_end,status
+)
+VALUES (
+ (SELECT id FROM upt_scope_ids WHERE name='pre_staff_shift'),
+ (SELECT id FROM upt_scope_ids WHERE name='pre_event'),
+ (SELECT id FROM upt_scope_ids WHERE name='pre_wp_own'),
+ (SELECT id FROM upt_scope_ids WHERE name='staff'),
+ 'Pre-event staff',
+ now()+interval '2 hours',now()+interval '9 hours',
+ now()+interval '2 hours',now()+interval '9 hours','scheduled'
+);
+
+SELECT set_config('request.jwt.claim.sub',
+  (SELECT id::text FROM upt_scope_ids WHERE name='pre_lead'),true);
+SET LOCAL ROLE authenticated;
+DO $pre_event$
+DECLARE
+  v_event uuid:=(SELECT id FROM upt_scope_ids WHERE name='pre_event');
+  v_own uuid:=(SELECT id FROM upt_scope_ids WHERE name='pre_wp_own');
+  v_other uuid:=(SELECT id FROM upt_scope_ids WHERE name='pre_wp_other');
+  v_visible_workplaces integer;
+  v_visible_shifts integer;
+BEGIN
+  IF public.upt_effective_role(auth.uid()) <> 'staff' THEN
+    RAISE EXCEPTION 'Pre-event fixture must be outside effective Responsible role window';
+  END IF;
+  IF public.upt_is_responsible(v_event,v_own,auth.uid()) THEN
+    RAISE EXCEPTION 'Operational Responsible role unexpectedly active before event';
+  END IF;
+  IF (SELECT count(*) FROM public.events WHERE id=v_event)<>1 THEN
+    RAISE EXCEPTION 'Upcoming assigned event is inaccessible';
+  END IF;
+  SELECT count(*) INTO v_visible_workplaces
+  FROM public.workplaces WHERE event_id=v_event;
+  IF v_visible_workplaces<>1 THEN
+    RAISE EXCEPTION 'Pre-event lead must read exactly their own workplace, got %',v_visible_workplaces;
+  END IF;
+  IF EXISTS(SELECT 1 FROM public.workplaces WHERE id=v_other) THEN
+    RAISE EXCEPTION 'Pre-event lead can read an unassigned workplace';
+  END IF;
+  SELECT count(*) INTO v_visible_shifts FROM public.shifts
+  WHERE event_id=v_event AND workplace_id=v_own;
+  IF v_visible_shifts<>1 THEN
+    RAISE EXCEPTION 'Pre-event lead cannot inspect their assigned team shift, got %',v_visible_shifts;
+  END IF;
+END $pre_event$;
+RESET ROLE;
+
 REVOKE SELECT ON public.profiles FROM authenticated;
-SELECT 'PASS: responsible and staff workplace visibility is assignment-scoped' AS result;
+SELECT 'PASS: active and pre-event Responsible workplace/shift visibility is assignment-scoped' AS result;
 ROLLBACK;
