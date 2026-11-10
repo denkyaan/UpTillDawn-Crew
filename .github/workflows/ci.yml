@@ -166,6 +166,30 @@ jobs:
           psql "$PGURL" -v ON_ERROR_STOP=1 --single-transaction -f /tmp/upt-production-upgrade.sql
           echo 'PASS: existing-data upgrade, preserved legacy rows and idempotent reapplication' >> "$GITHUB_STEP_SUMMARY"
 
+      # Historical upgrade verification intentionally stops at the reviewed
+      # November 8 platform milestone. Restore the current migration tip on
+      # this disposable local stack before running present-day security/role
+      # tests; never validate November 9 quarantine rules on the old schema.
+      - name: Restore latest isolated database after historical upgrade proof
+        env:
+          PGURL: postgresql://postgres:postgres@127.0.0.1:54322/postgres
+        shell: bash
+        run: |
+          set -euo pipefail
+          npx --yes supabase@2.117.0 db reset --local --no-seed
+          expected_latest="$(find supabase/migrations -maxdepth 1 -type f -name '*.sql' -printf '%f\n' | cut -d_ -f1 | sort | tail -n 1)"
+          actual_latest="$(psql "$PGURL" -v ON_ERROR_STOP=1 -Atc 'select max(version) from supabase_migrations.schema_migrations')"
+          if [ -z "$expected_latest" ] || [ "$actual_latest" != "$expected_latest" ]; then
+            echo "::error::Full lifecycle test database is not at the repository migration tip"
+            exit 1
+          fi
+          restrictive_scan_gate="$(psql "$PGURL" -v ON_ERROR_STOP=1 -Atc "select count(*) from pg_policies where schemaname='storage' and tablename='objects' and policyname='upt_all_operational_media_scans_required' and permissive='RESTRICTIVE' and cmd='SELECT'")"
+          if [ "$restrictive_scan_gate" != "1" ]; then
+            echo "::error::Latest schema is missing the mandatory operational media quarantine"
+            exit 1
+          fi
+          echo "PASS: historical-data preservation verified, current schema ${actual_latest} restored for lifecycle security tests"
+
       - name: Full event lifecycle release gate
         env:
           PGURL: postgresql://postgres:postgres@127.0.0.1:54322/postgres
