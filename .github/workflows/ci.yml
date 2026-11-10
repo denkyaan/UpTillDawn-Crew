@@ -337,6 +337,10 @@ jobs:
       # ticketing or inventory workflow should fail before the expensive
       # read-only cross-portal browser inventory.
       - name: Transactional administration workflow E2E
+        env:
+          # Only this disposable local E2E step may synthesize a clean scanner
+          # verdict after asserting pending originals remain inaccessible.
+          UPT_E2E_ALLOW_SYNTHETIC_SCAN: "1"
         run: node scripts/administration-completion-e2e.mjs
 
       - name: Full authenticated Administration browser E2E
