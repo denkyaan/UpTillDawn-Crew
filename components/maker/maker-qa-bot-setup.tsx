@@ -7,7 +7,7 @@ import {LANGUAGE_APPLIED_EVENT,initialUiLocale,parseUiLocale,type SupportedUiLoc
 const copy={
  nl:{
   heading:'Zeven QA-rolbots',
-  description:'Alleen op de main-testomgeving: Hoofdadmin, Linkerhand, Rechterhand, Verantwoordelijke, Personeel, Promotie en Administratie. Je Maker-account wordt niet aangepast.',
+  detail:'Alleen op de main-testomgeving: Hoofdadmin, Linkerhand, Rechterhand, Verantwoordelijke, Personeel, Promotie en Administratie. Je Maker-account wordt niet aangepast.',
   pending:'Testbots instellen…',
   setup:'Zeven rolbots instellen en beveiligen',
   download:'Download de 7 unieke inloggegevens (CSV)',
@@ -15,7 +15,7 @@ const copy={
  },
  fr:{
   heading:'Sept bots de test par rôle',
-  description:'Uniquement pour le test principal : administrateur principal, adjoint gauche, adjoint droit, responsable, personnel, promotion et administration. Votre compte Créateur reste inchangé.',
+  detail:'Uniquement pour le test principal : administrateur principal, adjoint gauche, adjoint droit, responsable, personnel, promotion et administration. Votre compte Créateur reste inchangé.',
   pending:'Configuration des bots…',
   setup:'Configurer et sécuriser les sept bots',
   download:'Télécharger les 7 identifiants uniques (CSV)',
@@ -23,7 +23,7 @@ const copy={
  },
  en:{
   heading:'Seven role-based QA bots',
-  description:'Main test environment only: Head Admin, Left Hand, Right Hand, Responsible, Staff, Promotion and Administration. Your Maker account stays unchanged.',
+  detail:'Main test environment only: Head Admin, Left Hand, Right Hand, Responsible, Staff, Promotion and Administration. Your Maker account stays unchanged.',
   pending:'Setting up test bots…',
   setup:'Set up and secure seven role bots',
   download:'Download all 7 unique logins (CSV)',
@@ -31,7 +31,7 @@ const copy={
  },
  de:{
   heading:'Sieben QA-Rollenbots',
-  description:'Nur in der Main-Testumgebung: Hauptadmin, linke Hand, rechte Hand, Verantwortliche, Personal, Promotion und Verwaltung. Dein Maker-Konto bleibt unverändert.',
+  detail:'Nur in der Main-Testumgebung: Hauptadmin, linke Hand, rechte Hand, Verantwortliche, Personal, Promotion und Verwaltung. Dein Maker-Konto bleibt unverändert.',
   pending:'Testbots werden eingerichtet…',
   setup:'Sieben Rollenbots einrichten und sichern',
   download:'Alle 7 Zugangsdaten herunterladen (CSV)',
@@ -64,7 +64,7 @@ export function MakerQaBotSetup(){
  const [state,action,pending]=useActionState(provisionOwnerQaBots,initial)
  return <section className="mt-7 rounded-2xl border border-white/10 bg-black/40 p-4">
   <h2 className="font-bold text-white">{t.heading}</h2>
-  <p className="mt-1 text-sm text-zinc-400">{t.description}</p>
+  <p className="mt-1 text-sm text-zinc-400">{t.detail}</p>
   <form action={action} className="mt-3">
    <button type="submit" disabled={pending} className="w-full rounded-xl border border-violet-500/50 bg-violet-600 px-4 py-3 font-semibold text-white disabled:opacity-60">
     {pending?t.pending:t.setup}
