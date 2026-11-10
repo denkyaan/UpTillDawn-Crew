@@ -6,7 +6,7 @@ import {sealIntegrationSecrets,openIntegrationSecrets,validIntegrationMasterKey}
 type Db=Awaited<ReturnType<typeof createClient>>
 type RpcResponse={data:unknown;error:{message?:string;code?:string}|null}
 function rpc(db:Db,action:"list"|"read"|"save"|"disconnect",provider:IntegrationProvider|null=null,ciphertext:string|null=null):Promise<RpcResponse>{
- const invoke=db.rpc as unknown as (name:string,args:{p_action:string;p_provider:string|null;p_ciphertext:string|null})=>Promise<RpcResponse>
+ const invoke=db.rpc.bind(db) as unknown as (name:string,args:{p_action:string;p_provider:string|null;p_ciphertext:string|null})=>Promise<RpcResponse>
  return invoke("upt_integration_credentials",{p_action:action,p_provider:provider,p_ciphertext:ciphertext})
 }
 function masterKey():string{
@@ -77,7 +77,7 @@ export type IntegrationAuditEvent={
  occurred_at:string
 }
 export async function listRecentIntegrationAudit(db:Db):Promise<IntegrationAuditEvent[]>{
- const invoke=db.rpc as unknown as (name:string,args:{p_limit:number})=>Promise<RpcResponse>
+ const invoke=db.rpc.bind(db) as unknown as (name:string,args:{p_limit:number})=>Promise<RpcResponse>
  const {data,error}=await invoke("upt_integration_audit_recent",{p_limit:15})
  if(error||!Array.isArray(data))throw Error("integration_audit_unavailable")
  const audit:IntegrationAuditEvent[]=[]
@@ -100,7 +100,7 @@ export async function listRecentIntegrationAudit(db:Db):Promise<IntegrationAudit
  */
 export type ScopedWeeztixConnection={config:IntegrationConfiguration;ciphertext:string}
 export async function getScopedWeeztixConnection(db:Db,eventId:string,workplaceId:string):Promise<ScopedWeeztixConnection|null>{
- const invoke=db.rpc as unknown as (name:string,args:{p_event_id:string;p_workplace_id:string})=>Promise<RpcResponse>
+ const invoke=db.rpc.bind(db) as unknown as (name:string,args:{p_event_id:string;p_workplace_id:string})=>Promise<RpcResponse>
  const {data,error}=await invoke("upt_weeztix_scan_secrets",{p_event_id:eventId,p_workplace_id:workplaceId})
  if(error)throw Error("weeztix_credentials_forbidden")
  if(!data||typeof data!=="object")throw Error("weeztix_credentials_unavailable")
@@ -116,7 +116,7 @@ export async function getScopedWeeztixScanConfig(db:Db,eventId:string,workplaceI
  return (await getScopedWeeztixConnection(db,eventId,workplaceId))?.config??null
 }
 export async function claimScopedWeeztixRefresh(db:Db,eventId:string,workplaceId:string):Promise<string|null>{
- const invoke=db.rpc as unknown as (name:string,args:Record<string,string>)=>Promise<RpcResponse>
+ const invoke=db.rpc.bind(db) as unknown as (name:string,args:Record<string,string>)=>Promise<RpcResponse>
  const {data,error}=await invoke("upt_weeztix_claim_refresh",{p_event_id:eventId,p_workplace_id:workplaceId})
  if(error)throw Error("weeztix_refresh_unavailable")
  return typeof data==="string"&&/^[0-9a-f-]{36}$/i.test(data)?data:null
@@ -125,7 +125,7 @@ export async function commitScopedWeeztixRefresh(db:Db,eventId:string,workplaceI
  const checked=parseIntegrationConfiguration("weeztix",newConfig)
  if(!checked)throw Error("weeztix_invalid_rotation")
  const ciphertext=await sealIntegrationSecrets("weeztix",checked as Record<string,string>,masterKey())
- const invoke=db.rpc as unknown as (name:string,args:Record<string,string>)=>Promise<RpcResponse>
+ const invoke=db.rpc.bind(db) as unknown as (name:string,args:Record<string,string>)=>Promise<RpcResponse>
  const {data,error}=await invoke("upt_weeztix_commit_refresh",{
   p_event_id:eventId,p_workplace_id:workplaceId,p_claim_id:claimId,
   p_previous_ciphertext:previousCiphertext,p_new_ciphertext:ciphertext
@@ -134,7 +134,7 @@ export async function commitScopedWeeztixRefresh(db:Db,eventId:string,workplaceI
  return data===true
 }
 export async function releaseScopedWeeztixRefresh(db:Db,eventId:string,workplaceId:string,claimId:string):Promise<void>{
- const invoke=db.rpc as unknown as (name:string,args:Record<string,string>)=>Promise<RpcResponse>
+ const invoke=db.rpc.bind(db) as unknown as (name:string,args:Record<string,string>)=>Promise<RpcResponse>
  await invoke("upt_weeztix_release_refresh",{p_event_id:eventId,p_workplace_id:workplaceId,p_claim_id:claimId})
 }
 
