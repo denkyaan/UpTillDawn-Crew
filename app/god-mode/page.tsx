@@ -26,8 +26,7 @@ export default async function GodModePage(){
         <p className="mt-2 text-sm text-muted-foreground">Programmeer de app, bewerk gegevens en beheer logica, workflows en versies.</p>
         <div className="mt-4 flex flex-wrap gap-2"><Link href="/" className="rounded-xl border px-4 py-2 text-sm font-bold">Website openen</Link><form action={godModeLogout}><button className="rounded-xl border px-4 py-2 text-sm font-bold">God Mode afsluiten</button></form></div>
       </header>
-      <UploadSecurityAudit rows={securityRows||[]}/>
-      <GodStudio/>
+      <GodStudio securityAudit={<UploadSecurityAudit rows={securityRows||[]}/>}/>
     </div>
   </main>
 }
