@@ -25,18 +25,29 @@ test('Maker controlroom provides five task-focused workspaces and shared diagnos
  assert.match(source,/source:'github-actions'/)
  assert.match(source,/authorizeStudio\(request\)/)
 })
-test('God Mode SQL never targets production or executes outside main-test',async()=>{
- const [api,editor]=await Promise.all([
+test('God Mode SQL selects only fixed projects and rejects unreviewed production writes',async()=>{
+ const [api,editor,projects]=await Promise.all([
   read('app/api/god/sql/route.ts'),
   read('components/god-mode/god-sql-editor.tsx'),
+  read('lib/god-environments.ts'),
  ])
- assert.match(api,/const PROJECT = 'npbjrtiolqperdgljnhi'/)
- assert.match(api,/function enforceMainTestDatabase/)
- assert.match(api,/NEXT_PUBLIC_SUPABASE_URL/)
- assert.equal((api.match(/enforceMainTestDatabase\(\)/g)||[]).length,3)
- assert.doesNotMatch(api,/const PROJECT = 'eakoavcieossazqzplke'/)
- assert.match(editor,/main-testdatabase/)
- assert.match(editor,/write&&!confirmed/)
+ assert.match(projects,/npbjrtiolqperdgljnhi/)
+ assert.match(projects,/eakoavcieossazqzplke/)
+ assert.match(projects,/function isApprovedRuntime/)
+ assert.match(projects,/function canWriteGodSql/)
+ assert.match(api,/guardRuntime/)
+ assert.match(api,/body\.environment==='production'&&body\.write/)
+ assert.match(api,/GOD_PROJECTS\[environment\]\.projectId/)
+ assert.match(api,/read_only:readOnly/)
+ assert.match(editor,/environment==='production'/)
+})
+test('God Mode reports for production use a fixed bounded read-only query',async()=>{
+ const report=await read('app/api/god/error-reports/route.ts')
+ assert.match(report,/environment==='production'/)
+ assert.match(report,/GOD_PROJECTS\.production\.projectId/)
+ assert.match(report,/read_only:true/)
+ assert.match(report,/limit \${limit}/)
+ assert.match(report,/authorizeStudio\(request\)/)
 })
 test('Publishing a God Mode patch only merges to main after successful CI main PR checks',async()=>{
  const source=await read('app/api/god/source/route.ts')
