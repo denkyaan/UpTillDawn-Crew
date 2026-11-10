@@ -43,6 +43,30 @@ async function productionErrorCounts(credential:string){
  if(!row||typeof row.checked!=='number')return null
  return {checked:row.checked,open:row.open||0,needsMaker:row.needs_maker||0,failed:row.failed||0}
 }
+async function releaseSchemaReadiness(credential:string){
+  // Same minimum administration contract as the Deploy production workflow.
+  const expected=[
+   'tasks:promotion_only','portal_role_assignments:approved',
+   'admin_counterparties:id','admin_financial_documents:id',
+   'admin_financial_lines:id','admin_payment_reminders:id',
+   'admin_financial_payments:id','admin_operational_obligations:id',
+   'admin_inventory_receipts:id','admin_ticket_sales:id',
+   'admin_provider_event_mappings:id',
+  ] as const
+  const values=expected.map(e=>{const [table,column]=e.split(':');return "('"+table+"','"+column+"')"}).join(',')
+  const query='with req(tab,col) as (values '+values+") select tab,col from req where not exists (select 1 from information_schema.columns c where c.table_schema='public' and c.table_name=req.tab and c.column_name=req.col) order by tab"
+  const response=await fetch('https://api.supabase.com/v1/projects/eakoavcieossazqzplke/database/query',{
+   method:'POST',headers:{Authorization:'Bearer '+credential,'Content-Type':'application/json'},
+   body:JSON.stringify({query,read_only:true}),cache:'no-store',redirect:'manual',signal:AbortSignal.timeout(15000),
+  })
+  if(!response.ok)return null
+  const data=await response.json() as unknown
+  if(!Array.isArray(data))return null
+  const missing=data.filter(row=>row&&typeof row==='object'&&typeof (row as {tab?:unknown}).tab==='string')
+   .map(row=>(row as {tab:string;col:string}).tab+':'+(row as {tab:string;col:string}).col)
+  return {ready:missing.length===0,missing,checked:expected.length}
+}
+
 export async function GET(request:Request){
  try{
   const context=await authorizeStudio(request)
@@ -58,6 +82,8 @@ export async function GET(request:Request){
    target==='main'
     ?context.client.rpc('upt_god_error_reports',{p_token:context.token,p_limit:100})
     :(typeof dbCredential==='string'&&dbCredential?productionErrorCounts(dbCredential):Promise.resolve(null)),
+   target==='production'&&typeof dbCredential==='string'&&dbCredential
+    ?releaseSchemaReadiness(dbCredential):Promise.resolve(null),
   ])
   const mainHead=outcomes[0].status==='fulfilled'?outcomes[0].value.object.sha:null
   const ciRuns=outcomes[1].status==='fulfilled'?outcomes[1].value:null
@@ -85,6 +111,7 @@ export async function GET(request:Request){
    // Never present it as the verified live production revision without deployment evidence.
    head:relevantHead,mainHead,deployedSha:target==='main'?lastSuccessfulDeploy?.head_sha||null:null,
    productionReleaseShaVerified:false,
+   productionSchema:target==='production'&&outcomes[4].status==='fulfilled'?outcomes[4].value:null,
    ci:summary(latestCi,relevantHead),deploy:summary(latestDeploy,relevantHead),
    reports,checks:{code:mainHead!==null,ci:ciRuns!==null,deploy:deployRuns!==null,reports:reports!==null},
   })
