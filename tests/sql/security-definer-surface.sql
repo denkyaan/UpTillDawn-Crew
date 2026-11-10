@@ -9,6 +9,7 @@ BEGIN;
 DO $surface$
 DECLARE
   v_count integer;
+  v_unauthorized_rpc_list text;
 BEGIN
   SELECT count(*) INTO v_count
   FROM pg_proc p
@@ -66,24 +67,27 @@ BEGIN
     RAISE EXCEPTION 'FAIL: % authenticated SECURITY DEFINER function(s) do not pin search_path', v_count;
   END IF;
 
-  IF EXISTS (
-    SELECT 1
-    FROM pg_proc p
-    JOIN pg_namespace n ON n.oid = p.pronamespace
-    WHERE n.nspname = 'public'
-      AND p.prosecdef
-      AND has_function_privilege('authenticated', p.oid, 'EXECUTE')
-      AND p.proname LIKE 'upt_%'
-      AND position('auth.uid()' in pg_get_functiondef(p.oid)) = 0
-      AND position('upt_is_approved' in pg_get_functiondef(p.oid)) = 0
-      AND position('upt_is_admin' in pg_get_functiondef(p.oid)) = 0
-      AND position('god_session_valid' in pg_get_functiondef(p.oid)) = 0
-      -- Delegated authorization is valid only for these explicit internal
-      -- workflow boundaries whose callees enforce caller identity/scope.
-      AND position('upt_respond_shift' in pg_get_functiondef(p.oid)) = 0
-      AND position('inventory_can_view' in pg_get_functiondef(p.oid)) = 0
-  ) THEN
-    RAISE EXCEPTION 'FAIL: authenticated Uptilldawn SECURITY DEFINER entry point lacks an explicit authorization primitive';
+  -- Preserve the exact deny-by-default predicates while reporting the
+  -- offending signature(s). Fresh-isolated replays can expose drift that a
+  -- long-lived hosted database no longer contains; never suppress this gate.
+  SELECT string_agg(p.oid::regprocedure::text, ', ' ORDER BY p.proname)
+    INTO v_unauthorized_rpc_list
+  FROM pg_proc p
+  JOIN pg_namespace n ON n.oid = p.pronamespace
+  WHERE n.nspname = 'public'
+    AND p.prosecdef
+    AND has_function_privilege('authenticated', p.oid, 'EXECUTE')
+    AND p.proname LIKE 'upt_%'
+    AND position('auth.uid()' in pg_get_functiondef(p.oid)) = 0
+    AND position('upt_is_approved' in pg_get_functiondef(p.oid)) = 0
+    AND position('upt_is_admin' in pg_get_functiondef(p.oid)) = 0
+    AND position('god_session_valid' in pg_get_functiondef(p.oid)) = 0
+    -- Delegated authorization is valid only for these explicit internal
+    -- workflow boundaries whose callees enforce caller identity/scope.
+    AND position('upt_respond_shift' in pg_get_functiondef(p.oid)) = 0
+    AND position('inventory_can_view' in pg_get_functiondef(p.oid)) = 0;
+  IF v_unauthorized_rpc_list IS NOT NULL THEN
+    RAISE EXCEPTION 'FAIL: authenticated Uptilldawn SECURITY DEFINER entry point lacks an explicit authorization primitive: %', v_unauthorized_rpc_list;
   END IF;
 END
 $surface$;
