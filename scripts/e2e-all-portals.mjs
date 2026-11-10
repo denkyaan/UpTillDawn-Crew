@@ -114,10 +114,19 @@ try{
      await page.goto(new URL(login,base).href,{waitUntil:'domcontentloaded',timeout:timeOut})
      await page.locator('#email').fill(email)
      await page.locator('#password').fill(password)
-     await Promise.all([
-      page.waitForURL(url=>!url.pathname.startsWith('/login'),{timeout:timeOut}),
-      page.locator('button[type="submit"]').click(),
-     ])
+     try{
+      await Promise.all([
+       page.waitForURL(url=>!url.pathname.startsWith('/login'),{timeout:timeOut}),
+       page.locator('button[type="submit"]').click(),
+      ])
+     }catch(error){
+      // A successful Next.js Server Action redirect can abort an intermediate
+      // document request. Accept only that transport race, then independently
+      // require the final authenticated destination; never waive a login failure.
+      if(!/ERR_ABORTED|frame was detached|navigation interrupted/i.test(String(error)))throw error
+      await page.waitForFunction(()=>!location.pathname.startsWith('/login'),null,{timeout:timeOut})
+     }
+     assert.ok(!new URL(page.url()).pathname.startsWith('/login'),'Login did not leave the authentication route')
      await assertAppliedLocale(page,locale)
      records.push({...meta,step:'authenticated',actual:new URL(page.url()).pathname})
      for(const pathname of config.routes){

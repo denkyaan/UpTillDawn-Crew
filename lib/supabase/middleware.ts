@@ -77,6 +77,23 @@ export async function updateSession(request: NextRequest) {
         return response
     }
 
+    // Enforce Maker ownership before Next.js starts the protected RSC render.
+    // This avoids leaking a partial God Mode shell to a signed-in non-owner;
+    // all privileged RPCs still independently validate their Maker session.
+    const makerRoute = pathname === '/maker-mode' || pathname.startsWith('/maker-mode/') ||
+        pathname === '/god-mode' || pathname.startsWith('/god-mode/')
+    if (user && makerRoute) {
+        const { data: isOwner, error: ownerError } = await supabase.rpc('upt_current_is_owner')
+        if (ownerError || isOwner !== true) {
+            const url = request.nextUrl.clone()
+            url.pathname = '/unauthorized'
+            url.search = ''
+            const response = NextResponse.redirect(url)
+            supabaseResponse.cookies.getAll().forEach(cookie => response.cookies.set(cookie))
+            return response
+        }
+    }
+
     // Keep login portals reachable while authenticated so admins/makers can
     // deliberately re-authenticate and switch their effective role mode.
     const redirectAuthenticatedAuthPages = ['/signup', '/forgot-password']

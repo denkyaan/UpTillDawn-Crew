@@ -84,7 +84,10 @@ export default async function Page({searchParams}:{searchParams?:Promise<{event?
   }
 
   const personalWork=!isAdmin&&Boolean(shifts.data?.length||session.data)
-  if(!isAdmin&&!personalWork&&!current.isEditMode)redirect('/events')
+  // An assigned responsible lead may monitor their workplace without being
+  // booked on a personal shift. Keep staff without a shift on /events.
+  const hasResponsibleAssignment=isResponsible&&responsibleEventRows.length>0
+  if(!isAdmin&&!personalWork&&!hasResponsibleAssignment&&!current.isEditMode)redirect('/events')
 
   const responsibleScope=!isAdmin&&manager
     ? (await s.from('responsible_assignments').select('event_id,workplace_id').eq('user_id',current.id).in('event_id',operationalEventIds)).data||[]
