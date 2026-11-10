@@ -17,31 +17,48 @@ export function ProviderConnectionProbe({provider,initialLocale}:{provider:Conne
  const [busy,setBusy]=useState(false)
  const last=useRef(0)
  const inFlight=useRef(false)
+ const currentRequest=useRef<AbortController|null>(null)
  useEffect(()=>{const apply=()=>setLocale(activeUiLocale());apply();window.addEventListener(LANGUAGE_APPLIED_EVENT,apply);return()=>window.removeEventListener(LANGUAGE_APPLIED_EVENT,apply)},[])
  const check=useCallback(async(force=false)=>{
-  // Prevent overlapping requests. A just-saved key must be checked even if a
-  // manual test was run within the normal 12-second rate limit.
-  if(inFlight.current||(!force&&Date.now()-last.current<12000))return
+  // A save overrides a previous credential test, but a manual click remains
+  // rate-limited. Abort the superseded request so stale verdicts cannot win.
+  if(inFlight.current&&!force)return
+  if(!force&&Date.now()-last.current<12000)return
+  currentRequest.current?.abort()
+  const controller=new AbortController()
+  currentRequest.current=controller
   inFlight.current=true;last.current=Date.now();setBusy(true);setStatus(null)
+  const update=(state:ConnectionState)=>{if(currentRequest.current===controller)setStatus(state)}
   try{
-   const response=await fetch("/api/admin/provider-connection-check",{method:"POST",headers:{"Content-Type":"application/json"},credentials:"same-origin",cache:"no-store",body:JSON.stringify({provider})})
-   if(!response.ok){setStatus("unavailable");return}
+   const response=await fetch("/api/admin/provider-connection-check",{method:"POST",headers:{"Content-Type":"application/json"},credentials:"same-origin",cache:"no-store",signal:controller.signal,body:JSON.stringify({provider})})
+   if(!response.ok){update("unavailable");return}
    const payload:unknown=await response.json()
-   if(!payload||typeof payload!=="object"||!("status" in payload)){setStatus("unavailable");return}
+   if(!payload||typeof payload!=="object"||!("status" in payload)){update("unavailable");return}
    const state=payload.status
-   if(state==="connected"||state==="not_configured"||state==="unauthorized"||state==="unavailable")setStatus(state)
-   else setStatus("unavailable")
-  }catch{setStatus("unavailable")}
-  finally{inFlight.current=false;setBusy(false)}
+   if(state==="connected"||state==="not_configured"||state==="unauthorized"||state==="unavailable")update(state)
+   else update("unavailable")
+  }catch{update("unavailable")}
+  finally{
+   if(currentRequest.current===controller){
+    currentRequest.current=null;inFlight.current=false;setBusy(false)
+   }
+  }
  },[provider])
  useEffect(()=>{
   const onChanged=(event:Event)=>{
    if(!(event instanceof CustomEvent)||!event.detail||event.detail.provider!==provider)return
-   if(event.detail.action==="removed"){setStatus("not_configured");last.current=0;return}
+   if(event.detail.action==="removed"){
+    currentRequest.current?.abort();currentRequest.current=null
+    inFlight.current=false;setBusy(false);setStatus("not_configured");last.current=0
+    return
+   }
    if(event.detail.action==="saved")void check(true)
   }
   window.addEventListener("uptilldawn-integration-credentials-changed",onChanged)
-  return()=>window.removeEventListener("uptilldawn-integration-credentials-changed",onChanged)
+  return()=>{
+   window.removeEventListener("uptilldawn-integration-credentials-changed",onChanged)
+   currentRequest.current?.abort();currentRequest.current=null;inFlight.current=false
+  }
  },[provider,check])
  const t=copy[locale]
  return <div className="mt-3 space-y-2 border-t pt-3">
