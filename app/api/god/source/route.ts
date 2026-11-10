@@ -33,19 +33,20 @@ export async function GET(request: Request) {
       return studioResponse({path, sha: data.sha, content: Buffer.from(data.content, 'base64').toString('utf8')})
     }
     if (action === 'operations') {
-      // Read-only list of the five approved workflows. No extra token or
-      // service connector is required for a public repository.
+      const environment = params.get('environment') || 'main'
+      if (environment !== 'main' && environment !== 'production')
+        throw new StudioError('Ongeldige omgevingskeuze.',400)
+      const approved = environment==='main'
+        ?new Set(['CI main','Deploy main','Cleanup'])
+        :new Set(['CI production','Deploy production'])
       const {workflow_runs: allRuns} = await github<{workflow_runs: Run[]}>(
-        '/actions/runs?branch=main&per_page=60', key,
+        '/actions/runs?branch=main&per_page=100',key,
       )
-      const approved = new Set([
-        'CI main','Deploy main','CI production','Deploy production','Cleanup',
-      ])
-      const runs = allRuns.filter(run => approved.has(run.name)).slice(0,30)
-        .map(({id,name,head_sha,status,conclusion,html_url,run_attempt}) => ({
+      const runs = allRuns.filter(run=>approved.has(run.name)).slice(0,30)
+        .map(({id,name,head_sha,status,conclusion,html_url,run_attempt})=>({
           id,name,head_sha,status,conclusion,html_url,run_attempt,
         }))
-      return studioResponse({runs,source:'github-actions',scope:'main',readOnly:true})
+      return studioResponse({runs,source:'github-actions',scope:environment,readOnly:true})
     }
     if (action === 'history') {
       const commits = await github<{sha: string; html_url: string; commit: {message: string; author: {date: string}}}[]>('/commits?sha=main&per_page=30', key)
