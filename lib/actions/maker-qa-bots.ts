@@ -13,6 +13,7 @@ const project='https://npbjrtiolqperdgljnhi.supabase.co'
 const origin='https://uptilldawn-main.uptilldawn.workers.dev'
 
 export async function provisionOwnerQaBots(_previous:QaBotProvisionState):Promise<QaBotProvisionState>{
+ void _previous
  const rejected=(message:string):QaBotProvisionState=>({status:'error',message,accounts:[]})
  if(process.env.NEXT_PUBLIC_SUPABASE_URL!==project||process.env.NEXT_PUBLIC_APP_URL!==origin)
   return rejected('De QA-bots kunnen alleen op de afzonderlijke main-testomgeving worden ingesteld.')
