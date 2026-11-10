@@ -112,6 +112,9 @@ try{
     try{
      const login='/login/'+config.login
      await page.goto(new URL(login,base).href,{waitUntil:'domcontentloaded',timeout:timeOut})
+     // DOM readiness does not guarantee that the client login handler is attached.
+     // A pre-hydration click may silently submit nothing; test the actual hydrated form.
+     await page.locator('form[data-login-hydrated="true"]').waitFor({state:'attached',timeout:timeOut})
      await page.locator('#email').fill(email)
      await page.locator('#password').fill(password)
      try{
@@ -132,6 +135,9 @@ try{
      for(const pathname of config.routes){
       try{
        const result=await settledRoute(page,pathname)
+       if(role==='responsible'&&pathname==='/workplaces'){
+        assert.match(await page.locator('body').innerText(),/E2E Entrance/,'Assigned responsible workplace data did not load')
+       }
        await assertAppliedLocale(page,locale)
        records.push({...meta,step:'route',...result})
        console.log('PASS '+role+' '+locale+' '+viewport.width+' '+pathname)
