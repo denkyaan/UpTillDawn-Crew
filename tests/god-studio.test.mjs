@@ -46,21 +46,23 @@ test('God Mode source publication is proposal-first and CI-gated', async()=>{
   const source=await read('app/api/god/source/route.ts')
   assert.match(source,/god-mode\//)
   assert.match(source,/\/pulls/)
-  assert.match(source,/actions\/workflows\/ci\.yml\/runs/)
+  assert.match(source,/fast-change-validation\.yml\/runs/)
   assert.match(source,/latest\.status !== 'completed' \|\| latest\.conclusion !== 'success'/)
   assert.match(source,/compare\/main\.\.\./)
   assert.match(source,/merge_method: 'squash'/)
   assert.doesNotMatch(source,/git\/refs\/heads\/main.*POST/)
 })
 
-test('God Mode SQL keeps read-only and write execution explicit', async()=>{
+test('God Mode SQL requires a local authenticated environment and explicit production write confirmation', async()=>{
   const source=await read('app/api/god/sql/route.ts')
   const editor=await read('components/god-mode/god-sql-editor.tsx')
   assert.match(source,/read_only:readOnly/)
-  assert.match(source,/body\.query,!body\.write/)
+  assert.match(source,/requiredGodEnvironment/)
+  assert.match(source,/body\.write&&target!==project\.id/)
+  assert.match(source,/productionConfirmation!=='PRODUCTION'/)
   assert.match(source,/upt_god_database_secret/)
-  assert.match(editor,/write&&!inProduction&&!confirmed/)
-  assert.match(editor,/Ik bevestig deze wijziging aan MAIN-TEST/)\n  assert.match(source,/body\\.environment==='production'&&body\\.write/)
+  assert.match(editor,/write&&!confirmed/)
+  assert.match(editor,/productionConfirmation!=='PRODUCTION'/)
 })
 
 test('God Mode data and connection routes keep credentials and mutations behind token RPCs', async()=>{
