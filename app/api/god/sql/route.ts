@@ -1,7 +1,14 @@
 import { z } from 'zod'
 import { authorizeStudio, studioBody, studioFailure, studioResponse, StudioError } from '@/lib/god-studio-server'
 
-const PROJECT = 'eakoavcieossazqzplke'
+const PROJECT = 'npbjrtiolqperdgljnhi'
+const QA_URL = 'https://npbjrtiolqperdgljnhi.supabase.co'
+
+function requireMainTest(){
+ if(process.env.NEXT_PUBLIC_SUPABASE_URL!==QA_URL){
+  throw new StudioError('De SQL-werkruimte is alleen beschikbaar op main-test. Productiedata worden hier niet bewerkt.',403)
+ }
+}
 
 async function queryDatabase(credential: string, query: string, readOnly: boolean) {
   const response = await fetch(`https://api.supabase.com/v1/projects/${PROJECT}/database/query`, {
@@ -15,6 +22,7 @@ async function queryDatabase(credential: string, query: string, readOnly: boolea
 
 export async function GET(request: Request) {
   try {
+    requireMainTest()
     const {client,token}=await authorizeStudio(request)
     const {data,error}=await client.rpc('upt_god_database_secret',{p_token:token})
     if(error)throw new StudioError('Databasekoppeling niet beschikbaar.',503)
