@@ -296,6 +296,29 @@ jobs:
           END $qa$;
           ROLLBACK;
           SQL
+          node --input-type=module <<'NODE'
+          import {createClient} from '@supabase/supabase-js'
+          const client=createClient(process.env.BOT_SUPABASE_URL,process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY,{
+            auth:{persistSession:false,autoRefreshToken:false}
+          })
+          const {data:session,error:authError}=await client.auth.signInWithPassword({
+            email:'bot-02-responsible-fr@bots.uptilldawn.test',
+            password:process.env.BOT_TEST_PASSWORD,
+          })
+          if(authError||!session.session)throw Error('Responsible QA account failed real password authentication')
+          const event='00000000-0000-4000-8000-00000000e2e1'
+          const workplace='00000000-0000-4000-8000-00000000e2e2'
+          const [assignment,events,workplaces]=await Promise.all([
+            client.from('responsible_assignments').select('event_id,workplace_id').eq('user_id',session.user.id),
+            client.from('events').select('id,name').eq('id',event),
+            client.from('workplaces').select('id,name,event_id').eq('id',workplace),
+          ])
+          for(const [name,result] of [['assignments',assignment],['events',events],['workplaces',workplaces]]){
+            if(result.error)throw Error('Responsible PostgREST '+name+' denied: '+result.error.code)
+            if(result.data?.length!==1)throw Error('Responsible PostgREST '+name+' expected one visible fixture; got '+(result.data?.length??0))
+          }
+          console.info('PASS: Responsible can authenticate and read assigned event, workplace and assignment via PostgREST')
+          NODE
 
       - name: Prepare separate temporary Maker identity for six-role browser QA
         run: |
