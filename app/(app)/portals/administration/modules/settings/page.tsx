@@ -6,11 +6,12 @@ export const dynamic = "force-dynamic"
 export default async function Page({searchParams}:{searchParams:Promise<{billing?:string}>}){
  const params=await searchParams
  let stage="workspace"
+ let workspace:Awaited<ReturnType<typeof AdministrationModulePage>>
+ let billing:Awaited<ReturnType<typeof BillingProfile>>
  try{
-  const workspace=await AdministrationModulePage({params:Promise.resolve({slug:"settings"})})
+  workspace=await AdministrationModulePage({params:Promise.resolve({slug:"settings"})})
   stage="billing"
-  const billing=await BillingProfile({failed:params.billing==='error'})
-  return <>{workspace}{billing}</>
+  billing=await BillingProfile({failed:params.billing==='error'})
  }catch(error){
   // Isolated CI only: error names/stacks identify the source of an unavailable
   // Settings page without exposing user data, provider secrets or the database.
@@ -20,4 +21,5 @@ export default async function Page({searchParams}:{searchParams:Promise<{billing
   }
   throw error
  }
+ return <>{workspace}{billing}</>
 }
