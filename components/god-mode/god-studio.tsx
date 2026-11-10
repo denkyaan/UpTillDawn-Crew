@@ -1,18 +1,36 @@
 'use client'
 
 import dynamic from 'next/dynamic'
-import {useEffect,useRef,useState} from 'react'
+import {useEffect,useRef,useState,useSyncExternalStore} from 'react'
 import {GodModeEditor} from './god-mode-editor'
 import {GodVisualBuilder} from './god-visual-builder'
 import {GodAutomationBuilder} from './god-automation-builder'
 import {GodDataEditor} from './god-data-editor'
 import {GodSqlEditor} from './god-sql-editor'
+import {MakerOverview} from './maker-overview'
+import {MakerLogs} from './maker-logs'
+import {currentGodEnvironment} from '@/lib/god-mode-environments'
+import {LANGUAGE_APPLIED_EVENT,initialUiLocale,parseUiLocale,type SupportedUiLocale} from '@/lib/locale-preferences'
 import {editablePath,summarizeChanges,type SourceChange,type SourceEntry,type SourceTarget} from '@/lib/god-studio'
 import {humanizeAppError} from '@/lib/client-error-message'
 import targets from '@/lib/god-source-index.json'
 
 const CodeEditor=dynamic(()=>import('./code-editor'),{ssr:false,loading:()=> <p>Code-editor laden…</p>})
-const tabs=[['builder','Live Builder'],['ai','AI tekstuitvoering'],['automations','Automaties'],['source','Programmering'],['elements','Knoppen & onderdelen'],['data','Gegevens'],['sql','Logica & workflows'],['roles','Rollen & navigatie'],['versions','Versies & publicatie'],['connections','Koppelingen']] as const
+const tabs=[['overview','Overzicht'],['ai','AI tekstuitvoering'],['logs','Systeemlogs'],['builder','Live Builder'],['source','Programmering'],['elements','Knoppen & onderdelen'],['versions','Versies & publicatie'],['automations','Automaties'],['data','Gegevens'],['sql','Logica & workflows'],['roles','Rollen & navigatie'],['connections','Koppelingen']] as const
+const sections={
+ overview:['overview'],
+ recovery:['ai','logs'],
+ studio:['builder','source','elements'],
+ release:['versions'],
+ advanced:['automations','data','sql','roles','connections'],
+} as const
+type Section=keyof typeof sections
+const navNames={
+ nl:{overview:'Overzicht',recovery:'AI & herstel',studio:'App Studio',release:'Versies & CI',advanced:'Geavanceerd',main:'Main · test',production:'Productie · live',warning:'De productiegegevens zijn strikt gescheiden. Broncodevoorstellen worden eerst op main getest en pas na afzonderlijke productiegoedkeuring gepubliceerd.'},
+ fr:{overview:'Vue générale',recovery:'IA & réparation',studio:'App Studio',release:'Versions & CI',advanced:'Avancé',main:'Main · test',production:'Production · réel',warning:'Les données de production restent séparées. Les changements de code passent d’abord par main et nécessitent une approbation de production distincte.'},
+ en:{overview:'Overview',recovery:'AI & recovery',studio:'App Studio',release:'Versions & CI',advanced:'Advanced',main:'Main · test',production:'Production · live',warning:'Production data is isolated. Code proposals are tested on main first; a separate approval is required to release to production.'},
+ de:{overview:'Übersicht',recovery:'KI & Reparatur',studio:'App Studio',release:'Versionen & CI',advanced:'Erweitert',main:'Main · Test',production:'Produktion · Live',warning:'Produktionsdaten bleiben getrennt. Codevorschläge werden zuerst auf main getestet und benötigen eine gesonderte Produktionsfreigabe.'},
+} as const
 type Tab=typeof tabs[number][0]
 type Proposal={number:number;url:string;sha:string;branch:string}
 type Commit={sha:string;html_url:string;commit:{message:string;author:{date:string}}}
@@ -64,7 +82,14 @@ async function api<T>(url:string,body?:unknown,method=body?'POST':'GET'):Promise
 }
 
 export function GodStudio(){
-  const [tab,setTab]=useState<Tab>('builder')
+  const locale=useSyncExternalStore(
+    notify=>{window.addEventListener(LANGUAGE_APPLIED_EVENT,notify);return()=>window.removeEventListener(LANGUAGE_APPLIED_EVENT,notify)},
+    ()=>parseUiLocale(document.documentElement.lang)||initialUiLocale(),
+    ()=>'nl' as SupportedUiLocale,
+  )
+  const t=navNames[locale]
+  const [environment,setEnvironment]=useState<'main'|'production'>(currentGodEnvironment(process.env.NEXT_PUBLIC_SUPABASE_URL)||'main')
+  const [tab,setTab]=useState<Tab>('overview')
   const [files,setFiles]=useState<SourceEntry[]>([])
   const [base,setBase]=useState('')
   const [connected,setConnected]=useState(false)
@@ -265,8 +290,21 @@ export function GodStudio(){
   }
 
   return <div className="space-y-4">
-    <nav aria-label="God Mode gereedschappen" className="flex gap-2 overflow-x-auto rounded-2xl border p-2">{tabs.map(([key,label])=><button key={key} aria-pressed={tab===key} onClick={()=>{setTab(key);if(key==='versions')void action(loadHistory)}} className={`shrink-0 rounded-xl px-4 py-3 text-sm font-bold ${tab===key?'bg-violet-600 text-white':'hover:bg-muted'}`}>{label}</button>)}</nav>
+    <nav aria-label="God Mode gereedschappen" className="space-y-2 rounded-2xl border p-2">
+      <div className="flex flex-wrap gap-2">
+        {(['main','production'] as const).map(target=><button key={target} type="button" aria-pressed={environment===target} onClick={()=>{setEnvironment(target);setSelectedErrorReport(null);setTab('overview')}} className={'rounded-xl border px-4 py-2 text-sm font-black '+(environment===target?'border-amber-500 bg-amber-500/15':'hover:border-violet-500')}>{t[target]}</button>)}
+      </div>
+      <div className="flex gap-2 overflow-x-auto">{(Object.keys(sections) as Section[]).map(section=><button key={section} type="button" aria-pressed={(sections[section] as readonly string[]).includes(tab)} onClick={()=>{const destination=sections[section][0] as Tab;setTab(destination);if(destination==='versions')void action(loadHistory)}} className={'shrink-0 rounded-xl px-4 py-3 text-sm font-bold '+((sections[section] as readonly string[]).includes(tab)?'bg-violet-600 text-white':'hover:bg-muted')}>{t[section]}</button>)}</div>
+      {(['overview','recovery','studio','release','advanced'] as const).map(section=>(sections[section] as readonly string[]).includes(tab)&&sections[section].length>1?<div key={section} className="flex gap-2 overflow-x-auto">{tabs.filter(([key])=>(sections[section] as readonly string[]).includes(key)).map(([key,label])=><button type="button" key={key} aria-pressed={tab===key} onClick={()=>{setTab(key);if(key==='versions')void action(loadHistory)}} className={'shrink-0 rounded-lg border px-3 py-2 text-xs font-bold '+(tab===key?'border-violet-500 bg-violet-500/10':'hover:border-violet-500')}>{label}</button>)}</div>:null)}
+    </nav>
+    {environment==='production'&&<p className="rounded-xl border border-amber-500/40 p-3 text-sm">{t.warning}</p>}
     {message&&<p role="status" className="whitespace-pre-wrap rounded-xl border border-violet-500/40 p-3 text-sm">{message}</p>}
+    {tab==='overview'&&<MakerOverview environment={environment} navigate={destination=>{setTab(destination);if(destination==='versions')void action(loadHistory)}}/>}
+    {tab==='logs'&&<MakerLogs environment={environment} onDiagnose={(reportId,prompt)=>{
+      setSelectedErrorReport(environment==='main'?reportId:null)
+      setTextAiPrompt(prompt)
+      setTab('ai')
+    }}/>}
     {tab==='builder'&&<GodVisualBuilder onOpenSource={(file,line)=>void open(file,line)} onPrepareAi={prepareAiFromBuilder}/>}
     {tab==='ai'&&<section className="space-y-5">
       <div className="space-y-3 rounded-2xl border border-violet-500/40 bg-violet-500/5 p-4">
@@ -340,7 +378,7 @@ export function GodStudio(){
     </div>}
     {tab==='elements'&&<section className="space-y-4"><h2 className="text-xl font-black">Van knop naar programmering</h2><p className="text-sm text-muted-foreground">Selecteer een knop, invoerveld, formulier of functie. De editor opent het bijbehorende bestand en de regel.</p><div className="flex flex-wrap gap-2"><input aria-label="Pagina inspecteren" value={previewPath} onChange={e=>setPreviewPath(e.target.value)} className="min-w-0 flex-1 rounded-xl border bg-background p-3"/><button onClick={()=>{if(!previewPath.startsWith('/')||previewPath.startsWith('//')||previewPath.startsWith('/god-mode')){setMessage('Gebruik een intern app-pad, bijvoorbeeld /events.');return}setPreview(previewPath)}} className="rounded-xl border px-4 py-2">Pagina inspecteren</button><select aria-label="Schermbreedte" value={previewWidth} onChange={e=>setPreviewWidth(e.target.value)} className="rounded-xl border bg-background p-2"><option value="100%">Desktop</option><option value="390px">Mobiel</option><option value="768px">Tablet</option></select></div>{preview&&<div className="overflow-auto rounded-xl border bg-zinc-950 p-2"><p className="p-2 text-xs text-zinc-400">Selectiestand: klikken selecteert een onderdeel. De pagina toont je huidige gewone app-sessie; meld daar eerst aan als dat nodig is.</p><iframe title="App onderdelen selecteren" src={preview} onLoad={e=>inspectFrame(e.currentTarget)} className="mx-auto h-[55vh] max-w-full bg-white" style={{width:previewWidth}}/></div>}<input aria-label="Onderdeel zoeken" value={elementSearch} onChange={e=>setElementSearch(e.target.value)} placeholder="Zoek knoptekst, functienaam of bestand…" className="w-full rounded-xl border bg-background p-3"/><div className="max-h-[65vh] space-y-2 overflow-auto">{indexed.map((t,i)=><button key={`${t.file}:${t.line}:${i}`} disabled={!base} onClick={()=>void open(t.file,t.line)} className="block w-full rounded-xl border p-3 text-left hover:border-violet-500"><span className="text-xs font-bold text-violet-400">{t.kind}</span><p className="break-words text-sm">{t.label||t.handler}</p><p className="mt-1 break-all font-mono text-xs text-muted-foreground">{t.file}:{t.line} {t.handler}</p></button>)}</div></section>}
     {tab==='data'&&<GodDataEditor/>}
-    {tab==='sql'&&<GodSqlEditor/>}
+    {tab==='sql'&&<GodSqlEditor key={environment} environment={environment}/>}
     {tab==='roles'&&<GodModeEditor/>}
     {tab==='versions'&&<section className="space-y-4"><h2 className="text-xl font-black">Versies, tests & publicatie</h2><p className="text-sm text-muted-foreground">Concept → automatische tests → publiceren op main → Cloudflare-build. Bij een mislukte build blijft de vorige appversie live. Databasewijzigingen staan los van broncodeherstel.</p><button disabled={busy} onClick={()=>void action(loadHistory)} className="rounded-xl border px-4 py-2">Status vernieuwen</button>{proposal&&<a href={proposal.url} target="_blank" rel="noreferrer" className="block text-violet-400 underline">Laatst opgeslagen voorstel #{proposal.number}</a>}{pulls.map(p=><article key={p.number} className="space-y-3 rounded-xl border p-4"><a href={p.html_url} target="_blank" rel="noreferrer" className="font-bold underline">#{p.number} {p.title}</a><p className="font-mono text-xs">{p.head.sha.slice(0,8)}</p><div className="flex flex-wrap gap-2"><button disabled={busy} onClick={()=>void action(async()=>{const data=await api<{runs:Run[]}>(`/api/god/source?action=checks&sha=${p.head.sha}`);setRuns(data.runs);setMessage(data.runs.length?'Teststatus geladen.':'Tests zijn nog niet gestart. Controleer de Actions-koppeling op GitHub.')})} className="rounded-xl border px-4 py-2">Tests bekijken</button><button disabled={busy||!connected} onClick={()=>void action(async()=>{const data=await api<{notice:string}>('/api/god/source',{action:'publish',number:p.number,sha:p.head.sha});setMessage(data.notice);await loadHistory();await load()})} className="rounded-xl bg-violet-600 px-4 py-2 font-bold text-white disabled:opacity-50">Geteste versie publiceren</button></div></article>)}{runs.map(r=><a key={r.id} href={r.html_url} target="_blank" rel="noreferrer" className="block rounded-xl border p-3 text-sm">{r.name}: {r.conclusion||r.status} · log openen</a>)}<h3 className="pt-3 font-black">Broncodegeschiedenis</h3>{history.map(c=><article key={c.sha} className="flex flex-wrap items-center justify-between gap-3 rounded-xl border p-3"><div><a href={c.html_url} target="_blank" rel="noreferrer" className="text-sm font-bold underline">{c.commit.message.split('\n')[0]}</a><p className="text-xs text-muted-foreground">{c.sha.slice(0,8)} · {new Date(c.commit.author.date).toLocaleString('nl-BE')}</p></div><button disabled={busy||!connected} onClick={()=>setRestore(c.sha)} className="rounded border px-3 py-2 text-xs">Herstelvoorstel</button></article>)}{restore&&<div className="space-y-2 rounded-xl border border-amber-500 p-4"><p>Broncode naar {restore.slice(0,8)} herstellen? Dit maakt een nieuw voorstel dat eerst getest moet worden. Gegevens worden niet teruggezet.</p><button disabled={busy} onClick={()=>void action(async()=>{const data=await api<{proposal:Proposal}>('/api/god/source',{action:'restore',target:restore,base});setProposal(data.proposal);setRestore('');await loadHistory()})} className="rounded bg-violet-600 px-4 py-2 text-white">Herstelvoorstel maken</button><button onClick={()=>setRestore('')} className="ml-2 rounded border px-4 py-2">Annuleren</button></div>}</section>}
     {tab==='connections'&&<section className="space-y-5"><h2 className="text-xl font-black">Schrijftoegang koppelen</h2><p className="text-sm text-muted-foreground">De app heeft eigen toegangsrechten nodig. Sleutels worden versleuteld bewaard en alleen op de server gebruikt. De chatkoppelingen worden niet automatisch aan de website doorgegeven.</p><div className="space-y-3 rounded-xl border p-4"><h3 className="font-bold">GitHub · {connected?'gekoppeld':'nog niet gekoppeld'}</h3><p className="text-sm">Maak een fine-grained token voor uitsluitend UpTillDawn-Crew, met Contents, Pull requests, Actions en Workflows op read/write.</p><a href="https://github.com/settings/personal-access-tokens/new" target="_blank" rel="noreferrer" className="block text-sm text-violet-400 underline">GitHub-toegang instellen</a><input aria-label="GitHub-toegangssleutel" type="password" autoComplete="off" value={credential} onChange={e=>setCredential(e.target.value)} placeholder="GitHub-token" className="w-full rounded-xl border bg-background p-3"/><div className="flex gap-2"><button disabled={busy||!credential} onClick={()=>void action(async()=>{await api('/api/god/connection',{credential});setCredential('');setConnected(true);setMessage('GitHub gekoppeld.')})} className="rounded-xl bg-violet-600 px-4 py-2 text-white">GitHub koppelen</button><button disabled={busy||!connected} onClick={()=>void action(async()=>{await api('/api/god/connection',undefined,'DELETE');setConnected(false)})} className="rounded-xl border px-4 py-2">Ontkoppelen</button></div></div><div className="space-y-3 rounded-xl border p-4"><h3 className="font-bold">SQL-werkruimte · {databaseConnected?'gekoppeld':'nog niet gekoppeld'}</h3><p className="text-sm">Gebruik een Supabase Management API-token met databasebevoegdheid voor dit project. Gewone gegevensbewerking werkt al met je God Mode-sessie.</p><a href="https://supabase.com/dashboard/account/tokens" target="_blank" rel="noreferrer" className="block text-sm text-violet-400 underline">Supabase-toegang instellen</a><input aria-label="Supabase Management API-sleutel" type="password" autoComplete="off" value={databaseKey} onChange={e=>setDatabaseKey(e.target.value)} placeholder="Supabase Management API-token" className="w-full rounded-xl border bg-background p-3"/><div className="flex gap-2"><button disabled={busy||!databaseKey} onClick={()=>void action(async()=>{await api('/api/god/sql',{action:'connect',credential:databaseKey});setDatabaseKey('');setDatabaseConnected(true);setMessage('SQL-werkruimte gekoppeld.')})} className="rounded-xl bg-violet-600 px-4 py-2 text-white">SQL koppelen</button><button disabled={busy||!databaseConnected} onClick={()=>void action(async()=>{await api('/api/god/sql',{action:'disconnect'});setDatabaseConnected(false)})} className="rounded-xl border px-4 py-2">Ontkoppelen</button></div></div></section>}
