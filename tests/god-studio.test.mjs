@@ -59,7 +59,7 @@ test('God Mode SQL keeps read-only and write execution explicit', async()=>{
   const source=await read('app/api/god/sql/route.ts')
   const editor=await read('components/god-mode/god-sql-editor.tsx')
   assert.match(source,/read_only:readOnly/)
-  assert.match(source,/body\.query,!body\.write/)
+  assert.match(source,/body\.query,body\.environment,!body\.write/)
   assert.match(source,/upt_god_database_secret/)
   assert.match(editor,/write&&!confirmed/)
   assert.match(editor,/Ik heb deze SQL gecontroleerd/)
