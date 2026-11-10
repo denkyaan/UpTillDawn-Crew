@@ -23,6 +23,8 @@ test('Owner identity is removed at the database layer, not just hidden by UI sty
  assert.match(qa,/upt_admin_personnel_details_v2\(\)/)
  assert.match(qa,/upt_crew_directory\(\)/)
  assert.match(qa,/upt_promotion_directory\(\)/)
+ assert.match(qa,/current_setting\('upt\.qa_owner_id'\)::uuid/)
+ assert.ok(qa.indexOf("set_config('upt.qa_owner_id'")<qa.indexOf('SET LOCAL ROLE authenticated'),'QA owner must be captured before dropping auth.users permissions')
 })
 test('Six-role acceptance uses only isolated local credentials and no visible app seed',()=>{
  assert.match(seed,/target\.port!=='54321'/)

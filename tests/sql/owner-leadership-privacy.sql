@@ -40,9 +40,11 @@ BEGIN
  IF NOT v_denied THEN RAISE EXCEPTION 'Maker was editable as an employee';END IF;
 END $qa$;
 SELECT set_config('request.jwt.claim.sub',(SELECT id::text FROM auth.users WHERE email='bot-16-maker@bots.uptilldawn.test'),true);
+-- Remember the test identity before dropping privileges: authenticated cannot read auth.users.
+SELECT set_config('upt.qa_owner_id',(SELECT id::text FROM auth.users WHERE email='bot-16-maker@bots.uptilldawn.test'),true);
 SET LOCAL ROLE authenticated;
 DO $qa$
-DECLARE v_owner uuid:=(SELECT id FROM auth.users WHERE email='bot-16-maker@bots.uptilldawn.test');
+DECLARE v_owner uuid:=current_setting('upt.qa_owner_id')::uuid;
 BEGIN
  IF EXISTS(SELECT 1 FROM public.upt_admin_personnel_details_v2() WHERE id=v_owner)
  OR EXISTS(SELECT 1 FROM public.upt_crew_directory() WHERE id=v_owner)
