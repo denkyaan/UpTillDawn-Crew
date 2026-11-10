@@ -4,6 +4,8 @@ type Row = { fr: string; en: string; de: string }
 // Canonical Dutch UI strings that were historically present only in the NL/FR/EN table.
 // Keep every row complete: missing translations must never silently fall back to Dutch.
 const ROWS: Record<string, Row> = {
+  'Mijn evenement · Meer functies': { fr: 'Mon événement · Plus de fonctions', en: 'My event · More features', de: 'Mein Event · Weitere Funktionen' },
+  'Mijn operationele werkplek · Meer functies': { fr: 'Mon poste opérationnel · Plus de fonctions', en: 'My operational workplace · More features', de: 'Mein Einsatzort · Weitere Funktionen' },
   'Meer functies': { fr: 'Autres fonctions', en: 'More features', de: 'Weitere Funktionen' },
   'Toon minder': { fr: 'Afficher moins', en: 'Show less', de: 'Weniger anzeigen' },
   'Toon alle acties': { fr: 'Afficher toutes les actions', en: 'Show all actions', de: 'Alle Aktionen anzeigen' },
