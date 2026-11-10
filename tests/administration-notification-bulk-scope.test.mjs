@@ -27,8 +27,6 @@ test('single and bulk read refresh administration and shared notification inboxe
  assert.match(single,/rpc\('upt_mark_notification_read'/)
  assert.match(bulk,/await markAllNotificationsRead\(\)/)
  assert.match(source,/import \{markAllNotificationsRead\}/)
-
- }
 })
 
 test('notification pagination does not expose next-page navigation on database errors',()=>{
