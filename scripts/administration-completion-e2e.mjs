@@ -157,23 +157,37 @@ try{
  const bar=await one(admin.db.from('workplaces').insert({event_id:created.eventId,name:'Bar',sort_order:2,is_active:true}).select('id'));created.workplaceIds.push(bar.id)
  await gotoReady(adminPage,base+'/workplaces?event='+created.eventId)
  const scanner=adminPage.locator('#workplace-'+workplace.id+' [data-weeztix-scanner]')
- await scanner.getByRole('heading',{name:'Scan tickets at the entrance',exact:true}).waitFor()
- const destinations={
-  'Scanner for iPhone':'https://apps.apple.com/be/app/weeztix-ticket-scanner/id1327353743',
-  'Scanner for Android':'https://play.google.com/store/apps/details?id=com.scantickets.app.eventix',
-  'Manage scanner login':'https://dashboard.weeztix.com',
+ await scanner.getByRole('heading',{name:'Scan tickets',exact:true}).waitFor()
+ assert.equal(await scanner.getByRole('button',{name:'Start camera',exact:true}).isVisible(),true)
+ assert.equal(await scanner.getByRole('button',{name:'Verify ticket',exact:true}).isVisible(),true)
+ assert.equal(await scanner.getByRole('link',{name:'Manage Weeztix',exact:true}).getAttribute('href'),'https://dashboard.weeztix.com')
+ assert.equal(await adminPage.locator('#workplace-'+bar.id+' [data-weeztix-scanner]').count(),0,'Ticket scanner must not appear on a bar workplace')
+ // Exercise the *integrated* barcode form and server endpoint, not the
+ // retired external-scanner onboarding buttons. This isolated event has no
+ // configured Weeztix provider: admission must fail closed and never be faked.
+ await scanner.getByRole('textbox',{name:'Enter ticket barcode'}).fill('QAENTRANCE123456')
+ const scanResponse=adminPage.waitForResponse(r=>r.request().method()==='POST'&&new URL(r.url()).pathname==='/api/weeztix/scan',{timeout:browserTimeoutMs})
+ await scanner.getByRole('button',{name:'Verify ticket',exact:true}).click()
+ const scanResult=await scanResponse
+ assert.equal(scanResult.status(),503,'Unconfigured Weeztix scanning must not grant entrance')
+ assert.equal((await scanResult.json()).code,'not_configured')
+ await scanner.getByRole('status').filter({hasText:'Connect this event to Weeztix before in-app scanning.'}).waitFor()
+ assert.equal(await scanner.getByText('TICKET ACCEPTED · ADMIT',{exact:true}).count(),0)
+ // Provider apps remain available as explicitly labeled offline fallbacks,
+ // not as the primary scanner inside UpTillDawn.
+ await scanner.locator('summary').filter({hasText:'Official backup scanner'}).click()
+ const backups={
+  iPhone:'https://apps.apple.com/be/app/weeztix-ticket-scanner/id1327353743',
+  Android:'https://play.google.com/store/apps/details?id=com.scantickets.app.eventix',
  }
- for(const [name,href] of Object.entries(destinations)){
+ for(const [name,href] of Object.entries(backups)){
   const link=scanner.getByRole('link',{name,exact:true})
   assert.equal(await link.getAttribute('href'),href)
   assert.equal(await link.getAttribute('target'),'_blank')
  }
- assert.equal(await adminPage.locator('#workplace-'+bar.id+' [data-weeztix-scanner]').count(),0,'Ticket scanner must not appear on a bar workplace')
- await scanner.getByText('Prepare for entrance control',{exact:true}).click()
- await scanner.getByRole('link',{name:'Scanner guide',exact:true}).waitFor({state:'visible'})
  await gotoReady(adminPage,base+'/guestlist?event='+created.eventId+'&workplace='+workplace.id)
- await adminPage.locator('[data-weeztix-scanner]').getByRole('heading',{name:'Scan tickets at the entrance',exact:true}).waitFor()
- ok('Entrance scanner exposes verified official apps and login guidance without appearing on sales posts')
+ assert.equal(await adminPage.locator('[data-weeztix-scanner]').count(),0,'Guestlist remains separate from the single entrance ticket scanner')
+ ok('In-app entrance ticket scanner verifies through Weeztix endpoint, fails closed without configuration, and provides backup links only on entrance posts')
  const itemResult=await admin.db.rpc('upt_create_inventory_item',{p_workplace:workplace.id,p_name:prefix+' Equipment',p_category:'test',p_quantity:1,p_item_kind:'asset'})
  if(itemResult.error)throw itemResult.error
  const item=await one(admin.db.from('inventory_items').select('id,total_quantity').eq('workplace_id',workplace.id).eq('name',prefix+' Equipment'));created.itemIds.push(item.id)
