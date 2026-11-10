@@ -1,5 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createServerClient } from '@supabase/ssr'
+import { createClient } from '@/lib/supabase/crew-server'
+import type { Database } from '@/types/crew-database'
 import { sendSecurityLoginEmail } from '@/lib/security-login-email'
 import { resolveLoginEmail } from '@/lib/maker-login'
 
@@ -12,11 +14,9 @@ function loginUrl(request: NextRequest, error?: string) {
 export async function POST(request: NextRequest) {
   // A native 303 redirect must explicitly forward the session cookie changes.
   const sessionResponse = new NextResponse()
-  const cookieHeaders = new Map<string, string>()
   const redirectWithSession = (url: URL) => {
     const response = NextResponse.redirect(url, 303)
     for (const cookie of sessionResponse.cookies.getAll()) response.cookies.set(cookie)
-    for (const [key, value] of cookieHeaders) response.headers.set(key, value)
     response.headers.set('Cache-Control', 'private, no-store')
     return response
   }
@@ -40,7 +40,7 @@ export async function POST(request: NextRequest) {
 
   const email = resolveLoginEmail(submittedLogin)
   enterPhase('supabase_client')
-  const supabase = createServerClient(
+  const supabase = createServerClient<Database>(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
     {
@@ -48,18 +48,15 @@ export async function POST(request: NextRequest) {
         getAll() {
           return request.cookies.getAll()
         },
-        setAll(updates, headers) {
+        setAll(updates) {
           for (const { name, value, options } of updates) {
             request.cookies.set(name, value)
             sessionResponse.cookies.set(name, value, options)
           }
-          if (headers) {
-            for (const [key, value] of Object.entries(headers)) cookieHeaders.set(key, value)
-          }
         },
       },
     },
-  )
+  ) as Awaited<ReturnType<typeof createClient>>
   const ip = request.headers.get('cf-connecting-ip')
     || request.headers.get('x-forwarded-for')?.split(',')[0]?.trim()
     || request.headers.get('x-real-ip')
