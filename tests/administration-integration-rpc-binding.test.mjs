@@ -18,7 +18,7 @@ test('all integration-store RPC calls preserve the client receiver',()=>{
 
 test('administration settings exposes the connected integrations and billing form',()=>{
  const settings=read('app/(app)/portals/administration/modules/settings/page.tsx')
- const module=read('app/(app)/portals/administration/modules/[slug]/page.tsx')
+ const moduleSource=read('app/(app)/portals/administration/modules/[slug]/page.tsx')
  assert.match(settings,/BillingProfile\(/)
- assert.match(module,/slug==="settings"&&<ExternalServicesReadiness/)
+ assert.match(moduleSource,/slug==="settings"&&<ExternalServicesReadiness/)
 })
