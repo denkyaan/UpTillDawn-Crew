@@ -1,7 +1,6 @@
 import {DateInput} from '@/components/crew/date-input'
 import {assignAvailableCrewShift,cancelShift,confirmShift,declineShift,reassignShift,updateShift} from '@/lib/actions/uptilldawn'
 import { OwnShiftChangeControls, type ShiftReplacementCandidate, type ShiftSwapCandidate } from '@/components/crew/shift-change-controls'
-import {WorkplaceTourButton} from '@/components/crew/workplace-tour-button'
 import {DriverTransportForm} from '@/components/crew/driver-transport-form'
 
 export type WorkplacePlannerPerson={
@@ -124,7 +123,6 @@ export function WorkplaceShiftPlanner({
     </div>
 
     {shift.userId===currentUserId&&shift.status!=='cancelled'&&<div className="mt-3 space-y-2">
-     <WorkplaceTourButton workplaceName={workplaceName} roleName={shift.roleName}/>
      {shift.responseStatus==='accepted'&&shift.confirmedAt
       ? <p className="rounded-lg border border-emerald-500/40 bg-emerald-500/10 p-3 text-sm font-semibold">SHIFT BEVESTIGD</p>
       : shift.responseStatus==='declined'
