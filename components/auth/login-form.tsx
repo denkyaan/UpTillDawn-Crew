@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useTransition } from "react"
+import { useState, useSyncExternalStore, useTransition } from "react"
 import Link from "next/link"
 import Image from "next/image"
 import { Menu, X, Eye, EyeOff, Loader2, AlertCircle, ArrowRight, ShieldCheck, Users, UserCog, Megaphone, BriefcaseBusiness } from "lucide-react"
@@ -14,6 +14,12 @@ const portals = {
   promotion: { label: "Promotie", icon: Megaphone },
   administration: { label: "Administratie", icon: BriefcaseBusiness },
 } as const
+
+// Stable hydration snapshots mark when the login submit handler is attached.
+// Unlike effect-driven state setters this is safe with the React hooks lint rules.
+const subscribeHydration = () => () => {}
+const clientHydrationSnapshot = () => true
+const serverHydrationSnapshot = () => false
 
 type Portal = keyof typeof portals
 
@@ -31,6 +37,7 @@ export function LoginForm({
   const [showPassword, setShowPassword] = useState(false)
   const [error, setError] = useState<string | null>(initialError)
   const [isPending, startTransition] = useTransition()
+  const hydrated = useSyncExternalStore(subscribeHydration, clientHydrationSnapshot, serverHydrationSnapshot)
 
   function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault()
@@ -112,6 +119,7 @@ export function LoginForm({
           )}
 
           <form
+            data-login-hydrated={hydrated ? "true" : "false"}
             action={nativeAction}
             method="post"
             onSubmit={nativeAction ? undefined : handleSubmit}
