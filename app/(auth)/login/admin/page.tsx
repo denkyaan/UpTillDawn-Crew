@@ -8,5 +8,5 @@ export default async function AdminLoginPage({
   const params = await searchParams
   const error = typeof params.error === 'string' ? params.error : null
 
-  return <LoginForm portal="admin" initialError={error} />
+  return <LoginForm portal="admin" nativeAction="/api/auth/admin-login" initialError={error} />
 }
