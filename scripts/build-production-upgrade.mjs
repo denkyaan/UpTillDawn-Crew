@@ -31,10 +31,10 @@ export function productionUpgrade({root=repository,plan:providedPlan}={}){
  // closes a definition, but PostgreSQL's statement separator is omitted.
  // Keep the source/hash immutable and terminate each definition only in the
  // generated upgrade SQL so EXECUTE never joins adjacent CREATE statements.
- const alignmentFunctionCount=(alignment.match(/^CREATE OR REPLACE FUNCTION\\b/gm)??[]).length
- const alignmentClosingCount=(alignment.match(/^\\$function\\$;?[ \\t]*$/gm)??[]).length
+ const alignmentFunctionCount=(alignment.match(/^CREATE OR REPLACE FUNCTION\b/gm)??[]).length
+ const alignmentClosingCount=(alignment.match(/^\$function\$;?[ \t]*$/gm)??[]).length
  if(!alignmentFunctionCount||alignmentFunctionCount!==alignmentClosingCount)throw Error('Reviewed core alignment has inconsistent function boundaries')
- const executableAlignment=alignment.replace(/^\\$function\\$[ \\t]*$/gm,'$function$;')
+ const executableAlignment=alignment.replace(/^\$function\$[ \t]*$/gm,'$function$;')
  if(!/^[a-f0-9]{32}$/.test(plan.columnContract)||!plan.newTables.every(name=>/^[a-z_]+$/.test(name)))throw Error('Invalid baseline contract')
  const required=plan.newTables.map(literal).join(',')
  let sql=`-- Reviewed platform upgrade: ${plan.baselineVersion} -> ${plan.targetVersion}.

@@ -41,10 +41,10 @@ test('every reviewed core function is a separately terminated SQL command in the
  const end=sql.indexOf('\n$upt_core_alignment$;',begin)
  assert.ok(begin>0&&end>begin,'The generated release must include the reviewed alignment section')
  const alignment=sql.slice(begin,end)
- const count=(source.match(/^CREATE OR REPLACE FUNCTION\\b/gm)??[]).length
+ const count=(source.match(/^CREATE OR REPLACE FUNCTION\b/gm)??[]).length
  assert.ok(count>=1,'Expected reviewed function definitions')
- assert.equal((alignment.match(/^CREATE OR REPLACE FUNCTION\\b/gm)??[]).length,count)
- assert.equal((alignment.match(/^\\$function\\$;[ \\t]*$/gm)??[]).length,count)
- assert.doesNotMatch(alignment,/^\\$function\\$[ \\t]*$/m,'PostgreSQL cannot execute adjacent function definitions without terminators')
- assert.match(alignment,/\\$function\\$;\\s*\\n-- public\\.upt_assign_task/,'The second CREATE FUNCTION must begin after a statement terminator')
+ assert.equal((alignment.match(/^CREATE OR REPLACE FUNCTION\b/gm)??[]).length,count)
+ assert.equal((alignment.match(/^\$function\$;[ \t]*$/gm)??[]).length,count)
+ assert.doesNotMatch(alignment,/^\$function\$[ \t]*$/m,'PostgreSQL cannot execute adjacent function definitions without terminators')
+ assert.match(alignment,/\$function\$;\s*\n-- public\.upt_assign_task/,'The second CREATE FUNCTION must begin after a statement terminator')
 })
