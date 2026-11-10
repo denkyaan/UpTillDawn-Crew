@@ -6699,6 +6699,16 @@ export type Database = {
         Args: { p_event: string }
         Returns: Json
       }
+      upt_administration_timesheet_labels: {
+        Args: { p_timesheet_ids: string[] }
+        Returns: {
+          crew_name: string
+          event_id: string
+          event_name: string
+          timesheet_id: string
+          user_id: string
+        }[]
+      }
       upt_apply_event_template: {
         Args: {
           p_address?: string
