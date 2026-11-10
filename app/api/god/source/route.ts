@@ -6,7 +6,7 @@ import { changeSetSchema, editablePath, MAX_SOURCE_BYTES, shaSchema, sourcePath,
 type GitTree = {sha: string; truncated?: boolean; tree: {path: string; type: string; mode: string; sha: string; size?: number}[]}
 type GitCommit = {sha: string; tree: {sha: string}; message: string}
 type Pull = {number: number; html_url: string; state: string; merged: boolean; head: {sha: string; ref: string; repo: {full_name: string}}; base: {ref: string}}
-type Run = {id: number; name: string; path: string; head_sha: string; status: string; conclusion: string | null; html_url: string; run_attempt: number}
+type Run = {id: number; name: string; path: string; head_sha: string; head_branch: string | null; event: string; status: string; conclusion: string | null; html_url: string; run_attempt: number}
 
 async function currentHead(credential?: string) {
   return (await github<{object: {sha: string}}>('/git/ref/heads/main', credential)).object.sha
@@ -91,14 +91,16 @@ export async function POST(request: Request) {
     const body = z.object({action: z.literal('publish'), number: z.number().int().positive(), sha: shaSchema}).strict().parse(raw)
     const pull = await github<Pull>(`/pulls/${body.number}`, key)
     if (pull.head.repo?.full_name !== STUDIO_REPOSITORY || !pull.head.ref.startsWith('god-mode/') || pull.base.ref !== 'main' || pull.head.sha !== body.sha || pull.state !== 'open') throw new StudioError('Het voorstel is gewijzigd of al gesloten.', 409)
-    const runs = await github<{workflow_runs: Run[]}>(`/actions/workflows/ci.yml/runs?head_sha=${body.sha}&per_page=100`, key)
-    const latest = [...runs.workflow_runs].sort((a,b) => b.id - a.id)[0]
-    if (!latest || latest.status !== 'completed' || latest.conclusion !== 'success') throw new StudioError('Publiceren kan pas nadat de CI-controle van deze code is geslaagd.', 409)
+    const runs = await github<{workflow_runs: Run[]}>(`/actions/workflows/fast-change-validation.yml/runs?head_sha=${body.sha}&per_page=100`, key)
+    const latest = runs.workflow_runs
+      .filter(run => run.head_sha === body.sha && run.event === 'pull_request' && run.head_branch === pull.head.ref)
+      .sort((a,b) => b.id - a.id)[0]
+    if (!latest || latest.status !== 'completed' || latest.conclusion !== 'success') throw new StudioError('Samenvoegen naar main kan alleen na een geslaagde CI main op exact deze pullrequest-code.', 409)
     const comparison = await github<{behind_by: number}>(`/compare/main...${body.sha}`, key)
     if (comparison.behind_by > 0) throw new StudioError('Main is intussen gewijzigd. Werk het voorstel bij op GitHub en laat de tests opnieuw lopen.', 409)
     const merge = await github<{merged: boolean; sha: string}>(`/pulls/${body.number}/merge`, key, 'PUT', {sha: body.sha, merge_method: 'squash'})
     if (!merge.merged) throw new StudioError('GitHub heeft de wijziging niet samengevoegd.', 409)
-    return studioResponse({ok: true, sha: merge.sha, notice: 'Code staat op main. Cloudflare start de gekoppelde productiebuild; livegang volgt pas na een geslaagde deployment.'})
+    return studioResponse({ok: true, sha: merge.sha, notice: 'Code is samengevoegd naar main. CI main en Deploy main controleren de testapp. Productie wordt niet automatisch gestart of gewijzigd.'})
   } catch (error) {
     if (error instanceof z.ZodError) return studioResponse({error: error.issues[0]?.message || 'Ongeldige wijziging.'}, 400)
     return studioFailure(error)
