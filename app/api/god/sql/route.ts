@@ -7,7 +7,7 @@ const PROJECT = 'npbjrtiolqperdgljnhi'
 const MAIN_TEST_DATABASE_URL = 'https://npbjrtiolqperdgljnhi.supabase.co'
 
 function enforceMainTestDatabase() {
-  if (process.env.NEXT_PUBLIC_SUPABASE_URL?.replace(/\\/$/, '') !== MAIN_TEST_DATABASE_URL) {
+  if (process.env.NEXT_PUBLIC_SUPABASE_URL?.replace(/\/$/, '') !== MAIN_TEST_DATABASE_URL) {
     throw new StudioError('SQL is uitsluitend beschikbaar op de main-testomgeving. Gebruik de expliciete productie-releaseprocedure voor productiewijzigingen.', 403)
   }
 }
