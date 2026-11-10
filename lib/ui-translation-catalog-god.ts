@@ -151,7 +151,7 @@ export const GOD_TRANSLATIONS:Record<string,Row>={
   "12px":{fr:"12px",en:"12px",de:"12px"},
   "0px":{fr:"0px",en:"0px",de:"0px"},
   "/events of actieomschrijving":{fr:"/events ou description de l’action",en:"/events or action description",de:"/events oder Aktionsbeschreibung"},
-  "0.75rem":{fr:"0.75rem",en:"0.75rem",de:"0.75rem"}
+  "0.75rem":{fr:"0.75rem",en:"0.75rem",de:"0.75rem"},
   "God Mode omgeving":{fr:"Environnement God Mode",en:"God Mode environment",de:"God-Mode-Umgebung"},
   "Open de bestaande functies en triggers, wijzig hun SQL of voeg nieuwe functies, tabellen en automatiseringen toe.":{fr:"Consultez les fonctions et déclencheurs existants, modifiez leur SQL ou ajoutez des fonctions, tables et automatisations.",en:"Inspect existing functions and triggers, edit their SQL, or add functions, tables and automations.",de:"Vorhandene Funktionen und Trigger prüfen, SQL bearbeiten oder Funktionen, Tabellen und Automatisierungen hinzufügen."},
   "Deze werkruimte is gekoppeld aan de PRODUCTIE-database. Wijzigingen aan productiedata zijn hier uitgeschakeld en verlopen via de gecontroleerde release.":{fr:"Cet espace est connecté à la base de PRODUCTION. Les modifications des données de production sont désactivées et nécessitent une publication contrôlée.",en:"This workspace connects to the PRODUCTION database. Production data changes are disabled here and require a controlled release.",de:"Dieser Arbeitsbereich ist mit der PRODUKTIONSdatenbank verbunden. Änderungen an Produktivdaten sind hier deaktiviert und erfordern eine kontrollierte Freigabe."},
