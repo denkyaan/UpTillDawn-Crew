@@ -1,6 +1,12 @@
 # God Mode App Studio
 
-Open `/god-mode` with the dedicated God Mode login. This session is independent of the staff/admin login and remains subject to its two-hour expiry.
+Open `/maker-mode` after signing in with the permanent Maker/Owner identity and choose God Mode. This creates a private two-hour God Mode session on the current environment; a main-test session does not grant production access. God Mode is not an operational Head Admin role.
+
+## Maker workflow and environments
+
+The main menu groups the existing tools into **Overzicht**, **AI & herstel**, **App Studio**, **Versies & CI**, and **Geavanceerd**. The environment selector shows `main` (test) and `production` (live). Status information and registered application/error/recovery/audit logs are kept separate by Supabase project. Switching to edit an environment opens that environment's own authenticated God Mode; no JWT is forwarded between projects. Cross-project diagnostic queries through a connected Supabase Management token are read-only. Production live-revision SHA is not asserted unless deployment evidence confirms it.
+
+Cloudflare runtime tail/observability logs are not yet integrated inside God Mode: currently only persisted application logs and linked GitHub Actions logs are visible. Provider limits still apply to AI context, tokens, latency and billing; the assistant must not claim unlimited resources or silent production self-repair.
 
 ## Tools
 
@@ -10,14 +16,14 @@ Open `/god-mode` with the dedicated God Mode login. This session is independent 
 - **Gegevens:** inspect all application tables in `public`, insert records and edit/delete rows with primary keys. Writes are immediate, checked against the complete original row, and recorded in `upt_private.god_data_audit`. Cascaded deletions are governed by existing database constraints.
 - **Logica & workflows:** SQL workbench with templates for functions, triggers, scheduled jobs and the God Mode data audit. Starts read-only. Writes require explicit confirmation for the current query. SQL execution does not automatically create a repository migration; retain schema changes as new migration files.
 - **Rollen & navigatie:** existing role rule and layout editor.
-- **Versies & publicatie:** each code change creates a `god-mode/*` branch and pull request. The specific revision must pass the `ci.yml` workflow and include current main before it can be merged. Cloudflare's existing main trigger builds and deploys the merged revision. A merge is not a deployment success. Source restoration creates a new reviewed change and does not restore database data.
+- **Versies & publicatie:** each code change creates a `god-mode/*` branch and pull request. The specific revision must pass the `ci.yml` workflow and include current main before it can be merged. CI main verifies the exact proposal revision. A merged revision goes through Deploy main to update **main-test only**. Production CI and Deploy production are separate, explicit release actions and are never triggered by simply publishing in God Mode. A merge is not deployment success. Source restoration creates a new reviewed change and does not restore database data.
 
 ## One-time connections
 
 ChatGPT's GitHub/Supabase connector sessions cannot be transferred to a deployed website.
 
 1. Under **Koppelingen**, provide a fine-grained GitHub token scoped to `denkyaan/UpTillDawn-Crew`. Required read/write permissions: Contents, Pull requests, Actions and Workflows (for editing workflow files). God Mode checks repository push access before storing it.
-2. For free SQL, connect a Supabase Management API token authorized for project `eakoavcieossazqzplke`, with database read/write permissions. This is separate from the public browser key. Ordinary data editing does not require this connection.
+2. For advanced SQL and cross-environment log inspection, connect a Supabase Management API token with permissions for the specific selected project(s). Main-test is `npbjrtiolqperdgljnhi`; production is `eakoavcieossazqzplke`. Tokens are stored server-side, not in browser storage. Production writes are allowed only from an authenticated production God Mode session with an additional typed `PRODUCTION` confirmation. Ordinary data editing uses the current environment's God Mode session.
 
 Credentials are encrypted in Supabase Vault, never written to GitHub or browser storage, and can be disconnected. Every retrieval and modification RPC checks the private expiring God Mode session. HTTP routes additionally reject cross-site requests and use no-store responses. The public RPC grants support the dedicated God Mode cookie authentication, not anonymous access: absent/invalid/expired God tokens are rejected.
 
