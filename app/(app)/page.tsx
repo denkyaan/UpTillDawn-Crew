@@ -6,6 +6,8 @@ import { createClient } from '@/lib/supabase/crew-server'
 import { ManagerOnly } from '@/components/auth/manager-only'
 import { AssignedEventOnly } from '@/components/auth/assigned-event-only'
 import { getCurrentUser } from '@/lib/actions/auth'
+import {requestUiLocale} from '@/lib/server-locale'
+import {dashboardNextAction,dashboardActionCopy} from '@/lib/dashboard-next-action'
 import { ResponsibleLivePersonnel, type ResponsibleLivePerson } from '@/components/responsible/responsible-live-personnel'
 import { StaffWorkplacePersonnel, type StaffWorkplacePerson } from '@/components/crew/staff-workplace-personnel'
 
@@ -23,12 +25,12 @@ async function DashboardOverview({current}:{current:NonNullable<Awaited<ReturnTy
   const user={id:current.id}
   // Keep identity visible independently from the data-heavy overview below.
   // The authenticated shell can render the user's name without a duplicate profile lookup.
-  const s = await createClient()
+  const [s,locale] = await Promise.all([createClient(),requestUiLocale()])
   const nowDate = new Date()
   const nowMs = nowDate.getTime()
   const [eventsResult, shiftsResult, incidentsResult, membershipsResult, responsibleAssignmentsResult] = await Promise.all([
     s.from('events').select('id,name,venue,start_at,end_at,status').neq('status','archived').order('start_at', { ascending: true }),
-    s.from('shifts').select('id,workplace_id,event_id,scheduled_start,scheduled_end,response_status').eq('user_id', user.id).neq('status','cancelled').neq('response_status','declined').order('scheduled_start', { ascending: true }),
+    s.from('shifts').select('id,workplace_id,event_id,scheduled_start,scheduled_end,response_status').eq('user_id', user.id).neq('status','cancelled').neq('response_status','declined').gte('scheduled_end',nowDate.toISOString()).order('scheduled_start', { ascending: true }),
     s.from('incidents').select('id,event_id,workplace_id').neq('status', 'resolved'),
     s.from('event_members').select('event_id,event_role').eq('user_id', user.id),
     s.from('responsible_assignments').select('event_id,workplace_id').eq('user_id', user.id),
@@ -124,15 +126,28 @@ async function DashboardOverview({current}:{current:NonNullable<Awaited<ReturnTy
   const overviewSources=[eventsResult,shiftsResult,incidentsResult,membershipsResult,responsibleAssignmentsResult]
   const failedOverviewSources=overviewSources.filter(result=>result.error).length+Number(responsibleLiveError)+Number(staffLiveError)
   const hasLoadError=failedOverviewSources>0
-
+  // Do not suggest a fallback action when event/shift assignments failed to load.
+  const action=!shiftsResult.error&&!eventsResult.error&&!membershipsResult.error&&!responsibleAssignmentsResult.error
+    ?dashboardNextAction(shifts,nowMs,hasEventAssignment):null
+  const actionText=action?dashboardActionCopy[locale][action.kind]:null
+  const upcomingEvents=events.filter(event=>Date.parse(event.end_at)>=nowMs)
 
   return <>{hasLoadError && <p className="rounded-xl border border-amber-500/40 p-4">Een deel van de realtime gegevens is tijdelijk niet beschikbaar. De beschikbare onderdelen blijven bruikbaar.</p>}
+    {action&&actionText&&<section data-next-action={action.kind} className="rounded-2xl border border-violet-500/40 bg-violet-500/5 p-5">
+      <p className="text-xs font-bold uppercase tracking-widest text-violet-400">{dashboardActionCopy[locale].heading}</p>
+      <div className="mt-2 flex flex-wrap items-center justify-between gap-4">
+        <div className="min-w-0 flex-1"><h2 className="text-xl font-black">{actionText.title}</h2><p className="mt-1 text-sm text-muted-foreground">{actionText.description}</p>
+          {action.shiftStart&&<time className="mt-2 block text-xs font-semibold" dateTime={action.shiftStart}>{new Date(action.shiftStart).toLocaleString(locale==='nl'?'nl-BE':locale==='fr'?'fr-BE':locale==='de'?'de-BE':'en-BE',{timeZone:'Europe/Brussels',dateStyle:'medium',timeStyle:'short'})}</time>}
+        </div>
+        <Link data-next-action-link href={action.href} className="inline-flex items-center gap-2 rounded-xl bg-violet-600 px-4 py-3 text-sm font-bold text-white">{actionText.button}<ArrowRight className="h-4 w-4"/></Link>
+      </div>
+    </section>}
     <section className="grid gap-4 md:grid-cols-3">
-      <Card href="/events" icon={CalendarDays} title="Evenementen" value={events.length}/>
+      <Card href="/events" icon={CalendarDays} title="Evenementen" value={upcomingEvents.length}/>
       <AssignedEventOnly available={hasEventAssignment}><Card href="/workplaces" icon={Clock3} title="Werkplaatsen & shifts" value={shifts.length}/></AssignedEventOnly>
       {hasActiveIncidentContext && <ManagerOnly><Card href="/incidents" icon={AlertTriangle} title="Open incidenten" value={activeIncidentCount}/></ManagerOnly>}
     </section>
-    {current.role==='staff'&&hasEventAssignment&&<section className="space-y-3 rounded-2xl border bg-card p-4">
+    {current.role==='staff'&&hasEventAssignment&&<details className="space-y-3 rounded-2xl border bg-card p-4"><summary className="cursor-pointer font-bold">Mijn evenement · Meer functies</summary>
       <div><h2 className="text-lg font-bold">Mijn evenement</h2><p className="text-sm text-muted-foreground">Directe toegang tot je toegewezen werk, instructies en materiaal.</p></div>
       <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
         <Link href="/operations" className="rounded-xl border p-4"><Clock3 className="mb-3 h-5 w-5 text-violet-400"/><p className="font-bold">Mijn werkuren</p><p className="text-xs text-muted-foreground">Start, pauze en stop je werk via de geldige workflow.</p></Link>
@@ -140,7 +155,7 @@ async function DashboardOverview({current}:{current:NonNullable<Awaited<ReturnTy
         <Link href="/workplaces" className="rounded-xl border p-4"><MapPin className="mb-3 h-5 w-5 text-violet-400"/><p className="font-bold">Werkplaats & shift</p><p className="text-xs text-muted-foreground">Bekijk waar en wanneer je bent ingepland.</p></Link>
         <Link href="/inventory" className="rounded-xl border p-4"><PackageCheck className="mb-3 h-5 w-5 text-violet-400"/><p className="font-bold">Inventaris</p><p className="text-xs text-muted-foreground">Bekijk materiaal van je toegewezen werkplek.</p></Link>
       </div>
-    </section>}
+    </details>}
     {current.role==='staff'&&<section className="space-y-3 rounded-2xl border bg-card p-4">
       <div className="flex items-center justify-between gap-3">
         <div>
@@ -151,7 +166,7 @@ async function DashboardOverview({current}:{current:NonNullable<Awaited<ReturnTy
       </div>
       <StaffWorkplacePersonnel people={staffLivePeople}/>
     </section>}
-    {current.role==='responsible_lead'&&activeResponsibleAssignments.length>0&&<section className="space-y-3 rounded-2xl border bg-card p-4">
+    {current.role==='responsible_lead'&&activeResponsibleAssignments.length>0&&<details className="space-y-3 rounded-2xl border bg-card p-4"><summary className="cursor-pointer font-bold">Mijn operationele werkplek · Meer functies</summary>
       <div><h2 className="text-lg font-bold">Mijn operationele werkplek</h2><p className="text-sm text-muted-foreground">Directe toegang tot de functies die je als verantwoordelijke tijdens het evenement gebruikt.</p></div>
       <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
         <Link href="/operations" className="rounded-xl border p-4"><Clock3 className="mb-3 h-5 w-5 text-violet-400"/><p className="font-bold">Mijn werkuren</p><p className="text-xs text-muted-foreground">Werk, pauze en operationele opvolging.</p></Link>
@@ -159,7 +174,7 @@ async function DashboardOverview({current}:{current:NonNullable<Awaited<ReturnTy
         <Link href="/inventory" className="rounded-xl border p-4"><PackageCheck className="mb-3 h-5 w-5 text-violet-400"/><p className="font-bold">Inventaris</p><p className="text-xs text-muted-foreground">Controleer materiaal en meld ontbrekend of defect materiaal.</p></Link>
         <Link href="/tasks" className="rounded-xl border p-4"><ListTodo className="mb-3 h-5 w-5 text-violet-400"/><p className="font-bold">Taken</p><p className="text-xs text-muted-foreground">Volg taken van je eigen werkplek op.</p></Link>
       </div>
-    </section>}
+    </details>}
     {current.role==='responsible_lead'&&<section className="space-y-3 rounded-2xl border bg-card p-4">
       <div className="flex items-center justify-between gap-3">
         <div>
@@ -173,7 +188,7 @@ async function DashboardOverview({current}:{current:NonNullable<Awaited<ReturnTy
     <section>
       <h2 className="mb-3 text-lg font-bold">Komende evenementen</h2>
       <div className="grid gap-3">
-        {events.length ? events.slice(0, 3).map(event => <Link href="/events" key={event.id} className="flex items-center justify-between rounded-2xl border border-border bg-card p-4"><div><div className="font-bold">{event.name}</div><div className="flex gap-2 text-sm text-muted-foreground"><MapPin className="h-4 w-4"/>{event.venue || 'Locatie nog niet ingesteld'}</div></div><ArrowRight className="h-5 w-5"/></Link>) : <div className="rounded-2xl border border-dashed p-8 text-center text-muted-foreground">Geen evenementen beschikbaar.</div>}
+        {upcomingEvents.length ? upcomingEvents.slice(0, 3).map(event => <Link href="/events" key={event.id} className="flex items-center justify-between rounded-2xl border border-border bg-card p-4"><div><div className="font-bold">{event.name}</div><div className="flex gap-2 text-sm text-muted-foreground"><MapPin className="h-4 w-4"/>{event.venue || 'Locatie nog niet ingesteld'}</div></div><ArrowRight className="h-5 w-5"/></Link>) : <div className="rounded-2xl border border-dashed p-8 text-center text-muted-foreground">Geen evenementen beschikbaar.</div>}
       </div>
     </section>
 </>

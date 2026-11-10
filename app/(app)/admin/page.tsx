@@ -1,5 +1,6 @@
 import { dashboardTimestamp } from '@/lib/admin-dashboard-timing'
 import { redirect } from 'next/navigation'
+import Link from 'next/link'
 import { getCurrentUser } from '@/lib/actions/auth'
 import { createClient } from '@/lib/supabase/crew-server'
 import { nlStatus } from '@/lib/ui-nl'
@@ -11,7 +12,11 @@ import { FirstUseReadiness } from '@/components/admin/first-use-readiness'
 
 export const dynamic = 'force-dynamic'
 
-function Stat({label,value,detail}:{href?:string;label:string;value:number;detail?:string}){return <div className="rounded-2xl border bg-card p-5"><p className="text-sm text-muted-foreground">{label}</p><p className="mt-2 text-3xl font-black">{value}</p>{detail&&<p className="mt-1 text-xs text-muted-foreground">{detail}</p>}</div>}
+function Stat({href,label,value,detail}:{href?:string;label:string;value:number;detail?:string}){
+ const content=<><p className="text-sm text-muted-foreground">{label}</p><p className="mt-2 text-3xl font-black">{value}</p>{detail&&<p className="mt-1 text-xs text-muted-foreground">{detail}</p>}</>
+ const cls="block rounded-2xl border bg-card p-5"+(href?" transition hover:border-violet-500/60 focus-visible:outline focus-visible:outline-2 focus-visible:outline-violet-500":"")
+ return href?<Link href={href} className={cls} aria-label={label+": "+value}>{content}</Link>:<div className={cls}>{content}</div>
+}
 
 export default async function Page(){
  const dashboardStartedAt=dashboardTimestamp()
@@ -136,6 +141,7 @@ export default async function Page(){
  return <main className="mx-auto max-w-7xl space-y-7 p-4 pb-28 md:p-8"><RealtimeRefresh/><div className="flex flex-wrap items-end justify-between gap-3"><div><p className="text-xs font-bold tracking-[.2em] text-violet-400">UP TILL DAWN BEHEER</p><h1 className="text-3xl font-black">Operationeel command center</h1><p className="text-muted-foreground">Realtime serverstatus voor personeel, goedkeuringen, help oproepen, taken en synchronisatie.</p></div></div>
  {showFirstUse&&<FirstUseReadiness pendingApprovals={pendingProfileRows.length} approvedCrew={profileRows.length}/>}
  {failedOverviewSources>0&&<p role="status" className="rounded-xl border border-amber-500/50 p-3 text-sm text-muted-foreground">Een deel van de realtime beheergegevens is tijdelijk niet beschikbaar. De beschikbare onderdelen blijven bruikbaar.</p>}
+ <AdminActionCenter items={actionQueue}/>
  <section className="space-y-3 rounded-2xl border p-4">
   <div className="flex items-center justify-between gap-3"><div><h2 className="text-xl font-bold">Event command centers</h2><p className="text-sm text-muted-foreground">Lopende en eerstvolgende evenementen met directe toegang tot readiness, briefing, inventory, guestlist en sales.</p></div></div>
   <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
@@ -149,6 +155,6 @@ export default async function Page(){
   </div>
  </section>
  <section className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4"><Stat href="/admin#actiecentrum" label="Acties met prioriteit" value={actionQueue.filter(item=>item.priority==='critical'||item.priority==='high').length} detail="Kritieke en hoge acties in het actiecentrum"/><Stat href="/events" label="Actieve evenementen" value={activeEvents.length} detail={String(eventRows.length)+' niet gearchiveerd'}/><Stat href="/operations" label="Aan het werk" value={sessionRows.length} detail={String(activeBreakRows.length)+' op pauze'}/><Stat href="/operations" label="Wachtende werkurengoedkeuringen" value={inRows.length+outRows.length} detail={String(inRows.length)+' inklokverzoek · '+String(outRows.length)+' uitklokverzoek'}/><Stat href="/personnel" label="Nieuwe accountgoedkeuringen" value={pendingProfileRows.length}/><Stat href="/incidents" label="Open help oproepen" value={incidentRows.length}/><Stat href="/operations" label="Ontbrekende inklokacties" value={missing.length} detail="Dienst actief of binnen 60 min"/><Stat href="/tasks" label="Open taaktoewijzingen" value={openAssignmentCount}/><Stat href="/crew" label="Goedgekeurd personeel" value={profileRows.length}/></section>
- <section className="grid gap-5 lg:grid-cols-2"><div className="space-y-3 rounded-2xl border p-4"><div className="flex items-center justify-between"><h2 className="text-xl font-bold">Actief personeel</h2><span className="text-sm text-muted-foreground">{activePersonnel.length} actief</span></div><AdminActivePersonnel people={activePersonnel}/></div><AdminActionCenter items={actionQueue}/></section>
+ <section className="grid gap-5 lg:grid-cols-2"><div className="space-y-3 rounded-2xl border p-4"><div className="flex items-center justify-between"><h2 className="text-xl font-bold">Actief personeel</h2><span className="text-sm text-muted-foreground">{activePersonnel.length} actief</span></div><AdminActivePersonnel people={activePersonnel}/></div></section>
  <section className="grid gap-5 lg:grid-cols-2"><div className="space-y-3 rounded-2xl border p-4"><div className="flex items-center justify-between"><h2 className="text-xl font-bold">Open help oproepen</h2></div>{!incidentRows.length&&<p className="text-muted-foreground">Geen open help oproepen.</p>}{incidentRows.slice(0,6).map(x=><article key={x.id} className="rounded-xl border p-3"><p className="font-semibold">{x.message}</p><p className="text-xs text-muted-foreground">{eventMap.get(x.event_id||'')?.name||'Evenement'} · {new Date(x.created_at).toLocaleString('nl-BE')} · {nlStatus(x.status)}</p></article>)}</div><div className="space-y-3 rounded-2xl border p-4"><div className="flex items-center justify-between gap-3"><h2 className="text-xl font-bold">Lopende diensten & pauzes</h2><span className="text-sm text-muted-foreground">{activeShiftRows.length} lopend</span></div><AdminRunningShifts shifts={activeShiftRows}/></div></section></main>
 }

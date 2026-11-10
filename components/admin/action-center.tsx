@@ -1,3 +1,6 @@
+"use client"
+
+import {useState} from 'react'
 import { ContextLink } from '@/components/admin/context-link'
 import type { AdminSelection } from '@/lib/admin-selection-context'
 
@@ -39,7 +42,9 @@ export function sortActionQueue(items:ActionQueueItem[]){
 }
 
 export function AdminActionCenter({items}:{items:ActionQueueItem[]}){
+  const [expanded,setExpanded]=useState(false)
   const sorted=sortActionQueue(items)
+  const visibleActions=expanded?sorted:sorted.slice(0,12)
   const counts={
     critical:sorted.filter(item=>item.priority==='critical').length,
     high:sorted.filter(item=>item.priority==='high').length,
@@ -65,7 +70,7 @@ export function AdminActionCenter({items}:{items:ActionQueueItem[]}){
     {!sorted.length&&<p className="rounded-xl border border-dashed p-4 text-muted-foreground">Geen directe acties vereist.</p>}
 
     <div className="grid gap-2">
-      {sorted.slice(0,12).map((item,index)=><ContextLink
+      {visibleActions.map((item,index)=><ContextLink
         key={item.key}
         href={item.href}
         context={item.context}
@@ -82,7 +87,7 @@ export function AdminActionCenter({items}:{items:ActionQueueItem[]}){
       </ContextLink>)}
     </div>
 
-    {sorted.length>12&&<p className="text-xs text-muted-foreground">{sorted.length-12} extra actie(s) zijn beschikbaar via de gekoppelde modules.</p>}
+    {sorted.length>12&&<button type="button" aria-expanded={expanded} onClick={()=>setExpanded(value=>!value)} className="w-full rounded-xl border p-3 text-sm font-bold hover:bg-muted/30">{expanded?'Toon minder':'Toon alle acties'} ({sorted.length})</button>}
     {sorted.length>0&&<p className="text-xs text-muted-foreground">Volgorde: kritiek → hoog → normaal → info; binnen dezelfde prioriteit staat de oudste actie eerst.</p>}
   </section>
 }
