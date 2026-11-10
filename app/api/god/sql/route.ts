@@ -1,7 +1,16 @@
 import { z } from 'zod'
 import { authorizeStudio, studioBody, studioFailure, studioResponse, StudioError } from '@/lib/god-studio-server'
 
-const PROJECT = 'eakoavcieossazqzplke'
+// God Mode on main must NEVER point at production. Production SQL changes
+// are deployed through reviewed migrations and the explicit release workflow.
+const PROJECT = 'npbjrtiolqperdgljnhi'
+const MAIN_TEST_DATABASE_URL = 'https://npbjrtiolqperdgljnhi.supabase.co'
+
+function enforceMainTestDatabase() {
+  if (process.env.NEXT_PUBLIC_SUPABASE_URL?.replace(/\\/$/, '') !== MAIN_TEST_DATABASE_URL) {
+    throw new StudioError('SQL is uitsluitend beschikbaar op de main-testomgeving. Gebruik de expliciete productie-releaseprocedure voor productiewijzigingen.', 403)
+  }
+}
 
 async function queryDatabase(credential: string, query: string, readOnly: boolean) {
   const response = await fetch(`https://api.supabase.com/v1/projects/${PROJECT}/database/query`, {
@@ -15,10 +24,11 @@ async function queryDatabase(credential: string, query: string, readOnly: boolea
 
 export async function GET(request: Request) {
   try {
+    enforceMainTestDatabase()
     const {client,token}=await authorizeStudio(request)
     const {data,error}=await client.rpc('upt_god_database_secret',{p_token:token})
     if(error)throw new StudioError('Databasekoppeling niet beschikbaar.',503)
-    return studioResponse({connected:Boolean(data)})
+    return studioResponse({connected:Boolean(data),environment:'main-test'})
   }catch(error){return studioFailure(error)}
 }
 
