@@ -59,8 +59,8 @@ test('God Mode SQL keeps read-only and write execution explicit', async()=>{
   assert.match(source,/read_only:readOnly/)
   assert.match(source,/body\.query,!body\.write/)
   assert.match(source,/upt_god_database_secret/)
-  assert.match(editor,/write&&!confirmed/)
-  assert.match(editor,/Ik heb deze SQL gecontroleerd/)
+  assert.match(editor,/write&&!inProduction&&!confirmed/)
+  assert.match(editor,/Ik bevestig deze wijziging aan MAIN-TEST/)\n  assert.match(source,/body\\.environment==='production'&&body\\.write/)
 })
 
 test('God Mode data and connection routes keep credentials and mutations behind token RPCs', async()=>{
