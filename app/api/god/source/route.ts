@@ -32,6 +32,21 @@ export async function GET(request: Request) {
       if (data.size > MAX_SOURCE_BYTES || data.encoding !== 'base64') throw new StudioError('Dit bestand is te groot voor de ingebouwde teksteditor.', 413)
       return studioResponse({path, sha: data.sha, content: Buffer.from(data.content, 'base64').toString('utf8')})
     }
+    if (action === 'operations') {
+      // Read-only list of the five approved workflows. No extra token or
+      // service connector is required for a public repository.
+      const {workflow_runs: allRuns} = await github<{workflow_runs: Run[]}>(
+        '/actions/runs?branch=main&per_page=60', key,
+      )
+      const approved = new Set([
+        'CI main','Deploy main','CI production','Deploy production','Cleanup',
+      ])
+      const runs = allRuns.filter(run => approved.has(run.name)).slice(0,30)
+        .map(({id,name,head_sha,status,conclusion,html_url,run_attempt}) => ({
+          id,name,head_sha,status,conclusion,html_url,run_attempt,
+        }))
+      return studioResponse({runs,source:'github-actions',scope:'main',readOnly:true})
+    }
     if (action === 'history') {
       const commits = await github<{sha: string; html_url: string; commit: {message: string; author: {date: string}}}[]>('/commits?sha=main&per_page=30', key)
       const pulls = await github<Pull[]>('/pulls?state=open&per_page=100', key)
