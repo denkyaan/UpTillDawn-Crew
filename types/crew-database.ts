@@ -257,6 +257,88 @@ export type Database = {
         }
         Relationships: []
       }
+      admin_bank_statement_transactions: {
+        Row: {
+          amount_cents: number
+          booked_on: string
+          currency: string
+          description: string
+          direction: string
+          id: string
+          ignored_at: string | null
+          ignored_by: string | null
+          ignored_reason: string | null
+          imported_at: string
+          imported_by: string
+          linked_document_id: string | null
+          payment_reference: string
+          posted_at: string | null
+          posted_by: string | null
+          posted_payment_id: string | null
+          transaction_id: string
+        }
+        Insert: {
+          amount_cents: number
+          booked_on: string
+          currency?: string
+          description?: string
+          direction: string
+          id?: string
+          ignored_at?: string | null
+          ignored_by?: string | null
+          ignored_reason?: string | null
+          imported_at?: string
+          imported_by: string
+          linked_document_id?: string | null
+          payment_reference?: string
+          posted_at?: string | null
+          posted_by?: string | null
+          posted_payment_id?: string | null
+          transaction_id: string
+        }
+        Update: {
+          amount_cents?: number
+          booked_on?: string
+          currency?: string
+          description?: string
+          direction?: string
+          id?: string
+          ignored_at?: string | null
+          ignored_by?: string | null
+          ignored_reason?: string | null
+          imported_at?: string
+          imported_by?: string
+          linked_document_id?: string | null
+          payment_reference?: string
+          posted_at?: string | null
+          posted_by?: string | null
+          posted_payment_id?: string | null
+          transaction_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "admin_bank_statement_transactions_linked_document_id_fkey"
+            columns: ["linked_document_id"]
+            isOneToOne: false
+            referencedRelation: "admin_financial_documents"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "admin_bank_statement_transactions_linked_document_id_fkey"
+            columns: ["linked_document_id"]
+            isOneToOne: false
+            referencedRelation: "admin_financial_payment_balances"
+            referencedColumns: ["document_id"]
+          },
+          {
+            foreignKeyName: "admin_bank_statement_transactions_posted_payment_id_fkey"
+            columns: ["posted_payment_id"]
+            isOneToOne: true
+            referencedRelation: "admin_financial_payments"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       admin_billing_profile: {
         Row: {
           approved_at: string | null
@@ -402,6 +484,7 @@ export type Database = {
           id: string
           mime_type: string
           original_name: string
+          sha256: string | null
           size_bytes: number
           storage_path: string
           uploaded_by: string
@@ -412,6 +495,7 @@ export type Database = {
           id?: string
           mime_type: string
           original_name: string
+          sha256?: string | null
           size_bytes: number
           storage_path: string
           uploaded_by?: string
@@ -422,6 +506,7 @@ export type Database = {
           id?: string
           mime_type?: string
           original_name?: string
+          sha256?: string | null
           size_bytes?: number
           storage_path?: string
           uploaded_by?: string
@@ -598,6 +683,51 @@ export type Database = {
           {
             foreignKeyName: "admin_financial_documents_original_invoice_id_fkey"
             columns: ["original_invoice_id"]
+            isOneToOne: false
+            referencedRelation: "admin_financial_payment_balances"
+            referencedColumns: ["document_id"]
+          },
+        ]
+      }
+      admin_financial_line_imports: {
+        Row: {
+          created_at: string
+          created_by: string
+          document_id: string
+          id: string
+          row_count: number
+          source_name: string
+          source_sha256: string
+        }
+        Insert: {
+          created_at?: string
+          created_by: string
+          document_id: string
+          id: string
+          row_count: number
+          source_name: string
+          source_sha256: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string
+          document_id?: string
+          id?: string
+          row_count?: number
+          source_name?: string
+          source_sha256?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "admin_financial_line_imports_document_id_fkey"
+            columns: ["document_id"]
+            isOneToOne: false
+            referencedRelation: "admin_financial_documents"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "admin_financial_line_imports_document_id_fkey"
+            columns: ["document_id"]
             isOneToOne: false
             referencedRelation: "admin_financial_payment_balances"
             referencedColumns: ["document_id"]
@@ -893,6 +1023,93 @@ export type Database = {
           },
         ]
       }
+      admin_provider_bank_settlement_items: {
+        Row: {
+          provider_transaction_id: string
+          settlement_id: string
+          signed_cents: number
+        }
+        Insert: {
+          provider_transaction_id: string
+          settlement_id: string
+          signed_cents: number
+        }
+        Update: {
+          provider_transaction_id?: string
+          settlement_id?: string
+          signed_cents?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "admin_provider_bank_settlement_ite_provider_transaction_id_fkey"
+            columns: ["provider_transaction_id"]
+            isOneToOne: true
+            referencedRelation: "admin_provider_transactions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "admin_provider_bank_settlement_items_settlement_id_fkey"
+            columns: ["settlement_id"]
+            isOneToOne: false
+            referencedRelation: "admin_provider_bank_settlements"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      admin_provider_bank_settlements: {
+        Row: {
+          approved_at: string
+          approved_by: string
+          bank_statement_id: string
+          event_id: string
+          fee_cents: number
+          gross_cents: number
+          id: string
+          note: string
+          payout_cents: number
+          provider: string
+        }
+        Insert: {
+          approved_at?: string
+          approved_by: string
+          bank_statement_id: string
+          event_id: string
+          fee_cents: number
+          gross_cents: number
+          id?: string
+          note: string
+          payout_cents: number
+          provider: string
+        }
+        Update: {
+          approved_at?: string
+          approved_by?: string
+          bank_statement_id?: string
+          event_id?: string
+          fee_cents?: number
+          gross_cents?: number
+          id?: string
+          note?: string
+          payout_cents?: number
+          provider?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "admin_provider_bank_settlements_bank_statement_id_fkey"
+            columns: ["bank_statement_id"]
+            isOneToOne: true
+            referencedRelation: "admin_bank_statement_transactions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "admin_provider_bank_settlements_event_id_fkey"
+            columns: ["event_id"]
+            isOneToOne: false
+            referencedRelation: "events"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       admin_provider_event_mappings: {
         Row: {
           created_at: string
@@ -934,6 +1151,72 @@ export type Database = {
           },
         ]
       }
+      admin_provider_transactions: {
+        Row: {
+          amount_cents: number
+          category: string
+          currency: string
+          event_id: string
+          external_event_id: string
+          id: string
+          imported_at: string
+          imported_by: string
+          mapping_id: string
+          occurred_at: string
+          provider: string
+          sale_reference: string | null
+          status: string
+          transaction_id: string
+        }
+        Insert: {
+          amount_cents: number
+          category: string
+          currency?: string
+          event_id: string
+          external_event_id: string
+          id?: string
+          imported_at?: string
+          imported_by: string
+          mapping_id: string
+          occurred_at: string
+          provider: string
+          sale_reference?: string | null
+          status: string
+          transaction_id: string
+        }
+        Update: {
+          amount_cents?: number
+          category?: string
+          currency?: string
+          event_id?: string
+          external_event_id?: string
+          id?: string
+          imported_at?: string
+          imported_by?: string
+          mapping_id?: string
+          occurred_at?: string
+          provider?: string
+          sale_reference?: string | null
+          status?: string
+          transaction_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "admin_provider_transactions_event_id_fkey"
+            columns: ["event_id"]
+            isOneToOne: false
+            referencedRelation: "events"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "admin_provider_transactions_mapping_id_fkey"
+            columns: ["mapping_id"]
+            isOneToOne: false
+            referencedRelation: "admin_provider_event_mappings"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       admin_role_modes: {
         Row: {
           active_role: string
@@ -958,9 +1241,16 @@ export type Database = {
           applied_by: string | null
           created_at: string
           created_by: string
+          created_shift_id: string | null
           details: string
           event_id: string
           id: string
+          plan_kind: string
+          planned_overlap_allowed: boolean
+          planned_role_name: string | null
+          planned_shift_kind: string | null
+          planned_user_id: string | null
+          planned_workplace_id: string | null
           proposed_end: string
           proposed_start: string
           review_note: string | null
@@ -976,9 +1266,16 @@ export type Database = {
           applied_by?: string | null
           created_at?: string
           created_by?: string
+          created_shift_id?: string | null
           details?: string
           event_id: string
           id?: string
+          plan_kind?: string
+          planned_overlap_allowed?: boolean
+          planned_role_name?: string | null
+          planned_shift_kind?: string | null
+          planned_user_id?: string | null
+          planned_workplace_id?: string | null
           proposed_end: string
           proposed_start: string
           review_note?: string | null
@@ -994,9 +1291,16 @@ export type Database = {
           applied_by?: string | null
           created_at?: string
           created_by?: string
+          created_shift_id?: string | null
           details?: string
           event_id?: string
           id?: string
+          plan_kind?: string
+          planned_overlap_allowed?: boolean
+          planned_role_name?: string | null
+          planned_shift_kind?: string | null
+          planned_user_id?: string | null
+          planned_workplace_id?: string | null
           proposed_end?: string
           proposed_start?: string
           review_note?: string | null
@@ -1009,10 +1313,31 @@ export type Database = {
         }
         Relationships: [
           {
+            foreignKeyName: "admin_roster_proposals_created_shift_id_fkey"
+            columns: ["created_shift_id"]
+            isOneToOne: false
+            referencedRelation: "shifts"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "admin_roster_proposals_event_id_fkey"
             columns: ["event_id"]
             isOneToOne: false
             referencedRelation: "events"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "admin_roster_proposals_planned_user_id_fkey"
+            columns: ["planned_user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "admin_roster_proposals_planned_workplace_id_fkey"
+            columns: ["planned_workplace_id"]
+            isOneToOne: false
+            referencedRelation: "workplaces"
             referencedColumns: ["id"]
           },
           {
@@ -4034,6 +4359,7 @@ export type Database = {
           body: string
           created_at: string
           id: string
+          reply_to_message_id: string | null
           room: string
           sender_id: string
         }
@@ -4041,6 +4367,7 @@ export type Database = {
           body: string
           created_at?: string
           id?: string
+          reply_to_message_id?: string | null
           room: string
           sender_id: string
         }
@@ -4048,10 +4375,18 @@ export type Database = {
           body?: string
           created_at?: string
           id?: string
+          reply_to_message_id?: string | null
           room?: string
           sender_id?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "promotion_chat_messages_reply_to_message_id_fkey"
+            columns: ["reply_to_message_id"]
+            isOneToOne: false
+            referencedRelation: "promotion_chat_messages"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "promotion_chat_messages_sender_id_fkey"
             columns: ["sender_id"]
@@ -5375,6 +5710,84 @@ export type Database = {
           },
         ]
       }
+      upt_organization_leadership: {
+        Row: {
+          assigned_at: string
+          assigned_by: string
+          managed_portal_grant: boolean
+          slot: string
+          user_id: string
+        }
+        Insert: {
+          assigned_at?: string
+          assigned_by: string
+          managed_portal_grant?: boolean
+          slot: string
+          user_id: string
+        }
+        Update: {
+          assigned_at?: string
+          assigned_by?: string
+          managed_portal_grant?: boolean
+          slot?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "upt_organization_leadership_assigned_by_fkey"
+            columns: ["assigned_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "upt_organization_leadership_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: true
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      upt_personnel_role_slots: {
+        Row: {
+          role_one: string
+          role_two: string | null
+          updated_at: string
+          updated_by: string
+          user_id: string
+        }
+        Insert: {
+          role_one: string
+          role_two?: string | null
+          updated_at?: string
+          updated_by: string
+          user_id: string
+        }
+        Update: {
+          role_one?: string
+          role_two?: string | null
+          updated_at?: string
+          updated_by?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "upt_personnel_role_slots_updated_by_fkey"
+            columns: ["updated_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "upt_personnel_role_slots_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: true
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       user_error_reports: {
         Row: {
           ai_category: string | null
@@ -5962,6 +6375,28 @@ export type Database = {
         }
         Returns: string
       }
+      upt_admin_ignore_bank_statement: {
+        Args: { p_reason: string; p_statement: string }
+        Returns: Json
+      }
+      upt_admin_import_bank_statement_transactions: {
+        Args: { p_rows: Json }
+        Returns: Json
+      }
+      upt_admin_import_invoice_lines_csv: {
+        Args: {
+          p_document: string
+          p_request: string
+          p_rows: Json
+          p_sha256: string
+          p_source_name: string
+        }
+        Returns: Json
+      }
+      upt_admin_link_existing_bank_statement_payment: {
+        Args: { p_payment: string; p_statement: string }
+        Returns: Json
+      }
       upt_admin_login_failure: {
         Args: {
           p_ip?: string
@@ -6035,6 +6470,10 @@ export type Database = {
           updated_at: string
         }[]
       }
+      upt_admin_post_bank_statement_payment: {
+        Args: { p_document: string; p_statement: string }
+        Returns: Json
+      }
       upt_admin_profiles: {
         Args: never
         Returns: {
@@ -6081,6 +6520,10 @@ export type Database = {
           full_name: string
           user_id: string
         }[]
+      }
+      upt_admin_receive_inventory_batch: {
+        Args: { p_document: string; p_request: string; p_rows: Json }
+        Returns: number
       }
       upt_admin_record_promotion_violation: {
         Args: {
@@ -6129,14 +6572,50 @@ export type Database = {
         }
         Returns: string
       }
+      upt_admin_roster_plan_new: {
+        Args: {
+          p_id: string
+          p_overlap_allowed?: boolean
+          p_role_name: string
+          p_shift_kind?: string
+          p_user: string
+          p_workplace: string
+        }
+        Returns: undefined
+      }
       upt_admin_roster_review: {
         Args: { p_approve: boolean; p_id: string; p_note?: string }
         Returns: undefined
+      }
+      upt_admin_roster_shift_options: {
+        Args: never
+        Returns: {
+          event_id: string
+          id: string
+          scheduled_end: string
+          scheduled_start: string
+        }[]
+      }
+      upt_admin_roster_staff_options: {
+        Args: never
+        Returns: {
+          event_id: string
+          full_name: string
+          user_id: string
+        }[]
       }
       upt_admin_roster_submit: { Args: { p_id: string }; Returns: undefined }
       upt_admin_roster_target: {
         Args: { p_id: string; p_shift: string }
         Returns: undefined
+      }
+      upt_admin_roster_workplace_options: {
+        Args: never
+        Returns: {
+          event_id: string
+          name: string
+          workplace_id: string
+        }[]
       }
       upt_admin_set_account: {
         Args: { p_approved: boolean; p_role: string; p_user: string }
@@ -6154,6 +6633,24 @@ export type Database = {
           p_user_id: string
         }
         Returns: string
+      }
+      upt_admin_set_two_personnel_roles: {
+        Args: {
+          p_confirm_head?: boolean
+          p_role_one: string
+          p_role_two: string
+          p_user: string
+        }
+        Returns: Json
+      }
+      upt_admin_settle_provider_bank_statement: {
+        Args: {
+          p_fee_cents: number
+          p_note: string
+          p_statement: string
+          p_transactions: string[]
+        }
+        Returns: Json
       }
       upt_admin_system_health: {
         Args: never
@@ -6279,17 +6776,8 @@ export type Database = {
         Args: { p_event: string; p_workplace: string }
         Returns: boolean
       }
-      upt_administration_timesheet_labels: {
-        Args: { p_timesheet_ids: string[] }
-        Returns: {
-          timesheet_id: string
-          user_id: string
-          crew_name: string | null
-          event_id: string
-          event_name: string | null
-        }[]
-      }
       upt_can_manage_administration: { Args: never; Returns: boolean }
+      upt_can_manage_integrations: { Args: never; Returns: boolean }
       upt_can_manage_task: {
         Args: { p_task: string; p_uid?: string }
         Returns: boolean
@@ -6852,6 +7340,10 @@ export type Database = {
           user_id: string
         }[]
       }
+      upt_import_admin_provider_transactions: {
+        Args: { p_mapping: string; p_rows: Json }
+        Returns: Json
+      }
       upt_import_ticket_sales: {
         Args: {
           p_event: string
@@ -6859,6 +7351,19 @@ export type Database = {
           p_sha256: string
           p_source: string
         }
+        Returns: Json
+      }
+      upt_integration_audit_recent: {
+        Args: { p_limit?: number }
+        Returns: {
+          action: string
+          actor_name: string
+          occurred_at: string
+          provider: string
+        }[]
+      }
+      upt_integration_credentials: {
+        Args: { p_action: string; p_ciphertext?: string; p_provider?: string }
         Returns: Json
       }
       upt_inventory_asset_by_code: {
@@ -6910,6 +7415,10 @@ export type Database = {
           p_user: string
         }
         Returns: string
+      }
+      upt_leadership_assign: {
+        Args: { p_slot: string; p_user: string }
+        Returns: Json
       }
       upt_lock_timesheet: { Args: { p_timesheet: string }; Returns: undefined }
       upt_manager_live_sessions: {
@@ -7038,6 +7547,25 @@ export type Database = {
         }[]
       }
       upt_promotion_chat_allowed: { Args: never; Returns: boolean }
+      upt_promotion_chat_mark_read: {
+        Args: { p_room: string }
+        Returns: undefined
+      }
+      upt_promotion_chat_readers: {
+        Args: { p_message: string }
+        Returns: {
+          full_name: string
+          read_at: string
+          user_id: string
+        }[]
+      }
+      upt_promotion_chat_unread_counts: {
+        Args: never
+        Returns: {
+          room: string
+          unread_count: number
+        }[]
+      }
       upt_promotion_directory: {
         Args: never
         Returns: {
@@ -7708,6 +8236,28 @@ export type Database = {
           p_security_contact?: string
         }
         Returns: undefined
+      }
+      upt_weeztix_claim_refresh: {
+        Args: { p_event_id: string; p_workplace_id: string }
+        Returns: string
+      }
+      upt_weeztix_commit_refresh: {
+        Args: {
+          p_claim_id: string
+          p_event_id: string
+          p_new_ciphertext: string
+          p_previous_ciphertext: string
+          p_workplace_id: string
+        }
+        Returns: boolean
+      }
+      upt_weeztix_release_refresh: {
+        Args: { p_claim_id: string; p_event_id: string; p_workplace_id: string }
+        Returns: boolean
+      }
+      upt_weeztix_scan_secrets: {
+        Args: { p_event_id: string; p_workplace_id: string }
+        Returns: Json
       }
       upt_work_session_time_summary: {
         Args: { p_work_session: string }
