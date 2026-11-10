@@ -1,0 +1,46 @@
+import test from 'node:test'
+import assert from 'node:assert/strict'
+import {readFileSync} from 'node:fs'
+
+const read=(name)=>readFileSync(new URL('../'+name,import.meta.url),'utf8')
+const worker=read('supabase/functions/qa-provision-seven/index.ts')
+const action=read('lib/actions/maker-qa-bots.ts')
+const page=read('app/maker-mode/page.tsx')
+const component=read('components/maker/maker-qa-bot-setup.tsx')
+
+test('QA provisioning is restricted to the dedicated main-test project, Maker JWT and origin',()=>{
+ assert.match(worker,/expectedProject = 'https:\/\/npbjrtiolqperdgljnhi\.supabase\.co'/)
+ assert.match(worker,/expectedOrigin = 'https:\/\/uptilldawn-main\.uptilldawn\.workers\.dev'/)
+ assert.match(worker,/req\.method !== 'POST'/)
+ assert.match(worker,/req\.headers\.get\('origin'\) !== expectedOrigin/)
+ assert.match(worker,/service\.auth\.getUser\(jwt\)/)
+ assert.match(worker,/userClient\.rpc\('upt_current_is_owner'\)/)
+ assert.match(worker,/owner !== true/)
+ assert.match(action,/db\.rpc\('upt_current_is_owner'\)/)
+ assert.match(action,/session\.user\.id!==user\.id/)
+ assert.match(action,/NEXT_PUBLIC_SUPABASE_URL!==project/)
+ assert.doesNotMatch(worker,/expectedProject = 'https:\/\/eakoavcieossazqzplke\.supabase\.co'/)
+})
+test('Seven distinct QA roles, no Maker identity and no extra normal-admin menu',()=>{
+ for(const role of ['head','left_hand','right_hand','responsible_lead','staff','promotion','administration'])
+  assert.ok(worker.includes("roleOne: '"+role+"'"),role)
+ assert.match(worker,/e2e-admin@uptilldawn\.test/)
+ assert.match(worker,/auth\.admin\.updateUserById/)
+ assert.match(worker,/auth\.admin\.createUser/)
+ assert.match(worker,/upt_admin_set_two_personnel_roles/)
+ assert.match(worker,/qa_occupied_/)
+ assert.doesNotMatch(worker,/steegmans|maker@uptilldawn|app_owners\(\).*insert/)
+ assert.match(page,/if\(isOwner!==true\)redirect\('\/unauthorized'\)/)
+ assert.match(page,/<MakerQaBotSetup\/>/)
+ assert.match(component,/Download de 7 unieke inloggegevens/)
+ assert.match(component,/URL\.createObjectURL/)
+})
+test('Bot secrets never belong to source control, cookies, production or logs',()=>{
+ assert.match(worker,/crypto\.getRandomValues/)
+ assert.match(worker,/password: strongPassword|const password = strongPassword\(\)/)
+ assert.match(worker,/cache-control': 'no-store'/)
+ assert.doesNotMatch(worker,/console\.(log|info|debug)\(/)
+ assert.doesNotMatch(action,/console\.(log|info|debug)\(/)
+ assert.match(action,/cache:'no-store'/)
+ assert.doesNotMatch(component,/localStorage|sessionStorage/)
+})

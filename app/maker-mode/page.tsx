@@ -2,6 +2,7 @@ import { redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase/crew-server'
 import { enterGodModeFromMakerSession } from '@/lib/actions/god-mode'
 import { enterNormalAppFromMakerSession } from '@/lib/actions/auth'
+import {MakerQaBotSetup} from '@/components/maker/maker-qa-bot-setup'
 
 export const dynamic='force-dynamic'
 
@@ -42,6 +43,7 @@ export default async function MakerModePage({
           </button>
         </form>
       </div>
+      <MakerQaBotSetup/>
     </section>
   </main>
 }
