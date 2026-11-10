@@ -1,4 +1,5 @@
 import {listPage} from "@/lib/list-query"
+import {markAllNotificationsRead} from "@/lib/actions/uptilldawn"
 import { administrationNotificationHref } from "@/lib/administration/navigation"
 import {externalServicesReadiness} from "@/lib/administration/external-services-readiness"
 import {ExternalServicesReadiness} from "@/components/admin/external-services-readiness"
@@ -42,7 +43,7 @@ async function markAdministrationNotificationRead(formData:FormData){
  }
  const id=String(formData.get('notification_id')??'')
  if(!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id))return
- const {error}=await db.from('crew_notifications').update({read_at:new Date().toISOString()}).eq('id',id).eq('user_id',current.id).is('read_at',null)
+ const {error}=await db.rpc('upt_mark_notification_read',{p_notification:id})
  if(error)throw new Error('Unable to update notification')
  revalidatePath('/portals/administration/modules/notifications')
  revalidatePath('/notifications')
@@ -58,8 +59,7 @@ async function markAllAdministrationNotificationsRead(){
   const {data,error}=await db.rpc('upt_my_portal_assignments')
   if(error||!canOpenPortal('administration',(data??[]) as PortalAssignment[],{approved:current.approved,blocked:current.account_blocked===true}))redirect('/portals')
  }
- const {error}=await db.from('crew_notifications').update({read_at:new Date().toISOString()}).eq('user_id',current.id).is('read_at',null)
- if(error)throw new Error('Unable to mark notifications as read')
+ await markAllNotificationsRead()
  revalidatePath('/portals/administration/modules/notifications')
  revalidatePath('/notifications')
 }
