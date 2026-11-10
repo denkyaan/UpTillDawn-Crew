@@ -24,8 +24,8 @@ insert into public.tasks(id,event_id,title,description,created_by)
 values((select id from upt_upgrade_fixture.ids where name='task'),(select id from upt_upgrade_fixture.ids where name='event'),'Historical completed task','Preserve these original instructions',(select id from upt_upgrade_fixture.ids where name='admin'));
 insert into public.task_assignments(task_id,user_id,assigned_by,status,confirmed_at)
 values((select id from upt_upgrade_fixture.ids where name='task'),(select id from upt_upgrade_fixture.ids where name='staff'),(select id from upt_upgrade_fixture.ids where name='admin'),'COMPLETED',now());
-insert into public.inventory_items(id,event_id,workplace_id,name,total_quantity,available_quantity)
-values((select id from upt_upgrade_fixture.ids where name='item'),(select id from upt_upgrade_fixture.ids where name='event'),(select id from upt_upgrade_fixture.ids where name='workplace'),'Historical stock',12,12);
+insert into public.inventory_items(id,event_id,workplace_id,name,total_quantity,available_quantity,created_by)
+values((select id from upt_upgrade_fixture.ids where name='item'),(select id from upt_upgrade_fixture.ids where name='event'),(select id from upt_upgrade_fixture.ids where name='workplace'),'Historical stock',12,12,(select id from upt_upgrade_fixture.ids where name='admin'));
 create table upt_upgrade_fixture.snapshots(table_name text primary key,columns_sql text not null,row_count bigint not null,fingerprint text not null);
 do $$declare r record;cols text;total bigint;fingerprint text;begin
  for r in select c.oid,c.relname from pg_class c join pg_namespace n on n.oid=c.relnamespace where n.nspname='public' and c.relkind in ('r','p') order by c.relname loop
