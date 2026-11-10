@@ -74,6 +74,6 @@ try{
  const blocked=await office.context.request.post(base+'/api/administration/peppol/prepare',{headers:{origin:base},data:{documentId:document.id}});assert.equal(blocked.status(),422);assert.ok((await blocked.json()).issues.some(issue=>issue.path==='seller.approved'))
  const {count,error:auditError}=await office.db.from('admin_billing_profile_audit').select('id',{count:'exact',head:true});assert.equal(auditError,null);assert.ok(count>=3)
  ok('Company edits revoke approval, block fresh exports and retain an audit trail')
-}catch(error){failure=error;console.error('FAIL:',error.message);for(const [index,page]of browser.contexts().flatMap(context=>context.pages()).entries())await page.screenshot({path:output+`/failure-${index}.png`,fullPage:true,timeout:5000}).catch(()=>{})}
+}catch(error){failure=error;console.error('FAIL:',error.message);for(const [index,page]of browser.contexts().flatMap(context=>context.pages()).entries()){console.error('PEPPOL_PAGE_DIAGNOSTIC',index,page.url(),(await page.locator('body').innerText({timeout:3000}).catch(()=>'')).slice(0,600));}for(const [index,page]of browser.contexts().flatMap(context=>context.pages()).entries())await page.screenshot({path:output+`/failure-${index}.png`,fullPage:true,timeout:5000}).catch(()=>{})}
 finally{await browser.close();await writeFile(output+'/result.json',JSON.stringify({checks,failed:failure?.message??null},null,2))}
 if(failure)throw failure
