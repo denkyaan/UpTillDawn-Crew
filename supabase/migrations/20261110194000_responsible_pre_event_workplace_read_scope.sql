@@ -7,22 +7,46 @@
 -- their existing time-bound role checks. Unassigned workplaces and shifts
 -- remain invisible; no Maker/Admin or staff rights are expanded.
 
+-- Minimal private read-only helper: an explicit assignment is valid before
+-- the operational role activates, but only for an approved *real* Responsible.
+-- SECURITY DEFINER is necessary because ordinary staff cannot SELECT the
+-- sensitive profiles table. No caller-supplied user identity is accepted.
+CREATE OR REPLACE FUNCTION upt_private.can_read_own_responsible_assignment(
+  p_event uuid,
+  p_workplace uuid
+)
+RETURNS boolean
+LANGUAGE sql
+STABLE
+SECURITY DEFINER
+SET search_path = pg_catalog, public, upt_private, pg_temp
+AS $$
+  SELECT auth.uid() IS NOT NULL
+    AND EXISTS (
+      SELECT 1
+      FROM public.responsible_assignments ra
+      JOIN public.profiles p ON p.id = ra.user_id
+      JOIN public.events e ON e.id = ra.event_id
+      WHERE ra.user_id = auth.uid()
+        AND ra.event_id = p_event
+        AND ra.workplace_id = p_workplace
+        AND p.approved = true
+        AND p.role = 'responsible_lead'
+        AND e.status <> 'archived'
+        AND now() <= e.end_at
+    );
+$$;
+REVOKE ALL ON FUNCTION upt_private.can_read_own_responsible_assignment(uuid,uuid)
+  FROM PUBLIC, anon;
+GRANT EXECUTE ON FUNCTION upt_private.can_read_own_responsible_assignment(uuid,uuid)
+  TO authenticated;
+
 ALTER POLICY workplaces_read ON public.workplaces
 USING (
   public.upt_is_admin()
   OR upt_private.is_event_responsible(event_id, (SELECT auth.uid()))
   OR public.upt_is_responsible(event_id, id, (SELECT auth.uid()))
-  OR EXISTS (
-    SELECT 1
-    FROM public.responsible_assignments ra
-    JOIN public.profiles p ON p.id = ra.user_id
-    WHERE ra.event_id = workplaces.event_id
-      AND ra.workplace_id = workplaces.id
-      AND ra.user_id = (SELECT auth.uid())
-      AND p.approved = true
-      AND p.role = 'responsible_lead'
-      AND upt_private.event_operational(workplaces.event_id)
-  )
+  OR upt_private.can_read_own_responsible_assignment(workplaces.event_id, workplaces.id)
   OR EXISTS (
     SELECT 1
     FROM public.shifts s
@@ -47,17 +71,7 @@ USING (
       )
       AND upt_private.event_operational(event_id)
     )
-    OR EXISTS (
-      SELECT 1
-      FROM public.responsible_assignments ra
-      JOIN public.profiles p ON p.id = ra.user_id
-      WHERE ra.event_id = workplaces.event_id
-        AND ra.workplace_id = workplaces.id
-        AND ra.user_id = (SELECT auth.uid())
-        AND p.approved = true
-        AND p.role = 'responsible_lead'
-        AND upt_private.event_operational(workplaces.event_id)
-    )
+    OR upt_private.can_read_own_responsible_assignment(workplaces.event_id, workplaces.id)
     OR EXISTS (
       SELECT 1
       FROM public.shifts s
@@ -79,15 +93,5 @@ USING (
   OR public.upt_is_admin()
   OR upt_private.is_event_responsible(event_id, (SELECT auth.uid()))
   OR public.upt_is_responsible(event_id, workplace_id, (SELECT auth.uid()))
-  OR EXISTS (
-    SELECT 1
-    FROM public.responsible_assignments ra
-    JOIN public.profiles p ON p.id = ra.user_id
-    WHERE ra.event_id = shifts.event_id
-      AND ra.workplace_id = shifts.workplace_id
-      AND ra.user_id = (SELECT auth.uid())
-      AND p.approved = true
-      AND p.role = 'responsible_lead'
-      AND upt_private.event_operational(shifts.event_id)
-  )
+  OR upt_private.can_read_own_responsible_assignment(shifts.event_id, shifts.workplace_id)
 );
