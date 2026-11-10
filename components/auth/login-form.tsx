@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useTransition } from "react"
+import { useEffect, useState, useTransition } from "react"
 import Link from "next/link"
 import Image from "next/image"
 import { Menu, X, Eye, EyeOff, Loader2, AlertCircle, ArrowRight, ShieldCheck, Users, UserCog, Megaphone, BriefcaseBusiness } from "lucide-react"
@@ -31,6 +31,8 @@ export function LoginForm({
   const [showPassword, setShowPassword] = useState(false)
   const [error, setError] = useState<string | null>(initialError)
   const [isPending, startTransition] = useTransition()
+  const [hydrated, setHydrated] = useState(false)
+  useEffect(() => { setHydrated(true) }, [])
 
   function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault()
@@ -112,6 +114,7 @@ export function LoginForm({
           )}
 
           <form
+            data-login-hydrated={hydrated ? "true" : "false"}
             action={nativeAction}
             method="post"
             onSubmit={nativeAction ? undefined : handleSubmit}
