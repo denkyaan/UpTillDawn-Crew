@@ -53,8 +53,26 @@ begin
   raise notice 'Platform schema already present; upgrade skipped';return;
  end if;
  if v_existing<>0 then raise exception 'Partial platform installation requires a separate reviewed upgrade';end if;
- select max(version) into v_version from supabase_migrations.schema_migrations;
- if v_version is null or v_version not in (${literal(plan.baselineVersion)},${literal(plan.localBaselineVersion)}) then raise exception 'Unexpected production baseline: %',v_version;end if;
+ -- A separately audited read-only Maker log RPC was installed on the live
+ -- production baseline without applying the platform schema. Its migration
+ -- timestamp is newer than the platform bundle; do not mistake it for a
+ -- successful platform upgrade or admit any other post-baseline migration.
+ select max(version) into v_version from supabase_migrations.schema_migrations
+ where version<=${literal(plan.localBaselineVersion)};
+ if v_version is null or v_version not in (${literal(plan.baselineVersion)},${literal(plan.localBaselineVersion)}) then
+  raise exception 'Unexpected production baseline: %',v_version;
+ end if;
+ if exists (
+  select 1 from supabase_migrations.schema_migrations
+  where version>${literal(plan.localBaselineVersion)}
+    and (version<>'20261110132255' or name<>'maker_read_only_log_snapshot')
+ ) then raise exception 'Unexpected post-baseline migration; reconcile before upgrade';end if;
+ if exists (
+  select 1 from supabase_migrations.schema_migrations
+  where version='20261110132255' and name='maker_read_only_log_snapshot'
+ ) and to_regprocedure('public.upt_god_maker_log_snapshot(text,integer)') is null then
+  raise exception 'Audited Maker log migration history has no matching function';
+ end if;
  select md5(string_agg(c.relname||'.'||a.attname||':'||nt.nspname||'.'||t.typname||':'||a.atttypmod::text||':'||a.attnotnull::text,E'\\n' order by c.relname,a.attname)) into v_columns
  from pg_class c join pg_namespace n on n.oid=c.relnamespace
  join pg_attribute a on a.attrelid=c.oid and a.attnum>0 and not a.attisdropped
