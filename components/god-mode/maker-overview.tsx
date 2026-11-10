@@ -12,7 +12,7 @@ type Overview={
  checks:{code:boolean;ci:boolean;deploy:boolean;reports:boolean}
 }
 const dictionary={
- nl:{productieCode:'Laatst bevestigde productieversie',ciProduction:'CI production',deployProduction:'Deploy production',productionEnvironment:'Productie · live-omgeving · wijzigingen vereisen een afzonderlijke release',heading:'Technisch overzicht',intro:'De status van main-test, CI, deployments en foutherstel op één plaats. Personeelsbeheer blijft in Admin.',
+ nl:{productionCode:'Laatst bevestigde productieversie',ciProduction:'CI production',deployProduction:'Deploy production',productionEnvironment:'Productie · live-omgeving · wijzigingen vereisen een afzonderlijke release',heading:'Technisch overzicht',intro:'De status van main-test, CI, deployments en foutherstel op één plaats. Personeelsbeheer blijft in Admin.',
   refresh:'Vernieuwen',loading:'Status controleren…',error:'De status kon niet worden opgehaald.',unknown:'Niet gecontroleerd',
   passed:'Geslaagd',failed:'Mislukt',running:'Bezig',queued:'Wacht',cancelled:'Geannuleerd',outdated:'Andere commit',
   source:'Broncode main',ci:'CI main',deploy:'Deploy main',reports:'Foutrapporten',needsMaker:'Makeractie nodig',
@@ -116,7 +116,7 @@ export function MakerOverview({navigate,environment}:{navigate:(tab:Destination)
   if(run.conclusion==='cancelled')return t.cancelled
   return t.unknown
  }
- let priority=t.partial
+ let priority:string=t.partial
  if(state){
   if(state.ci?.current&&state.ci.conclusion==='failure')priority=t.ciFailure
   else if((state.reports?.needsMaker||0)>0)priority=t.required
