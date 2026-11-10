@@ -135,11 +135,21 @@ SELECT set_config('request.jwt.claim.sub',(SELECT id::text FROM upt_storage_ids 
 SET LOCAL ROLE authenticated;
 DO $$
 BEGIN
+ IF current_user <> 'authenticated' OR NOT row_security_active('storage.objects'::regclass) THEN
+  RAISE EXCEPTION 'FAIL owner RLS impersonation not active: current_user=%, session_user=%, active=%',
+   current_user,session_user,row_security_active('storage.objects'::regclass);
+ END IF;
  IF EXISTS(
   SELECT 1 FROM storage.objects
   WHERE bucket_id IN ('incident-photos','chat-attachments')
     AND split_part(name,'/',1)=(SELECT id::text FROM upt_storage_ids WHERE name='staff')
- ) THEN RAISE EXCEPTION 'FAIL pending originals exposed to owner'; END IF;
+ ) THEN
+  RAISE EXCEPTION 'FAIL pending originals exposed to owner: current_user=%, jwt=%, RLS-active=%, restrictive-gate=%, incident-scan=%, chat-scan=%',
+   current_user,auth.uid(),row_security_active('storage.objects'::regclass),
+   (SELECT count(*) FROM pg_policies WHERE schemaname='storage' AND tablename='objects' AND policyname='upt_all_operational_media_scans_required' AND permissive='RESTRICTIVE'),
+   upt_private.storage_media_scan_is_clean('incident-photos',(SELECT id::text FROM upt_storage_ids WHERE name='staff')||'/incident.jpg'),
+   upt_private.storage_media_scan_is_clean('chat-attachments',(SELECT id::text FROM upt_storage_ids WHERE name='staff')||'/chat.jpg');
+ END IF;
 END $$;
 RESET ROLE;
 
