@@ -11,6 +11,8 @@ const copy={
  de:{check:"Verbindung prüfen",working:"Sichere Verbindung wird geprüft…",connected:"Schlüssel gültig · Funktionen nicht aktiviert",not_configured:"Server-Konfiguration fehlt",unauthorized:"Anbieter lehnt Schlüssel ab",unavailable:"Verbindung konnte nicht bestätigt werden",error:"Test derzeit nicht möglich"}
 } as const
 
+const disconnectedState:ConnectionState="not_configured"
+
 export function ProviderConnectionProbe({provider,initialLocale}:{provider:ConnectionProvider;initialLocale:SupportedUiLocale}){
  const [locale,setLocale]=useState<SupportedUiLocale>(initialLocale)
  const [status,setStatus]=useState<ConnectionState|null>(null)
@@ -49,7 +51,7 @@ export function ProviderConnectionProbe({provider,initialLocale}:{provider:Conne
    if(!(event instanceof CustomEvent)||!event.detail||event.detail.provider!==provider)return
    if(event.detail.action==="removed"){
     currentRequest.current?.abort();currentRequest.current=null
-    inFlight.current=false;setBusy(false);setStatus("not_configured");last.current=0
+    inFlight.current=false;setBusy(false);setStatus(disconnectedState);last.current=0
     return
    }
    if(event.detail.action==="saved")void check(true)
