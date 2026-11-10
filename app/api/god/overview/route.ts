@@ -1,4 +1,5 @@
 import {authorizeStudio,github,studioFailure,studioResponse} from '@/lib/god-studio-server'
+import {GOD_ENVIRONMENTS,currentGodEnvironment} from '@/lib/god-mode-environments'
 
 type Run={
  id:number
@@ -47,17 +48,26 @@ export async function GET(request:Request){
    safeRuns('fast-change-validation.yml',credential),
    safeRuns('deploy-main.yml',credential),
    context.client.rpc('upt_god_error_reports',{p_token:context.token,p_limit:100}),
+   safeRuns('ci.yml',credential),
+   safeRuns('deploy-cloudflare.yml',credential),
   ])
   const head=outcomes[0].status==='fulfilled'?outcomes[0].value.object.sha:null
   const ci=outcomes[1].status==='fulfilled'?outcomes[1].value:null
   const deploy=outcomes[2].status==='fulfilled'?outcomes[2].value:null
   const reportResult=outcomes[3].status==='fulfilled'?outcomes[3].value:null
+  const ciProduction=outcomes[4].status==='fulfilled'?outcomes[4].value:null
+  const deployProduction=outcomes[5].status==='fulfilled'?outcomes[5].value:null
+  const currentEnvironment=currentGodEnvironment(process.env.NEXT_PUBLIC_SUPABASE_URL)
   const reports=reportResult&&!reportResult.error&&Array.isArray(reportResult.data)
    ? reportResult.data as Report[]:null
   const open=reports?.filter(report=>!['resolved','auto_resolved'].includes(report.status))??[]
   const maker=open.filter(report=>report.status==='needs_maker'||report.maker_action_required)
   return studioResponse({
-   repository:'denkyaan/UpTillDawn-Crew',branch:'main',environment:'main-test',
+   repository:'denkyaan/UpTillDawn-Crew',branch:'main',environment:currentEnvironment||'unknown',
+   environments:{
+    main:{origin:GOD_ENVIRONMENTS.main.origin,ci:selectRun(ci,head,'push'),deploy:selectRun(deploy,head,'workflow_run'),logsAvailable:currentEnvironment==='main'&&reports!==null},
+    production:{origin:GOD_ENVIRONMENTS.production.origin,ci:selectRun(ciProduction,null,'workflow_dispatch'),deploy:selectRun(deployProduction,null,'workflow_dispatch'),logsAvailable:currentEnvironment==='production'&&reports!==null,releaseShaVerified:false},
+   },
    githubConnected:Boolean(credential),githubAvailable:head!==null,
    head,
    ci:selectRun(ci,head,'push'),
@@ -71,6 +81,8 @@ export async function GET(request:Request){
     ci:ci!==null,
     deploy:deploy!==null,
     reports:reports!==null,
+    ciProduction:ciProduction!==null,
+    deployProduction:deployProduction!==null,
    },
   })
  }catch(error){return studioFailure(error)}
