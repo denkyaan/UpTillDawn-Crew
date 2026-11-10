@@ -4,6 +4,7 @@
 import assert from 'node:assert/strict'
 import {mkdir,writeFile} from 'node:fs/promises'
 import {chromium} from 'playwright'
+import {createClient} from '@supabase/supabase-js'
 
 const MATRIX=[
  {role:'admin',login:'admin',routes:['/admin','/events','/personnel','/chat','/operations','/settings','/portals/administration/finance'],denied:[]},
@@ -30,6 +31,32 @@ if(base.pathname!=='/'||base.search||base.hash||(!local&&!main)||(main&&process.
 }
 const records=[]
 const failures=[]
+const networkByPage=new WeakMap()
+async function checkResponsibleQaFixture(){
+ // Read-only diagnostic on the disposable local test database, preserving RLS.
+ if(!local||!process.env.BOT_SUPABASE_URL||!process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY)return
+ const supabase=createClient(process.env.BOT_SUPABASE_URL,process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY,{auth:{persistSession:false,autoRefreshToken:false}})
+ const email=process.env.E2E_RESPONSIBLE_EMAIL
+ const password=process.env.E2E_RESPONSIBLE_PASSWORD
+ const {data:login,error:loginError}=await supabase.auth.signInWithPassword({email,password})
+ if(loginError||!login.user){
+  console.error('QA responsible fixture: direct Supabase login unavailable',loginError?.code||'missing-user')
+  return
+ }
+ const [{data:assignments,error:assignError},{data:shifts,error:shiftError},{data:workplaces,error:workplaceError}]=await Promise.all([
+  supabase.from('responsible_assignments').select('event_id,workplace_id').eq('user_id',login.user.id),
+  supabase.from('shifts').select('event_id,workplace_id').eq('user_id',login.user.id),
+  supabase.from('workplaces').select('id,name,event_id').eq('name','E2E Entrance'),
+ ])
+ console.log('QA responsible RLS fixture visibility',JSON.stringify({
+  assignmentCount:assignments?.length??null,
+  ownShiftsCount:shifts?.length??null,
+  workplaceCount:workplaces?.length??null,
+  readErrors:[assignError?.code,shiftError?.code,workplaceError?.code].filter(Boolean),
+ }))
+ await supabase.auth.signOut()
+}
+await checkResponsibleQaFixture()
 await mkdir('test-results/final-acceptance',{recursive:true})
 const browser=await chromium.launch({headless:true})
 const timeOut=45000
@@ -38,8 +65,11 @@ const addFailure=async(page,meta,error)=>{
  const message=error instanceof Error?error.message:String(error)
  const screenshot='test-results/final-acceptance/'+safeFile([meta.role,meta.locale,meta.width,meta.step].join('-'))+'.png'
  await page.screenshot({path:screenshot,fullPage:true,timeout:12000}).catch(()=>{})
- failures.push({...meta,message,screenshot})
- console.error('FAIL '+meta.role+' '+meta.locale+' '+meta.width+' '+meta.step+': '+message)
+ const path=new URL(page.url()).pathname
+ const network=(networkByPage.get(page)||[]).slice(-8)
+ const errorText=(await page.locator('section [class*="text-red"]').allInnerTexts().catch(()=>[])).join(' | ').slice(0,240)
+ failures.push({...meta,message,screenshot,path,network,errorText})
+ console.error('FAIL '+meta.role+' '+meta.locale+' '+meta.width+' '+meta.step+': '+message+'; at '+path+'; auth-network '+JSON.stringify(network)+'; form-error '+errorText)
 }
 async function assertAppliedLocale(page,expected){
  // Check the product language, not just Playwright's browser locale.
@@ -107,6 +137,16 @@ try{
     const meta={role,locale,width:viewport.width}
     const context=await browser.newContext({locale,viewport,acceptDownloads:true,reducedMotion:'reduce'})
     const page=await context.newPage()
+    const network=[]
+    networkByPage.set(page,network)
+    page.on('response',response=>{
+     const request=response.request()
+     if(request.method()!=='POST')return
+     const pathname=new URL(request.url()).pathname
+     if(!pathname.startsWith('/login')&&!pathname.startsWith('/api/auth/'))return
+     const location=response.headers()['location']
+     network.push({pathname,status:response.status(),redirect:location?new URL(location,base).pathname:null})
+    })
     const jsErrors=[]
     page.on('pageerror',error=>jsErrors.push(String(error?.message??error)))
     try{
