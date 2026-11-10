@@ -31,6 +31,6 @@ test('Six-role acceptance uses only isolated local credentials and no visible ap
  assert.match(ci,/scripts\/seed-local-maker-e2e\.mjs/)
  assert.match(ci,/tests\/sql\/owner-leadership-privacy\.sql/)
  assert.match(ci,/npm run e2e:portals/)
- assert.match(ci,/E2E_MAKER_EMAIL/)
+ assert.match(ci,/MAKER:bot-16-maker/)\n assert.match(ci,/E2E_\\$\\{role\\}_EMAIL/)
  assert.match(ci,/UPT_E2E_SESSION_BRIDGE/)
 })
