@@ -145,8 +145,12 @@ BEGIN
   ) THEN
     RAISE EXCEPTION 'FAIL staff can read unrelated workplace';
   END IF;
-END $$;
+END $;
 RESET ROLE;
+-- RESET ROLE does not clear PostgreSQL's transaction-local JWT identity.
+-- Clear it before creating another seed profile: its authorization trigger
+-- must run as the privileged fixture creator, not the previous test user.
+SELECT set_config('request.jwt.claim.sub', '', true);
 
 -- A separate lead has ONLY a future assignment. Their effective
 -- operational role remains staff until the event approaches; they must still
