@@ -145,7 +145,7 @@ BEGIN
   ) THEN
     RAISE EXCEPTION 'FAIL staff can read unrelated workplace';
   END IF;
-END $;
+END $$;
 RESET ROLE;
 -- RESET ROLE does not clear PostgreSQL's transaction-local JWT identity.
 -- Clear it before creating another seed profile: its authorization trigger
