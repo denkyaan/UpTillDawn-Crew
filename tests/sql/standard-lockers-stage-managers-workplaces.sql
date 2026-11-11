@@ -15,12 +15,6 @@ BEGIN
     ) <> 1 THEN
       RAISE EXCEPTION 'Expected exactly one active % standard catalog workplace', v_name;
     END IF;
-    IF NOT EXISTS (
-      SELECT 1 FROM public.upt_profile_workplace_options()
-      WHERE lower(trim(name))=lower(v_name)
-    ) THEN
-      RAISE EXCEPTION 'New standard workplace % is missing from crew preferences', v_name;
-    END IF;
   END LOOP;
 END $$;
 
@@ -33,6 +27,31 @@ INSERT INTO upt_new_workplace_fixture DEFAULT VALUES;
 INSERT INTO auth.users(id,email)
 SELECT owner_id,'standard-workplace-'||owner_id::text||'@test.invalid'
 FROM upt_new_workplace_fixture;
+
+-- The preferences RPC intentionally requires an approved, authenticated
+-- profile. An unauthenticated SQL runner must *not* see these options.
+UPDATE public.profiles
+SET approved=true,role='staff'
+WHERE id=(SELECT owner_id FROM upt_new_workplace_fixture);
+
+SELECT set_config('request.jwt.claim.sub',
+  (SELECT owner_id::text FROM upt_new_workplace_fixture),true);
+SET LOCAL ROLE authenticated;
+DO $approved$
+DECLARE
+  v_name text;
+BEGIN
+  FOREACH v_name IN ARRAY ARRAY['Lockers','Stage Managers'] LOOP
+    IF NOT EXISTS (
+      SELECT 1 FROM public.upt_profile_workplace_options()
+      WHERE lower(trim(name))=lower(v_name)
+    ) THEN
+      RAISE EXCEPTION 'Approved staff cannot select new standard workplace %', v_name;
+    END IF;
+  END LOOP;
+END $approved$;
+RESET ROLE;
+SELECT set_config('request.jwt.claim.sub','',true);
 
 -- The existing event trigger must automatically include the two standards.
 INSERT INTO public.events(
