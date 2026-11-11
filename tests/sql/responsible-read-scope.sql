@@ -224,7 +224,7 @@ DECLARE
   v_visible_workplaces integer;
   v_visible_shifts integer;
 BEGIN
-  IF public.upt_effective_role(auth.uid()) <> 'staff' THEN
+  IF public.upt_current_effective_role() <> 'staff' THEN
     RAISE EXCEPTION 'Pre-event fixture must be outside effective Responsible role window';
   END IF;
   IF public.upt_is_responsible(v_event,v_own,auth.uid()) THEN
