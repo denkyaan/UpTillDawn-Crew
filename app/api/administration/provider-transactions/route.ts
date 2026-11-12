@@ -65,8 +65,8 @@ export async function POST(request:Request){
  const {data:mapping,error:mappingError}=await access.db.from('admin_provider_event_mappings')
   .select('id,event_id,external_event_id,provider,enabled').eq('id',mappingId).eq('enabled',true).maybeSingle()
  if(mappingError)return reply({error:'mapping_unavailable'},503)
- if(!mapping||!['eventix','sumup'].includes(mapping.provider))return reply({error:'mapping_inactive'},409)
- const parsed=validateProviderTransactionCsv(await file.text(),mapping.event_id,mapping.external_event_id)
+ if(!mapping||!['eventix','sumup','eventpay'].includes(mapping.provider))return reply({error:'mapping_inactive'},409)
+ const parsed=validateProviderTransactionCsv(await file.text(),mapping.event_id,mapping.external_event_id,500,mapping.provider as 'eventix'|'sumup'|'eventpay')
  if(parsed.errors.length)return reply({error:'invalid_rows',errors:parsed.errors.slice(0,20)},422)
  // SQL derives event/provider from the locked mapping, even if a caller bypasses this API.
  const {data,error}=await dbClient(access.db).rpc('upt_import_admin_provider_transactions',{
