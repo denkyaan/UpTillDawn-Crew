@@ -29,13 +29,15 @@ test('final read-only browser acceptance covers all six roles, four languages, m
  assert.doesNotMatch(browser,/auth\.admin\.createUser|service_role|deleteUser|SUPABASE_SERVICE_ROLE/i)
 })
 
-test('CI main records static inventory and does not start production workflows',()=>{
+test('CI main records static inventory and dispatches production only after explicit release intent',()=>{
  const ci=source('.github/workflows/fast-change-validation.yml')
  const inventory=source('scripts/final-main-acceptance-inventory.mjs')
  assert.match(ci,/name: CI main/)
  assert.match(ci,/node scripts\/final-main-acceptance-inventory\.mjs/)
  assert.match(ci,/Authenticated end-to-end journeys: not executed in this fast CI/)
- assert.match(ci,/if: \$\{\{ github\.event_name == 'workflow_dispatch' && inputs\.release_production == true/)
+ assert.match(ci,/github\.event_name == 'workflow_dispatch' && inputs\.release_production == true/)
+ assert.match(ci,/github\.event_name == 'push' && github\.ref == 'refs\/heads\/main' && contains\(github\.event\.head_commit\.message, '\[release-production\]'\)/)
+ assert.match(ci,/if \[ "\$\{current_sha\}" != "\$\{GITHUB_SHA\}" \]/)
  assert.doesNotMatch(inventory,/productionReady\s*:\s*true|endToEndVerified\s*:\s*true/)
  for(const role of ['Admin','Administratie','Promotie','Personeel','Verantwoordelijke','Maker'])
   assert.ok(inventory.includes("name:'"+role+"'"),role)
