@@ -25,7 +25,6 @@ export function ErrorReportButton({
   errorName='Error',
   stackTrace='',
   source='manual',
-  onRetry,
   compact=false,
 }:{
   errorMessage:string
@@ -79,7 +78,7 @@ export function ErrorReportButton({
 
   async function submit(){
     if(busy)return
-    setBusy(true);setMessage('Fout wordt gemeld…');setReport(null)
+    setBusy(true);setMessage('Fout wordt gemeld…');setReport(null);setReportId(null)
     try{
       const route=window.location.pathname+window.location.search
       const response=await fetch('/api/error-reports',{
@@ -115,21 +114,8 @@ export function ErrorReportButton({
   }
 
   const action=report?.auto_action
-  const canApply=report?.status==='auto_resolved'&&(action==='reload'||(action==='retry'&&Boolean(onRetry)))
+  const canApply=report?.status==='failed'&&action==='reload'
 
-  useEffect(()=>{
-    if(!report||report.status!=='auto_resolved')return
-    if(action!=='reload'&&action!=='retry')return
-    if(action==='retry'&&!onRetry)return
-    const key='upt-error-auto-action:'+report.id
-    if(sessionStorage.getItem(key)==='done')return
-    sessionStorage.setItem(key,'done')
-    const timer=window.setTimeout(()=>{
-      if(action==='retry'&&onRetry)onRetry()
-      else if(action==='reload')window.location.reload()
-    },700)
-    return()=>window.clearTimeout(timer)
-  },[action,onRetry,report])
 
   return <div className={compact?'space-y-2':'space-y-3'}>
     <button
@@ -149,11 +135,10 @@ export function ErrorReportButton({
       {canApply&&<button
         type="button"
         onClick={()=>{
-          if(action==='retry'&&onRetry)onRetry()
-          else if(action==='reload')window.location.reload()
+          if(action==='reload')window.location.reload()
         }}
         className="mt-3 rounded-lg bg-violet-600 px-3 py-2 font-bold text-white"
-      >AI-OPLOSSING TOEPASSEN</button>}
+      >PAGINA HANDMATIG HERLADEN</button>}
     </div>}
   </div>
 }
