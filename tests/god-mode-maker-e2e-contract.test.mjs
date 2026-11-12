@@ -46,7 +46,7 @@ test('God Mode browser E2E covers real owner session and rejects staff privilege
   'bot-16-maker@bots.uptilldawn.test','bot-03-staff-en@bots.uptilldawn.test',
   'enter.click()',"'uptilldawn-god-session'".replace(/'/g,''),
   '/api/god/logs?environment=main','/api/god/overview?environment=main',
-  '/api/god/sql','cross-origin','God Mode afsluiten','logout',
+  '/api/god/sql','cross-origin','God Mode afmelden','logout',
  ]){
   if(token==='uptilldawn-god-session'||token==='logout')continue
   assert.ok(script.includes(token),'Expected God Mode test coverage: '+token)
