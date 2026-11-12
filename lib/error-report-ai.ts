@@ -204,6 +204,10 @@ export async function processErrorReport(client:CrewClient,reportId:string,ai:Er
 
   if(reportError||!report){
     console.error('[error-ai] rapport lezen mislukt',{reportId,code:reportError?.code})
+    // The claim was acquired before the read. Never strand it in 'processing'
+    // when Supabase temporarily fails or the report disappears.
+    try{await finalizeFailure(client,reportId)}
+    catch(error){console.error('[error-ai] rapport kon niet als mislukt worden afgesloten',{reportId,message:error instanceof Error?error.message:'unknown'})}
     return
   }
 
