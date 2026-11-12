@@ -30,7 +30,9 @@ test('maker bypass is resolved before ordinary account block gates on server and
   assert.ok(auth.includes("const { data: ownerFlag } = await supabase.rpc('upt_current_is_owner')"))
   assert.match(auth,/if \(profile\.account_blocked && !isOwner\) return null/)
 
-  assert.match(providers,/needsOwnerCheck=Boolean\(data\.account_blocked\)\|\|!data\.approved\|\|role==="admin"/)
+  assert.match(providers,/if\(ownerError\)/)
+  assert.doesNotMatch(providers,/needsOwnerCheck=Boolean/)
+  assert.match(providers,/const owner=ownerFlag===true/)
   assert.match(providers,/data\.account_blocked&&!owner/)
 })
 
@@ -46,4 +48,24 @@ test('owner effective role SQL respects Maker selection and leaves regular perso
  assert.match(sqlTest,/public\.upt_set_admin_role_mode\('staff'\)/)
  assert.match(sqlTest,/public\.upt_set_admin_role_mode\('responsible_lead'\)/)
  assert.match(sqlTest,/public\.upt_set_admin_role_mode\('admin'\)/)
+})
+
+test('Maker with staff base profile retains the linked Admin and Administration navigation when Owner mode is selected',async()=>{
+ const [provider,adminNav,mobile,sidebar,navItems,layout]=await Promise.all([
+  read('lib/providers.tsx'),
+  read('lib/admin-administration-navigation.ts'),
+  read('components/layout/mobile-nav.tsx'),
+  read('components/layout/sidebar.tsx'),
+  read('components/layout/navigation-items.ts'),
+  read('components/layout/app-layout.tsx'),
+ ])
+ assert.match(provider,/const \{data:ownerFlag,error:ownerError\}=await supabase\.rpc\("upt_current_is_owner"\)/)
+ assert.match(provider,/const realIsAdmin = profile\?\.role === "admin" \|\| isOwner/)
+ assert.match(provider,/setRoles\(\[resolved\]\)/)
+ assert.match(adminNav,/adminAdministrationSubtabs/)
+ assert.match(mobile,/adminAdministrationGroupKeys\.manage/)
+ assert.match(sidebar,/adminAdministrationGroupKeys\.manage/)
+ assert.match(navItems,/\.\.\.adminAdministrationSubtabs\.map/)
+ assert.match(layout,/const adminAiAction=/)
+ assert.match(layout,/<Topbar notificationMissed=\{notificationMissed\} adminAiAction=\{adminAiAction\}/)
 })

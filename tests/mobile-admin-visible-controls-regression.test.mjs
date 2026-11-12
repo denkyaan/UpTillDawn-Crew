@@ -3,12 +3,12 @@ import assert from 'node:assert/strict'
 import {readFileSync} from 'node:fs'
 const read=path=>readFileSync(new URL('../'+path,import.meta.url),'utf8')
 
-test('Admin has floating chat on home, AI remains visible when tabs expand',()=>{
+test('Admin floating chat remains on home and AI hides only while a subtab menu is expanded',()=>{
  const layout=read('components/layout/app-layout.tsx')
  assert.match(layout,/const showFloatingChat=showChat&&!inDedicatedPortal&&!navigationExpanded/)
  assert.doesNotMatch(layout,/pathname!=="\/admin"/)
- assert.match(layout,/const adminAiAction=isAdmin\?/)
- assert.doesNotMatch(layout,/adminAiAction=isAdmin&&!navigationExpanded/)
+ assert.match(layout,/const adminAiVisible=\(isAdmin\|\|administrationPortal\)&&!navigationExpanded/)
+ assert.match(layout,/const adminAiAction=adminAiVisible\?/)
  assert.match(layout,/if\(open\)setAdminAiOpen\(false\)/)
 })
 test('iPhone uses a screen-bounded AI panel, two-column subtabs and compact context',()=>{

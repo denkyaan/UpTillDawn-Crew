@@ -20,15 +20,16 @@ test('distinct Administration tools are assigned to existing Admin groups only o
  const nav=read('components/layout/mobile-nav.tsx')
  const sidebar=read('components/layout/sidebar.tsx')
  const entries=[...navigationConfig.matchAll(/\{key:"(admin-[^"]+)",slug:"([^"]+)",group:"([^"]+)"\}/g)]
- assert.equal(entries.length,18)
- assert.equal(new Set(entries.map(item=>item[1])).size,18)
- assert.equal(new Set(entries.map(item=>item[2])).size,18)
+ assert.equal(entries.length,17)
+ assert.equal(new Set(entries.map(item=>item[1])).size,17)
+ assert.equal(new Set(entries.map(item=>item[2])).size,17)
  for(const group of ['events','work','team','support','manage']){
   assert.ok(nav.includes('...adminAdministrationGroupKeys.'+group))
   assert.ok(sidebar.includes('...adminAdministrationGroupKeys.'+group))
  }
- for(const slug of ['artists','contracts','rosters','permits','timesheets','logistics','promotion-tasks','promotion-discipline','finance','invoices','banking','ticketing','reports','documents','contacts','counterparties','sponsors','marketing'])
+ for(const slug of ['artists','contracts','rosters','permits','timesheets','logistics','promotion-tasks','promotion-discipline','finance','invoices','banking','ticketing','reports','documents','counterparties','sponsors','marketing'])
   assert.ok(entries.some(item=>item[2]===slug),slug)
+ assert.ok(!entries.some(item=>item[2]==='contacts'),'Contacts is a canonical alias only')
  for(const slug of ['events','tasks','sales','inventory','chat','settings','automations','ai','notifications','personnel'])
   assert.ok(!entries.some(item=>item[2]===slug),'duplicate '+slug)
  const navItems=read('components/layout/navigation-items.ts')

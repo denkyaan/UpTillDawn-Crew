@@ -52,7 +52,6 @@ const ADMIN_SUBTAB_ICONS:Record<string,LucideIcon>={
  "admin-logistics":Truck,
  "admin-promotion-tasks":ListChecks,
  "admin-promotion-discipline":ShieldBan,
- "admin-contacts":Contact,
  "admin-counterparties":Contact,
  "admin-sponsors":Handshake,
  "admin-marketing":Megaphone,

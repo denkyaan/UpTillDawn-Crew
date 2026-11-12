@@ -14,7 +14,6 @@ export const adminAdministrationSubtabs=[
  {key:"admin-logistics",slug:"logistics",group:"work"},
  {key:"admin-promotion-tasks",slug:"promotion-tasks",group:"team"},
  {key:"admin-promotion-discipline",slug:"promotion-discipline",group:"team"},
- {key:"admin-contacts",slug:"contacts",group:"support"},
  {key:"admin-counterparties",slug:"counterparties",group:"support"},
  {key:"admin-sponsors",slug:"sponsors",group:"support"},
  {key:"admin-marketing",slug:"marketing",group:"support"},

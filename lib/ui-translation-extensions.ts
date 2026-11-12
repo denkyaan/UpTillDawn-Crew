@@ -3,6 +3,10 @@ export type ExtendedUiLocale = 'nl' | 'fr' | 'en' | 'de'
 type Row = { fr: string; en: string; de: string }
 
 const EXTENSIONS: Record<string, Row> = {
+  'Administratief werkcentrum': { fr: 'Centre de travail administratif', en: 'Administration work center', de: 'Verwaltungsarbeitsplatz' },
+  'Centre de travail administratif': { fr: 'Centre de travail administratif', en: 'Administration work center', de: 'Verwaltungsarbeitsplatz' },
+  'Administration work center': { fr: 'Centre de travail administratif', en: 'Administration work center', de: 'Verwaltungsarbeitsplatz' },
+  'Verwaltungsarbeitsplatz': { fr: 'Centre de travail administratif', en: 'Administration work center', de: 'Verwaltungsarbeitsplatz' },
   'Administratief overzicht': { fr: 'Tableau de bord administratif', en: 'Administration overview', de: 'Verwaltungsübersicht' },
   'Administration overview': { fr: 'Tableau de bord administratif', en: 'Administration overview', de: 'Verwaltungsübersicht' },
   'Bijlage wacht op veiligheidscontrole': { fr: 'Pièce jointe en attente du contrôle de sécurité', en: 'Attachment awaiting security review', de: 'Anhang wartet auf Sicherheitsprüfung' },

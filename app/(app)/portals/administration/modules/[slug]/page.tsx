@@ -1,4 +1,5 @@
 import {listPage} from "@/lib/list-query"
+import {DateInput} from "@/components/crew/date-input"
 import {markAllNotificationsRead} from "@/lib/actions/uptilldawn"
 import { administrationNotificationHref } from "@/lib/administration/navigation"
 import {externalServicesReadiness} from "@/lib/administration/external-services-readiness"
@@ -29,6 +30,35 @@ import { createClient } from "@/lib/supabase/crew-server"
 import { canOpenPortal, type PortalAssignment } from "@/lib/portal-access"
 import {administrationWorkspaceIntro} from "@/lib/administration/workspace-copy"
 import {invoiceStatuses,invoiceStatusLabels,isOverdueInvoice} from "@/lib/administration/invoice-status"
+
+/** A dedicated Administration draft action. Publication still requires Admin. */
+async function saveAdministrationEventDraft(formData:FormData){
+ 'use server'
+ const current=await getCurrentUser()
+ if(!current)redirect('/login')
+ if((!current.approved||current.account_blocked)&&!current.isOwner)redirect('/portals')
+ const db=await createClient()
+ if(!current.realIsAdmin&&!current.isOwner){
+  const {data,error}=await db.rpc('upt_my_portal_assignments')
+  if(error||!canOpenPortal('administration',(data??[]) as PortalAssignment[],{approved:current.approved,blocked:Boolean(current.account_blocked)}))redirect('/portals')
+ }
+ const value=(key:string)=>String(formData.get(key)??'').trim()
+ const name=value('name'),venue=value('venue')
+ const rawStart=value('start_at'),rawEnd=value('end_at'),id=value('event_id')
+ const start=new Date(rawStart),end=new Date(rawEnd)
+ if(name.length<3||name.length>200||venue.length>200||!rawStart||!rawEnd
+  ||!Number.isFinite(start.getTime())||!Number.isFinite(end.getTime())||end.getTime()<=start.getTime()
+  ||(id&&!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id))){
+  throw new Error('Controleer de evenementnaam, locatie, start- en eindtijd.')
+ }
+ const {error}=await (db as unknown as SupabaseClient).rpc('upt_administration_save_event_draft',{
+  p_event_id:id||null,p_name:name,p_start_at:start.toISOString(),p_end_at:end.toISOString(),p_venue:venue||null
+ })
+ if(error)throw new Error('Evenementconcept kon niet worden opgeslagen. Controleer je rechten en probeer opnieuw.')
+ revalidatePath('/portals/administration/modules/events')
+ revalidatePath('/events')
+ redirect('/portals/administration/modules/events')
+}
 
 async function markAdministrationNotificationRead(formData:FormData){
  'use server'
@@ -129,7 +159,7 @@ export default async function AdministrationModulePage({params,searchParams}:{pa
  const invoiceOffset=(currentInvoicePage-1)*invoicePageSize
  const invoiceSummaryRows=slug==="invoices"?await (()=>{let query=supabase.from("admin_financial_documents").select("id,kind,status,gross_amount,due_date,document_number,currency,issue_date",{count:"exact"}).in("kind",["sales_invoice","purchase_invoice"]);if(invoiceKindFilter)query=query.eq("kind",invoiceKindFilter);if(invoiceStatusFilter)query=query.eq("status",invoiceStatusFilter);if(invoiceNumberFilter)query=query.ilike("document_number",`%${invoiceNumberFilter.replace(/[%,_\\]/g,"")}%`);if(invoiceFromFilter)query=query.gte("issue_date",invoiceFromFilter);if(invoiceToFilter)query=query.lte("issue_date",invoiceToFilter);if(invoiceOverdueFilter)query=query.lt("due_date",invoiceToday).in("status",["approved","issued"]);return query.order(invoiceSortFilter.startsWith("amount")?"gross_amount":invoiceSortFilter==="issued_desc"?"issue_date":"due_date",{ascending:invoiceSortFilter==="due_asc"||invoiceSortFilter==="amount_asc",nullsFirst:false}).order("id",{ascending:true}).range(invoiceOffset,invoiceOffset+invoicePageSize-1)})():null
  const taskRows=slug==="tasks"?await supabase.from("tasks").select("id,title,status").limit(50):null
- const eventRows=slug==="events"?await supabase.from("events").select("id,name,status,start_at").order("start_at",{ascending:false}).limit(50):null
+ const eventRows=slug==="events"?await supabase.from("events").select("id,name,status,start_at,end_at,venue,created_by").order("start_at",{ascending:false}).limit(50):null
  const notificationPageNumber=listPage(notificationPage,99999)
  const notificationPageSize=50
  const notificationOffset=(notificationPageNumber-1)*notificationPageSize
@@ -140,9 +170,7 @@ export default async function AdministrationModulePage({params,searchParams}:{pa
  const artistBookings=slug==="artists"?await supabase.from("admin_artist_bookings").select("id,artist_name,status,event_id,performance_at,fee_amount,currency,follow_up_at").order("created_at",{ascending:false}).limit(30):null
  const artistFollowUps=slug==="artists"?await supabase.from("admin_artist_bookings").select("id,artist_name,status,follow_up_at").not("follow_up_at","is",null).in("status",["enquiry","negotiating"]).order("follow_up_at",{ascending:true}).limit(100):null
  const artistNow=new Date().getTime()
-  const liveRecords = slug==="events"
-  ? await supabase.from("events").select("id,name,status,start_at").order("start_at",{ascending:false}).limit(30)
-  : slug==="inventory"
+  const liveRecords = slug==="inventory"
     ? await (selectedEvent?supabase.from("inventory_items").select("id,name,missing_quantity,damaged_quantity,event_id").eq("event_id",selectedEvent):supabase.from("inventory_items").select("id,name,missing_quantity,damaged_quantity,event_id")).order("id").range(inventoryStart,inventoryStart+inventoryPageSize-1)
     : null
  // Read every inventory row for accurate totals; never label partial results as complete.
@@ -264,6 +292,10 @@ export default async function AdministrationModulePage({params,searchParams}:{pa
   </section>}
   {slug==="settings"&&<ExternalServicesReadiness locale={locale} services={externalServicesReadiness(process.env)}/>}
   {slug==="contracts"&&<section className="rounded-2xl border bg-card p-5">
+   <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
+    <p className="text-sm text-muted-foreground">{({nl:"Beheer je DJ-contracten vanuit het bestaande boekings- en goedkeuringsproces.",fr:"Gérez les contrats DJ dans le processus de réservation et de validation existant.",en:"Manage DJ contracts through the existing booking and approval workflow.",de:"Verwalten Sie DJ-Verträge im bestehenden Buchungs- und Freigabeprozess."} as const)[locale]}</p>
+    <Link href="/portals/administration/modules/artists/new?contract=1" className="inline-flex rounded-xl bg-violet-600 px-4 py-2 text-sm font-bold text-white">{({nl:"Nieuw contract opstellen",fr:"Créer un contrat",en:"Create contract",de:"Vertrag erstellen"} as const)[locale]}</Link>
+   </div>
    <h2 className="text-lg font-semibold">{({nl:"Artiesten en contractdossiers",fr:"Artistes et dossiers contractuels",en:"Artists and contract cases",de:"Künstler und Vertragsakten"} as const)[locale]}</h2>
    {contractBookingRows?.error?<p role="alert" className="mt-3 text-sm text-muted-foreground">{({nl:"Contractdossiers konden niet worden geladen.",fr:"Impossible de charger les dossiers.",en:"Unable to load contract cases.",de:"Vertragsakten konnten nicht geladen werden."} as const)[locale]}</p>:contractBookingRows?.data?.length?<ul className="mt-3 divide-y">{contractBookingRows.data.map(item=><li key={item.id} className="flex flex-wrap items-center justify-between gap-2 py-3 text-sm"><Link href={`/portals/administration/modules/artists/${item.id}/agreement`} className="font-semibold text-violet-400 hover:underline">{item.artist_name}</Link><span className="text-muted-foreground">{item.status}</span></li>)}</ul>:<p className="mt-3 text-sm text-muted-foreground">{({nl:"Geen contractdossiers gevonden.",fr:"Aucun dossier contractuel.",en:"No contract cases found.",de:"Keine Vertragsakten gefunden."} as const)[locale]}</p>}
   </section>}
@@ -311,8 +343,34 @@ export default async function AdministrationModulePage({params,searchParams}:{pa
    <Link href="#administration-work-queue" className="mt-4 inline-flex rounded-lg border px-4 py-2 text-sm font-semibold">{({nl:"Taken beheren",fr:"Gérer les tâches",en:"Manage tasks",de:"Aufgaben verwalten"} as const)[locale]}</Link>
   </section>}
   {slug==="events"&&<section className="rounded-2xl border bg-card p-5">
+   <details className="mb-5 rounded-xl border border-violet-500/50 p-4">
+    <summary className="cursor-pointer text-base font-bold text-violet-400">{({nl:"Nieuw evenement aanmaken",fr:"Créer un événement",en:"Create event",de:"Veranstaltung erstellen"} as const)[locale]}</summary>
+    <p className="mt-3 text-sm text-muted-foreground">{({nl:"Administratie kan een concept aanmaken en aanpassen. Admin keurt het evenement definitief goed en publiceert het.",fr:"L'administration crée et modifie un brouillon. L'Admin valide et publie.",en:"Administration can draft and edit. Admin handles final approval and publication.",de:"Die Verwaltung kann Entwürfe erstellen und ändern. Admin gibt sie frei und veröffentlicht."} as const)[locale]}</p>
+    <form action={saveAdministrationEventDraft} className="mt-4 grid gap-3 sm:grid-cols-2">
+     <label className="grid gap-1 text-sm font-semibold">{({nl:"Evenementnaam",fr:"Nom",en:"Event name",de:"Veranstaltungsname"} as const)[locale]}<input name="name" required minLength={3} maxLength={200} className="rounded-lg border bg-background p-3"/></label>
+     <label className="grid gap-1 text-sm font-semibold">{({nl:"Locatie",fr:"Lieu",en:"Venue",de:"Ort"} as const)[locale]}<input name="venue" maxLength={200} className="rounded-lg border bg-background p-3"/></label>
+     <DateInput name="start_at"/>
+     <DateInput name="end_at"/>
+     <button type="submit" className="rounded-xl bg-violet-600 px-4 py-3 font-bold text-white sm:col-span-2">{({nl:"Concept opslaan",fr:"Enregistrer le brouillon",en:"Save draft",de:"Entwurf speichern"} as const)[locale]}</button>
+    </form>
+   </details>
    <h2 className="text-lg font-semibold">{({nl:"Evenementenregister",fr:"Registre des événements",en:"Event register",de:"Veranstaltungsregister"} as const)[locale]}</h2>
-   {eventRows?.error?<p role="alert" className="mt-3 text-sm text-muted-foreground">{({nl:"Evenementen konden niet worden geladen.",fr:"Impossible de charger les événements.",en:"Unable to load events.",de:"Veranstaltungen konnten nicht geladen werden."} as const)[locale]}</p>:eventRows?.data?.length?<ul className="mt-3 divide-y">{eventRows.data.map(item=><li key={item.id} className="flex flex-wrap justify-between gap-2 py-3 text-sm"><span className="font-medium">{item.name}</span><span className="text-muted-foreground">{item.status}</span></li>)}</ul>:<p className="mt-3 text-sm text-muted-foreground">{({nl:"Geen evenementen gevonden.",fr:"Aucun événement.",en:"No events found.",de:"Keine Veranstaltungen gefunden."} as const)[locale]}</p>}
+   {eventRows?.error?<p role="alert" className="mt-3 text-sm text-muted-foreground">{({nl:"Evenementen konden niet worden geladen.",fr:"Impossible de charger les événements.",en:"Unable to load events.",de:"Veranstaltungen konnten nicht geladen werden."} as const)[locale]}</p>:eventRows?.data?.length?<ul className="mt-3 divide-y">{eventRows.data.map(item=><li key={item.id} className="space-y-2 py-3 text-sm">
+     <div className="flex flex-wrap justify-between gap-2"><span className="font-medium">{item.name}</span><span className="text-muted-foreground">{item.status}</span></div>
+     <p className="text-xs text-muted-foreground">{item.venue||"—"} · {new Date(item.start_at).toLocaleString(locale==="nl"?"nl-BE":locale==="fr"?"fr-BE":locale==="de"?"de-DE":"en-GB")}</p>
+     {item.status==="draft"&&(item.created_by===current.id||current.isOwner||current.realIsAdmin)&&<details className="rounded-lg border p-3">
+      <summary className="cursor-pointer font-semibold text-violet-400">{({nl:"Concept aanpassen",fr:"Modifier le brouillon",en:"Edit draft",de:"Entwurf bearbeiten"} as const)[locale]}</summary>
+      <form action={saveAdministrationEventDraft} className="mt-3 grid gap-3 sm:grid-cols-2">
+       <input type="hidden" name="event_id" value={item.id}/>
+       <label className="grid gap-1 font-semibold">{({nl:"Evenementnaam",fr:"Nom",en:"Event name",de:"Veranstaltungsname"} as const)[locale]}<input name="name" required minLength={3} maxLength={200} defaultValue={item.name} className="rounded-lg border bg-background p-3"/></label>
+       <label className="grid gap-1 font-semibold">{({nl:"Locatie",fr:"Lieu",en:"Venue",de:"Ort"} as const)[locale]}<input name="venue" maxLength={200} defaultValue={item.venue??""} className="rounded-lg border bg-background p-3"/></label>
+       <DateInput name="start_at" initial={item.start_at}/>
+       <DateInput name="end_at" initial={item.end_at}/>
+       <button type="submit" className="rounded-lg bg-violet-600 px-4 py-2 font-bold text-white sm:col-span-2">{({nl:"Wijzigingen opslaan",fr:"Enregistrer",en:"Save changes",de:"Änderungen speichern"} as const)[locale]}</button>
+      </form>
+     </details>}
+     {(current.isOwner||current.realIsAdmin)&&<Link href={`/events?event=${item.id}`} className="inline-block text-xs font-semibold text-violet-400">{({nl:"Beheer en publicatie via Admin",fr:"Gestion et publication via Admin",en:"Manage and publish in Admin",de:"Verwaltung und Veröffentlichung in Admin"} as const)[locale]}</Link>}
+    </li>)}</ul>:<p className="mt-3 text-sm text-muted-foreground">{({nl:"Geen evenementen gevonden.",fr:"Aucun événement.",en:"No events found.",de:"Keine Veranstaltungen gefunden."} as const)[locale]}</p>}
   </section>}
   {slug==="notifications"&&<section id="administration-notifications" className="scroll-mt-24 rounded-2xl border bg-card p-5">
    <div className="flex flex-wrap items-center justify-between gap-3"><h2 className="text-lg font-semibold">{({nl:"Mijn meldingen",fr:"Mes notifications",en:"My notifications",de:"Meine Benachrichtigungen"} as const)[locale]}</h2>{!notificationRows?.error&&!unreadNotificationCount?.error&&(unreadNotificationCount?.count??0)>0&&<form action={markAllAdministrationNotificationsRead}><button type="submit" className="rounded-lg border px-3 py-2 text-sm font-medium">{({nl:"Alle meldingen als gelezen markeren (ook andere pagina’s)",fr:"Marquer toutes les notifications comme lues (toutes les pages)",en:"Mark all notifications as read (all pages)",de:"Alle Benachrichtigungen als gelesen markieren (alle Seiten)"} as const)[locale]}</button></form>}</div>

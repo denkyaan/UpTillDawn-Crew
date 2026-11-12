@@ -37,18 +37,21 @@ async function createBooking(form:FormData){
   const {data:agency}=await db.from("admin_counterparties").select("id").eq("id",agency_contact_id).maybeSingle()
   if(!agency)throw new Error("Agency unavailable")
  }
- const {error}=await db.from("admin_artist_bookings").insert({
+ const {data:booking,error}=await db.from("admin_artist_bookings").insert({
   artist_name,event_id,agency_contact_id:agency_contact_id||null,
   fee_amount,performance_at:performanceDate?.toISOString()??null,
   rider_notes:rider_notes||null,internal_notes:internal_notes||null,
   status:"enquiry",currency:"EUR"
- })
- if(error)throw new Error("Booking could not be saved")
+ }).select("id").single()
+ if(error||!booking)throw new Error("Booking could not be saved")
  revalidatePath(path)
+ revalidatePath("/portals/administration/modules/contracts")
+ if(form.get("contract_context")==="1")redirect(path+"/"+booking.id+"/agreement")
  redirect(path)
 }
 export const dynamic="force-dynamic"
-export default async function NewArtistBooking(){
+export default async function NewArtistBooking({searchParams}:{searchParams?:Promise<{contract?:string}>}){
+ const contractContext=(await searchParams)?.contract==='1'
  const db=await authorizedDb()
  const locale=await requestUiLocale()
  const l=({
@@ -64,9 +67,11 @@ export default async function NewArtistBooking(){
  ])
  return <main className="mx-auto w-full max-w-3xl space-y-5 p-4 sm:p-6">
   <Link href={path} className="text-sm font-semibold text-violet-400">← {l.back}</Link>
-  <h1 className="text-2xl font-bold">{l.title}</h1>
+  <h1 className="text-2xl font-bold">{contractContext?({nl:"Nieuw DJ-contract",fr:"Nouveau contrat DJ",en:"New DJ contract",de:"Neuer DJ-Vertrag"} as const)[locale]:l.title}</h1>
+  {contractContext&&<p className="text-sm text-muted-foreground">{({nl:"Leg de boekingsgegevens vast. Daarna opent automatisch het contractconcept voor voorwaarden en goedkeuring.",fr:"Enregistrez la réservation, puis complétez le projet de contrat.",en:"Save the booking details, then complete the agreement draft for approval.",de:"Buchungsdaten speichern, danach den Vertragsentwurf vervollständigen."} as const)[locale]}</p>}
   {bookings.error?<p role="alert" className="rounded-xl border p-4">{l.migration}</p>:events.error||!events.data?.length?<p className="rounded-xl border p-4">{l.empty}</p>:
   <form action={createBooking} className="grid gap-4 rounded-2xl border bg-card p-5 sm:grid-cols-2">
+   {contractContext&&<input type="hidden" name="contract_context" value="1"/>}
    <label className="text-sm font-semibold">{l.artist}<input required name="artist_name" maxLength={180} className="mt-1 w-full rounded-lg border bg-background p-3"/></label>
    <label className="text-sm font-semibold">{l.event}<select required name="event_id" className="mt-1 w-full rounded-lg border bg-background p-3">{events.data.map(event=><option key={event.id} value={event.id}>{event.name}</option>)}</select></label>
    <label className="text-sm font-semibold">{l.agency}<select name="agency_contact_id" className="mt-1 w-full rounded-lg border bg-background p-3"><option value="">{l.none}</option>{(agencies.data??[]).map(agency=><option key={agency.id} value={agency.id}>{agency.name}</option>)}</select></label>
@@ -74,7 +79,7 @@ export default async function NewArtistBooking(){
    <label className="text-sm font-semibold">{l.fee}<input type="number" name="fee_amount" min="0" max="999999999" step="0.01" className="mt-1 w-full rounded-lg border bg-background p-3"/></label>
    <label className="text-sm font-semibold sm:col-span-2">{l.rider}<textarea name="rider_notes" maxLength={5000} rows={3} className="mt-1 w-full rounded-lg border bg-background p-3"/></label>
    <label className="text-sm font-semibold sm:col-span-2">{l.notes}<textarea name="internal_notes" maxLength={5000} rows={3} className="mt-1 w-full rounded-lg border bg-background p-3"/></label>
-   <button className="rounded-xl bg-violet-600 px-4 py-3 font-semibold text-white sm:col-span-2">{l.save}</button>
+   <button className="rounded-xl bg-violet-600 px-4 py-3 font-semibold text-white sm:col-span-2">{contractContext?({nl:"Contractdossier aanmaken",fr:"Créer le dossier",en:"Create contract case",de:"Vertragsakte erstellen"} as const)[locale]:l.save}</button>
   </form>}
  </main>
 }

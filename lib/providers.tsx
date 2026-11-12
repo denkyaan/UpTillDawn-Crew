@@ -60,8 +60,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       if(error||!data||data.id!==userId||(role!=="staff"&&role!=="responsible_lead"&&role!=="admin")){
         setProfile(null);setRoles([]);setRoleModeState(null);setIsOwner(false);return
       }
-      const needsOwnerCheck=Boolean(data.account_blocked)||!data.approved||role==="admin"
-      const {data:ownerFlag}=needsOwnerCheck?await supabase.rpc("upt_current_is_owner"):{data:false}
+      // Maker is deliberately stored with profiles.role='staff' after the
+      // Owner/Head separation. Never infer Owner from the operational profile:
+      // the authenticated Owner RPC must run for ALL profile roles.
+      const {data:ownerFlag,error:ownerError}=await supabase.rpc("upt_current_is_owner")
+      if(ownerError){
+        // Authorization is unresolved: fail closed instead of silently
+        // rendering the staff UI for an Owner (or elevating a regular user).
+        setProfile(null);setRoles([]);setRoleModeState(null);setIsOwner(false);return
+      }
       const owner=ownerFlag===true
       if((data.account_blocked&&!owner)||(!data.approved&&!owner)){
         setProfile(null);setRoles([]);setRoleModeState(null);setIsOwner(false);return
