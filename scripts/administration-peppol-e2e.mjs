@@ -45,7 +45,10 @@ try{
  const referenceForm=references.locator('form:visible').filter({has:office.page.locator('input[name="buyer_reference"]')})
  await referenceForm.locator('input[name="buyer_reference"]').fill('TEST-PO-UI')
  await submit(office.page,referenceForm.getByRole('button'))
- await office.page.waitForFunction(()=>document.querySelector('#app-scroll details[open] input[name="buyer_reference"]')?.defaultValue==='TEST-PO-UI')
+ await office.page.waitForFunction(()=>document.querySelector('#app-scroll details input[name="buyer_reference"]')?.defaultValue==='TEST-PO-UI')
+ // Server Action revalidation may remount the panel in its collapsed state.
+ // Open it only when needed before interacting with the line form.
+ if(await references.getAttribute('open')===null)await references.locator('summary:visible').click()
  assert.equal((await one(office.db.from('admin_financial_documents').select('buyer_reference').eq('id',document.id))).buyer_reference,'TEST-PO-UI')
  const lineForm=references.locator(`form:visible:has(input[name="line_id"][value="${createdLine.id}"])`)
  await lineForm.locator('select[name="unit_code"]').selectOption('DAY')
