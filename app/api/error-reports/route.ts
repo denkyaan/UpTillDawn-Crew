@@ -16,6 +16,27 @@ const reportSchema=z.object({
   clientContext:z.record(z.string(),z.unknown()).optional().default({}),
 }).strict()
 
+async function boundedErrorJson(request:Request,maxBytes=32768):Promise<unknown>{
+  const declared=Number(request.headers.get('content-length'))
+  if(Number.isFinite(declared)&&declared>maxBytes)throw new Error('too_large')
+  const reader=request.body?.getReader()
+  if(!reader)throw new Error('invalid_json')
+  const chunks:Uint8Array[]=[]
+  let total=0
+  for(;;){
+    const part=await reader.read()
+    if(part.done)break
+    total+=part.value.byteLength
+    if(total>maxBytes){await reader.cancel().catch(()=>{});throw new Error('too_large')}
+    chunks.push(part.value)
+  }
+  const bytes=new Uint8Array(total)
+  let offset=0
+  for(const part of chunks){bytes.set(part,offset);offset+=part.byteLength}
+  try{return JSON.parse(new TextDecoder('utf-8',{fatal:true}).decode(bytes))}
+  catch{throw new Error('invalid_json')}
+}
+
 function crossSite(request:Request){
   const site=request.headers.get('sec-fetch-site')
   const origin=request.headers.get('origin')
@@ -53,7 +74,10 @@ export async function POST(request:Request){
   const {s,user,approved}=await authenticatedClient()
   if(!user||!approved)return Response.json({error:'Aanmelden vereist.'},{status:401})
 
-  const parsed=reportSchema.safeParse(await request.json().catch(()=>null))
+  let raw:unknown
+  try{raw=await boundedErrorJson(request)}
+  catch(error){return Response.json({error:'Ongeldig of te groot foutrapport.'},{status:error instanceof Error&&error.message==='too_large'?413:400})}
+  const parsed=reportSchema.safeParse(raw)
   if(!parsed.success)return Response.json({error:'Ongeldig foutrapport.'},{status:400})
 
   const input=parsed.data
