@@ -156,13 +156,6 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5.1.0
-      - name: Set up Node.js
-        uses: actions/setup-node@a0853c24544627f65ddf259abe73b1d18a591444 # v5.0.0
-        with:
-          node-version: 24
-          cache: npm
-      - name: Install pinned dependencies
-        run: npm ci --prefer-offline --no-audit --no-fund
       - name: Verify all isolated QA account secrets are present
         shell: bash
         run: |
@@ -175,6 +168,13 @@ jobs:
             fi
           done
           echo "All six QA account credentials are configured (values withheld)."
+      - name: Set up Node.js
+        uses: actions/setup-node@a0853c24544627f65ddf259abe73b1d18a591444 # v5.0.0
+        with:
+          node-version: 24
+          cache: npm
+      - name: Install pinned dependencies
+        run: npm ci --prefer-offline --no-audit --no-fund
       - name: Install browser and Linux dependencies
         run: npx playwright install --with-deps chromium
       - name: Run six-role browser acceptance
