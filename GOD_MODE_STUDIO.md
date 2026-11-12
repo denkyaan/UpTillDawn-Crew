@@ -6,7 +6,7 @@ Open `/maker-mode` after signing in with the permanent Maker/Owner identity and 
 
 The main menu groups the existing tools into **Overzicht**, **AI & herstel**, **App Studio**, **Versies & CI**, and **Geavanceerd**. The environment selector shows `main` (test) and `production` (live). Status information and registered application/error/recovery/audit logs are kept separate by Supabase project. Switching to edit an environment opens that environment's own authenticated God Mode; no JWT is forwarded between projects. Cross-project diagnostic queries through a connected Supabase Management token are read-only. Production live-revision SHA is not asserted unless deployment evidence confirms it.
 
-Cloudflare runtime tail/observability logs are not yet integrated inside God Mode: currently only persisted application logs and linked GitHub Actions logs are visible. Provider limits still apply to AI context, tokens, latency and billing; the assistant must not claim unlimited resources or silent production self-repair.
+Cloudflare Workers Observability log queries are available in **Systeemlogs** after connecting the separate `CLOUDFLARE_OBSERVABILITY_TOKEN` GitHub Actions secret and deploying Main. Without this opt-in secret, God Mode truthfully reports that Cloudflare runtime logs are unavailable; only persisted application logs and authorized Supabase platform logs are visible. Provider limits still apply to AI context, tokens, latency and billing; the assistant must not claim unlimited resources or silent production self-repair.
 
 ## Tools
 
@@ -37,7 +37,9 @@ Een Maker kan een incident alleen afsluiten via **Herstel controleren** na het d
 
 ## Platformlogs en externe verbinding
 
-Main schakelt Cloudflare Workers invocation logging expliciet in; de Cloudflare Logs API wordt **nog niet** rechtstreeks vanuit God Mode bevraagd. De huidige God Mode-logviewer omvat opgeslagen app-/herstellogs en, mits de juiste Supabase Management-koppeling, Supabase-platformlogs. Cloudflare Workers-logonderzoek vereist voorlopig het Cloudflare-dashboard met een afzonderlijke leesbevoegdheid. Een algemeen Cloudflare-deploymenttoken hoort niet in de browser of een runtime Worker-secret te worden hergebruikt.
+Main schakelt Cloudflare Workers invocation logging expliciet in. God Mode kan via het bestaande **Systeemlogs**-scherm ook een server-side, strikt begrensde Cloudflare Workers Observability-query uitvoeren voor `uptilldawn-main` of `uptilldawn-crew`. De API accepteert uitsluitend een geldige Maker-sessie, geeft geen ander Worker's logs door, en schrijft niets naar Cloudflare. Zonder Cloudflare-verbinding toont de app een expliciete waarschuwing en blijft de bestaande Supabase-/applogweergave bruikbaar.
+
+**Eenmalige koppeling:** maak bij Cloudflare een afzonderlijke token met alleen de voor Workers Observability-query vereiste permissie (de Cloudflare API noemt dit `Workers Observability Write`; geef in elk geval geen Workers Scripts-/deploymentrechten). Bewaar dit token als repository GitHub Actions-secret `CLOUDFLARE_OBSERVABILITY_TOKEN`. Bij een geslaagde **Deploy main** zal de bestaande workflow dit token samen met het bestaande Cloudflare Account ID uitsluitend als versleutelde runtime secret `CLOUDFLARE_OBSERVABILITY_CONFIG` aan de Main Worker verbinden. Er wordt nooit een brede `CLOUDFLARE_API_TOKEN` uit de deployworkflow in de Worker gestopt. Production krijgt geen nieuwe binding totdat een aparte productie-release expliciet is goedgekeurd. De functie is technisch voorbereid; actuele providerrechten en echte Cloudflare-responsen zijn pas bewezen na de koppeling en live test.
 
 ## Limits and recovery
 
