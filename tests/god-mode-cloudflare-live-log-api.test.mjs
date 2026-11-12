@@ -97,14 +97,15 @@ test('God Mode Cloudflare logs reject bad ranges and provider authentication fai
  assert.equal((await b.GET(request())).status,403)
 })
 
-test('Main deploy safely skips the optional Cloudflare read token and retains 5 workflows',()=>{
+test('Main deploy never mutates Cloudflare Worker secrets; a distinct runtime credential is optional',()=>{
  const workflow=readFileSync('.github/workflows/deploy-main.yml','utf8')
- assert.match(workflow,/CLOUDFLARE_OBSERVABILITY_TOKEN: \$\{\{ secrets\.CLOUDFLARE_OBSERVABILITY_TOKEN \}\}/)
- assert.match(workflow,/npx wrangler secret put CLOUDFLARE_OBSERVABILITY_CONFIG --config wrangler\.main\.jsonc/)
- assert.match(workflow,/if: steps\.current-main\.outputs\.current == 'true'/)
- assert.match(workflow,/never the privileged/)
+ assert.doesNotMatch(workflow,/npx wrangler secret put|secrets-bulk|workers\/scripts\/uptilldawn-production\/secrets/)
+ assert.match(workflow,/Verify OCR secret binding on main Worker/)
+ const api=readFileSync('app/api/god/cloudflare-logs/route.ts','utf8')
+ assert.match(api,/process\.env\.CLOUDFLARE_OBSERVABILITY_CONFIG/)
+ assert.doesNotMatch(api,/process\.env\.CLOUDFLARE_API_TOKEN/)
  const logs=readFileSync('components/god-mode/maker-logs.tsx','utf8')
  assert.match(logs,/\/api\/god\/cloudflare-logs\?environment=/)
- for(const token of ['cloudflareLogs','cloudflareUnavailable','kind:\x27cloudflare\x27','setCloudflareLogs'])assert.ok(logs.includes(token))
+ for(const token of ['cloudflareLogs','cloudflareUnavailable',"kind:'cloudflare'",'setCloudflareLogs'])assert.ok(logs.includes(token))
  assert.doesNotMatch(logs,/CLOUDFLARE_API_TOKEN/)
 })
