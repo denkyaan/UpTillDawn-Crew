@@ -132,6 +132,14 @@ try{
      assert.ok(!new URL(page.url()).pathname.startsWith('/login'),'Login did not leave the authentication route')
      await assertAppliedLocale(page,locale)
      records.push({...meta,step:'authenticated',actual:new URL(page.url()).pathname})
+     if(role==='maker'){
+      assert.equal(new URL(page.url()).pathname,'/maker-mode',
+       'Maker login must lead to the choice screen before entering an Admin or God Mode session')
+      await page.getByRole('heading',{name:'Kies je modus'}).waitFor({state:'visible',timeout:timeOut})
+      await page.getByRole('button',{name:/Normale app/}).waitFor({state:'visible',timeout:timeOut})
+      await page.getByRole('button',{name:/God Mode/}).waitFor({state:'visible',timeout:timeOut})
+      records.push({...meta,step:'maker-mode-choice-visible',path:'/maker-mode'})
+     }
      for(const pathname of config.routes){
       try{
        const result=await settledRoute(page,pathname)
