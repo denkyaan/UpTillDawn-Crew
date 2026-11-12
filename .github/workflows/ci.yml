@@ -401,6 +401,9 @@ jobs:
           done
           npm run e2e:portals
 
+      - name: Maker God Mode actual-session and read-only control E2E (isolated)
+        run: node scripts/god-mode-maker-e2e.mjs
+
       - name: Run 15 concurrent authenticated browser bots
         run: |
           set -euo pipefail
@@ -448,6 +451,7 @@ jobs:
           path: |
             test-results/administration-completion/
             test-results/peppol-e2e/
+            test-results/god-mode-e2e/
             test-results/portal-e2e/
             test-results/final-acceptance/
           if-no-files-found: ignore
