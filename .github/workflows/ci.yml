@@ -106,7 +106,34 @@ jobs:
           npx --yes supabase@2.117.0 start -x studio,imgproxy,inbucket,edge-runtime,logflare,vector,realtime
 
       - name: Replay every migration from zero
-        run: npx --yes supabase@2.117.0 db reset --local --no-seed
+        # Local Supabase startup can deadlock with background schema/catalog
+        # introspection during POLICY DDL. Retry *only* SQLSTATE 40P01 on
+        # the disposable database; never hide a real migration failure.
+        shell: bash
+        run: |
+          set -euo pipefail
+          for attempt in 1 2 3; do
+            log="$(mktemp)"
+            if npx --yes supabase@2.117.0 db reset --local --no-seed >"$log" 2>&1; then
+              cat "$log"
+              rm -f "$log"
+              echo "PASS: migration replay on attempt $attempt"
+              exit 0
+            fi
+            cat "$log"
+            if ! grep -Eiq 'deadlock detected|SQLSTATE 40P01|SQLSTATE.*40P01' "$log"; then
+              echo "::error::Migration replay failed for a non-deadlock reason."
+              rm -f "$log"
+              exit 1
+            fi
+            rm -f "$log"
+            if [ "$attempt" -eq 3 ]; then
+              echo "::error::Isolated migration replay hit repeated SQL deadlocks."
+              exit 1
+            fi
+            echo "::warning::Transient isolated PostgreSQL 40P01 deadlock; retry $attempt of 2."
+            sleep $((attempt * 4))
+          done
 
       - name: Run SQL regression suites
         env:
