@@ -10,7 +10,7 @@ test('installed app starts at root and restores last account-scoped workspace th
  const layout=read('app/layout.tsx')
  assert.match(pwa,/start_url:'\/'/)
  assert.match(layout,/<WorkspaceContinuity\s*\/>/)
- assert.match(tracking,/user\.id\+':'\+workspace/)
+ assert.match(tracking,/userId\+':'\+workspace/)
  assert.match(tracking,/path===\x27\/god-mode\x27/)
  assert.match(tracking,/path===\x27\/portals\/administration\x27/)
  assert.match(root,/saved\?\.startsWith\(current\.id\+':'\)/)
