@@ -130,9 +130,10 @@ jobs:
           echo "Explicit production CI requested for exact main ${current_sha}"
 
   browser-acceptance:
-    name: Six-role browser acceptance (manual QA only)
+    name: Six-role browser acceptance (explicit Main QA only)
     needs: fast
-    if: ${{ github.event_name == 'workflow_dispatch' && inputs.run_six_role_acceptance == true && github.ref == 'refs/heads/main' }}
+    # Run only after explicit QA opt-in; regular push/PR and production stay unchanged.
+    if: ${{ (github.event_name == 'workflow_dispatch' && inputs.run_six_role_acceptance == true && github.ref == 'refs/heads/main') || (github.event_name == 'push' && github.ref == 'refs/heads/main' && contains(github.event.head_commit.message, '[qa-main]')) }}
     runs-on: ubuntu-latest
     timeout-minutes: 60
     permissions:
