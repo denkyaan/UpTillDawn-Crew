@@ -58,14 +58,14 @@ END $qa$;
 -- Each assertion is a separate SQL statement because stable SQL functions
 -- see the statement snapshot, not writes made earlier in one DO block.
 SELECT public.upt_set_admin_role_mode('staff');
-DO $BEGIN IF public.upt_current_effective_role() IS DISTINCT FROM 'staff'
- THEN RAISE EXCEPTION 'Maker did not enter Staff mode'; END IF; END$;
+DO $qa_assert$ BEGIN IF public.upt_current_effective_role() IS DISTINCT FROM 'staff'
+ THEN RAISE EXCEPTION 'Maker did not enter Staff mode'; END IF; END $qa_assert$;
 SELECT public.upt_set_admin_role_mode('responsible_lead');
-DO $BEGIN IF public.upt_current_effective_role() IS DISTINCT FROM 'responsible_lead'
- THEN RAISE EXCEPTION 'Maker did not enter Responsible mode'; END IF; END$;
+DO $qa_assert$ BEGIN IF public.upt_current_effective_role() IS DISTINCT FROM 'responsible_lead'
+ THEN RAISE EXCEPTION 'Maker did not enter Responsible mode'; END IF; END $qa_assert$;
 SELECT public.upt_set_admin_role_mode('admin');
-DO $BEGIN IF public.upt_current_effective_role() IS DISTINCT FROM 'admin'
- THEN RAISE EXCEPTION 'Maker cannot return to Admin mode'; END IF; END$;
+DO $qa_assert$ BEGIN IF public.upt_current_effective_role() IS DISTINCT FROM 'admin'
+ THEN RAISE EXCEPTION 'Maker cannot return to Admin mode'; END IF; END $qa_assert$;
 RESET ROLE;
 SELECT 'PASS: isolated Maker retains owner authority, can appoint independent Head, cannot become Head, and is absent from ordinary staff directories' AS result;
 ROLLBACK;
