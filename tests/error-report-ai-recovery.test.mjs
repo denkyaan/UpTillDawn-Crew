@@ -21,7 +21,7 @@ test('authenticated app exposes user-controlled error reporting and blocked-acco
   assert.match(bridge,/Fout melden/)
   assert.match(button,/postgres_changes/)
   assert.match(button,/user_error_reports/)
-  assert.match(button,/AI-OPLOSSING TOEPASSEN/)
+  assert.match(button,/PAGINA HANDMATIG HERLADEN/)
   assert.match(button,/maker_action_required/)
 })
 
@@ -46,7 +46,8 @@ test('background AI analysis always routes production errors through autonomous 
   assert.doesNotMatch(source,/makerActionRequired\s*\|\|\s*\['code','database','configuration','permission','data'\]/)
   assert.match(source,/upt_finalize_error_report_ai/)
   assert.doesNotMatch(source,/RESEND_API_KEY/)
-  assert.match(source,/dispatchSelfHealing/)
+  assert.match(source,/calibrateErrorDecision/)
+  assert.doesNotMatch(source,/dispatchSelfHealing|ai-self-heal\\.yml/)
   assert.doesNotMatch(source,/service_role/i)
 })
 
