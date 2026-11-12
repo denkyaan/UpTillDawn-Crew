@@ -1,4 +1,5 @@
 import { z } from 'zod'
+import { calibrateErrorDecision } from '@/lib/error-ai-calibration'
 import type { createClient } from '@/lib/supabase/crew-server'
 
 export type ErrorAiBinding={
@@ -103,45 +104,6 @@ function deterministicFallback(report:{error_message:string;error_name:string|nu
     makerAction:null,
     godPrompt:`Onderzoek en herstel autonoom deze productiefout op ${report.route}: ${report.error_message}`,
   }
-}
-
-async function dispatchSelfHealing(report:{
-  id:string
-  route:string
-  error_name:string|null
-  error_message:string
-  stack_trace:string|null
-  ai_summary:string
-}){
-  const token=process.env.SELF_HEALING_GITHUB_TOKEN
-  if(!token)return false
-  const response=await fetch('https://api.github.com/repos/denkyaan/UpTillDawn-Crew/actions/workflows/ai-self-heal.yml/dispatches',{
-    method:'POST',
-    headers:{
-      Authorization:`Bearer ${token}`,
-      Accept:'application/vnd.github+json',
-      'X-GitHub-Api-Version':'2022-11-28',
-      'Content-Type':'application/json',
-      'User-Agent':'UpTillDawn-SelfHealing',
-    },
-    body:JSON.stringify({
-      ref:'staging',
-      inputs:{
-        report_id:report.id,
-        route:report.route.slice(0,500),
-        error_name:(report.error_name||'Error').slice(0,200),
-        error_message:report.error_message.slice(0,4000),
-        stack_trace:(report.stack_trace||'').slice(0,10000),
-        ai_summary:report.ai_summary.slice(0,3000),
-      },
-    }),
-    signal:AbortSignal.timeout(8000),
-  })
-  if(!response.ok){
-    console.error('[error-ai] self-healing dispatch geweigerd',{status:response.status})
-    return false
-  }
-  return true
 }
 
 async function finalizeFailure(client:CrewClient,reportId:string){
@@ -251,82 +213,48 @@ export async function processErrorReport(client:CrewClient,reportId:string,ai:Er
     return
   }
 
+  // Model output is only a diagnosis. Verified release evidence, not an AI
+  // response or a suggested retry/reload, determines whether an issue is fixed.
   try{
     const result=await analyzeWithRetry(ai,report)
-
-    // Production errors are always routed through autonomous recovery first.
-    // The maker must never receive an app error as a manual action request.
-    const makerRequired=false
-
-    const makerAction=makerRequired
-      ? (result.makerAction||'Open het rapport in God Mode en onderzoek de oorzaak voordat je een wijziging publiceert.')
-      : null
-    const godPrompt=makerRequired
-      ? (result.godPrompt||`Onderzoek en herstel deze gemelde fout op ${report.route}: ${report.error_message}`)
-      : null
-    const status=makerRequired?'needs_maker':result.autoAction==='none'?'resolved':'auto_resolved'
-
+    const decision=calibrateErrorDecision(report,result)
     const {error:finalizeError}=await client.rpc('upt_finalize_error_report_ai',{
       p_report:reportId,
-      p_status:status,
-      p_category:result.category,
-      p_severity:result.severity,
-      p_summary:result.summary,
-      p_user_message:result.userMessage,
-      p_auto_action:makerRequired?'none':result.autoAction,
-      p_maker_action_required:makerRequired,
-      p_maker_action:makerAction||undefined,
-      p_god_prompt:godPrompt||undefined,
+      p_status:decision.status,
+      p_category:decision.category,
+      p_severity:decision.severity,
+      p_summary:decision.summary,
+      p_user_message:decision.userMessage,
+      p_auto_action:decision.autoAction,
+      p_maker_action_required:false,
+      p_maker_action:undefined,
+      p_god_prompt:undefined,
     })
     if(finalizeError)throw new Error(finalizeError.message)
-
-    if(result.autoAction==='none'||result.makerActionRequired||['code','client_state','unknown','database','configuration','permission','data'].includes(result.category)){
-      // Technical reports are first handed to the bounded autonomous repair
-      // controller. It validates the root cause, limits editable scope, runs
-      // the full test/build pipeline and only publishes after CI + deploy.
-      // Maker escalation is therefore the fallback, not the first action.
-      const dispatched=await dispatchSelfHealing({
-            id:report.id,
-            route:report.route,
-            error_name:report.error_name,
-            error_message:report.error_message,
-            stack_trace:report.stack_trace,
-            ai_summary:result.summary,
-          })
-      if(!dispatched)console.error('[error-ai] self-healing dispatch niet beschikbaar; rapport blijft technisch geregistreerd',{reportId})
-    }
+    // No workflow is dispatched here: the historical ai-self-heal/staging
+    // workflow was retired. The failed status preserves the error in Maker
+    // logs until a separately verified fix explicitly resolves it.
+    console.info('[error-ai] diagnose geregistreerd, herstel nog niet bevestigd',{reportId,category:decision.category,severity:decision.severity})
   }catch(error){
     const message=error instanceof Error?error.message:'onbekende fout'
     console.error('[error-ai] achtergrondanalyse mislukt',{reportId,message})
+    // If the model/provider fails, preserve the report and a deterministic
+    // diagnosis. Never convert a failed analysis into a resolved issue.
     try{
-      const fallback=deterministicFallback(report)
-      const makerRequired=false
-
+      const fallback=calibrateErrorDecision(report,deterministicFallback(report))
       const {error:finalizeError}=await client.rpc('upt_finalize_error_report_ai',{
         p_report:reportId,
-        p_status:makerRequired?'needs_maker':fallback.autoAction==='none'?'resolved':'auto_resolved',
+        p_status:fallback.status,
         p_category:fallback.category,
         p_severity:fallback.severity,
         p_summary:fallback.summary,
         p_user_message:fallback.userMessage,
-        p_auto_action:makerRequired?'none':fallback.autoAction,
-        p_maker_action_required:makerRequired,
-        p_maker_action:fallback.makerAction||undefined,
-        p_god_prompt:fallback.godPrompt||undefined,
+        p_auto_action:fallback.autoAction,
+        p_maker_action_required:false,
+        p_maker_action:undefined,
+        p_god_prompt:undefined,
       })
       if(finalizeError)throw finalizeError
-
-      if(fallback.autoAction==='none'||fallback.makerActionRequired){
-        const dispatched=await dispatchSelfHealing({
-          id:report.id,
-          route:report.route,
-          error_name:report.error_name,
-          error_message:report.error_message,
-          stack_trace:report.stack_trace,
-          ai_summary:fallback.summary,
-        })
-        if(!dispatched)console.error('[error-ai] fallback self-healing dispatch niet beschikbaar; rapport blijft technisch geregistreerd',{reportId})
-      }
     }catch(finalizeError){
       console.error('[error-ai] fallback-escalatie mislukt',finalizeError instanceof Error?finalizeError.message:'unknown')
       try{await finalizeFailure(client,reportId)}catch{}
