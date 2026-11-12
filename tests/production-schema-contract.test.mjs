@@ -18,7 +18,7 @@ test('the production probe selects zero rows and accepts resolved private relati
   const table=endpoint.pathname.split('/').at(-1)
   return table==='portal_role_assignments'?response(200,[]):response(401,{code:'42501',message:'permission denied for table '+table})
  }})
- assert.equal(checks.length,11)
+ assert.equal(checks.length,18)
  assert.equal(requests.length,checks.length)
  assert.ok(requests.some(endpoint=>endpoint.pathname.endsWith('/admin_payment_reminders')&&endpoint.searchParams.get('select').split(',').includes('revision')))
 })
@@ -60,4 +60,19 @@ test('deployment checks the schema before changing any Worker or runtime secret'
  assert.ok(gate<workflow.indexOf('Install dependencies'))
  assert.ok(gate<workflow.indexOf('wrangler secret put'))
  assert.ok(gate<workflow.indexOf('Deploy production Worker'))
+})
+
+
+test('November production finance and owner-role contracts block release if missing',async()=>{
+ for(const table of [
+  'admin_provider_transactions','admin_bank_statement_transactions','admin_financial_line_imports',
+  'admin_provider_bank_settlements','admin_provider_bank_settlement_items',
+  'upt_organization_leadership','upt_personnel_role_slots',
+ ]){
+  await assert.rejects(()=>checkProductionSchema({url,key,fetcher:async endpoint=>
+   endpoint.pathname.endsWith('/'+table)
+    ?response(404,{code:'PGRST205'})
+    :response(200,[])
+  }),error=>error.message.includes(table+': HTTP 404'))
+ }
 })
