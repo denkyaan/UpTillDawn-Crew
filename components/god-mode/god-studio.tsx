@@ -13,6 +13,7 @@ import {GOD_ENVIRONMENTS,currentGodEnvironment} from '@/lib/god-mode-environment
 import {LANGUAGE_APPLIED_EVENT,initialUiLocale,parseUiLocale,type SupportedUiLocale} from '@/lib/locale-preferences'
 import {editablePath,summarizeChanges,type SourceChange,type SourceEntry,type SourceTarget} from '@/lib/god-studio'
 import {humanizeAppError} from '@/lib/client-error-message'
+import {makerIncidentPrompt,pendingMakerIncidents} from '@/lib/god-mode-error-triage'
 import targets from '@/lib/god-source-index.json'
 
 const CodeEditor=dynamic(()=>import('./code-editor'),{ssr:false,loading:()=> <p>Code-editor laden…</p>})
@@ -109,7 +110,11 @@ export function GodStudio(){
   const [textAiPrompt,setTextAiPrompt]=useState('')
   const [textAiResult,setTextAiResult]=useState<TextAiResult|null>(null)
   const [errorReports,setErrorReports]=useState<RecoveryReport[]>([])
+  const [errorReportsStatus,setErrorReportsStatus]=useState<'loading'|'ready'|'error'>('loading')
   const [selectedErrorReport,setSelectedErrorReport]=useState<string|null>(null)
+  const [verifyReportId,setVerifyReportId]=useState<string|null>(null)
+  const [verifiedReleaseSha,setVerifiedReleaseSha]=useState('')
+  const [verificationNote,setVerificationNote]=useState('')
   const [proposal,setProposal]=useState<Proposal|null>(null)
   const [history,setHistory]=useState<Commit[]>([])
   const [pulls,setPulls]=useState<Pull[]>([])
@@ -142,7 +147,8 @@ export function GodStudio(){
     void api<{reports:RecoveryReport[]}>('/api/god/error-reports?limit=60')
       .then(data=>{
         if(!active)return
-        setErrorReports(data.reports)
+        setErrorReports(pendingMakerIncidents(data.reports))
+        setErrorReportsStatus('ready')
         const requested=new URLSearchParams(window.location.search).get('error-report')
         if(!requested)return
         const report=data.reports.find(item=>item.id===requested)
@@ -151,7 +157,7 @@ export function GodStudio(){
         setTextAiPrompt(current=>current||recoveryPrompt(report))
         setTab('ai')
       })
-      .catch(()=>{})
+      .catch(()=>{if(active)setErrorReportsStatus('error')})
     return()=>{active=false}
   },[])
   useEffect(()=>{if(!changes.length)return;const guard=(event:BeforeUnloadEvent)=>{event.preventDefault()};window.addEventListener('beforeunload',guard);return()=>window.removeEventListener('beforeunload',guard)},[changes.length])
@@ -205,19 +211,15 @@ export function GodStudio(){
   }
 
   function recoveryPrompt(report:RecoveryReport){
-    return report.god_prompt||[
-      'Onderzoek en herstel dit gemelde productiefoutrapport.',
-      `Pagina: ${report.route}`,
-      `Fout: ${report.error_message}`,
-      report.ai_summary?`AI-diagnose: ${report.ai_summary}`:'',
-      report.maker_action?`Vereiste makeractie: ${report.maker_action}`:'',
-      'Maak de kleinste veilige wijziging, behoud bestaande autorisatie en voeg regressietests toe.',
-    ].filter(Boolean).join('\n')
+    return makerIncidentPrompt(report)
   }
 
   async function loadErrorReports(){
-    const data=await api<{reports:RecoveryReport[]}>('/api/god/error-reports?limit=60')
-    setErrorReports(data.reports)
+    setErrorReportsStatus('loading')
+    try{
+      const data=await api<{reports:RecoveryReport[]}>('/api/god/error-reports?limit=60')
+      setErrorReports(pendingMakerIncidents(data.reports))
+      setErrorReportsStatus('ready')
     if(typeof window!=='undefined'){
       const requested=new URLSearchParams(window.location.search).get('error-report')
       if(requested){
@@ -228,6 +230,10 @@ export function GodStudio(){
           setTab('ai')
         }
       }
+    }
+    }catch(error){
+      setErrorReportsStatus('error')
+      throw error
     }
   }
 
@@ -260,10 +266,15 @@ export function GodStudio(){
   }
 
   async function resolveErrorReport(reportId:string){
-    await api('/api/god/error-reports',{action:'resolve',reportId,note:'Maker heeft de gemelde fout na controle als opgelost gemarkeerd.'})
+    if(!/^[a-f0-9]{40}$/i.test(verifiedReleaseSha.trim()))throw new Error('Geef de volledige SHA van de gecontroleerde, gedeployde versie in.')
+    if(verificationNote.trim().length<30)throw new Error('Beschrijf de herhaalde test en het resultaat in minimaal 30 tekens.')
+    const result=await api<{evidence:{runId:number;sha:string;environment:string}}>('/api/god/error-reports',{
+      action:'resolve',reportId,sha:verifiedReleaseSha.trim().toLowerCase(),note:verificationNote.trim(),
+    })
     if(selectedErrorReport===reportId)setSelectedErrorReport(null)
+    setVerifyReportId(null);setVerifiedReleaseSha('');setVerificationNote('')
     await loadErrorReports()
-    setMessage('Foutrapport als opgelost gemarkeerd. De gebruiker krijgt een melding.')
+    setMessage('Herstel bevestigd met deploymentbewijs (#'+result.evidence.runId+'). Het rapport is afgesloten.')
   }
   function inspectFrame(frame:HTMLIFrameElement){
     try{
@@ -351,7 +362,9 @@ export function GodStudio(){
           <div><h2 className="text-xl font-black">AI foutherstel</h2><p className="text-sm text-muted-foreground">Gebruikersrapporten worden op de achtergrond geanalyseerd. Alleen fouten waarvoor makeractie nodig is komen hier bovenaan.</p></div>
           <button type="button" disabled={busy} onClick={()=>void action(loadErrorReports)} className="rounded-xl border px-4 py-2">Vernieuwen</button>
         </div>
-        {!errorReports.length&&<p className="rounded-xl border border-dashed p-4 text-sm text-muted-foreground">Geen open foutrapporten.</p>}
+        {errorReportsStatus==='loading'&&<p role="status" className="rounded-xl border border-dashed p-4 text-sm">Foutrapporten laden…</p>}
+        {errorReportsStatus==='error'&&<p role="alert" className="rounded-xl border border-red-500/40 p-4 text-sm">Foutrapporten zijn tijdelijk niet beschikbaar. Probeer opnieuw; dit betekent niet dat alle fouten zijn opgelost.</p>}
+        {errorReportsStatus==='ready'&&!errorReports.length&&<p className="rounded-xl border border-dashed p-4 text-sm text-muted-foreground">Geen open foutrapporten in de recente lijst.</p>}
         {errorReports.map(report=><article key={report.id} className={"space-y-3 rounded-xl border p-4 "+(report.status==='needs_maker'?'border-amber-500/50':'')}>
           <div className="flex flex-wrap items-start justify-between gap-2">
             <div>
@@ -369,8 +382,18 @@ export function GodStudio(){
               setTextAiResult(null)
               window.scrollTo({top:0,behavior:'smooth'})
             }} className="rounded-lg bg-violet-600 px-3 py-2 text-sm font-bold text-white">AI OPLOSSEN</button>
-            <button type="button" disabled={busy} onClick={()=>void action(()=>resolveErrorReport(report.id))} className="rounded-lg border px-3 py-2 text-sm font-bold">OPGELOST MARKEREN</button>
+            <button type="button" aria-expanded={verifyReportId===report.id} disabled={busy} onClick={()=>{setVerifyReportId(id=>id===report.id?null:report.id);setVerifiedReleaseSha('');setVerificationNote('')}} className="rounded-lg border px-3 py-2 text-sm font-bold">HERSTEL CONTROLEREN</button>
           </div>
+          {verifyReportId===report.id&&<div className="space-y-3 rounded-lg border border-amber-500/40 p-3">
+            <p className="text-sm">Een AI-diagnose is geen reparatie. Test de fout opnieuw en geef de SHA van een daarna geslaagde deployment op. Productie vereist een afzonderlijk bevestigde productierelease.</p>
+            <label className="block text-sm font-semibold">Gedeployde commit-SHA
+              <input aria-label="Gedeployde commit-SHA" value={verifiedReleaseSha} onChange={event=>setVerifiedReleaseSha(event.target.value)} maxLength={40} spellCheck={false} autoComplete="off" className="mt-1 block w-full rounded border bg-background p-2 font-mono text-xs"/>
+            </label>
+            <label className="block text-sm font-semibold">Reproductie- en herstelbewijs
+              <textarea aria-label="Reproductie- en herstelbewijs" value={verificationNote} onChange={event=>setVerificationNote(event.target.value)} maxLength={4000} rows={3} className="mt-1 block w-full rounded border bg-background p-2 text-sm" placeholder="Welke fout kwam voor, welke stappen zijn herhaald en wat is het geteste resultaat?"/>
+            </label>
+            <button type="button" disabled={busy||!/^[a-f0-9]{40}$/i.test(verifiedReleaseSha.trim())||verificationNote.trim().length<30} onClick={()=>void action(()=>resolveErrorReport(report.id))} className="rounded-lg border border-violet-500 px-3 py-2 text-sm font-bold disabled:opacity-50">BEVESTIG GECONTROLEERD HERSTEL</button>
+          </div>}
         </article>)}
       </div>
     </section>}

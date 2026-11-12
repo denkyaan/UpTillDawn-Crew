@@ -6,7 +6,7 @@ Open `/maker-mode` after signing in with the permanent Maker/Owner identity and 
 
 The main menu groups the existing tools into **Overzicht**, **AI & herstel**, **App Studio**, **Versies & CI**, and **Geavanceerd**. The environment selector shows `main` (test) and `production` (live). Status information and registered application/error/recovery/audit logs are kept separate by Supabase project. Switching to edit an environment opens that environment's own authenticated God Mode; no JWT is forwarded between projects. Cross-project diagnostic queries through a connected Supabase Management token are read-only. Production live-revision SHA is not asserted unless deployment evidence confirms it.
 
-Cloudflare runtime tail/observability logs are not yet integrated inside God Mode: currently only persisted application logs and linked GitHub Actions logs are visible. Provider limits still apply to AI context, tokens, latency and billing; the assistant must not claim unlimited resources or silent production self-repair.
+Cloudflare Workers Observability log queries are available in **Systeemlogs** after configuring the separate `CLOUDFLARE_OBSERVABILITY_CONFIG` secret on the Main Worker. Without this opt-in secret, God Mode truthfully reports that Cloudflare runtime logs are unavailable; only persisted application logs and authorized Supabase platform logs are visible. Provider limits still apply to AI context, tokens, latency and billing; the assistant must not claim unlimited resources or silent production self-repair.
 
 ## Tools
 
@@ -26,6 +26,20 @@ ChatGPT's GitHub/Supabase connector sessions cannot be transferred to a deployed
 2. For advanced SQL and cross-environment log inspection, connect a Supabase Management API token with permissions for the specific selected project(s). Main-test is `npbjrtiolqperdgljnhi`; production is `eakoavcieossazqzplke`. Tokens are stored server-side, not in browser storage. Production writes are allowed only from an authenticated production God Mode session with an additional typed `PRODUCTION` confirmation. Ordinary data editing uses the current environment's God Mode session.
 
 Credentials are encrypted in Supabase Vault, never written to GitHub or browser storage, and can be disconnected. Every retrieval and modification RPC checks the private expiring God Mode session. HTTP routes additionally reject cross-site requests and use no-store responses. The public RPC grants support the dedicated God Mode cookie authentication, not anonymous access: absent/invalid/expired God tokens are rejected.
+
+## Error-AI: bewijs vóór afsluiten
+
+Een AI-diagnose is nooit gelijk aan bewezen herstel. In **AI & herstel** verschijnen open incidenten op ernst en herhaling, inclusief een foutmelding als logs niet kunnen worden opgehaald. Het AI-herstelvoorstel beschouwt foutteksten en eerdere modelantwoorden als onbetrouwbare gegevens; het voert daarin geen instructies uit.
+
+Een Maker kan een incident alleen afsluiten via **Herstel controleren** na het daadwerkelijk herhalen van de fouttest. Verplicht: een concrete beschrijving van minstens 30 tekens en de volledige commit-SHA van een succesvolle, actuele deployment in dezelfde omgeving, die niet ouder is dan het oorspronkelijke incident. Voor productie moet ook de `production-current`-tag overeenkomen. Het controleerbare deploymentrun-ID wordt toegevoegd aan de notitie. Zonder bewijs blijft de fout open.
+
+**Let op:** een succesvolle deployment bewijst op zichzelf nog niet dat die specifieke fout is verholpen. De Maker moet de reproductiestappen werkelijk opnieuw uitvoeren; automatische reparatie en productiepublicatie worden niet gesuggereerd als ze niet zijn uitgevoerd.
+
+## Platformlogs en externe verbinding
+
+Main schakelt Cloudflare Workers invocation logging expliciet in. God Mode kan via het bestaande **Systeemlogs**-scherm ook een server-side, strikt begrensde Cloudflare Workers Observability-query uitvoeren voor `uptilldawn-main` of `uptilldawn-crew`. De API accepteert uitsluitend een geldige Maker-sessie, geeft geen ander Worker's logs door, en schrijft niets naar Cloudflare. Zonder Cloudflare-verbinding toont de app een expliciete waarschuwing en blijft de bestaande Supabase-/applogweergave bruikbaar.
+
+**Eenmalige koppeling:** maak bij Cloudflare een specifiek token met alleen de voor Workers Observability-query vereiste permissie (de Cloudflare API noemt dit `Workers Observability Write`; geef geen Workers Scripts- of deploymentrechten). Voeg in Cloudflare Workers & Pages → **uptilldawn-main** → **Settings** → **Variables and Secrets** één versleuteld Worker-secret toe met naam `CLOUDFLARE_OBSERVABILITY_CONFIG` en JSON-inhoud `{"accountId":"<Cloudflare-account-ID>","token":"<specifiek-Observability-token>"}`. Gebruik dus nooit het algemene `CLOUDFLARE_API_TOKEN` uit de CI. De CI-workflow heeft bewust geen secret-schrijfbevoegdheid en past dit niet zelf aan. De read-only logviewer is technisch voorbereid, maar echte Cloudflare-logresultaten zijn pas bewezen na koppeling en live controle. Een wijziging voor productie blijft afzonderlijk goed te keuren.
 
 ## Limits and recovery
 
