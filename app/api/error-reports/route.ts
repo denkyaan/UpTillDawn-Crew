@@ -1,5 +1,6 @@
 import { getCloudflareContext } from '@opennextjs/cloudflare'
 import { z } from 'zod'
+import { readStrictJson } from '@/lib/strict-json-body'
 import { createClient } from '@/lib/supabase/crew-server'
 import { processErrorReport, type ErrorAiBinding } from '@/lib/error-report-ai'
 import type { Json } from '@/types/crew-database'
@@ -15,27 +16,6 @@ const reportSchema=z.object({
   source:z.enum(['boundary','runtime','promise','manual','api']).default('manual'),
   clientContext:z.record(z.string(),z.unknown()).optional().default({}),
 }).strict()
-
-async function boundedErrorJson(request:Request,maxBytes=32768):Promise<unknown>{
-  const declared=Number(request.headers.get('content-length'))
-  if(Number.isFinite(declared)&&declared>maxBytes)throw new Error('too_large')
-  const reader=request.body?.getReader()
-  if(!reader)throw new Error('invalid_json')
-  const chunks:Uint8Array[]=[]
-  let total=0
-  for(;;){
-    const part=await reader.read()
-    if(part.done)break
-    total+=part.value.byteLength
-    if(total>maxBytes){await reader.cancel().catch(()=>{});throw new Error('too_large')}
-    chunks.push(part.value)
-  }
-  const bytes=new Uint8Array(total)
-  let offset=0
-  for(const part of chunks){bytes.set(part,offset);offset+=part.byteLength}
-  try{return JSON.parse(new TextDecoder('utf-8',{fatal:true}).decode(bytes))}
-  catch{throw new Error('invalid_json')}
-}
 
 function crossSite(request:Request){
   const site=request.headers.get('sec-fetch-site')
@@ -75,7 +55,7 @@ export async function POST(request:Request){
   if(!user||!approved)return Response.json({error:'Aanmelden vereist.'},{status:401})
 
   let raw:unknown
-  try{raw=await boundedErrorJson(request)}
+  try{raw=await readStrictJson(request)}
   catch(error){return Response.json({error:'Ongeldig of te groot foutrapport.'},{status:error instanceof Error&&error.message==='too_large'?413:400})}
   const parsed=reportSchema.safeParse(raw)
   if(!parsed.success)return Response.json({error:'Ongeldig foutrapport.'},{status:400})
