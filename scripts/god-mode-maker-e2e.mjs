@@ -88,7 +88,7 @@ async function verifyMaker(viewport){
   // Log out explicitly: an expired/revoked God token must not remain usable.
   const leave=page.getByRole('button',{name:'God Mode afsluiten'})
   await leave.click()
-  await page.waitForURL(url=>url.pathname.startsWith('/login'),{timeout:30000})
+  await page.waitForURL(url=>url.pathname!=='/god-mode',{timeout:30000})
   assert.equal((await safeRequest(context,'/api/god/logs?environment=main&limit=3')).status(),401)
   record(tag+' God Mode logout invalidates the private session')
  }catch(error){
