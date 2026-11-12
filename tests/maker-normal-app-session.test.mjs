@@ -33,3 +33,17 @@ test('maker bypass is resolved before ordinary account block gates on server and
   assert.match(providers,/needsOwnerCheck=Boolean\(data\.account_blocked\)\|\|!data\.approved\|\|role==="admin"/)
   assert.match(providers,/data\.account_blocked&&!owner/)
 })
+
+test('owner effective role SQL respects Maker selection and leaves regular personnel unchanged',async()=>{
+ const [migration,sqlTest]=await Promise.all([
+  read('supabase/migrations/20261112195755_maker_owner_effective_role_mode_fix.sql'),
+  read('tests/sql/owner-leadership-privacy.sql'),
+ ])
+ assert.match(migration,/when upt_private\.is_app_owner\(auth\.uid\(\)\) then coalesce/)
+ assert.match(migration,/m\.active_role in \('admin','staff','responsible_lead'\)/)
+ assert.match(migration,/else public\.upt_effective_role\(auth\.uid\(\)\)/)
+ assert.match(sqlTest,/public\.upt_current_effective_role\(\) IS DISTINCT FROM 'admin'/)
+ assert.match(sqlTest,/public\.upt_set_admin_role_mode\('staff'\)/)
+ assert.match(sqlTest,/public\.upt_set_admin_role_mode\('responsible_lead'\)/)
+ assert.match(sqlTest,/public\.upt_set_admin_role_mode\('admin'\)/)
+})

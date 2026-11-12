@@ -52,7 +52,20 @@ BEGIN
  THEN RAISE EXCEPTION 'Maker appears in employee directory';END IF;
  IF NOT public.upt_current_is_owner() THEN
   RAISE EXCEPTION 'Maker cannot access owner-only features';END IF;
+ IF public.upt_current_effective_role() IS DISTINCT FROM 'admin' THEN
+  RAISE EXCEPTION 'Owner effective Admin mode was masked by staff profile';END IF;
 END $qa$;
+-- Each assertion is a separate SQL statement because stable SQL functions
+-- see the statement snapshot, not writes made earlier in one DO block.
+SELECT public.upt_set_admin_role_mode('staff');
+DO $BEGIN IF public.upt_current_effective_role() IS DISTINCT FROM 'staff'
+ THEN RAISE EXCEPTION 'Maker did not enter Staff mode'; END IF; END$;
+SELECT public.upt_set_admin_role_mode('responsible_lead');
+DO $BEGIN IF public.upt_current_effective_role() IS DISTINCT FROM 'responsible_lead'
+ THEN RAISE EXCEPTION 'Maker did not enter Responsible mode'; END IF; END$;
+SELECT public.upt_set_admin_role_mode('admin');
+DO $BEGIN IF public.upt_current_effective_role() IS DISTINCT FROM 'admin'
+ THEN RAISE EXCEPTION 'Maker cannot return to Admin mode'; END IF; END$;
 RESET ROLE;
 SELECT 'PASS: isolated Maker retains owner authority, can appoint independent Head, cannot become Head, and is absent from ordinary staff directories' AS result;
 ROLLBACK;
