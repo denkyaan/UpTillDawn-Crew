@@ -2,6 +2,7 @@ export type ExtraCatalogLocale = 'nl' | 'fr' | 'en' | 'de'
 type Row = { fr:string; en:string; de:string }
 
 export const APP_EXTRA_TRANSLATIONS: Record<string,Row> = {
+  "PAGINA HANDMATIG HERLADEN":{fr:"RECHARGER LA PAGE MANUELLEMENT",en:"RELOAD PAGE MANUALLY",de:"SEITE MANUELL NEU LADEN"},
   "Factuur of bon lezen · lokaal op je toestel":{fr:"Lire une facture ou un reçu · sur cet appareil",en:"Read invoice or receipt · on this device",de:"Rechnung oder Beleg lesen · auf diesem Gerät"},
   "Lire une facture ou un reçu · sur cet appareil":{fr:"Lire une facture ou un reçu · sur cet appareil",en:"Read invoice or receipt · on this device",de:"Rechnung oder Beleg lesen · auf diesem Gerät"},
   "Read invoice or receipt · on this device":{fr:"Lire une facture ou un reçu · sur cet appareil",en:"Read invoice or receipt · on this device",de:"Rechnung oder Beleg lesen · auf diesem Gerät"},
