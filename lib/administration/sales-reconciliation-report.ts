@@ -20,7 +20,7 @@ export type SalesReconciliationReport={
 export function buildSalesReconciliationReport(payments:readonly ExternalPayment[]):SalesReconciliationReport{
  const reconciled=reconcileExternalSales(payments)
  const events=new Map<string,EventSalesReport>()
- const zero=():Record<SaleCategory,number>=>({tickets:0,merch:0,tokens:0})
+ const zero=():Record<SaleCategory,number>=>({tickets:0,merch:0,tokens:0,bar:0,topups:0})
  for(const payment of reconciled.accepted){
   let event=events.get(payment.eventId)
   if(!event){
@@ -45,14 +45,14 @@ export function buildSalesReconciliationReport(payments:readonly ExternalPayment
  // Verify event-level accounting balances before exposing or exporting a report.
  const summed=zero()
  for(const event of events.values()){
-  for(const category of ['tickets','merch','tokens'] as const){
+  for(const category of ['tickets','merch','tokens','bar','topups'] as const){
    if(event.paidCents[category]-event.refundedCents[category]!==event.netCents[category])
     throw new Error('Sales reconciliation event balance mismatch')
    summed[category]+=event.netCents[category]
    if(!Number.isSafeInteger(summed[category]))throw new RangeError('Unsafe consolidated sales total')
   }
  }
- for(const category of ['tickets','merch','tokens'] as const){
+ for(const category of ['tickets','merch','tokens','bar','topups'] as const){
   if(summed[category]!==reconciled.totals[category])throw new Error('Sales reconciliation consolidated balance mismatch')
  }
  return {
@@ -72,7 +72,7 @@ export function buildSalesReconciliationReport(payments:readonly ExternalPayment
 export function salesReconciliationCsv(report:SalesReconciliationReport):string{
  const rows:(string|number)[][]=[['event_id','category','paid_cents','refunded_cents','net_cents','accepted_transactions']]
  for(const event of report.events){
-  for(const category of ['tickets','merch','tokens'] as const){
+  for(const category of ['tickets','merch','tokens','bar','topups'] as const){
    rows.push([event.eventId,category,event.paidCents[category],event.refundedCents[category],event.netCents[category],event.acceptedTransactions])
   }
  }
