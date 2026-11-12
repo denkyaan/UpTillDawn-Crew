@@ -2,6 +2,7 @@
 
 import {useEffect,useMemo,useState,useSyncExternalStore} from 'react'
 import {LANGUAGE_APPLIED_EVENT,initialUiLocale,parseUiLocale,type SupportedUiLocale} from '@/lib/locale-preferences'
+import {makerIncidentPrompt} from '@/lib/god-mode-error-triage'
 
 type ErrorLog={id:string;error_name:string|null;error_message:string;route:string;status:string;ai_severity:string|null;maker_action_required:boolean;reported_count:number;created_at:string;updated_at:string}
 type RecoveryLog={id:string;check_type:string;status:string;checked_at:string}
@@ -117,7 +118,7 @@ export function MakerLogs({onDiagnose,environment}:{onDiagnose:(id:string,prompt
       <p className="mt-1 break-all text-xs text-muted-foreground">{t.timestamp}: {new Date(item.date).toLocaleString(locale==='nl'?'nl-BE':locale)} · {t.status}: {item.level||'—'} {item.detail&&' · '+t.route+': '+item.detail}</p>
      </div>
      {item.report&&<button type="button" onClick={()=>onDiagnose(item.report.id,
-      'Analyseer dit app-foutrapport: '+item.report.error_message+' op '+item.report.route+'. Zoek de hoofdoorzaak in main, behoud bestaande functies en maak een gecontroleerd herstelvoorstel met regressietests.')} className="rounded-lg border border-violet-500/50 px-3 py-2 text-sm font-bold">{t.diagnose}</button>}
+      makerIncidentPrompt(item.report))} className="rounded-lg border border-violet-500/50 px-3 py-2 text-sm font-bold">{t.diagnose}</button>}
     </div>
    </article>)}
   </div>
