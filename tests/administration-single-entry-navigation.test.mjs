@@ -78,3 +78,12 @@ test('Contracts tab can start a new agreement in the existing DJ workflow',()=>{
  assert.match(create,/contract_context/)
  assert.match(create,/booking\.id\+"\/agreement"/)
 })
+
+test('administration workstate display names remain scoped by authenticated portal authorization',()=>{
+ const sql=read('supabase/migrations/20261112220202_restore_administration_timesheet_labels_runtime_repair.sql')
+ const dashboard=read('components/administration/administration-overview-dashboard.tsx')
+ assert.match(sql,/auth\.uid\(\) is null or not public\.upt_can_manage_administration\(\)/)
+ assert.match(sql,/cardinality\(p_timesheet_ids\) > 100/)
+ assert.match(sql,/revoke all on function public\.upt_administration_timesheet_labels/)
+ assert.match(dashboard,/upt_administration_timesheet_labels/)
+})
