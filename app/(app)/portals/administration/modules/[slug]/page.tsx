@@ -47,7 +47,7 @@ async function saveAdministrationEventDraft(formData:FormData){
  const rawStart=value('start_at'),rawEnd=value('end_at'),id=value('event_id')
  const start=new Date(rawStart),end=new Date(rawEnd)
  if(name.length<3||name.length>200||venue.length>200||!rawStart||!rawEnd
-  ||!Number.isFinite(start.getTime())||!Number.isFinite(end.getTime())||end<=start
+  ||!Number.isFinite(start.getTime())||!Number.isFinite(end.getTime())||end.getTime()<=start.getTime()
   ||(id&&!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id))){
   throw new Error('Controleer de evenementnaam, locatie, start- en eindtijd.')
  }
