@@ -3,7 +3,7 @@ export const administrationNavigationGroups = [
  {key:"planning",title:{nl:"Planning",fr:"Planification",en:"Planning",de:"Planung"},slugs:["events","artists","contracts","tasks","rosters","timesheets","staff"]},
  {key:"finance",title:{nl:"Financiën",fr:"Finances",en:"Finance",de:"Finanzen"},slugs:["finance","invoices","banking","ticketing","reports","sales"]},
  {key:"operations",title:{nl:"Operaties",fr:"Opérations",en:"Operations",de:"Betrieb"},slugs:["inventory","logistics","documents","permits"]},
- {key:"relations",title:{nl:"Relaties",fr:"Relations",en:"Relations",de:"Kontakte"},slugs:["personnel","chat","counterparties","promotion-tasks"]},
+ {key:"relations",title:{nl:"Relaties",fr:"Relations",en:"Relations",de:"Kontakte"},slugs:["personnel","chat","counterparties","sponsors","marketing","promotion-tasks"]},
  {key:"management",title:{nl:"Beheer",fr:"Gestion",en:"Management",de:"Verwaltung"},slugs:["notifications","automations","ai","promotion-discipline","settings","profile"]},
 ] as const
 
