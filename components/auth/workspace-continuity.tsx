@@ -23,13 +23,14 @@ function workspaceFromPath(path:string,isOwner:boolean):Workspace|null{
 export function WorkspaceContinuity(){
  const pathname=usePathname()
  const {user,isOwner,loading}=useAuth()
+ const userId=user?.id
  useEffect(()=>{
-  if(loading||!user||!pathname)return
+  if(loading||!userId||!pathname)return
   const workspace=workspaceFromPath(pathname,isOwner)
   if(!workspace)return
-  const value=encodeURIComponent(user.id+':'+workspace)
+  const value=encodeURIComponent(userId+':'+workspace)
   const secure=window.location.protocol==='https:'?'; Secure':''
   document.cookie=`${LAST_WORKSPACE_COOKIE}=${value}; Path=/; Max-Age=7776000; SameSite=Lax${secure}`
- },[pathname,user?.id,isOwner,loading])
+ },[pathname,userId,isOwner,loading])
  return null
 }
