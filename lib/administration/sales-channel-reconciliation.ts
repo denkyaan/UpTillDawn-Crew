@@ -27,7 +27,7 @@ export function reconcileExternalSales(payments:readonly ExternalPayment[]):Sale
   const id=p.provider+':'+p.transactionId
   if(!['eventix','sumup','eventpay'].includes(p.provider)
    || (p.provider==='eventpay'?!['bar','merch','topups'].includes(p.category):!['tickets','merch','tokens'].includes(p.category))
-   || typeof p.transactionId!=='string||!p.transactionId.trim()||typeof p.eventId!=='string'||!p.eventId.trim()||!categories.includes(p.category)||!Number.isSafeInteger(p.amountCents)||p.amountCents<0||(p.status==='refunded'&&p.amountCents===0)||p.currency!=='EUR'||!['paid','pending','refunded'].includes(p.status)){
+   || typeof p.transactionId!=='string'||!p.transactionId.trim()||typeof p.eventId!=='string'||!p.eventId.trim()||!categories.includes(p.category)||!Number.isSafeInteger(p.amountCents)||p.amountCents<0||(p.status==='refunded'&&p.amountCents===0)||p.currency!=='EUR'||!['paid','pending','refunded'].includes(p.status)){
    conflicts.push(id);continue
   }
   const transactionKey=JSON.stringify([p.provider,p.transactionId])
