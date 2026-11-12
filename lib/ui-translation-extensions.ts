@@ -3,6 +3,8 @@ export type ExtendedUiLocale = 'nl' | 'fr' | 'en' | 'de'
 type Row = { fr: string; en: string; de: string }
 
 const EXTENSIONS: Record<string, Row> = {
+  'Administratief overzicht': { fr: 'Tableau de bord administratif', en: 'Administration overview', de: 'Verwaltungsübersicht' },
+  'Administration overview': { fr: 'Tableau de bord administratif', en: 'Administration overview', de: 'Verwaltungsübersicht' },
   'Bijlage wacht op veiligheidscontrole': { fr: 'Pièce jointe en attente du contrôle de sécurité', en: 'Attachment awaiting security review', de: 'Anhang wartet auf Sicherheitsprüfung' },
   "Deze portaalrol intrekken? De medewerker verliest de bijbehorende toegang.": { fr: "Révoquer ce rôle de portail ? Le membre du personnel perdra l’accès correspondant.", en: "Revoke this portal role? The staff member will lose the associated access.", de: "Diese Portalrolle entziehen? Die betreffende Person verliert den zugehörigen Zugriff." },
   "Notities met AI-werkruimte bewerken": { fr: "Modifier les notes dans l’espace IA", en: "Edit notes in AI workspace", de: "Notizen im KI-Arbeitsbereich bearbeiten" },
