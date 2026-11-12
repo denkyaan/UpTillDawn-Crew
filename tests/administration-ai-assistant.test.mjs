@@ -21,7 +21,7 @@ test('cross-portal AI keeps separate endpoints, permissions and compact mobile c
  const layout=readFileSync('components/layout/app-layout.tsx','utf8')
  const adminApi=readFileSync('app/api/admin-assistant/route.ts','utf8')
  const adminPage=readFileSync('app/(app)/portals/administration/modules/ai/page.tsx','utf8')
- assert.match(layout,/aiWorkspace==="admin"\?<PlatformAiAssistant/)
+ assert.match(layout,/effectiveAiWorkspace==="admin"\?<PlatformAiAssistant/)
  assert.match(layout,/<AdministrationAiChat locale=\{uiLocale\} compact\/>/)
  assert.match(chat,/!compact&&<AdministrationAiBookingNotes/)
  assert.match(adminPage,/Boolean\(adminAccess\)&&<details/)
