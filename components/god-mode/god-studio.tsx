@@ -110,6 +110,9 @@ export function GodStudio(){
   const [textAiResult,setTextAiResult]=useState<TextAiResult|null>(null)
   const [errorReports,setErrorReports]=useState<RecoveryReport[]>([])
   const [selectedErrorReport,setSelectedErrorReport]=useState<string|null>(null)
+  const [verifyReportId,setVerifyReportId]=useState<string|null>(null)
+  const [verifiedReleaseSha,setVerifiedReleaseSha]=useState('')
+  const [verificationNote,setVerificationNote]=useState('')
   const [proposal,setProposal]=useState<Proposal|null>(null)
   const [history,setHistory]=useState<Commit[]>([])
   const [pulls,setPulls]=useState<Pull[]>([])
@@ -260,10 +263,15 @@ export function GodStudio(){
   }
 
   async function resolveErrorReport(reportId:string){
-    await api('/api/god/error-reports',{action:'resolve',reportId,note:'Maker heeft de gemelde fout na controle als opgelost gemarkeerd.'})
+    if(!/^[a-f0-9]{40}$/i.test(verifiedReleaseSha.trim()))throw new Error('Geef de volledige SHA van de gecontroleerde, gedeployde versie in.')
+    if(verificationNote.trim().length<30)throw new Error('Beschrijf de herhaalde test en het resultaat in minimaal 30 tekens.')
+    const result=await api<{evidence:{runId:number;sha:string;environment:string}}>('/api/god/error-reports',{
+      action:'resolve',reportId,sha:verifiedReleaseSha.trim().toLowerCase(),note:verificationNote.trim(),
+    })
     if(selectedErrorReport===reportId)setSelectedErrorReport(null)
+    setVerifyReportId(null);setVerifiedReleaseSha('');setVerificationNote('')
     await loadErrorReports()
-    setMessage('Foutrapport als opgelost gemarkeerd. De gebruiker krijgt een melding.')
+    setMessage('Herstel bevestigd met deploymentbewijs (#'+result.evidence.runId+'). Het rapport is afgesloten.')
   }
   function inspectFrame(frame:HTMLIFrameElement){
     try{
@@ -369,8 +377,18 @@ export function GodStudio(){
               setTextAiResult(null)
               window.scrollTo({top:0,behavior:'smooth'})
             }} className="rounded-lg bg-violet-600 px-3 py-2 text-sm font-bold text-white">AI OPLOSSEN</button>
-            <button type="button" disabled={busy} onClick={()=>void action(()=>resolveErrorReport(report.id))} className="rounded-lg border px-3 py-2 text-sm font-bold">OPGELOST MARKEREN</button>
+            <button type="button" aria-expanded={verifyReportId===report.id} disabled={busy} onClick={()=>{setVerifyReportId(id=>id===report.id?null:report.id);setVerifiedReleaseSha('');setVerificationNote('')}} className="rounded-lg border px-3 py-2 text-sm font-bold">HERSTEL CONTROLEREN</button>
           </div>
+          {verifyReportId===report.id&&<div className="space-y-3 rounded-lg border border-amber-500/40 p-3">
+            <p className="text-sm">Een AI-diagnose is geen reparatie. Test de fout opnieuw en geef de SHA van een daarna geslaagde deployment op. Productie vereist een afzonderlijk bevestigde productierelease.</p>
+            <label className="block text-sm font-semibold">Gedeployde commit-SHA
+              <input aria-label="Gedeployde commit-SHA" value={verifiedReleaseSha} onChange={event=>setVerifiedReleaseSha(event.target.value)} maxLength={40} spellCheck={false} autoComplete="off" className="mt-1 block w-full rounded border bg-background p-2 font-mono text-xs"/>
+            </label>
+            <label className="block text-sm font-semibold">Reproductie- en herstelbewijs
+              <textarea aria-label="Reproductie- en herstelbewijs" value={verificationNote} onChange={event=>setVerificationNote(event.target.value)} maxLength={4000} rows={3} className="mt-1 block w-full rounded border bg-background p-2 text-sm" placeholder="Welke fout kwam voor, welke stappen zijn herhaald en wat is het geteste resultaat?"/>
+            </label>
+            <button type="button" disabled={busy||!/^[a-f0-9]{40}$/i.test(verifiedReleaseSha.trim())||verificationNote.trim().length<30} onClick={()=>void action(()=>resolveErrorReport(report.id))} className="rounded-lg border border-violet-500 px-3 py-2 text-sm font-bold disabled:opacity-50">BEVESTIG GECONTROLEERD HERSTEL</button>
+          </div>}
         </article>)}
       </div>
     </section>}
