@@ -81,6 +81,8 @@ jobs:
             cat "/tmp/fast-$label.log"
           done
           exit "$failed"
+      - name: Inventory every Main page and API route
+        run: node scripts/main-adversarial-surface.mjs --inventory-only
       - name: Final six-role acceptance inventory (static evidence only)
         shell: bash
         run: |
@@ -132,7 +134,7 @@ jobs:
     needs: fast
     if: ${{ github.event_name == 'workflow_dispatch' && inputs.run_six_role_acceptance == true && github.ref == 'refs/heads/main' }}
     runs-on: ubuntu-latest
-    timeout-minutes: 35
+    timeout-minutes: 60
     permissions:
       contents: read
     env:
@@ -176,11 +178,15 @@ jobs:
         run: npx playwright install --with-deps chromium
       - name: Run six-role browser acceptance
         run: npm run e2e:portals
+      - name: Crawl every static Main page as all six QA roles
+        run: node scripts/main-adversarial-auth-crawl.mjs
       - name: Upload QA screenshots and structured result
         if: always()
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
           name: six-role-browser-acceptance
-          path: test-results/final-acceptance/
+          path: |
+            test-results/final-acceptance/
+            test-results/main-adversarial/
           if-no-files-found: ignore
           retention-days: 7
