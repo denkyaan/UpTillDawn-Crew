@@ -10,9 +10,9 @@ test('reports net sales per event and category with explicit refunds',()=>{
   payment({transactionId:'m1',eventId:'event2',category:'merch',saleReference:'shirt',amountCents:1500}),
   payment({transactionId:'k1',eventId:'event2',category:'tokens',saleReference:'tokens',amountCents:500})
  ])
- assert.deepEqual(r.totals,{tickets:1700,merch:1500,tokens:500})
+ assert.deepEqual(r.totals,{tickets:1700,merch:1500,tokens:500,bar:0,topups:0})
  assert.equal(r.events.length,2)
- assert.deepEqual(r.events[0].netCents,{tickets:1700,merch:0,tokens:0})
+ assert.deepEqual(r.events[0].netCents,{tickets:1700,merch:0,tokens:0,bar:0,topups:0})
  assert.equal(r.events[0].refundedCents.tickets,300)
  assert.equal(r.events[1].paidCents.merch,1500)
  assert.equal(r.exceptions.duplicates.length,1)
@@ -77,7 +77,7 @@ test('consolidated event net balances match paid minus refunds across categories
   payment({transactionId:'m2',eventId:'event2',category:'merch',saleReference:'shirt',status:'refunded',amountCents:200}),
   payment({transactionId:'k1',eventId:'event3',category:'tokens',saleReference:'tokens',amountCents:800})
  ])
- assert.deepEqual(report.totals,{tickets:1600,merch:1300,tokens:800})
+ assert.deepEqual(report.totals,{tickets:1600,merch:1300,tokens:800,bar:0,topups:0})
  for(const category of ['tickets','merch','tokens']){
   assert.equal(report.events.reduce((sum,event)=>sum+event.netCents[category],0),report.totals[category])
   for(const event of report.events)assert.equal(event.paidCents[category]-event.refundedCents[category],event.netCents[category])
