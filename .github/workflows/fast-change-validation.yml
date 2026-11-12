@@ -123,7 +123,8 @@ jobs:
           const type=typeof binding?.type==='string'?binding.type:'unknown'
           console.log('God Mode main Worker observability binding:',exists?'PRESENT':'MISSING')
           console.log('God Mode binding type:',type)
-          if(!exists)throw new Error('CLOUDFLARE_OBSERVABILITY_CONFIG is missing from uptilldawn-main')
+          // Continue with an independent live access-control probe even if the binding is absent.
+          // Report absence after all read-only checks, without claiming it is configured.
           if(type==='plain_text'||type==='plain')throw new Error('Observability config must be encrypted as a Worker Secret, not plain text')
           const hostname='https://uptilldawn-main.uptilldawn.workers.dev'
           const publicRoute=await fetch(hostname+'/api/god/cloudflare-logs?environment=main&limit=1',{
@@ -153,6 +154,7 @@ jobs:
               console.log('Cloudflare query response schema verified:',payload?.success===true&&Array.isArray(payload?.result?.events?.events))
             }
           }else console.log('Independent Cloudflare Observability query unavailable (runtime token remains private)')
+          if(!exists)throw new Error('CLOUDFLARE_OBSERVABILITY_CONFIG is missing from uptilldawn-main')
           console.log('PASS: Main Worker binding present and live Maker-only log route denies anonymous access')
           NODE
 
