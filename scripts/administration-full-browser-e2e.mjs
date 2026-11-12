@@ -89,7 +89,10 @@ try{
        const clickedPageErrors=[]
        tab.on('pageerror',error=>clickedPageErrors.push(String(error.message||error)))
        try{
-        await tab.goto(base+route,{waitUntil:'domcontentloaded',timeout:30000})
+        // Direct route aliases such as /overview are verified above.
+        // Click from their canonical destination after redirects have settled.
+        await tab.goto(base+path,{waitUntil:'domcontentloaded',timeout:30000})
+        await tab.waitForURL(u=>u.pathname+u.search===path,{timeout:15000,waitUntil:'commit'})
         const href=tab.locator('a[href="'+target.replaceAll('"','\\"')+'"]:visible').first()
         const expectedClickedPath=target==='/portals/administration/overview'?'/portals/administration':target
         try {

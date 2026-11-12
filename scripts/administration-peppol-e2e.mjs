@@ -36,14 +36,21 @@ try{
  const document=await one(office.db.from('admin_financial_documents').insert({kind:'sales_invoice',document_number:prefix,counterparty_id:customer.id,issue_date:'2026-10-30',due_date:'2026-11-13',buyer_reference:'TEST-PO',net_amount:0,tax_amount:0}).select('id'))
  const line=fixture.lines[0];const createdLine=await one(office.db.from('admin_financial_lines').insert({document_id:document.id,description:line.description,quantity:line.quantity,unit_price:line.unit_price,vat_rate:line.vat_rate,vat_category:line.vat_category,unit_code:line.unit_code}).select('id'))
  await gotoReady(office.page,base+`/portals/administration/modules/invoices/${document.id}/peppol`)
- const references=office.page.locator('details').filter({has:office.page.locator('input[name="buyer_reference"]')})
- await references.locator('summary').click()
- const referenceForm=references.locator('form').filter({has:office.page.locator('input[name="buyer_reference"]')})
+ // Streaming/RSC can retain a second, hidden details section outside the
+ // active app scroll area. Only interact with the one currently shown.
+ const references=office.page.locator('#app-scroll details:visible').filter({has:office.page.locator('input[name="buyer_reference"]')})
+ await references.waitFor({state:'visible'})
+ assert.equal(await references.count(),1,'Exactly one visible Peppol reference panel must be active')
+ await references.locator('summary:visible').click()
+ const referenceForm=references.locator('form:visible').filter({has:office.page.locator('input[name="buyer_reference"]')})
  await referenceForm.locator('input[name="buyer_reference"]').fill('TEST-PO-UI')
  await submit(office.page,referenceForm.getByRole('button'))
- await office.page.waitForFunction(()=>document.querySelector('input[name="buyer_reference"]')?.defaultValue==='TEST-PO-UI')
+ await office.page.waitForFunction(()=>document.querySelector('#app-scroll details input[name="buyer_reference"]')?.defaultValue==='TEST-PO-UI')
+ // Server Action revalidation may remount the panel in its collapsed state.
+ // Open it only when needed before interacting with the line form.
+ if(await references.getAttribute('open')===null)await references.locator('summary:visible').click()
  assert.equal((await one(office.db.from('admin_financial_documents').select('buyer_reference').eq('id',document.id))).buyer_reference,'TEST-PO-UI')
- const lineForm=references.locator(`form:has(input[name="line_id"][value="${createdLine.id}"])`)
+ const lineForm=references.locator(`form:visible:has(input[name="line_id"][value="${createdLine.id}"])`)
  await lineForm.locator('select[name="unit_code"]').selectOption('DAY')
  await submit(office.page,lineForm.getByRole('button'))
  assert.equal((await one(office.db.from('admin_financial_lines').select('unit_code').eq('id',createdLine.id))).unit_code,'DAY')
