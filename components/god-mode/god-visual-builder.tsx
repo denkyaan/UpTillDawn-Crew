@@ -14,6 +14,7 @@ const previewText={
 
 type Role = 'staff' | 'responsible_lead' | 'admin'
 type Device = 'desktop' | 'tablet' | 'mobile'
+const CSS_PX_UNIT='px'
 
 type Selected = {
   text: string
@@ -307,12 +308,12 @@ export function GodVisualBuilder({
         </select>
         <div className="flex w-full flex-wrap items-center gap-2 border-t pt-3">
           <span className="text-xs font-semibold text-muted-foreground">{t.device}</span>
-          {(['mobile','tablet','desktop'] as Device[]).map(item=><button type="button" key={item} aria-pressed={device===item} onClick={()=>setDevice(item)} className={`rounded-lg px-3 py-2 text-xs ${device===item?'bg-violet-600 font-bold text-white':'border'}`}>{t[item]} {`${widthFor(item)}px`}</button>)}
+          {(['mobile','tablet','desktop'] as Device[]).map(item=><button type="button" key={item} aria-pressed={device===item} onClick={()=>setDevice(item)} className={`rounded-lg px-3 py-2 text-xs ${device===item?'bg-violet-600 font-bold text-white':'border'}`}>{t[item]} {widthFor(item)}{CSS_PX_UNIT}</button>)}
           <button type="button" aria-pressed={fitToScreen} onClick={()=>setFitToScreen(value=>!value)} className="ml-auto rounded-lg border px-3 py-2 text-xs font-bold">{fitToScreen?t.fit:t.actual}</button>
         </div>
       </div>
 
-      <p className="text-xs text-muted-foreground">{t.note} {`${viewportWidth}px`}. {t.warning}</p>
+      <p className="text-xs text-muted-foreground">{t.note} {viewportWidth}{CSS_PX_UNIT}. {t.warning}</p>
       <div ref={previewContainerRef} className="min-w-0 overflow-auto rounded-2xl border bg-zinc-950 p-3">
         <div className="mx-auto overflow-hidden rounded-xl bg-white shadow-2xl" style={{width:viewportWidth*previewScale,height:`calc(72vh * ${previewScale})`}}>
           <div style={{width:viewportWidth,height:'72vh',transform:`scale(${previewScale})`,transformOrigin:'top left'}}>
