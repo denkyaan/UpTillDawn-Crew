@@ -1,6 +1,6 @@
 'use client'
 
-import { useMemo, useRef, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import targets from '@/lib/god-source-index.json'
 import type { SourceTarget } from '@/lib/god-studio'
 
@@ -95,7 +95,9 @@ export function GodVisualBuilder({
 }) {
   const [role,setRole] = useState<Role>('admin')
   const [path,setPath] = useState('/admin')
-  const [device,setDevice] = useState<Device>('desktop')
+  const [device,setDevice] = useState<Device>('mobile')
+  const [fitToScreen,setFitToScreen] = useState(true)
+  const [availableWidth,setAvailableWidth] = useState(390)
   const [selected,setSelected] = useState<Selected|null>(null)
   const [text,setText] = useState('')
   const [fontSize,setFontSize] = useState('')
@@ -118,6 +120,19 @@ export function GodVisualBuilder({
   const [status,setStatus] = useState('')
   const [frameKey,setFrameKey] = useState(0)
   const frameRef=useRef<HTMLIFrameElement>(null)
+  const previewContainerRef=useRef<HTMLDivElement>(null)
+  useEffect(()=>{
+    const container=previewContainerRef.current
+    if(!container)return
+    const resize=new ResizeObserver(entries=>{
+      const width=entries[0]?.contentRect.width
+      if(width&&Number.isFinite(width))setAvailableWidth(width)
+    })
+    resize.observe(container)
+    return()=>resize.disconnect()
+  },[])
+  const viewportWidth=widthFor(device)
+  const previewScale=fitToScreen?Math.min(1,Math.max(0.1,(availableWidth-24)/viewportWidth)):1
 
   const matches = useMemo(()=>{
     if(!selected)return []
@@ -276,14 +291,19 @@ export function GodVisualBuilder({
         <select value={path} onChange={e=>{setPath(e.target.value);setSelected(null);setFrameKey(value=>value+1)}} className="min-w-44 rounded-xl border bg-background px-3 py-2">
           {pageOptions[role].map(page=><option key={page.path} value={page.path}>{page.label}</option>)}
         </select>
-        <div className="ml-auto flex gap-1">
-          {(['desktop','tablet','mobile'] as Device[]).map(item=><button key={item} onClick={()=>setDevice(item)} className={`rounded-lg px-3 py-2 text-xs ${device===item?'bg-muted font-bold':'border'}`}>{item}</button>)}
+        <div className="flex w-full flex-wrap items-center gap-2 border-t pt-3">
+          <span className="text-xs font-semibold text-muted-foreground">Schermformaat</span>
+          {(['mobile','tablet','desktop'] as Device[]).map(item=><button type="button" key={item} aria-pressed={device===item} onClick={()=>setDevice(item)} className={`rounded-lg px-3 py-2 text-xs ${device===item?'bg-violet-600 font-bold text-white':'border'}`}>{item==='mobile'?'Mobiel 390px':item==='tablet'?'Tablet 820px':'Desktop 1440px'}</button>)}
+          <button type="button" aria-pressed={fitToScreen} onClick={()=>setFitToScreen(value=>!value)} className="ml-auto rounded-lg border px-3 py-2 text-xs font-bold">{fitToScreen?'Passend · 100% bekijken':'Ware grootte · passend bekijken'}</button>
         </div>
       </div>
 
-      <div className="overflow-auto rounded-2xl border bg-zinc-950 p-3">
-        <div className="mx-auto overflow-hidden rounded-xl bg-white shadow-2xl" style={{width:`min(100%, ${widthFor(device)}px)`}}>
-          <iframe ref={frameRef} key={`${role}:${path}:${frameKey}`} title={`${roleLabels[role]} preview`} src={path} onLoad={e=>inspect(e.currentTarget)} className="h-[72vh] w-full bg-white"/>
+      <p className="text-xs text-muted-foreground">De preview gebruikt een echte viewport van {viewportWidth}px. Kies 100% om op kleine schermen horizontaal te inspecteren. Rolwissels wijzigen tijdelijk je actieve testrol; kies Admin om die opnieuw in te stellen.</p>
+      <div ref={previewContainerRef} className="min-w-0 overflow-auto rounded-2xl border bg-zinc-950 p-3">
+        <div className="mx-auto overflow-hidden rounded-xl bg-white shadow-2xl" style={{width:viewportWidth*previewScale,height:`calc(72vh * ${previewScale})`}}>
+          <div style={{width:viewportWidth,height:'72vh',transform:`scale(${previewScale})`,transformOrigin:'top left'}}>
+            <iframe ref={frameRef} key={`${role}:${path}:${frameKey}`} title={`${roleLabels[role]} preview · ${viewportWidth}px`} src={path} onLoad={e=>inspect(e.currentTarget)} style={{width:viewportWidth,height:'72vh'}} className="block border-0 bg-white"/>
+          </div>
         </div>
       </div>
       {status&&<p role="status" className="rounded-xl border border-violet-500/40 p-3 text-sm">{status}</p>}
