@@ -2,13 +2,25 @@ import assert from 'node:assert/strict'
 import {mkdir,writeFile} from 'node:fs/promises'
 import {createClient} from '@supabase/supabase-js'
 import {chromium} from 'playwright'
+import {administrationNavigationGroups} from '../lib/administration/navigation.ts'
 
 const base=process.env.BOT_TEST_BASE_URL||'http://127.0.0.1:3000'
 const url=process.env.BOT_SUPABASE_URL||process.env.NEXT_PUBLIC_SUPABASE_URL
 const key=process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY,password=process.env.BOT_TEST_PASSWORD
 if(!url||!key||!password)throw Error('Missing isolated browser credentials')
 if(!['localhost','127.0.0.1'].includes(new URL(base).hostname)||!['localhost','127.0.0.1'].includes(new URL(url).hostname))throw Error('Navigation E2E requires isolated local services')
-const groups={planning:['events','artists','contracts','staff','tasks','rosters'],finance:['finance','invoices','banking','ticketing','reports'],operations:['inventory','logistics','documents','permits'],relations:['personnel','chat','contacts','sponsors','marketing'],management:['notifications','automations','ai','promotion-discipline','settings']}
+// Browser acceptance must follow the real navigation configuration. Contacts was
+// deliberately retired in favor of the single Customers & suppliers workflow.
+// An independent hard-coded list silently reintroduced obsolete UI expectations.
+const groups=Object.fromEntries(
+ administrationNavigationGroups
+  .filter(group=>group.key!=='overview')
+  .map(group=>[group.key,[...group.slugs]])
+)
+const canonicalSlugs=Object.values(groups).flat()
+assert.equal(new Set(canonicalSlugs).size,canonicalSlugs.length,'Every Administration subtab must have one canonical navigation entry')
+assert.ok(canonicalSlugs.includes('counterparties'),'The canonical Customers & suppliers register must remain accessible')
+assert.ok(!canonicalSlugs.includes('contacts'),'Retired duplicate Contacts shortcut must remain absent')
 const checks=[],failures=[]
 await mkdir('test-results/administration-navigation',{recursive:true})
 const browser=await chromium.launch({headless:true})
