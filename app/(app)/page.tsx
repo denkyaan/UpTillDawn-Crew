@@ -201,7 +201,9 @@ export default async function Dashboard() {
   // Installed PWAs launch at '/'. A workspace preference is NOT an
   // authorization token: bind it to the authenticated account, then verify
   // the real God Mode session and portal assignment before any redirect.
-  const saved=(await cookies()).get('uptilldawn-last-workspace')?.value
+  const savedRaw=(await cookies()).get('uptilldawn-last-workspace')?.value
+  let saved:string|undefined
+  try{saved=savedRaw?decodeURIComponent(savedRaw):undefined}catch{saved=undefined}
   const workspace=saved?.startsWith(current.id+':')?saved.slice(current.id.length+1):null
   const supabase=await createClient()
   if(workspace==='god-mode'&&current.isOwner){
