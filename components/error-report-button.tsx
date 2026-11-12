@@ -25,7 +25,6 @@ export function ErrorReportButton({
   errorName='Error',
   stackTrace='',
   source='manual',
-  onRetry,
   compact=false,
 }:{
   errorMessage:string
