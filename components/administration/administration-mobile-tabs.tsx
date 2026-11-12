@@ -11,7 +11,7 @@ const categories=[
  {id:"overview",name:{nl:"Overzicht",fr:"Accueil",en:"Overview",de:"Übersicht"},icon:LayoutDashboard,slugs:["dashboard"]},
  {id:"events",name:{nl:"Evenementen",fr:"Événements",en:"Events",de:"Events"},icon:CalendarDays,slugs:["events","artists","contracts","logistics","permits"]},
  {id:"finance",name:{nl:"Financiën",fr:"Finances",en:"Finance",de:"Finanzen"},icon:Wallet,slugs:["finance","invoices","banking","ticketing"]},
- {id:"operations",name:{nl:"Organisatie",fr:"Organisation",en:"Operations",de:"Organisation"},icon:Users,slugs:["staff","inventory","tasks","contacts"]},
+ {id:"operations",name:{nl:"Organisatie",fr:"Organisation",en:"Operations",de:"Organisation"},icon:Users,slugs:["inventory","tasks"]},
  {id:"promotion",name:{nl:"Promotie",fr:"Promotion",en:"Promotion",de:"Werbung"},icon:Megaphone,slugs:["marketing","sponsors"]},
  {id:"management",name:{nl:"Beheer",fr:"Gestion",en:"Manage",de:"Verwaltung"},icon:Settings2,slugs:["documents","reports","notifications","automations","ai","settings"]},
 ] as const
