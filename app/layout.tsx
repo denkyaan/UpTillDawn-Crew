@@ -1,3 +1,4 @@
+import { WorkspaceContinuity } from '@/components/auth/workspace-continuity'
 import { PwaRegister } from '@/components/pwa-register'
 import { PushPermissionPrompt } from '@/components/push-permission-prompt'
 import { FirstUseInstallPrompt } from '@/components/first-use-install-prompt'
@@ -66,7 +67,7 @@ export default async function RootLayout({
         <ThemeProvider attribute="class" defaultTheme="dark" enableSystem disableTransitionOnChange>
           <AuthProvider>
             <AdminSelectionProvider>
-            <PwaRegister /><FirstUseInstallPrompt /><PushPermissionPrompt /><SaveSuccessToaster />{children}
+            <WorkspaceContinuity /><PwaRegister /><FirstUseInstallPrompt /><PushPermissionPrompt /><SaveSuccessToaster />{children}
             <LocaleSync />
             <Toaster richColors position="top-right" />
             </AdminSelectionProvider>

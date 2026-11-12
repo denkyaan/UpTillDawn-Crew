@@ -1,11 +1,20 @@
 'use client'
 
-import { useMemo, useRef, useState } from 'react'
+import { useEffect, useMemo, useRef, useState, useSyncExternalStore } from 'react'
+import {LANGUAGE_APPLIED_EVENT,initialUiLocale,parseUiLocale,type SupportedUiLocale} from '@/lib/locale-preferences'
 import targets from '@/lib/god-source-index.json'
 import type { SourceTarget } from '@/lib/god-studio'
 
+const previewText={
+ nl:{device:'Schermformaat',mobile:'Mobiel',tablet:'Tablet',desktop:'Desktop',fit:'Passend · 100% bekijken',actual:'Ware grootte · passend bekijken',preview:'preview',note:'De preview gebruikt een echte viewport van',warning:'Kies 100% om op kleine schermen horizontaal te inspecteren. Rolwissels wijzigen tijdelijk je actieve testrol; kies Admin om die opnieuw in te stellen.'},
+ fr:{device:'Format d’écran',mobile:'Mobile',tablet:'Tablette',desktop:'Ordinateur',fit:'Adapté · afficher à 100 %',actual:'Taille réelle · ajuster',preview:'aperçu',note:"L’aperçu utilise une largeur réelle de",warning:"Affichez 100 % pour inspecter horizontalement sur les petits écrans. Changer de rôle modifie temporairement le rôle de test actif ; sélectionnez Admin pour le rétablir."},
+ en:{device:'Screen size',mobile:'Mobile',tablet:'Tablet',desktop:'Desktop',fit:'Fit · view at 100%',actual:'Actual size · fit',preview:'preview',note:'The preview uses a real viewport width of',warning:'Choose 100% to inspect horizontally on smaller screens. Role switching temporarily changes your active test role; select Admin to restore it.'},
+ de:{device:'Bildschirmgröße',mobile:'Mobil',tablet:'Tablet',desktop:'Desktop',fit:'Einpassen · 100 % anzeigen',actual:'Originalgröße · einpassen',preview:'Vorschau',note:'Die Vorschau verwendet eine echte Ansichtsbreite von',warning:'Auf kleinen Bildschirmen lässt sich bei 100 % horizontal prüfen. Ein Rollenwechsel ändert vorübergehend die aktive Testrolle; Admin stellt sie wieder her.'},
+} as const
+
 type Role = 'staff' | 'responsible_lead' | 'admin'
 type Device = 'desktop' | 'tablet' | 'mobile'
+const CSS_PX_UNIT='px'
 
 type Selected = {
   text: string
@@ -93,9 +102,17 @@ export function GodVisualBuilder({
   onOpenSource:(file:string,line:number)=>void
   onPrepareAi:(prompt:string,file?:string,line?:number)=>void
 }) {
+  const locale=useSyncExternalStore(
+    notify=>{window.addEventListener(LANGUAGE_APPLIED_EVENT,notify);return()=>window.removeEventListener(LANGUAGE_APPLIED_EVENT,notify)},
+    ()=>parseUiLocale(document.documentElement.lang)||initialUiLocale(),
+    ()=>'nl' as SupportedUiLocale,
+  )
+  const t=previewText[locale]
   const [role,setRole] = useState<Role>('admin')
   const [path,setPath] = useState('/admin')
-  const [device,setDevice] = useState<Device>('desktop')
+  const [device,setDevice] = useState<Device>('mobile')
+  const [fitToScreen,setFitToScreen] = useState(true)
+  const [availableWidth,setAvailableWidth] = useState(390)
   const [selected,setSelected] = useState<Selected|null>(null)
   const [text,setText] = useState('')
   const [fontSize,setFontSize] = useState('')
@@ -118,6 +135,19 @@ export function GodVisualBuilder({
   const [status,setStatus] = useState('')
   const [frameKey,setFrameKey] = useState(0)
   const frameRef=useRef<HTMLIFrameElement>(null)
+  const previewContainerRef=useRef<HTMLDivElement>(null)
+  useEffect(()=>{
+    const container=previewContainerRef.current
+    if(!container)return
+    const resize=new ResizeObserver(entries=>{
+      const width=entries[0]?.contentRect.width
+      if(width&&Number.isFinite(width))setAvailableWidth(width)
+    })
+    resize.observe(container)
+    return()=>resize.disconnect()
+  },[])
+  const viewportWidth=widthFor(device)
+  const previewScale=fitToScreen?Math.min(1,Math.max(0.1,(availableWidth-24)/viewportWidth)):1
 
   const matches = useMemo(()=>{
     if(!selected)return []
@@ -276,14 +306,19 @@ export function GodVisualBuilder({
         <select value={path} onChange={e=>{setPath(e.target.value);setSelected(null);setFrameKey(value=>value+1)}} className="min-w-44 rounded-xl border bg-background px-3 py-2">
           {pageOptions[role].map(page=><option key={page.path} value={page.path}>{page.label}</option>)}
         </select>
-        <div className="ml-auto flex gap-1">
-          {(['desktop','tablet','mobile'] as Device[]).map(item=><button key={item} onClick={()=>setDevice(item)} className={`rounded-lg px-3 py-2 text-xs ${device===item?'bg-muted font-bold':'border'}`}>{item}</button>)}
+        <div className="flex w-full flex-wrap items-center gap-2 border-t pt-3">
+          <span className="text-xs font-semibold text-muted-foreground">{t.device}</span>
+          {(['mobile','tablet','desktop'] as Device[]).map(item=><button type="button" key={item} aria-pressed={device===item} onClick={()=>setDevice(item)} className={`rounded-lg px-3 py-2 text-xs ${device===item?'bg-violet-600 font-bold text-white':'border'}`}>{t[item]} {widthFor(item)}{CSS_PX_UNIT}</button>)}
+          <button type="button" aria-pressed={fitToScreen} onClick={()=>setFitToScreen(value=>!value)} className="ml-auto rounded-lg border px-3 py-2 text-xs font-bold">{fitToScreen?t.fit:t.actual}</button>
         </div>
       </div>
 
-      <div className="overflow-auto rounded-2xl border bg-zinc-950 p-3">
-        <div className="mx-auto overflow-hidden rounded-xl bg-white shadow-2xl" style={{width:`min(100%, ${widthFor(device)}px)`}}>
-          <iframe ref={frameRef} key={`${role}:${path}:${frameKey}`} title={`${roleLabels[role]} preview`} src={path} onLoad={e=>inspect(e.currentTarget)} className="h-[72vh] w-full bg-white"/>
+      <p className="text-xs text-muted-foreground">{t.note} {viewportWidth}{CSS_PX_UNIT}. {t.warning}</p>
+      <div ref={previewContainerRef} className="min-w-0 overflow-auto rounded-2xl border bg-zinc-950 p-3">
+        <div className="mx-auto overflow-hidden rounded-xl bg-white shadow-2xl" style={{width:viewportWidth*previewScale,height:`calc(72vh * ${previewScale})`}}>
+          <div style={{width:viewportWidth,height:'72vh',transform:`scale(${previewScale})`,transformOrigin:'top left'}}>
+            <iframe ref={frameRef} key={`${role}:${path}:${frameKey}`} title={roleLabels[role]+' '+t.preview+' · '+viewportWidth+'px'} src={path} onLoad={e=>inspect(e.currentTarget)} style={{width:viewportWidth,height:'72vh'}} className="block border-0 bg-white"/>
+          </div>
         </div>
       </div>
       {status&&<p role="status" className="rounded-xl border border-violet-500/40 p-3 text-sm">{status}</p>}

@@ -1,8 +1,60 @@
 'use client'
+
+import {useSyncExternalStore} from 'react'
+import {LANGUAGE_APPLIED_EVENT,initialUiLocale,parseUiLocale,type SupportedUiLocale} from '@/lib/locale-preferences'
+
 type Row={id:string;bucket_id:string;storage_path:string;uploaded_by:string|null;uploader_email:string|null;uploader_name:string|null;mime_type:string|null;file_size_bytes:number|null;risk_class:string;status:string;engine:string|null;engine_result:unknown;attempts:number;scanned_at:string|null;created_at:string}
-export function UploadSecurityAudit({rows}:{rows:Row[]}){
- const bad=rows.filter(r=>['infected','suspicious','scan_failed'].includes(r.status))
- return <section className="rounded-2xl border p-5"><div className="mb-4"><h2 className="text-xl font-black">Uploadbeveiliging · Sécurité des téléchargements · Upload security · Upload-Sicherheit</h2><p className="text-sm text-muted-foreground">Wie uploadde wat, waar, wanneer en wat ging er mis · Qui / quoi / où / quand · Who / what / where / when · Wer / was / wo / wann</p></div>
- <div className="mb-4 grid grid-cols-2 gap-2 md:grid-cols-4"><div className="rounded-xl border p-3"><b>{rows.length}</b><div className="text-xs">Scans</div></div><div className="rounded-xl border p-3"><b>{bad.length}</b><div className="text-xs">Problemen · Problèmes · Issues · Probleme</div></div></div>
- <div className="overflow-x-auto"><table className="w-full text-left text-sm"><thead><tr className="border-b"><th className="p-2">Status</th><th className="p-2">Wie · Qui · Who · Wer</th><th className="p-2">Bestand · Fichier · File · Datei</th><th className="p-2">Waar · Où · Where · Wo</th><th className="p-2">Wanneer · Quand · When · Wann</th><th className="p-2">Probleem · Problème · Issue · Problem</th></tr></thead><tbody>{rows.map(r=><tr key={r.id} className="border-b align-top"><td className="p-2 font-bold">{r.status}</td><td className="p-2">{r.uploader_name||r.uploader_email||r.uploaded_by||'—'}</td><td className="p-2"><div className="max-w-xs break-all">{r.storage_path.split('/').pop()}</div><div className="text-xs text-muted-foreground">{r.mime_type||'—'} · {r.file_size_bytes?Math.ceil(r.file_size_bytes/1024)+' KB':'—'}</div></td><td className="p-2"><div>{r.bucket_id}</div><div className="max-w-xs break-all text-xs text-muted-foreground">{r.storage_path}</div></td><td className="p-2 whitespace-nowrap">{new Date(r.created_at).toLocaleString()}</td><td className="p-2"><pre className="max-w-md whitespace-pre-wrap break-words text-xs">{['infected','suspicious','scan_failed'].includes(r.status)?JSON.stringify(r.engine_result,null,2):'—'}</pre></td></tr>)}</tbody></table>{!rows.length&&<p className="p-4 text-sm text-muted-foreground">Nog geen uploads · Aucun téléchargement · No uploads yet · Noch keine Uploads</p>}</div></section>
+const labels={
+ nl:{heading:'Uploadbeveiliging',intro:'Overzicht van uploads, scanstatus en mogelijke veiligheidsproblemen.',scans:'Scans',issues:'Problemen',status:'Status',who:'Door wie',file:'Bestand',where:'Locatie',when:'Tijdstip',issue:'Probleem',empty:'Er zijn nog geen uploads geregistreerd.',unavailable:'Uploadbeveiliging kon niet worden opgehaald. De scanstatus is onbekend.',unknown:'Onbekend'},
+ fr:{heading:'Sécurité des téléchargements',intro:'Téléchargements, résultats des analyses et incidents de sécurité.',scans:'Analyses',issues:'Problèmes',status:'Statut',who:'Auteur',file:'Fichier',where:'Emplacement',when:'Date et heure',issue:'Problème',empty:"Aucun téléchargement enregistré.",unavailable:"Les données de sécurité sont indisponibles. Les analyses ne sont pas vérifiées.",unknown:'Inconnu'},
+ en:{heading:'Upload security',intro:'Uploads, scan results and potential security issues.',scans:'Scans',issues:'Issues',status:'Status',who:'Uploaded by',file:'File',where:'Location',when:'Time',issue:'Issue',empty:'No uploads recorded yet.',unavailable:'Upload security data could not be loaded. Scan status is unknown.',unknown:'Unknown'},
+ de:{heading:'Upload-Sicherheit',intro:'Uploads, Scanstatus und mögliche Sicherheitsprobleme.',scans:'Scans',issues:'Probleme',status:'Status',who:'Hochgeladen von',file:'Datei',where:'Speicherort',when:'Zeitpunkt',issue:'Problem',empty:'Noch keine Uploads registriert.',unavailable:'Upload-Sicherheitsdaten sind nicht verfügbar. Der Scanstatus ist unbekannt.',unknown:'Unbekannt'},
+} as const
+const unsafe=new Set(['infected','suspicious','scan_failed'])
+export function UploadSecurityAudit({rows,unavailable=false}:{rows:Row[];unavailable?:boolean}){
+ const locale=useSyncExternalStore(
+  notify=>{window.addEventListener(LANGUAGE_APPLIED_EVENT,notify);return()=>window.removeEventListener(LANGUAGE_APPLIED_EVENT,notify)},
+  ()=>parseUiLocale(document.documentElement.lang)||initialUiLocale(),
+  ()=>'nl' as SupportedUiLocale,
+ )
+ const t=labels[locale]
+ const bad=rows.filter(r=>unsafe.has(r.status))
+ const dateLocale=({nl:'nl-BE',fr:'fr-BE',en:'en-GB',de:'de-DE'} as const)[locale]
+ const formatDate=(date:string)=>new Intl.DateTimeFormat(dateLocale,{dateStyle:'short',timeStyle:'short',timeZone:'Europe/Brussels'}).format(new Date(date))
+ const errorText=(row:Row)=>unsafe.has(row.status)?JSON.stringify(row.engine_result,null,2)||'—':'—'
+ return <section className="min-w-0 space-y-4 rounded-2xl border p-4 md:p-5">
+  <header><h2 className="text-lg font-black">{t.heading}</h2><p className="text-sm text-muted-foreground">{t.intro}</p></header>
+  {unavailable?<p role="alert" className="rounded-lg border border-amber-500/50 p-3 text-sm">{t.unavailable}</p>:<>
+   <div className="grid grid-cols-2 gap-2">
+    <div className="rounded-xl border p-3"><b className="text-2xl tabular-nums">{rows.length}</b><p className="text-xs">{t.scans}</p></div>
+    <div className="rounded-xl border p-3"><b className="text-2xl tabular-nums">{bad.length}</b><p className="text-xs">{t.issues}</p></div>
+   </div>
+   {!rows.length?<p className="rounded-xl border p-4 text-sm text-muted-foreground">{t.empty}</p>:<>
+    <div className="grid gap-3 md:hidden">
+     {rows.map(row=><article key={row.id} className="min-w-0 space-y-2 rounded-xl border p-3 text-sm">
+      <div className="flex flex-wrap items-center justify-between gap-2"><b>{row.status}</b><span className="text-xs text-muted-foreground">{formatDate(row.created_at)}</span></div>
+      <p className="break-all font-semibold">{row.storage_path.split('/').pop()||t.unknown}</p>
+      <p>{t.who}: {row.uploader_name||row.uploader_email||row.uploaded_by||'—'}</p>
+      <p className="break-all text-xs text-muted-foreground">{row.bucket_id} / {row.storage_path}</p>
+      <p className="text-xs text-muted-foreground">{row.mime_type||'—'} · {row.file_size_bytes===null?'—':Math.ceil(row.file_size_bytes/1024)+' KB'}</p>
+      {unsafe.has(row.status)&&<pre className="max-h-36 overflow-auto whitespace-pre-wrap break-words text-xs">{errorText(row)}</pre>}
+     </article>)}
+    </div>
+    <div className="hidden max-w-full overflow-x-auto md:block">
+     <table className="w-full text-left text-sm"><thead><tr className="border-b">
+      {[t.status,t.who,t.file,t.where,t.when,t.issue].map(label=><th key={label} scope="col" className="p-2">{label}</th>)}
+     </tr></thead><tbody>
+      {rows.map(row=><tr key={row.id} className="border-b align-top">
+       <td className="p-2 font-bold">{row.status}</td>
+       <td className="max-w-40 break-words p-2">{row.uploader_name||row.uploader_email||row.uploaded_by||'—'}</td>
+       <td className="p-2"><div className="max-w-xs break-all">{row.storage_path.split('/').pop()}</div><div className="text-xs text-muted-foreground">{row.mime_type||'—'} · {row.file_size_bytes===null?'—':Math.ceil(row.file_size_bytes/1024)+' KB'}</div></td>
+       <td className="p-2"><div>{row.bucket_id}</div><div className="max-w-xs break-all text-xs text-muted-foreground">{row.storage_path}</div></td>
+       <td className="whitespace-nowrap p-2">{formatDate(row.created_at)}</td>
+       <td className="p-2"><pre className="max-w-md whitespace-pre-wrap break-words text-xs">{errorText(row)}</pre></td>
+      </tr>)}
+     </tbody></table>
+    </div>
+   </>}
+  </>}
+ </section>
 }

@@ -32,7 +32,14 @@ const navNames={
  en:{overview:'Overview',recovery:'AI & recovery',studio:'App Studio',release:'Versions & CI',advanced:'Advanced',main:'Main · test',production:'Production · live',warning:'Production data is isolated. Code proposals are tested on main first; a separate approval is required to release to production.'},
  de:{overview:'Übersicht',recovery:'KI & Reparatur',studio:'App Studio',release:'Versionen & CI',advanced:'Erweitert',main:'Main · Test',production:'Produktion · Live',warning:'Produktionsdaten bleiben getrennt. Codevorschläge werden zuerst auf main getestet und benötigen eine gesonderte Produktionsfreigabe.'},
 } as const
+const environmentLinks={nl:'Omgeving apart openen',fr:'Ouvrir cet environnement',en:'Open environment separately',de:'Umgebung separat öffnen'} as const
 type Tab=typeof tabs[number][0]
+const tabNames:Record<SupportedUiLocale,Record<Tab,string>>={
+ nl:{overview:'Overzicht',ai:'AI tekstuitvoering',logs:'Systeemlogs',builder:'Live Builder',source:'Programmering',elements:'Knoppen en onderdelen',versions:'Versies en publicatie',automations:'Automaties',data:'Gegevens',sql:'Logica en workflows',roles:'Rollen en navigatie',connections:'Koppelingen'},
+ fr:{overview:"Aperçu",ai:"Exécution IA",logs:"Journaux système",builder:"Éditeur visuel",source:"Programmation",elements:"Boutons et composants",versions:"Versions et publication",automations:"Automatisations",data:"Données",sql:"Logique et flux",roles:"Rôles et navigation",connections:"Connexions"},
+ en:{overview:"Overview",ai:"AI execution",logs:"System logs",builder:"Live Builder",source:"Programming",elements:"Buttons and components",versions:"Versions and releases",automations:"Automations",data:"Data",sql:"Logic and workflows",roles:"Roles and navigation",connections:"Connections"},
+ de:{overview:"Übersicht",ai:"KI-Ausführung",logs:"Systemprotokolle",builder:"Visueller Editor",source:"Programmierung",elements:"Schaltflächen und Komponenten",versions:"Versionen und Freigabe",automations:"Automatisierungen",data:"Daten",sql:"Logik und Abläufe",roles:"Rollen und Navigation",connections:"Verbindungen"},
+}
 type Proposal={number:number;url:string;sha:string;branch:string}
 type Commit={sha:string;html_url:string;commit:{message:string;author:{date:string}}}
 type Pull={number:number;html_url:string;title:string;head:{sha:string;ref:string}}
@@ -302,12 +309,13 @@ export function GodStudio(){
   }
 
   return <div className="space-y-4">
-    <nav aria-label="God Mode gereedschappen" className="space-y-2 rounded-2xl border p-2">
+    <nav aria-label="God Mode gereedschappen" className="min-w-0 space-y-3 rounded-2xl border p-3">
       <div className="flex flex-wrap gap-2">
         {(['main','production'] as const).map(target=><button key={target} type="button" aria-pressed={environment===target} onClick={()=>{setEnvironment(target);setSelectedErrorReport(null);setTab('overview')}} className={'rounded-xl border px-4 py-2 text-sm font-black '+(environment===target?'border-amber-500 bg-amber-500/15':'hover:border-violet-500')}>{t[target]}</button>)}
+        <a href={GOD_ENVIRONMENTS[environment].origin+'/god-mode'} target="_blank" rel="noopener noreferrer" className="ml-auto rounded-xl border border-violet-500/50 px-3 py-2 text-xs font-bold text-violet-400">{environmentLinks[locale]}</a>
       </div>
-      <div className="flex gap-2 overflow-x-auto">{(Object.keys(sections) as Section[]).map(section=><button key={section} type="button" aria-pressed={(sections[section] as readonly string[]).includes(tab)} onClick={()=>{const destination=sections[section][0] as Tab;setTab(destination);if(destination==='versions')void action(loadHistory)}} className={'shrink-0 rounded-xl px-4 py-3 text-sm font-bold '+((sections[section] as readonly string[]).includes(tab)?'bg-violet-600 text-white':'hover:bg-muted')}>{t[section]}</button>)}</div>
-      {(['overview','recovery','studio','release','advanced'] as const).map(section=>(sections[section] as readonly string[]).includes(tab)&&sections[section].length>1?<div key={section} className="flex gap-2 overflow-x-auto">{tabs.filter(([key])=>(sections[section] as readonly string[]).includes(key)).map(([key,label])=><button type="button" key={key} aria-pressed={tab===key} onClick={()=>{setTab(key);if(key==='versions')void action(loadHistory)}} className={'shrink-0 rounded-lg border px-3 py-2 text-xs font-bold '+(tab===key?'border-violet-500 bg-violet-500/10':'hover:border-violet-500')}>{label}</button>)}</div>:null)}
+      <div className="grid grid-cols-2 gap-2 sm:flex sm:flex-wrap" aria-label={t.studio}>{(Object.keys(sections) as Section[]).map(section=><button key={section} type="button" aria-pressed={(sections[section] as readonly string[]).includes(tab)} onClick={()=>{const destination=sections[section][0] as Tab;setTab(destination);if(destination==='versions')void action(loadHistory)}} className={'min-w-0 rounded-xl px-3 py-3 text-sm font-bold leading-snug sm:px-4 '+((sections[section] as readonly string[]).includes(tab)?'bg-violet-600 text-white':'border hover:bg-muted')}>{t[section]}</button>)}</div>
+      {(['overview','recovery','studio','release','advanced'] as const).map(section=>(sections[section] as readonly string[]).includes(tab)&&sections[section].length>1?<div key={section} className="grid grid-cols-2 gap-2 border-t pt-3 sm:flex sm:flex-wrap" aria-label={t[section]}>{tabs.filter(([key])=>(sections[section] as readonly string[]).includes(key)).map(([key])=><button type="button" key={key} aria-pressed={tab===key} onClick={()=>{setTab(key);if(key==='versions')void action(loadHistory)}} className={'min-w-0 break-words rounded-lg border px-3 py-3 text-left text-xs font-bold leading-snug sm:text-center '+(tab===key?'border-violet-500 bg-violet-500/10':'hover:border-violet-500')}>{tabNames[locale][key]}</button>)}</div>:null)}
     </nav>
     {environment==='production'&&<p className="rounded-xl border border-amber-500/40 p-3 text-sm">{t.warning}</p>}
     {message&&<p role="status" className="whitespace-pre-wrap rounded-xl border border-violet-500/40 p-3 text-sm">{message}</p>}

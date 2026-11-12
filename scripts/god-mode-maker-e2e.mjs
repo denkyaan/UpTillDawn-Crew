@@ -61,9 +61,29 @@ async function verifyMaker(viewport){
   ])
   assert.equal(new URL(page.url()).pathname,'/god-mode')
   await page.locator('main h1').filter({hasText:'App Studio'}).waitFor({state:'visible',timeout:20000})
-  assert.equal(await page.locator('nav[aria-label="God Mode"] a[href*="/god-mode"]').count(),2,
-   'God Mode must expose Main and production without sharing sessions')
-  record(tag+' Maker enters the actual private God Mode through its server action')
+  const workspaceNav=page.locator('nav[aria-label="God Mode gereedschappen"]')
+  await workspaceNav.getByRole('button',{name:/Main/}).waitFor({state:'visible',timeout:10000})
+  await workspaceNav.getByRole('button',{name:/Productie/}).waitFor({state:'visible',timeout:10000})
+  assert.equal(await workspaceNav.locator('a[href*="/god-mode"]').count(),1,
+   'Selected environment must open through its own isolated session without duplicate top-level selectors')
+  record(tag+' Maker enters private God Mode with isolated Main and production controls')
+
+  // Installed PWA starts at '/': it must restore a valid God session instead of Admin.
+  await page.waitForFunction(()=>document.cookie.includes('uptilldawn-last-workspace='),null,{timeout:10000})
+  await page.goto(base+'/',{waitUntil:'domcontentloaded',timeout:45000})
+  await page.waitForURL(url=>url.pathname==='/god-mode',{timeout:30000})
+  record(tag+' PWA reopen at root restores authorized God Mode instead of Admin')
+
+  // Real iframe viewport dimensions, not just CSS-shrunk mobile replicas.
+  await workspaceNav.getByRole('button',{name:'App Studio'}).click()
+  await workspaceNav.getByRole('button',{name:'Live Builder'}).click()
+  const preview=page.locator('iframe[title*="preview"]').first()
+  await preview.waitFor({state:'visible',timeout:30000})
+  for(const [name,width] of [['Mobiel 390px','390px'],['Tablet 820px','820px'],['Desktop 1440px','1440px']]){
+   await page.getByRole('button',{name,exact:true}).click()
+   assert.equal(await preview.evaluate(element=>element.style.width),width,'Wrong preview viewport for '+name)
+  }
+  record(tag+' iPhone/tablet/desktop selection changes real iframe viewport widths')
 
   const result=await safeRequest(context,'/api/god/logs?environment=main&limit=3')
   assert.equal(result.status(),200,'Owner must be allowed to read local persisted God logs')
@@ -96,11 +116,19 @@ async function verifyMaker(viewport){
   record(tag+' critical Studio, AI, release and advanced navigation buttons are functional')
 
   // Log out explicitly: an expired/revoked God token must not remain usable.
-  const leave=page.getByRole('button',{name:'God Mode afsluiten'})
+  const leave=page.getByRole('button',{name:'God Mode afmelden'})
   await leave.click()
   await page.waitForURL(url=>url.pathname!=='/god-mode',{timeout:30000})
   assert.equal((await safeRequest(context,'/api/god/logs?environment=main&limit=3')).status(),401)
   record(tag+' God Mode logout invalidates the private session')
+
+  // Server must restore an approved Administration portal on a fresh PWA root load.
+  await page.goto(base+'/portals/switch/administration',{waitUntil:'domcontentloaded',timeout:45000})
+  await page.waitForURL(url=>url.pathname==='/portals/administration',{timeout:30000})
+  await page.waitForFunction(()=>decodeURIComponent(document.cookie).includes(':administration'),null,{timeout:12000})
+  await page.goto(base+'/',{waitUntil:'domcontentloaded',timeout:45000})
+  await page.waitForURL(url=>url.pathname==='/portals/administration',{timeout:30000})
+  record(tag+' PWA reopen restores authorized Administration instead of Admin')
  }catch(error){
   failures.push(tag+': '+String(error?.message||error))
   await maker.page.screenshot({path:out+'/'+tag+'.png',fullPage:true,timeout:5000}).catch(()=>{})
