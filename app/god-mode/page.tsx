@@ -17,7 +17,7 @@ export default async function GodModePage(){
   if(valid!==true)redirect('/god-mode/login')
 
   const admin=await createClient()
-  const {data:securityRows}=await admin.rpc('upt_god_upload_security_audit',{p_token:token,p_limit:200})
+  const {data:securityRows,error:securityError}=await admin.rpc('upt_god_upload_security_audit',{p_token:token,p_limit:200})
 
   return <main className="min-h-screen bg-background p-4 pb-16 md:p-8">
     <div className="mx-auto max-w-[1600px] space-y-6">
@@ -33,8 +33,8 @@ export default async function GodModePage(){
       </header>
       <GodStudio/>
       <details className="rounded-2xl border bg-card/40 p-3">
-        <summary className="cursor-pointer px-2 py-3 text-sm font-bold">Uploadbeveiliging · audit en scans ({(securityRows||[]).length})</summary>
-        <div className="mt-3"><UploadSecurityAudit rows={securityRows||[]}/></div>
+        <summary className="cursor-pointer px-2 py-3 text-sm font-bold">Uploadbeveiliging · audit en scans ({securityError?'?':(securityRows||[]).length})</summary>
+        <div className="mt-3"><UploadSecurityAudit rows={securityRows||[]} unavailable={Boolean(securityError)}/></div>
       </details>
     </div>
   </main>
