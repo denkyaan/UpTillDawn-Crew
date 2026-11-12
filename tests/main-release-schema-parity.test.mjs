@@ -25,7 +25,7 @@ test('Deploy production and Maker readiness cover exactly the same 18 required r
  const overview=readFileSync('app/api/god/overview/route.ts','utf8')
  const source=overview.split('const expected=[')[1]?.split('] as const')[0]
  assert.ok(source,'God Mode must retain a production readiness inventory')
- const actual=[...source.matchAll(/'([a-z_]+):([a-z_]+)'/g)].map(x=>x[1])
+ const actual=[...source.matchAll(/'([a-z0-9_]+):([a-z0-9_]+)'/g)].map(x=>x[1])
  assert.deepEqual(actual.sort(),[...expectedTables].sort(),
   'Maker God Mode readiness should never contradict the production release preflight')
 })
