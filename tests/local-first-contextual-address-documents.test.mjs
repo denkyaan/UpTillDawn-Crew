@@ -21,11 +21,11 @@ test("billing addresses share one reusable lookup and validated fields",()=>{
  const component=read("components/administration/billing-address-fields.tsx")
  const sources=[
   "app/(app)/portals/administration/counterparties/page.tsx",
-  "app/(app)/portals/administration/contacts/page.tsx",
   "app/(app)/portals/administration/finance/page.tsx",
   "components/administration/billing-profile.tsx",
  ]
  for(const p of sources)assert.match(read(p),/BillingAddressFields/,p)
+ assert.match(read("app/(app)/portals/administration/contacts/page.tsx"),/redirect\("\/portals\/administration\/counterparties"\)/)
  for(const name of ["street_address","postal_code","city","country_code"])assert.match(component,new RegExp('name="'+name+'"'))
  const parties=read("app/(app)/portals/administration/counterparties/page.tsx")
  assert.match(parties,/checkedBillingAddress\(formData\)/)
