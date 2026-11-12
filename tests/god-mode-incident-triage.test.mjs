@@ -41,6 +41,9 @@ test('God Mode displays genuine incident-load failure rather than false success'
  assert.match(studio,/pendingMakerIncidents\(data.reports\)/)
  assert.match(studio,/makerIncidentPrompt\(report\)/)
  assert.doesNotMatch(studio,/return report\.god_prompt\|\|/)
+ const explorer=readFileSync('components/god-mode/maker-logs.tsx','utf8')
+ assert.match(explorer,/makerIncidentPrompt\(item\.report\)/)
+ assert.doesNotMatch(explorer,/Analyseer dit app-foutrapport: '\+item\.report\.error_message/)
 })
 
 test('Main Cloudflare worker logs explicitly capture invocations',()=>{
