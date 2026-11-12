@@ -13,6 +13,7 @@ import {GOD_ENVIRONMENTS,currentGodEnvironment} from '@/lib/god-mode-environment
 import {LANGUAGE_APPLIED_EVENT,initialUiLocale,parseUiLocale,type SupportedUiLocale} from '@/lib/locale-preferences'
 import {editablePath,summarizeChanges,type SourceChange,type SourceEntry,type SourceTarget} from '@/lib/god-studio'
 import {humanizeAppError} from '@/lib/client-error-message'
+import {makerIncidentPrompt,pendingMakerIncidents} from '@/lib/god-mode-error-triage'
 import targets from '@/lib/god-source-index.json'
 
 const CodeEditor=dynamic(()=>import('./code-editor'),{ssr:false,loading:()=> <p>Code-editor laden…</p>})
@@ -109,6 +110,7 @@ export function GodStudio(){
   const [textAiPrompt,setTextAiPrompt]=useState('')
   const [textAiResult,setTextAiResult]=useState<TextAiResult|null>(null)
   const [errorReports,setErrorReports]=useState<RecoveryReport[]>([])
+  const [errorReportsStatus,setErrorReportsStatus]=useState<'loading'|'ready'|'error'>('loading')
   const [selectedErrorReport,setSelectedErrorReport]=useState<string|null>(null)
   const [verifyReportId,setVerifyReportId]=useState<string|null>(null)
   const [verifiedReleaseSha,setVerifiedReleaseSha]=useState('')
@@ -145,7 +147,8 @@ export function GodStudio(){
     void api<{reports:RecoveryReport[]}>('/api/god/error-reports?limit=60')
       .then(data=>{
         if(!active)return
-        setErrorReports(data.reports)
+        setErrorReports(pendingMakerIncidents(data.reports))
+        setErrorReportsStatus('ready')
         const requested=new URLSearchParams(window.location.search).get('error-report')
         if(!requested)return
         const report=data.reports.find(item=>item.id===requested)
@@ -154,7 +157,7 @@ export function GodStudio(){
         setTextAiPrompt(current=>current||recoveryPrompt(report))
         setTab('ai')
       })
-      .catch(()=>{})
+      .catch(()=>{if(active)setErrorReportsStatus('error')})
     return()=>{active=false}
   },[])
   useEffect(()=>{if(!changes.length)return;const guard=(event:BeforeUnloadEvent)=>{event.preventDefault()};window.addEventListener('beforeunload',guard);return()=>window.removeEventListener('beforeunload',guard)},[changes.length])
@@ -208,19 +211,15 @@ export function GodStudio(){
   }
 
   function recoveryPrompt(report:RecoveryReport){
-    return report.god_prompt||[
-      'Onderzoek en herstel dit gemelde productiefoutrapport.',
-      `Pagina: ${report.route}`,
-      `Fout: ${report.error_message}`,
-      report.ai_summary?`AI-diagnose: ${report.ai_summary}`:'',
-      report.maker_action?`Vereiste makeractie: ${report.maker_action}`:'',
-      'Maak de kleinste veilige wijziging, behoud bestaande autorisatie en voeg regressietests toe.',
-    ].filter(Boolean).join('\n')
+    return makerIncidentPrompt(report)
   }
 
   async function loadErrorReports(){
-    const data=await api<{reports:RecoveryReport[]}>('/api/god/error-reports?limit=60')
-    setErrorReports(data.reports)
+    setErrorReportsStatus('loading')
+    try{
+      const data=await api<{reports:RecoveryReport[]}>('/api/god/error-reports?limit=60')
+      setErrorReports(pendingMakerIncidents(data.reports))
+      setErrorReportsStatus('ready')
     if(typeof window!=='undefined'){
       const requested=new URLSearchParams(window.location.search).get('error-report')
       if(requested){
@@ -231,6 +230,10 @@ export function GodStudio(){
           setTab('ai')
         }
       }
+    }
+    }catch(error){
+      setErrorReportsStatus('error')
+      throw error
     }
   }
 
@@ -359,7 +362,9 @@ export function GodStudio(){
           <div><h2 className="text-xl font-black">AI foutherstel</h2><p className="text-sm text-muted-foreground">Gebruikersrapporten worden op de achtergrond geanalyseerd. Alleen fouten waarvoor makeractie nodig is komen hier bovenaan.</p></div>
           <button type="button" disabled={busy} onClick={()=>void action(loadErrorReports)} className="rounded-xl border px-4 py-2">Vernieuwen</button>
         </div>
-        {!errorReports.length&&<p className="rounded-xl border border-dashed p-4 text-sm text-muted-foreground">Geen open foutrapporten.</p>}
+        {errorReportsStatus==='loading'&&<p role="status" className="rounded-xl border border-dashed p-4 text-sm">Foutrapporten laden…</p>}
+        {errorReportsStatus==='error'&&<p role="alert" className="rounded-xl border border-red-500/40 p-4 text-sm">Foutrapporten zijn tijdelijk niet beschikbaar. Probeer opnieuw; dit betekent niet dat alle fouten zijn opgelost.</p>}
+        {errorReportsStatus==='ready'&&!errorReports.length&&<p className="rounded-xl border border-dashed p-4 text-sm text-muted-foreground">Geen open foutrapporten in de recente lijst.</p>}
         {errorReports.map(report=><article key={report.id} className={"space-y-3 rounded-xl border p-4 "+(report.status==='needs_maker'?'border-amber-500/50':'')}>
           <div className="flex flex-wrap items-start justify-between gap-2">
             <div>
