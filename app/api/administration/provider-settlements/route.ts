@@ -36,7 +36,7 @@ export async function GET(){
    .order('booked_on',{ascending:false}).range(0,999),
   db.from('admin_provider_transactions')
    .select('id,event_id,provider,transaction_id,status,amount_cents,currency',{count:'exact'})
-   .in('status',['paid','refunded']).order('occurred_at',{ascending:false}).range(0,1999),
+    .in('provider',['eventix','sumup']).in('status',['paid','refunded']).order('occurred_at',{ascending:false}).range(0,1999),
   db.from('admin_provider_bank_settlements')
    .select('id,bank_statement_id,provider,event_id,gross_cents,fee_cents,payout_cents,note,approved_at',{count:'exact'})
    .order('approved_at',{ascending:false}).range(0,999),
@@ -91,7 +91,7 @@ export async function POST(request:Request){
   db.from('admin_bank_statement_transactions')
    .select('id,direction,currency,amount_cents,posted_payment_id,ignored_at').eq('id',statementId).maybeSingle(),
   db.from('admin_provider_transactions')
-   .select('id,event_id,provider,transaction_id,status,amount_cents,currency').in('id',transactionIds as string[])
+   .select('id,event_id,provider,transaction_id,status,amount_cents,currency').in('id',transactionIds as string[]).in('provider',['eventix','sumup'])
  ])
  if(bank.error||provider.error||!bank.data||!provider.data)return reply({error:'settlement_source_unavailable'},503)
  const entries:SettlementTransaction[]=[]
