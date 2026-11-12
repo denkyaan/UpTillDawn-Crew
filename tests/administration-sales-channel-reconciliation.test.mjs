@@ -4,7 +4,7 @@ import {reconcileExternalSales} from '../lib/administration/sales-channel-reconc
 const payment=(overrides={})=>({provider:'sumup',transactionId:'tx1',eventId:'event1',category:'tickets',amountCents:2500,currency:'EUR',status:'paid',saleReference:'order1',...overrides})
 test('groups tickets, merch and tokens without double counting matching cross-provider sales',()=>{
  const result=reconcileExternalSales([payment(),payment({provider:'eventix',transactionId:'ticket1'}),payment({transactionId:'tx2',category:'merch',saleReference:'shirt1',amountCents:1500}),payment({transactionId:'tx3',category:'tokens',saleReference:'tokens1',amountCents:1000})])
- assert.deepEqual(result.totals,{tickets:2500,merch:1500,tokens:1000})
+ assert.deepEqual(result.totals,{tickets:2500,merch:1500,tokens:1000,bar:0,topups:0})
  assert.equal(result.duplicates.length,1)
 })
 test('does not merge sales based on matching amount alone',()=>{
