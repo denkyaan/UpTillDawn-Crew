@@ -309,7 +309,7 @@ export async function signInAdmin(formData: FormData) {
 // ── Sign Out ──────────────────────────────────────────────────
 export async function signOut() {
     const supabase = await createClient(); await supabase.auth.signOut()
-    const cookieStore = await cookies(); cookieStore.delete('uptilldawn-admin-edit-mode'); cookieStore.delete('uptilldawn-admin-edit-role'); redirect('/login')
+    const cookieStore = await cookies(); cookieStore.delete('uptilldawn-admin-edit-mode'); cookieStore.delete('uptilldawn-admin-edit-role'); cookieStore.delete('uptilldawn-last-workspace'); cookieStore.delete('uptilldawn-last-portal'); redirect('/login')
 }
 
 // ── Forgot Password ──────────────────────────────────────────
