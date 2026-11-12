@@ -104,7 +104,9 @@ jobs:
 
   release-production:
     needs: fast
-    if: ${{ github.event_name == 'workflow_dispatch' && inputs.release_production == true && github.ref == 'refs/heads/main' }}
+    # Explicit owner-authorized release marker is permitted on a reviewed main merge;
+    # ordinary main pushes and PRs NEVER start production CI.
+    if: ${{ (github.event_name == 'workflow_dispatch' && inputs.release_production == true && github.ref == 'refs/heads/main') || (github.event_name == 'push' && github.ref == 'refs/heads/main' && contains(github.event.head_commit.message, '[release-production]')) }}
     runs-on: ubuntu-latest
     permissions:
       actions: write
@@ -116,12 +118,14 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          # A newer main commit must not block the requested production validation.
-          # workflow_dispatch(ref=main) tests the current main snapshot; the
-          # production deploy subsequently pins and verifies that exact CI SHA.
+          # Require the exact validated current main commit; prevent unintended release after branch drift.
           current_sha="$(gh api "repos/${GITHUB_REPOSITORY}/git/ref/heads/main" --jq '.object.sha')"
+          if [ "${current_sha}" != "${GITHUB_SHA}" ]; then
+            echo "::error::Main advanced to ${current_sha}; explicit release SHA was ${GITHUB_SHA}"
+            exit 1
+          fi
           gh api -X POST "repos/${GITHUB_REPOSITORY}/actions/workflows/ci.yml/dispatches" -f ref=main
-          echo "Explicit production CI requested for current main ${current_sha} (triggering CI main SHA ${GITHUB_SHA})"
+          echo "Explicit production CI requested for exact main ${current_sha}"
 
   browser-acceptance:
     name: Six-role browser acceptance (manual QA only)
