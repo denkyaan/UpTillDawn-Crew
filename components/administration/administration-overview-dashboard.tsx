@@ -94,7 +94,7 @@ export async function AdministrationOverviewDashboard({locale}:{locale:Supported
  const format=(value:string)=>new Intl.DateTimeFormat(dateLocale,{dateStyle:"medium",timeStyle:"short",timeZone:"Europe/Brussels"}).format(new Date(value))
  return <main className="mx-auto w-full max-w-5xl space-y-6 p-4 pb-28 md:p-8">
   <header className="space-y-2">
-   <p className="text-xs font-black uppercase tracking-[.2em] text-violet-400">UpTillDawn</p>
+   <p data-no-translate className="text-xs font-black uppercase tracking-[.2em] text-violet-400">UpTillDawn</p>
    <h1 className="text-2xl font-bold sm:text-3xl">{t.title}</h1>
    <p className="max-w-2xl text-sm text-muted-foreground">{t.intro}</p>
   </header>
