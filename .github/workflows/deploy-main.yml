@@ -331,3 +331,18 @@ jobs:
             exit 1
           fi
           echo 'OCR authentication gate is active on main.'
+ 
+      - name: Adversarial anonymous route and API guard probes on Main
+        if: steps.current-main.outputs.current == 'true'
+        env:
+          E2E_BASE_URL: https://uptilldawn-main.uptilldawn.workers.dev
+        run: node scripts/main-adversarial-surface.mjs --probe
+
+      - name: Publish Main adversarial route evidence
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: main-adversarial-routes
+          path: test-results/main-adversarial/
+          if-no-files-found: ignore
+          retention-days: 14
