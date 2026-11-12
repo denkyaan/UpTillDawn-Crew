@@ -56,7 +56,7 @@ test('equivalent marketing, sponsor and contact shortcuts do not duplicate canon
 
 test('Administration Events supports permission-scoped draft creation/edit without unreviewed publication',()=>{
  const source=read('app/(app)/portals/administration/modules/[slug]/page.tsx')
- const migration=read('supabase/migrations/20261112213000_administration_event_draft_workflow.sql')
+ const migration=read('supabase/migrations/20261112215746_administration_event_draft_workflow.sql')
  assert.match(source,/saveAdministrationEventDraft/)
  assert.match(source,/upt_administration_save_event_draft/)
  assert.match(source,/Nieuw evenement aanmaken/)
