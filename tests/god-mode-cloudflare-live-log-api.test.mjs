@@ -85,7 +85,7 @@ test('God Mode Cloudflare logs can inspect production but never mutate it or mix
  assert.match(result.json.logs[0].source,/uptilldawn-crew/)
  assert.equal(JSON.parse(calls[0].params.body).parameters.filters[0].value,'uptilldawn-crew')
  assert.equal(calls[0].params.method,'POST','Cloudflare POST is exclusively a query; app API remains GET-only')
- assert.equal(runtime({config:valid}).GET instanceof Function,true)
+ assert.equal(typeof runtime({config:valid}).GET,'function')
  assert.doesNotMatch(source,/export async function POST|wrangler deploy|workers\/scripts\/.*\/upload/)
 })
 
