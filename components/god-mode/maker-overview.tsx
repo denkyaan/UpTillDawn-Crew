@@ -7,12 +7,12 @@ type Destination='ai'|'builder'|'versions'|'connections'|'logs'
 type Run={id:number;name:string;status:string;conclusion:string|null;url:string;current:boolean;sha:string;createdAt:string}
 type Overview={
  branch:string;environment:string;githubConnected:boolean;githubAvailable:boolean;head:string|null;deployedSha:string|null;mainHead:string|null;
- ci:Run|null;deploy:Run|null;productionSchema:{ready:boolean;missing:string[];checked:number}|null;
+ ci:Run|null;deploy:Run|null;productionReleaseShaVerified?:boolean;productionSchema:{ready:boolean;missing:string[];checked:number}|null;
  reports:{checked:number;open:number;needsMaker:number;failed:number}|null;
  checks:{code:boolean;ci:boolean;deploy:boolean;reports:boolean}
 }
 const dictionary={
- nl:{schemaBlocked:'Productierelease geblokkeerd: ontbrekende databasestructuur',schemaUnknown:'Databasegereedheid niet geverifieerd. Koppel Supabase-beheertoegang vóór publicatie.',productionCode:'Laatst bevestigde productieversie',ciProduction:'CI production',deployProduction:'Deploy production',productionEnvironment:'Productie · live-omgeving · wijzigingen vereisen een afzonderlijke release',heading:'Technisch overzicht',intro:'De status van main-test, CI, deployments en foutherstel op één plaats. Personeelsbeheer blijft in Admin.',
+ nl:{schemaBlocked:'Productierelease geblokkeerd: ontbrekende databasestructuur',schemaUnknown:'Databasegereedheid niet geverifieerd. Koppel Supabase-beheertoegang vóór publicatie.',productionCode:'Laatst bevestigde productieversie',ciProduction:'CI production',deployProduction:'Deploy production',productionEnvironment:'Productie · live-omgeving · wijzigingen vereisen een afzonderlijke release',productionUnverified:'Productiecode niet onafhankelijk bevestigd. Een geslaagde CI is geen bewijs dat die versie live staat.',heading:'Technisch overzicht',intro:'De status van main-test, CI, deployments en foutherstel op één plaats. Personeelsbeheer blijft in Admin.',
   refresh:'Vernieuwen',loading:'Status controleren…',error:'De status kon niet worden opgehaald.',unknown:'Niet gecontroleerd',
   passed:'Geslaagd',failed:'Mislukt',running:'Bezig',queued:'Wacht',cancelled:'Geannuleerd',outdated:'Andere commit',
   source:'Broncode main',ci:'CI main',deploy:'Deploy main',reports:'Foutrapporten',needsMaker:'Makeractie nodig',
@@ -30,7 +30,7 @@ const dictionary={
   logs:'Systeemlogs',logsHint:'Bekijk bestaande app-, herstel- en auditregistraties',
   configure:'Koppelingen',configureHint:'Beheer bestaande GitHub- en databaseverbindingen',
   environment:'Main-test · productie staat los van deze omgeving'},
- fr:{schemaBlocked:'Version bloquée : structure de base de données manquante',schemaUnknown:'Base de données non vérifiée. Connectez Supabase Management avant publication.',productionCode:'Dernière version de production confirmée',ciProduction:'CI production',deployProduction:'Deploy production',productionEnvironment:'Production · environnement réel · version validée séparément',heading:'Tableau technique',intro:'État de main-test, CI, déploiements et réparation des erreurs au même endroit. Le personnel reste dans Admin.',
+ fr:{schemaBlocked:'Version bloquée : structure de base de données manquante',schemaUnknown:'Base de données non vérifiée. Connectez Supabase Management avant publication.',productionCode:'Dernière version de production confirmée',ciProduction:'CI production',deployProduction:'Deploy production',productionEnvironment:'Production · environnement réel · version validée séparément',productionUnverified:'La version en ligne n’est pas vérifiée indépendamment. Une CI réussie ne prouve pas la publication.',heading:'Tableau technique',intro:'État de main-test, CI, déploiements et réparation des erreurs au même endroit. Le personnel reste dans Admin.',
   refresh:'Actualiser',loading:'Vérification des états…',error:'Impossible de récupérer les états.',unknown:'Non vérifié',
   passed:'Réussi',failed:'Échec',running:'En cours',queued:'En attente',cancelled:'Annulé',outdated:'Autre commit',
   source:'Code main',ci:'CI main',deploy:'Deploy main',reports:'Rapports d’erreurs',needsMaker:'Action Créateur requise',
@@ -48,7 +48,7 @@ const dictionary={
   logs:'Journaux système',logsHint:'Consulter les journaux de l’application, récupération et audit',
   configure:'Connexions',configureHint:'Gérer les connexions GitHub et base de données',
   environment:'Main-test · production distincte'},
- en:{schemaBlocked:'Production release blocked: missing database structure',schemaUnknown:'Database readiness unverified. Connect Supabase Management before release.',productionCode:'Last confirmed production version',ciProduction:'CI production',deployProduction:'Deploy production',productionEnvironment:'Production · live environment · separate release approval required',heading:'Technical overview',intro:'Main-test status, CI, deployments and error recovery in one place. Personnel is managed in Admin.',
+ en:{schemaBlocked:'Production release blocked: missing database structure',schemaUnknown:'Database readiness unverified. Connect Supabase Management before release.',productionCode:'Last confirmed production version',ciProduction:'CI production',deployProduction:'Deploy production',productionEnvironment:'Production · live environment · separate release approval required',productionUnverified:'Live production revision has not been independently verified. Passing CI does not prove deployment.',heading:'Technical overview',intro:'Main-test status, CI, deployments and error recovery in one place. Personnel is managed in Admin.',
   refresh:'Refresh',loading:'Checking status…',error:'Unable to load status.',unknown:'Unverified',
   passed:'Passed',failed:'Failed',running:'Running',queued:'Queued',cancelled:'Cancelled',outdated:'Different commit',
   source:'Main source',ci:'CI main',deploy:'Deploy main',reports:'Error reports',needsMaker:'Maker action needed',
@@ -66,7 +66,7 @@ const dictionary={
   logs:'System logs',logsHint:'Inspect available app, recovery and audit records',
   configure:'Connections',configureHint:'Manage the existing GitHub and database connections',
   environment:'Main-test · production is separate'},
- de:{schemaBlocked:'Produktionsfreigabe blockiert: Datenbankstruktur fehlt',schemaUnknown:'Datenbankbereitschaft nicht geprüft. Supabase-Verwaltung vor dem Release verbinden.',productionCode:'Letzte bestätigte Produktionsversion',ciProduction:'CI production',deployProduction:'Deploy production',productionEnvironment:'Produktion · Live-Umgebung · separate Freigabe erforderlich',heading:'Technische Übersicht',intro:'Main-Teststatus, CI, Deployments und Fehlerbehebung an einem Ort. Personalverwaltung bleibt in Admin.',
+ de:{schemaBlocked:'Produktionsfreigabe blockiert: Datenbankstruktur fehlt',schemaUnknown:'Datenbankbereitschaft nicht geprüft. Supabase-Verwaltung vor dem Release verbinden.',productionCode:'Letzte bestätigte Produktionsversion',ciProduction:'CI production',deployProduction:'Deploy production',productionEnvironment:'Produktion · Live-Umgebung · separate Freigabe erforderlich',productionUnverified:'Die Live-Version ist nicht unabhängig bestätigt. Erfolgreiche CI beweist keine Bereitstellung.',heading:'Technische Übersicht',intro:'Main-Teststatus, CI, Deployments und Fehlerbehebung an einem Ort. Personalverwaltung bleibt in Admin.',
   refresh:'Aktualisieren',loading:'Status wird geprüft…',error:'Status konnte nicht geladen werden.',unknown:'Nicht geprüft',
   passed:'Erfolgreich',failed:'Fehler',running:'Läuft',queued:'Wartet',cancelled:'Abgebrochen',outdated:'Anderer Commit',
   source:'Main-Quellcode',ci:'CI main',deploy:'Deploy main',reports:'Fehlerberichte',needsMaker:'Maker-Aktion nötig',
@@ -121,6 +121,7 @@ export function MakerOverview({navigate,environment}:{navigate:(tab:Destination)
  if(state){
   if(environment==='production'&&state.productionSchema?.ready===false)priority=t.schemaBlocked
   else if(environment==='production'&&state.productionSchema===null)priority=t.schemaUnknown
+  else if(environment==='production'&&state.productionReleaseShaVerified!==true)priority=t.productionUnverified
   else if(state.ci?.current&&state.ci.conclusion==='failure')priority=t.ciFailure
   else if((state.reports?.needsMaker||0)>0)priority=t.required
   else if(state.ci?.current&&state.ci.conclusion==='success'&&(!state.deploy?.current||state.deploy.conclusion!=='success'))priority=t.deployPending
@@ -151,6 +152,7 @@ export function MakerOverview({navigate,environment}:{navigate:(tab:Destination)
   </div>
   <div className="rounded-2xl border border-amber-500/30 p-4"><h3 className="font-black">{t.next}</h3><p role="status" className="mt-2 text-sm">{priority}</p></div>
   {environment==='production'&&state&&<p role="status" className={'rounded-xl border p-4 text-sm '+(state.productionSchema?.ready===false?'border-red-500/60 text-red-400':'border-amber-500/30')}>{state.productionSchema?.ready===false?t.schemaBlocked+': '+state.productionSchema.missing.join(', '):state.productionSchema?.ready===true?t.passed:t.schemaUnknown}</p>}
+  {environment==='production'&&state?.productionReleaseShaVerified!==true&&<p role="status" className="rounded-xl border border-amber-500/40 bg-amber-500/5 p-4 text-sm">{t.productionUnverified}</p>}
   {state&&<section className="grid gap-3 sm:grid-cols-2">
     <div className="rounded-xl border p-4"><h3 className="font-bold">{t.reports}</h3>
       <p className="mt-1 text-sm">{t.errors}: {state.reports?.open??t.unknown}</p>
