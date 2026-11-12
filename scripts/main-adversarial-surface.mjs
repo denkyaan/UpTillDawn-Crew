@@ -1,7 +1,7 @@
 // Repository-wide read-only inventory + bounded anonymous probes for MAIN only.
 // Never issues authenticated mutations, scans external providers, or touches production.
 import {readdirSync,mkdirSync,writeFileSync} from 'node:fs'
-import {join,posix} from 'node:path'
+import {join} from 'node:path'
 
 const OUTPUT='test-results/main-adversarial'
 mkdirSync(OUTPUT,{recursive:true})
