@@ -98,6 +98,64 @@ jobs:
       - name: Production dependency security gate
         run: npm audit --omit=dev --audit-level=high
 
+      - name: One-time read-only live Cloudflare God Mode binding verification
+        if: ${{ github.event_name == 'pull_request' && github.head_ref == 'qa/cloudflare-main-observability-binding-20261112' }}
+        shell: bash
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        run: |
+          set -euo pipefail
+          node --input-type=module <<'NODE'
+          const account=process.env.CLOUDFLARE_ACCOUNT_ID
+          const token=process.env.CLOUDFLARE_API_TOKEN
+          if(!account||!token)throw new Error('GitHub Cloudflare management credentials missing; binding status unverified')
+          const base='https://api.cloudflare.com/client/v4/accounts/'+account
+          const worker='uptilldawn-main'
+          const res=await fetch(base+'/workers/scripts/'+worker+'/secrets',{
+            headers:{Authorization:'Bearer '+token},cache:'no-store',signal:AbortSignal.timeout(20000),
+          })
+          if(!res.ok)throw new Error('Unable to verify main Worker binding metadata: HTTP '+res.status)
+          const data=await res.json()
+          if(data.success!==true||!Array.isArray(data.result))throw new Error('Cloudflare binding metadata is invalid')
+          const binding=data.result.find(s=>s?.name==='CLOUDFLARE_OBSERVABILITY_CONFIG')
+          const exists=Boolean(binding)
+          const type=typeof binding?.type==='string'?binding.type:'unknown'
+          console.log('God Mode main Worker observability binding:',exists?'PRESENT':'MISSING')
+          console.log('God Mode binding type:',type)
+          if(!exists)throw new Error('CLOUDFLARE_OBSERVABILITY_CONFIG is missing from uptilldawn-main')
+          if(type==='plain_text'||type==='plain')throw new Error('Observability config must be encrypted as a Worker Secret, not plain text')
+          const hostname='https://uptilldawn-main.uptilldawn.workers.dev'
+          const publicRoute=await fetch(hostname+'/api/god/cloudflare-logs?environment=main&limit=1',{
+            redirect:'manual',cache:'no-store',signal:AbortSignal.timeout(20000),
+          })
+          console.log('Live unauthenticated God Mode Cloudflare API status:',publicRoute.status)
+          if(publicRoute.status!==401)throw new Error('God Mode Cloudflare API must fail closed for unauthenticated requests')
+          const now=Date.now()
+          // Additional provider-query health check with the existing deploy token.
+          // It may lack Observability scope; a 401/403 here does NOT invalidate
+          // the independent runtime-scoped token stored inside the Worker.
+          const query=await fetch(base+'/workers/observability/telemetry/query',{
+            method:'POST',
+            headers:{Authorization:'Bearer '+token,'Content-Type':'application/json'},
+            body:JSON.stringify({
+              queryId:'main-god-log-binding-qa',dry:true,view:'events',limit:1,
+              timeframe:{from:now-15*60000,to:now},
+              parameters:{datasets:['cloudflare-workers'],filterCombination:'and',
+                filters:[{id:'1',key:'$metadata.service',type:'string',operation:'eq',kind:'filter',value:worker}]},
+            }),
+            cache:'no-store',signal:AbortSignal.timeout(20000),
+          }).catch(()=>null)
+          if(query){
+            console.log('Independent Cloudflare Observability query via GitHub deployment token: HTTP',query.status)
+            if(query.ok){
+              const payload=await query.json().catch(()=>null)
+              console.log('Cloudflare query response schema verified:',payload?.success===true&&Array.isArray(payload?.result?.events?.events))
+            }
+          }else console.log('Independent Cloudflare Observability query unavailable (runtime token remains private)')
+          console.log('PASS: Main Worker binding present and live Maker-only log route denies anonymous access')
+          NODE
+
   full-validation:
     name: Full validation (explicit commit opt-in)
     needs: fast
