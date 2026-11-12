@@ -52,6 +52,13 @@ async function releaseSchemaReadiness(credential:string){
    'admin_financial_payments:id','admin_operational_obligations:id',
    'admin_inventory_receipts:id','admin_ticket_sales:id',
    'admin_provider_event_mappings:id',
+   'admin_provider_transactions:transaction_id',
+   'admin_bank_statement_transactions:payment_reference',
+   'admin_financial_line_imports:source_sha256',
+   'admin_provider_bank_settlements:approved_by',
+   'admin_provider_bank_settlement_items:provider_transaction_id',
+   'upt_organization_leadership:managed_portal_grant',
+   'upt_personnel_role_slots:role_two',
   ] as const
   const values=expected.map(e=>{const [table,column]=e.split(':');return "('"+table+"','"+column+"')"}).join(',')
   const query='with req(tab,col) as (values '+values+") select tab,col from req where not exists (select 1 from information_schema.columns c where c.table_schema='public' and c.table_name=req.tab and c.column_name=req.col) order by tab"

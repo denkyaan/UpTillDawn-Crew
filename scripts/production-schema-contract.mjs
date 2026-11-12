@@ -13,6 +13,13 @@ const relations=[
  ['admin_inventory_receipts',['request_id','line_id','item_id','quantity']],
  ['admin_ticket_sales',['id','event_id','external_id','gross_cents','import_id']],
  ['admin_provider_event_mappings',['id','provider','event_id','external_event_id','enabled']],
+ ['admin_provider_transactions',['id','provider','event_id','transaction_id','amount_cents','status']],
+ ['admin_bank_statement_transactions',['id','transaction_id','booked_on','amount_cents','payment_reference']],
+ ['admin_financial_line_imports',['id','document_id','source_sha256','row_count']],
+ ['admin_provider_bank_settlements',['id','bank_statement_id','provider','gross_cents','payout_cents','approved_by']],
+ ['admin_provider_bank_settlement_items',['settlement_id','provider_transaction_id','signed_cents']],
+ ['upt_organization_leadership',['slot','user_id','assigned_by','managed_portal_grant']],
+ ['upt_personnel_role_slots',['user_id','role_one','role_two','updated_at']],
 ]
 
 /** Resolve columns without reading rows or requiring a privileged database key. */

@@ -83,6 +83,8 @@ jobs:
           exit "$failed"
       - name: Inventory every Main page and API route
         run: node scripts/main-adversarial-surface.mjs --inventory-only
+      - name: Audit requested product functionality against committed code and tests
+        run: node scripts/main-requirements-audit.mjs
       - name: Final six-role acceptance inventory (static evidence only)
         shell: bash
         run: |
