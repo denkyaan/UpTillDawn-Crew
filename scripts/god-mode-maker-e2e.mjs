@@ -43,6 +43,16 @@ async function verifyMaker(viewport){
   assert.equal((await safeRequest(context,'/api/god/logs?environment=main&limit=3')).status(),401,'Maker account requires a separate God session')
   await page.goto(base+'/maker-mode',{waitUntil:'domcontentloaded',timeout:45000})
   await page.getByRole('heading',{name:'Kies je modus'}).waitFor({state:'visible',timeout:30000})
+  await page.getByRole('button',{name:/Normale app/}).waitFor({state:'visible',timeout:30000})
+  await page.getByRole('button',{name:/God Mode/}).waitFor({state:'visible',timeout:30000})
+  await Promise.all([
+   page.waitForURL(url=>url.pathname==='/admin',{timeout:30000}),
+   page.getByRole('button',{name:/Normale app/}).click(),
+  ])
+  await page.getByRole('heading',{name:'Operationeel command center'}).waitFor({state:'visible',timeout:30000})
+  record(tag+' Maker enters the normal Admin portal without losing Owner entitlement')
+  await page.goto(base+'/maker-mode?portal=admin',{waitUntil:'domcontentloaded',timeout:45000})
+  await page.getByRole('heading',{name:'Kies je modus'}).waitFor({state:'visible',timeout:30000})
   const enter=page.getByRole('button',{name:/God Mode/}).first()
   await enter.waitFor({state:'visible',timeout:30000})
   await Promise.all([
