@@ -27,6 +27,18 @@ ChatGPT's GitHub/Supabase connector sessions cannot be transferred to a deployed
 
 Credentials are encrypted in Supabase Vault, never written to GitHub or browser storage, and can be disconnected. Every retrieval and modification RPC checks the private expiring God Mode session. HTTP routes additionally reject cross-site requests and use no-store responses. The public RPC grants support the dedicated God Mode cookie authentication, not anonymous access: absent/invalid/expired God tokens are rejected.
 
+## Error-AI: bewijs vóór afsluiten
+
+Een AI-diagnose is nooit gelijk aan bewezen herstel. In **AI & herstel** verschijnen open incidenten op ernst en herhaling, inclusief een foutmelding als logs niet kunnen worden opgehaald. Het AI-herstelvoorstel beschouwt foutteksten en eerdere modelantwoorden als onbetrouwbare gegevens; het voert daarin geen instructies uit.
+
+Een Maker kan een incident alleen afsluiten via **Herstel controleren** na het daadwerkelijk herhalen van de fouttest. Verplicht: een concrete beschrijving van minstens 30 tekens en de volledige commit-SHA van een succesvolle, actuele deployment in dezelfde omgeving, die niet ouder is dan het oorspronkelijke incident. Voor productie moet ook de `production-current`-tag overeenkomen. Het controleerbare deploymentrun-ID wordt toegevoegd aan de notitie. Zonder bewijs blijft de fout open.
+
+**Let op:** een succesvolle deployment bewijst op zichzelf nog niet dat die specifieke fout is verholpen. De Maker moet de reproductiestappen werkelijk opnieuw uitvoeren; automatische reparatie en productiepublicatie worden niet gesuggereerd als ze niet zijn uitgevoerd.
+
+## Platformlogs en externe verbinding
+
+Main schakelt Cloudflare Workers invocation logging expliciet in; de Cloudflare Logs API wordt **nog niet** rechtstreeks vanuit God Mode bevraagd. De huidige God Mode-logviewer omvat opgeslagen app-/herstellogs en, mits de juiste Supabase Management-koppeling, Supabase-platformlogs. Cloudflare Workers-logonderzoek vereist voorlopig het Cloudflare-dashboard met een afzonderlijke leesbevoegdheid. Een algemeen Cloudflare-deploymenttoken hoort niet in de browser of een runtime Worker-secret te worden hergebruikt.
+
 ## Limits and recovery
 
 The code editor edits text source; binary files are not treated as text. A changeset supports up to 30 files and 1.5 MB combined text. AI context is smaller and may require several focused requests. A new button's event handler must run in a client component, or use an appropriate server action.
