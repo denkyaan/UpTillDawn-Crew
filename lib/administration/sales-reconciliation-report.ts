@@ -70,10 +70,10 @@ export function buildSalesReconciliationReport(payments:readonly ExternalPayment
 
 /** Export only accepted reconciled movements. Exceptions remain separate and cannot be mistaken for booked revenue. */
 export function salesReconciliationCsv(report:SalesReconciliationReport):string{
- const rows:(string|number)[][]=[['event_id','category','paid_cents','refunded_cents','net_cents','accepted_transactions']]
+ const rows:(string|number)[][]=[['event_id','category','paid_cents','refunded_cents','net_cents','accepted_transactions','accounting_classification']]
  for(const event of report.events){
   for(const category of ['tickets','merch','tokens','bar','topups'] as const){
-   rows.push([event.eventId,category,event.paidCents[category],event.refundedCents[category],event.netCents[category],event.acceptedTransactions])
+   rows.push([event.eventId,category,event.paidCents[category],event.refundedCents[category],event.netCents[category],event.acceptedTransactions,category==='topups'?'prepaid-liability':'sale'])
   }
  }
  return financeCsv(rows)
