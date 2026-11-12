@@ -156,30 +156,6 @@ jobs:
         if: steps.current-main.outputs.current == 'true'
         run: npx wrangler deploy --config wrangler.main.jsonc
 
-      - name: Configure optional Maker-only Cloudflare runtime-log query token
-        if: steps.current-main.outputs.current == 'true'
-        shell: bash
-        env:
-          CLOUDFLARE_OBSERVABILITY_TOKEN: ${{ secrets.CLOUDFLARE_OBSERVABILITY_TOKEN }}
-        run: |
-          set -euo pipefail
-          if [ -z "${CLOUDFLARE_OBSERVABILITY_TOKEN:-}" ]; then
-            echo "::notice::Cloudflare runtime-log viewer not connected. Configure the separate CLOUDFLARE_OBSERVABILITY_TOKEN Actions secret to enable it."
-            exit 0
-          fi
-          # Bind only the scoped observability token, never the privileged
-          # CLOUDFLARE_API_TOKEN used for publishing Workers.
-          node --input-type=module <<'NODE' > /tmp/upt-god-runtime-logs.json
-          const id=process.env.CLOUDFLARE_ACCOUNT_ID
-          const token=process.env.CLOUDFLARE_OBSERVABILITY_TOKEN
-          if(!/^[a-f0-9]{32}$/i.test(id||'')||(token||'').length<20)throw Error('Invalid read-only observability configuration')
-          process.stdout.write(JSON.stringify({accountId:id,token}))
-          NODE
-          chmod 600 /tmp/upt-god-runtime-logs.json
-          npx wrangler secret put CLOUDFLARE_OBSERVABILITY_CONFIG --config wrangler.main.jsonc < /tmp/upt-god-runtime-logs.json
-          rm -f /tmp/upt-god-runtime-logs.json
-          echo "Optional Cloudflare runtime logging read binding installed (value withheld)."
-
       - name: Diagnose Cloudflare workers.dev routing
         if: steps.current-main.outputs.current == 'true'
         shell: bash
