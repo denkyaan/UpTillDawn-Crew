@@ -5,7 +5,6 @@ import {externalServicesReadiness} from "@/lib/administration/external-services-
 import {ExternalServicesReadiness} from "@/components/admin/external-services-readiness"
 import { revalidatePath } from 'next/cache'
 import {invoiceDateRange} from "@/lib/administration/invoice-filter-validation"
-import {administrationWorkflowHref} from "@/lib/administration/workflow-links"
 import FinanceReconciliationSummary from "@/components/administration/finance-reconciliation-summary"
 import OperationalWorkQueue from "@/components/administration/operational-work-queue"
 import InventoryReceipts from "@/components/administration/inventory-receipts"
@@ -70,10 +69,7 @@ const ui={
  en:{section:"Workspace overview",notAvailable:"Data could not be loaded. Please retry.",related:"Related administration",finance:"Open financial documents",back:"Back to overview"},
  de:{section:"Arbeitsübersicht",notAvailable:"Daten konnten nicht geladen werden. Bitte erneut versuchen.",related:"Zugehörige Verwaltung",finance:"Finanzdokumente öffnen",back:"Zur Übersicht"},
 } as const
-const financeRelated=new Set(["invoices","banking","documents","reports"])
-const operationalModuleLabels={
- nl:"Open bestaande beheerfunctie",fr:"Ouvrir la fonction de gestion",en:"Open existing management workflow",de:"Vorhandene Verwaltungsfunktion öffnen",
-} as const
+const financeRelated=new Set(["documents"])
 
 
 export const dynamic = "force-dynamic"
@@ -83,6 +79,7 @@ export default async function AdministrationModulePage({params,searchParams}:{pa
  const {event:requestedEvent,page:requestedPage,status:requestedCaseStatus,invoiceKind,invoiceStatus,invoicePage,invoiceNumber,invoiceFrom,invoiceTo,invoiceOverdue,invoiceSort,notificationPage}=await (searchParams??Promise.resolve({event:undefined,page:undefined,status:undefined,invoiceKind:undefined,invoiceStatus:undefined,invoicePage:undefined,invoiceNumber:undefined,invoiceFrom:undefined,invoiceTo:undefined,invoiceOverdue:undefined,invoiceSort:undefined,notificationPage:undefined}))
  const adminModule=administrationModules.find(item=>item.slug===slug&&slug!=="dashboard"&&slug!=="finance")
  if(!adminModule)notFound()
+ if(slug==="contacts")redirect("/portals/administration/counterparties")
  const current=await getCurrentUser()
  if(!current)redirect("/login")
  if((!current.approved||Boolean(current.account_blocked))&&!current.isOwner)redirect("/portals")
@@ -99,19 +96,18 @@ export default async function AdministrationModulePage({params,searchParams}:{pa
  const selectedInventoryEvent=selectedEvent&&!inventoryFilterEvents?.data?.some(event=>event.id===selectedEvent)?await supabase.from("events").select("id,name").eq("id",selectedEvent).maybeSingle():null
  const inventoryEventChoices=[...(inventoryFilterEvents?.data??[]),...(selectedInventoryEvent?.data?[selectedInventoryEvent.data]:[])]
  const inventoryCount=slug==="inventory" ? await (selectedEvent?supabase.from("inventory_items").select("id",{count:"exact",head:true}).eq("event_id",selectedEvent):supabase.from("inventory_items").select("id",{count:"exact",head:true})) : null
- const submittedHours=slug==="staff"?await supabase.from("timesheets").select("id,user_id,event_id,status,submitted_at").eq("status","submitted").order("submitted_at",{ascending:false}).limit(50):null
- const documentEventRows=slug==="documents"?await supabase.from("events").select("id,name").order("start_at",{ascending:false}).limit(100):null
+  const documentEventRows=slug==="documents"?await supabase.from("events").select("id,name").order("start_at",{ascending:false}).limit(100):null
  const documentEventId=slug==="documents"&&typeof requestedEvent==="string"&&/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(requestedEvent)&&documentEventRows?.data?.some(e=>e.id===requestedEvent)?requestedEvent:null
  const documentWorkplaceRows=documentEventId?await supabase.from("workplaces").select("id,name").eq("event_id",documentEventId).order("name"):null
  const financialRows=financeRelated.has(slug)?await supabase.from("admin_financial_documents").select("id,kind,status,gross_amount,due_date").order("due_date",{ascending:false}).limit(50):null
- const counterpartyRows=["contacts","sponsors"].includes(slug)?await supabase.from("admin_counterparties").select("id,name,kind").order("name",{ascending:true}).limit(100):null
+ const counterpartyRows=slug==="sponsors"?await supabase.from("admin_counterparties").select("id,name,kind").order("name",{ascending:true}).limit(100):null
  const movementRows=slug==="logistics"?await supabase.from("inventory_movements").select("*").limit(50):null
  const ticketEventRows=slug==="ticketing"?await supabase.from("events").select("id,name,status,start_at").order("start_at",{ascending:false,nullsFirst:false}).order("id",{ascending:true}).limit(50):null
  const contractBookingRows=slug==="contracts"?await supabase.from("admin_artist_bookings").select("id,artist_name,status,performance_at").order("created_at",{ascending:false}).limit(50):null
  const permitEventRows=slug==="permits"?await supabase.from("events").select("id,name,status,start_at").order("start_at",{ascending:false}).limit(50):null
  const marketingEventRows=slug==="marketing"?await supabase.from("events").select("id,name,status,start_at").order("start_at",{ascending:false}).limit(50):null
  const settingsAssignmentRows=slug==="settings"?await supabase.from("portal_role_assignments").select("id,user_id,portal,approved").eq("portal","administration").limit(50):null
- const workQueueEvents=["logistics","permits","tasks","staff","reports"].includes(slug)?await supabase.from("events").select("id,name").order("start_at",{ascending:false}).limit(100):null
+ const workQueueEvents=["logistics","permits","tasks","staff"].includes(slug)?await supabase.from("events").select("id,name").order("start_at",{ascending:false}).limit(100):null
  const automationRuns=slug==="automations"?await (supabase as unknown as SupabaseClient).from("admin_automation_runs").select("id,completed_at,delivered,error_code").order("completed_at",{ascending:false}).limit(20):null
  const automationTaskRows=slug==="automations"?await supabase.from("tasks").select("id,title,status").order("id",{ascending:false}).limit(50):null
  const reportTimesheetRows=slug==="reports"?await supabase.from("timesheets").select("id,status").limit(100):null
@@ -144,8 +140,7 @@ export default async function AdministrationModulePage({params,searchParams}:{pa
  const artistBookings=slug==="artists"?await supabase.from("admin_artist_bookings").select("id,artist_name,status,event_id,performance_at,fee_amount,currency,follow_up_at").order("created_at",{ascending:false}).limit(30):null
  const artistFollowUps=slug==="artists"?await supabase.from("admin_artist_bookings").select("id,artist_name,status,follow_up_at").not("follow_up_at","is",null).in("status",["enquiry","negotiating"]).order("follow_up_at",{ascending:true}).limit(100):null
  const artistNow=new Date().getTime()
- const artistEventCount=slug==="artists"?await supabase.from("events").select("id",{count:"exact",head:true}):null
- const liveRecords = (slug==="events"||slug==="artists")
+  const liveRecords = slug==="events"
   ? await supabase.from("events").select("id,name,status,start_at").order("start_at",{ascending:false}).limit(30)
   : slug==="inventory"
     ? await (selectedEvent?supabase.from("inventory_items").select("id,name,missing_quantity,damaged_quantity,event_id").eq("event_id",selectedEvent):supabase.from("inventory_items").select("id,name,missing_quantity,damaged_quantity,event_id")).order("id").range(inventoryStart,inventoryStart+inventoryPageSize-1)
@@ -253,7 +248,7 @@ export default async function AdministrationModulePage({params,searchParams}:{pa
    {automationTaskRows?.error?<p role="alert" className="mt-3 text-sm text-muted-foreground">{({nl:"Taken konden niet worden geladen.",fr:"Impossible de charger les tâches.",en:"Unable to load tasks.",de:"Aufgaben konnten nicht geladen werden."} as const)[locale]}</p>:automationTaskRows?.data?.length?<ul className="mt-3 divide-y">{automationTaskRows.data.map(item=><li key={item.id} className="flex flex-wrap justify-between gap-2 py-3 text-sm"><span className="font-medium">{item.title}</span><span className="text-muted-foreground">{item.status}</span></li>)}</ul>:<p className="mt-3 text-sm text-muted-foreground">{({nl:"Geen taken gevonden.",fr:"Aucune tâche.",en:"No tasks found.",de:"Keine Aufgaben gefunden."} as const)[locale]}</p>}
    <p className="mt-3 text-xs text-muted-foreground">{({nl:"Gebruik dit takenoverzicht voor menselijke opvolging. De automatische deadlinecontrole en uitvoeringen staan hieronder.",fr:"Utilisez cette liste pour le suivi humain. Le contrôle automatique des échéances et les exécutions sont présentés ci-dessous.",en:"Use this task overview for human follow-up. Automatic deadline checks and execution history are shown below.",de:"Diese Aufgabenübersicht dient der menschlichen Nachverfolgung. Automatische Fristprüfungen und Ausführungen stehen unten."} as const)[locale]}</p>
   </section>}
-  {(slug==="staff"||slug==="reports")&&<section className="space-y-3 rounded-2xl border bg-card p-5"><h2 className="text-lg font-semibold">{({nl:"Payroll-export van goedgekeurde uren",fr:"Export des heures approuvées pour la paie",en:"Approved hours for payroll export",de:"Genehmigte Stunden für Lohnexport"} as const)[locale]}</h2><p className="text-sm text-muted-foreground">{({nl:"Alleen afgesloten sessies van goedgekeurde of vergrendelde werkstaten. De export bevat geregistreerde tijd en pauzes; loon en wettelijke overuren worden niet berekend.",fr:"Uniquement les sessions closes des feuilles approuvées ou verrouillées. Temps et pauses enregistrés, sans calcul salarial ni heures supplémentaires légales.",en:"Closed sessions from approved or locked timesheets only. Exports recorded time and breaks; wages and statutory overtime are not calculated.",de:"Nur abgeschlossene Sitzungen genehmigter oder gesperrter Zeitnachweise. Erfasste Zeit und Pausen; keine Lohn- oder gesetzliche Überstundenberechnung."} as const)[locale]}</p><div className="flex flex-wrap gap-2">{(workQueueEvents?.data??[]).map(event=><a key={event.id} href={`/api/administration/payroll/export?event=${event.id}`} className="rounded-lg border px-3 py-2 text-sm">{event.name} · CSV</a>)}</div></section>}
+  {slug==="staff"&&<section className="space-y-3 rounded-2xl border bg-card p-5"><h2 className="text-lg font-semibold">{({nl:"Payroll-export van goedgekeurde uren",fr:"Export des heures approuvées pour la paie",en:"Approved hours for payroll export",de:"Genehmigte Stunden für Lohnexport"} as const)[locale]}</h2><p className="text-sm text-muted-foreground">{({nl:"Alleen afgesloten sessies van goedgekeurde of vergrendelde werkstaten. De export bevat geregistreerde tijd en pauzes; loon en wettelijke overuren worden niet berekend.",fr:"Uniquement les sessions closes des feuilles approuvées ou verrouillées. Temps et pauses enregistrés, sans calcul salarial ni heures supplémentaires légales.",en:"Closed sessions from approved or locked timesheets only. Exports recorded time and breaks; wages and statutory overtime are not calculated.",de:"Nur abgeschlossene Sitzungen genehmigter oder gesperrter Zeitnachweise. Erfasste Zeit und Pausen; keine Lohn- oder gesetzliche Überstundenberechnung."} as const)[locale]}</p><div className="flex flex-wrap gap-2">{(workQueueEvents?.data??[]).map(event=><a key={event.id} href={`/api/administration/payroll/export?event=${event.id}`} className="rounded-lg border px-3 py-2 text-sm">{event.name} · CSV</a>)}</div></section>}
   {slug==="automations"&&<section className="space-y-3 rounded-2xl border bg-card p-5"><h2 className="text-lg font-semibold">{({nl:"Automatische deadlineopvolging",fr:"Suivi automatique des échéances",en:"Automatic deadline tracking",de:"Automatische Fristüberwachung"} as const)[locale]}</h2><p className="text-sm text-muted-foreground">{({nl:"Openstaande dossiers worden elke minuut gecontroleerd. Administratie en Admin ontvangen per deadline één melding. Mislukte uitvoeringen blijven zichtbaar en worden bij de volgende controle opnieuw geprobeerd.",fr:"Les dossiers ouverts sont vérifiés chaque minute. L’Administration et l’Admin reçoivent une notification par échéance. Les échecs sont visibles et réessayés au contrôle suivant.",en:"Open cases are checked every minute. Administration and Admin receive one notification per deadline. Failed runs remain visible and retry on the next check.",de:"Offene Vorgänge werden jede Minute geprüft. Verwaltung und Admin erhalten eine Meldung pro Frist. Fehler bleiben sichtbar und werden bei der nächsten Prüfung erneut versucht."} as const)[locale]}</p>{automationRuns?.error?<p role="alert">{ui[locale].notAvailable}</p>:<ul className="divide-y">{(automationRuns?.data??[]).map(run=><li key={run.id} className="flex justify-between gap-2 py-2 text-sm"><span>{new Date(run.completed_at).toLocaleString(locale)}</span><span>{run.error_code?({nl:"Mislukt",fr:"Échec",en:"Failed",de:"Fehlgeschlagen"} as const)[locale]:`${run.delivered} ${({nl:"meldingen",fr:"notifications",en:"notifications",de:"Meldungen"} as const)[locale]}`}</span></li>)}</ul>}</section>}
   {slug==="reports"&&<section className="rounded-2xl border bg-card p-5">
    <h2 className="text-lg font-semibold">{({nl:"Werkstaten voor rapportage",fr:"Feuilles de temps pour rapports",en:"Timesheets for reporting",de:"Arbeitszeitnachweise für Berichte"} as const)[locale]}</h2>
@@ -325,11 +320,6 @@ export default async function AdministrationModulePage({params,searchParams}:{pa
    {!notificationRows?.error&&(notificationPageNumber>1||notificationHasNext)&&<nav aria-label={({nl:"Meldingspagina’s",fr:"Pages des notifications",en:"Notification pages",de:"Benachrichtigungsseiten"} as const)[locale]} className="mt-4 flex items-center justify-between gap-3"><span className="text-sm">{({nl:"Pagina",fr:"Page",en:"Page",de:"Seite"} as const)[locale]} {notificationPageNumber}</span><div className="flex gap-2">{notificationPageNumber>1&&<Link href={`/portals/administration/modules/notifications?notificationPage=${notificationPageNumber-1}`} className="rounded-lg border px-3 py-2 text-sm">{({nl:"Vorige",fr:"Précédent",en:"Previous",de:"Zurück"} as const)[locale]}</Link>}{notificationHasNext&&<Link href={`/portals/administration/modules/notifications?notificationPage=${notificationPageNumber+1}`} className="rounded-lg border px-3 py-2 text-sm">{({nl:"Volgende",fr:"Suivant",en:"Next",de:"Weiter"} as const)[locale]}</Link>}</div></nav>}
    <p className="mt-4 text-xs text-muted-foreground">{({nl:"Meldingen zijn hierboven zichtbaar. Open een melding via de bijbehorende veilige doelpagina.",fr:"Les notifications sont affichées ci-dessus. Ouvrez leur destination autorisée.",en:"Notifications are listed above. Open their authorized destination when available.",de:"Benachrichtigungen stehen oben. Öffnen Sie bei Bedarf das zulässige Ziel."} as const)[locale]}</p>
   </section>}
-  {slug==="staff"&&<section className="rounded-2xl border bg-card p-5">
-   <h2 className="text-lg font-semibold">{({nl:"Ingediende werkuren",fr:"Heures soumises",en:"Submitted timesheets",de:"Eingereichte Arbeitszeiten"} as const)[locale]}</h2>
-   {submittedHours?.error?<p role="alert" className="mt-3 text-sm text-muted-foreground">{({nl:"Werkuren konden niet worden geladen.",fr:"Impossible de charger les heures.",en:"Unable to load timesheets.",de:"Arbeitszeiten konnten nicht geladen werden."} as const)[locale]}</p>:submittedHours?.data?.length?<ul className="mt-3 divide-y">{submittedHours.data.map(hour=><li key={hour.id} className="flex flex-wrap justify-between gap-2 py-3 text-sm"><span className="font-medium">{hour.user_id} · {hour.event_id}</span><span className="text-muted-foreground">{hour.submitted_at?new Intl.DateTimeFormat(({nl:"nl-BE",fr:"fr-BE",en:"en-GB",de:"de-DE"} as const)[locale],{dateStyle:"medium",timeStyle:"short"}).format(new Date(hour.submitted_at)):"—"} · {hour.status}</span></li>)}</ul>:<p className="mt-3 text-sm text-muted-foreground">{({nl:"Geen ingediende werkuren.",fr:"Aucune heure soumise.",en:"No submitted timesheets.",de:"Keine eingereichten Arbeitszeiten."} as const)[locale]}</p>}
-   <Link href="/portals/administration/rosters" className="mt-4 inline-flex rounded-lg border px-4 py-2 text-sm font-semibold">{({nl:"Werkroosters beheren",fr:"Gérer les plannings",en:"Manage rosters",de:"Dienstpläne verwalten"} as const)[locale]}</Link>
-  </section>}
   {slug==="artists"&&<section className="rounded-2xl border bg-card p-5">
    <Link href="/portals/administration/modules/artists/new" className="mb-3 inline-flex rounded-xl bg-violet-600 px-4 py-2 text-sm font-semibold text-white">{({nl:"DJ-boeking toevoegen",fr:"Ajouter une réservation DJ",en:"Add DJ booking",de:"DJ-Buchung hinzufügen"} as const)[locale]}</Link>
    <div className="mb-5 rounded-xl border p-4">
@@ -352,16 +342,9 @@ export default async function AdministrationModulePage({params,searchParams}:{pa
    <h2 className="text-lg font-semibold">{({nl:"DJ-bookings voorbereiden",fr:"Préparer les réservations DJ",en:"Prepare DJ bookings",de:"DJ-Buchungen vorbereiten"} as const)[locale]}</h2>
    <p className="mt-2 text-sm text-muted-foreground">{({nl:"Leg eerst de artiest of het agentschap vast als contact. Gebruik de evenementenplanning om de datum te controleren. Boekingen en bevestigingsmails worden hier nog niet automatisch aangemaakt.",fr:"Enregistrez d'abord l'artiste ou l'agence comme contact. Vérifiez la date dans les événements. Les réservations et confirmations automatiques ne sont pas encore disponibles.",en:"Register the artist or agency as a contact first, then check the event date. Booking records and confirmation emails are not yet created automatically.",de:"Erfassen Sie zuerst Künstler oder Agentur als Kontakt und prüfen Sie das Veranstaltungsdatum. Buchungen und Bestätigungen werden noch nicht automatisch erstellt."} as const)[locale]}</p>
    <div className="mt-4 flex flex-wrap gap-3">
-    <Link href="/portals/administration/contacts" className="rounded-lg border px-4 py-2 text-sm font-semibold hover:border-violet-400">{({nl:"Contacten openen",fr:"Ouvrir les contacts",en:"Open contacts",de:"Kontakte öffnen"} as const)[locale]}</Link>
+    <Link href="/portals/administration/counterparties" className="rounded-lg border px-4 py-2 text-sm font-semibold hover:border-violet-400">{({nl:"Contacten openen",fr:"Ouvrir les contacts",en:"Open contacts",de:"Kontakte öffnen"} as const)[locale]}</Link>
     <Link href="/portals/administration/modules/events" className="rounded-lg border px-4 py-2 text-sm font-semibold hover:border-violet-400">{({nl:"Evenementen openen",fr:"Ouvrir les événements",en:"Open events",de:"Veranstaltungen öffnen"} as const)[locale]}</Link>
    </div>
-  </section>}
-  {slug==="artists"&&artistEventCount?.count!=null&&<p className="text-sm text-muted-foreground">{({nl:"Totaal evenementen",fr:"Nombre total d’événements",en:"Total events",de:"Veranstaltungen insgesamt"} as const)[locale]}: {artistEventCount.count}. {({nl:"Hieronder staan maximaal 30 recente evenementen.",fr:"Jusqu’à 30 événements récents sont affichés ci-dessous.",en:"Up to 30 recent events are shown below.",de:"Unten werden bis zu 30 aktuelle Veranstaltungen angezeigt."} as const)[locale]}</p>}
-  {slug==="artists"&&<section className="rounded-2xl border bg-card p-5">
-   <h2 className="text-lg font-semibold">{({nl:"Evenementen voor boekingsplanning",fr:"Événements pour les réservations",en:"Events for booking planning",de:"Veranstaltungen für Buchungen"} as const)[locale]}</h2>
-   {liveRecords?.error?<p role="status" className="mt-3 text-sm text-muted-foreground">{({nl:"Evenementen konden niet worden geladen.",fr:"Impossible de charger les événements.",en:"Unable to load events.",de:"Veranstaltungen konnten nicht geladen werden."} as const)[locale]}</p>
-   :liveRecords?.data?.length?<ul className="mt-3 divide-y">{liveRecords.data.filter((event):event is Extract<typeof event,{start_at:string}>=>"start_at" in event).map(event=><li key={event.id} className="flex flex-wrap items-center justify-between gap-2 py-3 text-sm"><span className="font-medium">{event.name}</span><span className="text-muted-foreground">{event.start_at?new Intl.DateTimeFormat(({nl:"nl-BE",fr:"fr-BE",en:"en-GB",de:"de-DE"} as const)[locale],{dateStyle:"medium",timeStyle:"short",timeZone:"Europe/Brussels"}).format(new Date(event.start_at)):"—"} · {event.status}</span></li>)}</ul>
-   :<p className="mt-3 text-sm text-muted-foreground">{({nl:"Geen evenementen beschikbaar.",fr:"Aucun événement disponible.",en:"No events available.",de:"Keine Veranstaltungen verfügbar."} as const)[locale]}</p>}
   </section>}
   {slug==="marketing"&&<section className="rounded-2xl border bg-card p-5">
    <h2 className="text-lg font-semibold">{({nl:"Promotiebeheer",fr:"Gestion de la promotion",en:"Promotion management",de:"Promotion verwalten"} as const)[locale]}</h2>
@@ -402,25 +385,5 @@ export default async function AdministrationModulePage({params,searchParams}:{pa
     {(inventoryCount?.count!=null?inventoryPage*inventoryPageSize<inventoryCount.count:(liveRecords.data?.length??0)===inventoryPageSize)&&<Link className="rounded-lg border px-3 py-2" href={`/portals/administration/modules/inventory?page=${inventoryPage+1}${selectedEvent?`&event=${encodeURIComponent(selectedEvent)}`:""}`}>{({nl:"Volgende",fr:"Suivante",en:"Next",de:"Weiter"} as const)[locale]}</Link>}
    </div>
   </nav>}
-  {administrationWorkflowHref(slug)&&<div className="rounded-xl border border-violet-500/30 bg-card p-4"><Link href={administrationWorkflowHref(slug)!} className="inline-flex rounded-lg border border-violet-500/50 px-4 py-3 text-sm font-semibold text-violet-400 hover:border-violet-400">{operationalModuleLabels[locale]} →</Link></div>}
-  {(slug==="invoices"||slug==="banking")&&<section className="rounded-2xl border border-violet-500/40 bg-card p-5">
-   <h2 className="text-lg font-semibold">{({nl:"Financiële documenten beheren",fr:"Gérer les documents financiers",en:"Manage financial documents",de:"Finanzdokumente verwalten"} as const)[locale]}</h2>
-   <p className="mt-2 text-sm text-muted-foreground">{({nl:"Open het bestaande financiële register om concepten, bijlagen, betalingsstatussen en goedkeuringsstappen te beheren.",fr:"Ouvrez le registre financier pour gérer brouillons, pièces jointes, paiements et validations.",en:"Open the existing financial register to manage drafts, attachments, payment status and approval steps.",de:"Öffnen Sie das Finanzregister für Entwürfe, Anhänge, Zahlungsstatus und Freigaben."} as const)[locale]}</p>
-   <Link href="/portals/administration/finance" className="mt-4 inline-flex rounded-lg bg-violet-600 px-4 py-3 text-sm font-semibold text-white hover:bg-violet-700">{u.finance} →</Link>
-  </section>}
-  {slug==="notifications"&&<section className="rounded-2xl border bg-card p-5">
-   <h2 className="text-lg font-semibold">{({nl:"Meldingen beheren",fr:"Gérer les notifications",en:"Manage notifications",de:"Benachrichtigungen verwalten"} as const)[locale]}</h2>
-   <p className="mt-2 text-sm text-muted-foreground">{({nl:"Open de bestaande meldingenpagina om berichten en actiepunten te bekijken.",fr:"Ouvrez la page des notifications pour consulter les messages et actions.",en:"Open the existing notifications page to review messages and action items.",de:"Öffnen Sie die Benachrichtigungsseite, um Nachrichten und Aufgaben zu prüfen."} as const)[locale]}</p>
-   <Link href="#administration-notifications" className="mt-4 inline-flex rounded-lg bg-violet-600 px-4 py-3 text-sm font-semibold text-white hover:bg-violet-700">{({nl:"Open meldingen",fr:"Ouvrir les notifications",en:"Open notifications",de:"Benachrichtigungen öffnen"} as const)[locale]} →</Link>
-  </section>}
-  {slug==="tasks"&&<section className="rounded-2xl border bg-card p-5">
-   <h2 className="text-lg font-semibold">{({nl:"Taken opvolgen",fr:"Suivi des tâches",en:"Track tasks",de:"Aufgaben verfolgen"} as const)[locale]}</h2>
-   <Link href="#administration-work-queue" className="mt-4 inline-flex rounded-lg bg-violet-600 px-4 py-3 text-sm font-semibold text-white hover:bg-violet-700">{({nl:"Open taken",fr:"Ouvrir les tâches",en:"Open tasks",de:"Aufgaben öffnen"} as const)[locale]} →</Link>
-  </section>}
-  {slug==="staff"&&<section className="rounded-2xl border bg-card p-5"><Link href="/portals/administration/rosters" className="inline-flex rounded-lg bg-violet-600 px-4 py-3 text-sm font-semibold text-white hover:bg-violet-700">{({nl:"Administratieve werkroosters",fr:"Plannings administratifs",en:"Administrative rosters",de:"Administrative Dienstpläne"} as const)[locale]} →</Link></section>}
-  {financeRelated.has(slug)&&<section className="rounded-2xl border bg-card p-5">
-   <h2 className="font-semibold">{u.related}</h2>
-   <Link href="/portals/administration/finance" className="mt-3 inline-flex rounded-lg bg-violet-600 px-4 py-3 text-sm font-semibold text-white hover:bg-violet-700">{u.finance} →</Link>
-  </section>}
  </main>
 }

@@ -16,7 +16,9 @@ test('administration workflow targets exist and never loop to the current module
 test('unsupported module actions are not presented as working links',()=>{
  for(const slug of ['inventory','notifications','settings','automations','permits'])assert.equal(administrationWorkflowHref(slug),null)
  const page=readFileSync('app/(app)/portals/administration/modules/[slug]/page.tsx','utf8')
- assert.match(page,/administrationWorkflowHref\(slug\)/)
+ assert.doesNotMatch(page,/administrationWorkflowHref\(slug\)/)
+ assert.match(page,/<SepaExport locale=\{locale\}/)
+ assert.match(page,/<ProviderBankSettlementWorkspace locale=\{locale\}/)
  assert.ok(!page.includes('operationalModuleLinks'))
 })
 
