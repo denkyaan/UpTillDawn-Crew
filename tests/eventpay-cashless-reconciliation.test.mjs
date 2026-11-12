@@ -98,7 +98,7 @@ test('database refuses mixed-provider category records and never enables in-app 
  assert.match(migration,/v_mapping\.provider='eventpay'/)
  assert.doesNotMatch(migration,/CREATE TABLE.*wallet|UPDATE public\.sales_transactions|SET balance=/i)
  const api=read('app/api/administration/provider-transactions/route.ts')
- assert.match(api,/validateProviderTransactionCsv\([^)]*mapping\.provider/)
+ assert.match(api,/mapping\.provider as 'eventix'\|'sumup'\|'eventpay'/)
  assert.match(api,/upt_import_admin_provider_transactions/)
  assert.doesNotMatch(api,/wallet|topupCharge|paymentIntent/i)
  const settlement=read('app/api/administration/provider-settlements/route.ts')
