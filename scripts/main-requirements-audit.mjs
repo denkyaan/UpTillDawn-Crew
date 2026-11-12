@@ -69,6 +69,10 @@ export const requirements=[
    'lib/god-mode-resolution-evidence.ts',
    'lib/god-mode-error-triage.ts',
   ],tests:['tests/god-mode-verified-error-closure.test.mjs','tests/error-ai-runtime-adversarial.test.mjs']},
+ {id:'autonomous-error-repair',name:'Real-time independent Error-AI correction, tested release and verified incident closure on Main',
+  status:'not-implemented-as-unattended-release',source:[
+   'lib/error-report-ai.ts','lib/god-mode-resolution-evidence.ts',
+  ],tests:['tests/error-ai-calibration-adversarial.test.mjs','tests/error-ai-runtime-adversarial.test.mjs']},
  {id:'god-mode-cloudflare-logs',name:'Owner-only Cloudflare runtime log reader for Main and production',
   status:'code-and-isolated-tests-live-maker-query-unverified',source:[
    'app/api/god/cloudflare-logs/route.ts',
