@@ -5,7 +5,8 @@ import {administrationModules} from '../lib/administration/modules.ts'
 import {administrationWorkspaceIntro} from '../lib/administration/workspace-copy.ts'
 const source=readFileSync('app/(app)/portals/administration/modules/[slug]/page.tsx','utf8')
 test('operational administration modules link to their workflow without misleading unavailable cards',()=>{
- assert.ok(source.includes('{administrationWorkflowHref(slug)&&<div'))
+ assert.ok(!source.includes('{administrationWorkflowHref(slug)&&<div'))
+ assert.ok(source.includes('<OperationalWorkQueue'))
  assert.ok(!source.includes('sections.map('))
  assert.ok(!source.includes('{u.pending}'))
  assert.ok(!source.includes('{t.phase}'))
