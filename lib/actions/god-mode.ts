@@ -36,3 +36,22 @@ export async function godModeLogout(){
   store.delete('uptilldawn-last-workspace')
   redirect('/login/admin')
 }
+
+/** Leaving God Mode is an explicit, reviewed navigation action. Keep the
+ * Supabase account signed in, but clear privileged God session and restore
+ * operational Admin mode. This also updates the installed PWA launch hint. */
+export async function returnToNormalAppFromGodMode(){
+  const s=await createClient()
+  const {data:{user}}=await s.auth.getUser()
+  if(!user)redirect('/login/admin')
+  const {data:isOwner,error:ownerError}=await s.rpc('upt_current_is_owner')
+  if(ownerError||isOwner!==true)redirect('/unauthorized')
+  const {data:role,error:roleError}=await s.rpc('upt_set_admin_role_mode',{p_role:'admin'})
+  if(roleError||role!=='admin')redirect('/maker-mode?portal=admin&error=role-mode')
+  const store=await cookies()
+  const token=store.get(GOD_COOKIE)?.value
+  if(token)await s.rpc('upt_god_logout',{p_token:token})
+  store.delete(GOD_COOKIE)
+  store.set('uptilldawn-last-workspace',user.id+':admin',{sameSite:'lax',secure:true,path:'/',maxAge:60*60*24*90})
+  redirect('/admin')
+}
