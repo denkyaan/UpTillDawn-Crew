@@ -37,3 +37,15 @@ test('rosters, workstates, personnel directory and payroll export use distinguis
  assert.match(detail,/slug==="staff"&&<section className="space-y-3 rounded-2xl border bg-card p-5"/)
  assert.doesNotMatch(detail,/\(slug==="staff"\|\|slug==="reports"\)/)
 })
+
+test('equivalent marketing, sponsor and contact shortcuts do not duplicate canonical actions',()=>{
+ const admin=read('lib/admin-administration-navigation.ts')
+ assert.doesNotMatch(groups,/slugs:\[[^\]]*"sponsors"/)
+ assert.doesNotMatch(groups,/slugs:\[[^\]]*"marketing"/)
+ assert.match(groups,/slugs:\[[^\]]*"promotion-tasks"/)
+ assert.match(groups,/slugs:\[[^\]]*"counterparties"/)
+ assert.doesNotMatch(admin,/key:"admin-contacts"/)
+ assert.doesNotMatch(admin,/key:"admin-sponsors"/)
+ assert.doesNotMatch(admin,/key:"admin-marketing"/)
+ assert.match(admin,/key:"admin-counterparties"/)
+})
