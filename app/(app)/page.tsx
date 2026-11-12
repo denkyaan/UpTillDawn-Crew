@@ -2,6 +2,7 @@ import Link from 'next/link'
 import { Suspense } from 'react'
 import { CalendarDays, Clock3, MapPin, AlertTriangle, ArrowRight, ClipboardCheck, PackageCheck, ListTodo } from 'lucide-react'
 import { redirect } from 'next/navigation'
+import {cookies} from 'next/headers'
 import { createClient } from '@/lib/supabase/crew-server'
 import { ManagerOnly } from '@/components/auth/manager-only'
 import { AssignedEventOnly } from '@/components/auth/assigned-event-only'
@@ -197,10 +198,30 @@ async function DashboardOverview({current}:{current:NonNullable<Awaited<ReturnTy
 export default async function Dashboard() {
   const current=await getCurrentUser()
   if(!current)return null
-  if(current.isAdmin)redirect('/admin')
-  // Resolve approved portal entitlements on the server; fail closed to the existing
-  // personnel dashboard if the optional entitlement lookup is unavailable.
+  // Installed PWAs launch at '/'. A workspace preference is NOT an
+  // authorization token: bind it to the authenticated account, then verify
+  // the real God Mode session and portal assignment before any redirect.
+  const saved=(await cookies()).get('uptilldawn-last-workspace')?.value
+  const workspace=saved?.startsWith(current.id+':')?saved.slice(current.id.length+1):null
   const supabase=await createClient()
+  if(workspace==='god-mode'&&current.isOwner){
+    const token=(await cookies()).get('uptilldawn-god-session')?.value
+    if(token){
+      const {data:valid,error}=await supabase.rpc('upt_god_session_valid',{p_token:token})
+      if(!error&&valid===true)redirect('/god-mode')
+    }
+    // Expired God Mode requires a new Maker action; never silently land in Admin.
+    redirect('/maker-mode?portal=admin')
+  }
+  if(workspace==='promotion'||workspace==='administration'){
+    if(current.isOwner||current.realIsAdmin)redirect('/portals/'+workspace)
+    const {data:grants,error}=await supabase.rpc('upt_my_portal_assignments')
+    if(!error&&current.approved&&!current.account_blocked&&grants?.some(grant=>
+      grant.portal===workspace&&grant.approved===true&&grant.revoked_at===null))
+      redirect('/portals/'+workspace)
+  }
+  if(current.isAdmin)redirect('/admin')
+  // Preserve legacy Administration default for single-portal staff identities.
   const {data:assignments,error:assignmentError}=await supabase.rpc('upt_my_portal_assignments')
   if(!assignmentError && current.approved && !current.account_blocked &&
      assignments?.some(grant=>grant.portal==='administration' &&
