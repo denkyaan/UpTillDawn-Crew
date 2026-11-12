@@ -33,5 +33,6 @@ export async function godModeLogout(){
     await s.rpc('upt_god_logout',{p_token:token})
   }
   store.delete(GOD_COOKIE)
+  store.delete('uptilldawn-last-workspace')
   redirect('/login/admin')
 }
