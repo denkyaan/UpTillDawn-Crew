@@ -1,19 +1,11 @@
 import Link from 'next/link'
-import { AdministrationAiChat } from '@/components/administration/administration-ai-chat'
-import { administrationModules } from '@/lib/administration/modules'
 import { cookies, headers } from 'next/headers'
 import { parseAcceptLanguage, parseUiLocale } from '@/lib/locale-preferences'
 import { notFound, redirect } from 'next/navigation'
 import { getCurrentUser } from '@/lib/actions/auth'
 import { createClient } from '@/lib/supabase/crew-server'
+import { AdministrationOverviewDashboard } from '@/components/administration/administration-overview-dashboard'
 import { canOpenPortal, type PortalAssignment } from '@/lib/portal-access'
-
-const adminDashboardCopy = {
- nl:{title:'Administratief dashboard',description:'Beheer financiële documenten, ingediende uren, personeelsplanning en operationele opvolging vanuit één overzicht.'},
- fr:{title:'Tableau de bord administratif',description:'Gérez les documents financiers, les heures soumises, la planification et le suivi opérationnel.'},
- en:{title:'Administration dashboard',description:'Manage financial documents, submitted hours, staffing schedules and operations in one place.'},
- de:{title:'Verwaltungsübersicht',description:'Finanzdokumente, Arbeitszeiten, Personalplanung und operative Aufgaben zentral verwalten.'},
-} as const
 
 const portalCopy = {
   nl: { unavailable: "Portaal niet beschikbaar", unavailableDesc: "De toegangscontrole kan momenteel niet worden uitgevoerd. Probeer later opnieuw.", returnToPortals: "Terug naar portalen", promoChatEmpty: "Er zijn nog geen promotiegesprekken beschikbaar voor jouw account.", chatDesc: "Open de bestaande chatkanalen waarvoor je toegang hebt.", chatLink: "Chats →", taskDesc: "Bekijk je bestaande opdrachten.", taskLink: "Taken →", financeDesc: "Open het financiële overzicht voor documenten, inkomsten, uitgaven en betalingsopvolging.", reportDesc: "Bestaande rapportage voor beheerders.", salesLink: "Sales →", back: "← Alle portalen", promotion: "Promotie", administration: "Administratie", meldingen: "Meldingen",meldingenDesc: "Bekijk nieuwe berichten, opdrachten en updates.",meldingenLink: "Meldingen →", chats: "Chats", tasks: "Taken", sales: "Sales" },
@@ -47,97 +39,38 @@ export default async function PortalPage({ params }: { params: Promise<{ portal:
 
   if ((!current.approved || current.account_blocked === true) && !current.isOwner) redirect('/portals')
 
-  const submittedTimesheets = portal === 'administration'
-    ? await supabase.from('timesheets').select('id,event_id,user_id,status,submitted_at').eq('status','submitted').order('submitted_at',{ascending:false}).limit(100)
-    : null
-  const inventoryAlerts = portal === 'administration'
-    ? await supabase.from('inventory_items').select('id,name,missing_quantity,damaged_quantity,event_id').or('missing_quantity.gt.0,damaged_quantity.gt.0').limit(100)
-    : null
-  const promotion = portal === 'promotion'
-  // Database RLS controls which organization chats this user may see.
-  const promotionChats = promotion
-    ? (await supabase.from('chat_channels')
-        .select('id,name')
-        .eq('kind', 'organization')
-        .in('name', ['Promo groep Up Till Dawn', 'Up Till Dawn · Promotie'])
-        .order('name')).data ?? []
-    : []
+  // Each administrative module is available once through the persistent
+  // six-category navigation. The home page is a compact read-only work pulse.
+  if (portal === 'administration') return <AdministrationOverviewDashboard locale={locale} />
+
+  // Promotion keeps its own independent portal and existing safe channel links.
+  const {data:promotionChats}=await supabase.from('chat_channels')
+    .select('id,name').eq('kind','organization')
+    .in('name',['Promo groep Up Till Dawn','Up Till Dawn · Promotie'])
+    .order('name')
 
   return <main className="mx-auto max-w-4xl space-y-6 p-6">
-    <header><h1 className="text-2xl font-bold">{promotion ? t.promotion : t.administration}</h1></header>
-    {!promotion && <section className="grid grid-cols-2 gap-3 sm:grid-cols-4" aria-label={adminDashboardCopy[locale].title}>
-      <article className="rounded-xl border bg-card p-4"><p className="text-xs text-muted-foreground">{({nl:"Ingediende werkstaten",fr:"Feuilles soumises",en:"Submitted timesheets",de:"Eingereichte Stundenzettel"} as const)[locale]}</p><p className="mt-2 text-2xl font-bold">{submittedTimesheets?.error?"—":submittedTimesheets?.data?.length??0}</p><Link href="/portals/administration/modules/staff" className="mt-2 inline-block text-xs font-semibold text-violet-400">→</Link></article>
-      <article className="rounded-xl border bg-card p-4"><p className="text-xs text-muted-foreground">{({nl:"Inventarisafwijkingen",fr:"Écarts de stock",en:"Inventory discrepancies",de:"Bestandsabweichungen"} as const)[locale]}</p><p className="mt-2 text-2xl font-bold">{inventoryAlerts?.error?"—":inventoryAlerts?.data?.length??0}</p><Link href="/portals/administration/modules/inventory" className="mt-2 inline-block text-xs font-semibold text-violet-400">→</Link></article>
-      <article className="rounded-xl border bg-card p-4"><p className="text-xs text-muted-foreground">{({nl:"Financiële administratie",fr:"Administration financière",en:"Financial administration",de:"Finanzverwaltung"} as const)[locale]}</p><Link href="/portals/administration/finance" className="mt-3 inline-flex rounded-lg bg-violet-600 px-3 py-2 text-xs font-semibold text-white">{({nl:"Openen",fr:"Ouvrir",en:"Open",de:"Öffnen"} as const)[locale]} →</Link></article>
-      <article className="rounded-xl border bg-card p-4"><p className="text-xs text-muted-foreground">{({nl:"Administratieve taken",fr:"Tâches administratives",en:"Administrative tasks",de:"Verwaltungsaufgaben"} as const)[locale]}</p><Link href="/portals/administration/modules/tasks" className="mt-3 inline-flex rounded-lg border border-violet-500/50 px-3 py-2 text-xs font-semibold text-violet-400">{({nl:"Bekijken",fr:"Consulter",en:"View",de:"Ansehen"} as const)[locale]} →</Link></article>
-    </section>}
-    {!promotion && <section className="space-y-4" aria-label={adminDashboardCopy[locale].title}>
-      <div className="rounded-2xl border border-violet-500/40 bg-violet-500/10 p-5">
-        <h2 className="text-xl font-bold">{adminDashboardCopy[locale].title}</h2>
-        <p className="mt-2 text-sm text-muted-foreground">{adminDashboardCopy[locale].description}</p>
-      </div>
-      <AdministrationAiChat locale={locale} />
-      <Link href="/portals/administration/modules/ai" className="text-sm font-semibold text-violet-400 underline underline-offset-4">{({nl:"Open AI-werkruimte",fr:"Ouvrir l'espace IA",en:"Open AI workspace",de:"KI-Arbeitsbereich öffnen"} as const)[locale]}</Link>
-      <div className="grid gap-3 sm:grid-cols-2">
-       {[
-        {href:'/portals/administration/finance',nl:'Financiën & documenten',fr:'Finances et documents',de:'Finanzen & Dokumente',en:'Finance & documents',descNl:'Facturen, uitgaven, bijlagen en betalingsstatussen',descFr:'Factures, dépenses, pièces jointes et statuts de paiement',descDe:'Rechnungen, Ausgaben, Anhänge und Zahlungsstatus',descEn:'Invoices, expenses, attachments and payment statuses'},
-        {href:'/portals/administration/modules/staff',nl:'Werkuren & goedkeuringen',fr:'Heures et validations',de:'Arbeitszeiten & Freigaben',en:'Hours & approvals',descNl:'Ingediende werkstaten opvolgen',descFr:'Suivre les feuilles de temps soumises',descDe:'Eingereichte Stundenzettel verfolgen',descEn:'Review submitted timesheets'},
-        {href:'/portals/administration/rosters',nl:'Werkroosters & shifts',fr:'Plannings et shifts',de:'Dienstpläne & Schichten',en:'Schedules & shifts',descNl:'Roosters opstellen, indienen en ter goedkeuring voorleggen',descEn:'Create, submit and review roster proposals',descFr:'Créer, soumettre et valider des propositions de planning',descDe:'Dienstplanvorschläge erstellen, einreichen und prüfen'},
-        {href:'/portals/administration/modules/tasks',nl:'Administratieve taken',fr:'Tâches administratives',de:'Verwaltungsaufgaben',en:'Administrative tasks',descNl:'Taken, prioriteiten en opvolging',descFr:'Tâches, priorités et suivi',descDe:'Aufgaben, Prioritäten und Nachverfolgung',descEn:'Tasks, priorities and follow-up'},
-        {href:'/portals/administration/modules/inventory',nl:'Inventaris',fr:'Inventaire',de:'Inventar',en:'Inventory',descNl:'Voorraad en afwijkingen opvolgen',descFr:'Suivre les stocks et les écarts',descDe:'Bestand und Abweichungen verfolgen',descEn:'Review inventory and discrepancies'},
-        {href:'/portals/administration/modules/events',nl:'Evenementen',fr:'Événements',de:'Veranstaltungen',en:'Events',descNl:'Evenementen en operationele context',descFr:'Événements et contexte opérationnel',descDe:'Veranstaltungen und operativer Kontext',descEn:'Events and operational context'},
-       ].map(item=><Link key={item.href} href={item.href} className="block rounded-xl border bg-card p-4 transition-colors hover:border-violet-500">
-         <span className="font-semibold text-violet-400">{item[locale]} →</span>
-         <p className="mt-2 text-xs text-muted-foreground">{locale==='nl'?item.descNl:locale==='fr'?item.descFr:locale==='de'?item.descDe:item.descEn}</p>
-       </Link>)}
-      </div>
-    </section>}
-    {!promotion && <nav aria-label={adminDashboardCopy[locale].title} className="rounded-2xl border bg-card p-5">
-      <h2 className="text-lg font-semibold">{({nl:'Alle administratieve modules',fr:'Tous les modules administratifs',en:'All administration modules',de:'Alle Verwaltungsmodule'} as const)[locale]}</h2>
-      <p className="mt-2 text-sm text-muted-foreground">{({nl:'Open een module. Sommige onderdelen zijn nog in ontwikkeling.',fr:'Ouvrez un module. Certaines fonctions sont encore en développement.',en:'Open a module. Some features are still under development.',de:'Öffnen Sie ein Modul. Einige Funktionen befinden sich noch in Entwicklung.'} as const)[locale]}</p>
-      <div className="mt-4 grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
-       {administrationModules.filter(module=>module.slug!=='dashboard').map(module=><Link key={module.slug} href={module.slug==='finance'?'/portals/administration/finance':`/portals/administration/modules/${module.slug}`} className="rounded-lg border px-3 py-3 text-sm font-medium transition-colors hover:border-violet-500 focus-visible:outline focus-visible:outline-2 focus-visible:outline-violet-500">{module.title[locale]} →</Link>)}
-       <Link href="/portals/administration/rosters" className="rounded-lg border px-3 py-3 text-sm font-medium transition-colors hover:border-violet-500 focus-visible:outline focus-visible:outline-2 focus-visible:outline-violet-500">{({nl:'Werkroosters en goedkeuring',fr:'Plannings et validation',en:'Rosters and approval',de:'Dienstpläne und Freigabe'} as const)[locale]} →</Link>
-      </div>
-    </nav>}
-    {promotion && <p className="text-sm text-muted-foreground">{({nl:"Je promotiewerkplek: bekijk je opdrachten, overleg met het team en volg nieuwe meldingen. Publicaties en bewijsstukken worden alleen als voltooid beschouwd na controle.",fr:"Votre espace promotion : tâches, discussions et notifications. Les publications et preuves nécessitent une vérification.",en:"Your promotion workspace: tasks, team chats and notifications. Posts and evidence require verification before completion.",de:"Dein Promotion-Arbeitsbereich: Aufgaben, Teamchats und Meldungen. Veröffentlichungen und Nachweise erfordern eine Prüfung."} as const)[locale]}</p>}
-    {promotion ? <div className="grid gap-4 sm:grid-cols-2">
-      <section className="rounded-2xl border bg-card p-5">
-        <h2 className="font-semibold">{t.chats}</h2>
-        <p className="mt-2 text-sm text-muted-foreground">{t.chatDesc}</p>
-        {promotionChats.length ? <ul className="mt-3 space-y-2">{promotionChats.map(channel => <li key={channel.id}><Link href={`/chat?channel=${encodeURIComponent(channel.id)}`} className="text-violet-400 underline">{channel.name}</Link></li>)}</ul> : <p className="mt-3 text-sm text-muted-foreground">{t.promoChatEmpty}</p>}
-        <Link href="/chat" className="mt-4 inline-flex rounded-lg bg-violet-600 px-4 py-2 text-sm font-medium text-white">{t.chatLink}</Link>
-      </section>
-      <section className="rounded-2xl border bg-card p-5">
-        <h2 className="font-semibold">{t.tasks}</h2>
-        <p className="mt-2 text-sm text-muted-foreground">{t.taskDesc}</p>
-        <Link href="/tasks" className="mt-4 inline-flex rounded-lg bg-violet-600 px-4 py-2 text-sm font-medium text-white">{t.taskLink}</Link>
-      </section>
-      <section className="rounded-2xl border bg-card p-5">
-        <h2 className="font-semibold">{t.meldingen}</h2>
-        <p className="mt-2 text-sm text-muted-foreground">{t.meldingenDesc}</p>
-        <Link href="/notifications" className="mt-4 inline-flex rounded-lg bg-violet-600 px-4 py-2 text-sm font-medium text-white">{t.meldingenLink}</Link>
-      </section>
-    </div> : <div className="grid gap-4 sm:grid-cols-2">
-      <section className="rounded-2xl border bg-card p-5">
-        <h2 className="font-semibold">{t.administration}</h2>
-        <p className="mt-2 text-sm text-muted-foreground">{t.financeDesc}</p>
-        <Link href="/portals/administration/finance" className="mt-4 inline-flex rounded-lg bg-violet-600 px-4 py-2 text-sm font-medium text-white">{t.administration} →</Link>
-      </section>
-      <section className="rounded-2xl border bg-card p-5 sm:col-span-2">
-        <h2 className="font-semibold">{locale==='nl'?'Ingediende werkstaten':locale==='fr'?'Feuilles de temps soumises':locale==='de'?'Eingereichte Stundenzettel':'Submitted timesheets'}</h2>
-        <p className="mt-2 text-sm text-muted-foreground">{locale==='nl'?'Ingediende uren verschijnen hier automatisch na indiening. Goedkeuring blijft voorbehouden aan bevoegde beheerders.':locale==='fr'?'Les heures soumises apparaissent automatiquement ici. La validation reste réservée aux responsables autorisés.':locale==='de'?'Eingereichte Stunden erscheinen hier automatisch. Die Freigabe bleibt berechtigten Administratoren vorbehalten.':'Submitted hours appear here automatically. Approval remains restricted to authorized administrators.'}</p>
-        {submittedTimesheets?.error ? <p role="alert" className="mt-3 text-sm text-amber-500">{t.unavailableDesc}</p> : submittedTimesheets?.data?.length ? <ul className="mt-3 space-y-2">{submittedTimesheets.data.map(row=><li key={row.id} className="flex flex-wrap items-center justify-between gap-2 rounded-lg border p-3"><span className="text-sm">{row.submitted_at ? new Date(row.submitted_at).toLocaleString(locale==='nl'?'nl-BE':locale==='fr'?'fr-BE':locale==='de'?'de-BE':'en-BE') : '—'} · {row.user_id.slice(0,8)}</span><Link className="text-sm text-violet-400 underline" href={`/portals/administration/timesheets?event=${encodeURIComponent(row.event_id)}`}>{locale==='nl'?'Bekijken':locale==='fr'?'Consulter':locale==='de'?'Ansehen':'View'}</Link></li>)}</ul> : <p className="mt-3 text-sm text-muted-foreground">{locale==='nl'?'Geen ingediende werkstaten.':locale==='fr'?'Aucune feuille soumise.':locale==='de'?'Keine eingereichten Stundenzettel.':'No submitted timesheets.'}</p>}
-      </section>
-      <section className="rounded-2xl border bg-card p-5 sm:col-span-2">
-        <h2 className="font-semibold">{locale==='nl'?'Inventarisafwijkingen':locale==='fr'?'Écarts de stock':locale==='de'?'Bestandsabweichungen':'Inventory discrepancies'}</h2>
-        {inventoryAlerts?.error ? <p role="alert" className="mt-2 text-sm text-amber-500">{t.unavailableDesc}</p> : inventoryAlerts?.data?.length ? <ul className="mt-3 space-y-2">{inventoryAlerts.data.map(item=><li key={item.id} className="flex flex-wrap items-center justify-between gap-2 rounded-lg border p-3"><span>{item.name} · {locale==='nl'?'Ontbrekend':locale==='fr'?'Manquant':locale==='de'?'Fehlend':'Missing'}: {item.missing_quantity} · {locale==='nl'?'Beschadigd':locale==='fr'?'Endommagé':locale==='de'?'Beschädigt':'Damaged'}: {item.damaged_quantity}</span><Link href="/portals/administration/modules/inventory" className="text-violet-400 underline">{locale==='nl'?'Inventaris':locale==='fr'?'Inventaire':locale==='de'?'Inventar':'Inventory'}</Link></li>)}</ul> : <p className="mt-2 text-sm text-muted-foreground">{locale==='nl'?'Geen afwijkingen zichtbaar.':locale==='fr'?'Aucun écart visible.':locale==='de'?'Keine Abweichungen sichtbar.':'No discrepancies visible.'}</p>}
-      </section>
-      {current.isAdmin && <section className="rounded-2xl border bg-card p-5">
-        <h2 className="font-semibold">{t.sales}</h2>
-        <p className="mt-2 text-sm text-muted-foreground">{t.reportDesc}</p>
-        <Link href="/portals/administration/sales" className="mt-4 inline-flex rounded-lg bg-violet-600 px-4 py-2 text-sm font-medium text-white">{t.salesLink}</Link>
-      </section>}
-    </div>}
+   <header className="space-y-2">
+    <h1 className="text-2xl font-bold">{t.promotion}</h1>
+    <p className="text-sm text-muted-foreground">{({nl:"Bekijk je opdrachten, overleg met het promotieteam en volg nieuwe meldingen. Bewijsstukken gelden pas als voltooid na controle.",fr:"Consultez les tâches et les discussions de l'équipe ainsi que les notifications. Les justificatifs doivent être vérifiés.",en:"Review promotion tasks, team chats and new notifications. Evidence requires verification before completion.",de:"Sieh dir Promotionaufgaben, Teamchats und Meldungen an. Nachweise müssen vor Abschluss geprüft werden."} as const)[locale]}</p>
+   </header>
+   <div className="grid gap-4 sm:grid-cols-2">
+    <section className="rounded-2xl border bg-card p-5">
+     <h2 className="font-semibold">{t.chats}</h2>
+     <p className="mt-2 text-sm text-muted-foreground">{t.chatDesc}</p>
+     {promotionChats?.length?<ul className="mt-3 space-y-2">{promotionChats.map(channel=><li key={channel.id}><Link href={`/chat?channel=${encodeURIComponent(channel.id)}`} className="text-violet-400 underline">{channel.name}</Link></li>)}</ul>:<p className="mt-3 text-sm text-muted-foreground">{t.promoChatEmpty}</p>}
+     <Link href="/chat" className="mt-4 inline-flex rounded-lg bg-violet-600 px-4 py-2 text-sm font-medium text-white">{t.chatLink}</Link>
+    </section>
+    <section className="rounded-2xl border bg-card p-5">
+     <h2 className="font-semibold">{t.tasks}</h2>
+     <p className="mt-2 text-sm text-muted-foreground">{t.taskDesc}</p>
+     <Link href="/tasks" className="mt-4 inline-flex rounded-lg bg-violet-600 px-4 py-2 text-sm font-medium text-white">{t.taskLink}</Link>
+    </section>
+    <section className="rounded-2xl border bg-card p-5">
+     <h2 className="font-semibold">{t.meldingen}</h2>
+     <p className="mt-2 text-sm text-muted-foreground">{t.meldingenDesc}</p>
+     <Link href="/notifications" className="mt-4 inline-flex rounded-lg bg-violet-600 px-4 py-2 text-sm font-medium text-white">{t.meldingenLink}</Link>
+    </section>
+   </div>
   </main>
 }
