@@ -66,7 +66,9 @@ test('Administration Events supports permission-scoped draft creation/edit witho
  assert.match(migration,/a\.approved IS TRUE AND a\.revoked_at IS NULL/)
  assert.match(migration,/e\.created_by=v_actor OR public\.upt_is_admin\(v_actor\)/)
  assert.match(migration,/GRANT EXECUTE ON FUNCTION/)
- assert.doesNotMatch(migration,/UPDATE public\.events e[\s\S]*?SET [\s\S]*?status\s*=/)
+ const updateBlock=migration.split('UPDATE public.events e')[1]?.split('RETURNING e.id INTO v_event')[0]||''
+ assert.ok(updateBlock,'Event draft UPDATE must exist')
+ assert.doesNotMatch(updateBlock,/\bstatus\s*=/)
 })
 
 test('Contracts tab can start a new agreement in the existing DJ workflow',()=>{
