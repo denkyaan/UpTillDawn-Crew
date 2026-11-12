@@ -17,7 +17,7 @@ export async function POST(request:Request){
  try{const raw=await request.text();if(new TextEncoder().encode(raw).byteLength>8192)return respond({error:"payload_too_large"},413);body=JSON.parse(raw)}catch{return respond({error:"invalid_json"},400)}
  if(!body||typeof body!=="object"||Array.isArray(body))return respond({error:"invalid_mapping"},422)
  const input=body as Record<string,unknown>
- const check=validateProviderEventMappings([{provider:input.provider as "eventix"|"sumup",externalEventId:input.externalEventId as string,eventId:input.eventId as string,enabled:false}])
+ const check=validateProviderEventMappings([{provider:input.provider as "eventix"|"sumup"|"eventpay",externalEventId:input.externalEventId as string,eventId:input.eventId as string,enabled:false}])
  if(check.errors.length)return respond({error:"invalid_mapping",details:check.errors},422)
  const m=check.mappings[0]
  const {data:event,error:eventError}=await access.db.from("events").select("id").eq("id",m.eventId).maybeSingle()

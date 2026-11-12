@@ -12,12 +12,13 @@ const timestamp=/^(\d{4}-\d{2}-\d{2})T(\d{2}):(\d{2}):(\d{2})(?:\.\d{1,3})?(Z|[+
 const money=/^(?:0|[1-9]\d{0,8})(?:\.\d{1,2})?$/
 
 export function validateProviderTransactionCsv(
- csv:string,eventId:string,externalEventId:string,maxRows=500
+ csv:string,eventId:string,externalEventId:string,maxRows=500,provider:'eventix'|'sumup'|'eventpay'='eventix'
 ):ProviderTransactionBatch{
  const empty=():ProviderTransactionBatch=>({rows:[],errors:[],paidCents:0,refundedCents:0,pendingCount:0})
  const result=empty()
  if(typeof csv!=='string'||new TextEncoder().encode(csv).byteLength>1_000_000)
   return {...result,errors:[{line:1,message:'File exceeds 1 MB'}]}
+ if(!['eventix','sumup','eventpay'].includes(provider))return {...result,errors:[{line:1,message:'Invalid provider'}]}
  if(!/^[0-9a-f]{8}(?:-[0-9a-f]{4}){3}-[0-9a-f]{12}$/i.test(eventId)||!externalId.test(externalEventId))
   return {...result,errors:[{line:1,message:'Invalid event mapping'}]}
  if(!Number.isSafeInteger(maxRows)||maxRows<1||maxRows>500)
@@ -36,7 +37,8 @@ export function validateProviderTransactionCsv(
   const key=status+':'+transactionId
   if(!externalId.test(transactionId)||seen.has(key)){result.errors.push({line,message:'Invalid or duplicate transaction identifier'});continue}
   if(external!==externalEventId){result.errors.push({line,message:'External event mismatch'});continue}
-  if(!['tickets','merch','tokens'].includes(category)||!['paid','pending','refunded'].includes(status)||currency!=='EUR'){
+  if(!(provider==='eventpay'?['bar','merch','topups'].includes(category):['tickets','merch','tokens'].includes(category))
+    ||!['paid','pending','refunded'].includes(status)||currency!=='EUR'){
    result.errors.push({line,message:'Invalid category, status or currency'});continue
   }
   if(reference!==''&&!externalId.test(reference)){result.errors.push({line,message:'Invalid sale reference'});continue}

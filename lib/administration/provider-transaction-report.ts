@@ -23,9 +23,11 @@ export function decodeProviderTransactions(value:unknown):ExternalPayment[]{
   if(!item||typeof item!=='object'||Array.isArray(item))throw Error('Invalid provider report row')
   const row=item as Record<string,unknown>
   if(typeof row.id!=='string'||!uuid.test(row.id)||typeof row.event_id!=='string'||!uuid.test(row.event_id)
-   ||(row.provider!=='eventix'&&row.provider!=='sumup')
+   ||(row.provider!=='eventix'&&row.provider!=='sumup'&&row.provider!=='eventpay')
    ||typeof row.transaction_id!=='string'||!external.test(row.transaction_id)
-   ||!['tickets','merch','tokens'].includes(String(row.category))
+   ||!(row.provider==='eventpay'
+     ? ['bar','merch','topups'].includes(String(row.category))
+     : ['tickets','merch','tokens'].includes(String(row.category)))
    ||(row.sale_reference!==null&&(typeof row.sale_reference!=='string'||!external.test(row.sale_reference)))
    ||!['paid','pending','refunded'].includes(String(row.status))||row.currency!=='EUR'
    ||typeof row.occurred_at!=='string'||!Number.isFinite(Date.parse(row.occurred_at)))
