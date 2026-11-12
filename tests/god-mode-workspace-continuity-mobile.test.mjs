@@ -66,7 +66,7 @@ test('upload security audit distinguishes no scans from a failed audit and keeps
  assert.match(audit,/unavailable\?<p role="alert"/)
  assert.match(audit,/grid gap-3 md:hidden/)
  assert.match(audit,/md:block/)
- for(const locale of ['nl','fr','en','de'])assert.match(audit,new RegExp('\\b'+locale+':\\{title:'))
+ for(const locale of ['nl','fr','en','de'])assert.match(audit,new RegExp('\\b'+locale+':\\{heading:'))
 })
 
 test('Maker SQL regression uses valid PostgreSQL DO delimiters and does not bypass role checks',()=>{
