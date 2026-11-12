@@ -1,5 +1,6 @@
 import { getCloudflareContext } from '@opennextjs/cloudflare'
 import { z } from 'zod'
+import { readStrictJson } from '@/lib/strict-json-body'
 import { createClient } from '@/lib/supabase/crew-server'
 import { processErrorReport, type ErrorAiBinding } from '@/lib/error-report-ai'
 import type { Json } from '@/types/crew-database'
@@ -53,7 +54,10 @@ export async function POST(request:Request){
   const {s,user,approved}=await authenticatedClient()
   if(!user||!approved)return Response.json({error:'Aanmelden vereist.'},{status:401})
 
-  const parsed=reportSchema.safeParse(await request.json().catch(()=>null))
+  let raw:unknown
+  try{raw=await readStrictJson(request)}
+  catch(error){return Response.json({error:'Ongeldig of te groot foutrapport.'},{status:error instanceof Error&&error.message==='too_large'?413:400})}
+  const parsed=reportSchema.safeParse(raw)
   if(!parsed.success)return Response.json({error:'Ongeldig foutrapport.'},{status:400})
 
   const input=parsed.data
