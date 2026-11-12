@@ -5,10 +5,10 @@ import {LANGUAGE_APPLIED_EVENT,initialUiLocale,parseUiLocale,type SupportedUiLoc
 
 type Row={id:string;bucket_id:string;storage_path:string;uploaded_by:string|null;uploader_email:string|null;uploader_name:string|null;mime_type:string|null;file_size_bytes:number|null;risk_class:string;status:string;engine:string|null;engine_result:unknown;attempts:number;scanned_at:string|null;created_at:string}
 const labels={
- nl:{title:'Uploadbeveiliging',intro:'Overzicht van uploads, scanstatus en mogelijke veiligheidsproblemen.',scans:'Scans',issues:'Problemen',status:'Status',who:'Door wie',file:'Bestand',where:'Locatie',when:'Tijdstip',issue:'Probleem',empty:'Er zijn nog geen uploads geregistreerd.',unavailable:'Uploadbeveiliging kon niet worden opgehaald. De scanstatus is onbekend.',unknown:'Onbekend'},
- fr:{title:'Sécurité des téléchargements',intro:'Téléchargements, résultats des analyses et incidents de sécurité.',scans:'Analyses',issues:'Problèmes',status:'Statut',who:'Auteur',file:'Fichier',where:'Emplacement',when:'Date et heure',issue:'Problème',empty:"Aucun téléchargement enregistré.",unavailable:"Les données de sécurité sont indisponibles. Les analyses ne sont pas vérifiées.",unknown:'Inconnu'},
- en:{title:'Upload security',intro:'Uploads, scan results and potential security issues.',scans:'Scans',issues:'Issues',status:'Status',who:'Uploaded by',file:'File',where:'Location',when:'Time',issue:'Issue',empty:'No uploads recorded yet.',unavailable:'Upload security data could not be loaded. Scan status is unknown.',unknown:'Unknown'},
- de:{title:'Upload-Sicherheit',intro:'Uploads, Scanstatus und mögliche Sicherheitsprobleme.',scans:'Scans',issues:'Probleme',status:'Status',who:'Hochgeladen von',file:'Datei',where:'Speicherort',when:'Zeitpunkt',issue:'Problem',empty:'Noch keine Uploads registriert.',unavailable:'Upload-Sicherheitsdaten sind nicht verfügbar. Der Scanstatus ist unbekannt.',unknown:'Unbekannt'},
+ nl:{heading:'Uploadbeveiliging',intro:'Overzicht van uploads, scanstatus en mogelijke veiligheidsproblemen.',scans:'Scans',issues:'Problemen',status:'Status',who:'Door wie',file:'Bestand',where:'Locatie',when:'Tijdstip',issue:'Probleem',empty:'Er zijn nog geen uploads geregistreerd.',unavailable:'Uploadbeveiliging kon niet worden opgehaald. De scanstatus is onbekend.',unknown:'Onbekend'},
+ fr:{heading:'Sécurité des téléchargements',intro:'Téléchargements, résultats des analyses et incidents de sécurité.',scans:'Analyses',issues:'Problèmes',status:'Statut',who:'Auteur',file:'Fichier',where:'Emplacement',when:'Date et heure',issue:'Problème',empty:"Aucun téléchargement enregistré.",unavailable:"Les données de sécurité sont indisponibles. Les analyses ne sont pas vérifiées.",unknown:'Inconnu'},
+ en:{heading:'Upload security',intro:'Uploads, scan results and potential security issues.',scans:'Scans',issues:'Issues',status:'Status',who:'Uploaded by',file:'File',where:'Location',when:'Time',issue:'Issue',empty:'No uploads recorded yet.',unavailable:'Upload security data could not be loaded. Scan status is unknown.',unknown:'Unknown'},
+ de:{heading:'Upload-Sicherheit',intro:'Uploads, Scanstatus und mögliche Sicherheitsprobleme.',scans:'Scans',issues:'Probleme',status:'Status',who:'Hochgeladen von',file:'Datei',where:'Speicherort',when:'Zeitpunkt',issue:'Problem',empty:'Noch keine Uploads registriert.',unavailable:'Upload-Sicherheitsdaten sind nicht verfügbar. Der Scanstatus ist unbekannt.',unknown:'Unbekannt'},
 } as const
 const unsafe=new Set(['infected','suspicious','scan_failed'])
 export function UploadSecurityAudit({rows,unavailable=false}:{rows:Row[];unavailable?:boolean}){
@@ -23,7 +23,7 @@ export function UploadSecurityAudit({rows,unavailable=false}:{rows:Row[];unavail
  const formatDate=(date:string)=>new Intl.DateTimeFormat(dateLocale,{dateStyle:'short',timeStyle:'short',timeZone:'Europe/Brussels'}).format(new Date(date))
  const errorText=(row:Row)=>unsafe.has(row.status)?JSON.stringify(row.engine_result,null,2)||'—':'—'
  return <section className="min-w-0 space-y-4 rounded-2xl border p-4 md:p-5">
-  <header><h2 className="text-lg font-black">{t.title}</h2><p className="text-sm text-muted-foreground">{t.intro}</p></header>
+  <header><h2 className="text-lg font-black">{t.heading}</h2><p className="text-sm text-muted-foreground">{t.intro}</p></header>
   {unavailable?<p role="alert" className="rounded-lg border border-amber-500/50 p-3 text-sm">{t.unavailable}</p>:<>
    <div className="grid grid-cols-2 gap-2">
     <div className="rounded-xl border p-3"><b className="text-2xl tabular-nums">{rows.length}</b><p className="text-xs">{t.scans}</p></div>
