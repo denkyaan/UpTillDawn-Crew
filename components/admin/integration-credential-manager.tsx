@@ -27,12 +27,16 @@ const errorCodes={general:"unavailable",invalid:"invalid",missingKey:"keyMissing
 function subscribeLocation(){return ()=>{}}
 function readOAuthResult(){return new URLSearchParams(window.location.search).get("weeztix_oauth")}
 function serverOAuthResult(){return null}
+const callbackPath="/api/administration/integrations/weeztix/callback"
+function readOAuthCallback(){return window.location.origin+callbackPath}
+function serverOAuthCallback(){return callbackPath}
 
 export function IntegrationCredentialManager({initialLocale,provider,events=[]}:{initialLocale:SupportedUiLocale;provider:IntegrationProvider;events?:ReadonlyArray<{id:string;name:string}>}){
  const [locale,setLocale]=useState<SupportedUiLocale>(initialLocale)
  const [fields,setFields]=useState<Record<string,string>>({})
  const [state,setState]=useState<State|null>(null)
  const oauthResult=useSyncExternalStore(subscribeLocation,readOAuthResult,serverOAuthResult)
+ const oauthCallback=useSyncExternalStore(subscribeLocation,readOAuthCallback,serverOAuthCallback)
  const [busy,setBusy]=useState(false)
  const [confirm,setConfirm]=useState(false)
  const [notice,setNotice]=useState("")
@@ -97,7 +101,7 @@ export function IntegrationCredentialManager({initialLocale,provider,events=[]}:
     <label key={key} className="block text-sm">{labels[locale][key as keyof typeof labels.nl]}
     {key==="WEEZTIX_ACTIVE_EVENT_ID"&&events.length>0?
      <select className="mt-1 w-full min-h-11 rounded-lg border bg-background px-3" required disabled={busy} value={fields[key]??""} onChange={e=>setFields(old=>({...old,[key]:e.target.value}))}>
-      <option value="" disabled>{t.choose}</option>
+      <option value="" disabled>{({nl:"Kies een evenement",fr:"Choisir un événement",en:"Choose an event",de:"Event auswählen"} as const)[locale]}</option>
       {events.map(item=><option key={item.id} value={item.id}>{item.name}</option>)}
      </select>:
     <input type={key==="DOCUMENSO_BASE_URL"||key==="WEEZTIX_ACTIVE_EVENT_ID"||key==="SUMUP_MERCHANT_CODE"||key==="PONTO_CLIENT_ID"||key==="BILLIT_SANDBOX_PARTY_ID"||key==="WEEZTIX_CLIENT_ID"?"text":"password"} className="mt-1 w-full min-h-11 rounded-lg border bg-background px-3" required={provider!=="weeztix"||key==="WEEZTIX_ACTIVE_EVENT_ID"} minLength={key==="WEEZTIX_ACCESS_TOKEN"||key==="WEEZTIX_CLIENT_ID"||key==="WEEZTIX_CLIENT_SECRET"?0:3} maxLength={4096} autoComplete="off" spellCheck={false} value={fields[key]??defaults[key]??""} onChange={e=>setFields(old=>({...old,[key]:e.target.value}))}/>}
@@ -113,7 +117,7 @@ export function IntegrationCredentialManager({initialLocale,provider,events=[]}:
   </form>
   {provider==="weeztix"&&<section className="space-y-2 rounded-lg border p-3">
    <p className="text-xs text-muted-foreground">{t.oauthHelp}</p>
-   <code className="block break-all rounded bg-muted p-2 text-[11px]">https://uptilldawn-main.uptilldawn.workers.dev/api/administration/integrations/weeztix/callback</code>
+   <code className="block break-all rounded bg-muted p-2 text-[11px]">{oauthCallback}</code>
    {state?.weeztixOauthReady?
     <a className="inline-flex min-h-11 items-center rounded-lg bg-violet-700 px-4 py-2 text-sm font-semibold text-white" href="/api/administration/integrations/weeztix/start">{t.oauthConnect}</a>:
     <p className="text-xs text-muted-foreground">{t.oauthNotReady}</p>}
@@ -126,7 +130,7 @@ export function IntegrationCredentialManager({initialLocale,provider,events=[]}:
    <summary className="cursor-pointer text-sm font-semibold">{t.auditTitle}</summary>
    {state?.audit.length?
     <ol className="mt-2 divide-y">
-     {state.audit.map((row,index)=><li key={row.provider+row.occurred_at+index} className="py-2 text-xs">
+     {state.audit.filter(row=>row.provider===provider).map((row,index)=><li key={row.provider+row.occurred_at+index} className="py-2 text-xs">
       <strong>{names[row.provider]}</strong> · {row.action==="connected"?t.auditConnected:row.action==="updated"?t.auditUpdated:t.auditDisconnected}
       {" · "}{new Date(row.occurred_at).toLocaleString(locale)} · {t.auditBy} {row.actor_name}
      </li>)}
