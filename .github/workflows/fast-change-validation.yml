@@ -99,6 +99,11 @@ jobs:
           } >> "$GITHUB_STEP_SUMMARY"
       - name: Production dependency security gate
         run: npm audit --omit=dev --audit-level=high
+  # Main UI/UX changes: omit [full-ci] so a successful fast job completes CI main
+  # and automatically unlocks Deploy main. Full isolated E2E is deliberately
+  # opt-in for substantive backend/security/schema or explicit QA work; never
+  # add [full-ci] merely to publish a navigation or dashboard adjustment.
+  # Production remains a completely separate, explicitly authorized workflow.
   full-validation:
     name: Full validation (explicit commit opt-in)
     needs: fast
