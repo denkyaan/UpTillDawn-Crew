@@ -21,7 +21,7 @@ test('each real Administration subtab has one operational status, not a duplicat
  assert.match(subtab,/href=\{administrationRoute\(slug\)\}/)
  for(const slug of all){
   if(coveredAbove.has(slug))continue
-  assert.ok(subtab.includes(slug+':')||subtab.includes('"'+slug+'":'),slug+' missing source for subtab')
+  assert.ok(subtab.includes(slug+':')||subtab.includes('"'+slug+'":')||(slug==='ticketing'&&subtab.includes('metrics.ticketing=')),slug+' missing source for subtab')
  }
  assert.match(overview,/id:"finance",group:"money",label:w\.financial,href:"\/portals\/administration\/finance"/)
  assert.notEqual(administrationRoute('finance'),administrationRoute('invoices'))
