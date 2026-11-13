@@ -17,3 +17,12 @@ Vereiste **GitHub Actions repository secrets**, uitsluitend voor het Main-testpr
 Ga naar het genoemde workflow, kies **Run workflow** op branch **main** en zet `provision_qa_bots=true`. De job gebruikt `supabase.auth.admin.createUser` (geen directe SQL in `auth.users`), controleert rollen/slotconflicten vóór wijzigingen en verifieert de echte zeven Auth-identiteiten na uitvoering. De workflow faalt expliciet als geheimen of rollen ontbreken; groen CI Main op code alleen is **geen** bewijs dat Main-accounts bestaan.
 
 De zesrollenbrowser-E2E en externe leveranciersacceptatie blijven aparte tests. Een Main Maker-bot met permanente Owner-rechten wordt niet stilzwijgend aangemaakt.
+
+
+## Eén identiek testwachtwoord voor alle 7 operationele bots
+
+Een **handmatige** `Deploy main`-run met `provision_qa_bots=true` gebruikt nu uitsluitend de al ingestelde GitHub Actions secret `MAIN_QA_BOT_PASSWORD` om met `supabase.auth.admin.updateUserById` het wachtwoord van **alle zeven vastgepinde Main-testidentiteiten** te synchroniseren, inclusief de drie oudere testaccounts. Nieuwe en bestaande botaccounts krijgen daarmee hetzelfde testwachtwoord; hun rollen en e-mailadressen blijven onveranderd.
+
+De volgende stap `--verify --verify-passwords` meldt zeven echte geslaagde Supabase Auth-aanmeldingen met diezelfde secret, plus een geverifieerd JWT en een uitlogactie per identiteit. Alle wachtwoorden blijven uitsluitend in de private workflowomgeving. Een groene build is geen bewijs van deze wachtwoordactie; alleen een geslaagde **handmatig gestarte** provisioning-run bewijst dat de accounts werkelijk zijn bijgewerkt.
+
+**Beveiliging:** gedeelde inloggegevens zijn enkel toegestaan voor geïsoleerde Main QA-testaccounts, nooit echte medewerkers of productie. Gebruik bij voorkeur een nieuw geheim dat niet eerder in chat werd weergegeven. De tijdelijke Maker/God Mode-identiteit blijft buiten deze zeven.

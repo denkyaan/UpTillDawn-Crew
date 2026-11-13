@@ -41,3 +41,29 @@ test('Manual seven-role provisioning is isolated and never deploys Main or produ
  assert.doesNotMatch(source,/https:\/\/eakoavcieossazqzplke\.supabase\.co/)
  assert.match(readFileSync('scripts/seed-local-maker-e2e.mjs','utf8'),/Maker QA identity can only be created on local Supabase port 54321/)
 })
+
+test('manual Main QA password sync is explicitly scoped to the seven fixed QA identities and verified by real Auth login',()=>{
+ const workflow=readFileSync('.github/workflows/deploy-main.yml','utf8')
+ assert.match(workflow,/provision_qa_bots:/)
+ assert.match(workflow,/github\.event_name == 'workflow_dispatch'/)
+ assert.match(workflow,/scripts\/provision-seven-main-bots\.mjs --sync-passwords/)
+ assert.match(workflow,/scripts\/provision-seven-main-bots\.mjs --verify --verify-passwords/)
+ assert.match(workflow,/secrets\.MAIN_QA_BOT_PASSWORD/)
+ assert.match(source,/const syncPasswords=process\.argv\.includes\('--sync-passwords'\)/)
+ assert.match(source,/const verifyPasswords=process\.argv\.includes\('--verify-passwords'\)/)
+ assert.match(source,/auth\.admin\.updateUserById\(id,\{password\}\)/)
+ assert.match(source,/auth\.admin\.getUserById\(id\)/)
+ assert.match(source,/client\.auth\.signInWithPassword/)
+ assert.match(source,/client\.auth\.getUser\(\)/)
+ assert.match(source,/client\.auth\.signOut\(\)/)
+ assert.match(source,/legacy\.has\(bot\.email\)/)
+ assert.doesNotMatch(source,/from\(['"]auth\.users/)
+ assert.doesNotMatch(source,/https:\/\/eakoavcieossazqzplke\.supabase\.co/)
+})
+test('QA password synchronization fails closed when Main-only authorization is absent',()=>{
+ const result=spawnSync(process.execPath,[script,'--sync-passwords'],{
+  encoding:'utf8',env:{...process.env,UPT_QA_ALLOW_MAIN_SEED:'0',BOT_TEST_PASSWORD:'',BOT_SERVICE_ROLE_KEY:''}
+ })
+ assert.notEqual(result.status,0)
+ assert.match(result.stderr,/Main-test QA seeding is disabled/)
+})

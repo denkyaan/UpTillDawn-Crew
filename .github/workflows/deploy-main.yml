@@ -29,6 +29,7 @@ jobs:
       BOT_SUPABASE_URL: https://npbjrtiolqperdgljnhi.supabase.co
       BOT_SERVICE_ROLE_KEY: ${{ secrets.MAIN_QA_SUPABASE_SECRET_KEY }}
       BOT_TEST_PASSWORD: ${{ secrets.MAIN_QA_BOT_PASSWORD }}
+      BOT_PUBLIC_ANON_KEY: sb_publishable_zStTw3n8wZ271PehDRDvGg_rs0JOy84
       UPT_QA_ALLOW_MAIN_SEED: '1'
     steps:
       - name: Require QA-only private Auth secret and bot password
@@ -48,10 +49,10 @@ jobs:
           cache: npm
       - name: Install dependencies
         run: npm ci --prefer-offline --no-audit --no-fund
-      - name: Provision isolated Main QA bots
-        run: node scripts/provision-seven-main-bots.mjs
-      - name: Verify all seven distinct role accounts, portal grants and leader slots
-        run: node scripts/provision-seven-main-bots.mjs --verify
+      - name: Provision and synchronize the seven isolated Main QA passwords
+        run: node scripts/provision-seven-main-bots.mjs --sync-passwords
+      - name: Verify seven distinct roles and login with the same configured QA password
+        run: node scripts/provision-seven-main-bots.mjs --verify --verify-passwords
 
   validate-trigger:
     if: github.event_name == 'workflow_run'

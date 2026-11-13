@@ -21,6 +21,10 @@ if(process.argv.includes('--plan')){
  process.exit(0)
 }
 const verifyOnly=process.argv.includes('--verify')
+const syncPasswords=process.argv.includes('--sync-passwords')
+const verifyPasswords=process.argv.includes('--verify-passwords')
+if(syncPasswords&&verifyOnly)throw Error('Password sync and verify must run in separate explicit steps')
+if(verifyPasswords&&!verifyOnly)throw Error('Use --verify --verify-passwords to test credentials without changing them')
 if(!verifyOnly&&process.env.UPT_QA_ALLOW_MAIN_SEED!=='1')throw Error('Main-test QA seeding is disabled')
 const url=process.env.BOT_SUPABASE_URL
 const key=process.env.BOT_SERVICE_ROLE_KEY
@@ -62,6 +66,25 @@ if(verifyOnly){
   }
  }
  console.log('QA Main seven-role verification '+JSON.stringify({verified:issues.length===0,issues}))
+ if(!issues.length&&verifyPasswords){
+  const publicKey=process.env.BOT_PUBLIC_ANON_KEY
+  if(!publicKey||!password||password.length<24)throw Error('Private QA password and Main publishable key required for credential verification')
+  let authenticated=0
+  for(const bot of QA_SEVEN){
+   // Create a fresh client for each login so the sessions never overlap.
+   const client=createClient(url,publicKey,{auth:{persistSession:false,autoRefreshToken:false,detectSessionInUrl:false}})
+   const {data,error}=await client.auth.signInWithPassword({email:bot.email,password})
+   if(error||data.user?.id!==known.get(bot.email)?.id||!data.session)
+    throw Error('Password authentication failed for '+bot.key+' (never log credentials)')
+   const {data:check,error:checkError}=await client.auth.getUser()
+   if(checkError||check.user?.id!==known.get(bot.email)?.id)
+    throw Error('Verified session does not match fixed QA identity '+bot.key)
+   const {error:logoutError}=await client.auth.signOut()
+   if(logoutError)throw Error('Could not clear QA session for '+bot.key)
+   authenticated++
+  }
+  console.log('PASS: all '+authenticated+' fixed Main QA bots authenticated with the same private configured QA password (no passwords or sessions logged).')
+ }
  if(issues.length)process.exitCode=1
  process.exit()
 }
@@ -122,5 +145,26 @@ for(const bot of QA_SEVEN){
  const id=ids.get(bot.key)
  const {data:p,error}=await db.from('profiles').select('role,approved,account_blocked').eq('id',id).single()
  if(error||p?.role!==bot.role||!p?.approved||p?.account_blocked)throw Error('Final profile verification failed: '+bot.key)
+}
+// A manually opted-in QA run may synchronize the single configured QA password
+// to the three legacy accounts as well as newly provisioned test identities.
+// Never rotate any real person, Owner, production account or unknown identity.
+if(syncPasswords){
+ const legacy=new Set(['e2e-admin@uptilldawn.test','e2e-responsible@uptilldawn.test','e2e-staff@uptilldawn.test'])
+ for(const bot of QA_SEVEN){
+  const id=ids.get(bot.key)
+  const stored=known.get(bot.email)
+  if(stored&&stored.id!==id)throw Error('QA identity changed during provisioning for '+bot.key)
+  if(stored&&!stored.user_metadata?.qa_fixture&&!legacy.has(bot.email))
+   throw Error('Refusing to rotate non-QA identity '+bot.key)
+  const {data:auth,error:authError}=await db.auth.admin.getUserById(id)
+  if(authError||auth.user?.email?.toLowerCase()!==bot.email)
+   throw Error('Unable to revalidate fixed QA Auth identity '+bot.key)
+  // createUser already used the configured password; repeat the update
+  // explicitly for every identity so reused accounts never diverge.
+  const {error:passwordError}=await db.auth.admin.updateUserById(id,{password})
+  if(passwordError)throw Error('QA password synchronization failed for '+bot.key+': '+passwordError.message)
+ }
+ console.log('PASS: QA password set for all seven fixed Main-test operational accounts. Secret was not printed.')
 }
 console.log('PASS: seven distinct isolated Main-test operational role bots provisioned; '+created.length+' new, '+(7-created.length)+' reused. Maker/Owner is only created in disposable CI. Passwords were not logged.')
