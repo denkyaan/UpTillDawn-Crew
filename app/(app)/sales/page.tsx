@@ -2,6 +2,11 @@ import {redirect} from 'next/navigation'
 import {getCurrentUser} from '@/lib/actions/auth'
 import {createClient} from '@/lib/supabase/crew-server'
 import {PlatformAiAssistant} from '@/components/admin/platform-ai-assistant'
+import {requestUiLocale} from '@/lib/server-locale'
+import {integrationManagementAccess} from '@/lib/administration/integration-management-access'
+import {externalServicesReadiness} from '@/lib/administration/external-services-readiness'
+import {integrationServicesForWorkspace} from '@/lib/administration/integration-placement'
+import {ExternalServicesReadiness} from '@/components/admin/external-services-readiness'
 import {createPriceListDocument,createPriceListTextEntry,archiveEventDocument} from '@/lib/actions/uptilldawn'
 
 export const dynamic='force-dynamic'
@@ -33,6 +38,7 @@ export default async function SalesPage({
   const s=await createClient()
   const params=await searchParams
   const isAdmin=current.isAdmin===true
+  const [integrationAccess,locale]=await Promise.all([integrationManagementAccess(),requestUiLocale()])
 
   let events:EventRow[]=[]
   let eventLoadError=false
@@ -127,6 +133,7 @@ export default async function SalesPage({
       </form>
     </header>
 
+    {integrationAccess.ok&&<ExternalServicesReadiness locale={locale} services={integrationServicesForWorkspace('sales',externalServicesReadiness(process.env))}/>}
     {isAdmin&&selected&&<PlatformAiAssistant eventId={selected.id} contextKey="sales" contextLabel={'Sales · '+selected.name}/>}
 
     {isAdmin&&selected&&<section className="space-y-4 rounded-2xl border border-violet-500/30 p-4" data-tour="price-lists">
