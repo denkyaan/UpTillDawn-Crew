@@ -22,6 +22,9 @@ export async function enterGodModeFromMakerSession(){
 
   const store=await cookies()
   store.set(GOD_COOKIE,String(token),{httpOnly:true,secure:true,sameSite:'strict',path:'/',maxAge:2*60*60})
+  // Record the selected workspace before navigation. A freshly installed PWA
+  // may close before the client-side continuity hook has rendered.
+  store.set('uptilldawn-last-workspace',user.id+':god-mode',{sameSite:'lax',secure:process.env.NODE_ENV==='production',path:'/',maxAge:60*60*24*90})
   redirect('/god-mode')
 }
 
