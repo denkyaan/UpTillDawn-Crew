@@ -1,4 +1,5 @@
 import "server-only"
+import {validAccountAccess} from "./provider-account-access"
 
 /**
  * Credential-only provider diagnostics. Not a payment, bank read, document
@@ -39,14 +40,6 @@ async function safeMetadata(response:Response|null):Promise<unknown>{
  catch{return null}
 }
 /** Ponto uses JSON:API. No account number, IBAN, balance or owner is returned. */
-export function validAccountAccess(data:unknown):ConnectionState{
- if(!data||typeof data!=="object"||Array.isArray(data)||!("data" in data)||!Array.isArray(data.data))return "unavailable"
- if(data.data.length===0)return "needs_account_access"
- const first=data.data[0] as unknown
- return first&&typeof first==="object"&&"type" in first&&first.type==="account"&&
-  "id" in first&&typeof first.id==="string"&&
-  /^[0-9a-f]{8}(?:-[0-9a-f]{4}){3}-[0-9a-f]{12}$/i.test(first.id)?"connected":"unavailable"
-}
 
 function result(response:Response|null):ConnectionState{
  if(!response)return "unavailable"
