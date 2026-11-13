@@ -83,7 +83,7 @@ if(verifyOnly){
    if(logoutError)throw Error('Could not clear QA session for '+bot.key)
    authenticated++
   }
-  console.log('PASS: all '+authenticated+' fixed Main QA bots authenticated with the same private configured QA password (no passwords or sessions logged).')
+  console.log('PASS: all '+authenticated+' fixed Main QA bots authenticated with the same private configured QA credential (no secrets or sessions logged).')
  }
  if(issues.length)process.exitCode=1
  process.exit()
@@ -165,6 +165,6 @@ if(syncPasswords){
   const {error:passwordError}=await db.auth.admin.updateUserById(id,{password})
   if(passwordError)throw Error('QA password synchronization failed for '+bot.key+': '+passwordError.message)
  }
- console.log('PASS: QA password set for all seven fixed Main-test operational accounts. Secret was not printed.')
+ console.log('PASS: All seven fixed Main-test operational QA credentials were synchronized. Secret was not printed.')
 }
 console.log('PASS: seven distinct isolated Main-test operational role bots provisioned; '+created.length+' new, '+(7-created.length)+' reused. Maker/Owner is only created in disposable CI. Passwords were not logged.')
