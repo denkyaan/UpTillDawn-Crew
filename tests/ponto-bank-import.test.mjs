@@ -76,7 +76,7 @@ test("API enforces approved Admin/Administration credentials and exact account a
  assert.match(route,/allowed\.includes\(data\.accountId\)/)
  assert.match(route,/n>256/)
  assert.match(route,/upt_admin_import_bank_statement_transactions/)
- assert.match(route,/result\.inserted\+result\.skipped!==page\.rows\.length/)
+ assert.match(route,/inserted\+skipped!==page\.rows\.length/)
  assert.doesNotMatch(route,/upt_admin_post_bank_statement_payment|upt_admin_link_existing_bank_statement_payment|createPayment|initiateTransfer/)
  assert.match(settings,/upt_can_manage_integrations/)
  assert.match(admin,/slug==="banking"&&pontoSetupAccess\?\.ok&&<PontoBankImport/)
