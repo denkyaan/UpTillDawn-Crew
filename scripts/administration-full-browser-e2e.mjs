@@ -100,11 +100,12 @@ try{
         const expectedClickedPath=expectedPortalDestination(target)
         try {
          await Promise.all([
-          tab.waitForURL(u=>u.pathname+u.search===expectedClickedPath,{timeout:20000,waitUntil:'commit'}),
+          tab.waitForURL(u=>u.pathname+u.search+u.hash===expectedClickedPath,{timeout:20000,waitUntil:'commit'}),
           href.click({timeout:15000}),
          ])
         } catch (error) {
-         const actualPath=new URL(tab.url()).pathname
+         const actualUrl=new URL(tab.url())
+          const actualPath=actualUrl.pathname+actualUrl.search+actualUrl.hash
          const screenshotName='test-results/portal-e2e/'+role.name+'-clicked-'+route.replace(/[^a-z0-9]/gi,'_')+'-to-'+target.replace(/[^a-z0-9]/gi,'_')+'.png'
          await tab.screenshot({path:screenshotName,fullPage:true,timeout:5000}).catch(()=>{})
          throw Error('navigation '+route+' -> '+target+' expected '+expectedClickedPath+' but reached '+actualPath+': '+String(error.message||error)+' (screenshot: '+screenshotName+')')
@@ -115,8 +116,12 @@ try{
         await tab.locator('body').waitFor({state:'visible',timeout:15000})
         await tab.waitForTimeout(250)
         const finalUrl=new URL(tab.url())
-        const finalPath=finalUrl.pathname+finalUrl.search
+        const finalPath=finalUrl.pathname+finalUrl.search+finalUrl.hash
         if(finalPath!==expectedClickedPath)throw Error('hydrated navigation '+route+' -> '+target+' ended at '+finalPath+' (expected '+expectedClickedPath+'); page title='+await tab.title()+'; body='+((await tab.locator('body').innerText()).slice(0,500)))
+        // A deep-link action must open its existing form, not only change the URL.
+        if(target==='/portals/administration/modules/events?create=1#administration-event-draft'){
+         await tab.locator('details#administration-event-draft[open] form').waitFor({state:'visible',timeout:10000})
+        }
         // Inventory filtering must actually select the clicked event, not merely update the address bar.
         if(finalUrl.pathname==='/portals/administration/modules/inventory'&&finalUrl.searchParams.has('event')){
          const activeEventLink=tab.locator('a[aria-current="page"][href="'+target.replaceAll('"','\\"')+'"]')
