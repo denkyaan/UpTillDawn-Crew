@@ -2,9 +2,9 @@ import "server-only"
 import {validAccountAccess} from "./provider-account-access"
 
 /**
- * Credential-only provider diagnostics. Not a payment, bank read, document
- * upload, contract send or invoice transmission. No provider response body
- * or secret leaves this module.
+ * Read-only provider diagnostics: Billit sandbox metadata and Ponto bank-account
+ * authorization (without returning banking data). No money movement, invoice
+ * transmission or signing; no secret or provider response body leaves this module.
  */
 export type ConnectionProvider="sumup"|"documenso"|"banking"|"peppol"
 export type ConnectionState="not_configured"|"connected"|"unauthorized"|"unavailable"|"needs_account_access"
