@@ -46,6 +46,9 @@ test('Admin AI button remains in the topbar while expanded bottom navigation clo
  assert.match(appLayout,/const adminAiVisible=isAdmin\|\|administrationPortal/)
  assert.doesNotMatch(appLayout,/adminAiVisible=.*!navigationExpanded/)
  assert.match(appLayout,/if\(open\)setAdminAiOpen\(false\)/)
+ assert.match(appLayout,/uptilldawn-navigation-dismiss/)
+ assert.match(read('components/administration/administration-navigation.tsx'),/uptilldawn-navigation-dismiss/)
+ assert.match(read('components/layout/mobile-nav.tsx'),/uptilldawn-navigation-dismiss/)
  assert.match(appLayout,/adminAiAction=\s*adminAiVisible\?/)
 })
 
