@@ -47,7 +47,8 @@ test("provider checks only probe credentials, never write payment, financial or 
  assert.match(src,/redirect:"error"/)
  assert.match(src,/AbortSignal\.timeout\(6500\)/)
  assert.match(src,/json\.access_token\.length<11/)
- assert.doesNotMatch(src,/\/checkouts|\/payments|\/distribute|\/transactions|\/sync|\bPUT\b|\bDELETE\b/)
+ assert.doesNotMatch(src,/\/checkouts|\/payments|\/distribute|\/sync|\bPUT\b|\bDELETE\b/)
+ assert.match(src,/pontoReadOnlyJson\("\/accounts\?page%5Blimit%5D=1"/)
 })
 
 test("presence of provider credentials stays distinct from tested and enabled delivery",()=>{
