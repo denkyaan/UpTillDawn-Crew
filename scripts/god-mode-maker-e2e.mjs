@@ -130,11 +130,19 @@ async function verifyMaker(viewport){
   const normal=page.getByRole('button',{name:'Normale app openen'})
   await normal.click()
   await page.waitForURL(url=>url.pathname==='/admin',{timeout:30000})
+  await page.getByRole('heading',{name:'Operationeel command center'}).waitFor({state:'visible',timeout:30000})
   assert.equal((await safeRequest(context,'/api/god/logs?environment=main&limit=3')).status(),401)
   record(tag+' leaving God Mode retains the Owner login and restores Admin')
 
   // An authenticated Maker may switch to Administration. The PWA must then
   // reopen the last authorized workspace, without silently returning to Admin.
+  // Route Handler redirects must preserve the browser origin: using an
+  // internal localhost URL would lose the authenticated 127.0.0.1 cookies.
+  const switchResponse=await safeRequest(context,'/portals/switch/administration')
+  assert.equal(switchResponse.status(),307,'Authorized Maker portal switch must redirect')
+  assert.equal(switchResponse.headers().location,'/portals/administration',
+   'Portal switch must return a relative same-origin Location')
+  record(tag+' Administration switch preserves the authenticated browser origin')
   await page.goto(base+'/portals/switch/administration',{waitUntil:'domcontentloaded',timeout:45000})
   await page.waitForURL(url=>url.pathname==='/portals/administration',{timeout:30000})
   await page.waitForFunction(()=>decodeURIComponent(document.cookie).includes(':administration'),null,{timeout:12000})
