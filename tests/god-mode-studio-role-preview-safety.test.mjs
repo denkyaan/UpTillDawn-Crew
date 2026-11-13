@@ -50,7 +50,7 @@ test('visual editor does not delete React controls while changing nested text',(
  assert.match(builder,/if\(element\.childElementCount>0\)/)
  assert.match(builder,/Behoud bestaande authenticatie, autorisatie en overige logica/)
  for(const locale of ['nl','fr','en','de']){
-  assert.match(builder,new RegExp('\\b'+locale+':\\{restoreRole:'))
+  assert.match(builder,new RegExp('\\b'+locale+':\\{unavailable:'))
  }
 })
 
