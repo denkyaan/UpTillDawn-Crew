@@ -5,10 +5,10 @@ import {activeUiLocale,LANGUAGE_APPLIED_EVENT} from "@/lib/locale-preferences"
 import type {ConnectionProvider,ConnectionState} from "@/lib/administration/provider-connection-check"
 
 const copy={
- nl:{check:"Verbinding testen",working:"Beveiligde verbinding controleren…",connected:"Sleutel werkt · functies nog niet geactiveerd",not_configured:"Geheime instellingen ontbreken",unauthorized:"Provider weigert de sleutel",unavailable:"Verbindingscontrole niet gelukt",error:"Test kan momenteel niet worden uitgevoerd"},
- fr:{check:"Tester la connexion",working:"Vérification de la connexion…",connected:"Clé valide · fonctionnalités non activées",not_configured:"Configuration secrète manquante",unauthorized:"Le fournisseur refuse la clé",unavailable:"Connexion non vérifiée",error:"Test temporairement indisponible"},
- en:{check:"Test connection",working:"Checking secure credentials…",connected:"Key accepted · features not activated",not_configured:"Server configuration missing",unauthorized:"Provider rejected the key",unavailable:"Connection verification failed",error:"Cannot run verification right now"},
- de:{check:"Verbindung prüfen",working:"Sichere Verbindung wird geprüft…",connected:"Schlüssel gültig · Funktionen nicht aktiviert",not_configured:"Server-Konfiguration fehlt",unauthorized:"Anbieter lehnt Schlüssel ab",unavailable:"Verbindung konnte nicht bestätigt werden",error:"Test derzeit nicht möglich"}
+ nl:{check:"Verbinding testen",working:"Beveiligde verbinding controleren…",connected:"Sleutel werkt · functies nog niet geactiveerd",needs_account_access:"Ponto werkt, maar er is nog geen bankrekening aan deze integratie gekoppeld.",not_configured:"Geheime instellingen ontbreken",unauthorized:"Provider weigert de sleutel",unavailable:"Verbindingscontrole niet gelukt",error:"Test kan momenteel niet worden uitgevoerd"},
+ fr:{check:"Tester la connexion",working:"Vérification de la connexion…",connected:"Clé valide · fonctionnalités non activées",needs_account_access:"Ponto est accessible, mais aucun compte bancaire n’est autorisé pour cette intégration.",not_configured:"Configuration secrète manquante",unauthorized:"Le fournisseur refuse la clé",unavailable:"Connexion non vérifiée",error:"Test temporairement indisponible"},
+ en:{check:"Test connection",working:"Checking secure credentials…",connected:"Key accepted · features not activated",needs_account_access:"Ponto works, but no bank account has been authorized for this integration.",not_configured:"Server configuration missing",unauthorized:"Provider rejected the key",unavailable:"Connection verification failed",error:"Cannot run verification right now"},
+ de:{check:"Verbindung prüfen",working:"Sichere Verbindung wird geprüft…",connected:"Schlüssel gültig · Funktionen nicht aktiviert",needs_account_access:"Ponto funktioniert, aber diesem Zugang ist noch kein Bankkonto zugeordnet.",not_configured:"Server-Konfiguration fehlt",unauthorized:"Anbieter lehnt Schlüssel ab",unavailable:"Verbindung konnte nicht bestätigt werden",error:"Test derzeit nicht möglich"}
 } as const
 
 const disconnectedState:ConnectionState="not_configured"
@@ -37,7 +37,7 @@ export function ProviderConnectionProbe({provider,initialLocale}:{provider:Conne
    const payload:unknown=await response.json()
    if(!payload||typeof payload!=="object"||!("status" in payload)){update("unavailable");return}
    const state=payload.status
-   if(state==="connected"||state==="not_configured"||state==="unauthorized"||state==="unavailable")update(state)
+   if(state==="connected"||state==="not_configured"||state==="unauthorized"||state==="unavailable"||state==="needs_account_access")update(state)
    else update("unavailable")
   }catch{update("unavailable")}
   finally{
