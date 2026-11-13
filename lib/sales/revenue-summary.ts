@@ -3,7 +3,7 @@ export const MAX_REVENUE_TRANSACTIONS=20_000
 
 export type SalesRevenueRow={
   transaction_type:string
-  total_cents:number
+  total_cents:number|null
   payment_method:string
   sale_category:string
 }
@@ -16,7 +16,7 @@ export function revenueCoverageComplete(expected:number|null,loaded:number):bool
 export function summarizeSalesRevenue(rows:readonly SalesRevenueRow[]){
   const totals={event:0,merch:0,token:0,cash:0,card:0}
   for(const row of rows){
-    if(!Number.isSafeInteger(row.total_cents))throw Error('Invalid recorded sale amount')
+    if(row.total_cents===null||!Number.isSafeInteger(row.total_cents))throw Error('Invalid recorded sale amount')
     const signed=(row.transaction_type==='refund'?-1:1)*row.total_cents
     totals.event+=signed
     if(row.sale_category==='merch')totals.merch+=signed

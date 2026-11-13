@@ -892,6 +892,10 @@ export const APP_EXTRA_TRANSLATIONS: Record<string,Row> = {
   "INGEVOERDE PRIJSLIJST OPSLAAN": {fr:"ENREGISTRER LA LISTE SAISIE",en:"SAVE ENTERED PRICE LIST",de:"EINGEGEBENE PREISLISTE SPEICHERN"},
   "of upload een foto of bestand": {fr:"ou téléchargez une photo ou un fichier",en:"or upload a photo or file",de:"oder Foto bzw. Datei hochladen"},
   "Prijslijst opslaan mislukt.": {fr:"Échec de l’enregistrement de la liste de prix.",en:"Failed to save the price list.",de:"Preisliste konnte nicht gespeichert werden."},
+  "Totale netto-inkomsten uit geregistreerde verkopen": {fr:"Recettes nettes totales des ventes enregistrées",en:"Total net revenue from recorded sales",de:"Gesamter Nettoerlös aus erfassten Verkäufen"},
+  "(laatste)": {fr:"(les dernières)",en:"(latest)",de:"(neueste)"},
+  "Er zijn te veel transacties om de volledige omzet hier veilig te berekenen. Daarom worden geen onvolledige totalen getoond.": {fr:"Il y a trop de transactions pour calculer ici le revenu total de façon fiable. Aucun total partiel n'est affiché.",en:"There are too many transactions to calculate the full revenue reliably here. Incomplete totals are not shown.",de:"Es gibt zu viele Transaktionen, um den Gesamtumsatz hier zuverlässig zu berechnen. Unvollständige Summen werden nicht angezeigt."},
+  "De vorige werkplekfilter hoort niet bij dit evenement; het volledige evenement wordt getoond.": {fr:"Le filtre de poste précédent n'appartient pas à cet événement ; toutes ses ventes sont affichées.",en:"The previous workplace filter does not belong to this event; the entire event is shown.",de:"Der vorherige Arbeitsplatzfilter gehört nicht zu dieser Veranstaltung; die gesamte Veranstaltung wird angezeigt."},
 }
 
 const CANONICAL=new Map<string,string>()

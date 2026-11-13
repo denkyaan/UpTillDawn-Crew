@@ -23,7 +23,7 @@ type Transaction={
   product_name:string
   sale_category:string
   quantity:number
-  total_cents:number
+  total_cents:number|null
   payment_method:string
   created_at:string
 }
@@ -143,7 +143,11 @@ export default async function SalesPage({
     }
   }
 
-  const revenueTotals=revenueComplete?summarizeSalesRevenue(revenueRows):null
+  let revenueTotals:ReturnType<typeof summarizeSalesRevenue>|null=null
+  if(revenueComplete){
+    try{revenueTotals=summarizeSalesRevenue(revenueRows)}
+    catch{transactionLoadError=true;revenueComplete=false}
+  }
 
   return <main className="mx-auto max-w-7xl space-y-6 p-4 pb-28 md:p-8">
     <header className="space-y-3">
@@ -255,7 +259,7 @@ export default async function SalesPage({
                       <td className="p-2">{tx.product_name} × {tx.quantity}</td>
                       <td className="p-2">{workplaceNames.get(tx.workplace_id)||'Werkplek'}</td>
                       <td className="p-2">{tx.payment_method==='cash'?'Cash':tx.payment_method==='card'?'Kaart':tx.payment_method}</td>
-                      <td className="p-2 text-right font-bold">{tx.transaction_type==='refund'?'-':''}{money(Math.abs(Number(tx.total_cents)))}</td>
+                      <td className="p-2 text-right font-bold">{tx.transaction_type==='refund'?'-':''}{tx.total_cents===null?'—':money(Math.abs(tx.total_cents))}</td>
                     </tr>)}
                   </tbody>
                 </table>
