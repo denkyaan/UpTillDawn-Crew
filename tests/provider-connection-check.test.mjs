@@ -46,7 +46,7 @@ test("provider checks only probe credentials, never write payment, financial or 
  assert.match(src,/grant_type=client_credentials/)
  assert.match(src,/redirect:"error"/)
  assert.match(src,/AbortSignal\.timeout\(6500\)/)
- assert.match(src,/json\.access_token\.length>10/)
+ assert.match(src,/json\.access_token\.length<11/)
  assert.doesNotMatch(src,/\/checkouts|\/payments|\/distribute|\/transactions|\/sync|\bPUT\b|\bDELETE\b/)
 })
 
