@@ -53,6 +53,7 @@ export function parseIntegrationConfiguration(provider:IntegrationProvider,input
   if(typeof value!=="string"||value.trim()!==value||value.length<3||value.length>4096||/[\u0000-\u001f\u007f]/.test(value))return null
   valid[field]=value
  }
+ if(provider==="peppol"&&!/^[1-9][0-9]{2,14}$/.test(valid.BILLIT_SANDBOX_PARTY_ID))return null
  if(provider==="documenso"){
   // Do not let a browser-controlled URL turn this into an SSRF proxy.
   if(valid.DOCUMENSO_BASE_URL!=="https://app.documenso.com")return null
