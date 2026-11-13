@@ -80,6 +80,7 @@ export async function POST(request:Request){
   if(error)return reply({error:error.code==="23505"?"conflicting_transaction":
    error.code==="42501"?"access_denied":"import_rejected"},error.code==="23505"?409:error.code==="42501"?403:422)
   if(!result||typeof result!=="object"||!("inserted" in result)||!("skipped" in result)||
+    typeof result.inserted!=="number"||typeof result.skipped!=="number"||
     !Number.isSafeInteger(result.inserted)||!Number.isSafeInteger(result.skipped)||
     result.inserted<0||result.skipped<0||result.inserted+result.skipped!==page.rows.length)
    return reply({error:"unexpected_import_result"},503)
