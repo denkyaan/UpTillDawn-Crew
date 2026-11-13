@@ -78,3 +78,14 @@ test('actual Maker browser acceptance reaches mobile Live Builder through its ac
  assert.match(e2e,/getByRole\('combobox',\{name:'App Studio'\}\)\.selectOption\('builder'\)/)
  assert.match(e2e,/getByRole\('button',\{name:'Live Builder'\}\)\.click\(\)/)
 })
+
+test('God Mode browser E2E separates normal app return from explicit sign-out',()=>{
+ const e2e=read('scripts/god-mode-maker-e2e.mjs')
+ const normal=e2e.indexOf("getByRole('button',{name:'Normale app openen'})")
+ const workspace=e2e.indexOf("page.goto(base+'/portals/switch/administration'")
+ const leave=e2e.indexOf("const leave=page.getByRole('button',{name:'God Mode afmelden'})")
+ assert.ok(normal>0 && workspace>normal && leave>workspace,
+  'An explicit logout must not precede authenticated Administration PWA restore')
+ assert.match(e2e,/await page\.waitForURL\(url=>url\.pathname==='\/admin'/)
+ assert.match(e2e,/returnToGod\.click\(\)/)
+})
