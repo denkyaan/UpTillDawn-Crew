@@ -3,7 +3,7 @@
 import {useEffect,useState,useSyncExternalStore} from "react"
 import type {SupportedUiLocale} from "@/lib/locale-preferences"
 import {activeUiLocale,LANGUAGE_APPLIED_EVENT} from "@/lib/locale-preferences"
-import {integrationFields,integrationProviders,type IntegrationProvider,type IntegrationSummary} from "@/lib/administration/integration-credentials"
+import {integrationFields,type IntegrationProvider,type IntegrationSummary} from "@/lib/administration/integration-credentials"
 
 const names={sumup:"SumUp",documenso:"Documenso",banking:"Ponto",weeztix:"Weeztix",peppol:"Billit / Peppol"} as const
 const labels={
@@ -28,9 +28,8 @@ function subscribeLocation(){return ()=>{}}
 function readOAuthResult(){return new URLSearchParams(window.location.search).get("weeztix_oauth")}
 function serverOAuthResult(){return null}
 
-export function IntegrationCredentialManager({initialLocale}:{initialLocale:SupportedUiLocale}){
+export function IntegrationCredentialManager({initialLocale,provider,events=[]}:{initialLocale:SupportedUiLocale;provider:IntegrationProvider;events?:ReadonlyArray<{id:string;name:string}>}){
  const [locale,setLocale]=useState<SupportedUiLocale>(initialLocale)
- const [provider,setProvider]=useState<IntegrationProvider>("sumup")
  const [fields,setFields]=useState<Record<string,string>>({})
  const [state,setState]=useState<State|null>(null)
  const oauthResult=useSyncExternalStore(subscribeLocation,readOAuthResult,serverOAuthResult)
@@ -84,13 +83,8 @@ export function IntegrationCredentialManager({initialLocale}:{initialLocale:Supp
  const entry=entries.find(x=>x.provider===provider)
  const textOf=(code:string)=>({saved:t.saved,removed:t.removed,keyMissing:t.keyMissing,invalid:t.invalid,forbidden:t.forbidden} as Record<string,string>)[code]??t.unavailable
  return <section className="mt-4 space-y-3 rounded-xl border p-4" aria-label={t.title}>
-  <h3 className="font-semibold">{t.title}</h3>
+  <h3 className="font-semibold">{names[provider]} · {t.title}</h3>
   <p className="text-xs text-muted-foreground">{t.intro}</p>
-  <label className="block text-sm">{t.provider}
-   <select className="mt-1 w-full min-h-11 rounded-lg border bg-background px-3" value={provider} disabled={busy} onChange={event=>{setProvider(event.target.value as IntegrationProvider);setFields({});setNotice("");setError("");setConfirm(false)}}>
-    {integrationProviders.map(item=><option value={item} key={item}>{names[item]}</option>)}
-   </select>
-  </label>
   <p className="text-xs font-semibold">{entry?t.configured:t.missing}</p>
   {entry&&<p className="text-xs text-muted-foreground">{t.last}: {new Date(entry.updated_at).toLocaleString(locale)}</p>}
   {!state?.secureStoreAvailable&&<p className="text-xs text-amber-600" role="status">{t.keyMissing}</p>}
@@ -101,7 +95,12 @@ export function IntegrationCredentialManager({initialLocale}:{initialLocale:Supp
      {labels[locale].WEEZTIX_SCANNING_ENABLED}
     </label>:
     <label key={key} className="block text-sm">{labels[locale][key as keyof typeof labels.nl]}
-    <input type={key==="DOCUMENSO_BASE_URL"||key==="WEEZTIX_ACTIVE_EVENT_ID"||key==="SUMUP_MERCHANT_CODE"||key==="PONTO_CLIENT_ID"||key==="BILLIT_SANDBOX_PARTY_ID"||key==="WEEZTIX_CLIENT_ID"?"text":"password"} className="mt-1 w-full min-h-11 rounded-lg border bg-background px-3" required={provider!=="weeztix"||(key!=="WEEZTIX_ACCESS_TOKEN"&&key!=="WEEZTIX_CLIENT_ID"&&key!=="WEEZTIX_CLIENT_SECRET")} minLength={key==="WEEZTIX_ACCESS_TOKEN"||key==="WEEZTIX_CLIENT_ID"||key==="WEEZTIX_CLIENT_SECRET"?0:3} maxLength={4096} autoComplete="off" spellCheck={false} value={fields[key]??defaults[key]??""} onChange={e=>setFields(old=>({...old,[key]:e.target.value}))}/>
+    {key==="WEEZTIX_ACTIVE_EVENT_ID"&&events.length>0?
+     <select className="mt-1 w-full min-h-11 rounded-lg border bg-background px-3" required disabled={busy} value={fields[key]??""} onChange={e=>setFields(old=>({...old,[key]:e.target.value}))}>
+      <option value="" disabled>{t.choose}</option>
+      {events.map(item=><option key={item.id} value={item.id}>{item.name}</option>)}
+     </select>:
+    <input type={key==="DOCUMENSO_BASE_URL"||key==="WEEZTIX_ACTIVE_EVENT_ID"||key==="SUMUP_MERCHANT_CODE"||key==="PONTO_CLIENT_ID"||key==="BILLIT_SANDBOX_PARTY_ID"||key==="WEEZTIX_CLIENT_ID"?"text":"password"} className="mt-1 w-full min-h-11 rounded-lg border bg-background px-3" required={provider!=="weeztix"||key==="WEEZTIX_ACTIVE_EVENT_ID"} minLength={key==="WEEZTIX_ACCESS_TOKEN"||key==="WEEZTIX_CLIENT_ID"||key==="WEEZTIX_CLIENT_SECRET"?0:3} maxLength={4096} autoComplete="off" spellCheck={false} value={fields[key]??defaults[key]??""} onChange={e=>setFields(old=>({...old,[key]:e.target.value}))}/>}
    </label>)}
    <div className="flex flex-wrap gap-2">
     <button type="submit" disabled={busy||!state?.secureStoreAvailable} className="min-h-11 rounded-lg bg-violet-700 px-4 py-2 font-semibold text-white disabled:opacity-50">{busy?t.busy:t.save}</button>
