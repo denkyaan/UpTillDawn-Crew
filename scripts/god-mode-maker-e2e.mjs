@@ -121,20 +121,38 @@ async function verifyMaker(viewport){
   }
   record(tag+' critical Studio, AI, release and advanced navigation buttons are functional')
 
-  // Log out explicitly: an expired/revoked God token must not remain usable.
-  const leave=page.getByRole('button',{name:'God Mode afmelden'})
-  await leave.click()
-  await page.waitForURL(url=>url.pathname!=='/god-mode',{timeout:30000})
+  // "Normale app openen" is NOT logout: it must revoke only the privileged
+  // God token, preserve Supabase authentication and open the Admin portal.
+  const normal=page.getByRole('button',{name:'Normale app openen'})
+  await normal.click()
+  await page.waitForURL(url=>url.pathname==='/admin',{timeout:30000})
   assert.equal((await safeRequest(context,'/api/god/logs?environment=main&limit=3')).status(),401)
-  record(tag+' God Mode logout invalidates the private session')
+  record(tag+' leaving God Mode retains the Owner login and restores Admin')
 
-  // Server must restore an approved Administration portal on a fresh PWA root load.
+  // An authenticated Maker may switch to Administration. The PWA must then
+  // reopen the last authorized workspace, without silently returning to Admin.
   await page.goto(base+'/portals/switch/administration',{waitUntil:'domcontentloaded',timeout:45000})
   await page.waitForURL(url=>url.pathname==='/portals/administration',{timeout:30000})
   await page.waitForFunction(()=>decodeURIComponent(document.cookie).includes(':administration'),null,{timeout:12000})
   await page.goto(base+'/',{waitUntil:'domcontentloaded',timeout:45000})
   await page.waitForURL(url=>url.pathname==='/portals/administration',{timeout:30000})
   record(tag+' PWA reopen restores authorized Administration instead of Admin')
+
+  // Separately verify explicit God Mode sign-out. Going to the Admin login
+  // screen may terminate the normal account session; never assume the user
+  // remains authenticated after deliberately choosing "afmelden".
+  await page.goto(base+'/maker-mode?portal=admin',{waitUntil:'domcontentloaded',timeout:45000})
+  await page.getByRole('heading',{name:'Kies je modus'}).waitFor({state:'visible',timeout:30000})
+  const returnToGod=page.getByRole('button',{name:/God Mode/}).first()
+  await Promise.all([
+   page.waitForURL(url=>url.pathname==='/god-mode',{timeout:30000}),
+   returnToGod.click(),
+  ])
+  const leave=page.getByRole('button',{name:'God Mode afmelden'})
+  await leave.click()
+  await page.waitForURL(url=>url.pathname!=='/god-mode',{timeout:30000})
+  assert.equal((await safeRequest(context,'/api/god/logs?environment=main&limit=3')).status(),401)
+  record(tag+' God Mode logout invalidates the private session')
  }catch(error){
   failures.push(tag+': '+String(error?.message||error))
   await maker.page.screenshot({path:out+'/'+tag+'.png',fullPage:true,timeout:5000}).catch(()=>{})
