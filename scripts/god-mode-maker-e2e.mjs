@@ -67,6 +67,10 @@ async function verifyMaker(viewport){
   assert.equal(await workspaceNav.locator('a[href*="/god-mode"]').count(),1,
    'Selected environment must open through its own isolated session without duplicate top-level selectors')
   record(tag+' Maker enters private God Mode with isolated Main and production controls')
+  const activePreviewRole=await safeRequest(context,'/api/god/preview-role')
+  assert.equal(activePreviewRole.status(),200,'Maker must be allowed to read the actual current preview role')
+  assert.equal((await activePreviewRole.json()).role,'admin','Maker Admin role must match the browser preview before switching')
+  record(tag+' authenticated Maker sees the real active Admin preview role')
 
   // Installed PWA starts at '/': it must restore a valid God session instead of Admin.
   await page.waitForFunction(()=>document.cookie.includes('uptilldawn-last-workspace='),null,{timeout:10000})
@@ -76,7 +80,13 @@ async function verifyMaker(viewport){
 
   // Real iframe viewport dimensions, not just CSS-shrunk mobile replicas.
   await workspaceNav.getByRole('button',{name:'App Studio'}).click()
-  await workspaceNav.getByRole('button',{name:'Live Builder'}).click()
+  // On narrow phones the complete Studio submenu is an accessible select,
+  // not a clipped row of buttons. Desktop retains the button tabs.
+  if(viewport.width<640){
+   await workspaceNav.getByRole('combobox',{name:'App Studio'}).selectOption('builder')
+  }else{
+   await workspaceNav.getByRole('button',{name:'Live Builder'}).click()
+  }
   const preview=page.locator('iframe[title*="preview"]').first()
   await preview.waitFor({state:'visible',timeout:30000})
   for(const [name,width] of [['Mobiel 390px','390px'],['Tablet 820px','820px'],['Desktop 1440px','1440px']]){
@@ -115,20 +125,38 @@ async function verifyMaker(viewport){
   }
   record(tag+' critical Studio, AI, release and advanced navigation buttons are functional')
 
-  // Log out explicitly: an expired/revoked God token must not remain usable.
-  const leave=page.getByRole('button',{name:'God Mode afmelden'})
-  await leave.click()
-  await page.waitForURL(url=>url.pathname!=='/god-mode',{timeout:30000})
+  // "Normale app openen" is NOT logout: it must revoke only the privileged
+  // God token, preserve Supabase authentication and open the Admin portal.
+  const normal=page.getByRole('button',{name:'Normale app openen'})
+  await normal.click()
+  await page.waitForURL(url=>url.pathname==='/admin',{timeout:30000})
   assert.equal((await safeRequest(context,'/api/god/logs?environment=main&limit=3')).status(),401)
-  record(tag+' God Mode logout invalidates the private session')
+  record(tag+' leaving God Mode retains the Owner login and restores Admin')
 
-  // Server must restore an approved Administration portal on a fresh PWA root load.
+  // An authenticated Maker may switch to Administration. The PWA must then
+  // reopen the last authorized workspace, without silently returning to Admin.
   await page.goto(base+'/portals/switch/administration',{waitUntil:'domcontentloaded',timeout:45000})
   await page.waitForURL(url=>url.pathname==='/portals/administration',{timeout:30000})
   await page.waitForFunction(()=>decodeURIComponent(document.cookie).includes(':administration'),null,{timeout:12000})
   await page.goto(base+'/',{waitUntil:'domcontentloaded',timeout:45000})
   await page.waitForURL(url=>url.pathname==='/portals/administration',{timeout:30000})
   record(tag+' PWA reopen restores authorized Administration instead of Admin')
+
+  // Separately verify explicit God Mode sign-out. Going to the Admin login
+  // screen may terminate the normal account session; never assume the user
+  // remains authenticated after deliberately choosing "afmelden".
+  await page.goto(base+'/maker-mode?portal=admin',{waitUntil:'domcontentloaded',timeout:45000})
+  await page.getByRole('heading',{name:'Kies je modus'}).waitFor({state:'visible',timeout:30000})
+  const returnToGod=page.getByRole('button',{name:/God Mode/}).first()
+  await Promise.all([
+   page.waitForURL(url=>url.pathname==='/god-mode',{timeout:30000}),
+   returnToGod.click(),
+  ])
+  const leave=page.getByRole('button',{name:'God Mode afmelden'})
+  await leave.click()
+  await page.waitForURL(url=>url.pathname!=='/god-mode',{timeout:30000})
+  assert.equal((await safeRequest(context,'/api/god/logs?environment=main&limit=3')).status(),401)
+  record(tag+' God Mode logout invalidates the private session')
  }catch(error){
   failures.push(tag+': '+String(error?.message||error))
   await maker.page.screenshot({path:out+'/'+tag+'.png',fullPage:true,timeout:5000}).catch(()=>{})
@@ -142,6 +170,7 @@ try{
   assert.equal(resp.status(),401,'Ordinary staff must not read God Mode logs')
   const overview=await safeRequest(staff.context,'/api/god/overview?environment=main')
   assert.equal(overview.status(),401,'Ordinary staff must not read God Mode overview')
+  assert.equal((await safeRequest(staff.context,'/api/god/preview-role')).status(),401,'Staff cannot read Maker preview role state')
   await staff.page.goto(base+'/maker-mode',{waitUntil:'domcontentloaded',timeout:30000})
   await staff.page.waitForURL(url=>url.pathname==='/unauthorized',{timeout:20000})
   record('staff cannot enter Maker portal or read private God Mode APIs')

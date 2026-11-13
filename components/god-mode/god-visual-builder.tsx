@@ -6,10 +6,10 @@ import targets from '@/lib/god-source-index.json'
 import type { SourceTarget } from '@/lib/god-studio'
 
 const previewText={
- nl:{device:'Schermformaat',mobile:'Mobiel',tablet:'Tablet',desktop:'Desktop',fit:'Passend · 100% bekijken',actual:'Ware grootte · passend bekijken',preview:'preview',note:'De preview gebruikt een echte viewport van',warning:'Kies 100% om op kleine schermen horizontaal te inspecteren. Rolwissels wijzigen tijdelijk je actieve testrol; kies Admin om die opnieuw in te stellen.'},
- fr:{device:'Format d’écran',mobile:'Mobile',tablet:'Tablette',desktop:'Ordinateur',fit:'Adapté · afficher à 100 %',actual:'Taille réelle · ajuster',preview:'aperçu',note:"L’aperçu utilise une largeur réelle de",warning:"Affichez 100 % pour inspecter horizontalement sur les petits écrans. Changer de rôle modifie temporairement le rôle de test actif ; sélectionnez Admin pour le rétablir."},
- en:{device:'Screen size',mobile:'Mobile',tablet:'Tablet',desktop:'Desktop',fit:'Fit · view at 100%',actual:'Actual size · fit',preview:'preview',note:'The preview uses a real viewport width of',warning:'Choose 100% to inspect horizontally on smaller screens. Role switching temporarily changes your active test role; select Admin to restore it.'},
- de:{device:'Bildschirmgröße',mobile:'Mobil',tablet:'Tablet',desktop:'Desktop',fit:'Einpassen · 100 % anzeigen',actual:'Originalgröße · einpassen',preview:'Vorschau',note:'Die Vorschau verwendet eine echte Ansichtsbreite von',warning:'Auf kleinen Bildschirmen lässt sich bei 100 % horizontal prüfen. Ein Rollenwechsel ändert vorübergehend die aktive Testrolle; Admin stellt sie wieder her.'},
+ nl:{page:"Voorbeeldpagina",switchFailed:"Rolvoorbeeld kon niet worden geopend.",unavailable:"De actieve voorbeeldrol kon niet worden opgehaald.",nested:"Dit onderdeel heeft ingesloten knoppen of pictogrammen. Gebruik een codevoorstel om de tekst aan te passen zonder functies te verwijderen.",restoreRole:'Oorspronkelijke rol herstellen',retry:'Opnieuw verbinden',device:'Schermformaat',mobile:'Mobiel',tablet:'Tablet',desktop:'Desktop',fit:'Passend · 100% bekijken',actual:'Ware grootte · passend bekijken',preview:'preview',note:'De preview gebruikt een echte viewport van',warning:'Kies 100% om op kleine schermen horizontaal te inspecteren. Rolwissels wijzigen tijdelijk je actieve testrol; kies Admin om die opnieuw in te stellen.'},
+ fr:{page:"Page de prévisualisation",switchFailed:"Impossible d’ouvrir l’aperçu de ce rôle.",unavailable:"Le rôle actif de prévisualisation est indisponible.",nested:"Cet élément contient des boutons ou des icônes. Utilisez une proposition de code pour modifier le texte sans supprimer les fonctions.",restoreRole:'Rétablir le rôle initial',retry:'Réessayer',device:'Format d’écran',mobile:'Mobile',tablet:'Tablette',desktop:'Ordinateur',fit:'Adapté · afficher à 100 %',actual:'Taille réelle · ajuster',preview:'aperçu',note:"L’aperçu utilise une largeur réelle de",warning:"Affichez 100 % pour inspecter horizontalement sur les petits écrans. Changer de rôle modifie temporairement le rôle de test actif ; sélectionnez Admin pour le rétablir."},
+ en:{page:"Preview page",switchFailed:"Unable to open this role preview.",unavailable:"The active preview role could not be loaded.",nested:"This element contains nested controls or icons. Use a code proposal to change its text without removing functionality.",restoreRole:'Restore original role',retry:'Retry connection',device:'Screen size',mobile:'Mobile',tablet:'Tablet',desktop:'Desktop',fit:'Fit · view at 100%',actual:'Actual size · fit',preview:'preview',note:'The preview uses a real viewport width of',warning:'Choose 100% to inspect horizontally on smaller screens. Role switching temporarily changes your active test role; select Admin to restore it.'},
+ de:{page:"Vorschauseite",switchFailed:"Rollenvorschau konnte nicht geöffnet werden.",unavailable:"Die aktive Vorschaurolle konnte nicht geladen werden.",nested:"Dieses Element enthält verschachtelte Schaltflächen oder Symbole. Verwende einen Codevorschlag, um den Text ohne Funktionsverlust zu ändern.",restoreRole:'Ursprüngliche Rolle wiederherstellen',retry:'Erneut verbinden',device:'Bildschirmgröße',mobile:'Mobil',tablet:'Tablet',desktop:'Desktop',fit:'Einpassen · 100 % anzeigen',actual:'Originalgröße · einpassen',preview:'Vorschau',note:'Die Vorschau verwendet eine echte Ansichtsbreite von',warning:'Auf kleinen Bildschirmen lässt sich bei 100 % horizontal prüfen. Ein Rollenwechsel ändert vorübergehend die aktive Testrolle; Admin stellt sie wieder her.'},
 } as const
 
 type Role = 'staff' | 'responsible_lead' | 'admin'
@@ -64,6 +64,10 @@ const pageOptions: Record<Role,{label:string;path:string}[]> = {
   ],
   admin: [
     {label:'Overzicht',path:'/admin'},
+    // The Owner/Admin session may inspect both dedicated portals without
+    // creating extra role identities or bypassing their server-side layouts.
+    {label:'Administratie',path:'/portals/administration'},
+    {label:'Promotie',path:'/portals/promotion'},
     {label:'Evenementen',path:'/events'},
     {label:'Werkplaatsen & shifts',path:'/workplaces'},
     {label:'Werkuren',path:'/operations'},
@@ -134,6 +138,12 @@ export function GodVisualBuilder({
   const [buttonAction,setButtonAction] = useState('/events')
   const [status,setStatus] = useState('')
   const [frameKey,setFrameKey] = useState(0)
+  const [roleReady,setRoleReady] = useState(false)
+  const [roleChanging,setRoleChanging] = useState(false)
+  const originalRoleRef=useRef<Role|null>(null)
+  const activeRoleRef=useRef<Role|null>(null)
+  const [originalRole,setOriginalRole]=useState<Role|null>(null)
+  const [roleReload,setRoleReload]=useState(0)
   const frameRef=useRef<HTMLIFrameElement>(null)
   const previewContainerRef=useRef<HTMLDivElement>(null)
   useEffect(()=>{
@@ -145,6 +155,35 @@ export function GodVisualBuilder({
     })
     resize.observe(container)
     return()=>resize.disconnect()
+  },[])
+  useEffect(()=>{
+    const controller=new AbortController()
+    void fetch('/api/god/preview-role',{cache:'no-store',signal:controller.signal})
+      .then(async response=>{
+        const data=await response.json().catch(()=>({})) as {role?:Role;error?:string}
+        if(!response.ok||!data.role||!['staff','responsible_lead','admin'].includes(data.role))throw Error(data.error||t.unavailable)
+        if(controller.signal.aborted)return
+        if(originalRoleRef.current===null){originalRoleRef.current=data.role;setOriginalRole(data.role)}
+        activeRoleRef.current=data.role
+        setRole(data.role)
+        setPath(roleHome[data.role])
+        setFrameKey(key=>key+1)
+        setRoleReady(true)
+      })
+      .catch(error=>{if(!controller.signal.aborted)setStatus(error instanceof Error?error.message:t.unavailable)})
+    return()=>controller.abort()
+  },[roleReload,t.unavailable])
+  // Preview roles are temporary. Restore the pre-preview role when leaving the
+  // Builder; keepalive is best effort on tab close, the explicit restore button
+  // below is the reliable path while the app is still open.
+  useEffect(()=>()=>{
+    const original=originalRoleRef.current
+    if(original&&activeRoleRef.current!==original){
+      void fetch('/api/god/preview-role',{
+        method:'POST',headers:{'Content-Type':'application/json'},
+        body:JSON.stringify({role:original}),keepalive:true,
+      }).catch(()=>{})
+    }
   },[])
   const viewportWidth=widthFor(device)
   const previewScale=fitToScreen?Math.min(1,Math.max(0.1,(availableWidth-24)/viewportWidth)):1
@@ -158,18 +197,27 @@ export function GodVisualBuilder({
   },[selected])
 
   async function switchRole(next:Role){
+    if(!roleReady||roleChanging||role===next)return
+    setRoleChanging(true)
     setStatus('')
-    const response=await fetch('/api/god/preview-role',{
-      method:'POST',
-      headers:{'Content-Type':'application/json'},
-      body:JSON.stringify({role:next}),
-    })
-    const data=await response.json()
-    if(!response.ok){setStatus(data.error||'Rolvoorbeeld kon niet worden geopend.');return}
-    setRole(next)
-    setPath(roleHome[next])
-    setSelected(null)
-    setFrameKey(value=>value+1)
+    try{
+      const response=await fetch('/api/god/preview-role',{
+        method:'POST',
+        headers:{'Content-Type':'application/json'},
+        body:JSON.stringify({role:next}),
+      })
+      const data=await response.json().catch(()=>({})) as {role?:Role;error?:string}
+      if(!response.ok||data.role!==next)throw Error(data.error||t.switchFailed)
+      activeRoleRef.current=next
+      setRole(next)
+      setPath(roleHome[next])
+      setSelected(null)
+      setFrameKey(value=>value+1)
+    }catch(error){
+      setStatus(error instanceof Error?error.message:t.switchFailed)
+    }finally{
+      setRoleChanging(false)
+    }
   }
 
   function inspect(frame:HTMLIFrameElement){
@@ -227,6 +275,12 @@ export function GodVisualBuilder({
       element.value=text
       element.setAttribute('value',text)
     }else if(text!==selected?.text){
+      // Replacing the textContent of a React component with nested nodes
+      // would delete icons and their listeners in the live preview.
+      if(element.childElementCount>0){
+        setStatus(t.nested)
+        return
+      }
       element.textContent=text
     }
     element.style.fontSize=fontSize
@@ -302,25 +356,27 @@ export function GodVisualBuilder({
   return <div className="grid min-w-0 gap-4 xl:grid-cols-[minmax(0,1fr)_360px]">
     <section className="min-w-0 space-y-3">
       <div className="flex flex-wrap items-center gap-2 rounded-2xl border p-3">
-        {(Object.keys(roleLabels) as Role[]).map(item=><button key={item} onClick={()=>void switchRole(item)} className={`rounded-xl px-4 py-2 text-sm font-black ${role===item?'bg-violet-600 text-white':'border'}`}>{roleLabels[item]}</button>)}
-        <select value={path} onChange={e=>{setPath(e.target.value);setSelected(null);setFrameKey(value=>value+1)}} className="min-w-44 rounded-xl border bg-background px-3 py-2">
+        {(Object.keys(roleLabels) as Role[]).map(item=><button type="button" disabled={!roleReady||roleChanging} aria-pressed={role===item} key={item} onClick={()=>void switchRole(item)} className={`min-w-0 rounded-xl px-3 py-2 text-sm font-black disabled:opacity-50 ${role===item?'bg-violet-600 text-white':'border'}`}>{roleLabels[item]}</button>)}
+        {originalRole&&originalRole!==role&&<button type="button" disabled={roleChanging} onClick={()=>void switchRole(originalRole)} className="rounded-lg border border-amber-500/50 px-3 py-2 text-xs font-bold">{t.restoreRole}</button>}
+        <select aria-label={t.page} disabled={!roleReady||roleChanging} value={path} onChange={e=>{setPath(e.target.value);setSelected(null);setFrameKey(value=>value+1)}} className="w-full min-w-0 rounded-xl border bg-background px-3 py-2 sm:w-auto sm:min-w-44">
           {pageOptions[role].map(page=><option key={page.path} value={page.path}>{page.label}</option>)}
         </select>
-        <div className="flex w-full flex-wrap items-center gap-2 border-t pt-3">
-          <span className="text-xs font-semibold text-muted-foreground">{t.device}</span>
-          {(['mobile','tablet','desktop'] as Device[]).map(item=><button type="button" key={item} aria-pressed={device===item} onClick={()=>setDevice(item)} className={`rounded-lg px-3 py-2 text-xs ${device===item?'bg-violet-600 font-bold text-white':'border'}`}>{t[item]} {widthFor(item)}{CSS_PX_UNIT}</button>)}
-          <button type="button" aria-pressed={fitToScreen} onClick={()=>setFitToScreen(value=>!value)} className="ml-auto rounded-lg border px-3 py-2 text-xs font-bold">{fitToScreen?t.fit:t.actual}</button>
+        <div className="grid w-full grid-cols-3 gap-2 border-t pt-3 sm:flex sm:flex-wrap sm:items-center">
+          <span className="col-span-3 text-xs font-semibold text-muted-foreground sm:col-span-1">{t.device}</span>
+          {(['mobile','tablet','desktop'] as Device[]).map(item=><button type="button" key={item} aria-pressed={device===item} onClick={()=>setDevice(item)} className={`min-w-0 rounded-lg px-2 py-2 text-xs ${device===item?'bg-violet-600 font-bold text-white':'border'}`}>{t[item]} <span className="block text-[10px] opacity-80">{widthFor(item)}{CSS_PX_UNIT}</span></button>)}
+          <button type="button" aria-pressed={fitToScreen} onClick={()=>setFitToScreen(value=>!value)} className="col-span-3 rounded-lg border px-3 py-2 text-xs font-bold sm:col-span-1 sm:ml-auto">{fitToScreen?t.fit:t.actual}</button>
         </div>
       </div>
 
-      <p className="text-xs text-muted-foreground">{t.note} {viewportWidth}{CSS_PX_UNIT}. {t.warning}</p>
+      <p role="status" className="text-xs text-muted-foreground">{t.note} <strong>{viewportWidth}{CSS_PX_UNIT}</strong> · {Math.round(previewScale*100)}% {t.preview}. {t.warning}</p>
       <div ref={previewContainerRef} className="min-w-0 overflow-auto rounded-2xl border bg-zinc-950 p-3">
-        <div className="mx-auto overflow-hidden rounded-xl bg-white shadow-2xl" style={{width:viewportWidth*previewScale,height:`calc(72vh * ${previewScale})`}}>
+        <div className="mx-auto overflow-hidden rounded-xl border border-zinc-700 bg-white shadow-2xl" style={{width:viewportWidth*previewScale,height:`calc(72vh * ${previewScale})`}}>
           <div style={{width:viewportWidth,height:'72vh',transform:`scale(${previewScale})`,transformOrigin:'top left'}}>
-            <iframe ref={frameRef} key={`${role}:${path}:${frameKey}`} title={roleLabels[role]+' '+t.preview+' · '+viewportWidth+'px'} src={path} onLoad={e=>inspect(e.currentTarget)} style={{width:viewportWidth,height:'72vh'}} className="block border-0 bg-white"/>
+            {roleReady&&<iframe ref={frameRef} key={`${role}:${path}:${frameKey}`} title={roleLabels[role]+' '+t.preview+' · '+viewportWidth+'px'} src={path} onLoad={e=>inspect(e.currentTarget)} style={{width:viewportWidth,height:'72vh'}} className="block border-0 bg-white"/>}
           </div>
         </div>
       </div>
+      {!roleReady&&<button type="button" onClick={()=>{setStatus('');setRoleReload(n=>n+1)}} className="rounded-lg border px-4 py-2 text-sm font-bold">{t.retry}</button>}
       {status&&<p role="status" className="rounded-xl border border-violet-500/40 p-3 text-sm">{status}</p>}
     </section>
 
