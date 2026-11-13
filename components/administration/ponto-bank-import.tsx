@@ -3,7 +3,7 @@ import {useEffect,useState} from "react"
 import type {SupportedUiLocale} from "@/lib/locale-preferences"
 import {activeUiLocale,LANGUAGE_APPLIED_EVENT} from "@/lib/locale-preferences"
 
-type Account={id:string;label:string}
+type Account={id:string}
 type Result={inserted:number;skipped:number;nextCursor:string|null}
 const copy={
  nl:{title:"Ponto · Banktransacties ophalen",intro:"Haal geboekte banktransacties veilig op. Alleen nieuwe bankregels worden toegevoegd voor controle; facturen worden niet automatisch betaald gemarkeerd.",loading:"Rekeningen laden…",loadFailed:"Rekeningen ophalen mislukt. Controleer de Ponto-verbinding of banktoestemming.",notConfigured:"Stel Ponto eerst in bij Bankzaken.",noAccount:"Nog geen bankrekening vrijgegeven in Ponto.",account:"Rekening kiezen",import:"Banktransacties ophalen",more:"Volgende 100 transacties",working:"Ophalen…",saved:"Nieuw toegevoegd",skipped:"Reeds aanwezig",error:"Import mislukt. Controleer je toegang en de providergegevens.",invalid:"Ponto heeft gegevens teruggegeven die niet veilig konden worden verwerkt. Er is niets opgeslagen.",done:"Dit was de laatste batch.",refresh:"Rekeningen vernieuwen"},
@@ -29,9 +29,9 @@ export default function PontoBankImport({initialLocale}:{initialLocale:Supported
    if(!response.ok){setIssue(response.status===409?"not_configured":"load_failed");return}
    const data:unknown=await response.json()
    if(!data||typeof data!=="object"||!("accounts" in data)||!Array.isArray(data.accounts)||
-      data.accounts.some((a:unknown)=>!a||typeof a!=="object"||!("id" in a)&&!("label" in a)))throw Error("Invalid accounts")
+      data.accounts.some((a:unknown)=>!a||typeof a!=="object"||!("id" in a)))throw Error("Invalid accounts")
    const valid=data.accounts as Account[]
-   if(valid.some(a=>typeof a.id!=="string"||!idPattern.test(a.id)||typeof a.label!=="string"))throw Error("Invalid accounts")
+   if(valid.some(a=>typeof a.id!=="string"||!idPattern.test(a.id)))throw Error("Invalid accounts")
    setAccounts(valid)
    setAccountId(previous=>valid.some(a=>a.id===previous)?previous:valid[0]?.id??"")
    setCursor(null)
@@ -71,12 +71,12 @@ export default function PontoBankImport({initialLocale}:{initialLocale:Supported
      <span>{t.account}</span>
      <select className="min-h-11 w-full rounded-lg border bg-background px-3" value={accountId}
       disabled={busy} onChange={e=>{setAccountId(e.target.value);setCursor(null);setResult(null)}}>
-      {accounts.map(a=><option key={a.id} value={a.id}>{a.label}</option>)}
+      {accounts.map((a,index)=><option key={a.id} value={a.id}>{t.account} {index+1} · …{a.id.slice(-6)}</option>)}
      </select>
     </label>}
     {accounts.length===0&&!issue&&<p className="text-sm text-muted-foreground">{t.noAccount}</p>}
     <div className="flex flex-wrap gap-2">
-     <button type="button" disabled={busy||accounts.length===0}
+     <button type="button" disabled={busy||accounts.length===0||(result!==null&&result.nextCursor===null)}
       className="min-h-11 rounded-lg bg-violet-600 px-4 py-2 text-sm font-semibold text-white disabled:opacity-50"
       onClick={()=>void importPage()}>{busy?t.working:cursor?t.more:t.import}</button>
      <button type="button" disabled={busy} className="min-h-11 rounded-lg border px-3 py-2 text-xs font-medium"
