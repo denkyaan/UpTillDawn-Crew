@@ -7,10 +7,10 @@ import {chromium} from 'playwright'
 
 const MATRIX=[
  {role:'admin',login:'admin',routes:['/admin','/events','/personnel','/chat','/operations','/settings','/portals/administration/finance'],denied:[]},
- {role:'administration',login:'administration',routes:['/portals/administration','/portals/administration/finance','/portals/administration/chat','/portals/administration/promotion-tasks'],denied:['/admin','/god-mode']},
- {role:'promotion',login:'promotion',routes:['/portals/promotion','/portals/promotion/chats','/portals/promotion/staff','/portals/promotion/tasks'],denied:['/admin','/portals/administration/finance','/god-mode']},
- {role:'staff',login:'staff',routes:['/events','/tasks','/chat','/workplaces'],denied:['/admin','/portals/administration/finance','/god-mode']},
- {role:'responsible',login:'responsible',routes:['/events','/workplaces','/chat','/operations'],denied:['/admin','/portals/administration/finance','/god-mode']},
+ {role:'administration',login:'administration',routes:['/portals/administration','/portals/administration/finance','/portals/administration/chat','/portals/administration/promotion-tasks'],denied:['/admin','/sales','/god-mode']},
+ {role:'promotion',login:'promotion',routes:['/portals/promotion','/portals/promotion/chats','/portals/promotion/staff','/portals/promotion/tasks'],denied:['/admin','/sales','/portals/administration/finance','/god-mode']},
+ {role:'staff',login:'staff',routes:['/events','/tasks','/chat','/workplaces'],denied:['/admin','/sales','/portals/administration/finance','/god-mode']},
+ {role:'responsible',login:'responsible',routes:['/events','/workplaces','/chat','/operations'],denied:['/admin','/sales','/portals/administration/finance','/god-mode']},
  {role:'maker',login:'admin',routes:['/maker-mode'],denied:[]},
 ]
 const LOCALES=['nl','fr','en','de']

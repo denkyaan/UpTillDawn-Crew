@@ -35,6 +35,8 @@ export default async function SalesPage({
 }){
   const current=await getCurrentUser()
   if(!current)redirect('/login')
+  // Reporting is an Admin-only capability, not authorized by hidden navigation.
+  if(!current.isAdmin)redirect('/')
 
   const s=await createClient()
   const params=await searchParams
@@ -112,6 +114,8 @@ export default async function SalesPage({
     transactions=(firstPage.data||[]) as Transaction[]
     transactionCount=firstPage.count
     revenueRows=[...transactions]
+    const seenTransactionIds=new Set(transactions.map(row=>row.id))
+    if(seenTransactionIds.size!==transactions.length)transactionLoadError=true
 
     // The visible transaction list remains bounded. Fetch only the narrow
     // accounting columns for the remaining pages so totals are not silently
@@ -127,10 +131,13 @@ export default async function SalesPage({
           .range(offset,Math.min(offset+999,transactionCount-1))
         const next=await (selectedWorkplaceId?pageQuery.eq('workplace_id',selectedWorkplaceId):pageQuery)
         const expected=Math.min(1000,transactionCount-offset)
-        if(next.error||!next.data||next.data.length!==expected){
+        if(next.error||!next.data||next.data.length!==expected||
+           next.data.some(row=>seenTransactionIds.has(row.id))){
+          // Offset pagination can repeat rows when concurrent inserts occur.
           transactionLoadError=true
           break
         }
+        for(const row of next.data)seenTransactionIds.add(row.id)
         revenueRows.push(...next.data)
       }
     }

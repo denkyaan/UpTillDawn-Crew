@@ -70,6 +70,7 @@ test('sales page is income-only per event with merch and token totals',async()=>
   assert.match(page,/Merchandise-inkomsten/)
   assert.match(page,/Token- en kassaverkoop/)
   assert.match(page,/sales_transactions/)
+  assert.match(page,/if\(!current\.isAdmin\)redirect\('\/'\)/)
   assert.doesNotMatch(page,/Kassa begininhoud/)
   assert.doesNotMatch(page,/EXCEL SALES DOWNLOADEN/)
   assert.doesNotMatch(page,/TERUGBOEKEN/)

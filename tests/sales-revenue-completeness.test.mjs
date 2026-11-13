@@ -33,6 +33,8 @@ test('sales page scopes database reads before pagination and never displays inco
   assert.match(page,/selectedWorkplaceId=workplaces\.find\(row=>row\.id===params\.workplace\)/)
   assert.match(page, /count:'exact'/)
   assert.match(page,/revenueCoverageComplete\(transactionCount,revenueRows\.length\)/)
+  assert.match(page,/new Set\(transactions\.map\(row=>row\.id\)\)/)
+  assert.match(page,/next\.data\.some\(row=>seenTransactionIds\.has\(row\.id\)\)/)
   assert.match(page,/revenueTotals\?money\(revenueTotals\.event\):'—'/)
   assert.doesNotMatch(page,/transactions=transactions\.filter\(transaction=>transaction\.workplace_id===params\.workplace\)/)
   assert.doesNotMatch(page,/money\(eventRevenue\)/)
