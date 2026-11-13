@@ -33,6 +33,7 @@ export async function fetchPontoBankStatementRows(env:NodeJS.ProcessEnv):Promise
   activeAccounts++
   let cursor:string|null=null
   const seenPages=new Set<string>(),seenTransactions=new Set<string>()
+  let complete=false
   for(let pageIndex=0;pageIndex<5;pageIndex++){
    const path="/accounts/"+value.id+"/transactions?page%5Blimit%5D=100"+(cursor?"&page%5Bafter%5D="+encodeURIComponent(cursor):"")
    const response=await pontoReadOnlyJson(path,grant.token,262144)
@@ -42,11 +43,11 @@ export async function fetchPontoBankStatementRows(env:NodeJS.ProcessEnv):Promise
     seenTransactions.add(row.transactionId);allRows.push(row)
    }
    if(allRows.length>500)throw Error("ponto_transaction_limit")
-   if(!page.next)return {rows:allRows,accountCount:activeAccounts}
+   if(!page.next){complete=true;break}
    if(seenPages.has(page.next))throw Error("ponto_invalid_paging")
    seenPages.add(page.next);cursor=page.next
   }
-  throw Error("ponto_transaction_limit")
+  if(!complete)throw Error("ponto_transaction_limit")
  }
  if(activeAccounts===0)throw Error("ponto_no_eur_accounts")
  return {rows:allRows,accountCount:activeAccounts}
