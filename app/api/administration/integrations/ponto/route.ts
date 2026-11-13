@@ -32,7 +32,7 @@ export async function GET(){
  try{
   const {token}=await connection(access)
   const accounts=await pontoAuthorizedAccounts(token)
-  return reply({accounts:accounts.map((id,index)=>({id,label:"Account "+(index+1)+" · …"+id.slice(-6)}))})
+  return reply({accounts:accounts.map(id=>({id}))})
  }catch(error){return failed(error)}
 }
 /** Manual read-only pull of 100 booked provider transactions into the existing
@@ -72,7 +72,7 @@ export async function POST(request:Request){
   const {token}=await connection(access)
   const allowed=await pontoAuthorizedAccounts(token)
   if(!allowed.includes(data.accountId))return reply({error:"ponto_account_not_authorized"},403)
-  const page=await pontoBookedPage(token,data.accountId,data.after as string|null??null)
+  const page=await pontoBookedPage(token,data.accountId,typeof data.after==="string"?data.after:null)
   if(!page.rows.length)return reply({inserted:0,skipped:0,nextCursor:page.nextCursor})
   // Existing SECDEF RPC enforces organization roles and atomically rejects
   // conflicting IDs. Both manual CSV and Ponto share the same reconciliation.
