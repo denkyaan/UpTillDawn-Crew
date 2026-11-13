@@ -4,6 +4,7 @@ import {requestHasSameOrigin} from "@/lib/request-origin"
 import {isIntegrationProvider} from "@/lib/administration/integration-credentials"
 import {disconnectIntegration,listIntegrationSummaries,listRecentIntegrationAudit,weeztixOAuthReadiness,saveIntegrationCredentials} from "@/lib/administration/integration-store"
 import {validIntegrationMasterKey} from "@/lib/administration/integration-crypto"
+import {weeztixCallbackUrl} from "@/lib/administration/weeztix-oauth"
 
 export const dynamic="force-dynamic"
 const headers={"Cache-Control":"no-store"}
@@ -28,14 +29,16 @@ async function authorized(){
  const access=await integrationManagementAccess()
  return access
 }
-export async function GET(){
+export async function GET(request:Request){
  const access=await authorized()
  if(!access.ok)return output({error:"forbidden"},access.status)
  try{
   const [integrations,audit,weeztixOauthReady]=await Promise.all([
    listIntegrationSummaries(access.db),listRecentIntegrationAudit(access.db),weeztixOAuthReadiness(access.db)
   ])
-  return output({integrations,audit,weeztixOauthReady,
+  let weeztixOauthCallbackUrl:string|null=null
+  try{weeztixOauthCallbackUrl=weeztixCallbackUrl(request)}catch{/* Fail closed on unconfigured domains. */}
+  return output({integrations,audit,weeztixOauthReady,weeztixOauthCallbackUrl,
    secureStoreAvailable:validIntegrationMasterKey(process.env.UPT_INTEGRATION_ENCRYPTION_KEY)})
  }catch{return output({error:"integration_storage_unavailable"},503)}
 }
