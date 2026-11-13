@@ -1,8 +1,9 @@
 "use client"
-import {useEffect,useState} from "react"
+import {useEffect,useState,useSyncExternalStore} from "react"
 import type {SupportedUiLocale} from "@/lib/locale-preferences"
 import {activeUiLocale,LANGUAGE_APPLIED_EVENT} from "@/lib/locale-preferences"
 
+function subscribeLanguage(callback:()=>void){window.addEventListener(LANGUAGE_APPLIED_EVENT,callback);return()=>window.removeEventListener(LANGUAGE_APPLIED_EVENT,callback)}
 type Account={id:string}
 type Result={inserted:number;skipped:number;nextCursor:string|null}
 const copy={
@@ -13,15 +14,11 @@ const copy={
 } as const
 const idPattern=/^[0-9a-f]{8}(?:-[0-9a-f]{4}){3}-[0-9a-f]{12}$/i
 export default function PontoBankImport({initialLocale}:{initialLocale:SupportedUiLocale}){
- const [locale,setLocale]=useState(initialLocale),[accounts,setAccounts]=useState<Account[]>([])
+ const locale=useSyncExternalStore(subscribeLanguage,activeUiLocale,()=>initialLocale)
+ const [accounts,setAccounts]=useState<Account[]>([])
  const [accountId,setAccountId]=useState(""),[cursor,setCursor]=useState<string|null>(null)
  const [loading,setLoading]=useState(true),[busy,setBusy]=useState(false)
  const [issue,setIssue]=useState(""),[result,setResult]=useState<Result|null>(null)
- useEffect(()=>{
-  const apply=()=>setLocale(activeUiLocale())
-  apply();window.addEventListener(LANGUAGE_APPLIED_EVENT,apply)
-  return()=>window.removeEventListener(LANGUAGE_APPLIED_EVENT,apply)
- },[])
  async function loadAccounts(signal?:AbortSignal){
   setLoading(true);setIssue("");setResult(null)
   try{
@@ -62,8 +59,8 @@ export default function PontoBankImport({initialLocale}:{initialLocale:Supported
   finally{setBusy(false)}
  }
  const t=copy[locale]
- return <section aria-label={t.title} className="space-y-3 rounded-2xl border bg-card p-4 sm:p-5">
-  <h3 className="text-base font-semibold">{t.title}</h3>
+ return <section aria-label={t.heading} className="space-y-3 rounded-2xl border bg-card p-4 sm:p-5">
+  <h3 className="text-base font-semibold">{t.heading}</h3>
   <p className="text-xs leading-5 text-muted-foreground">{t.intro}</p>
   {loading?<p role="status" className="text-sm">{t.loading}</p>:
    <div className="space-y-3">
