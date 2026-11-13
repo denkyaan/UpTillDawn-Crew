@@ -71,3 +71,10 @@ test('Maker can inspect dedicated Administration and Promotion portals from an a
  assert.match(administration,/if\(!user\.isOwner&&!user\.realIsAdmin\)/)
  assert.match(promotion,/if\(!current\.isOwner&&!current\.realIsAdmin\)/)
 })
+
+test('actual Maker browser acceptance reaches mobile Live Builder through its accessible select',()=>{
+ const e2e=read('scripts/god-mode-maker-e2e.mjs')
+ assert.match(e2e,/viewport\.width<640/)
+ assert.match(e2e,/getByRole\('combobox',\{name:'App Studio'\}\)\.selectOption\('builder'\)/)
+ assert.match(e2e,/getByRole\('button',\{name:'Live Builder'\}\)\.click\(\)/)
+})
