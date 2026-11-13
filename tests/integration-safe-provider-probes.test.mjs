@@ -41,7 +41,7 @@ test("Provider diagnostics use only documented read-only API calls, avoid secret
  assert.match(route,/integrationManagementAccess\(\)/)
  assert.match(route,/requestHasSameOrigin\(request\)/)
  assert.match(route,/getManagedIntegrationConfig\(access\.db,value as ConnectionProvider\)/)
- assert.match(route,/scope:"credentials_only"/)
+ assert.match(route,/scope:value==="banking"\?"bank_accounts_read_only":"credentials_only"/)
  assert.match(route,/value!=="peppol"/)
  assert.match(panel,/service\.id==="peppol"/)
  assert.match(manager,/provider==="peppol"/)
