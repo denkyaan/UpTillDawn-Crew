@@ -41,5 +41,5 @@ export async function POST(request:Request){
  }catch{return fail("integration_storage_unavailable",503)}
  const status=await checkProviderConnection(value as ConnectionProvider,environment)
  // Even a successful credential check is not a completed integration.
- return NextResponse.json({status,scope:"credentials_only"},{headers:{"Cache-Control":"no-store"}})
+ return NextResponse.json({status,scope:value==="banking"?"bank_accounts_read_only":"credentials_only"},{headers:{"Cache-Control":"no-store"}})
 }
