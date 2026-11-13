@@ -81,7 +81,7 @@ export async function AdministrationOverviewDashboard({locale}:{locale:Supported
     <div className="flex flex-wrap items-center justify-between gap-2"><h2 className="text-lg font-bold">{t.nextEvents}</h2><Link className="text-sm font-semibold text-violet-400" href="/portals/administration/modules/events">{t.manageEvents}</Link></div>
     {events.error?<p role="alert" className="text-sm">{t.error}</p>:!events.data?.length?<p className="text-sm text-muted-foreground">{t.noEvents}</p>:
      <ul className="grid gap-2 sm:grid-cols-2">{events.data.map(item=><li key={item.id} className="flex flex-wrap items-center justify-between gap-2 rounded-lg border p-3 text-sm"><span className="font-semibold">{item.name}</span><span className="text-xs text-muted-foreground">{formatDate(item.start_at)} · {item.status}</span></li>)}</ul>}
-    <Link className="inline-flex rounded-lg border px-3 py-2 text-xs font-semibold" href="/portals/administration/modules/events">{t.createEvent}</Link>
+    <Link className="inline-flex rounded-lg border px-3 py-2 text-xs font-semibold" href="/portals/administration/modules/events?create=1#administration-event-draft">{t.createEvent}</Link>
    </section>
   </div>
  </main>
