@@ -79,11 +79,13 @@ export async function POST(request:Request){
   const {data:result,error}=await access.db.rpc("upt_admin_import_bank_statement_transactions",{p_rows:page.rows})
   if(error)return reply({error:error.code==="23505"?"conflicting_transaction":
    error.code==="42501"?"access_denied":"import_rejected"},error.code==="23505"?409:error.code==="42501"?403:422)
-  if(!result||typeof result!=="object"||!("inserted" in result)||!("skipped" in result)||
-    typeof result.inserted!=="number"||typeof result.skipped!=="number"||
-    !Number.isSafeInteger(result.inserted)||!Number.isSafeInteger(result.skipped)||
-    result.inserted<0||result.skipped<0||result.inserted+result.skipped!==page.rows.length)
+  if(!result||typeof result!=="object"||!("inserted" in result)||!("skipped" in result))
    return reply({error:"unexpected_import_result"},503)
-  return reply({inserted:result.inserted,skipped:result.skipped,nextCursor:page.nextCursor})
+  const inserted=typeof result.inserted==="number"?result.inserted:NaN
+  const skipped=typeof result.skipped==="number"?result.skipped:NaN
+  if(!Number.isSafeInteger(inserted)||!Number.isSafeInteger(skipped)||
+    inserted<0||skipped<0||inserted+skipped!==page.rows.length)
+   return reply({error:"unexpected_import_result"},503)
+  return reply({inserted,skipped,nextCursor:page.nextCursor})
  }catch(error){return failed(error)}
 }
