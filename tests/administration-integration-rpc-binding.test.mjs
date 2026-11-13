@@ -16,9 +16,10 @@ test('all integration-store RPC calls preserve the client receiver',()=>{
  assert.doesNotMatch(store,/const invoke=db\.rpc\s+as unknown as/)
 })
 
-test('administration settings exposes the connected integrations and billing form',()=>{
+test('administration billing stays in settings while integrations live in their actual modules',()=>{
  const settings=read('app/(app)/portals/administration/modules/settings/page.tsx')
  const moduleSource=read('app/(app)/portals/administration/modules/[slug]/page.tsx')
  assert.match(settings,/BillingProfile\(/)
- assert.match(moduleSource,/slug==="settings"&&<ExternalServicesReadiness/)
+ assert.doesNotMatch(moduleSource,/slug==="settings"&&<ExternalServicesReadiness/)
+ assert.match(moduleSource,/integrationServicesForWorkspace\(slug,externalServicesReadiness\(process\.env\)\)/)
 })

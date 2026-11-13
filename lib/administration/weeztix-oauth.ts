@@ -7,6 +7,17 @@ const CALLBACK="/api/administration/integrations/weeztix/callback"
 export function weeztixCallbackUrl(request:Request):string{
  const host=request.headers.get("host")?.toLowerCase()
  if(host==="uptilldawn-main.uptilldawn.workers.dev")return "https://"+host+CALLBACK
+ // A production redirect origin must be explicitly configured, never inferred
+ // solely from client-controlled Host/Forwarded headers.
+ const explicit=process.env.UPT_WEEZTIX_OAUTH_ORIGIN
+ if(explicit&&host){
+  try{
+   const url=new URL(explicit)
+   if(url.protocol==="https:"&&url.origin===explicit&&url.host.toLowerCase()===host&&
+      url.pathname==="/"&&!url.username&&!url.password&&!url.search&&!url.hash)
+    return url.origin+CALLBACK
+  }catch{/* Reject malformed configuration. */}
+ }
  if(process.env.NODE_ENV!=="production"&&host&&/^(?:localhost|127\.0\.0\.1):[0-9]{2,5}$/.test(host))return "http://"+host+CALLBACK
  throw Error("weeztix_oauth_origin_unavailable")
 }
