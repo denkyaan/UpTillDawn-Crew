@@ -4,7 +4,7 @@ import {getManagedIntegrationConfig,saveIntegrationCredentials} from "@/lib/admi
 import {requestWeeztixOAuthTokens,WEEZTIX_OAUTH_STATE_COOKIE,weeztixCallbackUrl} from "@/lib/administration/weeztix-oauth"
 
 export const dynamic="force-dynamic"
-const SETTINGS="/portals/administration/modules/settings"
+const SETTINGS="/portals/administration/modules/ticketing"
 function sameState(expected:string,received:string):boolean{
  if(expected.length!==64||received.length!==64)return false
  let diff=0
