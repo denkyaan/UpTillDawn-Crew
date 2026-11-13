@@ -285,7 +285,7 @@ export async function signIn(formData: FormData) {
     // preference is account-bound and re-authorized by the server on reopen.
     const workspace = requestedPortal === 'administration' || requestedPortal === 'promotion'
         ? requestedPortal : requestedPortal === 'admin' ? 'admin' : 'events'
-    ;(await cookies()).set('uptilldawn-last-workspace', user.id + ':' + workspace,
+    ;(await cookies()).set('uptilldawn-last-workspace', data.user.id + ':' + workspace,
         { path: '/', sameSite: 'lax', secure: process.env.NODE_ENV === 'production', maxAge: 60 * 60 * 24 * 90 })
 
     const redirectTo = isOwner === true
