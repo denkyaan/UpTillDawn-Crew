@@ -11,3 +11,9 @@ const canonicalAliases = new Map([
 export function expectedPortalDestination(path) {
   return canonicalAliases.get(path) ?? path
 }
+
+/** Match the complete browser destination; action links may use a query and fragment. */
+export function browserDestination(value) {
+  const url = value instanceof URL ? value : new URL(value)
+  return url.pathname + url.search + url.hash
+}
