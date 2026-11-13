@@ -4,13 +4,17 @@ import {readFileSync} from "node:fs"
 import {externalServicesReadiness} from "../lib/administration/external-services-readiness.ts"
 const read=path=>readFileSync(new URL("../"+path,import.meta.url),"utf8")
 
-test("the existing Admin and Administration settings share a single provider connection component",()=>{
- const page=read("app/(app)/admin/platform/page.tsx")
+test("Admin and Administration open the same secured provider setup at each actual workflow",()=>{
+ const platform=read("app/(app)/admin/platform/page.tsx")
  const administration=read("app/(app)/portals/administration/modules/[slug]/page.tsx")
+ const sales=read("app/(app)/sales/page.tsx")
+ const adminNavigation=read("lib/admin-administration-navigation.ts")
  const panel=read("components/admin/external-services-readiness.tsx")
- assert.equal((page.match(/<ExternalServicesReadiness /g)||[]).length,1)
+ assert.doesNotMatch(platform,/ExternalServicesReadiness/)
  assert.equal((administration.match(/<ExternalServicesReadiness /g)||[]).length,1)
- assert.match(administration,/slug==="settings"&&<ExternalServicesReadiness locale=\{locale\} services=\{externalServicesReadiness\(process\.env\)\}/)
+ assert.equal((sales.match(/<ExternalServicesReadiness /g)||[]).length,1)
+ for(const slug of ["contracts","invoices","banking","ticketing","documents"])assert.ok(administration.includes('"'+slug+'"'),slug)
+ for(const slug of ["contracts","invoices","banking","ticketing","documents"])assert.ok(adminNavigation.includes('slug:"'+slug+'"'),slug)
  assert.match(panel,/ProviderConnectionProbe/)
  assert.match(panel,/service\.id==="sumup"/)
  assert.match(panel,/service\.id==="documenso"/)
