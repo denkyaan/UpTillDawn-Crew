@@ -20,6 +20,8 @@ import MappedTicketImportPreview from "@/components/administration/mapped-ticket
 import SepaExport from "@/components/administration/sepa-export"
 import ProviderTransactionWorkspace from "@/components/administration/provider-transaction-workspace"
 import BankStatementWorkspace from "@/components/administration/bank-statement-workspace"
+import PontoBankImport from "@/components/administration/ponto-bank-import"
+import {integrationManagementAccess} from "@/lib/administration/integration-management-access"
 import {EventDocumentsPanel} from "@/components/crew/event-documents-panel"
 import ProviderBankSettlementWorkspace from "@/components/administration/provider-bank-settlement-workspace"
 import { notFound, redirect } from "next/navigation"
@@ -203,6 +205,7 @@ export default async function AdministrationModulePage({params,searchParams}:{pa
   : null
  const inventoryEventNames=new Map([...inventoryEventChoices,...(inventoryEvents?.data??[])].map(event=>[event.id,event.name]))
  const locale=await requestUiLocale()
+ const pontoSetupAccess=slug==="banking"?await integrationManagementAccess():null
  const u=ui[locale]
  const intro=administrationWorkspaceIntro[slug]
  if(!intro)notFound()
@@ -216,6 +219,7 @@ export default async function AdministrationModulePage({params,searchParams}:{pa
    <p className="mt-3 max-w-3xl text-sm leading-6 text-muted-foreground">{intro[locale]}</p>
   </header>
   {["contracts","invoices","banking","ticketing","documents"].includes(slug)&&<ExternalServicesReadiness locale={locale} services={integrationServicesForWorkspace(slug,externalServicesReadiness(process.env))}/>} 
+  {slug==="banking"&&pontoSetupAccess?.ok&&<PontoBankImport initialLocale={locale}/>}
   {slug==="invoices"&&<section className="rounded-2xl border bg-card p-5">
    <h2 className="text-lg font-semibold">{({nl:"Facturenregister",fr:"Registre des factures",en:"Invoice register",de:"Rechnungsregister"} as const)[locale]}</h2>
    <form method="get" className="mt-3 flex flex-wrap items-end gap-3">
