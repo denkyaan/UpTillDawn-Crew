@@ -7,9 +7,9 @@ import {createClient} from '@supabase/supabase-js'
 
 export const QA_MAIN_HOST='npbjrtiolqperdgljnhi.supabase.co'
 export const QA_SEVEN=[
- {key:'head_admin',email:'e2e-head-admin@uptilldawn.test',name:'E2E Hoofdadmin',role:'admin'},
- {key:'left_hand',email:'e2e-admin@uptilldawn.test',name:'E2E Linkerhand',role:'staff',leadership:'left_hand'},
- {key:'right_hand',email:'e2e-right-hand@uptilldawn.test',name:'E2E Rechterhand',role:'staff',leadership:'right_hand'},
+ {key:'head_admin',email:'e2e-head-admin@uptilldawn.test',name:'E2E Hoofdadmin',role:'admin',leadership:'head'},
+ {key:'left_hand',email:'e2e-admin@uptilldawn.test',name:'E2E Linkerhand',role:'staff',leadership:'left_hand',portal:'administration',portalRole:'administrative_staff'},
+ {key:'right_hand',email:'e2e-right-hand@uptilldawn.test',name:'E2E Rechterhand',role:'staff',leadership:'right_hand',portal:'administration',portalRole:'administrative_staff'},
  {key:'responsible',email:'e2e-responsible@uptilldawn.test',name:'E2E Verantwoordelijke',role:'responsible_lead'},
  {key:'staff',email:'e2e-staff@uptilldawn.test',name:'E2E Personeel',role:'staff'},
  {key:'promotion',email:'e2e-promotion@uptilldawn.test',name:'E2E Promotie',role:'staff',portal:'promotion',portalRole:'promoter'},
@@ -20,14 +20,15 @@ if(process.argv.includes('--plan')){
  console.log('PLAN: seven isolated QA roles',JSON.stringify(QA_SEVEN.map(({key,email,role,leadership,portal})=>({key,email,role,leadership,portal}))))
  process.exit(0)
 }
-if(process.env.UPT_QA_ALLOW_MAIN_SEED!=='1')throw Error('Main-test QA seeding is disabled')
+const verifyOnly=process.argv.includes('--verify')
+if(!verifyOnly&&process.env.UPT_QA_ALLOW_MAIN_SEED!=='1')throw Error('Main-test QA seeding is disabled')
 const url=process.env.BOT_SUPABASE_URL
 const key=process.env.BOT_SERVICE_ROLE_KEY
 const password=process.env.BOT_TEST_PASSWORD
 let target
 try{target=new URL(url||'')}catch{throw Error('Main-test Supabase URL required')}
 if(target.protocol!=='https:'||target.hostname!==QA_MAIN_HOST||target.pathname!=='/'||target.search||target.hash)throw Error('Refusing to provision outside isolated Main-test Supabase project')
-if(!key||!password||password.length<16)throw Error('Service role key and 16+ character QA password required via private environment')
+if(!key||(!verifyOnly&&(!password||password.length<24)))throw Error('QA secret key and 24+ character password required in private environment')
 const db=createClient(url,key,{auth:{persistSession:false,autoRefreshToken:false}})
 const known=new Map()
 for(let page=1;page<=100;page++){
@@ -36,6 +37,39 @@ for(let page=1;page<=100;page++){
  for(const user of data.users)if(QA_SEVEN.some(bot=>bot.email===user.email?.toLowerCase()))known.set(user.email.toLowerCase(),user)
  if(data.users.length<100)break
  if(page===100)throw Error('Auth account scan exceeded safe page limit')
+}
+// Verify all fixed role identities before changing any profile or account.
+const {data:seats,error:seatError}=await db.from('upt_organization_leadership')
+ .select('slot,user_id').in('slot',['head','left_hand','right_hand'])
+if(seatError)throw Error('QA leadership inventory unavailable')
+const seatOwner=new Map((seats||[]).map(row=>[row.slot,row.user_id]))
+if(verifyOnly){
+ const issues=[]
+ for(const bot of QA_SEVEN){
+  const user=known.get(bot.email)
+  if(!user){issues.push(bot.key+':missing-auth');continue}
+  const {data:profile,error:profileError}=await db.from('profiles')
+   .select('role,approved,account_blocked').eq('id',user.id).maybeSingle()
+  if(profileError||profile?.role!==bot.role||profile?.approved!==true||profile?.account_blocked===true)
+   issues.push(bot.key+':profile')
+  if(bot.leadership&&seatOwner.get(bot.leadership)!==user.id)
+   issues.push(bot.key+':leadership')
+  if(bot.portal){
+   const {data:grants,error:grantError}=await db.from('portal_role_assignments')
+    .select('approved,revoked_at').eq('user_id',user.id).eq('portal',bot.portal).eq('role',bot.portalRole)
+   if(grantError||!grants?.some(grant=>grant.approved===true&&grant.revoked_at===null))
+    issues.push(bot.key+':portal')
+  }
+ }
+ console.log('QA Main seven-role verification '+JSON.stringify({verified:issues.length===0,issues}))
+ if(issues.length)process.exitCode=1
+ process.exit()
+}
+// Never take over any existing human Head/Deputy slot; fail before user creation.
+for(const bot of QA_SEVEN.filter(item=>item.leadership)){
+ const occupant=seatOwner.get(bot.leadership)
+ if(occupant&&occupant!==known.get(bot.email)?.id)
+  throw Error('Existing leadership slot '+bot.leadership+' belongs to another user; no accounts modified')
 }
 const ids=new Map()
 const created=[]
@@ -89,4 +123,4 @@ for(const bot of QA_SEVEN){
  const {data:p,error}=await db.from('profiles').select('role,approved,account_blocked').eq('id',id).single()
  if(error||p?.role!==bot.role||!p?.approved||p?.account_blocked)throw Error('Final profile verification failed: '+bot.key)
 }
-console.log('PASS: seven distinct isolated Main-test role bots provisioned/verified; '+created.length+' new, '+(7-created.length)+' reused. Passwords were not logged.')
+console.log('PASS: seven distinct isolated Main-test operational role bots provisioned; '+created.length+' new, '+(7-created.length)+' reused. Maker/Owner is only created in disposable CI. Passwords were not logged.')
