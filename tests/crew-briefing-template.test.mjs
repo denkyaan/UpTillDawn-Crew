@@ -142,7 +142,7 @@ test('full browser E2E accepts canonical administration overview redirect for cl
  const browser=readFileSync(new URL('../scripts/administration-full-browser-e2e.mjs',import.meta.url),'utf8')
   assert.match(browser,/const expectedClickedPath=expectedPortalDestination\(target\)/)
   assert.match(browser,/const expectedPath=expectedPortalDestination\(route\)/)
- assert.match(browser,/u\.pathname\+u\.search===expectedClickedPath/)
+ assert.match(browser,/browserDestination\(u\)===expectedClickedPath/)
 })
 
 test('assignment person selection cannot retain a default outside the event and workplace scope',()=>{
