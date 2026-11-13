@@ -50,6 +50,13 @@ export default function BankStatementWorkspace({locale}:{locale:SupportedUiLocal
   try{setWorkspace(await fetchWorkspace());setError(false)}
   catch{setError(true)}finally{setLoading(false)}
  }
+ // A safe provider import only inserts pending bank rows. Refresh this existing
+ // reconciliation list rather than adding a second transaction dashboard.
+ useEffect(()=>{
+  const onImported=()=>void refresh()
+  window.addEventListener("uptilldawn-ponto-imported",onImported)
+  return()=>window.removeEventListener("uptilldawn-ponto-imported",onImported)
+ },[])
  function resetFile(){revision.current++;setFile(null);setCsv(null);setFeedback("")}
  async function chooseFile(event:ChangeEvent<HTMLInputElement>){
   const current=++revision.current,chosen=event.target.files?.[0]
