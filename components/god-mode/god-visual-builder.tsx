@@ -64,6 +64,10 @@ const pageOptions: Record<Role,{label:string;path:string}[]> = {
   ],
   admin: [
     {label:'Overzicht',path:'/admin'},
+    // The Owner/Admin session may inspect both dedicated portals without
+    // creating extra role identities or bypassing their server-side layouts.
+    {label:'Administratie',path:'/portals/administration'},
+    {label:'Promotie',path:'/portals/promotion'},
     {label:'Evenementen',path:'/events'},
     {label:'Werkplaatsen & shifts',path:'/workplaces'},
     {label:'Werkuren',path:'/operations'},
