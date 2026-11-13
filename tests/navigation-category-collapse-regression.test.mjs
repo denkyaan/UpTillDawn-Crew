@@ -12,8 +12,8 @@ test('administration subtab categories toggle closed on a second tap even on mod
  assert.match(administration,/previous\?\.pathname===pathname&&previous\.key===group\.key\?\{key:"overview",pathname\}/)
  assert.match(administration,/selectedCategory\?\.pathname===pathname/)
 })
-test('expanding subtabs closes the AI dialog so it does not reappear unexpectedly',()=>{
+test('expanding subtabs closes the AI dialog while preserving its topbar button',()=>{
  assert.match(shell,/if\(open\)setAdminAiOpen\(false\)/)
- assert.match(shell,/const adminAiVisible=\(isAdmin\|\|administrationPortal\)&&!navigationExpanded/)
+ assert.match(shell,/const adminAiVisible=isAdmin\|\|administrationPortal/)
  assert.match(shell,/const adminAiAction=adminAiVisible\?/)
 })
