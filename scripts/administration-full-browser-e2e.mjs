@@ -1,4 +1,5 @@
 import { chromium } from 'playwright'
+import { expectedPortalDestination } from './portal-e2e-route-contract.mjs'
 import { createClient } from '@supabase/supabase-js'
 import { mkdir, writeFile } from 'node:fs/promises'
 
@@ -63,9 +64,10 @@ try{
      if(!body)throw Error('empty page')
      if(/404\s*\|\s*this page could not be found|application error|internal server error/i.test(body))throw Error('application/404 screen')
      if(errors.length)throw Error('uncaught JS: '+errors.join('; ').slice(0,350))
-     // Canonical overview redirects to the portal home. Sales is deliberately
-     // admin-only; an administrative_staff account must be redirected away.
-     const expectedPath=route==='/portals/administration/overview'?'/portals/administration':role.name==='administration'&&route==='/portals/administration/sales'?'/portals/administration':route
+     // The overview and legacy Contacts routes intentionally redirect to their
+     // canonical destinations. Authorized Administration Sales stays on Sales;
+     // it is guarded by upt_can_manage_administration and database RLS.
+     const expectedPath=expectedPortalDestination(route)
      if(['admin','administration','promotion'].includes(role.name)&&route.startsWith('/portals/')&&path!==expectedPath)throw Error('unexpected portal redirect from '+route+' to '+path+' (expected '+expectedPath+')')
      if(role.name==='administration'&&route.startsWith('/portals/administration')&&await page.locator('[data-layout-key]').count())throw Error('administration rendered personnel navigation')
      if(role.name==='promotion'&&route.startsWith('/portals/promotion')&&await page.locator('[data-layout-key]').count())throw Error('promotion rendered personnel navigation')
@@ -80,9 +82,10 @@ try{
      if((['admin','administration'].includes(role.name)&&route.startsWith('/portals/administration'))||(role.name==='promotion'&&route.startsWith('/portals/promotion'))){
       // Exercise actual user clicks, rather than treating direct URL requests as navigation coverage.
       const visibleLinks=await page.locator('a[href]:visible').evaluateAll(els=>els.map(el=>el.getAttribute('href')).filter(Boolean))
-      // Do not click admin-only Sales as an administrative_staff user: the access guard correctly redirects to portal home.
+      // Click only links exposed to the authenticated role. Permissions on
+      // every destination remain enforced by the server and RLS.
       const portalPrefix=role.name==='promotion'?'/portals/promotion/':'/portals/administration/'
-      const targets=[...new Set(visibleLinks.filter(href=>href.startsWith(portalPrefix)&&(role.name==='admin'||href!=='/portals/administration/sales')))].slice(0,35)
+      const targets=[...new Set(visibleLinks.filter(href=>href.startsWith(portalPrefix)))].slice(0,35)
       if(role.name==='promotion'&&route==='/portals/promotion'&&!targets.includes('/portals/promotion/tasks'))throw Error('promotion home missing tasks navigation')
       for(const target of targets){
        const tab=await context.newPage()
@@ -94,7 +97,7 @@ try{
         await tab.goto(base+path,{waitUntil:'domcontentloaded',timeout:30000})
         await tab.waitForURL(u=>u.pathname+u.search===path,{timeout:15000,waitUntil:'commit'})
         const href=tab.locator('a[href="'+target.replaceAll('"','\\"')+'"]:visible').first()
-        const expectedClickedPath=target==='/portals/administration/overview'?'/portals/administration':target
+        const expectedClickedPath=expectedPortalDestination(target)
         try {
          await Promise.all([
           tab.waitForURL(u=>u.pathname+u.search===expectedClickedPath,{timeout:20000,waitUntil:'commit'}),

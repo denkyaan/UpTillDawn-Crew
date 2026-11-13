@@ -6,7 +6,8 @@ const browser=readFileSync('scripts/administration-full-browser-e2e.mjs','utf8')
 const peppol=readFileSync('scripts/administration-peppol-e2e.mjs','utf8')
 
 test('admin full-browser click verification starts from the settled canonical route',()=>{
- assert.match(browser,/expectedPath=route==='\/portals\/administration\/overview'\?'\/portals\/administration'/)
+ assert.match(browser,/const expectedPath=expectedPortalDestination\(route\)/)
+ assert.match(browser,/const expectedClickedPath=expectedPortalDestination\(target\)/)
  assert.match(browser,/await tab\.goto\(base\+path,\{waitUntil:'domcontentloaded',timeout:30000\}\)/)
  assert.match(browser,/await tab\.waitForURL\(u=>u\.pathname\+u\.search===path/)
  assert.doesNotMatch(browser,/await tab\.goto\(base\+route/)
