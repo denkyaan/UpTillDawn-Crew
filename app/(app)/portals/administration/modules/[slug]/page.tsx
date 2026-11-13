@@ -104,9 +104,9 @@ const financeRelated=new Set(["documents"])
 
 export const dynamic = "force-dynamic"
 
-export default async function AdministrationModulePage({params,searchParams}:{params:Promise<{slug:string}>;searchParams?:Promise<{event?:string;page?:string;status?:string;invoiceKind?:string;invoiceStatus?:string;invoicePage?:string;invoiceNumber?:string;invoiceFrom?:string;invoiceTo?:string;invoiceOverdue?:string;invoiceSort?:string;notificationPage?:string}>}){
+export default async function AdministrationModulePage({params,searchParams}:{params:Promise<{slug:string}>;searchParams?:Promise<{event?:string;page?:string;status?:string;invoiceKind?:string;invoiceStatus?:string;invoicePage?:string;invoiceNumber?:string;invoiceFrom?:string;invoiceTo?:string;invoiceOverdue?:string;invoiceSort?:string;notificationPage?:string;create?:string}>}){
  const {slug}=await params
- const {event:requestedEvent,page:requestedPage,status:requestedCaseStatus,invoiceKind,invoiceStatus,invoicePage,invoiceNumber,invoiceFrom,invoiceTo,invoiceOverdue,invoiceSort,notificationPage}=await (searchParams??Promise.resolve({event:undefined,page:undefined,status:undefined,invoiceKind:undefined,invoiceStatus:undefined,invoicePage:undefined,invoiceNumber:undefined,invoiceFrom:undefined,invoiceTo:undefined,invoiceOverdue:undefined,invoiceSort:undefined,notificationPage:undefined}))
+ const {event:requestedEvent,page:requestedPage,status:requestedCaseStatus,invoiceKind,invoiceStatus,invoicePage,invoiceNumber,invoiceFrom,invoiceTo,invoiceOverdue,invoiceSort,notificationPage,create:requestedCreate}=await (searchParams??Promise.resolve({event:undefined,page:undefined,status:undefined,invoiceKind:undefined,invoiceStatus:undefined,invoicePage:undefined,invoiceNumber:undefined,invoiceFrom:undefined,invoiceTo:undefined,invoiceOverdue:undefined,invoiceSort:undefined,notificationPage:undefined,create:undefined}))
  const adminModule=administrationModules.find(item=>item.slug===slug&&slug!=="dashboard"&&slug!=="finance")
  if(!adminModule)notFound()
  if(slug==="contacts")redirect("/portals/administration/counterparties")
@@ -343,7 +343,7 @@ export default async function AdministrationModulePage({params,searchParams}:{pa
    <Link href="#administration-work-queue" className="mt-4 inline-flex rounded-lg border px-4 py-2 text-sm font-semibold">{({nl:"Taken beheren",fr:"Gérer les tâches",en:"Manage tasks",de:"Aufgaben verwalten"} as const)[locale]}</Link>
   </section>}
   {slug==="events"&&<section className="rounded-2xl border bg-card p-5">
-   <details className="mb-5 rounded-xl border border-violet-500/50 p-4">
+   <details className="mb-5 rounded-xl border border-violet-500/50 p-4" id="administration-event-draft" open={requestedCreate==="1"}>
     <summary className="cursor-pointer text-base font-bold text-violet-400">{({nl:"Nieuw evenement aanmaken",fr:"Créer un événement",en:"Create event",de:"Veranstaltung erstellen"} as const)[locale]}</summary>
     <p className="mt-3 text-sm text-muted-foreground">{({nl:"Administratie kan een concept aanmaken en aanpassen. Admin keurt het evenement definitief goed en publiceert het.",fr:"L'administration crée et modifie un brouillon. L'Admin valide et publie.",en:"Administration can draft and edit. Admin handles final approval and publication.",de:"Die Verwaltung kann Entwürfe erstellen und ändern. Admin gibt sie frei und veröffentlicht."} as const)[locale]}</p>
     <form action={saveAdministrationEventDraft} className="mt-4 grid gap-3 sm:grid-cols-2">
