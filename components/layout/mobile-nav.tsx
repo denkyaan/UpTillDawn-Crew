@@ -127,6 +127,7 @@ export function MobileBottomNav({
   .sort((a,b)=>(priority.get(a.key)??999)-(priority.get(b.key)??999))
  useEffect(()=>{const onKey=(event:KeyboardEvent)=>{if(event.key==="Escape")setSelectedGroup({key:"home",pathname})};window.addEventListener("keydown",onKey);return()=>window.removeEventListener("keydown",onKey)},[pathname])
  useEffect(()=>{window.dispatchEvent(new CustomEvent("uptilldawn-navigation-expanded",{detail:{open:activeGroup!=="home"}}));return()=>{window.dispatchEvent(new CustomEvent("uptilldawn-navigation-expanded",{detail:{open:false}}))}},[activeGroup])
+ useEffect(()=>{const dismiss=()=>setSelectedGroup({key:"home",pathname});window.addEventListener("uptilldawn-navigation-dismiss",dismiss);return()=>window.removeEventListener("uptilldawn-navigation-dismiss",dismiss)},[pathname])
  return <nav aria-label={{nl:"Mobiele navigatie",en:"Mobile navigation",fr:"Navigation mobile",de:"Mobile Navigation"}[uiLocale]} className="fixed inset-x-0 bottom-0 z-50 min-h-14 border-t border-border bg-card pb-[env(safe-area-inset-bottom)] lg:hidden">
   {activeGroup!=="home"&&<div id="role-navigation-subtabs" role="region" aria-label={{nl:"Subnavigatie",fr:"Sous-navigation",en:"Subnavigation",de:"Unternavigation"}[uiLocale]} className="border-b bg-card p-2">
    <strong className="mb-2 block text-xs">{availableGroups.find(group=>group.key===activeGroup)?.labels[uiLocale]}</strong>
