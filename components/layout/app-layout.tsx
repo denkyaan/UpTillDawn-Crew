@@ -242,9 +242,10 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
   const showFloatingChat=showChat&&!inDedicatedPortal&&!navigationExpanded
 
   const administrationPortal=pathname.startsWith("/portals/administration")
-  // Keep the top AI control in both Admin and Administration; suppress it only
-  // while the navigation submenu is expanded so it never covers navigation.
-  const adminAiVisible=(isAdmin||administrationPortal)&&!navigationExpanded
+  // Keep the top AI button visible while bottom subtabs expand. The expanded
+  // navigation closes only the AI panel, not the topbar action; they cannot
+  // overlap because the submenu is anchored to the bottom of the screen.
+  const adminAiVisible=isAdmin||administrationPortal
   const effectiveAiWorkspace=isAdmin?aiWorkspace:"administration"
   const adminAiAction=adminAiVisible?<div className="relative z-[70] print:hidden"><button type="button" aria-expanded={adminAiOpen} onClick={()=>setAdminAiOpen(value=>!value)} className="rounded-lg bg-violet-600 px-2 py-2 text-xs font-black text-white shadow sm:px-3"><span className="sm:hidden">AI</span><span className="hidden sm:inline">{administrationPortal?({nl:"Administratie AI",fr:"IA administrative",en:"Administration AI",de:"Verwaltungs-KI"} as const)[uiLocale]:"ADMIN AI"}</span></button>{adminAiOpen&&<div className="fixed inset-x-3 top-[calc(4.5rem+env(safe-area-inset-top))] z-[80] max-h-[calc(100dvh-7rem)] overflow-y-auto rounded-2xl border bg-background p-4 shadow-2xl sm:absolute sm:inset-x-auto sm:top-[calc(100%+0.5rem)] sm:right-0 sm:w-[min(92vw,430px)] sm:max-h-[75dvh]"><div className="space-y-3"><div className="flex gap-2">{isAdmin&&<button type="button" aria-pressed={aiWorkspace==="admin"} onClick={()=>setAiWorkspace("admin")} className={`rounded-lg border px-3 py-2 text-sm ${aiWorkspace==="admin"?"border-violet-500 text-violet-400":""}`}>Admin AI</button>}<button type="button" aria-pressed={effectiveAiWorkspace==="administration"} onClick={()=>setAiWorkspace("administration")} className={`rounded-lg border px-3 py-2 text-sm ${aiWorkspace==="administration"?"border-violet-500 text-violet-400":""}`}>{({nl:"Administratie AI",fr:"IA administrative",en:"Administration AI",de:"Verwaltungs-KI"} as const)[uiLocale]}</button></div>{effectiveAiWorkspace==="admin"?<PlatformAiAssistant contextKey={currentFeature||undefined} contextLabel={labels[currentFeature||""]} compact/>:<AdministrationAiChat locale={uiLocale} compact/>}</div></div>}</div>:null
 
