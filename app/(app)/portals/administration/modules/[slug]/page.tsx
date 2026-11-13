@@ -3,6 +3,7 @@ import {DateInput} from "@/components/crew/date-input"
 import {markAllNotificationsRead} from "@/lib/actions/uptilldawn"
 import { administrationNotificationHref } from "@/lib/administration/navigation"
 import {externalServicesReadiness} from "@/lib/administration/external-services-readiness"
+import {integrationServicesForWorkspace} from "@/lib/administration/integration-placement"
 import {ExternalServicesReadiness} from "@/components/admin/external-services-readiness"
 import { revalidatePath } from 'next/cache'
 import {invoiceDateRange} from "@/lib/administration/invoice-filter-validation"
@@ -215,6 +216,7 @@ export default async function AdministrationModulePage({params,searchParams}:{pa
    <h1 className="mt-2 text-2xl font-bold tracking-tight sm:text-3xl">{adminModule.title[locale]}</h1>
    <p className="mt-3 max-w-3xl text-sm leading-6 text-muted-foreground">{intro[locale]}</p>
   </header>
+  {["contracts","invoices","banking","ticketing","documents"].includes(slug)&&<ExternalServicesReadiness locale={locale} services={integrationServicesForWorkspace(slug,externalServicesReadiness(process.env))}/>} 
   {slug==="invoices"&&<section className="rounded-2xl border bg-card p-5">
    <h2 className="text-lg font-semibold">{({nl:"Facturenregister",fr:"Registre des factures",en:"Invoice register",de:"Rechnungsregister"} as const)[locale]}</h2>
    <form method="get" className="mt-3 flex flex-wrap items-end gap-3">
@@ -290,7 +292,7 @@ export default async function AdministrationModulePage({params,searchParams}:{pa
    <h2 className="text-lg font-semibold">{({nl:"Administratieve roltoewijzingen",fr:"Attributions des rôles administratifs",en:"Administration role assignments",de:"Verwaltungsrollenzuweisungen"} as const)[locale]}</h2>
    {settingsAssignmentRows?.error?<p role="alert" className="mt-3 text-sm text-muted-foreground">{({nl:"Roltoewijzingen konden niet worden geladen.",fr:"Impossible de charger les rôles.",en:"Unable to load role assignments.",de:"Rollenzuweisungen konnten nicht geladen werden."} as const)[locale]}</p>:settingsAssignmentRows?.data?.length?<ul className="mt-3 divide-y">{settingsAssignmentRows.data.map(item=><li key={item.id} className="flex flex-wrap justify-between gap-2 py-3 text-sm"><span className="font-medium">{item.user_id}</span><span className="text-muted-foreground">{item.approved?({nl:"Goedgekeurd",fr:"Approuvé",en:"Approved",de:"Genehmigt"} as const)[locale]:({nl:"In afwachting",fr:"En attente",en:"Pending",de:"Ausstehend"} as const)[locale]}</span></li>)}</ul>:<p className="mt-3 text-sm text-muted-foreground">{({nl:"Geen roltoewijzingen gevonden.",fr:"Aucune attribution.",en:"No role assignments found.",de:"Keine Rollenzuweisungen gefunden."} as const)[locale]}</p>}
   </section>}
-  {slug==="settings"&&<ExternalServicesReadiness locale={locale} services={externalServicesReadiness(process.env)}/>}
+
   {slug==="contracts"&&<section className="rounded-2xl border bg-card p-5">
    <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
     <p className="text-sm text-muted-foreground">{({nl:"Beheer je DJ-contracten vanuit het bestaande boekings- en goedkeuringsproces.",fr:"Gérez les contrats DJ dans le processus de réservation et de validation existant.",en:"Manage DJ contracts through the existing booking and approval workflow.",de:"Verwalten Sie DJ-Verträge im bestehenden Buchungs- und Freigabeprozess."} as const)[locale]}</p>
