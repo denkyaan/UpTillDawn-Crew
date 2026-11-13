@@ -53,7 +53,7 @@ export function IntegrationCredentialManager({initialLocale,provider,events=[]}:
   if(!response.ok)throw Error("unavailable")
   const result:unknown=await response.json()
   if(!result||typeof result!=="object"||!("integrations" in result)||!Array.isArray(result.integrations))throw Error("unavailable")
-  setState({integrations:result.integrations as IntegrationSummary[],audit:"audit" in result&&Array.isArray(result.audit)?result.audit as AuditEvent[]:[],secureStoreAvailable:"secureStoreAvailable" in result&&result.secureStoreAvailable===true,weeztixOauthReady:"weeztixOauthReady" in result&&result.weeztixOauthReady===true})
+  setState({integrations:result.integrations as IntegrationSummary[],audit:"audit" in result&&Array.isArray(result.audit)?result.audit as AuditEvent[]:[],secureStoreAvailable:"secureStoreAvailable" in result&&result.secureStoreAvailable===true,weeztixOauthReady:"weeztixOauthReady" in result&&result.weeztixOauthReady===true,weeztixOauthCallbackUrl:"weeztixOauthCallbackUrl" in result&&typeof result.weeztixOauthCallbackUrl==="string"?result.weeztixOauthCallbackUrl:null})
  }
  async function perform(method:"POST"|"DELETE"){
   if(busy)return
