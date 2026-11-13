@@ -36,7 +36,7 @@ test("Provider diagnostics use only documented read-only API calls, avoid secret
  assert.match(server,/validAccountAccess\(await pontoReadOnlyJson/)
  assert.match(server,/method:"GET"/)
  assert.match(server,/AbortSignal\.timeout\(6500\)/)
- assert.match(server,/size>16384/)
+ assert.match(server,/size>maxBytes/)
  assert.doesNotMatch(server,/\/payments|\/transactions|\/envelope\/distribute|\/orders\/commands\/send|method:"PUT"|method:"DELETE"/)
  assert.match(route,/integrationManagementAccess\(\)/)
  assert.match(route,/requestHasSameOrigin\(request\)/)
