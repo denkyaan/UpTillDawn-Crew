@@ -280,6 +280,14 @@ export async function signIn(formData: FormData) {
 
     await notifySecurity('success', 'login_success')
 
+    // Save the selected portal at the authenticated server action boundary.
+    // The PWA can close before client-side route tracking runs; the launch
+    // preference is account-bound and re-authorized by the server on reopen.
+    const workspace = requestedPortal === 'administration' || requestedPortal === 'promotion'
+        ? requestedPortal : requestedPortal === 'admin' ? 'admin' : 'events'
+    ;(await cookies()).set('uptilldawn-last-workspace', user.id + ':' + workspace,
+        { path: '/', sameSite: 'lax', secure: process.env.NODE_ENV === 'production', maxAge: 60 * 60 * 24 * 90 })
+
     const redirectTo = isOwner === true
         ? (requestedPortal === 'promotion' || requestedPortal === 'administration' ? '/portals/' + requestedPortal : `/maker-mode?portal=${requestedPortal}`)
         : requestedPortal === 'promotion' || requestedPortal === 'administration'
@@ -381,6 +389,8 @@ export async function enterNormalAppFromMakerSession(formData: FormData) {
         redirect(`/maker-mode?portal=${portal}&error=role-mode`)
     }
 
+    ;(await cookies()).set('uptilldawn-last-workspace',user.id+':'+(portal==='admin'?'admin':'events'),
+        {path:'/',sameSite:'lax',secure:process.env.NODE_ENV==='production',maxAge:60*60*24*90})
     redirect(portal === 'admin' ? '/admin' : '/')
 }
 
