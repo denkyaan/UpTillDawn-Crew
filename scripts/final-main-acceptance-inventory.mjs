@@ -48,8 +48,12 @@ const playwrightReady=Boolean(packageJson.devDependencies?.playwright==='1.65.0'
  && dependencyLock.packages?.['node_modules/playwright']?.version==='1.65.0'
  && dependencyLock.packages?.['node_modules/playwright-core']?.version==='1.65.0'
  && packageJson.scripts?.['e2e:portals']==='node scripts/e2e-all-portals.mjs')
-const ciWorkflow=readFileSync('.github/workflows/fast-change-validation.yml','utf8')
-const qaJobAvailable=ciWorkflow.includes('run_six_role_acceptance:')&&ciWorkflow.includes('browser-acceptance:')
+const mainWorkflow=readFileSync('.github/workflows/fast-change-validation.yml','utf8')
+const releaseWorkflow=readFileSync('.github/workflows/ci.yml','utf8')
+// Main deliberately has no browser job. Six-role QA gates only production release.
+const qaJobAvailable=!mainWorkflow.includes('browser-acceptance:')&&!mainWorkflow.includes('full-validation:')
+ && releaseWorkflow.includes('Six-role 4-language mobile and desktop authenticated acceptance (isolated)')
+ && releaseWorkflow.includes('Run 15 concurrent authenticated browser bots')
 const summary={
  source:'static-source-audit',
  note:'File/contract presence is not successful live execution or a production release certificate.',

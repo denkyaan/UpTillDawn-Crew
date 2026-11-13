@@ -8,14 +8,9 @@ on:
   workflow_dispatch:
     inputs:
       release_production:
-        description: 'Start CI production after successful CI main'
+        description: 'Explicit owner-authorized production release: dispatch full CI production after successful fast CI main'
         type: boolean
         required: true
-        default: false
-      run_six_role_acceptance:
-        description: 'Run read-only six-role QA browser acceptance on main (requires dedicated QA secrets)'
-        type: boolean
-        required: false
         default: false
 
 concurrency:
@@ -99,17 +94,11 @@ jobs:
           } >> "$GITHUB_STEP_SUMMARY"
       - name: Production dependency security gate
         run: npm audit --omit=dev --audit-level=high
-  full-validation:
-    name: Full validation (explicit commit opt-in)
-    needs: fast
-    if: ${{ github.event_name == 'push' && github.ref == 'refs/heads/main' && contains(github.event.head_commit.message, '[full-ci]') }}
-    uses: ./.github/workflows/ci.yml
-
   release-production:
     needs: fast
-    # Explicit owner-authorized release marker is permitted on a reviewed main merge;
-    # ordinary main pushes and PRs NEVER start production CI.
-    if: ${{ (github.event_name == 'workflow_dispatch' && inputs.release_production == true && github.ref == 'refs/heads/main') || (github.event_name == 'push' && github.ref == 'refs/heads/main' && contains(github.event.head_commit.message, '[release-production]')) }}
+    # Only a manual, explicit release input may dispatch full CI production.
+    # Ordinary Main pushes, pull requests and commit markers NEVER trigger production.
+    if: ${{ github.event_name == 'workflow_dispatch' && inputs.release_production == true && github.ref == 'refs/heads/main' }}
     runs-on: ubuntu-latest
     permissions:
       actions: write
@@ -130,65 +119,3 @@ jobs:
           gh api -X POST "repos/${GITHUB_REPOSITORY}/actions/workflows/ci.yml/dispatches" -f ref=main
           echo "Explicit production CI requested for exact main ${current_sha}"
 
-  browser-acceptance:
-    name: Six-role browser acceptance (explicit Main QA only)
-    needs: fast
-    # Run only after explicit QA opt-in; regular push/PR and production stay unchanged.
-    if: ${{ (github.event_name == 'workflow_dispatch' && inputs.run_six_role_acceptance == true && github.ref == 'refs/heads/main') || (github.event_name == 'push' && github.ref == 'refs/heads/main' && contains(github.event.head_commit.message, '[qa-main]')) }}
-    runs-on: ubuntu-latest
-    timeout-minutes: 60
-    permissions:
-      contents: read
-    env:
-      E2E_BASE_URL: https://uptilldawn-main.uptilldawn.workers.dev
-      E2E_ALLOW_MAIN_TEST: '1'
-      E2E_ADMIN_EMAIL: ${{ secrets.E2E_ADMIN_EMAIL }}
-      E2E_ADMIN_PASSWORD: ${{ secrets.E2E_ADMIN_PASSWORD }}
-      E2E_ADMINISTRATION_EMAIL: ${{ secrets.E2E_ADMINISTRATION_EMAIL }}
-      E2E_ADMINISTRATION_PASSWORD: ${{ secrets.E2E_ADMINISTRATION_PASSWORD }}
-      E2E_PROMOTION_EMAIL: ${{ secrets.E2E_PROMOTION_EMAIL }}
-      E2E_PROMOTION_PASSWORD: ${{ secrets.E2E_PROMOTION_PASSWORD }}
-      E2E_STAFF_EMAIL: ${{ secrets.E2E_STAFF_EMAIL }}
-      E2E_STAFF_PASSWORD: ${{ secrets.E2E_STAFF_PASSWORD }}
-      E2E_RESPONSIBLE_EMAIL: ${{ secrets.E2E_RESPONSIBLE_EMAIL }}
-      E2E_RESPONSIBLE_PASSWORD: ${{ secrets.E2E_RESPONSIBLE_PASSWORD }}
-      E2E_MAKER_EMAIL: ${{ secrets.E2E_MAKER_EMAIL }}
-      E2E_MAKER_PASSWORD: ${{ secrets.E2E_MAKER_PASSWORD }}
-    steps:
-      - name: Checkout
-        uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5.1.0
-      - name: Verify all isolated QA account secrets are present
-        shell: bash
-        run: |
-          set -euo pipefail
-          required=(E2E_ADMIN_EMAIL E2E_ADMIN_PASSWORD E2E_ADMINISTRATION_EMAIL E2E_ADMINISTRATION_PASSWORD E2E_PROMOTION_EMAIL E2E_PROMOTION_PASSWORD E2E_STAFF_EMAIL E2E_STAFF_PASSWORD E2E_RESPONSIBLE_EMAIL E2E_RESPONSIBLE_PASSWORD E2E_MAKER_EMAIL E2E_MAKER_PASSWORD)
-          for key in "${required[@]}"; do
-            if [[ -z "${!key:-}" ]]; then
-              echo "::error::Missing dedicated main-test QA secret: $key (no production account should be used)."
-              exit 1
-            fi
-          done
-          echo "All six QA account credentials are configured (values withheld)."
-      - name: Set up Node.js
-        uses: actions/setup-node@a0853c24544627f65ddf259abe73b1d18a591444 # v5.0.0
-        with:
-          node-version: 24
-          cache: npm
-      - name: Install pinned dependencies
-        run: npm ci --prefer-offline --no-audit --no-fund
-      - name: Install browser and Linux dependencies
-        run: npx playwright install --with-deps chromium
-      - name: Run six-role browser acceptance
-        run: npm run e2e:portals
-      - name: Crawl every static Main page as all six QA roles
-        run: node scripts/main-adversarial-auth-crawl.mjs
-      - name: Upload QA screenshots and structured result
-        if: always()
-        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
-        with:
-          name: six-role-browser-acceptance
-          path: |
-            test-results/final-acceptance/
-            test-results/main-adversarial/
-          if-no-files-found: ignore
-          retention-days: 7

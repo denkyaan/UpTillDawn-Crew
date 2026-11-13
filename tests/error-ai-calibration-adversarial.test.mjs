@@ -69,5 +69,6 @@ test('Error AI: no retired staging workflow or premature resolution remains',()=
  assert.doesNotMatch(handler,/p_status:'resolved'|p_status:'auto_resolved'/)
  assert.doesNotMatch(ui,/sessionStorage\.setItem\(key,'done'\)|report\.status!=='auto_resolved'/)
  assert.match(ui,/PAGINA HANDMATIG HERLADEN/)
- assert.match(workflow,/run_six_role_acceptance:/)
+ assert.doesNotMatch(workflow,/run_six_role_acceptance:|browser-acceptance:|full-validation:/)
+ assert.match(workflow,/release_production:/)
 })

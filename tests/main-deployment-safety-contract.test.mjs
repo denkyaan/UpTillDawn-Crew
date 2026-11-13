@@ -39,15 +39,17 @@ test("production CI has no blanket push trigger",()=>{
  assert.doesNotMatch(productionCi,/\n\s+push:/)
 })
 
-test("full validation on main requires an explicit commit opt-in and cannot dispatch production",()=>{
- const job=mainCi.match(/\n  full-validation:([\s\S]*?)\n  release-production:/)?.[1]
- assert.ok(job)
- assert.match(job,/needs: fast/)
- assert.match(job,/github\.event_name == 'push'/)
- assert.match(job,/github\.ref == 'refs\/heads\/main'/)
- assert.match(job,/contains\(github\.event\.head_commit\.message, '\[full-ci\]'\)/)
- assert.match(job,/uses: \.\/\.github\/workflows\/ci\.yml/)
- assert.doesNotMatch(job,/dispatches|secrets: inherit/)
+test("Main CI is always fast; full isolated validation is exclusive to explicitly dispatched CI production",()=>{
+ assert.doesNotMatch(mainCi,/full-validation:/)
+ assert.doesNotMatch(mainCi,/browser-acceptance:/)
+ assert.doesNotMatch(mainCi,/uses: \.\/\.github\/workflows\/ci\.yml/)
+ assert.doesNotMatch(mainCi,/\[full-ci\]|\[qa-main\]|\[release-production\]/)
+ assert.match(mainCi,/jobs:\s*\n  fast:/)
+ assert.match(mainCi,/name: Parallel lint, typecheck and unit tests/)
+ assert.match(mainCi,/npm audit --omit=dev --audit-level=high/)
+ assert.match(productionCi,/workflow_dispatch:/)
+ assert.match(productionCi,/Run 15 concurrent authenticated browser bots/)
+ assert.match(productionCi,/Full event lifecycle release gate/)
  const productionDispatch=productionCi.slice(productionCi.indexOf('  dispatch-production-deploy:'))
  assert.match(productionDispatch,/github\.event_name == 'workflow_dispatch' && github\.ref == 'refs\/heads\/main'/)
 })
