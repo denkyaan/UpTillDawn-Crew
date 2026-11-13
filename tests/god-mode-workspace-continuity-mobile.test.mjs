@@ -77,3 +77,14 @@ test('Maker SQL regression uses valid PostgreSQL DO delimiters and does not bypa
  assert.match(sql,/upt_current_effective_role\(\)/)
  assert.match(sql,/upt_admin_personnel_details_v2\(\)/)
 })
+
+test('workspace preference is set at login and mode entry before the app can close',()=>{
+ const auth=read('lib/actions/auth.ts')
+ const god=read('lib/actions/god-mode.ts')
+ assert.match(auth,/const workspace = requestedPortal === 'administration' \|\| requestedPortal === 'promotion'/)
+ assert.match(auth,/user\.id \+ ':' \+ workspace/)
+ assert.match(auth,/cookieStore\.delete\('uptilldawn-last-workspace'\)/)
+ assert.match(god,/store\.set\('uptilldawn-last-workspace',user\.id\+':god-mode'/)
+ assert.match(god,/store\.delete\('uptilldawn-last-workspace'\)/)
+ assert.match(auth,/secure: process\.env\.NODE_ENV === 'production'/)
+})
