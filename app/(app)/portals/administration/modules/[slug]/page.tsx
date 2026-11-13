@@ -12,7 +12,6 @@ import OperationalWorkQueue from "@/components/administration/operational-work-q
 import InventoryReceipts from "@/components/administration/inventory-receipts"
 import InventoryBulkReceipts from "@/components/administration/inventory-bulk-receipts"
 import TicketSalesOverview from "@/components/administration/ticket-sales-overview"
-import EventixIntegration from "@/components/administration/eventix-integration"
 import ProviderMappingManager from "@/components/administration/provider-mapping-manager"
 import type {SupabaseClient} from "@supabase/supabase-js"
 import Link from "next/link"
@@ -304,7 +303,7 @@ export default async function AdministrationModulePage({params,searchParams}:{pa
   {["logistics","permits","tasks"].includes(slug)&&<OperationalWorkQueue kind={slug as "logistics"|"permits"|"tasks"} locale={locale} events={workQueueEvents?.data??[]} page={listPage(requestedPage,10000)} statusFilter={requestedCaseStatus}/>}
   {slug==="inventory"&&<InventoryBulkReceipts locale={locale}/>}
   {slug==="inventory"&&<InventoryReceipts locale={locale}/>}
-  {slug==="ticketing"&&<EventixIntegration locale={locale}/>}
+
   {slug==="ticketing"&&!ticketEventRows?.error&&<ProviderMappingManager locale={locale} events={(ticketEventRows?.data??[]).map(event=>({id:event.id,name:event.name}))}/>}
   {slug==="ticketing"&&<TicketSalesOverview locale={locale} events={ticketEventRows?.data??[]}/>}
   {slug==="ticketing"&&!ticketEventRows?.error&&<TicketImportPreview events={(ticketEventRows?.data??[]).map(event=>({id:event.id,name:event.name}))} locale={locale}/>}
