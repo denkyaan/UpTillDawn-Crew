@@ -8,6 +8,7 @@ import {externalServicesReadiness} from '@/lib/administration/external-services-
 import {integrationServicesForWorkspace} from '@/lib/administration/integration-placement'
 import {ExternalServicesReadiness} from '@/components/admin/external-services-readiness'
 import {createPriceListDocument,createPriceListTextEntry,archiveEventDocument} from '@/lib/actions/uptilldawn'
+import {MAX_REVENUE_TRANSACTIONS,revenueCoverageComplete,summarizeSalesRevenue,type SalesRevenueRow} from '@/lib/sales/revenue-summary'
 
 export const dynamic='force-dynamic'
 
@@ -76,29 +77,65 @@ export default async function SalesPage({
 
   let transactions:Transaction[]=[]
   let transactionLoadError=false
+  let revenueRows:SalesRevenueRow[]=[]
+  let revenueComplete=false
+  let transactionCount:number|null=null
+  let selectedWorkplaceId:string|null=null
   let workplaceNames=new Map<string,string>()
   let salesWorkplaces:Array<{id:string;name:string}>=[]
   let priceLists:Array<{id:string;workplace_id:string|null;title:string;file_name:string;storage_path:string}>=[]
   const priceListUrls=new Map<string,string>()
 
   if(selected){
-    const [transactionResult,workplaceResult]=await Promise.all([
-      s.from('sales_transactions')
-        .select('id,event_id,workplace_id,transaction_type,product_name,sale_category,quantity,total_cents,payment_method,created_at')
-        .eq('event_id',selected.id)
-        .order('created_at',{ascending:false})
-        .limit(1000),
-      s.from('workplaces')
-        .select('id,name')
-        .eq('event_id',selected.id)
-        .eq('is_active',true),
-    ])
-    transactionLoadError=Boolean(transactionResult.error)
-    transactions=(transactionResult.data||[]) as Transaction[]
-    if(params.workplace)transactions=transactions.filter(transaction=>transaction.workplace_id===params.workplace)
-    salesWorkplaces=(workplaceResult.data||[]).filter(row=>/bar|toog|counter|comptoir|theke|merch|token|jeton/i.test(row.name))
-    if(params.workplace)salesWorkplaces=salesWorkplaces.filter(row=>row.id===params.workplace)
-    workplaceNames=new Map((workplaceResult.data||[]).map(row=>[row.id,row.name]))
+    // Resolve the workplace against the selected event BEFORE querying sales.
+    // A stale workplace ID from another event must never produce a false €0 overview.
+    const workplaceResult=await s.from('workplaces')
+      .select('id,name')
+      .eq('event_id',selected.id)
+      .eq('is_active',true)
+    transactionLoadError=Boolean(workplaceResult.error)
+    const workplaces=workplaceResult.data||[]
+    selectedWorkplaceId=workplaces.find(row=>row.id===params.workplace)?.id??null
+    salesWorkplaces=workplaces.filter(row=>/bar|toog|counter|comptoir|theke|merch|token|jeton/i.test(row.name))
+    if(selectedWorkplaceId)salesWorkplaces=salesWorkplaces.filter(row=>row.id===selectedWorkplaceId)
+    workplaceNames=new Map(workplaces.map(row=>[row.id,row.name]))
+
+    // Filter in PostgreSQL BEFORE pagination, never after taking the first 1000
+    // event-wide rows. Count is exact under the caller's existing RLS policies.
+    const firstQuery=s.from('sales_transactions')
+      .select('id,event_id,workplace_id,transaction_type,product_name,sale_category,quantity,total_cents,payment_method,created_at',{count:'exact'})
+      .eq('event_id',selected.id)
+      .order('created_at',{ascending:false}).order('id',{ascending:false})
+      .range(0,999)
+    const firstPage=await (selectedWorkplaceId?firstQuery.eq('workplace_id',selectedWorkplaceId):firstQuery)
+    transactionLoadError ||= Boolean(firstPage.error)
+    transactions=(firstPage.data||[]) as Transaction[]
+    transactionCount=firstPage.count
+    revenueRows=[...transactions]
+
+    // The visible transaction list remains bounded. Fetch only the narrow
+    // accounting columns for the remaining pages so totals are not silently
+    // limited to the last 1000 entries. Fail closed on errors or huge datasets:
+    // a missing total is safer than publishing a partial amount as "total".
+    if(!transactionLoadError&&transactionCount!==null&&
+       transactionCount>transactions.length&&transactionCount<=MAX_REVENUE_TRANSACTIONS){
+      for(let offset=1000;offset<transactionCount;offset+=1000){
+        const pageQuery=s.from('sales_transactions')
+          .select('id,transaction_type,total_cents,payment_method,sale_category')
+          .eq('event_id',selected.id)
+          .order('created_at',{ascending:false}).order('id',{ascending:false})
+          .range(offset,Math.min(offset+999,transactionCount-1))
+        const next=await (selectedWorkplaceId?pageQuery.eq('workplace_id',selectedWorkplaceId):pageQuery)
+        const expected=Math.min(1000,transactionCount-offset)
+        if(next.error||!next.data||next.data.length!==expected){
+          transactionLoadError=true
+          break
+        }
+        revenueRows.push(...next.data)
+      }
+    }
+    revenueComplete=!transactionLoadError&&revenueCoverageComplete(transactionCount,revenueRows.length)
+
     if(isAdmin&&salesWorkplaces.length){
       const {data:docs}=await s.from('event_documents').select('id,workplace_id,title,file_name,storage_path').eq('event_id',selected.id).eq('kind','technical').eq('is_active',true).like('title','Prijslijst ·%').in('workplace_id',salesWorkplaces.map(row=>row.id)).order('created_at',{ascending:false})
       priceLists=(docs||[]) as typeof priceLists
@@ -106,13 +143,7 @@ export default async function SalesPage({
     }
   }
 
-  const sign=(tx:Transaction)=>tx.transaction_type==='refund'?-1:1
-  const amount=(rows:Transaction[])=>rows.reduce((sum,tx)=>sum+sign(tx)*Number(tx.total_cents),0)
-  const eventRevenue=amount(transactions)
-  const merchRevenue=amount(transactions.filter(tx=>tx.sale_category==='merch'))
-  const tokenRevenue=amount(transactions.filter(tx=>tx.sale_category==='token'))
-  const cashRevenue=amount(transactions.filter(tx=>tx.payment_method==='cash'))
-  const cardRevenue=amount(transactions.filter(tx=>tx.payment_method==='card'))
+  const revenueTotals=revenueComplete?summarizeSalesRevenue(revenueRows):null
 
   return <main className="mx-auto max-w-7xl space-y-6 p-4 pb-28 md:p-8">
     <header className="space-y-3">
@@ -129,7 +160,7 @@ export default async function SalesPage({
           <option value="" disabled>Evenement…</option>
           {events.map(event=><option key={event.id} value={event.id}>{event.name}</option>)}
         </select>
-        {params.workplace&&<input type="hidden" name="workplace" value={params.workplace}/>}<button className="rounded-xl border px-4 py-3 font-bold">EVENEMENT OPENEN</button>
+        {selectedWorkplaceId&&<input type="hidden" name="workplace" value={selectedWorkplaceId}/>}<button className="rounded-xl border px-4 py-3 font-bold">EVENEMENT OPENEN</button>
       </form>
     </header>
 
@@ -172,20 +203,20 @@ export default async function SalesPage({
         <section className="grid gap-3 md:grid-cols-3">
           <article className="rounded-2xl border p-5">
             <p className="text-xs font-black uppercase tracking-wider text-muted-foreground">Evenement</p>
-            <h2 className="mt-2 text-2xl font-black">{selected.name}</h2>{params.workplace&&<p className="mt-1 text-sm font-semibold text-violet-400">Werkplek: {workplaceNames.get(params.workplace)||'geselecteerd'}</p>}
-            <p className="mt-3 text-3xl font-black">{money(eventRevenue)}</p>
-            <p className="text-sm text-muted-foreground">Totale netto-inkomsten</p>
+            <h2 className="mt-2 text-2xl font-black">{selected.name}</h2>{selectedWorkplaceId&&<p className="mt-1 text-sm font-semibold text-violet-400">Werkplek: {workplaceNames.get(selectedWorkplaceId)}</p>}
+            <p className="mt-3 text-3xl font-black">{revenueTotals?money(revenueTotals.event):'—'}</p>
+            <p className="text-sm text-muted-foreground">Totale netto-inkomsten uit geregistreerde verkopen</p>
           </article>
 
           <article className="rounded-2xl border p-5">
             <p className="text-xs font-black uppercase tracking-wider text-muted-foreground">Merch</p>
-            <p className="mt-3 text-3xl font-black">{money(merchRevenue)}</p>
+            <p className="mt-3 text-3xl font-black">{revenueTotals?money(revenueTotals.merch):'—'}</p>
             <p className="text-sm text-muted-foreground">Merchandise-inkomsten</p>
           </article>
 
           <article className="rounded-2xl border p-5">
             <p className="text-xs font-black uppercase tracking-wider text-muted-foreground">Kassa / Tokens</p>
-            <p className="mt-3 text-3xl font-black">{money(tokenRevenue)}</p>
+            <p className="mt-3 text-3xl font-black">{revenueTotals?money(revenueTotals.token):'—'}</p>
             <p className="text-sm text-muted-foreground">Token- en kassaverkoop</p>
           </article>
         </section>
@@ -194,12 +225,14 @@ export default async function SalesPage({
           <div className="flex flex-wrap items-center justify-between gap-3">
             <div>
               <h2 className="text-xl font-black">Inkomstenoverzicht</h2>
-              <p className="text-sm text-muted-foreground">Cash {money(cashRevenue)} · kaart {money(cardRevenue)}</p>
+              <p className="text-sm text-muted-foreground">Cash {revenueTotals?money(revenueTotals.cash):'—'} · kaart {revenueTotals?money(revenueTotals.card):'—'}</p>
             </div>
-            <span className="rounded-full border px-3 py-2 text-sm font-bold">{transactions.length} transacties</span>
+            <span className="rounded-full border px-3 py-2 text-sm font-bold">{transactionCount===null?transactions.length:transactions.length===transactionCount?transactionCount:`${transactions.length} van ${transactionCount}`} transacties{transactionCount!==null&&transactionCount>transactions.length?' (laatste)':''}</span>
           </div>
 
           {transactionLoadError&&<p className="mt-3 rounded-xl border border-amber-500/40 p-3 text-sm text-amber-600">Transacties konden tijdelijk niet volledig worden geladen.</p>}
+          {!transactionLoadError&&!revenueComplete&&<p className="mt-3 rounded-xl border border-amber-500/40 p-3 text-sm text-amber-600">Er zijn te veel transacties om de volledige omzet hier veilig te berekenen. Daarom worden geen onvolledige totalen getoond.</p>}
+          {params.workplace&&!selectedWorkplaceId&&<p className="mt-3 text-sm text-muted-foreground">De vorige werkplekfilter hoort niet bij dit evenement; het volledige evenement wordt getoond.</p>}
 
           {!transactions.length
             ? <p className="mt-4 rounded-xl border border-dashed p-4 text-sm text-muted-foreground">Nog geen inkomsten geregistreerd voor dit evenement.</p>
