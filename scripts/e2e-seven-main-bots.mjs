@@ -66,12 +66,53 @@ async function assertAllowed(page,path){
  }
  assert.ok(await page.locator('a[href],button').count()>0,'No interactive navigation or controls')
 }
+// Next.js streaming responses can show a temporary shell or throw ERR_ABORTED
+// while redirecting an unauthorized request. Never classify a loading shell
+// as privileged access, and never classify an incomplete navigation as denial.
 async function assertDenied(page,path){
- const response=await goto(page,path)
+ const before=new URL(page.url()).pathname
+ let response=null
+ let interrupted=false
+ let requested=false
+ const onRequest=request=>{
+  if(!request.isNavigationRequest())return
+  try{if(new URL(request.url()).pathname===path)requested=true}catch{}
+ }
+ page.on('request',onRequest)
+ try{
+  try{
+   response=await page.goto(url(path),{waitUntil:'domcontentloaded',timeout})
+  }catch(error){
+   if(!/ERR_ABORTED|frame was detached|navigation interrupted/i.test(String(error)))throw error
+   interrupted=true
+  }
+ }finally{page.off('request',onRequest)}
+ const status=response?.status()||0
+ if(status>=500)throw Error('Protected URL returned HTTP '+status+' instead of an authorization result: '+path)
+ if([401,403,404].includes(status))return
+ if(!requested&&!response)throw Error('Protected URL was never reached: '+path)
+ // Wait for an explicit forbidden/404 document or a settled server redirect.
+ // The temporary app shell is not sufficient authorization evidence.
+ try{
+  await page.waitForFunction(expected=>{
+   if(window.location.pathname!==expected)return true
+   const heading=[...document.querySelectorAll('h1,h2,[role="alert"]')]
+    .map(node=>(node.textContent||'').trim().toLowerCase()).join(' ')
+   return /not found|niet gevonden|geen toegang|no access|accès refusé|kein zugang|unauthorized|forbidden|access denied|404/.test(heading)
+  },path,{timeout:25000})
+ }catch{
+  throw Error('Authorization result never settled for '+path+'; current route: '+new URL(page.url()).pathname)
+ }
  const actual=new URL(page.url()).pathname
- const content=(await page.locator('body').innerText()).toLowerCase()
- const blocked=(response?.status()||0)>=400||actual!==path||/not found|niet gevonden|geen toegang|no access|accès refusé|kein zugang|unauthorized|forbidden|404/.test(content)
- assert.ok(blocked,'Forbidden role could access protected URL '+path)
+ if(interrupted&&actual===before){
+  // The navigation may have been aborted before the browser ever left the
+  // original page; absence of privileged content does not prove a denial.
+  throw Error('Interrupted navigation returned to its original route without independently verified denial: '+path)
+ }
+ if(actual===path){
+  const heading=await page.locator('h1,h2,[role="alert"]').allTextContents()
+  assert.match(heading.join(' '),/not found|niet gevonden|geen toegang|no access|accès refusé|kein zugang|unauthorized|forbidden|access denied|404/i)
+ }
 }
 try{
  for(const [index,role] of roles.entries()){
@@ -88,10 +129,17 @@ try{
     await page.locator('form[data-login-hydrated="true"]').waitFor({state:'attached',timeout})
     await page.locator('#email').fill(role.email)
     await page.locator('#password').fill(password)
-    await Promise.all([
-     page.waitForURL(target=>!target.pathname.startsWith('/login'),{timeout}),
-     page.locator('button[type="submit"]').click(),
-    ])
+    try{
+     await Promise.all([
+      page.waitForURL(target=>!target.pathname.startsWith('/login'),{timeout}),
+      page.locator('button[type="submit"]').click(),
+     ])
+    }catch(error){
+     const alerts=(await page.locator('[role="alert"]').allTextContents().catch(()=>[]))
+      .map(message=>message.trim().slice(0,160)).filter(Boolean)
+     throw Error('Login navigation failed for '+role.role+
+      (alerts.length?'; displayed error: '+alerts.join(' | '):'')+'; '+scrub(error))
+    }
     assert.ok(!new URL(page.url()).pathname.startsWith('/login'),'Login did not complete')
     mark(role.role,locale,viewport,'authenticated',new URL(page.url()).pathname)
     const htmlLocale=(await page.locator('html').getAttribute('lang')||'').split('-')[0]

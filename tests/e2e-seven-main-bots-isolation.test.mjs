@@ -39,3 +39,18 @@ test('Browser QA is manually opted-in, separated from fast Main CI and productio
  assert.match(workflow,/actions\/upload-artifact@v4/)
  assert.match(workflow,/if: github\.event_name == 'workflow_run'/)
 })
+
+test('denied-route acceptance waits for final RSC authorization and never mistakes loading skeleton for leaked access',()=>{
+ assert.match(source,/page\.waitForFunction\(expected=>/)
+ assert.match(source,/Authorization result never settled/)
+ assert.match(source,/Interrupted navigation returned to its original route/)
+ assert.match(source,/status>=500/)
+ assert.match(source,/\[401,403,404\]/)
+ assert.match(source,/ERR_ABORTED/)
+ assert.doesNotMatch(source,/const blocked=\(response\?\.status\(\)\|\|0\)>=400\|\|actual!==path/)
+})
+test('transient login failures include safe page error diagnostics rather than falsely claiming authentication',()=>{
+ assert.match(source,/Login navigation failed for/)
+ assert.match(source,/locator\('\[role="alert"\]'\)/)
+ assert.match(source,/throw Error\('Login navigation failed/)
+})
