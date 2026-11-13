@@ -67,6 +67,10 @@ async function verifyMaker(viewport){
   assert.equal(await workspaceNav.locator('a[href*="/god-mode"]').count(),1,
    'Selected environment must open through its own isolated session without duplicate top-level selectors')
   record(tag+' Maker enters private God Mode with isolated Main and production controls')
+  const activePreviewRole=await safeRequest(context,'/api/god/preview-role')
+  assert.equal(activePreviewRole.status(),200,'Maker must be allowed to read the actual current preview role')
+  assert.equal((await activePreviewRole.json()).role,'admin','Maker Admin role must match the browser preview before switching')
+  record(tag+' authenticated Maker sees the real active Admin preview role')
 
   // Installed PWA starts at '/': it must restore a valid God session instead of Admin.
   await page.waitForFunction(()=>document.cookie.includes('uptilldawn-last-workspace='),null,{timeout:10000})
@@ -166,6 +170,7 @@ try{
   assert.equal(resp.status(),401,'Ordinary staff must not read God Mode logs')
   const overview=await safeRequest(staff.context,'/api/god/overview?environment=main')
   assert.equal(overview.status(),401,'Ordinary staff must not read God Mode overview')
+  assert.equal((await safeRequest(staff.context,'/api/god/preview-role')).status(),401,'Staff cannot read Maker preview role state')
   await staff.page.goto(base+'/maker-mode',{waitUntil:'domcontentloaded',timeout:30000})
   await staff.page.waitForURL(url=>url.pathname==='/unauthorized',{timeout:20000})
   record('staff cannot enter Maker portal or read private God Mode APIs')
