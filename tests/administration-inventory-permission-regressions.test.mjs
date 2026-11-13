@@ -14,7 +14,7 @@ test('inventory preserves event search params and applies event scope to records
  assert.match(modulePage,/inventory_items"\)\.select\("id",\{count:"exact",head:true\}\)\.eq\("event_id",selectedEvent\)/)
  assert.match(modulePage,/inventory_items"\)\.select\("id,name,missing_quantity,damaged_quantity,event_id"\)\.eq\("event_id",selectedEvent\)/)
  assert.match(modulePage,/inventory\?event=\$\{encodeURIComponent\(event\.id\)\}/)
- assert.match(browserTest,/u\.pathname\+u\.search===expectedClickedPath/)
+ assert.match(browserTest,/browserDestination\(u\)===expectedClickedPath/)
 })
 
 test('office staff cannot follow admin-only promotion discipline navigation',()=>{
