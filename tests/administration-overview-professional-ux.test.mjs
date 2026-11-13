@@ -25,8 +25,8 @@ test('Every operational status has exactly one canonical action, without duplica
  assert.match(overview,/href="\/portals\/administration\/modules\/events"/)
  assert.doesNotMatch(overview,/artists\/new\?contract=1|events\?create=1/)
  assert.doesNotMatch(overview,/const pulse=\[/)
- for(const module of ['timesheets','rosters','contracts','invoices','inventory','notifications','automations','events']){
-  assert.ok(overview.includes('href:"'+administrationRoute(module)+'"')||overview.includes('href="'+administrationRoute(module)+'"'),module)
+ for(const moduleSlug of ['timesheets','rosters','contracts','invoices','inventory','notifications','automations','events']){
+  assert.ok(overview.includes('href:"'+administrationRoute(moduleSlug)+'"')||overview.includes('href="'+administrationRoute(moduleSlug)+'"'),moduleSlug)
  }
 })
 
