@@ -4,6 +4,7 @@ import {readFileSync} from 'node:fs'
 import {administrationRoute} from '../lib/administration/navigation.ts'
 
 const overview=readFileSync(new URL('../components/administration/administration-overview-dashboard.tsx',import.meta.url),'utf8')
+const extra=readFileSync(new URL('../components/administration/administration-subtab-status.tsx',import.meta.url),'utf8')
 
 test('Operational overview stays informative even when all queues are empty',()=>{
  assert.match(overview,/const priorityItems=\[/)
@@ -25,9 +26,12 @@ test('Every operational status has exactly one canonical action, without duplica
  assert.match(overview,/href="\/portals\/administration\/modules\/events"/)
  assert.doesNotMatch(overview,/artists\/new\?contract=1|events\?create=1/)
  assert.doesNotMatch(overview,/const pulse=\[/)
- for(const moduleSlug of ['timesheets','rosters','contracts','invoices','inventory','notifications','automations','events']){
+ for(const moduleSlug of ['timesheets','rosters','contracts','finance','inventory','notifications','automations','events']){
   assert.ok(overview.includes('href:"'+administrationRoute(moduleSlug)+'"')||overview.includes('href="'+administrationRoute(moduleSlug)+'"'),moduleSlug)
  }
+ assert.match(overview,/AdministrationSubtabStatus locale=\{locale\}/)
+ assert.match(extra,/administrationRoute\(slug\)/)
+ assert.ok(administrationRoute('invoices')!==administrationRoute('finance'))
 })
 
 test('Zero counts and unavailable sources are distinct; no false assurance for failed queries',()=>{
