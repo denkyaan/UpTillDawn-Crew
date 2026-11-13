@@ -189,3 +189,15 @@
   border-radius: max(var(--radius), 0.5rem);
   box-shadow: 0 0 0 9999px rgb(0 0 0 / 0.42);
 }
+
+/* iOS Safari automatically zooms form fields with computed text below 16px.
+   Prevent focus zoom at the source, while preserving user pinch-to-zoom
+   (viewport.userScalable remains true). Keep visual labels at their original size. */
+@media (max-width: 767px) and (hover: none) and (pointer: coarse) {
+  input:not([type="checkbox"]):not([type="radio"]):not([type="range"]):not([type="color"]):not([type="hidden"]):not([type="button"]):not([type="submit"]):not([type="reset"]),
+  select,
+  textarea,
+  [contenteditable="true"] {
+    font-size: 16px !important;
+  }
+}

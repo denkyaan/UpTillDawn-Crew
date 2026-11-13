@@ -1,4 +1,5 @@
 import Link from "next/link"
+import {AdministrationSubtabStatus} from "@/components/administration/administration-subtab-status"
 import {ChevronRight} from "lucide-react"
 import type {SupabaseClient} from "@supabase/supabase-js"
 import { createClient } from "@/lib/supabase/crew-server"
@@ -110,7 +111,7 @@ export async function AdministrationOverviewDashboard({locale}:{locale:Supported
   {id:"rosters",group:"people",label:w.rosters,href:"/portals/administration/rosters",count:rosters.count,error:rosters.error,detail:w.planningOkay},
   {id:"contracts",group:"money",label:w.contracts,href:"/portals/administration/modules/contracts",count:contracts.count,error:contracts.error,
    detail:contracts.data?.length?contracts.data.slice(0,2).map(row=>row.artist_name).join("; "):w.contractsOkay},
-  {id:"finance",group:"money",label:w.financial,href:"/portals/administration/modules/invoices",count:financialPending,error:financial.error||draftDocuments.error,
+  {id:"finance",group:"money",label:w.financial,href:"/portals/administration/finance",count:financialPending,error:financial.error||draftDocuments.error,
    detail:financialPending===0?w.financeOkay:
     (draftDocuments.count??0)+" "+w.draft+" · "+(financial.count??0)+" "+w.inProgress},
   {id:"inventory",group:"operations",label:w.inventory,href:"/portals/administration/modules/inventory",count:inventory.count,error:inventory.error,
@@ -163,5 +164,6 @@ export async function AdministrationOverviewDashboard({locale}:{locale:Supported
     </section>)}
    </div>
   </section>
+  <AdministrationSubtabStatus locale={locale}/>
  </main>
 }
