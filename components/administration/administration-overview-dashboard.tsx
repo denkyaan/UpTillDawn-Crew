@@ -34,55 +34,62 @@ export async function AdministrationOverviewDashboard({locale}:{locale:Supported
  const t=copy[locale]
  const dateLocale=({nl:"nl-BE",fr:"fr-BE",en:"en-GB",de:"de-DE"} as const)[locale]
  const formatDate=(date:string)=>new Intl.DateTimeFormat(dateLocale,{dateStyle:"medium",timeStyle:"short",timeZone:"Europe/Brussels"}).format(new Date(date))
- const pulse=[
-  {label:t.hours,count:hours.count,error:hours.error},
-  {label:t.stock,count:inventory.count,error:inventory.error},
-  {label:t.contracts,count:contracts.count,error:contracts.error},
-  {label:t.finance,count:financial.count,error:financial.error},
-  {label:t.rosters,count:rosters.count,error:rosters.error},
-  {label:t.notices,count:notifications.count,error:notifications.error},
-  {label:t.events,count:events.count,error:events.error}
- ]
- return <main className="mx-auto w-full max-w-6xl space-y-6 p-4 pb-28 md:p-8">
+
+ const language={
+  nl:{attention:"Wat vraagt aandacht?",empty:"Geen openstaande acties.",upcoming:"Aankomende evenementen",noUpcoming:"Geen aankomende evenementen.",unavailable:"Niet alle gegevens konden worden opgehaald. Controleer de betrokken module.",open:"Openen"},
+  fr:{attention:"À traiter en priorité",empty:"Aucune action en attente.",upcoming:"Événements à venir",noUpcoming:"Aucun événement à venir.",unavailable:"Certaines données ne sont pas disponibles. Vérifiez le module concerné.",open:"Ouvrir"},
+  en:{attention:"Needs attention",empty:"No pending actions.",upcoming:"Upcoming events",noUpcoming:"No upcoming events.",unavailable:"Some data could not be loaded. Check the relevant module.",open:"Open"},
+  de:{attention:"Jetzt zu bearbeiten",empty:"Keine offenen Aufgaben.",upcoming:"Anstehende Veranstaltungen",noUpcoming:"Keine anstehenden Veranstaltungen.",unavailable:"Einige Daten sind nicht verfügbar. Prüfen Sie den jeweiligen Bereich.",open:"Öffnen"}
+ }[locale]
+ // Each priority is represented once. An item is shown only if it needs
+ // attention or its status cannot be determined; zero-count placeholders
+ // never consume the entire mobile overview. Full editing stays in subtabs.
+ const priorityItems=[
+  {id:"timesheets",label:t.hours,count:hours.count,error:hours.error,href:"/portals/administration/timesheets",
+   detail:(hours.data??[]).slice(0,2).map(row=>(staffNames.get(row.user_id)||t.staff)+" · "+(eventNames.get(row.event_id)||t.event)).join("; ")},
+  {id:"rosters",label:t.rosters,count:rosters.count,error:rosters.error,href:"/portals/administration/rosters",detail:""},
+  {id:"inventory",label:t.stock,count:inventory.count,error:inventory.error,href:"/portals/administration/modules/inventory",
+   detail:(inventory.data??[]).slice(0,2).map(item=>item.name+" ("+t.missing+": "+(item.missing_quantity??0)+", "+t.damaged+": "+(item.damaged_quantity??0)+")").join("; ")},
+  {id:"contracts",label:t.contracts,count:contracts.count,error:contracts.error,href:"/portals/administration/modules/contracts",
+   detail:(contracts.data??[]).slice(0,2).map(item=>item.artist_name+" · "+item.status).join("; ")},
+  {id:"finance",label:t.finance,count:financial.count,error:financial.error,href:"/portals/administration/modules/invoices",
+   detail:(financial.data??[]).slice(0,2).map(item=>(item.document_number||item.kind)+" · "+item.status).join("; ")},
+  {id:"notifications",label:t.notices,count:notifications.count,error:notifications.error,href:"/portals/administration/modules/notifications",detail:""},
+ ].filter(item=>Boolean(item.error)||(item.count??0)>0)
+ const hasDataError=Boolean(events.error||hours.error||inventory.error||contracts.error||financial.error||rosters.error||notifications.error||labels?.error)
+ const upcomingEvents=events.error?[]:(events.data??[]).slice(0,3)
+ return <main className="mx-auto w-full max-w-5xl space-y-5 p-4 pb-28 sm:p-6">
   <header className="space-y-2">
-   <p data-no-translate className="text-xs font-black uppercase tracking-[.2em] text-violet-400">UpTillDawn</p>
    <h1 className="text-2xl font-bold sm:text-3xl">{t.title}</h1>
-   <p className="max-w-3xl text-sm text-muted-foreground">{t.intro}</p>
+   <p className="text-sm text-muted-foreground">{t.intro}</p>
   </header>
-  <section aria-label={t.title} className="grid grid-cols-2 gap-3 sm:grid-cols-3 xl:grid-cols-4">
-   {pulse.map(item=><article key={item.label} className="rounded-xl border bg-card p-4">
-    <p className="min-h-10 text-xs font-medium text-muted-foreground">{item.label}</p>
-    <p className="mt-2 text-2xl font-bold tabular-nums" aria-label={item.label}>{item.error?"—":item.count??0}</p>
-   </article>)}
+  {hasDataError&&<p role="alert" className="rounded-xl border border-amber-600/40 p-3 text-sm">{language.unavailable}</p>}
+  <section aria-label={language.attention} className="rounded-2xl border bg-card p-4 sm:p-5">
+   <h2 className="mb-3 text-lg font-bold">{language.attention}</h2>
+   {priorityItems.length?<ul className="divide-y">
+    {priorityItems.map(item=><li key={item.id}>
+     <Link href={item.href} data-administration-priority={item.id} className="flex min-h-16 items-center gap-3 rounded-lg px-2 py-3 hover:bg-accent/50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-violet-500">
+      <span className="min-w-0 flex-1">
+       <span className="block text-sm font-semibold">{item.label}</span>
+       {item.detail&&<span className="mt-1 block break-words text-xs text-muted-foreground">{item.detail}</span>}
+      </span>
+      <span className="rounded-lg border px-3 py-1 text-sm font-bold tabular-nums">{item.error?"—":item.count}</span>
+      <span className="shrink-0 text-xs font-semibold text-violet-400">{language.open}</span>
+     </Link>
+    </li>)}
+   </ul>:<p className="text-sm text-muted-foreground">{language.empty}</p>}
   </section>
-  <div className="grid gap-4 lg:grid-cols-2">
-   <section className="space-y-3 rounded-2xl border bg-card p-5">
-    <div className="flex flex-wrap items-center justify-between gap-2"><h2 className="text-lg font-bold">{t.recentHours}</h2><Link className="text-sm font-semibold text-violet-400" href="/portals/administration/timesheets">{t.manageHours}</Link></div>
-    {hours.error?<p role="alert" className="text-sm">{t.error}</p>:!hours.data?.length?<p className="text-sm text-muted-foreground">{t.noHours}</p>:
-     <ul className="divide-y">{hours.data.map(row=><li key={row.id} className="space-y-1 py-3 text-sm"><p className="font-medium">{staffNames.get(row.user_id)||t.staff} · {eventNames.get(row.event_id)||t.event}</p>{row.submitted_at&&<p className="text-xs text-muted-foreground">{t.submitted}: {formatDate(row.submitted_at)}</p>}</li>)}</ul>}
-   </section>
-   <section className="space-y-3 rounded-2xl border bg-card p-5">
-    <div className="flex flex-wrap items-center justify-between gap-2"><h2 className="text-lg font-bold">{t.stockIssues}</h2><Link className="text-sm font-semibold text-violet-400" href="/portals/administration/modules/inventory">{t.manageStock}</Link></div>
-    {inventory.error?<p role="alert" className="text-sm">{t.error}</p>:!inventory.data?.length?<p className="text-sm text-muted-foreground">{t.noStock}</p>:
-     <ul className="divide-y">{inventory.data.map(item=><li key={item.id} className="space-y-1 py-3 text-sm"><p className="font-medium">{item.name}</p><p className="text-xs text-muted-foreground">{t.missing}: {item.missing_quantity??0} · {t.damaged}: {item.damaged_quantity??0}</p></li>)}</ul>}
-   </section>
-   <section className="space-y-3 rounded-2xl border bg-card p-5">
-    <div className="flex flex-wrap items-center justify-between gap-2"><h2 className="text-lg font-bold">{t.contractCases}</h2><Link className="text-sm font-semibold text-violet-400" href="/portals/administration/modules/contracts">{t.manageContracts}</Link></div>
-    {contracts.error?<p role="alert" className="text-sm">{t.error}</p>:!contracts.data?.length?<p className="text-sm text-muted-foreground">{t.noContracts}</p>:
-     <ul className="divide-y">{contracts.data.map(item=><li key={item.id} className="flex items-center justify-between gap-3 py-3 text-sm"><Link className="font-semibold text-violet-400 hover:underline" href={"/portals/administration/modules/artists/"+item.id+"/agreement"}>{item.artist_name}</Link><span className="text-xs text-muted-foreground">{item.status}</span></li>)}</ul>}
-    <Link className="inline-flex rounded-lg border px-3 py-2 text-xs font-semibold" href="/portals/administration/modules/artists/new?contract=1">{t.createContract}</Link>
-   </section>
-   <section className="space-y-3 rounded-2xl border bg-card p-5">
-    <div className="flex flex-wrap items-center justify-between gap-2"><h2 className="text-lg font-bold">{t.financialCases}</h2><Link className="text-sm font-semibold text-violet-400" href="/portals/administration/modules/invoices">{t.manageFinance}</Link></div>
-    {financial.error?<p role="alert" className="text-sm">{t.error}</p>:!financial.data?.length?<p className="text-sm text-muted-foreground">{t.noFinance}</p>:
-     <ul className="divide-y">{financial.data.map(item=><li key={item.id} className="flex flex-wrap items-center justify-between gap-2 py-3 text-sm"><span className="font-semibold">{item.document_number||item.kind}</span><span className="text-xs text-muted-foreground">{item.status} · {item.gross_amount??"—"} {item.currency}</span></li>)}</ul>}
-   </section>
-   <section className="space-y-3 rounded-2xl border bg-card p-5 lg:col-span-2">
-    <div className="flex flex-wrap items-center justify-between gap-2"><h2 className="text-lg font-bold">{t.nextEvents}</h2><Link className="text-sm font-semibold text-violet-400" href="/portals/administration/modules/events">{t.manageEvents}</Link></div>
-    {events.error?<p role="alert" className="text-sm">{t.error}</p>:!events.data?.length?<p className="text-sm text-muted-foreground">{t.noEvents}</p>:
-     <ul className="grid gap-2 sm:grid-cols-2">{events.data.map(item=><li key={item.id} className="flex flex-wrap items-center justify-between gap-2 rounded-lg border p-3 text-sm"><span className="font-semibold">{item.name}</span><span className="text-xs text-muted-foreground">{formatDate(item.start_at)} · {item.status}</span></li>)}</ul>}
-    <Link className="inline-flex rounded-lg border px-3 py-2 text-xs font-semibold" href="/portals/administration/modules/events?create=1#administration-event-draft">{t.createEvent}</Link>
-   </section>
-  </div>
+  <section aria-label={language.upcoming} className="rounded-2xl border bg-card p-4 sm:p-5">
+   <div className="mb-3 flex items-center justify-between gap-3">
+    <h2 className="text-lg font-bold">{language.upcoming}</h2>
+    <Link href="/portals/administration/modules/events" className="shrink-0 text-sm font-semibold text-violet-400">{language.open}</Link>
+   </div>
+   {upcomingEvents.length?<ul className="divide-y">
+    {upcomingEvents.map(event=><li key={event.id} className="flex flex-wrap justify-between gap-2 py-3 text-sm">
+     <span className="font-semibold">{event.name}</span>
+     <span className="text-muted-foreground">{formatDate(event.start_at)} · {event.status}</span>
+    </li>)}
+   </ul>:<p className="text-sm text-muted-foreground">{events.error?t.error:language.noUpcoming}</p>}
+  </section>
  </main>
 }
