@@ -43,7 +43,7 @@ export async function ExternalServicesReadiness({locale,services}:{locale:Suppor
      {service.id==="weeztix"&&<p className="mt-2 text-xs text-muted-foreground">{labels.chooseEvent}</p>}
      <IntegrationCredentialManager initialLocale={locale} provider={service.id} events={service.id==="weeztix"&&!events?.error?events?.data??[]:[]}/>
     </details>}
-    {access.ok&&(service.id==="sumup"||service.id==="documenso"||service.id==="banking")&&<ProviderConnectionProbe provider={service.id} initialLocale={locale}/>}
+    {access.ok&&(service.id==="sumup"||service.id==="documenso"||service.id==="banking"||service.id==="peppol")&&<ProviderConnectionProbe provider={service.id} initialLocale={locale}/>}
    </article>)}
   </div>
  </section>

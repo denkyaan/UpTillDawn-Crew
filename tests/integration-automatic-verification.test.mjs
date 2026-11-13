@@ -8,7 +8,7 @@ const route=readFileSync('app/api/admin/provider-connection-check/route.ts','utf
 const server=readFileSync('lib/administration/provider-connection-check.ts','utf8')
 
 test('saving provider credentials triggers exactly the existing credential-only check',()=>{
- assert.match(manager,/if\(provider==="sumup"\|\|provider==="documenso"\|\|provider==="banking"\)/)
+ assert.match(manager,/if\(provider==="sumup"\|\|provider==="documenso"\|\|provider==="banking"\|\|provider==="peppol"\)/)
  assert.match(manager,/response\.ok/)
  assert.match(manager,/uptilldawn-integration-credentials-changed/)
  assert.match(manager,/action:method==="POST"\?"saved":"removed"/)
@@ -28,7 +28,7 @@ test('automatic checks are guarded against overlap, still rate limit manual test
  assert.match(route,/integrationManagementAccess\(\)/)
  assert.match(route,/getManagedIntegrationConfig\(access\.db,value as ConnectionProvider\)/)
  assert.match(route,/requestHasSameOrigin\(request\)/)
- assert.match(route,/scope:"credentials_only"/)
+ assert.match(route,/scope:value==="banking"\?"bank_accounts_read_only":"credentials_only"/)
  assert.match(server,/method:"GET"/)
  assert.match(server,/grant_type=client_credentials/)
  assert.doesNotMatch(probe,/\/api\/payments|\/api\/transactions|secret|apiKey|ciphertext/i)

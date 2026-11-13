@@ -70,7 +70,7 @@ export function IntegrationCredentialManager({initialLocale,provider,events=[]}:
    setFields({});setConfirm(false);setNotice(method==="POST"?"saved":"removed")
    // Notify the existing read-only connection checker after a successful server save.
    // No credentials or provider responses are exposed through this client event.
-   if(provider==="sumup"||provider==="documenso"||provider==="banking"){
+   if(provider==="sumup"||provider==="documenso"||provider==="banking"||provider==="peppol"){
     window.dispatchEvent(new CustomEvent("uptilldawn-integration-credentials-changed",{
      detail:{provider,action:method==="POST"?"saved":"removed"},
     }))

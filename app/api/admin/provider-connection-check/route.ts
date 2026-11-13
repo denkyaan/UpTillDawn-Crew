@@ -31,7 +31,7 @@ export async function POST(request:Request){
  try{input=JSON.parse(new TextDecoder("utf-8",{fatal:true}).decode(buffer))}catch{return fail("invalid_request",400)}
  if(!input||typeof input!=="object"||Array.isArray(input))return fail("invalid_request",400)
  const value=(input as {provider?:unknown}).provider
- if(value!=="sumup"&&value!=="documenso"&&value!=="banking")return fail("invalid_provider",422)
+ if(value!=="sumup"&&value!=="documenso"&&value!=="banking"&&value!=="peppol")return fail("invalid_provider",422)
  // Prefer the encrypted application-managed credentials over any legacy
  // Worker bindings. Never return stored values or provider response bodies.
  let environment:NodeJS.ProcessEnv=process.env
@@ -41,5 +41,5 @@ export async function POST(request:Request){
  }catch{return fail("integration_storage_unavailable",503)}
  const status=await checkProviderConnection(value as ConnectionProvider,environment)
  // Even a successful credential check is not a completed integration.
- return NextResponse.json({status,scope:"credentials_only"},{headers:{"Cache-Control":"no-store"}})
+ return NextResponse.json({status,scope:value==="banking"?"bank_accounts_read_only":"credentials_only"},{headers:{"Cache-Control":"no-store"}})
 }

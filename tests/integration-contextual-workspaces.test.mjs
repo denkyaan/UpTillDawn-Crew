@@ -83,6 +83,6 @@ test("No credentials create live EventPay, Peppol, banking, or contract delivery
  assert.match(panel,/t\.states\.credentials_present/)
  assert.match(readiness,/provider_required/)
  assert.match(readiness,/manual_available/)
- assert.match(api,/scope:"credentials_only"/)
+ assert.match(api,/scope:value==="banking"\?"bank_accounts_read_only":"credentials_only"/)
  assert.doesNotMatch(panel,/paymentSucceeded|liveEnabled|transactionConfirmed/)
 })
