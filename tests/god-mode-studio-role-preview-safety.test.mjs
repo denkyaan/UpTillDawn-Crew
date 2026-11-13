@@ -53,3 +53,21 @@ test('visual editor does not delete React controls while changing nested text',(
   assert.match(builder,new RegExp('\\b'+locale+':\\{restoreRole:'))
  }
 })
+
+test('God overview compares the active Main source with its last deployed version and clears stale data on errors',()=>{
+ const overview=read('components/god-mode/maker-overview.tsx')
+ assert.match(overview,/state\.deployedSha!==state\.head/)
+ assert.match(overview,/heading:t\.deployedMain/)
+ assert.match(overview,/state\?\.deployedSha\?\.slice\(0,8\)/)
+ assert.match(overview,/setState\(null\);setError\(true\)/)
+ assert.match(overview,/state\.productionReleaseShaVerified!==true/)
+})
+test('Maker can inspect dedicated Administration and Promotion portals from an authorized Admin preview',()=>{
+ const builder=read('components/god-mode/god-visual-builder.tsx')
+ const administration=read('app/(app)/portals/administration/layout.tsx')
+ const promotion=read('app/(app)/portals/promotion/layout.tsx')
+ assert.match(builder,/label:'Administratie',path:'\/portals\/administration'/)
+ assert.match(builder,/label:'Promotie',path:'\/portals\/promotion'/)
+ assert.match(administration,/if\(!user\.isOwner&&!user\.realIsAdmin\)/)
+ assert.match(promotion,/if\(!current\.isOwner&&!current\.realIsAdmin\)/)
+})
