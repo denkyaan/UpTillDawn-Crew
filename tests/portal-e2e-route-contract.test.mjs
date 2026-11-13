@@ -1,6 +1,6 @@
 import { strict as assert } from 'node:assert'
 import { test } from 'node:test'
-import { expectedPortalDestination } from '../scripts/portal-e2e-route-contract.mjs'
+import { expectedPortalDestination, browserDestination } from '../scripts/portal-e2e-route-contract.mjs'
 
 test('Administration overview and legacy Contacts URLs resolve to their reviewed canonical pages', () => {
   assert.equal(expectedPortalDestination('/portals/administration/overview'), '/portals/administration')
@@ -21,4 +21,13 @@ test('Authorized Administration Sales and all unrelated routes remain exact', ()
   ]) {
     assert.equal(expectedPortalDestination(route), route)
   }
+})
+
+test('Clicked browser destinations preserve query and fragment in addition to the canonical path', () => {
+  const direct = '/portals/administration/modules/events?create=1#administration-event-draft'
+  const url = new URL('http://127.0.0.1:3000' + direct)
+  assert.equal(browserDestination(url), direct)
+  assert.equal(browserDestination(url.toString()), direct)
+  assert.equal(browserDestination(new URL('https://example.com/portals/administration/modules/invoices?status=draft')), '/portals/administration/modules/invoices?status=draft')
+  assert.notEqual(url.pathname + url.search, direct, 'fragment-dropping match must not be used')
 })
