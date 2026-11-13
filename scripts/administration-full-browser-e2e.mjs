@@ -1,5 +1,5 @@
 import { chromium } from 'playwright'
-import { expectedPortalDestination } from './portal-e2e-route-contract.mjs'
+import { expectedPortalDestination, browserDestination } from './portal-e2e-route-contract.mjs'
 import { createClient } from '@supabase/supabase-js'
 import { mkdir, writeFile } from 'node:fs/promises'
 
@@ -100,12 +100,11 @@ try{
         const expectedClickedPath=expectedPortalDestination(target)
         try {
          await Promise.all([
-          tab.waitForURL(u=>u.pathname+u.search+u.hash===expectedClickedPath,{timeout:20000,waitUntil:'commit'}),
+          tab.waitForURL(u=>browserDestination(u)===expectedClickedPath,{timeout:20000,waitUntil:'commit'}),
           href.click({timeout:15000}),
          ])
         } catch (error) {
-         const actualUrl=new URL(tab.url())
-          const actualPath=actualUrl.pathname+actualUrl.search+actualUrl.hash
+         const actualPath=browserDestination(tab.url())
          const screenshotName='test-results/portal-e2e/'+role.name+'-clicked-'+route.replace(/[^a-z0-9]/gi,'_')+'-to-'+target.replace(/[^a-z0-9]/gi,'_')+'.png'
          await tab.screenshot({path:screenshotName,fullPage:true,timeout:5000}).catch(()=>{})
          throw Error('navigation '+route+' -> '+target+' expected '+expectedClickedPath+' but reached '+actualPath+': '+String(error.message||error)+' (screenshot: '+screenshotName+')')
@@ -116,7 +115,7 @@ try{
         await tab.locator('body').waitFor({state:'visible',timeout:15000})
         await tab.waitForTimeout(250)
         const finalUrl=new URL(tab.url())
-        const finalPath=finalUrl.pathname+finalUrl.search+finalUrl.hash
+        const finalPath=browserDestination(finalUrl)
         if(finalPath!==expectedClickedPath)throw Error('hydrated navigation '+route+' -> '+target+' ended at '+finalPath+' (expected '+expectedClickedPath+'); page title='+await tab.title()+'; body='+((await tab.locator('body').innerText()).slice(0,500)))
         // A deep-link action must open its existing form, not only change the URL.
         if(target==='/portals/administration/modules/events?create=1#administration-event-draft'){
