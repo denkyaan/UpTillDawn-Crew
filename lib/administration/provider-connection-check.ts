@@ -5,14 +5,47 @@ import "server-only"
  * upload, contract send or invoice transmission. No provider response body
  * or secret leaves this module.
  */
-export type ConnectionProvider="sumup"|"documenso"|"banking"
-export type ConnectionState="not_configured"|"connected"|"unauthorized"|"unavailable"
+export type ConnectionProvider="sumup"|"documenso"|"banking"|"peppol"
+export type ConnectionState="not_configured"|"connected"|"unauthorized"|"unavailable"|"needs_account_access"
 
 function configured(v:string|undefined){return typeof v==="string"&&v.trim().length>0}
 
 async function safeFetch(url:string,init:RequestInit):Promise<Response|null>{
  try{return await fetch(url,{...init,redirect:"error",cache:"no-store",signal:AbortSignal.timeout(6500)})}
  catch{return null}
+}
+
+/** Bounded provider metadata parsing: never return account identities or secrets. */
+async function safeMetadata(response:Response|null):Promise<unknown>{
+ if(!response?.ok||!response.body)return null
+ const claimed=Number(response.headers.get("content-length")??"0")
+ if(!Number.isSafeInteger(claimed)||claimed<0||claimed>16384)return null
+ const reader=response.body.getReader(),chunks:Uint8Array[]=[]
+ let size=0
+ try{
+  while(true){
+   const {done,value}=await reader.read()
+   if(done)break
+   size+=value.byteLength
+   if(size>16384){await reader.cancel().catch(()=>{});return null}
+   chunks.push(value)
+  }
+ }catch{return null}
+ finally{reader.releaseLock()}
+ const all=new Uint8Array(size)
+ let i=0
+ for(const chunk of chunks){all.set(chunk,i);i+=chunk.byteLength}
+ try{return JSON.parse(new TextDecoder("utf-8",{fatal:true}).decode(all)) as unknown}
+ catch{return null}
+}
+/** Ponto uses JSON:API. No account number, IBAN, balance or owner is returned. */
+export function validAccountAccess(data:unknown):ConnectionState{
+ if(!data||typeof data!=="object"||Array.isArray(data)||!("data" in data)||!Array.isArray(data.data))return "unavailable"
+ if(data.data.length===0)return "needs_account_access"
+ const first=data.data[0] as unknown
+ return first&&typeof first==="object"&&"type" in first&&first.type==="account"&&
+  "id" in first&&typeof first.id==="string"&&
+  /^[0-9a-f]{8}(?:-[0-9a-f]{4}){3}-[0-9a-f]{12}$/i.test(first.id)?"connected":"unavailable"
 }
 
 function result(response:Response|null):ConnectionState{
@@ -65,12 +98,29 @@ export async function checkProviderConnection(id:ConnectionProvider,env:NodeJS.P
   if(response.status===401||response.status===403)return "unauthorized"
   if(!response.ok)return "unavailable"
   // A 2xx without an access token would not prove successful authentication.
-  try{
-   const bytes=await response.text()
-   if(bytes.length>8192)return "unavailable"
-   const json:unknown=JSON.parse(bytes)
-   return json&&typeof json==="object"&&"access_token" in json&&typeof json.access_token==="string"&&json.access_token.length>10?"connected":"unavailable"
-  }catch{return "unavailable"}
+  const json=await safeMetadata(response)
+  if(!json||typeof json!=="object"||!("access_token" in json)||
+     typeof json.access_token!=="string"||json.access_token.length<11||
+     json.access_token.length>4096||/[\u0000-\u001f\u007f]/.test(json.access_token)||
+     !("scope" in json)||typeof json.scope!=="string"||
+     !json.scope.split(" ").includes("ai"))return "unavailable"
+  const accounts=await safeFetch("https://api.myponto.com/accounts?page%5Blimit%5D=1",{
+   method:"GET",headers:{"Authorization":"Bearer "+json.access_token,"Accept":"application/json"}
+  })
+  if(!accounts)return "unavailable"
+  if(accounts.status===401||accounts.status===403)return "unauthorized"
+  if(!accounts.ok)return "unavailable"
+  return validAccountAccess(await safeMetadata(accounts))
+ }
+ if(id==="peppol"){
+  const party=env.BILLIT_SANDBOX_PARTY_ID,key=env.BILLIT_SANDBOX_API_KEY
+  if(!configured(party)||!configured(key)||!/^[1-9][0-9]{2,14}$/.test(party??"")||
+     /[\u0000-\u001f\u007f]/.test(key??""))return "not_configured"
+  // Official Billit sandbox only: GET list, never create/send a document.
+  // Verifies the PartyID + ApiKey pair without revealing invoice contents.
+  return result(await safeFetch("https://api.sandbox.billit.be/v1/orders",{
+   method:"GET",headers:{"ApiKey":key!,"PartyID":party!,"Accept":"application/json"}
+  }))
  }
  return "not_configured"
 }
