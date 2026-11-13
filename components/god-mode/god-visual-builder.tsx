@@ -6,10 +6,10 @@ import targets from '@/lib/god-source-index.json'
 import type { SourceTarget } from '@/lib/god-studio'
 
 const previewText={
- nl:{unavailable:"De actieve voorbeeldrol kon niet worden opgehaald.",nested:"Dit onderdeel heeft ingesloten knoppen of pictogrammen. Gebruik een codevoorstel om de tekst aan te passen zonder functies te verwijderen.",restoreRole:'Oorspronkelijke rol herstellen',retry:'Opnieuw verbinden',device:'Schermformaat',mobile:'Mobiel',tablet:'Tablet',desktop:'Desktop',fit:'Passend · 100% bekijken',actual:'Ware grootte · passend bekijken',preview:'preview',note:'De preview gebruikt een echte viewport van',warning:'Kies 100% om op kleine schermen horizontaal te inspecteren. Rolwissels wijzigen tijdelijk je actieve testrol; kies Admin om die opnieuw in te stellen.'},
- fr:{unavailable:"Le rôle actif de prévisualisation est indisponible.",nested:"Cet élément contient des boutons ou des icônes. Utilisez une proposition de code pour modifier le texte sans supprimer les fonctions.",restoreRole:'Rétablir le rôle initial',retry:'Réessayer',device:'Format d’écran',mobile:'Mobile',tablet:'Tablette',desktop:'Ordinateur',fit:'Adapté · afficher à 100 %',actual:'Taille réelle · ajuster',preview:'aperçu',note:"L’aperçu utilise une largeur réelle de",warning:"Affichez 100 % pour inspecter horizontalement sur les petits écrans. Changer de rôle modifie temporairement le rôle de test actif ; sélectionnez Admin pour le rétablir."},
- en:{unavailable:"The active preview role could not be loaded.",nested:"This element contains nested controls or icons. Use a code proposal to change its text without removing functionality.",restoreRole:'Restore original role',retry:'Retry connection',device:'Screen size',mobile:'Mobile',tablet:'Tablet',desktop:'Desktop',fit:'Fit · view at 100%',actual:'Actual size · fit',preview:'preview',note:'The preview uses a real viewport width of',warning:'Choose 100% to inspect horizontally on smaller screens. Role switching temporarily changes your active test role; select Admin to restore it.'},
- de:{unavailable:"Die aktive Vorschaurolle konnte nicht geladen werden.",nested:"Dieses Element enthält verschachtelte Schaltflächen oder Symbole. Verwende einen Codevorschlag, um den Text ohne Funktionsverlust zu ändern.",restoreRole:'Ursprüngliche Rolle wiederherstellen',retry:'Erneut verbinden',device:'Bildschirmgröße',mobile:'Mobil',tablet:'Tablet',desktop:'Desktop',fit:'Einpassen · 100 % anzeigen',actual:'Originalgröße · einpassen',preview:'Vorschau',note:'Die Vorschau verwendet eine echte Ansichtsbreite von',warning:'Auf kleinen Bildschirmen lässt sich bei 100 % horizontal prüfen. Ein Rollenwechsel ändert vorübergehend die aktive Testrolle; Admin stellt sie wieder her.'},
+ nl:{page:"Voorbeeldpagina",switchFailed:"Rolvoorbeeld kon niet worden geopend.",unavailable:"De actieve voorbeeldrol kon niet worden opgehaald.",nested:"Dit onderdeel heeft ingesloten knoppen of pictogrammen. Gebruik een codevoorstel om de tekst aan te passen zonder functies te verwijderen.",restoreRole:'Oorspronkelijke rol herstellen',retry:'Opnieuw verbinden',device:'Schermformaat',mobile:'Mobiel',tablet:'Tablet',desktop:'Desktop',fit:'Passend · 100% bekijken',actual:'Ware grootte · passend bekijken',preview:'preview',note:'De preview gebruikt een echte viewport van',warning:'Kies 100% om op kleine schermen horizontaal te inspecteren. Rolwissels wijzigen tijdelijk je actieve testrol; kies Admin om die opnieuw in te stellen.'},
+ fr:{page:"Page de prévisualisation",switchFailed:"Impossible d’ouvrir l’aperçu de ce rôle.",unavailable:"Le rôle actif de prévisualisation est indisponible.",nested:"Cet élément contient des boutons ou des icônes. Utilisez une proposition de code pour modifier le texte sans supprimer les fonctions.",restoreRole:'Rétablir le rôle initial',retry:'Réessayer',device:'Format d’écran',mobile:'Mobile',tablet:'Tablette',desktop:'Ordinateur',fit:'Adapté · afficher à 100 %',actual:'Taille réelle · ajuster',preview:'aperçu',note:"L’aperçu utilise une largeur réelle de",warning:"Affichez 100 % pour inspecter horizontalement sur les petits écrans. Changer de rôle modifie temporairement le rôle de test actif ; sélectionnez Admin pour le rétablir."},
+ en:{page:"Preview page",switchFailed:"Unable to open this role preview.",unavailable:"The active preview role could not be loaded.",nested:"This element contains nested controls or icons. Use a code proposal to change its text without removing functionality.",restoreRole:'Restore original role',retry:'Retry connection',device:'Screen size',mobile:'Mobile',tablet:'Tablet',desktop:'Desktop',fit:'Fit · view at 100%',actual:'Actual size · fit',preview:'preview',note:'The preview uses a real viewport width of',warning:'Choose 100% to inspect horizontally on smaller screens. Role switching temporarily changes your active test role; select Admin to restore it.'},
+ de:{page:"Vorschauseite",switchFailed:"Rollenvorschau konnte nicht geöffnet werden.",unavailable:"Die aktive Vorschaurolle konnte nicht geladen werden.",nested:"Dieses Element enthält verschachtelte Schaltflächen oder Symbole. Verwende einen Codevorschlag, um den Text ohne Funktionsverlust zu ändern.",restoreRole:'Ursprüngliche Rolle wiederherstellen',retry:'Erneut verbinden',device:'Bildschirmgröße',mobile:'Mobil',tablet:'Tablet',desktop:'Desktop',fit:'Einpassen · 100 % anzeigen',actual:'Originalgröße · einpassen',preview:'Vorschau',note:'Die Vorschau verwendet eine echte Ansichtsbreite von',warning:'Auf kleinen Bildschirmen lässt sich bei 100 % horizontal prüfen. Ein Rollenwechsel ändert vorübergehend die aktive Testrolle; Admin stellt sie wieder her.'},
 } as const
 
 type Role = 'staff' | 'responsible_lead' | 'admin'
@@ -207,14 +207,14 @@ export function GodVisualBuilder({
         body:JSON.stringify({role:next}),
       })
       const data=await response.json().catch(()=>({})) as {role?:Role;error?:string}
-      if(!response.ok||data.role!==next)throw Error(data.error||'Rolvoorbeeld kon niet worden geopend.')
+      if(!response.ok||data.role!==next)throw Error(data.error||t.switchFailed)
       activeRoleRef.current=next
       setRole(next)
       setPath(roleHome[next])
       setSelected(null)
       setFrameKey(value=>value+1)
     }catch(error){
-      setStatus(error instanceof Error?error.message:'Rolvoorbeeld kon niet worden geopend.')
+      setStatus(error instanceof Error?error.message:t.switchFailed)
     }finally{
       setRoleChanging(false)
     }
@@ -358,7 +358,7 @@ export function GodVisualBuilder({
       <div className="flex flex-wrap items-center gap-2 rounded-2xl border p-3">
         {(Object.keys(roleLabels) as Role[]).map(item=><button type="button" disabled={!roleReady||roleChanging} aria-pressed={role===item} key={item} onClick={()=>void switchRole(item)} className={`min-w-0 rounded-xl px-3 py-2 text-sm font-black disabled:opacity-50 ${role===item?'bg-violet-600 text-white':'border'}`}>{roleLabels[item]}</button>)}
         {originalRole&&originalRole!==role&&<button type="button" disabled={roleChanging} onClick={()=>void switchRole(originalRole)} className="rounded-lg border border-amber-500/50 px-3 py-2 text-xs font-bold">{t.restoreRole}</button>}
-        <select aria-label="Voorbeeldpagina" disabled={!roleReady||roleChanging} value={path} onChange={e=>{setPath(e.target.value);setSelected(null);setFrameKey(value=>value+1)}} className="w-full min-w-0 rounded-xl border bg-background px-3 py-2 sm:w-auto sm:min-w-44">
+        <select aria-label={t.page} disabled={!roleReady||roleChanging} value={path} onChange={e=>{setPath(e.target.value);setSelected(null);setFrameKey(value=>value+1)}} className="w-full min-w-0 rounded-xl border bg-background px-3 py-2 sm:w-auto sm:min-w-44">
           {pageOptions[role].map(page=><option key={page.path} value={page.path}>{page.label}</option>)}
         </select>
         <div className="grid w-full grid-cols-3 gap-2 border-t pt-3 sm:flex sm:flex-wrap sm:items-center">
