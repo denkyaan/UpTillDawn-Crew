@@ -1,5 +1,6 @@
 "use client"
 import {useEffect,useRef,useState,type ChangeEvent} from "react"
+import PontoBankSync from "@/components/administration/ponto-bank-sync"
 import {validateBankStatementCsv,findExistingBankPaymentCandidates,type ExistingBankLedgerPayment} from "@/lib/administration/bank-statement-import"
 import type {SupportedUiLocale} from "@/lib/locale-preferences"
 
@@ -112,6 +113,7 @@ export default function BankStatementWorkspace({locale}:{locale:SupportedUiLocal
   +"BANK-002,2026-11-09,debit,10.50,EUR,SUP-2026-001,Example supplier payment\n"
  return <section className="space-y-4 rounded-2xl border bg-card p-5" aria-label={t.title}>
   <h2 className="text-lg font-semibold">{t.title}</h2>
+  <PontoBankSync locale={locale} onImported={()=>void refresh()}/>
   <p className="text-sm text-muted-foreground">{t.intro}</p>
   <button type="button" disabled={busy||loading} onClick={()=>{resetFile();void refresh()}} className="rounded-lg border px-3 py-2 text-sm disabled:opacity-50">{t.refresh}</button>
   {loading&&<p role="status">{t.refresh}…</p>}
