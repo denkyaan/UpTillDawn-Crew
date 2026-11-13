@@ -8,6 +8,7 @@ import { PendingSubmitButton } from '@/components/ui/pending-submit-button'
 import {PersonnelTwoRoleEditor,type AssignableRole} from '@/components/admin/personnel-two-role-editor'
 import type {SupabaseClient} from '@supabase/supabase-js'
 import {requestUiLocale} from '@/lib/server-locale'
+import {translateQaBotName} from '@/lib/ui-translation-catalog-app'
 
 export const dynamic = 'force-dynamic'
 
@@ -70,7 +71,7 @@ export default async function Page({searchParams}:{searchParams?:Promise<{feedba
             : (person.full_name||'?').trim().charAt(0).toUpperCase()}
         </div>
         <div className="min-w-0 flex-1">
-          <h2 className="text-lg font-black">{person.full_name||'Naam ontbreekt'}</h2>
+          <h2 className="text-lg font-black">{translateQaBotName(person.full_name,locale)||'Naam ontbreekt'}</h2>
           <p className="break-all text-sm text-muted-foreground">{person.email||'Geen e-mail'}</p>
           <p className="mt-1 text-sm text-muted-foreground">Voorgestelde rol: {nlRole(person.role)}</p>
           <details className="mt-3 rounded-xl border p-3">
@@ -102,7 +103,7 @@ export default async function Page({searchParams}:{searchParams?:Promise<{feedba
       {approved.map(person=>{
        const role=rolePair(person)
        return <article key={person.id} id={person.id===params.user?'approval-user-focus':undefined} className="space-y-2 rounded-2xl border p-4">
-        <div><h3 className="font-bold">{person.full_name||'Naam ontbreekt'}</h3>
+        <div><h3 className="font-bold">{translateQaBotName(person.full_name,locale)||'Naam ontbreekt'}</h3>
          <p className="break-all text-xs text-muted-foreground">{person.email||'Geen e-mail'}</p></div>
         <details className="rounded-xl border p-3" open={person.id===params.user?true:undefined}><summary className="cursor-pointer text-sm font-semibold">Rollen beheren · {role.one}{role.two?` + ${role.two}`:""}</summary><PersonnelTwoRoleEditor userId={person.id} roleOne={role.one} roleTwo={role.two} locale={locale}/></details>
        </article>

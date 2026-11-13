@@ -2,6 +2,14 @@ export type CatalogLocale = 'nl' | 'fr' | 'en' | 'de'
 type Row = { fr:string; en:string; de:string }
 
 export const APP_TRANSLATIONS: Record<string,Row> = {
+  // Synthetic QA identities: display labels, not immutable Supabase profile data.
+  "E2E Hoofdadmin": { fr:"E2E Admin principal", en:"E2E Head Admin", de:"E2E Hauptadmin" },
+  "E2E Linkerhand": { fr:"E2E Bras gauche", en:"E2E Left hand", de:"E2E Linke Hand" },
+  "E2E Rechterhand": { fr:"E2E Bras droit", en:"E2E Right hand", de:"E2E Rechte Hand" },
+  "E2E Administratie": { fr:"E2E Administration", en:"E2E Administration", de:"E2E Verwaltung" },
+  "E2E Promotie": { fr:"E2E Promotion", en:"E2E Promotion", de:"E2E Promotion" },
+  "E2E Verantwoordelijke": { fr:"E2E Responsable", en:"E2E Responsible", de:"E2E Verantwortliche" },
+  "E2E Personeel": { fr:"E2E Personnel", en:"E2E Staff", de:"E2E Personal" },
   "UP TILL DAWN BEHEER": { fr:"GESTION UP TILL DAWN", en:"UP TILL DAWN ADMIN", de:"UP TILL DAWN VERWALTUNG" },
   "INKLOKKEN ·": { fr:"POINTAGE D’ENTRÉE ·", en:"CLOCK IN ·", de:"EINSTEMPELN ·" },
   "UITKLOKKEN ·": { fr:"POINTAGE DE SORTIE ·", en:"CLOCK OUT ·", de:"AUSSTEMPELN ·" },
@@ -183,4 +191,13 @@ export function translateAppUi(value:string,locale:CatalogLocale){
   if(!row)return value
   if(locale==='nl')return canonical
   return row[locale]||canonical
+}
+
+/** Translate only the seven canonical synthetic QA profile labels.
+ * Never treat ordinary employees' full_name as application UI copy.
+ */
+export function translateQaBotName(name:string|null|undefined,locale:CatalogLocale):string{
+ if(!name)return ''
+ return name.startsWith('E2E ')&&Object.prototype.hasOwnProperty.call(APP_TRANSLATIONS,name)
+  ?translateAppUi(name,locale):name
 }
