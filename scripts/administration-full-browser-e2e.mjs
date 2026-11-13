@@ -77,6 +77,18 @@ try{
      const buttons=await page.getByRole('button').count()
      const forms=await page.locator('form').count()
      const controls=await page.locator('button,input,select,textarea,[role="button"],[role="switch"],[role="checkbox"]').evaluateAll(elements=>elements.map(el=>({tag:el.tagName.toLowerCase(),type:el.getAttribute('type')||'',action:el.getAttribute('data-action')||'',label:(el.getAttribute('aria-label')||el.getAttribute('name')||el.textContent||'').trim().slice(0,100),disabled:el.matches(':disabled')||el.getAttribute('aria-disabled')==='true'})))
+     // Event creation belongs to the existing Events subtab; it is not a
+     // duplicate shortcut on Overview. Verify the actual authenticated form.
+     if(route==='/portals/administration/modules/events'&&['admin','administration'].includes(role.name)){
+      const draft=await context.newPage()
+      try{
+       const draftTarget=route+'?create=1#administration-event-draft'
+       const draftResponse=await draft.goto(base+draftTarget,{waitUntil:'domcontentloaded',timeout:45000})
+       if(!draftResponse||draftResponse.status()>=400)throw Error('event draft page HTTP '+draftResponse?.status())
+       await draft.locator('details#administration-event-draft[open] form').waitFor({state:'visible',timeout:15000})
+       if(browserDestination(draft.url())!==draftTarget)throw Error('event draft deep link changed destination')
+      }finally{await draft.close()}
+     }
      interactionInventory.push({role:role.name,route,controls})
      findings.push({role:role.name,route,actual:path,links:links.length,buttons,forms,controls:controls.length})
      if((['admin','administration'].includes(role.name)&&route.startsWith('/portals/administration'))||(role.name==='promotion'&&route.startsWith('/portals/promotion'))){
