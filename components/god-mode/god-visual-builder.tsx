@@ -6,10 +6,10 @@ import targets from '@/lib/god-source-index.json'
 import type { SourceTarget } from '@/lib/god-studio'
 
 const previewText={
- nl:{nested:"Dit onderdeel heeft ingesloten knoppen of pictogrammen. Gebruik een codevoorstel om de tekst aan te passen zonder functies te verwijderen.",restoreRole:'Oorspronkelijke rol herstellen',retry:'Opnieuw verbinden',device:'Schermformaat',mobile:'Mobiel',tablet:'Tablet',desktop:'Desktop',fit:'Passend · 100% bekijken',actual:'Ware grootte · passend bekijken',preview:'preview',note:'De preview gebruikt een echte viewport van',warning:'Kies 100% om op kleine schermen horizontaal te inspecteren. Rolwissels wijzigen tijdelijk je actieve testrol; kies Admin om die opnieuw in te stellen.'},
- fr:{nested:"Cet élément contient des boutons ou des icônes. Utilisez une proposition de code pour modifier le texte sans supprimer les fonctions.",restoreRole:'Rétablir le rôle initial',retry:'Réessayer',device:'Format d’écran',mobile:'Mobile',tablet:'Tablette',desktop:'Ordinateur',fit:'Adapté · afficher à 100 %',actual:'Taille réelle · ajuster',preview:'aperçu',note:"L’aperçu utilise une largeur réelle de",warning:"Affichez 100 % pour inspecter horizontalement sur les petits écrans. Changer de rôle modifie temporairement le rôle de test actif ; sélectionnez Admin pour le rétablir."},
- en:{nested:"This element contains nested controls or icons. Use a code proposal to change its text without removing functionality.",restoreRole:'Restore original role',retry:'Retry connection',device:'Screen size',mobile:'Mobile',tablet:'Tablet',desktop:'Desktop',fit:'Fit · view at 100%',actual:'Actual size · fit',preview:'preview',note:'The preview uses a real viewport width of',warning:'Choose 100% to inspect horizontally on smaller screens. Role switching temporarily changes your active test role; select Admin to restore it.'},
- de:{nested:"Dieses Element enthält verschachtelte Schaltflächen oder Symbole. Verwende einen Codevorschlag, um den Text ohne Funktionsverlust zu ändern.",restoreRole:'Ursprüngliche Rolle wiederherstellen',retry:'Erneut verbinden',device:'Bildschirmgröße',mobile:'Mobil',tablet:'Tablet',desktop:'Desktop',fit:'Einpassen · 100 % anzeigen',actual:'Originalgröße · einpassen',preview:'Vorschau',note:'Die Vorschau verwendet eine echte Ansichtsbreite von',warning:'Auf kleinen Bildschirmen lässt sich bei 100 % horizontal prüfen. Ein Rollenwechsel ändert vorübergehend die aktive Testrolle; Admin stellt sie wieder her.'},
+ nl:{unavailable:"De actieve voorbeeldrol kon niet worden opgehaald.",nested:"Dit onderdeel heeft ingesloten knoppen of pictogrammen. Gebruik een codevoorstel om de tekst aan te passen zonder functies te verwijderen.",restoreRole:'Oorspronkelijke rol herstellen',retry:'Opnieuw verbinden',device:'Schermformaat',mobile:'Mobiel',tablet:'Tablet',desktop:'Desktop',fit:'Passend · 100% bekijken',actual:'Ware grootte · passend bekijken',preview:'preview',note:'De preview gebruikt een echte viewport van',warning:'Kies 100% om op kleine schermen horizontaal te inspecteren. Rolwissels wijzigen tijdelijk je actieve testrol; kies Admin om die opnieuw in te stellen.'},
+ fr:{unavailable:"Le rôle actif de prévisualisation est indisponible.",nested:"Cet élément contient des boutons ou des icônes. Utilisez une proposition de code pour modifier le texte sans supprimer les fonctions.",restoreRole:'Rétablir le rôle initial',retry:'Réessayer',device:'Format d’écran',mobile:'Mobile',tablet:'Tablette',desktop:'Ordinateur',fit:'Adapté · afficher à 100 %',actual:'Taille réelle · ajuster',preview:'aperçu',note:"L’aperçu utilise une largeur réelle de",warning:"Affichez 100 % pour inspecter horizontalement sur les petits écrans. Changer de rôle modifie temporairement le rôle de test actif ; sélectionnez Admin pour le rétablir."},
+ en:{unavailable:"The active preview role could not be loaded.",nested:"This element contains nested controls or icons. Use a code proposal to change its text without removing functionality.",restoreRole:'Restore original role',retry:'Retry connection',device:'Screen size',mobile:'Mobile',tablet:'Tablet',desktop:'Desktop',fit:'Fit · view at 100%',actual:'Actual size · fit',preview:'preview',note:'The preview uses a real viewport width of',warning:'Choose 100% to inspect horizontally on smaller screens. Role switching temporarily changes your active test role; select Admin to restore it.'},
+ de:{unavailable:"Die aktive Vorschaurolle konnte nicht geladen werden.",nested:"Dieses Element enthält verschachtelte Schaltflächen oder Symbole. Verwende einen Codevorschlag, um den Text ohne Funktionsverlust zu ändern.",restoreRole:'Ursprüngliche Rolle wiederherstellen',retry:'Erneut verbinden',device:'Bildschirmgröße',mobile:'Mobil',tablet:'Tablet',desktop:'Desktop',fit:'Einpassen · 100 % anzeigen',actual:'Originalgröße · einpassen',preview:'Vorschau',note:'Die Vorschau verwendet eine echte Ansichtsbreite von',warning:'Auf kleinen Bildschirmen lässt sich bei 100 % horizontal prüfen. Ein Rollenwechsel ändert vorübergehend die aktive Testrolle; Admin stellt sie wieder her.'},
 } as const
 
 type Role = 'staff' | 'responsible_lead' | 'admin'
@@ -161,7 +161,7 @@ export function GodVisualBuilder({
     void fetch('/api/god/preview-role',{cache:'no-store',signal:controller.signal})
       .then(async response=>{
         const data=await response.json().catch(()=>({})) as {role?:Role;error?:string}
-        if(!response.ok||!data.role||!['staff','responsible_lead','admin'].includes(data.role))throw Error(data.error||'De actieve voorbeeldrol kon niet worden opgehaald.')
+        if(!response.ok||!data.role||!['staff','responsible_lead','admin'].includes(data.role))throw Error(data.error||t.unavailable)
         if(controller.signal.aborted)return
         if(originalRoleRef.current===null){originalRoleRef.current=data.role;setOriginalRole(data.role)}
         activeRoleRef.current=data.role
@@ -170,9 +170,9 @@ export function GodVisualBuilder({
         setFrameKey(key=>key+1)
         setRoleReady(true)
       })
-      .catch(error=>{if(!controller.signal.aborted)setStatus(error instanceof Error?error.message:'De actieve voorbeeldrol kon niet worden opgehaald.')})
+      .catch(error=>{if(!controller.signal.aborted)setStatus(error instanceof Error?error.message:t.unavailable)})
     return()=>controller.abort()
-  },[roleReload])
+  },[roleReload,t.unavailable])
   // Preview roles are temporary. Restore the pre-preview role when leaving the
   // Builder; keepalive is best effort on tab close, the explicit restore button
   // below is the reliable path while the app is still open.
