@@ -54,6 +54,39 @@ jobs:
       - name: Verify seven distinct roles and login with the same configured QA password
         run: node scripts/provision-seven-main-bots.mjs --verify --verify-passwords
 
+  qa-main-browser-acceptance:
+    # Browser acceptance is deliberately NOT part of fast push CI, Main deploy,
+    # or any production workflow. It follows only explicit QA provisioning.
+    needs: provision-qa-bots
+    if: github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main' && inputs.provision_qa_bots == true && needs.provision-qa-bots.result == 'success'
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    env:
+      E2E_MAIN_QA_BASE_URL: https://uptilldawn-main.uptilldawn.workers.dev
+      E2E_MAIN_QA_PASSWORD: ${{ secrets.MAIN_QA_BOT_PASSWORD }}
+    steps:
+      - name: Checkout Main QA browser tests
+        uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5.1.0
+      - name: Set up Node.js
+        uses: actions/setup-node@a0853c24544627f65ddf259abe73b1d18a591444 # v5.0.0
+        with:
+          node-version: 24
+          cache: npm
+      - name: Install dependencies
+        run: npm ci --prefer-offline --no-audit --no-fund
+      - name: Install isolated Chromium browser runtime
+        run: npx playwright install --with-deps chromium
+      - name: Read-only browser journeys for all seven operational QA roles
+        run: node scripts/e2e-seven-main-bots.mjs
+      - name: Upload QA browser report and sanitized failure screenshots
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: seven-role-main-browser-acceptance
+          path: test-results/seven-main-qa/
+          if-no-files-found: warn
+          retention-days: 5
+
   validate-trigger:
     if: github.event_name == 'workflow_run'
     runs-on: ubuntu-latest
