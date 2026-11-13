@@ -83,7 +83,7 @@ test('workspace preference is set at login and mode entry before the app can clo
  const god=read('lib/actions/god-mode.ts')
  assert.match(auth,/const workspace = requestedPortal === 'administration' \|\| requestedPortal === 'promotion'/)
  assert.match(auth,/user\.id \+ ':' \+ workspace/)
- assert.match(auth,/store\.delete\('uptilldawn-last-workspace'\)/)
+ assert.match(auth,/cookieStore\.delete\('uptilldawn-last-workspace'\)/)
  assert.match(god,/store\.set\('uptilldawn-last-workspace',user\.id\+':god-mode'/)
  assert.match(god,/store\.delete\('uptilldawn-last-workspace'\)/)
  assert.match(auth,/secure: process\.env\.NODE_ENV === 'production'/)
