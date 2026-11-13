@@ -11,7 +11,8 @@ const eventsPage=readFileSync(new URL('../app/(app)/portals/administration/modul
 
 test('Administration overview shows attention and upcoming events once, rather than a second management menu',()=>{
  assert.match(overview,/const priorityItems=\[/)
- assert.match(overview,/priorityItems\.length/)
+ assert.match(overview,/priorityItems\.filter\(item=>item\.group===group\.key\)\.map/)
+ assert.doesNotMatch(overview,/\.filter\(item=>Boolean\(item\.error\)\|\|\(item\.count\?\?0\)>0\)/)
  assert.match(overview,/upcomingEvents\.length/)
  assert.match(overview,/data-administration-priority=\{item\.id\}/)
  assert.doesNotMatch(overview,/const pulse=\[/)
