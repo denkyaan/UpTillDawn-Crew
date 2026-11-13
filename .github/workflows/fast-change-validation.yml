@@ -96,8 +96,8 @@ jobs:
         run: npm audit --omit=dev --audit-level=high
   release-production:
     needs: fast
-    # Explicit owner-authorized release marker is permitted on a reviewed main merge;
-    # ordinary main pushes and PRs NEVER start production CI.
+    # Only a manual, explicit release input may dispatch full CI production.
+    # Ordinary Main pushes, pull requests and commit markers NEVER trigger production.
     if: ${{ github.event_name == 'workflow_dispatch' && inputs.release_production == true && github.ref == 'refs/heads/main' }}
     runs-on: ubuntu-latest
     permissions:
