@@ -76,7 +76,13 @@ async function verifyMaker(viewport){
 
   // Real iframe viewport dimensions, not just CSS-shrunk mobile replicas.
   await workspaceNav.getByRole('button',{name:'App Studio'}).click()
-  await workspaceNav.getByRole('button',{name:'Live Builder'}).click()
+  // On narrow phones the complete Studio submenu is an accessible select,
+  // not a clipped row of buttons. Desktop retains the button tabs.
+  if(viewport.width<640){
+   await workspaceNav.getByRole('combobox',{name:'App Studio'}).selectOption('builder')
+  }else{
+   await workspaceNav.getByRole('button',{name:'Live Builder'}).click()
+  }
   const preview=page.locator('iframe[title*="preview"]').first()
   await preview.waitFor({state:'visible',timeout:30000})
   for(const [name,width] of [['Mobiel 390px','390px'],['Tablet 820px','820px'],['Desktop 1440px','1440px']]){
