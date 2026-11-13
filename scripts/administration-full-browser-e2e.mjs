@@ -1,4 +1,5 @@
 import { chromium } from 'playwright'
+import { expectedPortalDestination } from './portal-e2e-route-contract.mjs'
 import { createClient } from '@supabase/supabase-js'
 import { mkdir, writeFile } from 'node:fs/promises'
 
@@ -26,14 +27,6 @@ const portals=[
   '/portals/administration/modules/contacts',
   '/portals/promotion','/portals/promotion/tasks',
 ]
-// Recognize only intentional, explicitly reviewed legacy aliases. All other
-// route changes remain failures, so this browser test cannot mask regressions.
-function expectedPortalDestination(path) {
-  if(path==='/portals/administration/overview')return '/portals/administration'
-  if(path==='/portals/administration/contacts'||path==='/portals/administration/modules/contacts')
-    return '/portals/administration/counterparties'
-  return path
-}
 const surfaces=['/','/events','/workplaces','/briefings','/inventory','/guestlist','/chat','/operations','/tasks','/timesheets','/incidents','/notifications','/personnel','/sales','/settings','/exports','/audit']
 const failures=[]
 const findings=[]
