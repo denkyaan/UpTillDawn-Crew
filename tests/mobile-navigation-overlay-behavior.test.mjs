@@ -8,9 +8,10 @@ test('role overview uses Next client navigation rather than document reload',()=
  assert.match(mobile,/router\.push\(isAdmin\?"\/admin":"\/"\)/)
  assert.doesNotMatch(mobile,/window\.location\.assign/)
 })
-test('floating chat and AI both clear the expanded subtab area',()=>{
+test('floating chat clears the expanded subtab area, and only the AI panel closes',()=>{
  assert.match(shell,/showFloatingChat=showChat&&!inDedicatedPortal&&!navigationExpanded/)
- assert.match(shell,/const adminAiVisible=\(isAdmin\|\|administrationPortal\)&&!navigationExpanded/)
+ assert.match(shell,/const adminAiVisible=isAdmin\|\|administrationPortal/)
  assert.match(shell,/const adminAiAction=adminAiVisible\?/)
  assert.match(shell,/uptilldawn-navigation-expanded/)
+ assert.match(shell,/if\(open\)setAdminAiOpen\(false\)/)
 })
