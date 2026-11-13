@@ -6,10 +6,10 @@ import targets from '@/lib/god-source-index.json'
 import type { SourceTarget } from '@/lib/god-studio'
 
 const previewText={
- nl:{device:'Schermformaat',mobile:'Mobiel',tablet:'Tablet',desktop:'Desktop',fit:'Passend · 100% bekijken',actual:'Ware grootte · passend bekijken',preview:'preview',note:'De preview gebruikt een echte viewport van',warning:'Kies 100% om op kleine schermen horizontaal te inspecteren. Rolwissels wijzigen tijdelijk je actieve testrol; kies Admin om die opnieuw in te stellen.'},
- fr:{device:'Format d’écran',mobile:'Mobile',tablet:'Tablette',desktop:'Ordinateur',fit:'Adapté · afficher à 100 %',actual:'Taille réelle · ajuster',preview:'aperçu',note:"L’aperçu utilise une largeur réelle de",warning:"Affichez 100 % pour inspecter horizontalement sur les petits écrans. Changer de rôle modifie temporairement le rôle de test actif ; sélectionnez Admin pour le rétablir."},
- en:{device:'Screen size',mobile:'Mobile',tablet:'Tablet',desktop:'Desktop',fit:'Fit · view at 100%',actual:'Actual size · fit',preview:'preview',note:'The preview uses a real viewport width of',warning:'Choose 100% to inspect horizontally on smaller screens. Role switching temporarily changes your active test role; select Admin to restore it.'},
- de:{device:'Bildschirmgröße',mobile:'Mobil',tablet:'Tablet',desktop:'Desktop',fit:'Einpassen · 100 % anzeigen',actual:'Originalgröße · einpassen',preview:'Vorschau',note:'Die Vorschau verwendet eine echte Ansichtsbreite von',warning:'Auf kleinen Bildschirmen lässt sich bei 100 % horizontal prüfen. Ein Rollenwechsel ändert vorübergehend die aktive Testrolle; Admin stellt sie wieder her.'},
+ nl:{restoreRole:'Oorspronkelijke rol herstellen',retry:'Opnieuw verbinden',device:'Schermformaat',mobile:'Mobiel',tablet:'Tablet',desktop:'Desktop',fit:'Passend · 100% bekijken',actual:'Ware grootte · passend bekijken',preview:'preview',note:'De preview gebruikt een echte viewport van',warning:'Kies 100% om op kleine schermen horizontaal te inspecteren. Rolwissels wijzigen tijdelijk je actieve testrol; kies Admin om die opnieuw in te stellen.'},
+ fr:{restoreRole:'Rétablir le rôle initial',retry:'Réessayer',device:'Format d’écran',mobile:'Mobile',tablet:'Tablette',desktop:'Ordinateur',fit:'Adapté · afficher à 100 %',actual:'Taille réelle · ajuster',preview:'aperçu',note:"L’aperçu utilise une largeur réelle de",warning:"Affichez 100 % pour inspecter horizontalement sur les petits écrans. Changer de rôle modifie temporairement le rôle de test actif ; sélectionnez Admin pour le rétablir."},
+ en:{restoreRole:'Restore original role',retry:'Retry connection',device:'Screen size',mobile:'Mobile',tablet:'Tablet',desktop:'Desktop',fit:'Fit · view at 100%',actual:'Actual size · fit',preview:'preview',note:'The preview uses a real viewport width of',warning:'Choose 100% to inspect horizontally on smaller screens. Role switching temporarily changes your active test role; select Admin to restore it.'},
+ de:{restoreRole:'Ursprüngliche Rolle wiederherstellen',retry:'Erneut verbinden',device:'Bildschirmgröße',mobile:'Mobil',tablet:'Tablet',desktop:'Desktop',fit:'Einpassen · 100 % anzeigen',actual:'Originalgröße · einpassen',preview:'Vorschau',note:'Die Vorschau verwendet eine echte Ansichtsbreite von',warning:'Auf kleinen Bildschirmen lässt sich bei 100 % horizontal prüfen. Ein Rollenwechsel ändert vorübergehend die aktive Testrolle; Admin stellt sie wieder her.'},
 } as const
 
 type Role = 'staff' | 'responsible_lead' | 'admin'
@@ -136,6 +136,10 @@ export function GodVisualBuilder({
   const [frameKey,setFrameKey] = useState(0)
   const [roleReady,setRoleReady] = useState(false)
   const [roleChanging,setRoleChanging] = useState(false)
+  const originalRoleRef=useRef<Role|null>(null)
+  const activeRoleRef=useRef<Role|null>(null)
+  const [originalRole,setOriginalRole]=useState<Role|null>(null)
+  const [roleReload,setRoleReload]=useState(0)
   const frameRef=useRef<HTMLIFrameElement>(null)
   const previewContainerRef=useRef<HTMLDivElement>(null)
   useEffect(()=>{
@@ -155,6 +159,8 @@ export function GodVisualBuilder({
         const data=await response.json().catch(()=>({})) as {role?:Role;error?:string}
         if(!response.ok||!data.role||!['staff','responsible_lead','admin'].includes(data.role))throw Error(data.error||'De actieve voorbeeldrol kon niet worden opgehaald.')
         if(controller.signal.aborted)return
+        if(originalRoleRef.current===null){originalRoleRef.current=data.role;setOriginalRole(data.role)}
+        activeRoleRef.current=data.role
         setRole(data.role)
         setPath(roleHome[data.role])
         setFrameKey(key=>key+1)
@@ -162,6 +168,18 @@ export function GodVisualBuilder({
       })
       .catch(error=>{if(!controller.signal.aborted)setStatus(error instanceof Error?error.message:'De actieve voorbeeldrol kon niet worden opgehaald.')})
     return()=>controller.abort()
+  },[roleReload])
+  // Preview roles are temporary. Restore the pre-preview role when leaving the
+  // Builder; keepalive is best effort on tab close, the explicit restore button
+  // below is the reliable path while the app is still open.
+  useEffect(()=>()=>{
+    const original=originalRoleRef.current
+    if(original&&activeRoleRef.current!==original){
+      void fetch('/api/god/preview-role',{
+        method:'POST',headers:{'Content-Type':'application/json'},
+        body:JSON.stringify({role:original}),keepalive:true,
+      }).catch(()=>{})
+    }
   },[])
   const viewportWidth=widthFor(device)
   const previewScale=fitToScreen?Math.min(1,Math.max(0.1,(availableWidth-24)/viewportWidth)):1
@@ -186,6 +204,7 @@ export function GodVisualBuilder({
       })
       const data=await response.json().catch(()=>({})) as {role?:Role;error?:string}
       if(!response.ok||data.role!==next)throw Error(data.error||'Rolvoorbeeld kon niet worden geopend.')
+      activeRoleRef.current=next
       setRole(next)
       setPath(roleHome[next])
       setSelected(null)
@@ -334,6 +353,7 @@ export function GodVisualBuilder({
     <section className="min-w-0 space-y-3">
       <div className="flex flex-wrap items-center gap-2 rounded-2xl border p-3">
         {(Object.keys(roleLabels) as Role[]).map(item=><button type="button" disabled={!roleReady||roleChanging} aria-pressed={role===item} key={item} onClick={()=>void switchRole(item)} className={`min-w-0 rounded-xl px-3 py-2 text-sm font-black disabled:opacity-50 ${role===item?'bg-violet-600 text-white':'border'}`}>{roleLabels[item]}</button>)}
+        {originalRole&&originalRole!==role&&<button type="button" disabled={roleChanging} onClick={()=>void switchRole(originalRole)} className="rounded-lg border border-amber-500/50 px-3 py-2 text-xs font-bold">{t.restoreRole}</button>}
         <select aria-label="Voorbeeldpagina" disabled={!roleReady||roleChanging} value={path} onChange={e=>{setPath(e.target.value);setSelected(null);setFrameKey(value=>value+1)}} className="w-full min-w-0 rounded-xl border bg-background px-3 py-2 sm:w-auto sm:min-w-44">
           {pageOptions[role].map(page=><option key={page.path} value={page.path}>{page.label}</option>)}
         </select>
@@ -352,6 +372,7 @@ export function GodVisualBuilder({
           </div>
         </div>
       </div>
+      {!roleReady&&<button type="button" onClick={()=>{setStatus('');setRoleReload(n=>n+1)}} className="rounded-lg border px-4 py-2 text-sm font-bold">{t.retry}</button>}
       {status&&<p role="status" className="rounded-xl border border-violet-500/40 p-3 text-sm">{status}</p>}
     </section>
 
