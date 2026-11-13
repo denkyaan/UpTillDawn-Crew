@@ -305,23 +305,30 @@ try {
             await routePage.close()
           }
         }
-        // Exercise real navigation clicks for financial modules, not just direct URL loads.
+        // Exercise the actual six-category Administration navigation. Finance
+        // links intentionally exist only inside the Financiën subtab drawer:
+        // the homepage must not duplicate those navigation actions.
         await gotoWithTransientRetry(page,`${baseUrl}/portals/administration`,{waitUntil:'domcontentloaded'})
         const financialDestinations=[
-          '/portals/administration/finance',
-          '/portals/administration/modules/invoices',
-          '/portals/administration/modules/banking',
+          ['finance','/portals/administration/finance'],
+          ['invoices','/portals/administration/modules/invoices'],
+          ['banking','/portals/administration/modules/banking'],
         ]
-        for(const destination of financialDestinations){
-          const target=page.locator(`a[href="${destination}"]`).first()
-          if(await target.count()!==1)throw new Error(`administration financial navigation link missing: ${destination}`)
+        for(const [slug,destination] of financialDestinations){
+          await page.waitForLoadState('networkidle',{timeout:12000}).catch(()=>{})
+          const financeCategory=page.locator('[data-administration-category="finance"]')
+          await financeCategory.waitFor({state:'visible',timeout:12000})
+          await financeCategory.click()
+          const target=page.locator(`a[data-administration-subtab="${slug}"][href="${destination}"]`)
+          await target.waitFor({state:'visible',timeout:12000})
+          if(await target.count()!==1)throw new Error(`administration finance subtab missing or duplicated: ${destination}`)
           await target.click()
           await page.waitForURL(url=>url.pathname===destination,{timeout:20000})
           const destinationText=(await page.locator('body').innerText()).trim()
           if(!destinationText||/404\\s*\\|\\s*This page could not be found|application error/i.test(destinationText))throw new Error(`administration financial click failed: ${destination}`)
           await gotoWithTransientRetry(page,`${baseUrl}/portals/administration`,{waitUntil:'domcontentloaded'})
         }
-        console.log('PASS: authenticated Admin clicked finance, invoices and banking navigation')
+        console.log('PASS: authenticated Admin opened the Finance category and used finance, invoices and banking subtabs')
         await gotoWithTransientRetry(page,`${baseUrl}/portals/promotion`,{waitUntil:'domcontentloaded'})
         const tasksLink=page.locator('a[href="/portals/promotion/tasks"]').first()
         if(await tasksLink.count()!==1)throw new Error('promotion tasks navigation link missing')
