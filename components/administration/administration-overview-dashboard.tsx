@@ -69,7 +69,7 @@ export async function AdministrationOverviewDashboard({locale}:{locale:Supported
    loadError:"Statut indisponible",open:"Ouvrir la section",
   },
   en:{
-   title:"Administration work centre",intro:"Events, crew, finances and follow-ups in one clear overview.",
+   title:"Administration work center",intro:"Events, crew, finances and follow-ups in one clear overview.",
    events:"Event schedule",eventsLink:"View planning",noEvents:"No upcoming events are scheduled yet.",
    overview:"Operational status",allClear:"There are currently no cases awaiting attention.",needsReview:"Items require attention in the workstreams below.",
    noData:"Some data could not be loaded. Open the relevant section to check its status.",
