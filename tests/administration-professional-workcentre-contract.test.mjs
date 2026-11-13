@@ -7,9 +7,21 @@ const overview=readFileSync(new URL('../components/administration/administration
 const workspace=readFileSync(new URL('../app/(app)/portals/administration/modules/[slug]/page.tsx',import.meta.url),'utf8')
 const shared=readFileSync(new URL('../lib/admin-administration-navigation.ts',import.meta.url),'utf8')
 
-test('New Event goes directly to the existing Administration draft form, not a duplicate events page',()=>{
- assert.match(overview,/href="\/portals\/administration\/modules\/events\?create=1#administration-event-draft"/)
- assert.match(overview,/href="\/portals\/administration\/modules\/events">\{t\.manageEvents\}/)
+const eventsPage=readFileSync(new URL('../app/(app)/portals/administration/modules/events/page.tsx',import.meta.url),'utf8')
+
+test('Administration overview shows attention and upcoming events once, rather than a second management menu',()=>{
+ assert.match(overview,/const priorityItems=\[/)
+ assert.match(overview,/priorityItems\.length/)
+ assert.match(overview,/upcomingEvents\.length/)
+ assert.match(overview,/data-administration-priority=\{item\.id\}/)
+ assert.doesNotMatch(overview,/const pulse=\[/)
+ assert.doesNotMatch(overview,/t\.createContract|t\.createEvent|t\.manageContracts|t\.manageEvents|t\.manageFinance|t\.manageStock|t\.manageHours/)
+ assert.doesNotMatch(overview,/artists\/new\?contract=1|events\?create=1/)
+ assert.match(overview,/href="\/portals\/administration\/modules\/events"/)
+})
+
+test('The existing Events subtab forwards create deep-links to the permission-scoped draft form',()=>{
+ assert.match(eventsPage,/return AdministrationModulePage\(\{params:Promise\.resolve\(\{slug:"events"\}\),searchParams\}\)/)
  assert.match(workspace,/id="administration-event-draft" open=\{requestedCreate==="1"\}/)
  assert.match(workspace,/form action=\{saveAdministrationEventDraft\}/)
  assert.match(workspace,/upt_administration_save_event_draft/)
