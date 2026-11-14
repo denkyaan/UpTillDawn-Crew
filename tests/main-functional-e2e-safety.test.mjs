@@ -12,12 +12,12 @@ test('functional QA is confined to separate Main host and requires a private opt
  assert.doesNotMatch(runner,/eakoavcieossazqzplke/)
 })
 test('functional acceptance exercises real role-controlled writes and timesheet transitions',()=>{
- for(const feature of ['upt_administration_save_event_draft','event_members','event_availability','upt_submit_timesheet','upt_review_timesheet','upt_lock_timesheet','admin_artist_bookings','admin_financial_documents','admin_financial_lines']){
+ for(const feature of ['upt_administration_save_event_draft','event_members','event_availability','upt_submit_timesheet','upt_review_timesheet','upt_lock_timesheet','admin_artist_bookings','admin_financial_documents']){
   assert.ok(runner.includes(feature),feature)
  }
  assert.match(runner,/await checkBrowser\(office\)/)
  assert.match(runner,/Staff cannot create invoices/)
- assert.match(runner,/Administration cannot self-approve invoice/)
+ assert.match(runner,/Main invoice RLS remains protected without creating irreversible audit fixtures/)
 })
 test('fixture cleanup runs in finally and verifies the exact newly created event',()=>{
  assert.match(runner,/const prefix='UPT-QA-FUNCTION-'\+randomUUID\(\)/)
@@ -44,4 +44,12 @@ test('real functional QA has its own independent job and evidence even when brow
  assert.match(functional,/Main isolated functional workflow transactions with guaranteed fixture cleanup/)
  assert.match(functional,/if: always\(\)/)
  assert.doesNotMatch(functional,/needs\.qa-main-browser-acceptance/)
+})
+
+test('Main transactional QA does not create irreversible audited finance fixtures',()=>{
+ assert.doesNotMatch(runner,/office\.db\.from\('admin_financial_documents'\)\.insert\(/)
+ assert.doesNotMatch(runner,/office\.db\.from\('admin_financial_documents'\)\.update\(/)
+ assert.doesNotMatch(runner,/await remove\('admin_financial_documents'/)
+ assert.match(runner,/ON DELETE RESTRICT/)
+ assert.match(runner,/Finance register rendered without creating audited invoices/)
 })

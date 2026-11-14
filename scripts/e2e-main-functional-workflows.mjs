@@ -22,7 +22,7 @@ const prefix='UPT-QA-FUNCTION-'+randomUUID().slice(0,8)
 const reportDir='test-results/main-functional'
 await mkdir(reportDir,{recursive:true})
 const checks=[]
-const created={event:null,booking:null,counterparty:null,document:null,line:null,timesheet:null,staff:null,office:null}
+const created={event:null,booking:null,timesheet:null,staff:null,office:null}
 let browser
 let failed=null
 const service=createClient(MAIN_DB,secret,{auth:{persistSession:false,autoRefreshToken:false,detectSessionInUrl:false}})
@@ -66,13 +66,10 @@ async function clean(){
  if(!existing)return
  if(!existing.name?.startsWith(prefix)||existing.created_by!==created.office)
   throw Error('QA cleanup refused: fixture event ownership changed')
- await remove('admin_financial_lines','id',created.line)
- await remove('admin_financial_documents','id',created.document,{field:'event_id',value:created.event})
  await remove('admin_artist_bookings','id',created.booking,{field:'event_id',value:created.event})
  await remove('timesheets','id',created.timesheet,{field:'event_id',value:created.event})
  await remove('event_availability','event_id',created.event,{field:'user_id',value:created.staff})
  await remove('event_members','event_id',created.event,{field:'user_id',value:created.staff})
- await remove('admin_counterparties','id',created.counterparty,{field:'name',value:prefix+' Customer'})
  await remove('events','id',created.event,{field:'created_by',value:created.office})
  const {data:residual,error:verifyError}=await service.from('events').select('id').eq('id',created.event)
  if(verifyError||residual?.length)throw Error('QA event still exists after cleanup')
@@ -94,7 +91,6 @@ async function checkBrowser(office){
   for(const [path,needle] of [
    ['/portals/administration/modules/events',prefix+' Edited event'],
    ['/portals/administration/modules/contracts',prefix+' Artist'],
-   ['/portals/administration/modules/invoices',prefix+'-INV'],
   ]){
    const response=await page.goto(MAIN+path,{waitUntil:'commit',timeout:45000})
    assert.ok(response&&response.status()<400,'Main authenticated route HTTP failure '+path)
@@ -103,6 +99,15 @@ async function checkBrowser(office){
    assert.equal(new URL(page.url()).pathname,path,'Main UI left its administrative workflow')
    tick('rendered saved record '+path)
   }
+  // Finance retains immutable, FK-protected audit events. Never create/delete
+  // financial documents in the shared Main QA project just to pass a test.
+  // Full draft/review/approval mutation is tested in disposable DB E2E.
+  const financePath='/portals/administration/modules/invoices'
+  const financeResponse=await page.goto(MAIN+financePath,{waitUntil:'commit',timeout:45000})
+  assert.ok(financeResponse&&financeResponse.status()<400,'Finance register HTTP error')
+  await page.locator('main h1').last().waitFor({state:'visible',timeout:35000})
+  assert.equal(new URL(page.url()).pathname,financePath,'Finance register changed portal')
+  tick('Finance register rendered without creating audited invoices')
  }finally{await context.close()}
 }
 
@@ -189,37 +194,14 @@ try{
  assert.equal(booking.status,'enquiry');assert.equal(booking.created_by,office.id)
  tick('Administration persists a DJ booking and contract draft')
 
+ // Main's invoice audit is immutable and uses ON DELETE RESTRICT.
+ // Attempt only a forbidden Staff insert (must not create any audit row).
+ // Positive invoice draft/review/approval belongs to a disposable DB E2E:
+ // a live shared Main invoice would be legally/auditably retained, not cleaned.
  await denyWrite(staff.db.from('admin_financial_documents').insert({
   event_id:draft,kind:'sales_invoice',document_number:prefix+'-INVALID'
  }).select('id'),'Staff cannot create invoices')
- const party=await one(office.db.from('admin_counterparties').insert({
-  name:prefix+' Customer',kind:'customer'
- }).select('id'))
- created.counterparty=party.id
- const document=await one(office.db.from('admin_financial_documents').insert({
-  event_id:draft,counterparty_id:party.id,kind:'sales_invoice',
-  document_number:prefix+'-INV',net_amount:0,tax_amount:0,
-  status:'draft',notes:'Main QA only; never issue or send'
- }).select('id,status,approved_by'))
- created.document=document.id
- assert.equal(document.status,'draft');assert.equal(document.approved_by,null)
- const line=await one(office.db.from('admin_financial_lines').insert({
-  document_id:document.id,description:prefix+' Service',quantity:2,
-  unit_price:10,vat_rate:21
- }).select('id,quantity,unit_price'))
- created.line=line.id
- assert.equal(Number(line.quantity),2)
- tick('Administration persists a linked customer, invoice draft and line item')
- const requestReview=await office.db.from('admin_financial_documents').update({
-  status:'review'
- }).eq('id',document.id).select('id,status')
- assert.ifError(requestReview.error)
- assert.equal(requestReview.data?.[0]?.status,'review')
- await denyWrite(office.db.from('admin_financial_documents').update({
-  status:'approved',approved_by:office.id,approved_at:new Date().toISOString()
- }).eq('id',document.id).select('id'),'Administration cannot self-approve invoice')
- assert.equal((await one(head.db.from('admin_financial_documents').select('status').eq('id',document.id))).status,'review')
- tick('Invoice review persists and final approval remains Head Admin-only')
+ tick('Main invoice RLS remains protected without creating irreversible audit fixtures')
 
  await checkBrowser(office)
 } catch(error){
@@ -232,10 +214,10 @@ try{
   console.error('FAIL Main functional QA cleanup: '+String(error?.message||error).slice(0,350))
  }
  await writeFile(reportDir+'/report.json',JSON.stringify({
-  target:MAIN,scope:'Isolated Main only; real Auth, RLS, Administration draft, crew availability, timesheet lifecycle, DJ booking, invoice review, and UI readback',
+  target:MAIN,scope:'Isolated Main only; real Auth, RLS, Administration event drafts, crew availability, timesheet lifecycle and DJ bookings; finance authorization and read-only UI',
   completedChecks:checks,passed:checks.length,failed:Boolean(failed),failure:failed,
   fixtureCleaned:checks.includes('all Main fixture records deleted and verified'),
-  excluded:'No Maker, production, provider API calls, real payments, invoice approval/dispatch, contractual signing or emails.'
+  excluded:'No Maker, production, provider API calls, payments, mutable invoice draft/review/approval (immutable audit must be exercised in disposable DB), contractual signing or emails.'
  },null,2)+'\n')
  console.log('QA MAIN FUNCTIONAL RESULT: '+JSON.stringify({passed:checks.length,failed:Boolean(failed),cleaned:checks.includes('all Main fixture records deleted and verified')}))
 }
