@@ -58,6 +58,11 @@ function mark(role,locale,viewport,step,path){
 }
 async function assertAllowed(page,path,validPaths=[path]){
  const response=await goto(page,path)
+ if(response?.status()===503){
+  const visible=(await page.locator('body').innerText().catch(()=>''))||''
+  if(/Error 1102|Worker exceeded resource limits/i.test(visible))
+   throw Error('Cloudflare Worker 1102 resource exhaustion on '+path+' (CPU or memory); see Workers invocation metrics')
+ }
  assert.ok(response&&response.status()<400,'HTTP error for '+path+': '+response?.status())
  // A rendered heading distinguishes the real page from a transient authenticated
  // shell. A long-lived skeleton is a legitimate failed acceptance test.

@@ -32,6 +32,22 @@ function dated(value:string|undefined|null,locale:SupportedUiLocale):string{
  return new Intl.DateTimeFormat(locale==="nl"?"nl-BE":locale==="fr"?"fr-BE":locale==="de"?"de-DE":"en-GB",{dateStyle:"short",timeZone:"Europe/Brussels"}).format(d)
 }
 
+// Cap concurrent server-side PostgREST requests: a 20-query burst on the
+// Administration overview can exhaust a Cloudflare Worker isolate under load.
+// Each request keeps its RLS credentials and abort deadline. The existing
+// 10s hard stop still returns explicit unavailable status instead of zero.
+async function boundedQueries<const T extends readonly unknown[]>(queries:T,limit:number):Promise<{[K in keyof T]:Awaited<T[K]>}>{
+ const result:unknown[]=new Array(queries.length)
+ let cursor=0
+ await Promise.all(Array.from({length:Math.min(limit,queries.length)},async()=>{
+  while(cursor<queries.length){
+   const i=cursor++
+   result[i]=await queries[i]
+  }
+ }))
+ return result as {[K in keyof T]:Awaited<T[K]>}
+}
+
 /** Every extra indicator reads the same RLS-protected source as its owner subtab.
  * No service is treated as connected just because a settings page exists. */
 export async function AdministrationSubtabStatus({locale}:{locale:SupportedUiLocale}){
@@ -49,7 +65,7 @@ export async function AdministrationSubtabStatus({locale}:{locale:SupportedUiLoc
   hardStopSignal.addEventListener("abort",()=>resolve(null),{once:true})
  })
  const statuses=await Promise.race([
-  Promise.all([
+  boundedQueries([
   db.from("admin_artist_bookings").select("id",{count:"exact",head:true}).abortSignal(statusSignal),
   db.from("tasks").select("id",{count:"exact",head:true}).abortSignal(statusSignal),
   db.from("timesheets").select("id",{count:"exact",head:true}).in("status",["approved","locked"]).abortSignal(statusSignal),
@@ -70,7 +86,7 @@ export async function AdministrationSubtabStatus({locale}:{locale:SupportedUiLoc
   db.from("portal_role_assignments").select("id",{count:"exact",head:true}).eq("portal","administration").abortSignal(statusSignal),
   db.rpc("upt_own_profile_details").abortSignal(statusSignal),
   db.from("admin_financial_documents").select("id",{count:"exact",head:true}).eq("status","review").abortSignal(statusSignal)
-  ]).catch(()=>null),
+  ],4).catch(()=>null),
   timedOut
  ])
  if(!statuses)return <section aria-label={t.headline} role="status" data-administration-status-unavailable="true" className="rounded-2xl border border-amber-600/40 p-4 text-sm text-muted-foreground">

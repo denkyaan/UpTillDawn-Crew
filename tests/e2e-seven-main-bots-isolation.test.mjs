@@ -134,3 +134,10 @@ test('Main login QA observes real login errors and retries only unexpected Serve
  assert.match(form,/role="alert" data-login-error-code=\{errorCode \|\| "login_error"\}/)
  assert.match(form,/setErrorCode\("unexpected_action_failure"\)/)
 })
+
+test('browser QA reports Worker 1102 as real resource exhaustion, never accepts 503 as authorization',()=>{
+ assert.match(source,/response\?\.status\(\)===503/)
+ assert.match(source,/Worker exceeded resource limits/)
+ assert.match(source,/CPU or memory/)
+ assert.match(source,/status>=500/)
+})
