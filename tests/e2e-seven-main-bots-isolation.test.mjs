@@ -114,3 +114,12 @@ test('read-only acceptance checks real draft forms but never submits them',()=>{
  assert.doesNotMatch(source,/bookingForm\.locator\([^\n]+\.click\(\)/)
  assert.doesNotMatch(source,/draft\.locator\('form button\[type="submit"\]'\)\.click\(\)/)
 })
+
+test('DJ-contract prerequisite checks the nested page main, never ambiguous shell and page landmarks',()=>{
+ assert.match(source,/const contentMain=page\.locator\('main'\)\.last\(\)/)
+ assert.match(source,/contentMain\.locator\('h1'\)\.first\(\)\.waitFor/)
+ assert.match(source,/const bookingForm=contentMain\.locator\('form'\)\.first\(\)/)
+ assert.match(source,/const notice=\(await contentMain\.innerText\(\)\)\.toLowerCase\(\)/)
+ assert.doesNotMatch(source,/page\.locator\('main'\)\.innerText\(\)/)
+ assert.match(source,/Contract creation is blocked without an actionable prerequisite message/)
+})

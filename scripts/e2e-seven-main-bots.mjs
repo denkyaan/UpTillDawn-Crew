@@ -221,8 +221,11 @@ async function assertAdministrationClickWorkflows(page,role,locale,viewport){
      &&target.searchParams.get('contract')==='1',{waitUntil:'commit',timeout:40000}),
     create.click({noWaitAfter:true,timeout:20000}),
    ])
-   await page.locator('main h1').first().waitFor({state:'visible',timeout:30000})
-   const bookingForm=page.locator('main form').first()
+   // The app shell and the Administration page each render a nested <main>.
+   // Target only the innermost page content, never an ambiguous global locator.
+   const contentMain=page.locator('main').last()
+   await contentMain.locator('h1').first().waitFor({state:'visible',timeout:30000})
+   const bookingForm=contentMain.locator('form').first()
    const exists=await bookingForm.count()
    if(exists){
     await bookingForm.locator('input[name="artist_name"]').waitFor({state:'visible',timeout:10000})
@@ -235,7 +238,7 @@ async function assertAdministrationClickWorkflows(page,role,locale,viewport){
    }else{
     // A legitimate empty event catalogue requires creating an event first.
     // Verify that the app explains the dependency instead of showing a blank page.
-    const notice=(await page.locator('main').innerText()).toLowerCase()
+    const notice=(await contentMain.innerText()).toLowerCase()
     assert.match(notice,/maak eerst een evenement|créez d’abord un événement|create an event first|erstellen sie zuerst eine veranstaltung/,
      'Contract creation is blocked without an actionable prerequisite message')
     mark(role,locale,viewport,'administration-contract-prerequisite-visible',
