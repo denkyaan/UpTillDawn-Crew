@@ -55,10 +55,18 @@ jobs:
         run: node scripts/provision-seven-main-bots.mjs --verify --verify-passwords
 
   qa-main-browser-acceptance:
-    # Browser acceptance is deliberately NOT part of fast push CI, Main deploy,
-    # or any production workflow. It follows only explicit QA provisioning.
-    needs: provision-qa-bots
-    if: github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main' && inputs.provision_qa_bots == true && needs.provision-qa-bots.result == 'success'
+    # Isolated, read-only browser QA: either explicitly requested by a manual
+    # provisioning dispatch, or a Main commit bearing the opt-in marker after
+    # its fast CI and actual Main deployment both succeed. NEVER production.
+    needs: [provision-qa-bots, validate-trigger, deploy]
+    if: >-
+      always() && (
+        (github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main' &&
+         inputs.provision_qa_bots == true && needs.provision-qa-bots.result == 'success')
+        ||
+        (github.event_name == 'workflow_run' && needs.validate-trigger.outputs.qa_eligible == 'true' &&
+         needs.deploy.result == 'success')
+      )
     runs-on: ubuntu-latest
     timeout-minutes: 25
     env:
@@ -93,6 +101,7 @@ jobs:
     timeout-minutes: 3
     outputs:
       eligible: ${{ steps.check.outputs.eligible }}
+      qa_eligible: ${{ steps.check.outputs.qa_eligible }}
     steps:
       - name: Explain deployment eligibility
         id: check
@@ -118,6 +127,15 @@ jobs:
           if [[ "${SOURCE_EVENT}" == push && "${SOURCE_RESULT}" == success && "${SOURCE_BRANCH}" == main && -n "${SOURCE_SHA}" && "${SOURCE_SHA}" == "${current_sha}" ]]; then
             echo 'eligible=true' >> "$GITHUB_OUTPUT"
             echo 'Main deployment is eligible.'
+            # Explicit one-commit authorization for browser QA on Main only.
+            # This does not run in the fast CI job or change production deploy.
+            commit_message="$(gh api "/repos/$REPO/commits/main" --jq '.commit.message')"
+            if [[ "$commit_message" == *'[main-qa-e2e]'* ]]; then
+              echo 'qa_eligible=true' >> "$GITHUB_OUTPUT"
+              echo 'Explicit Main QA marker found; browser tests will run only after successful Main deploy.'
+            else
+              echo 'qa_eligible=false' >> "$GITHUB_OUTPUT"
+            fi
           elif [[ "${SOURCE_RESULT}" != success ]]; then
             echo 'eligible=false' >> "$GITHUB_OUTPUT"
             echo "::error::Main deployment blocked: CI concluded ${SOURCE_RESULT} for ${SOURCE_SHA}."

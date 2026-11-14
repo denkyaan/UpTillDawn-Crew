@@ -32,7 +32,7 @@ test('Browser QA is explicitly restricted to exact Main and secret, cannot run a
 })
 test('Browser QA is manually opted-in, separated from fast Main CI and production deployment',()=>{
  assert.match(workflow,/qa-main-browser-acceptance:/)
- assert.match(workflow,/needs: provision-qa-bots/)
+ assert.match(workflow,/needs: \[provision-qa-bots, validate-trigger, deploy\]/)
  assert.match(workflow,/inputs\.provision_qa_bots == true/)
  assert.match(workflow,/secrets\.MAIN_QA_BOT_PASSWORD/)
  assert.match(workflow,/node scripts\/e2e-seven-main-bots\.mjs/)
@@ -53,4 +53,16 @@ test('transient login failures include safe page error diagnostics rather than f
  assert.match(source,/Login navigation failed for/)
  assert.match(source,/locator\('\[role="alert"\]'\)/)
  assert.match(source,/throw Error\('Login navigation failed/)
+})
+
+test('explicit Main-only QA marker runs only after a successful fast CI and successful Main deployment',()=>{
+ assert.match(workflow,/qa_eligible: \$\{\{ steps\.check\.outputs\.qa_eligible \}\}/)
+ assert.match(workflow,/commit_message=.*gh api/)
+ assert.match(workflow,/\[main-qa-e2e\]/)
+ assert.match(workflow,/SOURCE_EVENT.*push/)
+ assert.match(workflow,/SOURCE_RESULT.*success/)
+ assert.match(workflow,/needs\.validate-trigger\.outputs\.qa_eligible == 'true'/)
+ assert.match(workflow,/needs\.deploy\.result == 'success'/)
+ assert.match(workflow,/always\(\)/)
+ assert.doesNotMatch(readFileSync('.github/workflows/fast-change-validation.yml','utf8'),/main-qa-e2e/)
 })
