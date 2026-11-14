@@ -41,9 +41,9 @@ test('Browser QA is manually opted-in, separated from fast Main CI and productio
 })
 
 test('denied-route acceptance waits for final RSC authorization and never mistakes loading skeleton for leaked access',()=>{
- assert.match(source,/page\.waitForFunction\(expected=>/)
- assert.match(source,/Authorization result never settled/)
- assert.match(source,/Interrupted navigation returned to its original route/)
+ assert.match(source,/page\.waitForURL\(target=>target\.pathname!==path/)
+ assert.match(source,/No settled authorization denial/)
+ assert.match(source,/Aborted navigation had no confirmed server redirect/)
  assert.match(source,/status>=500/)
  assert.match(source,/\[401,403,404\]/)
  assert.match(source,/ERR_ABORTED/)
