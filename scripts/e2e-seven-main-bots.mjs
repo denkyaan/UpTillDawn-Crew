@@ -4,6 +4,7 @@
 import assert from 'node:assert/strict'
 import {mkdir,writeFile} from 'node:fs/promises'
 import {chromium} from 'playwright'
+import {administrationNavigationGroups,administrationRoute} from '../lib/administration/navigation.ts'
 
 const BASE='https://uptilldawn-main.uptilldawn.workers.dev'
 const configUrl=process.env.E2E_MAIN_QA_BASE_URL
@@ -144,6 +145,113 @@ async function assertDenied(page,path){
  if(interrupted&&actual===before&&!([301,302,303,307,308].includes(status)))
   throw Error('Aborted navigation had no confirmed server redirect: '+path)
 }
+// Real read-only click acceptance, over and above direct URL checks.
+// Reuse the seven isolated QA identities; do not create additional bots,
+// access Maker/production or submit draft, contract or payment mutations.
+async function assertAdministrationClickWorkflows(page,role,locale,viewport){
+ await assertAllowed(page,'/portals/administration')
+ const buttons=page.locator('nav [data-administration-category]')
+ await buttons.first().waitFor({state:'visible',timeout:25000})
+ const actualGroups=await buttons.evaluateAll(nodes=>nodes.map(node=>node.getAttribute('data-administration-category')))
+ assert.deepEqual(actualGroups,administrationNavigationGroups.map(group=>group.key),
+  'Administration is missing or duplicating navigation categories')
+ const pulse=page.locator('[data-administration-overview-ready="true"]')
+ const priorities=await pulse.locator('[data-administration-priority]').evaluateAll(nodes=>
+  nodes.map(node=>({key:node.getAttribute('data-administration-priority'),href:node.getAttribute('href')})))
+ assert.equal(priorities.length,7,'Administration primary work pulse must have seven actionable priorities')
+ assert.equal(new Set(priorities.map(row=>row.key)).size,7,'Duplicate primary work actions')
+ assert.equal(new Set(priorities.map(row=>row.href)).size,7,'Duplicate destinations in work pulse')
+ assert.ok(priorities.every(row=>row.href?.startsWith('/portals/administration/')),
+  'Overview priority opens a different portal')
+ mark(role,locale,viewport,'administration-primary-actions','/portals/administration')
+
+ for(const group of administrationNavigationGroups.filter(group=>group.key!=='overview')){
+  const button=page.locator('nav [data-administration-category="'+group.key+'"]')
+  await button.click()
+  const region=page.locator('#administration-subtabs')
+  await region.waitFor({state:'visible',timeout:15000})
+  const found=await region.locator('[data-administration-subtab]').evaluateAll(nodes=>
+   nodes.map(node=>({slug:node.getAttribute('data-administration-subtab'),href:node.getAttribute('href')})))
+  const expected=group.slugs.filter(slug=>slug!=='promotion-discipline'||role==='head_admin')
+  assert.deepEqual(found.map(entry=>entry.slug),expected,'Wrong or duplicate subtab in '+group.key)
+  assert.deepEqual(found.map(entry=>entry.href),expected.map(administrationRoute),
+   'Subtab targets must use their existing canonical pages')
+  await button.click()
+  await region.waitFor({state:'detached',timeout:15000})
+  mark(role,locale,viewport,'administration-toggle-'+group.key,'/portals/administration')
+ }
+
+ for(const {category,slug} of [
+  {category:'finance',slug:'banking'},
+  {category:'planning',slug:'events'},
+  {category:'planning',slug:'contracts'},
+ ]){
+  await page.locator('nav [data-administration-category="'+category+'"]').click()
+  const link=page.locator('[data-administration-subtab="'+slug+'"]')
+  await link.waitFor({state:'visible',timeout:15000})
+  const href=await link.getAttribute('href')
+  assert.equal(href,administrationRoute(slug),'Incorrect '+slug+' subtab destination')
+  await Promise.all([
+   page.waitForURL(target=>target.pathname===href,{waitUntil:'commit',timeout:40000}),
+   link.click({noWaitAfter:true,timeout:20000}),
+  ])
+  await page.locator('#administration-subtabs').waitFor({state:'detached',timeout:15000})
+  await page.locator('main h1').first().waitFor({state:'visible',timeout:30000})
+  assert.equal(new URL(page.url()).pathname,href,'Subtab click did not reach its page')
+  const text=(await page.locator('main').first().innerText()).trim()
+  assert.ok(text.length>24&&!/Application error: a server-side exception/i.test(text),
+   'Clicked Administration subtab failed to render')
+  mark(role,locale,viewport,'administration-click-'+slug,href)
+
+  if(slug==='events'){
+   const draft=page.locator('#administration-event-draft')
+   await draft.waitFor({state:'visible',timeout:15000})
+   if(!(await draft.evaluate(node=>node.hasAttribute('open'))))await draft.locator('summary').click()
+   await draft.locator('form input[name="name"]').waitFor({state:'visible',timeout:10000})
+   assert.equal(await draft.locator('form input[name="start_at"]').count(),1,'Event start date field missing')
+   assert.equal(await draft.locator('form input[name="end_at"]').count(),1,'Event end date field missing')
+   assert.equal(await draft.locator('form button[type="submit"]').count(),1,'Event draft save action missing')
+   mark(role,locale,viewport,'administration-event-draft-form',href)
+  }
+  if(slug==='contracts'){
+   const create=page.locator('a[href="/portals/administration/modules/artists/new?contract=1"]')
+   await create.waitFor({state:'visible',timeout:15000})
+   await Promise.all([
+    page.waitForURL(target=>target.pathname==='/portals/administration/modules/artists/new'
+     &&target.searchParams.get('contract')==='1',{waitUntil:'commit',timeout:40000}),
+    create.click({noWaitAfter:true,timeout:20000}),
+   ])
+   await page.locator('main h1').first().waitFor({state:'visible',timeout:30000})
+   const bookingForm=page.locator('main form').first()
+   const exists=await bookingForm.count()
+   if(exists){
+    await bookingForm.locator('input[name="artist_name"]').waitFor({state:'visible',timeout:10000})
+    assert.equal(await bookingForm.locator('select[name="event_id"]').count(),1,
+     'Contract creation form has no event selection')
+    assert.equal(await bookingForm.locator('input[name="contract_context"][value="1"]').count(),1,
+     'Contract creation lost its contract-draft context')
+    mark(role,locale,viewport,'administration-contract-create-form',
+     '/portals/administration/modules/artists/new?contract=1')
+   }else{
+    // A legitimate empty event catalogue requires creating an event first.
+    // Verify that the app explains the dependency instead of showing a blank page.
+    const notice=(await page.locator('main').innerText()).toLowerCase()
+    assert.match(notice,/maak eerst een evenement|créez d’abord un événement|create an event first|erstellen sie zuerst eine veranstaltung/,
+     'Contract creation is blocked without an actionable prerequisite message')
+    mark(role,locale,viewport,'administration-contract-prerequisite-visible',
+     '/portals/administration/modules/artists/new?contract=1')
+   }
+  }
+  const home=page.locator('nav [data-administration-category="overview"]')
+  await Promise.all([
+   page.waitForURL(target=>target.pathname==='/portals/administration',{waitUntil:'commit',timeout:40000}),
+   home.click({timeout:20000}),
+  ])
+  await page.locator('[data-administration-overview-ready="true"] h1').waitFor({state:'visible',timeout:30000})
+  mark(role,locale,viewport,'administration-return-overview','/portals/administration')
+ }
+}
+
 try{
  for(const [index,role] of roles.entries()){
   for(const [i,viewport] of viewports.entries()){
@@ -187,6 +295,13 @@ try{
       mark(role.role,locale,viewport,'allowed',path)
      }catch(error){await recordFailure(page,role.role,locale,viewport,'allow-'+path,error)}
     }
+    if(role.role==='head_admin'||role.role==='administration'){
+     try{
+      await assertAdministrationClickWorkflows(page,role.role,locale,viewport)
+     }catch(error){
+      await recordFailure(page,role.role,locale,viewport,'administration-click-workflows',error)
+     }
+    }
     for(const path of role.denied){
      try{
       await assertDenied(page,path)
@@ -206,10 +321,10 @@ try{
  const report={
   run_type:'explicit-main-only-browser-qa',
   target:BASE,
-  scope:'14 separate sessions: 7 operational roles × 2 responsive viewports; locales rotated across NL/FR/EN/DE; role route access and denial only',
+  scope:'14 separate sessions: 7 operational roles × 2 responsive viewports; locales rotated NL/FR/EN/DE; login, route access/denial plus real Administration category, subtab, event-draft and contract-create navigation (read-only)',
   roles:roles.map(r=>r.role),locales,viewports,
   passed:results.length,failed:errors.length,results,errors,
-  limitations:'Not Maker; not production; no payment, events, notification, provider or destructive E2E. Login may write expected Supabase sessions and login audit.'
+  limitations:'Not Maker; not production; creation forms are inspected but never submitted; no actual event, contract, payment, notification, provider or destructive E2E. Login may write expected Supabase sessions and login audit.'
  }
  await writeFile(dir+'/report.json',JSON.stringify(report,null,2)+'\n')
  console.log('QA MAIN BROWSER RESULT: '+JSON.stringify({roles:roles.length,sessions:roles.length*viewports.length,passed:results.length,failed:errors.length}))

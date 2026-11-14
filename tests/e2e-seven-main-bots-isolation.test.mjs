@@ -94,3 +94,23 @@ test('browser login checks SSR cookie presence without exposing its value',()=>{
  assert.match(source,/Supabase SSR authentication cookie/)
  assert.doesNotMatch(source,/console\.log\([^\n]*cookieNames/)
 })
+
+test('seven-role Main acceptance exercises real Administration categories and canonical subtab clicks',()=>{
+ assert.match(source,/import \{administrationNavigationGroups,administrationRoute\} from '\.\.\/lib\/administration\/navigation\.ts'/)
+ assert.match(source,/async function assertAdministrationClickWorkflows\(/)
+ assert.match(source,/administrationNavigationGroups\.filter\(group=>group\.key!=='overview'\)/)
+ assert.match(source,/found\.map\(entry=>entry\.href\),expected\.map\(administrationRoute\)/)
+ assert.match(source,/role\.role==='head_admin'\|\|role\.role==='administration'/)
+ assert.match(source,/page\.waitForURL\(target=>target\.pathname===href/)
+ assert.match(source,/administration-return-overview/)
+ assert.match(source,/administration-toggle-/)
+})
+test('read-only acceptance checks real draft forms but never submits them',()=>{
+ assert.match(source,/administration-event-draft-form/)
+ assert.match(source,/draft\.locator\('form input\[name="name"\]'\)/)
+ assert.match(source,/administration-contract-create-form/)
+ assert.match(source,/contract_context/)
+ assert.match(source,/administration-contract-prerequisite-visible/)
+ assert.doesNotMatch(source,/bookingForm\.locator\([^\n]+\.click\(\)/)
+ assert.doesNotMatch(source,/draft\.locator\('form button\[type="submit"\]'\)\.click\(\)/)
+})
