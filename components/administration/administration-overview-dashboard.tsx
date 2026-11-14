@@ -1,4 +1,5 @@
 import Link from "next/link"
+import {Suspense} from "react"
 import {AdministrationSubtabStatus} from "@/components/administration/administration-subtab-status"
 import {ChevronRight} from "lucide-react"
 import type {SupabaseClient} from "@supabase/supabase-js"
@@ -127,7 +128,7 @@ export async function AdministrationOverviewDashboard({locale}:{locale:Supported
    detail:!automationRun?w.noRun:(automationError?w.runFailed:w.runOkay)+" · "+formatDate(automationRun.completed_at)},
  ]
  const groups=[{key:"people",title:w.people},{key:"money",title:w.money},{key:"operations",title:w.operations}]
- return <main className="mx-auto w-full max-w-6xl space-y-5 p-4 pb-28 sm:p-6">
+ return <main data-administration-overview-ready="true" className="mx-auto w-full max-w-6xl space-y-5 p-4 pb-28 sm:p-6">
   <header className="space-y-1">
    <h1 className="text-2xl font-bold tracking-tight sm:text-3xl">{w.title}</h1>
    <p className="text-sm leading-6 text-muted-foreground">{w.intro}</p>
@@ -169,6 +170,13 @@ export async function AdministrationOverviewDashboard({locale}:{locale:Supported
     </section>)}
    </div>
   </section>
-  <AdministrationSubtabStatus locale={locale}/>
+  {/* The extended subtab catalog runs 20 independent live queries. Isolate it
+      from the primary work pulse so a slow secondary RPC cannot hold the
+      page-level loading boundary, header, or primary actions hostage. */}
+  <Suspense fallback={<section aria-label={w.operations} data-administration-status-loading="true" role="status" className="rounded-2xl border bg-card p-4 text-sm text-muted-foreground">
+   {({nl:"Aanvullende onderdeelstatussen laden…",fr:"Chargement des statuts complémentaires…",en:"Loading additional section statuses…",de:"Weitere Bereichsstatus werden geladen…"} as const)[locale]}
+  </section>}>
+   <AdministrationSubtabStatus locale={locale}/>
+  </Suspense>
  </main>
 }

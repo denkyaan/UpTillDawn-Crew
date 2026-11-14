@@ -40,32 +40,45 @@ export async function AdministrationSubtabStatus({locale}:{locale:SupportedUiLoc
  const user=await getCurrentUser()
  const admin=Boolean(user?.realIsAdmin||user?.isOwner)
  const t=copy[locale]
+ const statusSignal=AbortSignal.timeout(8_000)
+ // Unlike an AbortSignal alone, a hard stop also covers an adapter that never
+ // settles after abort. Any unknown metrics remain explicitly unavailable.
+ let statusTimer:ReturnType<typeof setTimeout>|undefined
+ const timedOut=new Promise<null>(resolve=>{statusTimer=setTimeout(()=>resolve(null),10_000)})
+ const statuses=await Promise.race([
+  Promise.all([
+  db.from("admin_artist_bookings").select("id",{count:"exact",head:true}).abortSignal(statusSignal),
+  db.from("tasks").select("id",{count:"exact",head:true}).abortSignal(statusSignal),
+  db.from("timesheets").select("id",{count:"exact",head:true}).in("status",["approved","locked"]).abortSignal(statusSignal),
+  db.from("admin_financial_documents").select("id",{count:"exact",head:true}).in("kind",["sales_invoice","purchase_invoice"]).in("status",["review","approved","issued"]).abortSignal(statusSignal),
+  db.from("admin_financial_payments").select("id,paid_on",{count:"exact"}).order("paid_on",{ascending:false}).limit(1).abortSignal(statusSignal),
+  raw.rpc("upt_ticket_sales_summary").abortSignal(statusSignal),
+  db.from("timesheets").select("id",{count:"exact",head:true}).abortSignal(statusSignal),
+  db.from("sales_transactions").select("id",{count:"exact",head:true}).abortSignal(statusSignal),
+  raw.from("admin_operational_obligations").select("id",{count:"exact",head:true}).eq("kind","logistics").in("status",["open","submitted","rejected"]).abortSignal(statusSignal),
+  db.from("event_documents").select("id",{count:"exact",head:true}).abortSignal(statusSignal),
+  raw.from("admin_operational_obligations").select("id",{count:"exact",head:true}).eq("kind","permits").in("status",["open","submitted","rejected"]).abortSignal(statusSignal),
+  db.rpc("upt_crew_directory").abortSignal(statusSignal),
+  db.from("chat_channels").select("id",{count:"exact",head:true}).abortSignal(statusSignal),
+  db.from("admin_counterparties").select("id",{count:"exact",head:true}).abortSignal(statusSignal),
+  raw.from("promotion_reference_media").select("id",{count:"exact",head:true}).abortSignal(statusSignal),
+  db.from("tasks").select("id",{count:"exact",head:true}).eq("promotion_only",true).abortSignal(statusSignal),
+  admin?raw.from("promotion_evidence").select("id",{count:"exact",head:true}).in("verification_status",["pending","inconclusive"]).abortSignal(statusSignal):Promise.resolve({count:null,error:null}),
+  db.from("portal_role_assignments").select("id",{count:"exact",head:true}).eq("portal","administration").abortSignal(statusSignal),
+  db.rpc("upt_own_profile_details").abortSignal(statusSignal),
+  db.from("admin_financial_documents").select("id",{count:"exact",head:true}).eq("status","review").abortSignal(statusSignal)
+  ]).catch(()=>null),
+  timedOut
+ ])
+ if(statusTimer)clearTimeout(statusTimer)
+ if(!statuses)return <section aria-label={t.headline} role="status" data-administration-status-unavailable="true" className="rounded-2xl border border-amber-600/40 p-4 text-sm text-muted-foreground">
+  <h2 className="font-bold">{t.headline}</h2><p className="mt-1">{t.unavailable}</p>
+ </section>
  const [
   artists,tasks,payroll,invoices,payments,ticketing,reports,sales,
   logistics,documents,permits,personnel,chats,counterparties,
   references,promotionTasks,evidence,assignments,profile,aiReview
- ]=await Promise.all([
-  db.from("admin_artist_bookings").select("id",{count:"exact",head:true}),
-  db.from("tasks").select("id",{count:"exact",head:true}),
-  db.from("timesheets").select("id",{count:"exact",head:true}).in("status",["approved","locked"]),
-  db.from("admin_financial_documents").select("id",{count:"exact",head:true}).in("kind",["sales_invoice","purchase_invoice"]).in("status",["review","approved","issued"]),
-  db.from("admin_financial_payments").select("id,paid_on",{count:"exact"}).order("paid_on",{ascending:false}).limit(1),
-  raw.rpc("upt_ticket_sales_summary"),
-  db.from("timesheets").select("id",{count:"exact",head:true}),
-  db.from("sales_transactions").select("id",{count:"exact",head:true}),
-  raw.from("admin_operational_obligations").select("id",{count:"exact",head:true}).eq("kind","logistics").in("status",["open","submitted","rejected"]),
-  db.from("event_documents").select("id",{count:"exact",head:true}),
-  raw.from("admin_operational_obligations").select("id",{count:"exact",head:true}).eq("kind","permits").in("status",["open","submitted","rejected"]),
-  db.rpc("upt_crew_directory"),
-  db.from("chat_channels").select("id",{count:"exact",head:true}),
-  db.from("admin_counterparties").select("id",{count:"exact",head:true}),
-  raw.from("promotion_reference_media").select("id",{count:"exact",head:true}),
-  db.from("tasks").select("id",{count:"exact",head:true}).eq("promotion_only",true),
-  admin?raw.from("promotion_evidence").select("id",{count:"exact",head:true}).in("verification_status",["pending","inconclusive"]):Promise.resolve({count:null,error:null}),
-  db.from("portal_role_assignments").select("id",{count:"exact",head:true}).eq("portal","administration"),
-  db.rpc("upt_own_profile_details"),
-  db.from("admin_financial_documents").select("id",{count:"exact",head:true}).eq("status","review")
- ])
+ ]=statuses
  const metrics:Record<string,Metric>={
   artists:measured(artists,t.total,t.unavailable),
   tasks:measured(tasks,t.total,t.unavailable),

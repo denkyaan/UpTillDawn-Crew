@@ -61,8 +61,17 @@ async function assertAllowed(page,path,validPaths=[path]){
  // A rendered heading distinguishes the real page from a transient authenticated
  // shell. A long-lived skeleton is a legitimate failed acceptance test.
  // Channel chat uses a composer, not an h1; empty chat uses a heading.
- const ready=path==='/chat'?'section textarea, section h1':'h1,main h2'
+ const ready=path==='/chat'?'section textarea, section h1'
+  :path==='/portals/administration'?'[data-administration-overview-ready="true"] h1'
+  :'h1,main h2'
  await page.locator(ready).first().waitFor({state:'visible',timeout:30000})
+ if(path==='/portals/administration'){
+  // A hidden h1 in a streamed Suspense template is not a functioning page:
+  // require all seven canonical actionable priority rows as well.
+  const actions=page.locator('[data-administration-overview-ready="true"] [data-administration-priority]')
+  await actions.first().waitFor({state:'visible',timeout:30000})
+  assert.equal(await actions.count(),7,'Administration work pulse lacks its seven canonical actions')
+ }
  const actual=new URL(page.url()).pathname
  assert.ok(validPaths.includes(actual),'Unexpected portal redirect: '+path+' → '+actual)
  const content=(await page.locator('body').innerText()).trim()
