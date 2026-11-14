@@ -70,7 +70,7 @@ test('explicit Main-only QA marker runs only after a successful fast CI and succ
 test('live browser navigation waits for document commit rather than stalled full-page load',()=>{
  assert.match(source,/page\.goto\(url\(path\),\{waitUntil:'commit',timeout\}\)/)
  assert.match(source,/page\.waitForURL\(target=>!target\.pathname\.startsWith\('\/login'\),\{waitUntil:'commit',timeout\}\)/)
- assert.match(source,/locator\('h1,main h2'\)/)
+ assert.match(source,/locator\(ready\)\.first\(\)\.waitFor/)
 })
 test('denials remain fail-closed and do not mistake RSC loading shell or lost session for unauthorized access',()=>{
  assert.match(source,/page\.waitForURL\(target=>target\.pathname!==path,\{waitUntil:'commit',timeout:50000\}\)/)
