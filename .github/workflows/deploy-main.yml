@@ -138,6 +138,32 @@ jobs:
           retention-days: 5
 
 
+
+  qa-main-runtime-diagnostic:
+    # Read-only measurement of actual Worker invocation outcomes after QA.
+    # A missing analytics permission is reported, never mistaken for a pass.
+    needs: [validate-trigger, deploy, qa-main-browser-acceptance, qa-main-functional-acceptance]
+    if: >-
+      always() && github.event_name == 'workflow_run' &&
+      needs.validate-trigger.outputs.qa_eligible == 'true' &&
+      needs.deploy.result == 'success'
+    runs-on: ubuntu-latest
+    timeout-minutes: 4
+    env:
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+    steps:
+      - name: Checkout exact validated Main revision
+        uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5.1.0
+        with:
+          ref: ${{ github.event.workflow_run.head_sha }}
+      - name: Set up Node.js
+        uses: actions/setup-node@a0853c24544627f65ddf259abe73b1d18a591444 # v5.0.0
+        with:
+          node-version: 24
+      - name: Classify Main Worker exceededCpu versus exceededMemory outcomes
+        run: node scripts/main-worker-outcomes.mjs
+
   validate-trigger:
     if: github.event_name == 'workflow_run'
     runs-on: ubuntu-latest

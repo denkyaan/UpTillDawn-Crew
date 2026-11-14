@@ -70,7 +70,29 @@ async function clean(){
  await remove('timesheets','id',created.timesheet,{field:'event_id',value:created.event})
  await remove('event_availability','event_id',created.event,{field:'user_id',value:created.staff})
  await remove('event_members','event_id',created.event,{field:'user_id',value:created.staff})
- await remove('events','id',created.event,{field:'created_by',value:created.office})
+ // Event deletion can hit PostgREST statement_timeout while other Main QA
+ // sessions read the same event and its seeded workposts. A narrowly guarded
+ // retry is allowed only for PostgreSQL 57014. Every attempt revalidates exact
+ // fixture ownership, and every other error fails the cleanup immediately.
+ for(let attempt=1;attempt<=3;attempt++){
+  const {data:owned,error:ownedError}=await service.from('events').select('id,name,created_by')
+   .eq('id',created.event).maybeSingle()
+  if(ownedError)throw Error('QA event cleanup ownership read: '+ownedError.code)
+  if(!owned)break // A previous timed-out request may have committed.
+  if(!owned.name?.startsWith(prefix)||owned.created_by!==created.office)
+   throw Error('QA cleanup event ownership changed before retry')
+  const {data:removed,error:deleteError}=await service.from('events').delete()
+   .eq('id',created.event).eq('created_by',created.office).eq('name',owned.name).select('id')
+  if(!deleteError){
+   assert.equal(removed?.length,1,'QA event delete did not remove exactly one owned fixture')
+   if(attempt>1)console.warn('QA_EVENT_CLEANUP_RECOVERED_AFTER_TIMEOUT attempts='+attempt)
+   break
+  }
+  if(deleteError.code!=='57014'||attempt===3)
+   throw Error('QA cleanup events: '+deleteError.code+' '+deleteError.message)
+  console.warn('QA_EVENT_CLEANUP_STATEMENT_TIMEOUT_RETRY attempt='+attempt)
+  await new Promise(resolve=>setTimeout(resolve,attempt*800))
+ }
  const {data:residual,error:verifyError}=await service.from('events').select('id').eq('id',created.event)
  if(verifyError||residual?.length)throw Error('QA event still exists after cleanup')
  tick('all Main fixture records deleted and verified')
