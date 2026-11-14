@@ -34,3 +34,14 @@ test('existing approved Main deploy workflow runs functional E2E without a sixth
  assert.match(workflow,/main-isolated-functional-e2e/)
  assert.match(workflow,/needs\.deploy\.result == 'success'/)
 })
+
+test('real functional QA has its own independent job and evidence even when browser QA fails',()=>{
+ const browser=workflow.slice(workflow.indexOf('  qa-main-browser-acceptance:'),workflow.indexOf('  qa-main-functional-acceptance:'))
+ const functional=workflow.slice(workflow.indexOf('  qa-main-functional-acceptance:'),workflow.indexOf('  validate-trigger:'))
+ assert.doesNotMatch(browser,/node scripts\/e2e-main-functional-workflows\.mjs/)
+ assert.match(functional,/needs: \[validate-trigger, deploy\]/)
+ assert.match(functional,/needs\.deploy\.result == 'success'/)
+ assert.match(functional,/Main isolated functional workflow transactions with guaranteed fixture cleanup/)
+ assert.match(functional,/if: always\(\)/)
+ assert.doesNotMatch(functional,/needs\.qa-main-browser-acceptance/)
+})

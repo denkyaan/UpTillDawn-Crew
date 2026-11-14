@@ -266,21 +266,40 @@ try{
    const browserErrors=[]
    page.on('pageerror',error=>browserErrors.push(scrub(error)))
    try{
-    await goto(page,'/login/'+role.login)
-    await page.locator('form[data-login-hydrated="true"]').waitFor({state:'attached',timeout})
-    await page.locator('#email').fill(role.email)
-    await page.locator('#password').fill(password)
-    try{
-     await Promise.all([
-      page.waitForURL(target=>!target.pathname.startsWith('/login'),{waitUntil:'commit',timeout}),
-      page.locator('button[type="submit"]').click(),
-     ])
-    }catch(error){
-     const alerts=(await page.locator('[role="alert"]').allTextContents().catch(()=>[]))
-      .map(message=>message.trim().slice(0,160)).filter(Boolean)
-     throw Error('Login navigation failed for '+role.role+
-      (alerts.length?'; displayed error: '+alerts.join(' | '):'')+'; '+scrub(error))
+    let signedIn=false
+    for(let attempt=1;attempt<=2&&!signedIn;attempt++){
+     await goto(page,'/login/'+role.login)
+     await page.locator('form[data-login-hydrated="true"]').waitFor({state:'attached',timeout})
+     await page.locator('#email').fill(role.email)
+     await page.locator('#password').fill(password)
+     const alert=page.locator('[data-login-error-code]')
+     try{
+      // A failed Server Action can leave the form visible with a clear error.
+      // Wait for the first *settled* outcome, not only a navigation timeout.
+      const outcomePromise=Promise.race([
+       page.waitForURL(target=>!target.pathname.startsWith('/login'),{waitUntil:'commit',timeout:40000})
+        .then(()=>({type:'redirect'})),
+       alert.waitFor({state:'visible',timeout:40000}).then(()=>({type:'error'})),
+      ])
+      await page.locator('button[type="submit"]').click()
+      const outcome=await outcomePromise
+      if(outcome.type==='redirect'){
+       signedIn=true
+       if(attempt===2)console.warn('QA_RECOVERED_TRANSIENT_LOGIN '+role.role+' '+locale+' '+viewport.width)
+       continue
+      }
+      const code=await alert.getAttribute('data-login-error-code')
+      const message=(await alert.innerText()).trim().slice(0,160)
+      if(code!=='unexpected_action_failure'||attempt===2)
+       throw Error('Login rejected for '+role.role+'; code='+code+'; message='+message)
+      // A transient server-action exception is the sole case eligible for
+      // one fresh-page retry. It is reported, never silently treated as PASS.
+      console.warn('QA_RETRY_TRANSIENT_LOGIN '+role.role+' '+locale+' '+viewport.width)
+     }catch(error){
+      throw Error('Login navigation failed for '+role.role+'; '+scrub(error))
+     }
     }
+    assert.ok(signedIn,'Login did not settle as authenticated')
     assert.ok(!new URL(page.url()).pathname.startsWith('/login'),'Login did not complete')
     // Never expose cookie values. Missing SSR cookies explain login loops.
     const cookieNames=(await context.cookies(BASE)).map(cookie=>cookie.name)

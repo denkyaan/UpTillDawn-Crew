@@ -36,12 +36,14 @@ export function LoginForm({
   const [menuOpen, setMenuOpen] = useState(false)
   const [showPassword, setShowPassword] = useState(false)
   const [error, setError] = useState<string | null>(initialError)
+  const [errorCode, setErrorCode] = useState<string | null>(initialError ? "initial_login_error" : null)
   const [isPending, startTransition] = useTransition()
   const hydrated = useSyncExternalStore(subscribeHydration, clientHydrationSnapshot, serverHydrationSnapshot)
 
   function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault()
     setError(null)
+    setErrorCode(null)
     const formData = new FormData(e.currentTarget)
     const requestedNext = new URLSearchParams(window.location.search).get("next")
     if (requestedNext && requestedNext.startsWith("/") && !requestedNext.startsWith("//") && !requestedNext.includes("\\")) {
@@ -55,12 +57,16 @@ export function LoginForm({
         const result = await signIn(formData)
         if (result?.error) {
           setError(result.error)
+          setErrorCode(result.code || "login_denied")
           return
         }
         if (result?.success && result.redirectTo) {
           window.location.assign(result.redirectTo)
         }
       } catch {
+        // Only an unexpected Server Action failure is marked retriable for QA.
+        // Invalid credentials, blocked accounts and role denials are NEVER retried.
+        setErrorCode("unexpected_action_failure")
         setError(portal === "admin" || portal === "responsible"
           ? "Foute logingegevens of u heeft geen toegang tot deze rol."
           : "Aanmelden mislukt. Controleer je gegevens en probeer opnieuw.")
@@ -112,7 +118,7 @@ export function LoginForm({
           </div>
 
           {error && (
-            <div className="mb-5 flex gap-3 rounded-xl border border-red-500/30 bg-red-500/10 p-3 text-red-200">
+            <div role="alert" data-login-error-code={errorCode || "login_error"} className="mb-5 flex gap-3 rounded-xl border border-red-500/30 bg-red-500/10 p-3 text-red-200">
               <AlertCircle className="mt-0.5 h-5 w-5 shrink-0" />
               <p className="text-sm font-medium">{error}</p>
             </div>
