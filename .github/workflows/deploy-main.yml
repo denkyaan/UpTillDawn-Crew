@@ -86,6 +86,23 @@ jobs:
         run: npx playwright install --with-deps chromium
       - name: Read-only browser journeys for all seven operational QA roles
         run: node scripts/e2e-seven-main-bots.mjs
+      - name: Main isolated functional workflow transactions with guaranteed fixture cleanup
+        if: success()
+        timeout-minutes: 12
+        env:
+          E2E_MAIN_QA_SUPABASE_URL: https://npbjrtiolqperdgljnhi.supabase.co
+          E2E_MAIN_QA_PUBLISHABLE_KEY: sb_publishable_zStTw3n8wZ271PehDRDvGg_rs0JOy84
+          E2E_MAIN_QA_SERVICE_KEY: ${{ secrets.MAIN_QA_SUPABASE_SECRET_KEY }}
+          E2E_MAIN_QA_ALLOW_WRITE: '1'
+        run: node scripts/e2e-main-functional-workflows.mjs
+      - name: Upload sanitized functional E2E evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: main-isolated-functional-e2e
+          path: test-results/main-functional/
+          if-no-files-found: warn
+          retention-days: 5
       - name: Upload QA browser report and sanitized failure screenshots
         if: always()
         uses: actions/upload-artifact@v4
