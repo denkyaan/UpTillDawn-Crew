@@ -63,12 +63,14 @@ export async function updateSession(request: NextRequest) {
         },
     })
 
-    // Refresh and validate the session server-side.
-    const { data: { user } } = await supabase.auth.getUser()
+    // Verify signed claims without an extra Auth user-record network call
+    // for each navigation. Live database permissions remain authoritative.
+    const { data: verified, error: claimsError } = await supabase.auth.getClaims()
+    const authenticated = !claimsError && typeof verified?.claims?.sub === 'string'
     // Application pages are private by default. API routes remain responsible
     // for their own authentication/authorization so public auth/support APIs
     // can continue to operate without being accidentally hidden by middleware.
-    if (!isPublicPath(pathname) && !user) {
+    if (!isPublicPath(pathname) && !authenticated) {
         const url = request.nextUrl.clone()
         url.pathname = '/login'
         url.search = ''
@@ -82,7 +84,7 @@ export async function updateSession(request: NextRequest) {
     // all privileged RPCs still independently validate their Maker session.
     const makerRoute = pathname === '/maker-mode' || pathname.startsWith('/maker-mode/') ||
         pathname === '/god-mode' || pathname.startsWith('/god-mode/')
-    if (user && makerRoute) {
+    if (authenticated && makerRoute) {
         const { data: isOwner, error: ownerError } = await supabase.rpc('upt_current_is_owner')
         if (ownerError || isOwner !== true) {
             const url = request.nextUrl.clone()
@@ -101,7 +103,7 @@ export async function updateSession(request: NextRequest) {
         pathname === path || pathname.startsWith(`${path}/`)
     )
 
-    if (isRedirectedAuthPage && user) {
+    if (isRedirectedAuthPage && authenticated) {
         const url = request.nextUrl.clone()
         url.pathname = '/'
         url.search = ''

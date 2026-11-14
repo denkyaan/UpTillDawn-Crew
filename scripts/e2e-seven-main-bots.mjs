@@ -60,7 +60,9 @@ async function assertAllowed(page,path,validPaths=[path]){
  assert.ok(response&&response.status()<400,'HTTP error for '+path+': '+response?.status())
  // A rendered heading distinguishes the real page from a transient authenticated
  // shell. A long-lived skeleton is a legitimate failed acceptance test.
- await page.locator('h1,main h2').first().waitFor({state:'visible',timeout:30000})
+ // Channel chat uses a composer, not an h1; empty chat uses a heading.
+ const ready=path==='/chat'?'section textarea, section h1':'h1,main h2'
+ await page.locator(ready).first().waitFor({state:'visible',timeout:30000})
  const actual=new URL(page.url()).pathname
  assert.ok(validPaths.includes(actual),'Unexpected portal redirect: '+path+' → '+actual)
  const content=(await page.locator('body').innerText()).trim()
@@ -160,6 +162,10 @@ try{
       (alerts.length?'; displayed error: '+alerts.join(' | '):'')+'; '+scrub(error))
     }
     assert.ok(!new URL(page.url()).pathname.startsWith('/login'),'Login did not complete')
+    // Never expose cookie values. Missing SSR cookies explain login loops.
+    const cookieNames=(await context.cookies(BASE)).map(cookie=>cookie.name)
+    assert.ok(cookieNames.some(name=>/^sb-[a-z0-9]+-auth-token(?:\.\d+)?$/i.test(name)),
+     'Login redirect completed but browser has no Supabase SSR authentication cookie')
     mark(role.role,locale,viewport,'authenticated',new URL(page.url()).pathname)
     const htmlLocale=(await page.locator('html').getAttribute('lang')||'').split('-')[0]
     assert.equal(htmlLocale,locale,'App language mismatch')

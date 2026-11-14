@@ -396,8 +396,11 @@ export async function enterNormalAppFromMakerSession(formData: FormData) {
 
 export const getCurrentUser = cache(async function getCurrentUser() {
     const supabase = await createClient()
-    const { data: { user }, error: authError } = await supabase.auth.getUser()
-    if (authError || !user) return null
+    // getClaims verifies JWT signature and expiry; profile, Owner and role
+    // access remain checked against live database RPCs for every page.
+    const { data: verified, error: authError } = await supabase.auth.getClaims()
+    const claims = verified?.claims
+    if (authError || typeof claims?.sub !== 'string' || !claims.sub) return null
 
     const { data: profileRows, error } = await supabase.rpc('upt_current_profile')
     const profile = profileRows?.[0] ?? null
@@ -430,8 +433,8 @@ export const getCurrentUser = cache(async function getCurrentUser() {
         role: effectiveRole,
         realRole,
         roleMode: effectiveRole,
-        id: user.id,
-        email: user.email ?? '',
+        id: claims.sub,
+        email: typeof claims.email === 'string' ? claims.email : '',
         roles,
         isAdmin: effectiveRole === 'admin',
         realIsAdmin: hasPermanentAdminAccess,
