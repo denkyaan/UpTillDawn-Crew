@@ -51,7 +51,7 @@ test('denied-route acceptance waits for final RSC authorization and never mistak
 })
 test('transient login failures include safe page error diagnostics rather than falsely claiming authentication',()=>{
  assert.match(source,/Login navigation failed for/)
- assert.match(source,/locator\('\[role="alert"\]'\)/)
+ assert.match(source,/locator\('\[data-login-error-code\]'\)/)
  assert.match(source,/throw Error\('Login navigation failed/)
 })
 
@@ -69,7 +69,7 @@ test('explicit Main-only QA marker runs only after a successful fast CI and succ
 
 test('live browser navigation waits for document commit rather than stalled full-page load',()=>{
  assert.match(source,/page\.goto\(url\(path\),\{waitUntil:'commit',timeout\}\)/)
- assert.match(source,/page\.waitForURL\(target=>!target\.pathname\.startsWith\('\/login'\),\{waitUntil:'commit',timeout\}\)/)
+ assert.match(source,/page\.waitForURL\(target=>!target\.pathname\.startsWith\('\/login'\),\{waitUntil:'commit',timeout:40000\}\)/)
  assert.match(source,/locator\(ready\)\.first\(\)\.waitFor/)
 })
 test('denials remain fail-closed and do not mistake RSC loading shell or lost session for unauthorized access',()=>{
