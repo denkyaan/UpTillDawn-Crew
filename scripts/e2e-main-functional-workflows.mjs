@@ -32,6 +32,12 @@ const one=async q=>{
  if(error)throw Error('Main QA database operation failed: '+error.code+' '+error.message)
  return data
 }
+const scalar=async q=>{
+ const {data,error}=await q
+ if(error)throw Error('Main QA RPC failed: '+error.code+' '+error.message)
+ assert.match(String(data),/^[0-9a-f-]{36}$/i,'Expected a UUID from workflow RPC')
+ return data
+}
 const actor=async(email)=>{
  const db=createClient(MAIN_DB,MAIN_KEY,{auth:{persistSession:false,autoRefreshToken:false,detectSessionInUrl:false}})
  const {data,error}=await db.auth.signInWithPassword({email,password})
@@ -113,14 +119,14 @@ try{
  const args={p_event_id:null,p_name:prefix+' Draft event',p_venue:'QA only',p_start_at:start,p_end_at:end}
  await denyWrite(staff.db.rpc('upt_administration_save_event_draft',args),'Staff cannot create Administration event')
  await denyWrite(promotion.db.rpc('upt_administration_save_event_draft',args),'Promotion cannot create Administration event')
- const draft=await one(office.db.rpc('upt_administration_save_event_draft',args))
+ const draft=await scalar(office.db.rpc('upt_administration_save_event_draft',args))
  assert.match(draft,/^[0-9a-f-]{36}$/i)
  created.event=draft
  const event=await one(office.db.from('events').select('id,name,status,created_by').eq('id',draft))
  assert.equal(event.status,'draft')
  assert.equal(event.created_by,office.id)
  tick('Administration creates and persists an unpublished event draft')
- const updated=await one(office.db.rpc('upt_administration_save_event_draft',
+ const updated=await scalar(office.db.rpc('upt_administration_save_event_draft',
   {...args,p_event_id:draft,p_name:prefix+' Edited event'}))
  assert.equal(updated,draft)
  assert.equal((await one(office.db.from('events').select('name').eq('id',draft))).name,prefix+' Edited event')
@@ -140,7 +146,7 @@ try{
  }).select('event_id'),'Promotion cannot forge Staff availability')
  tick('Staff availability persists under its own user identity')
 
- const submitted=await one(staff.db.rpc('upt_submit_timesheet',{p_event:draft}))
+ const submitted=await scalar(staff.db.rpc('upt_submit_timesheet',{p_event:draft}))
  created.timesheet=submitted
  const ts=await one(head.db.from('timesheets').select('status,user_id,event_id').eq('id',submitted))
  assert.equal(ts.status,'submitted');assert.equal(ts.user_id,staff.id)
@@ -158,7 +164,7 @@ try{
  })
  assert.ifError(reviewed.error)
  assert.equal((await one(staff.db.from('timesheets').select('status').eq('id',submitted))).status,'rejected')
- const resubmitted=await one(staff.db.rpc('upt_submit_timesheet',{p_event:draft}))
+ const resubmitted=await scalar(staff.db.rpc('upt_submit_timesheet',{p_event:draft}))
  assert.equal(resubmitted,submitted)
  const approved=await head.db.rpc('upt_review_timesheet',{
   p_timesheet:submitted,p_approve:true,p_reason:null
