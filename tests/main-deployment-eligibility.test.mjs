@@ -15,6 +15,7 @@ assert.ok(run,'Deployment eligibility shell missing')
 const current='a'.repeat(40),older='b'.repeat(40)
 for(const scenario of [
  {name:'successful current push deploys',sha:current,result:'success',eligible:'true',exit:0},
+ {name:'successful current push with explicit QA marker deploys and enables isolated QA',sha:current,result:'success',eligible:'true',qa:'true',commitMessage:'test(main): authorized QA [main-qa-e2e]',exit:0},
  {name:'superseded success is skipped',sha:older,result:'success',eligible:'false',exit:0},
  {name:'superseded cancellation is skipped',sha:older,result:'cancelled',eligible:'false',exit:0},
  {name:'superseded failure is skipped',sha:older,result:'failure',eligible:'false',exit:0},
@@ -26,11 +27,12 @@ for(const scenario of [
 ])test('main eligibility: '+scenario.name,()=>{
  const dir=mkdtempSync(join(tmpdir(),'upt-main-eligibility-'))
  try{
-  writeFileSync(join(dir,'gh'),'#!/bin/bash\nprintf \'%s\\n\' "$CURRENT_MAIN_SHA"\n',{mode:0o700})
+  writeFileSync(join(dir,'gh'),'#!/bin/bash\nif [[ "$*" == *".commit.message"* ]]; then printf \'%s\n\' "$CURRENT_MAIN_COMMIT_MESSAGE"; else printf \'%s\n\' "$CURRENT_MAIN_SHA"; fi\n',{mode:0o700})
   const output=join(dir,'output')
-  const result=spawnSync('/bin/bash',['-euo','pipefail','-c',run],{encoding:'utf8',env:{...process.env,PATH:dir+':'+process.env.PATH,REPO:'test/repository',CURRENT_MAIN_SHA:current,SOURCE_SHA:scenario.sha,SOURCE_RESULT:scenario.result,SOURCE_EVENT:scenario.event??'push',SOURCE_BRANCH:scenario.branch??'main',GITHUB_OUTPUT:output}})
+  const result=spawnSync('/bin/bash',['-euo','pipefail','-c',run],{encoding:'utf8',env:{...process.env,PATH:dir+':'+process.env.PATH,REPO:'test/repository',CURRENT_MAIN_SHA:current,CURRENT_MAIN_COMMIT_MESSAGE:scenario.commitMessage??'',SOURCE_SHA:scenario.sha,SOURCE_RESULT:scenario.result,SOURCE_EVENT:scenario.event??'push',SOURCE_BRANCH:scenario.branch??'main',GITHUB_OUTPUT:output}})
   assert.ifError(result.error)
   assert.equal(result.status,scenario.exit,result.stdout+result.stderr)
-  assert.equal(readFileSync(output,'utf8').trim(),'eligible='+scenario.eligible)
+  const expected='eligible='+scenario.eligible+(scenario.eligible==='true'?'\nqa_eligible='+(scenario.qa??'false'):'')
+  assert.equal(readFileSync(output,'utf8').trim(),expected)
  }finally{rmSync(dir,{recursive:true,force:true})}
 })
