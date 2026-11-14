@@ -44,19 +44,25 @@ async function recordFailure(page,role,locale,viewport,step,error){
  console.error('FAIL '+JSON.stringify(issue))
 }
 async function goto(page,path){
- const response=await page.goto(url(path),{waitUntil:'domcontentloaded',timeout})
- await page.locator('body').waitFor({state:'visible',timeout:15000})
- await page.waitForTimeout(800)
+ // Main's Next/RSC pages stream data after the document has committed.
+ // Waiting for the entire browser load (or even DOMContentLoaded on a stalled
+ // streaming response) gives false failures despite an already navigated page.
+ const response=await page.goto(url(path),{waitUntil:'commit',timeout})
+ await page.locator('body').waitFor({state:'visible',timeout:30000})
  return response
 }
 function mark(role,locale,viewport,step,path){
  results.push({role,locale,viewport:viewport.width,step,path})
  console.log('PASS '+role+' '+locale+' '+viewport.width+' '+step+' '+path)
 }
-async function assertAllowed(page,path){
+async function assertAllowed(page,path,validPaths=[path]){
  const response=await goto(page,path)
  assert.ok(response&&response.status()<400,'HTTP error for '+path+': '+response?.status())
- assert.equal(new URL(page.url()).pathname,path,'Unexpected portal redirect')
+ // A rendered heading distinguishes the real page from a transient authenticated
+ // shell. A long-lived skeleton is a legitimate failed acceptance test.
+ await page.locator('h1,main h2').first().waitFor({state:'visible',timeout:30000})
+ const actual=new URL(page.url()).pathname
+ assert.ok(validPaths.includes(actual),'Unexpected portal redirect: '+path+' → '+actual)
  const content=(await page.locator('body').innerText()).trim()
  assert.ok(content.length>16,'Blank protected page')
  assert.doesNotMatch(content,/Application error: a server-side exception|The action could not be completed/i)
@@ -72,47 +78,60 @@ async function assertAllowed(page,path){
 async function assertDenied(page,path){
  const before=new URL(page.url()).pathname
  let response=null
- let interrupted=false
  let requested=false
+ let interrupted=false
+ let requestedHttpStatus=null
  const onRequest=request=>{
   if(!request.isNavigationRequest())return
   try{if(new URL(request.url()).pathname===path)requested=true}catch{}
  }
+ const onResponse=result=>{
+  if(result.request().isNavigationRequest()&&new URL(result.url()).pathname===path)
+   requestedHttpStatus=result.status()
+ }
  page.on('request',onRequest)
+ page.on('response',onResponse)
  try{
   try{
-   response=await page.goto(url(path),{waitUntil:'domcontentloaded',timeout})
+   response=await page.goto(url(path),{waitUntil:'commit',timeout})
   }catch(error){
    if(!/ERR_ABORTED|frame was detached|navigation interrupted/i.test(String(error)))throw error
    interrupted=true
   }
- }finally{page.off('request',onRequest)}
- const status=response?.status()||0
- if(status>=500)throw Error('Protected URL returned HTTP '+status+' instead of an authorization result: '+path)
+ }finally{
+  page.off('request',onRequest)
+  page.off('response',onResponse)
+ }
+ const status=requestedHttpStatus??response?.status()??0
+ if(status>=500)throw Error('Protected URL returned HTTP '+status+' rather than a denial for '+path)
  if([401,403,404].includes(status))return
- if(!requested&&!response)throw Error('Protected URL was never reached: '+path)
- // Wait for an explicit forbidden/404 document or a settled server redirect.
- // The temporary app shell is not sufficient authorization evidence.
- try{
-  await page.waitForFunction(expected=>{
-   if(window.location.pathname!==expected)return true
-   const heading=[...document.querySelectorAll('h1,h2,[role="alert"]')]
-    .map(node=>(node.textContent||'').trim().toLowerCase()).join(' ')
-   return /not found|niet gevonden|geen toegang|no access|accès refusé|kein zugang|unauthorized|forbidden|access denied|404/.test(heading)
-  },path,{timeout:25000})
- }catch{
-  throw Error('Authorization result never settled for '+path+'; current route: '+new URL(page.url()).pathname)
+ if(!requested&&!response)throw Error('Protected URL request was never observed: '+path)
+ // A 200 streaming shell is neither proof of privileged access nor denial.
+ // Prefer a committed redirect over race-prone page.waitForFunction during RSC.
+ if(new URL(page.url()).pathname===path){
+  try{
+   await page.waitForURL(target=>target.pathname!==path,{waitUntil:'commit',timeout:50000})
+  }catch{
+   // Explicit denial page on the original URL is also acceptable.
+   const headings=await page.locator('h1,h2,[role="alert"]').allTextContents().catch(()=>[])
+   if(!/not found|niet gevonden|geen toegang|no access|accès refusé|kein zugang|unauthorized|forbidden|access denied|404/i.test(headings.join(' ')))
+    throw Error('No settled authorization denial for '+path+'; browser remained on '+new URL(page.url()).pathname)
+  }
  }
  const actual=new URL(page.url()).pathname
- if(interrupted&&actual===before){
-  // The navigation may have been aborted before the browser ever left the
-  // original page; absence of privileged content does not prove a denial.
-  throw Error('Interrupted navigation returned to its original route without independently verified denial: '+path)
- }
  if(actual===path){
-  const heading=await page.locator('h1,h2,[role="alert"]').allTextContents()
-  assert.match(heading.join(' '),/not found|niet gevonden|geen toegang|no access|accès refusé|kein zugang|unauthorized|forbidden|access denied|404/i)
+  const headings=await page.locator('h1,h2,[role="alert"]').allTextContents()
+  assert.match(headings.join(' '),/not found|niet gevonden|geen toegang|no access|accès refusé|kein zugang|unauthorized|forbidden|access denied|404/i)
+  return
  }
+ // A lost login session is not a successful role isolation check.
+ if(actual==='/login'||actual.startsWith('/login/'))
+  throw Error('QA login session lost while checking forbidden route '+path)
+ // Explicitly enumerate the known safe destinations for server redirects.
+ assert.ok(['/','/events','/portals','/unauthorized'].includes(actual),
+  'Forbidden route redirected to an unexpected destination: '+path+' → '+actual)
+ if(interrupted&&actual===before&&!([301,302,303,307,308].includes(status)))
+  throw Error('Aborted navigation had no confirmed server redirect: '+path)
 }
 try{
  for(const [index,role] of roles.entries()){
@@ -131,7 +150,7 @@ try{
     await page.locator('#password').fill(password)
     try{
      await Promise.all([
-      page.waitForURL(target=>!target.pathname.startsWith('/login'),{timeout}),
+      page.waitForURL(target=>!target.pathname.startsWith('/login'),{waitUntil:'commit',timeout}),
       page.locator('button[type="submit"]').click(),
      ])
     }catch(error){
@@ -146,7 +165,10 @@ try{
     assert.equal(htmlLocale,locale,'App language mismatch')
     for(const path of role.allowed){
      try{
-      await assertAllowed(page,path)
+      // Without a live assignment, the Tasks route deliberately redirects
+      // ordinary Staff to Events. Test that exact documented fallback only.
+      const acceptedPaths=role.role==='staff'&&path==='/tasks'?['/tasks','/events']:[path]
+      await assertAllowed(page,path,acceptedPaths)
       mark(role.role,locale,viewport,'allowed',path)
      }catch(error){await recordFailure(page,role.role,locale,viewport,'allow-'+path,error)}
     }

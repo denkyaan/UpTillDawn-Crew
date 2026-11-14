@@ -66,3 +66,21 @@ test('explicit Main-only QA marker runs only after a successful fast CI and succ
  assert.match(workflow,/always\(\)/)
  assert.doesNotMatch(readFileSync('.github/workflows/fast-change-validation.yml','utf8'),/main-qa-e2e/)
 })
+
+test('live browser navigation waits for document commit rather than stalled full-page load',()=>{
+ assert.match(source,/page\.goto\(url\(path\),\{waitUntil:'commit',timeout\}\)/)
+ assert.match(source,/page\.waitForURL\(target=>!target\.pathname\.startsWith\('\/login'\),\{waitUntil:'commit',timeout\}\)/)
+ assert.match(source,/locator\('h1,main h2'\)/)
+})
+test('denials remain fail-closed and do not mistake RSC loading shell or lost session for unauthorized access',()=>{
+ assert.match(source,/page\.waitForURL\(target=>target\.pathname!==path,\{waitUntil:'commit',timeout:50000\}\)/)
+ assert.match(source,/QA login session lost/)
+ assert.match(source,/No settled authorization denial/)
+ assert.match(source,/Aborted navigation had no confirmed server redirect/)
+ assert.match(source,/status>=500/)
+})
+test('Staff task page explicitly permits the no-current-assignment redirect only to Events',()=>{
+ assert.match(source,/role\.role==='staff'&&path==='\/tasks'/)
+ assert.match(source,/\['\/tasks','\/events'\]/)
+ assert.doesNotMatch(source,/validPaths=\['\/tasks','\/events'\]/)
+})
