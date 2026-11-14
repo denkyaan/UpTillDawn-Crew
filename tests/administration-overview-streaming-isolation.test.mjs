@@ -17,13 +17,13 @@ test('primary Administration overview is a separate streamed, usable work pulse'
 
 test('20 secondary subtab queries have an 8s AbortSignal and an independent 10s hard stop',()=>{
  assert.match(extra,/const statusSignal=AbortSignal\.timeout\(8_000\)/)
- assert.match(extra,/new Promise<null>\(resolve=>\{statusTimer=setTimeout\(\(\)=>resolve\(null\),10_000\)\}\)/)
+ assert.match(extra,/const hardStopSignal=AbortSignal\.timeout\(10_000\)/)
+ assert.match(extra,/hardStopSignal\.addEventListener\("abort",\(\)=>resolve\(null\),\{once:true\}\)/)
  assert.match(extra,/Promise\.race\(\[/)
  assert.match(extra,/Promise\.all\(\[/)
  assert.equal((extra.match(/\.abortSignal\(statusSignal\)/g)||[]).length,20)
  assert.match(extra,/if\(!statuses\)return <section/)
  assert.match(extra,/data-administration-status-unavailable="true"/)
- assert.match(extra,/clearTimeout\(statusTimer\)/)
 })
 
 test('secondary status timeout never renders fabricated zero/connected status',()=>{

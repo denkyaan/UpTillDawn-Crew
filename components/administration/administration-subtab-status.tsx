@@ -43,8 +43,11 @@ export async function AdministrationSubtabStatus({locale}:{locale:SupportedUiLoc
  const statusSignal=AbortSignal.timeout(8_000)
  // Unlike an AbortSignal alone, a hard stop also covers an adapter that never
  // settles after abort. Any unknown metrics remain explicitly unavailable.
- let statusTimer:ReturnType<typeof setTimeout>|undefined
- const timedOut=new Promise<null>(resolve=>{statusTimer=setTimeout(()=>resolve(null),10_000)})
+ const hardStopSignal=AbortSignal.timeout(10_000)
+ const timedOut=new Promise<null>(resolve=>{
+  if(hardStopSignal.aborted){resolve(null);return}
+  hardStopSignal.addEventListener("abort",()=>resolve(null),{once:true})
+ })
  const statuses=await Promise.race([
   Promise.all([
   db.from("admin_artist_bookings").select("id",{count:"exact",head:true}).abortSignal(statusSignal),
@@ -70,7 +73,6 @@ export async function AdministrationSubtabStatus({locale}:{locale:SupportedUiLoc
   ]).catch(()=>null),
   timedOut
  ])
- if(statusTimer)clearTimeout(statusTimer)
  if(!statuses)return <section aria-label={t.headline} role="status" data-administration-status-unavailable="true" className="rounded-2xl border border-amber-600/40 p-4 text-sm text-muted-foreground">
   <h2 className="font-bold">{t.headline}</h2><p className="mt-1">{t.unavailable}</p>
  </section>

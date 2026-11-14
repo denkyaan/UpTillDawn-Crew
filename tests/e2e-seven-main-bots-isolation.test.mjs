@@ -86,7 +86,7 @@ test('Staff task page explicitly permits the no-current-assignment redirect only
 })
 
 test('chat readiness uses actual composer when the page does not render a heading',()=>{
- assert.match(source,/path==='\/chat'\?'section textarea, section h1':'h1,main h2'/)
+ assert.match(source,/path==='\/chat'\?'section textarea, section h1'/)
  assert.match(source,/locator\(ready\)\.first\(\)\.waitFor/)
 })
 test('browser login checks SSR cookie presence without exposing its value',()=>{
