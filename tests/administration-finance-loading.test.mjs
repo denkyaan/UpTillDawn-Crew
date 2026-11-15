@@ -5,6 +5,7 @@ import {createRequire} from 'node:module'
 import {runInNewContext} from 'node:vm'
 import ts from 'typescript'
 import {peppolFieldLabels,localeIndex} from '../lib/administration/peppol-copy.ts'
+import {boundedQueries} from '../lib/administration/bounded-queries.ts'
 
 const require=createRequire(import.meta.url)
 const source=readFileSync('app/(app)/portals/administration/finance/page.tsx','utf8')
@@ -15,7 +16,7 @@ function financePage(db){
  const exported={}
  const actions=Object.fromEntries([...source.matchAll(/async function (\w+)\(/g)].map(match=>[match[1],()=>null]))
  runInNewContext(compiled,{
-  ...actions,exports:exported,require,
+  ...actions,exports:exported,require,boundedQueries,
   requireAdministration:async()=>({supabase:db,isAdmin:true}),requestUiLocale:async()=> 'en',
   Link:()=>null,PeppolDocumentFields:()=>null,InvoiceLineCsvImport:()=>null,CloudmersiveOcrPreview:()=>null,LocalDocumentOcrPreview:()=>null,BillingAddressFields:()=>null,peppolFieldLabels,localeIndex,
  })
@@ -31,16 +32,21 @@ function query(result,onStart){
  return builder
 }
 
-test('finance loads independent lists concurrently and waits for documents before requesting balances',async()=>{
+test('finance limits register reads to three simultaneous queries and waits for documents before requesting balances',async()=>{
  const required=new Set(['admin_financial_documents','admin_counterparties','events','admin_financial_payments','admin_payment_reminders','admin_financial_lines','admin_financial_attachments','upt_administration_finance_summary'])
- const started=new Set(),pending=[]
- let documentsReturned=false,balanceRequested=false
+ const started=new Set()
+ let active=0,peak=0,documentsReturned=false,balanceRequested=false
  function load(name){
   const result={data:name==='upt_administration_finance_summary'?summary:[],error:null}
   return query(result,resolve=>{
    started.add(name)
-   pending.push(()=>{if(name==='admin_financial_documents')documentsReturned=true;resolve(result)})
-   if([...required].every(value=>started.has(value)))pending.splice(0).forEach(resolve=>resolve())
+   active++
+   peak=Math.max(peak,active)
+   setTimeout(()=>{
+    if(name==='admin_financial_documents')documentsReturned=true
+    active--
+    resolve(result)
+   },8)
   })
  }
  const db={from:load,rpc:(name,args)=>{
@@ -53,14 +59,11 @@ test('finance loads independent lists concurrently and waits for documents befor
   return load(name)
  }}
  const page=financePage(db)
- let timer
- const result=await Promise.race([
-  page({searchParams:Promise.resolve({})}).then(tree=>({tree})),
-  new Promise(resolve=>{timer=setTimeout(()=>resolve({timeout:true}),500)}),
- ])
- clearTimeout(timer)
- assert.ok(!result.timeout,'Independent finance requests were serialized; started only: '+[...started].join(', '))
- assert.ok(result.tree)
+ const result=await page({searchParams:Promise.resolve({})})
+ assert.ok(result,'Finance page did not render')
+ assert.deepEqual([...started].sort(),[...required].sort(),'Some financial registers were not queried')
+ assert.equal(peak,3,'Finance reads must use at most three concurrent PostgREST requests')
+ assert.equal(active,0,'Finance queries were still in flight after render')
  assert.equal(balanceRequested,true)
 })
 

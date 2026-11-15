@@ -32,7 +32,9 @@ test('Browser QA is explicitly restricted to exact Main and secret, cannot run a
 })
 test('Browser QA is manually opted-in, separated from fast Main CI and production deployment',()=>{
  assert.match(workflow,/qa-main-browser-acceptance:/)
- assert.match(workflow,/needs: \[provision-qa-bots, validate-trigger, deploy\]/)
+ assert.ok(workflow.includes('needs: [provision-qa-bots, validate-trigger, deploy, qa-main-functional-acceptance]'))
+ assert.ok(workflow.includes('needs: [validate-trigger, deploy]'))
+ assert.ok(workflow.includes('always() && ('))
  assert.match(workflow,/inputs\.provision_qa_bots == true/)
  assert.match(workflow,/secrets\.MAIN_QA_BOT_PASSWORD/)
  assert.match(workflow,/node scripts\/e2e-seven-main-bots\.mjs/)
