@@ -27,7 +27,14 @@ test('maker bypass is resolved before ordinary account block gates on server and
     read('lib/providers.tsx'),
   ])
 
-  assert.ok(auth.includes("const { data: ownerFlag } = await supabase.rpc('upt_current_is_owner')"))
+  // Owner/profile lookups may run concurrently after verified claims, but both
+  // must settle before the account-block gate. A transient owner RPC failure
+  // must never turn a Maker into an ordinary blocked staff identity.
+  assert.match(auth,/supabase\.rpc\('upt_current_is_owner'\)/)
+  const resolveOwner=auth.indexOf("const [{ data: profileRows, error }, { data: ownerFlag, error: ownerError }] = await Promise.all([")
+  const checkOwnerError=auth.indexOf("if (error || !profile || ownerError) return null",resolveOwner)
+  const accountBlock=auth.indexOf("if (profile.account_blocked && !isOwner) return null",resolveOwner)
+  assert.ok(resolveOwner>0&&checkOwnerError>resolveOwner&&accountBlock>checkOwnerError)
   assert.match(auth,/if \(profile\.account_blocked && !isOwner\) return null/)
 
   assert.match(providers,/if\(ownerError\)/)
