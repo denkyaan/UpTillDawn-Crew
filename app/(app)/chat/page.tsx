@@ -3,6 +3,8 @@ import { ChatClient } from '@/components/crew/chat-client'
 import { PromotionPrivateChatStarter } from '@/components/promotion/promotion-private-chat-starter'
 import { requestUiLocale } from '@/lib/server-locale'
 import { getCurrentUser } from '@/lib/actions/auth'
+import { boundedQueries } from '@/lib/administration/bounded-queries'
+import { signedDirectoryPhotoUrls } from '@/lib/crew/signed-directory-photo-urls'
 
 export const dynamic='force-dynamic'
 
@@ -10,14 +12,14 @@ export default async function Page({searchParams,promotionOnly=false}:{searchPar
   const params=searchParams?await searchParams:{}
   const s=await createClient();const current=await getCurrentUser();if(!current)return null
   const user={id:current.id}
-  const [{data:channels,error},{data:directory},{data:privatePeers},{data:channelSummaries},{data:activeEvents},{data:chatEvents}]=await Promise.all([
+  const [{data:channels,error},{data:directory},{data:privatePeers},{data:channelSummaries},{data:activeEvents},{data:chatEvents}]=await boundedQueries([
     s.from('chat_channels').select('*').in('kind',['organization','event','workplace','private']).order('created_at'),
     s.rpc('upt_crew_directory'),
     s.rpc('upt_private_chat_peers'),
     s.rpc('upt_chat_channel_summaries'),
     s.from('events').select('id,start_at,end_at').neq('status','archived').lte('start_at','now').gte('end_at','now').order('start_at'),
     s.from('events').select('id,start_at,end_at,status,image_url').order('start_at'),
-  ])
+  ],3)
 
   const promotionDirectory=promotionOnly?await s.rpc('upt_promotion_directory'):null
   // The private-chat UI in Promotion shows only peers granted to that portal.
@@ -25,11 +27,13 @@ export default async function Page({searchParams,promotionOnly=false}:{searchPar
   const eligiblePromotionIds=new Set((promotionDirectory?.data??[]).filter(person=>person.portal_label==='promotion').map(person=>person.id))
   const privatePeerRows=(privatePeers||[]).filter(peer=>!promotionOnly||eligiblePromotionIds.has(peer.user_id))
   const chatDirectory=promotionOnly?(promotionDirectory?.data??[]).filter(person=>person.portal_label==='promotion').map(person=>({id:person.id,full_name:person.full_name,phone_number:'',profile_photo_url:person.profile_photo_url})):directory||[]
-  const profilePhotoUrls:Record<string,string>={}
-  await Promise.all(chatDirectory.filter(member=>member.profile_photo_url).map(async member=>{
-    const {data:signed}=await s.storage.from('profile-photos').createSignedUrl(member.profile_photo_url!,3600)
-    if(signed?.signedUrl)profilePhotoUrls[member.id]=signed.signedUrl
-  }))
+  // Batch private signed photo URLs. A separate storage request for every
+  // member exhausts the 50-subrequest budget of Cloudflare Workers Free.
+  // Storage RLS still approves each path; failed paths remain hidden.
+  const profilePhotoUrls=await signedDirectoryPhotoUrls(
+    chatDirectory,
+    (paths,expiresIn)=>s.storage.from('profile-photos').createSignedUrls(paths,expiresIn),
+  )
 
   // chat_channels is already protected by upt_can_read_channel RLS. Do not apply a
   // second assignment policy in the UI: that can only hide channels the database

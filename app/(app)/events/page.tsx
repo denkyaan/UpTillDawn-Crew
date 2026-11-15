@@ -10,6 +10,7 @@ import { EmergencyInformationPanel } from '@/components/crew/emergency-informati
 import { EventDocumentsPanel } from '@/components/crew/event-documents-panel'
 import { nlStatus } from '@/lib/ui-nl'
 import { createClient } from '@/lib/supabase/crew-server'
+import { boundedQueries } from '@/lib/administration/bounded-queries'
 import { getCurrentUser } from '@/lib/actions/auth'
 import { applyEventTemplate, captureEventTemplate } from '@/lib/actions/events'
 import {
@@ -30,7 +31,7 @@ export default async function Page({searchParams}:{searchParams?:Promise<{event?
   const user=await getCurrentUser()
   if(!user)return null
 
-  const [eventsResult,membershipResult,shiftResult,startedResult,availabilityResult,responsibleResult,emergencyResult]=await Promise.all([
+  const [eventsResult,membershipResult,shiftResult,startedResult,availabilityResult,responsibleResult,emergencyResult]=await boundedQueries([
     s.from('events').select('id,name,venue,address,start_at,end_at,registration_deadline,max_joiners,status,latitude,longitude,checkin_radius_m,archived_at,archived_by,archive_reason,restored_at,restored_by,pre_archive_status').order('start_at'),
     s.from('event_members').select('event_id,user_id'),
     s.from('shifts').select('event_id,workplace_id,workplaces(name)').eq('user_id',user.id).neq('status','cancelled').neq('response_status','declined'),
@@ -38,7 +39,7 @@ export default async function Page({searchParams}:{searchParams?:Promise<{event?
     s.from('event_availability').select('event_id,user_id,response,setup_available,breakdown_available,updated_at,queue_joined_at'),
     s.from('responsible_assignments').select('event_id,workplace_id,workplaces(name,is_active)').eq('user_id',user.id),
     s.from('event_emergency_information').select('*'),
-  ])
+  ],3)
   const templateResult=user.isAdmin
     ? await s.from('event_templates').select('id,name,sections,source_event_id,created_at').order('updated_at',{ascending:false})
     : {data:[],error:null}
@@ -77,6 +78,33 @@ export default async function Page({searchParams}:{searchParams?:Promise<{event?
       })
   const visibleEvents=[...baseVisibleEvents].sort((a,b)=>Number(b.id===params.event)-Number(a.id===params.event)||Date.parse(a.start_at)-Date.parse(b.start_at))
   const memberKeys=new Set(memberships.map(row=>`${row.event_id}:${row.user_id}`))
+  // Pre-index for linear SSR preparation, rather than scanning the entire
+  // personnel/availability/shifts lists once per rendered event.
+  const confirmedCounts=new Map<string,number>()
+  for(const member of memberships)confirmedCounts.set(member.event_id,(confirmedCounts.get(member.event_id)||0)+1)
+  const availabilityByEvent=new Map<string,typeof availability>()
+  const ownAvailabilityByEvent=new Map<string,(typeof availability)[number]>()
+  for(const item of availability){
+    const rows=availabilityByEvent.get(item.event_id)||[]
+    rows.push(item)
+    availabilityByEvent.set(item.event_id,rows)
+    if(item.user_id===user.id)ownAvailabilityByEvent.set(item.event_id,item)
+  }
+  const workplacesByEvent=new Map<string,typeof workplaces>()
+  for(const workplace of workplaces){
+    if(!workplace.is_active)continue
+    const rows=workplacesByEvent.get(workplace.event_id)||[]
+    rows.push(workplace)
+    workplacesByEvent.set(workplace.event_id,rows)
+  }
+  const adminShiftsByEventAndUser=new Map<string,typeof adminShifts>()
+  for(const shift of adminShifts){
+    if(shift.status==='cancelled')continue
+    const key=`${shift.event_id}:${shift.user_id}`
+    const rows=adminShiftsByEventAndUser.get(key)||[]
+    rows.push(shift)
+    adminShiftsByEventAndUser.set(key,rows)
+  }
   const peopleById=new Map(people.map(person=>[person.id,person]))
   const emergencyByEvent=new Map((emergencyResult.data||[]).map(row=>[row.event_id,row]))
 
@@ -143,19 +171,19 @@ export default async function Page({searchParams}:{searchParams?:Promise<{event?
       const ended=nowMs>Date.parse(event.end_at)
       const registrationDeadline=event.registration_deadline||event.start_at
       const registrationOpen=event.status!=='archived'&&nowMs<Date.parse(registrationDeadline)
-      const confirmedCount=memberships.filter(row=>row.event_id===event.id).length
+      const confirmedCount=confirmedCounts.get(event.id)||0
       const capacityFull=event.max_joiners!==null&&confirmedCount>=event.max_joiners
-      const myAvailability=availability.find(row=>row.event_id===event.id&&row.user_id===user.id)
+      const myAvailability=ownAvailabilityByEvent.get(event.id)
       const myResponse=myAvailability?.response
-      const eventWorkplaces=user.isAdmin?workplaces.filter(workplace=>workplace.event_id===event.id&&workplace.is_active):[]
+      const eventWorkplaces=user.isAdmin?workplacesByEvent.get(event.id)||[]:[]
       const preferenceName=(userId:string)=>{
         const preferred=peopleById.get(userId)?.preferred_workplace_id
         if(!preferred)return 'Geen voorkeur'
         return eventWorkplaces.find(workplace=>workplace.catalog_workplace_id===preferred)?.name||'Andere voorkeur'
       }
       const canRows=user.isAdmin
-        ? availability
-            .filter(row=>row.event_id===event.id&&(row.response==='can'||row.setup_available===true||row.breakdown_available===true))
+        ? (availabilityByEvent.get(event.id)||[])
+            .filter(row=>row.response==='can'||row.setup_available===true||row.breakdown_available===true)
             .sort((a,b)=>{
               const aMember=memberKeys.has(`${event.id}:${a.user_id}`)
               const bMember=memberKeys.has(`${event.id}:${b.user_id}`)
@@ -307,7 +335,7 @@ export default async function Page({searchParams}:{searchParams?:Promise<{event?
                     const waitlistPosition=!alreadyAdded&&row.response==='can'
                       ? waitingRows.findIndex(candidate=>candidate.user_id===row.user_id)+1
                       : 0
-                    const existingShifts=adminShifts.filter(shift=>shift.event_id===event.id&&shift.user_id===row.user_id&&shift.status!=='cancelled')
+                    const existingShifts=adminShiftsByEventAndUser.get(`${event.id}:${row.user_id}`)||[]
                     return <article key={row.user_id} className="rounded-xl border p-3">
                       <div className="flex flex-wrap items-center justify-between gap-2">
                         <div>
