@@ -94,6 +94,62 @@ jobs:
           } >> "$GITHUB_STEP_SUMMARY"
       - name: Production dependency security gate
         run: npm audit --omit=dev --audit-level=high
+      # Branch-scoped vinext candidate verification. This is part of CI main,
+      # not a sixth workflow; it cannot deploy to Main or Production.
+      - name: Compile vinext candidate against isolated Main QA configuration (no deployment)
+        if: ${{ github.event_name == 'pull_request' && github.head_ref == 'feature/vinext-auth-parity-free-20261115' }}
+        timeout-minutes: 8
+        env:
+          NEXT_PUBLIC_SUPABASE_URL: https://npbjrtiolqperdgljnhi.supabase.co
+          NEXT_PUBLIC_SUPABASE_ANON_KEY: sb_publishable_zStTw3n8wZ271PehDRDvGg_rs0JOy84
+          NEXT_PUBLIC_APP_URL: http://127.0.0.1:8788
+        shell: bash
+        run: |
+          set -euo pipefail
+          # vinext init changes only this ephemeral CI checkout, not git files.
+          npx --yes vinext@1.4.5 init --platform=cloudflare --cdn-cache=none --data-cache=none --image-optimization=none --no-prerender --ignore-wrangler-config
+          node scripts/prepare-local-ocr.mjs
+          npm run build:vinext
+
+      - name: Exercise all seven QA role logins against vinext local preview (no deployment)
+        if: ${{ github.event_name == 'pull_request' && github.head_ref == 'feature/vinext-auth-parity-free-20261115' }}
+        timeout-minutes: 7
+        env:
+          VINEXT_AUTH_POC_BASE_URL: http://127.0.0.1:8788
+          MAIN_QA_BOT_PASSWORD: ${{ secrets.MAIN_QA_BOT_PASSWORD }}
+          NEXT_PUBLIC_SUPABASE_URL: https://npbjrtiolqperdgljnhi.supabase.co
+          NEXT_PUBLIC_SUPABASE_ANON_KEY: sb_publishable_zStTw3n8wZ271PehDRDvGg_rs0JOy84
+          NEXT_PUBLIC_APP_URL: http://127.0.0.1:8788
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [ -z "${MAIN_QA_BOT_PASSWORD:-}" ]; then
+            echo "::error::Missing isolated Main QA password; refusing to treat skipped login checks as a pass"
+            exit 1
+          fi
+          npx playwright install --with-deps chromium
+          npm run start:vinext -- --host 127.0.0.1 --port 8788 >/tmp/vinext-auth-preview.log 2>&1 &
+          preview_pid=$!
+          trap 'kill "$preview_pid" 2>/dev/null || true' EXIT
+          ready=0
+          for attempt in $(seq 1 40); do
+            if ! kill -0 "$preview_pid" 2>/dev/null; then
+              echo "::error::vinext preview process exited prematurely"
+              tail -40 /tmp/vinext-auth-preview.log
+              exit 1
+            fi
+            code="$(curl -sS --max-time 3 -o /dev/null -w '%{http_code}' http://127.0.0.1:8788/login/staff || true)"
+            if [ "$code" = '200' ]; then ready=1; break; fi
+            sleep 2
+          done
+          if [ "$ready" != 1 ]; then
+            echo "::error::vinext preview did not become ready"
+            tail -50 /tmp/vinext-auth-preview.log
+            exit 1
+          fi
+          node scripts/vinext-main-auth-smoke.mjs
+          echo 'vinext local seven-role authorization and browser smoke passed; Cloudflare CPU still unverified'
+
   release-production:
     needs: fast
     # Only a manual, explicit release input may dispatch full CI production.
