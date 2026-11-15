@@ -1,6 +1,6 @@
 /**
  * Publish ONLY Next.js build-time, anonymous login pages as Cloudflare Assets.
- * Authenticated pages and admin login remain dynamic, behind their existing
+ * Authenticated pages remain dynamic, behind their existing
  * authorization. Static HTML is copied only when Next's prerender manifest
  * proves the exact route is generated at build time.
  *
@@ -12,7 +12,7 @@ import path from 'node:path'
 import {pathToFileURL} from 'node:url'
 import nextConfig from '../next.config.mjs'
 
-export const PUBLIC_LOGIN_ROUTES=['/login/staff','/login/responsible','/login/promotion','/login/administration']
+export const PUBLIC_LOGIN_ROUTES=['/login/staff','/login/responsible','/login/promotion','/login/administration','/login/admin']
 
 function collectHtml(directory){
  if(!existsSync(directory))throw Error('Next server build output missing: '+directory)
@@ -73,7 +73,7 @@ export async function publishLoginAssets({nextRoot='.next',assetRoot='.open-next
   for(const header of ruleHeaders)existing+='  '+header.key+': '+header.value+'\n'
  }
  writeFileSync(headerPath,existing)
- console.log('Published '+prepared.length+' anonymous Main login assets; role/auth checks and POST Server Actions are unchanged')
+ console.log('Published '+prepared.length+' anonymous Main login assets; existing authorization remains server-side in the POST handler')
  for(const item of prepared)console.log('Static Main login '+item.route+': '+item.bytes+' bytes')
  return prepared
 }

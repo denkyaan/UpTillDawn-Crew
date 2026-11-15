@@ -9,7 +9,7 @@ test('public static login fetches same-origin POST API rather than Server Action
  assert.match(src,/method:'POST'/)
  assert.match(src,/credentials:'same-origin'/)
  assert.match(src,/body:formData/)
- assert.match(src,/portal === "admin" \? await signIn\(formData\) : await signInFromStaticShell\(formData\)/)
+ assert.doesNotMatch(src,/await signIn\(formData\)/)
  assert.match(src,/method="post"/)
  assert.match(src,/data-login-hydrated=\{hydrated \? "true" : "false"\}/)
 })
@@ -20,7 +20,7 @@ test('API authenticates only real same-origin form POSTs and reuses established 
  assert.match(api,/fetchSite!=='same-origin'/)
  assert.match(api,/startsWith\('multipart\/form-data;'\)/)
  assert.match(api,/length>16_384/)
- assert.match(api,/\['staff','responsible','promotion','administration'\]/)
+ assert.match(api,/\['staff','responsible','promotion','administration','admin'\]/)
  assert.match(api,/await signIn\(form\)/)
  // Guard against actual code calling privileged APIs, not against comments
  // explaining why those APIs are intentionally absent.

@@ -362,7 +362,7 @@ jobs:
           set -euo pipefail
           # Cloudflare deployments can propagate across edge POPs after
           # wrangler reports success. Retry boundedly, then fail closed.
-          for portal in staff responsible promotion administration; do
+          for portal in staff responsible promotion administration admin; do
             verified=0
             headers=''
             for attempt in 1 2 3 4 5 6; do

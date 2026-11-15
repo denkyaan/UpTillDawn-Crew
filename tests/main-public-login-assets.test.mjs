@@ -19,13 +19,13 @@ test('Main publishes only verified SSG public login shells as direct assets, wit
   }
   writeFileSync(path.join(nextRoot,'prerender-manifest.json'),JSON.stringify({routes}))
   const result=await publishLoginAssets({nextRoot,assetRoot})
-  assert.equal(result.length,4)
+  assert.equal(result.length,5)
   for(const route of PUBLIC_LOGIN_ROUTES){
    const name=path.join(assetRoot,route.slice(1),'index.html')
    assert.ok(existsSync(name),route)
    assert.ok(readFileSync(name,'utf8').includes('value="'+route.split('/')[2]+'"'))
   }
-  assert.ok(!existsSync(path.join(assetRoot,'login','admin.html')))
+  assert.ok(existsSync(path.join(assetRoot,'login','admin','index.html')))
   assert.ok(!existsSync(path.join(assetRoot,'admin.html')))
   assert.ok(!existsSync(path.join(assetRoot,'events.html')))
   const headers=readFileSync(path.join(assetRoot,'_headers'),'utf8')
@@ -59,7 +59,7 @@ test('only Deploy main publishes static login assets, no new workflows or produc
  const loginForm=readFileSync('components/auth/login-form.tsx','utf8')
  const loginRoute=readFileSync('app/api/auth/portal-login/route.ts','utf8')
  assert.match(loginForm,/signInFromStaticShell\(formData\)/)
- assert.match(loginForm,/portal === "admin" \? await signIn\(formData\)/)
+ assert.doesNotMatch(loginForm,/await signIn\(formData\)/)
  assert.match(loginRoute,/await signIn\(form\)/)
  assert.match(loginRoute,/origin!==expected/)
  const wrangler=JSON.parse(readFileSync('wrangler.main.jsonc','utf8'))

@@ -29,7 +29,7 @@ export async function POST(request:NextRequest){
  try{
   const form=await request.formData()
   const portal=String(form.get('portal')??'')
-  if(!['staff','responsible','promotion','administration'].includes(portal))
+  if(!['staff','responsible','promotion','administration','admin'].includes(portal))
    return reject(403,'invalid_portal')
   const username=String(form.get('email')??'')
   const password=String(form.get('password')??'')
