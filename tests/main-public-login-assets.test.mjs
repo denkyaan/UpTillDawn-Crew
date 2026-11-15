@@ -19,13 +19,13 @@ test('Main publishes only verified SSG public login shells as direct assets, wit
   }
   writeFileSync(path.join(nextRoot,'prerender-manifest.json'),JSON.stringify({routes}))
   const result=await publishLoginAssets({nextRoot,assetRoot})
-  assert.equal(result.length,4)
+  assert.equal(result.length,5)
   for(const route of PUBLIC_LOGIN_ROUTES){
    const name=path.join(assetRoot,route.slice(1),'index.html')
    assert.ok(existsSync(name),route)
    assert.ok(readFileSync(name,'utf8').includes('value="'+route.split('/')[2]+'"'))
   }
-  assert.ok(!existsSync(path.join(assetRoot,'login','admin.html')))
+  assert.ok(existsSync(path.join(assetRoot,'login','admin','index.html')))
   assert.ok(!existsSync(path.join(assetRoot,'admin.html')))
   assert.ok(!existsSync(path.join(assetRoot,'events.html')))
   const headers=readFileSync(path.join(assetRoot,'_headers'),'utf8')
