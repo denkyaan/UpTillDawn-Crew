@@ -177,7 +177,7 @@ export async function AdministrationOverviewDashboard({locale}:{locale:Supported
   <Suspense fallback={<section aria-label={w.operations} data-administration-status-loading="true" role="status" className="rounded-2xl border bg-card p-4 text-sm text-muted-foreground">
    {({nl:"Aanvullende onderdeelstatussen laden…",fr:"Chargement des statuts complémentaires…",en:"Loading additional section statuses…",de:"Weitere Bereichsstatus werden geladen…"} as const)[locale]}
   </section>}>
-   <AdministrationSubtabStatus locale={locale}/>
+   <AdministrationSubtabStatus locale={locale} admin={Boolean(current?.realIsAdmin||current?.isOwner)}/>
   </Suspense>
  </main>
 }
