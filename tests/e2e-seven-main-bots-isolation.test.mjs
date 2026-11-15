@@ -133,7 +133,8 @@ test('Main login QA observes real login errors and retries only unexpected Serve
  assert.match(source,/QA_RETRY_TRANSIENT_LOGIN/)
  assert.match(source,/QA_RECOVERED_TRANSIENT_LOGIN/)
  const form=readFileSync('components/auth/login-form.tsx','utf8')
- assert.match(form,/role="alert" data-login-error-code=\{errorCode \|\| "login_error"\}/)
+ assert.match(form,/role="alert" data-login-error-code=\{displayedCode \|\| "login_error"\}/)
+ assert.match(form,/const displayedCode = error \? errorCode : displayedError \? "initial_login_error" : null/)
  assert.match(form,/setErrorCode\("unexpected_action_failure"\)/)
 })
 
