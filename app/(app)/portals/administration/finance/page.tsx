@@ -9,6 +9,7 @@ import { randomUUID } from 'node:crypto'
 import { validateUploadSecurity, safeUploadName } from '@/lib/upload-security'
 import { financialAttachmentPayload } from '@/lib/administration/financial-attachment-integrity'
 import Link from 'next/link'
+import {boundedQueries} from '@/lib/administration/bounded-queries'
 import { revalidatePath } from 'next/cache'
 import { redirect } from 'next/navigation'
 import { getCurrentUser } from '@/lib/actions/auth'
@@ -565,9 +566,10 @@ export default async function FinancePage({searchParams}:{searchParams:Promise<{
  const locale = await requestUiLocale()
  const t = copy[locale]
  const params = await searchParams
- // These reads have no data dependency. Serial requests add a round trip for
- // every register and can leave mobile users in the page skeleton for too long.
- const [{data:documents,error},{data:counterparties},{data:financeEvents},{data:paymentRows},{data:reminderRows},{data:lines},{data:attachments},ledgerSummary]=await Promise.all([
+ // These independent finance reads use a budget of three simultaneous requests.
+ // Avoid both serial skeleton delays and a burst of eight concurrent requests
+ // that can exhaust the shared Main Cloudflare Worker under QA load.
+ const [{data:documents,error},{data:counterparties},{data:financeEvents},{data:paymentRows},{data:reminderRows},{data:lines},{data:attachments},ledgerSummary]=await boundedQueries([
   supabase.from('admin_financial_documents')
    .select('id,kind,document_number,net_amount,tax_amount,gross_amount,currency,status,created_at,original_invoice_id,due_date,issue_date,counterparty_id,notes,buyer_reference,order_reference,delivery_date,delivery_country')
    .order('created_at',{ascending:false}).limit(100),
@@ -578,7 +580,7 @@ export default async function FinancePage({searchParams}:{searchParams:Promise<{
   supabase.from('admin_financial_lines').select('id,document_id,description,quantity,unit_price,vat_rate,unit_code,vat_category,vat_exemption_reason').order('created_at',{ascending:true}).limit(500),
   (supabase as unknown as SupabaseClient).from('admin_financial_attachments').select('id,document_id,storage_path,original_name,sha256,created_at').order('created_at',{ascending:false}).limit(200),
   (supabase as unknown as SupabaseClient).rpc('upt_administration_finance_summary'),
- ])
+ ],3)
  // RLS exposes only registered finance scan status to authorized staff.
  // A missing scanner or failed lookup must never render a download link.
  const storedPaths=(attachments??[]).map(a=>a.storage_path as string)

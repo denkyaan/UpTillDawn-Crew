@@ -1,5 +1,6 @@
 import Link from "next/link"
 import {Suspense} from "react"
+import {boundedQueries} from "@/lib/administration/bounded-queries"
 import {AdministrationSubtabStatus} from "@/components/administration/administration-subtab-status"
 import {ChevronRight} from "lucide-react"
 import type {SupabaseClient} from "@supabase/supabase-js"
@@ -21,12 +22,12 @@ export async function AdministrationOverviewDashboard({locale}:{locale:Supported
  const db=await createClient()
  const current=await getCurrentUser()
  const now=new Date().toISOString()
- // This pulse contains nine independent PostgREST requests. Without a shared
- // deadline, one stalled query keeps the entire SSR route on its skeleton.
+ // Bound the nine independent PostgREST reads to three simultaneous requests.
+ // Without a shared deadline, one stalled query keeps the SSR skeleton visible.
  // PostgREST turns an aborted request into a non-null .error; the existing
  // hasDataError/priority rendering then shows "status unavailable", never 0.
  const overviewSignal=AbortSignal.timeout(12_000)
- const [hours,inventory,contracts,financial,rosters,notifications,events,draftDocuments,automationRuns]=await Promise.all([
+ const [hours,inventory,contracts,financial,rosters,notifications,events,draftDocuments,automationRuns]=await boundedQueries([
   db.from("timesheets").select("id,event_id,user_id,submitted_at",{count:"exact"}).eq("status","submitted").order("submitted_at",{ascending:false}).limit(5).abortSignal(overviewSignal),
   db.from("inventory_items").select("id,name,missing_quantity,damaged_quantity",{count:"exact"}).or("missing_quantity.gt.0,damaged_quantity.gt.0").order("name").limit(5).abortSignal(overviewSignal),
   db.from("admin_artist_bookings").select("id,artist_name,status,follow_up_at",{count:"exact"}).in("status",["enquiry","negotiating"]).order("created_at",{ascending:false}).limit(5).abortSignal(overviewSignal),
@@ -36,7 +37,7 @@ export async function AdministrationOverviewDashboard({locale}:{locale:Supported
   db.from("events").select("id,name,start_at,status",{count:"exact"}).neq("status","archived").gte("end_at",now).order("start_at").limit(5).abortSignal(overviewSignal),
   db.from("admin_financial_documents").select("id",{count:"exact",head:true}).eq("status","draft").abortSignal(overviewSignal),
   (db as unknown as SupabaseClient).from("admin_automation_runs").select("completed_at,error_code,delivered").order("completed_at",{ascending:false}).limit(1).abortSignal(overviewSignal)
- ])
+ ],3)
  const labels=!hours.error&&hours.data?.length
   ?await db.rpc("upt_administration_timesheet_labels",{p_timesheet_ids:hours.data.map(row=>row.id)}).abortSignal(overviewSignal)
   :null

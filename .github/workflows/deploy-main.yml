@@ -55,10 +55,13 @@ jobs:
         run: node scripts/provision-seven-main-bots.mjs --verify --verify-passwords
 
   qa-main-browser-acceptance:
+    # Do not overlap heavy browser navigation with transactional functional QA:
+    # both drive the same resource-limited Main Worker. The existing always()
+    # gate still runs browser QA if functional QA failed; verdicts stay independent.
     # Isolated, read-only browser QA: either explicitly requested by a manual
     # provisioning dispatch, or a Main commit bearing the opt-in marker after
     # its fast CI and actual Main deployment both succeed. NEVER production.
-    needs: [provision-qa-bots, validate-trigger, deploy]
+    needs: [provision-qa-bots, validate-trigger, deploy, qa-main-functional-acceptance]
     if: >-
       always() && (
         (github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main' &&
