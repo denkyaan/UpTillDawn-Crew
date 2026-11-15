@@ -2,6 +2,9 @@ export type ExtraCatalogLocale = 'nl' | 'fr' | 'en' | 'de'
 type Row = { fr:string; en:string; de:string }
 
 export const APP_EXTRA_TRANSLATIONS: Record<string,Row> = {
+  "Personnel":{fr:"Personnel",en:"Staff",de:"Personal"},
+  "Staff":{fr:"Personnel",en:"Staff",de:"Personal"},
+  "Personal":{fr:"Personnel",en:"Staff",de:"Personal"},
   "Foutrapporten laden…":{fr:"Chargement des rapports d’erreur…",en:"Loading error reports…",de:"Fehlerberichte werden geladen…"},
   "Foutrapporten zijn tijdelijk niet beschikbaar. Probeer opnieuw; dit betekent niet dat alle fouten zijn opgelost.":{fr:"Les rapports d’erreur sont temporairement indisponibles. Réessayez ; cela ne signifie pas que toutes les erreurs sont résolues.",en:"Error reports are temporarily unavailable. Try again; this does not mean that all issues are fixed.",de:"Fehlerberichte sind vorübergehend nicht verfügbar. Bitte erneut versuchen; das bedeutet nicht, dass alle Fehler behoben sind."},
   "Geen open foutrapporten in de recente lijst.":{fr:"Aucun rapport d’erreur ouvert dans la liste récente.",en:"No open error reports in the recent list.",de:"Keine offenen Fehlerberichte in der aktuellen Liste."},
