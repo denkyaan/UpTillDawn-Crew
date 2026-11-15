@@ -30,13 +30,17 @@ export default async function Page({searchParams}:{searchParams?:Promise<{event?
   const s=await createClient()
   const user=await getCurrentUser()
   if(!user)return null
+  // Keep the existing RLS-backed Admin-wide availability queue. Staff and
+  // responsible portals need only their own recorded response here.
+  const availabilityQuery=s.from('event_availability')
+    .select('event_id,user_id,response,setup_available,breakdown_available,updated_at,queue_joined_at')
+  const scopedAvailability=user.isAdmin?availabilityQuery:availabilityQuery.eq('user_id',user.id)
 
-  const [eventsResult,membershipResult,shiftResult,startedResult,availabilityResult,responsibleResult,emergencyResult]=await boundedQueries([
+  const [eventsResult,membershipResult,shiftResult,availabilityResult,responsibleResult,emergencyResult]=await boundedQueries([
     s.from('events').select('id,name,venue,address,start_at,end_at,registration_deadline,max_joiners,status,latitude,longitude,checkin_radius_m,archived_at,archived_by,archive_reason,restored_at,restored_by,pre_archive_status').order('start_at'),
     s.from('event_members').select('event_id,user_id'),
     s.from('shifts').select('event_id,workplace_id,workplaces(name)').eq('user_id',user.id).neq('status','cancelled').neq('response_status','declined'),
-    s.from('events').select('id').lte('start_at','now'),
-    s.from('event_availability').select('event_id,user_id,response,setup_available,breakdown_available,updated_at,queue_joined_at'),
+    scopedAvailability,
     s.from('responsible_assignments').select('event_id,workplace_id,workplaces(name,is_active)').eq('user_id',user.id),
     s.from('event_emergency_information').select('*'),
   ],3)
@@ -53,6 +57,7 @@ export default async function Page({searchParams}:{searchParams?:Promise<{event?
       ])
     : [{data:[],error:null},{data:[],error:null}]
 
+  const nowMs=new Date().getTime()
   const events=eventsResult.data||[]
   const people=peopleResult.data||[]
   const activeEvents=events.filter(event=>event.status!=='archived')
@@ -61,13 +66,13 @@ export default async function Page({searchParams}:{searchParams?:Promise<{event?
   const adminShifts=adminShiftsResult.data||[]
   const memberships=membershipResult.data||[]
   const availability=availabilityResult.data||[]
-  const startedEventIds=new Set((startedResult.data||[]).map(event=>event.id))
+  // start_at is already present on every fetched event; no second event query.
+  const startedEventIds=new Set(events.filter(event=>Date.parse(event.start_at)<=nowMs).map(event=>event.id))
   const assignedEventIds=new Set([
     ...memberships.filter(row=>row.user_id===user.id).map(row=>row.event_id),
     ...(shiftResult.data||[]).map(row=>row.event_id),
     ...(user.role==='responsible_lead'?(responsibleResult.data||[]).map(row=>row.event_id):[]),
   ])
-  const nowMs=new Date().getTime()
   const baseVisibleEvents=user.isAdmin
     ? activeEvents
     : activeEvents.filter(event=>{

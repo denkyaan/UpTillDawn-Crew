@@ -1,5 +1,6 @@
 import { createTask, removeTaskAssignment } from '@/lib/actions/uptilldawn'
 import { createClient } from '@/lib/supabase/crew-server'
+import { boundedQueries } from '@/lib/administration/bounded-queries'
 import { TaskControls } from '@/components/crew/task-controls'
 import { ManagerOnly } from '@/components/auth/manager-only'
 import { StaffAvailability, StaffUnavailableMessage } from '@/components/auth/staff-availability'
@@ -25,6 +26,14 @@ export default async function Page({searchParams}:{searchParams?:Promise<{event?
   const current = await getCurrentUser()
   if (!current) return null
   const user = { id: current.id }
+  const isAdmin = current.role === 'admin'
+  const isResponsible = current.role === 'responsible_lead'
+  // Limit non-manager directory reads to the signed-in user's assignments.
+  // RLS remains authoritative; manager-wide views are unchanged.
+  const taskAssignmentQuery=s.from('task_assignments')
+    .select('id,user_id,status,confirmed_at,tasks(id,title,description,event_id,workplace_id,updated_at)')
+    .order('created_at')
+  const roleTaskAssignments=isAdmin||isResponsible?taskAssignmentQuery:taskAssignmentQuery.eq('user_id',user.id)
 
   const [
     { data: events },
@@ -34,9 +43,9 @@ export default async function Page({searchParams}:{searchParams?:Promise<{event?
     { data: availabilityRows },
     { data: openEvents },
     { data: ownActiveShifts },
-  ] = await Promise.all([
+  ] = await boundedQueries([
     s.from('events').select('id,name').neq('status', 'archived').order('start_at'),
-    s.from('task_assignments').select('id,user_id,status,confirmed_at,tasks(id,title,description,event_id,workplace_id,updated_at)').order('created_at'),
+    roleTaskAssignments,
     s.from('events').select('id').neq('status','archived').lte('start_at', 'now').gte('end_at', 'now').order('start_at'),
     s.from('event_members').select('event_id').eq('user_id', user.id),
     s.from('event_availability').select('event_id,user_id').eq('response', 'can'),
@@ -47,10 +56,8 @@ export default async function Page({searchParams}:{searchParams?:Promise<{event?
       .neq('status', 'cancelled')
       .lte('scheduled_start', 'now')
       .gte('scheduled_end', 'now'),
-  ])
+  ],3)
 
-  const isAdmin = current.role === 'admin'
-  const isResponsible = current.role === 'responsible_lead'
   const manager = isAdmin || isResponsible
   const hasActiveShift = Boolean(ownActiveShifts?.length)
   const activeShiftEventIds = new Set((ownActiveShifts || []).map(shift => shift.event_id))
@@ -104,11 +111,20 @@ export default async function Page({searchParams}:{searchParams?:Promise<{event?
     attachmentRows.push(...(media || []))
   }
 
+  // Sign only the paths the current session can access, in bounded batches.
+  // Avoid one Cloudflare/Supabase Storage round trip per attachment.
   const photoUrls = new Map<string, string>()
-  await Promise.all(attachmentRows.map(async attachment => {
-    const { data: signed } = await s.storage.from('work-media').createSignedUrl(attachment.storage_path, 300)
-    if (signed?.signedUrl) photoUrls.set(attachment.storage_path, signed.signedUrl)
-  }))
+  const attachmentPaths=[...new Set(attachmentRows.map(item=>item.storage_path).filter(Boolean))]
+  const allowedPaths=new Set(attachmentPaths)
+  for(let offset=0;offset<attachmentPaths.length;offset+=100){
+    const {data:signed,error:signError}=await s.storage.from('work-media')
+      .createSignedUrls(attachmentPaths.slice(offset,offset+100),300)
+    if(signError||!signed)continue
+    for(const item of signed){
+      if(item.path&&item.signedUrl&&allowedPaths.has(item.path))
+        photoUrls.set(item.path,item.signedUrl)
+    }
+  }
 
   let selectableEvents = events || []
   let workplaces: WorkplaceOption[] = []
