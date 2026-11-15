@@ -22,7 +22,10 @@ test('API authenticates only real same-origin form POSTs and reuses established 
  assert.match(api,/length>16_384/)
  assert.match(api,/\['staff','responsible','promotion','administration'\]/)
  assert.match(api,/await signIn\(form\)/)
- assert.doesNotMatch(api,/service_role|SUPABASE_SERVICE_ROLE|signInWithPassword|upt_set_admin_role_mode/)
+ // Guard against actual code calling privileged APIs, not against comments
+ // explaining why those APIs are intentionally absent.
+ const executableApi=api.replace(/\/\*[\s\S]*?\*\/|\/\/[^\n]*/g,'')
+ assert.doesNotMatch(executableApi,/service_role|SUPABASE_SERVICE_ROLE|signInWithPassword|upt_set_admin_role_mode/)
  assert.match(auth,/await supabase\.auth\.signInWithPassword/)
  assert.match(auth,/upt_current_is_owner/)
  assert.match(auth,/upt_my_portal_assignments/)
