@@ -119,6 +119,46 @@ jobs:
           npx --yes vinext@1.4.5 init --platform=cloudflare --cdn-cache=none --data-cache=none --image-optimization=none --no-prerender --ignore-wrangler-config
           npm run build:vinext
           echo 'Vinext production compilation completed in temporary PR checkout'
+      - name: Exercise vinext preview HTTP routes without deploying or changing data
+        if: ${{ github.event_name == 'pull_request' && github.head_ref == 'explore/vinext-workers-free-compat-20261115' }}
+        timeout-minutes: 5
+        shell: bash
+        run: |
+          set -euo pipefail
+          echo 'Read-only vinext Vite preview probe, no Cloudflare token or actual login credentials'
+          npm run start:vinext -- --host 127.0.0.1 --port 8788 >/tmp/vinext-preview.log 2>&1 &
+          preview_pid=$!
+          trap 'kill "$preview_pid" 2>/dev/null || true' EXIT
+          ready=0
+          for i in $(seq 1 40); do
+            if ! kill -0 "$preview_pid" 2>/dev/null; then
+              echo '::error::vinext preview process exited before readiness'
+              tail -50 /tmp/vinext-preview.log
+              exit 1
+            fi
+            code="$(curl -sS --max-time 3 -o /dev/null -w '%{http_code}' http://127.0.0.1:8788/login/staff || true)"
+            if [ "$code" = '200' ]; then ready=1; break; fi
+            sleep 2
+          done
+          if [ "$ready" -ne 1 ]; then
+            echo '::error::vinext preview failed to serve /login/staff'
+            tail -70 /tmp/vinext-preview.log
+            exit 1
+          fi
+          for path in /login/staff /login/admin /login/promotion /login/administration /login/responsible; do
+            status="$(curl -sS --max-time 15 -o /dev/null -w '%{http_code}' "http://127.0.0.1:8788$path" || true)"
+            echo "$path => HTTP $status"
+            test "$status" = 200 || { echo "::error::vinext public login route failed: $path"; exit 1; }
+          done
+          for path in /events /god-mode /portals/administration/finance; do
+            status="$(curl -sS --max-time 15 -o /dev/null -w '%{http_code}' "http://127.0.0.1:8788$path" || true)"
+            echo "Unauthenticated $path => HTTP $status"
+            case "$status" in
+              301|302|303|307|308|401|403) ;;
+              *) echo "::error::vinext protected route not denied as expected: $path ($status)"; exit 1;;
+            esac
+          done
+          echo 'Vinext anonymous GET and protected-route deny smoke tests passed'
   release-production:
     needs: fast
     # Only a manual, explicit release input may dispatch full CI production.
