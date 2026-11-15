@@ -4,7 +4,7 @@
  * authorization. Static HTML is copied only when Next's prerender manifest
  * proves the exact route is generated at build time.
  *
- * This is deliberately Main-only: invoked only by Deploy main, never by the
+ * Main uses directory index files and drop-trailing-slash HTML handling,\n * so each public /login/:role URL maps to an exact static entrypoint.\n * This is deliberately Main-only: invoked only by Deploy main, never by the
  * package's standard build:cloudflare command used by production.
  */
 import {readFileSync,writeFileSync,mkdirSync,existsSync,readdirSync,copyFileSync} from 'node:fs'
@@ -51,7 +51,7 @@ export async function publishLoginAssets({nextRoot='.next',assetRoot='.open-next
  }
  // No partial publication if any SSG route is missing or fails inspection.
  for(const item of prepared){
-  const target=path.join(assetRoot,item.route.slice(1)+'.html')
+  const target=path.join(assetRoot,item.route.slice(1),'index.html')
   mkdirSync(path.dirname(target),{recursive:true})
   copyFileSync(item.source,target)
  }
