@@ -4,6 +4,7 @@ import { CalendarDays, Clock3, MapPin, AlertTriangle, ArrowRight, ClipboardCheck
 import { redirect } from 'next/navigation'
 import {cookies} from 'next/headers'
 import { createClient } from '@/lib/supabase/crew-server'
+import { boundedQueries } from '@/lib/administration/bounded-queries'
 import { ManagerOnly } from '@/components/auth/manager-only'
 import { AssignedEventOnly } from '@/components/auth/assigned-event-only'
 import { getCurrentUser } from '@/lib/actions/auth'
@@ -29,13 +30,13 @@ async function DashboardOverview({current}:{current:NonNullable<Awaited<ReturnTy
   const [s,locale] = await Promise.all([createClient(),requestUiLocale()])
   const nowDate = new Date()
   const nowMs = nowDate.getTime()
-  const [eventsResult, shiftsResult, incidentsResult, membershipsResult, responsibleAssignmentsResult] = await Promise.all([
+  const [eventsResult, shiftsResult, incidentsResult, membershipsResult, responsibleAssignmentsResult] = await boundedQueries([
     s.from('events').select('id,name,venue,start_at,end_at,status').neq('status','archived').order('start_at', { ascending: true }),
     s.from('shifts').select('id,workplace_id,event_id,scheduled_start,scheduled_end,response_status').eq('user_id', user.id).neq('status','cancelled').neq('response_status','declined').gte('scheduled_end',nowDate.toISOString()).order('scheduled_start', { ascending: true }),
     s.from('incidents').select('id,event_id,workplace_id').neq('status', 'resolved'),
     s.from('event_members').select('event_id,event_role').eq('user_id', user.id),
     s.from('responsible_assignments').select('event_id,workplace_id').eq('user_id', user.id),
-  ])
+  ],3)
 
 
 

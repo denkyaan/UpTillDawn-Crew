@@ -402,14 +402,19 @@ export const getCurrentUser = cache(async function getCurrentUser() {
     const claims = verified?.claims
     if (authError || typeof claims?.sub !== 'string' || !claims.sub) return null
 
-    const { data: profileRows, error } = await supabase.rpc('upt_current_profile')
+    // Both queries are independently RLS-protected and require the verified
+    // JWT. Resolve them concurrently to avoid extending every SSR navigation
+    // by a second sequential database roundtrip.
+    const [{ data: profileRows, error }, { data: ownerFlag, error: ownerError }] = await Promise.all([
+        supabase.rpc('upt_current_profile'),
+        supabase.rpc('upt_current_is_owner'),
+    ])
     const profile = profileRows?.[0] ?? null
-    if (error || !profile) return null
+    if (error || !profile || ownerError) return null
 
     const realRole = profile.role
     // Owner status must be resolved before ordinary block/approval gates so a
     // legacy or accidental personnel flag can never lock the maker out.
-    const { data: ownerFlag } = await supabase.rpc('upt_current_is_owner')
     const isOwner = ownerFlag === true
     if (profile.account_blocked && !isOwner) return null
     if (!profile.approved && !isOwner) return null

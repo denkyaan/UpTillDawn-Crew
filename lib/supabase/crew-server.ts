@@ -4,10 +4,13 @@
 // ============================================================
 
 import { createServerClient } from '@supabase/ssr'
+import { cache } from 'react'
 import { cookies } from 'next/headers'
 import type { Database } from '@/types/crew-database'
 
-export async function createClient() {
+// React cache is scoped to one server-render/request. It must never be a
+// process-global client: cookies and authenticated RLS context are per user.
+const createRequestClient = cache(async () => {
     const cookieStore = await cookies()
 
     return createServerClient<Database>(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!, {
@@ -27,4 +30,8 @@ export async function createClient() {
         },
     }
     )
+})
+
+export async function createClient() {
+    return createRequestClient()
 }
