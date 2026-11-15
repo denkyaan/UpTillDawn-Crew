@@ -41,7 +41,7 @@ export default async function PortalPage({ params }: { params: Promise<{ portal:
 
   // Each administrative module is available once through the persistent
   // six-category navigation. The home page is a compact read-only work pulse.
-  if (portal === 'administration') return <AdministrationOverviewDashboard locale={locale} />
+  if (portal === 'administration') return <AdministrationOverviewDashboard locale={locale} currentUserId={current.id} admin={Boolean(current.realIsAdmin||current.isOwner)} />
 
   // Promotion keeps its own independent portal and existing safe channel links.
   const {data:promotionChats}=await supabase.from('chat_channels')

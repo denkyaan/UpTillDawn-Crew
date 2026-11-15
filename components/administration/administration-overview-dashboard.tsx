@@ -1,11 +1,11 @@
+"use client"
 import Link from "next/link"
-import {Suspense} from "react"
+import {Suspense,useEffect,useMemo,useState} from "react"
 import {boundedQueries} from "@/lib/administration/bounded-queries"
 import {AdministrationSubtabStatus} from "@/components/administration/administration-subtab-status"
 import {ChevronRight} from "lucide-react"
 import type {SupabaseClient} from "@supabase/supabase-js"
-import { createClient } from "@/lib/supabase/crew-server"
-import { getCurrentUser } from "@/lib/actions/auth"
+import { createClient } from "@/lib/supabase/crew-client"
 import type { SupportedUiLocale } from "@/lib/locale-preferences"
 
 const copy={
@@ -18,9 +18,7 @@ const copy={
 /** Operational work pulse, not a duplicate directory of modules. Individual
  * pending records link to their owning workflow; no function is reimplemented
  * here. Each query is RLS-scoped to the signed-in user's Administration rights. */
-export async function AdministrationOverviewDashboard({locale}:{locale:SupportedUiLocale}){
- const db=await createClient()
- const current=await getCurrentUser()
+async function loadOverviewData(db:ReturnType<typeof createClient>,currentUserId:string){
  const now=new Date().toISOString()
  // Bound the nine independent PostgREST reads to three simultaneous requests.
  // Without a shared deadline, one stalled query keeps the SSR skeleton visible.
@@ -33,7 +31,7 @@ export async function AdministrationOverviewDashboard({locale}:{locale:Supported
   db.from("admin_artist_bookings").select("id,artist_name,status,follow_up_at",{count:"exact"}).in("status",["enquiry","negotiating"]).order("created_at",{ascending:false}).limit(5).abortSignal(overviewSignal),
   db.from("admin_financial_documents").select("id,kind,status,document_number,gross_amount,currency",{count:"exact"}).in("status",["review","issued","approved"]).order("created_at",{ascending:false}).limit(5).abortSignal(overviewSignal),
   db.from("admin_roster_proposals").select("id,status",{count:"exact"}).eq("status","submitted").limit(1).abortSignal(overviewSignal),
-  db.from("crew_notifications").select("id",{count:"exact",head:true}).eq("user_id",current?.id??"00000000-0000-0000-0000-000000000000").is("read_at",null).abortSignal(overviewSignal),
+  db.from("crew_notifications").select("id",{count:"exact",head:true}).eq("user_id",currentUserId??"00000000-0000-0000-0000-000000000000").is("read_at",null).abortSignal(overviewSignal),
   db.from("events").select("id,name,start_at,status",{count:"exact"}).neq("status","archived").gte("end_at",now).order("start_at").limit(5).abortSignal(overviewSignal),
   db.from("admin_financial_documents").select("id",{count:"exact",head:true}).eq("status","draft").abortSignal(overviewSignal),
   (db as unknown as SupabaseClient).from("admin_automation_runs").select("completed_at,error_code,delivered").order("completed_at",{ascending:false}).limit(1).abortSignal(overviewSignal)
@@ -41,6 +39,47 @@ export async function AdministrationOverviewDashboard({locale}:{locale:Supported
  const labels=!hours.error&&hours.data?.length
   ?await db.rpc("upt_administration_timesheet_labels",{p_timesheet_ids:hours.data.map(row=>row.id)}).abortSignal(overviewSignal)
   :null
+
+ return {hours,inventory,contracts,financial,rosters,notifications,events,draftDocuments,automationRuns,labels}
+}
+export function AdministrationOverviewDashboard({locale,currentUserId,admin}:{locale:SupportedUiLocale;currentUserId:string;admin:boolean}){
+ const db=useMemo(()=>createClient(),[])
+ const [snapshot,setSnapshot]=useState<Awaited<ReturnType<typeof loadOverviewData>>|null>(null)
+ const [loadFailed,setLoadFailed]=useState(false)
+ useEffect(()=>{
+  let active=true
+  void loadOverviewData(db,currentUserId).then(result=>{
+   if(active){setSnapshot(result);setLoadFailed(false)}
+  }).catch(()=>{if(active)setLoadFailed(true)})
+  return()=>{active=false}
+ },[db,currentUserId])
+ // Even during a slow RLS read, give users their existing seven real workflow
+ // destinations. Never invent zero counts or claim fresh data while loading.
+ if(!snapshot){
+  const t=copy[locale]
+  const fallback=[
+   {id:"timesheets",href:"/portals/administration/timesheets",label:t.hours},
+   {id:"rosters",href:"/portals/administration/rosters",label:t.rosters},
+   {id:"contracts",href:"/portals/administration/modules/contracts",label:t.contracts},
+   {id:"finance",href:"/portals/administration/finance",label:t.finance},
+   {id:"inventory",href:"/portals/administration/modules/inventory",label:t.stock},
+   {id:"notifications",href:"/portals/administration/modules/notifications",label:t.notices},
+   {id:"automations",href:"/portals/administration/modules/automations",
+    label:({nl:"Automatische controles",fr:"Contrôles automatiques",en:"Automated checks",de:"Automatische Prüfungen"} as const)[locale]},
+  ]
+  return <main data-administration-overview-loading="true" className="mx-auto w-full max-w-6xl space-y-5 p-4 pb-28 sm:p-6">
+   <header className="space-y-1"><h1 className="text-2xl font-bold">{t.title}</h1><p className="text-sm text-muted-foreground">{t.intro}</p></header>
+   <p role="status" className="text-sm text-muted-foreground">{loadFailed?t.error:
+    ({nl:"Actuele statussen laden…",fr:"Chargement des statuts…",en:"Loading live statuses…",de:"Live-Status werden geladen…"} as const)[locale]}</p>
+   <section aria-label={t.intro} className="grid gap-2 md:grid-cols-2">
+    {fallback.map(item=><Link key={item.id} href={item.href} data-administration-priority={item.id}
+      className="flex items-center justify-between gap-3 rounded-xl border p-4">
+      <span className="font-semibold">{item.label}</span><span className="text-muted-foreground">—</span>
+    </Link>)}
+   </section>
+  </main>
+ }
+ const {hours,inventory,contracts,financial,rosters,notifications,events,draftDocuments,automationRuns,labels}=snapshot
  const staffNames=new Map((labels?.data??[]).map(row=>[row.user_id,row.crew_name]))
  const eventNames=new Map((labels?.data??[]).map(row=>[row.event_id,row.event_name]))
  const t=copy[locale]
@@ -177,7 +216,7 @@ export async function AdministrationOverviewDashboard({locale}:{locale:Supported
   <Suspense fallback={<section aria-label={w.operations} data-administration-status-loading="true" role="status" className="rounded-2xl border bg-card p-4 text-sm text-muted-foreground">
    {({nl:"Aanvullende onderdeelstatussen laden…",fr:"Chargement des statuts complémentaires…",en:"Loading additional section statuses…",de:"Weitere Bereichsstatus werden geladen…"} as const)[locale]}
   </section>}>
-   <AdministrationSubtabStatus locale={locale} admin={Boolean(current?.realIsAdmin||current?.isOwner)}/>
+   <AdministrationSubtabStatus locale={locale} admin={admin}/>
   </Suspense>
  </main>
 }

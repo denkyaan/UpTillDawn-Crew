@@ -6,11 +6,11 @@ const dashboard=readFileSync('components/administration/administration-overview-
 const extra=readFileSync('components/administration/administration-subtab-status.tsx','utf8')
 const browser=readFileSync('scripts/e2e-seven-main-bots.mjs','utf8')
 
-test('primary Administration overview is a separate streamed, usable work pulse',()=>{
- assert.match(dashboard,/import \{Suspense\} from "react"/)
+test('primary Administration overview retains its seven priorities and loads metrics through browser RLS',()=>{
+ assert.match(dashboard,/import \{Suspense,useEffect,useMemo,useState\} from "react"/)
  assert.match(dashboard,/<main data-administration-overview-ready="true"/)
  assert.match(dashboard,/<Suspense fallback=\{<section/)
- assert.ok(dashboard.includes('<AdministrationSubtabStatus locale={locale} admin={Boolean(current?.realIsAdmin||current?.isOwner)}/>'))
+ assert.ok(dashboard.includes('<AdministrationSubtabStatus locale={locale} admin={admin}/>'))
  assert.ok(extra.includes('"use client"'))
  assert.ok(extra.includes('from "@/lib/supabase/crew-client"'))
  assert.ok(!extra.includes('from "@/lib/supabase/crew-server"'))
@@ -51,4 +51,16 @@ test('Administration secondary metrics use a maximum four-request pool while ret
  assert.match(extra,/boundedQueries\(\[/)
  assert.match(extra,/\],4\)\.catch\(\(\)=>null\)/)
  assert.match(extra,/const hardStopSignal=AbortSignal\.timeout\(10_000\)/)
+})
+
+test('Administration initial page is available without Worker-side database fan-out',()=>{
+ const portal=readFileSync('app/(app)/portals/[portal]/page.tsx','utf8')
+ assert.match(dashboard,/"use client"/)
+ assert.match(dashboard,/from "@\/lib\/supabase\/crew-client"/)
+ assert.doesNotMatch(dashboard,/from "@\/lib\/supabase\/crew-server"/)
+ assert.match(dashboard,/loadOverviewData\(db,currentUserId\)/)
+ assert.match(dashboard,/data-administration-overview-loading="true"/)
+ assert.match(dashboard,/setSnapshot\(result\)/)
+ assert.match(portal,/currentUserId=\{current\.id\}/)
+ assert.match(portal,/admin=\{Boolean\(current\.realIsAdmin\|\|current\.isOwner\)\}/)
 })
