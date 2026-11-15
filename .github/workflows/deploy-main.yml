@@ -360,10 +360,23 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
+          # Cloudflare deployments can propagate across edge POPs after
+          # wrangler reports success. Retry boundedly, then fail closed.
           for portal in staff responsible promotion administration; do
-            headers="$(curl --retry 3 --retry-all-errors --retry-delay 2 --max-time 25 -sS -I "${NEXT_PUBLIC_APP_URL}/login/${portal}")"
-            if ! grep -qi '^x-uptilldawn-static-login: 1' <<< "$headers"; then
-              echo "::error::Public /login/${portal} is not served as Cloudflare Static Asset."
+            verified=0
+            headers=''
+            for attempt in 1 2 3 4 5 6; do
+              headers="$(curl --retry 2 --retry-all-errors --retry-delay 1 --max-time 20 -sS -I "${NEXT_PUBLIC_APP_URL}/login/${portal}")" || headers=''
+              if grep -qi '^x-uptilldawn-static-login: 1' <<< "$headers" &&
+                grep -qE '^HTTP/[0-9.]+ 200' <<< "$headers"; then
+                verified=1
+                break
+              fi
+              if [ "$attempt" -lt 6 ]; then sleep 3; fi
+            done
+            if [ "$verified" -ne 1 ]; then
+              echo "::error::Public /login/${portal} is not served as Cloudflare Static Asset after six edge checks."
+              printf '%s\n' "$headers" | grep -iE '^(HTTP/|location:|server:|content-type:|cf-ray:|x-uptilldawn-static-login:)' || true
               exit 1
             fi
             echo "Static Cloudflare Asset verified: /login/${portal}"
