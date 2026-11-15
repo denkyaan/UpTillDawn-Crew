@@ -1,8 +1,9 @@
+"use client"
+import {useEffect,useMemo,useState} from "react"
 import Link from "next/link"
 import {ChevronRight} from "lucide-react"
 import type {SupabaseClient} from "@supabase/supabase-js"
-import {createClient} from "@/lib/supabase/crew-server"
-import {getCurrentUser} from "@/lib/actions/auth"
+import {createClient} from "@/lib/supabase/crew-client"
 import {administrationNavigationGroups,administrationRoute} from "@/lib/administration/navigation"
 import {administrationModules} from "@/lib/administration/modules"
 import {validateTicketSalesSummary,ticketSalesTotals,formatTicketEuro} from "@/lib/administration/ticket-sales-summary"
@@ -50,12 +51,8 @@ async function boundedQueries<const T extends readonly unknown[]>(queries:T,limi
 
 /** Every extra indicator reads the same RLS-protected source as its owner subtab.
  * No service is treated as connected just because a settings page exists. */
-export async function AdministrationSubtabStatus({locale}:{locale:SupportedUiLocale}){
- const db=await createClient()
+async function loadSubtabStatuses(db:ReturnType<typeof createClient>,admin:boolean){
  const raw=db as unknown as SupabaseClient
- const user=await getCurrentUser()
- const admin=Boolean(user?.realIsAdmin||user?.isOwner)
- const t=copy[locale]
  const statusSignal=AbortSignal.timeout(8_000)
  // Unlike an AbortSignal alone, a hard stop also covers an adapter that never
  // settles after abort. Any unknown metrics remain explicitly unavailable.
@@ -89,6 +86,22 @@ export async function AdministrationSubtabStatus({locale}:{locale:SupportedUiLoc
   ],4).catch(()=>null),
   timedOut
  ])
+ return statuses
+}
+export function AdministrationSubtabStatus({locale,admin}:{locale:SupportedUiLocale;admin:boolean}){
+ const db=useMemo(()=>createClient(),[])
+ const [statuses,setStatuses]=useState<Awaited<ReturnType<typeof loadSubtabStatuses>>|undefined>(undefined)
+ useEffect(()=>{
+  let active=true
+  void loadSubtabStatuses(db,admin).then(result=>{
+   if(active)setStatuses(result)
+  }).catch(()=>{if(active)setStatuses(null)})
+  return()=>{active=false}
+ },[db,admin])
+ const t=copy[locale]
+ if(statuses===undefined)return <section aria-label={t.headline} role="status" data-administration-status-loading="true" className="rounded-2xl border p-4 text-sm text-muted-foreground">
+  <h2 className="font-bold">{t.headline}</h2><p className="mt-1">{t.unavailable}</p>
+ </section>
  if(!statuses)return <section aria-label={t.headline} role="status" data-administration-status-unavailable="true" className="rounded-2xl border border-amber-600/40 p-4 text-sm text-muted-foreground">
   <h2 className="font-bold">{t.headline}</h2><p className="mt-1">{t.unavailable}</p>
  </section>
