@@ -62,9 +62,50 @@ try{
  if(cpu||memory||other)console.log('::warning::Main Worker runtime limit exceeded: exceededResources='+other+', exceededCpu='+cpu+', exceededMemory='+memory)
  if(memoryP99MiB!==null&&memoryP99MiB>=110)console.log('::warning::Main Worker isolate memory P99 is close to the 128 MiB limit; profile memory before adding traffic')
  if(rows.length===1000)console.log('::warning::Worker analytics query hit 1000-row limit; outcomes may be incomplete')
+ // The last-90-minute snapshot includes previous app versions. Measure a
+ // second, strictly post-deployment window to distinguish old faults from
+ // failures of the exact revision validated by this workflow.
+ const deployedAtRaw=process.env.MAIN_WORKER_DEPLOYED_AT||''
+ const deployedAt=deployedAtRaw?new Date(deployedAtRaw):null
+ let postDeploySummary='unavailable (missing or invalid deployment timestamp)'
+ let postDeployCounts=null
+ if(deployedAt&&Number.isFinite(deployedAt.getTime())&&deployedAt>start&&deployedAt<=now){
+  const afterPayload={
+   query,
+   variables:{...payload.variables,start:deployedAt.toISOString()},
+  }
+  try{
+   const afterResponse=await fetch('https://api.cloudflare.com/client/v4/graphql',{
+    method:'POST',
+    headers:{Authorization:'Bearer '+token,'Content-Type':'application/json','Accept':'application/json'},
+    body:JSON.stringify(afterPayload),signal:AbortSignal.timeout(12_000),
+   })
+   if(afterResponse.ok){
+    const afterParsed=await afterResponse.json()
+    const afterRows=afterParsed?.data?.viewer?.accounts?.flatMap(account=>account.workersInvocationsAdaptive||[])
+    if(Array.isArray(afterRows)){
+     const afterCounts=new Map()
+     for(const row of afterRows){
+      if(row?.dimensions?.scriptName!=='uptilldawn-main')continue
+      const status=String(row?.dimensions?.status||'unknown').replace(/[^a-zA-Z0-9_-]/g,'').slice(0,48)
+      const count=Math.max(0,Number(row?.sum?.requests)||0)
+      afterCounts.set(status,(afterCounts.get(status)||0)+count)
+     }
+     postDeployCounts=afterCounts
+     postDeploySummary=[...afterCounts.entries()].sort((a,b)=>a[0].localeCompare(b[0])).map(([key,n])=>key+'='+n).join(', ')||'no matching invocations'
+     console.log('CLOUDFLARE_MAIN_POST_DEPLOY since='+deployedAt.toISOString()+': '+postDeploySummary)
+     const over=(afterCounts.get('exceededResources')||0)+(afterCounts.get('exceededCpu')||0)+(afterCounts.get('exceededMemory')||0)
+     if(over)console.log('::warning::Main Worker still exceeded resource limits after current deployment: '+over+' invocations')
+     if(afterRows.length===1000)console.log('::warning::Main post-deploy analytics query hit row limit')
+    }else console.log('CLOUDFLARE_MAIN_POST_DEPLOY unavailable: analytics schema/permission')
+   }else console.log('CLOUDFLARE_MAIN_POST_DEPLOY unavailable: analytics status '+afterResponse.status)
+  }catch{
+   console.log('CLOUDFLARE_MAIN_POST_DEPLOY unavailable: analytics endpoint not reachable')
+  }
+ }else console.log('CLOUDFLARE_MAIN_POST_DEPLOY unavailable: deployment timestamp missing or outside last 90 minutes')
  const {appendFileSync}=await import('node:fs')
  if(process.env.GITHUB_STEP_SUMMARY)appendFileSync(process.env.GITHUB_STEP_SUMMARY,
-  '\n### Main Worker resource outcomes (read-only, last 90min)\n- Worker: uptilldawn-main\n- Status counts: '+(summary||'none')+'\n- Maximum grouped CPU P99 (ms): '+(cpuP99Ms??'unavailable')+'\n- Maximum grouped isolate-memory P99 (MiB): '+(memoryP99MiB??'unavailable')+'\n- Production worker not queried\n')
+  '\n### Main Worker resource outcomes (read-only)\n- Worker: uptilldawn-main\n- Last 90-minute status counts (includes earlier app revisions): '+(summary||'none')+'\n- Status counts since current Main deployment: '+postDeploySummary+'\n- Post-deploy confirmed resource failures: '+(postDeployCounts===null?'unavailable':(postDeployCounts.get('exceededResources')||0)+(postDeployCounts.get('exceededCpu')||0)+(postDeployCounts.get('exceededMemory')||0))+'\n- Maximum grouped CPU P99 (ms), last 90 minutes: '+(cpuP99Ms??'unavailable')+'\n- Maximum grouped isolate-memory P99 (MiB), last 90 minutes: '+(memoryP99MiB??'unavailable')+'\n- Analytics may be delayed; a zero is not a long-term guarantee\n- Production worker not queried\n')
 }catch{
  console.log('CLOUDFLARE_MAIN_OUTCOMES unavailable: analytics endpoint not reachable; verify Account Analytics Read permission')
 }

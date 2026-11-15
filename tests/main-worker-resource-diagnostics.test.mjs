@@ -23,3 +23,14 @@ test('Main-only metrics include CPU P99 and isolate-memory P99 without exposing 
  assert.match(workflow,/run: node scripts\/main-worker-outcomes\.mjs/)
  assert.match(workflow,/needs: \[validate-trigger, deploy, qa-main-browser-acceptance, qa-main-functional-acceptance\]/)
 })
+
+test('post-deploy resource measurement cannot mistake 90-minute history for current worker health',()=>{
+ assert.match(source,/MAIN_WORKER_DEPLOYED_AT/)
+ assert.match(source,/CLOUDFLARE_MAIN_POST_DEPLOY/)
+ assert.match(source,/deployedAt>start&&deployedAt<=now/)
+ assert.match(source,/start:deployedAt\.toISOString\(\)/)
+ assert.match(source,/still exceeded resource limits after current deployment/)
+ assert.match(workflow,/MAIN_WORKER_DEPLOYED_AT: \$\{\{ needs\.deploy\.outputs\.deployed_at \}\}/)
+ assert.match(workflow,/deployed_at: \$\{\{ steps\.worker-deploy\.outputs\.deployed_at \}\}/)
+ assert.match(workflow,/echo "deployed_at=\$\(date -u \+%Y-%m-%dT%H:%M:%SZ\)" >> "\$GITHUB_OUTPUT"/)
+})
