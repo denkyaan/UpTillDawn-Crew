@@ -50,3 +50,8 @@ test('chat and Events server data reads remain RLS-bound and respect outgoing co
  assert.match(events,/confirmedCounts\.get\(event\.id\)/)
  assert.match(events,/ownAvailabilityByEvent\.get\(event\.id\)/)
 })
+
+test('null URL from a partially denied Supabase batch is ignored without exposing a private image',async()=>{
+ const urls=await signedDirectoryPhotoUrls([{id:'denied',profile_photo_url:'profile.png'}],async()=>({data:[{path:'profile.png',signedUrl:null,error:null}],error:null}))
+ assert.deepEqual(urls,{})
+})

@@ -4,7 +4,7 @@
  * No public bucket fallback, no cached token reuse, no cross-directory signing.
  */
 export type DirectoryPhotoMember={id:string;profile_photo_url?:string|null}
-export type SignedPhotoRow={path:string|null;signedUrl:string;error:string|null}
+export type SignedPhotoRow={path:string|null;signedUrl:string|null;error:string|null}
 export type SignedPhotoBatch={data:SignedPhotoRow[]|null;error:unknown}
 export type BatchSigner=(paths:string[],expiresIn:number)=>Promise<SignedPhotoBatch>
 

@@ -32,7 +32,11 @@ test("promotion group chat supports reply previews, members' avatars and read re
  assert.match(source,/room==="announcements"&&!isAdmin/)
  assert.match(source,/if\(!message\|\|sending\.current\|\|/)
  assert.match(page,/<SharedChatPage promotionOnly/)
- assert.match(read("app/(app)/chat/page.tsx"),/createSignedUrl\(member\.profile_photo_url!,3600\)/)
+ const sharedChat=read("app/(app)/chat/page.tsx")
+ assert.match(sharedChat,/signedDirectoryPhotoUrls\(/)
+ assert.match(sharedChat,/\.createSignedUrls\(paths,expiresIn\)/)
+ assert.doesNotMatch(sharedChat,/createSignedUrl\(member\.profile_photo_url/)
+
  for(const locale of ["nl:","fr:","en:","de:"])assert.ok(source.includes(locale))
 })
 test("private promotion conversations reuse existing RLS chat and do not switch portals",()=>{
