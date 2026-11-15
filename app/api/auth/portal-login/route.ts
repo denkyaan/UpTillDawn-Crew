@@ -12,7 +12,7 @@ function reject(status:number,code:string){
 /** Dedicated POST transport for build-time public login HTML.
  * The existing server action owns all password, approval, Maker/role,
  * portal assignment, security notification and Supabase cookie logic.
- * No service_role key or authorization decision is ever exposed here.
+ * The browser never receives privileged credentials or any role decision.
  */
 export async function POST(request:NextRequest){
  const origin=request.headers.get('origin')
