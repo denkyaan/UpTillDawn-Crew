@@ -330,7 +330,7 @@ export function GodStudio(){
       <a href={GOD_ENVIRONMENTS[environment].origin+'/god-mode'} className="font-bold text-violet-400 underline">{GOD_ENVIRONMENTS[environment].label}</a>
       <p className="mt-2 text-sm text-muted-foreground">{t.warning}</p>
     </section>:<>
-    {tab==='overview'&&<MakerOverview environment={environment} navigate={destination=>{setTab(destination);if(destination==='versions')void action(loadHistory)}}/>}
+    {tab==='overview'&&<MakerOverview key={environment} environment={environment} navigate={destination=>{setTab(destination);if(destination==='versions')void action(loadHistory)}}/>}
     {tab==='logs'&&<MakerLogs environment={environment} onDiagnose={(reportId,prompt)=>{
       setSelectedErrorReport(environment==='main'?reportId:null)
       setTextAiPrompt(prompt)

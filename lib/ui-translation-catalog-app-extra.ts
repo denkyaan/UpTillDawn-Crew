@@ -896,6 +896,13 @@ export const APP_EXTRA_TRANSLATIONS: Record<string,Row> = {
   "(laatste)": {fr:"(les dernières)",en:"(latest)",de:"(neueste)"},
   "Er zijn te veel transacties om de volledige omzet hier veilig te berekenen. Daarom worden geen onvolledige totalen getoond.": {fr:"Il y a trop de transactions pour calculer ici le revenu total de façon fiable. Aucun total partiel n'est affiché.",en:"There are too many transactions to calculate the full revenue reliably here. Incomplete totals are not shown.",de:"Es gibt zu viele Transaktionen, um den Gesamtumsatz hier zuverlässig zu berechnen. Unvollständige Summen werden nicht angezeigt."},
   "De vorige werkplekfilter hoort niet bij dit evenement; het volledige evenement wordt getoond.": {fr:"Le filtre de poste précédent n'appartient pas à cet événement ; toutes ses ventes sont affichées.",en:"The previous workplace filter does not belong to this event; the entire event is shown.",de:"Der vorherige Arbeitsplatzfilter gehört nicht zu dieser Veranstaltung; die gesamte Veranstaltung wird angezeigt."},
+  "Status tijdelijk niet beschikbaar":{fr:"Statut temporairement indisponible",en:"Status temporarily unavailable",de:"Status vorübergehend nicht verfügbar"},
+  "Evenementgegevens zijn tijdelijk niet beschikbaar.":{fr:"Les données des événements sont temporairement indisponibles.",en:"Event data is temporarily unavailable.",de:"Veranstaltungsdaten sind vorübergehend nicht verfügbar."},
+  "Geen lopende of toekomstige evenementen.":{fr:"Aucun événement en cours ou à venir.",en:"No ongoing or upcoming events.",de:"Keine laufenden oder bevorstehenden Veranstaltungen."},
+  "Status van actief personeel niet volledig beschikbaar.":{fr:"L'état du personnel actif n'est pas entièrement disponible.",en:"Active staff status is not fully available.",de:"Der Status des aktiven Personals ist nicht vollständig verfügbar."},
+  "Open meldingen konden niet worden geladen.":{fr:"Les signalements en cours n'ont pas pu être chargés.",en:"Open incident reports could not be loaded.",de:"Offene Meldungen konnten nicht geladen werden."},
+  "Diensten en pauzes konden niet volledig worden geladen.":{fr:"Les services et les pauses n'ont pas pu être chargés entièrement.",en:"Shifts and breaks could not be fully loaded.",de:"Schichten und Pausen konnten nicht vollständig geladen werden."},
+  "status niet beschikbaar":{fr:"statut indisponible",en:"status unavailable",de:"Status nicht verfügbar"},
 }
 
 const CANONICAL=new Map<string,string>()

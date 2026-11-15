@@ -100,7 +100,6 @@ export function MakerOverview({navigate,environment}:{navigate:(tab:Destination)
  const [serial,setSerial]=useState(0)
  useEffect(()=>{
   const controller=new AbortController()
-  setLoading(true)
   fetch('/api/god/overview?environment='+environment,{cache:'no-store',signal:AbortSignal.any([controller.signal,AbortSignal.timeout(35_000)])})
    .then(async response=>{if(!response.ok)throw Error('overview');return await response.json() as Overview})
    .then(data=>{if(!controller.signal.aborted){setState({environment,data});setError(false)}})

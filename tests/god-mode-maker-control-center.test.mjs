@@ -75,3 +75,8 @@ test('Maker status refresh has a deadline and isolates its selected environment'
  assert.match(source,/AbortSignal\.any\(\[controller\.signal,AbortSignal\.timeout\(35_000\)\]\)/)
  assert.match(source,/overviewState\?\.environment===environment\?overviewState\.data:null/)
 })
+
+test('selected Maker environment remounts its status read without stale results',async()=>{
+ const studio=await file('components/god-mode/god-studio.tsx')
+ assert.match(studio,/<MakerOverview key=\{environment\} environment=\{environment\}/)
+})
