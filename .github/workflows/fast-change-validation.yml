@@ -107,6 +107,18 @@ jobs:
           } >> "$GITHUB_STEP_SUMMARY"
       - name: Production dependency security gate
         run: npm audit --omit=dev --audit-level=high
+      - name: Compile vinext in disposable CI checkout (no deployment)
+        if: ${{ github.event_name == 'pull_request' && github.head_ref == 'explore/vinext-workers-free-compat-20261115' }}
+        timeout-minutes: 10
+        shell: bash
+        env:
+          CI: '1'
+        run: |
+          set -euo pipefail
+          echo 'Ephemeral migration build only — no Workers credentials or deployment'
+          npx --yes vinext@1.4.5 init --platform=cloudflare --cdn-cache=none --data-cache=none --image-optimization=none --no-prerender --ignore-wrangler-config
+          npm run build:vinext
+          echo 'Vinext production compilation completed in temporary PR checkout'
   release-production:
     needs: fast
     # Only a manual, explicit release input may dispatch full CI production.
