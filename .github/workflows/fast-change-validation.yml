@@ -169,6 +169,9 @@ jobs:
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          NEXT_PUBLIC_SUPABASE_URL: https://npbjrtiolqperdgljnhi.supabase.co
+          NEXT_PUBLIC_SUPABASE_ANON_KEY: sb_publishable_zStTw3n8wZ271PehDRDvGg_rs0JOy84
+          NEXT_PUBLIC_APP_URL: https://uptilldawn-main.uptilldawn.workers.dev
         shell: bash
         run: |
           set -euo pipefail
@@ -190,7 +193,9 @@ jobs:
             tail -45 /tmp/vinext-free-preview.log | sed -E 's/(Bearer |token=)[^[:space:]]+/\\1[REDACTED]/g'
             exit "$deploy_code"
           fi
-          url="$(grep -Eo 'https://[a-zA-Z0-9.-]+\\.workers\\.dev' /tmp/vinext-free-preview.log | grep 'uptilldawn-main' | tail -n1)"
+          url="$(grep -Eo 'https://[A-Za-z0-9.-]+[.]workers[.]dev' /tmp/vinext-free-preview.log | grep -F 'uptilldawn-main' | tail -n1 || true)"
+          # A failed regex match must trigger this explicit diagnostic, not
+          # terminate earlier through Bash pipefail.
           if [ -z "$url" ]; then
             echo "::error::Preview URL not reported by Cloudflare"
             tail -30 /tmp/vinext-free-preview.log
