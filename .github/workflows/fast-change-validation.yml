@@ -228,6 +228,18 @@ jobs:
           done
           echo 'Cloudflare Free Preview GET shells passed; protected seven-role session smoke still required'
 
+      - name: Validate seven real role sessions on non-promoted Cloudflare Workers Free Preview
+        if: ${{ github.event_name == 'pull_request' && github.head_ref == 'feature/vinext-auth-parity-free-20261115' }}
+        timeout-minutes: 10
+        env:
+          VINEXT_FREE_PREVIEW_URL: ${{ steps.vinext-preview.outputs.preview_url }}
+          MAIN_QA_BOT_PASSWORD: ${{ secrets.MAIN_QA_BOT_PASSWORD }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          node scripts/vinext-main-worker-preview-smoke.mjs
+
+
 
   release-production:
     needs: fast
