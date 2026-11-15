@@ -143,3 +143,15 @@ test('browser QA reports Worker 1102 as real resource exhaustion, never accepts 
  assert.match(source,/CPU or memory/)
  assert.match(source,/status>=500/)
 })
+
+test('HTTP 503 and Cloudflare 1102 on login are classified immediately as Worker failures, never slow hydration or authorization success',()=>{
+ const start=source.indexOf('async function goto(page,path)')
+ const end=source.indexOf('function mark(',start)
+ assert.ok(start>=0&&end>start)
+ const loader=source.slice(start,end)
+ assert.match(loader,/response\?\.status\(\)===503/)
+ assert.match(loader,/Error 1102\|Worker exceeded resource limits/)
+ assert.match(loader,/Cloudflare Worker 1102 resource exhaustion/)
+ assert.match(loader,/Main Worker returned HTTP 503/)
+ assert.ok(loader.indexOf('response?.status()===503')<loader.indexOf("body').waitFor"),'Resource check must happen before hydration waits')
+})

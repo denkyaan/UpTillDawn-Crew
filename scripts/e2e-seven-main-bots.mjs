@@ -49,6 +49,14 @@ async function goto(page,path){
  // Waiting for the entire browser load (or even DOMContentLoaded on a stalled
  // streaming response) gives false failures despite an already navigated page.
  const response=await page.goto(url(path),{waitUntil:'commit',timeout})
+ // Detect a Cloudflare 1102 error page before waiting 40 seconds for a
+ // login form that could never hydrate. Never count 503 as an auth denial.
+ if(response?.status()===503){
+  const body=(await page.locator('body').innerText().catch(()=>''))||''
+  if(/Error 1102|Worker exceeded resource limits/i.test(body))
+   throw Error('Cloudflare Worker 1102 resource exhaustion on '+path+' (CPU or memory); see Main Worker metrics')
+  throw Error('Main Worker returned HTTP 503 on '+path+'; this is not a login or role denial')
+ }
  await page.locator('body').waitFor({state:'visible',timeout:30000})
  return response
 }
