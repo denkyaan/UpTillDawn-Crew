@@ -68,3 +68,10 @@ test('Maker log and overview endpoints never claim a successful check when the s
  assert.match(ui,/t\.unknown/)
  assert.match(ui,/state\?\.reports/)
 })
+
+test('Maker status refresh has a deadline and isolates its selected environment',async()=>{
+ const source=await file('components/god-mode/maker-overview.tsx')
+ assert.match(source,/setLoading\(true\)/)
+ assert.match(source,/AbortSignal\.any\(\[controller\.signal,AbortSignal\.timeout\(35_000\)\]\)/)
+ assert.match(source,/overviewState\?\.environment===environment\?overviewState\.data:null/)
+})
