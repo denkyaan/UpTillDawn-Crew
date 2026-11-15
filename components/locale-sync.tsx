@@ -75,6 +75,17 @@ export function LocaleSync() {
     // Update only the document language immediately (html suppresses hydration
     // warnings); defer mutating React-owned text until hydration has settled.
     document.documentElement.lang = locale
+    // Next.js can restore a stale server-rendered <html lang> during a
+    // navigation. Keep the active device/manual session choice authoritative
+    // without translating React-owned text ahead of hydration.
+    const documentLanguageObserver = new MutationObserver(() => {
+      if (document.documentElement.lang !== locale) {
+        document.documentElement.lang = locale
+      }
+    })
+    documentLanguageObserver.observe(document.documentElement, {
+      attributes: true, attributeFilter: ["lang"],
+    })
     let applying = false
     const applyLocale = (nextLocale: ExtendedUiLocale, source: LocaleSource) => {
       locale = nextLocale
@@ -155,6 +166,7 @@ export function LocaleSync() {
     return () => {
       if(initialPass!==undefined)window.clearTimeout(initialPass)
       window.removeEventListener('load',startRuntimeTranslation)
+      documentLanguageObserver.disconnect()
       observer.disconnect()
       window.removeEventListener(LANGUAGE_CHANGE_EVENT, onLanguageChange)
       window.removeEventListener("languagechange", onDeviceLanguageChange)
