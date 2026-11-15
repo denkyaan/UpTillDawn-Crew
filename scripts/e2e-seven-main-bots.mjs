@@ -263,7 +263,14 @@ async function assertAdministrationClickWorkflows(page,role,locale,viewport){
    page.waitForURL(target=>target.pathname==='/portals/administration',{waitUntil:'commit',timeout:40000}),
    home.click({timeout:20000}),
   ])
-  await page.locator('[data-administration-overview-ready="true"] h1').waitFor({state:'visible',timeout:30000})
+  try{
+   await page.locator('[data-administration-overview-ready="true"] h1').waitFor({state:'visible',timeout:30000})
+  }catch(error){
+   const body=(await page.locator('body').innerText().catch(()=>''))||''
+   if(/Error 1102|Worker exceeded resource limits/i.test(body))
+    throw Error('Cloudflare Worker 1102 while returning to Administration overview; Worker resource limits exceeded')
+   throw error
+  }
   mark(role,locale,viewport,'administration-return-overview','/portals/administration')
  }
 }
