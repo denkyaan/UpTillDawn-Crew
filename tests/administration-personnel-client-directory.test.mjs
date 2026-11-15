@@ -18,7 +18,7 @@ test('Administration personnel offloads directory reads from Next Worker but ret
  assert.doesNotMatch(client,/getPublicUrl|service_role|SUPABASE_SERVICE_ROLE/)
  assert.match(client,/AdministrationPrivateChatButton/)
  assert.match(client,/if\(directoryError\)/)
- assert.match(client,/onClick=\{\(\) =>\{/)
+ assert.match(client,/onClick=\{\(\)\s*=>\s*\{/)
  for(const locale of ['nl','fr','en','de'])assert.ok(client.includes(locale+':{title:'),locale)
 })
 
