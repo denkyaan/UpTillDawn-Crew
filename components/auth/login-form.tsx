@@ -4,7 +4,6 @@ import { useState, useSyncExternalStore, useTransition } from "react"
 import Link from "next/link"
 import Image from "next/image"
 import { Menu, X, Eye, EyeOff, Loader2, AlertCircle, ArrowRight, ShieldCheck, Users, UserCog, Megaphone, BriefcaseBusiness } from "lucide-react"
-import { signIn } from "@/lib/actions/auth"
 import { LanguageSwitcher } from "@/components/language-switcher"
 
 const portals = {
@@ -55,13 +54,25 @@ export function LoginForm({
   const [showPassword, setShowPassword] = useState(false)
   const [error, setError] = useState<string | null>(initialError)
   const [errorCode, setErrorCode] = useState<string | null>(initialError ? "initial_login_error" : null)
+  const [initialErrorDismissed, setInitialErrorDismissed] = useState(false)
   const [isPending, startTransition] = useTransition()
   const hydrated = useSyncExternalStore(subscribeHydration, clientHydrationSnapshot, serverHydrationSnapshot)
+  // Preserve the existing /login/admin?error=... status after removing
+  // request-bound SSR. The URL contains only a public error code, never a
+  // session or an authentication result. It is read after hydration.
+  const queryError = useSyncExternalStore(
+    subscribeHydration,
+    () => portal === "admin" ? new URLSearchParams(window.location.search).get("error") : null,
+    () => null,
+  )
+  const displayedError = error ?? (!initialErrorDismissed ? (initialError ?? queryError) : null)
+  const displayedCode = error ? errorCode : displayedError ? "initial_login_error" : null
 
   function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault()
     setError(null)
     setErrorCode(null)
+    setInitialErrorDismissed(true)
     const formData = new FormData(e.currentTarget)
     const requestedNext = new URLSearchParams(window.location.search).get("next")
     if (requestedNext && requestedNext.startsWith("/") && !requestedNext.startsWith("//") && !requestedNext.includes("\\")) {
@@ -72,7 +83,7 @@ export function LoginForm({
     }
     startTransition(async () => {
       try {
-        const result = portal === "admin" ? await signIn(formData) : await signInFromStaticShell(formData)
+        const result = await signInFromStaticShell(formData)
         if (result?.error) {
           setError(result.error)
           setErrorCode(result.code || "login_denied")
@@ -135,10 +146,10 @@ export function LoginForm({
             <p className="mt-1 text-sm text-zinc-400">UP TILL DAWN PERSONEELSBEHEER</p>
           </div>
 
-          {error && (
-            <div role="alert" data-login-error-code={errorCode || "login_error"} className="mb-5 flex gap-3 rounded-xl border border-red-500/30 bg-red-500/10 p-3 text-red-200">
+          {displayedError && (
+            <div role="alert" data-login-error-code={displayedCode || "login_error"} className="mb-5 flex gap-3 rounded-xl border border-red-500/30 bg-red-500/10 p-3 text-red-200">
               <AlertCircle className="mt-0.5 h-5 w-5 shrink-0" />
-              <p className="text-sm font-medium">{error}</p>
+              <p className="text-sm font-medium">{displayedError}</p>
             </div>
           )}
 
