@@ -3,6 +3,16 @@ import assert from 'node:assert/strict'
 import {readFile} from 'node:fs/promises'
 const read=p=>readFile(new URL('../'+p,import.meta.url),'utf8')
 
+test('active session language survives stale Next.js html attributes after navigation',async()=>{
+ const sync=await read('components/locale-sync.tsx')
+ assert.match(sync,/documentLanguageObserver = new MutationObserver/)
+ assert.match(sync,/document\.documentElement\.lang !== locale/)
+ assert.match(sync,/documentLanguageObserver\.observe\(document\.documentElement/)
+ assert.match(sync,/attributeFilter: \["lang"\]/)
+ assert.match(sync,/documentLanguageObserver\.disconnect\(\)/)
+ assert.doesNotMatch(sync,/useLayoutEffect/)
+})
+
 test('device language is authoritative at every fresh app start',async()=>{
  const [prefs,server]=await Promise.all([
   read('lib/locale-preferences.ts'),
