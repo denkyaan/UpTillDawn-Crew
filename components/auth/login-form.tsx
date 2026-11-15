@@ -23,6 +23,24 @@ const serverHydrationSnapshot = () => false
 
 type Portal = keyof typeof portals
 
+// Static Cloudflare login shells must not submit Next Server Actions back to
+// their asset URL. Use a dedicated same-origin JSON handler for non-Admin
+// portals; the handler delegates to the existing verified signIn action so
+// access, ownership, audit mail and Supabase session rules remain unchanged.
+async function signInFromStaticShell(formData:FormData):Promise<{
+  error?:string;code?:string;success?:boolean;redirectTo?:string
+}> {
+  const response=await fetch('/api/auth/portal-login',{
+    method:'POST',
+    credentials:'same-origin',
+    cache:'no-store',
+    headers:{Accept:'application/json'},
+    body:formData,
+  })
+  if(!response.ok)throw new Error('Login endpoint unavailable')
+  return await response.json()
+}
+
 export function LoginForm({
   portal,
   nativeAction,
@@ -54,7 +72,7 @@ export function LoginForm({
     }
     startTransition(async () => {
       try {
-        const result = await signIn(formData)
+        const result = portal === "admin" ? await signIn(formData) : await signInFromStaticShell(formData)
         if (result?.error) {
           setError(result.error)
           setErrorCode(result.code || "login_denied")
