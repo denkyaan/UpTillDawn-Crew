@@ -107,7 +107,7 @@ jobs:
         run: |
           set -euo pipefail
           # vinext init changes only this ephemeral CI checkout, not git files.
-          npx --yes vinext@1.4.5 init --platform=cloudflare --cdn-cache=none --data-cache=none --image-optimization=none --no-prerender --ignore-wrangler-config
+          npx --yes vinext@1.4.5 init --platform=cloudflare --name=uptilldawn-main --cdn-cache=none --data-cache=none --image-optimization=none --no-prerender --ignore-wrangler-config
           # Migrate with patched versions, not the vulnerable defaults
           # (undici <=7.30.0 and Vite 8.3.0..8.3.2). Keep this in CI only.
           npm pkg set overrides.undici=7.30.2
@@ -158,6 +158,71 @@ jobs:
           fi
           node scripts/vinext-main-auth-smoke.mjs
           echo 'vinext local seven-role authorization and browser smoke passed; Cloudflare CPU still unverified'
+
+      # Upload a non-promoted version Preview of the existing Main Worker.
+      # This is NOT a new staging environment or sixth workflow; the active
+      # workers.dev Main route and all production bindings remain untouched.
+      - name: Deploy non-promoted vinext Worker Free preview of Main
+        if: ${{ github.event_name == 'pull_request' && github.head_ref == 'feature/vinext-auth-parity-free-20261115' }}
+        id: vinext-preview
+        timeout-minutes: 7
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -n "${CLOUDFLARE_API_TOKEN:-}"
+          test -n "${CLOUDFLARE_ACCOUNT_ID:-}"
+          # The local QA build has already run with the isolated Main Supabase.
+          # A Preview upload must never promote the version to live traffic.
+          test -f cloudflare.config.ts
+          if ! grep -q "uptilldawn-main" cloudflare.config.ts; then
+            echo "::error::Generated Worker must be uptilldawn-main, refusing Preview deployment"
+            exit 1
+          fi
+          set +e
+          npx @vinext/cloudflare previews deploy --preview-name qa-free-340 > /tmp/vinext-free-preview.log 2>&1
+          deploy_code=$?
+          set -e
+          if [ "$deploy_code" -ne 0 ]; then
+            echo "::error::Non-promoted vinext Preview upload failed; active Main unchanged"
+            tail -45 /tmp/vinext-free-preview.log | sed -E 's/(Bearer |token=)[^[:space:]]+/\\1[REDACTED]/g'
+            exit "$deploy_code"
+          fi
+          url="$(grep -Eo 'https://[a-zA-Z0-9.-]+\\.workers\\.dev' /tmp/vinext-free-preview.log | grep 'uptilldawn-main' | tail -n1)"
+          if [ -z "$url" ]; then
+            echo "::error::Preview URL not reported by Cloudflare"
+            tail -30 /tmp/vinext-free-preview.log
+            exit 1
+          fi
+          hostname="$(node -e 'process.stdout.write(new URL(process.argv[1]).hostname)' "$url")"
+          case "$hostname" in
+            *-uptilldawn-main.uptilldawn.workers.dev) ;;
+            *) echo "::error::Preview host is not an isolated version of the Main Worker"; exit 1 ;;
+          esac
+          echo "preview_url=$url" >> "$GITHUB_OUTPUT"
+          echo "Non-promoted Cloudflare Free Preview deployed; Main traffic untouched"
+
+      - name: Check live Cloudflare Free preview role entrypoints and protected denial
+        if: ${{ github.event_name == 'pull_request' && github.head_ref == 'feature/vinext-auth-parity-free-20261115' }}
+        timeout-minutes: 5
+        env:
+          VINEXT_FREE_PREVIEW_URL: ${{ steps.vinext-preview.outputs.preview_url }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -n "${VINEXT_FREE_PREVIEW_URL:-}"
+          for portal in staff responsible promotion administration admin; do
+            status="$(curl --max-time 20 --retry 2 --retry-all-errors -L -sS -o /dev/null -w '%{http_code}' "${VINEXT_FREE_PREVIEW_URL}/login/$portal")"
+            if [ "$status" != 200 ]; then
+              echo "::error::Cloudflare Free Preview /login/$portal responded $status"
+              exit 1
+            fi
+            echo "PASS Cloudflare Free Preview /login/$portal HTTP 200"
+          done
+          echo 'Cloudflare Free Preview GET shells passed; protected seven-role session smoke still required'
+
 
   release-production:
     needs: fast
