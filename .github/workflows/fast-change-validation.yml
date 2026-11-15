@@ -159,11 +159,18 @@ jobs:
           node scripts/vinext-main-auth-smoke.mjs
           echo 'vinext local seven-role authorization and browser smoke passed; Cloudflare CPU still unverified'
 
+      - name: Report intentionally disabled Main Preview URL access
+        if: ${{ github.event_name == 'pull_request' && github.head_ref == 'feature/vinext-auth-parity-free-20261115' && vars.UPT_MAIN_PREVIEWS_ALLOWED != 'true' }}
+        shell: bash
+        run: |
+          echo "::notice::Live Cloudflare Free Preview tests were NOT run: Main Worker preview URLs are intentionally disabled. Set up an explicitly authorized Preview host and repository variable UPT_MAIN_PREVIEWS_ALLOWED=true to opt in."
+          echo "VINEXT_CLOUDFLARE_FREE_RUNTIME=UNVERIFIED" >> "$GITHUB_STEP_SUMMARY"
+
       # Upload a non-promoted version Preview of the existing Main Worker.
       # This is NOT a new staging environment or sixth workflow; the active
       # workers.dev Main route and all production bindings remain untouched.
       - name: Deploy non-promoted vinext Worker Free preview of Main
-        if: ${{ github.event_name == 'pull_request' && github.head_ref == 'feature/vinext-auth-parity-free-20261115' }}
+        if: ${{ github.event_name == 'pull_request' && github.head_ref == 'feature/vinext-auth-parity-free-20261115' && vars.UPT_MAIN_PREVIEWS_ALLOWED == 'true' }}
         id: vinext-preview
         timeout-minutes: 7
         env:
@@ -210,7 +217,7 @@ jobs:
           echo "Non-promoted Cloudflare Free Preview deployed; Main traffic untouched"
 
       - name: Check live Cloudflare Free preview role entrypoints and protected denial
-        if: ${{ github.event_name == 'pull_request' && github.head_ref == 'feature/vinext-auth-parity-free-20261115' }}
+        if: ${{ github.event_name == 'pull_request' && github.head_ref == 'feature/vinext-auth-parity-free-20261115' && vars.UPT_MAIN_PREVIEWS_ALLOWED == 'true' }}
         timeout-minutes: 5
         env:
           VINEXT_FREE_PREVIEW_URL: ${{ steps.vinext-preview.outputs.preview_url }}
@@ -229,7 +236,7 @@ jobs:
           echo 'Cloudflare Free Preview GET shells passed; protected seven-role session smoke still required'
 
       - name: Validate seven real role sessions on non-promoted Cloudflare Workers Free Preview
-        if: ${{ github.event_name == 'pull_request' && github.head_ref == 'feature/vinext-auth-parity-free-20261115' }}
+        if: ${{ github.event_name == 'pull_request' && github.head_ref == 'feature/vinext-auth-parity-free-20261115' && vars.UPT_MAIN_PREVIEWS_ALLOWED == 'true' }}
         timeout-minutes: 10
         env:
           VINEXT_FREE_PREVIEW_URL: ${{ steps.vinext-preview.outputs.preview_url }}
