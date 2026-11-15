@@ -4,6 +4,7 @@ import { PushPermissionPrompt } from '@/components/push-permission-prompt'
 import { FirstUseInstallPrompt } from '@/components/first-use-install-prompt'
 import { LocaleSync } from '@/components/locale-sync'
 import type { Metadata, Viewport } from 'next'
+import { Suspense } from 'react'
 import { ThemeProvider } from '@/components/theme-provider'
 import { AuthProvider } from '@/lib/providers'
 import { AdminSelectionProvider } from '@/lib/admin-selection-context'
@@ -67,7 +68,7 @@ export default async function RootLayout({
         <ThemeProvider attribute="class" defaultTheme="dark" enableSystem disableTransitionOnChange>
           <AuthProvider>
             <AdminSelectionProvider>
-            <WorkspaceContinuity /><PwaRegister /><FirstUseInstallPrompt /><PushPermissionPrompt /><SaveSuccessToaster />{children}
+            <WorkspaceContinuity /><PwaRegister /><FirstUseInstallPrompt /><Suspense fallback={null}><PushPermissionPrompt /></Suspense><SaveSuccessToaster />{children}
             <LocaleSync />
             <Toaster richColors position="top-right" />
             </AdminSelectionProvider>

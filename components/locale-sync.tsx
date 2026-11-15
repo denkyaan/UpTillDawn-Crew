@@ -71,6 +71,10 @@ function translateNode(root: Node, locale: ExtendedUiLocale) {
 export function LocaleSync() {
   useEffect(() => {
     let locale = initialUiLocale() as ExtendedUiLocale
+    // The SSR locale can be stale after an auth redirect or streaming render.
+    // Update only the document language immediately (html suppresses hydration
+    // warnings); defer mutating React-owned text until hydration has settled.
+    document.documentElement.lang = locale
     let applying = false
     const applyLocale = (nextLocale: ExtendedUiLocale, source: LocaleSource) => {
       locale = nextLocale
