@@ -111,6 +111,11 @@ jobs:
           node scripts/prepare-local-ocr.mjs
           npm run build:vinext
 
+      - name: Audit vinext candidate runtime dependencies after temporary initialization
+        if: ${{ github.event_name == 'pull_request' && github.head_ref == 'feature/vinext-auth-parity-free-20261115' }}
+        timeout-minutes: 3
+        run: npm audit --omit=dev --audit-level=high
+
       - name: Exercise all seven QA role logins against vinext local preview (no deployment)
         if: ${{ github.event_name == 'pull_request' && github.head_ref == 'feature/vinext-auth-parity-free-20261115' }}
         timeout-minutes: 7
