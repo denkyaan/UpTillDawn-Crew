@@ -29,13 +29,13 @@ export function PortalSwitcherLinks({portals,locale}:{
  const t=labels[locale]
  return <nav className="flex flex-wrap items-center gap-2 border-b px-4 py-2 print:hidden"
    aria-label={t.aria}>
-  {portals.map(portal=><Link key={portal} href={'/portals/switch/'+portal}
+  {portals.map(portal=><Link prefetch={false} key={portal} href={'/portals/switch/'+portal}
     aria-current={current===portal?'page':undefined}
     className={'rounded-lg border px-3 py-2 text-xs font-semibold focus-visible:outline focus-visible:outline-2 focus-visible:outline-violet-500 '+
      (current===portal?'border-violet-500 bg-violet-600 text-white':'border-violet-500/50 text-violet-400 hover:border-violet-500')}>
     {t[portal]}
    </Link>)}
-  <Link href="/portals" aria-current={pathname==='/portals'?'page':undefined}
+  <Link prefetch={false} href="/portals" aria-current={pathname==='/portals'?'page':undefined}
     className="rounded-lg border px-3 py-2 text-xs font-semibold text-muted-foreground hover:border-violet-500">
     {t.chooser}
   </Link>

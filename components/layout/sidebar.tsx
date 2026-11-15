@@ -62,7 +62,7 @@ export function AppSidebar({
  useEffect(()=>{const onKey=(event:KeyboardEvent)=>{if(event.key==="Escape")setSelectedGroup({key:"home",pathname})};window.addEventListener("keydown",onKey);return()=>window.removeEventListener("keydown",onKey)},[pathname])
 
  return <aside className="hidden lg:flex w-[250px] h-dvh sticky top-0 min-h-0 flex-col overflow-hidden border-r border-border bg-card">
-  <Link href={isAdmin?"/admin":"/"} className="h-16 flex items-center gap-3 px-5 border-b border-border">
+  <Link prefetch={false} href={isAdmin?"/admin":"/"} className="h-16 flex items-center gap-3 px-5 border-b border-border">
    <Image src="/up-till-dawn-mark.webp" alt="UP TILL DAWN" width={36} height={36} className="h-9 w-9 rounded-xl object-cover" priority />
    <div><div className="font-black tracking-wide">UP TILL DAWN</div><div className="text-[10px] text-muted-foreground tracking-[.18em]">PERSONEELSBEHEER</div></div>
   </Link>
@@ -76,7 +76,7 @@ export function AppSidebar({
     const count=Math.max(i.key==="chat"?chatMissed:i.key==="incidents"?incidentMissed:i.key==="tasks"?taskMissed:0,notificationFeatureCounts[i.key]??0)
     const label=i.key==="incidents"?({nl:"Incidenten",fr:"Incidents",en:"Incidents",de:"Vorfälle"} as const)[locale]:i.key==="help"?({nl:"Helpcentrum",fr:"Centre d’aide",en:"Help centre",de:"Hilfezentrum"} as const)[locale]:adminAdministrationLabel(i.key,locale)||featureLabels[i.key]||getDefaultRoleUiLabel(roleKey,i.key,i.label)
     const help=featureHelp(i.key,label)
-    return <Link data-layout-key={i.key} key={i.key} href={href} title={help.description} aria-description={help.description} className={cn("flex items-center gap-3 rounded-xl px-3 py-3 text-sm font-semibold",active?"bg-violet-600 text-white":"text-muted-foreground hover:bg-muted hover:text-foreground")}><span className="relative"><Icon className="h-5 w-5"/>{count>0&&<span className="absolute -right-3 -top-3 flex h-5 min-w-5 items-center justify-center rounded-full bg-red-600 px-1 text-[10px] font-black leading-none text-white">{count>99?"99+":count}</span>}</span>{label}</Link>
+    return <Link prefetch={false} data-layout-key={i.key} key={i.key} href={href} title={help.description} aria-description={help.description} className={cn("flex items-center gap-3 rounded-xl px-3 py-3 text-sm font-semibold",active?"bg-violet-600 text-white":"text-muted-foreground hover:bg-muted hover:text-foreground")}><span className="relative"><Icon className="h-5 w-5"/>{count>0&&<span className="absolute -right-3 -top-3 flex h-5 min-w-5 items-center justify-center rounded-full bg-red-600 px-1 text-[10px] font-black leading-none text-white">{count>99?"99+":count}</span>}</span>{label}</Link>
    })}</div>
   </nav>
   <div className="shrink-0 border-t border-border p-4"><div className="text-[11px] text-muted-foreground flex gap-2"><Shield className="h-4 w-4"/>Beveiligde personeelsoperaties</div></div>

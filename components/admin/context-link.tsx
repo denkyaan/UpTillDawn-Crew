@@ -12,7 +12,7 @@ export function ContextLink({
 }:Omit<ComponentProps<typeof Link>,"href"> & {href:string;context?:Partial<AdminSelection>}){
   const admin=useAdminSelection()
   const nextHref=admin.href(href,context||{})
-  return <Link {...props} href={nextHref} onClick={event=>{
+  return <Link {...props} prefetch={props.prefetch ?? false} href={nextHref} onClick={event=>{
     if(context)admin.setSelection(context)
     props.onClick?.(event)
   }}>{children}</Link>

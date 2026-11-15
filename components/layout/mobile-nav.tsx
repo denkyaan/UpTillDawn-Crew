@@ -82,6 +82,7 @@ export function MobileBottomNav({
    const label=item.key==="incidents"?({nl:"Incidenten",fr:"Incidents",en:"Incidents",de:"Vorfälle"} as const)[uiLocale]:item.key==="help"?({nl:"Helpcentrum",fr:"Centre d’aide",en:"Help centre",de:"Hilfezentrum"} as const)[uiLocale]:adminAdministrationLabel(item.key,uiLocale) || featureLabels[item.key] || getDefaultRoleUiLabel(roleKey,item.key,item.label)
    const help=featureHelp(item.key,label)
    return <Link
+    prefetch={false}
     data-layout-key={item.key}
     href={href}
     title={help.description}
