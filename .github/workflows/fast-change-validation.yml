@@ -108,6 +108,10 @@ jobs:
           set -euo pipefail
           # vinext init changes only this ephemeral CI checkout, not git files.
           npx --yes vinext@1.4.5 init --platform=cloudflare --cdn-cache=none --data-cache=none --image-optimization=none --no-prerender --ignore-wrangler-config
+          # Migrate with patched versions, not the vulnerable defaults
+          # (undici <=7.30.0 and Vite 8.3.0..8.3.2). Keep this in CI only.
+          npm pkg set overrides.undici=7.30.2
+          npm install --save-dev --save-exact vite@8.3.8 --no-audit --no-fund
           node scripts/prepare-local-ocr.mjs
           npm run build:vinext
 
