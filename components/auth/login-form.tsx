@@ -23,8 +23,8 @@ const serverHydrationSnapshot = () => false
 type Portal = keyof typeof portals
 
 // Static Cloudflare login shells must not submit Next Server Actions back to
-// their asset URL. Use a dedicated same-origin JSON handler for non-Admin
-// portals; the handler delegates to the existing verified signIn action so
+// their asset URL. Use a dedicated same-origin JSON handler for all login
+// portals, including Admin; the handler delegates to the existing verified signIn action so
 // access, ownership, audit mail and Supabase session rules remain unchanged.
 async function signInFromStaticShell(formData:FormData):Promise<{
   error?:string;code?:string;success?:boolean;redirectTo?:string
