@@ -291,9 +291,6 @@ jobs:
       - name: Build main app Worker
         run: npm run build:cloudflare
 
-      - name: Publish immutable anonymous login shells as Cloudflare Static Assets (Main only)
-        run: node scripts/publish-main-login-assets.mjs
-
       - name: Verify self-hosted OCR assets built for main
         shell: bash
         run: |
@@ -354,20 +351,6 @@ jobs:
                 }
               } catch { console.log("::warning::Cloudflare subdomain response could not be parsed"); }
             });'
-
-      - name: Verify public Main login paths bypass the Next Worker
-        if: steps.current-main.outputs.current == 'true'
-        shell: bash
-        run: |
-          set -euo pipefail
-          for portal in staff responsible promotion administration; do
-            headers="$(curl --retry 3 --retry-all-errors --retry-delay 2 --max-time 25 -sS -I "${NEXT_PUBLIC_APP_URL}/login/${portal}")"
-            if ! grep -qi '^x-uptilldawn-static-login: 1' <<< "$headers"; then
-              echo "::error::Public /login/${portal} was not served as Cloudflare Static Asset."
-              exit 1
-            fi
-            echo "Static Cloudflare Asset verified: /login/${portal}"
-          done
 
       - name: Smoke test main app
         if: steps.current-main.outputs.current == 'true'
