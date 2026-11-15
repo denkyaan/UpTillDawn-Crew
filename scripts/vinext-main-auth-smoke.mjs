@@ -45,7 +45,7 @@ async function assertRole(role, index) {
       throw Error('Login did not reach a protected route' + (code ? '; code=' + code : ''))
     }
     const cookieNames = (await context.cookies(BASE)).map(cookie => cookie.name)
-    if (!cookieNames.some(name => /^sb-[a-z0-9]+-auth-token(?:\\.\\d+)?$/i.test(name))) {
+    if (!cookieNames.some(name => /^sb-[a-z0-9]+-auth-token(?:\.\d+)?$/i.test(name))) {
       throw Error('Supabase authenticated session cookie missing')
     }
     const response = await page.goto(BASE + role.allowed, { waitUntil: 'commit', timeout: 30000 })
