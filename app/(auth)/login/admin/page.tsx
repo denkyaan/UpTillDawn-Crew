@@ -1,12 +1,9 @@
 import { LoginForm } from '@/components/auth/login-form'
 
-export default async function AdminLoginPage({
-  searchParams,
-}: {
-  searchParams: Promise<{ error?: string }>
-}) {
-  const params = await searchParams
-  const error = typeof params.error === 'string' ? params.error : null
+// Public Admin login has no private content. Only the POST handler performs
+// authentication and authorization. Avoid Next SSR for anonymous GETs on Main.
+export const dynamic = 'force-static'
 
-  return <LoginForm portal="admin" initialError={error} />
+export default function AdminLoginPage() {
+  return <LoginForm portal="admin" />
 }
