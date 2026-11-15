@@ -94,6 +94,29 @@ jobs:
           } >> "$GITHUB_STEP_SUMMARY"
       - name: Production dependency security gate
         run: npm audit --omit=dev --audit-level=high
+      - name: Probe vinext Workers Free build in isolated pull request only (NO DEPLOY)
+        if: ${{ github.event_name == 'pull_request' && github.head_ref == 'poc/vinext-workers-free-build-20261115' }}
+        shell: bash
+        timeout-minutes: 13
+        run: |
+          set -euo pipefail
+          echo "One-off vinext POC in disposable CI runner; no production or Main Workers credentials"
+          echo "No deploy command will be executed. Existing Next/OpenNext application remains unchanged."
+          npx --yes vinext@1.4.5 init \
+            --platform=cloudflare --ignore-wrangler-config \
+            --name uptilldawn-vinext-probe \
+            --cdn-cache=none --data-cache=none \
+            --image-optimization=none --no-prerender --skip-check \
+            2>&1 | tee /tmp/vinext-probe-init.log
+          test -f vite.config.ts || { echo "::error::vinext did not create Vite configuration"; exit 1; }
+          test -f cloudflare.config.ts || { echo "::error::vinext did not create Cloudflare configuration"; exit 1; }
+          npm run build:vinext 2>&1 | tee /tmp/vinext-probe-build.log
+          {
+            echo "## vinext main-only build feasibility"
+            echo "Cloudflare Workers build completed without deployment."
+            echo "Configuration was created only in this disposable CI working directory."
+          } >> "$GITHUB_STEP_SUMMARY"
+
   release-production:
     needs: fast
     # Only a manual, explicit release input may dispatch full CI production.
