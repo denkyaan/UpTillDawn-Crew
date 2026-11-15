@@ -103,6 +103,11 @@ try{
    console.log('CLOUDFLARE_MAIN_POST_DEPLOY unavailable: analytics endpoint not reachable')
   }
  }else console.log('CLOUDFLARE_MAIN_POST_DEPLOY unavailable: deployment timestamp missing or outside last 90 minutes')
+ const observedFailures=postDeployCounts===null?null:
+  (postDeployCounts.get('exceededResources')||0)+(postDeployCounts.get('exceededCpu')||0)+(postDeployCounts.get('exceededMemory')||0)
+ // A green sampled analytics result must never hide real browser failures.
+ if(process.env.MAIN_BROWSER_QA_RESULT==='failure'&&observedFailures===0)
+  console.log('::warning::Main browser acceptance failed while analytics reported zero post-deploy resource outcomes; treat browser failures as authoritative until investigated')
  const {appendFileSync}=await import('node:fs')
  if(process.env.GITHUB_STEP_SUMMARY)appendFileSync(process.env.GITHUB_STEP_SUMMARY,
   '\n### Main Worker resource outcomes (read-only)\n- Worker: uptilldawn-main\n- Last 90-minute status counts (includes earlier app revisions): '+(summary||'none')+'\n- Status counts since current Main deployment: '+postDeploySummary+'\n- Post-deploy confirmed resource failures: '+(postDeployCounts===null?'unavailable':(postDeployCounts.get('exceededResources')||0)+(postDeployCounts.get('exceededCpu')||0)+(postDeployCounts.get('exceededMemory')||0))+'\n- Maximum grouped CPU P99 (ms), last 90 minutes: '+(cpuP99Ms??'unavailable')+'\n- Maximum grouped isolate-memory P99 (MiB), last 90 minutes: '+(memoryP99MiB??'unavailable')+'\n- Analytics may be delayed; a zero is not a long-term guarantee\n- Production worker not queried\n')

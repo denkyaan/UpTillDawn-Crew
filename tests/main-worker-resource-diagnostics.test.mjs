@@ -34,3 +34,9 @@ test('post-deploy resource measurement cannot mistake 90-minute history for curr
  assert.match(workflow,/deployed_at: \$\{\{ steps\.worker-deploy\.outputs\.deployed_at \}\}/)
  assert.match(workflow,/echo "deployed_at=\$\(date -u \+%Y-%m-%dT%H:%M:%SZ\)" >> "\$GITHUB_OUTPUT"/)
 })
+
+test('Cloudflare metrics cannot override a failed end-to-end browser verdict',()=>{
+ assert.match(source,/MAIN_BROWSER_QA_RESULT==='failure'/)
+ assert.match(source,/browser acceptance failed while analytics reported zero/)
+ assert.match(workflow,/MAIN_BROWSER_QA_RESULT: \$\{\{ needs\.qa-main-browser-acceptance\.result \}\}/)
+})
