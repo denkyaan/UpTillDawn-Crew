@@ -59,7 +59,7 @@ async function pool(items,max,label,work,{allowPartial=false}={}){
    try{values[i]=await work(items[i],i)}catch(error){record(label,error,i+1)}
   }
  }))
- if(values.some(x=>x===undefined)&&!allowPartial)
+ if(Array.from({length:items.length},(_,i)=>values[i]).some(x=>x===undefined)&&!allowPartial)
   throw Error(label+' did not complete for all '+items.length+' unique users')
  return allowPartial?values.filter(x=>x!==undefined):values
 }
