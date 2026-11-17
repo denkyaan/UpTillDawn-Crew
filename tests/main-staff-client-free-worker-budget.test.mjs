@@ -34,7 +34,7 @@ test("Main Workers Free: only verified Staff enters the no-SSR event and task vi
 
 test("Main: staff Events preserves availability, cancellation reason, emergency, secure documents and chat",()=>{
  assert.match(staffEvents,/setEventAvailability\(fd\)/)
- assert.match(staffEvents,/name="response"/)
+ assert.match(staffEvents,/\["response",t\.event,/)
  assert.match(staffEvents,/name="reason"/)
  assert.match(staffEvents,/EmergencyInformationPanel compact canEdit=\{false\}/)
  assert.match(staffEvents,/\.from\("event_documents"\)/)
