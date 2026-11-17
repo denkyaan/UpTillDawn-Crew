@@ -101,7 +101,7 @@ test('Documenso v2 probe uses raw API token and rejects local or unsafe origins 
 
 test('Ponto OAuth token requires AIS scope and account consent; no transfer endpoint can be touched',async()=>{
  const env={PONTO_CLIENT_ID:fake,PONTO_CLIENT_SECRET:fake}
- const p=isolatedProviderProbe(async (url,init)=>{
+ const p=isolatedProviderProbe(async url=>{
   if(url==='https://api.myponto.com/oauth2/token')
    return json({access_token:'FAKE-AIS-ACCESS-TOKEN',scope:'ai',token_type:'bearer'})
   if(url==='https://api.myponto.com/accounts?page%5Blimit%5D=1')
