@@ -1,4 +1,5 @@
 import Link from 'next/link'
+import {LazyStaffEvents} from '@/components/crew/lazy-staff-events'
 import { DateInput } from '@/components/crew/date-input'
 import { AdminOnly } from '@/components/auth/admin-only'
 import { GeoapifyPlaceFields } from '@/components/events/geoapify-place-fields'
@@ -27,9 +28,12 @@ const input='rounded-lg border bg-background p-3'
 
 export default async function Page({searchParams}:{searchParams?:Promise<{event?:string}>}){
   const params=searchParams?await searchParams:{}
-  const s=await createClient()
   const user=await getCurrentUser()
   if(!user)return null
+  // Keep full Admin/Responsible SSR and all actions unchanged. Staff does
+  // not need the costly Manager/archival page tree in the Free Worker.
+  if(user.role==='staff')return <LazyStaffEvents userId={user.id} focusEvent={params.event}/>
+  const s=await createClient()
   // Keep the existing RLS-backed Admin-wide availability queue. Staff and
   // responsible portals need only their own recorded response here.
   const availabilityQuery=s.from('event_availability')
