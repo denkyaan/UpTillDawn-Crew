@@ -272,8 +272,8 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
     // issuing the entire dashboard badge-query burst in the same second.
     const seed=[...(user?.id||'')].reduce((h,c)=>((h*33+c.charCodeAt(0))>>>0),0)
     const safeRefresh=(force=false)=>void refresh(force).catch(()=>{})
-    const initial=window.setTimeout(()=>safeRefresh(),400+seed%2200)
-    const timer=window.setInterval(()=>safeRefresh(),pathname.startsWith("/portals/")?45_000:30_000)
+    const initial=window.setTimeout(()=>safeRefresh(),400+seed%6500)
+    const timer=window.setInterval(()=>safeRefresh(),pathname.startsWith("/portals/")?45_000+seed%8_000:30_000+seed%8_000)
     const focus=()=>safeRefresh()
     // Explicit chat-read action must still update the badge immediately.
     const chatRead=()=>safeRefresh(true)
