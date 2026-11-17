@@ -252,6 +252,9 @@ if(process.argv.includes('--cleanup')){
     p_gps_status:'not_checked',
    })
    assert.ok(denied.error,'Future unpublished event accepted an unassigned check-in')
+   assert.ok(denied.status<500,'Check-in service outage is not a valid authorization denial')
+   assert.match(String(denied.error.message),/dienst|Werk & pauze/i,
+    'Check-in was not rejected by the expected shift or operations guard')
    // Do not create synthetic attendance or GPS records.
    report.checkinDenied++
    throwIfError(await client.from('timesheets').select('id,status')
