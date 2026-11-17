@@ -1,7 +1,7 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
 import {readFileSync} from 'node:fs'
-const sql=readFileSync('supabase/migrations/20261117201500_chat_unread_total_set_based_fastpath.sql','utf8')
+const sql=readFileSync('supabase/migrations/20261117201203_main_chat_unread_total_set_based_fastpath_20261117.sql','utf8')
 
 test('badge computes exact unread count without invoking heavy channel summaries',()=>{
  assert.match(sql,/create or replace function public\.upt_chat_unread_total\(\)/i)
