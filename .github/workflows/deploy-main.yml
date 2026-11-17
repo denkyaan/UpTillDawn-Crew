@@ -55,11 +55,8 @@ jobs:
         run: node scripts/provision-seven-main-bots.mjs --verify --verify-passwords
 
   qa-main-anonymous-acceptance:
-    # Strict independent security gate. Running this inside the deployment job
-    # hid the 30-session and runtime evidence whenever an anonymous probe
-    # encountered a transient Worker network failure. Keep a RED verdict here,
-    # while allowing all other diagnostics against the already deployed Worker.
-    # Sequence it before functional/browser load so QA phases do not overlap.
+    # Strict, independent security gate. A failure stays red but may not
+    # suppress the remaining functional, 30-user or Cloudflare evidence.
     needs: [validate-trigger, deploy]
     if: >-
       always() && github.event_name == 'workflow_run' &&
@@ -69,6 +66,8 @@ jobs:
     timeout-minutes: 8
     env:
       E2E_BASE_URL: https://uptilldawn-main.uptilldawn.workers.dev
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
     steps:
       - name: Checkout exact deployed Main commit
         uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5.1.0
@@ -80,6 +79,12 @@ jobs:
           node-version: 24
       - name: Adversarial anonymous route and API guard probes on Main
         run: node scripts/main-adversarial-surface.mjs --probe
+      - name: Record Main Worker resource limits even if route probing fails
+        if: always()
+        env:
+          MAIN_WORKER_DEPLOYED_AT: ${{ needs.deploy.outputs.deployed_at }}
+          MAIN_BROWSER_QA_RESULT: ${{ job.status }}
+        run: node scripts/main-worker-outcomes.mjs
       - name: Publish Main adversarial route evidence
         if: always()
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
