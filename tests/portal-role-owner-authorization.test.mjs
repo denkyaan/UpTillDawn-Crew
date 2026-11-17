@@ -21,7 +21,9 @@ test('non-owner role management still requires active approved admin',()=>{
 test('portal access is independently checked on server for both protected portals',()=>{
  for(const source of [administrationLayout,promotionLayout]){
   assert.match(source,/if\(!user\)redirect\("\/login"\)|if\(!current\)redirect\("\/login"\)/)
-  assert.match(source,/upt_my_portal_assignments/)
+  assert.match(source===administrationLayout?source:source,/canOpenPortal\(/)
+  if(source===administrationLayout)assert.match(source,/currentPortalAssignments/)
+  else assert.match(source,/upt_my_portal_assignments/)
   assert.match(source,/canOpenPortal\(/)
  }
 })
