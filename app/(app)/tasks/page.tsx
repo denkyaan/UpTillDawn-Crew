@@ -28,6 +28,7 @@ export default async function Page({searchParams}:{searchParams?:Promise<{event?
   const user = { id: current.id }
   const isAdmin = current.role === 'admin'
   const isResponsible = current.role === 'responsible_lead'
+  const manager = isAdmin || isResponsible
   // Limit non-manager directory reads to the signed-in user's assignments.
   // RLS remains authoritative; manager-wide views are unchanged.
   const taskAssignmentQuery=s.from('task_assignments')
@@ -35,30 +36,36 @@ export default async function Page({searchParams}:{searchParams?:Promise<{event?
     .order('created_at')
   const roleTaskAssignments=isAdmin||isResponsible?taskAssignmentQuery:taskAssignmentQuery.eq('user_id',user.id)
 
+  // One RLS-authorized event listing supplies the names and all time-based
+  // visibility checks. Do not ask Supabase for the same events three times
+  // on every navigation. Staff does not need the manager-wide availability
+  // queue; the task/shift entitlement still comes from the original RLS
+  // queries and all writes remain server-authorized.
   const [
     { data: events },
     { data, error },
-    { data: activeEvents },
     { data: ownMemberships },
     { data: availabilityRows },
-    { data: openEvents },
     { data: ownActiveShifts },
   ] = await boundedQueries([
-    s.from('events').select('id,name').neq('status', 'archived').order('start_at'),
+    s.from('events').select('id,name,start_at,end_at').neq('status','archived').order('start_at'),
     roleTaskAssignments,
-    s.from('events').select('id').neq('status','archived').lte('start_at', 'now').gte('end_at', 'now').order('start_at'),
-    s.from('event_members').select('event_id').eq('user_id', user.id),
-    s.from('event_availability').select('event_id,user_id').eq('response', 'can'),
-    s.from('events').select('id').neq('status','archived').gte('end_at', 'now'),
+    s.from('event_members').select('event_id').eq('user_id',user.id),
+    manager
+      ? s.from('event_availability').select('event_id,user_id').eq('response','can')
+      : Promise.resolve({data:[] as {event_id:string;user_id:string}[]}),
     s.from('shifts')
       .select('event_id,workplace_id')
-      .eq('user_id', user.id)
-      .neq('status', 'cancelled')
-      .lte('scheduled_start', 'now')
-      .gte('scheduled_end', 'now'),
+      .eq('user_id',user.id)
+      .neq('status','cancelled')
+      .lte('scheduled_start','now')
+      .gte('scheduled_end','now'),
   ],3)
+  const now=Date.now()
+  const activeEvents=(events||[]).filter(event=>
+    Date.parse(event.start_at)<=now&&Date.parse(event.end_at)>=now)
+  const openEvents=(events||[]).filter(event=>Date.parse(event.end_at)>=now)
 
-  const manager = isAdmin || isResponsible
   const hasActiveShift = Boolean(ownActiveShifts?.length)
   const activeShiftEventIds = new Set((ownActiveShifts || []).map(shift => shift.event_id))
   const runningEventId = (isAdmin&&params.event&&events?.some(event=>event.id===params.event)?params.event:null) || ownActiveShifts?.[0]?.event_id || activeEvents?.[0]?.id || ''
