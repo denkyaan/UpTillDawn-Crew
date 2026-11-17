@@ -5,6 +5,7 @@ import Link from "next/link"
 import Image from "next/image"
 import { Menu, X, Eye, EyeOff, Loader2, AlertCircle, ArrowRight, ShieldCheck, Users, UserCog, Megaphone, BriefcaseBusiness } from "lucide-react"
 import { LanguageSwitcher } from "@/components/language-switcher"
+import {initialUiLocale} from "@/lib/locale-preferences"
 
 const portals = {
   staff: { label: "Personeel", icon: Users },
@@ -22,6 +23,26 @@ const serverHydrationSnapshot = () => false
 
 type Portal = keyof typeof portals
 
+// A failed transport (including Cloudflare 503/1102) is never evidence of
+// invalid credentials or a denied role. Keep this safe message local to the
+// browser language; provider/API error bodies are never shown to users.
+const loginServiceUnavailable={
+  nl:"De aanmeldservice is tijdelijk niet bereikbaar. Probeer opnieuw.",
+  fr:"Le service de connexion est temporairement indisponible. Réessayez.",
+  en:"The sign-in service is temporarily unavailable. Please try again.",
+  de:"Der Anmeldedienst ist vorübergehend nicht erreichbar. Bitte erneut versuchen.",
+} as const
+const loginRequestRejected={
+  nl:"De aanmelding kon niet worden verwerkt. Vernieuw de pagina en probeer opnieuw.",
+  fr:"La demande de connexion n'a pas pu être traitée. Actualisez la page et réessayez.",
+  en:"The sign-in request could not be processed. Refresh the page and try again.",
+  de:"Die Anmeldung konnte nicht verarbeitet werden. Laden Sie die Seite neu und versuchen Sie es erneut.",
+} as const
+
+function temporaryLoginError(code="auth_temporarily_unavailable"){
+  return {error:loginServiceUnavailable[initialUiLocale()],code}
+}
+
 // Static Cloudflare login shells must not submit Next Server Actions back to
 // their asset URL. Use a dedicated same-origin JSON handler for all login
 // portals, including Admin; the handler delegates to the existing verified signIn action so
@@ -36,7 +57,12 @@ async function signInFromStaticShell(formData:FormData):Promise<{
     headers:{Accept:'application/json'},
     body:formData,
   })
-  if(!response.ok)throw new Error('Login endpoint unavailable')
+  if(response.status===429)return temporaryLoginError("auth_rate_limited")
+  if(response.status>=500)return temporaryLoginError()
+  if(!response.ok)return {
+    error:loginRequestRejected[initialUiLocale()],
+    code:"login_request_rejected",
+  }
   return await response.json()
 }
 
@@ -93,12 +119,12 @@ export function LoginForm({
           window.location.assign(result.redirectTo)
         }
       } catch {
-        // Only an unexpected Server Action failure is marked retriable for QA.
-        // Invalid credentials, blocked accounts and role denials are NEVER retried.
-        setErrorCode("unexpected_action_failure")
-        setError(portal === "admin" || portal === "responsible"
-          ? "Foute logingegevens of u heeft geen toegang tot deze rol."
-          : "Aanmelden mislukt. Controleer je gegevens en probeer opnieuw.")
+        // Network, malformed upstream response or an unavailable Worker must
+        // never be presented as invalid credentials or rejected role access.
+        // Neither authorization state nor passwords are inferred on transport failure.
+        const outage=temporaryLoginError()
+        setErrorCode(outage.code)
+        setError(outage.error)
       }
     })
   }

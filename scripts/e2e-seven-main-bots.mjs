@@ -352,8 +352,18 @@ try{
     assert.ok(cookieNames.some(name=>/^sb-[a-z0-9]+-auth-token(?:\.\d+)?$/i.test(name)),
      'Login redirect completed but browser has no Supabase SSR authentication cookie')
     mark(role.role,locale,viewport,'authenticated',new URL(page.url()).pathname)
-    const htmlLocale=(await page.locator('html').getAttribute('lang')||'').split('-')[0]
-    assert.equal(htmlLocale,locale,'App language mismatch')
+    // Initial SSR language can be replaced after a static login redirect.
+    // Device-language hydration updates <html lang> asynchronously; check the
+    // final applied locale, never a racing first frame. A persistent mismatch
+    // remains a hard QA failure after this bounded hydration grace period.
+    try{
+     await page.waitForFunction(expected=>
+      document.documentElement.lang.toLowerCase().split('-')[0]===expected,
+      locale,{timeout:7000})
+    }catch{
+     const htmlLocale=(await page.locator('html').getAttribute('lang')||'').split('-')[0]
+     throw Error('App language mismatch after hydration: '+htmlLocale+' !== '+locale)
+    }
     for(const path of role.allowed){
      try{
       // Without a live assignment, the Tasks route deliberately redirects

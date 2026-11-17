@@ -48,8 +48,11 @@ test('admin and responsible login denial is consistent and fully translated', as
   const message = 'Foute logingegevens of u heeft geen toegang tot deze rol.'
   assert.ok(auth.includes("requestedPortal === 'admin' || requestedPortal === 'responsible'"))
   assert.ok(auth.includes(message))
-  assert.ok(login.includes('portal === "admin" || portal === "responsible"'))
-  assert.ok(login.includes(message))
+   // The server owns role-denial copy; the browser renders that result.
+   // Transport failures have separate four-language temporary availability copy.
+   assert.ok(login.includes('setError(result.error)'))
+   assert.ok(login.includes('setErrorCode(result.code || "login_denied")'))
+   assert.ok(login.includes('loginServiceUnavailable[initialUiLocale()]'))
   const row = complete.split('\n').find(line => line.includes(message)) || ''
   assert.match(row, /fr:\s*'[^']+'/)
   assert.match(row, /en:\s*'[^']+'/)
