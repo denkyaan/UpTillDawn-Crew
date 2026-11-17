@@ -54,6 +54,41 @@ jobs:
       - name: Verify seven distinct roles and login with the same configured QA password
         run: node scripts/provision-seven-main-bots.mjs --verify --verify-passwords
 
+  qa-main-anonymous-acceptance:
+    # Strict independent security gate. Running this inside the deployment job
+    # hid the 30-session and runtime evidence whenever an anonymous probe
+    # encountered a transient Worker network failure. Keep a RED verdict here,
+    # while allowing all other diagnostics against the already deployed Worker.
+    # Sequence it before functional/browser load so QA phases do not overlap.
+    needs: [validate-trigger, deploy]
+    if: >-
+      always() && github.event_name == 'workflow_run' &&
+      needs.validate-trigger.outputs.qa_eligible == 'true' &&
+      needs.deploy.result == 'success'
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    env:
+      E2E_BASE_URL: https://uptilldawn-main.uptilldawn.workers.dev
+    steps:
+      - name: Checkout exact deployed Main commit
+        uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5.1.0
+        with:
+          ref: ${{ github.event.workflow_run.head_sha }}
+      - name: Set up Node.js
+        uses: actions/setup-node@a0853c24544627f65ddf259abe73b1d18a591444 # v5.0.0
+        with:
+          node-version: 24
+      - name: Adversarial anonymous route and API guard probes on Main
+        run: node scripts/main-adversarial-surface.mjs --probe
+      - name: Publish Main adversarial route evidence
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: main-adversarial-routes
+          path: test-results/main-adversarial/
+          if-no-files-found: ignore
+          retention-days: 14
+
   qa-main-browser-acceptance:
     # Do not overlap heavy browser navigation with transactional functional QA:
     # both drive the same resource-limited Main Worker. The existing always()
@@ -101,7 +136,7 @@ jobs:
   qa-main-functional-acceptance:
     # A browser/login failure must NOT suppress real workflow E2E evidence.
     # This job has its own red/green verdict and cannot contact production.
-    needs: [validate-trigger, deploy]
+    needs: [validate-trigger, deploy, qa-main-anonymous-acceptance]
     if: >-
       always() && github.event_name == 'workflow_run' &&
       needs.validate-trigger.outputs.qa_eligible == 'true' &&
@@ -602,17 +637,3 @@ jobs:
           fi
           echo 'OCR authentication gate is active on main.'
  
-      - name: Adversarial anonymous route and API guard probes on Main
-        if: steps.current-main.outputs.current == 'true'
-        env:
-          E2E_BASE_URL: https://uptilldawn-main.uptilldawn.workers.dev
-        run: node scripts/main-adversarial-surface.mjs --probe
-
-      - name: Publish Main adversarial route evidence
-        if: always()
-        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
-        with:
-          name: main-adversarial-routes
-          path: test-results/main-adversarial/
-          if-no-files-found: ignore
-          retention-days: 14
