@@ -303,7 +303,7 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
     </div>
 
     {!pathname.startsWith("/chat")&&<>
-      {showUrgent&&<Link href="/incidents" className="fixed bottom-20 left-4 z-50 rounded-full bg-red-600 px-5 py-4 font-black text-white print:hidden lg:hidden">{({nl:"HELP",en:"HELP",fr:"AIDE",de:"HILFE"} as Record<SupportedUiLocale,string>)[uiLocale]}<CountBadge count={incidentMissed}/></Link>}
+      {showUrgent&&<Link prefetch={false} href="/incidents" className="fixed bottom-20 left-4 z-50 rounded-full bg-red-600 px-5 py-4 font-black text-white print:hidden lg:hidden">{({nl:"HELP",en:"HELP",fr:"AIDE",de:"HILFE"} as Record<SupportedUiLocale,string>)[uiLocale]}<CountBadge count={incidentMissed}/></Link>}
     </>}
   </div>
 }

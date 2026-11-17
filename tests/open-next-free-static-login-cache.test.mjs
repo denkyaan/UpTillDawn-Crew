@@ -3,10 +3,10 @@ import assert from 'node:assert/strict'
 import {readFileSync} from 'node:fs'
 const read=(file)=>readFileSync(file,'utf8')
 
-test('Cloudflare OpenNext serves only build-time public login shells from the read-only static assets cache',()=>{
+test('Cloudflare retains static login assets without intercepting dynamic authenticated SSR',()=>{
  const config=read('open-next.config.ts')
  assert.match(config,/incrementalCache:\s*staticAssetsIncrementalCache/)
- assert.match(config,/enableCacheInterception:\s*true/)
+ assert.match(config,/enableCacheInterception:\s*false/)
  assert.match(config,/static-assets-incremental-cache/)
  const wrangler=JSON.parse(read('wrangler.main.jsonc'))
  assert.equal(wrangler.name,'uptilldawn-main')

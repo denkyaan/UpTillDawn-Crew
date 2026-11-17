@@ -241,7 +241,7 @@ export default async function Page({searchParams}:{searchParams?:Promise<{event?
             <ContextLink href="/timesheets" context={{eventId:event.id}} className="inline-flex rounded-xl border px-3 py-2 text-sm font-bold">Werkstaten</ContextLink>
             {user.isAdmin&&<ContextLink href="/workplaces" context={{eventId:event.id}} className="inline-flex rounded-xl border px-3 py-2 text-sm font-bold" title="Open werkplaatsen, verantwoordelijken, personeel en shifts voor dit evenement.">Werkplaatsen & shifts</ContextLink>}
           </div>
-          {!user.isAdmin&&assigned&&<Link href={'/briefings?event='+encodeURIComponent(event.id)} className="inline-flex rounded-xl border px-3 py-2 text-sm font-bold">Briefing</Link>}
+          {!user.isAdmin&&assigned&&<Link prefetch={false} href={'/briefings?event='+encodeURIComponent(event.id)} className="inline-flex rounded-xl border px-3 py-2 text-sm font-bold">Briefing</Link>}
           <EmergencyInformationPanel
             compact
             canEdit={user.isAdmin}
@@ -308,7 +308,7 @@ export default async function Page({searchParams}:{searchParams?:Promise<{event?
 
           {!user.isAdmin&&started&&assigned&&<div className="rounded-xl border border-violet-500/30 bg-violet-500/5 p-3 text-sm">
             <p className="text-muted-foreground">Na afloop blijft de eventchat beschikbaar tot {chatUntil.toLocaleString('nl-BE')}.</p>
-            <Link href="/chat" className="mt-2 inline-block rounded-lg bg-violet-600 px-3 py-2 font-bold text-white">Chats openen</Link>
+            <Link prefetch={false} href="/chat" className="mt-2 inline-block rounded-lg bg-violet-600 px-3 py-2 font-bold text-white">Chats openen</Link>
           </div>}
 
           {user.isAdmin&&<AdminOnly><div className="space-y-4">
