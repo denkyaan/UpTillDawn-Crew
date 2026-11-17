@@ -2,6 +2,8 @@ export type ActionUiLocale='nl'|'fr'|'en'|'de'
 type Row={fr:string;en:string;de:string}
 
 const ROWS:Record<string,Row>={
+  "De aanmeldservice ontvangt tijdelijk te veel aanvragen. Probeer over enkele minuten opnieuw.":{fr:"Le service de connexion reçoit temporairement trop de demandes. Réessayez dans quelques minutes.",en:"The sign-in service is temporarily receiving too many requests. Try again in a few minutes.",de:"Der Anmeldedienst erhält vorübergehend zu viele Anfragen. Versuche es in einigen Minuten erneut."},
+  "De aanmeldservice is tijdelijk niet bereikbaar. Probeer opnieuw zodra de verbinding hersteld is.":{fr:"Le service de connexion est temporairement inaccessible. Réessayez lorsque la connexion sera rétablie.",en:"The sign-in service is temporarily unavailable. Try again once the connection is restored.",de:"Der Anmeldedienst ist vorübergehend nicht erreichbar. Versuche es erneut, sobald die Verbindung wiederhergestellt ist."},
   "Je hebt geen toestemming om rollen te wijzigen.":{fr:"Vous n'avez pas l'autorisation de modifier les rôles.",en:"You do not have permission to change roles.",de:"Du hast keine Berechtigung, Rollen zu ändern."},
   "Ongeldige rolkeuze. Controleer de velden.":{fr:"Choix de rôle invalide. Vérifiez les champs.",en:"Invalid role selection. Check the fields.",de:"Ungültige Rollenauswahl. Prüfe die Felder."},
   "Rol 1 en Rol 2 moeten verschillend zijn.":{fr:"Les rôles 1 et 2 doivent être différents.",en:"Role 1 and Role 2 must be different.",de:"Rolle 1 und Rolle 2 müssen unterschiedlich sein."},
