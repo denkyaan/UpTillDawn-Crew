@@ -1,7 +1,7 @@
 import {getCurrentUser} from "@/lib/actions/auth"
 import {requestUiLocale} from "@/lib/server-locale"
 import {redirect} from "next/navigation"
-import {AdministrationPersonnelClient} from "@/components/administration/administration-personnel-client"
+import {LazyAdministrationPersonnelClient} from "@/components/administration/lazy-administration-personnel-client"
 
 export const dynamic="force-dynamic"
 
@@ -12,5 +12,5 @@ export default async function AdministrationPersonnel(){
  const user=await getCurrentUser()
  if(!user)redirect("/login")
  const locale=await requestUiLocale()
- return <AdministrationPersonnelClient initialLocale={locale} currentUserId={user.id}/>
+ return <LazyAdministrationPersonnelClient initialLocale={locale} currentUserId={user.id}/>
 }
