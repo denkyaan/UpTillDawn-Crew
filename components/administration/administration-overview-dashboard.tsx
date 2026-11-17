@@ -48,9 +48,18 @@ export function AdministrationOverviewDashboard({locale,currentUserId,admin}:{lo
  const [loadFailed,setLoadFailed]=useState(false)
  useEffect(()=>{
   let active=true
-  void loadOverviewData(db,currentUserId).then(result=>{
-   if(active){setSnapshot(result);setLoadFailed(false)}
-  }).catch(()=>{if(active)setLoadFailed(true)})
+  // The PostgREST abort signal alone is not a guaranteed UI deadline when
+  // Supabase Auth or the network stalls. Settle into a truthful unavailable
+  // state rather than displaying the skeleton forever.
+  const stop=AbortSignal.timeout(16_000)
+  const hardStop=new Promise<null>(resolve=>{
+   stop.addEventListener("abort",()=>resolve(null),{once:true})
+  })
+  void Promise.race([loadOverviewData(db,currentUserId).catch(()=>null),hardStop]).then(result=>{
+   if(!active)return
+   if(result){setSnapshot(result);setLoadFailed(false)}
+   else setLoadFailed(true)
+  })
   return()=>{active=false}
  },[db,currentUserId])
  // Even during a slow RLS read, give users their existing seven real workflow
