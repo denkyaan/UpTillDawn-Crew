@@ -43,26 +43,39 @@ function record(row){
 async function probe(entry,method='GET',extra={}){
  const started=Date.now()
  const url=new URL(entry.route,target)
- const controller=new AbortController()
- const timeout=setTimeout(()=>controller.abort(),12000)
- try{
-  const response=await fetch(url,{method,redirect:'manual',signal:controller.signal,
-   headers:{'Accept':entry.type==='page'?'text/html':'application/json',...(extra.headers||{})},
-   ...(extra.body?{body:extra.body}:{}),
-  })
-  // Do not read bodies: they can contain personal data, session material or secrets.
-  await response.body?.cancel().catch(()=>{})
-  let failure=null
-  if(response.status>=500)failure='Server error on read-only probe'
-  if(entry.type==='api'&&privateApi.test(entry.route)&&response.status>=200&&response.status<300){
-   failure='Unauthenticated request received a successful private API response'
-  }
-  if(method==='POST'&&extra.crossOrigin&&response.status>=200&&response.status<300)failure='Cross-origin anonymous POST unexpectedly succeeded'
-  record({method,route:entry.route,type:entry.type,file:entry.file,status:response.status,durationMs:Date.now()-started,failure})
- }catch(error){
-  record({method,route:entry.route,type:entry.type,file:entry.file,status:null,durationMs:Date.now()-started,
-   failure:'Network failure / timeout: '+(error instanceof Error?error.name:'unknown')})
- }finally{clearTimeout(timeout)}
+ // A read-only GET can be retried ONCE after a transport failure, but not
+ // after an HTTP 5xx, unauthorized 2xx, or any other confirmed response.
+ // POST is never replayed: a lost response does not prove its mutation failed.
+ // The same strict status/security assertions apply to the final response.
+ const maxAttempts=method==='GET'?2:1
+ for(let attempt=1;attempt<=maxAttempts;attempt++){
+  const controller=new AbortController()
+  const timeout=setTimeout(()=>controller.abort(),12000)
+  try{
+   const response=await fetch(url,{method,redirect:'manual',signal:controller.signal,
+    headers:{'Accept':entry.type==='page'?'text/html':'application/json',...(extra.headers||{})},
+    ...(extra.body?{body:extra.body}:{}),
+   })
+   // Do not read bodies: they can contain personal data, session material or secrets.
+   await response.body?.cancel().catch(()=>{})
+   let failure=null
+   if(response.status>=500)failure='Server error on read-only probe'
+   if(entry.type==='api'&&privateApi.test(entry.route)&&response.status>=200&&response.status<300){
+    failure='Unauthenticated request received a successful private API response'
+   }
+   if(method==='POST'&&extra.crossOrigin&&response.status>=200&&response.status<300)failure='Cross-origin anonymous POST unexpectedly succeeded'
+   if(attempt>1)console.warn('RECOVERED_GET_TRANSPORT',entry.route,'attempts='+attempt)
+   record({method,route:entry.route,type:entry.type,file:entry.file,status:response.status,durationMs:Date.now()-started,attempts:attempt,failure})
+   return
+  }catch(error){
+   const failure='Network failure / timeout: '+(error instanceof Error?error.name:'unknown')
+   if(attempt<maxAttempts){
+    // Very short, bounded recovery for transient fetch/socket resets. This
+    // never changes the outcome of an actual HTTP 503/1102.
+    await new Promise(resolve=>setTimeout(resolve,250))
+   }else record({method,route:entry.route,type:entry.type,file:entry.file,status:null,durationMs:Date.now()-started,attempts:attempt,failure})
+  }finally{clearTimeout(timeout)}
+ }
 }
 // Low concurrency avoids turning route acceptance into an accidental load test.
 const queue=[...entries]

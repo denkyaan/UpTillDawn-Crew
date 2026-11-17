@@ -19,6 +19,6 @@ test('assigned roles retain live membership validation and blocked-account denia
 })
 
 test('promotion chat still queries with an authenticated server client',()=>{
-  assert.match(portal,/if \(portal === 'administration'\) return <AdministrationOverviewDashboard/)
+  assert.match(portal,/if \(portal === 'administration'\) return <LazyAdministrationOverviewDashboard/)
   assert.match(portal,/const \{data:promotionChats\}=await \(await createClient\(\)\)\.from\('chat_channels'\)/)
 })

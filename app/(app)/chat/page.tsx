@@ -1,5 +1,5 @@
 import { createClient } from '@/lib/supabase/crew-server'
-import { ChatClient } from '@/components/crew/chat-client'
+import { LazyChatClient } from '@/components/crew/lazy-chat-client'
 import { PromotionPrivateChatStarter } from '@/components/promotion/promotion-private-chat-starter'
 import { requestUiLocale } from '@/lib/server-locale'
 import { getCurrentUser } from '@/lib/actions/auth'
@@ -89,6 +89,6 @@ export default async function Page({searchParams,promotionOnly=false}:{searchPar
 
   return <main className={promotionOnly?"mx-auto max-w-4xl p-0 pb-2":"mx-auto max-w-4xl p-0 pb-24 md:p-8 md:pb-8"}>
     {promotionOnly&&promotionDirectory?.error&&<p role="alert" className="rounded-xl border border-amber-500/40 p-3 text-sm">{({nl:"De namenlijst kon niet worden geladen. Sommige afzenders worden mogelijk zonder naam weergegeven.",fr:"La liste des noms est indisponible. Certains expéditeurs peuvent apparaître sans nom.",en:"The member directory is unavailable. Some senders may appear without names.",de:"Das Mitgliederverzeichnis ist nicht verfügbar. Einige Absender werden möglicherweise ohne Namen angezeigt."} as const)[await requestUiLocale()]}</p>}
-    {error?<p className="p-4">Gesprekken konden niet worden geladen.</p>:<ChatClient channels={ordered} defaultChannelId={defaultChannelId} userId={user.id} crewDirectory={chatDirectory} isAdmin={current.realIsAdmin||current.isOwner} profilePhotoUrls={profilePhotoUrls} channelImages={channelImages} privatePeerNames={privatePeerNames} privatePeerIds={privatePeerIds} initialChannelStates={initialChannelStates} focusMessageId={params.message||null} chatBasePath={promotionOnly?'/portals/promotion/chats':params.administration==='1'?'/portals/administration/chat':'/chat'}/>} 
+    {error?<p className="p-4">Gesprekken konden niet worden geladen.</p>:<LazyChatClient channels={ordered} defaultChannelId={defaultChannelId} userId={user.id} crewDirectory={chatDirectory} isAdmin={current.realIsAdmin||current.isOwner} profilePhotoUrls={profilePhotoUrls} channelImages={channelImages} privatePeerNames={privatePeerNames} privatePeerIds={privatePeerIds} initialChannelStates={initialChannelStates} focusMessageId={params.message||null} chatBasePath={promotionOnly?'/portals/promotion/chats':params.administration==='1'?'/portals/administration/chat':'/chat'}/>} 
   </main>
 }
