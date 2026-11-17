@@ -36,6 +36,14 @@ const scrub=error=>String(error?.message||error||'unknown')
  .slice(0,240)
 const url=path=>new URL(path,BASE).href
 const sleep=ms=>new Promise(resolve=>setTimeout(resolve,ms))
+const observePage=(page,session,role)=>{
+ page.on('pageerror',error=>failures.push({session,role,type:'browser_exception',message:scrub(error)}))
+ page.on('response',response=>{
+  if(response.status()<500)return
+  try{if(new URL(response.url()).origin!==BASE)return}catch{return}
+  fiveHundreds.push({session,role,status:response.status(),resourceType:response.request().resourceType()})
+ })
+}
 
 try{
  const signedIn=[]
@@ -49,15 +57,24 @@ try{
   })
   contexts.push(context)
   const page=await context.newPage()
+  observePage(page,index+1,role.name)
   const response=await page.goto(url('/login/'+role.login),{waitUntil:'commit',timeout:40_000})
   assert.ok(response && response.status()<500,'Main login returned HTTP 5xx for '+role.name)
   await page.locator('form[data-login-hydrated="true"]').waitFor({state:'attached',timeout:40_000})
   await page.locator('#email').fill(role.email)
   await page.locator('#password').fill(password)
-  await Promise.all([
-   page.waitForURL(target=>!target.pathname.startsWith('/login'),{waitUntil:'commit',timeout:45_000}),
-   page.locator('button[type="submit"]').click({timeout:40_000}),
+  const alert=page.locator('[data-login-error-code]')
+  const outcomePromise=Promise.race([
+   page.waitForURL(target=>!target.pathname.startsWith('/login'),{waitUntil:'commit',timeout:45_000})
+    .then(()=>({type:'redirect'})),
+   alert.waitFor({state:'visible',timeout:45_000}).then(()=>({type:'error'})),
   ])
+  await page.locator('button[type="submit"]').click({timeout:40_000})
+  const outcome=await outcomePromise
+  if(outcome.type==='error'){
+   const code=await alert.getAttribute('data-login-error-code')
+   throw Error('Main QA login rejected for '+role.name+'; safe error code='+String(code||'unknown'))
+  }
   const cookieNames=(await context.cookies(BASE)).map(cookie=>cookie.name)
   assert.ok(cookieNames.some(name=>/^sb-[a-z0-9]+-auth-token(?:\.\d+)?$/i.test(name)),
    'Missing authenticated SSR session for '+role.name)
@@ -70,14 +87,7 @@ try{
   const signed=signedIn[i%roles.length]
   const page=i<signedIn.length?signed.page:await signed.context.newPage()
   const role=signed.role
-  page.on('pageerror',error=>failures.push({session:i+1,role:role.name,type:'browser_exception',message:scrub(error)}))
-  page.on('response',response=>{
-   if(response.status()<500)return
-   try{
-    if(new URL(response.url()).origin!==BASE)return
-   }catch{return}
-   fiveHundreds.push({session:i+1,role:role.name,status:response.status()})
-  })
+  if(i>=signedIn.length)observePage(page,i+1,role.name)
   tabs.push({index:i+1,page,role})
  }
  assert.equal(tabs.length,30)
