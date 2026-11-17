@@ -4,6 +4,7 @@ import {useEffect,useMemo,useState} from "react"
 import Link from "next/link"
 import {useRouter} from "next/navigation"
 import {createClient} from "@/lib/supabase/crew-client"
+import {boundedQueries} from "@/lib/administration/bounded-queries"
 import {TaskControls} from "@/components/crew/task-controls"
 import {completeOperationalChecklistItem,reopenOperationalChecklistItem,requestInventorySettlement,cancelInventorySettlement} from "@/lib/actions/uptilldawn"
 import {activeUiLocale,LANGUAGE_APPLIED_EVENT,type SupportedUiLocale} from "@/lib/locale-preferences"
@@ -50,11 +51,11 @@ export function StaffTasksClient({userId}:{userId:string}){
     const signal=AbortSignal.timeout(14_000)
     // First enforce the same active-shift and open membership gates as the
     // original server task view. All reads use signed browser JWT and RLS.
-    const [events,memberships,shifts]=await Promise.all([
+    const [events,memberships,shifts]=await boundedQueries([
      db.from("events").select("id,end_at").neq("status","archived").gte("end_at",new Date().toISOString()).abortSignal(signal),
      db.from("event_members").select("event_id").eq("user_id",userId).abortSignal(signal),
      db.from("shifts").select("event_id,workplace_id,scheduled_start,scheduled_end").eq("user_id",userId).neq("status","cancelled").abortSignal(signal),
-    ])
+    ],2)
     if(events.error||memberships.error||shifts.error)throw Error("Work shift authorization unavailable")
     const ids=new Set((events.data??[]).map(row=>row.id))
     const open=(memberships.data??[]).some(row=>ids.has(row.event_id))
@@ -66,24 +67,24 @@ export function StaffTasksClient({userId}:{userId:string}){
      setAssignments([]);setChecklists([]);setChecklistItems([]);setIssues([]);setRequests([]);setMovements([]);setAttachments([])
      setLoading(false);setError(false);return
     }
-    const [tasks,checks,issueRows,requestRows,materials,moveRows]=await Promise.all([
+    const [tasks,checks,issueRows,requestRows,materials,moveRows]=await boundedQueries([
      db.from("task_assignments").select("id,user_id,status,confirmed_at,tasks(id,title,description,event_id,workplace_id)").eq("user_id",userId).order("created_at").abortSignal(signal),
      db.from("operational_checklists").select("id,event_id,workplace_id,title,description,kind,status").order("created_at",{ascending:false}).abortSignal(signal),
      db.from("inventory_issues").select("id,item_id,user_id,quantity,outstanding_quantity,issued_at,notes").eq("user_id",userId).order("issued_at",{ascending:false}).limit(200).abortSignal(signal),
      db.from("inventory_settlement_requests").select("id,issue_id,status,condition,quantity,notes,decision_note,user_id").eq("user_id",userId).order("created_at",{ascending:false}).limit(100).abortSignal(signal),
      db.from("inventory_items").select("id,name").eq("is_active",true).order("name").abortSignal(signal),
      db.from("inventory_movements").select("id,item_id,movement_type,notes,created_at,quantity").order("created_at",{ascending:false}).limit(10).abortSignal(signal),
-    ])
+    ],2)
     if(tasks.error||checks.error||issueRows.error||requestRows.error||materials.error||moveRows.error)throw Error("Staff task read unavailable")
     const eventIds=new Set(current.map(row=>row.event_id))
     const ownTasks=(tasks.data??[]).filter(row=>row.tasks?.event_id&&eventIds.has(row.tasks.event_id)) as Task[]
     const checkRows=(checks.data??[]) as Checklist[]
     const idsForCheck=checkRows.map(c=>c.id)
     const idsForTask=ownTasks.map(t=>t.tasks?.id).filter((x):x is string=>Boolean(x))
-    const [itemsResult,filesResult]=await Promise.all([
+    const [itemsResult,filesResult]=await boundedQueries([
      idsForCheck.length?db.from("checklist_items").select("id,checklist_id,label,required,requires_photo,completed_at,completed_by,photo_path").in("checklist_id",idsForCheck).order("sort_order").abortSignal(signal):Promise.resolve({data:[],error:null}),
      idsForTask.length?db.from("work_attachments").select("id,task_id,storage_path,mime_type").in("task_id",idsForTask).order("created_at").abortSignal(signal):Promise.resolve({data:[],error:null}),
-    ])
+    ],2)
     if(itemsResult.error||filesResult.error)throw Error("Task attachments/checklist unavailable")
     const fileRows=(filesResult.data??[]) as Attachment[]
     const itemRows=(itemsResult.data??[]) as Item[]
