@@ -274,13 +274,15 @@ if(process.argv.includes('--cleanup')){
   // Realtime fan-out stays inside an isolated, ephemeral QA-only topic.
   // No public chat messages or database notifications are created.
   const topic='upt-main-qa-30-'+RUN
-  const channels=await pool(sessions,3,'realtime-subscription',async ({client})=>{
+  // Five bounded subscription handshakes at a time: fail promptly if Realtime
+  // is unavailable without keeping 30 temporary Auth accounts for minutes.
+  const channels=await pool(sessions,5,'realtime-subscription',async ({client})=>{
    const ch=client.channel(topic,{config:{broadcast:{self:true,ack:true}}})
    ch.on('broadcast',{event:'qa-ping'},packet=>{
     if(packet.payload?.run===RUN)report.realtimeReceived++
    })
    const joined=await new Promise((resolve,reject)=>{
-    const timeout=setTimeout(()=>reject(Error('Realtime subscribe timeout')),25_000)
+    const timeout=setTimeout(()=>reject(Error('Realtime subscribe timeout')),15_000)
     ch.subscribe(status=>{
      if(status==='SUBSCRIBED'){clearTimeout(timeout);resolve(true)}
      else if(status==='TIMED_OUT'||status==='CHANNEL_ERROR'||status==='CLOSED'){
