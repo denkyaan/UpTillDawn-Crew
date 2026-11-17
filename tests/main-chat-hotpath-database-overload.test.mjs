@@ -17,6 +17,10 @@ test('typing, chat counts and promotion unread counts stay read-only under polli
  }
  assert.match(def('upt_chat_typing_users'),/expires_at>now\(\)/)
  assert.match(def('upt_chat_channel_summaries'),/left join upt_private\.chat_user_states/)
+ assert.match(def('upt_chat_channel_summaries'),/m\.created_at>coalesce\(s\.last_read_at,c\.created_at\)/)
+ assert.match(def('upt_chat_channel_summaries'),/coalesce\(s\.last_read_at,c\.created_at\) as last_read_at/)
+ assert.match(def('upt_promotion_chat_unread_counts'),/m\.created_at>coalesce\(st\.last_read_at,'epoch'::timestamptz\)/)
+ assert.doesNotMatch(def('upt_chat_channel_summaries'),/m\.created_at>coalesce\(s\.last_read_at,now\(\)\)/)
  assert.match(def('upt_promotion_chat_unread_counts'),/left join upt_private\.promotion_chat_read_states/)
 })
 test('only approved channel members can receive private typing and read updates',()=>{
