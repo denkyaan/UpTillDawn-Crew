@@ -2,6 +2,7 @@ import { AdministrationNavigation } from "@/components/administration/administra
 import {requestUiLocale} from "@/lib/server-locale"
 import {getCurrentUser} from "@/lib/actions/auth"
 import {createClient} from "@/lib/supabase/crew-server"
+import {currentPortalAssignments} from "@/lib/portal-access-server"
 import type {SupabaseClient} from "@supabase/supabase-js"
 import {canOpenPortal,type PortalAssignment} from "@/lib/portal-access"
 import {redirect} from "next/navigation"
@@ -13,7 +14,7 @@ export default async function AdministrationLayout({children}:{children:React.Re
  if(!user)redirect("/login")
  if((!user.approved||user.account_blocked)&&!user.isOwner)redirect("/portals")
  if(!user.isOwner&&!user.realIsAdmin){
-  const {data,error}=await (await createClient()).rpc("upt_my_portal_assignments")
+  const {data,error}=await currentPortalAssignments()
   if(error||!canOpenPortal("administration",(data??[]) as PortalAssignment[],{approved:user.approved,blocked:user.account_blocked===true}))redirect("/portals")
  }
  const locale=await requestUiLocale()
