@@ -1,5 +1,17 @@
 # Main → Production: targeted schema alignment and external-provider acceptance
-Date: 2026-11-17 · Status: **prepared on Main; NOT applied to Production**
+Date: 2026-11-17 · Status: **Production database RPCs repaired; Worker release still pending**
+
+## 0. Production repair outcome — current status (2026-11-17)
+
+- The exact two-RPC patch in `supabase/upgrades/production-role-administration-alignment-20261117.sql` was successfully **COMMITTED to Production Supabase** `eakoavcieossazqzplke`. No table data, user profiles, external integrations, migration-history rows or Cloudflare Worker were modified by that patch.
+- Before execution, the same full patch and the verified function-scoped rollback `supabase/upgrades/production-role-administration-rollback-20261117.sql` were exercised together in a single **ROLLBACK** transaction against the actual Production database. The rollback restored the original function MD5 and absence of the new draft RPC while never persisting the test.
+- After the real commit: **12/12 required preflight checks PASS**, `anon` has no `EXECUTE` privilege on either RPC, `authenticated` does, and Supabase Health Advisor reported 0 lints.
+- **No full production database dump or point-in-time backup was confirmed**. Supabase organization is on the Free plan. The committed change has a verified **function-scoped** rollback, not a replacement for full data recovery. Preserve that distinction in all release notes.
+- Production Worker currently remains on **`0334a0f8e576d169d3b860a0fa53e03963798b7f`**, while Main contains the release candidate and must still pass the manually triggered **full CI production** against the exact final SHA. That workflow dispatches Production deploy after successful validation.
+- Github release automation can only be manually dispatched through Actions; no `workflow_dispatch` ability is exposed by the installed GitHub connector. Also verify that the legacy Cloudflare Workers Builds `Production main` auto-build is not active; that external trigger was not available for inspection.
+- Vendor test credentials remain entirely end-user-managed; no external provider transaction has been performed by the Maker.
+
+The analysis below describes the **historic before-patch state**, not the current Production DB.
 
 ## 1. Evidence collected from the actual databases
 
@@ -55,8 +67,8 @@ The metadata-only live count of `upt_private.integration_connections` on both Ma
 
 ## 4. Strict completion boundaries
 
-- Production DB modifications: **NOT DONE / NOT AUTHORIZED** in this bundle.
-- Production CI/deploy: **NOT STARTED**; no change to those workflow triggers.
-- Main fast CI and Main deploy: must pass on the release preparation PR's exact final commit.
-- New targeted alignment SQL: compilation and metadata precheck verified; Production application and authenticated post-patch E2E are not yet performed.
+- Production DB RPC alignment: **COMMITTED and checked 12/12 PASS** on 2026-11-17; function-scoped restoration rehearsed in a rolled-back transaction.
+- Production full CI/deploy: **NOT STARTED**; no change to triggers; exact release commit requires manual workflow_dispatch.
+- Main fast CI is green on pre-release commits; run fast CI and Main deploy on the final release candidate SHA.
+- Targeted RPC alignment SQL: applied and postchecked; authenticated post-patch role/event E2E still needs the Production acceptance stage.
 - Vendor acceptance: **BLOCKED ON AUTHORIZED THIRD-PARTY TEST ACCESS**, not a software test PASS.
