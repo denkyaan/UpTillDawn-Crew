@@ -608,6 +608,15 @@ jobs:
           E2E_BASE_URL: https://uptilldawn-main.uptilldawn.workers.dev
         run: node scripts/main-adversarial-surface.mjs --probe
 
+      - name: Record Main Worker resource limits even if route probing fails
+        # The Worker was already published. A failing anonymous probe must
+        # not suppress Cloudflare CPU/resource evidence for that revision.
+        if: always() && steps.worker-deploy.outcome == 'success' && steps.current-main.outputs.current == 'true'
+        env:
+          MAIN_WORKER_DEPLOYED_AT: ${{ steps.worker-deploy.outputs.deployed_at }}
+          MAIN_BROWSER_QA_RESULT: ${{ job.status }}
+        run: node scripts/main-worker-outcomes.mjs
+
       - name: Publish Main adversarial route evidence
         if: always()
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
