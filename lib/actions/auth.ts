@@ -424,6 +424,18 @@ type VerifiedSessionContextRow = {
 }
 
 export const getCurrentUser = cache(async function getCurrentUser() {
+    // API routes are intentionally excluded from middleware auth. Anonymous
+    // requests must not each trigger a costly, doomed PostgREST session RPC.
+    // This is a NEGATIVE-ONLY check, never authentication by cookie presence:
+    // every present/forged session still goes through the signed-JWT,
+    // RLS-authorized upt_current_session_context() verification below.
+    // Use the same standard/chunked @supabase/ssr cookie name shape as
+    // lib/supabase/middleware.ts; do not accept PKCE verifier cookies.
+    const hasSessionCookie = (await cookies()).getAll().some(cookie =>
+        /^sb-[a-z0-9]+-auth-token(?:\.\d+)?$/i.test(cookie.name) &&
+        cookie.value.length > 0,
+    )
+    if (!hasSessionCookie) return null
     const supabase = await createClient()
     const readContext = supabase.rpc.bind(supabase) as unknown as
         (fn: 'upt_current_session_context') => Promise<{
