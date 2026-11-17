@@ -44,6 +44,29 @@ export async function updateSession(request: NextRequest) {
         return NextResponse.next({ request })
     }
 
+    // The shared Worker hosts every protected Next SSR route. Anonymous
+    // navigation must not spend the Workers Free CPU budget creating an SSR
+    // Supabase client and decoding/verifying an access token that is absent.
+    // Presence is only a fast-path NEGATIVE check: a present/forged cookie
+    // continues through getClaims() and database authorization as before.
+    // Session cookies may be chunked by @supabase/ssr (auth-token.0, .1...).
+    const hasSessionCookie = request.cookies.getAll().some(cookie =>
+        /^sb-[a-z0-9]+-auth-token(?:\\.\\d+)?$/i.test(cookie.name) &&
+        cookie.value.length > 0,
+    )
+    if (!hasSessionCookie) {
+        // Signup and password recovery are intentionally reachable without
+        // a session; only an actually authenticated session should redirect.
+        if (pathname === '/signup' || pathname.startsWith('/signup/') ||
+            pathname === '/forgot-password' || pathname.startsWith('/forgot-password/')) {
+            return NextResponse.next({ request })
+        }
+        const login = request.nextUrl.clone()
+        login.pathname = '/login'
+        login.search = ''
+        return NextResponse.redirect(login)
+    }
+
     let supabaseResponse = NextResponse.next({ request })
 
     const supabase = createServerClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!, {
