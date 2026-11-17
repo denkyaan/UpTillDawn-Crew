@@ -15,9 +15,10 @@ test('financial approval role is derived from verified administrator identity',(
 test('finance and module guards enforce the same verified role as layout',()=>{
  for(const source of [finance,modules,layout]){
   assert.ok(source.includes('.realIsAdmin'))
-  assert.ok(source.includes('currentPortalAssignments'))
   assert.ok(source.includes('canOpenPortal('))
  }
+ for(const source of [finance,layout])assert.ok(source.includes('currentPortalAssignments'))
+ assert.ok(modules.includes('upt_my_portal_assignments'))
  assert.match(access,/cache\(async\(\)=>/)
  assert.match(access,/supabase\.rpc\('upt_my_portal_assignments'\)/)
  assert.ok(!finance.includes('current.isAdmin'))
