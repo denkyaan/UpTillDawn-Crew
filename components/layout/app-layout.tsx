@@ -125,8 +125,14 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
     ||pathname.startsWith("/exports")
     ||pathname.startsWith("/admin/platform")
   ))
-  const currentVisible=adminAlwaysRoute||!currentFeature||!roleKey||!rulesReady||previewAll||ruleMatches(currentRule,effectiveContext,false)
-  const currentUsable=previewAll||adminAlwaysRoute||!currentFeature||!roleKey||!rulesReady||ruleUsable(currentRule,effectiveContext,false)
+  // Staff without a live shift must be able to open Tasks and read the
+  // waiting/assignment explanation. The StaffTasksClient itself refuses task
+  // writes and private data unless the authenticated user's shift is active.
+  // A disabled/hidden Admin-configured feature remains disabled or hidden.
+  const staffTasksWaiting=roleKey==="staff"&&pathname==="/tasks"&&!effectiveContext.shiftActive
+    &&currentRule?.visible!==false&&currentRule?.enabled!==false
+  const currentVisible=staffTasksWaiting||adminAlwaysRoute||!currentFeature||!roleKey||!rulesReady||previewAll||ruleMatches(currentRule,effectiveContext,false)
+  const currentUsable=staffTasksWaiting||previewAll||adminAlwaysRoute||!currentFeature||!roleKey||!rulesReady||ruleUsable(currentRule,effectiveContext,false)
   const contentLocked=Boolean(currentVisible&&!currentUsable)
 
   const refresh=useCallback(async(force=false)=>{
