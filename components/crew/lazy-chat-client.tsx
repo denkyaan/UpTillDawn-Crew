@@ -6,13 +6,14 @@
 // The server page still verifies identity and every initial RLS read; the
 // browser still receives exactly the same ChatClient props and functionality.
 import dynamic from "next/dynamic"
+import {activeUiLocale} from "@/lib/locale-preferences"
 import type {ComponentProps} from "react"
 import type {ChatClient as ChatClientComponent} from "@/components/crew/chat-client"
 
 type ChatProps=ComponentProps<typeof ChatClientComponent>
 const ClientChat=dynamic<ChatProps>(
  ()=>import("@/components/crew/chat-client").then(module=>module.ChatClient),
- {ssr:false,loading:()=><div role="status" className="p-4 text-sm text-muted-foreground">Gesprekken laden…</div>},
+ {ssr:false,loading:()=><div role="status" className="p-4 text-sm text-muted-foreground">{({nl:"Gesprekken laden…",fr:"Chargement des conversations…",en:"Loading conversations…",de:"Gespräche werden geladen…"} as const)[activeUiLocale()]}</div>},
 )
 export function LazyChatClient(props:ChatProps){
  return <ClientChat {...props}/>
