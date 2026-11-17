@@ -115,7 +115,6 @@ export function StaffTasksClient({userId}:{userId:string}){
  const liveTasks=useMemo(()=>assignments,[assignments])
  const pending=new Map(requests.filter(x=>x.status==="pending").map(x=>[x.issue_id,x]))
  const inventoryById=new Map(inventory.map(x=>[x.id,x.name]))
- const nowIso=new Date().toISOString()
  return <main className="space-y-5 p-4 pb-24 md:p-8">
   <header className="flex justify-between gap-3"><h1 className="text-3xl font-black">{t.title}</h1><button type="button" className="rounded-lg border px-3 py-2 text-sm" onClick={()=>{setLoading(true);refresh()}}>{t.reload}</button></header>
   {loading?<p role="status">{t.loading}</p>:null}
