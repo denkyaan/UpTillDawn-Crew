@@ -18,6 +18,39 @@ WITH checks(name,required,passed) AS (
     coalesce(position('responsible_lead' IN pg_get_functiondef(
       to_regprocedure('public.upt_current_effective_role()'))) > 0,false)
   UNION ALL
+  SELECT 'draft_rpc_rejects_unauthenticated', true,
+    coalesce(
+      NOT has_function_privilege('anon',
+        to_regprocedure('public.upt_administration_save_event_draft(uuid,text,timestamptz,timestamptz,text)'),
+        'EXECUTE')
+      AND has_function_privilege('authenticated',
+        to_regprocedure('public.upt_administration_save_event_draft(uuid,text,timestamptz,timestamptz,text)'),
+        'EXECUTE'), false)
+  UNION ALL
+  SELECT 'draft_rpc_checks_approval_and_revocation', true,
+    coalesce(
+      position('account_blocked' IN pg_get_functiondef(
+        to_regprocedure('public.upt_administration_save_event_draft(uuid,text,timestamptz,timestamptz,text)'))) > 0
+      AND position('revoked_at' IN pg_get_functiondef(
+        to_regprocedure('public.upt_administration_save_event_draft(uuid,text,timestamptz,timestamptz,text)'))) > 0
+      AND position('p_event_id' IN pg_get_functiondef(
+        to_regprocedure('public.upt_administration_save_event_draft(uuid,text,timestamptz,timestamptz,text)'))) > 0,
+      false)
+  UNION ALL
+  SELECT 'owner_mode_rejects_unauthenticated', true,
+    coalesce(
+      NOT has_function_privilege('anon',
+        to_regprocedure('public.upt_current_effective_role()'),'EXECUTE')
+      AND has_function_privilege('authenticated',
+        to_regprocedure('public.upt_current_effective_role()'),'EXECUTE')
+      AND position('auth.uid() is null' IN lower(pg_get_functiondef(
+        to_regprocedure('public.upt_current_effective_role()')))) > 0,
+      false)
+  UNION ALL
+  SELECT 'owner_role_mode_setter_present', true,
+    coalesce(position('upt_private.is_app_owner' IN pg_get_functiondef(
+      to_regprocedure('public.upt_set_admin_role_mode(text)'))) > 0,false)
+  UNION ALL
   SELECT 'administration_timesheet_label_rpc', true,
     to_regprocedure('public.upt_administration_timesheet_labels(uuid[])') IS NOT NULL
   UNION ALL

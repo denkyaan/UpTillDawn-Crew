@@ -6,7 +6,7 @@ const read=path=>readFileSync(path,'utf8')
 
 test('Production readiness preflight is metadata-only, pinned to required schema contracts',()=>{
  const source=read('scripts/production-preflight-readonly.sql')
- const active=source.replace(/--[^\n]*/g,'')
+ const active=source.replace(/--[^\n]*/g,'').replace(/'EXECUTE'/g,'privilege')
  assert.doesNotMatch(active,/\b(?:INSERT|UPDATE|DELETE|ALTER|DROP|TRUNCATE|GRANT|REVOKE|CREATE|EXECUTE|CALL|DO)\b/i)
  for(const check of [
   'upt_administration_save_event_draft',

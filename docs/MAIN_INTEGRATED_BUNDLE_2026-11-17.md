@@ -67,3 +67,12 @@ De production-referentie heeft **een andere, historisch uitgelijnde migratiekete
 6. Controleer in het Cloudflare-dashboard of eventuele historische externe **Workers Builds direct op `main`** nog actief zijn. De GitHub-releaseworkflow is handmatig; een losstaande Cloudflare auto-publish op `main` zou die veiligheidsgrens ondermijnen.
 
 **Status:** Production-update geblokkeerd op drie actuele vereiste contractverschillen en extern/providerbewijs. Deze bundel maakt de verschillen reproduceerbaar, maar **herstelt Production niet ongemerkt**.
+
+
+## Aanvulling: functionele acceptatie en gerichte Production-uitlijning (17 november)
+
+- Op Main commit `e401f83cd678bcb3dee57227b2ac3217e537e488` is [Deploy main #44072391689](https://github.com/denkyaan/UpTillDawn-Crew/actions/runs/44072391689) volledig **geslaagd**: functioneel **24/24**, zevenrollen-browser **134/134**, testfixture-cleanup bevestigd. De runtimecontrole meldde geen Worker-resourceoverschrijdingen. Vier tijdelijke Auth-500-antwoorden onder belasting waren nog een aandachtspunt; ze veroorzaakten geen testfout.
+- De gerichte Production-voorbereiding en externe provideracceptatiematrix staan nu in [PRODUCTION_TARGETED_ALIGNMENT_AND_PROVIDER_ACCEPTANCE_20261117.md](PRODUCTION_TARGETED_ALIGNMENT_AND_PROVIDER_ACCEPTANCE_20261117.md).
+- De uitgebreidere read-only Production-preflight bevat nu twaalf verplichte contracten. **Main 12/12** en **Production 6/12**; de zes ontbrekende controles zijn teruggebracht tot twee inhoudelijke RPC-verschillen. Een gecontroleerde, niet-toegepaste Production-SQL-bundel staat in `supabase/upgrades/production-role-administration-alignment-20261117.sql`.
+- De daadwerkelijk vereiste Production-prechecks en beide vervangende functiedefinities zijn zonder blijvende wijzigingen in rollback-transacties geverifieerd. Externe providerverbindingen moeten door de bevoegde beheerder worden ingericht; er zijn nul app-managed providerrecords bevestigd op beide projecten.
+- **Status: Main functioneel geslaagd; nieuwe Production-bundel is voorbereidend en geen toestemming voor databasemutatie of uitrol.**
