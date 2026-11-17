@@ -10,39 +10,70 @@ export function GlobalOfflineContentSync({userId}:{userId:string}){
   const s=createClient()
   let cancelled=false
   let syncing=false
-  // Each user's browser tab keeps its own last successful offline snapshot
-  // timestamp across SPA route remounts. Never cache private content globally
-  // or suppress a sync after an actual reconnect.
+  // IndexedDB offline snapshots are shared between tabs in one browser
+  // profile. Share ONLY per-user timing metadata (never private snapshot
+  // content) so 4 tabs of one account do not repeat 16 RLS reads each.
   const syncKey='upt-offline:last-success:'+userId
-  const readLastSuccess=()=>{
-   try{
-    const value=Number(window.sessionStorage.getItem(syncKey))
-    return Number.isFinite(value)&&value>0&&value<=Date.now()?value:0
-   }catch{return 0}
-  }
-  let lastSyncedAt=readLastSuccess()
-  // A failed upstream query must not trigger another sixteen reads on the next
-  // route mount. Keep a one-minute per-user/tab backoff even on failures.
   const attemptKey='upt-offline:last-attempt:'+userId
-  const readLastAttempt=()=>{
-   try{
-    const value=Number(window.sessionStorage.getItem(attemptKey))
-    return Number.isFinite(value)&&value>0&&value<=Date.now()?value:0
-   }catch{return 0}
+  const leaseKey='upt-offline:active-sync:'+userId
+  const readTimestamp=(key:string)=>{
+   for(const kind of ['localStorage','sessionStorage'] as const){
+    try{
+     const value=Number(window[kind].getItem(key))
+     if(Number.isFinite(value)&&value>0&&value<=Date.now())return value
+    }catch{/* private/blocked storage: use the other store or in-memory fallback */}
+   }
+   return 0
   }
+  const writeTimestamp=(key:string,value:number)=>{
+   try{window.localStorage.setItem(key,String(value));return}catch{/* shared storage unavailable */}
+   try{window.sessionStorage.setItem(key,String(value))}catch{/* in-memory fallback */}
+  }
+  const readLastSuccess=()=>readTimestamp(syncKey)
+  const readLastAttempt=()=>readTimestamp(attemptKey)
+  let lastSyncedAt=readLastSuccess()
   let lastAttemptAt=readLastAttempt()
+  let activeLease:string|null=null
+  const acquireLease=()=>{
+   try{
+    const raw=window.localStorage.getItem(leaseKey)
+    const expires=Number(raw?.split(':')[0])
+    if(Number.isFinite(expires)&&expires>Date.now())return false
+    const value=String(Date.now()+3*60_000)+':'+crypto.randomUUID()
+    window.localStorage.setItem(leaseKey,value)
+    if(window.localStorage.getItem(leaseKey)!==value)return false
+    activeLease=value
+   }catch{
+    // Never block offline support on storage permission; each tab still
+    // uses its own in-memory sync guard and one-minute attempt backoff.
+   }
+   return true
+  }
+  const releaseLease=()=>{
+   if(!activeLease)return
+   try{
+    if(window.localStorage.getItem(leaseKey)===activeLease)
+     window.localStorage.removeItem(leaseKey)
+   }catch{/* storage unavailable */}
+   activeLease=null
+  }
   // Stable per-user jitter prevents 30 phones opening/updating the app at an
   // event from running sixteen Supabase reads in the same second.
   const staggerMs=[...userId].reduce((hash,char)=>((hash*31+char.charCodeAt(0))>>>0),0)%22_000
   const syncOfflineContent=async({force=false}:{force?:boolean}={})=>{
    if(cancelled||syncing||!navigator.onLine||document.visibilityState!=='visible')return
    const now=Date.now()
-   // Background snapshots (not live pages) refresh at most once per 15 min.
-   // Actual tasks/events still load directly under RLS on normal navigation.
-   if(!force&&(now-lastSyncedAt<15*60_000||now-lastAttemptAt<60_000))return
+   // Re-read shared timestamps on every attempt: another tab may have
+   // completed a snapshot since this component was mounted.
+   lastSyncedAt=Math.max(lastSyncedAt,readLastSuccess())
+   lastAttemptAt=Math.max(lastAttemptAt,readLastAttempt())
+   // Do not bypass the 60-second across-tab failure backoff on reconnect.
+   // A successful reconnect bypasses the 15-minute freshness window only.
+   if(now-lastAttemptAt<60_000||(!force&&now-lastSyncedAt<15*60_000))return
+   if(!acquireLease())return
    syncing=true
    lastAttemptAt=now
-   try{window.sessionStorage.setItem(attemptKey,String(lastAttemptAt))}catch{/* session storage optional */}
+   writeTimestamp(attemptKey,lastAttemptAt)
    try{
    const snapshotResults=await boundedQueries([
     s.from('briefings').select('id,title,body,version,event_id').order('created_at',{ascending:false}),
@@ -103,8 +134,11 @@ export function GlobalOfflineContentSync({userId}:{userId:string}){
    }
    await Promise.all([saveOfflineBriefings(userId,briefingItems),saveOfflineTasks(userId,taskItems),saveOfflineEmergency(userId,emergencyItems),saveOfflineBrowseData(userId,eventItems,workplaceItems,shiftItems),saveOfflineOperationalData(userId,incidentItems,checklistModels,inventoryModels,issueModels),saveOfflineKnowledge(userId,knowledgeModels),saveOfflineGuestlistAndSales(userId,guestlistModels,saleModels),replaceOfflineDocuments(userId,offlineDocuments)])
    lastSyncedAt=Date.now()
-   try{window.sessionStorage.setItem(syncKey,String(lastSyncedAt))}catch{/* offline cache still saved */}
-   }finally{syncing=false}
+   writeTimestamp(syncKey,lastSyncedAt)
+   }finally{
+    releaseLease()
+    syncing=false
+   }
   }
   let reconnectTimer:number|undefined
   const onOnline=()=>{
