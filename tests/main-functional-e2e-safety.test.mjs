@@ -39,7 +39,11 @@ test('real functional QA has its own independent job and evidence even when brow
  const browser=workflow.slice(workflow.indexOf('  qa-main-browser-acceptance:'),workflow.indexOf('  qa-main-functional-acceptance:'))
  const functional=workflow.slice(workflow.indexOf('  qa-main-functional-acceptance:'),workflow.indexOf('  qa-main-concurrency-acceptance:'))
  assert.doesNotMatch(browser,/node scripts\/e2e-main-functional-workflows\.mjs/)
- assert.match(functional,/needs: \[validate-trigger, deploy\]/)
+ assert.match(functional,/needs: \[validate-trigger, deploy, qa-main-anonymous-acceptance\]/)
+ // Anonymous gate must finish before transactional load, but a failure in that
+ // independent security check cannot suppress functional evidence.
+ assert.match(functional,/always\(\) && github\.event_name == 'workflow_run'/)
+ assert.match(workflow,/  qa-main-anonymous-acceptance:[\s\S]*?node scripts\/main-adversarial-surface\.mjs --probe/)
  assert.match(functional,/needs\.deploy\.result == 'success'/)
  assert.match(functional,/Main isolated functional workflow transactions with guaranteed fixture cleanup/)
  assert.match(functional,/if: always\(\)/)
