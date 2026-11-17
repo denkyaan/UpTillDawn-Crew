@@ -222,7 +222,7 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
     }finally{refreshInFlight.current=false}
   },[activeUiRole,pathname,supabase,user])
 
-  useEffect(()=>{queueMicrotask(()=>void refresh());const timer=window.setInterval(()=>void refresh(),pathname.startsWith("/portals/")?30000:10000);const focus=()=>void refresh();const chatRead=()=>void refresh();window.addEventListener("focus",focus);window.addEventListener("uptilldawn-chat-read",chatRead);return()=>{window.clearInterval(timer);window.removeEventListener("focus",focus);window.removeEventListener("uptilldawn-chat-read",chatRead)}},[refresh])
+  useEffect(()=>{queueMicrotask(()=>void refresh());const timer=window.setInterval(()=>void refresh(),pathname.startsWith("/portals/")?30000:10000);const focus=()=>void refresh();const chatRead=()=>void refresh();window.addEventListener("focus",focus);window.addEventListener("uptilldawn-chat-read",chatRead);return()=>{window.clearInterval(timer);window.removeEventListener("focus",focus);window.removeEventListener("uptilldawn-chat-read",chatRead)}},[refresh,pathname])
 
   const showOverview=feature("overview",true)
   const showEvents=feature("events",true)
