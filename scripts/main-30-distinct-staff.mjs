@@ -49,14 +49,16 @@ function throwIfError(result,label){
  if(result.error)throw Error(label+': '+String(result.error.code||result.error.status||'unknown'))
  return result.data
 }
-async function pool(items,max,label,work,{allowPartial=false}={}){
+async function pool(items,max,label,work,{allowPartial=false,stopOnError=false}={}){
  const values=new Array(items.length)
  let next=0
+ let stopped=false
  await Promise.all(Array.from({length:max},async()=>{
   for(;;){
+   if(stopped)return
    const i=next++
    if(i>=items.length)return
-   try{values[i]=await work(items[i],i)}catch(error){record(label,error,i+1)}
+   try{values[i]=await work(items[i],i)}catch(error){record(label,error,i+1);if(stopOnError)stopped=true}
   }
  }))
  if(Array.from({length:items.length},(_,i)=>values[i]).some(x=>x===undefined)&&!allowPartial)
@@ -80,31 +82,47 @@ async function scanAccounts(){
  throw Error('QA-only Auth inventory exceeded safe pagination bound')
 }
 async function cleanup(){
- const {data:events,error:eventError}=await service.from('events')
-  .select('id,name,status').eq('name',EVENT_NAME).limit(2)
- if(eventError)throw Error('Cannot inspect owned temporary event before cleanup')
- if(events.length>1)throw Error('Multiple temporary events found: manual investigation required')
- if(events.length){
-  const event=events[0]
-  if(event.status!=='draft')throw Error('Temporary QA event status changed; refusing cleanup')
-  // All event data is uniquely scoped. No cross-event/user deletions.
-  const {error:deleteError}=await service.from('events').delete()
-   .eq('id',event.id).eq('name',EVENT_NAME).eq('status','draft')
-  if(deleteError)throw Error('Scoped QA event cleanup failed: '+String(deleteError.code||'unknown'))
- }
- const owned=await scanAccounts()
+ // During an overloaded Data API, never skip Auth cleanup just because
+ // event lookup is unavailable. Each owned resource is cleaned independently.
+ const failures=[]
+ let deletedAccounts=0,deletedEvent=0
+ let owned=[]
+ try{owned=await scanAccounts()}
+ catch(error){failures.push('Auth inventory: '+safeMessage(error))}
  for(const user of owned){
-  // Identity is checked against exact per-run .test email and the marker
-  // written when the account was created by this QA-only workflow.
-  const {error}=await service.auth.admin.deleteUser(user.id)
-  if(error)throw Error('Scoped QA Auth cleanup failed: '+String(error.status||error.code||'unknown'))
+  try{
+   const {error}=await service.auth.admin.deleteUser(user.id)
+   if(error)throw Error(String(error.status||error.code||'unknown'))
+   deletedAccounts++
+  }catch(error){failures.push('Auth deletion: '+safeMessage(error))}
  }
- const remaining=await scanAccounts()
- const {data:remainingEvents,error:verifyError}=await service.from('events')
-  .select('id').eq('name',EVENT_NAME).limit(1)
- if(verifyError||remaining.length||remainingEvents?.length)
-  throw Error('QA cleanup verification found remaining owned records')
- return {deletedAccounts:owned.length,deletedEvent:events.length,verified:true}
+ try{
+  const {data:events,error:eventError}=await service.from('events')
+   .select('id,name,status').eq('name',EVENT_NAME).limit(2)
+   .abortSignal(AbortSignal.timeout(12000))
+  if(eventError)throw Error('Scoped QA event lookup failed')
+  if(events.length>1)throw Error('Multiple QA events, refusing event cleanup')
+  if(events.length){
+   const event=events[0]
+   if(event.status!=='draft')throw Error('QA event became non-draft; refusing deletion')
+   const {error}=await service.from('events').delete()
+    .eq('id',event.id).eq('name',EVENT_NAME).eq('status','draft')
+    .abortSignal(AbortSignal.timeout(12000))
+   if(error)throw Error('Scoped QA event deletion failed')
+   deletedEvent=1
+  }
+ }catch(error){failures.push('Event cleanup: '+safeMessage(error))}
+ try{
+  const remaining=await scanAccounts()
+  if(remaining.length)failures.push('Owned QA Auth accounts remain: '+remaining.length)
+ }catch(error){failures.push('Auth cleanup verification: '+safeMessage(error))}
+ try{
+  const {data,error}=await service.from('events').select('id').eq('name',EVENT_NAME).limit(1)
+   .abortSignal(AbortSignal.timeout(12000))
+  if(error||data?.length)failures.push('QA event remains or cannot be verified')
+ }catch(error){failures.push('Event cleanup verification: '+safeMessage(error))}
+ if(failures.length)throw Error(failures.slice(0,6).join('; '))
+ return {deletedAccounts,deletedEvent,verified:true}
 }
 if(process.argv.includes('--cleanup')){
  try{
@@ -237,23 +255,23 @@ if(process.argv.includes('--cleanup')){
 
   await pool(sessions,3,'real-routes-and-rls',async ({person,client})=>{
    const member=throwIfError(await client.from('event_members')
-    .select('user_id').eq('event_id',event.id).eq('user_id',person.id),
+    .select('user_id').eq('event_id',event.id).eq('user_id',person.id).abortSignal(AbortSignal.timeout(8000)),
     'RLS membership query')
    assert.equal(member.length,1,'Staff cannot read own membership')
    report.availabilityReads++
    const channels=throwIfError(await client.from('chat_channels')
-    .select('id,name').eq('kind','organization'),'RLS chat directory')
+    .select('id,name').eq('kind','organization').abortSignal(AbortSignal.timeout(8000)),'RLS chat directory')
    assert.deepEqual(channels.map(ch=>ch.name).sort(),['Algemene chat evenementen'],
     'Crew must see only its standard organization chat')
-   throwIfError(await client.rpc('upt_chat_unread_total'),'Real chat badge RPC')
+   throwIfError(await client.rpc('upt_chat_unread_total').abortSignal(AbortSignal.timeout(8000)),'Real chat badge RPC')
    report.chatReads++
    throwIfError(await client.from('check_ins').select('id')
-    .eq('event_id',event.id).eq('user_id',person.id).limit(1),
+    .eq('event_id',event.id).eq('user_id',person.id).limit(1).abortSignal(AbortSignal.timeout(8000)),
     'Own check-in history')
    const denied=await client.rpc('upt_request_check_in',{
     p_event:event.id,p_workplace:workplace.id,p_remote:false,
     p_gps_status:'not_checked',
-   })
+   }).abortSignal(AbortSignal.timeout(8000))
    assert.ok(denied.error,'Future unpublished event accepted an unassigned check-in')
    assert.ok(denied.status<500,'Check-in service outage is not a valid authorization denial')
    assert.match(String(denied.error.message),/dienst|Werk & pauze/i,
@@ -261,11 +279,11 @@ if(process.argv.includes('--cleanup')){
    // Do not create synthetic attendance or GPS records.
    report.checkinDenied++
    throwIfError(await client.from('timesheets').select('id,status')
-    .eq('event_id',event.id).eq('user_id',person.id).limit(1),
+    .eq('event_id',event.id).eq('user_id',person.id).limit(1).abortSignal(AbortSignal.timeout(8000)),
     'Own time records')
    report.timesheetReads++
    return true
-  })
+  },{stopOnError:true})
   console.log('MAIN_30_DISTINCT_CREW_READS '+JSON.stringify({
    chat:report.chatReads,checkinGuards:report.checkinDenied,
    timesheets:report.timesheetReads,
@@ -293,7 +311,7 @@ if(process.argv.includes('--cleanup')){
    assert.ok(joined,'Realtime did not confirm subscribed status')
    report.realtimeSubscribed++
    return ch
-  })
+  },{stopOnError:true})
   assert.equal(channels.length,COUNT)
   const delivery=await channels[0].send({
    type:'broadcast',event:'qa-ping',payload:{run:RUN},

@@ -24,7 +24,7 @@ test("chat send lock is released even if the database request rejects",()=>{
 test("chat distinguishes failed history loading from an empty room",()=>{
  assert.match(source,/const \[loaded,setLoaded\]=useState\(false\)/)
  assert.match(source,/const \[loadFailed,setLoadFailed\]=useState\(false\)/)
- assert.match(source,/if\(failure\)\{setLoadFailed\(true\);setError\(l\.load\);return\}/)
- assert.match(source,/catch\{\s*if\(current!==sequence\.current\)return\s*setLoadFailed\(true\)/)
+ assert.match(source,/if\(failure\)\{setLoadFailed\(true\);setError\(l\.load\);retryAfter\.current=Date\.now\(\)\+5000;return\}/)
+ assert.match(source,/catch\{\s*retryAfter\.current=Date\.now\(\)\+5000\s*if\(current!==sequence\.current\)return\s*setLoadFailed\(true\)/)
  assert.match(source,/!messages\.length&&loaded&&!loadFailed/)
 })

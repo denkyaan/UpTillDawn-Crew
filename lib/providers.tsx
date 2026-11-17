@@ -53,33 +53,33 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     if(profileRequestRef.current)return profileRequestRef.current
 
     const request=(async()=>{
-      const {data:profileRows,error}=await supabase.rpc("upt_current_profile")
-      const data=profileRows?.[0]??null
+      // One PostgREST-verified, self-scoped JWT context replaces three
+      // independent profile/Owner/role RPCs on login, focus and role changes.
+      // This function is SECURITY INVOKER, is not callable by anon, and
+      // derives owner and role only from the live database.
+      type SessionContext={id:string;full_name:string|null;profile_photo_url:string|null;
+        approved:boolean;role:string;account_blocked:boolean;is_owner:boolean;
+        effective_role:string|null}
+      const readContext=supabase.rpc.bind(supabase) as unknown as
+        (name:'upt_current_session_context')=>Promise<{data:SessionContext[]|null;error:{message:string}|null}>
+      const {data:contexts,error}=await readContext('upt_current_session_context')
+      const data=contexts?.[0]??null
       lastProfileLoadRef.current=Date.now()
       const role=data?.role
       if(error||!data||data.id!==userId||(role!=="staff"&&role!=="responsible_lead"&&role!=="admin")){
         setProfile(null);setRoles([]);setRoleModeState(null);setIsOwner(false);return
       }
-      // Maker is deliberately stored with profiles.role='staff' after the
-      // Owner/Head separation. Never infer Owner from the operational profile:
-      // the authenticated Owner RPC must run for ALL profile roles.
-      const {data:ownerFlag,error:ownerError}=await supabase.rpc("upt_current_is_owner")
-      if(ownerError){
-        // Authorization is unresolved: fail closed instead of silently
-        // rendering the staff UI for an Owner (or elevating a regular user).
-        setProfile(null);setRoles([]);setRoleModeState(null);setIsOwner(false);return
-      }
-      const owner=ownerFlag===true
+      const owner=data.is_owner===true
       if((data.account_blocked&&!owner)||(!data.approved&&!owner)){
         setProfile(null);setRoles([]);setRoleModeState(null);setIsOwner(false);return
       }
       setIsOwner(owner)
       setProfile({id:data.id,full_name:data.full_name??"",profile_photo_url:data.profile_photo_url,approved:data.approved||owner,role})
       const baseUiRole:UiRole=role==="staff"?"employee":role
-      const {data:effectiveRole,error:effectiveRoleError}=role==="admin"||owner
-        ?await supabase.rpc("upt_current_effective_role")
-        :{data:role,error:null}
-      const resolved:UiRole=!effectiveRoleError&&effectiveRole==="responsible_lead"?"responsible_lead":!effectiveRoleError&&(effectiveRole==="staff"||effectiveRole==="employee")?"employee":!effectiveRoleError&&effectiveRole==="admin"?"admin":baseUiRole
+      const effectiveRole=(role==="admin"||owner)?data.effective_role:role
+      const resolved:UiRole=effectiveRole==="responsible_lead"?"responsible_lead":
+        (effectiveRole==="staff"||effectiveRole==="employee")?"employee":
+        effectiveRole==="admin"?"admin":baseUiRole
       setRoles([resolved])
       setRoleModeState(resolved)
     })().finally(()=>{profileRequestRef.current=null})

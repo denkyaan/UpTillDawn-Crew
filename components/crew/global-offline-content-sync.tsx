@@ -79,23 +79,27 @@ export function GlobalOfflineContentSync({userId}:{userId:string}){
    writeTimestamp(attemptKey,lastAttemptAt)
    if(force)writeTimestamp(reconnectKey,now)
    try{
+   // A stalled Supabase/PostgREST gateway must not leave all sixteen
+   // background snapshot reads in flight for minutes. Preserve the existing
+   // IndexedDB snapshot and backoff on failure; healthy requests are unchanged.
+   const snapshotSignal=AbortSignal.timeout(12_000)
    const snapshotResults=await boundedQueries([
-    s.from('briefings').select('id,title,body,version,event_id').order('created_at',{ascending:false}),
-    s.from('personal_instructions').select('id,title,body,version,event_id').eq('user_id',userId).order('created_at',{ascending:false}),
-    s.from('task_assignments').select('id,status,tasks(id,title,description,event_id,workplace_id)').eq('user_id',userId).order('created_at'),
-    s.from('event_emergency_information').select('event_id,emergency_number,first_aid_contact,security_contact,assembly_point,procedure,updated_at,events(name,address)').order('updated_at',{ascending:false}),
-    s.from('event_documents').select('id,event_id,kind,title,description,file_name,mime_type,storage_path,updated_at,events(name)').eq('offline_critical',true).eq('is_active',true).order('updated_at',{ascending:false}),
-    s.from('event_members').select('event_id,events(id,name,address,start_at,end_at,status)').eq('user_id',userId),
-    s.from('workplaces').select('id,event_id,name,description').eq('is_active',true).order('sort_order'),
-    s.from('shifts').select('id,event_id,workplace_id,role_name,scheduled_start,scheduled_end,status,response_status').eq('user_id',userId).order('scheduled_start'),
-    s.from('incidents').select('id,event_id,workplace_id,message,status,created_at,acknowledged_at,resolved_at,escalated_at').order('created_at',{ascending:false}).limit(100),
-    s.from('operational_checklists').select('id,event_id,workplace_id,kind,title,description,status,completed_at').order('created_at',{ascending:false}),
-    s.from('checklist_items').select('id,checklist_id,label,required,requires_photo,completed_at').order('sort_order'),
-    s.from('inventory_items').select('id,event_id,workplace_id,name,category,available_quantity,issued_quantity,damaged_quantity,missing_quantity').eq('is_active',true).order('name'),
-    s.from('inventory_issues').select('id,item_id,user_id,outstanding_quantity,issued_at').gt('outstanding_quantity',0).order('issued_at',{ascending:false}),
-    s.from('knowledge_articles').select('id,event_id,workplace_id,category,title,body,updated_at').eq('offline_critical',true).eq('is_published',true).order('updated_at',{ascending:false}),
-    s.from('event_guestlist_entries').select('id,event_id,name,entry_type,spots_total,spots_checked_in,notes').eq('is_active',true).order('name'),
-    s.from('inventory_items').select('id,event_id,workplace_id,name,sale_category,sale_price_cents,available_quantity').eq('is_active',true).eq('sale_enabled',true).gt('available_quantity',0).order('name'),
+    s.from('briefings').select('id,title,body,version,event_id').order('created_at',{ascending:false}).abortSignal(snapshotSignal),
+    s.from('personal_instructions').select('id,title,body,version,event_id').eq('user_id',userId).order('created_at',{ascending:false}).abortSignal(snapshotSignal),
+    s.from('task_assignments').select('id,status,tasks(id,title,description,event_id,workplace_id)').eq('user_id',userId).order('created_at').abortSignal(snapshotSignal),
+    s.from('event_emergency_information').select('event_id,emergency_number,first_aid_contact,security_contact,assembly_point,procedure,updated_at,events(name,address)').order('updated_at',{ascending:false}).abortSignal(snapshotSignal),
+    s.from('event_documents').select('id,event_id,kind,title,description,file_name,mime_type,storage_path,updated_at,events(name)').eq('offline_critical',true).eq('is_active',true).order('updated_at',{ascending:false}).abortSignal(snapshotSignal),
+    s.from('event_members').select('event_id,events(id,name,address,start_at,end_at,status)').eq('user_id',userId).abortSignal(snapshotSignal),
+    s.from('workplaces').select('id,event_id,name,description').eq('is_active',true).order('sort_order').abortSignal(snapshotSignal),
+    s.from('shifts').select('id,event_id,workplace_id,role_name,scheduled_start,scheduled_end,status,response_status').eq('user_id',userId).order('scheduled_start').abortSignal(snapshotSignal),
+    s.from('incidents').select('id,event_id,workplace_id,message,status,created_at,acknowledged_at,resolved_at,escalated_at').order('created_at',{ascending:false}).limit(100).abortSignal(snapshotSignal),
+    s.from('operational_checklists').select('id,event_id,workplace_id,kind,title,description,status,completed_at').order('created_at',{ascending:false}).abortSignal(snapshotSignal),
+    s.from('checklist_items').select('id,checklist_id,label,required,requires_photo,completed_at').order('sort_order').abortSignal(snapshotSignal),
+    s.from('inventory_items').select('id,event_id,workplace_id,name,category,available_quantity,issued_quantity,damaged_quantity,missing_quantity').eq('is_active',true).order('name').abortSignal(snapshotSignal),
+    s.from('inventory_issues').select('id,item_id,user_id,outstanding_quantity,issued_at').gt('outstanding_quantity',0).order('issued_at',{ascending:false}).abortSignal(snapshotSignal),
+    s.from('knowledge_articles').select('id,event_id,workplace_id,category,title,body,updated_at').eq('offline_critical',true).eq('is_published',true).order('updated_at',{ascending:false}).abortSignal(snapshotSignal),
+    s.from('event_guestlist_entries').select('id,event_id,name,entry_type,spots_total,spots_checked_in,notes').eq('is_active',true).order('name').abortSignal(snapshotSignal),
+    s.from('inventory_items').select('id,event_id,workplace_id,name,sale_category,sale_price_cents,available_quantity').eq('is_active',true).eq('sale_enabled',true).gt('available_quantity',0).order('name').abortSignal(snapshotSignal),
    ],3)
    // An intermittent network/RLS error must NEVER overwrite working offline
    // data with an empty snapshot. Retry at the next safe sync opportunity.

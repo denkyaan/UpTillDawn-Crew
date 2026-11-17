@@ -88,9 +88,15 @@ WITH checks(name,required,passed) AS (
       AND NOT (SELECT prosecdef FROM pg_proc
         WHERE oid=to_regprocedure('public.upt_current_session_context()')), false)
   UNION ALL
+  SELECT 'chat_read_hotpaths_are_non_mutating', true,
+    coalesce((select provolatile = 's' from pg_proc
+      where oid=to_regprocedure('public.upt_chat_typing_users(uuid)')),false)
+    and coalesce((select provolatile = 's' from pg_proc
+      where oid=to_regprocedure('public.upt_chat_channel_summaries()')),false)
+  UNION ALL
   SELECT 'main_tip_migration_in_history', false,
     EXISTS(SELECT 1 FROM supabase_migrations.schema_migrations
-      WHERE version='20261117175500')
+      WHERE version='20261117185000')
 )
 SELECT name,required,passed,
   CASE WHEN passed THEN 'PASS'

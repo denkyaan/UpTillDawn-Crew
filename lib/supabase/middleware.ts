@@ -67,6 +67,46 @@ export async function updateSession(request: NextRequest) {
         return NextResponse.redirect(login)
     }
 
+
+    // All ordinary (app) pages are wrapped by AuthenticatedLayout, which
+    // awaits getCurrentUser() BEFORE returning the protected shell. That
+    // request-scoped call uses upt_current_session_context(): PostgREST checks
+    // the signed bearer JWT and the self-scoped database privileges. Avoid
+    // verifying the same JWT a second time in this Free-tier edge middleware.
+    //
+    // CRITICAL: This is a strict allowlist for PAGE routes only. Admin and
+    // finance have separate early DB role enforcement below; Maker routes,
+    // public auth flows and App Router route handlers must keep this middleware.
+    const appPageRoots = [
+        '/audit', '/briefings', '/chat', '/crew', '/events', '/exports',
+        '/guestlist', '/help', '/incidents', '/inventory', '/notifications',
+        '/onboarding', '/operations', '/personnel', '/sales', '/settings',
+        '/shifts', '/sync', '/tasks', '/timesheets', '/workplaces',
+    ]
+    const ordinaryAppPage = pathname === '/' ||
+        appPageRoots.some(root => pathname === root || pathname.startsWith(root + '/')) ||
+        pathname === '/portals' ||
+        pathname === '/portals/roles' ||
+        pathname.startsWith('/portals/promotion/') ||
+        pathname === '/portals/promotion' ||
+        pathname === '/portals/administration' ||
+        pathname.startsWith('/portals/administration/')
+    const requiresEarlyRoleCheck =
+        pathname === '/admin' || pathname.startsWith('/admin/') ||
+        pathname === '/portals/administration/finance' ||
+        pathname.startsWith('/portals/administration/finance/')
+    const routeHandlerWithoutAppLayout =
+        pathname.startsWith('/portals/switch/') ||
+        /^\/portals\/administration\/modules\/artists\/[^/]+\/agreement\/(?:archive|print)\//.test(pathname)
+    // Never bypass the proxy on POST/PUT/etc: Next server actions are
+    // delivered to page URLs and must retain the usual edge verification.
+    const safeRead = request.method === 'GET' || request.method === 'HEAD'
+    if (safeRead && ordinaryAppPage && !requiresEarlyRoleCheck && !routeHandlerWithoutAppLayout) {
+        // No auth is granted here: AuthenticatedLayout + signed PostgREST
+        // session context still fail closed before any private page renders.
+        return NextResponse.next({ request })
+    }
+
     let supabaseResponse = NextResponse.next({ request })
 
     const supabase = createServerClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!, {
