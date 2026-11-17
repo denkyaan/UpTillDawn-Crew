@@ -68,9 +68,20 @@ WITH checks(name,required,passed) AS (
     to_regclass('public.admin_provider_transactions') IS NOT NULL
     AND to_regclass('public.admin_provider_bank_settlements') IS NOT NULL
   UNION ALL
+  SELECT 'attendance_check_in_out_authenticated_only', true,
+    coalesce(
+      has_function_privilege('authenticated',
+        to_regprocedure('public.upt_request_check_in(uuid,uuid,boolean,text,numeric,numeric,numeric,text)'), 'EXECUTE')
+      AND NOT has_function_privilege('anon',
+        to_regprocedure('public.upt_request_check_in(uuid,uuid,boolean,text,numeric,numeric,numeric,text)'), 'EXECUTE')
+      AND has_function_privilege('authenticated',
+        to_regprocedure('public.upt_request_check_out(uuid,text)'), 'EXECUTE')
+      AND NOT has_function_privilege('anon',
+        to_regprocedure('public.upt_request_check_out(uuid,text)'), 'EXECUTE'), false)
+  UNION ALL
   SELECT 'main_tip_migration_in_history', false,
     EXISTS(SELECT 1 FROM supabase_migrations.schema_migrations
-      WHERE version='20261112220202')
+      WHERE version='20261117174500')
 )
 SELECT name,required,passed,
   CASE WHEN passed THEN 'PASS'
