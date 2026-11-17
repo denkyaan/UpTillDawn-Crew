@@ -43,8 +43,8 @@ WITH checks(name,required,passed) AS (
         to_regprocedure('public.upt_current_effective_role()'),'EXECUTE')
       AND has_function_privilege('authenticated',
         to_regprocedure('public.upt_current_effective_role()'),'EXECUTE')
-      AND position('auth.uid() IS NULL' IN pg_get_functiondef(
-        to_regprocedure('public.upt_current_effective_role()'))) > 0,
+      AND position('auth.uid() is null' IN lower(pg_get_functiondef(
+        to_regprocedure('public.upt_current_effective_role()')))) > 0,
       false)
   UNION ALL
   SELECT 'owner_role_mode_setter_present', true,
