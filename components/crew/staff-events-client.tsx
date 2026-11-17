@@ -4,6 +4,7 @@ import {useEffect,useMemo,useState} from "react"
 import Link from "next/link"
 import {useRouter} from "next/navigation"
 import {createClient} from "@/lib/supabase/crew-client"
+import {boundedQueries} from "@/lib/administration/bounded-queries"
 import {setEventAvailability} from "@/lib/actions/uptilldawn"
 import {EmergencyInformationPanel} from "@/components/crew/emergency-information-panel"
 import {activeUiLocale,LANGUAGE_APPLIED_EVENT,type SupportedUiLocale} from "@/lib/locale-preferences"
@@ -128,13 +129,13 @@ export function StaffEventsClient({userId,focusEvent}:{userId:string;focusEvent?
     const signal=AbortSignal.timeout(14_000)
     // These remain per-user RLS-protected requests: no elevated API keys and
     // no route-specific Worker SSR, only the verified server layout.
-    const [ev,mem,sh,avail,info]=await Promise.all([
+    const [ev,mem,sh,avail,info]=await boundedQueries([
      db.from("events").select("id,name,venue,address,start_at,end_at,registration_deadline,max_joiners,status").order("start_at").abortSignal(signal),
      db.from("event_members").select("event_id,user_id").abortSignal(signal),
      db.from("shifts").select("event_id").eq("user_id",userId).neq("status","cancelled").neq("response_status","declined").abortSignal(signal),
      db.from("event_availability").select("event_id,response,setup_available,breakdown_available").eq("user_id",userId).abortSignal(signal),
      db.from("event_emergency_information").select("event_id,emergency_number,first_aid_contact,security_contact,assembly_point,procedure,updated_at").abortSignal(signal),
-    ])
+    ],2)
     if(ev.error||mem.error||sh.error||avail.error||info.error)throw Error("RLS events unavailable")
     if(!alive)return
     const m=new Set([...(mem.data??[]).filter(x=>x.user_id===userId).map(x=>x.event_id),...(sh.data??[]).map(x=>x.event_id)])
