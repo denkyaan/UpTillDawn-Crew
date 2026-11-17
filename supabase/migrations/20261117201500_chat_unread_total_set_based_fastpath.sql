@@ -37,8 +37,12 @@ begin
   select coalesce(sum(p.unread_count),0)::bigint
     into v_total
     from pending p
-   where p.unread_count > 0
-     and public.upt_can_read_channel(p.channel_id);
+   where case
+     -- PostgreSQL may reorder AND predicates, but CASE guarantees that the
+     -- costly channel-access check is not invoked for an empty inbox.
+     when p.unread_count > 0 then public.upt_can_read_channel(p.channel_id)
+     else false
+   end;
 
   return coalesce(v_total,0);
 end;
