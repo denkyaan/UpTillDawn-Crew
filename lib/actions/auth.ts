@@ -416,7 +416,7 @@ type VerifiedSessionContextRow = {
     phone_number: string | null
     profile_photo_url: string | null
     approved: boolean
-    role: 'staff' | 'responsible_lead' | 'admin'
+    role: string
     account_blocked: boolean
     verified_email: string | null
     is_owner: boolean
