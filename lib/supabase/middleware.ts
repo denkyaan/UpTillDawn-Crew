@@ -143,7 +143,7 @@ export async function updateSession(request: NextRequest) {
                 if (!active) return redirectDenied('/portals')
                 const { data: assignments, error } = await supabase.rpc('upt_my_portal_assignments')
                 if (error) return authzUnavailable()
-                const allowed = (assignments ?? []).some(assignment =>
+                const allowed = (assignments ?? []).some((assignment: { portal: string; approved: boolean; revoked_at: string | null }) =>
                     assignment.portal === 'administration' &&
                     assignment.approved === true &&
                     assignment.revoked_at == null,
