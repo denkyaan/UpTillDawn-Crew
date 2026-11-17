@@ -117,7 +117,7 @@ BEGIN
   END IF;
  END IF;
  RETURN v_event;
-END
+END;
 $upt_event_draft$;
 
 -- Canonical Main Owner/operational role selection from
@@ -140,7 +140,7 @@ AS $upt_owner_mode$
       'admin'
     )
     ELSE public.upt_effective_role(auth.uid())
-  END
+  END;
 $upt_owner_mode$;
 
 -- PostgreSQL's default PUBLIC EXECUTE must never expose SECURITY DEFINER RPCs.
