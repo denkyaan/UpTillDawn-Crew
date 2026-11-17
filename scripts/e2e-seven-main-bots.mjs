@@ -155,8 +155,31 @@ async function assertDenied(page,path){
  // Explicitly enumerate the known safe destinations for server redirects.
  assert.ok(['/','/events','/portals','/unauthorized'].includes(actual),
   'Forbidden route redirected to an unexpected destination: '+path+' → '+actual)
- if(interrupted&&actual===before&&!([301,302,303,307,308].includes(status)))
-  throw Error('Aborted navigation had no confirmed server redirect: '+path)
+ if(interrupted&&actual===before&&!([301,302,303,307,308].includes(status))){
+  // A browser can abort a top-level navigation before exposing the response.
+  // Independently probe the exact protected URL with THIS authenticated
+  // browser context. Require an explicit same-origin server denial, and
+  // continue failing on 5xx, missing sessions or an ambiguous 200 shell.
+  const probe=await page.request.get(url(path),{
+   maxRedirects:0,timeout:40000,failOnStatusCode:false,
+   headers:{Accept:'text/html'},
+  })
+  const probeStatus=probe.status()
+  if(probeStatus>=500)throw Error('Protected URL returned HTTP '+probeStatus+' during redirect verification: '+path)
+  if([401,403,404].includes(probeStatus))return
+  if([301,302,303,307,308].includes(probeStatus)){
+   const location=probe.headers()['location']
+   if(!location)throw Error('Protected URL redirect has no Location header: '+path)
+   const target=new URL(location,url(path))
+   assert.equal(target.origin,new URL(BASE).origin,'Forbidden route redirected outside Main origin')
+   if(target.pathname==='/login'||target.pathname.startsWith('/login/'))
+    throw Error('QA login session lost while checking forbidden route '+path)
+   assert.ok(['/','/events','/portals','/unauthorized'].includes(target.pathname),
+    'Forbidden route redirected to unexpected destination: '+path+' → '+target.pathname)
+   return
+  }
+  throw Error('Aborted navigation had no confirmed server redirect: '+path+' (HTTP '+probeStatus+')')
+ }
 }
 // Real read-only click acceptance, over and above direct URL checks.
 // Reuse the seven isolated QA identities; do not create additional bots,
