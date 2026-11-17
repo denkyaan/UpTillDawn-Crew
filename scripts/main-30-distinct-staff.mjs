@@ -30,6 +30,7 @@ const expectedEmails=Array.from({length:COUNT},(_,i)=>'e2e-load30-'+RUN+'-'+Stri
 const safeMessage=error=>String(error?.message||error||'unknown')
  .replace(/Bearer\s+[a-z0-9._-]+/gi,'Bearer [redacted]')
  .replace(/sb_secret_[a-z0-9_-]+/gi,'[redacted]')
+ .replace(/e2e-load30-\d+-\d+@uptilldawn\.test/gi,'[qa-account]')
  .slice(0,190)
 const report={
  target:'isolated-main-worker',identityCount:0,authenticated:0,browserReady:0,
@@ -58,7 +59,8 @@ async function pool(items,max,label,work){
    try{values[i]=await work(items[i],i)}catch(error){record(label,error,i+1)}
   }
  }))
- if(values.some(x=>x===undefined))throw Error(label+' did not complete for all '+COUNT+' unique users')
+ if(Array.from({length:items.length},(_,i)=>values[i]).some(x=>x===undefined))
+  throw Error(label+' did not complete for all '+items.length+' unique users')
  return values
 }
 async function scanAccounts(){
@@ -117,7 +119,6 @@ if(process.argv.includes('--cleanup')){
  let browser
  const clients=[]
  const contexts=[]
- const watchers=[]
  const started=Date.now()
  const failOnResponse=(response,index)=>{
   try{if(new URL(response.url()).origin!==MAIN)return}catch{return}
@@ -267,7 +268,7 @@ if(process.argv.includes('--cleanup')){
   // Realtime fan-out stays inside an isolated, ephemeral QA-only topic.
   // No public chat messages or database notifications are created.
   const topic='upt-main-qa-30-'+RUN
-  const channels=await pool(sessions,3,'realtime-subscription',async ({client,person})=>{
+  const channels=await pool(sessions,3,'realtime-subscription',async ({client})=>{
    const ch=client.channel(topic,{config:{broadcast:{self:true,ack:true}}})
    ch.on('broadcast',{event:'qa-ping'},packet=>{
     if(packet.payload?.run===RUN)report.realtimeReceived++
