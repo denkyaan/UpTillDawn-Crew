@@ -24,6 +24,29 @@ function CountBadge({ count }: { count: number }) {
 
 const emptyContext:RoleUiContext={assignedEvent:false,assignedWorkplaceRole:false,eventActive:false,shiftActive:false}
 
+function featureForNotificationLink(link:string|null){
+  if(!link)return null
+  if(link.startsWith("/events"))return "events"
+  if(link.startsWith("/operations"))return "operations"
+  if(link.startsWith("/workplaces"))return "workplaces"
+  if(link.startsWith("/inventory"))return "inventory"
+  if(link.startsWith("/guestlist"))return "guestlist"
+  if(link.startsWith("/sales"))return "sales"
+  if(link.startsWith("/shifts"))return "workplaces"
+  if(link.startsWith("/briefings"))return "briefings"
+  if(link.startsWith("/tasks"))return "tasks"
+  if(link.startsWith("/chat"))return "chat"
+  if(link.startsWith("/crew"))return "crew"
+  if(link.startsWith("/incidents"))return "incidents"
+  if(link.startsWith("/exports"))return "exports"
+  if(link.startsWith("/personnel"))return "personnel"
+  if(link.startsWith("/admin/platform")||link.startsWith("/control-center"))return "platform"
+  if(link.startsWith("/settings"))return "settings"
+  if(link==="/"||link.startsWith("/admin"))return "overview"
+  return null
+}
+
+
 export function AppLayout({ children }: { children: React.ReactNode }) {
   const pathname=usePathname()
   const {user,roles,isAdmin}=useAuth()
@@ -117,6 +140,40 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
     let incidentSince=window.localStorage.getItem(incidentKey)
     const taskSince=window.localStorage.getItem(taskKey)||"1970-01-01T00:00:00.000Z"
     if(!incidentSince){incidentSince=nowIso;window.localStorage.setItem(incidentKey,incidentSince)}
+    // Dedicated Promotion/Administration pages use their own scoped actions
+    // and navigation. Their shared shell needs only unread badges and the
+    // active shift for the urgent HELP affordance, not the complete events,
+    // memberships, responsible assignments, incident and task directory.
+    // Preserve role UI and the chat/notification freshness while avoiding
+    // >8 PostgREST calls on every portal focus or tab refresh.
+    const dedicatedPortal=pathname.startsWith("/portals/promotion")||
+      pathname.startsWith("/portals/administration")
+    if(dedicatedPortal){
+      const [
+        {data:chatUnreadTotal},
+        {data:unreadNotifications},
+        {data:activeShifts},
+      ]=await boundedQueries([
+        supabase.rpc("upt_chat_unread_total"),
+        supabase.from("crew_notifications").select("id,link,kind")
+          .eq("user_id",user.id).is("read_at",null).limit(500),
+        supabase.from("shifts").select("scheduled_start,scheduled_end")
+          .eq("user_id",user.id).neq("status","cancelled")
+          .lte("scheduled_start",nowIso).gte("scheduled_end",nowIso).limit(1),
+      ],2)
+      const noticeRows=unreadNotifications||[]
+      setChatMissed(Number(chatUnreadTotal||0))
+      setNotificationMissed(noticeRows.length)
+      const featureCounts:Record<string,number>={}
+      for(const notice of noticeRows){
+        const key=featureForNotificationLink(notice.link)
+        if(key)featureCounts[key]=(featureCounts[key]||0)+1
+      }
+      setNotificationFeatureCounts(featureCounts)
+      setContext({assignedEvent:false,assignedWorkplaceRole:Boolean(activeShifts?.length),
+        eventActive:Boolean(activeShifts?.length),shiftActive:Boolean(activeShifts?.length)})
+      return
+    }
     const [
       {data:events},
       {data:memberships},
@@ -135,29 +192,8 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
     const notificationRows=unreadNotifications||[]
     setNotificationMissed(notificationRows.length)
     const featureCounts:Record<string,number>={}
-    const featureForLink=(link:string|null)=>{
-      if(!link)return null
-      if(link.startsWith("/events"))return "events"
-      if(link.startsWith("/operations"))return "operations"
-      if(link.startsWith("/workplaces"))return "workplaces"
-      if(link.startsWith("/inventory"))return "inventory"
-      if(link.startsWith("/guestlist"))return "guestlist"
-      if(link.startsWith("/sales"))return "sales"
-      if(link.startsWith("/shifts"))return "workplaces"
-      if(link.startsWith("/briefings"))return "briefings"
-      if(link.startsWith("/tasks"))return "tasks"
-      if(link.startsWith("/chat"))return "chat"
-      if(link.startsWith("/crew"))return "crew"
-      if(link.startsWith("/incidents"))return "incidents"
-      if(link.startsWith("/exports"))return "exports"
-      if(link.startsWith("/personnel"))return "personnel"
-      if(link.startsWith("/admin/platform")||link.startsWith("/control-center"))return "platform"
-      if(link.startsWith("/settings"))return "settings"
-      if(link==="/"||link.startsWith("/admin"))return "overview"
-      return null
-    }
     for(const notification of notificationRows){
-      const key=featureForLink(notification.link)
+      const key=featureForNotificationLink(notification.link)
       if(key)featureCounts[key]=(featureCounts[key]||0)+1
     }
     setNotificationFeatureCounts(featureCounts)
