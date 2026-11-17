@@ -1,7 +1,7 @@
--- PRODUCTION-ONLY, PREPARED / NOT APPLIED. Requires separate explicit release approval.
+-- PRODUCTION-ONLY: APPLIED AND VERIFIED 2026-11-17 (12/12 required checks). DO NOT REPLAY.
 -- Do not add to the ordinary supabase/migrations chain: Production has its own
--- historical alignment versions. Run only against the confirmed Production DB,
--- after verified backup/recovery, exact DB preflight and operational approval.
+-- historical alignment versions. This file is the exact applied historical patch.
+-- Do not run it again; it is intentionally guarded against replay.
 -- This is a single atomic transaction. Any unexpected database state fails before
 -- DDL. No table changes, data modifications, account changes, webhook or payment.
 BEGIN;
