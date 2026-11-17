@@ -37,7 +37,7 @@ test('existing approved Main deploy workflow runs functional E2E without a sixth
 
 test('real functional QA has its own independent job and evidence even when browser QA fails',()=>{
  const browser=workflow.slice(workflow.indexOf('  qa-main-browser-acceptance:'),workflow.indexOf('  qa-main-functional-acceptance:'))
- const functional=workflow.slice(workflow.indexOf('  qa-main-functional-acceptance:'),workflow.indexOf('  qa-main-runtime-diagnostic:'))
+ const functional=workflow.slice(workflow.indexOf('  qa-main-functional-acceptance:'),workflow.indexOf('  qa-main-concurrency-acceptance:'))
  assert.doesNotMatch(browser,/node scripts\/e2e-main-functional-workflows\.mjs/)
  assert.match(functional,/needs: \[validate-trigger, deploy\]/)
  assert.match(functional,/needs\.deploy\.result == 'success'/)
@@ -73,6 +73,6 @@ test('read-only Cloudflare analytics diagnostic cannot query production or expos
  assert.doesNotMatch(diagnostic,/uptilldawn-crew/)
  assert.doesNotMatch(diagnostic,/console\.log\(.*token/)
  assert.match(workflow,/qa-main-runtime-diagnostic:/)
- assert.match(workflow,/needs: \[validate-trigger, deploy, qa-main-browser-acceptance, qa-main-functional-acceptance\]/)
+ assert.match(workflow,/needs: \[validate-trigger, deploy, qa-main-browser-acceptance, qa-main-functional-acceptance, qa-main-concurrency-acceptance\]/)
  assert.match(workflow,/node scripts\/main-worker-outcomes\.mjs/)
 })
