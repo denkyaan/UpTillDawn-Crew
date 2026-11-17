@@ -14,12 +14,13 @@ import {boundedQueries} from "@/lib/administration/bounded-queries"
 import { useAuth } from "@/lib/providers"
 import { getDefaultRoleUiRules, ruleMatches, ruleUsable, type RoleUiContext, type RoleUiRule } from "@/lib/role-ui"
 import { AdminContextBar } from "@/components/admin/admin-context-bar"
+import { LANGUAGE_APPLIED_EVENT, activeUiLocale, type SupportedUiLocale } from "@/lib/locale-preferences"
+
 // Both AI panels are closed on ordinary page loads. Keep their client-only
 // feature bundles out of the first Worker SSR and browser hydration path.
 // The button and panels remain fully available when a user actually opens AI.
 const PlatformAiAssistant = dynamic(() => import("@/components/admin/platform-ai-assistant").then(m => m.PlatformAiAssistant), {ssr:false})
 const AdministrationAiChat = dynamic(() => import("@/components/administration/administration-ai-chat").then(m => m.AdministrationAiChat), {ssr:false})
-import { LANGUAGE_APPLIED_EVENT, activeUiLocale, type SupportedUiLocale } from "@/lib/locale-preferences"
 
 function CountBadge({ count }: { count: number }) {
   if (count < 1) return null
