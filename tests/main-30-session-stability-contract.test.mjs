@@ -5,7 +5,7 @@ import {readFileSync} from 'node:fs'
 const source=readFileSync('scripts/main-30-session-stability.mjs','utf8')
 const workflow=readFileSync('.github/workflows/deploy-main.yml','utf8')
 
-test('30-session stability test is isolated to Main and reuses the seven existing QA bots',()=>{
+test('retained legacy 30-tab harness is isolated to Main and reuses only existing QA bots',()=>{
  assert.match(source,/const BASE='https:\/\/uptilldawn-main\.uptilldawn\.workers\.dev'/)
  assert.match(source,/process\.env\.E2E_MAIN_QA_BASE_URL!==BASE/)
  assert.match(source,/const TARGET_SESSIONS=30/)
@@ -20,7 +20,7 @@ test('30-session stability test is isolated to Main and reuses the seven existin
 test('concurrent browser QA runs after browser/functional QA, before Worker post-deploy analytics',()=>{
  assert.match(workflow,/qa-main-concurrency-acceptance:/)
  assert.match(workflow,/needs: \[validate-trigger, deploy, qa-main-functional-acceptance, qa-main-browser-acceptance\]/)
- assert.match(workflow,/run: node scripts\/main-30-session-stability\.mjs/)
+ assert.match(workflow,/run: node scripts\/main-30-distinct-staff\.mjs/)
  assert.match(workflow,/qa-main-browser-acceptance, qa-main-functional-acceptance, qa-main-concurrency-acceptance/)
  assert.match(workflow,/MAIN_WORKER_DEPLOYED_AT:/)
 })
