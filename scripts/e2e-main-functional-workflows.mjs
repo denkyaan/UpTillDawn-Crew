@@ -203,12 +203,16 @@ try{
  assert.equal(workplace.event_id,draft)
  const workStart=new Date(Date.parse(start)+60*60*1000).toISOString()
  const workEnd=new Date(Date.parse(workStart)+8*60*60*1000).toISOString()
- const scheduled=await one(head.db.from('shifts').insert({
-  event_id:draft,workplace_id:workplace.id,user_id:staff.id,
-  scheduled_start:workStart,scheduled_end:workEnd,
-  start_time:workStart,end_time:workEnd,role_name:'Crew',status:'scheduled'
- }).select('id,event_id,workplace_id,user_id,status'))
- created.shift=scheduled.id
+ // Shifts are intentionally not writable with direct PostgREST INSERT.
+ // Exercise the real Admin-only, capacity-/overlap-validated RPC instead.
+ const shiftArgs={
+  p_workplace:workplace.id,p_user:staff.id,p_role_name:'Crew',
+  p_start:workStart,p_end:workEnd,p_overlap_allowed:false,p_shift_kind:'event',
+ }
+ const shiftId=await scalar(head.db.rpc('upt_create_shift',shiftArgs))
+ created.shift=shiftId
+ const scheduled=await one(head.db.from('shifts')
+  .select('id,event_id,workplace_id,user_id,status').eq('id',shiftId))
  assert.equal(scheduled.workplace_id,workplace.id)
  const staffShift=await one(staff.db.from('shifts').select('id,user_id,workplace_id').eq('id',scheduled.id))
  assert.equal(staffShift.user_id,staff.id)
@@ -222,10 +226,8 @@ try{
  const staffBriefing=await one(staff.db.from('briefings').select('id,title').eq('id',briefing.id))
  assert.equal(staffBriefing.title,briefing.title)
  tick('Head Admin publishes scoped QA briefing and Staff reads the correct briefing')
- await denyWrite(promotion.db.from('shifts').insert({
-  event_id:draft,workplace_id:workplace.id,user_id:staff.id,
-  scheduled_start:workStart,scheduled_end:workEnd,start_time:workStart,end_time:workEnd
- }).select('id'),'Promotion cannot forge a Staff shift')
+ await denyWrite(promotion.db.rpc('upt_create_shift',shiftArgs),
+  'Promotion cannot forge a Staff shift through the authorized planner')
 
  const submitted=await scalar(staff.db.rpc('upt_submit_timesheet',{p_event:draft}))
  created.timesheet=submitted
