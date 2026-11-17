@@ -69,6 +69,6 @@ export function QueueStatus() {
     {hasError && <p>{t(l,'Niets wordt stilzwijgend verwijderd. Open details om het probleem op te lossen.','Nothing is silently discarded. Open details to resolve the problem.','Rien n’est supprimé silencieusement. Ouvrez les détails pour résoudre le problème.','Nichts wird stillschweigend verworfen. Öffne die Details, um das Problem zu lösen.')}</p>}
     {lastSynced&&!total&&<span className="ml-2 text-xs opacity-80">{new Date(lastSynced).toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'})}</span>}
     {online&&total>0&&<button disabled={syncing} className="ml-3 underline disabled:opacity-50" onClick={() => user && (()=>{setSyncing(true);void synchronize(user.id).then(()=>setLastSynced(Date.now())).finally(()=>setSyncing(false))})()}>{t(l,'Opnieuw proberen','Retry','Réessayer','Erneut versuchen')}</button>}
-    <Link href="/sync" className="ml-3 underline">{t(l,'Details / probleem oplossen','Details / resolve issue','Détails / résoudre','Details / Problem lösen')}</Link>
+    <Link prefetch={false} href="/sync" className="ml-3 underline">{t(l,'Details / probleem oplossen','Details / resolve issue','Détails / résoudre','Details / Problem lösen')}</Link>
   </aside>
 }
