@@ -33,6 +33,11 @@ export function PromotionChatsClient({locale,userId,isAdmin,names,photos={}}:{lo
  const [readersError,setReadersError]=useState(false)
  const [unread,setUnread]=useState<Record<Room,number>>({general:0,announcements:0})
  const sequence=useRef(0)
+ const inflight=useRef<Promise<void>|null>(null)
+ const lastFetchAt=useRef(0)
+ const retryAfter=useRef(0)
+ const unreadInflight=useRef(false)
+ const unreadFetchedAt=useRef(0)
  const viewportRef=useRef<HTMLDivElement>(null)
  const followLatest=useRef(true)
  const sending=useRef(false)
@@ -51,44 +56,79 @@ export function PromotionChatsClient({locale,userId,isAdmin,names,photos={}}:{lo
   if(viewport&&followLatest.current)viewport.scrollTop=viewport.scrollHeight
  },[messages,room])
 
- const refreshUnread=useCallback(async()=>{
+ const refreshUnread=useCallback(async(force=false)=>{
+  if(unreadInflight.current||!navigator.onLine||document.visibilityState!=="visible")return
+  const now=Date.now()
+  if(now-unreadFetchedAt.current<(force?1500:45_000))return
+  unreadFetchedAt.current=now
+  unreadInflight.current=true
   try{
    const {data,error:failure}=await createClient().rpc("upt_promotion_chat_unread_counts" as never)
+    .abortSignal(AbortSignal.timeout(8000))
    if(failure)return
    const next:{general:number;announcements:number}={general:0,announcements:0}
    for(const record of (data??[]) as {room:Room;unread_count:number}[]){
     if(record.room==="general"||record.room==="announcements")next[record.room]=Math.max(0,Number(record.unread_count)||0)
    }
    setUnread(next)
-  }catch{}
+  }catch{}finally{unreadInflight.current=false}
  },[])
 
  const load=useCallback(async()=>{
+  if(inflight.current||!navigator.onLine||document.visibilityState!=="visible")return
+  const now=Date.now()
+  if(now<retryAfter.current||now-lastFetchAt.current<1200)return
+  lastFetchAt.current=now
   const current=++sequence.current
-  try{
-   const db=createClient()
-   const {data,error:failure}=await db.from("promotion_chat_messages" as never).select("id,room,sender_id,body,created_at,reply_to_message_id").eq("room",room).order("created_at",{ascending:false}).limit(100)
-   if(current!==sequence.current)return
-   if(failure){setLoadFailed(true);setError(l.load);return}
-   setLoadFailed(false);setLoaded(true);setError("")
-   setMessages(((data||[]) as unknown as Message[]).reverse())
-   if(document.visibilityState==="visible"){
-    void db.rpc("upt_promotion_chat_mark_read" as never,{p_room:room} as never).then(()=>void refreshUnread())
+  const request=(async()=>{
+   try{
+    const db=createClient()
+    const {data,error:failure}=await db.from("promotion_chat_messages" as never)
+     .select("id,room,sender_id,body,created_at,reply_to_message_id")
+     .eq("room",room).order("created_at",{ascending:false}).limit(100)
+     .abortSignal(AbortSignal.timeout(8500))
+    if(current!==sequence.current)return
+    if(failure){retryAfter.current=Date.now()+5000;setLoadFailed(true);setError(l.load);return}
+    setLoadFailed(false);setLoaded(true);setError("")
+    setMessages(((data||[]) as unknown as Message[]).reverse())
+    if(document.visibilityState==="visible")
+     void db.rpc("upt_promotion_chat_mark_read" as never,{p_room:room} as never)
+      .abortSignal(AbortSignal.timeout(6500)).then(()=>void refreshUnread(true))
+   }catch{
+    retryAfter.current=Date.now()+5000
+    if(current!==sequence.current)return
+    setLoadFailed(true);setError(l.load)
    }
-  }catch{
-   if(current!==sequence.current)return
-   setLoadFailed(true);setError(l.load)
-  }
+  })().finally(()=>{inflight.current=null})
+  inflight.current=request
+  await request
  },[room,l.load,refreshUnread])
 
  useEffect(()=>{
-  const initial=window.setTimeout(()=>{void load();void refreshUnread()},0)
-  const interval=window.setInterval(()=>{if(document.visibilityState==="visible"){void load();void refreshUnread()}},10000)
-  const onVisible=()=>{if(document.visibilityState==="visible"){void load();void refreshUnread()}}
+  let active=true,live=false
+  const db=createClient()
+  const refresh=()=>{if(!active||document.visibilityState!=="visible")return;void load();void refreshUnread(true)}
+  const timer=window.setTimeout(refresh,0)
+  const stream=db.channel('upt-promotion-chat-'+room)
+   .on('postgres_changes',{event:'*',schema:'public',table:'promotion_chat_messages',filter:'room=eq.'+room},
+     refresh)
+   .subscribe(status=>{live=status==='SUBSCRIBED';if(live)refresh()})
+  // Realtime delivers immediate updates. Recovery polling is infrequent.
+  const interval=window.setInterval(()=>{
+    if(document.visibilityState!=="visible"||!navigator.onLine)return
+    if(!live||Date.now()-lastFetchAt.current>=60_000)refresh()
+  },15000)
+  const onVisible=()=>{if(document.visibilityState==="visible")refresh()}
   document.addEventListener("visibilitychange",onVisible)
-  const activeSequence=sequence
-  return()=>{activeSequence.current++;clearTimeout(initial);clearInterval(interval);document.removeEventListener("visibilitychange",onVisible)}
- },[load,refreshUnread])
+  return()=>{
+    active=false
+    sequence.current++
+    window.clearTimeout(timer)
+    window.clearInterval(interval)
+    document.removeEventListener("visibilitychange",onVisible)
+    void db.removeChannel(stream)
+  }
+ },[room,load,refreshUnread])
 
  async function showReaders(messageId:string){
   setReadersMessage(messageId);setReaders([]);setReadersBusy(true);setReadersError(false)

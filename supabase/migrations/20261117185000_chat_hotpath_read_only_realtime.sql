@@ -196,6 +196,17 @@ drop policy if exists upt_chat_signal_insert on realtime.messages;
 create policy upt_chat_signal_insert on realtime.messages for insert to authenticated
 with check (extension='broadcast' and public.upt_chat_signal_authorized((select realtime.topic())));
 
+-- Promotion messages keep their existing RLS rules; Realtime only delivers
+-- changes which the subscribed user's SELECT policy can already read.
+do $promotion_realtime$
+begin
+ if not exists(select 1 from pg_publication_tables
+  where pubname='supabase_realtime' and schemaname='public' and tablename='promotion_chat_messages') then
+  alter publication supabase_realtime add table public.promotion_chat_messages;
+ end if;
+end;
+$promotion_realtime$;
+
 revoke all on function public.upt_chat_typing_users(uuid) from public,anon;
 revoke all on function public.upt_chat_channel_summaries() from public,anon;
 revoke all on function public.upt_set_chat_typing(uuid,boolean) from public,anon;
