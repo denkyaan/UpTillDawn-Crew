@@ -154,7 +154,7 @@ jobs:
       needs.validate-trigger.outputs.qa_eligible == 'true' &&
       needs.deploy.result == 'success'
     runs-on: ubuntu-latest
-    timeout-minutes: 22
+    timeout-minutes: 26
     env:
       E2E_MAIN_QA_BASE_URL: https://uptilldawn-main.uptilldawn.workers.dev
       E2E_MAIN_QA_SUPABASE_URL: https://npbjrtiolqperdgljnhi.supabase.co
@@ -173,6 +173,24 @@ jobs:
           cache: npm
       - name: Install dependencies
         run: npm ci --prefer-offline --no-audit --no-fund
+      # Recover only the exact interrupted, fixture-marked previous Main QA run.
+      # Never seed 30 more accounts if Supabase Admin API cannot clean the old ones.
+      - name: Recover prior interrupted Main test fixtures before new 30-user load
+        timeout-minutes: 4
+        env:
+          QA_RECOVERY_RUN_ID: '44142366396'
+        shell: bash
+        run: |
+          set -euo pipefail
+          for attempt in 1 2 3 4; do
+            if GITHUB_RUN_ID="${QA_RECOVERY_RUN_ID}" node scripts/main-30-distinct-staff.mjs --cleanup; then
+              echo "Main QA fixture recovery verified for run ${QA_RECOVERY_RUN_ID}"
+              exit 0
+            fi
+            if [[ ${attempt} -lt 4 ]]; then sleep 10; fi
+          done
+          echo '::error::Interrupted Main QA fixtures could not be removed; abort fresh load.'
+          exit 1
       - name: Install isolated Chromium
         run: npx playwright install --with-deps chromium
       - name: Verify thirty distinct Main staff sessions and guarded workflows
