@@ -13,7 +13,7 @@ const parties=read('app/(app)/portals/administration/counterparties/page.tsx')
 const detail=read('app/(app)/portals/administration/modules/[slug]/page.tsx')
 
 test('Administration home has an operational work pulse without a repeated module directory',()=>{
- assert.match(portal,/if \(portal === 'administration'\) return <AdministrationOverviewDashboard locale=\{locale\}/)
+ assert.match(portal,/if \(portal === 'administration'\) return <LazyAdministrationOverviewDashboard locale=\{locale\}/)
  assert.doesNotMatch(portal,/Alle administratieve modules|All administration modules/)
  assert.match(home,/<Link\b/)
  assert.match(home,/from\("admin_artist_bookings"\)/)
