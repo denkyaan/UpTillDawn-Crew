@@ -165,7 +165,8 @@ export function StaffEventsClient({userId,focusEvent}:{userId:string;focusEvent?
    const isExpanded=expanded.has(event.id)||event.id===focusEvent
    const info=emergency.find(x=>x.event_id===event.id)
    return <details key={event.id} open={isExpanded} onToggle={e=>{
-      if(e.currentTarget.open!==isExpanded)setExpanded(prev=>{const next=new Set(prev);if(e.currentTarget.open)next.add(event.id);else next.delete(event.id);return next})
+      const open=e.currentTarget.open
+      if(open!==isExpanded)setExpanded(prev=>{const next=new Set(prev);if(open)next.add(event.id);else next.delete(event.id);return next})
      }} className="rounded-2xl border bg-card">
     <summary className="cursor-pointer p-4"><span className="text-lg font-semibold">{event.name}</span><span className="ml-2 text-xs text-muted-foreground">{started&&!ended?t.ongoing:!started?t.future:""}</span>
      <p className="text-sm text-muted-foreground">{event.venue||t.unknown} · {date(event.start_at)}</p>
