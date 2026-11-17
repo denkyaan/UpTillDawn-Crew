@@ -100,7 +100,7 @@ export async function updateSession(request: NextRequest) {
     // insufficient roles. A denied browser navigation must NOT enter a full
     // Next.js RSC render (Cloudflare Free can fail with 1102 before redirect).
     // Read permission only from authenticated, database-backed RPCs, never
-    // from client-selected portal cookies or mutable user_metadata.
+    // from client-selected portal cookies or mutable client role fields.
     // The page/layout still re-checks authorization for allowed requests.
     const isAdminArea = pathname === '/admin' || pathname.startsWith('/admin/')
     const isFinanceArea = pathname === '/portals/administration/finance' ||
@@ -114,10 +114,14 @@ export async function updateSession(request: NextRequest) {
             supabaseResponse.cookies.getAll().forEach(cookie => response.cookies.set(cookie))
             return response
         }
-        const authzUnavailable = () => new NextResponse(
-            'Authorization service temporarily unavailable.',
-            { status: 503, headers: { 'Cache-Control': 'no-store' } },
-        )
+        const authzUnavailable = () => {
+            const response = new NextResponse(
+                'Authorization service temporarily unavailable.',
+                { status: 503, headers: { 'Cache-Control': 'no-store' } },
+            )
+            supabaseResponse.cookies.getAll().forEach(cookie => response.cookies.set(cookie))
+            return response
+        }
         if (isAdminArea) {
             // Equivalent to getCurrentUser().isAdmin: effective role, not
             // permanent DB role. A Maker in Staff preview mode remains denied.
