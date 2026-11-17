@@ -15,6 +15,7 @@ import { redirect } from 'next/navigation'
 import { getCurrentUser } from '@/lib/actions/auth'
 import { createClient } from '@/lib/supabase/crew-server'
 import { canOpenPortal, type PortalAssignment } from '@/lib/portal-access'
+import {currentPortalAssignments} from '@/lib/portal-access-server'
 import { requestUiLocale } from '@/lib/server-locale'
 
 const copy = {
@@ -67,11 +68,14 @@ async function requireAdministration() {
  if (!current) redirect('/login')
  if ((!current.approved || Boolean(current.account_blocked)) && !current.isOwner) redirect('/portals')
  const supabase = await createClient()
- const { data, error } = await supabase.rpc('upt_my_portal_assignments')
- if (error && !current.realIsAdmin && !current.isOwner) redirect('/portals')
- if (!current.realIsAdmin && !current.isOwner && !canOpenPortal('administration',(data ?? []) as PortalAssignment[],{
-   approved:current.approved,blocked:current.account_blocked===true,
- })) redirect('/portals')
+ // The parent layout and PortalSwitcher reuse this verified read per request.
+ // Privileged accounts skip it; all other users remain fail-closed.
+ if (!current.realIsAdmin && !current.isOwner) {
+   const {data,error}=await currentPortalAssignments()
+   if(error||!canOpenPortal('administration',(data??[]) as PortalAssignment[],{
+     approved:current.approved,blocked:current.account_blocked===true,
+   })) redirect('/portals')
+ }
  return {supabase,isAdmin:current.realIsAdmin || current.isOwner}
 }
 
