@@ -91,10 +91,13 @@ export async function updateSession(request: NextRequest) {
         pathname === '/portals/promotion' ||
         pathname === '/portals/administration' ||
         pathname.startsWith('/portals/administration/')
+    // Safe GET finance pages already pass TWO independently signed, live
+    // database checks in AdministrationLayout and requireAdministration().
+    // A second proxy JWT verification plus 2-3 permission RPCs caused 503s
+    // while denying staff users on Workers Free. Keep the proxy guard on all
+    // mutations and continue protecting Admin GETs before SSR.
     const requiresEarlyRoleCheck =
-        pathname === '/admin' || pathname.startsWith('/admin/') ||
-        pathname === '/portals/administration/finance' ||
-        pathname.startsWith('/portals/administration/finance/')
+        pathname === '/admin' || pathname.startsWith('/admin/')
     const routeHandlerWithoutAppLayout =
         pathname.startsWith('/portals/switch/') ||
         /^\/portals\/administration\/modules\/artists\/[^/]+\/agreement\/(?:archive|print)\//.test(pathname)
