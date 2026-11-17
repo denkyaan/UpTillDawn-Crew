@@ -42,6 +42,8 @@ test('offline snapshots are complete but use three-way bounded queue after initi
  assert.match(offline,/Math.max\(lastAttemptAt,readLastAttempt\(\)\)/)
  assert.match(offline,/window\.localStorage\.setItem\(leaseKey,value\)/)
  assert.match(offline,/if\(!acquireLease\(\)\)return/)
+ assert.match(offline,/if\(force&&now-readTimestamp\(reconnectKey\)<60_000\)return/)
+ assert.match(offline,/if\(force\)writeTimestamp\(reconnectKey,now\)/)
  assert.match(offline,/releaseLease\(\)/)
  assert.match(offline,/writeTimestamp\(syncKey,lastSyncedAt\)/)
  assert.match(offline,/snapshotResults\.some\(result=>Boolean\(result\.error\)\)/)
