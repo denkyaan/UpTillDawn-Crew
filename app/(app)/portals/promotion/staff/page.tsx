@@ -4,6 +4,7 @@ import {getCurrentUser} from "@/lib/actions/auth"
 import {createClient} from "@/lib/supabase/crew-server"
 import {requestUiLocale} from "@/lib/server-locale"
 import {Users} from "lucide-react"
+import {signedDirectoryPhotoUrls} from "@/lib/crew/signed-directory-photo-urls"
 /* eslint-disable @next/next/no-img-element */
 
 export const dynamic="force-dynamic"
@@ -21,8 +22,13 @@ export default async function PromotionStaff(){
  const db=await createClient()
  const {data,error}=await db.rpc("upt_promotion_directory" as never)
  const rows=(error?[]:(data??[])) as Member[]
- const photos:Record<string,string>={}
- await Promise.all(rows.filter(x=>x.profile_photo_url).map(async x=>{const {data}=await db.storage.from("profile-photos").createSignedUrl(x.profile_photo_url!,3600);if(data?.signedUrl)photos[x.id]=data.signedUrl}))
+ // Respect the Workers Free 6-outgoing-connection/50-subrequest caps.
+ // Only RLS-authorized promotion-directory photos may be signed; one bounded
+ // batch replaces a burst of per-person storage requests on every SSR load.
+ const photos=await signedDirectoryPhotoUrls(
+  rows,
+  (paths,expiresIn)=>db.storage.from("profile-photos").createSignedUrls(paths,expiresIn),
+ )
  const groups=[{label:copy[locale].promotion,items:rows.filter(x=>x.portal_label==="promotion")},{label:copy[locale].other,items:rows.filter(x=>x.portal_label==="events")}]
  return <main className="mx-auto max-w-4xl space-y-6 p-4 sm:p-8">
  <header className="space-y-2"><h1 className="flex items-center gap-3 text-2xl font-bold"><Users className="h-6 w-6 text-violet-400"/>{copy[locale].heading}</h1></header>
