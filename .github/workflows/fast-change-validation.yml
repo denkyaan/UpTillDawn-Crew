@@ -166,6 +166,45 @@ jobs:
           echo "::notice::Live Cloudflare Free Preview tests were NOT run: Main Worker preview URLs are intentionally disabled. Set up an explicitly authorized Preview host and repository variable UPT_MAIN_PREVIEWS_ALLOWED=true to opt in."
           echo "VINEXT_CLOUDFLARE_FREE_RUNTIME=UNVERIFIED" >> "$GITHUB_STEP_SUMMARY"
 
+      # A Preview URL must NEVER be enabled without an Access gate protecting
+      # the specific Main Worker. Verify that before any preview upload.
+      # Requires a Cloudflare token with Workers Read and Access Apps Read.
+      - name: Require protected Main Worker Preview before any remote QA upload
+        if: ${{ github.event_name == 'pull_request' && github.head_ref == 'feature/vinext-auth-parity-free-20261115' && vars.UPT_MAIN_PREVIEWS_ALLOWED == 'true' }}
+        timeout-minutes: 3
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          node --input-type=module <<'NODE'
+          const token=process.env.CLOUDFLARE_API_TOKEN
+          const account=process.env.CLOUDFLARE_ACCOUNT_ID
+          if(!token||!account)throw Error('Missing Cloudflare API authentication')
+          async function cf(path){
+            const response=await fetch('https://api.cloudflare.com/client/v4/'+path,{
+              headers:{Authorization:'Bearer '+token}
+            })
+            if(!response.ok)throw Error('Cloudflare Access preflight unavailable (HTTP '+response.status+'); refusing Preview upload')
+            const data=await response.json()
+            if(data.success!==true)throw Error('Cloudflare Access preflight not authorized; refusing Preview upload')
+            return data.result
+          }
+          const workers=await cf('accounts/'+encodeURIComponent(account)+'/workers/workers?per_page=100')
+          const worker=workers?.find?.(item=>item.name==='uptilldawn-main')
+          if(!worker?.id)throw Error('Main Worker identifier not available; refusing Preview upload')
+          const apps=await cf('accounts/'+encodeURIComponent(account)+'/access/apps?per_page=100')
+          const protectedPreview=apps?.some?.(app=>
+            app.type==='self_hosted'&&
+            app.destinations?.some?.(destination=>
+              destination.type==='preview_worker'&&destination.worker_id===worker.id&&
+              !destination.overrides?.some?.(override=>override.behavior==='public'))&&
+            app.policies?.some?.(policy=>policy.decision==='allow'))
+          if(!protectedPreview)throw Error('Main Worker has no verified previews-only Cloudflare Access app with allow policy; refusing Preview upload')
+          console.log('Verified Main-only Worker Preview Access policy before remote test upload')
+          NODE
+
       # Upload a non-promoted version Preview of the existing Main Worker.
       # This is NOT a new staging environment or sixth workflow; the active
       # workers.dev Main route and all production bindings remain untouched.
