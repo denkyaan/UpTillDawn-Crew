@@ -21,6 +21,16 @@ export function GlobalOfflineContentSync({userId}:{userId:string}){
    }catch{return 0}
   }
   let lastSyncedAt=readLastSuccess()
+  // A failed upstream query must not trigger another sixteen reads on the next
+  // route mount. Keep a one-minute per-user/tab backoff even on failures.
+  const attemptKey='upt-offline:last-attempt:'+userId
+  const readLastAttempt=()=>{
+   try{
+    const value=Number(window.sessionStorage.getItem(attemptKey))
+    return Number.isFinite(value)&&value>0&&value<=Date.now()?value:0
+   }catch{return 0}
+  }
+  let lastAttemptAt=readLastAttempt()
   // Stable per-user jitter prevents 30 phones opening/updating the app at an
   // event from running sixteen Supabase reads in the same second.
   const staggerMs=[...userId].reduce((hash,char)=>((hash*31+char.charCodeAt(0))>>>0),0)%22_000
@@ -29,8 +39,10 @@ export function GlobalOfflineContentSync({userId}:{userId:string}){
    const now=Date.now()
    // Background snapshots (not live pages) refresh at most once per 15 min.
    // Actual tasks/events still load directly under RLS on normal navigation.
-   if(!force&&now-lastSyncedAt<15*60_000)return
+   if(!force&&(now-lastSyncedAt<15*60_000||now-lastAttemptAt<60_000))return
    syncing=true
+   lastAttemptAt=now
+   try{window.sessionStorage.setItem(attemptKey,String(lastAttemptAt))}catch{/* session storage optional */}
    try{
    const snapshotResults=await boundedQueries([
     s.from('briefings').select('id,title,body,version,event_id').order('created_at',{ascending:false}),
