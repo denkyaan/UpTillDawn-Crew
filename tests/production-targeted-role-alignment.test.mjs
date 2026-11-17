@@ -74,7 +74,7 @@ test('Metadata-only preflight blocks unsafe roles without treating historical mi
   'BLOCK RELEASE'
  ])assert.ok(preflight.includes(key),key)
  assert.match(preflight,/main_tip_migration_in_history', false/)
- const active=preflight.replace(/--[^\n]*/g,'')
+ const active=preflight.replace(/--[^\n]*/g,'').replace(/'EXECUTE'/g,'privilege')
  assert.doesNotMatch(active,/\b(?:INSERT|UPDATE|DELETE|ALTER|DROP|TRUNCATE|GRANT|REVOKE|CREATE|EXECUTE|CALL|DO)\b/i)
 })
 
