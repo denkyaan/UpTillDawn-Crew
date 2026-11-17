@@ -27,7 +27,8 @@ test('only protected (app) PAGE paths may skip redundant edge JWT work',()=>{
  assert.match(middleware,/const safeRead = request\.method === 'GET' \|\| request\.method === 'HEAD'/)
  assert.match(middleware,/safeRead && ordinaryAppPage && !requiresEarlyRoleCheck && !routeHandlerWithoutAppLayout/)
  assert.match(middleware,/return NextResponse\.next\(\{ request \}\)/)
- assert.doesNotMatch(middleware,/appPageRoots = \[[\s\S]*?'\/god-mode'/)
+ const pageRoots=middleware.slice(middleware.indexOf('const appPageRoots = ['),middleware.indexOf('const ordinaryAppPage ='))
+ assert.doesNotMatch(pageRoots,/god-mode|maker-mode|\/admin|\/api/)
 })
 test('Maker, Admin, Finance, route handlers and normal auth pages keep edge verified claims',()=>{
  assert.match(middleware,/const requiresEarlyRoleCheck =[\s\S]*?pathname === '\/admin'/)
