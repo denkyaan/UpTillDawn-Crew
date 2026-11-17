@@ -11,6 +11,13 @@ test('Tasks requests are RLS-scoped and bounded without altering manager permiss
  assert.match(tasks,/isAdmin\|\|isResponsible\?taskAssignmentQuery:taskAssignmentQuery\.eq\('user_id',user\.id\)/)
  assert.match(tasks,/const manager = isAdmin \|\| isResponsible/)
  assert.match(tasks,/const hasActiveShift/)
+ assert.match(tasks,/const activeEvents=\(events\|\|\[\]\)\.filter/)
+ assert.match(tasks,/const openEvents=\(events\|\|\[\]\)\.filter/)
+ assert.match(tasks,/manager\s*\? s\.from\('event_availability'\)/)
+ assert.match(tasks,/Promise\.resolve\(\{data:\[\] as \{event_id:string;user_id:string\}\[\]\}\)/)
+ const primaryReads=tasks.slice(tasks.indexOf('const ['),tasks.indexOf('],3)')+4)
+ assert.equal((primaryReads.match(/s\.from\('events'\)/g)||[]).length,1,
+   'Tasks must not fetch the same event listing three times per request')
  assert.match(tasks,/if \(!manager && !hasOpenAssignedEvent\) redirect\('\/events'\)/)
  assert.match(tasks,/ManagerOnly/)
  assert.match(tasks,/StaffAvailability/)

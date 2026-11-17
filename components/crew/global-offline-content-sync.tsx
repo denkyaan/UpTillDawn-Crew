@@ -10,14 +10,41 @@ export function GlobalOfflineContentSync({userId}:{userId:string}){
   const s=createClient()
   let cancelled=false
   let syncing=false
-  let lastSyncedAt=0
-  const syncOfflineContent=async({force=false}:{force?:boolean}={})=>{
-   if(cancelled||syncing||!navigator.onLine)return
-   const now=Date.now()
-   if(!force&&now-lastSyncedAt<60_000)return
-   syncing=true
+  // Each user's browser tab keeps its own last successful offline snapshot
+  // timestamp across SPA route remounts. Never cache private content globally
+  // or suppress a sync after an actual reconnect.
+  const syncKey='upt-offline:last-success:'+userId
+  const readLastSuccess=()=>{
    try{
-   const [{data:briefings},{data:personal},{data:assignments},{data:emergency},{data:documents},{data:eventMemberships},{data:workplaces},{data:shifts},{data:incidents},{data:checklists},{data:checklistItems},{data:inventoryItems},{data:inventoryIssues},{data:knowledge},{data:guestlistRows},{data:saleRows}]=await boundedQueries([
+    const value=Number(window.sessionStorage.getItem(syncKey))
+    return Number.isFinite(value)&&value>0&&value<=Date.now()?value:0
+   }catch{return 0}
+  }
+  let lastSyncedAt=readLastSuccess()
+  // A failed upstream query must not trigger another sixteen reads on the next
+  // route mount. Keep a one-minute per-user/tab backoff even on failures.
+  const attemptKey='upt-offline:last-attempt:'+userId
+  const readLastAttempt=()=>{
+   try{
+    const value=Number(window.sessionStorage.getItem(attemptKey))
+    return Number.isFinite(value)&&value>0&&value<=Date.now()?value:0
+   }catch{return 0}
+  }
+  let lastAttemptAt=readLastAttempt()
+  // Stable per-user jitter prevents 30 phones opening/updating the app at an
+  // event from running sixteen Supabase reads in the same second.
+  const staggerMs=[...userId].reduce((hash,char)=>((hash*31+char.charCodeAt(0))>>>0),0)%22_000
+  const syncOfflineContent=async({force=false}:{force?:boolean}={})=>{
+   if(cancelled||syncing||!navigator.onLine||document.visibilityState!=='visible')return
+   const now=Date.now()
+   // Background snapshots (not live pages) refresh at most once per 15 min.
+   // Actual tasks/events still load directly under RLS on normal navigation.
+   if(!force&&(now-lastSyncedAt<15*60_000||now-lastAttemptAt<60_000))return
+   syncing=true
+   lastAttemptAt=now
+   try{window.sessionStorage.setItem(attemptKey,String(lastAttemptAt))}catch{/* session storage optional */}
+   try{
+   const snapshotResults=await boundedQueries([
     s.from('briefings').select('id,title,body,version,event_id').order('created_at',{ascending:false}),
     s.from('personal_instructions').select('id,title,body,version,event_id').eq('user_id',userId).order('created_at',{ascending:false}),
     s.from('task_assignments').select('id,status,tasks(id,title,description,event_id,workplace_id)').eq('user_id',userId).order('created_at'),
@@ -35,7 +62,11 @@ export function GlobalOfflineContentSync({userId}:{userId:string}){
     s.from('event_guestlist_entries').select('id,event_id,name,entry_type,spots_total,spots_checked_in,notes').eq('is_active',true).order('name'),
     s.from('inventory_items').select('id,event_id,workplace_id,name,sale_category,sale_price_cents,available_quantity').eq('is_active',true).eq('sale_enabled',true).gt('available_quantity',0).order('name'),
    ],3)
-   if(cancelled)return
+   // An intermittent network/RLS error must NEVER overwrite working offline
+   // data with an empty snapshot. Retry at the next safe sync opportunity.
+   if(cancelled||document.visibilityState!=='visible'||
+      snapshotResults.some(result=>Boolean(result.error)))return
+   const [{data:briefings},{data:personal},{data:assignments},{data:emergency},{data:documents},{data:eventMemberships},{data:workplaces},{data:shifts},{data:incidents},{data:checklists},{data:checklistItems},{data:inventoryItems},{data:inventoryIssues},{data:knowledge},{data:guestlistRows},{data:saleRows}]=snapshotResults
    const briefingItems:OfflineBriefing[]=[
     ...(briefings||[]).map(row=>({...row,kind:'general' as const})),
     ...(personal||[]).map(row=>({...row,kind:'personal' as const})),
@@ -72,20 +103,36 @@ export function GlobalOfflineContentSync({userId}:{userId:string}){
    }
    await Promise.all([saveOfflineBriefings(userId,briefingItems),saveOfflineTasks(userId,taskItems),saveOfflineEmergency(userId,emergencyItems),saveOfflineBrowseData(userId,eventItems,workplaceItems,shiftItems),saveOfflineOperationalData(userId,incidentItems,checklistModels,inventoryModels,issueModels),saveOfflineKnowledge(userId,knowledgeModels),saveOfflineGuestlistAndSales(userId,guestlistModels,saleModels),replaceOfflineDocuments(userId,offlineDocuments)])
    lastSyncedAt=Date.now()
+   try{window.sessionStorage.setItem(syncKey,String(lastSyncedAt))}catch{/* offline cache still saved */}
    }finally{syncing=false}
   }
-  const onOnline=()=>void syncOfflineContent({force:true}).catch(()=>{})
+  let reconnectTimer:number|undefined
+  const onOnline=()=>{
+   if(reconnectTimer!==undefined)window.clearTimeout(reconnectTimer)
+   // A reconnect must refresh offline data, but not stampede a recovering
+   // Supabase database with every device at exactly the same instant.
+   reconnectTimer=window.setTimeout(()=>{
+    reconnectTimer=undefined
+    void syncOfflineContent({force:true}).catch(()=>{})
+   },500+staggerMs)
+  }
   const onVisible=()=>{if(document.visibilityState==='visible')void syncOfflineContent().catch(()=>{})}
   window.addEventListener('online',onOnline)
   document.addEventListener('visibilitychange',onVisible)
-  // Keep offline snapshots, but do not start sixteen reads while the
-  // authenticated page and navigation are still loading. Requests execute
-  // in a small pool and remain RLS-scoped to this user.
+  // Existing online pages remain immediately usable. Stagger only the
+  // noncritical offline copy, preserving the original 3-outgoing-request cap.
   const initialSync=window.setTimeout(()=>{
-   if(document.visibilityState==='visible')void syncOfflineContent({force:true}).catch(()=>{})
-  },2500)
+   if(document.visibilityState==='visible')void syncOfflineContent().catch(()=>{})
+  },8_000+staggerMs)
   const timer=window.setInterval(()=>{if(document.visibilityState==='visible')void syncOfflineContent().catch(()=>{})},15*60*1000)
-  return()=>{cancelled=true;window.clearTimeout(initialSync);window.removeEventListener('online',onOnline);document.removeEventListener('visibilitychange',onVisible);window.clearInterval(timer)}
+  return()=>{
+   cancelled=true
+   window.clearTimeout(initialSync)
+   if(reconnectTimer!==undefined)window.clearTimeout(reconnectTimer)
+   window.removeEventListener('online',onOnline)
+   document.removeEventListener('visibilitychange',onVisible)
+   window.clearInterval(timer)
+  }
  },[userId])
  return null
 }

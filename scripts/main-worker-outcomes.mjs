@@ -111,6 +111,15 @@ try{
  const {appendFileSync}=await import('node:fs')
  if(process.env.GITHUB_STEP_SUMMARY)appendFileSync(process.env.GITHUB_STEP_SUMMARY,
   '\n### Main Worker resource outcomes (read-only)\n- Worker: uptilldawn-main\n- Last 90-minute status counts (includes earlier app revisions): '+(summary||'none')+'\n- Status counts since current Main deployment: '+postDeploySummary+'\n- Post-deploy confirmed resource failures: '+(postDeployCounts===null?'unavailable':(postDeployCounts.get('exceededResources')||0)+(postDeployCounts.get('exceededCpu')||0)+(postDeployCounts.get('exceededMemory')||0))+'\n- Maximum grouped CPU P99 (ms), last 90 minutes: '+(cpuP99Ms??'unavailable')+'\n- Maximum grouped isolate-memory P99 (MiB), last 90 minutes: '+(memoryP99MiB??'unavailable')+'\n- Analytics may be delayed; a zero is not a long-term guarantee\n- Production worker not queried\n')
+ // Do not let a successful deployment and browser run conceal confirmed 1102
+ // invocations. This checks ACTUAL post-deploy Main Worker analytics, never a
+ // manufactured load test or a cross-release 90-minute window.
+ if(observedFailures!==null&&observedFailures>0){
+  console.log('::error::Main Worker post-deploy 1102/resource errors: '+observedFailures+
+    '. Production release is blocked until this is zero.')
+  process.exitCode=1
+ }
+
 }catch{
  console.log('CLOUDFLARE_MAIN_OUTCOMES unavailable: analytics endpoint not reachable; verify Account Analytics Read permission')
 }

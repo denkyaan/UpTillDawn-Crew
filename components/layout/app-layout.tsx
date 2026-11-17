@@ -29,6 +29,7 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
   const {user,roles,isAdmin}=useAuth()
   const supabase=useMemo(()=>createClient(),[])
   const refreshInFlight=useRef(false)
+  const lastRefreshAttemptAt=useRef(0)
   const [chatMissed,setChatMissed]=useState(0)
   const [incidentMissed,setIncidentMissed]=useState(0)
   const [taskMissed,setTaskMissed]=useState(0)
@@ -100,8 +101,13 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
   const currentUsable=previewAll||adminAlwaysRoute||!currentFeature||!roleKey||!rulesReady||ruleUsable(currentRule,effectiveContext,false)
   const contentLocked=Boolean(currentVisible&&!currentUsable)
 
-  const refresh=useCallback(async()=>{
-    if(!user||refreshInFlight.current||document.visibilityState==='hidden')return
+  const refresh=useCallback(async(force=false)=>{
+    if(!user||refreshInFlight.current||document.visibilityState==='hidden'||!navigator.onLine)return
+    // Focus, route transitions and polling may occur together. Avoid repeating
+    // six or more RLS reads when badge context has just been refreshed.
+    const attemptAt=Date.now()
+    if(!force&&attemptAt-lastRefreshAttemptAt.current<20_000)return
+    lastRefreshAttemptAt.current=attemptAt
     refreshInFlight.current=true
     try{
     const now=new Date()
@@ -222,7 +228,25 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
     }finally{refreshInFlight.current=false}
   },[activeUiRole,pathname,supabase,user])
 
-  useEffect(()=>{queueMicrotask(()=>void refresh());const timer=window.setInterval(()=>void refresh(),pathname.startsWith("/portals/")?30000:10000);const focus=()=>void refresh();const chatRead=()=>void refresh();window.addEventListener("focus",focus);window.addEventListener("uptilldawn-chat-read",chatRead);return()=>{window.clearInterval(timer);window.removeEventListener("focus",focus);window.removeEventListener("uptilldawn-chat-read",chatRead)}},[refresh,pathname])
+  useEffect(()=>{
+    // Stable user-specific jitter keeps simultaneous event logins from
+    // issuing the entire dashboard badge-query burst in the same second.
+    const seed=[...(user?.id||'')].reduce((h,c)=>((h*33+c.charCodeAt(0))>>>0),0)
+    const safeRefresh=(force=false)=>void refresh(force).catch(()=>{})
+    const initial=window.setTimeout(()=>safeRefresh(),400+seed%2200)
+    const timer=window.setInterval(()=>safeRefresh(),pathname.startsWith("/portals/")?45_000:30_000)
+    const focus=()=>safeRefresh()
+    // Explicit chat-read action must still update the badge immediately.
+    const chatRead=()=>safeRefresh(true)
+    window.addEventListener("focus",focus)
+    window.addEventListener("uptilldawn-chat-read",chatRead)
+    return()=>{
+      window.clearTimeout(initial)
+      window.clearInterval(timer)
+      window.removeEventListener("focus",focus)
+      window.removeEventListener("uptilldawn-chat-read",chatRead)
+    }
+  },[refresh,pathname,user?.id])
 
   const showOverview=feature("overview",true)
   const showEvents=feature("events",true)
