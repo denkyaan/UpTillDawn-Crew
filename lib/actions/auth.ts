@@ -222,6 +222,17 @@ export async function signIn(formData: FormData) {
     }
     const { data, error } = await supabase.auth.signInWithPassword({ email, password })
     if (error || !data.user) {
+        // An upstream outage/rate limit is not an invalid password or a denied role.
+        // Keep credential and authorization failures indistinguishable, but do
+        // not tell a valid user that their role was rejected when Auth is down.
+        const status = error?.status ?? 0
+        const authCode = String(error?.code || '').toLowerCase()
+        if (status === 429 || authCode.includes('rate_limit')) {
+            return { error: 'De aanmeldservice ontvangt tijdelijk te veel aanvragen. Probeer over enkele minuten opnieuw.', code: 'auth_rate_limited' }
+        }
+        if (status >= 500 || /network|fetch failed|timed? out|connection|context canceled/i.test(error?.message || '')) {
+            return { error: 'De aanmeldservice is tijdelijk niet bereikbaar. Probeer opnieuw zodra de verbinding hersteld is.', code: 'auth_temporarily_unavailable' }
+        }
         await notifySecurity('failure', error?.message.includes('Email not confirmed') ? 'email_not_confirmed' : error?.message.includes('Invalid login credentials') ? 'invalid_credentials' : 'auth_failure')
         if (requestedPortal === 'admin' || requestedPortal === 'responsible') return { error: 'Foute logingegevens of u heeft geen toegang tot deze rol.', code: 'invalid_credentials_or_role' }
         if (error?.message.includes('Email not confirmed')) return { error: 'Verifieer eerst je e-mailadres.', code: 'email_not_confirmed' }

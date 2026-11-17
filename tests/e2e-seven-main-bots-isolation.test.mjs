@@ -126,10 +126,11 @@ test('DJ-contract prerequisite checks the nested page main, never ambiguous shel
  assert.match(source,/Contract creation is blocked without an actionable prerequisite message/)
 })
 
-test('Main login QA observes real login errors and retries only unexpected Server Action failures once',()=>{
+test('Main login QA retries only classified transient Auth and transport failures, never role/credential denials',()=>{
  assert.match(source,/for\(let attempt=1;attempt<=2&&!signedIn;attempt\+\+\)/)
  assert.match(source,/data-login-error-code/)
- assert.match(source,/code!=='unexpected_action_failure'\|\|attempt===2/)
+ assert.match(source,/const temporaryAuthFailure=\['unexpected_action_failure','auth_temporarily_unavailable','auth_rate_limited'\]\.includes\(code\)/)
+ assert.match(source,/if\(!temporaryAuthFailure\|\|attempt===2\)/)
  assert.match(source,/QA_RETRY_TRANSIENT_LOGIN/)
  assert.match(source,/QA_RECOVERED_TRANSIENT_LOGIN/)
  const form=readFileSync('components/auth/login-form.tsx','utf8')
