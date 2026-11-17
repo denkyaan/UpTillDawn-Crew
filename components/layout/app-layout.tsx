@@ -135,6 +135,9 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
     try{
     const now=new Date()
     const nowIso=now.toISOString()
+    // Keep routine nav badges responsive during Supabase gateway timeouts.
+    // Failed reads must settle; they must not accumulate on the next focus.
+    const badgeSignal=AbortSignal.timeout(9_000)
     const incidentKey=`uptilldawn-last-incidents-view:${user.id}`
     const taskKey=`uptilldawn-last-tasks-view:${user.id}`
     let incidentSince=window.localStorage.getItem(incidentKey)
@@ -154,12 +157,12 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
         {data:unreadNotifications},
         {data:activeShifts},
       ]=await boundedQueries([
-        supabase.rpc("upt_chat_unread_total"),
+        supabase.rpc("upt_chat_unread_total").abortSignal(badgeSignal),
         supabase.from("crew_notifications").select("id,link,kind")
-          .eq("user_id",user.id).is("read_at",null).limit(500),
+          .eq("user_id",user.id).is("read_at",null).limit(500).abortSignal(badgeSignal),
         supabase.from("shifts").select("scheduled_start,scheduled_end")
           .eq("user_id",user.id).neq("status","cancelled")
-          .lte("scheduled_start",nowIso).gte("scheduled_end",nowIso).limit(1),
+          .lte("scheduled_start",nowIso).gte("scheduled_end",nowIso).limit(1).abortSignal(badgeSignal),
       ],2)
       const noticeRows=unreadNotifications||[]
       setChatMissed(Number(chatUnreadTotal||0))
@@ -182,12 +185,12 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
       {data:chatUnreadTotal},
       {data:unreadNotifications},
     ]=await boundedQueries([
-      supabase.from("events").select("id,start_at,end_at,status").neq("status","archived").gte("end_at",nowIso),
-      supabase.from("event_members").select("event_id,event_role").eq("user_id",user.id),
-      supabase.from("shifts").select("event_id,workplace_id,scheduled_start,scheduled_end,status").eq("user_id",user.id).neq("status","cancelled"),
-      supabase.from("responsible_assignments").select("event_id,workplace_id").eq("user_id",user.id),
-      supabase.rpc("upt_chat_unread_total"),
-      supabase.from("crew_notifications").select("id,link,kind").eq("user_id",user.id).is("read_at",null).limit(500),
+      supabase.from("events").select("id,start_at,end_at,status").neq("status","archived").gte("end_at",nowIso).abortSignal(badgeSignal),
+      supabase.from("event_members").select("event_id,event_role").eq("user_id",user.id).abortSignal(badgeSignal),
+      supabase.from("shifts").select("event_id,workplace_id,scheduled_start,scheduled_end,status").eq("user_id",user.id).neq("status","cancelled").abortSignal(badgeSignal),
+      supabase.from("responsible_assignments").select("event_id,workplace_id").eq("user_id",user.id).abortSignal(badgeSignal),
+      supabase.rpc("upt_chat_unread_total").abortSignal(badgeSignal),
+      supabase.from("crew_notifications").select("id,link,kind").eq("user_id",user.id).is("read_at",null).limit(500).abortSignal(badgeSignal),
     ],3)
     const notificationRows=unreadNotifications||[]
     setNotificationMissed(notificationRows.length)
