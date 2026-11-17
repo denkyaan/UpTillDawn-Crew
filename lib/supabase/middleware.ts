@@ -96,6 +96,59 @@ export async function updateSession(request: NextRequest) {
         }
     }
 
+    // Short-circuit two expensive protected SSR surfaces for sessions with
+    // insufficient roles. A denied browser navigation must NOT enter a full
+    // Next.js RSC render (Cloudflare Free can fail with 1102 before redirect).
+    // Read permission only from authenticated, database-backed RPCs, never
+    // from client-selected portal cookies or mutable user_metadata.
+    // The page/layout still re-checks authorization for allowed requests.
+    const isAdminArea = pathname === '/admin' || pathname.startsWith('/admin/')
+    const isFinanceArea = pathname === '/portals/administration/finance' ||
+        pathname.startsWith('/portals/administration/finance/')
+    if (authenticated && (isAdminArea || isFinanceArea)) {
+        const redirectDenied = (destination: string) => {
+            const url = request.nextUrl.clone()
+            url.pathname = destination
+            url.search = ''
+            const response = NextResponse.redirect(url)
+            supabaseResponse.cookies.getAll().forEach(cookie => response.cookies.set(cookie))
+            return response
+        }
+        const authzUnavailable = () => new NextResponse(
+            'Authorization service temporarily unavailable.',
+            { status: 503, headers: { 'Cache-Control': 'no-store' } },
+        )
+        if (isAdminArea) {
+            // Equivalent to getCurrentUser().isAdmin: effective role, not
+            // permanent DB role. A Maker in Staff preview mode remains denied.
+            const { data: effectiveRole, error } = await supabase.rpc('upt_current_effective_role')
+            if (error) return authzUnavailable()
+            if (effectiveRole !== 'admin') return redirectDenied('/')
+        } else {
+            // Finance is shared by permanent Admin, Maker and explicitly
+            // approved Administration portal users (including deputies).
+            const [{ data: profileRows, error: profileError },
+                { data: owner, error: ownerError }] = await Promise.all([
+                supabase.rpc('upt_current_profile'),
+                supabase.rpc('upt_current_is_owner'),
+            ])
+            if (profileError || ownerError) return authzUnavailable()
+            const profile = profileRows?.[0] ?? null
+            const active = Boolean(profile?.approved && !profile?.account_blocked)
+            if (!owner && (!active || profile?.role !== 'admin')) {
+                if (!active) return redirectDenied('/portals')
+                const { data: assignments, error } = await supabase.rpc('upt_my_portal_assignments')
+                if (error) return authzUnavailable()
+                const allowed = (assignments ?? []).some(assignment =>
+                    assignment.portal === 'administration' &&
+                    assignment.approved === true &&
+                    assignment.revoked_at == null,
+                )
+                if (!allowed) return redirectDenied('/portals')
+            }
+        }
+    }
+
     // Keep login portals reachable while authenticated so admins/makers can
     // deliberately re-authenticate and switch their effective role mode.
     const redirectAuthenticatedAuthPages = ['/signup', '/forgot-password']
