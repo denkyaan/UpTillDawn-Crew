@@ -51,7 +51,7 @@ export async function updateSession(request: NextRequest) {
     // continues through getClaims() and database authorization as before.
     // Session cookies may be chunked by @supabase/ssr (auth-token.0, .1...).
     const hasSessionCookie = request.cookies.getAll().some(cookie =>
-        /^sb-[a-z0-9]+-auth-token(?:\\.\\d+)?$/i.test(cookie.name) &&
+        /^sb-[a-z0-9]+-auth-token(?:\.\d+)?$/i.test(cookie.name) &&
         cookie.value.length > 0,
     )
     if (!hasSessionCookie) {
