@@ -25,8 +25,12 @@ export default async function PortalPage({ params }: { params: Promise<{ portal:
   const cookieLocale = parseUiLocale((await cookies()).get('uptilldawn-language')?.value)
   const locale = cookieLocale ?? parseAcceptLanguage(requestHeaders.get('accept-language')) ?? 'nl'
   const t = portalCopy[locale]
-  const supabase = await createClient()
-  const { data, error } = await supabase.rpc('upt_my_portal_assignments')
+  // Verified administrators and the Maker already have portal access.
+  // Only role-assigned users need this live RLS-protected membership lookup.
+  // Avoid extra Worker/PostgREST work on every privileged portal navigation.
+  const { data, error } = !current.realIsAdmin && !current.isOwner
+    ? await (await createClient()).rpc('upt_my_portal_assignments')
+    : { data: [] as PortalAssignment[], error: null }
   if (error && !current.realIsAdmin && !current.isOwner) return <main className="p-6"><h1 className="text-xl font-bold">{t.unavailable}</h1><p className="mt-3">{t.unavailableDesc}</p><Link href="/portals" className="mt-4 inline-block text-violet-400">{t.returnToPortals}</Link></main>
   if (!current.realIsAdmin && !current.isOwner && !canOpenPortal(portal, (data ?? []) as PortalAssignment[], {
     approved: current.approved,
@@ -44,7 +48,7 @@ export default async function PortalPage({ params }: { params: Promise<{ portal:
   if (portal === 'administration') return <AdministrationOverviewDashboard locale={locale} currentUserId={current.id} admin={Boolean(current.realIsAdmin||current.isOwner)} />
 
   // Promotion keeps its own independent portal and existing safe channel links.
-  const {data:promotionChats}=await supabase.from('chat_channels')
+  const {data:promotionChats}=await (await createClient()).from('chat_channels')
     .select('id,name').eq('kind','organization')
     .in('name',['Promo groep Up Till Dawn','Up Till Dawn · Promotie'])
     .order('name')
