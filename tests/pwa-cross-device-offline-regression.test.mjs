@@ -96,6 +96,6 @@ test('offline operational snapshots refresh after reconnect and foreground resum
   assert.match(sync, /now-lastSyncedAt<15\*60_000/)
   assert.match(sync, /snapshotResults\.some\(result=>Boolean\(result\.error\)\)/)
   assert.match(sync, /15\*60\*1000/)
-  assert.match(sync, /if\(cancelled\|\|syncing\|\|!navigator\.onLine\)return/)
+  assert.match(sync, /if\(cancelled\|\|syncing\|\|!navigator\.onLine\|\|document\.visibilityState!=='visible'\)return/)
   assert.match(sync, /window\.removeEventListener\('online',onOnline\)/)
 })
