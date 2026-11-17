@@ -2,6 +2,7 @@
 
 import {useEffect} from 'react'
 import {createClient} from '@/lib/supabase/crew-client'
+import {boundedQueries} from '@/lib/administration/bounded-queries'
 import {loadOfflineDocuments,replaceOfflineDocuments,saveOfflineBriefings,saveOfflineBrowseData,saveOfflineEmergency,saveOfflineOperationalData,saveOfflineTasks,saveOfflineKnowledge,saveOfflineGuestlistAndSales,type OfflineBriefing,type OfflineChecklist,type OfflineDocument,type OfflineEmergencyInfo,type OfflineEvent,type OfflineGuestlistEntry,type OfflineIncident,type OfflineInventoryIssue,type OfflineInventoryItem,type OfflineKnowledgeArticle,type OfflineSaleItem,type OfflineShift,type OfflineTask,type OfflineWorkplace} from '@/lib/crew-offline-snapshot'
 
 export function GlobalOfflineContentSync({userId}:{userId:string}){
@@ -16,7 +17,7 @@ export function GlobalOfflineContentSync({userId}:{userId:string}){
    if(!force&&now-lastSyncedAt<60_000)return
    syncing=true
    try{
-   const [{data:briefings},{data:personal},{data:assignments},{data:emergency},{data:documents},{data:eventMemberships},{data:workplaces},{data:shifts},{data:incidents},{data:checklists},{data:checklistItems},{data:inventoryItems},{data:inventoryIssues},{data:knowledge},{data:guestlistRows},{data:saleRows}]=await Promise.all([
+   const [{data:briefings},{data:personal},{data:assignments},{data:emergency},{data:documents},{data:eventMemberships},{data:workplaces},{data:shifts},{data:incidents},{data:checklists},{data:checklistItems},{data:inventoryItems},{data:inventoryIssues},{data:knowledge},{data:guestlistRows},{data:saleRows}]=await boundedQueries([
     s.from('briefings').select('id,title,body,version,event_id').order('created_at',{ascending:false}),
     s.from('personal_instructions').select('id,title,body,version,event_id').eq('user_id',userId).order('created_at',{ascending:false}),
     s.from('task_assignments').select('id,status,tasks(id,title,description,event_id,workplace_id)').eq('user_id',userId).order('created_at'),
@@ -33,7 +34,7 @@ export function GlobalOfflineContentSync({userId}:{userId:string}){
     s.from('knowledge_articles').select('id,event_id,workplace_id,category,title,body,updated_at').eq('offline_critical',true).eq('is_published',true).order('updated_at',{ascending:false}),
     s.from('event_guestlist_entries').select('id,event_id,name,entry_type,spots_total,spots_checked_in,notes').eq('is_active',true).order('name'),
     s.from('inventory_items').select('id,event_id,workplace_id,name,sale_category,sale_price_cents,available_quantity').eq('is_active',true).eq('sale_enabled',true).gt('available_quantity',0).order('name'),
-   ])
+   ],3)
    if(cancelled)return
    const briefingItems:OfflineBriefing[]=[
     ...(briefings||[]).map(row=>({...row,kind:'general' as const})),
@@ -77,9 +78,14 @@ export function GlobalOfflineContentSync({userId}:{userId:string}){
   const onVisible=()=>{if(document.visibilityState==='visible')void syncOfflineContent().catch(()=>{})}
   window.addEventListener('online',onOnline)
   document.addEventListener('visibilitychange',onVisible)
-  void syncOfflineContent({force:true}).catch(()=>{})
+  // Keep offline snapshots, but do not start sixteen reads while the
+  // authenticated page and navigation are still loading. Requests execute
+  // in a small pool and remain RLS-scoped to this user.
+  const initialSync=window.setTimeout(()=>{
+   if(document.visibilityState==='visible')void syncOfflineContent({force:true}).catch(()=>{})
+  },2500)
   const timer=window.setInterval(()=>{if(document.visibilityState==='visible')void syncOfflineContent().catch(()=>{})},15*60*1000)
-  return()=>{cancelled=true;window.removeEventListener('online',onOnline);document.removeEventListener('visibilitychange',onVisible);window.clearInterval(timer)}
+  return()=>{cancelled=true;window.clearTimeout(initialSync);window.removeEventListener('online',onOnline);document.removeEventListener('visibilitychange',onVisible);window.clearInterval(timer)}
  },[userId])
  return null
 }
