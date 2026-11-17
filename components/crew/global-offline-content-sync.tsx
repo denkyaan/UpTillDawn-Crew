@@ -60,7 +60,7 @@ export function GlobalOfflineContentSync({userId}:{userId:string}){
   }
   // Stable per-user jitter prevents 30 phones opening/updating the app at an
   // event from running sixteen Supabase reads in the same second.
-  const staggerMs=[...userId].reduce((hash,char)=>((hash*31+char.charCodeAt(0))>>>0),0)%22_000
+  const staggerMs=[...userId].reduce((hash,char)=>((hash*31+char.charCodeAt(0))>>>0),0)%48_000
   const syncOfflineContent=async({force=false}:{force?:boolean}={})=>{
    if(cancelled||syncing||!navigator.onLine||document.visibilityState!=='visible')return
    const now=Date.now()
@@ -100,7 +100,7 @@ export function GlobalOfflineContentSync({userId}:{userId:string}){
     s.from('knowledge_articles').select('id,event_id,workplace_id,category,title,body,updated_at').eq('offline_critical',true).eq('is_published',true).order('updated_at',{ascending:false}).abortSignal(snapshotSignal),
     s.from('event_guestlist_entries').select('id,event_id,name,entry_type,spots_total,spots_checked_in,notes').eq('is_active',true).order('name').abortSignal(snapshotSignal),
     s.from('inventory_items').select('id,event_id,workplace_id,name,sale_category,sale_price_cents,available_quantity').eq('is_active',true).eq('sale_enabled',true).gt('available_quantity',0).order('name').abortSignal(snapshotSignal),
-   ],3)
+   ],2)
    // An intermittent network/RLS error must NEVER overwrite working offline
    // data with an empty snapshot. Retry at the next safe sync opportunity.
    if(cancelled||document.visibilityState!=='visible'||
@@ -165,7 +165,7 @@ export function GlobalOfflineContentSync({userId}:{userId:string}){
   // noncritical offline copy, preserving the original 3-outgoing-request cap.
   const initialSync=window.setTimeout(()=>{
    if(document.visibilityState==='visible')void syncOfflineContent().catch(()=>{})
-  },8_000+staggerMs)
+  },10_000+staggerMs)
   const timer=window.setInterval(()=>{if(document.visibilityState==='visible')void syncOfflineContent().catch(()=>{})},15*60*1000)
   return()=>{
    cancelled=true
