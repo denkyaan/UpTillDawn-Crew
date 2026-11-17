@@ -4,6 +4,10 @@ import {chromium} from 'playwright'
 
 const raw=process.env.VINEXT_FREE_PREVIEW_URL||''
 const password=process.env.MAIN_QA_BOT_PASSWORD||''
+const accessClientId=process.env.MAIN_QA_CF_ACCESS_CLIENT_ID||''
+const accessClientSecret=process.env.MAIN_QA_CF_ACCESS_CLIENT_SECRET||''
+if(!accessClientId||!accessClientSecret)
+ throw Error('Missing Cloudflare Access CI service token; refusing private Preview QA')
 let base
 try{
  const url=new URL(raw)
@@ -32,6 +36,22 @@ async function check(role,index){
   viewport:index%2===0?{width:1280,height:800}:{width:390,height:844},
  })
  try{
+  // Inject Access credentials ONLY for the exact isolated preview origin.
+  // route.fetch(maxRedirects:0) prevents service-token headers being
+  // forwarded across a possible cross-origin HTTP redirect.
+  await context.route('**/*',async route=>{
+   const target=new URL(route.request().url())
+   if(target.origin!==base){await route.continue();return}
+   const response=await route.fetch({
+    headers:{
+     ...route.request().headers(),
+     'CF-Access-Client-Id':accessClientId,
+     'CF-Access-Client-Secret':accessClientSecret,
+    },
+    maxRedirects:0,
+   })
+   await route.fulfill({response})
+  })
   const page=await context.newPage()
   page.setDefaultTimeout(30000)
   const login=await page.goto(base+'/login/'+role.portal,{waitUntil:'commit',timeout:40000})
