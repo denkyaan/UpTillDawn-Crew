@@ -89,8 +89,10 @@ WITH checks(name,required,passed) AS (
         WHERE oid=to_regprocedure('public.upt_current_session_context()')), false)
   UNION ALL
   SELECT 'chat_read_hotpaths_are_non_mutating', true,
-    coalesce(position('delete from upt_private.chat_typing_states' in lower(pg_get_functiondef(to_regprocedure('public.upt_chat_typing_users(uuid)'))))=0
-    and position('insert into upt_private.chat_user_states' in lower(pg_get_functiondef(to_regprocedure('public.upt_chat_channel_summaries()'))))=0,false)
+    coalesce((select provolatile = 's' from pg_proc
+      where oid=to_regprocedure('public.upt_chat_typing_users(uuid)')),false)
+    and coalesce((select provolatile = 's' from pg_proc
+      where oid=to_regprocedure('public.upt_chat_channel_summaries()')),false)
   UNION ALL
   SELECT 'main_tip_migration_in_history', false,
     EXISTS(SELECT 1 FROM supabase_migrations.schema_migrations
