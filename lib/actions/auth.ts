@@ -405,35 +405,47 @@ export async function enterNormalAppFromMakerSession(formData: FormData) {
     redirect(portal === 'admin' ? '/admin' : '/')
 }
 
+// The private Next middleware verifies the signed session before the page
+// renders. PostgREST independently validates the same bearer JWT again before
+// executing this SQL INVOKER RPC; profile/owner/role all come from DB-backed,
+// self-scoped functions. Avoid repeating local JWT crypto in every SSR request
+// and replace 2-3 database roundtrips with a single authoritative read.
+type VerifiedSessionContextRow = {
+    id: string
+    full_name: string | null
+    phone_number: string | null
+    profile_photo_url: string | null
+    approved: boolean
+    role: string
+    account_blocked: boolean
+    verified_email: string | null
+    is_owner: boolean
+    effective_role: string | null
+}
+
 export const getCurrentUser = cache(async function getCurrentUser() {
     const supabase = await createClient()
-    // getClaims verifies JWT signature and expiry; profile, Owner and role
-    // access remain checked against live database RPCs for every page.
-    const { data: verified, error: authError } = await supabase.auth.getClaims()
-    const claims = verified?.claims
-    if (authError || typeof claims?.sub !== 'string' || !claims.sub) return null
+    const readContext = supabase.rpc.bind(supabase) as unknown as
+        (fn: 'upt_current_session_context') => Promise<{
+            data: VerifiedSessionContextRow[] | null
+            error: { message?: string } | null
+        }>
+    const { data: records, error } = await readContext('upt_current_session_context')
+    const profile = records?.[0] ?? null
+    if (error || !profile || !profile.id ||
+        !['staff', 'responsible_lead', 'admin'].includes(profile.role)) return null
 
-    // Both queries are independently RLS-protected and require the verified
-    // JWT. Resolve them concurrently to avoid extending every SSR navigation
-    // by a second sequential database roundtrip.
-    const [{ data: profileRows, error }, { data: ownerFlag, error: ownerError }] = await Promise.all([
-        supabase.rpc('upt_current_profile'),
-        supabase.rpc('upt_current_is_owner'),
-    ])
-    const profile = profileRows?.[0] ?? null
-    if (error || !profile || ownerError) return null
-
-    const realRole = profile.role
-    // Owner status must be resolved before ordinary block/approval gates so a
-    // legacy or accidental personnel flag can never lock the maker out.
+    const { verified_email: verifiedEmail, is_owner: ownerFlag,
+        effective_role: trustedEffectiveRole, ...publicProfile } = profile
+    const realRole = publicProfile.role
+    // Keep the Maker separate from the Head Admin: a bad ordinary approval
+    // flag must not strand the Owner, and staff preview is not admin access.
     const isOwner = ownerFlag === true
     if (profile.account_blocked && !isOwner) return null
     if (!profile.approved && !isOwner) return null
 
     const hasPermanentAdminAccess = realRole === 'admin' || isOwner
-    const { data: storedRole } = hasPermanentAdminAccess
-        ? await supabase.rpc('upt_current_effective_role')
-        : { data: realRole }
+    const storedRole = hasPermanentAdminAccess ? trustedEffectiveRole : realRole
     const effectiveRole = storedRole === 'responsible_lead'
         ? 'responsible_lead'
         : storedRole === 'staff'
@@ -444,17 +456,17 @@ export const getCurrentUser = cache(async function getCurrentUser() {
     const roles = [effectiveRole === 'staff' ? 'employee' : effectiveRole]
 
     return {
-        ...profile,
-        approved: profile.approved || isOwner === true,
+        ...publicProfile,
+        approved: profile.approved || isOwner,
         role: effectiveRole,
         realRole,
         roleMode: effectiveRole,
-        id: claims.sub,
-        email: typeof claims.email === 'string' ? claims.email : '',
+        id: profile.id,
+        email: verifiedEmail || '',
         roles,
         isAdmin: effectiveRole === 'admin',
         realIsAdmin: hasPermanentAdminAccess,
-        isOwner: isOwner === true,
+        isOwner,
         isEditMode: false,
     }
 })

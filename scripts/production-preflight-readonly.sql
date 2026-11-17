@@ -79,9 +79,18 @@ WITH checks(name,required,passed) AS (
       AND NOT has_function_privilege('anon',
         to_regprocedure('public.upt_request_check_out(uuid,text)'), 'EXECUTE'), false)
   UNION ALL
+  SELECT 'verified_self_scoped_session_context', true,
+    coalesce(
+      has_function_privilege('authenticated',
+        to_regprocedure('public.upt_current_session_context()'), 'EXECUTE')
+      AND NOT has_function_privilege('anon',
+        to_regprocedure('public.upt_current_session_context()'), 'EXECUTE')
+      AND NOT (SELECT prosecdef FROM pg_proc
+        WHERE oid=to_regprocedure('public.upt_current_session_context()')), false)
+  UNION ALL
   SELECT 'main_tip_migration_in_history', false,
     EXISTS(SELECT 1 FROM supabase_migrations.schema_migrations
-      WHERE version='20261117174500')
+      WHERE version='20261117175500')
 )
 SELECT name,required,passed,
   CASE WHEN passed THEN 'PASS'

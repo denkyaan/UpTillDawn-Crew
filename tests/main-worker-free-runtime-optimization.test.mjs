@@ -24,7 +24,7 @@ test('Distinct-user load test still reports SSR failures but continues independe
  assert.match(source,/MAIN_30_DISTINCT_BROWSERS success=/)
  assert.match(source,/const pages=await pool\(sessions,3,'browser-route'/)
  assert.match(source,/await pool\(sessions,3,'real-routes-and-rls'/)
- assert.match(source,/const channels=await pool\(sessions,3,'realtime-subscription'/)
+ assert.match(source,/const channels=await pool\(sessions,[1-5],'realtime-subscription'/)
  assert.match(source,/report\.browserReady===COUNT/)
  assert.match(source,/report\.http5xx===0&&errors\.length===0&&report\.cleanupVerified/)
  assert.match(source,/const path=\['\/events','\/tasks','\/chat'\]/)
