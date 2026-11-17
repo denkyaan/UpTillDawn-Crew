@@ -18,8 +18,13 @@ test('Production readiness preflight is metadata-only, pinned to required schema
  ])assert.ok(source.includes(check),check)
  assert.match(source,/BLOCK RELEASE/)
  assert.match(source,/main_tip_migration_in_history', false/)
- assert.match(read('lib/release-baseline.ts'),/20261112220202/)
- assert.match(source,/20261112220202/)
+ const baseline=read('lib/release-baseline.ts')
+ const version=baseline.match(/EXPECTED_DB_MIGRATION_VERSION='(\d+)'/)?.[1]
+ assert.ok(version,'Missing versioned database release baseline')
+ assert.ok(source.includes("WHERE version='"+version+"'"),'Preflight historical migration marker must match the baseline')
+ assert.match(source,/attendance_check_in_out_authenticated_only/)
+ assert.match(source,/upt_request_check_in/)
+ assert.match(source,/upt_request_check_out/)
 })
 test('Main-only functional E2E uses real signed-in users to verify role-specific chat and a disposable shift/briefing',()=>{
  const e2e=read('scripts/e2e-main-functional-workflows.mjs')
