@@ -49,7 +49,7 @@ function throwIfError(result,label){
  if(result.error)throw Error(label+': '+String(result.error.code||result.error.status||'unknown'))
  return result.data
 }
-async function pool(items,max,label,work){
+async function pool(items,max,label,work,{allowPartial=false}={}){
  const values=new Array(items.length)
  let next=0
  await Promise.all(Array.from({length:max},async()=>{
@@ -59,9 +59,9 @@ async function pool(items,max,label,work){
    try{values[i]=await work(items[i],i)}catch(error){record(label,error,i+1)}
   }
  }))
- if(Array.from({length:items.length},(_,i)=>values[i]).some(x=>x===undefined))
+ if(values.some(x=>x===undefined)&&!allowPartial)
   throw Error(label+' did not complete for all '+items.length+' unique users')
- return values
+ return allowPartial?values.filter(x=>x!==undefined):values
 }
 async function scanAccounts(){
  const matched=[]
@@ -121,10 +121,11 @@ if(process.argv.includes('--cleanup')){
  const contexts=[]
  const started=Date.now()
  const failOnResponse=(response,index)=>{
-  try{if(new URL(response.url()).origin!==MAIN)return}catch{return}
+  let pathname
+  try{const address=new URL(response.url());if(address.origin!==MAIN)return;pathname=address.pathname}catch{return}
   if(response.status()>=500){
    report.http5xx++
-   record('main-http5xx',Error('HTTP '+response.status()),index)
+   record('main-http5xx '+pathname,Error('HTTP '+response.status()),index)
   }
  }
  try{
@@ -228,9 +229,11 @@ if(process.argv.includes('--cleanup')){
    assert.doesNotMatch(text,/Worker exceeded resource limits|Application error: a server-side exception/i)
    report.browserReady++
    return {page,person}
-  })
-  assert.equal(pages.length,COUNT)
-  console.log('MAIN_30_DISTINCT_BROWSERS count='+pages.length)
+  },{allowPartial:true})
+  console.log('MAIN_30_DISTINCT_BROWSERS success='+pages.length+' of='+COUNT)
+  // Continue isolated backend/Realtime checks even if Worker SSR is degraded;
+  // this distinguishes Cloudflare CPU exhaustion from Auth, RLS or Realtime.
+  // The final verdict still REQUIRES all thirty browser routes to succeed.
 
   await pool(sessions,3,'real-routes-and-rls',async ({person,client})=>{
    const member=throwIfError(await client.from('event_members')
