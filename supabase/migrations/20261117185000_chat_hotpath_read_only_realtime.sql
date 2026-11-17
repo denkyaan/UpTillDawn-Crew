@@ -39,7 +39,9 @@ begin
     raise exception 'ACCOUNT NOT APPROVED';
   end if;
 
-  -- Absent user states behave as newly read without INSERT-on-every-read.
+  -- A user without an existing read receipt must still see unread messages.
+  -- Never use now() as a moving default: that hides every incoming message
+  -- until the user opens each channel and creates a persistent read state.
 
   return query
   select
@@ -50,7 +52,7 @@ begin
       where m.channel_id=c.id
         and m.sender_id is distinct from v_actor
         and m.moderated_at is null
-        and m.created_at>coalesce(s.last_read_at,now())
+        and m.created_at>coalesce(s.last_read_at,c.created_at)
     )::bigint as unread_count,
     (
       select count(*)
@@ -59,9 +61,9 @@ begin
         and m.sender_id is distinct from v_actor
         and m.moderated_at is null
         and v_actor=any(m.mentioned_user_ids)
-        and m.created_at>coalesce(s.last_read_at,now())
+        and m.created_at>coalesce(s.last_read_at,c.created_at)
     )::bigint as mention_count,
-    coalesce(s.last_read_at,now()) as last_read_at,
+    coalesce(s.last_read_at,c.created_at) as last_read_at,
     case when c.kind='private' and c.name is null then (
       select max(peer_state.last_read_at)
       from public.chat_members peer
@@ -157,12 +159,12 @@ begin
  if v_actor is null or not public.upt_promotion_chat_allowed() then
   raise exception 'No access to Promotion unread count' using errcode='42501';
  end if;
- -- Read-only read counters. An absent state has zero unread items.
+ -- Read-only counters. A missing receipt must not silently hide unread messages.
  return query
  select v.room,
     (select count(*) from public.promotion_chat_messages m
       where m.room=v.room and m.sender_id<>v_actor
-        and m.created_at>coalesce(st.last_read_at,now()))::bigint
+        and m.created_at>coalesce(st.last_read_at,'epoch'::timestamptz))::bigint
  from (values ('general'::text),('announcements'::text)) v(room)
  left join upt_private.promotion_chat_read_states st
     on st.user_id=v_actor and st.room=v.room
