@@ -1,0 +1,89 @@
+import test from "node:test"
+import assert from "node:assert/strict"
+import {readFileSync} from "node:fs"
+const read=path=>readFileSync(path,"utf8")
+const events=read("app/(app)/events/page.tsx")
+const tasks=read("app/(app)/tasks/page.tsx")
+const staffEvents=read("components/crew/staff-events-client.tsx")
+const staffTasks=read("components/crew/staff-tasks-client.tsx")
+const finance=read("app/(app)/portals/administration/finance/page.tsx")
+const administration=read("app/(app)/portals/administration/layout.tsx")
+const middleware=read("lib/supabase/middleware.ts")
+
+test("Main Workers Free: only verified Staff enters the no-SSR event and task views",()=>{
+ for(const [src,role,component] of [
+  [events,"user","LazyStaffEvents"],[tasks,"current","LazyStaffTasks"],
+ ]){
+  assert.match(src,/await getCurrentUser\(\)/)
+  assert.ok(src.indexOf(role+".role==='staff'")>=0||src.indexOf(role+".role === 'staff'")>=0)
+  assert.ok(src.indexOf(role+".role")<src.indexOf("const s=await createClient()")||
+    src.indexOf(role+".role")<src.indexOf("const s = await createClient()"))
+  assert.ok(src.includes("<"+component+" userId={"+role+".id}"))
+ }
+ const wrapperEvents=read("components/crew/lazy-staff-events.tsx")
+ const wrapperTasks=read("components/crew/lazy-staff-tasks.tsx")
+ for(const wrapper of [wrapperEvents,wrapperTasks]){
+  assert.match(wrapper,/ssr:false/)
+  assert.match(wrapper,/import dynamic from "next\/dynamic"/)
+  assert.match(wrapper,/"use client"/)
+ }
+ assert.match(events,/s\.from\('event_templates'\)/)
+ assert.match(tasks,/s\.from\('work_attachments'\)/)
+ assert.match(tasks,/ManagerOnly/)
+})
+
+test("Main: staff Events preserves availability, cancellation reason, emergency, secure documents and chat",()=>{
+ assert.match(staffEvents,/setEventAvailability\(fd\)/)
+ assert.match(staffEvents,/\["response",t\.event,/)
+ assert.match(staffEvents,/name="reason"/)
+ assert.match(staffEvents,/EmergencyInformationPanel compact canEdit=\{false\}/)
+ assert.match(staffEvents,/\.from\("event_documents"\)/)
+ assert.match(staffEvents,/\.eq\("event_id",eventId\)/)
+ assert.match(staffEvents,/\.eq\("is_active",true\)/)
+ assert.match(staffEvents,/\.storage\.from\("work-media"\)\.createSignedUrls\(/)
+ assert.match(staffEvents,/activeUiLocale\(\)/)
+ assert.match(staffEvents,/href="\/chat"/)
+ assert.doesNotMatch(staffEvents,/service_role|sb_secret_|NEXT_PUBLIC_SERVICE/)
+})
+
+test("Main: staff Tasks preserves shift gate, task confirms, checklist photos and equipment settlements",()=>{
+ assert.match(staffTasks,/const current=\(shifts\.data\?\?\[\]\)\.filter/)
+ assert.match(staffTasks,/setActive\(current\.length>0\)/)
+ assert.match(staffTasks,/\.from\("task_assignments"\)/)
+ assert.match(staffTasks,/\.eq\("user_id",userId\)/)
+ assert.match(staffTasks,/TaskControls id=\{row\.id\} userId=\{userId\} confirmed=/)
+ assert.match(staffTasks,/onSaved=\{refresh\}/)
+ assert.match(staffTasks,/completeOperationalChecklistItem/)
+ assert.match(staffTasks,/reopenOperationalChecklistItem/)
+ assert.match(staffTasks,/name="photo" required/)
+ assert.match(staffTasks,/requestInventorySettlement/)
+ assert.match(staffTasks,/cancelInventorySettlement/)
+ assert.match(staffTasks,/name="condition" value="returned"/)
+ assert.match(staffTasks,/name="condition" value="damaged"/)
+ assert.match(staffTasks,/name="condition" value="missing"/)
+ assert.match(staffTasks,/createSignedUrls\(/)
+ assert.match(read("components/crew/task-controls.tsx"),/onSaved\?: \(\) => void/)
+ assert.doesNotMatch(staffTasks,/service_role|sb_secret_|NEXT_PUBLIC_SERVICE/)
+})
+
+test("Main finance read: redundant middleware RPCs skipped ONLY on safe GET, authorization remains enforced",()=>{
+ const start=middleware.indexOf("const ordinaryAppPage =")
+ const early=middleware.indexOf("const requiresEarlyRoleCheck =")
+ const bypass=middleware.indexOf("if (safeRead && ordinaryAppPage")
+ const proxyAuth=middleware.indexOf("const supabase = createServerClient")
+ assert.ok(start>=0&&early>start&&bypass>early&&proxyAuth>bypass)
+ const chunk=middleware.slice(early,bypass)
+ assert.doesNotMatch(chunk,/requiresEarlyRoleCheck[^\n]*finance|pathname === '\/portals\/administration\/finance'/)
+ assert.match(middleware,/const safeRead = request\.method === 'GET' \|\| request\.method === 'HEAD'/)
+ assert.match(administration,/await getCurrentUser\(\)/)
+ assert.match(administration,/currentPortalAssignments\(\)/)
+ assert.match(administration,/!canOpenPortal\("administration"/)
+ assert.match(finance,/async function requireAdministration\(\)/)
+ assert.match(finance,/!canOpenPortal\('administration'/)
+ assert.match(finance,/const \{supabase,isAdmin\} = await requireAdministration\(\)/)
+})
+
+test("Main: staff UI labels remain in all 4 supported languages",()=>{
+ for(const source of [staffEvents,staffTasks])
+  for(const language of ["nl:","fr:","en:","de:"])assert.ok(source.includes(language),language)
+})

@@ -4,6 +4,17 @@ type Row = { fr: string; en: string; de: string }
 // Canonical Dutch UI strings that were historically present only in the NL/FR/EN table.
 // Keep every row complete: missing translations must never silently fall back to Dutch.
 const ROWS: Record<string, Row> = {
+  'Événements': { fr: 'Événements', en: 'Events', de: 'Veranstaltungen' },
+  'Events': { fr: 'Événements', en: 'Events', de: 'Veranstaltungen' },
+  'Veranstaltungen': { fr: 'Événements', en: 'Events', de: 'Veranstaltungen' },
+  'Tâches': { fr: 'Tâches', en: 'Tasks', de: 'Aufgaben' },
+  'Aufgaben': { fr: 'Tâches', en: 'Tasks', de: 'Aufgaben' },
+  'Consultez les événements, confirmez vos disponibilités et ouvrez briefings et documents.': { fr: 'Consultez les événements, confirmez vos disponibilités et ouvrez briefings et documents.', en: 'See events, confirm availability and open briefings and documents.', de: 'Veranstaltungen ansehen, Verfügbarkeit bestätigen und Briefings und Dokumente öffnen.' },
+  'See events, confirm availability and open briefings and documents.': { fr: 'Consultez les événements, confirmez vos disponibilités et ouvrez briefings et documents.', en: 'See events, confirm availability and open briefings and documents.', de: 'Veranstaltungen ansehen, Verfügbarkeit bestätigen und Briefings und Dokumente öffnen.' },
+  'Veranstaltungen ansehen, Verfügbarkeit bestätigen und Briefings und Dokumente öffnen.': { fr: 'Consultez les événements, confirmez vos disponibilités et ouvrez briefings et documents.', en: 'See events, confirm availability and open briefings and documents.', de: 'Veranstaltungen ansehen, Verfügbarkeit bestätigen und Briefings und Dokumente öffnen.' },
+  'Evenementen': { fr: 'Événements', en: 'Events', de: 'Veranstaltungen' },
+  'Taken': { fr: 'Tâches', en: 'Tasks', de: 'Aufgaben' },
+  'Bekijk evenementen, bevestig je beschikbaarheid en open briefings en documenten.': { fr: 'Consultez les événements, confirmez vos disponibilités et ouvrez briefings et documents.', en: 'See events, confirm availability and open briefings and documents.', de: 'Veranstaltungen ansehen, Verfügbarkeit bestätigen und Briefings und Dokumente öffnen.' },
   'Mijn evenement · Meer functies': { fr: 'Mon événement · Plus de fonctions', en: 'My event · More features', de: 'Mein Event · Weitere Funktionen' },
   'Mijn operationele werkplek · Meer functies': { fr: 'Mon poste opérationnel · Plus de fonctions', en: 'My operational workplace · More features', de: 'Mein Einsatzort · Weitere Funktionen' },
   'Meer functies': { fr: 'Autres fonctions', en: 'More features', de: 'Weitere Funktionen' },

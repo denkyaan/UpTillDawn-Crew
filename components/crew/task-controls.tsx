@@ -15,10 +15,12 @@ export function TaskControls({
   id,
   userId,
   confirmed,
+  onSaved,
 }: {
   id: string
   userId: string
   confirmed: boolean
+  onSaved?: () => void
 }) {
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState('')
@@ -31,7 +33,7 @@ export function TaskControls({
     setError('')
     const { error } = await s.rpc('upt_confirm_task_assignment', { p_assignment: id })
     if (error) setError('Bevestiging kon niet worden opgeslagen.')
-    else router.refresh()
+    else { onSaved?.();router.refresh() }
     setBusy(false)
   }
 
@@ -68,6 +70,7 @@ export function TaskControls({
           } else {
             await enqueue(userId, 'task', { assignment_id: id, status: status.value })
           }
+          onSaved?.()
           router.refresh()
         } catch {
           setError('Wijziging kon niet worden bewaard.')

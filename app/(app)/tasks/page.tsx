@@ -1,4 +1,5 @@
 import { createTask, removeTaskAssignment } from '@/lib/actions/uptilldawn'
+import {LazyStaffTasks} from '@/components/crew/lazy-staff-tasks'
 import { createClient } from '@/lib/supabase/crew-server'
 import { boundedQueries } from '@/lib/administration/bounded-queries'
 import { TaskControls } from '@/components/crew/task-controls'
@@ -22,9 +23,12 @@ type WorkplaceOption = { id: string; name: string; event_id: string; events: { n
 
 export default async function Page({searchParams}:{searchParams?:Promise<{event?:string;workplace?:string;user?:string}>}) {
   const params=searchParams?await searchParams:{}
-  const s = await createClient()
   const current = await getCurrentUser()
   if (!current) return null
+  // Staff task status, checklists and equipment now run through browser
+  // RLS; never SSR the large manager form/checklist tree on Workers Free.
+  if (current.role === 'staff') return <LazyStaffTasks userId={current.id}/>
+  const s = await createClient()
   const user = { id: current.id }
   const isAdmin = current.role === 'admin'
   const isResponsible = current.role === 'responsible_lead'
