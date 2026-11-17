@@ -143,22 +143,26 @@ jobs:
 
 
   qa-main-concurrency-acceptance:
-    # Opt-in MAIN-only load: 30 browser tabs with seven existing test identities.
-    # Run strictly AFTER other QA to avoid overlapping stress on Workers Free.
+    # Thirty DISTINCT temporary Auth identities against isolated Main only.
+    # Runs after existing browser and transactional E2E checks. Cleanup is
+    # independently retried even if the acceptance command fails.
+    # Run independent Main diagnostics even if another QA verdict is red;
+    # a failed browser/functional job still blocks overall acceptance.
     needs: [validate-trigger, deploy, qa-main-functional-acceptance, qa-main-browser-acceptance]
     if: >-
       always() && github.event_name == 'workflow_run' &&
       needs.validate-trigger.outputs.qa_eligible == 'true' &&
-      needs.deploy.result == 'success' &&
-      needs.qa-main-functional-acceptance.result == 'success' &&
-      needs.qa-main-browser-acceptance.result == 'success'
+      needs.deploy.result == 'success'
     runs-on: ubuntu-latest
-    timeout-minutes: 18
+    timeout-minutes: 22
     env:
       E2E_MAIN_QA_BASE_URL: https://uptilldawn-main.uptilldawn.workers.dev
-      E2E_MAIN_QA_PASSWORD: ${{ secrets.MAIN_QA_BOT_PASSWORD }}
+      E2E_MAIN_QA_SUPABASE_URL: https://npbjrtiolqperdgljnhi.supabase.co
+      E2E_MAIN_QA_PUBLISHABLE_KEY: sb_publishable_zStTw3n8wZ271PehDRDvGg_rs0JOy84
+      E2E_MAIN_QA_SERVICE_KEY: ${{ secrets.MAIN_QA_SUPABASE_SECRET_KEY }}
+      E2E_MAIN_QA_ALLOW_WRITE: '1'
     steps:
-      - name: Checkout exact Main commit for bounded concurrency
+      - name: Checkout exact validated Main commit
         uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5.1.0
         with:
           ref: ${{ github.event.workflow_run.head_sha }}
@@ -169,17 +173,21 @@ jobs:
           cache: npm
       - name: Install dependencies
         run: npm ci --prefer-offline --no-audit --no-fund
-      - name: Install isolated Chromium browser runtime
+      - name: Install isolated Chromium
         run: npx playwright install --with-deps chromium
-      - name: Verify thirty active Main-only browser tabs without HTTP 5xx
-        timeout-minutes: 8
-        run: node scripts/main-30-session-stability.mjs
-      - name: Upload thirty-session acceptance evidence
+      - name: Verify thirty distinct Main staff sessions and guarded workflows
+        timeout-minutes: 14
+        run: node scripts/main-30-distinct-staff.mjs
+      - name: Independently verify and remove temporary Main QA identities
+        if: always()
+        timeout-minutes: 4
+        run: node scripts/main-30-distinct-staff.mjs --cleanup
+      - name: Upload sanitized Main 30-identity test report
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: main-30-session-stability
-          path: test-results/main-30-session/
+          name: main-30-unique-staff-acceptance
+          path: test-results/main-30-unique/
           if-no-files-found: warn
           retention-days: 5
 
