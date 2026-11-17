@@ -424,6 +424,18 @@ type VerifiedSessionContextRow = {
 }
 
 export const getCurrentUser = cache(async function getCurrentUser() {
+    // The server Supabase client authenticates ONLY from these SSR cookies.
+    // Anonymous API/SSR requests should not allocate a Data API connection
+    // and call upt_current_session_context() just to discover there is no JWT.
+    // Cookie presence is a NEGATIVE shortcut, never proof of authentication:
+    // any present/forged/stale token still passes the signed-JWT, RLS-scoped
+    // session-context RPC below. Chunked SSR cookies are supported as well.
+    const hasSessionCookie = (await cookies()).getAll().some(cookie =>
+        /^sb-[a-z0-9]+-auth-token(?:\.\d+)?$/i.test(cookie.name) &&
+        cookie.value.length > 0,
+    )
+    if (!hasSessionCookie) return null
+
     const supabase = await createClient()
     const readContext = supabase.rpc.bind(supabase) as unknown as
         (fn: 'upt_current_session_context') => Promise<{
