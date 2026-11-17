@@ -68,13 +68,13 @@ function EventDocuments({eventId,locale}:{eventId:string;locale:SupportedUiLocal
  </section>
 }
 
-function AvailabilityForm({event,previous,locale,onSaved}:{event:EventRow;previous:Availability|undefined;locale:SupportedUiLocale;onSaved:()=>void}){
+function AvailabilityForm({event,previous,locale,onSaved,nowMs}:{event:EventRow;previous:Availability|undefined;locale:SupportedUiLocale;onSaved:()=>void;nowMs:number}){
  const t=textCopy[locale]
  const [saving,setSaving]=useState(false)
  const [failure,setFailure]=useState(false)
  const registrationDeadline=event.registration_deadline||event.start_at
- const registrationOpen=Date.now()<Date.parse(registrationDeadline)
- const canCancel=Date.now()<Date.parse(event.end_at)&&previous?.response==="can"
+ const registrationOpen=nowMs>0&&nowMs<Date.parse(registrationDeadline)
+ const canCancel=nowMs>0&&nowMs<Date.parse(event.end_at)&&previous?.response==="can"
  const submit=async(fd:FormData)=>{
   if(saving)return
   setSaving(true);setFailure(false)
@@ -112,6 +112,7 @@ export function StaffEventsClient({userId,focusEvent}:{userId:string;focusEvent?
  const db=useMemo(()=>createClient(),[])
  const router=useRouter()
  const [locale,setLocale]=useState<SupportedUiLocale>("nl")
+ const [nowMs,setNowMs]=useState(0)
  const [events,setEvents]=useState<EventRow[]>([])
  const [assigned,setAssigned]=useState<Set<string>>(new Set())
  const [availability,setAvailability]=useState<Availability[]>([])
@@ -122,6 +123,7 @@ export function StaffEventsClient({userId,focusEvent}:{userId:string;focusEvent?
  const [revision,setRevision]=useState(0)
  const [expanded,setExpanded]=useState<Set<string>>(new Set())
  useEffect(()=>{const update=()=>setLocale(activeUiLocale());update();window.addEventListener(LANGUAGE_APPLIED_EVENT,update);return()=>window.removeEventListener(LANGUAGE_APPLIED_EVENT,update)},[])
+ useEffect(()=>{const refreshClock=()=>setNowMs(Date.now());const first=window.setTimeout(refreshClock,0);const tick=window.setInterval(refreshClock,60_000);return()=>{window.clearTimeout(first);window.clearInterval(tick)}},[])
  useEffect(()=>{
   let alive=true
   void(async()=>{
@@ -161,8 +163,8 @@ export function StaffEventsClient({userId,focusEvent}:{userId:string;focusEvent?
   {!loading&&!error&&!sorted.length?<p>{t.none}</p>:null}
   {sorted.map(event=>{
    const assignedToEvent=assigned.has(event.id)
-   const started=Date.now()>=Date.parse(event.start_at)
-   const ended=Date.now()>Date.parse(event.end_at)
+   const started=nowMs>0&&nowMs>=Date.parse(event.start_at)
+   const ended=nowMs>0&&nowMs>Date.parse(event.end_at)
    const isExpanded=expanded.has(event.id)||event.id===focusEvent
    const info=emergency.find(x=>x.event_id===event.id)
    return <details key={event.id} open={isExpanded} onToggle={e=>{
@@ -188,7 +190,7 @@ export function StaffEventsClient({userId,focusEvent}:{userId:string;focusEvent?
        procedure:info?.procedure||null,updatedAt:info?.updated_at||null,
      }}/>
      <EventDocuments eventId={event.id} locale={locale}/>
-     <AvailabilityForm key={event.id+revision} event={event}
+     <AvailabilityForm key={event.id+revision} event={event} nowMs={nowMs}
        previous={availability.find(a=>a.event_id===event.id)} locale={locale}
        onSaved={()=>{setRevision(n=>n+1);router.refresh()}}/>
      {!ended&&event.max_joiners!==null&&(counts.get(event.id)||0)>=event.max_joiners?<p className="text-sm text-amber-500">{t.capacity}</p>:null}
