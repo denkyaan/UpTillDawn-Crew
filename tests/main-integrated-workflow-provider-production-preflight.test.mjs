@@ -19,7 +19,7 @@ test('Production readiness preflight is metadata-only, pinned to required schema
  assert.match(source,/BLOCK RELEASE/)
  assert.match(source,/main_tip_migration_in_history', false/)
  const baseline=read('lib/release-baseline.ts')
- const version=baseline.match(/EXPECTED_DB_MIGRATION_VERSION='(\\d+)'/)?.[1]
+ const version=baseline.match(/EXPECTED_DB_MIGRATION_VERSION='(\d+)'/)?.[1]
  assert.ok(version,'Missing versioned database release baseline')
  assert.ok(source.includes("WHERE version='"+version+"'"),'Preflight historical migration marker must match the baseline')
  assert.match(source,/attendance_check_in_out_authenticated_only/)
