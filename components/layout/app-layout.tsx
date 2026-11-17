@@ -1,6 +1,6 @@
 "use client"
 
-import { useCallback, useEffect, useMemo, useState } from "react"
+import { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import Link from "next/link"
 import { usePathname } from "next/navigation"
 import { AppSidebar } from "@/components/layout/sidebar"
@@ -9,6 +9,7 @@ import { MobileBottomNav } from "@/components/layout/mobile-nav"
 import { FloatingChatButton } from "@/components/layout/floating-chat-button"
 import { QueueStatus } from "@/components/crew/queue-status"
 import { createClient } from "@/lib/supabase/crew-client"
+import {boundedQueries} from "@/lib/administration/bounded-queries"
 import { useAuth } from "@/lib/providers"
 import { getDefaultRoleUiRules, ruleMatches, ruleUsable, type RoleUiContext, type RoleUiRule } from "@/lib/role-ui"
 import { AdminContextBar } from "@/components/admin/admin-context-bar"
@@ -27,6 +28,7 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
   const pathname=usePathname()
   const {user,roles,isAdmin}=useAuth()
   const supabase=useMemo(()=>createClient(),[])
+  const refreshInFlight=useRef(false)
   const [chatMissed,setChatMissed]=useState(0)
   const [incidentMissed,setIncidentMissed]=useState(0)
   const [taskMissed,setTaskMissed]=useState(0)
@@ -99,7 +101,9 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
   const contentLocked=Boolean(currentVisible&&!currentUsable)
 
   const refresh=useCallback(async()=>{
-    if(!user)return
+    if(!user||refreshInFlight.current||document.visibilityState==='hidden')return
+    refreshInFlight.current=true
+    try{
     const now=new Date()
     const nowIso=now.toISOString()
     const incidentKey=`uptilldawn-last-incidents-view:${user.id}`
@@ -114,14 +118,14 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
       {data:responsibleAssignments},
       {data:chatUnreadTotal},
       {data:unreadNotifications},
-    ]=await Promise.all([
+    ]=await boundedQueries([
       supabase.from("events").select("id,start_at,end_at,status").neq("status","archived").gte("end_at",nowIso),
       supabase.from("event_members").select("event_id,event_role").eq("user_id",user.id),
       supabase.from("shifts").select("event_id,workplace_id,scheduled_start,scheduled_end,status").eq("user_id",user.id).neq("status","cancelled"),
       supabase.from("responsible_assignments").select("event_id,workplace_id").eq("user_id",user.id),
       supabase.rpc("upt_chat_unread_total"),
       supabase.from("crew_notifications").select("id,link,kind").eq("user_id",user.id).is("read_at",null).limit(500),
-    ])
+    ],3)
     const notificationRows=unreadNotifications||[]
     setNotificationMissed(notificationRows.length)
     const featureCounts:Record<string,number>={}
@@ -215,9 +219,10 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
         .gt("created_at",incidentSince)
       setIncidentMissed(count??0)
     }else setIncidentMissed(0)
+    }finally{refreshInFlight.current=false}
   },[activeUiRole,pathname,supabase,user])
 
-  useEffect(()=>{queueMicrotask(()=>void refresh());const timer=window.setInterval(()=>void refresh(),10000);const focus=()=>void refresh();const chatRead=()=>void refresh();window.addEventListener("focus",focus);window.addEventListener("uptilldawn-chat-read",chatRead);return()=>{window.clearInterval(timer);window.removeEventListener("focus",focus);window.removeEventListener("uptilldawn-chat-read",chatRead)}},[refresh])
+  useEffect(()=>{queueMicrotask(()=>void refresh());const timer=window.setInterval(()=>void refresh(),pathname.startsWith("/portals/")?30000:10000);const focus=()=>void refresh();const chatRead=()=>void refresh();window.addEventListener("focus",focus);window.addEventListener("uptilldawn-chat-read",chatRead);return()=>{window.clearInterval(timer);window.removeEventListener("focus",focus);window.removeEventListener("uptilldawn-chat-read",chatRead)}},[refresh])
 
   const showOverview=feature("overview",true)
   const showEvents=feature("events",true)
