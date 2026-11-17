@@ -98,7 +98,10 @@ export async function updateSession(request: NextRequest) {
     const routeHandlerWithoutAppLayout =
         pathname.startsWith('/portals/switch/') ||
         /^\/portals\/administration\/modules\/artists\/[^/]+\/agreement\/(?:archive|print)\//.test(pathname)
-    if (ordinaryAppPage && !requiresEarlyRoleCheck && !routeHandlerWithoutAppLayout) {
+    // Never bypass the proxy on POST/PUT/etc: Next server actions are
+    // delivered to page URLs and must retain the usual edge verification.
+    const safeRead = request.method === 'GET' || request.method === 'HEAD'
+    if (safeRead && ordinaryAppPage && !requiresEarlyRoleCheck && !routeHandlerWithoutAppLayout) {
         // No auth is granted here: AuthenticatedLayout + signed PostgREST
         // session context still fail closed before any private page renders.
         return NextResponse.next({ request })
