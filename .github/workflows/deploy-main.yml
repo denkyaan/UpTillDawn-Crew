@@ -142,10 +142,51 @@ jobs:
 
 
 
+  qa-main-concurrency-acceptance:
+    # Opt-in MAIN-only load: 30 browser tabs with seven existing test identities.
+    # Run strictly AFTER other QA to avoid overlapping stress on Workers Free.
+    needs: [validate-trigger, deploy, qa-main-functional-acceptance, qa-main-browser-acceptance]
+    if: >-
+      always() && github.event_name == 'workflow_run' &&
+      needs.validate-trigger.outputs.qa_eligible == 'true' &&
+      needs.deploy.result == 'success' &&
+      needs.qa-main-functional-acceptance.result == 'success' &&
+      needs.qa-main-browser-acceptance.result == 'success'
+    runs-on: ubuntu-latest
+    timeout-minutes: 18
+    env:
+      E2E_MAIN_QA_BASE_URL: https://uptilldawn-main.uptilldawn.workers.dev
+      E2E_MAIN_QA_PASSWORD: ${{ secrets.MAIN_QA_BOT_PASSWORD }}
+    steps:
+      - name: Checkout exact Main commit for bounded concurrency
+        uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5.1.0
+        with:
+          ref: ${{ github.event.workflow_run.head_sha }}
+      - name: Set up Node.js
+        uses: actions/setup-node@a0853c24544627f65ddf259abe73b1d18a591444 # v5.0.0
+        with:
+          node-version: 24
+          cache: npm
+      - name: Install dependencies
+        run: npm ci --prefer-offline --no-audit --no-fund
+      - name: Install isolated Chromium browser runtime
+        run: npx playwright install --with-deps chromium
+      - name: Verify thirty active Main-only browser tabs without HTTP 5xx
+        timeout-minutes: 8
+        run: node scripts/main-30-session-stability.mjs
+      - name: Upload thirty-session acceptance evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: main-30-session-stability
+          path: test-results/main-30-session/
+          if-no-files-found: warn
+          retention-days: 5
+
   qa-main-runtime-diagnostic:
     # Read-only measurement of actual Worker invocation outcomes after QA.
     # A missing analytics permission is reported, never mistaken for a pass.
-    needs: [validate-trigger, deploy, qa-main-browser-acceptance, qa-main-functional-acceptance]
+    needs: [validate-trigger, deploy, qa-main-browser-acceptance, qa-main-functional-acceptance, qa-main-concurrency-acceptance]
     if: >-
       always() && github.event_name == 'workflow_run' &&
       needs.validate-trigger.outputs.qa_eligible == 'true' &&

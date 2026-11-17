@@ -21,7 +21,7 @@ test('Main-only metrics include CPU P99 and isolate-memory P99 without exposing 
  assert.doesNotMatch(source,/script:'uptilldawn-crew'/)
  assert.match(workflow,/qa-main-runtime-diagnostic:/)
  assert.match(workflow,/run: node scripts\/main-worker-outcomes\.mjs/)
- assert.match(workflow,/needs: \[validate-trigger, deploy, qa-main-browser-acceptance, qa-main-functional-acceptance\]/)
+ assert.match(workflow,/needs: \[validate-trigger, deploy, qa-main-browser-acceptance, qa-main-functional-acceptance, qa-main-concurrency-acceptance\]/)
 })
 
 test('post-deploy resource measurement cannot mistake 90-minute history for current worker health',()=>{
