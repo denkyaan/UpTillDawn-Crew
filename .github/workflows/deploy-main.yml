@@ -183,7 +183,7 @@ jobs:
         run: |
           set -euo pipefail
           for attempt in 1 2 3 4; do
-            if GITHUB_RUN_ID="${QA_RECOVERY_RUN_ID}" node scripts/main-30-distinct-staff.mjs --cleanup; then
+            if timeout --signal=TERM --kill-after=5s 45s env GITHUB_RUN_ID="${QA_RECOVERY_RUN_ID}" node scripts/main-30-distinct-staff.mjs --cleanup; then
               echo "Main QA fixture recovery verified for run ${QA_RECOVERY_RUN_ID}"
               exit 0
             fi
