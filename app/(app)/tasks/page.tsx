@@ -61,7 +61,7 @@ export default async function Page({searchParams}:{searchParams?:Promise<{event?
       .lte('scheduled_start','now')
       .gte('scheduled_end','now'),
   ],3)
-  const now=Date.now()
+  const now=new Date().getTime()
   const activeEvents=(events||[]).filter(event=>
     Date.parse(event.start_at)<=now&&Date.parse(event.end_at)>=now)
   const openEvents=(events||[]).filter(event=>Date.parse(event.end_at)>=now)
@@ -133,7 +133,7 @@ export default async function Page({searchParams}:{searchParams?:Promise<{event?
     }
   }
 
-  let selectableEvents = events || []
+  let selectableEvents: {id:string;name:string}[] = events || []
   let workplaces: WorkplaceOption[] = []
   let people: CrewOption[] = []
   let memberships: AssignmentMembership[] = []
