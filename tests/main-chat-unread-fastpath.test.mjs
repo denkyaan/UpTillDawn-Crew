@@ -17,8 +17,8 @@ test('badge computes exact unread count without invoking heavy channel summaries
 test('inbox fast path retains independent auth, RLS-equivalent authorization and grants',()=>{
  assert.match(sql,/v_actor uuid := auth\.uid\(\)/)
  assert.match(sql,/not public\.upt_is_approved\(\)/)
- assert.match(sql,/public\.upt_can_read_channel\(p\.channel_id\)/)
- assert.match(sql,/p\.unread_count > 0/)
+ assert.match(sql,/when p\.unread_count > 0 then public\.upt_can_read_channel\(p\.channel_id\)/)
+ assert.match(sql,/else false/)
  assert.match(sql,/security definer/i)
  assert.match(sql,/set search_path to 'pg_catalog','public','upt_private'/i)
  assert.match(sql,/revoke all on function public\.upt_chat_unread_total\(\) from public,anon;/i)
