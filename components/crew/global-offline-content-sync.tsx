@@ -15,6 +15,7 @@ export function GlobalOfflineContentSync({userId}:{userId:string}){
   // content) so 4 tabs of one account do not repeat 16 RLS reads each.
   const syncKey='upt-offline:last-success:'+userId
   const attemptKey='upt-offline:last-attempt:'+userId
+  const reconnectKey='upt-offline:last-reconnect:'+userId
   const leaseKey='upt-offline:active-sync:'+userId
   const readTimestamp=(key:string)=>{
    for(const kind of ['localStorage','sessionStorage'] as const){
@@ -67,13 +68,16 @@ export function GlobalOfflineContentSync({userId}:{userId:string}){
    // completed a snapshot since this component was mounted.
    lastSyncedAt=Math.max(lastSyncedAt,readLastSuccess())
    lastAttemptAt=Math.max(lastAttemptAt,readLastAttempt())
-   // Do not bypass the 60-second across-tab failure backoff on reconnect.
-   // A successful reconnect bypasses the 15-minute freshness window only.
-   if(now-lastAttemptAt<60_000||(!force&&now-lastSyncedAt<15*60_000))return
+   // Normal background work uses a shared one-minute failure backoff.
+   // An actual reconnect still forces refresh once per browser profile;
+   // multiple same-user tabs cannot each force sixteen reads on that event.
+   if(!force&&(now-lastSyncedAt<15*60_000||now-lastAttemptAt<60_000))return
+   if(force&&now-readTimestamp(reconnectKey)<60_000)return
    if(!acquireLease())return
    syncing=true
    lastAttemptAt=now
    writeTimestamp(attemptKey,lastAttemptAt)
+   if(force)writeTimestamp(reconnectKey,now)
    try{
    const snapshotResults=await boundedQueries([
     s.from('briefings').select('id,title,body,version,event_id').order('created_at',{ascending:false}),
