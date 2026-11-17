@@ -7,15 +7,17 @@ import {integrationProviders} from "../lib/administration/integration-credential
 
 const read=path=>readFileSync(new URL("../"+path,import.meta.url),"utf8")
 
-test("each provider has one business-owned setup location; no duplicate global management directory",()=>{
+test("each operational role reaches the same shared provider store from its own workflow",()=>{
  const expected={
-  contracts:["documenso"],invoices:["peppol"],banking:["banking"],
+  contracts:["documenso"],invoices:["peppol"],banking:["banking","sumup","eventpay"],
   ticketing:["weeztix","eventix"],sales:["sumup","eventpay"],documents:["cloudmersive"],
  }
  assert.deepEqual(integrationPlacement,expected)
  const providers=Object.values(integrationPlacement).flat()
- assert.equal(new Set(providers).size,providers.length,"each service must have exactly one owning workspace")
- assert.deepEqual(providers.toSorted(),externalServicesReadiness({}).map(s=>s.id).toSorted())
+ for(const ids of Object.values(integrationPlacement))
+  assert.equal(new Set(ids).size,ids.length,"one setup control per provider within a workflow")
+ assert.deepEqual(providers.filter((id,i)=>providers.indexOf(id)!==i).toSorted(),["eventpay","sumup"],"only payment status is shared between Admin Sales and Administration Banking")
+ assert.deepEqual([...new Set(providers)].toSorted(),externalServicesReadiness({}).map(s=>s.id).toSorted())
  const all=externalServicesReadiness({})
  for(const [page,ids] of Object.entries(expected))
   assert.deepEqual(integrationServicesForWorkspace(page,all).map(s=>s.id),ids)
