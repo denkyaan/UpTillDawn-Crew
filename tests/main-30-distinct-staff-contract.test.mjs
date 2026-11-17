@@ -41,6 +41,8 @@ test('load simultaneously exercises browser routes, scoped chat, realtime, check
  assert.match(runner,/upt_request_check_in/)
  assert.match(runner,/assert\.ok\(denied\.error/)
  assert.match(runner,/from\('timesheets'\)/)
+ assert.match(runner,/const channels=await pool\(sessions,5,'realtime-subscription'/)
+ assert.match(runner,/Realtime subscribe timeout'\)\),15_000\)/)
  assert.match(runner,/client\.channel\(topic/)
  assert.match(runner,/report\.realtimeReceived/)
  assert.match(runner,/response\.status\(\)>=500/)
