@@ -12,13 +12,17 @@ export default async function Page({searchParams,promotionOnly=false}:{searchPar
   const params=searchParams?await searchParams:{}
   const s=await createClient();const current=await getCurrentUser();if(!current)return null
   const user={id:current.id}
+  // Each request shares a deadline: an overloaded Main Supabase must not
+  // leave the entire Chat page streaming a skeleton indefinitely.
+  // RLS is unchanged; unavailable data never becomes visible to another role.
+  const chatSignal=AbortSignal.timeout(10_000)
   const [{data:channels,error},{data:directory},{data:privatePeers},{data:channelSummaries},{data:activeEvents},{data:chatEvents}]=await boundedQueries([
-    s.from('chat_channels').select('*').in('kind',['organization','event','workplace','private']).order('created_at'),
-    s.rpc('upt_crew_directory'),
-    s.rpc('upt_private_chat_peers'),
-    s.rpc('upt_chat_channel_summaries'),
-    s.from('events').select('id,start_at,end_at').neq('status','archived').lte('start_at','now').gte('end_at','now').order('start_at'),
-    s.from('events').select('id,start_at,end_at,status,image_url').order('start_at'),
+    s.from('chat_channels').select('*').in('kind',['organization','event','workplace','private']).order('created_at').abortSignal(chatSignal),
+    s.rpc('upt_crew_directory').abortSignal(chatSignal),
+    s.rpc('upt_private_chat_peers').abortSignal(chatSignal),
+    s.rpc('upt_chat_channel_summaries').abortSignal(chatSignal),
+    s.from('events').select('id,start_at,end_at').neq('status','archived').lte('start_at','now').gte('end_at','now').order('start_at').abortSignal(chatSignal),
+    s.from('events').select('id,start_at,end_at,status,image_url').order('start_at').abortSignal(chatSignal),
   ],3)
 
   const promotionDirectory=promotionOnly?await s.rpc('upt_promotion_directory'):null
