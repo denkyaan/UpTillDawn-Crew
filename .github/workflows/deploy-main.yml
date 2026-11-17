@@ -146,13 +146,13 @@ jobs:
     # Thirty DISTINCT temporary Auth identities against isolated Main only.
     # Runs after existing browser and transactional E2E checks. Cleanup is
     # independently retried even if the acceptance command fails.
+    # Run independent Main diagnostics even if another QA verdict is red;
+    # a failed browser/functional job still blocks overall acceptance.
     needs: [validate-trigger, deploy, qa-main-functional-acceptance, qa-main-browser-acceptance]
     if: >-
       always() && github.event_name == 'workflow_run' &&
       needs.validate-trigger.outputs.qa_eligible == 'true' &&
-      needs.deploy.result == 'success' &&
-      needs.qa-main-functional-acceptance.result == 'success' &&
-      needs.qa-main-browser-acceptance.result == 'success'
+      needs.deploy.result == 'success'
     runs-on: ubuntu-latest
     timeout-minutes: 22
     env:
