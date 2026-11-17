@@ -88,7 +88,7 @@ export function PromotionChatsClient({locale,userId,isAdmin,names,photos={}}:{lo
      .eq("room",room).order("created_at",{ascending:false}).limit(100)
      .abortSignal(AbortSignal.timeout(8500))
     if(current!==sequence.current)return
-    if(failure){retryAfter.current=Date.now()+5000;setLoadFailed(true);setError(l.load);return}
+    if(failure){setLoadFailed(true);setError(l.load);retryAfter.current=Date.now()+5000;return}
     setLoadFailed(false);setLoaded(true);setError("")
     setMessages(((data||[]) as unknown as Message[]).reverse())
     if(document.visibilityState==="visible")
@@ -120,9 +120,10 @@ export function PromotionChatsClient({locale,userId,isAdmin,names,photos={}}:{lo
   },15000)
   const onVisible=()=>{if(document.visibilityState==="visible")refresh()}
   document.addEventListener("visibilitychange",onVisible)
+  const activeSequence=sequence
   return()=>{
     active=false
-    sequence.current++
+    activeSequence.current++
     window.clearTimeout(timer)
     window.clearInterval(interval)
     document.removeEventListener("visibilitychange",onVisible)

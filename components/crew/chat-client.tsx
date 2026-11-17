@@ -569,11 +569,16 @@ export function ChatClient({channels,defaultChannelId,userId,crewDirectory,isAdm
       const olderReplies:Record<string,Tables<'messages'>>={}
       if(ids.length){
         const {data:attachmentRows}=await s.from('message_attachments').select('message_id,storage_path,mime_type').in('message_id',ids)
-        const signed=await Promise.all((attachmentRows||[]).filter(row=>row.storage_path).map(async row=>{
-          const {data:url}=await s.storage.from('chat-attachments').createSignedUrl(row.storage_path!,300)
-          return {messageId:row.message_id,url:url?.signedUrl??'',mimeType:row.mime_type}
-        }))
-        for(const item of signed)if(item)(olderAttachments[item.messageId]||=[]).push({url:item.url,mimeType:item.mimeType})
+        const paths=[...new Set((attachmentRows||[]).map(row=>row.storage_path).filter((path):path is string=>Boolean(path)))]
+        const byPath=new Map<string,string>()
+        for(let i=0;i<paths.length;i+=80){
+          const {data:batch}=await s.storage.from('chat-attachments').createSignedUrls(paths.slice(i,i+80),300)
+          for(const item of batch||[])if(!item.error&&item.path&&item.signedUrl)byPath.set(item.path,item.signedUrl)
+        }
+        for(const row of attachmentRows||[]){
+          const signedUrl=row.storage_path?byPath.get(row.storage_path):null
+          if(signedUrl)(olderAttachments[row.message_id]||=[]).push({url:signedUrl,mimeType:row.mime_type})
+        }
         const inBatch=new Set(ids)
         const replyIds=[...new Set(older.map(message=>message.reply_to_message_id).filter((id):id is string=>Boolean(id)&&!inBatch.has(id!)))]
         if(replyIds.length){
@@ -607,11 +612,16 @@ export function ChatClient({channels,defaultChannelId,userId,crewDirectory,isAdm
     const target=data as Tables<'messages'>
     const targetAttachments:Record<string,Attachment[]>={}
     const {data:attachmentRows}=await s.from('message_attachments').select('message_id,storage_path,mime_type').eq('message_id',messageId)
-    const signed=await Promise.all((attachmentRows||[]).filter(row=>row.storage_path).map(async row=>{
-      const {data:url}=await s.storage.from('chat-attachments').createSignedUrl(row.storage_path!,300)
-      return {messageId:row.message_id,url:url?.signedUrl??'',mimeType:row.mime_type}
-    }))
-    for(const item of signed)if(item)(targetAttachments[item.messageId]||=[]).push({url:item.url,mimeType:item.mimeType})
+    const paths=[...new Set((attachmentRows||[]).map(row=>row.storage_path).filter((path):path is string=>Boolean(path)))]
+    const byPath=new Map<string,string>()
+    for(let i=0;i<paths.length;i+=80){
+      const {data:batch}=await s.storage.from('chat-attachments').createSignedUrls(paths.slice(i,i+80),300)
+      for(const item of batch||[])if(!item.error&&item.path&&item.signedUrl)byPath.set(item.path,item.signedUrl)
+    }
+    for(const row of attachmentRows||[]){
+      const signedUrl=row.storage_path?byPath.get(row.storage_path):null
+      if(signedUrl)(targetAttachments[row.message_id]||=[]).push({url:signedUrl,mimeType:row.mime_type})
+    }
     let replyTarget:Tables<'messages'>|null=null
     if(target.reply_to_message_id&&!messageLookup.has(target.reply_to_message_id)){
       const {data:reply}=await s.from('messages').select('*').eq('id',target.reply_to_message_id).maybeSingle()

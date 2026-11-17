@@ -36,9 +36,10 @@ test('maker bypass is resolved before ordinary account block gates on server and
   assert.ok(resolveOwner>0&&checkOwner>resolveOwner&&accountBlock>checkOwner)
   assert.match(auth,/if \(profile\.account_blocked && !isOwner\) return null/)
 
-  assert.match(providers,/if\(ownerError\)/)
+  assert.match(providers,/readContext\('upt_current_session_context'\)/)
+  assert.match(providers,/if\(error\|\|!data\|\|data\.id!==userId/)
   assert.doesNotMatch(providers,/needsOwnerCheck=Boolean/)
-  assert.match(providers,/const owner=ownerFlag===true/)
+  assert.match(providers,/const owner=data\.is_owner===true/)
   assert.match(providers,/data\.account_blocked&&!owner/)
 })
 
@@ -65,7 +66,8 @@ test('Maker with staff base profile retains the linked Admin and Administration 
   read('components/layout/navigation-items.ts'),
   read('components/layout/app-layout.tsx'),
  ])
- assert.match(provider,/const \{data:ownerFlag,error:ownerError\}=await supabase\.rpc\("upt_current_is_owner"\)/)
+ assert.match(provider,/readContext\('upt_current_session_context'\)/)
+ assert.match(provider,/const owner=data\.is_owner===true/)
  assert.match(provider,/const realIsAdmin = profile\?\.role === "admin" \|\| isOwner/)
  assert.match(provider,/setRoles\(\[resolved\]\)/)
  assert.match(adminNav,/adminAdministrationSubtabs/)
