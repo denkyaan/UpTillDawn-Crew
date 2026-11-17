@@ -59,7 +59,7 @@ test('Administration/Promotion shell reads only badges and active shift while pr
 test('all sixteen offline snapshots have one shared failure deadline, without deleting old local data',()=>{
  const offline=source('components/crew/global-offline-content-sync.tsx')
  const start=offline.indexOf('const snapshotSignal=AbortSignal.timeout(12_000)')
- const end=offline.indexOf('],3)',start)
+ const end=offline.indexOf('],2)',start)
  assert.ok(start>=0&&end>start,'Offline queries do not have a bounded request window')
  const queries=offline.slice(start,end)
  assert.equal((queries.match(/s\.from\('/g)||[]).length,16)
