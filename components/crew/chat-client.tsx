@@ -124,6 +124,12 @@ export function ChatClient({channels,defaultChannelId,userId,crewDirectory,isAdm
   const textareaRef=useRef<HTMLTextAreaElement>(null)
   const typingStopTimerRef=useRef<number|null>(null)
   const typingThrottleRef=useRef(0)
+  const typingPresenceRef=useRef(new Map<string,{name:string;expires:number}>())
+  const typingExpiryTimerRef=useRef<number|null>(null)
+  const stateInFlightRef=useRef(false)
+  const stateLastAttemptRef=useRef(0)
+  const stateFailureRef=useRef(0)
+  const readLastAttemptRef=useRef<Record<string,number>>({})
   const draftFilesRef=useRef(new Map<string,File|null>())
   const initialDraftLoadedRef=useRef(false)
 
@@ -149,22 +155,86 @@ export function ChatClient({channels,defaultChannelId,userId,crewDirectory,isAdm
 
   useEffect(()=>{
     if(!effectiveSelected)return
-    void refreshChannelStates()
-    void loadPins(effectiveSelected)
-    const stateTimer=window.setInterval(()=>void refreshChannelStates(),5000)
-    const typingTimer=window.setInterval(async()=>{
-      const s=createClient()
-      const {data}=await s.rpc('upt_chat_typing_users',{p_channel:effectiveSelected})
-      setTypingUsers((data||[]).map(item=>item.full_name).filter(Boolean))
-    },1600)
+    const supabase=createClient()
+    const channelId=effectiveSelected
+    let alive=true,live=false,typingInFlight=false,typingLastAttempt=0,typingRetryAfter=0
+    const visible=()=>document.visibilityState==='visible'&&navigator.onLine
+    const showTyping=()=>{
+      if(!alive)return
+      const now=Date.now()
+      for(const [id,entry] of typingPresenceRef.current){
+        if(entry.expires<=now)typingPresenceRef.current.delete(id)
+      }
+      setTypingUsers([...typingPresenceRef.current.values()].map(entry=>entry.name))
+      if(typingExpiryTimerRef.current!==null)window.clearTimeout(typingExpiryTimerRef.current)
+      const next=[...typingPresenceRef.current.values()].map(entry=>entry.expires).sort((a,b)=>a-b)[0]
+      typingExpiryTimerRef.current=next?window.setTimeout(showTyping,Math.max(50,next-now+50)):null
+    }
+    const loadTyping=async()=>{
+      if(!alive||!visible()||typingInFlight||Date.now()<typingRetryAfter)return
+      typingInFlight=true
+      typingLastAttempt=Date.now()
+      try{
+        const {data,error}=await supabase.rpc('upt_chat_typing_users',{p_channel:channelId})
+          .abortSignal(AbortSignal.timeout(7000))
+        if(!alive)return
+        if(error){typingRetryAfter=Date.now()+15_000;return}
+        const entries=new Map<string,{name:string;expires:number}>()
+        for(const entry of data||[]){
+          if(entry.user_id!==userId&&entry.full_name)
+            entries.set(entry.user_id,{name:entry.full_name,expires:Date.now()+4500})
+        }
+        typingPresenceRef.current=entries
+        showTyping()
+      }catch{typingRetryAfter=Date.now()+15_000}
+      finally{typingInFlight=false}
+    }
+    const signal=supabase.channel('upt-chat-signal:'+channelId,{config:{private:true,broadcast:{self:false}}})
+      .on('broadcast',{event:'typing'},({payload})=>{
+        if(!alive||!visible())return
+        const id=typeof payload?.user_id==='string'?payload.user_id:''
+        if(!id||id===userId)return
+        const person=crewDirectory.find(x=>x.id===id)
+        const name=person?.full_name?.trim()||''
+        if(payload.active===true&&name)typingPresenceRef.current.set(id,{name,expires:Date.now()+4500})
+        else typingPresenceRef.current.delete(id)
+        showTyping()
+      })
+      .on('broadcast',{event:'read'},()=>void refreshChannelStates(true))
+      .subscribe(status=>{
+        live=status==='SUBSCRIBED'
+        if(live){void refreshChannelStates(true);void loadTyping()}
+      })
+    const summaries=supabase.channel('upt-chat-summary:'+userId)
+      .on('postgres_changes',{event:'*',schema:'public',table:'messages'},
+        ()=>void refreshChannelStates(true)).subscribe()
+    void refreshChannelStates(true)
+    void loadPins(channelId)
+    void loadTyping()
+    const fallback=window.setInterval(()=>{
+      if(!visible())return
+      void refreshChannelStates()
+      if(Date.now()-typingLastAttempt>=(live?90_000:15_000))void loadTyping()
+    },5000)
+    const onVisibility=()=>{
+      if(visible()){void refreshChannelStates(true);void loadTyping()}
+      else{typingPresenceRef.current.clear();showTyping()}
+    }
+    document.addEventListener('visibilitychange',onVisibility)
     const readTimer=window.setTimeout(()=>void markCurrentRead(),450)
     return()=>{
-      window.clearInterval(stateTimer)
-      window.clearInterval(typingTimer)
+      alive=false
+      window.clearInterval(fallback)
       window.clearTimeout(readTimer)
-      if(typingStopTimerRef.current)window.clearTimeout(typingStopTimerRef.current)
-      void createClient().rpc('upt_set_chat_typing',{p_channel:effectiveSelected,p_active:false})
+      document.removeEventListener('visibilitychange',onVisibility)
+      if(typingExpiryTimerRef.current!==null)window.clearTimeout(typingExpiryTimerRef.current)
+      if(typingStopTimerRef.current!==null)window.clearTimeout(typingStopTimerRef.current)
+      typingPresenceRef.current.clear()
       setTypingUsers([])
+      void supabase.removeChannel(signal)
+      void supabase.removeChannel(summaries)
+      if(navigator.onLine)
+        void supabase.rpc('upt_set_chat_typing',{p_channel:channelId,p_active:false}).abortSignal(AbortSignal.timeout(5000))
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
   },[effectiveSelected])
@@ -203,46 +273,91 @@ export function ChatClient({channels,defaultChannelId,userId,crewDirectory,isAdm
 
   useEffect(()=>{
     if(!effectiveSelected)return
-    const s=createClient()
-    let alive=true
-    async function load(){
-      const {data,error}=await s.from('messages').select('*').eq('channel_id',effectiveSelected).order('created_at',{ascending:false}).limit(100)
-      if(!alive)return
-      if(error){setStatus('Berichten konden niet worden geladen.');return}
-      const ordered=((data||[]) as Tables<'messages'>[]).reverse()
-      const ids=ordered.map(message=>message.id)
-      const idSet=new Set(ids)
-      const missingReplyIds=[...new Set(ordered.map(message=>message.reply_to_message_id).filter((id):id is string=>Boolean(id)&&!idSet.has(id!)))]
-      const replyTargets:Record<string,Tables<'messages'>>={}
-      if(missingReplyIds.length){
-        const {data:replyRows}=await s.from('messages').select('*').in('id',missingReplyIds)
-        for(const row of (replyRows||[]) as Tables<'messages'>[])replyTargets[row.id]=row
-      }
-      const grouped:Record<string,Attachment[]>={}
-      if(ids.length){
-        const {data:rows}=await s.from('message_attachments').select('message_id,storage_path,mime_type').in('message_id',ids)
-        const signed=await Promise.all((rows||[]).filter(row=>row.storage_path).map(async row=>{
-          const {data:url}=await s.storage.from('chat-attachments').createSignedUrl(row.storage_path!,300)
-          return {messageId:row.message_id,url:url?.signedUrl??'',mimeType:row.mime_type}
-        }))
-        for(const item of signed)if(item)(grouped[item.messageId]||=[]).push({url:item.url,mimeType:item.mimeType})
-      }
-      if(alive)setCache(previous=>{
-        const prior=previous[effectiveSelected]
-        return {...previous,[effectiveSelected]:{
-          messages:mergeMessages(prior?.messages||[],ordered),
-          attachments:{...(prior?.attachments||{}),...grouped},
-          replyTargets:{...(prior?.replyTargets||{}),...replyTargets},
-          hasMore:ordered.length===100,
-        }}
-      })
+    const db=createClient()
+    const channelId=effectiveSelected
+    let alive=true,inFlight=false,pending=false,live=false,lastAttempt=0
+    let retryTimer:number|null=null
+    const signedCache=new Map<string,{url:string;expires:number}>()
+    const visible=()=>document.visibilityState==='visible'&&navigator.onLine
+    function queueReload(delay:number){
+      if(retryTimer!==null)return
+      retryTimer=window.setTimeout(()=>{retryTimer=null;void load(true)},delay)
     }
-    void load()
-    const channel=s.channel(`crew-chat-${effectiveSelected}`)
-      .on('postgres_changes',{event:'*',schema:'public',table:'messages',filter:`channel_id=eq.${effectiveSelected}`},()=>void load())
-      .subscribe()
-    const timer=window.setInterval(()=>void load(),10000)
-    return()=>{alive=false;window.clearInterval(timer);void s.removeChannel(channel)}
+    async function load(force=false){
+      if(!alive||!visible())return
+      if(inFlight){pending=true;return}
+      const elapsed=Date.now()-lastAttempt
+      if(elapsed<1200){queueReload(1200-elapsed);return}
+      if(!force&&live&&elapsed<60_000)return
+      inFlight=true;lastAttempt=Date.now()
+      try{
+        const {data,error}=await db.from('messages').select('*').eq('channel_id',channelId)
+          .order('created_at',{ascending:false}).limit(100).abortSignal(AbortSignal.timeout(9000))
+        if(!alive)return
+        if(error){setStatus('Berichten konden niet worden geladen.');return}
+        const ordered=((data||[]) as Tables<'messages'>[]).reverse()
+        const ids=ordered.map(message=>message.id)
+        const idSet=new Set(ids)
+        const missingReplyIds=[...new Set(ordered.map(message=>message.reply_to_message_id).filter((id):id is string=>Boolean(id)&&!idSet.has(id!)))]
+        const replyTargets:Record<string,Tables<'messages'>>={}
+        if(missingReplyIds.length){
+          const {data:replyRows}=await db.from('messages').select('*').in('id',missingReplyIds)
+            .abortSignal(AbortSignal.timeout(9000))
+          for(const row of (replyRows||[]) as Tables<'messages'>[])replyTargets[row.id]=row
+        }
+        const grouped:Record<string,Attachment[]>={}
+        if(ids.length){
+          const {data:rows}=await db.from('message_attachments')
+            .select('message_id,storage_path,mime_type').in('message_id',ids)
+            .abortSignal(AbortSignal.timeout(9000))
+          const now=Date.now()
+          for(const [path,entry] of signedCache)if(entry.expires<=now)signedCache.delete(path)
+          const paths=[...new Set((rows||[]).map(row=>row.storage_path).filter((path):path is string=>Boolean(path)))]
+          const unsigned=paths.filter(path=>!signedCache.has(path))
+          for(let i=0;i<unsigned.length;i+=80){
+            const {data:batch}=await db.storage.from('chat-attachments').createSignedUrls(unsigned.slice(i,i+80),300)
+            for(const item of batch||[])
+              if(!item.error&&item.path&&item.signedUrl)
+                signedCache.set(item.path,{url:item.signedUrl,expires:Date.now()+240_000})
+          }
+          for(const row of rows||[]){
+            const item=row.storage_path?signedCache.get(row.storage_path):null
+            if(item)(grouped[row.message_id]||=[]).push({url:item.url,mimeType:row.mime_type})
+          }
+        }
+        if(alive)setCache(previous=>{
+          const prior=previous[channelId]
+          return {...previous,[channelId]:{
+            messages:mergeMessages(prior?.messages||[],ordered),
+            attachments:{...(prior?.attachments||{}),...grouped},
+            replyTargets:{...(prior?.replyTargets||{}),...replyTargets},
+            hasMore:ordered.length===100,
+          }}
+        })
+      }catch{if(alive)setStatus('Berichten konden niet worden geladen.')}
+      finally{
+        inFlight=false
+        if(pending){pending=false;queueReload(400)}
+      }
+    }
+    void load(true)
+    const channel=db.channel('crew-chat-'+channelId)
+      .on('postgres_changes',{event:'*',schema:'public',table:'messages',filter:'channel_id=eq.'+channelId},
+        ()=>{void load(true);void refreshChannelStates(true)})
+      .subscribe(status=>{live=status==='SUBSCRIBED'})
+    const timer=window.setInterval(()=>{
+      if(visible()&&(!live||Date.now()-lastAttempt>=60_000))void load(true)
+    },15_000)
+    const onVisibility=()=>{if(visible())void load(true)}
+    document.addEventListener('visibilitychange',onVisibility)
+    return()=>{
+      alive=false
+      window.clearInterval(timer)
+      if(retryTimer!==null)window.clearTimeout(retryTimer)
+      document.removeEventListener('visibilitychange',onVisibility)
+      void db.removeChannel(channel)
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   },[effectiveSelected])
 
   useEffect(()=>{
@@ -383,11 +498,23 @@ export function ChatClient({channels,defaultChannelId,userId,crewDirectory,isAdm
     document.querySelector<HTMLElement>(`[data-message-id="${id}"]`)?.scrollIntoView({behavior:'smooth',block:'center'})
   }
 
-  async function refreshChannelStates(){
-    const s=createClient()
-    const {data}=await s.rpc('upt_chat_channel_summaries')
-    if(!data)return
-    setChannelStates(Object.fromEntries((data as ChatSummary[]).map(item=>[item.channel_id,item])))
+  async function refreshChannelStates(force=false){
+    if(stateInFlightRef.current||!navigator.onLine||document.visibilityState!=='visible')return
+    const now=Date.now()
+    const minDelay=stateFailureRef.current
+      ?Math.min(60_000,5000*2**Math.min(4,stateFailureRef.current))
+      :force?1200:45_000
+    if(now-stateLastAttemptRef.current<minDelay)return
+    stateInFlightRef.current=true
+    stateLastAttemptRef.current=now
+    try{
+      const {data,error}=await createClient().rpc('upt_chat_channel_summaries')
+        .abortSignal(AbortSignal.timeout(8000))
+      if(error||!data){stateFailureRef.current++;return}
+      stateFailureRef.current=0
+      setChannelStates(Object.fromEntries((data as ChatSummary[]).map(item=>[item.channel_id,item])))
+    }catch{stateFailureRef.current++}
+    finally{stateInFlightRef.current=false}
   }
 
   async function loadPins(channelId:string){
@@ -398,9 +525,13 @@ export function ChatClient({channels,defaultChannelId,userId,crewDirectory,isAdm
   }
 
   async function markCurrentRead(){
-    if(!effectiveSelected)return
+    if(!effectiveSelected||!navigator.onLine||document.visibilityState!=='visible')return
+    const nowMs=Date.now()
+    if(nowMs-(readLastAttemptRef.current[effectiveSelected]||0)<1000)return
+    readLastAttemptRef.current[effectiveSelected]=nowMs
     const s=createClient()
     const {error}=await s.rpc('upt_mark_chat_read',{p_channel:effectiveSelected})
+      .abortSignal(AbortSignal.timeout(7000))
     if(error)return
     const now=new Date().toISOString()
     setChannelStates(previous=>{
@@ -417,7 +548,7 @@ export function ChatClient({channels,defaultChannelId,userId,crewDirectory,isAdm
     if(active&&now-typingThrottleRef.current<1200)return
     if(active)typingThrottleRef.current=now
     const s=createClient()
-    void s.rpc('upt_set_chat_typing',{p_channel:effectiveSelected,p_active:active})
+    void s.rpc('upt_set_chat_typing',{p_channel:effectiveSelected,p_active:active}).abortSignal(AbortSignal.timeout(6000))
     if(typingStopTimerRef.current)window.clearTimeout(typingStopTimerRef.current)
     if(active)typingStopTimerRef.current=window.setTimeout(()=>void setTyping(false),2500)
   }
