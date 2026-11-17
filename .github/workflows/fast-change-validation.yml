@@ -195,13 +195,22 @@ jobs:
           const worker=workers?.find?.(item=>item.name==='uptilldawn-main')
           if(!worker?.id)throw Error('Main Worker identifier not available; refusing Preview upload')
           const apps=await cf('accounts/'+encodeURIComponent(account)+'/access/apps?per_page=100')
-          const protectedPreview=apps?.some?.(app=>
-            app.type==='self_hosted'&&
-            app.destinations?.some?.(destination=>
+          let protectedPreview=false
+          for(const app of apps||[]){
+            if(app.type!=='self_hosted'||!app.destinations?.some?.(destination=>
               destination.type==='preview_worker'&&destination.worker_id===worker.id&&
-              !destination.overrides?.some?.(override=>override.behavior==='public'))&&
-            app.policies?.some?.(policy=>policy.decision==='allow'))
-          if(!protectedPreview)throw Error('Main Worker has no verified previews-only Cloudflare Access app with allow policy; refusing Preview upload')
+              !destination.overrides?.some?.(override=>override.behavior==='public')))continue
+            // Strict Access service tokens require "Service Auth"
+            // (decision=non_identity), not a human-login Allow policy.
+            let policies=app.policies||[]
+            if(!policies.some(p=>p.decision==='non_identity')&&app.id)
+              policies=await cf('accounts/'+encodeURIComponent(account)+'/access/apps/'+encodeURIComponent(app.id)+'/policies')
+            const authorized=policies.some(policy=>
+              policy.decision==='non_identity'&&
+              policy.include?.some?.(rule=>Boolean(rule.service_token||rule.service_token_tag)))
+            if(authorized){protectedPreview=true;break}
+          }
+          if(!protectedPreview)throw Error('Main Worker has no verified previews-only Cloudflare Access Service Auth policy; refusing Preview upload')
           console.log('Verified Main-only Worker Preview Access policy before remote test upload')
           NODE
 
