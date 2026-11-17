@@ -136,7 +136,9 @@ test('Main login QA retries only classified transient Auth and transport failure
  const form=readFileSync('components/auth/login-form.tsx','utf8')
  assert.match(form,/role="alert" data-login-error-code=\{displayedCode \|\| "login_error"\}/)
  assert.match(form,/const displayedCode = error \? errorCode : displayedError \? "initial_login_error" : null/)
- assert.match(form,/setErrorCode\("unexpected_action_failure"\)/)
+ assert.match(form,/setErrorCode\(outage\.code\)/)
+ assert.match(form,/const outage=temporaryLoginError\(\)/)
+ assert.doesNotMatch(form,/setErrorCode\("unexpected_action_failure"\)/)
 })
 
 test('browser QA reports Worker 1102 as real resource exhaustion, never accepts 503 as authorization',()=>{
