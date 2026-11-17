@@ -6,7 +6,10 @@ import type {IntegrationId,IntegrationReadiness} from "./external-services-readi
 export const integrationPlacement={
  contracts:["documenso"],
  invoices:["peppol"],
- banking:["banking"],
+ // Same encrypted connection store in two role-specific workflow views.
+ // Administration configures cashless readiness in Bank & payments; Head Admin
+ // finds it in Sales. Never create a second merchant or EventPay wallet.
+ banking:["banking","sumup","eventpay"],
  ticketing:["weeztix","eventix"],
  sales:["sumup","eventpay"],
  documents:["cloudmersive"],

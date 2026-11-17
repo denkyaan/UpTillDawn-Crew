@@ -7,10 +7,10 @@ import {IntegrationCredentialManager} from "@/components/admin/integration-crede
 import {externalServicesCopy,type IntegrationId,type IntegrationReadiness} from "@/lib/administration/external-services-readiness"
 
 const copy={
- nl:{setup:"Koppeling instellen of wijzigen",manage:"Instellen",chooseEvent:"Selecteer het gekoppelde evenement in de beveiligde instellingen.",needProvider:"Vraag eerst de officiële aansluitgegevens bij de dienstverlener aan."},
- fr:{setup:"Configurer ou modifier la connexion",manage:"Configurer",chooseEvent:"Sélectionnez l'événement lié dans les paramètres sécurisés.",needProvider:"Demandez d'abord les accès officiels au fournisseur."},
- en:{setup:"Configure or change connection",manage:"Configure",chooseEvent:"Choose the connected event in secure settings.",needProvider:"Obtain official integration access from the provider first."},
- de:{setup:"Verbindung einrichten oder ändern",manage:"Einrichten",chooseEvent:"Wählen Sie das zugeordnete Event in den geschützten Einstellungen.",needProvider:"Fordern Sie zuerst die offiziellen Zugangsdaten beim Anbieter an."}
+ nl:{setup:"Koppeling instellen of wijzigen",manage:"Instellen",chooseEvent:"Selecteer het gekoppelde evenement in de beveiligde instellingen.",needProvider:"Vraag eerst de officiële aansluitgegevens bij de dienstverlener aan.",statusUnavailable:"Verbindingsstatus kan momenteel niet worden geladen. Probeer later opnieuw."},
+ fr:{setup:"Configurer ou modifier la connexion",manage:"Configurer",chooseEvent:"Sélectionnez l'événement lié dans les paramètres sécurisés.",needProvider:"Demandez d'abord les accès officiels au fournisseur.",statusUnavailable:"Impossible de charger l’état des connexions. Réessayez plus tard."},
+ en:{setup:"Configure or change connection",manage:"Configure",chooseEvent:"Choose the connected event in secure settings.",needProvider:"Obtain official integration access from the provider first.",statusUnavailable:"Connection status is temporarily unavailable. Please retry later."},
+ de:{setup:"Verbindung einrichten oder ändern",manage:"Einrichten",chooseEvent:"Wählen Sie das zugeordnete Event in den geschützten Einstellungen.",needProvider:"Fordern Sie zuerst die offiziellen Zugangsdaten beim Anbieter an.",statusUnavailable:"Verbindungsstatus momentan nicht verfügbar. Bitte später erneut versuchen."}
 } as const
 const managed=(id:IntegrationId):id is IntegrationProvider=>integrationProviders.some(provider=>provider===id)
 
@@ -20,20 +20,27 @@ const managed=(id:IntegrationId):id is IntegrationProvider=>integrationProviders
 export async function ExternalServicesReadiness({locale,services}:{locale:SupportedUiLocale;services:readonly IntegrationReadiness[]}){
  if(!services.length)return null
  const access=await integrationManagementAccess()
- const stored=access.ok?await listIntegrationSummaries(access.db).catch(()=>[]):[]
- const configured=new Set(stored.map(row=>row.provider))
+ // A temporary credential-store failure must never appear as a missing key.
+ // No secret, ciphertext or other user's credentials leave the secure store.
+ const lookup=access.ok
+  ?await listIntegrationSummaries(access.db)
+    .then(rows=>({available:true as const,rows}))
+    .catch(()=>({available:false as const,rows:[]}))
+  :{available:false as const,rows:[]}
+ const configured=new Set(lookup.rows.map(row=>row.provider))
  const events=access.ok&&services.some(service=>service.id==="weeztix")
   ?await access.db.from("events").select("id,name").order("start_at",{ascending:false}).limit(100)
   :null
  const t=externalServicesCopy[locale],labels=copy[locale]
  return <section aria-label={t.title} className="space-y-3 rounded-2xl border bg-card p-4 sm:p-5">
   <h3 className="font-semibold">{t.title}</h3>
+  {access.ok&&!lookup.available&&<p role="status" className="text-xs font-medium text-amber-600">{labels.statusUnavailable}</p>}
   <div className="grid gap-3">
    {services.map(service=><article key={service.id} data-integration-workspace={service.id} className="min-w-0 space-y-3 rounded-xl border p-3 sm:p-4">
     <div className="flex flex-wrap items-center justify-between gap-2">
      <strong className="text-sm">{t.names[service.id]}</strong>
      <span className="text-xs font-medium text-muted-foreground">
-      {configured.has(service.id as IntegrationProvider)?t.states.credentials_present:t.states[service.state]}
+      {access.ok&&!lookup.available?labels.statusUnavailable:configured.has(service.id as IntegrationProvider)?t.states.credentials_present:t.states[service.state]}
      </span>
     </div>
     <p className="text-xs leading-5 text-muted-foreground">{t.instructions[service.id]}</p>

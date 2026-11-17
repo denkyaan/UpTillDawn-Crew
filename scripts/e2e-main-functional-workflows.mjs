@@ -22,7 +22,7 @@ const prefix='UPT-QA-FUNCTION-'+randomUUID().slice(0,8)
 const reportDir='test-results/main-functional'
 await mkdir(reportDir,{recursive:true})
 const checks=[]
-const created={event:null,booking:null,timesheet:null,staff:null,office:null}
+const created={event:null,booking:null,timesheet:null,staff:null,office:null,workplace:null,shift:null,briefing:null}
 let browser
 let failed=null
 const service=createClient(MAIN_DB,secret,{auth:{persistSession:false,autoRefreshToken:false,detectSessionInUrl:false}})
@@ -68,6 +68,9 @@ async function clean(){
   throw Error('QA cleanup refused: fixture event ownership changed')
  await remove('admin_artist_bookings','id',created.booking,{field:'event_id',value:created.event})
  await remove('timesheets','id',created.timesheet,{field:'event_id',value:created.event})
+ await remove('shifts','id',created.shift,{field:'event_id',value:created.event})
+ await remove('briefings','id',created.briefing,{field:'event_id',value:created.event})
+ await remove('workplaces','id',created.workplace,{field:'event_id',value:created.event})
  await remove('event_availability','event_id',created.event,{field:'user_id',value:created.staff})
  await remove('event_members','event_id',created.event,{field:'user_id',value:created.staff})
  // Event deletion can hit PostgREST statement_timeout while other Main QA
@@ -141,6 +144,23 @@ try{
   actor('e2e-promotion@uptilldawn.test'),
  ])
  created.office=office.id;created.staff=staff.id
+ // Exercise actual organization chat visibility under the four signed-in
+ // identities without creating messages or reading any private message body.
+ // These roles must never see an unrelated standard organization channel.
+ const expectedChats=new Map([
+  [head,['Admin · Administratie','Algemene chat evenementen','Algemene chat promotie']],
+  [office,['Admin · Administratie','Algemene chat evenementen','Algemene chat promotie']],
+  [staff,['Algemene chat evenementen']],
+  [promotion,['Algemene chat promotie']],
+ ])
+ for(const [identity,expected] of expectedChats){
+  const {data,error}=await identity.db.from('chat_channels')
+   .select('name').eq('kind','organization')
+  assert.ifError(error)
+  assert.deepEqual((data??[]).map(row=>row.name).toSorted(),expected.toSorted(),
+   'Standard chat visibility must be role-restricted and RLS-authoritative')
+ }
+ tick('Four operational roles see only permitted standard organization chats')
  const start=new Date(Date.now()+3*86400000).toISOString()
  const end=new Date(Date.now()+4*86400000).toISOString()
  const args={p_event_id:null,p_name:prefix+' Draft event',p_venue:'QA only',p_start_at:start,p_end_at:end}
@@ -172,6 +192,40 @@ try{
   event_id:draft,user_id:staff.id,response:'can'
  }).select('event_id'),'Promotion cannot forge Staff availability')
  tick('Staff availability persists under its own user identity')
+
+ // Real roster/briefing verification on uniquely owned disposable QA rows.
+ // Keep work scheduled in the future: never start a live time clock or emit a
+ // fake GPS check-in. The event remains an unpublished draft throughout.
+ const workplace=await one(head.db.from('workplaces').insert({
+  event_id:draft,name:prefix+' QA workpost',minimum_staff:1,target_staff:1
+ }).select('id,event_id,name'))
+ created.workplace=workplace.id
+ assert.equal(workplace.event_id,draft)
+ const workStart=new Date(Date.parse(start)+60*60*1000).toISOString()
+ const workEnd=new Date(Date.parse(workStart)+8*60*60*1000).toISOString()
+ const scheduled=await one(head.db.from('shifts').insert({
+  event_id:draft,workplace_id:workplace.id,user_id:staff.id,
+  scheduled_start:workStart,scheduled_end:workEnd,
+  start_time:workStart,end_time:workEnd,role_name:'Crew',status:'scheduled'
+ }).select('id,event_id,workplace_id,user_id,status'))
+ created.shift=scheduled.id
+ assert.equal(scheduled.workplace_id,workplace.id)
+ const staffShift=await one(staff.db.from('shifts').select('id,user_id,workplace_id').eq('id',scheduled.id))
+ assert.equal(staffShift.user_id,staff.id)
+ tick('Head Admin creates a real scheduled workpost and assigned Staff reads its shift')
+
+ const briefing=await one(head.db.from('briefings').insert({
+  event_id:draft,workplace_id:workplace.id,title:prefix+' QA crew briefing',
+  body:'QA only: no real event, no live check-in',created_by:head.id
+ }).select('id,event_id,title'))
+ created.briefing=briefing.id
+ const staffBriefing=await one(staff.db.from('briefings').select('id,title').eq('id',briefing.id))
+ assert.equal(staffBriefing.title,briefing.title)
+ tick('Head Admin publishes scoped QA briefing and Staff reads the correct briefing')
+ await denyWrite(promotion.db.from('shifts').insert({
+  event_id:draft,workplace_id:workplace.id,user_id:staff.id,
+  scheduled_start:workStart,scheduled_end:workEnd,start_time:workStart,end_time:workEnd
+ }).select('id'),'Promotion cannot forge a Staff shift')
 
  const submitted=await scalar(staff.db.rpc('upt_submit_timesheet',{p_event:draft}))
  created.timesheet=submitted
@@ -236,7 +290,7 @@ try{
   console.error('FAIL Main functional QA cleanup: '+String(error?.message||error).slice(0,350))
  }
  await writeFile(reportDir+'/report.json',JSON.stringify({
-  target:MAIN,scope:'Isolated Main only; real Auth, RLS, Administration event drafts, crew availability, timesheet lifecycle and DJ bookings; finance authorization and read-only UI',
+  target:MAIN,scope:'Isolated Main only; real Auth, scoped standard chats, Administration event drafts, workpost and shift planning, briefing visibility, crew availability, timesheet lifecycle and DJ bookings; finance authorization and read-only UI',
   completedChecks:checks,passed:checks.length,failed:Boolean(failed),failure:failed,
   fixtureCleaned:checks.includes('all Main fixture records deleted and verified'),
   excluded:'No Maker, production, provider API calls, payments, mutable invoice draft/review/approval (immutable audit must be exercised in disposable DB), contractual signing or emails.'

@@ -9,7 +9,9 @@
 - Runtime: Next.js 16 through OpenNext on Cloudflare Workers
 - Supabase project: `eakoavcieossazqzplke`
 
-Production is deployed by the Cloudflare Workers Builds trigger `Production main` connected to GitHub `main`. It runs lint, TypeScript checks, tests and the OpenNext build before deploying with Wrangler. The separate GitHub production workflow remains manual. God Mode source proposals create branches and pull requests, require a successful CI run, and merge to main to start the production build.
+**Production release policy (current):** a normal `main` push or successful `CI main` is **not** permission to release Production. The repository's `CI production` validates an explicitly selected release commit; `Deploy production` requires the full successful CI for that exact SHA. Production publication must be separately authorized and must pass the read-only live metadata checks in `scripts/production-preflight-readonly.sql` before any schema or Worker changes. See `docs/MAIN_INTEGRATED_BUNDLE_2026-11-17.md` for the currently identified missing Production event-draft RPC and Owner mode mismatch.
+
+**External Cloudflare build trigger caveat:** earlier documentation referenced an independent `Production main` Workers Builds trigger connected directly to `main`. Its live Cloudflare-dashboard status has **not** been verified by the GitHub release gate. Before a production release (and to guarantee test/prod isolation), verify in the Cloudflare dashboard that there is **no** active automatic production build/deploy triggered by ordinary `main` commits. A separately configured trigger would bypass the manual GitHub workflow regardless of passing tests. God Mode source proposals must continue through branch, pull request and Main CI; a merge to Main alone is not a Production approval.
 
 ## Runtime variables
 
