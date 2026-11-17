@@ -8,7 +8,7 @@ const chat=readFileSync('components/administration/administration-ai-chat.tsx','
 const navigation=readFileSync('lib/administration/navigation.ts','utf8')
 
 test('AI stays available in its canonical Administration subtab without duplicate home entry',()=>{
- assert.match(home,/return <AdministrationOverviewDashboard locale=\{locale\}/)
+ assert.match(home,/return <LazyAdministrationOverviewDashboard locale=\{locale\}/)
  assert.doesNotMatch(home,/<AdministrationAiChat/)
  assert.doesNotMatch(home,/href="\/portals\/administration\/modules\/ai"/)
  assert.match(navigation,/slugs:\["notifications","automations","ai"/)
