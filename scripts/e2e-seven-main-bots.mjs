@@ -310,11 +310,14 @@ try{
       }
       const code=await alert.getAttribute('data-login-error-code')
       const message=(await alert.innerText()).trim().slice(0,160)
-      if(code!=='unexpected_action_failure'||attempt===2)
+      const temporaryAuthFailure=['unexpected_action_failure','auth_temporarily_unavailable','auth_rate_limited'].includes(code)
+      if(!temporaryAuthFailure||attempt===2)
        throw Error('Login rejected for '+role.role+'; code='+code+'; message='+message)
-      // A transient server-action exception is the sole case eligible for
-      // one fresh-page retry. It is reported, never silently treated as PASS.
-      console.warn('QA_RETRY_TRANSIENT_LOGIN '+role.role+' '+locale+' '+viewport.width)
+      // Retry only explicitly classified upstream outages / transport errors.
+      // Invalid credentials and role denials always fail immediately.
+      // Retrying never counts as success until a real session is verified.
+      console.warn('QA_RETRY_TRANSIENT_LOGIN '+role.role+' '+locale+' '+viewport.width+' code='+code)
+      await new Promise(resolve=>setTimeout(resolve,code==='auth_rate_limited'?3000:1500))
      }catch(error){
       throw Error('Login navigation failed for '+role.role+'; '+scrub(error))
      }
