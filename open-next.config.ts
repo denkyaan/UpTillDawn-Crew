@@ -8,5 +8,10 @@ import staticAssetsIncrementalCache from '@opennextjs/cloudflare/overrides/incre
 // routes relying on ISR/revalidatePath into the static route set.
 export default defineCloudflareConfig({
   incrementalCache: staticAssetsIncrementalCache,
-  enableCacheInterception: true,
+  // Main serves private pages dynamically; its only prerendered output is
+  // the public login/metadata shell. Intercepting all requests at the edge
+  // adds an unnecessary cache-route pass and can amplify Next 16 segment
+  // prefetch loops on some OpenNext versions. Keep static-assets caching
+  // for public shells; do not cache authenticated SSR or user-specific data.
+  enableCacheInterception: false,
 })
