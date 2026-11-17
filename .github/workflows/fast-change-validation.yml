@@ -260,12 +260,18 @@ jobs:
         timeout-minutes: 5
         env:
           VINEXT_FREE_PREVIEW_URL: ${{ steps.vinext-preview.outputs.preview_url }}
+          MAIN_QA_CF_ACCESS_CLIENT_ID: ${{ secrets.MAIN_QA_CF_ACCESS_CLIENT_ID }}
+          MAIN_QA_CF_ACCESS_CLIENT_SECRET: ${{ secrets.MAIN_QA_CF_ACCESS_CLIENT_SECRET }}
         shell: bash
         run: |
           set -euo pipefail
           test -n "${VINEXT_FREE_PREVIEW_URL:-}"
+          test -n "${MAIN_QA_CF_ACCESS_CLIENT_ID:-}"
+          test -n "${MAIN_QA_CF_ACCESS_CLIENT_SECRET:-}"
           for portal in staff responsible promotion administration admin; do
-            status="$(curl --max-time 20 --retry 2 --retry-all-errors -L -sS -o /dev/null -w '%{http_code}' "${VINEXT_FREE_PREVIEW_URL}/login/$portal")"
+            # Never use -L: redirecting the request could disclose Access headers
+            # to another origin. A valid protected route must itself return 200.
+            status="$(curl --max-time 20 --retry 2 --retry-all-errors -sS -o /dev/null -w '%{http_code}' -H "CF-Access-Client-Id: ${MAIN_QA_CF_ACCESS_CLIENT_ID}" -H "CF-Access-Client-Secret: ${MAIN_QA_CF_ACCESS_CLIENT_SECRET}" "${VINEXT_FREE_PREVIEW_URL}/login/$portal")"
             if [ "$status" != 200 ]; then
               echo "::error::Cloudflare Free Preview /login/$portal responded $status"
               exit 1
@@ -280,6 +286,8 @@ jobs:
         env:
           VINEXT_FREE_PREVIEW_URL: ${{ steps.vinext-preview.outputs.preview_url }}
           MAIN_QA_BOT_PASSWORD: ${{ secrets.MAIN_QA_BOT_PASSWORD }}
+          MAIN_QA_CF_ACCESS_CLIENT_ID: ${{ secrets.MAIN_QA_CF_ACCESS_CLIENT_ID }}
+          MAIN_QA_CF_ACCESS_CLIENT_SECRET: ${{ secrets.MAIN_QA_CF_ACCESS_CLIENT_SECRET }}
         shell: bash
         run: |
           set -euo pipefail
