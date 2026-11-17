@@ -36,6 +36,8 @@ test('offline snapshots are complete but use three-way bounded queue after initi
  assert.match(offline,/\],3\)/)
  assert.match(offline,/const initialSync=window\.setTimeout/)
  assert.match(offline,/lastSyncedAt=readLastSuccess\(\)/)
+ assert.match(offline,/lastAttemptAt=readLastAttempt\(\)/)
+ assert.match(offline,/now-lastAttemptAt<60_000/)
  assert.match(offline,/sessionStorage\.setItem\(syncKey,String\(lastSyncedAt\)\)/)
  assert.match(offline,/snapshotResults\.some\(result=>Boolean\(result\.error\)\)/)
  assert.match(offline,/8_000\+staggerMs/)
