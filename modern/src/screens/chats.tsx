@@ -75,12 +75,15 @@ function Composer({channelId,uid,onUpdated}:{channelId:string;uid:string;onUpdat
   setBusy(true);setStatus("")
   try{
    // Queueing != sending. Retain the message if network/DB fails.
-   await enqueueText(uid,channelId,body)
+   const queuedItem=await enqueueText(uid,channelId,body)
    setBody("")
    const delivered=await flushOwnText(uid)
-   await refresh()
+   const remaining=await pendingText(uid)
+   setPending(remaining)
    if(delivered>0)onUpdated()
-   setStatus(delivered>0?"Sent":"Saved on this device. Retry when connected.")
+   // Other queued messages may succeed while THIS message still fails.
+   const thisSent=!remaining.some(item=>item.id===queuedItem.id)
+   setStatus(thisSent?"Sent":"Saved on this device. Retry when connected.")
   }catch{setStatus("Could not queue this message. No delivery was claimed.")}
   finally{setBusy(false)}
  }
@@ -88,9 +91,10 @@ function Composer({channelId,uid,onUpdated}:{channelId:string;uid:string;onUpdat
   setBusy(true)
   try{
    const delivered=await flushOwnText(uid)
-   await refresh()
+   const remaining=await pendingText(uid)
+   setPending(remaining)
    if(delivered>0)onUpdated()
-   setStatus(delivered>0?"Queued messages sent":"Messages still queued locally.")
+   setStatus(remaining.length===0?"All queued messages sent":delivered>0?"Some messages still queued locally":"Messages still queued locally.")
   }catch{setStatus("Offline account check failed. Nothing sent.")}
   finally{setBusy(false)}
  }
