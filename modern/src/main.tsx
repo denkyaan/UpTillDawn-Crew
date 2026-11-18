@@ -10,6 +10,14 @@ const Events=lazy(()=>import("./screens/events"))
 const Tasks=lazy(()=>import("./screens/tasks"))
 const Chats=lazy(()=>import("./screens/chats"))
 const Finance=lazy(()=>import("./screens/finance"))
+const Crew=lazy(()=>import("./screens/crew"))
+const Briefings=lazy(()=>import("./screens/briefings"))
+const Operations=lazy(()=>import("./screens/operations"))
+const Responsible=lazy(()=>import("./screens/responsible"))
+const Administration=lazy(()=>import("./screens/administration"))
+const Promotion=lazy(()=>import("./screens/promotion"))
+const Notifications=lazy(()=>import("./screens/notifications"))
+const Profile=lazy(()=>import("./screens/profile"))
 
 function Authenticated({children}:{children:ReactNode}){
  const state=useSession()
@@ -25,14 +33,22 @@ function Authenticated({children}:{children:ReactNode}){
    <nav aria-label={t.portal} className="nav">
     <NavLink to="/" end>{t.home}</NavLink>
     <NavLink to="/events">{t.events}</NavLink>
+    <NavLink to="/crew">{t.crew}</NavLink>
+    <NavLink to="/briefings">{t.briefings}</NavLink>
     <NavLink to="/tasks">{t.tasks}</NavLink>
     <NavLink to="/chat">{t.chat}</NavLink>
-    {canAdmin&&<NavLink to="/portals/administration/finance">{t.finance}</NavLink>}
+    <NavLink to="/operations">{t.operations}</NavLink>
+    {(state.identity?.role==="responsible_lead"||state.identity?.role==="admin"||state.identity?.is_owner)&&
+     <NavLink to="/responsible">{t.responsible}</NavLink>}
+    {state.portals.includes("promotion")&&<NavLink to="/portals/promotion">{t.promotion}</NavLink>}
+    {canAdmin&&<NavLink to="/portals/administration">{t.administration}</NavLink>}
+    <NavLink to="/notifications">{t.notifications}</NavLink>
    </nav>
    <div className="row"><label className="muted" htmlFor="language">UI
     <select id="language" value={locale} onChange={e=>setLocale(resolveLocale(e.target.value))}>
      <option value="nl">NL</option><option value="fr">FR</option><option value="en">EN</option><option value="de">DE</option>
     </select></label>
+    <NavLink to="/profile">{t.profile}</NavLink>
     <button type="button" onClick={()=>void state.signOut()}>{t.logout}</button></div>
   </header>
   <main id="main" className="layout">
@@ -67,18 +83,23 @@ function SignIn(){
   </form></section></main>
 }
 function Home(){
- const {identity,portals}=useSession()
- return <><h1>UpTillDawn</h1><p className="muted">{identity?.full_name||"Crew"} · {identity?.effective_role||identity?.role}</p>
- <section className="grid">
-  <article className="card"><h2>Events</h2><p>Live RLS-limited upcoming events.</p><Link to="/events">View events</Link></article>
-  <article className="card"><h2>Tasks</h2><p>Personal RLS-limited task assignments.</p><Link to="/tasks">View tasks</Link></article>
-  <article className="card"><h2>Chat</h2><p>Channels available to this account.</p><Link to="/chat">View channels</Link></article>
-  {portals.includes("administration")&&<article className="card"><h2>Finance</h2><p>Read-only financial summary.</p><Link to="/portals/administration/finance">View finance</Link></article>}
- </section></>
+ const {identity}=useSession()
+ return <><h1>UpTillDawn</h1>
+  <p className="muted">{identity?.full_name||"Crew"} · {identity?.effective_role||identity?.role}</p>
+  <section className="card"><h2>Local-first migratie</h2>
+   <p>Gebruik de portaalnavigatie. De huidige app blijft leidend voor nog niet gemigreerde functies.</p>
+   <p className="muted">Persoonlijke schermen laden uitsluitend benodigde RLS-gegevens op wanneer je ze opent. Geen zware server-rendering per navigatie.</p>
+  </section>
+ </>
 }
 function PortalGuard({portal,children}:{portal:"events"|"promotion"|"administration";children:ReactNode}){
  const session=useSession()
  return session.portals.includes(portal)?<>{children}</>:<p role="alert" className="notice">No approved access to this portal.</p>
+}
+function ResponsibleGuard({children}:{children:ReactNode}){
+ const {identity}=useSession()
+ return identity&&(identity.role==="responsible_lead"||identity.role==="admin"||identity.is_owner)
+  ?<>{children}</>:<p role="alert" className="notice">Geen goedgekeurde toegang tot verantwoordelijkheidsbeheer.</p>
 }
 function Missing(){return <section className="card" role="status"><h1>Migration incomplete</h1><p>Deze functie blijft beschikbaar in de bestaande UpTillDawn-app. De nieuwe app mag nog niet in productie worden gebruikt.</p><Link to="/">Home</Link></section>}
 function App(){
@@ -90,10 +111,16 @@ function App(){
     <Route path="/events" element={<Suspense fallback="Loading events…"><Events/></Suspense>}/>
     <Route path="/tasks" element={<Suspense fallback="Loading tasks…"><Tasks/></Suspense>}/>
     <Route path="/chat" element={<Suspense fallback="Loading channels…"><Chats/></Suspense>}/>
+    <Route path="/crew" element={<Suspense fallback="Planning laden…"><Crew/></Suspense>}/>
+    <Route path="/briefings" element={<Suspense fallback="Briefings laden…"><Briefings/></Suspense>}/>
+    <Route path="/operations" element={<Suspense fallback="Werkplekken laden…"><Operations/></Suspense>}/>
+    <Route path="/notifications" element={<Suspense fallback="Meldingen laden…"><Notifications/></Suspense>}/>
+    <Route path="/profile" element={<Suspense fallback="Profiel laden…"><Profile/></Suspense>}/>
+    <Route path="/responsible" element={<ResponsibleGuard><Suspense fallback="Planning laden…"><Responsible/></Suspense></ResponsibleGuard>}/>
     <Route path="/portals" element={<Home/>}/>
-    <Route path="/portals/administration" element={<PortalGuard portal="administration"><Home/></PortalGuard>}/>
+    <Route path="/portals/administration" element={<PortalGuard portal="administration"><Suspense fallback="Administratie laden…"><Administration/></Suspense></PortalGuard>}/>
     <Route path="/portals/administration/finance" element={<PortalGuard portal="administration"><Suspense fallback="Loading finance…"><Finance/></Suspense></PortalGuard>}/>
-    <Route path="/portals/promotion" element={<PortalGuard portal="promotion"><Chats/></PortalGuard>}/>
+    <Route path="/portals/promotion" element={<PortalGuard portal="promotion"><Suspense fallback="Promotie laden…"><Promotion/></Suspense></PortalGuard>}/>
     <Route path="/god/*" element={<Missing/>}/>
     <Route path="*" element={<Missing/>}/>
    </Route>

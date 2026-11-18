@@ -23,7 +23,8 @@ export default function Administration(){
 }
 function Documents({uid}:{uid:string}){
  const r=usePrivateQuery<FinancialDocument[]>(uid,"admin-documents",administrationDocuments)
- return <section className="card"><div className="row"><h2>Financiële documenten</h2><Refresh onClick={r.refresh}/></div>
+ return <section className="card"><div className="row"><h2>Financiële documenten</h2><div className="row"><Refresh onClick={r.refresh}/>
+ <button type="button" disabled={!r.data?.length||r.loading||Boolean(r.error)} onClick={()=>void import("../lib/export-csv").then(m=>m.downloadCsv("administratie-documenten.csv",["Nummer","Type","Datum","Vervaldag","Valuta","Bruto","Status","Peppol"],(r.data||[]).map(x=>[x.document_number,x.kind,x.issue_date,x.due_date,x.currency,x.gross_amount,x.status,x.peppol_status])))}>CSV exporteren</button></div></div>
  <WhenLoading loading={r.loading} error={r.error}><DataList empty={!r.data?.length}>
  {r.data?.map(item=><li key={item.id}>
   <div className="row"><strong>{item.document_number||item.kind}</strong><span className="muted">{item.status}</span></div>

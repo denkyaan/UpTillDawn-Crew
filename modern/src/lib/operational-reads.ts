@@ -39,7 +39,7 @@ export async function ownHours(uid:string,signal:AbortSignal):Promise<WorkSessio
 }
 export async function ownProfile(uid:string,signal:AbortSignal):Promise<Profile|null>{
  const {data,error}=await supabase().from("profiles").select("id,full_name,phone_number,home_address,date_of_birth,profile_photo_url,app_profile_completed_at")
-  .eq("id",uid).maybeSingle().abortSignal(signal)
+  .eq("id",uid).abortSignal(signal).maybeSingle()
  failed(error,"profile_unavailable")
  return data as Profile|null
 }

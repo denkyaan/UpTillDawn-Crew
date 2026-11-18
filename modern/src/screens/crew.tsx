@@ -28,7 +28,8 @@ function Shifts({uid}:{uid:string}){
   try{await confirmOwnShift(id);r.refresh()}catch{setError(true)}
   finally{setBusy(null)}
  }
- return <section className="card"><div className="row"><h2>Mijn diensten</h2><Refresh onClick={r.refresh}/></div>
+ return <section className="card"><div className="row"><h2>Mijn diensten</h2><div className="row"><Refresh onClick={r.refresh}/>
+  <button type="button" disabled={!r.data?.length||r.loading||Boolean(r.error)} onClick={()=>void import("../lib/export-csv").then(m=>m.downloadCsv("mijn-diensten.csv",["Functie","Start","Einde","Status"],(r.data||[]).map(x=>[x.role_name,x.scheduled_start,x.scheduled_end,x.response_status||x.status])))}>CSV exporteren</button></div></div>
   {error&&<p role="alert" className="error">Dienstenbevestiging niet verwerkt.</p>}
   <WhenLoading loading={r.loading} error={r.error}>
    <DataList empty={!r.data?.length}>{r.data?.map(shift=><li key={shift.id}>

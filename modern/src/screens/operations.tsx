@@ -27,7 +27,8 @@ function Workplaces({uid}:{uid:string}){
 }
 function Inventory({uid}:{uid:string}){
  const r=usePrivateQuery<InventoryItem[]>(uid,"inventory",allowedInventory)
- return <section className="card"><div className="row"><h2>Beschikbare inventaris</h2><Refresh onClick={r.refresh}/></div>
+ return <section className="card"><div className="row"><h2>Beschikbare inventaris</h2><div className="row"><Refresh onClick={r.refresh}/>
+  <button type="button" disabled={!r.data?.length||r.loading||Boolean(r.error)} onClick={()=>void import("../lib/export-csv").then(m=>m.downloadCsv("werkplek-inventaris.csv",["Naam","Categorie","Beschikbaar","Totaal","Vermist","Defect"],(r.data||[]).map(x=>[x.name,x.category,x.available_quantity,x.total_quantity,x.missing_quantity,x.damaged_quantity])))}>CSV exporteren</button></div></div>
   <WhenLoading loading={r.loading} error={r.error}><DataList empty={!r.data?.length}>
    {r.data?.map(item=><li key={item.id}><div className="row"><strong>{item.name}</strong><span className="muted">{item.category||"Materiaal"}</span></div>
     <p>Beschikbaar: {item.available_quantity} / {item.total_quantity} · Ontbrekend: {item.missing_quantity} · Defect: {item.damaged_quantity}</p>

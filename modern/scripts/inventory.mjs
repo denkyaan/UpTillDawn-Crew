@@ -30,9 +30,15 @@ const pilots=new Map(Object.entries({
  "/tasks":"RLS-read-plus-guarded-task-writes",
  "/chat":"RLS-read-Realtime-plus-guarded-text-outbox",
  "/portals":"portal-navigation-candidate",
- "/portals/administration":"administration-navigation-candidate",
+ "/portals/administration":"RLS-documents-payments-inventory-read",
  "/portals/administration/finance":"financial-summary-read-only",
- "/portals/promotion":"promotion-channel-list-only",
+ "/portals/promotion":"RLS-promotion-task-list-only",
+ "/crew":"RLS-personal-shifts-checkins-timesheets-read",
+ "/briefings":"RLS-briefings-plus-disabled-acknowledgement",
+ "/operations":"RLS-workplace-inventory-incident-read",
+ "/responsible":"RLS-assignment-scoped-roster-read",
+ "/notifications":"RLS-user-notifications-read",
+ "/profile":"RLS-user-minimal-profile-read",
 }))
 const criticalWords=["god","admin","finance","bank","oauth","integrations","auth","sales","checkin","check-in","payment","qr","timesheet","sign","push","scan","worker","payroll"]
 const files=await allFiles(join(repo,"app"))
