@@ -2,8 +2,19 @@ begin;
 create temp table ts_ids(name text primary key,id uuid default gen_random_uuid());
 insert into ts_ids(name) values('staff'),('lead'),('admin'),('event'),('wp');
 grant select on ts_ids to authenticated;
-insert into auth.users(id,email) select id,name||'@timesheet.test' from ts_ids where name in('staff','lead','admin');
-update public.profiles p set approved=true,role=case when i.name='admin' then 'admin' when i.name='lead' then 'responsible_lead' else 'staff' end,full_name='TS '||i.name from ts_ids i where p.id=i.id and i.name in('staff','lead','admin');
+-- Reuse the approved Main Head for this isolated regression; never create
+-- a competing Admin profile (single-Head uniqueness must remain enforced).
+UPDATE ts_ids SET id=(SELECT l.user_id FROM public.upt_organization_leadership l
+ JOIN public.profiles p ON p.id=l.user_id WHERE l.slot='head'
+ AND p.role='admin' AND p.approved AND NOT coalesce(p.account_blocked,false))
+WHERE name='admin';
+DO $qa_head$ BEGIN
+ IF (SELECT id FROM ts_ids WHERE name='admin') IS NULL THEN
+  RAISE EXCEPTION 'No active designated Main Head available for role test';
+ END IF;
+END $qa_head$;
+insert into auth.users(id,email) select id,name||'@timesheet.test' from ts_ids where name in('staff','lead');
+update public.profiles p set approved=true,role=case when i.name='admin' then 'admin' when i.name='lead' then 'responsible_lead' else 'staff' end,full_name='TS '||i.name from ts_ids i where p.id=i.id and i.name in('staff','lead');
 insert into public.events(id,name,start_date,end_date,start_at,end_at,status,created_by) values((select id from ts_ids where name='event'),'Timesheet lifecycle',now()-interval '8 hours',now(),now()-interval '8 hours',now(),'active',(select id from ts_ids where name='admin'));
 insert into public.workplaces(id,event_id,name,sort_order) values((select id from ts_ids where name='wp'),(select id from ts_ids where name='event'),'TS workplace',1);
 insert into public.event_members(event_id,user_id,event_role) values((select id from ts_ids where name='event'),(select id from ts_ids where name='staff'),'employee');
