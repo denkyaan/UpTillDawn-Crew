@@ -20,11 +20,12 @@ test('unassigned Staff can view Tasks landing without bypassing configured role 
  assert.match(tasks,/!loading&&!error&&active/)
  const staffRoute=read('app/(app)/tasks/page.tsx')
  const managerRoute=read('app/(app)/tasks/manager-page.tsx')
- assert.match(staffRoute,/await getCurrentUser\\(\\)/)
- assert.match(staffRoute,/if\\(user\\.role==='staff'\\)return <LazyStaffTasks/)
- assert.match(managerRoute,/await getCurrentUser\\(\\)/)
- assert.match(managerRoute,/ManagerOnly/)
- assert.match(shell,/ruleMap\\.get\\("tasks"\\)\\?\\.visible===true/)
+ assert.ok(staffRoute.includes("await getCurrentUser()"))
+ assert.ok(staffRoute.includes("if(user.role==='staff')return <LazyStaffTasks"))
+ assert.ok(managerRoute.includes("await getCurrentUser()"))
+ assert.ok(managerRoute.includes("ManagerOnly"))
+ assert.ok(shell.includes('ruleMap.get("tasks")?.visible===true'))
+
 })
 test('full shell must hydrate and loading fallback provides safe authenticated links',()=>{
  assert.match(shell,/data-app-shell-ready="true"/)
