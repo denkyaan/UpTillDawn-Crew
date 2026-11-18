@@ -25,8 +25,8 @@ test('QA session endpoint is still disabled outside the isolated Main Worker and
 
 test('resource-heavy AI APIs must parse bounded JSON before database fan-out or AI calls',()=>{
  for(const [source,limit] of [
-  [admin,'8_192'],
-  [administration,'48_000'],
+  [admin,'32_768'],
+  [administration,'256_000'],
   [editor,'128_000'],
  ]){
   assert.ok(source.includes(`readStrictJson(request,${limit})`))
@@ -34,8 +34,8 @@ test('resource-heavy AI APIs must parse bounded JSON before database fan-out or 
   assert.match(source,/status:error instanceof Error&&error\.message==='too_large'\?413:400/)
   assert.ok(source.indexOf(`readStrictJson(request,${limit})`)<source.indexOf('ai.run('))
  }
- assert.ok(admin.indexOf('readStrictJson(request,8_192)')<admin.indexOf("s.from('events')"))
- assert.ok(administration.indexOf('readStrictJson(request,48_000)')<administration.indexOf('Promise.all(['))
+ assert.ok(admin.indexOf('readStrictJson(request,32_768)')<admin.indexOf("s.from('events')"))
+ assert.ok(administration.indexOf('readStrictJson(request,256_000)')<administration.indexOf('Promise.all(['))
 })
 
 test('Admin and Administration AI maintain independent verified privilege requirements',()=>{
