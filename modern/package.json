@@ -12,7 +12,8 @@
     "build": "tsc --noEmit -p tsconfig.json && vite build",
     "check": "tsc --noEmit -p tsconfig.json",
     "preview": "vite preview",
-    "deploy:dry-run": "npm run build && wrangler deploy --dry-run"
+    "deploy:dry-run": "npm run build && wrangler deploy --dry-run",
+    "budget": "node scripts/bundle-budget.mjs"
   },
   "dependencies": {
     "@supabase/ssr": "0.9.0",

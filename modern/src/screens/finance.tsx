@@ -1,10 +1,10 @@
 import {useEffect,useState} from "react"
 import {loadFinanceSummary,type FinanceSummary} from "../lib/queries"
-import {copy,deviceLocale} from "../shared/i18n"
+import {useLocale} from "../lib/use-locale"
 
 function euros(raw:string){const v=BigInt(raw);const sign=v<0n?"-":"";const abs=v<0n?-v:v;const whole=new Intl.NumberFormat("nl-BE").format(abs/100n);return sign+whole+","+String(abs%100n).padStart(2,"0")+" €"}
 export default function Finance(){
- const t=copy(deviceLocale()),[result,setResult]=useState<FinanceSummary|null>(null),[error,setError]=useState(false),[retry,setRetry]=useState(0)
+ const {t}=useLocale(),[result,setResult]=useState<FinanceSummary|null>(null),[error,setError]=useState(false),[retry,setRetry]=useState(0)
  useEffect(()=>{
   let mounted=true
   const controller=new AbortController()

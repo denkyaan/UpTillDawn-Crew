@@ -1,9 +1,9 @@
-import {StrictMode,Suspense,lazy,useEffect,useState,type FormEvent,type ReactNode} from "react"
+import {StrictMode,Suspense,lazy,useState,type FormEvent,type ReactNode} from "react"
 import {createRoot} from "react-dom/client"
 import {BrowserRouter,Link,NavLink,Navigate,Outlet,Route,Routes} from "react-router-dom"
 import {SessionProvider,useSession} from "./lib/session"
-import {copy,deviceLocale,resolveLocale,type Locale} from "./shared/i18n"
-import {supabase} from "./lib/supabase"
+import {resolveLocale} from "./shared/i18n"
+import {useLocale,setLocale} from "./lib/use-locale"
 import "./styles.css"
 
 const Events=lazy(()=>import("./screens/events"))
@@ -13,9 +13,7 @@ const Finance=lazy(()=>import("./screens/finance"))
 
 function Authenticated({children}:{children:ReactNode}){
  const state=useSession()
- const [locale,setLocale]=useState<Locale>(()=>deviceLocale())
- useEffect(()=>{document.documentElement.lang=locale},[locale])
- const t=copy(locale)
+ const {locale,t}=useLocale()
  if(state.status==="checking")return <main className="layout" role="status">{t.loading}</main>
  if(state.status==="anonymous")return <Navigate to="/login" replace/>
  if(state.status==="denied")return <main className="auth" role="alert">{t.unavailable} — account approval required</main>
@@ -47,7 +45,7 @@ function SignIn(){
  const state=useSession()
  const [error,setError]=useState("")
  const [busy,setBusy]=useState(false)
- const locale=deviceLocale(),t=copy(locale)
+ const {t}=useLocale()
  if(state.status==="ready")return <Navigate to="/" replace/>
  async function submit(e:FormEvent<HTMLFormElement>){
   e.preventDefault()

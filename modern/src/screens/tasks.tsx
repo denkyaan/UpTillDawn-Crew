@@ -1,10 +1,10 @@
 import {useSession} from "../lib/session"
 import {loadTasks} from "../lib/queries"
 import {useRead} from "../lib/use-read"
-import {copy,deviceLocale} from "../shared/i18n"
+import {useLocale} from "../lib/use-locale"
 
 export default function Tasks(){
- const {identity}=useSession(),t=copy(deviceLocale())
+ const {identity}=useSession(),{t}=useLocale()
  const result=useRead(identity!.id,"tasks",signal=>loadTasks(identity!.id,signal))
  return <><div className="row"><h1>{t.tasks}</h1><button className="primary" onClick={result.refresh}>{t.refresh}</button></div>
  {result.stale&&<p className="notice" role="status">{t.offline}</p>}

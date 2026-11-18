@@ -1,6 +1,6 @@
 import {supabase} from "./supabase"
 
-export type EventRow={id:string;name:string;venue:string|null;address:string|null;start_at:string;end_at:string;status:string}
+export type EventRow={id:string;name:string;venue:string|null;address:string|null;start_at:string;end_at:string;status:string;registration_deadline:string|null;max_joiners:number|null}
 export type TaskRow={id:string;status:string;tasks:{id:string;title:string;description:string|null;event_id:string|null}|null}
 export type ChatRow={id:string;name:string;kind:string}
 const DEADLINE_MS=12000
@@ -11,7 +11,7 @@ const DEADLINE_MS=12000
 export async function loadEvents(signal:AbortSignal):Promise<EventRow[]>{
  const s=supabase()
  const {data,error}=await s.from("events")
-  .select("id,name,venue,address,start_at,end_at,status")
+  .select("id,name,venue,address,start_at,end_at,status,registration_deadline,max_joiners")
   .gte("end_at",new Date().toISOString())
   .neq("status","archived").order("start_at",{ascending:true})
   .limit(80).abortSignal(signal)

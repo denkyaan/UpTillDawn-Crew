@@ -1,7 +1,7 @@
 import {defineConfig} from "vite"
 
 export default defineConfig({
- publicDir:"../public",
+ publicDir:"public",
  build:{outDir:"dist",emptyOutDir:true,cssCodeSplit:true,rollupOptions:{output:{manualChunks(id){
   if(id.includes("node_modules/@supabase/"))return "supabase"
   if(id.includes("node_modules/react-router"))return "router"

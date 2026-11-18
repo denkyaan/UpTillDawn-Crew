@@ -1,6 +1,6 @@
 # UpTillDawn — local-first migration candidate
 
-**Status: ISOLATED / NOT PRODUCTION-READY.** This is a deliberately partial, functional read-only migration candidate, not a replacement for the existing Main app. No GitHub Actions workflow deploys this directory. The five approved workflows remain unchanged. Production must never be switched automatically.
+**Status: ISOLATED / NOT PRODUCTION-READY.** This is a deliberately partial, functional, read-mostly migration candidate, not a replacement for the existing Main app. No GitHub Actions workflow deploys this directory. The five approved workflows remain unchanged. Production must never be switched automatically.
 
 ## Goal
 
@@ -10,7 +10,7 @@ Replace Next.js/OpenNext's per-navigation SSR with Vite/React Router static asse
 
 - Separate Vite/React build and Hono Worker config, without modifying production or Main's deployed app.
 - Signed RLS session context using `upt_current_session_context`, real role and account approval checks; portal assignment visibility resolved via `upt_my_portal_assignments`.
-- Read-only upcoming Events, personal Tasks, accessible channel names, and authorized financial summary; bounded queries and user-scoped offline *read* snapshots.
+- Upcoming Events, personal Tasks, accessible channel names, and authorized financial summary; bounded queries and user-scoped offline *read* snapshots. Event availability reuses the existing database-side authenticated and deadline-checked RPC, gated OFF by default and not available to real users.
 - Device-localized navigation baseline (NL, FR, EN, DE); service worker caches only public static assets.
 - Explicit module boundaries, safe denial on unported pages, no fake financial balances or completed workflows.
 - Authenticated API example `/api/v1/session` with bearer-validated claims and PostgREST RLS, never a service-role key.
@@ -51,3 +51,7 @@ The isolated `modern/wrangler.jsonc` has `workers_dev:false`, `preview_urls:fals
 - Password and access-token validation is delegated to Supabase Auth/PostgREST and role approval checks; no browser-assigned Admin role.
 - Replacing Next Server Actions requires individually mapped RLS/SECURITY DEFINER RPCs or authenticated Hono endpoints with audit and replay/idempotency controls. Do not blanket-migrate actions to direct browser table mutations.
 - Only public static shell assets are service-worker cached. Requests to `/api/*` never enter that cache.
+
+## Static-service-worker isolation
+
+Vite's publicDir is deliberately `modern/public` rather than the legacy root `public/`. This prevents accidentally packaging the previous production service worker, legacy scripts, debug pages and large offline assets into the candidate. Any needed offline capabilities must be audited and ported individually. The candidate manifest and service worker intentionally expose no production credentials.
