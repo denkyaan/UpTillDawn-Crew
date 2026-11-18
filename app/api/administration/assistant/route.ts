@@ -17,7 +17,7 @@ export async function POST(request:Request){
  const {data:assignments,error:accessError}=await db.rpc("upt_my_portal_assignments")
  if((accessError&&!user.isAdmin&&!user.isOwner)||(!user.isAdmin&&!user.isOwner&&!canOpenPortal("administration",(assignments??[]) as PortalAssignment[],{approved:user.approved,blocked:user.account_blocked===true})))return Response.json({error:"Forbidden"},{status:403})
  let body:unknown
- try{body=await readStrictJson(request,48_000)}
+ try{body=await readStrictJson(request,256_000)}
  catch(error){return Response.json({error:"Invalid request"},{
   status:error instanceof Error&&error.message==='too_large'?413:400,
  })}
