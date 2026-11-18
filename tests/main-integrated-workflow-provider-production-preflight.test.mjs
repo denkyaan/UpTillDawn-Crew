@@ -22,9 +22,14 @@ test('Production readiness preflight is metadata-only, pinned to required schema
  const version=baseline.match(/EXPECTED_DB_MIGRATION_VERSION='(\d+)'/)?.[1]
  assert.ok(version,'Missing versioned database release baseline')
  assert.ok(source.includes("WHERE version='"+version+"'"),'Preflight historical migration marker must match the baseline')
- assert.match(source,/attendance_check_in_out_authenticated_only/)
- assert.match(source,/upt_request_check_in/)
- assert.match(source,/upt_request_check_out/)
+ assert.match(source,/retired_pre_qr_attendance_closed_and_qr_flow_enabled/)
+ // Pre-QR entry points must be revoked, while the signed-in QR flow remains callable.
+ for(const rpc of ['upt_request_check_in','upt_request_check_out']){
+  assert.ok(source.includes(rpc),'Release preflight must check the retired RPC: '+rpc)
+ }
+ assert.match(source,/NOT has_function_privilege\('authenticated'/)
+ assert.match(source,/upt_qr_request\(boolean,boolean,text\)/)
+ assert.match(source,/has_function_privilege\('authenticated',[\s\S]*upt_qr_request/)
 })
 test('Main-only functional E2E uses real signed-in users to verify role-specific chat and a disposable shift/briefing',()=>{
  const e2e=read('scripts/e2e-main-functional-workflows.mjs')
