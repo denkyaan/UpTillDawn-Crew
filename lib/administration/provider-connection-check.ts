@@ -112,8 +112,8 @@ export async function pontoReadOnlyJson(path:string,token:string,maxBytes=262144
 /** Called only on explicit administrator button click and no more often than the client UI allows. */
 export async function checkProviderConnection(id:ConnectionProvider,env:NodeJS.ProcessEnv=process.env):Promise<ConnectionState>{
  if(id==="sumup"){
-  const key=env.SUMUP_API_KEY,merchant=env.SUMUP_MERCHANT_CODE
-  if(!configured(key)||!configured(merchant))return "not_configured"
+  const key=env.SUMUP_OAUTH_ACCESS_TOKEN||env.SUMUP_API_KEY
+  if(!configured(key)||(!env.SUMUP_OAUTH_ACCESS_TOKEN&&!configured(env.SUMUP_MERCHANT_CODE)))return "not_configured"
   return result(await safeFetch("https://api.sumup.com/v0.1/me",{method:"GET",headers:{"Authorization":"Bearer "+key,"Accept":"application/json"}}))
  }
  if(id==="documenso"){
@@ -130,6 +130,14 @@ export async function checkProviderConnection(id:ConnectionProvider,env:NodeJS.P
   catch{return "unavailable"}
  }
  if(id==="peppol"){
+  if(configured(env.BILLIT_OAUTH_ACCESS_TOKEN)){
+   // OAuth belongs to the user's consented company, not a supplied Party ID.
+   // Account Information is GET-only; no invoice data is returned to the browser.
+   const origin=env.BILLIT_OAUTH_ENV==="production"?"https://api.billit.be":"https://api.sandbox.billit.be"
+   return result(await safeFetch(origin+"/v1/account/accountInformation",{
+    method:"GET",headers:{"Authorization":"Bearer "+env.BILLIT_OAUTH_ACCESS_TOKEN,"Accept":"application/json"}
+   }))
+  }
   const party=env.BILLIT_SANDBOX_PARTY_ID,key=env.BILLIT_SANDBOX_API_KEY
   if(!configured(party)||!configured(key)||!/^[1-9][0-9]{2,14}$/.test(party??"")||
      /[\u0000-\u001f\u007f]/.test(key??""))return "not_configured"
