@@ -3,6 +3,7 @@ import {integrationManagementAccess} from "@/lib/administration/integration-mana
 import {requestHasSameOrigin} from "@/lib/request-origin"
 import {checkProviderConnection,type ConnectionProvider} from "@/lib/administration/provider-connection-check"
 import {getManagedIntegrationConfig} from "@/lib/administration/integration-store"
+import {authorizedProviderOAuthConfig} from "@/lib/administration/provider-user-oauth-refresh"
 
 export const dynamic="force-dynamic"
 const fail=(error:string,status:number)=>NextResponse.json({status:"unavailable",error},{status,headers:{"Cache-Control":"no-store"}})
@@ -37,8 +38,19 @@ export async function POST(request:Request){
  let environment:NodeJS.ProcessEnv=process.env
  try{
   const managed=await getManagedIntegrationConfig(access.db,value as ConnectionProvider)
-  if(managed)environment={...process.env,...managed}
- }catch{return fail("integration_storage_unavailable",503)}
+  // For delegated login, refresh on the server using the application's own
+  // OAuth client. A revoked grant requires the customer to authorize again.
+  if((value==="sumup"||value==="peppol")&&
+     managed?.[value==="sumup"?"SUMUP_OAUTH_ACCESS_TOKEN":"BILLIT_OAUTH_ACCESS_TOKEN"]){
+   const current=await authorizedProviderOAuthConfig(access.db,value)
+   if(!current)return fail("provider_reauthorization_required",409)
+   environment={...process.env,...current}
+  }else if(managed)environment={...process.env,...managed}
+ }catch(error){
+  if(error instanceof Error&&(error.message==="oauth_reauthorization_required"||
+     error.message==="oauth_environment_changed"))return fail("provider_reauthorization_required",409)
+  return fail("integration_storage_unavailable",503)
+ }
  const status=await checkProviderConnection(value as ConnectionProvider,environment)
  // Even a successful credential check is not a completed integration.
  return NextResponse.json({status,scope:value==="banking"?"bank_accounts_read_only":"credentials_only"},{headers:{"Cache-Control":"no-store"}})
