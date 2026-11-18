@@ -1,3 +1,4 @@
+import {withReadBudget} from "./request-budget"
 import {useEffect,useRef,useState} from "react"
 
 // Strictly ephemeral state for personal/financial/incident details.
@@ -16,7 +17,7 @@ export function usePrivateQuery<T>(
   const controller=new AbortController()
   const deadline=setTimeout(()=>controller.abort(),12000)
   setState({scope,data:null,loading:true,error:null})
-  void loader.current(controller.signal)
+  void withReadBudget(controller.signal,()=>loader.current(controller.signal))
    .then(data=>{if(mounted)setState({scope,data,loading:false,error:null})})
    .catch(()=>{if(mounted)setState({scope,data:null,loading:false,error:"request_failed"})})
    .finally(()=>clearTimeout(deadline))

@@ -1,3 +1,4 @@
+import {withReadBudget} from "../lib/request-budget"
 import {useEffect,useRef,useState,type FormEvent} from "react"
 import {useSession} from "../lib/session"
 import {loadChatList,type ChatRow} from "../lib/queries"
@@ -24,7 +25,7 @@ function MessageHistory({channelId,uid,revision}:{channelId:string;uid:string;re
    controller=next
    const deadline=setTimeout(()=>next.abort(),12000)
    try{
-    const rows=await loadChannelMessages(channelId,next.signal)
+    const rows=await withReadBudget(next.signal,()=>loadChannelMessages(channelId,next.signal))
     if(!active)return
     setMessages(rows);setError(false);setLoading(false)
     if(MIGRATION_WRITES_ENABLED)

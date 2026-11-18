@@ -1,3 +1,4 @@
+import {withReadBudget} from "./request-budget"
 import {useEffect,useRef,useState} from "react"
 import {readSnapshot,writeSnapshot} from "./local-cache"
 
@@ -17,7 +18,7 @@ export function useRead<T>(uid:string,kind:CachedKind,load:(signal:AbortSignal)=
   void readSnapshot<T>(uid,kind).then(saved=>{
    if(!cancelled&&saved!==null)setState(current=>current.scope===scope&&current.data===null?{scope,data:saved,loading:true,stale:true,error:null}:current)
   }).catch(()=>{})
-  void loader.current(controller.signal).then(data=>{
+  void withReadBudget(controller.signal,()=>loader.current(controller.signal)).then(data=>{
    if(cancelled)return
    setState({scope,data,loading:false,stale:false,error:null})
    void writeSnapshot(uid,kind,data).catch(()=>{})

@@ -1,3 +1,4 @@
+import {withReadBudget} from "../lib/request-budget"
 import {useEffect,useState} from "react"
 import {loadFinanceSummary,type FinanceSummary} from "../lib/queries"
 import {useLocale} from "../lib/use-locale"
@@ -10,7 +11,7 @@ export default function Finance(){
   const controller=new AbortController()
   const timer=setTimeout(()=>controller.abort(),12000)
   setError(false);setResult(null)
-  void loadFinanceSummary(controller.signal).then(data=>{if(mounted)setResult(data)}).catch(()=>{if(mounted)setError(true)}).finally(()=>clearTimeout(timer))
+  void withReadBudget(controller.signal,()=>loadFinanceSummary(controller.signal)).then(data=>{if(mounted)setResult(data)}).catch(()=>{if(mounted)setError(true)}).finally(()=>clearTimeout(timer))
   return()=>{mounted=false;clearTimeout(timer);controller.abort()}
  },[retry])
  return <><div className="row"><h1>{t.finance}</h1><button className="primary" onClick={()=>setRetry(n=>n+1)}>{t.refresh}</button></div>
