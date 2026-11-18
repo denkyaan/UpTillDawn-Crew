@@ -20,7 +20,7 @@ test('release candidate: God Mode owns three-role visual editing, automation, AI
 test('release candidate: Admin AI is authenticated, Admin-only, context-grounded and non-mutating', async () => {
   const route=await read('app/api/admin-assistant/route.ts')
   assert.match(route,/crossSite\(request\)/)
-  assert.match(route,/upt_is_approved/)
+  assert.match(route,/await getCurrentUser\(\)/)
   assert.match(route,/upt_is_admin/)
   for(const source of ['events','upt_operational_alerts','incidents','inventory_items','event_guestlist_entries','artist_backstage_checklists','sales_transactions','sales_registers']) assert.ok(route.includes(source),source)
   assert.match(route,/Gebruik uitsluitend de meegegeven actuele platformcontext/)

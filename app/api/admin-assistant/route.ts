@@ -1,6 +1,8 @@
 import { getCloudflareContext } from '@opennextjs/cloudflare'
 import { z } from 'zod'
 import { createClient } from '@/lib/supabase/crew-server'
+import { getCurrentUser } from '@/lib/actions/auth'
+import { readStrictJson } from '@/lib/strict-json-body'
 
 export const runtime='nodejs'
 export const dynamic='force-dynamic'
@@ -15,15 +17,19 @@ function crossSite(request:Request){
 
 export async function POST(request:Request){
   if(crossSite(request))return Response.json({error:'Ongeldige oorsprong.'},{status:403})
+  // Resolve approval, blocking and identity via one verified RLS-backed session.
+  const current=await getCurrentUser()
+  if(!current)return Response.json({error:'Aanmelden vereist.'},{status:401})
   const s=await createClient()
-  const {data:{user}}=await s.auth.getUser()
-  if(!user)return Response.json({error:'Aanmelden vereist.'},{status:401})
-  const [{data:approved},{data:isAdmin}]=await Promise.all([
-    s.rpc('upt_is_approved'),
-    s.rpc('upt_is_admin',{uid:user.id}),
-  ])
-  if(!approved||!isAdmin)return Response.json({error:'Geen toegang.'},{status:403})
-  const parsed=schema.safeParse(await request.json().catch(()=>null))
+  const {data:isAdmin,error:adminError}=await s.rpc('upt_is_admin',{uid:current.id})
+  if(adminError)return Response.json({error:'Toegangscontrole tijdelijk niet beschikbaar.'},{status:503})
+  if(!isAdmin)return Response.json({error:'Geen toegang.'},{status:403})
+  let body:unknown
+  try{body=await readStrictJson(request,32_768)}
+  catch(error){return Response.json({error:'Ongeldige AI-aanvraag.'},{
+    status:error instanceof Error&&error.message==='too_large'?413:400,
+  })}
+  const parsed=schema.safeParse(body)
   if(!parsed.success)return Response.json({error:'Ongeldige AI-aanvraag.'},{status:400})
 
   const [{data:events,error:eventsError},{data:alerts,error:alertsError},{data:incidents,error:incidentsError},{data:inventory,error:inventoryError},{data:recovery,error:recoveryError},{data:guestlist,error:guestlistError},{data:backstage,error:backstageError},{data:sales,error:salesError},{data:registers,error:registersError}]=await Promise.all([
