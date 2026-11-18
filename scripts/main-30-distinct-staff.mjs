@@ -183,7 +183,7 @@ if(process.argv.includes('--cleanup')){
    start_at:start,end_at:end,start_date:start,end_date:end,
    onboarding_required:false,
   }).select('id').single(),'QA private draft event')
-  const workplace=throwIfError(await service.from('workplaces').insert({
+  throwIfError(await service.from('workplaces').insert({
    event_id:event.id,name:EVENT_NAME+' post',minimum_staff:1,target_staff:COUNT,
   }).select('id').single(),'QA private workpost')
   const membership=await service.from('event_members').insert(
