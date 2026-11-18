@@ -83,3 +83,7 @@ Every existing Next page route, API route and exported server action is counted 
 ## Per-device request budget (preventive overload mitigation)
 
 A shared browser-only scheduler caps ordinary PostgREST reads at **3 simultaneous requests per device**, with at most **16 queued requests** and a 12-second per-screen abort signal. It is used for Events/Tasks/Channels, sensitive RLS-only operational screens, chat history and finance summary. Aborted queued reads are removed without ever starting a query; there is no retry storm, polling loop, globally cached private response, new Cloudflare endpoint or change to authenticated writes. This is a *per-device* bound, not a global Supabase capacity guarantee. Actual 30-identity/per-role stress and post-deployment Cloudflare telemetry remain mandatory.
+
+## Hono API security smoke tests
+
+The migration-only CI validates the assembled Hono Worker directly with `npm --prefix modern run api:test`, checking no-store headers, anonymous 401, malformed bearer rejection, absent-provider fail-closed 503, and unknown-route 404. This runs without contacting Supabase or deploying Cloudflare. It does **not** replace live seven-role RLS penetration tests after final migration.

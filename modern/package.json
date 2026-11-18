@@ -15,7 +15,8 @@
     "deploy:dry-run": "npm run build && wrangler deploy --dry-run",
     "budget": "node scripts/bundle-budget.mjs",
     "worker:check": "wrangler deploy --dry-run --outdir .wrangler-candidate-dry-run",
-    "inventory": "node scripts/inventory.mjs"
+    "inventory": "node scripts/inventory.mjs",
+    "api:test": "node --test tests/*.test.mjs"
   },
   "dependencies": {
     "@supabase/ssr": "0.9.0",

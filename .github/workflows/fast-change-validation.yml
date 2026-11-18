@@ -88,6 +88,7 @@ jobs:
           npm --prefix modern run build
           npm --prefix modern run budget
           npm --prefix modern run worker:check
+          npm --prefix modern run api:test
           npm --prefix modern run inventory
           npm --prefix modern audit --omit=dev --audit-level=high
       - name: Inventory every Main page and API route
