@@ -1,6 +1,6 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
-import {readFileSync} from 'node:fs'
+import {readFileSync,readdirSync} from 'node:fs'
 
 const migration=readFileSync('supabase/migrations/20261118103224_bind_privileged_task_and_driver_authorization_to_session.sql','utf8')
 const sqlGate=readFileSync('tests/sql/definer-task-driver-actor-binding.sql','utf8')
@@ -35,8 +35,11 @@ test('task, driver and active profile entitlements remain intact with original p
 })
 
 test('new Main SQL migration and production release preflight use the same immutable baseline',()=>{
- assert.match(baseline,/EXPECTED_DB_MIGRATION_VERSION='20261118103224'/)
- assert.match(preflight,/WHERE version='20261118103224'/)
+ const migrations=readdirSync('supabase/migrations').filter(name=>name.endsWith('.sql')).map(name=>name.split('_')[0]).filter(version=>version.length===14&&[...version].every(char=>char>='0'&&char<='9')).sort()
+ const latest=migrations.at(-1)
+ assert.ok(latest,'Expected at least one versioned migration')
+ assert.match(baseline,new RegExp("EXPECTED_DB_MIGRATION_VERSION='"+latest+"'"))
+ assert.ok(preflight.includes("WHERE version='"+latest+"'"),'Preflight must require latest SQL migration')
  assert.match(sqlGate,/has_function_privilege\('anon'/)
  assert.match(sqlGate,/has_function_privilege\('authenticated'/)
 })
