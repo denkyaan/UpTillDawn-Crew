@@ -14,7 +14,7 @@ test('admin command center is realtime without polling',async()=>{
 })
 
 test('planning keeps availability, duplication and overlap controls',async()=>{
- const [events,actions]=await Promise.all([source('app/(app)/events/page.tsx'),source('lib/actions/uptilldawn.ts')])
+ const [events,actions]=await Promise.all([source('app/(app)/events/manager-page.tsx'),source('lib/actions/uptilldawn.ts')])
  assert.match(events,/Beschikbaarheid bevestigen/)
  assert.match(events,/Evenement dupliceren/)
  assert.match(events,/overlap_allowed/)

@@ -10,15 +10,14 @@ const finance=read("app/(app)/portals/administration/finance/page.tsx")
 const administration=read("app/(app)/portals/administration/layout.tsx")
 const middleware=read("lib/supabase/middleware.ts")
 
-test("Main Workers Free: only verified Staff enters the no-SSR event and task views",()=>{
- for(const [src,role,component] of [
-  [events,"user","LazyStaffEvents"],[tasks,"current","LazyStaffTasks"],
- ]){
-  assert.match(src,/await getCurrentUser\(\)/)
-  assert.ok(src.indexOf(role+".role==='staff'")>=0||src.indexOf(role+".role === 'staff'")>=0)
-  assert.ok(src.indexOf(role+".role")<src.indexOf("const s=await createClient()")||
-    src.indexOf(role+".role")<src.indexOf("const s = await createClient()"))
-  assert.ok(src.includes("<"+component+" userId={"+role+".id}"))
+test("Main Workers Free: only verified Staff enters lightweight event/task views without manager imports",()=>{
+ for(const [source,view] of [[events,"LazyStaffEvents"],[tasks,"LazyStaffTasks"]]){
+  assert.match(source,/await getCurrentUser\(\)/)
+  assert.match(source,/if\(user\.role==='staff'\)/)
+  assert.match(source,/await import\('\.\/manager-page'\)/)
+  assert.ok(source.indexOf("if(user.role==='staff')")<source.indexOf("await import('./manager-page')"))
+  assert.ok(source.includes("<"+view+" userId={user.id}"))
+  assert.doesNotMatch(source,/from ['"]@\/lib\/actions\/uptilldawn|from ['"]@\/components\/crew\/inventory-panel/)
  }
  const wrapperEvents=read("components/crew/lazy-staff-events.tsx")
  const wrapperTasks=read("components/crew/lazy-staff-tasks.tsx")
@@ -27,9 +26,13 @@ test("Main Workers Free: only verified Staff enters the no-SSR event and task vi
   assert.match(wrapper,/import dynamic from "next\/dynamic"/)
   assert.match(wrapper,/"use client"/)
  }
- assert.match(events,/s\.from\('event_templates'\)/)
- assert.match(tasks,/s\.from\('work_attachments'\)/)
- assert.match(tasks,/ManagerOnly/)
+ const managerEvents=read("app/(app)/events/manager-page.tsx")
+ const managerTasks=read("app/(app)/tasks/manager-page.tsx")
+ assert.match(managerEvents,/s\.from\('event_templates'\)/)
+ assert.match(managerTasks,/s\.from\('work_attachments'\)/)
+ assert.match(managerTasks,/ManagerOnly/)
+ assert.match(managerEvents,/await getCurrentUser\(\)/)
+ assert.match(managerTasks,/await getCurrentUser\(\)/)
 })
 
 test("Main: staff Events preserves availability, cancellation reason, emergency, secure documents and chat",()=>{

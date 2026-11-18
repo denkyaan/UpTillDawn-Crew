@@ -13,7 +13,7 @@ test('event operations architecture keeps templates readiness checklists audit a
     offlineMigration,
     checklistTemplateMigration,
   ]=await Promise.all([
-    readFile(new URL('../app/(app)/events/page.tsx',import.meta.url),'utf8'),
+    readFile(new URL('../app/(app)/events/manager-page.tsx',import.meta.url),'utf8'),
     readFile(new URL('../app/(app)/events/[id]/command/page.tsx',import.meta.url),'utf8'),
     readFile(new URL('../app/(app)/briefings/page.tsx',import.meta.url),'utf8'),
     readFile(new URL('../components/crew/operational-checklists.tsx',import.meta.url),'utf8'),

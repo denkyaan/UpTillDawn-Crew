@@ -2,8 +2,8 @@ import test from 'node:test'
 import assert from 'node:assert/strict'
 import {readFileSync} from 'node:fs'
 
-const tasks=readFileSync('app/(app)/tasks/page.tsx','utf8')
-const events=readFileSync('app/(app)/events/page.tsx','utf8')
+const tasks=readFileSync('app/(app)/tasks/manager-page.tsx','utf8')
+const events=readFileSync('app/(app)/events/manager-page.tsx','utf8')
 
 test('Tasks requests are RLS-scoped and bounded without altering manager permissions',()=>{
  assert.match(tasks,/await boundedQueries\(\[/)

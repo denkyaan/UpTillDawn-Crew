@@ -67,7 +67,7 @@ test('emergency role rule defaults are feature controls and not a navigation tab
 
 test('emergency information is integrated into event preparation and live help flow', async () => {
   const [events,incidents,panel,actions]=await Promise.all([
-    readFile(new URL('../app/(app)/events/page.tsx',import.meta.url),'utf8'),
+    readFile(new URL('../app/(app)/events/manager-page.tsx',import.meta.url),'utf8'),
     readFile(new URL('../app/(app)/incidents/page.tsx',import.meta.url),'utf8'),
     readFile(new URL('../components/crew/emergency-information-panel.tsx',import.meta.url),'utf8'),
     readFile(new URL('../lib/actions/uptilldawn.ts',import.meta.url),'utf8'),

@@ -53,7 +53,7 @@ test('click context persists across modules and prefills the next relevant actio
     read('components/admin/context-link.tsx'),
     read('components/admin/admin-context-bar.tsx'),
     read('app/(app)/admin/page.tsx'),
-    read('app/(app)/tasks/page.tsx'),
+    read('app/(app)/tasks/manager-page.tsx'),
     read('app/(app)/briefings/page.tsx'),
     read('app/(app)/workplaces/page.tsx'),
     read('app/(app)/chat/page.tsx'),

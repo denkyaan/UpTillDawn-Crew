@@ -60,7 +60,7 @@ test('document notifications respect audience rank after scope hardening', async
 
 test('event document UI is integrated in Events without a new navigation tab', async () => {
   const [events,panel,roles,nav,actions]=await Promise.all([
-    readFile(new URL('../app/(app)/events/page.tsx',import.meta.url),'utf8'),
+    readFile(new URL('../app/(app)/events/manager-page.tsx',import.meta.url),'utf8'),
     readFile(new URL('../components/crew/event-documents-panel.tsx',import.meta.url),'utf8'),
     readFile(new URL('../lib/role-ui.ts',import.meta.url),'utf8'),
     readFile(new URL('../components/layout/navigation-items.ts',import.meta.url),'utf8'),

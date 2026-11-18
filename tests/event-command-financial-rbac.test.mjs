@@ -5,7 +5,7 @@ import {readFileSync,readdirSync} from 'node:fs'
 const sql=readFileSync('supabase/migrations/20261118121230_redact_event_command_financial_totals_for_non_admins.sql','utf8')
 const testSql=readFileSync('tests/sql/event-command-financial-privacy.sql','utf8')
 const page=readFileSync('app/(app)/events/[id]/command/page.tsx','utf8')
-const events=readFileSync('app/(app)/events/page.tsx','utf8')
+const events=readFileSync('app/(app)/events/manager-page.tsx','utf8')
 
 test('database never returns event revenue to an ordinary event member or Responsible',()=>{
  assert.match(sql,/'sales',CASE WHEN public\.upt_is_admin\(v_actor\) THEN jsonb_build_object\(/)

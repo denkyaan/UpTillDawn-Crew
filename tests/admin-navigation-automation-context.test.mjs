@@ -50,7 +50,7 @@ test('admin click context persists across related modules and action-center clic
     read('components/admin/admin-context-bar.tsx'),
     read('app/layout.tsx'),
     read('app/(app)/admin/page.tsx'),
-    read('app/(app)/events/page.tsx'),
+    read('app/(app)/events/manager-page.tsx'),
     read('app/(app)/workplaces/page.tsx'),
     read('app/(app)/operations/operations-client.tsx'),
   ])
