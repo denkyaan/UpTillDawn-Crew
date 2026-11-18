@@ -66,3 +66,7 @@ Vite's publicDir is deliberately `modern/public` rather than the legacy root `pu
 ## Isolated Worker validation
 
 The existing fast Main CI stays unchanged in normal runs. The migration-only PR gate now also **bundles the Hono Worker with Wrangler using dry-run** and audits the candidate's production dependencies. This checks Worker packaging without publishing a Cloudflare deployment; a future live preview must additionally measure actual CPU/memory under seven-role and 30-user load. No production credentials or user OAuth logins are required for this packaging check.
+
+## No-downgrade inventory
+
+Every existing Next page route, API route and exported server action is counted by `npm run inventory`. Partial pilot screens are explicitly labelled **candidate-not-parity**; nothing is counted as fully migrated until a verified comparison exists. `node scripts/inventory.mjs --routes` prints the complete path inventory, and `--enforce-parity` fails closed to block any accidental production cutover. This inventory does **not** claim that an API route has been implemented simply because a React screen with the same name exists.
