@@ -1,6 +1,6 @@
 import {Hono} from "hono"
 import {createClient} from "@supabase/supabase-js"
-import {isActive,parseIdentity} from "../shared/identity"
+import {isActive,parseIdentity} from "../shared/identity.ts"
 
 type Bindings={SUPABASE_URL:string;SUPABASE_ANON_KEY:string}
 const app=new Hono<{Bindings:Bindings}>()
