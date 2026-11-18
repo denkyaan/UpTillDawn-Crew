@@ -35,7 +35,7 @@ test('task, driver and active profile entitlements remain intact with original p
 })
 
 test('new Main SQL migration and production release preflight use the same immutable baseline',()=>{
- const migrations=readdirSync('supabase/migrations').map(name=>name.match(/^(\\d+)_.*\\.sql$/)?.[1]).filter(Boolean).sort()
+ const migrations=readdirSync('supabase/migrations').filter(name=>name.endsWith('.sql')).map(name=>name.split('_')[0]).filter(version=>version.length===14&&[...version].every(char=>char>='0'&&char<='9')).sort()
  const latest=migrations.at(-1)
  assert.ok(latest,'Expected at least one versioned migration')
  assert.match(baseline,new RegExp("EXPECTED_DB_MIGRATION_VERSION='"+latest+"'"))
