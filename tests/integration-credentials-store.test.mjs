@@ -56,7 +56,8 @@ test("no provider tokens are returned from GET, save or disconnect browser respo
  assert.match(store,/sealIntegrationSecrets/)
  assert.match(store,/openIntegrationSecrets/)
  assert.match(store,/upt_integration_credentials/)
- assert.match(wrapper,/IntegrationCredentialManager initialLocale=\{locale\} provider=\{service\.id\}/)
+ assert.match(wrapper,/userOAuthReady\(service\.id\)/)
+ assert.doesNotMatch(wrapper,/<IntegrationCredentialManager /)
  assert.match(ui,/\?"text":"password"/)
  assert.match(ui,/setFields\(\{\}\)/)
  assert.match(ui,/confirm/)
@@ -101,7 +102,8 @@ test("provider readiness reflects encrypted in-app credentials without duplicate
  assert.match(panel,/listIntegrationSummaries\(access\.db\)/)
  assert.match(panel,/configured\.has\(service\.id/)
  assert.match(panel,/t\.states\.credentials_present/)
- assert.equal((panel.match(/<IntegrationCredentialManager /g)||[]).length,1)
+ assert.equal((panel.match(/<IntegrationCredentialManager /g)||[]).length,0)
+ assert.match(panel,/name="eventId"/)
 })
 
 test("Weeztix scanner access requires explicit per-event activation",()=>{
@@ -164,5 +166,6 @@ test("business integrations exclude technical Maker ownership unless separately 
  assert.match(helper,/data!==true/)
  assert.match(api,/integrationManagementAccess/)
  assert.match(probe,/integrationManagementAccess/)
- assert.match(wrapper,/access.ok&&managed\(service\.id\)/)
+ assert.match(wrapper,/access\.ok&&managed\(service\.id\)/)
+ assert.match(wrapper,/connectionNeedsProvider/)
 })
