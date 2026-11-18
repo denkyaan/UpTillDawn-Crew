@@ -45,6 +45,28 @@ export function parseIntegrationConfiguration(provider:IntegrationProvider,input
   }
   return valid
  }
+ // OAuth tokens are only accepted from the authenticated provider callback.
+ // The public credentials POST endpoint separately rejects OAuth-only fields.
+ if(provider==="sumup"||provider==="peppol"){
+  const prefix=provider==="sumup"?"SUMUP":"BILLIT"
+  const keys=[prefix+"_OAUTH_ACCESS_TOKEN",prefix+"_OAUTH_REFRESH_TOKEN",prefix+"_OAUTH_EXPIRES_AT"]
+  if(provider==="peppol")keys.push("BILLIT_OAUTH_ENV")
+  if(Object.keys(record).length===keys.length&&keys.every(key=>key in record)){
+   const parsed:Record<string,string>={}
+   for(const key of keys){
+    const value=record[key]
+    if(typeof value!=="string"||value.trim()!==value||value.length>4096||
+       /[\u0000-\u001f\u007f]/.test(value))return null
+    parsed[key]=value
+   }
+   if(parsed[keys[0]].length<10||parsed[keys[1]].length<10||
+      !/^[0-9]{10,13}$/.test(parsed[keys[2]])||
+      !Number.isSafeInteger(Number(parsed[keys[2]])))return null
+   if(provider==="peppol"&&parsed.BILLIT_OAUTH_ENV!=="sandbox"&&
+      parsed.BILLIT_OAUTH_ENV!=="production")return null
+   return parsed
+  }
+ }
  const fields=integrationFields[provider]
  if(Object.keys(record).length!==fields.length||Object.keys(record).some(k=>!fields.includes(k)))return null
  const valid:Record<string,string>={}
