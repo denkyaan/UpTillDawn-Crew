@@ -79,6 +79,10 @@ async function assertAllowed(page,path,validPaths=[path]){
   :path==='/portals/administration'?'[data-administration-overview-ready="true"] h1'
   :'h1,main h2'
  await page.locator(ready).first().waitFor({state:'visible',timeout:30000})
+ // A static loading fallback is useful to the user but is NOT evidence that
+ // the Staff task client actually hydrated and can perform its workflows.
+ if(path==='/tasks')await page.locator('[data-staff-tasks-hydrated="true"]')
+  .waitFor({state:'visible',timeout:30000})
  if(path==='/portals/administration'){
   // A hidden h1 in a streamed Suspense template is not a functioning page:
   // require all seven canonical actionable priority rows as well.

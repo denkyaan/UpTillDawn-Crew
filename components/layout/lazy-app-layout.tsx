@@ -7,15 +7,25 @@
 // spikes on Workers Free. Authorization remains in the server layout BEFORE
 // this component is returned (and independently within each protected page).
 import dynamic from "next/dynamic"
-import type {ReactNode} from "react"
+import {createContext,useContext,type ReactNode} from "react"
 import {activeUiLocale} from "@/lib/locale-preferences"
 
 type Props={children:ReactNode}
+// The route's authenticated server-rendered content must stay visible while
+// the browser downloads the optional interactive navigation/chrome bundle.
+const ShellChildrenContext=createContext<ReactNode>(null)
+function ShellLoading(){
+ const content=useContext(ShellChildrenContext)
+ return <div data-shell-hydrating="true" className="min-h-screen">
+  <p role="status" aria-live="polite" className="mx-auto max-w-7xl p-4 text-sm text-muted-foreground">{({nl:"Werkruimte laden…",fr:"Chargement de l’espace de travail…",en:"Loading workspace…",de:"Arbeitsbereich wird geladen…"} as const)[activeUiLocale()]}</p>
+  {content}
+ </div>
+}
 const ClientShell=dynamic<Props>(
  ()=>import("@/components/layout/app-layout").then(module=>module.AppLayout),
- {ssr:false,loading:()=><div role="status" aria-live="polite" className="mx-auto max-w-7xl p-4 text-sm text-muted-foreground">{({nl:"Werkruimte laden…",fr:"Chargement de l’espace de travail…",en:"Loading workspace…",de:"Arbeitsbereich wird geladen…"} as const)[activeUiLocale()]}</div>},
+ {ssr:false,loading:ShellLoading},
 )
 
 export function LazyAppLayout({children}:Props){
- return <ClientShell>{children}</ClientShell>
+ return <ShellChildrenContext.Provider value={children}><ClientShell>{children}</ClientShell></ShellChildrenContext.Provider>
 }
