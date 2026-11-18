@@ -37,7 +37,7 @@ test('finance limits register reads to three simultaneous queries and waits for 
  const started=new Set()
  let active=0,peak=0,documentsReturned=false,balanceRequested=false
  function load(name){
-  const result={data:name==='upt_administration_finance_summary'?summary:[],error:null}
+  const result={data:name==='upt_administration_finance_summary'?{...summary,documents:'1'}:[],error:null}
   return query(result,resolve=>{
    started.add(name)
    active++
@@ -70,7 +70,29 @@ test('finance limits register reads to three simultaneous queries and waits for 
 test('a failed document-balance lookup still prevents rendering incomplete financial totals',async()=>{
  const db={
   from:()=>query({data:[],error:null}),
-  rpc:name=>Promise.resolve(name==='upt_administration_finance_summary'?{data:summary,error:null}:{data:null,error:{message:'Denied'}}),
+  rpc:name=>Promise.resolve(name==='upt_administration_finance_summary'?{data:{...summary,documents:'1'},error:null}:{data:null,error:{message:'Denied'}}),
  }
  await assert.rejects(()=>financePage(db)({searchParams:Promise.resolve({})}),/Financial ledger unavailable/)
+})
+
+test('empty RLS ledger renders without requesting document-scoped tables or balances',async()=>{
+ const started=[]
+ let balances=0
+ const db={
+  from:name=>{
+   started.push(name)
+   return query({data:[],error:null})
+  },
+  rpc:name=>{
+   started.push(name)
+   if(name==='upt_administration_document_balances')balances++
+   return Promise.resolve({data:name==='upt_administration_finance_summary'?summary:[],error:null})
+  },
+ }
+ const render=financePage(db)
+ const result=await render({searchParams:Promise.resolve({})})
+ assert.ok(result,'Empty finance overview failed to render')
+ assert.deepEqual(started.sort(),['upt_administration_finance_summary','admin_counterparties','events'].sort(),
+  'Empty finance ledger made unnecessary document-related reads')
+ assert.equal(balances,0,'An empty ledger must not request per-document balances')
 })

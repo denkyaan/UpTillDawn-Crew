@@ -573,17 +573,23 @@ export default async function FinancePage({searchParams}:{searchParams:Promise<{
  // These independent finance reads use a budget of three simultaneous requests.
  // Avoid both serial skeleton delays and a burst of eight concurrent requests
  // that can exhaust the shared Main Cloudflare Worker under QA load.
- const [{data:documents,error},{data:counterparties},{data:financeEvents},{data:paymentRows},{data:reminderRows},{data:lines},{data:attachments},ledgerSummary]=await boundedQueries([
-  supabase.from('admin_financial_documents')
+ // Always derive the COMPLETE ledger totals from the authoritative RPC.
+ // When the ledger contains no documents, payment, reminder, line, attachment
+ // and document listings must also be empty: avoid five RLS/PostgREST reads.
+ // Counterparty and event lookups remain live so new drafts work normally.
+ const ledgerSummary=await (supabase as unknown as SupabaseClient).rpc('upt_administration_finance_summary')
+ if(ledgerSummary.error||!ledgerSummary.data)throw new Error('Financial ledger unavailable')
+ const noFinancialDocuments=Number(ledgerSummary.data.documents)===0
+ const [{data:documents,error},{data:counterparties},{data:financeEvents},{data:paymentRows},{data:reminderRows},{data:lines},{data:attachments}]=await boundedQueries([
+  noFinancialDocuments?Promise.resolve({data:[],error:null}):supabase.from('admin_financial_documents')
    .select('id,kind,document_number,net_amount,tax_amount,gross_amount,currency,status,created_at,original_invoice_id,due_date,issue_date,counterparty_id,notes,buyer_reference,order_reference,delivery_date,delivery_country')
    .order('created_at',{ascending:false}).limit(100),
   (supabase as unknown as SupabaseClient).from('admin_counterparties').select('id,name,kind,email,vat_number,enterprise_number,street_address,postal_code,city,country_code,iban,bic,payment_terms_days,peppol_endpoint').order('name').limit(500),
   supabase.from('events').select('id,name').order('start_at',{ascending:false}).limit(200),
-  (supabase as unknown as SupabaseClient).from('admin_financial_payments').select('id,document_id,amount,paid_on,bank_reference').order('created_at',{ascending:false}).limit(1000),
-  (supabase as unknown as SupabaseClient).from('admin_payment_reminders').select('id,document_id,reminder_number,status,recipient_email,subject,body,created_at,revision').order('created_at',{ascending:false}).limit(500),
-  supabase.from('admin_financial_lines').select('id,document_id,description,quantity,unit_price,vat_rate,unit_code,vat_category,vat_exemption_reason').order('created_at',{ascending:true}).limit(500),
-  (supabase as unknown as SupabaseClient).from('admin_financial_attachments').select('id,document_id,storage_path,original_name,sha256,created_at').order('created_at',{ascending:false}).limit(200),
-  (supabase as unknown as SupabaseClient).rpc('upt_administration_finance_summary'),
+  noFinancialDocuments?Promise.resolve({data:[],error:null}):(supabase as unknown as SupabaseClient).from('admin_financial_payments').select('id,document_id,amount,paid_on,bank_reference').order('created_at',{ascending:false}).limit(1000),
+  noFinancialDocuments?Promise.resolve({data:[],error:null}):(supabase as unknown as SupabaseClient).from('admin_payment_reminders').select('id,document_id,reminder_number,status,recipient_email,subject,body,created_at,revision').order('created_at',{ascending:false}).limit(500),
+  noFinancialDocuments?Promise.resolve({data:[],error:null}):supabase.from('admin_financial_lines').select('id,document_id,description,quantity,unit_price,vat_rate,unit_code,vat_category,vat_exemption_reason').order('created_at',{ascending:true}).limit(500),
+  noFinancialDocuments?Promise.resolve({data:[],error:null}):(supabase as unknown as SupabaseClient).from('admin_financial_attachments').select('id,document_id,storage_path,original_name,sha256,created_at').order('created_at',{ascending:false}).limit(200),
  ],3)
  // RLS exposes only registered finance scan status to authorized staff.
  // A missing scanner or failed lookup must never render a download link.
@@ -605,7 +611,7 @@ export default async function FinancePage({searchParams}:{searchParams:Promise<{
  const originalInvoices=(documents??[]).filter(d=>['sales_invoice','purchase_invoice'].includes(d.kind)&&['approved','issued','paid'].includes(d.status))
  const payments=(paymentRows??[]) as {id:string;document_id:string;amount:number;paid_on:string;bank_reference:string|null}[]
  const reminders=(reminderRows??[]) as {id:string;document_id:string;reminder_number:number;status:string;recipient_email:string;subject:string;body:string;created_at:string;revision:number}[]
- const documentBalances=await (supabase as unknown as SupabaseClient).rpc('upt_administration_document_balances',{p_ids:(documents??[]).map(d=>d.id)})
+ const documentBalances=noFinancialDocuments?{data:[],error:null}:await (supabase as unknown as SupabaseClient).rpc('upt_administration_document_balances',{p_ids:(documents??[]).map(d=>d.id)})
  if(ledgerSummary.error||documentBalances.error||!ledgerSummary.data||!Array.isArray(documentBalances.data)||documentBalances.data.length!==(documents?.length??0))throw new Error('Financial ledger unavailable')
  const balances=new Map<string,{paid_cents:string;credited_cents:string;outstanding_cents:string}>((documentBalances.data as {id:string;paid_cents:string;credited_cents:string;outstanding_cents:string}[]).map(row=>[row.id,row]))
  const exactMoney=(cents:string)=>{const value=BigInt(cents);return new Intl.NumberFormat(locale).format(value/BigInt(100))+(locale==='en'?'.':',')+String(value%BigInt(100)).padStart(2,'0')+' EUR'}
