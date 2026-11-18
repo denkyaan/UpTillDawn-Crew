@@ -4,6 +4,7 @@ import { createClient } from '@/lib/supabase/crew-server'
 import type { Database } from '@/types/crew-database'
 import { sendSecurityLoginEmail } from '@/lib/security-login-email'
 import { resolveLoginEmail } from '@/lib/maker-login'
+import { readBoundedFormData } from '@/lib/bounded-form-data'
 
 function loginUrl(request: NextRequest, error?: string) {
   const url = new URL('/login/admin', request.url)
@@ -29,8 +30,14 @@ export async function POST(request: NextRequest) {
     phase = next
     phaseStartedAt = now
   }
+  const origin=request.headers.get('origin')
+  const fetchSite=request.headers.get('sec-fetch-site')
+  if(origin!==new URL(request.url).origin||(fetchSite&&fetchSite!=='same-origin'))
+    return redirectWithSession(loginUrl(request,'Ongeldige aanvraag.'))
+  let formData:FormData
+  try{formData=await readBoundedFormData(request,16_384)}
+  catch(error){return redirectWithSession(loginUrl(request,error instanceof Error&&error.message==='too_large'?'Aanvraag te groot.':'Ongeldig formulier.'))}
   try {
-  const formData = await request.formData()
   const submittedLogin = String(formData.get('email') || '').trim().toLowerCase()
   const password = String(formData.get('password') || '')
 

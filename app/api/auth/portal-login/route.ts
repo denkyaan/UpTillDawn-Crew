@@ -1,5 +1,6 @@
 import {NextRequest,NextResponse} from 'next/server'
 import {signIn} from '@/lib/actions/auth'
+import {readBoundedFormData} from '@/lib/bounded-form-data'
 
 export const dynamic='force-dynamic'
 const NO_STORE={'Cache-Control':'private, no-store'} as const
@@ -26,8 +27,11 @@ export async function POST(request:NextRequest){
  const length=Number(request.headers.get('content-length')||0)
  if(!Number.isFinite(length)||length>16_384)return reject(413,'form_too_large')
 
+ let form:FormData
+ try{form=await readBoundedFormData(request,16_384)}
+ catch(error){return error instanceof Error&&error.message==='too_large'
+  ?reject(413,'form_too_large'):reject(400,'invalid_form')}
  try{
-  const form=await request.formData()
   const portal=String(form.get('portal')??'')
   if(!['staff','responsible','promotion','administration','admin'].includes(portal))
    return reject(403,'invalid_portal')
