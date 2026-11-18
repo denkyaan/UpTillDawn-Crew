@@ -98,6 +98,42 @@ WITH checks(name,required,passed) AS (
     and coalesce((select provolatile = 's' from pg_proc
       where oid=to_regprocedure('public.upt_chat_channel_summaries()')),false)
   UNION ALL
+  -- Release-blocking security semantics verified on Main. Function existence
+  -- is insufficient: older Production revisions exposed caller-selected identities.
+  SELECT 'approved_gate_rejects_blocked_accounts', true,
+    coalesce(position('account_blocked' in pg_get_functiondef(
+      to_regprocedure('public.upt_is_approved()'))) > 0,false)
+  UNION ALL
+  SELECT 'task_read_and_manage_bind_actor_to_session', true,
+    coalesce(position('p_uid = (SELECT auth.uid())' in pg_get_functiondef(
+      to_regprocedure('public.upt_can_read_task(uuid,uuid)'))) > 0,false)
+    AND coalesce(position('p_uid = (SELECT auth.uid())' in pg_get_functiondef(
+      to_regprocedure('public.upt_can_manage_task(uuid,uuid)'))) > 0,false)
+  UNION ALL
+  SELECT 'driver_supervisor_binds_actor_to_session', true,
+    coalesce(position('p_uid = (SELECT auth.uid())' in pg_get_functiondef(
+      to_regprocedure('public.upt_is_driver_supervisor(uuid,uuid)'))) > 0,false)
+  UNION ALL
+  SELECT 'responsible_binds_actor_to_session', true,
+    coalesce(position('uid = (SELECT auth.uid())' in pg_get_functiondef(
+      to_regprocedure('public.upt_is_responsible(uuid,uuid,uuid)'))) > 0,false)
+    AND coalesce(position('upt_is_approved()' in pg_get_functiondef(
+      to_regprocedure('public.upt_is_responsible(uuid,uuid,uuid)'))) > 0,false)
+  UNION ALL
+  SELECT 'successful_admin_login_audit_is_own_account_only', true,
+    coalesce(position('v_key IS DISTINCT FROM v_verified_login' in pg_get_functiondef(
+      to_regprocedure('public.upt_admin_login_success(text,text,text,text)'))) > 0,false)
+    AND coalesce(position('FROM auth.users u' in pg_get_functiondef(
+      to_regprocedure('public.upt_admin_login_success(text,text,text,text)'))) > 0,false)
+    AND coalesce(position('upt_is_approved()' in pg_get_functiondef(
+      to_regprocedure('public.upt_admin_login_success(text,text,text,text)'))) > 0,false)
+  UNION ALL
+  SELECT 'event_command_revenue_is_admin_only', true,
+    coalesce(position('''sales'',CASE WHEN public.upt_is_admin(v_actor)' in pg_get_functiondef(
+      to_regprocedure('public.upt_event_command_snapshot(uuid)'))) > 0,false)
+    AND coalesce(position('''netCents'',0' in pg_get_functiondef(
+      to_regprocedure('public.upt_event_command_snapshot(uuid)'))) > 0,false)
+  UNION ALL
   SELECT 'main_tip_migration_in_history', false,
     EXISTS(SELECT 1 FROM supabase_migrations.schema_migrations
       WHERE version='20261118121657')
