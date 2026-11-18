@@ -7,7 +7,7 @@ const read=path=>readFile(new URL('../'+path,import.meta.url),'utf8')
 test('admin first-use state guides a clean production into the first real event',async()=>{
   const [admin,events,component]=await Promise.all([
     read('app/(app)/admin/page.tsx'),
-    read('app/(app)/events/page.tsx'),
+    read('app/(app)/events/manager-page.tsx'),
     read('components/admin/first-use-readiness.tsx'),
   ])
   assert.match(admin,/showFirstUse&&<FirstUseReadiness/)
