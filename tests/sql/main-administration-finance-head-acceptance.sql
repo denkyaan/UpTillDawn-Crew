@@ -67,6 +67,6 @@ BEGIN
     RAISE EXCEPTION 'Unexpected void result: %',failure;
   END IF;
   RAISE NOTICE 'PASS: draft/review/approval, unpaid rejection, overpayment rejection, partial payment + credit, paid, void rejection';
-END $;
+END $$;
 SELECT 'PASS: Head invoice draft/review/approval; overpayment and void safeguards; credit-adjusted settlement' AS result;
 ROLLBACK;
