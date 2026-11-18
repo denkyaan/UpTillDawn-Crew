@@ -1,7 +1,7 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
 import {readFileSync} from 'node:fs'
-const events=readFileSync(new URL('../app/(app)/events/page.tsx',import.meta.url),'utf8')
+const events=readFileSync(new URL('../app/(app)/events/manager-page.tsx',import.meta.url),'utf8')
 const timesheets=readFileSync(new URL('../app/(app)/timesheets/page.tsx',import.meta.url),'utf8')
 const controls=readFileSync(new URL('../components/crew/timesheet-controls.tsx',import.meta.url),'utf8')
 test('event cards preserve selected event when opening timesheet workflow',()=>{
