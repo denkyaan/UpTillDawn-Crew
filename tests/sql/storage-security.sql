@@ -7,10 +7,24 @@ INSERT INTO upt_storage_ids(name) VALUES
 ('admin'),('staff'),('other'),('lead'),('outsider'),('event'),('bar'),('message'),('checkin'),('incident');
 GRANT SELECT ON upt_storage_ids TO authenticated;
 
+-- Honor the single-Head constraint: use the existing isolated Main QA Head
+-- as an identity fixture, without creating a second Admin or modifying it.
+UPDATE upt_storage_ids SET id=(
+ SELECT l.user_id FROM public.upt_organization_leadership l
+ JOIN public.profiles p ON p.id=l.user_id
+ WHERE l.slot='head' AND p.role='admin' AND p.approved
+   AND NOT coalesce(p.account_blocked,false)
+) WHERE name='admin';
+DO $head_fixture$ BEGIN
+ IF (SELECT id FROM upt_storage_ids WHERE name='admin') IS NULL THEN
+  RAISE EXCEPTION 'Main QA requires an approved active designated Head';
+ END IF;
+END $head_fixture$;
+
 INSERT INTO auth.users(id,email)
 SELECT id,name||'@storage.test'
 FROM upt_storage_ids
-WHERE name IN ('admin','staff','other','lead','outsider');
+WHERE name IN ('staff','other','lead','outsider');
 
 UPDATE public.profiles
 SET approved = name <> 'outsider',
@@ -22,7 +36,7 @@ SET approved = name <> 'outsider',
     full_name = initcap(name)||' Storage'
 FROM upt_storage_ids i
 WHERE profiles.id=i.id
-  AND i.name IN ('admin','staff','other','lead','outsider');
+  AND i.name IN ('staff','other','lead','outsider');
 
 INSERT INTO public.events(id,name,start_date,end_date,start_at,end_at,created_by)
 SELECT id,'Storage rollback',now()-interval '1 hour',now()+interval '1 day',now()-interval '1 hour',now()+interval '1 day',(SELECT id FROM upt_storage_ids WHERE name='admin')
