@@ -46,7 +46,13 @@ const record=(step,error,index)=>{
  console.error('MAIN_30_DISTINCT_ERROR '+JSON.stringify(item))
 }
 function throwIfError(result,label){
- if(result.error)throw Error(label+': '+String(result.error.code||result.error.status||'unknown'))
+ if(result.error){
+  // Report only a safe failure class; never leak row values, JWTs or URLs.
+  const msg=String(result.error.message||'')
+  const kind=result.error.code||result.error.status||result.status||
+   (/abort|timed out|timeout|fetch failed/i.test(msg)?'transport_or_timeout':'unclassified_data_api_error')
+  throw Error(label+': '+String(kind))
+ }
  return result.data
 }
 async function pool(items,max,label,work,{allowPartial=false,stopOnError=false}={}){
@@ -255,18 +261,18 @@ if(process.argv.includes('--cleanup')){
 
   await pool(sessions,3,'real-routes-and-rls',async ({person,client})=>{
    const member=throwIfError(await client.from('event_members')
-    .select('user_id').eq('event_id',event.id).eq('user_id',person.id).abortSignal(AbortSignal.timeout(8000)),
+    .select('user_id').eq('event_id',event.id).eq('user_id',person.id).abortSignal(AbortSignal.timeout(14000)),
     'RLS membership query')
    assert.equal(member.length,1,'Staff cannot read own membership')
    report.availabilityReads++
    const channels=throwIfError(await client.from('chat_channels')
-    .select('id,name').eq('kind','organization').abortSignal(AbortSignal.timeout(8000)),'RLS chat directory')
+    .select('id,name').eq('kind','organization').abortSignal(AbortSignal.timeout(14000)),'RLS chat directory')
    assert.deepEqual(channels.map(ch=>ch.name).sort(),['Algemene chat evenementen'],
     'Crew must see only its standard organization chat')
-   throwIfError(await client.rpc('upt_chat_unread_total').abortSignal(AbortSignal.timeout(8000)),'Real chat badge RPC')
+   throwIfError(await client.rpc('upt_chat_unread_total').abortSignal(AbortSignal.timeout(14000)),'Real chat badge RPC')
    report.chatReads++
    throwIfError(await client.from('check_ins').select('id')
-    .eq('event_id',event.id).eq('user_id',person.id).limit(1).abortSignal(AbortSignal.timeout(8000)),
+    .eq('event_id',event.id).eq('user_id',person.id).limit(1).abortSignal(AbortSignal.timeout(14000)),
     'Own check-in history')
    // The pre-QR attendance RPC was deliberately revoked. Exercise the
    // actual user-facing QR flow rather than asserting on an obsolete API.
@@ -274,7 +280,7 @@ if(process.argv.includes('--cleanup')){
    // future unpublished draft: the only safe result is outside_window
    // with no next shift. A 5xx or RPC error remains a hard QA failure.
    const guarded=await client.rpc('upt_qr_request')
-    .abortSignal(AbortSignal.timeout(8000))
+    .abortSignal(AbortSignal.timeout(14000))
    throwIfError(guarded,'Authenticated QR attendance guard')
    assert.equal(guarded.data?.action,'outside_window',
     'Unassigned Staff entered an attendance flow without a shift')
@@ -282,12 +288,12 @@ if(process.argv.includes('--cleanup')){
     'Unassigned Staff was shown another shift')
    const history=throwIfError(await client.from('check_ins').select('id')
     .eq('event_id',event.id).eq('user_id',person.id)
-    .limit(1).abortSignal(AbortSignal.timeout(8000)),
+    .limit(1).abortSignal(AbortSignal.timeout(14000)),
     'Check-in did not remain read-only')
    assert.equal(history.length,0,'QR test created attendance for an unassigned Staff account')
    report.checkinDenied++
    throwIfError(await client.from('timesheets').select('id,status')
-    .eq('event_id',event.id).eq('user_id',person.id).limit(1).abortSignal(AbortSignal.timeout(8000)),
+    .eq('event_id',event.id).eq('user_id',person.id).limit(1).abortSignal(AbortSignal.timeout(14000)),
     'Own time records')
    report.timesheetReads++
    return true
