@@ -55,13 +55,13 @@ export const externalServicesCopy={
   names:{cloudmersive:"Cloudmersive · OCR (optioneel)",documenso:"Documenso · digitaal ondertekenen",peppol:"Peppol · e-facturatie",weeztix:"Weeztix · inkomscan",eventix:"Eventix / Weeztix · ticketverkoop",eventpay:"EventPay · Bar, Merch en Tokens",sumup:"SumUp · overige betaalstromen",banking:"Bank / boekhouding"},
   instructions:{
    cloudmersive:"OCR van foto's en PDF's gebeurt standaard lokaal op het toestel zonder API. Cloudmersive is alleen een optionele externe dienst en niet nodig voor gewone factuurverwerking.",
-   documenso:"Kies Documenso Cloud of een afzonderlijke beveiligde installatie, maak een team-API-token aan en stel de HTTPS-basis-URL en sleutel in. Contracten verzenden is nog uitgeschakeld.",
-   peppol:"Aanbevolen: Billit sandbox. Registreer je bedrijf, activeer Peppol en vraag API-toegang aan. UBL-voorbereiding bestaat; live verzending is nog niet ingeschakeld.",
-   weeztix:"De QR-camera zit rechtstreeks in de inkomwerkplek. Voor echte toegang: stel een server-token en het interne event-ID in en activeer scannen uitdrukkelijk. Alleen de Weeztix-server bevestigt toegang; de officiële app blijft offline reserve.",
+   documenso:"Documenso vereist momenteel een leverancier-API-token voor integraties. UpTillDawn kan nog geen veilige login-en-toestemmingkoppeling aanbieden; vraag geen sleutel aan de Maker. Contracten verzenden blijft uit.",
+   peppol:"Klik Verbinden en meld je bij Billit aan. Billit vraagt jouw toestemming; UpTillDawn bewaart de tokens versleuteld. UpTillDawn moet als app vooraf bij Billit geregistreerd zijn. Peppol-verzending blijft uit tot leveranciersacceptatie.",
+   weeztix:"Kies het UpTillDawn-evenement en meld je aan bij Weeztix. UpTillDawn regelt de clienttoegang centraal; je hoeft geen token of API-sleutel te kennen. Alleen Weeztix bevestigt inkomscans.",
    eventix:"Evenementkoppelingen en gecontroleerde CSV-import bestaan al. Automatische API-synchronisatie vereist een providercontract en API-documentatie.",
-   eventpay:"Jullie RFID-/QR-kaarten gebruiken EventPay voor opladen bij Tokens en afrekenen aan Bar en Merch. Betalingen en saldo blijven uitsluitend bij EventPay. Vraag officiële API-/terminalrechten en een testomgeving aan; tot de bevestigde koppeling is de EventPay-kassa de betaalbron.",
-   sumup:"Maak een SumUp testmerchant, een geheime server-API-sleutel en noteer de merchantcode. De koppeling blijft read-only/import tot echte transacties en boekingsafstemming getest zijn.",
-   banking:"Zonder extra kosten: bankafschriften via bestaande import. Voor automatische Belgische bankmutaties: Ponto met PSD2-banktoestemming. De connector moet apart gevalideerd worden; geef nooit je bankwachtwoord aan UpTillDawn."
+   eventpay:"EventPay beheert RFID-/QR-saldo, Tokens, Bar en Merch. Voor automatische koppeling is een officiële EventPay-integratie vereist; de beheerder hoeft geen API-sleutels te bezorgen. Tot dan is alleen EventPay zelf de bevestigde betaalbron.",
+   sumup:"Klik Verbinden en meld je aan bij je eigen SumUp-account om de koppeling toestemming te geven. Geen merchantcode of API-sleutel nodig. Betalingsverwerking vergt aparte SumUp-goedkeuring.",
+   banking:"Ponto vereist eerst een officiële UpTillDawn-integratie bij de aanbieder. Daarna autoriseert de beheerder zelf de bank in Ponto via PSD2; bankwachtwoorden worden nooit gevraagd. Tot dan blijft bankafschriftimport beschikbaar."
   }
  },
  fr:{
@@ -72,13 +72,13 @@ export const externalServicesCopy={
   names:{cloudmersive:"Cloudmersive · OCR (facultatif)",documenso:"Documenso · signature numérique",peppol:"Peppol · facturation électronique",weeztix:"Weeztix · contrôle d'entrée",eventix:"Eventix / Weeztix · billetterie",eventpay:"EventPay · Bar, Merch et rechargements",sumup:"SumUp · autres paiements",banking:"Banque / comptabilité"},
   instructions:{
    cloudmersive:"L'OCR des photos et PDF s'effectue par défaut sur l'appareil sans API. Cloudmersive est facultatif et n'est pas nécessaire pour le traitement standard.",
-   documenso:"Choisissez Documenso Cloud ou un hébergement sécurisé séparé, créez un jeton d'équipe et configurez l'URL HTTPS et le secret. L'envoi reste désactivé.",
-   peppol:"Recommandé : Billit sandbox. Enregistrez l'entreprise, activez Peppol et demandez l'accès API. Préparation UBL disponible ; envoi réel désactivé.",
-   weeztix:"Caméra QR intégrée au poste Entrée. Configurez un jeton serveur et l'identifiant de l'événement, puis activez explicitement. Seul Weeztix confirme l'entrée ; application officielle en secours hors ligne.",
+   documenso:"Documenso exige actuellement un jeton API pour l'intégration. Aucune connexion par consentement n'est vérifiée; ne demandez pas de clé au créateur. L'envoi de contrats reste désactivé.",
+   peppol:"Cliquez sur Connecter et autorisez UpTillDawn depuis votre compte Billit. Les jetons sont chiffrés; l'application doit être enregistrée auprès de Billit. L'envoi Peppol exige encore une validation.",
+   weeztix:"Choisissez l'événement et connectez-vous à Weeztix pour autoriser l'accès. Aucun jeton ou secret client n'est demandé. Seul Weeztix valide les scans.",
    eventix:"Les associations d'événements et l'import CSV validé sont disponibles. La synchronisation API exige un accord et une documentation du prestataire.",
-   eventpay:"Les cartes RFID/QR utilisent EventPay pour les rechargements au poste Tokens et les paiements au bar et au stand Merch. Seul EventPay confirme le solde et le paiement. Demandez l'accès API/terminal et un environnement de test ; utilisez la caisse EventPay d'ici là.",
-   sumup:"Créez un marchand SumUp sandbox, une clé API serveur et relevez le code marchand. La synchronisation réelle reste désactivée avant les tests de transactions.",
-   banking:"Sans coût API : importez les relevés. Pour synchronisation bancaire belge automatique, utilisez Ponto et le consentement PSD2 ; un connecteur validé reste nécessaire."
+   eventpay:"EventPay gère les cartes RFID/QR, le bar, le merch et les rechargements. L'automatisation nécessite une intégration officielle. Aucun secret n'est demandé au client.",
+   sumup:"Cliquez sur Connecter et autorisez l'accès avec votre compte SumUp. Aucune clé API ni code commerçant à saisir. Les paiements nécessitent une approbation distincte de SumUp.",
+   banking:"UpTillDawn doit d'abord activer une intégration officielle Ponto. Le responsable autorise ensuite sa banque via PSD2, sans partager de mot de passe. L'import de relevés reste disponible."
   }
  },
  en:{
@@ -89,13 +89,13 @@ export const externalServicesCopy={
   names:{cloudmersive:"Cloudmersive · OCR (optional)",documenso:"Documenso · e-signatures",peppol:"Peppol · e-invoicing",weeztix:"Weeztix · entrance scanning",eventix:"Eventix / Weeztix · ticketing",eventpay:"EventPay · Bar, Merch and top-ups",sumup:"SumUp · other payments",banking:"Banking / accounting"},
   instructions:{
    cloudmersive:"Photo and PDF OCR now runs on the device by default with no API key. Cloudmersive is optional and not required for standard invoice processing.",
-   documenso:"Choose Documenso Cloud or a separately secured host, create a team API token, and configure its HTTPS origin and secret. Sending remains disabled.",
-   peppol:"Recommended: Billit sandbox. Register your company, enable Peppol and request API access. UBL preparation works; live delivery is not enabled.",
-   weeztix:"QR camera is integrated in the entrance workplace. Configure a server token and the internal event ID, then enable scanning explicitly. Only Weeztix confirms admission; the official app remains the offline fallback.",
+   documenso:"Documenso currently requires an API token for third-party integration. No verified third-party account-consent login is available; never ask the Maker for customer keys. Signing dispatch stays disabled.",
+   peppol:"Click Connect and sign into your Billit account to authorize UpTillDawn. Tokens are encrypted and the application must first be registered with Billit. Peppol delivery remains subject to provider acceptance.",
+   weeztix:"Choose the event and sign in at Weeztix to approve access. No API key or OAuth client secret is requested from you. Only Weeztix verifies admission scans.",
    eventix:"Event mappings and validated CSV imports are available. Automatic API synchronization requires a provider agreement and technical documentation.",
-   eventpay:"RFID/QR cards use EventPay for top-ups at Tokens and checkout at Bar and Merch. Only EventPay confirms wallet balances and payments. Request official API/terminal access and a test environment; use the EventPay POS until a validated integration exists.",
-   sumup:"Create a SumUp sandbox merchant, server-only API key, and note the merchant code. Live syncing remains disabled until transaction and settlement tests pass.",
-   banking:"No extra API cost: import bank statements. For automated Belgian bank synchronization, use Ponto with PSD2 bank consent. A verified connector is still required."
+   eventpay:"EventPay owns RFID/QR wallet balances, Bar, Merch and top-ups. Automation requires a verified official EventPay integration. No customer API key is required; EventPay remains the payment source.",
+   sumup:"Click Connect and sign into your SumUp merchant account to grant consent. No API key or merchant code is required from you. Payments need separate SumUp approval.",
+   banking:"UpTillDawn must first register its Ponto software integration. The account owner then consents to bank access via PSD2; no bank password is collected. Statement import remains available."
   }
  },
  de:{
@@ -106,13 +106,13 @@ export const externalServicesCopy={
   names:{cloudmersive:"Cloudmersive · OCR (optional)",documenso:"Documenso · digitale Signaturen",peppol:"Peppol · E-Rechnungen",weeztix:"Weeztix · Einlasskontrolle",eventix:"Eventix / Weeztix · Ticketverkauf",eventpay:"EventPay · Bar, Merch und Aufladungen",sumup:"SumUp · weitere Zahlungen",banking:"Bank / Buchhaltung"},
   instructions:{
    cloudmersive:"OCR für Fotos und PDF läuft standardmäßig lokal auf dem Gerät ohne API. Cloudmersive ist optional und für die normale Rechnungsverarbeitung nicht erforderlich.",
-   documenso:"Documenso Cloud oder separaten sicheren Host wählen, Team-Token erstellen und HTTPS-URL sowie Schlüssel konfigurieren. Versand bleibt deaktiviert.",
-   peppol:"Empfohlen: Billit-Sandbox. Unternehmen registrieren, Peppol aktivieren und API-Zugang beantragen. UBL-Vorbereitung funktioniert; Live-Versand ist deaktiviert.",
-   weeztix:"Die QR-Kamera ist direkt im Einlass-Arbeitsplatz. Server-Token und interne Event-ID konfigurieren und Scannen ausdrücklich aktivieren. Nur Weeztix bestätigt Einlass; offizielle App als Offline-Reserve.",
+   documenso:"Documenso benötigt derzeit für Fremdintegrationen ein API-Token. Eine sichere Kontoautorisierung ist noch nicht nachgewiesen; keine Kundenschlüssel vom Maker verlangen. Signaturversand bleibt deaktiviert.",
+   peppol:"Auf Verbinden klicken und sich bei Billit anmelden, um UpTillDawn zu autorisieren. Tokens werden verschlüsselt; die App benötigt vorher eine Billit-Registrierung. Peppol-Versand bleibt gesperrt.",
+   weeztix:"Event auswählen und sich bei Weeztix anmelden. Kundenseitige API-Schlüssel sind nicht nötig. Nur Weeztix bestätigt Einlassscans.",
    eventix:"Event-Zuordnungen und geprüfter CSV-Import sind verfügbar. Automatische API-Synchronisation erfordert Anbietervereinbarung und Dokumentation.",
-   eventpay:"RFID-/QR-Karten verwenden EventPay zum Aufladen am Token-Stand und Bezahlen an Bar und Merch. Nur EventPay bestätigt Saldo und Zahlung. Offiziellen API-/Terminalzugang und Testumgebung anfragen; bis dahin die EventPay-Kasse nutzen.",
-   sumup:"SumUp-Sandbox-Händler, geheimen Server-API-Schlüssel und Händlercode erstellen. Live-Abgleich erst nach Transaktions- und Auszahlungstests aktivieren.",
-   banking:"Ohne API-Kosten: Kontoauszüge importieren. Für automatischen belgischen Bankabgleich Ponto mit PSD2-Zustimmung wählen; Connector muss gesondert validiert werden."
+   eventpay:"EventPay verwaltet RFID/QR-Guthaben, Bar, Merch und Aufladungen. Eine Automatisierung benötigt eine geprüfte offizielle Integration; keine Kundenschlüssel erforderlich.",
+   sumup:"Auf Verbinden klicken und sich im SumUp-Konto anmelden, um Zugriff zu erlauben. Kein API-Schlüssel oder Händlercode erforderlich. Für Zahlungen ist eine gesonderte Zulassung nötig.",
+   banking:"UpTillDawn muss zuerst eine offizielle Ponto-Integration registrieren. Danach genehmigt der Kunde den Bankzugriff über PSD2, ohne Bankpasswort weiterzugeben. Kontoauszugsimport bleibt nutzbar."
   }
  }
 } as const
