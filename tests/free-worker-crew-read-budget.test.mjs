@@ -37,7 +37,7 @@ test('deduplicate identical private photo paths and fail closed on signing failu
 })
 
 test('chat and Events server data reads remain RLS-bound and respect outgoing connection budgets',()=>{
- const chat=read('app/(app)/chat/page.tsx'),events=read('app/(app)/events/page.tsx')
+ const chat=read('app/(app)/chat/page.tsx'),events=read('app/(app)/events/manager-page.tsx')
  assert.match(chat,/\]=await boundedQueries\(\[/)
  assert.match(events,/\]=await boundedQueries\(\[/)
  assert.match(chat,/\],3\)/)
