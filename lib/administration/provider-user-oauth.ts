@@ -1,5 +1,5 @@
 import "server-only"
-import type {IntegrationProvider,IntegrationConfiguration} from "./integration-credentials"
+import type {IntegrationConfiguration} from "./integration-credentials"
 
 /** Provider application credentials belong to UpTillDawn's operator, NEVER to its customer. */
 export type UserOAuthProvider="sumup"|"peppol"
