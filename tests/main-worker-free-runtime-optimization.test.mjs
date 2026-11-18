@@ -10,7 +10,7 @@ test('Main OpenNext does not intercept dynamic authenticated SSR with a static c
  assert.doesNotMatch(source,/cacheEverything:\s*true|cacheControl:\s*public/)
 })
 test('Shared app shell and event action links never prefetch authenticated RSC destinations',()=>{
- for(const path of ['components/layout/app-layout.tsx','app/(app)/events/page.tsx']){
+ for(const path of ['components/layout/app-layout.tsx','app/(app)/events/manager-page.tsx']){
   const source=read(path)
   assert.ok((source.match(/<Link\s/g)||[]).length>0,path+' has no Next.js links')
   assert.equal((source.match(/<Link\s+prefetch=\{false\}/g)||[]).length,
