@@ -29,7 +29,7 @@ function MessageHistory({channelId,uid,revision}:{channelId:string;uid:string;re
     setMessages(rows);setError(false);setLoading(false)
     if(MIGRATION_WRITES_ENABLED)
      void markOwnChatRead(channelId).catch(()=>{})
-   }catch{if(active&&!next.signal.aborted){setError(true);setLoading(false)}}
+   }catch{if(active&&controller===next){setError(true);setLoading(false)}}
    finally{clearTimeout(deadline)}
   }
   void load()

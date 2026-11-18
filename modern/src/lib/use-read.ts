@@ -26,5 +26,7 @@ export function useRead<T>(uid:string,kind:CachedKind,load:(signal:AbortSignal)=
   }).finally(()=>clearTimeout(timer))
   return()=>{cancelled=true;clearTimeout(timer);controller.abort()}
  },[uid,kind,refreshToken])
- // Never render a previous user\'s snapshot, even for one paint before effects run.\n const visible=state.scope===scope?state:{scope,data:null,loading:true,stale:false,error:null}\n return {...visible,refresh:()=>setRefreshToken(x=>x+1)}
+ // Never render a previous user's snapshot, even for one paint before effects run.
+ const visible=state.scope===scope?state:{scope,data:null,loading:true,stale:false,error:null}
+ return {...visible,refresh:()=>setRefreshToken(x=>x+1)}
 }
