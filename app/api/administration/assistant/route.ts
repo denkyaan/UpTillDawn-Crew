@@ -1,5 +1,6 @@
 import {getCloudflareContext} from "@opennextjs/cloudflare"
 import {z} from "zod"
+import {readStrictJson} from "@/lib/strict-json-body"
 import {createClient} from "@/lib/supabase/crew-server"
 import {getCurrentUser} from "@/lib/actions/auth"
 import {canOpenPortal,type PortalAssignment} from "@/lib/portal-access"
@@ -15,7 +16,12 @@ export async function POST(request:Request){
  const db=await createClient()
  const {data:assignments,error:accessError}=await db.rpc("upt_my_portal_assignments")
  if((accessError&&!user.isAdmin&&!user.isOwner)||(!user.isAdmin&&!user.isOwner&&!canOpenPortal("administration",(assignments??[]) as PortalAssignment[],{approved:user.approved,blocked:user.account_blocked===true})))return Response.json({error:"Forbidden"},{status:403})
- const parsed=schema.safeParse(await request.json().catch(()=>null))
+ let body:unknown
+ try{body=await readStrictJson(request,48_000)}
+ catch(error){return Response.json({error:"Invalid request"},{
+  status:error instanceof Error&&error.message==='too_large'?413:400,
+ })}
+ const parsed=schema.safeParse(body)
  if(!parsed.success)return Response.json({error:"Invalid request"},{status:400})
  const now=new Date()
  const today=new Intl.DateTimeFormat("en-CA",{timeZone:"Europe/Brussels",year:"numeric",month:"2-digit",day:"2-digit"}).format(now)
