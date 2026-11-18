@@ -61,3 +61,19 @@ test('JSON reader accepts normal AI request and rejects oversized or invalid inp
  await assert.rejects(readStrictJson(request('x'.repeat(8200)),8_192),/too_large/)
  await assert.rejects(readStrictJson(request('invalid JSON'),8_192),/invalid_json/)
 })
+
+test('payload caps still allow maximal valid escaped AI messages and history',async()=>{
+ const url='https://uptilldawn.local/api/administration/assistant'
+ const make=body=>new Request(url,{method:'POST',headers:{'content-type':'application/json'},body})
+ const textWithEscapes='\u0000'.repeat(4000)
+ const adminPayload=JSON.stringify({message:textWithEscapes,locale:'nl'})
+ assert.ok(Buffer.byteLength(adminPayload)<32_768)
+ const adminResult=await readStrictJson(make(adminPayload),32_768)
+ assert.equal(adminResult.message.length,4000)
+ const history=Array.from({length:8},()=>({role:'user',content:textWithEscapes}))
+ const administrationPayload=JSON.stringify({message:textWithEscapes,locale:'nl',history})
+ assert.ok(Buffer.byteLength(administrationPayload)<256_000)
+ const parsed=await readStrictJson(make(administrationPayload),256_000)
+ assert.equal(parsed.history.length,8)
+ assert.equal(parsed.history[0].content.length,4000)
+})
