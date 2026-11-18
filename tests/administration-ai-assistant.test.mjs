@@ -27,7 +27,7 @@ test('cross-portal AI keeps separate endpoints, permissions and compact mobile c
  assert.match(adminPage,/Boolean\(adminAccess\)&&<details/)
  assert.match(adminApi,/if\(!isAdmin\)return Response\.json/)
  assert.match(adminApi,/await getCurrentUser\(\)/)
- assert.match(adminApi,/readStrictJson\(request,8_192\)/)
+ assert.match(adminApi,/readStrictJson\(request,32_768\)/)
  assert.match(api,/canOpenPortal\("administration"/)
 })
 
