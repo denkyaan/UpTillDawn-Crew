@@ -96,7 +96,7 @@ WITH checks(name,required,passed) AS (
   UNION ALL
   SELECT 'main_tip_migration_in_history', false,
     EXISTS(SELECT 1 FROM supabase_migrations.schema_migrations
-      WHERE version='20261118103224')
+      WHERE version='20261118105430')
 )
 SELECT name,required,passed,
   CASE WHEN passed THEN 'PASS'
