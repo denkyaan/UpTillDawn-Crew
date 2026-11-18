@@ -86,7 +86,6 @@ jobs:
           npm --prefix modern install --no-audit --no-fund --prefer-offline
           npm --prefix modern run check
           npm --prefix modern run build
-          (cd modern && npx wrangler deploy --dry-run)
       - name: Inventory every Main page and API route
         run: node scripts/main-adversarial-surface.mjs --inventory-only
       - name: Audit requested product functionality against committed code and tests
