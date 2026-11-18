@@ -21,16 +21,16 @@ test('bounded multipart parser preserves valid login fields and optional portal 
 })
 
 test('streaming rejects an oversized login even without a Content-Length header',async()=>{
- const input=formRequest({email:'user@example.com',password:'x'.repeat(20_000),portal:'staff'})
+ const input=new Request(url,{method:'POST',headers:{'content-type':'multipart/form-data; boundary=t'},body:'x'.repeat(20_000)})
  assert.equal(input.headers.get('content-length'),null)
  await assert.rejects(readBoundedFormData(input,16_384),/too_large/)
 })
 
 test('declared form size is an early reject and cannot bypass stream limit',async()=>{
- const request=formRequest({email:'user@example.com',password:'x'})
+ const request=new Request(url,{method:'POST',headers:{'content-type':'multipart/form-data; boundary=t'},body:'x'})
  request.headers.set('content-length','20000')
  await assert.rejects(readBoundedFormData(request,16_384),/too_large/)
- const input=formRequest({email:'user@example.com',password:'x'.repeat(18_000)})
+ const input=new Request(url,{method:'POST',headers:{'content-type':'multipart/form-data; boundary=t'},body:'x'.repeat(18_000)})
  input.headers.set('content-length','200')
  await assert.rejects(readBoundedFormData(input,16_384),/too_large/)
 })
