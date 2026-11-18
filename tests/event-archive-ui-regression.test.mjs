@@ -5,13 +5,13 @@ const read=path=>readFile(new URL('../'+path,import.meta.url),'utf8')
 
 test('event archive lifecycle is recoverable and absent from active surfaces',async()=>{
   const [events,button,center,actions,command,inventory,tasks,briefings,migration,toaster]=await Promise.all([
-    read('app/(app)/events/page.tsx'),
+    read('app/(app)/events/manager-page.tsx'),
     read('components/events/archive-event-button.tsx'),
     read('components/events/archive-center.tsx'),
     read('lib/actions/events.ts'),
     read('app/(app)/events/[id]/command/page.tsx'),
     read('app/(app)/inventory/page.tsx'),
-    read('app/(app)/tasks/page.tsx'),
+    read('app/(app)/tasks/manager-page.tsx'),
     read('app/(app)/briefings/page.tsx'),
     read('supabase/migrations/20260929075332_event_archive_center_and_restore.sql'),
     read('components/save-success-toaster.tsx'),
