@@ -5,11 +5,11 @@ import {readFile} from 'node:fs/promises'
 const read=path=>readFile(new URL('../'+path,import.meta.url),'utf8')
 
 const operationalPages=[
-  'app/(app)/page.tsx','app/(app)/admin/page.tsx','app/(app)/events/page.tsx',
+  'app/(app)/page.tsx','app/(app)/admin/page.tsx','app/(app)/events/manager-page.tsx',
   'app/(app)/workplaces/page.tsx','app/(app)/briefings/page.tsx',
   'app/(app)/operations/page.tsx','app/(app)/chat/page.tsx',
   'app/(app)/guestlist/page.tsx','app/(app)/inventory/page.tsx',
-  'app/(app)/tasks/page.tsx','app/(app)/incidents/page.tsx',
+  'app/(app)/tasks/manager-page.tsx','app/(app)/incidents/page.tsx',
   'app/(app)/sales/page.tsx','app/(app)/personnel/page.tsx',
   'app/(app)/exports/page.tsx','app/(app)/crew/page.tsx',
 ]
@@ -36,7 +36,7 @@ test('operational onboarding and briefings remain available',async()=>{
   const [onboarding,briefings,events]=await Promise.all([
     read('app/(app)/onboarding/page.tsx'),
     read('app/(app)/briefings/page.tsx'),
-    read('app/(app)/events/page.tsx'),
+    read('app/(app)/events/manager-page.tsx'),
   ])
   assert.ok(onboarding.length>100)
   assert.match(briefings,/acknowledgeBriefing/)
