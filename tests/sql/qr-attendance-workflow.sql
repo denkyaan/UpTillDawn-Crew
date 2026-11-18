@@ -9,10 +9,24 @@ INSERT INTO qr_ids(name) VALUES
  ('shift_early_1'),('shift_early_2'),('shift_ten'),('shift_stop'),('shift_remote'),('shift_contact'),('shift_lead');
 GRANT SELECT ON qr_ids TO authenticated;
 
+-- Honor the single-Head constraint: use the existing isolated Main QA Head
+-- as an identity fixture, without creating a second Admin or modifying it.
+UPDATE qr_ids SET id=(
+ SELECT l.user_id FROM public.upt_organization_leadership l
+ JOIN public.profiles p ON p.id=l.user_id
+ WHERE l.slot='head' AND p.role='admin' AND p.approved
+   AND NOT coalesce(p.account_blocked,false)
+) WHERE name='admin';
+DO $head_fixture$ BEGIN
+ IF (SELECT id FROM qr_ids WHERE name='admin') IS NULL THEN
+  RAISE EXCEPTION 'Main QA requires an approved active designated Head';
+ END IF;
+END $head_fixture$;
+
 INSERT INTO auth.users(id,email)
 SELECT id,name||'@qr-regression.test'
 FROM qr_ids
-WHERE name IN ('staff_early','staff_ten','staff_stop','staff_remote','staff_contact','lead','admin');
+WHERE name IN ('staff_early','staff_ten','staff_stop','staff_remote','staff_contact','lead');
 
 UPDATE public.profiles p
 SET approved=true,
@@ -24,7 +38,7 @@ SET approved=true,
     full_name='QR '||i.name
 FROM qr_ids i
 WHERE p.id=i.id
-  AND i.name IN ('staff_early','staff_ten','staff_stop','staff_remote','staff_contact','lead','admin');
+  AND i.name IN ('staff_early','staff_ten','staff_stop','staff_remote','staff_contact','lead');
 
 INSERT INTO public.events(id,name,start_date,end_date,start_at,end_at,status,created_by)
 VALUES(
