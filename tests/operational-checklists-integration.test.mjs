@@ -90,7 +90,7 @@ test('checklist actions upload and clean evidence safely', async () => {
 test('checklist UI is integrated into staff Tasks and manager Briefing without navigation changes', async () => {
   const [panel,tasks,briefing,workplaces]=await Promise.all([
     readFile(new URL('../components/crew/operational-checklists.tsx',import.meta.url),'utf8'),
-    readFile(new URL('../app/(app)/tasks/page.tsx',import.meta.url),'utf8'),
+    readFile(new URL('../app/(app)/tasks/manager-page.tsx',import.meta.url),'utf8'),
     readFile(new URL('../app/(app)/briefings/page.tsx',import.meta.url),'utf8'),
     readFile(new URL('../app/(app)/workplaces/page.tsx',import.meta.url),'utf8'),
   ])
