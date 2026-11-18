@@ -1,6 +1,6 @@
 import {NextRequest,NextResponse} from "next/server"
 import {integrationManagementAccess} from "@/lib/administration/integration-management-access"
-import {userOAuthCallbackUrl,userOAuthConsentUrl,userOAuthCookie,userOAuthReady,oauthRandomState,type UserOAuthProvider} from "@/lib/administration/provider-user-oauth"
+import {userOAuthCallbackUrl,userOAuthConsentUrl,userOAuthCookie,userOAuthReady,oauthRandomState} from "@/lib/administration/provider-user-oauth"
 import {validIntegrationMasterKey} from "@/lib/administration/integration-crypto"
 
 export const dynamic="force-dynamic"
