@@ -2,15 +2,27 @@
 -- No real credentials, permanent accounts, or external sends are used.
 begin;
 create temp table qa_accept_users(name text primary key,id uuid not null default gen_random_uuid());
-insert into qa_accept_users(name) values('admin'),('office'),('right'),('staff');
+insert into qa_accept_users(name) values('office'),('right'),('staff');
+-- The shared Main QA database enforces exactly one approved Head Admin.
+-- Reuse the designated active Head and never create or mutate a second Admin.
+insert into qa_accept_users(name,id)
+select 'admin',l.user_id from public.upt_organization_leadership l
+join public.profiles p on p.id=l.user_id
+where l.slot='head' and p.role='admin' and p.approved
+ and not coalesce(p.account_blocked,false);
 grant select on qa_accept_users to authenticated;
-insert into auth.users(id,email) select id,'qa-accept-'||name||'-'||id::text||'@example.invalid' from qa_accept_users;
-update public.profiles p set approved=true,account_blocked=false,
- role=case when q.name='admin' then 'admin' else 'staff' end
- from qa_accept_users q where p.id=q.id;
+do $qa_head$ begin
+ if not exists(select 1 from qa_accept_users where name='admin') then
+  raise exception 'An approved QA Head Admin is required';
+ end if;
+end $qa_head$;
+insert into auth.users(id,email)
+select id,'qa-accept-'||name||'-'||id::text||'@example.invalid'
+from qa_accept_users where name<>'admin';
+update public.profiles p set approved=true,account_blocked=false,role='staff'
+ from qa_accept_users q where p.id=q.id and q.name<>'admin';
 select set_config('request.jwt.claim.sub',(select id::text from qa_accept_users where name='admin'),true);
 set local role authenticated;
-select public.upt_leadership_assign('head',(select id from qa_accept_users where name='admin'));
 select public.upt_leadership_assign('left_hand',(select id from qa_accept_users where name='office'));
 select public.upt_leadership_assign('right_hand',(select id from qa_accept_users where name='right'));
 reset role;
