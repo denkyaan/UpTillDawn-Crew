@@ -1,5 +1,5 @@
 import { WorkspaceContinuity } from '@/components/auth/workspace-continuity'
-import { LazyClientBootstraps } from '@/components/lazy-client-bootstraps'
+import { LazyPwaRegister, LazyLocaleSync } from '@/components/lazy-client-bootstraps'
 import { PushPermissionPrompt } from '@/components/push-permission-prompt'
 import { FirstUseInstallPrompt } from '@/components/first-use-install-prompt'
 import type { Metadata, Viewport } from 'next'
@@ -67,7 +67,8 @@ export default async function RootLayout({
         <ThemeProvider attribute="class" defaultTheme="dark" enableSystem disableTransitionOnChange>
           <AuthProvider>
             <AdminSelectionProvider>
-            <WorkspaceContinuity /><LazyClientBootstraps /><FirstUseInstallPrompt /><Suspense fallback={null}><PushPermissionPrompt /></Suspense><SaveSuccessToaster />{children}
+            <WorkspaceContinuity /><LazyPwaRegister /><FirstUseInstallPrompt /><Suspense fallback={null}><PushPermissionPrompt /></Suspense><SaveSuccessToaster />{children}
+            <LazyLocaleSync />
             <Toaster richColors position="top-right" />
             </AdminSelectionProvider>
           </AuthProvider>
