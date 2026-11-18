@@ -91,13 +91,15 @@ export async function updateSession(request: NextRequest) {
         pathname === '/portals/promotion' ||
         pathname === '/portals/administration' ||
         pathname.startsWith('/portals/administration/')
-    // Safe GET finance pages already pass TWO independently signed, live
-    // database checks in AdministrationLayout and requireAdministration().
-    // A second proxy JWT verification plus 2-3 permission RPCs caused 503s
-    // while denying staff users on Workers Free. Keep the proxy guard on all
-    // mutations and continue protecting Admin GETs before SSR.
+    // Finance GET is a known expensive SSR route. Deny unrelated staff
+    // BEFORE the full Next render using one authenticated database permission
+    // RPC (not the previous 2-3 independent checks). This avoids spending
+    // the Workers Free CPU budget rendering a page that must redirect anyway.
+    // The Administration layout still independently authorizes allowed pages.
+    const isFinanceArea = pathname === '/portals/administration/finance' ||
+        pathname.startsWith('/portals/administration/finance/')
     const requiresEarlyRoleCheck =
-        pathname === '/admin' || pathname.startsWith('/admin/')
+        pathname === '/admin' || pathname.startsWith('/admin/') || isFinanceArea
     const routeHandlerWithoutAppLayout =
         pathname.startsWith('/portals/switch/') ||
         /^\/portals\/administration\/modules\/artists\/[^/]+\/agreement\/(?:archive|print)\//.test(pathname)
@@ -169,8 +171,6 @@ export async function updateSession(request: NextRequest) {
     // from client-selected portal cookies or mutable client role fields.
     // The page/layout still re-checks authorization for allowed requests.
     const isAdminArea = pathname === '/admin' || pathname.startsWith('/admin/')
-    const isFinanceArea = pathname === '/portals/administration/finance' ||
-        pathname.startsWith('/portals/administration/finance/')
     if (authenticated && (isAdminArea || isFinanceArea)) {
         const redirectDenied = (destination: string) => {
             const url = request.nextUrl.clone()
@@ -195,27 +195,14 @@ export async function updateSession(request: NextRequest) {
             if (error) return authzUnavailable()
             if (effectiveRole !== 'admin') return redirectDenied('/')
         } else {
-            // Finance is shared by permanent Admin, Maker and explicitly
-            // approved Administration portal users (including deputies).
-            const [{ data: profileRows, error: profileError },
-                { data: owner, error: ownerError }] = await Promise.all([
-                supabase.rpc('upt_current_profile'),
-                supabase.rpc('upt_current_is_owner'),
-            ])
-            if (profileError || ownerError) return authzUnavailable()
-            const profile = profileRows?.[0] ?? null
-            const active = Boolean(profile?.approved && !profile?.account_blocked)
-            if (!owner && (!active || profile?.role !== 'admin')) {
-                if (!active) return redirectDenied('/portals')
-                const { data: assignments, error } = await supabase.rpc('upt_my_portal_assignments')
-                if (error) return authzUnavailable()
-                const allowed = (assignments ?? []).some((assignment: { portal: string; approved: boolean; revoked_at: string | null }) =>
-                    assignment.portal === 'administration' &&
-                    assignment.approved === true &&
-                    assignment.revoked_at == null,
-                )
-                if (!allowed) return redirectDenied('/portals')
-            }
+            // Single self-scoped, SECURITY DEFINER boolean RPC reads the
+            // *verified* session (auth.uid), approval, Admin/Maker status and
+            // active Administration entitlement. Never trust role cookies.
+            // This avoids SSR of the expensive financial page for Staff.
+            // Network/DB errors remain 503 (not an incorrect 'denied' PASS).
+            const { data: canManage, error } = await supabase.rpc('upt_can_manage_administration')
+            if (error) return authzUnavailable()
+            if (canManage !== true) return redirectDenied('/portals')
         }
     }
 
