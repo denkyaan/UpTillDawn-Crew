@@ -1,5 +1,6 @@
 import { getCloudflareContext } from "@opennextjs/cloudflare"
 import { z } from "zod"
+import { readStrictJson } from "@/lib/strict-json-body"
 import { cookies } from "next/headers"
 import { createClient } from "@/lib/supabase/crew-server"
 
@@ -117,7 +118,12 @@ export async function POST(request:Request){
   }
   if(!authorized)return Response.json({error:"God Mode sessie vereist."},{status:403})
 
-  const parsed=requestSchema.safeParse(await request.json().catch(()=>null))
+  let body:unknown
+  try{body=await readStrictJson(request,128_000)}
+  catch(error){return Response.json({error:"Ongeldige AI-aanvraag."},{
+    status:error instanceof Error&&error.message==='too_large'?413:400,
+  })}
+  const parsed=requestSchema.safeParse(body)
   if(!parsed.success)return Response.json({error:"Ongeldige AI-aanvraag."},{status:400})
 
   let ai:WorkersAiBinding|undefined
