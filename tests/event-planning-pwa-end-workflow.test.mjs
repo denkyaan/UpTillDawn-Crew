@@ -5,7 +5,7 @@ const read=p=>readFile(new URL('../'+p,import.meta.url),'utf8')
 
 test('event planning keeps Facebook import location suggestions and three-day setup breakdown governance',async()=>{
  const [events,fb,address,actions,migration]=await Promise.all([
-  read('app/(app)/events/page.tsx'),read('components/events/facebook-event-field.tsx'),
+  read('app/(app)/events/manager-page.tsx'),read('components/events/facebook-event-field.tsx'),
   read('components/crew/address-autocomplete.tsx'),read('lib/actions/uptilldawn.ts'),
   read('supabase/migrations/20260925105232_god_mode_event_import_shift_windows.sql'),
  ])
