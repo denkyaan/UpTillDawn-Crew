@@ -47,7 +47,8 @@ test('all data-access hooks use one per-device read budget, not a Worker queue',
  'modern/src/lib/use-read.ts',
  'modern/src/lib/use-private-query.ts',
  'modern/src/screens/chats.tsx',
- 'modern/src/screens/finance.tsx'
+ 'modern/src/screens/finance.tsx',
+ 'modern/src/screens/events.tsx'
  ]
  for(const p of paths)assert.ok(readFileSync(p,'utf8').includes('withReadBudget('),p)
  const source=readFileSync('modern/src/lib/request-budget.ts','utf8')
@@ -56,4 +57,11 @@ test('all data-access hooks use one per-device read budget, not a Worker queue',
  assert.ok(!source.includes('localStorage'))
  assert.ok(!source.includes('setInterval'))
  assert.ok(!source.includes('fetch('))
+})
+
+test('briefing two-read bundle stays sequential inside one scheduler slot',()=>{
+ const source=readFileSync('modern/src/screens/briefings.tsx','utf8')
+ assert.ok(source.includes('const briefings=await allowedBriefings(signal)'))
+ assert.ok(source.includes('const acknowledgements=await ownAcknowledgements(uid,signal)'))
+ assert.ok(!source.includes('Promise.all(['))
 })

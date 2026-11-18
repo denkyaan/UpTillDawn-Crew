@@ -10,9 +10,9 @@ type Bundle={briefings:Briefing[];acknowledgements:Acknowledgement[]}
 export default function Briefings(){
  const uid=useSession().identity!.id
  const r=usePrivateQuery<Bundle>(uid,"briefings",async signal=>{
-  const [briefings,acknowledgements]=await Promise.all([
-   allowedBriefings(signal),ownAcknowledgements(uid,signal),
-  ])
+  // Exactly one database read per scheduler slot, not two parallel queries.
+  const briefings=await allowedBriefings(signal)
+  const acknowledgements=await ownAcknowledgements(uid,signal)
   return {briefings,acknowledgements}
  })
  const [busy,setBusy]=useState<string|null>(null)

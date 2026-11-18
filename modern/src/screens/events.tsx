@@ -1,3 +1,4 @@
+import {withReadBudget} from "../lib/request-budget"
 import {useEffect,useState,type FormEvent} from "react"
 import {useSession} from "../lib/session"
 import {loadEvents,type EventRow} from "../lib/queries"
@@ -72,9 +73,9 @@ export default function Events(){
   const controller=new AbortController()
   const timer=setTimeout(()=>controller.abort(),12000)
   setAvailabilityError(false);setAvailability(null)
-  void Promise.resolve(supabase().from("event_availability")
+  void withReadBudget(controller.signal,()=>Promise.resolve(supabase().from("event_availability")
    .select("event_id,response,setup_available,breakdown_available")
-   .eq("user_id",identity!.id).limit(100).abortSignal(controller.signal))
+   .eq("user_id",identity!.id).limit(100).abortSignal(controller.signal)))
    .then(({data,error})=>{
     if(!active)return
     if(error){setAvailabilityError(true);return}
