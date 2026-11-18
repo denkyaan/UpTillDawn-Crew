@@ -58,15 +58,19 @@ export function verifyOAuthState(expected:string,actual:string):boolean{
 export function oauthRandomState(){
  return Array.from(crypto.getRandomValues(new Uint8Array(32)),v=>v.toString(16).padStart(2,"0")).join("")
 }
-export function oauthTokenResponse(payload:unknown,now=Date.now()):{access:string;refresh:string;expires:string}|null{
+export function oauthTokenResponse(payload:unknown,now=Date.now(),existingRefresh?:string):{access:string;refresh:string;expires:string}|null{
  if(!payload||typeof payload!=="object"||Array.isArray(payload))return null
  const p=payload as Record<string,unknown>
+ // SumUp may omit a new refresh token during rotation. Reuse the old one
+ // only on a refresh grant, never when initially authorizing an account.
+ const refresh=typeof p.refresh_token==="string"?p.refresh_token:existingRefresh
+ if(p.token_type!==undefined&&String(p.token_type).toLowerCase()!=="bearer")return null
  if(typeof p.access_token!=="string"||p.access_token.length<10||p.access_token.length>4096||
-    typeof p.refresh_token!=="string"||p.refresh_token.length<10||p.refresh_token.length>4096||
-    /[\u0000-\u001f\u007f]/.test(p.access_token+p.refresh_token)||
+    typeof refresh!=="string"||refresh.length<10||refresh.length>4096||
+    /[\u0000-\u001f\u007f]/.test(p.access_token+refresh)||
     typeof p.expires_in!=="number"||!Number.isSafeInteger(p.expires_in)||
     p.expires_in<60||p.expires_in>31536000||Number.isNaN(now))return null
- return {access:p.access_token,refresh:p.refresh_token,expires:String(Math.floor(now/1000)+p.expires_in-30)}
+ return {access:p.access_token,refresh,expires:String(Math.floor(now/1000)+p.expires_in-30)}
 }
 async function smallResponse(response:Response):Promise<unknown>{
  if(!response.ok)return null
@@ -100,7 +104,7 @@ async function callToken(provider:UserOAuthProvider,params:Record<string,string>
    headers:{"Accept":"application/json","Content-Type":provider==="sumup"?"application/x-www-form-urlencoded":"application/json"},
    body:provider==="sumup"?new URLSearchParams(body).toString():JSON.stringify(body)
   })
-  return oauthTokenResponse(await smallResponse(response))
+  return oauthTokenResponse(await smallResponse(response),Date.now(),params.grant_type==="refresh_token"?params.refresh_token:undefined)
  }catch{return null}
 }
 export async function exchangeUserOAuthCode(provider:UserOAuthProvider,code:string,redirect:string,env:NodeJS.ProcessEnv=process.env){
