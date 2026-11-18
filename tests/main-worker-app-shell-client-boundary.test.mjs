@@ -29,7 +29,11 @@ test('do not discard existing full navigation, unread, role, chat, help or AI fu
  for(const token of ['AppSidebar','Topbar','MobileBottomNav','FloatingChatButton','AdminContextBar','QueueStatus','PlatformAiAssistant','AdministrationAiChat','role_ui_rules','upt_chat_unread_total','uptilldawn-navigation-expanded']){
   assert.ok(app.includes(token),'App shell feature lost: '+token)
  }
- assert.match(lazy,/return <ClientShell>\{children\}<\/ClientShell>/)
+ // The full shell still wraps the SAME authorized route content after hydration.
+ // The context provider only exposes that content while browser JS loads.
+ assert.match(lazy,/return <ShellChildrenContext\\.Provider value=\\{children\\}>/)
+ assert.match(lazy,/<ClientShell>\\{children\\}<\\/ClientShell>/)
+ assert.match(lazy,/\\{content\\}/)
 })
 
 test('browser acceptance is still required to fail on Worker overload, not accept it as a denial',()=>{
