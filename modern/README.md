@@ -62,3 +62,7 @@ Vite's publicDir is deliberately `modern/public` rather than the legacy root `pu
 - Text chat uses one selected-channel Realtime subscription, 100-message window, on-demand local translation roadmap and idempotent `upt_send_chat_message_operation_v2` with a stable operation UUID per queued message. Offline outbox is capped at 50 per user and is purged on sign-out, account denial or identity switch. Failed sends are *queued*, never misreported as delivered.
 - Chat read receipts use `upt_mark_chat_read`, which verifies channel access server-side. The modern candidate still lacks the current app's auto-translation, attachment signing, read-avatar details, group management and moderation UI, so chat parity is **not** achieved.
 - The write gate `VITE_MIGRATION_ALLOW_WRITES` defaults to `false` and must remain so until full E2E and data integrity approval.
+
+## Isolated Worker validation
+
+The existing fast Main CI stays unchanged in normal runs. The migration-only PR gate now also **bundles the Hono Worker with Wrangler using dry-run** and audits the candidate's production dependencies. This checks Worker packaging without publishing a Cloudflare deployment; a future live preview must additionally measure actual CPU/memory under seven-role and 30-user load. No production credentials or user OAuth logins are required for this packaging check.

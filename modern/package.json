@@ -13,7 +13,8 @@
     "check": "tsc --noEmit -p tsconfig.json",
     "preview": "vite preview",
     "deploy:dry-run": "npm run build && wrangler deploy --dry-run",
-    "budget": "node scripts/bundle-budget.mjs"
+    "budget": "node scripts/bundle-budget.mjs",
+    "worker:check": "wrangler deploy --dry-run --outdir .wrangler-candidate-dry-run"
   },
   "dependencies": {
     "@supabase/ssr": "0.9.0",

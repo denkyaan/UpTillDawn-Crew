@@ -87,6 +87,8 @@ jobs:
           npm --prefix modern run check
           npm --prefix modern run build
           npm --prefix modern run budget
+          npm --prefix modern run worker:check
+          npm --prefix modern audit --omit=dev --audit-level=high
       - name: Inventory every Main page and API route
         run: node scripts/main-adversarial-surface.mjs --inventory-only
       - name: Audit requested product functionality against committed code and tests
