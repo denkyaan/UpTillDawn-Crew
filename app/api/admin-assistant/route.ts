@@ -25,7 +25,7 @@ export async function POST(request:Request){
   if(adminError)return Response.json({error:'Toegangscontrole tijdelijk niet beschikbaar.'},{status:503})
   if(!isAdmin)return Response.json({error:'Geen toegang.'},{status:403})
   let body:unknown
-  try{body=await readStrictJson(request,8_192)}
+  try{body=await readStrictJson(request,32_768)}
   catch(error){return Response.json({error:'Ongeldige AI-aanvraag.'},{
     status:error instanceof Error&&error.message==='too_large'?413:400,
   })}
