@@ -96,7 +96,7 @@ test('handover captures and exposes inventory state at ready time', async () => 
 
 test('inventory is integrated as a workplace-scoped navigation feature while retaining material workflows', async () => {
   const [tasks,workplaces,panel,roles,nav,inventoryPage]=await Promise.all([
-    readFile(new URL('../app/(app)/tasks/page.tsx',import.meta.url),'utf8'),
+    readFile(new URL('../app/(app)/tasks/manager-page.tsx',import.meta.url),'utf8'),
     readFile(new URL('../app/(app)/workplaces/page.tsx',import.meta.url),'utf8'),
     readFile(new URL('../components/crew/inventory-panel.tsx',import.meta.url),'utf8'),
     readFile(new URL('../lib/role-ui.ts',import.meta.url),'utf8'),
