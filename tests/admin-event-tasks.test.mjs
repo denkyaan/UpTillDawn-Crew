@@ -2,7 +2,7 @@ import test from 'node:test'
 import assert from 'node:assert/strict'
 import {readFileSync} from 'node:fs'
 const page=readFileSync('app/(app)/admin/management/event-tasks/page.tsx','utf8')
-const tasks=readFileSync('app/(app)/tasks/page.tsx','utf8')
+const tasks=readFileSync('app/(app)/tasks/manager-page.tsx','utf8')
 test('admin event task overview enforces role and approval',()=>{
  assert.ok(page.includes('!actor?.isAdmin'))
  assert.ok(page.includes('actor.account_blocked'))
