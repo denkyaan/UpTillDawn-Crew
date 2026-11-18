@@ -1,7 +1,7 @@
 import {supabase} from "./supabase"
 
 export type EventRow={id:string;name:string;venue:string|null;address:string|null;start_at:string;end_at:string;status:string;registration_deadline:string|null;max_joiners:number|null}
-export type TaskRow={id:string;status:string;tasks:{id:string;title:string;description:string|null;event_id:string|null}|null}
+export type TaskRow={id:string;status:string;confirmed_at:string|null;tasks:{id:string;title:string;description:string|null;event_id:string|null}|null}
 export type ChatRow={id:string;name:string;kind:string}
 const DEADLINE_MS=12000
 
@@ -20,7 +20,7 @@ export async function loadEvents(signal:AbortSignal):Promise<EventRow[]>{
 }
 export async function loadTasks(uid:string,signal:AbortSignal):Promise<TaskRow[]>{
  const {data,error}=await supabase().from("task_assignments")
-  .select("id,status,tasks(id,title,description,event_id)")
+  .select("id,status,confirmed_at,tasks(id,title,description,event_id)")
   .eq("user_id",uid).order("created_at",{ascending:false})
   .limit(100).abortSignal(signal)
  if(error)throw new Error("tasks_unavailable")

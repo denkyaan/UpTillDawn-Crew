@@ -10,7 +10,7 @@ Replace Next.js/OpenNext's per-navigation SSR with Vite/React Router static asse
 
 - Separate Vite/React build and Hono Worker config, without modifying production or Main's deployed app.
 - Signed RLS session context using `upt_current_session_context`, real role and account approval checks; portal assignment visibility resolved via `upt_my_portal_assignments`.
-- Upcoming Events, personal Tasks, accessible channel names, and authorized financial summary; bounded queries and user-scoped offline *read* snapshots. Event availability reuses the existing database-side authenticated and deadline-checked RPC, gated OFF by default and not available to real users.
+- Upcoming Events, personal Tasks, chat channels with bounded Realtime message history, and authorized financial summary; bounded queries and user-scoped offline *read* snapshots. Event availability, personal task confirmation/status, chat text/read receipts and idempotent offline chat text outbox reuse existing authorization/audit RPCs. **All candidate writes are OFF by default and not available to real users.**
 - Device-localized navigation baseline (NL, FR, EN, DE); service worker caches only public static assets.
 - Explicit module boundaries, safe denial on unported pages, no fake financial balances or completed workflows.
 - Authenticated API example `/api/v1/session` with bearer-validated claims and PostgREST RLS, never a service-role key.
@@ -55,3 +55,10 @@ The isolated `modern/wrangler.jsonc` has `workers_dev:false`, `preview_urls:fals
 ## Static-service-worker isolation
 
 Vite's publicDir is deliberately `modern/public` rather than the legacy root `public/`. This prevents accidentally packaging the previous production service worker, legacy scripts, debug pages and large offline assets into the candidate. Any needed offline capabilities must be audited and ported individually. The candidate manifest and service worker intentionally expose no production credentials.
+
+## Modern interaction transport (migration candidate only)
+
+- Staff task confirmations and status updates call the existing `upt_confirm_task_assignment` and `upt_update_task_status` RPCs after live auth checks. Both RPCs check assignment ownership, shift/feature constraints and audit state changes.
+- Text chat uses one selected-channel Realtime subscription, 100-message window, on-demand local translation roadmap and idempotent `upt_send_chat_message_operation_v2` with a stable operation UUID per queued message. Offline outbox is capped at 50 per user and is purged on sign-out, account denial or identity switch. Failed sends are *queued*, never misreported as delivered.
+- Chat read receipts use `upt_mark_chat_read`, which verifies channel access server-side. The modern candidate still lacks the current app's auto-translation, attachment signing, read-avatar details, group management and moderation UI, so chat parity is **not** achieved.
+- The write gate `VITE_MIGRATION_ALLOW_WRITES` defaults to `false` and must remain so until full E2E and data integrity approval.
