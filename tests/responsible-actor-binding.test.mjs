@@ -37,7 +37,7 @@ test('versioned SQL migration and read-only preflight stay synchronized',()=>{
   .filter(version=>version.length===14&&[...version].every(c=>c>='0'&&c<='9'))
   .sort()
  const latest=versions.at(-1)
- assert.equal(latest,'20261118112738')
+ assert.ok(latest,'Expected at least one versioned Supabase migration')
  assert.match(readFileSync('lib/release-baseline.ts','utf8'),new RegExp("EXPECTED_DB_MIGRATION_VERSION='"+latest+"'"))
  assert.ok(readFileSync('scripts/production-preflight-readonly.sql','utf8').includes("WHERE version='"+latest+"'"))
 })
