@@ -26,7 +26,7 @@ test('Approvals owns the only leadership and personnel role selector',()=>{
  assert.match(editor,/value="none"/)
 })
 test('Tasks is the only Admin navigation entry for event and promotion task modules',()=>{
- const tasks=read('app/(app)/tasks/page.tsx')
+ const tasks=read('app/(app)/tasks/manager-page.tsx')
  assert.match(tasks,/Evenementtaken beheren/)
  assert.match(tasks,/Promotietaken beheren/)
  const moderation=read('app/(app)/portals/administration/promotion-discipline/page.tsx')
