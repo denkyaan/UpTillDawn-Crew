@@ -13,7 +13,7 @@ test('final acceptance covers registration approval and portal role binding',asy
 })
 
 test('final acceptance covers event planning briefing workplace shift and availability',async()=>{
-  const [events,workplaces,briefing]=await Promise.all([read('app/(app)/events/page.tsx'),read('components/crew/workplace-shift-planner.tsx'),read('app/(app)/briefings/page.tsx')])
+  const [events,workplaces,briefing]=await Promise.all([read('app/(app)/events/manager-page.tsx'),read('components/crew/workplace-shift-planner.tsx'),read('app/(app)/briefings/page.tsx')])
   assert.match(events,/Beschikbaarheid bevestigen/)
   assert.match(workplaces,/assignAvailableCrewShift/)
   assert.match(workplaces,/Personeel \+ uren toevoegen/)
@@ -30,7 +30,7 @@ test('final acceptance covers check-in work break checkout and governed timeshee
 
 test('final acceptance covers tasks inventory guestlist sales incidents and realtime collaboration',async()=>{
   const [tasks,inventory,guestlist,sales,chat,realtime]=await Promise.all([
-    read('app/(app)/tasks/page.tsx'),read('components/crew/inventory-panel.tsx'),read('components/crew/guestlist-entrance-client.tsx'),
+    read('app/(app)/tasks/manager-page.tsx'),read('components/crew/inventory-panel.tsx'),read('components/crew/guestlist-entrance-client.tsx'),
     read('components/crew/sales-register-client.tsx'),read('components/crew/chat-client.tsx'),read('components/realtime-refresh.tsx'),
   ])
   assert.match(tasks,/task/i)
