@@ -1,6 +1,7 @@
 import { getCloudflareContext } from '@opennextjs/cloudflare'
 import { z } from 'zod'
-import { createClient } from '@/lib/supabase/crew-server'
+import { getCurrentUser } from '@/lib/actions/auth'
+import { readStrictJson } from '@/lib/strict-json-body'
 
 const schema=z.object({
   text:z.string().trim().min(1).max(4000),
@@ -15,11 +16,14 @@ export async function POST(request:Request){
     return Response.json({error:'Ongeldige oorsprong.'},{status:403})
   }
 
-  const client=await createClient()
-  const {data:{user}}=await client.auth.getUser()
+  // Verified, approved, non-blocked session: a Supabase login alone is not access.
+  const user=await getCurrentUser()
   if(!user)return Response.json({error:'Aanmelden vereist.'},{status:401})
 
-  const parsed=schema.safeParse(await request.json().catch(()=>null))
+  let body:unknown
+  try{body=await readStrictJson(request,8192)}
+  catch(error){return Response.json({error:'Ongeldige vertaalaanvraag.'},{status:error instanceof Error&&error.message==='too_large'?413:400})}
+  const parsed=schema.safeParse(body)
   if(!parsed.success)return Response.json({error:'Ongeldige vertaalaanvraag.'},{status:400})
 
   let ai:{run:(model:string,input:Record<string,unknown>)=>Promise<unknown>}|undefined
