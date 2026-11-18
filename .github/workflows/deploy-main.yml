@@ -251,6 +251,7 @@ jobs:
 
   qa-main-runtime-diagnostic:
     # Read-only measurement of actual Worker invocation outcomes after QA.
+    # A full Main QA run is explicitly requested by a main commit bearing [main-qa-e2e].
     # A missing analytics permission is reported, never mistaken for a pass.
     needs: [validate-trigger, deploy, qa-main-browser-acceptance, qa-main-functional-acceptance, qa-main-concurrency-acceptance]
     if: >-
