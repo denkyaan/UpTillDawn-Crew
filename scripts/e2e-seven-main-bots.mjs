@@ -79,6 +79,10 @@ async function assertAllowed(page,path,validPaths=[path]){
   :path==='/portals/administration'?'[data-administration-overview-ready="true"] h1'
   :'h1,main h2'
  await page.locator(ready).first().waitFor({state:'visible',timeout:30000})
+ // Server-rendered headings are not proof that the interactive app shell
+ // loaded; navigation, chat and controls require the real client layout.
+ await page.locator('[data-app-shell-ready="true"]').first()
+  .waitFor({state:'visible',timeout:30000})
  // A static loading fallback is useful to the user but is NOT evidence that
  // the Staff task client actually hydrated and can perform its workflows.
  if(path==='/tasks')await page.locator('[data-staff-tasks-hydrated="true"]')
@@ -366,6 +370,9 @@ try{
       locale,{timeout:7000})
     }catch{
      const htmlLocale=(await page.locator('html').getAttribute('lang')||'').split('-')[0]
+     const workerBody=(await page.locator('body').innerText().catch(()=>''))||''
+     if(/Error 1102|Worker exceeded resource limits/i.test(workerBody))
+      throw Error('Cloudflare Worker 1102 after login; verify Main CPU/memory outcomes')
      throw Error('App language mismatch after hydration: '+htmlLocale+' !== '+locale)
     }
     for(const path of role.allowed){

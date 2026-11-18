@@ -125,8 +125,16 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
     ||pathname.startsWith("/exports")
     ||pathname.startsWith("/admin/platform")
   ))
-  const currentVisible=adminAlwaysRoute||!currentFeature||!roleKey||!rulesReady||previewAll||ruleMatches(currentRule,effectiveContext,false)
-  const currentUsable=previewAll||adminAlwaysRoute||!currentFeature||!roleKey||!rulesReady||ruleUsable(currentRule,effectiveContext,false)
+  // A Staff/Responsible who has no active shift must still see their Tasks
+  // landing page, with the existing "available when your shift starts" state.
+  // This does not grant task actions: server actions and RLS enforce shifts.
+  // Explicit hidden/disabled Admin role rules remain authoritative.
+  const taskLandingVisible=Boolean(currentFeature==="tasks"&&
+    (roleKey==="staff"||roleKey==="responsible_lead")&&
+    currentRule?.visible===true&&currentRule?.enabled===true&&
+    currentRule?.condition_key==="shift_active")
+  const currentVisible=adminAlwaysRoute||taskLandingVisible||!currentFeature||!roleKey||!rulesReady||previewAll||ruleMatches(currentRule,effectiveContext,false)
+  const currentUsable=taskLandingVisible||previewAll||adminAlwaysRoute||!currentFeature||!roleKey||!rulesReady||ruleUsable(currentRule,effectiveContext,false)
   const contentLocked=Boolean(currentVisible&&!currentUsable)
 
   const refresh=useCallback(async(force=false)=>{
@@ -301,7 +309,10 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
   const showInventory=feature("inventory",context.assignedWorkplaceRole)
   const showGuestlist=feature("guestlist",Boolean(isAdmin)||context.assignedEvent)
   const showSales=Boolean(isAdmin)&&feature("sales",true)
-  const showTasks=feature("tasks",Boolean(isAdmin)||context.shiftActive)
+  const showTasks=feature("tasks",Boolean(isAdmin)||context.shiftActive)||
+    Boolean((roleKey==="staff"||roleKey==="responsible_lead")&&
+      ruleMap.get("tasks")?.visible===true&&ruleMap.get("tasks")?.enabled===true&&
+      ruleMap.get("tasks")?.condition_key==="shift_active")
   const showIncidents=feature("incidents",isAdmin?true:context.shiftActive)
   const showChat=feature("chat",true)
   const showCrew=feature("crew",true)
@@ -322,7 +333,7 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
   const effectiveAiWorkspace=isAdmin?aiWorkspace:"administration"
   const adminAiAction=adminAiVisible?<div className="relative z-[70] print:hidden"><button type="button" aria-expanded={adminAiOpen} onClick={()=>{if(navigationExpanded)window.dispatchEvent(new Event("uptilldawn-navigation-dismiss"));setAdminAiOpen(value=>!value)}} className="rounded-lg bg-violet-600 px-2 py-2 text-xs font-black text-white shadow sm:px-3"><span className="sm:hidden">AI</span><span className="hidden sm:inline">{administrationPortal?({nl:"Administratie AI",fr:"IA administrative",en:"Administration AI",de:"Verwaltungs-KI"} as const)[uiLocale]:"ADMIN AI"}</span></button>{adminAiOpen&&<div className="fixed inset-x-3 top-[calc(4.5rem+env(safe-area-inset-top))] z-[80] max-h-[calc(100dvh-7rem)] overflow-y-auto rounded-2xl border bg-background p-4 shadow-2xl sm:absolute sm:inset-x-auto sm:top-[calc(100%+0.5rem)] sm:right-0 sm:w-[min(92vw,430px)] sm:max-h-[75dvh]"><div className="space-y-3"><div className="flex gap-2">{isAdmin&&<button type="button" aria-pressed={aiWorkspace==="admin"} onClick={()=>setAiWorkspace("admin")} className={`rounded-lg border px-3 py-2 text-sm ${aiWorkspace==="admin"?"border-violet-500 text-violet-400":""}`}>Admin AI</button>}<button type="button" aria-pressed={effectiveAiWorkspace==="administration"} onClick={()=>setAiWorkspace("administration")} className={`rounded-lg border px-3 py-2 text-sm ${aiWorkspace==="administration"?"border-violet-500 text-violet-400":""}`}>{({nl:"Administratie AI",fr:"IA administrative",en:"Administration AI",de:"Verwaltungs-KI"} as const)[uiLocale]}</button></div>{effectiveAiWorkspace==="admin"?<PlatformAiAssistant contextKey={currentFeature||undefined} contextLabel={labels[currentFeature||""]} compact/>:<AdministrationAiChat locale={uiLocale} compact/>}</div></div>}</div>:null
 
-  return <div className="flex h-dvh bg-background print:block print:h-auto">
+  return <div data-app-shell-ready="true" className="flex h-dvh bg-background print:block print:h-auto">
 
     {/* Mobile shell lives at the AppLayout root so iOS fixed positioning is not
         clipped by the nested overflow scroll container. */}

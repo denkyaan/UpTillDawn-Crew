@@ -18,6 +18,11 @@ function ShellLoading(){
  const content=useContext(ShellChildrenContext)
  return <div data-shell-hydrating="true" className="min-h-screen">
   <p role="status" aria-live="polite" className="mx-auto max-w-7xl p-4 text-sm text-muted-foreground">{({nl:"Werkruimte laden…",fr:"Chargement de l’espace de travail…",en:"Loading workspace…",de:"Arbeitsbereich wird geladen…"} as const)[activeUiLocale()]}</p>
+  <nav aria-label="Basisnavigatie tijdens laden" data-shell-fallback-navigation="true" className="mx-auto flex max-w-7xl flex-wrap gap-2 px-4 pb-3 text-sm">
+   <a href="/" className="rounded-lg border px-3 py-2">Home</a>
+   <a href="/events" className="rounded-lg border px-3 py-2">{({nl:"Evenementen",fr:"Événements",en:"Events",de:"Veranstaltungen"} as const)[activeUiLocale()]}</a>
+   <a href="/chat" className="rounded-lg border px-3 py-2">Chat</a>
+  </nav>
   {content}
  </div>
 }

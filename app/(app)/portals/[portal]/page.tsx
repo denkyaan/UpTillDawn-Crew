@@ -1,6 +1,6 @@
 import Link from 'next/link'
-import { cookies, headers } from 'next/headers'
-import { parseAcceptLanguage, parseUiLocale } from '@/lib/locale-preferences'
+import { requestUiLocale } from '@/lib/server-locale'
+import { currentPortalAssignments } from '@/lib/portal-access-server'
 import { notFound, redirect } from 'next/navigation'
 import { getCurrentUser } from '@/lib/actions/auth'
 import { createClient } from '@/lib/supabase/crew-server'
@@ -21,15 +21,13 @@ export default async function PortalPage({ params }: { params: Promise<{ portal:
   if (portal !== 'promotion' && portal !== 'administration') notFound()
   const current = await getCurrentUser()
   if (!current) redirect('/login')
-  const requestHeaders = await headers()
-  const cookieLocale = parseUiLocale((await cookies()).get('uptilldawn-language')?.value)
-  const locale = cookieLocale ?? parseAcceptLanguage(requestHeaders.get('accept-language')) ?? 'nl'
+  const locale = await requestUiLocale()
   const t = portalCopy[locale]
   // Verified administrators and the Maker already have portal access.
   // Only role-assigned users need this live RLS-protected membership lookup.
   // Avoid extra Worker/PostgREST work on every privileged portal navigation.
   const { data, error } = !current.realIsAdmin && !current.isOwner
-    ? await (await createClient()).rpc('upt_my_portal_assignments')
+    ? await currentPortalAssignments()
     : { data: [] as PortalAssignment[], error: null }
   if (error && !current.realIsAdmin && !current.isOwner) return <main className="p-6"><h1 className="text-xl font-bold">{t.unavailable}</h1><p className="mt-3">{t.unavailableDesc}</p><Link href="/portals" className="mt-4 inline-block text-violet-400">{t.returnToPortals}</Link></main>
   if (!current.realIsAdmin && !current.isOwner && !canOpenPortal(portal, (data ?? []) as PortalAssignment[], {
