@@ -6,14 +6,25 @@ INSERT INTO bot_ids(name)
 SELECT 'bot_'||lpad(n::text,2,'0') FROM generate_series(1,15) n;
 INSERT INTO bot_ids(name) VALUES ('event'),('wp_entrance'),('wp_bar'),('wp_backstage');
 GRANT SELECT ON bot_ids TO authenticated;
+-- Reuse the approved Main Head for this isolated regression; never create
+-- a competing Admin profile (single-Head uniqueness must remain enforced).
+UPDATE bot_ids SET id=(SELECT l.user_id FROM public.upt_organization_leadership l
+ JOIN public.profiles p ON p.id=l.user_id WHERE l.slot='head'
+ AND p.role='admin' AND p.approved AND NOT coalesce(p.account_blocked,false))
+WHERE name='bot_01';
+DO $qa_head$ BEGIN
+ IF (SELECT id FROM bot_ids WHERE name='bot_01') IS NULL THEN
+  RAISE EXCEPTION 'No active designated Main Head available for role test';
+ END IF;
+END $qa_head$;
 
 INSERT INTO auth.users(id,email)
-SELECT id,name||'@bots.uptilldawn.test' FROM bot_ids WHERE name like 'bot_%';
+SELECT id,name||'@bots.uptilldawn.test' FROM bot_ids WHERE name like 'bot_%' AND name<>'bot_01';
 
 UPDATE public.profiles p SET approved=true,
  role=case when b.name='bot_01' then 'admin' when b.name in ('bot_02','bot_03','bot_04') then 'responsible_lead' else 'staff' end,
  full_name='E2E '||b.name
-FROM bot_ids b WHERE p.id=b.id AND b.name like 'bot_%';
+FROM bot_ids b WHERE p.id=b.id AND b.name like 'bot_%' AND b.name<>'bot_01';
 
 INSERT INTO public.events(id,name,start_date,end_date,start_at,end_at,status,created_by)
 VALUES((SELECT id FROM bot_ids WHERE name='event'),'15 Bot Full Event',now()+interval '1 hour',now()+interval '9 hours',now()+interval '1 hour',now()+interval '9 hours','scheduled',(SELECT id FROM bot_ids WHERE name='bot_01'));

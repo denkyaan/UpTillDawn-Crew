@@ -68,16 +68,20 @@ WITH checks(name,required,passed) AS (
     to_regclass('public.admin_provider_transactions') IS NOT NULL
     AND to_regclass('public.admin_provider_bank_settlements') IS NOT NULL
   UNION ALL
-  SELECT 'attendance_check_in_out_authenticated_only', true,
+  SELECT 'retired_pre_qr_attendance_closed_and_qr_flow_enabled', true,
     coalesce(
-      has_function_privilege('authenticated',
+      NOT has_function_privilege('authenticated',
         to_regprocedure('public.upt_request_check_in(uuid,uuid,boolean,text,numeric,numeric,numeric,text)'), 'EXECUTE')
       AND NOT has_function_privilege('anon',
         to_regprocedure('public.upt_request_check_in(uuid,uuid,boolean,text,numeric,numeric,numeric,text)'), 'EXECUTE')
-      AND has_function_privilege('authenticated',
+      AND NOT has_function_privilege('authenticated',
         to_regprocedure('public.upt_request_check_out(uuid,text)'), 'EXECUTE')
       AND NOT has_function_privilege('anon',
-        to_regprocedure('public.upt_request_check_out(uuid,text)'), 'EXECUTE'), false)
+        to_regprocedure('public.upt_request_check_out(uuid,text)'), 'EXECUTE')
+      AND has_function_privilege('authenticated',
+        to_regprocedure('public.upt_qr_request(boolean,boolean,text)'), 'EXECUTE')
+      AND NOT has_function_privilege('anon',
+        to_regprocedure('public.upt_qr_request(boolean,boolean,text)'), 'EXECUTE'), false)
   UNION ALL
   SELECT 'verified_self_scoped_session_context', true,
     coalesce(
@@ -96,7 +100,7 @@ WITH checks(name,required,passed) AS (
   UNION ALL
   SELECT 'main_tip_migration_in_history', false,
     EXISTS(SELECT 1 FROM supabase_migrations.schema_migrations
-      WHERE version='20261118112738')
+      WHERE version='20261118121657')
 )
 SELECT name,required,passed,
   CASE WHEN passed THEN 'PASS'

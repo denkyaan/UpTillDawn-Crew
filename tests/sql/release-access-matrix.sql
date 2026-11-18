@@ -10,16 +10,30 @@ INSERT INTO rr_ids(name) VALUES
 ('future_wp'),('active_wp'),('ended_wp');
 GRANT SELECT ON rr_ids TO authenticated;
 
+-- Honor the single-Head constraint: use the existing isolated Main QA Head
+-- as an identity fixture, without creating a second Admin or modifying it.
+UPDATE rr_ids SET id=(
+ SELECT l.user_id FROM public.upt_organization_leadership l
+ JOIN public.profiles p ON p.id=l.user_id
+ WHERE l.slot='head' AND p.role='admin' AND p.approved
+   AND NOT coalesce(p.account_blocked,false)
+) WHERE name='admin';
+DO $head_fixture$ BEGIN
+ IF (SELECT id FROM rr_ids WHERE name='admin') IS NULL THEN
+  RAISE EXCEPTION 'Main QA requires an approved active designated Head';
+ END IF;
+END $head_fixture$;
+
 INSERT INTO auth.users(id,email)
 SELECT id,name||'@release.test'
-FROM rr_ids WHERE name IN ('admin','lead','staff','other');
+FROM rr_ids WHERE name IN ('lead','staff','other');
 
 UPDATE public.profiles p
 SET approved=true,
     role=CASE i.name WHEN 'admin' THEN 'admin' WHEN 'lead' THEN 'responsible_lead' ELSE 'staff' END,
     full_name=initcap(i.name)||' Release'
 FROM rr_ids i
-WHERE p.id=i.id AND i.name IN ('admin','lead','staff','other');
+WHERE p.id=i.id AND i.name IN ('lead','staff','other');
 
 INSERT INTO public.events(id,name,start_date,end_date,start_at,end_at,status,created_by)
 VALUES
