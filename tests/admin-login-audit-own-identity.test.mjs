@@ -1,6 +1,6 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
-import {readFileSync} from 'node:fs'
+import {readFileSync,readdirSync} from 'node:fs'
 
 const migration=readFileSync('supabase/migrations/20261118105430_scope_admin_login_success_to_verified_admin_identity.sql','utf8')
 const regression=readFileSync('tests/sql/admin-login-audit-own-identity.sql','utf8')
@@ -44,6 +44,13 @@ test('privileged audit function retains original signature, audit event and safe
 test('release migration preflight matches deployed isolated Main database migration',()=>{
  const baseline=readFileSync('lib/release-baseline.ts','utf8')
  const preflight=readFileSync('scripts/production-preflight-readonly.sql','utf8')
- assert.match(baseline,/EXPECTED_DB_MIGRATION_VERSION='20261118105430'/)
- assert.match(preflight,/WHERE version='20261118105430'/)
+ const versions=readdirSync('supabase/migrations')
+  .filter(name=>name.endsWith('.sql'))
+  .map(name=>name.split('_')[0])
+  .filter(version=>version.length===14&&[...version].every(char=>char>='0'&&char<='9'))
+  .sort()
+ const latest=versions.at(-1)
+ assert.ok(latest,'Expected a versioned migration')
+ assert.ok(baseline.includes("EXPECTED_DB_MIGRATION_VERSION='"+latest+"'"))
+ assert.ok(preflight.includes("WHERE version='"+latest+"'"))
 })
