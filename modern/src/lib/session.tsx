@@ -1,4 +1,4 @@
-import {createContext,useCallback,useContext,useEffect,useMemo,useState,type ReactNode} from "react"
+import {createContext,useCallback,useContext,useEffect,useMemo,useRef,useState,type ReactNode} from "react"
 import {supabase} from "./supabase"
 import {purgeSnapshotUser} from "./local-cache"
 import {isActive,parseIdentity,visiblePortals,type Assignment,type Portal,type VerifiedIdentity} from "../shared/identity"
@@ -9,21 +9,31 @@ const Context=createContext<SessionApi|null>(null)
 export function SessionProvider({children}:{children:ReactNode}){
  const [state,setState]=useState<State>({status:"checking",identity:null,portals:[]})
  const db=useMemo(()=>supabase(),[])
+ const lastIdentity=useRef<string|null>(null)
  const refresh=useCallback(async()=>{
   const {data:{session},error:sessionError}=await db.auth.getSession()
   if(sessionError){setState({status:"error",identity:null,portals:[]});return}
-  if(!session){setState({status:"anonymous",identity:null,portals:[]});return}
+  if(!session){
+   if(lastIdentity.current)void purgeSnapshotUser(lastIdentity.current).catch(()=>{})
+   lastIdentity.current=null
+   setState({status:"anonymous",identity:null,portals:[]});return
+  }
   // A stored session is NOT an authorization decision. This invoker RPC
   // verifies signed PostgREST JWT + live approval, owner and effective role.
   const {data,error}=await db.rpc("upt_current_session_context")
   if(error){setState({status:"error",identity:null,portals:[]});return}
   const identity=parseIdentity(Array.isArray(data)?data[0]:null)
   if(!identity||identity.id!==session.user.id||!isActive(identity)){
+   void purgeSnapshotUser(session.user.id).catch(()=>{})
+   lastIdentity.current=null
    setState({status:"denied",identity:null,portals:[]});return
   }
   const assignments=identity.role==="admin"||identity.is_owner?
    {data:[] as Assignment[],error:null}:await db.rpc("upt_my_portal_assignments")
   if(assignments.error){setState({status:"error",identity:null,portals:[]});return}
+  if(lastIdentity.current&&lastIdentity.current!==identity.id)
+   void purgeSnapshotUser(lastIdentity.current).catch(()=>{})
+  lastIdentity.current=identity.id
   setState({status:"ready",identity,portals:visiblePortals(identity,(assignments.data||[]) as Assignment[])})
  },[db])
  useEffect(()=>{
@@ -44,6 +54,7 @@ export function SessionProvider({children}:{children:ReactNode}){
   const uid=state.identity?.id
   await db.auth.signOut()
   if(uid)await purgeSnapshotUser(uid).catch(()=>{})
+  lastIdentity.current=null
   setState({status:"anonymous",identity:null,portals:[]})
  },[db,state.identity?.id])
  return <Context.Provider value={{...state,refresh,signIn,signOut}}>{children}</Context.Provider>
