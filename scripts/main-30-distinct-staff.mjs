@@ -37,7 +37,7 @@ const report={
  realtimeSubscribed:0,realtimeReceived:0,chatReads:0,availabilityReads:0,
  checkinDenied:0,timesheetReads:0,http5xx:0,failures:[],
  holdMs:HOLD_MS,cleanupVerified:false,
- scope:'30 separate Auth accounts, JWTs and browser contexts; RLS reads of crew/chat/check-in/time; 30 Realtime subscriptions and ephemeral broadcast. Check-ins are rejected for a future QA draft event; positive GPS/time writes are NOT simulated on shared Main.',
+ scope:'30 separate Auth accounts, JWTs and browser contexts; RLS reads of crew/chat/check-in/time; 30 Realtime subscriptions and ephemeral broadcast. Current QR attendance returns outside_window with no shift and creates no records for unpublished QA draft events; positive GPS/time writes are NOT simulated on shared Main.',
 }
 const errors=report.failures
 const record=(step,error,index)=>{
@@ -183,7 +183,7 @@ if(process.argv.includes('--cleanup')){
    start_at:start,end_at:end,start_date:start,end_date:end,
    onboarding_required:false,
   }).select('id').single(),'QA private draft event')
-  const workplace=throwIfError(await service.from('workplaces').insert({
+  throwIfError(await service.from('workplaces').insert({
    event_id:event.id,name:EVENT_NAME+' post',minimum_staff:1,target_staff:COUNT,
   }).select('id').single(),'QA private workpost')
   const membership=await service.from('event_members').insert(
@@ -268,15 +268,23 @@ if(process.argv.includes('--cleanup')){
    throwIfError(await client.from('check_ins').select('id')
     .eq('event_id',event.id).eq('user_id',person.id).limit(1).abortSignal(AbortSignal.timeout(8000)),
     'Own check-in history')
-   const denied=await client.rpc('upt_request_check_in',{
-    p_event:event.id,p_workplace:workplace.id,p_remote:false,
-    p_gps_status:'not_checked',
-   }).abortSignal(AbortSignal.timeout(8000))
-   assert.ok(denied.error,'Future unpublished event accepted an unassigned check-in')
-   assert.ok(denied.status<500,'Check-in service outage is not a valid authorization denial')
-   assert.match(String(denied.error.message),/dienst|Werk & pauze/i,
-    'Check-in was not rejected by the expected shift or operations guard')
-   // Do not create synthetic attendance or GPS records.
+   // The pre-QR attendance RPC was deliberately revoked. Exercise the
+   // actual user-facing QR flow rather than asserting on an obsolete API.
+   // These fresh QA Staff accounts have NO shifts and the event is a
+   // future unpublished draft: the only safe result is outside_window
+   // with no next shift. A 5xx or RPC error remains a hard QA failure.
+   const guarded=await client.rpc('upt_qr_request')
+    .abortSignal(AbortSignal.timeout(8000))
+   throwIfError(guarded,'Authenticated QR attendance guard')
+   assert.equal(guarded.data?.action,'outside_window',
+    'Unassigned Staff entered an attendance flow without a shift')
+   assert.equal(guarded.data?.next_shift_id??null,null,
+    'Unassigned Staff was shown another shift')
+   const history=throwIfError(await client.from('check_ins').select('id')
+    .eq('event_id',event.id).eq('user_id',person.id)
+    .limit(1).abortSignal(AbortSignal.timeout(8000)),
+    'Check-in did not remain read-only')
+   assert.equal(history.length,0,'QR test created attendance for an unassigned Staff account')
    report.checkinDenied++
    throwIfError(await client.from('timesheets').select('id,status')
     .eq('event_id',event.id).eq('user_id',person.id).limit(1).abortSignal(AbortSignal.timeout(8000)),

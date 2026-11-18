@@ -4,8 +4,9 @@ import {readFileSync} from 'node:fs'
 
 const migration=readFileSync('supabase/migrations/20261117174500_restore_attendance_rpc_authenticated_grants.sql','utf8')
 const runner=readFileSync('scripts/main-30-distinct-staff.mjs','utf8')
+const retirement=readFileSync('supabase/migrations/20261118121657_revoke_retired_pre_qr_attendance_rpcs.sql','utf8')
 
-test('attendance API grants only authenticated the exact self-service function signatures',()=>{
+test('historical attendance grants have been superseded by explicit retirement',()=>{
  for(const fn of [
   'public.upt_request_check_in\\(uuid,uuid,boolean,text,numeric,numeric,numeric,text\\)',
   'public.upt_request_check_out\\(uuid,text\\)',
@@ -15,13 +16,21 @@ test('attendance API grants only authenticated the exact self-service function s
  }
  assert.doesNotMatch(migration,/grant\s+execute[\s\S]+?\bto (?:anon|public)\b/i)
  assert.doesNotMatch(migration,/grant\s+(?:all|insert|update|delete|select)\s+on\b/i)
+ for(const signature of [
+  'public.upt_request_check_in\\(uuid,uuid,boolean,text,numeric,numeric,numeric,text\\)',
+  'public.upt_request_check_out\\(uuid,text\\)',
+ ]){
+  assert.match(retirement,new RegExp('REVOKE ALL ON FUNCTION '+signature+' FROM PUBLIC,anon,authenticated'))
+ }
 })
 
-test('30 distinct users must reach a business-rule denial, not an RPC privilege error',()=>{
- assert.match(runner,/upt_request_check_in/)
- assert.match(runner,/assert\.ok\(denied\.error/)
- assert.match(runner,/denied\.status<500/)
- assert.match(runner,/\/dienst\|Werk & pauze\/i/)
+test('30 distinct users must receive the actual QR outside-window decision and no attendance write',()=>{
+ assert.match(runner,/client\.rpc\('upt_qr_request'\)/)
+ assert.match(runner,/throwIfError\(guarded,'Authenticated QR attendance guard'\)/)
+ assert.match(runner,/guarded\.data\?\.action,'outside_window'/)
+ assert.match(runner,/guarded\.data\?\.next_shift_id\?\?null,null/)
+ assert.match(runner,/history\.length,0/)
+ assert.doesNotMatch(runner,/client\.rpc\('upt_request_check_in'\)/)
  assert.match(runner,/report\.checkinDenied\+\+/)
  assert.match(runner,/cleanupVerified/)
 })
