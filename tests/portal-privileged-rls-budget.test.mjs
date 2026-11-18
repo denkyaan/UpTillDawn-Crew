@@ -4,10 +4,14 @@ import {readFileSync} from 'node:fs'
 
 const portal = readFileSync('app/(app)/portals/[portal]/page.tsx','utf8')
 
-test('privileged Administration and Promotion pages avoid an unnecessary role RPC',()=>{
-  assert.match(portal,/const \{ data, error \} = !current\.realIsAdmin && !current\.isOwner\s*\? await \(await createClient\(\)\)\.rpc\('upt_my_portal_assignments'\)/)
-  assert.equal((portal.match(/\.rpc\('upt_my_portal_assignments'\)/g)||[]).length,1)
-  assert.match(portal,/\: \{ data: \[\] as PortalAssignment\[\], error: null \}/)
+test('privileged Administration and Promotion pages avoid a redundant role RPC',()=>{
+  assert.ok(portal.includes("const { data, error } = !current.realIsAdmin && !current.isOwner"))
+  assert.ok(portal.includes("? await currentPortalAssignments()"))
+  assert.equal(portal.split(".rpc('upt_my_portal_assignments')").length,1)
+  const cache=readFileSync('lib/portal-access-server.ts','utf8')
+  assert.ok(cache.includes("currentPortalAssignments=cache(async()"))
+  assert.ok(cache.includes("supabase.rpc('upt_my_portal_assignments')"))
+  assert.ok(portal.includes(": { data: [] as PortalAssignment[], error: null }"))
 })
 
 test('assigned roles retain live membership validation and blocked-account denial',()=>{
