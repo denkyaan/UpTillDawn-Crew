@@ -8,12 +8,12 @@
 // this component is returned (and independently within each protected page).
 import dynamic from "next/dynamic"
 import type {ReactNode} from "react"
-import type {AppLayout as AppShell} from "@/components/layout/app-layout"
+import {activeUiLocale} from "@/lib/locale-preferences"
 
 type Props={children:ReactNode}
 const ClientShell=dynamic<Props>(
  ()=>import("@/components/layout/app-layout").then(module=>module.AppLayout),
- {ssr:false,loading:()=><div role="status" aria-live="polite" className="mx-auto max-w-7xl p-4 text-sm text-muted-foreground">Loading workspace…</div>},
+ {ssr:false,loading:()=><div role="status" aria-live="polite" className="mx-auto max-w-7xl p-4 text-sm text-muted-foreground">{({nl:"Werkruimte laden…",fr:"Chargement de l’espace de travail…",en:"Loading workspace…",de:"Arbeitsbereich wird geladen…"} as const)[activeUiLocale()]}</div>},
 )
 
 export function LazyAppLayout({children}:Props){
