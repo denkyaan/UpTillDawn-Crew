@@ -53,6 +53,10 @@ export async function POST(request:Request){
  const value=body as Record<string,unknown>
  if(!isIntegrationProvider(value.provider))return output({error:"invalid_provider"},422)
  if(Object.keys(value).some(k=>k!=="provider"&&k!=="credentials"))return output({error:"invalid_body"},400)
+ // Merchant/Peppol OAuth tokens are exchanged and encrypted server-side after
+ // verified user consent. Reject browser-submitted tokens and legacy API keys.
+ if(value.provider==="sumup"||value.provider==="peppol")
+  return output({error:"connect_via_provider_login"},409)
  // OAuth refresh values are created and rotated server-side only, never
  // accepted from an arbitrary browser POST.
  if(value.provider==="weeztix"&&value.credentials&&typeof value.credentials==="object"&&!Array.isArray(value.credentials)){
