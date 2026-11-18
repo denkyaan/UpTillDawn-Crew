@@ -18,6 +18,12 @@ const ClientPwaRegister=dynamic(
  {ssr:false},
 )
 
-export function LazyClientBootstraps(){
- return <><ClientLocaleSync/><ClientPwaRegister/></>
+export function LazyPwaRegister(){
+ return <ClientPwaRegister/>
+}
+
+// Translation runs after the application children have hydrated so the DOM
+// translator does not mutate still-hydrating React text nodes.
+export function LazyLocaleSync(){
+ return <ClientLocaleSync/>
 }
