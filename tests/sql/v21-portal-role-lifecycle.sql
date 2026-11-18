@@ -12,6 +12,12 @@ DO $qa_head$ BEGIN
  END IF;
 END $qa_head$;
 
+CREATE TEMP TABLE qa_portal_head(id uuid not null);
+INSERT INTO qa_portal_head(id)
+SELECT l.user_id FROM public.upt_organization_leadership l
+WHERE l.slot='head';
+GRANT SELECT ON qa_portal_head TO authenticated;
+
 insert into auth.users (id, instance_id, aud, role, email, encrypted_password, email_confirmed_at, created_at, updated_at)
 values
  ('b9100000-0000-4000-8000-000000000002','00000000-0000-0000-0000-000000000000','authenticated','authenticated','portal-staff-ci@example.invalid','',now(),now(),now()),
@@ -25,7 +31,7 @@ values
 on conflict (id) do update set role=excluded.role,approved=excluded.approved,account_blocked=false;
 
 set local role authenticated;
-select set_config('request.jwt.claim.sub',(SELECT l.user_id::text FROM public.upt_organization_leadership l JOIN public.profiles p ON p.id=l.user_id WHERE l.slot='head' AND p.role='admin' AND p.approved AND NOT coalesce(p.account_blocked,false)),true);
+select set_config('request.jwt.claim.sub',(SELECT id::text FROM qa_portal_head),true);
 
 do $test$
 declare
@@ -53,20 +59,20 @@ begin
  end;
 
  -- Atomic grant: assign and approve together, without a pending intermediate state.
- perform set_config('request.jwt.claim.sub',(SELECT l.user_id::text FROM public.upt_organization_leadership l JOIN public.profiles p ON p.id=l.user_id WHERE l.slot='head' AND p.role='admin' AND p.approved AND NOT coalesce(p.account_blocked,false)),true);
+ perform set_config('request.jwt.claim.sub',(SELECT id::text FROM qa_portal_head),true);
  perform public.upt_admin_set_portal_role('b9100000-0000-4000-8000-000000000003','administration','administrative_staff','assign_approved');
  perform set_config('request.jwt.claim.sub','b9100000-0000-4000-8000-000000000003',true);
  select count(*) into v_count from public.upt_my_portal_assignments()
  where portal='administration' and role='administrative_staff' and approved and revoked_at is null;
  if v_count<>1 then raise exception 'Atomic approved grant not visible to recipient'; end if;
- perform set_config('request.jwt.claim.sub',(SELECT l.user_id::text FROM public.upt_organization_leadership l JOIN public.profiles p ON p.id=l.user_id WHERE l.slot='head' AND p.role='admin' AND p.approved AND NOT coalesce(p.account_blocked,false)),true);
+ perform set_config('request.jwt.claim.sub',(SELECT id::text FROM qa_portal_head),true);
  begin
    perform public.upt_admin_set_portal_role('b9100000-0000-4000-8000-000000000003','administration','administrative_staff','assign_approved');
    raise exception 'Duplicate active atomic grant unexpectedly succeeded';
  exception when invalid_parameter_value then null;
  end;
  -- Revoke as admin, then verify the recipient loses access.
- perform set_config('request.jwt.claim.sub',(SELECT l.user_id::text FROM public.upt_organization_leadership l JOIN public.profiles p ON p.id=l.user_id WHERE l.slot='head' AND p.role='admin' AND p.approved AND NOT coalesce(p.account_blocked,false)),true);
+ perform set_config('request.jwt.claim.sub',(SELECT id::text FROM qa_portal_head),true);
  perform public.upt_admin_set_portal_role('b9100000-0000-4000-8000-000000000002','promotion','promoter','revoke');
  perform set_config('request.jwt.claim.sub','b9100000-0000-4000-8000-000000000002',true);
  select count(*) into v_count from public.upt_my_portal_assignments()
