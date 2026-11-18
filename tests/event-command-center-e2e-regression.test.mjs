@@ -6,7 +6,7 @@ const read=path=>readFile(new URL('../'+path,import.meta.url),'utf8')
 
 test('event lifecycle command center connects templates readiness operations and post-event controls',async()=>{
   const [events,command,actions,migration]=await Promise.all([
-    read('app/(app)/events/page.tsx'),
+    read('app/(app)/events/manager-page.tsx'),
     read('app/(app)/events/[id]/command/page.tsx'),
     read('lib/actions/events.ts'),
     read('supabase/migrations/20260928211500_event_command_center_and_close_workflow.sql'),
