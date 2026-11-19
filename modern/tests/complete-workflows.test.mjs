@@ -3,8 +3,7 @@ import assert from "node:assert/strict"
 import {readFileSync} from "node:fs"
 import {workflowCopy} from "../src/shared/workflow-copy.ts"
 import {languages} from "../src/shared/i18n.ts"
-import {validReviewReason} from "../src/lib/promotion-evidence.ts"
-import {validateCheckinDecision} from "../src/lib/checkin-review.ts"
+import {validReviewReason,validateCheckinDecision} from "../src/shared/approval-validation.ts"
 const read=p=>readFileSync(new URL("../src/"+p,import.meta.url),"utf8")
 test("promotion proof uses own assignment, local SHA256, private media bucket and audited RPC",()=>{
  const src=read("lib/promotion-evidence.ts"),screen=read("screens/promotion.tsx")

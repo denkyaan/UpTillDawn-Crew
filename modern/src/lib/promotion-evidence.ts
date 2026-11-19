@@ -1,6 +1,7 @@
 import {supabase} from "./supabase"
 import {verifyOwnSession,requireUuid} from "./operational-writes"
 import {validPhotoSignature} from "../shared/profile-validation"
+import {validReviewReason,type EvidenceVerdict} from "../shared/approval-validation"
 
 export type Evidence={id:string;assignment_id:string;verification_status:string;submitted_at:string;verified_at:string|null}
 export async function ownPromotionEvidence(uid:string,signal:AbortSignal):Promise<Evidence[]>{
@@ -45,12 +46,6 @@ export async function uploadOwnPromotionEvidence(uid:string,assignmentId:string,
  })
  if(error||typeof data!=="string")throw new Error("evidence_confirmation_uncertain")
  return requireUuid(data)
-}
-export type EvidenceVerdict="verified"|"rejected"|"inconclusive"
-export function validReviewReason(reason:string){
- const clean=reason.trim()
- if(clean.length<10||clean.length>1000)throw new Error("review_reason_required")
- return clean
 }
 export async function reviewPromotionEvidence(id:string,verdict:EvidenceVerdict,reason:string):Promise<void>{
  requireUuid(id)

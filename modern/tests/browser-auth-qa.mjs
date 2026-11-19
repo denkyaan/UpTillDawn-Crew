@@ -83,6 +83,19 @@ try{
    await ready(loginPage)
    signins++
    await assertNav(loginPage,bot)
+   // Real signed, RLS-protected reads on the candidate, not only navbar labels.
+   // Every page remains read-only; no business data is created or updated.
+   const routes=["/profile","/notifications",
+    ...(bot.admin?["/portals/administration"]:[]),
+    ...(bot.promotion?["/portals/promotion"]:[]),
+    ...(bot.responsible?["/responsible"]:[])]
+   for(const route of routes){
+    await loginPage.goto(origin+route,{waitUntil:"domcontentloaded",timeout:15000})
+    await ready(loginPage)
+    await loginPage.waitForTimeout(700)
+    const error=await loginPage.locator('p[role="alert"].error').count()
+    if(error)throw Error("QA_AUTHENTICATED_READ_FAILED "+bot.role+" "+route)
+   }
    await denied(loginPage,"/maker/diagnostics")
    if(!bot.admin)await denied(loginPage,"/portals/administration")
    if(!bot.promotion)await denied(loginPage,"/portals/promotion/chat")
