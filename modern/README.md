@@ -296,3 +296,18 @@ in the new app, not duplicate navigational tabs.
 The primary Main hostname remains mapped to the complete legacy app
 until the functional parity and security/write acceptance gates pass.
 No changes to the Production deployment workflow or Production database.
+
+### 30 distinct signed sessions through real deployed Hono (6 / 12 / 30 ramp)
+
+The existing candidate QA-session probe is parameterized to call the exact,
+explicitly allowlisted modern Main-QA Worker URL in its deployed-run mode.
+Thirty separate genuine Supabase Auth sessions are created with a rate-limited
+login ramp across seven isolated bot accounts, then a real Cloudflare Worker
+`GET /api/v1/session` validates JWT and RLS-scoped identity for 6, 12 and
+30 simultaneous requests. The benchmark reports Worker HTTP P95/maximum,
+errors and a strict cutoff. It never mutates user/business data or contacts
+Production. Bot sessions are signed out locally afterward. **Only this
+deployed mode** may report `cloudflareWorkerMeasured=true`; running the
+same script directly against Supabase stays clearly labeled a database
+benchmark. Browser acceptance precedes the 30-request peak to avoid
+overlapping DB pressure on the Free plan.

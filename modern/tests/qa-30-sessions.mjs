@@ -5,6 +5,9 @@ import {createClient} from "@supabase/supabase-js"
 const target=new URL(process.env.E2E_MAIN_QA_BASE_URL||"")
 if(target.origin!=="https://npbjrtiolqperdgljnhi.supabase.co"||
  target.pathname!=="/"||target.search||target.hash)throw Error("QA_ONLY_ENDPOINT_REQUIRED")
+const remoteWorker=process.env.E2E_MAIN_MODERN_QA_ORIGIN||""
+if(remoteWorker&&remoteWorker!=="https://uptilldawn-modern-main.uptilldawn.workers.dev")
+ throw Error("EXACT_MODERN_MAIN_QA_WORKER_REQUIRED")
 const key=process.env.E2E_MAIN_QA_PUBLISHABLE_KEY||""
 const password=process.env.E2E_MAIN_QA_PASSWORD||""
 if(!key.startsWith("sb_publishable_")||password.length<24)throw Error("QA_CREDENTIALS_NOT_CONFIGURED")
@@ -35,15 +38,28 @@ async function signedSession(email){
  if(!payload.session_id||typeof payload.session_id!=="string"||sessionIds.has(payload.session_id))
   throw Error("QA_DUPLICATE_SESSION_ID")
  sessionIds.add(payload.session_id)
- return {client,uid:authenticated.user.id,email}
+ return {client,uid:authenticated.user.id,email,token:authenticated.session.access_token}
 }
 async function checkSession(record){
  const started=performance.now()
- const {data,error}=await record.client.rpc("upt_current_session_context")
-  .abortSignal(AbortSignal.timeout(15000))
- if(error||!Array.isArray(data)||data.length!==1||data[0]?.id!==record.uid||
-  data[0]?.approved!==true||data[0]?.account_blocked===true)
-  throw Error("QA_RLS_SESSION_UNAVAILABLE")
+ if(remoteWorker){
+  // Real Hono Worker: JWT signature verification + one verified RLS identity
+  // per request. Read-only, noncached and no shared Worker user/session state.
+  const response=await fetch(remoteWorker+"/api/v1/session",{
+   method:"GET",headers:{Authorization:"Bearer "+record.token,Accept:"application/json"},
+   cache:"no-store",redirect:"error",signal:AbortSignal.timeout(15000)
+  })
+  if(response.status!==200)throw Error("MODERN_QA_SIGNED_WORKER_HTTP_"+response.status)
+  const data=await response.json()
+  if(!data||data.id!==record.uid||typeof data.role!=="string"||
+   data.owner!==true&&data.owner!==false)throw Error("MODERN_QA_WORKER_IDENTITY_INVALID")
+ }else{
+  const {data,error}=await record.client.rpc("upt_current_session_context")
+   .abortSignal(AbortSignal.timeout(15000))
+  if(error||!Array.isArray(data)||data.length!==1||data[0]?.id!==record.uid||
+   data[0]?.approved!==true||data[0]?.account_blocked===true)
+   throw Error("QA_RLS_SESSION_UNAVAILABLE")
+ }
  return Math.round(performance.now()-started)
 }
 try{
@@ -72,7 +88,7 @@ try{
   signedSessions:sessionIds.size,distinctAccounts:emails.length,
   qaReadQueries:totalQueries,peakConcurrentReads:30,
   p95Millis:finalP95,maxMillis:worst,failures:0,
-  target:"isolated-main-qa",cloudflareWorkerMeasured:false,
+  target:remoteWorker?"deployed-modern-main-qa-worker":"isolated-main-qa-supabase",cloudflareWorkerMeasured:Boolean(remoteWorker),
   businessWrites:0,productionReady:false
  }))
 }finally{

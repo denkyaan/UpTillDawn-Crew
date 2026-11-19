@@ -164,9 +164,12 @@ jobs:
         run: npm --prefix modern exec -- playwright install chromium --only-shell
       - name: Verify seven real roles, four languages and two devices on LIVE modern Worker
         run: npm --prefix modern run browser:qa
+      - name: Exercise 30 DISTINCT signed QA sessions through deployed Hono /api/v1/session
+        run: npm --prefix modern run sessions:qa
       - name: Report live browser evidence
         run: |
           echo "Modern Main-QA: seven signed roles x four languages x two device types validated against deployed Cloudflare static assets." >> "$GITHUB_STEP_SUMMARY"
+          echo "Also passed 30 distinct signed QA sessions across 7 identities, with a bounded 30-request real Cloudflare Worker peak." >> "$GITHUB_STEP_SUMMARY"
           echo "No business writes, provider money operations or production release were attempted." >> "$GITHUB_STEP_SUMMARY"
 
   qa-main-anonymous-acceptance:

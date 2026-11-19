@@ -67,3 +67,17 @@ test("unported pages and payment features still cannot break Main on dual-rail d
  assert.ok(get("modern/scripts/inventory.mjs").includes("productionCutoverAllowed:false"))
  assert.ok(get("modern/.env.example").includes("VITE_MIGRATION_ALLOW_WRITES=false"))
 })
+
+test("30 actual signed sessions exercise the deployed Cloudflare Hono identity API",()=>{
+ const job=get(".github/workflows/deploy-main.yml"),
+  reader=get("modern/tests/qa-30-sessions.mjs")
+ assert.ok(job.includes("Exercise 30 DISTINCT signed QA sessions through deployed Hono /api/v1/session"))
+ assert.ok(reader.includes('remoteWorker+"/api/v1/session"'))
+ assert.ok(reader.includes("EXACT_MODERN_MAIN_QA_WORKER_REQUIRED"))
+ assert.ok(reader.includes('response.status!==200'))
+ assert.ok(reader.includes("cloudflareWorkerMeasured:Boolean(remoteWorker)"))
+ assert.ok(reader.includes('if(sessionIds.size!==30)'))
+ assert.ok(reader.includes('for(const size of [6,12,30])'))
+ assert.ok(reader.includes("AbortSignal.timeout(15000)"))
+ assert.ok(!reader.includes("service_role"))
+})
