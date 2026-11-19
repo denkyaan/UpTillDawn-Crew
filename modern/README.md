@@ -311,3 +311,14 @@ deployed mode** may report `cloudflareWorkerMeasured=true`; running the
 same script directly against Supabase stays clearly labeled a database
 benchmark. Browser acceptance precedes the 30-request peak to avoid
 overlapping DB pressure on the Free plan.
+
+### Opt-in from the existing Main app — Maker only
+
+The trusted Main landing screen shows **one** small test-app entry solely
+for the verified Maker/Owner account. It opens the actual modern Main-QA
+Worker origin; no standard staff, responsible, admin or promotion tab is
+duplicated, and no anonymous user gets any new capability. Cross-origin
+Supabase auth on the modern Worker is deliberately established anew with
+the normal sign-in screen; no credential, cookie, God Mode token or
+privileged session is copied across applications. All incomplete
+business functions stay available in the old Main app.

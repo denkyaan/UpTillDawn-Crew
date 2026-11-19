@@ -13,6 +13,13 @@ import {dashboardNextAction,dashboardActionCopy} from '@/lib/dashboard-next-acti
 import { ResponsibleLivePersonnel, type ResponsibleLivePerson } from '@/components/responsible/responsible-live-personnel'
 import { StaffWorkplacePersonnel, type StaffWorkplacePerson } from '@/components/crew/staff-workplace-personnel'
 
+const modernMainCopy={
+ nl:{title:"Nieuwe, lichtere Main-app",body:"Test de nieuwe Vite-versie. De huidige app blijft beschikbaar voor functies die nog niet volledig zijn overgezet.",button:"Open nieuwe Main-app"},
+ fr:{title:"Nouvelle application Main allégée",body:"Essayez la version Vite. L'application actuelle reste disponible pour les fonctions pas encore migrées.",button:"Ouvrir la nouvelle application Main"},
+ en:{title:"New lightweight Main app",body:"Try the new Vite version. The current app remains available for features not yet fully migrated.",button:"Open new Main app"},
+ de:{title:"Neue schlanke Main-App",body:"Testen Sie die neue Vite-Version. Die bestehende App bleibt für noch nicht vollständig migrierte Funktionen verfügbar.",button:"Neue Main-App öffnen"}
+} as const
+
 export const dynamic = 'force-dynamic'
 
 function Card({ href, icon: Icon, title, value }: { href: string; icon: typeof CalendarDays; title: string; value: number }) {
@@ -134,7 +141,19 @@ async function DashboardOverview({current}:{current:NonNullable<Awaited<ReturnTy
   const actionText=action?dashboardActionCopy[locale][action.kind]:null
   const upcomingEvents=events.filter(event=>Date.parse(event.end_at)>=nowMs)
 
-  return <>{hasLoadError && <p className="rounded-xl border border-amber-500/40 p-4">Een deel van de realtime gegevens is tijdelijk niet beschikbaar. De beschikbare onderdelen blijven bruikbaar.</p>}
+  return <>{current.isOwner&&<section className="rounded-2xl border border-violet-500/40 bg-violet-500/5 p-5" aria-label={modernMainCopy[locale].title}>
+    <div className="flex flex-wrap items-center justify-between gap-4">
+      <div className="min-w-0 flex-1">
+        <h2 className="text-lg font-black">{modernMainCopy[locale].title}</h2>
+        <p className="mt-1 text-sm text-muted-foreground">{modernMainCopy[locale].body}</p>
+      </div>
+      <a href="https://uptilldawn-modern-main.uptilldawn.workers.dev"
+        className="inline-flex items-center gap-2 rounded-xl border border-violet-500 bg-violet-500/10 px-4 py-3 text-sm font-bold">
+        {modernMainCopy[locale].button}<ArrowRight className="h-4 w-4"/>
+      </a>
+    </div>
+  </section>}
+    {hasLoadError && <p className="rounded-xl border border-amber-500/40 p-4">Een deel van de realtime gegevens is tijdelijk niet beschikbaar. De beschikbare onderdelen blijven bruikbaar.</p>}
     {action&&actionText&&<section data-next-action={action.kind} className="rounded-2xl border border-violet-500/40 bg-violet-500/5 p-5">
       <p className="text-xs font-bold uppercase tracking-widest text-violet-400">{dashboardActionCopy[locale].heading}</p>
       <div className="mt-2 flex flex-wrap items-center justify-between gap-4">
