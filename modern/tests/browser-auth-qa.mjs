@@ -28,9 +28,13 @@ const devices=[
  {name:"desktop",viewport:{width:1440,height:900},isMobile:false,hasTouch:false},
  {name:"mobile",viewport:{width:390,height:844},isMobile:true,hasTouch:true}
 ]
-const origin="http://127.0.0.1:4176"
+const approvedRemote="https://uptilldawn-modern-main.uptilldawn.workers.dev"
+const remoteOrigin=process.env.E2E_MAIN_MODERN_QA_ORIGIN||""
+if(remoteOrigin&&remoteOrigin!==approvedRemote)
+ throw Error("EXACT_MODERN_MAIN_QA_ORIGIN_REQUIRED")
+const origin=remoteOrigin||"http://127.0.0.1:4176"
 const root=resolve(import.meta.dirname,"../..")
-const preview=spawn(process.execPath,[resolve(root,"modern/node_modules/vite/bin/vite.js"),
+const preview=remoteOrigin?null:spawn(process.execPath,[resolve(root,"modern/node_modules/vite/bin/vite.js"),
  "preview","--host","127.0.0.1","--port","4176","--strictPort"],{
  cwd:resolve(root,"modern"),stdio:"ignore"
 })
@@ -61,7 +65,7 @@ async function assertNav(page,bot){
 try{
  let up=false
  for(let i=0;i<80;i++){
-  if(preview.exitCode!==null)throw Error("Candidate preview exited")
+  if(preview&&preview.exitCode!==null)throw Error("Candidate preview exited")
   try{
    const response=await fetch(origin+"/login",{signal:AbortSignal.timeout(1000)})
    if(response.ok){up=true;break}
@@ -146,5 +150,5 @@ try{
   target:"isolated-main-qa",wroteBusinessData:false,productionReady:false}))
 }finally{
  if(browser)await browser.close()
- preview.kill("SIGTERM")
+ preview?.kill("SIGTERM")
 }

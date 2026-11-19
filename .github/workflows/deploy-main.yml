@@ -54,6 +54,121 @@ jobs:
       - name: Verify seven distinct roles and login with the same configured QA password
         run: node scripts/provision-seven-main-bots.mjs --verify --verify-passwords
 
+  # Deploy the real Vite/React/Hono Main-QA Worker IN PARALLEL with
+  # the existing OpenNext Main Worker, never replacing the working site.
+  # Main and Production are separate; this uses ONLY the QA Supabase project.
+  deploy-modern-main-qa:
+    needs: validate-trigger
+    if: needs.validate-trigger.outputs.eligible == 'true'
+    permissions:
+      contents: read
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    env:
+      VITE_SUPABASE_URL: https://npbjrtiolqperdgljnhi.supabase.co
+      VITE_SUPABASE_ANON_KEY: sb_publishable_zStTw3n8wZ271PehDRDvGg_rs0JOy84
+      VITE_MIGRATION_ALLOW_WRITES: 'false'
+      VITE_MIGRATION_SCANNING_ENABLED: 'false'
+      E2E_MAIN_MODERN_QA_ORIGIN: https://uptilldawn-modern-main.uptilldawn.workers.dev
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+    steps:
+      - name: Checkout exact validated Main SHA
+        uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5.1.0
+        with:
+          ref: ${{ github.event.workflow_run.head_sha }}
+      - name: Set up Node.js
+        uses: actions/setup-node@a0853c24544627f65ddf259abe73b1d18a591444 # v5.0.0
+        with:
+          node-version: 24
+      - name: Install lightweight candidate dependencies (isolated)
+        run: npm --prefix modern install --prefer-offline --no-audit --no-fund
+      - name: Parallel candidate TS, contract, unit and API safety checks
+        shell: bash
+        run: |
+          set -euo pipefail
+          npm --prefix modern run check
+          npm --prefix modern run api:test
+          npm --prefix modern run rpc:contract
+      - name: Build static SPA and enforce Free-plan Worker budget
+        shell: bash
+        run: |
+          set -euo pipefail
+          npm --prefix modern run build
+          npm --prefix modern run budget
+          cd modern
+          npx wrangler deploy --config wrangler.main-qa.jsonc --dry-run --outdir .wrangler-main-qa-dry-run
+      - name: Verify exact current Main SHA before deploying
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+          VALIDATED_SHA: ${{ github.event.workflow_run.head_sha }}
+        run: |
+          set -euo pipefail
+          current="$(gh api "/repos/${GITHUB_REPOSITORY}/git/ref/heads/main" --jq '.object.sha')"
+          if [ "$current" != "$VALIDATED_SHA" ]; then
+            echo "::error::Main advanced; do not publish an outdated candidate."
+            exit 1
+          fi
+          test -n "${CLOUDFLARE_API_TOKEN:-}" && test -n "${CLOUDFLARE_ACCOUNT_ID:-}"
+      - name: Publish modern Main-QA Worker — static assets and Hono API only
+        working-directory: modern
+        run: npx wrangler deploy --config wrangler.main-qa.jsonc
+      - name: Smoke test actual public static SPA, Hono API and denial rules
+        run: node modern/scripts/main-qa-live-smoke.mjs
+      - name: Report exactly what is deployed
+        shell: bash
+        run: |
+          echo "## New local-first Main-QA application published" >> "$GITHUB_STEP_SUMMARY"
+          echo "Origin: https://uptilldawn-modern-main.uptilldawn.workers.dev" >> "$GITHUB_STEP_SUMMARY"
+          echo "Existing Main app: https://uptilldawn-main.uptilldawn.workers.dev (unchanged)" >> "$GITHUB_STEP_SUMMARY"
+          echo "All candidate writes, scanning and OAuth remain OFF. Production untouched." >> "$GITHUB_STEP_SUMMARY"
+
+  # This is a LIVE browser test of the new Cloudflare Worker, not a local Vite
+  # preview and not a simulated Supabase-only concurrency benchmark.
+  qa-modern-main-qa:
+    needs: [validate-trigger, deploy-modern-main-qa]
+    if: >-
+      needs.validate-trigger.outputs.eligible == 'true' &&
+      needs.deploy-modern-main-qa.result == 'success'
+    permissions:
+      contents: read
+    runs-on: ubuntu-latest
+    timeout-minutes: 18
+    env:
+      E2E_MAIN_MODERN_QA_ORIGIN: https://uptilldawn-modern-main.uptilldawn.workers.dev
+      E2E_MAIN_QA_BASE_URL: https://npbjrtiolqperdgljnhi.supabase.co/
+      E2E_MAIN_QA_PUBLISHABLE_KEY: sb_publishable_zStTw3n8wZ271PehDRDvGg_rs0JOy84
+      E2E_MAIN_QA_PASSWORD: ${{ secrets.MAIN_QA_BOT_PASSWORD }}
+      VITE_MIGRATION_ALLOW_WRITES: 'false'
+    steps:
+      - name: Checkout exact deployed Main commit
+        uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5.1.0
+        with:
+          ref: ${{ github.event.workflow_run.head_sha }}
+      - name: Set up Node.js
+        uses: actions/setup-node@a0853c24544627f65ddf259abe73b1d18a591444 # v5.0.0
+        with:
+          node-version: 24
+      - name: Require live QA bot secret to avoid false-green smoke-only acceptance
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [ "${#E2E_MAIN_QA_PASSWORD}" -lt 24 ]; then
+            echo "::error::Main QA bot secret unavailable; 7-role LIVE acceptance cannot be claimed."
+            exit 1
+          fi
+      - name: Install isolated modern dependencies
+        run: npm --prefix modern install --prefer-offline --no-audit --no-fund
+      - name: Install headless browser (no unrelated OS packages)
+        run: npx playwright install chromium --only-shell
+      - name: Verify seven real roles, four languages and two devices on LIVE modern Worker
+        run: npm --prefix modern run browser:qa
+      - name: Report live browser evidence
+        run: |
+          echo "Modern Main-QA: seven signed roles x four languages x two device types validated against deployed Cloudflare static assets." >> "$GITHUB_STEP_SUMMARY"
+          echo "No business writes, provider money operations or production release were attempted." >> "$GITHUB_STEP_SUMMARY"
+
   qa-main-anonymous-acceptance:
     # Strict, independent security gate. A failure stays red but may not
     # suppress the remaining functional, 30-user or Cloudflare evidence.
