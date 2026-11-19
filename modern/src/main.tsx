@@ -27,7 +27,7 @@ const ProviderOauthCallback=lazy(()=>import("./screens/provider-oauth-callback")
 // existing Next routes. Route memory stays relative to the mounted basename.
 const sameOriginMount=typeof window!=="undefined" &&
  window.location.origin==="https://uptilldawn-main.uptilldawn.workers.dev" &&
- /^\\/modern(?:\\/|$)/.test(window.location.pathname)
+ (window.location.pathname==="/modern" || window.location.pathname.startsWith("/modern/"))
 const legacyMainUrl="https://uptilldawn-main.uptilldawn.workers.dev"
 const legacyFallbackCopy={
  nl:{open:"Open bestaande UpTillDawn-app",missing:"Deze functie is nog niet gemigreerd. Ze blijft beschikbaar in de bestaande Main-app.",title:"Nog niet overgezet"},
