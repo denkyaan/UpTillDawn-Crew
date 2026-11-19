@@ -20,6 +20,12 @@ for(const segment of ["index-","router-","events-","tasks-","chats-","finance-"]
 const initial=chunks.filter(x=>/^(index-|router-|rolldown-runtime-|.*\.css$)/.test(x.file))
 const initialGzip=initial.reduce((n,x)=>n+x.gzip,0)
 const maxInitialGzip=128*1024
+// The public auth route includes Main's complete translation catalog and exact
+// stylesheet. Measure it explicitly instead of hiding it behind a lazy import.
+const authChunks=chunks.filter(x=>x.file.startsWith("original-auth-"))
+if(authChunks.length!==1)throw Error("Original Main authentication chunk missing")
+const authRouteGzip=initialGzip+authChunks[0].gzip
+if(authRouteGzip>350*1024)throw Error("Public auth route exceeded 350 KiB gzip: "+authRouteGzip)
 const lazy=chunks.filter(x=>/^(events-|tasks-|chats-|finance-)/.test(x.file))
 const tooHeavy=lazy.find(x=>x.gzip>40*1024)
 const html=await readFile(join(dist,"index.html"),"utf8")
@@ -29,5 +35,6 @@ if(tooHeavy)throw Error("Oversized lazy module "+tooHeavy.file+": "+tooHeavy.gzi
 console.log(JSON.stringify({
  initialGzipBytes:initialGzip,initialGzipKiB:Number((initialGzip/1024).toFixed(1)),
  maxInitialGzipKiB:maxInitialGzip/1024,allChunks:chunks,
+ authRouteGzipBytes:authRouteGzip,maxAuthRouteGzipKiB:350,
  staticNavigation:true,workerRuntimeParity:"unverified"
 },null,2))

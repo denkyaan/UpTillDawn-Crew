@@ -6,7 +6,7 @@ import {chromium} from "playwright"
 
 const root=resolve(import.meta.dirname,"../..")
 const origin="http://127.0.0.1:4175"
-const languageLabels={nl:"Aanmelden",fr:"Connexion",en:"Sign in",de:"Anmelden"}
+const languageLabels={nl:"Personeel",fr:"Personnel",en:"Staff",de:"Personal"}
 const views=[
  {name:"desktop",viewport:{width:1440,height:900},isMobile:false},
  {name:"mobile",viewport:{width:390,height:844},isMobile:true,hasTouch:true},
@@ -32,7 +32,7 @@ try{
   for(const device of views){
    const context=await browser.newContext({
     viewport:device.viewport,isMobile:device.isMobile,
-    hasTouch:device.hasTouch||false,
+    hasTouch:device.hasTouch||false,locale:language,
    })
    try{
     await context.addInitScript(lang=>{
@@ -42,7 +42,10 @@ try{
     const errors=[]
     page.on("pageerror",error=>errors.push(error.message))
     await page.goto(origin+"/login",{waitUntil:"networkidle",timeout:15000})
-    await page.locator('input[type="email"]').waitFor({timeout:10000})
+    await page.locator('a[href="/login/staff"]').click()
+    await page.locator('input[name="email"]').waitFor({timeout:10000})
+    await page.locator('select').selectOption(language)
+    await page.waitForFunction(lang=>document.documentElement.lang===lang,language)
     await page.locator('input[type="password"]').waitFor({timeout:10000})
     const heading=await page.locator("h1").innerText()
     if(!heading.includes(label))throw Error(device.name+"/"+language+" incorrect translation: "+heading)

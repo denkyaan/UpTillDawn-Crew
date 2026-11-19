@@ -8,8 +8,9 @@ import {
  sealOAuthToken,exchangeOAuthCode,tokenConfiguration,type OAuthBindings
 } from "./provider-oauth.ts"
 import {scannerReady,scannerOrigin,validScanRequest,scanWeeztix,type ScannerBindings,type RpcDb} from "./weeztix-scan.ts"
+import {forwardMainAuth,type MainAuthBindings} from "./main-auth.ts"
 
-type Bindings={SUPABASE_URL:string;SUPABASE_ANON_KEY:string}&OAuthBindings&ScannerBindings
+type Bindings={SUPABASE_URL:string;SUPABASE_ANON_KEY:string}&OAuthBindings&ScannerBindings&MainAuthBindings
 const app=new Hono<{Bindings:Bindings}>()
 
 // Static navigation and images bypass this Worker entirely. Only /api/*
@@ -23,6 +24,10 @@ app.use("/api/*",async(c,next)=>{
 })
 
 app.get("/api/v1/health",c=>c.json({ok:true,service:"uptilldawn-local-first-api"}))
+
+app.post("/api/auth/portal-login",c=>forwardMainAuth(c.req.raw,c.env))
+app.post("/api/auth/account-action",c=>forwardMainAuth(c.req.raw,c.env))
+app.get("/auth/callback",c=>forwardMainAuth(c.req.raw,c.env))
 
 app.get("/api/v1/session",async c=>{
  const header=c.req.header("Authorization")||""

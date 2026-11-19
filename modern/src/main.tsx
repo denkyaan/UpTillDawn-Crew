@@ -1,11 +1,14 @@
-import {StrictMode,Suspense,lazy,useEffect,useState,type FormEvent,type ReactNode} from "react"
+import {StrictMode,Suspense,lazy,useEffect,type ReactNode} from "react"
 import {createRoot} from "react-dom/client"
 import {BrowserRouter,Link,NavLink,Navigate,Outlet,Route,Routes,useLocation} from "react-router-dom"
 import {SessionProvider,useSession} from "./lib/session"
 import {resolveLocale} from "./shared/i18n"
 import {useLocale,setLocale} from "./lib/use-locale"
 import {canRememberRoute,preferredPortalRoute,rememberPortalRoute,type PortalAccess} from "./shared/portal-preference"
-import "./styles.css"
+import candidateStyles from "./styles.css?inline"
+import {ReturnAfterLogin} from "@/components/auth/return-after-login"
+
+const OriginalAuth=lazy(()=>import("./screens/original-auth"))
 
 const Events=lazy(()=>import("./screens/events"))
 const Tasks=lazy(()=>import("./screens/tasks"))
@@ -51,6 +54,7 @@ function Authenticated({children}:{children:ReactNode}){
  const canAdmin=state.portals.includes("administration")
  const canEvents=state.portals.includes("events")
  return <>
+  <ReturnAfterLogin/>
   <PortalMemory/>
   <a className="sr-only skip" href="#main">Skip to content</a>
   <header className="bar"><div className="brand">UP TILL DAWN <span className="muted">· local-first candidate</span></div>
@@ -82,31 +86,6 @@ function Authenticated({children}:{children:ReactNode}){
    {children}
   </main>
  </>
-}
-function SignIn(){
- const state=useSession()
- const [error,setError]=useState("")
- const [busy,setBusy]=useState(false)
- const {t}=useLocale()
- if(state.status==="ready")return <Navigate to="/" replace/>
- async function submit(e:FormEvent<HTMLFormElement>){
-  e.preventDefault()
-  const form=new FormData(e.currentTarget)
-  const email=String(form.get("email")||"").trim()
-  const password=String(form.get("password")||"")
-  if(!email||!password)return
-  setBusy(true);setError("")
-  try{await state.signIn(email,password)}
-  catch{setError("Login kon niet worden bevestigd. Controleer je gegevens of probeer opnieuw.")}
-  finally{setBusy(false)}
- }
- return <main className="auth"><section className="card"><h1>UP TILL DAWN — {t.login}</h1>
-  <p className="muted">{t.readOnly}</p><form onSubmit={e=>void submit(e)}>
-   <label>E-mail<input type="email" name="email" autoComplete="username" required/></label>
-   <label>Password<input type="password" name="password" autoComplete="current-password" required/></label>
-   {error&&<p className="error" role="alert">{error}</p>}
-   <button className="primary" disabled={busy}>{busy?t.loading:t.login}</button>
-  </form></section></main>
 }
 function Landing(){
  const {identity,portals}=useSession()
@@ -155,12 +134,20 @@ function Missing(){
  </section>
 }
 function App(){
- return <BrowserRouter><SessionProvider>
+ return <BrowserRouter>
   <Routes>
-   <Route path="/login" element={<SignIn/>}/>
-   <Route element={<Authenticated><Outlet/></Authenticated>}>
+   <Route path="/login" element={<Suspense fallback={null}><OriginalAuth/></Suspense>}/>
+   <Route path="/login/:portal" element={<Suspense fallback={null}><OriginalAuth/></Suspense>}/>
+   <Route path="/signup" element={<Suspense fallback={null}><OriginalAuth/></Suspense>}/>
+   <Route path="/forgot-password" element={<Suspense fallback={null}><OriginalAuth/></Suspense>}/>
+   <Route path="/auth/reset-password" element={<Suspense fallback={null}><OriginalAuth/></Suspense>}/>
+   <Route path="/verify-email" element={<Suspense fallback={null}><OriginalAuth/></Suspense>}/>
+   <Route path="/pending-approval" element={<Suspense fallback={null}><OriginalAuth/></Suspense>}/>
+   <Route element={<SessionProvider><style>{candidateStyles}</style><Authenticated><Outlet/></Authenticated></SessionProvider>}>
     <Route index element={<Landing/>}/>
     <Route path="/overview" element={<Home/>}/>
+    <Route path="/admin" element={<Missing/>}/>
+    <Route path="/maker-mode" element={<Missing/>}/>
     <Route element={<PortalGuard portal="events"><Outlet/></PortalGuard>}>
      <Route path="/events" element={<Suspense fallback="Loading events…"><Events/></Suspense>}/>
      <Route path="/tasks" element={<Suspense fallback="Loading tasks…"><Tasks/></Suspense>}/>
@@ -186,7 +173,7 @@ function App(){
     <Route path="*" element={<Missing/>}/>
    </Route>
   </Routes>
- </SessionProvider></BrowserRouter>
+ </BrowserRouter>
 }
 createRoot(document.getElementById("root")!).render(<StrictMode><App/></StrictMode>)
 if(import.meta.env.PROD&&"serviceWorker" in navigator)

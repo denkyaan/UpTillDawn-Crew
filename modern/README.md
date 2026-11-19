@@ -322,3 +322,38 @@ Supabase auth on the modern Worker is deliberately established anew with
 the normal sign-in screen; no credential, cookie, God Mode token or
 privileged session is copied across applications. All incomplete
 business functions stay available in the old Main app.
+
+## Original Main authentication source reuse
+
+The public chooser, all five portal forms, signup, forgot-password, email
+verification, reset-password and pending-approval presentation now import the
+original Main source through narrow Vite runtime adapters. Main's original
+login files, logo, language switcher and auth layout remain byte-for-byte
+unchanged. There is no independent lookalike login component or browser-side
+password-login bypass. Main's stylesheet is mounted only on these public pages;
+the candidate operational stylesheet is unmounted while they render.
+
+`MAIN_AUTH` is an internal Cloudflare service binding to `uptilldawn-main`.
+Only three fixed authentication paths can use it, only from the exact candidate
+host and Main QA database. Bounded forms, same-origin validation, host-only
+chunked cookies, redirect validation, no-store responses and upstream failures
+are checked before any private context can be returned. Sign-in uses the
+**existing** Main portal-login action, including portal denial, admin role mode,
+Maker handling, security email and login audit. Ordinary screens/navigation
+remain static; the legacy runtime is invoked only by explicit auth operations.
+This is a migration adapter, not the final removal of the legacy auth runtime.
+
+Email signup, resend and recovery on the candidate are deliberately blocked
+until the exact candidate callback URL is configured in Supabase QA AND
+`UPT_MIGRATION_EMAIL_CALLBACK_READY=true` is set on Main after validation.
+Otherwise an email link could land on a different host from its PKCE cookie.
+The existing Main account flows continue to use their configured origin.
+No live email flow, account creation or password change has been accepted by
+this bundle. The callback-origin allowlist cannot redirect Production to QA.
+
+The Main deployment runs the separate exact-visual gate (48 route/locale/device
+pairs plus 160 menu, password-toggle and input-focus pairs) before candidate
+seven-role acceptance. A passing screenshot suite cannot approve the app
+cutover: complete auth denial/approval/recovery and the remaining operational
+screens still require their own acceptance. Main keeps serving the existing
+app and Production needs separate authorization.

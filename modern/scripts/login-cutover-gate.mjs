@@ -7,6 +7,9 @@ const read=p=>readFileSync(new URL("../../"+p,import.meta.url),"utf8")
 const legacy=read("lib/actions/auth.ts")
 const modern=read("modern/src/lib/session.tsx")
 const modernUi=read("modern/src/main.tsx")
+const originalUi=read("modern/src/screens/original-auth.tsx")
+const bridge=read("modern/src/api/main-auth.ts")
+const originalForm=read("components/auth/login-form.tsx")
 const required={
  portalChoice:legacy.includes("requestedPortal"),
  roleAccess:legacy.includes("assignedPortalAccess")&&legacy.includes("'wrong_portal'"),
@@ -21,20 +24,20 @@ const required={
 }
 if(Object.values(required).some(x=>x!==true))throw Error("LEGACY_LOGIN_CONTRACT_CHANGED_REBASE_REQUIRED")
 const candidate={
- roleMenu:modernUi.includes('/login/staff')&&modernUi.includes('/login/responsible')&&
-  modernUi.includes('/login/admin')&&modernUi.includes('/login/promotion')&&
-  modernUi.includes('/login/administration'),
+ roleMenu:originalUi.includes('@/components/auth/login-form')&&
+  ["staff","responsible","admin","promotion","administration"].every(portal=>originalForm.includes(portal)),
  authorityVerified:modern.includes("upt_current_session_context"),
- roleSwitch:modern.includes("upt_set_admin_role_mode"),
- adminLoginAudit:modern.includes("upt_admin_login_success"),
- securityNotifications:modern.includes("sendSecurityLoginEmail"),
+ roleSwitch:bridge.includes('MAIN_AUTH.fetch')&&legacy.includes("upt_set_admin_role_mode"),
+ adminLoginAudit:bridge.includes('MAIN_AUTH.fetch')&&legacy.includes("upt_admin_login_success"),
+ securityNotifications:bridge.includes('MAIN_AUTH.fetch')&&legacy.includes("sendSecurityLoginEmail"),
  pendingApproval:modernUi.includes("/pending-approval"),
  resetPassword:modernUi.includes("/forgot-password"),
+ emailCallbackVerified:false,
 }
 console.log(JSON.stringify({loginCutoverAllowed:false,
  exactSourceOfTruth:"existing Main authenticated portal-login",
  legacyContract:required,candidateCapabilities:candidate,
- visualEvidenceRequired:"npm --prefix modern run login:visual-parity (48 exact screenshot comparisons)",
+ visualEvidenceRequired:"npm --prefix modern run login:visual-parity (48 screens + 160 interaction screenshot comparisons)",
  functionalEvidenceRequired:"live, role-scoped and denial E2E with same auth/audit/reset outcomes in Main QA",
  reason:"Visual snapshots alone do not prove login/role/security parity; no full acceptance evidence",
  productionUntouched:true},null,2))

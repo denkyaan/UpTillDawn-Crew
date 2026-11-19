@@ -14,7 +14,7 @@ async function purgeLocalUser(uid:string){
 import {isActive,parseIdentity,visiblePortals,type Assignment,type Portal,type VerifiedIdentity} from "../shared/identity"
 
 type State={status:"checking"|"anonymous"|"ready"|"denied"|"error";identity:VerifiedIdentity|null;portals:Portal[]}
-type SessionApi=State&{refresh:()=>Promise<void>;signIn:(email:string,password:string)=>Promise<void>;signOut:()=>Promise<void>}
+type SessionApi=State&{refresh:()=>Promise<void>;signOut:()=>Promise<void>}
 const Context=createContext<SessionApi|null>(null)
 export function SessionProvider({children}:{children:ReactNode}){
  const [state,setState]=useState<State>({status:"checking",identity:null,portals:[]})
@@ -83,11 +83,6 @@ export function SessionProvider({children}:{children:ReactNode}){
   })
   return()=>{mounted=false;refreshGate.current.invalidate();document.removeEventListener("visibilitychange",visible);subscription.unsubscribe()}
  },[db,refresh])
- const signIn=useCallback(async(email:string,password:string)=>{
-  const {error}=await db.auth.signInWithPassword({email,password})
-  if(error)throw new Error("login_failed")
-  await refresh()
- },[db,refresh])
  const signOut=useCallback(async()=>{
   refreshGate.current.invalidate()
   const uid=lastIdentity.current||state.identity?.id
@@ -102,6 +97,6 @@ export function SessionProvider({children}:{children:ReactNode}){
   if(uid)await purgeLocalUser(uid).catch(()=>{})
   setState({status:"anonymous",identity:null,portals:[]})
  },[db,state.identity?.id])
- return <Context.Provider value={{...state,refresh,signIn,signOut}}>{children}</Context.Provider>
+ return <Context.Provider value={{...state,refresh,signOut}}>{children}</Context.Provider>
 }
 export function useSession(){const value=useContext(Context);if(!value)throw new Error("SessionProvider missing");return value}

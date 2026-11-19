@@ -15,13 +15,13 @@ if(!key.startsWith("sb_publishable_"))throw Error("QA_PUBLISHABLE_KEY_REQUIRED")
 if(password.length<24)throw Error("QA_PASSWORD_NOT_CONFIGURED")
 if(process.env.VITE_MIGRATION_ALLOW_WRITES!=="false")throw Error("READ_ONLY_CANDIDATE_REQUIRED")
 const bots=[
- {role:"head_admin",email:"e2e-head-admin@uptilldawn.test",admin:true,promotion:true,responsible:true},
- {role:"left_hand",email:"e2e-admin@uptilldawn.test",admin:true,promotion:false,responsible:false},
- {role:"right_hand",email:"e2e-right-hand@uptilldawn.test",admin:true,promotion:false,responsible:false},
- {role:"responsible",email:"e2e-responsible@uptilldawn.test",admin:false,promotion:false,responsible:true},
- {role:"staff",email:"e2e-staff@uptilldawn.test",admin:false,promotion:false,responsible:false},
- {role:"promotion",email:"e2e-promotion@uptilldawn.test",admin:false,promotion:true,responsible:false},
- {role:"administration",email:"e2e-administration@uptilldawn.test",admin:true,promotion:false,responsible:false},
+ {role:"head_admin",login:"admin",email:"e2e-head-admin@uptilldawn.test",admin:true,promotion:true,responsible:true},
+ {role:"left_hand",login:"administration",email:"e2e-admin@uptilldawn.test",admin:true,promotion:false,responsible:false},
+ {role:"right_hand",login:"administration",email:"e2e-right-hand@uptilldawn.test",admin:true,promotion:false,responsible:false},
+ {role:"responsible",login:"responsible",email:"e2e-responsible@uptilldawn.test",admin:false,promotion:false,responsible:true},
+ {role:"staff",login:"staff",email:"e2e-staff@uptilldawn.test",admin:false,promotion:false,responsible:false},
+ {role:"promotion",login:"promotion",email:"e2e-promotion@uptilldawn.test",admin:false,promotion:true,responsible:false},
+ {role:"administration",login:"administration",email:"e2e-administration@uptilldawn.test",admin:true,promotion:false,responsible:false},
 ]
 const translations={nl:"Overzicht",fr:"Accueil",en:"Overview",de:"Übersicht"}
 const devices=[
@@ -80,10 +80,10 @@ try{
   try{
    await loginContext.addInitScript(()=>localStorage.setItem("uptilldawn-modern-locale","nl"))
    const loginPage=await loginContext.newPage()
-   await loginPage.goto(origin+"/login",{waitUntil:"domcontentloaded",timeout:15000})
+   await loginPage.goto(origin+"/login/"+bot.login,{waitUntil:"domcontentloaded",timeout:15000})
    await loginPage.locator('input[name="email"]').fill(bot.email)
    await loginPage.locator('input[name="password"]').fill(password)
-   await loginPage.locator('button.primary').click()
+   await loginPage.locator('form button[type="submit"]').click()
    await ready(loginPage)
    signins++
    await assertNav(loginPage,bot)
