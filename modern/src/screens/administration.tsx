@@ -3,6 +3,7 @@ import {Suspense,lazy,useState} from "react"
 const HistoryPanel=lazy(()=>import("../components/history-panel"))
 const TimesheetWorkspace=lazy(()=>import("./timesheet-workspace"))
 const IntegrationStatus=lazy(()=>import("../components/integration-status"))
+const PromotionEvidenceReview=lazy(()=>import("../components/promotion-evidence-review"))
 import {useSession} from "../lib/session"
 import {usePrivateQuery} from "../lib/use-private-query"
 import {administrationDocuments,administrationPayments,allowedInventory,type FinancialDocument,type FinancialPayment,type InventoryItem} from "../lib/operational-reads"
@@ -19,7 +20,7 @@ export default function Administration(){
     <button key={key} type="button" className={section===key?"primary":""} aria-pressed={section===key} onClick={()=>setSection(key)}>{title}</button>)}
   </nav>
   <div style={{paddingTop:"1rem"}}>
-   {section==="documents"?<><Documents uid={uid}/><Suspense fallback="Koppelingen laden…"><IntegrationStatus area="invoices"/></Suspense></>:section==="payments"?<><Payments uid={uid}/><Suspense fallback="Koppelingen laden…"><IntegrationStatus area="banking"/></Suspense></>:section==="inventory"?<Inventory uid={uid}/>:<Suspense fallback="Gegevens laden…">{section==="ticketing"?<><HistoryPanel kind="ticket-imports"/><HistoryPanel kind="ticket-sales"/><IntegrationStatus area="ticketing"/></>:section==="contracts"?<><HistoryPanel kind="contracts"/><IntegrationStatus area="contracts"/></>:<TimesheetWorkspace review/>}</Suspense>}
+   {section==="documents"?<><Documents uid={uid}/><Suspense fallback="Koppelingen laden…"><IntegrationStatus area="invoices"/></Suspense></>:section==="payments"?<><Payments uid={uid}/><Suspense fallback="Koppelingen laden…"><IntegrationStatus area="banking"/></Suspense></>:section==="inventory"?<Inventory uid={uid}/>:<Suspense fallback="Gegevens laden…">{section==="ticketing"?<><HistoryPanel kind="ticket-imports"/><HistoryPanel kind="ticket-sales"/><IntegrationStatus area="ticketing"/></>:section==="contracts"?<><HistoryPanel kind="contracts"/><IntegrationStatus area="contracts"/></>:<><TimesheetWorkspace review/><PromotionEvidenceReview/></>}</Suspense>}
   </div>
   <p><Link to="/portals/administration/finance">Financiële totalen bekijken</Link></p>
  </>

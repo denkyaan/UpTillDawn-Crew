@@ -109,8 +109,8 @@ export async function promotionTasks(uid:string,signal:AbortSignal):Promise<Prom
  // Current user's assignment IDs are the only task actions exposed in this
  // portal. Never enumerate every promotion task or expose other users' work.
  const {data,error}=await supabase().from("task_assignments")
-  .select("id,status,confirmed_at,tasks(id,event_id,title,description)")
-  .eq("user_id",uid).order("created_at",{ascending:false})
+  .select("id,status,confirmed_at,tasks!inner(id,event_id,title,description,promotion_only)")
+  .eq("user_id",uid).eq("tasks.promotion_only",true).order("created_at",{ascending:false})
   .limit(80).abortSignal(signal)
  failed(error,"promotion_assignments_unavailable")
  const rows=(data||[]) as unknown as {

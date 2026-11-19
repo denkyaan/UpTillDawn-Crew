@@ -3,6 +3,7 @@
   "requiredPublicRpcNames": [
     "upt_acknowledge_briefing",
     "upt_acknowledge_incident",
+    "upt_admin_review_promotion_evidence",
     "upt_administration_finance_summary",
     "upt_can_manage_integrations",
     "upt_chat_message_readers",
@@ -11,6 +12,7 @@
     "upt_current_is_owner",
     "upt_current_profile_completion",
     "upt_current_session_context",
+    "upt_decide_check_in",
     "upt_god_login_owner",
     "upt_god_logout",
     "upt_god_maker_log_snapshot",
@@ -30,6 +32,7 @@
     "upt_set_event_availability_with_reason",
     "upt_set_own_workplace_preference",
     "upt_start_promotion_task",
+    "upt_submit_promotion_evidence",
     "upt_submit_timesheet",
     "upt_sync_operation",
     "upt_update_own_profile",

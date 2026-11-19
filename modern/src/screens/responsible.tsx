@@ -3,6 +3,8 @@ import {useSession} from "../lib/session"
 import {usePrivateQuery} from "../lib/use-private-query"
 import {responsibleAssignments,responsibleShifts,type ResponsibleAssignment,type Shift} from "../lib/operational-reads"
 import {DataList,Refresh,Timestamp,WhenLoading} from "../components/data-ui"
+import {lazy,Suspense} from "react"
+const CheckinReview=lazy(()=>import("../components/checkin-review"))
 
 export default function Responsible(){
  const session=useSession(),uid=session.identity!.id
@@ -15,8 +17,10 @@ export default function Responsible(){
  <WhenLoading loading={assignments.loading} error={assignments.error}>
   {eventId&&<><label>Evenement
    <select value={eventId} onChange={e=>setSelected(e.target.value)}>{allowedEvents.map(id=><option value={id} key={id}>{id.slice(0,8)}</option>)}</select>
-  </label><ResponsibleCrew key={eventId} uid={uid} eventId={eventId}/></>}
+  </label><ResponsibleCrew key={eventId} uid={uid} eventId={eventId}/>
+   <Suspense fallback="Check-ins laden…"><CheckinReview eventId={eventId}/></Suspense></>}
   {!eventId&&<p className="muted">{isAdmin?"Adminplanning bestaat nog in de huidige app.":"Geen actieve werkpostverantwoordelijkheid zichtbaar."}</p>}
+  {!eventId&&isAdmin&&<Suspense fallback="Check-ins laden…"><CheckinReview eventId={null}/></Suspense>}
  </WhenLoading>
  <p className="muted">Teamgegevens worden alleen getoond als de bestaande databasebeveiliging hiervoor toegang geeft. Toewijzen, overdragen en goedkeuren blijven in de huidige workflow.</p>
  </>
