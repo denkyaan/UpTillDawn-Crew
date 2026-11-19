@@ -1,8 +1,13 @@
 import {Hono} from "hono"
 import {createClient} from "@supabase/supabase-js"
 import {isActive,parseIdentity} from "../shared/identity.ts"
+import {
+ isOAuthProvider,oauthReady,oauthOrigin,oauthCallback,
+ authorizationUrl,startOAuthState,verifyOAuthState,clearOAuthCookie,
+ sealOAuthToken,exchangeOAuthCode,tokenConfiguration,type OAuthBindings
+} from "./provider-oauth.ts"
 
-type Bindings={SUPABASE_URL:string;SUPABASE_ANON_KEY:string}
+type Bindings={SUPABASE_URL:string;SUPABASE_ANON_KEY:string}&OAuthBindings
 const app=new Hono<{Bindings:Bindings}>()
 
 // Static navigation and images bypass this Worker entirely. Only /api/*
@@ -73,7 +78,93 @@ app.get("/api/v1/integrations/status",async c=>{
  const accepted=new Set(["weeztix","sumup","peppol","banking","documenso"])
  const configured=validList(configuration).filter(x=>accepted.has(String(x.provider)))
   .map(x=>({provider:x.provider,updatedAt:safeText(x.updated_at,60)}))
- return c.json({configured,connectionFlow:"requires_configured_provider_oauth"})
+ return c.json({configured,connectionFlow:"requires_configured_provider_oauth",
+  oauthReady:{
+   sumup:oauthReady(c.env,"sumup",c.req.url),
+   peppol:oauthReady(c.env,"peppol",c.req.url)
+  }
+ })
+})
+
+
+// Bounded JSON input; do not buffer attacker-controlled request bodies.
+async function boundedJson(request:Request,limit=4096):Promise<Record<string,unknown>|null>{
+ if(!request.body)return null
+ const length=request.headers.get("content-length")
+ if(length&&(!/^\d+$/.test(length)||Number(length)>limit))return null
+ const chunks:Uint8Array[]=[];let bytes=0
+ const reader=request.body.getReader()
+ try{
+  while(true){
+   const {done,value}=await reader.read()
+   if(done)break
+   bytes+=value.byteLength
+   if(bytes>limit){await reader.cancel().catch(()=>{});return null}
+   chunks.push(value)
+  }
+ }catch{return null}
+ finally{reader.releaseLock()}
+ const merged=new Uint8Array(bytes);let offset=0
+ for(const chunk of chunks){merged.set(chunk,offset);offset+=chunk.byteLength}
+ try{
+  const result:unknown=JSON.parse(new TextDecoder("utf-8",{fatal:true}).decode(merged))
+  return result&&typeof result==="object"&&!Array.isArray(result)?result as Record<string,unknown>:null
+ }catch{return null}
+}
+async function managedOauthActor(c:Parameters<typeof scopedActor>[0]){
+ const actor=await scopedActor(c)
+ if("error" in actor)return actor
+ const {data:allowed,error}=await actor.db.rpc("upt_can_manage_integrations")
+ if(error)return {error:"integration_permission_unavailable" as const,status:503 as const}
+ if(allowed!==true)return {error:"access_denied" as const,status:403 as const}
+ return actor
+}
+// POST only: Authorization bearer + Origin must match the operator-configured
+// HTTPS origin. OAuth client secrets and encryption keys never leave Worker.
+app.post("/api/v1/integrations/oauth/start",async c=>{
+ const actor=await managedOauthActor(c)
+ if("error" in actor)return c.json({error:actor.error},actor.status)
+ const body=await boundedJson(c.req.raw)
+ if(!body||!isOAuthProvider(body.provider))return c.json({error:"invalid_provider"},422)
+ const provider=body.provider
+ if(!oauthReady(c.env,provider,c.req.url))return c.json({error:"oauth_not_configured"},503)
+ const origin=oauthOrigin(c.env,c.req.url)
+ if(!origin||c.req.header("Origin")!==origin)return c.json({error:"origin_denied"},403)
+ const master=c.env.UPT_INTEGRATION_ENCRYPTION_KEY!
+ const {state,cookie}=await startOAuthState(provider,actor.identity.id,master)
+ const url=authorizationUrl(c.env,provider,origin,state)
+ c.header("Set-Cookie",cookie)
+ return c.json({authorizeUrl:url})
+})
+
+app.post("/api/v1/integrations/oauth/complete",async c=>{
+ const actor=await managedOauthActor(c)
+ if("error" in actor)return c.json({error:actor.error},actor.status)
+ const body=await boundedJson(c.req.raw)
+ if(!body||!isOAuthProvider(body.provider))return c.json({error:"invalid_provider"},422)
+ const provider=body.provider
+ if(!oauthReady(c.env,provider,c.req.url))return c.json({error:"oauth_not_configured"},503)
+ const origin=oauthOrigin(c.env,c.req.url)
+ if(!origin||c.req.header("Origin")!==origin)return c.json({error:"origin_denied"},403)
+ // Invalidate the browser's OAuth state regardless of any downstream failure.
+ c.header("Set-Cookie",clearOAuthCookie(provider))
+ if(typeof body.state!=="string"||typeof body.code!=="string"||
+  !(await verifyOAuthState(provider,actor.identity.id,c.env.UPT_INTEGRATION_ENCRYPTION_KEY!,
+   c.req.header("Cookie")||"",body.state)))
+  return c.json({error:"oauth_state_denied"},403)
+ const token=await exchangeOAuthCode(c.env,provider,body.code,origin)
+ if(!token)return c.json({error:"provider_token_unavailable"},502)
+ const ciphertext=await sealOAuthToken(provider,tokenConfiguration(provider,token,c.env),
+  c.env.UPT_INTEGRATION_ENCRYPTION_KEY!)
+ // The existing SECURITY DEFINER RPC checks current admin/administration role,
+ // audits every change and stores ciphertext in its private table. Never
+ // store provider tokens in browser cookies, logs or service-worker cache.
+ const {data,error}=await actor.db.rpc("upt_integration_credentials",{
+  p_action:"save",p_provider:provider,p_ciphertext:ciphertext
+ })
+ if(error||!data||typeof data!=="object"||(data as Record<string,unknown>).configured!==true)
+  return c.json({error:"integration_save_unconfirmed"},503)
+ return c.json({connected:true})
 })
 
 app.get("/api/v1/god/diagnostics",async c=>{

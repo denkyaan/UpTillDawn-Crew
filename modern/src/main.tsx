@@ -21,6 +21,7 @@ const Notifications=lazy(()=>import("./screens/notifications"))
 const Profile=lazy(()=>import("./screens/profile"))
 const MakerDiagnostics=lazy(()=>import("./screens/maker-diagnostics"))
 const QrWorkflow=lazy(()=>import("./screens/qr-workflow"))
+const ProviderOauthCallback=lazy(()=>import("./screens/provider-oauth-callback"))
 
 function PortalMemory(){
  const {identity,portals,status}=useSession()
@@ -154,6 +155,9 @@ function App(){
     </Route>
     <Route path="/notifications" element={<Suspense fallback="Meldingen laden…"><Notifications/></Suspense>}/>
     <Route path="/profile" element={<Suspense fallback="Profiel laden…"><Profile/></Suspense>}/>
+    <Route path="/integrations/oauth/callback/:provider" element={<PortalGuard portal="administration">
+     <Suspense fallback="Beveiligde koppeling laden…"><ProviderOauthCallback/></Suspense>
+    </PortalGuard>}/>
     <Route path="/responsible" element={<ResponsibleGuard><Suspense fallback="Planning laden…"><Responsible/></Suspense></ResponsibleGuard>}/>
     <Route path="/portals" element={<Home/>}/>
     <Route path="/portals/administration" element={<PortalGuard portal="administration"><Suspense fallback="Administratie laden…"><Administration/></Suspense></PortalGuard>}/>

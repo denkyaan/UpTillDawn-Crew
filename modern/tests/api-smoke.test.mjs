@@ -37,3 +37,13 @@ test('unknown HTTP routes never return a false-positive SPA document',async()=>{
  const response=await request('/api/v1/session',{method:'POST'})
  assert.equal(response.status,404)
 })
+
+test('OAuth endpoints are deny-by-default and never return secrets without a bearer token',async()=>{
+ for(const route of ['/api/v1/integrations/oauth/start','/api/v1/integrations/oauth/complete']){
+  const resp=await request(route,{method:'POST',headers:{'Content-Type':'application/json'},
+   body:JSON.stringify({provider:'sumup',code:'fake-code',state:'a'.repeat(64)})})
+  assert.equal(resp.status,401)
+  assert.deepEqual(await resp.json(),{error:'authentication_required'})
+  assert.match(resp.headers.get('cache-control')||'',/no-store/)
+ }
+})

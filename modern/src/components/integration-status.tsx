@@ -1,8 +1,11 @@
 import {useState} from "react"
-import {protectedCandidateGet} from "../lib/owner-api"
+import {protectedCandidateGet,protectedCandidatePost} from "../lib/owner-api"
+import {MIGRATION_WRITES_ENABLED} from "../lib/operational-writes"
+import {useLocale} from "../lib/use-locale"
+import {providerCopy} from "../shared/oauth-i18n"
 
 type Provider="weeztix"|"sumup"|"peppol"|"banking"|"documenso"
-type Status={configured:{provider:Provider;updatedAt:string|null}[];connectionFlow:string}
+type Status={configured:{provider:Provider;updatedAt:string|null}[];connectionFlow:string;oauthReady?:{sumup:boolean;peppol:boolean}}
 const description:Record<Provider,string>={
  weeztix:"Weeztix · inkom en ticketcontrole",
  sumup:"SumUp · verkoopbetalingen",
@@ -19,6 +22,22 @@ export default function IntegrationStatus({area}:{area:keyof typeof workspace}){
  const [state,setState]=useState<Status|null>(null)
  const [error,setError]=useState("")
  const [loading,setLoading]=useState(false)
+ const [starting,setStarting]=useState<Provider|null>(null)
+ const {locale}=useLocale(),t=providerCopy(locale)
+ async function login(provider:"sumup"|"peppol"){
+  if(starting||!MIGRATION_WRITES_ENABLED||!state?.oauthReady?.[provider])return
+  setStarting(provider);setError("")
+  try{
+   const result=await protectedCandidatePost<{authorizeUrl:string}>("/api/v1/integrations/oauth/start",{provider})
+   const redirect=new URL(result.authorizeUrl)
+   const allowed=provider==="sumup"?redirect.origin==="https://api.sumup.com":
+    ["https://my.sandbox.billit.be","https://my.billit.be"].includes(redirect.origin)
+   if(!allowed||redirect.protocol!=="https:"||!redirect.searchParams.has("state"))
+    throw new Error("invalid_oauth_redirect")
+   window.location.assign(redirect.toString())
+  }catch{setError(t.failed);setStarting(null)}
+ }
+
  async function load(){
   if(loading)return
   setLoading(true);setError("");setState(null)
@@ -38,10 +57,17 @@ export default function IntegrationStatus({area}:{area:keyof typeof workspace}){
    const hit=state.configured.find(row=>row.provider===provider)
    return <li key={provider}>
     <div className="row"><strong>{description[provider]}</strong>
-     <span>{hit?"Geregistreerde verbinding":"Niet verbonden"}</span></div>
+     <span>{hit?t.connected:t.disconnected}</span></div>
     {hit&&<p className="muted">Laatst bijgewerkt: {hit.updatedAt||"Onbekend"}</p>}
+    {(provider==="sumup"||provider==="peppol")&&<div>
+     {MIGRATION_WRITES_ENABLED&&state.oauthReady?.[provider]?
+      <button type="button" disabled={starting!==null} onClick={()=>void login(provider)}>
+       {starting===provider?t.connecting:t.connect}
+      </button>:
+      <p className="muted">{t.notReady}</p>}
+    </div>}
    </li>
   })}</ul>}
-  <p className="muted">Opnieuw aanmelden bij de aanbieder moet via een volledig beveiligde OAuth-stroom gebeuren. Die stroom is nog niet overgezet; er wordt hier geen onveilige handmatige sleutel-invoer aangeboden.</p>
+  <p className="muted">{t.summary} De andere aanbieders vereisen afzonderlijke beveiligde koppelingen en blijven hier alleen-lezen.</p>
  </section>
 }
