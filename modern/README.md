@@ -119,3 +119,11 @@ This transaction bundle is implementation progress, **NOT feature parity or auth
 - The authenticated **provider-user OAuth start/callback, crypto store, rotation and acceptance** from Next/OpenNext are still NOT migrated. Provider SDK app registrations require an operator-held client ID/secret before final customers can connect using login alone. The candidate does not pretend that a provider OAuth redirect exists and never asks an end user to paste API tokens.
 - Session refresh now hides the previous private view during validation, prevents stale overlapping responses from restoring a revoked user, and revalidates on tab visibility.
 - Migration-only Chromium smoke covers anonymous app entry and forbidden maker route on **4 locales x 2 device profiles = 8 scenarios**, with fake public Supabase configuration and no customer credentials. This **is not** authenticated 7-role or 30-concurrent-user acceptance. Those release gates remain blocked.
+
+## Verified database compatibility finding — 19 November 2026
+
+The repository's Main QA deploy points at Supabase project `npbjrtiolqperdgljnhi`; the Production deploy points at `eakoavcieossazqzplke`. Read-only inspection of both projects' PostgreSQL function catalogs checked all 25 RPC names called by this candidate, `authenticated` execute grants and `anon` execute exposure. On the observation date, **Main QA had all 25** and **Production lacked `public.upt_current_session_context`**. No anonymous execution grants were detected among the 25. No production data, schema, role or secret was changed.
+
+The candidate depends on this RPC for every login/session and rejects the request when absent. **Do not try to handle its absence via frontend role claims, alternate service-role queries or by merging early.** The missing database contract must be investigated, safely migrated through the existing reviewed production migration path and live-tested *only as part of a separately authorized release*.
+
+Run `npm run rpc:contract` inside `modern/` to audit the source's current RPC allowlist offline; this gate is included in candidate-only CI. Its checked-in catalog snapshot is dated historical evidence, not an actual live database probe. It always refuses `--release` because full function parity, 7-role browser journeys, 30 distinct sessions and Worker-resource measurements are not yet proven.

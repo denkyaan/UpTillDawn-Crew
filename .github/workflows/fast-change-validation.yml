@@ -90,6 +90,7 @@ jobs:
           npm --prefix modern run worker:check
           npm --prefix modern run api:test
           npm --prefix modern run inventory
+          npm --prefix modern run rpc:contract
           npm --prefix modern audit --omit=dev --audit-level=high
       # Isolated migration PR only. Main fast CI remains unchanged.
       - name: Candidate anonymous browser acceptance (4 languages x 2 device profiles)
