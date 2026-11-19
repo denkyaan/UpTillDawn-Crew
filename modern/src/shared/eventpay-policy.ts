@@ -6,7 +6,7 @@ export type ProductQuote={productId:string;kind:CartKind;unitPriceCents:number;c
 export type CartChoice={productId:string;quantity:number}
 export type LocalCartQuote={kind:CartKind;lineCount:number;totalCents:number;
  items:{productId:string;quantity:number;unitPriceCents:number;lineCents:number}[]}
-const productId=/^[0-9a-f]{8}-(?:[0-9a-f]{4}-){3}-[0-9a-f]{12}$/i
+const productId=/^[0-9a-f]{8}-(?:[0-9a-f]{4}-){3}[0-9a-f]{12}$/i
 const int=(n:unknown):n is number=>typeof n==="number"&&Number.isSafeInteger(n)
 export function quoteLocalCart(kind:CartKind,choices:readonly CartChoice[],
  catalogue:readonly ProductQuote[]):LocalCartQuote{

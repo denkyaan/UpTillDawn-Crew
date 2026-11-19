@@ -1,7 +1,7 @@
 // Server-only allowlist; logs are untrusted even when returned by privileged
 // DB functions. Never put query strings, route identifiers, hostnames, secrets
 // or raw database error payloads in the maker browser response.
-const uuid=/[0-9a-f]{8}-(?:[0-9a-f]{4}-){3}-[0-9a-f]{12}/gi
+const uuid=/[0-9a-f]{8}-(?:[0-9a-f]{4}-){3}[0-9a-f]{12}/gi
 export function sanitizedMakerRoute(value:unknown):string|null{
  if(typeof value!=="string"||value.length>512)return null
  const route=value.split(/[?#]/,1)[0]
