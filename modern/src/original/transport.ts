@@ -4,7 +4,12 @@ export async function invokeOriginalAction(id:string,args:unknown[]):Promise<unk
  const response=await fetch('/api/migration/actions',{method:'POST',body,credentials:'same-origin',redirect:'error'})
  const result=await response.json()
  if(!response.ok)throw Error(result.error||'De actie kon niet worden uitgevoerd.')
- if(typeof result.redirect==='string'){window.location.assign(result.redirect);return}
+ if(typeof result.redirect==='string'){
+  if(!result.redirect.startsWith('/')||result.redirect.startsWith('//')||result.redirect.includes('\\'))throw Error('Invalid action redirect')
+  if(id.startsWith('lib/actions/auth.ts#')||id.startsWith('lib/actions/god-mode.ts#'))window.location.assign(result.redirect)
+  else window.dispatchEvent(new CustomEvent('upt-source-navigate',{detail:result.redirect}))
+  return
+ }
  if(result.refresh)window.dispatchEvent(new Event('upt-source-refresh'))
  return decode(result.value,new FormData())
 }

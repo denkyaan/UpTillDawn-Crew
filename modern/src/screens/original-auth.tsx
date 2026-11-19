@@ -1,3 +1,4 @@
+import {originalSearchParams} from '../compat/search-params'
 import {useEffect,useState,Suspense,lazy,useMemo,type ReactNode} from "react"
 import {useLocation} from "react-router-dom"
 import {ThemeProvider} from "next-themes"
@@ -21,7 +22,7 @@ const additionalPublic={
 import {OriginalRequest} from '../original/runtime'
 function AdditionalPublic({pathname,search}:{pathname:keyof typeof additionalPublic;search:string}){
  const Page=additionalPublic[pathname]
- const searchParams=useMemo(()=>Promise.resolve(Object.fromEntries(new URLSearchParams(search))),[search])
+ const searchParams=useMemo(()=>Promise.resolve(originalSearchParams(search)),[search])
  return <OriginalRequest revision={pathname+search}><Suspense fallback={null}><Page searchParams={searchParams}/></Suspense></OriginalRequest>
 }
 

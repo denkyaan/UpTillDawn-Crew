@@ -8,6 +8,7 @@ import React from 'react'
 import {renderToPipeableStream} from 'react-dom/server'
 import {clientSource,pages,routePath,actionEntries,root,ts} from '../tooling/main-source.mjs'
 import {encode,decode} from '../../lib/migration/wire.ts'
+import {originalSearchParams} from '../src/compat/search-params.ts'
 import {originalDateString,originalDateTimeFormat} from '../src/compat/server-date.ts'
 import {boundedMigrationForm} from '../../lib/migration/bounded-form.ts'
 import {boundedMigrationJson} from '../../lib/migration/bounded-json.ts'
@@ -86,4 +87,10 @@ test('server date output remains UTC while explicit Brussels dates and client co
  assert.equal(originalDateString(date,'toLocaleTimeString',[],{hour:'2-digit',timeZone:undefined}),date.toLocaleTimeString('en-US',{hour:'2-digit',timeZone:'UTC'}))
  assert.match(clientSource('app/(app)/audit/page.tsx'),/__originalDateString/)
  assert.doesNotMatch(clientSource('app/(app)/operations/operations-client.tsx'),/__originalDateString/)
+})
+
+test('page query props preserve duplicate-value rejection and never mutate Object.prototype',()=>{
+ const parsed=originalSearchParams('?token_hash=one&token_hash=two&view=all&__proto__=safe')
+ assert.deepEqual(parsed.token_hash,['one','two']);assert.equal(parsed.view,'all')
+ assert.equal(Object.getPrototypeOf(parsed),Object.prototype);assert.equal(parsed.__proto__,'safe')
 })

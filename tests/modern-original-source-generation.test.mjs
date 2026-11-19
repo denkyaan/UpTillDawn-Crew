@@ -31,3 +31,12 @@ test('original offline and push worker stays byte-identical, with the original u
   assert.equal(manifest.short_name,'UP TILL DAWN');assert.equal(manifest.icons[0].src,'/up-till-dawn-mark.webp')
  }
 })
+
+test('original client shell and open AI state survive ordinary refresh; identities remain isolated',()=>{
+ const app=read('modern/src/screens/original-application.tsx'),navigation=read('modern/src/compat/navigation.ts')
+ assert.match(app,/<Boundary key=\{identityKey\} revision=\{requestKey\}/)
+ assert.match(app,/<OriginalRequest revision=\{requestKey\}/)
+ assert.match(navigation,/useLayoutEffect\(\(\)=>\{current.current=navigate\}/)
+ assert.match(navigation,/useMemo\(\(\)=>new URLSearchParams\(search\),\[search\]\)/)
+ assert.ok(read('modern/tests/browser-auth-qa.mjs').includes('ORIGINAL_CLIENT_STATE_LOST_ON_REFRESH'))
+})

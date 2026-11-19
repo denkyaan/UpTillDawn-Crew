@@ -29,7 +29,12 @@ let browser,signins=0,total=0,menuComparisons=0
 async function ready(page){
  await page.locator('[data-app-shell-ready="true"]').waitFor({timeout:30000})
  await page.locator('[data-route-loading="true"]').waitFor({state:'detached',timeout:30000})
- await page.waitForTimeout(900)
+ // Respect Main's staggered badge refresh: focus invokes the existing
+ // immediate path while preserving its anti-overload jitter for real users.
+ await page.bringToFront()
+ await page.evaluate(()=>window.dispatchEvent(new Event('focus')))
+ await page.waitForLoadState('networkidle',{timeout:25000})
+ await page.locator('[data-route-loading="true"]').waitFor({state:'detached',timeout:30000})
  if(await page.getByRole('heading',{name:'De actie kon niet worden voltooid.',exact:true}).count())throw Error('ORIGINAL_VIEW_RENDER_FAILED')
 }
 async function fingerprint(page){
@@ -63,6 +68,12 @@ async function menus(a,b,label){
   if(!await original.isEnabled()||!await candidate.isEnabled())continue
   await original.click();await candidate.click();await a.waitForTimeout(100);await b.waitForTimeout(100)
   await compare(a,b,label+'-menu-'+i);menuComparisons++
+  if(label==='head_admin-nl-desktop'&&(await original.innerText()).includes('AI')&&await candidate.getAttribute('aria-expanded')==='true'){
+   await b.evaluate(()=>window.dispatchEvent(new Event('upt-source-refresh')))
+   await b.waitForLoadState('networkidle',{timeout:25000})
+   if(await candidate.getAttribute('aria-expanded')!=='true')throw Error('ORIGINAL_CLIENT_STATE_LOST_ON_REFRESH')
+   await compare(a,b,label+'-retained-ai')
+  }
   if(await original.getAttribute('aria-expanded')==='true')await original.click()
   if(await candidate.getAttribute('aria-expanded')==='true')await candidate.click()
  }

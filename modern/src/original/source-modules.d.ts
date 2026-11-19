@@ -8,7 +8,7 @@ declare module 'main-source/routes' {
 
 declare module 'main-source/lib/providers.tsx' {
 export const AuthProvider:import('react').ComponentType<{children?:import('react').ReactNode}>
-export function useAuth():{user:{id:string}|null;profile:object|null;loading:boolean;roleMode:string|null}
+export function useAuth():{user:{id:string}|null;profile:object|null;loading:boolean;roleMode:string|null;isOwner:boolean}
 }
 
 declare module 'main-source/lib/admin-selection-context.tsx' {
