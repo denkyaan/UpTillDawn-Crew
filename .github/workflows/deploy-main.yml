@@ -127,7 +127,7 @@ jobs:
   # This is a LIVE browser test of the new Cloudflare Worker, not a local Vite
   # preview and not a simulated Supabase-only concurrency benchmark.
   qa-modern-main-qa:
-    needs: [validate-trigger, deploy-modern-main-qa]
+    needs: [validate-trigger, deploy-modern-main-qa, deploy]
     if: >-
       needs.validate-trigger.outputs.eligible == 'true' &&
       needs.deploy-modern-main-qa.result == 'success'
@@ -162,6 +162,8 @@ jobs:
         run: npm --prefix modern install --prefer-offline --no-audit --no-fund
       - name: Install headless browser (no unrelated OS packages)
         run: npm --prefix modern exec -- playwright install chromium --only-shell
+      - name: Compare original Main login — 48 screens and 160 interaction states
+        run: npm --prefix modern run login:visual-parity
       - name: Verify seven real roles, four languages and two devices on LIVE modern Worker
         run: npm --prefix modern run browser:qa
       - name: Exercise 30 DISTINCT signed QA sessions through deployed Hono /api/v1/session
@@ -171,6 +173,14 @@ jobs:
           echo "Modern Main-QA: seven signed roles x four languages x two device types validated against deployed Cloudflare static assets." >> "$GITHUB_STEP_SUMMARY"
           echo "Also passed 30 distinct signed QA sessions across 7 identities, with a bounded 30-request real Cloudflare Worker peak." >> "$GITHUB_STEP_SUMMARY"
           echo "No business writes, provider money operations or production release were attempted." >> "$GITHUB_STEP_SUMMARY"
+      - name: Upload anonymous login parity evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: modern-main-login-parity
+          path: test-results/login-parity/
+          if-no-files-found: warn
+          retention-days: 5
 
   qa-main-anonymous-acceptance:
     # Strict, independent security gate. A failure stays red but may not

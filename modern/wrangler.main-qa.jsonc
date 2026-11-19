@@ -12,7 +12,8 @@
     "directory": "./dist",
     "not_found_handling": "single-page-application",
     "run_worker_first": [
-      "/api/*"
+      "/api/*",
+      "/auth/callback"
     ]
   },
   "vars": {
@@ -23,5 +24,11 @@
   },
   "observability": {
     "enabled": true
-  }
+  },
+  "services": [
+    {
+      "binding": "MAIN_AUTH",
+      "service": "uptilldawn-main"
+    }
+  ]
 }

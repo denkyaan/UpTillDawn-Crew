@@ -1,0 +1,9 @@
+/* Compile the authoritative Main stylesheet and original component classes.
+   This stylesheet is mounted only while the original public screens render. */
+@import "../../app/globals.css";
+@source "../../components/auth";
+@source "../../components/ui";
+@source "../../components/language-switcher.tsx";
+@source "../../components/shared/footer.tsx";
+@source "../../app/(auth)";
+@source "../../app/auth/reset-password";

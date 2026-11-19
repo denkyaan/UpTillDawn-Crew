@@ -17,7 +17,7 @@ test('migration candidate is independent and cannot auto-deploy or replace produ
  assert.equal(candidate.workers_dev,false)
  assert.equal(candidate.preview_urls,false)
  assert.equal(candidate.assets.not_found_handling,'single-page-application')
- assert.deepEqual(candidate.assets.run_worker_first,['/api/*'])
+ assert.deepEqual(candidate.assets.run_worker_first,['/api/*','/auth/callback'])
  const files=['.github/workflows/ci.yml','.github/workflows/fast-change-validation.yml','.github/workflows/deploy-main.yml','.github/workflows/deploy-cloudflare.yml','.github/workflows/cleanup-actions-history.yml']
  assert.equal(files.length,5)
  for(const name of files)assert.doesNotMatch(read(name),/modern\/wrangler|uptilldawn-modern-candidate/)

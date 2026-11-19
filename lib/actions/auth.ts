@@ -14,19 +14,15 @@ import { passwordPolicyMessage } from '@/lib/password-policy'
 import { sendSecurityLoginEmail } from '@/lib/security-login-email'
 import { markSaveSuccess } from '@/lib/save-success'
 import { resolveLoginEmail } from '@/lib/maker-login'
+import { authCallbackOrigin } from '@/lib/auth-callback-origin'
 
 function extractName(email: string): string {
     const local = email.split('@')[0]
     return local.split('.').map(part => part.charAt(0).toUpperCase() + part.slice(1)).join(' ').slice(0, 200)
 }
 
-function appOrigin(): string | null {
-    const raw = process.env.NEXT_PUBLIC_APP_URL
-    if (!raw) return null
-    try {
-        const url = new URL(raw)
-        return url.protocol === 'http:' || url.protocol === 'https:' ? url.origin : null
-    } catch { return null }
+function appOrigin(requested: unknown = null): string | null {
+    return authCallbackOrigin(process.env.NEXT_PUBLIC_APP_URL, process.env.NEXT_PUBLIC_SUPABASE_URL, requested)
 }
 
 async function lookupIpLocation(ip: string | null) {
@@ -177,7 +173,7 @@ export async function signUp(formData: FormData) {
     const passwordError = passwordPolicyMessage(password)
     if (passwordError) return { error: passwordError }
     if (confirmPassword && password !== confirmPassword) return { error: 'Wachtwoorden komen niet overeen.' }
-    const origin = appOrigin()
+    const origin = appOrigin(formData.get('_callback_origin'))
     if (!origin) return { error: 'De applicatieconfiguratie is onvolledig. Neem contact op met de beheerder.' }
     const supabase = await createClient()
     const { data, error } = await supabase.auth.signUp({ email, password, options: { emailRedirectTo: `${origin}/auth/callback`, data: { full_name: fullName, pwa_install_prompt_pending: true } } })
@@ -335,7 +331,7 @@ export async function signOut() {
 export async function forgotPassword(formData: FormData) {
     const submittedEmail = String(formData.get('email') || '').trim().toLowerCase(); if (!submittedEmail) return { error: 'Vul je e-mailadres in.' }
     const email = resolveLoginEmail(submittedEmail)
-    const origin = appOrigin(); if (!origin) return { error: 'De applicatieconfiguratie is onvolledig. Neem contact op met de beheerder.' }
+    const origin = appOrigin(formData.get('_callback_origin')); if (!origin) return { error: 'De applicatieconfiguratie is onvolledig. Neem contact op met de beheerder.' }
     const supabase = await createClient(); const { error } = await supabase.auth.resetPasswordForEmail(email, { redirectTo: `${origin}/auth/callback?next=/auth/reset-password` })
     if (error) {
         if (error.status === 429 || error.code === 'over_email_send_rate_limit' || error.message.toLowerCase().includes('rate limit')) {
@@ -374,7 +370,7 @@ export async function updatePassword(formData: FormData) {
 export async function resendVerificationEmail(formData: FormData) {
     const submittedEmail = String(formData.get('email') || '').trim().toLowerCase(); if (!submittedEmail) return { error: 'Vul je e-mailadres in.' }
     const email = resolveLoginEmail(submittedEmail)
-    const origin = appOrigin(); if (!origin) return { error: 'De applicatieconfiguratie is onvolledig. Neem contact op met de beheerder.' }
+    const origin = appOrigin(formData.get('_callback_origin')); if (!origin) return { error: 'De applicatieconfiguratie is onvolledig. Neem contact op met de beheerder.' }
     const supabase = await createClient(); const { error } = await supabase.auth.resend({ type: 'signup', email, options: { emailRedirectTo: `${origin}/auth/callback` } })
     if (error) return { error: 'De verificatiemail kon niet worden verstuurd. Probeer opnieuw.' }
     return { success: true, message: 'Verificatiemail opnieuw verstuurd.' }

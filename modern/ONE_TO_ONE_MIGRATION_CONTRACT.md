@@ -36,9 +36,13 @@ development candidate, NOT an approved replacement or redesign.
 - Compare real browser screenshots against original Main login at desktop and
   mobile widths in all four languages, including open menu, focused inputs,
   password visible, loading, error and validation states.
-- The separate modern app currently lacks this exact login screen and complete
-  authentication behavior. Treat it as incomplete. Do not assert login parity
-  or redirect the existing Main login to the new candidate yet.
+- The separate modern app now imports the original chooser, five-portal form,
+  auth layout, footer, styles, translations and account screens directly.
+  Its authentication transport delegates to the original Main action through a
+  QA-only service binding. Full visual and functional acceptance is still
+  required; do not redirect the existing Main login to this candidate yet.
+  Candidate signup/recovery mail remains disabled until the exact QA callback
+  is configured and verified, to preserve the same-host PKCE verifier cookie.
 
 ### Implementation rule
 **Reuse/extract the existing presentation and behavior as the migration source**.
@@ -69,8 +73,10 @@ panel or a fallback link is never functional parity.
    explicit authorization.
 
 ### Current truth
-The candidate in `modern/` has its own simplified styling, navigation and
-screens. It is **NOT 1:1**, and its inventory intentionally reports zero
+The authenticated candidate in `modern/` still has simplified styling,
+navigation and screens. Public authentication reuses Main source, with the
+48-screen/160-interaction visual gate separate from functional auth acceptance.
+The full app is **NOT 1:1**, and its inventory intentionally reports zero
 verified route/action parity. The isolated modern URL remains a QA surface, and
 its successful smoke/auth/browser tests do not grant release readiness.
 
