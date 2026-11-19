@@ -514,6 +514,22 @@ jobs:
       - name: Check TypeScript
         run: npm run typecheck
 
+      - name: Bundle lightweight Main app as static same-origin /modern assets
+        shell: bash
+        env:
+          VITE_SUPABASE_URL: https://npbjrtiolqperdgljnhi.supabase.co
+          VITE_SUPABASE_ANON_KEY: sb_publishable_zStTw3n8wZ271PehDRDvGg_rs0JOy84
+          VITE_MIGRATION_ALLOW_WRITES: 'false'
+          VITE_MIGRATION_SCANNING_ENABLED: 'false'
+        run: |
+          set -euo pipefail
+          npm --prefix modern install --prefer-offline --no-audit --no-fund
+          npm --prefix modern run check
+          npm --prefix modern run build -- --base=/modern/ --outDir=../public/modern
+          test -s public/modern/index.html
+          test -d public/modern/assets
+          echo 'Same-origin /modern built as static assets; business writes still OFF.'
+
       - name: Build main app Worker
         run: npm run build:cloudflare
 
@@ -642,6 +658,10 @@ jobs:
             if (!manifest.name && !manifest.short_name) throw new Error("PWA manifest missing app name");
             console.log("PWA manifest parsed and app name verified");
           '
+
+      - name: Verify lightweight SPA works on the EXISTING Main hostname
+        if: steps.current-main.outputs.current == 'true'
+        run: node scripts/main-modern-same-origin-smoke.mjs
 
       - name: Verify OCR secret binding on main Worker (names only)
         if: steps.current-main.outputs.current == 'true'
