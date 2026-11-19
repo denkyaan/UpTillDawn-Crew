@@ -14,7 +14,7 @@ import {boundedMigrationForm} from '../../lib/migration/bounded-form.ts'
 import {boundedMigrationJson} from '../../lib/migration/bounded-json.ts'
 const require=createRequire(import.meta.url)
 const runtimeSource=ts.transpileModule(readFileSync(root+'/modern/src/original/runtime.tsx','utf8'),{compilerOptions:{target:ts.ScriptTarget.ES2022,module:ts.ModuleKind.ESNext,jsx:ts.JsxEmit.ReactJSX}}).outputText.replace(/from ['"](react(?:\/jsx-runtime)?)['"]/g,(_,name)=>'from '+JSON.stringify(pathToFileURL(require.resolve(name)).href))
-const {OriginalRequest,sourceView,loadSourceView}=await import('data:text/javascript;base64,'+Buffer.from(runtimeSource).toString('base64'))
+const {OriginalRequest,sourceView,loadSourceView,originalRoutePromise}=await import('data:text/javascript;base64,'+Buffer.from(runtimeSource).toString('base64'))
 async function render(element){
  return new Promise((resolve,reject)=>{
   const output=new PassThrough();let text=''
@@ -93,4 +93,13 @@ test('page query props preserve duplicate-value rejection and never mutate Objec
  const parsed=originalSearchParams('?token_hash=one&token_hash=two&view=all&__proto__=safe')
  assert.deepEqual(parsed.token_hash,['one','two']);assert.equal(parsed.view,'all')
  assert.equal(Object.getPrototypeOf(parsed),Object.prototype);assert.equal(parsed.__proto__,'safe')
+})
+
+test('route promises with the same values reuse their resource despite discarded React memo instances',async()=>{
+ let reads=0
+ const View=sourceView('route-fixture',async({params,searchParams})=>{reads++;const [route,query]=await Promise.all([params,searchParams]);return React.createElement('b',null,route.id+query.view)})
+ const first={params:originalRoutePromise({id:'one'}),searchParams:originalRoutePromise({view:'all'})}
+ const retry={params:originalRoutePromise({id:'one'}),searchParams:originalRoutePromise({view:'all'})}
+ const html=await render(React.createElement(OriginalRequest,{revision:'route'},React.createElement(React.Suspense,{fallback:'pending'},React.createElement(React.Fragment,null,React.createElement(View,first),React.createElement(View,retry)))))
+ assert.equal(reads,1);assert.match(html,/oneall/)
 })

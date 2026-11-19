@@ -4,14 +4,17 @@ import {createContext,isValidElement,use,useContext,useEffect,useRef, type React
 // renders reuse the same promise; no authenticated result survives navigation.
 type RequestScope={views:Map<string,Promise<ReactNode>>;objects:WeakMap<object,number>;sequence:number}
 const Scope=createContext<RequestScope|null>(null)
+const routeValue=Symbol.for('uptilldawn.original-route-value')
+export function originalRoutePromise<T>(value:T):Promise<T>{return Object.assign(Promise.resolve(value),{[routeValue]:value})}
 function key(value:unknown,scope:RequestScope,depth=0):string{
  if(typeof value==='symbol'||typeof value==='bigint')return String(value)
  if(depth>12)return identity(value,scope)
  if(value===null||typeof value==='string'||typeof value==='number'||typeof value==='boolean'||value===undefined)return JSON.stringify(value)??'undefined'
+ if(typeof value==='object'&&value!==null&&routeValue in value)return 'route:'+key((value as Record<symbol,unknown>)[routeValue],scope,depth+1)
  if(typeof value==='object'&&value!==null&&'$$typeof'in value&&typeof (value as {$$typeof:unknown}).$$typeof==='symbol'&&!isValidElement(value))return identity(value,scope)
  if(isValidElement(value))return 'element('+key(value.type,scope,depth+1)+':'+value.key+':'+key(value.props,scope,depth+1)+')'
  if(Array.isArray(value))return '['+value.map(x=>key(x,scope,depth+1)).join(',')+']'
- if(typeof value==='object'&&Object.getPrototypeOf(value)===Object.prototype)return '{'+Object.keys(value).sort().map(k=>JSON.stringify(k)+':'+key((value as Record<string,unknown>)[k],scope,depth+1)).join(',')+'}'
+ if(typeof value==='object'&&(Object.getPrototypeOf(value)===Object.prototype||Object.getPrototypeOf(value)===null))return '{'+Object.keys(value).sort().map(k=>JSON.stringify(k)+':'+key((value as Record<string,unknown>)[k],scope,depth+1)).join(',')+'}'
  return identity(value,scope)
 }
 function identity(value:unknown,scope:RequestScope){

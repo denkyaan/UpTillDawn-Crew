@@ -19,7 +19,7 @@ import SettingsLoading from 'main-source/app/(app)/settings/loading.tsx'
 import OriginalError from 'main-source/app/(app)/error.tsx'
 import NotFound from '../original/not-found'
 import {routes} from 'main-source/routes'
-import {OriginalRequest} from '../original/runtime'
+import {OriginalRequest,originalRoutePromise} from '../original/runtime'
 import styles from '../app.css?inline'
 
 const pages=routes.map(r=>({...r,Page:lazy(r.load)}))
@@ -31,8 +31,8 @@ class Boundary extends Component<{children:ReactNode;reset:()=>void;revision:str
 }
 function Page({Screen,revision}:{Screen:ComponentType<Record<string,unknown>>;revision:string}){
  const values=useParams(),location=useLocation()
- const params=useMemo(()=>Promise.resolve(values),[values])
- const searchParams=useMemo(()=>Promise.resolve(originalSearchParams(location.search)),[location.search])
+ const params=useMemo(()=>originalRoutePromise(Object.fromEntries(Object.entries(values).filter(([name])=>name!=='*'))),[values])
+ const searchParams=useMemo(()=>originalRoutePromise(originalSearchParams(location.search)),[location.search])
  return <Boundary revision={revision} reset={()=>window.dispatchEvent(new Event('upt-source-refresh'))}><Suspense fallback={location.pathname==='/settings'?<SettingsLoading/>:<Loading/>}><Screen params={params} searchParams={searchParams}/></Suspense></Boundary>
 }
 function AuthenticatedRoutes(){

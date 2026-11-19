@@ -86,14 +86,14 @@ try{
  for(const bot of bots){
   const login=await browser.newContext({locale:'nl-BE',viewport:devices[0].viewport})
   try{
-   const page=await login.newPage();let status=0,reads=0
-   page.on('request',request=>{if(new URL(request.url()).origin===qa.origin)reads++})
+   const page=await login.newPage();let status=0,reads=0;const readKinds={}
+   page.on('request',request=>{const target=new URL(request.url());if(target.origin!==qa.origin)return;reads++;readKinds[target.pathname]=(readKinds[target.pathname]||0)+1;if(reads>400)void page.close()})
    page.on('pageerror',error=>console.error('QA_PAGE_ERROR '+bot.role+' '+error.name))
    page.on('response',response=>{if(new URL(response.url()).pathname==='/api/auth/portal-login')status=response.status()})
    await page.goto(origin+'/login/'+bot.login,{waitUntil:'domcontentloaded',timeout:20000})
    await page.locator('input[name="email"]').fill(bot.email);await page.locator('input[name="password"]').fill(password)
    await page.locator('form button[type="submit"]').click()
-   try{await ready(page)}catch(error){console.error('QA_READY_FAILURE '+bot.role+' '+(error instanceof Error?error.message.split('\n')[0]:'unknown')+' reads='+reads);throw Error('QA_LOGIN_NOT_READY '+bot.role+' HTTP='+status)}
+   try{await ready(page)}catch(error){console.error('QA_READY_FAILURE '+bot.role+' '+(error instanceof Error?error.message.split('\n')[0]:'unknown')+' reads='+reads+' sources='+JSON.stringify(readKinds));throw Error('QA_LOGIN_NOT_READY '+bot.role+' HTTP='+status)}
    signins++
    const landing=new URL(page.url()).pathname,state=await login.storageState()
    // Check ordinary source pages without mutations before device comparisons.

@@ -19,10 +19,10 @@ const additionalPublic={
  '/auth/recovery':lazy(()=>import('main-source/app/(auth)/auth/recovery/page.tsx')),
  '/auth/confirm':lazy(()=>import('main-source/app/(auth)/auth/confirm/page.tsx')),
 } as const
-import {OriginalRequest} from '../original/runtime'
+import {OriginalRequest,originalRoutePromise} from '../original/runtime'
 function AdditionalPublic({pathname,search}:{pathname:keyof typeof additionalPublic;search:string}){
  const Page=additionalPublic[pathname]
- const searchParams=useMemo(()=>Promise.resolve(originalSearchParams(search)),[search])
+ const searchParams=useMemo(()=>originalRoutePromise(originalSearchParams(search)),[search])
  return <OriginalRequest revision={pathname+search}><Suspense fallback={null}><Page searchParams={searchParams}/></Suspense></OriginalRequest>
 }
 
