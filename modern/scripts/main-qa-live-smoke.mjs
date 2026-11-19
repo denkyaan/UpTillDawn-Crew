@@ -48,6 +48,16 @@ const found=html.match(/(?:src|href)="(\/assets\/[^"]+\.(?:js|css))"/)
 check(Boolean(found),"BUNDLED_ASSET_LINK")
 const asset=await getAfterPropagation(found[1],200)
 check(asset.ok,"BUNDLED_ASSET")
+// Empty mandatory fields return BEFORE Supabase, login audit or mail. This
+// checks the real internal service transport without credentials or writes.
+const emptyForm=new FormData()
+emptyForm.set("portal","staff");emptyForm.set("email","");emptyForm.set("password","")
+const authTransport=await get("/api/auth/portal-login",{
+ method:"POST",headers:{Origin:origin,"Sec-Fetch-Site":"same-origin"},body:emptyForm,
+})
+check(authTransport.status===200,"AUTH_TRANSPORT_HTTP_"+authTransport.status)
+const emptyResult=await authTransport.json()
+check(emptyResult.error==="E-mail en wachtwoord zijn verplicht."&&emptyResult.success!==true,"AUTH_REQUIRED_FIELD_VALIDATION")
 const noSession=await get("/api/v1/session")
 check(noSession.status===401,"ANON_SESSION_DENIED")
 check((await noSession.json()).error==="authentication_required","AUTH_DENY_BODY")
@@ -65,7 +75,7 @@ const missing=await getAfterPropagation("/nonexistent-path-123",200,{headers:{"S
 check(missing.status===200,"CLIENT_ROUTE_FALLBACK")
 check((await missing.text()).includes('id="root"'),"SPA_FALLBACK_CONTENT")
 console.log(JSON.stringify({ok:true,worker:"uptilldawn-modern-main",
- actualOrigin:origin,appShell:true,assetServed:true,honoHealth:true,
+ actualOrigin:origin,appShell:true,assetServed:true,honoHealth:true,originalAuthTransportVerified:true,
  anonymousSessionBlocked:true,anonymousScanBlocked:true,
  anonymousOauthBlocked:true,unknownApiFailsClosed:true,
  workerIsolatedFromLegacy:true,release:"Main QA only; production untouched",

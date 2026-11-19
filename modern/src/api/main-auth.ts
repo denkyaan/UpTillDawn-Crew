@@ -11,6 +11,16 @@ function rejected(status:number,code:string){
  return Response.json({error:"De aanmeldservice is tijdelijk niet bereikbaar. Probeer opnieuw.",code},{status,headers:{"Cache-Control":"private, no-store"}})
 }
 
+export function authResponseCookies(headers:Headers):string[]{
+ const runtime=headers as Headers&{getAll?:(name:string)=>string[]}
+ if(typeof runtime.getSetCookie==="function")return runtime.getSetCookie()
+ // Workers deliberately retains getAll for Set-Cookie. Never split a folded
+ // header: cookie expiry dates contain commas and sessions may be chunked.
+ if(typeof runtime.getAll==="function")return runtime.getAll("Set-Cookie")
+ if(headers.has("Set-Cookie"))throw Error("UNSUPPORTED_AUTH_COOKIE_API")
+ return []
+}
+
 // Temporary migration boundary: only explicit authentication requests use the
 // existing Main service. Static screens and navigation stay entirely on Vite.
 // The service binding reuses the live audited action, its keys, IP context,
@@ -36,6 +46,12 @@ export async function forwardMainAuth(request:Request,env:MainAuthBindings):Prom
  }
  const upstreamUrl=new URL(url.pathname+(callback?url.search:""),MAIN_AUTH_ORIGIN)
  const headers=new Headers({Accept:callback?"text/html":"application/json"})
+ // A service-binding Request does not acquire the network fetch's Host header.
+ // OpenNext constructs Next's request origin from Host/X-Forwarded-Host. Pin
+ // both to the SAME fixed service URL so the original CSRF check still holds.
+ headers.set("Host",upstreamUrl.host)
+ headers.set("X-Forwarded-Host",upstreamUrl.host)
+ headers.set("X-Forwarded-Proto",upstreamUrl.protocol.slice(0,-1))
  // Explicit allowlist. No Authorization, client role, arbitrary host, external
  // redirect URL or provider credential can turn this into a general proxy.
  for(const key of ["cookie","user-agent","accept-language","cf-connecting-ip","cf-ipcity","cf-region","cf-ipcountry"]){
@@ -56,7 +72,9 @@ export async function forwardMainAuth(request:Request,env:MainAuthBindings):Prom
   output.set("Location",url.origin+target.pathname+target.search+target.hash)
  }else if(!(response.headers.get("content-type")||"").includes("application/json"))return rejected(503,"auth_temporarily_unavailable")
  else output.set("Content-Type","application/json; charset=utf-8")
- for(const cookie of response.headers.getSetCookie()){
+ let cookies:string[]
+ try{cookies=authResponseCookies(response.headers)}catch{return rejected(503,"auth_cookie_transport_unavailable")}
+ for(const cookie of cookies){
   // Supabase uses host-only cookies. A foreign Domain must never be relayed.
   if(/;\s*domain=/i.test(cookie))return rejected(502,"invalid_auth_cookie")
   output.append("Set-Cookie",cookie)
