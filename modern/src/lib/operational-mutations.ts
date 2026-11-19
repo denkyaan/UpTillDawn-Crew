@@ -52,4 +52,13 @@ export async function markDisplayedNotificationsRead(ids:readonly string[]):Prom
   if(results.some(result=>result.error))throw new Error("notification_batch_partial")
  }
 }
+// The existing promotion-specific RPC refuses blocked/revoked members and
+// confirms only their own live assignment. Completion still requires verified
+// promotional evidence; never call the generic task completion RPC here.
+export async function startOwnPromotionTask(assignmentId:string):Promise<void>{
+ requireUuid(assignmentId)
+ await verifyOwnSession()
+ const {error}=await supabase().rpc("upt_start_promotion_task",{p_assignment:assignmentId})
+ if(error)throw new Error("promotion_start_rejected")
+}
 export function writesAvailable(){return MIGRATION_WRITES_ENABLED}

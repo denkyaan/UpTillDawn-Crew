@@ -23,6 +23,7 @@
     "upt_review_timesheet",
     "upt_send_chat_message_operation_v2",
     "upt_set_event_availability_with_reason",
+    "upt_start_promotion_task",
     "upt_submit_timesheet",
     "upt_sync_operation",
     "upt_update_task_status"

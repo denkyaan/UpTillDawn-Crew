@@ -28,7 +28,7 @@ test('all four languages expose the same new navigation categories',()=>{
 })
 test('15 direct Supabase read boundaries use RLS, selected fields, limits and cancellation',()=>{
  const reads=read('modern/src/lib/operational-reads.ts')
- for(const t of ['shifts','check_ins','work_sessions','profiles','crew_notifications','workplaces','inventory_items','incidents','briefings','briefing_acknowledgements','responsible_assignments','admin_financial_documents','admin_financial_payments','tasks']){
+ for(const t of ['shifts','check_ins','work_sessions','profiles','crew_notifications','workplaces','inventory_items','incidents','briefings','briefing_acknowledgements','responsible_assignments','admin_financial_documents','admin_financial_payments','task_assignments']){
   assert.ok(reads.includes('.from("'+t+'")'),'missing '+t)
  }
  assert.ok((reads.match(/\.limit\(\d+\)/g)||[]).length>=14)

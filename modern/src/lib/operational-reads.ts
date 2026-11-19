@@ -16,7 +16,7 @@ export type FinancialDocument={id:string;kind:string;document_number:string|null
 export type FinancialPayment={id:string;document_id:string;amount:number;paid_on:string;created_at:string}
 export type Profile={id:string;full_name:string|null;phone_number:string|null;home_address:string|null;date_of_birth:string|null;profile_photo_url:string|null;app_profile_completed_at:string|null}
 export type ResponsibleAssignment={id:string;event_id:string;workplace_id:string;user_id:string}
-export type PromotionTask={id:string;event_id:string|null;title:string;description:string|null;status:string}
+export type PromotionTask={id:string;task_id:string;event_id:string|null;title:string;description:string|null;status:string;confirmed_at:string|null}
 
 function failed(error:unknown,code:string):void{if(error)throw new Error(code)}
 export async function ownShifts(uid:string,signal:AbortSignal):Promise<Shift[]>{
@@ -105,9 +105,23 @@ export async function administrationPayments(signal:AbortSignal):Promise<Financi
  failed(error,"financial_payments_unavailable")
  return (data||[]) as FinancialPayment[]
 }
-export async function promotionTasks(signal:AbortSignal):Promise<PromotionTask[]>{
- const {data,error}=await supabase().from("tasks").select("id,event_id,title,description,status")
-  .eq("promotion_only",true).order("created_at",{ascending:false}).limit(80).abortSignal(signal)
- failed(error,"promotion_tasks_unavailable")
- return (data||[]) as PromotionTask[]
+export async function promotionTasks(uid:string,signal:AbortSignal):Promise<PromotionTask[]>{
+ // Current user's assignment IDs are the only task actions exposed in this
+ // portal. Never enumerate every promotion task or expose other users' work.
+ const {data,error}=await supabase().from("task_assignments")
+  .select("id,status,confirmed_at,tasks(id,event_id,title,description)")
+  .eq("user_id",uid).order("created_at",{ascending:false})
+  .limit(80).abortSignal(signal)
+ failed(error,"promotion_assignments_unavailable")
+ const rows=(data||[]) as unknown as {
+  id:string;status:string;confirmed_at:string|null;
+  tasks:{id:string;event_id:string|null;title:string;description:string|null}|null
+ }[]
+ if(rows.some(row=>!row.tasks))throw new Error("promotion_assignments_incomplete")
+ return rows.map(row=>({
+  id:row.id,task_id:row.tasks!.id,
+  event_id:row.tasks!.event_id,title:row.tasks!.title,
+  description:row.tasks!.description,status:row.status,
+  confirmed_at:row.confirmed_at,
+ }))
 }
