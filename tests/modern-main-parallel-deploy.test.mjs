@@ -82,10 +82,10 @@ test("30 actual signed sessions exercise the deployed Cloudflare Hono identity A
  assert.ok(!reader.includes("service_role"))
 })
 
-test("existing Main app offers Maker a single trusted link to new lightweight Main test app",()=>{
+test("existing Main app offers Maker a same-origin lightweight Main entry",()=>{
  const dashboard=get("app/(app)/page.tsx")
  assert.ok(dashboard.includes('current.isOwner&&<section'))
- assert.ok(dashboard.includes('href="https://uptilldawn-modern-main.uptilldawn.workers.dev"'))
+ assert.ok(dashboard.includes('href="/modern"'))
  assert.ok(dashboard.includes('modernMainCopy[locale].button'))
  assert.ok(!dashboard.includes('href="https://uptilldawn-modern-candidate'))
 })
