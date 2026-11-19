@@ -23,6 +23,14 @@ const MakerDiagnostics=lazy(()=>import("./screens/maker-diagnostics"))
 const QrWorkflow=lazy(()=>import("./screens/qr-workflow"))
 const ProviderOauthCallback=lazy(()=>import("./screens/provider-oauth-callback"))
 
+const legacyMainUrl="https://uptilldawn-main.uptilldawn.workers.dev"
+const legacyFallbackCopy={
+ nl:{open:"Open bestaande UpTillDawn-app",missing:"Deze functie is nog niet gemigreerd. Ze blijft beschikbaar in de bestaande Main-app.",title:"Nog niet overgezet"},
+ fr:{open:"Ouvrir l'application UpTillDawn actuelle",missing:"Cette fonction n'est pas encore migrée. Elle reste accessible dans l'application Main actuelle.",title:"Migration en cours"},
+ en:{open:"Open existing UpTillDawn app",missing:"This feature has not been migrated yet. It remains available in the existing Main app.",title:"Not migrated yet"},
+ de:{open:"Bestehende UpTillDawn-App öffnen",missing:"Diese Funktion ist noch nicht migriert und bleibt in der bisherigen Main-App verfügbar.",title:"Noch nicht migriert"}
+} as const
+
 function PortalMemory(){
  const {identity,portals,status}=useSession()
  const {pathname}=useLocation()
@@ -115,11 +123,13 @@ function Landing(){
 }
 function Home(){
  const {identity}=useSession()
+ const {locale}=useLocale()
  return <><h1>UpTillDawn</h1>
   <p className="muted">{identity?.full_name||"Crew"} · {identity?.effective_role||identity?.role}</p>
   <section className="card"><h2>Local-first migratie</h2>
    <p>Gebruik de portaalnavigatie. De huidige app blijft leidend voor nog niet gemigreerde functies.</p>
    <p className="muted">Persoonlijke schermen laden uitsluitend benodigde RLS-gegevens op wanneer je ze opent. Geen zware server-rendering per navigatie.</p>
+   <p><a href={legacyMainUrl}>{legacyFallbackCopy[locale].open}</a></p>
   </section>
  </>
 }
@@ -136,7 +146,14 @@ function MakerGuard({children}:{children:ReactNode}){
  const {identity}=useSession()
  return identity?.is_owner?<>{children}</>:<p role="alert" className="notice">Maker-toegang vereist.</p>
 }
-function Missing(){return <section className="card" role="status"><h1>Migration incomplete</h1><p>Deze functie blijft beschikbaar in de bestaande UpTillDawn-app. De nieuwe app mag nog niet in productie worden gebruikt.</p><Link to="/">Home</Link></section>}
+function Missing(){
+ const {locale}=useLocale(),copy=legacyFallbackCopy[locale]
+ return <section className="card" role="status"><h1>{copy.title}</h1>
+  <p>{copy.missing}</p>
+  <a className="mode-link" href={legacyMainUrl}>{copy.open}</a>
+  <p><Link to="/">Home</Link></p>
+ </section>
+}
 function App(){
  return <BrowserRouter><SessionProvider>
   <Routes>

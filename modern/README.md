@@ -271,3 +271,28 @@ when supported, not by the developer guessing their credentials.
 Main remains the existing Next app; production cutover remains blocked
 until the full functional parity suite and Free Worker load validations
 pass. No live database schema or payment changes were made.
+
+## Real parallel Vite/Hono Main-QA deployment
+
+The existing Main deployment workflow now builds and publishes both
+`uptilldawn-main` (legacy Next) and `uptilldawn-modern-main`
+(static-first Vite/React/Hono) as separate Workers on separate GitHub
+runners after **the same validated Main fast CI**. Neither runs through
+Production; both authenticate against the Main-QA Supabase project.
+The public modern URL is
+`https://uptilldawn-modern-main.uptilldawn.workers.dev` ONLY after
+the actual Cloudflare publish and strict HTTP smoke test succeeds.
+
+The modern deployment keeps writes, ticket admission and provider OAuth
+**disabled** in both the browser and Worker. No private provider tokens or
+service-role key are available to it. Real browser acceptance logs in
+seven distinct Main-QA bots and checks 4 languages x 2 device profiles
+against the deployed modern Worker (not local Vite). This does **not**
+verify business write parity or real Cloudflare 30-user load. A test
+failure remains red and never claims complete migration. The old Main
+URL is preserved for unported functions, with one localized fallback link
+in the new app, not duplicate navigational tabs.
+
+The primary Main hostname remains mapped to the complete legacy app
+until the functional parity and security/write acceptance gates pass.
+No changes to the Production deployment workflow or Production database.

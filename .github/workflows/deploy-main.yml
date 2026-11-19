@@ -161,7 +161,7 @@ jobs:
       - name: Install isolated modern dependencies
         run: npm --prefix modern install --prefer-offline --no-audit --no-fund
       - name: Install headless browser (no unrelated OS packages)
-        run: npx playwright install chromium --only-shell
+        run: npm --prefix modern exec -- playwright install chromium --only-shell
       - name: Verify seven real roles, four languages and two devices on LIVE modern Worker
         run: npm --prefix modern run browser:qa
       - name: Report live browser evidence
