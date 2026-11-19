@@ -1,5 +1,5 @@
-import {openOAuthToken,sealOAuthToken,validMasterKey} from "./provider-oauth"
-import {validWeeztixBarcode,type ScanResult} from "../shared/weeztix-scan"
+import {openOAuthToken,sealOAuthToken,validMasterKey} from "./provider-oauth.ts"
+import {validWeeztixBarcode,type ScanResult} from "../shared/weeztix-scan.ts"
 
 export type ScannerBindings={
  UPT_MIGRATION_SCANNING_ENABLED?:string
