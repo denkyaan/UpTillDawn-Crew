@@ -1,3 +1,4 @@
+import {originalMainRoutes} from '../api/main-routes'
 import {forwardRef,type AnchorHTMLAttributes} from 'react'
 import {useNavigate} from 'react-router-dom'
 type Props=Omit<AnchorHTMLAttributes<HTMLAnchorElement>,'href'>&{href:string|{pathname?:string;query?:Record<string,string|number|undefined>};prefetch?:boolean;replace?:boolean;scroll?:boolean}
@@ -8,7 +9,7 @@ const Link=forwardRef<HTMLAnchorElement,Props>(function Link({href,prefetch:_pre
   onClick?.(event)
   if(event.defaultPrevented||event.button!==0||event.metaKey||event.ctrlKey||event.shiftKey||event.altKey||props.target&&props.target!=='_self'||props.download!==undefined)return
   const target=new URL(url,window.location.href)
-  if(target.origin!==window.location.origin||target.pathname.startsWith('/api/'))return
+  if(target.origin!==window.location.origin||originalMainRoutes.some(route=>route.methods.some(method=>method==='GET')&&new RegExp('^'+route.pattern+'$').test(target.pathname)))return
   event.preventDefault();void navigate(target.pathname+target.search+target.hash,{replace})
   if(scroll!==false&&!target.hash)window.scrollTo(0,0)
  }}/>

@@ -38,7 +38,7 @@ test("source-only candidate cannot replace Main or trigger production automatica
  assert.ok(rootPkg.dependencies.next)
  assert.ok(!candidatePkg.dependencies.next)
  assert.equal(rootTs.exclude.includes("modern"),true)
- assert.deepEqual(wrangler.assets.run_worker_first,["/api/*","/auth/callback"])
+ assert.deepEqual(wrangler.assets.run_worker_first,["/api/*","/auth/callback","/portals/switch/*","/portals/administration/modules/artists/*"])
  assert.equal(wrangler.workers_dev,false)
  assert.ok(read("modern/.env.example").includes("VITE_MIGRATION_ALLOW_WRITES=false"))
  assert.ok(read("modern/.env.example").includes("UPT_MIGRATION_OAUTH_ENABLED=false"))

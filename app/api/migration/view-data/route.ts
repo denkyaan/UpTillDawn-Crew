@@ -22,6 +22,10 @@ export async function POST(request:Request){
  try{body=await boundedMigrationJson(request) as typeof body}catch{return reject(400)}
  if(!body||typeof body!=='object')return reject(400)
  if(!Array.isArray(body.args))return reject(400)
+ if(body.id==='portal-preference'){
+  const last=(await cookies()).get('uptilldawn-last-portal')?.value
+  return NextResponse.json({value:{lastPortal:last&&['events','promotion','administration'].includes(last)?last:null}},{headers})
+ }
  if(body.id==='god-session-rpc'){
   if(!user.isOwner)return reject(403)
   const fn=body.args[0]

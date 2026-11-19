@@ -34,6 +34,7 @@ export default defineConfig({
  server:{port:5174,strictPort:true,fs:{allow:[root]},proxy:{
   "/api/auth":{target:authTarget,changeOrigin:true,configure(proxy){proxy.on("proxyReq",req=>{req.setHeader("Origin",authTarget);req.setHeader("Sec-Fetch-Site","same-origin")})}},
   "/auth/callback":{target:authTarget,changeOrigin:true,autoRewrite:true},
+  "/portals/switch":{target:authTarget,changeOrigin:true,autoRewrite:true},
   "/api":{target:authTarget,changeOrigin:true,configure(proxy){proxy.on("proxyReq",req=>{req.setHeader("Origin",authTarget);req.setHeader("Sec-Fetch-Site","same-origin")})}},
  }},
 })

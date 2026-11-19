@@ -13,6 +13,8 @@ test('only committed API methods use fixed Main host and cookie authority, never
  assert.match(response.headers.get('cache-control'),/no-store/)
  assert.equal(originalApiAllowed('/api/migration/actions','GET'),false)
  assert.equal(originalApiAllowed('/api/god/arbitrary-exec','POST'),false)
+ assert.equal(originalApiAllowed('/portals/switch/administration','GET'),true)
+ assert.equal(originalApiAllowed('/portals/administration/modules/artists/fixture/agreement/print/fixture','GET'),true)
 })
 test('forged origins, unbound production and unknown operations stop before the Main service',async()=>{
  let calls=0

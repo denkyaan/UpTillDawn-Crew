@@ -15,7 +15,7 @@ test("actual modern Main QA config is a different static-first Worker using only
  assert.ok(modern.vars.SUPABASE_ANON_KEY.startsWith("sb_publishable_"))
  assert.equal(modern.vars.UPT_MIGRATION_OAUTH_ENABLED,"false")
  assert.equal(modern.vars.UPT_MIGRATION_SCANNING_ENABLED,"false")
- assert.deepEqual(modern.assets.run_worker_first,["/api/*","/auth/callback"])
+ assert.deepEqual(modern.assets.run_worker_first,["/api/*","/auth/callback","/portals/switch/*","/portals/administration/modules/artists/*"])
  assert.equal(modern.assets.not_found_handling,"single-page-application")
  assert.ok(!JSON.stringify(modern).includes("eakoavcieossazqzplke"))
  for(const key of ["SERVICE_ROLE","API_TOKEN","ENCRYPTION_KEY","CLIENT_SECRET"])

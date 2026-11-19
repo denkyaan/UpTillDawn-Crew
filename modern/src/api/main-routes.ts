@@ -1,6 +1,24 @@
 // Generated from original Main API route declarations. No arbitrary proxy.
 export const originalMainRoutes=[
  {
+  "pattern": "/portals/administration/modules/artists/[^/]+/agreement/archive/[^/]+",
+  "methods": [
+   "GET"
+  ]
+ },
+ {
+  "pattern": "/portals/administration/modules/artists/[^/]+/agreement/print/[^/]+",
+  "methods": [
+   "GET"
+  ]
+ },
+ {
+  "pattern": "/portals/switch/[^/]+",
+  "methods": [
+   "GET"
+  ]
+ },
+ {
   "pattern": "/api/admin/provider-connection-check",
   "methods": [
    "POST"
@@ -378,6 +396,12 @@ export const originalMainRoutes=[
   "pattern": "/api/weeztix/scan",
   "methods": [
    "POST"
+  ]
+ },
+ {
+  "pattern": "/auth/callback",
+  "methods": [
+   "GET"
   ]
  }
 ] as const

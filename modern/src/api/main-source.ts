@@ -29,7 +29,7 @@ export async function forwardMainSource(request:Request,env:MainAuthBindings):Pr
  let response:Response
  try{response=await env.MAIN_AUTH.fetch(new Request(upstream,{method:request.method,headers,body,redirect:'manual',signal:AbortSignal.timeout(120_000),...{duplex:'half'}}))}catch{return reject(503,'main_source_unavailable')}
  const output=new Headers({'Cache-Control':'private, no-store','X-Content-Type-Options':'nosniff','Referrer-Policy':'no-referrer'})
- for(const name of ['content-type','content-disposition','content-range','accept-ranges','etag']){
+ for(const name of ['content-type','content-disposition','content-range','accept-ranges','etag','content-security-policy','x-contract-sha256']){
   const value=response.headers.get(name);if(value)output.set(name,value)
  }
  const location=response.headers.get('location')

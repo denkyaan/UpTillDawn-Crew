@@ -90,6 +90,7 @@ export function clientSource(file){
     throw Error('Private environment variable blocked: '+file+':'+name)
    }
    if((ts.isFunctionDeclaration(node)||ts.isArrowFunction(node)||ts.isFunctionExpression(node))&&directive(node,'use server')&&(!isAction(node)||node.parent!==ast))throw Error('Inline closure requires an explicit server adapter: '+file)
+   if(ts.isCallExpression(node)&&ts.isIdentifier(node.expression)&&node.expression.text==='cookies'&&file==='app/(app)/portals/page.tsx')return f.updateCallExpression(node,node.expression,node.typeArguments,[f.createTrue()])
    if(isAction(node)){
     usesAction=true
     return f.updateFunctionDeclaration(node,node.modifiers,node.asteriskToken,node.name,node.typeParameters,node.parameters,node.type,f.createBlock([f.createReturnStatement(f.createCallExpression(f.createIdentifier('__originalAction'),undefined,[f.createStringLiteral(file+'#'+node.name.text),f.createArrayLiteralExpression(node.parameters.map(p=>f.createIdentifier(p.name.getText(ast))))]))],true))

@@ -49,6 +49,7 @@ async function compare(a,b,label){
  if(JSON.stringify(actual)!==JSON.stringify(expected)){
   await mkdir(resolve(root,'test-results/modern-source-parity'),{recursive:true})
   for(const [page,suffix]of [[a,'main'],[b,'vite']])await page.screenshot({path:resolve(root,'test-results/modern-source-parity',label+'-'+suffix+'.png'),fullPage:true})
+  for(const field of ['navigation','fields'])if(JSON.stringify(actual[field])!==JSON.stringify(expected[field]))console.error('ORIGINAL_UI_CONTROL_DIFFERENCE '+label+' '+field+' '+JSON.stringify({expected:expected[field],actual:actual[field]}))
   const differing=Object.keys(expected).filter(k=>JSON.stringify(actual[k])!==JSON.stringify(expected[k]))
   throw Error('ORIGINAL_UI_CONTROL_PARITY '+label+' '+differing.join(','))
  }
