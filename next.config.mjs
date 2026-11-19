@@ -1,5 +1,9 @@
 import { initOpenNextCloudflareForDev } from '@opennextjs/cloudflare'
 
+// Expose the lightweight SPA as an isolated, same-origin Main static mount.
+// Never proxy or rewrite production traffic; the legacy Main routes remain intact.
+const sameOriginModernMain = process.env.NEXT_PUBLIC_APP_URL === 'https://uptilldawn-main.uptilldawn.workers.dev'
+
 const localSupabaseConnectSources = process.env.NEXT_PUBLIC_SUPABASE_URL?.startsWith('http://127.0.0.1:') || process.env.NEXT_PUBLIC_SUPABASE_URL?.startsWith('http://localhost:')
   ? ' http://127.0.0.1:* ws://127.0.0.1:* http://localhost:* ws://localhost:*'
   : ''
@@ -31,6 +35,19 @@ const nextConfig = {
   images: {
     // OpenNext/Cloudflare serves local application assets directly.
     unoptimized: true,
+  },
+  async rewrites() {
+    if (!sameOriginModernMain) return []
+    // Fall back to the SPA shell ONLY after Next/Cloudflare checks actual
+    // /modern/assets/* files. Never intercept existing legacy Main pages.
+    return {
+      beforeFiles: [],
+      afterFiles: [],
+      fallback: [
+        { source: '/modern', destination: '/modern/index.html' },
+        { source: '/modern/:path*', destination: '/modern/index.html' },
+      ],
+    }
   },
   async headers() {
     const securityHeaders = [
