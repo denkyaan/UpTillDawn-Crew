@@ -147,7 +147,7 @@ async function DashboardOverview({current}:{current:NonNullable<Awaited<ReturnTy
         <h2 className="text-lg font-black">{modernMainCopy[locale].title}</h2>
         <p className="mt-1 text-sm text-muted-foreground">{modernMainCopy[locale].body}</p>
       </div>
-      <a href="https://uptilldawn-modern-main.uptilldawn.workers.dev"
+      <a href="/modern"
         className="inline-flex items-center gap-2 rounded-xl border border-violet-500 bg-violet-500/10 px-4 py-3 text-sm font-bold">
         {modernMainCopy[locale].button}<ArrowRight className="h-4 w-4"/>
       </a>
