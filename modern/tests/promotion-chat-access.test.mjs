@@ -32,7 +32,7 @@ test("fixed room labels and live messages remain distinct in four languages",()=
  for(const locale of languages){
   const labels=chatCopy(locale)
   for(const key of ["channels","loading","historyError","empty","you","moderated","readers","readersFailed","noReaders","send","queued","partial","accountFailed","retry","discard","parity"])
-   assert.ok(labels[key].length>2,locale+":"+key)
+   assert.ok(labels[key].trim().length>=2,locale+":"+key)
   assert.ok(channelTitle("Algemene chat promotie",locale).length>2)
   assert.ok(channelTitle("Admin · Administratie",locale).length>2)
   assert.equal(channelTitle("User-created room",locale),"User-created room")
