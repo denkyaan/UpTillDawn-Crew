@@ -1,6 +1,9 @@
 import {Link} from "react-router-dom"
+import {useLocale} from "../lib/use-locale"
+import {adminOverviewText} from "../shared/admin-overview-copy"
 import {Suspense,lazy,useState} from "react"
 const HistoryPanel=lazy(()=>import("../components/history-panel"))
+const AdministrationOverview=lazy(()=>import("../components/administration-overview"))
 const TimesheetWorkspace=lazy(()=>import("./timesheet-workspace"))
 const IntegrationStatus=lazy(()=>import("../components/integration-status"))
 const PromotionEvidenceReview=lazy(()=>import("../components/promotion-evidence-review"))
@@ -9,18 +12,19 @@ import {usePrivateQuery} from "../lib/use-private-query"
 import {administrationDocuments,administrationPayments,allowedInventory,type FinancialDocument,type FinancialPayment,type InventoryItem} from "../lib/operational-reads"
 import {DataList,LocalMoney,Refresh,WhenLoading,Timestamp} from "../components/data-ui"
 
-type Section="documents"|"payments"|"inventory"|"ticketing"|"contracts"|"timesheets"
+type Section="overview"|"documents"|"payments"|"inventory"|"ticketing"|"contracts"|"timesheets"
 export default function Administration(){
  const uid=useSession().identity!.id
- const [section,setSection]=useState<Section>("documents")
+ const {locale}=useLocale(),overviewLabels=adminOverviewText(locale)
+ const [section,setSection]=useState<Section>("overview")
  return <><h1>Administratie · read-only migratieoverzicht</h1>
   <p className="muted">Financiële goedkeuring, contracten, bankkoppelingen, Peppol en verwijderingen blijven beveiligd in de bestaande app.</p>
   <nav className="nav" aria-label="Administratie">
-   {([["documents","Documenten"],["payments","Betalingen"],["inventory","Inventaris"],["ticketing","Ticketing"],["contracts","Contracten"],["timesheets","Timesheets"]] as const).map(([key,title])=>
+   {([["overview",overviewLabels.overview],["documents","Documenten"],["payments","Betalingen"],["inventory","Inventaris"],["ticketing","Ticketing"],["contracts","Contracten"],["timesheets","Timesheets"]] as const).map(([key,title])=>
     <button key={key} type="button" className={section===key?"primary":""} aria-pressed={section===key} onClick={()=>setSection(key)}>{title}</button>)}
   </nav>
   <div style={{paddingTop:"1rem"}}>
-   {section==="documents"?<><Documents uid={uid}/><Suspense fallback="Koppelingen laden…"><IntegrationStatus area="invoices"/></Suspense></>:section==="payments"?<><Payments uid={uid}/><Suspense fallback="Koppelingen laden…"><IntegrationStatus area="banking"/></Suspense></>:section==="inventory"?<Inventory uid={uid}/>:<Suspense fallback="Gegevens laden…">{section==="ticketing"?<><HistoryPanel kind="ticket-imports"/><HistoryPanel kind="ticket-sales"/><IntegrationStatus area="ticketing"/></>:section==="contracts"?<><HistoryPanel kind="contracts"/><IntegrationStatus area="contracts"/></>:<><TimesheetWorkspace review/><PromotionEvidenceReview/></>}</Suspense>}
+   {section==="overview"?<Suspense fallback="Overzicht laden…"><AdministrationOverview/></Suspense>:section==="documents"?<><Documents uid={uid}/><Suspense fallback="Koppelingen laden…"><IntegrationStatus area="invoices"/></Suspense></>:section==="payments"?<><Payments uid={uid}/><Suspense fallback="Koppelingen laden…"><IntegrationStatus area="banking"/></Suspense></>:section==="inventory"?<Inventory uid={uid}/>:<Suspense fallback="Gegevens laden…">{section==="ticketing"?<><HistoryPanel kind="ticket-imports"/><HistoryPanel kind="ticket-sales"/><IntegrationStatus area="ticketing"/></>:section==="contracts"?<><HistoryPanel kind="contracts"/><IntegrationStatus area="contracts"/></>:<><TimesheetWorkspace review/><PromotionEvidenceReview/></>}</Suspense>}
   </div>
   <p><Link to="/portals/administration/finance">Financiële totalen bekijken</Link></p>
  </>
