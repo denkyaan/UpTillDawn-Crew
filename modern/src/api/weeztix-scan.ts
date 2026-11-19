@@ -12,7 +12,7 @@ export type RpcDb={
 export type ScanRequest={eventId:string;workplaceId:string;barcode:string}
 type Configuration=Record<string,string>
 type Scoped={ciphertext:string;config:Configuration}
-const uuid=/^[0-9a-f]{8}-(?:[0-9a-f]{4}-){3}-[0-9a-f]{12}$/i
+const uuid=/^[0-9a-f]{8}(?:-[0-9a-f]{4}){3}-[0-9a-f]{12}$/i
 const tokenEndpoint="https://auth.weeztix.com/tokens"
 const scanEndpoint="https://api.weeztix.com/order/scanbarcode/"
 // Strictly on and bound to the deployed HTTPS Worker origin. No dynamic

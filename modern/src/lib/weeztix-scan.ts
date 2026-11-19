@@ -2,7 +2,7 @@ import {supabase} from "./supabase"
 import {MIGRATION_WRITES_ENABLED} from "./operational-writes"
 import {validWeeztixBarcode,type ScanResult} from "../shared/weeztix-scan"
 
-const uuid=/^[0-9a-f]{8}-(?:[0-9a-f]{4}-){3}-[0-9a-f]{12}$/i
+const uuid=/^[0-9a-f]{8}(?:-[0-9a-f]{4}){3}-[0-9a-f]{12}$/i
 export const CANDIDATE_TICKET_SCANNING_ENABLED=
  MIGRATION_WRITES_ENABLED&&import.meta.env.VITE_MIGRATION_SCANNING_ENABLED==="true"
 export async function scanOwnWeeztixTicket(input:{
