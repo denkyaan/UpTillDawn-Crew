@@ -51,8 +51,8 @@ function AuthenticatedRoutes(){
   return <Route key={path} path={path} element={node}/>
  })}<Route path="*" element={<AppLayout><NotFound/></AppLayout>}/></Routes>,[requestKey])
  if(auth.loading)return <Loading/>
- if(!auth.user){window.location.replace('/login');return null}
- if(!auth.profile){window.location.replace('/pending-approval');return null}
+ // Each original layout/page owns its exact login, approval and Owner
+ // redirect. A generic outer redirect would change QR and Maker entry flows.
  return <OriginalRequest key={identityKey} revision={requestKey}><Boundary key={identityKey} revision={requestKey} reset={()=>setRevision(n=>n+1)}><Suspense fallback={<Loading/>}>{content}</Suspense></Boundary></OriginalRequest>
 }
 export default function OriginalApplication(){

@@ -40,3 +40,12 @@ test('original client shell and open AI state survive ordinary refresh; identiti
  assert.match(navigation,/useMemo\(\(\)=>new URLSearchParams\(search\),\[search\]\)/)
  assert.ok(read('modern/tests/browser-auth-qa.mjs').includes('ORIGINAL_CLIENT_STATE_LOST_ON_REFRESH'))
 })
+
+test('original layouts and standalone pages retain their distinct authorization redirects',()=>{
+ const app=read('modern/src/screens/original-application.tsx')
+ assert.ok(!app.includes("window.location.replace('/pending-approval')"))
+ assert.ok(!app.includes("window.location.replace('/login')"))
+ assert.match(read('app/(app)/layout.tsx'),/getCurrentUser\(\)/)
+ assert.match(read('app/maker-mode/page.tsx'),/redirect\('\/login\/admin'\)/)
+ assert.match(read('app/qr/page.tsx'),/redirect\('\/login\?next=\/qr'\)/)
+})

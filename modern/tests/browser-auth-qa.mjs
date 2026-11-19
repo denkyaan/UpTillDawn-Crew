@@ -34,6 +34,11 @@ async function ready(page){
  await page.bringToFront()
  await page.evaluate(()=>window.dispatchEvent(new Event('focus')))
  await page.waitForLoadState('networkidle',{timeout:25000})
+ await page.waitForFunction(()=>document.visibilityState==='visible')
+ // Compare completed badge data, not the intentional staggered startup state.
+ // This is Main's existing forced, read-only badge refresh event.
+ await page.evaluate(()=>window.dispatchEvent(new Event('uptilldawn-chat-read')))
+ await page.waitForLoadState('networkidle',{timeout:25000})
  await page.locator('[data-route-loading="true"]').waitFor({state:'detached',timeout:30000})
  if(await page.getByRole('heading',{name:'De actie kon niet worden voltooid.',exact:true}).count())throw Error('ORIGINAL_VIEW_RENDER_FAILED')
 }
