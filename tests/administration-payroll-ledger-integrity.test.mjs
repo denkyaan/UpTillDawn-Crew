@@ -44,15 +44,15 @@ test('rejects malformed, offset and impossible UTC payroll timestamps',()=>{
 test('paid first-hour break, 70-minute grace and deductible excess export with clear columns',()=>{
  const exact=payrollCsv([{...row,break_seconds:4200,net_seconds:7200}])
  assert.match(exact,/Deducted excess break seconds/)
- assert.match(exact,/7200,4200,0,7200,2\.000000/)
+ assert.match(exact,/"7200";"4200";"0";"7200";"2\.000000"/)
  const over=payrollCsv([{...row,break_seconds:4201,net_seconds:6599}])
- assert.match(over,/7200,4201,601,6599,1\.833056/)
+ assert.match(over,/"7200";"4201";"601";"6599";"1\.833056"/)
  const split=payrollCsv([
   {...row,session_id:'one',break_seconds:3900,net_seconds:6900},
   {...row,session_id:'two',break_seconds:360,net_seconds:6840}
  ])
- assert.match(split,/7200,3900,300,6900/)
- assert.match(split,/7200,360,360,6840/)
+ assert.match(split,/"7200";"3900";"300";"6900"/)
+ assert.match(split,/"7200";"360";"360";"6840"/)
 })
 test('legacy or missing database payroll version fails closed, not silently exported',()=>{
  assert.throws(()=>payrollCsv([{...row,policy_version:''}]))

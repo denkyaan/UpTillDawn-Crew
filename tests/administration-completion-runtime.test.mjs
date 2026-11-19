@@ -2,7 +2,7 @@ import test from 'node:test'
 import assert from 'node:assert/strict'
 import {readFileSync} from 'node:fs'
 import {administrationDeadline} from '../lib/administration/deadline.ts'
-import {payrollCsv} from '../lib/administration/payroll-export.ts'
+import {payrollCsv,PAYROLL_POLICY_VERSION} from '../lib/administration/payroll-export.ts'
 import {validateTicketSalesCsv} from '../lib/administration/ticket-import.ts'
 
 test('Belgian deadlines honor winter, summer and transition-day offsets',()=>{
@@ -18,14 +18,14 @@ test('ticket timestamps accept valid time zones across UTC midnight and reject i
  assert.equal(parse('2026-10-30T00:30:00+02:00').rows[0].soldAt,'2026-10-29T22:30:00.000Z')
  for(const bad of ['2026-10-30T24:00:00Z','2026-02-30T12:00:00+01:00','2026-10-30T12:00:00+15:00','2026-10-30T12:00:00+14:30'])assert.ok(parse(bad).errors.length)
 })
-const row={session_id:'session-1',event_id:'event-1',event_name:'=HYPERLINK("bad")',user_id:'user-1',full_name:'QA',timesheet_status:'approved',started_at:'2026-10-30T10:00:00Z',ended_at:'2026-10-30T12:00:00Z',gross_seconds:7200,break_seconds:1800,net_seconds:5400}
+const row={session_id:'session-1',event_id:'event-1',event_name:'=HYPERLINK("bad")',user_id:'user-1',full_name:'QA',timesheet_status:'approved',started_at:'2026-10-30T10:00:00Z',ended_at:'2026-10-30T12:00:00Z',gross_seconds:7200,break_seconds:1800,net_seconds:7200,policy_version:PAYROLL_POLICY_VERSION}
 test('payroll exports exact recorded seconds, decimal hours and spreadsheet-safe text',()=>{
- const csv=payrollCsv([row]);assert.ok(csv.startsWith('\uFEFF'));assert.ok(csv.includes('"1.500000"'));assert.ok(csv.includes("'=HYPERLINK"))
+ const csv=payrollCsv([row]);assert.ok(csv.startsWith('\uFEFF'));assert.ok(csv.includes('"2.000000"'));assert.ok(csv.includes("'=HYPERLINK"))
 })
 test('payroll rejects pending, duplicate and inconsistent time records',()=>{
  assert.throws(()=>payrollCsv([{...row,timesheet_status:'submitted'}]))
  assert.throws(()=>payrollCsv([row,row]))
- assert.throws(()=>payrollCsv([{...row,net_seconds:7000}]))
+ assert.throws(()=>payrollCsv([{...row,net_seconds:5300}]))
  assert.throws(()=>payrollCsv([{...row,gross_seconds:0,break_seconds:0,net_seconds:0}]))
 })
 test('actual finance input regexes accept valid dates, spaced IBANs and agency emails',()=>{
