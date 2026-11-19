@@ -4,7 +4,8 @@ const TimesheetWorkspace=lazy(()=>import("./timesheet-workspace"))
 import {useSession} from "../lib/session"
 import {usePrivateQuery} from "../lib/use-private-query"
 import {ownShifts,ownCheckIns,ownHours,type Shift,type CheckIn,type WorkSession} from "../lib/operational-reads"
-import {confirmOwnShift,writesAvailable} from "../lib/operational-mutations"
+import {confirmOwnShift,declineOwnShift,writesAvailable} from "../lib/operational-mutations"
+import {useLocale} from "../lib/use-locale"
 import {DataList,Refresh,Timestamp,WhenLoading} from "../components/data-ui"
 
 type View="shifts"|"checkins"|"hours"|"timesheets"|"equipment"
@@ -21,9 +22,22 @@ export default function Crew(){
  </div></>
 }
 function Shifts({uid}:{uid:string}){
+ const {t}=useLocale()
  const r=usePrivateQuery<Shift[]>(uid,"own-shifts",signal=>ownShifts(uid,signal))
  const [busy,setBusy]=useState<string|null>(null)
  const [error,setError]=useState(false)
+ const [declining,setDeclining]=useState<string|null>(null)
+ const [declineReason,setDeclineReason]=useState("")
+ async function decline(id:string){
+  if(!writesAvailable()||busy||declining!==id)return
+  setBusy(id);setError(false)
+  try{
+   await declineOwnShift(id,declineReason)
+   setDeclining(null);setDeclineReason("")
+   r.refresh()
+  }catch{setError(true)}
+  finally{setBusy(null)}
+ }
  async function confirm(id:string){
   if(!writesAvailable()||busy)return
   setBusy(id);setError(false)
@@ -32,13 +46,28 @@ function Shifts({uid}:{uid:string}){
  }
  return <section className="card"><div className="row"><h2>Mijn diensten</h2><div className="row"><Refresh onClick={r.refresh}/>
   <button type="button" disabled={!r.data?.length||r.loading||Boolean(r.error)} onClick={()=>void import("../lib/export-csv").then(m=>m.downloadCsv("mijn-diensten.csv",["Functie","Start","Einde","Status"],(r.data||[]).map(x=>[x.role_name,x.scheduled_start,x.scheduled_end,x.response_status||x.status])))}>CSV exporteren</button></div></div>
-  {error&&<p role="alert" className="error">Dienstenbevestiging niet verwerkt.</p>}
+  {error&&<p role="alert" className="error">{t.shiftUpdateFailed}</p>}
   <WhenLoading loading={r.loading} error={r.error}>
    <DataList empty={!r.data?.length}>{r.data?.map(shift=><li key={shift.id}>
     <div className="row"><strong>{shift.role_name||shift.shift_kind||"Dienst"}</strong><span className="muted">{shift.response_status||shift.status}</span></div>
     <p>Van <Timestamp value={shift.scheduled_start}/> tot <Timestamp value={shift.scheduled_end}/></p>
     <p className="muted">Evenement {shift.event_id.slice(0,8)}</p>
-    {writesAvailable()&&shift.status!=="cancelled"&&!shift.confirmed_at&&<button className="primary" disabled={busy!==null} onClick={()=>void confirm(shift.id)}>Bevestigen</button>}
+    {writesAvailable()&&shift.status!=="cancelled"&&!shift.confirmed_at&&
+     <button className="primary" disabled={busy!==null} onClick={()=>void confirm(shift.id)}>{t.confirmShift}</button>}
+    {writesAvailable()&&shift.status!=="cancelled"&&shift.response_status!=="declined"&&Date.parse(shift.scheduled_start)>Date.now()&&
+     (declining===shift.id?
+       <form onSubmit={event=>{event.preventDefault();void decline(shift.id)}}>
+        <label>{t.declineReason}
+         <textarea value={declineReason} minLength={3} maxLength={500} required
+          onChange={event=>setDeclineReason(event.target.value)}/>
+        </label>
+        <div className="row">
+         <button className="primary" type="submit" disabled={busy!==null||declineReason.trim().length<3}>{t.confirmDecline}</button>
+         <button type="button" disabled={busy!==null} onClick={()=>{setDeclining(null);setDeclineReason("")}}>{t.cancelDecline}</button>
+        </div>
+       </form>:
+       <button type="button" disabled={busy!==null}
+        onClick={()=>{setDeclining(shift.id);setDeclineReason("");setError(false)}}>{t.declineShift}</button>)}
    </li>)}</DataList>
   </WhenLoading>
   {!writesAvailable()&&<p className="muted">Shiftbevestigingen zijn tijdelijk alleen-lezen in deze migratiekandidaat.</p>}
