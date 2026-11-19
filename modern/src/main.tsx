@@ -40,19 +40,20 @@ function Authenticated({children}:{children:ReactNode}){
  if(state.status==="denied")return <main className="auth" role="alert">{t.unavailable} — account approval required</main>
  if(state.status==="error")return <main className="auth" role="alert">{t.unavailable}<button className="primary" onClick={()=>void state.refresh()}>{t.refresh}</button></main>
  const canAdmin=state.portals.includes("administration")
+ const canEvents=state.portals.includes("events")
  return <>
   <PortalMemory/>
   <a className="sr-only skip" href="#main">Skip to content</a>
   <header className="bar"><div className="brand">UP TILL DAWN <span className="muted">· local-first candidate</span></div>
    <nav aria-label={t.portal} className="nav">
     <NavLink to="/overview">{state.identity?.is_owner?t.normalApp:t.home}</NavLink>
-    <NavLink to="/events">{t.events}</NavLink>
-    <NavLink to="/crew">{t.crew}</NavLink>
-    <NavLink to="/briefings">{t.briefings}</NavLink>
-    <NavLink to="/qr">{t.qr}</NavLink>
-    <NavLink to="/tasks">{t.tasks}</NavLink>
-    <NavLink to="/chat">{t.chat}</NavLink>
-    <NavLink to="/operations">{t.operations}</NavLink>
+    {canEvents&&<NavLink to="/events">{t.events}</NavLink>}
+    {canEvents&&<NavLink to="/crew">{t.crew}</NavLink>}
+    {canEvents&&<NavLink to="/briefings">{t.briefings}</NavLink>}
+    {canEvents&&<NavLink to="/qr">{t.qr}</NavLink>}
+    {canEvents&&<NavLink to="/tasks">{t.tasks}</NavLink>}
+    {canEvents&&<NavLink to="/chat">{t.chat}</NavLink>}
+    {canEvents&&<NavLink to="/operations">{t.operations}</NavLink>
     {(state.identity?.role==="responsible_lead"||state.identity?.role==="admin"||state.identity?.is_owner)&&
      <NavLink to="/responsible">{t.responsible}</NavLink>}
     {state.portals.includes("promotion")&&<NavLink to="/portals/promotion">{t.promotion}</NavLink>}
@@ -142,13 +143,15 @@ function App(){
    <Route element={<Authenticated><Outlet/></Authenticated>}>
     <Route index element={<Landing/>}/>
     <Route path="/overview" element={<Home/>}/>
-    <Route path="/events" element={<Suspense fallback="Loading events…"><Events/></Suspense>}/>
-    <Route path="/tasks" element={<Suspense fallback="Loading tasks…"><Tasks/></Suspense>}/>
-    <Route path="/chat" element={<Suspense fallback="Loading channels…"><Chats/></Suspense>}/>
-    <Route path="/crew" element={<Suspense fallback="Planning laden…"><Crew/></Suspense>}/>
-    <Route path="/briefings" element={<Suspense fallback="Briefings laden…"><Briefings/></Suspense>}/>
-    <Route path="/qr" element={<Suspense fallback="QR-aanvraag laden…"><QrWorkflow/></Suspense>}/>
-    <Route path="/operations" element={<Suspense fallback="Werkplekken laden…"><Operations/></Suspense>}/>
+    <Route element={<PortalGuard portal="events"><Outlet/></PortalGuard>}>
+     <Route path="/events" element={<Suspense fallback="Loading events…"><Events/></Suspense>}/>
+     <Route path="/tasks" element={<Suspense fallback="Loading tasks…"><Tasks/></Suspense>}/>
+     <Route path="/chat" element={<Suspense fallback="Loading channels…"><Chats/></Suspense>}/>
+     <Route path="/crew" element={<Suspense fallback="Planning laden…"><Crew/></Suspense>}/>
+     <Route path="/briefings" element={<Suspense fallback="Briefings laden…"><Briefings/></Suspense>}/>
+     <Route path="/qr" element={<Suspense fallback="QR-aanvraag laden…"><QrWorkflow/></Suspense>}/>
+     <Route path="/operations" element={<Suspense fallback="Werkplekken laden…"><Operations/></Suspense>}/>
+    </Route>
     <Route path="/notifications" element={<Suspense fallback="Meldingen laden…"><Notifications/></Suspense>}/>
     <Route path="/profile" element={<Suspense fallback="Profiel laden…"><Profile/></Suspense>}/>
     <Route path="/responsible" element={<ResponsibleGuard><Suspense fallback="Planning laden…"><Responsible/></Suspense></ResponsibleGuard>}/>
