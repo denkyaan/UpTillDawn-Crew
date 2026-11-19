@@ -95,6 +95,16 @@ try{
     await loginPage.waitForTimeout(700)
     const error=await loginPage.locator('p[role="alert"].error').count()
     if(error)throw Error("QA_AUTHENTICATED_READ_FAILED "+bot.role+" "+route)
+    if(route==="/crew"){
+     // Open the actual personnel data screens, not merely their navigation.
+     // Signed reads remain bounded and sequential to respect the free plan.
+     for(const tab of ["Check-ins","Gewerkte uren"]){
+      await loginPage.getByRole("button",{name:tab}).click()
+      await loginPage.waitForTimeout(900)
+      if(await loginPage.locator('p[role="alert"].error').count())
+       throw Error("QA_AUTHENTICATED_TIMEKEEPING_READ_FAILED "+bot.role+" "+tab)
+     }
+    }
    }
    await denied(loginPage,"/maker/diagnostics")
    if(!bot.admin)await denied(loginPage,"/portals/administration")

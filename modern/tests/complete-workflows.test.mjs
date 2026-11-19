@@ -75,3 +75,13 @@ test("timekeeping lazy loads only on own hours tab, and check-outs stay in exist
  assert.ok(tracker.includes("ownSessionTimeSummary"))
  for(const ban of ["setTimeout(()=>stopOwnBreak","localStorage","navigator.geolocation"])assert.ok(!tracker.includes(ban))
 })
+
+test("admin sees global check-in and check-out approvals, technical Maker never receives business admin status",()=>{
+ const responsible=read("screens/responsible.tsx")
+ assert.ok(responsible.includes('const isAdmin=session.identity?.role==="admin"'))
+ assert.ok(!responsible.includes('role==="admin"||session.identity?.is_owner'))
+ assert.ok(responsible.includes('<CheckinReview eventId={isAdmin?null:eventId}/>'))
+ const browser=readFileSync(new URL("./browser-auth-qa.mjs",import.meta.url),"utf8")
+ assert.ok(browser.includes("QA_AUTHENTICATED_TIMEKEEPING_READ_FAILED"))
+ assert.ok(browser.includes('for(const tab of ["Check-ins","Gewerkte uren"])'))
+})
