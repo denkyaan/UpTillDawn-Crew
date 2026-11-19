@@ -82,20 +82,12 @@ test("30 actual signed sessions exercise the deployed Cloudflare Hono identity A
  assert.ok(!reader.includes("service_role"))
 })
 
-test("existing Main app offers Maker a single trusted link to new lightweight Main test app",()=>{
+test("original Main dashboard stays byte-for-byte identical during internal migration",()=>{
  const dashboard=get("app/(app)/page.tsx")
- assert.ok(dashboard.includes('current.isOwner&&<section'))
- assert.ok(dashboard.includes('href="https://uptilldawn-modern-main.uptilldawn.workers.dev"'))
- assert.ok(dashboard.includes('modernMainCopy[locale].button'))
- assert.ok(!dashboard.includes('href="https://uptilldawn-modern-candidate'))
-})
-
-test("all Maker's legacy-to-modern link strings have four-locale catalog coverage",()=>{
- const source=get("lib/ui-translation-catalog-app-extra.ts")
- for(const title of ["Nieuwe, lichtere Main-app","Nouvelle application Main allégée",
-  "New lightweight Main app","Neue schlanke Main-App"]){
-  assert.ok(source.includes(JSON.stringify(title)+":"),"Missing four-locale key "+title)
- }
+ assert.ok(!dashboard.includes("modernMainCopy"))
+ assert.ok(!dashboard.includes("uptilldawn-modern-main.uptilldawn.workers.dev"))
+ assert.ok(!dashboard.includes('href="/modern"'))
+ assert.ok(dashboard.includes("dashboardNextAction"))
 })
 
 test("Cloudflare edge propagation probe retries only bounded public reads and reports failures",()=>{
