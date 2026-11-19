@@ -39,3 +39,13 @@ test("non-privileged paths restore normally; event routes demand event portal",(
  assert.equal(resolvePortalPreference("/events",staff),"/events")
  assert.equal(resolvePortalPreference("/tasks",staff),"/tasks")
 })
+
+test("mode selector is localized in all four supported app languages",async()=>{
+ const {copy,languages}=await import("../src/shared/i18n.ts")
+ assert.deepEqual([...languages],["nl","fr","en","de"])
+ for(const locale of languages){
+  const labels=copy(locale)
+  for(const key of ["choosePortal","normalApp","preferenceNote"])
+   assert.ok(typeof labels[key]==="string"&&labels[key].length>3)
+ }
+})
