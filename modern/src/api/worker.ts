@@ -6,8 +6,9 @@ import {
  authorizationUrl,startOAuthState,verifyOAuthState,clearOAuthCookie,
  sealOAuthToken,exchangeOAuthCode,tokenConfiguration,type OAuthBindings
 } from "./provider-oauth.ts"
+import {scannerReady,scannerOrigin,validScanRequest,scanWeeztix,type ScannerBindings,type RpcDb} from "./weeztix-scan.ts"
 
-type Bindings={SUPABASE_URL:string;SUPABASE_ANON_KEY:string}&OAuthBindings
+type Bindings={SUPABASE_URL:string;SUPABASE_ANON_KEY:string}&OAuthBindings&ScannerBindings
 const app=new Hono<{Bindings:Bindings}>()
 
 // Static navigation and images bypass this Worker entirely. Only /api/*
@@ -206,6 +207,30 @@ app.get("/api/v1/god/diagnostics",async c=>{
   // Session token must be invalidated even on a failed database read.
   try{await actor.db.rpc("upt_god_logout",{p_token:token})}catch{/* Never disclose privileged token. */}
  }
+})
+
+
+// Ticket admission is a mutating provider operation, never an offline QR
+// acceptance. The operator must explicitly enable both scanner endpoints and
+// the exact Main HTTPS origin; the user must be authenticated and assigned to
+// an entrance workplace, independently verified by Postgres.
+app.post("/api/v1/tickets/weeztix/scan",async c=>{
+ const header=c.req.header("Authorization")||""
+ if(!/^Bearer [A-Za-z0-9._~+-]{30,8192}$/.test(header))
+  return c.json({ok:false,code:"unauthorized"},401)
+ if(!scannerReady(c.env,c.req.url))
+  return c.json({ok:false,code:"scanner_disabled"},503)
+ const origin=scannerOrigin(c.env,c.req.url)
+ if(!origin||c.req.header("Origin")!==origin)
+  return c.json({ok:false,code:"forbidden"},403)
+ if(!c.req.header("Content-Type")?.toLowerCase().startsWith("application/json"))
+  return c.json({ok:false,code:"invalid_request"},415)
+ const body=await boundedJson(c.req.raw,1024)
+ if(!validScanRequest(body))return c.json({ok:false,code:"invalid_request"},422)
+ const actor=await scopedActor(c)
+ if("error" in actor)return c.json({ok:false,code:actor.error==="authentication_required"?"unauthorized":"forbidden"},actor.status)
+ const out=await scanWeeztix(actor.db as unknown as RpcDb,c.env,body)
+ return c.json(out.body,out.status as 200|403|404|409|422|503)
 })
 
 // Deny unknown API routes rather than returning the SPA shell with 200 OK.

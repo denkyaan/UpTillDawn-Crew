@@ -40,6 +40,10 @@
     "upt_sync_operation",
     "upt_update_own_profile",
     "upt_update_task_status",
+    "upt_weeztix_claim_refresh",
+    "upt_weeztix_commit_refresh",
+    "upt_weeztix_release_refresh",
+    "upt_weeztix_scan_secrets",
     "upt_work_session_time_summary"
   ],
   "lastObserved": {
