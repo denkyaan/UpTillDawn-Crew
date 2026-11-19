@@ -205,3 +205,38 @@ build. Candidate writes and OAuth login remain disabled. A normal Main push
 runs the Main fast CI and existing Main deployment; Production is dispatched
 **only** by a separate explicit release action. Nothing in this bundle
 authorizes a production cutover, provider account setup or enabling writes.
+
+## Weeztix online entry scanning — isolated candidate (not enabled/deployed)
+
+The legacy UpTillDawn scanner's exact **server-authoritative** provider contract
+is being ported into this Vite/Hono candidate. Only an explicitly authorized
+entrance-workplace user can submit a ticket barcode; the SECURITY DEFINER
+`upt_weeztix_scan_secrets` independently checks the approved/active member,
+non-archived event, entrance workplace, assigned staff shift/responsible
+assignment or actual business Admin. Maker alone is not a business Admin.
+The minimal API Worker uses the signed user's JWT and the publishable key,
+never a service-role key; database credentials are AES-256-GCM encrypted and
+only decrypted inside the Worker using the same operator-owned master key as
+the legacy app. The stored Weeztix mapping must match the selected UpTillDawn
+event and scanning must explicitly be enabled by the authorized end user.
+Optional OAuth token rotation reuses the existing 22-second scoped Postgres
+lease to prevent concurrent refresh storms. This is not a general-purpose
+wallet/QR acceptance service.
+
+The browser decodes camera frames **locally** using the already-licensed,
+self-hosted jsQR library. It sends ONLY a validated ticket barcode to the
+authenticated Hono API upon explicit scan; the provider's HTTP **204** is the
+only accepted admission signal. Offline, timeout, expired token, duplicate,
+unconfigured provider, cross-event/wrong-workplace, unauthorized staff and
+unconfirmed scans cannot grant entry. No barcode, token or raw vendor
+response is logged, cached, placed in links or returned. There is no
+automatic retry that could double-consume a ticket. The scanner is in its
+existing entrance-workplace screen, not an additional navigation tab.
+
+**Release gates:** VITE_MIGRATION_ALLOW_WRITES, VITE_MIGRATION_SCANNING_ENABLED
+and server-side UPT_MIGRATION_SCANNING_ENABLED all default to false. The
+server also demands an exact configured UPT_SCANNER_ORIGIN and a valid
+operator-managed master key. This commit does NOT connect a provider account,
+enable the scanner, deploy the modern Worker or replace the existing app.
+Seven-role authorized/unapproved/forbidden live tests and real scanner
+provider sandbox cases are still necessary before enabling the feature.
