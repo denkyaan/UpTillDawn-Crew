@@ -20,7 +20,9 @@
     "browser:test": "node tests/browser-smoke.mjs",
     "rpc:contract": "node scripts/rpc-contract.mjs",
     "browser:qa": "node tests/browser-auth-qa.mjs",
-    "sessions:qa": "node tests/qa-30-sessions.mjs"
+    "sessions:qa": "node tests/qa-30-sessions.mjs",
+    "login:visual-parity": "node tests/login-parity-qa.mjs",
+    "login:cutover-gate": "node scripts/login-cutover-gate.mjs"
   },
   "dependencies": {
     "@supabase/ssr": "0.9.0",
