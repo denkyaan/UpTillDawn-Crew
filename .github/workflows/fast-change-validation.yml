@@ -76,6 +76,73 @@ jobs:
             cat "/tmp/fast-$label.log"
           done
           exit "$failed"
+      # Candidate-only build gate. Never slows ordinary Main CI/deploy; the
+      # current production app remains Next/OpenNext until the full parity gate.
+      - name: Validate isolated Vite/Hono migration build
+        if: ${{ github.event_name == 'pull_request' && startsWith(github.head_ref, 'migration/') }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          npm --prefix modern install --no-audit --no-fund --prefer-offline
+          npm --prefix modern run check
+          npm --prefix modern run build
+          npm --prefix modern run budget
+          npm --prefix modern run worker:check
+          npm --prefix modern run api:test
+          npm --prefix modern run inventory
+          npm --prefix modern run rpc:contract
+          npm --prefix modern audit --omit=dev --audit-level=high
+      # Isolated migration PR only. Main fast CI remains unchanged.
+      - name: Candidate anonymous browser acceptance (4 languages x 2 device profiles)
+        if: ${{ github.event_name == 'pull_request' && startsWith(github.head_ref, 'migration/') }}
+        env:
+          VITE_SUPABASE_URL: https://placeholder.supabase.co
+          VITE_SUPABASE_ANON_KEY: placeholder-public-key
+          VITE_MIGRATION_ALLOW_WRITES: "false"
+        shell: bash
+        run: |
+          set -euo pipefail
+          npm --prefix modern run build
+          # Headless Chromium only; avoid apt package downloads on each CI run.
+          npx playwright install chromium --only-shell
+          npm --prefix modern run browser:test
+      - name: Candidate authenticated seven-role browser acceptance (isolated Main QA only)
+        if: ${{ github.event_name == 'pull_request' && startsWith(github.head_ref, 'migration/') && github.event.pull_request.head.repo.full_name == github.repository }}
+        env:
+          E2E_MAIN_QA_PASSWORD: ${{ secrets.MAIN_QA_BOT_PASSWORD }}
+          E2E_MAIN_QA_BASE_URL: https://npbjrtiolqperdgljnhi.supabase.co/
+          E2E_MAIN_QA_PUBLISHABLE_KEY: sb_publishable_zStTw3n8wZ271PehDRDvGg_rs0JOy84
+          VITE_SUPABASE_URL: https://npbjrtiolqperdgljnhi.supabase.co
+          VITE_SUPABASE_ANON_KEY: sb_publishable_zStTw3n8wZ271PehDRDvGg_rs0JOy84
+          VITE_MIGRATION_ALLOW_WRITES: "false"
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [ -z "${E2E_MAIN_QA_PASSWORD:-}" ]; then
+            echo "::warning::QA-only password secret not configured. Authenticated acceptance NOT executed."
+            echo "Authenticated candidate acceptance: NOT EXECUTED (secret missing)" >> "$GITHUB_STEP_SUMMARY"
+            exit 0
+          fi
+          npm --prefix modern run build
+          npm --prefix modern run browser:qa
+          echo "Authenticated candidate acceptance: seven distinct bot logins / 56 localized device scenarios PASSED" >> "$GITHUB_STEP_SUMMARY"
+      - name: Candidate 30 independent signed QA sessions and one bounded read-only peak
+        if: ${{ github.event_name == 'pull_request' && startsWith(github.head_ref, 'migration/') && github.event.pull_request.head.repo.full_name == github.repository }}
+        env:
+          E2E_MAIN_QA_PASSWORD: ${{ secrets.MAIN_QA_BOT_PASSWORD }}
+          E2E_MAIN_QA_BASE_URL: https://npbjrtiolqperdgljnhi.supabase.co/
+          E2E_MAIN_QA_PUBLISHABLE_KEY: sb_publishable_zStTw3n8wZ271PehDRDvGg_rs0JOy84
+          VITE_MIGRATION_ALLOW_WRITES: "false"
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [ -z "${E2E_MAIN_QA_PASSWORD:-}" ]; then
+            echo "::warning::30-session QA acceptance not executed: QA password secret unavailable."
+            echo "30-session acceptance NOT EXECUTED" >> "$GITHUB_STEP_SUMMARY"
+            exit 0
+          fi
+          npm --prefix modern run sessions:qa
+          echo "30 distinct signed QA sessions + 30 concurrent authenticated Supabase reads: PASS" >> "$GITHUB_STEP_SUMMARY"
       - name: Inventory every Main page and API route
         run: node scripts/main-adversarial-surface.mjs --inventory-only
       - name: Audit requested product functionality against committed code and tests

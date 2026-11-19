@@ -1,0 +1,41 @@
+{
+  "name": "@uptilldawn/local-first-candidate",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "engines": {
+    "node": ">=24"
+  },
+  "scripts": {
+    "dev": "vite --host 127.0.0.1",
+    "dev:api": "wrangler dev --port 8788",
+    "build": "tsc --noEmit -p tsconfig.json && vite build",
+    "check": "tsc --noEmit -p tsconfig.json",
+    "preview": "vite preview",
+    "deploy:dry-run": "npm run build && wrangler deploy --dry-run",
+    "budget": "node scripts/bundle-budget.mjs",
+    "worker:check": "wrangler deploy --dry-run --outdir .wrangler-candidate-dry-run",
+    "inventory": "node scripts/inventory.mjs",
+    "api:test": "node --test tests/*.test.mjs",
+    "browser:test": "node tests/browser-smoke.mjs",
+    "rpc:contract": "node scripts/rpc-contract.mjs",
+    "browser:qa": "node tests/browser-auth-qa.mjs",
+    "sessions:qa": "node tests/qa-30-sessions.mjs"
+  },
+  "dependencies": {
+    "@supabase/ssr": "0.9.0",
+    "@supabase/supabase-js": "2.106.2",
+    "hono": "^4.11.0",
+    "react": "19.2.6",
+    "react-dom": "19.2.6",
+    "react-router-dom": "^7.12.0"
+  },
+  "devDependencies": {
+    "@types/react": "^19.2.15",
+    "@types/react-dom": "19.2.3",
+    "@types/node": "^22.19.19",
+    "typescript": "^5.9.0",
+    "vite": "^8.0.0",
+    "wrangler": "4.136.3"
+  }
+}
