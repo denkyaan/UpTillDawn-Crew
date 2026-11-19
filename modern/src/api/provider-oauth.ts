@@ -141,8 +141,10 @@ export async function openOAuthToken(provider:OAuthProvider,ciphertext:string,se
  const iv=base64ToBytes(match[1]),data=base64ToBytes(match[2])
  if(iv.length!==12||data.length<16||data.length>16384)throw Error("invalid_ciphertext")
  const key=await crypto.subtle.importKey("raw",masterBytes(secret).buffer as ArrayBuffer,"AES-GCM",false,["decrypt"])
- const plain=await crypto.subtle.decrypt({name:"AES-GCM",iv,
-  additionalData:encoder.encode("uptilldawn:"+provider+":v1")},key,data)
+ // The decoder owns a fresh ArrayBuffer; use it explicitly to satisfy
+ // WebCrypto's BufferSource boundary (not SharedArrayBuffer).
+ const plain=await crypto.subtle.decrypt({name:"AES-GCM",iv:iv.buffer as ArrayBuffer,
+  additionalData:encoder.encode("uptilldawn:"+provider+":v1")},key,data.buffer as ArrayBuffer)
  const decoded:unknown=JSON.parse(decoder.decode(plain))
  if(!decoded||typeof decoded!=="object"||Array.isArray(decoded))throw Error("invalid_ciphertext")
  const record:Record<string,string>={}

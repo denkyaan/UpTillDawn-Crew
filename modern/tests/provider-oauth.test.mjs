@@ -51,7 +51,7 @@ test("OAuth state cookie is signed, HttpOnly, actor-bound, provider-bound and ex
  assert.equal(await verifyOAuthState("sumup",uid,secret,value,"a".repeat(64),now+1000),false)
  assert.equal(await verifyOAuthState("sumup",uid,secret,value,session.state,now+601000),false)
  assert.equal(await verifyOAuthState("sumup",uid,secret,value+"; "+value,session.state,now),false)
- const tampered=value.replace(/.$/,"0")
+ const tampered=value.slice(0,-1)+(value.endsWith("0")?"1":"0")
  assert.equal(await verifyOAuthState("sumup",uid,secret,tampered,session.state,now+1000),false)
  assert.ok(clearOAuthCookie("sumup").includes("Max-Age=0"))
 })
