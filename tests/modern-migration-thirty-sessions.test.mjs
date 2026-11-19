@@ -10,7 +10,14 @@ test("candidate load gate proves thirty unique signed sessions, not thirty reuse
  assert.ok(s.includes('for(const size of [6,12,30])'))
  assert.ok(s.includes('Promise.all(sessions.slice(0,size).map(checkSession))'))
  assert.ok(s.includes("businessWrites:0,productionReady:false"))
- assert.ok(s.includes('cloudflareWorkerMeasured:false'))
+ assert.ok(s.includes('cloudflareWorkerMeasured:Boolean(remoteWorker)'))
+ assert.ok(s.includes('const remoteWorker=process.env.E2E_MAIN_MODERN_QA_ORIGIN||""'))
+ assert.ok(s.includes('if(remoteWorker){'))
+ assert.ok(s.includes('response.status!==200'))
+ assert.ok(s.includes('record.client.rpc("upt_current_session_context")'))
+ // The prior read-only Supabase-only mode is preserved and cannot claim
+ // Cloudflare load evidence without explicitly selecting exact Main QA origin.
+ assert.ok(s.includes('EXACT_MODERN_MAIN_QA_WORKER_REQUIRED'))
  assert.ok(s.includes('scope:"local"'))
  assert.ok(!s.includes("service_role"))
  assert.ok(!s.includes("console.log(password)"))
