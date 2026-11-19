@@ -91,6 +91,19 @@ jobs:
           npm --prefix modern run api:test
           npm --prefix modern run inventory
           npm --prefix modern audit --omit=dev --audit-level=high
+      # Isolated migration PR only. Main fast CI remains unchanged.
+      - name: Candidate anonymous browser acceptance (4 languages x 2 device profiles)
+        if: ${{ github.event_name == 'pull_request' && startsWith(github.head_ref, 'migration/') }}
+        env:
+          VITE_SUPABASE_URL: https://placeholder.supabase.co
+          VITE_SUPABASE_ANON_KEY: placeholder-public-key
+          VITE_MIGRATION_ALLOW_WRITES: "false"
+        shell: bash
+        run: |
+          set -euo pipefail
+          npm --prefix modern run build
+          npx playwright install --with-deps chromium
+          npm --prefix modern run browser:test
       - name: Inventory every Main page and API route
         run: node scripts/main-adversarial-surface.mjs --inventory-only
       - name: Audit requested product functionality against committed code and tests

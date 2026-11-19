@@ -19,8 +19,14 @@ export function SessionProvider({children}:{children:ReactNode}){
  const [state,setState]=useState<State>({status:"checking",identity:null,portals:[]})
  const db=useMemo(()=>supabase(),[])
  const lastIdentity=useRef<string|null>(null)
+ const generation=useRef(0)
  const refresh=useCallback(async()=>{
+  const ticket=++generation.current
+  // Fail closed while confirming fresh permissions. Never keep stale admin
+  // data visible through a session revalidation or browser tab resume.
+  setState({status:"checking",identity:null,portals:[]})
   const {data:{session},error:sessionError}=await db.auth.getSession()
+  if(ticket!==generation.current)return
   if(sessionError){setState({status:"error",identity:null,portals:[]});return}
   if(!session){
    if(lastIdentity.current)void purgeLocalUser(lastIdentity.current).catch(()=>{})
@@ -30,6 +36,7 @@ export function SessionProvider({children}:{children:ReactNode}){
   // A stored session is NOT an authorization decision. This invoker RPC
   // verifies signed PostgREST JWT + live approval, owner and effective role.
   const {data,error}=await db.rpc("upt_current_session_context")
+  if(ticket!==generation.current)return
   if(error){setState({status:"error",identity:null,portals:[]});return}
   const identity=parseIdentity(Array.isArray(data)?data[0]:null)
   if(!identity||identity.id!==session.user.id||!isActive(identity)){
@@ -39,6 +46,7 @@ export function SessionProvider({children}:{children:ReactNode}){
   }
   const assignments=identity.role==="admin"||identity.is_owner?
    {data:[] as Assignment[],error:null}:await db.rpc("upt_my_portal_assignments")
+  if(ticket!==generation.current)return
   if(assignments.error){setState({status:"error",identity:null,portals:[]});return}
   if(lastIdentity.current&&lastIdentity.current!==identity.id)
    void purgeLocalUser(lastIdentity.current).catch(()=>{})
@@ -48,11 +56,13 @@ export function SessionProvider({children}:{children:ReactNode}){
  useEffect(()=>{
   let mounted=true
   void refresh()
+  const visible=()=>{if(document.visibilityState==="visible")void refresh()}
+  document.addEventListener("visibilitychange",visible)
   const {data:{subscription}}=db.auth.onAuthStateChange(()=>{
    // Avoid nested calls into Supabase inside its internal auth lock.
    queueMicrotask(()=>{if(mounted)void refresh()})
   })
-  return()=>{mounted=false;subscription.unsubscribe()}
+  return()=>{mounted=false;generation.current++;document.removeEventListener("visibilitychange",visible);subscription.unsubscribe()}
  },[db,refresh])
  const signIn=useCallback(async(email:string,password:string)=>{
   const {error}=await db.auth.signInWithPassword({email,password})
@@ -60,7 +70,9 @@ export function SessionProvider({children}:{children:ReactNode}){
   await refresh()
  },[db,refresh])
  const signOut=useCallback(async()=>{
-  const uid=state.identity?.id
+  ++generation.current
+  const uid=lastIdentity.current||state.identity?.id
+  setState({status:"checking",identity:null,portals:[]})
   await db.auth.signOut()
   if(uid)await purgeLocalUser(uid).catch(()=>{})
   lastIdentity.current=null

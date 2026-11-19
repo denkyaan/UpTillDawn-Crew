@@ -37,6 +37,86 @@ app.get("/api/v1/session",async c=>{
  return c.json({id:identity.id,role:identity.role,effectiveRole:identity.effective_role,owner:identity.is_owner})
 })
 
+// Verified per-request identity: never trust browser-supplied roles. The
+// publishable Supabase key is used with the current signed user's JWT only.
+async function scopedActor(c:{req:{header:(key:string)=>string|undefined};env:Bindings}){
+ const auth=c.req.header("Authorization")||""
+ const match=/^Bearer ([A-Za-z0-9._~+-]{30,8192})$/.exec(auth)
+ if(!match)return {error:"authentication_required" as const,status:401 as const}
+ if(!c.env.SUPABASE_URL||!c.env.SUPABASE_ANON_KEY)
+  return {error:"service_unconfigured" as const,status:503 as const}
+ const db=createClient(c.env.SUPABASE_URL,c.env.SUPABASE_ANON_KEY,{
+  global:{headers:{Authorization:"Bearer "+match[1]}},
+  auth:{persistSession:false,autoRefreshToken:false,detectSessionInUrl:false}
+ })
+ const {data:claims,error:claimsError}=await db.auth.getClaims(match[1])
+ if(claimsError||!claims?.claims?.sub)return {error:"authentication_required" as const,status:401 as const}
+ const {data:context,error}=await db.rpc("upt_current_session_context")
+ if(error)return {error:"identity_unavailable" as const,status:503 as const}
+ const identity=parseIdentity(Array.isArray(context)?context[0]:null)
+ if(!identity||identity.id!==claims.claims.sub||!isActive(identity))
+  return {error:"access_denied" as const,status:403 as const}
+ return {db,identity}
+}
+const safeText=(value:unknown,max=180)=>typeof value==="string"?value.slice(0,max):null
+const validList=(v:unknown):Record<string,unknown>[]=>Array.isArray(v)?v.filter(x=>Boolean(x)&&typeof x==="object"&&!Array.isArray(x)).slice(0,25) as Record<string,unknown>[]:[]
+
+app.get("/api/v1/integrations/status",async c=>{
+ const actor=await scopedActor(c)
+ if("error" in actor)return c.json({error:actor.error},actor.status)
+ const {data:allowed,error:accessError}=await actor.db.rpc("upt_can_manage_integrations")
+ if(accessError)return c.json({error:"permission_check_unavailable"},503)
+ if(allowed!==true)return c.json({error:"access_denied"},403)
+ const {data:configuration,error}=await actor.db.rpc("upt_integration_credentials",{p_action:"list"})
+ if(error||!Array.isArray(configuration))return c.json({error:"integration_status_unavailable"},503)
+ // Explicit metadata allowlist: no ciphertext, tokens or provider credentials.
+ const accepted=new Set(["weeztix","sumup","peppol","banking","documenso"])
+ const configured=validList(configuration).filter(x=>accepted.has(String(x.provider)))
+  .map(x=>({provider:x.provider,updatedAt:safeText(x.updated_at,60)}))
+ return c.json({configured,connectionFlow:"requires_configured_provider_oauth"})
+})
+
+app.get("/api/v1/god/diagnostics",async c=>{
+ const actor=await scopedActor(c)
+ if("error" in actor)return c.json({error:actor.error},actor.status)
+ // Technical Maker does not receive business/financial integration authority.
+ if(!actor.identity.is_owner)return c.json({error:"access_denied"},403)
+ const {data:owner,error:ownerError}=await actor.db.rpc("upt_current_is_owner")
+ if(ownerError)return c.json({error:"maker_check_unavailable"},503)
+ if(owner!==true)return c.json({error:"access_denied"},403)
+ // Ephemeral God token exists on the Worker stack ONLY for this one request.
+ // Never serialize it to JSON, use browser storage or place it in a cookie.
+ const {data:token,error:loginError}=await actor.db.rpc("upt_god_login_owner")
+ if(loginError||typeof token!=="string"||!token)return c.json({error:"maker_session_unavailable"},503)
+ try{
+  const {data:snapshot,error}=await actor.db.rpc("upt_god_maker_log_snapshot",{p_token:token,p_limit:20})
+  if(error||!snapshot||typeof snapshot!=="object"||Array.isArray(snapshot))
+   return c.json({error:"diagnostics_unavailable"},503)
+  const row=snapshot as Record<string,unknown>
+  // No raw stack traces, metadata, client context, secrets or personal IDs.
+  return c.json({
+   audit:validList(row.audit).map(x=>({
+    action:safeText(x.action,80),entityType:safeText(x.entity_type,80),
+    at:safeText(x.created_at,60)
+   })),
+   recovery:validList(row.recovery).map(x=>({
+    type:safeText(x.check_type,80),status:safeText(x.status,45),
+    at:safeText(x.checked_at,60)
+   })),
+   errors:validList(row.errors).map(x=>({
+    name:safeText(x.error_name,110),route:safeText(x.route,140),
+    status:safeText(x.status,45),severity:safeText(x.ai_severity,45),
+    needsMaker:x.maker_action_required===true,
+    count:typeof x.reported_count==="number"?x.reported_count:null,
+    at:safeText(x.created_at,60)
+   }))
+  })
+ }finally{
+  // Session token must be invalidated even on a failed database read.
+  try{await actor.db.rpc("upt_god_logout",{p_token:token})}catch{/* Never disclose privileged token. */}
+ }
+})
+
 // Deny unknown API routes rather than returning the SPA shell with 200 OK.
 app.notFound(c=>c.json({error:"not_found"},404))
 app.onError((_error,c)=>c.json({error:"internal_error"},500))

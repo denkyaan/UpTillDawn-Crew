@@ -40,6 +40,7 @@ const pilots=new Map(Object.entries({
  "/notifications":"RLS-user-notifications-read",
  "/profile":"RLS-user-minimal-profile-read",
  "/qr":"QR-state-machine-with-disabled-transactional-requests",
+ "/maker/diagnostics":"owner-only-summarized-manual-read-not-full-God-Mode",
 }))
 const criticalWords=["god","admin","finance","bank","oauth","integrations","auth","sales","checkin","check-in","payment","qr","timesheet","sign","push","scan","worker","payroll"]
 const files=await allFiles(join(repo,"app"))

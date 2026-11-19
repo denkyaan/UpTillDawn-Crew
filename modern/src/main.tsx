@@ -18,6 +18,7 @@ const Administration=lazy(()=>import("./screens/administration"))
 const Promotion=lazy(()=>import("./screens/promotion"))
 const Notifications=lazy(()=>import("./screens/notifications"))
 const Profile=lazy(()=>import("./screens/profile"))
+const MakerDiagnostics=lazy(()=>import("./screens/maker-diagnostics"))
 const QrWorkflow=lazy(()=>import("./screens/qr-workflow"))
 
 function Authenticated({children}:{children:ReactNode}){
@@ -50,6 +51,7 @@ function Authenticated({children}:{children:ReactNode}){
     <select id="language" value={locale} onChange={e=>setLocale(resolveLocale(e.target.value))}>
      <option value="nl">NL</option><option value="fr">FR</option><option value="en">EN</option><option value="de">DE</option>
     </select></label>
+    {state.identity?.is_owner&&<NavLink to="/maker/diagnostics">God Mode</NavLink>}
     <NavLink to="/profile">{t.profile}</NavLink>
     <button type="button" onClick={()=>void state.signOut()}>{t.logout}</button></div>
   </header>
@@ -103,6 +105,10 @@ function ResponsibleGuard({children}:{children:ReactNode}){
  return identity&&(identity.role==="responsible_lead"||identity.role==="admin"||identity.is_owner)
   ?<>{children}</>:<p role="alert" className="notice">Geen goedgekeurde toegang tot verantwoordelijkheidsbeheer.</p>
 }
+function MakerGuard({children}:{children:ReactNode}){
+ const {identity}=useSession()
+ return identity?.is_owner?<>{children}</>:<p role="alert" className="notice">Maker-toegang vereist.</p>
+}
 function Missing(){return <section className="card" role="status"><h1>Migration incomplete</h1><p>Deze functie blijft beschikbaar in de bestaande UpTillDawn-app. De nieuwe app mag nog niet in productie worden gebruikt.</p><Link to="/">Home</Link></section>}
 function App(){
  return <BrowserRouter><SessionProvider>
@@ -124,6 +130,7 @@ function App(){
     <Route path="/portals/administration" element={<PortalGuard portal="administration"><Suspense fallback="Administratie laden…"><Administration/></Suspense></PortalGuard>}/>
     <Route path="/portals/administration/finance" element={<PortalGuard portal="administration"><Suspense fallback="Loading finance…"><Finance/></Suspense></PortalGuard>}/>
     <Route path="/portals/promotion" element={<PortalGuard portal="promotion"><Suspense fallback="Promotie laden…"><Promotion/></Suspense></PortalGuard>}/>
+    <Route path="/maker/diagnostics" element={<MakerGuard><Suspense fallback="Makerdiagnostiek laden…"><MakerDiagnostics/></Suspense></MakerGuard>}/>
     <Route path="/god/*" element={<Missing/>}/>
     <Route path="*" element={<Missing/>}/>
    </Route>
