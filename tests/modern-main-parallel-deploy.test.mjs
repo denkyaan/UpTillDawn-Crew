@@ -89,3 +89,11 @@ test("existing Main app offers Maker a single trusted link to new lightweight Ma
  assert.ok(dashboard.includes('modernMainCopy[locale].button'))
  assert.ok(!dashboard.includes('href="https://uptilldawn-modern-candidate'))
 })
+
+test("all Maker's legacy-to-modern link strings have four-locale catalog coverage",()=>{
+ const source=get("lib/ui-translation-catalog-app-extra.ts")
+ for(const title of ["Nieuwe, lichtere Main-app","Nouvelle application Main allégée",
+  "New lightweight Main app","Neue schlanke Main-App"]){
+  assert.ok(source.includes(JSON.stringify(title)+":"),"Missing four-locale key "+title)
+ }
+})
