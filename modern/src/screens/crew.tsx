@@ -1,21 +1,22 @@
-import {useState} from "react"
+import {Suspense,lazy,useState} from "react"
+const HistoryPanel=lazy(()=>import("../components/history-panel"))
 import {useSession} from "../lib/session"
 import {usePrivateQuery} from "../lib/use-private-query"
 import {ownShifts,ownCheckIns,ownHours,type Shift,type CheckIn,type WorkSession} from "../lib/operational-reads"
 import {confirmOwnShift,writesAvailable} from "../lib/operational-mutations"
 import {DataList,Refresh,Timestamp,WhenLoading} from "../components/data-ui"
 
-type View="shifts"|"checkins"|"hours"
+type View="shifts"|"checkins"|"hours"|"timesheets"|"equipment"
 export default function Crew(){
  const {identity}=useSession(),uid=identity!.id
  const [view,setView]=useState<View>("shifts")
  return <><h1>Mijn planning en uren</h1><p className="muted">Lokaal gerenderd. Actuele gegevens rechtstreeks via Supabase en bestaande toegangsregels.</p>
  <nav className="nav" aria-label="Crewoverzicht">
-  {([["shifts","Mijn diensten"],["checkins","Check-ins"],["hours","Gewerkte uren"]] as const)
+  {([["shifts","Mijn diensten"],["checkins","Check-ins"],["hours","Gewerkte uren"],["timesheets","Timesheets"],["equipment","Materiaal"]] as const)
    .map(([key,title])=><button key={key} type="button" className={view===key?"primary":""} aria-pressed={view===key} onClick={()=>setView(key)}>{title}</button>)}
  </nav>
  <div style={{paddingTop:"1rem"}}>
-  {view==="shifts"?<Shifts uid={uid}/>:view==="checkins"?<Checkins uid={uid}/>:<Hours uid={uid}/>}
+  {view==="shifts"?<Shifts uid={uid}/>:view==="checkins"?<Checkins uid={uid}/>:view==="hours"?<Hours uid={uid}/>:view==="timesheets"?<Suspense fallback="Timesheets laden…"><HistoryPanel kind="my-timesheets"/><HistoryPanel kind="time-reviews"/></Suspense>:<Suspense fallback="Materiaal laden…"><HistoryPanel kind="issued-items"/><HistoryPanel kind="settlements"/></Suspense>}
  </div></>
 }
 function Shifts({uid}:{uid:string}){

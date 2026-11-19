@@ -1,20 +1,21 @@
-import {useState} from "react"
+import {Suspense,lazy,useState} from "react"
+const HistoryPanel=lazy(()=>import("../components/history-panel"))
 import {useSession} from "../lib/session"
 import {usePrivateQuery} from "../lib/use-private-query"
 import {allowedWorkplaces,allowedInventory,ownIncidents,type Workplace,type InventoryItem,type Incident} from "../lib/operational-reads"
 import {DataList,Refresh,Timestamp,WhenLoading} from "../components/data-ui"
 import {writesAvailable,acknowledgeAllowedIncident} from "../lib/operational-mutations"
 
-type View="workplaces"|"inventory"|"incidents"
+type View="workplaces"|"inventory"|"incidents"|"sales"
 export default function Operations(){
  const uid=useSession().identity!.id
  const [view,setView]=useState<View>("workplaces")
  return <><h1>Werkplekken, inventaris en incidenten</h1>
   <nav className="nav" aria-label="Operationeel overzicht">
-  {([["workplaces","Werkplekken"],["inventory","Inventaris"],["incidents","Mijn incidenten"]] as const)
+  {([["workplaces","Werkplekken"],["inventory","Inventaris"],["incidents","Mijn incidenten"],["sales","Verkoop"]] as const)
    .map(([key,label])=><button type="button" key={key} className={view===key?"primary":""} aria-pressed={view===key} onClick={()=>setView(key)}>{label}</button>)}
   </nav>
-  <div style={{paddingTop:"1rem"}}>{view==="workplaces"?<Workplaces uid={uid}/>:view==="inventory"?<Inventory uid={uid}/>:<Incidents uid={uid}/>}</div>
+  <div style={{paddingTop:"1rem"}}>{view==="workplaces"?<Workplaces uid={uid}/>:view==="inventory"?<Inventory uid={uid}/>:view==="incidents"?<Incidents uid={uid}/>:<Suspense fallback="Verkoop laden…"><HistoryPanel kind="sales"/></Suspense>}</div>
  </>
 }
 function Workplaces({uid}:{uid:string}){
@@ -33,7 +34,7 @@ function Inventory({uid}:{uid:string}){
    {r.data?.map(item=><li key={item.id}><div className="row"><strong>{item.name}</strong><span className="muted">{item.category||"Materiaal"}</span></div>
     <p>Beschikbaar: {item.available_quantity} / {item.total_quantity} · Ontbrekend: {item.missing_quantity} · Defect: {item.damaged_quantity}</p>
    </li>)}
-  </DataList></WhenLoading><p className="muted">Uitgifte, tekorten en definitieve inventariscorrecties blijven in de bestaande gecontroleerde workflows.</p></section>
+  </DataList></WhenLoading><p className="muted">Uitgifte, tekorten en definitieve inventariscorrecties blijven in de bestaande gecontroleerde workflows.</p><Suspense fallback="Bewegingen laden…"><HistoryPanel kind="movements"/></Suspense></section>
 }
 function Incidents({uid}:{uid:string}){
  const r=usePrivateQuery<Incident[]>(uid,"my-incidents",signal=>ownIncidents(uid,signal))

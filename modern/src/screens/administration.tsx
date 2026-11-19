@@ -1,22 +1,23 @@
 import {Link} from "react-router-dom"
-import {useState} from "react"
+import {Suspense,lazy,useState} from "react"
+const HistoryPanel=lazy(()=>import("../components/history-panel"))
 import {useSession} from "../lib/session"
 import {usePrivateQuery} from "../lib/use-private-query"
 import {administrationDocuments,administrationPayments,allowedInventory,type FinancialDocument,type FinancialPayment,type InventoryItem} from "../lib/operational-reads"
 import {DataList,LocalMoney,Refresh,WhenLoading,Timestamp} from "../components/data-ui"
 
-type Section="documents"|"payments"|"inventory"
+type Section="documents"|"payments"|"inventory"|"ticketing"|"contracts"|"timesheets"
 export default function Administration(){
  const uid=useSession().identity!.id
  const [section,setSection]=useState<Section>("documents")
  return <><h1>Administratie · read-only migratieoverzicht</h1>
   <p className="muted">Financiële goedkeuring, contracten, bankkoppelingen, Peppol en verwijderingen blijven beveiligd in de bestaande app.</p>
   <nav className="nav" aria-label="Administratie">
-   {([["documents","Documenten"],["payments","Betalingen"],["inventory","Inventaris"]] as const).map(([key,title])=>
+   {([["documents","Documenten"],["payments","Betalingen"],["inventory","Inventaris"],["ticketing","Ticketing"],["contracts","Contracten"],["timesheets","Timesheets"]] as const).map(([key,title])=>
     <button key={key} type="button" className={section===key?"primary":""} aria-pressed={section===key} onClick={()=>setSection(key)}>{title}</button>)}
   </nav>
   <div style={{paddingTop:"1rem"}}>
-   {section==="documents"?<Documents uid={uid}/>:section==="payments"?<Payments uid={uid}/>:<Inventory uid={uid}/>}
+   {section==="documents"?<Documents uid={uid}/>:section==="payments"?<Payments uid={uid}/>:section==="inventory"?<Inventory uid={uid}/>:<Suspense fallback="Gegevens laden…">{section==="ticketing"?<><HistoryPanel kind="ticket-imports"/><HistoryPanel kind="ticket-sales"/></>:section==="contracts"?<HistoryPanel kind="contracts"/>:<HistoryPanel kind="admin-timesheets"/>}</Suspense>}
   </div>
   <p><Link to="/portals/administration/finance">Financiële totalen bekijken</Link></p>
  </>

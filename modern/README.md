@@ -87,3 +87,15 @@ A shared browser-only scheduler caps ordinary PostgREST reads at **3 simultaneou
 ## Hono API security smoke tests
 
 The migration-only CI validates the assembled Hono Worker directly with `npm --prefix modern run api:test`, checking no-store headers, anonymous 401, malformed bearer rejection, absent-provider fail-closed 503, and unknown-route 404. This runs without contacting Supabase or deploying Cloudflare. It does **not** replace live seven-role RLS penetration tests after final migration.
+
+## Extended operational migration bundle (read-only)
+
+The parallel local-first candidate now has **ten additional, lazily grouped RLS read views** without introducing a new top-level portal or Cloudflare Worker dependency:
+
+- **Crew:** personal timesheets, time review requests, inventory issues and return settlements alongside shifts/check-ins/hours.
+- **Operations:** transactions in the existing Sales tab and recent inventory movement history within the existing Inventory tab.
+- **Administration:** historical ticket imports and sales, signed-contract status (only rows permitted by current RLS), and staff timesheet status.
+
+All queries select an explicit minimal column set, abort on navigation/timeout, share the client-wide 3-active/16-queued read budget and return at most 70–100 rows. Full datasets, payments, signed documents, personal identifiers and detailed approval decisions are **not** cached. CSV export is performed locally only upon user interaction and escapes formula-injection prefixes.
+
+**No bookkeeping, bank transfer, EventPay authorization, QR check-in, contract signature or payroll approval is claimed as migrated or verified.** Workflows that write remain gated off; the feature parity and production cutover gates remain fail-closed. The portal views are *candidates*, not finished ported routes.
