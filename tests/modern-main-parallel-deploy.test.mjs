@@ -97,3 +97,16 @@ test("all Maker's legacy-to-modern link strings have four-locale catalog coverag
   assert.ok(source.includes(JSON.stringify(title)+":"),"Missing four-locale key "+title)
  }
 })
+
+test("Cloudflare edge propagation probe retries only bounded public reads and reports failures",()=>{
+ const smoke=get("modern/scripts/main-qa-live-smoke.mjs")
+ assert.ok(smoke.includes("attempt<=10"))
+ assert.ok(smoke.includes("MODERN_MAIN_QA_EDGE"))
+ assert.ok(smoke.includes('getAfterPropagation("/api/v1/health",200)'))
+ assert.ok(smoke.includes('getAfterPropagation("/login",200'))
+ assert.ok(smoke.includes('getAfterPropagation(found[1],200)'))
+ assert.ok(smoke.includes('const noTickets=await get('))
+ assert.ok(smoke.includes('const noOauth=await get('))
+ assert.ok(!smoke.includes('getAfterPropagation("/api/v1/tickets'))
+ assert.ok(!smoke.includes('getAfterPropagation("/api/v1/integrations'))
+})
