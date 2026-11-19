@@ -49,3 +49,12 @@ test("mode selector is localized in all four supported app languages",async()=>{
    assert.ok(typeof labels[key]==="string"&&labels[key].length>3)
  }
 })
+
+test("operational navigation and deep links remain guarded by confirmed events portal",async()=>{
+ const {readFileSync}=await import("node:fs")
+ const main=readFileSync(new URL("../src/main.tsx",import.meta.url),"utf8")
+ assert.ok(main.includes('const canEvents=state.portals.includes("events")'))
+ assert.ok(main.includes('<Route element={<PortalGuard portal="events"><Outlet/></PortalGuard>}>'))
+ for(const route of ["/events","/tasks","/chat","/crew","/briefings","/qr","/operations"])
+  assert.ok(main.includes('path="'+route+'"'),route)
+})
