@@ -43,20 +43,23 @@ test("private profile uses signed self-only RPCs, validates live identity, never
  assert.ok(editor.includes("row.id!==uid"))
  assert.ok(editor.includes("await verifyOwnSession()"))
  assert.ok(editor.includes("if(ownId!==uid)"))
- assert.ok(editor.includes("if(uploadedPath&&!profileCommitted)"))
+ assert.ok(editor.includes("if(uploadedPath&&!profileRpcStarted)"))
+ assert.ok(editor.includes("if(profileRpcStarted)throw new Error(\"profile_write_uncertain\")"))
  assert.ok(editor.includes('throw new Error("profile_partially_saved")'))
  for(const banned of ["indexedDB","localStorage","sessionStorage","service_role","profiles\").update("])
   assert.ok(!editor.includes(banned),banned)
  assert.ok(profile.includes("ownProfile(uid,signal)"))
  assert.ok(profile.includes("usePrivateQuery<Bundle>"))
  assert.ok(profile.includes("writesAvailable()?"))
+ assert.ok(profile.includes("onFeedback={setFeedback}"))
+ assert.ok(profile.includes("feedback===\"uncertain\"?t.profileUncertainError"))
 })
 test("profile editing and privacy notices exist in all supported languages",()=>{
  for(const locale of languages){
   const t=copy(locale)
   for(const key of ["profileEdit","profilePrivacy","profileName","profilePhone","profileDob","profileAddress",
    "profileNationalRegister","profileIban","profilePreferredWorkplace","profileChooseWorkplace","profilePhoto",
-   "profilePhotoRules","profileSaved","profileSave","profileSaveError","profilePartialError","profileReadOnly",
+   "profilePhotoRules","profileSaved","profileSave","profileSaveError","profilePartialError","profileUncertainError","profileReadOnly",
    "profileCompleted","profileIncomplete"])
    assert.ok(t[key].trim().length>=2,locale+":"+key)
  }

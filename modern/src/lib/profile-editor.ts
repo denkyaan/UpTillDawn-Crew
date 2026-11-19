@@ -50,6 +50,7 @@ export async function saveOwnProfile(uid:string,input:SaveOwnProfileInput,photo:
  const db=supabase()
  let uploadedPath:string|null=null
  let profileCommitted=false
+ let profileRpcStarted=false
  try{
   if(photo){
    const extension=photo.type==="image/png"?"png":photo.type==="image/webp"?"webp":"jpg"
@@ -59,6 +60,7 @@ export async function saveOwnProfile(uid:string,input:SaveOwnProfileInput,photo:
    })
    if(error)throw new Error("photo_upload_failed")
   }
+  profileRpcStarted=true
   const {error}=await db.rpc("upt_update_own_profile",{
    p_full_name:clean.fullName,
    p_phone_number:clean.phone,
@@ -87,12 +89,14 @@ export async function saveOwnProfile(uid:string,input:SaveOwnProfileInput,photo:
   // Never remove the previous photo in the migration candidate: other user
   // records may still reference it and cleanup is not part of this transaction.
  }catch(error){
-  if(uploadedPath&&!profileCommitted){
+  // A transport failure during the update RPC is ambiguous: the server
+  // may have committed the new profile/photo before the network broke. Never
+  // delete a photo once a profile RPC was ATTEMPTED, even if it reports an error.
+  if(uploadedPath&&!profileRpcStarted){
    await db.storage.from("profile-photos").remove([uploadedPath]).catch(()=>{})
   }
-  // If the profile RPC succeeded, the new photo is LIVE. Removing it on any
-  // later preference/completion error would corrupt the committed profile.
   if(profileCommitted)throw new Error("profile_partially_saved")
+  if(profileRpcStarted)throw new Error("profile_write_uncertain")
   throw error
  }
 }
