@@ -68,7 +68,7 @@ function translateNode(root: Node, locale: ExtendedUiLocale) {
   if (root instanceof Element) root.querySelectorAll("*").forEach(element => translateElementAttributes(element, locale))
 }
 
-export function LocaleSync() {
+export function LocaleSync({clientRendered=false}:{clientRendered?:boolean}={}) {
   useEffect(() => {
     let locale = initialUiLocale() as ExtendedUiLocale
     // The SSR locale can be stale after an auth redirect or streaming render.
@@ -128,7 +128,9 @@ export function LocaleSync() {
     // server HTML until that subtree has committed hydration, the load event
     // has fired, a hydration grace period has elapsed, and two paint frames
     // have yielded. Mutating earlier can turn translated text into React #418
-    // hydration mismatches on slower streamed/mobile renders.
+    // hydration mismatches on slower streamed/mobile renders. A createRoot
+    // client-only screen has no server HTML to hydrate: observe its newly
+    // opened menus immediately after commit, without the SSR grace period.
     let initialPass:number|undefined
     let observing=false
     const startRuntimeTranslation=()=>{
@@ -143,7 +145,7 @@ export function LocaleSync() {
           })
         })
         void first
-      },1200)
+      },clientRendered?0:1200)
     }
     if(document.readyState==='complete')startRuntimeTranslation()
     else window.addEventListener('load',startRuntimeTranslation,{once:true})
@@ -172,6 +174,6 @@ export function LocaleSync() {
       window.removeEventListener("languagechange", onDeviceLanguageChange)
       window.removeEventListener("storage", onStorage)
     }
-  }, [])
+  }, [clientRendered])
   return null
 }

@@ -7,6 +7,7 @@ import {chromium} from "playwright"
 const root=resolve(import.meta.dirname,"../..")
 const origin="http://127.0.0.1:4175"
 const languageLabels={nl:"Personeel",fr:"Personnel",en:"Staff",de:"Personal"}
+const responsibleLabels={nl:"Verantwoordelijke",fr:"Responsable",en:"Responsible",de:"Verantwortlicher"}
 const views=[
  {name:"desktop",viewport:{width:1440,height:900},isMobile:false},
  {name:"mobile",viewport:{width:390,height:844},isMobile:true,hasTouch:true},
@@ -51,6 +52,13 @@ try{
     if(!heading.includes(label))throw Error(device.name+"/"+language+" incorrect translation: "+heading)
     if((await page.locator("html").getAttribute("lang"))!==language)
      throw Error(device.name+"/"+language+" html language mismatch")
+    // The Vite screen has no SSR hydration. Opening its menu immediately must
+    // already translate newly mounted labels; do not wait out a legacy timer.
+    await page.locator('button[aria-expanded]').click()
+    const responsible=await page.locator('a[href="/login/responsible"]').innerText()
+    if(responsible.trim()!==responsibleLabels[language])
+     throw Error(device.name+"/"+language+" new menu is not translated: "+responsible)
+    await page.locator('button[aria-expanded]').click()
     if(errors.length)throw Error(device.name+"/"+language+" JavaScript errors: "+errors.join("; ").slice(0,500))
     await page.goto(origin+"/maker/diagnostics",{waitUntil:"domcontentloaded",timeout:12000})
     await page.waitForURL("**/login",{timeout:10000})

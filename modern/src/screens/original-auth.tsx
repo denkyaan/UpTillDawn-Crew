@@ -43,6 +43,6 @@ export default function OriginalAuth(){
   return()=>{document.body.classList.remove("font-sans","antialiased")}
  },[])
  return <ThemeProvider attribute="class" defaultTheme="dark" enableSystem disableTransitionOnChange>
-  <style>{styles}</style><AuthLayout>{screen}</AuthLayout><LocaleSync/>
+  <style>{styles}</style><AuthLayout>{screen}</AuthLayout><LocaleSync clientRendered/>
  </ThemeProvider>
 }
