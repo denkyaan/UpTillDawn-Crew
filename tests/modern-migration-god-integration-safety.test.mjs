@@ -32,9 +32,31 @@ test("Business integration metadata is accessible only after separate organizati
  assert.ok(worker.includes('db.rpc("upt_can_manage_integrations")'))
  assert.ok(worker.includes('actor.db.rpc("upt_integration_credentials",{p_action:"list"})'))
  assert.ok(worker.includes('if(allowed!==true)'))
- assert.ok(!worker.includes('p_action:"read"'))
- assert.ok(!worker.includes('p_action:"save"'))
- assert.ok(!worker.includes('p_action:"disconnect"'))
+ // Metadata status never reaches credential-read/save/disconnect operations.
+ // The *separate*, explicit OAuth callback may save only provider-encrypted
+ // ciphertext after live authorization and tamper-proof state verification.
+ const metadata=worker.slice(worker.indexOf('app.get("/api/v1/integrations/status"'),
+  worker.indexOf('async function boundedJson('))
+ assert.ok(!metadata.includes('p_action:"read"'))
+ assert.ok(!metadata.includes('p_action:"save"'))
+ assert.ok(!metadata.includes('p_action:"disconnect"'))
+ const start=worker.slice(worker.indexOf('app.post("/api/v1/integrations/oauth/start"'),
+  worker.indexOf('app.post("/api/v1/integrations/oauth/complete"'))
+ const callback=worker.slice(worker.indexOf('app.post("/api/v1/integrations/oauth/complete"'),
+  worker.indexOf('app.get("/api/v1/god/diagnostics"'))
+ assert.ok(start.includes("managedOauthActor(c)"))
+ assert.ok(start.includes("oauthReady(c.env,provider,c.req.url)"))
+ assert.ok(start.includes('c.req.header("Origin")!==origin'))
+ assert.ok(!start.includes('p_action:"save"'))
+ assert.ok(callback.includes("managedOauthActor(c)"))
+ assert.ok(callback.includes("verifyOAuthState(provider,actor.identity.id"))
+ assert.ok(callback.includes("exchangeOAuthCode(c.env,provider"))
+ assert.ok(callback.includes("sealOAuthToken(provider,tokenConfiguration"))
+ assert.ok(callback.includes('p_action:"save"'))
+ assert.ok(callback.indexOf("verifyOAuthState(")<callback.indexOf("exchangeOAuthCode("))
+ assert.ok(callback.indexOf("sealOAuthToken(")<callback.indexOf('p_action:"save"'))
+ assert.ok(!callback.includes('p_action:"read"'))
+ assert.ok(!callback.includes('p_action:"disconnect"'))
  assert.ok(!worker.includes("WEEZTIX_CLIENT_SECRET"))
  assert.ok(!worker.includes("SUMUP_OAUTH_ACCESS_TOKEN"))
  const status=get("modern/src/components/integration-status.tsx")
@@ -43,7 +65,7 @@ test("Business integration metadata is accessible only after separate organizati
  const admin=get("modern/src/screens/administration.tsx")
  for(const area of ["invoices","banking","ticketing","contracts"])
   assert.ok(admin.includes('area="'+area+'"'))
- assert.ok(!get("modern/src/main.tsx").includes('path="/integrations"'))
+ assert.ok(!get("modern/src/main.tsx").includes('path="/integrations" element='))
 })
 test("session refresh is generation-scoped and always revalidates live access on resume",()=>{
  const session=get("modern/src/lib/session.tsx")
