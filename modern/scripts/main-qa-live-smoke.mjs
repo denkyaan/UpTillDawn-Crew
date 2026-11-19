@@ -58,6 +58,11 @@ const authTransport=await get("/api/auth/portal-login",{
 check(authTransport.status===200,"AUTH_TRANSPORT_HTTP_"+authTransport.status)
 const emptyResult=await authTransport.json()
 check(emptyResult.error==="E-mail en wachtwoord zijn verplicht."&&emptyResult.success!==true,"AUTH_REQUIRED_FIELD_VALIDATION")
+// This new source transport must be QA-configured yet deny anonymous
+// callers before parsing or dispatching any original business action.
+const sourceForm=new FormData();sourceForm.set('_id','unknown');sourceForm.set('_args','[]')
+const noSourceAction=await get('/api/migration/actions',{method:'POST',headers:{Origin:origin,'Sec-Fetch-Site':'same-origin'},body:sourceForm})
+check(noSourceAction.status===401,'ANON_ORIGINAL_ACTION_DENIED_HTTP_'+noSourceAction.status)
 const noSession=await get("/api/v1/session")
 check(noSession.status===401,"ANON_SESSION_DENIED")
 check((await noSession.json()).error==="authentication_required","AUTH_DENY_BODY")

@@ -1,4 +1,5 @@
 import {Hono} from "hono"
+import {forwardMainSource} from "./main-source.ts"
 import {createClient} from "@supabase/supabase-js"
 import {isActive,parseIdentity} from "../shared/identity.ts"
 import {sanitizedMakerRoute,sanitizedMakerName,sanitizedMakerSeverity} from "./god-redaction.ts"
@@ -238,6 +239,8 @@ app.post("/api/v1/tickets/weeztix/scan",async c=>{
  const out=await scanWeeztix(actor.db as unknown as RpcDb,c.env,body)
  return c.json(out.body,out.status as 200|403|404|409|422|503)
 })
+
+app.all("/api/*",c=>forwardMainSource(c.req.raw,c.env))
 
 // Deny unknown API routes rather than returning the SPA shell with 200 OK.
 app.notFound(c=>c.json({error:"not_found"},404))

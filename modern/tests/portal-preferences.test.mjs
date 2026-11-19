@@ -50,11 +50,11 @@ test("mode selector is localized in all four supported app languages",async()=>{
  }
 })
 
-test("operational navigation and deep links remain guarded by confirmed events portal",async()=>{
- const {readFileSync}=await import("node:fs")
- const main=readFileSync(new URL("../src/main.tsx",import.meta.url),"utf8")
- assert.ok(main.includes('const canEvents=state.portals.includes("events")'))
- assert.ok(main.includes('<Route element={<PortalGuard portal="events"><Outlet/></PortalGuard>}>'))
- for(const route of ["/events","/tasks","/chat","/crew","/briefings","/qr","/operations"])
-  assert.ok(main.includes('path="'+route+'"'),route)
+test("original operational pages retain their own live session and RLS checks",async()=>{
+ const {readFileSync}=await import('node:fs')
+ const read=p=>readFileSync(new URL('../../'+p,import.meta.url),'utf8')
+ assert.match(read('modern/src/screens/original-application.tsx'),/main-source\/app\/\(app\)\/layout.tsx/)
+ assert.match(read('app/(app)/layout.tsx'),/getCurrentUser\(\)/)
+ assert.match(read('modern/src/compat/auth-actions.ts'),/profile.id!==session.user.id/)
+ assert.match(read('modern/src/compat/auth-actions.ts'),/profile.account_blocked\|\|!profile.approved/)
 })

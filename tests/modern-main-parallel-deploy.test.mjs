@@ -1,3 +1,4 @@
+import {assertOriginalSourceRoutes} from './helpers/modern-original-source-contract.mjs'
 import test from "node:test"
 import assert from "node:assert/strict"
 import {readFileSync} from "node:fs"
@@ -51,21 +52,17 @@ test("live Worker smoke checks Hono, static SPA and anonymous write rejection",(
 })
 test("remote seven-role QA talks to real Cloudflare, local preview remains separately runnable",()=>{
  const qa=get("modern/tests/browser-auth-qa.mjs")
- assert.ok(qa.includes("const preview=remoteOrigin?null:spawn("))
+ assert.ok(qa.includes("const preview=remote?null:spawn("))
  assert.ok(qa.includes("if(preview&&preview.exitCode!==null)"))
- assert.ok(qa.includes('preview?.kill("SIGTERM")'))
- assert.ok(qa.includes('throw Error("EXACT_MODERN_MAIN_QA_ORIGIN_REQUIRED")'))
+ assert.ok(qa.includes("preview?.kill('SIGTERM')"))
+ assert.ok(qa.includes("throw Error('EXACT_MODERN_MAIN_QA_ORIGIN_REQUIRED')"))
  assert.ok(qa.includes('if(signins!==7||total!==56)'))
  assert.ok(JSON.parse(get("modern/package.json")).devDependencies.playwright)
 })
-test("unported pages and payment features still cannot break Main on dual-rail deployment",()=>{
- const src=get("modern/src/main.tsx")
- assert.ok(src.includes('path="*" element={<Missing/>}'))
- assert.ok(src.includes('path="/god/*" element={<Missing/>}'))
- assert.ok(src.includes("legacyFallbackCopy"))
- assert.ok(src.includes("https://uptilldawn-main.uptilldawn.workers.dev"))
- assert.ok(get("modern/scripts/inventory.mjs").includes("productionCutoverAllowed:false"))
- assert.ok(get("modern/.env.example").includes("VITE_MIGRATION_ALLOW_WRITES=false"))
+test('source migration preserves original Main and keeps cutover locked',()=>{
+ assertOriginalSourceRoutes()
+ assert.ok(get('modern/scripts/inventory.mjs').includes('productionCutoverAllowed:false'))
+ assert.ok(get('modern/.env.example').includes('VITE_MIGRATION_ALLOW_WRITES=false'))
 })
 
 test("30 actual signed sessions exercise the deployed Cloudflare Hono identity API",()=>{

@@ -4,9 +4,9 @@ import {readFileSync} from "node:fs"
 const src=p=>readFileSync(p,"utf8")
 test("only exact isolated Main QA URL and seven known bot roles can authenticate",()=>{
  const harness=src("modern/tests/browser-auth-qa.mjs")
- assert.ok(harness.includes('url.origin!=="https://npbjrtiolqperdgljnhi.supabase.co"'))
+ assert.match(harness,/qa.origin!==['"]https:\/\/npbjrtiolqperdgljnhi.supabase.co['"]/)
  assert.ok(harness.includes('if(password.length<24)throw'))
- assert.ok(harness.includes('VITE_MIGRATION_ALLOW_WRITES!=="false"'))
+ assert.match(harness,/VITE_MIGRATION_ALLOW_WRITES!==['"]false['"]/)
  assert.ok(harness.includes("if(signins!==7||total!==56)"))
  assert.equal((harness.match(/e2e-[a-z-]+@uptilldawn\.test/g)||[]).length,7)
  assert.ok(!harness.includes("service_role"))
@@ -14,14 +14,16 @@ test("only exact isolated Main QA URL and seven known bot roles can authenticate
 })
 test("QA browser scenarios reuse in-memory login state and do not disclose secrets",()=>{
  const code=src("modern/tests/browser-auth-qa.mjs")
- assert.ok(code.includes("const state=await loginContext.storageState()"))
+ assert.ok(code.includes("state=await login.storageState()"))
  assert.ok(code.includes("storageState:state"))
- assert.ok(code.includes('await denied(loginPage,"/maker/diagnostics")'))
- assert.ok(code.includes('await denied(loginPage,"/portals/administration")'))
- assert.ok(code.includes('await denied(loginPage,"/portals/promotion/chat")'))
+
+
+
  assert.ok(!code.includes("storageState({path:"))
  assert.ok(!code.includes("console.log(password)"))
- assert.ok(code.includes('wroteBusinessData:false,productionReady:false'))
+ assert.ok(code.includes('formsSubmitted:false,fullVisualParityVerified:false,productionReady:false'))
+ assert.ok(code.includes('await compare(a,b,label)'))
+ assert.ok(code.includes('await menus(a,b,label)'))
 })
 test("QA browser never uses production, never blocks ordinary Main CI",()=>{
  const yml=src(".github/workflows/fast-change-validation.yml")

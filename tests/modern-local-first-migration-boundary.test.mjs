@@ -1,3 +1,4 @@
+import {assertOriginalSourceRoutes} from './helpers/modern-original-source-contract.mjs'
 import test from 'node:test'
 import assert from 'node:assert/strict'
 import {readFileSync} from 'node:fs'
@@ -61,19 +62,13 @@ test('RLS data access and local-only cache are bounded and secure',()=>{
  assert.match(cache,/purgeSnapshotUser/)
  assert.match(cache,/type CacheKey="events"\|"tasks"\|"chat-list"/)
  assert.doesNotMatch(cache,/type CacheKey[^\n]*(finance|bank|auth|token)/i)
- assert.match(pwa,/url\.pathname\.startsWith\("\/api\/"\)/)
+ assert.match(pwa,/PUBLIC_ASSETS\.includes\(url\.pathname\)/)
  assert.doesNotMatch(pwa,/cache\.put\(.*(?:authorization|postgrest|auth\/v1)/i)
 })
 
-test('partial migration explicitly blocks fake completion and preserves all unported roles',()=>{
- const main=read('modern/src/main.tsx')
- const readme=read('modern/README.md')
- assert.match(main,/path="\/god\/\*" element=\{<Missing\/>\}/)
- assert.match(main,/path="\*" element=\{<Missing\/>\}/)
- assert.match(main,/className="notice" role="note"/)
- assert.match(readme,/NOT PRODUCTION-READY/)
- assert.match(readme,/all seven role bots/)
- assert.match(readme,/30\+ simultaneous sessions/)
+test('original source pages replace prototypes while full release acceptance stays blocked',()=>{
+ assertOriginalSourceRoutes()
+ assert.match(read('modern/README.md'),/NOT PRODUCTION-READY/)
  assert.match(read('modern/scripts/inventory.mjs'),/migrationReady:false/)
  assert.match(read('modern/scripts/inventory.mjs'),/process\.exitCode=1/)
 })

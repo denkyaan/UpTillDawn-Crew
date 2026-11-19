@@ -1,3 +1,4 @@
+import {assertOriginalSourceRoutes} from './helpers/modern-original-source-contract.mjs'
 import test from "node:test"
 import assert from "node:assert/strict"
 import {readFileSync} from "node:fs"
@@ -51,12 +52,7 @@ test("crew, administration, operations add grouped functions without extra top-l
  assert.ok(admin.includes('<TimesheetWorkspace review/>'))
  for(const kind of ['movements','sales'])
   assert.ok(ops.includes('kind="'+kind+'"'))
- const main=read("modern/src/main.tsx")
- assert.ok(main.includes('<PortalGuard portal="administration">'))
- assert.ok(main.includes('<ResponsibleGuard>'))
- assert.ok(main.includes('path="/portals/administration"'))
- assert.ok(!main.includes('path="/ticket-imports"'))
- assert.ok(!main.includes('path="/sales"'))
+ assertOriginalSourceRoutes()
 })
 test("nothing turns off the migration cutover lock or enables unverified writes",()=>{
  const doc=read("modern/README.md")

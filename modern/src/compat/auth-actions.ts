@@ -22,3 +22,27 @@ export async function signOut(){
  if(result.success)window.location.assign("/login")
  else throw new Error(result.code||"signout_failed")
 }
+
+// The signed JWT/RLS context is the same source as Main's getCurrentUser.
+// No cookie, cached role, form value or user_metadata grants access here.
+export async function getCurrentUser(){
+ const {createClient}=await import('./crew-client')
+ const db=createClient()
+ const {data:{session},error:sessionError}=await db.auth.getSession()
+ if(sessionError||!session)return null
+ type Context=Record<string,unknown>&{id:string;role:string;approved:boolean;account_blocked:boolean;is_owner:boolean;effective_role:string|null;verified_email:string|null}
+ const read=db.rpc.bind(db) as unknown as (name:'upt_current_session_context')=>Promise<{data:Context[]|null;error:unknown}>
+ const {data,error}=await read('upt_current_session_context'),profile=data?.[0]
+ if(error||!profile||profile.id!==session.user.id||!['staff','responsible_lead','admin'].includes(profile.role))return null
+ const {verified_email:email,is_owner:owner,effective_role:trustedRole,...publicProfile}=profile
+ const isOwner=owner===true
+ if((profile.account_blocked||!profile.approved)&&!isOwner)return null
+ const realRole=profile.role,realIsAdmin=realRole==='admin'||isOwner
+ const stored=realIsAdmin?trustedRole:realRole
+ const role=stored==='staff'||stored==='responsible_lead'||stored==='admin'?stored:realRole
+ return {...publicProfile,id:profile.id,approved:profile.approved||isOwner,role,realRole,roleMode:role,email:email||'',roles:[role==='staff'?'employee':role],isAdmin:role==='admin',realIsAdmin,isOwner,isEditMode:false}
+}
+export async function enterNormalAppFromMakerSession(form:FormData){
+ const {invokeOriginalAction}=await import('../original/transport')
+ return invokeOriginalAction('lib/actions/auth.ts#enterNormalAppFromMakerSession',[form])
+}

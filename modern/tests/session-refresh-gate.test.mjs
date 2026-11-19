@@ -48,7 +48,7 @@ test("signed-out and account-switched sessions cannot restore stale async result
 })
 test("candidate session remains fail-closed and authenticates every ready state via live RPC",()=>{
  const session=readFileSync(new URL("../src/lib/session.tsx",import.meta.url),"utf8")
- const main=readFileSync(new URL("../src/main.tsx",import.meta.url),"utf8")
+ const topbar=readFileSync(new URL("../../components/layout/topbar.tsx",import.meta.url),"utf8")
  assert.ok(session.includes("refreshGate.current.validate(async ticket=>"))
  assert.ok(session.includes('if(event==="INITIAL_SESSION")return'))
  assert.ok(session.includes('if(event==="SIGNED_OUT")'))
@@ -59,5 +59,5 @@ test("candidate session remains fail-closed and authenticates every ready state 
  assert.ok(session.includes('throw new Error("signout_failed")'))
  assert.ok(session.includes('purgeLocalUser(session.user.id)'))
  assert.ok(session.includes('purgeLocalUser(lastIdentity.current)'))
- assert.ok(main.includes("state.signOut().catch(()=>{})"))
+ assert.match(topbar,/signOut\(/)
 })

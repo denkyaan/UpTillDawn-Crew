@@ -35,7 +35,7 @@ test("legacy login remains the only public Main entry until screenshot AND auth 
  assert.ok(!main.includes("modernMainCopy"))
  assert.ok(!main.includes('href="/modern"'))
  const routes=read("modern/src/main.tsx")
- assert.ok(routes.includes('path="/login"'))
+ assert.ok(routes.includes("'/login'"))
  const harness=read("modern/tests/login-parity-qa.mjs")
  for(const fragment of [
   'https://uptilldawn-main.uptilldawn.workers.dev',

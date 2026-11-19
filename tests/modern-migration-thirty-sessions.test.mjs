@@ -24,8 +24,8 @@ test("candidate load gate proves thirty unique signed sessions, not thirty reuse
 })
 test("real role QA reads route data under RLS; production and standard Main CI remain untouched",()=>{
  const acceptance=read("modern/tests/browser-auth-qa.mjs")
- assert.ok(acceptance.includes('QA_AUTHENTICATED_READ_FAILED'))
- assert.ok(acceptance.includes('const routes=["/profile","/notifications"'))
+ assert.ok(acceptance.includes('ORIGINAL_VIEW_RENDER_FAILED'))
+ assert.ok(acceptance.includes("['/settings','/notifications','/events','/crew']"))
  const yml=read(".github/workflows/fast-change-validation.yml")
  assert.ok(yml.includes("Candidate 30 independent signed QA sessions"))
  assert.ok(yml.includes("github.event.pull_request.head.repo.full_name == github.repository"))

@@ -42,12 +42,12 @@ test("Admin and Administration reuse the same provider storage at domain-correct
 })
 
 test("credential management is provider-locked on each page while status-only providers stay read-only",()=>{
- const panel=read("components/admin/external-services-readiness.tsx")
+ const panel=read("components/admin/external-services-readiness.tsx")+read("lib/administration/external-services-view-data.ts")
  const manager=read("components/admin/integration-credential-manager.tsx")
  const route=read("app/api/administration/integrations/route.ts")
  assert.match(panel,/access\.ok&&managed\(service\.id\)/)
  assert.doesNotMatch(panel,/<IntegrationCredentialManager /)
- assert.match(panel,/userOAuthReady\(service\.id\)/)
+ assert.match(panel,/oauthReady\[service\.id\]/)
  assert.match(panel,/connectionNeedsProvider/)
  assert.match(panel,/name="eventId"/)
  assert.match(panel,/ProviderConnectionProbe provider=\{service\.id\}/)
@@ -82,7 +82,7 @@ test("Weeztix event choice and OAuth callback return to Ticketing without unsafe
 })
 
 test("No credentials create live EventPay, Peppol, banking, or contract delivery claims",()=>{
- const panel=read("components/admin/external-services-readiness.tsx")
+ const panel=read("components/admin/external-services-readiness.tsx")+read("lib/administration/external-services-view-data.ts")
  const readiness=read("lib/administration/external-services-readiness.ts")
  const api=read("app/api/admin/provider-connection-check/route.ts")
  assert.match(panel,/t\.states\.credentials_present/)

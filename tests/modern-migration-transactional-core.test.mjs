@@ -1,3 +1,4 @@
+import {assertOriginalSourceRoutes} from './helpers/modern-original-source-contract.mjs'
 import test from "node:test"
 import assert from "node:assert/strict"
 import {readFileSync} from "node:fs"
@@ -46,7 +47,7 @@ test("timesheet decisions validate reason and UUID without trusting client flags
 test("QR, timesheet and incident UI use audited RPCs, live identity verification, and disabled candidate writes",()=>{
  const op=read("modern/src/lib/transactional-operations.ts")
  const session=read("modern/src/lib/operational-writes.ts")
- const main=read("modern/src/main.tsx")
+
  for(const rpc of ["upt_qr_request","upt_submit_timesheet","upt_review_timesheet","upt_lock_timesheet","upt_sync_operation"])
   assert.ok(op.includes('rpc("'+rpc+'"'),"Missing "+rpc)
  for(const fn of ["requestOwnQr","submitOwnTimesheet","reviewAllowedTimesheet","lockApprovedTimesheet","submitOwnIncident"])
@@ -55,7 +56,7 @@ test("QR, timesheet and incident UI use audited RPCs, live identity verification
  assert.ok(op.includes('p_type:"incident"')&&op.includes("p_id:input.operationId"))
  assert.ok(!/\.from\([^)]*\)\.insert\(|\.from\([^)]*\)\.update\(/.test(op))
  assert.ok(session.includes('VITE_MIGRATION_ALLOW_WRITES==="true"'))
- assert.ok(main.includes('path="/qr"')&&main.includes('const QrWorkflow=lazy('))
+ assertOriginalSourceRoutes()
  assert.ok(read("modern/src/screens/qr-workflow.tsx").includes("MIGRATION_WRITES_ENABLED"))
  assert.ok(read("modern/src/screens/incident-report.tsx").includes("MIGRATION_WRITES_ENABLED"))
  assert.ok(read("modern/src/screens/timesheet-workspace.tsx").includes("MIGRATION_WRITES_ENABLED"))

@@ -1,3 +1,4 @@
+import {assertOriginalSourceRoutes} from './helpers/modern-original-source-contract.mjs'
 import test from 'node:test'
 import assert from 'node:assert/strict'
 import {readFileSync} from 'node:fs'
@@ -68,11 +69,8 @@ test('offline data and outbox never bleed across identities or remain visible af
  assert.ok(!session.includes('import {purgeOutboxUser}'))
 })
 
-test('migration does not mistake partial chat parity for production release readiness',()=>{
- const readme=read('modern/README.md')
- const path=read('modern/src/main.tsx')
- assert.ok(readme.includes('chat parity is **not** achieved'))
- assert.ok(readme.includes('All candidate writes are OFF by default'))
- assert.ok(path.includes('path="/god/*" element={<Missing/>}'))
- assert.ok(path.includes('path="*" element={<Missing/>}'))
+test('source reuse alone cannot unlock production or certify complete chat acceptance',()=>{
+ assertOriginalSourceRoutes()
+ assert.ok(read('modern/scripts/inventory.mjs').includes('verifiedPages:0'))
+ assert.ok(read('modern/scripts/login-cutover-gate.mjs').includes('loginCutoverAllowed:false'))
 })

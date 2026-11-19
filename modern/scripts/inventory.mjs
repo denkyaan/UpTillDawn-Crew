@@ -58,15 +58,15 @@ const routes=[...pages.map(source=>({kind:"page",source,path:routeOf(source),sta
  ...api.map(source=>({kind:"api",source,path:routeOf(source),status:"unported"}))]
 routes.sort((a,b)=>a.path.localeCompare(b.path)||a.kind.localeCompare(b.kind))
 const criticalRoutes=routes.filter(item=>criticalWords.some(k=>item.path.toLowerCase().includes(k)))
-const main=await readFile(join(repo,"modern/src/main.tsx"),"utf8")
-if(!main.includes('path="*" element={<Missing/>}'))throw Error("Unported routes must fail clearly")
-if(!main.includes('path="/god/*" element={<Missing/>}'))throw Error("Maker must not be implicitly migrated")
-if(!main.includes('path="/portals/administration/finance"'))throw Error("Finance candidate route missing")
+const main=await readFile(join(repo,"modern/src/screens/original-application.tsx"),"utf8")
+const source=await readFile(join(repo,"modern/tooling/main-source.mjs"),"utf8")
+if(!main.includes('main-source/routes')||!main.includes('<NotFound/>'))throw Error("Original source routes and explicit 404 required")
+if(!source.includes("Private server module blocked"))throw Error("Private server code must fail closed")
 const report={
  migrationReady:false,
  productionCutoverAllowed:false,
  existing:{pages:pages.length,api:api.length,serverActionExports:serverActions},
- pilot:{portedRoutes:pilots.size,readOnly:true,securedWritesMigrated:0,guardedWritesPresent:true,guardedWritesEnabled:false},
+ pilot:{portedRoutes:pilots.size,replacedByOriginalSource:true,securedWritesMigrated:0,originalActionAcceptancePending:true},
  parity:{verifiedPages:0,verifiedApis:0,verifiedServerActions:0,pendingRoutes:routes.length,pendingServerActions:serverActions},
  criticalRoutesPending:criticalRoutes.length,
  ...(process.argv.includes("--routes")?{routes}:{}),

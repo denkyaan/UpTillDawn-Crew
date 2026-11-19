@@ -40,9 +40,10 @@ test("fixed room labels and live messages remain distinct in four languages",()=
 })
 test("promotion link uses its own guarded route and all writes remain behind migration flag",()=>{
  const read=p=>readFileSync(new URL("../src/"+p,import.meta.url),"utf8")
- const main=read("main.tsx"),promotionUI=read("screens/promotion.tsx")
+ const main=read("screens/original-application.tsx"),promotionUI=read("screens/promotion.tsx")
  const chats=read("screens/chats.tsx"),readers=read("lib/chat-readers.ts")
- assert.ok(main.includes('<PortalGuard portal="promotion"><Suspense fallback="Chat laden…"><Chats scope="promotion"/>'))
+ assert.ok(main.includes('main-source/app/(app)/portals/promotion/layout.tsx'))
+ assert.ok(main.includes('<PromotionLayout>'))
  assert.ok(promotionUI.includes('to="/portals/promotion/chat"'))
  assert.ok(!promotionUI.includes('to="/chat"'))
  assert.ok(chats.includes("visibleChatChannels(list.data||[],scope)"))
