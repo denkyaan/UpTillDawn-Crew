@@ -30,4 +30,26 @@ export async function acknowledgeAllowedIncident(id:string):Promise<void>{
  const {error}=await supabase().rpc("upt_acknowledge_incident",{p_incident:id})
  if(error)throw new Error("incident_acknowledgement_rejected")
 }
+// Existing audited RPC checks auth.uid() against each notification. Only
+// confirmed user interaction may submit this mutation; no direct UPDATE.
+export async function markOwnNotificationRead(id:string):Promise<void>{
+ requireUuid(id)
+ await verifyOwnSession()
+ const {error}=await supabase().rpc("upt_mark_notification_read",{p_notification:id})
+ if(error)throw new Error("notification_read_rejected")
+}
+// Processes exactly the displayed bounded set, not unseen pages. Three
+// requests at once cap backend fan-out and avoid a Worker proxy.
+export async function markDisplayedNotificationsRead(ids:readonly string[]):Promise<void>{
+ if(ids.length>70)throw new Error("notification_batch_too_large")
+ const unique=[...new Set(ids.map(requireUuid))]
+ if(unique.length===0)return
+ await verifyOwnSession()
+ for(let i=0;i<unique.length;i+=3){
+  const results=await Promise.all(unique.slice(i,i+3).map(id=>
+   supabase().rpc("upt_mark_notification_read",{p_notification:id})
+  ))
+  if(results.some(result=>result.error))throw new Error("notification_batch_partial")
+ }
+}
 export function writesAvailable(){return MIGRATION_WRITES_ENABLED}

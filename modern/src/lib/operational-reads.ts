@@ -45,7 +45,7 @@ export async function ownProfile(uid:string,signal:AbortSignal):Promise<Profile|
 }
 export async function ownNotifications(uid:string,signal:AbortSignal):Promise<Notification[]>{
  const {data,error}=await supabase().from("crew_notifications").select("id,title,body,kind,read_at,created_at,link")
-  .eq("user_id",uid).order("created_at",{ascending:false}).limit(70).abortSignal(signal)
+  .eq("user_id",uid).neq("kind","error_report").order("created_at",{ascending:false}).limit(70).abortSignal(signal)
  failed(error,"notifications_unavailable")
  return (data||[]) as Notification[]
 }
