@@ -54,7 +54,6 @@ function Authenticated({children}:{children:ReactNode}){
  const canAdmin=state.portals.includes("administration")
  const canEvents=state.portals.includes("events")
  return <>
-  <style>{candidateStyles}</style>
   <ReturnAfterLogin/>
   <PortalMemory/>
   <a className="sr-only skip" href="#main">Skip to content</a>
@@ -144,11 +143,11 @@ function App(){
    <Route path="/auth/reset-password" element={<Suspense fallback={null}><OriginalAuth/></Suspense>}/>
    <Route path="/verify-email" element={<Suspense fallback={null}><OriginalAuth/></Suspense>}/>
    <Route path="/pending-approval" element={<Suspense fallback={null}><OriginalAuth/></Suspense>}/>
-   <Route element={<SessionProvider><Authenticated><Outlet/></Authenticated></SessionProvider>}>
+   <Route element={<SessionProvider><style>{candidateStyles}</style><Authenticated><Outlet/></Authenticated></SessionProvider>}>
     <Route index element={<Landing/>}/>
     <Route path="/overview" element={<Home/>}/>
-    <Route path="/admin" element={<Home/>}/>
-    <Route path="/maker-mode" element={<Landing/>}/>
+    <Route path="/admin" element={<Missing/>}/>
+    <Route path="/maker-mode" element={<Missing/>}/>
     <Route element={<PortalGuard portal="events"><Outlet/></PortalGuard>}>
      <Route path="/events" element={<Suspense fallback="Loading events…"><Events/></Suspense>}/>
      <Route path="/tasks" element={<Suspense fallback="Loading tasks…"><Tasks/></Suspense>}/>

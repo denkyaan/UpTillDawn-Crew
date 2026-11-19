@@ -22,7 +22,8 @@ function extractName(email: string): string {
 }
 
 function appOrigin(requested: unknown = null): string | null {
-    return authCallbackOrigin(process.env.NEXT_PUBLIC_APP_URL, process.env.NEXT_PUBLIC_SUPABASE_URL, requested)
+    const alternate = process.env.UPT_MIGRATION_EMAIL_CALLBACK_READY === 'true' ? requested : null
+    return authCallbackOrigin(process.env.NEXT_PUBLIC_APP_URL, process.env.NEXT_PUBLIC_SUPABASE_URL, alternate)
 }
 
 async function lookupIpLocation(ip: string | null) {
