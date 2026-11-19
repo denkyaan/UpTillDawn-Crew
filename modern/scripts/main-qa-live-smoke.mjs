@@ -10,7 +10,36 @@ const get=async(path,init={})=>{
  return response
 }
 function check(value,label){if(!value)throw Error("MODERN_MAIN_QA_"+label)}
-const health=await get("/api/v1/health")
+// A newly created workers.dev hostname/edge route can be briefly invisible
+// immediately after Wrangler prints "Deployed". Retry ONLY this harmless GET
+// while the Cloudflare edge converges. A persistent non-200 is a hard failure,
+// never a green build and never a permission/CSRF bypass.
+const sleep=ms=>new Promise(resolve=>setTimeout(resolve,ms))
+let health=null
+let lastHealth="not_requested"
+const maxHealthAttempts=12
+for(let attempt=1;attempt<=maxHealthAttempts;attempt++){
+ try{
+  const candidate=await get("/api/v1/health")
+  if(candidate.status===200){
+   health=candidate
+   break
+  }
+  const challenge=candidate.headers.get("cf-mitigated")
+  lastHealth="HTTP "+candidate.status+(challenge==="challenge"?" (Cloudflare challenge)":"")
+  if(candidate.status===401||candidate.status===403||challenge==="challenge"){
+   // No retries against an Access policy or security challenge: configuring
+   // a public URL does not authorize bypassing a protected Worker.
+   throw Error("MODERN_MAIN_QA_HEALTH_ACCESS_DENIED_"+candidate.status)
+  }
+ }catch(error){
+  const message=error instanceof Error?error.message:"request_failed"
+  if(message.startsWith("MODERN_MAIN_QA_HEALTH_ACCESS_DENIED_"))throw error
+  lastHealth="network_error"
+ }
+ if(attempt<maxHealthAttempts)await sleep(2000)
+}
+if(!health)throw Error("MODERN_MAIN_QA_HEALTH_STATUS_"+lastHealth.replace(/[^A-Za-z0-9_() -]/g,"").replaceAll(" ","_"))
 check(health.status===200,"HEALTH_STATUS")
 check(health.headers.get("x-content-type-options")==="nosniff","API_NOSNIFF")
 check((health.headers.get("cache-control")||"").includes("no-store"),"API_NO_STORE")
