@@ -2,3 +2,6 @@
 
 /* One role-aware navigation surface, responsive without overlapping content. */
 .nav{overflow-x:auto;max-width:100%;scrollbar-width:thin}.nav button{color:#e8ecf4;border:1px solid #363a55;border-radius:.65rem;background:transparent;padding:.5rem .75rem}.nav button.primary{background:#41277d;border-color:#8764c9}.bar>.nav{max-width:100%;flex:1 1 500px}.bar>.nav>a{white-space:nowrap}@media(max-width:600px){.bar>.nav{flex-wrap:nowrap}.bar>.nav>a{flex:0 0 auto}.nav button{white-space:nowrap}}dl{display:grid;grid-template-columns:minmax(85px,1fr) 2fr;gap:.5rem 1rem}dt{font-weight:600;color:#aab0c1}dd{margin:0;overflow-wrap:anywhere}
+
+/* A real two-mode owner chooser, visible without adding duplicate app tabs. */
+.mode-choice{max-width:580px;margin:2rem auto}.mode-link{display:inline-flex;align-items:center;justify-content:center;min-height:44px;border:1px solid #8d73c4;border-radius:.6rem;background:#6443a9;color:#fff;padding:.65rem 1rem}.mode-link:hover,.mode-link:focus-visible{background:#7653be;color:#fff}
