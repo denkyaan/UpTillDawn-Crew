@@ -6,6 +6,7 @@ import {useRead} from "../lib/use-read"
 import {useLocale} from "../lib/use-locale"
 import {supabase} from "../lib/supabase"
 import {setOwnEventAvailability,type AvailabilityResponse} from "../lib/availability"
+import {submissionChoice} from "../shared/availability-choice"
 
 type Availability={event_id:string;response:AvailabilityResponse;setup_available:boolean|null;breakdown_available:boolean|null}
 function date(value:string){const n=Date.parse(value);return Number.isFinite(n)?new Intl.DateTimeFormat(undefined,{dateStyle:"medium",timeStyle:"short"}).format(new Date(n)):value}
@@ -13,19 +14,21 @@ function date(value:string){const n=Date.parse(value);return Number.isFinite(n)?
 function AvailabilityForm({event,previous,refresh}:{event:EventRow;previous:Availability|undefined;refresh:()=>Promise<void>}){
  const [saving,setSaving]=useState(false)
  const [error,setError]=useState(false)
- const {locale}=useLocale()
+ const {t}=useLocale()
  const cutoff=Date.parse(event.registration_deadline||event.start_at)
  const now=Date.now(),end=Date.parse(event.end_at)
  const canJoin=now<cutoff
  const canCancel=previous?.response==="can"&&now<end
+ const [choice,setChoice]=useState<AvailabilityResponse>(canJoin?(previous?.response||"can"):"cannot")
+ const requiresReason=choice==="cannot"&&previous?.response==="can"
  const allowWrites=import.meta.env.VITE_MIGRATION_ALLOW_WRITES==="true"
  if(!allowWrites)return <p className="muted">Availability writes remain disabled until verified against the existing seven-role workflows.</p>
- if(!canJoin&&!canCancel)return <p className="muted">Registration deadline passed.</p>
+ if(!canJoin&&!canCancel)return <p className="muted">{t.registrationClosed}</p>
  const submit=async(eventForm:FormEvent<HTMLFormElement>)=>{
   eventForm.preventDefault()
   const fd=new FormData(eventForm.currentTarget)
-  const response=fd.get("response")==="cannot"?"cannot":"can"
-  if(!canJoin&&response!=="cannot")return
+  const response=submissionChoice(choice,canJoin,canCancel)
+  if(requiresReason&&String(fd.get("reason")||"").trim().length<3){setError(true);return}
   setSaving(true);setError(false)
   try{
    await setOwnEventAvailability({
@@ -38,17 +41,19 @@ function AvailabilityForm({event,previous,refresh}:{event:EventRow;previous:Avai
   finally{setSaving(false)}
  }
  return <form onSubmit={e=>void submit(e)}>
-  <label>Availability
-   <select name="response" defaultValue={canJoin?(previous?.response||"can"):"cannot"} disabled={!canJoin}>
-    {canJoin&&<option value="can">{locale==="nl"?"Ik kan":"I can attend"}</option>}
-    <option value="cannot">{locale==="nl"?"Ik kan niet":"I cannot attend"}</option>
+  <label>{t.availabilityLabel}
+   <select name="response" value={canJoin?choice:"cannot"} disabled={!canJoin}
+    onChange={event=>setChoice(event.target.value as AvailabilityResponse)}>
+    {canJoin&&<option value="can">{t.canAttend}</option>}
+    <option value="cannot">{t.cannotAttend}</option>
    </select>
   </label>
-  <label><input type="checkbox" name="setup" defaultChecked={previous?.setup_available===true}/>Setup available</label>
-  <label><input type="checkbox" name="breakdown" defaultChecked={previous?.breakdown_available===true}/>Breakdown available</label>
-  <label>Cancellation reason (required when withdrawing)<input type="text" name="reason" minLength={3} maxLength={1000} placeholder="Reason when cancelling"/></label>
-  {error&&<p role="alert" className="error">Availability could not be saved.</p>}
-  <button disabled={saving} className="primary">{saving?"Saving…":"Save availability"}</button>
+  <label><input type="checkbox" name="setup" defaultChecked={previous?.setup_available===true}/>{t.setupAvailable}</label>
+  <label><input type="checkbox" name="breakdown" defaultChecked={previous?.breakdown_available===true}/>{t.breakdownAvailable}</label>
+  <label>{t.withdrawalReason}<input type="text" name="reason" minLength={3} maxLength={1000}
+   required={requiresReason} placeholder={t.withdrawalReason}/></label>
+  {error&&<p role="alert" className="error">{t.availabilityFailed}</p>}
+  <button disabled={saving} className="primary">{saving?t.saving:t.saveAvailability}</button>
  </form>
 }
 function EventCard({event,previous,refresh,availabilityVerified}:{event:EventRow;previous:Availability|undefined;refresh:()=>Promise<void>;availabilityVerified:boolean}){
