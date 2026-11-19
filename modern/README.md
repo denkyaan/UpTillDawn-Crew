@@ -180,3 +180,28 @@ The reviewed but **NOT EXECUTED** file `modern/sql/break-payroll-grace-reconcili
 ### Payroll CSV atomic consistency gate (staged, not deployed)
 
 The database JSON wrapper will attach mandatory `policy_version=paid60-grace10-event-v1` to every payroll row; `payrollCsv` now **rejects missing/legacy versions**, prevents silently exporting an all-break-deducted legacy row as though it were new policy, and outputs actual break seconds separately from the **deducted excess**. It continues to reject duplicate sessions, unapproved timesheets, malformed UTC timestamps and unsafe numeric coercions. This exporter change and the candidate SQL wrapper MUST be deployed atomically. Until then the existing Main/Production implementation stays unchanged and the migration PR must remain Draft. Its unit tests do not authorize payroll production.
+
+## Main-safe integration boundary — no runtime cutover
+
+The full source for this migration is staged under `modern/` and may be
+merged into `main` as an **isolated, disabled development candidate**, without
+replacing the existing Next app or deploying a second Worker. It is **not** a
+completed application, public deployment, or production approval.
+
+The existing Next administration payroll implementation and its unit tests are
+kept byte-for-byte identical to the pre-migration `main` version. The
+**versioned candidate-only** CSV implementation lives at
+`modern/src/shared/payroll-csv.ts` with tests at
+`modern/tests/payroll-csv.test.mjs`. Its companion SQL is review-only under
+`modern/sql`, **not** `supabase/migrations`; it has not been installed on
+Main QA or Production. Without the matching DB change, that candidate exporter
+must not be connected to active API routes.
+
+Root `package.json`, `app/`, existing live API routes, database migrations,
+`deploy-main.yml` and `deploy-cloudflare.yml` remain unchanged. The root
+ESLint and TypeScript configurations exclude `modern/` from the Next app's
+analysis; the migration uses its own independently validated TS/Vite/Worker
+build. Candidate writes and OAuth login remain disabled. A normal Main push
+runs the Main fast CI and existing Main deployment; Production is dispatched
+**only** by a separate explicit release action. Nothing in this bundle
+authorizes a production cutover, provider account setup or enabling writes.

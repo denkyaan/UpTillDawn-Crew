@@ -45,11 +45,16 @@ test("SQL candidate preserves authorization and payroll safeguards, shares a pri
 })
 
 test("payroll export contract cannot silently consume old break-deducting database",()=>{
- const oldCsv=readFileSync(new URL("../../lib/administration/payroll-export.ts",import.meta.url),"utf8")
+ const oldCsv=readFileSync(new URL("../src/shared/payroll-csv.ts",import.meta.url),"utf8")
+ const activeCsv=readFileSync(new URL("../../lib/administration/payroll-export.ts",import.meta.url),"utf8")
  assert.ok(source.includes("jsonb_build_object('policy_version','paid60-grace10-event-v1')"))
  assert.ok(oldCsv.includes("row.policy_version!==PAYROLL_POLICY_VERSION"))
  assert.ok(oldCsv.includes("'Deducted excess break seconds'"))
  assert.ok(oldCsv.includes("const deducted=gross-net"))
  assert.ok(oldCsv.includes("pause>gross||net>gross||gross-net>pause"))
  assert.ok(!oldCsv.includes("gross-pause!==net"))
+ // The existing deployed exporter MUST retain its original matching SQL
+ // contract until the real schema and candidate exporter release together.
+ assert.ok(activeCsv.includes("gross-pause!==net"))
+ assert.ok(!activeCsv.includes("PAYROLL_POLICY_VERSION"))
 })
