@@ -13,6 +13,7 @@
     "upt_current_profile_completion",
     "upt_current_session_context",
     "upt_decide_check_in",
+    "upt_decide_check_out",
     "upt_god_login_owner",
     "upt_god_logout",
     "upt_god_maker_log_snapshot",
@@ -31,12 +32,15 @@
     "upt_send_chat_message_operation_v2",
     "upt_set_event_availability_with_reason",
     "upt_set_own_workplace_preference",
+    "upt_start_break",
     "upt_start_promotion_task",
+    "upt_stop_break",
     "upt_submit_promotion_evidence",
     "upt_submit_timesheet",
     "upt_sync_operation",
     "upt_update_own_profile",
-    "upt_update_task_status"
+    "upt_update_task_status",
+    "upt_work_session_time_summary"
   ],
   "lastObserved": {
     "checkedOn": "2026-11-19",

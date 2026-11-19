@@ -5,9 +5,9 @@ import {readFileSync} from "node:fs"
 const file=p=>readFileSync(p,"utf8")
 const metadata=JSON.parse(file("modern/scripts/rpc-reference.json"))
 test("all candidate RPCs are review-allowlisted without live credentials",()=>{
- assert.equal(metadata.requiredPublicRpcNames.length,36)
+ assert.equal(metadata.requiredPublicRpcNames.length,40)
  const out=JSON.parse(execFileSync(process.execPath,["modern/scripts/rpc-contract.mjs"],{encoding:"utf8"}))
- assert.equal(out.sourceRpcCount,36)
+ assert.equal(out.sourceRpcCount,40)
  assert.deepEqual(out.unreviewedRpc,[])
  assert.deepEqual(out.noLongerReferenced,[])
  assert.equal(out.liveDatabaseVerifiedInCi,false)
