@@ -48,9 +48,10 @@ test('offline chat uses a user scoped bounded outbox, stable operation ID and ex
  assert.ok(outbox.includes('break // bound backend load and preserve FIFO'))
  assert.ok(actions.includes('rpc("upt_send_chat_message_operation_v2"'))
  assert.ok(actions.includes('p_operation:input.operationId'))
- assert.ok(chat.includes('Some messages still queued locally') && chat.includes('Saved on this device'))
+ assert.ok(chat.includes('const l=chatCopy(locale)'))
+ assert.ok(chat.includes('setStatus(thisSent?l.sent:l.queued)'))
  assert.ok(chat.includes('const thisSent=!remaining.some(item=>item.id===queuedItem.id)'))
- assert.ok(chat.includes('Nothing sent.'))
+ assert.ok(chat.includes('setStatus(l.accountFailed)'))
  assert.ok(!outbox.includes('localStorage.'))
 })
 

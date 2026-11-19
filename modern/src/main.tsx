@@ -159,6 +159,7 @@ function App(){
     <Route path="/portals/administration" element={<PortalGuard portal="administration"><Suspense fallback="Administratie laden…"><Administration/></Suspense></PortalGuard>}/>
     <Route path="/portals/administration/finance" element={<PortalGuard portal="administration"><Suspense fallback="Loading finance…"><Finance/></Suspense></PortalGuard>}/>
     <Route path="/portals/promotion" element={<PortalGuard portal="promotion"><Suspense fallback="Promotie laden…"><Promotion/></Suspense></PortalGuard>}/>
+    <Route path="/portals/promotion/chat" element={<PortalGuard portal="promotion"><Suspense fallback="Chat laden…"><Chats scope="promotion"/></Suspense></PortalGuard>}/>
     <Route path="/maker/diagnostics" element={<MakerGuard><Suspense fallback="Makerdiagnostiek laden…"><MakerDiagnostics/></Suspense></MakerGuard>}/>
     <Route path="/god/*" element={<Missing/>}/>
     <Route path="*" element={<Missing/>}/>

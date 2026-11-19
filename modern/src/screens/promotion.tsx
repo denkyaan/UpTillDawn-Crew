@@ -14,7 +14,7 @@ export default function Promotion(){
    <p>{item.description||"—"}</p>
   </li>)}</DataList>
  </WhenLoading></section>
- <p><Link to="/chat">Algemene chat promotie en beschikbare kanalen</Link></p>
+ <p><Link to="/portals/promotion/chat">Algemene chat promotie</Link></p>
  <p className="muted">Promotiebewijs uploaden, taakacceptatie en strikes blijven in de bestaande gecontroleerde app.</p>
  </>
 }

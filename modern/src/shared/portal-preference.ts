@@ -9,7 +9,7 @@ const KEY_PREFIX="uptilldawn-modern-portal:"
 const allowedPaths=new Set([
  "/overview","/events","/tasks","/chat","/crew","/briefings","/qr",
  "/operations","/notifications","/profile","/responsible",
- "/portals/promotion","/portals/administration",
+ "/portals/promotion","/portals/promotion/chat","/portals/administration",
  "/portals/administration/finance","/maker/diagnostics",
 ])
 export function canRememberRoute(path:string,access:PortalAccess):boolean{
@@ -17,7 +17,7 @@ export function canRememberRoute(path:string,access:PortalAccess):boolean{
  if(path==="/maker/diagnostics")return access.isOwner
  if(path==="/portals/administration"||path==="/portals/administration/finance")
   return access.portals.includes("administration")
- if(path==="/portals/promotion")return access.portals.includes("promotion")
+ if(path==="/portals/promotion"||path==="/portals/promotion/chat")return access.portals.includes("promotion")
  if(path==="/responsible")
   return access.isOwner||access.role==="admin"||access.role==="responsible_lead"
  if(["/events","/tasks","/chat","/crew","/briefings","/qr","/operations"].includes(path))
