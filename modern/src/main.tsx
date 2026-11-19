@@ -23,6 +23,11 @@ const MakerDiagnostics=lazy(()=>import("./screens/maker-diagnostics"))
 const QrWorkflow=lazy(()=>import("./screens/qr-workflow"))
 const ProviderOauthCallback=lazy(()=>import("./screens/provider-oauth-callback"))
 
+// Main mounts the exact same static SPA under /modern while preserving all
+// existing Next routes. Route memory stays relative to the mounted basename.
+const sameOriginMount=typeof window!=="undefined" &&
+ window.location.origin==="https://uptilldawn-main.uptilldawn.workers.dev" &&
+ /^\\/modern(?:\\/|$)/.test(window.location.pathname)
 const legacyMainUrl="https://uptilldawn-main.uptilldawn.workers.dev"
 const legacyFallbackCopy={
  nl:{open:"Open bestaande UpTillDawn-app",missing:"Deze functie is nog niet gemigreerd. Ze blijft beschikbaar in de bestaande Main-app.",title:"Nog niet overgezet"},
@@ -155,7 +160,7 @@ function Missing(){
  </section>
 }
 function App(){
- return <BrowserRouter><SessionProvider>
+ return <BrowserRouter basename={sameOriginMount?"/modern":undefined}><SessionProvider>
   <Routes>
    <Route path="/login" element={<SignIn/>}/>
    <Route element={<Authenticated><Outlet/></Authenticated>}>
@@ -189,5 +194,5 @@ function App(){
  </SessionProvider></BrowserRouter>
 }
 createRoot(document.getElementById("root")!).render(<StrictMode><App/></StrictMode>)
-if(import.meta.env.PROD&&"serviceWorker" in navigator)
+if(import.meta.env.PROD&&!sameOriginMount&&"serviceWorker" in navigator)
  window.addEventListener("load",()=>{void navigator.serviceWorker.register("/sw.js").catch(()=>{})})
