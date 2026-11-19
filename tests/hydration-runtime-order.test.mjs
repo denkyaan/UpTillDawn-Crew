@@ -11,7 +11,10 @@ test('runtime translation waits until after app children hydration',async()=>{
  const bootstrap=await readFile(new URL('../components/lazy-client-bootstraps.tsx',import.meta.url),'utf8')
  assert.match(bootstrap,/import\("@\/components\/locale-sync"\)/)
  assert.match(bootstrap,/ssr:false/)
- assert.match(sync,/setTimeout\(\(\)=>\s*\{[\s\S]*requestAnimationFrame\(\(\)=>\s*\{[\s\S]*requestAnimationFrame\([\s\S]*\},1200\)/)
+ assert.match(sync,/clientRendered=false/)
+ assert.match(sync,/setTimeout\(\(\)=>\s*\{[\s\S]*requestAnimationFrame\(\(\)=>\s*\{[\s\S]*requestAnimationFrame\([\s\S]*\},clientRendered\?0:1200\)/)
+ const candidate=await readFile(new URL('../modern/src/screens/original-auth.tsx',import.meta.url),'utf8')
+ assert.match(candidate,/<LocaleSync clientRendered\/>/)
 })
 
 test('operational hydration is independent of retired tour overlays',async()=>{
