@@ -26,6 +26,11 @@ if(remote&&remote!==approvedRemote)throw Error('EXACT_MODERN_MAIN_QA_ORIGIN_REQU
 const origin=remote||'http://127.0.0.1:4176',root=resolve(import.meta.dirname,'../..')
 const preview=remote?null:spawn(process.execPath,[resolve(root,'modern/node_modules/vite/bin/vite.js'),'preview','--host','127.0.0.1','--port','4176','--strictPort'],{cwd:resolve(root,'modern'),stdio:'ignore'})
 let browser,signins=0,total=0,menuComparisons=0
+const notificationReads=new WeakMap()
+function observeNotices(page){
+ const reads=[];notificationReads.set(page,reads)
+ page.on('response',async response=>{const url=new URL(response.url());if(url.origin!==qa.origin||!url.pathname.endsWith('/crew_notifications')||url.searchParams.get('select')!=='id,link,kind')return;try{const data=await response.json();reads.push({status:response.status(),count:Array.isArray(data)?data.length:null})}catch{reads.push({status:response.status(),count:null})}})
+}
 async function ready(page){
  await page.locator('[data-app-shell-ready="true"]').waitFor({timeout:30000})
  await page.locator('[data-route-loading="true"]').waitFor({state:'detached',timeout:30000})
@@ -55,8 +60,13 @@ async function fingerprint(page){
  })
 }
 async function compare(a,b,label){
- const [expected,actual]=await Promise.all([fingerprint(a),fingerprint(b)])
+ let [expected,actual]=await Promise.all([fingerprint(a),fingerprint(b)])
+ const deadline=Date.now()+9000
+ while(JSON.stringify(actual)!==JSON.stringify(expected)&&Date.now()<deadline){
+  await new Promise(resolve=>setTimeout(resolve,250));[expected,actual]=await Promise.all([fingerprint(a),fingerprint(b)])
+ }
  if(JSON.stringify(actual)!==JSON.stringify(expected)){
+  console.error('ORIGINAL_BADGE_READS '+label+' '+JSON.stringify({main:notificationReads.get(a),candidate:notificationReads.get(b)}))
   await mkdir(resolve(root,'test-results/modern-source-parity'),{recursive:true})
   for(const [page,suffix]of [[a,'main'],[b,'vite']])await page.screenshot({path:resolve(root,'test-results/modern-source-parity',label+'-'+suffix+'.png'),fullPage:true})
   for(const field of ['navigation','fields'])if(JSON.stringify(actual[field])!==JSON.stringify(expected[field]))console.error('ORIGINAL_UI_CONTROL_DIFFERENCE '+label+' '+field+' '+JSON.stringify({expected:expected[field],actual:actual[field]}))
@@ -114,6 +124,7 @@ try{
     const original=await browser.newContext({...options,storageState:{cookies:mainCookies,origins:[]}})
     try{
      const a=await original.newPage(),b=await candidate.newPage(),errors=[]
+     observeNotices(a);observeNotices(b)
      b.on('pageerror',error=>errors.push(error.name))
      const label=[bot.role,language,device.name].join('-')
      // Sequential Main SSR requests respect the Free environment's limits.
