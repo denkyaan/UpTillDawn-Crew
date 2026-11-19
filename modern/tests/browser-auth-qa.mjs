@@ -50,7 +50,7 @@ async function fingerprint(page){
  })
 }
 async function compare(a,b,label){
- const expected=await fingerprint(a),actual=await fingerprint(b)
+ const [expected,actual]=await Promise.all([fingerprint(a),fingerprint(b)])
  if(JSON.stringify(actual)!==JSON.stringify(expected)){
   await mkdir(resolve(root,'test-results/modern-source-parity'),{recursive:true})
   for(const [page,suffix]of [[a,'main'],[b,'vite']])await page.screenshot({path:resolve(root,'test-results/modern-source-parity',label+'-'+suffix+'.png'),fullPage:true})
@@ -66,7 +66,7 @@ async function menus(a,b,label){
  for(let i=0;i<count;i++){
   const original=buttons.nth(i),candidate=b.locator(selector).nth(i)
   if(!await original.isEnabled()||!await candidate.isEnabled())continue
-  await original.click();await candidate.click();await a.waitForTimeout(100);await b.waitForTimeout(100)
+  await Promise.all([original.click(),candidate.click()]);await Promise.all([a.waitForTimeout(100),b.waitForTimeout(100)])
   await compare(a,b,label+'-menu-'+i);menuComparisons++
   if(label==='head_admin-nl-desktop'&&(await original.innerText()).includes('AI')&&await candidate.getAttribute('aria-expanded')==='true'){
    await b.evaluate(()=>window.dispatchEvent(new Event('upt-source-refresh')))
@@ -86,12 +86,14 @@ try{
  for(const bot of bots){
   const login=await browser.newContext({locale:'nl-BE',viewport:devices[0].viewport})
   try{
-   const page=await login.newPage();let status=0
+   const page=await login.newPage();let status=0,reads=0
+   page.on('request',request=>{if(new URL(request.url()).origin===qa.origin)reads++})
+   page.on('pageerror',error=>console.error('QA_PAGE_ERROR '+bot.role+' '+error.name))
    page.on('response',response=>{if(new URL(response.url()).pathname==='/api/auth/portal-login')status=response.status()})
    await page.goto(origin+'/login/'+bot.login,{waitUntil:'domcontentloaded',timeout:20000})
    await page.locator('input[name="email"]').fill(bot.email);await page.locator('input[name="password"]').fill(password)
    await page.locator('form button[type="submit"]').click()
-   try{await ready(page)}catch{throw Error('QA_LOGIN_NOT_READY '+bot.role+' HTTP='+status)}
+   try{await ready(page)}catch(error){console.error('QA_READY_FAILURE '+bot.role+' '+(error instanceof Error?error.message.split('\n')[0]:'unknown')+' reads='+reads);throw Error('QA_LOGIN_NOT_READY '+bot.role+' HTTP='+status)}
    signins++
    const landing=new URL(page.url()).pathname,state=await login.storageState()
    // Check ordinary source pages without mutations before device comparisons.
@@ -110,8 +112,7 @@ try{
      b.on('pageerror',error=>errors.push(error.name))
      const label=[bot.role,language,device.name].join('-')
      // Sequential Main SSR requests respect the Free environment's limits.
-     await a.goto(legacy+landing,{waitUntil:'domcontentloaded',timeout:30000});await ready(a)
-     await b.goto(origin+landing,{waitUntil:'domcontentloaded',timeout:20000});await ready(b)
+     await Promise.all([a.goto(legacy+landing,{waitUntil:'domcontentloaded',timeout:30000}),b.goto(origin+landing,{waitUntil:'domcontentloaded',timeout:20000})]);await ready(a);await ready(b)
      if(await b.locator('html').getAttribute('lang')!==language)throw Error('QA_LOCALE '+label)
      await compare(a,b,label);await menus(a,b,label)
      if(language==='nl'&&device.name==='desktop'){

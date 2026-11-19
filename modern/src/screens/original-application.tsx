@@ -53,7 +53,7 @@ function AuthenticatedRoutes(){
  if(auth.loading)return <Loading/>
  if(!auth.user){window.location.replace('/login');return null}
  if(!auth.profile){window.location.replace('/pending-approval');return null}
- return <OriginalRequest revision={requestKey}><Boundary key={identityKey} revision={requestKey} reset={()=>setRevision(n=>n+1)}><Suspense fallback={<Loading/>}>{content}</Suspense></Boundary></OriginalRequest>
+ return <OriginalRequest key={identityKey} revision={requestKey}><Boundary key={identityKey} revision={requestKey} reset={()=>setRevision(n=>n+1)}><Suspense fallback={<Loading/>}>{content}</Suspense></Boundary></OriginalRequest>
 }
 export default function OriginalApplication(){
  return <ThemeProvider attribute="class" defaultTheme="dark" enableSystem disableTransitionOnChange><style>{styles}</style>
