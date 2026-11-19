@@ -1,9 +1,10 @@
-import {StrictMode,Suspense,lazy,useState,type FormEvent,type ReactNode} from "react"
+import {StrictMode,Suspense,lazy,useEffect,useState,type FormEvent,type ReactNode} from "react"
 import {createRoot} from "react-dom/client"
-import {BrowserRouter,Link,NavLink,Navigate,Outlet,Route,Routes} from "react-router-dom"
+import {BrowserRouter,Link,NavLink,Navigate,Outlet,Route,Routes,useLocation} from "react-router-dom"
 import {SessionProvider,useSession} from "./lib/session"
 import {resolveLocale} from "./shared/i18n"
 import {useLocale,setLocale} from "./lib/use-locale"
+import {canRememberRoute,preferredPortalRoute,rememberPortalRoute,type PortalAccess} from "./shared/portal-preference"
 import "./styles.css"
 
 const Events=lazy(()=>import("./screens/events"))
@@ -21,6 +22,16 @@ const Profile=lazy(()=>import("./screens/profile"))
 const MakerDiagnostics=lazy(()=>import("./screens/maker-diagnostics"))
 const QrWorkflow=lazy(()=>import("./screens/qr-workflow"))
 
+function PortalMemory(){
+ const {identity,portals,status}=useSession()
+ const {pathname}=useLocation()
+ useEffect(()=>{
+  if(status!=="ready"||!identity)return
+  const access:PortalAccess={userId:identity.id,role:identity.role,isOwner:identity.is_owner,portals}
+  if(canRememberRoute(pathname,access))rememberPortalRoute(pathname,access)
+ },[status,identity,portals,pathname])
+ return null
+}
 function Authenticated({children}:{children:ReactNode}){
  const state=useSession()
  const {locale,t}=useLocale()
@@ -30,10 +41,11 @@ function Authenticated({children}:{children:ReactNode}){
  if(state.status==="error")return <main className="auth" role="alert">{t.unavailable}<button className="primary" onClick={()=>void state.refresh()}>{t.refresh}</button></main>
  const canAdmin=state.portals.includes("administration")
  return <>
+  <PortalMemory/>
   <a className="sr-only skip" href="#main">Skip to content</a>
   <header className="bar"><div className="brand">UP TILL DAWN <span className="muted">· local-first candidate</span></div>
    <nav aria-label={t.portal} className="nav">
-    <NavLink to="/" end>{t.home}</NavLink>
+    <NavLink to="/overview">{state.identity?.is_owner?"Normale app":t.home}</NavLink>
     <NavLink to="/events">{t.events}</NavLink>
     <NavLink to="/crew">{t.crew}</NavLink>
     <NavLink to="/briefings">{t.briefings}</NavLink>
@@ -86,6 +98,18 @@ function SignIn(){
    <button className="primary" disabled={busy}>{busy?t.loading:t.login}</button>
   </form></section></main>
 }
+function Landing(){
+ const {identity,portals}=useSession()
+ if(!identity)return null
+ const access:PortalAccess={userId:identity.id,role:identity.role,isOwner:identity.is_owner,portals}
+ const destination=preferredPortalRoute(access)
+ if(destination)return destination==="/overview"?<Home/>:<Navigate to={destination} replace/>
+ return <main className="auth"><section className="card"><h1>Kies je portaal</h1>
+  <p className="muted">Deze keuze wordt enkel op dit toestel onthouden. Je bevoegdheden worden bij iedere sessie opnieuw gecontroleerd.</p>
+  <div className="row"><Link className="primary" to="/overview">Normale app</Link>
+   <Link className="primary" to="/maker/diagnostics">God Mode</Link></div>
+ </section></main>
+}
 function Home(){
  const {identity}=useSession()
  return <><h1>UpTillDawn</h1>
@@ -115,7 +139,8 @@ function App(){
   <Routes>
    <Route path="/login" element={<SignIn/>}/>
    <Route element={<Authenticated><Outlet/></Authenticated>}>
-    <Route index element={<Home/>}/>
+    <Route index element={<Landing/>}/>
+    <Route path="/overview" element={<Home/>}/>
     <Route path="/events" element={<Suspense fallback="Loading events…"><Events/></Suspense>}/>
     <Route path="/tasks" element={<Suspense fallback="Loading tasks…"><Tasks/></Suspense>}/>
     <Route path="/chat" element={<Suspense fallback="Loading channels…"><Chats/></Suspense>}/>
