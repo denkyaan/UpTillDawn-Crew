@@ -66,7 +66,7 @@ function Authenticated({children}:{children:ReactNode}){
     </select></label>
     {state.identity?.is_owner&&<NavLink to="/maker/diagnostics">God Mode</NavLink>}
     <NavLink to="/profile">{t.profile}</NavLink>
-    <button type="button" onClick={()=>void state.signOut()}>{t.logout}</button></div>
+    <button type="button" onClick={()=>void state.signOut().catch(()=>{})}>{t.logout}</button></div>
   </header>
   <main id="main" className="layout">
    <div className="notice" role="note">{t.readOnly}</div>
