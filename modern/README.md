@@ -99,3 +99,15 @@ The parallel local-first candidate now has **ten additional, lazily grouped RLS 
 All queries select an explicit minimal column set, abort on navigation/timeout, share the client-wide 3-active/16-queued read budget and return at most 70–100 rows. Full datasets, payments, signed documents, personal identifiers and detailed approval decisions are **not** cached. CSV export is performed locally only upon user interaction and escapes formula-injection prefixes.
 
 **No bookkeeping, bank transfer, EventPay authorization, QR check-in, contract signature or payroll approval is claimed as migrated or verified.** Workflows that write remain gated off; the feature parity and production cutover gates remain fail-closed. The portal views are *candidates*, not finished ported routes.
+
+## One-bundle transactional migration: QR, incidents and timesheets
+
+This candidate implements (behind the **OFF-by-default** write gate):
+
+- The existing server-validated QR start/stop REQUEST state machine, including shift/briefing prerequisites, contact with a responsible lead, early-start explanation, and pending-approval outcomes. The UI never calls a pending request an approved check-in. Physical QR, accurate GPS evidence, selfie capture, and reviewer E2E parity are NOT yet validated.
+- Incident submission via the existing idempotent `upt_sync_operation(p_type='incident')` RPC, with explicit event/workplace selection, strict urgency/category/GPS/input validation, preserved operation UUID and GPS evidence on ambiguous retries, and no fake delivery confirmation. This initial candidate accepts text-only online reports. Legacy offline photo + malware scanning and fully durable incident queues remain to be migrated.
+- Personal timesheet submission, authorized reviewer approval/rejection (with required reason), and admin-only final locking, using the existing audited `upt_submit_timesheet`, `upt_review_timesheet` and `upt_lock_timesheet` RPCs. The RPCs enforce event membership, disallow self-approval and lock state transitions independently of UI controls.
+- No new top-level administration or operations tab duplication: the new timesheet workflow lives inside existing Crew and Administration sections, and the incident form lives within the existing incident view.
+- Pure, tested contracts for QR state, timesheet rejection reasons and incident payloads, without any browser/backend dependencies.
+
+This transaction bundle is implementation progress, **NOT feature parity or authorization to enable new writes**. Customer financial, EventPay, Weeztix, self-service OAuth and full Maker God Mode remain on the original secure implementation. The isolated migration branch must NOT merge or deploy until seven-role, multilingual browser tests and Cloudflare Free runtime metrics confirm parity.

@@ -18,6 +18,7 @@ const Administration=lazy(()=>import("./screens/administration"))
 const Promotion=lazy(()=>import("./screens/promotion"))
 const Notifications=lazy(()=>import("./screens/notifications"))
 const Profile=lazy(()=>import("./screens/profile"))
+const QrWorkflow=lazy(()=>import("./screens/qr-workflow"))
 
 function Authenticated({children}:{children:ReactNode}){
  const state=useSession()
@@ -35,6 +36,7 @@ function Authenticated({children}:{children:ReactNode}){
     <NavLink to="/events">{t.events}</NavLink>
     <NavLink to="/crew">{t.crew}</NavLink>
     <NavLink to="/briefings">{t.briefings}</NavLink>
+    <NavLink to="/qr">{t.qr}</NavLink>
     <NavLink to="/tasks">{t.tasks}</NavLink>
     <NavLink to="/chat">{t.chat}</NavLink>
     <NavLink to="/operations">{t.operations}</NavLink>
@@ -113,6 +115,7 @@ function App(){
     <Route path="/chat" element={<Suspense fallback="Loading channels…"><Chats/></Suspense>}/>
     <Route path="/crew" element={<Suspense fallback="Planning laden…"><Crew/></Suspense>}/>
     <Route path="/briefings" element={<Suspense fallback="Briefings laden…"><Briefings/></Suspense>}/>
+    <Route path="/qr" element={<Suspense fallback="QR-aanvraag laden…"><QrWorkflow/></Suspense>}/>
     <Route path="/operations" element={<Suspense fallback="Werkplekken laden…"><Operations/></Suspense>}/>
     <Route path="/notifications" element={<Suspense fallback="Meldingen laden…"><Notifications/></Suspense>}/>
     <Route path="/profile" element={<Suspense fallback="Profiel laden…"><Profile/></Suspense>}/>

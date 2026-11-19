@@ -1,5 +1,6 @@
 import {Suspense,lazy,useState} from "react"
 const HistoryPanel=lazy(()=>import("../components/history-panel"))
+const TimesheetWorkspace=lazy(()=>import("./timesheet-workspace"))
 import {useSession} from "../lib/session"
 import {usePrivateQuery} from "../lib/use-private-query"
 import {ownShifts,ownCheckIns,ownHours,type Shift,type CheckIn,type WorkSession} from "../lib/operational-reads"
@@ -16,7 +17,7 @@ export default function Crew(){
    .map(([key,title])=><button key={key} type="button" className={view===key?"primary":""} aria-pressed={view===key} onClick={()=>setView(key)}>{title}</button>)}
  </nav>
  <div style={{paddingTop:"1rem"}}>
-  {view==="shifts"?<Shifts uid={uid}/>:view==="checkins"?<Checkins uid={uid}/>:view==="hours"?<Hours uid={uid}/>:view==="timesheets"?<Suspense fallback="Timesheets laden…"><HistoryPanel kind="my-timesheets"/><HistoryPanel kind="time-reviews"/></Suspense>:<Suspense fallback="Materiaal laden…"><HistoryPanel kind="issued-items"/><HistoryPanel kind="settlements"/></Suspense>}
+  {view==="shifts"?<Shifts uid={uid}/>:view==="checkins"?<Checkins uid={uid}/>:view==="hours"?<Hours uid={uid}/>:view==="timesheets"?<Suspense fallback="Timesheets laden…"><TimesheetWorkspace/><HistoryPanel kind="time-reviews"/></Suspense>:<Suspense fallback="Materiaal laden…"><HistoryPanel kind="issued-items"/><HistoryPanel kind="settlements"/></Suspense>}
  </div></>
 }
 function Shifts({uid}:{uid:string}){

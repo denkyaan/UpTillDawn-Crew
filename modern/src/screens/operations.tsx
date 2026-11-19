@@ -1,5 +1,6 @@
 import {Suspense,lazy,useState} from "react"
 const HistoryPanel=lazy(()=>import("../components/history-panel"))
+const IncidentReport=lazy(()=>import("./incident-report"))
 import {useSession} from "../lib/session"
 import {usePrivateQuery} from "../lib/use-private-query"
 import {allowedWorkplaces,allowedInventory,ownIncidents,type Workplace,type InventoryItem,type Incident} from "../lib/operational-reads"
@@ -55,6 +56,7 @@ function Incidents({uid}:{uid:string}){
    {writesAvailable()&&item.status==="open"&&<button className="primary" disabled={busy!==null} onClick={()=>void ack(item.id)}>Bevestig ontvangst (verantwoordelijke)</button>}
   </li>)}
  </DataList></WhenLoading>
- <p className="muted">Meldingen aanmaken en media uploaden blijven in de bestaande app totdat verificatie en offline replay gemigreerd zijn.</p>
+ <Suspense fallback="Incidentformulier laden…"><IncidentReport onSubmitted={r.refresh}/></Suspense>
+ <p className="muted">Foto's, video's en duurzame offline replay zijn nog niet gemigreerd.</p>
  </section>
 }
