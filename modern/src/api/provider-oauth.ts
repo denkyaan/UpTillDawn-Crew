@@ -127,7 +127,7 @@ export async function verifyOAuthState(provider:OAuthProvider,uid:string,secret:
    decodeHex(match[5]).buffer as ArrayBuffer,encoder.encode(message))}
  catch{return false}
 }
-export async function sealOAuthToken(provider:OAuthProvider,config:Record<string,string>,secret:string):Promise<string>{
+export async function sealOAuthToken(provider:OAuthProvider|"weeztix",config:Record<string,string>,secret:string):Promise<string>{
  const key=await crypto.subtle.importKey("raw",masterBytes(secret).buffer as ArrayBuffer,"AES-GCM",false,["encrypt"])
  const iv=crypto.getRandomValues(new Uint8Array(12))
  const data=encoder.encode(JSON.stringify(config))
@@ -135,7 +135,7 @@ export async function sealOAuthToken(provider:OAuthProvider,config:Record<string
   additionalData:encoder.encode("uptilldawn:"+provider+":v1")},key,data)
  return "v1:"+bytesToBase64(iv)+":"+bytesToBase64(new Uint8Array(encrypted))
 }
-export async function openOAuthToken(provider:OAuthProvider,ciphertext:string,secret:string):Promise<Record<string,string>>{
+export async function openOAuthToken(provider:OAuthProvider|"weeztix",ciphertext:string,secret:string):Promise<Record<string,string>>{
  const match=/^v1:([A-Za-z0-9+/=]+):([A-Za-z0-9+/=]+)$/.exec(ciphertext)
  if(!match)throw Error("invalid_ciphertext")
  const iv=base64ToBytes(match[1]),data=base64ToBytes(match[2])
