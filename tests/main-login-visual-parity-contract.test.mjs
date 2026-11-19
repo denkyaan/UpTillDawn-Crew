@@ -20,7 +20,7 @@ const baseline = {
 const read=path=>readFileSync(path,"utf8")
 function gitBlobSha(path){
  const bytes=readFileSync(path)
- return createHash("sha1").update(Buffer.from("blob "+bytes.length+"\\0")).update(bytes).digest("hex")
+ return createHash("sha1").update(Buffer.from("blob "+bytes.length+"\0")).update(bytes).digest("hex")
 }
 test("every existing Main login source and original logo remains byte-for-byte unchanged",()=>{
  for(const [path,expected] of Object.entries(baseline))
