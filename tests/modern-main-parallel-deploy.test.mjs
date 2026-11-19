@@ -97,3 +97,14 @@ test("all Maker's legacy-to-modern link strings have four-locale catalog coverag
   assert.ok(source.includes(JSON.stringify(title)+":"),"Missing four-locale key "+title)
  }
 })
+
+test("real Main QA health rollout retries only a bounded anonymous GET and rejects persistent errors",()=>{
+ const script=get("modern/scripts/main-qa-live-smoke.mjs")
+ assert.ok(script.includes("const maxHealthAttempts=12"))
+ assert.ok(script.includes('get("/api/v1/health")'))
+ assert.ok(script.includes("if(!health)throw Error"))
+ assert.ok(script.includes("health.status===200"))
+ assert.ok(script.includes("Cloudflare challenge"))
+ assert.ok(script.includes("HEALTH_ACCESS_DENIED_"))
+ assert.ok(!script.includes('get("/api/v1/tickets/weeztix/scan")'))
+})
