@@ -1,6 +1,7 @@
 import {Hono} from "hono"
 import {createClient} from "@supabase/supabase-js"
 import {isActive,parseIdentity} from "../shared/identity.ts"
+import {sanitizedMakerRoute,sanitizedMakerName,sanitizedMakerSeverity} from "./god-redaction.ts"
 import {
  isOAuthProvider,oauthReady,oauthOrigin,oauthCallback,
  authorizationUrl,startOAuthState,verifyOAuthState,clearOAuthCookie,
@@ -196,8 +197,8 @@ app.get("/api/v1/god/diagnostics",async c=>{
     at:safeText(x.checked_at,60)
    })),
    errors:validList(row.errors).map(x=>({
-    name:safeText(x.error_name,110),route:safeText(x.route,140),
-    status:safeText(x.status,45),severity:safeText(x.ai_severity,45),
+    name:sanitizedMakerName(x.error_name),route:sanitizedMakerRoute(x.route),
+    status:safeText(x.status,45),severity:sanitizedMakerSeverity(x.ai_severity),
     needsMaker:x.maker_action_required===true,
     count:typeof x.reported_count==="number"?x.reported_count:null,
     at:safeText(x.created_at,60)

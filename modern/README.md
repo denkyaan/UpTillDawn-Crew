@@ -240,3 +240,34 @@ operator-managed master key. This commit does NOT connect a provider account,
 enable the scanner, deploy the modern Worker or replace the existing app.
 Seven-role authorized/unapproved/forbidden live tests and real scanner
 provider sandbox cases are still necessary before enabling the feature.
+
+## Administration, Maker and EventPay safety bundle
+
+The Administration portal's existing navigation now defaults to a single
+overview rather than duplicate shortcuts: three on-demand RLS reads
+(max 100 documents, 100 payment registrations, 100 inventory items)
+produce overdue-open document, failed Peppol and inventory attention
+counts plus at most eight highlighted records. A registered payment is
+NOT treated as a bank-confirmed settlement. No aggregate pretends to
+cover all rows beyond the bounded fetch, no hidden polling or worker SSR.
+Operational actions remain in their existing sections.
+
+God Mode uses the existing ephemeral signed owner-only Worker route and
+temporary privileged token; the new client triage prioritizes
+**maker_action_required**, critical severities and failed recovery checks.
+The Worker now strips all query strings, dynamic identifiers and suspicious
+labels before returning routes/errors. The maker can filter and export
+only the sanitized records on-device; the candidate cannot read Production
+via a Main account, repair code autonomously, execute SQL or change releases.
+No maker account gains business Admin rights.
+
+EventPay's pure local cart/reconciliation guard lives in
+`modern/src/shared/eventpay-policy.ts` with tests and documentation;
+this is **not a live integration** and no cashier can process transactions
+without verified official partner API/POS access. Existing external-service
+logins are to be performed by the end user in their assigned sections
+when supported, not by the developer guessing their credentials.
+
+Main remains the existing Next app; production cutover remains blocked
+until the full functional parity suite and Free Worker load validations
+pass. No live database schema or payment changes were made.
