@@ -9,20 +9,44 @@ const get=async(path,init={})=>{
  })
  return response
 }
+// A newly published Worker can take a few seconds to become visible in each
+// Cloudflare edge POP. Retry ONLY bounded public GET probes, and record the
+// actual response status rather than producing a context-free health failure.
+// Authenticated and mutating probes below are never retried.
+const pause=ms=>new Promise(resolve=>setTimeout(resolve,ms))
+async function getAfterPropagation(path,expected,init={}){
+ let last
+ for(let attempt=1;attempt<=10;attempt++){
+  try{
+   last=await get(path,init)
+   if(last.status===expected)return last
+   console.error("MODERN_MAIN_QA_EDGE "+path+" attempt "+attempt+
+    "/10 HTTP "+last.status+" content-type="+(last.headers.get("content-type")||"none")+
+    " cf-ray="+(last.headers.get("cf-ray")||"none"))
+   await last.body?.cancel().catch(()=>{})
+  }catch(error){
+   console.error("MODERN_MAIN_QA_NETWORK "+path+" attempt "+attempt+
+    "/10 "+(error instanceof Error?error.name:"unknown"))
+   if(attempt===10)throw error
+  }
+  if(attempt<10)await pause(Math.min(1000+attempt*350,4000))
+ }
+ return last
+}
 function check(value,label){if(!value)throw Error("MODERN_MAIN_QA_"+label)}
-const health=await get("/api/v1/health")
+const health=await getAfterPropagation("/api/v1/health",200)
 check(health.status===200,"HEALTH_STATUS")
 check(health.headers.get("x-content-type-options")==="nosniff","API_NOSNIFF")
 check((health.headers.get("cache-control")||"").includes("no-store"),"API_NO_STORE")
 check((await health.json()).service==="uptilldawn-local-first-api","REAL_HONO_WORKER")
-const login=await get("/login",{headers:{"Sec-Fetch-Mode":"navigate"}})
+const login=await getAfterPropagation("/login",200,{headers:{"Sec-Fetch-Mode":"navigate"}})
 check(login.status===200,"LOGIN_DOCUMENT")
 check((login.headers.get("content-type")||"").includes("text/html"),"LOGIN_HTML")
 const html=await login.text()
 check(html.includes('id="root"'),"REACT_SPA_SHELL")
 const found=html.match(/(?:src|href)="(\/assets\/[^"]+\.(?:js|css))"/)
 check(Boolean(found),"BUNDLED_ASSET_LINK")
-const asset=await get(found[1])
+const asset=await getAfterPropagation(found[1],200)
 check(asset.ok,"BUNDLED_ASSET")
 const noSession=await get("/api/v1/session")
 check(noSession.status===401,"ANON_SESSION_DENIED")
@@ -37,7 +61,7 @@ const noOauth=await get("/api/v1/integrations/oauth/start",{
 check(noOauth.status===401,"ANON_OAUTH_WRITE_DENIED")
 const unknown=await get("/api/v1/not-a-route")
 check(unknown.status===404,"UNKNOWN_API_NOT_SPA")
-const missing=await get("/nonexistent-path-123",{headers:{"Sec-Fetch-Mode":"navigate"}})
+const missing=await getAfterPropagation("/nonexistent-path-123",200,{headers:{"Sec-Fetch-Mode":"navigate"}})
 check(missing.status===200,"CLIENT_ROUTE_FALLBACK")
 check((await missing.text()).includes('id="root"'),"SPA_FALLBACK_CONTENT")
 console.log(JSON.stringify({ok:true,worker:"uptilldawn-modern-main",
