@@ -271,3 +271,54 @@ when supported, not by the developer guessing their credentials.
 Main remains the existing Next app; production cutover remains blocked
 until the full functional parity suite and Free Worker load validations
 pass. No live database schema or payment changes were made.
+
+## Real parallel Vite/Hono Main-QA deployment
+
+The existing Main deployment workflow now builds and publishes both
+`uptilldawn-main` (legacy Next) and `uptilldawn-modern-main`
+(static-first Vite/React/Hono) as separate Workers on separate GitHub
+runners after **the same validated Main fast CI**. Neither runs through
+Production; both authenticate against the Main-QA Supabase project.
+The public modern URL is
+`https://uptilldawn-modern-main.uptilldawn.workers.dev` ONLY after
+the actual Cloudflare publish and strict HTTP smoke test succeeds.
+
+The modern deployment keeps writes, ticket admission and provider OAuth
+**disabled** in both the browser and Worker. No private provider tokens or
+service-role key are available to it. Real browser acceptance logs in
+seven distinct Main-QA bots and checks 4 languages x 2 device profiles
+against the deployed modern Worker (not local Vite). This does **not**
+verify business write parity or real Cloudflare 30-user load. A test
+failure remains red and never claims complete migration. The old Main
+URL is preserved for unported functions, with one localized fallback link
+in the new app, not duplicate navigational tabs.
+
+The primary Main hostname remains mapped to the complete legacy app
+until the functional parity and security/write acceptance gates pass.
+No changes to the Production deployment workflow or Production database.
+
+### 30 distinct signed sessions through real deployed Hono (6 / 12 / 30 ramp)
+
+The existing candidate QA-session probe is parameterized to call the exact,
+explicitly allowlisted modern Main-QA Worker URL in its deployed-run mode.
+Thirty separate genuine Supabase Auth sessions are created with a rate-limited
+login ramp across seven isolated bot accounts, then a real Cloudflare Worker
+`GET /api/v1/session` validates JWT and RLS-scoped identity for 6, 12 and
+30 simultaneous requests. The benchmark reports Worker HTTP P95/maximum,
+errors and a strict cutoff. It never mutates user/business data or contacts
+Production. Bot sessions are signed out locally afterward. **Only this
+deployed mode** may report `cloudflareWorkerMeasured=true`; running the
+same script directly against Supabase stays clearly labeled a database
+benchmark. Browser acceptance precedes the 30-request peak to avoid
+overlapping DB pressure on the Free plan.
+
+### Opt-in from the existing Main app — Maker only
+
+The trusted Main landing screen shows **one** small test-app entry solely
+for the verified Maker/Owner account. It opens the actual modern Main-QA
+Worker origin; no standard staff, responsible, admin or promotion tab is
+duplicated, and no anonymous user gets any new capability. Cross-origin
+Supabase auth on the modern Worker is deliberately established anew with
+the normal sign-in screen; no credential, cookie, God Mode token or
+privileged session is copied across applications. All incomplete
+business functions stay available in the old Main app.

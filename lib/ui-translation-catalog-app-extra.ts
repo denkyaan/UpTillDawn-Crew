@@ -2,6 +2,18 @@ export type ExtraCatalogLocale = 'nl' | 'fr' | 'en' | 'de'
 type Row = { fr:string; en:string; de:string }
 
 export const APP_EXTRA_TRANSLATIONS: Record<string,Row> = {
+  "Test de nieuwe Vite-versie. De huidige app blijft beschikbaar voor functies die nog niet volledig zijn overgezet.": {fr:"Essayez la version Vite. L'application actuelle reste disponible pour les fonctions pas encore migrées.",en:"Try the new Vite version. The current app remains available for features not yet fully migrated.",de:"Testen Sie die neue Vite-Version. Die bestehende App bleibt für noch nicht vollständig migrierte Funktionen verfügbar."},
+  "Essayez la version Vite. L'application actuelle reste disponible pour les fonctions pas encore migrées.": {fr:"Essayez la version Vite. L'application actuelle reste disponible pour les fonctions pas encore migrées.",en:"Try the new Vite version. The current app remains available for features not yet fully migrated.",de:"Testen Sie die neue Vite-Version. Die bestehende App bleibt für noch nicht vollständig migrierte Funktionen verfügbar."},
+  "Try the new Vite version. The current app remains available for features not yet fully migrated.": {fr:"Essayez la version Vite. L'application actuelle reste disponible pour les fonctions pas encore migrées.",en:"Try the new Vite version. The current app remains available for features not yet fully migrated.",de:"Testen Sie die neue Vite-Version. Die bestehende App bleibt für noch nicht vollständig migrierte Funktionen verfügbar."},
+  "Testen Sie die neue Vite-Version. Die bestehende App bleibt für noch nicht vollständig migrierte Funktionen verfügbar.": {fr:"Essayez la version Vite. L'application actuelle reste disponible pour les fonctions pas encore migrées.",en:"Try the new Vite version. The current app remains available for features not yet fully migrated.",de:"Testen Sie die neue Vite-Version. Die bestehende App bleibt für noch nicht vollständig migrierte Funktionen verfügbar."},
+  "Open nieuwe Main-app": {fr:"Ouvrir la nouvelle application Main",en:"Open new Main app",de:"Neue Main-App öffnen"},
+  "Ouvrir la nouvelle application Main": {fr:"Ouvrir la nouvelle application Main",en:"Open new Main app",de:"Neue Main-App öffnen"},
+  "Open new Main app": {fr:"Ouvrir la nouvelle application Main",en:"Open new Main app",de:"Neue Main-App öffnen"},
+  "Neue Main-App öffnen": {fr:"Ouvrir la nouvelle application Main",en:"Open new Main app",de:"Neue Main-App öffnen"},
+  "Nieuwe, lichtere Main-app":{fr:"Nouvelle application Main allégée",en:"New lightweight Main app",de:"Neue schlanke Main-App"},
+  "Nouvelle application Main allégée":{fr:"Nouvelle application Main allégée",en:"New lightweight Main app",de:"Neue schlanke Main-App"},
+  "New lightweight Main app":{fr:"Nouvelle application Main allégée",en:"New lightweight Main app",de:"Neue schlanke Main-App"},
+  "Neue schlanke Main-App":{fr:"Nouvelle application Main allégée",en:"New lightweight Main app",de:"Neue schlanke Main-App"},
   "Personnel":{fr:"Personnel",en:"Staff",de:"Personal"},
   "Staff":{fr:"Personnel",en:"Staff",de:"Personal"},
   "Personal":{fr:"Personnel",en:"Staff",de:"Personal"},
