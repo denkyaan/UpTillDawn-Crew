@@ -2,13 +2,13 @@ import {useEffect,useState,type FormEvent} from "react"
 import {useSession} from "../lib/session"
 import {usePrivateQuery} from "../lib/use-private-query"
 import {ownProfile,type Profile as BasicProfile} from "../lib/operational-reads"
-import {ownPrivateProfile,ownWorkplacePreferences,saveOwnProfile,signedOwnPhoto,
- type PrivateDetails,type WorkplaceOption} from "../lib/profile-editor"
+import {ownWorkplacePreferences,saveOwnProfile,signedOwnPhoto,
+ type WorkplaceOption} from "../lib/profile-editor"
 import {useLocale} from "../lib/use-locale"
 import {writesAvailable} from "../lib/operational-mutations"
 import {Refresh,WhenLoading} from "../components/data-ui"
 
-type Bundle={basic:BasicProfile;details:PrivateDetails;preferred:string|null;options:WorkplaceOption[]}
+type Bundle={basic:BasicProfile;details:BasicProfile;preferred:string|null;options:WorkplaceOption[]}
 type Feedback="saved"|"failed"|"partial"|"uncertain"|null
 function Editor({uid,data,admin,refresh,onFeedback}:{uid:string;data:Bundle;admin:boolean;refresh:()=>void;onFeedback:(feedback:Feedback)=>void}){
  const {t}=useLocale()
@@ -77,11 +77,13 @@ export default function Profile(){
  const r=usePrivateQuery<Bundle>(uid,"my-profile",async signal=>{
   // Bounded calls occur only when this screen mounts, never in shell bootstrap.
   // Sensitive national ID/IBAN stay in ephemeral React memory, not IndexedDB.
-  const [basic,details]=await Promise.all([ownProfile(uid,signal),ownPrivateProfile(uid,signal)])
+  const basic=await ownProfile(uid,signal)
   if(!basic)throw new Error("profile_unavailable")
-  const preference=admin?{preferred:null,options:[] as WorkplaceOption[]}:
-   await ownWorkplacePreferences(signal)
-  return {basic,details,preferred:preference.preferred,options:preference.options}
+  // Workplaces are only needed while EDITING. Do not generate two extra RPCs
+  // for an otherwise read-only profile view on every navigation.
+  const preference=!admin&&writesAvailable()?await ownWorkplacePreferences(signal):
+   {preferred:null,options:[] as WorkplaceOption[]}
+  return {basic,details:basic,preferred:preference.preferred,options:preference.options}
  })
  return <><div className="row"><h1>{t.profile}</h1><Refresh onClick={r.refresh}/></div>
   {feedback&&<p role={feedback==="saved"?"status":"alert"} className={feedback==="saved"?"notice":"error"}>
@@ -91,9 +93,9 @@ export default function Profile(){
    {r.data&&<><section className="card">
     <h2>{r.data.details.full_name||"—"}</h2>
     <p className="muted">{r.data.details.email||"—"}</p>
-    <p>{r.data.basic.app_profile_completed_at?t.profileCompleted:t.profileIncomplete}</p>
+    <p>{r.data.basic.app_profile_completed?t.profileCompleted:t.profileIncomplete}</p>
    </section>
-   {writesAvailable()?<Editor key={uid+":"+String(r.data.basic.app_profile_completed_at||"pending")}
+   {writesAvailable()?<Editor key={uid+":"+String(r.data.basic.app_profile_completed||"pending")}
     uid={uid} data={r.data} admin={admin} refresh={r.refresh} onFeedback={setFeedback}/>:
     <p className="muted">{t.profileReadOnly}</p>}</>}
   </WhenLoading>

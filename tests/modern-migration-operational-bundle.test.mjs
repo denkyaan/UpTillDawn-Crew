@@ -28,7 +28,7 @@ test('all four languages expose the same new navigation categories',()=>{
 })
 test('15 direct Supabase read boundaries use RLS, selected fields, limits and cancellation',()=>{
  const reads=read('modern/src/lib/operational-reads.ts')
- for(const t of ['shifts','check_ins','work_sessions','profiles','crew_notifications','workplaces','inventory_items','incidents','briefings','briefing_acknowledgements','responsible_assignments','admin_financial_documents','admin_financial_payments','task_assignments']){
+ for(const t of ['shifts','check_ins','work_sessions','crew_notifications','workplaces','inventory_items','incidents','briefings','briefing_acknowledgements','responsible_assignments','admin_financial_documents','admin_financial_payments','task_assignments']){
   assert.ok(reads.includes('.from("'+t+'")'),'missing '+t)
  }
  assert.ok((reads.match(/\.limit\(\d+\)/g)||[]).length>=14)
@@ -38,7 +38,9 @@ test('15 direct Supabase read boundaries use RLS, selected fields, limits and ca
   assert.ok(!reads.includes(method),'read-only source may not write via '+method)
  assert.ok(reads.includes('.eq("user_id",uid)'))
  assert.ok(reads.includes('.eq("reporter_id",uid)'))
- assert.ok(reads.includes('.eq("id",uid).abortSignal(signal).maybeSingle()'))
+ assert.ok(reads.includes('db.rpc("upt_own_profile_details").abortSignal(signal)'))
+ assert.ok(reads.includes('db.rpc("upt_current_profile_completion").abortSignal(signal)'))
+ assert.ok(!reads.includes('.from("profiles")'))
 })
 test('private and financial data are ephemeral, scoped to user, and never offline cached',()=>{
  const hook=read('modern/src/lib/use-private-query.ts')

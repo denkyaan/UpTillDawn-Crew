@@ -14,7 +14,7 @@ export type Acknowledgement={briefing_id:string;version:number;acknowledged_at:s
 export type Notification={id:string;title:string;body:string;kind:string;read_at:string|null;created_at:string;link:string|null}
 export type FinancialDocument={id:string;kind:string;document_number:string|null;issue_date:string|null;due_date:string|null;currency:string;gross_amount:number;status:string;peppol_status:string|null;event_id:string|null}
 export type FinancialPayment={id:string;document_id:string;amount:number;paid_on:string;created_at:string}
-export type Profile={id:string;full_name:string|null;phone_number:string|null;home_address:string|null;date_of_birth:string|null;profile_photo_url:string|null;app_profile_completed_at:string|null}
+export type Profile={id:string;email:string|null;full_name:string|null;phone_number:string|null;home_address:string|null;date_of_birth:string|null;profile_photo_url:string|null;national_register_number:string|null;iban:string|null;app_profile_completed:boolean}
 export type ResponsibleAssignment={id:string;event_id:string;workplace_id:string;user_id:string}
 export type PromotionTask={id:string;task_id:string;event_id:string|null;title:string;description:string|null;status:string;confirmed_at:string|null}
 
@@ -38,10 +38,20 @@ export async function ownHours(uid:string,signal:AbortSignal):Promise<WorkSessio
  return (data||[]) as WorkSession[]
 }
 export async function ownProfile(uid:string,signal:AbortSignal):Promise<Profile|null>{
- const {data,error}=await supabase().from("profiles").select("id,full_name,phone_number,home_address,date_of_birth,profile_photo_url,app_profile_completed_at")
-  .eq("id",uid).abortSignal(signal).maybeSingle()
- failed(error,"profile_unavailable")
- return data as Profile|null
+ // Public profiles has SELECT revoked in BOTH QA and production. Only the
+ // already-authorized, self-scoped RPC may read private profile attributes.
+ // Combine the details and completion status without a redundant third read.
+ const db=supabase()
+ const [{data:details,error:detailsError},{data:completion,error:completionError}]=await Promise.all([
+  db.rpc("upt_own_profile_details").abortSignal(signal),
+  db.rpc("upt_current_profile_completion").abortSignal(signal),
+ ])
+ if(detailsError||completionError)throw new Error("profile_unavailable")
+ if(!Array.isArray(details)||details.length!==1||details[0]?.id!==uid||
+   !Array.isArray(completion)||completion.length!==1||
+   typeof completion[0]?.completed!=="boolean")
+  throw new Error("profile_identity_unavailable")
+ return {...details[0],app_profile_completed:completion[0].completed} as Profile
 }
 export async function ownNotifications(uid:string,signal:AbortSignal):Promise<Notification[]>{
  const {data,error}=await supabase().from("crew_notifications").select("id,title,body,kind,read_at,created_at,link")
