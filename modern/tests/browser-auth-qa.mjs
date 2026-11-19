@@ -80,11 +80,19 @@ try{
   try{
    await loginContext.addInitScript(()=>localStorage.setItem("uptilldawn-modern-locale","nl"))
    const loginPage=await loginContext.newPage()
+   let loginHttpStatus=0
+   loginPage.on("response",response=>{
+    if(new URL(response.url()).pathname==="/api/auth/portal-login")loginHttpStatus=response.status()
+   })
    await loginPage.goto(origin+"/login/"+bot.login,{waitUntil:"domcontentloaded",timeout:15000})
    await loginPage.locator('input[name="email"]').fill(bot.email)
    await loginPage.locator('input[name="password"]').fill(password)
    await loginPage.locator('form button[type="submit"]').click()
-   await ready(loginPage)
+   try{await ready(loginPage)}catch{
+    const code=await loginPage.locator('[data-login-error-code]').first().getAttribute('data-login-error-code').catch(()=>null)
+    const known=new Set(['auth_temporarily_unavailable','auth_rate_limited','login_request_rejected','invalid_credentials_or_role','invalid_credentials','wrong_portal','account_not_approved','account_blocked','role_mode_error','owner_lookup_error','profile_error'])
+    throw Error("QA_LOGIN_NOT_READY "+bot.role+" HTTP="+loginHttpStatus+" code="+(known.has(code)?code:"unknown"))
+   }
    signins++
    await assertNav(loginPage,bot)
    // Real signed, RLS-protected reads on the candidate, not only navbar labels.

@@ -1,6 +1,6 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
-import {forwardMainAuth,MAIN_AUTH_ORIGIN} from '../src/api/main-auth.ts'
+import {forwardMainAuth,MAIN_AUTH_ORIGIN,authResponseCookies} from '../src/api/main-auth.ts'
 
 const origin='https://uptilldawn-modern-main.uptilldawn.workers.dev'
 const qa='https://npbjrtiolqperdgljnhi.supabase.co'
@@ -12,11 +12,14 @@ function req(path='/api/auth/portal-login',fields={portal:'staff',email:'fixture
 test('all five login portals keep the original Main action result and chunked cookies',async()=>{
  for(const portal of ['staff','responsible','admin','promotion','administration']){
   let calls=0
-  const response=await forwardMainAuth(req(undefined,{portal,email:'fixture@example.invalid',password:'synthetic-test-value'},{Cookie:'sb-qa-auth-token.0=fixture','User-Agent':'fixture-browser',Authorization:'Bearer must-not-forward','X-Role':'admin'}),{
+  const response=await forwardMainAuth(req(undefined,{portal,email:'fixture@example.invalid',password:'synthetic-test-value'},{Cookie:'sb-qa-auth-token.0=fixture','User-Agent':'fixture-browser',Authorization:'Bearer must-not-forward','X-Role':'admin',Host:'attacker.invalid','X-Forwarded-Host':'attacker.invalid','X-Forwarded-Proto':'http'}),{
    SUPABASE_URL:qa,MAIN_AUTH:{async fetch(request){
     calls++
     assert.equal(request.url,MAIN_AUTH_ORIGIN+'/api/auth/portal-login')
     assert.equal(request.headers.get('origin'),MAIN_AUTH_ORIGIN)
+    assert.equal(request.headers.get('host'),new URL(MAIN_AUTH_ORIGIN).host)
+    assert.equal(request.headers.get('x-forwarded-host'),new URL(MAIN_AUTH_ORIGIN).host)
+    assert.equal(request.headers.get('x-forwarded-proto'),'https')
     assert.equal(request.headers.get('cookie'),'sb-qa-auth-token.0=fixture')
     assert.equal(request.headers.get('authorization'),null)
     assert.equal(request.headers.get('x-role'),null)
@@ -42,6 +45,18 @@ test('missing binding, wrong host and non-QA database cannot forward authenticat
   [new Request('https://foreign.invalid/api/auth/portal-login',{method:'POST'}),{SUPABASE_URL:qa,MAIN_AUTH:binding}],
  ])assert.equal((await forwardMainAuth(request,env)).status,503)
  assert.equal(called,false)
+})
+test('Workers getAll preserves distinct session chunks and expiry commas without the Node getSetCookie method',async()=>{
+ const cookies=['sb-qa-auth-token.0=fixture; Expires=Wed, 20 Nov 2030 00:00:00 GMT; Path=/','sb-qa-auth-token.1=fixture; Path=/']
+ const response=Response.json({success:true,redirectTo:'/admin'})
+ Object.defineProperty(response.headers,'getSetCookie',{value:undefined})
+ Object.defineProperty(response.headers,'getAll',{value:name=>{assert.equal(name,'Set-Cookie');return cookies}})
+ assert.deepEqual(authResponseCookies(response.headers),cookies)
+ const result=await forwardMainAuth(req(),{SUPABASE_URL:qa,MAIN_AUTH:{async fetch(){return response}}})
+ assert.deepEqual(result.headers.getSetCookie(),cookies)
+ const unavailable=new Headers({'Set-Cookie':'fixture=1'})
+ Object.defineProperty(unavailable,'getSetCookie',{value:undefined})
+ assert.throws(()=>authResponseCookies(unavailable),/UNSUPPORTED_AUTH_COOKIE_API/)
 })
 test('CSRF, unknown actions, invalid forms and oversized streaming bodies stop before the service',async()=>{
  let calls=0
