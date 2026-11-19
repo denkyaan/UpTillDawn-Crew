@@ -114,4 +114,18 @@ begin
  where w.event_id=p_event and t.status in ('approved','locked')
  order by w.user_id,coalesce(w.started_at,w.start_time),w.id;
 end $function$;
+-- JSON wrapper adds a mandatory policy version to every authoritative row.
+-- An older database can no longer be mistaken for this payroll contract.
+CREATE OR REPLACE FUNCTION public.upt_administration_payroll_rows(p_event uuid)
+ RETURNS jsonb
+ LANGUAGE plpgsql
+ STABLE
+ SET search_path TO ''
+AS $function$
+declare v_rows jsonb;
+begin
+ select coalesce(jsonb_agg(to_jsonb(r) || jsonb_build_object('policy_version','paid60-grace10-event-v1')),'[]'::jsonb) into v_rows from (select * from upt_administration_private.payroll_rows(p_event) limit 10001)r;
+ if jsonb_array_length(v_rows)>10000 then raise exception 'Payroll export exceeds 10000 sessions'; end if;
+ return v_rows;
+end $function$;
 commit;
