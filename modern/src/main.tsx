@@ -53,7 +53,7 @@ function Authenticated({children}:{children:ReactNode}){
     {canEvents&&<NavLink to="/qr">{t.qr}</NavLink>}
     {canEvents&&<NavLink to="/tasks">{t.tasks}</NavLink>}
     {canEvents&&<NavLink to="/chat">{t.chat}</NavLink>}
-    {canEvents&&<NavLink to="/operations">{t.operations}</NavLink>
+    {canEvents&&<NavLink to="/operations">{t.operations}</NavLink>}
     {(state.identity?.role==="responsible_lead"||state.identity?.role==="admin"||state.identity?.is_owner)&&
      <NavLink to="/responsible">{t.responsible}</NavLink>}
     {state.portals.includes("promotion")&&<NavLink to="/portals/promotion">{t.promotion}</NavLink>}
