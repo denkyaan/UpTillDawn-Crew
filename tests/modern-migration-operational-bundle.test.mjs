@@ -75,7 +75,7 @@ test('large data surfaces load only after a selected tab mounts, not concurrentl
  const admin=read('modern/src/screens/administration.tsx')
  assert.ok(crew.includes('view==="shifts"?<Shifts'))
  assert.ok(ops.includes('view==="workplaces"?<Workplaces'))
- assert.ok(admin.includes('section==="documents"?<Documents'))
+ assert.ok(admin.includes('section==="documents"?<><Documents'))
  for(const screen of [crew,ops,admin]){
   assert.ok(screen.includes('usePrivateQuery'))
   assert.ok(screen.includes('<WhenLoading'))
