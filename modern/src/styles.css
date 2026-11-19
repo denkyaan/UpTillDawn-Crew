@@ -8,3 +8,9 @@
 
 /* Local-only shift response form; remains behind the migration write gate. */
 textarea{font:inherit;width:100%;border:1px solid #4a4e67;background:#101321;color:#fff;padding:.65rem;border-radius:.6rem;min-height:90px;resize:vertical}
+
+/* Ticket camera preview never overlaps navigation or touches server until scan. */
+.scanner-preview{display:block;width:100%;max-height:330px;object-fit:contain;background:#07080d;border-radius:.6rem;margin:1rem 0}
+.scanner-approved,.scanner-denied{padding:1rem;font-size:1.1rem;font-weight:800;border-radius:.65rem;margin:.7rem 0}
+.scanner-approved{color:#b0ffc4;border:1px solid #2fb873}
+.scanner-denied{color:#ffb9b9;border:1px solid #ed6363}

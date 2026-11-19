@@ -1,11 +1,14 @@
 import {Suspense,lazy,useState} from "react"
 const HistoryPanel=lazy(()=>import("../components/history-panel"))
 const IncidentReport=lazy(()=>import("./incident-report"))
+const WeeztixScanner=lazy(()=>import("../components/weeztix-scanner"))
 import {useSession} from "../lib/session"
 import {usePrivateQuery} from "../lib/use-private-query"
 import {allowedWorkplaces,allowedInventory,ownIncidents,type Workplace,type InventoryItem,type Incident} from "../lib/operational-reads"
 import {DataList,Refresh,Timestamp,WhenLoading} from "../components/data-ui"
 import {writesAvailable,acknowledgeAllowedIncident} from "../lib/operational-mutations"
+import {isEntranceWorkplace,scanCopy} from "../shared/weeztix-scan"
+import {useLocale} from "../lib/use-locale"
 
 type View="workplaces"|"inventory"|"incidents"|"sales"
 export default function Operations(){
@@ -20,11 +23,23 @@ export default function Operations(){
  </>
 }
 function Workplaces({uid}:{uid:string}){
+ const {locale}=useLocale(),scannerCopy=scanCopy[locale]
+ const [selectedScanner,setSelectedScanner]=useState<string|null>(null)
  const r=usePrivateQuery<Workplace[]>(uid,"workplaces",allowedWorkplaces)
  return <section className="card"><div className="row"><h2>Werkplekken</h2><Refresh onClick={r.refresh}/></div>
   <WhenLoading loading={r.loading} error={r.error}><DataList empty={!r.data?.length}>
    {r.data?.map(p=><li key={p.id}><div className="row"><strong>{p.name}</strong><span className="muted">Streefbezetting {p.target_staff??"—"}</span></div>
-    <p>{p.description||"Geen omschrijving"}</p></li>)}
+    <p>{p.description||"Geen omschrijving"}</p>
+    {isEntranceWorkplace(p.name)&&<div>
+     <button type="button" aria-expanded={selectedScanner===p.id}
+      onClick={()=>setSelectedScanner(s=>s===p.id?null:p.id)}>
+      {selectedScanner===p.id?scannerCopy.close:scannerCopy.open}
+     </button>
+     {selectedScanner===p.id&&<Suspense fallback={scannerCopy.loadingDecoder}>
+      <WeeztixScanner key={p.id} eventId={p.event_id} workplaceId={p.id}/>
+     </Suspense>}
+    </div>}
+   </li>)}
   </DataList></WhenLoading></section>
 }
 function Inventory({uid}:{uid:string}){
