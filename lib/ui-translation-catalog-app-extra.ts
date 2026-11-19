@@ -2,6 +2,10 @@ export type ExtraCatalogLocale = 'nl' | 'fr' | 'en' | 'de'
 type Row = { fr:string; en:string; de:string }
 
 export const APP_EXTRA_TRANSLATIONS: Record<string,Row> = {
+  "Nieuwe, lichtere Main-app":{fr:"Nouvelle application Main allégée",en:"New lightweight Main app",de:"Neue schlanke Main-App"},
+  "Nouvelle application Main allégée":{fr:"Nouvelle application Main allégée",en:"New lightweight Main app",de:"Neue schlanke Main-App"},
+  "New lightweight Main app":{fr:"Nouvelle application Main allégée",en:"New lightweight Main app",de:"Neue schlanke Main-App"},
+  "Neue schlanke Main-App":{fr:"Nouvelle application Main allégée",en:"New lightweight Main app",de:"Neue schlanke Main-App"},
   "Personnel":{fr:"Personnel",en:"Staff",de:"Personal"},
   "Staff":{fr:"Personnel",en:"Staff",de:"Personal"},
   "Personal":{fr:"Personnel",en:"Staff",de:"Personal"},
