@@ -45,7 +45,7 @@ function Authenticated({children}:{children:ReactNode}){
   <a className="sr-only skip" href="#main">Skip to content</a>
   <header className="bar"><div className="brand">UP TILL DAWN <span className="muted">· local-first candidate</span></div>
    <nav aria-label={t.portal} className="nav">
-    <NavLink to="/overview">{state.identity?.is_owner?"Normale app":t.home}</NavLink>
+    <NavLink to="/overview">{state.identity?.is_owner?t.normalApp:t.home}</NavLink>
     <NavLink to="/events">{t.events}</NavLink>
     <NavLink to="/crew">{t.crew}</NavLink>
     <NavLink to="/briefings">{t.briefings}</NavLink>
@@ -100,15 +100,16 @@ function SignIn(){
 }
 function Landing(){
  const {identity,portals}=useSession()
+ const {t}=useLocale()
  if(!identity)return null
  const access:PortalAccess={userId:identity.id,role:identity.role,isOwner:identity.is_owner,portals}
  const destination=preferredPortalRoute(access)
  if(destination)return destination==="/overview"?<Home/>:<Navigate to={destination} replace/>
- return <main className="auth"><section className="card"><h1>Kies je portaal</h1>
-  <p className="muted">Deze keuze wordt enkel op dit toestel onthouden. Je bevoegdheden worden bij iedere sessie opnieuw gecontroleerd.</p>
-  <div className="row"><Link className="primary" to="/overview">Normale app</Link>
-   <Link className="primary" to="/maker/diagnostics">God Mode</Link></div>
- </section></main>
+ return <section className="card mode-choice"><h1>{t.choosePortal}</h1>
+  <p className="muted">{t.preferenceNote}</p>
+  <nav className="row" aria-label={t.portal}><Link className="mode-link" to="/overview">{t.normalApp}</Link>
+   <Link className="mode-link" to="/maker/diagnostics">God Mode</Link></nav>
+ </section>
 }
 function Home(){
  const {identity}=useSession()
