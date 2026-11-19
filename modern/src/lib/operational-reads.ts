@@ -6,6 +6,7 @@ import {supabase} from "./supabase"
 export type Shift={id:string;event_id:string;workplace_id:string|null;role_name:string|null;scheduled_start:string;scheduled_end:string;status:string;response_status:string|null;shift_kind:string|null;confirmed_at:string|null}
 export type CheckIn={id:string;event_id:string;workplace_id:string|null;type:string|null;status:string;requested_at:string|null;decided_at:string|null}
 export type WorkSession={id:string;event_id:string;shift_id:string|null;started_at:string|null;ended_at:string|null;status:string}
+export type CheckOut={id:string;event_id:string;status:string;requested_at:string|null;decided_at:string|null}
 export type Workplace={id:string;event_id:string;name:string;description:string|null;minimum_staff:number|null;target_staff:number|null;is_active:boolean}
 export type InventoryItem={id:string;event_id:string|null;workplace_id:string|null;name:string;category:string|null;available_quantity:number;total_quantity:number;missing_quantity:number;damaged_quantity:number;is_active:boolean}
 export type Incident={id:string;event_id:string;workplace_id:string|null;reporter_id:string|null;description:string|null;message:string|null;status:string;created_at:string;urgency:string|null}
@@ -30,6 +31,13 @@ export async function ownCheckIns(uid:string,signal:AbortSignal):Promise<CheckIn
   .eq("user_id",uid).order("created_at",{ascending:false}).limit(80).abortSignal(signal)
  failed(error,"checkins_unavailable")
  return (data||[]) as CheckIn[]
+}
+export async function ownCheckOuts(uid:string,signal:AbortSignal):Promise<CheckOut[]>{
+ const {data,error}=await supabase().from("check_outs")
+  .select("id,event_id,status,requested_at,decided_at")
+  .eq("user_id",uid).order("requested_at",{ascending:false}).limit(80).abortSignal(signal)
+ failed(error,"checkouts_unavailable")
+ return (data||[]) as CheckOut[]
 }
 export async function ownHours(uid:string,signal:AbortSignal):Promise<WorkSession[]>{
  const {data,error}=await supabase().from("work_sessions").select("id,event_id,shift_id,started_at,ended_at,status")

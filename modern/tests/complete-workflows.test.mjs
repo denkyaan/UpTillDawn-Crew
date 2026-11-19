@@ -51,3 +51,27 @@ test("new workflow UX strings available for four locales",()=>{
    assert.ok(t[key].length>=3,language+":"+key)
  }
 })
+
+test("check-out uses existing audited RPC, separate pending read, no own approvals",()=>{
+ const src=read("lib/checkin-review.ts"),screen=read("components/checkin-review.tsx")
+ assert.ok(src.includes('.from("check_outs")'))
+ assert.ok(src.includes('rpc("upt_decide_check_out"'))
+ assert.ok(src.includes('.eq("status","pending").order("requested_at"'))
+ assert.ok(src.includes('p_check_out:id,p_approve:approve,p_notes:clean'))
+ assert.ok(!src.includes(".update("))
+ assert.ok(screen.includes('kind="out"'))
+ assert.ok(screen.includes('row.user_id===uid'))
+ assert.ok(screen.includes('row.user_id!==uid'))
+})
+test("timekeeping lazy loads only on own hours tab, and check-outs stay in existing crew tab",()=>{
+ const crew=read("screens/crew.tsx"),tracker=read("components/break-tracker.tsx")
+ assert.ok(crew.includes('const BreakTracker=lazy(()=>import("../components/break-tracker"))'))
+ assert.ok(crew.includes('view==="hours"?<Hours uid={uid}/>'))
+ assert.ok(crew.includes('<BreakTracker key={selected.id} session={selected}/>'))
+ assert.ok(crew.includes('ownCheckOuts(uid,signal)'))
+ assert.ok(tracker.includes("MIGRATION_WRITES_ENABLED&&active"))
+ assert.ok(tracker.includes("breakAlert(activeBreak.started_at,now)"))
+ assert.ok(tracker.includes("window.setInterval"))
+ assert.ok(tracker.includes("ownSessionTimeSummary"))
+ for(const ban of ["setTimeout(()=>stopOwnBreak","localStorage","navigator.geolocation"])assert.ok(!tracker.includes(ban))
+})

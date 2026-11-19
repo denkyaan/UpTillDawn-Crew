@@ -85,7 +85,7 @@ try{
    await assertNav(loginPage,bot)
    // Real signed, RLS-protected reads on the candidate, not only navbar labels.
    // Every page remains read-only; no business data is created or updated.
-   const routes=["/profile","/notifications",
+   const routes=["/profile","/notifications","/crew","/qr",
     ...(bot.admin?["/portals/administration"]:[]),
     ...(bot.promotion?["/portals/promotion"]:[]),
     ...(bot.responsible?["/responsible"]:[])]

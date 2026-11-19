@@ -1,12 +1,14 @@
 import {Suspense,lazy,useState} from "react"
 const HistoryPanel=lazy(()=>import("../components/history-panel"))
 const TimesheetWorkspace=lazy(()=>import("./timesheet-workspace"))
+const BreakTracker=lazy(()=>import("../components/break-tracker"))
 import {useSession} from "../lib/session"
 import {usePrivateQuery} from "../lib/use-private-query"
-import {ownShifts,ownCheckIns,ownHours,type Shift,type CheckIn,type WorkSession} from "../lib/operational-reads"
+import {ownShifts,ownCheckIns,ownCheckOuts,ownHours,type Shift,type CheckIn,type CheckOut,type WorkSession} from "../lib/operational-reads"
 import {confirmOwnShift,declineOwnShift,writesAvailable} from "../lib/operational-mutations"
 import {useLocale} from "../lib/use-locale"
 import {DataList,Refresh,Timestamp,WhenLoading} from "../components/data-ui"
+import {timekeepingCopy} from "../shared/timekeeping-copy"
 
 type View="shifts"|"checkins"|"hours"|"timesheets"|"equipment"
 export default function Crew(){
@@ -74,21 +76,33 @@ function Shifts({uid}:{uid:string}){
  </section>
 }
 function Checkins({uid}:{uid:string}){
+ const {locale}=useLocale(),t=timekeepingCopy(locale)
  const r=usePrivateQuery<CheckIn[]>(uid,"own-checkins",signal=>ownCheckIns(uid,signal))
+ const outs=usePrivateQuery<CheckOut[]>(uid,"own-checkouts",signal=>ownCheckOuts(uid,signal))
  return <section className="card"><div className="row"><h2>Mijn check-ins</h2><Refresh onClick={r.refresh}/></div>
  <WhenLoading loading={r.loading} error={r.error}><DataList empty={!r.data?.length}>{r.data?.map(item=><li key={item.id}>
   <div className="row"><strong>{item.type||"Aanvraag"}</strong><span className="muted">{item.status}</span></div>
   <p>Aangevraagd <Timestamp value={item.requested_at}/></p>
   {item.decided_at&&<p>Beslist <Timestamp value={item.decided_at}/></p>}
  </li>)}</DataList></WhenLoading>
+ <div className="row"><h3>{t.pendingOut}</h3><Refresh onClick={outs.refresh}/></div>
+ <WhenLoading loading={outs.loading} error={outs.error}>
+  <DataList empty={!outs.data?.length}>{outs.data?.map(item=><li key={item.id}>
+   <div className="row"><strong>{t.checkOut}</strong><span className="muted">{item.status}</span></div>
+   <p><Timestamp value={item.requested_at}/>{item.decided_at&&<> · <Timestamp value={item.decided_at}/></>}</p>
+   {item.status==="pending"&&<p className="muted">{t.notStopped}</p>}
+  </li>)}</DataList>
+ </WhenLoading>
  <p className="muted">Nieuwe GPS/QR-check-ins vereisen de bestaande verificatieflow en zijn nog niet overgezet.</p></section>
 }
 function Hours({uid}:{uid:string}){
  const r=usePrivateQuery<WorkSession[]>(uid,"own-work-hours",signal=>ownHours(uid,signal))
+ const selected=(r.data||[]).find(item=>item.ended_at===null)||(r.data||[])[0]
  return <section className="card"><div className="row"><h2>Mijn werkregistraties</h2><Refresh onClick={r.refresh}/></div>
  <WhenLoading loading={r.loading} error={r.error}><DataList empty={!r.data?.length}>{r.data?.map(item=><li key={item.id}>
   <div className="row"><strong>Werkregistratie</strong><span className="muted">{item.status}</span></div>
   <p>Start <Timestamp value={item.started_at}/> · Einde <Timestamp value={item.ended_at}/></p>
  </li>)}</DataList></WhenLoading>
+ {selected&&<Suspense fallback="Pauze en uren laden…"><BreakTracker key={selected.id} session={selected}/></Suspense>}
  <p className="muted">Geen loon- of overurenberekening uit ruwe registraties: de officiële timesheetgoedkeuring blijft in het bestaande systeem.</p></section>
 }
