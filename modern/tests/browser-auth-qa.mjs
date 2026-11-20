@@ -5,6 +5,7 @@ import {spawn} from 'node:child_process'
 import {resolve} from 'node:path'
 import {mkdir} from 'node:fs/promises'
 import {chromium} from 'playwright'
+import {createServerClient} from '@supabase/ssr'
 const qa=new URL(process.env.E2E_MAIN_QA_BASE_URL||''),key=process.env.E2E_MAIN_QA_PUBLISHABLE_KEY||'',password=process.env.E2E_MAIN_QA_PASSWORD||''
 if(qa.origin!=='https://npbjrtiolqperdgljnhi.supabase.co'||qa.pathname!=='/'||qa.search||qa.hash)throw Error('QA_ONLY_ENDPOINT_REQUIRED')
 if(!key.startsWith('sb_publishable_'))throw Error('QA_PUBLISHABLE_KEY_REQUIRED')
@@ -25,7 +26,7 @@ const remote=process.env.E2E_MAIN_MODERN_QA_ORIGIN||''
 if(remote&&remote!==approvedRemote)throw Error('EXACT_MODERN_MAIN_QA_ORIGIN_REQUIRED')
 const origin=remote||'http://127.0.0.1:4176',root=resolve(import.meta.dirname,'../..')
 const preview=remote?null:spawn(process.execPath,[resolve(root,'modern/node_modules/vite/bin/vite.js'),'preview','--host','127.0.0.1','--port','4176','--strictPort'],{cwd:resolve(root,'modern'),stdio:'ignore'})
-let browser,signins=0,total=0,menuComparisons=0
+let browser,signins=0,total=0,menuComparisons=0,workspaceComparisons=0
 const failures=[]
 const notificationReads=new WeakMap()
 function observeNotices(page){
@@ -141,6 +142,19 @@ try{
       await b.getByRole('heading',{name:'Geen toegang',exact:true}).waitFor()
       await compare(a,b,label+'-maker-denied')
      }
+     if(label==='head_admin-nl-desktop'){
+      // The account ID selects a non-authoritative preference only. Both
+      // apps independently verify the session and actual portal access.
+      const reader=createServerClient(qa.origin,key,{cookies:{getAll:()=>state.cookies,setAll:()=>{}}})
+      const {data:{session}}=await reader.auth.getSession(),uid=session?.user.id
+      if(!uid)throw Error('QA_WORKSPACE_IDENTITY_MISSING')
+      for(const workspace of ['administration','promotion']){
+       for(const [context,host]of [[original,legacy],[candidate,origin]])await context.addCookies([{name:'uptilldawn-last-workspace',value:encodeURIComponent(uid+':'+workspace),url:host,secure:host.startsWith('https:'),sameSite:'Lax'}])
+       await Promise.all([a.goto(legacy+'/',{waitUntil:'domcontentloaded',timeout:30000}),b.goto(origin+'/',{waitUntil:'domcontentloaded',timeout:20000})])
+       await Promise.all([a.waitForURL('**/portals/'+workspace,{timeout:20000}),b.waitForURL('**/portals/'+workspace,{timeout:20000})])
+       await ready(a);await ready(b);await compare(a,b,label+'-restore-'+workspace);workspaceComparisons++
+      }
+     }
      if(errors.length)throw Error('QA_JS_ERRORS '+label)
      total++;console.log('PASS original-source controls '+bot.role+' / '+language+' / '+device.name)
     }catch(error){
@@ -151,6 +165,7 @@ try{
   }finally{await login.close()}
  }
  if(failures.length){console.error('ORIGINAL_COMPARISON_FAILURES '+JSON.stringify(failures));throw Error('QA_ORIGINAL_COMPARISONS_FAILED '+failures.length)}
+ if(workspaceComparisons!==2)throw Error('QA_WORKSPACE_RESTORATION_INCOMPLETE')
  if(signins!==7||total!==56)throw Error('QA_INCOMPLETE_COVERAGE')
- console.log(JSON.stringify({validated:true,qaBots:7,actualBotSignins:signins,authenticatedBrowserScenarios:total,originalMainControlComparisons:total,expandedMenuComparisons:menuComparisons,locales:4,deviceProfiles:2,formsSubmitted:false,fullVisualParityVerified:false,productionReady:false}))
+ console.log(JSON.stringify({validated:true,qaBots:7,actualBotSignins:signins,authenticatedBrowserScenarios:total,originalMainControlComparisons:total,expandedMenuComparisons:menuComparisons,workspaceRestorationComparisons:workspaceComparisons,locales:4,deviceProfiles:2,formsSubmitted:false,fullVisualParityVerified:false,productionReady:false}))
 }finally{if(browser)await browser.close();preview?.kill('SIGTERM')}

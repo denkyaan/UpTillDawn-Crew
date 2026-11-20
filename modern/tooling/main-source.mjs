@@ -62,7 +62,7 @@ export function clientSource(file){
  }
  const clientModule=ast.statements.some(s=>ts.isExpressionStatement(s)&&ts.isStringLiteral(s.expression)&&s.expression.text==='use client')
  const viewIds=new Set(ast.statements.filter(s=>ts.isFunctionDeclaration(s)&&s.name&&/^[A-Z]/.test(s.name.text)&&!clientModule&&(s.modifiers?.some(m=>m.kind===ts.SyntaxKind.AsyncKeyword)||s.modifiers?.some(m=>m.kind===ts.SyntaxKind.DefaultKeyword)&&s.body?.statements.some(n=>ts.isReturnStatement(n)&&n.expression&&ts.isCallExpression(n.expression)))).map(s=>s.name.text))
- let usesView=false,usesAction=false,usesLoad=false,usesRead=false,usesDate=false
+ let usesView=false,usesAction=false,usesLoad=false,usesRead=false,usesDate=false,inRequestView=false
  function rewrite(context){
   function visit(node){
    if(ts.isExpressionStatement(node)&&ts.isStringLiteral(node.expression)&&node.expression.text==='use client')return undefined
@@ -90,14 +90,20 @@ export function clientSource(file){
     throw Error('Private environment variable blocked: '+file+':'+name)
    }
    if((ts.isFunctionDeclaration(node)||ts.isArrowFunction(node)||ts.isFunctionExpression(node))&&directive(node,'use server')&&(!isAction(node)||node.parent!==ast))throw Error('Inline closure requires an explicit server adapter: '+file)
-   if(ts.isCallExpression(node)&&ts.isIdentifier(node.expression)&&node.expression.text==='cookies'&&file==='app/(app)/portals/page.tsx')return f.updateCallExpression(node,node.expression,node.typeArguments,[f.createTrue()])
+   if(ts.isCallExpression(node)&&ts.isIdentifier(node.expression)&&node.expression.text==='cookies'){
+    if(inRequestView)return f.updateCallExpression(node,node.expression,node.typeArguments,[file==='app/(app)/portals/page.tsx'?f.createTrue():f.createFalse(),f.createPropertyAccessChain(f.createIdentifier('__sourceRequest'),f.createToken(ts.SyntaxKind.QuestionDotToken),'cookies')])
+    if(file==='app/(app)/portals/page.tsx')return f.updateCallExpression(node,node.expression,node.typeArguments,[f.createTrue()])
+   }
    if(isAction(node)){
     usesAction=true
     return f.updateFunctionDeclaration(node,node.modifiers,node.asteriskToken,node.name,node.typeParameters,node.parameters,node.type,f.createBlock([f.createReturnStatement(f.createCallExpression(f.createIdentifier('__originalAction'),undefined,[f.createStringLiteral(file+'#'+node.name.text),f.createArrayLiteralExpression(node.parameters.map(p=>f.createIdentifier(p.name.getText(ast))))]))],true))
    }
    if(ts.isFunctionDeclaration(node)&&node.name&&viewIds.has(node.name.text)){
     usesView=true
-    const impl=f.createFunctionExpression(node.modifiers?.filter(m=>m.kind===ts.SyntaxKind.AsyncKeyword),node.asteriskToken,f.createIdentifier(node.name.text+'Source'),node.typeParameters,node.parameters,node.type,ts.visitEachChild(node.body,visit,context))
+    const previous=inRequestView;inRequestView=true
+    const body=ts.visitEachChild(node.body,visit,context);inRequestView=previous
+    const parameters=[...(node.parameters.length?node.parameters:[f.createParameterDeclaration(undefined,undefined,'__sourceProps')]),f.createParameterDeclaration(undefined,undefined,'__sourceRequest')]
+    const impl=f.createFunctionExpression(node.modifiers?.filter(m=>m.kind===ts.SyntaxKind.AsyncKeyword),node.asteriskToken,f.createIdentifier(node.name.text+'Source'),node.typeParameters,parameters,node.type,body)
     const value=f.createCallExpression(f.createIdentifier('__originalView'),undefined,[f.createStringLiteral(file+'#'+node.name.text),impl])
     const declaration=f.createVariableStatement(node.modifiers?.filter(m=>m.kind===ts.SyntaxKind.ExportKeyword),f.createVariableDeclarationList([f.createVariableDeclaration(node.name,undefined,undefined,value)],ts.NodeFlags.Const))
     return node.modifiers?.some(m=>m.kind===ts.SyntaxKind.DefaultKeyword)?[declaration,f.createExportAssignment(undefined,false,node.name)]:declaration

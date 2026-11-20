@@ -2,7 +2,8 @@ import {createContext,isValidElement,use,useContext,useEffect,useRef, type React
 
 // Lifetime is one route + one authenticated identity revision. Suspended
 // renders reuse the same promise; no authenticated result survives navigation.
-type RequestScope={views:Map<string,Promise<ReactNode>>;objects:WeakMap<object,number>;sequence:number}
+type RequestContext={cookies?:string}
+type RequestScope={views:Map<string,Promise<ReactNode>>;objects:WeakMap<object,number>;sequence:number;request:RequestContext}
 const Scope=createContext<RequestScope|null>(null)
 const routeValue=Symbol.for('uptilldawn.original-route-value')
 export function originalRoutePromise<T>(value:T):Promise<T>{return Object.assign(Promise.resolve(value),{[routeValue]:value})}
@@ -23,14 +24,14 @@ function identity(value:unknown,scope:RequestScope){
  if(id===undefined){id=++scope.sequence;scope.objects.set(obj,id)}
  return '@'+id
 }
-type SourceComponent=((props:Record<string,unknown>)=>ReactNode)&{load:(props:Record<string,unknown>)=>ReactNode|Promise<ReactNode>}
-export function sourceView(id:string,factory:(props:Record<string,unknown>)=>ReactNode|Promise<ReactNode>):SourceComponent{
+type SourceComponent=((props:Record<string,unknown>)=>ReactNode)&{load:(props:Record<string,unknown>,request?:RequestContext)=>ReactNode|Promise<ReactNode>}
+export function sourceView(id:string,factory:(props:Record<string,unknown>,request?:RequestContext)=>ReactNode|Promise<ReactNode>):SourceComponent{
  function SourceView(props:Record<string,unknown>){
   const scope=useContext(Scope)
   if(!scope)throw Error('Original view request scope missing')
   const cacheKey=id+':'+key(props,scope)
   let pending=scope.views.get(cacheKey)
-  if(!pending){pending=Promise.resolve().then(()=>factory(props));scope.views.set(cacheKey,pending)}
+  if(!pending){pending=Promise.resolve().then(()=>factory(props,scope.request));scope.views.set(cacheKey,pending)}
   return use(pending)
  }
  SourceView.load=factory
@@ -42,12 +43,14 @@ export function loadSourceView(component:unknown,...args:unknown[]):unknown{
  const callable=component as ((...args:unknown[])=>unknown)&{load?:(...args:unknown[])=>unknown}
  return (callable.load??callable)(...args)
 }
-export function OriginalRequest({revision,children}:{revision:string;children:ReactNode}){
+export function OriginalRequest({revision,children,cookieSnapshot}:{revision:string;children:ReactNode;cookieSnapshot?:string}){
  // Ref-backed resources survive discarded concurrent renders. A useMemo
  // cache is lost when a transition suspends before committing its new scope.
  const resources=useRef(new Map<string,RequestScope>())
  let scope=resources.current.get(revision)
- if(!scope){scope={views:new Map(),objects:new WeakMap(),sequence:0};resources.current.set(revision,scope)}
+ // Server pages read request cookies before client continuity effects run.
+ // Capture at render, before those effects replace the last-workspace hint.
+ if(!scope){scope={views:new Map(),objects:new WeakMap(),sequence:0,request:{cookies:cookieSnapshot??(typeof document==='undefined'?undefined:document.cookie)}};resources.current.set(revision,scope)}
  useEffect(()=>{for(const key of resources.current.keys())if(key!==revision)resources.current.delete(key)},[revision])
  return <Scope.Provider value={scope}>{children}</Scope.Provider>
 }

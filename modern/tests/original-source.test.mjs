@@ -103,3 +103,21 @@ test('route promises with the same values reuse their resource despite discarded
  const html=await render(React.createElement(OriginalRequest,{revision:'route'},React.createElement(React.Suspense,{fallback:'pending'},React.createElement(React.Fragment,null,React.createElement(View,first),React.createElement(View,retry)))))
  assert.equal(reads,1);assert.match(html,/oneall/)
 })
+
+test('async original pages read their initial request cookies after client workspace effects have changed the document',async()=>{
+ let current='account:administration'
+ const View=sourceView('workspace-cookie',async(_props,request)=>{
+  current='account:events'
+  await Promise.resolve()
+  return React.createElement('b',null,request.cookies)
+ })
+ const node=(revision,cookieSnapshot)=>React.createElement(OriginalRequest,{revision,cookieSnapshot},React.createElement(React.Suspense,{fallback:'pending'},React.createElement(View)))
+ const [first,second]=await Promise.all([render(node('one',current)),render(node('two','other:promotion'))])
+ assert.match(first,/account:administration/);assert.doesNotMatch(first,/account:events|other:promotion/)
+ assert.match(second,/other:promotion/);assert.equal(current,'account:events')
+ for(const file of ['app/(app)/page.tsx','app/(app)/portals/page.tsx','app/god-mode/page.tsx']){
+  const code=clientSource(file)
+  assert.match(code,/Source\(__sourceProps, __sourceRequest\)/)
+  assert.match(code,/cookies\((?:true|false), __sourceRequest\?\.cookies\)/)
+ }
+})
