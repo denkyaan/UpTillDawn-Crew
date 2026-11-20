@@ -1,0 +1,30 @@
+import test from 'node:test'
+import assert from 'node:assert/strict'
+import {readFileSync} from 'node:fs'
+const read=p=>readFileSync(p,'utf8')
+test('conditional incident redirect is part of real Main business authorization, not a false parity failure',()=>{
+ const incidents=read('app/(app)/incidents/page.tsx')
+ assert.ok(incidents.includes("if(!isAdmin&&!activeShifts.length&&!currentContext)redirect('/events')"))
+ assert.ok(incidents.includes("if(!isAdmin)redirect('/events')"))
+ const deep=read('modern/tests/deep-route-parity-qa.mjs')
+ assert.ok(deep.includes("if(path==='/incidents')"))
+ assert.ok(deep.includes("location.pathname==='/events'"))
+ assert.ok(deep.includes("location.pathname==='/incidents'&&!!document.querySelector('main h1')"))
+ assert.ok(deep.includes("UNEXPECTED_ORIGINAL_INCIDENT_REDIRECT"))
+ assert.ok(deep.includes("await b.waitForURL(url=>url.pathname===expectedPath"))
+ assert.ok(deep.includes("await matching(a,b,name)"),'Redirected /events screen must still match source controls')
+})
+test('every one of the 44 route comparisons gets a fresh pair of pages, preserving signed contexts',()=>{
+ const deep=read('modern/tests/deep-route-parity-qa.mjs')
+ const forLoop=deep.indexOf('for(const path of role.paths)')
+ const fresh=deep.indexOf('const a=await sourceContext.newPage(),b=await modernContext.newPage()',forLoop)
+ const navigation=deep.indexOf('await a.goto(original+path',forLoop)
+ const cleanup=deep.indexOf('await a.close()',navigation)
+ assert.ok(forLoop>=0&&fresh>forLoop&&navigation>fresh&&cleanup>navigation)
+ assert.ok(deep.includes('await b.close()'))
+ assert.ok(deep.includes('await sourceContext?.close()'))
+ assert.ok(deep.includes('await modernContext?.close()'))
+ assert.ok(deep.includes('DEEP_PARITY_ALL_MISMATCHES'))
+ assert.ok(deep.includes('mainCutoverAllowed:false'))
+ assert.ok(deep.includes('writeActionsSubmitted:0'))
+})
