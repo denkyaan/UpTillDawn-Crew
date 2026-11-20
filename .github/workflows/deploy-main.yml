@@ -180,10 +180,13 @@ jobs:
         run: npm --prefix modern run browser:qa
       - name: Exercise 30 DISTINCT signed QA sessions through deployed Hono /api/v1/session
         run: npm --prefix modern run sessions:qa
+      - name: Compare 22 deep original pages across seven real QA roles before any cutover
+        run: npm --prefix modern run browser:deep-qa
       - name: Report live browser evidence
         run: |
           echo "Modern Main-QA: seven signed roles x four languages x two device types validated against deployed Cloudflare static assets." >> "$GITHUB_STEP_SUMMARY"
           echo "Also passed 30 distinct signed QA sessions across 7 identities, with a bounded 30-request real Cloudflare Worker peak." >> "$GITHUB_STEP_SUMMARY"
+          echo "Deep-route acceptance: 22 additional authenticated original Main source-control comparisons across seven roles (NL desktop); no forms submitted." >> "$GITHUB_STEP_SUMMARY"
           echo "No business writes, provider money operations or production release were attempted." >> "$GITHUB_STEP_SUMMARY"
       - name: Record new Main-QA runtime outcomes even when candidate browser QA fails
         if: always()
@@ -200,6 +203,14 @@ jobs:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
         run: node scripts/main-worker-outcomes.mjs
+      - name: Upload deep-route comparison screenshots only when a mismatch is found
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: modern-main-deep-route-differences
+          path: test-results/modern-deep-route-parity/
+          if-no-files-found: ignore
+          retention-days: 5
       - name: Upload anonymous login parity evidence
         if: always()
         uses: actions/upload-artifact@v4
