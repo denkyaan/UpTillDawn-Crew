@@ -11,8 +11,12 @@ test("original Main /shifts redirects approved signed users to /workplaces",()=>
 })
 test("Vite original-source runtime preserves the same URL without relaxing auth or replacing UI",()=>{
  const candidate=read("modern/src/screens/original-application.tsx")
- assert.ok(candidate.includes("auth.user&&auth.profile"),"must require existing authenticated and RLS-approved profile")
- assert.ok(candidate.includes("if(path==='/shifts'&&auth.user&&auth.profile)"))
+ assert.ok(candidate.includes("if(location.pathname==='/shifts'&&auth.user)"),"only signed users may use the original shifts alias")
+ assert.ok(candidate.indexOf("if(auth.loading)return <Loading/>")<
+  candidate.indexOf("if(location.pathname==='/shifts'&&auth.user)"),"wait for authoritative signed session first")
+ assert.ok(candidate.indexOf('return <Navigate to="/workplaces" replace/>')<
+  candidate.indexOf('return <OriginalRequest key={identityKey}'),"redirect must occur before suspended original Main layout")
+ assert.ok(candidate.includes('node=<AppLayout>{node}</AppLayout>'),"workplaces still enforces original Main auth/RLS")
  assert.ok(candidate.includes('<Navigate to="/workplaces" replace/>'))
  assert.ok(candidate.includes("if(auth.loading)return <Loading/>"))
  assert.ok(candidate.includes("path={path} element={node}"))
