@@ -1,9 +1,10 @@
 import {readBoundedFormData} from "../../../lib/bounded-form-data.ts"
+import {nativeOriginalAuth,type MainAuthRuntimeBinding} from './native-auth.ts'
 
 export const MAIN_AUTH_ORIGIN="https://uptilldawn-main.uptilldawn.workers.dev"
 const CANDIDATE_ORIGIN="https://uptilldawn-modern-main.uptilldawn.workers.dev"
 const QA_DATABASE="https://npbjrtiolqperdgljnhi.supabase.co"
-export type MainAuthBindings={SUPABASE_URL:string;MAIN_AUTH?:{fetch:(request:Request)=>Promise<Response>}}
+export type MainAuthBindings={SUPABASE_URL:string;SUPABASE_ANON_KEY?:string;MAIN_AUTH_RUNTIME?:MainAuthRuntimeBinding;MAIN_AUTH?:{fetch:(request:Request)=>Promise<Response>}}
 const paths=new Set(["/api/auth/portal-login","/api/auth/account-action","/auth/callback"])
 const portals=new Set(["staff","responsible","admin","promotion","administration"])
 const actions=new Set(["signUp","forgotPassword","updatePassword","resendVerificationEmail","signOut"])
@@ -27,7 +28,7 @@ export function authResponseCookies(headers:Headers):string[]{
 // mail alerts, cookie writes and denial rules; none is copied to the client.
 export async function forwardMainAuth(request:Request,env:MainAuthBindings):Promise<Response>{
  const url=new URL(request.url)
- if(url.origin!==CANDIDATE_ORIGIN||env.SUPABASE_URL!==QA_DATABASE||!env.MAIN_AUTH)
+ if(url.origin!==CANDIDATE_ORIGIN||env.SUPABASE_URL!==QA_DATABASE||!env.MAIN_AUTH&&!env.MAIN_AUTH_RUNTIME)
   return rejected(503,"auth_service_unconfigured")
  if(!paths.has(url.pathname))return rejected(404,"auth_path_denied")
  const callback=url.pathname==="/auth/callback"
@@ -61,9 +62,15 @@ export async function forwardMainAuth(request:Request,env:MainAuthBindings):Prom
  if(!callback){headers.set("Origin",MAIN_AUTH_ORIGIN);headers.set("Sec-Fetch-Site","same-origin")}
  let response:Response
  try{
-  response=await env.MAIN_AUTH.fetch(new Request(upstreamUrl,{method:request.method,headers,body:form,redirect:"manual",signal:AbortSignal.timeout(20_000)}))
+  const originalRequest=new Request(upstreamUrl,{method:request.method,headers,body:form,redirect:"manual",signal:AbortSignal.timeout(20_000)})
+  if(env.MAIN_AUTH_RUNTIME){
+   if(!env.SUPABASE_ANON_KEY?.startsWith('sb_publishable_'))return rejected(503,'auth_service_unconfigured')
+   response=await nativeOriginalAuth(originalRequest,env.MAIN_AUTH_RUNTIME,env.SUPABASE_ANON_KEY)
+  }else if(env.MAIN_AUTH)response=await env.MAIN_AUTH.fetch(originalRequest)
+  else return rejected(503,'auth_service_unconfigured')
  }catch{return rejected(503,"auth_temporarily_unavailable")}
  const output=new Headers({"Cache-Control":"private, no-store","X-Content-Type-Options":"nosniff","Referrer-Policy":"no-referrer"})
+ const runtime=response.headers.get('x-uptilldawn-auth-runtime');if(runtime)output.set('X-UpTillDawn-Auth-Runtime',runtime)
  const location=response.headers.get("location")
  if(location){
   const target=new URL(location,MAIN_AUTH_ORIGIN)

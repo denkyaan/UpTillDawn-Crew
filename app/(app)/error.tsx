@@ -9,7 +9,7 @@ export default function Error({
   error:Error&{digest?:string}
   reset:()=>void
 }){
-  return <main className="space-y-4 p-8">
+  return <main data-app-error="true" className="space-y-4 p-8">
     <div>
       <h1 className="text-2xl font-bold">De actie kon niet worden voltooid.</h1>
       <p>Controleer je invoer en verbinding.</p>

@@ -21,6 +21,10 @@ const query=`query MainWorkerOutcomes($accountTag: string, $start: string, $end:
  }
 }`
 const payload={query,variables:{accountTag:account,start:start.toISOString(),end:now.toISOString(),script:'uptilldawn-main'}}
+// Exact two Main-QA names only. Never accept an arbitrary/production script.
+if(process.env.MAIN_DIAGNOSTIC_TARGET==='modern-main')payload.variables.script='uptilldawn-modern-main'
+else if(process.env.MAIN_DIAGNOSTIC_TARGET&&process.env.MAIN_DIAGNOSTIC_TARGET!=='main')throw Error('Main-only diagnostic target required')
+const scriptName=payload.variables.script
 try{
  const response=await fetch('https://api.cloudflare.com/client/v4/graphql',{
   method:'POST',
@@ -42,7 +46,7 @@ try{
  // bytes. These are the highest GROUPED P99 readings, not a global percentile.
  let cpuP99MaxUs=null,memoryP99MaxBytes=null
  for(const row of rows){
-  if(row?.dimensions?.scriptName!=='uptilldawn-main')continue
+  if(row?.dimensions?.scriptName!==scriptName)continue
   const name=String(row?.dimensions?.status||'unknown').replace(/[^a-zA-Z0-9_-]/g,'').slice(0,48)
   const requests=Math.max(0,Number(row?.sum?.requests)||0)
   statusCounts.set(name,(statusCounts.get(name)||0)+requests)
@@ -54,7 +58,7 @@ try{
   }
  }
  const summary=[...statusCounts.entries()].sort((a,b)=>a[0].localeCompare(b[0])).map(([k,v])=>k+'='+v).join(', ')
- console.log('CLOUDFLARE_MAIN_OUTCOMES last90min: '+(summary||'no matching invocations'))
+ console.log('CLOUDFLARE_MAIN_OUTCOMES script='+scriptName+' last90min: '+(summary||'no matching invocations'))
  const cpu=statusCounts.get('exceededCpu')||0,memory=statusCounts.get('exceededMemory')||0,other=statusCounts.get('exceededResources')||0
  const cpuP99Ms=cpuP99MaxUs===null?null:Math.round(cpuP99MaxUs/1000*100)/100
  const memoryP99MiB=memoryP99MaxBytes===null?null:Math.round(memoryP99MaxBytes/(1024*1024)*100)/100
@@ -86,7 +90,7 @@ try{
     if(Array.isArray(afterRows)){
      const afterCounts=new Map()
      for(const row of afterRows){
-      if(row?.dimensions?.scriptName!=='uptilldawn-main')continue
+      if(row?.dimensions?.scriptName!==scriptName)continue
       const status=String(row?.dimensions?.status||'unknown').replace(/[^a-zA-Z0-9_-]/g,'').slice(0,48)
       const count=Math.max(0,Number(row?.sum?.requests)||0)
       afterCounts.set(status,(afterCounts.get(status)||0)+count)
@@ -110,7 +114,7 @@ try{
   console.log('::warning::Main browser acceptance failed while analytics reported zero post-deploy resource outcomes; treat browser failures as authoritative until investigated')
  const {appendFileSync}=await import('node:fs')
  if(process.env.GITHUB_STEP_SUMMARY)appendFileSync(process.env.GITHUB_STEP_SUMMARY,
-  '\n### Main Worker resource outcomes (read-only)\n- Worker: uptilldawn-main\n- Last 90-minute status counts (includes earlier app revisions): '+(summary||'none')+'\n- Status counts since current Main deployment: '+postDeploySummary+'\n- Post-deploy confirmed resource failures: '+(postDeployCounts===null?'unavailable':(postDeployCounts.get('exceededResources')||0)+(postDeployCounts.get('exceededCpu')||0)+(postDeployCounts.get('exceededMemory')||0))+'\n- Maximum grouped CPU P99 (ms), last 90 minutes: '+(cpuP99Ms??'unavailable')+'\n- Maximum grouped isolate-memory P99 (MiB), last 90 minutes: '+(memoryP99MiB??'unavailable')+'\n- Analytics may be delayed; a zero is not a long-term guarantee\n- Production worker not queried\n')
+  '\n### Main Worker resource outcomes (read-only)\n- Worker: '+scriptName+'\n- Last 90-minute status counts (includes earlier app revisions): '+(summary||'none')+'\n- Status counts since current Main deployment: '+postDeploySummary+'\n- Post-deploy confirmed resource failures: '+(postDeployCounts===null?'unavailable':(postDeployCounts.get('exceededResources')||0)+(postDeployCounts.get('exceededCpu')||0)+(postDeployCounts.get('exceededMemory')||0))+'\n- Maximum grouped CPU P99 (ms), last 90 minutes: '+(cpuP99Ms??'unavailable')+'\n- Maximum grouped isolate-memory P99 (MiB), last 90 minutes: '+(memoryP99MiB??'unavailable')+'\n- Analytics may be delayed; a zero is not a long-term guarantee\n- Production worker not queried\n')
  // Do not let a successful deployment and browser run conceal confirmed 1102
  // invocations. This checks ACTUAL post-deploy Main Worker analytics, never a
  // manufactured load test or a cross-release 90-minute window.

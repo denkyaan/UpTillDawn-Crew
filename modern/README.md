@@ -22,6 +22,17 @@ Existing API route/method pairs use a bounded streaming QA-only Main service
 binding. Unknown paths, forged hosts and cross-site mutations are rejected.
 The original credential, email callback and provider-delivery gates remain.
 
+The three authentication routes compile directly from the original Main source
+into native Worker code. Both Main and the candidate execute that same source
+without invoking Next's request handler. Request-scoped cookies and private
+environment values remain isolated across concurrent users. Main exposes only
+the audited mail/location configuration through a named internal service
+entrypoint; database administration, deployment and provider credentials are
+excluded. Publish Main before the candidate resolves this binding. Real login
+QA requires the native-runtime response header, with no password retry or
+fallback to the legacy handler. A single recorded retry is allowed only for
+read-only reference-page rendering; it does not certify legacy runtime health.
+
 God Mode's HttpOnly credential stays on the server. An opaque reference can
 request only two fixed RPCs after an independent owner and actual cookie check.
 No browser authority, raw token, encryption key or service-role key is added.

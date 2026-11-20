@@ -76,10 +76,16 @@ jobs:
             cat "/tmp/fast-$label.log"
           done
           exit "$failed"
+      - name: Read isolated Main Worker runtime outcomes for diagnostic PRs
+        if: ${{ github.event_name == 'pull_request' && startsWith(github.head_ref, 'diagnostic/main-runtime') && github.event.pull_request.head.repo.full_name == github.repository }}
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        run: node scripts/main-worker-outcomes.mjs
       # Candidate-only build gate. Never slows ordinary Main CI/deploy; the
       # current production app remains Next/OpenNext until the full parity gate.
       - name: Validate isolated Vite/Hono migration build
-        if: ${{ github.event_name == 'pull_request' && startsWith(github.head_ref, 'migration/') }}
+        if: ${{ github.event_name == 'pull_request' && (startsWith(github.head_ref, 'migration/') || startsWith(github.head_ref, 'diagnostic/main-runtime')) }}
         shell: bash
         run: |
           set -euo pipefail

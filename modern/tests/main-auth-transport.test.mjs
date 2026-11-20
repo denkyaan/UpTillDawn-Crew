@@ -9,6 +9,18 @@ function req(path='/api/auth/portal-login',fields={portal:'staff',email:'fixture
  for(const [key,value] of Object.entries(fields))body.set(key,value)
  return new Request(origin+path,{method:'POST',body,headers:{Origin:origin,'Sec-Fetch-Site':'same-origin',...headers}})
 }
+test('native binding executes the original validation without entering the legacy fetch path',async()=>{
+ let calls=0
+ const env={SUPABASE_URL:qa,SUPABASE_ANON_KEY:'sb_publishable_native-auth-fixture',MAIN_AUTH_RUNTIME:{async runtimeConfiguration(){calls++;return {protocol:'main-auth-native-v1',projectUrl:qa,values:{}}}},MAIN_AUTH:{async fetch(){throw Error('legacy runtime must not execute')}}}
+ const result=await forwardMainAuth(req(undefined,{portal:'staff',email:'',password:''}),env)
+ assert.equal(result.status,200);assert.equal(calls,1)
+ assert.equal(result.headers.get('x-uptilldawn-auth-runtime'),'native-original-source')
+ assert.deepEqual(await result.json(),{error:'E-mail en wachtwoord zijn verplicht.'})
+ env.MAIN_AUTH_RUNTIME.runtimeConfiguration=async()=>{calls++;throw Error('runtime unavailable')}
+ const failed=await forwardMainAuth(req(),env)
+ assert.equal(failed.status,503);assert.equal(calls,2)
+ assert.equal((await failed.json()).code,'auth_temporarily_unavailable')
+})
 test('all five login portals keep the original Main action result and chunked cookies',async()=>{
  for(const portal of ['staff','responsible','admin','promotion','administration']){
   let calls=0

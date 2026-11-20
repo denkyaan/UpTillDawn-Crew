@@ -43,3 +43,12 @@ test('Cloudflare metrics cannot override a failed end-to-end browser verdict',()
  assert.match(source,/browser acceptance failed while analytics reported zero/)
  assert.match(workflow,/MAIN_BROWSER_QA_RESULT: \$\{\{ needs\.qa-main-browser-acceptance\.result \}\}/)
 })
+test('isolated runtime diagnostics can read Main outcomes without publishing or exposing credentials to forks',()=>{
+ const ci=readFileSync('.github/workflows/fast-change-validation.yml','utf8')
+ const step=ci.split('- name: Read isolated Main Worker runtime outcomes for diagnostic PRs')[1].split('# Candidate-only build gate.')[0]
+ assert.match(step,/github.event_name == 'pull_request'/)
+ assert.match(step,/startsWith\(github.head_ref, 'diagnostic\/main-runtime'\)/)
+ assert.match(step,/github.event.pull_request.head.repo.full_name == github.repository/)
+ assert.match(step,/run: node scripts\/main-worker-outcomes.mjs/)
+ assert.doesNotMatch(step,/deploy|dispatch|console\.log/)
+})

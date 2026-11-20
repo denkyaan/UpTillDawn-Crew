@@ -54,11 +54,15 @@ jobs:
       - name: Verify seven distinct roles and login with the same configured QA password
         run: node scripts/provision-seven-main-bots.mjs --verify --verify-passwords
 
-  # Deploy the real Vite/React/Hono Main-QA Worker IN PARALLEL with
-  # the existing OpenNext Main Worker, never replacing the working site.
+  # Publish Main's private auth entrypoint before the Vite/React/Hono
+  # Main-QA Worker that binds it, preserving the original Main UI.
   # Main and Production are separate; this uses ONLY the QA Supabase project.
   deploy-modern-main-qa:
-    needs: validate-trigger
+    # The native auth binding targets a named entrypoint introduced on Main.
+    # Publish Main first so that entrypoint exists before resolving the binding.
+    needs: [validate-trigger, deploy]
+    outputs:
+      deployed_at: ${{ steps.modern-worker-deploy.outputs.deployed_at }}
     if: needs.validate-trigger.outputs.eligible == 'true'
     permissions:
       contents: read
@@ -115,8 +119,11 @@ jobs:
           fi
           test -n "${CLOUDFLARE_API_TOKEN:-}" && test -n "${CLOUDFLARE_ACCOUNT_ID:-}"
       - name: Publish modern Main-QA Worker — static assets and Hono API only
+        id: modern-worker-deploy
         working-directory: modern
-        run: npx wrangler deploy --config wrangler.main-qa.jsonc
+        run: |
+          npx wrangler deploy --config wrangler.main-qa.jsonc
+          echo "deployed_at=$(date -u +%Y-%m-%dT%H:%M:%SZ)" >> "$GITHUB_OUTPUT"
       - name: Smoke test actual public static SPA, Hono API and denial rules
         run: node modern/scripts/main-qa-live-smoke.mjs
       - name: Report exactly what is deployed
@@ -178,6 +185,21 @@ jobs:
           echo "Modern Main-QA: seven signed roles x four languages x two device types validated against deployed Cloudflare static assets." >> "$GITHUB_STEP_SUMMARY"
           echo "Also passed 30 distinct signed QA sessions across 7 identities, with a bounded 30-request real Cloudflare Worker peak." >> "$GITHUB_STEP_SUMMARY"
           echo "No business writes, provider money operations or production release were attempted." >> "$GITHUB_STEP_SUMMARY"
+      - name: Record new Main-QA runtime outcomes even when candidate browser QA fails
+        if: always()
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          MAIN_DIAGNOSTIC_TARGET: modern-main
+          MAIN_WORKER_DEPLOYED_AT: ${{ needs.deploy-modern-main-qa.outputs.deployed_at }}
+          MAIN_BROWSER_QA_RESULT: ${{ job.status }}
+        run: node scripts/main-worker-outcomes.mjs
+      - name: Report legacy Main runtime outcomes separately from new candidate health
+        if: always()
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        run: node scripts/main-worker-outcomes.mjs
       - name: Upload anonymous login parity evidence
         if: always()
         uses: actions/upload-artifact@v4

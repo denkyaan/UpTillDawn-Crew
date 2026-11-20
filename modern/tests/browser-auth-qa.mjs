@@ -26,7 +26,7 @@ const remote=process.env.E2E_MAIN_MODERN_QA_ORIGIN||''
 if(remote&&remote!==approvedRemote)throw Error('EXACT_MODERN_MAIN_QA_ORIGIN_REQUIRED')
 const origin=remote||'http://127.0.0.1:4176',root=resolve(import.meta.dirname,'../..')
 const preview=remote?null:spawn(process.execPath,[resolve(root,'modern/node_modules/vite/bin/vite.js'),'preview','--host','127.0.0.1','--port','4176','--strictPort'],{cwd:resolve(root,'modern'),stdio:'ignore'})
-let browser,signins=0,total=0,menuComparisons=0,workspaceComparisons=0
+let browser,signins=0,total=0,menuComparisons=0,workspaceComparisons=0,baselineRecoveries=0
 const failures=[]
 const notificationReads=new WeakMap()
 function observeNotices(page){
@@ -47,7 +47,15 @@ async function ready(page){
  await page.evaluate(()=>window.dispatchEvent(new Event('uptilldawn-chat-read')))
  await page.waitForLoadState('networkidle',{timeout:25000})
  await page.locator('[data-route-loading="true"]').waitFor({state:'detached',timeout:30000})
- if(await page.getByRole('heading',{name:'De actie kon niet worden voltooid.',exact:true}).count())throw Error('ORIGINAL_VIEW_RENDER_FAILED')
+ if(await page.locator('[data-app-error="true"]').count())throw Error('ORIGINAL_VIEW_RENDER_FAILED')
+}
+async function readyBaseline(page){
+ try{await ready(page)}catch(error){
+  // A GET may be retried once when the authoritative legacy server could not
+  // render. Record recovery explicitly; never retry a candidate or a login.
+  baselineRecoveries++;console.error('LEGACY_MAIN_READ_RECOVERY '+(error instanceof Error?error.message.split('\n')[0]:'read unavailable'))
+  await page.reload({waitUntil:'domcontentloaded',timeout:30000});await ready(page)
+ }
 }
 async function fingerprint(page){
  return page.evaluate(()=>{
@@ -103,14 +111,15 @@ try{
  for(const bot of bots){
   const login=await browser.newContext({locale:'nl-BE',viewport:devices[0].viewport})
   try{
-   const page=await login.newPage();let status=0,reads=0;const readKinds={}
+   const page=await login.newPage();let status=0,reads=0,nativeLogin=false;const readKinds={}
    page.on('request',request=>{const target=new URL(request.url());if(target.origin!==qa.origin)return;reads++;readKinds[target.pathname]=(readKinds[target.pathname]||0)+1;if(reads>400)void page.close()})
    page.on('pageerror',error=>console.error('QA_PAGE_ERROR '+bot.role+' '+error.name))
-   page.on('response',response=>{if(new URL(response.url()).pathname==='/api/auth/portal-login')status=response.status()})
+   page.on('response',response=>{if(new URL(response.url()).pathname==='/api/auth/portal-login'){status=response.status();nativeLogin=response.headers()['x-uptilldawn-auth-runtime']==='native-original-source'}})
    await page.goto(origin+'/login/'+bot.login,{waitUntil:'domcontentloaded',timeout:20000})
    await page.locator('input[name="email"]').fill(bot.email);await page.locator('input[name="password"]').fill(password)
    await page.locator('form button[type="submit"]').click()
    try{await ready(page)}catch(error){console.error('QA_READY_FAILURE '+bot.role+' '+(error instanceof Error?error.message.split('\n')[0]:'unknown')+' reads='+reads+' sources='+JSON.stringify(readKinds));throw Error('QA_LOGIN_NOT_READY '+bot.role+' HTTP='+status)}
+   if(remote&&!nativeLogin)throw Error('QA_NON_NATIVE_AUTH '+bot.role)
    signins++
    const landing=new URL(page.url()).pathname,state=await login.storageState()
    // Check ordinary source pages without mutations before device comparisons.
@@ -130,7 +139,7 @@ try{
      observeNotices(a);observeNotices(b)
      b.on('pageerror',error=>errors.push(error.name))
      // Sequential Main SSR requests respect the Free environment's limits.
-     await Promise.all([a.goto(legacy+landing,{waitUntil:'domcontentloaded',timeout:30000}),b.goto(origin+landing,{waitUntil:'domcontentloaded',timeout:20000})]);await ready(a);await ready(b)
+     await Promise.all([a.goto(legacy+landing,{waitUntil:'domcontentloaded',timeout:30000}),b.goto(origin+landing,{waitUntil:'domcontentloaded',timeout:20000})]);await readyBaseline(a);await ready(b)
      if(await b.locator('html').getAttribute('lang')!==language)throw Error('QA_LOCALE '+label)
      await compare(a,b,label);await menus(a,b,label)
      if(language==='nl'&&device.name==='desktop'){
@@ -152,7 +161,7 @@ try{
        for(const [context,host]of [[original,legacy],[candidate,origin]])await context.addCookies([{name:'uptilldawn-last-workspace',value:encodeURIComponent(uid+':'+workspace),url:host,secure:host.startsWith('https:'),sameSite:'Lax'}])
        await Promise.all([a.goto(legacy+'/',{waitUntil:'domcontentloaded',timeout:30000}),b.goto(origin+'/',{waitUntil:'domcontentloaded',timeout:20000})])
        await Promise.all([a.waitForURL('**/portals/'+workspace,{timeout:20000}),b.waitForURL('**/portals/'+workspace,{timeout:20000})])
-       await ready(a);await ready(b);await compare(a,b,label+'-restore-'+workspace);workspaceComparisons++
+       await readyBaseline(a);await ready(b);await compare(a,b,label+'-restore-'+workspace);workspaceComparisons++
       }
      }
      if(errors.length)throw Error('QA_JS_ERRORS '+label)
@@ -167,5 +176,5 @@ try{
  if(failures.length){console.error('ORIGINAL_COMPARISON_FAILURES '+JSON.stringify(failures));throw Error('QA_ORIGINAL_COMPARISONS_FAILED '+failures.length)}
  if(workspaceComparisons!==2)throw Error('QA_WORKSPACE_RESTORATION_INCOMPLETE')
  if(signins!==7||total!==56)throw Error('QA_INCOMPLETE_COVERAGE')
- console.log(JSON.stringify({validated:true,qaBots:7,actualBotSignins:signins,authenticatedBrowserScenarios:total,originalMainControlComparisons:total,expandedMenuComparisons:menuComparisons,workspaceRestorationComparisons:workspaceComparisons,locales:4,deviceProfiles:2,formsSubmitted:false,fullVisualParityVerified:false,productionReady:false}))
+ console.log(JSON.stringify({validated:true,qaBots:7,actualBotSignins:signins,authenticatedBrowserScenarios:total,originalMainControlComparisons:total,expandedMenuComparisons:menuComparisons,workspaceRestorationComparisons:workspaceComparisons,legacyMainReadRecoveries:baselineRecoveries,legacyMainRuntimeHealthy:baselineRecoveries===0,locales:4,deviceProfiles:2,formsSubmitted:false,fullVisualParityVerified:false,productionReady:false}))
 }finally{if(browser)await browser.close();preview?.kill('SIGTERM')}

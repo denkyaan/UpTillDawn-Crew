@@ -16,14 +16,14 @@
     "budget": "node scripts/bundle-budget.mjs",
     "worker:check": "wrangler deploy --dry-run --outdir .wrangler-candidate-dry-run",
     "inventory": "node scripts/inventory.mjs",
-    "api:test": "node --test tests/*.test.mjs",
+    "api:test": "node scripts/build-native-auth.mjs && node --test tests/*.test.mjs",
     "browser:test": "node tests/browser-smoke.mjs",
     "rpc:contract": "node scripts/rpc-contract.mjs",
     "browser:qa": "node tests/browser-auth-qa.mjs",
     "sessions:qa": "node tests/qa-30-sessions.mjs",
     "login:visual-parity": "node tests/login-parity-qa.mjs",
     "login:cutover-gate": "node scripts/login-cutover-gate.mjs",
-    "prebuild": "node scripts/prepare-original-assets.mjs"
+    "prebuild": "node scripts/build-native-auth.mjs && node scripts/prepare-original-assets.mjs"
   },
   "dependencies": {
     "@codemirror/lang-css": "6.3.1",
@@ -55,6 +55,7 @@
     "@types/node": "^22.19.19",
     "@types/react": "^19.2.15",
     "@types/react-dom": "19.2.3",
+    "esbuild": "^0.28.1",
     "playwright": "1.65.0",
     "tailwindcss": "4.3.0",
     "tw-animate-css": "1.4.0",
