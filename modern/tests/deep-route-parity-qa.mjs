@@ -1,5 +1,7 @@
 // Authoritative Main-versus-Vite deep-route acceptance, using ONLY the seven
-// pre-existing isolated QA identities. Read-only navigation; no form submission
+// pre-existing isolated QA identities. This pass now compares 44 routes;
+// it still does NOT claim all 81 application screens or all workflow states.
+// Read-only navigation; no form submission
 // or business write. Intentionally does NOT claim complete 1:1 action parity.
 import {chromium} from 'playwright'
 import {mkdir} from 'node:fs/promises'
@@ -19,24 +21,30 @@ if(password.length<24||process.env.VITE_MIGRATION_ALLOW_WRITES!=='false')
 
 const cases=[
  {role:'head_admin',portal:'admin',email:'e2e-head-admin@uptilldawn.test',paths:[
-  '/admin/management','/admin/time-records','/portals/administration/modules/invoices',
+  '/admin/management','/admin/time-records','/admin','/admin/health','/admin/platform',
+  '/events','/inventory','/portals/administration/modules/invoices',
   '/portals/administration/modules/banking','/portals/administration/modules/ticketing']},
  {role:'left_hand',portal:'administration',email:'e2e-admin@uptilldawn.test',paths:[
-  '/portals/administration/rosters','/portals/administration/modules/contracts']},
+  '/portals/administration/rosters','/portals/administration/modules/contracts',
+  '/portals/administration/overview','/portals/administration/modules/events']},
  {role:'right_hand',portal:'administration',email:'e2e-right-hand@uptilldawn.test',paths:[
-  '/portals/administration/personnel','/portals/administration/modules/inventory']},
+  '/portals/administration/personnel','/portals/administration/modules/inventory',
+  '/portals/administration/modules/documents','/portals/administration/modules/staff']},
  {role:'administration',portal:'administration',email:'e2e-administration@uptilldawn.test',paths:[
   '/portals/administration/finance','/portals/administration/modules/artists',
-  '/portals/administration/modules/invoices','/portals/administration/timesheets']},
+  '/portals/administration/modules/invoices','/portals/administration/timesheets',
+  '/portals/administration/modules/tasks','/portals/administration/modules/automations',
+  '/portals/administration/modules/reports','/portals/administration/modules/settings']},
  {role:'responsible',portal:'responsible',email:'e2e-responsible@uptilldawn.test',paths:[
-  '/workplaces','/shifts','/briefings']},
+  '/workplaces','/shifts','/briefings','/crew','/help','/incidents','/timesheets']},
  {role:'staff',portal:'staff',email:'e2e-staff@uptilldawn.test',paths:[
-  '/tasks','/timesheets','/notifications']},
+  '/tasks','/timesheets','/notifications','/events','/settings','/sync','/briefings']},
  {role:'promotion',portal:'promotion',email:'e2e-promotion@uptilldawn.test',paths:[
-  '/portals/promotion/tasks','/portals/promotion/chats','/portals/promotion/notifications']},
+  '/portals/promotion/tasks','/portals/promotion/chats','/portals/promotion/notifications',
+  '/portals/promotion/staff']},
 ]
 const EXPECTED=cases.reduce((n,c)=>n+c.paths.length,0)
-if(cases.length!==7||EXPECTED!==22)throw Error('DEEP_PARITY_COVERAGE_CHANGED')
+if(cases.length!==7||EXPECTED!==44)throw Error('DEEP_PARITY_COVERAGE_CHANGED')
 const reportDir=resolve(import.meta.dirname,'../../test-results/modern-deep-route-parity')
 const clean=value=>(value||'').replace(/\s+/g,' ').replace(/\b\d+\b/g,'#').trim()
 
