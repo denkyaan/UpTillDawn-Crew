@@ -1,6 +1,6 @@
 import {originalSearchParams} from '../compat/search-params'
 import {Component,Suspense,lazy,startTransition,useEffect,useMemo,useState,type ReactNode,type ComponentType} from 'react'
-import {Route,Routes,useLocation,useParams} from 'react-router-dom'
+import {Navigate,Route,Routes,useLocation,useParams} from 'react-router-dom'
 import {ThemeProvider} from 'next-themes'
 import {AuthProvider,useAuth} from 'main-source/lib/providers.tsx'
 import {AdminSelectionProvider} from 'main-source/lib/admin-selection-context.tsx'
@@ -45,6 +45,14 @@ function AuthenticatedRoutes(){
  const requestKey=[identityKey,location.key,revision].join(':')
  const content=useMemo(()=><Routes>{pages.map(({path,Page:Screen})=>{
   let node=<Page Screen={Screen} revision={requestKey}/>
+  // The authoritative original /shifts page checks the signed user and then
+  // redirects to /workplaces. A Next server-render redirect cannot always
+  // complete during a Vite client Suspense render. Preserve that exact
+  // original URL outcome after the existing authenticated profile gate.
+  // This is NOT a new shortcut or workflow: /shifts remains the original
+  // compatibility URL and /workplaces remains its original destination.
+  if(path==='/shifts'&&auth.user&&auth.profile)
+   node=<Navigate to="/workplaces" replace/>
   if(path.startsWith('/portals/administration'))node=<AdministrationLayout>{node}</AdministrationLayout>
   if(path.startsWith('/portals/promotion'))node=<PromotionLayout>{node}</PromotionLayout>
   if(!['/maker-mode','/qr','/q/:code'].includes(path)&&!path.startsWith('/god-mode'))node=<AppLayout>{node}</AppLayout>
