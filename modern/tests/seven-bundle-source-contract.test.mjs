@@ -124,7 +124,7 @@ test('offline/PWA and fast, isolated Main delivery remain preserved without prod
  assert.ok(workflow.includes("VITE_MIGRATION_ALLOW_WRITES: 'false'"))
  assert.ok(workflow.includes("qa-modern-main-qa:"))
  assert.ok(workflow.includes("Compare original Main login"))
- assert.ok(workflow.includes("Compare 22 deep original pages"))
+ assert.ok(workflow.includes("Compare 44 deep original pages"))
  const fast=read('.github/workflows/fast-change-validation.yml')
  assert.ok(fast.includes('branches: [main]'))
  assert.ok(fast.includes('release_production'))
