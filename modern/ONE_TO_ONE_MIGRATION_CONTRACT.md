@@ -72,6 +72,20 @@ panel or a fallback link is never functional parity.
    the user-facing URL, visual design or functionality. Production needs separate
    explicit authorization.
 
+### Read-only QA service-boundary contract
+The Vite/React/Hono candidate remains a read-only acceptance surface until
+all existing business actions pass real success/denial E2E parity. The
+`UPT_MIGRATION_ALLOW_WRITES` **Worker runtime variable** is explicitly
+`"false"` in the Main-QA Wrangler configuration. Client-side Vite feature
+flags are not authorization boundaries. The Hono API must reject original
+Main action POSTs, provider/ticket mutations and OAuth/Peppol GET initiation
+**before** calling the Main service binding; the sole POST exception is the
+original auth/RLS-protected `/api/migration/view-data` read. Original login
+and account actions retain the separate native-auth implementation.
+Enabling writes is a separate gated technical migration task; never claim
+functionality based only on the 163 mapped action names. The original Main
+app stays unchanged and fully functional during this phase.
+
 ### Current truth
 The authenticated candidate in `modern/` still has simplified styling,
 navigation and screens. Public authentication reuses Main source, with the

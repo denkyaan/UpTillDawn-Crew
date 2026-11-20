@@ -11,7 +11,7 @@ import {
 import {scannerReady,scannerOrigin,validScanRequest,scanWeeztix,type ScannerBindings,type RpcDb} from "./weeztix-scan.ts"
 import {forwardMainAuth,type MainAuthBindings} from "./main-auth.ts"
 
-type Bindings={SUPABASE_URL:string;SUPABASE_ANON_KEY:string;ASSETS?:{fetch:(request:Request)=>Promise<Response>}}&OAuthBindings&ScannerBindings&MainAuthBindings
+type Bindings={SUPABASE_URL:string;SUPABASE_ANON_KEY:string;UPT_MIGRATION_ALLOW_WRITES?:string;ASSETS?:{fetch:(request:Request)=>Promise<Response>}}&OAuthBindings&ScannerBindings&MainAuthBindings
 const app=new Hono<{Bindings:Bindings}>()
 
 // Static navigation and images bypass this Worker entirely. Only /api/*
@@ -245,7 +245,26 @@ app.post("/api/v1/tickets/weeztix/scan",async c=>{
  return c.json(out.body,out.status as 200|403|404|409|422|503)
 })
 
-app.all("/api/*",c=>forwardMainSource(c.req.raw,c.env))
+// Candidate is intentionally read-only. Vite compile-time flags alone are
+// not security controls: clients can POST directly to the original Main API
+// service binding. Enforce the migration gate at the Worker boundary too.
+// /api/migration/view-data uses POST for a scoped READ and is the sole
+// exception. Login/account actions above retain their own original-auth
+// security contract; provider OAuth and ticket admission remain separately OFF.
+app.all("/api/*",c=>{
+ const path=c.req.path,method=c.req.method
+ if(path==="/api/test-auth-session"||!originalApiAllowed(path,method))return c.json({error:"not_found"},404)
+ const readMethod=method==="GET"||method==="HEAD"
+ const safeReadPost=path==="/api/migration/view-data"&&method==="POST"
+ // Some legacy GET endpoints initiate OAuth or prepare outward-facing
+ // accounting transactions, so method alone does not imply no side effects.
+ const businessGet=method==="GET"&&(
+  /^\\/api\\/administration\\/integrations\\/(?:oauth\\/[^/]+|weeztix)\\/(?:start|callback)$/.test(path)||
+  path==="/api/administration/peppol/prepare")
+ if(c.env.UPT_MIGRATION_ALLOW_WRITES!=="true"&&(!readMethod&&!safeReadPost||businessGet))
+  return c.json({error:"migration_writes_disabled"},503)
+ return forwardMainSource(c.req.raw,c.env)
+})
 // Original portal switching and private contract downloads are server routes,
 // not SPA pages. Other artist URLs serve the static index through ASSETS.
 app.all("/portals/*",c=>{

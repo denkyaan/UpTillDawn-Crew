@@ -60,7 +60,9 @@ test('source bridge smoke waits for the upstream API deployment while the two Wo
  assert.ok(!get('modern/scripts/main-qa-live-smoke.mjs').includes('/api/migration/actions'))
  const smoke=get('modern/scripts/main-source-live-smoke.mjs')
  assert.ok(smoke.includes('/api/migration/actions')&&smoke.includes('/api/migration/view-data'))
- assert.ok(smoke.includes('response.status!==401'))
+ assert.ok(smoke.includes("'/api/migration/actions',form,null,503"))
+ assert.ok(smoke.includes("'application/json',401"))
+ assert.ok(smoke.includes('response.status!==expected'))
 })
 test("remote seven-role QA talks to real Cloudflare, local preview remains separately runnable",()=>{
  const qa=get("modern/tests/browser-auth-qa.mjs")
