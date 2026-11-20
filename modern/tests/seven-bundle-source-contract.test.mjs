@@ -3,12 +3,14 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
 import {readFileSync} from 'node:fs'
+import {resolve} from 'node:path'
 import {actionEntries,filesBelow,parse,pages,routePath,ts} from '../tooling/main-source.mjs'
 import {originalMainRoutes} from '../src/api/main-routes.ts'
 import {originalApiAllowed} from '../src/api/main-source.ts'
 import {verifyOriginalActionRegistry} from '../tooling/action-registry-contract.mjs'
 
-const read=(file)=>readFileSync(file,'utf8')
+const repo=resolve(import.meta.dirname,'../..')
+const read=(file)=>readFileSync(resolve(repo,file),'utf8')
 const exportsMethod=(node)=>{
  const modifiers=node.modifiers??[]
  return modifiers.some(m=>m.kind===ts.SyntaxKind.ExportKeyword)
