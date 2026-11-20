@@ -151,43 +151,77 @@ try{
     storageState:{cookies:originalCookies,origins:[]}})
    modernContext=await browser.newContext({locale:'nl-BE',viewport:{width:1440,height:900},
     storageState:session})
-   const a=await sourceContext.newPage(),b=await modernContext.newPage()
+   // Reuse source and candidate pages for ordinary navigation to keep
+   // Cloudflare Free load low. A conditional Next redirect may still be in
+   // flight after React hydration, so give THAT route its own disposable
+   // documents rather than letting it interrupt the next /timesheets visit.
+   const sharedSource=await sourceContext.newPage(),sharedCandidate=await modernContext.newPage()
    for(const path of role.paths){
     const name=role.role+'-'+path
-    // One original SSR request and one candidate SPA request per route.
-    // Never synthesize focus/chat refreshes, poll networkidle or retry mutations.
+    const redirectsConditionally=path==='/incidents'
+    const a=redirectsConditionally?await sourceContext.newPage():sharedSource
+    const b=redirectsConditionally?await modernContext.newPage():sharedCandidate
+    let stage='original-navigation'
     try{
      const baseline=await a.goto(original+path,{waitUntil:'domcontentloaded',timeout:30000})
-     // The original /shifts source is an authenticated redirect alias:
-     // getCurrentUser() then redirect('/workplaces'). It can briefly render
-     // an empty Next transition that has NO app-shell readiness marker.
-     // Wait for its final URL instead of spending 18s on a blank old route.
-     if(path==='/shifts')
-      await a.waitForURL(url=>url.pathname==='/workplaces',{timeout:9000})
      if(baseline?.status()!==200&&baseline?.status()!==304)
       throw Error('LEGACY_MAIN_HTTP_'+baseline?.status())
+     // Legacy /shifts is always an authenticated alias to /workplaces.
+     if(path==='/shifts'){
+      stage='original-shifts-redirect'
+      await a.waitForURL(url=>url.pathname==='/workplaces',{timeout:9000})
+     }
+     // The original /incidents page sends responsible/staff to /events
+     // when no current work context or active shift exists. It can first
+     // stream a blank Next shell. Require either the rendered incident
+     // heading or the actual authorized redirect before taking a baseline.
+     if(path==='/incidents'){
+      stage='original-incidents-settle'
+      await a.waitForFunction(()=>location.pathname==='/events'||
+       (location.pathname==='/incidents'&&!!document.querySelector('main h1')),
+       null,{timeout:18000})
+      const settled=new URL(a.url()).pathname
+      if(settled!=='/incidents'&&settled!=='/events')
+       throw Error('UNEXPECTED_ORIGINAL_INCIDENT_REDIRECT')
+     }
+     stage='original-readiness'
      await ready(a)
-     await b.goto(modern+path,{waitUntil:'domcontentloaded',timeout:20000})
      const expectedPath=new URL(a.url()).pathname
-     if(expectedPath!==path)
-      await b.waitForURL(url=>url.pathname===expectedPath,{timeout:9000})
+     stage='candidate-navigation'
+     await b.goto(modern+path,{waitUntil:'domcontentloaded',timeout:20000})
+     // If the original page has redirected, the candidate MUST navigate
+     // to the SAME final location. Never count a missing/blank redirect
+     // or an unhydrated root as a passing screen.
+     if(expectedPath!==path){
+      stage='candidate-redirect'
+      await b.waitForURL(url=>url.pathname===expectedPath,{timeout:12000})
+     }
+     stage='candidate-readiness'
      await ready(b)
+     stage='compare-original'
      await matching(a,b,name)
      validated++
      console.log('DEEP_PARITY_PASS '+name)
     }catch(error){
-     // Preserve EVERY independent route result, not only UI mismatches.
-     // In particular, a legacy blank/timeout is an INCONCLUSIVE baseline,
-     // never a claimed parity pass, and must not hide later failures.
+     // Report ALL independent failures in a single QA run, without leaking
+     // response bodies, profile/incident data or credential-bearing URLs.
      const message=error instanceof Error?error.message.split('\n')[0]:'unknown'
-     const reason=message.startsWith('DEEP_PARITY_MISMATCH')?message:
-      'DEEP_PARITY_ROUTE_INCOMPLETE '+(error instanceof Error?error.name:'Error')
+     const knownError=/^(?:DEEP_PARITY_MISMATCH .*|DEEP_PARITY_RENDER_ERROR|LEGACY_MAIN_HTTP_\d+|UNEXPECTED_ORIGINAL_INCIDENT_REDIRECT)$/
+     const reason=knownError.test(message)?message:
+      'DEEP_PARITY_ROUTE_INCOMPLETE '+stage+' '+(error instanceof Error?error.name:'Error')
      const sourcePath=new URL(a.url()).pathname,candidatePath=new URL(b.url()).pathname
      mismatches.push({route:name,reason,sourcePath,candidatePath})
      console.error('DEEP_PARITY_ROUTE_FAILED '+name+' '+reason+
       ' originalPath='+sourcePath+' candidatePath='+candidatePath)
+    }finally{
+     if(redirectsConditionally){
+      await a.close()
+      await b.close()
+     }
     }
    }
+   await sharedSource.close()
+   await sharedCandidate.close()
   }finally{
    await sourceContext?.close()
    await modernContext?.close()
