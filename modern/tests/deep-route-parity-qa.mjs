@@ -97,7 +97,7 @@ async function matching(a,b,label){
  await b.screenshot({path:resolve(reportDir,safe+'-modern.png'),fullPage:true,animations:'disabled'})
  const fields=Object.keys(expected).filter(k=>JSON.stringify(expected[k])!==JSON.stringify(actual[k]))
  // Only field names and route identities are logged: never leak profile data.
- console.error('DEEP_PARITY_DIFFERENCE '+label+' '+fields.join(','))
+ console.error('DEEP_PARITY_DIFFERENCE '+label+' '+fields.join(',')+' originalPath='+new URL(a.url()).pathname+' candidatePath='+new URL(b.url()).pathname)
  throw Error('DEEP_PARITY_MISMATCH '+label+' '+fields.join(','))
 }
 
@@ -140,6 +140,12 @@ try{
     await a.goto(original+path,{waitUntil:'domcontentloaded',timeout:30000})
     await ready(a)
     await b.goto(modern+path,{waitUntil:'domcontentloaded',timeout:20000})
+    // If original Next performed an authenticated redirect, require the
+    // candidate to reach that same URL before comparing UI controls. A
+    // suspended client navigation is not an accepted alternate route.
+    const expectedPath=new URL(a.url()).pathname
+    if(expectedPath!==path)
+     await b.waitForURL(url=>url.pathname===expectedPath,{timeout:9000})
     await ready(b)
     await matching(a,b,name)
     validated++
