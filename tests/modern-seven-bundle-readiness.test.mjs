@@ -15,6 +15,8 @@ test('one bundled release contract accounts for ALL seven migration domains with
  assert.equal(report.isolatedCandidateWriteEnabled,false)
  assert.equal(report.releaseReady,false)
  assert.equal(report.mainCutoverAllowed,false)
+ assert.equal(report.dependsOnLegacyMainBackend,true)
+ assert.equal(report.directMainCutoverWouldSelfBind,true)
  assert.ok(report.workstreams.every(x=>x.verified===false&&x.blocker))
  const ui=report.workstreams.find(x=>x.id==='ui').available
  const actions=report.workstreams.find(x=>x.id==='actions').available
