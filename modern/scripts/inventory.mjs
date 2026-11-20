@@ -2,7 +2,8 @@
 // A fail-closed, machine-readable parity inventory. Never assume a route
 // migrated because the new SPA shows a heading or a static placeholder.
 import {readdir,readFile} from "node:fs/promises"
-import {pages as originalSourcePages} from "../tooling/main-source.mjs"
+import {pages as originalSourcePages,actionEntries} from "../tooling/main-source.mjs"
+import {verifyOriginalActionRegistry} from "../tooling/action-registry-contract.mjs"
 import {relative,resolve,join} from "node:path"
 
 const repo=resolve(import.meta.dirname,"../..")
@@ -33,6 +34,10 @@ for(const file of libActions){
  const s=await readFile(join(repo,file),"utf8")
  serverActions+=(s.match(/export\s+async\s+function\s+[A-Za-z_$][\w$]*/g)||[]).length
 }
+const sourceActionIds=actionEntries().map(entry=>entry.id)
+const registrySource=await readFile(join(repo,"lib/migration/original-action-registry.ts"),"utf8")
+const originalActions=verifyOriginalActionRegistry(sourceActionIds,registrySource)
+
 const sourcePages=new Set([...originalSourcePages,...pages.filter(x=>x.startsWith('app/(auth)/')), 'app/auth/reset-password/page.tsx'])
 // Count EVERY existing route and action as pending until individually verified
 // in real role/browser and auth/RLS tests. No placeholder is marked complete.
@@ -48,7 +53,7 @@ const report={
  migrationReady:false,
  productionCutoverAllowed:false,
  existing:{pages:pages.length,api:api.length,serverActionExports:serverActions},
- sourceReuse:{pages:pages.filter(x=>sourcePages.has(x)).length,originalServerHandlers:api.length,originalActionsDispatched:163,originalActionAcceptancePending:true},
+ sourceReuse:{pages:pages.filter(x=>sourcePages.has(x)).length,originalServerHandlers:api.length,originalActionsDispatched:originalActions.registeredCount,originalActionAcceptancePending:true},
  parity:{verifiedPages:0,verifiedApis:0,verifiedServerActions:0,pendingRoutes:routes.length,pendingServerActions:serverActions},
  criticalRoutesPending:criticalRoutes.length,
  ...(process.argv.includes("--routes")?{routes}:{}),
