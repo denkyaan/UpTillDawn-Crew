@@ -1,0 +1,42 @@
+import test from 'node:test'
+import assert from 'node:assert/strict'
+import {readFileSync} from 'node:fs'
+
+const qa=()=>readFileSync('modern/tests/browser-auth-qa.mjs','utf8')
+test('live original-source parity cannot overload Main with synthetic focus or badge refresh probes',()=>{
+ const s=qa()
+ assert.ok(s.includes("async function ready(page)"))
+ assert.ok(s.includes("data-app-shell-ready"))
+ assert.ok(s.includes("data-route-loading"))
+ assert.ok(s.includes("data-app-error"))
+ assert.ok(s.includes("document.querySelector('main')"))
+ assert.ok(s.includes("nav.querySelector('a,button')"))
+ assert.ok(!s.includes("waitForLoadState('networkidle'"),'Realtime/polling never becomes idle')
+ assert.ok(!s.includes("page.bringToFront()"),'Do not cause a focus-induced refresh burst')
+ assert.ok(!s.includes("window.dispatchEvent(new Event('focus'))"))
+ assert.ok(!s.includes("window.dispatchEvent(new Event('uptilldawn-chat-read'))"))
+})
+test('source failures remain hard failures, not empty baselines or fake UI parity',()=>{
+ const s=qa()
+ assert.ok(s.includes("LEGACY_MAIN_BASELINE_UNAVAILABLE_AFTER_ONE_RETRY"))
+ assert.ok(s.includes("LEGACY_MAIN_BASELINE_UNAVAILABLE_CIRCUIT_OPEN"))
+ assert.ok(s.includes("QA_STOPPED_UNHEALTHY_LEGACY_MAIN_NO_FALSE_PARITY"))
+ assert.ok(s.includes("ORIGINAL_VIEW_RENDER_FAILED"))
+ assert.ok(s.includes("ORIGINAL_UI_CONTROL_PARITY"))
+ assert.ok(s.includes("QA_ORIGINAL_COMPARISONS_FAILED"))
+ assert.ok(s.includes("fullVisualParityVerified:false"))
+ assert.ok(s.includes("productionReady:false"))
+})
+test('seven roles times four locales times two devices and denied maker route remain tested',()=>{
+ const s=qa()
+ for(const name of ['head_admin','left_hand','right_hand','responsible','staff','promotion','administration'])
+  assert.ok(s.includes("role:'"+name+"'"),name)
+ for(const locale of ["'nl'","'fr'","'en'","'de'"])assert.ok(s.includes(locale))
+ for(const mode of ["name:'desktop'","name:'mobile'"])assert.ok(s.includes(mode))
+ assert.ok(s.includes('if(signins!==7||total!==56)'))
+ assert.ok(s.includes("maker-denied"))
+ assert.ok(s.includes("workspaceComparisons!==2"))
+ assert.ok(s.includes("compare(a,b,label)"))
+ assert.ok(s.includes("menus(a,b,label)"))
+ assert.ok(!s.includes("E2E_MAIN_QA_ALLOW_WRITE"))
+})
