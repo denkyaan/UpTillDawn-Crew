@@ -1,0 +1,778 @@
+name: Deploy main
+
+on:
+  workflow_run:
+    workflows: ["CI main"]
+    types: [completed]
+    branches: [main]
+  workflow_dispatch:
+    inputs:
+      provision_qa_bots:
+        description: 'Explicit seven-role Main QA Auth provisioning (never deploy/production)'
+        type: boolean
+        required: true
+        default: false
+
+permissions:
+  contents: read
+
+concurrency:
+  group: uptilldawn-main-app
+  cancel-in-progress: true
+
+jobs:
+  provision-qa-bots:
+    if: github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main' && inputs.provision_qa_bots == true
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    env:
+      BOT_SUPABASE_URL: https://npbjrtiolqperdgljnhi.supabase.co
+      BOT_SERVICE_ROLE_KEY: ${{ secrets.MAIN_QA_SUPABASE_SECRET_KEY }}
+      BOT_TEST_PASSWORD: ${{ secrets.MAIN_QA_BOT_PASSWORD }}
+      BOT_PUBLIC_ANON_KEY: sb_publishable_zStTw3n8wZ271PehDRDvGg_rs0JOy84
+      UPT_QA_ALLOW_MAIN_SEED: '1'
+    steps:
+      - name: Require QA-only private Auth secret and bot password
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [ -z "${BOT_SERVICE_ROLE_KEY:-}" ] || [ -z "${BOT_TEST_PASSWORD:-}" ]; then
+            echo "::error::Missing MAIN_QA_SUPABASE_SECRET_KEY and/or MAIN_QA_BOT_PASSWORD (24+ chars) in repository Actions secrets. No Auth accounts were changed."
+            exit 1
+          fi
+      - name: Checkout
+        uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5.1.0
+      - name: Set up Node.js
+        uses: actions/setup-node@a0853c24544627f65ddf259abe73b1d18a591444 # v5.0.0
+        with:
+          node-version: 24
+          cache: npm
+      - name: Install dependencies
+        run: npm ci --prefer-offline --no-audit --no-fund
+      - name: Provision and synchronize the seven isolated Main QA passwords
+        run: node scripts/provision-seven-main-bots.mjs --sync-passwords
+      - name: Verify seven distinct roles and login with the same configured QA password
+        run: node scripts/provision-seven-main-bots.mjs --verify --verify-passwords
+
+  # Deploy the real Vite/React/Hono Main-QA Worker IN PARALLEL with
+  # the existing OpenNext Main Worker, never replacing the working site.
+  # Main and Production are separate; this uses ONLY the QA Supabase project.
+  deploy-modern-main-qa:
+    needs: validate-trigger
+    if: needs.validate-trigger.outputs.eligible == 'true'
+    permissions:
+      contents: read
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    env:
+      VITE_SUPABASE_URL: https://npbjrtiolqperdgljnhi.supabase.co
+      VITE_SUPABASE_ANON_KEY: sb_publishable_zStTw3n8wZ271PehDRDvGg_rs0JOy84
+      VITE_MIGRATION_ALLOW_WRITES: 'false'
+      VITE_MIGRATION_SCANNING_ENABLED: 'false'
+      E2E_MAIN_MODERN_QA_ORIGIN: https://uptilldawn-modern-main.uptilldawn.workers.dev
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+    steps:
+      - name: Checkout exact validated Main SHA
+        uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5.1.0
+        with:
+          ref: ${{ github.event.workflow_run.head_sha }}
+      - name: Set up Node.js
+        uses: actions/setup-node@a0853c24544627f65ddf259abe73b1d18a591444 # v5.0.0
+        with:
+          node-version: 24
+      - name: Install lightweight candidate dependencies (isolated)
+        run: npm --prefix modern install --prefer-offline --no-audit --no-fund
+      - name: Prepare original on-device OCR assets for the source candidate
+        working-directory: modern
+        run: node ../scripts/prepare-local-ocr.mjs
+      - name: Parallel candidate TS, contract, unit and API safety checks
+        shell: bash
+        run: |
+          set -euo pipefail
+          npm --prefix modern run check
+          npm --prefix modern run api:test
+          npm --prefix modern run rpc:contract
+      - name: Build static SPA and enforce Free-plan Worker budget
+        shell: bash
+        run: |
+          set -euo pipefail
+          npm --prefix modern run build
+          npm --prefix modern run budget
+          cd modern
+          npx wrangler deploy --config wrangler.main-qa.jsonc --dry-run --outdir .wrangler-main-qa-dry-run
+      - name: Verify exact current Main SHA before deploying
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+          VALIDATED_SHA: ${{ github.event.workflow_run.head_sha }}
+        run: |
+          set -euo pipefail
+          current="$(gh api "/repos/${GITHUB_REPOSITORY}/git/ref/heads/main" --jq '.object.sha')"
+          if [ "$current" != "$VALIDATED_SHA" ]; then
+            echo "::error::Main advanced; do not publish an outdated candidate."
+            exit 1
+          fi
+          test -n "${CLOUDFLARE_API_TOKEN:-}" && test -n "${CLOUDFLARE_ACCOUNT_ID:-}"
+      - name: Publish modern Main-QA Worker — static assets and Hono API only
+        working-directory: modern
+        run: npx wrangler deploy --config wrangler.main-qa.jsonc
+      - name: Smoke test actual public static SPA, Hono API and denial rules
+        run: node modern/scripts/main-qa-live-smoke.mjs
+      - name: Report exactly what is deployed
+        shell: bash
+        run: |
+          echo "## New local-first Main-QA application published" >> "$GITHUB_STEP_SUMMARY"
+          echo "Origin: https://uptilldawn-modern-main.uptilldawn.workers.dev" >> "$GITHUB_STEP_SUMMARY"
+          echo "Existing Main app: https://uptilldawn-main.uptilldawn.workers.dev (unchanged)" >> "$GITHUB_STEP_SUMMARY"
+          echo "Original actions retain Main authorization and RLS. Candidate /api/v1 scanning and OAuth remain OFF. Production untouched." >> "$GITHUB_STEP_SUMMARY"
+
+  # This is a LIVE browser test of the new Cloudflare Worker, not a local Vite
+  # preview and not a simulated Supabase-only concurrency benchmark.
+  qa-modern-main-qa:
+    needs: [validate-trigger, deploy-modern-main-qa, deploy]
+    if: >-
+      needs.validate-trigger.outputs.eligible == 'true' &&
+      needs.deploy-modern-main-qa.result == 'success'
+    permissions:
+      contents: read
+    runs-on: ubuntu-latest
+    timeout-minutes: 18
+    env:
+      E2E_MAIN_MODERN_QA_ORIGIN: https://uptilldawn-modern-main.uptilldawn.workers.dev
+      E2E_MAIN_QA_BASE_URL: https://npbjrtiolqperdgljnhi.supabase.co/
+      E2E_MAIN_QA_PUBLISHABLE_KEY: sb_publishable_zStTw3n8wZ271PehDRDvGg_rs0JOy84
+      E2E_MAIN_QA_PASSWORD: ${{ secrets.MAIN_QA_BOT_PASSWORD }}
+      VITE_MIGRATION_ALLOW_WRITES: 'false'
+    steps:
+      - name: Checkout exact deployed Main commit
+        uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5.1.0
+        with:
+          ref: ${{ github.event.workflow_run.head_sha }}
+      - name: Set up Node.js
+        uses: actions/setup-node@a0853c24544627f65ddf259abe73b1d18a591444 # v5.0.0
+        with:
+          node-version: 24
+      - name: Require live QA bot secret to avoid false-green smoke-only acceptance
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [ "${#E2E_MAIN_QA_PASSWORD}" -lt 24 ]; then
+            echo "::error::Main QA bot secret unavailable; 7-role LIVE acceptance cannot be claimed."
+            exit 1
+          fi
+      - name: Install isolated modern dependencies
+        run: npm --prefix modern install --prefer-offline --no-audit --no-fund
+      - name: Install headless browser (no unrelated OS packages)
+        run: npm --prefix modern exec -- playwright install chromium --only-shell
+      - name: Verify original source transport after BOTH Main Workers are deployed
+        run: node modern/scripts/main-source-live-smoke.mjs
+      - name: Compare original Main login — 48 screens and 160 interaction states
+        run: npm --prefix modern run login:visual-parity
+      - name: Verify seven real roles, four languages and two devices on LIVE modern Worker
+        run: npm --prefix modern run browser:qa
+      - name: Exercise 30 DISTINCT signed QA sessions through deployed Hono /api/v1/session
+        run: npm --prefix modern run sessions:qa
+      - name: Report live browser evidence
+        run: |
+          echo "Modern Main-QA: seven signed roles x four languages x two device types validated against deployed Cloudflare static assets." >> "$GITHUB_STEP_SUMMARY"
+          echo "Also passed 30 distinct signed QA sessions across 7 identities, with a bounded 30-request real Cloudflare Worker peak." >> "$GITHUB_STEP_SUMMARY"
+          echo "No business writes, provider money operations or production release were attempted." >> "$GITHUB_STEP_SUMMARY"
+      - name: Upload anonymous login parity evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: modern-main-login-parity
+          path: test-results/login-parity/
+          if-no-files-found: warn
+          retention-days: 5
+
+  qa-main-anonymous-acceptance:
+    # Strict, independent security gate. A failure stays red but may not
+    # suppress the remaining functional, 30-user or Cloudflare evidence.
+    needs: [validate-trigger, deploy]
+    if: >-
+      always() && github.event_name == 'workflow_run' &&
+      needs.validate-trigger.outputs.qa_eligible == 'true' &&
+      needs.deploy.result == 'success'
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    env:
+      E2E_BASE_URL: https://uptilldawn-main.uptilldawn.workers.dev
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+    steps:
+      - name: Checkout exact deployed Main commit
+        uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5.1.0
+        with:
+          ref: ${{ github.event.workflow_run.head_sha }}
+      - name: Set up Node.js
+        uses: actions/setup-node@a0853c24544627f65ddf259abe73b1d18a591444 # v5.0.0
+        with:
+          node-version: 24
+      - name: Adversarial anonymous route and API guard probes on Main
+        run: node scripts/main-adversarial-surface.mjs --probe
+      - name: Record Main Worker resource limits even if route probing fails
+        if: always()
+        env:
+          MAIN_WORKER_DEPLOYED_AT: ${{ needs.deploy.outputs.deployed_at }}
+          MAIN_BROWSER_QA_RESULT: ${{ job.status }}
+        run: node scripts/main-worker-outcomes.mjs
+      - name: Publish Main adversarial route evidence
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: main-adversarial-routes
+          path: test-results/main-adversarial/
+          if-no-files-found: ignore
+          retention-days: 14
+
+  qa-main-browser-acceptance:
+    # Do not overlap heavy browser navigation with transactional functional QA:
+    # both drive the same resource-limited Main Worker. The existing always()
+    # gate still runs browser QA if functional QA failed; verdicts stay independent.
+    # Isolated, read-only browser QA: either explicitly requested by a manual
+    # provisioning dispatch, or a Main commit bearing the opt-in marker after
+    # its fast CI and actual Main deployment both succeed. NEVER production.
+    needs: [provision-qa-bots, validate-trigger, deploy, qa-main-functional-acceptance]
+    if: >-
+      always() && (
+        (github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main' &&
+         inputs.provision_qa_bots == true && needs.provision-qa-bots.result == 'success')
+        ||
+        (github.event_name == 'workflow_run' && needs.validate-trigger.outputs.qa_eligible == 'true' &&
+         needs.deploy.result == 'success')
+      )
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    env:
+      E2E_MAIN_QA_BASE_URL: https://uptilldawn-main.uptilldawn.workers.dev
+      E2E_MAIN_QA_PASSWORD: ${{ secrets.MAIN_QA_BOT_PASSWORD }}
+    steps:
+      - name: Checkout Main QA browser tests
+        uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5.1.0
+      - name: Set up Node.js
+        uses: actions/setup-node@a0853c24544627f65ddf259abe73b1d18a591444 # v5.0.0
+        with:
+          node-version: 24
+          cache: npm
+      - name: Install dependencies
+        run: npm ci --prefer-offline --no-audit --no-fund
+      - name: Install isolated Chromium browser runtime
+        run: npx playwright install --with-deps chromium
+      - name: Read-only browser journeys for all seven operational QA roles
+        run: node scripts/e2e-seven-main-bots.mjs
+      - name: Upload QA browser report and sanitized failure screenshots
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: seven-role-main-browser-acceptance
+          path: test-results/seven-main-qa/
+          if-no-files-found: warn
+          retention-days: 5
+
+  qa-main-functional-acceptance:
+    # A browser/login failure must NOT suppress real workflow E2E evidence.
+    # This job has its own red/green verdict and cannot contact production.
+    needs: [validate-trigger, deploy, qa-main-anonymous-acceptance]
+    if: >-
+      always() && github.event_name == 'workflow_run' &&
+      needs.validate-trigger.outputs.qa_eligible == 'true' &&
+      needs.deploy.result == 'success'
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    env:
+      E2E_MAIN_QA_BASE_URL: https://uptilldawn-main.uptilldawn.workers.dev
+      E2E_MAIN_QA_PASSWORD: ${{ secrets.MAIN_QA_BOT_PASSWORD }}
+    steps:
+      - name: Checkout isolated functional test
+        uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5.1.0
+      - name: Set up Node.js
+        uses: actions/setup-node@a0853c24544627f65ddf259abe73b1d18a591444 # v5.0.0
+        with:
+          node-version: 24
+          cache: npm
+      - name: Install dependencies
+        run: npm ci --prefer-offline --no-audit --no-fund
+      - name: Install isolated Chromium browser runtime
+        run: npx playwright install --with-deps chromium
+      - name: Main isolated functional workflow transactions with guaranteed fixture cleanup
+        timeout-minutes: 12
+        env:
+          E2E_MAIN_QA_SUPABASE_URL: https://npbjrtiolqperdgljnhi.supabase.co
+          E2E_MAIN_QA_PUBLISHABLE_KEY: sb_publishable_zStTw3n8wZ271PehDRDvGg_rs0JOy84
+          E2E_MAIN_QA_SERVICE_KEY: ${{ secrets.MAIN_QA_SUPABASE_SECRET_KEY }}
+          E2E_MAIN_QA_ALLOW_WRITE: '1'
+        run: node scripts/e2e-main-functional-workflows.mjs
+      - name: Upload sanitized functional E2E evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: main-isolated-functional-e2e
+          path: test-results/main-functional/
+          if-no-files-found: warn
+          retention-days: 5
+
+
+
+  qa-main-concurrency-acceptance:
+    # Thirty DISTINCT temporary Auth identities against isolated Main only.
+    # Runs after existing browser and transactional E2E checks. Cleanup is
+    # independently retried even if the acceptance command fails.
+    # Run independent Main diagnostics even if another QA verdict is red;
+    # a failed browser/functional job still blocks overall acceptance.
+    needs: [validate-trigger, deploy, qa-main-functional-acceptance, qa-main-browser-acceptance]
+    if: >-
+      always() && github.event_name == 'workflow_run' &&
+      needs.validate-trigger.outputs.qa_eligible == 'true' &&
+      needs.deploy.result == 'success'
+    runs-on: ubuntu-latest
+    timeout-minutes: 26
+    env:
+      E2E_MAIN_QA_BASE_URL: https://uptilldawn-main.uptilldawn.workers.dev
+      E2E_MAIN_QA_SUPABASE_URL: https://npbjrtiolqperdgljnhi.supabase.co
+      E2E_MAIN_QA_PUBLISHABLE_KEY: sb_publishable_zStTw3n8wZ271PehDRDvGg_rs0JOy84
+      E2E_MAIN_QA_SERVICE_KEY: ${{ secrets.MAIN_QA_SUPABASE_SECRET_KEY }}
+      E2E_MAIN_QA_ALLOW_WRITE: '1'
+    steps:
+      - name: Checkout exact validated Main commit
+        uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5.1.0
+        with:
+          ref: ${{ github.event.workflow_run.head_sha }}
+      - name: Set up Node.js
+        uses: actions/setup-node@a0853c24544627f65ddf259abe73b1d18a591444 # v5.0.0
+        with:
+          node-version: 24
+          cache: npm
+      - name: Install dependencies
+        run: npm ci --prefer-offline --no-audit --no-fund
+      # Recover only the exact interrupted, fixture-marked previous Main QA run.
+      # Never seed 30 more accounts if Supabase Admin API cannot clean the old ones.
+      - name: Recover prior interrupted Main test fixtures before new 30-user load
+        timeout-minutes: 4
+        env:
+          QA_RECOVERY_RUN_ID: '44142366396'
+        shell: bash
+        run: |
+          set -euo pipefail
+          for attempt in 1 2 3 4; do
+            if timeout --signal=TERM --kill-after=5s 45s env GITHUB_RUN_ID="${QA_RECOVERY_RUN_ID}" node scripts/main-30-distinct-staff.mjs --cleanup; then
+              echo "Main QA fixture recovery verified for run ${QA_RECOVERY_RUN_ID}"
+              exit 0
+            fi
+            if [[ ${attempt} -lt 4 ]]; then sleep 10; fi
+          done
+          echo '::error::Interrupted Main QA fixtures could not be removed; abort fresh load.'
+          exit 1
+      - name: Install isolated Chromium
+        run: npx playwright install --with-deps chromium
+      - name: Verify thirty distinct Main staff sessions and guarded workflows
+        timeout-minutes: 14
+        run: node scripts/main-30-distinct-staff.mjs
+      - name: Independently verify and remove temporary Main QA identities
+        if: always()
+        timeout-minutes: 4
+        run: node scripts/main-30-distinct-staff.mjs --cleanup
+      - name: Upload sanitized Main 30-identity test report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: main-30-unique-staff-acceptance
+          path: test-results/main-30-unique/
+          if-no-files-found: warn
+          retention-days: 5
+
+  qa-main-runtime-diagnostic:
+    # Read-only measurement of actual Worker invocation outcomes after QA.
+    # A full Main QA run is explicitly requested by a main commit bearing [main-qa-e2e].
+    # A missing analytics permission is reported, never mistaken for a pass.
+    needs: [validate-trigger, deploy, qa-main-browser-acceptance, qa-main-functional-acceptance, qa-main-concurrency-acceptance]
+    if: >-
+      always() && github.event_name == 'workflow_run' &&
+      needs.validate-trigger.outputs.qa_eligible == 'true' &&
+      needs.deploy.result == 'success'
+    runs-on: ubuntu-latest
+    timeout-minutes: 4
+    env:
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+      MAIN_WORKER_DEPLOYED_AT: ${{ needs.deploy.outputs.deployed_at }}
+      MAIN_BROWSER_QA_RESULT: ${{ needs.qa-main-browser-acceptance.result }}
+    steps:
+      - name: Checkout exact validated Main revision
+        uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5.1.0
+        with:
+          ref: ${{ github.event.workflow_run.head_sha }}
+      - name: Set up Node.js
+        uses: actions/setup-node@a0853c24544627f65ddf259abe73b1d18a591444 # v5.0.0
+        with:
+          node-version: 24
+      - name: Classify Main Worker exceededCpu versus exceededMemory outcomes
+        run: node scripts/main-worker-outcomes.mjs
+
+  validate-trigger:
+    if: github.event_name == 'workflow_run'
+    runs-on: ubuntu-latest
+    timeout-minutes: 3
+    outputs:
+      eligible: ${{ steps.check.outputs.eligible }}
+      qa_eligible: ${{ steps.check.outputs.qa_eligible }}
+    steps:
+      - name: Explain deployment eligibility
+        id: check
+        env:
+          SOURCE_EVENT: ${{ github.event.workflow_run.event }}
+          SOURCE_RESULT: ${{ github.event.workflow_run.conclusion }}
+          SOURCE_BRANCH: ${{ github.event.workflow_run.head_branch }}
+          SOURCE_SHA: ${{ github.event.workflow_run.head_sha }}
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+        shell: bash
+        run: |
+          echo "Validation event: ${SOURCE_EVENT}"
+          echo "Validation result: ${SOURCE_RESULT}"
+          echo "Validation branch: ${SOURCE_BRANCH}"
+          echo "Validated SHA: ${SOURCE_SHA}"
+          current_sha="$(gh api "/repos/$REPO/commits/main" --jq '.sha')"
+          if [[ -z "${SOURCE_SHA}" || "${SOURCE_SHA}" != "${current_sha}" ]]; then
+            echo 'eligible=false' >> "$GITHUB_OUTPUT"
+            echo 'Deployment intentionally skipped: this CI run has been superseded by current main.'
+            exit 0
+          fi
+          if [[ "${SOURCE_EVENT}" == push && "${SOURCE_RESULT}" == success && "${SOURCE_BRANCH}" == main && -n "${SOURCE_SHA}" && "${SOURCE_SHA}" == "${current_sha}" ]]; then
+            echo 'eligible=true' >> "$GITHUB_OUTPUT"
+            echo 'Main deployment is eligible.'
+            # Explicit one-commit authorization for browser QA on Main only.
+            # This does not run in the fast CI job or change production deploy.
+            commit_message="$(gh api "/repos/$REPO/commits/main" --jq '.commit.message')"
+            if [[ "$commit_message" == *'[main-qa-e2e]'* ]]; then
+              echo 'qa_eligible=true' >> "$GITHUB_OUTPUT"
+              echo 'Explicit Main QA marker found; browser tests will run only after successful Main deploy.'
+            else
+              echo 'qa_eligible=false' >> "$GITHUB_OUTPUT"
+            fi
+          elif [[ "${SOURCE_RESULT}" != success ]]; then
+            echo 'eligible=false' >> "$GITHUB_OUTPUT"
+            echo "::error::Main deployment blocked: CI concluded ${SOURCE_RESULT} for ${SOURCE_SHA}."
+            exit 1
+          else
+            echo 'eligible=false' >> "$GITHUB_OUTPUT"
+            echo 'Deployment intentionally skipped: requires successful push CI for current main HEAD.'
+          fi
+
+  deploy:
+    needs: validate-trigger
+    outputs:
+      deployed_at: ${{ steps.worker-deploy.outputs.deployed_at }}
+    if: needs.validate-trigger.outputs.eligible == 'true'
+    permissions:
+      contents: read
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    env:
+      NEXT_PUBLIC_SUPABASE_URL: https://npbjrtiolqperdgljnhi.supabase.co
+      NEXT_PUBLIC_SUPABASE_ANON_KEY: sb_publishable_zStTw3n8wZ271PehDRDvGg_rs0JOy84
+      NEXT_PUBLIC_APP_URL: https://uptilldawn-main.uptilldawn.workers.dev
+      # Deployment uses repository-level Actions secrets; no environment approval gate.
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+    steps:
+      - name: Report main deployment context
+        run: |
+          echo "Main test deploy started for validated commit ${{ github.event.workflow_run.head_sha }}"
+          echo "Environment: main-test; Worker: uptilldawn-main"
+
+      - name: Checkout exact validated commit
+        uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5.1.0
+        with:
+          ref: ${{ github.event.workflow_run.head_sha }}
+
+      - name: Validate isolated main configuration
+        shell: bash
+        run: |
+          set -euo pipefail
+          for key in NEXT_PUBLIC_SUPABASE_URL NEXT_PUBLIC_SUPABASE_ANON_KEY CLOUDFLARE_API_TOKEN CLOUDFLARE_ACCOUNT_ID; do
+            if [ -z "${!key:-}" ]; then
+              echo "::error::Missing required repository Actions secret or configuration: $key"
+              exit 1
+            fi
+          done
+          # Reject control characters in credentials without disclosing their values.
+          if [[ "$CLOUDFLARE_API_TOKEN" =~ [[:cntrl:]] ]]; then
+            echo "::error::CLOUDFLARE_API_TOKEN contains invalid control characters. Re-save it as a single-line token."
+            exit 1
+          fi
+          if [[ "$CLOUDFLARE_ACCOUNT_ID" =~ [[:cntrl:]] ]]; then
+            echo "::error::CLOUDFLARE_ACCOUNT_ID contains invalid control characters. Re-save it as a plain account ID."
+            exit 1
+          fi
+          case "$NEXT_PUBLIC_SUPABASE_URL" in
+            https://eakoavcieossazqzplke.supabase.co)
+              echo "::error::Main test app must not use production"
+              exit 1 ;;
+            https://*.supabase.co) ;;
+            *) echo "::error::Invalid main test Supabase URL"; exit 1 ;;
+          esac
+
+      - name: Set up Node.js
+        uses: actions/setup-node@a0853c24544627f65ddf259abe73b1d18a591444 # v5.0.0
+        with:
+          node-version: 24
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci --prefer-offline --no-audit --no-fund
+
+      - name: Run automated unit and integration tests
+        run: npm test
+
+      - name: Check TypeScript
+        run: npm run typecheck
+
+      - name: Build main app Worker
+        run: npm run build:cloudflare
+
+      - name: Publish only public, pre-rendered login GET shells as Static Assets
+        run: node scripts/publish-main-login-assets.mjs
+
+      - name: Verify self-hosted OCR assets built for main
+        shell: bash
+        run: |
+          set -euo pipefail
+          for asset in tesseract.min.js worker.min.js pdf.min.mjs pdf.worker.min.mjs core/tesseract-core-lstm.wasm.js core/tesseract-core-lstm.wasm lang/nld.traineddata.gz lang/fra.traineddata.gz lang/eng.traineddata.gz lang/deu.traineddata.gz manifest.json; do
+            test -s "public/vendor/ocr/$asset" || { echo "::error::Missing local OCR asset: $asset"; exit 1; }
+          done
+          echo "Self-hosted OCR assets present: no runtime third-party API needed."
+      - name: Validate Worker bundle
+        run: npx wrangler deploy --dry-run --config wrangler.main.jsonc
+
+      - name: Revalidate current main commit before deployment
+        id: current-main
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+          VALIDATED_SHA: ${{ github.event.workflow_run.head_sha }}
+        run: |
+          set -euo pipefail
+          current_sha="$(gh api "/repos/$REPO/commits/main" --jq '.sha')"
+          if [[ "$current_sha" != "$VALIDATED_SHA" ]]; then
+            echo "::notice::Main advanced from validated commit $VALIDATED_SHA to $current_sha. Skipping obsolete deployment."
+            echo "current=false" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          echo "Validated commit is still main HEAD: $VALIDATED_SHA"
+          echo "current=true" >> "$GITHUB_OUTPUT"
+
+      - name: Deploy main test Worker only
+        id: worker-deploy
+        if: steps.current-main.outputs.current == 'true'
+        shell: bash
+        run: |
+          set -euo pipefail
+          npx wrangler deploy --config wrangler.main.jsonc
+          echo "deployed_at=$(date -u +%Y-%m-%dT%H:%M:%SZ)" >> "$GITHUB_OUTPUT"
+
+      - name: Diagnose Cloudflare workers.dev routing
+        if: steps.current-main.outputs.current == 'true'
+        shell: bash
+        run: |
+          set -euo pipefail
+          # This endpoint returns account metadata, never print credentials.
+          result="$(curl -sS --max-time 15 -H "Authorization: Bearer ${CLOUDFLARE_API_TOKEN}" "https://api.cloudflare.com/client/v4/accounts/${CLOUDFLARE_ACCOUNT_ID}/workers/subdomain")"
+          echo "$result" | node -e '
+            let data = ""; process.stdin.on("data", c => data += c);
+            process.stdin.on("end", () => {
+              try {
+                const v = JSON.parse(data);
+                console.log("Cloudflare account workers.dev subdomain:", v.result?.subdomain || "(unavailable)");
+                if (!v.success) console.log("Cloudflare subdomain API errors:", JSON.stringify((v.errors || []).map(e => ({code:e.code,message:e.message}))));
+                const configured = new URL(process.env.NEXT_PUBLIC_APP_URL).hostname;
+                const expected = v.result?.subdomain ? "uptilldawn-main." + v.result.subdomain + ".workers.dev" : null;
+                if (expected && configured !== expected) {
+                  console.error("::error::Wrong NEXT_PUBLIC_APP_URL hostname. Configured: " + configured + "; actual Cloudflare worker host: " + expected);
+                  process.exitCode = 1;
+                }
+              } catch { console.log("::warning::Cloudflare subdomain response could not be parsed"); }
+            });'
+
+      - name: Verify public Main login GET shells bypass Next SSR
+        if: steps.current-main.outputs.current == 'true'
+        shell: bash
+        run: |
+          set -euo pipefail
+          # Cloudflare deployments can propagate across edge POPs after
+          # wrangler reports success. Retry boundedly, then fail closed.
+          for portal in staff responsible promotion administration admin; do
+            verified=0
+            headers=''
+            for attempt in 1 2 3 4 5 6; do
+              headers="$(curl --retry 2 --retry-all-errors --retry-delay 1 --max-time 20 -sS -I "${NEXT_PUBLIC_APP_URL}/login/${portal}")" || headers=''
+              if grep -qi '^x-uptilldawn-static-login: 1' <<< "$headers" &&
+                grep -qE '^HTTP/[0-9.]+ 200' <<< "$headers"; then
+                verified=1
+                break
+              fi
+              if [ "$attempt" -lt 6 ]; then sleep 3; fi
+            done
+            if [ "$verified" -ne 1 ]; then
+              echo "::error::Public /login/${portal} is not served as Cloudflare Static Asset after six edge checks."
+              printf '%s\n' "$headers" | grep -iE '^(HTTP/|location:|server:|content-type:|cf-ray:|x-uptilldawn-static-login:)' || true
+              exit 1
+            fi
+            echo "Static Cloudflare Asset verified: /login/${portal}"
+          done
+
+      - name: Smoke test main app
+        if: steps.current-main.outputs.current == 'true'
+        shell: bash
+        run: |
+          set -euo pipefail
+          for path in / /login /login/admin /login/administration /login/promotion /login/staff /portals/administration /portals/promotion /admin /events /personnel /workplaces /chat /manifest.webmanifest; do
+            code="$(curl --retry 5 --retry-all-errors --retry-delay 2 -L -sS --max-time 25 -D /tmp/main-smoke-headers -o /tmp/main-smoke-body -w '%{http_code}' "${NEXT_PUBLIC_APP_URL}${path}")"
+            echo "Main test ${path}: HTTP ${code}"
+            if [ "$code" -lt 200 ] || [ "$code" -ge 400 ] || [ ! -s /tmp/main-smoke-body ]; then
+              echo "Response headers (safe subset):"
+              grep -iE '^(HTTP/|server:|content-type:|cf-ray:|location:)' /tmp/main-smoke-headers || true
+              echo "Response body (first 500 characters):"
+              head -c 500 /tmp/main-smoke-body | tr '\\n' ' '; echo
+              echo "::error::Main app smoke test failed at ${path} (HTTP ${code})"
+              exit 1
+            fi
+          done
+          # A redirect to login is acceptable for protected routes, but must not
+          # silently mask a broken public login page or a missing static asset.
+          for path in /login /login/admin /login/administration /login/promotion /manifest.webmanifest; do
+            code="$(curl -sS --max-time 25 -o /tmp/main-public-body -w '%{http_code}' "${NEXT_PUBLIC_APP_URL}${path}")"
+            echo "Public route ${path} without redirects: HTTP ${code}"
+            if [ "$code" != 200 ] || [ ! -s /tmp/main-public-body ]; then
+              echo "::error::Public entrypoint ${path} must respond HTTP 200 without redirect"
+              exit 1
+            fi
+          done
+          node --input-type=module -e '
+            const url = process.env.NEXT_PUBLIC_APP_URL + "/manifest.webmanifest";
+            const response = await fetch(url);
+            const manifest = await response.json();
+            if (!manifest.name && !manifest.short_name) throw new Error("PWA manifest missing app name");
+            console.log("PWA manifest parsed and app name verified");
+          '
+
+      - name: Verify OCR secret binding on main Worker (names only)
+        if: steps.current-main.outputs.current == 'true'
+        shell: bash
+        run: |
+          set -euo pipefail
+          # Cloudflare returns binding metadata. Never log the response body or
+          # secret values. Check only the exact main Worker, never production.
+          node --input-type=module <<'NODE'
+          const account = process.env.CLOUDFLARE_ACCOUNT_ID
+          const token = process.env.CLOUDFLARE_API_TOKEN
+          const url = `https://api.cloudflare.com/client/v4/accounts/${account}/workers/scripts/uptilldawn-main/secrets`
+          let status = 'unverified'
+          try {
+            const response = await fetch(url, {
+              headers: {Authorization: `Bearer ${token}`},
+              signal: AbortSignal.timeout(15000),
+              cache: 'no-store',
+            })
+            if (!response.ok) {
+              console.log('::warning::Cloudflare secret-name lookup failed (HTTP ' + response.status + '); no secret values were fetched or printed.')
+            } else {
+              const metadata = await response.json()
+              if (!metadata?.success || !Array.isArray(metadata.result)) {
+                console.log('::warning::Cloudflare secret binding metadata was unavailable.')
+              } else {
+                status = metadata.result.some(entry => entry?.name === 'CLOUDMERSIVE_OCR_API_KEY') ? 'present' : 'missing'
+                if (status === 'missing') console.log('::warning::CLOUDMERSIVE_OCR_API_KEY is not bound to the main Worker.')
+              }
+            }
+          } catch {
+            console.log('::warning::Cloudflare secret-name lookup could not be completed.')
+          }
+          console.log('CLOUDMERSIVE_OCR_API_KEY binding on uptilldawn-main: ' + status)
+          if (process.env.GITHUB_STEP_SUMMARY) {
+            const {appendFileSync} = await import('node:fs')
+            appendFileSync(process.env.GITHUB_STEP_SUMMARY, '\n### Cloudmersive binding check (main only)\n- Worker: uptilldawn-main\n- Secret name present: **' + status + '**\n- Legacy Cloudmersive OCR smoke test: disabled; local OCR is the default\n')
+          }
+          NODE
+
+      - name: Verify integration encryption key binding (name only)
+        if: steps.current-main.outputs.current == 'true'
+        shell: bash
+        run: |
+          set -euo pipefail
+          # Never fetch a secret's value. This Cloudflare endpoint exposes only
+          # secret binding metadata for the exact main-test Worker.
+          node --input-type=module <<'NODE'
+          const url = `https://api.cloudflare.com/client/v4/accounts/${process.env.CLOUDFLARE_ACCOUNT_ID}/workers/scripts/uptilldawn-main/secrets`
+          let status = 'unverified'
+          try {
+            const response = await fetch(url, {
+              headers: {Authorization: `Bearer ${process.env.CLOUDFLARE_API_TOKEN}`},
+              cache: 'no-store',
+              signal: AbortSignal.timeout(15000),
+            })
+            if (response.ok) {
+              const payload = await response.json()
+              if (payload?.success && Array.isArray(payload.result)) {
+                status = payload.result.some(binding =>
+                  binding?.name === 'UPT_INTEGRATION_ENCRYPTION_KEY'
+                ) ? 'present' : 'missing'
+              }
+            }
+          } catch {
+            // Insufficient Cloudflare permissions or temporary lookup failure.
+          }
+          console.log('UPT_INTEGRATION_ENCRYPTION_KEY binding on uptilldawn-main: ' + status)
+          const {appendFileSync} = await import('node:fs')
+          if (process.env.GITHUB_STEP_SUMMARY) {
+            appendFileSync(process.env.GITHUB_STEP_SUMMARY,
+              '\n### Integration encryption binding check (main only)\n- Worker: uptilldawn-main\n- Encryption secret name: **' + status + '**\n- Secret value: not requested or displayed\n')
+          }
+          if (status !== 'present') {
+            console.log('::warning::Integration credential management needs a main Worker Secret UPT_INTEGRATION_ENCRYPTION_KEY (status: ' + status + ').')
+          }
+          NODE
+
+      - name: Verify local-first OCR assets are reachable on main
+        if: steps.current-main.outputs.current == 'true'
+        shell: bash
+        run: |
+          set -euo pipefail
+          for asset in manifest.json tesseract.min.js pdf.min.mjs worker.min.js lang/nld.traineddata.gz; do
+            status="$(curl --retry 3 --retry-all-errors -L -sS --max-time 25 -o /dev/null -w '%{http_code}' "${NEXT_PUBLIC_APP_URL}/vendor/ocr/${asset}")"
+            echo "Local OCR asset ${asset}: HTTP ${status}"
+            if [[ "${status}" != "200" ]]; then echo "::error::Local OCR asset missing on main: ${asset}"; exit 1; fi
+          done
+
+      - name: Verify integration credentials API denies unauthenticated requests
+        if: steps.current-main.outputs.current == 'true'
+        shell: bash
+        run: |
+          set -euo pipefail
+          endpoint="${NEXT_PUBLIC_APP_URL}/api/administration/integrations"
+          get_code="$(curl -sS --max-time 20 -o /dev/null -w '%{http_code}' "$endpoint")"
+          post_code="$(curl -sS --max-time 20 -X POST -H "Origin: ${NEXT_PUBLIC_APP_URL}" -H 'Content-Type: application/json' --data '{"provider":"sumup","credentials":{}}' -o /dev/null -w '%{http_code}' "$endpoint")"
+          echo "Integration API unauthenticated GET: HTTP $get_code"
+          echo "Integration API unauthenticated POST: HTTP $post_code"
+          for code in "$get_code" "$post_code"; do
+            if [[ "$code" != 401 && "$code" != 403 ]]; then
+              echo '::error::Integration credentials endpoint did not enforce authentication.'
+              exit 1
+            fi
+          done
+
+      - name: Verify OCR endpoint denies unauthenticated requests
+        if: steps.current-main.outputs.current == 'true'
+        shell: bash
+        run: |
+          set -euo pipefail
+          response_code="$(curl -sS --max-time 20 -X POST -H "Origin: ${NEXT_PUBLIC_APP_URL}" -H 'Content-Type: application/json' --data '{}' -o /tmp/main-ocr-unauthorized-response -w '%{http_code}' "${NEXT_PUBLIC_APP_URL}/api/administration/ocr")"
+          echo "Main OCR unauthenticated request: HTTP ${response_code}"
+          if [[ "${response_code}" != "401" && "${response_code}" != "403" ]]; then
+            echo "::error::OCR endpoint did not enforce authentication (unexpected HTTP ${response_code})."
+            exit 1
+          fi
+          echo 'OCR authentication gate is active on main.'
+ 

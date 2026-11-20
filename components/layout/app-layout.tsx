@@ -1,0 +1,364 @@
+"use client"
+
+import { useCallback, useEffect, useMemo, useRef, useState } from "react"
+import dynamic from "next/dynamic"
+import Link from "next/link"
+import { usePathname } from "next/navigation"
+import { AppSidebar } from "@/components/layout/sidebar"
+import { Topbar } from "@/components/layout/topbar"
+import { MobileBottomNav } from "@/components/layout/mobile-nav"
+import { FloatingChatButton } from "@/components/layout/floating-chat-button"
+import { QueueStatus } from "@/components/crew/queue-status"
+import { createClient } from "@/lib/supabase/crew-client"
+import {boundedQueries} from "@/lib/administration/bounded-queries"
+import { useAuth } from "@/lib/providers"
+import { getDefaultRoleUiRules, ruleMatches, ruleUsable, type RoleUiContext, type RoleUiRule } from "@/lib/role-ui"
+import { AdminContextBar } from "@/components/admin/admin-context-bar"
+import { LANGUAGE_APPLIED_EVENT, activeUiLocale, type SupportedUiLocale } from "@/lib/locale-preferences"
+
+// Both AI panels are closed on ordinary page loads. Keep their client-only
+// feature bundles out of the first Worker SSR and browser hydration path.
+// The button and panels remain fully available when a user actually opens AI.
+const PlatformAiAssistant = dynamic(() => import("@/components/admin/platform-ai-assistant").then(m => m.PlatformAiAssistant), {ssr:false})
+const AdministrationAiChat = dynamic(() => import("@/components/administration/administration-ai-chat").then(m => m.AdministrationAiChat), {ssr:false})
+
+function CountBadge({ count }: { count: number }) {
+  if (count < 1) return null
+  return <span className="absolute -right-2 -top-2 flex h-5 min-w-5 items-center justify-center rounded-full bg-red-600 px-1 text-[11px] font-black leading-none text-white shadow ring-2 ring-background">{count>99?"99+":count}</span>
+}
+
+const emptyContext:RoleUiContext={assignedEvent:false,assignedWorkplaceRole:false,eventActive:false,shiftActive:false}
+
+function featureForNotificationLink(link:string|null){
+  if(!link)return null
+  if(link.startsWith("/events"))return "events"
+  if(link.startsWith("/operations"))return "operations"
+  if(link.startsWith("/workplaces"))return "workplaces"
+  if(link.startsWith("/inventory"))return "inventory"
+  if(link.startsWith("/guestlist"))return "guestlist"
+  if(link.startsWith("/sales"))return "sales"
+  if(link.startsWith("/shifts"))return "workplaces"
+  if(link.startsWith("/briefings"))return "briefings"
+  if(link.startsWith("/tasks"))return "tasks"
+  if(link.startsWith("/chat"))return "chat"
+  if(link.startsWith("/crew"))return "crew"
+  if(link.startsWith("/incidents"))return "incidents"
+  if(link.startsWith("/exports"))return "exports"
+  if(link.startsWith("/personnel"))return "personnel"
+  if(link.startsWith("/admin/platform")||link.startsWith("/control-center"))return "platform"
+  if(link.startsWith("/settings"))return "settings"
+  if(link==="/"||link.startsWith("/admin"))return "overview"
+  return null
+}
+
+
+export function AppLayout({ children }: { children: React.ReactNode }) {
+  const pathname=usePathname()
+  const {user,roles,isAdmin}=useAuth()
+  const supabase=useMemo(()=>createClient(),[])
+  const refreshInFlight=useRef(false)
+  const lastRefreshAttemptAt=useRef(0)
+  const [chatMissed,setChatMissed]=useState(0)
+  const [incidentMissed,setIncidentMissed]=useState(0)
+  const [taskMissed,setTaskMissed]=useState(0)
+  const [notificationMissed,setNotificationMissed]=useState(0)
+  const [notificationFeatureCounts,setNotificationFeatureCounts]=useState<Record<string,number>>({})
+  const [context,setContext]=useState<RoleUiContext>(emptyContext)
+  const [rules,setRules]=useState<RoleUiRule[]>([])
+  const [adminAiOpen,setAdminAiOpen]=useState(false)
+ const [navigationExpanded,setNavigationExpanded]=useState(false)
+ useEffect(()=>{const on=(event:Event)=>{const open=Boolean((event as CustomEvent<{open:boolean}>).detail?.open);setNavigationExpanded(open);if(open)setAdminAiOpen(false)};window.addEventListener("uptilldawn-navigation-expanded",on);return()=>window.removeEventListener("uptilldawn-navigation-expanded",on)},[])
+  const [aiWorkspace,setAiWorkspace]=useState<"admin"|"administration">("admin")
+  const [uiLocale,setUiLocale]=useState<SupportedUiLocale>("nl")
+  useEffect(()=>{const apply=()=>setUiLocale(activeUiLocale());apply();addEventListener(LANGUAGE_APPLIED_EVENT,apply);return()=>removeEventListener(LANGUAGE_APPLIED_EVENT,apply)},[])
+
+  const activeUiRole=roles[0]
+  const roleKey=activeUiRole==="responsible_lead"?"responsible_lead":activeUiRole==="admin"?"admin":activeUiRole==="employee"?"staff":null
+  const defaultRules=useMemo(()=>roleKey?getDefaultRoleUiRules(roleKey):[],[roleKey])
+
+  const loadRules=useCallback(async()=>{
+    if(!roleKey){setRules([]);return}
+    const {data}=await supabase.from("role_ui_rules").select("role,feature_key,label,group_key,visible,enabled,condition_key,sort_order,settings").eq("role",roleKey).order("sort_order")
+    setRules((data?.length?data:defaultRules) as RoleUiRule[])
+  },[defaultRules,roleKey,supabase])
+
+  useEffect(()=>{const first=window.setTimeout(()=>void loadRules(),0);const fn=()=>void loadRules();window.addEventListener("uptilldawn-role-rules-updated",fn);return()=>{window.clearTimeout(first);window.removeEventListener("uptilldawn-role-rules-updated",fn)}},[loadRules])
+
+  const effectiveRules=rules.length?rules:defaultRules
+  const ruleMap=useMemo(()=>new Map(effectiveRules.map(rule=>[rule.feature_key,rule])),[effectiveRules])
+  const previewAll=false
+  const effectiveContext=context
+  const feature=(key:string,fallback:boolean)=>{
+    const rule=ruleMap.get(key)
+    return rule?ruleMatches(rule,effectiveContext,previewAll):fallback
+  }
+  const order=effectiveRules.map(rule=>rule.feature_key)
+  const labels=Object.fromEntries(effectiveRules.map(rule=>[rule.feature_key,rule.label]))
+
+  const personalRoute=pathname.startsWith("/settings")||pathname.startsWith("/notifications")||pathname.startsWith("/portals")
+  const currentFeature=
+    personalRoute?null:
+    pathname==="/"||pathname==="/admin"?"overview":
+    pathname.startsWith("/events")?"events":
+    pathname.startsWith("/operations")?"operations":
+    pathname.startsWith("/workplaces")?"workplaces":
+    pathname.startsWith("/inventory")?"inventory":
+    pathname.startsWith("/guestlist")?"guestlist":
+    pathname.startsWith("/sales")?"sales":
+    pathname.startsWith("/shifts")?"workplaces":
+    pathname.startsWith("/briefings")?"briefings":
+    pathname.startsWith("/tasks")?"tasks":
+    pathname.startsWith("/chat")?"chat":
+    pathname.startsWith("/crew")?"crew":
+    pathname.startsWith("/incidents")?"incidents":
+    pathname.startsWith("/exports")?"exports":
+    pathname.startsWith("/personnel")?"personnel":
+    pathname.startsWith("/settings")?"settings":
+    null
+  const currentRule=currentFeature?ruleMap.get(currentFeature):undefined
+  const rulesReady=!roleKey||effectiveRules.length>0
+  const adminAlwaysRoute=Boolean(isAdmin&&(
+    pathname.startsWith("/operations")
+    ||pathname.startsWith("/inventory")
+    ||pathname.startsWith("/guestlist")
+    ||pathname.startsWith("/briefings")
+    ||pathname.startsWith("/exports")
+    ||pathname.startsWith("/admin/platform")
+  ))
+  // A Staff/Responsible who has no active shift must still see their Tasks
+  // landing page, with the existing "available when your shift starts" state.
+  // This does not grant task actions: server actions and RLS enforce shifts.
+  // Explicit hidden/disabled Admin role rules remain authoritative.
+  const taskLandingVisible=Boolean(currentFeature==="tasks"&&
+    (roleKey==="staff"||roleKey==="responsible_lead")&&
+    currentRule?.visible===true&&currentRule?.enabled===true&&
+    currentRule?.condition_key==="shift_active")
+  const currentVisible=adminAlwaysRoute||taskLandingVisible||!currentFeature||!roleKey||!rulesReady||previewAll||ruleMatches(currentRule,effectiveContext,false)
+  const currentUsable=taskLandingVisible||previewAll||adminAlwaysRoute||!currentFeature||!roleKey||!rulesReady||ruleUsable(currentRule,effectiveContext,false)
+  const contentLocked=Boolean(currentVisible&&!currentUsable)
+
+  const refresh=useCallback(async(force=false)=>{
+    if(!user||refreshInFlight.current||document.visibilityState==='hidden'||!navigator.onLine)return
+    // Focus, route transitions and polling may occur together. Avoid repeating
+    // six or more RLS reads when badge context has just been refreshed.
+    const attemptAt=Date.now()
+    if(!force&&attemptAt-lastRefreshAttemptAt.current<20_000)return
+    lastRefreshAttemptAt.current=attemptAt
+    refreshInFlight.current=true
+    try{
+    const now=new Date()
+    const nowIso=now.toISOString()
+    // Keep routine nav badges responsive during Supabase gateway timeouts.
+    // Failed reads must settle; they must not accumulate on the next focus.
+    const badgeSignal=AbortSignal.timeout(9_000)
+    const incidentKey=`uptilldawn-last-incidents-view:${user.id}`
+    const taskKey=`uptilldawn-last-tasks-view:${user.id}`
+    let incidentSince=window.localStorage.getItem(incidentKey)
+    const taskSince=window.localStorage.getItem(taskKey)||"1970-01-01T00:00:00.000Z"
+    if(!incidentSince){incidentSince=nowIso;window.localStorage.setItem(incidentKey,incidentSince)}
+    // Dedicated Promotion/Administration pages use their own scoped actions
+    // and navigation. Their shared shell needs only unread badges and the
+    // active shift for the urgent HELP affordance, not the complete events,
+    // memberships, responsible assignments, incident and task directory.
+    // Preserve role UI and the chat/notification freshness while avoiding
+    // >8 PostgREST calls on every portal focus or tab refresh.
+    const dedicatedPortal=pathname.startsWith("/portals/promotion")||
+      pathname.startsWith("/portals/administration")
+    if(dedicatedPortal){
+      const [
+        {data:chatUnreadTotal},
+        {data:unreadNotifications},
+        {data:activeShifts},
+      ]=await boundedQueries([
+        supabase.rpc("upt_chat_unread_total").abortSignal(badgeSignal),
+        supabase.from("crew_notifications").select("id,link,kind")
+          .eq("user_id",user.id).is("read_at",null).limit(500).abortSignal(badgeSignal),
+        supabase.from("shifts").select("scheduled_start,scheduled_end")
+          .eq("user_id",user.id).neq("status","cancelled")
+          .lte("scheduled_start",nowIso).gte("scheduled_end",nowIso).limit(1).abortSignal(badgeSignal),
+      ],2)
+      const noticeRows=unreadNotifications||[]
+      setChatMissed(Number(chatUnreadTotal||0))
+      setNotificationMissed(noticeRows.length)
+      const featureCounts:Record<string,number>={}
+      for(const notice of noticeRows){
+        const key=featureForNotificationLink(notice.link)
+        if(key)featureCounts[key]=(featureCounts[key]||0)+1
+      }
+      setNotificationFeatureCounts(featureCounts)
+      setContext({assignedEvent:false,assignedWorkplaceRole:Boolean(activeShifts?.length),
+        eventActive:Boolean(activeShifts?.length),shiftActive:Boolean(activeShifts?.length)})
+      return
+    }
+    const [
+      {data:events},
+      {data:memberships},
+      {data:shifts},
+      {data:responsibleAssignments},
+      {data:chatUnreadTotal},
+      {data:unreadNotifications},
+    ]=await boundedQueries([
+      supabase.from("events").select("id,start_at,end_at,status").neq("status","archived").gte("end_at",nowIso).abortSignal(badgeSignal),
+      supabase.from("event_members").select("event_id,event_role").eq("user_id",user.id).abortSignal(badgeSignal),
+      supabase.from("shifts").select("event_id,workplace_id,scheduled_start,scheduled_end,status").eq("user_id",user.id).neq("status","cancelled").abortSignal(badgeSignal),
+      supabase.from("responsible_assignments").select("event_id,workplace_id").eq("user_id",user.id).abortSignal(badgeSignal),
+      supabase.rpc("upt_chat_unread_total").abortSignal(badgeSignal),
+      supabase.from("crew_notifications").select("id,link,kind").eq("user_id",user.id).is("read_at",null).limit(500).abortSignal(badgeSignal),
+    ],3)
+    const notificationRows=unreadNotifications||[]
+    setNotificationMissed(notificationRows.length)
+    const featureCounts:Record<string,number>={}
+    for(const notification of notificationRows){
+      const key=featureForNotificationLink(notification.link)
+      if(key)featureCounts[key]=(featureCounts[key]||0)+1
+    }
+    setNotificationFeatureCounts(featureCounts)
+
+    const eventRows=events||[]
+    const memberIds=new Set((memberships||[]).map(x=>x.event_id))
+    const assignedEvent=eventRows.some(e=>
+      memberIds.has(e.id)
+      || (shifts||[]).some(shift=>shift.event_id===e.id)
+      || (responsibleAssignments||[]).some(assignment=>assignment.event_id===e.id)
+    ) || (shifts||[]).some(shift=>Date.parse(shift.scheduled_end)>=now.getTime())
+    const eventActive=eventRows.some(e=>
+      (memberIds.has(e.id)||(shifts||[]).some(shift=>shift.event_id===e.id)||(responsibleAssignments||[]).some(assignment=>assignment.event_id===e.id))
+      && Date.parse(e.start_at)<=now.getTime()
+      && Date.parse(e.end_at)>=now.getTime()
+    )
+    const shiftActive=(shifts||[]).some(s=>Date.parse(s.scheduled_start)<=now.getTime()&&Date.parse(s.scheduled_end)>=now.getTime())
+    const assignedWorkplaceRole=(shifts||[]).length>0||(responsibleAssignments||[]).length>0
+    setContext({assignedEvent,assignedWorkplaceRole,eventActive,shiftActive})
+
+    const activeShiftRows=(shifts||[]).filter(shift=>
+      Date.parse(shift.scheduled_start)<=now.getTime()&&Date.parse(shift.scheduled_end)>=now.getTime()
+    )
+    const activeShiftEventIds=new Set(activeShiftRows.map(shift=>shift.event_id))
+    const activeShiftWorkplaceIds=new Set(activeShiftRows.map(shift=>shift.workplace_id))
+    const responsibleWorkplaceIds=new Set((responsibleAssignments||[]).map(row=>row.workplace_id))
+    const activeResponsibleWorkplaceIds=new Set(
+      [...responsibleWorkplaceIds].filter(workplaceId=>activeShiftWorkplaceIds.has(workplaceId))
+    )
+
+    if(pathname.startsWith("/tasks")){window.localStorage.setItem(taskKey,nowIso);setTaskMissed(0)}
+    else if(activeUiRole==="admin"){
+      const {count}=await supabase.from("task_assignments").select("id,tasks!inner(event_id)",{count:"exact",head:true}).not("tasks.event_id","is",null).gt("created_at",taskSince).neq("status","COMPLETED")
+      setTaskMissed(count??0)
+    }else{
+      const {data:taskRows}=await supabase.from("task_assignments")
+        .select("id,user_id,tasks(event_id,workplace_id)")
+        .gt("created_at",taskSince)
+        .neq("status","COMPLETED")
+        .limit(1000)
+      const count=(taskRows||[]).filter(row=>{
+        const task=row.tasks
+        if(!task?.event_id)return false
+        if(activeUiRole==="employee")return row.user_id===user.id&&activeShiftEventIds.has(task.event_id)
+        if(row.user_id===user.id&&activeShiftEventIds.has(task.event_id))return true
+        return Boolean(task.workplace_id&&activeResponsibleWorkplaceIds.has(task.workplace_id))
+      }).length
+      setTaskMissed(count)
+    }
+
+    setChatMissed(Number(chatUnreadTotal||0))
+
+    if(pathname.startsWith("/incidents")){window.localStorage.setItem(incidentKey,nowIso);setIncidentMissed(0)}
+    else if(activeUiRole==="admin"){
+      const {count}=await supabase.from("incidents").select("id",{count:"exact",head:true}).gt("created_at",incidentSince)
+      setIncidentMissed(count??0)
+    }else if(activeUiRole==="employee"){
+      const {count}=await supabase.from("incidents").select("id",{count:"exact",head:true})
+        .eq("reporter_id",user.id)
+        .gt("created_at",incidentSince)
+      setIncidentMissed(count??0)
+    }else if(activeResponsibleWorkplaceIds.size){
+      const {count}=await supabase.from("incidents").select("id",{count:"exact",head:true})
+        .in("workplace_id",[...activeResponsibleWorkplaceIds])
+        .gt("created_at",incidentSince)
+      setIncidentMissed(count??0)
+    }else setIncidentMissed(0)
+    }finally{refreshInFlight.current=false}
+  },[activeUiRole,pathname,supabase,user])
+
+  useEffect(()=>{
+    // Stable user-specific jitter keeps simultaneous event logins from
+    // issuing the entire dashboard badge-query burst in the same second.
+    const seed=[...(user?.id||'')].reduce((h,c)=>((h*33+c.charCodeAt(0))>>>0),0)
+    const safeRefresh=(force=false)=>void refresh(force).catch(()=>{})
+    const initial=window.setTimeout(()=>safeRefresh(),400+seed%6500)
+    const timer=window.setInterval(()=>safeRefresh(),pathname.startsWith("/portals/")?45_000+seed%8_000:30_000+seed%8_000)
+    const focus=()=>safeRefresh()
+    // Explicit chat-read action must still update the badge immediately.
+    const chatRead=()=>safeRefresh(true)
+    window.addEventListener("focus",focus)
+    window.addEventListener("uptilldawn-chat-read",chatRead)
+    return()=>{
+      window.clearTimeout(initial)
+      window.clearInterval(timer)
+      window.removeEventListener("focus",focus)
+      window.removeEventListener("uptilldawn-chat-read",chatRead)
+    }
+  },[refresh,pathname,user?.id])
+
+  const showOverview=feature("overview",true)
+  const showEvents=feature("events",true)
+  const showShifts=false
+  const showBriefings=feature("briefings",Boolean(isAdmin)||context.assignedEvent)
+  const showOperations=feature("operations",isAdmin?true:context.shiftActive)
+  const showWorkplaces=feature("workplaces",Boolean(isAdmin)||context.assignedWorkplaceRole)
+  const showInventory=feature("inventory",context.assignedWorkplaceRole)
+  const showGuestlist=feature("guestlist",Boolean(isAdmin)||context.assignedEvent)
+  const showSales=Boolean(isAdmin)&&feature("sales",true)
+  const showTasks=feature("tasks",Boolean(isAdmin)||context.shiftActive)||
+    Boolean((roleKey==="staff"||roleKey==="responsible_lead")&&
+      ruleMap.get("tasks")?.visible===true&&ruleMap.get("tasks")?.enabled===true&&
+      ruleMap.get("tasks")?.condition_key==="shift_active")
+  const showIncidents=feature("incidents",isAdmin?true:context.shiftActive)
+  const showChat=feature("chat",true)
+  const showCrew=feature("crew",true)
+  const showExports=feature("exports",Boolean(isAdmin))
+  const showPersonnel=feature("personnel",Boolean(isAdmin))
+  const showSettings=feature("settings",true)
+  const showPlatform=feature("platform",Boolean(isAdmin))
+  const featureVisibility={overview:showOverview,events:showEvents,operations:showOperations,workplaces:showWorkplaces,inventory:showInventory,guestlist:showGuestlist,sales:showSales,shifts:showShifts,briefings:showBriefings,tasks:showTasks,chat:showChat,crew:showCrew,incidents:showIncidents,exports:showExports,personnel:showPersonnel,platform:showPlatform,settings:showSettings}
+  const showUrgent=!pathname.startsWith("/chat")&&!isAdmin&&showIncidents&&effectiveContext.shiftActive
+  const inDedicatedPortal=pathname.startsWith("/portals/promotion")||pathname.startsWith("/portals/administration")
+  const showFloatingChat=showChat&&!inDedicatedPortal&&!navigationExpanded
+
+  const administrationPortal=pathname.startsWith("/portals/administration")
+  // Keep the top AI button visible while bottom subtabs expand. The expanded
+  // navigation closes only the AI panel, not the topbar action; they cannot
+  // overlap because the submenu is anchored to the bottom of the screen.
+  const adminAiVisible=isAdmin||administrationPortal
+  const effectiveAiWorkspace=isAdmin?aiWorkspace:"administration"
+  const adminAiAction=adminAiVisible?<div className="relative z-[70] print:hidden"><button type="button" aria-expanded={adminAiOpen} onClick={()=>{if(navigationExpanded)window.dispatchEvent(new Event("uptilldawn-navigation-dismiss"));setAdminAiOpen(value=>!value)}} className="rounded-lg bg-violet-600 px-2 py-2 text-xs font-black text-white shadow sm:px-3"><span className="sm:hidden">AI</span><span className="hidden sm:inline">{administrationPortal?({nl:"Administratie AI",fr:"IA administrative",en:"Administration AI",de:"Verwaltungs-KI"} as const)[uiLocale]:"ADMIN AI"}</span></button>{adminAiOpen&&<div className="fixed inset-x-3 top-[calc(4.5rem+env(safe-area-inset-top))] z-[80] max-h-[calc(100dvh-7rem)] overflow-y-auto rounded-2xl border bg-background p-4 shadow-2xl sm:absolute sm:inset-x-auto sm:top-[calc(100%+0.5rem)] sm:right-0 sm:w-[min(92vw,430px)] sm:max-h-[75dvh]"><div className="space-y-3"><div className="flex gap-2">{isAdmin&&<button type="button" aria-pressed={aiWorkspace==="admin"} onClick={()=>setAiWorkspace("admin")} className={`rounded-lg border px-3 py-2 text-sm ${aiWorkspace==="admin"?"border-violet-500 text-violet-400":""}`}>Admin AI</button>}<button type="button" aria-pressed={effectiveAiWorkspace==="administration"} onClick={()=>setAiWorkspace("administration")} className={`rounded-lg border px-3 py-2 text-sm ${aiWorkspace==="administration"?"border-violet-500 text-violet-400":""}`}>{({nl:"Administratie AI",fr:"IA administrative",en:"Administration AI",de:"Verwaltungs-KI"} as const)[uiLocale]}</button></div>{effectiveAiWorkspace==="admin"?<PlatformAiAssistant contextKey={currentFeature||undefined} contextLabel={labels[currentFeature||""]} compact/>:<AdministrationAiChat locale={uiLocale} compact/>}</div></div>}</div>:null
+
+  return <div data-app-shell-ready="true" className="flex h-dvh bg-background print:block print:h-auto">
+
+    {/* Mobile shell lives at the AppLayout root so iOS fixed positioning is not
+        clipped by the nested overflow scroll container. */}
+    <div className="print:hidden">
+      {!inDedicatedPortal&&!pathname.startsWith("/portals/")&&<MobileBottomNav chatMissed={chatMissed} incidentMissed={incidentMissed} taskMissed={taskMissed} notificationFeatureCounts={notificationFeatureCounts} featureOrder={order} featureLabels={labels} featureVisibility={featureVisibility} assignedEvent={effectiveContext.assignedEvent} shiftActive={effectiveContext.shiftActive}/>}
+    </div>
+    {showFloatingChat&&!pathname.startsWith("/chat")&&<FloatingChatButton count={chatMissed} stackedAboveAdminAi={Boolean(isAdmin)} href="/chat"/>}
+
+    {!inDedicatedPortal&&<div className="print:hidden"><AppSidebar chatMissed={chatMissed} incidentMissed={incidentMissed} taskMissed={taskMissed} notificationFeatureCounts={notificationFeatureCounts} showOperations={showOperations} showEvents={showEvents} showTasks={showTasks} showBriefings={showBriefings} showShifts={showShifts} showWorkplaces={showWorkplaces} showIncidents={showIncidents} featureOrder={order} featureLabels={labels} featureVisibility={featureVisibility}/></div>}
+    <div className="flex flex-1 flex-col overflow-hidden print:block print:overflow-visible">
+      <div className="print:hidden"><Topbar notificationMissed={notificationMissed} adminAiAction={adminAiAction}/><QueueStatus/>{isAdmin&&<AdminContextBar/>}</div>
+      <div id="app-scroll" className="flex-1 overflow-y-auto bg-background scroll-smooth print:overflow-visible">
+        <main className="min-h-[calc(100dvh-theme(spacing.16)-theme(spacing.12))] pb-20 lg:pb-0 print:min-h-0 print:pb-0">
+          {!currentVisible&&!previewAll
+            ? <div className="m-4 rounded-2xl border p-6 text-muted-foreground">Deze functie is verborgen voor jouw rol of huidige context.</div>
+            : <>
+                {!currentUsable&&!previewAll&&<p className="m-3 rounded-xl border p-3 text-sm text-muted-foreground">Alleen-lezen: deze functie is zichtbaar, maar momenteel niet bruikbaar voor jouw rol.</p>}
+                <div inert={contentLocked&&!previewAll}>{children}</div>
+              </>}
+        </main>
+      </div>
+    </div>
+
+    {!pathname.startsWith("/chat")&&<>
+      {showUrgent&&<Link prefetch={false} href="/incidents" className="fixed bottom-20 left-4 z-50 rounded-full bg-red-600 px-5 py-4 font-black text-white print:hidden lg:hidden">{({nl:"HELP",en:"HELP",fr:"AIDE",de:"HILFE"} as Record<SupportedUiLocale,string>)[uiLocale]}<CountBadge count={incidentMissed}/></Link>}
+    </>}
+  </div>
+}

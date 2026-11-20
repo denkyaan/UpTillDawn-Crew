@@ -1,0 +1,12 @@
+{
+  "$schema": "./node_modules/wrangler/config-schema.json",
+  "name": "uptilldawn-main",
+  "main": ".open-next/worker.js",
+  "compatibility_date": "2026-09-22",
+  "compatibility_flags": ["nodejs_compat"],
+  "workers_dev": true,
+  "preview_urls": false,
+  "assets": { "directory": ".open-next/assets", "binding": "ASSETS", "html_handling": "drop-trailing-slash" },
+  "ai": { "binding": "AI" },
+  "observability": { "enabled": true, "logs": { "invocation_logs": true, "head_sampling_rate": 1 } }
+}

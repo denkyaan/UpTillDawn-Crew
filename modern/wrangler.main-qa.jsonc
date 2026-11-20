@@ -1,0 +1,37 @@
+{
+  "$schema": "../node_modules/wrangler/config-schema.json",
+  "name": "uptilldawn-modern-main",
+  "main": "src/api/worker.ts",
+  "compatibility_date": "2026-11-19",
+  "compatibility_flags": [
+    "nodejs_compat"
+  ],
+  "workers_dev": true,
+  "preview_urls": false,
+  "assets": {
+    "directory": "./dist",
+    "not_found_handling": "single-page-application",
+    "run_worker_first": [
+      "/api/*",
+      "/auth/callback",
+      "/portals/switch/*",
+      "/portals/administration/modules/artists/*"
+    ],
+    "binding": "ASSETS"
+  },
+  "vars": {
+    "SUPABASE_URL": "https://npbjrtiolqperdgljnhi.supabase.co",
+    "SUPABASE_ANON_KEY": "sb_publishable_zStTw3n8wZ271PehDRDvGg_rs0JOy84",
+    "UPT_MIGRATION_OAUTH_ENABLED": "false",
+    "UPT_MIGRATION_SCANNING_ENABLED": "false"
+  },
+  "observability": {
+    "enabled": true
+  },
+  "services": [
+    {
+      "binding": "MAIN_AUTH",
+      "service": "uptilldawn-main"
+    }
+  ]
+}

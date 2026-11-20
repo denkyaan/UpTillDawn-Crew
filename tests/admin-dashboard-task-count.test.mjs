@@ -1,0 +1,11 @@
+import test from 'node:test'
+import assert from 'node:assert/strict'
+import {readFileSync} from 'node:fs'
+const source=readFileSync('app/(app)/admin/page.tsx','utf8')
+test('admin dashboard counts unfinished task assignments server-side without transferring rows',()=>{
+ assert.match(source,/s\.from\('task_assignments'\)\.select\('id,tasks!inner\(event_id\)',\{count:'exact',head:true\}\)\.not\('tasks\.event_id','is',null\)\.neq\('status','COMPLETED'\)/)
+ assert.match(source,/openAssignmentCount=assignments\.count\?\?0/)
+ assert.match(source,/openAssignmentCount\+' open taaktoewijzing/)
+ assert.match(source,/label="Open taaktoewijzingen" value=\{assignments\.error\?null:openAssignmentCount\}/)
+ assert.doesNotMatch(source,/assignmentRows\.length/)
+})

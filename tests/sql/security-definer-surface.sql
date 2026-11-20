@@ -1,0 +1,181 @@
+-- Security-definer surface regression.
+-- Public SECURITY DEFINER RPCs are intentionally used for validated workflows.
+-- PUBLIC and anonymous execute are forbidden for this SECURITY DEFINER surface.
+-- The retired pre-auth admin login guard/failure RPCs are service-only. God Mode
+-- requires an authenticated permanent-maker session.
+
+BEGIN;
+
+DO $surface$
+DECLARE
+  v_count integer;
+  v_unauthorized_rpc_list text;
+BEGIN
+  SELECT count(*) INTO v_count
+  FROM pg_proc p
+  JOIN pg_namespace n ON n.oid = p.pronamespace
+  WHERE n.nspname = 'public'
+    AND p.prosecdef
+    AND has_function_privilege('public', p.oid, 'EXECUTE');
+
+  IF v_count <> 0 THEN
+    RAISE EXCEPTION 'FAIL: % public SECURITY DEFINER function(s) are executable by PUBLIC', v_count;
+  END IF;
+
+  SELECT count(*) INTO v_count
+  FROM pg_proc p
+  JOIN pg_namespace n ON n.oid = p.pronamespace
+  WHERE n.nspname = 'public'
+    AND p.prosecdef
+    AND has_function_privilege('anon', p.oid, 'EXECUTE')
+;
+
+  IF v_count <> 0 THEN
+    RAISE EXCEPTION 'FAIL: % unexpected SECURITY DEFINER function(s) are executable by anon', v_count;
+  END IF;
+
+  IF has_function_privilege('anon','public.upt_admin_login_guard(text)','EXECUTE')
+     OR has_function_privilege('anon','public.upt_admin_login_failure(text,text,text,text)','EXECUTE') THEN
+    RAISE EXCEPTION 'FAIL: retired anonymous admin lockout RPC remains executable';
+  END IF;
+
+  IF EXISTS(
+    SELECT 1
+    FROM pg_proc p
+    JOIN pg_namespace n ON n.oid=p.pronamespace
+    WHERE n.nspname='public'
+      AND p.prosecdef
+      AND has_function_privilege('anon',p.oid,'EXECUTE')
+      AND p.proname LIKE 'upt_god_%'
+  ) THEN
+    RAISE EXCEPTION 'FAIL: anonymous caller can execute a God Mode RPC';
+  END IF;
+
+  SELECT count(*) INTO v_count
+  FROM pg_proc p
+  JOIN pg_namespace n ON n.oid = p.pronamespace
+  WHERE n.nspname = 'public'
+    AND p.prosecdef
+    AND has_function_privilege('authenticated', p.oid, 'EXECUTE')
+    AND NOT EXISTS (
+      SELECT 1
+      FROM unnest(coalesce(p.proconfig, '{}'::text[])) setting
+      WHERE setting LIKE 'search_path=%'
+    );
+
+  IF v_count <> 0 THEN
+    RAISE EXCEPTION 'FAIL: % authenticated SECURITY DEFINER function(s) do not pin search_path', v_count;
+  END IF;
+
+  -- Preserve the exact deny-by-default predicates while reporting the
+  -- offending signature(s). Fresh-isolated replays can expose drift that a
+  -- long-lived hosted database no longer contains; never suppress this gate.
+  SELECT string_agg(p.oid::regprocedure::text, ', ' ORDER BY p.proname)
+    INTO v_unauthorized_rpc_list
+  FROM pg_proc p
+  JOIN pg_namespace n ON n.oid = p.pronamespace
+  WHERE n.nspname = 'public'
+    AND p.prosecdef
+    AND has_function_privilege('authenticated', p.oid, 'EXECUTE')
+    AND p.proname LIKE 'upt_%'
+    AND position('auth.uid()' in pg_get_functiondef(p.oid)) = 0
+    AND position('upt_is_approved' in pg_get_functiondef(p.oid)) = 0
+    AND position('upt_is_admin' in pg_get_functiondef(p.oid)) = 0
+    AND position('god_session_valid' in pg_get_functiondef(p.oid)) = 0
+    -- Delegated authorization is valid only for these explicit internal
+    -- workflow boundaries whose callees enforce caller identity/scope.
+    AND position('upt_respond_shift' in pg_get_functiondef(p.oid)) = 0
+    AND position('inventory_can_view' in pg_get_functiondef(p.oid)) = 0;
+  IF v_unauthorized_rpc_list IS NOT NULL THEN
+    RAISE EXCEPTION 'FAIL: authenticated Uptilldawn SECURITY DEFINER entry point lacks an explicit authorization primitive: %', v_unauthorized_rpc_list;
+  END IF;
+END
+$surface$;
+
+DO $bootstrap_closed$
+BEGIN
+  IF to_regprocedure('public.upt_promote_confirmed_info_admin()') IS NOT NULL
+     OR to_regprocedure('public.upt_info_admin_bootstrap_open()') IS NOT NULL
+     OR to_regprocedure('public.upt_password_change_required()') IS NOT NULL
+     OR to_regprocedure('public.upt_mark_password_changed()') IS NOT NULL
+     OR to_regclass('upt_private.password_change_required') IS NOT NULL
+     OR EXISTS(
+       SELECT 1
+       FROM pg_trigger t
+       JOIN pg_class c ON c.oid=t.tgrelid
+       JOIN pg_namespace n ON n.oid=c.relnamespace
+       WHERE NOT t.tgisinternal
+         AND n.nspname='auth'
+         AND c.relname='users'
+         AND t.tgname='upt_promote_confirmed_info_admin'
+     ) THEN
+    RAISE EXCEPTION 'FAIL: legacy info-admin bootstrap artifact remains';
+  END IF;
+END
+$bootstrap_closed$;
+
+DO $god_gate$
+BEGIN
+  IF has_table_privilege('authenticated','upt_private.god_mode_config','SELECT')
+     OR has_table_privilege('authenticated','upt_private.god_mode_sessions','SELECT')
+     OR has_table_privilege('authenticated','upt_private.god_mode_attempts','SELECT')
+     OR has_table_privilege('anon','upt_private.god_mode_config','SELECT')
+     OR has_table_privilege('anon','upt_private.god_mode_sessions','SELECT')
+     OR has_table_privilege('anon','upt_private.god_mode_attempts','SELECT') THEN
+    RAISE EXCEPTION 'FAIL: browser roles can read private God Mode state';
+  END IF;
+
+  IF has_function_privilege('anon','public.upt_god_is_configured()','EXECUTE')
+     OR has_function_privilege('anon','public.upt_god_set_credentials(text,text)','EXECUTE')
+     OR has_function_privilege('anon','public.upt_god_login(text,text)','EXECUTE') THEN
+    RAISE EXCEPTION 'FAIL: anonymous caller can access a retired God Mode credential RPC';
+  END IF;
+
+  IF has_function_privilege('authenticated','public.upt_god_is_configured()','EXECUTE')
+     OR has_function_privilege('authenticated','public.upt_god_set_credentials(text,text)','EXECUTE')
+     OR has_function_privilege('authenticated','public.upt_god_login(text,text)','EXECUTE') THEN
+    RAISE EXCEPTION 'FAIL: retired standalone God Mode credential RPC is still client-executable';
+  END IF;
+
+  IF NOT has_function_privilege('authenticated','public.upt_god_login_owner()','EXECUTE')
+     OR position(
+       'is_app_owner'
+       in pg_get_functiondef('public.upt_god_login_owner()'::regprocedure)
+     )=0 THEN
+    RAISE EXCEPTION 'FAIL: permanent-maker God Mode entry is unavailable or unguarded';
+  END IF;
+
+  IF EXISTS(
+    SELECT 1
+    FROM pg_proc p
+    JOIN pg_namespace n ON n.oid=p.pronamespace
+    WHERE n.nspname='public'
+      AND p.prosecdef
+      AND p.proname LIKE 'upt_god_%'
+      AND has_function_privilege('authenticated',p.oid,'EXECUTE')
+      AND p.proname <> 'upt_god_login_owner'
+      AND position('god_session_valid' in pg_get_functiondef(p.oid))=0
+      AND position('is_app_owner' in pg_get_functiondef(p.oid))=0
+  ) THEN
+    RAISE EXCEPTION 'FAIL: authenticated God Mode RPC is not owner/session guarded';
+  END IF;
+
+  IF EXISTS(
+    SELECT 1
+    FROM information_schema.role_table_grants
+    WHERE table_schema='public'
+      AND table_name='role_ui_rules'
+      AND grantee='authenticated'
+      AND privilege_type IN ('INSERT','UPDATE','DELETE','TRUNCATE','REFERENCES','TRIGGER')
+  ) THEN
+    RAISE EXCEPTION 'FAIL: authenticated retains direct role_ui_rules mutation privileges';
+  END IF;
+
+  IF NOT has_table_privilege('authenticated','public.role_ui_rules','SELECT') THEN
+    RAISE EXCEPTION 'FAIL: authenticated cannot read role_ui_rules';
+  END IF;
+END
+$god_gate$;
+
+SELECT 'PASS: SECURITY DEFINER surface, closed anonymous admin login mutation surface, permanent-maker-only God Mode and retired standalone credential flow are locked down' AS result;
+ROLLBACK;

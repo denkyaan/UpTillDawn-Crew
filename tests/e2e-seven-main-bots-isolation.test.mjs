@@ -1,0 +1,161 @@
+import test from 'node:test'
+import assert from 'node:assert/strict'
+import {readFileSync} from 'node:fs'
+import {spawnSync} from 'node:child_process'
+const script='scripts/e2e-seven-main-bots.mjs'
+const source=readFileSync(script,'utf8')
+const workflow=readFileSync('.github/workflows/deploy-main.yml','utf8')
+
+test('Main role-browser acceptance is syntactically valid and covers all seven identities',()=>{
+ const check=spawnSync(process.execPath,['--check',script],{encoding:'utf8'})
+ assert.equal(check.status,0,check.stderr)
+ const aliases=['head_admin','left_hand','right_hand','administration','promotion','responsible','staff']
+ for(const alias of aliases)assert.ok(source.includes("role:'"+alias+"'"),alias+' missing')
+ assert.match(source,/viewports=\[/)
+ assert.match(source,/locales=\['nl','fr','en','de'\]/)
+ assert.match(source,/page\.waitForURL/)
+ assert.match(source,/assertAllowed/)
+ assert.match(source,/assertDenied/)
+ assert.match(source,/data-login-hydrated/)
+ assert.match(source,/scrollWidth/)
+})
+test('Browser QA is explicitly restricted to exact Main and secret, cannot run against production',()=>{
+ assert.match(source,/configUrl!==BASE/)
+ assert.match(source,/E2E_MAIN_QA_PASSWORD/)
+ assert.match(source,/https:\/\/uptilldawn-main\.uptilldawn\.workers\.dev/)
+ assert.doesNotMatch(source,/https:\/\/crew\.uptilldawn\.workers\.dev/)
+ const denied=spawnSync(process.execPath,[script],{
+  encoding:'utf8',env:{...process.env,E2E_MAIN_QA_BASE_URL:'https://crew.uptilldawn.workers.dev',E2E_MAIN_QA_PASSWORD:'x'.repeat(26)}
+ })
+ assert.notEqual(denied.status,0)
+ assert.match(denied.stderr,/restricted to the exact isolated Main URL/)
+})
+test('Browser QA is manually opted-in, separated from fast Main CI and production deployment',()=>{
+ assert.match(workflow,/qa-main-browser-acceptance:/)
+ assert.ok(workflow.includes('needs: [provision-qa-bots, validate-trigger, deploy, qa-main-functional-acceptance]'))
+ assert.ok(workflow.includes('needs: [validate-trigger, deploy]'))
+ assert.ok(workflow.includes('always() && ('))
+ assert.match(workflow,/inputs\.provision_qa_bots == true/)
+ assert.match(workflow,/secrets\.MAIN_QA_BOT_PASSWORD/)
+ assert.match(workflow,/node scripts\/e2e-seven-main-bots\.mjs/)
+ assert.match(workflow,/actions\/upload-artifact@v4/)
+ assert.match(workflow,/if: github\.event_name == 'workflow_run'/)
+})
+
+test('denied-route acceptance waits for final RSC authorization and never mistakes loading skeleton for leaked access',()=>{
+ assert.match(source,/page\.waitForURL\(target=>target\.pathname!==path/)
+ assert.match(source,/No settled authorization denial/)
+ assert.match(source,/Aborted navigation had no confirmed server redirect/)
+ assert.match(source,/status>=500/)
+ assert.match(source,/\[401,403,404\]/)
+ assert.match(source,/ERR_ABORTED/)
+ assert.doesNotMatch(source,/const blocked=\(response\?\.status\(\)\|\|0\)>=400\|\|actual!==path/)
+})
+test('transient login failures include safe page error diagnostics rather than falsely claiming authentication',()=>{
+ assert.match(source,/Login navigation failed for/)
+ assert.match(source,/locator\('\[data-login-error-code\]'\)/)
+ assert.match(source,/throw Error\('Login navigation failed/)
+})
+
+test('explicit Main-only QA marker runs only after a successful fast CI and successful Main deployment',()=>{
+ assert.match(workflow,/qa_eligible: \$\{\{ steps\.check\.outputs\.qa_eligible \}\}/)
+ assert.match(workflow,/commit_message=.*gh api/)
+ assert.match(workflow,/\[main-qa-e2e\]/)
+ assert.match(workflow,/SOURCE_EVENT.*push/)
+ assert.match(workflow,/SOURCE_RESULT.*success/)
+ assert.match(workflow,/needs\.validate-trigger\.outputs\.qa_eligible == 'true'/)
+ assert.match(workflow,/needs\.deploy\.result == 'success'/)
+ assert.match(workflow,/always\(\)/)
+ assert.doesNotMatch(readFileSync('.github/workflows/fast-change-validation.yml','utf8'),/main-qa-e2e/)
+})
+
+test('live browser navigation waits for document commit rather than stalled full-page load',()=>{
+ assert.match(source,/page\.goto\(url\(path\),\{waitUntil:'commit',timeout\}\)/)
+ assert.match(source,/page\.waitForURL\(target=>!target\.pathname\.startsWith\('\/login'\),\{waitUntil:'commit',timeout:40000\}\)/)
+ assert.match(source,/locator\(ready\)\.first\(\)\.waitFor/)
+})
+test('denials remain fail-closed and do not mistake RSC loading shell or lost session for unauthorized access',()=>{
+ assert.match(source,/page\.waitForURL\(target=>target\.pathname!==path,\{waitUntil:'commit',timeout:50000\}\)/)
+ assert.match(source,/QA login session lost/)
+ assert.match(source,/No settled authorization denial/)
+ assert.match(source,/Aborted navigation had no confirmed server redirect/)
+ assert.match(source,/status>=500/)
+})
+test('Staff task page explicitly permits the no-current-assignment redirect only to Events',()=>{
+ assert.match(source,/role\.role==='staff'&&path==='\/tasks'/)
+ assert.match(source,/\['\/tasks','\/events'\]/)
+ assert.doesNotMatch(source,/validPaths=\['\/tasks','\/events'\]/)
+})
+
+test('chat readiness uses actual composer when the page does not render a heading',()=>{
+ assert.match(source,/path==='\/chat'\?'section textarea, section h1'/)
+ assert.match(source,/locator\(ready\)\.first\(\)\.waitFor/)
+})
+test('browser login checks SSR cookie presence without exposing its value',()=>{
+ assert.match(source,/context\.cookies\(BASE\)/)
+ assert.match(source,/Supabase SSR authentication cookie/)
+ assert.doesNotMatch(source,/console\.log\([^\n]*cookieNames/)
+})
+
+test('seven-role Main acceptance exercises real Administration categories and canonical subtab clicks',()=>{
+ assert.match(source,/import \{administrationNavigationGroups,administrationRoute\} from '\.\.\/lib\/administration\/navigation\.ts'/)
+ assert.match(source,/async function assertAdministrationClickWorkflows\(/)
+ assert.match(source,/administrationNavigationGroups\.filter\(group=>group\.key!=='overview'\)/)
+ assert.match(source,/found\.map\(entry=>entry\.href\),expected\.map\(administrationRoute\)/)
+ assert.match(source,/role\.role==='head_admin'\|\|role\.role==='administration'/)
+ assert.match(source,/page\.waitForURL\(target=>target\.pathname===href/)
+ assert.match(source,/administration-return-overview/)
+ assert.match(source,/administration-toggle-/)
+})
+test('read-only acceptance checks real draft forms but never submits them',()=>{
+ assert.match(source,/administration-event-draft-form/)
+ assert.match(source,/draft\.locator\('form input\[name="name"\]'\)/)
+ assert.match(source,/administration-contract-create-form/)
+ assert.match(source,/contract_context/)
+ assert.match(source,/administration-contract-prerequisite-visible/)
+ assert.doesNotMatch(source,/bookingForm\.locator\([^\n]+\.click\(\)/)
+ assert.doesNotMatch(source,/draft\.locator\('form button\[type="submit"\]'\)\.click\(\)/)
+})
+
+test('DJ-contract prerequisite checks the nested page main, never ambiguous shell and page landmarks',()=>{
+ assert.match(source,/const contentMain=page\.locator\('main'\)\.last\(\)/)
+ assert.match(source,/contentMain\.locator\('h1'\)\.first\(\)\.waitFor/)
+ assert.match(source,/const bookingForm=contentMain\.locator\('form'\)\.first\(\)/)
+ assert.match(source,/const notice=\(await contentMain\.innerText\(\)\)\.toLowerCase\(\)/)
+ assert.doesNotMatch(source,/page\.locator\('main'\)\.innerText\(\)/)
+ assert.match(source,/Contract creation is blocked without an actionable prerequisite message/)
+})
+
+test('Main login QA retries only classified transient Auth and transport failures, never role/credential denials',()=>{
+ assert.match(source,/for\(let attempt=1;attempt<=2&&!signedIn;attempt\+\+\)/)
+ assert.match(source,/data-login-error-code/)
+ assert.match(source,/const temporaryAuthFailure=\['unexpected_action_failure','auth_temporarily_unavailable','auth_rate_limited'\]\.includes\(code\)/)
+ assert.match(source,/if\(!temporaryAuthFailure\|\|attempt===2\)/)
+ assert.match(source,/QA_RETRY_TRANSIENT_LOGIN/)
+ assert.match(source,/QA_RECOVERED_TRANSIENT_LOGIN/)
+ const form=readFileSync('components/auth/login-form.tsx','utf8')
+ assert.match(form,/role="alert" data-login-error-code=\{displayedCode \|\| "login_error"\}/)
+ assert.match(form,/const displayedCode = error \? errorCode : displayedError \? "initial_login_error" : null/)
+ assert.match(form,/setErrorCode\(outage\.code\)/)
+ assert.match(form,/const outage=temporaryLoginError\(\)/)
+ assert.doesNotMatch(form,/setErrorCode\("unexpected_action_failure"\)/)
+})
+
+test('browser QA reports Worker 1102 as real resource exhaustion, never accepts 503 as authorization',()=>{
+ assert.match(source,/response\?\.status\(\)===503/)
+ assert.match(source,/Worker exceeded resource limits/)
+ assert.match(source,/CPU or memory/)
+ assert.match(source,/status>=500/)
+})
+
+test('HTTP 503 and Cloudflare 1102 on login are classified immediately as Worker failures, never slow hydration or authorization success',()=>{
+ const start=source.indexOf('async function goto(page,path)')
+ const end=source.indexOf('function mark(',start)
+ assert.ok(start>=0&&end>start)
+ const loader=source.slice(start,end)
+ assert.match(loader,/response\?\.status\(\)===503/)
+ assert.match(loader,/Error 1102\|Worker exceeded resource limits/)
+ assert.match(loader,/Cloudflare Worker 1102 resource exhaustion/)
+ assert.match(loader,/Main Worker returned HTTP 503/)
+ assert.ok(loader.indexOf('response?.status()===503')<loader.indexOf("body').waitFor"),'Resource check must happen before hydration waits')
+})

@@ -1,0 +1,50 @@
+import test from 'node:test'
+import assert from 'node:assert/strict'
+import {readFileSync} from 'node:fs'
+
+const read=path=>readFileSync(new URL('../'+path,import.meta.url),'utf8')
+
+test('full browser acceptance has a reproducible, pinned Playwright runtime',async()=>{
+ const pkg=JSON.parse(read('package.json'))
+ const lock=JSON.parse(read('package-lock.json'))
+ assert.equal(pkg.devDependencies.playwright,'1.65.0')
+ assert.equal(lock.packages[''].devDependencies.playwright,'1.65.0')
+ assert.equal(lock.packages['node_modules/playwright'].version,'1.65.0')
+ assert.equal(lock.packages['node_modules/playwright-core'].version,'1.65.0')
+ assert.equal(pkg.scripts['e2e:portals'],'node scripts/e2e-all-portals.mjs')
+ const {chromium}=await import('playwright')
+ assert.equal(typeof chromium.launch,'function')
+})
+test('authenticated browser release QA is isolated in manually dispatched CI production',()=>{
+ const main=read('.github/workflows/fast-change-validation.yml')
+ const production=read('.github/workflows/ci.yml')
+ const runner=read('scripts/e2e-all-portals.mjs')
+ assert.doesNotMatch(main,/run_six_role_acceptance:|browser-acceptance:|full-validation:/)
+ assert.match(production,/workflow_dispatch:/)
+ assert.match(production,/Run 15 concurrent authenticated browser bots/)
+ assert.match(production,/npx playwright install --with-deps chromium/)
+ assert.match(production,/npm run e2e:portals/)
+ assert.match(production,/UPT_E2E_SESSION_BRIDGE: '1'/)
+ assert.match(runner,/E2E_ALLOW_MAIN_TEST/)
+ assert.match(runner,/const main=base\.hostname==='uptilldawn-main\.uptilldawn\.workers\.dev'/)
+ assert.match(runner,/Missing|BLOCKED/)
+ assert.doesNotMatch(main,/secrets\.SUPABASE_SERVICE_ROLE|BOT_SERVICE_ROLE_KEY/)
+})
+
+test('QA seeding permits only loopback Supabase and explicitly approved main-test, never production',()=>{
+ const seed=read('scripts/seed-15-bot-users.mjs')
+ const fullCi=read('.github/workflows/ci.yml')
+ assert.match(seed,/const expectedTestHost = 'npbjrtiolqperdgljnhi\.supabase\.co'/)
+ assert.match(seed,/target\.protocol === 'http:'/)
+ assert.match(seed,/target\.hostname === '127\.0\.0\.1'/)
+ assert.match(seed,/target\.port === '54321'/)
+ assert.match(seed,/isApprovedMainTest/)
+ assert.match(seed,/process\.env\.UPT_QA_ALLOW_MAIN_SEED === '1'/)
+ assert.match(seed,/if \(!isLocalSupabase && !isApprovedMainTest\)/)
+ assert.match(seed,/process\.exit\(2\)/)
+ assert.match(fullCi,/node scripts\/seed-15-bot-users\.mjs/)
+ assert.match(fullCi,/playwright-chromium-1\.65\.0-/)
+ assert.doesNotMatch(fullCi,/npm install --no-save.*playwright@1\.62\.1/)
+ const fastCi=read('.github/workflows/fast-change-validation.yml')
+ assert.doesNotMatch(fastCi,/node scripts\/seed-15-bot-users\.mjs/)
+})

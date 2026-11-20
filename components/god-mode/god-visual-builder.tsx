@@ -1,0 +1,435 @@
+'use client'
+
+import { useEffect, useMemo, useRef, useState, useSyncExternalStore } from 'react'
+import {LANGUAGE_APPLIED_EVENT,initialUiLocale,parseUiLocale,type SupportedUiLocale} from '@/lib/locale-preferences'
+import targets from '@/lib/god-source-index.json'
+import type { SourceTarget } from '@/lib/god-studio'
+
+const previewText={
+ nl:{page:"Voorbeeldpagina",switchFailed:"Rolvoorbeeld kon niet worden geopend.",unavailable:"De actieve voorbeeldrol kon niet worden opgehaald.",nested:"Dit onderdeel heeft ingesloten knoppen of pictogrammen. Gebruik een codevoorstel om de tekst aan te passen zonder functies te verwijderen.",restoreRole:'Oorspronkelijke rol herstellen',retry:'Opnieuw verbinden',device:'Schermformaat',mobile:'Mobiel',tablet:'Tablet',desktop:'Desktop',fit:'Passend · 100% bekijken',actual:'Ware grootte · passend bekijken',preview:'preview',note:'De preview gebruikt een echte viewport van',warning:'Kies 100% om op kleine schermen horizontaal te inspecteren. Rolwissels wijzigen tijdelijk je actieve testrol; kies Admin om die opnieuw in te stellen.'},
+ fr:{page:"Page de prévisualisation",switchFailed:"Impossible d’ouvrir l’aperçu de ce rôle.",unavailable:"Le rôle actif de prévisualisation est indisponible.",nested:"Cet élément contient des boutons ou des icônes. Utilisez une proposition de code pour modifier le texte sans supprimer les fonctions.",restoreRole:'Rétablir le rôle initial',retry:'Réessayer',device:'Format d’écran',mobile:'Mobile',tablet:'Tablette',desktop:'Ordinateur',fit:'Adapté · afficher à 100 %',actual:'Taille réelle · ajuster',preview:'aperçu',note:"L’aperçu utilise une largeur réelle de",warning:"Affichez 100 % pour inspecter horizontalement sur les petits écrans. Changer de rôle modifie temporairement le rôle de test actif ; sélectionnez Admin pour le rétablir."},
+ en:{page:"Preview page",switchFailed:"Unable to open this role preview.",unavailable:"The active preview role could not be loaded.",nested:"This element contains nested controls or icons. Use a code proposal to change its text without removing functionality.",restoreRole:'Restore original role',retry:'Retry connection',device:'Screen size',mobile:'Mobile',tablet:'Tablet',desktop:'Desktop',fit:'Fit · view at 100%',actual:'Actual size · fit',preview:'preview',note:'The preview uses a real viewport width of',warning:'Choose 100% to inspect horizontally on smaller screens. Role switching temporarily changes your active test role; select Admin to restore it.'},
+ de:{page:"Vorschauseite",switchFailed:"Rollenvorschau konnte nicht geöffnet werden.",unavailable:"Die aktive Vorschaurolle konnte nicht geladen werden.",nested:"Dieses Element enthält verschachtelte Schaltflächen oder Symbole. Verwende einen Codevorschlag, um den Text ohne Funktionsverlust zu ändern.",restoreRole:'Ursprüngliche Rolle wiederherstellen',retry:'Erneut verbinden',device:'Bildschirmgröße',mobile:'Mobil',tablet:'Tablet',desktop:'Desktop',fit:'Einpassen · 100 % anzeigen',actual:'Originalgröße · einpassen',preview:'Vorschau',note:'Die Vorschau verwendet eine echte Ansichtsbreite von',warning:'Auf kleinen Bildschirmen lässt sich bei 100 % horizontal prüfen. Ein Rollenwechsel ändert vorübergehend die aktive Testrolle; Admin stellt sie wieder her.'},
+} as const
+
+type Role = 'staff' | 'responsible_lead' | 'admin'
+type Device = 'desktop' | 'tablet' | 'mobile'
+const CSS_PX_UNIT='px'
+
+type Selected = {
+  text: string
+  tag: string
+  aria: string
+  selector: string
+}
+
+const roleLabels: Record<Role,string> = {
+  staff: 'Personeel',
+  responsible_lead: 'Verantwoordelijke',
+  admin: 'Admin',
+}
+
+const roleHome: Record<Role,string> = {
+  staff: '/',
+  responsible_lead: '/',
+  admin: '/admin',
+}
+
+const pageOptions: Record<Role,{label:string;path:string}[]> = {
+  staff: [
+    {label:'Overzicht',path:'/'},
+    {label:'Evenementen',path:'/events'},
+    {label:'Mijn werkuren',path:'/operations'},
+    {label:'Werkplaatsen & shifts',path:'/workplaces'},
+    {label:'Briefing',path:'/briefings'},
+    {label:'Inventaris',path:'/inventory'},
+    {label:'Inkom & Guestlist',path:'/guestlist'},
+    {label:'Verkoop',path:'/sales'},
+    {label:'Taken',path:'/tasks'},
+    {label:'Chats',path:'/chat'},
+    {label:'Profiel',path:'/settings'},
+  ],
+  responsible_lead: [
+    {label:'Overzicht',path:'/'},
+    {label:'Evenementen',path:'/events'},
+    {label:'Mijn werkuren',path:'/operations'},
+    {label:'Werkplaatsen & shifts',path:'/workplaces'},
+    {label:'Briefing',path:'/briefings'},
+    {label:'Inventaris',path:'/inventory'},
+    {label:'Inkom & Guestlist',path:'/guestlist'},
+    {label:'Verkoop',path:'/sales'},
+    {label:'Taken',path:'/tasks'},
+    {label:'Help',path:'/incidents'},
+    {label:'Profiel',path:'/settings'},
+  ],
+  admin: [
+    {label:'Overzicht',path:'/admin'},
+    // The Owner/Admin session may inspect both dedicated portals without
+    // creating extra role identities or bypassing their server-side layouts.
+    {label:'Administratie',path:'/portals/administration'},
+    {label:'Promotie',path:'/portals/promotion'},
+    {label:'Evenementen',path:'/events'},
+    {label:'Werkplaatsen & shifts',path:'/workplaces'},
+    {label:'Werkuren',path:'/operations'},
+    {label:'Inventaris',path:'/inventory'},
+    {label:'Inkom & Guestlist',path:'/guestlist'},
+    {label:'Taken',path:'/tasks'},
+    {label:'Sales',path:'/sales'},
+    {label:'Goedkeuringen',path:'/personnel'},
+    {label:'Personeel',path:'/crew'},
+    {label:'Chats',path:'/chat'},
+    {label:'Help',path:'/incidents'},
+    {label:'Beheer',path:'/settings'},
+  ],
+}
+
+function widthFor(device:Device){
+  if(device==='mobile') return 390
+  if(device==='tablet') return 820
+  return 1440
+}
+
+function selectorFor(element: HTMLElement) {
+  if (element.id) return `#${CSS.escape(element.id)}`
+  const testId = element.getAttribute('data-testid')
+  if (testId) return `[data-testid="${CSS.escape(testId)}"]`
+  const aria = element.getAttribute('aria-label')
+  if (aria) return `${element.tagName.toLowerCase()}[aria-label="${CSS.escape(aria)}"]`
+  const classes = [...element.classList].slice(0,3).map(name=>'.'+CSS.escape(name)).join('')
+  return element.tagName.toLowerCase()+classes
+}
+
+export function GodVisualBuilder({
+  onOpenSource,
+  onPrepareAi,
+}:{
+  onOpenSource:(file:string,line:number)=>void
+  onPrepareAi:(prompt:string,file?:string,line?:number)=>void
+}) {
+  const locale=useSyncExternalStore(
+    notify=>{window.addEventListener(LANGUAGE_APPLIED_EVENT,notify);return()=>window.removeEventListener(LANGUAGE_APPLIED_EVENT,notify)},
+    ()=>parseUiLocale(document.documentElement.lang)||initialUiLocale(),
+    ()=>'nl' as SupportedUiLocale,
+  )
+  const t=previewText[locale]
+  const [role,setRole] = useState<Role>('admin')
+  const [path,setPath] = useState('/admin')
+  const [device,setDevice] = useState<Device>('mobile')
+  const [fitToScreen,setFitToScreen] = useState(true)
+  const [availableWidth,setAvailableWidth] = useState(390)
+  const [selected,setSelected] = useState<Selected|null>(null)
+  const [text,setText] = useState('')
+  const [fontSize,setFontSize] = useState('')
+  const [width,setWidth] = useState('')
+  const [height,setHeight] = useState('')
+  const [radius,setRadius] = useState('')
+  const [padding,setPadding] = useState('')
+  const [margin,setMargin] = useState('')
+  const [x,setX] = useState('')
+  const [y,setY] = useState('')
+  const [foreground,setForeground] = useState('')
+  const [background,setBackground] = useState('')
+  const [visible,setVisible] = useState(true)
+  const [themePrimary,setThemePrimary] = useState('#7c3aed')
+  const [themeBackground,setThemeBackground] = useState('#1c1c1e')
+  const [themeCard,setThemeCard] = useState('#2c2c2e')
+  const [themeRadius,setThemeRadius] = useState('0.75rem')
+  const [buttonLabel,setButtonLabel] = useState('Nieuwe knop')
+  const [buttonAction,setButtonAction] = useState('/events')
+  const [status,setStatus] = useState('')
+  const [frameKey,setFrameKey] = useState(0)
+  const [roleReady,setRoleReady] = useState(false)
+  const [roleChanging,setRoleChanging] = useState(false)
+  const originalRoleRef=useRef<Role|null>(null)
+  const activeRoleRef=useRef<Role|null>(null)
+  const [originalRole,setOriginalRole]=useState<Role|null>(null)
+  const [roleReload,setRoleReload]=useState(0)
+  const frameRef=useRef<HTMLIFrameElement>(null)
+  const previewContainerRef=useRef<HTMLDivElement>(null)
+  useEffect(()=>{
+    const container=previewContainerRef.current
+    if(!container)return
+    const resize=new ResizeObserver(entries=>{
+      const width=entries[0]?.contentRect.width
+      if(width&&Number.isFinite(width))setAvailableWidth(width)
+    })
+    resize.observe(container)
+    return()=>resize.disconnect()
+  },[])
+  useEffect(()=>{
+    const controller=new AbortController()
+    void fetch('/api/god/preview-role',{cache:'no-store',signal:controller.signal})
+      .then(async response=>{
+        const data=await response.json().catch(()=>({})) as {role?:Role;error?:string}
+        if(!response.ok||!data.role||!['staff','responsible_lead','admin'].includes(data.role))throw Error(data.error||t.unavailable)
+        if(controller.signal.aborted)return
+        if(originalRoleRef.current===null){originalRoleRef.current=data.role;setOriginalRole(data.role)}
+        activeRoleRef.current=data.role
+        setRole(data.role)
+        setPath(roleHome[data.role])
+        setFrameKey(key=>key+1)
+        setRoleReady(true)
+      })
+      .catch(error=>{if(!controller.signal.aborted)setStatus(error instanceof Error?error.message:t.unavailable)})
+    return()=>controller.abort()
+  },[roleReload,t.unavailable])
+  // Preview roles are temporary. Restore the pre-preview role when leaving the
+  // Builder; keepalive is best effort on tab close, the explicit restore button
+  // below is the reliable path while the app is still open.
+  useEffect(()=>()=>{
+    const original=originalRoleRef.current
+    if(original&&activeRoleRef.current!==original){
+      void fetch('/api/god/preview-role',{
+        method:'POST',headers:{'Content-Type':'application/json'},
+        body:JSON.stringify({role:original}),keepalive:true,
+      }).catch(()=>{})
+    }
+  },[])
+  const viewportWidth=widthFor(device)
+  const previewScale=fitToScreen?Math.min(1,Math.max(0.1,(availableWidth-24)/viewportWidth)):1
+
+  const matches = useMemo(()=>{
+    if(!selected)return []
+    const needle=(selected.aria||selected.text).toLowerCase()
+    return (targets as SourceTarget[]).filter(target=>
+      needle && `${target.label} ${target.handler}`.toLowerCase().includes(needle)
+    ).slice(0,8)
+  },[selected])
+
+  async function switchRole(next:Role){
+    if(!roleReady||roleChanging||role===next)return
+    setRoleChanging(true)
+    setStatus('')
+    try{
+      const response=await fetch('/api/god/preview-role',{
+        method:'POST',
+        headers:{'Content-Type':'application/json'},
+        body:JSON.stringify({role:next}),
+      })
+      const data=await response.json().catch(()=>({})) as {role?:Role;error?:string}
+      if(!response.ok||data.role!==next)throw Error(data.error||t.switchFailed)
+      activeRoleRef.current=next
+      setRole(next)
+      setPath(roleHome[next])
+      setSelected(null)
+      setFrameKey(value=>value+1)
+    }catch(error){
+      setStatus(error instanceof Error?error.message:t.switchFailed)
+    }finally{
+      setRoleChanging(false)
+    }
+  }
+
+  function inspect(frame:HTMLIFrameElement){
+    try{
+      const doc=frame.contentDocument
+      if(!doc)return
+      const style=doc.createElement('style')
+      style.dataset.godModeInspector='true'
+      style.textContent='[data-god-selected="true"]{outline:2px solid #a855f7!important;outline-offset:2px!important;cursor:crosshair!important}'
+      doc.head.appendChild(style)
+      doc.addEventListener('click',event=>{
+        event.preventDefault()
+        event.stopPropagation()
+        event.stopImmediatePropagation()
+        const target=(event.target as HTMLElement|null)?.closest('button,a,input,select,textarea,label,h1,h2,h3,p,section,article,div,nav,aside') as HTMLElement|null
+        if(!target)return
+        doc.querySelectorAll('[data-god-selected="true"]').forEach(el=>el.removeAttribute('data-god-selected'))
+        target.setAttribute('data-god-selected','true')
+        const next={
+          text:(target.textContent||'').trim().replace(/\s+/g,' ').slice(0,160),
+          tag:target.tagName.toLowerCase(),
+          aria:target.getAttribute('aria-label')||'',
+          selector:selectorFor(target),
+        }
+        setSelected(next)
+        setText((target.textContent||'').trim())
+        setFontSize(target.style.fontSize)
+        setWidth(target.style.width)
+        setHeight(target.style.height)
+        setRadius(target.style.borderRadius)
+        setPadding(target.style.padding)
+        setMargin(target.style.margin)
+        setX(target.style.left)
+        setY(target.style.top)
+        setForeground(target.style.color)
+        setBackground(target.style.backgroundColor)
+        setVisible(target.style.display!=='none')
+      },true)
+      doc.addEventListener('submit',event=>event.preventDefault(),true)
+    }catch{
+      setStatus('Preview kon niet worden geïnspecteerd.')
+    }
+  }
+
+  function selectedElement(){
+    const doc=frameRef.current?.contentDocument
+    if(!doc||!selected)return null
+    return doc.querySelector('[data-god-selected="true"]') as HTMLElement|null
+  }
+
+  function applyPreview(){
+    const element=selectedElement()
+    if(!element){setStatus('Selecteer eerst een onderdeel in de preview.');return}
+    if(element instanceof HTMLInputElement || element instanceof HTMLTextAreaElement){
+      element.value=text
+      element.setAttribute('value',text)
+    }else if(text!==selected?.text){
+      // Replacing the textContent of a React component with nested nodes
+      // would delete icons and their listeners in the live preview.
+      if(element.childElementCount>0){
+        setStatus(t.nested)
+        return
+      }
+      element.textContent=text
+    }
+    element.style.fontSize=fontSize
+    element.style.width=width
+    element.style.height=height
+    element.style.borderRadius=radius
+    element.style.padding=padding
+    element.style.margin=margin
+    element.style.color=foreground
+    element.style.backgroundColor=background
+    element.style.display=visible?'':'none'
+    if(x||y){
+      element.style.position='relative'
+      element.style.left=x
+      element.style.top=y
+    }else{
+      element.style.left=''
+      element.style.top=''
+    }
+    setStatus('Preview aangepast. Maak daarna een AI-codevoorstel om dit duurzaam op te slaan.')
+  }
+
+  function describeChange(){
+    if(!selected)return ''
+    return [
+      `Pas in God Mode het geselecteerde element aan op pagina ${path} voor rol ${roleLabels[role]}.`,
+      `Element: ${selected.tag}, selector-indicatie: ${selected.selector}, huidige tekst: "${selected.text}".`,
+      text!==selected.text?`Nieuwe tekst: "${text}".`:'',
+      fontSize?`Font-size: ${fontSize}.`:'',
+      width?`Breedte: ${width}.`:'',
+      height?`Hoogte: ${height}.`:'',
+      radius?`Border-radius: ${radius}.`:'',
+      padding?`Padding: ${padding}.`:'',
+      margin?`Margin: ${margin}.`:'',
+      x||y?`Positie-offset: left ${x||'0'}, top ${y||'0'}.`:'',
+      foreground?`Tekstkleur: ${foreground}.`:'',
+      background?`Achtergrondkleur: ${background}.`:'',
+      !visible?'Maak het element onzichtbaar.':'',
+      'Behoud bestaande authenticatie, autorisatie en overige logica. Gebruik responsieve Tailwind/CSS waar mogelijk.',
+    ].filter(Boolean).join(' ')
+  }
+
+  function applyThemePreview(){
+    const doc=frameRef.current?.contentDocument
+    if(!doc){setStatus('Open eerst een preview.');return}
+    const root=doc.documentElement
+    root.style.setProperty('--primary',themePrimary)
+    root.style.setProperty('--ring',themePrimary)
+    root.style.setProperty('--sidebar-primary',themePrimary)
+    root.style.setProperty('--background',themeBackground)
+    root.style.setProperty('--card',themeCard)
+    root.style.setProperty('--radius',themeRadius)
+    setStatus('Thema op de preview toegepast. Maak een codevoorstel om dit permanent te maken.')
+  }
+
+  function createPreviewButton(){
+    const doc=frameRef.current?.contentDocument
+    if(!doc)return
+    const host=doc.querySelector('main')||doc.body
+    const button=doc.createElement('button')
+    button.type='button'
+    button.textContent=buttonLabel
+    button.setAttribute('data-god-preview-new','true')
+    button.style.padding='12px 16px'
+    button.style.border='1px solid currentColor'
+    button.style.borderRadius='12px'
+    button.style.margin='12px'
+    button.onclick=event=>{event.preventDefault();event.stopPropagation()}
+    host.appendChild(button)
+    setStatus('Knop aan preview toegevoegd. Gebruik "Codevoorstel voor nieuwe knop" om hem echt te implementeren.')
+  }
+
+  return <div className="grid min-w-0 gap-4 xl:grid-cols-[minmax(0,1fr)_360px]">
+    <section className="min-w-0 space-y-3">
+      <div className="flex flex-wrap items-center gap-2 rounded-2xl border p-3">
+        {(Object.keys(roleLabels) as Role[]).map(item=><button type="button" disabled={!roleReady||roleChanging} aria-pressed={role===item} key={item} onClick={()=>void switchRole(item)} className={`min-w-0 rounded-xl px-3 py-2 text-sm font-black disabled:opacity-50 ${role===item?'bg-violet-600 text-white':'border'}`}>{roleLabels[item]}</button>)}
+        {originalRole&&originalRole!==role&&<button type="button" disabled={roleChanging} onClick={()=>void switchRole(originalRole)} className="rounded-lg border border-amber-500/50 px-3 py-2 text-xs font-bold">{t.restoreRole}</button>}
+        <select aria-label={t.page} disabled={!roleReady||roleChanging} value={path} onChange={e=>{setPath(e.target.value);setSelected(null);setFrameKey(value=>value+1)}} className="w-full min-w-0 rounded-xl border bg-background px-3 py-2 sm:w-auto sm:min-w-44">
+          {pageOptions[role].map(page=><option key={page.path} value={page.path}>{page.label}</option>)}
+        </select>
+        <div className="grid w-full grid-cols-3 gap-2 border-t pt-3 sm:flex sm:flex-wrap sm:items-center">
+          <span className="col-span-3 text-xs font-semibold text-muted-foreground sm:col-span-1">{t.device}</span>
+          {(['mobile','tablet','desktop'] as Device[]).map(item=><button type="button" key={item} aria-pressed={device===item} onClick={()=>setDevice(item)} className={`min-w-0 rounded-lg px-2 py-2 text-xs ${device===item?'bg-violet-600 font-bold text-white':'border'}`}>{t[item]} <span className="block text-[10px] opacity-80">{widthFor(item)}{CSS_PX_UNIT}</span></button>)}
+          <button type="button" aria-pressed={fitToScreen} onClick={()=>setFitToScreen(value=>!value)} className="col-span-3 rounded-lg border px-3 py-2 text-xs font-bold sm:col-span-1 sm:ml-auto">{fitToScreen?t.fit:t.actual}</button>
+        </div>
+      </div>
+
+      <p role="status" className="text-xs text-muted-foreground">{t.note} <strong>{viewportWidth}{CSS_PX_UNIT}</strong> · {Math.round(previewScale*100)}% {t.preview}. {t.warning}</p>
+      <div ref={previewContainerRef} className="min-w-0 overflow-auto rounded-2xl border bg-zinc-950 p-3">
+        <div className="mx-auto overflow-hidden rounded-xl border border-zinc-700 bg-white shadow-2xl" style={{width:viewportWidth*previewScale,height:`calc(72vh * ${previewScale})`}}>
+          <div style={{width:viewportWidth,height:'72vh',transform:`scale(${previewScale})`,transformOrigin:'top left'}}>
+            {roleReady&&<iframe ref={frameRef} key={`${role}:${path}:${frameKey}`} title={roleLabels[role]+' '+t.preview+' · '+viewportWidth+'px'} src={path} onLoad={e=>inspect(e.currentTarget)} style={{width:viewportWidth,height:'72vh'}} className="block border-0 bg-white"/>}
+          </div>
+        </div>
+      </div>
+      {!roleReady&&<button type="button" onClick={()=>{setStatus('');setRoleReload(n=>n+1)}} className="rounded-lg border px-4 py-2 text-sm font-bold">{t.retry}</button>}
+      {status&&<p role="status" className="rounded-xl border border-violet-500/40 p-3 text-sm">{status}</p>}
+    </section>
+
+    <aside className="space-y-4">
+      <section className="space-y-3 rounded-2xl border p-4">
+        <div>
+          <p className="text-xs font-black uppercase tracking-wider text-violet-400">Inspector</p>
+          <h2 className="font-black">{selected?selected.text||selected.tag:'Klik een element in de preview'}</h2>
+          {selected&&<p className="mt-1 break-all font-mono text-[11px] text-muted-foreground">{selected.selector}</p>}
+        </div>
+        <label className="block text-xs">Tekst<textarea value={text} onChange={e=>setText(e.target.value)} rows={3} className="mt-1 w-full rounded-lg border bg-background p-2 text-sm"/></label>
+        <div className="grid grid-cols-2 gap-2">
+          <label className="text-xs">Breedte<input value={width} onChange={e=>setWidth(e.target.value)} placeholder="100% / 320px" className="mt-1 w-full rounded-lg border bg-background p-2"/></label>
+          <label className="text-xs">Hoogte<input value={height} onChange={e=>setHeight(e.target.value)} placeholder="auto / 48px" className="mt-1 w-full rounded-lg border bg-background p-2"/></label>
+          <label className="text-xs">Font<input value={fontSize} onChange={e=>setFontSize(e.target.value)} placeholder="16px" className="mt-1 w-full rounded-lg border bg-background p-2"/></label>
+          <label className="text-xs">Ronding<input value={radius} onChange={e=>setRadius(e.target.value)} placeholder="12px" className="mt-1 w-full rounded-lg border bg-background p-2"/></label>
+          <label className="text-xs">Padding<input value={padding} onChange={e=>setPadding(e.target.value)} placeholder="12px" className="mt-1 w-full rounded-lg border bg-background p-2"/></label>
+          <label className="text-xs">Margin<input value={margin} onChange={e=>setMargin(e.target.value)} placeholder="0" className="mt-1 w-full rounded-lg border bg-background p-2"/></label>
+          <label className="text-xs">X<input value={x} onChange={e=>setX(e.target.value)} placeholder="0px" className="mt-1 w-full rounded-lg border bg-background p-2"/></label>
+          <label className="text-xs">Y<input value={y} onChange={e=>setY(e.target.value)} placeholder="0px" className="mt-1 w-full rounded-lg border bg-background p-2"/></label>
+        </div>
+        <div className="grid grid-cols-2 gap-2">
+          <label className="text-xs">Tekstkleur<input type="color" value={foreground||'#ffffff'} onChange={e=>setForeground(e.target.value)} className="mt-1 h-10 w-full rounded border bg-background"/></label>
+          <label className="text-xs">Achtergrond<input type="color" value={background||'#000000'} onChange={e=>setBackground(e.target.value)} className="mt-1 h-10 w-full rounded border bg-background"/></label>
+        </div>
+        <label className="flex items-center justify-between rounded-lg border p-2 text-sm">Zichtbaar<input type="checkbox" checked={visible} onChange={e=>setVisible(e.target.checked)}/></label>
+        <button disabled={!selected} onClick={applyPreview} className="w-full rounded-xl bg-violet-600 px-4 py-3 font-black text-white disabled:opacity-40">Preview toepassen</button>
+        <button disabled={!selected} onClick={()=>{
+          const match=matches[0]
+          onPrepareAi(describeChange(),match?.file,match?.line)
+        }} className="w-full rounded-xl border px-4 py-3 font-bold disabled:opacity-40">AI-codevoorstel maken</button>
+        {matches.length>0&&<div className="space-y-1 border-t pt-3"><p className="text-xs font-bold">Waarschijnlijke bron</p>{matches.map(match=><button key={`${match.file}:${match.line}`} onClick={()=>onOpenSource(match.file,match.line)} className="block w-full rounded-lg border p-2 text-left text-xs"><span className="font-mono">{match.file}:{match.line}</span><br/>{match.label||match.handler}</button>)}</div>}
+      </section>
+
+      <section className="space-y-3 rounded-2xl border p-4">
+        <p className="text-xs font-black uppercase tracking-wider text-violet-400">Functie / knop toevoegen</p>
+        <input value={buttonLabel} onChange={e=>setButtonLabel(e.target.value)} placeholder="Knoptekst" className="w-full rounded-lg border bg-background p-2"/>
+        <input value={buttonAction} onChange={e=>setButtonAction(e.target.value)} placeholder="/events of actieomschrijving" className="w-full rounded-lg border bg-background p-2"/>
+        <button onClick={createPreviewButton} className="w-full rounded-xl border px-4 py-2">Voorbeeldknop toevoegen</button>
+        <button onClick={()=>onPrepareAi(`Voeg op pagina ${path} voor rol ${roleLabels[role]} een nieuwe knop toe met tekst "${buttonLabel}". De knop moet deze actie uitvoeren: ${buttonAction}. Plaats hem logisch in de bestaande layout, responsief, met dezelfde visuele stijl en behoud alle bestaande autorisatie.`)} className="w-full rounded-xl bg-violet-600 px-4 py-2 font-bold text-white">Codevoorstel voor nieuwe knop</button>
+      </section>
+
+      <section className="space-y-3 rounded-2xl border p-4">
+        <p className="text-xs font-black uppercase tracking-wider text-violet-400">Thema & kleuren</p>
+        <div className="grid grid-cols-2 gap-2">
+          <label className="text-xs">Primaire kleur<input type="color" value={themePrimary} onChange={e=>setThemePrimary(e.target.value)} className="mt-1 h-10 w-full rounded border bg-background"/></label>
+          <label className="text-xs">Achtergrond<input type="color" value={themeBackground} onChange={e=>setThemeBackground(e.target.value)} className="mt-1 h-10 w-full rounded border bg-background"/></label>
+          <label className="text-xs">Kaarten<input type="color" value={themeCard} onChange={e=>setThemeCard(e.target.value)} className="mt-1 h-10 w-full rounded border bg-background"/></label>
+          <label className="text-xs">Globale ronding<input value={themeRadius} onChange={e=>setThemeRadius(e.target.value)} placeholder="0.75rem" className="mt-1 h-10 w-full rounded border bg-background px-2"/></label>
+        </div>
+        <button onClick={applyThemePreview} className="w-full rounded-xl border px-4 py-2">Thema op preview toepassen</button>
+        <button onClick={()=>onPrepareAi(`Pas het globale thema in app/globals.css aan. Primaire kleur: ${themePrimary}; achtergrond: ${themeBackground}; kaartkleur: ${themeCard}; globale radius: ${themeRadius}. Werk zowel light als dark mode consistent bij, inclusief sidebar, ring en accentvariabelen. Behoud contrast, toegankelijkheid en responsiviteit.`,'app/globals.css',1)} className="w-full rounded-xl bg-violet-600 px-4 py-2 font-bold text-white">Thema als codevoorstel</button>
+      </section>
+    </aside>
+  </div>
+}
