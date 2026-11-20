@@ -26,6 +26,7 @@ if(remote&&remote!==approvedRemote)throw Error('EXACT_MODERN_MAIN_QA_ORIGIN_REQU
 const origin=remote||'http://127.0.0.1:4176',root=resolve(import.meta.dirname,'../..')
 const preview=remote?null:spawn(process.execPath,[resolve(root,'modern/node_modules/vite/bin/vite.js'),'preview','--host','127.0.0.1','--port','4176','--strictPort'],{cwd:resolve(root,'modern'),stdio:'ignore'})
 let browser,signins=0,total=0,menuComparisons=0
+const failures=[]
 const notificationReads=new WeakMap()
 function observeNotices(page){
  const reads=[];notificationReads.set(page,reads)
@@ -69,7 +70,7 @@ async function compare(a,b,label){
   console.error('ORIGINAL_BADGE_READS '+label+' '+JSON.stringify({main:notificationReads.get(a),candidate:notificationReads.get(b)}))
   await mkdir(resolve(root,'test-results/modern-source-parity'),{recursive:true})
   for(const [page,suffix]of [[a,'main'],[b,'vite']])await page.screenshot({path:resolve(root,'test-results/modern-source-parity',label+'-'+suffix+'.png'),fullPage:true})
-  for(const field of ['navigation','fields'])if(JSON.stringify(actual[field])!==JSON.stringify(expected[field]))console.error('ORIGINAL_UI_CONTROL_DIFFERENCE '+label+' '+field+' '+JSON.stringify({expected:expected[field],actual:actual[field]}))
+  for(const field of ['headings','navigation','fields'])if(JSON.stringify(actual[field])!==JSON.stringify(expected[field]))console.error('ORIGINAL_UI_CONTROL_DIFFERENCE '+label+' '+field+' '+JSON.stringify({expected:expected[field],actual:actual[field]}))
   const differing=Object.keys(expected).filter(k=>JSON.stringify(actual[k])!==JSON.stringify(expected[k]))
   throw Error('ORIGINAL_UI_CONTROL_PARITY '+label+' '+differing.join(','))
  }
@@ -122,11 +123,11 @@ try{
     // session in RAM; no extra passwords or independent privileged tokens.
     const mainCookies=state.cookies.map(c=>({...c,domain:new URL(legacy).hostname,secure:true}))
     const original=await browser.newContext({...options,storageState:{cookies:mainCookies,origins:[]}})
+    const label=[bot.role,language,device.name].join('-')
     try{
      const a=await original.newPage(),b=await candidate.newPage(),errors=[]
      observeNotices(a);observeNotices(b)
      b.on('pageerror',error=>errors.push(error.name))
-     const label=[bot.role,language,device.name].join('-')
      // Sequential Main SSR requests respect the Free environment's limits.
      await Promise.all([a.goto(legacy+landing,{waitUntil:'domcontentloaded',timeout:30000}),b.goto(origin+landing,{waitUntil:'domcontentloaded',timeout:20000})]);await ready(a);await ready(b)
      if(await b.locator('html').getAttribute('lang')!==language)throw Error('QA_LOCALE '+label)
@@ -142,10 +143,14 @@ try{
      }
      if(errors.length)throw Error('QA_JS_ERRORS '+label)
      total++;console.log('PASS original-source controls '+bot.role+' / '+language+' / '+device.name)
+    }catch(error){
+     const reason=error instanceof Error?error.message.split('\n')[0]:'QA_SCENARIO_FAILED'
+     failures.push({label,reason});console.error('ORIGINAL_SCENARIO_FAILED '+label+' '+reason)
     }finally{await candidate.close();await original.close()}
    }
   }finally{await login.close()}
  }
+ if(failures.length){console.error('ORIGINAL_COMPARISON_FAILURES '+JSON.stringify(failures));throw Error('QA_ORIGINAL_COMPARISONS_FAILED '+failures.length)}
  if(signins!==7||total!==56)throw Error('QA_INCOMPLETE_COVERAGE')
  console.log(JSON.stringify({validated:true,qaBots:7,actualBotSignins:signins,authenticatedBrowserScenarios:total,originalMainControlComparisons:total,expandedMenuComparisons:menuComparisons,locales:4,deviceProfiles:2,formsSubmitted:false,fullVisualParityVerified:false,productionReady:false}))
 }finally{if(browser)await browser.close();preview?.kill('SIGTERM')}
