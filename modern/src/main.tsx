@@ -1,180 +1,29 @@
-import {StrictMode,Suspense,lazy,useEffect,type ReactNode} from "react"
-import {createRoot} from "react-dom/client"
-import {BrowserRouter,Link,NavLink,Navigate,Outlet,Route,Routes,useLocation} from "react-router-dom"
-import {SessionProvider,useSession} from "./lib/session"
-import {resolveLocale} from "./shared/i18n"
-import {useLocale,setLocale} from "./lib/use-locale"
-import {canRememberRoute,preferredPortalRoute,rememberPortalRoute,type PortalAccess} from "./shared/portal-preference"
-import candidateStyles from "./styles.css?inline"
-import {ReturnAfterLogin} from "@/components/auth/return-after-login"
-
-const OriginalAuth=lazy(()=>import("./screens/original-auth"))
-
-const Events=lazy(()=>import("./screens/events"))
-const Tasks=lazy(()=>import("./screens/tasks"))
-const Chats=lazy(()=>import("./screens/chats"))
-const Finance=lazy(()=>import("./screens/finance"))
-const Crew=lazy(()=>import("./screens/crew"))
-const Briefings=lazy(()=>import("./screens/briefings"))
-const Operations=lazy(()=>import("./screens/operations"))
-const Responsible=lazy(()=>import("./screens/responsible"))
-const Administration=lazy(()=>import("./screens/administration"))
-const Promotion=lazy(()=>import("./screens/promotion"))
-const Notifications=lazy(()=>import("./screens/notifications"))
-const Profile=lazy(()=>import("./screens/profile"))
-const MakerDiagnostics=lazy(()=>import("./screens/maker-diagnostics"))
-const QrWorkflow=lazy(()=>import("./screens/qr-workflow"))
-const ProviderOauthCallback=lazy(()=>import("./screens/provider-oauth-callback"))
-
-const legacyMainUrl="https://uptilldawn-main.uptilldawn.workers.dev"
-const legacyFallbackCopy={
- nl:{open:"Open bestaande UpTillDawn-app",missing:"Deze functie is nog niet gemigreerd. Ze blijft beschikbaar in de bestaande Main-app.",title:"Nog niet overgezet"},
- fr:{open:"Ouvrir l'application UpTillDawn actuelle",missing:"Cette fonction n'est pas encore migrée. Elle reste accessible dans l'application Main actuelle.",title:"Migration en cours"},
- en:{open:"Open existing UpTillDawn app",missing:"This feature has not been migrated yet. It remains available in the existing Main app.",title:"Not migrated yet"},
- de:{open:"Bestehende UpTillDawn-App öffnen",missing:"Diese Funktion ist noch nicht migriert und bleibt in der bisherigen Main-App verfügbar.",title:"Noch nicht migriert"}
-} as const
-
-function PortalMemory(){
- const {identity,portals,status}=useSession()
- const {pathname}=useLocation()
+import {StrictMode,Suspense,lazy,useEffect} from 'react'
+import {createRoot} from 'react-dom/client'
+import {BrowserRouter,Route,Routes,useNavigate} from 'react-router-dom'
+const OriginalAuth=lazy(()=>import('./screens/original-auth'))
+const OriginalApplication=lazy(()=>import('./screens/original-application'))
+function NavigationBridge(){
+ const navigate=useNavigate()
  useEffect(()=>{
-  if(status!=="ready"||!identity)return
-  const access:PortalAccess={userId:identity.id,role:identity.role,isOwner:identity.is_owner,portals}
-  if(canRememberRoute(pathname,access))rememberPortalRoute(pathname,access)
- },[status,identity,portals,pathname])
+  const go=(event:Event)=>{const path=(event as CustomEvent<string>).detail;if(typeof path==='string'&&path.startsWith('/')&&!path.startsWith('//')&&!path.includes('\\'))void navigate(path)}
+  window.addEventListener('upt-source-navigate',go);return()=>window.removeEventListener('upt-source-navigate',go)
+ },[navigate])
  return null
 }
-function Authenticated({children}:{children:ReactNode}){
- const state=useSession()
- const {locale,t}=useLocale()
- if(state.status==="checking")return <main className="layout" role="status">{t.loading}</main>
- if(state.status==="anonymous")return <Navigate to="/login" replace/>
- if(state.status==="denied")return <main className="auth" role="alert">{t.unavailable} — account approval required</main>
- if(state.status==="error")return <main className="auth" role="alert">{t.unavailable}<button className="primary" onClick={()=>void state.refresh()}>{t.refresh}</button></main>
- const canAdmin=state.portals.includes("administration")
- const canEvents=state.portals.includes("events")
- return <>
-  <ReturnAfterLogin/>
-  <PortalMemory/>
-  <a className="sr-only skip" href="#main">Skip to content</a>
-  <header className="bar"><div className="brand">UP TILL DAWN <span className="muted">· local-first candidate</span></div>
-   <nav aria-label={t.portal} className="nav">
-    <NavLink to="/overview">{state.identity?.is_owner?t.normalApp:t.home}</NavLink>
-    {canEvents&&<NavLink to="/events">{t.events}</NavLink>}
-    {canEvents&&<NavLink to="/crew">{t.crew}</NavLink>}
-    {canEvents&&<NavLink to="/briefings">{t.briefings}</NavLink>}
-    {canEvents&&<NavLink to="/qr">{t.qr}</NavLink>}
-    {canEvents&&<NavLink to="/tasks">{t.tasks}</NavLink>}
-    {canEvents&&<NavLink to="/chat">{t.chat}</NavLink>}
-    {canEvents&&<NavLink to="/operations">{t.operations}</NavLink>}
-    {(state.identity?.role==="responsible_lead"||state.identity?.role==="admin"||state.identity?.is_owner)&&
-     <NavLink to="/responsible">{t.responsible}</NavLink>}
-    {state.portals.includes("promotion")&&<NavLink to="/portals/promotion">{t.promotion}</NavLink>}
-    {canAdmin&&<NavLink to="/portals/administration">{t.administration}</NavLink>}
-    <NavLink to="/notifications">{t.notifications}</NavLink>
-   </nav>
-   <div className="row"><label className="muted" htmlFor="language">UI
-    <select id="language" value={locale} onChange={e=>setLocale(resolveLocale(e.target.value))}>
-     <option value="nl">NL</option><option value="fr">FR</option><option value="en">EN</option><option value="de">DE</option>
-    </select></label>
-    {state.identity?.is_owner&&<NavLink to="/maker/diagnostics">God Mode</NavLink>}
-    <NavLink to="/profile">{t.profile}</NavLink>
-    <button type="button" onClick={()=>void state.signOut().catch(()=>{})}>{t.logout}</button></div>
-  </header>
-  <main id="main" className="layout">
-   <div className="notice" role="note">{t.readOnly}</div>
-   {children}
-  </main>
- </>
-}
-function Landing(){
- const {identity,portals}=useSession()
- const {t}=useLocale()
- if(!identity)return null
- const access:PortalAccess={userId:identity.id,role:identity.role,isOwner:identity.is_owner,portals}
- const destination=preferredPortalRoute(access)
- if(destination)return destination==="/overview"?<Home/>:<Navigate to={destination} replace/>
- return <section className="card mode-choice"><h1>{t.choosePortal}</h1>
-  <p className="muted">{t.preferenceNote}</p>
-  <nav className="row" aria-label={t.portal}><Link className="mode-link" to="/overview">{t.normalApp}</Link>
-   <Link className="mode-link" to="/maker/diagnostics">God Mode</Link></nav>
- </section>
-}
-function Home(){
- const {identity}=useSession()
- const {locale}=useLocale()
- return <><h1>UpTillDawn</h1>
-  <p className="muted">{identity?.full_name||"Crew"} · {identity?.effective_role||identity?.role}</p>
-  <section className="card"><h2>Local-first migratie</h2>
-   <p>Gebruik de portaalnavigatie. De huidige app blijft leidend voor nog niet gemigreerde functies.</p>
-   <p className="muted">Persoonlijke schermen laden uitsluitend benodigde RLS-gegevens op wanneer je ze opent. Geen zware server-rendering per navigatie.</p>
-   <p><a href={legacyMainUrl}>{legacyFallbackCopy[locale].open}</a></p>
-  </section>
- </>
-}
-function PortalGuard({portal,children}:{portal:"events"|"promotion"|"administration";children:ReactNode}){
- const session=useSession()
- return session.portals.includes(portal)?<>{children}</>:<p role="alert" className="notice">No approved access to this portal.</p>
-}
-function ResponsibleGuard({children}:{children:ReactNode}){
- const {identity}=useSession()
- return identity&&(identity.role==="responsible_lead"||identity.role==="admin"||identity.is_owner)
-  ?<>{children}</>:<p role="alert" className="notice">Geen goedgekeurde toegang tot verantwoordelijkheidsbeheer.</p>
-}
-function MakerGuard({children}:{children:ReactNode}){
- const {identity}=useSession()
- return identity?.is_owner?<>{children}</>:<p role="alert" className="notice">Maker-toegang vereist.</p>
-}
-function Missing(){
- const {locale}=useLocale(),copy=legacyFallbackCopy[locale]
- return <section className="card" role="status"><h1>{copy.title}</h1>
-  <p>{copy.missing}</p>
-  <a className="mode-link" href={legacyMainUrl}>{copy.open}</a>
-  <p><Link to="/">Home</Link></p>
- </section>
+function Metadata(){
+ useEffect(()=>{
+  const update=()=>{const language=document.documentElement.lang.split('-')[0];const link=document.querySelector<HTMLLinkElement>('link[rel="manifest"]');if(link&&['nl','fr','en','de'].includes(language))link.href='/manifest-'+language+'.webmanifest'}
+  const observer=new MutationObserver(update);observer.observe(document.documentElement,{attributes:true,attributeFilter:['lang']});update();return()=>observer.disconnect()
+ },[])
+ return null
 }
 function App(){
- return <BrowserRouter>
-  <Routes>
-   <Route path="/login" element={<Suspense fallback={null}><OriginalAuth/></Suspense>}/>
-   <Route path="/login/:portal" element={<Suspense fallback={null}><OriginalAuth/></Suspense>}/>
-   <Route path="/signup" element={<Suspense fallback={null}><OriginalAuth/></Suspense>}/>
-   <Route path="/forgot-password" element={<Suspense fallback={null}><OriginalAuth/></Suspense>}/>
-   <Route path="/auth/reset-password" element={<Suspense fallback={null}><OriginalAuth/></Suspense>}/>
-   <Route path="/verify-email" element={<Suspense fallback={null}><OriginalAuth/></Suspense>}/>
-   <Route path="/pending-approval" element={<Suspense fallback={null}><OriginalAuth/></Suspense>}/>
-   <Route element={<SessionProvider><style>{candidateStyles}</style><Authenticated><Outlet/></Authenticated></SessionProvider>}>
-    <Route index element={<Landing/>}/>
-    <Route path="/overview" element={<Home/>}/>
-    <Route path="/admin" element={<Missing/>}/>
-    <Route path="/maker-mode" element={<Missing/>}/>
-    <Route element={<PortalGuard portal="events"><Outlet/></PortalGuard>}>
-     <Route path="/events" element={<Suspense fallback="Loading events…"><Events/></Suspense>}/>
-     <Route path="/tasks" element={<Suspense fallback="Loading tasks…"><Tasks/></Suspense>}/>
-     <Route path="/chat" element={<Suspense fallback="Loading channels…"><Chats/></Suspense>}/>
-     <Route path="/crew" element={<Suspense fallback="Planning laden…"><Crew/></Suspense>}/>
-     <Route path="/briefings" element={<Suspense fallback="Briefings laden…"><Briefings/></Suspense>}/>
-     <Route path="/qr" element={<Suspense fallback="QR-aanvraag laden…"><QrWorkflow/></Suspense>}/>
-     <Route path="/operations" element={<Suspense fallback="Werkplekken laden…"><Operations/></Suspense>}/>
-    </Route>
-    <Route path="/notifications" element={<Suspense fallback="Meldingen laden…"><Notifications/></Suspense>}/>
-    <Route path="/profile" element={<Suspense fallback="Profiel laden…"><Profile/></Suspense>}/>
-    <Route path="/integrations/oauth/callback/:provider" element={<PortalGuard portal="administration">
-     <Suspense fallback="Beveiligde koppeling laden…"><ProviderOauthCallback/></Suspense>
-    </PortalGuard>}/>
-    <Route path="/responsible" element={<ResponsibleGuard><Suspense fallback="Planning laden…"><Responsible/></Suspense></ResponsibleGuard>}/>
-    <Route path="/portals" element={<Home/>}/>
-    <Route path="/portals/administration" element={<PortalGuard portal="administration"><Suspense fallback="Administratie laden…"><Administration/></Suspense></PortalGuard>}/>
-    <Route path="/portals/administration/finance" element={<PortalGuard portal="administration"><Suspense fallback="Loading finance…"><Finance/></Suspense></PortalGuard>}/>
-    <Route path="/portals/promotion" element={<PortalGuard portal="promotion"><Suspense fallback="Promotie laden…"><Promotion/></Suspense></PortalGuard>}/>
-    <Route path="/portals/promotion/chat" element={<PortalGuard portal="promotion"><Suspense fallback="Chat laden…"><Chats scope="promotion"/></Suspense></PortalGuard>}/>
-    <Route path="/maker/diagnostics" element={<MakerGuard><Suspense fallback="Makerdiagnostiek laden…"><MakerDiagnostics/></Suspense></MakerGuard>}/>
-    <Route path="/god/*" element={<Missing/>}/>
-    <Route path="*" element={<Missing/>}/>
-   </Route>
-  </Routes>
- </BrowserRouter>
+ return <BrowserRouter><NavigationBridge/><Metadata/><Suspense fallback={null}><Routes>
+  {['/login','/login/:portal','/signup','/forgot-password','/auth/reset-password','/verify-email','/pending-approval','/disabled','/unauthorized','/auth/recovery','/auth/confirm'].map(path=><Route key={path} path={path} element={<OriginalAuth/>}/>)}
+  <Route path="*" element={<OriginalApplication/>}/>
+ </Routes></Suspense></BrowserRouter>
 }
-createRoot(document.getElementById("root")!).render(<StrictMode><App/></StrictMode>)
-if(import.meta.env.PROD&&"serviceWorker" in navigator)
- window.addEventListener("load",()=>{void navigator.serviceWorker.register("/sw.js").catch(()=>{})})
+createRoot(document.getElementById('root')!).render(<StrictMode><App/></StrictMode>)
+if(import.meta.env.PROD&&'serviceWorker' in navigator)
+ window.addEventListener('load',()=>{void navigator.serviceWorker.register('/sw.js').catch(()=>{})})

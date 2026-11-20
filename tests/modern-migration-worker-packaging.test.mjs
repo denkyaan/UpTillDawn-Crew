@@ -20,7 +20,7 @@ test('Vite SPA and Hono Worker are both compiled before candidate promotion',()=
 test('Worker remains API-only, fail-closed, no service-role credentials or SSR',()=>{
  const worker=read('modern/src/api/worker.ts')
  const wrangler=JSON.parse(read('modern/wrangler.jsonc'))
- assert.deepEqual(wrangler.assets.run_worker_first,['/api/*','/auth/callback'])
+ assert.deepEqual(wrangler.assets.run_worker_first,['/api/*','/auth/callback','/portals/switch/*','/portals/administration/modules/artists/*'])
  assert.equal(wrangler.assets.not_found_handling,'single-page-application')
  assert.ok(worker.includes('app.notFound('))
  assert.ok(worker.includes('app.onError('))

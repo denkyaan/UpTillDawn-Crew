@@ -1,2 +1,2 @@
-import {supabase} from "../lib/supabase"
-export async function createClient(){return supabase()}
+import {createClient as browserClient} from './crew-client'
+export async function createClient(){return browserClient()}

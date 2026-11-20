@@ -10,7 +10,7 @@ test("Main modern Worker has static-first Free-tier routing and no business writ
  assert.ok(config.vars.SUPABASE_ANON_KEY.startsWith("sb_publishable_"))
  assert.equal(config.vars.UPT_MIGRATION_OAUTH_ENABLED,"false")
  assert.equal(config.vars.UPT_MIGRATION_SCANNING_ENABLED,"false")
- assert.deepEqual(config.assets.run_worker_first,["/api/*","/auth/callback"])
+ assert.deepEqual(config.assets.run_worker_first,["/api/*","/auth/callback","/portals/switch/*","/portals/administration/modules/artists/*"])
  assert.equal(config.assets.not_found_handling,"single-page-application")
  const code=readFileSync(new URL("../scripts/main-qa-live-smoke.mjs",import.meta.url),"utf8")
  assert.ok(code.includes(origin))

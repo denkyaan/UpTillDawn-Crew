@@ -1,3 +1,4 @@
+import {assertOriginalSourceRoutes} from './helpers/modern-original-source-contract.mjs'
 import test from 'node:test'
 import assert from 'node:assert/strict'
 import {readFileSync} from 'node:fs'
@@ -17,7 +18,7 @@ test('migration candidate is independent and cannot auto-deploy or replace produ
  assert.equal(candidate.workers_dev,false)
  assert.equal(candidate.preview_urls,false)
  assert.equal(candidate.assets.not_found_handling,'single-page-application')
- assert.deepEqual(candidate.assets.run_worker_first,['/api/*','/auth/callback'])
+ assert.deepEqual(candidate.assets.run_worker_first,['/api/*','/auth/callback','/portals/switch/*','/portals/administration/modules/artists/*'])
  const files=['.github/workflows/ci.yml','.github/workflows/fast-change-validation.yml','.github/workflows/deploy-main.yml','.github/workflows/deploy-cloudflare.yml','.github/workflows/cleanup-actions-history.yml']
  assert.equal(files.length,5)
  for(const name of files)assert.doesNotMatch(read(name),/modern\/wrangler|uptilldawn-modern-candidate/)
@@ -61,19 +62,13 @@ test('RLS data access and local-only cache are bounded and secure',()=>{
  assert.match(cache,/purgeSnapshotUser/)
  assert.match(cache,/type CacheKey="events"\|"tasks"\|"chat-list"/)
  assert.doesNotMatch(cache,/type CacheKey[^\n]*(finance|bank|auth|token)/i)
- assert.match(pwa,/url\.pathname\.startsWith\("\/api\/"\)/)
+ assert.match(pwa,/PUBLIC_ASSETS\.includes\(url\.pathname\)/)
  assert.doesNotMatch(pwa,/cache\.put\(.*(?:authorization|postgrest|auth\/v1)/i)
 })
 
-test('partial migration explicitly blocks fake completion and preserves all unported roles',()=>{
- const main=read('modern/src/main.tsx')
- const readme=read('modern/README.md')
- assert.match(main,/path="\/god\/\*" element=\{<Missing\/>\}/)
- assert.match(main,/path="\*" element=\{<Missing\/>\}/)
- assert.match(main,/className="notice" role="note"/)
- assert.match(readme,/NOT PRODUCTION-READY/)
- assert.match(readme,/all seven role bots/)
- assert.match(readme,/30\+ simultaneous sessions/)
+test('original source pages replace prototypes while full release acceptance stays blocked',()=>{
+ assertOriginalSourceRoutes()
+ assert.match(read('modern/README.md'),/NOT PRODUCTION-READY/)
  assert.match(read('modern/scripts/inventory.mjs'),/migrationReady:false/)
  assert.match(read('modern/scripts/inventory.mjs'),/process\.exitCode=1/)
 })

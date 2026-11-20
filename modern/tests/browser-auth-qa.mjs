@@ -1,162 +1,156 @@
-// Read-only authenticated acceptance of the isolated Vite candidate using
-// precisely seven fixed Main QA bots. No service role, never production.
-// Logins occur once per bot. Session cookies are replayed in memory for 4
-// locales x 2 device profiles, avoiding 56 expensive Auth sign-ins.
-import {spawn} from "node:child_process"
-import {resolve} from "node:path"
-import {chromium} from "playwright"
-
-const url=new URL(process.env.E2E_MAIN_QA_BASE_URL||"")
-const key=process.env.E2E_MAIN_QA_PUBLISHABLE_KEY||""
-const password=process.env.E2E_MAIN_QA_PASSWORD||""
-if(url.origin!=="https://npbjrtiolqperdgljnhi.supabase.co"||url.pathname!=="/"||
- url.search||url.hash)throw Error("QA_ONLY_ENDPOINT_REQUIRED")
-if(!key.startsWith("sb_publishable_"))throw Error("QA_PUBLISHABLE_KEY_REQUIRED")
-if(password.length<24)throw Error("QA_PASSWORD_NOT_CONFIGURED")
-if(process.env.VITE_MIGRATION_ALLOW_WRITES!=="false")throw Error("READ_ONLY_CANDIDATE_REQUIRED")
+// Seven real QA identities. Compare the original Main controls/headings and
+// expanded menus with the same source on Vite, in all four locales/devices.
+// No form submissions or production endpoints. Session material stays in RAM.
+import {spawn} from 'node:child_process'
+import {resolve} from 'node:path'
+import {mkdir} from 'node:fs/promises'
+import {chromium} from 'playwright'
+const qa=new URL(process.env.E2E_MAIN_QA_BASE_URL||''),key=process.env.E2E_MAIN_QA_PUBLISHABLE_KEY||'',password=process.env.E2E_MAIN_QA_PASSWORD||''
+if(qa.origin!=='https://npbjrtiolqperdgljnhi.supabase.co'||qa.pathname!=='/'||qa.search||qa.hash)throw Error('QA_ONLY_ENDPOINT_REQUIRED')
+if(!key.startsWith('sb_publishable_'))throw Error('QA_PUBLISHABLE_KEY_REQUIRED')
+if(password.length<24)throw Error('QA_PASSWORD_NOT_CONFIGURED')
+if(process.env.VITE_MIGRATION_ALLOW_WRITES!=='false')throw Error('READ_ONLY_CANDIDATE_REQUIRED')
 const bots=[
- {role:"head_admin",login:"admin",email:"e2e-head-admin@uptilldawn.test",admin:true,promotion:true,responsible:true},
- {role:"left_hand",login:"administration",email:"e2e-admin@uptilldawn.test",admin:true,promotion:false,responsible:false},
- {role:"right_hand",login:"administration",email:"e2e-right-hand@uptilldawn.test",admin:true,promotion:false,responsible:false},
- {role:"responsible",login:"responsible",email:"e2e-responsible@uptilldawn.test",admin:false,promotion:false,responsible:true},
- {role:"staff",login:"staff",email:"e2e-staff@uptilldawn.test",admin:false,promotion:false,responsible:false},
- {role:"promotion",login:"promotion",email:"e2e-promotion@uptilldawn.test",admin:false,promotion:true,responsible:false},
- {role:"administration",login:"administration",email:"e2e-administration@uptilldawn.test",admin:true,promotion:false,responsible:false},
+ {role:'head_admin',login:'admin',email:'e2e-head-admin@uptilldawn.test'},
+ {role:'left_hand',login:'administration',email:'e2e-admin@uptilldawn.test'},
+ {role:'right_hand',login:'administration',email:'e2e-right-hand@uptilldawn.test'},
+ {role:'responsible',login:'responsible',email:'e2e-responsible@uptilldawn.test'},
+ {role:'staff',login:'staff',email:'e2e-staff@uptilldawn.test'},
+ {role:'promotion',login:'promotion',email:'e2e-promotion@uptilldawn.test'},
+ {role:'administration',login:'administration',email:'e2e-administration@uptilldawn.test'},
 ]
-const translations={nl:"Overzicht",fr:"Accueil",en:"Overview",de:"Übersicht"}
-const devices=[
- {name:"desktop",viewport:{width:1440,height:900},isMobile:false,hasTouch:false},
- {name:"mobile",viewport:{width:390,height:844},isMobile:true,hasTouch:true}
-]
-const approvedRemote="https://uptilldawn-modern-main.uptilldawn.workers.dev"
-const remoteOrigin=process.env.E2E_MAIN_MODERN_QA_ORIGIN||""
-if(remoteOrigin&&remoteOrigin!==approvedRemote)
- throw Error("EXACT_MODERN_MAIN_QA_ORIGIN_REQUIRED")
-const origin=remoteOrigin||"http://127.0.0.1:4176"
-const root=resolve(import.meta.dirname,"../..")
-const preview=remoteOrigin?null:spawn(process.execPath,[resolve(root,"modern/node_modules/vite/bin/vite.js"),
- "preview","--host","127.0.0.1","--port","4176","--strictPort"],{
- cwd:resolve(root,"modern"),stdio:"ignore"
-})
-let browser
-let total=0
-let signins=0
+const devices=[{name:'desktop',viewport:{width:1440,height:900},isMobile:false,hasTouch:false},{name:'mobile',viewport:{width:390,height:844},isMobile:true,hasTouch:true}]
+const legacy='https://uptilldawn-main.uptilldawn.workers.dev',approvedRemote='https://uptilldawn-modern-main.uptilldawn.workers.dev'
+const remote=process.env.E2E_MAIN_MODERN_QA_ORIGIN||''
+if(remote&&remote!==approvedRemote)throw Error('EXACT_MODERN_MAIN_QA_ORIGIN_REQUIRED')
+const origin=remote||'http://127.0.0.1:4176',root=resolve(import.meta.dirname,'../..')
+const preview=remote?null:spawn(process.execPath,[resolve(root,'modern/node_modules/vite/bin/vite.js'),'preview','--host','127.0.0.1','--port','4176','--strictPort'],{cwd:resolve(root,'modern'),stdio:'ignore'})
+let browser,signins=0,total=0,menuComparisons=0
+const failures=[]
+const notificationReads=new WeakMap()
+function observeNotices(page){
+ const reads=[];notificationReads.set(page,reads)
+ page.on('response',async response=>{const url=new URL(response.url());if(url.origin!==qa.origin||!url.pathname.endsWith('/crew_notifications')||url.searchParams.get('select')!=='id,link,kind')return;try{const data=await response.json();reads.push({status:response.status(),count:Array.isArray(data)?data.length:null})}catch{reads.push({status:response.status(),count:null})}})
+}
 async function ready(page){
- await page.locator('a[href="/overview"]').first().waitFor({state:"visible",timeout:20000})
+ await page.locator('[data-app-shell-ready="true"]').waitFor({timeout:30000})
+ await page.locator('[data-route-loading="true"]').waitFor({state:'detached',timeout:30000})
+ // Respect Main's staggered badge refresh: focus invokes the existing
+ // immediate path while preserving its anti-overload jitter for real users.
+ await page.bringToFront()
+ await page.evaluate(()=>window.dispatchEvent(new Event('focus')))
+ await page.waitForLoadState('networkidle',{timeout:25000})
+ await page.waitForFunction(()=>document.visibilityState==='visible')
+ // Compare completed badge data, not the intentional staggered startup state.
+ // This is Main's existing forced, read-only badge refresh event.
+ await page.evaluate(()=>window.dispatchEvent(new Event('uptilldawn-chat-read')))
+ await page.waitForLoadState('networkidle',{timeout:25000})
+ await page.locator('[data-route-loading="true"]').waitFor({state:'detached',timeout:30000})
+ if(await page.getByRole('heading',{name:'De actie kon niet worden voltooid.',exact:true}).count())throw Error('ORIGINAL_VIEW_RENDER_FAILED')
 }
-async function denied(page,path){
- await page.goto(origin+path,{waitUntil:"domcontentloaded",timeout:15000})
- await ready(page)
- await page.getByRole("alert").first().waitFor({state:"visible",timeout:12000})
- if(await page.locator('h1').filter({hasText:"UP TILL DAWN —"}).count())
-  throw Error("Unauthenticated route loaded during authenticated QA")
+async function fingerprint(page){
+ return page.evaluate(()=>{
+  const visible=e=>{const r=e.getBoundingClientRect(),s=getComputedStyle(e);return r.width>0&&r.height>0&&s.visibility!=='hidden'&&s.display!=='none'}
+  const text=e=>(e.getAttribute('aria-label')||e.textContent||'').replace(/\s+/g,' ').trim()
+  // Compare actual user controls. Internal Next action fields, signed photo
+  // URLs and live work-duration counters are not UI capability identifiers.
+  const headings=Array.from(document.querySelectorAll('main h1')).filter(visible).map(text)
+  const navigation=Array.from(document.querySelectorAll('nav a,nav button,header a,header button')).filter(visible).map(e=>({tag:e.tagName,label:text(e).replace(/\b\d+\b/g,'#'),href:e.getAttribute('href'),expanded:e.getAttribute('aria-expanded')}))
+  const fields=Array.from(document.querySelectorAll('main input,main select,main textarea')).filter(visible).filter(e=>!(e.getAttribute('name')||'').startsWith('$ACTION')).map(e=>({tag:e.tagName,name:e.getAttribute('name'),type:e.getAttribute('type'),required:e.required,disabled:e.disabled}))
+  return {headings,navigation,fields}
+ })
 }
-async function assertNav(page,bot){
- for(const [route,allowed] of [
-  ["/events",true],["/portals/administration",bot.admin],
-  ["/portals/promotion",bot.promotion],
-  ["/responsible",bot.responsible],
-  ["/maker/diagnostics",false],
- ]){
-  const count=await page.locator('header nav a[href="'+route+'"], header a[href="'+route+'"]').count()
-  if((count>0)!==allowed)throw Error("QA_NAV_POLICY "+bot.role+" "+route)
+async function compare(a,b,label){
+ let [expected,actual]=await Promise.all([fingerprint(a),fingerprint(b)])
+ const deadline=Date.now()+9000
+ while(JSON.stringify(actual)!==JSON.stringify(expected)&&Date.now()<deadline){
+  await new Promise(resolve=>setTimeout(resolve,250));[expected,actual]=await Promise.all([fingerprint(a),fingerprint(b)])
+ }
+ if(JSON.stringify(actual)!==JSON.stringify(expected)){
+  console.error('ORIGINAL_BADGE_READS '+label+' '+JSON.stringify({main:notificationReads.get(a),candidate:notificationReads.get(b)}))
+  await mkdir(resolve(root,'test-results/modern-source-parity'),{recursive:true})
+  for(const [page,suffix]of [[a,'main'],[b,'vite']])await page.screenshot({path:resolve(root,'test-results/modern-source-parity',label+'-'+suffix+'.png'),fullPage:true})
+  for(const field of ['headings','navigation','fields'])if(JSON.stringify(actual[field])!==JSON.stringify(expected[field]))console.error('ORIGINAL_UI_CONTROL_DIFFERENCE '+label+' '+field+' '+JSON.stringify({expected:expected[field],actual:actual[field]}))
+  const differing=Object.keys(expected).filter(k=>JSON.stringify(actual[k])!==JSON.stringify(expected[k]))
+  throw Error('ORIGINAL_UI_CONTROL_PARITY '+label+' '+differing.join(','))
+ }
+}
+async function menus(a,b,label){
+ const selector='button[aria-expanded]:visible,button[data-role-category]:not([data-role-category="home"]):visible'
+ const buttons=a.locator(selector)
+ const count=Math.min(await buttons.count(),6)
+ for(let i=0;i<count;i++){
+  const original=buttons.nth(i),candidate=b.locator(selector).nth(i)
+  if(!await original.isEnabled()||!await candidate.isEnabled())continue
+  await Promise.all([original.click(),candidate.click()]);await Promise.all([a.waitForTimeout(100),b.waitForTimeout(100)])
+  await compare(a,b,label+'-menu-'+i);menuComparisons++
+  if(label==='head_admin-nl-desktop'&&(await original.innerText()).includes('AI')&&await candidate.getAttribute('aria-expanded')==='true'){
+   await b.evaluate(()=>window.dispatchEvent(new Event('upt-source-refresh')))
+   await b.waitForLoadState('networkidle',{timeout:25000})
+   if(await candidate.getAttribute('aria-expanded')!=='true')throw Error('ORIGINAL_CLIENT_STATE_LOST_ON_REFRESH')
+   await compare(a,b,label+'-retained-ai')
+  }
+  if(await original.getAttribute('aria-expanded')==='true')await original.click()
+  if(await candidate.getAttribute('aria-expanded')==='true')await candidate.click()
  }
 }
 try{
  let up=false
- for(let i=0;i<80;i++){
-  if(preview&&preview.exitCode!==null)throw Error("Candidate preview exited")
-  try{
-   const response=await fetch(origin+"/login",{signal:AbortSignal.timeout(1000)})
-   if(response.ok){up=true;break}
-  }catch{}
-  await new Promise(done=>setTimeout(done,250))
- }
- if(!up)throw Error("QA_CANDIDATE_PREVIEW_UNAVAILABLE")
+ for(let i=0;i<80;i++){if(preview&&preview.exitCode!==null)throw Error('Candidate preview exited');try{if((await fetch(origin+'/login',{signal:AbortSignal.timeout(1000)})).ok){up=true;break}}catch{}await new Promise(r=>setTimeout(r,250))}
+ if(!up)throw Error('QA_CANDIDATE_PREVIEW_UNAVAILABLE')
  browser=await chromium.launch({headless:true})
  for(const bot of bots){
-  // The only credential operation in this harness is this one QA login.
-  const loginContext=await browser.newContext({viewport:devices[0].viewport})
+  const login=await browser.newContext({locale:'nl-BE',viewport:devices[0].viewport})
   try{
-   await loginContext.addInitScript(()=>localStorage.setItem("uptilldawn-modern-locale","nl"))
-   const loginPage=await loginContext.newPage()
-   let loginHttpStatus=0
-   loginPage.on("response",response=>{
-    if(new URL(response.url()).pathname==="/api/auth/portal-login")loginHttpStatus=response.status()
-   })
-   await loginPage.goto(origin+"/login/"+bot.login,{waitUntil:"domcontentloaded",timeout:15000})
-   await loginPage.locator('input[name="email"]').fill(bot.email)
-   await loginPage.locator('input[name="password"]').fill(password)
-   await loginPage.locator('form button[type="submit"]').click()
-   try{await ready(loginPage)}catch{
-    const code=await loginPage.locator('[data-login-error-code]').first().getAttribute('data-login-error-code').catch(()=>null)
-    const known=new Set(['auth_temporarily_unavailable','auth_rate_limited','login_request_rejected','invalid_credentials_or_role','invalid_credentials','wrong_portal','account_not_approved','account_blocked','role_mode_error','owner_lookup_error','profile_error'])
-    throw Error("QA_LOGIN_NOT_READY "+bot.role+" HTTP="+loginHttpStatus+" code="+(known.has(code)?code:"unknown"))
-   }
+   const page=await login.newPage();let status=0,reads=0;const readKinds={}
+   page.on('request',request=>{const target=new URL(request.url());if(target.origin!==qa.origin)return;reads++;readKinds[target.pathname]=(readKinds[target.pathname]||0)+1;if(reads>400)void page.close()})
+   page.on('pageerror',error=>console.error('QA_PAGE_ERROR '+bot.role+' '+error.name))
+   page.on('response',response=>{if(new URL(response.url()).pathname==='/api/auth/portal-login')status=response.status()})
+   await page.goto(origin+'/login/'+bot.login,{waitUntil:'domcontentloaded',timeout:20000})
+   await page.locator('input[name="email"]').fill(bot.email);await page.locator('input[name="password"]').fill(password)
+   await page.locator('form button[type="submit"]').click()
+   try{await ready(page)}catch(error){console.error('QA_READY_FAILURE '+bot.role+' '+(error instanceof Error?error.message.split('\n')[0]:'unknown')+' reads='+reads+' sources='+JSON.stringify(readKinds));throw Error('QA_LOGIN_NOT_READY '+bot.role+' HTTP='+status)}
    signins++
-   await assertNav(loginPage,bot)
-   // Real signed, RLS-protected reads on the candidate, not only navbar labels.
-   // Every page remains read-only; no business data is created or updated.
-   const routes=["/profile","/notifications","/crew","/qr",
-    ...(bot.admin?["/portals/administration"]:[]),
-    ...(bot.promotion?["/portals/promotion"]:[]),
-    ...(bot.responsible?["/responsible"]:[])]
-   for(const route of routes){
-    await loginPage.goto(origin+route,{waitUntil:"domcontentloaded",timeout:15000})
-    await ready(loginPage)
-    await loginPage.waitForTimeout(700)
-    const error=await loginPage.locator('p[role="alert"].error').count()
-    if(error)throw Error("QA_AUTHENTICATED_READ_FAILED "+bot.role+" "+route)
-    if(route==="/crew"){
-     // Open the actual personnel data screens, not merely their navigation.
-     // Signed reads remain bounded and sequential to respect the free plan.
-     for(const tab of ["Check-ins","Gewerkte uren"]){
-      await loginPage.getByRole("button",{name:tab}).click()
-      await loginPage.waitForTimeout(900)
-      if(await loginPage.locator('p[role="alert"].error').count())
-       throw Error("QA_AUTHENTICATED_TIMEKEEPING_READ_FAILED "+bot.role+" "+tab)
+   const landing=new URL(page.url()).pathname,state=await login.storageState()
+   // Check ordinary source pages without mutations before device comparisons.
+   for(const path of ['/settings','/notifications','/events','/crew']){
+    await page.goto(origin+path,{waitUntil:'domcontentloaded',timeout:20000});await ready(page)
+   }
+   for(const language of ['nl','fr','en','de'])for(const device of devices){
+    const options={locale:language==='en'?'en-GB':language+'-BE',viewport:device.viewport,isMobile:device.isMobile,hasTouch:device.hasTouch}
+    const candidate=await browser.newContext({...options,storageState:state})
+    // Both hosts are the same fixed QA database. Reuse the exact signed test
+    // session in RAM; no extra passwords or independent privileged tokens.
+    const mainCookies=state.cookies.map(c=>({...c,domain:new URL(legacy).hostname,secure:true}))
+    const original=await browser.newContext({...options,storageState:{cookies:mainCookies,origins:[]}})
+    const label=[bot.role,language,device.name].join('-')
+    try{
+     const a=await original.newPage(),b=await candidate.newPage(),errors=[]
+     observeNotices(a);observeNotices(b)
+     b.on('pageerror',error=>errors.push(error.name))
+     // Sequential Main SSR requests respect the Free environment's limits.
+     await Promise.all([a.goto(legacy+landing,{waitUntil:'domcontentloaded',timeout:30000}),b.goto(origin+landing,{waitUntil:'domcontentloaded',timeout:20000})]);await ready(a);await ready(b)
+     if(await b.locator('html').getAttribute('lang')!==language)throw Error('QA_LOCALE '+label)
+     await compare(a,b,label);await menus(a,b,label)
+     if(language==='nl'&&device.name==='desktop'){
+      await a.goto(legacy+'/maker-mode',{waitUntil:'domcontentloaded',timeout:30000})
+      await a.waitForURL('**/unauthorized',{timeout:20000})
+      await b.goto(origin+'/maker-mode',{waitUntil:'domcontentloaded',timeout:20000})
+      await b.waitForURL('**/unauthorized',{timeout:20000})
+      await a.getByRole('heading',{name:'Geen toegang',exact:true}).waitFor()
+      await b.getByRole('heading',{name:'Geen toegang',exact:true}).waitFor()
+      await compare(a,b,label+'-maker-denied')
      }
-    }
+     if(errors.length)throw Error('QA_JS_ERRORS '+label)
+     total++;console.log('PASS original-source controls '+bot.role+' / '+language+' / '+device.name)
+    }catch(error){
+     const reason=error instanceof Error?error.message.split('\n')[0]:'QA_SCENARIO_FAILED'
+     failures.push({label,reason});console.error('ORIGINAL_SCENARIO_FAILED '+label+' '+reason)
+    }finally{await candidate.close();await original.close()}
    }
-   await denied(loginPage,"/maker/diagnostics")
-   if(!bot.admin)await denied(loginPage,"/portals/administration")
-   if(!bot.promotion)await denied(loginPage,"/portals/promotion/chat")
-   const state=await loginContext.storageState()
-   // This is in-memory only: never write storageState to disk, artifacts or logs.
-   for(const [language,label] of Object.entries(translations)){
-    for(const device of devices){
-     const context=await browser.newContext({
-      storageState:state,viewport:device.viewport,isMobile:device.isMobile,
-      hasTouch:device.hasTouch,
-     })
-     try{
-      await context.addInitScript(lang=>localStorage.setItem("uptilldawn-modern-locale",lang),language)
-      const page=await context.newPage()
-      const jsErrors=[]
-      page.on("pageerror",error=>jsErrors.push(error.name))
-      await page.goto(origin+"/overview",{waitUntil:"domcontentloaded",timeout:15000})
-      await ready(page)
-      if((await page.locator("html").getAttribute("lang"))!==language)
-       throw Error("QA_LOCALE "+bot.role+" "+language)
-      await page.locator('header nav a[href="/overview"]').first().waitFor({state:"visible"})
-      const actual=await page.locator('header nav a[href="/overview"]').first().innerText()
-      if(!actual.includes(label))throw Error("QA_TRANSLATION "+bot.role+" "+language)
-      await assertNav(page,bot)
-      if(jsErrors.length)throw Error("QA_JS_ERRORS "+bot.role+" "+language+" "+device.name)
-      total++
-      console.log("PASS authenticated candidate "+bot.role+" / "+language+" / "+device.name)
-     }finally{await context.close()}
-    }
-   }
-  }finally{await loginContext.close()}
-  // No parallel logins or browser fanout against resource-limited Main QA.
-  await new Promise(done=>setTimeout(done,250))
+  }finally{await login.close()}
  }
- if(signins!==7||total!==56)throw Error("QA_INCOMPLETE_COVERAGE")
- console.log(JSON.stringify({validated:true,qaBots:7,actualBotSignins:signins,
-  authenticatedBrowserScenarios:total,locales:4,deviceProfiles:2,
-  target:"isolated-main-qa",wroteBusinessData:false,productionReady:false}))
-}finally{
- if(browser)await browser.close()
- preview?.kill("SIGTERM")
-}
+ if(failures.length){console.error('ORIGINAL_COMPARISON_FAILURES '+JSON.stringify(failures));throw Error('QA_ORIGINAL_COMPARISONS_FAILED '+failures.length)}
+ if(signins!==7||total!==56)throw Error('QA_INCOMPLETE_COVERAGE')
+ console.log(JSON.stringify({validated:true,qaBots:7,actualBotSignins:signins,authenticatedBrowserScenarios:total,originalMainControlComparisons:total,expandedMenuComparisons:menuComparisons,locales:4,deviceProfiles:2,formsSubmitted:false,fullVisualParityVerified:false,productionReady:false}))
+}finally{if(browser)await browser.close();preview?.kill('SIGTERM')}

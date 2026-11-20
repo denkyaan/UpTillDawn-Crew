@@ -9,20 +9,17 @@ test('candidate PWA static assets are isolated from legacy Next production worke
  assert.match(vite,/publicDir:"public"/)
  assert.doesNotMatch(vite,/\.\.\/public/)
  assert.match(html,/rel="manifest" href="\/manifest\.webmanifest"/)
- assert.match(serviceWorker,/url\.pathname\.startsWith\("\/api\/"\)/)
+ assert.match(serviceWorker,/PUBLIC_ASSETS\.includes\(url\.pathname\)/)
  assert.doesNotMatch(serviceWorker,/caches\.match\(.*auth/)
 })
-test('four-language selector is a single shared store for all migrated screens',()=>{
- const main=read('modern/src/main.tsx')
- const hook=read('modern/src/lib/use-locale.ts')
- assert.match(main,/import \{useLocale,setLocale\} from "\.\/lib\/use-locale"/)
- for(const screen of ['tasks','chats','finance','events']){
-  assert.match(read('modern/src/screens/'+screen+'.tsx'),/useLocale\(\)/)
- }
- assert.match(hook,/useSyncExternalStore\(subscribe,read/)
- assert.match(hook,/localStorage\.setItem/)
- assert.match(hook,/document\.documentElement\.lang=locale/)
- assert.match(read('modern/src/shared/i18n.ts'),/\["nl","fr","en","de"\]/)
+test('original language synchronization is shared by all source portals',()=>{
+ const app=read('modern/src/screens/original-application.tsx')
+ assert.match(app,/<LocaleSync clientRendered/)
+ const sync=read('components/locale-sync.tsx')
+ assert.match(sync,/LANGUAGE_CHANGE_EVENT/)
+ const locale=read('lib/locale-preferences.ts')
+ assert.match(locale,/SUPPORTED_UI_LOCALES = \['nl','fr','en','de'\]/)
+ assert.match(locale,/document\.cookie/)
 })
 test('migration availability writes reuse the existing audited RPC and default to OFF',()=>{
  const db=read('modern/src/lib/availability.ts')

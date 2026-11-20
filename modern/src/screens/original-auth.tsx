@@ -1,4 +1,5 @@
-import {useEffect,useState,type ReactNode} from "react"
+import {originalSearchParams} from '../compat/search-params'
+import {useEffect,useState,Suspense,lazy,useMemo,type ReactNode} from "react"
 import {useLocation} from "react-router-dom"
 import {ThemeProvider} from "next-themes"
 import LoginPage from "@/app/(auth)/login/page"
@@ -11,6 +12,19 @@ import {LoginForm} from "@/components/auth/login-form"
 import ForgotPasswordForm from "@/components/auth/forgot-password-form"
 import {LocaleSync} from "@/components/locale-sync"
 import styles from "../auth.css?inline"
+
+const additionalPublic={
+ '/disabled':lazy(()=>import('main-source/app/(auth)/disabled/page.tsx')),
+ '/unauthorized':lazy(()=>import('main-source/app/(auth)/unauthorized/page.tsx')),
+ '/auth/recovery':lazy(()=>import('main-source/app/(auth)/auth/recovery/page.tsx')),
+ '/auth/confirm':lazy(()=>import('main-source/app/(auth)/auth/confirm/page.tsx')),
+} as const
+import {OriginalRequest,originalRoutePromise} from '../original/runtime'
+function AdditionalPublic({pathname,search}:{pathname:keyof typeof additionalPublic;search:string}){
+ const Page=additionalPublic[pathname]
+ const searchParams=useMemo(()=>originalRoutePromise(originalSearchParams(search)),[search])
+ return <OriginalRequest revision={pathname+search}><Suspense fallback={null}><Page searchParams={searchParams}/></Suspense></OriginalRequest>
+}
 
 function PendingApproval(){
  const [content,setContent]=useState<ReactNode>(null)
@@ -37,6 +51,7 @@ export default function OriginalAuth(){
  else if(pathname==="/auth/reset-password")screen=<ResetPasswordPage/>
  else if(pathname==="/verify-email")screen=<VerifyEmailClient/>
  else if(pathname==="/pending-approval")screen=<PendingApproval/>
+ else if(pathname in additionalPublic)screen=<AdditionalPublic pathname={pathname as keyof typeof additionalPublic} search={search}/>
  else screen=null
  useEffect(()=>{
   document.body.classList.add("font-sans","antialiased")

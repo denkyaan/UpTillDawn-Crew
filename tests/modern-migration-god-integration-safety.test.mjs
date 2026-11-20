@@ -1,3 +1,4 @@
+import {assertOriginalSourceRoutes} from './helpers/modern-original-source-contract.mjs'
 import test from "node:test"
 import assert from "node:assert/strict"
 import {readFileSync} from "node:fs"
@@ -21,10 +22,12 @@ test("God diagnostics run only as signed verified owner; token never reaches bro
  assert.ok(screen.includes('protectedCandidateGet<Diagnostics>("/api/v1/god/diagnostics")'))
  assert.ok(!screen.includes("upt_god_login_owner"))
  assert.ok(!screen.includes("localStorage"))
- const main=get("modern/src/main.tsx")
- assert.ok(main.includes("<MakerGuard>"))
- assert.ok(main.includes("identity?.is_owner"))
- assert.ok(main.includes('path="/god/*" element={<Missing/>}'))
+ assertOriginalSourceRoutes()
+ const bridge=get('app/api/migration/view-data/route.ts')
+ assert.ok(bridge.includes('if(!user.isOwner)return reject(403)'))
+ assert.ok(bridge.includes("cookies()).get('uptilldawn-god-session')"))
+ assert.ok(bridge.includes("fn!=='upt_god_session_valid'&&fn!=='upt_god_upload_security_audit'"))
+ assert.ok(!bridge.includes('value:token'))
 })
 test("Business integration metadata is accessible only after separate organization permissions",()=>{
  const worker=get("modern/src/api/worker.ts")

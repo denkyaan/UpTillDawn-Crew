@@ -1,4 +1,5 @@
 import {Hono} from "hono"
+import {forwardMainSource,originalApiAllowed} from "./main-source.ts"
 import {createClient} from "@supabase/supabase-js"
 import {isActive,parseIdentity} from "../shared/identity.ts"
 import {sanitizedMakerRoute,sanitizedMakerName,sanitizedMakerSeverity} from "./god-redaction.ts"
@@ -10,7 +11,7 @@ import {
 import {scannerReady,scannerOrigin,validScanRequest,scanWeeztix,type ScannerBindings,type RpcDb} from "./weeztix-scan.ts"
 import {forwardMainAuth,type MainAuthBindings} from "./main-auth.ts"
 
-type Bindings={SUPABASE_URL:string;SUPABASE_ANON_KEY:string}&OAuthBindings&ScannerBindings&MainAuthBindings
+type Bindings={SUPABASE_URL:string;SUPABASE_ANON_KEY:string;ASSETS?:{fetch:(request:Request)=>Promise<Response>}}&OAuthBindings&ScannerBindings&MainAuthBindings
 const app=new Hono<{Bindings:Bindings}>()
 
 // Static navigation and images bypass this Worker entirely. Only /api/*
@@ -237,6 +238,16 @@ app.post("/api/v1/tickets/weeztix/scan",async c=>{
  if("error" in actor)return c.json({ok:false,code:actor.error==="authentication_required"?"unauthorized":"forbidden"},actor.status)
  const out=await scanWeeztix(actor.db as unknown as RpcDb,c.env,body)
  return c.json(out.body,out.status as 200|403|404|409|422|503)
+})
+
+app.all("/api/*",c=>forwardMainSource(c.req.raw,c.env))
+// Original portal switching and private contract downloads are server routes,
+// not SPA pages. Other artist URLs serve the static index through ASSETS.
+app.all("/portals/*",c=>{
+ const path=new URL(c.req.url).pathname
+ if(originalApiAllowed(path,c.req.method))return forwardMainSource(c.req.raw,c.env)
+ if(c.req.method==="GET"&&path.startsWith("/portals/administration/modules/artists/")&&c.env.ASSETS)return c.env.ASSETS.fetch(new Request(new URL("/index.html",c.req.url),{headers:{Accept:"text/html"}}))
+ return c.json({error:"not_found"},404)
 })
 
 // Deny unknown API routes rather than returning the SPA shell with 200 OK.

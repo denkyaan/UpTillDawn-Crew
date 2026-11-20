@@ -13,8 +13,11 @@
     "not_found_handling": "single-page-application",
     "run_worker_first": [
       "/api/*",
-      "/auth/callback"
-    ]
+      "/auth/callback",
+      "/portals/switch/*",
+      "/portals/administration/modules/artists/*"
+    ],
+    "binding": "ASSETS"
   },
   "vars": {
     "SUPABASE_URL": "https://npbjrtiolqperdgljnhi.supabase.co",

@@ -1,3 +1,4 @@
+import {assertOriginalSourceRoutes} from './helpers/modern-original-source-contract.mjs'
 import test from 'node:test'
 import assert from 'node:assert/strict'
 import {readFileSync} from 'node:fs'
@@ -5,21 +6,12 @@ import {csvCell,encodeCsv} from '../modern/src/lib/export-csv.ts'
 
 const read=path=>readFileSync(path,'utf8')
 
-test('one role-aware navigation, eight lazy operational screens and no fake God Mode',()=>{
- const app=read('modern/src/main.tsx')
- for(const page of ['crew','briefings','operations','responsible','administration','promotion','notifications','profile']){
-  assert.ok(app.includes('import("./screens/'+page+'")'),page+' must be lazy')
- }
- for(const path of ['/crew','/briefings','/operations','/notifications','/profile','/responsible']){
-  assert.ok(app.includes('path="'+path+'"'),path+' must be routed')
- }
- assert.ok(app.includes('function ResponsibleGuard('))
- assert.ok(app.includes('identity.role==="responsible_lead"||identity.role==="admin"||identity.is_owner'))
- assert.ok(app.includes('<PortalGuard portal="administration">'))
- assert.ok(app.includes('<PortalGuard portal="promotion">'))
- assert.ok(app.includes('path="/god/*" element={<Missing/>}'))
- assert.ok(app.includes('path="*" element={<Missing/>}'))
- assert.ok(!app.includes('statefulResponsibleRoute('))
+test('all ordinary portals reuse the original lazy pages and role-aware shell',()=>{
+ assertOriginalSourceRoutes()
+ const source=read('modern/tooling/main-source.mjs')
+ assert.ok(source.includes("filesBelow('app/(app)')"))
+ assert.ok(source.includes('load:()=>import('))
+ assert.ok(source.includes('Private server module blocked'))
 })
 test('all four languages expose the same new navigation categories',()=>{
  const translations=read('modern/src/shared/i18n.ts')

@@ -83,6 +83,9 @@ jobs:
           node-version: 24
       - name: Install lightweight candidate dependencies (isolated)
         run: npm --prefix modern install --prefer-offline --no-audit --no-fund
+      - name: Prepare original on-device OCR assets for the source candidate
+        working-directory: modern
+        run: node ../scripts/prepare-local-ocr.mjs
       - name: Parallel candidate TS, contract, unit and API safety checks
         shell: bash
         run: |

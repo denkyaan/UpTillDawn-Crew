@@ -16,9 +16,9 @@ test('every existing page, API route and server action is inventoried before cut
  assert.ok(script.includes('migrationReady:false'))
  assert.ok(script.includes('productionCutoverAllowed:false'))
 })
-test('pilot routes are not accepted as feature parity',()=>{
+test('source reuse is not accepted as verified feature parity',()=>{
  const script=read('modern/scripts/inventory.mjs')
- assert.ok(script.includes('candidate-not-parity'))
+ assert.ok(script.includes('source-reused-acceptance-pending'))
  assert.ok(script.includes('verifiedPages:0'))
  assert.ok(script.includes('verifiedApis:0'))
  assert.ok(script.includes('verifiedServerActions:0'))

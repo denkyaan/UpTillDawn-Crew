@@ -51,7 +51,7 @@ test('Main-only functional E2E uses real signed-in users to verify role-specific
  assert.match(e2e,/No Maker, production, provider API calls, payments/)
 })
 test('One encrypted connection store remains role-scoped; failures are never misreported as disconnected',()=>{
- const panel=read('components/admin/external-services-readiness.tsx')
+ const panel=read('components/admin/external-services-readiness.tsx')+read('lib/administration/external-services-view-data.ts')
  const access=read('lib/administration/integration-management-access.ts')
  const store=read('lib/administration/integration-store.ts')
  const placement=read('lib/administration/integration-placement.ts')
@@ -69,7 +69,7 @@ test('One encrypted connection store remains role-scoped; failures are never mis
  assert.doesNotMatch(placement,/eventpay:\[/)
 })
 test('All four locales describe connection lookup outage without revealing credentials',()=>{
- const panel=read('components/admin/external-services-readiness.tsx')
+ const panel=read('components/admin/external-services-readiness.tsx')+read('lib/administration/external-services-view-data.ts')
  for(const locale of ['nl','fr','en','de'])assert.match(panel,new RegExp(' '+locale+':\\{[^\\n]*statusUnavailable:'))
  assert.doesNotMatch(panel,/JSON\.stringify\(stored\)|console\.log\(stored\)|return.*ciphertext/)
 })

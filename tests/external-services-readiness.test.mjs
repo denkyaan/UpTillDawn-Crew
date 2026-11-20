@@ -37,7 +37,7 @@ test("setup guidance lives only in each owning workflow, not in Admin platform o
  const platform=read("app/(app)/admin/platform/page.tsx")
  const modules=read("app/(app)/portals/administration/modules/[slug]/page.tsx")
  const sales=read("app/(app)/sales/page.tsx")
- const panel=read("components/admin/external-services-readiness.tsx")
+ const panel=read("components/admin/external-services-readiness.tsx")+read("lib/administration/external-services-view-data.ts")
  const helper=read("lib/administration/external-services-readiness.ts")
  const placement=read("lib/administration/integration-placement.ts")
  assert.doesNotMatch(platform,/ExternalServicesReadiness|externalServicesReadiness/)
