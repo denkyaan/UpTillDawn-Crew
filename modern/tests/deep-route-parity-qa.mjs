@@ -138,27 +138,36 @@ try{
     const name=role.role+'-'+path
     // One original SSR request and one candidate SPA request per route.
     // Never synthesize focus/chat refreshes, poll networkidle or retry mutations.
-    await a.goto(original+path,{waitUntil:'domcontentloaded',timeout:30000})
-    await ready(a)
-    await b.goto(modern+path,{waitUntil:'domcontentloaded',timeout:20000})
-    // If original Next performed an authenticated redirect, require the
-    // candidate to reach that same URL before comparing UI controls. A
-    // suspended client navigation is not an accepted alternate route.
-    const expectedPath=new URL(a.url()).pathname
-    if(expectedPath!==path)
-     await b.waitForURL(url=>url.pathname===expectedPath,{timeout:9000})
-    await ready(b)
     try{
+     const baseline=await a.goto(original+path,{waitUntil:'domcontentloaded',timeout:30000})
+     // The original /shifts source is an authenticated redirect alias:
+     // getCurrentUser() then redirect('/workplaces'). It can briefly render
+     // an empty Next transition that has NO app-shell readiness marker.
+     // Wait for its final URL instead of spending 18s on a blank old route.
+     if(path==='/shifts')
+      await a.waitForURL(url=>url.pathname==='/workplaces',{timeout:9000})
+     if(baseline?.status()!==200&&baseline?.status()!==304)
+      throw Error('LEGACY_MAIN_HTTP_'+baseline?.status())
+     await ready(a)
+     await b.goto(modern+path,{waitUntil:'domcontentloaded',timeout:20000})
+     const expectedPath=new URL(a.url()).pathname
+     if(expectedPath!==path)
+      await b.waitForURL(url=>url.pathname===expectedPath,{timeout:9000})
+     await ready(b)
      await matching(a,b,name)
      validated++
      console.log('DEEP_PARITY_PASS '+name)
     }catch(error){
-     // A UI/path mismatch must fail the release, but should not hide the
-     // remaining independent QA routes. Collect all safe path/field names
-     // in a single run to prevent serial fix-and-redeploy cycles.
-     if(!(error instanceof Error)||!error.message.startsWith('DEEP_PARITY_MISMATCH '))throw error
-     mismatches.push({route:name,reason:error.message})
-     console.error('DEEP_PARITY_ROUTE_FAILED '+name+' '+error.message)
+     // Preserve EVERY independent route result, not only UI mismatches.
+     // In particular, a legacy blank/timeout is an INCONCLUSIVE baseline,
+     // never a claimed parity pass, and must not hide later failures.
+     const message=error instanceof Error?error.message.split('\n')[0]:'unknown'
+     const reason=message.startsWith('DEEP_PARITY_MISMATCH')?message:
+      'DEEP_PARITY_ROUTE_INCOMPLETE '+(error instanceof Error?error.name:'Error')
+     const sourcePath=new URL(a.url()).pathname,candidatePath=new URL(b.url()).pathname
+     mismatches.push({route:name,reason,sourcePath,candidatePath})
+     console.error('DEEP_PARITY_ROUTE_FAILED '+name+' '+reason+
+      ' originalPath='+sourcePath+' candidatePath='+candidatePath)
     }
    }
   }finally{
