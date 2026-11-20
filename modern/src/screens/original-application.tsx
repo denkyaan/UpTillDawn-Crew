@@ -45,20 +45,20 @@ function AuthenticatedRoutes(){
  const requestKey=[identityKey,location.key,revision].join(':')
  const content=useMemo(()=><Routes>{pages.map(({path,Page:Screen})=>{
   let node=<Page Screen={Screen} revision={requestKey}/>
-  // The authoritative original /shifts page checks the signed user and then
-  // redirects to /workplaces. A Next server-render redirect cannot always
-  // complete during a Vite client Suspense render. Preserve that exact
-  // original URL outcome after the existing authenticated profile gate.
-  // This is NOT a new shortcut or workflow: /shifts remains the original
-  // compatibility URL and /workplaces remains its original destination.
-  if(path==='/shifts'&&auth.user&&auth.profile)
-   node=<Navigate to="/workplaces" replace/>
   if(path.startsWith('/portals/administration'))node=<AdministrationLayout>{node}</AdministrationLayout>
   if(path.startsWith('/portals/promotion'))node=<PromotionLayout>{node}</PromotionLayout>
   if(!['/maker-mode','/qr','/q/:code'].includes(path)&&!path.startsWith('/god-mode'))node=<AppLayout>{node}</AppLayout>
   return <Route key={path} path={path} element={node}/>
  })}<Route path="*" element={<AppLayout><NotFound/></AppLayout>}/></Routes>,[requestKey])
  if(auth.loading)return <Loading/>
+ // The original /shifts source is an authenticated alias of /workplaces.
+ // Resolve it at the router boundary BEFORE the asynchronous Next-source
+ // AppLayout/Page Suspense wrappers. Redirecting only the nested route
+ // child can leave the URL at /shifts indefinitely when its parent is
+ // suspended. The destination still uses the exact original AppLayout,
+ // signed-user RPC/RLS checks and workplace permissions; no access is granted.
+ if(location.pathname==='/shifts'&&auth.user)
+  return <Navigate to="/workplaces" replace/>
  // Each original layout/page owns its exact login, approval and Owner
  // redirect. A generic outer redirect would change QR and Maker entry flows.
  return <OriginalRequest key={identityKey} revision={requestKey}><Boundary key={identityKey} revision={requestKey} reset={()=>setRevision(n=>n+1)}><Suspense fallback={<Loading/>}>{content}</Suspense></Boundary></OriginalRequest>
