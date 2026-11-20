@@ -50,6 +50,18 @@ test("live Worker smoke checks Hono, static SPA and anonymous write rejection",(
  assert.ok(script.includes("asset.ok"))
  assert.ok(!script.includes("service_role"))
 })
+test('source bridge smoke waits for the upstream API deployment while the two Workers publish in parallel',()=>{
+ const workflow=get('.github/workflows/deploy-main.yml')
+ const candidate=workflow.split('  deploy-modern-main-qa:')[1].split('  qa-modern-main-qa:')[0]
+ const acceptance=workflow.split('  qa-modern-main-qa:')[1].split('  qa-main-anonymous-acceptance:')[0]
+ assert.ok(!candidate.includes('main-source-live-smoke.mjs'))
+ assert.ok(acceptance.includes('needs: [validate-trigger, deploy-modern-main-qa, deploy]'))
+ assert.ok(acceptance.includes('node modern/scripts/main-source-live-smoke.mjs'))
+ assert.ok(!get('modern/scripts/main-qa-live-smoke.mjs').includes('/api/migration/actions'))
+ const smoke=get('modern/scripts/main-source-live-smoke.mjs')
+ assert.ok(smoke.includes('/api/migration/actions')&&smoke.includes('/api/migration/view-data'))
+ assert.ok(smoke.includes('response.status!==401'))
+})
 test("remote seven-role QA talks to real Cloudflare, local preview remains separately runnable",()=>{
  const qa=get("modern/tests/browser-auth-qa.mjs")
  assert.ok(qa.includes("const preview=remote?null:spawn("))

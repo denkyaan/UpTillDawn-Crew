@@ -39,3 +39,13 @@ test('download and SSE replies stream unchanged; only Main redirects return to c
  const denied=await forwardMainSource(req(),{SUPABASE_URL:qa,MAIN_AUTH:{async fetch(){return new Response(null,{headers:{'Set-Cookie':'a=synthetic; Domain=evil.invalid'}})}}})
  assert.equal(denied.status,502)
 })
+test('an existing OCR job proof reaches only its original polling endpoint',async()=>{
+ for(const path of ['/api/administration/ocr','/api/migration/actions']){
+  let calls=0
+  const response=await forwardMainSource(req(path,{'X-Ocr-Job-Token':'synthetic-job-proof'}),{SUPABASE_URL:qa,MAIN_AUTH:{async fetch(request){
+   calls++;assert.equal(request.headers.get('x-ocr-job-token'),path==='/api/administration/ocr'?'synthetic-job-proof':null)
+   return Response.json({ok:true})
+  }}})
+  assert.equal(response.status,200);assert.equal(calls,1)
+ }
+})

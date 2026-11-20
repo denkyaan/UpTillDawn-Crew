@@ -23,6 +23,11 @@ export async function forwardMainSource(request:Request,env:MainAuthBindings):Pr
  for(const name of ['cookie','user-agent','accept','accept-language','content-type','range','if-none-match','cf-connecting-ip','cf-ipcity','cf-region','cf-ipcountry']){
   const value=request.headers.get(name);if(value)headers.set(name,value)
  }
+ // The original asynchronous OCR poll uses a scoped job proof in this
+ // header. Retain it only for that endpoint; authorization stays on Main.
+ if(url.pathname==='/api/administration/ocr'){
+  const token=request.headers.get('x-ocr-job-token');if(token)headers.set('x-ocr-job-token',token)
+ }
  if(mutation){headers.set('Origin',MAIN_AUTH_ORIGIN);headers.set('Sec-Fetch-Site','same-origin')}
  let bytes=0
  const body=request.body?.pipeThrough(new TransformStream<Uint8Array,Uint8Array>({transform(chunk,controller){bytes+=chunk.byteLength;if(bytes>max)throw Error('too_large');controller.enqueue(chunk)}}))

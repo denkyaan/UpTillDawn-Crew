@@ -125,7 +125,7 @@ jobs:
           echo "## New local-first Main-QA application published" >> "$GITHUB_STEP_SUMMARY"
           echo "Origin: https://uptilldawn-modern-main.uptilldawn.workers.dev" >> "$GITHUB_STEP_SUMMARY"
           echo "Existing Main app: https://uptilldawn-main.uptilldawn.workers.dev (unchanged)" >> "$GITHUB_STEP_SUMMARY"
-          echo "All candidate writes, scanning and OAuth remain OFF. Production untouched." >> "$GITHUB_STEP_SUMMARY"
+          echo "Original actions retain Main authorization and RLS. Candidate /api/v1 scanning and OAuth remain OFF. Production untouched." >> "$GITHUB_STEP_SUMMARY"
 
   # This is a LIVE browser test of the new Cloudflare Worker, not a local Vite
   # preview and not a simulated Supabase-only concurrency benchmark.
@@ -165,6 +165,8 @@ jobs:
         run: npm --prefix modern install --prefer-offline --no-audit --no-fund
       - name: Install headless browser (no unrelated OS packages)
         run: npm --prefix modern exec -- playwright install chromium --only-shell
+      - name: Verify original source transport after BOTH Main Workers are deployed
+        run: node modern/scripts/main-source-live-smoke.mjs
       - name: Compare original Main login — 48 screens and 160 interaction states
         run: npm --prefix modern run login:visual-parity
       - name: Verify seven real roles, four languages and two devices on LIVE modern Worker

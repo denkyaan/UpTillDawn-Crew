@@ -9,6 +9,8 @@ const Link=forwardRef<HTMLAnchorElement,Props>(function Link({href,prefetch:_pre
   onClick?.(event)
   if(event.defaultPrevented||event.button!==0||event.metaKey||event.ctrlKey||event.shiftKey||event.altKey||props.target&&props.target!=='_self'||props.download!==undefined)return
   const target=new URL(url,window.location.href)
+  // Same-page section links keep the browser's native anchor scroll/focus.
+  if(target.hash&&target.origin===window.location.origin&&target.pathname===window.location.pathname&&target.search===window.location.search)return
   if(target.origin!==window.location.origin||originalMainRoutes.some(route=>route.methods.some(method=>method==='GET')&&new RegExp('^'+route.pattern+'$').test(target.pathname)))return
   event.preventDefault();void navigate(target.pathname+target.search+target.hash,{replace})
   if(scroll!==false&&!target.hash)window.scrollTo(0,0)
