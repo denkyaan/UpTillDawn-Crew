@@ -20,6 +20,13 @@ if(env.vars.UPT_MIGRATION_ALLOW_WRITES!=='false'||env.vars.UPT_MIGRATION_SCANNIN
  env.vars.UPT_MIGRATION_OAUTH_ENABLED!=='false')
  throw Error('QA write/provider isolation disabled — refusing readiness report')
 const originalSourceCount=originalPages.filter(x=>pages.includes(x)).length
+const legacyMainServiceBindings=env.services.filter(x=>x.service==='uptilldawn-main')
+const legacyBackendDependency=legacyMainServiceBindings.length>0
+// The candidate's upstream Main service would refer to ITSELF if renamed to
+// uptilldawn-main. Cutover must first extract all original server handlers
+// into a separate, non-recursive backend or replace them with native Hono
+// handlers without changing the RLS/authorization contract.
+if(!legacyBackendDependency)throw Error('Backend dependency inventory changed: review cutover topology')
 const workstreams=[
  {id:'ui',description:'Pixel, layout, navigation, every original screen and four locales',
   available:{originalPages:originalPages.length,sourceReused:originalSourceCount},
@@ -41,7 +48,7 @@ const workstreams=[
   verified:false,blocker:'22 representative read-only routes do not prove complete 101-page/64-API/163-action coverage'},
  {id:'cutover',description:'Atomic existing Main URL switch, rollback and post-switch verification',
   available:{mainQACandidate:'uptilldawn-modern-main',existingMain:'uptilldawn-main'},
-  verified:false,blocker:'All six acceptance domains plus isolated rollback rehearsal must pass first'}
+  verified:false,blocker:'All six acceptance domains, non-recursive native backend extraction, and isolated rollback rehearsal must pass first'}
 ]
 const report={
  contract:'uptilldawn-main-seven-bundle-v1',
@@ -49,6 +56,8 @@ const report={
  productionUntouched:true,
  isolatedCandidateWriteEnabled:false,
  exactActionRegistryMapped:registered.registeredCount===originalActions.length,
+ dependsOnLegacyMainBackend:legacyBackendDependency,
+ directMainCutoverWouldSelfBind:legacyMainServiceBindings.some(x=>x.binding==='MAIN_AUTH'||x.binding==='MAIN_AUTH_RUNTIME'),
  releaseReady:workstreams.every(x=>x.verified),
  mainCutoverAllowed:false,
  workstreams
