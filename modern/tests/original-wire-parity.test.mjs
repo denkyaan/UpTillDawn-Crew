@@ -2,7 +2,17 @@ import test from "node:test"
 import assert from "node:assert/strict"
 import {encode,decode} from "../../lib/migration/wire.ts"
 import {boundedMigrationForm} from "../../lib/migration/bounded-form.ts"
-import {invokeOriginalAction,invokeOriginalRead} from "../src/original/transport.ts"
+import {build} from "esbuild"
+import {fileURLToPath} from "node:url"
+// Node's native TS loader does not resolve extensionless Vite/TS imports.
+// Bundle ONLY the real browser transport module for these isolated tests.
+const transportBundle=await build({
+ entryPoints:[fileURLToPath(new URL("../src/original/transport.ts",import.meta.url))],
+ bundle:true,platform:"browser",format:"esm",target:"es2022",write:false,logLevel:"silent"
+})
+const transport=await import("data:text/javascript;base64,"+
+ Buffer.from(transportBundle.outputFiles[0].contents).toString("base64"))
+const {invokeOriginalAction,invokeOriginalRead}=transport
 
 test("original source action wire round-trips exact user input, nested values, duplicate fields, dates, and binary attachments",async()=>{
  const form=new FormData()
