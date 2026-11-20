@@ -7,7 +7,7 @@ const deep=read("modern/tests/deep-route-parity-qa.mjs")
 const workflow=read(".github/workflows/deploy-main.yml")
 const fast=read(".github/workflows/fast-change-validation.yml")
 
-test("22 deep authenticated routes exist in the authoritative original Main, not placeholders",()=>{
+test("all 21 original baseline route paths remain in expanded 44-case deep QA",()=>{
  const paths=[
   "/admin/management","/admin/time-records",
   "/portals/administration/modules/invoices","/portals/administration/modules/banking",
@@ -25,7 +25,7 @@ test("22 deep authenticated routes exist in the authoritative original Main, not
   assert.ok(allPaths.has(path),"Original Main route missing: "+path)
   assert.ok(deep.includes("'"+path+"'"),"Uncovered deep comparison: "+path)
  }
- assert.ok(deep.includes("EXPECTED!==22"),"22 actual role-route cases required")
+ assert.ok(deep.includes("EXPECTED!==44"),"44 actual role-route cases required")
  for(const role of ["head_admin","left_hand","right_hand","administration","responsible","staff","promotion"])
   assert.ok(deep.includes("role:'"+role+"'"),"Role missing from deep browser QA: "+role)
 })
@@ -55,7 +55,7 @@ test("deployment fails closed on live deep comparisons after existing login, rol
   "Compare original Main login — 48 screens and 160 interaction states",
   "Verify seven real roles, four languages and two devices on LIVE modern Worker",
   "Exercise 30 DISTINCT signed QA sessions through deployed Hono /api/v1/session",
-  "Compare 22 deep original pages across seven real QA roles before any cutover"
+  "Compare 44 deep original pages across seven real QA roles before any cutover"
  ]
  const positions=steps.map(step=>workflow.indexOf("- name: "+step))
  assert.ok(positions.every(i=>i>=0),"Live QA step missing")
