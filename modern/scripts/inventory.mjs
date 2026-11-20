@@ -35,10 +35,10 @@ for(const file of libActions){
 }
 // All browser-dispatched original source actions MUST be present in the
 // fixed server-side allowlist. Matching names is only a wiring guarantee:
- // behavioral and authorization parity remains unverified until live E2E.
+// Behavioral and authorization parity remains unverified until live E2E.
 const sourceActionIds=actionEntries().map(entry=>entry.id)
 const registrySource=await readFile(join(repo,"lib/migration/original-action-registry.ts"),"utf8")
-const registeredIds=[...registrySource.matchAll(/^"([^"\\n]+#[A-Za-z_$][\\w$]*)":/gm)].map(match=>match[1])
+const registeredIds=[...registrySource.matchAll(/^"([^"\n]+#[A-Za-z_$][\w$]*)":/gm)].map(match=>match[1])
 const sourceSet=new Set(sourceActionIds),registrySet=new Set(registeredIds)
 const missingActions=sourceActionIds.filter(id=>!registrySet.has(id))
 const obsoleteActions=registeredIds.filter(id=>!sourceSet.has(id))
