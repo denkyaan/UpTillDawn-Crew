@@ -32,6 +32,11 @@ test("22 deep authenticated routes exist in the authoritative original Main, not
 test("deep acceptance runs against live Main and modern Worker, no business form submissions",()=>{
  assert.ok(deep.includes("await a.goto(original+path"))
  assert.ok(deep.includes("await b.goto(modern+path"))
+ assert.ok(deep.includes("await login.waitForURL(url=>!url.pathname.startsWith('/login')"))
+ const click=deep.indexOf("await login.locator('form button[type=\"submit\"]').click()")
+ const redirect=deep.indexOf("await login.waitForURL(url=>!url.pathname.startsWith('/login')")
+ const hydration=deep.indexOf("await ready(login)")
+ assert.ok(click>=0&&click<redirect&&redirect<hydration,"Native auth redirect must complete before evaluating the logged-in shell")
  assert.ok(deep.includes("await matching(a,b,name)"))
  assert.ok(deep.includes("if(signins!==7||validated!==EXPECTED)"))
  assert.ok(deep.includes("DEEP_PARITY_RENDER_ERROR"))

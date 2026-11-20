@@ -118,6 +118,9 @@ try{
    await login.locator('input[name="email"]').fill(role.email)
    await login.locator('input[name="password"]').fill(password)
    await login.locator('form button[type="submit"]').click()
+   // A login form already contains an h1. That is NOT an authenticated
+   // destination: wait for a real role-based redirect, then hydration.
+   await login.waitForURL(url=>!url.pathname.startsWith('/login'),{timeout:25000})
    await ready(login)
    if(!native)throw Error('DEEP_PARITY_NATIVE_LOGIN_FAILED '+role.role)
    signins++
