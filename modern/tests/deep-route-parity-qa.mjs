@@ -151,12 +151,16 @@ try{
     storageState:{cookies:originalCookies,origins:[]}})
    modernContext=await browser.newContext({locale:'nl-BE',viewport:{width:1440,height:900},
     storageState:session})
+   // Reuse source and candidate pages for ordinary navigation to keep
+   // Cloudflare Free load low. A conditional Next redirect may still be in
+   // flight after React hydration, so give THAT route its own disposable
+   // documents rather than letting it interrupt the next /timesheets visit.
+   const sharedSource=await sourceContext.newPage(),sharedCandidate=await modernContext.newPage()
    for(const path of role.paths){
     const name=role.role+'-'+path
-    // Every route receives FRESH browser documents. Redirecting /incidents
-    // to /events must never interrupt the next /timesheets comparison.
-    // Browser contexts (cookies, roles) remain identical to the source Main.
-    const a=await sourceContext.newPage(),b=await modernContext.newPage()
+    const redirectsConditionally=path==='/incidents'
+    const a=redirectsConditionally?await sourceContext.newPage():sharedSource
+    const b=redirectsConditionally?await modernContext.newPage():sharedCandidate
     let stage='original-navigation'
     try{
      const baseline=await a.goto(original+path,{waitUntil:'domcontentloaded',timeout:30000})
@@ -210,10 +214,14 @@ try{
      console.error('DEEP_PARITY_ROUTE_FAILED '+name+' '+reason+
       ' originalPath='+sourcePath+' candidatePath='+candidatePath)
     }finally{
-     await a.close()
-     await b.close()
+     if(redirectsConditionally){
+      await a.close()
+      await b.close()
+     }
     }
    }
+   await sharedSource.close()
+   await sharedCandidate.close()
   }finally{
    await sourceContext?.close()
    await modernContext?.close()
