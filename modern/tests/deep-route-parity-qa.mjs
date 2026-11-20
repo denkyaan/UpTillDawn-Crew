@@ -66,8 +66,18 @@ async function view(page){
   }
   const list=(selector,mapper)=>[...document.querySelectorAll(selector)].filter(visible).map(mapper)
   const label=e=>clean(e.getAttribute('aria-label')||e.textContent)
+  // Detect silent visual regressions that a matching heading/button list
+  // cannot: actual original header, navigation, content and typography boxes.
+  // Round to 2 CSS pixels to avoid browser fractional-pixel artifacts.
+  const round=x=>Math.round(x/2)*2
+  const layout=list('header,nav,main,main h1,main h2',e=>{
+   const r=e.getBoundingClientRect(),s=getComputedStyle(e)
+   return {tag:e.tagName,x:round(r.x),y:round(r.y),w:round(r.width),h:round(r.height),
+    font:s.fontSize,weight:s.fontWeight,color:s.color,background:s.backgroundColor}
+  })
   return {
    path:location.pathname,
+   layout,
    headings:list('main h1,main h2',label),
    navigation:list('nav a,nav button,header a,header button',e=>({
     tag:e.tagName,label:label(e),href:e.getAttribute('href'),expanded:e.getAttribute('aria-expanded')
