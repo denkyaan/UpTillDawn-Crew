@@ -253,7 +253,7 @@ app.post("/api/v1/tickets/weeztix/scan",async c=>{
 // security contract; provider OAuth and ticket admission remain separately OFF.
 app.all("/api/*",c=>{
  const path=c.req.path,method=c.req.method
- if(path==="/api/test-auth-session")return c.json({error:"not_found"},404)
+ if(path==="/api/test-auth-session"||!originalApiAllowed(path,method))return c.json({error:"not_found"},404)
  const readMethod=method==="GET"||method==="HEAD"
  const safeReadPost=path==="/api/migration/view-data"&&method==="POST"
  // Some legacy GET endpoints initiate OAuth or prepare outward-facing
