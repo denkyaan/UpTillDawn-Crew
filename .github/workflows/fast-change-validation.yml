@@ -87,6 +87,7 @@ jobs:
           set -euo pipefail
           npm --prefix modern install --prefer-offline --no-audit --no-fund
           npm --prefix modern run check
+          node --check modern/tests/deep-route-parity-qa.mjs
       - name: Read isolated Main Worker runtime outcomes for diagnostic PRs
         if: ${{ github.event_name == 'pull_request' && startsWith(github.head_ref, 'diagnostic/main-runtime') && github.event.pull_request.head.repo.full_name == github.repository }}
         env:
