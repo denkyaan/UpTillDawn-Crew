@@ -24,7 +24,9 @@
     "login:visual-parity": "node tests/login-parity-qa.mjs",
     "login:cutover-gate": "node scripts/login-cutover-gate.mjs",
     "prebuild": "node scripts/build-native-auth.mjs && node scripts/prepare-original-assets.mjs",
-    "browser:deep-qa": "node tests/deep-route-parity-qa.mjs"
+    "browser:deep-qa": "node tests/deep-route-parity-qa.mjs",
+    "bundle:seven": "node scripts/seven-bundle-readiness.mjs",
+    "cutover:gate": "node scripts/seven-bundle-readiness.mjs --enforce-cutover"
   },
   "dependencies": {
     "@codemirror/lang-css": "6.3.1",

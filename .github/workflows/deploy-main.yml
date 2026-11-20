@@ -182,6 +182,24 @@ jobs:
         run: npm --prefix modern run sessions:qa
       - name: Compare 22 deep original pages across seven real QA roles before any cutover
         run: npm --prefix modern run browser:deep-qa
+      # One consolidated seven-domain report is produced even when a
+      # representative route fails. Failure remains RED; no live provider
+      # operation, extra browser load, production job or cutover is triggered.
+      - name: Record the seven-domain migration release blockers
+        if: always()
+        run: |
+          npm --prefix modern run bundle:seven
+          echo "## Unified seven-domain migration bundle" >> "$GITHUB_STEP_SUMMARY"
+          echo "Original app, QA roles, 101 source pages, 64 APIs and the original action registry are audited. This is NOT a full functional acceptance." >> "$GITHUB_STEP_SUMMARY"
+          echo "All seven release domains remain blocked pending exhaustive E2E evidence; Main URL is unchanged, production is untouched." >> "$GITHUB_STEP_SUMMARY"
+      - name: Upload seven-domain release readiness and explicit blockers
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: main-seven-bundle-readiness
+          path: test-results/modern-seven-bundle/readiness.json
+          if-no-files-found: error
+          retention-days: 5
       - name: Report live browser evidence
         run: |
           echo "Modern Main-QA: seven signed roles x four languages x two device types validated against deployed Cloudflare static assets." >> "$GITHUB_STEP_SUMMARY"
