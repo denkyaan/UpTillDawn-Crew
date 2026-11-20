@@ -33,28 +33,40 @@ function observeNotices(page){
  const reads=[];notificationReads.set(page,reads)
  page.on('response',async response=>{const url=new URL(response.url());if(url.origin!==qa.origin||!url.pathname.endsWith('/crew_notifications')||url.searchParams.get('select')!=='id,link,kind')return;try{const data=await response.json();reads.push({status:response.status(),count:Array.isArray(data)?data.length:null})}catch{reads.push({status:response.status(),count:null})}})
 }
+// A populated, hydrated view is the authoritative readiness signal. Waiting
+// for networkidle can never prove this when chat, badges and Realtime continue
+// to make requests. Worse, the previous focus + chat-read probes induced two
+// extra refresh bursts per role/device/locale comparison on Workers Free.
 async function ready(page){
- await page.locator('[data-app-shell-ready="true"]').waitFor({timeout:30000})
- await page.locator('[data-route-loading="true"]').waitFor({state:'detached',timeout:30000})
- // Respect Main's staggered badge refresh: focus invokes the existing
- // immediate path while preserving its anti-overload jitter for real users.
- await page.bringToFront()
- await page.evaluate(()=>window.dispatchEvent(new Event('focus')))
- await page.waitForLoadState('networkidle',{timeout:25000})
- await page.waitForFunction(()=>document.visibilityState==='visible')
- // Compare completed badge data, not the intentional staggered startup state.
- // This is Main's existing forced, read-only badge refresh event.
- await page.evaluate(()=>window.dispatchEvent(new Event('uptilldawn-chat-read')))
- await page.waitForLoadState('networkidle',{timeout:25000})
- await page.locator('[data-route-loading="true"]').waitFor({state:'detached',timeout:30000})
- if(await page.locator('[data-app-error="true"]').count())throw Error('ORIGINAL_VIEW_RENDER_FAILED')
+ await page.locator('[data-app-shell-ready="true"]').waitFor({timeout:18000})
+ await page.locator('[data-route-loading="true"]').waitFor({state:'detached',timeout:15000})
+ await page.waitForFunction(()=>{
+  const main=document.querySelector('main'),nav=document.querySelector('nav')
+  return Boolean(main&&nav&&main.getBoundingClientRect().height>0&&
+   nav.querySelector('a,button')&&!document.querySelector('[data-route-loading="true"]'))
+ },null,{timeout:10000})
+ if(await page.locator('[data-app-error="true"]').count())
+  throw Error('ORIGINAL_VIEW_RENDER_FAILED')
 }
+// Never compare against an empty, unhydrated legacy baseline. Keep a single
+// bounded read-only reload for an intermittent Main failure; after repeated
+// baseline failures, stop the test RED rather than hammering a failing Worker.
+let consecutiveLegacyFailures=0
 async function readyBaseline(page){
- try{await ready(page)}catch(error){
-  // A GET may be retried once when the authoritative legacy server could not
-  // render. Record recovery explicitly; never retry a candidate or a login.
-  baselineRecoveries++;console.error('LEGACY_MAIN_READ_RECOVERY '+(error instanceof Error?error.message.split('\n')[0]:'read unavailable'))
-  await page.reload({waitUntil:'domcontentloaded',timeout:30000});await ready(page)
+ try{await ready(page);consecutiveLegacyFailures=0}
+ catch(error){
+  baselineRecoveries++
+  console.error('LEGACY_MAIN_READ_RECOVERY '+(error instanceof Error?error.message.split('\n')[0]:'read unavailable'))
+  if(consecutiveLegacyFailures>=1)
+   throw Error('LEGACY_MAIN_BASELINE_UNAVAILABLE_CIRCUIT_OPEN')
+  try{
+   await page.reload({waitUntil:'domcontentloaded',timeout:17000})
+   await ready(page)
+   consecutiveLegacyFailures=0
+  }catch{
+   consecutiveLegacyFailures++
+   throw Error('LEGACY_MAIN_BASELINE_UNAVAILABLE_AFTER_ONE_RETRY')
+  }
  }
 }
 async function fingerprint(page){
@@ -95,7 +107,7 @@ async function menus(a,b,label){
   await compare(a,b,label+'-menu-'+i);menuComparisons++
   if(label==='head_admin-nl-desktop'&&(await original.innerText()).includes('AI')&&await candidate.getAttribute('aria-expanded')==='true'){
    await b.evaluate(()=>window.dispatchEvent(new Event('upt-source-refresh')))
-   await b.waitForLoadState('networkidle',{timeout:25000})
+   await b.locator('[data-route-loading="true"]').waitFor({state:'detached',timeout:12000})
    if(await candidate.getAttribute('aria-expanded')!=='true')throw Error('ORIGINAL_CLIENT_STATE_LOST_ON_REFRESH')
    await compare(a,b,label+'-retained-ai')
   }
@@ -169,6 +181,8 @@ try{
     }catch(error){
      const reason=error instanceof Error?error.message.split('\n')[0]:'QA_SCENARIO_FAILED'
      failures.push({label,reason});console.error('ORIGINAL_SCENARIO_FAILED '+label+' '+reason)
+     if(reason==='LEGACY_MAIN_BASELINE_UNAVAILABLE_CIRCUIT_OPEN')
+      throw Error('QA_STOPPED_UNHEALTHY_LEGACY_MAIN_NO_FALSE_PARITY')
     }finally{await candidate.close();await original.close()}
    }
   }finally{await login.close()}
