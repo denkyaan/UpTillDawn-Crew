@@ -23,7 +23,8 @@
     "sessions:qa": "node tests/qa-30-sessions.mjs",
     "login:visual-parity": "node tests/login-parity-qa.mjs",
     "login:cutover-gate": "node scripts/login-cutover-gate.mjs",
-    "prebuild": "node scripts/build-native-auth.mjs && node scripts/prepare-original-assets.mjs"
+    "prebuild": "node scripts/build-native-auth.mjs && node scripts/prepare-original-assets.mjs",
+    "browser:deep-qa": "node tests/deep-route-parity-qa.mjs"
   },
   "dependencies": {
     "@codemirror/lang-css": "6.3.1",
