@@ -116,3 +116,13 @@ test("Cloudflare edge propagation probe retries only bounded public reads and re
  assert.ok(smoke.indexOf('const nativeReady=')<smoke.indexOf('const authTransport='))
  assert.equal((smoke.match(/const authTransport=await get\(/g)||[]).length,1)
 })
+
+test("every migration-related pull request fails fast on candidate syntax errors before Main deploy",()=>{
+ const fast=get(".github/workflows/fast-change-validation.yml")
+ assert.ok(fast.includes("Fast isolated modern TypeScript safety check on pull requests"))
+ assert.ok(fast.includes("if: ${{ github.event_name == 'pull_request' }}"))
+ assert.ok(fast.includes("npm --prefix modern run check"))
+ assert.ok(fast.includes("npm --prefix modern install --prefer-offline --no-audit --no-fund"))
+ assert.ok(fast.indexOf("Fast isolated modern TypeScript safety check")<
+  fast.indexOf("Read isolated Main Worker runtime outcomes"))
+})

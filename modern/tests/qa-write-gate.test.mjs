@@ -30,7 +30,6 @@ test("candidate write flag disabled or absent blocks ALL original Main action/pr
   ["/api/administration/integrations/oauth/sumup/callback","GET"],
   ["/api/administration/integrations/weeztix/start","GET"],
   ["/api/administration/integrations/weeztix/callback","GET"],
-  ["/api/administration/peppol/prepare","GET"],
  ]
  for(const flag of [undefined,"false","FALSE","0"]){
   const f=fixture(flag)
@@ -47,12 +46,13 @@ test("original read-only view POST and explicitly authorized GET remain availabl
  const f=fixture("false")
  for(const [path,method] of [
   ["/api/migration/view-data","POST"],
-  ["/api/administration/finance/export","GET"]
+  ["/api/administration/finance/export","GET"],
+  ["/api/administration/peppol/prepare","GET"]
  ]){
   const response=await probe(path,method,f.env)
   assert.equal(response.status,200,path)
  }
- assert.equal(f.calls,2,"Only the two explicitly read-only probes reach original Main")
+ assert.equal(f.calls,3,"Only the three explicitly read-only probes reach original Main")
 })
 test("unknown APIs and QA-only test-session endpoints fail closed before original Main service",async()=>{
  const f=fixture("true")

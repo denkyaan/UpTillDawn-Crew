@@ -76,6 +76,17 @@ jobs:
             cat "/tmp/fast-$label.log"
           done
           exit "$failed"
+      # Every PR can affect the shared original-source Vite runtime (including
+      # fixes outside migration/*). Catch syntax/type errors BEFORE merging to
+      # Main, not after the original Main Worker is already deployed. This
+      # does not run on Main pushes and adds no expensive browser/build stages.
+      - name: Fast isolated modern TypeScript safety check on pull requests
+        if: ${{ github.event_name == 'pull_request' }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          npm --prefix modern install --prefer-offline --no-audit --no-fund
+          npm --prefix modern run check
       - name: Read isolated Main Worker runtime outcomes for diagnostic PRs
         if: ${{ github.event_name == 'pull_request' && startsWith(github.head_ref, 'diagnostic/main-runtime') && github.event.pull_request.head.repo.full_name == github.repository }}
         env:

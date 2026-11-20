@@ -256,11 +256,11 @@ app.all("/api/*",c=>{
  if(path==="/api/test-auth-session"||!originalApiAllowed(path,method))return c.json({error:"not_found"},404)
  const readMethod=method==="GET"||method==="HEAD"
  const safeReadPost=path==="/api/migration/view-data"&&method==="POST"
- // Some legacy GET endpoints initiate OAuth or prepare outward-facing
- // accounting transactions, so method alone does not imply no side effects.
- const businessGet=method==="GET"&&(
-  /^\\/api\\/administration\\/integrations\\/(?:oauth\\/[^/]+|weeztix)\\/(?:start|callback)$/.test(path)||
-  path==="/api/administration/peppol/prepare")
+ // OAuth authorization/callback GETs can initiate account linkage and
+ // set state cookies. Peppol XML readiness GET is a pure original Main read
+ // and stays available, preserving its existing behavior.
+ const businessGet=method==="GET"&&
+  /^\/api\/administration\/integrations\/(?:oauth\/[^/]+|weeztix)\/(?:start|callback)$/.test(path)
  if(c.env.UPT_MIGRATION_ALLOW_WRITES!=="true"&&(!readMethod&&!safeReadPost||businessGet))
   return c.json({error:"migration_writes_disabled"},503)
  return forwardMainSource(c.req.raw,c.env)

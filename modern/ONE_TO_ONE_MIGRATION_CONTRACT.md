@@ -78,7 +78,7 @@ all existing business actions pass real success/denial E2E parity. The
 `UPT_MIGRATION_ALLOW_WRITES` **Worker runtime variable** is explicitly
 `"false"` in the Main-QA Wrangler configuration. Client-side Vite feature
 flags are not authorization boundaries. The Hono API must reject original
-Main action POSTs, provider/ticket mutations and OAuth/Peppol GET initiation
+Main action POSTs, provider/ticket mutations and OAuth authorization/callback GETs
 **before** calling the Main service binding; the sole POST exception is the
 original auth/RLS-protected `/api/migration/view-data` read. Original login
 and account actions retain the separate native-auth implementation.
