@@ -110,4 +110,7 @@ test("Cloudflare edge propagation probe retries only bounded public reads and re
  assert.ok(smoke.includes('const noOauth=await get('))
  assert.ok(!smoke.includes('getAfterPropagation("/api/v1/tickets'))
  assert.ok(!smoke.includes('getAfterPropagation("/api/v1/integrations'))
+ assert.ok(smoke.includes("response.headers.get('x-uptilldawn-auth-protocol')==='main-auth-native-v1'"))
+ assert.ok(smoke.indexOf('const nativeReady=')<smoke.indexOf('const authTransport='))
+ assert.equal((smoke.match(/const authTransport=await get\(/g)||[]).length,1)
 })

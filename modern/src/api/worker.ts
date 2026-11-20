@@ -24,7 +24,12 @@ app.use("/api/*",async(c,next)=>{
  c.header("Content-Security-Policy","default-src 'none'; frame-ancestors 'none'")
 })
 
-app.get("/api/v1/health",c=>c.json({ok:true,service:"uptilldawn-local-first-api"}))
+app.get("/api/v1/health",c=>{
+ // Public deployment readiness only. Do not invoke authentication, private
+ // configuration, Supabase or mail to discover the visible Worker version.
+ if(c.env.MAIN_AUTH_RUNTIME)c.header('X-UpTillDawn-Auth-Protocol','main-auth-native-v1')
+ return c.json({ok:true,service:"uptilldawn-local-first-api"})
+})
 
 app.post("/api/auth/portal-login",c=>forwardMainAuth(c.req.raw,c.env))
 app.post("/api/auth/account-action",c=>forwardMainAuth(c.req.raw,c.env))

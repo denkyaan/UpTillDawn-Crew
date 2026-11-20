@@ -14,15 +14,16 @@ const get=async(path,init={})=>{
 // actual response status rather than producing a context-free health failure.
 // Authenticated and mutating probes below are never retried.
 const pause=ms=>new Promise(resolve=>setTimeout(resolve,ms))
-async function getAfterPropagation(path,expected,init={}){
+async function getAfterPropagation(path,expected,init={},accept=()=>true){
  let last
  for(let attempt=1;attempt<=10;attempt++){
   try{
    last=await get(path,init)
-   if(last.status===expected)return last
+   if(last.status===expected&&accept(last))return last
    console.error("MODERN_MAIN_QA_EDGE "+path+" attempt "+attempt+
     "/10 HTTP "+last.status+" content-type="+(last.headers.get("content-type")||"none")+
-    " cf-ray="+(last.headers.get("cf-ray")||"none"))
+    " cf-ray="+(last.headers.get("cf-ray")||"none")+
+    " auth-protocol="+(last.headers.get('x-uptilldawn-auth-protocol')||'none'))
    await last.body?.cancel().catch(()=>{})
   }catch(error){
    console.error("MODERN_MAIN_QA_NETWORK "+path+" attempt "+attempt+
@@ -39,6 +40,11 @@ check(health.status===200,"HEALTH_STATUS")
 check(health.headers.get("x-content-type-options")==="nosniff","API_NOSNIFF")
 check((health.headers.get("cache-control")||"").includes("no-store"),"API_NO_STORE")
 check((await health.json()).service==="uptilldawn-local-first-api","REAL_HONO_WORKER")
+// An old POP can return a perfectly healthy 200 from the previous Worker.
+// Wait for this revision using a public GET before the single auth POST.
+const nativeReady=await getAfterPropagation('/api/v1/health',200,{},response=>response.headers.get('x-uptilldawn-auth-protocol')==='main-auth-native-v1')
+check(nativeReady.headers.get('x-uptilldawn-auth-protocol')==='main-auth-native-v1','NATIVE_AUTH_DEPLOYMENT_VISIBLE')
+await nativeReady.body?.cancel()
 const login=await getAfterPropagation("/login",200,{headers:{"Sec-Fetch-Mode":"navigate"}})
 check(login.status===200,"LOGIN_DOCUMENT")
 check((login.headers.get("content-type")||"").includes("text/html"),"LOGIN_HTML")

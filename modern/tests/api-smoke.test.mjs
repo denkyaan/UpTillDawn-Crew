@@ -13,6 +13,14 @@ test('the Hono Worker exposes one unprivileged health check with no caching',asy
  assert.match(response.headers.get('cache-control')||'',/no-store/)
  assert.equal(response.headers.get('x-content-type-options'),'nosniff')
 })
+test('native deployment readiness is public, version-specific and never calls private auth configuration',async()=>{
+ const response=await request('/api/v1/health',undefined,{MAIN_AUTH_RUNTIME:{runtimeConfiguration(){throw Error('public readiness must not read private configuration')}}})
+ assert.equal(response.status,200)
+ assert.equal(response.headers.get('x-uptilldawn-auth-protocol'),'main-auth-native-v1')
+ assert.deepEqual(await response.json(),{ok:true,service:'uptilldawn-local-first-api'})
+ const legacy=await request('/api/v1/health')
+ assert.equal(legacy.headers.get('x-uptilldawn-auth-protocol'),null)
+})
 test('anonymous or malformed bearer tokens never contact the database',async()=>{
  for(const authorization of [undefined,'Bearer xyz','Bearer x.y.z','Basic user:pass','Bearer '+'a'.repeat(9000)]){
   const headers=authorization?{Authorization:authorization}:{}
