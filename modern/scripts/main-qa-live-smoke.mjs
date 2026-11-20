@@ -56,6 +56,7 @@ const authTransport=await get("/api/auth/portal-login",{
  method:"POST",headers:{Origin:origin,"Sec-Fetch-Site":"same-origin"},body:emptyForm,
 })
 check(authTransport.status===200,"AUTH_TRANSPORT_HTTP_"+authTransport.status)
+check(authTransport.headers.get('x-uptilldawn-auth-runtime')==='native-original-source','ORIGINAL_NATIVE_AUTH_RUNTIME')
 const emptyResult=await authTransport.json()
 check(emptyResult.error==="E-mail en wachtwoord zijn verplicht."&&emptyResult.success!==true,"AUTH_REQUIRED_FIELD_VALIDATION")
 const noSession=await get("/api/v1/session")

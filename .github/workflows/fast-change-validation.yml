@@ -85,7 +85,7 @@ jobs:
       # Candidate-only build gate. Never slows ordinary Main CI/deploy; the
       # current production app remains Next/OpenNext until the full parity gate.
       - name: Validate isolated Vite/Hono migration build
-        if: ${{ github.event_name == 'pull_request' && startsWith(github.head_ref, 'migration/') }}
+        if: ${{ github.event_name == 'pull_request' && (startsWith(github.head_ref, 'migration/') || startsWith(github.head_ref, 'diagnostic/main-runtime')) }}
         shell: bash
         run: |
           set -euo pipefail
