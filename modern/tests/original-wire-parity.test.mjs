@@ -4,7 +4,7 @@ import {encode,decode} from "../../lib/migration/wire.ts"
 import {boundedMigrationForm} from "../../lib/migration/bounded-form.ts"
 import {invokeOriginalAction,invokeOriginalRead} from "../src/original/transport.ts"
 
-test("original source action wire round-trips exact user input, nested values, duplicate fields, dates, and binary attachments",()=>{
+test("original source action wire round-trips exact user input, nested values, duplicate fields, dates, and binary attachments",async()=>{
  const form=new FormData()
  form.append("crew","first")
  form.append("crew","second")
@@ -21,7 +21,7 @@ test("original source action wire round-trips exact user input, nested values, d
  const proof=output.form.get("attachment")
  assert.equal(proof.name,"proof.png")
  assert.equal(proof.type,"image/png")
- assert.deepEqual([...new Uint8Array(Buffer.from(new Uint8Array([0,42,127,255])))],[0,42,127,255])
+ assert.deepEqual([...new Uint8Array(await proof.arrayBuffer())],[0,42,127,255])
 })
 test("wire rejects invalid tags, nonfinite values, excessive nesting and 20k+ decode nodes",()=>{
  assert.throws(()=>encode(Number.POSITIVE_INFINITY,new FormData()),/Unsupported wire/)
