@@ -25,6 +25,8 @@ test("deep acceptance validates final original redirect and still fails on misma
  assert.ok(qa.includes("const expectedPath=new URL(a.url()).pathname"))
  assert.ok(qa.includes("b.waitForURL(url=>url.pathname===expectedPath"))
  assert.ok(qa.includes("DEEP_PARITY_MISMATCH"))
+ assert.ok(qa.includes("DEEP_PARITY_ALL_MISMATCHES"),"Report all route differences in one run")
+ assert.ok(qa.includes("throw Error('DEEP_PARITY_MISMATCHES"),"Hard fail on any discrepancy")
  assert.ok(qa.includes("fullFunctionalParityVerified:false"))
  assert.ok(qa.includes("mainCutoverAllowed:false"))
 })
