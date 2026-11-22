@@ -20,7 +20,7 @@ for(const file of sourceFiles(source)){
  // literal RPC selectors. No dynamic/caller-provided SQL function strings.
  const selectors=[
   /\.rpc\s*\(\s*["'](upt_[a-z0-9_]+)["']/g,
-  ...(file.endsWith("native-admin-actions.ts")?
+  ...(["native-admin-actions.ts","native-platform-actions.ts"].some(name=>file.endsWith(name))?
    [/\brpc\s*:\s*["'](upt_[a-z0-9_]+)["']/g]:[])
  ]
  for(const selector of selectors)for(const match of content.matchAll(selector)){
