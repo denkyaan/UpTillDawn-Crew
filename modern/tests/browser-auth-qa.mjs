@@ -48,24 +48,35 @@ async function ready(page){
  if(await page.locator('[data-app-error="true"]').count())
   throw Error('ORIGINAL_VIEW_RENDER_FAILED')
 }
-// Never compare against an empty, unhydrated legacy baseline. Keep a single
-// bounded read-only reload for an intermittent Main failure; after repeated
-// baseline failures, stop the test RED rather than hammering a failing Worker.
+// A legacy Main timeout is not evidence of candidate UI parity. Retry only
+// the failing read, with bounded cooling-off time to protect Workers Free.
+// If a fully hydrated original view cannot be read, keep the gate RED.
 let consecutiveLegacyFailures=0
 async function readyBaseline(page){
- try{await ready(page);consecutiveLegacyFailures=0}
- catch(error){
-  baselineRecoveries++
-  console.error('LEGACY_MAIN_READ_RECOVERY '+(error instanceof Error?error.message.split('\n')[0]:'read unavailable'))
-  if(consecutiveLegacyFailures>=1)
-   throw Error('LEGACY_MAIN_BASELINE_UNAVAILABLE_CIRCUIT_OPEN')
+ for(let attempt=0;attempt<3;attempt++){
   try{
-   await page.reload({waitUntil:'domcontentloaded',timeout:17000})
    await ready(page)
    consecutiveLegacyFailures=0
-  }catch{
-   consecutiveLegacyFailures++
-   throw Error('LEGACY_MAIN_BASELINE_UNAVAILABLE_AFTER_ONE_RETRY')
+   return
+  }catch(error){
+   baselineRecoveries++
+   const cause=error instanceof Error?error.message.split('\n')[0]:'read unavailable'
+   console.error('LEGACY_MAIN_READ_RECOVERY attempt='+String(attempt+1)+' '+cause)
+   if(consecutiveLegacyFailures>=1)
+    throw Error('LEGACY_MAIN_BASELINE_UNAVAILABLE_CIRCUIT_OPEN')
+   if(attempt===2){
+    consecutiveLegacyFailures++
+    throw Error('LEGACY_MAIN_BASELINE_UNAVAILABLE_AFTER_BOUNDED_RETRIES')
+   }
+   // Repeated immediate SSR reloads can amplify a Worker resource failure.
+   await new Promise(resolve=>setTimeout(resolve,2000*(attempt+1)))
+   try{
+    const response=await page.reload({waitUntil:'domcontentloaded',timeout:25000})
+    if(response&&response.status()>=500)
+     console.error('LEGACY_MAIN_RELOAD_HTTP_'+response.status())
+   }catch(reloadError){
+    console.error('LEGACY_MAIN_RELOAD_FAILED '+(reloadError instanceof Error?reloadError.name:'unknown'))
+   }
   }
  }
 }
@@ -151,7 +162,8 @@ try{
      observeNotices(a);observeNotices(b)
      b.on('pageerror',error=>errors.push(error.name))
      // Sequential Main SSR requests respect the Free environment's limits.
-     await Promise.all([a.goto(legacy+landing,{waitUntil:'domcontentloaded',timeout:30000}),b.goto(origin+landing,{waitUntil:'domcontentloaded',timeout:20000})]);await readyBaseline(a);await ready(b)
+     await a.goto(legacy+landing,{waitUntil:'domcontentloaded',timeout:30000});await readyBaseline(a)
+     await b.goto(origin+landing,{waitUntil:'domcontentloaded',timeout:20000});await ready(b)
      if(await b.locator('html').getAttribute('lang')!==language)throw Error('QA_LOCALE '+label)
      await compare(a,b,label);await menus(a,b,label)
      if(language==='nl'&&device.name==='desktop'){
@@ -171,9 +183,11 @@ try{
       if(!uid)throw Error('QA_WORKSPACE_IDENTITY_MISSING')
       for(const workspace of ['administration','promotion']){
        for(const [context,host]of [[original,legacy],[candidate,origin]])await context.addCookies([{name:'uptilldawn-last-workspace',value:encodeURIComponent(uid+':'+workspace),url:host,secure:host.startsWith('https:'),sameSite:'Lax'}])
-       await Promise.all([a.goto(legacy+'/',{waitUntil:'domcontentloaded',timeout:30000}),b.goto(origin+'/',{waitUntil:'domcontentloaded',timeout:20000})])
-       await Promise.all([a.waitForURL('**/portals/'+workspace,{timeout:20000}),b.waitForURL('**/portals/'+workspace,{timeout:20000})])
-       await readyBaseline(a);await ready(b);await compare(a,b,label+'-restore-'+workspace);workspaceComparisons++
+       await a.goto(legacy+'/',{waitUntil:'domcontentloaded',timeout:30000})
+       await a.waitForURL('**/portals/'+workspace,{timeout:20000});await readyBaseline(a)
+       await b.goto(origin+'/',{waitUntil:'domcontentloaded',timeout:20000})
+       await b.waitForURL('**/portals/'+workspace,{timeout:20000});await ready(b)
+       await compare(a,b,label+'-restore-'+workspace);workspaceComparisons++
       }
      }
      if(errors.length)throw Error('QA_JS_ERRORS '+label)
@@ -183,7 +197,11 @@ try{
      failures.push({label,reason});console.error('ORIGINAL_SCENARIO_FAILED '+label+' '+reason)
      if(reason==='LEGACY_MAIN_BASELINE_UNAVAILABLE_CIRCUIT_OPEN')
       throw Error('QA_STOPPED_UNHEALTHY_LEGACY_MAIN_NO_FALSE_PARITY')
-    }finally{await candidate.close();await original.close()}
+    }finally{
+     await candidate.close();await original.close()
+     // Do not pile the next role/locale SSR request onto a cooling-off Worker.
+     await new Promise(resolve=>setTimeout(resolve,500))
+    }
    }
   }finally{await login.close()}
  }
