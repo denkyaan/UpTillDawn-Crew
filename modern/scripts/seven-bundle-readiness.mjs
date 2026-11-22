@@ -9,6 +9,7 @@ import {actionEntries,filesBelow,pages} from '../tooling/main-source.mjs'
 import {originalMainRoutes} from '../src/api/main-routes.ts'
 import {verifyOriginalActionRegistry} from '../tooling/action-registry-contract.mjs'
 import {nativeAdminActionIds} from '../src/api/native-admin-actions.ts'
+import {nativeWaveTwoActionIds} from '../src/api/native-platform-actions.ts'
 
 const repo=resolve(import.meta.dirname,'../..')
 const originalPages=filesBelow('app').filter(x=>/\/page\.tsx?$/.test(x))
@@ -73,6 +74,14 @@ if(!legacyBackendDependency)throw Error('Backend dependency inventory changed: r
 if(nativeAdminActionIds.length!==12||!nativeAdminActionIds.every(id=>registered.registeredCount>0&&
  readFileSync(resolve(repo,'lib/migration/original-action-registry.ts'),'utf8').includes('"'+id+'"')))
  throw Error('Native admin action registry drift: original source and action IDs must match')
+if(nativeWaveTwoActionIds.length!==11||!nativeWaveTwoActionIds.every(id=>
+ readFileSync(resolve(repo,'lib/migration/original-action-registry.ts'),'utf8').includes('"'+id+'"')))
+ throw Error('Wave-two original action IDs drifted: refuse unreviewed handlers')
+if(new Set([...nativeAdminActionIds,...nativeWaveTwoActionIds]).size!==23)
+ throw Error('Native action waves overlap or lose a source action')
+if(!workerSource.includes('nativeWaveTwoAllowed(hint)')||
+ !workerSource.includes('nativeWaveTwoActionResponse('))
+ throw Error('Native wave-two Hono dispatcher missing')
 if(env.vars.UPT_MIGRATION_ALLOW_WRITES!=='false')throw Error('Native action wave cannot enable QA writes')
 const workstreams=[
  {id:'ui',description:'Pixel, layout, navigation, every original screen and four locales',
@@ -80,7 +89,7 @@ const workstreams=[
   verified:false,blocker:'Every role/route/mobile/light-dark screen and its visual states require exhaustive live acceptance'},
  {id:'actions',description:'All 163 original event, crew, administrative and financial actions',
   available:{transportMapped:registered.registeredCount,
-   nativeExtractedButDisabled:nativeAdminActionIds.length,nativeAuthorizedWritePaths:0},
+   nativeExtractedButDisabled:nativeAdminActionIds.length+nativeWaveTwoActionIds.length,nativeAuthorizedWritePaths:0},
   verified:false,blocker:'Positive, denied, rollback and audit cases are not yet accepted for every action'},
  {id:'authorization',description:'Role hierarchy, Maker, approval, multi-role, login and recovery',
   available:{signedQAIdentityTypes:7},
