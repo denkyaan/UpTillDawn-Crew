@@ -1,7 +1,6 @@
 import {useEffect,useState,type ReactNode} from 'react'
 import {Navigate} from 'react-router-dom'
 import {createClient} from '../compat/crew-client'
-import Loading from 'main-source/app/(app)/loading.tsx'
 
 // The original incidents source page redirects a non-admin to /events when
 // there is no active event, or when neither an active shift nor current work
