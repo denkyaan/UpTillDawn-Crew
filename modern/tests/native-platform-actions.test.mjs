@@ -114,7 +114,7 @@ test("CSV, JSON and forged multipart requests cannot bypass original CSRF/sessio
   [post(id,fields,{site:"cross-site"}),403],
   [post(id,fields,{actualId:action(cases[1][0])}),404],
   [post(id,fields,{args:[]}),400],
-  [post(id,fields,{payload:"{"foo":"}),400]
+  [post(id,fields,{payload:`{"foo":`}),400],
  ]){
   const f=fixture()
   const out=await nativeWaveTwoActionResponse(req,f.db,id)
