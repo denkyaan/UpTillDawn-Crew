@@ -26,7 +26,7 @@ const remote=process.env.E2E_MAIN_MODERN_QA_ORIGIN||''
 if(remote&&remote!==approvedRemote)throw Error('EXACT_MODERN_MAIN_QA_ORIGIN_REQUIRED')
 const origin=remote||'http://127.0.0.1:4176',root=resolve(import.meta.dirname,'../..')
 const preview=remote?null:spawn(process.execPath,[resolve(root,'modern/node_modules/vite/bin/vite.js'),'preview','--host','127.0.0.1','--port','4176','--strictPort'],{cwd:resolve(root,'modern'),stdio:'ignore'})
-let browser,signins=0,total=0,menuComparisons=0,workspaceComparisons=0,baselineRecoveries=0
+let browser,signins=0,total=0,menuComparisons=0,workspaceComparisons=0,baselineRecoveries=0,nativeReadComparisons=0
 const failures=[]
 const notificationReads=new WeakMap()
 function observeNotices(page){
@@ -176,6 +176,33 @@ try{
       await compare(a,b,label+'-maker-denied')
      }
      if(label==='head_admin-nl-desktop'){
+      // Two migrated READ endpoints must match the real authenticated Main,
+      // including session-cookie handling and empty/error outcomes. Never
+      // write business data or relax a response mismatch into a pass.
+      const sourcePush=await original.request.get(legacy+'/api/push/config')
+      const modernPush=await candidate.request.get(origin+'/api/push/config')
+      const sourcePushBody=await sourcePush.json(),modernPushBody=await modernPush.json()
+      if(sourcePush.status()!==modernPush.status()||
+         JSON.stringify(sourcePushBody)!==JSON.stringify(modernPushBody))
+       throw Error('QA_NATIVE_PUSH_CONFIG_PARITY')
+      nativeReadComparisons++
+      // The original portal-preference DTO reads an allowlisted cookie after
+      // authentication. Preserve the exact result on the lighter Worker.
+      for(const [context,host] of [[original,legacy],[candidate,origin]])
+       await context.addCookies([{name:'uptilldawn-last-portal',value:'promotion',url:host,secure:true,sameSite:'Lax'}])
+      const sourcePreference=await original.request.post(legacy+'/api/migration/view-data',{
+       data:{id:'portal-preference',args:[]},headers:{Origin:legacy}
+      })
+      const modernPreference=await candidate.request.post(origin+'/api/migration/view-data',{
+       data:{id:'portal-preference',args:[]},headers:{Origin:origin}
+      })
+      const sourcePreferenceBody=await sourcePreference.json(),modernPreferenceBody=await modernPreference.json()
+      if(sourcePreference.status()!==200||
+         sourcePreference.status()!==modernPreference.status()||
+         JSON.stringify(sourcePreferenceBody)!==JSON.stringify(modernPreferenceBody)||
+         sourcePreferenceBody?.value?.lastPortal!=='promotion')
+       throw Error('QA_NATIVE_PORTAL_PREFERENCE_PARITY')
+      nativeReadComparisons++
       // The account ID selects a non-authoritative preference only. Both
       // apps independently verify the session and actual portal access.
       const reader=createServerClient(qa.origin,key,{cookies:{getAll:()=>state.cookies,setAll:()=>{}}})
@@ -207,6 +234,7 @@ try{
  }
  if(failures.length){console.error('ORIGINAL_COMPARISON_FAILURES '+JSON.stringify(failures));throw Error('QA_ORIGINAL_COMPARISONS_FAILED '+failures.length)}
  if(workspaceComparisons!==2)throw Error('QA_WORKSPACE_RESTORATION_INCOMPLETE')
+ if(nativeReadComparisons!==2)throw Error('QA_NATIVE_SOURCE_READ_COVERAGE_INCOMPLETE')
  if(signins!==7||total!==56)throw Error('QA_INCOMPLETE_COVERAGE')
- console.log(JSON.stringify({validated:true,qaBots:7,actualBotSignins:signins,authenticatedBrowserScenarios:total,originalMainControlComparisons:total,expandedMenuComparisons:menuComparisons,workspaceRestorationComparisons:workspaceComparisons,legacyMainReadRecoveries:baselineRecoveries,legacyMainRuntimeHealthy:baselineRecoveries===0,locales:4,deviceProfiles:2,formsSubmitted:false,fullVisualParityVerified:false,productionReady:false}))
+ console.log(JSON.stringify({validated:true,qaBots:7,actualBotSignins:signins,authenticatedBrowserScenarios:total,originalMainControlComparisons:total,expandedMenuComparisons:menuComparisons,workspaceRestorationComparisons:workspaceComparisons,nativeSourceReadComparisons:nativeReadComparisons,legacyMainReadRecoveries:baselineRecoveries,legacyMainRuntimeHealthy:baselineRecoveries===0,locales:4,deviceProfiles:2,formsSubmitted:false,fullVisualParityVerified:false,productionReady:false}))
 }finally{if(browser)await browser.close();preview?.kill('SIGTERM')}

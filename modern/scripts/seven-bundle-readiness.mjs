@@ -22,6 +22,14 @@ if(env.vars.UPT_MIGRATION_ALLOW_WRITES!=='false'||env.vars.UPT_MIGRATION_SCANNIN
 const originalSourceCount=originalPages.filter(x=>pages.includes(x)).length
 const legacyMainServiceBindings=env.services.filter(x=>x.service==='uptilldawn-main')
 const legacyBackendDependency=legacyMainServiceBindings.length>0
+const workerSource=readFileSync(resolve(repo,'modern/src/api/worker.ts'),'utf8')
+const migratedOriginalReads=[
+ '/api/push/config',
+ '/api/migration/view-data#portal-preference',
+]
+if(!workerSource.includes('app.get("/api/push/config"')||
+   !workerSource.includes('app.post("/api/migration/view-data"'))
+ throw Error('Native Main source-read route contract changed')
 // The candidate's upstream Main service would refer to ITSELF if renamed to
 // uptilldawn-main. Cutover must first extract all original server handlers
 // into a separate, non-recursive backend or replace them with native Hono
@@ -38,14 +46,14 @@ const workstreams=[
   available:{signedQAIdentityTypes:7},
   verified:false,blocker:'Complete signup, recovery, role/RLS matrix and signed Maker workflows have not been accepted'},
  {id:'integrations',description:'EventPay, Weeztix, SumUp, Documenso, banking and Peppol',
-  available:{originalApiRoutes:originalMainRoutes.length},
+  available:{originalApiRoutes:originalMainRoutes.length,nativeReadHandlers:migratedOriginalReads.length},
   verified:false,blocker:'Provider onboarding/sandbox callbacks, payment, scanning and real read/write parity remain unverified'},
  {id:'offline',description:'PWA, chat, location/time and offline replay without overload',
   available:{originalSourceRetained:true},
   verified:false,blocker:'Disconnected use, replay, sync conflicts, four locales and Free-tier load validation remain'},
  {id:'e2e',description:'All original pages, API methods, server actions and device journeys',
   available:{originalPages:originalPages.length,originalApis:originalApis.length,originalActions:originalActions.length},
-  verified:false,blocker:'22 representative read-only routes do not prove complete 101-page/64-API/163-action coverage'},
+  verified:false,blocker:'44 authenticated read-only routes and 56 role/locale/device checks do not prove complete 101-page/64-API/163-action coverage'},
  {id:'cutover',description:'Atomic existing Main URL switch, rollback and post-switch verification',
   available:{mainQACandidate:'uptilldawn-modern-main',existingMain:'uptilldawn-main'},
   verified:false,blocker:'All six acceptance domains, non-recursive native backend extraction, and isolated rollback rehearsal must pass first'}
