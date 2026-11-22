@@ -3,18 +3,19 @@ import assert from "node:assert/strict"
 import {readFileSync} from "node:fs"
 import {createHash} from "node:crypto"
 
-// Exact existing Main login markup and behavior is the baseline.
-// Changing these files requires an explicit user-approved visual/behavior change,
-// never an incidental runtime migration edit.
+// Protect Main login source and behavior against incidental runtime migration edits.
+// Two source files were deliberately rebaselined for the user's explicit
+// 2026-11-22 request: fixed, entirely black, non-scrollable portal chooser.
+// All other original login screens, components and original logo remain pinned.
 const baseline = {
  "components/auth/login-form.tsx":"f200bec9bb2928f0a412a9f9d494af2bb40614bb",
- "app/(auth)/login/page.tsx":"f51da94a140c71889bfc9b1e7ff5df31b8f099a8",
+ "app/(auth)/login/page.tsx":"28cc96ab2b86bf123e738ab6d321a01cfaec7df0",
  "app/(auth)/login/[portal]/page.tsx":"1778597f285f0f1b43bdecc6ba6454b6e9bd359b",
  "app/(auth)/login/admin/page.tsx":"ae74ccca116a733cc2a969c280fc587d4f9b1d7a",
  "app/(auth)/login/administration/page.tsx":"34e789cc0cf5b4a1224a27c55e271c3d8e9dc66d",
  "app/(auth)/login/promotion/page.tsx":"6ee0b183db83ca3a52cf796e3d5b38c887bcf3a0",
  "components/language-switcher.tsx":"8818bd8ba7dc5b1308624708b740259872e5c5b8",
- "app/(auth)/layout.tsx":"b85bd20fb85724914458c5ea8dbcf1f28b7ce64f",
+ "app/(auth)/layout.tsx":"b6dd3aa5a3df6a3a0be73bf2143842f13f2caa11",
  "public/uptilldawn-logo.jpeg":"0370c44285b7ba047397a481ecb29fb2f925a328"
 }
 const read=path=>readFileSync(path,"utf8")
@@ -22,10 +23,39 @@ function gitBlobSha(path){
  const bytes=readFileSync(path)
  return createHash("sha1").update(Buffer.from("blob "+bytes.length+"\0")).update(bytes).digest("hex")
 }
-test("every existing Main login source and original logo remains byte-for-byte unchanged",()=>{
+test("approved Main login source and original logo stay byte-for-byte pinned",()=>{
  for(const [path,expected] of Object.entries(baseline))
   assert.equal(gitBlobSha(path),expected,"Unauthorized login UI or behavior change: "+path)
 })
+test("explicit user-approved portal chooser is fixed full black without changing other auth views",()=>{
+ const chooser=read("app/(auth)/login/page.tsx")
+ const layout=read("app/(auth)/layout.tsx")
+ const css=read("app/globals.css")
+ assert.ok(chooser.includes('data-portal-chooser="true"'))
+ assert.ok(chooser.includes('className="portal-selection-screen'))
+ assert.ok(chooser.includes('portal-selection-logo'))
+ assert.ok(chooser.includes('portal-selection-links'))
+ assert.ok(chooser.includes('portal-selection-card'))
+ assert.ok(layout.includes('className="auth-layout '))
+ assert.ok(layout.includes('className="auth-layout-content '))
+ for(const contract of [
+  "html:has(.portal-selection-screen)",
+  "body:has(.portal-selection-screen)",
+  ".auth-layout:has(.portal-selection-screen)",
+  ".auth-layout-content:has(.portal-selection-screen)",
+  ".auth-layout:has(.portal-selection-screen) > footer",
+  "height: 100dvh;",
+  "position: fixed;",
+  "overflow: hidden;",
+  "background: #000;",
+  "env(safe-area-inset-top)",
+  "env(safe-area-inset-bottom)"
+ ])assert.ok(css.includes(contract),"Missing scoped non-scroll layout: "+contract)
+ // Other login portals must never inherit the viewport lock or lose footer.
+ assert.ok(!read("components/auth/login-form.tsx").includes("portal-selection-screen"))
+ assert.ok(!read("app/(auth)/login/[portal]/page.tsx").includes("portal-selection-screen"))
+})
+
 test("original five login portals, menu, language, recovery and show-password remain present",()=>{
  const login=read("components/auth/login-form.tsx"),chooser=read("app/(auth)/login/page.tsx")
  for(const name of ["staff","responsible","admin","promotion","administration"])
