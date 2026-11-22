@@ -5,9 +5,10 @@ import {readFileSync} from "node:fs"
 const file=p=>readFileSync(p,"utf8")
 const metadata=JSON.parse(file("modern/scripts/rpc-reference.json"))
 test("all candidate RPCs are review-allowlisted without live credentials",()=>{
- assert.equal(metadata.requiredPublicRpcNames.length,44)
+ assert.equal(metadata.requiredPublicRpcNames.length,45)
+ assert.ok(metadata.requiredPublicRpcNames.includes('upt_current_work_context'), 'Original signed incident access RPC must be explicitly reviewed')
  const out=JSON.parse(execFileSync(process.execPath,["modern/scripts/rpc-contract.mjs"],{encoding:"utf8"}))
- assert.equal(out.sourceRpcCount,44)
+ assert.equal(out.sourceRpcCount,45)
  assert.deepEqual(out.unreviewedRpc,[])
  assert.deepEqual(out.noLongerReferenced,[])
  assert.equal(out.liveDatabaseVerifiedInCi,false)
