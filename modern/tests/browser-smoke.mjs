@@ -82,6 +82,57 @@ try{
       throw Error(device.name+"/"+language+" portal chooser still scrolls")
     await page.locator('a[href="/login/staff"]').click()
     await page.locator('input[name="email"]').waitFor({timeout:10000})
+    // Portal selection AND every role form must be a black fixed viewport.
+    // No login, credentials or network mutations: anonymous GET only.
+    async function assertFixedPortalForm(route){
+      await page.locator('[data-auth-portal="true"]').waitFor()
+      const state=await page.evaluate(()=>{
+        const root=document.querySelector('.auth-layout')
+        const screen=document.querySelector('[data-auth-portal="true"]')
+        const form=screen?.querySelector('form')
+        const controls=[
+          screen?.querySelector('input[name="email"]'),
+          screen?.querySelector('input[name="password"]'),
+          screen?.querySelector('button[type="submit"]'),
+          screen?.querySelector('a[href="/forgot-password"]'),
+          screen?.querySelector('a[href="/signup"]'),
+          screen?.querySelector('select')
+        ]
+        const height=window.innerHeight,width=window.innerWidth
+        return {
+          height,
+          layoutHeight:root?.getBoundingClientRect().height,
+          background:[document.documentElement,document.body,root,screen]
+            .map(el=>el?getComputedStyle(el).backgroundColor:null),
+          footerVisible:[...document.querySelectorAll('.auth-layout > footer')]
+            .some(el=>getComputedStyle(el).display!=='none'),
+          scrollable:Math.max(document.documentElement.scrollHeight,document.body.scrollHeight)>height+1,
+          formExists:!!form,
+          allControlsVisible:controls.every(el=>{
+            if(!el)return false
+            const r=el.getBoundingClientRect()
+            return r.width>0&&r.height>0&&r.top>=-1&&r.left>=-1&&
+              r.bottom<=height+1&&r.right<=width+1
+          })
+        }
+      })
+      if(state.background.some(value=>value!=="rgb(0, 0, 0)")||
+         state.footerVisible||state.scrollable||!state.formExists||
+         !state.allControlsVisible||Math.abs(state.layoutHeight-state.height)>1)
+        throw Error("PORTAL_LOGIN_NOT_FIXED_BLACK "+device.name+"/"+language+route+" "+JSON.stringify(state))
+      await page.evaluate(()=>window.scrollTo(0,350))
+      if(await page.evaluate(()=>window.scrollY)!==0)
+        throw Error("PORTAL_LOGIN_SCROLLS "+device.name+"/"+language+route)
+    }
+    await assertFixedPortalForm("/login/staff")
+    if(language==="nl"){
+      for(const portal of ["responsible","promotion","admin","administration"]){
+        await page.goto(origin+"/login/"+portal,{waitUntil:"domcontentloaded",timeout:15000})
+        await assertFixedPortalForm("/login/"+portal)
+      }
+      await page.goto(origin+"/login/staff",{waitUntil:"domcontentloaded",timeout:15000})
+      await page.locator('input[name="email"]').waitFor({timeout:10000})
+    }
     await page.locator('select').selectOption(language)
     await page.waitForFunction(lang=>document.documentElement.lang===lang,language)
     await page.locator('input[type="password"]').waitFor({timeout:10000})
