@@ -52,7 +52,7 @@ test("original finance CSV is byte-for-byte preserved: BOM, semicolons, CRLF and
  assert.equal(r.headers.get("content-disposition"),'attachment; filename="invoice-reconciliation-summary.csv"')
  assert.equal(r.headers.get("cache-control"),"private, no-store")
  assert.equal(r.headers.get("x-content-type-options"),"nosniff")
- assert.equal(await r.text(),financeCsv([["status","invoice_count"],["unpaid","1"],["partial","0"],["settled","5"],["overpaid","2"]]))
+ assert.equal(Buffer.from(await r.arrayBuffer()).toString("utf8"),financeCsv([["status","invoice_count"],["unpaid","1"],["partial","0"],["settled","5"],["overpaid","2"]]))
  assert.deepEqual(x.calls,["upt_can_manage_administration","upt_administration_finance_summary"])
 })
 test("original ticket CSV retains sorted event aggregation, unique sources and integer cents",async()=>{
@@ -60,7 +60,7 @@ test("original ticket CSV retains sorted event aggregation, unique sources and i
  const r=await administrationCsvResponse(x.db,"tickets")
  assert.equal(r.status,200)
  assert.equal(r.headers.get("content-disposition"),'attachment; filename="ticket-event-summary.csv"')
- assert.equal(await r.text(),financeCsv([
+ assert.equal(Buffer.from(await r.arrayBuffer()).toString("utf8"),financeCsv([
   ["event_id","source_count","sale_rows","quantity","gross_cents"],
   [one,"1","1","3","100"],
   [two,"2","5","9","750"]
