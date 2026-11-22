@@ -219,6 +219,27 @@ try{
         throw Error('QA_NATIVE_ADMIN_EXPORT_PARITY '+path)
        nativeReadComparisons++
       }
+      // Extended native read migration: signed original-versus-Hono source
+      // comparison for every new backend route. Payroll uses a valid event
+      // UUID; if no approved snapshot exists both must return the same
+      // original refusal rather than fabricate rows.
+      for(const [path,positive] of [
+       ['/api/administration/ticketing/export',true],
+       ['/api/administration/payroll/export?event=00000000-0000-0000-0000-000000000001',false],
+       ['/api/administration/provider-mappings',true],
+       ['/api/administration/provider-transactions',true]
+      ]){
+       const source=await original.request.get(legacy+path)
+       const native=await candidate.request.get(origin+path)
+       if(source.status()>=500||native.status()>=500||
+          (positive&&source.status()!==200)||
+          source.status()!==native.status()||
+          source.headers()['content-type']!==native.headers()['content-type']||
+          source.headers()['content-disposition']!==native.headers()['content-disposition']||
+          !Buffer.from(await source.body()).equals(Buffer.from(await native.body())))
+        throw Error('QA_NATIVE_ADMIN_READ_PARITY '+path.split('?')[0])
+       nativeReadComparisons++
+      }
       // The account ID selects a non-authoritative preference only. Both
       // apps independently verify the session and actual portal access.
       const reader=createServerClient(qa.origin,key,{cookies:{getAll:()=>state.cookies,setAll:()=>{}}})
@@ -250,7 +271,7 @@ try{
  }
  if(failures.length){console.error('ORIGINAL_COMPARISON_FAILURES '+JSON.stringify(failures));throw Error('QA_ORIGINAL_COMPARISONS_FAILED '+failures.length)}
  if(workspaceComparisons!==2)throw Error('QA_WORKSPACE_RESTORATION_INCOMPLETE')
- if(nativeReadComparisons!==4)throw Error('QA_NATIVE_SOURCE_READ_COVERAGE_INCOMPLETE')
+ if(nativeReadComparisons!==8)throw Error('QA_NATIVE_SOURCE_READ_COVERAGE_INCOMPLETE')
  if(signins!==7||total!==56)throw Error('QA_INCOMPLETE_COVERAGE')
  console.log(JSON.stringify({validated:true,qaBots:7,actualBotSignins:signins,authenticatedBrowserScenarios:total,originalMainControlComparisons:total,expandedMenuComparisons:menuComparisons,workspaceRestorationComparisons:workspaceComparisons,nativeSourceReadComparisons:nativeReadComparisons,legacyMainReadRecoveries:baselineRecoveries,legacyMainRuntimeHealthy:baselineRecoveries===0,locales:4,deviceProfiles:2,formsSubmitted:false,fullVisualParityVerified:false,productionReady:false}))
 }finally{if(browser)await browser.close();preview?.kill('SIGTERM')}
