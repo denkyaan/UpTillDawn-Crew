@@ -508,7 +508,10 @@ jobs:
             else
               echo 'qa_eligible=false' >> "$GITHUB_OUTPUT"
             fi
-            if [[ "$commit_message" == *'[modern-main-full-qa]'* ]]; then
+            # Only a deliberate leading subject token may start full parity.
+            # A token mentioned in the squash body is documentation, not intent.
+            IFS= read -r commit_subject <<< "$commit_message"
+            if [[ "$commit_subject" == '[modern-main-full-qa]' || "$commit_subject" == '[modern-main-full-qa] '* ]]; then
               echo 'modern_qa_eligible=true' >> "$GITHUB_OUTPUT"
               echo 'Explicit full modern Main-QA marker found; run strict parity acceptance after publishing.'
             else
