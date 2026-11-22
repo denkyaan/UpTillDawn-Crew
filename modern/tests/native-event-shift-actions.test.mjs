@@ -122,7 +122,7 @@ test("malformed, unapproved, forged-origin and spoofed signed action IDs fail cl
   [post(key,fields,{site:"cross-site"}),403],
   [post(key,fields,{actualId:id(cases[1][0])}),404],
   [post(key,fields,{args:[]}),400],
-  [post(key,fields,{raw:"{""}),400]
+  [post(key,fields,{raw:"{"}),400]
  ]){
   const f=fixture()
   const response=await nativeWaveThreeActionResponse(req,f.db,key)
