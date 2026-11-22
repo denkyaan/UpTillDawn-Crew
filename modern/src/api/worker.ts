@@ -1,6 +1,7 @@
 import {Hono} from "hono"
 import {forwardMainSource,originalApiAllowed} from "./main-source.ts"
 import {sourceReadSession,attachSourceCookies,pushConfigResponse,portalPreferenceResponse} from "./native-main-reads.ts"
+import {administrationCsvResponse,type AdminExportDb} from "./native-administration-exports.ts"
 import {createClient} from "@supabase/supabase-js"
 import {isActive,parseIdentity} from "../shared/identity.ts"
 import {sanitizedMakerRoute,sanitizedMakerName,sanitizedMakerSeverity} from "./god-redaction.ts"
@@ -39,6 +40,21 @@ app.get("/api/push/config",async c=>{
  if(!actor.ok)return c.json({error:actor.status===401?"Aanmelden vereist.":"Push is nog niet geconfigureerd."},actor.status)
  return attachSourceCookies(await pushConfigResponse(actor.db),actor)
 })
+
+// Read-only finance exports use the exact original validators and CSV
+// serializer. No Next/SSR or original Main service binding in these paths.
+// Signed RLS and upt_can_manage_administration are checked on EVERY GET.
+for(const [path,kind] of [
+ ["/api/administration/finance/summary/export","finance"],
+ ["/api/administration/ticketing/event-summary","tickets"]
+] as const){
+ app.get(path,async c=>{
+  const actor=await sourceReadSession(c.req.raw,c.env)
+  if(!actor.ok)return c.json({error:"forbidden"},actor.status)
+  return attachSourceCookies(await administrationCsvResponse(
+   actor.db as unknown as AdminExportDb,kind),actor)
+ })
+}
 
 // The source uses POST for this read DTO. Only the strictly recognized
 // preference query migrates here; all other IDs stay on original Main until
