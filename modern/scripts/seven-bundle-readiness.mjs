@@ -32,6 +32,13 @@ const migratedOriginalReads=[
  '/api/administration/payroll/export',
  '/api/administration/provider-mappings',
  '/api/administration/provider-transactions',
+ '/api/migration/view-data#god-session-rpc',
+ '/api/god/automation-rules',
+ '/api/god/preview-role',
+ '/api/god/rules',
+ '/api/god/data',
+ '/api/god/error-reports',
+ '/api/error-reports',
 ]
 if(!workerSource.includes('app.get("/api/push/config"')||
    !workerSource.includes('app.post("/api/migration/view-data"')||
@@ -41,9 +48,22 @@ if(!workerSource.includes('app.get("/api/push/config"')||
    !workerSource.includes('"/api/administration/payroll/export"')||
    !workerSource.includes('"/api/administration/provider-mappings"')||
    !workerSource.includes('"/api/administration/provider-transactions"')||
+   !workerSource.includes('"/api/god/automation-rules"')||
+   !workerSource.includes('"/api/god/preview-role"')||
+   !workerSource.includes('"/api/god/rules"')||
+   !workerSource.includes('"/api/god/data"')||
+   !workerSource.includes('"/api/god/error-reports"')||
+   !workerSource.includes('"/api/error-reports"')||
+   !workerSource.includes('godSourceReadResponse(')||
    !workerSource.includes('administrationReportResponse(')||
    !workerSource.includes('administrationCsvResponse('))
  throw Error('Native Main source-read route contract changed')
+// Internal one-hop rejection stops runaway accidental recursion, but DOES NOT
+// make the original Main service independently available at cutover: every
+// remaining server action still requires an actual separate backend.
+if(!workerSource.includes('main_backend_recursion_blocked')||
+   !readFileSync(resolve(repo,'modern/src/api/main-source.ts'),'utf8').includes('X-UpTillDawn-Main-Bridge'))
+ throw Error('Main backend recursion guard missing')
 // The candidate's upstream Main service would refer to ITSELF if renamed to
 // uptilldawn-main. Cutover must first extract all original server handlers
 // into a separate, non-recursive backend or replace them with native Hono
