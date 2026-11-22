@@ -8,6 +8,7 @@ import {resolve} from 'node:path'
 import {actionEntries,filesBelow,pages} from '../tooling/main-source.mjs'
 import {originalMainRoutes} from '../src/api/main-routes.ts'
 import {verifyOriginalActionRegistry} from '../tooling/action-registry-contract.mjs'
+import {nativeAdminActionIds} from '../src/api/native-admin-actions.ts'
 
 const repo=resolve(import.meta.dirname,'../..')
 const originalPages=filesBelow('app').filter(x=>/\/page\.tsx?$/.test(x))
@@ -69,12 +70,17 @@ if(!workerSource.includes('main_backend_recursion_blocked')||
 // into a separate, non-recursive backend or replace them with native Hono
 // handlers without changing the RLS/authorization contract.
 if(!legacyBackendDependency)throw Error('Backend dependency inventory changed: review cutover topology')
+if(nativeAdminActionIds.length!==12||!nativeAdminActionIds.every(id=>registered.registeredCount>0&&
+ readFileSync(resolve(repo,'lib/migration/original-action-registry.ts'),'utf8').includes('"'+id+'"')))
+ throw Error('Native admin action registry drift: original source and action IDs must match')
+if(env.vars.UPT_MIGRATION_ALLOW_WRITES!=='false')throw Error('Native action wave cannot enable QA writes')
 const workstreams=[
  {id:'ui',description:'Pixel, layout, navigation, every original screen and four locales',
   available:{originalPages:originalPages.length,sourceReused:originalSourceCount},
   verified:false,blocker:'Every role/route/mobile/light-dark screen and its visual states require exhaustive live acceptance'},
  {id:'actions',description:'All 163 original event, crew, administrative and financial actions',
-  available:{transportMapped:registered.registeredCount},
+  available:{transportMapped:registered.registeredCount,
+   nativeExtractedButDisabled:nativeAdminActionIds.length,nativeAuthorizedWritePaths:0},
   verified:false,blocker:'Positive, denied, rollback and audit cases are not yet accepted for every action'},
  {id:'authorization',description:'Role hierarchy, Maker, approval, multi-role, login and recovery',
   available:{signedQAIdentityTypes:7},

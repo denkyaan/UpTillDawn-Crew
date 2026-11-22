@@ -16,7 +16,14 @@ function sourceFiles(directory){
 const found=new Map()
 for(const file of sourceFiles(source)){
  const content=readFileSync(file,"utf8")
- for(const match of content.matchAll(/\.rpc\s*\(\s*["'](upt_[a-z0-9_]+)["']/g)){
+ // Only the vetted static native admin action table is allowed to add
+ // literal RPC selectors. No dynamic/caller-provided SQL function strings.
+ const selectors=[
+  /\.rpc\s*\(\s*["'](upt_[a-z0-9_]+)["']/g,
+  ...(file.endsWith("native-admin-actions.ts")?
+   [/\brpc\s*:\s*["'](upt_[a-z0-9_]+)["']/g]:[])
+ ]
+ for(const selector of selectors)for(const match of content.matchAll(selector)){
   const list=found.get(match[1])||[]
   list.push(file.slice(source.length+1))
   found.set(match[1],list)
