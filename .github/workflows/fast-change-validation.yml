@@ -79,7 +79,7 @@ jobs:
       # Every PR can affect the shared original-source Vite runtime (including
       # fixes outside migration/*). Catch syntax/type errors BEFORE merging to
       # Main, not after the original Main Worker is already deployed. This
-      # does not run on Main pushes and adds no expensive browser/build stages.
+      # does not run on Main pushes or add any expensive browser stages.
       - name: Fast isolated modern TypeScript safety check on pull requests
         if: ${{ github.event_name == 'pull_request' }}
         shell: bash
@@ -87,6 +87,12 @@ jobs:
           set -euo pipefail
           npm --prefix modern install --prefer-offline --no-audit --no-fund
           npm --prefix modern run check
+          # Always enforce the REAL candidate gzip budget on PRs that share
+          # original Main CSS/auth/components. Previously non-migration PRs
+          # passed while the post-merge modern deploy failed by just 32 bytes.
+          # Vite builds locally on this GitHub runner, never on Workers Free.
+          npm --prefix modern run build
+          npm --prefix modern run budget
           # The lightweight action/API/authorization contracts must be green
           # BEFORE merging. Previously Main CI was green while the post-merge
           # modern QA Worker failed its own tests.
