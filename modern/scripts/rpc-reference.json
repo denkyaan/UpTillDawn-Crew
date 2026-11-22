@@ -37,6 +37,7 @@
     "upt_guestlist_set_backstage_workplace",
     "upt_guestlist_update_entry",
     "upt_integration_credentials",
+    "upt_is_admin",
     "upt_is_approved",
     "upt_lock_timesheet",
     "upt_mark_chat_read",
