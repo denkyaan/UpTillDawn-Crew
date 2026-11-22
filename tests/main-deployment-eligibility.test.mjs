@@ -21,6 +21,10 @@ for(const scenario of [
  {name:'mention of modern QA marker in subject must not authorize long QA',sha:current,result:'success',eligible:'true',modernQa:'false',commitMessage:'fix(ci): prevent accidental [modern-main-full-qa] trigger',exit:0},
  {name:'mention of modern QA marker in merge body must not authorize long QA',sha:current,result:'success',eligible:'true',modernQa:'false',commitMessage:'ci(main): keep automatic deploy fast and require explicit full modern QA (#419)\n\nKeep strict acceptance only on a [modern-main-full-qa] commit; normal Main remains fast',exit:0},
  {name:'exact isolated QA prefix authorizes full parity',sha:current,result:'success',eligible:'true',modernQa:'true',commitMessage:'[modern-main-full-qa]',exit:0},
+ {name:'dedicated signed QA prefix alone requests narrow HTTP acceptance',sha:current,result:'success',eligible:'true',nativeQa:'true',commitMessage:'[native-admin-http-qa] test(main): safe signed QA',exit:0},
+ {name:'exact signed QA marker without a suffix authorizes narrow acceptance',sha:current,result:'success',eligible:'true',nativeQa:'true',commitMessage:'[native-admin-http-qa]',exit:0},
+ {name:'marker mentioned later in subject cannot authorize signed QA',sha:current,result:'success',eligible:'true',nativeQa:'false',commitMessage:'fix(main): mention [native-admin-http-qa] but no opt-in',exit:0},
+ {name:'marker mentioned in merge body cannot authorize signed QA',sha:current,result:'success',eligible:'true',nativeQa:'false',commitMessage:'ci(main): default safe\n\nExample opt-in marker [native-admin-http-qa] only',exit:0},
  {name:'superseded success is skipped',sha:older,result:'success',eligible:'false',exit:0},
  {name:'superseded cancellation is skipped',sha:older,result:'cancelled',eligible:'false',exit:0},
  {name:'superseded failure is skipped',sha:older,result:'failure',eligible:'false',exit:0},
@@ -37,7 +41,7 @@ for(const scenario of [
   const result=spawnSync('/bin/bash',['-euo','pipefail','-c',run],{encoding:'utf8',env:{...process.env,PATH:dir+':'+process.env.PATH,REPO:'test/repository',CURRENT_MAIN_SHA:current,CURRENT_MAIN_COMMIT_MESSAGE:scenario.commitMessage??'',SOURCE_SHA:scenario.sha,SOURCE_RESULT:scenario.result,SOURCE_EVENT:scenario.event??'push',SOURCE_BRANCH:scenario.branch??'main',GITHUB_OUTPUT:output}})
   assert.ifError(result.error)
   assert.equal(result.status,scenario.exit,result.stdout+result.stderr)
-  const expected='eligible='+scenario.eligible+(scenario.eligible==='true'?'\nqa_eligible='+(scenario.qa??'false')+'\nmodern_qa_eligible='+(scenario.modernQa??'false'):'')
+  const expected='eligible='+scenario.eligible+(scenario.eligible==='true'?'\nqa_eligible='+(scenario.qa??'false')+'\nnative_admin_qa_eligible='+(scenario.nativeQa??'false')+'\nmodern_qa_eligible='+(scenario.modernQa??'false'):'')
   assert.equal(readFileSync(output,'utf8').trim(),expected)
  }finally{rmSync(dir,{recursive:true,force:true})}
 })
