@@ -130,7 +130,7 @@ export function LoginForm({
   }
 
   return (
-    <main className="min-h-screen bg-black text-white relative overflow-hidden">
+    <main data-auth-portal="true" className="auth-portal-screen min-h-screen bg-black text-white relative overflow-hidden">
       <button
         type="button"
         aria-label="Open inlogmenu"
@@ -142,7 +142,7 @@ export function LoginForm({
       </button>
 
       {menuOpen && (
-        <div className="fixed left-5 top-20 z-50 w-64 rounded-2xl border border-white/15 bg-zinc-950/95 p-2 shadow-2xl backdrop-blur-xl">
+        <div className="auth-portal-menu fixed left-5 top-20 z-50 w-64 rounded-2xl border border-white/15 bg-zinc-950/95 p-2 shadow-2xl backdrop-blur-xl">
           <p className="px-4 py-2 text-xs font-semibold uppercase tracking-wide text-zinc-400">Evenementen</p>
           {(['staff', 'responsible'] as const).map(key => {
             const Icon = portals[key].icon
@@ -158,13 +158,13 @@ export function LoginForm({
         </div>
       )}
 
-      <div className="mx-auto flex min-h-screen w-full max-w-lg flex-col items-center px-6 pb-10 pt-20 sm:pt-12">
-        <div className="flex min-h-[260px] w-full items-center justify-center sm:min-h-[330px]">
-          <Image src="/uptilldawn-logo.jpeg" alt="Up Till Dawn personeel" width={500} height={320} priority className="max-h-[320px] w-full max-w-[500px] object-contain" />
+      <div className="auth-portal-content mx-auto flex min-h-screen w-full max-w-lg flex-col items-center px-6 pb-10 pt-20 sm:pt-12">
+        <div className="auth-portal-logo-frame flex min-h-[260px] w-full items-center justify-center sm:min-h-[330px]">
+          <Image src="/uptilldawn-logo.jpeg" alt="Up Till Dawn personeel" width={500} height={320} priority className="auth-portal-logo max-h-[320px] w-full max-w-[500px] object-contain" />
         </div>
 
-        <section className="w-full rounded-3xl border border-white/15 bg-zinc-950 p-6 shadow-2xl sm:p-8">
-          <div className="mb-7 text-center">
+        <section className="auth-portal-card w-full rounded-3xl border border-white/15 bg-zinc-950 p-6 shadow-2xl sm:p-8">
+          <div className="auth-portal-heading mb-7 text-center">
             <div className="mx-auto mb-3 flex h-11 w-11 items-center justify-center rounded-full border border-white/15 bg-white/5">
               <PortalIcon className="h-5 w-5" />
             </div>
@@ -208,11 +208,11 @@ export function LoginForm({
             </button>
           </form>
 
-          <div className="mt-6 border-t border-white/10 pt-5 text-center text-sm text-zinc-400">
+          <div className="auth-portal-register mt-6 border-t border-white/10 pt-5 text-center text-sm text-zinc-400">
             Nog geen account? <Link href="/signup" className="font-bold text-white hover:underline">Account aanmaken</Link>
           </div>
         </section>
-        <div className="mt-6 w-full rounded-2xl border border-white/10 bg-zinc-950/70 p-4"><LanguageSwitcher dark /></div>
+        <div className="auth-portal-language mt-6 w-full rounded-2xl border border-white/10 bg-zinc-950/70 p-4"><LanguageSwitcher dark /></div>
       </div>
     </main>
   )
