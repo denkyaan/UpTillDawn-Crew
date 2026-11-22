@@ -135,7 +135,7 @@ test("approved payroll rows are exported byte-identically; invalid event, empty,
  for(const [rows,code,status]of [
   [[],"no_approved_timesheets",422],
   [new Array(10001).fill(payrollRow),"export_too_large",413],
-  [{...payrollRow,net_seconds:"3700"}],"invalid_payroll_data",409]
+  [[{...payrollRow,net_seconds:"3700"}],"invalid_payroll_data",409]
  ]){
   const scoped={rpc:async name=>name==="upt_can_manage_administration"?{data:true,error:null}:{data:rows,error:null}}
   const res=await administrationCsvResponse(scoped,"payroll",event)
