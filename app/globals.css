@@ -354,7 +354,6 @@ body:has(.auth-portal-screen) {
 .auth-portal-screen {
   height: 100%;
   min-height: 0;
-  overflow: hidden;
 }
 
 .auth-portal-content {
@@ -373,7 +372,6 @@ body:has(.auth-portal-screen) {
 .auth-portal-logo {
   height: 100%;
   max-height: 100%;
-  object-fit: contain;
 }
 
 .auth-portal-card {
