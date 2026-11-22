@@ -5,6 +5,7 @@
     "upt_acknowledge_incident",
     "upt_admin_review_promotion_evidence",
     "upt_administration_finance_summary",
+    "upt_administration_payroll_rows",
     "upt_can_manage_administration",
     "upt_can_manage_integrations",
     "upt_chat_message_readers",

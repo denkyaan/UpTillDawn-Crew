@@ -28,11 +28,20 @@ const migratedOriginalReads=[
  '/api/migration/view-data#portal-preference',
  '/api/administration/finance/summary/export',
  '/api/administration/ticketing/event-summary',
+ '/api/administration/ticketing/export',
+ '/api/administration/payroll/export',
+ '/api/administration/provider-mappings',
+ '/api/administration/provider-transactions',
 ]
 if(!workerSource.includes('app.get("/api/push/config"')||
    !workerSource.includes('app.post("/api/migration/view-data"')||
    !workerSource.includes('"/api/administration/finance/summary/export"')||
    !workerSource.includes('"/api/administration/ticketing/event-summary"')||
+   !workerSource.includes('"/api/administration/ticketing/export"')||
+   !workerSource.includes('"/api/administration/payroll/export"')||
+   !workerSource.includes('"/api/administration/provider-mappings"')||
+   !workerSource.includes('"/api/administration/provider-transactions"')||
+   !workerSource.includes('administrationReportResponse(')||
    !workerSource.includes('administrationCsvResponse('))
  throw Error('Native Main source-read route contract changed')
 // The candidate's upstream Main service would refer to ITSELF if renamed to

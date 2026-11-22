@@ -9,6 +9,8 @@ const origin="https://uptilldawn-modern-main.uptilldawn.workers.dev"
 const qa="https://npbjrtiolqperdgljnhi.supabase.co"
 const financePath="/api/administration/finance/summary/export"
 const ticketsPath="/api/administration/ticketing/event-summary"
+const salesPath="/api/administration/ticketing/export"
+const payrollPath="/api/administration/payroll/export"
 const one="aaaabbbb-cccc-dddd-eeee-000000000001"
 const two="aaaabbbb-cccc-dddd-eeee-000000000002"
 const rows=[
@@ -83,16 +85,79 @@ test("source invalid responses fail closed and cannot be passed as successful ex
   assert.deepEqual(await r.json(),{error:"report_unavailable"})
  }
 })
-test("both candidate export paths reject anonymous callers natively, without Next binding",async()=>{
+test("ticket-sales CSV retains all source rows, case-insensitive event filtering and exact filename",async()=>{
+ const x=stub()
+ const r=await administrationCsvResponse(x.db,"ticket-sales",two.toUpperCase())
+ assert.equal(r.status,200)
+ assert.equal(r.headers.get("content-disposition"),'attachment; filename="ticket-sales.csv"')
+ assert.equal(Buffer.from(await r.arrayBuffer()).toString("utf8"),financeCsv([
+  ["event_id","source","sale_rows","quantity","gross_cents"],
+  [two,"weeztix","2","4","250"],[two,"eventpay","3","5","500"]
+ ]))
+ assert.deepEqual(x.calls,["upt_can_manage_administration","upt_ticket_sales_summary"])
+ const bad=stub()
+ const rejected=await administrationCsvResponse(bad.db,"ticket-sales","a-bad-event")
+ assert.equal(rejected.status,400)
+ assert.deepEqual(await rejected.json(),{error:"invalid_event"})
+ assert.deepEqual(bad.calls,["upt_can_manage_administration","upt_ticket_sales_summary"])
+ const all=await administrationCsvResponse(stub().db,"ticket-sales")
+ assert.equal(all.status,200)
+ const raw=Buffer.from(await all.arrayBuffer()).toString("utf8")
+ assert.ok(raw.includes(one)&&raw.includes(two))
+})
+
+test("approved payroll rows are exported byte-identically; invalid event, empty, oversized and malformed sets fail closed",async()=>{
+ const event=one
+ const payrollRow={
+  session_id:two,event_id:event,event_name:"Fixture rave",user_id:one,
+  full_name:"Crew person",timesheet_status:"approved",
+  started_at:"2026-11-22T10:00:00Z",ended_at:"2026-11-22T11:00:00Z",
+  gross_seconds:"3600",break_seconds:"600",net_seconds:"3000"
+ }
+ const calls=[]
+ const db={rpc:async(name,args)=>{
+  calls.push({name,args})
+  if(name==="upt_can_manage_administration")return {data:true,error:null}
+  if(name==="upt_administration_payroll_rows")return {data:[payrollRow],error:null}
+  throw Error("unexpected RPC")
+ }}
+ const r=await administrationCsvResponse(db,"payroll",event)
+ assert.equal(r.status,200)
+ assert.equal(r.headers.get("content-disposition"),'attachment; filename="approved-payroll-'+event+'.csv"')
+ const {payrollCsv}=await import("../../lib/administration/payroll-export.ts")
+ assert.equal(Buffer.from(await r.arrayBuffer()).toString("utf8"),payrollCsv([payrollRow]))
+ assert.deepEqual(calls,[{name:"upt_can_manage_administration",args:undefined},
+  {name:"upt_administration_payroll_rows",args:{p_event:event}}])
+ const invalid=await administrationCsvResponse(db,"payroll","traversal")
+ assert.equal(invalid.status,422)
+ assert.deepEqual(await invalid.json(),{error:"event_required"})
+ assert.equal(calls.length,3)
+ for(const [rows,code,status]of [
+  [[],"no_approved_timesheets",422],
+  [new Array(10001).fill(payrollRow),"export_too_large",413],
+  [[{...payrollRow,net_seconds:"3700"}],"invalid_payroll_data",409]
+ ]){
+  const scoped={rpc:async name=>name==="upt_can_manage_administration"?{data:true,error:null}:{data:rows,error:null}}
+  const res=await administrationCsvResponse(scoped,"payroll",event)
+  assert.equal(res.status,status)
+  assert.deepEqual(await res.json(),{error:code})
+ }
+ const failed={rpc:async name=>name==="upt_can_manage_administration"?{data:true,error:null}:{data:null,error:{code:"offline"}}}
+ const report=await administrationCsvResponse(failed,"payroll",event)
+ assert.equal(report.status,409)
+ assert.deepEqual(await report.json(),{error:"payroll_unavailable"})
+})
+
+test("all four candidate CSV export paths reject anonymous callers natively, without Next binding",async()=>{
  let forwarded=0
  const env={SUPABASE_URL:qa,SUPABASE_ANON_KEY:"sb_publishable_test",
   UPT_MIGRATION_ALLOW_WRITES:"false",
   MAIN_AUTH:{fetch:async()=>{forwarded++;return Response.json({private:"upstream"})}}
  }
- for(const path of [financePath,ticketsPath]){
+ for(const path of [financePath,ticketsPath,salesPath,payrollPath]){
   const r=await app.request(origin+path,{},env)
   assert.equal(r.status,401,path)
-  assert.deepEqual(await r.json(),{error:"forbidden"})
+  assert.deepEqual(await r.json(),{error:path===payrollPath?"access_denied":"forbidden"})
   assert.equal(r.headers.get("cache-control"),"private, no-store")
  }
  assert.equal(forwarded,0)
