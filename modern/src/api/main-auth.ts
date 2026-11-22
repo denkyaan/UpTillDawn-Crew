@@ -53,6 +53,9 @@ export async function forwardMainAuth(request:Request,env:MainAuthBindings):Prom
  headers.set("Host",upstreamUrl.host)
  headers.set("X-Forwarded-Host",upstreamUrl.host)
  headers.set("X-Forwarded-Proto",upstreamUrl.protocol.slice(0,-1))
+ // Protect the fallback Main service from recursive modern->modern calls
+ // in any future deploy topology. The original backend ignores this header.
+ headers.set("X-UpTillDawn-Main-Bridge","original-read-v1")
  // Explicit allowlist. No Authorization, client role, arbitrary host, external
  // redirect URL or provider credential can turn this into a general proxy.
  for(const key of ["cookie","user-agent","accept-language","cf-connecting-ip","cf-ipcity","cf-region","cf-ipcountry"]){
