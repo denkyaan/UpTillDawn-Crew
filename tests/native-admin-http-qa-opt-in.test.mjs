@@ -38,5 +38,11 @@ test("a scoped QA-only job never changes production, Main UI, or deployed write 
  assert.match(script,/originalMainFailClosedParitySamples/)
  assert.match(script,/fullVisualOrProductionParityVerified:false/)
  assert.match(script,/publicWritesEnabled:false/)
- assert.equal((action.match(/"lib\/actions\/(?:guestlist|sales|platform)\.ts#[A-Za-z]+"/g)||[]).length,24)
+ // The original signed QA remains the exact 12 first-wave actions, not
+ // the five additional disabled platform actions introduced afterward.
+ const firstWaveIds=action.split("export const nativeAdminActionIds=[")[1].split("] as const")[0]
+ const firstWaveCases=action.split("switch(id){")[1].split('case "lib/actions/platform.ts#setFeatureRollout"')[0]
+ const matches=/"lib\/actions\/(?:guestlist|sales|platform)\.ts#[A-Za-z]+"/g
+ assert.equal((firstWaveIds.match(matches)||[]).length,12)
+ assert.equal((firstWaveCases.match(matches)||[]).length,12)
 })
