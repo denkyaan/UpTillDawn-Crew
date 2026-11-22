@@ -508,7 +508,343 @@ jobs:
             else
               echo 'qa_eligible=false' >> "$GITHUB_OUTPUT"
             fi
-            if [[ "$commit_message" == *'[modern-main-full-qa]'* ]]; then
+            # Only an explicit prefix in the COMMIT SUBJECT authorizes the
+            # expensive QA. A mere mention in release notes or a squash
+            # merge body must NEVER trigger 24-minute browser validation.
+            commit_subject="${commit_message%%
+              echo 'modern_qa_eligible=true' >> "$GITHUB_OUTPUT"
+              echo 'Explicit full modern Main-QA marker found; run strict parity acceptance after publishing.'
+            else
+              echo 'modern_qa_eligible=false' >> "$GITHUB_OUTPUT"
+              echo 'Fast Main deployment: full modern parity NOT executed; cutover remains blocked.'
+            fi
+          elif [[ "${SOURCE_RESULT}" != success ]]; then
+            echo 'eligible=false' >> "$GITHUB_OUTPUT"
+            echo "::error::Main deployment blocked: CI concluded ${SOURCE_RESULT} for ${SOURCE_SHA}."
+            exit 1
+          else
+            echo 'eligible=false' >> "$GITHUB_OUTPUT"
+            echo 'Deployment intentionally skipped: requires successful push CI for current main HEAD.'
+          fi
+
+  deploy:
+    needs: validate-trigger
+    outputs:
+      deployed_at: ${{ steps.worker-deploy.outputs.deployed_at }}
+    if: needs.validate-trigger.outputs.eligible == 'true'
+    permissions:
+      contents: read
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    env:
+      NEXT_PUBLIC_SUPABASE_URL: https://npbjrtiolqperdgljnhi.supabase.co
+      NEXT_PUBLIC_SUPABASE_ANON_KEY: sb_publishable_zStTw3n8wZ271PehDRDvGg_rs0JOy84
+      NEXT_PUBLIC_APP_URL: https://uptilldawn-main.uptilldawn.workers.dev
+      # Deployment uses repository-level Actions secrets; no environment approval gate.
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+    steps:
+      - name: Report main deployment context
+        run: |
+          echo "Main test deploy started for validated commit ${{ github.event.workflow_run.head_sha }}"
+          echo "Environment: main-test; Worker: uptilldawn-main"
+
+      - name: Checkout exact validated commit
+        uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5.1.0
+        with:
+          ref: ${{ github.event.workflow_run.head_sha }}
+
+      - name: Validate isolated main configuration
+        shell: bash
+        run: |
+          set -euo pipefail
+          for key in NEXT_PUBLIC_SUPABASE_URL NEXT_PUBLIC_SUPABASE_ANON_KEY CLOUDFLARE_API_TOKEN CLOUDFLARE_ACCOUNT_ID; do
+            if [ -z "${!key:-}" ]; then
+              echo "::error::Missing required repository Actions secret or configuration: $key"
+              exit 1
+            fi
+          done
+          # Reject control characters in credentials without disclosing their values.
+          if [[ "$CLOUDFLARE_API_TOKEN" =~ [[:cntrl:]] ]]; then
+            echo "::error::CLOUDFLARE_API_TOKEN contains invalid control characters. Re-save it as a single-line token."
+            exit 1
+          fi
+          if [[ "$CLOUDFLARE_ACCOUNT_ID" =~ [[:cntrl:]] ]]; then
+            echo "::error::CLOUDFLARE_ACCOUNT_ID contains invalid control characters. Re-save it as a plain account ID."
+            exit 1
+          fi
+          case "$NEXT_PUBLIC_SUPABASE_URL" in
+            https://eakoavcieossazqzplke.supabase.co)
+              echo "::error::Main test app must not use production"
+              exit 1 ;;
+            https://*.supabase.co) ;;
+            *) echo "::error::Invalid main test Supabase URL"; exit 1 ;;
+          esac
+
+      - name: Set up Node.js
+        uses: actions/setup-node@a0853c24544627f65ddf259abe73b1d18a591444 # v5.0.0
+        with:
+          node-version: 24
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci --prefer-offline --no-audit --no-fund
+
+      - name: Run automated unit and integration tests
+        run: npm test
+
+      - name: Check TypeScript
+        run: npm run typecheck
+
+      - name: Build main app Worker
+        run: npm run build:cloudflare
+
+      - name: Publish only public, pre-rendered login GET shells as Static Assets
+        run: node scripts/publish-main-login-assets.mjs
+
+      - name: Verify self-hosted OCR assets built for main
+        shell: bash
+        run: |
+          set -euo pipefail
+          for asset in tesseract.min.js worker.min.js pdf.min.mjs pdf.worker.min.mjs core/tesseract-core-lstm.wasm.js core/tesseract-core-lstm.wasm lang/nld.traineddata.gz lang/fra.traineddata.gz lang/eng.traineddata.gz lang/deu.traineddata.gz manifest.json; do
+            test -s "public/vendor/ocr/$asset" || { echo "::error::Missing local OCR asset: $asset"; exit 1; }
+          done
+          echo "Self-hosted OCR assets present: no runtime third-party API needed."
+      - name: Validate Worker bundle
+        run: npx wrangler deploy --dry-run --config wrangler.main.jsonc
+
+      - name: Revalidate current main commit before deployment
+        id: current-main
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+          VALIDATED_SHA: ${{ github.event.workflow_run.head_sha }}
+        run: |
+          set -euo pipefail
+          current_sha="$(gh api "/repos/$REPO/commits/main" --jq '.sha')"
+          if [[ "$current_sha" != "$VALIDATED_SHA" ]]; then
+            echo "::notice::Main advanced from validated commit $VALIDATED_SHA to $current_sha. Skipping obsolete deployment."
+            echo "current=false" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          echo "Validated commit is still main HEAD: $VALIDATED_SHA"
+          echo "current=true" >> "$GITHUB_OUTPUT"
+
+      - name: Deploy main test Worker only
+        id: worker-deploy
+        if: steps.current-main.outputs.current == 'true'
+        shell: bash
+        run: |
+          set -euo pipefail
+          npx wrangler deploy --config wrangler.main.jsonc
+          echo "deployed_at=$(date -u +%Y-%m-%dT%H:%M:%SZ)" >> "$GITHUB_OUTPUT"
+
+      - name: Diagnose Cloudflare workers.dev routing
+        if: steps.current-main.outputs.current == 'true'
+        shell: bash
+        run: |
+          set -euo pipefail
+          # This endpoint returns account metadata, never print credentials.
+          result="$(curl -sS --max-time 15 -H "Authorization: Bearer ${CLOUDFLARE_API_TOKEN}" "https://api.cloudflare.com/client/v4/accounts/${CLOUDFLARE_ACCOUNT_ID}/workers/subdomain")"
+          echo "$result" | node -e '
+            let data = ""; process.stdin.on("data", c => data += c);
+            process.stdin.on("end", () => {
+              try {
+                const v = JSON.parse(data);
+                console.log("Cloudflare account workers.dev subdomain:", v.result?.subdomain || "(unavailable)");
+                if (!v.success) console.log("Cloudflare subdomain API errors:", JSON.stringify((v.errors || []).map(e => ({code:e.code,message:e.message}))));
+                const configured = new URL(process.env.NEXT_PUBLIC_APP_URL).hostname;
+                const expected = v.result?.subdomain ? "uptilldawn-main." + v.result.subdomain + ".workers.dev" : null;
+                if (expected && configured !== expected) {
+                  console.error("::error::Wrong NEXT_PUBLIC_APP_URL hostname. Configured: " + configured + "; actual Cloudflare worker host: " + expected);
+                  process.exitCode = 1;
+                }
+              } catch { console.log("::warning::Cloudflare subdomain response could not be parsed"); }
+            });'
+
+      - name: Verify public Main login GET shells bypass Next SSR
+        if: steps.current-main.outputs.current == 'true'
+        shell: bash
+        run: |
+          set -euo pipefail
+          # Cloudflare deployments can propagate across edge POPs after
+          # wrangler reports success. Retry boundedly, then fail closed.
+          for portal in staff responsible promotion administration admin; do
+            verified=0
+            headers=''
+            for attempt in 1 2 3 4 5 6; do
+              headers="$(curl --retry 2 --retry-all-errors --retry-delay 1 --max-time 20 -sS -I "${NEXT_PUBLIC_APP_URL}/login/${portal}")" || headers=''
+              if grep -qi '^x-uptilldawn-static-login: 1' <<< "$headers" &&
+                grep -qE '^HTTP/[0-9.]+ 200' <<< "$headers"; then
+                verified=1
+                break
+              fi
+              if [ "$attempt" -lt 6 ]; then sleep 3; fi
+            done
+            if [ "$verified" -ne 1 ]; then
+              echo "::error::Public /login/${portal} is not served as Cloudflare Static Asset after six edge checks."
+              printf '%s\n' "$headers" | grep -iE '^(HTTP/|location:|server:|content-type:|cf-ray:|x-uptilldawn-static-login:)' || true
+              exit 1
+            fi
+            echo "Static Cloudflare Asset verified: /login/${portal}"
+          done
+
+      - name: Smoke test main app
+        if: steps.current-main.outputs.current == 'true'
+        shell: bash
+        run: |
+          set -euo pipefail
+          for path in / /login /login/admin /login/administration /login/promotion /login/staff /portals/administration /portals/promotion /admin /events /personnel /workplaces /chat /manifest.webmanifest; do
+            code="$(curl --retry 5 --retry-all-errors --retry-delay 2 -L -sS --max-time 25 -D /tmp/main-smoke-headers -o /tmp/main-smoke-body -w '%{http_code}' "${NEXT_PUBLIC_APP_URL}${path}")"
+            echo "Main test ${path}: HTTP ${code}"
+            if [ "$code" -lt 200 ] || [ "$code" -ge 400 ] || [ ! -s /tmp/main-smoke-body ]; then
+              echo "Response headers (safe subset):"
+              grep -iE '^(HTTP/|server:|content-type:|cf-ray:|location:)' /tmp/main-smoke-headers || true
+              echo "Response body (first 500 characters):"
+              head -c 500 /tmp/main-smoke-body | tr '\\n' ' '; echo
+              echo "::error::Main app smoke test failed at ${path} (HTTP ${code})"
+              exit 1
+            fi
+          done
+          # A redirect to login is acceptable for protected routes, but must not
+          # silently mask a broken public login page or a missing static asset.
+          for path in /login /login/admin /login/administration /login/promotion /manifest.webmanifest; do
+            code="$(curl -sS --max-time 25 -o /tmp/main-public-body -w '%{http_code}' "${NEXT_PUBLIC_APP_URL}${path}")"
+            echo "Public route ${path} without redirects: HTTP ${code}"
+            if [ "$code" != 200 ] || [ ! -s /tmp/main-public-body ]; then
+              echo "::error::Public entrypoint ${path} must respond HTTP 200 without redirect"
+              exit 1
+            fi
+          done
+          node --input-type=module -e '
+            const url = process.env.NEXT_PUBLIC_APP_URL + "/manifest.webmanifest";
+            const response = await fetch(url);
+            const manifest = await response.json();
+            if (!manifest.name && !manifest.short_name) throw new Error("PWA manifest missing app name");
+            console.log("PWA manifest parsed and app name verified");
+          '
+
+      - name: Verify OCR secret binding on main Worker (names only)
+        if: steps.current-main.outputs.current == 'true'
+        shell: bash
+        run: |
+          set -euo pipefail
+          # Cloudflare returns binding metadata. Never log the response body or
+          # secret values. Check only the exact main Worker, never production.
+          node --input-type=module <<'NODE'
+          const account = process.env.CLOUDFLARE_ACCOUNT_ID
+          const token = process.env.CLOUDFLARE_API_TOKEN
+          const url = `https://api.cloudflare.com/client/v4/accounts/${account}/workers/scripts/uptilldawn-main/secrets`
+          let status = 'unverified'
+          try {
+            const response = await fetch(url, {
+              headers: {Authorization: `Bearer ${token}`},
+              signal: AbortSignal.timeout(15000),
+              cache: 'no-store',
+            })
+            if (!response.ok) {
+              console.log('::warning::Cloudflare secret-name lookup failed (HTTP ' + response.status + '); no secret values were fetched or printed.')
+            } else {
+              const metadata = await response.json()
+              if (!metadata?.success || !Array.isArray(metadata.result)) {
+                console.log('::warning::Cloudflare secret binding metadata was unavailable.')
+              } else {
+                status = metadata.result.some(entry => entry?.name === 'CLOUDMERSIVE_OCR_API_KEY') ? 'present' : 'missing'
+                if (status === 'missing') console.log('::warning::CLOUDMERSIVE_OCR_API_KEY is not bound to the main Worker.')
+              }
+            }
+          } catch {
+            console.log('::warning::Cloudflare secret-name lookup could not be completed.')
+          }
+          console.log('CLOUDMERSIVE_OCR_API_KEY binding on uptilldawn-main: ' + status)
+          if (process.env.GITHUB_STEP_SUMMARY) {
+            const {appendFileSync} = await import('node:fs')
+            appendFileSync(process.env.GITHUB_STEP_SUMMARY, '\n### Cloudmersive binding check (main only)\n- Worker: uptilldawn-main\n- Secret name present: **' + status + '**\n- Legacy Cloudmersive OCR smoke test: disabled; local OCR is the default\n')
+          }
+          NODE
+
+      - name: Verify integration encryption key binding (name only)
+        if: steps.current-main.outputs.current == 'true'
+        shell: bash
+        run: |
+          set -euo pipefail
+          # Never fetch a secret's value. This Cloudflare endpoint exposes only
+          # secret binding metadata for the exact main-test Worker.
+          node --input-type=module <<'NODE'
+          const url = `https://api.cloudflare.com/client/v4/accounts/${process.env.CLOUDFLARE_ACCOUNT_ID}/workers/scripts/uptilldawn-main/secrets`
+          let status = 'unverified'
+          try {
+            const response = await fetch(url, {
+              headers: {Authorization: `Bearer ${process.env.CLOUDFLARE_API_TOKEN}`},
+              cache: 'no-store',
+              signal: AbortSignal.timeout(15000),
+            })
+            if (response.ok) {
+              const payload = await response.json()
+              if (payload?.success && Array.isArray(payload.result)) {
+                status = payload.result.some(binding =>
+                  binding?.name === 'UPT_INTEGRATION_ENCRYPTION_KEY'
+                ) ? 'present' : 'missing'
+              }
+            }
+          } catch {
+            // Insufficient Cloudflare permissions or temporary lookup failure.
+          }
+          console.log('UPT_INTEGRATION_ENCRYPTION_KEY binding on uptilldawn-main: ' + status)
+          const {appendFileSync} = await import('node:fs')
+          if (process.env.GITHUB_STEP_SUMMARY) {
+            appendFileSync(process.env.GITHUB_STEP_SUMMARY,
+              '\n### Integration encryption binding check (main only)\n- Worker: uptilldawn-main\n- Encryption secret name: **' + status + '**\n- Secret value: not requested or displayed\n')
+          }
+          if (status !== 'present') {
+            console.log('::warning::Integration credential management needs a main Worker Secret UPT_INTEGRATION_ENCRYPTION_KEY (status: ' + status + ').')
+          }
+          NODE
+
+      - name: Verify local-first OCR assets are reachable on main
+        if: steps.current-main.outputs.current == 'true'
+        shell: bash
+        run: |
+          set -euo pipefail
+          for asset in manifest.json tesseract.min.js pdf.min.mjs worker.min.js lang/nld.traineddata.gz; do
+            status="$(curl --retry 3 --retry-all-errors -L -sS --max-time 25 -o /dev/null -w '%{http_code}' "${NEXT_PUBLIC_APP_URL}/vendor/ocr/${asset}")"
+            echo "Local OCR asset ${asset}: HTTP ${status}"
+            if [[ "${status}" != "200" ]]; then echo "::error::Local OCR asset missing on main: ${asset}"; exit 1; fi
+          done
+
+      - name: Verify integration credentials API denies unauthenticated requests
+        if: steps.current-main.outputs.current == 'true'
+        shell: bash
+        run: |
+          set -euo pipefail
+          endpoint="${NEXT_PUBLIC_APP_URL}/api/administration/integrations"
+          get_code="$(curl -sS --max-time 20 -o /dev/null -w '%{http_code}' "$endpoint")"
+          post_code="$(curl -sS --max-time 20 -X POST -H "Origin: ${NEXT_PUBLIC_APP_URL}" -H 'Content-Type: application/json' --data '{"provider":"sumup","credentials":{}}' -o /dev/null -w '%{http_code}' "$endpoint")"
+          echo "Integration API unauthenticated GET: HTTP $get_code"
+          echo "Integration API unauthenticated POST: HTTP $post_code"
+          for code in "$get_code" "$post_code"; do
+            if [[ "$code" != 401 && "$code" != 403 ]]; then
+              echo '::error::Integration credentials endpoint did not enforce authentication.'
+              exit 1
+            fi
+          done
+
+      - name: Verify OCR endpoint denies unauthenticated requests
+        if: steps.current-main.outputs.current == 'true'
+        shell: bash
+        run: |
+          set -euo pipefail
+          response_code="$(curl -sS --max-time 20 -X POST -H "Origin: ${NEXT_PUBLIC_APP_URL}" -H 'Content-Type: application/json' --data '{}' -o /tmp/main-ocr-unauthorized-response -w '%{http_code}' "${NEXT_PUBLIC_APP_URL}/api/administration/ocr")"
+          echo "Main OCR unauthenticated request: HTTP ${response_code}"
+          if [[ "${response_code}" != "401" && "${response_code}" != "403" ]]; then
+            echo "::error::OCR endpoint did not enforce authentication (unexpected HTTP ${response_code})."
+            exit 1
+          fi
+          echo 'OCR authentication gate is active on main.'
+ 
+\n'*}"
+            if [[ "$commit_subject" == '[modern-main-full-qa]' || "$commit_subject" == '[modern-main-full-qa] '* ]]; then
               echo 'modern_qa_eligible=true' >> "$GITHUB_OUTPUT"
               echo 'Explicit full modern Main-QA marker found; run strict parity acceptance after publishing.'
             else
