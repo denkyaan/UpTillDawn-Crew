@@ -1,25 +1,13 @@
 import {useEffect,useState,type ReactNode} from 'react'
 import {Navigate} from 'react-router-dom'
 import {createClient} from '../compat/crew-client'
+import {incidentDestination} from './incident-access-decision'
 
 // The original incidents source page redirects a non-admin to /events when
 // there is no active event, or when neither an active shift nor current work
 // context authorizes access. Keep exactly the same predicates at the router
 // boundary: asynchronous source-page redirects may never commit while its
 // parent AppLayout is suspended. No role comes from browser storage/claims.
-export function incidentDestination(
- isAdmin:boolean,
- activeEventIds:readonly string[],
- shiftEventIds:readonly string[],
- hasCurrentWorkContext:boolean,
-):'/events'|null{
- if(isAdmin)return null
- if(activeEventIds.length===0)return '/events'
- const active=new Set(activeEventIds)
- const hasActiveShift=shiftEventIds.some(eventId=>active.has(eventId))
- return !hasActiveShift&&!hasCurrentWorkContext?'/events':null
-}
-
 type State='checking'|'allow'|'redirect'
 export function IncidentAccessRedirect({userId,isAdmin,children,loading}:{
  userId:string;isAdmin:boolean;children:ReactNode;loading:ReactNode
