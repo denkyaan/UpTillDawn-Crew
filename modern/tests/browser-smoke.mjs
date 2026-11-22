@@ -43,6 +43,43 @@ try{
     const errors=[]
     page.on("pageerror",error=>errors.push(error.message))
     await page.goto(origin+"/login",{waitUntil:"networkidle",timeout:15000})
+    // The original Main portal chooser is a single fully black, fixed
+    // viewport; no body scroll, clipped controls or gray footer on iPhone.
+    await page.locator('[data-portal-chooser="true"]').waitFor()
+    const chooser=await page.evaluate(()=>{
+      const page=document.querySelector('[data-portal-chooser="true"]')
+      const root=document.querySelector('.auth-layout')
+      const links=[...document.querySelectorAll('.portal-selection-links a')]
+      const register=document.querySelector('a[href="/signup"]')
+      const language=page?.querySelector('select')
+      const all=[...links,register,language]
+      const height=window.innerHeight
+      return {
+        htmlBackground:getComputedStyle(document.documentElement).backgroundColor,
+        bodyBackground:getComputedStyle(document.body).backgroundColor,
+        layoutBackground:root?getComputedStyle(root).backgroundColor:null,
+        layoutHeight:root?.getBoundingClientRect().height,
+        height,
+        pageScrollable:Math.max(document.body.scrollHeight,document.documentElement.scrollHeight)>height+1,
+        footerVisible:[...document.querySelectorAll('.auth-layout > footer')].some(el=>getComputedStyle(el).display!=='none'),
+        visibleLinks:links.length,
+        allControlsVisible:all.every(el=>{
+          if(!el)return false
+          const r=el.getBoundingClientRect()
+          return r.top>=-1&&r.bottom<=height+1&&r.left>=-1&&r.right<=window.innerWidth+1
+        })
+      }
+    })
+    if(chooser.htmlBackground!=="rgb(0, 0, 0)"||
+      chooser.bodyBackground!=="rgb(0, 0, 0)"||
+      chooser.layoutBackground!=="rgb(0, 0, 0)")
+      throw Error(device.name+"/"+language+" portal chooser background is not fully black")
+    if(Math.abs(chooser.layoutHeight-chooser.height)>1||chooser.pageScrollable||
+      chooser.footerVisible||chooser.visibleLinks!==3||!chooser.allControlsVisible)
+      throw Error(device.name+"/"+language+" portal chooser must fit fixed viewport: "+JSON.stringify(chooser))
+    await page.evaluate(()=>window.scrollTo(0,300))
+    if(await page.evaluate(()=>window.scrollY)!==0)
+      throw Error(device.name+"/"+language+" portal chooser still scrolls")
     await page.locator('a[href="/login/staff"]').click()
     await page.locator('input[name="email"]').waitFor({timeout:10000})
     await page.locator('select').selectOption(language)
