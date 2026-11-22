@@ -162,7 +162,7 @@ export async function nativeInventoryActionResponse(
   if(authError||!user)return failure(401,"authentication_required")
   const {data:profiles,error:profileError}=await db.rpc("upt_current_profile")
   const profile=Array.isArray(profiles)?profiles[0]:null
-  if(profileError||profile?.approved!==true||profile?.account_blocked!==false)
+  if(profileError||profile?.approved!==true||profile?.account_blocked===true)
    return failure(422,"action_failed")
   if(managerIds.has(selected)){
    const {data:effectiveRole,error:roleError}=await db.rpc("upt_current_effective_role")
