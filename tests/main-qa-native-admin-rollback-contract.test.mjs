@@ -14,13 +14,13 @@ const positive=read("supabase/tests/main_qa_native_admin_actions_positive_rollba
 const rpcNames=[...source.matchAll(/\brpc:"(upt_[a-z_]+)"/g)].map(match=>match[1])
 const actionIds=[...source.matchAll(/"lib\/actions\/(?:guestlist|sales|platform)\.ts#[A-Za-z]+"/g)].map(x=>x[0].slice(1,-1))
 const uniqueValues=xs=>[...new Set(xs)].sort()
-const calls=sql=>[...sql.matchAll(/(?:SELECT|PERFORM)\s+public\.(upt_[a-z_]+)\(/g)]
+const calls=sql=>[...sql.matchAll(/\bpublic\.(upt_[a-z_]+)\(/g)]
  .map(x=>x[1])
 
 test("all 12 portable admin actions retain original registry and have real SQL authorization tests",()=>{
  assert.equal(rpcNames.length,12)
- assert.equal(actionIds.length,12)
  assert.equal(uniqueValues(actionIds).length,12)
+ assert.equal(actionIds.length,24,"Original allowlist plus native switch cases are required")
  assert.equal(uniqueValues(rpcNames).length,12)
  for(const id of actionIds)assert.ok(original.includes('"'+id+'"'),"Original action removed: "+id)
  const deniedCalls=uniqueValues(calls(denied)),successCalls=uniqueValues(calls(positive))
