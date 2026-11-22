@@ -23,8 +23,17 @@ export const nativeAdminActionIds=[
  "lib/actions/platform.ts#dismissPlanningRecommendation",
  "lib/actions/platform.ts#generateEventReport",
 ] as const
-export type NativeAdminActionId=typeof nativeAdminActionIds[number]
-const actionSet=new Set<string>(nativeAdminActionIds)
+// Second wave: five existing, originally admin-gated platform FormData actions.
+// Keep wave-one's 12-ID inventory stable for its previously signed QA evidence.
+export const nativePlatformActionIds=[
+ "lib/actions/platform.ts#setFeatureRollout",
+ "lib/actions/platform.ts#snapshotPlatformConfiguration",
+ "lib/actions/platform.ts#captureEventTemplate",
+ "lib/actions/platform.ts#restorePlatformConfiguration",
+ "lib/actions/platform.ts#saveAutomationRule",
+] as const
+export type NativeAdminActionId=typeof nativeAdminActionIds[number]|typeof nativePlatformActionIds[number]
+const actionSet=new Set<string>([...nativeAdminActionIds,...nativePlatformActionIds])
 export function nativeAdminActionAllowed(id:string|null):id is NativeAdminActionId{
  return typeof id==="string"&&actionSet.has(id)
 }
@@ -104,13 +113,53 @@ export function originalAdminCommand(id:NativeAdminActionId,fd:FormData):Command
    return {rpc:"upt_dismiss_planning_recommendation",args:{p_recommendation:uuid.parse(fd.get("recommendation_id"))}}
   case "lib/actions/platform.ts#generateEventReport":
    return {rpc:"upt_generate_event_report",args:{p_event:uuid.parse(fd.get("event_id"))}}
+  case "lib/actions/platform.ts#setFeatureRollout":
+   return {rpc:"upt_set_feature_rollout",args:{
+    p_feature_key:z.string().trim().min(1).max(120).parse(fd.get("feature_key")),
+    p_enabled:fd.get("enabled")==="on",
+    p_audience:z.enum(["all","admin","responsible","staff"]).parse(fd.get("audience")),
+    p_rollout_percentage:int(0,100).parse(fd.get("rollout_percentage")),
+    p_notes:String(fd.get("notes")||"").trim().slice(0,1000)||undefined
+   }}
+  case "lib/actions/platform.ts#snapshotPlatformConfiguration":
+   return {rpc:"upt_snapshot_platform_configuration",args:{
+    p_note:String(fd.get("note")||"").trim().slice(0,1000)||undefined
+   }}
+  case "lib/actions/platform.ts#captureEventTemplate":
+   return {rpc:"upt_capture_event_template",args:{
+    p_event:uuid.parse(fd.get("event_id")),
+    p_name:z.string().trim().min(3).max(200).parse(fd.get("name")),
+    p_sections:fd.getAll("section").map(String)
+   }}
+  case "lib/actions/platform.ts#restorePlatformConfiguration":
+   return {rpc:"upt_restore_platform_configuration",args:{
+    p_version:uuid.parse(fd.get("version_id"))
+   }}
+  case "lib/actions/platform.ts#saveAutomationRule":{
+   const optionalMinutes=(name:string)=>{
+    const raw=String(fd.get(name)||"").trim()
+    return raw?int(1,43200).parse(raw):null
+   }
+   const channels=fd.getAll("channel").map(String)
+    .filter(value=>["in_app","push","email"].includes(value))
+   return {rpc:"upt_save_automation_rule",args:{
+    p_key:z.string().trim().min(1).max(120).regex(/^[a-z0-9_-]+$/).parse(fd.get("automation_key")),
+    p_enabled:fd.get("enabled")==="on",
+    p_delay_minutes:int(0,43200).parse(fd.get("delay_minutes")||0),
+    p_reminder_minutes:optionalMinutes("reminder_minutes")??0,
+    p_escalation_minutes:optionalMinutes("escalation_minutes")??0,
+    p_cooldown_minutes:int(0,43200).parse(fd.get("cooldown_minutes")||0),
+    p_max_retries:int(0,20).parse(fd.get("max_retries")||0),
+    p_channels:channels.length?channels:["in_app"]
+   }}
+  }
  }
 }
 /**
  * Only execute when the *server-side* QA write flag is explicitly enabled.
  * The caller must also require a verified original signed session. The hint
  * selects parsing only; matching _id is mandatory and provides NO authority.
- * All 12 actions keep the original admin/approved checks + RLS SQL audit.
+ * All selected actions keep the original admin/approved checks + RLS SQL audit.
  */
 export async function nativeAdminActionResponse(
  request:Request,db:NativeAdminActionDb,selected:NativeAdminActionId
