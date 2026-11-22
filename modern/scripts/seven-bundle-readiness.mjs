@@ -26,9 +26,14 @@ const workerSource=readFileSync(resolve(repo,'modern/src/api/worker.ts'),'utf8')
 const migratedOriginalReads=[
  '/api/push/config',
  '/api/migration/view-data#portal-preference',
+ '/api/administration/finance/summary/export',
+ '/api/administration/ticketing/event-summary',
 ]
 if(!workerSource.includes('app.get("/api/push/config"')||
-   !workerSource.includes('app.post("/api/migration/view-data"'))
+   !workerSource.includes('app.post("/api/migration/view-data"')||
+   !workerSource.includes('"/api/administration/finance/summary/export"')||
+   !workerSource.includes('"/api/administration/ticketing/event-summary"')||
+   !workerSource.includes('administrationCsvResponse('))
  throw Error('Native Main source-read route contract changed')
 // The candidate's upstream Main service would refer to ITSELF if renamed to
 // uptilldawn-main. Cutover must first extract all original server handlers
