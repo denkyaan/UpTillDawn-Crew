@@ -86,8 +86,8 @@ export async function godSourceReadResponse(db:ReadDb,cookieHeader:string,args:u
   const token=tokenFrom(cookieHeader)
   if(!token)return Response.json({value:{data:fn==="upt_god_session_valid"?false:[],error:null}},{headers:{"Cache-Control":"private, no-store"}})
   const result=fn==="upt_god_session_valid"
-   ?await db.rpc(fn,{p_token:token})
-   :await db.rpc(fn,{p_token:token,p_limit:200})
+   ?await db.rpc("upt_god_session_valid",{p_token:token})
+   :await db.rpc("upt_god_upload_security_audit",{p_token:token,p_limit:200})
   return Response.json({value:{data:result.data,error:result.error?{message:"God Mode-gegevens niet beschikbaar"}:null}},{headers:{"Cache-Control":"private, no-store"}})
  }catch{return unavailable(503)}
 }
