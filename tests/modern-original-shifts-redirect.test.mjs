@@ -15,7 +15,7 @@ test("Vite original-source runtime preserves the same URL without relaxing auth 
  assert.ok(candidate.indexOf("if(auth.loading)return <Loading/>")<
   candidate.indexOf("if(location.pathname==='/shifts'&&auth.user)"),"wait for authoritative signed session first")
  assert.ok(candidate.indexOf('return <Navigate to="/workplaces" replace/>')<
-  candidate.indexOf('return <OriginalRequest key={identityKey}'),"redirect must occur before suspended original Main layout")
+  candidate.indexOf('const original=<OriginalRequest key={identityKey}'),"redirect must occur before suspended original Main layout")
  assert.ok(candidate.includes('node=<AppLayout>{node}</AppLayout>'),"workplaces still enforces original Main auth/RLS")
  assert.ok(candidate.includes('<Navigate to="/workplaces" replace/>'))
  assert.ok(candidate.includes("if(auth.loading)return <Loading/>"))

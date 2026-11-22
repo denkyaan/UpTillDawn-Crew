@@ -20,6 +20,7 @@ import OriginalError from 'main-source/app/(app)/error.tsx'
 import NotFound from '../original/not-found'
 import {routes} from 'main-source/routes'
 import {OriginalRequest,originalRoutePromise} from '../original/runtime'
+import {IncidentAccessRedirect} from '../original/incident-access-redirect'
 import styles from '../app.css?inline'
 
 const pages=routes.map(r=>({...r,Page:lazy(r.load)}))
@@ -61,7 +62,14 @@ function AuthenticatedRoutes(){
   return <Navigate to="/workplaces" replace/>
  // Each original layout/page owns its exact login, approval and Owner
  // redirect. A generic outer redirect would change QR and Maker entry flows.
- return <OriginalRequest key={identityKey} revision={requestKey}><Boundary key={identityKey} revision={requestKey} reset={()=>setRevision(n=>n+1)}><Suspense fallback={<Loading/>}>{content}</Suspense></Boundary></OriginalRequest>
+ const original=<OriginalRequest key={identityKey} revision={requestKey}><Boundary key={identityKey} revision={requestKey} reset={()=>setRevision(n=>n+1)}><Suspense fallback={<Loading/>}>{content}</Suspense></Boundary></OriginalRequest>
+ // Original /incidents redirects non-admin users without a current shift or
+ // work context to /events. Like /shifts, this redirect must resolve before
+ // the suspended source layout. Recheck the SAME RLS-filtered work data,
+ // not a cached local role or a client-provided permission.
+ if(location.pathname==='/incidents'&&auth.user&&auth.profile)
+  return <IncidentAccessRedirect key={identityKey} userId={auth.user.id} isAdmin={auth.roleMode==='admin'} loading={<Loading/>}>{original}</IncidentAccessRedirect>
+ return original
 }
 export default function OriginalApplication(){
  return <ThemeProvider attribute="class" defaultTheme="dark" enableSystem disableTransitionOnChange><style>{styles}</style>

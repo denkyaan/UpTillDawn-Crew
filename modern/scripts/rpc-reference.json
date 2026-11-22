@@ -12,6 +12,7 @@
     "upt_current_is_owner",
     "upt_current_profile_completion",
     "upt_current_session_context",
+    "upt_current_work_context",
     "upt_decide_check_in",
     "upt_decide_check_out",
     "upt_god_login_owner",
