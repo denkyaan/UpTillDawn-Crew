@@ -1,5 +1,6 @@
 import {Hono} from "hono"
 import {forwardMainSource,originalApiAllowed} from "./main-source.ts"
+import {sourceReadSession,attachSourceCookies,pushConfigResponse,portalPreferenceResponse} from "./native-main-reads.ts"
 import {createClient} from "@supabase/supabase-js"
 import {isActive,parseIdentity} from "../shared/identity.ts"
 import {sanitizedMakerRoute,sanitizedMakerName,sanitizedMakerSeverity} from "./god-redaction.ts"
@@ -29,6 +30,32 @@ app.get("/api/v1/health",c=>{
  // configuration, Supabase or mail to discover the visible Worker version.
  if(c.env.MAIN_AUTH_RUNTIME)c.header('X-UpTillDawn-Auth-Protocol','main-auth-native-v1')
  return c.json({ok:true,service:"uptilldawn-local-first-api"})
+})
+
+/** Source-identical read routes. Preserve real Supabase SSR cookies and
+ * original user-scoped RPC access; do not invoke the legacy Next Worker. */
+app.get("/api/push/config",async c=>{
+ const actor=await sourceReadSession(c.req.raw,c.env)
+ if(!actor.ok)return c.json({error:actor.status===401?"Aanmelden vereist.":"Push is nog niet geconfigureerd."},actor.status)
+ return attachSourceCookies(await pushConfigResponse(actor.db),actor)
+})
+
+// The source uses POST for this read DTO. Only the strictly recognized
+// preference query migrates here; all other IDs stay on original Main until
+// independently ported and verified. Inspect a bounded clone, never consume
+// a body that will be forwarded.
+app.post("/api/migration/view-data",async c=>{
+ const request=c.req.raw
+ const origin=new URL(request.url).origin
+ const site=request.headers.get("sec-fetch-site")
+ if(request.headers.get("origin")!==origin||(site&&site!=="same-origin"&&site!=="none"))
+  return c.json({error:"invalid_origin"},403)
+ const payload=await boundedJson(request.clone(),4096)
+ if(payload?.id!=="portal-preference"||!Array.isArray(payload.args))
+  return forwardMainSource(request,c.env)
+ const actor=await sourceReadSession(request,c.env)
+ if(!actor.ok)return c.json({error:"view_data_unavailable"},actor.status)
+ return attachSourceCookies(portalPreferenceResponse(actor.cookieHeader),actor)
 })
 
 app.post("/api/auth/portal-login",c=>forwardMainAuth(c.req.raw,c.env))
