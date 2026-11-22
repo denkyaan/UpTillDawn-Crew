@@ -18,7 +18,10 @@ test('live original-source parity cannot overload Main with synthetic focus or b
 })
 test('source failures remain hard failures, not empty baselines or fake UI parity',()=>{
  const s=qa()
- assert.ok(s.includes("LEGACY_MAIN_BASELINE_UNAVAILABLE_AFTER_ONE_RETRY"))
+ assert.ok(s.includes("LEGACY_MAIN_BASELINE_UNAVAILABLE_AFTER_BOUNDED_RETRIES"))
+ assert.ok(s.includes("attempt<3"),'Unhealthy original Main must have a finite retry limit')
+ assert.ok(s.includes("setTimeout(resolve,2000*(attempt+1))"),'Retry only after bounded legacy cooling-off')
+ assert.ok(s.includes("await a.goto(legacy+landing"),'Original must load before the candidate to reduce QA backend bursts')
  assert.ok(s.includes("LEGACY_MAIN_BASELINE_UNAVAILABLE_CIRCUIT_OPEN"))
  assert.ok(s.includes("QA_STOPPED_UNHEALTHY_LEGACY_MAIN_NO_FALSE_PARITY"))
  assert.ok(s.includes("ORIGINAL_VIEW_RENDER_FAILED"))
