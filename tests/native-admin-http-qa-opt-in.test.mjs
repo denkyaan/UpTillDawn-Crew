@@ -1,6 +1,7 @@
 import test from "node:test"
 import assert from "node:assert/strict"
 import {readFileSync} from "node:fs"
+import {spawnSync} from "node:child_process"
 
 const workflow=readFileSync(".github/workflows/deploy-main.yml","utf8")
 const config=JSON.parse(readFileSync("modern/wrangler.main-qa.jsonc","utf8"))
@@ -15,6 +16,12 @@ test("narrow signed QA runs only on explicit FIRST squash subject token after de
  assert.match(workflow,/needs\.deploy-modern-main-qa\.result == 'success'/)
  assert.match(workflow,/ref: \$\{\{ github\.event\.workflow_run\.head_sha \}\}/)
  assert.equal((workflow.match(/^  qa-native-admin-http:$/gm)||[]).length,1)
+})
+test("focused signed HTTP QA script compiles before any credentialed job may run",()=>{
+ const result=spawnSync(process.execPath,["--check","modern/tests/qa-native-admin-signed-http.mjs"],{
+  encoding:"utf8",timeout:10000
+ })
+ assert.equal(result.status,0,result.stderr||"Native action QA script syntax invalid")
 })
 test("a scoped QA-only job never changes production, Main UI, or deployed write switches",()=>{
  assert.equal(config.vars.UPT_MIGRATION_ALLOW_WRITES,"false")
