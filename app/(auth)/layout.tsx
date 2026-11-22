@@ -15,8 +15,8 @@ export async function generateMetadata():Promise<Metadata>{
 
 export default function AuthLayout({ children }: { children: React.ReactNode }) {
   return (
-    <div className="flex min-h-dvh flex-col">
-      <div className="flex flex-1 items-center justify-center px-4 py-12">
+    <div className="auth-layout flex min-h-dvh flex-col">
+      <div className="auth-layout-content flex flex-1 items-center justify-center px-4 py-12">
         {children}
       </div>
       <Footer />
