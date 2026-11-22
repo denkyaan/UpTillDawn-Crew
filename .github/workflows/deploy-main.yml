@@ -282,14 +282,16 @@ jobs:
         run: npm --prefix modern install --prefer-offline --no-audit --no-fund
       - name: Install minimal headless Chromium runtime
         run: npm --prefix modern exec -- playwright install chromium --only-shell
-      - name: Verify two signed browser sessions, 12 native HTTP paths, original parity and fail-closed deployment
+      - name: Verify two signed browser sessions and first-wave 12 native action paths
         run: node modern/tests/qa-native-admin-signed-http.mjs
+      - name: Verify 11 additional native actions with real signed roles, public write blockade and zero live mutation
+        run: node modern/tests/qa-native-wave-two-signed-http.mjs
       - name: Report exact remaining acceptance blockers
         if: always()
         shell: bash
         run: |
-          echo '## Main-QA signed native admin HTTP/browser acceptance' >> "$GITHUB_STEP_SUMMARY"
-          echo 'Public Hono writes remain disabled. No live positive HTTP money mutation was performed.' >> "$GITHUB_STEP_SUMMARY"
+          echo '## Main-QA signed 23 native actions HTTP/browser acceptance' >> "$GITHUB_STEP_SUMMARY"
+          echo 'Public Hono writes remain disabled. Targetless positive writes are never sent. All positive database tests are rollback-only.' >> "$GITHUB_STEP_SUMMARY"
           echo 'Full visual/browser parity and production release remain unverified and BLOCKED.' >> "$GITHUB_STEP_SUMMARY"
 
   qa-main-anonymous-acceptance:
