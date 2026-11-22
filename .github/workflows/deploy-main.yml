@@ -511,7 +511,8 @@ jobs:
             # Only an explicit prefix in the COMMIT SUBJECT authorizes the
             # expensive QA. A mere mention in release notes or a squash
             # merge body must NEVER trigger 24-minute browser validation.
-            commit_subject="${commit_message%%
+            IFS= read -r commit_subject <<< "$commit_message"
+            if [[ "$commit_subject" == '[modern-main-full-qa]' || "$commit_subject" == '[modern-main-full-qa] '* ]]; then
               echo 'modern_qa_eligible=true' >> "$GITHUB_OUTPUT"
               echo 'Explicit full modern Main-QA marker found; run strict parity acceptance after publishing.'
             else
