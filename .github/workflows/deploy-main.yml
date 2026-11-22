@@ -133,13 +133,18 @@ jobs:
           echo "Origin: https://uptilldawn-modern-main.uptilldawn.workers.dev" >> "$GITHUB_STEP_SUMMARY"
           echo "Existing Main app: https://uptilldawn-main.uptilldawn.workers.dev (unchanged)" >> "$GITHUB_STEP_SUMMARY"
           echo "Original actions retain Main authorization and RLS. Candidate /api/v1 scanning and OAuth remain OFF. Production untouched." >> "$GITHUB_STEP_SUMMARY"
+          echo "A successful deployment proves static/Hono smoke only; full 56-scenario/44-route parity is NOT verified by this job and Main URL cutover stays BLOCKED." >> "$GITHUB_STEP_SUMMARY"
 
-  # This is a LIVE browser test of the new Cloudflare Worker, not a local Vite
-  # preview and not a simulated Supabase-only concurrency benchmark.
+  # Exhaustive, costly parity acceptance runs ONLY on explicitly marked Main
+  # commits; normal Main publishes the candidate with a live smoke test.
+  # A successful normal deployment is NOT evidence of full parity or cutover.
+  # The original 56 role/locale/device, 44 deep-route and load gates remain
+  # intact, and are still mandatory before any Main URL replacement.
   qa-modern-main-qa:
     needs: [validate-trigger, deploy-modern-main-qa, deploy]
     if: >-
       needs.validate-trigger.outputs.eligible == 'true' &&
+      needs.validate-trigger.outputs.modern_qa_eligible == 'true' &&
       needs.deploy-modern-main-qa.result == 'success'
     permissions:
       contents: read
@@ -468,6 +473,7 @@ jobs:
     outputs:
       eligible: ${{ steps.check.outputs.eligible }}
       qa_eligible: ${{ steps.check.outputs.qa_eligible }}
+      modern_qa_eligible: ${{ steps.check.outputs.modern_qa_eligible }}
     steps:
       - name: Explain deployment eligibility
         id: check
@@ -501,6 +507,13 @@ jobs:
               echo 'Explicit Main QA marker found; browser tests will run only after successful Main deploy.'
             else
               echo 'qa_eligible=false' >> "$GITHUB_OUTPUT"
+            fi
+            if [[ "$commit_message" == *'[modern-main-full-qa]'* ]]; then
+              echo 'modern_qa_eligible=true' >> "$GITHUB_OUTPUT"
+              echo 'Explicit full modern Main-QA marker found; run strict parity acceptance after publishing.'
+            else
+              echo 'modern_qa_eligible=false' >> "$GITHUB_OUTPUT"
+              echo 'Fast Main deployment: full modern parity NOT executed; cutover remains blocked.'
             fi
           elif [[ "${SOURCE_RESULT}" != success ]]; then
             echo 'eligible=false' >> "$GITHUB_OUTPUT"
