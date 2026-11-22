@@ -243,6 +243,55 @@ jobs:
           if-no-files-found: warn
           retention-days: 5
 
+  # Narrow, one-commit signed QA. Does not slow ordinary Main deployments.
+  # Real Worker business writes remain off. No production or cutover job.
+  qa-native-admin-http:
+    needs: [validate-trigger, deploy, deploy-modern-main-qa]
+    if: >-
+      needs.validate-trigger.outputs.eligible == 'true' &&
+      needs.validate-trigger.outputs.native_admin_qa_eligible == 'true' &&
+      needs.deploy.result == 'success' &&
+      needs.deploy-modern-main-qa.result == 'success'
+    runs-on: ubuntu-latest
+    timeout-minutes: 14
+    permissions:
+      contents: read
+    env:
+      E2E_MAIN_QA_BASE_URL: https://npbjrtiolqperdgljnhi.supabase.co/
+      E2E_MAIN_MODERN_QA_ORIGIN: https://uptilldawn-modern-main.uptilldawn.workers.dev
+      E2E_MAIN_QA_PASSWORD: ${{ secrets.MAIN_QA_BOT_PASSWORD }}
+      VITE_MIGRATION_ALLOW_WRITES: 'false'
+    steps:
+      - name: Checkout exact validated and deployed Main commit
+        uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5.1.0
+        with:
+          ref: ${{ github.event.workflow_run.head_sha }}
+      - name: Require private QA bot credentials
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [ "${#E2E_MAIN_QA_PASSWORD}" -lt 24 ]; then
+            echo '::error::QA bot credential unavailable: signed acceptance NOT executed.'
+            exit 1
+          fi
+      - name: Set up Node.js
+        uses: actions/setup-node@a0853c24544627f65ddf259abe73b1d18a591444 # v5.0.0
+        with:
+          node-version: 24
+      - name: Install candidate dependencies (isolated)
+        run: npm --prefix modern install --prefer-offline --no-audit --no-fund
+      - name: Install minimal headless Chromium runtime
+        run: npm --prefix modern exec -- playwright install chromium --only-shell
+      - name: Verify two signed browser sessions, 12 native HTTP paths, original parity and fail-closed deployment
+        run: node modern/tests/qa-native-admin-signed-http.mjs
+      - name: Report exact remaining acceptance blockers
+        if: always()
+        shell: bash
+        run: |
+          echo '## Main-QA signed native admin HTTP/browser acceptance' >> "$GITHUB_STEP_SUMMARY"
+          echo 'Public Hono writes remain disabled. No live positive HTTP money mutation was performed.' >> "$GITHUB_STEP_SUMMARY"
+          echo 'Full visual/browser parity and production release remain unverified and BLOCKED.' >> "$GITHUB_STEP_SUMMARY"
+
   qa-main-anonymous-acceptance:
     # Strict, independent security gate. A failure stays red but may not
     # suppress the remaining functional, 30-user or Cloudflare evidence.
@@ -474,6 +523,7 @@ jobs:
       eligible: ${{ steps.check.outputs.eligible }}
       qa_eligible: ${{ steps.check.outputs.qa_eligible }}
       modern_qa_eligible: ${{ steps.check.outputs.modern_qa_eligible }}
+      native_admin_qa_eligible: ${{ steps.check.outputs.native_admin_qa_eligible }}
     steps:
       - name: Explain deployment eligibility
         id: check
@@ -511,6 +561,13 @@ jobs:
             # Only a deliberate leading subject token may start full parity.
             # A token mentioned in the squash body is documentation, not intent.
             IFS= read -r commit_subject <<< "$commit_message"
+            # One-commit opt-in for narrow live HTTP/browser QA; subject only.
+            if [[ "$commit_subject" == '[native-admin-http-qa]' || "$commit_subject" == '[native-admin-http-qa] '* ]]; then
+              echo 'native_admin_qa_eligible=true' >> "$GITHUB_OUTPUT"
+              echo 'QA-only signed action acceptance selected (writes remain OFF).'
+            else
+              echo 'native_admin_qa_eligible=false' >> "$GITHUB_OUTPUT"
+            fi
             if [[ "$commit_subject" == '[modern-main-full-qa]' || "$commit_subject" == '[modern-main-full-qa] '* ]]; then
               echo 'modern_qa_eligible=true' >> "$GITHUB_OUTPUT"
               echo 'Explicit full modern Main-QA marker found; run strict parity acceptance after publishing.'
