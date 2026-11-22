@@ -203,6 +203,22 @@ try{
          sourcePreferenceBody?.value?.lastPortal!=='promotion')
        throw Error('QA_NATIVE_PORTAL_PREFERENCE_PARITY')
       nativeReadComparisons++
+      // Signed, read-only original-versus-native CSV bytes and headers. This
+      // cannot be replaced by synthetic snapshots before the Main cutover.
+      for(const path of [
+       '/api/administration/finance/summary/export',
+       '/api/administration/ticketing/event-summary'
+      ]){
+       const originalExport=await original.request.get(legacy+path)
+       const modernExport=await candidate.request.get(origin+path)
+       if(originalExport.status()!==200||modernExport.status()!==200||
+          originalExport.status()!==modernExport.status()||
+          originalExport.headers()['content-disposition']!==modernExport.headers()['content-disposition']||
+          originalExport.headers()['content-type']!==modernExport.headers()['content-type']||
+          await originalExport.text()!==await modernExport.text())
+        throw Error('QA_NATIVE_ADMIN_EXPORT_PARITY '+path)
+       nativeReadComparisons++
+      }
       // The account ID selects a non-authoritative preference only. Both
       // apps independently verify the session and actual portal access.
       const reader=createServerClient(qa.origin,key,{cookies:{getAll:()=>state.cookies,setAll:()=>{}}})
@@ -234,7 +250,7 @@ try{
  }
  if(failures.length){console.error('ORIGINAL_COMPARISON_FAILURES '+JSON.stringify(failures));throw Error('QA_ORIGINAL_COMPARISONS_FAILED '+failures.length)}
  if(workspaceComparisons!==2)throw Error('QA_WORKSPACE_RESTORATION_INCOMPLETE')
- if(nativeReadComparisons!==2)throw Error('QA_NATIVE_SOURCE_READ_COVERAGE_INCOMPLETE')
+ if(nativeReadComparisons!==4)throw Error('QA_NATIVE_SOURCE_READ_COVERAGE_INCOMPLETE')
  if(signins!==7||total!==56)throw Error('QA_INCOMPLETE_COVERAGE')
  console.log(JSON.stringify({validated:true,qaBots:7,actualBotSignins:signins,authenticatedBrowserScenarios:total,originalMainControlComparisons:total,expandedMenuComparisons:menuComparisons,workspaceRestorationComparisons:workspaceComparisons,nativeSourceReadComparisons:nativeReadComparisons,legacyMainReadRecoveries:baselineRecoveries,legacyMainRuntimeHealthy:baselineRecoveries===0,locales:4,deviceProfiles:2,formsSubmitted:false,fullVisualParityVerified:false,productionReady:false}))
 }finally{if(browser)await browser.close();preview?.kill('SIGTERM')}
