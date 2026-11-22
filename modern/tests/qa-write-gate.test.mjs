@@ -24,6 +24,8 @@ test("candidate write flag disabled or absent blocks ALL original Main action/pr
   ["/api/administration/bank-statements","POST"],
   ["/api/administration/provider-mappings/123","PATCH"],
   ["/api/administration/integrations","DELETE"],
+  ["/api/administration/provider-mappings","POST"],
+  ["/api/administration/provider-transactions","POST"],
   ["/api/administration/finance/invoice-lines/import","POST"],
   ["/api/god/source","POST"],
   ["/api/administration/integrations/oauth/sumup/start","GET"],
