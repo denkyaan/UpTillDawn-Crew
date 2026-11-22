@@ -82,6 +82,14 @@ jobs:
       # does not run on Main pushes or add any expensive browser stages.
       - name: Fast isolated modern TypeScript safety check on pull requests
         if: ${{ github.event_name == 'pull_request' }}
+        # Build the same candidate as Deploy main, not an accidentally
+        # tree-shaken "unset VITE_*" bundle that can underreport size.
+        env:
+          VITE_SUPABASE_URL: https://npbjrtiolqperdgljnhi.supabase.co
+          VITE_SUPABASE_ANON_KEY: sb_publishable_zStTw3n8wZ271PehDRDvGg_rs0JOy84
+          VITE_MIGRATION_ALLOW_WRITES: 'false'
+          VITE_MIGRATION_SCANNING_ENABLED: 'false'
+          E2E_MAIN_MODERN_QA_ORIGIN: https://uptilldawn-modern-main.uptilldawn.workers.dev
         shell: bash
         run: |
           set -euo pipefail
