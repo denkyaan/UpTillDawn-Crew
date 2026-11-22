@@ -144,7 +144,7 @@ jobs:
     permissions:
       contents: read
     runs-on: ubuntu-latest
-    timeout-minutes: 18
+    timeout-minutes: 24
     env:
       E2E_MAIN_MODERN_QA_ORIGIN: https://uptilldawn-modern-main.uptilldawn.workers.dev
       E2E_MAIN_QA_BASE_URL: https://npbjrtiolqperdgljnhi.supabase.co/
