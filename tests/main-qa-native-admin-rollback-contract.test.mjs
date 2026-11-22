@@ -11,8 +11,13 @@ const config=JSON.parse(read("modern/wrangler.main-qa.jsonc"))
 const original=read("lib/migration/original-action-registry.ts")
 const denied=read("supabase/tests/main_qa_native_admin_actions_rollback.sql")
 const positive=read("supabase/tests/main_qa_native_admin_actions_positive_rollback.sql")
-const rpcNames=[...source.matchAll(/\brpc:"(upt_[a-z_]+)"/g)].map(match=>match[1])
-const actionIds=[...source.matchAll(/"lib\/actions\/(?:guestlist|sales|platform)\.ts#[A-Za-z]+"/g)].map(x=>x[0].slice(1,-1))
+// Preserve 12 first-wave SQL assertions independently of newly extracted actions.
+const firstWaveIds=source.split("export const nativeAdminActionIds=[")[1].split("] as const")[0]
+const firstWaveCases=source.split("switch(id){")[1].split('case "lib/actions/platform.ts#setFeatureRollout"')[0]
+const rpcNames=[...firstWaveCases.matchAll(/\brpc:"(upt_[a-z_]+)"/g)].map(match=>match[1])
+const actionIds=[...firstWaveIds.matchAll(/"lib\/actions\/(?:guestlist|sales|platform)\.ts#[A-Za-z]+"/g),
+ ...firstWaveCases.matchAll(/"lib\/actions\/(?:guestlist|sales|platform)\.ts#[A-Za-z]+"/g)]
+ .map(x=>x[0].slice(1,-1))
 const uniqueValues=xs=>[...new Set(xs)].sort()
 const calls=sql=>[...sql.matchAll(/\bpublic\.(upt_[a-z_]+)\(/g)]
  .map(x=>x[1])
