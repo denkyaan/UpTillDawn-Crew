@@ -15,6 +15,7 @@ import {scannerReady,scannerOrigin,validScanRequest,scanWeeztix,type ScannerBind
 import {forwardMainAuth,type MainAuthBindings} from "./main-auth.ts"
 import {makerReadResponse,godSourceReadResponse,userErrorReportReadResponse,type GodReadPath,type ReadDb} from "./native-maker-reads.ts"
 import {nativeAdminActionAllowed,nativeAdminActionResponse,type NativeAdminActionDb} from "./native-admin-actions.ts"
+import {nativeWaveTwoAllowed,nativeWaveTwoActionResponse} from "./native-platform-actions.ts"
 
 type Bindings={SUPABASE_URL:string;SUPABASE_ANON_KEY:string;UPT_MIGRATION_ALLOW_WRITES?:string;ASSETS?:{fetch:(request:Request)=>Promise<Response>}}&OAuthBindings&ScannerBindings&MainAuthBindings
 const app=new Hono<{Bindings:Bindings}>()
@@ -348,15 +349,20 @@ app.post("/api/migration/actions",async c=>{
  if(c.env.UPT_MIGRATION_ALLOW_WRITES!=="true")
   return c.json({error:"migration_writes_disabled"},503)
  const hint=c.req.header("x-uptilldawn-action-hint")||null
- if(!nativeAdminActionAllowed(hint))
+ const waveOne=nativeAdminActionAllowed(hint)
+ const waveTwo=nativeWaveTwoAllowed(hint)
+ if(!waveOne&&!waveTwo)
   return forwardMainSource(c.req.raw,c.env)
  const actor=await sourceReadSession(c.req.raw,c.env)
  if(!actor.ok)return Response.json({
   error:"De actie kon niet worden uitgevoerd. Probeer opnieuw.",
   code:actor.status===401?"authentication_required":"action_unavailable"
  },{status:actor.status,headers:{"Cache-Control":"private, no-store"}})
- return attachSourceCookies(await nativeAdminActionResponse(
-  c.req.raw,actor.db as unknown as NativeAdminActionDb,hint),actor)
+ const db=actor.db as unknown as NativeAdminActionDb
+ const result=waveOne
+  ?await nativeAdminActionResponse(c.req.raw,db,hint)
+  :await nativeWaveTwoActionResponse(c.req.raw,db,hint as Parameters<typeof nativeWaveTwoActionResponse>[2])
+ return attachSourceCookies(result,actor)
 })
 
 // Candidate is intentionally read-only. Vite compile-time flags alone are
