@@ -207,13 +207,16 @@
    and desktop. Other login forms, signup and auth pages remain unchanged.
    The modern Main-QA candidate imports this same authoritative stylesheet. */
 html:has(.portal-selection-screen),
-body:has(.portal-selection-screen) {
+body:has(.portal-selection-screen),
+html:has(.auth-portal-screen),
+body:has(.auth-portal-screen) {
   background: #000;
   overflow: hidden;
   overscroll-behavior: none;
 }
 
-.auth-layout:has(.portal-selection-screen) {
+.auth-layout:has(.portal-selection-screen),
+.auth-layout:has(.auth-portal-screen) {
   position: fixed;
   inset: 0;
   display: flex;
@@ -225,7 +228,8 @@ body:has(.portal-selection-screen) {
   background: #000;
 }
 
-.auth-layout-content:has(.portal-selection-screen) {
+.auth-layout-content:has(.portal-selection-screen),
+.auth-layout-content:has(.auth-portal-screen) {
   flex: 1 1 auto;
   width: 100%;
   min-height: 0;
@@ -234,7 +238,8 @@ body:has(.portal-selection-screen) {
 
 /* The shared footer is not part of the original portal chooser design.
    Hide it on this one route; do not remove it from other auth pages. */
-.auth-layout:has(.portal-selection-screen) > footer {
+.auth-layout:has(.portal-selection-screen) > footer,
+.auth-layout:has(.auth-portal-screen) > footer {
   display: none;
 }
 
@@ -323,34 +328,6 @@ body:has(.portal-selection-screen) {
    The pre-existing auth shell adds its own 48px padding, min-screen sizing
    and footer; overriding only the login's <main> does not prevent scrolling.
    Scope everything to these five forms (signup/recovery remain unaffected). */
-html:has(.auth-portal-screen),
-body:has(.auth-portal-screen) {
-  background: #000;
-  overflow: hidden;
-  overscroll-behavior: none;
-}
-
-.auth-layout:has(.auth-portal-screen) {
-  position: fixed;
-  inset: 0;
-  width: 100%;
-  height: 100dvh;
-  min-height: 0;
-  overflow: hidden;
-  background: #000;
-}
-
-.auth-layout-content:has(.auth-portal-screen) {
-  flex: 1 1 auto;
-  width: 100%;
-  min-height: 0;
-  padding: 0;
-}
-
-.auth-layout:has(.auth-portal-screen) > footer {
-  display: none;
-}
-
 .auth-portal-screen {
   width: 100%;
   height: 100%;
