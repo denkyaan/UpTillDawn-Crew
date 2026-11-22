@@ -13,9 +13,19 @@ import {
 } from "./provider-oauth.ts"
 import {scannerReady,scannerOrigin,validScanRequest,scanWeeztix,type ScannerBindings,type RpcDb} from "./weeztix-scan.ts"
 import {forwardMainAuth,type MainAuthBindings} from "./main-auth.ts"
+import {makerReadResponse,godSourceReadResponse,userErrorReportReadResponse,type GodReadPath,type ReadDb} from "./native-maker-reads.ts"
 
 type Bindings={SUPABASE_URL:string;SUPABASE_ANON_KEY:string;UPT_MIGRATION_ALLOW_WRITES?:string;ASSETS?:{fetch:(request:Request)=>Promise<Response>}}&OAuthBindings&ScannerBindings&MainAuthBindings
 const app=new Hono<{Bindings:Bindings}>()
+
+// If a future rename accidentally binds the former Main service to THIS
+// candidate, terminate the first forwarded hop. Never recurse into the same
+// Worker until Cloudflare Free CPU/memory limits are exhausted.
+app.use("*",async(c,next)=>{
+ if(c.req.header("x-uptilldawn-main-bridge")==="original-read-v1")
+  return c.json({error:"main_backend_recursion_blocked"},508)
+ await next()
+})
 
 // Static navigation and images bypass this Worker entirely. Only /api/*
 // invokes Hono, with no Next runtime, SSR, or privileged application secrets.
@@ -72,6 +82,27 @@ for(const [path,kind] of [
  })
 }
 
+// Owner-only God Mode reads and user error-report status no longer invoke
+// the expensive Next/SSR Worker. Writes and cross-environment operations
+// remain on the original authenticated service.
+for(const path of [
+ "/api/god/automation-rules","/api/god/preview-role","/api/god/rules",
+ "/api/god/data","/api/god/error-reports"
+] as const){
+ app.get(path,async c=>{
+  const actor=await sourceReadSession(c.req.raw,c.env)
+  if(!actor.ok)return c.json({error:"Meld opnieuw aan bij God Mode."},actor.status)
+  return attachSourceCookies(await makerReadResponse(
+   actor.db as unknown as ReadDb,c.req.raw,actor.cookieHeader,path as GodReadPath),actor)
+ })
+}
+app.get("/api/error-reports",async c=>{
+ const actor=await sourceReadSession(c.req.raw,c.env)
+ if(!actor.ok)return c.json({error:"Aanmelden vereist."},actor.status)
+ return attachSourceCookies(await userErrorReportReadResponse(
+  actor.db as unknown as ReadDb,c.req.raw),actor)
+})
+
 // The source uses POST for this read DTO. Only the strictly recognized
 // preference query migrates here; all other IDs stay on original Main until
 // independently ported and verified. Inspect a bounded clone, never consume
@@ -83,10 +114,14 @@ app.post("/api/migration/view-data",async c=>{
  if(request.headers.get("origin")!==origin||(site&&site!=="same-origin"&&site!=="none"))
   return c.json({error:"invalid_origin"},403)
  const payload=await boundedJson(request.clone(),4096)
- if(payload?.id!=="portal-preference"||!Array.isArray(payload.args))
+ if(!payload||!Array.isArray(payload.args)||
+    (payload.id!=="portal-preference"&&payload.id!=="god-session-rpc"))
   return forwardMainSource(request,c.env)
  const actor=await sourceReadSession(request,c.env)
  if(!actor.ok)return c.json({error:"view_data_unavailable"},actor.status)
+ if(payload.id==="god-session-rpc")
+  return attachSourceCookies(await godSourceReadResponse(
+   actor.db as unknown as ReadDb,actor.cookieHeader,payload.args),actor)
  return attachSourceCookies(portalPreferenceResponse(actor.cookieHeader),actor)
 })
 
