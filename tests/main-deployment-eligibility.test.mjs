@@ -16,8 +16,11 @@ const current='a'.repeat(40),older='b'.repeat(40)
 for(const scenario of [
  {name:'successful current push deploys',sha:current,result:'success',eligible:'true',exit:0},
  {name:'successful current push with explicit QA marker deploys and enables isolated QA',sha:current,result:'success',eligible:'true',qa:'true',commitMessage:'test(main): authorized QA [main-qa-e2e]',exit:0},
- {name:'successful current push with explicit modern release marker runs full parity',sha:current,result:'success',eligible:'true',modernQa:'true',commitMessage:'test(main): cutover parity [modern-main-full-qa]',exit:0},
- {name:'successful current push with both QA markers requests both QA gates',sha:current,result:'success',eligible:'true',qa:'true',modernQa:'true',commitMessage:'test(main): complete QA [main-qa-e2e] [modern-main-full-qa]',exit:0},
+ {name:'successful current push with explicit modern release marker runs full parity',sha:current,result:'success',eligible:'true',modernQa:'true',commitMessage:'[modern-main-full-qa] test(main): cutover parity',exit:0},
+ {name:'successful current push with both QA markers requests both QA gates',sha:current,result:'success',eligible:'true',qa:'true',modernQa:'true',commitMessage:'[modern-main-full-qa] test(main): complete QA [main-qa-e2e]',exit:0},
+ {name:'mention of modern QA marker in subject must not authorize long QA',sha:current,result:'success',eligible:'true',modernQa:'false',commitMessage:'fix(ci): prevent accidental [modern-main-full-qa] trigger',exit:0},
+ {name:'mention of modern QA marker in merge body must not authorize long QA',sha:current,result:'success',eligible:'true',modernQa:'false',commitMessage:'ci(main): keep automatic deploy fast and require explicit full modern QA (#419)\n\nKeep strict acceptance only on a [modern-main-full-qa] commit; normal Main remains fast',exit:0},
+ {name:'exact isolated QA prefix authorizes full parity',sha:current,result:'success',eligible:'true',modernQa:'true',commitMessage:'[modern-main-full-qa]',exit:0},
  {name:'superseded success is skipped',sha:older,result:'success',eligible:'false',exit:0},
  {name:'superseded cancellation is skipped',sha:older,result:'cancelled',eligible:'false',exit:0},
  {name:'superseded failure is skipped',sha:older,result:'failure',eligible:'false',exit:0},
