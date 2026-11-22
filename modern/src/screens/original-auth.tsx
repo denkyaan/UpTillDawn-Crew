@@ -4,14 +4,22 @@ import {useLocation} from "react-router-dom"
 import {ThemeProvider} from "next-themes"
 import LoginPage from "@/app/(auth)/login/page"
 import AuthLayout from "@/app/(auth)/layout"
-import SignupPage from "@/app/(auth)/signup/page"
-import ResetPasswordPage from "@/app/auth/reset-password/page"
-import VerifyEmailClient from "@/app/(auth)/verify-email/verify-email-client"
+
+
+
 import loadPendingApproval from "@/app/(auth)/pending-approval/page"
 import {LoginForm} from "@/components/auth/login-form"
-import ForgotPasswordForm from "@/components/auth/forgot-password-form"
+
 import {LocaleSync} from "@/components/locale-sync"
 import styles from "../auth.css?inline"
+
+// Non-login routes keep the exact original components and behavior, but do
+// not inflate the critical login payload for every visitor. React Router's
+// existing Suspense boundary loads these only when the user navigates there.
+const SignupPage=lazy(()=>import("@/app/(auth)/signup/page"))
+const ResetPasswordPage=lazy(()=>import("@/app/auth/reset-password/page"))
+const VerifyEmailClient=lazy(()=>import("@/app/(auth)/verify-email/verify-email-client"))
+const ForgotPasswordForm=lazy(()=>import("@/components/auth/forgot-password-form"))
 
 const additionalPublic={
  '/disabled':lazy(()=>import('main-source/app/(auth)/disabled/page.tsx')),
