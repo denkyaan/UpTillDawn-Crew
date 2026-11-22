@@ -20,6 +20,9 @@ export async function forwardMainSource(request:Request,env:MainAuthBindings):Pr
  if(declared&&(!/^\d+$/.test(declared)||Number(declared)>max))return reject(413,'too_large')
  const upstream=new URL(url.pathname+url.search,MAIN_AUTH_ORIGIN)
  const headers=new Headers({Host:upstream.host,'X-Forwarded-Host':upstream.host,'X-Forwarded-Proto':'https'})
+ // An accidental self-binding must hit the candidate's first-hop guard,
+ // never recursively call its own /api/migration/actions endpoint.
+ headers.set('X-UpTillDawn-Main-Bridge','original-read-v1')
  for(const name of ['cookie','user-agent','accept','accept-language','content-type','range','if-none-match','cf-connecting-ip','cf-ipcity','cf-region','cf-ipcountry']){
   const value=request.headers.get(name);if(value)headers.set(name,value)
  }

@@ -6,7 +6,7 @@ const req=(path='/api/migration/actions',headers={})=>new Request(candidate+path
 test('only committed API methods use fixed Main host and cookie authority, never caller authorization',async()=>{
  let calls=0
  const response=await forwardMainSource(req(undefined,{Host:'evil.invalid','X-Forwarded-Host':'evil.invalid',Authorization:'Bearer forged','X-Role':'admin'}),{SUPABASE_URL:qa,MAIN_AUTH:{async fetch(r){
-  calls++;assert.equal(r.url,main+'/api/migration/actions');assert.equal(r.headers.get('host'),new URL(main).host);assert.equal(r.headers.get('origin'),main);assert.equal(r.headers.get('authorization'),null);assert.equal(r.headers.get('x-role'),null);assert.equal(r.headers.get('cookie'),'sb-qa-auth-token=synthetic');assert.equal(await r.text(),'{}')
+  calls++;assert.equal(r.url,main+'/api/migration/actions');assert.equal(r.headers.get('host'),new URL(main).host);assert.equal(r.headers.get('origin'),main);assert.equal(r.headers.get('x-uptilldawn-main-bridge'),'original-read-v1');assert.equal(r.headers.get('authorization'),null);assert.equal(r.headers.get('x-role'),null);assert.equal(r.headers.get('cookie'),'sb-qa-auth-token=synthetic');assert.equal(await r.text(),'{}')
   const headers=new Headers({'Content-Type':'application/json'});headers.append('Set-Cookie','a=synthetic; Path=/; HttpOnly');headers.append('Set-Cookie','b=synthetic; Path=/; HttpOnly');return Response.json({value:['value',true]},{headers})
  }}})
  assert.equal(response.status,200);assert.equal(calls,1);assert.equal(response.headers.getSetCookie().length,2)
