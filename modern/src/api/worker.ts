@@ -14,6 +14,7 @@ import {
 import {scannerReady,scannerOrigin,validScanRequest,scanWeeztix,type ScannerBindings,type RpcDb} from "./weeztix-scan.ts"
 import {forwardMainAuth,type MainAuthBindings} from "./main-auth.ts"
 import {makerReadResponse,godSourceReadResponse,userErrorReportReadResponse,type GodReadPath,type ReadDb} from "./native-maker-reads.ts"
+import {nativeAdminActionAllowed,nativeAdminActionResponse,type NativeAdminActionDb} from "./native-admin-actions.ts"
 
 type Bindings={SUPABASE_URL:string;SUPABASE_ANON_KEY:string;UPT_MIGRATION_ALLOW_WRITES?:string;ASSETS?:{fetch:(request:Request)=>Promise<Response>}}&OAuthBindings&ScannerBindings&MainAuthBindings
 const app=new Hono<{Bindings:Bindings}>()
@@ -337,6 +338,25 @@ app.post("/api/v1/tickets/weeztix/scan",async c=>{
  if("error" in actor)return c.json({ok:false,code:actor.error==="authentication_required"?"unauthorized":"forbidden"},actor.status)
  const out=await scanWeeztix(actor.db as unknown as RpcDb,c.env,body)
  return c.json(out.body,out.status as 200|403|404|409|422|503)
+})
+
+// First source-identical admin action wave. The browser hint is only a
+// streaming-safe selector: the signed action _id, authenticated session,
+// original admin/approved RPCs and original SQL RLS are checked separately.
+// No POST is available on deployed Main-QA (write flag is always false).
+app.post("/api/migration/actions",async c=>{
+ if(c.env.UPT_MIGRATION_ALLOW_WRITES!=="true")
+  return c.json({error:"migration_writes_disabled"},503)
+ const hint=c.req.header("x-uptilldawn-action-hint")||null
+ if(!nativeAdminActionAllowed(hint))
+  return forwardMainSource(c.req.raw,c.env)
+ const actor=await sourceReadSession(c.req.raw,c.env)
+ if(!actor.ok)return Response.json({
+  error:"De actie kon niet worden uitgevoerd. Probeer opnieuw.",
+  code:actor.status===401?"authentication_required":"action_unavailable"
+ },{status:actor.status,headers:{"Cache-Control":"private, no-store"}})
+ return attachSourceCookies(await nativeAdminActionResponse(
+  c.req.raw,actor.db as unknown as NativeAdminActionDb,hint),actor)
 })
 
 // Candidate is intentionally read-only. Vite compile-time flags alone are
