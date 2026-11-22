@@ -16,6 +16,7 @@ import {forwardMainAuth,type MainAuthBindings} from "./main-auth.ts"
 import {makerReadResponse,godSourceReadResponse,userErrorReportReadResponse,type GodReadPath,type ReadDb} from "./native-maker-reads.ts"
 import {nativeAdminActionAllowed,nativeAdminActionResponse,type NativeAdminActionDb} from "./native-admin-actions.ts"
 import {nativeWaveTwoAllowed,nativeWaveTwoActionResponse} from "./native-platform-actions.ts"
+import {nativeWaveThreeAllowed,nativeWaveThreeActionResponse} from "./native-event-shift-actions.ts"
 
 type Bindings={SUPABASE_URL:string;SUPABASE_ANON_KEY:string;UPT_MIGRATION_ALLOW_WRITES?:string;ASSETS?:{fetch:(request:Request)=>Promise<Response>}}&OAuthBindings&ScannerBindings&MainAuthBindings
 const app=new Hono<{Bindings:Bindings}>()
@@ -351,7 +352,8 @@ app.post("/api/migration/actions",async c=>{
  const hint=c.req.header("x-uptilldawn-action-hint")||null
  const waveOne=nativeAdminActionAllowed(hint)
  const waveTwo=nativeWaveTwoAllowed(hint)
- if(!waveOne&&!waveTwo)
+ const waveThree=nativeWaveThreeAllowed(hint)
+ if(!waveOne&&!waveTwo&&!waveThree)
   return forwardMainSource(c.req.raw,c.env)
  const actor=await sourceReadSession(c.req.raw,c.env)
  if(!actor.ok)return Response.json({
@@ -361,7 +363,9 @@ app.post("/api/migration/actions",async c=>{
  const db=actor.db as unknown as NativeAdminActionDb
  const result=waveOne
   ?await nativeAdminActionResponse(c.req.raw,db,hint)
-  :await nativeWaveTwoActionResponse(c.req.raw,db,hint as Parameters<typeof nativeWaveTwoActionResponse>[2])
+  :waveTwo
+   ?await nativeWaveTwoActionResponse(c.req.raw,db,hint as Parameters<typeof nativeWaveTwoActionResponse>[2])
+   :await nativeWaveThreeActionResponse(c.req.raw,db,hint as Parameters<typeof nativeWaveThreeActionResponse>[2])
  return attachSourceCookies(result,actor)
 })
 
