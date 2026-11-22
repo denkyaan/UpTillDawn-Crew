@@ -215,7 +215,7 @@ try{
           originalExport.status()!==modernExport.status()||
           originalExport.headers()['content-disposition']!==modernExport.headers()['content-disposition']||
           originalExport.headers()['content-type']!==modernExport.headers()['content-type']||
-          await originalExport.text()!==await modernExport.text())
+          !Buffer.from(await originalExport.body()).equals(Buffer.from(await modernExport.body())))
         throw Error('QA_NATIVE_ADMIN_EXPORT_PARITY '+path)
        nativeReadComparisons++
       }
