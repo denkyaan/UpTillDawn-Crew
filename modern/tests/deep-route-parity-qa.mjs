@@ -48,6 +48,22 @@ if(cases.length!==7||EXPECTED!==44)throw Error('DEEP_PARITY_COVERAGE_CHANGED')
 const reportDir=resolve(import.meta.dirname,'../../test-results/modern-deep-route-parity')
 const clean=value=>(value||'').replace(/\s+/g,' ').replace(/\b\d+\b/g,'#').trim()
 
+let legacyRecoveries=0
+async function navigateOriginalWithRecovery(page,path){
+ // The original Next SSR GET can transiently fail while Main-QA is healthy.
+ // Only recover an idempotent source navigation, with bounded cooling.
+ for(let attempt=0;attempt<3;attempt++){
+  const response=await page.goto(original+path,{waitUntil:'domcontentloaded',timeout:30000})
+  const status=response?.status()
+  if(status!==502&&status!==503&&status!==504)return response
+  if(attempt===2)return response
+  await page.waitForTimeout((attempt+1)*2000)
+  console.warn('DEEP_PARITY_SOURCE_RECOVERY '+path+' '+status+' attempt='+String(attempt+1))
+  legacyRecoveries++
+ }
+ throw Error('DEEP_PARITY_SOURCE_NAVIGATION_INCOMPLETE')
+}
+
 async function ready(page){
  await page.waitForFunction(()=>{
   const path=location.pathname
@@ -102,8 +118,13 @@ async function view(page){
  })
 }
 async function matching(a,b,label){
+ // Avoid comparing original SSR and SPA mid-font-swap or first paint.
+ await Promise.all([a,b].map(page=>page.evaluate(async()=>{
+  await document.fonts.ready
+  await new Promise(resolve=>requestAnimationFrame(()=>requestAnimationFrame(resolve)))
+ })))
  let expected=await view(a),actual=await view(b)
- const deadline=Date.now()+6000
+ const deadline=Date.now()+10000
  while(JSON.stringify(expected)!==JSON.stringify(actual)&&Date.now()<deadline){
   await b.waitForTimeout(300)
   expected=await view(a);actual=await view(b)
@@ -114,6 +135,17 @@ async function matching(a,b,label){
  await a.screenshot({path:resolve(reportDir,safe+'-original.png'),fullPage:true,animations:'disabled'})
  await b.screenshot({path:resolve(reportDir,safe+'-modern.png'),fullPage:true,animations:'disabled'})
  const fields=Object.keys(expected).filter(k=>JSON.stringify(expected[k])!==JSON.stringify(actual[k]))
+ if(fields.includes('layout')){
+  // Diagnostic deliberately emits CSS geometry only: no document text,
+  // cookies, account identifiers, token-bearing URLs or finance content.
+  const differences=[]
+  for(let i=0;i<Math.max(expected.layout.length,actual.layout.length)&&differences.length<8;i++){
+   const source=expected.layout[i],candidate=actual.layout[i]
+   if(JSON.stringify(source)!==JSON.stringify(candidate))
+    differences.push({index:i,original:source&&{tag:source.tag,x:source.x,y:source.y,w:source.w,h:source.h,font:source.font,weight:source.weight},candidate:candidate&&{tag:candidate.tag,x:candidate.x,y:candidate.y,w:candidate.w,h:candidate.h,font:candidate.font,weight:candidate.weight}})
+  }
+  console.error('DEEP_PARITY_LAYOUT_GEOMETRY '+label+' '+JSON.stringify(differences))
+ }
  // Only field names and route identities are logged: never leak profile data.
  console.error('DEEP_PARITY_DIFFERENCE '+label+' '+fields.join(',')+' originalPath='+new URL(a.url()).pathname+' candidatePath='+new URL(b.url()).pathname)
  throw Error('DEEP_PARITY_MISMATCH '+label+' '+fields.join(','))
@@ -162,8 +194,14 @@ try{
     const a=redirectsConditionally?await sourceContext.newPage():sharedSource
     const b=redirectsConditionally?await modernContext.newPage():sharedCandidate
     let stage='original-navigation'
+    const failedReadStatuses=[]
+    const onCandidateResponse=response=>{
+     if(new URL(response.url()).pathname==='/api/migration/view-data'&&
+        response.status()>=500)failedReadStatuses.push(response.status())
+    }
+    b.on('response',onCandidateResponse)
     try{
-     const baseline=await a.goto(original+path,{waitUntil:'domcontentloaded',timeout:30000})
+     const baseline=await navigateOriginalWithRecovery(a,path)
      if(baseline?.status()!==200&&baseline?.status()!==304)
       throw Error('LEGACY_MAIN_HTTP_'+baseline?.status())
      // Legacy /shifts is always an authenticated alias to /workplaces.
@@ -207,17 +245,21 @@ try{
      // response bodies, profile/incident data or credential-bearing URLs.
      const message=error instanceof Error?error.message.split('\n')[0]:'unknown'
      const knownError=/^(?:DEEP_PARITY_MISMATCH .*|DEEP_PARITY_RENDER_ERROR|LEGACY_MAIN_HTTP_\d+|UNEXPECTED_ORIGINAL_INCIDENT_REDIRECT)$/
-     const reason=knownError.test(message)?message:
-      'DEEP_PARITY_ROUTE_INCOMPLETE '+stage+' '+(error instanceof Error?error.name:'Error')
+     const reason=(knownError.test(message)?message:
+      'DEEP_PARITY_ROUTE_INCOMPLETE '+stage+' '+(error instanceof Error?error.name:'Error'))+
+      (failedReadStatuses.length?' bridgeRead5xx='+failedReadStatuses.join(','):'')
      const sourcePath=new URL(a.url()).pathname,candidatePath=new URL(b.url()).pathname
      mismatches.push({route:name,reason,sourcePath,candidatePath})
      console.error('DEEP_PARITY_ROUTE_FAILED '+name+' '+reason+
       ' originalPath='+sourcePath+' candidatePath='+candidatePath)
     }finally{
+     b.off('response',onCandidateResponse)
      if(redirectsConditionally){
       await a.close()
       await b.close()
      }
+     // Do not pile dozens of expensive legacy SSR reads onto Cloudflare Free.
+     await new Promise(resolve=>setTimeout(resolve,450))
     }
    }
    await sharedSource.close()
@@ -234,7 +276,7 @@ try{
  }
  if(signins!==7||validated!==EXPECTED)throw Error('DEEP_PARITY_INCOMPLETE')
  console.log(JSON.stringify({
-  deepRouteSourceControlComparisons:validated,authenticatedRoles:signins,
+  deepRouteSourceControlComparisons:validated,authenticatedRoles:signins,legacyMainReadRecoveries:legacyRecoveries,
   comparedAgainstRealMain:true,writeActionsSubmitted:0,
   fullFunctionalParityVerified:false,mainCutoverAllowed:false,productionReady:false
  }))

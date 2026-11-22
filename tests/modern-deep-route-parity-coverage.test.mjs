@@ -30,7 +30,9 @@ test("all 21 original baseline route paths remain in expanded 44-case deep QA",(
   assert.ok(deep.includes("role:'"+role+"'"),"Role missing from deep browser QA: "+role)
 })
 test("deep acceptance runs against live Main and modern Worker, no business form submissions",()=>{
- assert.ok(deep.includes("await a.goto(original+path"))
+ assert.ok(deep.includes("await page.goto(original+path"))
+ assert.ok(deep.includes("await navigateOriginalWithRecovery(a,path)"))
+ assert.ok(deep.includes("if(attempt===2)return response"))
  assert.ok(deep.includes("await b.goto(modern+path"))
  assert.ok(deep.includes("await login.waitForURL(url=>!url.pathname.startsWith('/login')"))
  const click=deep.indexOf("await login.locator('form button[type=\"submit\"]').click()")

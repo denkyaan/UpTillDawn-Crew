@@ -14,8 +14,33 @@ export async function invokeOriginalAction(id:string,args:unknown[]):Promise<unk
  return decode(result.value,new FormData())
 }
 export async function invokeOriginalRead(id:string,args:unknown[]):Promise<unknown>{
- const response=await fetch('/api/migration/view-data',{method:'POST',credentials:'same-origin',headers:{'Content-Type':'application/json'},body:JSON.stringify({id,args})})
- const result=await response.json()
- if(!response.ok)throw Error('De gegevens konden niet worden geladen.')
- return result.value
+ // Original view-data uses POST for a strictly read-only DTO. For the
+ // integration readiness panel, allow ONE delayed retry of a transient
+ // upstream gateway failure. This preserves the original page and avoids
+ // an immediate retry storm against the Free-plan legacy Main Worker.
+ const body=JSON.stringify({id,args})
+ const transient=new Set([502,503,504])
+ for(let attempt=0;attempt<2;attempt++){
+  let response:Response
+  try{
+   response=await fetch('/api/migration/view-data',{method:'POST',credentials:'same-origin',
+    headers:{'Content-Type':'application/json'},body})
+  }catch{
+   if(id!=='external-services-view'||attempt!==0)
+    throw Error('De gegevens konden niet worden geladen.')
+   await new Promise(resolve=>setTimeout(resolve,1800))
+   continue
+  }
+  if(!response.ok&&id==='external-services-view'&&attempt===0&&transient.has(response.status)){
+   await new Promise(resolve=>setTimeout(resolve,1800))
+   continue
+  }
+  if(!response.ok)throw Error('De gegevens konden niet worden geladen.')
+  let result:unknown
+  try{result=await response.json()}catch{throw Error('De gegevens konden niet worden geladen.')}
+  if(!result||typeof result!=='object'||!('value' in result))
+   throw Error('De gegevens konden niet worden geladen.')
+  return (result as {value:unknown}).value
+ }
+ throw Error('De gegevens konden niet worden geladen.')
 }
