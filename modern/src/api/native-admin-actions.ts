@@ -5,7 +5,7 @@ import {z} from "zod"
 import {boundedMigrationForm} from "../../../lib/migration/bounded-form.ts"
 import {decode,encode} from "../../../lib/migration/wire.ts"
 
-type ActionDb={
+export type NativeAdminActionDb={
  auth:{getUser:()=>Promise<{data:{user:{id:string}|null};error:unknown}>},
  rpc:(name:string,args?:Record<string,unknown>)=>Promise<{data:unknown;error:{message?:string}|null}>
 }
@@ -113,7 +113,7 @@ export function originalAdminCommand(id:NativeAdminActionId,fd:FormData):Command
  * All 12 actions keep the original admin/approved checks + RLS SQL audit.
  */
 export async function nativeAdminActionResponse(
- request:Request,db:ActionDb,selected:NativeAdminActionId
+ request:Request,db:NativeAdminActionDb,selected:NativeAdminActionId
 ):Promise<Response>{
  const url=new URL(request.url)
  const site=request.headers.get("sec-fetch-site")
