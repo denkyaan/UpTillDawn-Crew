@@ -1,7 +1,10 @@
 import {encode,decode} from '../../../lib/migration/wire'
 export async function invokeOriginalAction(id:string,args:unknown[]):Promise<unknown>{
  const body=new FormData();body.set('_id',id);body.set('_args',JSON.stringify(encode(args,body)))
- const response=await fetch('/api/migration/actions',{method:'POST',body,credentials:'same-origin',redirect:'error'})
+ // Routing hint permits bounded native parsing without buffering every original upload.
+ // It is NEVER an authorization: the server checks the signed _id inside the
+ // multipart body and the original admin/RLS grants before any write.
+ const response=await fetch('/api/migration/actions',{method:'POST',body,headers:{'X-UpTillDawn-Action-Hint':id},credentials:'same-origin',redirect:'error'})
  const result=await response.json()
  if(!response.ok)throw Error(result.error||'De actie kon niet worden uitgevoerd.')
  if(typeof result.redirect==='string'){
