@@ -49,7 +49,6 @@ export async function nativeTicketCsvImport(db:SupabaseClient,request:Request){
  if(!sameOriginMutation(request))return fail("forbidden",403)
  // Read a bounded stream before parsing multipart data; Content-Length is untrusted.
 
- if(!reader)return fail("invalid_file",400)
  let form:FormData
  try{form=await readBoundedFormData(request,2_100_000)}
  catch(error){return fail(error instanceof Error&&error.message==="too_large"?"file_too_large":"invalid_file",error instanceof Error&&error.message==="too_large"?413:400)}
