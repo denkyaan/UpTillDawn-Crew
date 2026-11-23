@@ -314,8 +314,11 @@ app.post("/api/admin/provider-connection-check",async c=>{
 // Original customer-facing GET OAuth consent and callback URLs. Both start
 // and callback mutate browser/vault state; never treat GET as a safe QA read.
 // No legacy Worker, provider request or SQL writes while QA gates are off.
-for(const phase of ["start","callback"] as const){
- app.get("/api/administration/integrations/oauth/:provider/"+phase,async c=>{
+for(const [path,phase] of [
+ ["/api/administration/integrations/oauth/:provider/start","start"],
+ ["/api/administration/integrations/oauth/:provider/callback","callback"]
+] as const){
+ app.get(path,async c=>{
   if(c.env.UPT_MIGRATION_ALLOW_WRITES!=="true"||
      c.env.UPT_MIGRATION_OAUTH_ENABLED!=="true")
    return c.json({error:"migration_writes_disabled"},503)
@@ -325,7 +328,12 @@ for(const phase of ["start","callback"] as const){
    actor.db,actor.identity.id,c.req.raw,c.env,c.req.param("provider"),phase
   ),actor)
  })
- app.get("/api/administration/integrations/weeztix/"+phase,async c=>{
+}
+for(const [path,phase] of [
+ ["/api/administration/integrations/weeztix/start","start"],
+ ["/api/administration/integrations/weeztix/callback","callback"]
+] as const){
+ app.get(path,async c=>{
   if(c.env.UPT_MIGRATION_ALLOW_WRITES!=="true"||
      c.env.UPT_MIGRATION_OAUTH_ENABLED!=="true")
    return c.json({error:"migration_writes_disabled"},503)
