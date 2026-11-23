@@ -36,6 +36,8 @@ import {nativeAdministrationPermission,nativeFinancialAttachment,nativePeppolPre
 import {nativeBookingNotesGet,nativeBookingNotesPost} from "./native-booking-notes.ts"
 import {nativePushSubscription,nativeTranslateChat,type NativeTranslationAI} from "./native-push-translation.ts"
 import {nativeProviderMappingCreate,nativeProviderMappingUpdate,nativeProviderTransactionsImport} from "./native-provider-mutations.ts"
+import {nativeInvoiceLinesImport,nativeTicketSalesImport} from "./native-final-imports.ts"
+import {nativeBookingNotesProposal,nativeAdministrationAssistant,nativeOperationalAdminAssistant} from "./native-final-ai-assistants.ts"
 import {nativeFinanceExportResponse} from "./native-finance-export.ts"
 import {nativePortalSwitchResponse,nativeFacebookEventResponse,nativeGeoapifyAutocompleteResponse} from "./native-standalone-routes.ts"
 
@@ -178,6 +180,28 @@ const adminRoute=async(
   Response.json({error:"access_denied"},{status:permitted}),actor)
  return attachSourceCookies(await execute(actor.db,actor.identity.id),actor)
 }
+// Source-preserved imports and three bounded AI assistants. All POSTs
+// remain blocked on public Main-QA until transaction and per-role acceptance.
+app.post("/api/administration/finance/invoice-lines/import",c=>
+ adminRoute(c.req.raw,c.env,db=>nativeInvoiceLinesImport(db,c.req.raw),true))
+app.post("/api/administration/ticketing/import",c=>
+ adminRoute(c.req.raw,c.env,db=>nativeTicketSalesImport(db,c.req.raw),true))
+app.post("/api/administration/assistant/booking-notes/propose",c=>
+ adminRoute(c.req.raw,c.env,db=>nativeBookingNotesProposal(db,c.req.raw,c.env.AI),true))
+app.post("/api/administration/assistant",c=>
+ adminRoute(c.req.raw,c.env,db=>nativeAdministrationAssistant(db,c.req.raw,c.env.AI),true))
+app.post("/api/admin-assistant",async c=>{
+ if(c.env.UPT_MIGRATION_ALLOW_WRITES!=="true")
+  return c.json({error:"migration_writes_disabled"},503)
+ const actor=await sourceReadSession(c.req.raw,c.env)
+ if(!actor.ok)return c.json({error:"Aanmelden vereist."},actor.status)
+ const {data:admin,error}=await actor.db.rpc("upt_is_admin",{uid:actor.identity.id})
+ if(error)return c.json({error:"Toegangscontrole tijdelijk niet beschikbaar."},503)
+ if(admin!==true)return c.json({error:"Geen toegang."},403)
+ return attachSourceCookies(await nativeOperationalAdminAssistant(
+  actor.db,c.req.raw,c.env.AI
+ ),actor)
+})
 app.post("/api/administration/provider-mappings",c=>
  adminRoute(c.req.raw,c.env,(db,actorId)=>nativeProviderMappingCreate(db,actorId,c.req.raw),true))
 app.patch("/api/administration/provider-mappings/:id",c=>
