@@ -14,12 +14,7 @@ const change=z.object({path,content:z.string().max(500_000).nullable()}).strict(
 const set=z.object({
  base:sha,title:z.string().trim().min(3).max(120),
  changes:z.array(change).min(1).max(30)
-}).strict().superRefine((value,context)=>{
- if(new Set(value.changes.map(c=>c.path)).size!==value.changes.length)
-  context.addIssue({code:"custom",message:"Elk bestand mag maar eenmaal voorkomen."})
- if(value.changes.reduce((n,c)=>n+new TextEncoder().encode(c.content||"").byteLength,0)>1_500_000)
-  context.addIssue({code:"custom",message:"Deze wijziging is te groot."})
-})
+}).strict()
 const action=z.discriminatedUnion("action",[
  set.extend({action:z.literal("save")}),
  z.object({action:z.literal("restore"),target:sha,base:sha}).strict(),
@@ -83,6 +78,10 @@ async function propose(key:string,base:string,tree:string,title:string){
  return {sha:committed.data,branch,number:pull.number,url:pull.html_url}
 }
 async function save(key:string,body:z.infer<typeof set>){
+ if(new Set(body.changes.map(c=>c.path)).size!==body.changes.length)
+  throw new MakerExecutionError("Elk bestand mag maar eenmaal voorkomen.",400)
+ if(body.changes.reduce((n,c)=>n+new TextEncoder().encode(c.content||"").byteLength,0)>1_500_000)
+  throw new MakerExecutionError("Deze wijziging is te groot.",400)
  if(await mainHead(key)!==body.base)
   throw new MakerExecutionError("Er staat nieuwere code op main. Bewaar je concept en laad de actuele versie.",409)
  const [base,tree]=await Promise.all([
@@ -132,7 +131,7 @@ async function publish(key:string,number:number,headSha:string){
  if(!latest||latest.status!=="completed"||latest.conclusion!=="success")
   throw new MakerExecutionError("Publiceren kan pas nadat CI main voor precies deze voorstelversie is geslaagd.",409)
  const compare=await makerGithubRead("/compare/main..."+headSha,key) as {behind_by?:number}
- if(!Number.isInteger(compare.behind_by)||compare.behind_by!>0)
+ if(!Number.isInteger(compare.behind_by)||Number(compare.behind_by)>0)
   throw new MakerExecutionError("Main is intussen gewijzigd. Werk het voorstel bij op GitHub en laat de tests opnieuw lopen.",409)
  // The original source merges only into Main. Production workflows and
  // Production tags are never touched here.
