@@ -40,6 +40,7 @@ import {nativeInvoiceLinesImport,nativeTicketSalesImport} from "./native-final-i
 import {nativeBookingNotesProposal,nativeAdministrationAssistant,nativeOperationalAdminAssistant} from "./native-final-ai-assistants.ts"
 import {nativeArtistContractArchive,nativeArtistContractPrint} from "./native-artist-agreements.ts"
 import {nativeUserErrorReportPost} from "./native-error-ingest.ts"
+import {nativeBriefingMediaExtract} from "./native-briefing-media.ts"
 import {nativeFinanceExportResponse} from "./native-finance-export.ts"
 import {nativePortalSwitchResponse,nativeFacebookEventResponse,nativeGeoapifyAutocompleteResponse} from "./native-standalone-routes.ts"
 
@@ -223,6 +224,23 @@ app.post("/api/error-reports",async c=>{
  return attachSourceCookies(await nativeUserErrorReportPost(
   actor.db,c.req.raw,c.env.AI,schedule
  ),actor)
+})
+// No cloud document conversion, no OpenAI/Cloudmersive dependency: Office
+// images remain parsed locally with bounded ZIP inflate and signed role checks.
+app.post("/api/briefing-extract-media",async c=>{
+ if(c.env.UPT_MIGRATION_ALLOW_WRITES!=="true")
+  return c.json({error:"migration_writes_disabled"},503)
+ const actor=await sourceReadSession(c.req.raw,c.env)
+ if(!actor.ok)return c.json({error:"Niet ingelogd."},actor.status)
+ const [profileResult,roleResult]=await Promise.all([
+  actor.db.from("profiles").select("role,approved").eq("id",actor.identity.id).single(),
+  actor.db.rpc("upt_current_effective_role")
+ ])
+ const role=roleResult.data||profileResult.data?.role
+ if(profileResult.error||roleResult.error||!profileResult.data?.approved||
+    !["admin","responsible_lead"].includes(role||""))
+  return c.json({error:"Geen toegang."},403)
+ return attachSourceCookies(await nativeBriefingMediaExtract(c.req.raw),actor)
 })
 app.post("/api/administration/finance/invoice-lines/import",c=>
  adminRoute(c.req.raw,c.env,db=>nativeInvoiceLinesImport(db,c.req.raw),true))
