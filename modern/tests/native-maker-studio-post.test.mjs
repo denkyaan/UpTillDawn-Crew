@@ -128,7 +128,7 @@ test("source save uses exact main base, preserves executable file mode and creat
   if(name.endsWith("/git/ref/heads/main"))return Response.json({object:{sha:a}})
   if(name.endsWith("/git/commits/"+a))return Response.json({sha:a,tree:{sha:b}})
   if(name.includes("/git/trees/"+a))return Response.json({truncated:false,tree:[
-   {path:"scripts/run.sh",type:"blob",mode:"100755",sha:c}
+   {path:"scripts/run.mjs",type:"blob",mode:"100755",sha:c}
   ]})
   if(name.endsWith("/git/trees")&&opts.method==="POST")return Response.json({sha:b})
   if(name.endsWith("/git/commits")&&opts.method==="POST")return Response.json({sha:c})
@@ -138,7 +138,7 @@ test("source save uses exact main base, preserves executable file mode and creat
  }
  try{
   const r=await source(f,{action:"save",base:a,title:"Test source modification",changes:[
-   {path:"scripts/run.sh",content:"#!/bin/sh\necho success\n"}
+   {path:"scripts/run.mjs",content:"#!/bin/sh\necho success\n"}
   ]})
   assert.equal(r.status,200)
   const result=await r.json()
@@ -147,7 +147,7 @@ test("source save uses exact main base, preserves executable file mode and creat
   assert.equal(result.proposal.number,449)
   const tree=seen.find(x=>x.name.endsWith("/git/trees")&&x.method==="POST")
   assert.deepEqual(tree.payload.tree,[{
-   path:"scripts/run.sh",mode:"100755",type:"blob",content:"#!/bin/sh\necho success\n"
+   path:"scripts/run.mjs",mode:"100755",type:"blob",content:"#!/bin/sh\necho success\n"
   }])
   assert.ok(seen.every(x=>x.name.startsWith("https://api.github.com/repos/denkyaan/UpTillDawn-Crew/")))
   assert.ok(seen.every(x=>x.name.includes("production")===false))
