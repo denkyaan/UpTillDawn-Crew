@@ -90,7 +90,7 @@ export async function megaPeopleResponse(req:Request,db:NativeAdminActionDb,sele
     const users=names.map(uuid)
     const {error}=await client.rpc("upt_admin_create_promotion_task",{
      p_request:request,p_title:title.parse(fd.get("title")),
-     p_description:String(fd.get("description")||"").slice(0,4000),p_users:users
+     p_description:z.string().max(4000).parse(String(fd.get("description")||"")),p_users:users
     })
     return promotionReturn(fd,error?"save":undefined)
    }
@@ -105,7 +105,7 @@ export async function megaPeopleResponse(req:Request,db:NativeAdminActionDb,sele
     if(!expected||!Number.isFinite(Date.parse(expected)))throw Error("Invalid version")
     const {error}=await client.rpc("upt_admin_update_promotion_task",{
      p_task:uuid(fd.get("task_id")),p_title:title.parse(fd.get("title")),
-     p_description:String(fd.get("description")||"").slice(0,4000),
+     p_description:z.string().max(4000).parse(String(fd.get("description")||"")),
      p_expected_updated_at:expected
     })
     const code=(error as {code?:string}|null)?.code
