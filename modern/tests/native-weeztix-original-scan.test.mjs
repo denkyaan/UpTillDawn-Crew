@@ -42,11 +42,18 @@ test("barcode input is strictly validated before SQL or Weeztix network fetch",a
  const db={rpc:async()=>{throw Error("No SQL on invalid barcode")}}
  for(const input of [{...payload,barcode:"https://phishing.invalid"},
   {...payload,eventId:"../event"}, {...payload,workplaceId:"wrong"},
-  {...payload,extra:"dangerous"},{...payload,barcode:"x".repeat(1020)}]){
+  {...payload,extra:"dangerous"}]){
   const r=await nativeWeeztixSourceScan(db,identity,request(input),env)
   assert.equal(r.status,422)
   assert.deepEqual(await r.json(),{ok:false,code:"invalid_request"})
  }
+})
+test("oversized QR upload is rejected without contacting SQL",async()=>{
+ const r=await nativeWeeztixSourceScan({
+  rpc:async()=>{throw Error("SQL must not run")}
+ },identity,request({...payload,barcode:"x".repeat(1020)}),env)
+ assert.equal(r.status,400)
+ assert.deepEqual(await r.json(),{ok:false,code:"invalid_request"})
 })
 test("signed entrance-scoped SQL secret and real vendor 204 are the only admission-success route",async()=>{
  const encrypted=await sealOAuthToken("weeztix",{
