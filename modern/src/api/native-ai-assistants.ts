@@ -181,7 +181,7 @@ export async function nativeBookingNotesProposal(db:SupabaseClient,request:Reque
  if(!booking)return Response.json({error:"Not found"},{status:404})
  if(booking.status==="cancelled")return Response.json({error:"Cancelled booking is locked"},{status:409})
  if(booking.internal_notes!==parsed.data.expectedNotes)return Response.json({error:"Booking notes changed; reload before generating"},{status:409})
- const current=(booking.internal_notes??"").split("\n").filter(line=>!auditLine.test(line)).join("\n")
+ const current=(booking.internal_notes??"").split("\n").filter((line:string)=>!auditLine.test(line)).join("\n")
  if(sensitiveRequest.test(parsed.data.instruction))return Response.json({error:"Sensitive booking changes require manual review outside AI notes"},{status:422})
  if(!ai)return Response.json({error:"AI unavailable"},{status:503})
  try{
