@@ -47,7 +47,7 @@ test("all candidate RPCs are review-allowlisted without live credentials",()=>{
  for(const rpc of ['upt_push_public_key','upt_notification_badge_count'])
   assert.ok(metadata.requiredPublicRpcNames.includes(rpc),'Original push read RPC needs an explicit native migration review: '+rpc)
  const out=JSON.parse(execFileSync(process.execPath,["modern/scripts/rpc-contract.mjs"],{encoding:"utf8"}))
- assert.equal(out.sourceRpcCount,176)
+ assert.equal(out.sourceRpcCount,178)
  assert.deepEqual(out.unreviewedRpc,[])
  assert.deepEqual(out.noLongerReferenced,[])
  assert.equal(out.liveDatabaseVerifiedInCi,false)
