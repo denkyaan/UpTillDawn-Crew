@@ -45,7 +45,7 @@ async function limitedJson(response:Response){
  try{return JSON.parse(new TextDecoder("utf-8",{fatal:true}).decode(bytes)) as unknown}
  catch{return null}
 }
-async function refreshProvider(provider:"sumup"|"peppol",stored:Record<string,string>,env:Env){
+async function refreshProvider(provider:"sumup"|"peppol",stored:Record<string,string|undefined>,env:Env){
  const p=prefix(provider),refresh=stored[p+"_OAUTH_REFRESH_TOKEN"]
  const entry=providerKeys[provider],client=env[entry.client],secret=env[entry.secret]
  if(!client?.trim()||!secret?.trim()||!refresh||refresh.length<10||refresh.length>4096||
@@ -149,7 +149,7 @@ export async function nativeProviderConnectionCheck(
  if(!isConnectionProvider(object.provider)||Object.keys(object).some(x=>x!=="provider"))
   return fail("invalid_provider",422)
  const provider=object.provider
- let managed:Record<string,string>|null=null
+ let managed:Record<string,string|undefined>|null=null
  try{managed=await configuration(db,provider,env)}
  catch(error){
   if(error instanceof Error&&(
