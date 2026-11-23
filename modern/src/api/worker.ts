@@ -45,6 +45,9 @@ import {nativeGodPreviewRolePost,nativeGodRulesPost} from "./native-maker-writes
 import {makerObservabilityResponse} from "./native-maker-observability.ts"
 import {nativeMakerStudioReadResponse} from "./native-maker-studio-reads.ts"
 import {nativeIntegrationsSummary} from "./native-integration-read.ts"
+import {nativeMakerSourcePost} from "./native-maker-source-post.ts"
+import {nativeMakerSqlPost} from "./native-maker-sql-post.ts"
+import {nativeMakerAiProposal} from "./native-maker-ai-proposals.ts"
 import {nativeMakerBusinessResponse} from "./native-maker-business-writes.ts"
 import {nativeIntegrationMutation} from "./native-integration-mutations.ts"
 import {nativeFinanceExportResponse} from "./native-finance-export.ts"
@@ -187,6 +190,37 @@ app.delete("/api/god/connection",async c=>{
   actor.db,c.req.raw,actor.cookieHeader,c.env,"disconnect"
  ),actor)
 })
+
+// Native God Mode studio: original source proposals and SQL queries remain
+// separately Maker-authenticated and are stopped BEFORE any I/O on QA.
+// Code and UI editor AI only return reviewable proposals and cannot commit.
+for(const [path,kind] of [
+ ["/api/god/source","source"],
+ ["/api/god/sql","sql"]
+] as const){
+ app.post(path,async c=>{
+  if(c.env.UPT_MIGRATION_ALLOW_WRITES!=="true")
+   return c.json({error:"migration_writes_disabled"},503)
+  const actor=await sourceReadSession(c.req.raw,c.env)
+  if(!actor.ok)return c.json({error:"Meld opnieuw aan bij God Mode."},actor.status)
+  return attachSourceCookies(await (kind==="source"
+   ?nativeMakerSourcePost(actor.db,c.req.raw,actor.cookieHeader,c.env)
+   :nativeMakerSqlPost(actor.db,c.req.raw,actor.cookieHeader,c.env)),actor)
+ })
+}
+for(const [path,kind] of [
+ ["/api/god/code-assistant","code"],
+ ["/api/edit-assistant","edit"]
+] as const){
+ app.post(path,async c=>{
+  // Both operations produce uncommitted proposals, never mutate data.
+  const actor=await sourceReadSession(c.req.raw,c.env)
+  if(!actor.ok)return c.json({error:"God Mode sessie vereist."},actor.status)
+  return attachSourceCookies(await nativeMakerAiProposal(
+   actor.db,c.req.raw,actor.cookieHeader,c.env,kind,c.env.AI
+  ),actor)
+ })
+}
 
 app.get("/api/error-reports",async c=>{
  const actor=await sourceReadSession(c.req.raw,c.env)
