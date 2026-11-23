@@ -45,7 +45,7 @@ function denied(status:number){
  throw new StudioError(messages[status]||"GitHub is tijdelijk niet beschikbaar ("+status+").",
   status===401||status===403?403:409)
 }
-async function boundedJson(response:Response,limit=6_000_000):Promise<unknown>{
+export async function makerBoundedJson(response:Response,limit=6_000_000):Promise<unknown>{
  const length=response.headers.get("content-length")
  if(length&&Number(length)>limit)throw new StudioError("GitHub-resultaat is te groot.",413)
  if(!response.body)throw new StudioError("GitHub gaf geen bruikbaar antwoord.",502)
@@ -65,7 +65,7 @@ async function boundedJson(response:Response,limit=6_000_000):Promise<unknown>{
  try{return JSON.parse(new TextDecoder("utf-8",{fatal:true}).decode(bytes))}
  catch{throw new StudioError("GitHub gaf geen bruikbaar antwoord.",502)}
 }
-async function github(path:string,credential?:string){
+export async function makerGithubRead(path:string,credential?:string){
  // The endpoint is a literal repository allowlist, never a user-supplied URL.
  if(!path.startsWith("/")||path.includes("..")||/[\r\n]/.test(path))
   throw new StudioError("Ongeldig repositorypad.")
@@ -79,7 +79,7 @@ async function github(path:string,credential?:string){
   cache:"no-store",redirect:"manual",signal:AbortSignal.timeout(20_000)
  })
  if(!response.ok)denied(response.status)
- return boundedJson(response)
+ return makerBoundedJson(response)
 }
 type Tree={sha:string;truncated?:boolean;tree:Array<{path:string;type:string;mode:string;sha:string;size?:number}>}
 const shaValue=(input:unknown)=>shaSchema.parse(input)
@@ -97,8 +97,8 @@ async function sourceRead(db:Db,token:string,request:Request){
  const params=new URL(request.url).searchParams
  const action=params.get("action")||"tree"
  if(action==="tree"){
-  const head=shaValue((await github("/git/ref/heads/main",credential) as {object?:{sha?:string}}).object?.sha)
-  const tree=await github("/git/trees/"+head+"?recursive=1",credential) as Tree
+  const head=shaValue((await makerGithubRead("/git/ref/heads/main",credential) as {object?:{sha?:string}}).object?.sha)
+  const tree=await makerGithubRead("/git/trees/"+head+"?recursive=1",credential) as Tree
   if(!tree||!Array.isArray(tree.tree))throw new StudioError("De repository kon niet worden geladen.",503)
   if(tree.truncated)throw new StudioError("De repository is te groot om volledig te laden.",413)
   return reply({head,connected:Boolean(credential),repository:STUDIO_REPOSITORY,
@@ -108,7 +108,7 @@ async function sourceRead(db:Db,token:string,request:Request){
   let path:string,ref:string
   try{path=sourcePath.parse(params.get("path"));ref=shaSchema.parse(params.get("ref"))}
   catch{return reply({error:"Ongeldige bestandsaanvraag."},400)}
-  const data=await github("/contents/"+path.split("/").map(encodeURIComponent).join("/")+"?ref="+ref,
+  const data=await makerGithubRead("/contents/"+path.split("/").map(encodeURIComponent).join("/")+"?ref="+ref,
    credential) as {content?:unknown;encoding?:unknown;sha?:unknown;size?:unknown}
   if(typeof data.size!=="number"||data.size>MAX_SOURCE_BYTES||data.encoding!=="base64"||
      typeof data.content!=="string")throw new StudioError("Dit bestand is te groot voor de ingebouwde teksteditor.",413)
@@ -116,8 +116,8 @@ async function sourceRead(db:Db,token:string,request:Request){
  }
  if(action==="history"){
   const [commits,pulls]=await Promise.all([
-   github("/commits?sha=main&per_page=30",credential),
-   github("/pulls?state=open&per_page=100",credential)
+   makerGithubRead("/commits?sha=main&per_page=30",credential),
+   makerGithubRead("/pulls?state=open&per_page=100",credential)
   ])
   if(!Array.isArray(commits)||!Array.isArray(pulls))
    throw new StudioError("De versiegeschiedenis kon niet worden geladen.",503)
@@ -132,7 +132,7 @@ async function sourceRead(db:Db,token:string,request:Request){
   let sha:string
   try{sha=shaValue(params.get("sha"))}
   catch{return reply({error:"Ongeldige bestandsaanvraag."},400)}
-  const data=await github("/actions/runs?head_sha="+sha+"&per_page=100",credential) as {workflow_runs?:unknown}
+  const data=await makerGithubRead("/actions/runs?head_sha="+sha+"&per_page=100",credential) as {workflow_runs?:unknown}
   if(!Array.isArray(data?.workflow_runs))
    throw new StudioError("De CI-resultaten konden niet worden geladen.",503)
   const runs=data.workflow_runs.map((value:unknown)=>{
