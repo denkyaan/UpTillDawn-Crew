@@ -355,7 +355,7 @@ app.post("/api/guestlist/import",async c=>{
  const actor=await sourceReadSession(c.req.raw,c.env)
  if(!actor.ok)return c.json({error:"Aanmelden vereist."},actor.status)
  return attachSourceCookies(await nativeGuestlistImport(
-  actor.db,c.req.raw,c.env.AI as GuestlistAI|undefined
+  actor.db,actor.identity.id,c.req.raw,c.env.AI as GuestlistAI|undefined
  ),actor)
 })
 

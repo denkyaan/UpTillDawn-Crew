@@ -217,10 +217,10 @@ async function uploadRows(file:File,ai:GuestlistAI|undefined):Promise<Entry[]>{
  }
  throw Error("Gebruik PDF, DOCX, XLS/XLSX, ODS/ODT, Numbers, CSV, TXT, JPG, PNG of WEBP.")
 }
-export async function nativeGuestlistImport(db:Pick<SupabaseClient,"rpc">,request:Request,ai?:GuestlistAI){
+export async function nativeGuestlistImport(db:Pick<SupabaseClient,"rpc">,userId:string,request:Request,ai?:GuestlistAI){
  if(!requestHasSameOrigin(request))return reply({error:"Ongeldige oorsprong."},403)
  const [{data:approved,error:aerr},{data:admin,error:ierr}]=await Promise.all([
-  db.rpc("upt_is_approved"),db.rpc("upt_is_admin")
+  db.rpc("upt_is_approved"),db.rpc("upt_is_admin",{uid:userId})
  ])
  if(aerr||ierr)return reply({error:"Geen toegang."},503)
  if(!approved||!admin)return reply({error:"Geen toegang."},403)

@@ -31,9 +31,10 @@ test("original CSV/TXT import preserves Dutch headers, artist/drinks and SQL eve
  const file=new File(["artiest;plaatsen;drank;backstage\nDJ Test;2;Water;Quiet room\n"],
   "guests.csv",{type:"text/csv"})
  const f=db()
- const result=await nativeGuestlistImport(f,request("/api/guestlist/import",form(file)))
+ const result=await nativeGuestlistImport(f,"11111111-1111-4111-8111-111111111111",request("/api/guestlist/import",form(file)))
  assert.equal(result.status,200)
  assert.deepEqual(await result.json(),{inserted:1,duplicates:0,supplemented:0})
+ assert.equal(f.calls.find(x=>x.name==="upt_is_admin").args.uid,"11111111-1111-4111-8111-111111111111")
  assert.equal(f.calls.at(-1).args.p_event,event)
  assert.deepEqual(f.calls.at(-1).args.p_entries,[{name:"DJ Test",type:"artist",
   spots:"2",notes:"",drinks:"Water",hospitality_notes:"Quiet room"}])
@@ -50,18 +51,18 @@ test("XLSX from original free Worker writer imports locally and without Node Exc
  assert.deepEqual(parsed.map(x=>[x.name,x.type,x.spots]),[
   ["Guest One","guest","1"],["Artist Two","artist","2"]])
  const f=db()
- const result=await nativeGuestlistImport(f,request("/api/guestlist/import",form(file)))
+ const result=await nativeGuestlistImport(f,"11111111-1111-4111-8111-111111111111",request("/api/guestlist/import",form(file)))
  assert.equal(result.status,200)
  assert.equal(f.calls.at(-1).args.p_entries.length,2)
 })
 test("signed SQL privilege is required before parsing bytes, AI or import",async()=>{
  const disabled=db(false,true)
- const result=await nativeGuestlistImport(disabled,request("/api/guestlist/import",
+ const result=await nativeGuestlistImport(disabled,"11111111-1111-4111-8111-111111111111",request("/api/guestlist/import",
   form(new File(["name\nTest"],"list.csv",{type:"text/csv"}))))
  assert.equal(result.status,403)
  assert.deepEqual(disabled.calls.map(x=>x.name),["upt_is_approved","upt_is_admin"])
  const hostile=db()
- const r=await nativeGuestlistImport(hostile,request("/api/guestlist/import",
+ const r=await nativeGuestlistImport(hostile,"11111111-1111-4111-8111-111111111111",request("/api/guestlist/import",
   form(new File(["name\nTest"],"list.csv",{type:"text/csv"})),{Origin:"https://evil.invalid"}))
  assert.equal(r.status,403);assert.equal(hostile.calls.length,0)
 })
@@ -76,10 +77,10 @@ test("rich document AI extraction requires source schema, fixed prompt and staff
     notes:null,drinks:"Water",hospitality_notes:null}]})}
   }}
  const file=new File(["%PDF-1.4\nfake test"],"guests.pdf",{type:"application/pdf"})
- const result=await nativeGuestlistImport(f,request("/api/guestlist/import",form(file)),ai)
+ const result=await nativeGuestlistImport(f,"11111111-1111-4111-8111-111111111111",request("/api/guestlist/import",form(file)),ai)
  assert.equal(result.status,200);assert.equal(calls,1)
  assert.equal(f.calls.at(-1).args.p_entries[0].name,"DJ B")
- const invalid=await nativeGuestlistImport(f,request("/api/guestlist/import",form(file)),{
+ const invalid=await nativeGuestlistImport(f,"11111111-1111-4111-8111-111111111111",request("/api/guestlist/import",form(file)),{
   ...ai,run:async()=>({response:JSON.stringify({entries:[{name:"Bad",type:"admin",spots:1000}]})})
  })
  assert.equal(invalid.status,400)
