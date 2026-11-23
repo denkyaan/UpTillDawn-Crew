@@ -71,7 +71,7 @@ function safeDocumensoOrigin(raw:string):string|null{
 }
 
 /** Ponto AIS token never leaves the server. A key alone is not bank consent. */
-export async function pontoAccessToken(env:NodeJS.ProcessEnv):Promise<{state:ConnectionState;token:string|null}>{
+export async function pontoAccessToken(env:Record<string,string|undefined>):Promise<{state:ConnectionState;token:string|null}>{
   const id=env.PONTO_CLIENT_ID,secret=env.PONTO_CLIENT_SECRET
   if(!configured(id)||!configured(secret))return {state:"not_configured",token:null}
   // Ponto client-credentials grant is an authentication probe, not bank
