@@ -4,8 +4,7 @@
 import type {SupabaseClient} from "@supabase/supabase-js"
 import {isIntegrationProvider,parseIntegrationConfiguration}
  from "../../../lib/administration/integration-credentials.ts"
-import {openIntegrationSecrets,validIntegrationMasterKey}
- from "../../../lib/administration/integration-crypto.ts"
+import {openOAuthToken,validMasterKey} from "./provider-oauth.ts"
 
 export type NativeIntegrationReadEnv={
  UPT_INTEGRATION_ENCRYPTION_KEY?:string
@@ -64,9 +63,9 @@ export async function nativeIntegrationsSummary(
   const row=weeztixResult.data as Record<string,unknown>|null
   if(!row||typeof row!=="object"||Array.isArray(row))throw Error("invalid_weeztix")
   if(row.configured===true){
-   if(typeof row.ciphertext!=="string"||!validIntegrationMasterKey(env.UPT_INTEGRATION_ENCRYPTION_KEY))
+   if(typeof row.ciphertext!=="string"||!validMasterKey(env.UPT_INTEGRATION_ENCRYPTION_KEY))
     throw Error("integration_storage_unavailable")
-   const decoded=await openIntegrationSecrets("weeztix",row.ciphertext,env.UPT_INTEGRATION_ENCRYPTION_KEY!)
+   const decoded=await openOAuthToken("weeztix",row.ciphertext,env.UPT_INTEGRATION_ENCRYPTION_KEY!)
    const config=parseIntegrationConfiguration("weeztix",decoded)
    if(!config)throw Error("invalid_weeztix_config")
    weeztixOauthReady=Boolean(config.WEEZTIX_CLIENT_ID&&config.WEEZTIX_CLIENT_SECRET)
@@ -74,7 +73,7 @@ export async function nativeIntegrationsSummary(
   return json({
    integrations,audit,weeztixOauthReady,
    weeztixOauthCallbackUrl:weeztixCallback(request,env),
-   secureStoreAvailable:validIntegrationMasterKey(env.UPT_INTEGRATION_ENCRYPTION_KEY)
+   secureStoreAvailable:validMasterKey(env.UPT_INTEGRATION_ENCRYPTION_KEY)
   })
  }catch{return json({error:"integration_storage_unavailable"},503)}
 }
