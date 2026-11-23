@@ -106,6 +106,7 @@
     "upt_save_automation_rule",
     "upt_save_shift_handover",
     "upt_send_chat_message_operation_v2",
+    "upt_set_admin_role_mode",
     "upt_set_event_availability_with_reason",
     "upt_set_feature_rollout",
     "upt_set_inventory_asset_details",
