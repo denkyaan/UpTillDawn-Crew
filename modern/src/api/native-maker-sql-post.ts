@@ -55,7 +55,7 @@ export async function nativeMakerSqlPost(
   // A separate private safety switch prevents an accidental SQL write in
   // the migration acceptance environment even if an unrelated write flag is
   // mistakenly flipped. Original production SQL can never be written here.
-  if(value.write&&("UPT_MIGRATION_SQL_WRITES_ENABLED" in env)&&
+  if(value.write&&
     (env as {UPT_MIGRATION_SQL_WRITES_ENABLED?:string}).UPT_MIGRATION_SQL_WRITES_ENABLED!=="true")
    throw new MakerExecutionError("SQL-schrijfacties zijn in deze testomgeving uitgeschakeld.",403)
   const {data:credential,error}=await db.rpc("upt_god_database_secret",{p_token:token})
