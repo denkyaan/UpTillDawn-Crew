@@ -153,8 +153,8 @@ export async function nativeMakerSourcePost(
   if(!parsed.success)return makerJson({error:"Ongeldige wijziging."},400)
   const key=await repositoryKey(db,token)
   const value=parsed.data
-  if(value.action==="save")return save(key,value)
-  if(value.action==="restore")return restore(key,value.target,value.base)
-  return publish(key,value.number,value.sha)
+  if(value.action==="save")return await save(key,value)
+  if(value.action==="restore")return await restore(key,value.target,value.base)
+  return await publish(key,value.number,value.sha)
  }catch(error){return makerError(error)}
 }
