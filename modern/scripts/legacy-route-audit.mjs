@@ -63,7 +63,7 @@ function nativeMatches(pattern,route){
  return new RegExp("^"+pattern+"$").test(candidate)
 }
 const inherited=original.flatMap(item=>item.methods.map(method=>{
- const m=native.find(x=>x.method===method&&nativeMatches(item.pattern,x.path))
+ const m=native.find(x=>x.method===method.toLowerCase()&&nativeMatches(item.pattern,x.path))
  let delivery="legacy-proxy"
  if(m){
   delivery="native"
