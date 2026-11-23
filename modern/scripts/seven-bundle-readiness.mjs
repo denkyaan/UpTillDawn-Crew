@@ -158,6 +158,9 @@ if(!workerSource.includes('app.get("/api/push/config"')||
    !workerSource.includes('nativeArtistContractArchive(')||
    !workerSource.includes('nativeUserErrorReportPost(')||
    !workerSource.includes('nativeBriefingMediaExtract(')||
+   !workerSource.includes('nativeOriginalBriefingAnalyze(')||
+   !workerSource.includes('nativeOriginalAdministrationOcr(')||
+   !workerSource.includes('nativeMainOcrDiagnostic(')||
    !workerSource.includes('nativeGodPreviewRolePost')||
    !workerSource.includes('nativeGodRulesPost'))
  throw Error('Native Main source-read route contract changed')
@@ -265,7 +268,7 @@ const workstreams=[
  {id:'integrations',description:'EventPay, Weeztix, SumUp, Documenso, banking and Peppol',
   available:{originalApiRoutes:originalMainRoutes.length,
    nativeReadHandlers:migratedOriginalReads.length,
-   nativeApiMethodPairsNewlyExtracted:57,
+   nativeApiMethodPairsNewlyExtracted:60,
    nativeMakerAndIntegrationWritesExtracted:migratedOriginalWriteMethods.length,
    sourceApiMethodPairs:legacyRouteReport.originalMethodPairs,
    fullyNativeApiMethodPairs:legacyRouteReport.nativeMethodPairs,
