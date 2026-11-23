@@ -20,7 +20,8 @@ const studio=(body:unknown,status=200)=>Response.json(body,{status,headers:{
  "Cache-Control":"no-store","X-Content-Type-Options":"nosniff"
 }})
 class StudioError extends Error{
- constructor(message:string,readonly status=400){super(message)}
+ readonly status:number
+ constructor(message:string,status=400){super(message);this.status=status}
 }
 const generic="De actie kon niet worden voltooid. Vernieuw de status voordat je opnieuw opslaat."
 const limits=z.coerce.number().int().min(1).max(100).default(50)
