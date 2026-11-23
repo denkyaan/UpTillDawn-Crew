@@ -81,6 +81,8 @@
     "upt_god_data_catalog",
     "upt_god_data_mutate",
     "upt_god_data_rows",
+    "upt_god_database_connect",
+    "upt_god_database_disconnect",
     "upt_god_database_secret",
     "upt_god_error_report_mark_working",
     "upt_god_error_report_resolve",

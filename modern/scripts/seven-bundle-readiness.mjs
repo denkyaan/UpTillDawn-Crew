@@ -82,11 +82,18 @@ const migratedOriginalWriteMethods=[
  "POST /api/god/connection",
  "DELETE /api/god/connection",
  "POST /api/administration/integrations",
- "DELETE /api/administration/integrations"
+ "DELETE /api/administration/integrations",
+ "POST /api/god/source",
+ "POST /api/god/sql",
+ "POST /api/god/code-assistant",
+ "POST /api/edit-assistant"
 ]
-if(migratedOriginalWriteMethods.length!==7||
+if(migratedOriginalWriteMethods.length!==11||
    !workerSource.includes('nativeMakerBusinessResponse(')||
    !workerSource.includes('nativeIntegrationMutation(')||
+   !workerSource.includes('nativeMakerSourcePost(')||
+   !workerSource.includes('nativeMakerSqlPost(')||
+   !workerSource.includes('nativeMakerAiProposal(')||
    !workerSource.includes('UPT_MIGRATION_ALLOW_WRITES!=="true"'))
  throw Error('Signed Maker/Integration write safety contract drift')
 
@@ -245,7 +252,7 @@ const workstreams=[
  {id:'integrations',description:'EventPay, Weeztix, SumUp, Documenso, banking and Peppol',
   available:{originalApiRoutes:originalMainRoutes.length,
    nativeReadHandlers:migratedOriginalReads.length,
-   nativeApiMethodPairsNewlyExtracted:41,
+   nativeApiMethodPairsNewlyExtracted:45,
    nativeMakerAndIntegrationWritesExtracted:migratedOriginalWriteMethods.length,
    sourceApiMethodPairs:legacyRouteReport.originalMethodPairs,
    fullyNativeApiMethodPairs:legacyRouteReport.nativeMethodPairs,
