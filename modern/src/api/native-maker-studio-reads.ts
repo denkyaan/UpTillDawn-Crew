@@ -4,8 +4,22 @@
 import {parseCookieHeader} from "@supabase/ssr"
 import {z} from "zod"
 import type {SupabaseClient} from "@supabase/supabase-js"
-import {editablePath,MAX_SOURCE_BYTES,shaSchema,sourcePath,STUDIO_REPOSITORY}
- from "../../../lib/god-studio.ts"
+// Exact, dependency-free copy of the original Maker source path contract.
+// Original lib/god-studio.ts imports Next-app dependency "zod" from the
+// root package. Isolated modern deployments install ONLY modern/node_modules,
+// so a transitive root source import would fail outside PR CI.
+const STUDIO_REPOSITORY="denkyaan/UpTillDawn-Crew"
+const MAX_SOURCE_BYTES=500_000
+function editablePath(path: string) {
+  if (!path || path.length > 240 || path.startsWith('/') || /[\\\x00-\x1f?#%]/.test(path)) return false
+  const parts = path.split('/')
+  if (parts.some(part => !part || part === '.' || part === '..' || part === '.git' || part === 'node_modules')) return false
+  if (parts.some(part => /^\.env(?:\.|$)/.test(part) && !part.endsWith('.example'))) return false
+  return /\.(tsx?|jsx?|mjs|cjs|jsonc?|css|scss|sql|md|ya?ml|html|txt|svg|toml)$/.test(path) || ['.gitignore', 'LICENSE', '.env.example', '.env.local.example'].includes(path)
+}
+const sourcePath=z.string().refine(editablePath,"Ongeldig of niet-bewerkbaar bronbestand.")
+const shaSchema=z.string().regex(/^[a-f0-9]{40}$/)
+
 import {nativeMakerOverviewResponse} from "./native-maker-overview.ts"
 
 export type NativeMakerStudioPath="/api/god/source"|"/api/god/sql"|"/api/god/overview"
