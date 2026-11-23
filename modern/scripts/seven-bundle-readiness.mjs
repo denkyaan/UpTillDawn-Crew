@@ -33,7 +33,8 @@ const registered=verifyOriginalActionRegistry(originalActions,
  readFileSync(resolve(repo,'lib/migration/original-action-registry.ts'),'utf8'))
 const env=JSON.parse(readFileSync(resolve(repo,'modern/wrangler.main-qa.jsonc'),'utf8'))
 if(env.vars.UPT_MIGRATION_ALLOW_WRITES!=='false'||env.vars.UPT_MIGRATION_SCANNING_ENABLED!=='false'||
- env.vars.UPT_MIGRATION_OAUTH_ENABLED!=='false')
+ env.vars.UPT_MIGRATION_OAUTH_ENABLED!=='false'||
+ env.vars.UPT_MIGRATION_NATIVE_AUTH_ENABLED!=='false')
  throw Error('QA write/provider isolation disabled — refusing readiness report')
 const originalSourceCount=originalPages.filter(x=>pages.includes(x)).length
 const legacyMainServiceBindings=env.services.filter(x=>x.service==='uptilldawn-main')
@@ -55,6 +56,9 @@ const migratedOriginalReads=[
  '/api/god/data',
  '/api/god/error-reports',
  '/api/error-reports',
+ '/api/administration/finance/export',
+ '/api/facebook-event',
+ '/portals/switch/:portal',
 ]
 if(!workerSource.includes('app.get("/api/push/config"')||
    !workerSource.includes('app.post("/api/migration/view-data"')||
@@ -72,7 +76,12 @@ if(!workerSource.includes('app.get("/api/push/config"')||
    !workerSource.includes('"/api/error-reports"')||
    !workerSource.includes('godSourceReadResponse(')||
    !workerSource.includes('administrationReportResponse(')||
-   !workerSource.includes('administrationCsvResponse('))
+   !workerSource.includes('administrationCsvResponse(')||
+   !workerSource.includes('nativeFinanceExportResponse(')||
+   !workerSource.includes('nativeFacebookEventResponse(')||
+   !workerSource.includes('nativeGeoapifyAutocompleteResponse(')||
+   !workerSource.includes('nativePortalSwitchResponse(')||
+   !workerSource.includes('return c.json({error:"unknown_action"},404)'))
  throw Error('Native Main source-read route contract changed')
 // Internal one-hop rejection stops runaway accidental recursion, but DOES NOT
 // make the original Main service independently available at cutover: every
@@ -171,12 +180,14 @@ const workstreams=[
  {id:'actions',description:'All 163 original event, crew, administrative and financial actions',
   available:{transportMapped:registered.registeredCount,
    nativeExtractedButDisabled:allNativeActions.length,nativeAuthorizedWritePaths:0},
-  verified:false,blocker:'Positive, denied, rollback and audit cases are not yet accepted for every action'},
+  verified:false,blocker:'Every source ID is now native-gated, but positive, denied, rollback and audit cases are not yet accepted against a real QA database for all 163 actions'},
  {id:'authorization',description:'Role hierarchy, Maker, approval, multi-role, login and recovery',
-  available:{signedQAIdentityTypes:7},
+  available:{signedQAIdentityTypes:7,nativeDirectAuthAvailable:true,nativeDirectAuthEnabled:false},
   verified:false,blocker:'Complete signup, recovery, role/RLS matrix and signed Maker workflows have not been accepted'},
  {id:'integrations',description:'EventPay, Weeztix, SumUp, Documenso, banking and Peppol',
-  available:{originalApiRoutes:originalMainRoutes.length,nativeReadHandlers:migratedOriginalReads.length},
+  available:{originalApiRoutes:originalMainRoutes.length,
+   nativeReadHandlers:migratedOriginalReads.length,
+   conditionalNativeGeoapify:!Boolean(env.vars.GEOAPIFY_API_KEY)},
   verified:false,blocker:'Provider onboarding/sandbox callbacks, payment, scanning and real read/write parity remain unverified'},
  {id:'offline',description:'PWA, chat, location/time and offline replay without overload',
   available:{originalSourceRetained:true},
@@ -196,6 +207,8 @@ const report={
  exactActionRegistryMapped:registered.registeredCount===originalActions.length,
  dependsOnLegacyMainBackend:legacyBackendDependency,
  directMainCutoverWouldSelfBind:legacyMainServiceBindings.some(x=>x.binding==='MAIN_AUTH'||x.binding==='MAIN_AUTH_RUNTIME'),
+ nativeAuthAvailableButDisabled:true,
+ originalActionFallbackRemoved:workerSource.includes('return c.json({error:"unknown_action"},404)'),
  releaseReady:workstreams.every(x=>x.verified),
  mainCutoverAllowed:false,
  workstreams
