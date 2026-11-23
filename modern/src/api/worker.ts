@@ -50,6 +50,8 @@ import {nativeMakerSqlPost} from "./native-maker-sql-post.ts"
 import {nativeMakerAiProposal} from "./native-maker-ai-proposals.ts"
 import {nativeMakerBusinessResponse} from "./native-maker-business-writes.ts"
 import {nativeIntegrationMutation} from "./native-integration-mutations.ts"
+import {nativePontoGet,nativePontoPost} from "./native-ponto-integration.ts"
+import {nativeProviderConnectionCheck} from "./native-provider-connection.ts"
 import {nativeFinanceExportResponse} from "./native-finance-export.ts"
 import {nativePortalSwitchResponse,nativeFacebookEventResponse,nativeGeoapifyAutocompleteResponse} from "./native-standalone-routes.ts"
 
@@ -255,6 +257,29 @@ for(const method of ["POST","DELETE"] as const){
  if(method==="POST")app.post("/api/administration/integrations",c=>handler(c.req.raw,c.env))
  else app.delete("/api/administration/integrations",c=>handler(c.req.raw,c.env))
 }
+
+// Ponto AIS and four-provider connection validation are run in the isolated
+// Worker, never by a privileged Next service hop. Financial POSTs always
+// require the explicit migration QA write gate before database/provider I/O.
+app.get("/api/administration/integrations/ponto",async c=>{
+ const actor=await sourceReadSession(c.req.raw,c.env)
+ if(!actor.ok)return c.json({error:"access_denied"},actor.status)
+ return attachSourceCookies(await nativePontoGet(actor.db,c.env),actor)
+})
+app.post("/api/administration/integrations/ponto",async c=>{
+ if(c.env.UPT_MIGRATION_ALLOW_WRITES!=="true")
+  return c.json({error:"migration_writes_disabled"},503)
+ const actor=await sourceReadSession(c.req.raw,c.env)
+ if(!actor.ok)return c.json({error:"access_denied"},actor.status)
+ return attachSourceCookies(await nativePontoPost(actor.db,c.req.raw,c.env),actor)
+})
+app.post("/api/admin/provider-connection-check",async c=>{
+ if(c.env.UPT_MIGRATION_ALLOW_WRITES!=="true")
+  return c.json({error:"migration_writes_disabled"},503)
+ const actor=await sourceReadSession(c.req.raw,c.env)
+ if(!actor.ok)return c.json({status:"unavailable",error:"unauthorized"},actor.status)
+ return attachSourceCookies(await nativeProviderConnectionCheck(actor.db,c.req.raw,c.env),actor)
+})
 
 app.get("/api/administration/finance/export",async c=>{
  const actor=await sourceReadSession(c.req.raw,c.env)
