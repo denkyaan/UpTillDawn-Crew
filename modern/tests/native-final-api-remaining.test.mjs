@@ -48,7 +48,9 @@ test("64 original API route/method contracts tracked and explicit legacy routes 
   assert.ok(report.pending.every(x=>!x.startsWith("POST "+path+" ")&&!x.startsWith("GET "+path+" ")),path)
  }
  assert.ok(report.pending.some(x=>x.includes("integrations/oauth")))
- assert.ok(report.pending.some(x=>x.includes("/api/god/")))
+ assert.ok(report.pending.every(x=>!x.includes("/api/god/")),"God routes must remain native")
+ assert.ok(report.pending.some(x=>x.includes("/api/guestlist/import")),"Guestlist import still needs a native route")
+ assert.ok(report.pending.some(x=>x.includes("/api/uptilldawn/export")),"Excel work-session export is not migrated yet")
 })
 test("finance invoice-line import rejects cross-origin and malformed CSV before SQL",async()=>{
  const x=new Request(origin+"/api/administration/finance/invoice-lines/import",{
