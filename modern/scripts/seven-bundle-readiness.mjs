@@ -112,7 +112,9 @@ if(!workerSource.includes('app.get("/api/push/config"')||
    !workerSource.includes('nativeArtistContractPrint(')||
    !workerSource.includes('nativeArtistContractArchive(')||
    !workerSource.includes('nativeUserErrorReportPost(')||
-   !workerSource.includes('nativeBriefingMediaExtract('))
+   !workerSource.includes('nativeBriefingMediaExtract(')||
+   !workerSource.includes('nativeGodPreviewRolePost')||
+   !workerSource.includes('nativeGodRulesPost'))
  throw Error('Native Main source-read route contract changed')
 // Internal one-hop rejection stops runaway accidental recursion, but DOES NOT
 // make the original Main service independently available at cutover: every
@@ -218,7 +220,7 @@ const workstreams=[
  {id:'integrations',description:'EventPay, Weeztix, SumUp, Documenso, banking and Peppol',
   available:{originalApiRoutes:originalMainRoutes.length,
    nativeReadHandlers:migratedOriginalReads.length,
-   nativeApiMethodPairsNewlyExtracted:25,
+   nativeApiMethodPairsNewlyExtracted:27,
    sourceApiMethodPairs:legacyRouteReport.originalMethodPairs,
    fullyNativeApiMethodPairs:legacyRouteReport.nativeMethodPairs,
    pendingLegacyApiMethodPairs:legacyRouteReport.pendingLegacyMethodPairs,
