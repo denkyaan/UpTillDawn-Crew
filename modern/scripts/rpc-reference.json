@@ -35,6 +35,7 @@
     "upt_complete_event_onboarding_step",
     "upt_confirm_shift",
     "upt_confirm_task_assignment",
+    "upt_create_event_document",
     "upt_create_inventory_item",
     "upt_create_operational_checklist",
     "upt_create_shift",
