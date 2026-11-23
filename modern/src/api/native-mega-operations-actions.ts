@@ -163,9 +163,8 @@ export async function megaOperationsResponse(
    }
    case "markAllNotificationsRead":{
     const cutoff=new Date().toISOString()
-    // Original scoped filter and fixed 50x5 RPC batches, but cap the number
-    // of batches to prevent an authorization or read-at regression looping.
-    for(let batch=0;batch<1000;batch++){
+    // Original signed-user-only query, stable cutoff and fixed 50x5 batches.
+    for(;;){
      const {data,error}=await client.from("crew_notifications").select("id")
       .eq("user_id",actor.id).is("read_at",null).lte("created_at",cutoff)
       .order("created_at",{ascending:false}).order("id",{ascending:false}).limit(50)
@@ -179,7 +178,6 @@ export async function megaOperationsResponse(
       if(results.some((r:{error:unknown})=>Boolean(r.error)))throw Error("Notification read rejected")
      }
      if(data.length<50)break
-     if(batch===999)throw Error("Notification page ceiling reached")
     }
     return done()
    }
