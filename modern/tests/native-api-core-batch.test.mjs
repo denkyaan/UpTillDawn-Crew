@@ -73,7 +73,7 @@ test("Peppol XML export refuses missing or unsafe document ID and cross-site POS
 })
 test("bank/provider registers fail closed on incomplete pagination and only use fixed RLS tables",async()=>{
  const calls=[]
- const db={from:table=>{calls.push(table);return q([])},rpc:async()=>({data:true,error:null})}
+ const db={from:table=>{calls.push(table);const query=q([]);query.range=async()=>({data:[],count:null,error:null});return query},rpc:async()=>({data:true,error:null})}
  const bank=await nativeBankStatementRegister(db)
  assert.equal(bank.status,503)
  assert.deepEqual(await bank.json(),{error:"statement_or_invoice_data_unavailable"})
@@ -154,7 +154,7 @@ test("push endpoint validation, revoke RPC, and translation preserve original DT
   "/api/translate-chat","POST",JSON.stringify({text:"a",targetLanguage:"en"}),
   {"Content-Type":"application/json"}),undefined)).status,503)
 })
-test("QA mutation block rejects 9 private operations BEFORE auth and before original Main binding",async()=>{
+test("QA mutation block rejects 7 private operations BEFORE auth and before original Main binding",async()=>{
  const paths=[
   ["/api/administration/bank-statements","POST"],
   ["/api/administration/bank-statements","PATCH"],
