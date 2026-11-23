@@ -45,6 +45,8 @@ import {nativeGodPreviewRolePost,nativeGodRulesPost} from "./native-maker-writes
 import {makerObservabilityResponse} from "./native-maker-observability.ts"
 import {nativeMakerStudioReadResponse} from "./native-maker-studio-reads.ts"
 import {nativeIntegrationsSummary} from "./native-integration-read.ts"
+import {nativeMakerBusinessResponse} from "./native-maker-business-writes.ts"
+import {nativeIntegrationMutation} from "./native-integration-mutations.ts"
 import {nativeFinanceExportResponse} from "./native-finance-export.ts"
 import {nativePortalSwitchResponse,nativeFacebookEventResponse,nativeGeoapifyAutocompleteResponse} from "./native-standalone-routes.ts"
 
@@ -157,6 +159,35 @@ for(const path of ["/api/god/source","/api/god/sql","/api/god/overview"] as cons
  })
 }
 
+// Original Maker mutations: signed Supabase actor + expiring private God
+// session + the source SQL permission/RLS gates. Public QA writes are stopped
+// before cookie validation, GitHub calls or database mutations.
+for(const [path,kind] of [
+ ["/api/god/automation-rules","automation"],
+ ["/api/god/data","data"],
+ ["/api/god/error-reports","report"],
+ ["/api/god/connection","connect"]
+] as const){
+ app.post(path,async c=>{
+  if(c.env.UPT_MIGRATION_ALLOW_WRITES!=="true")
+   return c.json({error:"migration_writes_disabled"},503)
+  const actor=await sourceReadSession(c.req.raw,c.env)
+  if(!actor.ok)return c.json({error:"Meld opnieuw aan bij God Mode."},actor.status)
+  return attachSourceCookies(await nativeMakerBusinessResponse(
+   actor.db,c.req.raw,actor.cookieHeader,c.env,kind
+  ),actor)
+ })
+}
+app.delete("/api/god/connection",async c=>{
+ if(c.env.UPT_MIGRATION_ALLOW_WRITES!=="true")
+  return c.json({error:"migration_writes_disabled"},503)
+ const actor=await sourceReadSession(c.req.raw,c.env)
+ if(!actor.ok)return c.json({error:"Meld opnieuw aan bij God Mode."},actor.status)
+ return attachSourceCookies(await nativeMakerBusinessResponse(
+  actor.db,c.req.raw,actor.cookieHeader,c.env,"disconnect"
+ ),actor)
+})
+
 app.get("/api/error-reports",async c=>{
  const actor=await sourceReadSession(c.req.raw,c.env)
  if(!actor.ok)return c.json({error:"Aanmelden vereist."},actor.status)
@@ -174,6 +205,22 @@ app.get("/api/administration/integrations",async c=>{
   actor.db,c.req.raw,c.env
  ),actor)
 })
+
+// Customer-managed provider configuration: original encrypted SQL vault,
+// role verification and mandatory same-origin check. No public QA mutations.
+for(const method of ["POST","DELETE"] as const){
+ const handler=async (request:Request,env:Bindings)=>{
+  if(env.UPT_MIGRATION_ALLOW_WRITES!=="true")
+   return Response.json({error:"migration_writes_disabled"},{status:503})
+  const actor=await sourceReadSession(request,env)
+  if(!actor.ok)return Response.json({error:"forbidden"},{status:actor.status})
+  return attachSourceCookies(await nativeIntegrationMutation(
+   actor.db,request,env,method
+  ),actor)
+ }
+ if(method==="POST")app.post("/api/administration/integrations",c=>handler(c.req.raw,c.env))
+ else app.delete("/api/administration/integrations",c=>handler(c.req.raw,c.env))
+}
 
 app.get("/api/administration/finance/export",async c=>{
  const actor=await sourceReadSession(c.req.raw,c.env)
