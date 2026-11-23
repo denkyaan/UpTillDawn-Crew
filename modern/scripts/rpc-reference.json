@@ -1,6 +1,7 @@
 {
   "purpose": "Source RPC allowlist and read-only historical database catalog observations; NOT production release evidence",
   "requiredPublicRpcNames": [
+    "upt_accept_shift_handover",
     "upt_acknowledge_briefing",
     "upt_acknowledge_incident",
     "upt_acknowledge_personal_instruction",
@@ -25,6 +26,7 @@
     "upt_confirm_shift",
     "upt_confirm_task_assignment",
     "upt_create_inventory_item",
+    "upt_create_shift",
     "upt_current_effective_role",
     "upt_current_is_owner",
     "upt_current_profile",
@@ -84,6 +86,7 @@
     "upt_sales_refund",
     "upt_sales_set_opening_cash",
     "upt_save_automation_rule",
+    "upt_save_shift_handover",
     "upt_send_chat_message_operation_v2",
     "upt_set_event_availability_with_reason",
     "upt_set_feature_rollout",
@@ -100,7 +103,9 @@
     "upt_sync_workplace_catalog_to_event",
     "upt_ticket_sales_summary",
     "upt_update_own_profile",
+    "upt_update_shift",
     "upt_update_task_status",
+    "upt_upsert_event_emergency_information",
     "upt_weeztix_claim_refresh",
     "upt_weeztix_commit_refresh",
     "upt_weeztix_release_refresh",
