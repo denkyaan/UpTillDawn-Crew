@@ -40,5 +40,8 @@
       "service": "uptilldawn-main",
       "entrypoint": "MainAuthRuntime"
     }
-  ]
+  ],
+  "ai": {
+    "binding": "AI"
+  }
 }
