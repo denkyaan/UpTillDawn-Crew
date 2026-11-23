@@ -24,7 +24,8 @@
     "SUPABASE_ANON_KEY": "sb_publishable_zStTw3n8wZ271PehDRDvGg_rs0JOy84",
     "UPT_MIGRATION_OAUTH_ENABLED": "false",
     "UPT_MIGRATION_SCANNING_ENABLED": "false",
-    "UPT_MIGRATION_ALLOW_WRITES": "false"
+    "UPT_MIGRATION_ALLOW_WRITES": "false",
+    "UPT_MIGRATION_NATIVE_AUTH_ENABLED": "false"
   },
   "observability": {
     "enabled": true

@@ -70,6 +70,7 @@
     "upt_force_archive_event",
     "upt_generate_event_report",
     "upt_generate_planning_recommendations",
+    "upt_geoapify_rate_limit",
     "upt_god_data_catalog",
     "upt_god_data_rows",
     "upt_god_error_reports",

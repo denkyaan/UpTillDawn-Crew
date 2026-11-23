@@ -2,11 +2,11 @@
 // Keep the original cookie session format and the signed PostgREST/RLS
 // upt_current_session_context check. A cookie alone is NOT authorization.
 import {createServerClient,parseCookieHeader,serializeCookieHeader} from "@supabase/ssr"
-import {isActive,parseIdentity} from "../shared/identity.ts"
+import {isActive,parseIdentity,type VerifiedIdentity} from "../shared/identity.ts"
 
 type Environment={SUPABASE_URL:string;SUPABASE_ANON_KEY:string}
 type Db=ReturnType<typeof createServerClient>
-type Authorized={ok:true;db:Db;cookieHeader:string;setCookies:string[]}
+type Authorized={ok:true;db:Db;identity:VerifiedIdentity;cookieHeader:string;setCookies:string[]}
 type Denied={ok:false;status:401|503}
 export type SourceReadSession=Authorized|Denied
 const QA_ORIGIN="https://npbjrtiolqperdgljnhi.supabase.co"
@@ -44,7 +44,7 @@ export async function sourceReadSession(request:Request,env:Environment):Promise
   const {data,error}=await db.rpc("upt_current_session_context")
   const identity=parseIdentity(Array.isArray(data)?data[0]:null)
   if(error||!identity||!isActive(identity))return {ok:false,status:401}
-  return {ok:true,db,cookieHeader,setCookies}
+  return {ok:true,db,identity,cookieHeader,setCookies}
  }catch{return {ok:false,status:503}}
 }
 
