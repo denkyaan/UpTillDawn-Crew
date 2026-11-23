@@ -113,15 +113,15 @@ test("finance export computes exact-cent balance and retains CSV formula escapin
 test("direct native auth needs explicit flag and QA origin, never a Main binding",async()=>{
  const fields=new FormData()
  fields.set("portal","staff");fields.set("email","");fields.set("password","")
- const request=new Request(origin+"/api/auth/portal-login",{
+ const makeRequest=()=>new Request(origin+"/api/auth/portal-login",{
   method:"POST",headers:{Origin:origin,"Sec-Fetch-Site":"same-origin"},body:fields
  })
  const direct={...candidate,UPT_MIGRATION_NATIVE_AUTH_ENABLED:"true"}
- const response=await app.request(request,{},direct)
+ const response=await app.request(makeRequest(),{},direct)
  assert.equal(response.status,200)
  assert.equal(response.headers.get("x-uptilldawn-auth-runtime"),"native-original-source")
  assert.deepEqual(await response.json(),{error:"E-mail en wachtwoord zijn verplicht."})
- const without=await app.request(request,{},candidate)
+ const without=await app.request(makeRequest(),{},candidate)
  assert.equal(without.status,503)
  const wrong=await app.request(request,{},{
   ...direct,SUPABASE_URL:"https://production.invalid"
