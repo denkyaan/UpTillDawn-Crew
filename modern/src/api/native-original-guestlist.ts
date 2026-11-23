@@ -15,7 +15,7 @@ export type GuestlistAI={
  toMarkdown?:(file:{name:string;blob:Blob},options?:Record<string,unknown>)=>Promise<
   {format:"markdown"|"text"|"error";data?:string;error?:string}|Array<{format:"markdown"|"text"|"error";data?:string;error?:string}>>
 }
-const uuid=/^[0-9a-f]{8}-(?:[0-9a-f]{4}-){3}-[0-9a-f]{12}$/i
+const uuid=/^[0-9a-f]{8}-(?:[0-9a-f]{4}-){3}[0-9a-f]{12}$/i
 const MAX_FILE=10_000_000,MAX_REQUEST=MAX_FILE+262_144,MAX_XML=6_000_000
 const reply=(payload:unknown,status=200)=>Response.json(payload,{status,headers:{
  "Cache-Control":"private, no-store","X-Content-Type-Options":"nosniff"
