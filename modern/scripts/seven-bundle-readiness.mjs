@@ -106,8 +106,8 @@ if(!workerSource.includes('app.get("/api/push/config"')||
    !workerSource.includes('nativeAdminAssistant(')||
    !workerSource.includes('nativeAdministrationAssistant(')||
    !workerSource.includes('nativeBookingNotesProposal(')||
-   !workerSource.includes('nativeGodPreviewRolePost(')||
-   !workerSource.includes('nativeGodRulesPost(')||
+   !workerSource.includes('["/api/god/preview-role",nativeGodPreviewRolePost]')||
+   !workerSource.includes('["/api/god/rules",nativeGodRulesPost]')||
    !workerSource.includes('nativeClientErrorReport('))
  throw Error('Native Main source-read route contract changed')
 // Internal one-hop rejection stops runaway accidental recursion, but DOES NOT
