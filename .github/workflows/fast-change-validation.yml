@@ -94,6 +94,15 @@ jobs:
         run: |
           set -euo pipefail
           npm --prefix modern install --prefer-offline --no-audit --no-fund
+          # The deploy-modern-main-qa job installs ONLY modern dependencies.
+          # Root npm ci used by ordinary fast checks previously masked broken
+          # imports from ../lib/* that cannot resolve dependencies in deploy.
+          # Atomically hide root node_modules for the whole isolated candidate
+          # check, then always restore it for later CI steps.
+          test -d node_modules
+          test ! -e .upt-root-node-modules-isolation
+          mv node_modules .upt-root-node-modules-isolation
+          trap 'mv .upt-root-node-modules-isolation node_modules' EXIT
           npm --prefix modern run check
           # Always enforce the REAL candidate gzip budget on PRs that share
           # original Main CSS/auth/components. Previously non-migration PRs
