@@ -8,7 +8,8 @@ const QA_DB="https://npbjrtiolqperdgljnhi.supabase.co"
 const headers={"Cache-Control":"private, no-store","X-Content-Type-Options":"nosniff"} as const
 export const makerJson=(data:unknown,status=200)=>Response.json(data,{status,headers})
 export class MakerExecutionError extends Error{
- constructor(message:string,readonly status=400){super(message)}
+ readonly status:number
+ constructor(message:string,status=400){super(message);this.status=status}
 }
 export function makerError(error:unknown){
  if(error instanceof MakerExecutionError)return makerJson({error:error.message},error.status)
