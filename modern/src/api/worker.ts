@@ -55,6 +55,7 @@ import {nativeIntegrationMutation} from "./native-integration-mutations.ts"
 import {nativePontoGet,nativePontoPost} from "./native-ponto-integration.ts"
 import {nativeProviderConnectionCheck} from "./native-provider-connection.ts"
 import {nativeFinanceExportResponse} from "./native-finance-export.ts"
+import {nativeGuestlistImport,type GuestlistAI} from "./native-original-guestlist.ts"
 import {nativeSalesXlsx,nativeWorkSessionsXlsx} from "./native-original-xlsx-exports.ts"
 import {nativeOriginalProviderOAuth,nativeOriginalWeeztixOAuth} from "./native-original-provider-oauth.ts"
 import {nativePortalSwitchResponse,nativeFacebookEventResponse,nativeGeoapifyAutocompleteResponse} from "./native-standalone-routes.ts"
@@ -345,6 +346,19 @@ for(const [path,phase] of [
  })
 }
 
+// All original guestlist input types: CSV/TXT/XLSX are Worker-local;
+// rich documents use the existing optional Cloudflare AI (no new paid API).
+// Original admin-only SQL privilege and input limits are repeated natively.
+app.post("/api/guestlist/import",async c=>{
+ if(c.env.UPT_MIGRATION_ALLOW_WRITES!=="true")
+  return c.json({error:"migration_writes_disabled"},503)
+ const actor=await sourceReadSession(c.req.raw,c.env)
+ if(!actor.ok)return c.json({error:"Aanmelden vereist."},actor.status)
+ return attachSourceCookies(await nativeGuestlistImport(
+  actor.db,c.req.raw,c.env.AI as GuestlistAI|undefined
+ ),actor)
+})
+
 // Original Excel exports now run on the signed, RLS-scoped Hono Worker.
 app.get("/api/uptilldawn/export",async c=>{
  const actor=await sourceReadSession(c.req.raw,c.env)
@@ -570,6 +584,9 @@ app.post("/api/migration/view-data",async c=>{
  return attachSourceCookies(portalPreferenceResponse(actor.cookieHeader),actor)
 })
 
+// Compiled original Admin direct login route preserves its native 303,
+// signed role/owner gates and Supabase chunked cookies without Next.
+app.post("/api/auth/admin-login",c=>forwardMainAuth(c.req.raw,c.env))
 app.post("/api/auth/portal-login",c=>forwardMainAuth(c.req.raw,c.env))
 app.post("/api/auth/account-action",c=>forwardMainAuth(c.req.raw,c.env))
 app.get("/auth/callback",c=>forwardMainAuth(c.req.raw,c.env))
