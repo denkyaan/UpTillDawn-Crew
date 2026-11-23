@@ -48,6 +48,8 @@ import {nativeIntegrationsSummary} from "./native-integration-read.ts"
 import {nativeMakerSourcePost} from "./native-maker-source-post.ts"
 import {nativeMakerSqlPost} from "./native-maker-sql-post.ts"
 import {nativeMakerAiProposal} from "./native-maker-ai-proposals.ts"
+import {nativeMakerTextExecution} from "./native-maker-text-execution.ts"
+import {nativeWeeztixSourceScan} from "./native-weeztix-original-scan.ts"
 import {nativeMakerBusinessResponse} from "./native-maker-business-writes.ts"
 import {nativeIntegrationMutation} from "./native-integration-mutations.ts"
 import {nativePontoGet,nativePontoPost} from "./native-ponto-integration.ts"
@@ -223,6 +225,32 @@ for(const [path,kind] of [
   ),actor)
  })
 }
+
+// Complete original natural-language two-stage Maker proposal. It can mark
+// reports as working, so it is gated on isolated QA until reviewed acceptance.
+app.post("/api/god/text-execution",async c=>{
+ if(c.env.UPT_MIGRATION_ALLOW_WRITES!=="true")
+  return c.json({error:"migration_writes_disabled"},503)
+ const actor=await sourceReadSession(c.req.raw,c.env)
+ if(!actor.ok)return c.json({error:"Meld opnieuw aan bij God Mode."},actor.status)
+ return attachSourceCookies(await nativeMakerTextExecution(
+  actor.db,c.req.raw,actor.cookieHeader,c.env,c.env.AI
+ ),actor)
+})
+
+// Existing original browser-facing scan path. Never bypass the independent
+// PWA scanner flag, signed user and scoped SQL event/workplace authorization.
+app.post("/api/weeztix/scan",async c=>{
+ if(c.env.UPT_MIGRATION_ALLOW_WRITES!=="true")
+  return c.json({error:"migration_writes_disabled"},503)
+ if(c.env.UPT_MIGRATION_SCANNING_ENABLED!=="true")
+  return c.json({ok:false,code:"not_configured"},503)
+ const actor=await sourceReadSession(c.req.raw,c.env)
+ if(!actor.ok)return c.json({ok:false,code:actor.status===401?"unauthorized":"forbidden"},actor.status)
+ return attachSourceCookies(await nativeWeeztixSourceScan(
+  actor.db,actor.identity,c.req.raw,c.env
+ ),actor)
+})
 
 app.get("/api/error-reports",async c=>{
  const actor=await sourceReadSession(c.req.raw,c.env)

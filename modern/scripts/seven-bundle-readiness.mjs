@@ -88,9 +88,11 @@ const migratedOriginalWriteMethods=[
  "POST /api/god/code-assistant",
  "POST /api/edit-assistant",
  "POST /api/administration/integrations/ponto",
- "POST /api/admin/provider-connection-check"
+ "POST /api/admin/provider-connection-check",
+ "POST /api/god/text-execution",
+ "POST /api/weeztix/scan"
 ]
-if(migratedOriginalWriteMethods.length!==13||
+if(migratedOriginalWriteMethods.length!==15||
    !workerSource.includes('nativeMakerBusinessResponse(')||
    !workerSource.includes('nativeIntegrationMutation(')||
    !workerSource.includes('nativeMakerSourcePost(')||
@@ -99,6 +101,8 @@ if(migratedOriginalWriteMethods.length!==13||
    !workerSource.includes('nativePontoGet(')||
    !workerSource.includes('nativePontoPost(')||
    !workerSource.includes('nativeProviderConnectionCheck(')||
+   !workerSource.includes('nativeMakerTextExecution(')||
+   !workerSource.includes('nativeWeeztixSourceScan(')||
    !workerSource.includes('UPT_MIGRATION_ALLOW_WRITES!=="true"'))
  throw Error('Signed Maker/Integration write safety contract drift')
 
@@ -257,7 +261,7 @@ const workstreams=[
  {id:'integrations',description:'EventPay, Weeztix, SumUp, Documenso, banking and Peppol',
   available:{originalApiRoutes:originalMainRoutes.length,
    nativeReadHandlers:migratedOriginalReads.length,
-   nativeApiMethodPairsNewlyExtracted:48,
+   nativeApiMethodPairsNewlyExtracted:50,
    nativeMakerAndIntegrationWritesExtracted:migratedOriginalWriteMethods.length,
    sourceApiMethodPairs:legacyRouteReport.originalMethodPairs,
    fullyNativeApiMethodPairs:legacyRouteReport.nativeMethodPairs,
