@@ -36,6 +36,10 @@ import {nativeAdministrationPermission,nativeFinancialAttachment,nativePeppolPre
 import {nativeBookingNotesGet,nativeBookingNotesPost} from "./native-booking-notes.ts"
 import {nativePushSubscription,nativeTranslateChat,type NativeTranslationAI} from "./native-push-translation.ts"
 import {nativeProviderMappingCreate,nativeProviderMappingUpdate,nativeProviderTransactionsImport} from "./native-provider-mutations.ts"
+import {nativeInvoiceLinesImport,nativeTicketCsvImport} from "./native-invoice-ticket-imports.ts"
+import {nativeAdminAssistant,nativeAdministrationAssistant,nativeBookingNotesProposal} from "./native-ai-assistants.ts"
+import {nativeGodPreviewRolePost,nativeGodRulesPost} from "./native-maker-writes.ts"
+import {nativeClientErrorReport} from "./native-error-reporting.ts"
 import {nativeFinanceExportResponse} from "./native-finance-export.ts"
 import {nativePortalSwitchResponse,nativeFacebookEventResponse,nativeGeoapifyAutocompleteResponse} from "./native-standalone-routes.ts"
 
@@ -225,6 +229,50 @@ app.post("/api/translate-chat",async c=>{
  const actor=await sourceReadSession(c.req.raw,c.env)
  if(!actor.ok)return c.json({error:"Aanmelden vereist."},actor.status)
  return attachSourceCookies(await nativeTranslateChat(c.req.raw,c.env.AI),actor)
+})
+
+// Native final financial/AI/Maker migration batch. Public QA writes OFF.
+app.post("/api/administration/finance/invoice-lines/import",c=>
+ adminRoute(c.req.raw,c.env,db=>nativeInvoiceLinesImport(db,c.req.raw),true))
+app.post("/api/administration/ticketing/import",c=>
+ adminRoute(c.req.raw,c.env,db=>nativeTicketCsvImport(db,c.req.raw),true))
+app.post("/api/administration/assistant",c=>
+ adminRoute(c.req.raw,c.env,db=>nativeAdministrationAssistant(db,c.req.raw,c.env.AI),true))
+app.post("/api/administration/assistant/booking-notes/propose",c=>
+ adminRoute(c.req.raw,c.env,db=>nativeBookingNotesProposal(db,c.req.raw,c.env.AI),true))
+app.post("/api/admin-assistant",async c=>{
+ if(c.env.UPT_MIGRATION_ALLOW_WRITES!=="true")
+  return c.json({error:"migration_writes_disabled"},503)
+ const actor=await sourceReadSession(c.req.raw,c.env)
+ if(!actor.ok)return c.json({error:"Aanmelden vereist."},actor.status)
+ return attachSourceCookies(await nativeAdminAssistant(
+  actor.db,c.req.raw,c.env.AI,actor.identity.id
+ ),actor)
+})
+for(const [path,handler] of [
+ ["/api/god/preview-role",nativeGodPreviewRolePost],
+ ["/api/god/rules",nativeGodRulesPost]
+] as const){
+ app.post(path,async c=>{
+  if(c.env.UPT_MIGRATION_ALLOW_WRITES!=="true")
+   return c.json({error:"migration_writes_disabled"},503)
+  const actor=await sourceReadSession(c.req.raw,c.env)
+  if(!actor.ok)return c.json({error:"Meld opnieuw aan bij God Mode."},actor.status)
+  return attachSourceCookies(await handler(
+   actor.db,c.req.raw,actor.cookieHeader
+  ),actor)
+ })
+}
+app.post("/api/error-reports",async c=>{
+ if(c.env.UPT_MIGRATION_ALLOW_WRITES!=="true")
+  return c.json({error:"migration_writes_disabled"},503)
+ const actor=await sourceReadSession(c.req.raw,c.env)
+ if(!actor.ok)return c.json({error:"Aanmelden vereist."},actor.status)
+ let waitUntil:((p:Promise<unknown>)=>void)|undefined
+ try{waitUntil=p=>c.executionCtx.waitUntil(p)}catch{}
+ return attachSourceCookies(await nativeClientErrorReport(
+  actor.db,c.req.raw,c.env.AI,waitUntil
+ ),actor)
 })
 
 // The source uses POST for this read DTO. Only the strictly recognized
