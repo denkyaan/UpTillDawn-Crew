@@ -22,6 +22,8 @@ import {nativeRosterActionAllowed,nativeRosterActionResponse} from "./native-ros
 import {nativeCatalogActionAllowed,nativeCatalogActionResponse} from "./native-catalog-event-actions.ts"
 import {megaPeopleAllowed,megaPeopleResponse} from "./native-mega-people-actions.ts"
 import {megaOperationsAllowed,megaOperationsResponse} from "./native-mega-operations-actions.ts"
+import {megaCrewEventAllowed,megaCrewEventResponse} from "./native-mega-crew-event-actions.ts"
+import {megaMakerAllowed,megaMakerResponse,godLogoutId,originalGodLogout} from "./native-mega-maker-actions.ts"
 
 type Bindings={SUPABASE_URL:string;SUPABASE_ANON_KEY:string;UPT_MIGRATION_ALLOW_WRITES?:string;ASSETS?:{fetch:(request:Request)=>Promise<Response>}}&OAuthBindings&ScannerBindings&MainAuthBindings
 const app=new Hono<{Bindings:Bindings}>()
@@ -363,13 +365,21 @@ app.post("/api/migration/actions",async c=>{
  const waveSix=nativeCatalogActionAllowed(hint)
  const waveSevenPeople=megaPeopleAllowed(hint)
  const waveSevenOperations=megaOperationsAllowed(hint)
- if(!waveOne&&!waveTwo&&!waveThree&&!waveFour&&!waveFive&&!waveSix&&!waveSevenPeople&&!waveSevenOperations)
+ const waveEightCrew=megaCrewEventAllowed(hint)
+ const waveEightMaker=megaMakerAllowed(hint)
+ if(!waveOne&&!waveTwo&&!waveThree&&!waveFour&&!waveFive&&!waveSix&&!waveSevenPeople&&!waveSevenOperations&&!waveEightCrew&&!waveEightMaker)
   return forwardMainSource(c.req.raw,c.env)
  const actor=await sourceReadSession(c.req.raw,c.env)
- if(!actor.ok)return Response.json({
-  error:"De actie kon niet worden uitgevoerd. Probeer opnieuw.",
-  code:actor.status===401?"authentication_required":"action_unavailable"
- },{status:actor.status,headers:{"Cache-Control":"private, no-store"}})
+ if(!actor.ok){
+  // Original God Mode logout clears privileged cookies even after the
+  // ordinary auth session expires. Keep the existing same-origin + _id checks.
+  if(hint===godLogoutId&&actor.status===401)
+   return originalGodLogout(c.req.raw,null)
+  return Response.json({
+   error:"De actie kon niet worden uitgevoerd. Probeer opnieuw.",
+   code:actor.status===401?"authentication_required":"action_unavailable"
+  },{status:actor.status,headers:{"Cache-Control":"private, no-store"}})
+ }
  const db=actor.db as unknown as NativeAdminActionDb
  const result=waveOne
   ?await nativeAdminActionResponse(c.req.raw,db,hint)
@@ -385,7 +395,11 @@ app.post("/api/migration/actions",async c=>{
        ?await nativeCatalogActionResponse(c.req.raw,db,hint as Parameters<typeof nativeCatalogActionResponse>[2])
        :waveSevenPeople
         ?await megaPeopleResponse(c.req.raw,db,hint as Parameters<typeof megaPeopleResponse>[2])
-        :await megaOperationsResponse(c.req.raw,db,hint as Parameters<typeof megaOperationsResponse>[2])
+        :waveSevenOperations
+         ?await megaOperationsResponse(c.req.raw,db,hint as Parameters<typeof megaOperationsResponse>[2])
+         :waveEightCrew
+          ?await megaCrewEventResponse(c.req.raw,db,hint as Parameters<typeof megaCrewEventResponse>[2])
+          :await megaMakerResponse(c.req.raw,db,hint as Parameters<typeof megaMakerResponse>[2])
  return attachSourceCookies(result,actor)
 })
 
