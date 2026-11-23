@@ -146,7 +146,7 @@ for(const path of ["/api/god/logs","/api/god/platform-logs","/api/god/cloudflare
 // Two original Maker Studio read endpoints now run natively without Next.
 // The original GitHub source editor writes, SQL execution and production
 // switching remain on their separately secured, explicitly gated paths.
-for(const path of ["/api/god/source","/api/god/sql"] as const){
+for(const path of ["/api/god/source","/api/god/sql","/api/god/overview"] as const){
  app.get(path,async c=>{
   const actor=await sourceReadSession(c.req.raw,c.env)
   if(!actor.ok)return c.json({error:"Meld opnieuw aan bij God Mode."},actor.status)
