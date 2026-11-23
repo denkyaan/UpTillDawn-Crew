@@ -2,7 +2,7 @@
 // Delegated SumUp/Billit grants are refreshed server-side at the fixed vendor
 // token endpoint; a revoked grant is never disguised as connected.
 import type {SupabaseClient} from "@supabase/supabase-js"
-import {isIntegrationProvider,parseIntegrationConfiguration} from "../../../lib/administration/integration-credentials.ts"
+import {parseIntegrationConfiguration} from "../../../lib/administration/integration-credentials.ts"
 import {readStrictJson} from "../../../lib/strict-json-body.ts"
 import {requestHasSameOrigin} from "../../../lib/request-origin.ts"
 import {openOAuthToken,sealOAuthToken,validMasterKey} from "./provider-oauth.ts"
