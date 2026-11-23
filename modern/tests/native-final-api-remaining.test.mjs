@@ -17,9 +17,9 @@ const uuid="11111111-1111-4111-8111-111111111111"
 const makeRequest=(path,method="POST",body="{}",headers={})=>
  new Request(origin+path,{method,headers:{
   Origin:origin,"Sec-Fetch-Site":"same-origin",
-  ...typeof body==="string"?{"Content-Type":"application/json"}:{},
+  ...typeof body==="string"&&method!=="GET"&&method!=="HEAD"?{"Content-Type":"application/json"}:{},
   ...headers
- },body})
+ },...(method==="GET"||method==="HEAD"?{}:{body})})
 function signed(request){return new Request(request.url,{method:request.method,
  headers:{...Object.fromEntries(request.headers),Origin:origin},
  body:request.body,duplex:"half"})}
