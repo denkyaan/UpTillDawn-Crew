@@ -143,10 +143,27 @@ try{
    page.on('request',request=>{const target=new URL(request.url());if(target.origin!==qa.origin)return;reads++;readKinds[target.pathname]=(readKinds[target.pathname]||0)+1;if(reads>400)void page.close()})
    page.on('pageerror',error=>console.error('QA_PAGE_ERROR '+bot.role+' '+error.name))
    page.on('response',response=>{if(new URL(response.url()).pathname==='/api/auth/portal-login'){status=response.status();nativeLogin=response.headers()['x-uptilldawn-auth-runtime']==='native-original-source'}})
-   await page.goto(origin+'/login/'+bot.login,{waitUntil:'domcontentloaded',timeout:20000})
-   await page.locator('input[name="email"]').fill(bot.email);await page.locator('input[name="password"]').fill(password)
-   await page.locator('form button[type="submit"]').click()
-   try{await ready(page)}catch(error){console.error('QA_READY_FAILURE '+bot.role+' '+(error instanceof Error?error.message.split('\n')[0]:'unknown')+' reads='+reads+' sources='+JSON.stringify(readKinds));throw Error('QA_LOGIN_NOT_READY '+bot.role+' HTTP='+status)}
+   // Bounded cooldown only after source 5xx, not bad credentials, wrong
+   // identity, incomplete screens or any genuine original-vs-new UI mismatch.
+   let signedIn=false
+   for(let attempt=0;attempt<3;attempt++){
+    status=0;nativeLogin=false
+    await page.goto(origin+'/login/'+bot.login,{waitUntil:'domcontentloaded',timeout:20000})
+    await page.locator('input[name="email"]').fill(bot.email)
+    await page.locator('input[name="password"]').fill(password)
+    await page.locator('form button[type="submit"]').click()
+    try{await ready(page);signedIn=true;break}catch(error){
+     const cause=error instanceof Error?error.message.split('\n')[0]:'unknown'
+     console.error('QA_READY_FAILURE '+bot.role+' '+cause+' reads='+reads+
+      ' sources='+JSON.stringify(readKinds)+' HTTP='+status)
+     if(![502,503,504].includes(status)||attempt===2)
+      throw Error('QA_LOGIN_NOT_READY '+bot.role+' HTTP='+status)
+     console.error('QA_LOGIN_TRANSPORT_RECOVERY '+bot.role+
+      ' attempt='+String(attempt+1)+' HTTP='+status)
+     await new Promise(resolve=>setTimeout(resolve,(attempt+1)*8000))
+    }
+   }
+   if(!signedIn)throw Error('QA_LOGIN_NOT_READY '+bot.role+' HTTP='+status)
    if(remote&&!nativeLogin)throw Error('QA_NON_NATIVE_AUTH '+bot.role)
    signins++
    const landing=new URL(page.url()).pathname,state=await login.storageState()
