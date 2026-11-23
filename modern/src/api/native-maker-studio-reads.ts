@@ -82,7 +82,7 @@ export async function makerBoundedJson(response:Response,limit=6_000_000):Promis
 }
 export async function makerGithubRead(path:string,credential?:string){
  // The endpoint is a literal repository allowlist, never a user-supplied URL.
- if(!path.startsWith("/")||path.includes("..")||/[\r\n]/.test(path))
+ if((path!==""&&!path.startsWith("/"))||path.includes("..")||/[\r\n]/.test(path))
   throw new StudioError("Ongeldig repositorypad.")
  const response=await fetch("https://api.github.com/repos/"+STUDIO_REPOSITORY+path,{
   headers:{
