@@ -78,7 +78,7 @@ export async function pontoAccessToken(env:NodeJS.ProcessEnv):Promise<{state:Con
   // authorization, consent, transaction retrieval or payment initiation.
   const response=await safeFetch("https://api.myponto.com/oauth2/token",{
    method:"POST",
-   headers:{"Content-Type":"application/x-www-form-urlencoded","Accept":"application/json","Authorization":"Basic "+basicAuthentication(id,secret)},
+   headers:{"Content-Type":"application/x-www-form-urlencoded","Accept":"application/json","Authorization":"Basic "+basicAuthentication(id!,secret!)},
    body:"grant_type=client_credentials"
   })
   if(!response)return {state:"unavailable",token:null}
