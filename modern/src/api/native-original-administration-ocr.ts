@@ -107,7 +107,7 @@ export async function nativeOriginalAdministrationOcr(request:Request,userId:str
  const kind=verifiedType==="application/pdf"?"pdf":"image"
  const path=kind==="pdf"?"/ocr/pdf/toText":"/ocr/photo/toText"
  const upload=new FormData()
- upload.append("imageFile",new Blob([bytes],{type:verifiedType}),file.name.slice(0,150))
+ upload.append("imageFile",new Blob([Uint8Array.from(bytes)],{type:verifiedType}),file.name.slice(0,150))
  try{
   // The host and path are fixed. Never allow client-supplied URLs/API keys.
   const response=await fetch("https://api.cloudmersive.com"+path,{
