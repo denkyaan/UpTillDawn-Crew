@@ -129,7 +129,7 @@ const allNativeActions=[
  ...megaMakerActionIds,...nativeWaveNineActionIds,...remainingFinalActionIds
 ]
 if(allNativeActions.length!==163||new Set(allNativeActions).size!==163||
-  !originalActions.every(id=>allNativeActions.includes(id)))
+  !originalActions.every(entry=>allNativeActions.includes(entry.id)))
  throw Error('All 163 source actions must appear exactly once in the final mega-bundle')
 if(!workerSource.includes('nativeWaveTwoAllowed(hint)')||
  !workerSource.includes('nativeWaveTwoActionResponse(')||
