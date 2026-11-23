@@ -35,6 +35,7 @@ import {nativeBankStatementImport,nativeBankStatementReview,nativeProviderSettle
 import {nativeAdministrationPermission,nativeFinancialAttachment,nativePeppolPreparation} from "./native-admin-document-routes.ts"
 import {nativeBookingNotesGet,nativeBookingNotesPost} from "./native-booking-notes.ts"
 import {nativePushSubscription,nativeTranslateChat,type NativeTranslationAI} from "./native-push-translation.ts"
+import {nativeProviderMappingCreate,nativeProviderMappingUpdate,nativeProviderTransactionsImport} from "./native-provider-mutations.ts"
 import {nativeFinanceExportResponse} from "./native-finance-export.ts"
 import {nativePortalSwitchResponse,nativeFacebookEventResponse,nativeGeoapifyAutocompleteResponse} from "./native-standalone-routes.ts"
 
@@ -165,7 +166,7 @@ app.get("/portals/switch/:portal",async c=>{
 // permission. Disabled QA writes are rejected BEFORE signing or SQL.
 const adminRoute=async(
  request:Request,env:Bindings,
- execute:(db:import("@supabase/supabase-js").SupabaseClient)=>Promise<Response>,
+ execute:(db:import("@supabase/supabase-js").SupabaseClient,actorId:string)=>Promise<Response>,
  mutation=false
 ):Promise<Response>=>{
  if(mutation&&env.UPT_MIGRATION_ALLOW_WRITES!=="true")
@@ -175,8 +176,14 @@ const adminRoute=async(
  const permitted=await nativeAdministrationPermission(actor.db)
  if(permitted!==200)return attachSourceCookies(
   Response.json({error:"access_denied"},{status:permitted}),actor)
- return attachSourceCookies(await execute(actor.db),actor)
+ return attachSourceCookies(await execute(actor.db,actor.identity.id),actor)
 }
+app.post("/api/administration/provider-mappings",c=>
+ adminRoute(c.req.raw,c.env,(db,actorId)=>nativeProviderMappingCreate(db,actorId,c.req.raw),true))
+app.patch("/api/administration/provider-mappings/:id",c=>
+ adminRoute(c.req.raw,c.env,db=>nativeProviderMappingUpdate(db,c.req.param("id"),c.req.raw),true))
+app.post("/api/administration/provider-transactions",c=>
+ adminRoute(c.req.raw,c.env,db=>nativeProviderTransactionsImport(db,c.req.raw),true))
 app.get("/api/administration/bank-statements",c=>
  adminRoute(c.req.raw,c.env,db=>nativeBankStatementRegister(db)))
 app.post("/api/administration/bank-statements",c=>
