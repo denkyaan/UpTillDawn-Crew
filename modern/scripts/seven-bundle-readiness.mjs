@@ -7,6 +7,7 @@ import {readFileSync,writeFileSync,mkdirSync} from 'node:fs'
 import {resolve} from 'node:path'
 import {actionEntries,filesBelow,pages} from '../tooling/main-source.mjs'
 import {originalMainRoutes} from '../src/api/main-routes.ts'
+import {report as legacyRouteReport} from './legacy-route-audit.mjs'
 import {verifyOriginalActionRegistry} from '../tooling/action-registry-contract.mjs'
 import {nativeAdminActionIds} from '../src/api/native-admin-actions.ts'
 import {nativeWaveTwoActionIds} from '../src/api/native-platform-actions.ts'
@@ -64,6 +65,8 @@ const migratedOriginalReads=[
  '/api/administration/finance/attachments/:id',
  '/api/administration/peppol/prepare',
  '/api/administration/assistant/booking-notes',
+ '/portals/administration/modules/artists/:id/agreement/print/:versionId',
+ '/portals/administration/modules/artists/:id/agreement/archive/:versionId',
 ]
 if(!workerSource.includes('app.get("/api/push/config"')||
    !workerSource.includes('app.post("/api/migration/view-data"')||
@@ -100,7 +103,16 @@ if(!workerSource.includes('app.get("/api/push/config"')||
    !workerSource.includes('nativeTranslateChat(')||
    !workerSource.includes('nativeProviderMappingCreate(')||
    !workerSource.includes('nativeProviderMappingUpdate(')||
-   !workerSource.includes('nativeProviderTransactionsImport('))
+   !workerSource.includes('nativeProviderTransactionsImport(')||
+   !workerSource.includes('nativeInvoiceLinesImport(')||
+   !workerSource.includes('nativeTicketSalesImport(')||
+   !workerSource.includes('nativeBookingNotesProposal(')||
+   !workerSource.includes('nativeAdministrationAssistant(')||
+   !workerSource.includes('nativeOperationalAdminAssistant(')||
+   !workerSource.includes('nativeArtistContractPrint(')||
+   !workerSource.includes('nativeArtistContractArchive(')||
+   !workerSource.includes('nativeUserErrorReportPost(')||
+   !workerSource.includes('nativeBriefingMediaExtract('))
  throw Error('Native Main source-read route contract changed')
 // Internal one-hop rejection stops runaway accidental recursion, but DOES NOT
 // make the original Main service independently available at cutover: every
@@ -206,7 +218,11 @@ const workstreams=[
  {id:'integrations',description:'EventPay, Weeztix, SumUp, Documenso, banking and Peppol',
   available:{originalApiRoutes:originalMainRoutes.length,
    nativeReadHandlers:migratedOriginalReads.length,
-   nativeApiMethodPairsNewlyExtracted:16,
+   nativeApiMethodPairsNewlyExtracted:25,
+   sourceApiMethodPairs:legacyRouteReport.originalMethodPairs,
+   fullyNativeApiMethodPairs:legacyRouteReport.nativeMethodPairs,
+   pendingLegacyApiMethodPairs:legacyRouteReport.pendingLegacyMethodPairs,
+   pendingDefaultLegacyAuthMethods:legacyRouteReport.pendingLegacyAuthentication,
    nativeApiWriteHandlersPubliclyEnabled:0,
    nativeGeoapifyKeyDeclared:typeof env.vars.GEOAPIFY_API_KEY==='string'&&Boolean(env.vars.GEOAPIFY_API_KEY)},
   verified:false,blocker:'Bank, provider, Peppol, notes, documents, push and translation handlers are extracted; live authorized writes, provider setup, payments, scanning and callback parity remain unverified'},
@@ -214,7 +230,10 @@ const workstreams=[
   available:{originalSourceRetained:true},
   verified:false,blocker:'Disconnected use, replay, sync conflicts, four locales and Free-tier load validation remain'},
  {id:'e2e',description:'All original pages, API methods, server actions and device journeys',
-  available:{originalPages:originalPages.length,originalApis:originalApis.length,originalActions:originalActions.length},
+  available:{originalPages:originalPages.length,originalApis:originalApis.length,
+   originalApiMethodPairs:legacyRouteReport.originalMethodPairs,
+   pendingLegacyApiMethodPairs:legacyRouteReport.pendingLegacyMethodPairs,
+   originalActions:originalActions.length},
   verified:false,blocker:'44 authenticated read-only routes and 56 role/locale/device checks do not prove complete 101-page/64-API/163-action coverage'},
  {id:'cutover',description:'Atomic existing Main URL switch, rollback and post-switch verification',
   available:{mainQACandidate:'uptilldawn-modern-main',existingMain:'uptilldawn-main'},
@@ -234,7 +253,10 @@ const report={
  mainCutoverAllowed:false,
  workstreams
 }
-if(!report.exactActionRegistryMapped||originalApis.length!==originalMainRoutes.length)
+if(!report.exactActionRegistryMapped||originalApis.length!==originalMainRoutes.length||
+   legacyRouteReport.originalSourceRoutes!==originalMainRoutes.length||
+   !legacyRouteReport.allOriginalPairsAccountedFor||
+   legacyRouteReport.pendingLegacyMethodPairs===0)
  throw Error('Source-to-transport inventory drift; refuse candidate release evidence')
 if(process.argv.includes('--enforce-cutover')){
  console.error('ONE_BUNDLE_CUTOVER_BLOCKED '+JSON.stringify(workstreams.filter(x=>!x.verified).map(x=>x.id)))
