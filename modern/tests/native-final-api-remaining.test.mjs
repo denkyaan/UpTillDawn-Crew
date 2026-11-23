@@ -9,6 +9,7 @@ import {nativeBookingNotesProposal,nativeAdministrationAssistant,nativeOperation
 import {nativeArtistContractArchive,nativeArtistContractPrint} from "../src/api/native-artist-agreements.ts"
 import {nativeUserErrorReportPost} from "../src/api/native-error-ingest.ts"
 import {nativeBriefingMediaExtract} from "../src/api/native-briefing-media.ts"
+import {nativeGodPreviewRolePost,nativeGodRulesPost} from "../src/api/native-maker-writes.ts"
 
 const origin="https://uptilldawn-modern-main.uptilldawn.workers.dev"
 const qa="https://npbjrtiolqperdgljnhi.supabase.co"
@@ -40,7 +41,9 @@ test("64 original API route/method contracts tracked and explicit legacy routes 
   "/api/error-reports",
   "/portals/administration/modules/artists/[^/]+/agreement/print/[^/]+",
   "/portals/administration/modules/artists/[^/]+/agreement/archive/[^/]+",
-  "/api/briefing-extract-media"
+  "/api/briefing-extract-media",
+  "/api/god/preview-role",
+  "/api/god/rules"
  ]){
   assert.ok(report.pending.every(x=>!x.startsWith("POST "+path+" ")&&!x.startsWith("GET "+path+" ")),path)
  }
@@ -223,4 +226,44 @@ test("public Main-QA denies all new POSTs before any legacy service, actor or SQ
   assert.equal(res.headers.get("location"),"/login")
  }
  assert.equal(calls,0)
+})
+
+test("Maker role preview and rule edits require both independent God session and owner status",async()=>{
+ const request=(path,body)=>makeRequest(path,"POST",JSON.stringify(body),{
+  Cookie:"uptilldawn-god-session=fixture-strong-token"
+ })
+ let writes=0
+ const db={rpc:async(name,args)=>{
+  if(name==="upt_god_session_valid")return {data:true,error:null}
+  if(name==="upt_current_is_owner")return {data:true,error:null}
+  writes++
+  if(name==="upt_set_admin_role_mode")return {data:args.p_role,error:null}
+  if(name==="upt_god_save_role_rules")return {data:null,error:null}
+  throw Error("unexpected RPC "+name)
+ }}
+ const valid=await nativeGodPreviewRolePost(db,request(
+  "/api/god/preview-role",{role:"staff"}
+ ),"uptilldawn-god-session=fixture-strong-token")
+ assert.equal(valid.status,200)
+ assert.deepEqual(await valid.json(),{ok:true,role:"staff"})
+ const denied=await nativeGodPreviewRolePost(db,request(
+  "/api/god/preview-role",{role:"maker"}
+ ),"uptilldawn-god-session=fixture-strong-token")
+ assert.equal(denied.status,400)
+ const edited=await nativeGodRulesPost(db,request(
+  "/api/god/rules",{role:"staff",rules:[]}
+ ),"uptilldawn-god-session=fixture-strong-token")
+ assert.equal(edited.status,200)
+ assert.deepEqual(await edited.json(),{ok:true,rules:[]})
+ assert.equal(writes,2)
+ const noCookie=await nativeGodPreviewRolePost(db,request(
+  "/api/god/preview-role",{role:"admin"}
+ ),"")
+ assert.equal(noCookie.status,401)
+ assert.equal(writes,2)
+ const nonOwner={rpc:async name=>({data:name==="upt_god_session_valid",error:null})}
+ const noOwner=await nativeGodRulesPost(nonOwner,request(
+  "/api/god/rules",{role:"staff",rules:[]}
+ ),"uptilldawn-god-session=fixture-strong-token")
+ assert.equal(noOwner.status,403)
 })
