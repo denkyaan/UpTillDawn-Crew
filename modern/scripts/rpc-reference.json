@@ -80,6 +80,7 @@
     "upt_geoapify_rate_limit",
     "upt_god_data_catalog",
     "upt_god_data_rows",
+    "upt_god_database_secret",
     "upt_god_error_reports",
     "upt_god_login_owner",
     "upt_god_logout",
