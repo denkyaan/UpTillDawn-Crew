@@ -30,6 +30,8 @@ import {finalOperationsActionAllowed,finalOperationsActionResponse} from "./nati
 import {finalAdminDetailsAllowed,finalAdminDetailsResponse} from "./native-final-admin-details.ts"
 import {finalFinanceActionAllowed,finalFinanceResponse} from "./native-final-finance-actions.ts"
 import {finalAgreementsAllowed,finalAgreementsResponse} from "./native-final-agreements-actions.ts"
+import {nativeFinanceExportResponse} from "./native-finance-export.ts"
+import {nativePortalSwitchResponse,nativeFacebookEventResponse,nativeGeoapifyAutocompleteResponse} from "./native-standalone-routes.ts"
 
 type Bindings={SUPABASE_URL:string;SUPABASE_ANON_KEY:string;UPT_MIGRATION_ALLOW_WRITES?:string;GEOAPIFY_API_KEY?:string;DOCUMENSO_API_KEY?:string;DOCUMENSO_BASE_URL?:string;ASSETS?:{fetch:(request:Request)=>Promise<Response>}}&OAuthBindings&ScannerBindings&MainAuthBindings
 const app=new Hono<{Bindings:Bindings}>()
@@ -56,7 +58,10 @@ app.use("/api/*",async(c,next)=>{
 app.get("/api/v1/health",c=>{
  // Public deployment readiness only. Do not invoke authentication, private
  // configuration, Supabase or mail to discover the visible Worker version.
- if(c.env.MAIN_AUTH_RUNTIME)c.header('X-UpTillDawn-Auth-Protocol','main-auth-native-v1')
+ if(c.env.UPT_MIGRATION_NATIVE_AUTH_ENABLED==="true")
+  c.header("X-UpTillDawn-Auth-Protocol","native-direct-v1")
+ else if(c.env.MAIN_AUTH_RUNTIME)
+  c.header('X-UpTillDawn-Auth-Protocol','main-auth-native-v1')
  return c.json({ok:true,service:"uptilldawn-local-first-api"})
 })
 
@@ -117,6 +122,37 @@ app.get("/api/error-reports",async c=>{
  if(!actor.ok)return c.json({error:"Aanmelden vereist."},actor.status)
  return attachSourceCookies(await userErrorReportReadResponse(
   actor.db as unknown as ReadDb,c.req.raw),actor)
+})
+
+// Exact read-only original endpoints now execute without the legacy Worker.
+app.get("/api/administration/finance/export",async c=>{
+ const actor=await sourceReadSession(c.req.raw,c.env)
+ if(!actor.ok)return c.json({error:actor.status===401?"Unauthorized":"Service unavailable"},actor.status)
+ return attachSourceCookies(await nativeFinanceExportResponse(actor.db,actor.identity),actor)
+})
+app.get("/api/facebook-event",async c=>{
+ const actor=await sourceReadSession(c.req.raw,c.env)
+ if(!actor.ok)return c.json({error:"Aanmelden vereist."},actor.status)
+ return attachSourceCookies(await nativeFacebookEventResponse(actor.db,actor.identity,c.req.raw),actor)
+})
+app.get("/api/geocode/autocomplete",async c=>{
+ // Keep 1:1 existing autocomplete until an identical private provider key
+ // has been installed on this Worker. Never silently turn results into [].
+ if(!c.env.GEOAPIFY_API_KEY)return forwardMainSource(c.req.raw,c.env)
+ const actor=await sourceReadSession(c.req.raw,c.env)
+ if(!actor.ok)return c.json({error:"Aanmelden vereist."},actor.status)
+ return attachSourceCookies(await nativeGeoapifyAutocompleteResponse(
+  actor.db,c.req.raw,c.env.GEOAPIFY_API_KEY
+ ),actor)
+})
+app.get("/portals/switch/:portal",async c=>{
+ const actor=await sourceReadSession(c.req.raw,c.env)
+ if(!actor.ok)return new Response(null,{status:307,headers:{
+  Location:"/login","Cache-Control":"private, no-store"
+ }})
+ return attachSourceCookies(await nativePortalSwitchResponse(
+  actor.db,actor.identity,c.req.raw,c.req.param("portal")
+ ),actor)
 })
 
 // The source uses POST for this read DTO. Only the strictly recognized
@@ -380,7 +416,9 @@ app.post("/api/migration/actions",async c=>{
  const finalFinance=finalFinanceActionAllowed(hint)
  const finalAgreements=finalAgreementsAllowed(hint)
  if(!waveOne&&!waveTwo&&!waveThree&&!waveFour&&!waveFive&&!waveSix&&!waveSevenPeople&&!waveSevenOperations&&!waveEightCrew&&!waveEightMaker&&!waveNine&&!finalCrew&&!finalOperations&&!finalDetails&&!finalFinance&&!finalAgreements)
-  return forwardMainSource(c.req.raw,c.env)
+  // Every original action has a native handler. A miss is unknown or
+  // forged: do NOT dispatch it to a privileged Next backend even in QA.
+  return c.json({error:"unknown_action"},404)
  const actor=await sourceReadSession(c.req.raw,c.env)
  if(!actor.ok){
   // Original God Mode logout clears privileged cookies even after the
