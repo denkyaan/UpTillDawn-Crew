@@ -100,6 +100,7 @@
     "upt_god_session_valid",
     "upt_god_upload_security_audit",
     "upt_guestlist_add_entry",
+    "upt_guestlist_import",
     "upt_guestlist_remove_entry",
     "upt_guestlist_set_artist_hospitality",
     "upt_guestlist_set_backstage_workplace",
