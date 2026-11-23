@@ -147,8 +147,11 @@ export async function finalFinanceResponse(
  const parsed=await parseMegaRequest(req,db,selected,0,name==="uploadFinancialAttachment"?22*1024*1024:64*1024)
  if(!parsed.ok)return parsed.response
  const {fd,actor,db:client}=parsed
+ // A signed but unauthorized session must never return an apparently
+ // successful redirect; reject it before any finance data is accessed.
+ try{await access(client,actor)}
+ catch{return failure(422,"action_failed")}
  try{
-  await access(client,actor)
   switch(name){
    case "createCounterparty":{
     chk(await client.from("admin_counterparties").insert(counterpartyFields(fd)))
