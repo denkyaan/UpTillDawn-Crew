@@ -33,7 +33,7 @@ async function pages(db:SupabaseClient,table:string,columns:string,order:string,
   if(eventId)query=query.eq("event_id",eventId)
   const {data,error}=await query.order(order).range(offset,offset+499)
   if(error)throw Error("data_unavailable")
-  const rows=(data??[]) as Row[]
+  const rows=(data??[]) as unknown as Row[]
   tracker.total+=rows.length
   if(output.length+rows.length>MAX_TABLE_ROWS||tracker.total>MAX_SOURCE_ROWS)throw Error("source_too_large")
   output.push(...rows)
