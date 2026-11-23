@@ -12,17 +12,17 @@ const target="aaaabbbb-cccc-4ddd-8eee-000000000002"
 const event="aaaabbbb-cccc-4ddd-8eee-000000000003"
 const workplace="aaaabbbb-cccc-4ddd-8eee-000000000004"
 const task="aaaabbbb-cccc-4ddd-8eee-000000000005"
-const request="aaaabbbb-cccc-4ddd-8eee-000000000006"
+const receiptRequest="aaaabbbb-cccc-4ddd-8eee-000000000006"
 const time="2026-12-01T16:00:00+01:00"
 const people=[
  ["promotion-tasks.ts#createPromotionTask",{
-  request,title:"Social",description:"Share promotion",user_id:target,admin_view:"1"
+  request:receiptRequest,title:"Social",description:"Share promotion",user_id:target,admin_view:"1"
  },"upt_admin_create_promotion_task"],
  ["promotion-tasks.ts#assignGeneralPromotionTask",{task_id:task,user_id:target},"upt_admin_assign_promotion_task"],
  ["promotion-tasks.ts#editPromotionTask",{task_id:task,title:"Social",description:"Promote",expected_updated_at:time},"upt_admin_update_promotion_task"],
  ["promotion-tasks.ts#removeGeneralPromotionAssignment",{assignment_id:task},"upt_remove_task_assignment"],
  ["admin-inventory-batch.ts#receiveAdminInventoryBatch",{
-  request,document:event,confirm:"yes",rows:JSON.stringify([{line:workplace,item:task,quantity:2}])
+  request:receiptRequest,document:event,confirm:"yes",rows:JSON.stringify([{line:workplace,item:task,quantity:2}])
  },"upt_admin_receive_inventory_batch"],
  ["portal-roles.ts#changePortalRole",{user_id:target,portal:"events",role:"event_staff",action:"approve"},"upt_admin_set_portal_role"],
  ["personnel-dual-roles.ts#savePersonnelRoleSlot",{user_id:target,role_one:"staff",role_two:"promotion",save_slot:"1"},"upt_admin_set_two_personnel_roles"],
