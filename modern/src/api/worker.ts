@@ -24,6 +24,7 @@ import {megaPeopleAllowed,megaPeopleResponse} from "./native-mega-people-actions
 import {megaOperationsAllowed,megaOperationsResponse} from "./native-mega-operations-actions.ts"
 import {megaCrewEventAllowed,megaCrewEventResponse} from "./native-mega-crew-event-actions.ts"
 import {megaMakerAllowed,megaMakerResponse,godLogoutId,originalGodLogout} from "./native-mega-maker-actions.ts"
+import {nativeWaveNineAllowed,nativeWaveNineResponse} from "./native-wave-nine-safe-actions.ts"
 
 type Bindings={SUPABASE_URL:string;SUPABASE_ANON_KEY:string;UPT_MIGRATION_ALLOW_WRITES?:string;ASSETS?:{fetch:(request:Request)=>Promise<Response>}}&OAuthBindings&ScannerBindings&MainAuthBindings
 const app=new Hono<{Bindings:Bindings}>()
@@ -367,7 +368,8 @@ app.post("/api/migration/actions",async c=>{
  const waveSevenOperations=megaOperationsAllowed(hint)
  const waveEightCrew=megaCrewEventAllowed(hint)
  const waveEightMaker=megaMakerAllowed(hint)
- if(!waveOne&&!waveTwo&&!waveThree&&!waveFour&&!waveFive&&!waveSix&&!waveSevenPeople&&!waveSevenOperations&&!waveEightCrew&&!waveEightMaker)
+ const waveNine=nativeWaveNineAllowed(hint)
+ if(!waveOne&&!waveTwo&&!waveThree&&!waveFour&&!waveFive&&!waveSix&&!waveSevenPeople&&!waveSevenOperations&&!waveEightCrew&&!waveEightMaker&&!waveNine)
   return forwardMainSource(c.req.raw,c.env)
  const actor=await sourceReadSession(c.req.raw,c.env)
  if(!actor.ok){
@@ -381,6 +383,7 @@ app.post("/api/migration/actions",async c=>{
   },{status:actor.status,headers:{"Cache-Control":"private, no-store"}})
  }
  const db=actor.db as unknown as NativeAdminActionDb
+ if(waveNine)return attachSourceCookies(await nativeWaveNineResponse(c.req.raw,db,hint),actor)
  const result=waveOne
   ?await nativeAdminActionResponse(c.req.raw,db,hint)
   :waveTwo
