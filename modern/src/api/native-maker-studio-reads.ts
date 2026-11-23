@@ -18,6 +18,7 @@ function editablePath(path: string) {
   return /\.(tsx?|jsx?|mjs|cjs|jsonc?|css|scss|sql|md|ya?ml|html|txt|svg|toml)$/.test(path) || ['.gitignore', 'LICENSE', '.env.example', '.env.local.example'].includes(path)
 }
 const sourcePath=z.string().refine(editablePath,"Ongeldig of niet-bewerkbaar bronbestand.")
+export {editablePath as makerEditablePath}
 const shaSchema=z.string().regex(/^[a-f0-9]{40}$/)
 
 import {nativeMakerOverviewResponse} from "./native-maker-overview.ts"
