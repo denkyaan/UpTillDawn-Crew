@@ -6,8 +6,9 @@ import {z} from "zod"
 import type {SupabaseClient} from "@supabase/supabase-js"
 import {editablePath,MAX_SOURCE_BYTES,shaSchema,sourcePath,STUDIO_REPOSITORY}
  from "../../../lib/god-studio.ts"
+import {nativeMakerOverviewResponse} from "./native-maker-overview.ts"
 
-export type NativeMakerStudioPath="/api/god/source"|"/api/god/sql"
+export type NativeMakerStudioPath="/api/god/source"|"/api/god/sql"|"/api/god/overview"
 type Db=Pick<SupabaseClient,"rpc">
 type Env={SUPABASE_URL:string}
 const QA_DATABASE="https://npbjrtiolqperdgljnhi.supabase.co"
@@ -156,6 +157,7 @@ export async function nativeMakerStudioReadResponse(
  try{
   const token=await godToken(db,request,cookies,env)
   return path==="/api/god/sql"?await sqlRead(db,token):
+   path==="/api/god/overview"?await nativeMakerOverviewResponse(db,token,request):
    await sourceRead(db,token,request)
  }catch(error){
   return error instanceof z.ZodError?reply({error:"Ongeldige bestandsaanvraag."},400):
