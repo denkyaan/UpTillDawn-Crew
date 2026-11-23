@@ -36,7 +36,9 @@ test("QA browser is an explicitly opted-in QA-only gate, never part of fast Main
  assert.ok(deploy.includes("E2E_MAIN_QA_PASSWORD: ${{ secrets.MAIN_QA_BOT_PASSWORD }}"))
  assert.ok(deploy.includes("VITE_MIGRATION_ALLOW_WRITES: 'false'"))
  assert.ok(deploy.includes("npm --prefix modern run browser:qa"))
- assert.ok(!deploy.includes("E2E_MAIN_QA_SERVICE_KEY"))
+ assert.ok(!fast.includes("E2E_MAIN_QA_SERVICE_KEY"))
+ const isolatedQa=deploy.split("  qa-modern-main-qa:")[1]?.split("  qa-native-admin-http:")[0]
+ assert.ok(isolatedQa && !isolatedQa.includes("E2E_MAIN_QA_SERVICE_KEY"))
  const pkg=JSON.parse(src("modern/package.json"))
  assert.equal(pkg.scripts["browser:qa"],"node tests/browser-auth-qa.mjs")
 })
