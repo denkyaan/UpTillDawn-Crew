@@ -55,6 +55,7 @@ import {nativeIntegrationMutation} from "./native-integration-mutations.ts"
 import {nativePontoGet,nativePontoPost} from "./native-ponto-integration.ts"
 import {nativeProviderConnectionCheck} from "./native-provider-connection.ts"
 import {nativeFinanceExportResponse} from "./native-finance-export.ts"
+import {nativeSalesXlsx,nativeWorkSessionsXlsx} from "./native-original-xlsx-exports.ts"
 import {nativePortalSwitchResponse,nativeFacebookEventResponse,nativeGeoapifyAutocompleteResponse} from "./native-standalone-routes.ts"
 
 type Bindings={SUPABASE_URL:string;SUPABASE_ANON_KEY:string;UPT_WEEZTIX_OAUTH_ORIGIN?:string;CONTRACT_ISSUER_EMAIL?:string;CLOUDFLARE_OBSERVABILITY_CONFIG?:string;AI?:NativeTranslationAI;UPT_MIGRATION_ALLOW_WRITES?:string;GEOAPIFY_API_KEY?:string;DOCUMENSO_API_KEY?:string;DOCUMENSO_BASE_URL?:string;ASSETS?:{fetch:(request:Request)=>Promise<Response>}}&OAuthBindings&ScannerBindings&MainAuthBindings
@@ -309,6 +310,17 @@ app.post("/api/admin/provider-connection-check",async c=>{
  return attachSourceCookies(await nativeProviderConnectionCheck(actor.db,c.req.raw,c.env),actor)
 })
 
+// Original Excel exports now run on the signed, RLS-scoped Hono Worker.
+app.get("/api/uptilldawn/export",async c=>{
+ const actor=await sourceReadSession(c.req.raw,c.env)
+ if(!actor.ok)return new Response("Aanmelden vereist.",{status:actor.status})
+ return attachSourceCookies(await nativeWorkSessionsXlsx(actor.db,actor.identity.id),actor)
+})
+app.get("/api/uptilldawn/sales-export",async c=>{
+ const actor=await sourceReadSession(c.req.raw,c.env)
+ if(!actor.ok)return new Response("Aanmelden vereist.",{status:actor.status})
+ return attachSourceCookies(await nativeSalesXlsx(actor.db,c.req.raw,actor.identity.id),actor)
+})
 app.get("/api/administration/finance/export",async c=>{
  const actor=await sourceReadSession(c.req.raw,c.env)
  if(!actor.ok)return c.json({error:actor.status===401?"Unauthorized":"Service unavailable"},actor.status)
