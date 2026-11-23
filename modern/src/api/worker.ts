@@ -41,6 +41,7 @@ import {nativeBookingNotesProposal,nativeAdministrationAssistant,nativeOperation
 import {nativeArtistContractArchive,nativeArtistContractPrint} from "./native-artist-agreements.ts"
 import {nativeUserErrorReportPost} from "./native-error-ingest.ts"
 import {nativeBriefingMediaExtract} from "./native-briefing-media.ts"
+import {nativeGodPreviewRolePost,nativeGodRulesPost} from "./native-maker-writes.ts"
 import {nativeFinanceExportResponse} from "./native-finance-export.ts"
 import {nativePortalSwitchResponse,nativeFacebookEventResponse,nativeGeoapifyAutocompleteResponse} from "./native-standalone-routes.ts"
 
@@ -227,6 +228,23 @@ app.post("/api/error-reports",async c=>{
 })
 // No cloud document conversion, no OpenAI/Cloudmersive dependency: Office
 // images remain parsed locally with bounded ZIP inflate and signed role checks.
+// Maker edits can never be unlocked by selecting a preview role.
+// The second original God session token is revalidated with the owner RPC
+// for every POST, besides the ordinary signed SSR identity.
+for(const [path,handler] of [
+ ["/api/god/preview-role",nativeGodPreviewRolePost],
+ ["/api/god/rules",nativeGodRulesPost]
+] as const){
+ app.post(path,async c=>{
+  if(c.env.UPT_MIGRATION_ALLOW_WRITES!=="true")
+   return c.json({error:"migration_writes_disabled"},503)
+  const actor=await sourceReadSession(c.req.raw,c.env)
+  if(!actor.ok)return c.json({error:"Meld opnieuw aan bij God Mode."},actor.status)
+  return attachSourceCookies(await handler(
+   actor.db,c.req.raw,actor.cookieHeader
+  ),actor)
+ })
+}
 app.post("/api/briefing-extract-media",async c=>{
  if(c.env.UPT_MIGRATION_ALLOW_WRITES!=="true")
   return c.json({error:"migration_writes_disabled"},503)
