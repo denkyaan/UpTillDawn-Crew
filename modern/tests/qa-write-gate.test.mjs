@@ -44,17 +44,19 @@ test("candidate write flag disabled or absent blocks ALL original Main action/pr
   assert.equal(f.calls,0,"No candidate business mutation may reach the Main Worker")
  }
 })
-test("original read-only view POST and explicitly authorized GET remain available through Main authority",async()=>{
+test("legacy read-only routes still proxy; extracted financial export requires a signed session",async()=>{
  const f=fixture("false")
  for(const [path,method] of [
   ["/api/migration/view-data","POST"],
-  ["/api/administration/finance/export","GET"],
   ["/api/administration/peppol/prepare","GET"]
  ]){
   const response=await probe(path,method,f.env)
   assert.equal(response.status,200,path)
  }
- assert.equal(f.calls,3,"Only the three explicitly read-only probes reach original Main")
+ assert.equal(f.calls,2,"Only endpoints not yet extracted reach original Main")
+ const finance=await probe("/api/administration/finance/export","GET",f.env)
+ assert.equal(finance.status,401,"Extracted finance export rejects unsigned requests")
+ assert.equal(f.calls,2,"Finance must never proxy after native extraction")
 })
 test("unknown APIs and QA-only test-session endpoints fail closed before original Main service",async()=>{
  const f=fixture("true")
@@ -64,11 +66,12 @@ test("unknown APIs and QA-only test-session endpoints fail closed before origina
  }
  assert.equal(f.calls,0)
 })
-test("explicitly enabled write transport still uses original Main authorization and never promotes mock identity",async()=>{
+test("explicitly enabled QA writes still reject unknown actions locally and never promote mock identity",async()=>{
  const f=fixture("true")
  const response=await probe("/api/migration/actions","POST",f.env)
- assert.equal(response.status,200)
- assert.equal(f.calls,1)
+ assert.equal(response.status,404)
+ assert.deepEqual(await response.json(),{error:"unknown_action"})
+ assert.equal(f.calls,0)
 })
 test("deployed QA config cannot enable original Main writes without an explicit security review",()=>{
  const config=JSON.parse(readFileSync(new URL("../wrangler.main-qa.jsonc",import.meta.url),"utf8"))
