@@ -21,7 +21,7 @@ test("all 66 signed cases are confined to optional Main-QA workflow; deployed Wo
   "E2E_MAIN_QA_BASE_URL","E2E_MAIN_MODERN_QA_ORIGIN",
   'VITE_MIGRATION_ALLOW_WRITES!=="false"',
   'UPT_MIGRATION_ALLOW_WRITES:"true"',
-  "const missing=randomUUID()","assert.equal(live.status(),503)",
+  "const missing=randomUUID()","assert.equal(live.status(),503,",
   "assert.equal(forwards,0)"])
   assert.ok(source.includes(token),"Signed QA guard missing: "+token)
  assert.ok(workflow.includes("needs.validate-trigger.outputs.native_admin_qa_eligible == 'true'"))
