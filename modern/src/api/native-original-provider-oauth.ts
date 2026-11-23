@@ -18,7 +18,7 @@ type Db=Pick<SupabaseClient,"rpc"|"from">
 const noStore={"Cache-Control":"no-store","Referrer-Policy":"no-referrer",
  "X-Content-Type-Options":"nosniff"} as const
 const json=(error:string,status:number)=>Response.json({error},{status,headers:noStore})
-const uuid=/^[0-9a-f]{8}-(?:[0-9a-f]{4}-){3}-[0-9a-f]{12}$/i
+const uuid=/^[0-9a-f]{8}-(?:[0-9a-f]{4}-){3}[0-9a-f]{12}$/i
 function same(a:string,b:string){
  if(a.length!==b.length||a.length!==64)return false
  let diff=0
