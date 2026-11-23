@@ -5,7 +5,7 @@ import {createRequire} from 'node:module'
 import {build} from 'esbuild'
 const root=resolve(import.meta.dirname,'../..'),require=createRequire(import.meta.url),ts=require('typescript')
 const output=resolve(root,'modern/src/api/native-auth.generated.mjs')
-const routes={'/api/auth/portal-login':'app/api/auth/portal-login/route.ts','/api/auth/account-action':'app/api/auth/account-action/route.ts','/auth/callback':'app/auth/callback/route.ts'}
+const routes={'/api/auth/admin-login':'app/api/auth/admin-login/route.ts','/api/auth/portal-login':'app/api/auth/portal-login/route.ts','/api/auth/account-action':'app/api/auth/account-action/route.ts','/auth/callback':'app/auth/callback/route.ts'}
 const allowed=new Set(['NODE_ENV','NEXT_PUBLIC_SUPABASE_URL','NEXT_PUBLIC_SUPABASE_ANON_KEY','NEXT_PUBLIC_APP_URL','RESEND_API_KEY','SECURITY_ALERT_EMAIL','SECURITY_FROM_EMAIL','GEOAPIFY_API_KEY','UPT_MIGRATION_EMAIL_CALLBACK_READY'])
 const contextNames=new Set(['next/server','next/headers','next/cache','next/navigation','next/dist/client/components/redirect-error','react','native-auth-runtime:context'])
 const entry=Object.entries(routes).map(([,file],i)=>`import * as route${i} from ${JSON.stringify(resolve(root,file))};`).join('\n')+`\nexport async function executeOriginalAuth(request){const path=new URL(request.url).pathname;${Object.keys(routes).map((path,i)=>`if(path===${JSON.stringify(path)}){const handler=route${i}[request.method];return handler?handler(request):Response.json({error:'method_not_allowed'},{status:405});}`).join('')}return Response.json({error:'not_found'},{status:404})}`

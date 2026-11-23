@@ -14,7 +14,7 @@ export type MainAuthBindings={
  SECURITY_FROM_EMAIL?:string;GEOAPIFY_API_KEY?:string;
  UPT_MIGRATION_EMAIL_CALLBACK_READY?:string
 }
-const paths=new Set(["/api/auth/portal-login","/api/auth/account-action","/auth/callback"])
+const paths=new Set(["/api/auth/admin-login","/api/auth/portal-login","/api/auth/account-action","/auth/callback"])
 const portals=new Set(["staff","responsible","admin","promotion","administration"])
 const actions=new Set(["signUp","forgotPassword","updatePassword","resendVerificationEmail","signOut"])
 function rejected(status:number,code:string){
@@ -43,12 +43,16 @@ export async function forwardMainAuth(request:Request,env:MainAuthBindings):Prom
   return rejected(503,"auth_service_unconfigured")
  if(!paths.has(url.pathname))return rejected(404,"auth_path_denied")
  const callback=url.pathname==="/auth/callback"
+ const adminLogin=url.pathname==="/api/auth/admin-login"
  if(request.method!==(callback?"GET":"POST"))return rejected(405,"method_not_allowed")
  let form:FormData|undefined
  if(!callback){
   const site=request.headers.get("sec-fetch-site")
   if(request.headers.get("origin")!==url.origin||(site&&site!=="same-origin"))return rejected(403,"invalid_origin")
-  if(!(request.headers.get("content-type")||"").toLowerCase().startsWith("multipart/form-data;"))return rejected(415,"invalid_content_type")
+  const contentType=(request.headers.get("content-type")||"").toLowerCase()
+  if(!contentType.startsWith("multipart/form-data;")&&
+     !(adminLogin&&contentType.startsWith("application/x-www-form-urlencoded")))
+   return rejected(415,"invalid_content_type")
   try{form=await readBoundedFormData(request,16_384)}
   catch(error){return rejected(error instanceof Error&&error.message==="too_large"?413:400,"invalid_form")}
   for(const [,value] of form)if(typeof value!=="string"||value.length>2048)return rejected(413,"form_too_large")
@@ -105,7 +109,7 @@ export async function forwardMainAuth(request:Request,env:MainAuthBindings):Prom
  const location=response.headers.get("location")
  if(location){
   const target=new URL(location,MAIN_AUTH_ORIGIN)
-  if(!callback||target.origin!==MAIN_AUTH_ORIGIN)return rejected(502,"invalid_auth_redirect")
+  if((!callback&&!adminLogin)||target.origin!==MAIN_AUTH_ORIGIN)return rejected(502,"invalid_auth_redirect")
   // Callback exchanges the same QA auth code/OTP, then returns to this host.
   output.set("Location",url.origin+target.pathname+target.search+target.hash)
  }else if(!(response.headers.get("content-type")||"").includes("application/json"))return rejected(503,"auth_temporarily_unavailable")
