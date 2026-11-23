@@ -44,10 +44,11 @@ import {nativeBriefingMediaExtract} from "./native-briefing-media.ts"
 import {nativeGodPreviewRolePost,nativeGodRulesPost} from "./native-maker-writes.ts"
 import {makerObservabilityResponse} from "./native-maker-observability.ts"
 import {nativeMakerStudioReadResponse} from "./native-maker-studio-reads.ts"
+import {nativeIntegrationsSummary} from "./native-integration-read.ts"
 import {nativeFinanceExportResponse} from "./native-finance-export.ts"
 import {nativePortalSwitchResponse,nativeFacebookEventResponse,nativeGeoapifyAutocompleteResponse} from "./native-standalone-routes.ts"
 
-type Bindings={SUPABASE_URL:string;SUPABASE_ANON_KEY:string;CONTRACT_ISSUER_EMAIL?:string;CLOUDFLARE_OBSERVABILITY_CONFIG?:string;AI?:NativeTranslationAI;UPT_MIGRATION_ALLOW_WRITES?:string;GEOAPIFY_API_KEY?:string;DOCUMENSO_API_KEY?:string;DOCUMENSO_BASE_URL?:string;ASSETS?:{fetch:(request:Request)=>Promise<Response>}}&OAuthBindings&ScannerBindings&MainAuthBindings
+type Bindings={SUPABASE_URL:string;SUPABASE_ANON_KEY:string;UPT_WEEZTIX_OAUTH_ORIGIN?:string;CONTRACT_ISSUER_EMAIL?:string;CLOUDFLARE_OBSERVABILITY_CONFIG?:string;AI?:NativeTranslationAI;UPT_MIGRATION_ALLOW_WRITES?:string;GEOAPIFY_API_KEY?:string;DOCUMENSO_API_KEY?:string;DOCUMENSO_BASE_URL?:string;ASSETS?:{fetch:(request:Request)=>Promise<Response>}}&OAuthBindings&ScannerBindings&MainAuthBindings
 const app=new Hono<{Bindings:Bindings}>()
 
 // If a future rename accidentally binds the former Main service to THIS
@@ -164,6 +165,16 @@ app.get("/api/error-reports",async c=>{
 })
 
 // Exact read-only original endpoints now execute without the legacy Worker.
+// Customer-configurable connection metadata and recent audit, no credentials.
+// Native GET only. Provider credential writes/OAuth are disabled on Main QA.
+app.get("/api/administration/integrations",async c=>{
+ const actor=await sourceReadSession(c.req.raw,c.env)
+ if(!actor.ok)return c.json({error:"forbidden"},actor.status)
+ return attachSourceCookies(await nativeIntegrationsSummary(
+  actor.db,c.req.raw,c.env
+ ),actor)
+})
+
 app.get("/api/administration/finance/export",async c=>{
  const actor=await sourceReadSession(c.req.raw,c.env)
  if(!actor.ok)return c.json({error:actor.status===401?"Unauthorized":"Service unavailable"},actor.status)
