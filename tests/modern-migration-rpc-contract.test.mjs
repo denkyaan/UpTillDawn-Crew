@@ -5,7 +5,7 @@ import {readFileSync} from "node:fs"
 const file=p=>readFileSync(p,"utf8")
 const metadata=JSON.parse(file("modern/scripts/rpc-reference.json"))
 test("all candidate RPCs are review-allowlisted without live credentials",()=>{
- assert.equal(metadata.requiredPublicRpcNames.length,117)
+ assert.equal(metadata.requiredPublicRpcNames.length,131)
  assert.ok(metadata.requiredPublicRpcNames.includes('upt_current_work_context'), 'Original signed incident access RPC must be explicitly reviewed')
  for(const rpc of ['upt_can_manage_administration','upt_ticket_sales_summary','upt_administration_finance_summary','upt_administration_payroll_rows'])
   assert.ok(metadata.requiredPublicRpcNames.includes(rpc),'Native administrative read must remain reviewed: '+rpc)
@@ -27,11 +27,17 @@ test("all candidate RPCs are review-allowlisted without live credentials",()=>{
   'upt_duplicate_event','upt_archive_event','upt_create_operational_checklist',
   'upt_sync_workplace_catalog_to_event'])
   assert.ok(metadata.requiredPublicRpcNames.includes(name),'Catalog/event SQL procedure not audited: '+name)
+ for(const name of ['upt_admin_create_promotion_task','upt_admin_assign_promotion_task',
+  'upt_admin_update_promotion_task','upt_remove_task_assignment','upt_admin_receive_inventory_batch',
+  'upt_admin_set_portal_role','upt_admin_set_two_personnel_roles','upt_admin_set_personnel_block',
+  'upt_admin_set_account','upt_require_first_profile','upt_archive_event_document',
+  'upt_remove_operational_checklist_item','upt_set_operational_checklist_item','upt_feature_allowed'])
+  assert.ok(metadata.requiredPublicRpcNames.includes(name),'Megabundle SQL RPC needs explicit audit: '+name)
  assert.ok(metadata.requiredPublicRpcNames.includes('upt_is_admin'), 'Every native admin write must recheck original admin RPC')
  for(const rpc of ['upt_push_public_key','upt_notification_badge_count'])
   assert.ok(metadata.requiredPublicRpcNames.includes(rpc),'Original push read RPC needs an explicit native migration review: '+rpc)
  const out=JSON.parse(execFileSync(process.execPath,["modern/scripts/rpc-contract.mjs"],{encoding:"utf8"}))
- assert.equal(out.sourceRpcCount,117)
+ assert.equal(out.sourceRpcCount,131)
  assert.deepEqual(out.unreviewedRpc,[])
  assert.deepEqual(out.noLongerReferenced,[])
  assert.equal(out.liveDatabaseVerifiedInCi,false)
