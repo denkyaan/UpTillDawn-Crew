@@ -19,6 +19,7 @@ import {nativeWaveTwoAllowed,nativeWaveTwoActionResponse} from "./native-platfor
 import {nativeWaveThreeAllowed,nativeWaveThreeActionResponse} from "./native-event-shift-actions.ts"
 import {nativeInventoryActionAllowed,nativeInventoryActionResponse} from "./native-inventory-checklist-actions.ts"
 import {nativeRosterActionAllowed,nativeRosterActionResponse} from "./native-roster-handover-actions.ts"
+import {nativeCatalogActionAllowed,nativeCatalogActionResponse} from "./native-catalog-event-actions.ts"
 
 type Bindings={SUPABASE_URL:string;SUPABASE_ANON_KEY:string;UPT_MIGRATION_ALLOW_WRITES?:string;ASSETS?:{fetch:(request:Request)=>Promise<Response>}}&OAuthBindings&ScannerBindings&MainAuthBindings
 const app=new Hono<{Bindings:Bindings}>()
@@ -357,7 +358,8 @@ app.post("/api/migration/actions",async c=>{
  const waveThree=nativeWaveThreeAllowed(hint)
  const waveFour=nativeInventoryActionAllowed(hint)
  const waveFive=nativeRosterActionAllowed(hint)
- if(!waveOne&&!waveTwo&&!waveThree&&!waveFour&&!waveFive)
+ const waveSix=nativeCatalogActionAllowed(hint)
+ if(!waveOne&&!waveTwo&&!waveThree&&!waveFour&&!waveFive&&!waveSix)
   return forwardMainSource(c.req.raw,c.env)
  const actor=await sourceReadSession(c.req.raw,c.env)
  if(!actor.ok)return Response.json({
@@ -373,7 +375,9 @@ app.post("/api/migration/actions",async c=>{
     ?await nativeWaveThreeActionResponse(c.req.raw,db,hint as Parameters<typeof nativeWaveThreeActionResponse>[2])
     :waveFour
      ?await nativeInventoryActionResponse(c.req.raw,db,hint as Parameters<typeof nativeInventoryActionResponse>[2])
-     :await nativeRosterActionResponse(c.req.raw,db,hint as Parameters<typeof nativeRosterActionResponse>[2])
+     :waveFive
+      ?await nativeRosterActionResponse(c.req.raw,db,hint as Parameters<typeof nativeRosterActionResponse>[2])
+      :await nativeCatalogActionResponse(c.req.raw,db,hint as Parameters<typeof nativeCatalogActionResponse>[2])
  return attachSourceCookies(result,actor)
 })
 
