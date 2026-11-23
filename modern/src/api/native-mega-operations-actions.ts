@@ -122,10 +122,9 @@ export async function megaOperationsResponse(
     const {data,error:lookup}=await client.from("checklist_items")
      .select("photo_path").eq("id",item).maybeSingle()
     if(lookup)throw Error("Checklist read failed")
-    const rpc=id==="removeOperationalChecklistItem"?
-     {name:"upt_remove_operational_checklist_item",args:{p_item:item}}:
-     {name:"upt_set_operational_checklist_item",args:{p_item:item,p_complete:false}}
-    const {error}=await client.rpc(rpc.name,rpc.args)
+    const {error}=id==="removeOperationalChecklistItem"
+     ?await client.rpc("upt_remove_operational_checklist_item",{p_item:item})
+     :await client.rpc("upt_set_operational_checklist_item",{p_item:item,p_complete:false})
     if(error)throw Error("Checklist RPC rejected")
     if(data?.photo_path)await client.storage.from("work-media").remove([data.photo_path])
     return done()
