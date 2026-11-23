@@ -79,7 +79,8 @@ test("Geoapify input normalization and database rate-limits preserve old contrac
   denied,new Request(origin+"/api/geocode/autocomplete?q=Leuven"),"dummy")
  assert.equal(rate.status,429)
  assert.equal(rate.headers.get("retry-after"),"32")
- const fail={rpc:async name=>({data:null,error:name==="upt_geoapify_rate_limit"?{code:"NO"}:null})}
+ const fail={rpc:async name=>name==="upt_is_approved"
+  ?{data:true,error:null}:{data:null,error:{code:"NO"}}}
  assert.equal((await nativeGeoapifyAutocompleteResponse(
   fail,new Request(origin+"/api/geocode/autocomplete?q=Leuven"),"dummy")).status,503)
 })
@@ -100,8 +101,9 @@ test("finance export computes exact-cent balance and retains CSV formula escapin
  const response=await nativeFinanceExportResponse(db,signed("staff"))
  assert.equal(response.status,200)
  assert.match(response.headers.get("content-type"),/text\/csv/)
- const csv=await response.text()
- assert.ok(csv.startsWith("\uFEFF"))
+ const bytes=new Uint8Array(await response.arrayBuffer())
+ assert.deepEqual([...bytes.slice(0,3)],[0xEF,0xBB,0xBF])
+ const csv=new TextDecoder().decode(bytes)
  assert.match(csv,/'=CMD/)
  assert.match(csv,/10\.00/)
  assert.match(csv,/0\.00/)
