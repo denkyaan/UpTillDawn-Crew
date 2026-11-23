@@ -200,8 +200,11 @@ export async function finalOperationsActionResponse(
     if(!["target","apply"].includes(action))throw Error("Invalid shift change")
     if(action==="apply"&&!actor.is_owner&&!await approvedAdmin(client,actor))
      throw Error("Admin approval required")
-    const args=action==="target"?{p_id:id,p_shift:uuid(fd.get("shift"))}:{p_id:id}
-    chk(await client.rpc(action==="target"?"upt_admin_roster_target":"upt_admin_roster_apply",args))
+    if(action==="target"){
+     chk(await client.rpc("upt_admin_roster_target",{p_id:id,p_shift:uuid(fd.get("shift"))}))
+    }else{
+     chk(await client.rpc("upt_admin_roster_apply",{p_id:id}))
+    }
     break
    }
    case "planNewShift":{
@@ -226,8 +229,10 @@ export async function finalOperationsActionResponse(
      if(error||!data||data.status!=="submitted"||data.created_by===actor.id)
       throw Error("Self-approval or invalid status")
     }
-    chk(await client.rpc(action==="submit"?"upt_admin_roster_submit":"upt_admin_roster_review",
-      action==="submit"?{p_id:id}:{p_id:id,p_approve:action==="approve",p_note:note}))
+    if(action==="submit")chk(await client.rpc("upt_admin_roster_submit",{p_id:id}))
+    else chk(await client.rpc("upt_admin_roster_review",{
+     p_id:id,p_approve:action==="approve",p_note:note
+    }))
     break
    }
    case "saveAdministrationEventDraft":{
