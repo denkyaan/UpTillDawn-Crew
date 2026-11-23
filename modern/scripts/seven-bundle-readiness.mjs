@@ -100,7 +100,15 @@ if(!workerSource.includes('app.get("/api/push/config"')||
    !workerSource.includes('nativeTranslateChat(')||
    !workerSource.includes('nativeProviderMappingCreate(')||
    !workerSource.includes('nativeProviderMappingUpdate(')||
-   !workerSource.includes('nativeProviderTransactionsImport('))
+   !workerSource.includes('nativeProviderTransactionsImport(')||
+   !workerSource.includes('nativeInvoiceLinesImport(')||
+   !workerSource.includes('nativeTicketCsvImport(')||
+   !workerSource.includes('nativeAdminAssistant(')||
+   !workerSource.includes('nativeAdministrationAssistant(')||
+   !workerSource.includes('nativeBookingNotesProposal(')||
+   !workerSource.includes('nativeGodPreviewRolePost(')||
+   !workerSource.includes('nativeGodRulesPost(')||
+   !workerSource.includes('nativeClientErrorReport('))
  throw Error('Native Main source-read route contract changed')
 // Internal one-hop rejection stops runaway accidental recursion, but DOES NOT
 // make the original Main service independently available at cutover: every
@@ -206,10 +214,10 @@ const workstreams=[
  {id:'integrations',description:'EventPay, Weeztix, SumUp, Documenso, banking and Peppol',
   available:{originalApiRoutes:originalMainRoutes.length,
    nativeReadHandlers:migratedOriginalReads.length,
-   nativeApiMethodPairsNewlyExtracted:16,
+   nativeApiMethodPairsNewlyExtracted:24,
    nativeApiWriteHandlersPubliclyEnabled:0,
    nativeGeoapifyKeyDeclared:typeof env.vars.GEOAPIFY_API_KEY==='string'&&Boolean(env.vars.GEOAPIFY_API_KEY)},
-  verified:false,blocker:'Bank, provider, Peppol, notes, documents, push and translation handlers are extracted; live authorized writes, provider setup, payments, scanning and callback parity remain unverified'},
+  verified:false,blocker:'Bank/provider/Peppol/import, operations AI, Maker edits and error AI are extracted but public QA writes stay disabled; live authorized role/RLS tests, provider onboarding, scanning and callback parity remain unverified'},
  {id:'offline',description:'PWA, chat, location/time and offline replay without overload',
   available:{originalSourceRetained:true},
   verified:false,blocker:'Disconnected use, replay, sync conflicts, four locales and Free-tier load validation remain'},
