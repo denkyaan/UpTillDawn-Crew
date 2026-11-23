@@ -151,13 +151,14 @@ test("QA Worker rejects all 12 native actions before auth, parsing or Main upstr
  }
  assert.equal(forwarded,0)
 })
-test("unknown/missing action hint stays streamed through original allowlisted service only when write gate explicitly true",async()=>{
+test("missing action hint fails closed locally rather than escalating to original Main backend",async()=>{
  const id=cases[0][0]
  let forwarded=0
  const env={SUPABASE_URL:qa,SUPABASE_ANON_KEY:"sb_publishable_fixture",UPT_MIGRATION_ALLOW_WRITES:"true",
-  MAIN_AUTH:{fetch:async req=>{forwarded++;assert.equal(req.headers.get("x-uptilldawn-action-hint"),null);return Response.json({value:["undefined"],refresh:true})}}}
+  MAIN_AUTH:{fetch:async()=>{forwarded++;throw Error("FORBIDDEN_LEGACY_PROXY")}}}
  const req=request(id,cases[0][1])
  const result=await app.request(req,{},env)
- assert.equal(result.status,200)
- assert.equal(forwarded,1)
+ assert.equal(result.status,404)
+ assert.deepEqual(await result.json(),{error:"unknown_action"})
+ assert.equal(forwarded,0)
 })
