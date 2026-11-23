@@ -6,6 +6,7 @@ import {nativeBankStatementRegister,nativeProviderSettlementRegister} from "../s
 import {nativeBankStatementImport,nativeBankStatementReview,nativeProviderSettlementApprove} from "../src/api/native-bank-settlement-writes.ts"
 import {nativeBookingNotesGet,nativeBookingNotesPost} from "../src/api/native-booking-notes.ts"
 import {nativePushSubscription,nativeTranslateChat} from "../src/api/native-push-translation.ts"
+import {nativeProviderMappingCreate,nativeProviderMappingUpdate,nativeProviderTransactionsImport} from "../src/api/native-provider-mutations.ts"
 const origin="https://uptilldawn-modern-main.uptilldawn.workers.dev"
 const uid="11111111-1111-4111-8111-111111111111"
 const env={SUPABASE_URL:"https://npbjrtiolqperdgljnhi.supabase.co",SUPABASE_ANON_KEY:"sb_publishable_fixture",
@@ -190,4 +191,26 @@ test("all extracted read-only routes reject anonymous requests without forwardin
   assert.deepEqual(await res.json(),{error:"access_denied"})
  }
  assert.equal(calls,0)
+})
+
+test("provider mappings and CSV imports validate IDs and source payload before writes",async()=>{
+ let touched=0
+ const db={from:()=>{touched++;throw Error("Invalid input must not reach database")}}
+ const foreign=new Request(origin+"/api/administration/provider-mappings",{
+  method:"POST",headers:{Origin:"https://evil.invalid","Content-Type":"application/json"},
+  body:JSON.stringify({provider:"sumup"})
+ })
+ assert.equal((await nativeProviderMappingCreate(db,uid,foreign)).status,403)
+ const create=await nativeProviderMappingCreate(db,uid,req(
+  "/api/administration/provider-mappings","POST",JSON.stringify({provider:"invalid",externalEventId:"x",eventId:uid}),
+  {"Content-Type":"application/json"}))
+ assert.equal(create.status,422)
+ const update=await nativeProviderMappingUpdate(db,"invalid",req(
+  "/api/administration/provider-mappings/invalid","PATCH",JSON.stringify({enabled:true}),
+  {"Content-Type":"application/json"}))
+ assert.equal(update.status,422)
+ const ingest=await nativeProviderTransactionsImport(db,req(
+  "/api/administration/provider-transactions","POST",new FormData()))
+ assert.equal(ingest.status,422)
+ assert.equal(touched,0)
 })
