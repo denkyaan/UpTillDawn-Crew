@@ -56,6 +56,7 @@ import {nativePontoGet,nativePontoPost} from "./native-ponto-integration.ts"
 import {nativeProviderConnectionCheck} from "./native-provider-connection.ts"
 import {nativeFinanceExportResponse} from "./native-finance-export.ts"
 import {nativeSalesXlsx,nativeWorkSessionsXlsx} from "./native-original-xlsx-exports.ts"
+import {nativeOriginalProviderOAuth,nativeOriginalWeeztixOAuth} from "./native-original-provider-oauth.ts"
 import {nativePortalSwitchResponse,nativeFacebookEventResponse,nativeGeoapifyAutocompleteResponse} from "./native-standalone-routes.ts"
 
 type Bindings={SUPABASE_URL:string;SUPABASE_ANON_KEY:string;UPT_WEEZTIX_OAUTH_ORIGIN?:string;CONTRACT_ISSUER_EMAIL?:string;CLOUDFLARE_OBSERVABILITY_CONFIG?:string;AI?:NativeTranslationAI;UPT_MIGRATION_ALLOW_WRITES?:string;GEOAPIFY_API_KEY?:string;DOCUMENSO_API_KEY?:string;DOCUMENSO_BASE_URL?:string;ASSETS?:{fetch:(request:Request)=>Promise<Response>}}&OAuthBindings&ScannerBindings&MainAuthBindings
@@ -309,6 +310,32 @@ app.post("/api/admin/provider-connection-check",async c=>{
  if(!actor.ok)return c.json({status:"unavailable",error:"unauthorized"},actor.status)
  return attachSourceCookies(await nativeProviderConnectionCheck(actor.db,c.req.raw,c.env),actor)
 })
+
+// Original customer-facing GET OAuth consent and callback URLs. Both start
+// and callback mutate browser/vault state; never treat GET as a safe QA read.
+// No legacy Worker, provider request or SQL writes while QA gates are off.
+for(const phase of ["start","callback"] as const){
+ app.get("/api/administration/integrations/oauth/:provider/"+phase,async c=>{
+  if(c.env.UPT_MIGRATION_ALLOW_WRITES!=="true"||
+     c.env.UPT_MIGRATION_OAUTH_ENABLED!=="true")
+   return c.json({error:"migration_writes_disabled"},503)
+  const actor=await sourceReadSession(c.req.raw,c.env)
+  if(!actor.ok)return c.json({error:"forbidden"},actor.status)
+  return attachSourceCookies(await nativeOriginalProviderOAuth(
+   actor.db,actor.identity.id,c.req.raw,c.env,c.req.param("provider"),phase
+  ),actor)
+ })
+ app.get("/api/administration/integrations/weeztix/"+phase,async c=>{
+  if(c.env.UPT_MIGRATION_ALLOW_WRITES!=="true"||
+     c.env.UPT_MIGRATION_OAUTH_ENABLED!=="true")
+   return c.json({error:"migration_writes_disabled"},503)
+  const actor=await sourceReadSession(c.req.raw,c.env)
+  if(!actor.ok)return c.json({error:"forbidden"},actor.status)
+  return attachSourceCookies(await nativeOriginalWeeztixOAuth(
+   actor.db,actor.identity.id,c.req.raw,c.env,phase
+  ),actor)
+ })
+}
 
 // Original Excel exports now run on the signed, RLS-scoped Hono Worker.
 app.get("/api/uptilldawn/export",async c=>{
