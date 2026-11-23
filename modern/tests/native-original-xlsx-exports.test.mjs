@@ -57,7 +57,7 @@ test("Worker ZIP writer produces a valid two-sheet XLSX structure, numeric curre
   "xl/worksheets/sheet1.xml","xl/worksheets/sheet2.xml"])
   assert.ok(entries.has(path),path)
  const sheet=entries.get("xl/worksheets/sheet1.xml").content
- assert.match(sheet,/<t xml:space="preserve">'=1\+1<\/t>/)
+ assert.match(sheet,/<t xml:space="preserve">&apos;=1\+1<\/t>/)
  assert.doesNotMatch(sheet,/<f(?:\s|>)/)
  assert.match(sheet,/<c r="B2" s="1"><v>12.5<\/v><\/c>/)
  assert.match(sheet,/autoFilter ref="A1:C1"/)
@@ -89,7 +89,7 @@ test("native sales returns the original two XLSX sheets with refunds, cash, and 
  const entries=parts(new Uint8Array(await res.arrayBuffer()))
  const tx=entries.get("xl/worksheets/sheet1.xml").content
  const sums=entries.get("xl/worksheets/sheet2.xml").content
- assert.match(tx,/<t xml:space="preserve">'=bad<\/t>/)
+ assert.match(tx,/<t xml:space="preserve">&apos;=bad<\/t>/)
  assert.match(tx,/&lt;test&gt;/)
  assert.match(tx,/<v>-2<\/v>/)
  assert.match(sums,/Samenvatting|Netto omzet/)
