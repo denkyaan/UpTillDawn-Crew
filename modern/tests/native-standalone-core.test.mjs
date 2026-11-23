@@ -123,7 +123,7 @@ test("direct native auth needs explicit flag and QA origin, never a Main binding
  assert.deepEqual(await response.json(),{error:"E-mail en wachtwoord zijn verplicht."})
  const without=await app.request(makeRequest(),{},candidate)
  assert.equal(without.status,503)
- const wrong=await app.request(request,{},{
+ const wrong=await app.request(makeRequest(),{},{
   ...direct,SUPABASE_URL:"https://production.invalid"
  })
  assert.equal(wrong.status,503)
