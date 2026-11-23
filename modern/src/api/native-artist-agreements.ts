@@ -3,11 +3,34 @@
 // Unlike a signed public URL, the archive is fetched by scoped Storage RLS,
 // verified as a complete PDF and SHA-256 checked before responding.
 import type {SupabaseClient} from "@supabase/supabase-js"
-import {buildContractDocument} from "../../../lib/administration/contract-document.ts"
+import {buildContractDocument,type ContractDocument} from "../../../lib/administration/contract-document.ts"
 import {renderContractPrintHtml} from "../../../lib/administration/contract-print.ts"
-import {contractSha256} from "../../../lib/administration/contract-integrity.ts"
+
 import {isContractArchivePath,CONTRACT_ARCHIVE_BUCKET} from "../../../lib/administration/contract-archive.ts"
 
+function canonicalContractBytes(document:ContractDocument):Uint8Array{
+ const ordered={
+  schemaVersion:document.schemaVersion,
+  reference:document.reference,
+  title:document.title,
+  parties:{
+   issuer:{name:document.parties.issuer.name,email:document.parties.issuer.email,country:document.parties.issuer.country??null},
+   recipient:{name:document.parties.recipient.name,email:document.parties.recipient.email,country:document.parties.recipient.country??null}
+  },
+  event:{name:document.event.name,date:document.event.date},
+  clauses:document.clauses.map(c=>({heading:c.heading,body:c.body})),
+  approvedAt:document.approvedAt,
+  status:document.status
+ }
+ return new TextEncoder().encode(JSON.stringify(ordered))
+}
+async function contractSha256(document:ContractDocument):Promise<string>{
+ // Convert canonical bytes to an owned ArrayBuffer before WebCrypto:
+ // TS 5.9 rejects BufferSource backed by SharedArrayBuffer-like memory.
+ const bytes=Uint8Array.from(canonicalContractBytes(document))
+ const digest=await crypto.subtle.digest("SHA-256",bytes.buffer)
+ return Array.from(new Uint8Array(digest),byte=>byte.toString(16).padStart(2,"0")).join("")
+}
 const uuid=/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
 const missing=()=>new Response("Not found",{status:404,headers:{"Cache-Control":"private, no-store"}})
 const archiveUnavailable=()=>new Response("Contract archive unavailable",{status:404,headers:{"Cache-Control":"no-store"}})
