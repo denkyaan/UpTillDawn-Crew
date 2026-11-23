@@ -228,7 +228,8 @@ export async function finalFinanceResponse(
       !["sales_invoice","purchase_invoice"].includes(existing.kind)))return error()
     if(useTerms&&!isDate(existing.issue_date))return error()
     const p=partyId?await party(client,uuid(partyId),existing.kind):null
-    const due=useTerms?datesWithTerms(existing.issue_date,p.payment_terms_days):undefined
+    if(useTerms&&!p)throw Error('Counterparty required for payment terms')
+    const due=useTerms?datesWithTerms(existing.issue_date,p!.payment_terms_days):undefined
     const result=await client.from("admin_financial_documents")
      .update({counterparty_id:partyId?uuid(partyId):null,...(useTerms?{due_date:due}:{} )})
      .eq("id",doc).eq("status","draft").select("id")
