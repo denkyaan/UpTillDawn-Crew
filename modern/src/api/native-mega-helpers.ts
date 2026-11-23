@@ -31,7 +31,7 @@ export const option=(fd:FormData,key:string,max:number)=>
  String(fd.get(key)||"").trim().slice(0,max)||undefined
 export async function parseMegaRequest(
  req:Request,db:NativeAdminActionDb,id:string,
- formIndex:0|1|-1=0
+ formIndex:0|1|-1=0,maxBytes=64*1024
 ):Promise<{ok:true;fd:FormData;actor:AuthContext;db:MegaDb}|{ok:false;response:Response}>{
  const url=new URL(req.url),site=req.headers.get("sec-fetch-site")
  if(req.headers.get("origin")!==url.origin||(site&&site!=="same-origin"))
@@ -39,7 +39,7 @@ export async function parseMegaRequest(
  if(!(req.headers.get("content-type")||"").startsWith("multipart/form-data;"))
   return {ok:false,response:failure(415,"invalid_content_type")}
  let body:FormData
- try{body=await boundedMigrationForm(req,64*1024)}
+ try{body=await boundedMigrationForm(req,maxBytes)}
  catch{return {ok:false,response:failure(413,"invalid_form")}}
  if(body.get("_id")!==id)return {ok:false,response:failure(404,"unknown_action")}
  const raw=body.get("_args")

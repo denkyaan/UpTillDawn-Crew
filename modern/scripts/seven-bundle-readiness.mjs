@@ -18,6 +18,12 @@ import {megaPeopleActionIds} from '../src/api/native-mega-people-actions.ts'
 import {megaOperationsActionIds} from '../src/api/native-mega-operations-actions.ts'
 import {megaCrewEventActionIds} from '../src/api/native-mega-crew-event-actions.ts'
 import {megaMakerActionIds} from '../src/api/native-mega-maker-actions.ts'
+import {nativeWaveNineActionIds} from '../src/api/native-wave-nine-safe-actions.ts'
+import {finalCrewActionIds} from '../src/api/native-final-crew-actions.ts'
+import {finalOperationsActionIds} from '../src/api/native-final-operations-actions.ts'
+import {finalAdminDetailsActionIds} from '../src/api/native-final-admin-details.ts'
+import {finalFinanceActionIds} from '../src/api/native-final-finance-actions.ts'
+import {finalAgreementsActionIds} from '../src/api/native-final-agreements-actions.ts'
 
 const repo=resolve(import.meta.dirname,'../..')
 const originalPages=filesBelow('app').filter(x=>/\/page\.tsx?$/.test(x))
@@ -105,8 +111,26 @@ if(megaCrewEventActionIds.length!==11||megaMakerActionIds.length!==4||
  ![...megaCrewEventActionIds,...megaMakerActionIds].every(id=>
   readFileSync(resolve(repo,'lib/migration/original-action-registry.ts'),'utf8').includes('"'+id+'"')))
  throw Error('Eighth-wave crew and Maker source action IDs drifted')
-if(new Set([...nativeAdminActionIds,...nativeWaveTwoActionIds,...nativeWaveThreeActionIds,...nativeInventoryActionIds,...nativeRosterActionIds,...nativeCatalogActionIds,...megaPeopleActionIds,...megaOperationsActionIds,...megaCrewEventActionIds,...megaMakerActionIds]).size!==102)
- throw Error('Native action waves overlap or lose a source action')
+if(nativeWaveNineActionIds.length!==4||!nativeWaveNineActionIds.every(id=>
+ readFileSync(resolve(repo,'lib/migration/original-action-registry.ts'),'utf8').includes('"'+id+'"')))
+ throw Error('Ninth-wave document/checklist/personnel registry drift')
+const remainingFinalActionIds=[
+ ...finalCrewActionIds,...finalOperationsActionIds,...finalAdminDetailsActionIds,
+ ...finalFinanceActionIds,...finalAgreementsActionIds
+]
+if(remainingFinalActionIds.length!==57||
+ !remainingFinalActionIds.every(id=>readFileSync(resolve(repo,
+  'lib/migration/original-action-registry.ts'),'utf8').includes('"'+id+'"')))
+ throw Error('Final 57 original action IDs missing or drifted')
+const allNativeActions=[
+ ...nativeAdminActionIds,...nativeWaveTwoActionIds,...nativeWaveThreeActionIds,
+ ...nativeInventoryActionIds,...nativeRosterActionIds,...nativeCatalogActionIds,
+ ...megaPeopleActionIds,...megaOperationsActionIds,...megaCrewEventActionIds,
+ ...megaMakerActionIds,...nativeWaveNineActionIds,...remainingFinalActionIds
+]
+if(allNativeActions.length!==163||new Set(allNativeActions).size!==163||
+  !originalActions.every(entry=>allNativeActions.includes(entry.id)))
+ throw Error('All 163 source actions must appear exactly once in the final mega-bundle')
 if(!workerSource.includes('nativeWaveTwoAllowed(hint)')||
  !workerSource.includes('nativeWaveTwoActionResponse(')||
  !workerSource.includes('nativeWaveThreeAllowed(hint)')||
@@ -125,6 +149,18 @@ if(!workerSource.includes('nativeWaveTwoAllowed(hint)')||
  !workerSource.includes('megaCrewEventResponse(')||
  !workerSource.includes('megaMakerAllowed(hint)')||
  !workerSource.includes('megaMakerResponse(')||
+ !workerSource.includes('nativeWaveNineAllowed(hint)')||
+ !workerSource.includes('nativeWaveNineResponse(')||
+ !workerSource.includes('finalCrewActionAllowed(hint)')||
+ !workerSource.includes('finalCrewActionResponse(')||
+ !workerSource.includes('finalOperationsActionAllowed(hint)')||
+ !workerSource.includes('finalOperationsActionResponse(')||
+ !workerSource.includes('finalAdminDetailsAllowed(hint)')||
+ !workerSource.includes('finalAdminDetailsResponse(')||
+ !workerSource.includes('finalFinanceActionAllowed(hint)')||
+ !workerSource.includes('finalFinanceResponse(')||
+ !workerSource.includes('finalAgreementsAllowed(hint)')||
+ !workerSource.includes('finalAgreementsResponse(')||
  !workerSource.includes('originalGodLogout(c.req.raw,null)'))
  throw Error('Native wave-two Hono dispatcher missing')
 if(env.vars.UPT_MIGRATION_ALLOW_WRITES!=='false')throw Error('Native action wave cannot enable QA writes')
@@ -134,7 +170,7 @@ const workstreams=[
   verified:false,blocker:'Every role/route/mobile/light-dark screen and its visual states require exhaustive live acceptance'},
  {id:'actions',description:'All 163 original event, crew, administrative and financial actions',
   available:{transportMapped:registered.registeredCount,
-   nativeExtractedButDisabled:nativeAdminActionIds.length+nativeWaveTwoActionIds.length+nativeWaveThreeActionIds.length+nativeInventoryActionIds.length+nativeRosterActionIds.length+nativeCatalogActionIds.length+megaPeopleActionIds.length+megaOperationsActionIds.length+megaCrewEventActionIds.length+megaMakerActionIds.length,nativeAuthorizedWritePaths:0},
+   nativeExtractedButDisabled:allNativeActions.length,nativeAuthorizedWritePaths:0},
   verified:false,blocker:'Positive, denied, rollback and audit cases are not yet accepted for every action'},
  {id:'authorization',description:'Role hierarchy, Maker, approval, multi-role, login and recovery',
   available:{signedQAIdentityTypes:7},
