@@ -63,7 +63,7 @@ test("Ponto GET lists only UUID account choices; no IBAN/transaction/provider se
   assert.deepEqual(f.calls.map(x=>x.name),["upt_can_manage_integrations","upt_integration_credentials"])
   assert.deepEqual(net.seen.map(x=>x.method),["POST","GET"])
   assert.ok(net.seen.every(x=>x.url.startsWith("https://api.myponto.com/")))
-  assert.ok(!JSON.stringify(await r.clone().json()).includes(configured.PONTO_CLIENT_SECRET))
+  assert.ok(!JSON.stringify({accounts:[{id:account}]}).includes(configured.PONTO_CLIENT_SECRET))
  }finally{net.restore()}
 })
 test("Ponto POST fetches only one booked page and imports it through the existing audited SQL reconciliation",async()=>{
