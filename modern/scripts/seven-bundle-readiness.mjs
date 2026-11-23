@@ -11,6 +11,7 @@ import {verifyOriginalActionRegistry} from '../tooling/action-registry-contract.
 import {nativeAdminActionIds} from '../src/api/native-admin-actions.ts'
 import {nativeWaveTwoActionIds} from '../src/api/native-platform-actions.ts'
 import {nativeWaveThreeActionIds} from '../src/api/native-event-shift-actions.ts'
+import {nativeInventoryActionIds} from '../src/api/native-inventory-checklist-actions.ts'
 
 const repo=resolve(import.meta.dirname,'../..')
 const originalPages=filesBelow('app').filter(x=>/\/page\.tsx?$/.test(x))
@@ -81,12 +82,17 @@ if(nativeWaveTwoActionIds.length!==11||!nativeWaveTwoActionIds.every(id=>
 if(nativeWaveThreeActionIds.length!==12||!nativeWaveThreeActionIds.every(id=>
  readFileSync(resolve(repo,'lib/migration/original-action-registry.ts'),'utf8').includes('"'+id+'"')))
  throw Error('Third-wave original action IDs drifted: refuse unreviewed handlers')
-if(new Set([...nativeAdminActionIds,...nativeWaveTwoActionIds,...nativeWaveThreeActionIds]).size!==35)
+if(nativeInventoryActionIds.length!==14||!nativeInventoryActionIds.every(id=>
+ readFileSync(resolve(repo,'lib/migration/original-action-registry.ts'),'utf8').includes('"'+id+'"')))
+ throw Error('Fourth-wave original action IDs drifted: refuse unreviewed handlers')
+if(new Set([...nativeAdminActionIds,...nativeWaveTwoActionIds,...nativeWaveThreeActionIds,...nativeInventoryActionIds]).size!==49)
  throw Error('Native action waves overlap or lose a source action')
 if(!workerSource.includes('nativeWaveTwoAllowed(hint)')||
  !workerSource.includes('nativeWaveTwoActionResponse(')||
  !workerSource.includes('nativeWaveThreeAllowed(hint)')||
- !workerSource.includes('nativeWaveThreeActionResponse('))
+ !workerSource.includes('nativeWaveThreeActionResponse(')||
+ !workerSource.includes('nativeInventoryActionAllowed(hint)')||
+ !workerSource.includes('nativeInventoryActionResponse('))
  throw Error('Native wave-two Hono dispatcher missing')
 if(env.vars.UPT_MIGRATION_ALLOW_WRITES!=='false')throw Error('Native action wave cannot enable QA writes')
 const workstreams=[
@@ -95,7 +101,7 @@ const workstreams=[
   verified:false,blocker:'Every role/route/mobile/light-dark screen and its visual states require exhaustive live acceptance'},
  {id:'actions',description:'All 163 original event, crew, administrative and financial actions',
   available:{transportMapped:registered.registeredCount,
-   nativeExtractedButDisabled:nativeAdminActionIds.length+nativeWaveTwoActionIds.length+nativeWaveThreeActionIds.length,nativeAuthorizedWritePaths:0},
+   nativeExtractedButDisabled:nativeAdminActionIds.length+nativeWaveTwoActionIds.length+nativeWaveThreeActionIds.length+nativeInventoryActionIds.length,nativeAuthorizedWritePaths:0},
   verified:false,blocker:'Positive, denied, rollback and audit cases are not yet accepted for every action'},
  {id:'authorization',description:'Role hierarchy, Maker, approval, multi-role, login and recovery',
   available:{signedQAIdentityTypes:7},
