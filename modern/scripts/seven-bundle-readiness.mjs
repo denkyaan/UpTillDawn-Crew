@@ -56,6 +56,9 @@ const migratedOriginalReads=[
  '/api/god/rules',
  '/api/god/data',
  '/api/god/error-reports',
+ '/api/god/logs',
+ '/api/god/platform-logs',
+ '/api/god/cloudflare-logs',
  '/api/error-reports',
  '/api/administration/finance/export',
  '/api/facebook-event',
@@ -82,6 +85,7 @@ if(!workerSource.includes('app.get("/api/push/config"')||
    !workerSource.includes('"/api/god/data"')||
    !workerSource.includes('"/api/god/error-reports"')||
    !workerSource.includes('"/api/error-reports"')||
+   !workerSource.includes('makerObservabilityResponse(')||
    !workerSource.includes('godSourceReadResponse(')||
    !workerSource.includes('administrationReportResponse(')||
    !workerSource.includes('administrationCsvResponse(')||
@@ -220,7 +224,7 @@ const workstreams=[
  {id:'integrations',description:'EventPay, Weeztix, SumUp, Documenso, banking and Peppol',
   available:{originalApiRoutes:originalMainRoutes.length,
    nativeReadHandlers:migratedOriginalReads.length,
-   nativeApiMethodPairsNewlyExtracted:27,
+   nativeApiMethodPairsNewlyExtracted:30,
    sourceApiMethodPairs:legacyRouteReport.originalMethodPairs,
    fullyNativeApiMethodPairs:legacyRouteReport.nativeMethodPairs,
    pendingLegacyApiMethodPairs:legacyRouteReport.pendingLegacyMethodPairs,

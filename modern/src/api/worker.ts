@@ -42,10 +42,11 @@ import {nativeArtistContractArchive,nativeArtistContractPrint} from "./native-ar
 import {nativeUserErrorReportPost} from "./native-error-ingest.ts"
 import {nativeBriefingMediaExtract} from "./native-briefing-media.ts"
 import {nativeGodPreviewRolePost,nativeGodRulesPost} from "./native-maker-writes.ts"
+import {makerObservabilityResponse} from "./native-maker-observability.ts"
 import {nativeFinanceExportResponse} from "./native-finance-export.ts"
 import {nativePortalSwitchResponse,nativeFacebookEventResponse,nativeGeoapifyAutocompleteResponse} from "./native-standalone-routes.ts"
 
-type Bindings={SUPABASE_URL:string;SUPABASE_ANON_KEY:string;CONTRACT_ISSUER_EMAIL?:string;AI?:NativeTranslationAI;UPT_MIGRATION_ALLOW_WRITES?:string;GEOAPIFY_API_KEY?:string;DOCUMENSO_API_KEY?:string;DOCUMENSO_BASE_URL?:string;ASSETS?:{fetch:(request:Request)=>Promise<Response>}}&OAuthBindings&ScannerBindings&MainAuthBindings
+type Bindings={SUPABASE_URL:string;SUPABASE_ANON_KEY:string;CONTRACT_ISSUER_EMAIL?:string;CLOUDFLARE_OBSERVABILITY_CONFIG?:string;AI?:NativeTranslationAI;UPT_MIGRATION_ALLOW_WRITES?:string;GEOAPIFY_API_KEY?:string;DOCUMENSO_API_KEY?:string;DOCUMENSO_BASE_URL?:string;ASSETS?:{fetch:(request:Request)=>Promise<Response>}}&OAuthBindings&ScannerBindings&MainAuthBindings
 const app=new Hono<{Bindings:Bindings}>()
 
 // If a future rename accidentally binds the former Main service to THIS
@@ -127,6 +128,18 @@ for(const path of [
   if(!actor.ok)return c.json({error:"Meld opnieuw aan bij God Mode."},actor.status)
   return attachSourceCookies(await makerReadResponse(
    actor.db as unknown as ReadDb,c.req.raw,actor.cookieHeader,path as GodReadPath),actor)
+ })
+}
+// Three signed, read-only original Maker observability routes. Never forward
+// the QA or production JWT to a different Supabase project; management secrets
+// stay private and cross-environment reads remain manually authorized.
+for(const path of ["/api/god/logs","/api/god/platform-logs","/api/god/cloudflare-logs"] as const){
+ app.get(path,async c=>{
+  const actor=await sourceReadSession(c.req.raw,c.env)
+  if(!actor.ok)return c.json({error:"Meld opnieuw aan bij God Mode."},actor.status)
+  return attachSourceCookies(await makerObservabilityResponse(
+   actor.db,c.req.raw,actor.cookieHeader,c.env,path
+  ),actor)
  })
 }
 app.get("/api/error-reports",async c=>{
