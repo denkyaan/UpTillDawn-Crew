@@ -20,6 +20,8 @@ import {nativeWaveThreeAllowed,nativeWaveThreeActionResponse} from "./native-eve
 import {nativeInventoryActionAllowed,nativeInventoryActionResponse} from "./native-inventory-checklist-actions.ts"
 import {nativeRosterActionAllowed,nativeRosterActionResponse} from "./native-roster-handover-actions.ts"
 import {nativeCatalogActionAllowed,nativeCatalogActionResponse} from "./native-catalog-event-actions.ts"
+import {megaPeopleAllowed,megaPeopleResponse} from "./native-mega-people-actions.ts"
+import {megaOperationsAllowed,megaOperationsResponse} from "./native-mega-operations-actions.ts"
 
 type Bindings={SUPABASE_URL:string;SUPABASE_ANON_KEY:string;UPT_MIGRATION_ALLOW_WRITES?:string;ASSETS?:{fetch:(request:Request)=>Promise<Response>}}&OAuthBindings&ScannerBindings&MainAuthBindings
 const app=new Hono<{Bindings:Bindings}>()
@@ -359,7 +361,9 @@ app.post("/api/migration/actions",async c=>{
  const waveFour=nativeInventoryActionAllowed(hint)
  const waveFive=nativeRosterActionAllowed(hint)
  const waveSix=nativeCatalogActionAllowed(hint)
- if(!waveOne&&!waveTwo&&!waveThree&&!waveFour&&!waveFive&&!waveSix)
+ const waveSevenPeople=megaPeopleAllowed(hint)
+ const waveSevenOperations=megaOperationsAllowed(hint)
+ if(!waveOne&&!waveTwo&&!waveThree&&!waveFour&&!waveFive&&!waveSix&&!waveSevenPeople&&!waveSevenOperations)
   return forwardMainSource(c.req.raw,c.env)
  const actor=await sourceReadSession(c.req.raw,c.env)
  if(!actor.ok)return Response.json({
@@ -377,7 +381,11 @@ app.post("/api/migration/actions",async c=>{
      ?await nativeInventoryActionResponse(c.req.raw,db,hint as Parameters<typeof nativeInventoryActionResponse>[2])
      :waveFive
       ?await nativeRosterActionResponse(c.req.raw,db,hint as Parameters<typeof nativeRosterActionResponse>[2])
-      :await nativeCatalogActionResponse(c.req.raw,db,hint as Parameters<typeof nativeCatalogActionResponse>[2])
+      :waveSix
+       ?await nativeCatalogActionResponse(c.req.raw,db,hint as Parameters<typeof nativeCatalogActionResponse>[2])
+       :waveSevenPeople
+        ?await megaPeopleResponse(c.req.raw,db,hint as Parameters<typeof megaPeopleResponse>[2])
+        :await megaOperationsResponse(c.req.raw,db,hint as Parameters<typeof megaOperationsResponse>[2])
  return attachSourceCookies(result,actor)
 })
 
