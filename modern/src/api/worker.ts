@@ -36,10 +36,16 @@ import {nativeAdministrationPermission,nativeFinancialAttachment,nativePeppolPre
 import {nativeBookingNotesGet,nativeBookingNotesPost} from "./native-booking-notes.ts"
 import {nativePushSubscription,nativeTranslateChat,type NativeTranslationAI} from "./native-push-translation.ts"
 import {nativeProviderMappingCreate,nativeProviderMappingUpdate,nativeProviderTransactionsImport} from "./native-provider-mutations.ts"
+import {nativeInvoiceLinesImport,nativeTicketSalesImport} from "./native-final-imports.ts"
+import {nativeBookingNotesProposal,nativeAdministrationAssistant,nativeOperationalAdminAssistant} from "./native-final-ai-assistants.ts"
+import {nativeArtistContractArchive,nativeArtistContractPrint} from "./native-artist-agreements.ts"
+import {nativeUserErrorReportPost} from "./native-error-ingest.ts"
+import {nativeBriefingMediaExtract} from "./native-briefing-media.ts"
+import {nativeGodPreviewRolePost,nativeGodRulesPost} from "./native-maker-writes.ts"
 import {nativeFinanceExportResponse} from "./native-finance-export.ts"
 import {nativePortalSwitchResponse,nativeFacebookEventResponse,nativeGeoapifyAutocompleteResponse} from "./native-standalone-routes.ts"
 
-type Bindings={SUPABASE_URL:string;SUPABASE_ANON_KEY:string;AI?:NativeTranslationAI;UPT_MIGRATION_ALLOW_WRITES?:string;GEOAPIFY_API_KEY?:string;DOCUMENSO_API_KEY?:string;DOCUMENSO_BASE_URL?:string;ASSETS?:{fetch:(request:Request)=>Promise<Response>}}&OAuthBindings&ScannerBindings&MainAuthBindings
+type Bindings={SUPABASE_URL:string;SUPABASE_ANON_KEY:string;CONTRACT_ISSUER_EMAIL?:string;AI?:NativeTranslationAI;UPT_MIGRATION_ALLOW_WRITES?:string;GEOAPIFY_API_KEY?:string;DOCUMENSO_API_KEY?:string;DOCUMENSO_BASE_URL?:string;ASSETS?:{fetch:(request:Request)=>Promise<Response>}}&OAuthBindings&ScannerBindings&MainAuthBindings
 const app=new Hono<{Bindings:Bindings}>()
 
 // If a future rename accidentally binds the former Main service to THIS
@@ -178,6 +184,102 @@ const adminRoute=async(
   Response.json({error:"access_denied"},{status:permitted}),actor)
  return attachSourceCookies(await execute(actor.db,actor.identity.id),actor)
 }
+// Source-preserved imports and three bounded AI assistants. All POSTs
+// remain blocked on public Main-QA until transaction and per-role acceptance.
+// Original artist agreements are private NON-SPA routes. A browser that
+// is not logged in is redirected to the same original login UI, not served
+// a blank static shell. Every file is authorized with signed SQL & Storage RLS.
+const artistAgreementRoute=async(
+ req:Request,env:Bindings,
+ handler:(db:import("@supabase/supabase-js").SupabaseClient)=>Promise<Response>
+):Promise<Response>=>{
+ const actor=await sourceReadSession(req,env)
+ if(!actor.ok){
+  if(actor.status===503)return Response.json({error:"access_unavailable"},{status:503})
+  return new Response(null,{status:307,headers:{
+   Location:"/login","Cache-Control":"private, no-store"
+  }})
+ }
+ const permission=await nativeAdministrationPermission(actor.db)
+ if(permission===503)return Response.json({error:"access_unavailable"},{status:503})
+ if(permission!==200)return new Response(null,{status:307,headers:{
+  Location:"/portals","Cache-Control":"private, no-store"
+ }})
+ return attachSourceCookies(await handler(actor.db),actor)
+}
+app.get("/portals/administration/modules/artists/:id/agreement/archive/:versionId",c=>
+ artistAgreementRoute(c.req.raw,c.env,db=>nativeArtistContractArchive(
+  db,c.req.raw,c.req.param("id"),c.req.param("versionId")
+ )))
+app.get("/portals/administration/modules/artists/:id/agreement/print/:versionId",c=>
+ artistAgreementRoute(c.req.raw,c.env,db=>nativeArtistContractPrint(
+  db,c.req.param("id"),c.req.param("versionId"),c.env.CONTRACT_ISSUER_EMAIL
+ )))
+app.post("/api/error-reports",async c=>{
+ if(c.env.UPT_MIGRATION_ALLOW_WRITES!=="true")
+  return c.json({error:"migration_writes_disabled"},503)
+ const actor=await sourceReadSession(c.req.raw,c.env)
+ if(!actor.ok)return c.json({error:"Aanmelden vereist."},actor.status)
+ let schedule:((job:Promise<unknown>)=>void)|undefined
+ try{const runtime=c.executionCtx;schedule=job=>runtime.waitUntil(job)}catch{}
+ return attachSourceCookies(await nativeUserErrorReportPost(
+  actor.db,c.req.raw,c.env.AI,schedule
+ ),actor)
+})
+// No cloud document conversion, no OpenAI/Cloudmersive dependency: Office
+// images remain parsed locally with bounded ZIP inflate and signed role checks.
+// Maker edits can never be unlocked by selecting a preview role.
+// The second original God session token is revalidated with the owner RPC
+// for every POST, besides the ordinary signed SSR identity.
+for(const [path,handler] of [
+ ["/api/god/preview-role",nativeGodPreviewRolePost],
+ ["/api/god/rules",nativeGodRulesPost]
+] as const){
+ app.post(path,async c=>{
+  if(c.env.UPT_MIGRATION_ALLOW_WRITES!=="true")
+   return c.json({error:"migration_writes_disabled"},503)
+  const actor=await sourceReadSession(c.req.raw,c.env)
+  if(!actor.ok)return c.json({error:"Meld opnieuw aan bij God Mode."},actor.status)
+  return attachSourceCookies(await handler(
+   actor.db,c.req.raw,actor.cookieHeader
+  ),actor)
+ })
+}
+app.post("/api/briefing-extract-media",async c=>{
+ if(c.env.UPT_MIGRATION_ALLOW_WRITES!=="true")
+  return c.json({error:"migration_writes_disabled"},503)
+ const actor=await sourceReadSession(c.req.raw,c.env)
+ if(!actor.ok)return c.json({error:"Niet ingelogd."},actor.status)
+ const [profileResult,roleResult]=await Promise.all([
+  actor.db.from("profiles").select("role,approved").eq("id",actor.identity.id).single(),
+  actor.db.rpc("upt_current_effective_role")
+ ])
+ const role=roleResult.data||profileResult.data?.role
+ if(profileResult.error||roleResult.error||!profileResult.data?.approved||
+    !["admin","responsible_lead"].includes(role||""))
+  return c.json({error:"Geen toegang."},403)
+ return attachSourceCookies(await nativeBriefingMediaExtract(c.req.raw),actor)
+})
+app.post("/api/administration/finance/invoice-lines/import",c=>
+ adminRoute(c.req.raw,c.env,db=>nativeInvoiceLinesImport(db,c.req.raw),true))
+app.post("/api/administration/ticketing/import",c=>
+ adminRoute(c.req.raw,c.env,db=>nativeTicketSalesImport(db,c.req.raw),true))
+app.post("/api/administration/assistant/booking-notes/propose",c=>
+ adminRoute(c.req.raw,c.env,db=>nativeBookingNotesProposal(db,c.req.raw,c.env.AI),true))
+app.post("/api/administration/assistant",c=>
+ adminRoute(c.req.raw,c.env,db=>nativeAdministrationAssistant(db,c.req.raw,c.env.AI),true))
+app.post("/api/admin-assistant",async c=>{
+ if(c.env.UPT_MIGRATION_ALLOW_WRITES!=="true")
+  return c.json({error:"migration_writes_disabled"},503)
+ const actor=await sourceReadSession(c.req.raw,c.env)
+ if(!actor.ok)return c.json({error:"Aanmelden vereist."},actor.status)
+ const {data:admin,error}=await actor.db.rpc("upt_is_admin",{uid:actor.identity.id})
+ if(error)return c.json({error:"Toegangscontrole tijdelijk niet beschikbaar."},503)
+ if(admin!==true)return c.json({error:"Geen toegang."},403)
+ return attachSourceCookies(await nativeOperationalAdminAssistant(
+  actor.db,c.req.raw,c.env.AI
+ ),actor)
+})
 app.post("/api/administration/provider-mappings",c=>
  adminRoute(c.req.raw,c.env,(db,actorId)=>nativeProviderMappingCreate(db,actorId,c.req.raw),true))
 app.patch("/api/administration/provider-mappings/:id",c=>

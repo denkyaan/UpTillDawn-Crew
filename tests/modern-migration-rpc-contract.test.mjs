@@ -5,7 +5,7 @@ import {readFileSync} from "node:fs"
 const file=p=>readFileSync(p,"utf8")
 const metadata=JSON.parse(file("modern/scripts/rpc-reference.json"))
 test("all candidate RPCs are review-allowlisted without live credentials",()=>{
- assert.equal(metadata.requiredPublicRpcNames.length,158)
+ assert.equal(metadata.requiredPublicRpcNames.length,166)
  assert.ok(metadata.requiredPublicRpcNames.includes('upt_current_work_context'), 'Original signed incident access RPC must be explicitly reviewed')
  for(const rpc of ['upt_can_manage_administration','upt_ticket_sales_summary','upt_administration_finance_summary','upt_administration_payroll_rows'])
   assert.ok(metadata.requiredPublicRpcNames.includes(rpc),'Native administrative read must remain reviewed: '+rpc)
@@ -38,7 +38,7 @@ test("all candidate RPCs are review-allowlisted without live credentials",()=>{
  for(const rpc of ['upt_push_public_key','upt_notification_badge_count'])
   assert.ok(metadata.requiredPublicRpcNames.includes(rpc),'Original push read RPC needs an explicit native migration review: '+rpc)
  const out=JSON.parse(execFileSync(process.execPath,["modern/scripts/rpc-contract.mjs"],{encoding:"utf8"}))
- assert.equal(out.sourceRpcCount,158)
+ assert.equal(out.sourceRpcCount,166)
  assert.deepEqual(out.unreviewedRpc,[])
  assert.deepEqual(out.noLongerReferenced,[])
  assert.equal(out.liveDatabaseVerifiedInCi,false)
