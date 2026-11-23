@@ -28,7 +28,7 @@ const origin="https://uptilldawn-modern-main.uptilldawn.workers.dev"
 function request(id){
  const input=new FormData();const fd=new FormData()
  input.set("_id",id)
- input.set("_args",JSON.stringify(encode([fd],input)))
+ input.set("_args",JSON.stringify(encode(id===godLogoutId?[]:[fd],input)))
  return new Request(origin+"/api/migration/actions",{
   method:"POST",headers:{Origin:origin,"Sec-Fetch-Site":"same-origin",
    "X-UpTillDawn-Action-Hint":id},body:input
