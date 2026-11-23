@@ -5,7 +5,7 @@
 import {z} from "zod"
 import type {SupabaseClient} from "@supabase/supabase-js"
 import {readStrictJson} from "../../../lib/strict-json-body.ts"
-import {processErrorReport,type ErrorAiBinding} from "../../../lib/error-report-ai.ts"
+import {processErrorReport,type ErrorAiBinding} from "./native-error-ai-pipeline.ts"
 import {godRequestCrossSite} from "./native-maker-reads.ts"
 const reportSchema=z.object({
  route:z.string().trim().min(1).max(500),
