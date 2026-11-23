@@ -59,6 +59,11 @@ const migratedOriginalReads=[
  '/api/administration/finance/export',
  '/api/facebook-event',
  '/portals/switch/:portal',
+ '/api/administration/bank-statements',
+ '/api/administration/provider-settlements',
+ '/api/administration/finance/attachments/:id',
+ '/api/administration/peppol/prepare',
+ '/api/administration/assistant/booking-notes',
 ]
 if(!workerSource.includes('app.get("/api/push/config"')||
    !workerSource.includes('app.post("/api/migration/view-data"')||
@@ -81,7 +86,21 @@ if(!workerSource.includes('app.get("/api/push/config"')||
    !workerSource.includes('nativeFacebookEventResponse(')||
    !workerSource.includes('nativeGeoapifyAutocompleteResponse(')||
    !workerSource.includes('nativePortalSwitchResponse(')||
-   !workerSource.includes('return c.json({error:"unknown_action"},404)'))
+   !workerSource.includes('return c.json({error:"unknown_action"},404)')||
+   !workerSource.includes('nativeBankStatementRegister(')||
+   !workerSource.includes('nativeProviderSettlementRegister(')||
+   !workerSource.includes('nativeBankStatementImport(')||
+   !workerSource.includes('nativeBankStatementReview(')||
+   !workerSource.includes('nativeProviderSettlementApprove(')||
+   !workerSource.includes('nativeFinancialAttachment(')||
+   !workerSource.includes('nativePeppolPreparation(')||
+   !workerSource.includes('nativeBookingNotesGet(')||
+   !workerSource.includes('nativeBookingNotesPost(')||
+   !workerSource.includes('nativePushSubscription(')||
+   !workerSource.includes('nativeTranslateChat(')||
+   !workerSource.includes('nativeProviderMappingCreate(')||
+   !workerSource.includes('nativeProviderMappingUpdate(')||
+   !workerSource.includes('nativeProviderTransactionsImport('))
  throw Error('Native Main source-read route contract changed')
 // Internal one-hop rejection stops runaway accidental recursion, but DOES NOT
 // make the original Main service independently available at cutover: every
@@ -187,8 +206,10 @@ const workstreams=[
  {id:'integrations',description:'EventPay, Weeztix, SumUp, Documenso, banking and Peppol',
   available:{originalApiRoutes:originalMainRoutes.length,
    nativeReadHandlers:migratedOriginalReads.length,
+   nativeApiMethodPairsNewlyExtracted:16,
+   nativeApiWriteHandlersPubliclyEnabled:0,
    nativeGeoapifyKeyDeclared:typeof env.vars.GEOAPIFY_API_KEY==='string'&&Boolean(env.vars.GEOAPIFY_API_KEY)},
-  verified:false,blocker:'Provider onboarding/sandbox callbacks, payment, scanning and real read/write parity remain unverified'},
+  verified:false,blocker:'Bank, provider, Peppol, notes, documents, push and translation handlers are extracted; live authorized writes, provider setup, payments, scanning and callback parity remain unverified'},
  {id:'offline',description:'PWA, chat, location/time and offline replay without overload',
   available:{originalSourceRetained:true},
   verified:false,blocker:'Disconnected use, replay, sync conflicts, four locales and Free-tier load validation remain'},

@@ -94,9 +94,14 @@ async function fingerprint(page){
 }
 async function compare(a,b,label){
  let [expected,actual]=await Promise.all([fingerprint(a),fingerprint(b)])
- const deadline=Date.now()+9000
+ // The original shell deliberately staggers each signed badge refresh by
+ // up to 6.9 seconds to prevent login bursts on Workers Free. Allow that
+ // source-defined initialization plus bounded network latency, but keep
+ // every heading, badge, field and navigation assertion fail-closed.
+ const deadline=Date.now()+18000
  while(JSON.stringify(actual)!==JSON.stringify(expected)&&Date.now()<deadline){
-  await new Promise(resolve=>setTimeout(resolve,250));[expected,actual]=await Promise.all([fingerprint(a),fingerprint(b)])
+  await new Promise(resolve=>setTimeout(resolve,300))
+  ;[expected,actual]=await Promise.all([fingerprint(a),fingerprint(b)])
  }
  if(JSON.stringify(actual)!==JSON.stringify(expected)){
   console.error('ORIGINAL_BADGE_READS '+label+' '+JSON.stringify({main:notificationReads.get(a),candidate:notificationReads.get(b)}))
@@ -264,7 +269,10 @@ try{
     }finally{
      await candidate.close();await original.close()
      // Do not pile the next role/locale SSR request onto a cooling-off Worker.
-     await new Promise(resolve=>setTimeout(resolve,500))
+     // Source Main uses Next SSR on Cloudflare Free. Spread the 56 genuine
+     // independent SSR comparisons to avoid back-to-back CPU spikes; never
+     // suppress an error, skip a role or fabricate success.
+     await new Promise(resolve=>setTimeout(resolve,1600))
     }
    }
   }finally{await login.close()}

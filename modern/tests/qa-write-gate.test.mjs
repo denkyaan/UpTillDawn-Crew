@@ -25,9 +25,16 @@ test("candidate write flag disabled or absent blocks ALL original Main action/pr
   ["/api/administration/provider-mappings/123","PATCH"],
   ["/api/administration/integrations","DELETE"],
   ["/api/administration/provider-mappings","POST"],
+  ["/api/administration/provider-mappings/"+ "11111111-1111-4111-8111-111111111111","PATCH"],
   ["/api/administration/provider-transactions","POST"],
   ["/api/administration/finance/invoice-lines/import","POST"],
   ["/api/god/source","POST"],
+  ["/api/administration/bank-statements","PATCH"],
+  ["/api/administration/provider-settlements","POST"],
+  ["/api/administration/assistant/booking-notes","POST"],
+  ["/api/push/subscription","POST"],
+  ["/api/push/subscription","DELETE"],
+  ["/api/translate-chat","POST"],
   ["/api/administration/integrations/oauth/sumup/start","GET"],
   ["/api/administration/integrations/oauth/sumup/callback","GET"],
   ["/api/administration/integrations/weeztix/start","GET"],
@@ -44,19 +51,16 @@ test("candidate write flag disabled or absent blocks ALL original Main action/pr
   assert.equal(f.calls,0,"No candidate business mutation may reach the Main Worker")
  }
 })
-test("legacy read-only routes still proxy; extracted financial export requires a signed session",async()=>{
+test("only remaining legacy read DTO proxies; extracted financial and Peppol endpoints require signed sessions",async()=>{
  const f=fixture("false")
- for(const [path,method] of [
-  ["/api/migration/view-data","POST"],
-  ["/api/administration/peppol/prepare","GET"]
- ]){
-  const response=await probe(path,method,f.env)
-  assert.equal(response.status,200,path)
- }
- assert.equal(f.calls,2,"Only endpoints not yet extracted reach original Main")
+ const legacy=await probe("/api/migration/view-data","POST",f.env)
+ assert.equal(legacy.status,200)
+ assert.equal(f.calls,1)
  const finance=await probe("/api/administration/finance/export","GET",f.env)
  assert.equal(finance.status,401,"Extracted finance export rejects unsigned requests")
- assert.equal(f.calls,2,"Finance must never proxy after native extraction")
+ const peppol=await probe("/api/administration/peppol/prepare","GET",f.env)
+ assert.equal(peppol.status,401,"Extracted Peppol read rejects unsigned requests")
+ assert.equal(f.calls,1,"Native finance and Peppol never contact the original Worker")
 })
 test("unknown APIs and QA-only test-session endpoints fail closed before original Main service",async()=>{
  const f=fixture("true")

@@ -30,10 +30,16 @@ import {finalOperationsActionAllowed,finalOperationsActionResponse} from "./nati
 import {finalAdminDetailsAllowed,finalAdminDetailsResponse} from "./native-final-admin-details.ts"
 import {finalFinanceActionAllowed,finalFinanceResponse} from "./native-final-finance-actions.ts"
 import {finalAgreementsAllowed,finalAgreementsResponse} from "./native-final-agreements-actions.ts"
+import {nativeBankStatementRegister,nativeProviderSettlementRegister} from "./native-bank-settlement-registers.ts"
+import {nativeBankStatementImport,nativeBankStatementReview,nativeProviderSettlementApprove} from "./native-bank-settlement-writes.ts"
+import {nativeAdministrationPermission,nativeFinancialAttachment,nativePeppolPreparation} from "./native-admin-document-routes.ts"
+import {nativeBookingNotesGet,nativeBookingNotesPost} from "./native-booking-notes.ts"
+import {nativePushSubscription,nativeTranslateChat,type NativeTranslationAI} from "./native-push-translation.ts"
+import {nativeProviderMappingCreate,nativeProviderMappingUpdate,nativeProviderTransactionsImport} from "./native-provider-mutations.ts"
 import {nativeFinanceExportResponse} from "./native-finance-export.ts"
 import {nativePortalSwitchResponse,nativeFacebookEventResponse,nativeGeoapifyAutocompleteResponse} from "./native-standalone-routes.ts"
 
-type Bindings={SUPABASE_URL:string;SUPABASE_ANON_KEY:string;UPT_MIGRATION_ALLOW_WRITES?:string;GEOAPIFY_API_KEY?:string;DOCUMENSO_API_KEY?:string;DOCUMENSO_BASE_URL?:string;ASSETS?:{fetch:(request:Request)=>Promise<Response>}}&OAuthBindings&ScannerBindings&MainAuthBindings
+type Bindings={SUPABASE_URL:string;SUPABASE_ANON_KEY:string;AI?:NativeTranslationAI;UPT_MIGRATION_ALLOW_WRITES?:string;GEOAPIFY_API_KEY?:string;DOCUMENSO_API_KEY?:string;DOCUMENSO_BASE_URL?:string;ASSETS?:{fetch:(request:Request)=>Promise<Response>}}&OAuthBindings&ScannerBindings&MainAuthBindings
 const app=new Hono<{Bindings:Bindings}>()
 
 // If a future rename accidentally binds the former Main service to THIS
@@ -153,6 +159,72 @@ app.get("/portals/switch/:portal",async c=>{
  return attachSourceCookies(await nativePortalSwitchResponse(
   actor.db,actor.identity,c.req.raw,c.req.param("portal")
  ),actor)
+})
+
+// Native backend wave: original URLs and DTOs, no Next/legacy calls.
+// Every admin operation verifies a fresh signed SSR session and database
+// permission. Disabled QA writes are rejected BEFORE signing or SQL.
+const adminRoute=async(
+ request:Request,env:Bindings,
+ execute:(db:import("@supabase/supabase-js").SupabaseClient,actorId:string)=>Promise<Response>,
+ mutation=false
+):Promise<Response>=>{
+ if(mutation&&env.UPT_MIGRATION_ALLOW_WRITES!=="true")
+  return Response.json({error:"migration_writes_disabled"},{status:503})
+ const actor=await sourceReadSession(request,env)
+ if(!actor.ok)return Response.json({error:"access_denied"},{status:actor.status})
+ const permitted=await nativeAdministrationPermission(actor.db)
+ if(permitted!==200)return attachSourceCookies(
+  Response.json({error:"access_denied"},{status:permitted}),actor)
+ return attachSourceCookies(await execute(actor.db,actor.identity.id),actor)
+}
+app.post("/api/administration/provider-mappings",c=>
+ adminRoute(c.req.raw,c.env,(db,actorId)=>nativeProviderMappingCreate(db,actorId,c.req.raw),true))
+app.patch("/api/administration/provider-mappings/:id",c=>
+ adminRoute(c.req.raw,c.env,db=>nativeProviderMappingUpdate(db,c.req.param("id"),c.req.raw),true))
+app.post("/api/administration/provider-transactions",c=>
+ adminRoute(c.req.raw,c.env,db=>nativeProviderTransactionsImport(db,c.req.raw),true))
+app.get("/api/administration/bank-statements",c=>
+ adminRoute(c.req.raw,c.env,db=>nativeBankStatementRegister(db)))
+app.post("/api/administration/bank-statements",c=>
+ adminRoute(c.req.raw,c.env,db=>nativeBankStatementImport(db,c.req.raw),true))
+app.patch("/api/administration/bank-statements",c=>
+ adminRoute(c.req.raw,c.env,db=>nativeBankStatementReview(db,c.req.raw),true))
+app.get("/api/administration/provider-settlements",c=>
+ adminRoute(c.req.raw,c.env,db=>nativeProviderSettlementRegister(db)))
+app.post("/api/administration/provider-settlements",c=>
+ adminRoute(c.req.raw,c.env,db=>nativeProviderSettlementApprove(db,c.req.raw),true))
+app.get("/api/administration/finance/attachments/:id",c=>
+ adminRoute(c.req.raw,c.env,db=>nativeFinancialAttachment(db,c.req.param("id"))))
+app.get("/api/administration/peppol/prepare",c=>
+ adminRoute(c.req.raw,c.env,db=>nativePeppolPreparation(db,c.req.raw,false)))
+// Read-only XML generation by POST; signed + CSRF checked, no database writes.
+app.post("/api/administration/peppol/prepare",c=>
+ adminRoute(c.req.raw,c.env,db=>nativePeppolPreparation(db,c.req.raw,true)))
+app.get("/api/administration/assistant/booking-notes",c=>
+ adminRoute(c.req.raw,c.env,db=>nativeBookingNotesGet(db,c.req.raw)))
+app.post("/api/administration/assistant/booking-notes",c=>
+ adminRoute(c.req.raw,c.env,db=>nativeBookingNotesPost(db,c.req.raw),true))
+app.post("/api/push/subscription",async c=>{
+ if(c.env.UPT_MIGRATION_ALLOW_WRITES!=="true")
+  return c.json({error:"migration_writes_disabled"},503)
+ const actor=await sourceReadSession(c.req.raw,c.env)
+ if(!actor.ok)return c.json({error:"Aanmelden vereist."},actor.status)
+ return attachSourceCookies(await nativePushSubscription(actor.db,c.req.raw,"POST"),actor)
+})
+app.delete("/api/push/subscription",async c=>{
+ if(c.env.UPT_MIGRATION_ALLOW_WRITES!=="true")
+  return c.json({error:"migration_writes_disabled"},503)
+ const actor=await sourceReadSession(c.req.raw,c.env)
+ if(!actor.ok)return c.json({error:"Aanmelden vereist."},actor.status)
+ return attachSourceCookies(await nativePushSubscription(actor.db,c.req.raw,"DELETE"),actor)
+})
+app.post("/api/translate-chat",async c=>{
+ if(c.env.UPT_MIGRATION_ALLOW_WRITES!=="true")
+  return c.json({error:"migration_writes_disabled"},503)
+ const actor=await sourceReadSession(c.req.raw,c.env)
+ if(!actor.ok)return c.json({error:"Aanmelden vereist."},actor.status)
+ return attachSourceCookies(await nativeTranslateChat(c.req.raw,c.env.AI),actor)
 })
 
 // The source uses POST for this read DTO. Only the strictly recognized
