@@ -187,7 +187,7 @@ const workstreams=[
  {id:'integrations',description:'EventPay, Weeztix, SumUp, Documenso, banking and Peppol',
   available:{originalApiRoutes:originalMainRoutes.length,
    nativeReadHandlers:migratedOriginalReads.length,
-   conditionalNativeGeoapify:!Boolean(env.vars.GEOAPIFY_API_KEY)},
+   nativeGeoapifyKeyDeclared:typeof env.vars.GEOAPIFY_API_KEY==='string'&&Boolean(env.vars.GEOAPIFY_API_KEY)},
   verified:false,blocker:'Provider onboarding/sandbox callbacks, payment, scanning and real read/write parity remain unverified'},
  {id:'offline',description:'PWA, chat, location/time and offline replay without overload',
   available:{originalSourceRetained:true},
