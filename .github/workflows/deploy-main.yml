@@ -294,11 +294,13 @@ jobs:
         run: node modern/tests/qa-native-wave-five-signed-http.mjs
       - name: Verify ten catalog, template and checklist actions with signed Main-QA and no real target writes
         run: node modern/tests/qa-native-wave-six-signed-http.mjs
+      - name: Verify 21 personnel promotion platform and operations actions with signed Main-QA; no persistent writes
+        run: node modern/tests/qa-native-mega-21-signed-http.mjs
       - name: Report exact remaining acceptance blockers
         if: always()
         shell: bash
         run: |
-          echo '## Main-QA signed 66 native actions HTTP/browser acceptance' >> "$GITHUB_STEP_SUMMARY"
+          echo '## Main-QA signed 87 native actions HTTP/browser acceptance' >> "$GITHUB_STEP_SUMMARY"
           echo 'Public Hono writes remain disabled. Targetless positive writes are never sent. All positive database tests are rollback-only.' >> "$GITHUB_STEP_SUMMARY"
           echo 'Full visual/browser parity and production release remain unverified and BLOCKED.' >> "$GITHUB_STEP_SUMMARY"
 
