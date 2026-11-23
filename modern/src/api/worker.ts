@@ -383,7 +383,7 @@ app.post("/api/migration/actions",async c=>{
   },{status:actor.status,headers:{"Cache-Control":"private, no-store"}})
  }
  const db=actor.db as unknown as NativeAdminActionDb
- if(waveNine)return attachSourceCookies(await nativeWaveNineResponse(c.req.raw,db,hint),actor)
+ if(waveNine)return attachSourceCookies(await nativeWaveNineResponse(c.req.raw,db,hint as Parameters<typeof nativeWaveNineResponse>[2]),actor)
  const result=waveOne
   ?await nativeAdminActionResponse(c.req.raw,db,hint)
   :waveTwo
