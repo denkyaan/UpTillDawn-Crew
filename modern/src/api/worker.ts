@@ -25,8 +25,13 @@ import {megaOperationsAllowed,megaOperationsResponse} from "./native-mega-operat
 import {megaCrewEventAllowed,megaCrewEventResponse} from "./native-mega-crew-event-actions.ts"
 import {megaMakerAllowed,megaMakerResponse,godLogoutId,originalGodLogout} from "./native-mega-maker-actions.ts"
 import {nativeWaveNineAllowed,nativeWaveNineResponse} from "./native-wave-nine-safe-actions.ts"
+import {finalCrewActionAllowed,finalCrewActionResponse} from "./native-final-crew-actions.ts"
+import {finalOperationsActionAllowed,finalOperationsActionResponse} from "./native-final-operations-actions.ts"
+import {finalAdminDetailsAllowed,finalAdminDetailsResponse} from "./native-final-admin-details.ts"
+import {finalFinanceActionAllowed,finalFinanceResponse} from "./native-final-finance-actions.ts"
+import {finalAgreementsAllowed,finalAgreementsResponse} from "./native-final-agreements-actions.ts"
 
-type Bindings={SUPABASE_URL:string;SUPABASE_ANON_KEY:string;UPT_MIGRATION_ALLOW_WRITES?:string;ASSETS?:{fetch:(request:Request)=>Promise<Response>}}&OAuthBindings&ScannerBindings&MainAuthBindings
+type Bindings={SUPABASE_URL:string;SUPABASE_ANON_KEY:string;UPT_MIGRATION_ALLOW_WRITES?:string;GEOAPIFY_API_KEY?:string;DOCUMENSO_API_KEY?:string;DOCUMENSO_BASE_URL?:string;ASSETS?:{fetch:(request:Request)=>Promise<Response>}}&OAuthBindings&ScannerBindings&MainAuthBindings
 const app=new Hono<{Bindings:Bindings}>()
 
 // If a future rename accidentally binds the former Main service to THIS
@@ -369,7 +374,12 @@ app.post("/api/migration/actions",async c=>{
  const waveEightCrew=megaCrewEventAllowed(hint)
  const waveEightMaker=megaMakerAllowed(hint)
  const waveNine=nativeWaveNineAllowed(hint)
- if(!waveOne&&!waveTwo&&!waveThree&&!waveFour&&!waveFive&&!waveSix&&!waveSevenPeople&&!waveSevenOperations&&!waveEightCrew&&!waveEightMaker&&!waveNine)
+ const finalCrew=finalCrewActionAllowed(hint)
+ const finalOperations=finalOperationsActionAllowed(hint)
+ const finalDetails=finalAdminDetailsAllowed(hint)
+ const finalFinance=finalFinanceActionAllowed(hint)
+ const finalAgreements=finalAgreementsAllowed(hint)
+ if(!waveOne&&!waveTwo&&!waveThree&&!waveFour&&!waveFive&&!waveSix&&!waveSevenPeople&&!waveSevenOperations&&!waveEightCrew&&!waveEightMaker&&!waveNine&&!finalCrew&&!finalOperations&&!finalDetails&&!finalFinance&&!finalAgreements)
   return forwardMainSource(c.req.raw,c.env)
  const actor=await sourceReadSession(c.req.raw,c.env)
  if(!actor.ok){
@@ -383,6 +393,13 @@ app.post("/api/migration/actions",async c=>{
   },{status:actor.status,headers:{"Cache-Control":"private, no-store"}})
  }
  const db=actor.db as unknown as NativeAdminActionDb
+ if(finalCrew)return attachSourceCookies(await finalCrewActionResponse(c.req.raw,db,hint as Parameters<typeof finalCrewActionResponse>[2],c.env.GEOAPIFY_API_KEY||""),actor)
+ if(finalOperations)return attachSourceCookies(await finalOperationsActionResponse(c.req.raw,db,hint as Parameters<typeof finalOperationsActionResponse>[2]),actor)
+ if(finalDetails)return attachSourceCookies(await finalAdminDetailsResponse(c.req.raw,db,hint as Parameters<typeof finalAdminDetailsResponse>[2]),actor)
+ if(finalFinance)return attachSourceCookies(await finalFinanceResponse(c.req.raw,db,hint as Parameters<typeof finalFinanceResponse>[2]),actor)
+ if(finalAgreements)return attachSourceCookies(await finalAgreementsResponse(c.req.raw,db,hint as Parameters<typeof finalAgreementsResponse>[2],{
+  DOCUMENSO_API_KEY:c.env.DOCUMENSO_API_KEY,DOCUMENSO_BASE_URL:c.env.DOCUMENSO_BASE_URL
+ }),actor)
  if(waveNine)return attachSourceCookies(await nativeWaveNineResponse(c.req.raw,db,hint as Parameters<typeof nativeWaveNineResponse>[2]),actor)
  const result=waveOne
   ?await nativeAdminActionResponse(c.req.raw,db,hint)
