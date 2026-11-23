@@ -41,6 +41,9 @@ import {nativeBookingNotesProposal,nativeAdministrationAssistant,nativeOperation
 import {nativeArtistContractArchive,nativeArtistContractPrint} from "./native-artist-agreements.ts"
 import {nativeUserErrorReportPost} from "./native-error-ingest.ts"
 import {nativeBriefingMediaExtract} from "./native-briefing-media.ts"
+import {nativeOriginalBriefingAnalyze} from "./native-original-briefing-analysis.ts"
+import {nativeOriginalAdministrationOcr} from "./native-original-administration-ocr.ts"
+import {nativeMainOcrDiagnostic} from "./native-original-ocr-diagnostic.ts"
 import {nativeGodPreviewRolePost,nativeGodRulesPost} from "./native-maker-writes.ts"
 import {makerObservabilityResponse} from "./native-maker-observability.ts"
 import {nativeMakerStudioReadResponse} from "./native-maker-studio-reads.ts"
@@ -60,7 +63,7 @@ import {nativeSalesXlsx,nativeWorkSessionsXlsx} from "./native-original-xlsx-exp
 import {nativeOriginalProviderOAuth,nativeOriginalWeeztixOAuth} from "./native-original-provider-oauth.ts"
 import {nativePortalSwitchResponse,nativeFacebookEventResponse,nativeGeoapifyAutocompleteResponse} from "./native-standalone-routes.ts"
 
-type Bindings={SUPABASE_URL:string;SUPABASE_ANON_KEY:string;UPT_WEEZTIX_OAUTH_ORIGIN?:string;CONTRACT_ISSUER_EMAIL?:string;CLOUDFLARE_OBSERVABILITY_CONFIG?:string;AI?:NativeTranslationAI;UPT_MIGRATION_ALLOW_WRITES?:string;GEOAPIFY_API_KEY?:string;DOCUMENSO_API_KEY?:string;DOCUMENSO_BASE_URL?:string;ASSETS?:{fetch:(request:Request)=>Promise<Response>}}&OAuthBindings&ScannerBindings&MainAuthBindings
+type Bindings={SUPABASE_URL:string;SUPABASE_ANON_KEY:string;UPT_WEEZTIX_OAUTH_ORIGIN?:string;CONTRACT_ISSUER_EMAIL?:string;CLOUDFLARE_OBSERVABILITY_CONFIG?:string;AI?:NativeTranslationAI;UPT_MIGRATION_ALLOW_WRITES?:string;GEOAPIFY_API_KEY?:string;DOCUMENSO_API_KEY?:string;DOCUMENSO_BASE_URL?:string;CLOUDMERSIVE_OCR_API_KEY?:string;UPT_ENABLE_EXTERNAL_BRIEFING_AI?:string;OPENAI_API_KEY?:string;ASSETS?:{fetch:(request:Request)=>Promise<Response>}}&OAuthBindings&ScannerBindings&MainAuthBindings
 const app=new Hono<{Bindings:Bindings}>()
 
 // If a future rename accidentally binds the former Main service to THIS
@@ -478,6 +481,25 @@ for(const [path,handler] of [
   ),actor)
  })
 }
+// Original three document-analysis endpoints. Neither the original local
+// briefing UI nor the existing Main Worker is modified. All user uploads are
+// denied in public QA before signed-auth, Supabase or provider calls.
+app.post("/api/briefing-analyze",async c=>{
+ if(c.env.UPT_MIGRATION_ALLOW_WRITES!=="true")
+  return c.json({error:"migration_writes_disabled"},503)
+ const actor=await sourceReadSession(c.req.raw,c.env)
+ if(!actor.ok)return c.json({error:"Niet ingelogd."},actor.status)
+ return attachSourceCookies(await nativeOriginalBriefingAnalyze(
+  c.req.raw,actor.db,actor.identity.id,c.env
+ ),actor)
+})
+app.post("/api/administration/ocr",c=>
+ adminRoute(c.req.raw,c.env,(_db,actorId)=>
+  nativeOriginalAdministrationOcr(c.req.raw,actorId,c.env.CLOUDMERSIVE_OCR_API_KEY),true))
+// Deployment identity, not a browser session; this does NOT work from
+// Main-QA, which is a different hostname from the original Main Worker.
+app.post("/api/diagnostics/cloudmersive-ocr",c=>
+ nativeMainOcrDiagnostic(c.req.raw,c.env.CLOUDMERSIVE_OCR_API_KEY))
 app.post("/api/briefing-extract-media",async c=>{
  if(c.env.UPT_MIGRATION_ALLOW_WRITES!=="true")
   return c.json({error:"migration_writes_disabled"},503)
