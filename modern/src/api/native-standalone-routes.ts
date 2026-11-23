@@ -15,7 +15,6 @@ const redirect=(to:string)=>new Response(null,{status:307,headers:{
  Location:to,"Cache-Control":"private, no-store"
 }})
 const forbidden=()=>Response.json({error:"Geen toegang."},{status:403})
-const authRequired=()=>Response.json({error:"Aanmelden vereist."},{status:401})
 
 export async function nativePortalSwitchResponse(
  db:SupabaseClient,identity:VerifiedIdentity,request:Request,portal:string
