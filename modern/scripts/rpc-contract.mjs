@@ -20,7 +20,7 @@ for(const file of sourceFiles(source)){
  // literal RPC selectors. No dynamic/caller-provided SQL function strings.
  const selectors=[
   /\.rpc\s*\(\s*["'](upt_[a-z0-9_]+)["']/g,
-  ...(["native-admin-actions.ts","native-platform-actions.ts","native-event-shift-actions.ts","native-inventory-checklist-actions.ts","native-roster-handover-actions.ts"].some(name=>file.endsWith(name))?
+  ...(["native-admin-actions.ts","native-platform-actions.ts","native-event-shift-actions.ts","native-inventory-checklist-actions.ts","native-roster-handover-actions.ts","native-catalog-event-actions.ts"].some(name=>file.endsWith(name))?
    [/\brpc\s*:\s*["'](upt_[a-z0-9_]+)["']/g]:[])
  ]
  for(const selector of selectors)for(const match of content.matchAll(selector)){
