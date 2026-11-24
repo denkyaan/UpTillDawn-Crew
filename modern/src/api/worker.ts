@@ -595,7 +595,8 @@ app.post("/api/migration/view-data",async c=>{
  const actor=await sourceReadSession(request,c.env)
  if(!actor.ok)return c.json({error:"view_data_unavailable"},actor.status)
  return attachSourceCookies(await nativeOriginalViewData(
-  actor.db,actor.identity,request,actor.cookieHeader,c.env
+  actor.db,actor.identity,request,actor.cookieHeader,
+  c.env as unknown as Readonly<Record<string,string|undefined>>
  ),actor)
 })
 
