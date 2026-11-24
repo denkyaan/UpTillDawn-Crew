@@ -67,7 +67,6 @@ const inherited=original.flatMap(item=>item.methods.map(method=>{
  let delivery="legacy-proxy"
  if(m){
   delivery="native"
-  if(m.path==="/api/migration/view-data")delivery="mixed-legacy-view"
   if(m.path==="/api/geocode/autocomplete")delivery="conditional-legacy-provider"
   if(m.path.startsWith("/api/auth/")||m.path==="/auth/callback")delivery="legacy-auth-default"
  }

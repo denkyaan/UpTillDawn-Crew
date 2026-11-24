@@ -74,16 +74,24 @@ test("read-only source boundary fails closed on wrong host/database or missing s
  assert.ok(source.includes("isActive("))
  assert.ok(!source.includes("SERVICE_ROLE_KEY"))
 })
-test("only portal-preference bypasses the original allowlisted read bridge",async()=>{
+test("all original view-data IDs fail closed without signed identity or Next proxy",async()=>{
  const x=bridge()
- const other=await app.request(request("/api/migration/view-data","POST",JSON.stringify({id:"external-services",args:["sales"]}),{"Content-Type":"application/json"}),{},x.env)
- assert.equal(other.status,200)
- assert.deepEqual(await other.json(),{value:"source-fallback"})
- assert.equal(x.forwarded(),1)
- const denied=await app.request(request("/api/migration/view-data","POST",JSON.stringify({id:"portal-preference",args:[]}),{"Content-Type":"application/json","Origin":"https://attacker.invalid"}),{},x.env)
+ for(const id of ["portal-preference","god-session-rpc","external-services",
+  "external-services-view","signing-connection","artist-signing-preflight","invalid"]){
+  const other=await app.request(request("/api/migration/view-data","POST",
+   JSON.stringify({id,args:["sales"]}),{"Content-Type":"application/json"}),{},x.env)
+  assert.equal(other.status,401,id)
+  assert.deepEqual(await other.json(),{error:"view_data_unavailable"})
+ }
+ assert.equal(x.forwarded(),0)
+ const denied=await app.request(request("/api/migration/view-data","POST",
+  JSON.stringify({id:"portal-preference",args:[]}),{
+   "Content-Type":"application/json","Origin":"https://attacker.invalid"
+  }),{},x.env)
  assert.equal(denied.status,403)
- assert.equal(x.forwarded(),1)
- const unauthorizedWrite=await app.request(request("/api/migration/actions","POST",new FormData(),{"Origin":origin}),{},x.env)
+ assert.equal(x.forwarded(),0)
+ const unauthorizedWrite=await app.request(request("/api/migration/actions","POST",
+  new FormData(),{"Origin":origin}),{},x.env)
  assert.equal(unauthorizedWrite.status,503)
- assert.equal(x.forwarded(),1)
+ assert.equal(x.forwarded(),0)
 })

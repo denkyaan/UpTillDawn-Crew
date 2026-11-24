@@ -43,6 +43,7 @@ import {nativeUserErrorReportPost} from "./native-error-ingest.ts"
 import {nativeBriefingMediaExtract} from "./native-briefing-media.ts"
 import {nativeOriginalBriefingAnalyze} from "./native-original-briefing-analysis.ts"
 import {nativeOriginalAdministrationOcr} from "./native-original-administration-ocr.ts"
+import {nativeOriginalViewData} from "./native-original-view-data.ts"
 import {nativeMainOcrDiagnostic} from "./native-original-ocr-diagnostic.ts"
 import {nativeGodPreviewRolePost,nativeGodRulesPost} from "./native-maker-writes.ts"
 import {makerObservabilityResponse} from "./native-maker-observability.ts"
@@ -584,26 +585,18 @@ app.post("/api/translate-chat",async c=>{
  return attachSourceCookies(await nativeTranslateChat(c.req.raw,c.env.AI),actor)
 })
 
-// The source uses POST for this read DTO. Only the strictly recognized
-// preference query migrates here; all other IDs stay on original Main until
-// independently ported and verified. Inspect a bounded clone, never consume
-// a body that will be forwarded.
+// All six original signed view-data DTO IDs run directly in the QA Worker.
+// No default legacy proxy for this endpoint, including malformed/unknown IDs.
 app.post("/api/migration/view-data",async c=>{
- const request=c.req.raw
- const origin=new URL(request.url).origin
+ const request=c.req.raw,url=new URL(c.req.url)
  const site=request.headers.get("sec-fetch-site")
- if(request.headers.get("origin")!==origin||(site&&site!=="same-origin"&&site!=="none"))
-  return c.json({error:"invalid_origin"},403)
- const payload=await boundedJson(request.clone(),4096)
- if(!payload||!Array.isArray(payload.args)||
-    (payload.id!=="portal-preference"&&payload.id!=="god-session-rpc"))
-  return forwardMainSource(request,c.env)
+ if(request.headers.get("origin")!==url.origin||(site&&site!=="same-origin"))
+  return c.json({error:"view_data_unavailable"},403)
  const actor=await sourceReadSession(request,c.env)
  if(!actor.ok)return c.json({error:"view_data_unavailable"},actor.status)
- if(payload.id==="god-session-rpc")
-  return attachSourceCookies(await godSourceReadResponse(
-   actor.db as unknown as ReadDb,actor.cookieHeader,payload.args),actor)
- return attachSourceCookies(portalPreferenceResponse(actor.cookieHeader),actor)
+ return attachSourceCookies(await nativeOriginalViewData(
+  actor.db,actor.identity,request,actor.cookieHeader,c.env
+ ),actor)
 })
 
 // Compiled original Admin direct login route preserves its native 303,
