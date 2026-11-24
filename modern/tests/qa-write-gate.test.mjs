@@ -51,16 +51,17 @@ test("candidate write flag disabled or absent blocks ALL original Main action/pr
   assert.equal(f.calls,0,"No candidate business mutation may reach the Main Worker")
  }
 })
-test("only remaining legacy read DTO proxies; extracted financial and Peppol endpoints require signed sessions",async()=>{
+test("original view DTO, financial export and Peppol rejects unsigned requests without legacy proxy",async()=>{
  const f=fixture("false")
- const legacy=await probe("/api/migration/view-data","POST",f.env)
- assert.equal(legacy.status,200)
- assert.equal(f.calls,1)
+ const view=await probe("/api/migration/view-data","POST",f.env)
+ assert.equal(view.status,401,"All six original view DTOs require a signed account")
+ assert.deepEqual(await view.json(),{error:"view_data_unavailable"})
+ assert.equal(f.calls,0,"The complete view-data endpoint never contacts Next")
  const finance=await probe("/api/administration/finance/export","GET",f.env)
  assert.equal(finance.status,401,"Extracted finance export rejects unsigned requests")
  const peppol=await probe("/api/administration/peppol/prepare","GET",f.env)
  assert.equal(peppol.status,401,"Extracted Peppol read rejects unsigned requests")
- assert.equal(f.calls,1,"Native finance and Peppol never contact the original Worker")
+ assert.equal(f.calls,0,"No native finance, Peppol or view DTO may contact original Worker")
 })
 test("unknown APIs and QA-only test-session endpoints fail closed before original Main service",async()=>{
  const f=fixture("true")

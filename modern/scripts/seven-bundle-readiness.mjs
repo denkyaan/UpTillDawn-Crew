@@ -51,6 +51,10 @@ const migratedOriginalReads=[
  '/api/administration/provider-mappings',
  '/api/administration/provider-transactions',
  '/api/migration/view-data#god-session-rpc',
+ '/api/migration/view-data#external-services',
+ '/api/migration/view-data#external-services-view',
+ '/api/migration/view-data#signing-connection',
+ '/api/migration/view-data#artist-signing-preflight',
  '/api/god/automation-rules',
  '/api/god/preview-role',
  '/api/god/rules',
@@ -125,7 +129,7 @@ if(!workerSource.includes('app.get("/api/push/config"')||
    !workerSource.includes('makerObservabilityResponse(')||
    !workerSource.includes('nativeMakerStudioReadResponse(')||
    !workerSource.includes('nativeIntegrationsSummary(')||
-   !workerSource.includes('godSourceReadResponse(')||
+   !workerSource.includes('nativeOriginalViewData(')||
    !workerSource.includes('administrationReportResponse(')||
    !workerSource.includes('administrationCsvResponse(')||
    !workerSource.includes('nativeWorkSessionsXlsx(')||
@@ -268,7 +272,7 @@ const workstreams=[
  {id:'integrations',description:'EventPay, Weeztix, SumUp, Documenso, banking and Peppol',
   available:{originalApiRoutes:originalMainRoutes.length,
    nativeReadHandlers:migratedOriginalReads.length,
-   nativeApiMethodPairsNewlyExtracted:60,
+   nativeApiMethodPairsNewlyExtracted:legacyRouteReport.nativeMethodPairs,
    nativeMakerAndIntegrationWritesExtracted:migratedOriginalWriteMethods.length,
    sourceApiMethodPairs:legacyRouteReport.originalMethodPairs,
    fullyNativeApiMethodPairs:legacyRouteReport.nativeMethodPairs,

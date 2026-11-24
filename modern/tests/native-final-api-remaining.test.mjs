@@ -42,6 +42,7 @@ test("64 original API route/method contracts tracked and explicit legacy routes 
   "/portals/administration/modules/artists/[^/]+/agreement/print/[^/]+",
   "/portals/administration/modules/artists/[^/]+/agreement/archive/[^/]+",
   "/api/briefing-extract-media",
+  "/api/migration/view-data",
   "/api/briefing-analyze",
   "/api/administration/ocr",
   "/api/diagnostics/cloudmersive-ocr",
