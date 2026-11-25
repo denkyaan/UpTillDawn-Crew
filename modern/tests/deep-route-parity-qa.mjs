@@ -264,6 +264,12 @@ try{
    }
    await sharedSource.close()
    await sharedCandidate.close()
+  }catch(error){
+   // Keep a failed login/role visible without preventing independent roles
+   // from producing evidence. Do not emit credentials or raw browser errors.
+   const reason='DEEP_PARITY_ROLE_INCOMPLETE '+(error instanceof Error?error.name:'Error')
+   mismatches.push({route:role.role,reason})
+   console.error('DEEP_PARITY_ROLE_FAILED '+role.role+' '+reason)
   }finally{
    await sourceContext?.close()
    await modernContext?.close()

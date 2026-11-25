@@ -275,6 +275,15 @@ try{
      await new Promise(resolve=>setTimeout(resolve,1600))
     }
    }
+  }catch(error){
+   // A single bad role/login is still a failed gate, but cannot hide all
+   // remaining identities. Keep the unhealthy-source circuit breaker hard.
+   const message=error instanceof Error?error.message.split('\n')[0]:'unknown'
+   if(message==='QA_STOPPED_UNHEALTHY_LEGACY_MAIN_NO_FALSE_PARITY')throw error
+   const reason=/^(QA_LOGIN_NOT_READY [a-z_]+ HTTP=\d+|QA_NON_NATIVE_AUTH [a-z_]+|ORIGINAL_VIEW_RENDER_FAILED)$/.test(message)?
+    message:'QA_ROLE_INCOMPLETE '+(error instanceof Error?error.name:'Error')
+   failures.push({label:bot.role,reason})
+   console.error('QA_ROLE_FAILED '+bot.role+' '+reason)
   }finally{await login.close()}
  }
  if(failures.length){console.error('ORIGINAL_COMPARISON_FAILURES '+JSON.stringify(failures));throw Error('QA_ORIGINAL_COMPARISONS_FAILED '+failures.length)}

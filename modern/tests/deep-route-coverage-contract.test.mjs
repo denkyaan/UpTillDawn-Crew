@@ -45,6 +45,15 @@ test('live QA still fails closed on any mismatch, timeout, or unfinished route a
  assert.ok(file.includes("const layout=list('header,nav,main,main h1,main h2'"))
  const workflow=readFileSync(resolve(repo,'.github/workflows/deploy-main.yml'),'utf8')
  assert.ok(workflow.includes('Compare 44 deep original pages across seven real QA roles'))
- assert.ok(workflow.includes('44 additional authenticated original Main source-control comparisons'))
+ // The old fixed success sentence could not distinguish failed/skipped
+ // deep comparisons from actual runtime acceptance.
+ assert.ok(workflow.includes('id: qa_deep'))
+ assert.ok(workflow.includes('QA_DEEP_OUTCOME: ${{ steps.qa_deep.outcome }}'))
+ assert.ok(workflow.includes('node modern/scripts/qa-live-verdict.mjs'))
+ assert.ok(file.includes('if(signins!==7||validated!==EXPECTED)'))
+ const verdict=readFileSync(resolve(repo,'modern/scripts/qa-live-verdict.mjs'),'utf8')
+ assert.ok(verdict.includes("['deep-routes','QA_DEEP_OUTCOME']"))
+ assert.ok(verdict.includes("results.every(stage=>stage.outcome==='success')"))
+ assert.ok(verdict.includes('if(!result.allReadOnlyStagesPassed)process.exitCode=1'))
  assert.ok(workflow.includes("VITE_MIGRATION_ALLOW_WRITES: 'false'"))
 })

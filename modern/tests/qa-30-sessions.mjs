@@ -21,6 +21,7 @@ const emails=[
 const url=target.origin
 const sessions=[]
 const sessionIds=new Set()
+const accountIds=new Map()
 const sleep=ms=>new Promise(resolve=>setTimeout(resolve,ms))
 async function signedSession(email){
  const client=createClient(url,key,{
@@ -34,11 +35,24 @@ async function signedSession(email){
   await sleep((trial+1)*1500)
  }
  if(!authenticated?.session||!authenticated.user)throw Error("QA_SESSION_MISSING")
- const payload=JSON.parse(Buffer.from(authenticated.session.access_token.split(".")[1],"base64url").toString("utf8"))
- if(!payload.session_id||typeof payload.session_id!=="string"||sessionIds.has(payload.session_id))
-  throw Error("QA_DUPLICATE_SESSION_ID")
- sessionIds.add(payload.session_id)
- return {client,uid:authenticated.user.id,email,token:authenticated.session.access_token}
+ // If validation fails after password auth, revoke even this not-yet-registered
+ // session. Never leave a temporary test session alive on an early error.
+ try{
+  const payload=JSON.parse(Buffer.from(authenticated.session.access_token.split(".")[1],"base64url").toString("utf8"))
+  if(!payload.session_id||typeof payload.session_id!=="string"||sessionIds.has(payload.session_id))
+   throw Error("QA_DUPLICATE_SESSION_ID")
+  const uid=authenticated.user.id
+  if(typeof uid!=="string"||!uid||payload.sub!==uid)
+   throw Error("QA_SESSION_IDENTITY_MISMATCH")
+  if(accountIds.has(email)&&accountIds.get(email)!==uid)
+   throw Error("QA_ACCOUNT_IDENTITY_CHANGED")
+  accountIds.set(email,uid)
+  sessionIds.add(payload.session_id)
+  return {client,uid,email,token:authenticated.session.access_token}
+ }catch(error){
+  try{await client.auth.signOut({scope:"local"})}catch{}
+  throw error
+ }
 }
 async function checkSession(record){
  const started=performance.now()
@@ -69,12 +83,22 @@ try{
   await sleep(180)
  }
  if(sessionIds.size!==30)throw Error("QA_THIRTY_DISTINCT_SIGNED_SESSIONS_REQUIRED")
+ if(accountIds.size!==7||new Set(accountIds.values()).size!==7)
+  throw Error("QA_SEVEN_DISTINCT_ACCOUNTS_REQUIRED")
  // Two bounded stages, then one controlled 30-request peak for resource evidence.
  let totalQueries=0
  let worst=0
  let finalP95=0
  for(const size of [6,12,30]){
-  const elapsed=await Promise.all(sessions.slice(0,size).map(checkSession))
+  // Wait for every in-flight read before cleanup; Promise.all would revoke
+  // tokens while sibling requests were still running after the first failure.
+  const results=await Promise.allSettled(sessions.slice(0,size).map(checkSession))
+  const elapsed=results.filter(result=>result.status==="fulfilled").map(result=>result.value)
+  const failures=results.length-elapsed.length
+  if(failures){
+   console.error(JSON.stringify({qaSessionReadStage:size,passed:elapsed.length,failures,largerStageSkipped:true}))
+   throw Error("QA_SESSION_READ_STAGE_FAILED_"+size)
+  }
   totalQueries+=elapsed.length
   const sorted=[...elapsed].sort((a,b)=>a-b)
   const p95=sorted[Math.ceil(sorted.length*.95)-1]
@@ -85,7 +109,7 @@ try{
   await sleep(250)
  }
  console.log(JSON.stringify({
-  signedSessions:sessionIds.size,distinctAccounts:emails.length,
+  signedSessions:sessionIds.size,distinctAccounts:new Set(accountIds.values()).size,
   qaReadQueries:totalQueries,peakConcurrentReads:30,
   p95Millis:finalP95,maxMillis:worst,failures:0,
   target:remoteWorker?"deployed-modern-main-qa-worker":"isolated-main-qa-supabase",cloudflareWorkerMeasured:Boolean(remoteWorker),
