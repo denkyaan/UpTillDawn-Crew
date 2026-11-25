@@ -97,7 +97,7 @@ async function providerResponse(url:string){
  return data.results.slice(0,6).map(normalizeGeoapifyRow).filter(x=>x!==null)
 }
 export async function nativeGeoapifyAutocompleteResponse(
- db:SupabaseClient,request:Request,key:string
+ db:SupabaseClient,request:Request,keySource:string|(()=>Promise<string>)
 ):Promise<Response>{
  // Signed profile approval and the original per-user SQL rate limiter run
  // before we inspect or serve any provider query.
@@ -114,6 +114,9 @@ export async function nativeGeoapifyAutocompleteResponse(
  const lang=(u.searchParams.get("lang")||"nl").slice(0,2).toLowerCase()
  if(query.length<2)return result({results:[]})
  if(query.length>200)return result({error:"Zoekopdracht is te lang."},400)
+ let key:string
+ try{key=typeof keySource==="string"?keySource:await keySource()}
+ catch{return result({error:"Locatiezoeker tijdelijk niet beschikbaar."},503)}
  if(!key.trim())return result({error:"Locatiezoeker is nog niet geconfigureerd."},503)
  const params=new URLSearchParams({
   text:query,format:"json",limit:"6",

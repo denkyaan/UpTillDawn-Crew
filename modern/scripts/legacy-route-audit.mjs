@@ -67,14 +67,18 @@ const inherited=original.flatMap(item=>item.methods.map(method=>{
  let delivery="legacy-proxy"
  if(m){
   delivery="native"
-  if(m.path==="/api/geocode/autocomplete")delivery="conditional-legacy-provider"
-  if(m.path.startsWith("/api/auth/")||m.path==="/auth/callback")delivery="legacy-auth-default"
+  if(m.path==="/api/geocode/autocomplete")delivery="native-provider-config"
+  if(m.path.startsWith("/api/auth/")||m.path==="/auth/callback")delivery="native-auth-config"
  }
  if(item.pattern==="/api/test-auth-session")delivery="intentionally-denied"
  return {method,pattern:item.pattern,nativePath:m?.path||null,delivery}
 }))
 const pending=inherited.filter(x=>x.delivery!=="native"&&x.delivery!=="intentionally-denied")
 const migrated=inherited.filter(x=>x.delivery==="native")
+const configDependent=pending.filter(x=>x.delivery==="native-provider-config"||x.delivery==="native-auth-config")
+const httpFallback=pending.filter(x=>x.delivery==="legacy-proxy")
+if(workerText.includes("forwardMainSource(")||workerText.includes("forwardMainAuth("))
+ throw Error("Legacy HTTP forwarding remains reachable from the Worker")
 const report={
  contract:"uptilldawn-source-to-hono-route-method-inventory-v1",
  originalSourceRoutes:original.length,
@@ -82,8 +86,11 @@ const report={
  explicitWorkerMethodPairs:native.length,
  nativeMethodPairs:migrated.length,
  pendingLegacyMethodPairs:pending.length,
- pendingLegacyAuthentication:pending.filter(x=>x.delivery==="legacy-auth-default").length,
- pendingMixedOrConditional:pending.filter(x=>x.delivery.includes("legacy")).length,
+ pendingLegacyAuthentication:pending.filter(x=>x.delivery==="native-auth-config").length,
+ pendingMixedOrConditional:configDependent.length,
+ nativeHttpMethodPairs:migrated.length+configDependent.length,
+ legacyHttpMethodPairs:httpFallback.length,
+ configurationDependentMethodPairs:configDependent.length,
  deniedBySecurity:inherited.filter(x=>x.delivery==="intentionally-denied").length,
  allOriginalPairsAccountedFor:inherited.length===
   migrated.length+pending.length+inherited.filter(x=>x.delivery==="intentionally-denied").length,

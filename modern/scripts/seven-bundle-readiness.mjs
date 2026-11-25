@@ -40,6 +40,8 @@ if(env.vars.UPT_MIGRATION_ALLOW_WRITES!=='false'||env.vars.UPT_MIGRATION_SCANNIN
 const originalSourceCount=originalPages.filter(x=>pages.includes(x)).length
 const legacyMainServiceBindings=env.services.filter(x=>x.service==='uptilldawn-main')
 const legacyBackendDependency=legacyMainServiceBindings.length>0
+if(env.services.some(x=>x.binding==="MAIN_AUTH")||legacyRouteReport.legacyHttpMethodPairs!==0)
+ throw Error("Legacy HTTP forwarding must not be deployable")
 const workerSource=readFileSync(resolve(repo,'modern/src/api/worker.ts'),'utf8')
 const migratedOriginalReads=[
  '/api/push/config',
@@ -278,6 +280,9 @@ const workstreams=[
    fullyNativeApiMethodPairs:legacyRouteReport.nativeMethodPairs,
    pendingLegacyApiMethodPairs:legacyRouteReport.pendingLegacyMethodPairs,
    pendingDefaultLegacyAuthMethods:legacyRouteReport.pendingLegacyAuthentication,
+   nativeHttpMethodPairs:legacyRouteReport.nativeHttpMethodPairs,
+   legacyHttpMethodPairs:legacyRouteReport.legacyHttpMethodPairs,
+   privateConfigurationDependentMethods:legacyRouteReport.configurationDependentMethodPairs,
    nativeApiWriteHandlersPubliclyEnabled:0,
    nativeGeoapifyKeyDeclared:typeof env.vars.GEOAPIFY_API_KEY==='string'&&Boolean(env.vars.GEOAPIFY_API_KEY)},
   verified:false,blocker:'Bank, provider, Peppol, notes, documents, push and translation handlers are extracted; live authorized writes, provider setup, payments, scanning and callback parity remain unverified'},
@@ -301,6 +306,8 @@ const report={
  isolatedCandidateWriteEnabled:false,
  exactActionRegistryMapped:registered.registeredCount===originalActions.length,
  dependsOnLegacyMainBackend:legacyBackendDependency,
+ legacyHttpForwardingEnabled:false,
+ privateMainConfigurationStillRequired:legacyBackendDependency,
  directMainCutoverWouldSelfBind:legacyMainServiceBindings.some(x=>x.binding==='MAIN_AUTH'||x.binding==='MAIN_AUTH_RUNTIME'),
  nativeAuthAvailableButDisabled:true,
  originalActionFallbackRemoved:workerSource.includes('return c.json({error:"unknown_action"},404)'),
@@ -311,7 +318,7 @@ const report={
 if(!report.exactActionRegistryMapped||originalApis.length!==originalMainRoutes.length||
    legacyRouteReport.originalSourceRoutes!==originalMainRoutes.length||
    !legacyRouteReport.allOriginalPairsAccountedFor||
-   legacyRouteReport.pendingLegacyMethodPairs===0)
+   legacyRouteReport.legacyHttpMethodPairs!==0)
  throw Error('Source-to-transport inventory drift; refuse candidate release evidence')
 if(process.argv.includes('--enforce-cutover')){
  console.error('ONE_BUNDLE_CUTOVER_BLOCKED '+JSON.stringify(workstreams.filter(x=>!x.verified).map(x=>x.id)))

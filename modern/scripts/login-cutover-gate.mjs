@@ -27,9 +27,9 @@ const candidate={
  roleMenu:originalUi.includes('@/components/auth/login-form')&&
   ["staff","responsible","admin","promotion","administration"].every(portal=>originalForm.includes(portal)),
  authorityVerified:modern.includes("upt_current_session_context"),
- roleSwitch:bridge.includes('MAIN_AUTH.fetch')&&legacy.includes("upt_set_admin_role_mode"),
- adminLoginAudit:bridge.includes('MAIN_AUTH.fetch')&&legacy.includes("upt_admin_login_success"),
- securityNotifications:bridge.includes('MAIN_AUTH.fetch')&&legacy.includes("sendSecurityLoginEmail"),
+ roleSwitch:bridge.includes('nativeMainAuthResponse')&&legacy.includes("upt_set_admin_role_mode"),
+ adminLoginAudit:bridge.includes('nativeMainAuthResponse')&&legacy.includes("upt_admin_login_success"),
+ securityNotifications:bridge.includes('nativeMainAuthResponse')&&legacy.includes("sendSecurityLoginEmail"),
  pendingApproval:modernUi.includes("/pending-approval"),
  resetPassword:modernUi.includes("/forgot-password"),
  emailCallbackVerified:false,

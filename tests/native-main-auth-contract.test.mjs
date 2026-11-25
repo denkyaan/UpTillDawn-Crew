@@ -16,6 +16,8 @@ test('only Main exposes the private auth entrypoint and retains the original def
  assert.match(worker,/mainAuthRuntimeConfiguration\(this.env\)/)
  const cfg=JSON.parse(read('modern/wrangler.main-qa.jsonc'))
  assert.ok(cfg.services.some(x=>x.service==='uptilldawn-main'&&x.binding==='MAIN_AUTH_RUNTIME'&&x.entrypoint==='MainAuthRuntime'))
+ assert.ok(!cfg.services.some(x=>x.binding==='MAIN_AUTH'))
+ assert.match(worker,/mainGeoapifyRuntimeConfiguration\(this.env\)/)
  const workflow=read('.github/workflows/deploy-main.yml')
  const section=workflow.split('  deploy-modern-main-qa:')[1].split('  qa-modern-main-qa:')[0]
  assert.match(section,/needs: \[validate-trigger, deploy\]/)

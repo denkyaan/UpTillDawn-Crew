@@ -11,3 +11,12 @@ export function mainAuthRuntimeConfiguration(env:Record<string,unknown>){
  for(const name of MAIN_AUTH_PRIVATE_ENV_KEYS){const value=env[name];if(typeof value==='string')values[name]=value}
  return {protocol:'main-auth-native-v1',projectUrl:MAIN_QA_PROJECT,values}
 }
+
+ // Narrow provider-specific RPC: address lookup does not need mail keys.
+export function mainGeoapifyRuntimeConfiguration(env:Record<string,unknown>){
+ // The original Main URL is build-pinned and may not exist as a runtime
+ // variable. Reuse the original named entrypoint's project validation.
+ const config=mainAuthRuntimeConfiguration(env)
+ return {protocol:'main-geoapify-native-v1',projectUrl:config.projectUrl,
+  key:config.values.GEOAPIFY_API_KEY?.trim()||''}
+}

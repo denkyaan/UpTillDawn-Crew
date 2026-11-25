@@ -32,10 +32,6 @@
   },
   "services": [
     {
-      "binding": "MAIN_AUTH",
-      "service": "uptilldawn-main"
-    },
-    {
       "binding": "MAIN_AUTH_RUNTIME",
       "service": "uptilldawn-main",
       "entrypoint": "MainAuthRuntime"
