@@ -1,0 +1,63 @@
+import test from "node:test"
+import assert from "node:assert/strict"
+import {readFileSync} from "node:fs"
+import {fixtureVerdict,expectedOperations} from "../modern/scripts/qa-fixture-verdict.mjs"
+const read=path=>readFileSync(path,"utf8")
+test("fixture-only credentials are isolated from read-only QA and ordinary fast CI",()=>{
+ const workflow=read(".github/workflows/deploy-main.yml")
+ const sections=workflow.split(/^  (?=[a-z][a-z0-9-]+:\s*$)/m)
+ const fixture=sections.find(x=>x.startsWith("qa-native-fixture-transactions:\n"))
+ const browser=sections.find(x=>x.startsWith("qa-modern-main-qa:\n"))
+ assert.ok(fixture&&browser)
+ assert.ok(!browser.includes("E2E_MAIN_QA_SERVICE_KEY"))
+ assert.ok(fixture.includes("needs: [validate-trigger, deploy-modern-main-qa, qa-modern-main-qa]"))
+ assert.ok(fixture.includes("needs.validate-trigger.outputs.modern_qa_eligible == 'true'"))
+ assert.ok(fixture.includes("VITE_MIGRATION_ALLOW_WRITES: 'false'"))
+ assert.ok(fixture.includes("node modern/scripts/main-source-live-smoke.mjs"))
+ assert.equal((fixture.match(/E2E_MAIN_QA_SERVICE_KEY:/g)||[]).length,2)
+ assert.ok(fixture.includes("node modern/scripts/build-native-auth.mjs"))
+ assert.ok(fixture.includes("qa-native-fixture-transactions.mjs --cleanup"))
+ assert.ok(fixture.includes("steps.qa_fixture_cleanup.outcome"))
+ assert.ok(fixture.indexOf("node modern/scripts/qa-fixture-verdict.mjs")<fixture.indexOf("name: modern-main-native-fixtures"))
+ assert.ok(!fixture.includes("continue-on-error: true"))
+ const fast=read(".github/workflows/fast-change-validation.yml")
+ assert.ok(fast.includes("npm --prefix modern run worker:standalone-check"))
+ assert.ok(!fast.includes("wrangler deploy"))
+ assert.ok(!fast.includes("E2E_MAIN_QA_SERVICE_KEY"))
+ const pkg=JSON.parse(read("modern/package.json"))
+ assert.equal(pkg.scripts["worker:standalone-check"],"node scripts/standalone-release-plan.mjs --prepare-main-dry-run && wrangler deploy --dry-run --config .wrangler-standalone-main-preflight.jsonc --outdir .wrangler-standalone-main-preflight")
+})
+test("fixture outcome, exact operation evidence and independent cleanup must all match commit, run and attempt",()=>{
+ const good={QA_VALIDATED_SHA:"a".repeat(40),GITHUB_RUN_ID:"123",GITHUB_RUN_ATTEMPT:"2",QA_FIXTURE_OUTCOME:"success",QA_FIXTURE_CLEANUP_OUTCOME:"success"}
+ const base={validatedSha:good.QA_VALIDATED_SHA,runId:"123",runAttempt:"2",cleaned:true,failed:false,all163ActionsVerified:false,productionReady:false}
+ const ops=expectedOperations.map(([id,outcome])=>({id,outcome,name:"verified"}))
+ const tx={...base,cleanupOnly:false,positiveActions:8,operations:ops,checks:Array(14).fill("verified")}
+ const cleanup={...base,cleanupOnly:true,positiveActions:0,operations:[],checks:["cleanup"]}
+ const v=fixtureVerdict(good,tx,cleanup)
+ assert.equal(v.positiveFixtureTransactionsVerified,true)
+ assert.equal(v.uniquePositiveActionIds,7)
+ assert.equal(v.remainingUnverifiedOriginalActionIds,156)
+ for(const k of ["QA_FIXTURE_OUTCOME","QA_FIXTURE_CLEANUP_OUTCOME"])
+  for(const status of ["failure","cancelled","skipped",undefined])
+   assert.equal(fixtureVerdict({...good,[k]:status},tx,cleanup).positiveFixtureTransactionsVerified,false)
+ for(const bad of [{...tx,runAttempt:"1"},{...tx,validatedSha:"b".repeat(40)},{...tx,operations:ops.slice(1)},{...tx,operations:ops.map((x,i)=>i===0?{...x,id:"wrong"}:x)},{...tx,failed:true},null])
+  assert.equal(fixtureVerdict(good,bad,cleanup).positiveFixtureTransactionsVerified,false)
+ assert.equal(fixtureVerdict(good,tx,{...cleanup,runId:"124"}).positiveFixtureTransactionsVerified,false)
+ assert.equal(fixtureVerdict(good,tx,null).positiveFixtureTransactionsVerified,false)
+ assert.equal(fixtureVerdict(good,tx,{...cleanup,cleaned:false}).positiveFixtureTransactionsVerified,false)
+ assert.equal(fixtureVerdict({...good,QA_VALIDATED_SHA:"invalid"},tx,cleanup).positiveFixtureTransactionsVerified,false)
+ assert.equal(v.businessWriteParityVerified,false)
+ assert.equal(v.verifiedActionIds.length,new Set(v.verifiedActionIds).size)
+ assert.equal(v.uniquePositiveActionIds+v.remainingUnverifiedOriginalActionIds,163)
+ assert.equal(v.productionReady,false)
+})
+test("anonymous login waits for hydration and actual input state; screenshots remain exact",()=>{
+ const script=read("modern/tests/login-parity-qa.mjs")
+ assert.ok(script.includes('form[data-login-hydrated="true"]'))
+ assert.ok(script.includes("await locator.tap()"))
+ assert.ok(script.includes('await waitAttr(page,passwordSelector,"type"'))
+ assert.ok(script.includes("legacy.pixels.equals(modern.pixels)"))
+ assert.ok(script.includes("pixelTolerance:0"))
+ assert.ok(script.includes("comparisons!==48||interactionComparisons!==160"))
+ assert.ok(script.includes("await current?.page.close()"))
+})

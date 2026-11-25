@@ -35,8 +35,8 @@ test('promotion chat supports realtime updates and guarded fallback rather than 
 test('empty offline queues make ZERO Auth network requests, but existing writes still validate user',()=>{
  assert.match(queue,/const pending=await queuedUploads\(userId\);if\(!pending\.length\)return;const s=createClient\(\)/)
  assert.match(queue,/const pending=await queued\(userId\);const uploads=await queuedUploads\(userId\);if\(!pending\.length&&!uploads\.length\)return;const s=createClient\(\)/)
- assert.match(queue,/ensureOfflineReplayOwner\(userId,user\?\.id,'operations'\)/)
- assert.match(queue,/ensureOfflineReplayOwner\(userId,user\?\.id,'uploads'\)/)
+ assert.match(queue,/ensureOfflineReplayOwner\(userId,authError\?null:user\?\.id,'operations'\)/)
+ assert.match(queue,/ensureOfflineReplayOwner\(userId,authError\?null:user\?\.id,'uploads'\)/)
  assert.match(source('components/crew/queue-status.tsx'),/<Link prefetch=\{false\} href="\/sync"/)
 })
 test('client auth uses one signed PostgREST session context and keeps maker/role security',()=>{

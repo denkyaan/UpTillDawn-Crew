@@ -11,7 +11,7 @@ const uid="11111111-1111-4111-8111-111111111111"
 const post="22222222-2222-4222-8222-222222222222"
 const barcode="WEEZTIX_123456"
 const key=Buffer.alloc(32,42).toString("base64")
-const env={UPT_MIGRATION_SCANNING_ENABLED:"true",UPT_SCANNER_ORIGIN:origin,
+const env={UPT_MIGRATION_ALLOW_WRITES:"true",UPT_MIGRATION_SCANNING_ENABLED:"true",UPT_SCANNER_ORIGIN:origin,
  UPT_INTEGRATION_ENCRYPTION_KEY:key}
 const input={eventId:uid,workplaceId:post,barcode}
 const src=path=>readFileSync(new URL("../src/"+path,import.meta.url),"utf8")

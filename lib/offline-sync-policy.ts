@@ -70,3 +70,11 @@ export function ensureOfflineReplayOwner(requestedUserId: string, activeUserId: 
     throw new Error(kind === 'uploads' ? 'UPLOAD_SESSION_MISMATCH' : 'SYNC_SESSION_MISMATCH')
   }
 }
+
+/** A persisted queue is untrusted: only the exact generated per-user object
+ * path may be replayed, before any related incident or message mutation. */
+export function ensureOfflineUploadPath(userId:string,operationId:string,path:string,extension:string):void {
+ const uuid=/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
+ if(!uuid.test(userId)||!uuid.test(operationId)||!(/^[a-z0-9]{1,8}$/).test(extension)||path!==userId+'/'+operationId+'.'+extension)
+  throw new Error('UPLOAD_PATH_MISMATCH')
+}

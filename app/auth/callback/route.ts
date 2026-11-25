@@ -1,6 +1,7 @@
 import { NextResponse, type NextRequest } from 'next/server'
 import type { EmailOtpType } from '@supabase/supabase-js'
 import { createClient } from '@/lib/supabase/crew-server'
+import { safeAuthReturnPath } from '@/lib/auth-return-path'
 
 const EMAIL_OTP_TYPES = new Set<EmailOtpType>([
   'email',
@@ -10,11 +11,6 @@ const EMAIL_OTP_TYPES = new Set<EmailOtpType>([
   'recovery',
   'email_change',
 ])
-
-function safeInternalPath(value: string | null, fallback = '/') {
-  if (!value || !value.startsWith('/') || value.startsWith('//') || value.includes('\\')) return fallback
-  return value
-}
 
 export async function GET(request: NextRequest) {
   const params = request.nextUrl.searchParams
@@ -36,7 +32,7 @@ export async function GET(request: NextRequest) {
     error = true
   }
 
-  const requested = safeInternalPath(params.get('next'))
+  const requested = safeAuthReturnPath(params.get('next'), request.nextUrl.origin)
   const isRecovery = type === 'recovery' || params.get('next') === '/auth/reset-password'
 
   if (error) {

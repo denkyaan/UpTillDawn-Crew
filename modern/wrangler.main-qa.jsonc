@@ -25,7 +25,8 @@
     "UPT_MIGRATION_OAUTH_ENABLED": "false",
     "UPT_MIGRATION_SCANNING_ENABLED": "false",
     "UPT_MIGRATION_ALLOW_WRITES": "false",
-    "UPT_MIGRATION_NATIVE_AUTH_ENABLED": "false"
+    "UPT_MIGRATION_NATIVE_AUTH_ENABLED": "false",
+    "UPT_MIGRATION_RUNTIME_TARGET": "main-qa"
   },
   "observability": {
     "enabled": true

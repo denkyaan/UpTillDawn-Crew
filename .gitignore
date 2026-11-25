@@ -42,3 +42,7 @@ test-results/
 
 # Isolated migration build/Worker verification outputs
 modern/.wrangler-*-dry-run/
+
+# Non-deployable standalone rehearsal output (contains generated artifacts only)
+modern/.wrangler-standalone-*
+modern/.standalone-production-dist/

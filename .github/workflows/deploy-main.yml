@@ -140,6 +140,76 @@ jobs:
   # A successful normal deployment is NOT evidence of full parity or cutover.
   # The original 56 role/locale/device, 44 deep-route and load gates remain
   # intact, and are still mandatory before any Main URL replacement.
+  # Separate credential boundary: no service key in the browser/read-only job.
+  # One deployment workflow, same exact SHA, sequential to avoid Free-plan load.
+  qa-native-fixture-transactions:
+    needs: [validate-trigger, deploy-modern-main-qa, qa-modern-main-qa]
+    if: >-
+      !cancelled() &&
+      needs.validate-trigger.outputs.eligible == 'true' &&
+      needs.validate-trigger.outputs.modern_qa_eligible == 'true' &&
+      needs.deploy-modern-main-qa.result == 'success' &&
+      (needs.qa-modern-main-qa.result == 'success' || needs.qa-modern-main-qa.result == 'failure')
+    permissions:
+      contents: read
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      E2E_MAIN_MODERN_QA_ORIGIN: https://uptilldawn-modern-main.uptilldawn.workers.dev
+      E2E_MAIN_QA_BASE_URL: https://npbjrtiolqperdgljnhi.supabase.co/
+      E2E_MAIN_QA_PUBLISHABLE_KEY: sb_publishable_zStTw3n8wZ271PehDRDvGg_rs0JOy84
+      E2E_MAIN_QA_PASSWORD: ${{ secrets.MAIN_QA_BOT_PASSWORD }}
+      VITE_MIGRATION_ALLOW_WRITES: 'false'
+      QA_VALIDATED_SHA: ${{ github.event.workflow_run.head_sha }}
+    steps:
+      - name: Checkout exact deployed Main commit
+        uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09
+        with:
+          ref: ${{ github.event.workflow_run.head_sha }}
+      - name: Set up Node.js
+        uses: actions/setup-node@a0853c24544627f65ddf259abe73b1d18a591444
+        with:
+          node-version: 24
+      - name: Build isolated native handlers
+        run: |
+          npm --prefix modern install --prefer-offline --no-audit --no-fund
+          node modern/scripts/build-native-auth.mjs
+      - name: Recheck actual public write blockade
+        id: qa_transport
+        timeout-minutes: 2
+        run: node modern/scripts/main-source-live-smoke.mjs
+      - name: Verify eight positive native standalone transactions and five forbidden mutations on a disposable Main QA draft
+        id: qa_fixture
+        if: ${{ !cancelled() && steps.qa_transport.outcome == 'success' }}
+        timeout-minutes: 6
+        env:
+          E2E_MAIN_QA_ALLOW_NATIVE_FIXTURE: '1'
+          E2E_MAIN_QA_SERVICE_KEY: ${{ secrets.MAIN_QA_SUPABASE_SECRET_KEY }}
+        run: node modern/tests/qa-native-fixture-transactions.mjs
+      - name: Independently verify and remove only this run's exact owned Main draft fixture
+        id: qa_fixture_cleanup
+        if: ${{ always() && steps.qa_transport.outcome == 'success' && steps.qa_fixture.outcome != 'skipped' }}
+        timeout-minutes: 3
+        env:
+          E2E_MAIN_QA_ALLOW_NATIVE_FIXTURE: '1'
+          E2E_MAIN_QA_SERVICE_KEY: ${{ secrets.MAIN_QA_SUPABASE_SECRET_KEY }}
+        run: node modern/tests/qa-native-fixture-transactions.mjs --cleanup
+      - name: Require actual fixture success and independent cleanup
+        if: always()
+        env:
+          QA_VALIDATED_SHA: ${{ github.event.workflow_run.head_sha }}
+          QA_FIXTURE_OUTCOME: ${{ steps.qa_fixture.outcome }}
+          QA_FIXTURE_CLEANUP_OUTCOME: ${{ steps.qa_fixture_cleanup.outcome }}
+        run: node modern/scripts/qa-fixture-verdict.mjs
+      - name: Upload sanitized signed fixture and independent cleanup evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: modern-main-native-fixtures
+          path: test-results/modern-native-fixtures/
+          if-no-files-found: warn
+          retention-days: 5
+
   qa-modern-main-qa:
     needs: [validate-trigger, deploy-modern-main-qa, deploy]
     if: >-

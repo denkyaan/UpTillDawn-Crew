@@ -4,13 +4,12 @@
 import {createServerClient,parseCookieHeader,serializeCookieHeader} from "@supabase/ssr"
 import {isActive,parseIdentity,type VerifiedIdentity} from "../shared/identity.ts"
 
-type Environment={SUPABASE_URL:string;SUPABASE_ANON_KEY:string}
+import {runtimeForRequest,type RuntimeEnvironment} from "./runtime-scope.ts"
+type Environment=RuntimeEnvironment&{SUPABASE_ANON_KEY:string}
 type Db=ReturnType<typeof createServerClient>
 type Authorized={ok:true;db:Db;identity:VerifiedIdentity;cookieHeader:string;setCookies:string[]}
 type Denied={ok:false;status:401|503}
 export type SourceReadSession=Authorized|Denied
-const QA_ORIGIN="https://npbjrtiolqperdgljnhi.supabase.co"
-const CANDIDATE_ORIGIN="https://uptilldawn-modern-main.uptilldawn.workers.dev"
 const authCookie=/^sb-[a-z0-9]+-auth-token(?:\.\d+)?$/i
 
 // Use exactly the browser/legacy Supabase SSR cookie chunks. Never treat the
@@ -20,11 +19,12 @@ export function hasOriginalAuthCookie(raw:string):boolean{
 }
 
 export async function sourceReadSession(request:Request,env:Environment):Promise<SourceReadSession>{
- if(new URL(request.url).origin!==CANDIDATE_ORIGIN||
-    env.SUPABASE_URL!==QA_ORIGIN||
+ if(!runtimeForRequest(request.url,env)||
     !env.SUPABASE_ANON_KEY?.startsWith("sb_publishable_"))return {ok:false,status:503}
  const cookieHeader=request.headers.get("cookie")||""
- if(!hasOriginalAuthCookie(cookieHeader))return {ok:false,status:401}
+ const project=new URL(env.SUPABASE_URL).hostname.split(".")[0]
+ const sessionName="sb-"+project+"-auth-token"
+ if(!parseCookieHeader(cookieHeader).some(c=>(c.name===sessionName||c.name.startsWith(sessionName+".")&&/^\d+$/.test(c.name.slice(sessionName.length+1)))&&Boolean(c.value)))return {ok:false,status:401}
  const jar=new Map(parseCookieHeader(cookieHeader).map(c=>[c.name,c.value??""]))
  const setCookies:string[]=[]
  try{

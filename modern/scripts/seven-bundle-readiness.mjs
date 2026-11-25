@@ -8,6 +8,7 @@ import {resolve} from 'node:path'
 import {actionEntries,filesBelow,pages} from '../tooling/main-source.mjs'
 import {originalMainRoutes} from '../src/api/main-routes.ts'
 import {report as legacyRouteReport} from './legacy-route-audit.mjs'
+import {releaseTopology} from './standalone-release-plan.mjs'
 import {verifyOriginalActionRegistry} from '../tooling/action-registry-contract.mjs'
 import {nativeAdminActionIds} from '../src/api/native-admin-actions.ts'
 import {nativeWaveTwoActionIds} from '../src/api/native-platform-actions.ts'
@@ -42,6 +43,7 @@ const legacyMainServiceBindings=env.services.filter(x=>x.service==='uptilldawn-m
 const legacyBackendDependency=legacyMainServiceBindings.length>0
 if(env.services.some(x=>x.binding==="MAIN_AUTH")||legacyRouteReport.legacyHttpMethodPairs!==0)
  throw Error("Legacy HTTP forwarding must not be deployable")
+const standalone=releaseTopology(env)
 const workerSource=readFileSync(resolve(repo,'modern/src/api/worker.ts'),'utf8')
 const migratedOriginalReads=[
  '/api/push/config',
@@ -308,6 +310,9 @@ const report={
  dependsOnLegacyMainBackend:legacyBackendDependency,
  legacyHttpForwardingEnabled:false,
  privateMainConfigurationStillRequired:legacyBackendDependency,
+ standaloneMainProfilePrepared:!standalone.main.services&&standalone.main.vars.UPT_MIGRATION_NATIVE_AUTH_ENABLED==='true',
+ standaloneProductionProfileDraftPrepared:!standalone.production.services&&standalone.production.vars.UPT_MIGRATION_RUNTIME_TARGET==='production-standalone',
+ standaloneReleaseAllowed:standalone.deploymentAllowed,
  directMainCutoverWouldSelfBind:legacyMainServiceBindings.some(x=>x.binding==='MAIN_AUTH'||x.binding==='MAIN_AUTH_RUNTIME'),
  nativeAuthAvailableButDisabled:true,
  originalActionFallbackRemoved:workerSource.includes('return c.json({error:"unknown_action"},404)'),

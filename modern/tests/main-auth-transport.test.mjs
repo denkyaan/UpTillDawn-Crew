@@ -114,3 +114,10 @@ test('PKCE account callbacks are fixed to this candidate and callback responses 
  const foreignCookie=await forwardMainAuth(req(),{SUPABASE_URL:qa,MAIN_AUTH:{async fetch(){return Response.json({success:true},{headers:{'Set-Cookie':'session=fixture; Domain=foreign.invalid; Path=/'}})}}})
  assert.equal(foreignCookie.status,502)
 })
+
+test("malformed and ambiguous callback locations fail closed before cookie relay",async()=>{
+ for(const location of ["http://[",MAIN_AUTH_ORIGIN+"/"+"//foreign.invalid",MAIN_AUTH_ORIGIN.replace("https://","https://user@"),"https://foreign.invalid"]){
+  const response=await forwardMainAuth(new Request(origin+"/auth/callback?code=fixture"),{SUPABASE_URL:qa,MAIN_AUTH:{async fetch(){return new Response(null,{status:302,headers:{Location:location,"Set-Cookie":"fixture=1"}})}}})
+  assert.equal(response.status,502,location);assert.equal(response.headers.get("set-cookie"),null)
+ }
+})

@@ -16,7 +16,9 @@ const devices=[
  {name:"mobile",viewport:{width:390,height:844},isMobile:true,hasTouch:true},
 ]
 const reportDir=resolve(import.meta.dirname,"../../test-results/login-parity")
-const browser=await chromium.launch({headless:true})
+const browser=await chromium.launch({headless:true,args:[
+ "--disable-gpu","--disable-skia-runtime-opts","--disable-threaded-animation","--disable-threaded-scrolling"
+]})
 let comparisons=0
 let interactionComparisons=0
 let lastRoute="unknown"
@@ -34,22 +36,39 @@ function recordFailure(label,reason){
  console.error("LOGIN_CASE_FAILED "+label+" "+reason)
 }
 async function comparePair(legacy,modern,label,name){
- // Activate each document and let its compositor settle before capturing.
- // Strict byte equality is mandatory: no mask, tolerance or changed pixels.
- const a=await capture(legacy.page,label,"legacy")
- const b=await capture(modern.page,label,"modern")
- legacy.pixels=a.pixels
- modern.pixels=b.pixels
- if(!a.stable||!b.stable||!legacy.pixels.equals(modern.pixels)){
+ // Both images come from independently stable foreground-only documents.
+ if(!legacy||!modern){recordFailure(label,"LOGIN_CAPTURE_MISSING");return false}
+ if(!legacy.stable||!modern.stable||!legacy.pixels.equals(modern.pixels)){
   await mkdir(reportDir,{recursive:true})
   await writeFile(resolve(reportDir,name+"-legacy.png"),legacy.pixels)
   await writeFile(resolve(reportDir,name+"-modern.png"),modern.pixels)
-  recordFailure(label,!a.stable||!b.stable?"LOGIN_UNSTABLE_RENDER":"LOGIN_PIXEL_PARITY_FAILED")
+  recordFailure(label,!legacy.stable||!modern.stable?"LOGIN_UNSTABLE_RENDER":"LOGIN_PIXEL_PARITY_FAILED")
   return false
  }
  return true
 }
-async function visit(context,origin,path,lang){
+async function waitAttr(page,selector,attribute,value){
+ await page.waitForFunction(({selector,attribute,value})=>
+  document.querySelector(selector)?.getAttribute(attribute)===value,
+  {selector,attribute,value},{timeout:8000})
+}
+const passwordSelector='input[name="password"]'
+const menuSelector='button[aria-expanded]'
+async function clickControl(page,locator,device){
+ if(device.hasTouch)await locator.tap()
+ else await locator.click()
+}
+async function toggleMenu(page,device,open){
+ const button=page.locator(menuSelector)
+ await clickControl(page,button,device)
+ await waitAttr(page,menuSelector,"aria-expanded",String(open))
+}
+async function togglePassword(page,device,visible){
+ const icon=visible?"svg.lucide-eye":"svg.lucide-eye-off"
+ await clickControl(page,page.locator('button[aria-label]').filter({has:page.locator(icon)}),device)
+ await waitAttr(page,passwordSelector,"type",visible?"text":"password")
+}
+async function visit(context,origin,path,lang,device){
  const page=await context.newPage()
  const unsafe=[]
  page.on("request",req=>{
@@ -58,6 +77,8 @@ async function visit(context,origin,path,lang){
  try{
  const response=await page.goto(origin+path,{waitUntil:"networkidle",timeout:25000})
  if(response?.status()!==200)throw Error("LOGIN_HTTP_NOT_200 "+origin+path+" "+response?.status())
+ if(path!=="/login")
+  await page.locator('form[data-login-hydrated="true"]').waitFor({state:"attached",timeout:15000})
  const switcher=page.locator("select")
  if(await switcher.count()!==1)throw Error("LOGIN_LANGUAGE_SWITCHER_NOT_PARITY "+origin+path)
  await switcher.selectOption(lang)
@@ -91,20 +112,9 @@ async function visit(context,origin,path,lang){
    if((await page.locator('a[href="'+href+'"]').count())<1)
     throw Error("LOGIN_ACCOUNT_LINK_MISSING "+origin+path+" "+href)
   }
-  await page.locator('button[aria-label]').filter({has:page.locator("svg.lucide-eye")}).click()
-  if(await page.locator('input[name="password"]').getAttribute("type")!=="text")
-   throw Error("LOGIN_SHOW_PASSWORD_BROKEN "+origin+path)
-  await page.locator('button[aria-label]').filter({has:page.locator("svg.lucide-eye-off")}).click()
-  if(await page.locator('input[name="password"]').getAttribute("type")!=="password")
-   throw Error("LOGIN_HIDE_PASSWORD_BROKEN "+origin+path)
-  await page.locator("button[aria-expanded]").click()
-  for(const role of ["staff","responsible","admin","promotion","administration"])
-   if(!await page.locator('a[href="/login/'+role+'"]').count())
-    throw Error("LOGIN_MENU_PORTAL_MISSING "+origin+" "+role)
-  await page.locator("button[aria-expanded]").click()
+  // Interactions are captured exactly once below, after hydration.
  }
  if(unsafe.length)throw Error("LOGIN_READ_ONLY_TEST_SAW_MUTATION "+unsafe[0])
- await page.locator("h1").click({force:true})
  await page.mouse.move(0,0)
  await page.evaluate(()=>scrollTo(0,0))
  return {page,pixels:null,assertReadOnly:()=>{
@@ -115,77 +125,73 @@ async function visit(context,origin,path,lang){
   throw error
  }
 }
+async function collect(context,origin,route,lang,device,side,label){
+ const states=new Map()
+ let current
+ try{
+  current=await visit(context,origin,route,lang,device)
+  const page=current.page
+  const captureState=async state=>{
+   await page.mouse.move(0,0)
+   await page.evaluate(()=>scrollTo(0,0))
+   states.set(state,await capture(page,label+" "+state,side))
+  }
+  await captureState("base")
+  if(route!=="/login"){
+   for(const state of ["menu","password-visible","email-focus","password-focus"]){
+    try{
+     if(state==="menu"){
+      await toggleMenu(page,device,true)
+      for(const role of ["staff","responsible","admin","promotion","administration"])
+       if(!await page.locator('a[href="/login/'+role+'"]').count())
+        throw Error("LOGIN_MENU_PORTAL_MISSING "+role)
+     }else if(state==="password-visible")await togglePassword(page,device,true)
+     else{
+      const input=page.locator('input[name="'+(state==="email-focus"?"email":"password")+'"]')
+      await input.focus()
+      if(!await input.evaluate(el=>document.activeElement===el))throw Error("LOGIN_INPUT_FOCUS_BROKEN")
+     }
+     await captureState(state)
+    }catch(error){recordFailure(label+" "+side+" "+state,error instanceof Error?error.message.split("\n")[0]:"LOGIN_INTERACTION_FAILED")}
+    finally{
+     if(state==="menu"&&await page.locator(menuSelector).getAttribute("aria-expanded")==="true")
+      await toggleMenu(page,device,false)
+     if(state==="password-visible"&&await page.locator(passwordSelector).getAttribute("type")==="text")
+      await togglePassword(page,device,false)
+    }
+   }
+  }
+  current.assertReadOnly()
+ }catch(error){recordFailure(label+" "+side,error instanceof Error?error.message.split("\n")[0]:"LOGIN_ROUTE_FAILED")}
+ finally{await current?.page.close()}
+ return states
+}
 try{
  for(const device of devices){
   for(const lang of languages){
-   const context=await browser.newContext({
-    viewport:device.viewport,isMobile:device.isMobile,hasTouch:device.hasTouch,
+   // Separate origins and one active page at any time. Same browser,
+   // dimensions, locale, fonts, rasterizer, interaction and screenshot options.
+   const options={viewport:device.viewport,isMobile:device.isMobile,hasTouch:device.hasTouch,
     locale:lang==="nl"?"nl-BE":lang==="fr"?"fr-BE":lang==="de"?"de-BE":"en-US",
-    deviceScaleFactor:1,colorScheme:"dark",reducedMotion:"reduce"
-   })
+    deviceScaleFactor:1,colorScheme:"dark",reducedMotion:"reduce"}
+   const source=await browser.newContext(options)
+   const candidateContext=await browser.newContext(options)
    try{
     for(const route of routes){
      lastRoute=device.name+"/"+lang+route
-     let legacy,modern
-     try{
-      legacy=await visit(context,baseline,route,lang)
-      modern=await visit(context,candidate,route,lang)
-      const name=(device.name+"-"+lang+"-"+route.slice(1).replaceAll("/","-")).replace(/[^a-z0-9-]/gi,"")
-      const failuresBefore=failures.length
-      if(await comparePair(legacy,modern,lastRoute+" base",name))comparisons++
-      if(route!=="/login"){
-       // Compare every interactive state even after a pixel mismatch. A
-       // broken interaction is recorded and the next route remains independent.
-       for(const state of ["menu","password-visible","email-focus","password-focus"]){
-        try{
-         for(const current of [legacy,modern]){
-          await current.page.bringToFront()
-          if(state==="menu"){
-           const menu=current.page.locator("button[aria-expanded]")
-           await menu.click()
-           if(await menu.getAttribute("aria-expanded")!=="true")throw Error("LOGIN_MENU_DID_NOT_OPEN")
-          }
-          if(state==="password-visible"){
-           await current.page.locator('button[aria-label]').filter({has:current.page.locator("svg.lucide-eye")}).click()
-           if(await current.page.locator('input[name="password"]').getAttribute("type")!=="text")throw Error("LOGIN_SHOW_PASSWORD_BROKEN")
-          }
-          if(state==="email-focus"||state==="password-focus"){
-           const input=current.page.locator('input[name="'+(state==="email-focus"?"email":"password")+'"]')
-           await input.focus()
-           if(!await input.evaluate(el=>document.activeElement===el))throw Error("LOGIN_INPUT_FOCUS_BROKEN")
-          }
-          await current.page.mouse.move(0,0)
-          await current.page.evaluate(()=>scrollTo(0,0))
-         }
-         if(await comparePair(legacy,modern,lastRoute+" "+state,name+"-"+state))interactionComparisons++
-        }catch(error){
-         recordFailure(lastRoute+" "+state,error instanceof Error?error.message.split("\n")[0]:"LOGIN_INTERACTION_FAILED")
-        }finally{
-         // Restore both pages, including when only one side opened.
-         for(const current of [legacy,modern]){
-          if(state==="menu"){
-           const menu=current.page.locator("button[aria-expanded]")
-           if(await menu.getAttribute("aria-expanded")==="true")await menu.click()
-          }
-          if(state==="password-visible"){
-           const visible=current.page.locator('button[aria-label]').filter({has:current.page.locator("svg.lucide-eye-off")})
-           if(await visible.count()===1)await visible.click()
-          }
-         }
-        }
-       }
+     const name=(device.name+"-"+lang+"-"+route.slice(1).replaceAll("/","-")).replace(/[^a-z0-9-]/gi,"")
+     const failuresBefore=failures.length
+     const legacy=await collect(source,baseline,route,lang,device,"legacy",lastRoute)
+     const modern=await collect(candidateContext,candidate,route,lang,device,"modern",lastRoute)
+     for(const state of route==="/login"?["base"]:["base","menu","password-visible","email-focus","password-focus"]){
+      if(await comparePair(legacy.get(state),modern.get(state),lastRoute+" "+state,name+(state==="base"?"":"-"+state))){
+       if(state==="base")comparisons++
+       else interactionComparisons++
       }
-      legacy.assertReadOnly()
-      modern.assertReadOnly()
-      if(failures.length===failuresBefore)console.log("PASS login screenshot "+lastRoute)
-     }catch(error){
-      recordFailure(lastRoute,error instanceof Error?error.message.split("\n")[0]:"LOGIN_ROUTE_FAILED")
-     }finally{
-      await legacy?.page.close()
-      await modern?.page.close()
      }
+     if(failures.length===failuresBefore)console.log("PASS login screenshot "+lastRoute)
     }
-   }finally{await context.close()}
+   }finally{await source.close();await candidateContext.close()}
   }
  }
  const exactCoverage=comparisons===48&&interactionComparisons===160&&failures.length===0

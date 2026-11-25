@@ -223,7 +223,19 @@ try{
        throw Error('UNEXPECTED_ORIGINAL_INCIDENT_REDIRECT')
      }
      stage='original-readiness'
-     await ready(a)
+     try{await ready(a)}catch(error){
+      // An observed conditional redirect is not passing evidence unless its
+      // destination renders. Re-attempt the original route once, never skip
+      // the route or replace the candidate's required redirect.
+      if(path!=='/incidents'||error?.name!=='TimeoutError'||new URL(a.url()).pathname!=='/events')throw error
+      legacyRecoveries++
+      console.warn('DEEP_PARITY_SOURCE_REDIRECT_READINESS_RECOVERY '+path)
+      await a.waitForTimeout(2000)
+      const retry=await navigateOriginalWithRecovery(a,path)
+      if(retry?.status()!==200&&retry?.status()!==304)throw Error('LEGACY_MAIN_HTTP_'+retry?.status())
+      await a.waitForFunction(()=>location.pathname==='/events'||(location.pathname==='/incidents'&&!!document.querySelector('main h1')),null,{timeout:18000})
+      await ready(a)
+     }
      const expectedPath=new URL(a.url()).pathname
      stage='candidate-navigation'
      await b.goto(modern+path,{waitUntil:'domcontentloaded',timeout:20000})

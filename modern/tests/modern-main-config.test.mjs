@@ -8,6 +8,7 @@ test("Main modern Worker has static-first Free-tier routing and no business writ
  assert.equal(config.workers_dev,true)
  assert.equal(config.vars.SUPABASE_URL,"https://npbjrtiolqperdgljnhi.supabase.co")
  assert.ok(config.vars.SUPABASE_ANON_KEY.startsWith("sb_publishable_"))
+ assert.equal(config.vars.UPT_MIGRATION_RUNTIME_TARGET,"main-qa")
  assert.equal(config.vars.UPT_MIGRATION_OAUTH_ENABLED,"false")
  assert.equal(config.vars.UPT_MIGRATION_SCANNING_ENABLED,"false")
  assert.deepEqual(config.assets.run_worker_first,["/api/*","/auth/callback","/portals/switch/*","/portals/administration/modules/artists/*"])

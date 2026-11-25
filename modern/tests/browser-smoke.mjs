@@ -39,6 +39,7 @@ try{
     await context.addInitScript(lang=>{
      localStorage.setItem("uptilldawn-modern-locale",lang)
     },language)
+    await context.route("**/*",route=>new URL(route.request().url()).origin===origin?route.continue():route.abort("blockedbyclient"))
     const page=await context.newPage()
     const errors=[]
     page.on("pageerror",error=>errors.push(error.message))

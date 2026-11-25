@@ -103,19 +103,36 @@ jobs:
           test ! -e .upt-root-node-modules-isolation
           mv node_modules .upt-root-node-modules-isolation
           trap 'mv .upt-root-node-modules-isolation node_modules' EXIT
-          npm --prefix modern run check
           # Always enforce the REAL candidate gzip budget on PRs that share
           # original Main CSS/auth/components. Previously non-migration PRs
           # passed while the post-merge modern deploy failed by just 32 bytes.
           # Vite builds locally on this GitHub runner, never on Workers Free.
           npm --prefix modern run build
           npm --prefix modern run budget
+          npm --prefix modern run worker:standalone-check
+          # Compile a separate non-deployable production-shaped bundle without production secrets.
+          if [[ "$GITHUB_HEAD_REF" == migration/* ]]; then
+            npm --prefix modern run worker:production-rehearsal
+          fi
           # The lightweight action/API/authorization contracts must be green
           # BEFORE merging. Previously Main CI was green while the post-merge
           # modern QA Worker failed its own tests.
           npm --prefix modern run api:test
           npm --prefix modern run bundle:seven
           node --check modern/tests/deep-route-parity-qa.mjs
+          node --check modern/tests/qa-native-fixture-transactions.mjs
+          node --check modern/tests/login-parity-qa.mjs
+          node --check modern/tests/qa-all-action-write-denials.mjs
+      - name: Upload non-deploying migration build evidence
+        if: ${{ always() && github.event_name == 'pull_request' && startsWith(github.head_ref, 'migration/') }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: migration-build-preflight
+          path: |
+            test-results/modern-standalone-preflight/
+            test-results/modern-seven-bundle/
+          if-no-files-found: warn
+          retention-days: 5
       - name: Read isolated Main Worker runtime outcomes for diagnostic PRs
         if: ${{ github.event_name == 'pull_request' && startsWith(github.head_ref, 'diagnostic/main-runtime') && github.event.pull_request.head.repo.full_name == github.repository }}
         env:
@@ -129,26 +146,19 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          npm --prefix modern install --no-audit --no-fund --prefer-offline
-          npm --prefix modern run check
-          npm --prefix modern run build
-          npm --prefix modern run budget
+          # Previous PR step installed, typechecked, built, budget-checked and tested
+          # the exact QA bundle. Reuse those outputs instead of rebuilding it.
           npm --prefix modern run worker:check
-          npm --prefix modern run api:test
           npm --prefix modern run inventory
           npm --prefix modern run rpc:contract
           npm --prefix modern audit --omit=dev --audit-level=high
       # Isolated migration PR only. Main fast CI remains unchanged.
       - name: Candidate anonymous browser acceptance (4 languages x 2 device profiles)
         if: ${{ github.event_name == 'pull_request' && startsWith(github.head_ref, 'migration/') }}
-        env:
-          VITE_SUPABASE_URL: https://placeholder.supabase.co
-          VITE_SUPABASE_ANON_KEY: placeholder-public-key
-          VITE_MIGRATION_ALLOW_WRITES: "false"
         shell: bash
         run: |
           set -euo pipefail
-          npm --prefix modern run build
+          # Reuse the exact QA build, with all non-local browser traffic blocked.
           # Headless Chromium only; avoid apt package downloads on each CI run.
           npx playwright install chromium --only-shell
           npm --prefix modern run browser:test

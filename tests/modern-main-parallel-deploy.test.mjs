@@ -52,9 +52,18 @@ test("live Worker smoke checks Hono, static SPA and anonymous write rejection",(
 })
 test('source bridge smoke waits for the upstream API deployment while the two Workers publish in parallel',()=>{
  const workflow=get('.github/workflows/deploy-main.yml')
- const candidate=workflow.split('  deploy-modern-main-qa:')[1].split('  qa-modern-main-qa:')[0]
- const acceptance=workflow.split('  qa-modern-main-qa:')[1].split('  qa-main-anonymous-acceptance:')[0]
+ // Select exact YAML job sections, not all text between two unrelated jobs.
+ // Adding a separately privileged fixture job must not alter this contract.
+ const jobs=workflow.split(/^  (?=[a-z][a-z0-9-]+:\s*$)/m)
+ const candidate=jobs.find(job=>job.startsWith('deploy-modern-main-qa:\n'))
+ const acceptance=jobs.find(job=>job.startsWith('qa-modern-main-qa:\n'))
+ const fixtures=jobs.find(job=>job.startsWith('qa-native-fixture-transactions:\n'))
+ assert.ok(candidate&&acceptance&&fixtures)
  assert.ok(!candidate.includes('main-source-live-smoke.mjs'))
+ assert.ok(fixtures.includes('needs: [validate-trigger, deploy-modern-main-qa, qa-modern-main-qa]'))
+ assert.ok(fixtures.includes('node modern/scripts/main-source-live-smoke.mjs'))
+ assert.ok(!candidate.includes('E2E_MAIN_QA_SERVICE_KEY'))
+ assert.ok(!acceptance.includes('E2E_MAIN_QA_SERVICE_KEY'))
  assert.ok(acceptance.includes('needs: [validate-trigger, deploy-modern-main-qa, deploy]'))
  assert.ok(acceptance.includes('node modern/scripts/main-source-live-smoke.mjs'))
  assert.ok(!get('modern/scripts/main-qa-live-smoke.mjs').includes('/api/migration/actions'))
@@ -121,7 +130,10 @@ test("every migration-related pull request fails fast on candidate syntax errors
  const fast=get(".github/workflows/fast-change-validation.yml")
  assert.ok(fast.includes("Fast isolated modern TypeScript safety check on pull requests"))
  assert.ok(fast.includes("if: ${{ github.event_name == 'pull_request' }}"))
- assert.ok(fast.includes("npm --prefix modern run check"))
+ assert.ok(fast.includes("npm --prefix modern run build"))
+ const scripts=JSON.parse(get("modern/package.json")).scripts
+ assert.match(scripts.build,/^tsc --noEmit -p tsconfig\.json && vite build$/)
+ assert.ok(fast.indexOf("mv node_modules .upt-root-node-modules-isolation")<fast.indexOf("npm --prefix modern run build"))
  assert.ok(fast.includes("npm --prefix modern install --prefer-offline --no-audit --no-fund"))
  assert.ok(fast.indexOf("Fast isolated modern TypeScript safety check")<
   fast.indexOf("Read isolated Main Worker runtime outcomes"))

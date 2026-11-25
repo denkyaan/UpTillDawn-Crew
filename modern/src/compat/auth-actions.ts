@@ -6,7 +6,7 @@ async function invoke(action:string,form:FormData):Promise<Result>{
  const body=new FormData()
  for(const [key,value] of form)body.append(key,value)
  body.set("_action",action)
- body.set("_callback_origin","https://uptilldawn-modern-main.uptilldawn.workers.dev")
+ body.set("_callback_origin",window.location.origin)
  try{
   const response=await fetch("/api/auth/account-action",{method:"POST",credentials:"same-origin",cache:"no-store",headers:{Accept:"application/json"},body})
   if(!response.ok)throw new Error("AUTH_TRANSPORT_UNAVAILABLE")
