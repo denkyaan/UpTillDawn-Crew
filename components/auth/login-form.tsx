@@ -198,7 +198,7 @@ export function LoginForm({
               </div>
               <div className="relative">
                 <input id="password" name="password" type={showPassword ? "text" : "password"} autoComplete="current-password" required placeholder="••••••••" className="h-12 w-full rounded-xl border border-white/15 bg-black px-4 pr-12 text-white outline-none placeholder:text-zinc-600 focus:border-white/50" />
-                <button type="button" aria-label={showPassword ? "Verberg wachtwoord" : "Toon wachtwoord"} onClick={() => setShowPassword(v => !v)} className="absolute right-4 top-1/2 -translate-y-1/2 text-zinc-400 hover:text-white">
+                <button type="button" aria-label={showPassword ? "Verberg wachtwoord" : "Toon wachtwoord"} onPointerDown={event => { if (event.pointerType === "touch") event.preventDefault() }} onClick={() => setShowPassword(v => !v)} className="absolute right-4 top-1/2 -translate-y-1/2 text-zinc-400 hover:text-white">
                   {showPassword ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
                 </button>
               </div>

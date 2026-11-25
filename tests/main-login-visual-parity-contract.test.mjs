@@ -8,7 +8,8 @@ import {createHash} from "node:crypto"
 // all five role-specific login forms: full-black, fixed, non-scrolling.
 // Login semantics, recovery, session handling and original logo stay pinned.
 const baseline = {
- "components/auth/login-form.tsx":"de9c9b26e4c61e381af18e001d7614ca5a76e303",
+ // 2026-11-25: narrowly scoped touch-focus repair; all other original bytes verified unchanged.
+ "components/auth/login-form.tsx":"1723feb2fc0baedac486a0ace5fadc18b8a6ca7c",
  "app/(auth)/login/page.tsx":"28cc96ab2b86bf123e738ab6d321a01cfaec7df0",
  "app/(auth)/login/[portal]/page.tsx":"1778597f285f0f1b43bdecc6ba6454b6e9bd359b",
  "app/(auth)/login/admin/page.tsx":"ae74ccca116a733cc2a969c280fc587d4f9b1d7a",
@@ -68,7 +69,7 @@ test("user-approved five portal forms are black fixed-screen and prevent documen
   ".auth-layout:has(.auth-portal-screen)",".auth-layout-content:has(.auth-portal-screen)",
   ".auth-layout:has(.auth-portal-screen) > footer","height: 100dvh;",
   "overflow: hidden;","background: #000;","auth-portal-content","auth-portal-card",
-  "auth-portal-logo-frame","auth-portal-language",":focus-within",
+  "auth-portal-logo-frame","auth-portal-language",':has(.auth-portal-card input:not([type="hidden"]):focus)',
   "env(safe-area-inset-top)","env(safe-area-inset-bottom)"])
   assert.ok(css.includes(contract),"Missing scoped fixed black login contract "+contract)
  for(const unchanged of ["signInFromStaticShell","handleSubmit","data-login-hydrated",
@@ -99,4 +100,16 @@ test("modern candidate must use original logo bytes, but must NOT claim login or
  const existingMain=read("app/(app)/page.tsx")
  assert.ok(!existingMain.includes("modernMainCopy"))
  assert.ok(!existingMain.includes("uptilldawn-modern-main.uptilldawn.workers.dev"))
+})
+
+
+test("mobile keyboard accommodation must not shift the login when a menu or eye button receives focus",()=>{
+ const css=read("app/globals.css")
+ const form=read("components/auth/login-form.tsx")
+ const selector='.auth-portal-screen:has(.auth-portal-card input:not([type="hidden"]):focus)'
+ assert.ok(css.includes(selector+" .auth-portal-content"))
+ assert.ok(css.includes(selector+" .auth-portal-logo-frame"))
+ assert.ok(!css.includes(".auth-portal-screen:focus-within"))
+ assert.ok(form.includes('onPointerDown={event => { if (event.pointerType === "touch") event.preventDefault() }}'))
+ assert.ok(form.includes("setShowPassword(v => !v)"))
 })
