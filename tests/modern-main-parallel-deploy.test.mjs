@@ -52,9 +52,18 @@ test("live Worker smoke checks Hono, static SPA and anonymous write rejection",(
 })
 test('source bridge smoke waits for the upstream API deployment while the two Workers publish in parallel',()=>{
  const workflow=get('.github/workflows/deploy-main.yml')
- const candidate=workflow.split('  deploy-modern-main-qa:')[1].split('  qa-modern-main-qa:')[0]
- const acceptance=workflow.split('  qa-modern-main-qa:')[1].split('  qa-main-anonymous-acceptance:')[0]
+ // Select exact YAML job sections, not all text between two unrelated jobs.
+ // Adding a separately privileged fixture job must not alter this contract.
+ const jobs=workflow.split(/^  (?=[a-z][a-z0-9-]+:\s*$)/m)
+ const candidate=jobs.find(job=>job.startsWith('deploy-modern-main-qa:\n'))
+ const acceptance=jobs.find(job=>job.startsWith('qa-modern-main-qa:\n'))
+ const fixtures=jobs.find(job=>job.startsWith('qa-native-fixture-transactions:\n'))
+ assert.ok(candidate&&acceptance&&fixtures)
  assert.ok(!candidate.includes('main-source-live-smoke.mjs'))
+ assert.ok(fixtures.includes('needs: [validate-trigger, deploy-modern-main-qa, qa-modern-main-qa]'))
+ assert.ok(fixtures.includes('node modern/scripts/main-source-live-smoke.mjs'))
+ assert.ok(!candidate.includes('E2E_MAIN_QA_SERVICE_KEY'))
+ assert.ok(!acceptance.includes('E2E_MAIN_QA_SERVICE_KEY'))
  assert.ok(acceptance.includes('needs: [validate-trigger, deploy-modern-main-qa, deploy]'))
  assert.ok(acceptance.includes('node modern/scripts/main-source-live-smoke.mjs'))
  assert.ok(!get('modern/scripts/main-qa-live-smoke.mjs').includes('/api/migration/actions'))
