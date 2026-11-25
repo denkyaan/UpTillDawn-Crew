@@ -1,5 +1,5 @@
 import {WorkerEntrypoint} from 'cloudflare:workers'
-import {mainAuthRuntimeConfiguration} from '../lib/migration/main-auth-runtime-config.ts'
+import {mainAuthRuntimeConfiguration,mainGeoapifyRuntimeConfiguration} from '../lib/migration/main-auth-runtime-config.ts'
 import {nativeOriginalAuth} from '../modern/src/api/native-auth.ts'
 import legacy from '../.open-next/worker.js'
 // Keep the authoritative Main HTTP application unchanged. The named internal
@@ -23,4 +23,5 @@ const mainWorker={
 export default mainWorker
 export class MainAuthRuntime extends WorkerEntrypoint{
  runtimeConfiguration(){return mainAuthRuntimeConfiguration(this.env)}
+ geoapifyConfiguration(){return mainGeoapifyRuntimeConfiguration(this.env)}
 }

@@ -3,6 +3,7 @@
 // still blocks all writes; every entrypoint additionally verifies signed identity.
 // Source of truth: lib/actions/uptilldawn.ts.
 import {z} from "zod"
+import {readBoundedUpstreamJson} from "./native-bounded-upstream.ts"
 import {safeUploadName,validateUploadSecurity} from "../../../lib/upload-security.ts"
 import type {NativeAdminActionDb} from "./native-admin-actions.ts"
 import {parseMegaRequest,approvedAdmin,uuid,done,failure,type MegaDb,type AuthContext} from "./native-mega-helpers.ts"
@@ -214,10 +215,12 @@ async function geoapify(key:string,path:string,params:URLSearchParams){
  if(!key)throw Error("Geoapify unavailable")
  params.set("apiKey",key)
  const response=await fetch("https://api.geoapify.com/v1/"+path+"?"+params,{
-  headers:{Accept:"application/json"},signal:AbortSignal.timeout(8000)
+  headers:{Accept:"application/json"},cache:"no-store",signal:AbortSignal.timeout(8000)
  })
  if(!response.ok)throw Error("Online route unavailable")
- return response.json() as Promise<any>
+ const data=await readBoundedUpstreamJson(response,path==="routing"?1024*1024:256*1024)
+ if(!data||typeof data!=="object")throw Error("Online route unavailable")
+ return data as any
 }
 async function geoPoint(key:string,address:string){
  const query=new URLSearchParams({text:address,format:"json",limit:"1",lang:"nl"})
@@ -234,7 +237,7 @@ async function routeEstimate(key:string,from:{latitude:number;longitude:number},
  const dist=Number.isFinite(props.distance)?props.distance:0
  return {minutes:Math.max(1,Math.ceil(props.time/60)),kilometers:Math.max(0,Math.round(dist/10)/100)}
 }
-async function driver(fd:FormData,db:MegaDb,a:AuthContext,geoKey:string){
+async function driver(fd:FormData,db:MegaDb,a:AuthContext,geoKeySource:string|(()=>Promise<string>)){
  if(!await approvedAdmin(db,a))throw Error("Admin privilege required")
  const shiftId=uuid(fd.get("shift_id"))
  const direction=z.enum(["pickup","dropoff"]).parse(fd.get("direction"))
@@ -251,6 +254,7 @@ async function driver(fd:FormData,db:MegaDb,a:AuthContext,geoKey:string){
   throw Error("Valid Driver shift required")
  let minutes:number,kilometers:number
  if(fd.get("use_online_route")==="on"){
+  const geoKey=typeof geoKeySource==="string"?geoKeySource:await geoKeySource()
   const ev=shift.events
   const start=ev.latitude!=null&&ev.longitude!=null
    ?{latitude:Number(ev.latitude),longitude:Number(ev.longitude)}
@@ -284,7 +288,7 @@ async function driver(fd:FormData,db:MegaDb,a:AuthContext,geoKey:string){
 }
 export async function finalCrewActionResponse(
  req:Request,db:NativeAdminActionDb,selected:FinalCrewActionId,
- geoKey=""
+ geoKey:string|(()=>Promise<string>)=""
 ):Promise<Response>{
  const name=selected.split("#")[1]
  const upload=name==="createEventDocument"||name==="createPriceListDocument"

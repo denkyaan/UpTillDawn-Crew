@@ -1,5 +1,5 @@
 import {Hono} from "hono"
-import {forwardMainSource,originalApiAllowed} from "./main-source.ts"
+import {originalApiAllowed} from "./main-source.ts"
 import {sourceReadSession,attachSourceCookies,pushConfigResponse} from "./native-main-reads.ts"
 import {administrationCsvResponse,type AdminExportDb} from "./native-administration-exports.ts"
 import {administrationReportResponse,type AdminReportKind} from "./native-administration-reports.ts"
@@ -12,7 +12,8 @@ import {
  sealOAuthToken,exchangeOAuthCode,tokenConfiguration,type OAuthBindings
 } from "./provider-oauth.ts"
 import {scannerReady,scannerOrigin,validScanRequest,scanWeeztix,type ScannerBindings,type RpcDb} from "./weeztix-scan.ts"
-import {forwardMainAuth,type MainAuthBindings} from "./main-auth.ts"
+import {nativeMainAuthResponse,type MainAuthBindings} from "./main-auth.ts"
+import {resolveMainGeoapifyKey} from "./native-main-private-config.ts"
 import {makerReadResponse,userErrorReportReadResponse,type GodReadPath,type ReadDb} from "./native-maker-reads.ts"
 import {nativeAdminActionAllowed,nativeAdminActionResponse,type NativeAdminActionDb} from "./native-admin-actions.ts"
 import {nativeWaveTwoAllowed,nativeWaveTwoActionResponse} from "./native-platform-actions.ts"
@@ -64,7 +65,7 @@ import {nativeSalesXlsx,nativeWorkSessionsXlsx} from "./native-original-xlsx-exp
 import {nativeOriginalProviderOAuth,nativeOriginalWeeztixOAuth} from "./native-original-provider-oauth.ts"
 import {nativePortalSwitchResponse,nativeFacebookEventResponse,nativeGeoapifyAutocompleteResponse} from "./native-standalone-routes.ts"
 
-type Bindings={SUPABASE_URL:string;SUPABASE_ANON_KEY:string;UPT_WEEZTIX_OAUTH_ORIGIN?:string;CONTRACT_ISSUER_EMAIL?:string;CLOUDFLARE_OBSERVABILITY_CONFIG?:string;AI?:NativeTranslationAI;UPT_MIGRATION_ALLOW_WRITES?:string;GEOAPIFY_API_KEY?:string;DOCUMENSO_API_KEY?:string;DOCUMENSO_BASE_URL?:string;CLOUDMERSIVE_OCR_API_KEY?:string;UPT_ENABLE_EXTERNAL_BRIEFING_AI?:string;OPENAI_API_KEY?:string;ASSETS?:{fetch:(request:Request)=>Promise<Response>}}&OAuthBindings&ScannerBindings&MainAuthBindings
+type Bindings={SUPABASE_URL:string;SUPABASE_ANON_KEY:string;UPT_WEEZTIX_OAUTH_ORIGIN?:string;CONTRACT_ISSUER_EMAIL?:string;CLOUDFLARE_OBSERVABILITY_CONFIG?:string;AI?:NativeTranslationAI;UPT_MIGRATION_ALLOW_WRITES?:string;GEOAPIFY_API_KEY?:string;DOCUMENSO_API_KEY?:string;DOCUMENSO_BASE_URL?:string;CLOUDMERSIVE_OCR_API_KEY?:string;UPT_ENABLE_EXTERNAL_BRIEFING_AI?:string;OPENAI_API_KEY?:string;ASSETS?:{fetch:(request:Request)=>Promise<Response>}}&OAuthBindings&ScannerBindings&Omit<MainAuthBindings,"MAIN_AUTH">
 const app=new Hono<{Bindings:Bindings}>()
 
 // If a future rename accidentally binds the former Main service to THIS
@@ -87,6 +88,7 @@ app.use("/api/*",async(c,next)=>{
 })
 
 app.get("/api/v1/health",c=>{
+ c.header("X-UpTillDawn-Backend-Protocol","native-http-v1")
  // Public deployment readiness only. Do not invoke authentication, private
  // configuration, Supabase or mail to discover the visible Worker version.
  if(c.env.UPT_MIGRATION_NATIVE_AUTH_ENABLED==="true")
@@ -385,13 +387,12 @@ app.get("/api/facebook-event",async c=>{
  return attachSourceCookies(await nativeFacebookEventResponse(actor.db,actor.identity,c.req.raw),actor)
 })
 app.get("/api/geocode/autocomplete",async c=>{
- // Keep 1:1 existing autocomplete until an identical private provider key
- // has been installed on this Worker. Never silently turn results into [].
- if(!c.env.GEOAPIFY_API_KEY)return forwardMainSource(c.req.raw,c.env)
+ // Execute the native signed route; only private scoped configuration
+ // may be requested after approval, rate and input guards.
  const actor=await sourceReadSession(c.req.raw,c.env)
  if(!actor.ok)return c.json({error:"Aanmelden vereist."},actor.status)
  return attachSourceCookies(await nativeGeoapifyAutocompleteResponse(
-  actor.db,c.req.raw,c.env.GEOAPIFY_API_KEY
+  actor.db,c.req.raw,()=>resolveMainGeoapifyKey(c.env)
  ),actor)
 })
 app.get("/portals/switch/:portal",async c=>{
@@ -602,10 +603,10 @@ app.post("/api/migration/view-data",async c=>{
 
 // Compiled original Admin direct login route preserves its native 303,
 // signed role/owner gates and Supabase chunked cookies without Next.
-app.post("/api/auth/admin-login",c=>forwardMainAuth(c.req.raw,c.env))
-app.post("/api/auth/portal-login",c=>forwardMainAuth(c.req.raw,c.env))
-app.post("/api/auth/account-action",c=>forwardMainAuth(c.req.raw,c.env))
-app.get("/auth/callback",c=>forwardMainAuth(c.req.raw,c.env))
+app.post("/api/auth/admin-login",c=>nativeMainAuthResponse(c.req.raw,c.env))
+app.post("/api/auth/portal-login",c=>nativeMainAuthResponse(c.req.raw,c.env))
+app.post("/api/auth/account-action",c=>nativeMainAuthResponse(c.req.raw,c.env))
+app.get("/auth/callback",c=>nativeMainAuthResponse(c.req.raw,c.env))
 
 app.get("/api/v1/session",async c=>{
  const header=c.req.header("Authorization")||""
@@ -857,7 +858,7 @@ app.post("/api/migration/actions",async c=>{
   },{status:actor.status,headers:{"Cache-Control":"private, no-store"}})
  }
  const db=actor.db as unknown as NativeAdminActionDb
- if(finalCrew)return attachSourceCookies(await finalCrewActionResponse(c.req.raw,db,hint as Parameters<typeof finalCrewActionResponse>[2],c.env.GEOAPIFY_API_KEY||""),actor)
+ if(finalCrew)return attachSourceCookies(await finalCrewActionResponse(c.req.raw,db,hint as Parameters<typeof finalCrewActionResponse>[2],()=>resolveMainGeoapifyKey(c.env)),actor)
  if(finalOperations)return attachSourceCookies(await finalOperationsActionResponse(c.req.raw,db,hint as Parameters<typeof finalOperationsActionResponse>[2]),actor)
  if(finalDetails)return attachSourceCookies(await finalAdminDetailsResponse(c.req.raw,db,hint as Parameters<typeof finalAdminDetailsResponse>[2]),actor)
  if(finalFinance)return attachSourceCookies(await finalFinanceResponse(c.req.raw,db,hint as Parameters<typeof finalFinanceResponse>[2]),actor)
@@ -887,9 +888,9 @@ app.post("/api/migration/actions",async c=>{
  return attachSourceCookies(result,actor)
 })
 
-// Candidate is intentionally read-only. Vite compile-time flags alone are
-// not security controls: clients can POST directly to the original Main API
-// service binding. Enforce the migration gate at the Worker boundary too.
+// Candidate is intentionally read-only. Vite flags alone are not security
+// controls. Enforce the migration gate at the Worker boundary. Never proxy
+// an unregistered method to the old HTTP application.
 // /api/migration/view-data uses POST for a scoped READ and is the sole
 // exception. Login/account actions above retain their own original-auth
 // security contract; provider OAuth and ticket admission remain separately OFF.
@@ -905,13 +906,13 @@ app.all("/api/*",c=>{
   /^\/api\/administration\/integrations\/(?:oauth\/[^/]+|weeztix)\/(?:start|callback)$/.test(path)
  if(c.env.UPT_MIGRATION_ALLOW_WRITES!=="true"&&(!readMethod&&!safeReadPost||businessGet))
   return c.json({error:"migration_writes_disabled"},503)
- return forwardMainSource(c.req.raw,c.env)
+ return c.json({error:"native_route_unavailable"},503)
 })
 // Original portal switching and private contract downloads are server routes,
 // not SPA pages. Other artist URLs serve the static index through ASSETS.
 app.all("/portals/*",c=>{
  const path=new URL(c.req.url).pathname
- if(originalApiAllowed(path,c.req.method))return forwardMainSource(c.req.raw,c.env)
+ if(originalApiAllowed(path,c.req.method))return c.json({error:"native_route_unavailable"},503)
  if(c.req.method==="GET"&&path.startsWith("/portals/administration/modules/artists/")&&c.env.ASSETS)return c.env.ASSETS.fetch(new Request(new URL("/index.html",c.req.url),{headers:{Accept:"text/html"}}))
  return c.json({error:"not_found"},404)
 })

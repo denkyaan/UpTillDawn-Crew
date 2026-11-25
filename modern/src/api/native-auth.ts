@@ -1,7 +1,10 @@
 import {executeOriginalAuth} from './native-auth.generated.mjs'
 import {NextRequest,NextResponse,cookies,withNativeAuth} from './native-auth-context.ts'
 import {MAIN_AUTH_PRIVATE_ENV_KEYS,MAIN_QA_PROJECT} from '../../../lib/migration/main-auth-runtime-config.ts'
-export type MainAuthRuntimeBinding={runtimeConfiguration:()=>Promise<{protocol:string;projectUrl:string;values:Record<string,unknown>}>}
+export type MainAuthRuntimeBinding={
+ runtimeConfiguration:()=>Promise<{protocol:string;projectUrl:string;values:Record<string,unknown>}>
+ geoapifyConfiguration?:()=>Promise<{protocol:string;projectUrl:string;key:string}>
+}
 export async function nativeOriginalAuth(request:Request,binding:MainAuthRuntimeBinding,publishableKey:string):Promise<Response>{
  const config=await binding.runtimeConfiguration()
  if(config.protocol!=='main-auth-native-v1'||config.projectUrl!==MAIN_QA_PROJECT)throw Error('Invalid native authentication environment')

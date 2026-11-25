@@ -125,3 +125,16 @@ export async function forwardMainAuth(request:Request,env:MainAuthBindings):Prom
  }
  return new Response(response.body,{status:response.status,headers:output})
 }
+
+ // The actual Hono Worker never supplies the historical HTTP binding.
+ // Explicitly copy only the permitted native configuration fields.
+export function nativeMainAuthResponse(request:Request,env:Omit<MainAuthBindings,"MAIN_AUTH">):Promise<Response>{
+ return forwardMainAuth(request,{
+  SUPABASE_URL:env.SUPABASE_URL,SUPABASE_ANON_KEY:env.SUPABASE_ANON_KEY,
+  UPT_MIGRATION_NATIVE_AUTH_ENABLED:env.UPT_MIGRATION_NATIVE_AUTH_ENABLED,
+  MAIN_AUTH_RUNTIME:env.MAIN_AUTH_RUNTIME,
+  RESEND_API_KEY:env.RESEND_API_KEY,SECURITY_ALERT_EMAIL:env.SECURITY_ALERT_EMAIL,
+  SECURITY_FROM_EMAIL:env.SECURITY_FROM_EMAIL,GEOAPIFY_API_KEY:env.GEOAPIFY_API_KEY,
+  UPT_MIGRATION_EMAIL_CALLBACK_READY:env.UPT_MIGRATION_EMAIL_CALLBACK_READY
+ })
+}
