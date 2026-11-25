@@ -1,7 +1,7 @@
 import test from "node:test"
 import assert from "node:assert/strict"
 import {readFileSync} from "node:fs"
-import {fixtureVerdict} from "../modern/scripts/qa-fixture-verdict.mjs"
+import {fixtureVerdict,expectedOperations} from "../modern/scripts/qa-fixture-verdict.mjs"
 const read=path=>readFileSync(path,"utf8")
 test("fixture-only credentials are isolated from read-only QA and ordinary fast CI",()=>{
  const workflow=read(".github/workflows/deploy-main.yml")
@@ -27,15 +27,27 @@ test("fixture-only credentials are isolated from read-only QA and ordinary fast 
  const pkg=JSON.parse(read("modern/package.json"))
  assert.equal(pkg.scripts["worker:standalone-check"],"node scripts/standalone-release-plan.mjs --prepare-main-dry-run && wrangler deploy --dry-run --config .wrangler-standalone-main-preflight.jsonc --outdir .wrangler-standalone-main-preflight")
 })
-test("fixture outcome and independent cleanup must both pass on exact commit",()=>{
- const good={QA_VALIDATED_SHA:"a".repeat(40),QA_FIXTURE_OUTCOME:"success",QA_FIXTURE_CLEANUP_OUTCOME:"success"}
- assert.equal(fixtureVerdict(good).positiveFixtureTransactionsVerified,true)
+test("fixture outcome, exact operation evidence and independent cleanup must all match commit, run and attempt",()=>{
+ const good={QA_VALIDATED_SHA:"a".repeat(40),GITHUB_RUN_ID:"123",GITHUB_RUN_ATTEMPT:"2",QA_FIXTURE_OUTCOME:"success",QA_FIXTURE_CLEANUP_OUTCOME:"success"}
+ const base={validatedSha:good.QA_VALIDATED_SHA,runId:"123",runAttempt:"2",cleaned:true,failed:false,all163ActionsVerified:false,productionReady:false}
+ const ops=expectedOperations.map(([id,outcome])=>({id,outcome,name:"verified"}))
+ const tx={...base,cleanupOnly:false,positiveActions:8,operations:ops,checks:Array(14).fill("verified")}
+ const cleanup={...base,cleanupOnly:true,positiveActions:0,operations:[],checks:["cleanup"]}
+ const v=fixtureVerdict(good,tx,cleanup)
+ assert.equal(v.positiveFixtureTransactionsVerified,true)
+ assert.equal(v.uniquePositiveActionIds,7)
+ assert.equal(v.remainingUnverifiedOriginalActionIds,156)
  for(const k of ["QA_FIXTURE_OUTCOME","QA_FIXTURE_CLEANUP_OUTCOME"])
   for(const status of ["failure","cancelled","skipped",undefined])
-   assert.equal(fixtureVerdict({...good,[k]:status}).positiveFixtureTransactionsVerified,false)
- assert.equal(fixtureVerdict({...good,QA_VALIDATED_SHA:"invalid"}).positiveFixtureTransactionsVerified,false)
- assert.equal(fixtureVerdict(good).businessWriteParityVerified,false)
- assert.equal(fixtureVerdict(good).productionReady,false)
+   assert.equal(fixtureVerdict({...good,[k]:status},tx,cleanup).positiveFixtureTransactionsVerified,false)
+ for(const bad of [{...tx,runAttempt:"1"},{...tx,validatedSha:"b".repeat(40)},{...tx,operations:ops.slice(1)},{...tx,operations:ops.map((x,i)=>i===0?{...x,id:"wrong"}:x)},{...tx,failed:true},null])
+  assert.equal(fixtureVerdict(good,bad,cleanup).positiveFixtureTransactionsVerified,false)
+ assert.equal(fixtureVerdict(good,tx,{...cleanup,runId:"124"}).positiveFixtureTransactionsVerified,false)
+ assert.equal(fixtureVerdict(good,tx,null).positiveFixtureTransactionsVerified,false)
+ assert.equal(fixtureVerdict(good,tx,{...cleanup,cleaned:false}).positiveFixtureTransactionsVerified,false)
+ assert.equal(fixtureVerdict({...good,QA_VALIDATED_SHA:"invalid"},tx,cleanup).positiveFixtureTransactionsVerified,false)
+ assert.equal(v.businessWriteParityVerified,false)
+ assert.equal(v.productionReady,false)
 })
 test("anonymous login waits for hydration and actual input state; screenshots remain exact",()=>{
  const script=read("modern/tests/login-parity-qa.mjs")

@@ -6,6 +6,7 @@
 import assert from "node:assert/strict"
 import {mkdir,writeFile} from "node:fs/promises"
 import {resolve} from "node:path"
+import {execFileSync} from "node:child_process"
 import {createClient} from "@supabase/supabase-js"
 import {createServerClient,serializeCookieHeader,parseCookieHeader} from "@supabase/ssr"
 import app from "../src/api/worker.ts"
@@ -18,11 +19,13 @@ const key=process.env.E2E_MAIN_QA_PUBLISHABLE_KEY||""
 const secret=process.env.E2E_MAIN_QA_SERVICE_KEY||""
 const password=process.env.E2E_MAIN_QA_PASSWORD||""
 const run=process.env.GITHUB_RUN_ID||"",attempt=process.env.GITHUB_RUN_ATTEMPT||""
+const sha=process.env.QA_VALIDATED_SHA||""
+const checkedOut=execFileSync("git",["rev-parse","HEAD"],{encoding:"utf8"}).trim()
 if(process.env.E2E_MAIN_MODERN_QA_ORIGIN!==CANDIDATE_ORIGIN||
  process.env.E2E_MAIN_QA_BASE_URL!==qa+"/"||
  process.env.VITE_MIGRATION_ALLOW_WRITES!=="false"||
  process.env.E2E_MAIN_QA_ALLOW_NATIVE_FIXTURE!=="1"||
- !/^\d+$/.test(run)||!/^\d+$/.test(attempt)||
+ !/^\d+$/.test(run)||!/^\d+$/.test(attempt)||!(/^[a-f0-9]{40}$/).test(sha)||sha!==checkedOut||
  key!=="sb_publishable_zStTw3n8wZ271PehDRDvGg_rs0JOy84"||
  !secret||secret===key||password.length<24)throw Error("NATIVE_FIXTURE_EXACT_MAIN_QA_ONLY")
 const prefix="UPT-QA-NATIVE-"+run+"-"+attempt
@@ -32,15 +35,17 @@ const briefingTitles=[prefix+" Briefing",prefix+" Updated briefing"]
 const bookingName=prefix+" Artist"
 const cleanupOnly=process.argv.includes("--cleanup")
 const reportDir=resolve(import.meta.dirname,"../../test-results/modern-native-fixtures")
-const checks=[],sessions=[]
+const checks=[],sessions=[],operations=[]
 const service=createClient(qa,secret,{auth:{persistSession:false,autoRefreshToken:false,detectSessionInUrl:false}})
 const env={SUPABASE_URL:qa,SUPABASE_ANON_KEY:key,UPT_MIGRATION_NATIVE_AUTH_ENABLED:"true",
  UPT_MIGRATION_RUNTIME_TARGET:"main-standalone",UPT_MIGRATION_ALLOW_WRITES:"true"}
 const draftAction="app/(app)/portals/administration/modules/[slug]/page.tsx#saveAdministrationEventDraft"
 const bookingAction="app/(app)/portals/administration/modules/artists/new/page.tsx#createBooking"
+const bookingUpdate="app/(app)/portals/administration/modules/artists/[id]/page.tsx#updateBooking"
 const crew=(name)=>"lib/actions/uptilldawn.ts#"+name
 let office,head,staff,fixtureId=null,failed=null,cleaned=false
 const tick=name=>{checks.push(name);console.log("PASS native fixture "+name)}
+const evidence=(id,outcome,name)=>{operations.push({id,outcome,name});tick(name)}
 async function rows(query,label){
  const {data,error}=await query
  if(error)throw Error(label+"_"+(error.code||"DB_ERROR"))
@@ -144,37 +149,48 @@ try{
   const created=await one(office.db.from("events").select("id,name,status,created_by")
    .eq("name",names[0]).eq("created_by",office.id),"DRAFT_CREATED")
   assert.equal(created.status,"draft");fixtureId=created.id
-  tick("Administration native action creates an owned unpublished draft")
+  evidence(draftAction,"positive","Administration native action creates an owned unpublished draft")
   await invoke(office,draftAction,{...eventFields,event_id:fixtureId,name:names[1]})
   assert.equal((await one(office.db.from("events").select("name").eq("id",fixtureId),"DRAFT_EDITED")).name,names[1])
-  tick("Administration native edit persists")
+  evidence(draftAction,"positive","Administration native edit persists")
   await invoke(staff,draftAction,{...eventFields,event_id:fixtureId,name:names[2]},422)
   assert.equal((await one(office.db.from("events").select("name").eq("id",fixtureId),"DRAFT_DENIAL")).name,names[1])
-  tick("Staff cannot edit the administrative draft")
+  evidence(draftAction,"denied","Staff cannot edit the administrative draft")
   const post={event_id:fixtureId,name:workplaceNames[0],default_shift_start:start,default_shift_end:end,minimum_staff:"1",target_staff:"1",sort_order:"999"}
   await invoke(staff,crew("addWorkplace"),post,422)
   assert.equal((await rows(head.db.from("workplaces").select("id").eq("event_id",fixtureId).eq("name",workplaceNames[0]),"WORKPOST_DENIAL")).length,0)
-  tick("Staff cannot add a workplace")
+  evidence(crew("addWorkplace"),"denied","Staff cannot add a workplace")
   await invoke(head,crew("addWorkplace"),post)
   const workplace=await one(head.db.from("workplaces").select("id,name,event_id").eq("event_id",fixtureId).eq("name",workplaceNames[0]),"WORKPOST_CREATED")
-  tick("Head Admin native workplace creation persists")
+  evidence(crew("addWorkplace"),"positive","Head Admin native workplace creation persists")
   await invoke(head,crew("updateWorkplace"),{...post,workplace_id:workplace.id,name:workplaceNames[1],is_active:"on"})
   assert.equal((await one(head.db.from("workplaces").select("name").eq("id",workplace.id),"WORKPOST_UPDATED")).name,workplaceNames[1])
-  tick("Head Admin native workplace update persists")
+  evidence(crew("updateWorkplace"),"positive","Head Admin native workplace update persists")
   const briefing={event_id:fixtureId,workplace_id:workplace.id,title:briefingTitles[0],body:"QA draft only"}
   await invoke(head,crew("createBriefing"),briefing)
   const b=await one(head.db.from("briefings").select("id,title,event_id").eq("event_id",fixtureId).eq("title",briefingTitles[0]),"BRIEFING_CREATED")
-  tick("Native briefing creation persists")
+  evidence(crew("createBriefing"),"positive","Native briefing creation persists")
   await invoke(head,crew("updateBriefing"),{...briefing,id:b.id,title:briefingTitles[1],body:"QA corrected"})
   assert.equal((await one(head.db.from("briefings").select("title").eq("id",b.id),"BRIEFING_EDITED")).title,briefingTitles[1])
-  tick("Native briefing edit persists")
+  evidence(crew("updateBriefing"),"positive","Native briefing edit persists")
   await invoke(staff,bookingAction,{event_id:fixtureId,artist_name:bookingName,fee_amount:"120"},422)
   assert.equal((await rows(office.db.from("admin_artist_bookings").select("id").eq("event_id",fixtureId).eq("artist_name",bookingName),"BOOKING_DENIAL")).length,0)
-  tick("Staff cannot create a booking")
+  evidence(bookingAction,"denied","Staff cannot create a booking")
   await invoke(office,bookingAction,{event_id:fixtureId,artist_name:bookingName,fee_amount:"120"})
-  const booking=await one(office.db.from("admin_artist_bookings").select("status,created_by").eq("event_id",fixtureId).eq("artist_name",bookingName),"BOOKING_CREATED")
+  const booking=await one(office.db.from("admin_artist_bookings").select("id,status,created_by").eq("event_id",fixtureId).eq("artist_name",bookingName),"BOOKING_CREATED")
   assert.equal(booking.status,"enquiry");assert.equal(booking.created_by,office.id)
-  tick("Native Administration booking creation persists")
+  evidence(bookingAction,"positive","Native Administration booking creation persists")
+  const update={id:booking.id,status:"negotiating",rider_notes:"QA draft rider",internal_notes:"QA draft notes"}
+  await invoke(staff,bookingUpdate,update,422)
+  assert.equal((await one(office.db.from("admin_artist_bookings").select("status").eq("id",booking.id),"BOOKING_UPDATE_DENIED")).status,"enquiry")
+  evidence(bookingUpdate,"denied","Staff cannot change administrative booking")
+  await invoke(office,bookingUpdate,{...update,status:"confirmed"},422)
+  assert.equal((await one(office.db.from("admin_artist_bookings").select("status").eq("id",booking.id),"BOOKING_TRANSITION_DENIED")).status,"enquiry")
+  evidence(bookingUpdate,"denied","Direct enquiry to confirmed transition is rejected")
+  await invoke(office,bookingUpdate,update)
+  const edited=await one(office.db.from("admin_artist_bookings").select("status,rider_notes,internal_notes").eq("id",booking.id),"BOOKING_UPDATED")
+  assert.equal(edited.status,"negotiating");assert.equal(edited.rider_notes,update.rider_notes);assert.equal(edited.internal_notes,update.internal_notes)
+  evidence(bookingUpdate,"positive","Native Administration booking update persists")
  }
 }catch(error){
  // Avoid serializing request URLs, cookie headers, credentials or full DB errors.
@@ -187,9 +203,9 @@ try{
  }
  for(const identity of sessions)try{await identity.db.auth.signOut({scope:"local"})}catch{}
  await mkdir(reportDir,{recursive:true})
- const report={scope:"exact Main QA database; in-process native standalone Main; public writes unchanged",cleanupOnly,checks,positiveActions:cleanupOnly?0:checks.filter(x=>/persists|creates an owned/.test(x)).length,
+ const report={scope:"exact Main QA database; in-process native standalone Main; public writes unchanged",validatedSha:sha,runId:run,runAttempt:attempt,cleanupOnly,checks,operations,positiveActions:operations.filter(x=>x.outcome==="positive").length,
   cleaned,failed:Boolean(failed),failure:failed,all163ActionsVerified:false,productionReady:false}
  await writeFile(resolve(reportDir,cleanupOnly?"cleanup.json":"transactions.json"),JSON.stringify(report,null,2)+"\n")
  console.log(JSON.stringify(report))
 }
-if(failed||!cleaned||(!cleanupOnly&&checks.length!==11))process.exitCode=1
+if(failed||!cleaned||(!cleanupOnly&&(checks.length!==14||operations.filter(x=>x.outcome==="positive").length!==8||operations.filter(x=>x.outcome==="denied").length!==5)))process.exitCode=1

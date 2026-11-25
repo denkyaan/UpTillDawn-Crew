@@ -160,6 +160,7 @@ jobs:
       E2E_MAIN_QA_PUBLISHABLE_KEY: sb_publishable_zStTw3n8wZ271PehDRDvGg_rs0JOy84
       E2E_MAIN_QA_PASSWORD: ${{ secrets.MAIN_QA_BOT_PASSWORD }}
       VITE_MIGRATION_ALLOW_WRITES: 'false'
+      QA_VALIDATED_SHA: ${{ github.event.workflow_run.head_sha }}
     steps:
       - name: Checkout exact deployed Main commit
         uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09
@@ -177,7 +178,7 @@ jobs:
         id: qa_transport
         timeout-minutes: 2
         run: node modern/scripts/main-source-live-smoke.mjs
-      - name: Verify seven positive native standalone transactions and three forbidden mutations on a disposable Main QA draft
+      - name: Verify eight positive native standalone transactions and five forbidden mutations on a disposable Main QA draft
         id: qa_fixture
         if: ${{ !cancelled() && steps.qa_transport.outcome == 'success' }}
         timeout-minutes: 6
