@@ -50,8 +50,10 @@ export async function forwardMainAuth(request:Request,env:MainAuthBindings):Prom
   const site=request.headers.get("sec-fetch-site")
   if(request.headers.get("origin")!==url.origin||(site&&site!=="same-origin"))return rejected(403,"invalid_origin")
   const contentType=(request.headers.get("content-type")||"").toLowerCase()
+  // For no-JS Admin submission permit only exact UTF-8 url-encoded forms.
+  // Reject bad/unsupported charsets as media types before reading credentials.
   if(!contentType.startsWith("multipart/form-data;")&&
-     !(adminLogin&&contentType.startsWith("application/x-www-form-urlencoded")))
+     !(adminLogin&&/^application\/x-www-form-urlencoded(?:;\s*charset=utf-8)?$/.test(contentType.trim())))
    return rejected(415,"invalid_content_type")
   try{form=await readBoundedFormData(request,16_384,adminLogin)}
   catch(error){return rejected(error instanceof Error&&error.message==="too_large"?413:400,"invalid_form")}
