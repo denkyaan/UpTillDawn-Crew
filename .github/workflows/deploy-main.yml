@@ -193,6 +193,13 @@ jobs:
           E2E_MAIN_QA_ALLOW_NATIVE_FIXTURE: '1'
           E2E_MAIN_QA_SERVICE_KEY: ${{ secrets.MAIN_QA_SUPABASE_SECRET_KEY }}
         run: node modern/tests/qa-native-fixture-transactions.mjs --cleanup
+      - name: Require actual fixture success and independent cleanup
+        if: always()
+        env:
+          QA_VALIDATED_SHA: ${{ github.event.workflow_run.head_sha }}
+          QA_FIXTURE_OUTCOME: ${{ steps.qa_fixture.outcome }}
+          QA_FIXTURE_CLEANUP_OUTCOME: ${{ steps.qa_fixture_cleanup.outcome }}
+        run: node modern/scripts/qa-fixture-verdict.mjs
       - name: Upload sanitized signed fixture and independent cleanup evidence
         if: always()
         uses: actions/upload-artifact@v4
@@ -201,13 +208,6 @@ jobs:
           path: test-results/modern-native-fixtures/
           if-no-files-found: warn
           retention-days: 5
-      - name: Require actual fixture success and independent cleanup
-        if: always()
-        env:
-          QA_VALIDATED_SHA: ${{ github.event.workflow_run.head_sha }}
-          QA_FIXTURE_OUTCOME: ${{ steps.qa_fixture.outcome }}
-          QA_FIXTURE_CLEANUP_OUTCOME: ${{ steps.qa_fixture_cleanup.outcome }}
-        run: node modern/scripts/qa-fixture-verdict.mjs
 
   qa-modern-main-qa:
     needs: [validate-trigger, deploy-modern-main-qa, deploy]
