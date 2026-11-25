@@ -53,7 +53,7 @@ export async function forwardMainAuth(request:Request,env:MainAuthBindings):Prom
   if(!contentType.startsWith("multipart/form-data;")&&
      !(adminLogin&&contentType.startsWith("application/x-www-form-urlencoded")))
    return rejected(415,"invalid_content_type")
-  try{form=await readBoundedFormData(request,16_384)}
+  try{form=await readBoundedFormData(request,16_384,adminLogin)}
   catch(error){return rejected(error instanceof Error&&error.message==="too_large"?413:400,"invalid_form")}
   for(const [,value] of form)if(typeof value!=="string"||value.length>2048)return rejected(413,"form_too_large")
   if(url.pathname.endsWith("portal-login")&&!portals.has(String(form.get("portal")||"")))return rejected(403,"invalid_portal")
@@ -73,7 +73,7 @@ export async function forwardMainAuth(request:Request,env:MainAuthBindings):Prom
  headers.set("X-UpTillDawn-Main-Bridge","original-read-v1")
  // Explicit allowlist. No Authorization, client role, arbitrary host, external
  // redirect URL or provider credential can turn this into a general proxy.
- for(const key of ["cookie","user-agent","accept-language","cf-connecting-ip","cf-ipcity","cf-region","cf-ipcountry"]){
+ for(const key of ["cookie","user-agent","accept-language","cf-connecting-ip","cf-ipcity","cf-region","cf-ipcountry","cf-iplatitude","cf-iplongitude"]){
   const value=request.headers.get(key)
   if(value)headers.set(key,value)
  }

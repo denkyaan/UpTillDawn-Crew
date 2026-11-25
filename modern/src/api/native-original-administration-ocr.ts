@@ -1,4 +1,5 @@
 import {sameOriginMutation} from './native-admin-document-routes.ts'
+import {readBoundedUpstreamJson} from './native-bounded-upstream.ts'
 import {normalizeCloudmersiveOcr,verifiedOcrFileType} from '../../../lib/administration/cloudmersive-ocr.ts'
 import {pendingPdfJobId,signOcrJob,verifyOcrJob} from '../../../lib/administration/cloudmersive-ocr-job.ts'
 
@@ -30,27 +31,9 @@ async function readBoundedForm(request:Request):Promise<FormData|null>{
 }
 
 /** Cap untrusted upstream responses even if Content-Length is omitted. */
+// Shared size cap; original OCR error responses and formats stay unchanged.
 async function readProviderJson(response:Response):Promise<unknown|null>{
- const len=Number(response.headers.get("content-length")||0)
- if(!Number.isFinite(len)||len>MAX_RESPONSE)return null
- const stream=response.body
- if(!stream)return null
- const reader=stream.getReader()
- let size=0
- const chunks:Uint8Array[]=[]
- try{
-  for(;;){
-   const {done,value}=await reader.read()
-   if(done)break
-   size+=value.byteLength
-   if(size>MAX_RESPONSE){await reader.cancel();return null}
-   chunks.push(value)
-  }
-  const result=new Uint8Array(size)
-  let pos=0
-  for(const part of chunks){result.set(part,pos);pos+=part.byteLength}
-  return JSON.parse(new TextDecoder("utf-8",{fatal:true}).decode(result)) as unknown
- }catch{return null}finally{reader.releaseLock()}
+ return readBoundedUpstreamJson(response,MAX_RESPONSE)
 }
 
 async function handleProvider(response:Response,kind:"image"|"pdf",key:string,userId:string,pollToken?:string){

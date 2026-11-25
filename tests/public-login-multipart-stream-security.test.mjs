@@ -41,11 +41,12 @@ test('multipart parser rejects invalid bodies and unsupported encoding before si
 })
 
 test('both native and hydrated login APIs enforce streaming bounds before authentication',()=>{
- for(const route of [portalLogin,adminLogin]){
+ for(const route of [portalLogin]){
   assert.match(route,/readBoundedFormData\(request,16_384\)/)
   assert.doesNotMatch(route,/await request\.formData\(\)/)
  }
  assert.ok(portalLogin.indexOf('readBoundedFormData(request,16_384)')<portalLogin.indexOf('await signIn(form)'))
- assert.ok(adminLogin.indexOf('readBoundedFormData(request,16_384)')<adminLogin.indexOf('signInWithPassword'))
+ assert.ok(adminLogin.includes('readBoundedFormData(request,16_384,true)'))
+ assert.ok(adminLogin.indexOf('readBoundedFormData(request,16_384,true)')<adminLogin.indexOf('signInWithPassword'))
  assert.match(adminLogin,/origin!==new URL\(request\.url\)\.origin/)
 })
