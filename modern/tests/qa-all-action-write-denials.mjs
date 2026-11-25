@@ -1,6 +1,9 @@
 // Live signed negative acceptance only. Mismatched envelopes cannot create
 // data. No positive business mutation, provider operation or privileged key.
 import assert from "node:assert/strict"
+import {mkdirSync,writeFileSync} from "node:fs"
+import {resolve} from "node:path"
+import {execFileSync} from "node:child_process"
 import {chromium} from "playwright"
 import {actionEntries} from "../tooling/main-source.mjs"
 import {sourceReadSession,hasOriginalAuthCookie} from "../src/api/native-main-reads.ts"
@@ -20,7 +23,9 @@ const identities=[
  {role:"staff",portal:"staff",email:"e2e-staff@uptilldawn.test",admin:false}
 ]
 let browser,denials=0,signins=0
-const failures=[]
+const failures=[],verified=[]
+const sha=execFileSync("git",["rev-parse","HEAD"],{encoding:"utf8"}).trim()
+if(process.env.QA_VALIDATED_SHA&&process.env.QA_VALIDATED_SHA!==sha)throw Error("DENIAL_WRONG_CHECKOUT")
 try{
  browser=await chromium.launch({headless:true})
  for(const bot of identities){
@@ -49,7 +54,8 @@ try{
    for(let start=0;start<ids.length;start+=4){
     const results=await Promise.allSettled(ids.slice(start,start+4).map(async id=>{
      const response=await context.request.post(origin+"/api/migration/actions",{
-      multipart:{_id:"synthetic-not-a-registered-action",_args:"[]"},
+      // Exact registered ID, not an unknown synthetic envelope. Public writes are disabled before dispatch.
+      multipart:{_id:id,_args:"[]"},
       headers:{Origin:origin,"X-UpTillDawn-Action-Hint":id},
       timeout:12000,maxRedirects:0
      })
@@ -61,7 +67,7 @@ try{
      }finally{await response.dispose()}
     }))
     for(const [i,result] of results.entries()){
-     if(result.status==="fulfilled")denials++
+     if(result.status==="fulfilled"){denials++;verified.push({role:bot.role,id:result.value})}
      else failures.push({role:bot.role,id:ids[start+i],reason:"public_write_gate_failed"})
     }
    }
@@ -72,6 +78,9 @@ try{
    await context.close()
   }
  }
- console.log(JSON.stringify({originalActions:ids.length,signedIdentities:signins,publicWriteDenials:denials,expectedDenials:326,failures,businessWrites:0,positiveWriteParityVerified:false,productionReady:false}))
+ const report={validatedSha:sha,runId:process.env.GITHUB_RUN_ID||null,runAttempt:process.env.GITHUB_RUN_ATTEMPT||null,originalActions:ids.length,signedIdentities:signins,publicWriteDenials:denials,expectedDenials:326,verified,failures,businessWrites:0,positiveWriteParityVerified:false,productionReady:false}
+ const dir=resolve(import.meta.dirname,"../../test-results/modern-action-denials")
+ mkdirSync(dir,{recursive:true});writeFileSync(resolve(dir,"report.json"),JSON.stringify(report,null,2)+"\n")
+ console.log(JSON.stringify({...report,verified:undefined}))
  if(signins!==2||denials!==326||failures.length)throw Error("ALL_NATIVE_ACTION_WRITE_DENIALS_INCOMPLETE")
 }finally{await browser?.close()}

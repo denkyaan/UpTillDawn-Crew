@@ -208,6 +208,22 @@ jobs:
           QA_FIXTURE_OUTCOME: ${{ steps.qa_fixture.outcome }}
           QA_FIXTURE_CLEANUP_OUTCOME: ${{ steps.qa_fixture_cleanup.outcome }}
         run: node modern/scripts/qa-fixture-verdict.mjs
+      - name: Combine phase 2 acceptance and phase 3 release readiness for this exact revision
+        if: always()
+        env:
+          QA_BROWSER_EVIDENCE: ${{ needs.qa-modern-main-qa.outputs.live_evidence }}
+          QA_DENIAL_EVIDENCE: ${{ needs.qa-modern-main-qa.outputs.denial_evidence }}
+          QA_CANDIDATE_RUNTIME: ${{ needs.qa-modern-main-qa.outputs.candidate_runtime }}
+          QA_ORIGINAL_RUNTIME: ${{ needs.qa-modern-main-qa.outputs.original_runtime }}
+        run: node modern/scripts/phase-two-three-evidence.mjs
+      - name: Upload integrated acceptance and release blockers
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: modern-main-phase-two-three-readiness
+          path: test-results/modern-phase-two-three/readiness.json
+          if-no-files-found: error
+          retention-days: 5
       - name: Upload sanitized signed fixture and independent cleanup evidence
         if: always()
         uses: actions/upload-artifact@v4
@@ -218,6 +234,11 @@ jobs:
           retention-days: 5
 
   qa-modern-main-qa:
+    outputs:
+      live_evidence: ${{ steps.qa_evidence.outputs.live_evidence }}
+      denial_evidence: ${{ steps.qa_evidence.outputs.denial_evidence }}
+      candidate_runtime: ${{ steps.candidate_runtime.outputs.runtime_verified }}
+      original_runtime: ${{ steps.original_runtime.outputs.runtime_verified }}
     needs: [validate-trigger, deploy-modern-main-qa, deploy]
     if: >-
       needs.validate-trigger.outputs.eligible == 'true' &&
@@ -286,6 +307,8 @@ jobs:
         id: qa_actions
         if: ${{ !cancelled() && steps.qa_transport.outcome == 'success' }}
         timeout-minutes: 5
+        env:
+          QA_VALIDATED_SHA: ${{ github.event.workflow_run.head_sha }}
         run: node modern/tests/qa-all-action-write-denials.mjs
       # One consolidated seven-domain report is produced even when a
       # representative route fails. Failure remains RED; no live provider
@@ -325,6 +348,7 @@ jobs:
           if-no-files-found: error
           retention-days: 5
       - name: Record new Main-QA runtime outcomes even when candidate browser QA fails
+        id: candidate_runtime
         if: always()
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
@@ -334,11 +358,17 @@ jobs:
           MAIN_BROWSER_QA_RESULT: ${{ job.status }}
         run: node scripts/main-worker-outcomes.mjs
       - name: Report legacy Main runtime outcomes separately from new candidate health
+        id: original_runtime
         if: always()
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          MAIN_WORKER_DEPLOYED_AT: ${{ needs.deploy.outputs.deployed_at }}
         run: node scripts/main-worker-outcomes.mjs
+      - name: Pass exact same-run acceptance evidence to the final fixture job
+        id: qa_evidence
+        if: always()
+        run: node modern/scripts/phase-two-three-evidence.mjs --export-browser
       - name: Upload deep-route comparison screenshots only when a mismatch is found
         if: always()
         uses: actions/upload-artifact@v4

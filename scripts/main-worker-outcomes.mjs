@@ -73,6 +73,7 @@ try{
  const deployedAt=deployedAtRaw?new Date(deployedAtRaw):null
  let postDeploySummary='unavailable (missing or invalid deployment timestamp)'
  let postDeployCounts=null
+ let postDeployComplete=false
  if(deployedAt&&Number.isFinite(deployedAt.getTime())&&deployedAt>start&&deployedAt<=now){
   const afterPayload={
    query,
@@ -96,6 +97,7 @@ try{
       afterCounts.set(status,(afterCounts.get(status)||0)+count)
      }
      postDeployCounts=afterCounts
+     postDeployComplete=afterRows.length<1000
      postDeploySummary=[...afterCounts.entries()].sort((a,b)=>a[0].localeCompare(b[0])).map(([key,n])=>key+'='+n).join(', ')||'no matching invocations'
      console.log('CLOUDFLARE_MAIN_POST_DEPLOY since='+deployedAt.toISOString()+': '+postDeploySummary)
      const over=(afterCounts.get('exceededResources')||0)+(afterCounts.get('exceededCpu')||0)+(afterCounts.get('exceededMemory')||0)
@@ -113,6 +115,10 @@ try{
  if(process.env.MAIN_BROWSER_QA_RESULT==='failure'&&observedFailures===0)
   console.log('::warning::Main browser acceptance failed while analytics reported zero post-deploy resource outcomes; treat browser failures as authoritative until investigated')
  const {appendFileSync}=await import('node:fs')
+ // Only a nonempty complete post-deployment measurement can contribute to acceptance.
+ // Missing permissions, empty windows and truncated samples never count as verified.
+ const runtimeVerified=postDeployComplete&&observedFailures===0&&(postDeployCounts?.get('success')||0)>0
+ if(process.env.GITHUB_OUTPUT)appendFileSync(process.env.GITHUB_OUTPUT,'runtime_verified='+String(runtimeVerified)+'\n')
  if(process.env.GITHUB_STEP_SUMMARY)appendFileSync(process.env.GITHUB_STEP_SUMMARY,
   '\n### Main Worker resource outcomes (read-only)\n- Worker: '+scriptName+'\n- Last 90-minute status counts (includes earlier app revisions): '+(summary||'none')+'\n- Status counts since current Main deployment: '+postDeploySummary+'\n- Post-deploy confirmed resource failures: '+(postDeployCounts===null?'unavailable':(postDeployCounts.get('exceededResources')||0)+(postDeployCounts.get('exceededCpu')||0)+(postDeployCounts.get('exceededMemory')||0))+'\n- Maximum grouped CPU P99 (ms), last 90 minutes: '+(cpuP99Ms??'unavailable')+'\n- Maximum grouped isolate-memory P99 (MiB), last 90 minutes: '+(memoryP99MiB??'unavailable')+'\n- Analytics may be delayed; a zero is not a long-term guarantee\n- Production worker not queried\n')
  // Do not let a successful deployment and browser run conceal confirmed 1102

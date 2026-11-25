@@ -28,7 +28,7 @@ export function fixtureVerdict(env,transactions,cleanup){
   transactions.positiveActions===8&&transactions.checks?.length===14&&cleanup.positiveActions===0&&
   Array.isArray(cleanup.operations)&&cleanup.operations.length===0&&cleanup.checks?.length===1&&exact
  const verifiedActionIds=positiveFixtureTransactionsVerified?[...new Set(ops.filter(x=>x.outcome==="positive").map(x=>x.id))]:[]
- return {validatedSha:sha,transactions:env.QA_FIXTURE_OUTCOME||"not-run",cleanup:env.QA_FIXTURE_CLEANUP_OUTCOME||"not-run",
+ return {validatedSha:sha,runId:run||null,runAttempt:attempt||null,transactions:env.QA_FIXTURE_OUTCOME||"not-run",cleanup:env.QA_FIXTURE_CLEANUP_OUTCOME||"not-run",
   positiveFixtureTransactionsVerified,verifiedActionIds,uniquePositiveActionIds:verifiedActionIds.length,
   remainingUnverifiedOriginalActionIds:163-verifiedActionIds.length,businessWriteParityVerified:false,productionReady:false}
 }
