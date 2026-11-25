@@ -6,6 +6,7 @@ import {serializeCookieHeader} from "@supabase/ssr"
 import type {SupabaseClient} from "@supabase/supabase-js"
 import {userVisiblePortals,type Portal,type PortalAssignment} from "../../../lib/portal-access.ts"
 import {fetchFacebookEventInfo} from "../../../lib/facebook-event.ts"
+import {readBoundedUpstreamJson} from "./native-bounded-upstream.ts"
 import type {VerifiedIdentity} from "../shared/identity.ts"
 
 const destinations:Record<Portal,string>={
@@ -89,12 +90,10 @@ async function providerResponse(url:string){
  const response=await fetch(url,{headers:{Accept:"application/json"},
   cache:"no-store",signal:AbortSignal.timeout(8000)})
  if(!response.ok)throw Error("Locaties konden niet worden opgezocht.")
- const raw=await response.text()
- // Geoapify returns at most six location objects. Refuse enormous payloads
- // instead of burdening a Cloudflare Free worker.
- if(raw.length>256*1024)throw Error("Locaties konden niet worden opgezocht.")
- const data=JSON.parse(raw) as {results?:RawLocation[]}
- if(!data||!Array.isArray(data.results))return []
+ // Never buffer a huge/malformed provider response in Worker memory.
+ const data=await readBoundedUpstreamJson(response,256*1024) as {results?:RawLocation[]}|null
+ if(!data)throw Error("Locaties konden niet worden opgezocht.")
+ if(!Array.isArray(data.results))return []
  return data.results.slice(0,6).map(normalizeGeoapifyRow).filter(x=>x!==null)
 }
 export async function nativeGeoapifyAutocompleteResponse(

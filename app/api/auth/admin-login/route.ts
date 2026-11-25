@@ -35,7 +35,7 @@ export async function POST(request: NextRequest) {
   if(origin!==new URL(request.url).origin||(fetchSite&&fetchSite!=='same-origin'))
     return redirectWithSession(loginUrl(request,'Ongeldige aanvraag.'))
   let formData:FormData
-  try{formData=await readBoundedFormData(request,16_384)}
+  try{formData=await readBoundedFormData(request,16_384,true)}
   catch(error){return redirectWithSession(loginUrl(request,error instanceof Error&&error.message==='too_large'?'Aanvraag te groot.':'Ongeldig formulier.'))}
   try {
   const submittedLogin = String(formData.get('email') || '').trim().toLowerCase()

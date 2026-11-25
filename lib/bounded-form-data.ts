@@ -3,9 +3,13 @@
  * A streamed body may omit the header or exceed a declared size.
  * Stop consuming before multipart parsing and credential processing.
  */
-export async function readBoundedFormData(request:Request,maxBytes=16_384):Promise<FormData>{
- const type=request.headers.get('content-type')||''
- if(!type.toLowerCase().startsWith('multipart/form-data;'))throw new Error('invalid_form')
+export async function readBoundedFormData(request:Request,maxBytes=16_384,allowUrlEncoded=false):Promise<FormData>{
+ const type=(request.headers.get('content-type')||'').trim()
+ // Only original Admin's optional no-JS form permits URL encoding.
+ // Portal and account APIs continue to require multipart at their own gates.
+ const multipart=type.toLowerCase().startsWith('multipart/form-data;')
+ const encoded=allowUrlEncoded&&/^application\/x-www-form-urlencoded(?:;\s*charset=utf-8)?$/i.test(type)
+ if(!multipart&&!encoded)throw new Error('invalid_form')
  const declared=request.headers.get('content-length')
  if(declared!==null){
   const length=Number(declared)
