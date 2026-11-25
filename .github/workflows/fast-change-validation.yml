@@ -122,6 +122,17 @@ jobs:
           node --check modern/tests/deep-route-parity-qa.mjs
           node --check modern/tests/qa-native-fixture-transactions.mjs
           node --check modern/tests/login-parity-qa.mjs
+          node --check modern/tests/qa-all-action-write-denials.mjs
+      - name: Upload non-deploying migration build evidence
+        if: ${{ always() && github.event_name == 'pull_request' && startsWith(github.head_ref, 'migration/') }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: migration-build-preflight
+          path: |
+            test-results/modern-standalone-preflight/
+            test-results/modern-seven-bundle/
+          if-no-files-found: warn
+          retention-days: 5
       - name: Read isolated Main Worker runtime outcomes for diagnostic PRs
         if: ${{ github.event_name == 'pull_request' && startsWith(github.head_ref, 'diagnostic/main-runtime') && github.event.pull_request.head.repo.full_name == github.repository }}
         env:

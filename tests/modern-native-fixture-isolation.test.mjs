@@ -47,6 +47,8 @@ test("fixture outcome, exact operation evidence and independent cleanup must all
  assert.equal(fixtureVerdict(good,tx,{...cleanup,cleaned:false}).positiveFixtureTransactionsVerified,false)
  assert.equal(fixtureVerdict({...good,QA_VALIDATED_SHA:"invalid"},tx,cleanup).positiveFixtureTransactionsVerified,false)
  assert.equal(v.businessWriteParityVerified,false)
+ assert.equal(v.verifiedActionIds.length,new Set(v.verifiedActionIds).size)
+ assert.equal(v.uniquePositiveActionIds+v.remainingUnverifiedOriginalActionIds,163)
  assert.equal(v.productionReady,false)
 })
 test("anonymous login waits for hydration and actual input state; screenshots remain exact",()=>{
