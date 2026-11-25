@@ -7,7 +7,7 @@ import { getCurrentUser } from '@/lib/actions/auth'
 
 export const dynamic='force-dynamic'
 
-const AdminCard=({href,title,description}:{href:string;title:string;description:string})=><Link href={href} className="rounded-2xl border p-4 transition hover:border-violet-500/60 hover:bg-muted/30"><h2 className="font-black">{title}</h2><p className="mt-1 text-sm text-muted-foreground">{description}</p></Link>
+const AdminCard=({href,title,description}:{href:string;title:string;description:string})=><Link prefetch={false} href={href} className="rounded-2xl border p-4 transition hover:border-violet-500/60 hover:bg-muted/30"><h2 className="font-black">{title}</h2><p className="mt-1 text-sm text-muted-foreground">{description}</p></Link>
 
 export default async function Page(){
   const s=await createClient()

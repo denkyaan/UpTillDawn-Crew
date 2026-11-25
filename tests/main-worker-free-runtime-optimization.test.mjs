@@ -29,3 +29,12 @@ test('Distinct-user load test still reports SSR failures but continues independe
  assert.match(source,/report\.http5xx===0&&errors\.length===0&&report\.cleanupVerified/)
  assert.match(source,/const path=\['\/events','\/tasks','\/chat'\]/)
 })
+
+test('Main protected overview, administration and staff links cannot speculatively fetch heavy Next SSR routes',()=>{
+ for(const path of ["app/(app)/portals/administration/modules/[slug]/page.tsx","app/(app)/portals/[portal]/page.tsx","app/(app)/portals/administration/finance/page.tsx","app/(app)/notifications/page.tsx","app/(app)/timesheets/page.tsx","app/(app)/settings/page.tsx","components/administration/administration-mobile-tabs.tsx","components/administration/administration-overview-dashboard.tsx"]){
+  const source=read(path)
+  const links=(source.match(/<Link\s/g)||[]).length
+  assert.ok(links>0,path+' expected protected links')
+  assert.equal((source.match(/<Link\s+prefetch=\{false\}/g)||[]).length,links,path+' introduced speculative protected navigation')
+ }
+})

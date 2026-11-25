@@ -59,8 +59,8 @@ export default async function Page({searchParams}:{searchParams?:Promise<{page?:
     <NotificationBadgeSync count={badgeCount??0}/>
     <h1 className="text-3xl font-black">{translateRuntimeUi("Meldingen",locale)}</h1>
     <nav aria-label={translateRuntimeUi("Meldingen",locale)} className="flex flex-wrap gap-2">
-      <Link href={viewHref('unread')} aria-current={selectedView==='unread'?'page':undefined} className={`rounded-xl border px-4 py-2 text-sm font-semibold ${selectedView==='unread'?'border-violet-500 bg-violet-500/10':'hover:bg-muted/30'}`}>{labels.unread} ({badgeCount??0})</Link>
-      <Link href={viewHref('all')} aria-current={selectedView==='all'?'page':undefined} className={`rounded-xl border px-4 py-2 text-sm font-semibold ${selectedView==='all'?'border-violet-500 bg-violet-500/10':'hover:bg-muted/30'}`}>{labels.all}</Link>
+      <Link prefetch={false} href={viewHref('unread')} aria-current={selectedView==='unread'?'page':undefined} className={`rounded-xl border px-4 py-2 text-sm font-semibold ${selectedView==='unread'?'border-violet-500 bg-violet-500/10':'hover:bg-muted/30'}`}>{labels.unread} ({badgeCount??0})</Link>
+      <Link prefetch={false} href={viewHref('all')} aria-current={selectedView==='all'?'page':undefined} className={`rounded-xl border px-4 py-2 text-sm font-semibold ${selectedView==='all'?'border-violet-500 bg-violet-500/10':'hover:bg-muted/30'}`}>{labels.all}</Link>
     </nav>
     {!error&&!badgeError&&(badgeCount??0)>0&&<form action={markAllNotificationsRead} className="flex justify-end">
       <PendingSubmitButton pendingLabel={labels.clearing} className="rounded-lg border px-4 py-2 text-sm font-semibold">{labels.clearAll}</PendingSubmitButton>
@@ -85,6 +85,6 @@ export default async function Page({searchParams}:{searchParams?:Promise<{page?:
         </div>
       </article>
     })}
-    {!error&&(page>1||hasNext)&&<nav aria-label={translateRuntimeUi("Meldingspagina’s",locale)} className="flex items-center justify-between gap-3"><span>{translateRuntimeUi('Pagina',locale)} {page}</span><div className="flex gap-2">{page>1&&<Link href={pageHref(page-1)} className="rounded-lg border px-3 py-2">{translateRuntimeUi('Vorige',locale)}</Link>}{hasNext&&<Link href={pageHref(page+1)} className="rounded-lg border px-3 py-2">{translateRuntimeUi('Volgende',locale)}</Link>}</div></nav>}
+    {!error&&(page>1||hasNext)&&<nav aria-label={translateRuntimeUi("Meldingspagina’s",locale)} className="flex items-center justify-between gap-3"><span>{translateRuntimeUi('Pagina',locale)} {page}</span><div className="flex gap-2">{page>1&&<Link prefetch={false} href={pageHref(page-1)} className="rounded-lg border px-3 py-2">{translateRuntimeUi('Vorige',locale)}</Link>}{hasNext&&<Link prefetch={false} href={pageHref(page+1)} className="rounded-lg border px-3 py-2">{translateRuntimeUi('Volgende',locale)}</Link>}</div></nav>}
   </main>
 }
