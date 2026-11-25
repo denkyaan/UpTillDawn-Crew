@@ -45,8 +45,8 @@ if(process.argv[1]===fileURLToPath(import.meta.url)){
  mkdirSync(out,{recursive:true})
  // The production profile is a dry-run specification, NOT a deployable
  // production bundle: its key is deliberately a nonworking fixture.
- const report={...plan,main:{name:plan.main.name,vars:plan.main.vars},
-  production:{name:plan.production.name,vars:plan.production.vars}}
+ const summarize=profile=>({name:profile.name,projectUrl:profile.vars.SUPABASE_URL,runtimeTarget:profile.vars.UPT_MIGRATION_RUNTIME_TARGET,publicWrites:false,oauth:false,scanning:false})
+ const report={...plan,main:summarize(plan.main),production:summarize(plan.production)}
  writeFileSync(resolve(out,"topology.json"),JSON.stringify(report,null,2)+"\n")
  if(process.argv.includes("--prepare-main-dry-run")){
   assertRehearsalBuildScope(plan.main,process.env)

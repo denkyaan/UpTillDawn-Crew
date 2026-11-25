@@ -27,7 +27,8 @@
     "browser:deep-qa": "node tests/deep-route-parity-qa.mjs",
     "bundle:seven": "node scripts/seven-bundle-readiness.mjs",
     "cutover:gate": "node scripts/seven-bundle-readiness.mjs --enforce-cutover",
-    "worker:standalone-check": "node scripts/standalone-release-plan.mjs --prepare-main-dry-run && wrangler deploy --dry-run --config .wrangler-standalone-main-preflight.jsonc --outdir .wrangler-standalone-main-preflight"
+    "worker:standalone-check": "node scripts/standalone-release-plan.mjs --prepare-main-dry-run && wrangler deploy --dry-run --config .wrangler-standalone-main-preflight.jsonc --outdir .wrangler-standalone-main-preflight",
+    "worker:production-rehearsal": "node scripts/production-build-rehearsal.mjs"
   },
   "dependencies": {
     "@codemirror/lang-css": "6.3.1",
