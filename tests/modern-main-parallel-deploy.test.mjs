@@ -130,7 +130,10 @@ test("every migration-related pull request fails fast on candidate syntax errors
  const fast=get(".github/workflows/fast-change-validation.yml")
  assert.ok(fast.includes("Fast isolated modern TypeScript safety check on pull requests"))
  assert.ok(fast.includes("if: ${{ github.event_name == 'pull_request' }}"))
- assert.ok(fast.includes("npm --prefix modern run check"))
+ assert.ok(fast.includes("npm --prefix modern run build"))
+ const scripts=JSON.parse(get("modern/package.json")).scripts
+ assert.match(scripts.build,/^tsc --noEmit -p tsconfig\.json && vite build$/)
+ assert.ok(fast.indexOf("mv node_modules .upt-root-node-modules-isolation")<fast.indexOf("npm --prefix modern run build"))
  assert.ok(fast.includes("npm --prefix modern install --prefer-offline --no-audit --no-fund"))
  assert.ok(fast.indexOf("Fast isolated modern TypeScript safety check")<
   fast.indexOf("Read isolated Main Worker runtime outcomes"))
