@@ -149,7 +149,8 @@ jobs:
     permissions:
       contents: read
     runs-on: ubuntu-latest
-    timeout-minutes: 24
+    # Explicit opt-in only; give independent bounded stages time to publish evidence.
+    timeout-minutes: 38
     env:
       E2E_MAIN_MODERN_QA_ORIGIN: https://uptilldawn-modern-main.uptilldawn.workers.dev
       E2E_MAIN_QA_BASE_URL: https://npbjrtiolqperdgljnhi.supabase.co/
@@ -178,14 +179,31 @@ jobs:
       - name: Install headless browser (no unrelated OS packages)
         run: npm --prefix modern exec -- playwright install chromium --only-shell
       - name: Verify original source transport after BOTH Main Workers are deployed
+        id: qa_transport
+        timeout-minutes: 2
         run: node modern/scripts/main-source-live-smoke.mjs
+      # Each stage is sequential, bounded and retains its real failure status.
+      # A failed visual comparison must not suppress signed session evidence.
+      # A failed transport safety guard blocks ALL subsequent live traffic.
       - name: Compare original Main login — 48 screens and 160 interaction states
+        id: qa_login
+        if: ${{ !cancelled() && steps.qa_transport.outcome == 'success' }}
+        timeout-minutes: 6
         run: npm --prefix modern run login:visual-parity
       - name: Verify seven real roles, four languages and two devices on LIVE modern Worker
+        id: qa_roles
+        if: ${{ !cancelled() && steps.qa_transport.outcome == 'success' }}
+        timeout-minutes: 12
         run: npm --prefix modern run browser:qa
       - name: Exercise 30 DISTINCT signed QA sessions through deployed Hono /api/v1/session
+        id: qa_sessions
+        if: ${{ !cancelled() && steps.qa_transport.outcome == 'success' }}
+        timeout-minutes: 4
         run: npm --prefix modern run sessions:qa
       - name: Compare 44 deep original pages across seven real QA roles before any cutover
+        id: qa_deep
+        if: ${{ !cancelled() && steps.qa_transport.outcome == 'success' }}
+        timeout-minutes: 10
         run: npm --prefix modern run browser:deep-qa
       # One consolidated seven-domain report is produced even when a
       # representative route fails. Failure remains RED; no live provider
@@ -206,11 +224,23 @@ jobs:
           if-no-files-found: error
           retention-days: 5
       - name: Report live browser evidence
-        run: |
-          echo "Modern Main-QA: seven signed roles x four languages x two device types validated against deployed Cloudflare static assets." >> "$GITHUB_STEP_SUMMARY"
-          echo "Also passed 30 distinct signed QA sessions across 7 identities, with a bounded 30-request real Cloudflare Worker peak." >> "$GITHUB_STEP_SUMMARY"
-          echo "Deep-route acceptance: 44 additional authenticated original Main source-control comparisons across seven roles (NL desktop); no forms submitted." >> "$GITHUB_STEP_SUMMARY"
-          echo "No business writes, provider money operations or production release were attempted." >> "$GITHUB_STEP_SUMMARY"
+        if: always()
+        env:
+          QA_VALIDATED_SHA: ${{ github.event.workflow_run.head_sha }}
+          QA_TRANSPORT_OUTCOME: ${{ steps.qa_transport.outcome }}
+          QA_LOGIN_OUTCOME: ${{ steps.qa_login.outcome }}
+          QA_ROLES_OUTCOME: ${{ steps.qa_roles.outcome }}
+          QA_SESSIONS_OUTCOME: ${{ steps.qa_sessions.outcome }}
+          QA_DEEP_OUTCOME: ${{ steps.qa_deep.outcome }}
+        run: node modern/scripts/qa-live-verdict.mjs
+      - name: Upload per-stage live acceptance evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: modern-main-live-verdict
+          path: test-results/modern-live-qa/verdict.json
+          if-no-files-found: error
+          retention-days: 5
       - name: Record new Main-QA runtime outcomes even when candidate browser QA fails
         if: always()
         env:
