@@ -8,7 +8,8 @@ import {createHash} from "node:crypto"
 // all five role-specific login forms: full-black, fixed, non-scrolling.
 // Login semantics, recovery, session handling and original logo stay pinned.
 const baseline = {
- "components/auth/login-form.tsx":"de9c9b26e4c61e381af18e001d7614ca5a76e303",
+ // 2026-11-25: narrowly scoped touch-focus repair; all other original bytes verified unchanged.
+ "components/auth/login-form.tsx":"1723feb2fc0baedac486a0ace5fadc18b8a6ca7c",
  "app/(auth)/login/page.tsx":"28cc96ab2b86bf123e738ab6d321a01cfaec7df0",
  "app/(auth)/login/[portal]/page.tsx":"1778597f285f0f1b43bdecc6ba6454b6e9bd359b",
  "app/(auth)/login/admin/page.tsx":"ae74ccca116a733cc2a969c280fc587d4f9b1d7a",
