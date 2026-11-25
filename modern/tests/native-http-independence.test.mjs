@@ -34,6 +34,7 @@ test("native deployed auth never accepts the historical MAIN_AUTH HTTP fetch bin
 test("provider credential RPC is scoped, exact QA only, never falls back to HTTP or exposes mail values",async()=>{
  const result=mainGeoapifyRuntimeConfiguration({NEXT_PUBLIC_SUPABASE_URL:qa,GEOAPIFY_API_KEY:" fixture ",RESEND_API_KEY:"private",SUPABASE_SERVICE_ROLE_KEY:"never"})
  assert.deepEqual(result,{protocol:"main-geoapify-native-v1",projectUrl:qa,key:"fixture"})
+ assert.deepEqual(mainGeoapifyRuntimeConfiguration({GEOAPIFY_API_KEY:"fixture"}),result)
  assert.throws(()=>mainGeoapifyRuntimeConfiguration({NEXT_PUBLIC_SUPABASE_URL:"https://production.invalid"}))
  let calls=0
  const binding={runtimeConfiguration:async()=>{throw Error("mail config must not be read")},
