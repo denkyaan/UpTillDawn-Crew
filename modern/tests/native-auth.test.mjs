@@ -87,3 +87,35 @@ test('native auth denies missing portal rights and blocked accounts, and clears 
   }
  }finally{globalThis.fetch=previous;console.error=originalError}
 })
+
+test('native Maker sign-in keeps owner authority separate from the permanent staff role across all five portals',async()=>{
+ const previous=globalThis.fetch,originalError=console.error
+ console.error=(...args)=>{if(args[0]!=='[security-email] RESEND_API_KEY ontbreekt')originalError(...args)}
+ try{
+  for(const portal of ['staff','responsible','admin','promotion','administration']){
+   const roles=[]
+   globalThis.fetch=async(input,init)=>{
+    const req=new Request(input,init),url=new URL(req.url)
+    assert.equal(url.origin,MAIN_QA_PROJECT)
+    if(url.pathname==='/auth/v1/token')return Response.json({access_token:jwt,token_type:'bearer',refresh_token:'synthetic-refresh',expires_in:3600,user:{id:uid,email:'fixture@example.invalid',app_metadata:{},user_metadata:{}}})
+    assert.equal(req.headers.get('authorization'),'Bearer '+jwt)
+    if(url.pathname.endsWith('/upt_current_profile'))return Response.json([{id:uid,full_name:'Maker fixture',approved:true,account_blocked:false,role:'staff'}])
+    if(url.pathname.endsWith('/upt_current_is_owner'))return Response.json(true)
+    if(url.pathname.endsWith('/upt_set_admin_role_mode')){
+     const {p_role}=await req.json();roles.push(p_role);return Response.json(p_role)
+    }
+    if(url.pathname.endsWith('/upt_admin_login_success'))return Response.json(true)
+    throw Error('Unexpected Maker login request '+url.pathname)
+   }
+   const result=await nativeOriginalAuth(request(undefined,{portal,email:'fixture@example.invalid',password:'synthetic-password'}),binding,key)
+   assert.equal(result.status,200)
+   const destination=['promotion','administration'].includes(portal)?'/portals/'+portal:'/maker-mode?portal='+portal
+   assert.deepEqual(await result.json(),{success:true,redirectTo:destination})
+   assert.deepEqual(roles,[['admin','administration'].includes(portal)?'admin':portal==='responsible'?'responsible_lead':'staff'])
+   assert.ok(result.headers.getSetCookie().some(c=>c.startsWith('sb-npbjrtiolqperdgljnhi-auth-token')))
+   // God authority is issued only after the separate Maker action, never by
+   // the normal portal login. No role assignment or real account mutation.
+   assert.ok(!result.headers.getSetCookie().some(c=>c.startsWith('uptilldawn-god-session=')))
+  }
+ }finally{globalThis.fetch=previous;console.error=originalError}
+})

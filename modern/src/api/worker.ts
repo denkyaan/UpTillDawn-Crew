@@ -672,8 +672,8 @@ app.get("/api/v1/integrations/status",async c=>{
   .map(x=>({provider:x.provider,updatedAt:safeText(x.updated_at,60)}))
  return c.json({configured,connectionFlow:"requires_configured_provider_oauth",
   oauthReady:{
-   sumup:oauthReady(c.env,"sumup",c.req.url),
-   peppol:oauthReady(c.env,"peppol",c.req.url)
+   sumup:c.env.UPT_MIGRATION_ALLOW_WRITES==="true"&&oauthReady(c.env,"sumup",c.req.url),
+   peppol:c.env.UPT_MIGRATION_ALLOW_WRITES==="true"&&oauthReady(c.env,"peppol",c.req.url)
   }
  })
 })
@@ -714,6 +714,10 @@ async function managedOauthActor(c:Parameters<typeof scopedActor>[0]){
 // POST only: Authorization bearer + Origin must match the operator-configured
 // HTTPS origin. OAuth client secrets and encryption keys never leave Worker.
 app.post("/api/v1/integrations/oauth/start",async c=>{
+ if(!/^Bearer [A-Za-z0-9._~+-]{30,8192}$/.test(c.req.header("Authorization")||""))
+  return c.json({error:"authentication_required"},401)
+ if(c.env.UPT_MIGRATION_ALLOW_WRITES!=="true"||c.env.UPT_MIGRATION_OAUTH_ENABLED!=="true")
+  return c.json({error:"migration_writes_disabled"},503)
  const actor=await managedOauthActor(c)
  if("error" in actor)return c.json({error:actor.error},actor.status)
  const body=await boundedJson(c.req.raw)
@@ -730,6 +734,10 @@ app.post("/api/v1/integrations/oauth/start",async c=>{
 })
 
 app.post("/api/v1/integrations/oauth/complete",async c=>{
+ if(!/^Bearer [A-Za-z0-9._~+-]{30,8192}$/.test(c.req.header("Authorization")||""))
+  return c.json({error:"authentication_required"},401)
+ if(c.env.UPT_MIGRATION_ALLOW_WRITES!=="true"||c.env.UPT_MIGRATION_OAUTH_ENABLED!=="true")
+  return c.json({error:"migration_writes_disabled"},503)
  const actor=await managedOauthActor(c)
  if("error" in actor)return c.json({error:actor.error},actor.status)
  const body=await boundedJson(c.req.raw)
@@ -809,7 +817,7 @@ app.post("/api/v1/tickets/weeztix/scan",async c=>{
  const header=c.req.header("Authorization")||""
  if(!/^Bearer [A-Za-z0-9._~+-]{30,8192}$/.test(header))
   return c.json({ok:false,code:"unauthorized"},401)
- if(!scannerReady(c.env,c.req.url))
+ if(c.env.UPT_MIGRATION_ALLOW_WRITES!=="true"||!scannerReady(c.env,c.req.url))
   return c.json({ok:false,code:"scanner_disabled"},503)
  const origin=scannerOrigin(c.env,c.req.url)
  if(!origin||c.req.header("Origin")!==origin)
