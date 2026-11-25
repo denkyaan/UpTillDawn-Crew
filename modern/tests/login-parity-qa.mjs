@@ -29,7 +29,16 @@ const capture=async(page,label,side)=>{
  const result=await stableLoginScreenshot(page)
  if(result.captures>2)recoveredFrames.push({label,side,captures:result.captures})
  if(!result.stable)unstableFrames.push({label,side,captures:result.captures})
- return result
+ const layout=await page.evaluate(()=>{
+  const selectors=["html","body",".auth-layout",".auth-layout-content",".auth-portal-screen",".auth-portal-content",".auth-portal-logo-frame",".auth-portal-logo",".auth-portal-card",".auth-portal-heading","form","input[name=email]","input[name=password]","button[aria-expanded]",".auth-portal-menu",".auth-portal-language","select"]
+  return Object.fromEntries(selectors.map(selector=>{
+   const el=document.querySelector(selector)
+   if(!el)return [selector,null]
+   const rect=el.getBoundingClientRect(),style=getComputedStyle(el)
+   return [selector,{x:rect.x,y:rect.y,width:rect.width,height:rect.height,font:style.fontFamily,size:style.fontSize,line:style.lineHeight,weight:style.fontWeight,color:style.color,background:style.backgroundColor,overflow:style.overflow,display:style.display,position:style.position,padding:style.padding,margin:style.margin,transform:style.transform,focus:el===document.activeElement}]
+  }))
+ })
+ return {...result,layout}
 }
 function recordFailure(label,reason){
  failures.push({label,reason})
@@ -42,6 +51,8 @@ async function comparePair(legacy,modern,label,name){
   await mkdir(reportDir,{recursive:true})
   await writeFile(resolve(reportDir,name+"-legacy.png"),legacy.pixels)
   await writeFile(resolve(reportDir,name+"-modern.png"),modern.pixels)
+  const differences=Object.keys(legacy.layout||{}).filter(key=>JSON.stringify(legacy.layout[key])!==JSON.stringify(modern.layout?.[key])).map(key=>({selector:key,original:legacy.layout[key],candidate:modern.layout?.[key]}))
+  console.error("LOGIN_LAYOUT_DIFFERENCES "+label+" "+JSON.stringify(differences))
   recordFailure(label,!legacy.stable||!modern.stable?"LOGIN_UNSTABLE_RENDER":"LOGIN_PIXEL_PARITY_FAILED")
   return false
  }

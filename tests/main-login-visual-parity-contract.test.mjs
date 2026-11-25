@@ -68,7 +68,7 @@ test("user-approved five portal forms are black fixed-screen and prevent documen
   ".auth-layout:has(.auth-portal-screen)",".auth-layout-content:has(.auth-portal-screen)",
   ".auth-layout:has(.auth-portal-screen) > footer","height: 100dvh;",
   "overflow: hidden;","background: #000;","auth-portal-content","auth-portal-card",
-  "auth-portal-logo-frame","auth-portal-language",":focus-within",
+  "auth-portal-logo-frame","auth-portal-language",':has(.auth-portal-card input:not([type="hidden"]):focus)',
   "env(safe-area-inset-top)","env(safe-area-inset-bottom)"])
   assert.ok(css.includes(contract),"Missing scoped fixed black login contract "+contract)
  for(const unchanged of ["signInFromStaticShell","handleSubmit","data-login-hydrated",
@@ -99,4 +99,16 @@ test("modern candidate must use original logo bytes, but must NOT claim login or
  const existingMain=read("app/(app)/page.tsx")
  assert.ok(!existingMain.includes("modernMainCopy"))
  assert.ok(!existingMain.includes("uptilldawn-modern-main.uptilldawn.workers.dev"))
+})
+
+
+test("mobile keyboard accommodation must not shift the login when a menu or eye button receives focus",()=>{
+ const css=read("app/globals.css")
+ const form=read("components/auth/login-form.tsx")
+ const selector='.auth-portal-screen:has(.auth-portal-card input:not([type="hidden"]):focus)'
+ assert.ok(css.includes(selector+" .auth-portal-content"))
+ assert.ok(css.includes(selector+" .auth-portal-logo-frame"))
+ assert.ok(!css.includes(".auth-portal-screen:focus-within"))
+ assert.ok(form.includes('onPointerDown={event => { if (event.pointerType === "touch") event.preventDefault() }}'))
+ assert.ok(form.includes("setShowPassword(v => !v)"))
 })

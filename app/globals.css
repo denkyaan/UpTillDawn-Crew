@@ -497,12 +497,14 @@ body:has(.auth-portal-screen) {
 /* iOS keyboard: the page remains fixed/black. Allow only the contained
    login controls to move into view while an input is focused, never the
    document or other portals. Preserve pinch zoom and input focus. */
+/* Only credential focus represents a possible on-screen keyboard. Focusing
+   the menu or password-visibility button must not move its touch target. */
 @media (hover: none) and (pointer: coarse) {
-  .auth-portal-screen:focus-within .auth-portal-content {
+  .auth-portal-screen:has(.auth-portal-card input:not([type="hidden"]):focus) .auth-portal-content {
     overflow-y: auto;
     overscroll-behavior: contain;
   }
-  .auth-portal-screen:focus-within .auth-portal-logo-frame {
+  .auth-portal-screen:has(.auth-portal-card input:not([type="hidden"]):focus) .auth-portal-logo-frame {
     height: 0;
     flex-basis: 0;
     overflow: hidden;
