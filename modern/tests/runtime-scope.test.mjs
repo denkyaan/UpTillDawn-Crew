@@ -39,3 +39,15 @@ test("standalone auth and signed routes accept only the exact runtime scope, wit
   assert.equal((await nativeMainAuthResponse(login(MAIN_ORIGIN),prod)).status,503)
  }finally{globalThis.fetch=original}
 })
+
+test("foreign Supabase cookie cannot trigger a session lookup across Main and Production",async()=>{
+ const original=globalThis.fetch
+ let requests=0
+ globalThis.fetch=async()=>{requests++;throw Error("unexpected network call")}
+ try{
+  for(const [origin,env,foreign] of [[MAIN_ORIGIN,main,"eakoavcieossazqzplke"],[PRODUCTION_ORIGIN,prod,"npbjrtiolqperdgljnhi"]]){
+   assert.deepEqual(await sourceReadSession(new Request(origin+"/api/push/config",{headers:{Cookie:"sb-"+foreign+"-auth-token.0=fixture"}}),env),{ok:false,status:401})
+  }
+  assert.equal(requests,0)
+ }finally{globalThis.fetch=original}
+})

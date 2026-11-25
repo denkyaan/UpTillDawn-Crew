@@ -108,8 +108,9 @@ export async function forwardMainAuth(request:Request,env:MainAuthBindings):Prom
  const runtime=response.headers.get('x-uptilldawn-auth-runtime');if(runtime)output.set('X-UpTillDawn-Auth-Runtime',runtime)
  const location=response.headers.get("location")
  if(location){
-  const target=new URL(location,scope.appOrigin)
-  if((!callback&&!adminLogin)||target.origin!==scope.appOrigin)return rejected(502,"invalid_auth_redirect")
+  let target:URL
+  try{target=new URL(location,scope.appOrigin)}catch{return rejected(502,"invalid_auth_redirect")}
+  if((!callback&&!adminLogin)||target.origin!==scope.appOrigin||target.username||target.password||target.pathname.startsWith("//"))return rejected(502,"invalid_auth_redirect")
   // Callback exchanges the same QA auth code/OTP, then returns to this host.
   output.set("Location",url.origin+target.pathname+target.search+target.hash)
  }else if(!(response.headers.get("content-type")||"").includes("application/json"))return rejected(503,"auth_temporarily_unavailable")

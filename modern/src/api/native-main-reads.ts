@@ -22,7 +22,9 @@ export async function sourceReadSession(request:Request,env:Environment):Promise
  if(!runtimeForRequest(request.url,env)||
     !env.SUPABASE_ANON_KEY?.startsWith("sb_publishable_"))return {ok:false,status:503}
  const cookieHeader=request.headers.get("cookie")||""
- if(!hasOriginalAuthCookie(cookieHeader))return {ok:false,status:401}
+ const project=new URL(env.SUPABASE_URL).hostname.split(".")[0]
+ const sessionName="sb-"+project+"-auth-token"
+ if(!parseCookieHeader(cookieHeader).some(c=>(c.name===sessionName||c.name.startsWith(sessionName+".")&&/^\d+$/.test(c.name.slice(sessionName.length+1)))&&Boolean(c.value)))return {ok:false,status:401}
  const jar=new Map(parseCookieHeader(cookieHeader).map(c=>[c.name,c.value??""]))
  const setCookies:string[]=[]
  try{
