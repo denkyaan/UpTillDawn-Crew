@@ -150,7 +150,7 @@ jobs:
       contents: read
     runs-on: ubuntu-latest
     # Explicit opt-in only; give independent bounded stages time to publish evidence.
-    timeout-minutes: 38
+    timeout-minutes: 41
     env:
       E2E_MAIN_MODERN_QA_ORIGIN: https://uptilldawn-modern-main.uptilldawn.workers.dev
       E2E_MAIN_QA_BASE_URL: https://npbjrtiolqperdgljnhi.supabase.co/
@@ -188,7 +188,7 @@ jobs:
       - name: Compare original Main login — 48 screens and 160 interaction states
         id: qa_login
         if: ${{ !cancelled() && steps.qa_transport.outcome == 'success' }}
-        timeout-minutes: 6
+        timeout-minutes: 9
         run: npm --prefix modern run login:visual-parity
       - name: Verify seven real roles, four languages and two devices on LIVE modern Worker
         id: qa_roles

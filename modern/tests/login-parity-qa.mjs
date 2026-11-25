@@ -1,10 +1,11 @@
 // Read-only, exact-visual login cutover gate: existing Main is authoritative.
 // This deliberately FAILS until modern reproduces every Main login screen.
 // No credentials, no real logins, no write requests, no Production endpoints.
-// Run explicitly: npm --prefix modern run login:parity
+// Run explicitly: npm --prefix modern run login:visual-parity
 import {chromium} from "playwright"
 import {mkdir,writeFile} from "node:fs/promises"
 import {resolve} from "node:path"
+import {stableLoginScreenshot} from "../tooling/stable-login-screenshot.mjs"
 const baseline="https://uptilldawn-main.uptilldawn.workers.dev"
 const candidate="https://uptilldawn-modern-main.uptilldawn.workers.dev"
 const routes=["/login","/login/staff","/login/responsible",
@@ -19,12 +20,42 @@ const browser=await chromium.launch({headless:true})
 let comparisons=0
 let interactionComparisons=0
 let lastRoute="unknown"
+const failures=[]
+const unstableFrames=[]
+const recoveredFrames=[]
+const capture=async(page,label,side)=>{
+ const result=await stableLoginScreenshot(page)
+ if(result.captures>2)recoveredFrames.push({label,side,captures:result.captures})
+ if(!result.stable)unstableFrames.push({label,side,captures:result.captures})
+ return result
+}
+function recordFailure(label,reason){
+ failures.push({label,reason})
+ console.error("LOGIN_CASE_FAILED "+label+" "+reason)
+}
+async function comparePair(legacy,modern,label,name){
+ // Activate each document and let its compositor settle before capturing.
+ // Strict byte equality is mandatory: no mask, tolerance or changed pixels.
+ const a=await capture(legacy.page,label,"legacy")
+ const b=await capture(modern.page,label,"modern")
+ legacy.pixels=a.pixels
+ modern.pixels=b.pixels
+ if(!a.stable||!b.stable||!legacy.pixels.equals(modern.pixels)){
+  await mkdir(reportDir,{recursive:true})
+  await writeFile(resolve(reportDir,name+"-legacy.png"),legacy.pixels)
+  await writeFile(resolve(reportDir,name+"-modern.png"),modern.pixels)
+  recordFailure(label,!a.stable||!b.stable?"LOGIN_UNSTABLE_RENDER":"LOGIN_PIXEL_PARITY_FAILED")
+  return false
+ }
+ return true
+}
 async function visit(context,origin,path,lang){
  const page=await context.newPage()
  const unsafe=[]
  page.on("request",req=>{
   if(!["GET","HEAD"].includes(req.method()))unsafe.push(req.method()+" "+new URL(req.url()).pathname)
  })
+ try{
  const response=await page.goto(origin+path,{waitUntil:"networkidle",timeout:25000})
  if(response?.status()!==200)throw Error("LOGIN_HTTP_NOT_200 "+origin+path+" "+response?.status())
  const switcher=page.locator("select")
@@ -76,8 +107,13 @@ async function visit(context,origin,path,lang){
  await page.locator("h1").click({force:true})
  await page.mouse.move(0,0)
  await page.evaluate(()=>scrollTo(0,0))
- const pixels=await page.screenshot({fullPage:true,animations:"disabled",caret:"hide"})
- return {page,pixels}
+ return {page,pixels:null,assertReadOnly:()=>{
+  if(unsafe.length)throw Error("LOGIN_READ_ONLY_TEST_SAW_MUTATION "+unsafe[0])
+ }}
+ }catch(error){
+  await page.close()
+  throw error
+ }
 }
 try{
  for(const device of devices){
@@ -94,40 +130,56 @@ try{
      try{
       legacy=await visit(context,baseline,route,lang)
       modern=await visit(context,candidate,route,lang)
-      if(!legacy.pixels.equals(modern.pixels)){
-       await mkdir(reportDir,{recursive:true})
-       const name=(device.name+"-"+lang+"-"+route.slice(1).replaceAll("/","-")).replace(/[^a-z0-9-]/gi,"")
-       await legacy.page.screenshot({path:resolve(reportDir,name+"-legacy.png"),fullPage:true,animations:"disabled"})
-       await modern.page.screenshot({path:resolve(reportDir,name+"-modern.png"),fullPage:true,animations:"disabled"})
-       throw Error("LOGIN_PIXEL_PARITY_FAILED "+lastRoute+" (two anonymous comparison screenshots saved)")
-      }
-      comparisons++
+      const name=(device.name+"-"+lang+"-"+route.slice(1).replaceAll("/","-")).replace(/[^a-z0-9-]/gi,"")
+      const failuresBefore=failures.length
+      if(await comparePair(legacy,modern,lastRoute+" base",name))comparisons++
       if(route!=="/login"){
-       // Match visible interactive states too. Empty fields only: no login,
-       // recovery email, synthetic credential POST or business write occurs.
+       // Compare every interactive state even after a pixel mismatch. A
+       // broken interaction is recorded and the next route remains independent.
        for(const state of ["menu","password-visible","email-focus","password-focus"]){
-        for(const current of [legacy,modern]){
-         if(state==="menu")await current.page.locator("button[aria-expanded]").click()
-         if(state==="password-visible")await current.page.locator('button[aria-label]').filter({has:current.page.locator("svg.lucide-eye")}).click()
-         if(state==="email-focus")await current.page.locator('input[name="email"]').focus()
-         if(state==="password-focus")await current.page.locator('input[name="password"]').focus()
-         await current.page.mouse.move(0,0)
-         await current.page.evaluate(()=>scrollTo(0,0))
-         current.pixels=await current.page.screenshot({fullPage:true,animations:"disabled",caret:"hide"})
+        try{
+         for(const current of [legacy,modern]){
+          await current.page.bringToFront()
+          if(state==="menu"){
+           const menu=current.page.locator("button[aria-expanded]")
+           await menu.click()
+           if(await menu.getAttribute("aria-expanded")!=="true")throw Error("LOGIN_MENU_DID_NOT_OPEN")
+          }
+          if(state==="password-visible"){
+           await current.page.locator('button[aria-label]').filter({has:current.page.locator("svg.lucide-eye")}).click()
+           if(await current.page.locator('input[name="password"]').getAttribute("type")!=="text")throw Error("LOGIN_SHOW_PASSWORD_BROKEN")
+          }
+          if(state==="email-focus"||state==="password-focus"){
+           const input=current.page.locator('input[name="'+(state==="email-focus"?"email":"password")+'"]')
+           await input.focus()
+           if(!await input.evaluate(el=>document.activeElement===el))throw Error("LOGIN_INPUT_FOCUS_BROKEN")
+          }
+          await current.page.mouse.move(0,0)
+          await current.page.evaluate(()=>scrollTo(0,0))
+         }
+         if(await comparePair(legacy,modern,lastRoute+" "+state,name+"-"+state))interactionComparisons++
+        }catch(error){
+         recordFailure(lastRoute+" "+state,error instanceof Error?error.message.split("\n")[0]:"LOGIN_INTERACTION_FAILED")
+        }finally{
+         // Restore both pages, including when only one side opened.
+         for(const current of [legacy,modern]){
+          if(state==="menu"){
+           const menu=current.page.locator("button[aria-expanded]")
+           if(await menu.getAttribute("aria-expanded")==="true")await menu.click()
+          }
+          if(state==="password-visible"){
+           const visible=current.page.locator('button[aria-label]').filter({has:current.page.locator("svg.lucide-eye-off")})
+           if(await visible.count()===1)await visible.click()
+          }
+         }
         }
-        if(!legacy.pixels.equals(modern.pixels)){
-         await mkdir(reportDir,{recursive:true})
-         const name=(device.name+"-"+lang+"-"+route.slice(1).replaceAll("/","-")+"-"+state)
-         await writeFile(resolve(reportDir,name+"-legacy.png"),legacy.pixels)
-         await writeFile(resolve(reportDir,name+"-modern.png"),modern.pixels)
-         throw Error("LOGIN_PIXEL_PARITY_FAILED "+lastRoute+" "+state)
-        }
-        interactionComparisons++
-        if(state==="menu")for(const current of [legacy,modern])await current.page.locator("button[aria-expanded]").click()
-        if(state==="password-visible")for(const current of [legacy,modern])await current.page.locator('button[aria-label]').filter({has:current.page.locator("svg.lucide-eye-off")}).click()
        }
       }
-      console.log("PASS login screenshot "+lastRoute)
+      legacy.assertReadOnly()
+      modern.assertReadOnly()
+      if(failures.length===failuresBefore)console.log("PASS login screenshot "+lastRoute)
+     }catch(error){
+      recordFailure(lastRoute,error instanceof Error?error.message.split("\n")[0]:"LOGIN_ROUTE_FAILED")
      }finally{
       await legacy?.page.close()
       await modern?.page.close()
@@ -136,15 +188,18 @@ try{
    }finally{await context.close()}
   }
  }
- if(comparisons!==48)throw Error("LOGIN_COVERAGE_INCOMPLETE "+comparisons+"/48")
- if(interactionComparisons!==160)throw Error("LOGIN_INTERACTION_COVERAGE_INCOMPLETE")
- const report={loginVisualParityVerified:true,
+ const exactCoverage=comparisons===48&&interactionComparisons===160&&failures.length===0
+ const report={loginVisualParityVerified:exactCoverage,
   exactScreens:routes.length,locales:languages.length,devices:devices.length,
   screenshotPairs:comparisons,interactionScreenshotPairs:interactionComparisons,authenticationNotExercised:true,
+  expectedScreenshotPairs:48,expectedInteractionScreenshotPairs:160,
+  comparisonMethod:"stable-exact-png",pixelTolerance:0,failures,unstableFrames,recoveredFrames,
   functionalAuthParityVerified:false,productionReady:false}
  await mkdir(reportDir,{recursive:true})
  await writeFile(resolve(reportDir,"report.json"),JSON.stringify(report,null,2))
  console.log(JSON.stringify(report))
+ if(comparisons!==48||interactionComparisons!==160||failures.length)
+  throw Error("LOGIN_PIXEL_PARITY_FAILED "+failures.length+" cases; exact screens "+comparisons+"/48, interactions "+interactionComparisons+"/160")
 }finally{
  await browser.close()
 }

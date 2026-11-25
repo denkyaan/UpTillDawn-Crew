@@ -43,7 +43,8 @@ test("legacy login remains the only public Main entry until screenshot AND auth 
   '"/login/staff"','"/login/responsible"','"/login/admin"',
   '"/login/promotion"','"/login/administration"',
   '"nl","fr","en","de"','"desktop"','"mobile"',
-  "pixels.equals(modern.pixels)","comparisons!==48",
+  "pixels.equals(modern.pixels)","comparisons!==48","interactionComparisons!==160",
+  "stableLoginScreenshot","pixelTolerance:0","LOGIN_UNSTABLE_RENDER",
   "Login".toUpperCase().replace("LOGIN","LOGIN_PIXEL_PARITY_FAILED"),
  ]) assert.ok(harness.includes(fragment),"Login parity gate missing: "+fragment)
  assert.ok(!harness.includes("signInWithPassword"))
