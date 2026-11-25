@@ -105,12 +105,32 @@ async function remove(table,event,field,allowed){
  const remaining=await rows(service.from(table).select("id").eq("event_id",event.id).in(field,allowed),"VERIFY_"+table)
  assert.equal(remaining.length,0,"CLEANUP_RESIDUAL_"+table)
 }
+// The original booking-note update creates a RESTRICT-linked audit row.
+ // Only the exact unpublished QA fixture's note audit may be removed.
+async function removeFixtureBooking(event){
+ const bookings=await rows(service.from("admin_artist_bookings").select("id,created_by,status").eq("event_id",event.id).eq("artist_name",bookingName),"FIND_FIXTURE_BOOKING")
+ for(const booking of bookings){
+  if(booking.created_by!==office.id||!["enquiry","negotiating"].includes(booking.status))throw Error("CLEANUP_BOOKING_SCOPE")
+  const communications=await rows(service.from("admin_artist_booking_communications").select("id").eq("booking_id",booking.id),"FIND_FIXTURE_COMMUNICATIONS")
+  if(communications.length)throw Error("CLEANUP_UNEXPECTED_COMMUNICATIONS")
+  const audit=await rows(service.from("admin_artist_booking_note_audit").select("id,actor_id,previous_length,new_length").eq("booking_id",booking.id),"FIND_FIXTURE_NOTE_AUDIT")
+  if(audit.length>1||audit.some(row=>row.actor_id!==office.id||row.previous_length!==0||row.new_length!=="QA draft notes".length))throw Error("CLEANUP_NOTE_AUDIT_SCOPE")
+  for(const row of audit){
+   const removed=await rows(service.from("admin_artist_booking_note_audit").delete().eq("id",row.id).eq("booking_id",booking.id).eq("actor_id",office.id).eq("previous_length",0).eq("new_length","QA draft notes".length).select("id"),"DELETE_FIXTURE_NOTE_AUDIT")
+   assert.equal(removed.length,1,"CLEANUP_NOTE_AUDIT_COUNT")
+  }
+  assert.equal((await rows(service.from("admin_artist_booking_note_audit").select("id").eq("booking_id",booking.id),"VERIFY_FIXTURE_NOTE_AUDIT")).length,0,"CLEANUP_NOTE_AUDIT_RESIDUAL")
+  const removed=await rows(service.from("admin_artist_bookings").delete().eq("id",booking.id).eq("event_id",event.id).eq("artist_name",bookingName).eq("created_by",office.id).eq("status",booking.status).select("id"),"DELETE_FIXTURE_BOOKING")
+  assert.equal(removed.length,1,"CLEANUP_BOOKING_COUNT")
+ }
+ assert.equal((await rows(service.from("admin_artist_bookings").select("id").eq("event_id",event.id).eq("artist_name",bookingName),"VERIFY_FIXTURE_BOOKING")).length,0,"CLEANUP_BOOKING_RESIDUAL")
+}
 async function cleanup(){
  if(!office)throw Error("CLEANUP_IDENTITY_UNVERIFIED")
  for(const event of await findFixtures()){
   assert.equal(event.created_by,office.id)
   assert.ok(names.includes(event.name))
-  await remove("admin_artist_bookings",event,"artist_name",[bookingName])
+  await removeFixtureBooking(event)
   await remove("briefings",event,"title",briefingTitles)
   await remove("workplaces",event,"name",workplaceNames)
   // Event removal only after rechecking the exact owner, draft status and name.
@@ -198,8 +218,11 @@ try{
  console.error("FAIL native fixture "+failed)
 }finally{
  try{await cleanup()}catch(error){
-  failed=(failed?failed+" | ":"")+"cleanup:"+(error instanceof Error?error.name:"Error")
-  console.error("FAIL native fixture cleanup")
+  // Emit only controlled cleanup labels and SQLSTATE codes, never DB payloads.
+  const label=error instanceof Error?error.message.split("\n")[0]:""
+  const detail=/^(?:CLEANUP_[A-Z0-9_]+|FIND_[A-Za-z0-9_]+|DELETE_[A-Za-z0-9_]+|VERIFY_[A-Za-z0-9_]+|REFUSE_[A-Z0-9_]+|NATIVE_FIXTURE_RESIDUAL|CHECK_DELETE_[A-Z0-9_]+)(?:\b|$)/.test(label)?label.match(/^[A-Za-z0-9_]+/)[0]:"CLEANUP_UNCLASSIFIED"
+  failed=(failed?failed+" | ":"")+"cleanup:"+detail
+  console.error("FAIL native fixture cleanup "+detail)
  }
  for(const identity of sessions)try{await identity.db.auth.signOut({scope:"local"})}catch{}
  await mkdir(reportDir,{recursive:true})

@@ -626,7 +626,7 @@ export default async function FinancePage({searchParams}:{searchParams:Promise<{
  const draftCount=ledgerSummary.data.drafts as string
  const today=new Intl.DateTimeFormat('en-CA',{timeZone:'Europe/Brussels',year:'numeric',month:'2-digit',day:'2-digit'}).format(new Date())
  return <main className="mx-auto max-w-5xl space-y-6 p-4 pb-28 md:p-8">
-  <Link className="text-violet-400" href="/portals/administration">← {t.back}</Link>
+  <Link prefetch={false} className="text-violet-400" href="/portals/administration">← {t.back}</Link>
   <header><h1 className="text-3xl font-black">{t.title}</h1><p className="mt-2 text-muted-foreground">{t.intro}</p></header>
   <section className="rounded-2xl border bg-card p-5"><h2 className="mb-3 font-bold">{t.totals}</h2><div className="grid gap-3 sm:grid-cols-4">{[[t.count,String(ledgerSummary.data.documents)],[t.draft,String(draftCount)],[t.outstanding,exactMoney(unpaidTotal)],[t.paid,exactMoney(paidTotal)]].map(([label,value])=><div key={label} className="rounded-lg border p-3"><p className="text-sm text-muted-foreground">{label}</p><strong>{value}</strong></div>)}</div></section>
   <section className="rounded-2xl border bg-card p-5 space-y-3">

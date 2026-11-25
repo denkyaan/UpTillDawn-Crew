@@ -29,14 +29,14 @@ export default async function PortalPage({ params }: { params: Promise<{ portal:
   const { data, error } = !current.realIsAdmin && !current.isOwner
     ? await currentPortalAssignments()
     : { data: [] as PortalAssignment[], error: null }
-  if (error && !current.realIsAdmin && !current.isOwner) return <main className="p-6"><h1 className="text-xl font-bold">{t.unavailable}</h1><p className="mt-3">{t.unavailableDesc}</p><Link href="/portals" className="mt-4 inline-block text-violet-400">{t.returnToPortals}</Link></main>
+  if (error && !current.realIsAdmin && !current.isOwner) return <main className="p-6"><h1 className="text-xl font-bold">{t.unavailable}</h1><p className="mt-3">{t.unavailableDesc}</p><Link prefetch={false} href="/portals" className="mt-4 inline-block text-violet-400">{t.returnToPortals}</Link></main>
   if (!current.realIsAdmin && !current.isOwner && !canOpenPortal(portal, (data ?? []) as PortalAssignment[], {
     approved: current.approved,
     blocked: current.account_blocked === true,
   })) return <main className="mx-auto max-w-3xl space-y-4 p-6" role="alert">
     <h1 className="text-2xl font-bold">{({nl:"Geen toegang tot dit portaal",fr:"Accès à ce portail refusé",en:"No access to this portal",de:"Kein Zugang zu diesem Portal"} as const)[locale]}</h1>
     <p>{({nl:"Je account heeft geen goedgekeurde rol voor dit portaal. Controleer je portaalrollen of vraag een beheerder om toegang.",fr:"Votre compte ne possède pas de rôle approuvé pour ce portail. Vérifiez vos rôles ou contactez un administrateur.",en:"Your account has no approved role for this portal. Check your portal roles or contact an administrator.",de:"Dein Konto hat keine genehmigte Rolle für dieses Portal. Prüfe deine Portalrollen oder kontaktiere einen Administrator."} as const)[locale]}</p>
-    <Link href="/portals/roles" className="inline-flex rounded-lg border border-violet-500 px-4 py-2 text-violet-400">{({nl:"Mijn portaalrollen",fr:"Mes rôles de portail",en:"My portal roles",de:"Meine Portalrollen"} as const)[locale]}</Link>
+    <Link prefetch={false} href="/portals/roles" className="inline-flex rounded-lg border border-violet-500 px-4 py-2 text-violet-400">{({nl:"Mijn portaalrollen",fr:"Mes rôles de portail",en:"My portal roles",de:"Meine Portalrollen"} as const)[locale]}</Link>
   </main>
 
   if ((!current.approved || current.account_blocked === true) && !current.isOwner) redirect('/portals')
@@ -60,18 +60,18 @@ export default async function PortalPage({ params }: { params: Promise<{ portal:
     <section className="rounded-2xl border bg-card p-5">
      <h2 className="font-semibold">{t.chats}</h2>
      <p className="mt-2 text-sm text-muted-foreground">{t.chatDesc}</p>
-     {promotionChats?.length?<ul className="mt-3 space-y-2">{promotionChats.map(channel=><li key={channel.id}><Link href={`/chat?channel=${encodeURIComponent(channel.id)}`} className="text-violet-400 underline">{channel.name}</Link></li>)}</ul>:<p className="mt-3 text-sm text-muted-foreground">{t.promoChatEmpty}</p>}
-     <Link href="/chat" className="mt-4 inline-flex rounded-lg bg-violet-600 px-4 py-2 text-sm font-medium text-white">{t.chatLink}</Link>
+     {promotionChats?.length?<ul className="mt-3 space-y-2">{promotionChats.map(channel=><li key={channel.id}><Link prefetch={false} href={`/chat?channel=${encodeURIComponent(channel.id)}`} className="text-violet-400 underline">{channel.name}</Link></li>)}</ul>:<p className="mt-3 text-sm text-muted-foreground">{t.promoChatEmpty}</p>}
+     <Link prefetch={false} href="/chat" className="mt-4 inline-flex rounded-lg bg-violet-600 px-4 py-2 text-sm font-medium text-white">{t.chatLink}</Link>
     </section>
     <section className="rounded-2xl border bg-card p-5">
      <h2 className="font-semibold">{t.tasks}</h2>
      <p className="mt-2 text-sm text-muted-foreground">{t.taskDesc}</p>
-     <Link href="/tasks" className="mt-4 inline-flex rounded-lg bg-violet-600 px-4 py-2 text-sm font-medium text-white">{t.taskLink}</Link>
+     <Link prefetch={false} href="/tasks" className="mt-4 inline-flex rounded-lg bg-violet-600 px-4 py-2 text-sm font-medium text-white">{t.taskLink}</Link>
     </section>
     <section className="rounded-2xl border bg-card p-5">
      <h2 className="font-semibold">{t.meldingen}</h2>
      <p className="mt-2 text-sm text-muted-foreground">{t.meldingenDesc}</p>
-     <Link href="/notifications" className="mt-4 inline-flex rounded-lg bg-violet-600 px-4 py-2 text-sm font-medium text-white">{t.meldingenLink}</Link>
+     <Link prefetch={false} href="/notifications" className="mt-4 inline-flex rounded-lg bg-violet-600 px-4 py-2 text-sm font-medium text-white">{t.meldingenLink}</Link>
     </section>
    </div>
   </main>

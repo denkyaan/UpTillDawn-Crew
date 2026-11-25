@@ -81,7 +81,7 @@ export function AdministrationOverviewDashboard({locale,currentUserId,admin}:{lo
    <p role="status" className="text-sm text-muted-foreground">{loadFailed?t.error:
     ({nl:"Actuele statussen laden…",fr:"Chargement des statuts…",en:"Loading live statuses…",de:"Live-Status werden geladen…"} as const)[locale]}</p>
    <section aria-label={t.intro} className="grid gap-2 md:grid-cols-2">
-    {fallback.map(item=><Link key={item.id} href={item.href} data-administration-priority={item.id}
+    {fallback.map(item=><Link prefetch={false} key={item.id} href={item.href} data-administration-priority={item.id}
       className="flex items-center justify-between gap-3 rounded-xl border p-4">
       <span className="font-semibold">{item.label}</span><span className="text-muted-foreground">—</span>
     </Link>)}
@@ -186,7 +186,7 @@ export function AdministrationOverviewDashboard({locale,currentUserId,admin}:{lo
   <section aria-label={w.events} className="rounded-2xl border bg-card p-4 sm:p-5">
    <div className="flex items-center justify-between gap-3">
     <h2 className="text-lg font-bold">{w.events}</h2>
-    <Link className="shrink-0 text-sm font-semibold text-violet-400 hover:underline" href="/portals/administration/modules/events">{w.eventsLink}</Link>
+    <Link prefetch={false} className="shrink-0 text-sm font-semibold text-violet-400 hover:underline" href="/portals/administration/modules/events">{w.eventsLink}</Link>
    </div>
    {upcomingEvents.length?<ul className="mt-3 divide-y">
     {upcomingEvents.map(event=><li key={event.id} className="flex flex-wrap items-center justify-between gap-2 py-3 text-sm">
@@ -205,7 +205,7 @@ export function AdministrationOverviewDashboard({locale,currentUserId,admin}:{lo
      <h3 className="border-b px-4 py-3 text-sm font-bold">{group.title}</h3>
      <ul className="divide-y">
       {priorityItems.filter(item=>item.group===group.key).map(item=><li key={item.id}>
-       <Link href={item.href} data-administration-priority={item.id} className="flex min-h-20 items-center gap-3 px-4 py-3 hover:bg-accent/50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-violet-500">
+       <Link prefetch={false} href={item.href} data-administration-priority={item.id} className="flex min-h-20 items-center gap-3 px-4 py-3 hover:bg-accent/50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-violet-500">
         <span className="min-w-0 flex-1">
          <span className="block text-sm font-semibold">{item.label}</span>
          <span className="mt-1 block break-words text-xs leading-5 text-muted-foreground">{item.error?w.loadError:item.detail}</span>

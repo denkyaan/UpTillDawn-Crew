@@ -28,7 +28,7 @@ export function AdministrationMobileTabs({locale}:{locale:SupportedUiLocale}){
     {selected.slugs.map(slug=>{
      const adminModule=administrationModules.find(item=>item.slug===slug)
      if(!adminModule)return null
-     return <Link key={slug} href={href(slug)} onClick={()=>setExpanded(null)} className={`rounded-xl border p-3 text-sm font-semibold ${pathname===href(slug)?"border-violet-500 bg-violet-600 text-white":"border-border text-foreground hover:border-violet-500"}`}>{adminModule.title[locale]}</Link>
+     return <Link prefetch={false} key={slug} href={href(slug)} onClick={()=>setExpanded(null)} className={`rounded-xl border p-3 text-sm font-semibold ${pathname===href(slug)?"border-violet-500 bg-violet-600 text-white":"border-border text-foreground hover:border-violet-500"}`}>{adminModule.title[locale]}</Link>
     })}
    </div>
   </div>}
@@ -37,7 +37,7 @@ export function AdministrationMobileTabs({locale}:{locale:SupportedUiLocale}){
     const active=expanded===group.id||(!expanded&&current?.id===group.id)
     const Icon=group.icon
     return group.id==="overview"
-     ? <Link key={group.id} href="/portals/administration" onClick={()=>setExpanded(null)} aria-current={pathname==="/portals/administration"?"page":undefined} className={`flex min-h-16 min-w-0 flex-col items-center justify-center gap-1 border-t-2 px-0.5 py-2 text-center text-[9px] font-semibold ${active?"border-violet-500 text-violet-400":"border-transparent text-muted-foreground"}`}><Icon className="h-5 w-5 shrink-0"/><span className="w-full truncate">{group.name[locale]}</span></Link>
+     ? <Link prefetch={false} key={group.id} href="/portals/administration" onClick={()=>setExpanded(null)} aria-current={pathname==="/portals/administration"?"page":undefined} className={`flex min-h-16 min-w-0 flex-col items-center justify-center gap-1 border-t-2 px-0.5 py-2 text-center text-[9px] font-semibold ${active?"border-violet-500 text-violet-400":"border-transparent text-muted-foreground"}`}><Icon className="h-5 w-5 shrink-0"/><span className="w-full truncate">{group.name[locale]}</span></Link>
      : <button key={group.id} type="button" aria-expanded={expanded===group.id} onClick={()=>setExpanded(value=>value===group.id?null:group.id)} className={`flex min-h-16 min-w-0 flex-col items-center justify-center gap-1 border-t-2 px-0.5 py-2 text-center text-[9px] font-semibold ${active?"border-violet-500 text-violet-400":"border-transparent text-muted-foreground"}`}><Icon className="h-5 w-5 shrink-0"/><span className="w-full truncate">{group.name[locale]}</span></button>
    })}
   </nav>

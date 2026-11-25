@@ -61,3 +61,18 @@ test("anonymous login waits for hydration and actual input state; screenshots re
  assert.ok(script.includes("comparisons!==48||interactionComparisons!==160"))
  assert.ok(script.includes("await current?.page.close()"))
 })
+
+
+test("native fixture cleanup removes only its exact owned booking audit before the RESTRICT parent",()=>{
+ const source=read("modern/tests/qa-native-fixture-transactions.mjs")
+ assert.ok(source.includes("booking.created_by!==office.id"))
+ assert.ok(source.includes('eq("event_id",event.id).eq("artist_name",bookingName)'))
+ assert.ok(source.includes("CLEANUP_UNEXPECTED_COMMUNICATIONS"))
+ assert.ok(source.includes("row.actor_id!==office.id"))
+ assert.ok(source.includes('eq("booking_id",booking.id).eq("actor_id",office.id).eq("previous_length",0)'))
+ assert.ok(source.indexOf('from("admin_artist_booking_note_audit").delete()')<source.indexOf('from("admin_artist_bookings").delete()'))
+ assert.ok(source.includes("CLEANUP_NOTE_AUDIT_RESIDUAL"))
+ assert.ok(source.includes("CLEANUP_BOOKING_RESIDUAL"))
+ assert.ok(source.includes("await removeFixtureBooking(event)"))
+ assert.ok(source.includes("CLEANUP_UNCLASSIFIED"))
+})
