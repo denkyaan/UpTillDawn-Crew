@@ -177,6 +177,216 @@ jobs:
           } >> "$GITHUB_STEP_SUMMARY"
       - name: Production dependency security gate
         run: npm audit --omit=dev --audit-level=high
+      # Branch-scoped vinext candidate verification. This is part of CI main,
+      # not a sixth workflow; it cannot deploy to Main or Production.
+      - name: Compile vinext candidate against isolated Main QA configuration (no deployment)
+        if: ${{ github.event_name == 'pull_request' && github.head_ref == 'feature/vinext-auth-parity-free-20261115' }}
+        timeout-minutes: 8
+        env:
+          NEXT_PUBLIC_SUPABASE_URL: https://npbjrtiolqperdgljnhi.supabase.co
+          NEXT_PUBLIC_SUPABASE_ANON_KEY: sb_publishable_zStTw3n8wZ271PehDRDvGg_rs0JOy84
+          NEXT_PUBLIC_APP_URL: http://127.0.0.1:8788
+        shell: bash
+        run: |
+          set -euo pipefail
+          # vinext init changes only this ephemeral CI checkout, not git files.
+          npx --yes vinext@1.4.5 init --platform=cloudflare --name=uptilldawn-main --cdn-cache=none --data-cache=none --image-optimization=none --no-prerender --ignore-wrangler-config
+          # Migrate with patched versions, not the vulnerable defaults
+          # (undici <=7.30.0 and Vite 8.3.0..8.3.2). Keep this in CI only.
+          npm pkg set overrides.undici=7.30.2
+          npm install --save-dev --save-exact vite@8.3.8 --no-audit --no-fund
+          node scripts/prepare-local-ocr.mjs
+          npm run build:vinext
+
+      - name: Audit vinext candidate runtime dependencies after temporary initialization
+        if: ${{ github.event_name == 'pull_request' && github.head_ref == 'feature/vinext-auth-parity-free-20261115' }}
+        timeout-minutes: 3
+        run: npm audit --omit=dev --audit-level=high
+
+      - name: Exercise all seven QA role logins against vinext local preview (no deployment)
+        if: ${{ github.event_name == 'pull_request' && github.head_ref == 'feature/vinext-auth-parity-free-20261115' }}
+        timeout-minutes: 7
+        env:
+          VINEXT_AUTH_POC_BASE_URL: http://127.0.0.1:8788
+          MAIN_QA_BOT_PASSWORD: ${{ secrets.MAIN_QA_BOT_PASSWORD }}
+          NEXT_PUBLIC_SUPABASE_URL: https://npbjrtiolqperdgljnhi.supabase.co
+          NEXT_PUBLIC_SUPABASE_ANON_KEY: sb_publishable_zStTw3n8wZ271PehDRDvGg_rs0JOy84
+          NEXT_PUBLIC_APP_URL: http://127.0.0.1:8788
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [ -z "${MAIN_QA_BOT_PASSWORD:-}" ]; then
+            echo "::error::Missing isolated Main QA password; refusing to treat skipped login checks as a pass"
+            exit 1
+          fi
+          npx playwright install --with-deps chromium
+          npm run start:vinext -- --host 127.0.0.1 --port 8788 >/tmp/vinext-auth-preview.log 2>&1 &
+          preview_pid=$!
+          trap 'kill "$preview_pid" 2>/dev/null || true' EXIT
+          ready=0
+          for attempt in $(seq 1 40); do
+            if ! kill -0 "$preview_pid" 2>/dev/null; then
+              echo "::error::vinext preview process exited prematurely"
+              tail -40 /tmp/vinext-auth-preview.log
+              exit 1
+            fi
+            code="$(curl -sS --max-time 3 -o /dev/null -w '%{http_code}' http://127.0.0.1:8788/login/staff || true)"
+            if [ "$code" = '200' ]; then ready=1; break; fi
+            sleep 2
+          done
+          if [ "$ready" != 1 ]; then
+            echo "::error::vinext preview did not become ready"
+            tail -50 /tmp/vinext-auth-preview.log
+            exit 1
+          fi
+          node scripts/vinext-main-auth-smoke.mjs
+          echo 'vinext local seven-role authorization and browser smoke passed; Cloudflare CPU still unverified'
+
+      - name: Report intentionally disabled Main Preview URL access
+        if: ${{ github.event_name == 'pull_request' && github.head_ref == 'feature/vinext-auth-parity-free-20261115' && vars.UPT_MAIN_PREVIEWS_ALLOWED != 'true' }}
+        shell: bash
+        run: |
+          echo "::notice::Live Cloudflare Free Preview tests were NOT run: Main Worker preview URLs are intentionally disabled. Set up an explicitly authorized Preview host and repository variable UPT_MAIN_PREVIEWS_ALLOWED=true to opt in."
+          echo "VINEXT_CLOUDFLARE_FREE_RUNTIME=UNVERIFIED" >> "$GITHUB_STEP_SUMMARY"
+
+      # A Preview URL must NEVER be enabled without an Access gate protecting
+      # the specific Main Worker. Verify that before any preview upload.
+      # Requires a Cloudflare token with Workers Read and Access Apps Read.
+      - name: Require protected Main Worker Preview before any remote QA upload
+        if: ${{ github.event_name == 'pull_request' && github.head_ref == 'feature/vinext-auth-parity-free-20261115' && vars.UPT_MAIN_PREVIEWS_ALLOWED == 'true' }}
+        timeout-minutes: 3
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          node --input-type=module <<'NODE'
+          const token=process.env.CLOUDFLARE_API_TOKEN
+          const account=process.env.CLOUDFLARE_ACCOUNT_ID
+          if(!token||!account)throw Error('Missing Cloudflare API authentication')
+          async function cf(path){
+            const response=await fetch('https://api.cloudflare.com/client/v4/'+path,{
+              headers:{Authorization:'Bearer '+token}
+            })
+            if(!response.ok)throw Error('Cloudflare Access preflight unavailable (HTTP '+response.status+'); refusing Preview upload')
+            const data=await response.json()
+            if(data.success!==true)throw Error('Cloudflare Access preflight not authorized; refusing Preview upload')
+            return data.result
+          }
+          const workers=await cf('accounts/'+encodeURIComponent(account)+'/workers/workers?per_page=100')
+          const worker=workers?.find?.(item=>item.name==='uptilldawn-main')
+          if(!worker?.id)throw Error('Main Worker identifier not available; refusing Preview upload')
+          const apps=await cf('accounts/'+encodeURIComponent(account)+'/access/apps?per_page=100')
+          let protectedPreview=false
+          for(const app of apps||[]){
+            if(app.type!=='self_hosted'||!app.destinations?.some?.(destination=>
+              destination.type==='preview_worker'&&destination.worker_id===worker.id&&
+              !destination.overrides?.some?.(override=>override.behavior==='public')))continue
+            // Strict Access service tokens require "Service Auth"
+            // (decision=non_identity), not a human-login Allow policy.
+            let policies=app.policies||[]
+            if(!policies.some(p=>p.decision==='non_identity')&&app.id)
+              policies=await cf('accounts/'+encodeURIComponent(account)+'/access/apps/'+encodeURIComponent(app.id)+'/policies')
+            const authorized=policies.some(policy=>
+              policy.decision==='non_identity'&&
+              policy.include?.some?.(rule=>Boolean(rule.service_token||rule.service_token_tag)))
+            if(authorized){protectedPreview=true;break}
+          }
+          if(!protectedPreview)throw Error('Main Worker has no verified previews-only Cloudflare Access Service Auth policy; refusing Preview upload')
+          console.log('Verified Main-only Worker Preview Access policy before remote test upload')
+          NODE
+
+      # Upload a non-promoted version Preview of the existing Main Worker.
+      # This is NOT a new staging environment or sixth workflow; the active
+      # workers.dev Main route and all production bindings remain untouched.
+      - name: Deploy non-promoted vinext Worker Free preview of Main
+        if: ${{ github.event_name == 'pull_request' && github.head_ref == 'feature/vinext-auth-parity-free-20261115' && vars.UPT_MAIN_PREVIEWS_ALLOWED == 'true' }}
+        id: vinext-preview
+        timeout-minutes: 7
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          NEXT_PUBLIC_SUPABASE_URL: https://npbjrtiolqperdgljnhi.supabase.co
+          NEXT_PUBLIC_SUPABASE_ANON_KEY: sb_publishable_zStTw3n8wZ271PehDRDvGg_rs0JOy84
+          NEXT_PUBLIC_APP_URL: https://uptilldawn-main.uptilldawn.workers.dev
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -n "${CLOUDFLARE_API_TOKEN:-}"
+          test -n "${CLOUDFLARE_ACCOUNT_ID:-}"
+          # The local QA build has already run with the isolated Main Supabase.
+          # A Preview upload must never promote the version to live traffic.
+          test -f cloudflare.config.ts
+          if ! grep -q "uptilldawn-main" cloudflare.config.ts; then
+            echo "::error::Generated Worker must be uptilldawn-main, refusing Preview deployment"
+            exit 1
+          fi
+          set +e
+          npx @vinext/cloudflare previews deploy --preview-name qa-free-340 > /tmp/vinext-free-preview.log 2>&1
+          deploy_code=$?
+          set -e
+          if [ "$deploy_code" -ne 0 ]; then
+            echo "::error::Non-promoted vinext Preview upload failed; active Main unchanged"
+            tail -45 /tmp/vinext-free-preview.log | sed -E 's/(Bearer |token=)[^[:space:]]+/\\1[REDACTED]/g'
+            exit "$deploy_code"
+          fi
+          url="$(grep -Eo 'https://[A-Za-z0-9.-]+[.]workers[.]dev' /tmp/vinext-free-preview.log | grep -F 'uptilldawn-main' | tail -n1 || true)"
+          # A failed regex match must trigger this explicit diagnostic, not
+          # terminate earlier through Bash pipefail.
+          if [ -z "$url" ]; then
+            echo "::error::Preview URL not reported by Cloudflare"
+            tail -30 /tmp/vinext-free-preview.log
+            exit 1
+          fi
+          hostname="$(node -e 'process.stdout.write(new URL(process.argv[1]).hostname)' "$url")"
+          case "$hostname" in
+            *-uptilldawn-main.uptilldawn.workers.dev) ;;
+            *) echo "::error::Preview host is not an isolated version of the Main Worker"; exit 1 ;;
+          esac
+          echo "preview_url=$url" >> "$GITHUB_OUTPUT"
+          echo "Non-promoted Cloudflare Free Preview deployed; Main traffic untouched"
+
+      - name: Check live Cloudflare Free preview role entrypoints and protected denial
+        if: ${{ github.event_name == 'pull_request' && github.head_ref == 'feature/vinext-auth-parity-free-20261115' && vars.UPT_MAIN_PREVIEWS_ALLOWED == 'true' }}
+        timeout-minutes: 5
+        env:
+          VINEXT_FREE_PREVIEW_URL: ${{ steps.vinext-preview.outputs.preview_url }}
+          MAIN_QA_CF_ACCESS_CLIENT_ID: ${{ secrets.MAIN_QA_CF_ACCESS_CLIENT_ID }}
+          MAIN_QA_CF_ACCESS_CLIENT_SECRET: ${{ secrets.MAIN_QA_CF_ACCESS_CLIENT_SECRET }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -n "${VINEXT_FREE_PREVIEW_URL:-}"
+          test -n "${MAIN_QA_CF_ACCESS_CLIENT_ID:-}"
+          test -n "${MAIN_QA_CF_ACCESS_CLIENT_SECRET:-}"
+          for portal in staff responsible promotion administration admin; do
+            # Never use -L: redirecting the request could disclose Access headers
+            # to another origin. A valid protected route must itself return 200.
+            status="$(curl --max-time 20 --retry 2 --retry-all-errors -sS -o /dev/null -w '%{http_code}' -H "CF-Access-Client-Id: ${MAIN_QA_CF_ACCESS_CLIENT_ID}" -H "CF-Access-Client-Secret: ${MAIN_QA_CF_ACCESS_CLIENT_SECRET}" "${VINEXT_FREE_PREVIEW_URL}/login/$portal")"
+            if [ "$status" != 200 ]; then
+              echo "::error::Cloudflare Free Preview /login/$portal responded $status"
+              exit 1
+            fi
+            echo "PASS Cloudflare Free Preview /login/$portal HTTP 200"
+          done
+          echo 'Cloudflare Free Preview GET shells passed; protected seven-role session smoke still required'
+
+      - name: Validate seven real role sessions on non-promoted Cloudflare Workers Free Preview
+        if: ${{ github.event_name == 'pull_request' && github.head_ref == 'feature/vinext-auth-parity-free-20261115' && vars.UPT_MAIN_PREVIEWS_ALLOWED == 'true' }}
+        timeout-minutes: 10
+        env:
+          VINEXT_FREE_PREVIEW_URL: ${{ steps.vinext-preview.outputs.preview_url }}
+          MAIN_QA_BOT_PASSWORD: ${{ secrets.MAIN_QA_BOT_PASSWORD }}
+          MAIN_QA_CF_ACCESS_CLIENT_ID: ${{ secrets.MAIN_QA_CF_ACCESS_CLIENT_ID }}
+          MAIN_QA_CF_ACCESS_CLIENT_SECRET: ${{ secrets.MAIN_QA_CF_ACCESS_CLIENT_SECRET }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          node scripts/vinext-main-worker-preview-smoke.mjs
+
+
+
   release-production:
     needs: fast
     # Only a manual, explicit release input may dispatch full CI production.
