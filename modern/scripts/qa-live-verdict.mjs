@@ -5,7 +5,7 @@ import {fileURLToPath} from 'node:url'
 const stages=Object.freeze([
  ['transport','QA_TRANSPORT_OUTCOME'],['login-visual','QA_LOGIN_OUTCOME'],
  ['seven-roles','QA_ROLES_OUTCOME'],['thirty-sessions','QA_SESSIONS_OUTCOME'],
- ['deep-routes','QA_DEEP_OUTCOME']
+ ['deep-routes','QA_DEEP_OUTCOME'],['all-action-write-denials','QA_ACTIONS_OUTCOME']
 ])
 const accepted=new Set(['success','failure','cancelled','skipped'])
 export function liveVerdict(env){
@@ -27,7 +27,7 @@ if(process.argv[1]===fileURLToPath(import.meta.url)){
    'Validated commit: '+(result.validatedSha||'unverified'),'',
    '| Stage | Outcome |','| --- | --- |',
    ...result.stages.map(x=>'| '+x.stage+' | '+x.outcome+' |'),
-   '',result.allReadOnlyStagesPassed?'All five selected read-only stages passed.':'At least one required stage failed or did not run.',
+   '',result.allReadOnlyStagesPassed?'All six selected read-only/security stages passed.':'At least one required stage failed or did not run.',
    'Business writes, provider onboarding, offline replay and positive Maker access remain unverified. Main cutover and production release remain blocked.','']
   appendFileSync(process.env.GITHUB_STEP_SUMMARY,lines.join('\n'))
  }

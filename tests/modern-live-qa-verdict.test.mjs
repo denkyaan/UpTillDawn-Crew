@@ -2,9 +2,9 @@ import test from 'node:test'
 import assert from 'node:assert/strict'
 import {readFileSync} from 'node:fs'
 import {liveVerdict} from '../modern/scripts/qa-live-verdict.mjs'
-const keys=['QA_TRANSPORT_OUTCOME','QA_LOGIN_OUTCOME','QA_ROLES_OUTCOME','QA_SESSIONS_OUTCOME','QA_DEEP_OUTCOME']
+const keys=['QA_TRANSPORT_OUTCOME','QA_LOGIN_OUTCOME','QA_ROLES_OUTCOME','QA_SESSIONS_OUTCOME','QA_DEEP_OUTCOME','QA_ACTIONS_OUTCOME']
 const good=Object.fromEntries([['QA_VALIDATED_SHA','a'.repeat(40)],...keys.map(key=>[key,'success'])])
-test('only a valid exact SHA and five successful live QA stages can pass selected read-only checks',()=>{
+test('only a valid exact SHA and six successful live QA stages can pass selected read-only checks',()=>{
  const report=liveVerdict(good)
  assert.equal(report.allReadOnlyStagesPassed,true)
  for(const key of keys)for(const outcome of ['failure','cancelled','skipped','',undefined,'bogus']){
@@ -22,7 +22,7 @@ test('only a valid exact SHA and five successful live QA stages can pass selecte
 test('each live test stage remains sequential, transport-gated, timed and independently evidenced without hiding failures',()=>{
  const workflow=readFileSync('.github/workflows/deploy-main.yml','utf8')
  const section=workflow.split('  qa-modern-main-qa:')[1].split('  qa-native-admin-http:')[0]
- const stages=['qa_transport','qa_login','qa_roles','qa_sessions','qa_deep']
+ const stages=['qa_transport','qa_login','qa_roles','qa_sessions','qa_deep','qa_actions']
  const offsets=stages.map(id=>section.indexOf('id: '+id))
  assert.ok(offsets.every(x=>x>=0))
  assert.deepEqual([...offsets].sort((a,b)=>a-b),offsets)

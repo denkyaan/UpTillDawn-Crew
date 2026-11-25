@@ -35,7 +35,7 @@ test('full 56/44 parity remains a strict opt-in release gate; production is unto
  assert.ok(candidate.includes('Main URL cutover stays BLOCKED'))
  assert.ok(trigger.includes('SOURCE_EVENT'))
  assert.ok(!qa.includes('continue-on-error: true'))
- assert.equal((qa.match(/steps\.qa_transport\.outcome == 'success'/g)||[]).length,4)
+ assert.equal((qa.match(/steps\.qa_transport\.outcome == 'success'/g)||[]).length,5)
  assert.ok(qa.includes('node modern/scripts/qa-live-verdict.mjs'))
  assert.ok(qa.includes('QA_ROLES_OUTCOME:'))
  assert.ok(qa.includes('QA_SESSIONS_OUTCOME:'))
