@@ -12,6 +12,7 @@ import {LoginForm} from "@/components/auth/login-form"
 
 import {LocaleSync} from "@/components/locale-sync"
 import styles from "../auth.css?inline"
+declare const __UPT_EXACT_MAIN_LOGIN_CSS__: {sheets:Record<string,string>;routes:Record<string,string[]>}|null
 
 // Non-login routes keep the exact original components and behavior, but do
 // not inflate the critical login payload for every visitor. React Router's
@@ -66,6 +67,8 @@ export default function OriginalAuth(){
   return()=>{document.body.classList.remove("font-sans","antialiased")}
  },[])
  return <ThemeProvider attribute="class" defaultTheme="dark" enableSystem disableTransitionOnChange>
-  <style>{styles}</style><AuthLayout>{screen}</AuthLayout><LocaleSync clientRendered/>
+  {__UPT_EXACT_MAIN_LOGIN_CSS__?.routes[pathname]
+   ?__UPT_EXACT_MAIN_LOGIN_CSS__.routes[pathname].map(href=><style key={href}>{__UPT_EXACT_MAIN_LOGIN_CSS__!.sheets[href]}</style>)
+   :<style>{styles}</style>}<AuthLayout>{screen}</AuthLayout><LocaleSync clientRendered/>
  </ThemeProvider>
 }
