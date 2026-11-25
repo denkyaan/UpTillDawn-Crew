@@ -1,9 +1,10 @@
 import {MAIN_QA_PROJECT} from "../../../lib/migration/main-auth-runtime-config.ts"
 import type {MainAuthBindings} from "./main-auth.ts"
+import {nativeRuntimeScope} from "./runtime-scope.ts"
 
 // Only configuration, never an HTTP proxy, user identity, address or mail key.
 export async function resolveMainGeoapifyKey(env:Omit<MainAuthBindings,"MAIN_AUTH">):Promise<string>{
- if(env.SUPABASE_URL!==MAIN_QA_PROJECT)throw Error("invalid_main_configuration")
+ if(!nativeRuntimeScope(env))throw Error("invalid_main_configuration")
  const local=env.GEOAPIFY_API_KEY?.trim()
  if(local)return local
  if(env.UPT_MIGRATION_NATIVE_AUTH_ENABLED==="true")return ""

@@ -14,6 +14,7 @@ import {
 import {scannerReady,scannerOrigin,validScanRequest,scanWeeztix,type ScannerBindings,type RpcDb} from "./weeztix-scan.ts"
 import {nativeMainAuthResponse,type MainAuthBindings} from "./main-auth.ts"
 import {resolveMainGeoapifyKey} from "./native-main-private-config.ts"
+import {runtimeForRequest} from "./runtime-scope.ts"
 import {makerReadResponse,userErrorReportReadResponse,type GodReadPath,type ReadDb} from "./native-maker-reads.ts"
 import {nativeAdminActionAllowed,nativeAdminActionResponse,type NativeAdminActionDb} from "./native-admin-actions.ts"
 import {nativeWaveTwoAllowed,nativeWaveTwoActionResponse} from "./native-platform-actions.ts"
@@ -74,6 +75,11 @@ const app=new Hono<{Bindings:Bindings}>()
 app.use("*",async(c,next)=>{
  if(c.req.header("x-uptilldawn-main-bridge")==="original-read-v1")
   return c.json({error:"main_backend_recursion_blocked"},508)
+ // Any explicitly configured profile must match its exact host and DB.
+ // No request or binding may promote a QA runtime into Production.
+ if(c.env?.UPT_MIGRATION_RUNTIME_TARGET!==undefined&&
+   (!runtimeForRequest(c.req.url,c.env)||!c.env.SUPABASE_ANON_KEY?.startsWith("sb_publishable_")))
+  return c.json({error:"runtime_scope_denied"},503,{"Cache-Control":"private, no-store"})
  await next()
 })
 

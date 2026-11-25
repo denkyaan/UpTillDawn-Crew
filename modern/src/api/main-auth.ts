@@ -1,13 +1,13 @@
 import {readBoundedFormData} from "../../../lib/bounded-form-data.ts"
 import {nativeOriginalAuth,type MainAuthRuntimeBinding} from './native-auth.ts'
-import {mainAuthRuntimeConfiguration,MAIN_AUTH_PRIVATE_ENV_KEYS} from "../../../lib/migration/main-auth-runtime-config.ts"
+import {MAIN_AUTH_PRIVATE_ENV_KEYS} from "../../../lib/migration/main-auth-runtime-config.ts"
+import {runtimeForRequest,MAIN_ORIGIN} from "./runtime-scope.ts"
 
-export const MAIN_AUTH_ORIGIN="https://uptilldawn-main.uptilldawn.workers.dev"
-const CANDIDATE_ORIGIN="https://uptilldawn-modern-main.uptilldawn.workers.dev"
-const QA_DATABASE="https://npbjrtiolqperdgljnhi.supabase.co"
+export const MAIN_AUTH_ORIGIN=MAIN_ORIGIN
 export type MainAuthBindings={
  SUPABASE_URL:string;SUPABASE_ANON_KEY?:string;
  UPT_MIGRATION_NATIVE_AUTH_ENABLED?:string;
+ UPT_MIGRATION_RUNTIME_TARGET?:string;
  MAIN_AUTH_RUNTIME?:MainAuthRuntimeBinding;
  MAIN_AUTH?:{fetch:(request:Request)=>Promise<Response>}
  RESEND_API_KEY?:string;SECURITY_ALERT_EMAIL?:string;
@@ -38,8 +38,8 @@ export function authResponseCookies(headers:Headers):string[]{
 export async function forwardMainAuth(request:Request,env:MainAuthBindings):Promise<Response>{
  const url=new URL(request.url)
  const direct=env.UPT_MIGRATION_NATIVE_AUTH_ENABLED==="true"
- if(url.origin!==CANDIDATE_ORIGIN||env.SUPABASE_URL!==QA_DATABASE||
-  (!direct&&!env.MAIN_AUTH&&!env.MAIN_AUTH_RUNTIME))
+ const scope=runtimeForRequest(request.url,env)
+ if(!scope||(!direct&&!env.MAIN_AUTH&&!env.MAIN_AUTH_RUNTIME))
   return rejected(503,"auth_service_unconfigured")
  if(!paths.has(url.pathname))return rejected(404,"auth_path_denied")
  const callback=url.pathname==="/auth/callback"
@@ -60,9 +60,9 @@ export async function forwardMainAuth(request:Request,env:MainAuthBindings):Prom
   for(const [,value] of form)if(typeof value!=="string"||value.length>2048)return rejected(413,"form_too_large")
   if(url.pathname.endsWith("portal-login")&&!portals.has(String(form.get("portal")||"")))return rejected(403,"invalid_portal")
   if(url.pathname.endsWith("account-action")&&!actions.has(String(form.get("_action")||"")))return rejected(400,"invalid_action")
-  if(url.pathname.endsWith("account-action"))form.set("_callback_origin",CANDIDATE_ORIGIN)
+  if(url.pathname.endsWith("account-action"))form.set("_callback_origin",scope.requestOrigin)
  }
- const upstreamUrl=new URL(url.pathname+(callback?url.search:""),MAIN_AUTH_ORIGIN)
+ const upstreamUrl=new URL(url.pathname+(callback?url.search:""),scope.appOrigin)
  const headers=new Headers({Accept:callback?"text/html":"application/json"})
  // A service-binding Request does not acquire the network fetch's Host header.
  // OpenNext constructs Next's request origin from Host/X-Forwarded-Host. Pin
@@ -79,7 +79,7 @@ export async function forwardMainAuth(request:Request,env:MainAuthBindings):Prom
   const value=request.headers.get(key)
   if(value)headers.set(key,value)
  }
- if(!callback){headers.set("Origin",MAIN_AUTH_ORIGIN);headers.set("Sec-Fetch-Site","same-origin")}
+ if(!callback){headers.set("Origin",scope.appOrigin);headers.set("Sec-Fetch-Site","same-origin")}
  let response:Response
  try{
   const originalRequest=new Request(upstreamUrl,{method:request.method,headers,body:form,redirect:"manual",signal:AbortSignal.timeout(20_000)})
@@ -89,17 +89,15 @@ export async function forwardMainAuth(request:Request,env:MainAuthBindings):Prom
    // Same audited original login, verification, account and callback code
    // compiled without Next. Only names in the original trusted private
    // environment allowlist can be forwarded into the per-request scope.
-   const privateValues:Record<string,unknown>={
-    NEXT_PUBLIC_SUPABASE_URL:env.SUPABASE_URL
-   }
+   const privateValues:Record<string,string>={}
    for(const name of MAIN_AUTH_PRIVATE_ENV_KEYS){
     const value=env[name]
     if(typeof value==="string")privateValues[name]=value
    }
-   const configuration=mainAuthRuntimeConfiguration(privateValues)
+   const configuration={protocol:"main-auth-native-v1",projectUrl:scope.projectUrl,values:privateValues}
    response=await nativeOriginalAuth(originalRequest,{
     runtimeConfiguration:async()=>configuration
-   },env.SUPABASE_ANON_KEY)
+   },env.SUPABASE_ANON_KEY,{appOrigin:scope.appOrigin,projectUrl:scope.projectUrl})
   }else if(env.MAIN_AUTH_RUNTIME){
    if(!env.SUPABASE_ANON_KEY?.startsWith('sb_publishable_'))return rejected(503,'auth_service_unconfigured')
    response=await nativeOriginalAuth(originalRequest,env.MAIN_AUTH_RUNTIME,env.SUPABASE_ANON_KEY)
@@ -110,8 +108,8 @@ export async function forwardMainAuth(request:Request,env:MainAuthBindings):Prom
  const runtime=response.headers.get('x-uptilldawn-auth-runtime');if(runtime)output.set('X-UpTillDawn-Auth-Runtime',runtime)
  const location=response.headers.get("location")
  if(location){
-  const target=new URL(location,MAIN_AUTH_ORIGIN)
-  if((!callback&&!adminLogin)||target.origin!==MAIN_AUTH_ORIGIN)return rejected(502,"invalid_auth_redirect")
+  const target=new URL(location,scope.appOrigin)
+  if((!callback&&!adminLogin)||target.origin!==scope.appOrigin)return rejected(502,"invalid_auth_redirect")
   // Callback exchanges the same QA auth code/OTP, then returns to this host.
   output.set("Location",url.origin+target.pathname+target.search+target.hash)
  }else if(!(response.headers.get("content-type")||"").includes("application/json"))return rejected(503,"auth_temporarily_unavailable")
@@ -132,6 +130,7 @@ export function nativeMainAuthResponse(request:Request,env:Omit<MainAuthBindings
  return forwardMainAuth(request,{
   SUPABASE_URL:env.SUPABASE_URL,SUPABASE_ANON_KEY:env.SUPABASE_ANON_KEY,
   UPT_MIGRATION_NATIVE_AUTH_ENABLED:env.UPT_MIGRATION_NATIVE_AUTH_ENABLED,
+  UPT_MIGRATION_RUNTIME_TARGET:env.UPT_MIGRATION_RUNTIME_TARGET,
   MAIN_AUTH_RUNTIME:env.MAIN_AUTH_RUNTIME,
   RESEND_API_KEY:env.RESEND_API_KEY,SECURITY_ALERT_EMAIL:env.SECURITY_ALERT_EMAIL,
   SECURITY_FROM_EMAIL:env.SECURITY_FROM_EMAIL,GEOAPIFY_API_KEY:env.GEOAPIFY_API_KEY,
