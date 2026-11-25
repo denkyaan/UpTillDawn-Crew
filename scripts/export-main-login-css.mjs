@@ -1,6 +1,7 @@
 // Export exactly the ordered, already compiled CSS from the authoritative Main
 // static public login shells. No runtime fetching or copying of HTML/JS/secrets.
-import {readFileSync,writeFileSync,mkdirSync} from 'node:fs'
+import {readFileSync,writeFileSync,mkdirSync,appendFileSync} from 'node:fs'
+import {createHash} from 'node:crypto'
 import {resolve,dirname} from 'node:path'
 import {pathToFileURL} from 'node:url'
 import {execFileSync} from 'node:child_process'
@@ -36,11 +37,23 @@ export function collectLoginCss(assetRoot,sha){
  if(!Object.values(sheets).some(css=>css.includes('.auth-portal-screen')))throw Error('LOGIN_CSS_WRONG_SOURCE')
  return {sha,sheets,routes}
 }
+export function loginCssManifest(payload){
+ const sheets=Object.fromEntries(Object.entries(payload.sheets).map(([href,css])=>[href,{
+  sha256:createHash('sha256').update(css,'utf8').digest('hex'),bytes:Buffer.byteLength(css,'utf8')
+ }]))
+ return {sha:payload.sha,routes:payload.routes,sheets}
+}
 if(process.argv[1]&&import.meta.url===pathToFileURL(resolve(process.argv[1])).href){
  const sha=process.env.VALIDATED_SHA||''
  if(sha!==execFileSync('git',['rev-parse','HEAD'],{encoding:'utf8'}).trim())throw Error('LOGIN_CSS_WRONG_CHECKOUT')
  const target=resolve('main-login-css-artifact','main-login-css.json')
  mkdirSync(dirname(target),{recursive:true})
- writeFileSync(target,JSON.stringify(collectLoginCss('.open-next/assets',sha)))
+ const payload=collectLoginCss('.open-next/assets',sha)
+ writeFileSync(target,JSON.stringify(payload))
+ if(process.env.GITHUB_OUTPUT){
+  const manifest=JSON.stringify(loginCssManifest(payload))
+  if(Buffer.byteLength(manifest,'utf8')>32768)throw Error('LOGIN_CSS_MANIFEST_TOO_LARGE')
+  appendFileSync(process.env.GITHUB_OUTPUT,'manifest='+manifest+'\n')
+ }
  console.log('Exported original compiled Main login CSS for '+sha)
 }
