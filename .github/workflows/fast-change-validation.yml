@@ -110,8 +110,7 @@ jobs:
           # Vite builds locally on this GitHub runner, never on Workers Free.
           npm --prefix modern run build
           npm --prefix modern run budget
-          node modern/scripts/standalone-release-plan.mjs --prepare-main-dry-run
-          (cd modern && npx wrangler deploy --dry-run --config .wrangler-standalone-main-preflight.jsonc --outdir .wrangler-standalone-main-preflight)
+          npm --prefix modern run worker:standalone-check
           # The lightweight action/API/authorization contracts must be green
           # BEFORE merging. Previously Main CI was green while the post-merge
           # modern QA Worker failed its own tests.
