@@ -99,14 +99,17 @@ test("Geoapify rejects oversized streamed, malformed and invalid UTF8 responses 
   }
  }finally{globalThis.fetch=original}
 })
-test("cutover still blocks all four legacy-default authentication methods and keyless Geoapify",()=>{
+test("all original HTTP routes are native or explicitly denied; five private config dependencies still block independent cutover",()=>{
  assert.deepEqual([...report.pending].sort(),[
-  "GET /api/geocode/autocomplete [conditional-legacy-provider]",
-  "GET /auth/callback [legacy-auth-default]",
-  "POST /api/auth/account-action [legacy-auth-default]",
-  "POST /api/auth/admin-login [legacy-auth-default]",
-  "POST /api/auth/portal-login [legacy-auth-default]"
+  "GET /api/geocode/autocomplete [native-provider-config]",
+  "GET /auth/callback [native-auth-config]",
+  "POST /api/auth/account-action [native-auth-config]",
+  "POST /api/auth/admin-login [native-auth-config]",
+  "POST /api/auth/portal-login [native-auth-config]"
  ].sort())
+ assert.equal(report.nativeHttpMethodPairs,83)
+ assert.equal(report.legacyHttpMethodPairs,0)
+ assert.equal(report.configurationDependentMethodPairs,5)
  assert.equal(report.allOriginalPairsAccountedFor,true)
  assert.equal(report.fullCutoverAllowed,false)
 })

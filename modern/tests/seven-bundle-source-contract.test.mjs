@@ -113,7 +113,9 @@ test('payments, providers, scans and bank imports require signed original Main a
  assert.equal(config.vars.UPT_MIGRATION_SCANNING_ENABLED,'false')
  assert.equal(config.vars.UPT_MIGRATION_OAUTH_ENABLED,'false')
  assert.equal(config.vars.SUPABASE_URL,'https://npbjrtiolqperdgljnhi.supabase.co')
- assert.ok(config.services.find(x=>x.binding==='MAIN_AUTH'))
+ assert.ok(!config.services.some(x=>x.binding==='MAIN_AUTH'))
+ assert.ok(config.services.some(x=>x.binding==='MAIN_AUTH_RUNTIME'&&x.entrypoint==='MainAuthRuntime'))
+ assert.ok(!read('modern/src/api/worker.ts').includes('forwardMainSource('))
 })
 test('offline/PWA and fast, isolated Main delivery remain preserved without production triggers',()=>{
  const original=read('app/(app)/layout.tsx'),candidate=read('modern/src/main.tsx')
