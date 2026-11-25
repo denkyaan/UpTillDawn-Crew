@@ -150,7 +150,7 @@ jobs:
       contents: read
     runs-on: ubuntu-latest
     # Explicit opt-in only; give independent bounded stages time to publish evidence.
-    timeout-minutes: 46
+    timeout-minutes: 56
     env:
       E2E_MAIN_MODERN_QA_ORIGIN: https://uptilldawn-modern-main.uptilldawn.workers.dev
       E2E_MAIN_QA_BASE_URL: https://npbjrtiolqperdgljnhi.supabase.co/
@@ -210,6 +210,30 @@ jobs:
         if: ${{ !cancelled() && steps.qa_transport.outcome == 'success' }}
         timeout-minutes: 5
         run: node modern/tests/qa-all-action-write-denials.mjs
+      - name: Verify seven positive native standalone transactions and three forbidden mutations on a disposable Main QA draft
+        id: qa_fixture
+        if: ${{ !cancelled() && steps.qa_transport.outcome == 'success' }}
+        timeout-minutes: 6
+        env:
+          E2E_MAIN_QA_ALLOW_NATIVE_FIXTURE: '1'
+          E2E_MAIN_QA_SERVICE_KEY: ${{ secrets.MAIN_QA_SUPABASE_SECRET_KEY }}
+        run: node modern/tests/qa-native-fixture-transactions.mjs
+      - name: Independently verify and remove only this run's exact owned Main draft fixture
+        id: qa_fixture_cleanup
+        if: ${{ always() && steps.qa_transport.outcome == 'success' && steps.qa_fixture.outcome != 'skipped' }}
+        timeout-minutes: 3
+        env:
+          E2E_MAIN_QA_ALLOW_NATIVE_FIXTURE: '1'
+          E2E_MAIN_QA_SERVICE_KEY: ${{ secrets.MAIN_QA_SUPABASE_SECRET_KEY }}
+        run: node modern/tests/qa-native-fixture-transactions.mjs --cleanup
+      - name: Upload sanitized signed fixture and independent cleanup evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: modern-main-native-fixtures
+          path: test-results/modern-native-fixtures/
+          if-no-files-found: warn
+          retention-days: 5
       # One consolidated seven-domain report is produced even when a
       # representative route fails. Failure remains RED; no live provider
       # operation, extra browser load, production job or cutover is triggered.
@@ -238,6 +262,8 @@ jobs:
           QA_SESSIONS_OUTCOME: ${{ steps.qa_sessions.outcome }}
           QA_DEEP_OUTCOME: ${{ steps.qa_deep.outcome }}
           QA_ACTIONS_OUTCOME: ${{ steps.qa_actions.outcome }}
+          QA_FIXTURE_OUTCOME: ${{ steps.qa_fixture.outcome }}
+          QA_FIXTURE_CLEANUP_OUTCOME: ${{ steps.qa_fixture_cleanup.outcome }}
         run: node modern/scripts/qa-live-verdict.mjs
       - name: Upload per-stage live acceptance evidence
         if: always()
