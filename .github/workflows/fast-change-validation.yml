@@ -187,6 +187,191 @@ jobs:
           } >> "$GITHUB_STEP_SUMMARY"
       - name: Production dependency security gate
         run: npm audit --omit=dev --audit-level=high
+  # Separate runner, same PR CI. Never runs for a Main push or production release.
+  phase-two-three-local-acceptance:
+    if: ${{ github.event_name == 'pull_request' && startsWith(github.head_ref, 'migration/phase-2-3-') && github.event.pull_request.head.repo.full_name == github.repository }}
+    permissions:
+      contents: read
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+    env:
+      PGURL: postgresql://postgres:postgres@127.0.0.1:54322/postgres
+    steps:
+      - name: Checkout
+        uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09
+      - name: Set up Node.js
+        uses: actions/setup-node@a0853c24544627f65ddf259abe73b1d18a591444
+        with:
+          node-version: 24
+          cache: npm
+      - name: Install isolated test dependencies
+        run: |
+          npm ci --prefer-offline --no-audit --no-fund
+          npm --prefix modern ci --prefer-offline --no-audit --no-fund
+      - name: Install PostgreSQL client
+        run: sudo apt-get update && sudo apt-get install -y postgresql-client
+
+      - name: Initialize isolated Supabase config
+        run: |
+          if [ ! -f supabase/config.toml ]; then
+            npx --yes supabase@2.117.0 init
+          fi
+
+      - name: Start isolated Supabase stack
+        run: |
+          set -euo pipefail
+          echo 'Checking local Supabase ports before startup'
+          for port in 54321 54322 54323 54324 54327; do
+            if sudo ss -ltnp "( sport = :$port )" | grep -q LISTEN; then
+              echo "::error::Port $port is already occupied on the runner"
+              sudo ss -ltnp "( sport = :$port )" || true
+              docker ps --format 'table {{.Names}}\t{{.Ports}}' || true
+              exit 1
+            fi
+          done
+          npx --yes supabase@2.117.0 start -x studio,imgproxy,inbucket,edge-runtime,logflare,vector,realtime
+
+      - name: Replay every migration from zero
+        # Local Supabase startup can deadlock with background schema/catalog
+        # introspection during POLICY DDL. Retry *only* SQLSTATE 40P01 on
+        # the disposable database; never hide a real migration failure.
+        shell: bash
+        run: |
+          set -euo pipefail
+          for attempt in 1 2 3; do
+            log="$(mktemp)"
+            if npx --yes supabase@2.117.0 db reset --local --no-seed >"$log" 2>&1; then
+              cat "$log"
+              rm -f "$log"
+              echo "PASS: migration replay on attempt $attempt"
+              exit 0
+            fi
+            cat "$log"
+            if ! grep -Eiq 'deadlock detected|SQLSTATE 40P01|SQLSTATE.*40P01' "$log"; then
+              echo "::error::Migration replay failed for a non-deadlock reason."
+              rm -f "$log"
+              exit 1
+            fi
+            rm -f "$log"
+            if [ "$attempt" -eq 3 ]; then
+              echo "::error::Isolated migration replay hit repeated SQL deadlocks."
+              exit 1
+            fi
+            echo "::warning::Transient isolated PostgreSQL 40P01 deadlock; retry $attempt of 2."
+            sleep $((attempt * 4))
+          done
+
+      - name: Run SQL regression suites
+        env:
+          PGURL: postgresql://postgres:postgres@127.0.0.1:54322/postgres
+        run: |
+          set -euo pipefail
+          for file in tests/sql/*.sql; do
+            # These suites require the dedicated users seeded later in this job.
+            case "$file" in
+              tests/sql/owner-leadership-privacy.sql|tests/sql/administration-finance-integration.sql|tests/sql/administration-finance-rls.sql|tests/sql/administration-workflow-integration.sql|tests/sql/administration-peppol-integration.sql|tests/sql/15-bot-full-event.sql|tests/sql/qr-attendance-workflow.sql|tests/sql/operational-security.sql|tests/sql/chat-lifecycle.sql|tests/sql/queued-upload-security.sql|tests/sql/timesheet-lifecycle.sql|tests/sql/release-access-matrix.sql|tests/sql/privilege-matrix.sql|tests/sql/responsible-read-scope.sql|tests/sql/responsible-event-selection-guard.sql|tests/sql/offline-revocation-replay.sql|tests/sql/offline-time-dependencies.sql|tests/sql/new-feature-security.sql) continue ;;
+            esac
+            echo "::group::$file"
+            psql "$PGURL" -v ON_ERROR_STOP=1 -f "$file"
+            echo "::endgroup::"
+          done
+
+      - name: Verify generated database types
+        run: |
+          npx --yes supabase@2.117.0 gen types typescript --local --schema public > /tmp/crew-database.ts
+          node --input-type=module <<'NODE'
+          import { readFileSync, writeFileSync } from 'node:fs'
+          const normalize = (source) => source
+            .replace(
+              /  \/\/ Allows to automatically instantiate createClient with right options\n  \/\/ instead of createClient<Database, \{ PostgrestVersion: 'XX' \}>\(URL, KEY\)\n  __InternalSupabase: \{\n    PostgrestVersion: "[^"]+"\n  \}\n/,
+              '',
+            )
+            .trimEnd() + '\n'
+          writeFileSync('/tmp/expected-crew-database.ts', normalize(readFileSync('types/crew-database.ts', 'utf8')))
+          writeFileSync('/tmp/actual-crew-database.ts', normalize(readFileSync('/tmp/crew-database.ts', 'utf8')))
+          NODE
+          diff -u /tmp/expected-crew-database.ts /tmp/actual-crew-database.ts
+
+      - name: Export isolated bot credentials
+        run: |
+          set -euo pipefail
+          eval "$(npx --yes supabase@2.117.0 status -o env)"
+          api_url="${API_URL:-${SUPABASE_URL:-}}"
+          public_key="${ANON_KEY:-${PUBLISHABLE_KEY:-}}"
+          service_key="${SERVICE_ROLE_KEY:-${SECRET_KEY:-}}"
+          test -n "$api_url"
+          test -n "$public_key"
+          test -n "$service_key"
+          bot_password="$(openssl rand -base64 24 | tr -d '\n')Aa1!"
+          echo "::add-mask::$service_key"
+          echo "::add-mask::$bot_password"
+          {
+            echo "NEXT_PUBLIC_SUPABASE_URL=$api_url"
+            echo "NEXT_PUBLIC_SUPABASE_ANON_KEY=$public_key"
+            echo "BOT_SUPABASE_URL=$api_url"
+            echo "BOT_SERVICE_ROLE_KEY=$service_key"
+            echo "BOT_TEST_PASSWORD=$bot_password"
+            echo "BOT_DB_URL=postgresql://postgres:postgres@127.0.0.1:54322/postgres"
+          } >> "$GITHUB_ENV"
+
+      - name: Prepare isolated authentication fixtures
+        run: |
+          set -euo pipefail
+          psql "$BOT_DB_URL" -v ON_ERROR_STOP=1 -c "DROP TRIGGER IF EXISTS on_auth_user_created ON auth.users;"
+          node scripts/seed-15-bot-users.mjs
+          briefing_seed_count="$(psql "$BOT_DB_URL" -v ON_ERROR_STOP=1 -Atc "SELECT count(*) FROM public.briefing_acknowledgements ba JOIN auth.users u ON u.id=ba.user_id WHERE ba.briefing_id='00000000-0000-4000-8000-00000000e2e3'::uuid AND lower(u.email)=lower('bot-03-staff-en@bots.uptilldawn.test');")"
+          test "$briefing_seed_count" = "0"
+          echo "PASS: bot03 briefing fixture starts unacknowledged"
+
+      - name: Prepare separate temporary Maker identity for six-role browser QA
+        run: |
+          set -euo pipefail
+          test "$BOT_SUPABASE_URL" = "http://127.0.0.1:54321" || { echo "::error::Maker QA seeding is local-only"; exit 1; }
+          node scripts/seed-local-maker-e2e.mjs
+          test "$(psql "$BOT_DB_URL" -Atc "select count(*) from auth.users where email='bot-16-maker@bots.uptilldawn.test'")" = "1"
+          psql "$BOT_DB_URL" -v ON_ERROR_STOP=1 -c "insert into upt_private.app_owners(user_id) select id from auth.users where email='bot-16-maker@bots.uptilldawn.test'"
+          psql "$BOT_DB_URL" -v ON_ERROR_STOP=1 -f tests/sql/owner-leadership-privacy.sql
+
+      - name: Run complete financial transaction and non-admin RLS integration suites
+        shell: bash
+        run: |
+          set -euo pipefail
+          admin_id="$(psql "$BOT_DB_URL" -v ON_ERROR_STOP=1 -Atc "SELECT id FROM public.profiles WHERE full_name='E2E ADMIN 01' LIMIT 1")"
+          staff_id="$(psql "$BOT_DB_URL" -v ON_ERROR_STOP=1 -Atc "SELECT id FROM public.profiles WHERE full_name='E2E STAFF 03' LIMIT 1")"
+          test -n "$admin_id" && test -n "$staff_id"
+          psql "$BOT_DB_URL" -v ON_ERROR_STOP=1 -v TEST_ADMIN_ID="$admin_id" -f tests/sql/administration-finance-integration.sql
+          psql "$BOT_DB_URL" -v ON_ERROR_STOP=1 -v TEST_NON_ADMIN_ID="$staff_id" -f tests/sql/administration-finance-rls.sql
+          office_id=$(psql "$BOT_DB_URL" -Atc "select id from auth.users where email='bot-04-staff-de@bots.uptilldawn.test';")
+          test -n "$office_id"
+          psql "$BOT_DB_URL" -v ON_ERROR_STOP=1 -v TEST_ADMIN_ID="$admin_id" -v TEST_STAFF_ID="$staff_id" -v TEST_OFFICE_ID="$office_id" -f tests/sql/administration-workflow-integration.sql
+          psql "$BOT_DB_URL" -v ON_ERROR_STOP=1 -v TEST_ADMIN_ID="$admin_id" -v TEST_STAFF_ID="$staff_id" -v TEST_OFFICE_ID="$office_id" -f tests/sql/administration-peppol-integration.sql
+          echo "PASS: financial invoice/payment/credit and non-admin RLS regression suites"
+
+      - name: Exercise actual local database RLS, offline replay and role lifecycles
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$BOT_SUPABASE_URL" = "http://127.0.0.1:54321"
+          test "$BOT_DB_URL" = "$PGURL"
+          for suite in 15-bot-full-event qr-attendance-workflow operational-security chat-lifecycle queued-upload-security timesheet-lifecycle release-access-matrix privilege-matrix responsible-read-scope responsible-event-selection-guard offline-revocation-replay offline-time-dependencies storage-security new-feature-security; do
+            echo "::group::$suite"
+            psql "$PGURL" -v ON_ERROR_STOP=1 -f "tests/sql/$suite.sql"
+            echo "::endgroup::"
+          done
+      - name: Verify positive native actions with real signed local users and persisted state
+        id: local_native
+        run: node modern/tests/qa-local-native-phase-two.mjs
+      - name: Always destroy disposable database stack
+        if: always()
+        run: npx --yes supabase@2.117.0 stop --no-backup
+      - name: Upload local native action evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: phase-two-three-local-native-actions
+          path: test-results/phase-two-three-local-native/report.json
+          if-no-files-found: error
+          retention-days: 5
   release-production:
     needs: fast
     # Only a manual, explicit release input may dispatch full CI production.
