@@ -326,6 +326,13 @@ try{
  const people=(file,name)=>'lib/actions/'+file+'.ts#'+name
  const promotion=name=>people('promotion-tasks',name)
  const find=async(table,id,columns)=>one(a.from(table).select(columns).eq('id',id),table)
+ const ownProfile=async identity=>{
+  const rows=await read(identity.db.rpc('upt_current_profile'),'SELF_PROFILE')
+  assert.equal(rows?.length,1)
+  assert.equal(rows[0].id,identity.id)
+  return rows[0]
+ }
+ const sqlLocal=statement=>execFileSync('psql',[process.env.BOT_DB_URL,'-X','-v','ON_ERROR_STOP=1','-At','-c',statement],{encoding:'utf8',timeout:10000}).trim()
  const saved=async(name,identity,fields)=>{
   const r=await invoke(financeAction,identity,finance(name),fields)
   assert.equal(r.data.redirect,'/portals/administration/finance',name+'_SAVED')
@@ -348,13 +355,23 @@ try{
   })
  })
  await domain('roster',async()=>{
-  await read(a.from('event_members').upsert({event_id:event,user_id:alternate.id,event_role:'employee'},{onConflict:'event_id,user_id'}),'ROSTER_MEMBER')
+  // Independently exercise roster on its own newly-created event instead
+  // of bypassing a preceding failed membership lifecycle / FIFO queue.
+  const rosterStart=new Date(Date.now()+7*86400000).toISOString(),rosterEnd=new Date(Date.parse(rosterStart)+8*3600000).toISOString()
+  const rosterName=prefix+' Roster fixture'
+  await invoke(megaCrewEventResponse,head,crew('createEvent'),{name:rosterName,start_at:rosterStart,end_at:rosterEnd,radius:'100'})
+  const rosterEvent=await one(a.from('events').select('id').eq('name',rosterName),'ROSTER_EVENT')
+  const rosterPost=prefix+' Roster post'
+  await invoke(megaCrewEventResponse,head,crew('addWorkplace'),{event_id:rosterEvent.id,name:rosterPost,default_shift_start:rosterStart,default_shift_end:rosterEnd})
+  const post=await one(a.from('workplaces').select('id').eq('event_id',rosterEvent.id).eq('name',rosterPost),'ROSTER_POST')
+  await read(alternate.db.rpc('upt_set_event_availability_with_reason',{p_event:rosterEvent.id,p_response:'can',p_setup:false,p_breakdown:false}),'ROSTER_AVAILABLE')
+  await read(a.from('event_members').insert({event_id:rosterEvent.id,user_id:alternate.id,event_role:'employee'}),'ROSTER_MEMBER')
   let shift
-  const fields={workplace_id:workplace,user_id:alternate.id,role_name:prefix+' Roster',start:owned.start_at,end:owned.end_at}
+  const fields={workplace_id:post.id,user_id:alternate.id,role_name:prefix+' Roster',start:rosterStart,end:rosterEnd}
   await verified(crew('createShift'),async()=>{
    await denied(roster,staff,crew('createShift'),fields)
    await invoke(roster,head,crew('createShift'),fields)
-   shift=await one(a.from('shifts').select('id,scheduled_start,scheduled_end').eq('event_id',event).eq('user_id',alternate.id).eq('role_name',fields.role_name),'SHIFT_CREATE')
+   shift=await one(a.from('shifts').select('id,scheduled_start,scheduled_end').eq('event_id',rosterEvent.id).eq('user_id',alternate.id).eq('role_name',fields.role_name),'SHIFT_CREATE')
    assert.equal(Date.parse(shift.scheduled_start),Date.parse(fields.start));assert.equal(Date.parse(shift.scheduled_end),Date.parse(fields.end))
   })
   await verified(crew('updateShift'),async()=>{
@@ -382,6 +399,14 @@ try{
   await verified(crew('updateEventEmergencyInformation'),async()=>{
    const fields={event_id:event,emergency_number:'112',assembly_point:prefix+' Entrance',procedure:'QA procedure'}
    await denied(roster,staff,crew('updateEventEmergencyInformation'),fields)
+   const allowed=await read(a.rpc('upt_feature_allowed',{p_feature:'emergency',p_event:event}),'EMERGENCY_FEATURE')
+   if(!allowed){
+    // Prove fail-closed behavior for a disabled feature before enabling
+    // the intended positive fixture in this disposable database only.
+    await denied(roster,head,crew('updateEventEmergencyInformation'),fields)
+    sqlLocal("INSERT INTO public.role_ui_rules(role,feature_key,label,group_key,visible,enabled,condition_key,sort_order,settings) VALUES ('admin','emergency','Noodinformatie','operations',true,true,'always',115,'{}'::jsonb) ON CONFLICT (role,feature_key) DO UPDATE SET visible=true,enabled=true,condition_key='always'")
+    assert.equal(await read(a.rpc('upt_feature_allowed',{p_feature:'emergency',p_event:event}),'EMERGENCY_FIXTURE_ENABLED'),true)
+   }
    await invoke(roster,head,crew('updateEventEmergencyInformation'),fields)
    const r=await one(a.from('event_emergency_information').select('emergency_number,assembly_point,updated_by').eq('event_id',event),'EMERGENCY')
    assert.equal(r.emergency_number,'112');assert.equal(r.assembly_point,fields.assembly_point);assert.equal(r.updated_by,head.id)
@@ -459,25 +484,25 @@ try{
   await verified(people('personnel','setPersonnelRole'),async()=>{
    const id=people('personnel','setPersonnelRole')
    await invoke(peopleAction,head,id,{...target,role:'responsible_lead'})
-   assert.equal((await find('profiles',subject.id,'role')).role,'responsible_lead')
+   assert.equal((await ownProfile(subject)).role,'responsible_lead')
    await invoke(peopleAction,head,id,{...target,role:'staff'})
-   assert.equal((await find('profiles',subject.id,'role')).role,'staff')
+   assert.equal((await ownProfile(subject)).role,'staff')
   })
   await verified(people('personnel','setPersonnelBlock'),async()=>{
    const id=people('personnel','setPersonnelBlock')
    await invoke(peopleAction,head,id,{...target,blocked:'true',reason:prefix+' blocked'})
-   assert.equal((await find('profiles',subject.id,'account_blocked')).account_blocked,true)
+   assert.equal((await ownProfile(subject)).account_blocked,true)
    assert.equal(await read(subject.db.rpc('upt_is_approved'),'BLOCKED_APPROVAL'),false)
    await invoke(peopleAction,head,id,{...target,blocked:'false',reason:prefix+' restored'})
-   assert.equal((await find('profiles',subject.id,'account_blocked')).account_blocked,false)
+   assert.equal((await ownProfile(subject)).account_blocked,false)
   })
   await verified(crew('setAccountStatus'),async()=>{
    await invoke(peopleAction,head,crew('setAccountStatus'),{...target,status:'pending',role:'staff'})
-   assert.equal((await find('profiles',subject.id,'approved')).approved,false)
+   assert.equal((await ownProfile(subject)).approved,false)
   })
   await verified(crew('approvePersonnelAccount'),async()=>{
    await invoke(peopleAction,head,crew('approvePersonnelAccount'),{...target,role:'staff'})
-   assert.equal((await find('profiles',subject.id,'approved')).approved,true)
+   assert.equal((await ownProfile(subject)).approved,true)
   })
  })
  await domain('finance-draft-settlement',async()=>{

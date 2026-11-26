@@ -88,7 +88,10 @@ function fixture({owner=false,admin=true,approved=true,blocked=false,verified=tr
  }
  const db={
   auth:{getUser:async()=>({data:{user:verified?{id:user}:null},error:null})},
-  rpc:async(name,args)=>{
+  rpc:(name,args)=>{
+   if(name==="upt_admin_profiles"){
+    calls.push(["rpc",name,args]);return queries("profiles")
+   }
    calls.push(["rpc",name,args])
    if(name==="upt_current_session_context")return {data:[actor],error:null}
    if(name==="upt_is_admin")return {data:admin,error:null}

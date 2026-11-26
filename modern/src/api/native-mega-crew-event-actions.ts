@@ -93,7 +93,7 @@ async function addMember(fd:FormData,db:any,bulk:boolean){
  if(!bulk){
   const target=ids[0]
   const [{data:p,error:profileError},{data:a,error:availabilityError}]=await Promise.all([
-   db.from("profiles").select("approved,role").eq("id",target).single(),
+   db.rpc("upt_admin_profiles").select("approved,role").eq("id",target).single(),
    db.from("event_availability").select("response").eq("event_id",event)
     .eq("user_id",target).maybeSingle()
   ])
@@ -106,7 +106,7 @@ async function addMember(fd:FormData,db:any,bulk:boolean){
   const [{data:available,error:avError},{data:approved,error:pError}]=await Promise.all([
    db.from("event_availability").select("user_id").eq("event_id",event)
     .eq("response","can").in("user_id",ids),
-   db.from("profiles").select("id,role").eq("approved",true).in("id",ids)
+   db.rpc("upt_admin_profiles").select("id,role").eq("approved",true).in("id",ids)
   ])
   if(avError||pError)throw Error("Availability lookup failed")
   const allowed=new Set((available||[]).map((row:{user_id:string})=>row.user_id))
@@ -123,7 +123,7 @@ async function assignCrewShift(fd:FormData,db:any){
  const [start,end]=dates(fd,"start","end")
  const kind=z.enum(["event","setup","breakdown"]).parse(fd.get("shift_kind")||"event")
  const [profile,availability,post,membership]=await Promise.all([
-  db.from("profiles").select("id,approved,role").eq("id",target).single(),
+  db.rpc("upt_admin_profiles").select("id,approved,role").eq("id",target).single(),
   db.from("event_availability").select("response,setup_available,breakdown_available")
    .eq("event_id",event).eq("user_id",target).maybeSingle(),
   db.from("workplaces").select("id,event_id,is_active").eq("id",workplace).single(),
@@ -157,7 +157,7 @@ async function assignCrewShift(fd:FormData,db:any){
 async function assignResponsible(fd:FormData,db:any,actor:string){
  const workplace=uuid(fd.get("workplace_id")),target=uuid(fd.get("user_id"))
  const [profile,post,assigned,all,assignments]=await Promise.all([
-  db.from("profiles").select("approved,role").eq("id",target).single(),
+  db.rpc("upt_admin_profiles").select("approved,role").eq("id",target).single(),
   db.from("workplaces").select("event_id,is_active").eq("id",workplace).single(),
   db.from("shifts").select("workplace_id,scheduled_start,scheduled_end")
    .eq("workplace_id",workplace).eq("user_id",target)
@@ -197,7 +197,7 @@ async function demoteResponsible(fd:FormData,db:any){
  const workplace=uuid(fd.get("workplace_id")),target=uuid(fd.get("user_id"))
  const [post,profile,assignment]=await Promise.all([
   db.from("workplaces").select("event_id").eq("id",workplace).single(),
-  db.from("profiles").select("role,approved").eq("id",target).single(),
+  db.rpc("upt_admin_profiles").select("role,approved").eq("id",target).single(),
   db.from("responsible_assignments").select("event_id,workplace_id,user_id")
    .eq("workplace_id",workplace).eq("user_id",target).maybeSingle()
  ])
