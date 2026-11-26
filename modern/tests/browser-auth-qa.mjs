@@ -52,15 +52,17 @@ async function ready(page){
 // the failing read, with bounded cooling-off time to protect Workers Free.
 // If a fully hydrated original view cannot be read, keep the gate RED.
 let consecutiveLegacyFailures=0
-async function readyBaseline(page){
+async function readyBaseline(page,check=ready){
  for(let attempt=0;attempt<3;attempt++){
   try{
-   await ready(page)
+   await check(page)
    consecutiveLegacyFailures=0
    return
   }catch(error){
    baselineRecoveries++
    const cause=error instanceof Error?error.message.split('\n')[0]:'read unavailable'
+   // Never retry a confirmed application/render error or a parity mismatch.
+   if(error?.name!=='TimeoutError'&&!/^LEGACY_MAIN_HTTP_(502|503|504)$/.test(cause))throw error
    console.error('LEGACY_MAIN_READ_RECOVERY attempt='+String(attempt+1)+' '+cause)
    if(consecutiveLegacyFailures>=1)
     throw Error('LEGACY_MAIN_BASELINE_UNAVAILABLE_CIRCUIT_OPEN')
@@ -69,7 +71,7 @@ async function readyBaseline(page){
     throw Error('LEGACY_MAIN_BASELINE_UNAVAILABLE_AFTER_BOUNDED_RETRIES')
    }
    // Repeated immediate SSR reloads can amplify a Worker resource failure.
-   await new Promise(resolve=>setTimeout(resolve,2000*(attempt+1)))
+   await new Promise(resolve=>setTimeout(resolve,6000*(attempt+1)))
    try{
     const response=await page.reload({waitUntil:'domcontentloaded',timeout:25000})
     if(response&&response.status()>=500)
@@ -154,6 +156,9 @@ try{
    for(const path of ['/settings','/notifications','/events','/crew']){
     await page.goto(origin+path,{waitUntil:'domcontentloaded',timeout:20000});await ready(page)
    }
+   // Stop the now-unused login/probe page's live badges, offline sync and
+   // realtime activity before the independent role comparisons.
+   await page.close()
    for(const language of ['nl','fr','en','de'])for(const device of devices){
     const options={locale:language==='en'?'en-GB':language+'-BE',viewport:device.viewport,isMobile:device.isMobile,hasTouch:device.hasTouch}
     const candidate=await browser.newContext({...options,storageState:state})
@@ -173,10 +178,12 @@ try{
      await compare(a,b,label);await menus(a,b,label)
      if(language==='nl'&&device.name==='desktop'){
       await a.goto(legacy+'/maker-mode',{waitUntil:'domcontentloaded',timeout:30000})
-      await a.waitForURL('**/unauthorized',{timeout:20000})
+      await readyBaseline(a,async source=>{
+       await source.waitForURL('**/unauthorized',{timeout:20000})
+       await source.getByRole('heading',{name:'Geen toegang',exact:true}).waitFor({timeout:18000})
+      })
       await b.goto(origin+'/maker-mode',{waitUntil:'domcontentloaded',timeout:20000})
       await b.waitForURL('**/unauthorized',{timeout:20000})
-      await a.getByRole('heading',{name:'Geen toegang',exact:true}).waitFor()
       await b.getByRole('heading',{name:'Geen toegang',exact:true}).waitFor()
       await compare(a,b,label+'-maker-denied')
      }

@@ -339,6 +339,9 @@ jobs:
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          MAIN_DIAGNOSTIC_TARGET: main
+          MAIN_WORKER_DEPLOYED_AT: ${{ needs.deploy.outputs.deployed_at }}
+          MAIN_BROWSER_QA_RESULT: ${{ job.status }}
         run: node scripts/main-worker-outcomes.mjs
       - name: Upload deep-route comparison screenshots only when a mismatch is found
         if: always()
