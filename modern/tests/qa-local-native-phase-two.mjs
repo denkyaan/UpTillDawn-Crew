@@ -33,11 +33,11 @@ const localFetch=async(input,init)=>{
  const response=await originalFetch(input,{...init,redirect:'error'})
  // Disposable synthetic database: only bounded error code and message.
  // Never serialize headers, auth responses, SQL details or raw bodies.
- if(!response.ok&&url.pathname.startsWith('/rest/v1/')){
+ if(!response.ok&&(url.pathname.startsWith('/rest/v1/')||url.pathname.startsWith('/storage/v1/'))){
   try{
    const data=await response.clone().json()
-   const code=String(data.code||'DB').replace(/[^A-Za-z0-9_]/g,'').slice(0,16)
-   const message=String(data.message||'').replaceAll(password,'[redacted]').replaceAll(key,'[redacted]').replace(/[\r\n]/g,' ').slice(0,160)
+   const code=String(data.code||data.statusCode||'DB').replace(/[^A-Za-z0-9_]/g,'').slice(0,16)
+   const message=String(data.message||data.error||'').replaceAll(password,'[redacted]').replaceAll(key,'[redacted]').replace(/[\r\n]/g,' ').slice(0,160)
    lastLocalDbFailure={code,message}
   }catch{}
  }
@@ -669,6 +669,7 @@ try{
  })
  await domain('text-document-storage',async()=>{
   const invTitle=prefix+' Inventory text',postName=prefix+' Price post',body='QA synthetic text only'
+  assert.equal(sqlLocal("SELECT count(*) FROM storage.buckets WHERE id='work-media' AND NOT public AND 'text/plain'=ANY(allowed_mime_types)"),'1','PRIVATE_TEXT_BUCKET')
   let doc
   const lookup=heading=>one(a.from('event_documents').select('id,storage_path,uploaded_by,mime_type,file_size_bytes,is_active,offline_critical,description').eq('event_id',event).eq('workplace_id',workplace).eq('title',heading),'TEXT_DOCUMENT')
   const verifyDoc=async(row)=>{
@@ -678,6 +679,11 @@ try{
    // Independently verify storage existence using the disposable DB catalog.
    assert.match(row.storage_path,/^[0-9a-f-]{36}\/document\/[0-9a-f-]{36}\.txt$/i)
    assert.equal(sqlLocal("SELECT count(*) FROM storage.objects WHERE bucket_id='work-media' AND name='"+row.storage_path+"'"),'1')
+   assert.equal(sqlLocal("SELECT status FROM public.upload_security_scans WHERE bucket_id='work-media' AND storage_path='"+row.storage_path+"'"),'pending','DOCUMENT_SCAN_PENDING')
+   const pending=await a.storage.from('work-media').download(row.storage_path)
+   assert.ok(pending.error,'PENDING_DOCUMENT_DOWNLOAD_DENIED')
+   const foreign=await unrelated.db.storage.from('work-media').download(row.storage_path)
+   assert.ok(foreign.error,'FOREIGN_PENDING_DOCUMENT_DOWNLOAD_DENIED')
   }
   await verified(crew('createInventoryTextEntry'),async()=>{
    const fields={event_id:event,workplace_id:workplace,title:invTitle,content:body}
@@ -692,6 +698,13 @@ try{
   await verified(crew('archiveEventDocument'),async()=>{
    await denied(megaOperationsResponse,staff,crew('archiveEventDocument'),{document_id:doc.id})
    assert.match(doc.id,/^[0-9a-f-]{36}$/i)
+   // Local-only simulated clean verdict for these known synthetic bytes.
+   // The real external scanner is NOT tested or bypassed by app code.
+   assert.equal(sqlLocal("UPDATE public.upload_security_scans SET status='clean',scanned_at=now() WHERE bucket_id='work-media' AND storage_path='"+doc.storage_path+"' AND status='pending' RETURNING status").split('\n')[0],'clean')
+   const downloaded=await a.storage.from('work-media').download(doc.storage_path)
+   assert.ifError(downloaded.error);assert.equal(await downloaded.data.text(),body)
+   const foreign=await unrelated.db.storage.from('work-media').download(doc.storage_path)
+   assert.ok(foreign.error,'FOREIGN_CLEAN_DOCUMENT_DOWNLOAD_DENIED')
    await invoke(megaOperationsResponse,head,crew('archiveEventDocument'),{document_id:doc.id})
    assert.equal(sqlLocal("SELECT is_active FROM public.event_documents WHERE id='"+doc.id+"'::uuid"),'f')
    assert.equal(sqlLocal("SELECT count(*) FROM storage.objects WHERE bucket_id='work-media' AND name='"+doc.storage_path+"'"),'0')
