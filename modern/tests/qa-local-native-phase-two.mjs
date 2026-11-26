@@ -188,9 +188,17 @@ try{
   assert.equal(stock.available_quantity,5);assert.equal(stock.issued_quantity,0)
  })
  await verified(platform('updateAssetMetadata'),async()=>{
-  await invoke(megaOperationsResponse,head,platform('updateAssetMetadata'),{item_id:item.id,asset_code:prefix,barcode:prefix+'-bar',serial_number:'QA-1',location_label:'QA shelf',reorder_threshold:'2',unit_cost:'12.50',asset_notes:prefix})
-  const row=await one(a.from('inventory_items').select('location_label,reorder_threshold,unit_cost_cents,asset_notes').eq('id',item.id),'ASSET_METADATA')
+  const originalPurchase='2026-01-01',originalMaintenance='2026-02-01T12:00:00Z'
+  await read(a.rpc('upt_update_inventory_asset_metadata',{p_item:item.id,p_asset_code:prefix,p_barcode:prefix+'-bar',p_serial_number:'QA-1',p_purchase_date:originalPurchase,p_last_maintenance_at:originalMaintenance}),'ASSET_HIDDEN_FIXTURE')
+  const fields={item_id:item.id,asset_code:prefix,barcode:prefix+'-bar',serial_number:'QA-1',location_label:'QA shelf',reorder_threshold:'2',unit_cost:'12.50',asset_notes:prefix}
+  await denied(megaOperationsResponse,staff,platform('updateAssetMetadata'),fields)
+  const deniedDirect=await staff.db.rpc('upt_update_inventory_asset_form',{p_item:item.id,p_asset_code:'denied'})
+  assert.equal(deniedDirect.error?.code,'42501','ASSET_RPC_STAFF_DENIED')
+  await invoke(megaOperationsResponse,head,platform('updateAssetMetadata'),fields)
+  const row=await one(a.from('inventory_items').select('location_label,reorder_threshold,unit_cost_cents,asset_notes,purchase_date,last_maintenance_at,asset_code').eq('id',item.id),'ASSET_METADATA')
   assert.equal(row.location_label,'QA shelf');assert.equal(row.reorder_threshold,2);assert.equal(row.unit_cost_cents,1250);assert.equal(row.asset_notes,prefix)
+  assert.equal(row.asset_code,prefix);assert.equal(row.purchase_date,originalPurchase);assert.equal(Date.parse(row.last_maintenance_at),Date.parse(originalMaintenance))
+
  })
  })
  await domain('sales',async()=>{

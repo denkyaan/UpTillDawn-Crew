@@ -134,9 +134,13 @@ WITH checks(name,required,passed) AS (
     AND coalesce(position('''netCents'',0' in pg_get_functiondef(
       to_regprocedure('public.upt_event_command_snapshot(uuid)'))) > 0,false)
   UNION ALL
+  SELECT 'inventory_asset_form_rpc', true,
+    coalesce(has_function_privilege('authenticated',to_regprocedure('public.upt_update_inventory_asset_form(uuid,text,text,text,text,timestamptz,integer,integer,text)'),'EXECUTE')
+      AND NOT has_function_privilege('anon',to_regprocedure('public.upt_update_inventory_asset_form(uuid,text,text,text,text,timestamptz,integer,integer,text)'),'EXECUTE'),false)
+  UNION ALL
   SELECT 'main_tip_migration_in_history', false,
     EXISTS(SELECT 1 FROM supabase_migrations.schema_migrations
-      WHERE version='20261118121657')
+      WHERE version='20261126172500')
 )
 SELECT name,required,passed,
   CASE WHEN passed THEN 'PASS'

@@ -163,16 +163,17 @@ export async function updateAssetMetadata(fd:FormData){
   const id=uuid.parse(fd.get('item_id'))
   const reorder=z.coerce.number().int().min(0).max(100000).parse(fd.get('reorder_threshold')||0)
   const unit=String(fd.get('unit_cost')||'').trim()
-  const {error}=await s.from('inventory_items').update({
-    asset_code:String(fd.get('asset_code')||'').trim().slice(0,120)||null,
-    barcode:String(fd.get('barcode')||'').trim().slice(0,200)||null,
-    serial_number:String(fd.get('serial_number')||'').trim().slice(0,200)||null,
-    location_label:String(fd.get('location_label')||'').trim().slice(0,300)||null,
-    maintenance_due_at:String(fd.get('maintenance_due_at')||'').trim()||null,
-    reorder_threshold:reorder,
-    unit_cost_cents:unit?Math.round(z.coerce.number().min(0).max(10000000).parse(unit)*100):null,
-    asset_notes:String(fd.get('asset_notes')||'').trim().slice(0,4000)||null,
-  }).eq('id',id)
+  const {error}=await s.rpc('upt_update_inventory_asset_form',{
+    p_item:id,
+    p_asset_code:String(fd.get('asset_code')||'').trim().slice(0,120)||undefined,
+    p_barcode:String(fd.get('barcode')||'').trim().slice(0,200)||undefined,
+    p_serial_number:String(fd.get('serial_number')||'').trim().slice(0,200)||undefined,
+    p_location_label:String(fd.get('location_label')||'').trim().slice(0,300)||undefined,
+    p_maintenance_due_at:String(fd.get('maintenance_due_at')||'').trim()||undefined,
+    p_reorder_threshold:reorder,
+    p_unit_cost_cents:unit?Math.round(z.coerce.number().min(0).max(10000000).parse(unit)*100):undefined,
+    p_notes:String(fd.get('asset_notes')||'').trim().slice(0,4000)||undefined,
+  })
   if(error)throw new Error('Assetgegevens konden niet worden opgeslagen.')
   await refresh()
 }

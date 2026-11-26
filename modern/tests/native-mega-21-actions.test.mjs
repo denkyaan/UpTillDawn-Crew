@@ -35,7 +35,7 @@ const operations=[
  ["platform.ts#savePayRate",{user_id:target,hourly_rate:"21.50",employer_multiplier:"1.5",effective_from:"2026-12-01"},"staff_pay_rates"],
  ["platform.ts#createKnowledgeArticle",{title:"Safety",body:"Emergency exit",offline_critical:"on"},"knowledge_articles"],
  ["platform.ts#createQrResource",{resource_type:"workplace",title:"Crew QR",route:"/workplaces"},"qr_resources"],
- ["platform.ts#updateAssetMetadata",{item_id:task,asset_code:"TEST",reorder_threshold:"2",unit_cost:"3.5"},"inventory_items"],
+ ["platform.ts#updateAssetMetadata",{item_id:task,asset_code:"TEST",reorder_threshold:"2",unit_cost:"3.5"},"upt_update_inventory_asset_form"],
  ["uptilldawn.ts#removeOperationalChecklistItem",{item_id:task},"upt_remove_operational_checklist_item"],
  ["uptilldawn.ts#reopenOperationalChecklistItem",{item_id:task},"upt_set_operational_checklist_item"],
  ["uptilldawn.ts#archiveEventDocument",{document_id:task},"upt_archive_event_document"],
@@ -174,4 +174,18 @@ test("worker-wide public disabled write gate rejects all 21 without legacy forwa
   assert.equal(result.status,503,name)
   assert.deepEqual(await result.json(),{error:"migration_writes_disabled"})
  }
+})
+
+test("asset form uses only the audited RPC with exact arguments",async()=>{
+ const f=fixture()
+ const name="platform.ts#updateAssetMetadata"
+ const response=await megaOperationsResponse(request(name,{item_id:task,asset_code:"TEST",reorder_threshold:"2",unit_cost:"3.5",asset_notes:"note"}),f.db,id(name))
+ assert.equal(response.status,200)
+ const call=f.calls.find(x=>x[0]==="rpc"&&x[1]==="upt_update_inventory_asset_form")
+ assert.ok(call)
+ assert.equal(call[2].p_item,task)
+ assert.equal(call[2].p_reorder_threshold,2)
+ assert.equal(call[2].p_unit_cost_cents,350)
+ assert.equal(call[2].p_notes,"note")
+ assert.equal(f.calls.some(x=>x[0]==="update"&&x[1]==="inventory_items"),false)
 })

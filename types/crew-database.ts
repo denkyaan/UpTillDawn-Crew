@@ -8198,6 +8198,20 @@ export type Database = {
         Args: { p_message: string; p_pinned: boolean }
         Returns: undefined
       }
+      upt_update_inventory_asset_form: {
+        Args: {
+          p_asset_code?: string
+          p_barcode?: string
+          p_item: string
+          p_location_label?: string
+          p_maintenance_due_at?: string
+          p_notes?: string
+          p_reorder_threshold?: number
+          p_serial_number?: string
+          p_unit_cost_cents?: number
+        }
+        Returns: undefined
+      }
       upt_update_inventory_asset_metadata: {
         Args: {
           p_asset_code?: string
