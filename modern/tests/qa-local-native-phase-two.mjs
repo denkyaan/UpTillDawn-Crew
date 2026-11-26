@@ -17,6 +17,7 @@ import {nativeWaveTwoActionResponse as memberAction} from '../src/api/native-pla
 import {megaPeopleResponse as peopleAction} from '../src/api/native-mega-people-actions.ts'
 import {finalCrewActionResponse as crewAction} from '../src/api/native-final-crew-actions.ts'
 import {finalFinanceResponse as financeAction} from '../src/api/native-final-finance-actions.ts'
+import {nativeWaveNineResponse as safeAction} from '../src/api/native-wave-nine-safe-actions.ts'
 import {megaMakerResponse,godLogoutId} from '../src/api/native-mega-maker-actions.ts'
 const target='http://127.0.0.1:54321'
 const key=process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY||''
@@ -271,8 +272,11 @@ try{
  })
  await denied(nativeInventoryActionResponse,head,crew('closeOperationalChecklist'),{checklist_id:checklist.id})
  assert.equal((await one(a.from('operational_checklists').select('status').eq('id',checklist.id),'CHECKLIST_DENIED')).status,'open')
- // Complete using the original audited RPC before testing native close/reopen.
- await read(a.rpc('upt_set_operational_checklist_item',{p_item:checkItem.id,p_complete:true}),'CHECKLIST_COMPLETE_FIXTURE')
+ await verified(crew('completeOperationalChecklistItem'),async()=>{
+  await invoke(safeAction,head,crew('completeOperationalChecklistItem'),{item_id:checkItem.id})
+  const row=await one(a.from('checklist_items').select('completed_at').eq('id',checkItem.id),'CHECKLIST_COMPLETE')
+  assert.ok(row.completed_at)
+ })
  await verified(crew('closeOperationalChecklist'),async()=>{
   await invoke(nativeInventoryActionResponse,head,crew('closeOperationalChecklist'),{checklist_id:checklist.id})
   const row=await one(a.from('operational_checklists').select('status,completed_at').eq('id',checklist.id),'CHECKLIST_CLOSE')
@@ -588,6 +592,109 @@ try{
    const r=await find('admin_financial_payments',payment,'amount,document_id')
    assert.equal(Number(r.amount),121);assert.equal(r.document_id,doc.id)
    assert.equal((await read(a.from('admin_financial_payments').select('amount').eq('document_id',doc.id),'PAYMENT_REPLAY')).length,1)
+  })
+ })
+ await domain('inventory-condition-recovery',async()=>{
+  const name=prefix+' Condition fixture'
+  await invoke(nativeInventoryActionResponse,head,crew('createInventoryItem'),{workplace_id:workplace,name,quantity:'4',item_kind:'asset'})
+  const item=await one(a.from('inventory_items').select('id').eq('workplace_id',workplace).eq('name',name),'CONDITION_FIXTURE')
+  const stock=()=>find('inventory_items',item.id,'total_quantity,available_quantity,damaged_quantity,missing_quantity')
+  await verified(crew('reportWorkplaceInventoryCondition'),async()=>{
+   const fields={item_id:item.id,phase:'opening',condition:'damaged',quantity:'1',notes:prefix}
+   await denied(nativeInventoryActionResponse,staff,crew('reportWorkplaceInventoryCondition'),fields)
+   assert.equal((await stock()).damaged_quantity,0)
+   await invoke(nativeInventoryActionResponse,head,crew('reportWorkplaceInventoryCondition'),fields)
+   const row=await stock();assert.equal(row.total_quantity,4);assert.equal(row.available_quantity,3);assert.equal(row.damaged_quantity,1)
+   await invoke(nativeInventoryActionResponse,head,crew('reportWorkplaceInventoryCondition'),{...fields,phase:'closing',condition:'missing'})
+   const after=await stock();assert.equal(after.available_quantity,2);assert.equal(after.missing_quantity,1)
+  })
+  await verified(crew('restoreInventoryQuantity'),async()=>{
+   const fields={item_id:item.id,condition:'damaged',quantity:'1',notes:prefix}
+   await denied(nativeInventoryActionResponse,staff,crew('restoreInventoryQuantity'),fields)
+   await invoke(nativeInventoryActionResponse,head,crew('restoreInventoryQuantity'),fields)
+   await denied(nativeInventoryActionResponse,head,crew('restoreInventoryQuantity'),fields)
+   await invoke(nativeInventoryActionResponse,head,crew('restoreInventoryQuantity'),{...fields,condition:'missing'})
+   const row=await stock();assert.equal(row.total_quantity,4);assert.equal(row.available_quantity,4)
+   assert.equal(row.damaged_quantity,0);assert.equal(row.missing_quantity,0)
+  })
+ })
+ await domain('workplace-capacity',async()=>{
+  const start=new Date(Date.now()+9*86400000).toISOString(),end=new Date(Date.parse(start)+4*3600000).toISOString()
+  const name=prefix+' Workplace event'
+  await invoke(megaCrewEventResponse,head,crew('createEvent'),{name,start_at:start,end_at:end,radius:'100'})
+  const e=await one(a.from('events').select('id').eq('name',name),'WORKPLACE_EVENT')
+  const fields={event_id:e.id,name:prefix+' Capacity',default_shift_start:start,default_shift_end:end,minimum_staff:'1',target_staff:'3',maximum_staff:'5',sort_order:'9'}
+  let post
+  await verified(crew('addWorkplace'),async()=>{
+   await denied(megaCrewEventResponse,staff,crew('addWorkplace'),fields)
+   await invoke(megaCrewEventResponse,head,crew('addWorkplace'),fields)
+   post=await one(a.from('workplaces').select('id,minimum_staff,target_staff,maximum_staff,sort_order,is_active').eq('event_id',e.id).eq('name',fields.name),'WORKPLACE_ADD')
+   assert.equal(post.minimum_staff,1);assert.equal(post.target_staff,3);assert.equal(post.maximum_staff,5);assert.equal(post.sort_order,9);assert.equal(post.is_active,true)
+  })
+  await verified(crew('updateWorkplace'),async()=>{
+   const change={...fields,workplace_id:post.id,name:prefix+' Capacity edited',minimum_staff:'2',target_staff:'4',maximum_staff:'6',is_active:'on'}
+   await denied(megaCrewEventResponse,head,crew('updateWorkplace'),{...change,maximum_staff:'1'})
+   assert.equal((await find('workplaces',post.id,'name')).name,fields.name)
+   await invoke(megaCrewEventResponse,head,crew('updateWorkplace'),change)
+   const row=await find('workplaces',post.id,'name,minimum_staff,target_staff,maximum_staff,is_active')
+   assert.equal(row.name,change.name);assert.equal(row.minimum_staff,2);assert.equal(row.target_staff,4);assert.equal(row.maximum_staff,6);assert.equal(row.is_active,true)
+  })
+ })
+ await domain('notifications-read-isolation',async()=>{
+  // Seed only synthetic notifications using the explicitly loopback psql helper.
+  // All mutations under test still use the actual signed native handlers.
+  for(const id of [staff.id,unrelated.id])assert.match(id,/^[0-9a-f-]{36}$/i)
+  assert.match(prefix,/^PHASE23-[0-9a-f]{12}$/)
+  const title=prefix+' Notification'
+  sqlLocal("INSERT INTO public.crew_notifications(user_id,title,kind) SELECT '"+staff.id+"'::uuid,'"+title+"','inventory' FROM generate_series(1,51)")
+  const foreign=sqlLocal("INSERT INTO public.crew_notifications(user_id,title,kind) VALUES ('"+unrelated.id+"'::uuid,'"+title+"','inventory') RETURNING id").split('\n')[0]
+  assert.match(foreign,/^[0-9a-f-]{36}$/i)
+  const own=await read(staff.db.from('crew_notifications').select('id,read_at').eq('title',title),'NOTIFICATION_FIXTURES')
+  assert.equal(own.length,51);assert.ok(own.every(x=>!x.read_at))
+  const foreignRead=()=>one(unrelated.db.from('crew_notifications').select('read_at').eq('id',foreign),'FOREIGN_NOTIFICATION')
+  await verified(crew('markNotificationRead'),async()=>{
+   await invoke(memberAction,staff,crew('markNotificationRead'),{notification_id:own[0].id})
+   assert.ok((await one(staff.db.from('crew_notifications').select('read_at').eq('id',own[0].id),'SINGLE_NOTIFICATION')).read_at)
+   const attempted=await memberAction(req(crew('markNotificationRead'),{notification_id:foreign}),staff.db,crew('markNotificationRead'))
+   assert.ok([200,422].includes(attempted.status),'FOREIGN_NOTIFICATION_HTTP')
+   assert.equal((await foreignRead()).read_at,null)
+  })
+  await verified(crew('markAllNotificationsRead'),async()=>{
+   // Add one extra unread own notification to guarantee >50 pending rows.
+   sqlLocal("INSERT INTO public.crew_notifications(user_id,title,kind) VALUES ('"+staff.id+"'::uuid,'"+title+"','inventory')")
+   await invoke(megaOperationsResponse,staff,crew('markAllNotificationsRead'),{},{noForm:true})
+   const rows=await read(staff.db.from('crew_notifications').select('id,read_at').eq('title',title),'ALL_NOTIFICATIONS')
+   assert.equal(rows.length,52);assert.ok(rows.every(x=>x.read_at));assert.equal((await foreignRead()).read_at,null)
+  })
+ })
+ await domain('text-document-storage',async()=>{
+  const invTitle=prefix+' Inventory text',postName=prefix+' Price post',body='QA synthetic text only'
+  let doc
+  const lookup=heading=>one(a.from('event_documents').select('id,storage_path,uploaded_by,mime_type,file_size_bytes,is_active,offline_critical,description').eq('event_id',event).eq('workplace_id',workplace).eq('title',heading),'TEXT_DOCUMENT')
+  const verifyDoc=async(row)=>{
+   assert.equal(row.uploaded_by,head.id);assert.equal(row.mime_type,'text/plain')
+   assert.equal(row.file_size_bytes,new TextEncoder().encode(body).byteLength);assert.equal(row.description,body)
+   assert.equal(row.is_active,true);assert.equal(row.offline_critical,true)
+   // Independently verify storage existence using the disposable DB catalog.
+   assert.match(row.storage_path,/^[0-9a-f-]{36}\/document\/[0-9a-f-]{36}\.txt$/i)
+   assert.equal(sqlLocal("SELECT count(*) FROM storage.objects WHERE bucket_id='work-media' AND name='"+row.storage_path+"'"),'1')
+  }
+  await verified(crew('createInventoryTextEntry'),async()=>{
+   const fields={event_id:event,workplace_id:workplace,title:invTitle,content:body}
+   await denied(safeAction,staff,crew('createInventoryTextEntry'),fields)
+   await invoke(safeAction,head,crew('createInventoryTextEntry'),fields)
+   doc=await lookup(invTitle);await verifyDoc(doc)
+  })
+  await verified(crew('createPriceListTextEntry'),async()=>{
+   await invoke(safeAction,head,crew('createPriceListTextEntry'),{event_id:event,workplace_id:workplace,workplace_name:postName,price_list_text:body})
+   await verifyDoc(await lookup('Prijslijst · '+postName))
+  })
+  await verified(crew('archiveEventDocument'),async()=>{
+   await denied(megaOperationsResponse,staff,crew('archiveEventDocument'),{document_id:doc.id})
+   assert.match(doc.id,/^[0-9a-f-]{36}$/i)
+   await invoke(megaOperationsResponse,head,crew('archiveEventDocument'),{document_id:doc.id})
+   assert.equal(sqlLocal("SELECT is_active FROM public.event_documents WHERE id='"+doc.id+"'::uuid"),'f')
+   assert.equal(sqlLocal("SELECT count(*) FROM storage.objects WHERE bucket_id='work-media' AND name='"+doc.storage_path+"'"),'0')
   })
  })
  await domain('maker',async()=>{
