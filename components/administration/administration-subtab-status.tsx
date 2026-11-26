@@ -160,7 +160,7 @@ export function AdministrationSubtabStatus({locale,admin}:{locale:SupportedUiLoc
       const metric=metrics[slug]??{value:"—",detail:t.notTracked}
       const title=names[slug]??administrationModules.find(item=>item.slug===slug)?.title[locale]??slug
       return <li key={slug}>
-       <Link href={administrationRoute(slug)} data-administration-subtab-status={slug} className="flex min-h-16 items-center gap-2 px-4 py-3 hover:bg-accent/50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-violet-500">
+       <Link prefetch={false} href={administrationRoute(slug)} data-administration-subtab-status={slug} className="flex min-h-16 items-center gap-2 px-4 py-3 hover:bg-accent/50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-violet-500">
         <span className="min-w-0 flex-1">
          <span className="block text-sm font-semibold">{title}</span>
          <span className="mt-1 block break-words text-xs text-muted-foreground">{metric.detail}</span>

@@ -16,7 +16,7 @@ import { StaffWorkplacePersonnel, type StaffWorkplacePerson } from '@/components
 export const dynamic = 'force-dynamic'
 
 function Card({ href, icon: Icon, title, value }: { href: string; icon: typeof CalendarDays; title: string; value: number }) {
-  return <Link href={href} className="block w-full rounded-2xl border border-border bg-card p-5">
+  return <Link href={href} className="block w-full rounded-2xl border border-border bg-card p-5" prefetch={false}>
     <div className="flex items-center justify-between"><Icon className="h-5 w-5 text-violet-400"/><ArrowRight className="h-4 w-4 text-muted-foreground"/></div>
     <div className="mt-5 text-3xl font-black">{value}</div>
     <div className="text-sm text-muted-foreground">{title}</div>
@@ -141,7 +141,7 @@ async function DashboardOverview({current}:{current:NonNullable<Awaited<ReturnTy
         <div className="min-w-0 flex-1"><h2 className="text-xl font-black">{actionText.title}</h2><p className="mt-1 text-sm text-muted-foreground">{actionText.description}</p>
           {action.shiftStart&&<time className="mt-2 block text-xs font-semibold" dateTime={action.shiftStart}>{new Date(action.shiftStart).toLocaleString(locale==='nl'?'nl-BE':locale==='fr'?'fr-BE':locale==='de'?'de-BE':'en-BE',{timeZone:'Europe/Brussels',dateStyle:'medium',timeStyle:'short'})}</time>}
         </div>
-        <Link data-next-action-link href={action.href} className="inline-flex items-center gap-2 rounded-xl bg-violet-600 px-4 py-3 text-sm font-bold text-white">{actionText.button}<ArrowRight className="h-4 w-4"/></Link>
+        <Link data-next-action-link href={action.href} className="inline-flex items-center gap-2 rounded-xl bg-violet-600 px-4 py-3 text-sm font-bold text-white" prefetch={false}>{actionText.button}<ArrowRight className="h-4 w-4"/></Link>
       </div>
     </section>}
     <section className="grid gap-4 md:grid-cols-3">
@@ -152,10 +152,10 @@ async function DashboardOverview({current}:{current:NonNullable<Awaited<ReturnTy
     {current.role==='staff'&&hasEventAssignment&&<details className="space-y-3 rounded-2xl border bg-card p-4"><summary className="cursor-pointer font-bold">Mijn evenement · Meer functies</summary>
       <div><h2 className="text-lg font-bold">Mijn evenement</h2><p className="text-sm text-muted-foreground">Directe toegang tot je toegewezen werk, instructies en materiaal.</p></div>
       <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
-        <Link href="/operations" className="rounded-xl border p-4"><Clock3 className="mb-3 h-5 w-5 text-violet-400"/><p className="font-bold">Mijn werkuren</p><p className="text-xs text-muted-foreground">Start, pauze en stop je werk via de geldige workflow.</p></Link>
-        <Link href="/briefings" className="rounded-xl border p-4"><ClipboardCheck className="mb-3 h-5 w-5 text-violet-400"/><p className="font-bold">Briefing</p><p className="text-xs text-muted-foreground">Lees en bevestig je instructies vóór je shift.</p></Link>
-        <Link href="/workplaces" className="rounded-xl border p-4"><MapPin className="mb-3 h-5 w-5 text-violet-400"/><p className="font-bold">Werkplaats & shift</p><p className="text-xs text-muted-foreground">Bekijk waar en wanneer je bent ingepland.</p></Link>
-        <Link href="/inventory" className="rounded-xl border p-4"><PackageCheck className="mb-3 h-5 w-5 text-violet-400"/><p className="font-bold">Inventaris</p><p className="text-xs text-muted-foreground">Bekijk materiaal van je toegewezen werkplek.</p></Link>
+        <Link href="/operations" className="rounded-xl border p-4" prefetch={false}><Clock3 className="mb-3 h-5 w-5 text-violet-400"/><p className="font-bold">Mijn werkuren</p><p className="text-xs text-muted-foreground">Start, pauze en stop je werk via de geldige workflow.</p></Link>
+        <Link href="/briefings" className="rounded-xl border p-4" prefetch={false}><ClipboardCheck className="mb-3 h-5 w-5 text-violet-400"/><p className="font-bold">Briefing</p><p className="text-xs text-muted-foreground">Lees en bevestig je instructies vóór je shift.</p></Link>
+        <Link href="/workplaces" className="rounded-xl border p-4" prefetch={false}><MapPin className="mb-3 h-5 w-5 text-violet-400"/><p className="font-bold">Werkplaats & shift</p><p className="text-xs text-muted-foreground">Bekijk waar en wanneer je bent ingepland.</p></Link>
+        <Link href="/inventory" className="rounded-xl border p-4" prefetch={false}><PackageCheck className="mb-3 h-5 w-5 text-violet-400"/><p className="font-bold">Inventaris</p><p className="text-xs text-muted-foreground">Bekijk materiaal van je toegewezen werkplek.</p></Link>
       </div>
     </details>}
     {current.role==='staff'&&<section className="space-y-3 rounded-2xl border bg-card p-4">
@@ -171,10 +171,10 @@ async function DashboardOverview({current}:{current:NonNullable<Awaited<ReturnTy
     {current.role==='responsible_lead'&&activeResponsibleAssignments.length>0&&<details className="space-y-3 rounded-2xl border bg-card p-4"><summary className="cursor-pointer font-bold">Mijn operationele werkplek · Meer functies</summary>
       <div><h2 className="text-lg font-bold">Mijn operationele werkplek</h2><p className="text-sm text-muted-foreground">Directe toegang tot de functies die je als verantwoordelijke tijdens het evenement gebruikt.</p></div>
       <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
-        <Link href="/operations" className="rounded-xl border p-4"><Clock3 className="mb-3 h-5 w-5 text-violet-400"/><p className="font-bold">Mijn werkuren</p><p className="text-xs text-muted-foreground">Werk, pauze en operationele opvolging.</p></Link>
-        <Link href="/briefings" className="rounded-xl border p-4"><ClipboardCheck className="mb-3 h-5 w-5 text-violet-400"/><p className="font-bold">Briefing & checklists</p><p className="text-xs text-muted-foreground">Instructies en opening- of sluitchecklists.</p></Link>
-        <Link href="/inventory" className="rounded-xl border p-4"><PackageCheck className="mb-3 h-5 w-5 text-violet-400"/><p className="font-bold">Inventaris</p><p className="text-xs text-muted-foreground">Controleer materiaal en meld ontbrekend of defect materiaal.</p></Link>
-        <Link href="/tasks" className="rounded-xl border p-4"><ListTodo className="mb-3 h-5 w-5 text-violet-400"/><p className="font-bold">Taken</p><p className="text-xs text-muted-foreground">Volg taken van je eigen werkplek op.</p></Link>
+        <Link href="/operations" className="rounded-xl border p-4" prefetch={false}><Clock3 className="mb-3 h-5 w-5 text-violet-400"/><p className="font-bold">Mijn werkuren</p><p className="text-xs text-muted-foreground">Werk, pauze en operationele opvolging.</p></Link>
+        <Link href="/briefings" className="rounded-xl border p-4" prefetch={false}><ClipboardCheck className="mb-3 h-5 w-5 text-violet-400"/><p className="font-bold">Briefing & checklists</p><p className="text-xs text-muted-foreground">Instructies en opening- of sluitchecklists.</p></Link>
+        <Link href="/inventory" className="rounded-xl border p-4" prefetch={false}><PackageCheck className="mb-3 h-5 w-5 text-violet-400"/><p className="font-bold">Inventaris</p><p className="text-xs text-muted-foreground">Controleer materiaal en meld ontbrekend of defect materiaal.</p></Link>
+        <Link href="/tasks" className="rounded-xl border p-4" prefetch={false}><ListTodo className="mb-3 h-5 w-5 text-violet-400"/><p className="font-bold">Taken</p><p className="text-xs text-muted-foreground">Volg taken van je eigen werkplek op.</p></Link>
       </div>
     </details>}
     {current.role==='responsible_lead'&&<section className="space-y-3 rounded-2xl border bg-card p-4">
@@ -190,7 +190,7 @@ async function DashboardOverview({current}:{current:NonNullable<Awaited<ReturnTy
     <section>
       <h2 className="mb-3 text-lg font-bold">Komende evenementen</h2>
       <div className="grid gap-3">
-        {upcomingEvents.length ? upcomingEvents.slice(0, 3).map(event => <Link href="/events" key={event.id} className="flex items-center justify-between rounded-2xl border border-border bg-card p-4"><div><div className="font-bold">{event.name}</div><div className="flex gap-2 text-sm text-muted-foreground"><MapPin className="h-4 w-4"/>{event.venue || 'Locatie nog niet ingesteld'}</div></div><ArrowRight className="h-5 w-5"/></Link>) : <div className="rounded-2xl border border-dashed p-8 text-center text-muted-foreground">Geen evenementen beschikbaar.</div>}
+        {upcomingEvents.length ? upcomingEvents.slice(0, 3).map(event => <Link href="/events" key={event.id} className="flex items-center justify-between rounded-2xl border border-border bg-card p-4" prefetch={false}><div><div className="font-bold">{event.name}</div><div className="flex gap-2 text-sm text-muted-foreground"><MapPin className="h-4 w-4"/>{event.venue || 'Locatie nog niet ingesteld'}</div></div><ArrowRight className="h-5 w-5"/></Link>) : <div className="rounded-2xl border border-dashed p-8 text-center text-muted-foreground">Geen evenementen beschikbaar.</div>}
       </div>
     </section>
 </>
