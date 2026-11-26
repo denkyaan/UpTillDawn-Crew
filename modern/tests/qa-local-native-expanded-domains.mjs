@@ -1,6 +1,7 @@
 // Phase 2+3: independent positive workflows in the same disposable DB run.
 // No service role for actions, no live providers, no synthetic success results.
 import assert from 'node:assert/strict'
+import {runFinalDomains} from './qa-local-native-final-domains.mjs'
 import {nativeAdminActionResponse as admin} from '../src/api/native-admin-actions.ts'
 import {nativeCatalogActionResponse as catalog} from '../src/api/native-catalog-event-actions.ts'
 import {nativeWaveTwoActionResponse as platformAction} from '../src/api/native-platform-actions.ts'
@@ -433,4 +434,5 @@ export async function runRemainingDomains(c){
    assert.equal(r.unit_code,'HUR');assert.equal(r.vat_category,'S')
   })
  })
+ await runFinalDomains({...c,newEvent,newPost,available,member,dateRange})
 }

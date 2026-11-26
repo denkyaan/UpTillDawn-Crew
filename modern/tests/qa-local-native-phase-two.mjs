@@ -711,7 +711,7 @@ try{
    assert.equal(sqlLocal("SELECT count(*) FROM storage.objects WHERE bucket_id='work-media' AND name='"+doc.storage_path+"'"),'0')
   })
  })
- await runRemainingDomains({head,staff,office,promoter,unrelated,alternate,actor,event,workplace,prefix,a,read,one,find,sqlLocal,invoke,denied,verified,domain,crew,platform,finance,saved,ownProfile})
+ await runRemainingDomains({head,maker,staff,office,promoter,unrelated,alternate,actor,event,workplace,prefix,a,read,one,find,sqlLocal,invoke,denied,verified,domain,crew,platform,finance,saved,ownProfile})
  await domain('maker',async()=>{
  const enter='lib/actions/god-mode.ts#enterGodModeFromMakerSession'
  const normal='lib/actions/auth.ts#enterNormalAppFromMakerSession'
