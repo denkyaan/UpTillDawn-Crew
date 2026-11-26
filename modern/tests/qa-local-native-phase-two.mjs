@@ -29,7 +29,7 @@ const event='00000000-0000-4000-8000-00000000e2e1'
 const workplace='00000000-0000-4000-8000-00000000e2e2'
 const sha=execFileSync('git',['rev-parse','HEAD'],{encoding:'utf8'}).trim()
 const prefix='PHASE23-'+sha.slice(0,12)
-const actors=[],operations=[]
+const actors=[],operations=[],domains=[],failures=[]
 let failed=null
 const crew=name=>'lib/actions/uptilldawn.ts#'+name
 const guest=name=>'lib/actions/guestlist.ts#'+name
@@ -79,6 +79,20 @@ async function verified(id,fn){
  operations.push({id,outcome:'positive',persistenceVerified:true})
  console.log('PASS native local '+id)
 }
+function safeFailure(error){
+ return (error instanceof Error?error.message.split('\n')[0]:'LOCAL_NATIVE_FAILED').replaceAll(password,'[redacted]').replaceAll(key,'[redacted]').slice(0,160)
+}
+async function domain(name,fn){
+ try{
+  await fn()
+  domains.push({name,outcome:'success'})
+ }catch(error){
+  const reason=safeFailure(error)
+  domains.push({name,outcome:'failure'})
+  failures.push({domain:name,reason})
+  console.error('FAIL native local '+name+': '+reason)
+ }
+}
 async function denied(handler,identity,id,fields){
  await invoke(handler,identity,id,fields,{status:422})
  operations.push({id,outcome:'denied'})
@@ -87,10 +101,12 @@ try{
  const head=await actor('bot-01-admin-nl',false,true)
  const staff=await actor('bot-03-staff-en',false,false)
  const maker=await actor('bot-16-maker',true,false)
+ const unrelated=await actor('bot-08-staff-de',false,false)
  const a=head.db
  const owned=await one(a.from('events').select('id,created_by,status,start_at,end_at').eq('id',event),'LOCAL_EVENT')
  assert.equal(owned.created_by,head.id);assert.equal(owned.status,'scheduled')
  assert.equal((await one(a.from('workplaces').select('event_id').eq('id',workplace),'LOCAL_WORKPLACE')).event_id,event)
+ await domain('guestlist',async()=>{
  const guestFields={event_id:event,name:prefix+' Artist',entry_type:'artist',spots:'2'}
  await denied(nativeAdminActionResponse,staff,guest('addGuestlistEntry'),guestFields)
  assert.equal((await read(a.from('event_guestlist_entries').select('id').eq('event_id',event).eq('name',guestFields.name),'GUEST_DENIAL')).length,0)
@@ -128,6 +144,8 @@ try{
   assert.equal(stored,'f','GUEST_REMOVE_PERSISTED')
   await denied(nativeAdminActionResponse,head,guest('removeGuestlistEntry'),{entry_id:entry.id})
  })
+ })
+ await domain('inventory',async()=>{
  const inventoryFields={workplace_id:workplace,name:prefix+' Radio',category:'QA',quantity:'3',item_kind:'asset'}
  let item
  await verified(crew('createInventoryItem'),async()=>{
@@ -153,6 +171,12 @@ try{
   await invoke(nativeInventoryActionResponse,head,crew('issueInventoryItem'),{item_id:item.id,user_id:staff.id,quantity:'2',notes:prefix})
   issue=await one(a.from('inventory_issues').select('id,quantity,outstanding_quantity').eq('item_id',item.id).eq('user_id',staff.id),'ISSUE')
   assert.equal(issue.quantity,2);assert.equal(issue.outstanding_quantity,2)
+  // The Head's read access must match the actual original Inventory UI,
+  // and a different employee must not gain access to the issued asset.
+  const movement=await one(a.from('inventory_movements').select('quantity,target_user_id').eq('issue_id',issue.id).eq('movement_type','issued'),'ISSUE_MOVEMENT')
+  assert.equal(movement.quantity,2);assert.equal(movement.target_user_id,staff.id)
+  assert.equal((await read(unrelated.db.from('inventory_issues').select('id').eq('id',issue.id),'FOREIGN_ISSUE_DENIAL')).length,0)
+  assert.equal((await read(unrelated.db.from('inventory_movements').select('id').eq('issue_id',issue.id),'FOREIGN_MOVEMENT_DENIAL')).length,0)
   const row=await one(a.from('inventory_items').select('available_quantity,issued_quantity').eq('id',item.id),'ISSUE_STOCK')
   assert.equal(row.available_quantity,3);assert.equal(row.issued_quantity,2)
  })
@@ -168,6 +192,8 @@ try{
   const row=await one(a.from('inventory_items').select('location_label,reorder_threshold,unit_cost_cents,asset_notes').eq('id',item.id),'ASSET_METADATA')
   assert.equal(row.location_label,'QA shelf');assert.equal(row.reorder_threshold,2);assert.equal(row.unit_cost_cents,1250);assert.equal(row.asset_notes,prefix)
  })
+ })
+ await domain('sales',async()=>{
  await verified(sales('configureSaleItem'),async()=>{
   const name=prefix+' Merch'
   await invoke(nativeInventoryActionResponse,head,crew('createInventoryItem'),{workplace_id:workplace,name,quantity:'8',item_kind:'consumable'})
@@ -184,11 +210,16 @@ try{
   const row=await one(a.from('sales_registers').select('opening_cash_cents,opened_by').eq('event_id',event).eq('workplace_id',workplace),'REGISTER')
   assert.equal(row.opening_cash_cents,2500);assert.equal(row.opened_by,head.id)
  })
+ })
+ await domain('qr-resource',async()=>{
+ const item=await one(a.from('inventory_items').select('id').eq('id','00000000-0000-4000-8000-00000000e2e8'),'QR_SEEDED_ITEM')
  await verified(platform('createQrResource'),async()=>{
   await invoke(megaOperationsResponse,head,platform('createQrResource'),{event_id:event,workplace_id:workplace,resource_type:'inventory',resource_id:item.id,title:prefix+' QR',route:'/inventory'})
   const row=await one(a.from('qr_resources').select('resource_id,route,active,created_by').eq('event_id',event).eq('title',prefix+' QR'),'QR')
   assert.equal(row.resource_id,item.id);assert.equal(row.route,'/inventory');assert.equal(row.active,true);assert.equal(row.created_by,head.id)
  })
+ })
+ await domain('checklist',async()=>{
  let checklist,checkItem
  await verified(crew('createOperationalChecklist'),async()=>{
   await invoke(nativeCatalogActionResponse,head,crew('createOperationalChecklist'),{workplace_id:workplace,kind:'custom',title:prefix+' Checklist'})
@@ -222,6 +253,8 @@ try{
   await invoke(megaOperationsResponse,head,crew('removeOperationalChecklistItem'),{item_id:checkItem.id})
   assert.equal((await read(a.from('checklist_items').select('id').eq('id',checkItem.id),'CHECK_ITEM_REMOVE')).length,0)
  })
+ })
+ await domain('events',async()=>{
  await verified(crew('updateEvent'),async()=>{
   await invoke(megaOperationsResponse,head,crew('updateEvent'),{event_id:event,name:prefix+' Event',start_at:owned.start_at,end_at:owned.end_at,registration_deadline:owned.start_at,radius:'150'})
   const row=await one(a.from('events').select('name,checkin_radius_m').eq('id',event),'EVENT_EDIT')
@@ -236,16 +269,22 @@ try{
    assert.equal(row.created_by,head.id);assert.equal(Date.parse(row.start_at),Date.parse(start));assert.equal(Date.parse(row.end_at),Date.parse(end))
   })
  }
+ })
+ await domain('pay-rate',async()=>{
  await verified(platform('savePayRate'),async()=>{
   await invoke(megaOperationsResponse,head,platform('savePayRate'),{user_id:staff.id,hourly_rate:'23.50',effective_from:new Date(Date.now()+86400000).toISOString().slice(0,10),notes:prefix})
   const row=await one(a.from('staff_pay_rates').select('hourly_rate_cents,created_by').eq('user_id',staff.id).eq('notes',prefix),'PAY_RATE')
   assert.equal(row.hourly_rate_cents,2350);assert.equal(row.created_by,head.id)
  })
+ })
+ await domain('knowledge',async()=>{
  await verified(platform('createKnowledgeArticle'),async()=>{
   await invoke(megaOperationsResponse,head,platform('createKnowledgeArticle'),{event_id:event,workplace_id:workplace,title:prefix+' Knowledge',body:'QA fixture'})
   const row=await one(a.from('knowledge_articles').select('body,created_by').eq('event_id',event).eq('title',prefix+' Knowledge'),'KNOWLEDGE')
   assert.equal(row.body,'QA fixture');assert.equal(row.created_by,head.id)
  })
+ })
+ await domain('maker',async()=>{
  const enter='lib/actions/god-mode.ts#enterGodModeFromMakerSession'
  const normal='lib/actions/auth.ts#enterNormalAppFromMakerSession'
  const back='lib/actions/god-mode.ts#returnToNormalAppFromGodMode'
@@ -276,9 +315,12 @@ try{
   const r=await invoke(megaMakerResponse,maker,godLogoutId,{}, {noForm:true,cookie:'uptilldawn-god-session='+encodeURIComponent(token)})
   assert.equal(r.data.redirect,'/login/admin');assert.equal(await valid(),false)
  })
+ })
+ if(failures.length)failed=failures.length+' native acceptance domain(s) failed'
 }catch(error){
- // Never serialize session credentials or response bodies.
- failed=error instanceof Error?error.message.split('\n')[0].replaceAll(password,'[redacted]').replaceAll(key,'[redacted]').slice(0,160):'LOCAL_NATIVE_FAILED'
+ // Identity/setup failure invalidates all dependent cases; still report it.
+ failed=safeFailure(error)
+ failures.push({domain:'setup',reason:failed})
  console.error(failed)
 }finally{
  for(const db of actors)try{await db.auth.signOut({scope:'local'})}catch{}
@@ -286,7 +328,7 @@ try{
  const dir=resolve(import.meta.dirname,'../../test-results/phase-two-three-local-native')
  mkdirSync(dir,{recursive:true})
  const ids=[...new Set(operations.filter(x=>x.outcome==='positive').map(x=>x.id))]
- writeFileSync(resolve(dir,'report.json'),JSON.stringify({validatedSha:sha,runId:process.env.GITHUB_RUN_ID||null,runAttempt:process.env.GITHUB_RUN_ATTEMPT||null,scope:'disposable-loopback-native-handlers-with-signed-users',operations,positiveActionIds:ids,failed,productionReady:false,liveMainParityVerified:false},null,2)+'\n')
+ writeFileSync(resolve(dir,'report.json'),JSON.stringify({validatedSha:sha,runId:process.env.GITHUB_RUN_ID||null,runAttempt:process.env.GITHUB_RUN_ATTEMPT||null,scope:'disposable-loopback-native-handlers-with-signed-users',operations,positiveActionIds:ids,domains,failures,failed,productionReady:false,liveMainParityVerified:false},null,2)+'\n')
  if(!failed)console.log('PASS actual local native action IDs: '+ids.length)
 }
 if(failed)process.exitCode=1
