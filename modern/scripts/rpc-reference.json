@@ -169,6 +169,7 @@
     "upt_sync_operation",
     "upt_sync_workplace_catalog_to_event",
     "upt_ticket_sales_summary",
+    "upt_update_inventory_asset_form",
     "upt_update_own_profile",
     "upt_update_shift",
     "upt_update_task_status",
@@ -205,5 +206,14 @@
     "workerResourceTelemetry": true,
     "fullFunctionalParity": true,
     "ownerAuthorizedProduction": true
-  }
+  },
+  "pendingLiveCatalogReverification": [
+    {
+      "rpc": "upt_update_inventory_asset_form",
+      "migration": "20261126172500_inventory_asset_form_rpc.sql",
+      "localAcceptanceVerifiedInRun": 45866266427,
+      "mainQaVerified": false,
+      "productionVerified": false
+    }
+  ]
 }
