@@ -200,7 +200,7 @@ jobs:
     permissions:
       contents: read
     runs-on: ubuntu-latest
-    timeout-minutes: 35
+    timeout-minutes: 65
     env:
       PGURL: postgresql://postgres:postgres@127.0.0.1:54322/postgres
     steps:
@@ -226,6 +226,9 @@ jobs:
           if [ ! -f supabase/config.toml ]; then
             npx --yes supabase@2.117.0 init
           fi
+          # Only the generated disposable local stack needs more Auth logins.
+          # No remote Supabase configuration is altered.
+          sed -i -E 's/^sign_in_sign_ups[[:space:]]*=.*/sign_in_sign_ups = 120/' supabase/config.toml
 
       - name: Start isolated Supabase stack
         run: |
@@ -398,6 +401,48 @@ jobs:
       - name: Exhaustive signed native transport acceptance (all 163 actions, all roles)
         if: ${{ !cancelled() && steps.local_native.outcome != 'skipped' }}
         run: node modern/tests/qa-local-all-action-matrix.mjs
+      - name: Local schema, rollback and thirty real Hono session checks
+        if: ${{ !cancelled() && steps.local_native.outcome != 'skipped' }}
+        run: node modern/tests/qa-local-release-rehearsal.mjs
+      - name: Build both actual applications for local browser parity
+        id: local_browser_build
+        if: ${{ !cancelled() && steps.local_native.outcome != 'skipped' }}
+        env:
+          NEXT_PUBLIC_APP_URL: http://127.0.0.1:3000
+          VITE_SUPABASE_URL: http://127.0.0.1:54321
+          VITE_MIGRATION_ALLOW_WRITES: 'false'
+          VITE_MIGRATION_SCANNING_ENABLED: 'false'
+        run: |
+          set -euo pipefail
+          test "$BOT_SUPABASE_URL" = "http://127.0.0.1:54321"
+          export VITE_SUPABASE_ANON_KEY="$NEXT_PUBLIC_SUPABASE_ANON_KEY"
+          npx playwright install --with-deps chromium
+          npm run build:next
+          npm --prefix modern run build
+          npm start -- --hostname 127.0.0.1 > /tmp/phase23-original-app.log 2>&1 &
+          echo $! > /tmp/phase23-original-app.pid
+          for i in {1..90}; do
+            if curl --fail --silent http://127.0.0.1:3000/login/staff >/dev/null; then exit 0; fi
+            sleep 1
+          done
+          exit 1
+      - name: Compare seven roles, four languages, two devices, 44 deep routes and Maker choice
+        if: ${{ !cancelled() && steps.local_browser_build.outcome == 'success' }}
+        env:
+          NEXT_PUBLIC_APP_URL: http://127.0.0.1:3000
+          VITE_SUPABASE_URL: http://127.0.0.1:54321
+          VITE_MIGRATION_ALLOW_WRITES: 'false'
+          VITE_MIGRATION_SCANNING_ENABLED: 'false'
+        run: |
+          set -euo pipefail
+          export VITE_SUPABASE_ANON_KEY="$NEXT_PUBLIC_SUPABASE_ANON_KEY"
+          node modern/tests/qa-local-release-browser.mjs
+      - name: Stop isolated original browser server
+        if: always()
+        run: |
+          if [ -f /tmp/phase23-original-app.pid ]; then
+            kill "$(cat /tmp/phase23-original-app.pid)" 2>/dev/null || true
+          fi
       - name: Always destroy disposable database stack
         if: always()
         run: npx --yes supabase@2.117.0 stop --no-backup
