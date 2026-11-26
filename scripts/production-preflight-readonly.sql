@@ -148,8 +148,15 @@ WITH checks(name,required,passed) AS (
     'application/vnd.openxmlformats-officedocument.presentationml.presentation',
     'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
       ]::text[])
-    AND EXISTS(SELECT 1 FROM pg_policies WHERE schemaname='storage' AND tablename='objects'
-      AND policyname='upt_work_media_document_upload_scope' AND permissive='RESTRICTIVE' AND cmd='INSERT')
+    AND EXISTS(
+      SELECT 1 FROM pg_catalog.pg_policy p
+      WHERE p.polrelid=to_regclass('storage.objects')
+        AND p.polname='upt_work_media_document_upload_scope'
+        AND NOT p.polpermissive
+        AND p.polcmd='a' -- PostgreSQL catalog code for row additions
+        AND p.polroles=ARRAY[to_regrole('authenticated')::oid]
+        AND p.polwithcheck IS NOT NULL
+    )
   UNION ALL
   SELECT 'main_tip_migration_in_history', false,
     EXISTS(SELECT 1 FROM supabase_migrations.schema_migrations
