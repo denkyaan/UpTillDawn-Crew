@@ -274,9 +274,9 @@ jobs:
         run: |
           set -euo pipefail
           for file in tests/sql/*.sql; do
-            # These suites require the dedicated users seeded later in this job.
+            # Self-contained synthetic users run before the sole Head is seeded.
             case "$file" in
-              tests/sql/owner-leadership-privacy.sql|tests/sql/administration-finance-integration.sql|tests/sql/administration-finance-rls.sql|tests/sql/administration-workflow-integration.sql|tests/sql/administration-peppol-integration.sql|tests/sql/15-bot-full-event.sql|tests/sql/qr-attendance-workflow.sql|tests/sql/operational-security.sql|tests/sql/chat-lifecycle.sql|tests/sql/queued-upload-security.sql|tests/sql/timesheet-lifecycle.sql|tests/sql/release-access-matrix.sql|tests/sql/privilege-matrix.sql|tests/sql/responsible-read-scope.sql|tests/sql/responsible-event-selection-guard.sql|tests/sql/offline-revocation-replay.sql|tests/sql/offline-time-dependencies.sql|tests/sql/new-feature-security.sql) continue ;;
+              tests/sql/owner-leadership-privacy.sql|tests/sql/administration-finance-integration.sql|tests/sql/administration-finance-rls.sql|tests/sql/administration-workflow-integration.sql|tests/sql/administration-peppol-integration.sql|tests/sql/main-seven-role-permission-matrix.sql|tests/sql/15-bot-full-event.sql|tests/sql/administration-workflow-isolated-e2e.sql|tests/sql/event-command-financial-privacy.sql|tests/sql/main-administration-finance-head-acceptance.sql|tests/sql/qr-attendance-workflow.sql|tests/sql/release-access-matrix.sql|tests/sql/storage-security.sql|tests/sql/timesheet-lifecycle.sql|tests/sql/v21-portal-role-lifecycle.sql continue ;;
             esac
             echo "::group::$file"
             psql "$PGURL" -v ON_ERROR_STOP=1 -f "$file"
@@ -306,7 +306,7 @@ jobs:
           api_url="${API_URL:-${SUPABASE_URL:-}}"
           public_key="${ANON_KEY:-${PUBLISHABLE_KEY:-}}"
           service_key="${SERVICE_ROLE_KEY:-${SECRET_KEY:-}}"
-          test -n "$api_url"
+          test "$api_url" = "http://127.0.0.1:54321"
           test -n "$public_key"
           test -n "$service_key"
           bot_password="$(openssl rand -base64 24 | tr -d '\n')Aa1!"
@@ -324,7 +324,9 @@ jobs:
       - name: Prepare isolated authentication fixtures
         run: |
           set -euo pipefail
-          psql "$BOT_DB_URL" -v ON_ERROR_STOP=1 -c "DROP TRIGGER IF EXISTS on_auth_user_created ON auth.users;"
+          test "$BOT_SUPABASE_URL" = "http://127.0.0.1:54321"
+          test "$BOT_DB_URL" = "$PGURL"
+          # Keep the installed signup trigger intact for actual Auth seeding.
           node scripts/seed-15-bot-users.mjs
           briefing_seed_count="$(psql "$BOT_DB_URL" -v ON_ERROR_STOP=1 -Atc "SELECT count(*) FROM public.briefing_acknowledgements ba JOIN auth.users u ON u.id=ba.user_id WHERE ba.briefing_id='00000000-0000-4000-8000-00000000e2e3'::uuid AND lower(u.email)=lower('bot-03-staff-en@bots.uptilldawn.test');")"
           test "$briefing_seed_count" = "0"
@@ -338,6 +340,27 @@ jobs:
           test "$(psql "$BOT_DB_URL" -Atc "select count(*) from auth.users where email='bot-16-maker@bots.uptilldawn.test'")" = "1"
           psql "$BOT_DB_URL" -v ON_ERROR_STOP=1 -c "insert into upt_private.app_owners(user_id) select id from auth.users where email='bot-16-maker@bots.uptilldawn.test'"
           psql "$BOT_DB_URL" -v ON_ERROR_STOP=1 -f tests/sql/owner-leadership-privacy.sql
+
+      - name: Establish the designated local Head and deputy identities
+        run: |
+          set -euo pipefail
+          test "$BOT_SUPABASE_URL" = "http://127.0.0.1:54321"
+          test "$BOT_DB_URL" = "$PGURL"
+          psql "$PGURL" -v ON_ERROR_STOP=1 <<'SQL'
+          BEGIN;
+          SELECT set_config('request.jwt.claim.sub',(SELECT id::text FROM auth.users WHERE email='bot-16-maker@bots.uptilldawn.test'),true);
+          SELECT public.upt_leadership_assign('head',(SELECT id FROM auth.users WHERE email='bot-01-admin-nl@bots.uptilldawn.test'));
+          SELECT set_config('request.jwt.claim.sub',(SELECT id::text FROM auth.users WHERE email='bot-01-admin-nl@bots.uptilldawn.test'),true);
+          SELECT public.upt_leadership_assign('left_hand',(SELECT id FROM auth.users WHERE email='bot-06-staff-fr@bots.uptilldawn.test'));
+          SELECT public.upt_leadership_assign('right_hand',(SELECT id FROM auth.users WHERE email='bot-07-staff-en@bots.uptilldawn.test'));
+          DO $ BEGIN
+            IF (SELECT count(*) FROM public.upt_organization_leadership)<>3 OR
+               (SELECT count(*) FROM public.profiles WHERE role='admin' AND approved AND NOT account_blocked)<>1 THEN
+              RAISE EXCEPTION 'Local single-Head setup incomplete';
+            END IF;
+          END $;
+          COMMIT;
+          SQL
 
       - name: Run complete financial transaction and non-admin RLS integration suites
         shell: bash
@@ -360,11 +383,12 @@ jobs:
           set -euo pipefail
           test "$BOT_SUPABASE_URL" = "http://127.0.0.1:54321"
           test "$BOT_DB_URL" = "$PGURL"
-          for suite in 15-bot-full-event qr-attendance-workflow operational-security chat-lifecycle queued-upload-security timesheet-lifecycle release-access-matrix privilege-matrix responsible-read-scope responsible-event-selection-guard offline-revocation-replay offline-time-dependencies storage-security new-feature-security; do
+          for suite in 15-bot-full-event administration-workflow-isolated-e2e event-command-financial-privacy main-administration-finance-head-acceptance qr-attendance-workflow release-access-matrix storage-security timesheet-lifecycle v21-portal-role-lifecycle; do
             echo "::group::$suite"
             psql "$PGURL" -v ON_ERROR_STOP=1 -f "tests/sql/$suite.sql"
             echo "::endgroup::"
           done
+          psql "$PGURL" -v ON_ERROR_STOP=1 -v PHASE23_LOCAL_ROLE_FIXTURES=1 -f tests/sql/main-seven-role-permission-matrix.sql
       - name: Verify positive native actions with real signed local users and persisted state
         id: local_native
         run: node modern/tests/qa-local-native-phase-two.mjs

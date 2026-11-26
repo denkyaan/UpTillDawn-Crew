@@ -28,7 +28,9 @@ test('authenticated browser release QA is isolated in manually dispatched CI pro
  assert.match(runner,/E2E_ALLOW_MAIN_TEST/)
  assert.match(runner,/const main=base\.hostname==='uptilldawn-main\.uptilldawn\.workers\.dev'/)
  assert.match(runner,/Missing|BLOCKED/)
- assert.doesNotMatch(main,/secrets\.SUPABASE_SERVICE_ROLE|BOT_SERVICE_ROLE_KEY/)
+ const fast=main.split('  fast:')[1].split('  phase-two-three-local-acceptance:')[0]
+ assert.doesNotMatch(fast,/secrets\.SUPABASE_SERVICE_ROLE|BOT_SERVICE_ROLE_KEY/)
+ assert.doesNotMatch(main,/secrets\.[A-Z0-9_]*(?:SERVICE_ROLE|SUPABASE_SECRET)/)
 })
 
 test('QA seeding permits only loopback Supabase and explicitly approved main-test, never production',()=>{
@@ -46,5 +48,14 @@ test('QA seeding permits only loopback Supabase and explicitly approved main-tes
  assert.match(fullCi,/playwright-chromium-1\.65\.0-/)
  assert.doesNotMatch(fullCi,/npm install --no-save.*playwright@1\.62\.1/)
  const fastCi=read('.github/workflows/fast-change-validation.yml')
- assert.doesNotMatch(fastCi,/node scripts\/seed-15-bot-users\.mjs/)
+ const fast=fastCi.split('  fast:')[1].split('  phase-two-three-local-acceptance:')[0]
+ assert.doesNotMatch(fast,/node scripts\/seed-15-bot-users\.mjs/)
+ const local=fastCi.split('  phase-two-three-local-acceptance:')[1].split('  release-production:')[0]
+ assert.match(local,/github\.event_name == 'pull_request'/)
+ assert.match(local,/github\.event\.pull_request\.head\.repo\.full_name == github\.repository/)
+ assert.match(local,/startsWith\(github\.head_ref, 'migration\/phase-2-3-'\)/)
+ assert.ok(local.includes('test "$api_url" = "http://127.0.0.1:54321"'))
+ assert.ok(local.includes('test "$BOT_DB_URL" = "$PGURL"'))
+ assert.doesNotMatch(local,/secrets\.|UPT_QA_ALLOW_MAIN_SEED|release_production/)
+ assert.match(local,/node scripts\/seed-15-bot-users\.mjs/)
 })
