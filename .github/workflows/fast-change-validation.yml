@@ -211,6 +211,9 @@ jobs:
         with:
           node-version: 24
           cache: npm
+      - name: Check acceptance shell syntax before database startup
+        run: node --test tests/phase-two-three-shell-syntax.test.mjs
+
       - name: Install isolated test dependencies
         run: |
           npm ci --prefer-offline --no-audit --no-fund
@@ -276,7 +279,7 @@ jobs:
           for file in tests/sql/*.sql; do
             # Self-contained synthetic users run before the sole Head is seeded.
             case "$file" in
-              tests/sql/owner-leadership-privacy.sql|tests/sql/administration-finance-integration.sql|tests/sql/administration-finance-rls.sql|tests/sql/administration-workflow-integration.sql|tests/sql/administration-peppol-integration.sql|tests/sql/main-seven-role-permission-matrix.sql|tests/sql/15-bot-full-event.sql|tests/sql/administration-workflow-isolated-e2e.sql|tests/sql/event-command-financial-privacy.sql|tests/sql/main-administration-finance-head-acceptance.sql|tests/sql/qr-attendance-workflow.sql|tests/sql/release-access-matrix.sql|tests/sql/storage-security.sql|tests/sql/timesheet-lifecycle.sql|tests/sql/v21-portal-role-lifecycle.sql continue ;;
+              tests/sql/owner-leadership-privacy.sql|tests/sql/administration-finance-integration.sql|tests/sql/administration-finance-rls.sql|tests/sql/administration-workflow-integration.sql|tests/sql/administration-peppol-integration.sql|tests/sql/main-seven-role-permission-matrix.sql|tests/sql/15-bot-full-event.sql|tests/sql/administration-workflow-isolated-e2e.sql|tests/sql/event-command-financial-privacy.sql|tests/sql/main-administration-finance-head-acceptance.sql|tests/sql/qr-attendance-workflow.sql|tests/sql/release-access-matrix.sql|tests/sql/storage-security.sql|tests/sql/timesheet-lifecycle.sql|tests/sql/v21-portal-role-lifecycle.sql) continue ;;
             esac
             echo "::group::$file"
             psql "$PGURL" -v ON_ERROR_STOP=1 -f "$file"
@@ -353,12 +356,12 @@ jobs:
           SELECT set_config('request.jwt.claim.sub',(SELECT id::text FROM auth.users WHERE email='bot-01-admin-nl@bots.uptilldawn.test'),true);
           SELECT public.upt_leadership_assign('left_hand',(SELECT id FROM auth.users WHERE email='bot-06-staff-fr@bots.uptilldawn.test'));
           SELECT public.upt_leadership_assign('right_hand',(SELECT id FROM auth.users WHERE email='bot-07-staff-en@bots.uptilldawn.test'));
-          DO $ BEGIN
+          DO $qa$ BEGIN
             IF (SELECT count(*) FROM public.upt_organization_leadership)<>3 OR
                (SELECT count(*) FROM public.profiles WHERE role='admin' AND approved AND NOT account_blocked)<>1 THEN
               RAISE EXCEPTION 'Local single-Head setup incomplete';
             END IF;
-          END $;
+          END $qa$;
           COMMIT;
           SQL
 
