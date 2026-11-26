@@ -12,8 +12,10 @@
     "upt_admin_import_bank_statement_transactions",
     "upt_admin_import_invoice_lines_csv",
     "upt_admin_link_existing_bank_statement_payment",
+    "upt_admin_pending_profiles",
     "upt_admin_personnel_details_v2",
     "upt_admin_post_bank_statement_payment",
+    "upt_admin_profiles",
     "upt_admin_receive_inventory_batch",
     "upt_admin_register_promotion_reference",
     "upt_admin_review_promotion_evidence",
@@ -212,6 +214,18 @@
       "rpc": "upt_update_inventory_asset_form",
       "migration": "20261126172500_inventory_asset_form_rpc.sql",
       "localAcceptanceVerifiedInRun": 45866266427,
+      "mainQaVerified": false,
+      "productionVerified": false
+    },
+    {
+      "rpc": "upt_admin_pending_profiles",
+      "migration": "20261002204500_admin_pending_profiles_safe_rpc.sql",
+      "mainQaVerified": false,
+      "productionVerified": false
+    },
+    {
+      "rpc": "upt_admin_profiles",
+      "migration": "20260922211452_uptilldawn_profile_privacy.sql",
       "mainQaVerified": false,
       "productionVerified": false
     }
