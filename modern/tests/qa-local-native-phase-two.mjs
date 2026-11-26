@@ -25,10 +25,22 @@ if(process.env.BOT_SUPABASE_URL!==target||process.env.NEXT_PUBLIC_SUPABASE_URL!=
  process.env.BOT_DB_URL!=='postgresql://postgres:postgres@127.0.0.1:54322/postgres'||
  !key||key===process.env.BOT_SERVICE_ROLE_KEY||password.length<24)throw Error('DISPOSABLE_LOOPBACK_REQUIRED')
 const originalFetch=globalThis.fetch
-const localFetch=(input,init)=>{
+let lastLocalDbFailure=null
+const localFetch=async(input,init)=>{
  const url=new URL(input instanceof Request?input.url:String(input))
  if(url.origin!==target)throw Error('NONLOCAL_NETWORK_BLOCKED')
- return originalFetch(input,{...init,redirect:'error'})
+ const response=await originalFetch(input,{...init,redirect:'error'})
+ // Disposable synthetic database: only bounded error code and message.
+ // Never serialize headers, auth responses, SQL details or raw bodies.
+ if(!response.ok&&url.pathname.startsWith('/rest/v1/')){
+  try{
+   const data=await response.clone().json()
+   const code=String(data.code||'DB').replace(/[^A-Za-z0-9_]/g,'').slice(0,16)
+   const message=String(data.message||'').replaceAll(password,'[redacted]').replaceAll(key,'[redacted]').replace(/[\r\n]/g,' ').slice(0,160)
+   lastLocalDbFailure={code,message}
+  }catch{}
+ }
+ return response
 }
 globalThis.fetch=localFetch
 const event='00000000-0000-4000-8000-00000000e2e1'
@@ -58,7 +70,7 @@ async function actor(name,owner,admin){
 }
 async function read(q,label){
  const {data,error}=await q
- if(error)throw Error(label+'_'+(error.code||'DB'))
+ if(error)throw Error(label+'_'+(error.code||'DB')+(lastLocalDbFailure?': '+lastLocalDbFailure.message:''))
  return data
 }
 async function one(q,label){
@@ -74,16 +86,25 @@ function req(id,fields,options={}){
  return new Request('http://127.0.0.1:5174/api/migration/actions',{method:'POST',headers:{Origin:'http://127.0.0.1:5174','Sec-Fetch-Site':'same-origin','X-UpTillDawn-Action-Hint':id,...(options.cookie?{Cookie:options.cookie}:{})},body})
 }
 async function invoke(handler,identity,id,fields={},options={}){
+ lastLocalDbFailure=null
  const res=await handler(req(id,fields,options),identity.db,id)
- assert.equal(res.status,options.status||200,id+'_HTTP')
+ if(res.status!==(options.status||200))throw Error(id+'_HTTP_'+res.status+(lastLocalDbFailure?' '+lastLocalDbFailure.code+': '+lastLocalDbFailure.message:''))
  const data=await res.json()
  if(options.status===422)assert.equal(data.code,'action_failed',id)
  return {data,cookies:res.headers.getSetCookie()}
 }
 async function verified(id,fn){
- await fn()
- operations.push({id,outcome:'positive',persistenceVerified:true})
- console.log('PASS native local '+id)
+ lastLocalDbFailure=null
+ try{
+  await fn()
+  operations.push({id,outcome:'positive',persistenceVerified:true})
+  console.log('PASS native local '+id)
+ }catch(error){
+  const reason=safeFailure(error)
+  operations.push({id,outcome:'failure',persistenceVerified:false,reason})
+  console.error('FAIL native action '+id+': '+reason)
+  throw error // only the dependent lifecycle stops; other domains continue
+ }
 }
 function safeFailure(error){
  return (error instanceof Error?error.message.split('\n')[0]:'LOCAL_NATIVE_FAILED').replaceAll(password,'[redacted]').replaceAll(key,'[redacted]').slice(0,160)
@@ -431,7 +452,8 @@ try{
    const id=people('portal-roles','changePortalRole'),fields={...target,portal:'promotion',role:'promoter',action:'assign_approved'}
    await denied(peopleAction,staff,id,fields)
    await invoke(peopleAction,head,id,fields)
-   const r=await one(a.from('portal_role_assignments').select('approved,revoked_at').eq('user_id',subject.id).eq('portal','promotion').eq('role','promoter'),'PORTAL_ASSIGN')
+   const r=(await read(subject.db.rpc('upt_my_portal_assignments'),'PORTAL_ASSIGN')).find(x=>x.portal==='promotion'&&x.role==='promoter')
+   assert.ok(r,'PORTAL_ASSIGN_SUBJECT_MISSING')
    assert.equal(r.approved,true);assert.equal(r.revoked_at,null)
   })
   await verified(people('personnel','setPersonnelRole'),async()=>{

@@ -395,6 +395,9 @@ jobs:
       - name: Verify positive native actions with real signed local users and persisted state
         id: local_native
         run: node modern/tests/qa-local-native-phase-two.mjs
+      - name: Exhaustive signed native transport acceptance (all 163 actions, all roles)
+        if: ${{ !cancelled() && steps.local_native.outcome != 'skipped' }}
+        run: node modern/tests/qa-local-all-action-matrix.mjs
       - name: Always destroy disposable database stack
         if: always()
         run: npx --yes supabase@2.117.0 stop --no-backup
@@ -403,7 +406,7 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: phase-two-three-local-native-actions
-          path: test-results/phase-two-three-local-native/report.json
+          path: test-results/phase-two-three-local-native/*.json
           if-no-files-found: error
           retention-days: 5
   release-production:
