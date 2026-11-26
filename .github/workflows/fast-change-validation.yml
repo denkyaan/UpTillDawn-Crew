@@ -437,6 +437,19 @@ jobs:
           set -euo pipefail
           export VITE_SUPABASE_ANON_KEY="$NEXT_PUBLIC_SUPABASE_ANON_KEY"
           node modern/tests/qa-local-release-browser.mjs
+      - name: Classify original local server failures without exposing log contents
+        if: always()
+        run: |
+          node --input-type=module <<'NODE'
+          import {existsSync,readFileSync} from 'node:fs'
+          const file='/tmp/phase23-original-app.log'
+          if(existsSync(file)){
+            const value=readFileSync(file,'utf8')
+            for(const [name,pattern] of [['fetch-failed',/fetch failed/gi],['session-error',/session.*(?:missing|invalid|error)/gi],['render-error',/UPT_[A-Z_]+_RENDER_FAILURE/g],['security-email-unconfigured',/RESEND_API_KEY ontbreekt/g],['request-origin',/invalid_origin|origin mismatch/gi],['server-error',/Error:/g]]){
+              console.log('LOCAL_SERVER_DIAGNOSTIC '+name+'='+String((value.match(pattern)||[]).length))
+            }
+          }
+          NODE
       - name: Stop isolated original browser server
         if: always()
         run: |
