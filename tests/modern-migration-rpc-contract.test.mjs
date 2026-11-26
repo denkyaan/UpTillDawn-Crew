@@ -5,8 +5,8 @@ import {readFileSync} from "node:fs"
 const file=p=>readFileSync(p,"utf8")
 const metadata=JSON.parse(file("modern/scripts/rpc-reference.json"))
 test("all candidate RPCs are review-allowlisted without live credentials",()=>{
- assert.equal(metadata.requiredPublicRpcNames.length,182)
- assert.equal(new Set(metadata.requiredPublicRpcNames).size,182)
+ assert.equal(metadata.requiredPublicRpcNames.length,183)
+ assert.equal(new Set(metadata.requiredPublicRpcNames).size,183)
  assert.ok(metadata.requiredPublicRpcNames.includes('upt_update_inventory_asset_form'))
  for(const rpc of ['upt_admin_pending_profiles','upt_admin_profiles'])
   assert.ok(metadata.requiredPublicRpcNames.includes(rpc),'Existing Admin-only personnel read must be explicitly reviewed: '+rpc)
@@ -52,7 +52,7 @@ test("all candidate RPCs are review-allowlisted without live credentials",()=>{
  for(const rpc of ['upt_push_public_key','upt_notification_badge_count'])
   assert.ok(metadata.requiredPublicRpcNames.includes(rpc),'Original push read RPC needs an explicit native migration review: '+rpc)
  const out=JSON.parse(execFileSync(process.execPath,["modern/scripts/rpc-contract.mjs"],{encoding:"utf8"}))
- assert.equal(out.sourceRpcCount,182)
+ assert.equal(out.sourceRpcCount,183)
  assert.deepEqual(out.unreviewedRpc,[])
  assert.deepEqual(out.noLongerReferenced,[])
  assert.equal(out.liveDatabaseVerifiedInCi,false)
@@ -61,7 +61,7 @@ test("all candidate RPCs are review-allowlisted without live credentials",()=>{
 test("Production-missing session contract is recorded and cannot be silently released",()=>{
  assert.deepEqual(metadata.lastObserved.production.missing,["upt_current_session_context"])
  assert.deepEqual(metadata.lastObserved.mainQa.missing,[])
- for(const rpc of ['upt_update_inventory_asset_form','upt_admin_pending_profiles','upt_admin_profiles']){
+ for(const rpc of ['upt_update_inventory_asset_form','upt_admin_pending_profiles','upt_admin_profiles','upt_admin_set_responsible_assignment']){
   const pending=metadata.pendingLiveCatalogReverification.find(x=>x.rpc===rpc)
   assert.ok(pending,rpc)
   assert.equal(pending.mainQaVerified,false)

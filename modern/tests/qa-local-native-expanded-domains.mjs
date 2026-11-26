@@ -53,10 +53,13 @@ export async function runRemainingDomains(c){
   return sqlLocal("SELECT status FROM public.events WHERE id='"+id+"'::uuid")
  }
  await domain('event-close-archive-restore',async()=>{
-  const e=await newEvent('Archive lifecycle')
+  const future=await newEvent('Future closure denial')
+  const e=await newEvent('Archive lifecycle',-0.01)
   const fields={event_id:e.id,reason:prefix+' authorized test'}
   await verified(eventId('closeEvent'),async()=>{
    await denied(shiftAction,staff,eventId('closeEvent'),{...fields,force:'on'})
+   await denied(shiftAction,head,eventId('closeEvent'),{event_id:future.id,force:'on',reason:prefix+' premature'})
+   assert.notEqual(await status(future.id),'closed')
    await denied(shiftAction,head,eventId('closeEvent'),fields)
    assert.notEqual(await status(e.id),'closed')
    await invoke(shiftAction,head,eventId('closeEvent'),{...fields,force:'on'})
@@ -95,6 +98,9 @@ export async function runRemainingDomains(c){
    assert.notEqual(copy.id,e.id);assert.equal(copy.created_by,head.id)
    const w=await one(a.from('workplaces').select('id').eq('event_id',copy.id).eq('name',post.name),'CLONED_POST')
    assert.notEqual(w.id,post.id)
+   const seeded=await read(a.from('workplaces').select('name,catalog_workplace_id').eq('event_id',copy.id),'CLONED_CATALOG_POSTS')
+   assert.equal(new Set(seeded.map(r=>r.name)).size,seeded.length)
+   assert.ok(seeded.some(r=>r.catalog_workplace_id))
   }
   let t1,t2
   await verified(eventId('captureEventTemplate'),async()=>{
@@ -217,6 +223,7 @@ export async function runRemainingDomains(c){
    assert.equal(Date.parse(r.scheduled_start),Date.parse(e.start_at));assert.equal(Date.parse(r.scheduled_end),Date.parse(e.end_at))
   })
   await verified(crew('assignResponsible'),async()=>{
+   await denied(crewEvent,staff,crew('assignResponsible'),fields)
    await invoke(crewEvent,head,crew('assignResponsible'),fields)
    const r=await one(a.from('responsible_assignments').select('user_id').eq('workplace_id',post.id).eq('user_id',who.id),'RESPONSIBLE_ASSIGNMENT')
    assert.equal(r.user_id,who.id);assert.equal((await ownProfile(who)).role,'responsible_lead')

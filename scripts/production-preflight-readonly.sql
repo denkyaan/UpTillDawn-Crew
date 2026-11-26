@@ -158,9 +158,13 @@ WITH checks(name,required,passed) AS (
         AND p.polwithcheck IS NOT NULL
     )
   UNION ALL
+  SELECT 'atomic_responsible_assignment_rpc', true,
+    coalesce(has_function_privilege('authenticated',to_regprocedure('public.upt_admin_set_responsible_assignment(uuid,uuid,boolean)'),'EXECUTE')
+      AND NOT has_function_privilege('anon',to_regprocedure('public.upt_admin_set_responsible_assignment(uuid,uuid,boolean)'),'EXECUTE'),false)
+  UNION ALL
   SELECT 'main_tip_migration_in_history', false,
     EXISTS(SELECT 1 FROM supabase_migrations.schema_migrations
-      WHERE version='20261126180000')
+      WHERE version='20261126210000')
 )
 SELECT name,required,passed,
   CASE WHEN passed THEN 'PASS'

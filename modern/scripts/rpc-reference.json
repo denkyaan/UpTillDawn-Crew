@@ -28,6 +28,7 @@
     "upt_admin_set_account",
     "upt_admin_set_personnel_block",
     "upt_admin_set_portal_role",
+    "upt_admin_set_responsible_assignment",
     "upt_admin_set_two_personnel_roles",
     "upt_admin_settle_provider_bank_statement",
     "upt_admin_unblock_promotion",
@@ -226,6 +227,12 @@
     {
       "rpc": "upt_admin_profiles",
       "migration": "20260922211452_uptilldawn_profile_privacy.sql",
+      "mainQaVerified": false,
+      "productionVerified": false
+    },
+    {
+      "rpc": "upt_admin_set_responsible_assignment",
+      "migration": "20261126210000_event_template_and_responsible_atomicity.sql",
       "mainQaVerified": false,
       "productionVerified": false
     }
