@@ -107,8 +107,15 @@ jobs:
           # original Main CSS/auth/components. Previously non-migration PRs
           # passed while the post-merge modern deploy failed by just 32 bytes.
           # Vite builds locally on this GitHub runner, never on Workers Free.
+          # Reproduce the deployment-only failure using the existing single
+          # build on this repair branch. Ordinary PRs use their normal CSS.
+          if [[ "$GITHUB_HEAD_REF" == fix/phase-one-login-bundle ]]; then
+            node modern/scripts/login-css-budget-preflight.mjs
+            export UPT_EXACT_MAIN_LOGIN_CSS_SHA=9052fde2dd460fe17dc24c9d1cf8103ef3cc49dc
+          fi
           npm --prefix modern run build
           npm --prefix modern run budget
+          unset UPT_EXACT_MAIN_LOGIN_CSS_SHA
           npm --prefix modern run worker:standalone-check
           # Compile a separate non-deployable production-shaped bundle without production secrets.
           if [[ "$GITHUB_HEAD_REF" == migration/* ]]; then

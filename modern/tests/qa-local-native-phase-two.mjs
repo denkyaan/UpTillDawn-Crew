@@ -135,6 +135,50 @@ try{
   const row=await one(a.from('inventory_items').select('total_quantity,available_quantity').eq('id',item.id),'INVENTORY_RESTOCK')
   assert.equal(row.total_quantity,5);assert.equal(row.available_quantity,5)
  })
+ // Actual signed inventory and sales lifecycles on the disposable fixture.
+ await denied(nativeInventoryActionResponse,staff,crew('restockInventoryItem'),{item_id:item.id,quantity:'1'})
+ assert.equal((await one(a.from('inventory_items').select('total_quantity').eq('id',item.id),'RESTOCK_DENIAL')).total_quantity,5)
+ let issue
+ await verified(crew('issueInventoryItem'),async()=>{
+  await invoke(nativeInventoryActionResponse,head,crew('issueInventoryItem'),{item_id:item.id,user_id:staff.id,quantity:'2',notes:prefix})
+  issue=await one(a.from('inventory_issues').select('id,quantity,outstanding_quantity').eq('item_id',item.id).eq('user_id',staff.id),'ISSUE')
+  assert.equal(issue.quantity,2);assert.equal(issue.outstanding_quantity,2)
+  const row=await one(a.from('inventory_items').select('available_quantity,issued_quantity').eq('id',item.id),'ISSUE_STOCK')
+  assert.equal(row.available_quantity,3);assert.equal(row.issued_quantity,2)
+ })
+ await verified(crew('settleInventoryIssue'),async()=>{
+  await invoke(nativeInventoryActionResponse,head,crew('settleInventoryIssue'),{issue_id:issue.id,condition:'returned',quantity:'2'})
+  const row=await one(a.from('inventory_issues').select('outstanding_quantity,closed_at').eq('id',issue.id),'ISSUE_RETURN')
+  assert.equal(row.outstanding_quantity,0);assert.ok(row.closed_at)
+  const stock=await one(a.from('inventory_items').select('available_quantity,issued_quantity').eq('id',item.id),'RETURN_STOCK')
+  assert.equal(stock.available_quantity,5);assert.equal(stock.issued_quantity,0)
+ })
+ await verified(platform('updateAssetMetadata'),async()=>{
+  await invoke(megaOperationsResponse,head,platform('updateAssetMetadata'),{item_id:item.id,asset_code:prefix,barcode:prefix+'-bar',serial_number:'QA-1',location_label:'QA shelf',reorder_threshold:'2',unit_cost:'12.50',asset_notes:prefix})
+  const row=await one(a.from('inventory_items').select('location_label,reorder_threshold,unit_cost_cents,asset_notes').eq('id',item.id),'ASSET_METADATA')
+  assert.equal(row.location_label,'QA shelf');assert.equal(row.reorder_threshold,2);assert.equal(row.unit_cost_cents,1250);assert.equal(row.asset_notes,prefix)
+ })
+ await verified(sales('configureSaleItem'),async()=>{
+  const name=prefix+' Merch'
+  await invoke(nativeInventoryActionResponse,head,crew('createInventoryItem'),{workplace_id:workplace,name,quantity:'8',item_kind:'consumable'})
+  const saleItem=await one(a.from('inventory_items').select('id').eq('workplace_id',workplace).eq('name',name),'MERCH_ITEM')
+  const fields={item_id:saleItem.id,enabled:'on',sale_category:'merch',price:'12.50'}
+  await denied(nativeAdminActionResponse,staff,sales('configureSaleItem'),fields)
+  assert.equal((await one(a.from('inventory_items').select('sale_enabled').eq('id',saleItem.id),'MERCH_DENIAL')).sale_enabled,false)
+  await invoke(nativeAdminActionResponse,head,sales('configureSaleItem'),fields)
+  const row=await one(a.from('inventory_items').select('sale_enabled,sale_category,sale_price_cents').eq('id',saleItem.id),'SALE_CONFIG')
+  assert.equal(row.sale_enabled,true);assert.equal(row.sale_category,'merch');assert.equal(row.sale_price_cents,1250)
+ })
+ await verified(sales('setOpeningCash'),async()=>{
+  await invoke(nativeAdminActionResponse,head,sales('setOpeningCash'),{event_id:event,workplace_id:workplace,opening_cash:'25.00'})
+  const row=await one(a.from('sales_registers').select('opening_cash_cents,opened_by').eq('event_id',event).eq('workplace_id',workplace),'REGISTER')
+  assert.equal(row.opening_cash_cents,2500);assert.equal(row.opened_by,head.id)
+ })
+ await verified(platform('createQrResource'),async()=>{
+  await invoke(megaOperationsResponse,head,platform('createQrResource'),{event_id:event,workplace_id:workplace,resource_type:'inventory',resource_id:item.id,title:prefix+' QR',route:'/inventory'})
+  const row=await one(a.from('qr_resources').select('resource_id,route,active,created_by').eq('event_id',event).eq('title',prefix+' QR'),'QR')
+  assert.equal(row.resource_id,item.id);assert.equal(row.route,'/inventory');assert.equal(row.active,true);assert.equal(row.created_by,head.id)
+ })
  let checklist,checkItem
  await verified(crew('createOperationalChecklist'),async()=>{
   await invoke(nativeCatalogActionResponse,head,crew('createOperationalChecklist'),{workplace_id:workplace,kind:'custom',title:prefix+' Checklist'})
@@ -183,7 +227,7 @@ try{
   })
  }
  await verified(platform('savePayRate'),async()=>{
-  await invoke(megaOperationsResponse,head,platform('savePayRate'),{user_id:staff.id,hourly_rate:'23.50',effective_from:'2026-12-01',notes:prefix})
+  await invoke(megaOperationsResponse,head,platform('savePayRate'),{user_id:staff.id,hourly_rate:'23.50',effective_from:new Date(Date.now()+86400000).toISOString().slice(0,10),notes:prefix})
   const row=await one(a.from('staff_pay_rates').select('hourly_rate_cents,created_by').eq('user_id',staff.id).eq('notes',prefix),'PAY_RATE')
   assert.equal(row.hourly_rate_cents,2350);assert.equal(row.created_by,head.id)
  })

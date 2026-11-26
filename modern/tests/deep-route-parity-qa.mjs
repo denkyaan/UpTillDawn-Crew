@@ -57,7 +57,10 @@ async function navigateOriginalWithRecovery(page,path){
   const status=response?.status()
   if(status!==502&&status!==503&&status!==504)return response
   if(attempt===2)return response
-  await page.waitForTimeout((attempt+1)*2000)
+  // A 503 is a real source failure. Release the failed document before
+  // bounded cooling, then fetch the same original route again.
+  await page.goto('about:blank')
+  await page.waitForTimeout((attempt+1)*6000)
   console.warn('DEEP_PARITY_SOURCE_RECOVERY '+path+' '+status+' attempt='+String(attempt+1))
   legacyRecoveries++
  }
@@ -176,6 +179,7 @@ try{
    if(!native)throw Error('DEEP_PARITY_NATIVE_LOGIN_FAILED '+role.role)
    signins++
    const session=await context.storageState()
+   await login.close() // no unused background page during the 44 route reads
    const originalCookies=session.cookies.map(cookie=>({
     ...cookie,domain:new URL(original).hostname,secure:true
    }))
@@ -224,16 +228,18 @@ try{
      }
      stage='original-readiness'
      try{await ready(a)}catch(error){
-      // An observed conditional redirect is not passing evidence unless its
-      // destination renders. Re-attempt the original route once, never skip
-      // the route or replace the candidate's required redirect.
-      if(path!=='/incidents'||error?.name!=='TimeoutError'||new URL(a.url()).pathname!=='/events')throw error
+      // A source timeout is not a parity mismatch. Retry the exact original
+      // GET once after releasing its document; require the real ready view.
+      // Never skip a route or retry a candidate difference.
+      if(error?.name!=='TimeoutError')throw error
       legacyRecoveries++
       console.warn('DEEP_PARITY_SOURCE_REDIRECT_READINESS_RECOVERY '+path)
-      await a.waitForTimeout(2000)
+      await a.goto('about:blank')
+      await a.waitForTimeout(6000)
       const retry=await navigateOriginalWithRecovery(a,path)
       if(retry?.status()!==200&&retry?.status()!==304)throw Error('LEGACY_MAIN_HTTP_'+retry?.status())
-      await a.waitForFunction(()=>location.pathname==='/events'||(location.pathname==='/incidents'&&!!document.querySelector('main h1')),null,{timeout:18000})
+      if(path==='/incidents')await a.waitForFunction(()=>location.pathname==='/events'||(location.pathname==='/incidents'&&!!document.querySelector('main h1')),null,{timeout:18000})
+      if(path==='/shifts')await a.waitForURL(url=>url.pathname==='/workplaces',{timeout:9000})
       await ready(a)
      }
      const expectedPath=new URL(a.url()).pathname

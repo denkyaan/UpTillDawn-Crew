@@ -5,7 +5,8 @@ import Link from "next/link"
 import Image from "next/image"
 import { Menu, X, Eye, EyeOff, Loader2, AlertCircle, ArrowRight, ShieldCheck, Users, UserCog, Megaphone, BriefcaseBusiness } from "lucide-react"
 import { LanguageSwitcher } from "@/components/language-switcher"
-import {initialUiLocale} from "@/lib/locale-preferences"
+import {activeUiLocale,initialUiLocale,LANGUAGE_APPLIED_EVENT} from "@/lib/locale-preferences"
+import {translateRuntimeUi} from "@/lib/ui-translation-runtime"
 
 const portals = {
   staff: { label: "Personeel", icon: Users },
@@ -20,6 +21,11 @@ const portals = {
 const subscribeHydration = () => () => {}
 const clientHydrationSnapshot = () => true
 const serverHydrationSnapshot = () => false
+const subscribeMenuLocale = (notify:()=>void) => {
+  window.addEventListener(LANGUAGE_APPLIED_EVENT,notify)
+  return () => window.removeEventListener(LANGUAGE_APPLIED_EVENT,notify)
+}
+const serverMenuLocale = () => "nl" as const
 
 type Portal = keyof typeof portals
 
@@ -77,6 +83,11 @@ export function LoginForm({
 }) {
   const PortalIcon = portals[portal].icon
   const [menuOpen, setMenuOpen] = useState(false)
+  // The menu can open before the deferred SSR DOM-translation observer starts.
+  // React owns its labels in the active locale from the first render, rather
+  // than relying on a later mutation observer to translate new menu nodes.
+  const menuLocale=useSyncExternalStore(subscribeMenuLocale,activeUiLocale,serverMenuLocale)
+  const menuText=(text:string)=>translateRuntimeUi(text,menuLocale)
   const [showPassword, setShowPassword] = useState(false)
   const [error, setError] = useState<string | null>(initialError)
   const [errorCode, setErrorCode] = useState<string | null>(initialError ? "initial_login_error" : null)
@@ -142,18 +153,18 @@ export function LoginForm({
       </button>
 
       {menuOpen && (
-        <div className="auth-portal-menu fixed left-5 top-20 z-50 w-64 rounded-2xl border border-white/15 bg-zinc-950/95 p-2 shadow-2xl backdrop-blur-xl">
-          <p className="px-4 py-2 text-xs font-semibold uppercase tracking-wide text-zinc-400">Evenementen</p>
+        <div data-no-translate className="auth-portal-menu fixed left-5 top-20 z-50 w-64 rounded-2xl border border-white/15 bg-zinc-950/95 p-2 shadow-2xl backdrop-blur-xl">
+          <p className="px-4 py-2 text-xs font-semibold uppercase tracking-wide text-zinc-400">{menuText("Evenementen")}</p>
           {(['staff', 'responsible'] as const).map(key => {
             const Icon = portals[key].icon
-            return <Link prefetch={false} key={key} href={`/login/${key}`} onClick={() => setMenuOpen(false)} aria-current={portal === key ? 'page' : undefined} className={`flex items-center gap-3 rounded-xl px-4 py-3 text-sm font-bold transition ${portal === key ? 'bg-white text-black' : 'text-white hover:bg-white/10'}`}><Icon className="h-5 w-5" />{portals[key].label}</Link>
+            return <Link prefetch={false} key={key} href={`/login/${key}`} onClick={() => setMenuOpen(false)} aria-current={portal === key ? 'page' : undefined} className={`flex items-center gap-3 rounded-xl px-4 py-3 text-sm font-bold transition ${portal === key ? 'bg-white text-black' : 'text-white hover:bg-white/10'}`}><Icon className="h-5 w-5" />{menuText(portals[key].label)}</Link>
           })}
-          <p className="px-4 py-2 text-xs font-semibold uppercase tracking-wide text-zinc-400">Promotie</p>
-          <Link prefetch={false} href="/login/promotion" onClick={() => setMenuOpen(false)} aria-current={portal === 'promotion' ? 'page' : undefined} className={`flex items-center gap-3 rounded-xl px-4 py-3 text-sm font-bold transition ${portal === 'promotion' ? 'bg-white text-black' : 'text-white hover:bg-white/10'}`}><Megaphone className="h-5 w-5" />Promotie</Link>
-          <p className="px-4 py-2 text-xs font-semibold uppercase tracking-wide text-zinc-400">{portals.admin.label} / {portals.administration.label}</p>
+          <p className="px-4 py-2 text-xs font-semibold uppercase tracking-wide text-zinc-400">{menuText("Promotie")}</p>
+          <Link prefetch={false} href="/login/promotion" onClick={() => setMenuOpen(false)} aria-current={portal === 'promotion' ? 'page' : undefined} className={`flex items-center gap-3 rounded-xl px-4 py-3 text-sm font-bold transition ${portal === 'promotion' ? 'bg-white text-black' : 'text-white hover:bg-white/10'}`}><Megaphone className="h-5 w-5" />{menuText("Promotie")}</Link>
+          <p className="px-4 py-2 text-xs font-semibold uppercase tracking-wide text-zinc-400">{menuText(portals.admin.label)} / {menuText(portals.administration.label)}</p>
           {(['admin', 'administration'] as const).map(key => {
             const Icon = portals[key].icon
-            return <Link prefetch={false} key={key} href={`/login/${key}`} onClick={() => setMenuOpen(false)} aria-current={portal === key ? 'page' : undefined} className={`flex items-center gap-3 rounded-xl px-4 py-3 text-sm font-bold transition ${portal === key ? 'bg-white text-black' : 'text-white hover:bg-white/10'}`}><Icon className="h-5 w-5" />{portals[key].label}</Link>
+            return <Link prefetch={false} key={key} href={`/login/${key}`} onClick={() => setMenuOpen(false)} aria-current={portal === key ? 'page' : undefined} className={`flex items-center gap-3 rounded-xl px-4 py-3 text-sm font-bold transition ${portal === key ? 'bg-white text-black' : 'text-white hover:bg-white/10'}`}><Icon className="h-5 w-5" />{menuText(portals[key].label)}</Link>
           })}
         </div>
       )}

@@ -1,6 +1,6 @@
 # Combined phase 2 and 3 acceptance / release handoff
 
-This branch prepares both phases in one PR, without deploying or superseding the phase 1 Main run. Do not merge until phase 1 is resolved and review the base SHA again.
+Phase 1 passed Deploy #590 on Main SHA 922092388a4068634286d14313083b1234650ab1 (48 + 160 pixel-exact login cases, 56 role scenarios, 44 deep routes, 30 sessions; no post-deploy resource failures observed). This PR incorporates that exact Main revision and continues both remaining phases without enabling cutover or production. The prior phase-2/3 CI run was no longer accessible when work resumed. Local action evidence is separate from live acceptance.
 
 ## Acceptance (phase 2)
 

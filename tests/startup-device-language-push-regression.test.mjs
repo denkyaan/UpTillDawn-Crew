@@ -25,7 +25,14 @@ test('device language is authoritative at every fresh app start',async()=>{
 
 test('manual language applies in-session while device changes resync the app',async()=>{
  const sync=await read('components/locale-sync.tsx')
- assert.match(sync,/applyLocale\(initialUiLocale\(\) as ExtendedUiLocale,initialUiLocaleSource\(\)\)/)
+ // Initialize from the device once, but keep the latest in-session choice
+ // when the deferred hydration pass actually runs.
+ assert.match(sync,/let locale = initialUiLocale\(\) as ExtendedUiLocale/)
+ assert.match(sync,/let localeSource=initialUiLocaleSource\(\)/)
+ assert.match(sync,/locale = nextLocale\s+localeSource = source/)
+ assert.match(sync,/const onLanguageChange = \(event: Event\) => \{[\s\S]*?applyLocale\(next as ExtendedUiLocale,'manual'\)/)
+ assert.match(sync,/initialPass=undefined[\s\S]*?applyLocale\(locale,localeSource\)/)
+ assert.doesNotMatch(sync,/applyLocale\(initialUiLocale\(\) as ExtendedUiLocale,initialUiLocaleSource\(\)\)/)
  assert.match(sync,/const onDeviceLanguageChange = \(\) => \{[\s\S]*applyLocale\(deviceUiLocale\(\) as ExtendedUiLocale,'device'\)/)
  assert.doesNotMatch(sync,/onDeviceLanguageChange[\s\S]{0,180}storedUiLocaleSource\(\)==='manual'/)
 })
