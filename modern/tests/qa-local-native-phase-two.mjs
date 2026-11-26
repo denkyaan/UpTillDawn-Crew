@@ -116,7 +116,17 @@ try{
  })
  await verified(guest('removeGuestlistEntry'),async()=>{
   await invoke(nativeAdminActionResponse,head,guest('removeGuestlistEntry'),{entry_id:entry.id})
-  assert.equal((await one(a.from('event_guestlist_entries').select('is_active').eq('id',entry.id),'GUEST_REMOVE')).is_active,false)
+  // The installed guestlist SELECT policy deliberately hides inactive rows.
+  // Prove both the signed user's view and the exact persisted soft-delete,
+  // without changing RLS or using a privileged client to execute the action.
+  assert.equal((await read(a.from('event_guestlist_entries').select('id').eq('id',entry.id),'GUEST_REMOVE_VISIBILITY')).length,0)
+  assert.match(entry.id,/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i)
+  assert.match(event,/^[0-9a-f-]{36}$/i)
+  const stored=execFileSync('psql',[process.env.BOT_DB_URL,'-X','-v','ON_ERROR_STOP=1','-At','-c',
+   "SELECT is_active FROM public.event_guestlist_entries WHERE id='"+entry.id+"'::uuid AND event_id='"+event+"'::uuid"],
+   {encoding:'utf8',timeout:10000}).trim()
+  assert.equal(stored,'f','GUEST_REMOVE_PERSISTED')
+  await denied(nativeAdminActionResponse,head,guest('removeGuestlistEntry'),{entry_id:entry.id})
  })
  const inventoryFields={workplace_id:workplace,name:prefix+' Radio',category:'QA',quantity:'3',item_kind:'asset'}
  let item
