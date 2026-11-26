@@ -11,6 +11,12 @@ import {nativeInventoryActionResponse} from '../src/api/native-inventory-checkli
 import {nativeCatalogActionResponse} from '../src/api/native-catalog-event-actions.ts'
 import {megaCrewEventResponse} from '../src/api/native-mega-crew-event-actions.ts'
 import {megaOperationsResponse} from '../src/api/native-mega-operations-actions.ts'
+import {nativeRosterActionResponse as roster} from '../src/api/native-roster-handover-actions.ts'
+import {nativeWaveThreeActionResponse as shiftAction} from '../src/api/native-event-shift-actions.ts'
+import {nativeWaveTwoActionResponse as memberAction} from '../src/api/native-platform-actions.ts'
+import {megaPeopleResponse as peopleAction} from '../src/api/native-mega-people-actions.ts'
+import {finalCrewActionResponse as crewAction} from '../src/api/native-final-crew-actions.ts'
+import {finalFinanceResponse as financeAction} from '../src/api/native-final-finance-actions.ts'
 import {megaMakerResponse,godLogoutId} from '../src/api/native-mega-maker-actions.ts'
 const target='http://127.0.0.1:54321'
 const key=process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY||''
@@ -102,6 +108,9 @@ try{
  const staff=await actor('bot-03-staff-en',false,false)
  const maker=await actor('bot-16-maker',true,false)
  const unrelated=await actor('bot-08-staff-de',false,false)
+ const office=await actor('bot-04-staff-de',false,false)
+ const promoter=await actor('bot-05-staff-nl',false,false)
+ const alternate=await actor('bot-09-staff-nl',false,false)
  const a=head.db
  const owned=await one(a.from('events').select('id,created_by,status,start_at,end_at').eq('id',event),'LOCAL_EVENT')
  assert.equal(owned.created_by,head.id);assert.equal(owned.status,'scheduled')
@@ -291,6 +300,248 @@ try{
   const row=await one(a.from('knowledge_articles').select('body,created_by').eq('event_id',event).eq('title',prefix+' Knowledge'),'KNOWLEDGE')
   assert.equal(row.body,'QA fixture');assert.equal(row.created_by,head.id)
  })
+ })
+ const finance=name=>'app/(app)/portals/administration/finance/page.tsx#'+name
+ const people=(file,name)=>'lib/actions/'+file+'.ts#'+name
+ const promotion=name=>people('promotion-tasks',name)
+ const find=async(table,id,columns)=>one(a.from(table).select(columns).eq('id',id),table)
+ const saved=async(name,identity,fields)=>{
+  const r=await invoke(financeAction,identity,finance(name),fields)
+  assert.equal(r.data.redirect,'/portals/administration/finance',name+'_SAVED')
+ }
+ const avail={event_id:event,response:'can',setup_available:'yes',breakdown_available:'no'}
+ await domain('availability-membership',async()=>{
+  await verified(crew('setEventAvailability'),async()=>{
+   await invoke(roster,unrelated,crew('setEventAvailability'),avail)
+   const r=await one(unrelated.db.from('event_availability').select('response,setup_available,breakdown_available').eq('event_id',event).eq('user_id',unrelated.id),'AVAILABILITY')
+   assert.equal(r.response,'can');assert.equal(r.setup_available,true);assert.equal(r.breakdown_available,false)
+  })
+  await verified(crew('addEventMember'),async()=>{
+   await invoke(megaCrewEventResponse,head,crew('addEventMember'),{event_id:event,user_id:unrelated.id})
+   assert.equal((await one(a.from('event_members').select('event_role').eq('event_id',event).eq('user_id',unrelated.id),'MEMBER')).event_role,'employee')
+  })
+  await verified(crew('addAvailableEventMembers'),async()=>{
+   await read(alternate.db.rpc('upt_set_event_availability_with_reason',{p_event:event,p_response:'can',p_setup:false,p_breakdown:false}),'BULK_AVAILABLE')
+   await invoke(megaCrewEventResponse,head,crew('addAvailableEventMembers'),{event_id:event,user_id:[alternate.id,unrelated.id]})
+   assert.equal((await read(a.from('event_members').select('user_id').eq('event_id',event).in('user_id',[alternate.id,unrelated.id]),'BULK_MEMBERS')).length,2)
+  })
+ })
+ await domain('roster',async()=>{
+  await read(a.from('event_members').upsert({event_id:event,user_id:alternate.id,event_role:'employee'},{onConflict:'event_id,user_id'}),'ROSTER_MEMBER')
+  let shift
+  const fields={workplace_id:workplace,user_id:alternate.id,role_name:prefix+' Roster',start:owned.start_at,end:owned.end_at}
+  await verified(crew('createShift'),async()=>{
+   await denied(roster,staff,crew('createShift'),fields)
+   await invoke(roster,head,crew('createShift'),fields)
+   shift=await one(a.from('shifts').select('id,scheduled_start,scheduled_end').eq('event_id',event).eq('user_id',alternate.id).eq('role_name',fields.role_name),'SHIFT_CREATE')
+   assert.equal(Date.parse(shift.scheduled_start),Date.parse(fields.start));assert.equal(Date.parse(shift.scheduled_end),Date.parse(fields.end))
+  })
+  await verified(crew('updateShift'),async()=>{
+   const end=new Date(Date.parse(fields.end)-3600000).toISOString()
+   await invoke(roster,head,crew('updateShift'),{shift_id:shift.id,role_name:prefix+' Changed',start:fields.start,end})
+   const r=await find('shifts',shift.id,'role_name,scheduled_end')
+   assert.equal(r.role_name,prefix+' Changed');assert.equal(Date.parse(r.scheduled_end),Date.parse(end))
+  })
+  await verified(crew('confirmShift'),async()=>{
+   await denied(shiftAction,staff,crew('confirmShift'),{shift_id:shift.id})
+   await invoke(shiftAction,alternate,crew('confirmShift'),{shift_id:shift.id})
+   const r=await find('shifts',shift.id,'confirmed_at,response_status')
+   assert.ok(r.confirmed_at);assert.equal(r.response_status,'accepted')
+  })
+  await verified(crew('declineShift'),async()=>{
+   await invoke(roster,alternate,crew('declineShift'),{shift_id:shift.id,reason:prefix+' unavailable'})
+   assert.equal((await find('shifts',shift.id,'response_status')).response_status,'declined')
+  })
+  await verified(crew('cancelShift'),async()=>{
+   await invoke(shiftAction,head,crew('cancelShift'),{shift_id:shift.id,reason:prefix+' Cancel'})
+   assert.equal((await find('shifts',shift.id,'status')).status,'cancelled')
+  })
+ })
+ await domain('emergency',async()=>{
+  await verified(crew('updateEventEmergencyInformation'),async()=>{
+   const fields={event_id:event,emergency_number:'112',assembly_point:prefix+' Entrance',procedure:'QA procedure'}
+   await denied(roster,staff,crew('updateEventEmergencyInformation'),fields)
+   await invoke(roster,head,crew('updateEventEmergencyInformation'),fields)
+   const r=await one(a.from('event_emergency_information').select('emergency_number,assembly_point,updated_by').eq('event_id',event),'EMERGENCY')
+   assert.equal(r.emergency_number,'112');assert.equal(r.assembly_point,fields.assembly_point);assert.equal(r.updated_by,head.id)
+  })
+ })
+ await domain('briefing-instructions',async()=>{
+  const fields={event_id:event,workplace_id:workplace,title:prefix+' Briefing',body:'QA instructions'}
+  let briefing,instruction
+  await verified(crew('createBriefing'),async()=>{
+   await invoke(crewAction,head,crew('createBriefing'),fields)
+   briefing=await one(a.from('briefings').select('id,body').eq('event_id',event).eq('title',fields.title),'BRIEFING_CREATE')
+   assert.equal(briefing.body,fields.body)
+  })
+  await verified(crew('updateBriefing'),async()=>{
+   await invoke(crewAction,head,crew('updateBriefing'),{id:briefing.id,title:fields.title,body:'Updated instructions'})
+   assert.equal((await find('briefings',briefing.id,'body')).body,'Updated instructions')
+  })
+  await verified(crew('acknowledgeBriefing'),async()=>{
+   const seeded='00000000-0000-4000-8000-00000000e2e3'
+   await invoke(memberAction,staff,crew('acknowledgeBriefing'),{id:seeded})
+   assert.equal((await one(staff.db.from('briefing_acknowledgements').select('version').eq('briefing_id',seeded).eq('user_id',staff.id),'BRIEFING_ACK')).version,1)
+  })
+  await verified(crew('createPersonalInstruction'),async()=>{
+   const data={...fields,user_id:staff.id,title:prefix+' Personal'}
+   await denied(crewAction,staff,crew('createPersonalInstruction'),data)
+   await invoke(crewAction,head,crew('createPersonalInstruction'),data)
+   instruction=await one(a.from('personal_instructions').select('id,user_id,body').eq('event_id',event).eq('title',data.title),'INSTRUCTION_CREATE')
+   assert.equal(instruction.user_id,staff.id);assert.equal(instruction.body,data.body)
+  })
+  await verified(crew('updatePersonalInstruction'),async()=>{
+   await invoke(crewAction,head,crew('updatePersonalInstruction'),{id:instruction.id,title:prefix+' Personal updated',body:'Corrected'})
+   assert.equal((await find('personal_instructions',instruction.id,'body')).body,'Corrected')
+  })
+  await verified(crew('acknowledgeInstruction'),async()=>{
+   await invoke(memberAction,staff,crew('acknowledgeInstruction'),{id:instruction.id})
+   const r=await one(staff.db.from('personal_instruction_acknowledgements').select('version').eq('instruction_id',instruction.id).eq('user_id',staff.id),'INSTRUCTION_ACK')
+   assert.ok(r.version>=1)
+  })
+ })
+ await domain('promotion',async()=>{
+  const request=crypto.randomUUID(),fields={request,title:prefix+' Campaign',description:'QA promotion',user_id:promoter.id,admin_view:'1'}
+  const save=async(name,data)=>{
+   const r=await invoke(peopleAction,head,promotion(name),data)
+   assert.ok(r.data.redirect?.includes('saved=1'),name+'_SAVED')
+  }
+  let task,assignment
+  await verified(promotion('createPromotionTask'),async()=>{
+   await save('createPromotionTask',fields)
+   task=await find('tasks',request,'id,title,promotion_only,event_id,updated_at')
+   assert.equal(task.title,fields.title);assert.equal(task.promotion_only,true);assert.equal(task.event_id,null)
+  })
+  await verified(promotion('editPromotionTask'),async()=>{
+   await save('editPromotionTask',{task_id:task.id,title:prefix+' Campaign edit',description:'Updated',expected_updated_at:task.updated_at,admin_view:'1'})
+   assert.equal((await find('tasks',task.id,'title')).title,prefix+' Campaign edit')
+  })
+  await verified(promotion('assignGeneralPromotionTask'),async()=>{
+   await save('assignGeneralPromotionTask',{task_id:task.id,user_id:promoter.id,admin_view:'1'})
+   assignment=await one(a.from('task_assignments').select('id').eq('task_id',task.id).eq('user_id',promoter.id),'PROMOTION_ASSIGN')
+  })
+  await verified(promotion('removeGeneralPromotionAssignment'),async()=>{
+   await save('removeGeneralPromotionAssignment',{assignment_id:assignment.id,admin_view:'1'})
+   assert.equal((await read(a.from('task_assignments').select('id').eq('id',assignment.id),'PROMOTION_REMOVE')).length,0)
+  })
+ })
+ await domain('personnel',async()=>{
+  const subject=await actor('bot-10-staff-fr',false,false),target={user_id:subject.id}
+  await verified(people('portal-roles','changePortalRole'),async()=>{
+   const id=people('portal-roles','changePortalRole'),fields={...target,portal:'promotion',role:'promoter',action:'assign_approved'}
+   await denied(peopleAction,staff,id,fields)
+   await invoke(peopleAction,head,id,fields)
+   const r=await one(a.from('portal_role_assignments').select('approved,revoked_at').eq('user_id',subject.id).eq('portal','promotion').eq('role','promoter'),'PORTAL_ASSIGN')
+   assert.equal(r.approved,true);assert.equal(r.revoked_at,null)
+  })
+  await verified(people('personnel','setPersonnelRole'),async()=>{
+   const id=people('personnel','setPersonnelRole')
+   await invoke(peopleAction,head,id,{...target,role:'responsible_lead'})
+   assert.equal((await find('profiles',subject.id,'role')).role,'responsible_lead')
+   await invoke(peopleAction,head,id,{...target,role:'staff'})
+   assert.equal((await find('profiles',subject.id,'role')).role,'staff')
+  })
+  await verified(people('personnel','setPersonnelBlock'),async()=>{
+   const id=people('personnel','setPersonnelBlock')
+   await invoke(peopleAction,head,id,{...target,blocked:'true',reason:prefix+' blocked'})
+   assert.equal((await find('profiles',subject.id,'account_blocked')).account_blocked,true)
+   assert.equal(await read(subject.db.rpc('upt_is_approved'),'BLOCKED_APPROVAL'),false)
+   await invoke(peopleAction,head,id,{...target,blocked:'false',reason:prefix+' restored'})
+   assert.equal((await find('profiles',subject.id,'account_blocked')).account_blocked,false)
+  })
+  await verified(crew('setAccountStatus'),async()=>{
+   await invoke(peopleAction,head,crew('setAccountStatus'),{...target,status:'pending',role:'staff'})
+   assert.equal((await find('profiles',subject.id,'approved')).approved,false)
+  })
+  await verified(crew('approvePersonnelAccount'),async()=>{
+   await invoke(peopleAction,head,crew('approvePersonnelAccount'),{...target,role:'staff'})
+   assert.equal((await find('profiles',subject.id,'approved')).approved,true)
+  })
+ })
+ await domain('finance-draft-settlement',async()=>{
+  const partyName=prefix+' Customer',number=prefix+' Invoice'
+  const fields={name:partyName,kind:'customer',payment_terms_days:'14',email:'qa@example.invalid'}
+  let customer,doc,line,reminder
+  const day=n=>new Date(Date.now()+n*86400000).toISOString().slice(0,10),issueDate=day(-40),dueDate=day(-10)
+  await verified(finance('createCounterparty'),async()=>{
+   await denied(financeAction,staff,finance('createCounterparty'),fields)
+   await saved('createCounterparty',office,fields)
+   customer=await one(a.from('admin_counterparties').select('id,payment_terms_days').eq('name',partyName),'CUSTOMER')
+   assert.equal(customer.payment_terms_days,14)
+  })
+  await verified(finance('updateCounterparty'),async()=>{
+   await saved('updateCounterparty',office,{...fields,counterparty_id:customer.id,payment_terms_days:'30'})
+   assert.equal((await find('admin_counterparties',customer.id,'payment_terms_days')).payment_terms_days,30)
+  })
+  await verified(finance('createDraft'),async()=>{
+   await saved('createDraft',office,{kind:'sales_invoice',document_number:number,net_amount:'100',tax_amount:'21',counterparty_id:customer.id,issue_date:issueDate,due_date:dueDate})
+   doc=await one(a.from('admin_financial_documents').select('id,status,gross_amount').eq('document_number',number),'INVOICE_DRAFT')
+   assert.equal(doc.status,'draft');assert.equal(Number(doc.gross_amount),121)
+  })
+  const docFields=()=>({document_id:doc.id})
+  await verified(finance('updateDraftNotes'),async()=>{
+   await saved('updateDraftNotes',office,{...docFields(),notes:prefix})
+   assert.equal((await find('admin_financial_documents',doc.id,'notes')).notes,prefix)
+  })
+  await verified(finance('updateDraftDocumentNumber'),async()=>{
+   await saved('updateDraftDocumentNumber',office,{...docFields(),document_number:number+' edited'})
+   assert.equal((await find('admin_financial_documents',doc.id,'document_number')).document_number,number+' edited')
+  })
+  await verified(finance('updateDraftCounterparty'),async()=>{
+   await saved('updateDraftCounterparty',office,{...docFields(),counterparty_id:customer.id,use_payment_terms:'on'})
+   assert.equal((await find('admin_financial_documents',doc.id,'counterparty_id')).counterparty_id,customer.id)
+  })
+  await verified(finance('updateInvoiceDates'),async()=>{
+   await saved('updateInvoiceDates',office,{...docFields(),issue_date:issueDate,due_date:dueDate})
+   assert.equal((await find('admin_financial_documents',doc.id,'due_date')).due_date,dueDate)
+  })
+  await verified(finance('addInvoiceLine'),async()=>{
+   await saved('addInvoiceLine',office,{...docFields(),description:prefix+' Line',quantity:'2',unit_price:'50',vat_rate:'21'})
+   line=await one(a.from('admin_financial_lines').select('id,quantity,unit_price').eq('document_id',doc.id).eq('description',prefix+' Line'),'LINE')
+   assert.equal(Number(line.quantity),2);assert.equal(Number(line.unit_price),50)
+  })
+  await verified(finance('updateInvoiceLine'),async()=>{
+   await saved('updateInvoiceLine',office,{...docFields(),line_id:line.id,description:prefix+' Line edited',quantity:'1',unit_price:'100',vat_rate:'21'})
+   const r=await find('admin_financial_lines',line.id,'description,unit_price')
+   assert.equal(r.description,prefix+' Line edited');assert.equal(Number(r.unit_price),100)
+  })
+  await verified(finance('removeInvoiceLine'),async()=>{
+   await saved('addInvoiceLine',office,{...docFields(),description:prefix+' Temporary',quantity:'1',unit_price:'1',vat_rate:'21'})
+   const temp=await one(a.from('admin_financial_lines').select('id').eq('document_id',doc.id).eq('description',prefix+' Temporary'),'TEMP_LINE')
+   await saved('removeInvoiceLine',office,{...docFields(),line_id:temp.id})
+   assert.equal((await read(a.from('admin_financial_lines').select('id').eq('id',temp.id),'LINE_REMOVE')).length,0)
+  })
+  await verified(finance('updateFinancialStatus'),async()=>{
+   await saved('updateFinancialStatus',office,{...docFields(),status:'review'})
+   await invoke(financeAction,office,finance('updateFinancialStatus'),{...docFields(),status:'approved'})
+   assert.equal((await find('admin_financial_documents',doc.id,'status')).status,'review')
+   await saved('updateFinancialStatus',head,{...docFields(),status:'approved'})
+   const r=await find('admin_financial_documents',doc.id,'status,approved_by,gross_amount')
+   assert.equal(r.status,'approved');assert.equal(r.approved_by,head.id);assert.equal(Number(r.gross_amount),121)
+  })
+  const reminderFields=()=>({...docFields(),recipient_email:'qa@example.invalid',subject:prefix+' Reminder',body:'QA only; no dispatch'})
+  await verified(finance('createPaymentReminder'),async()=>{
+   await saved('createPaymentReminder',office,reminderFields())
+   reminder=await one(a.from('admin_payment_reminders').select('id,status,revision').eq('document_id',doc.id),'REMINDER')
+   assert.equal(reminder.status,'draft')
+  })
+  await verified(finance('editPaymentReminderDraft'),async()=>{
+   await saved('editPaymentReminderDraft',office,{...reminderFields(),reminder_id:reminder.id,expected_revision:reminder.revision,body:'Updated QA only'})
+   const r=await find('admin_payment_reminders',reminder.id,'revision,body')
+   assert.equal(r.body,'Updated QA only');assert.ok(r.revision>reminder.revision);reminder.revision=r.revision
+  })
+  await verified(finance('updatePaymentReminder'),async()=>{
+   await saved('updatePaymentReminder',head,{reminder_id:reminder.id,expected_revision:reminder.revision,status:'approved'})
+   const r=await find('admin_payment_reminders',reminder.id,'status,approved_by')
+   assert.equal(r.status,'approved');assert.equal(r.approved_by,head.id)
+  })
+  await verified(finance('recordFinancialPayment'),async()=>{
+   const payment=crypto.randomUUID(),fields={...docFields(),payment_id:payment,amount:'121',paid_on:day(0),bank_reference:prefix}
+   await saved('recordFinancialPayment',head,fields);await saved('recordFinancialPayment',head,fields)
+   const r=await find('admin_financial_payments',payment,'amount,document_id')
+   assert.equal(Number(r.amount),121);assert.equal(r.document_id,doc.id)
+   assert.equal((await read(a.from('admin_financial_payments').select('amount').eq('document_id',doc.id),'PAYMENT_REPLAY')).length,1)
+  })
  })
  await domain('maker',async()=>{
  const enter='lib/actions/god-mode.ts#enterGodModeFromMakerSession'
