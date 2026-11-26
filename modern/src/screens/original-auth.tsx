@@ -7,12 +7,11 @@ import AuthLayout from "@/app/(auth)/layout"
 
 
 
-import loadPendingApproval from "@/app/(auth)/pending-approval/page"
 import {LoginForm} from "@/components/auth/login-form"
 
 import {LocaleSync} from "@/components/locale-sync"
-import styles from "../auth.css?inline"
-declare const __UPT_EXACT_MAIN_LOGIN_CSS__: {sheets:Record<string,string>;routes:Record<string,string[]>}|null
+import {ExactAuthStyles,hasExactAuthStyles} from "./exact-auth-styles"
+const FallbackAuthStyles=lazy(()=>import("./fallback-auth-styles"))
 
 // Non-login routes keep the exact original components and behavior, but do
 // not inflate the critical login payload for every visitor. React Router's
@@ -40,7 +39,7 @@ function PendingApproval(){
  const [failed,setFailed]=useState(false)
  useEffect(()=>{
   let mounted=true
-  void loadPendingApproval().then(node=>{if(mounted)setContent(node)}).catch(error=>{
+  void import("@/app/(auth)/pending-approval/page").then(({default:loadPendingApproval})=>loadPendingApproval()).then(node=>{if(mounted)setContent(node)}).catch(error=>{
    if(mounted&&error?.message!=="DOCUMENT_REDIRECT")setFailed(true)
   })
   return()=>{mounted=false}
@@ -67,8 +66,6 @@ export default function OriginalAuth(){
   return()=>{document.body.classList.remove("font-sans","antialiased")}
  },[])
  return <ThemeProvider attribute="class" defaultTheme="dark" enableSystem disableTransitionOnChange>
-  {__UPT_EXACT_MAIN_LOGIN_CSS__?.routes[pathname]
-   ?__UPT_EXACT_MAIN_LOGIN_CSS__.routes[pathname].map(href=><style key={href}>{__UPT_EXACT_MAIN_LOGIN_CSS__!.sheets[href]}</style>)
-   :<style>{styles}</style>}<AuthLayout>{screen}</AuthLayout><LocaleSync clientRendered/>
+  {hasExactAuthStyles(pathname)?<ExactAuthStyles pathname={pathname}/>:<FallbackAuthStyles/>}<AuthLayout>{screen}</AuthLayout><LocaleSync clientRendered/>
  </ThemeProvider>
 }

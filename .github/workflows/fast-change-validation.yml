@@ -109,6 +109,13 @@ jobs:
           # Vite builds locally on this GitHub runner, never on Workers Free.
           npm --prefix modern run build
           npm --prefix modern run budget
+          # Reproduce the exact deployment-only failure on this repair branch.
+          # Ordinary PRs and Main pushes do not use an earlier build's CSS.
+          if [[ "$GITHUB_HEAD_REF" == fix/phase-one-login-bundle ]]; then
+            node modern/scripts/login-css-budget-preflight.mjs
+            UPT_EXACT_MAIN_LOGIN_CSS_SHA=9052fde2dd460fe17dc24c9d1cf8103ef3cc49dc npm --prefix modern run build
+            npm --prefix modern run budget
+          fi
           npm --prefix modern run worker:standalone-check
           # Compile a separate non-deployable production-shaped bundle without production secrets.
           if [[ "$GITHUB_HEAD_REF" == migration/* ]]; then
