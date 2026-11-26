@@ -6869,6 +6869,10 @@ export type Database = {
           sender_id: string
         }[]
       }
+      upt_chat_signal_authorized: {
+        Args: { p_topic: string }
+        Returns: boolean
+      }
       upt_chat_typing_users: {
         Args: { p_channel: string }
         Returns: {
@@ -7066,6 +7070,21 @@ export type Database = {
         Returns: {
           completed: boolean
           required: boolean
+        }[]
+      }
+      upt_current_session_context: {
+        Args: never
+        Returns: {
+          account_blocked: boolean
+          approved: boolean
+          effective_role: string
+          full_name: string
+          id: string
+          is_owner: boolean
+          phone_number: string
+          profile_photo_url: string
+          role: string
+          verified_email: string
         }[]
       }
       upt_current_work_context: {
