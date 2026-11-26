@@ -187,24 +187,37 @@ export async function runRemainingDomains(c){
  await domain('planning-recommendations-and-report',async()=>{
   const e=await newEvent('Planning recommendations',24),post=await newPost(e,'Planning shortage',{target_staff:'2',maximum_staff:'4'})
   await available(e,alternate);await available(e,unrelated)
-  let rows
+  let first,second
   await verified(platform('generatePlanningRecommendations'),async()=>{
    await denied(admin,staff,platform('generatePlanningRecommendations'),{event_id:e.id})
    await invoke(admin,head,platform('generatePlanningRecommendations'),{event_id:e.id})
-   rows=await read(a.from('planning_recommendations').select('id,recommended_user_id,status').eq('event_id',e.id).eq('workplace_id',post.id).eq('status','proposed'),'PLANNING')
-   assert.ok(rows.length>=2,'EXPECTED_TWO_CANDIDATES')
+   const rows=await read(a.from('planning_recommendations').select('id,recommended_user_id,status').eq('event_id',e.id).eq('workplace_id',post.id).eq('status','proposed'),'PLANNING')
+   assert.equal(rows.length,2,'EXPECTED_TWO_CANDIDATES')
    assert.ok(rows.every(r=>[alternate.id,unrelated.id].includes(r.recommended_user_id)))
+   // The recommendation query has no guaranteed row order. Membership admission
+   // instead uses queue_joined_at and user ID (the DB's FIFO tie-breaker).
+   const queue=await read(a.from('event_availability').select('user_id,queue_joined_at').eq('event_id',e.id).eq('response','can').order('queue_joined_at',{ascending:true}).order('user_id',{ascending:true}),'PLANNING_FIFO')
+   assert.equal(queue.length,2)
+   assert.ok(queue.every(r=>r.queue_joined_at))
+   first=rows.find(r=>r.recommended_user_id===queue[0].user_id)
+   second=rows.find(r=>r.recommended_user_id===queue[1].user_id)
+   assert.ok(first&&second&&first.id!==second.id,'EXPECTED_FIFO_CANDIDATES')
   })
   await verified(platform('dismissPlanningRecommendation'),async()=>{
-   await invoke(admin,head,platform('dismissPlanningRecommendation'),{recommendation_id:rows[0].id})
-   assert.equal((await find('planning_recommendations',rows[0].id,'status')).status,'dismissed')
+   // A lower-priority candidate must not bypass the waitlist even when both
+   // recommendations exist. Denial must leave recommendation and member intact.
+   await denied(admin,head,platform('applyPlanningRecommendation'),{recommendation_id:second.id})
+   assert.equal((await find('planning_recommendations',second.id,'status')).status,'proposed')
+   assert.equal((await read(a.from('event_members').select('user_id').eq('event_id',e.id).eq('user_id',second.recommended_user_id),'FIFO_DENIED_MEMBER')).length,0)
+   await invoke(admin,head,platform('dismissPlanningRecommendation'),{recommendation_id:second.id})
+   assert.equal((await find('planning_recommendations',second.id,'status')).status,'dismissed')
   })
   await verified(platform('applyPlanningRecommendation'),async()=>{
-   await invoke(admin,head,platform('applyPlanningRecommendation'),{recommendation_id:rows[1].id})
-   const r=await find('planning_recommendations',rows[1].id,'status,applied_shift_id')
+   await invoke(admin,head,platform('applyPlanningRecommendation'),{recommendation_id:first.id})
+   const r=await find('planning_recommendations',first.id,'status,applied_shift_id')
    assert.equal(r.status,'applied');assert.ok(r.applied_shift_id)
-   assert.equal((await find('shifts',r.applied_shift_id,'user_id')).user_id,rows[1].recommended_user_id)
-   await denied(admin,head,platform('applyPlanningRecommendation'),{recommendation_id:rows[1].id})
+   assert.equal((await find('shifts',r.applied_shift_id,'user_id')).user_id,first.recommended_user_id)
+   await denied(admin,head,platform('applyPlanningRecommendation'),{recommendation_id:first.id})
   })
   await verified(platform('generateEventReport'),async()=>{
    await invoke(admin,head,platform('generateEventReport'),{event_id:e.id})
