@@ -397,9 +397,17 @@ export async function runFinalDomains(c){
  })
  await domain('delete-disposable-personnel',async()=>{
   // Choose an unused test identity, never a Maker, admin or real user.
-  const id=sqlLocal("SELECT p.id FROM public.profiles p JOIN auth.users u ON u.id=p.id WHERE u.email LIKE 'bot-%@bots.uptilldawn.test' AND p.role='staff' AND p.approved AND p.profile_photo_url IS NULL AND NOT EXISTS(SELECT 1 FROM public.event_members m WHERE m.user_id=p.id) AND NOT EXISTS(SELECT 1 FROM public.work_attachments w WHERE w.uploaded_by=p.id) AND p.id NOT IN ("+[head,staff,office,promoter,unrelated,alternate,maker].map(x=>quoteId(x.id)).join(',')+") ORDER BY p.id LIMIT 1")
+  const id=sqlLocal("SELECT p.id FROM public.profiles p JOIN auth.users u ON u.id=p.id WHERE u.email LIKE 'bot-%@bots.uptilldawn.test' AND p.role='staff' AND p.approved AND p.profile_photo_url IS NULL AND NOT EXISTS(SELECT 1 FROM public.event_members m WHERE m.user_id=p.id) AND NOT EXISTS(SELECT 1 FROM public.work_attachments w WHERE w.uploaded_by=p.id) AND NOT EXISTS(SELECT 1 FROM public.upt_organization_leadership l WHERE l.user_id=p.id OR l.assigned_by=p.id) AND NOT EXISTS(SELECT 1 FROM public.upt_personnel_role_slots r WHERE r.user_id=p.id OR r.updated_by=p.id) AND NOT EXISTS(SELECT 1 FROM public.shifts sh WHERE sh.user_id=p.id OR sh.responsible_lead_id=p.id) AND NOT EXISTS(SELECT 1 FROM public.inventory_issues i WHERE i.user_id=p.id OR i.issued_by=p.id) AND p.id NOT IN ("+[head,staff,office,promoter,unrelated,alternate,maker].map(x=>quoteId(x.id)).join(',')+") ORDER BY p.id LIMIT 1")
   assert.match(id,/^[0-9a-f-]{36}$/i)
   await verified(person('deletePersonnel'),async()=>{
+   // Protect the organization rather than stripping leadership references to
+   // make a destructive test pass. Test both the protected and ordinary cases.
+   const leaders=JSON.parse(sqlLocal("SELECT coalesce(json_agg(json_build_object('slot',slot,'user_id',user_id,'assigned_by',assigned_by) ORDER BY slot),'[]'::json) FROM public.upt_organization_leadership"))
+   const protectedLeader=leaders.find(l=>l.user_id!==head.id&&l.user_id!==maker.id)
+   assert.ok(protectedLeader,'EXPECTED_SEEDED_NON_HEAD_LEADERSHIP')
+   await denied(safeAction,head,person('deletePersonnel'),{user_id:protectedLeader.user_id})
+   assert.equal(sqlLocal('SELECT count(*) FROM auth.users WHERE id='+quoteId(protectedLeader.user_id)),'1')
+   assert.deepEqual(JSON.parse(sqlLocal("SELECT coalesce(json_agg(json_build_object('slot',slot,'user_id',user_id,'assigned_by',assigned_by) ORDER BY slot),'[]'::json) FROM public.upt_organization_leadership")),leaders)
    await denied(safeAction,staff,person('deletePersonnel'),{user_id:id})
    assert.equal(sqlLocal('SELECT count(*) FROM auth.users WHERE id='+quoteId(id)),'1')
    await invoke(safeAction,head,person('deletePersonnel'),{user_id:id})
