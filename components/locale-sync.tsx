@@ -87,8 +87,10 @@ export function LocaleSync({clientRendered=false}:{clientRendered?:boolean}={}) 
       attributes: true, attributeFilter: ["lang"],
     })
     let applying = false
+    let localeSource=initialUiLocaleSource()
     const applyLocale = (nextLocale: ExtendedUiLocale, source: LocaleSource) => {
       locale = nextLocale
+      localeSource = source
       document.documentElement.lang = locale
       persistUiLocale(locale, source)
       applying = true
@@ -139,7 +141,8 @@ export function LocaleSync({clientRendered=false}:{clientRendered?:boolean}={}) 
         const first=requestAnimationFrame(()=>{
           requestAnimationFrame(()=>{
             initialPass=undefined
-            applyLocale(initialUiLocale() as ExtendedUiLocale,initialUiLocaleSource())
+            // Do not overwrite a language selection made during the SSR grace period.
+            applyLocale(locale,localeSource)
             observer.observe(document.body, { subtree: true, childList: true, characterData: true, attributes: true, attributeFilter: [...attributes] })
             observing=true
           })

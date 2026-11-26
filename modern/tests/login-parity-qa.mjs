@@ -17,7 +17,11 @@ const devices=[
 ]
 const reportDir=resolve(import.meta.dirname,"../../test-results/login-parity")
 const browser=await chromium.launch({headless:true,args:[
- "--disable-gpu","--disable-skia-runtime-opts","--disable-threaded-animation","--disable-threaded-scrolling"
+ // Full software rasterization for both origins. Partial raster reuse can
+ // retain different antialiasing at rounded borders after equivalent focus
+ // transitions. No pixel masks, color correction, or tolerance.
+ "--disable-gpu","--disable-skia-runtime-opts","--disable-threaded-animation","--disable-threaded-scrolling",
+ "--disable-partial-raster","--disable-gpu-rasterization","--run-all-compositor-stages-before-draw"
 ]})
 let comparisons=0
 let interactionComparisons=0
@@ -30,12 +34,12 @@ const capture=async(page,label,side)=>{
  if(result.captures>2)recoveredFrames.push({label,side,captures:result.captures})
  if(!result.stable)unstableFrames.push({label,side,captures:result.captures})
  const layout=await page.evaluate(()=>{
-  const selectors=["html","body",".auth-layout",".auth-layout-content",".auth-portal-screen",".auth-portal-content",".auth-portal-logo-frame",".auth-portal-logo",".auth-portal-card",".auth-portal-heading","form","input[name=email]","input[name=password]","button[aria-expanded]",".auth-portal-menu",".auth-portal-language","select"]
+  const selectors=["html","body",".auth-layout",".auth-layout-content",".auth-portal-screen",".auth-portal-content",".auth-portal-logo-frame",".auth-portal-logo",".auth-portal-card",".auth-portal-heading",".auth-portal-heading > div","form","input[name=email]","input[name=password]","button[type=submit]","button[aria-expanded]",".auth-portal-menu",".auth-portal-language","select"]
   return Object.fromEntries(selectors.map(selector=>{
    const el=document.querySelector(selector)
    if(!el)return [selector,null]
    const rect=el.getBoundingClientRect(),style=getComputedStyle(el)
-   return [selector,{x:rect.x,y:rect.y,width:rect.width,height:rect.height,font:style.fontFamily,size:style.fontSize,line:style.lineHeight,weight:style.fontWeight,color:style.color,background:style.backgroundColor,overflow:style.overflow,display:style.display,position:style.position,padding:style.padding,margin:style.margin,transform:style.transform,focus:el===document.activeElement}]
+   return [selector,{x:rect.x,y:rect.y,width:rect.width,height:rect.height,font:style.fontFamily,size:style.fontSize,line:style.lineHeight,weight:style.fontWeight,color:style.color,background:style.backgroundColor,overflow:style.overflow,display:style.display,position:style.position,padding:style.padding,margin:style.margin,transform:style.transform,borderRadius:style.borderRadius,borderColor:style.borderColor,borderWidth:style.borderWidth,boxShadow:style.boxShadow,backgroundClip:style.backgroundClip,filter:style.filter,backdropFilter:style.backdropFilter,focus:el===document.activeElement}]
   }))
  })
  return {...result,layout}

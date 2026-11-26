@@ -9,7 +9,8 @@ import {createHash} from "node:crypto"
 // Login semantics, recovery, session handling and original logo stay pinned.
 const baseline = {
  // 2026-11-25: narrowly scoped touch-focus repair; all other original bytes verified unchanged.
- "components/auth/login-form.tsx":"1723feb2fc0baedac486a0ace5fadc18b8a6ca7c",
+ // 2026-11-26: menu labels use the active locale synchronously; no geometry, styling or auth change.
+ "components/auth/login-form.tsx":"d70ef64df97fcfed40082d452585a84d1a1f0acb",
  "app/(auth)/login/page.tsx":"28cc96ab2b86bf123e738ab6d321a01cfaec7df0",
  "app/(auth)/login/[portal]/page.tsx":"1778597f285f0f1b43bdecc6ba6454b6e9bd359b",
  "app/(auth)/login/admin/page.tsx":"ae74ccca116a733cc2a969c280fc587d4f9b1d7a",
@@ -112,4 +113,14 @@ test("mobile keyboard accommodation must not shift the login when a menu or eye 
  assert.ok(!css.includes(".auth-portal-screen:focus-within"))
  assert.ok(form.includes('onPointerDown={event => { if (event.pointerType === "touch") event.preventDefault() }}'))
  assert.ok(form.includes("setShowPassword(v => !v)"))
+})
+
+test("role login menu owns the active-locale labels before deferred hydration translation",()=>{
+ const form=read("components/auth/login-form.tsx")
+ assert.ok(form.includes('useSyncExternalStore(subscribeMenuLocale,activeUiLocale,serverMenuLocale)'))
+ assert.ok(form.includes('translateRuntimeUi(text,menuLocale)'))
+ assert.ok(form.includes('data-no-translate className="auth-portal-menu'))
+ assert.equal((form.match(/menuText\(portals\[key\]\.label\)/g)||[]).length,2)
+ assert.ok(form.includes('menuText("Evenementen")'))
+ assert.ok(form.includes('menuText("Promotie")'))
 })
