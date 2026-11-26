@@ -18,6 +18,7 @@ import {megaPeopleResponse as peopleAction} from '../src/api/native-mega-people-
 import {finalCrewActionResponse as crewAction} from '../src/api/native-final-crew-actions.ts'
 import {finalFinanceResponse as financeAction} from '../src/api/native-final-finance-actions.ts'
 import {nativeWaveNineResponse as safeAction} from '../src/api/native-wave-nine-safe-actions.ts'
+import {runRemainingDomains} from './qa-local-native-expanded-domains.mjs'
 import {megaMakerResponse,godLogoutId} from '../src/api/native-mega-maker-actions.ts'
 const target='http://127.0.0.1:54321'
 const key=process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY||''
@@ -81,7 +82,7 @@ async function one(q,label){
 }
 function req(id,fields,options={}){
  const fd=new FormData()
- for(const [k,v] of Object.entries(fields))for(const item of Array.isArray(v)?v:[v])fd.append(k,String(item))
+ for(const [k,v] of Object.entries(fields))for(const item of Array.isArray(v)?v:[v])fd.append(k,item instanceof Blob?item:String(item))
  const body=new FormData();body.set('_id',id)
  body.set('_args',JSON.stringify(encode(options.noForm?[]:options.state?[{error:null},fd]:[fd],body)))
  return new Request('http://127.0.0.1:5174/api/migration/actions',{method:'POST',headers:{Origin:'http://127.0.0.1:5174','Sec-Fetch-Site':'same-origin','X-UpTillDawn-Action-Hint':id,...(options.cookie?{Cookie:options.cookie}:{})},body})
@@ -710,6 +711,7 @@ try{
    assert.equal(sqlLocal("SELECT count(*) FROM storage.objects WHERE bucket_id='work-media' AND name='"+doc.storage_path+"'"),'0')
   })
  })
+ await runRemainingDomains({head,staff,office,promoter,unrelated,alternate,actor,event,workplace,prefix,a,read,one,find,sqlLocal,invoke,denied,verified,domain,crew,platform,finance,saved,ownProfile})
  await domain('maker',async()=>{
  const enter='lib/actions/god-mode.ts#enterGodModeFromMakerSession'
  const normal='lib/actions/auth.ts#enterNormalAppFromMakerSession'
