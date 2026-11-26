@@ -5,6 +5,7 @@
 import assert from 'node:assert/strict'
 import {spawn,execFileSync} from 'node:child_process'
 import {resolve} from 'node:path'
+import {runRolePool,verifyExactCoverage} from './qa-role-pool.mjs'
 import {mkdirSync,writeFileSync} from 'node:fs'
 import {chromium} from 'playwright'
 import {createServerClient,parseCookieHeader} from '@supabase/ssr'
@@ -52,6 +53,15 @@ assert.equal(cases.reduce((n,c)=>n+c.paths.length,0),44)
 const devices=[{name:'desktop',viewport:{width:1440,height:900}},{name:'mobile',viewport:{width:390,height:844},isMobile:true,hasTouch:true}]
 const locales=['nl','fr','en','de']
 const rows=[],failures=[],loginChecks=[],blockedRoutes=new Set()
+const maker={role:'maker',portal:'admin',email:'bot-16-maker@bots.uptilldawn.test',paths:[]}
+const allRoles=[...cases,maker]
+const parallelism=Number(process.env.UPT_LOCAL_BROWSER_PARALLELISM||'3')
+assert.ok(Number.isInteger(parallelism)&&parallelism>=1&&parallelism<=3,'LOCAL_BROWSER_PARALLELISM_RANGE')
+assert.equal(new Set(allRoles.map(r=>r.email)).size,8,'EACH_ROLE_REQUIRES_DISTINCT_ACCOUNT')
+const scenarioKey=x=>[x.role,x.kind,x.language,x.device,x.kind==='landing'?'landing':x.path].join('|')
+const planned=allRoles.flatMap(role=>role.role==='maker'?devices.map(d=>scenarioKey({role:role.role,kind:'maker-choice',language:'nl',device:d.name,path:'/maker-mode'})):[...locales.flatMap(language=>devices.map(d=>scenarioKey({role:role.role,kind:'landing',language,device:d.name}))),...devices.flatMap(d=>role.paths.map(path=>scenarioKey({role:role.role,kind:'deep',language:'nl',device:d.name,path})))])
+const plannedLogins=allRoles.flatMap(r=>['browser-form','original-http-session'].map(kind=>r.role+'|'+kind))
+assert.equal(planned.length,146);assert.equal(new Set(planned).size,146)
 const reportDir=resolve(root,'test-results/phase-two-three-local-native')
 mkdirSync(reportDir,{recursive:true})
 const binding={validatedSha:execFileSync('git',['rev-parse','HEAD'],{encoding:'utf8'}).trim(),runId:process.env.GITHUB_RUN_ID||null,runAttempt:process.env.GITHUB_RUN_ATTEMPT||null}
@@ -256,8 +266,10 @@ async function signedState(role){
 async function paired(state,language,device,fn){
  const opts={locale:language==='en'?'en-GB':language+'-BE',viewport:device.viewport,isMobile:!!device.isMobile,hasTouch:!!device.hasTouch,serviceWorkers:'block',
   storageState:{cookies:state.cookies.filter(c=>!['uptilldawn-language','uptilldawn-language-source'].includes(c.name)),origins:[]}}
- const contexts=[await browser.newContext(opts),await browser.newContext(opts)]
+ const contexts=[]
  try{
+  contexts.push(await browser.newContext(opts))
+  contexts.push(await browser.newContext(opts))
   await Promise.all(contexts.map((c,i)=>protect(c,i?candidate:source)))
   for(const [i,context] of contexts.entries()){
    await context.addCookies([{name:'uptilldawn-language',value:language,url:i?candidate:source,sameSite:'Lax'},{name:'uptilldawn-language-source',value:'device',url:i?candidate:source,sameSite:'Lax'}])
@@ -266,36 +278,56 @@ async function paired(state,language,device,fn){
   await fn(a,b)
  }finally{await Promise.all(contexts.map(c=>c.close()))}
 }
-try{
- let up=false
- for(let i=0;i<100;i++){if(preview.exitCode!==null)throw Error('PREVIEW_EXITED');try{if((await fetch(candidate+'/login',{signal:AbortSignal.timeout(1000)})).ok){up=true;break}}catch{}await new Promise(r=>setTimeout(r,250))}
- assert.ok(up,'PREVIEW_UNAVAILABLE')
- browser=await chromium.launch({headless:true})
- for(const role of cases){
+// A role remains sequential so its sessions, workspace preferences and
+// mutable account state cannot race against itself. Only independent roles
+// run concurrently, on one local browser/Next/Vite/Supabase stack.
+async function runRole(role){
+ const started=performance.now()
+ try{
   await browserLogin(role)
   let state
-  try{state=await signedState(role)}catch(error){record({role:role.role,stage:'source-login'},error);continue}
+  try{state=await signedState(role)}catch(error){record({role:role.role,stage:'source-login'},error);return}
+  if(role.role==='maker'){
+   assert.equal(state.landing,'/maker-mode','UNEXPECTED_ROUTE_MAKER')
+   for(const device of devices)await paired(state,'nl',device,(a,b)=>compare(a,b,'/maker-mode',{role:role.role,kind:'maker-choice',language:'nl',device:device.name,path:'/maker-mode'}))
+   return
+  }
   for(const language of locales)for(const device of devices)await paired(state,language,device,async(a,b)=>{
    await compare(a,b,state.landing,{role:role.role,kind:'landing',language,device:device.name,path:state.landing})
   })
   for(const device of devices)await paired(state,'nl',device,async(a,b)=>{
    for(const path of role.paths)await compare(a,b,path,{role:role.role,kind:'deep',language:'nl',device:device.name,path})
   })
+ }catch(error){record({role:role.role,stage:'role-execution'},error)}
+ finally{
+  console.log('LOCAL_BROWSER_ROLE_COMPLETE '+JSON.stringify({role:role.role,elapsedMs:Math.round(performance.now()-started),passed:rows.filter(x=>x.role===role.role).length,failed:failures.filter(x=>x.role===role.role).length,totalPassed:rows.length,expected:planned.length}))
  }
- // Maker choice on both sizes, using a genuine owner account and original
- // login. This is not a claim of all God Mode panels or provider access.
- const maker={role:'maker',portal:'admin',email:'bot-16-maker@bots.uptilldawn.test'}
- try{
-  await browserLogin(maker)
-  const state=await signedState(maker)
-  assert.equal(state.landing,'/maker-mode','UNEXPECTED_ROUTE_MAKER')
-  for(const device of devices)await paired(state,'nl',device,(a,b)=>compare(a,b,'/maker-mode',{role:'maker',kind:'maker-choice',language:'nl',device:device.name,path:'/maker-mode'}))
- }catch(error){record({role:'maker',stage:'source-login'},error)}
+}
+const started=performance.now()
+let poolResult=null
+function writeReport(){
+ const scenarioCoverage=verifyExactCoverage(planned,rows.map(scenarioKey))
+ const loginCoverage=verifyExactCoverage(plannedLogins,loginChecks.filter(x=>x.outcome==='pass').map(x=>x.role+'|'+x.kind))
+ const report={...binding,scope:'local-next-vite-browser-with-native-read-adapter',expected:planned.length,passed:rows.length,failed:failures.length,rows,failures,loginChecks,scenarioCoverage,loginCoverage,parallelism,peakParallelRoles:poolResult?.peak??null,elapsedMs:Math.round(performance.now()-started),unsupportedLocalReadRoutes:[...blockedRoutes].sort(),candidateNativeLoginVerified:false,deployedWorkerVerified:false,fullVisualParityVerified:false,productionReady:false}
+ writeFileSync(resolve(reportDir,'browser-parity.json'),JSON.stringify(report,null,2)+'\n')
+ return report
+}
+try{
+ let up=false
+ for(let i=0;i<100;i++){if(preview.exitCode!==null)throw Error('PREVIEW_EXITED');try{if((await fetch(candidate+'/login',{signal:AbortSignal.timeout(1000)})).ok){up=true;break}}catch{}await new Promise(r=>setTimeout(r,250))}
+ assert.ok(up,'PREVIEW_UNAVAILABLE')
+ browser=await chromium.launch({headless:true})
+ // Longest roles first minimizes the idle tail without adding extra workers.
+ const queue=allRoles.toSorted((a,b)=>b.paths.length-a.paths.length)
+ poolResult=await runRolePool(queue,parallelism,runRole,({item,error})=>{
+  if(error)record({role:item.role,stage:'pool'},error)
+  // Persist partial results after every completed role; missing cases stay
+  // explicitly unverified if the overall job is interrupted.
+  writeReport()
+ })
 }finally{
  await browser?.close();preview.kill('SIGTERM');globalThis.fetch=fetchBefore
- const expected=56+88+2
- const report={...binding,scope:'local-next-vite-browser-with-native-read-adapter',expected,passed:rows.length,failed:failures.length,rows,failures,loginChecks,unsupportedLocalReadRoutes:[...blockedRoutes].sort(),candidateNativeLoginVerified:false,deployedWorkerVerified:false,fullVisualParityVerified:false,productionReady:false}
- writeFileSync(resolve(reportDir,'browser-parity.json'),JSON.stringify(report,null,2)+'\n')
- console.log(JSON.stringify({localBrowserExpected:expected,passed:rows.length,failed:failures.length,unsupportedLocalReadRoutes:report.unsupportedLocalReadRoutes}))
- if(rows.length!==expected||failures.length||loginChecks.length!==16||loginChecks.some(x=>x.outcome!=='pass'))process.exitCode=1
+ const report=writeReport()
+ console.log(JSON.stringify({localBrowserExpected:planned.length,passed:rows.length,failed:failures.length,parallelism,peakParallelRoles:report.peakParallelRoles,elapsedMs:report.elapsedMs,missing:report.scenarioCoverage.missing.length,unsupportedLocalReadRoutes:report.unsupportedLocalReadRoutes}))
+ if(!report.scenarioCoverage.complete||!report.loginCoverage.complete||failures.length||loginChecks.length!==16||loginChecks.some(x=>x.outcome!=='pass')||!poolResult||poolResult.errors.length)process.exitCode=1
 }

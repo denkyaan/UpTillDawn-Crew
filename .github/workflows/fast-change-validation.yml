@@ -15,7 +15,9 @@ on:
 
 concurrency:
   group: fast-validation-${{ github.ref }}
-  cancel-in-progress: true
+  # Preserve in-flight isolated acceptance evidence when a newer phase PR
+  # revision is queued; ordinary Main/other PR cancellation stays unchanged.
+  cancel-in-progress: ${{ !(github.event_name == 'pull_request' && startsWith(github.head_ref, 'migration/phase-2-3-')) }}
 
 permissions:
   contents: read
@@ -429,6 +431,7 @@ jobs:
       - name: Compare seven roles, four languages, two devices, 44 deep routes and Maker choice
         if: ${{ !cancelled() && steps.local_browser_build.outcome == 'success' }}
         env:
+          UPT_LOCAL_BROWSER_PARALLELISM: '3'
           NEXT_PUBLIC_APP_URL: http://127.0.0.1:3000
           VITE_SUPABASE_URL: http://127.0.0.1:54321
           VITE_MIGRATION_ALLOW_WRITES: 'false'
