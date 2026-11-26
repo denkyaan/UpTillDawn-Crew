@@ -120,7 +120,7 @@ export async function finalOperationsActionResponse(
     if(te||!t?.event_id)throw Error("Only event promotion tasks")
     const [member,profile]=await Promise.all([
      client.from("event_members").select("user_id").eq("event_id",t.event_id).eq("user_id",user).maybeSingle(),
-     client.rpc("upt_admin_profiles").select("id").eq("id",user).eq("approved",true).maybeSingle()
+     (client.rpc("upt_admin_profiles") as unknown as {select:(columns:string)=>{eq:(column:string,value:string)=>{eq:(column:string,value:boolean)=>{maybeSingle:()=>Promise<{data:{id:string}|null;error:unknown}>}}}}).select("id").eq("id",user).eq("approved",true).maybeSingle()
     ])
     if(member.error||profile.error||!member.data||!profile.data)throw Error("Approved event member required")
     chk(await client.rpc("upt_assign_task",{p_task:task,p_user:user}))

@@ -6621,10 +6621,6 @@ export type Database = {
         Args: { p_approved: boolean; p_role: string; p_user: string }
         Returns: undefined
       }
-      upt_admin_set_responsible_assignment: {
-        Args: { p_assign: boolean; p_user: string; p_workplace: string }
-        Returns: undefined
-      }
       upt_admin_set_personnel_block: {
         Args: { p_blocked: boolean; p_reason?: string; p_user: string }
         Returns: undefined
@@ -6637,6 +6633,10 @@ export type Database = {
           p_user_id: string
         }
         Returns: string
+      }
+      upt_admin_set_responsible_assignment: {
+        Args: { p_assign: boolean; p_user: string; p_workplace: string }
+        Returns: undefined
       }
       upt_admin_set_two_personnel_roles: {
         Args: {
