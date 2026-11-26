@@ -202,7 +202,7 @@ jobs:
     permissions:
       contents: read
     runs-on: ubuntu-latest
-    timeout-minutes: 65
+    timeout-minutes: 30
     env:
       PGURL: postgresql://postgres:postgres@127.0.0.1:54322/postgres
     steps:
@@ -429,6 +429,7 @@ jobs:
           done
           exit 1
       - name: Compare seven roles, four languages, two devices, 44 deep routes and Maker choice
+        timeout-minutes: 16
         if: ${{ !cancelled() && steps.local_browser_build.outcome == 'success' }}
         env:
           UPT_LOCAL_BROWSER_PARALLELISM: '3'
