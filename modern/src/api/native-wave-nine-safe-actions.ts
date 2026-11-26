@@ -77,18 +77,20 @@ async function deleteOriginalPersonnel(fd:FormData,db:any,actor:string){
  if(target===actor)throw Error("Own account cannot be deleted")
  // Never remove media unless each lookup has succeeded.
  const [profile,attachments]=await Promise.all([
-  db.from("profiles").select("profile_photo_url").eq("id",target).maybeSingle(),
+  db.rpc("upt_admin_profiles").select("id,profile_photo_url").eq("id",target).maybeSingle(),
   db.from("work_attachments").select("storage_path").eq("uploaded_by",target)
  ])
- if(profile.error||attachments.error)throw Error("Account media lookup failed")
+ if(profile.error||attachments.error||profile.data?.id!==target)throw Error("Account media lookup failed")
  const paths=(attachments.data||[]).map((row:{storage_path?:string})=>row.storage_path)
   .filter((value:unknown):value is string=>typeof value==="string"&&value.length>0)
- if(paths.length)check(await db.storage.from("work-media").remove(paths))
- if(profile.data?.profile_photo_url)
-  check(await db.storage.from("profile-photos").remove([profile.data.profile_photo_url]))
+ // The authoritative RPC rejects Maker/self deletion and outstanding inventory,
+ // and transfers storage ownership. Never delete media before that guard passes.
  check(await db.rpc("upt_admin_set_account",{
   p_user:target,p_approved:false,p_role:"__delete__"
  }))
+ if(paths.length)check(await db.storage.from("work-media").remove(paths))
+ if(profile.data.profile_photo_url)
+  check(await db.storage.from("profile-photos").remove([profile.data.profile_photo_url]))
 }
 export async function nativeWaveNineResponse(
  req:Request,db:NativeAdminActionDb,selected:NativeWaveNineActionId

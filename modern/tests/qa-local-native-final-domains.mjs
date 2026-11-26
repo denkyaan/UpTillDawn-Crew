@@ -162,7 +162,7 @@ export async function runFinalDomains(c){
    await invoke(roster,alternate,crew('declineShift'),{shift_id:shiftId,reason})
    await invoke(shiftAction,staff,crew('claimOpenShift'),{shift_id:shiftId,reason})
    claim=await request('claim-open-shift');assert.equal(privateState('shift_change_requests',claim),'pending')
-   assert.equal(privateState('shift_change_requests',claim,'replacement_response'),'not-required')
+   assert.equal(privateState('shift_change_requests',claim,'replacement_response'),'accepted')
    await invoke(shiftAction,head,crew('decideShiftChange'),{request_id:claim,decision:'approved',reason})
    assert.equal((await find('shifts',shiftId,'user_id')).user_id,staff.id)
   })
@@ -210,11 +210,11 @@ export async function runFinalDomains(c){
   })
  })
  await domain('promotion-evidence-lifecycle',async()=>{
-  const e=await newEvent('Promotion evidence',37),post=await newPost(e,'Promotion proof')
-  await member(e,promoter)
-  const title=prefix+' Promotion proof task'
-  await invoke(finalCrew,head,crew('createTask'),{event_id:e.id,workplace_id:post.id,user_id:promoter.id,title,description:'Synthetic proof'})
-  const task=await one(a.from('tasks').select('id').eq('event_id',e.id).eq('title',title),'PROMO_PROOF_TASK')
+  const title=prefix+' Promotion proof task',request=crypto.randomUUID()
+  const created=await invoke(people,head,'lib/actions/promotion-tasks.ts#createPromotionTask',{request,title,description:'Synthetic proof',user_id:promoter.id,admin_view:'1'})
+  assert.ok(created.data.redirect?.includes('saved=1'))
+  const task=await find('tasks',request,'id,promotion_only,event_id')
+  assert.equal(task.promotion_only,true);assert.equal(task.event_id,null)
   const assignment=await one(a.from('task_assignments').select('id').eq('task_id',task.id).eq('user_id',promoter.id),'PROMO_PROOF_ASSIGNMENT')
   // Tiny genuine PNG; no external image, no live upload. Different hashes
   // for reference and evidence are obtained by distinct valid PNG payloads.
@@ -354,36 +354,38 @@ export async function runFinalDomains(c){
  })
  await domain('inventory-settlement-request-lifecycle',async()=>{
   // Current-work prerequisite is isolated and created only in disposable SQL.
+  const returner=await c.actor('bot-10-staff-fr',false,false)
+  assert.equal(sqlLocal('SELECT count(*) FROM public.shifts WHERE user_id='+quoteId(returner.id)+" AND status<>'cancelled' AND scheduled_start<now()+interval '3 hours' AND scheduled_end>now()-interval '15 minutes'"),'0','RETURNER_NO_OVERLAP')
   const e=await newEvent('Inventory return context',40),post=await newPost(e,'Return context')
-  await member(e,staff)
-  const shift=await createShift(e,post,staff,'Return shift')
+  await member(e,returner)
+  const shift=await createShift(e,post,returner,'Return shift')
   const item=await issueItem(post,'Return issue stock')
-  await invoke(inventory,head,crew('issueInventoryItem'),{item_id:item.id,user_id:staff.id,quantity:'2'})
-  const issue=await one(a.from('inventory_issues').select('id').eq('item_id',item.id).eq('user_id',staff.id),'RETURN_ISSUE')
+  await invoke(inventory,head,crew('issueInventoryItem'),{item_id:item.id,user_id:returner.id,quantity:'2'})
+  const issue=await one(a.from('inventory_issues').select('id').eq('item_id',item.id).eq('user_id',returner.id),'RETURN_ISSUE')
   sqlLocal("UPDATE public.events SET start_at=now()-interval '15 minutes',start_date=now()-interval '15 minutes',end_at=now()+interval '3 hours',end_date=now()+interval '3 hours',registration_deadline=now()-interval '15 minutes' WHERE id="+quoteId(e.id))
   sqlLocal("UPDATE public.shifts SET scheduled_start=now()-interval '15 minutes',start_time=now()-interval '15 minutes',scheduled_end=now()+interval '3 hours',end_time=now()+interval '3 hours',response_status='accepted' WHERE id="+quoteId(shift.id))
   const session=crypto.randomUUID()
-  sqlLocal("INSERT INTO public.work_sessions(id,user_id,event_id,shift_id,start_time,started_at,status) VALUES ("+[session,staff.id,e.id,shift.id].map(quoteId).join(",")+",now()-interval '5 minutes',now()-interval '5 minutes','active')")
+  sqlLocal("INSERT INTO public.work_sessions(id,user_id,event_id,shift_id,start_time,started_at,status) VALUES ("+[session,returner.id,e.id,shift.id].map(quoteId).join(",")+",now()-interval '5 minutes',now()-interval '5 minutes','active')")
   let pending
   const fields={issue_id:issue.id,condition:'returned',quantity:'2',notes:'QA return'}
   const pendingRow=()=>one(a.from('inventory_settlement_requests').select('id,status,user_id,quantity').eq('issue_id',issue.id).eq('status','pending'),'RETURN_PENDING')
   try{
    await verified(crew('requestInventorySettlement'),async()=>{
     await denied(inventory,unrelated,crew('requestInventorySettlement'),fields)
-    await invoke(inventory,staff,crew('requestInventorySettlement'),fields)
-    pending=await pendingRow();assert.equal(pending.user_id,staff.id);assert.equal(pending.quantity,2)
+    await invoke(inventory,returner,crew('requestInventorySettlement'),fields)
+    pending=await pendingRow();assert.equal(pending.user_id,returner.id);assert.equal(pending.quantity,2)
     assert.equal((await find('inventory_issues',issue.id,'outstanding_quantity')).outstanding_quantity,2)
    })
    await verified(crew('cancelInventorySettlement'),async()=>{
     await denied(inventory,unrelated,crew('cancelInventorySettlement'),{request_id:pending.id})
-    await invoke(inventory,staff,crew('cancelInventorySettlement'),{request_id:pending.id})
+    await invoke(inventory,returner,crew('cancelInventorySettlement'),{request_id:pending.id})
     assert.equal((await find('inventory_settlement_requests',pending.id,'status')).status,'cancelled')
    })
    await verified(crew('decideInventorySettlement'),async()=>{
-    await invoke(inventory,staff,crew('requestInventorySettlement'),fields)
+    await invoke(inventory,returner,crew('requestInventorySettlement'),fields)
     pending=await pendingRow()
     const decision={request_id:pending.id,decision:'approved',note:'QA approved return'}
-    await denied(inventory,staff,crew('decideInventorySettlement'),decision)
+    await denied(inventory,returner,crew('decideInventorySettlement'),decision)
     await invoke(inventory,head,crew('decideInventorySettlement'),decision)
     assert.equal((await find('inventory_settlement_requests',pending.id,'status')).status,'approved')
     assert.equal((await find('inventory_issues',issue.id,'outstanding_quantity')).outstanding_quantity,0)
