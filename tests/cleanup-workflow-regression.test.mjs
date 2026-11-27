@@ -1,6 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync, readdirSync } from 'node:fs';
+import { execFileSync } from 'node:child_process';
 
 const workflowDir = '.github/workflows';
 const approved = [
@@ -15,13 +16,32 @@ test('only five approved GitHub Actions workflows exist', () => {
   assert.deepEqual(readdirSync(workflowDir).filter(name => /\.ya?ml$/.test(name)).sort(), approved);
 });
 
-test('cleanup preserves only the latest actual success and actual failure', () => {
+test('cleanup retains exactly one latest successful or failed run across branches', () => {
   const source = readFileSync(workflowDir + '/cleanup-actions-history.yml', 'utf8');
-  assert.match(source, /\[ "\$conclusion" = "success" \]/);
-  assert.match(source, /\[ "\$conclusion" = "failure" \]/);
-  assert.doesNotMatch(source, /\[ "\$conclusion" != "success" \]/);
-  assert.match(source, /\[ "\$id" = "\$CURRENT_RUN_ID" \] && continue/);
-  assert.match(source, /status=completed/);
+  assert.match(source, /workflow_run:\s*\n\s*workflows: \["CI main", "Deploy main", "CI production", "Deploy production"\]/);
+  assert.match(source, /cancel-in-progress: false/);
+  assert.match(source, /for workflow in fast-change-validation\.yml deploy-main\.yml ci\.yml deploy-cloudflare\.yml cleanup-actions-history\.yml;/);
+  assert.match(source, /actions\/workflows\/\$workflow\/runs\?per_page=100"/);
+  assert.match(source, /\[ "\$id" != "\$CURRENT_RUN_ID" \] \|\| continue/);
+  assert.match(source, /if \[ "\$status" != "completed" \]; then/);
+  // Execute the exact planner used by the deletion step, without API calls.
+  const planner = source.match(/jq -c --arg current "\$CURRENT_RUN_ID" --arg workflow "\$1" '([\s\S]*?)'\n/);
+  assert.ok(planner, 'Missing actual retention planner');
+  const run = (id, conclusion, head_branch = 'main', status = 'completed') =>
+    ({ id, run_number: id, conclusion, head_branch, status });
+  const pages = [
+    { workflow_runs: [run(9, null, 'main', 'in_progress'), run(8, 'cancelled'), run(7, 'failure', 'feature'), run(5, 'success')] },
+    { workflow_runs: [run(5, 'success'), run(4, null, 'main', 'queued')] },
+  ];
+  const plan = (workflow, history, current = '99') => JSON.parse(execFileSync('jq',
+    ['-c', '--arg', 'current', current, '--arg', 'workflow', workflow, planner[1]],
+    { input: JSON.stringify(history), encoding: 'utf8' }));
+  assert.deepEqual(plan('fast-change-validation.yml', pages), { keep: 7, delete: [8, 5] });
+  assert.deepEqual(plan('ci.yml', [{ workflow_runs: [run(10, 'success'), run(9, 'failure')] }]), { keep: 10, delete: [9] });
+  assert.deepEqual(plan('deploy-main.yml', pages, '7'), { keep: 5, delete: [8] });
+  assert.deepEqual(plan('cleanup-actions-history.yml', pages), { keep: null, delete: [8, 7, 5] });
+  assert.deepEqual(plan('deploy-cloudflare.yml', [{ workflow_runs: [run(1, 'cancelled')] }]), { keep: null, delete: [1] });
+  assert.deepEqual(plan('ci.yml', [{ workflow_runs: [] }]), { keep: null, delete: [] });
 });
 
 test('full CI retains isolated database replay and authenticated browser gates', () => {
