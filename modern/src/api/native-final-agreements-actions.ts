@@ -161,20 +161,37 @@ export async function finalAgreementsResponse(
    if(ledgerError||!row?.envelope_id)throw Error("Signing envelope unavailable")
    const base=(config.DOCUMENSO_BASE_URL||"https://app.documenso.com").replace(/\/$/,"")
    const url=new URL(base)
-   if(url.protocol!=="https:"||url.username||url.password||
+   if(url.protocol!=="https:"||url.username||url.password||url.pathname!=="/"||url.search||url.hash||url.port||
       !/^(?:[a-z0-9-]+\.)*documenso\.com$/i.test(url.hostname)||
       !config.DOCUMENSO_API_KEY||
       !/^[a-zA-Z0-9_-]{1,128}$/.test(row.envelope_id))
     throw Error("Signing provider not connected")
    const response=await fetch(base+"/api/v2/envelope/"+encodeURIComponent(row.envelope_id),{
     headers:{Authorization:config.DOCUMENSO_API_KEY,Accept:"application/json"},
-    signal:AbortSignal.timeout(20000),redirect:"error"
+    cache:"no-store",signal:AbortSignal.timeout(20000),redirect:"error"
    })
-   if(!response.ok||Number(response.headers.get("content-length")||0)>65536)
+   if(!response.ok||!response.headers.get("content-type")?.toLowerCase().includes("application/json"))
     throw Error("Signing provider unavailable")
-   const raw=await response.text()
-   if(raw.length>65536)throw Error("Signing response oversized")
-   const remote=JSON.parse(raw)
+   const declared=response.headers.get("content-length")
+   if(declared!==null&&(!Number.isSafeInteger(Number(declared))||Number(declared)<0||Number(declared)>65536))
+    throw Error("Signing response oversized")
+   const reader=response.body?.getReader()
+   if(!reader)throw Error("Signing response unavailable")
+   const chunks:Uint8Array[]=[]
+   let length=0
+   try{
+    while(true){
+     const part=await reader.read()
+     if(part.done)break
+     length+=part.value.byteLength
+     if(length>65536){await reader.cancel().catch(()=>{});throw Error("Signing response oversized")}
+     chunks.push(part.value)
+    }
+   }finally{reader.releaseLock()}
+   const bytes=new Uint8Array(length)
+   let offset=0
+   for(const chunk of chunks){bytes.set(chunk,offset);offset+=chunk.byteLength}
+   const remote=JSON.parse(new TextDecoder("utf-8",{fatal:true}).decode(bytes))
    if(remote?.id!==row.envelope_id||
       !["DRAFT","PENDING","COMPLETED","REJECTED","CANCELLED"].includes(remote?.status))
     throw Error("Signing envelope mismatch")

@@ -403,6 +403,10 @@ jobs:
       - name: Exhaustive signed native transport acceptance (all 163 actions, all roles)
         if: ${{ !cancelled() && steps.local_native.outcome != 'skipped' }}
         run: node modern/tests/qa-local-all-action-matrix.mjs
+      - name: Rehearse both database alignment sequences locally (transaction rollback)
+        if: ${{ !cancelled() && steps.local_native.outcome != 'skipped' }}
+        timeout-minutes: 3
+        run: node modern/tests/qa-local-alignment-rehearsal.mjs
       - name: Local schema, rollback and thirty real Hono session checks
         if: ${{ !cancelled() && steps.local_native.outcome != 'skipped' }}
         run: node modern/tests/qa-local-release-rehearsal.mjs
@@ -453,6 +457,12 @@ jobs:
           set -euo pipefail
           export VITE_SUPABASE_ANON_KEY="$NEXT_PUBLIC_SUPABASE_ANON_KEY"
           node modern/tests/qa-local-release-browser.mjs
+      - name: Compare actual original and generated native authentication across all eight accounts
+        if: ${{ !cancelled() && steps.local_browser_build.outcome == 'success' }}
+        timeout-minutes: 3
+        env:
+          NEXT_PUBLIC_APP_URL: http://127.0.0.1:3000
+        run: node modern/tests/qa-local-native-auth-parity.mjs
       - name: Classify original local server failures without exposing log contents
         if: always()
         run: |

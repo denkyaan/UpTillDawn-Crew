@@ -1,0 +1,30 @@
+{
+ "contract":"phase23-environment-alignment-v1",
+ "main":{
+  "project":"npbjrtiolqperdgljnhi",
+  "expectedFailed":["atomic_responsible_assignment_rpc","inventory_asset_form_rpc","private_work_media_document_types"],
+  "migrations":[
+   "20261126171000_align_inventory_manager_read_authority.sql",
+   "20261126172500_inventory_asset_form_rpc.sql",
+   "20261126180000_work_media_document_types.sql",
+   "20261126210000_event_template_and_responsible_atomicity.sql"
+  ]
+ },
+ "production":{
+  "project":"eakoavcieossazqzplke",
+  "expectedFailed":["approved_gate_rejects_blocked_accounts","atomic_responsible_assignment_rpc","chat_read_hotpaths_are_non_mutating","driver_supervisor_binds_actor_to_session","event_command_revenue_is_admin_only","inventory_asset_form_rpc","private_work_media_document_types","responsible_binds_actor_to_session","successful_admin_login_audit_is_own_account_only","task_read_and_manage_bind_actor_to_session","verified_self_scoped_session_context"],
+  "migrations":[
+   "20261117175500_single_verified_session_context.sql",
+   "20261117185000_chat_hotpath_read_only_realtime.sql",
+   "20261118095730_deny_blocked_in_central_approval_guard.sql",
+   "20261118103224_bind_privileged_task_and_driver_authorization_to_session.sql",
+   "20261118105430_scope_admin_login_success_to_verified_admin_identity.sql",
+   "20261118112738_bind_responsible_privileges_to_authenticated_actor.sql",
+   "20261118121230_redact_event_command_financial_totals_for_non_admins.sql",
+   "20261126171000_align_inventory_manager_read_authority.sql",
+   "20261126172500_inventory_asset_form_rpc.sql",
+   "20261126180000_work_media_document_types.sql",
+   "20261126210000_event_template_and_responsible_atomicity.sql"
+  ]
+ }
+}

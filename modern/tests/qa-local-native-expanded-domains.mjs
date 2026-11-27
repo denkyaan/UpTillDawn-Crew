@@ -364,6 +364,54 @@ export async function runRemainingDomains(c){
    r=await one(a.from('admin_artist_agreement_signature_requests').select('id,status,recipient_email').eq('agreement_version_id',v.id),'SIGNATURE_PREPARATION')
    assert.equal(r.status,'prepared');assert.equal(r.recipient_email,email)
   })
+  // Signed ledger plus synthetic Documenso transport. Deliberately do NOT
+  // register refreshSigning as a live/positive persistence action.
+  await domain('documenso-read-only-provider-contract',async()=>{
+   assert.equal(process.env.BOT_SUPABASE_URL,'http://127.0.0.1:54321')
+   assert.match(v.id,/^[0-9a-f-]{36}$/i)
+   const envelope='phase23-'+v.id
+   const digest='a'.repeat(64)
+   sqlLocal("INSERT INTO public.administration_contract_signing_requests(document_type,document_id,document_version,document_sha256,envelope_id,recipient_email) VALUES ('artist','"+v.id+"',1,'"+digest+"','"+envelope+"','qa-agency@example.invalid')")
+   const hash=()=>sqlLocal("SELECT md5(to_jsonb(r)::text) FROM public.administration_contract_signing_requests r WHERE document_id='"+v.id+"'::uuid AND document_type='artist'")
+   const baseline=hash()
+   assert.match(baseline,/^[a-f0-9]{32}$/)
+   const id=agreement('refreshSigning'),fields={booking_id:b.id,version_id:v.id,version:'1'}
+   const realFetch=globalThis.fetch
+   let calls=0,mode='valid'
+   const config={DOCUMENSO_BASE_URL:'https://app.documenso.com',DOCUMENSO_API_KEY:'synthetic-local-provider-fixture'}
+   const handler=(request,db,selected)=>agreements(request,db,selected,config)
+   try{
+    globalThis.fetch=async(input,init)=>{
+     const request=new Request(input,init),url=new URL(request.url)
+     if(url.origin==='http://127.0.0.1:54321')return realFetch(input,init)
+     assert.equal(url.href,'https://app.documenso.com/api/v2/envelope/'+envelope)
+     assert.equal(request.method,'GET')
+     assert.equal(request.headers.get('authorization'),config.DOCUMENSO_API_KEY)
+     calls++
+     if(mode==='oversized')return new Response('x'.repeat(65537),{headers:{'content-type':'application/json'}})
+     if(mode==='non-json')return new Response('{}',{headers:{'content-type':'text/plain'}})
+     return Response.json({id:mode==='mismatch'?'wrong-envelope':envelope,status:'COMPLETED'})
+    }
+    await denied(agreements,office,id,fields)
+    await denied(handler,staff,id,fields)
+    await denied(handler,office,id,{...fields,version:'2'})
+    assert.equal(calls,0,'PROVIDER_CALL_BEFORE_AUTHORIZATION')
+    const result=await invoke(handler,office,id,fields)
+    assert.equal(result.data.redirect,ap+'modules/artists/'+b.id+'/agreement')
+    assert.equal(calls,1)
+    for(const invalid of ['mismatch','oversized','non-json']){
+     mode=invalid
+     await denied(handler,office,id,fields)
+    }
+    assert.equal(calls,4)
+    assert.equal(hash(),baseline,'READ_ONLY_REFRESH_MUTATED_LEDGER')
+    console.log('PASS local Documenso contract: signed authorization, exact envelope, bounded response, unchanged ledger; synthetic provider only')
+   }finally{
+    globalThis.fetch=realFetch
+    sqlLocal("DELETE FROM public.administration_contract_signing_requests WHERE document_id='"+v.id+"'::uuid AND document_type='artist' AND envelope_id='"+envelope+"'")
+    assert.equal(hash(),'')
+   }
+  })
   await verified(agreement('cancelSignaturePreparation'),async()=>{
    await invoke(agreements,office,agreement('cancelSignaturePreparation'),{id:b.id,request_id:r.id})
    const row=await find('admin_artist_agreement_signature_requests',r.id,'status,cancelled_at')
