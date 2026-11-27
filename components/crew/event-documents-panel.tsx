@@ -30,6 +30,58 @@ function formatBytes(bytes:number){
   return (bytes/(1024*1024)).toFixed(1)+' MB'
 }
 
+type DocumentPanelProps={
+ eventId:string
+ canManage:boolean
+ allowEventWide:boolean
+ workplaceOptions:EventDocumentWorkplaceOption[]
+ workplaceId?:string
+ showTextEntry?:boolean
+}
+type LoadedDocuments={
+ documents:Tables<'event_documents'>[]
+ signedUrls:Map<string,string>
+ locale:Awaited<ReturnType<typeof requestUiLocale>>
+ error:boolean
+}
+
+/** One signed, request-local document prefetch for inventory's visible posts.
+ * Limit query URL size and page through rows; keep the existing RLS and
+ * Storage authorization. No service role, no global cache or public URLs. */
+export async function loadInventoryDocuments(workplaces:readonly {id:string;event_id:string}[]){
+ const [s,locale]=await Promise.all([createClient(),requestUiLocale()])
+ const loaded=new Map<string,LoadedDocuments>()
+ for(const workplace of workplaces)loaded.set(workplace.id,{documents:[],signedUrls:new Map(),locale,error:false})
+ const byId=new Map(workplaces.map(row=>[row.id,row.event_id]))
+ for(let start=0;start<workplaces.length;start+=50){
+  const ids=workplaces.slice(start,start+50).map(row=>row.id)
+  const batch:Tables<'event_documents'>[]=[]
+  let failed=false
+  for(let offset=0;;offset+=250){
+   const result=await s.from('event_documents').select('*').in('workplace_id',ids).eq('is_active',true)
+    .order('offline_critical',{ascending:false}).order('created_at',{ascending:false}).order('id',{ascending:false}).range(offset,offset+249)
+   if(result.error||!result.data){failed=true;break}
+   batch.push(...result.data)
+   if(result.data.length<250)break
+  }
+  if(failed){for(const id of ids)loaded.get(id)!.error=true;continue}
+  for(const document of batch){
+   if(!document.workplace_id||byId.get(document.workplace_id)!==document.event_id)continue
+   loaded.get(document.workplace_id)?.documents.push(document)
+  }
+  // Keep signing individual files so one denied object cannot grant access
+  // to another. Bound concurrent calls, including on Workers Free.
+  for(let offset=0;offset<batch.length;offset+=8){
+   await Promise.all(batch.slice(offset,offset+8).map(async document=>{
+    if(!document.workplace_id||byId.get(document.workplace_id)!==document.event_id)return
+    const {data:signed}=await s.storage.from('work-media').createSignedUrl(document.storage_path,600)
+    if(signed?.signedUrl)loaded.get(document.workplace_id)?.signedUrls.set(document.id,signed.signedUrl)
+   }))
+  }
+ }
+ return loaded
+}
+
 export async function EventDocumentsPanel({
   eventId,
   canManage,
@@ -37,14 +89,7 @@ export async function EventDocumentsPanel({
   workplaceOptions,
   workplaceId,
   showTextEntry = false,
-}:{
-  eventId:string
-  canManage:boolean
-  allowEventWide:boolean
-  workplaceOptions:EventDocumentWorkplaceOption[]
-  workplaceId?:string
-  showTextEntry?:boolean
-}){
+}:DocumentPanelProps){
   const locale=await requestUiLocale()
   const s=await createClient()
   let query=s
@@ -57,18 +102,22 @@ export async function EventDocumentsPanel({
     .order('offline_critical',{ascending:false})
     .order('created_at',{ascending:false})
 
+  const documents=(data||[]) as Tables<'event_documents'>[]
+  const signedUrls=new Map<string,string>()
+  if(!error)await Promise.all(documents.map(async document=>{
+    const {data:signed}=await s.storage.from('work-media').createSignedUrl(document.storage_path,600)
+    if(signed?.signedUrl)signedUrls.set(document.id,signed.signedUrl)
+  }))
+  return <EventDocumentsView eventId={eventId} canManage={canManage} allowEventWide={allowEventWide} workplaceOptions={workplaceOptions} showTextEntry={showTextEntry} loaded={{documents,signedUrls,locale,error:!!error}}/>
+}
+
+export function EventDocumentsView({eventId,canManage,allowEventWide,workplaceOptions,showTextEntry=false,loaded}:DocumentPanelProps&{loaded:LoadedDocuments}){
+  const {documents,signedUrls,locale,error}=loaded
   if(error)return <section className="rounded-2xl border p-4">
     <h2 className="text-xl font-black">Documenten</h2>
     <p className="mt-2 text-sm text-muted-foreground">Documenten konden niet worden geladen.</p>
   </section>
-
-  const documents=(data||[]) as Tables<'event_documents'>[]
   const workplaceById=new Map(workplaceOptions.map(item=>[item.id,item.label]))
-  const signedUrls=new Map<string,string>()
-  await Promise.all(documents.map(async document=>{
-    const {data:signed}=await s.storage.from('work-media').createSignedUrl(document.storage_path,600)
-    if(signed?.signedUrl)signedUrls.set(document.id,signed.signedUrl)
-  }))
 
   return <section className="space-y-4 rounded-2xl border p-4">
     <div>

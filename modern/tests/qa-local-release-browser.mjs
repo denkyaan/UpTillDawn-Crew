@@ -141,16 +141,17 @@ async function protect(context,which){
 // browser tabs. Timer polling and independent Node deadlines also protect
 // against a nonresponsive browser process. Every timeout remains a failure.
 async function ready(page,language){
+ const poll=async(label,fn,ms)=>{try{return await limit(label,fn,ms)}catch(error){if(error.name==='TimeoutError')throw Error('DEADLINE_'+label);throw error}}
  const timeout=12000
- await limit('APP_READINESS',()=>page.waitForFunction(()=>{
+ await poll('APP_READINESS',()=>page.waitForFunction(()=>{
   if(/^\/(?:login|unauthorized|pending-approval|disabled)(?:\/|$)/.test(location.pathname)||document.querySelector('[data-app-error="true"]'))return true
   if(location.pathname==='/maker-mode')return !!document.querySelector('main h1, h1')
   return !!document.querySelector('[data-app-shell-ready="true"]')&&!document.querySelector('[data-route-loading="true"]')&&!!document.querySelector('main')
  },null,{timeout,polling:150}),timeout+1000)
  assert.ok(!/^\/(?:login|unauthorized|pending-approval|disabled)(?:\/|$)/.test(new URL(page.url()).pathname),'UNEXPECTED_AUTH_REDIRECT')
  assert.equal(await limit('APP_ERROR_CHECK',()=>page.locator('[data-app-error="true"]').count(),3000),0,'APP_RENDER_ERROR')
- await limit('LOCALE_READINESS',()=>page.waitForFunction(lang=>document.documentElement.lang.split('-')[0]===lang,language,{timeout:6000,polling:150}),7000)
- await limit('FONT_READINESS',()=>page.waitForFunction(()=>document.fonts.status==='loaded',null,{timeout:4000,polling:150}),5000)
+ await poll('LOCALE_READINESS',()=>page.waitForFunction(lang=>document.documentElement.lang.split('-')[0]===lang,language,{timeout:6000,polling:150}),7000)
+ await poll('FONT_READINESS',()=>page.waitForFunction(()=>document.fonts.status==='loaded',null,{timeout:4000,polling:150}),5000)
 }
 async function view(page){
  return limit('VIEW_FINGERPRINT',()=>page.evaluate(()=>{
@@ -174,10 +175,23 @@ function record(meta,error){
  }else{rows.push(meta);console.log('LOCAL_BROWSER_PASS '+JSON.stringify(meta))}
  writeReport()
 }
-async function compare(a,b,path,meta){
+async function notificationSnapshot(page){
+ const cookies=await limit('NOTIFICATION_COOKIES',()=>page.context().cookies(source),5000)
+ const db=createServerClient(dbUrl,key,{cookies:{getAll:()=>cookies.map(({name,value})=>({name,value})),setAll:()=>{}}})
+ const {data:{user},error}=await limit('NOTIFICATION_USER',()=>db.auth.getUser(),10000)
+ if(error||!user)throw Error('SOURCE_LOGIN_NOTIFICATION_IDENTITY')
+ const [rows,badge]=await limit('NOTIFICATION_SNAPSHOT',()=>Promise.all([
+  db.from('crew_notifications').select('id,read_at,created_at,kind').eq('user_id',user.id).neq('kind','error_report').order('created_at',{ascending:false}).order('id',{ascending:false}).limit(51),
+  db.rpc('upt_notification_badge_count')
+ ]),10000)
+ if(rows.error||badge.error)throw Error('DEADLINE_NOTIFICATION_SNAPSHOT_UNAVAILABLE')
+ return JSON.stringify({rows:rows.data,badge:badge.data})
+}
+async function compare(a,b,path,meta,attempt=0){
  stage(meta.role,'compare:'+meta.kind+':'+meta.language+':'+meta.device+':'+path)
  let phase='source'
  try{
+  const snapshot=path==='/notifications'?await notificationSnapshot(a):null
   const ra=await limit('SOURCE_NAVIGATION',()=>a.goto(source+path,{waitUntil:'domcontentloaded',timeout:15000}),16000)
   if(!ra||ra.status()>=400)throw Error('SOURCE_HTTP_'+ra?.status())
   phase='source-ready'
@@ -198,6 +212,14 @@ async function compare(a,b,path,meta){
    await new Promise(r=>setTimeout(r,300));expected=await view(a);actual=await view(b)
   }
   const diff=Object.keys(expected).filter(k=>JSON.stringify(expected[k])!==JSON.stringify(actual[k]))
+  if(snapshot!==null){
+   const after=await notificationSnapshot(a)
+   if(snapshot!==after){
+    if(attempt>=1)throw Error('PARITY_MISMATCH notification-snapshot-changing')
+    console.log('LOCAL_NOTIFICATION_SNAPSHOT_CHANGED '+meta.role+' '+meta.device)
+    return await compare(a,b,path,meta,attempt+1)
+   }
+  }
   if(diff.length){
    const layoutDifferences=diff.includes('layout')?expected.layout.map((item,i)=>({i,expected:item,actual:actual.layout[i]??null})).filter(x=>JSON.stringify(x.expected)!==JSON.stringify(x.actual)).slice(0,4):[]
    console.error('LOCAL_BROWSER_PARITY_DETAIL '+JSON.stringify({role:meta.role,path,device:meta.device,diff,layoutDifferences}))
@@ -211,7 +233,14 @@ async function compare(a,b,path,meta){
    if(!expectedHidden[meta.role]?.includes(path)||expected.featureHidden.length!==1||!expected.featureHidden[0]||actual.featureHidden.length!==1)throw Error('MISSING_CONTROL')
    record({...meta,viewState:'role-hidden'})
   }else record({...meta,viewState:'content'})
- }catch(error){record({...meta,stage:phase},error)}
+ }catch(error){
+  if(phase==='candidate-ready'||phase==='source-ready'){
+   const page=phase==='candidate-ready'?b:a
+   const flags=await limit('READINESS_DIAGNOSTICS',()=>page.evaluate(()=>({shell:!!document.querySelector('[data-app-shell-ready="true"]'),loading:!!document.querySelector('[data-route-loading="true"]'),error:!!document.querySelector('[data-app-error="true"]'),main:!!document.querySelector('main'),lang:document.documentElement.lang,fonts:document.fonts.status})),3000).catch(()=>null)
+   console.error('LOCAL_BROWSER_READINESS_DETAIL '+JSON.stringify({role:meta.role,path,device:meta.device,phase,flags}))
+  }
+  record({...meta,stage:phase},error)
+ }
 }
 // Verify the real original login HTTP transport independently of the browser
 // click. Both use the production application's normal signIn implementation.
