@@ -73,7 +73,12 @@ const activeStages=new Map()
 const limit=(label,fn,ms=10000)=>withDeadline(label,fn,ms)
 const stage=(role,name)=>{activeStages.set(role,name);console.log('LOCAL_BROWSER_STAGE '+role+' '+name)}
 const closeContext=context=>limit('CONTEXT_CLOSE',()=>context.close(),5000)
-const newContext=options=>limit('CONTEXT_CREATE',()=>browser.newContext(options),10000)
+const newContext=async options=>{
+ const context=await limit('CONTEXT_CREATE',()=>browser.newContext(options),10000)
+ context.setDefaultTimeout(8000)
+ context.setDefaultNavigationTimeout(15000)
+ return context
+}
 const newPage=context=>limit('PAGE_CREATE',()=>context.newPage(),10000)
 // All native server-side read handlers are network-isolated too.
 globalThis.fetch=(input,init)=>{
@@ -102,11 +107,11 @@ async function readAdapter(request){
  return deny()
 }
 async function protect(context,which){
- await context.route('**/*',async route=>{
+ await limit('ROUTE_REGISTER',()=>context.route('**/*',async route=>{
   const incoming=route.request(),url=new URL(incoming.url())
-  if(url.origin===dbUrl)return route.continue()
-  if(url.origin!==which)return route.abort('blockedbyclient')
-  if(which!==candidate||!url.pathname.startsWith('/api/')&&!url.pathname.startsWith('/portals/switch/'))return route.continue()
+  if(url.origin===dbUrl)return limit('ROUTE_CONTINUE_DB',()=>route.continue(),5000).catch(()=>{})
+  if(url.origin!==which)return limit('ROUTE_BLOCK_EXTERNAL',()=>route.abort('blockedbyclient'),3000).catch(()=>{})
+  if(which!==candidate||!url.pathname.startsWith('/api/')&&!url.pathname.startsWith('/portals/switch/'))return limit('ROUTE_CONTINUE_APP',()=>route.continue(),5000).catch(()=>{})
   try{
    const headers=await limit('ROUTE_HEADERS',()=>incoming.allHeaders(),4000)
    const options={method:incoming.method(),headers}
@@ -115,7 +120,7 @@ async function protect(context,which){
    // Keep real statuses and redirect locations, never source-fallback.
    await limit('ROUTE_FULFILL',async()=>route.fulfill({status:response.status,headers:Object.fromEntries(response.headers),body:Buffer.from(await response.arrayBuffer())}),5000)
   }catch{await limit('ROUTE_FAILURE_RESPONSE',()=>route.fulfill({status:503,contentType:'application/json',body:'{"error":"local_read_adapter_failed"}'}),3000).catch(()=>route.abort('failed').catch(()=>{}))}
- })
+ }),5000)
 }
 // Do not wait on animation frames or unbounded font promises in background
 // browser tabs. Timer polling and independent Node deadlines also protect
@@ -157,7 +162,7 @@ async function compare(a,b,path,meta){
  stage(meta.role,'compare:'+meta.kind+':'+meta.language+':'+meta.device+':'+path)
  let phase='source'
  try{
-  const ra=await a.goto(source+path,{waitUntil:'domcontentloaded',timeout:30000})
+  const ra=await limit('SOURCE_NAVIGATION',()=>a.goto(source+path,{waitUntil:'domcontentloaded',timeout:15000}),16000)
   if(!ra||ra.status()>=400)throw Error('SOURCE_HTTP_'+ra?.status())
   await ready(a,meta.language)
   const finalPath=new URL(a.url()).pathname
@@ -165,9 +170,9 @@ async function compare(a,b,path,meta){
   // settle on a different authorized route in this matrix.
   if(finalPath!==path&&!(path==='/shifts'&&finalPath==='/workplaces')&&!(path==='/incidents'&&finalPath==='/events'))throw Error('UNEXPECTED_ROUTE_SOURCE')
   phase='candidate'
-  const rb=await b.goto(candidate+path,{waitUntil:'domcontentloaded',timeout:30000})
+  const rb=await limit('CANDIDATE_NAVIGATION',()=>b.goto(candidate+path,{waitUntil:'domcontentloaded',timeout:15000}),16000)
   if(!rb||rb.status()>=400)throw Error('CANDIDATE_HTTP_'+rb?.status())
-  if(finalPath!==path)await b.waitForURL(u=>u.pathname===finalPath,{timeout:12000})
+  if(finalPath!==path)await limit('CANDIDATE_REDIRECT',()=>b.waitForURL(u=>u.pathname===finalPath,{timeout:8000}),9000)
   await ready(b,meta.language)
   phase='comparison'
   let expected=await view(a),actual=await view(b),deadline=Date.now()+10000
@@ -199,84 +204,89 @@ async function verifyCookieIdentity(context,role){
  const cookies=await limit('SESSION_COOKIES',()=>context.cookies(source),5000)
  assert.ok(cookies.some(c=>/^sb-[a-z0-9]+-auth-token(?:\.\d+)?$/i.test(c.name)&&c.value),'SOURCE_LOGIN_COOKIE_MISSING')
  const db=createServerClient(dbUrl,key,{cookies:{getAll:()=>cookies.map(({name,value})=>({name,value})),setAll:()=>{}}})
- const {data:{user},error}=await db.auth.getUser()
+ const {data:{user},error}=await limit('COOKIE_AUTH_USER',()=>db.auth.getUser(),10000)
  if(error||!user||user.email!==role.email)throw Error('SOURCE_LOGIN_SIGNED_IDENTITY_MISMATCH')
- const {data,error:contextError}=await db.rpc('upt_current_session_context')
+ const {data,error:contextError}=await limit('COOKIE_ROLE_RPC',()=>db.rpc('upt_current_session_context'),10000)
  const identity=parseIdentity(Array.isArray(data)?data[0]:null)
  if(contextError||!identity||identity.id!==user.id||!isActive(identity))throw Error('SOURCE_LOGIN_ROLE_CONTEXT_DENIED')
  if(identity.is_owner!==(role.role==='maker'))throw Error('SOURCE_LOGIN_OWNER_CONTEXT_MISMATCH')
 }
+// Original HTTP login and real browser interaction are separate acceptance
+// checks. Acquire the genuine signed HTTP session FIRST so a stalled
+// browser form cannot block all page comparisons. No login bypass or mock.
+function loginStep(role,kind,name,operation,ms=10000){
+ stage(role.role,kind+':'+name)
+ return limit(kind.toUpperCase().replaceAll('-','_')+'_'+name.toUpperCase().replaceAll('-','_'),operation,ms)
+}
 async function browserLogin(role){
- const context=await newContext({locale:'nl-BE',serviceWorkers:'block'})
- let stage='navigation',status=null,code=null,failedScripts=0,pageErrors=0,authRequestSeen=false
+ let context,phase='context-create',status=null,code=null,failedScripts=0,pageErrors=0,authRequestSeen=false
+ const step=(name,fn,ms)=>{phase=name;return loginStep(role,'browser-login',name,fn,ms)}
  try{
-  await protect(context,source)
-  const page=await newPage(context)
+  context=await step('context-create',()=>newContext({locale:'nl-BE',serviceWorkers:'block'}),12000)
+  await step('route-register',()=>protect(context,source),6000)
+  const page=await step('page-create',()=>newPage(context),12000)
   page.on('pageerror',()=>pageErrors++)
   page.on('requestfailed',r=>{if(r.resourceType()==='script'&&new URL(r.url()).origin===source)failedScripts++})
   page.on('request',r=>{if(new URL(r.url()).pathname==='/api/auth/portal-login'&&r.method()==='POST')authRequestSeen=true})
-  const response=await page.goto(source+'/login/'+role.portal,{waitUntil:'domcontentloaded',timeout:20000})
+  const response=await step('navigation',()=>page.goto(source+'/login/'+role.portal,{waitUntil:'domcontentloaded',timeout:15000}),16000)
   if(!response||response.status()!==200)throw Error('SOURCE_LOGIN_PAGE_HTTP_'+response?.status())
-  stage='hydration'
-  await page.locator('form[data-login-hydrated="true"]').waitFor({timeout:12000})
-  stage='fill'
-  await page.locator('input[name="email"]').fill(role.email)
-  await page.locator('input[name="password"]').fill(password)
-  stage='submit'
-  const [login]=await Promise.all([
-   page.waitForResponse(r=>new URL(r.url()).origin===source&&new URL(r.url()).pathname==='/api/auth/portal-login'&&r.request().method()==='POST',{timeout:15000}),
-   page.locator('form button[type="submit"]').click({timeout:10000})
-  ])
+  await step('hydration',()=>page.locator('form[data-login-hydrated="true"]').waitFor({timeout:8000}),9000)
+  await step('email-fill',()=>page.locator('input[name="email"]').fill(role.email,{timeout:5000}),6000)
+  await step('password-fill',()=>page.locator('input[name="password"]').fill(password,{timeout:5000}),6000)
+  const [login]=await step('submit',()=>Promise.all([
+   page.waitForResponse(r=>new URL(r.url()).origin===source&&new URL(r.url()).pathname==='/api/auth/portal-login'&&r.request().method()==='POST',{timeout:12000}),
+   page.locator('form button[type="submit"]').click({timeout:8000})
+  ]),13000)
   status=login.status()
-  stage='response'
-  const payload=await login.json()
+  const payload=await step('response',()=>login.json(),5000)
   code=safeLoginCode(payload?.code)
   if(status!==200)throw Error('SOURCE_LOGIN_HTTP_'+status)
   const destination=checkedLogin(payload)
-  stage='redirect'
-  await page.waitForURL(u=>u.origin===source&&!u.pathname.startsWith('/login'),{timeout:15000})
-  stage='verified-cookie'
-  await verifyCookieIdentity(context,role)
-  stage='authenticated-ready'
-  await ready(page,'nl')
+  await step('redirect',()=>page.waitForURL(u=>u.origin===source&&!u.pathname.startsWith('/login'),{timeout:10000}),11000)
+  await step('verified-cookie',()=>verifyCookieIdentity(context,role),24000)
+  await step('authenticated-ready',()=>ready(page,'nl'),27000)
   loginChecks.push({role:role.role,kind:'browser-form',outcome:'pass',status,destination:destination.pathname})
   console.log('LOCAL_BROWSER_LOGIN_PASS '+role.role)
  }catch(error){
-  const details={role:role.role,kind:'browser-form',outcome:'fail',stage,status,code,failedScripts,pageErrors,authRequestSeen}
+  const details={role:role.role,kind:'browser-form',outcome:'fail',stage:phase,status,code,failedScripts,pageErrors,authRequestSeen}
   loginChecks.push(details);console.error('LOCAL_BROWSER_LOGIN_DIAGNOSTIC '+JSON.stringify(details))
-  record({role:role.role,stage:'source-browser-login-'+stage},Error('SOURCE_LOGIN '+error.name+(status===null?'':' HTTP_'+status)+(code?' '+code:'')))
- }finally{await closeContext(context)}
+  record({role:role.role,stage:'source-browser-login-'+phase},error)
+ }finally{
+  if(context)try{await step('context-close',()=>closeContext(context),6000)}catch(error){record({role:role.role,stage:'browser-login-cleanup'},error)}
+ }
 }
 async function signedState(role){
- const context=await newContext({locale:'nl-BE',serviceWorkers:'block'})
- let stage='http-signin',status=null,code=null
+ let context,phase='context-create',status=null,code=null
+ const step=(name,fn,ms)=>{phase=name;return loginStep(role,'http-session',name,fn,ms)}
  try{
-  await protect(context,source)
-  const login=await context.request.post(source+'/api/auth/portal-login',{
+  context=await step('context-create',()=>newContext({locale:'nl-BE',serviceWorkers:'block'}),12000)
+  // APIRequestContext uses the actual original Next handler; it cannot be
+  // affected by page routing/interception or browser hydration.
+  const login=await step('post',()=>context.request.post(source+'/api/auth/portal-login',{
    multipart:{portal:role.portal,email:role.email,password},
    headers:{Origin:source,'Sec-Fetch-Site':'same-origin',Accept:'application/json'},
-   maxRedirects:0,timeout:20000
-  })
+   maxRedirects:0,timeout:15000
+  }),16000)
   status=login.status()
-  const body=await login.json()
+  const body=await step('response',()=>login.json(),5000)
   code=safeLoginCode(body?.code)
   if(status!==200)throw Error('SOURCE_LOGIN_HTTP_'+status)
   const destination=checkedLogin(body)
-  stage='verified-cookie'
-  await verifyCookieIdentity(context,role)
-  stage='authenticated-navigation'
-  const page=await newPage(context)
-  const response=await page.goto(destination.href,{waitUntil:'domcontentloaded',timeout:25000})
-  if(!response||response.status()>=400)throw Error('SOURCE_LOGIN_LANDING_HTTP_'+response?.status())
-  await ready(page,'nl')
+  await step('verified-cookie',()=>verifyCookieIdentity(context,role),24000)
+  const cookies=await step('storage-state',()=>context.cookies(source),5000)
   loginChecks.push({role:role.role,kind:'original-http-session',outcome:'pass',status,destination:destination.pathname})
-  return {landing:new URL(page.url()).pathname,cookies:(await context.storageState()).cookies}
+  console.log('LOCAL_ORIGINAL_SESSION_PASS '+role.role)
+  // The independent landing comparison must still render and authorize
+  // the actual source and candidate pages, including the Maker choice.
+  return {landing:destination.pathname,cookies}
  }catch(error){
-  loginChecks.push({role:role.role,kind:'original-http-session',outcome:'fail',stage,status,code})
-  console.error('LOCAL_ORIGINAL_SESSION_DIAGNOSTIC '+JSON.stringify({role:role.role,stage,status,code,errorName:error.name}))
+  loginChecks.push({role:role.role,kind:'original-http-session',outcome:'fail',stage:phase,status,code})
+  console.error('LOCAL_ORIGINAL_SESSION_DIAGNOSTIC '+JSON.stringify({role:role.role,stage:phase,status,code,errorName:error.name}))
   const reason=String(error?.message||'')
-  throw Error(/^(?:SOURCE_LOGIN_[A-Z0-9_]+|SOURCE_LOGIN_RESULT_[a-z_]+)$/.test(reason)?reason:'SOURCE_LOGIN '+stage+' '+error.name)
- }finally{await closeContext(context)}
+  throw Error(/^(?:SOURCE_LOGIN_[A-Z0-9_]+|SOURCE_LOGIN_RESULT_[a-z_]+|DEADLINE_[A-Z0-9_]+)$/.test(reason)?reason:'SOURCE_LOGIN '+phase+' '+error.name)
+ }finally{
+  if(context)try{await step('context-close',()=>closeContext(context),6000)}catch(error){record({role:role.role,stage:'http-session-cleanup'},error)}
+ }
 }
 async function paired(state,language,device,fn){
  const opts={locale:language==='en'?'en-GB':language+'-BE',viewport:device.viewport,isMobile:!!device.isMobile,hasTouch:!!device.hasTouch,serviceWorkers:'block',
@@ -287,7 +297,7 @@ async function paired(state,language,device,fn){
   contexts.push(await newContext(opts))
   await Promise.all(contexts.map((c,i)=>protect(c,i?candidate:source)))
   for(const [i,context] of contexts.entries()){
-   await context.addCookies([{name:'uptilldawn-language',value:language,url:i?candidate:source,sameSite:'Lax'},{name:'uptilldawn-language-source',value:'device',url:i?candidate:source,sameSite:'Lax'}])
+   await limit('PAIR_LOCALE_COOKIES',()=>context.addCookies([{name:'uptilldawn-language',value:language,url:i?candidate:source,sameSite:'Lax'},{name:'uptilldawn-language-source',value:'device',url:i?candidate:source,sameSite:'Lax'}]),5000)
   }
   const a=await newPage(contexts[0]),b=await newPage(contexts[1])
   await fn(a,b)
@@ -299,11 +309,12 @@ async function paired(state,language,device,fn){
 async function runRole(role){
  const started=performance.now()
  try{
-  stage(role.role,'browser-login')
-  await browserLogin(role)
-  stage(role.role,'http-session')
   let state
-  try{state=await signedState(role)}catch(error){record({role:role.role,stage:'source-login'},error);return}
+  try{state=await signedState(role)}catch(error){record({role:role.role,stage:'source-login'},error)}
+  // Still require a genuine browser-form result for every role, even if
+  // HTTP sign-in failed. Each operation has a separate bounded deadline.
+  await browserLogin(role)
+  if(!state)return
   if(role.role==='maker'){
    assert.equal(state.landing,'/maker-mode','UNEXPECTED_ROUTE_MAKER')
    for(const device of devices)await paired(state,'nl',device,(a,b)=>compare(a,b,'/maker-mode',{role:role.role,kind:'maker-choice',language:'nl',device:device.name,path:'/maker-mode'}))
