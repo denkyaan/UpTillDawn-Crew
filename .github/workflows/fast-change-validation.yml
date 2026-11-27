@@ -424,10 +424,22 @@ jobs:
           npm start -- --hostname 127.0.0.1 > /tmp/phase23-original-app.log 2>&1 &
           echo $! > /tmp/phase23-original-app.pid
           for i in {1..90}; do
-            if curl --fail --silent http://127.0.0.1:3000/login/staff >/dev/null; then exit 0; fi
+            if curl --fail --silent http://127.0.0.1:3000/login/staff >/dev/null; then break; fi
             sleep 1
           done
-          exit 1
+          node --input-type=module <<'NODE'
+          import assert from 'node:assert/strict'
+          const base='http://127.0.0.1:3000'
+          for(const [origin,site,expected] of [[base,'same-origin',200],['http://foreign.invalid','cross-site',403],[base,'cross-site',403],['http://localhost:3000','same-origin',403]]){
+            const form=new FormData();form.set('portal','staff');form.set('email','');form.set('password','')
+            const response=await fetch(base+'/api/auth/portal-login',{method:'POST',headers:{Origin:origin,'Sec-Fetch-Site':site},body:form,signal:AbortSignal.timeout(5000),redirect:'error'})
+            assert.equal(response.status,expected,'LOCAL_AUTH_ORIGIN_PREFLIGHT')
+            const body=await response.json()
+            if(expected===403)assert.equal(body.code,'invalid_origin')
+            else assert.equal(body.error,'E-mail en wachtwoord zijn verplicht.')
+          }
+          console.log('PASS actual Next authentication origin preflight (4 cases)')
+          NODE
       - name: Compare seven roles, four languages, two devices, 44 deep routes and Maker choice
         timeout-minutes: 16
         if: ${{ !cancelled() && steps.local_browser_build.outcome == 'success' }}

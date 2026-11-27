@@ -1,3 +1,4 @@
+import {authRequestOrigin} from '@/lib/request-origin'
 import { NextRequest, NextResponse } from 'next/server'
 import { createServerClient } from '@supabase/ssr'
 import { createClient } from '@/lib/supabase/crew-server'
@@ -7,7 +8,7 @@ import { resolveLoginEmail } from '@/lib/maker-login'
 import { readBoundedFormData } from '@/lib/bounded-form-data'
 
 function loginUrl(request: NextRequest, error?: string) {
-  const url = new URL('/login/admin', request.url)
+  const url = new URL('/login/admin', authRequestOrigin(request,process.env.NEXT_PUBLIC_APP_URL) ?? request.url)
   if (error) url.searchParams.set('error', error)
   return url
 }
@@ -30,9 +31,8 @@ export async function POST(request: NextRequest) {
     phase = next
     phaseStartedAt = now
   }
-  const origin=request.headers.get('origin')
-  const fetchSite=request.headers.get('sec-fetch-site')
-  if(origin!==new URL(request.url).origin||(fetchSite&&fetchSite!=='same-origin'))
+  const origin=authRequestOrigin(request,process.env.NEXT_PUBLIC_APP_URL)
+  if(!origin)
     return redirectWithSession(loginUrl(request,'Ongeldige aanvraag.'))
   let formData:FormData
   try{formData=await readBoundedFormData(request,16_384,true)}
@@ -167,8 +167,8 @@ export async function POST(request: NextRequest) {
 
   enterPhase('redirect')
   const destination = isOwner === true
-    ? new URL('/maker-mode?portal=admin', request.url)
-    : new URL('/admin', request.url)
+    ? new URL('/maker-mode?portal=admin', origin)
+    : new URL('/admin', origin)
 
   console.info('[admin-login] completed', { durationMs: Date.now() - startedAt, destination: isOwner === true ? 'maker' : 'admin' })
   return redirectWithSession(destination)

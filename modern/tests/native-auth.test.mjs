@@ -119,3 +119,14 @@ test('native Maker sign-in keeps owner authority separate from the permanent sta
   }
  }finally{globalThis.fetch=previous;console.error=originalError}
 })
+
+test('native auth denies forged Host and cross-site requests before authentication',async()=>{
+ const allowed=request(undefined,{portal:'staff',email:'',password:''})
+ allowed.headers.set('Host',new URL(origin).host)
+ assert.equal((await nativeOriginalAuth(allowed,binding,key)).status,200)
+ for(const [host,requestOrigin,site] of [['foreign.invalid','https://foreign.invalid','same-origin'],['foreign.invalid',origin,'same-origin'],[new URL(origin).host,origin,'cross-site']]){
+  const wrong=request()
+  wrong.headers.set('Host',host);wrong.headers.set('Origin',requestOrigin);wrong.headers.set('Sec-Fetch-Site',site)
+  assert.equal((await nativeOriginalAuth(wrong,binding,key)).status,403)
+ }
+})

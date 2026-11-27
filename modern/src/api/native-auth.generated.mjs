@@ -671,11 +671,43 @@ var NO_STORE = { "Cache-Control": "private, no-store" };
 function reject(status, code) {
   return NextResponse.json({ error: "Aanmelden kon niet worden verwerkt.", code }, { status, headers: NO_STORE });
 }
+/** Validate the browser origin against the HTTP host, including an internal Next.js URL. */
+function requestHasSameOrigin(request) {
+ const origin=request.headers.get('origin')
+ if(!origin)return false
+ try{
+  const url=new URL(request.url)
+  if(url.protocol!=='http:'&&url.protocol!=='https:')return false
+  const host=request.headers.get('host')
+  if(host!==null){
+   if(!host||/[\s,\/\\@?#]/.test(host))return false
+   // Next.js can construct request.url with localhost while retaining the real Host.
+   // Forwarded headers are deliberately not used as an independent origin grant.
+   const expected=new URL(`${url.protocol}//${host}`)
+   return origin===expected.origin
+  }
+  return origin===url.origin
+ }catch{return false}
+}
+
+/** Authenticate only an exact browser origin. A Next internal URL may differ
+ * from the browser URL only when Host and configured app origin both agree.
+ * Forwarded headers cannot grant access. */
+function authRequestOrigin(request, configuredAppUrl) {
+ const origin=request.headers.get('origin')
+ const site=request.headers.get('sec-fetch-site')
+ if(!origin||(site&&site!=='same-origin')||!requestHasSameOrigin(request))return null
+ try{
+  if(origin===new URL(request.url).origin)return origin
+  if(!configuredAppUrl)return null
+  const configured=new URL(configuredAppUrl)
+  if(configured.username||configured.password||configured.pathname!=='/'||configured.search||configured.hash)return null
+  return origin===configured.origin?origin:null
+ }catch{return null}
+}
+
 async function POST(request) {
-  const origin = request.headers.get("origin");
-  const expected = new URL(request.url).origin;
-  const fetchSite = request.headers.get("sec-fetch-site");
-  if (origin !== expected || fetchSite && fetchSite !== "same-origin")
+  if (!authRequestOrigin(request, __nativeEnvironment3().NEXT_PUBLIC_APP_URL))
     return reject(403, "invalid_origin");
   const contentType = request.headers.get("content-type") || "";
   if (!contentType.toLowerCase().startsWith("multipart/form-data;"))
@@ -720,9 +752,7 @@ function reject2(status, code) {
   return NextResponse2.json({ error: "De aanvraag kon niet worden verwerkt.", code }, { status, headers: NO_STORE2 });
 }
 async function POST2(request) {
-  const expected = new URL(request.url).origin;
-  const site = request.headers.get("sec-fetch-site");
-  if (request.headers.get("origin") !== expected || site && site !== "same-origin")
+  if (!authRequestOrigin(request, __nativeEnvironment4().NEXT_PUBLIC_APP_URL))
     return reject2(403, "invalid_origin");
   if (!(request.headers.get("content-type") || "").toLowerCase().startsWith("multipart/form-data;"))
     return reject2(415, "invalid_content_type");

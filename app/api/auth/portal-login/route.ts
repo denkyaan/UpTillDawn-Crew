@@ -1,3 +1,4 @@
+import {authRequestOrigin} from '@/lib/request-origin'
 import {NextRequest,NextResponse} from 'next/server'
 import {signIn} from '@/lib/actions/auth'
 import {readBoundedFormData} from '@/lib/bounded-form-data'
@@ -16,10 +17,7 @@ function reject(status:number,code:string){
  * The browser never receives privileged credentials or any role decision.
  */
 export async function POST(request:NextRequest){
- const origin=request.headers.get('origin')
- const expected=new URL(request.url).origin
- const fetchSite=request.headers.get('sec-fetch-site')
- if(origin!==expected||(fetchSite&&fetchSite!=='same-origin'))
+ if(!authRequestOrigin(request,process.env.NEXT_PUBLIC_APP_URL))
   return reject(403,'invalid_origin')
  const contentType=request.headers.get('content-type')||''
  if(!contentType.toLowerCase().startsWith('multipart/form-data;'))
