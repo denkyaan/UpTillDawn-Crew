@@ -348,7 +348,7 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
       <div id="app-scroll" className="flex-1 overflow-y-auto bg-background scroll-smooth print:overflow-visible">
         <main className="min-h-[calc(100dvh-theme(spacing.16)-theme(spacing.12))] pb-20 lg:pb-0 print:min-h-0 print:pb-0">
           {!currentVisible&&!previewAll
-            ? <div className="m-4 rounded-2xl border p-6 text-muted-foreground">Deze functie is verborgen voor jouw rol of huidige context.</div>
+            ? <div data-feature-hidden="true" className="m-4 rounded-2xl border p-6 text-muted-foreground">Deze functie is verborgen voor jouw rol of huidige context.</div>
             : <>
                 {!currentUsable&&!previewAll&&<p className="m-3 rounded-xl border p-3 text-sm text-muted-foreground">Alleen-lezen: deze functie is zichtbaar, maar momenteel niet bruikbaar voor jouw rol.</p>}
                 <div inert={contentLocked&&!previewAll}>{children}</div>

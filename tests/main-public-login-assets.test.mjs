@@ -61,7 +61,7 @@ test('only Deploy main publishes static login assets, no new workflows or produc
  assert.match(loginForm,/signInFromStaticShell\(formData\)/)
  assert.doesNotMatch(loginForm,/await signIn\(formData\)/)
  assert.match(loginRoute,/await signIn\(form\)/)
- assert.match(loginRoute,/origin!==expected/)
+ assert.match(loginRoute,/authRequestOrigin\(request,process\.env\.NEXT_PUBLIC_APP_URL\)/)
  const wrangler=JSON.parse(readFileSync('wrangler.main.jsonc','utf8'))
  assert.equal(wrangler.assets.directory,'.open-next/assets')
  assert.notEqual(wrangler.assets.run_worker_first,true)

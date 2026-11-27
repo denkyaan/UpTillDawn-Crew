@@ -48,5 +48,5 @@ test('both native and hydrated login APIs enforce streaming bounds before authen
  assert.ok(portalLogin.indexOf('readBoundedFormData(request,16_384)')<portalLogin.indexOf('await signIn(form)'))
  assert.ok(adminLogin.includes('readBoundedFormData(request,16_384,true)'))
  assert.ok(adminLogin.indexOf('readBoundedFormData(request,16_384,true)')<adminLogin.indexOf('signInWithPassword'))
- assert.match(adminLogin,/origin!==new URL\(request\.url\)\.origin/)
+ assert.match(adminLogin,/authRequestOrigin\(request,process\.env\.NEXT_PUBLIC_APP_URL\)/)
 })

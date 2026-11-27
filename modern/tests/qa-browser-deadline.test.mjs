@@ -15,7 +15,7 @@ test('browser login and HTTP session have independent bounded setup and explicit
  assert.match(source,/step\('email-fill',\(\)=>page\.locator\('input\[name="email"\]'\)\.fill\(role\.email,\{timeout:5000\}\),6000\)/)
  assert.match(source,/step\('password-fill',\(\)=>page\.locator\('input\[name="password"\]'\)\.fill\(password,\{timeout:5000\}\),6000\)/)
  const run=source.slice(source.indexOf('async function runRole(role)'))
- assert.ok(run.indexOf('await signedState(role)')<run.indexOf('await browserLogin(role)'))
+ assert.ok(run.indexOf('await signedState(role)')<run.indexOf('await browserLogin(role,state?.landing)'))
  assert.match(source,/limit\('ROUTE_REGISTER'/)
  assert.match(source,/loginCoverage\.complete/)
 })

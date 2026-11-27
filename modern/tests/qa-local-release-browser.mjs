@@ -15,6 +15,10 @@ import {nativeOriginalViewData} from '../src/api/native-original-view-data.ts'
 import {pushConfigResponse} from '../src/api/native-main-reads.ts'
 import {nativePortalSwitchResponse} from '../src/api/native-standalone-routes.ts'
 import {makerReadResponse} from '../src/api/native-maker-reads.ts'
+import {administrationReportResponse} from '../src/api/native-administration-reports.ts'
+import {nativeBankStatementRegister,nativeProviderSettlementRegister} from '../src/api/native-bank-settlement-registers.ts'
+import {nativeAdministrationPermission} from '../src/api/native-admin-document-routes.ts'
+import {nativePontoGet} from '../src/api/native-ponto-integration.ts'
 const root=resolve(import.meta.dirname,'../..'),source='http://127.0.0.1:3000',candidate='http://127.0.0.1:4176',dbUrl='http://127.0.0.1:54321'
 const key=process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY||'',password=process.env.BOT_TEST_PASSWORD||''
 assert.equal(process.env.BOT_SUPABASE_URL,dbUrl)
@@ -53,7 +57,9 @@ assert.equal(cases.length,7)
 assert.equal(cases.reduce((n,c)=>n+c.paths.length,0),44)
 const devices=[{name:'desktop',viewport:{width:1440,height:900}},{name:'mobile',viewport:{width:390,height:844},isMobile:true,hasTouch:true}]
 const locales=['nl','fr','en','de']
-const rows=[],failures=[],loginChecks=[],blockedRoutes=new Set()
+const rows=[],failures=[],loginChecks=[],blockedRoutes=new Set(),readRouteFailures=new Set()
+const exactAliases={'/shifts':'/workplaces','/admin/management':'/admin','/admin/health':'/admin','/portals/administration/overview':'/portals/administration'}
+const expectedHidden={responsible:['/workplaces','/shifts','/briefings'],staff:['/briefings']}
 const maker={role:'maker',portal:'admin',email:'bot-16-maker@bots.uptilldawn.test',paths:[]}
 const allRoles=[...cases,maker]
 const parallelism=Number(process.env.UPT_LOCAL_BROWSER_PARALLELISM||'3')
@@ -99,6 +105,14 @@ async function readAdapter(request){
  if(ue||error||!user||!identity||identity.id!==user.id||!isActive(identity))return deny(401)
  if(request.method==='POST'&&url.pathname==='/api/migration/view-data')return nativeOriginalViewData(db,identity,request,cookie,{})
  if(request.method==='GET'&&url.pathname==='/api/push/config')return pushConfigResponse(db)
+ if(request.method==='GET'&&url.pathname==='/api/administration/provider-mappings')return administrationReportResponse(db,'provider-mappings',request.url)
+ if(request.method==='GET'&&url.pathname==='/api/administration/provider-transactions')return administrationReportResponse(db,'provider-transactions',request.url)
+ if(request.method==='GET'&&url.pathname==='/api/administration/integrations/ponto')return nativePontoGet(db,{})
+ if(request.method==='GET'&&['/api/administration/bank-statements','/api/administration/provider-settlements'].includes(url.pathname)){
+  const permitted=await nativeAdministrationPermission(db)
+  if(permitted!==200)return Response.json({error:'access_denied'},{status:permitted})
+  return url.pathname.endsWith('/bank-statements')?nativeBankStatementRegister(db):nativeProviderSettlementRegister(db)
+ }
  if(request.method==='GET'&&url.pathname.startsWith('/portals/switch/'))return nativePortalSwitchResponse(db,identity,request,url.pathname.split('/').at(-1))
  if(request.method==='GET'&&['/api/god/automation-rules','/api/god/preview-role','/api/god/rules','/api/god/data','/api/god/error-reports'].includes(url.pathname))return makerReadResponse(db,request,cookie,url.pathname)
  // Unimplemented local routes remain explicitly blocked. Never forward
@@ -117,9 +131,10 @@ async function protect(context,which){
    const options={method:incoming.method(),headers}
    if(!['GET','HEAD'].includes(options.method))options.body=incoming.postDataBuffer()||undefined
    const response=await limit('SIGNED_READ_ADAPTER',()=>readAdapter(new Request(incoming.url(),options)),12000)
+   if(response.status>=500)readRouteFailures.add(incoming.method()+' '+url.pathname+' '+response.status)
    // Keep real statuses and redirect locations, never source-fallback.
    await limit('ROUTE_FULFILL',async()=>route.fulfill({status:response.status,headers:Object.fromEntries(response.headers),body:Buffer.from(await response.arrayBuffer())}),5000)
-  }catch{await limit('ROUTE_FAILURE_RESPONSE',()=>route.fulfill({status:503,contentType:'application/json',body:'{"error":"local_read_adapter_failed"}'}),3000).catch(()=>route.abort('failed').catch(()=>{}))}
+  }catch{readRouteFailures.add(incoming.method()+' '+url.pathname+' adapter_failure');await limit('ROUTE_FAILURE_RESPONSE',()=>route.fulfill({status:503,contentType:'application/json',body:'{"error":"local_read_adapter_failed"}'}),3000).catch(()=>route.abort('failed').catch(()=>{}))}
  }),5000)
 }
 // Do not wait on animation frames or unbounded font promises in background
@@ -145,6 +160,7 @@ async function view(page){
   const label=e=>clean(e.getAttribute('aria-label')||e.textContent)
   const control=e=>({tag:e.tagName,label:label(e),href:e.getAttribute('href'),disabled:e.disabled||e.getAttribute('aria-disabled')==='true',expanded:e.getAttribute('aria-expanded')})
   return {path:location.pathname,headings:list('main h1,main h2',label),nav:list('nav a,nav button,header a,header button',control),controls:list('main a[href],main button,main [role="button"]',control),
+   featureHidden:list('main [data-feature-hidden="true"]',e=>clean(e.textContent)),
    fields:list('main input,main textarea,main select',e=>({tag:e.tagName,name:e.getAttribute('name'),type:e.getAttribute('type'),required:e.required,disabled:e.disabled})).filter(e=>!(e.name||'').startsWith('$ACTION')),
    layout:list('header,nav,main,main h1,main h2',e=>{const r=e.getBoundingClientRect(),s=getComputedStyle(e);const round=n=>Math.round(n/2)*2;return {tag:e.tagName,x:round(r.x),y:round(r.y),w:round(r.width),h:round(r.height),font:s.fontSize,color:s.color,background:s.backgroundColor}})}
  }),5000)
@@ -164,15 +180,17 @@ async function compare(a,b,path,meta){
  try{
   const ra=await limit('SOURCE_NAVIGATION',()=>a.goto(source+path,{waitUntil:'domcontentloaded',timeout:15000}),16000)
   if(!ra||ra.status()>=400)throw Error('SOURCE_HTTP_'+ra?.status())
+  phase='source-ready'
   await ready(a,meta.language)
   const finalPath=new URL(a.url()).pathname
-  // Only the known shifts alias and conditional incident routing may
-  // settle on a different authorized route in this matrix.
-  if(finalPath!==path&&!(path==='/shifts'&&finalPath==='/workplaces')&&!(path==='/incidents'&&finalPath==='/events'))throw Error('UNEXPECTED_ROUTE_SOURCE')
+  // Verify the exact original source aliases, never accept arbitrary redirects.
+  if(exactAliases[path]&&finalPath!==exactAliases[path])throw Error('UNEXPECTED_ROUTE_SOURCE_ALIAS')
+  if(finalPath!==path&&finalPath!==exactAliases[path]&&!(path==='/incidents'&&finalPath==='/events'))throw Error('UNEXPECTED_ROUTE_SOURCE')
   phase='candidate'
   const rb=await limit('CANDIDATE_NAVIGATION',()=>b.goto(candidate+path,{waitUntil:'domcontentloaded',timeout:15000}),16000)
   if(!rb||rb.status()>=400)throw Error('CANDIDATE_HTTP_'+rb?.status())
   if(finalPath!==path)await limit('CANDIDATE_REDIRECT',()=>b.waitForURL(u=>u.pathname===finalPath,{timeout:8000}),9000)
+  phase='candidate-ready'
   await ready(b,meta.language)
   phase='comparison'
   let expected=await view(a),actual=await view(b),deadline=Date.now()+10000
@@ -180,10 +198,19 @@ async function compare(a,b,path,meta){
    await new Promise(r=>setTimeout(r,300));expected=await view(a);actual=await view(b)
   }
   const diff=Object.keys(expected).filter(k=>JSON.stringify(expected[k])!==JSON.stringify(actual[k]))
-  if(diff.length)throw Error('PARITY_MISMATCH '+diff.join(','))
+  if(diff.length){
+   const layoutDifferences=diff.includes('layout')?expected.layout.map((item,i)=>({i,expected:item,actual:actual.layout[i]??null})).filter(x=>JSON.stringify(x.expected)!==JSON.stringify(x.actual)).slice(0,4):[]
+   console.error('LOCAL_BROWSER_PARITY_DETAIL '+JSON.stringify({role:meta.role,path,device:meta.device,diff,layoutDifferences}))
+   throw Error('PARITY_MISMATCH '+diff.join(','))
+  }
   if(meta.device==='mobile')for(const page of [a,b])if(await limit('MOBILE_OVERFLOW',()=>page.evaluate(()=>document.documentElement.scrollWidth-document.documentElement.clientWidth>4),4000))throw Error('NO_MOBILE_OVERFLOW')
-  if(!expected.headings.length&&!expected.controls.length)throw Error('MISSING_CONTROL')
-  record(meta)
+  if(!expected.headings.length&&!expected.controls.length){
+   // The original shell can explicitly hide a feature for a verified role.
+   // A nonempty, matching access-denial state is not a blank screen.
+   // Do not permit arbitrary empty routes or hidden admin content.
+   if(!expectedHidden[meta.role]?.includes(path)||expected.featureHidden.length!==1||!expected.featureHidden[0]||actual.featureHidden.length!==1)throw Error('MISSING_CONTROL')
+   record({...meta,viewState:'role-hidden'})
+  }else record({...meta,viewState:'content'})
  }catch(error){record({...meta,stage:phase},error)}
 }
 // Verify the real original login HTTP transport independently of the browser
@@ -218,7 +245,7 @@ function loginStep(role,kind,name,operation,ms=10000){
  stage(role.role,kind+':'+name)
  return limit(kind.toUpperCase().replaceAll('-','_')+'_'+name.toUpperCase().replaceAll('-','_'),operation,ms)
 }
-async function browserLogin(role){
+async function browserLogin(role,expectedLanding){
  let context,phase='context-create',status=null,code=null,failedScripts=0,pageErrors=0,authRequestSeen=false
  const step=(name,fn,ms)=>{phase=name;return loginStep(role,'browser-login',name,fn,ms)}
  try{
@@ -239,10 +266,18 @@ async function browserLogin(role){
   ]),13000)
   status=login.status()
   if(status!==200)throw Error('SOURCE_LOGIN_HTTP_'+status)
-  const payload=await step('response',()=>login.json(),5000)
-  code=safeLoginCode(payload?.code)
-  const destination=checkedLogin(payload)
-  await step('redirect',()=>page.waitForURL(u=>u.origin===source&&!u.pathname.startsWith('/login'),{timeout:10000}),11000)
+  // The real UI consumes this response and immediately navigates. Chromium
+  // can dispose its response body before a second reader (Playwright) can
+  // retrieve it. Prove the browser outcome, not a redundant body read.
+  await step('redirect-or-error',()=>page.waitForFunction(()=>{
+   return !location.pathname.startsWith('/login')||!!document.querySelector('[data-login-error-code]')
+  },null,{timeout:10000,polling:100}),11000)
+  if(new URL(page.url()).pathname.startsWith('/login')){
+   code=safeLoginCode(await step('displayed-error',()=>page.locator('[data-login-error-code]').first().getAttribute('data-login-error-code'),4000))
+   throw Error('SOURCE_LOGIN_RESULT_'+code)
+  }
+  const destination=new URL(page.url())
+  if(destination.origin!==source||(expectedLanding&&destination.pathname!==expectedLanding))throw Error('UNEXPECTED_ROUTE_SOURCE_LOGIN')
   await step('verified-cookie',()=>verifyCookieIdentity(context,role),24000)
   await step('authenticated-ready',()=>ready(page,'nl'),27000)
   loginChecks.push({role:role.role,kind:'browser-form',outcome:'pass',status,destination:destination.pathname})
@@ -313,7 +348,7 @@ async function runRole(role){
   try{state=await signedState(role)}catch(error){record({role:role.role,stage:'source-login'},error)}
   // Still require a genuine browser-form result for every role, even if
   // HTTP sign-in failed. Each operation has a separate bounded deadline.
-  await browserLogin(role)
+  await browserLogin(role,state?.landing)
   if(!state)return
   if(role.role==='maker'){
    assert.equal(state.landing,'/maker-mode','UNEXPECTED_ROUTE_MAKER')
@@ -337,7 +372,7 @@ let poolResult=null
 function writeReport(){
  const scenarioCoverage=verifyExactCoverage(planned,rows.map(scenarioKey))
  const loginCoverage=verifyExactCoverage(plannedLogins,loginChecks.filter(x=>x.outcome==='pass').map(x=>x.role+'|'+x.kind))
- const report={...binding,scope:'local-next-vite-browser-with-native-read-adapter',expected:planned.length,passed:rows.length,failed:failures.length,rows,failures,loginChecks,scenarioCoverage,loginCoverage,parallelism,peakParallelRoles:poolResult?.peak??null,activeStages:Object.fromEntries(activeStages),elapsedMs:Math.round(performance.now()-started),unsupportedLocalReadRoutes:[...blockedRoutes].sort(),candidateNativeLoginVerified:false,deployedWorkerVerified:false,fullVisualParityVerified:false,productionReady:false}
+ const report={...binding,scope:'local-next-vite-browser-with-native-read-adapter',expected:planned.length,passed:rows.length,failed:failures.length,rows,failures,loginChecks,scenarioCoverage,loginCoverage,parallelism,peakParallelRoles:poolResult?.peak??null,activeStages:Object.fromEntries(activeStages),elapsedMs:Math.round(performance.now()-started),unsupportedLocalReadRoutes:[...blockedRoutes].sort(),localReadRouteFailures:[...readRouteFailures].sort(),candidateNativeLoginVerified:false,deployedWorkerVerified:false,fullVisualParityVerified:false,productionReady:false}
  writeFileSync(resolve(reportDir,'browser-parity.json'),JSON.stringify(report,null,2)+'\n')
  return report
 }
@@ -371,6 +406,6 @@ try{
  try{if(browser)await limit('BROWSER_CLOSE',()=>browser.close(),8000)}catch(error){failures.push({stage:'cleanup',reason:'DEADLINE_BROWSER_CLOSE'})}
  clearInterval(heartbeat);clearTimeout(watchdog);preview.kill('SIGTERM');globalThis.fetch=fetchBefore
  const report=writeReport()
- console.log(JSON.stringify({localBrowserExpected:planned.length,passed:rows.length,failed:failures.length,parallelism,peakParallelRoles:report.peakParallelRoles,elapsedMs:report.elapsedMs,missing:report.scenarioCoverage.missing.length,unsupportedLocalReadRoutes:report.unsupportedLocalReadRoutes}))
- if(!report.scenarioCoverage.complete||!report.loginCoverage.complete||failures.length||loginChecks.length!==16||loginChecks.some(x=>x.outcome!=='pass')||!poolResult||poolResult.errors.length)process.exitCode=1
+ console.log(JSON.stringify({localBrowserExpected:planned.length,passed:rows.length,failed:failures.length,parallelism,peakParallelRoles:report.peakParallelRoles,elapsedMs:report.elapsedMs,missing:report.scenarioCoverage.missing.length,unsupportedLocalReadRoutes:report.unsupportedLocalReadRoutes,localReadRouteFailures:report.localReadRouteFailures}))
+ if(!report.scenarioCoverage.complete||!report.loginCoverage.complete||blockedRoutes.size||readRouteFailures.size||failures.length||loginChecks.length!==16||loginChecks.some(x=>x.outcome!=='pass')||!poolResult||poolResult.errors.length)process.exitCode=1
 }

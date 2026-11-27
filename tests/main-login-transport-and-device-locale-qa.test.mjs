@@ -15,7 +15,7 @@ test("login transport outage is never translated into an invalid password or wro
  assert.match(src,/setError\(outage\.error\)/)
  assert.doesNotMatch(src,/setErrorCode\("unexpected_action_failure"\)/)
  assert.match(api,/return reject\(503,'login_temporarily_unavailable'\)/)
- assert.match(api,/if\(origin!==expected/)
+ assert.match(api,/authRequestOrigin\(request,process\.env\.NEXT_PUBLIC_APP_URL\)/)
  assert.match(api,/await signIn\(form\)/)
 })
 
