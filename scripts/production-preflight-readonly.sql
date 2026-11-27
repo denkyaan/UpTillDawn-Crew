@@ -134,9 +134,37 @@ WITH checks(name,required,passed) AS (
     AND coalesce(position('''netCents'',0' in pg_get_functiondef(
       to_regprocedure('public.upt_event_command_snapshot(uuid)'))) > 0,false)
   UNION ALL
+  SELECT 'inventory_asset_form_rpc', true,
+    coalesce(has_function_privilege('authenticated',to_regprocedure('public.upt_update_inventory_asset_form(uuid,text,text,text,text,timestamptz,integer,integer,text)'),'EXECUTE')
+      AND NOT has_function_privilege('anon',to_regprocedure('public.upt_update_inventory_asset_form(uuid,text,text,text,text,timestamptz,integer,integer,text)'),'EXECUTE'),false)
+  UNION ALL
+  SELECT 'private_work_media_document_types', true,
+    EXISTS(SELECT 1 FROM storage.buckets WHERE id='work-media' AND NOT public
+      AND allowed_mime_types @> ARRAY[
+        'text/plain',
+    'text/csv',
+    'application/pdf',
+    'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+    'application/vnd.openxmlformats-officedocument.presentationml.presentation',
+    'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+      ]::text[])
+    AND EXISTS(
+      SELECT 1 FROM pg_catalog.pg_policy p
+      WHERE p.polrelid=to_regclass('storage.objects')
+        AND p.polname='upt_work_media_document_upload_scope'
+        AND NOT p.polpermissive
+        AND p.polcmd='a' -- PostgreSQL catalog code for row additions
+        AND p.polroles=ARRAY[to_regrole('authenticated')::oid]
+        AND p.polwithcheck IS NOT NULL
+    )
+  UNION ALL
+  SELECT 'atomic_responsible_assignment_rpc', true,
+    coalesce(has_function_privilege('authenticated',to_regprocedure('public.upt_admin_set_responsible_assignment(uuid,uuid,boolean)'),'EXECUTE')
+      AND NOT has_function_privilege('anon',to_regprocedure('public.upt_admin_set_responsible_assignment(uuid,uuid,boolean)'),'EXECUTE'),false)
+  UNION ALL
   SELECT 'main_tip_migration_in_history', false,
     EXISTS(SELECT 1 FROM supabase_migrations.schema_migrations
-      WHERE version='20261118121657')
+      WHERE version='20261126210000')
 )
 SELECT name,required,passed,
   CASE WHEN passed THEN 'PASS'

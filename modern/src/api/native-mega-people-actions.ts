@@ -202,8 +202,9 @@ export async function megaPeopleResponse(req:Request,db:NativeAdminActionDb,sele
     if(error)throw Error("Approval failed")
     const {error:firstProfileError}=await client.rpc("upt_require_first_profile",{p_user:target})
     if(firstProfileError)throw Error("Profile gate failed")
-    const {data:next}=await client.from("profiles").select("id").eq("approved",false)
-     .neq("id",target).order("created_at").limit(1).maybeSingle()
+    const {data:pending}=await client.rpc("upt_admin_pending_profiles")
+    // The RPC itself returns the safe pending projection in updated_at order.
+    const next=Array.isArray(pending)?pending.find(row=>typeof row?.id==="string"&&row.id!==target):null
     return redirect(next?.id?
      "/personnel?feedback=approved&user="+next.id+"&focus=approval":
      "/personnel?feedback=approved")

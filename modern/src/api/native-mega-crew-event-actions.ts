@@ -2,7 +2,6 @@
 // responsible coverage and lifecycle state. Same screens; QA writes disabled.
 import {z} from "zod"
 import {fetchFacebookEventInfo} from "../../../lib/facebook-event.ts"
-import {responsibleHasConflict} from "../../../lib/responsible-coverage.ts"
 import {workplaceCapacityIsValid} from "../../../lib/workplace-capacity.ts"
 import type {NativeAdminActionDb} from "./native-admin-actions.ts"
 import {approvedAdmin,parseMegaRequest,uuid,option,done,failure} from "./native-mega-helpers.ts"
@@ -93,7 +92,7 @@ async function addMember(fd:FormData,db:any,bulk:boolean){
  if(!bulk){
   const target=ids[0]
   const [{data:p,error:profileError},{data:a,error:availabilityError}]=await Promise.all([
-   db.from("profiles").select("approved,role").eq("id",target).single(),
+   db.rpc("upt_admin_profiles").select("approved,role").eq("id",target).single(),
    db.from("event_availability").select("response").eq("event_id",event)
     .eq("user_id",target).maybeSingle()
   ])
@@ -106,7 +105,7 @@ async function addMember(fd:FormData,db:any,bulk:boolean){
   const [{data:available,error:avError},{data:approved,error:pError}]=await Promise.all([
    db.from("event_availability").select("user_id").eq("event_id",event)
     .eq("response","can").in("user_id",ids),
-   db.from("profiles").select("id,role").eq("approved",true).in("id",ids)
+   db.rpc("upt_admin_profiles").select("id,role").eq("approved",true).in("id",ids)
   ])
   if(avError||pError)throw Error("Availability lookup failed")
   const allowed=new Set((available||[]).map((row:{user_id:string})=>row.user_id))
@@ -123,7 +122,7 @@ async function assignCrewShift(fd:FormData,db:any){
  const [start,end]=dates(fd,"start","end")
  const kind=z.enum(["event","setup","breakdown"]).parse(fd.get("shift_kind")||"event")
  const [profile,availability,post,membership]=await Promise.all([
-  db.from("profiles").select("id,approved,role").eq("id",target).single(),
+  db.rpc("upt_admin_profiles").select("id,approved,role").eq("id",target).single(),
   db.from("event_availability").select("response,setup_available,breakdown_available")
    .eq("event_id",event).eq("user_id",target).maybeSingle(),
   db.from("workplaces").select("id,event_id,is_active").eq("id",workplace).single(),
@@ -154,73 +153,15 @@ async function assignCrewShift(fd:FormData,db:any){
   throw Error("Shift creation failed")
  }
 }
-async function assignResponsible(fd:FormData,db:any,actor:string){
- const workplace=uuid(fd.get("workplace_id")),target=uuid(fd.get("user_id"))
- const [profile,post,assigned,all,assignments]=await Promise.all([
-  db.from("profiles").select("approved,role").eq("id",target).single(),
-  db.from("workplaces").select("event_id,is_active").eq("id",workplace).single(),
-  db.from("shifts").select("workplace_id,scheduled_start,scheduled_end")
-   .eq("workplace_id",workplace).eq("user_id",target)
-   .neq("status","cancelled").neq("response_status","declined"),
-  db.from("shifts").select("workplace_id,scheduled_start,scheduled_end")
-   .eq("user_id",target).neq("status","cancelled").neq("response_status","declined"),
-  db.from("responsible_assignments").select("workplace_id").eq("user_id",target)
- ])
- if([profile,post,assigned,all,assignments].some(x=>x.error))throw Error("Responsibility lookup failed")
- if(!post.data?.is_active||!profile.data?.approved||!assigned.data?.length)
-  throw Error("Responsible assignment ineligible")
- const others=new Set((assignments.data||[]).map((row:{workplace_id:string})=>row.workplace_id)
-  .filter((id:string)=>id!==workplace))
- const existing=(all.data||[]).filter((row:{workplace_id:string})=>others.has(row.workplace_id))
-  .map((row:{workplace_id:string;scheduled_start:string;scheduled_end:string})=>({
-   userId:target,workplaceId:row.workplace_id,
-   startsAt:Date.parse(row.scheduled_start),endsAt:Date.parse(row.scheduled_end)
-  }))
- for(const row of assigned.data){
-  if(responsibleHasConflict({
-   userId:target,workplaceId:workplace,
-   startsAt:Date.parse(row.scheduled_start),endsAt:Date.parse(row.scheduled_end)
-  },existing))throw Error("Overlapping responsible duties")
- }
- if(profile.data.role==="staff")requireValid(await db.rpc("upt_admin_set_account",{
-  p_user:target,p_approved:true,p_role:"responsible_lead"
+async function assignResponsible(fd:FormData,db:any){
+ requireValid(await db.rpc("upt_admin_set_responsible_assignment",{
+  p_workplace:uuid(fd.get("workplace_id")),p_user:uuid(fd.get("user_id")),p_assign:true
  }))
- requireValid(await db.from("event_members").upsert({
-  event_id:post.data.event_id,user_id:target,
-  event_role:profile.data.role==="admin"?"admin":"responsible_lead"
- },{onConflict:"event_id,user_id"}))
- requireValid(await db.from("responsible_assignments").upsert({
-  event_id:post.data.event_id,workplace_id:workplace,user_id:target,assigned_by:actor
- },{onConflict:"workplace_id,user_id"}))
 }
 async function demoteResponsible(fd:FormData,db:any){
- const workplace=uuid(fd.get("workplace_id")),target=uuid(fd.get("user_id"))
- const [post,profile,assignment]=await Promise.all([
-  db.from("workplaces").select("event_id").eq("id",workplace).single(),
-  db.from("profiles").select("role,approved").eq("id",target).single(),
-  db.from("responsible_assignments").select("event_id,workplace_id,user_id")
-   .eq("workplace_id",workplace).eq("user_id",target).maybeSingle()
- ])
- if([post,profile,assignment].some(x=>x.error)||!post.data||!assignment.data||
-    profile.data?.role==="admin")throw Error("Responsibility not available")
- requireValid(await db.from("responsible_assignments").delete()
-  .eq("workplace_id",workplace).eq("user_id",target))
- const [events,remaining]=await Promise.all([
-  db.from("responsible_assignments").select("workplace_id")
-   .eq("event_id",post.data.event_id).eq("user_id",target).limit(1),
-  db.from("responsible_assignments").select("workplace_id").eq("user_id",target).limit(1)
- ])
- if(events.error||remaining.error)throw Error("Remaining duties lookup failed")
- if(!events.data?.length)requireValid(await db.from("event_members")
-  .update({event_role:"employee"}).eq("event_id",post.data.event_id)
-  .eq("user_id",target).eq("event_role","responsible_lead"))
- if(profile.data?.role==="responsible_lead"&&!remaining.data?.length){
-  requireValid(await db.rpc("upt_admin_set_account",{
-   p_user:target,p_approved:profile.data.approved===true,p_role:"staff"
-  }))
-  requireValid(await db.from("event_members").update({event_role:"employee"})
-   .eq("user_id",target).eq("event_role","responsible_lead"))
- }
+ requireValid(await db.rpc("upt_admin_set_responsible_assignment",{
+  p_workplace:uuid(fd.get("workplace_id")),p_user:uuid(fd.get("user_id")),p_assign:false
+ }))
 }
 export async function megaCrewEventResponse(
  req:Request,db:NativeAdminActionDb,selected:MegaCrewEventId
@@ -283,7 +224,7 @@ export async function megaCrewEventResponse(
    case "addEventMember":await addMember(fd,client,false);break
    case "addAvailableEventMembers":await addMember(fd,client,true);break
    case "assignAvailableCrewShift":await assignCrewShift(fd,client);break
-   case "assignResponsible":await assignResponsible(fd,client,actor.id);break
+   case "assignResponsible":await assignResponsible(fd,client);break
    case "demoteResponsibleToStaff":await demoteResponsible(fd,client);break
    default:return failure(404,"unknown_action")
   }

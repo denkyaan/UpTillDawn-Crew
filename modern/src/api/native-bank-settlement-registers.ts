@@ -80,7 +80,7 @@ export async function nativeBankStatementRegister(db:SupabaseClient){
    if(!document||typeof payment.bank_reference!=='string'||!payment.bank_reference||
       payment.bank_reference.startsWith('BANKSTMT:'))return []
    if(typeof payment.id!=='string'||!uuid.test(payment.id)||
-      typeof payment.paid_on!=='string'||!/^\\d{4}-\\d{2}-\\d{2}$/.test(payment.paid_on))
+      typeof payment.paid_on!=='string'||!/^\d{4}-\d{2}-\d{2}$/.test(payment.paid_on))
     throw Error('Invalid existing payment')
    return [{id:payment.id,documentId:payment.document_id,
     documentNumber:document.document_number??document.id,

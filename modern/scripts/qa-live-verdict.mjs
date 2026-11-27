@@ -13,7 +13,7 @@ export function liveVerdict(env){
  const results=stages.map(([name,key])=>({stage:name,
   outcome:accepted.has(env[key])?env[key]:'not-run'}))
  const allReadOnlyStagesPassed=sha!==null&&results.every(stage=>stage.outcome==='success')
- return {contract:'uptilldawn-live-main-qa-v1',validatedSha:sha,stages:results,
+ return {contract:'uptilldawn-live-main-qa-v1',validatedSha:sha,runId:env.GITHUB_RUN_ID||null,runAttempt:env.GITHUB_RUN_ATTEMPT||null,stages:results,
   allReadOnlyStagesPassed,businessWriteParityVerified:false,providerParityVerified:false,
   offlineReplayVerified:false,makerPositiveFlowVerified:false,mainCutoverAllowed:false,productionReady:false}
 }

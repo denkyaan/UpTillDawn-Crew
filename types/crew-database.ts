@@ -6634,6 +6634,10 @@ export type Database = {
         }
         Returns: string
       }
+      upt_admin_set_responsible_assignment: {
+        Args: { p_assign: boolean; p_user: string; p_workplace: string }
+        Returns: undefined
+      }
       upt_admin_set_two_personnel_roles: {
         Args: {
           p_confirm_head?: boolean
@@ -6869,6 +6873,10 @@ export type Database = {
           sender_id: string
         }[]
       }
+      upt_chat_signal_authorized: {
+        Args: { p_topic: string }
+        Returns: boolean
+      }
       upt_chat_typing_users: {
         Args: { p_channel: string }
         Returns: {
@@ -7066,6 +7074,21 @@ export type Database = {
         Returns: {
           completed: boolean
           required: boolean
+        }[]
+      }
+      upt_current_session_context: {
+        Args: never
+        Returns: {
+          account_blocked: boolean
+          approved: boolean
+          effective_role: string
+          full_name: string
+          id: string
+          is_owner: boolean
+          phone_number: string
+          profile_photo_url: string
+          role: string
+          verified_email: string
         }[]
       }
       upt_current_work_context: {
@@ -8177,6 +8200,20 @@ export type Database = {
       upt_ticket_sales_summary: { Args: { p_event?: string }; Returns: Json }
       upt_toggle_chat_pin: {
         Args: { p_message: string; p_pinned: boolean }
+        Returns: undefined
+      }
+      upt_update_inventory_asset_form: {
+        Args: {
+          p_asset_code?: string
+          p_barcode?: string
+          p_item: string
+          p_location_label?: string
+          p_maintenance_due_at?: string
+          p_notes?: string
+          p_reorder_threshold?: number
+          p_serial_number?: string
+          p_unit_cost_cents?: number
+        }
         Returns: undefined
       }
       upt_update_inventory_asset_metadata: {

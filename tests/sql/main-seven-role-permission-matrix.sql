@@ -3,6 +3,20 @@
 -- users, roles, credentials or real crew data. Every session is transactional.
 BEGIN;
 CREATE TEMP TABLE qa_operational_access(name text PRIMARY KEY,id uuid NOT NULL,expected_admin boolean NOT NULL);
+\if :{?PHASE23_LOCAL_ROLE_FIXTURES}
+INSERT INTO qa_operational_access(name,id,expected_admin)
+SELECT v.name,u.id,v.expected_admin
+FROM (VALUES
+ ('head_admin','bot-01-admin-nl@bots.uptilldawn.test',true),
+ ('left_hand','bot-06-staff-fr@bots.uptilldawn.test',true),
+ ('right_hand','bot-07-staff-en@bots.uptilldawn.test',true),
+ ('administration','bot-04-staff-de@bots.uptilldawn.test',true),
+ ('promotion','bot-05-staff-nl@bots.uptilldawn.test',false),
+ ('responsible','bot-02-responsible-fr@bots.uptilldawn.test',false),
+ ('staff','bot-03-staff-en@bots.uptilldawn.test',false)
+) v(name,email,expected_admin)
+JOIN auth.users u ON lower(u.email)=v.email;
+\else
 INSERT INTO qa_operational_access(name,id,expected_admin)
 SELECT v.name,u.id,v.expected_admin
 FROM (VALUES
@@ -15,6 +29,7 @@ FROM (VALUES
  ('staff','e2e-staff@uptilldawn.test',false)
 ) v(name,email,expected_admin)
 JOIN auth.users u ON lower(u.email)=v.email;
+\endif
 GRANT SELECT ON qa_operational_access TO authenticated;
 
 SET LOCAL ROLE authenticated;

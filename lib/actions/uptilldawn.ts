@@ -291,7 +291,7 @@ export async function addEventMember(fd:FormData){
  const eventId=uuid.parse(fd.get('event_id'))
  const userId=uuid.parse(fd.get('user_id'))
  const [{data:p},{data:availability}]=await Promise.all([
-  s.from('profiles').select('approved,role').eq('id',userId).single(),
+  s.rpc('upt_admin_profiles').select('approved,role').eq('id',userId).single(),
   s.from('event_availability').select('response').eq('event_id',eventId).eq('user_id',userId).maybeSingle(),
  ])
  if(!p?.approved)throw new Error('Account niet goedgekeurd.')
@@ -308,7 +308,7 @@ export async function addAvailableEventMembers(fd:FormData){
  if(!userIds.length)throw new Error('Selecteer minstens één persoon.')
  const [{data:available,error:availabilityError},{data:approved,error:profileError}]=await Promise.all([
   s.from('event_availability').select('user_id').eq('event_id',eventId).eq('response','can').in('user_id',userIds),
-  s.from('profiles').select('id,role').eq('approved',true).in('id',userIds),
+  s.rpc('upt_admin_profiles').select('id,role').eq('approved',true).in('id',userIds),
  ])
  check(availabilityError);check(profileError)
  const allowed=new Set((available||[]).map(row=>row.user_id))
@@ -340,7 +340,7 @@ export async function assignAvailableCrewShift(fd:FormData){
   {data:workplace,error:workplaceError},
   {data:membership,error:membershipError},
  ]=await Promise.all([
-  s.from('profiles').select('id,approved,role').eq('id',userId).single(),
+  s.rpc('upt_admin_profiles').select('id,approved,role').eq('id',userId).single(),
   s.from('event_availability').select('response,setup_available,breakdown_available').eq('event_id',eventId).eq('user_id',userId).maybeSingle(),
   s.from('workplaces').select('id,event_id,is_active').eq('id',workplaceId).single(),
   s.from('event_members').select('user_id').eq('event_id',eventId).eq('user_id',userId).maybeSingle(),
@@ -391,7 +391,7 @@ export async function assignResponsible(fd:FormData){
   {data:allUserShifts,error:allUserShiftsError},
   {data:responsibleAssignments,error:responsibleAssignmentsError},
  ]=await Promise.all([
-  s.from('profiles').select('approved,role').eq('id',user_id).single(),
+  s.rpc('upt_admin_profiles').select('approved,role').eq('id',user_id).single(),
   s.from('workplaces').select('event_id,is_active').eq('id',workplace_id).single(),
   s.from('shifts').select('workplace_id,scheduled_start,scheduled_end').eq('workplace_id',workplace_id).eq('user_id',user_id).neq('status','cancelled').neq('response_status','declined'),
   s.from('shifts').select('workplace_id,scheduled_start,scheduled_end').eq('user_id',user_id).neq('status','cancelled').neq('response_status','declined'),
@@ -461,7 +461,7 @@ export async function demoteResponsibleToStaff(fd:FormData){
   {data:assignment,error:assignmentError},
  ]=await Promise.all([
   s.from('workplaces').select('event_id').eq('id',workplaceId).single(),
-  s.from('profiles').select('role,approved').eq('id',userId).single(),
+  s.rpc('upt_admin_profiles').select('role,approved').eq('id',userId).single(),
   s.from('responsible_assignments').select('event_id,workplace_id,user_id').eq('workplace_id',workplaceId).eq('user_id',userId).maybeSingle(),
  ])
  check(workplaceError);check(profileError);check(assignmentError)
@@ -648,7 +648,7 @@ export async function approvePersonnelAccount(fd:FormData){
  check(error)
  const {error:profileGateError}=await s.rpc('upt_require_first_profile',{p_user:id})
  check(profileGateError)
- const {data:next}=await s.from('profiles').select('id').eq('approved',false).neq('id',id).order('created_at').limit(1).maybeSingle()
+ const {data:next}=await s.rpc('upt_admin_pending_profiles').select('id').neq('id',id).order('updated_at').limit(1).maybeSingle()
  await revalidatePath('/personnel')
  await revalidatePath('/crew')
  await revalidatePath('/notifications')

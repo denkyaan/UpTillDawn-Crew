@@ -13,7 +13,7 @@ test('Admin and Maker sign in using the same verified portal server action as ot
  assert.match(page,/force-static/)
  assert.match(form,/await signInFromStaticShell\(formData\)/)
  assert.match(handler,/await signIn\(form\)/)
- assert.match(handler,/origin!==expected/)
+ assert.match(handler,/authRequestOrigin\(request,process\.env\.NEXT_PUBLIC_APP_URL\)/)
  assert.doesNotMatch(page,/nativeAction=|\/api\/auth\/admin-login/)
  assert.match(form,/onSubmit=\{nativeAction \? undefined : handleSubmit\}/)
  assert.match(form,/data-login-hydrated=\{hydrated \? "true" : "false"\}/)

@@ -1,6 +1,6 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
-import {readFileSync} from 'node:fs'
+import {readFileSync,readdirSync} from 'node:fs'
 
 const read=p=>readFileSync(p,'utf8')
 const preflight=read('scripts/production-preflight-readonly.sql')
@@ -25,7 +25,10 @@ test('Production release preflight checks recent Main session-bound and finance 
   assert.ok(preflight.includes("SELECT '"+name+"', true"),'Missing required production gate: '+name)
  }
  assert.match(preflight,/main_tip_migration_in_history', false/)
- assert.match(preflight,/WHERE version='20261118121657'/)
+ const latest=readdirSync('supabase/migrations').map(name=>name.match(/^(\d{14})_.*\.sql$/)?.[1]).filter(Boolean).sort().at(-1)
+ assert.ok(latest)
+ assert.ok(preflight.includes("WHERE version='"+latest+"'"))
+ assert.ok(read('lib/release-baseline.ts').includes("EXPECTED_DB_MIGRATION_VERSION='"+latest+"'"))
  assert.match(preflight,/BLOCK RELEASE/)
  assert.doesNotMatch(preflight,/\b(CREATE|ALTER|DROP|TRUNCATE|INSERT|UPDATE|DELETE|GRANT|REVOKE)\s+(?:TABLE|FUNCTION|ON|INTO|public\.|auth\.)/i,
   'Preflight may only inspect metadata, never modify production')

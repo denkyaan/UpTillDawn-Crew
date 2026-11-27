@@ -88,7 +88,10 @@ function fixture({owner=false,admin=true,approved=true,blocked=false,verified=tr
  }
  const db={
   auth:{getUser:async()=>({data:{user:verified?{id:user}:null},error:null})},
-  rpc:async(name,args)=>{
+  rpc:(name,args)=>{
+   if(name==="upt_admin_profiles"){
+    calls.push(["rpc",name,args]);return queries("profiles")
+   }
    calls.push(["rpc",name,args])
    if(name==="upt_current_session_context")return {data:[actor],error:null}
    if(name==="upt_is_admin")return {data:admin,error:null}
@@ -123,7 +126,21 @@ test("original 11 event/crew paths use signed DB role checks and source-specific
   assert.equal(r.status,200,name)
   assert.ok(f.calls.some(x=>x[0]==="rpc"&&x[1]==="upt_is_admin"),name)
   assert.ok(f.calls.some(x=>["insert","update","upsert","delete"].includes(x[0])||
-   x[0]==="rpc"&&["upt_archive_event","upt_restore_event","upt_force_archive_event","upt_create_shift","upt_admin_set_account"].includes(x[1])),name)
+   x[0]==="rpc"&&["upt_archive_event","upt_restore_event","upt_force_archive_event","upt_create_shift","upt_admin_set_account","upt_admin_set_responsible_assignment"].includes(x[1])),name)
+ }
+})
+test("responsible assignment and demotion use exactly one atomic signed RPC and fail closed",async()=>{
+ for(const [name,assign] of [["uptilldawn.ts#assignResponsible",true],["uptilldawn.ts#demoteResponsibleToStaff",false]]){
+  const fields={workplace_id:workplace,user_id:target},action=id(name)
+  for(const options of [{},{admin:false},{rpcError:{message:"rejected"}}]){
+   const f=fixture(options)
+   const r=await megaCrewEventResponse(post(name,fields),f.db,action)
+   assert.equal(r.status,options.admin===false||options.rpcError?422:200,name)
+   assert.deepEqual(f.calls.filter(x=>x[0]==="rpc"&&x[1]==="upt_admin_set_responsible_assignment"),
+    options.admin===false?[]:[["rpc","upt_admin_set_responsible_assignment",{p_workplace:workplace,p_user:target,p_assign:assign}]],name)
+   assert.equal(f.calls.some(x=>["from","insert","update","upsert","delete"].includes(x[0])||
+    x[0]==="rpc"&&x[1]==="upt_admin_set_account"),false,name)
+  }
  }
 })
 test("Maker portal mode, God Mode cookie, return path and signed logout preserve ownership",async()=>{

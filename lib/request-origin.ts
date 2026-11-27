@@ -16,3 +16,19 @@ export function requestHasSameOrigin(request: Request): boolean {
   return origin===url.origin
  }catch{return false}
 }
+
+/** Authenticate only an exact browser origin. A Next internal URL may differ
+ * from the browser URL only when Host and configured app origin both agree.
+ * Forwarded headers cannot grant access. */
+export function authRequestOrigin(request: Request, configuredAppUrl?: string): string | null {
+ const origin=request.headers.get('origin')
+ const site=request.headers.get('sec-fetch-site')
+ if(!origin||(site&&site!=='same-origin')||!requestHasSameOrigin(request))return null
+ try{
+  if(origin===new URL(request.url).origin)return origin
+  if(!configuredAppUrl)return null
+  const configured=new URL(configuredAppUrl)
+  if(configured.username||configured.password||configured.pathname!=='/'||configured.search||configured.hash)return null
+  return origin===configured.origin?origin:null
+ }catch{return null}
+}

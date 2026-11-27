@@ -1,3 +1,4 @@
+import {authRequestOrigin} from '@/lib/request-origin'
 import {NextRequest,NextResponse} from 'next/server'
 import {isRedirectError} from 'next/dist/client/components/redirect-error'
 import {signUp,forgotPassword,updatePassword,resendVerificationEmail,signOut} from '@/lib/actions/auth'
@@ -11,9 +12,7 @@ function reject(status:number,code:string){return NextResponse.json({error:'De a
 // A bounded JSON transport for the SAME existing account server actions. No
 // alternate password, approval, verification or recovery implementation.
 export async function POST(request:NextRequest){
- const expected=new URL(request.url).origin
- const site=request.headers.get('sec-fetch-site')
- if(request.headers.get('origin')!==expected||(site&&site!=='same-origin'))return reject(403,'invalid_origin')
+ if(!authRequestOrigin(request,process.env.NEXT_PUBLIC_APP_URL))return reject(403,'invalid_origin')
  if(!(request.headers.get('content-type')||'').toLowerCase().startsWith('multipart/form-data;'))return reject(415,'invalid_content_type')
  let form:FormData
  try{form=await readBoundedFormData(request,16_384)}

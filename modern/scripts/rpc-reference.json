@@ -12,8 +12,10 @@
     "upt_admin_import_bank_statement_transactions",
     "upt_admin_import_invoice_lines_csv",
     "upt_admin_link_existing_bank_statement_payment",
+    "upt_admin_pending_profiles",
     "upt_admin_personnel_details_v2",
     "upt_admin_post_bank_statement_payment",
+    "upt_admin_profiles",
     "upt_admin_receive_inventory_batch",
     "upt_admin_register_promotion_reference",
     "upt_admin_review_promotion_evidence",
@@ -26,6 +28,7 @@
     "upt_admin_set_account",
     "upt_admin_set_personnel_block",
     "upt_admin_set_portal_role",
+    "upt_admin_set_responsible_assignment",
     "upt_admin_set_two_personnel_roles",
     "upt_admin_settle_provider_bank_statement",
     "upt_admin_unblock_promotion",
@@ -169,6 +172,7 @@
     "upt_sync_operation",
     "upt_sync_workplace_catalog_to_event",
     "upt_ticket_sales_summary",
+    "upt_update_inventory_asset_form",
     "upt_update_own_profile",
     "upt_update_shift",
     "upt_update_task_status",
@@ -205,5 +209,32 @@
     "workerResourceTelemetry": true,
     "fullFunctionalParity": true,
     "ownerAuthorizedProduction": true
-  }
+  },
+  "pendingLiveCatalogReverification": [
+    {
+      "rpc": "upt_update_inventory_asset_form",
+      "migration": "20261126172500_inventory_asset_form_rpc.sql",
+      "localAcceptanceVerifiedInRun": 45866266427,
+      "mainQaVerified": false,
+      "productionVerified": false
+    },
+    {
+      "rpc": "upt_admin_pending_profiles",
+      "migration": "20261002204500_admin_pending_profiles_safe_rpc.sql",
+      "mainQaVerified": false,
+      "productionVerified": false
+    },
+    {
+      "rpc": "upt_admin_profiles",
+      "migration": "20260922211452_uptilldawn_profile_privacy.sql",
+      "mainQaVerified": false,
+      "productionVerified": false
+    },
+    {
+      "rpc": "upt_admin_set_responsible_assignment",
+      "migration": "20261126210000_event_template_and_responsible_atomicity.sql",
+      "mainQaVerified": false,
+      "productionVerified": false
+    }
+  ]
 }

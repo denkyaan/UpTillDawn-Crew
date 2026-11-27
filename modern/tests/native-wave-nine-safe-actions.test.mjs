@@ -36,7 +36,7 @@ function fixture({admin=true,role="admin",approved=true,rpcError=null,uploadErro
   const q={
    select:()=>q,eq:()=>q,in:()=>q,
    single:async()=>({data:{event_id:event,is_active:true},error:null}),
-   maybeSingle:async()=>({data:{profile_photo_url:"photo.jpg"},error:null}),
+   maybeSingle:async()=>({data:{id:target,profile_photo_url:"photo.jpg"},error:null}),
    then:(accept,reject)=>Promise.resolve({
     data:name==="work_attachments"?[{storage_path:"work-photo.jpg"}]:[],error:null
    }).then(accept,reject)
@@ -45,7 +45,8 @@ function fixture({admin=true,role="admin",approved=true,rpcError=null,uploadErro
  }
  const db={
   auth:{getUser:async()=>({data:{user:{id:user}},error:null})},
-  rpc:async(name,args)=>{calls.push(["rpc",name,args])
+  rpc:(name,args)=>{calls.push(["rpc",name,args])
+   if(name==="upt_admin_profiles")return table("profiles")
    if(name==="upt_current_session_context")return {data:[actor],error:null}
    if(name==="upt_is_admin")return {data:admin,error:null}
    return {data:null,error:rpcError}
@@ -134,6 +135,21 @@ test("document/checklist RPC failure rolls back newly uploaded media",async()=>{
   "lib/actions/uptilldawn.ts#completeOperationalChecklistItem")
  assert.equal(r.status,422)
  assert.equal(f.calls.some(x=>x[0]==="remove"),true)
+})
+test("personnel deletion uses the signed profile RPC and never removes media if account deletion fails",async()=>{
+ const [name,fields]=cases[3],id="lib/actions/"+name
+ for(const rpcError of [null,{code:"PROTECTED_ACCOUNT"}]){
+  const f=fixture({rpcError})
+  const r=await nativeWaveNineResponse(post(name,fields),f.db,id)
+  assert.equal(r.status,rpcError?422:200)
+  assert.ok(f.calls.some(x=>x[0]==="rpc"&&x[1]==="upt_admin_profiles"))
+  assert.ok(!f.calls.some(x=>x[0]==="from"&&x[1]==="profiles"))
+  const removal=f.calls.findIndex(x=>x[0]==="remove")
+  const deletion=f.calls.findIndex(x=>x[0]==="rpc"&&x[1]==="upt_admin_set_account")
+  assert.ok(deletion>=0)
+  if(rpcError)assert.equal(removal,-1)
+  else assert.ok(removal>deletion)
+ }
 })
 test("public deployed Worker rejects all four actions before any backend call",async()=>{
  const env={SUPABASE_URL:"https://npbjrtiolqperdgljnhi.supabase.co",

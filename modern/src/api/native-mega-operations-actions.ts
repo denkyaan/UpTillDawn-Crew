@@ -103,16 +103,17 @@ export async function megaOperationsResponse(
     const reorder=z.coerce.number().int().min(0).max(100000)
      .parse(fd.get("reorder_threshold")||0)
     const raw=String(fd.get("unit_cost")||"").trim()
-    const {error}=await client.from("inventory_items").update({
-     asset_code:option(fd,"asset_code",120)||null,
-     barcode:option(fd,"barcode",200)||null,
-     serial_number:option(fd,"serial_number",200)||null,
-     location_label:option(fd,"location_label",300)||null,
-     maintenance_due_at:option(fd,"maintenance_due_at",120)||null,
-     reorder_threshold:reorder,
-     unit_cost_cents:raw?toCents(raw):null,
-     asset_notes:option(fd,"asset_notes",4000)||null
-    }).eq("id",uuid(fd.get("item_id")))
+    const {error}=await client.rpc("upt_update_inventory_asset_form",{
+     p_item:uuid(fd.get("item_id")),
+     p_asset_code:option(fd,"asset_code",120),
+     p_barcode:option(fd,"barcode",200),
+     p_serial_number:option(fd,"serial_number",200),
+     p_location_label:option(fd,"location_label",300),
+     p_maintenance_due_at:option(fd,"maintenance_due_at",120),
+     p_reorder_threshold:reorder,
+     p_unit_cost_cents:raw?toCents(raw):undefined,
+     p_notes:option(fd,"asset_notes",4000)
+    })
     if(error)throw Error("Asset update rejected")
     return done()
    }

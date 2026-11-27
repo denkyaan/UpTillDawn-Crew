@@ -60,6 +60,13 @@ function AuthenticatedRoutes(){
  // signed-user RPC/RLS checks and workplace permissions; no access is granted.
  if(location.pathname==='/shifts'&&auth.user)
   return <Navigate to="/workplaces" replace/>
+ // These three existing source pages unconditionally redirect. Preserve the
+ // same authenticated alias before async source rendering, retaining all
+ // destination layouts and their signed authorization checks.
+ if(auth.user&&(location.pathname==='/admin/management'||location.pathname==='/admin/health'))
+  return <Navigate to="/admin" replace/>
+ if(auth.user&&location.pathname==='/portals/administration/overview')
+  return <Navigate to="/portals/administration" replace/>
  // Each original layout/page owns its exact login, approval and Owner
  // redirect. A generic outer redirect would change QR and Maker entry flows.
  const original=<OriginalRequest key={identityKey} revision={requestKey}><Boundary key={identityKey} revision={requestKey} reset={()=>setRevision(n=>n+1)}><Suspense fallback={<Loading/>}>{content}</Suspense></Boundary></OriginalRequest>

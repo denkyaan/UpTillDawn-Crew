@@ -1,7 +1,7 @@
 import { redirect } from 'next/navigation'
 import { getCurrentUser } from '@/lib/actions/auth'
 import { createClient } from '@/lib/supabase/crew-server'
-import { EventDocumentsPanel } from '@/components/crew/event-documents-panel'
+import { EventDocumentsView, loadInventoryDocuments } from '@/components/crew/event-documents-panel'
 import { PlatformAiAssistant } from '@/components/admin/platform-ai-assistant'
 import { WorkplaceInventoryMaterials, type WorkplaceInventoryMaterial } from '@/components/crew/workplace-inventory-materials'
 import {
@@ -119,14 +119,17 @@ export default async function InventoryPage({searchParams}:{searchParams?:Promis
       return Number(bSelected)-Number(aSelected)||a.name.localeCompare(b.name,'nl')
     })
   const workplaceIds=visible.map(workplace=>workplace.id)
-  const materialResult=workplaceIds.length
-    ? await s.from('inventory_items')
-        .select('id,workplace_id,name,category,total_quantity,available_quantity,issued_quantity,damaged_quantity,missing_quantity')
+  const [materialResult,documentPanels]=await Promise.all([
+    workplaceIds.length
+    ? s.from('inventory_items')
+        .select('id,workplace_id,name,category,total_quantity,available_quantity,issued_quantity,damaged_quantity,missing_quantity,item_kind,asset_code,barcode,serial_number')
         .in('workplace_id',workplaceIds)
         .eq('is_active',true)
         .order('category')
         .order('name')
-    : {data:[],error:null}
+    : {data:[],error:null},
+    loadInventoryDocuments(visible),
+  ])
   materialLoadError=Boolean(materialResult.error)
   const materials=(materialResult.data||[]) as WorkplaceInventoryMaterial[]
 
@@ -169,7 +172,8 @@ export default async function InventoryPage({searchParams}:{searchParams?:Promis
         isResponsible={isResponsible}
       />
 
-      <EventDocumentsPanel
+      <EventDocumentsView
+        loaded={documentPanels.get(workplace.id)!}
         eventId={workplace.event_id}
         workplaceId={workplace.id}
         canManage={isAdmin}

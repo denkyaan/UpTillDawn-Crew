@@ -15,7 +15,9 @@ on:
 
 concurrency:
   group: fast-validation-${{ github.ref }}
-  cancel-in-progress: true
+  # Preserve in-flight isolated acceptance evidence when a newer phase PR
+  # revision is queued; ordinary Main/other PR cancellation stays unchanged.
+  cancel-in-progress: ${{ !(github.event_name == 'pull_request' && startsWith(github.head_ref, 'migration/phase-2-3-')) }}
 
 permissions:
   contents: read
@@ -194,6 +196,303 @@ jobs:
           } >> "$GITHUB_STEP_SUMMARY"
       - name: Production dependency security gate
         run: npm audit --omit=dev --audit-level=high
+  # Separate runner, same PR CI. Never runs for a Main push or production release.
+  phase-two-three-local-acceptance:
+    if: ${{ github.event_name == 'pull_request' && startsWith(github.head_ref, 'migration/phase-2-3-') && github.event.pull_request.head.repo.full_name == github.repository }}
+    permissions:
+      contents: read
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    env:
+      PGURL: postgresql://postgres:postgres@127.0.0.1:54322/postgres
+    steps:
+      - name: Checkout
+        uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09
+      - name: Set up Node.js
+        uses: actions/setup-node@a0853c24544627f65ddf259abe73b1d18a591444
+        with:
+          node-version: 24
+          cache: npm
+      - name: Check acceptance shell syntax before database startup
+        run: node --test tests/phase-two-three-shell-syntax.test.mjs
+
+      - name: Install isolated test dependencies
+        run: |
+          npm ci --prefer-offline --no-audit --no-fund
+          npm --prefix modern ci --prefer-offline --no-audit --no-fund
+      - name: Install PostgreSQL client
+        run: sudo apt-get update && sudo apt-get install -y postgresql-client
+
+      - name: Initialize isolated Supabase config
+        run: |
+          if [ ! -f supabase/config.toml ]; then
+            npx --yes supabase@2.117.0 init
+          fi
+          # Only the generated disposable local stack needs more Auth logins.
+          # No remote Supabase configuration is altered.
+          sed -i -E 's/^sign_in_sign_ups[[:space:]]*=.*/sign_in_sign_ups = 120/' supabase/config.toml
+
+      - name: Start isolated Supabase stack
+        run: |
+          set -euo pipefail
+          echo 'Checking local Supabase ports before startup'
+          for port in 54321 54322 54323 54324 54327; do
+            if sudo ss -ltnp "( sport = :$port )" | grep -q LISTEN; then
+              echo "::error::Port $port is already occupied on the runner"
+              sudo ss -ltnp "( sport = :$port )" || true
+              docker ps --format 'table {{.Names}}\t{{.Ports}}' || true
+              exit 1
+            fi
+          done
+          npx --yes supabase@2.117.0 start -x studio,imgproxy,inbucket,edge-runtime,logflare,vector,realtime
+
+      - name: Replay every migration from zero
+        # Local Supabase startup can deadlock with background schema/catalog
+        # introspection during POLICY DDL. Retry *only* SQLSTATE 40P01 on
+        # the disposable database; never hide a real migration failure.
+        shell: bash
+        run: |
+          set -euo pipefail
+          for attempt in 1 2 3; do
+            log="$(mktemp)"
+            if npx --yes supabase@2.117.0 db reset --local --no-seed >"$log" 2>&1; then
+              cat "$log"
+              rm -f "$log"
+              echo "PASS: migration replay on attempt $attempt"
+              exit 0
+            fi
+            cat "$log"
+            if ! grep -Eiq 'deadlock detected|SQLSTATE 40P01|SQLSTATE.*40P01' "$log"; then
+              echo "::error::Migration replay failed for a non-deadlock reason."
+              rm -f "$log"
+              exit 1
+            fi
+            rm -f "$log"
+            if [ "$attempt" -eq 3 ]; then
+              echo "::error::Isolated migration replay hit repeated SQL deadlocks."
+              exit 1
+            fi
+            echo "::warning::Transient isolated PostgreSQL 40P01 deadlock; retry $attempt of 2."
+            sleep $((attempt * 4))
+          done
+
+      - name: Run SQL regression suites
+        env:
+          PGURL: postgresql://postgres:postgres@127.0.0.1:54322/postgres
+        run: |
+          set -euo pipefail
+          for file in tests/sql/*.sql; do
+            # Self-contained synthetic users run before the sole Head is seeded.
+            case "$file" in
+              tests/sql/owner-leadership-privacy.sql|tests/sql/administration-finance-integration.sql|tests/sql/administration-finance-rls.sql|tests/sql/administration-workflow-integration.sql|tests/sql/administration-peppol-integration.sql|tests/sql/main-seven-role-permission-matrix.sql|tests/sql/15-bot-full-event.sql|tests/sql/administration-workflow-isolated-e2e.sql|tests/sql/event-command-financial-privacy.sql|tests/sql/main-administration-finance-head-acceptance.sql|tests/sql/qr-attendance-workflow.sql|tests/sql/release-access-matrix.sql|tests/sql/storage-security.sql|tests/sql/timesheet-lifecycle.sql|tests/sql/v21-portal-role-lifecycle.sql) continue ;;
+            esac
+            echo "::group::$file"
+            psql "$PGURL" -v ON_ERROR_STOP=1 -f "$file"
+            echo "::endgroup::"
+          done
+
+      - name: Verify generated database types
+        run: |
+          npx --yes supabase@2.117.0 gen types typescript --local --schema public > /tmp/crew-database.ts
+          node --input-type=module <<'NODE'
+          import { readFileSync, writeFileSync } from 'node:fs'
+          const normalize = (source) => source
+            .replace(
+              /  \/\/ Allows to automatically instantiate createClient with right options\n  \/\/ instead of createClient<Database, \{ PostgrestVersion: 'XX' \}>\(URL, KEY\)\n  __InternalSupabase: \{\n    PostgrestVersion: "[^"]+"\n  \}\n/,
+              '',
+            )
+            .trimEnd() + '\n'
+          writeFileSync('/tmp/expected-crew-database.ts', normalize(readFileSync('types/crew-database.ts', 'utf8')))
+          writeFileSync('/tmp/actual-crew-database.ts', normalize(readFileSync('/tmp/crew-database.ts', 'utf8')))
+          NODE
+          diff -u /tmp/expected-crew-database.ts /tmp/actual-crew-database.ts
+
+      - name: Export isolated bot credentials
+        run: |
+          set -euo pipefail
+          eval "$(npx --yes supabase@2.117.0 status -o env)"
+          api_url="${API_URL:-${SUPABASE_URL:-}}"
+          public_key="${ANON_KEY:-${PUBLISHABLE_KEY:-}}"
+          service_key="${SERVICE_ROLE_KEY:-${SECRET_KEY:-}}"
+          test "$api_url" = "http://127.0.0.1:54321"
+          test -n "$public_key"
+          test -n "$service_key"
+          bot_password="$(openssl rand -base64 24 | tr -d '\n')Aa1!"
+          echo "::add-mask::$service_key"
+          echo "::add-mask::$bot_password"
+          {
+            echo "NEXT_PUBLIC_SUPABASE_URL=$api_url"
+            echo "NEXT_PUBLIC_SUPABASE_ANON_KEY=$public_key"
+            echo "BOT_SUPABASE_URL=$api_url"
+            echo "BOT_SERVICE_ROLE_KEY=$service_key"
+            echo "BOT_TEST_PASSWORD=$bot_password"
+            echo "BOT_DB_URL=postgresql://postgres:postgres@127.0.0.1:54322/postgres"
+          } >> "$GITHUB_ENV"
+
+      - name: Prepare isolated authentication fixtures
+        run: |
+          set -euo pipefail
+          test "$BOT_SUPABASE_URL" = "http://127.0.0.1:54321"
+          test "$BOT_DB_URL" = "$PGURL"
+          # Keep the installed signup trigger intact for actual Auth seeding.
+          node scripts/seed-15-bot-users.mjs
+          briefing_seed_count="$(psql "$BOT_DB_URL" -v ON_ERROR_STOP=1 -Atc "SELECT count(*) FROM public.briefing_acknowledgements ba JOIN auth.users u ON u.id=ba.user_id WHERE ba.briefing_id='00000000-0000-4000-8000-00000000e2e3'::uuid AND lower(u.email)=lower('bot-03-staff-en@bots.uptilldawn.test');")"
+          test "$briefing_seed_count" = "0"
+          echo "PASS: bot03 briefing fixture starts unacknowledged"
+
+      - name: Prepare separate temporary Maker identity for six-role browser QA
+        run: |
+          set -euo pipefail
+          test "$BOT_SUPABASE_URL" = "http://127.0.0.1:54321" || { echo "::error::Maker QA seeding is local-only"; exit 1; }
+          node scripts/seed-local-maker-e2e.mjs
+          test "$(psql "$BOT_DB_URL" -Atc "select count(*) from auth.users where email='bot-16-maker@bots.uptilldawn.test'")" = "1"
+          psql "$BOT_DB_URL" -v ON_ERROR_STOP=1 -c "insert into upt_private.app_owners(user_id) select id from auth.users where email='bot-16-maker@bots.uptilldawn.test'"
+          psql "$BOT_DB_URL" -v ON_ERROR_STOP=1 -f tests/sql/owner-leadership-privacy.sql
+
+      - name: Establish the designated local Head and deputy identities
+        run: |
+          set -euo pipefail
+          test "$BOT_SUPABASE_URL" = "http://127.0.0.1:54321"
+          test "$BOT_DB_URL" = "$PGURL"
+          psql "$PGURL" -v ON_ERROR_STOP=1 <<'SQL'
+          BEGIN;
+          SELECT set_config('request.jwt.claim.sub',(SELECT id::text FROM auth.users WHERE email='bot-16-maker@bots.uptilldawn.test'),true);
+          SELECT public.upt_leadership_assign('head',(SELECT id FROM auth.users WHERE email='bot-01-admin-nl@bots.uptilldawn.test'));
+          SELECT set_config('request.jwt.claim.sub',(SELECT id::text FROM auth.users WHERE email='bot-01-admin-nl@bots.uptilldawn.test'),true);
+          SELECT public.upt_leadership_assign('left_hand',(SELECT id FROM auth.users WHERE email='bot-06-staff-fr@bots.uptilldawn.test'));
+          SELECT public.upt_leadership_assign('right_hand',(SELECT id FROM auth.users WHERE email='bot-07-staff-en@bots.uptilldawn.test'));
+          DO $qa$ BEGIN
+            IF (SELECT count(*) FROM public.upt_organization_leadership)<>3 OR
+               (SELECT count(*) FROM public.profiles WHERE role='admin' AND approved AND NOT account_blocked)<>1 THEN
+              RAISE EXCEPTION 'Local single-Head setup incomplete';
+            END IF;
+          END $qa$;
+          COMMIT;
+          SQL
+
+      - name: Run complete financial transaction and non-admin RLS integration suites
+        shell: bash
+        run: |
+          set -euo pipefail
+          admin_id="$(psql "$BOT_DB_URL" -v ON_ERROR_STOP=1 -Atc "SELECT id FROM public.profiles WHERE full_name='E2E ADMIN 01' LIMIT 1")"
+          staff_id="$(psql "$BOT_DB_URL" -v ON_ERROR_STOP=1 -Atc "SELECT id FROM public.profiles WHERE full_name='E2E STAFF 03' LIMIT 1")"
+          test -n "$admin_id" && test -n "$staff_id"
+          psql "$BOT_DB_URL" -v ON_ERROR_STOP=1 -v TEST_ADMIN_ID="$admin_id" -f tests/sql/administration-finance-integration.sql
+          psql "$BOT_DB_URL" -v ON_ERROR_STOP=1 -v TEST_NON_ADMIN_ID="$staff_id" -f tests/sql/administration-finance-rls.sql
+          office_id=$(psql "$BOT_DB_URL" -Atc "select id from auth.users where email='bot-04-staff-de@bots.uptilldawn.test';")
+          test -n "$office_id"
+          psql "$BOT_DB_URL" -v ON_ERROR_STOP=1 -v TEST_ADMIN_ID="$admin_id" -v TEST_STAFF_ID="$staff_id" -v TEST_OFFICE_ID="$office_id" -f tests/sql/administration-workflow-integration.sql
+          psql "$BOT_DB_URL" -v ON_ERROR_STOP=1 -v TEST_ADMIN_ID="$admin_id" -v TEST_STAFF_ID="$staff_id" -v TEST_OFFICE_ID="$office_id" -f tests/sql/administration-peppol-integration.sql
+          echo "PASS: financial invoice/payment/credit and non-admin RLS regression suites"
+
+      - name: Exercise actual local database RLS, offline replay and role lifecycles
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$BOT_SUPABASE_URL" = "http://127.0.0.1:54321"
+          test "$BOT_DB_URL" = "$PGURL"
+          for suite in 15-bot-full-event administration-workflow-isolated-e2e event-command-financial-privacy main-administration-finance-head-acceptance qr-attendance-workflow release-access-matrix storage-security timesheet-lifecycle v21-portal-role-lifecycle; do
+            echo "::group::$suite"
+            psql "$PGURL" -v ON_ERROR_STOP=1 -f "tests/sql/$suite.sql"
+            echo "::endgroup::"
+          done
+          psql "$PGURL" -v ON_ERROR_STOP=1 -v PHASE23_LOCAL_ROLE_FIXTURES=1 -f tests/sql/main-seven-role-permission-matrix.sql
+      - name: Verify positive native actions with real signed local users and persisted state
+        id: local_native
+        run: node modern/tests/qa-local-native-phase-two.mjs
+      - name: Exhaustive signed native transport acceptance (all 163 actions, all roles)
+        if: ${{ !cancelled() && steps.local_native.outcome != 'skipped' }}
+        run: node modern/tests/qa-local-all-action-matrix.mjs
+      - name: Rehearse both database alignment sequences locally (transaction rollback)
+        if: ${{ !cancelled() && steps.local_native.outcome != 'skipped' }}
+        timeout-minutes: 3
+        run: node modern/tests/qa-local-alignment-rehearsal.mjs
+      - name: Local schema, rollback and thirty real Hono session checks
+        if: ${{ !cancelled() && steps.local_native.outcome != 'skipped' }}
+        run: node modern/tests/qa-local-release-rehearsal.mjs
+      - name: Build both actual applications for local browser parity
+        id: local_browser_build
+        if: ${{ !cancelled() && steps.local_native.outcome != 'skipped' }}
+        env:
+          NEXT_PUBLIC_APP_URL: http://127.0.0.1:3000
+          VITE_SUPABASE_URL: http://127.0.0.1:54321
+          VITE_MIGRATION_ALLOW_WRITES: 'false'
+          VITE_MIGRATION_SCANNING_ENABLED: 'false'
+        run: |
+          set -euo pipefail
+          test "$BOT_SUPABASE_URL" = "http://127.0.0.1:54321"
+          export VITE_SUPABASE_ANON_KEY="$NEXT_PUBLIC_SUPABASE_ANON_KEY"
+          npx playwright install --with-deps chromium
+          npm run build:next
+          npm --prefix modern run build
+          npm start -- --hostname 127.0.0.1 > /tmp/phase23-original-app.log 2>&1 &
+          echo $! > /tmp/phase23-original-app.pid
+          for i in {1..90}; do
+            if curl --fail --silent http://127.0.0.1:3000/login/staff >/dev/null; then break; fi
+            sleep 1
+          done
+          node --input-type=module <<'NODE'
+          import assert from 'node:assert/strict'
+          const base='http://127.0.0.1:3000'
+          for(const [origin,site,expected] of [[base,'same-origin',200],['http://foreign.invalid','cross-site',403],[base,'cross-site',403],['http://localhost:3000','same-origin',403]]){
+            const form=new FormData();form.set('portal','staff');form.set('email','');form.set('password','')
+            const response=await fetch(base+'/api/auth/portal-login',{method:'POST',headers:{Origin:origin,'Sec-Fetch-Site':site},body:form,signal:AbortSignal.timeout(5000),redirect:'error'})
+            assert.equal(response.status,expected,'LOCAL_AUTH_ORIGIN_PREFLIGHT')
+            const body=await response.json()
+            if(expected===403)assert.equal(body.code,'invalid_origin')
+            else assert.equal(body.error,'E-mail en wachtwoord zijn verplicht.')
+          }
+          console.log('PASS actual Next authentication origin preflight (4 cases)')
+          NODE
+      - name: Compare seven roles, four languages, two devices, 44 deep routes and Maker choice
+        timeout-minutes: 16
+        if: ${{ !cancelled() && steps.local_browser_build.outcome == 'success' }}
+        env:
+          UPT_LOCAL_BROWSER_PARALLELISM: '3'
+          NEXT_PUBLIC_APP_URL: http://127.0.0.1:3000
+          VITE_SUPABASE_URL: http://127.0.0.1:54321
+          VITE_MIGRATION_ALLOW_WRITES: 'false'
+          VITE_MIGRATION_SCANNING_ENABLED: 'false'
+        run: |
+          set -euo pipefail
+          export VITE_SUPABASE_ANON_KEY="$NEXT_PUBLIC_SUPABASE_ANON_KEY"
+          node modern/tests/qa-local-release-browser.mjs
+      - name: Compare actual original and generated native authentication across all eight accounts
+        if: ${{ !cancelled() && steps.local_browser_build.outcome == 'success' }}
+        timeout-minutes: 3
+        env:
+          NEXT_PUBLIC_APP_URL: http://127.0.0.1:3000
+        run: node modern/tests/qa-local-native-auth-parity.mjs
+      - name: Classify original local server failures without exposing log contents
+        if: always()
+        run: |
+          node --input-type=module <<'NODE'
+          import {existsSync,readFileSync} from 'node:fs'
+          const file='/tmp/phase23-original-app.log'
+          if(existsSync(file)){
+            const value=readFileSync(file,'utf8')
+            for(const [name,pattern] of [['fetch-failed',/fetch failed/gi],['session-error',/session.*(?:missing|invalid|error)/gi],['render-error',/UPT_[A-Z_]+_RENDER_FAILURE/g],['security-email-unconfigured',/RESEND_API_KEY ontbreekt/g],['request-origin',/invalid_origin|origin mismatch/gi],['server-error',/Error:/g]]){
+              console.log('LOCAL_SERVER_DIAGNOSTIC '+name+'='+String((value.match(pattern)||[]).length))
+            }
+          }
+          NODE
+      - name: Stop isolated original browser server
+        if: always()
+        run: |
+          if [ -f /tmp/phase23-original-app.pid ]; then
+            kill "$(cat /tmp/phase23-original-app.pid)" 2>/dev/null || true
+          fi
+      - name: Always destroy disposable database stack
+        if: always()
+        run: npx --yes supabase@2.117.0 stop --no-backup
+      - name: Upload local native action evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: phase-two-three-local-native-actions
+          path: test-results/phase-two-three-local-native/*.json
+          if-no-files-found: error
+          retention-days: 5
   release-production:
     needs: fast
     # Only a manual, explicit release input may dispatch full CI production.
