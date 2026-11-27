@@ -397,7 +397,7 @@ export async function runRemainingDomains(c){
     await denied(handler,office,id,{...fields,version:'2'})
     assert.equal(calls,0,'PROVIDER_CALL_BEFORE_AUTHORIZATION')
     const result=await invoke(handler,office,id,fields)
-    assert.equal(result.data.redirect,ap+'modules/artists/'+b.id+'/agreement')
+    assert.equal(result.data.redirect,'/portals/administration/modules/artists/'+b.id+'/agreement','DOCUMENSO_REFRESH_REDIRECT')
     assert.equal(calls,1)
     for(const invalid of ['mismatch','oversized','non-json']){
      mode=invalid
