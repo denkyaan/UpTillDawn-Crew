@@ -7,6 +7,7 @@ import {spawn,execFileSync} from 'node:child_process'
 import {resolve} from 'node:path'
 import {runRolePool,verifyExactCoverage} from './qa-role-pool.mjs'
 import {withDeadline} from './qa-browser-deadline.mjs'
+import {mayRetryOwnerLookup} from './qa-login-recovery.mjs'
 import {mkdirSync,writeFileSync} from 'node:fs'
 import {chromium} from 'playwright'
 import {createServerClient,parseCookieHeader} from '@supabase/ssr'
@@ -57,7 +58,7 @@ assert.equal(cases.length,7)
 assert.equal(cases.reduce((n,c)=>n+c.paths.length,0),44)
 const devices=[{name:'desktop',viewport:{width:1440,height:900}},{name:'mobile',viewport:{width:390,height:844},isMobile:true,hasTouch:true}]
 const locales=['nl','fr','en','de']
-const rows=[],failures=[],loginChecks=[],blockedRoutes=new Set(),readRouteFailures=new Set()
+const rows=[],failures=[],loginChecks=[],loginTransientAttempts=[],blockedRoutes=new Set(),readRouteFailures=new Set()
 const exactAliases={'/shifts':'/workplaces','/admin/management':'/admin','/admin/health':'/admin','/portals/administration/overview':'/portals/administration'}
 const expectedHidden={responsible:['/workplaces','/shifts','/briefings'],staff:['/briefings']}
 const maker={role:'maker',portal:'admin',email:'bot-16-maker@bots.uptilldawn.test',paths:[]}
@@ -309,8 +310,10 @@ async function browserLogin(role,expectedLanding){
   if(destination.origin!==source||(expectedLanding&&destination.pathname!==expectedLanding))throw Error('UNEXPECTED_ROUTE_SOURCE_LOGIN')
   await step('verified-cookie',()=>verifyCookieIdentity(context,role),24000)
   await step('authenticated-ready',()=>ready(page,'nl'),27000)
+  const cookies=await step('storage-state',()=>context.cookies(source),5000)
   loginChecks.push({role:role.role,kind:'browser-form',outcome:'pass',status,destination:destination.pathname})
   console.log('LOCAL_BROWSER_LOGIN_PASS '+role.role)
+  return {landing:destination.pathname,cookies}
  }catch(error){
   const details={role:role.role,kind:'browser-form',outcome:'fail',stage:phase,status,code,failedScripts,pageErrors,authRequestSeen}
   loginChecks.push(details);console.error('LOCAL_BROWSER_LOGIN_DIAGNOSTIC '+JSON.stringify(details))
@@ -319,8 +322,8 @@ async function browserLogin(role,expectedLanding){
   if(context)try{await step('context-close',()=>closeContext(context),6000)}catch(error){record({role:role.role,stage:'browser-login-cleanup'},error)}
  }
 }
-async function signedState(role){
- let context,phase='context-create',status=null,code=null
+async function signedState(role,attempt=0){
+ let context,phase='context-create',status=null,code=null,retry=false
  const step=(name,fn,ms)=>{phase=name;return loginStep(role,'http-session',name,fn,ms)}
  try{
   context=await step('context-create',()=>newContext({locale:'nl-BE',serviceWorkers:'block'}),12000)
@@ -338,19 +341,34 @@ async function signedState(role){
   const destination=checkedLogin(body)
   await step('verified-cookie',()=>verifyCookieIdentity(context,role),24000)
   const cookies=await step('storage-state',()=>context.cookies(source),5000)
-  loginChecks.push({role:role.role,kind:'original-http-session',outcome:'pass',status,destination:destination.pathname})
+  loginChecks.push({role:role.role,kind:'original-http-session',outcome:'pass',status,destination:destination.pathname,attempts:attempt+1})
   console.log('LOCAL_ORIGINAL_SESSION_PASS '+role.role)
   // The independent landing comparison must still render and authorize
   // the actual source and candidate pages, including the Maker choice.
   return {landing:destination.pathname,cookies}
  }catch(error){
-  loginChecks.push({role:role.role,kind:'original-http-session',outcome:'fail',stage:phase,status,code})
-  console.error('LOCAL_ORIGINAL_SESSION_DIAGNOSTIC '+JSON.stringify({role:role.role,stage:phase,status,code,errorName:error.name}))
-  const reason=String(error?.message||'')
-  throw Error(/^(?:SOURCE_LOGIN_[A-Z0-9_]+|SOURCE_LOGIN_RESULT_[a-z_]+|DEADLINE_[A-Z0-9_]+)$/.test(reason)?reason:'SOURCE_LOGIN '+phase+' '+error.name)
+  const details={role:role.role,kind:'original-http-session',stage:phase,status,code,attempt:attempt+1}
+  console.error('LOCAL_ORIGINAL_SESSION_DIAGNOSTIC '+JSON.stringify({...details,errorName:error.name}))
+  if(mayRetryOwnerLookup({attempt,stage:phase,status,code})){
+   // The original handler explicitly returned a technical lookup failure and
+   // signed out. Retry once in a fresh cookie jar, never on denied authority.
+   retry=true
+   loginTransientAttempts.push({...details,outcome:'retry'})
+   console.log('LOCAL_LOGIN_TRANSIENT_RETRY '+JSON.stringify(details))
+   writeReport()
+  }else{
+   loginChecks.push({...details,outcome:'fail'})
+   const reason=String(error?.message||'')
+   throw Error(/^(?:SOURCE_LOGIN_[A-Z0-9_]+|SOURCE_LOGIN_RESULT_[a-z_]+|DEADLINE_[A-Z0-9_]+)$/.test(reason)?reason:'SOURCE_LOGIN '+phase+' '+error.name)
+  }
  }finally{
   if(context)try{await step('context-close',()=>closeContext(context),6000)}catch(error){record({role:role.role,stage:'http-session-cleanup'},error)}
  }
+ if(retry){
+  await new Promise(resolve=>setTimeout(resolve,500))
+  return signedState(role,attempt+1)
+ }
+ throw Error('SOURCE_LOGIN_NO_VERIFIED_STATE')
 }
 async function paired(state,language,device,fn){
  const opts={locale:language==='en'?'en-GB':language+'-BE',viewport:device.viewport,isMobile:!!device.isMobile,hasTouch:!!device.hasTouch,serviceWorkers:'block',
@@ -377,7 +395,10 @@ async function runRole(role){
   try{state=await signedState(role)}catch(error){record({role:role.role,stage:'source-login'},error)}
   // Still require a genuine browser-form result for every role, even if
   // HTTP sign-in failed. Each operation has a separate bounded deadline.
-  await browserLogin(role,state?.landing)
+  const browserState=await browserLogin(role,state?.landing)
+  // Independent HTTP failures still fail the login gate; a genuine, verified
+  // browser session can nevertheless exercise every page of this role.
+  if(!state)state=browserState
   if(!state)return
   if(role.role==='maker'){
    assert.equal(state.landing,'/maker-mode','UNEXPECTED_ROUTE_MAKER')
@@ -401,7 +422,7 @@ let poolResult=null
 function writeReport(){
  const scenarioCoverage=verifyExactCoverage(planned,rows.map(scenarioKey))
  const loginCoverage=verifyExactCoverage(plannedLogins,loginChecks.filter(x=>x.outcome==='pass').map(x=>x.role+'|'+x.kind))
- const report={...binding,scope:'local-next-vite-browser-with-native-read-adapter',expected:planned.length,passed:rows.length,failed:failures.length,rows,failures,loginChecks,scenarioCoverage,loginCoverage,parallelism,peakParallelRoles:poolResult?.peak??null,activeStages:Object.fromEntries(activeStages),elapsedMs:Math.round(performance.now()-started),unsupportedLocalReadRoutes:[...blockedRoutes].sort(),localReadRouteFailures:[...readRouteFailures].sort(),candidateNativeLoginVerified:false,deployedWorkerVerified:false,fullVisualParityVerified:false,productionReady:false}
+ const report={...binding,scope:'local-next-vite-browser-with-native-read-adapter',expected:planned.length,passed:rows.length,failed:failures.length,rows,failures,loginChecks,loginTransientAttempts,scenarioCoverage,loginCoverage,parallelism,peakParallelRoles:poolResult?.peak??null,activeStages:Object.fromEntries(activeStages),elapsedMs:Math.round(performance.now()-started),unsupportedLocalReadRoutes:[...blockedRoutes].sort(),localReadRouteFailures:[...readRouteFailures].sort(),candidateNativeLoginVerified:false,deployedWorkerVerified:false,fullVisualParityVerified:false,productionReady:false}
  writeFileSync(resolve(reportDir,'browser-parity.json'),JSON.stringify(report,null,2)+'\n')
  return report
 }
