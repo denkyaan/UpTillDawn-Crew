@@ -23,7 +23,7 @@ const identities=[
  {role:"staff",portal:"staff",email:"e2e-staff@uptilldawn.test",admin:false}
 ]
 let browser,denials=0,signins=0
-const failures=[],verified=[]
+const failures=[],verifiedActions=[]
 const sha=execFileSync("git",["rev-parse","HEAD"],{encoding:"utf8"}).trim()
 if(process.env.QA_VALIDATED_SHA&&process.env.QA_VALIDATED_SHA!==sha)throw Error("DENIAL_WRONG_CHECKOUT")
 try{
@@ -40,9 +40,9 @@ try{
    await page.waitForURL(url=>!url.pathname.startsWith("/login"),{timeout:25000})
    const cookie=(await context.cookies(origin)).map(c=>c.name+"="+c.value).join("; ")
    assert.ok(hasOriginalAuthCookie(cookie))
-   const verified=await sourceReadSession(new Request(origin+"/api/push/config",{headers:{Cookie:cookie}}),{SUPABASE_URL:qa,SUPABASE_ANON_KEY:key})
-   assert.equal(verified.ok,true)
-   db=verified.db
+   const signedSession=await sourceReadSession(new Request(origin+"/api/push/config",{headers:{Cookie:cookie}}),{SUPABASE_URL:qa,SUPABASE_ANON_KEY:key})
+   assert.equal(signedSession.ok,true)
+   db=signedSession.db
    const {data:{user},error}=await db.auth.getUser()
    assert.equal(error,null);assert.equal(user?.email,bot.email)
    const {data:admin,error:adminError}=await db.rpc("upt_is_admin",{uid:user.id})
@@ -67,7 +67,7 @@ try{
      }finally{await response.dispose()}
     }))
     for(const [i,result] of results.entries()){
-     if(result.status==="fulfilled"){denials++;verified.push({role:bot.role,id:result.value})}
+     if(result.status==="fulfilled"){denials++;verifiedActions.push({role:bot.role,id:result.value})}
      else failures.push({role:bot.role,id:ids[start+i],reason:"public_write_gate_failed"})
     }
    }
@@ -78,7 +78,7 @@ try{
    await context.close()
   }
  }
- const report={validatedSha:sha,runId:process.env.GITHUB_RUN_ID||null,runAttempt:process.env.GITHUB_RUN_ATTEMPT||null,originalActions:ids.length,signedIdentities:signins,publicWriteDenials:denials,expectedDenials:326,verified,failures,businessWrites:0,positiveWriteParityVerified:false,productionReady:false}
+ const report={validatedSha:sha,runId:process.env.GITHUB_RUN_ID||null,runAttempt:process.env.GITHUB_RUN_ATTEMPT||null,originalActions:ids.length,signedIdentities:signins,publicWriteDenials:denials,expectedDenials:326,verified:verifiedActions,failures,businessWrites:0,positiveWriteParityVerified:false,productionReady:false}
  const dir=resolve(import.meta.dirname,"../../test-results/modern-action-denials")
  mkdirSync(dir,{recursive:true});writeFileSync(resolve(dir,"report.json"),JSON.stringify(report,null,2)+"\n")
  console.log(JSON.stringify({...report,verified:undefined}))

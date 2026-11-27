@@ -148,6 +148,14 @@ async function matching(a,b,label){
     differences.push({index:i,original:source&&{tag:source.tag,x:source.x,y:source.y,w:source.w,h:source.h,font:source.font,weight:source.weight},candidate:candidate&&{tag:candidate.tag,x:candidate.x,y:candidate.y,w:candidate.w,h:candidate.h,font:candidate.font,weight:candidate.weight}})
   }
   console.error('DEEP_PARITY_LAYOUT_GEOMETRY '+label+' '+JSON.stringify(differences))
+  // Geometry-only section diagnostics locate the first divergent block even
+  // when headings and controls match. Never emit text, inputs or identities.
+  const sections=page=>page.evaluate(()=>[...document.querySelectorAll('main section')].filter(e=>e.getBoundingClientRect().height>0).map(e=>{
+   const r=e.getBoundingClientRect()
+   return {y:Math.round(r.y),h:Math.round(r.height),w:Math.round(r.width),children:e.childElementCount}
+  }))
+  const [sourceSections,candidateSections]=await Promise.all([sections(a),sections(b)])
+  console.error('DEEP_PARITY_SECTION_GEOMETRY '+label+' '+JSON.stringify({source:sourceSections,candidate:candidateSections}))
  }
  // Only field names and route identities are logged: never leak profile data.
  console.error('DEEP_PARITY_DIFFERENCE '+label+' '+fields.join(',')+' originalPath='+new URL(a.url()).pathname+' candidatePath='+new URL(b.url()).pathname)

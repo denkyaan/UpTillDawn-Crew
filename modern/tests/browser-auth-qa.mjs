@@ -51,7 +51,7 @@ async function ready(page){
 // A legacy Main timeout is not evidence of candidate UI parity. Retry only
 // the failing read, with bounded cooling-off time to protect Workers Free.
 // If a fully hydrated original view cannot be read, keep the gate RED.
-let consecutiveLegacyFailures=0
+let consecutiveLegacyFailures=0, exhaustedLegacyScenarios=0
 async function readyBaseline(page,check=ready){
  for(let attempt=0;attempt<3;attempt++){
   try{
@@ -64,10 +64,11 @@ async function readyBaseline(page,check=ready){
    // Never retry a confirmed application/render error or a parity mismatch.
    if(error?.name!=='TimeoutError'&&!/^LEGACY_MAIN_HTTP_(502|503|504)$/.test(cause))throw error
    console.error('LEGACY_MAIN_READ_RECOVERY attempt='+String(attempt+1)+' '+cause)
-   if(consecutiveLegacyFailures>=1)
+   if(consecutiveLegacyFailures>=1||exhaustedLegacyScenarios>=2)
     throw Error('LEGACY_MAIN_BASELINE_UNAVAILABLE_CIRCUIT_OPEN')
    if(attempt===2){
     consecutiveLegacyFailures++
+    exhaustedLegacyScenarios++
     throw Error('LEGACY_MAIN_BASELINE_UNAVAILABLE_AFTER_BOUNDED_RETRIES')
    }
    // Repeated immediate SSR reloads can amplify a Worker resource failure.
