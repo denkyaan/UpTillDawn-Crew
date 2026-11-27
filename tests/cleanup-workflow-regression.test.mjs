@@ -44,6 +44,21 @@ test('cleanup retains exactly one latest successful or failed run across branche
   assert.deepEqual(plan('ci.yml', [{ workflow_runs: [] }]), { keep: null, delete: [] });
 });
 
+test('retired workflows lose completed history without touching approved or active runs', () => {
+  const source = readFileSync(workflowDir + '/cleanup-actions-history.yml', 'utf8');
+  assert.match(source, /actions\/workflows\/\$workflow" --jq '\.id'/);
+  assert.match(source, /actions\/runs\?per_page=100/);
+  const planner = source.match(/jq -c --argjson protected "\$1" --arg current "\$CURRENT_RUN_ID" '([\s\S]*?)'\n/);
+  assert.ok(planner, 'Missing retired-workflow planner');
+  const run = (id, workflow_id, status = 'completed') => ({ id, workflow_id, status });
+  const pages = [{workflow_runs: [run(1, 11), run(2, 99), run(3, 99, 'queued'), run(4, 99, 'in_progress'), run(5, 99), run(6, 15)]},
+    {workflow_runs: [run(2, 99), run(7, 12), run(8, null)]}];
+  const result = JSON.parse(execFileSync('jq',
+    ['-c', '--argjson', 'protected', '[11,12,13,14,15]', '--arg', 'current', '5', planner[1]],
+    {input: JSON.stringify(pages), encoding: 'utf8'}));
+  assert.deepEqual(result, [2]);
+});
+
 test('full CI retains isolated database replay and authenticated browser gates', () => {
   const source = readFileSync(workflowDir + '/ci.yml', 'utf8');
   for (const gate of [
