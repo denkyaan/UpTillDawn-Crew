@@ -57,6 +57,64 @@ jobs:
           CURRENT_RUN_ID=99 plan ci.yml <<< '[{"workflow_runs":[{"id":1,"run_number":1,"status":"completed","conclusion":"cancelled"}]}]' | jq -e '.keep == null and .delete == [1]' >/dev/null
 
           failures=0
+
+          # Historical runs can survive removal of their workflow file. Resolve
+          # the five active workflow IDs first, then sweep retired IDs across
+          # the repository, preserving every active run.
+          approved_ids=()
+          for workflow in fast-change-validation.yml deploy-main.yml ci.yml deploy-cloudflare.yml cleanup-actions-history.yml; do
+            workflow_id="$(gh api "/repos/$REPO/actions/workflows/$workflow" --jq '.id')"
+            if ! [[ "$workflow_id" =~ ^[0-9]+$ ]]; then
+              echo "::error::Could not resolve approved workflow $workflow"
+              exit 1
+            fi
+            approved_ids+=("$workflow_id")
+          done
+          protected="$(printf '%s\n' "${approved_ids[@]}" | jq -s 'unique')"
+          jq -e 'length == 5' <<< "$protected" >/dev/null
+          retired_plan() {
+            jq -c --argjson protected "$1" --arg current "$CURRENT_RUN_ID" '
+              [.[].workflow_runs[] | select(.id != null and (.workflow_id | type) == "number")] |
+              unique_by(.id) |
+              map(select(.status == "completed" and (.id | tostring) != $current
+                and (.workflow_id as $w | ($protected | index($w)) == null))) |
+              map(.id)
+            '
+          }
+          retired_fixture='[{"workflow_runs":[{"id":1,"workflow_id":11,"status":"completed"},{"id":2,"workflow_id":99,"status":"completed"},{"id":3,"workflow_id":99,"status":"in_progress"},{"id":4,"workflow_id":99,"status":"completed"}]},{"workflow_runs":[{"id":2,"workflow_id":99,"status":"completed"}]}]'
+          CURRENT_RUN_ID=4 retired_plan '[11,12,13,14,15]' <<< "$retired_fixture" | jq -e '. == [2]' >/dev/null
+          if ! history="$(gh api --paginate --slurp "/repos/$REPO/actions/runs?per_page=100")"; then
+            echo "::error::Could not fetch repository-wide run history"
+            exit 1
+          fi
+          if ! jq -e 'type == "array" and length > 0 and all(.[]; (.workflow_runs | type) == "array")' <<< "$history" >/dev/null; then
+            echo "::error::Invalid repository-wide history"
+            exit 1
+          fi
+          retired="$(retired_plan "$protected" <<< "$history" | jq -r '.[]')"
+          removed=0
+          while IFS= read -r id; do
+            [ -n "$id" ] || continue
+            [ "$id" != "$CURRENT_RUN_ID" ] || continue
+            # Check live identity and status again before deletion.
+            if ! run="$(gh api "/repos/$REPO/actions/runs/$id")"; then
+              echo "::error::Could not verify retired run $id"
+              failures=$((failures + 1))
+              continue
+            fi
+            if ! jq -e --argjson protected "$protected" '.status == "completed" and (.workflow_id | type) == "number" and (.workflow_id as $w | ($protected | index($w)) == null)' <<< "$run" >/dev/null; then
+              echo "Preserving active or approved run $id"
+              continue
+            fi
+            if gh api --method DELETE "/repos/$REPO/actions/runs/$id" >/dev/null; then
+              removed=$((removed + 1))
+            else
+              echo "::error::Could not delete retired run $id"
+              failures=$((failures + 1))
+            fi
+          done <<< "$retired"
+          echo "Retired workflows: removed $removed obsolete completed runs"
+
           # Scope strictly to the five approved workflows. Cleanup goes last:
           # its current run will become its sole result once it completes.
           for workflow in fast-change-validation.yml deploy-main.yml ci.yml deploy-cloudflare.yml cleanup-actions-history.yml; do
