@@ -216,6 +216,12 @@ try{
      const baseline=await navigateOriginalWithRecovery(a,path)
      if(baseline?.status()!==200&&baseline?.status()!==304)
       throw Error('LEGACY_MAIN_HTTP_'+baseline?.status())
+     // The existing administration overview alias must settle on its actual
+     // guarded destination before taking any source fingerprint.
+     if(path==='/portals/administration/overview'){
+      stage='original-overview-redirect'
+      await a.waitForURL(url=>url.pathname==='/portals/administration',{timeout:9000})
+     }
      // Legacy /shifts is always an authenticated alias to /workplaces.
      if(path==='/shifts'){
       stage='original-shifts-redirect'
@@ -247,6 +253,7 @@ try{
       const retry=await navigateOriginalWithRecovery(a,path)
       if(retry?.status()!==200&&retry?.status()!==304)throw Error('LEGACY_MAIN_HTTP_'+retry?.status())
       if(path==='/incidents')await a.waitForFunction(()=>location.pathname==='/events'||(location.pathname==='/incidents'&&!!document.querySelector('main h1')),null,{timeout:18000})
+      if(path==='/portals/administration/overview')await a.waitForURL(url=>url.pathname==='/portals/administration',{timeout:9000})
       if(path==='/shifts')await a.waitForURL(url=>url.pathname==='/workplaces',{timeout:9000})
       await ready(a)
      }

@@ -32,6 +32,11 @@ const nextConfig = {
     // OpenNext/Cloudflare serves local application assets directly.
     unoptimized: true,
   },
+  // Resolve the existing overview alias before starting an authenticated
+  // React render. The destination still runs its full auth and portal guard.
+  async redirects() {
+    return [{ source: '/portals/administration/overview', destination: '/portals/administration', permanent: false }]
+  },
   async headers() {
     const securityHeaders = [
       { key: 'Content-Security-Policy', value: contentSecurityPolicy },
