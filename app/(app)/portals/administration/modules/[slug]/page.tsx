@@ -30,6 +30,7 @@ import { administrationModules } from "@/lib/administration/modules"
 import { getCurrentUser } from "@/lib/actions/auth"
 import { createClient } from "@/lib/supabase/crew-server"
 import { canOpenPortal, type PortalAssignment } from "@/lib/portal-access"
+import { currentPortalAssignments } from "@/lib/portal-access-server"
 import {administrationWorkspaceIntro} from "@/lib/administration/workspace-copy"
 import {invoiceStatuses,invoiceStatusLabels,isOverdueInvoice} from "@/lib/administration/invoice-status"
 
@@ -119,7 +120,7 @@ export default async function AdministrationModulePage({params,searchParams}:{pa
  // The signed session already establishes real Admin/Maker authority. Only
  // other roles need the additional portal assignment query; retain fail-closed access.
  if(!current.realIsAdmin&&!current.isOwner){
-  const {data,error}=await supabase.rpc("upt_my_portal_assignments")
+  const {data,error}=await currentPortalAssignments()
   if(error||!canOpenPortal("administration",(data??[]) as PortalAssignment[],{approved:current.approved,blocked:current.account_blocked===true}))redirect("/portals")
  }
  const parsedPage=Number(requestedPage)

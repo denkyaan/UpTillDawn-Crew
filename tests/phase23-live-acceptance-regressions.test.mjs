@@ -19,7 +19,27 @@ test('legacy retries cap exhausted scenarios even when intervening reads recover
 })
 test('administration module skips redundant signed Admin or Maker portal lookup only',()=>{
  const s=read('app/(app)/portals/administration/modules/[slug]/page.tsx').split('export default async function AdministrationModulePage')[1]
- assert.match(s,/if\(!current.realIsAdmin&&!current.isOwner\)\{\s*const \{data,error\}=await supabase.rpc\("upt_my_portal_assignments"\)/)
+ assert.match(s,/if\(!current.realIsAdmin&&!current.isOwner\)\{\s*const \{data,error\}=await currentPortalAssignments\(\)/)
  assert.match(s,/if\(error\|\|!canOpenPortal\("administration"/)
  assert.match(s,/if\(\(!current.approved\|\|Boolean\(current.account_blocked\)\)&&!current.isOwner\)redirect/)
+})
+
+test('administration overview alias avoids duplicate SSR while preserving protected destination and live parity',()=>{
+ const config=read('next.config.mjs')
+ assert.match(config,/source: '\/portals\/administration\/overview', destination: '\/portals\/administration', permanent: false/)
+ const layout=read('app/(app)/portals/administration/layout.tsx')
+ assert.match(layout,/if\(!user\)redirect\("\/login"\)/)
+ assert.match(layout,/await currentPortalAssignments\(\)/)
+ const qa=read('modern/tests/deep-route-parity-qa.mjs')
+ assert.match(qa,/stage='original-overview-redirect'/)
+ assert.match(qa,/await a.waitForURL\(url=>url.pathname==='\/portals\/administration'/)
+ assert.match(qa,/EXPECTED!==44/)
+})
+test('administration read guard shares the request-scoped assignment result while mutations still check directly',()=>{
+ const source=read('app/(app)/portals/administration/modules/[slug]/page.tsx')
+ const [actions,page]=source.split('export default async function AdministrationModulePage')
+ assert.match(page,/await currentPortalAssignments\(\)/)
+ assert.doesNotMatch(page,/supabase\.rpc\("upt_my_portal_assignments"\)/)
+ assert.equal((actions.match(/db\.rpc\('upt_my_portal_assignments'\)/g)||[]).length,3)
+ assert.match(read('lib/portal-access-server.ts'),/currentPortalAssignments=cache\(async/)
 })
